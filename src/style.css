@@ -190,6 +190,166 @@ footer { background: var(--dark); color: white; padding: 80px 0; }
 .footer-col ul li { margin-bottom: 10px; }
 .footer-col a { color: #9CA3AF; text-decoration: none; }
 
+/* Rental Banner */
+.rental-banner {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    padding: 12px 0;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-100%); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.rental-banner-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.rental-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-weight: 600;
+}
+
+.rental-info i.fa-bicycle {
+    font-size: 1.5rem;
+}
+
+.rental-timer {
+    background: rgba(255,255,255,0.2);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-family: 'Inter', monospace;
+    font-weight: 700;
+}
+
+.btn-end-rental {
+    background: white;
+    color: #059669;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-end-rental:hover {
+    background: #F0FDF4;
+    transform: scale(1.02);
+}
+
+/* Map Legend */
+.map-legend {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    padding-top: 20px;
+    justify-content: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--text-gray);
+}
+
+.legend-icon-wrapper {
+    position: relative;
+    display: inline-flex;
+}
+
+.main-legend-icon {
+    font-size: 1rem;
+    color: var(--dark);
+}
+
+.sub-legend-icon {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    font-size: 0.6rem;
+}
+
+/* Bike Marker Styles */
+.combined-icon-marker {
+    position: relative;
+    display: inline-flex;
+}
+
+.marker-bike {
+    font-size: 1.5rem;
+    color: var(--dark);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.marker-sub {
+    position: absolute;
+    top: -4px;
+    right: -8px;
+    font-size: 0.7rem;
+}
+
+/* Btn Outline */
+.btn-outline {
+    padding: 12px 24px;
+    border-radius: 99px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    background: transparent;
+    color: var(--dark);
+    border: 2px solid var(--dark);
+}
+
+.btn-outline:hover {
+    background: var(--dark);
+    color: white;
+}
+
+/* Pulse Animation */
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.impressum-sub {
+    border-top: 1px solid rgba(255,255,255,0.1);
+    margin-top: 40px;
+    padding-top: 20px;
+    text-align: center;
+    color: #6B7280;
+    font-size: 0.85rem;
+}
+
 @media (max-width: 768px) {
   h1, .hl-line-1, .hl-line-2 { font-size: 3.5rem; white-space: normal; line-height: 1.1; margin-left: 0; }
   .sub-line-1, .sub-line-2 { font-size: 1.2rem; white-space: normal; letter-spacing: normal; word-spacing: normal; }
@@ -199,4 +359,6 @@ footer { background: var(--dark); color: white; padding: 80px 0; }
   .nav-links { display: none; }
   .footer-grid, .stats-grid { grid-template-columns: 1fr; }
   .map-container-shadow { height: 450px; }
+  .rental-banner-content { flex-direction: column; text-align: center; }
+  .rental-info { flex-direction: column; gap: 8px; }
 }

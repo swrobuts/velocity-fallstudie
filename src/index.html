@@ -1,8 +1,19 @@
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
-<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeloCity - Fahrradverleih Wuerzburg</title>
+
+    <!-- Externe Styles -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
 <nav id="navbar">
   <div class="container nav-flex">
@@ -21,75 +32,93 @@
 
 <div id="auth-modal" class="modal-overlay">
     <div class="modal-content">
-        <button class="close-modal" aria-label="Schließen">&times;</button>
+        <button class="close-modal" aria-label="Schliessen">&times;</button>
         <div class="auth-tabs">
             <div class="auth-tab active" data-target="login-form">Anmelden</div>
             <div class="auth-tab" data-target="register-form">Registrieren</div>
         </div>
         <div class="form-wrapper">
             <form id="login-form" class="auth-form active">
-                <h3 class="form-title">Willkommen zurück!</h3>
+                <h3 class="form-title">Willkommen zurueck!</h3>
                 <div class="form-group">
-                    <label>E-Mail Adresse</label>
-                    <input type="email" placeholder="name@beispiel.de" required>
+                    <label for="login-email">E-Mail Adresse</label>
+                    <input type="email" id="login-email" name="email" placeholder="name@beispiel.de" required>
                 </div>
                 <div class="form-group">
-                    <label>Passwort</label>
-                    <input type="password" placeholder="••••••••" required>
+                    <label for="login-password">Passwort</label>
+                    <input type="password" id="login-password" name="password" placeholder="********" required>
                 </div>
                 <button type="submit" class="btn-primary full-width">Jetzt Anmelden</button>
             </form>
             <form id="register-form" class="auth-form">
                 <h3 class="form-title">Neu bei VeloCity?</h3>
                 <div class="form-group">
-                    <label>Vor- & Nachname</label>
-                    <input type="text" placeholder="Max Mustermann" required>
+                    <label for="reg-vorname">Vorname</label>
+                    <input type="text" id="reg-vorname" name="vorname" placeholder="Max" required>
                 </div>
                 <div class="form-group">
-                    <label>E-Mail Adresse</label>
-                    <input type="email" placeholder="name@beispiel.de" required>
+                    <label for="reg-nachname">Nachname</label>
+                    <input type="text" id="reg-nachname" name="nachname" placeholder="Mustermann" required>
                 </div>
                 <div class="form-group">
-                    <label>Passwort wählen</label>
-                    <input type="password" required>
+                    <label for="reg-email">E-Mail Adresse</label>
+                    <input type="email" id="reg-email" name="email" placeholder="name@beispiel.de" required>
                 </div>
-                <button type="submit" class="btn-primary full-width">Kostenpflichtig registrieren</button>
+                <div class="form-group">
+                    <label for="reg-password">Passwort waehlen</label>
+                    <input type="password" id="reg-password" name="password" minlength="6" placeholder="Min. 6 Zeichen" required>
+                </div>
+                <button type="submit" class="btn-primary full-width">Kostenlos registrieren</button>
             </form>
         </div>
+    </div>
+</div>
+
+<!-- Aktive Ausleihe Banner (wird per JS angezeigt) -->
+<div id="active-rental-banner" class="rental-banner" style="display: none;">
+    <div class="container rental-banner-content">
+        <div class="rental-info">
+            <i class="fa-solid fa-bicycle"></i>
+            <span id="rental-bike-info">-</span>
+            <span class="rental-timer"><i class="fa-solid fa-clock"></i> <span id="rental-duration">0:00</span></span>
+        </div>
+        <button id="end-rental-btn" class="btn-end-rental">
+            <i class="fa-solid fa-square-parking"></i> Ausleihe beenden
+        </button>
     </div>
 </div>
 
 <header class="hero">
   <div class="overlay"></div>
   <div class="container hero-container">
-    
+
     <div class="hero-typo-wrapper">
-      
-      <span class="badge">Neu in Würzburg</span>
-      
+
+      <span class="badge">Neu in Wuerzburg</span>
+
       <div class="hero-block-headline">
           <h1 class="hl-line-1">Deine Stadt.</h1>
           <h1 class="hl-line-2">Dein Velo.</h1>
       </div>
-      
+
       <div class="hero-block-sub">
-          <p class="sub-line-1">Premium Mobilität für Würzburg.</p>
+          <p class="sub-line-1">Premium Mobilitaet fuer Wuerzburg.</p>
           <p class="sub-line-2">Sportlich, smart & spontan.</p>
       </div>
-      
+
       <div class="hero-block-interaction">
           <div class="buttons-row">
             <button class="btn-hero-primary" onclick="document.getElementById('map-section').scrollIntoView()"><i class="fa-solid fa-map-location-dot"></i> Rad finden</button>
             <a href="#anleitung" class="btn-hero-outline">So geht's</a>
           </div>
-          
+
           <div class="status-widget-aligned">
              <div class="status-left">
                  <div class="status-icon pulse"></div>
-                 <small class="status-label">SYSTEM ONLINE</small>
+                 <small class="status-label">LIVE DATEN</small>
              </div>
              <div class="status-right">
-                 <strong><span id="bike-counter">...</span> Räder</strong> bereit
+                 <strong><span id="bike-counter">...</span> Raeder</strong> verfuegbar
              </div>
           </div>
       </div>
@@ -100,10 +129,10 @@
 
 <section class="stats-bar">
     <div class="container stats-grid">
-        <div class="stat-item"><span class="stat-number">50+</span><span class="stat-label">Stationen</span></div>
-        <div class="stat-item"><span class="stat-number">24/7</span><span class="stat-label">Verfügbarkeit</span></div>
-        <div class="stat-item"><span class="stat-number">100%</span><span class="stat-label">Ökostrom</span></div>
-        <div class="stat-item"><span class="stat-number">0€</span><span class="stat-label">Anmeldegebühr</span></div>
+        <div class="stat-item"><span class="stat-number" id="stat-stations">-</span><span class="stat-label">Stationen</span></div>
+        <div class="stat-item"><span class="stat-number">24/7</span><span class="stat-label">Verfuegbarkeit</span></div>
+        <div class="stat-item"><span class="stat-number">100%</span><span class="stat-label">Oekostrom</span></div>
+        <div class="stat-item"><span class="stat-number">0 Euro</span><span class="stat-label">Anmeldegebuehr</span></div>
     </div>
 </section>
 
@@ -118,19 +147,19 @@
                 <div class="step-number">1</div>
                 <div class="icon-circle"><i class="fa-solid fa-mobile-screen-button"></i></div>
                 <h3>App laden & Finden</h3>
-                <p>Registriere dich einmalig kostenlos. Finde in der Web-App oder nativen App das nächste freie Rad in deiner Nähe.</p>
+                <p>Registriere dich einmalig kostenlos. Finde in der Web-App oder nativen App das naechste freie Rad in deiner Naehe.</p>
             </div>
             <div class="howto-card">
                 <div class="step-number">2</div>
                 <div class="icon-circle"><i class="fa-solid fa-qrcode"></i></div>
                 <h3>Scannen & Losfahren</h3>
-                <p>Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss öffnet sich automatisch.</p>
+                <p>Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss oeffnet sich automatisch.</p>
             </div>
             <div class="howto-card">
                 <div class="step-number">3</div>
                 <div class="icon-circle"><i class="fa-solid fa-square-parking"></i></div>
                 <h3>Parken & Beenden</h3>
-                <p>Stelle das Rad an einer Station (gratis) oder in der Flex-Zone (gegen Gebühr) ab. Schloss schließen, fertig.</p>
+                <p>Stelle das Rad an einer Station (gratis) oder in der Flex-Zone (gegen Gebuehr) ab. Schloss schliessen, fertig.</p>
             </div>
         </div>
     </div>
@@ -142,19 +171,20 @@
       <h2>Ein Preismodell, drei Klassen</h2>
       <p>Transparent. Fair. Minutengenaue Abrechnung.</p>
     </div>
-    <div class="pricing-grid">
+    <div class="pricing-grid" id="pricing-grid">
+      <!-- Wird dynamisch aus DB geladen -->
       <div class="price-card">
         <div class="card-content">
             <div class="icon-header"><i class="fa-solid fa-bicycle"></i></div>
             <div class="header">City-Bike</div>
-            <div class="price">1,00 € <small>/ 30 Min</small></div>
+            <div class="price">1,00 Euro <small>/ 30 Min</small></div>
             <ul class="features-list">
               <li><i class="fa-solid fa-check"></i> 8-Gang Nabenschaltung</li>
               <li><i class="fa-solid fa-check"></i> Pannensichere Reifen</li>
               <li><i class="fa-solid fa-check"></i> Komfort-Sattel</li>
             </ul>
         </div>
-        <button class="btn-outline full-width">Fahrt starten</button>
+        <button class="btn-outline full-width" onclick="document.getElementById('map-section').scrollIntoView()">Fahrt starten</button>
       </div>
       <div class="price-card popular">
         <div class="badge-pop">Beliebteste Wahl</div>
@@ -164,14 +194,14 @@
                 <i class="fa-solid fa-bolt" style="position:absolute; top:0; right:-10px; font-size:0.5em; color:#D11231;"></i>
             </div>
             <div class="header">E-Bike Sport</div>
-            <div class="price">2,00 € <small>/ 30 Min</small></div>
+            <div class="price">2,00 Euro <small>/ 30 Min</small></div>
             <ul class="features-list">
               <li><i class="fa-solid fa-check"></i> <strong>Bosch Performance CX</strong></li>
-              <li><i class="fa-solid fa-check"></i> Bis 25 km/h Unterstützung</li>
-              <li><i class="fa-solid fa-check"></i> Ideal fürs Hubland</li>
+              <li><i class="fa-solid fa-check"></i> Bis 25 km/h Unterstuetzung</li>
+              <li><i class="fa-solid fa-check"></i> Ideal fuers Hubland</li>
             </ul>
         </div>
-        <button class="btn-primary full-width">E-Bike wählen</button>
+        <button class="btn-primary full-width" onclick="document.getElementById('map-section').scrollIntoView()">E-Bike waehlen</button>
       </div>
       <div class="price-card">
         <div class="card-content">
@@ -180,14 +210,14 @@
                 <i class="fa-solid fa-box" style="position:absolute; top:0; right:-12px; font-size:0.5em; color:#2563EB;"></i>
             </div>
             <div class="header">E-Cargo Loader</div>
-            <div class="price">3,00 € <small>/ 30 Min</small></div>
+            <div class="price">3,00 Euro <small>/ 30 Min</small></div>
             <ul class="features-list">
-              <li><i class="fa-solid fa-check"></i> Große Transportbox (100kg)</li>
+              <li><i class="fa-solid fa-check"></i> Grosse Transportbox (100kg)</li>
               <li><i class="fa-solid fa-check"></i> Starker E-Motor</li>
-              <li><i class="fa-solid fa-check"></i> Sitzbank für 2 Kinder</li>
+              <li><i class="fa-solid fa-check"></i> Sitzbank fuer 2 Kinder</li>
             </ul>
          </div>
-        <button class="btn-outline full-width">Lastenrad buchen</button>
+        <button class="btn-outline full-width" onclick="document.getElementById('map-section').scrollIntoView()">Lastenrad buchen</button>
       </div>
     </div>
   </div>
@@ -195,10 +225,10 @@
 
 <section id="map-section" class="map-wrapper">
     <div class="container section-header">
-        <h2>Live-Karte & Verfügbarkeit</h2>
+        <h2>Live-Karte & Verfuegbarkeit</h2>
         <p>Echtzeit-Daten aller Fahrzeuge. Nutze den Filter, um dein perfektes Rad zu finden.</p>
     </div>
-    
+
     <div class="map-container-shadow">
         <div class="map-controls">
             <div class="control-title"><i class="fa-solid fa-filter"></i> Filter</div>
@@ -207,9 +237,9 @@
             <label class="filter-option"><input type="checkbox" value="cargo" checked> <span>Cargo</span></label>
         </div>
         <div id="map"></div>
-        <div class="map-overlay-btn" onclick="alert('Standort wird ermittelt (Simulation)...')" title="Meinen Standort anzeigen"><i class="fa-solid fa-location-crosshairs"></i></div>
+        <div class="map-overlay-btn" onclick="alert('Standort wird ermittelt...')" title="Meinen Standort anzeigen"><i class="fa-solid fa-location-crosshairs"></i></div>
     </div>
-    
+
     <div class="map-legend container">
         <div class="legend-item"><i class="fa-solid fa-square" style="color: #D11231;"></i> Stationen</div>
         <div class="legend-item"><span class="legend-icon-wrapper"><i class="fa-solid fa-bicycle main-legend-icon"></i></span> City</div>
@@ -221,7 +251,7 @@
 
 <section id="faq" class="faq-section">
     <div class="container">
-        <div class="section-header"><h2>Häufige Fragen</h2><p>Alles was du wissen musst.</p></div>
+        <div class="section-header"><h2>Haeufige Fragen</h2><p>Alles was du wissen musst.</p></div>
         <div class="faq-grid">
             <details>
                 <summary>Wie kann ich bezahlen?</summary>
@@ -229,15 +259,15 @@
             </details>
             <details>
                 <summary>Darf ich das Rad kurz parken?</summary>
-                <div class="faq-content">Ja, absolut! Nutze in der App den "Parkmodus". Die Miete läuft weiter, das Schloss verriegelt.</div>
+                <div class="faq-content">Ja, absolut! Nutze in der App den "Parkmodus". Die Miete laeuft weiter, das Schloss verriegelt.</div>
             </details>
             <details>
-                <summary>Gibt es Rabatte für Studierende?</summary>
-                <div class="faq-content">Ja! Registriere dich einfach mit deiner <strong>@uni-wuerzburg.de</strong> Adresse für den Campus-Tarif.</div>
+                <summary>Gibt es Rabatte fuer Studierende?</summary>
+                <div class="faq-content">Ja! Registriere dich einfach mit deiner <strong>@uni-wuerzburg.de</strong> Adresse fuer den Campus-Tarif.</div>
             </details>
             <details>
                 <summary>Was passiert bei einem Defekt?</summary>
-                <div class="faq-content">Melde den Schaden über die App. Wir beenden deine Miete sofort kostenfrei.</div>
+                <div class="faq-content">Melde den Schaden ueber die App. Wir beenden deine Miete sofort kostenfrei.</div>
             </details>
         </div>
     </div>
@@ -249,7 +279,7 @@
             <div class="logo" style="color:white; margin-bottom: 20px;">
               <i class="fa-solid fa-bicycle" style="color:var(--primary);"></i> Velo<strong>City</strong>
             </div>
-            <p style="color: #9CA3AF; line-height: 1.6;">Das moderne Leihradsystem für Würzburg und Umgebung. Einfach, smart, elektrisch.</p>
+            <p style="color: #9CA3AF; line-height: 1.6;">Das moderne Leihradsystem fuer Wuerzburg und Umgebung. Einfach, smart, elektrisch.</p>
         </div>
         <div class="footer-col">
             <h4>Rechtliches</h4>
@@ -263,13 +293,27 @@
         <div class="footer-col">
             <h4>Kontakt</h4>
             <ul>
-                <li>VeloCity Würzburg GmbH</li>
-                <li>Sanderring 2, 97070 Würzburg</li>
+                <li>VeloCity Wuerzburg GmbH</li>
+                <li>Sanderring 2, 97070 Wuerzburg</li>
                 <li style="margin-top:10px;"><i class="fa-solid fa-envelope"></i> hilfe@velocity-wue.de</li>
             </ul>
         </div>
     </div>
     <div class="impressum-sub container">
-        <p>&copy; 2026 VeloCity Würzburg GmbH. Geschäftsführer: Max Mustermann. Amtsgericht Würzburg HRB 99999.</p>
+        <p>&copy; 2026 VeloCity Wuerzburg GmbH. Geschaeftsfuehrer: Max Mustermann. Amtsgericht Wuerzburg HRB 99999.</p>
     </div>
 </footer>
+
+<!-- Externe Scripts -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- App Scripts (Reihenfolge wichtig!) -->
+<script src="config.js"></script>
+<script src="supabase.js"></script>
+<script src="auth.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
