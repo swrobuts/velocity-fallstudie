@@ -1,0 +1,16 @@
+flowchart LR
+    A["Anna öffnet<br/>die Karte"] --> B["wählt ein<br/>E-Bike"]
+    B --> C["Fahrt startet<br/>10:00 Uhr"]
+    C --> D["61 Minuten<br/>unterwegs"]
+    D --> E["Fahrt endet<br/>11:01 Uhr"]
+    E --> F["Rechnung:<br/>4,96 Euro"]
+
+    A -.-> a1["v_verfuegbares_fahrrad"]
+    C -.-> a2["ausleihe · Startzeit<br/>Preis wird fixiert"]
+    E -.-> a3["dauer_minuten<br/>wird berechnet"]
+    F -.-> a4["entgeltposition<br/>fünf Zeilen"]
+
+    classDef schritt fill:#003E6E,stroke:#003E6E,color:#FFFFFF,font-weight:bold
+    classDef daten fill:#E3DED1,stroke:#C9C3B4,color:#404040
+    class A,B,C,D,E,F schritt
+    class a1,a2,a3,a4 daten

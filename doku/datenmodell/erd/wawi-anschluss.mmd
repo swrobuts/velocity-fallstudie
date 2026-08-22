@@ -1,0 +1,17 @@
+erDiagram
+    FAHRRAD       ||--o{ SCHADENSMELDUNG  : "betrifft"
+    KUNDE         ||--o{ SCHADENSMELDUNG  : "meldet"
+    SCHADENSMELDUNG ||--o| WARTUNGSAUFTRAG : "löst aus"
+    FAHRRAD       ||--o{ WARTUNGSAUFTRAG  : "wird instandgesetzt in"
+    MITARBEITER   ||--o{ WARTUNGSAUFTRAG  : "bearbeitet"
+    WARTUNGSAUFTRAG ||--o{ WARTUNGSPOSITION : "verbraucht"
+    ARTIKEL       ||--o{ WARTUNGSPOSITION : "wird verbaut als"
+    WARTUNGSPOSITION ||--|| LAGERBEWEGUNG : "bucht aus"
+    LIEFERANT     ||--o{ ARTIKEL          : "liefert"
+    LAGER         ||--o{ LAGERBEWEGUNG    : "wird bebucht"
+    STATION       ||--o{ UMSETZUNGSAUFTRAG : "Quelle oder Ziel"
+
+    FAHRRAD     { bigint fahrrad_id PK "aus Phase 1" }
+    KUNDE       { bigint kunde_id PK "aus Phase 1" }
+    STATION     { bigint station_id PK "aus Phase 1" }
+    LAGERBEWEGUNG { numeric menge "vorzeichenbehaftet; Bestand ist ein Aggregat" }

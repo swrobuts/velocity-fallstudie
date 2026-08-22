@@ -1,0 +1,23 @@
+erDiagram
+    ADRESSE ||--o{ KUNDE : "Rechnungsadresse von"
+
+    ADRESSE {
+        bigint  adresse_id  PK "GENERATED ALWAYS AS IDENTITY"
+        text    strasse     "UK zusammen mit den vier folgenden"
+        text    hausnummer  "NOT NULL, Vorgabe leerer Text"
+        text    plz
+        text    ort
+        char    land_code
+    }
+    KUNDE {
+        bigint  kunde_id            PK
+        text    kundennummer        UK "Format K-000000"
+        uuid    auth_uid            UK "FK auth.users, NULL ohne Login"
+        text    email               UK
+        text    vorname
+        text    nachname
+        date    geburtsdatum        "Altersgrenze prüft die API"
+        bigint  rechnungsadresse_id FK
+        enum    status
+        timestamptz registriert_am
+    }

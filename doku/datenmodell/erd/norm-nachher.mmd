@@ -1,0 +1,18 @@
+erDiagram
+    ADRESSE       ||--o{ KUNDE           : "Anschrift von"
+    KUNDE         ||--o{ AUSLEIHE        : "tätigt"
+    FAHRRADTYP    ||--o{ FAHRRADMODELL   : "klassifiziert"
+    FAHRRADMODELL ||--o{ FAHRRAD         : "ist Bauart von"
+    FAHRRAD       ||--o{ AUSLEIHE        : "wird genutzt in"
+    FAHRRADTYP    ||--o{ NUTZUNGSPREIS   : "wird bepreist durch"
+    AUSLEIHE      ||--|{ ENTGELTPOSITION : "wird abgerechnet in"
+    NUTZUNGSPREIS ||--o{ ENTGELTPOSITION : "belegt"
+
+    ADRESSE         { bigint adresse_id PK }
+    KUNDE           { bigint kunde_id PK }
+    FAHRRADTYP      { bigint typ_id PK }
+    FAHRRADMODELL   { bigint modell_id PK }
+    FAHRRAD         { bigint fahrrad_id PK }
+    NUTZUNGSPREIS   { daterange gueltigkeit "der Preis gilt für einen Zeitraum" }
+    AUSLEIHE        { integer dauer_minuten "GENERATED statt gepflegt" }
+    ENTGELTPOSITION { numeric betrag "eine Zeile je Preisbestandteil" }

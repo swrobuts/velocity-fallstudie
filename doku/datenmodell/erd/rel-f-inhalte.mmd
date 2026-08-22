@@ -1,0 +1,28 @@
+erDiagram
+    FAHRRADTYP ||--o{ FAHRRADTYP_MERKMAL : "wird beworben mit"
+
+    FAQ_EINTRAG {
+        bigint  faq_id     PK
+        text    frage      UK
+        text    antwort
+        integer sortierung
+        boolean aktiv
+    }
+    NUTZUNGSSCHRITT {
+        bigint  schritt_id PK
+        integer nummer     UK
+        text    titel
+        text    icon_code
+    }
+    KENNZAHL {
+        bigint  kennzahl_id   PK
+        text    schluessel    UK
+        text    anzeigewert   "NULL wenn berechnet"
+        boolean ist_berechnet "CHECK: berechnet oder Wert"
+    }
+    FAHRRADTYP_MERKMAL {
+        bigint  merkmal_id PK
+        bigint  typ_id     FK
+        integer sortierung "UK mit typ_id"
+        text    merkmal
+    }

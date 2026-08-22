@@ -1,0 +1,40 @@
+erDiagram
+    ADRESSE       ||--o{ STATION          : "Standort von"
+    FAHRRADTYP    ||--o{ FAHRRADMODELL    : "klassifiziert"
+    HERSTELLER    ||--o{ FAHRRADMODELL    : "produziert"
+    FAHRRADMODELL ||--o{ FAHRRAD          : "ist Bauart von"
+    FAHRRAD       ||--|| FAHRRAD_POSITION : "hat genau eine"
+    STATION       ||--o{ FAHRRAD_POSITION : "beherbergt"
+
+    STATION {
+        bigint    station_id     PK
+        text      stationsnummer UK
+        bigint    adresse_id     FK
+        integer   kapazitaet     "CHECK groesser null"
+        daterange betriebszeitraum
+    }
+    FAHRRADTYP {
+        bigint typ_id      PK
+        text   typ_code    UK "CITY, EBIKE, CARGO"
+        text   bezeichnung UK
+        boolean hat_elektro
+    }
+    FAHRRADMODELL {
+        bigint modell_id         PK
+        bigint hersteller_id     FK
+        bigint typ_id            FK
+        text   modellbezeichnung "UK mit hersteller_id"
+    }
+    FAHRRAD {
+        bigint fahrrad_id   PK
+        text   rahmennummer UK
+        bigint modell_id    FK
+        enum   status
+    }
+    FAHRRAD_POSITION {
+        bigint   fahrrad_id PK "zugleich FK: 1 zu 1"
+        bigint   station_id FK "NULL = frei abgestellt"
+        numeric  latitude
+        numeric  longitude
+        smallint akkustand_prozent "NULL ohne Akku"
+    }

@@ -76,7 +76,7 @@ def main(pfad: str) -> int:
         # verdeckte, ohne dass eine Hoehenpruefung angeschlagen haette.
         inhalt = [sh for sh in s.shapes
                   if not sh.is_placeholder and sh.top is not None
-                  and sh.top.pt >= ZONE_OBEN - 60]
+                  and sh.top.pt >= 80]
         gemeldet = set()
         for a_i, a in enumerate(inhalt):
             for b in inhalt[a_i + 1:]:

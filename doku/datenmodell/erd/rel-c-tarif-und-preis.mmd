@@ -1,0 +1,37 @@
+erDiagram
+    TARIF          ||--o{ TARIF_KONDITION     : "gilt zeitraumweise mit"
+    KUNDE          ||--o{ MITGLIEDSCHAFT      : "schließt ab"
+    TARIF          ||--o{ MITGLIEDSCHAFT      : "liegt zugrunde"
+    MITGLIEDSCHAFT ||--o{ FREIMINUTEN_PERIODE : "führt monatlich"
+    FAHRRADTYP     ||--o{ NUTZUNGSPREIS       : "wird bepreist durch"
+
+    TARIF_KONDITION {
+        bigint    kondition_id PK
+        bigint    tarif_id     FK
+        daterange gueltigkeit  "EXCLUDE: nie überlappend"
+        numeric   monatspreis
+        integer   freiminuten_pro_monat
+        numeric   rabatt_prozent
+    }
+    MITGLIEDSCHAFT {
+        bigint    mitgliedschaft_id PK
+        bigint    kunde_id          FK
+        bigint    tarif_id          FK
+        daterange gueltigkeit       "EXCLUDE je Kunde: GR3"
+    }
+    FREIMINUTEN_PERIODE {
+        bigint  periode_id         PK
+        bigint  mitgliedschaft_id  FK
+        integer jahr               "UK mit monat"
+        integer monat
+        integer kontingent_minuten "Bestand"
+        integer verbraucht_minuten "Bewegung"
+    }
+    NUTZUNGSPREIS {
+        bigint    preis_id          PK
+        bigint    typ_id            FK
+        daterange gueltigkeit       "EXCLUDE: nie überlappend"
+        numeric   startgebuehr
+        numeric   preis_pro_minute
+        numeric   tageshoechstpreis
+    }

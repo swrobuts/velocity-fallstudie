@@ -111,10 +111,20 @@ def kopf(slide, kicker, titel, *, quelle=None, intro=None):
             ph.text_frame.text = kicker
         elif idx == 13:
             ph.text_frame.text = quelle or ''
-    if intro:
-        box = slide.shapes.add_textbox(Pt(INTRO_X), Pt(INTRO_Y), Pt(INTRO_B), Pt(74))
-        tf = _tf(box, rand=(0, 0, 0, 0))
-        _absatz(tf, intro, groesse=14, farbe=TEXT, erste=True, ausricht=PP_ALIGN.JUSTIFY)
+    if not intro:
+        return INTRO_Y
+    # Hoehe aus der Textlaenge ableiten. Eine fest vorgegebene Hoehe laesst
+    # kurze Einleitungen unnoetig viel Platz beanspruchen - Platz, der auf
+    # Diagrammfolien fehlt.
+    # Derselbe Faktor wie im Pruefer, plus Reserve: eine zu knapp
+    # bemessene Einleitung schiebt sich sonst ins Motiv darunter.
+    je_zeile = int(INTRO_B / (14 * 0.55))
+    zeilen = max(1, -(-len(intro) // je_zeile))
+    hoehe = zeilen * 18 + 6
+    box = slide.shapes.add_textbox(Pt(INTRO_X), Pt(INTRO_Y), Pt(INTRO_B), Pt(hoehe))
+    tf = _tf(box, rand=(0, 0, 0, 0))
+    _absatz(tf, intro, groesse=14, farbe=TEXT, erste=True, ausricht=PP_ALIGN.JUSTIFY)
+    return INTRO_Y + hoehe
 
 
 def notizen(slide, text):
@@ -280,7 +290,8 @@ def ampel_matrix(slide, kopfzeile, zeilen, *, y=ZONE_OBEN, zeilen_h=46, luecke=8
         _absatz(tf, umsetzung, groesse=13, farbe=TEXT_SEK, erste=True)
 
 
-def sandkarte(slide, titel, zeilen, *, y, hoehe=None, warnung=False, breite=None):
+def sandkarte(slide, titel, zeilen, *, y, hoehe=None, warnung=False, breite=None,
+              x0=FLUCHT_L):
     b = breite or BREITE
     if hoehe is None:
         # Wie beim Band: die Höhe folgt dem Text, nicht umgekehrt.
@@ -289,9 +300,9 @@ def sandkarte(slide, titel, zeilen, *, y, hoehe=None, warnung=False, breite=None
         for z in zeilen:
             n += max(1, -(-len(z) // je_zeile))
         hoehe = max(80, n * 19 + 30)
-    rechteck(slide, FLUCHT_L, y, b, hoehe, fuell=SAND, linie=HAAR)
-    leiste(slide, FLUCHT_L, y, hoehe, ROT_A if warnung else BLAU)
-    box = slide.shapes.add_textbox(Pt(FLUCHT_L + 16), Pt(y + 10), Pt(b - 30), Pt(hoehe - 20))
+    rechteck(slide, x0, y, b, hoehe, fuell=SAND, linie=HAAR)
+    leiste(slide, x0, y, hoehe, ROT_A if warnung else BLAU)
+    box = slide.shapes.add_textbox(Pt(x0 + 16), Pt(y + 10), Pt(b - 30), Pt(hoehe - 20))
     tf = _tf(box, rand=(0, 0, 0, 0))
     _absatz(tf, titel, groesse=15, farbe=ROT_A if warnung else BLAU, fett=True, erste=True)
     for z in zeilen:
@@ -309,3 +320,90 @@ def sandband(slide, text, *, y, hoehe=None, mono=False):
     box = slide.shapes.add_textbox(Pt(FLUCHT_L + 16), Pt(y + 6), Pt(BREITE - 32), Pt(hoehe - 12))
     tf = _tf(box, rand=(0, 0, 0, 0)); tf.vertical_anchor = MSO_ANCHOR.MIDDLE
     _absatz(tf, text, groesse=14, farbe=BLAU, fett=True, erste=True, mono=mono)
+
+
+# --------------------------------------------------------------- Diagramme
+def _png_masse(pfad: str) -> tuple[int, int]:
+    """Liest Breite und Hoehe aus dem IHDR-Block einer PNG-Datei."""
+    import struct
+    with open(pfad, 'rb') as f:
+        kopf = f.read(24)
+    return struct.unpack('>II', kopf[16:24])
+
+
+def diagramm(slide, pfad, *, y=ZONE_OBEN, hoehe=None, breite=None,
+             x0=FLUCHT_L, rahmen=True, quelle=None):
+    """Setzt ein gerendertes Mermaid-Diagramm mittig in die Inhaltszone.
+
+    Das Bild wird proportional so skaliert, dass es in die verfuegbare
+    Flaeche passt - Diagramme werden nie verzerrt und laufen nie ueber
+    die Quellenzeile.
+    """
+    max_b = breite or BREITE
+    max_h = hoehe or (ZONE_UNTEN - y)
+    b_px, h_px = _png_masse(pfad)
+    faktor = min(max_b / b_px, max_h / h_px)
+    b, h = b_px * faktor, h_px * faktor
+    x = x0 + (max_b - b) / 2
+    yy = y + (max_h - h) / 2
+
+    if rahmen:
+        rechteck(slide, x - 8, yy - 8, b + 16, h + 16, fuell=WEISS, linie=HAAR)
+    slide.shapes.add_picture(pfad, Pt(x), Pt(yy), Pt(b), Pt(h))
+
+    if quelle:
+        box = slide.shapes.add_textbox(Pt(x0), Pt(yy + h + 10), Pt(max_b), Pt(18))
+        tf = _tf(box, rand=(0, 0, 0, 0))
+        _absatz(tf, quelle, groesse=13, farbe=TEXT_SEK, erste=True)
+    return yy + h
+
+
+def leitfrage(slide, frage, *, y=ZONE_OBEN + 40):
+    """Die Frage, die ein Kapitel beantwortet. Steht auf der Kapitelfolie."""
+    hoehe = 92
+    rechteck(slide, FLUCHT_L, y, BREITE, hoehe, fuell=SAND_D)
+    leiste(slide, FLUCHT_L, y, hoehe, GELB, breite=6)
+    box = slide.shapes.add_textbox(Pt(FLUCHT_L + 24), Pt(y + 14), Pt(BREITE - 48), Pt(hoehe - 28))
+    tf = _tf(box, rand=(0, 0, 0, 0))
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    _absatz(tf, 'Leitfrage', groesse=13, farbe=TEXT_SEK, fett=True, erste=True)
+    _absatz(tf, frage, groesse=20, farbe=BLAU, fett=True, abstand=6)
+
+
+def faden(slide, text, *, y=ZONE_UNTEN - 34):
+    """Der rote Faden: der Bezug dieser Folie zu Annas Fahrt."""
+    hoehe = 34
+    rechteck(slide, FLUCHT_L, y, BREITE, hoehe, fuell=WEISS, linie=HAAR)
+    leiste(slide, FLUCHT_L, y, hoehe, ROT_A)
+    box = slide.shapes.add_textbox(Pt(FLUCHT_L + 16), Pt(y + 4), Pt(BREITE - 32), Pt(hoehe - 8))
+    tf = _tf(box, rand=(0, 0, 0, 0))
+    tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+    p = tf.paragraphs[0]
+    p.line_spacing = 0.95
+    r1 = p.add_run(); r1.text = 'Annas Fahrt:  '
+    r1.font.size = Pt(13); r1.font.bold = True; r1.font.color.rgb = ROT_A
+    r2 = p.add_run(); r2.text = text
+    r2.font.size = Pt(13); r2.font.color.rgb = TEXT
+
+
+def vorher_nachher(slide, links, rechts, *, y=ZONE_OBEN, hoehe=250):
+    """Zwei Kacheln: der naive Versuch und die Loesung.
+
+    links/rechts = (kopfzeile, titel, [zeilen], mono)
+    """
+    for (kopfzeile, titel, zeilen, mono), x, farbe in (
+            (links,  SP2[0], ROT_A),
+            (rechts, SP2[1], GRUEN_D)):
+        rechteck(slide, x, y, SP2_B, hoehe, fuell=WEISS, linie=HAAR)
+        kopf_h = 30
+        rechteck(slide, x, y, SP2_B, kopf_h, fuell=farbe)
+        kbox = slide.shapes.add_textbox(Pt(x + 12), Pt(y + 4), Pt(SP2_B - 24), Pt(kopf_h - 8))
+        ktf = _tf(kbox, rand=(0, 0, 0, 0)); ktf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        _absatz(ktf, kopfzeile, groesse=13, farbe=WEISS, fett=True, erste=True)
+
+        box = slide.shapes.add_textbox(Pt(x + 14), Pt(y + kopf_h + 10),
+                                       Pt(SP2_B - 26), Pt(hoehe - kopf_h - 20))
+        tf = _tf(box, rand=(0, 0, 0, 0))
+        _absatz(tf, titel, groesse=14, farbe=farbe, fett=True, erste=True)
+        for z in zeilen:
+            _absatz(tf, z, groesse=13, farbe=TEXT, mono=mono, abstand=3)

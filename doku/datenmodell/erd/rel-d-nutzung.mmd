@@ -1,0 +1,35 @@
+erDiagram
+    KUNDE          ||--o{ AUSLEIHE        : "tätigt"
+    FAHRRAD        ||--o{ AUSLEIHE        : "wird genutzt in"
+    MITGLIEDSCHAFT ||--o{ AUSLEIHE        : "bepreist"
+    STATION        ||--o{ AUSLEIHE        : "Start und Ziel"
+    AUSLEIHE       ||--|{ ENTGELTPOSITION : "wird abgerechnet in"
+    ENTGELTART     ||--o{ ENTGELTPOSITION : "typisiert"
+    NUTZUNGSPREIS  ||--o{ ENTGELTPOSITION : "belegt die Preisfindung"
+
+    AUSLEIHE {
+        bigint      ausleihe_id       PK
+        bigint      kunde_id          FK
+        bigint      fahrrad_id        FK "UNIQUE WHERE aktiv: GR1"
+        bigint      mitgliedschaft_id FK "beim Start fixiert"
+        bigint      start_station_id  FK
+        timestamptz startzeit         "maßgeblich für den Preis: GR5"
+        bigint      end_station_id    FK
+        timestamptz endzeit
+        enum        status
+        integer     dauer_minuten     "GENERATED, aufgerundet: GR6"
+    }
+    ENTGELTART {
+        bigint   entgeltart_id PK
+        text     code          UK "ZEITENTGELT, FREIMINUTEN, …"
+        smallint vorzeichen    "plus eins oder minus eins"
+    }
+    ENTGELTPOSITION {
+        bigint  position_id      PK
+        bigint  ausleihe_id      FK
+        bigint  entgeltart_id    FK
+        bigint  nutzungspreis_id FK "Beleg des angewandten Satzes"
+        numeric menge
+        numeric einzelbetrag
+        numeric betrag           "mit Vorzeichen"
+    }

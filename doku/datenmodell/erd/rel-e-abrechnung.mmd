@@ -1,0 +1,32 @@
+erDiagram
+    KUNDE          ||--o{ ZAHLUNGSMITTEL    : "hinterlegt"
+    ZAHLUNGSART    ||--o{ ZAHLUNGSMITTEL    : "typisiert"
+    KUNDE          ||--o{ RECHNUNG          : "erhält"
+    RECHNUNG       ||--|{ RECHNUNGSPOSITION : "besteht aus"
+    AUSLEIHE       ||--o| RECHNUNGSPOSITION : "wird fakturiert als"
+    RECHNUNG       ||--o{ ZAHLUNG           : "wird beglichen durch"
+    ZAHLUNGSMITTEL ||--o{ ZAHLUNG           : "belastet über"
+
+    ZAHLUNGSMITTEL {
+        bigint  zahlungsmittel_id PK
+        bigint  kunde_id          FK
+        bigint  zahlungsart_id    FK
+        text    referenz_token    "Token des Dienstleisters, nie IBAN"
+        boolean ist_standard      "UNIQUE je Kunde WHERE wahr"
+    }
+    RECHNUNG {
+        bigint  rechnung_id     PK
+        text    rechnungsnummer UK
+        bigint  kunde_id        FK
+        integer periode_jahr    "UK mit monat und kunde: GR10"
+        integer periode_monat
+        numeric betrag_brutto
+        enum    status
+    }
+    RECHNUNGSPOSITION {
+        bigint  rechnungsposition_id PK
+        bigint  rechnung_id          FK
+        integer position_nr          "UK je Rechnung"
+        bigint  ausleihe_id          FK
+        numeric betrag
+    }

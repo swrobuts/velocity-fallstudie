@@ -1,0 +1,18 @@
+erDiagram
+    AUSLEIHE_FLACH {
+        bigint      ausleihe_id       PK
+        text        kunde_email       "wiederholt sich je Fahrt"
+        text        kunde_name        "nicht atomar: 1NF"
+        text        kunde_strasse     "wiederholt sich"
+        text        kunde_plz
+        text        kunde_ort
+        text        rahmennummer
+        text        typ_bezeichnung   "hängt am Rad: 3NF"
+        numeric     startgebuehr      "hängt am Typ: 3NF"
+        numeric     preis_pro_minute  "hängt am Typ: 3NF"
+        timestamptz startzeit
+        timestamptz endzeit
+        integer     dauer_minuten     "abgeleitet"
+        numeric     kosten            "abgeleitet"
+        text        positionen        "mehrwertig: 1NF"
+    }

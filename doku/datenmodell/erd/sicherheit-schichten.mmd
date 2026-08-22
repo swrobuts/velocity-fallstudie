@@ -1,0 +1,27 @@
+flowchart TB
+    B["Browser mit dem öffentlichen anon-Key"]
+
+    subgraph erlaubt["erreichbar"]
+        V["v_station · v_verfuegbares_fahrrad · v_tarifkarte<br/>v_tarif · v_faq · v_nutzungsschritt · v_kennzahl"]
+        R["api_kunde_sicherstellen · api_ausleihe_starten<br/>api_ausleihe_beenden · api_profil_aktualisieren"]
+    end
+
+    subgraph gesperrt["unerreichbar"]
+        F["fn_ausleihe_starten · fn_ausleihe_beenden<br/>prüfen selbst nicht auf auth.uid()"]
+        T["kunde · adresse · ausleihe · rechnung<br/>zahlungsmittel · entgeltposition · …"]
+    end
+
+    B -->|"lesen"| V
+    B -->|"schreiben"| R
+    B -.->|"permission denied"| F
+    B -.->|"permission denied"| T
+    V --> T
+    R --> F
+    F --> T
+
+    classDef ok fill:#F7F5EF,stroke:#55801C,stroke-width:2px,color:#0B1F44
+    classDef nok fill:#FDECEF,stroke:#BE2344,stroke-width:2px,color:#4A0A16
+    classDef akteur fill:#003E6E,stroke:#003E6E,color:#FFFFFF,font-weight:bold
+    class V,R ok
+    class F,T nok
+    class B akteur
