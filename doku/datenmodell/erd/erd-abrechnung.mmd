@@ -1,0 +1,70 @@
+erDiagram
+    KUNDE ||--o{ ZAHLUNGSMITTEL : "hinterlegt"
+    ZAHLUNGSART ||--o{ ZAHLUNGSMITTEL : "typisiert"
+    KUNDE ||--o{ RECHNUNG : "erhaelt"
+    RECHNUNG ||--|{ RECHNUNGSPOSITION : "besteht aus"
+    AUSLEIHE ||--o| RECHNUNGSPOSITION : "wird fakturiert als"
+    AUSLEIHE ||--o{ ENTGELTPOSITION : "wird abgerechnet in"
+    RECHNUNG ||--o{ ZAHLUNG : "wird beglichen durch"
+    ZAHLUNGSMITTEL ||--o{ ZAHLUNG : "belastet ueber"
+
+    ZAHLUNGSART {
+        bigint zahlungsart_id PK
+        text code UK "SEPA, KREDITKARTE, PAYPAL"
+        text bezeichnung
+    }
+    ZAHLUNGSMITTEL {
+        bigint zahlungsmittel_id PK
+        bigint kunde_id FK
+        bigint zahlungsart_id FK
+        text referenz_token "Token des PSP, nie Klartext"
+        text inhaber
+        date gueltig_bis
+        boolean ist_standard
+    }
+    RECHNUNG {
+        bigint rechnung_id PK
+        text rechnungsnummer UK
+        bigint kunde_id FK
+        integer periode_jahr "UK mit monat und kunde"
+        integer periode_monat
+        timestamptz erstellt_am
+        numeric betrag_netto
+        numeric ust_satz
+        numeric ust_betrag
+        numeric betrag_brutto
+        rechnung_status status
+    }
+    RECHNUNGSPOSITION {
+        bigint rechnungsposition_id PK
+        bigint rechnung_id FK
+        integer position_nr "UK mit rechnung_id"
+        bigint ausleihe_id FK
+        text beschreibung
+        numeric betrag
+    }
+    ZAHLUNG {
+        bigint zahlung_id PK
+        bigint rechnung_id FK
+        bigint zahlungsmittel_id FK
+        numeric betrag
+        timestamptz gebucht_am
+        zahlung_status status
+    }
+    AUSLEIHE {
+        bigint ausleihe_id PK
+        bigint kunde_id FK
+        timestamptz startzeit
+        timestamptz endzeit
+        ausleihe_status status
+    }
+    ENTGELTPOSITION {
+        bigint position_id PK
+        bigint ausleihe_id FK
+        bigint entgeltart_id FK
+        numeric betrag
+    }
+    KUNDE {
+        bigint kunde_id PK
+        text kundennummer UK
+    }

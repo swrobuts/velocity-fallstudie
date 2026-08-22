@@ -1,0 +1,46 @@
+erDiagram
+    FAHRRADTYP ||--o{ FAHRRADTYP_MERKMAL : "wird beworben mit"
+    FAHRRADTYP ||--o{ NUTZUNGSPREIS : "wird bepreist durch"
+
+    FAQ_EINTRAG {
+        bigint faq_id PK
+        text frage
+        text antwort
+        integer sortierung
+        boolean aktiv
+    }
+    NUTZUNGSSCHRITT {
+        bigint schritt_id PK
+        integer nummer UK
+        text titel
+        text beschreibung
+        text icon_code
+    }
+    KENNZAHL {
+        bigint kennzahl_id PK
+        text schluessel UK "z.B. stationen, oekostrom"
+        text anzeigewert "NULL wenn berechnet"
+        text label
+        integer sortierung
+        boolean ist_berechnet
+    }
+    FAHRRADTYP {
+        bigint typ_id PK
+        text typ_code UK
+        text bezeichnung
+        boolean hat_elektro
+    }
+    FAHRRADTYP_MERKMAL {
+        bigint merkmal_id PK
+        bigint typ_id FK
+        integer sortierung
+        text merkmal
+    }
+    NUTZUNGSPREIS {
+        bigint preis_id PK
+        bigint typ_id FK
+        daterange gueltigkeit
+        numeric startgebuehr
+        numeric preis_pro_minute
+        numeric tageshoechstpreis
+    }

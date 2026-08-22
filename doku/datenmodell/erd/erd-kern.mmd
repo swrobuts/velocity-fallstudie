@@ -1,0 +1,157 @@
+erDiagram
+    ADRESSE ||--o{ KUNDE : "Rechnungsadresse von"
+    ADRESSE ||--o{ STATION : "Standort von"
+    KUNDE ||--o{ MITGLIEDSCHAFT : "schliesst ab"
+    TARIF ||--o{ MITGLIEDSCHAFT : "liegt zugrunde"
+    TARIF ||--o{ TARIF_KONDITION : "gilt zeitraumweise mit"
+    MITGLIEDSCHAFT ||--o{ FREIMINUTEN_PERIODE : "fuehrt monatlich"
+    FAHRRADTYP ||--o{ FAHRRADTYP_MERKMAL : "wird beworben mit"
+    FAHRRADTYP ||--o{ NUTZUNGSPREIS : "wird bepreist durch"
+    FAHRRADTYP ||--o{ FAHRRADMODELL : "klassifiziert"
+    HERSTELLER ||--o{ FAHRRADMODELL : "produziert"
+    FAHRRADMODELL ||--o{ FAHRRAD : "ist Bauart von"
+    FAHRRAD ||--|| FAHRRAD_POSITION : "hat aktuelle"
+    STATION ||--o{ FAHRRAD_POSITION : "beherbergt"
+    KUNDE ||--o{ AUSLEIHE : "taetigt"
+    FAHRRAD ||--o{ AUSLEIHE : "wird genutzt in"
+    MITGLIEDSCHAFT ||--o{ AUSLEIHE : "bepreist"
+    STATION ||--o{ AUSLEIHE : "Startstation"
+    AUSLEIHE ||--o{ ENTGELTPOSITION : "wird abgerechnet in"
+    ENTGELTART ||--o{ ENTGELTPOSITION : "typisiert"
+    NUTZUNGSPREIS ||--o{ ENTGELTPOSITION : "belegt Preisfindung von"
+
+    ADRESSE {
+        bigint adresse_id PK
+        text strasse
+        text hausnummer
+        text plz
+        text ort
+        char land_code
+    }
+    KUNDE {
+        bigint kunde_id PK
+        text kundennummer UK
+        uuid auth_uid UK "FK auth.users"
+        text email UK
+        text vorname
+        text nachname
+        date geburtsdatum
+        bigint rechnungsadresse_id FK
+        kunde_status status
+        timestamptz registriert_am
+    }
+    TARIF {
+        bigint tarif_id PK
+        text tarif_code UK
+        text bezeichnung
+        tarifart art
+        text voraussetzung
+    }
+    TARIF_KONDITION {
+        bigint kondition_id PK
+        bigint tarif_id FK
+        daterange gueltigkeit "UK je Tarif, ueberschneidungsfrei"
+        numeric monatspreis
+        integer freiminuten_pro_monat
+        numeric rabatt_prozent
+    }
+    MITGLIEDSCHAFT {
+        bigint mitgliedschaft_id PK
+        bigint kunde_id FK
+        bigint tarif_id FK
+        daterange gueltigkeit "je Kunde ueberschneidungsfrei"
+    }
+    FREIMINUTEN_PERIODE {
+        bigint periode_id PK
+        bigint mitgliedschaft_id FK
+        integer jahr "UK mit monat"
+        integer monat
+        integer kontingent_minuten
+        integer verbraucht_minuten
+    }
+    STATION {
+        bigint station_id PK
+        text stationsnummer UK
+        text name
+        bigint adresse_id FK
+        numeric latitude
+        numeric longitude
+        integer kapazitaet
+        daterange betriebszeitraum
+    }
+    FAHRRADTYP {
+        bigint typ_id PK
+        text typ_code UK
+        text bezeichnung
+        text beschreibung
+        boolean hat_elektro
+        integer zuladung_kg
+    }
+    FAHRRADTYP_MERKMAL {
+        bigint merkmal_id PK
+        bigint typ_id FK
+        integer sortierung "UK mit typ_id"
+        text merkmal
+    }
+    HERSTELLER {
+        bigint hersteller_id PK
+        text name UK
+    }
+    FAHRRADMODELL {
+        bigint modell_id PK
+        bigint hersteller_id FK
+        bigint typ_id FK
+        text modellbezeichnung "UK mit hersteller_id"
+        integer baujahr
+    }
+    FAHRRAD {
+        bigint fahrrad_id PK
+        text rahmennummer UK
+        bigint modell_id FK
+        fahrrad_status status
+        date angeschafft_am
+        date ausgemustert_am
+    }
+    FAHRRAD_POSITION {
+        bigint fahrrad_id PK "zugleich FK"
+        bigint station_id FK "NULL = frei abgestellt"
+        numeric latitude
+        numeric longitude
+        smallint akkustand_prozent
+        timestamptz aktualisiert_am
+    }
+    NUTZUNGSPREIS {
+        bigint preis_id PK
+        bigint typ_id FK
+        daterange gueltigkeit "UK je Typ, ueberschneidungsfrei"
+        numeric startgebuehr
+        numeric preis_pro_minute
+        numeric tageshoechstpreis
+    }
+    AUSLEIHE {
+        bigint ausleihe_id PK
+        bigint kunde_id FK
+        bigint fahrrad_id FK
+        bigint mitgliedschaft_id FK
+        bigint start_station_id FK
+        timestamptz startzeit
+        bigint end_station_id FK
+        timestamptz endzeit
+        ausleihe_status status
+        integer dauer_minuten "GENERATED"
+    }
+    ENTGELTART {
+        bigint entgeltart_id PK
+        text code UK
+        text bezeichnung
+        smallint vorzeichen
+    }
+    ENTGELTPOSITION {
+        bigint position_id PK
+        bigint ausleihe_id FK
+        bigint entgeltart_id FK
+        bigint nutzungspreis_id FK
+        numeric menge
+        numeric einzelbetrag
+        numeric betrag
+    }

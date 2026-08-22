@@ -1,0 +1,158 @@
+erDiagram
+    ADRESSE ||--o{ LIEFERANT : "Sitz von"
+    LIEFERANT ||--o{ ARTIKEL : "liefert"
+    ARTIKELGRUPPE ||--o{ ARTIKEL : "gliedert"
+    LIEFERANT ||--o{ BESTELLUNG : "erhaelt"
+    BESTELLUNG ||--|{ BESTELLPOSITION : "besteht aus"
+    ARTIKEL ||--o{ BESTELLPOSITION : "wird bestellt als"
+    BESTELLUNG ||--o{ WARENEINGANG : "wird erfuellt durch"
+    WARENEINGANG ||--|{ LAGERBEWEGUNG : "bucht ein"
+    LAGER ||--o{ LAGERBEWEGUNG : "wird bebucht"
+    ARTIKEL ||--o{ LAGERBEWEGUNG : "bewegt sich als"
+    FAHRRAD ||--o{ SCHADENSMELDUNG : "betrifft"
+    KUNDE ||--o{ SCHADENSMELDUNG : "meldet"
+    SCHADENSMELDUNG ||--o| WARTUNGSAUFTRAG : "loest aus"
+    FAHRRAD ||--o{ WARTUNGSAUFTRAG : "wird instandgesetzt in"
+    MITARBEITER ||--o{ WARTUNGSAUFTRAG : "bearbeitet"
+    WARTUNGSAUFTRAG ||--o{ WARTUNGSPOSITION : "verbraucht"
+    ARTIKEL ||--o{ WARTUNGSPOSITION : "wird verbaut als"
+    WARTUNGSPOSITION ||--|| LAGERBEWEGUNG : "bucht aus"
+    ROLLE ||--o{ MITARBEITER : "qualifiziert"
+    MITARBEITER ||--o{ UMSETZUNGSAUFTRAG : "fuehrt aus"
+    STATION ||--o{ UMSETZUNGSAUFTRAG : "Quelle oder Ziel"
+    FAHRRAD ||--o{ FAHRRAD_EREIGNIS : "durchlaeuft"
+
+    LIEFERANT {
+        bigint lieferant_id PK
+        text lieferantennummer UK
+        text name
+        bigint adresse_id FK
+        text email
+    }
+    ARTIKELGRUPPE {
+        bigint artikelgruppe_id PK
+        text code UK
+        text bezeichnung
+        bigint uebergeordnet_id FK "Hierarchie"
+    }
+    ARTIKEL {
+        bigint artikel_id PK
+        text artikelnummer UK
+        text bezeichnung
+        bigint artikelgruppe_id FK
+        bigint lieferant_id FK
+        text mengeneinheit
+        numeric einkaufspreis
+        integer meldebestand
+    }
+    BESTELLUNG {
+        bigint bestellung_id PK
+        text bestellnummer UK
+        bigint lieferant_id FK
+        date bestellt_am
+        date liefertermin_zugesagt
+        bestellung_status status
+    }
+    BESTELLPOSITION {
+        bigint bestellposition_id PK
+        bigint bestellung_id FK
+        integer position_nr "UK mit bestellung_id"
+        bigint artikel_id FK
+        numeric menge_bestellt
+        numeric einzelpreis
+    }
+    WARENEINGANG {
+        bigint wareneingang_id PK
+        bigint bestellung_id FK
+        date eingegangen_am
+        text lieferscheinnummer
+    }
+    LAGER {
+        bigint lager_id PK
+        text code UK
+        text bezeichnung
+        bigint adresse_id FK
+    }
+    LAGERBEWEGUNG {
+        bigint bewegung_id PK
+        bigint artikel_id FK
+        bigint lager_id FK
+        bewegungsart art "ZUGANG, ABGANG, UMLAGERUNG, KORREKTUR"
+        numeric menge "vorzeichenbehaftet"
+        timestamptz gebucht_am
+        text belegreferenz
+    }
+    FAHRRAD {
+        bigint fahrrad_id PK
+        text rahmennummer UK
+        fahrrad_status status
+    }
+    FAHRRAD_EREIGNIS {
+        bigint ereignis_id PK
+        bigint fahrrad_id FK
+        ereignisart art
+        timestamptz eingetreten_am
+        text belegreferenz
+    }
+    SCHADENSMELDUNG {
+        bigint schadensmeldung_id PK
+        bigint fahrrad_id FK
+        bigint kunde_id FK "NULL bei interner Meldung"
+        timestamptz gemeldet_am
+        text beschreibung
+        schaden_schwere schwere
+    }
+    WARTUNGSAUFTRAG {
+        bigint wartungsauftrag_id PK
+        text auftragsnummer UK
+        bigint fahrrad_id FK
+        bigint schadensmeldung_id FK
+        bigint mitarbeiter_id FK
+        wartungsart art "INSPEKTION, REPARATUR"
+        timestamptz eroeffnet_am
+        timestamptz abgeschlossen_am
+        auftrag_status status
+    }
+    WARTUNGSPOSITION {
+        bigint wartungsposition_id PK
+        bigint wartungsauftrag_id FK
+        bigint artikel_id FK
+        bigint bewegung_id FK
+        numeric menge
+        numeric arbeitszeit_minuten
+    }
+    MITARBEITER {
+        bigint mitarbeiter_id PK
+        text personalnummer UK
+        text vorname
+        text nachname
+        bigint rolle_id FK
+        uuid auth_uid UK
+    }
+    ROLLE {
+        bigint rolle_id PK
+        text code UK
+        text bezeichnung
+    }
+    UMSETZUNGSAUFTRAG {
+        bigint umsetzungsauftrag_id PK
+        bigint von_station_id FK
+        bigint nach_station_id FK
+        bigint mitarbeiter_id FK
+        integer anzahl_raeder
+        timestamptz geplant_fuer
+        auftrag_status status
+    }
+    STATION {
+        bigint station_id PK
+        text name
+    }
+    KUNDE {
+        bigint kunde_id PK
+        text kundennummer UK
+    }
+    ADRESSE {
+        bigint adresse_id PK
+        text plz
+        text ort
+    }
