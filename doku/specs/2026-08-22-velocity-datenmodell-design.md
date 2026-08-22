@@ -383,10 +383,15 @@ laufen als *security definer* (PostgreSQL-Standard) und enthalten
 ausschließlich Spalten ohne Personenbezug. `GRANT SELECT` an `anon` und
 `authenticated`.
 
-**Persönliche Sichten.** `v_meine_ausleihe`, `v_meine_rechnung`,
-`v_mein_profil` werden mit `security_invoker = true` angelegt und
-stützen sich auf RLS-Policies, die über
-`kunde.auth_uid = auth.uid()` filtern. Nur so greift RLS tatsächlich.
+**Persönliche Sichten.** `v_meine_ausleihe` und `v_meine_rechnung`
+werden mit `security_invoker = true` angelegt und stützen sich auf die
+RLS-Policies oben. Nur so greift RLS tatsächlich.
+
+`v_mein_profil` ist die begründete Ausnahme: die Sicht verknüpft
+`adresse`, und ein Leserecht auf `adresse` für `authenticated` würde die
+Anschriften **aller** Kunden öffnen. Sie läuft deshalb mit
+Definer-Rechten und filtert selbst über `where kunde.auth_uid =
+auth.uid()`. `adresse` bekommt keine Policy und kein Leserecht.
 
 **Schreibzugriffe** ausschließlich über `SECURITY DEFINER`-Funktionen
 mit `SET search_path = velocity, pg_temp`:
@@ -444,17 +449,23 @@ Entwurfs, zugleich die Reihenfolge der Vorlesung.
 | 0006 | `bereich_e_abrechnung.sql` | Zahlungsart bis `zahlung` |
 | 0007 | `bereich_f_inhalte.sql` | FAQ, Nutzungsschritt, Kennzahl |
 | 0008 | `referenzdaten.sql` | `entgeltart`, `zahlungsart`, Tarife, Inhalte |
-| 0009 | `geschaeftslogik.sql` | `api_*`-Funktionen |
+| 0009 | `geschaeftslogik.sql` | `fn_*`-Fachlogik und `api_*`-Zugriffsschicht |
 | 0010 | `sichten.sql` | `v_*`-Sichten |
 | 0011 | `sicherheit.sql` | RLS, Policies, Grants |
 | 0012 | `dokumentation.sql` | `COMMENT ON`, Dictionary-Generator |
-| 0013 | `pruefungen.sql` | Prüfabfragen und Testfälle |
 
 Jede Datei ist idempotent und trägt einen Kopfkommentar mit Zweck,
 betroffenen Objekten und Rücknahme.
 
+Die Tests liegen **nicht** als Aufbauschritt, sondern als eigene
+pgTAP-Testdateien unter `db/tests/t0001_*.sql` bis `t0013_*.sql`. pgTAP
+1.3.3 ist auf der Instanz verfügbar; jede Testfunktion läuft in einer
+eigenen, danach zurückgerollten Transaktion, sodass Testdaten nicht im
+Bestand zurückbleiben. Angewandt werden sie über `db/test.py`.
+
 Verzeichnis `db/betrieb/` — nicht Teil des Lehrpfads:
-`uebernahme_altdaten.sql`, `altschema_absichern.sql`.
+`uebernahme_altdaten.sql`, `abgleichsbericht.sql`,
+`altschema_absichern.sql`, `demo_antipattern.sql`.
 
 ---
 
@@ -532,9 +543,10 @@ unter `src/`.
 4. Die Website funktioniert Ende-zu-Ende im Browser: Karte mit Stationen
    und Rädern, Tarifkarten aus der DB, FAQ aus der DB, Registrierung,
    Login, Ausleihe starten und beenden, Historie.
-5. Die Preisfindung ist durch Testfälle in `db/aufbau/0013` belegt —
-   mindestens: ohne Tarif, mit Freiminuten teilweise, mit Freiminuten
-   vollständig, mit Rabatt, mit Höchstpreis-Kappung.
+5. Die Preisfindung ist durch Testfälle in
+   `db/tests/t0009_preisfindung.sql` belegt — mindestens: ohne Tarif, mit
+   Freiminuten teilweise, mit Freiminuten vollständig, mit Rabatt, mit
+   Höchstpreis-Kappung und die Reihenfolge Rabatt vor Kappung.
 6. Alle Mermaid-Diagramme validieren gegen den Mermaid-Parser.
 7. Jede Tabelle und jede Spalte trägt einen `COMMENT`; das generierte
    Data Dictionary ist vollständig.
