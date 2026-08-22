@@ -125,6 +125,88 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ===== AUTH STATE LISTENER =====
     onAuthStateChange(updateUI);
 
+    // ===== INHALTE AUS DER DATENBANK =====
+    // Tarifkarten, FAQ, Nutzungsschritte und Kennzahlen standen frueher
+    // fest in index.html. Jetzt kommen sie aus den v_-Sichten.
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text ?? '';
+        return div.innerHTML;
+    }
+
+    function euro(betrag) {
+        return Number(betrag).toLocaleString('de-DE',
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Euro';
+    }
+
+    async function renderKennzahlen() {
+        const ziel = document.getElementById('stats-grid');
+        if (!ziel) return;
+        const zeilen = await fetchKennzahlen();
+        ziel.innerHTML = zeilen.map(k => `
+            <div class="stat-item">
+                <span class="stat-number">${escapeHtml(k.wert)}</span>
+                <span class="stat-label">${escapeHtml(k.label)}</span>
+            </div>`).join('');
+    }
+
+    async function renderNutzungsschritte() {
+        const ziel = document.getElementById('howto-grid');
+        if (!ziel) return;
+        const zeilen = await fetchNutzungsschritte();
+        ziel.innerHTML = zeilen.map(schritt => `
+            <div class="howto-card">
+                <div class="step-number">${schritt.nummer}</div>
+                <div class="icon-circle"><i class="fa-solid ${escapeHtml(schritt.icon_code)}"></i></div>
+                <h3>${escapeHtml(schritt.titel)}</h3>
+                <p>${escapeHtml(schritt.beschreibung)}</p>
+            </div>`).join('');
+    }
+
+    async function renderTarifkarten() {
+        const ziel = document.getElementById('pricing-grid');
+        if (!ziel) return;
+        const karten = await fetchTarifkarten();
+        ziel.innerHTML = karten.map((k, i) => `
+            <div class="price-card${i === 1 ? ' popular' : ''}">
+                ${i === 1 ? '<div class="badge-pop">Beliebteste Wahl</div>' : ''}
+                <div class="card-content">
+                    <div class="icon-header"><i class="fa-solid fa-bicycle"></i></div>
+                    <div class="header">${escapeHtml(k.bezeichnung)}</div>
+                    <div class="price">${euro(k.preis_30_minuten)} <small>/ 30 Min</small></div>
+                    <ul class="features-list">
+                        ${(k.merkmale || []).map(m =>
+                            `<li><i class="fa-solid fa-check"></i> ${escapeHtml(m)}</li>`).join('')}
+                    </ul>
+                </div>
+                <button class="${i === 1 ? 'btn-primary' : 'btn-outline'} full-width"
+                        onclick="document.getElementById('map-section').scrollIntoView()">
+                    Fahrt starten
+                </button>
+            </div>`).join('');
+    }
+
+    async function renderFaq() {
+        const ziel = document.getElementById('faq-grid');
+        if (!ziel) return;
+        const zeilen = await fetchFaq();
+        ziel.innerHTML = zeilen.map(f => `
+            <details>
+                <summary>${escapeHtml(f.frage)}</summary>
+                <div class="faq-content">${escapeHtml(f.antwort)}</div>
+            </details>`).join('');
+    }
+
+    async function renderInhalte() {
+        await Promise.all([
+            renderKennzahlen(),
+            renderNutzungsschritte(),
+            renderTarifkarten(),
+            renderFaq()
+        ]);
+    }
+
     // ===== DATEN LADEN =====
     async function loadData() {
         try {
@@ -139,7 +221,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // Stats aktualisieren
             document.getElementById("bike-counter").innerText = bikes.length;
-            document.getElementById("stat-stations").innerText = stations.length;
+            // Die Stationszahl kommt aus velocity.v_kennzahl und wird von
+            // renderKennzahlen gesetzt, nicht mehr hier.
 
             console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrraeder`);
             return true;
@@ -200,11 +283,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const checkboxes = document.querySelectorAll('.filter-option input');
 
     function mapBikeType(bike) {
-        // Mapping von DB-Typ zu Filter-Wert
-        const typeName = (bike.typ_name || '').toLowerCase();
-        if (typeName.includes('cargo') || typeName.includes('lasten')) return 'cargo';
-        if (bike.hat_elektro) return 'ebike';
-        return 'city';
+        // Die Sicht liefert einen sauberen Code; frueher wurde der
+        // Anzeigename per Textvergleich geraten.
+        switch (bike.typ_code) {
+            case 'EBIKE': return 'ebike';
+            case 'CARGO': return 'cargo';
+            default:      return 'city';
+        }
     }
 
     function updateMarkers() {
@@ -225,13 +310,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             let batteryHtml = "";
 
             // Simulierter Akkustand fuer E-Bikes (da nicht in DB)
-            const simulatedBattery = Math.floor(Math.random() * 100);
+            // Echter Wert aus der Sicht. NULL bei Raedern ohne Akku -
+            // das ist etwas anderes als ein leerer Akku.
+            const akkustand = bike.akkustand_prozent;
 
             if (bikeType === 'ebike') {
                 typeLabel = "E-Bike";
-                let batColor = simulatedBattery > 50 ? '#10B981' : simulatedBattery > 20 ? '#F59E0B' : '#EF4444';
+                let batColor = akkustand > 50 ? '#10B981' : akkustand > 20 ? '#F59E0B' : '#EF4444';
                 subIconHtml = `<i class="fa-solid fa-bolt marker-sub" style="color: ${batColor};"></i>`;
-                batteryHtml = `<div style="display:flex; justify-content:space-between; color:${batColor}; font-weight:600;"><span><i class="fa-solid fa-battery-half"></i> Akku:</span> <b>${simulatedBattery}%</b></div>`;
+                batteryHtml = akkustand === null || akkustand === undefined
+                    ? ''
+                    : `<div style="display:flex; justify-content:space-between; color:${batColor}; font-weight:600;"><span><i class="fa-solid fa-battery-half"></i> Akku:</span> <b>${akkustand}%</b></div>`;
             } else if (bikeType === 'cargo') {
                 typeLabel = "Cargo-Bike";
                 subIconHtml = `<i class="fa-solid fa-box marker-sub" style="color: #2563EB;"></i>`;
@@ -351,9 +440,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                 const rental = rentals[0];
                 activeRental = {
                     ausleihe_id: rental.ausleihe_id,
-                    fahrrad_id: rental.fahrrad?.fahrrad_id,
+                    rahmennummer: rental.rahmennummer,
                     startzeit: new Date(rental.startzeit),
-                    bikeInfo: rental.fahrrad?.fahrradtyp?.bezeichnung || 'Fahrrad'
+                    bikeInfo: rental.typ_bezeichnung || 'Fahrrad'
                 };
                 showRentalBanner();
             } else {
@@ -370,7 +459,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!activeRental) return;
 
         const bikeInfo = document.getElementById("rental-bike-info");
-        bikeInfo.textContent = `${activeRental.bikeInfo || 'Fahrrad'} #${activeRental.fahrrad_id}`;
+        bikeInfo.textContent = `${activeRental.bikeInfo || 'Fahrrad'} ${activeRental.rahmennummer || ''}`.trim();
 
         rentalBanner.style.display = "block";
         startRentalTimer();
@@ -423,12 +512,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             const result = await endRental(activeRental.ausleihe_id, endStation.station_id);
 
-            const kosten = result?.berechnete_kosten
-                ? `${parseFloat(result.berechnete_kosten).toFixed(2).replace('.', ',')} Euro`
+            const kosten = (result?.gesamtbetrag ?? null) !== null
+                ? euro(result.gesamtbetrag)
                 : '-';
 
             Toastify({
-                text: `Ausleihe beendet! Kosten: ${kosten}`,
+                text: `Ausleihe beendet! Dauer: ${result?.dauer_minuten ?? '-'} Min, Kosten: ${kosten}`,
                 duration: 6000,
                 gravity: "top",
                 position: "center",
@@ -452,6 +541,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // ===== INITIALISIERUNG =====
+    await renderInhalte();
     const dataLoaded = await loadData();
 
     if (dataLoaded) {
@@ -460,7 +550,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else {
         // Fallback: Zeige Fehlermeldung auf der Karte
         document.getElementById("bike-counter").innerText = "0";
-        document.getElementById("stat-stations").innerText = "0";
     }
 
 });

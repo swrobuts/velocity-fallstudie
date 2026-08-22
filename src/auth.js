@@ -7,9 +7,17 @@ let currentUser = null;
 let authStateListeners = [];
 
 // Auth State Change Handler registrieren
-supabaseClient.auth.onAuthStateChange((event, session) => {
+supabaseClient.auth.onAuthStateChange(async (event, session) => {
     currentUser = session?.user ?? null;
     console.log('Auth State Changed:', event, currentUser?.email);
+
+    // Kundensatz sicherstellen, bevor die Oberflaeche reagiert.
+    // Idempotent: legt nur an, was noch fehlt. Ersetzt den frueheren
+    // Trigger auf auth.users - ein Fremdschema fasst diese Anwendung
+    // nicht an.
+    if (currentUser) {
+        await ensureKunde();
+    }
 
     // Alle Listener benachrichtigen
     authStateListeners.forEach(listener => {
@@ -119,6 +127,7 @@ async function initAuth() {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
         currentUser = session.user;
+        await ensureKunde();
         authStateListeners.forEach(listener => listener(currentUser));
     }
 }

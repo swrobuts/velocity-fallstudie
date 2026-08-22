@@ -128,11 +128,8 @@
 </header>
 
 <section class="stats-bar">
-    <div class="container stats-grid">
-        <div class="stat-item"><span class="stat-number" id="stat-stations">-</span><span class="stat-label">Stationen</span></div>
-        <div class="stat-item"><span class="stat-number">24/7</span><span class="stat-label">Verfuegbarkeit</span></div>
-        <div class="stat-item"><span class="stat-number">100%</span><span class="stat-label">Oekostrom</span></div>
-        <div class="stat-item"><span class="stat-number">0 Euro</span><span class="stat-label">Anmeldegebuehr</span></div>
+    <div class="container stats-grid" id="stats-grid">
+        <!-- wird aus velocity.v_kennzahl geladen -->
     </div>
 </section>
 
@@ -142,25 +139,8 @@
             <h2>So einfach geht's</h2>
             <p>In drei Schritten zu deinem Ziel.</p>
         </div>
-        <div class="howto-grid">
-            <div class="howto-card">
-                <div class="step-number">1</div>
-                <div class="icon-circle"><i class="fa-solid fa-mobile-screen-button"></i></div>
-                <h3>App laden & Finden</h3>
-                <p>Registriere dich einmalig kostenlos. Finde in der Web-App oder nativen App das naechste freie Rad in deiner Naehe.</p>
-            </div>
-            <div class="howto-card">
-                <div class="step-number">2</div>
-                <div class="icon-circle"><i class="fa-solid fa-qrcode"></i></div>
-                <h3>Scannen & Losfahren</h3>
-                <p>Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss oeffnet sich automatisch.</p>
-            </div>
-            <div class="howto-card">
-                <div class="step-number">3</div>
-                <div class="icon-circle"><i class="fa-solid fa-square-parking"></i></div>
-                <h3>Parken & Beenden</h3>
-                <p>Stelle das Rad an einer Station (gratis) oder in der Flex-Zone (gegen Gebuehr) ab. Schloss schliessen, fertig.</p>
-            </div>
+        <div class="howto-grid" id="howto-grid">
+            <!-- wird aus velocity.v_nutzungsschritt geladen -->
         </div>
     </div>
 </section>
@@ -172,53 +152,7 @@
       <p>Transparent. Fair. Minutengenaue Abrechnung.</p>
     </div>
     <div class="pricing-grid" id="pricing-grid">
-      <!-- Wird dynamisch aus DB geladen -->
-      <div class="price-card">
-        <div class="card-content">
-            <div class="icon-header"><i class="fa-solid fa-bicycle"></i></div>
-            <div class="header">City-Bike</div>
-            <div class="price">1,00 Euro <small>/ 30 Min</small></div>
-            <ul class="features-list">
-              <li><i class="fa-solid fa-check"></i> 8-Gang Nabenschaltung</li>
-              <li><i class="fa-solid fa-check"></i> Pannensichere Reifen</li>
-              <li><i class="fa-solid fa-check"></i> Komfort-Sattel</li>
-            </ul>
-        </div>
-        <button class="btn-outline full-width" onclick="document.getElementById('map-section').scrollIntoView()">Fahrt starten</button>
-      </div>
-      <div class="price-card popular">
-        <div class="badge-pop">Beliebteste Wahl</div>
-        <div class="card-content">
-            <div class="icon-header" style="position:relative; display:inline-block;">
-                <i class="fa-solid fa-bicycle"></i>
-                <i class="fa-solid fa-bolt" style="position:absolute; top:0; right:-10px; font-size:0.5em; color:#D11231;"></i>
-            </div>
-            <div class="header">E-Bike Sport</div>
-            <div class="price">2,00 Euro <small>/ 30 Min</small></div>
-            <ul class="features-list">
-              <li><i class="fa-solid fa-check"></i> <strong>Bosch Performance CX</strong></li>
-              <li><i class="fa-solid fa-check"></i> Bis 25 km/h Unterstuetzung</li>
-              <li><i class="fa-solid fa-check"></i> Ideal fuers Hubland</li>
-            </ul>
-        </div>
-        <button class="btn-primary full-width" onclick="document.getElementById('map-section').scrollIntoView()">E-Bike waehlen</button>
-      </div>
-      <div class="price-card">
-        <div class="card-content">
-            <div class="icon-header" style="position:relative; display:inline-block;">
-                <i class="fa-solid fa-bicycle"></i>
-                <i class="fa-solid fa-box" style="position:absolute; top:0; right:-12px; font-size:0.5em; color:#2563EB;"></i>
-            </div>
-            <div class="header">E-Cargo Loader</div>
-            <div class="price">3,00 Euro <small>/ 30 Min</small></div>
-            <ul class="features-list">
-              <li><i class="fa-solid fa-check"></i> Grosse Transportbox (100kg)</li>
-              <li><i class="fa-solid fa-check"></i> Starker E-Motor</li>
-              <li><i class="fa-solid fa-check"></i> Sitzbank fuer 2 Kinder</li>
-            </ul>
-         </div>
-        <button class="btn-outline full-width" onclick="document.getElementById('map-section').scrollIntoView()">Lastenrad buchen</button>
-      </div>
+      <!-- wird aus velocity.v_tarifkarte geladen -->
     </div>
   </div>
 </section>
@@ -252,23 +186,8 @@
 <section id="faq" class="faq-section">
     <div class="container">
         <div class="section-header"><h2>Haeufige Fragen</h2><p>Alles was du wissen musst.</p></div>
-        <div class="faq-grid">
-            <details>
-                <summary>Wie kann ich bezahlen?</summary>
-                <div class="faq-content">Wir akzeptieren PayPal, Kreditkarte und SEPA-Lastschrift. Die Abrechnung erfolgt automatisch.</div>
-            </details>
-            <details>
-                <summary>Darf ich das Rad kurz parken?</summary>
-                <div class="faq-content">Ja, absolut! Nutze in der App den "Parkmodus". Die Miete laeuft weiter, das Schloss verriegelt.</div>
-            </details>
-            <details>
-                <summary>Gibt es Rabatte fuer Studierende?</summary>
-                <div class="faq-content">Ja! Registriere dich einfach mit deiner <strong>@uni-wuerzburg.de</strong> Adresse fuer den Campus-Tarif.</div>
-            </details>
-            <details>
-                <summary>Was passiert bei einem Defekt?</summary>
-                <div class="faq-content">Melde den Schaden ueber die App. Wir beenden deine Miete sofort kostenfrei.</div>
-            </details>
+        <div class="faq-grid" id="faq-grid">
+            <!-- wird aus velocity.v_faq geladen -->
         </div>
     </div>
 </section>
