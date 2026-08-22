@@ -18,21 +18,29 @@ begin
 end;
 $$;
 
+-- Die Tests nutzen bewusst einen eigenen Schluesselbereich (Nummern ab 90,
+-- Schluessel mit Praefix test_): die Referenzdaten aus Schritt 0008 belegen
+-- die fachlichen Schluessel 1 bis 3 bzw. 'stationen' und Folgende.
 create or replace function velocity_test.test_f_regeln()
 returns setof text language plpgsql as $$
 begin
   insert into velocity.nutzungsschritt (nummer, titel, beschreibung)
-       values (1, 'Finden', 'Freies Rad in der Karte suchen');
+       values (91, 'Finden', 'Freies Rad in der Karte suchen');
   return next throws_ok(
     $sql$insert into velocity.nutzungsschritt (nummer, titel, beschreibung)
-         values (1, 'Doppelt', 'Zweiter Schritt mit Nummer 1')$sql$,
+         values (91, 'Doppelt', 'Zweiter Schritt mit derselben Nummer')$sql$,
     '23505', null, 'Schrittnummern sind eindeutig');
 
   insert into velocity.kennzahl (schluessel, label, ist_berechnet)
-       values ('stationen', 'Stationen', true);
+       values ('test_berechnet', 'Testkennzahl', true);
   return next throws_ok(
     $sql$insert into velocity.kennzahl (schluessel, label, anzeigewert, ist_berechnet)
-         values ('oekostrom', 'Oekostrom', null, false)$sql$,
+         values ('test_ohne_wert', 'Ohne Wert', null, false)$sql$,
     '23514', null, 'Nicht berechnete Kennzahl braucht einen Anzeigewert');
+
+  return next throws_ok(
+    $sql$insert into velocity.kennzahl (schluessel, label, anzeigewert, ist_berechnet)
+         values ('test_berechnet', 'Doppelt', 'x', false)$sql$,
+    '23505', null, 'Kennzahlschluessel sind eindeutig');
 end;
 $$;
