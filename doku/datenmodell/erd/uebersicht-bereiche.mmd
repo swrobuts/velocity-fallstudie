@@ -1,0 +1,36 @@
+flowchart TB
+    subgraph P1["PHASE 1 - Website"]
+        direction TB
+        A["A - Geschaeftspartner"]
+        B["B - Netz und Flotte"]
+        C["C - Tarif und Preis"]
+        D["D - Nutzung"]
+        E["E - Abrechnung"]
+        F["F - Redaktionsinhalte"]
+    end
+    subgraph P2["PHASE 2 - Warenwirtschaft"]
+        direction TB
+        G["G - Beschaffung"]
+        H["H - Lager"]
+        I["I - Instandhaltung"]
+        J["J - Personal und Logistik"]
+    end
+
+    A --> C
+    A --> B
+    B --> D
+    C --> D
+    D --> E
+    A --> E
+    B --> F
+    B --> I
+    G --> H
+    H --> I
+    J --> I
+    J --> G
+    B --> J
+
+    classDef ph1 fill:#E8F0FE,stroke:#2563EB,stroke-width:1px,color:#0B1F44
+    classDef ph2 fill:#FDECEF,stroke:#D11231,stroke-width:1px,color:#4A0A16
+    class A,B,C,D,E,F ph1
+    class G,H,I,J ph2
