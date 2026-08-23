@@ -111,6 +111,18 @@ else
   grep -A2 '^FEHLER' /tmp/abnahme-mmd.log | sed 's/^/     /'
 fi
 
+# ------------------------------ 7b Kardinalitaeten gegen den Katalog
+# mermaid_check prueft die Syntax. Das sagt nichts darueber, ob ein
+# Diagramm die Wahrheit sagt: achtzehn Beziehungen behaupteten einmal
+# Pflicht, wo der Fremdschluessel NULL zulaesst.
+schritt "Kardinalitaeten der Diagramme"
+if python3 tools/erd_check.py >/tmp/abnahme-erd.log 2>&1; then
+  ergebnis 0 "$(tail -1 /tmp/abnahme-erd.log)"
+else
+  ergebnis 1 "Diagramm widerspricht dem Systemkatalog"
+  grep -A3 '^FEHLER' /tmp/abnahme-erd.log | head -20 | sed 's/^/     /'
+fi
+
 # --------------------------------------------------------- 8 Website
 schritt "Website spricht nur Sichten und api-Funktionen"
 verstoss=$(grep -oE "\.from\('[a-z_]+'\)" src/supabase.js | grep -v "'v_" || true)

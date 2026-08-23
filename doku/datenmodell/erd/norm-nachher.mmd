@@ -1,12 +1,12 @@
 erDiagram
-    ADRESSE       ||--o{ KUNDE           : "Anschrift von"
+    ADRESSE       |o--o{ KUNDE           : "Anschrift von"
     KUNDE         ||--o{ AUSLEIHE        : "tätigt"
     FAHRRADTYP    ||--o{ FAHRRADMODELL   : "klassifiziert"
     FAHRRADMODELL ||--o{ FAHRRAD         : "ist Bauart von"
     FAHRRAD       ||--o{ AUSLEIHE        : "wird genutzt in"
     FAHRRADTYP    ||--o{ NUTZUNGSPREIS   : "wird bepreist durch"
-    AUSLEIHE      ||--|{ ENTGELTPOSITION : "wird abgerechnet in"
-    NUTZUNGSPREIS ||--o{ ENTGELTPOSITION : "belegt"
+    AUSLEIHE      ||--o{ ENTGELTPOSITION : "wird abgerechnet in"
+    NUTZUNGSPREIS |o--o{ ENTGELTPOSITION : "belegt"
 
     ADRESSE         { bigint adresse_id PK }
     KUNDE           { bigint kunde_id PK }

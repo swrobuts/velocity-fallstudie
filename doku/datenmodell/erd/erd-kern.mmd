@@ -1,5 +1,5 @@
 erDiagram
-    ADRESSE ||--o{ KUNDE : "Rechnungsadresse von"
+    ADRESSE |o--o{ KUNDE : "Rechnungsadresse von"
     ADRESSE ||--o{ STATION : "Standort von"
     KUNDE ||--o{ MITGLIEDSCHAFT : "schliesst ab"
     TARIF ||--o{ MITGLIEDSCHAFT : "liegt zugrunde"
@@ -11,14 +11,15 @@ erDiagram
     HERSTELLER ||--o{ FAHRRADMODELL : "produziert"
     FAHRRADMODELL ||--o{ FAHRRAD : "ist Bauart von"
     FAHRRAD ||--|| FAHRRAD_POSITION : "hat aktuelle"
-    STATION ||--o{ FAHRRAD_POSITION : "beherbergt"
+    STATION |o--o{ FAHRRAD_POSITION : "beherbergt"
     KUNDE ||--o{ AUSLEIHE : "taetigt"
     FAHRRAD ||--o{ AUSLEIHE : "wird genutzt in"
-    MITGLIEDSCHAFT ||--o{ AUSLEIHE : "bepreist"
-    STATION ||--o{ AUSLEIHE : "Startstation"
+    MITGLIEDSCHAFT |o--o{ AUSLEIHE : "bepreist"
+    STATION |o--o{ AUSLEIHE : "Startstation"
+    STATION |o--o{ AUSLEIHE : "Rückgabestation"
     AUSLEIHE ||--o{ ENTGELTPOSITION : "wird abgerechnet in"
     ENTGELTART ||--o{ ENTGELTPOSITION : "typisiert"
-    NUTZUNGSPREIS ||--o{ ENTGELTPOSITION : "belegt Preisfindung von"
+    NUTZUNGSPREIS |o--o{ ENTGELTPOSITION : "belegt Preisfindung von"
 
     ADRESSE {
         bigint adresse_id PK

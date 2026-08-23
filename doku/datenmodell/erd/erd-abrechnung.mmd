@@ -3,10 +3,10 @@ erDiagram
     ZAHLUNGSART ||--o{ ZAHLUNGSMITTEL : "typisiert"
     KUNDE ||--o{ RECHNUNG : "erhaelt"
     RECHNUNG ||--|{ RECHNUNGSPOSITION : "besteht aus"
-    AUSLEIHE ||--o| RECHNUNGSPOSITION : "wird fakturiert als"
+    AUSLEIHE |o--o| RECHNUNGSPOSITION : "wird fakturiert als"
     AUSLEIHE ||--o{ ENTGELTPOSITION : "wird abgerechnet in"
     RECHNUNG ||--o{ ZAHLUNG : "wird beglichen durch"
-    ZAHLUNGSMITTEL ||--o{ ZAHLUNG : "belastet ueber"
+    ZAHLUNGSMITTEL |o--o{ ZAHLUNG : "belastet ueber"
 
     ZAHLUNGSART {
         bigint zahlungsart_id PK

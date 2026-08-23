@@ -3,9 +3,9 @@ erDiagram
     ZAHLUNGSART    ||--o{ ZAHLUNGSMITTEL    : "typisiert"
     KUNDE          ||--o{ RECHNUNG          : "erhält"
     RECHNUNG       ||--|{ RECHNUNGSPOSITION : "besteht aus"
-    AUSLEIHE       ||--o| RECHNUNGSPOSITION : "wird fakturiert als"
+    AUSLEIHE       |o--o| RECHNUNGSPOSITION : "wird fakturiert als"
     RECHNUNG       ||--o{ ZAHLUNG           : "wird beglichen durch"
-    ZAHLUNGSMITTEL ||--o{ ZAHLUNG           : "belastet über"
+    ZAHLUNGSMITTEL |o--o{ ZAHLUNG           : "belastet über"
 
     ZAHLUNGSMITTEL {
         bigint  zahlungsmittel_id PK

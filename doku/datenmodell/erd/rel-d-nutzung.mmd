@@ -1,11 +1,12 @@
 erDiagram
     KUNDE          ||--o{ AUSLEIHE        : "tätigt"
     FAHRRAD        ||--o{ AUSLEIHE        : "wird genutzt in"
-    MITGLIEDSCHAFT ||--o{ AUSLEIHE        : "bepreist"
-    STATION        ||--o{ AUSLEIHE        : "Start und Ziel"
-    AUSLEIHE       ||--|{ ENTGELTPOSITION : "wird abgerechnet in"
+    MITGLIEDSCHAFT |o--o{ AUSLEIHE        : "bepreist"
+    STATION        |o--o{ AUSLEIHE        : "Startstation"
+    STATION        |o--o{ AUSLEIHE        : "Rückgabestation"
+    AUSLEIHE       ||--o{ ENTGELTPOSITION : "wird abgerechnet in"
     ENTGELTART     ||--o{ ENTGELTPOSITION : "typisiert"
-    NUTZUNGSPREIS  ||--o{ ENTGELTPOSITION : "belegt die Preisfindung"
+    NUTZUNGSPREIS  |o--o{ ENTGELTPOSITION : "belegt die Preisfindung"
 
     AUSLEIHE {
         bigint      ausleihe_id       PK

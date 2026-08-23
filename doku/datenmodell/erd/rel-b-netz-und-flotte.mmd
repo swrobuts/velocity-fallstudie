@@ -4,7 +4,7 @@ erDiagram
     HERSTELLER    ||--o{ FAHRRADMODELL    : "produziert"
     FAHRRADMODELL ||--o{ FAHRRAD          : "ist Bauart von"
     FAHRRAD       ||--|| FAHRRAD_POSITION : "hat genau eine"
-    STATION       ||--o{ FAHRRAD_POSITION : "beherbergt"
+    STATION       |o--o{ FAHRRAD_POSITION : "beherbergt"
 
     STATION {
         bigint    station_id     PK
