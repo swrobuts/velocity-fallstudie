@@ -194,6 +194,22 @@ Produzent eines Fahrradmodells.
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
+## `hoehenmarke` (Tabelle)
+
+Markante Hoehen rund um Wuerzburg als Bezugspunkte der Hoehengrafik. Keine Stationen, aber Redaktionsinhalt - deshalb in der Datenbank und nicht im Frontend.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `marke_id` | `bigint` | nein |  | Surrogatschlüssel. |
+| `name` | `text` | nein |  | Name der Höhe, zugleich Fachschlüssel. |
+| `hoehe_m` | `integer` | nein |  | Höhe in Metern, bestimmt wie station.hoehe_m gegen zwei Geländemodelle und gemittelt. Genommen wurde das Maximum eines Rasters um den Ort - der Gipfel, nicht ein Punkt am Hang. |
+| `latitude` | `numeric(9,6)` | ja |  | Breitengrad des gemessenen Punktes. |
+| `longitude` | `numeric(9,6)` | ja |  | Längengrad des gemessenen Punktes. |
+| `quelle` | `text` | nein |  | Herkunft des Höhenwerts, für die Bildunterschrift. |
+| `sortierung` | `integer` | nein |  | Reihenfolge in der Grafik, absteigend nach Höhe. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
 ## `kennzahl` (Tabelle)
 
 Kennzahl der Kopfleiste. Entweder mit festem Anzeigewert oder berechnet.
@@ -440,6 +456,19 @@ Erzeugt das Data Dictionary aus dem Systemkatalog. Grundlage für doku/datenmode
 | `frage` | `text` | ja |  | Die Frage. |
 | `antwort` | `text` | ja |  | Die Antwort. |
 | `sortierung` | `integer` | ja |  | Reihenfolge auf der Seite. |
+
+## `v_hoehenmarke` (Sicht)
+
+Öffentliche Bezugshöhen für die Höhengrafik.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `marke_id` | `bigint` | ja |  | Schlüssel der Höhenmarke. |
+| `name` | `text` | ja |  | Name der Höhe. |
+| `hoehe_m` | `integer` | ja |  | Höhe in Metern. Siehe hoehenmarke.hoehe_m zur Genauigkeit. |
+| `latitude` | `numeric(9,6)` | ja |  | Breitengrad. |
+| `longitude` | `numeric(9,6)` | ja |  | Längengrad. |
+| `quelle` | `text` | ja |  | Herkunft des Höhenwerts. |
 
 ## `v_kennzahl` (Sicht)
 

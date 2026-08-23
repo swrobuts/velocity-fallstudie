@@ -35,6 +35,10 @@ async function fetchAvailableBikes() {
     return ladeListe('v_verfuegbares_fahrrad');
 }
 
+async function fetchHoehenmarken() {
+    return ladeListe('v_hoehenmarke');
+}
+
 async function fetchTarifkarten() {
     return ladeListe('v_tarifkarte', '*', (q) => q.order('preis_pro_minute'));
 }

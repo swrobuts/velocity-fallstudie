@@ -154,7 +154,8 @@ grant select on velocity.v_station,
                 velocity.v_tarif,
                 velocity.v_faq,
                 velocity.v_nutzungsschritt,
-                velocity.v_kennzahl
+                velocity.v_kennzahl,
+                velocity.v_hoehenmarke
   to anon, authenticated;
 
 grant select on velocity.v_meine_ausleihe,

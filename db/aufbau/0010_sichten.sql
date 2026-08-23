@@ -37,6 +37,12 @@ select s.station_id,
           a.strasse, a.hausnummer, a.plz, a.ort,
           s.latitude, s.longitude, s.hoehe_m, s.kapazitaet;
 
+drop view if exists velocity.v_hoehenmarke;
+create view velocity.v_hoehenmarke as
+select marke_id, name, hoehe_m, latitude, longitude, quelle
+  from velocity.hoehenmarke
+ order by sortierung;
+
 drop view if exists velocity.v_verfuegbares_fahrrad;
 create view velocity.v_verfuegbares_fahrrad as
 select f.fahrrad_id,

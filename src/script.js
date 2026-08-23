@@ -154,33 +154,34 @@ document.addEventListener("DOMContentLoaded", async () => {
        Er ist kein Streckenprofil und behauptet keinen Weg - er zeigt, wie
        flach die Stadt am Fluss liegt und wie steil es zum Campus geht.
        ================================================================= */
-    const HS = { b: 1240, h: 340, l: 74, r: 1108, o: 46, u: 250 };
+    const HS = { b: 1240, h: 400, l: 74, r: 1108, o: 46, u: 300 };
 
-    function hoehenspiegelZeichnen(stationen) {
+    let hoehenMarken = [];      // aus velocity.v_hoehenmarke
+    let hoehenStationen = [];   // die Wuerzburger Stationen, nach Hoehe
+    let hoehenAuswahl = null;   // station_id, vom Kartenklick gesetzt
+
+    function hoehenspiegelZeichnen() {
         const ziel = document.getElementById('profil-bild');
         if (!ziel) return;
 
-        const orte = stationen
-            .filter(s => s.ort === 'Würzburg' && Number.isFinite(s.hoehe_m))
-            .sort((a, b) => a.hoehe_m - b.hoehe_m);
+        const orte = hoehenStationen;
         if (orte.length < 2) { ziel.innerHTML = ''; return; }
 
-        const hMin = orte[0].hoehe_m, hMax = orte[orte.length - 1].hoehe_m;
+        const hMin = orte[0].hoehe_m;
+        const hMaxStation = orte[orte.length - 1].hoehe_m;
+        // Nur Hoehen ZEIGEN, die ueber dem Netz liegen. Der Campus Hubland
+        // ist selbst eine Station - als Linie waere er eine Dopplung.
+        // Im Satz unten kommt er trotzdem vor.
+        const linien = hoehenMarken.filter(m => m.hoehe_m > hMaxStation + 2);
+        const hMax = Math.max(hMaxStation, ...linien.map(m => m.hoehe_m));
         const spanne = Math.max(hMax - hMin, 1);
-        // Etwas Luft ueber und unter den Randwerten, sonst kleben die
-        // Punkte an der Rahmenkante.
-        const von = hMin - spanne * 0.10, bis = hMax + spanne * 0.10;
+        const von = hMin - spanne * 0.08, bis = hMax + spanne * 0.08;
         const y = (h) => HS.o + (bis - h) / (bis - von) * (HS.u - HS.o);
         const x = (i) => orte.length === 1 ? HS.l
                        : HS.l + i * (HS.r - HS.l) / (orte.length - 1);
 
         const punkte = orte.map((s, i) => ({ s, x: x(i), y: y(s.hoehe_m) }));
-        // Die obere Bildhaelfte bleibt leer, weil fast alle Stationen unten
-        // am Fluss liegen. Diese Leere ist die Aussage - also spricht sie
-        // sie aus, mit Zahlen aus denselben Daten.
-        const talZahl = orte.filter(s => s.hoehe_m <= hMin + 15).length;
 
-        // Weicher Kurvenzug durch die Punkte (Catmull-Rom als Bezier).
         let d = `M${punkte[0].x.toFixed(1)} ${punkte[0].y.toFixed(1)}`;
         for (let i = 0; i < punkte.length - 1; i++) {
             const p0 = punkte[i - 1] || punkte[i], p1 = punkte[i];
@@ -191,32 +192,60 @@ document.addEventListener("DOMContentLoaded", async () => {
                + ` ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
         }
 
-        const marken = punkte.map(({ s, x, y }) => {
+        // Bezugshoehen als gestrichelte Linien quer durch das Bild.
+        // Die Beschriftungen werden waagerecht versetzt. Zwei Hoehen, die
+        // nur wenige Meter auseinanderliegen, haetten sonst Etiketten
+        // uebereinander.
+        const marken = linien.map((mk, i) => `
+      <g class="hm">
+        <line x1="${HS.l}" y1="${y(mk.hoehe_m).toFixed(1)}"
+              x2="${HS.r + 22}" y2="${y(mk.hoehe_m).toFixed(1)}"/>
+        <text x="${(HS.l + i * 250).toFixed(0)}" y="${(y(mk.hoehe_m) - 8).toFixed(1)}"
+              >${escapeHtml(mk.name)} · ${mk.hoehe_m} m</text>
+      </g>`).join('');
+
+        const gewaehlt = punkte.find(p => p.s.station_id === hoehenAuswahl);
+
+        const stationsmarken = punkte.map(({ s, x, y: py }) => {
             const frei = s.verfuegbare_raeder || 0;
             const voll = Math.max(s.kapazitaet || 1, 1);
-            const anteil = Math.min(frei / voll, 1);
-            // Flaechentreu: der Radius waechst mit der Wurzel der Anzahl,
-            // sonst uebertreibt die Kreisflaeche den Unterschied.
             const rad = 5 + Math.sqrt(frei) * 1.15;
+            const ist = s.station_id === hoehenAuswahl;
             return `
-      <g class="hs-station" tabindex="0" role="listitem"
-         aria-label="${escapeHtml(s.name)}, ${s.hoehe_m} Meter, ${frei} von ${voll} Rädern frei">
-        <line class="hs-lot" x1="${x.toFixed(1)}" y1="${y.toFixed(1)}"
+      <g class="hs-station${ist ? ' ist-gewaehlt' : ''}" tabindex="0" role="listitem"
+         aria-label="${escapeHtml(s.name)}, ${s.hoehe_m} Meter, ${frei} Räder frei">
+        <line class="hs-lot" x1="${x.toFixed(1)}" y1="${py.toFixed(1)}"
               x2="${x.toFixed(1)}" y2="${HS.u}"/>
-        <circle class="hs-ring" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rad.toFixed(1)}"/>
-        <circle class="hs-kern" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}"
-                r="${(rad * anteil).toFixed(1)}"/>
-        <text class="hs-zahl" x="${x.toFixed(1)}" y="${(y - rad - 8).toFixed(1)}">${frei}</text>
+        <circle class="hs-ring" cx="${x.toFixed(1)}" cy="${py.toFixed(1)}" r="${rad.toFixed(1)}"/>
+        <circle class="hs-kern" cx="${x.toFixed(1)}" cy="${py.toFixed(1)}"
+                r="${(rad * Math.min(frei / voll, 1)).toFixed(1)}"/>
+        <text class="hs-zahl" x="${x.toFixed(1)}" y="${(py - rad - 8).toFixed(1)}">${frei}</text>
         <text class="hs-name" transform="translate(${x.toFixed(1)} ${HS.u + 14}) rotate(-42)"
               >${escapeHtml(s.name)}</text>
-        <title>${escapeHtml(s.name)} · ${s.hoehe_m} m · ${frei} von ${voll} frei</title>
+        <title>${escapeHtml(s.name)} · ${s.hoehe_m} m · ${frei} Räder frei</title>
       </g>`;
         }).join('');
 
-        const yTief = y(hMin), yHoch = y(hMax), xMass = HS.r + 34;
+        // Der Satz im Bild: ohne Auswahl die Spreizung, mit Auswahl der
+        // Abstand von dort zu den Bezugshoehen.
+        let satz1, satz2;
+        if (gewaehlt) {
+            const abstaende = hoehenMarken
+                .map(mk => `${mk.name} +${mk.hoehe_m - gewaehlt.s.hoehe_m} m`)
+                .join(' · ');
+            satz1 = `Ab ${gewaehlt.s.name}, ${gewaehlt.s.hoehe_m} m.`;
+            satz2 = abstaende;
+        } else {
+            const tal = orte.filter(o => o.hoehe_m <= hMin + 15).length;
+            satz1 = `${tal} Stationen liegen unten am Fluss.`;
+            const hoechste = hoehenMarken.reduce((a, b) => (b.hoehe_m > a.hoehe_m ? b : a),
+                                                 hoehenMarken[0] || { name: '—', hoehe_m: hMin });
+            satz2 = `Bis zur ${hoechste.name} sind es ${hoechste.hoehe_m - hMin} Höhenmeter.`;
+        }
+
         ziel.innerHTML = `
     <svg class="profil-svg" viewBox="0 0 ${HS.b} ${HS.h}" role="list"
-         aria-label="Würzburger Stationen nach Höhenlage, mit der Zahl der gerade freien Räder">
+         aria-label="Würzburger Stationen nach Höhenlage, mit den markanten Höhen der Stadt">
       <defs>
         <linearGradient id="hang" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%"   stop-color="var(--red)" stop-opacity=".15"/>
@@ -224,34 +253,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         </linearGradient>
       </defs>
 
-      <g class="p-raster">
-        <line x1="${HS.l}" y1="${yTief.toFixed(1)}" x2="${HS.r}" y2="${yTief.toFixed(1)}"/>
-        <line x1="${HS.l}" y1="${yHoch.toFixed(1)}" x2="${HS.r}" y2="${yHoch.toFixed(1)}"/>
-        <text x="${HS.l - 10}" y="${(yTief + 3.8).toFixed(1)}">${hMin} m</text>
-        <text x="${HS.l - 10}" y="${(yHoch + 3.8).toFixed(1)}">${hMax} m</text>
-      </g>
+      ${marken}
 
-      <text class="hs-satz" x="${HS.l}" y="106">${talZahl} Stationen liegen unten am Fluss.</text>
-      <text class="hs-satz hs-satz-2" x="${HS.l}" y="140">Bis ${escapeHtml(orte[orte.length - 1].name)} sind es ${hMax - hMin} Höhenmeter.</text>
+      <text class="hs-satz" x="${HS.l}" y="${HS.u - 92}">${escapeHtml(satz1)}</text>
+      <text class="hs-satz hs-satz-2" x="${HS.l}" y="${HS.u - 62}">${escapeHtml(satz2)}</text>
 
       <path class="p-flaeche" d="${d} L${HS.r} ${HS.u} L${HS.l} ${HS.u} Z"/>
       <path class="p-linie"   d="${d}"/>
       <line class="p-grundlinie" x1="${HS.l}" y1="${HS.u}" x2="${HS.r}" y2="${HS.u}"/>
-      ${marken}
-
-      <g class="p-mass">
-        <line class="p-pfeil" x1="${xMass}" y1="${yHoch.toFixed(1)}"
-              x2="${xMass}" y2="${yTief.toFixed(1)}"/>
-        <path class="p-spitze" d="M${xMass - 4} ${(yHoch + 7).toFixed(1)}
-              L${xMass} ${yHoch.toFixed(1)} L${xMass + 4} ${(yHoch + 7).toFixed(1)} Z"/>
-        <path class="p-spitze" d="M${xMass - 4} ${(yTief - 7).toFixed(1)}
-              L${xMass} ${yTief.toFixed(1)} L${xMass + 4} ${(yTief - 7).toFixed(1)} Z"/>
-        <text class="p-mass-text" x="${xMass + 13}"
-              y="${((yHoch + yTief) / 2 - 2).toFixed(1)}">${hMax - hMin}</text>
-        <text class="p-mass-text p-klein" x="${xMass + 13}"
-              y="${((yHoch + yTief) / 2 + 13).toFixed(1)}">Höhenmeter</text>
-      </g>
+      ${stationsmarken}
     </svg>`;
+    }
+
+    /* Wird vom Kartenpopover aufgerufen: die Grafik zeigt dann, wie hoch
+       diese Station gegenueber den markanten Hoehen der Stadt liegt. */
+    function hoehenspiegelWaehlen(stationId) {
+        hoehenAuswahl = stationId;
+        hoehenspiegelZeichnen();
     }
 
     async function renderKennzahlen() {
@@ -318,80 +336,100 @@ document.addEventListener("DOMContentLoaded", async () => {
             </details>`).join('');
     }
 
-    // ===== FAHRPREISZAEHLER =====
-    // Rechnet mit denselben Regeln wie die Datenbank: angefangene Minuten
-    // werden aufgerundet (Geschaeftsregel GR6), der Betrag ist auf den
-    // Tageshoechstpreis gedeckelt. Die Saetze kommen aus v_tarifkarte,
-    // sind also nicht im Frontend hinterlegt.
-    let zaehlerTarife = [];
-    let zaehlerAktiv = 0;
-    const zaehlerStart = Date.now();
+    /* =================================================================
+       PREISRECHNER
 
-    function zaehlerZeichnen() {
-        const wert   = document.getElementById('meter-value');
-        const detail = document.getElementById('meter-detail');
-        const uhr    = document.getElementById('meter-clock');
-        if (!wert || zaehlerTarife.length === 0) return;
+       Vorher lief hier eine Uhr und der Betrag stieg von selbst. Das
+       war huebsch, aber niemand konnte daran ablesen, was eine
+       bestimmte Fahrt kostet. Jetzt gibt man die Fahrzeit ein.
 
-        const t = zaehlerTarife[zaehlerAktiv];
-        const sekunden = Math.floor((Date.now() - zaehlerStart) / 1000);
-        const minuten  = Math.ceil(sekunden / 60);   // angefangene Minuten, wie GR6
+       Gerechnet wird mit denselben Regeln wie in der Datenbank:
+       angefangene Minuten aufgerundet (GR6), Deckelung auf den
+       Tageshoechstpreis. Die Saetze kommen aus v_tarifkarte, stehen
+       also nicht im Frontend. Die Aufschluesselung unten entspricht
+       Zeile fuer Zeile dem, was velocity.entgeltposition speichert.
+       ================================================================= */
+    let rechnerTarife = [];
+    let rechnerAktiv = 0;
 
-        const roh = Number(t.startgebuehr) + minuten * Number(t.preis_pro_minute);
-        const betrag = Math.min(roh, Number(t.tageshoechstpreis));
-
-        wert.textContent = betrag.toLocaleString('de-DE',
-            { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-        const mm = String(Math.floor(sekunden / 60)).padStart(2, '0');
-        const ss = String(sekunden % 60).padStart(2, '0');
-        uhr.textContent = `${mm}:${ss}`;
-
-        const gedeckelt = roh > Number(t.tageshoechstpreis);
-        // Knapp halten: die Zeile steht neben der Uhr und darf nicht umbrechen.
-        const zahl = (n) => Number(n).toLocaleString('de-DE',
-            { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        detail.textContent = gedeckelt
-            ? `Tageshöchstpreis erreicht`
-            : `${zahl(t.startgebuehr)} Start · ${zahl(t.preis_pro_minute)}/Min · ` +
-              `max ${zahl(t.tageshoechstpreis)}`;
+    function rechnerBetrag(t, minuten) {
+        const start = Number(t.startgebuehr);
+        const zeit  = Math.ceil(minuten) * Number(t.preis_pro_minute);
+        const deckel = Number(t.tageshoechstpreis);
+        const roh = start + zeit;
+        return { start, zeit, deckel, roh, betrag: Math.min(roh, deckel),
+                 gekappt: roh > deckel };
     }
 
-    function zaehlerSchalterZeichnen() {
+    function rechnerZeichnen() {
+        const wert   = document.getElementById('meter-value');
+        const posten = document.getElementById('meter-detail');
+        const feld   = document.getElementById('meter-minuten');
+        if (!wert || !rechnerTarife.length) return;
+
+        const t = rechnerTarife[rechnerAktiv];
+        const minuten = Math.max(1, Math.min(1440, Number(feld.value) || 1));
+        const r = rechnerBetrag(t, minuten);
+
+        wert.textContent = r.betrag.toLocaleString('de-DE',
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const zeilen = [
+            ['Startgebühr', euro(r.start)],
+            [`Zeitentgelt · ${minuten} Min × ${euro(t.preis_pro_minute)}`, euro(r.zeit)]
+        ];
+        if (r.gekappt) {
+            zeilen.push([`Kappung auf Tageshöchstpreis ${euro(r.deckel)}`,
+                         '− ' + euro(r.roh - r.deckel)]);
+        }
+        posten.innerHTML = zeilen.map(([b, w], i) =>
+            `<li${i === zeilen.length - 1 && r.gekappt ? ' class="ist-abzug"' : ''}>
+               <span>${escapeHtml(b)}</span><b>${escapeHtml(w)}</b></li>`).join('');
+    }
+
+    function rechnerTypenZeichnen() {
         const ziel = document.getElementById('meter-switch');
         if (!ziel) return;
-        ziel.innerHTML = zaehlerTarife.map((t, i) =>
-            `<button type="button" data-i="${i}" aria-pressed="${i === zaehlerAktiv}">` +
-            `${escapeHtml(t.typ_code)}</button>`).join('');
+        ziel.innerHTML = rechnerTarife.map((t, i) =>
+            `<button type="button" data-i="${i}" aria-pressed="${i === rechnerAktiv}">` +
+            `${escapeHtml(t.bezeichnung)}</button>`).join('');
         ziel.querySelectorAll('button').forEach(b => {
             b.addEventListener('click', () => {
-                zaehlerAktiv = Number(b.dataset.i);
-                zaehlerSchalterZeichnen();
-                zaehlerZeichnen();
+                rechnerAktiv = Number(b.dataset.i);
+                rechnerTypenZeichnen();
+                rechnerZeichnen();
             });
         });
     }
 
-    async function zaehlerStarten() {
+    async function rechnerStarten() {
         if (!document.getElementById('fare-meter')) return;
         const karten = await fetchTarifkarten();
-        zaehlerTarife = karten.filter(k => k.preis_pro_minute !== null);
-        if (zaehlerTarife.length === 0) {
-            document.getElementById('meter-detail').textContent =
-                'Tarife nicht verfügbar';
+        rechnerTarife = karten.filter(k => k.preis_pro_minute !== null);
+        const posten = document.getElementById('meter-detail');
+        if (!rechnerTarife.length) {
+            if (posten) posten.innerHTML = '<li><span>Tarife nicht verfügbar</span></li>';
             return;
         }
         // E-Bike voreingestellt: das ist das Rad fuer den Berg.
-        const ebike = zaehlerTarife.findIndex(t => t.typ_code === 'EBIKE');
-        zaehlerAktiv = ebike >= 0 ? ebike : 0;
-        zaehlerSchalterZeichnen();
-        zaehlerZeichnen();
-        setInterval(zaehlerZeichnen, 1000);
+        const ebike = rechnerTarife.findIndex(t => t.typ_code === 'EBIKE');
+        rechnerAktiv = ebike >= 0 ? ebike : 0;
+
+        const feld   = document.getElementById('meter-minuten');
+        const regler = document.getElementById('meter-regler');
+        feld.addEventListener('input', () => {
+            if (Number(feld.value) <= Number(regler.max)) regler.value = feld.value;
+            rechnerZeichnen();
+        });
+        regler.addEventListener('input', () => { feld.value = regler.value; rechnerZeichnen(); });
+
+        rechnerTypenZeichnen();
+        rechnerZeichnen();
     }
 
     async function renderInhalte() {
         await Promise.all([
-            zaehlerStarten(),
+            rechnerStarten(),
             renderKennzahlen(),
             renderNutzungsschritte(),
             renderTarifkarten(),
@@ -421,8 +459,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Die Stationszahl kommt aus velocity.v_kennzahl und wird von
             // renderKennzahlen gesetzt, nicht mehr hier.
 
-            // Der Hoehenspiegel liest dieselben Stationsdaten wie die Karte.
-            hoehenspiegelZeichnen(stations);
+            // Der Hoehenspiegel liest dieselben Stationsdaten wie die Karte;
+            // die Bezugshoehen kommen aus velocity.v_hoehenmarke.
+            hoehenStationen = stations
+                .filter(s => s.ort === 'Würzburg' && Number.isFinite(s.hoehe_m))
+                .sort((a, b) => a.hoehe_m - b.hoehe_m);
+            if (!hoehenMarken.length) hoehenMarken = await fetchHoehenmarken();
+            hoehenspiegelZeichnen();
 
             console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrräder`);
             return true;
@@ -441,130 +484,221 @@ document.addEventListener("DOMContentLoaded", async () => {
         maxZoom: 19
     }).addTo(map);
 
-    // Geschaeftsgebiet Polygon (Wuerzburg)
-    L.polygon([
+    // Geschaeftsgebiet Wuerzburg. Es bestimmt zugleich den Ausschnitt:
+    // ein fitBounds ueber ALLE Stationen zoege Schweinfurt mit hinein -
+    // dort gibt es drei Stationen, vierzig Kilometer entfernt - und
+    // Wuerzburg schrumpfte zu einem Klumpen.
+    const geschaeftsgebiet = L.polygon([
         [49.8100, 9.9100], [49.8150, 9.9400], [49.7850, 9.9850],
         [49.7750, 9.9600], [49.7700, 9.9300], [49.7850, 9.9000]
     ], {
-        color: '#D11231', fillColor: '#D11231', fillOpacity: 0.04,
-        weight: 2, dashArray: '8, 8'
+        color: '#f00038', fillColor: '#f00038', fillOpacity: 0.05,
+        weight: 2, dashArray: '7, 7'
     }).addTo(map);
 
     const stationLayer = L.layerGroup().addTo(map);
     const bikeLayer = L.layerGroup().addTo(map);
 
-    // ===== STATIONEN ANZEIGEN =====
-    function renderStations() {
-        stationLayer.clearLayers();
+    /* =================================================================
+       KARTE
 
-        db_Stations.forEach(station => {
-            if (!station.latitude || !station.longitude) return;
+       Vorher wurde je verfuegbarem Rad ein Marker gezeichnet - 293
+       Stueck. Da alle Raeder einer Station deren Koordinate teilen
+       (v_verfuegbares_fahrrad faellt ueber coalesce auf die Station
+       zurueck), lagen sie exakt uebereinander. Zu sehen war ein
+       einziges Radsymbol je Station, ganz gleich ob 17 oder 28 Raeder
+       dort standen. Genau das war die Verwirrung.
 
-            const stationIcon = L.divIcon({
-                className: '',
-                html: `<div style="background:#D11231; width:14px; height:14px; border:2px solid white; border-radius:2px; box-shadow: 0 4px 6px rgba(0,0,0,0.2);"></div>`,
-                iconSize: [14, 14]
-            });
+       Jetzt traegt jede Station EINEN Marker mit der Zahl der freien
+       Raeder. Das Popover schluesselt nach Fahrradtyp auf und leiht
+       direkt. Frei abgestellte Raeder bekommen weiterhin einen
+       eigenen Marker - sie stehen ja wirklich einzeln.
+       ================================================================= */
+    const TYP_BILD = {
+        CITY:  'assets/rad-city.jpg',
+        EBIKE: 'assets/rad-ebike.jpg',
+        CARGO: null                     // kein Foto hinterlegt
+    };
+    // Die Filterwerte im HTML sind kurz, der Fachschluessel ist lang.
+    const TYP_FILTER = { CITY: 'city', EBIKE: 'ebike', CARGO: 'cargo' };
 
-            const popupContent = `
-                <b>Hub: ${station.name}</b><br>
-                ${station.strasse} ${station.hausnummer || ''}<br>
-                <small>${station.plz} ${station.ort}</small><br>
-                <span style="color:#6B7280;">Kapazitaet: ${station.kapazitaet} Stellplaetze</span>
-            `;
-
-            L.marker([station.latitude, station.longitude], { icon: stationIcon })
-                .addTo(stationLayer)
-                .bindPopup(popupContent);
-        });
-    }
-
-    // ===== FAHRRAEDER ANZEIGEN =====
     const checkboxes = document.querySelectorAll('.filter-option input');
 
-    function mapBikeType(bike) {
-        // Die Sicht liefert einen sauberen Code; frueher wurde der
-        // Anzeigename per Textvergleich geraten.
-        switch (bike.typ_code) {
-            case 'EBIKE': return 'ebike';
-            case 'CARGO': return 'cargo';
-            default:      return 'city';
+    function gewaehlteTypen() {
+        return new Set(Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value));
+    }
+
+    function radzahlAnzeigen(n) {
+        for (const id of ['bike-counter', 'bike-counter-karte']) {
+            const el = document.getElementById(id);
+            if (el) el.textContent = n;
         }
     }
 
-    function updateMarkers() {
-        bikeLayer.clearLayers();
+    function akkuFarbe(prozent) {
+        if (prozent === null || prozent === undefined) return null;
+        return prozent > 50 ? '#0f9d63' : prozent > 20 ? '#c98a00' : '#c8002f';
+    }
 
-        const activeFilters = Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-        const filteredBikes = db_Bikes.filter(bike => activeFilters.includes(mapBikeType(bike)));
+    /* Eine Zeile im Popover: Bild, Name, Zahl, Preis, Schaltflaeche. */
+    function typZeile(typCode, raeder) {
+        const erstes = raeder[0];
+        const bild = TYP_BILD[typCode];
+        const preis = erstes.preis_pro_minute
+            ? euro(Number(erstes.startgebuehr) + Number(erstes.preis_pro_minute) * 30)
+            : '—';
 
-        document.getElementById("bike-counter").innerText = filteredBikes.length;
-
-        filteredBikes.forEach(bike => {
-            if (!bike.latitude || !bike.longitude) return;
-
-            const bikeType = mapBikeType(bike);
-            const baseBikeIcon = `<i class="fa-solid fa-bicycle marker-bike"></i>`;
-            let subIconHtml = "";
-            let typeLabel = "City-Bike";
-            let batteryHtml = "";
-
-            // Simulierter Akkustand fuer E-Bikes (da nicht in DB)
-            // Echter Wert aus der Sicht. NULL bei Raedern ohne Akku -
-            // das ist etwas anderes als ein leerer Akku.
-            const akkustand = bike.akkustand_prozent;
-
-            if (bikeType === 'ebike') {
-                typeLabel = "E-Bike";
-                let batColor = akkustand > 50 ? '#10B981' : akkustand > 20 ? '#F59E0B' : '#EF4444';
-                subIconHtml = `<i class="fa-solid fa-bolt marker-sub" style="color: ${batColor};"></i>`;
-                batteryHtml = akkustand === null || akkustand === undefined
-                    ? ''
-                    : `<div style="display:flex; justify-content:space-between; color:${batColor}; font-weight:600;"><span><i class="fa-solid fa-battery-half"></i> Akku:</span> <b>${akkustand}%</b></div>`;
-            } else if (bikeType === 'cargo') {
-                typeLabel = "Cargo-Bike";
-                subIconHtml = `<i class="fa-solid fa-box marker-sub" style="color: #2563EB;"></i>`;
-                batteryHtml = `<div style="display:flex; justify-content:space-between; color:#2563EB;"><span><i class="fa-solid fa-truck-fast"></i> Zuladung:</span> <b>100kg</b></div>`;
+        // Akkustand nur bei Raedern mit Akku, und dann der beste im Bestand:
+        // das Rad, das die Ausleihe vergibt, ist das mit der meisten Ladung.
+        let akku = '';
+        if (erstes.hat_elektro) {
+            const werte = raeder.map(r => r.akkustand_prozent).filter(v => v !== null && v !== undefined);
+            if (werte.length) {
+                const beste = Math.max(...werte);
+                akku = `<span class="pop-akku" style="color:${akkuFarbe(beste)}">
+                          <i class="fa-solid fa-bolt"></i> bis ${beste}&thinsp;% Akku</span>`;
             }
+        }
 
-            const bikeIcon = L.divIcon({
-                className: '',
-                html: `<div class="combined-icon-marker">${baseBikeIcon}${subIconHtml}</div>`,
-                iconSize: [34, 34],
-                iconAnchor: [17, 34],
-                popupAnchor: [0, -34]
-            });
+        const bestes = erstes.hat_elektro
+            ? raeder.slice().sort((a, b) => (b.akkustand_prozent || 0) - (a.akkustand_prozent || 0))[0]
+            : erstes;
 
-            const priceInfo = bike.preis_pro_minute
-                ? `${(bike.preis_pro_minute * 30).toFixed(2).replace('.', ',')} Euro / 30 Min`
-                : '-';
+        return `
+          <div class="pop-typ">
+            <div class="pop-bild">${bild
+                ? `<img src="${bild}" alt="${escapeHtml(erstes.typ_bezeichnung)}" loading="lazy">`
+                : `<span class="pop-kein-bild"><i class="fa-solid fa-box"></i></span>`}</div>
+            <div class="pop-text">
+              <strong>${escapeHtml(erstes.typ_bezeichnung)}</strong>
+              <span class="pop-zahl">${raeder.length} frei</span>
+              <span class="pop-preis">${preis} für 30 Minuten${akku ? ' · ' : ''}</span>
+              ${akku}
+            </div>
+            <button type="button" class="pop-leihen" data-rad="${bestes.fahrrad_id}">Leihen</button>
+          </div>`;
+    }
 
-            const popupContent = `
-                <div style="text-align:center; min-width: 200px; padding: 5px;">
-                    <h3 style="margin:0 0 8px 0; color:#111827; font-size: 1rem;">${typeLabel}</h3>
-                    <div style="font-size:0.85em; margin-bottom:12px; color:#6B7280; background:#F3F4F6; padding:12px; border-radius:8px; text-align:left;">
-                       <div style="display:flex; justify-content:space-between; margin-bottom:4px; border-bottom:1px solid #e5e7eb; padding-bottom:4px;">
-                           <span><i class="fa-solid fa-hashtag"></i> ID:</span> <b>${bike.fahrrad_id}</b>
-                       </div>
-                       <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                           <span><i class="fa-solid fa-location-dot"></i> Station:</span> <b>${bike.station_name || '-'}</b>
-                       </div>
-                       <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                           <span><i class="fa-solid fa-euro-sign"></i> Preis:</span> <b>${priceInfo}</b>
-                       </div>
-                       ${batteryHtml}
-                    </div>
-                    <button onclick="window.reserveBike(${bike.fahrrad_id})" style="background:#D11231; color:white; border:none; padding:10px 0; border-radius:50px; cursor:pointer; width:100%; font-weight:600; font-size:0.9rem; box-shadow: 0 4px 6px rgba(209, 18, 49, 0.2);">Jetzt ausleihen</button>
-                </div>
-            `;
+    function stationsPopover(station, raeder) {
+        const nachTyp = new Map();
+        for (const r of raeder) {
+            if (!nachTyp.has(r.typ_code)) nachTyp.set(r.typ_code, []);
+            nachTyp.get(r.typ_code).push(r);
+        }
+        const reihenfolge = ['CITY', 'EBIKE', 'CARGO'].filter(t => nachTyp.has(t));
+        const zeilen = reihenfolge.map(t => typZeile(t, nachTyp.get(t))).join('');
 
-            L.marker([bike.latitude, bike.longitude], { icon: bikeIcon })
-                .addTo(bikeLayer)
-                .bindPopup(popupContent);
+        return `
+          <div class="pop">
+            <div class="pop-kopf">
+              <span class="pop-marke">Station</span>
+              <strong>${escapeHtml(station.name)}</strong>
+              <span class="pop-adresse">${escapeHtml(station.strasse || '')} ${escapeHtml(station.hausnummer || '')}${station.plz ? ' · ' + escapeHtml(station.plz) + ' ' + escapeHtml(station.ort) : ''}</span>
+              <span class="pop-frei">${raeder.length} ${raeder.length === 1 ? 'Rad' : 'Räder'} gerade frei</span>
+            </div>
+            ${zeilen || '<p class="pop-leer">Gerade kein Rad des gewählten Typs hier.</p>'}
+            <p class="pop-fuss">Nach dem Leihen öffnet sich das Schloss automatisch.
+               Abstellen an jeder Station kostenlos.</p>
+          </div>`;
+    }
+
+    function freiesRadPopover(rad) {
+        return `
+          <div class="pop">
+            <div class="pop-kopf">
+              <span class="pop-marke">Frei abgestellt</span>
+              <strong>${escapeHtml(rad.typ_bezeichnung)}</strong>
+              <span class="pop-adresse">Rahmennummer ${escapeHtml(rad.rahmennummer)}</span>
+            </div>
+            ${typZeile(rad.typ_code, [rad])}
+            <p class="pop-fuss">Nach dem Leihen öffnet sich das Schloss automatisch.</p>
+          </div>`;
+    }
+
+    /* Stationsmarker: eine Scheibe mit der Zahl der freien Raeder.
+       Der Durchmesser waechst mit der Wurzel der Anzahl - die
+       Kreisflaeche wuerde den Unterschied sonst uebertreiben. */
+    function stationsSymbol(anzahl) {
+        const d = Math.round(30 + Math.sqrt(anzahl) * 3.4);
+        return L.divIcon({
+            className: '',
+            html: `<div class="karten-station" style="width:${d}px;height:${d}px">
+                     <span>${anzahl}</span></div>`,
+            iconSize: [d, d],
+            iconAnchor: [d / 2, d / 2],
+            popupAnchor: [0, -d / 2 - 4]
         });
     }
 
-    checkboxes.forEach(cb => cb.addEventListener('change', updateMarkers));
+    function freiesSymbol(rad) {
+        const klasse = rad.typ_code === 'CARGO' ? 'ist-cargo'
+                     : rad.hat_elektro ? 'ist-ebike' : 'ist-city';
+        return L.divIcon({
+            className: '',
+            html: `<div class="karten-rad ${klasse}"><i class="fa-solid fa-bicycle"></i></div>`,
+            iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -30]
+        });
+    }
+
+    let karteEingepasst = false;
+
+    function karteZeichnen() {
+        stationLayer.clearLayers();
+        bikeLayer.clearLayers();
+
+        const typen = gewaehlteTypen();
+        const raeder = db_Bikes.filter(r => typen.has(TYP_FILTER[r.typ_code] || 'city'));
+        radzahlAnzeigen(raeder.length);
+
+        const proStation = new Map();
+        const freie = [];
+        for (const r of raeder) {
+            if (r.station_id) {
+                if (!proStation.has(r.station_id)) proStation.set(r.station_id, []);
+                proStation.get(r.station_id).push(r);
+            } else if (r.latitude && r.longitude) {
+                freie.push(r);
+            }
+        }
+
+        const punkte = [];
+        for (const station of db_Stations) {
+            if (!station.latitude || !station.longitude) continue;
+            const hier = proStation.get(station.station_id) || [];
+            punkte.push([station.latitude, station.longitude]);
+            L.marker([station.latitude, station.longitude], {
+                icon: stationsSymbol(hier.length),
+                title: `${station.name} — ${hier.length} frei`
+            }).addTo(stationLayer)
+              .bindPopup(stationsPopover(station, hier), { maxWidth: 340, minWidth: 300 })
+              // Die Hoehengrafik weiter unten folgt der Auswahl auf der Karte.
+              .on('popupopen', () => hoehenspiegelWaehlen(station.station_id))
+              .on('popupclose', () => hoehenspiegelWaehlen(null));
+        }
+
+        for (const rad of freie) {
+            punkte.push([rad.latitude, rad.longitude]);
+            L.marker([rad.latitude, rad.longitude], { icon: freiesSymbol(rad) })
+             .addTo(bikeLayer)
+             .bindPopup(freiesRadPopover(rad), { maxWidth: 340, minWidth: 300 });
+        }
+
+        // Einmal auf das Geschaeftsgebiet einpassen, statt auf einer
+        // festen Vorgabe zu bleiben - die nutzte die Flaeche schlecht aus.
+        if (!karteEingepasst) {
+            map.fitBounds(geschaeftsgebiet.getBounds(), { padding: [40, 40] });
+            karteEingepasst = true;
+        }
+    }
+
+    checkboxes.forEach(cb => cb.addEventListener('change', karteZeichnen));
+
+    // Ein Klick im Popover leiht. Delegiert, weil Popovers erst beim
+    // Oeffnen in den Baum kommen.
+    document.addEventListener('click', (e) => {
+        const knopf = e.target.closest('.pop-leihen');
+        if (knopf) window.reserveBike(Number(knopf.dataset.rad));
+    });
 
     // ===== AUSLEIHE FUNKTION =====
     window.reserveBike = async function(bikeId) {
@@ -615,7 +749,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
                 // Daten neu laden und Banner zeigen
                 await loadData();
-                updateMarkers();
+                karteZeichnen();
                 showRentalBanner();
             } else {
                 throw new Error(result?.status_msg || 'Unbekannter Fehler');
@@ -729,7 +863,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // Daten neu laden
             await loadData();
-            updateMarkers();
+            karteZeichnen();
 
         } catch (error) {
             console.error('Fehler beim Beenden:', error);
@@ -745,8 +879,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const dataLoaded = await loadData();
 
     if (dataLoaded) {
-        renderStations();
-        updateMarkers();
+        karteZeichnen();
     } else {
         // Fallback: Zeige Fehlermeldung auf der Karte
         document.getElementById("bike-counter").innerText = "0";

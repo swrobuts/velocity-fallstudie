@@ -22,19 +22,37 @@ create or replace function velocity_test.test_ref_preise()
 returns setof text language plpgsql as $$
 begin
   return next is((select count(*)::int from velocity.fahrradtyp), 3, 'Drei Fahrradtypen');
-  return next is((select count(*)::int from velocity.nutzungspreis), 3,
-                 'Je Fahrradtyp genau ein gueltiger Preis');
+  -- Preise haben eine Historie. Nach der Anpassung vom 23.08.2026 gibt es
+  -- je Typ zwei Perioden; gefragt ist immer die HEUTE gueltige. Genau
+  -- deshalb steht der Zeitbezug in der Abfrage - ohne ihn liefert die
+  -- Unterabfrage mehr als eine Zeile und der Test stirbt.
+  return next is((select count(*)::int from velocity.nutzungspreis
+                   where gueltigkeit @> current_date), 3,
+                 'Je Fahrradtyp genau ein heute gueltiger Preis');
   return next is(
     (select p.preis_pro_minute from velocity.nutzungspreis p
-       join velocity.fahrradtyp t on t.typ_id = p.typ_id where t.typ_code = 'CITY'),
-    0.10::numeric(10,2), 'CityRad kostet 0,10 Euro je Minute');
+       join velocity.fahrradtyp t on t.typ_id = p.typ_id
+      where t.typ_code = 'CITY' and p.gueltigkeit @> current_date),
+    0.10::numeric(10,2), 'City-Bike kostet 0,10 Euro je Minute');
   return next is(
     (select p.tageshoechstpreis from velocity.nutzungspreis p
-       join velocity.fahrradtyp t on t.typ_id = p.typ_id where t.typ_code = 'CARGO'),
-    22.00::numeric(10,2), 'Lastenrad ist bei 22,00 Euro am Tag gedeckelt');
+       join velocity.fahrradtyp t on t.typ_id = p.typ_id
+      where t.typ_code = 'CARGO' and p.gueltigkeit @> current_date),
+    110.00::numeric(10,2), 'E-Cargo Loader ist bei 110,00 Euro am Tag gedeckelt');
+  -- Frueher stand hier: alle Preise sind nach oben offen. Das galt nur,
+  -- solange es je Typ eine einzige Periode gab. Die haltbare Invariante
+  -- ist eine andere: je Fahrradtyp gibt es GENAU EINE offene Periode -
+  -- den heute geltenden Satz. Alles davor ist geschlossene Historie.
+  return next is(
+    (select count(*)::int from velocity.nutzungspreis where upper_inf(gueltigkeit)),
+    (select count(*)::int from velocity.fahrradtyp),
+    'Je Fahrradtyp genau eine nach oben offene Preisperiode');
   return next ok(
-    (select bool_and(upper_inf(gueltigkeit)) from velocity.nutzungspreis),
-    'Alle Preise sind nach oben offen gueltig');
+    not exists (
+      select 1 from velocity.nutzungspreis a join velocity.nutzungspreis b
+        on a.typ_id = b.typ_id and a.preis_id < b.preis_id
+       where a.gueltigkeit && b.gueltigkeit),
+    'Preisperioden eines Fahrradtyps ueberschneiden sich nie');
 end;
 $$;
 

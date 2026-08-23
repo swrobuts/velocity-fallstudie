@@ -53,6 +53,27 @@ comment on column velocity.station.name             is 'Anzeigename auf der Kart
 comment on column velocity.station.adresse_id       is 'Anschrift der Station.';
 comment on column velocity.station.latitude         is 'Breitengrad in Dezimalgrad, WGS 84.';
 comment on column velocity.station.longitude        is 'Längengrad in Dezimalgrad, WGS 84.';
+comment on table  velocity.hoehenmarke is
+  'Markante Hoehen rund um Wuerzburg als Bezugspunkte der Hoehengrafik. Keine '
+  'Stationen, aber Redaktionsinhalt - deshalb in der Datenbank und nicht im Frontend.';
+comment on column velocity.hoehenmarke.marke_id   is 'Surrogatschlüssel.';
+comment on column velocity.hoehenmarke.name       is 'Name der Höhe, zugleich Fachschlüssel.';
+comment on column velocity.hoehenmarke.hoehe_m    is
+  'Höhe in Metern, bestimmt wie station.hoehe_m gegen zwei Geländemodelle und gemittelt. '
+  'Genommen wurde das Maximum eines Rasters um den Ort - der Gipfel, nicht ein Punkt am Hang.';
+comment on column velocity.hoehenmarke.latitude   is 'Breitengrad des gemessenen Punktes.';
+comment on column velocity.hoehenmarke.longitude  is 'Längengrad des gemessenen Punktes.';
+comment on column velocity.hoehenmarke.quelle     is 'Herkunft des Höhenwerts, für die Bildunterschrift.';
+comment on column velocity.hoehenmarke.sortierung is 'Reihenfolge in der Grafik, absteigend nach Höhe.';
+
+comment on view   velocity.v_hoehenmarke is 'Öffentliche Bezugshöhen für die Höhengrafik.';
+comment on column velocity.v_hoehenmarke.marke_id  is 'Schlüssel der Höhenmarke.';
+comment on column velocity.v_hoehenmarke.name      is 'Name der Höhe.';
+comment on column velocity.v_hoehenmarke.hoehe_m   is 'Höhe in Metern. Siehe hoehenmarke.hoehe_m zur Genauigkeit.';
+comment on column velocity.v_hoehenmarke.latitude  is 'Breitengrad.';
+comment on column velocity.v_hoehenmarke.longitude is 'Längengrad.';
+comment on column velocity.v_hoehenmarke.quelle    is 'Herkunft des Höhenwerts.';
+
 comment on column velocity.station.hoehe_m is
   'Hoehenlage in Metern, aus den Koordinaten gegen zwei unabhaengige Gelaendemodelle '
   'bestimmt (Copernicus GLO-30 und EU-DEM v1.1) und gemittelt. Beides sind '

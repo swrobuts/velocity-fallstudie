@@ -177,9 +177,11 @@
 
     <p class="profil-fuss">
       <strong>Jede Station nach ihrer Höhenlage, Belegung von eben.</strong>
-      Höhen aus zwei Geländemodellen gemittelt; es sind Oberflächenmodelle, in der
-      Altstadt liegen sie rund zehn Meter zu hoch. Belastbar sind die Unterschiede.
-      Quelle der Belegung: <code>velocity.v_station</code>.
+      Wähle auf der Karte oben eine Station, dann zeigt die Grafik, wie weit es von
+      dort noch hinauf ist. Höhen aus zwei Geländemodellen gemittelt; es sind
+      Oberflächenmodelle, in der Altstadt liegen sie rund zehn Meter zu hoch.
+      Belastbar sind die Unterschiede. Quellen:
+      <code>velocity.v_station</code> und <code>velocity.v_hoehenmarke</code>.
     </p>
   </div>
 </section>
@@ -188,8 +190,9 @@
     <div class="container">
         <div class="section-header">
             <span class="eyebrow">Ablauf</span>
-            <h2>Vom Bordstein auf die Straße</h2>
-            <p>Drei Schritte. Kein Papier, kein Schalter, keine Kaution.</p>
+            <h2>So funktioniert eine Ausleihe</h2>
+            <p>Sie beginnt, wenn sich das Schloss öffnet, und endet, wenn du es wieder
+               schließt. Dazwischen zählt die Zeit — minutengenau.</p>
         </div>
         <div class="howto-grid" id="howto-grid">
             <!-- wird aus velocity.v_nutzungsschritt geladen -->
@@ -201,8 +204,9 @@
   <div class="container">
     <div class="section-header">
       <span class="eyebrow">Tarife</span>
-      <h2>Drei Klassen, ein Preismodell</h2>
-      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis. Die Zahlen unten stammen direkt aus der Preistabelle.</p>
+      <h2>Drei Fahrradtypen, ein Preismodell</h2>
+      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis. Alle Zahlen
+         kommen aus der Preistabelle der Datenbank, nicht aus dem Seitentext.</p>
     </div>
 
     <!-- Der Fahrpreiszaehler stand frueher im Kopfbereich. Der ist
@@ -211,18 +215,25 @@
          angefangene Minuten aufgerundet, Deckelung auf den
          Tageshoechstpreis. Die Saetze kommen aus v_tarifkarte. -->
     <div class="tarif-zaehler">
-    <div class="meter" id="fare-meter">
-      <div class="meter-head">
-        <span class="meter-eyebrow">Beispielrechnung, läuft mit</span>
-        <div class="meter-switch" id="meter-switch" role="group" aria-label="Radtyp wählen"></div>
+    <div class="rechner" id="fare-meter">
+      <div class="rechner-kopf">
+        <span class="rechner-marke">Was kostet eine Fahrt?</span>
+        <div class="rechner-typen" id="meter-switch" role="group" aria-label="Fahrradtyp wählen"></div>
       </div>
-      <div class="meter-readout">
-        <span class="meter-value" id="meter-value">0,00</span><span class="meter-unit">Euro</span>
+      <div class="rechner-eingabe">
+        <label for="meter-minuten">Fahrzeit</label>
+        <div class="rechner-feld">
+          <input type="number" id="meter-minuten" min="1" max="1440" step="1" value="30"
+                 inputmode="numeric" autocomplete="off">
+          <span>Minuten</span>
+        </div>
+        <input type="range" id="meter-regler" min="1" max="240" step="1" value="30"
+               aria-label="Fahrzeit in Minuten">
       </div>
-      <div class="meter-foot">
-        <span class="meter-detail" id="meter-detail">Tarife werden geladen</span>
-        <span class="meter-clock" id="meter-clock">00:00</span>
+      <div class="rechner-ergebnis">
+        <span class="rechner-betrag" id="meter-value">0,00</span><span class="rechner-waehrung">Euro</span>
       </div>
+      <ul class="rechner-posten" id="meter-detail"></ul>
     </div>
     </div>
 
@@ -236,26 +247,27 @@
     <div class="container section-header">
         <span class="eyebrow">Karte</span>
         <h2>Was gerade frei ist</h2>
-        <p>Jeder Punkt ist ein Rad, das in diesem Moment ausleihbar ist. Filtere nach Klasse.</p>
+        <p>Jede Scheibe ist eine Station und trägt die Zahl der Räder, die dort gerade frei
+           sind. Ein Klick schlüsselt nach Fahrradtyp auf und leiht direkt.</p>
     </div>
 
     <div class="map-container-shadow">
         <div class="map-controls">
             <div class="control-title"><i class="fa-solid fa-filter"></i> Filter</div>
             <label class="filter-option"><input type="checkbox" value="city" checked> <span>City-Bike</span></label>
-            <label class="filter-option"><input type="checkbox" value="ebike" checked> <span>E-Bike</span></label>
-            <label class="filter-option"><input type="checkbox" value="cargo" checked> <span>Cargo</span></label>
+            <label class="filter-option"><input type="checkbox" value="ebike" checked> <span>E-Bike Sport</span></label>
+            <label class="filter-option"><input type="checkbox" value="cargo" checked> <span>E-Cargo Loader</span></label>
         </div>
         <div id="map"></div>
         <div class="map-overlay-btn" onclick="alert('Standort wird ermittelt...')" title="Meinen Standort anzeigen"><i class="fa-solid fa-location-crosshairs"></i></div>
     </div>
 
     <div class="map-legend container">
-        <div class="legend-item"><i class="fa-solid fa-square" style="color: #D11231;"></i> Stationen</div>
-        <div class="legend-item"><span class="legend-icon-wrapper"><i class="fa-solid fa-bicycle main-legend-icon"></i></span> City</div>
-        <div class="legend-item"><span class="legend-icon-wrapper"><i class="fa-solid fa-bicycle main-legend-icon"></i><i class="fa-solid fa-bolt sub-legend-icon" style="color: #10B981;"></i></span> E-Bike (Voll)</div>
-        <div class="legend-item"><span class="legend-icon-wrapper"><i class="fa-solid fa-bicycle main-legend-icon"></i><i class="fa-solid fa-bolt sub-legend-icon" style="color: #F59E0B;"></i></span> E-Bike (Mittel)</div>
-        <div class="legend-item"><span class="legend-icon-wrapper"><i class="fa-solid fa-bicycle main-legend-icon"></i><i class="fa-solid fa-box sub-legend-icon" style="color: #2563EB;"></i></span> Cargo</div>
+        <div class="legend-item"><span class="legende-scheibe">7</span> Station mit sieben freien Rädern</div>
+        <div class="legend-item"><span class="legende-rad ist-city"><i class="fa-solid fa-bicycle"></i></span> frei abgestelltes City-Bike</div>
+        <div class="legend-item"><span class="legende-rad ist-ebike"><i class="fa-solid fa-bicycle"></i></span> frei abgestelltes E-Bike Sport</div>
+        <div class="legend-item"><span class="legende-rad ist-cargo"><i class="fa-solid fa-bicycle"></i></span> frei abgestellter E-Cargo Loader</div>
+        <div class="legend-item legende-hinweis">Gestrichelt: Geschäftsgebiet. Außerhalb endet keine Fahrt kostenfrei.</div>
     </div>
 </section>
 

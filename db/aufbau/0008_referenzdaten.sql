@@ -64,13 +64,20 @@ on conflict (typ_id, sortierung) do update set merkmal = excluded.merkmal;
 -- ---------------------------------------------------------------------
 -- Preise: uebernommen aus cityBikesRental.fahrradtyp, ab heute gueltig
 -- und nach oben offen.
+--
+-- Der Tageshoechstpreis wurde am 23.08.2026 angehoben. Eine frische
+-- Datenbank startet gleich mit den neuen Werten. In der bestehenden
+-- Datenbank wurde stattdessen die laufende Periode geschlossen und eine
+-- neue eroeffnet - siehe db/betrieb/preisanpassung_tageshoechstpreis.sql.
+-- Preise werden nie ueberschrieben: entgeltposition zeigt auf die Zeile,
+-- mit der abgerechnet wurde (Geschaeftsregel GR5).
 -- ---------------------------------------------------------------------
 insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
 select t.typ_id, daterange(current_date, null, '[)'), p.start, p.minute, p.hoechst
   from (values
-    ('CITY',  0.10, 0.10, 10.00),
-    ('EBIKE', 1.00, 0.10, 15.00),
-    ('CARGO', 2.00, 0.10, 22.00)
+    ('CITY',  0.10, 0.10,  50.00),
+    ('EBIKE', 1.00, 0.10,  75.00),
+    ('CARGO', 2.00, 0.10, 110.00)
   ) as p(typ_code, start, minute, hoechst)
   join velocity.fahrradtyp t on t.typ_code = p.typ_code
  where not exists (
@@ -144,3 +151,23 @@ on conflict (schluessel) do update
       label         = excluded.label,
       sortierung    = excluded.sortierung,
       ist_berechnet = excluded.ist_berechnet;
+
+
+-- ---------------------------------------------------------------------
+-- Hoehenmarken: die markanten Hoehen rund um Wuerzburg.
+--
+-- Bestimmt wie station.hoehe_m gegen zwei unabhaengige Gelaendemodelle
+-- (Copernicus GLO-30 und EU-DEM v1.1) und gemittelt. Genommen wurde
+-- jeweils das Maximum eines Rasters um den Ort - der Gipfel, nicht ein
+-- beliebiger Punkt am Hang. Es sind Oberflaechenmodelle: in bebautem
+-- Gebiet liegen sie rund zehn Meter zu hoch. Belastbar sind die
+-- Unterschiede, und genau die traegt die Grafik vor.
+-- ---------------------------------------------------------------------
+insert into velocity.hoehenmarke (name, hoehe_m, latitude, longitude, quelle, sortierung) values
+  ('Frankenwarte',   360, 49.781370, 9.907470, 'Copernicus GLO-30 und EU-DEM v1.1, gemittelt', 1),
+  ('Steinburg',      285, 49.814700, 9.912230, 'Copernicus GLO-30 und EU-DEM v1.1, gemittelt', 2),
+  ('Campus Hubland', 279, 49.781000, 9.972000, 'Copernicus GLO-30 und EU-DEM v1.1, gemittelt', 3)
+on conflict (name) do update
+   set hoehe_m = excluded.hoehe_m, latitude = excluded.latitude,
+       longitude = excluded.longitude, quelle = excluded.quelle,
+       sortierung = excluded.sortierung;

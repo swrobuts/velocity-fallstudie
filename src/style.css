@@ -580,7 +580,20 @@ img { max-width: 100%; }
   font-family: var(--body-schrift); font-weight: 600; font-size: 12px;
   fill: var(--grau-still); text-anchor: end;
 }
+/* Bezugshoehen: die markanten Hoehen rund um Wuerzburg, aus
+   velocity.v_hoehenmarke. Sie liegen hinter der Kurve. */
+.hm line { stroke: var(--navy); stroke-width: 1; stroke-dasharray: 3 5; opacity: .3; }
+.hm text {
+  font: 700 10px/1 var(--mono);
+  letter-spacing: .12em; text-transform: uppercase;
+  fill: var(--grau-still);
+}
+
 .hs-station:focus-visible { outline: none; }
+/* Die auf der Karte gewaehlte Station tritt hervor. */
+.hs-station.ist-gewaehlt .hs-ring { stroke: var(--red); stroke-width: 3; }
+.hs-station.ist-gewaehlt .hs-name { fill: var(--navy); font-weight: 700; }
+.hs-station.ist-gewaehlt .hs-lot  { stroke: var(--red); opacity: .5; }
 .hs-station:hover .hs-ring, .hs-station:focus-visible .hs-ring {
   stroke: var(--red); stroke-width: 2.4;
 }
@@ -708,10 +721,12 @@ img { max-width: 100%; }
 .pricing .btn-outline { color: #fff; border-color: rgba(255, 255, 255, .38); }
 .pricing .btn-outline:hover { background: #fff; color: var(--navy); border-color: #fff; }
 
-/* Fahrpreiszähler — früher im Kopfbereich, jetzt bei den Tarifen. */
+/* Preisrechner — früher im Kopfbereich, jetzt bei den Tarifen.
+   Er rechnet mit denselben Regeln wie die Datenbank und schlüsselt
+   die Posten so auf, wie velocity.entgeltposition sie speichert. */
 .tarif-zaehler { margin-bottom: clamp(30px, 3.4vw, 48px); }
-.meter {
-  max-width: 460px;
+.rechner {
+  max-width: 520px;
   background: #fff;
   color: var(--navy);
   border: 1px solid var(--mist);
@@ -719,62 +734,198 @@ img { max-width: 100%; }
   border-radius: 0 2px 2px 0;
   box-shadow: 0 18px 40px -28px rgba(0, 0, 0, .7);
 }
-.meter-head {
+.rechner-kopf {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 14px;
-  padding: 13px 15px;
+  flex-wrap: wrap; gap: 12px;
+  padding: 15px 18px;
   border-bottom: 1px solid var(--mist);
 }
-.meter-eyebrow {
+.rechner-marke {
   font: 700 10.5px/1.3 var(--mono);
   letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
 }
-.meter-switch { display: flex; gap: 4px; }
-.meter-switch button {
-  padding: 5px 10px;
-  font: 700 10.5px/1 var(--mono);
-  letter-spacing: .1em; text-transform: uppercase;
+.rechner-typen { display: flex; gap: 5px; flex-wrap: wrap; }
+.rechner-typen button {
+  padding: 6px 12px;
+  font-size: 12px; font-weight: 700;
   color: var(--grau-still);
   background: transparent;
   border: 1px solid var(--mist);
   border-radius: 999px;
+  white-space: nowrap;
 }
-.meter-switch button:hover { border-color: var(--navy); color: var(--navy); }
-.meter-switch button[aria-pressed="true"] {
+.rechner-typen button:hover { border-color: var(--navy); color: var(--navy); }
+.rechner-typen button[aria-pressed="true"] {
   background: var(--navy); border-color: var(--navy); color: #fff;
 }
-.meter-readout { display: flex; align-items: baseline; gap: 8px; padding: 18px 15px 6px; }
-.meter-value {
+
+.rechner-eingabe { padding: 18px 18px 6px; }
+.rechner-eingabe label {
+  display: block; margin-bottom: 9px;
+  font: 700 10.5px/1 var(--mono);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--grau-still);
+}
+.rechner-feld { display: flex; align-items: baseline; gap: 9px; margin-bottom: 14px; }
+.rechner-feld input {
+  width: 108px;
+  padding: 9px 12px;
+  font-family: var(--mono); font-size: 19px; font-weight: 700;
+  color: var(--navy);
+  border: 1px solid var(--mist); border-radius: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.rechner-feld input:focus { border-color: var(--navy); outline: none; }
+.rechner-feld span { font-size: 14px; color: var(--grau); }
+
+.rechner-eingabe input[type="range"] {
+  width: 100%; margin: 0;
+  accent-color: var(--red);
+}
+
+.rechner-ergebnis {
+  display: flex; align-items: baseline; gap: 9px;
+  padding: 10px 18px 4px;
+}
+.rechner-betrag {
   font-family: var(--schmal); font-weight: 800;
-  font-size: clamp(40px, 4vw, 58px); line-height: 1;
+  font-size: clamp(44px, 4.4vw, 62px); line-height: 1;
   letter-spacing: -.055em;
   font-variant-numeric: tabular-nums;
 }
-.meter-unit { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--red); }
-.meter-foot {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px;
-  padding: 6px 15px 14px;
+.rechner-waehrung {
+  font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--red);
 }
-.meter-detail { font-family: var(--mono); font-size: 11px; color: var(--grau-still); }
-.meter-clock {
-  font-family: var(--mono); font-size: 12px; font-weight: 700;
-  color: #fff; background: var(--navy);
-  padding: 4px 9px; border-radius: 999px;
-  font-variant-numeric: tabular-nums;
+
+.rechner-posten { list-style: none; margin: 0; padding: 8px 18px 18px; }
+.rechner-posten li {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px;
+  padding: 7px 0;
+  border-top: 1px solid var(--mist);
+  font-family: var(--mono); font-size: 12px; color: var(--grau);
 }
+.rechner-posten li:first-child { border-top: 0; }
+.rechner-posten li b { color: var(--navy); font-variant-numeric: tabular-nums; }
+.rechner-posten li.ist-abzug, .rechner-posten li.ist-abzug b { color: var(--red); }
 
 /* -------------------------------------------------------- Karte */
 
+/* Die Karte nutzt jetzt die volle Fensterbreite. Vorher stand sie in
+   der Spur und liess links und rechts Platz liegen, obwohl sie das
+   Element ist, das Flaeche wirklich braucht. */
 .map-container-shadow {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--mist);
-  border-right: 0;
-  border-radius: 2px 0 0 2px;
-  margin-left: max(var(--rand), calc((100vw - var(--spur)) / 2 + var(--rand)));
+  border-block: 1px solid var(--mist);
 }
-#map { height: 560px; width: 100%; }
+#map { height: clamp(520px, 74vh, 820px); width: 100%; }
+
+/* ---- Marker ---- */
+/* Eine Station traegt eine Scheibe mit der Zahl der freien Raeder.
+   Der Durchmesser kommt aus dem Skript und waechst mit der Wurzel. */
+.karten-station {
+  display: flex; align-items: center; justify-content: center;
+  background: var(--navy);
+  color: #fff;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(6, 24, 65, .38);
+  font-family: var(--mono); font-weight: 700;
+  font-size: 13px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: transform .14s ease;
+}
+.leaflet-marker-icon:hover .karten-station { transform: scale(1.08); }
+
+/* Frei abgestellte Raeder. Die drei Typen unterscheiden sich durch die
+   Farbe des Rings, nicht durch ein zweites Sinnbild darauf - das war
+   auf Kartengroesse nicht zu erkennen. */
+.karten-rad {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  background: #fff;
+  border: 2px solid var(--navy);
+  border-radius: 999px;
+  color: var(--navy);
+  font-size: 14px;
+  box-shadow: 0 5px 14px rgba(6, 24, 65, .3);
+}
+.karten-rad.ist-ebike { border-color: var(--mint); color: #0f7a52; }
+.karten-rad.ist-cargo { border-color: var(--red);  color: var(--red); }
+
+/* ---- Popover ---- */
+.leaflet-popup-content-wrapper {
+  border-radius: 3px;
+  box-shadow: 0 22px 60px rgba(6, 24, 65, .3);
+}
+.leaflet-popup-content { margin: 0; font-family: var(--body-schrift); }
+.pop { width: 100%; }
+.pop-kopf {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--mist);
+}
+.pop-marke {
+  display: block; margin-bottom: 5px;
+  font: 700 10px/1 var(--mono);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+}
+.pop-kopf strong {
+  display: block;
+  font-family: var(--schmal); font-weight: 800;
+  font-size: 24px; line-height: 1.05; letter-spacing: -.035em;
+  color: var(--navy);
+}
+.pop-adresse {
+  display: block; margin-top: 5px;
+  font-size: 12.5px; line-height: 1.45; color: var(--grau);
+}
+.pop-frei {
+  display: block; margin-top: 7px;
+  font: 700 11px/1 var(--mono);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--navy);
+}
+
+.pop-typ {
+  display: grid;
+  grid-template-columns: 66px 1fr auto;
+  align-items: center;
+  gap: 13px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--mist);
+}
+.pop-bild {
+  width: 66px; height: 44px;
+  overflow: hidden; border-radius: 2px;
+  background: var(--paper);
+  display: flex; align-items: center; justify-content: center;
+}
+.pop-bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pop-kein-bild { color: var(--grau-still); font-size: 17px; }
+.pop-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pop-text strong {
+  font-size: 15px; font-weight: 700; color: var(--navy); letter-spacing: -.01em;
+}
+.pop-zahl {
+  font: 700 11px/1.2 var(--mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--red);
+}
+.pop-preis, .pop-akku { font-size: 12px; color: var(--grau); }
+.pop-akku { font-weight: 700; }
+.pop-leihen {
+  padding: 10px 16px;
+  background: var(--red); color: #fff;
+  border: 0; border-radius: 999px;
+  font-weight: 700; font-size: 13.5px;
+  white-space: nowrap;
+}
+.pop-leihen:hover { background: var(--red-tief); }
+.pop-leer { margin: 0; padding: 16px 18px; color: var(--grau); font-size: 13px; }
+.pop-fuss {
+  margin: 0; padding: 12px 18px 14px;
+  font-size: 11.5px; line-height: 1.5; color: var(--grau-still);
+  background: var(--paper);
+}
 
 .map-controls {
   position: absolute; top: 18px; left: 18px; z-index: 500;
@@ -809,13 +960,25 @@ img { max-width: 100%; }
   font-family: var(--mono); font-size: 11px;
   letter-spacing: .1em; text-transform: uppercase; color: var(--grau-still);
 }
-.legend-item { display: flex; align-items: center; gap: 7px; }
-.legend-icon-wrapper { position: relative; display: inline-block; }
-.main-legend-icon { color: var(--navy); }
-.sub-legend-icon { position: absolute; top: -3px; right: -7px; font-size: .55em; }
-.marker-bike { color: var(--navy); font-size: 1.05rem; }
-.combined-icon-marker { position: relative; }
-.marker-sub { position: absolute; top: -4px; right: -6px; font-size: .55em; }
+.legend-item { display: flex; align-items: center; gap: 9px; }
+/* Die Legende zeigt dieselben Symbole wie die Karte, nur kleiner. */
+.legende-scheibe {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px;
+  background: var(--navy); color: #fff;
+  border: 2px solid #fff; border-radius: 999px;
+  box-shadow: 0 3px 9px rgba(6, 24, 65, .3);
+  font-family: var(--mono); font-weight: 700; font-size: 11px; letter-spacing: 0;
+}
+.legende-rad {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px;
+  background: #fff; border: 2px solid var(--navy); border-radius: 999px;
+  color: var(--navy); font-size: 11px;
+}
+.legende-rad.ist-ebike { border-color: var(--mint); color: #0f7a52; }
+.legende-rad.ist-cargo { border-color: var(--red);  color: var(--red); }
+.legende-hinweis { color: var(--grau-still); text-transform: none; letter-spacing: .02em; }
 .leaflet-popup-content { font-family: var(--body-schrift); font-size: 14px; }
 .leaflet-popup-content b { font-family: var(--schmal); font-size: 17px; letter-spacing: -.02em; }
 
@@ -1002,11 +1165,9 @@ footer a:hover { color: #fff; text-decoration: underline; }
      in ihrem eigenen Kasten, statt auf Briefmarkengroesse zu schrumpfen. */
   .profil .container { overflow-x: auto; }
   .profil-svg { min-width: 720px; }
-  .map-container-shadow {
-    margin-left: var(--rand); margin-right: var(--rand);
-    border-right: 1px solid var(--mist); border-radius: 2px;
-  }
-  #map { height: 440px; }
+  #map { height: clamp(420px, 66vh, 600px); }
+  .pop-typ { grid-template-columns: 54px 1fr auto; gap: 10px; padding: 11px 14px; }
+  .pop-bild { width: 54px; height: 38px; }
 }
 
 @media (max-width: 520px) {
