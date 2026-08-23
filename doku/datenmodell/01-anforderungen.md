@@ -50,6 +50,7 @@ fertigen System **durchgesetzt** sein, nicht nur dokumentiert.
 | GR11 | Jede Ausleihe hat **genau eine** Ortsangabe je Ende: eine Station **oder** Koordinaten |
 | GR12 | Ein Rad ohne bekannten Standort lässt sich nicht ausleihen |
 | GR13 | Ein Rad steht **an einer Station** oder **frei im Stadtgebiet** oder ist **in Fahrt** — nie zweierlei zugleich |
+| GR14 | Frei abgestellt wird nur **innerhalb des Geschäftsgebiets** |
 
 Wo jede Regel durchgesetzt wird, steht in `05-physisches-modell.md`.
 

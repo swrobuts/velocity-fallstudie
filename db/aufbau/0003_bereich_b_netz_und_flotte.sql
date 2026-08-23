@@ -266,3 +266,52 @@ create constraint trigger trg_fahrrad_status_ort
   for each row execute function velocity.trg_radposition_pruefen();
 
 create index if not exists idx_fahrrad_position_station on velocity.fahrrad_position (station_id);
+
+
+-- =====================================================================
+--  GESCHAEFTSGEBIET
+--
+--  Innerhalb dieser Flaeche darf ein Rad ueberall abgestellt werden,
+--  ausserhalb nicht. Bisher stand das Vieleck fest im JavaScript der
+--  Karte - eine Regel, die die Anwendung zeichnet, aber niemand
+--  durchsetzt. Jetzt steht sie in der Datenbank und wird beim Beenden
+--  einer Fahrt geprueft.
+--
+--  Der Typ polygon gehoert zum Sprachkern von PostgreSQL; fuer
+--  Punkt-in-Flaeche genuegt der Operator @>. PostGIS braucht es dafuer
+--  nicht - das waere fuer ein einzelnes konvexes Vieleck zu viel
+--  Maschinerie. Achtung auf die Reihenfolge: point(x, y) heisst hier
+--  point(Laengengrad, Breitengrad).
+-- =====================================================================
+
+create table if not exists velocity.geschaeftsgebiet (
+  gebiet_id    bigint generated always as identity primary key,
+  name         text        not null,
+  flaeche      polygon     not null,
+  aktiv        boolean     not null default true,
+  erstellt_am  timestamptz not null default now(),
+  geaendert_am timestamptz not null default now(),
+  constraint geschaeftsgebiet_name_uk unique (name),
+  -- Ein Vieleck braucht mindestens drei Ecken, sonst ist es keine Flaeche.
+  constraint geschaeftsgebiet_ecken_chk check (npoints(flaeche) >= 3)
+);
+select velocity.fn_audit_anhaengen('geschaeftsgebiet');
+
+-- Liegt der Punkt in einem aktiven Geschaeftsgebiet?
+create or replace function velocity.fn_im_geschaeftsgebiet(
+  p_latitude numeric, p_longitude numeric
+) returns boolean
+language sql
+stable
+set search_path = velocity, pg_temp
+as $$
+  select exists (
+    select 1 from velocity.geschaeftsgebiet g
+     where g.aktiv
+       and g.flaeche @> point(p_longitude::float8, p_latitude::float8)
+  );
+$$;
+
+comment on function velocity.fn_im_geschaeftsgebiet(numeric, numeric) is
+  'Wahr, wenn der Punkt in einem aktiven Geschaeftsgebiet liegt. Nutzt den '
+  'eingebauten Operator @> auf polygon - ohne PostGIS.';

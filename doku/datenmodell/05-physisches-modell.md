@@ -52,6 +52,7 @@ aufwendig, und eine Sortierreihenfolge lässt sich nicht nachträglich
 | GR11 genau eine Ortsangabe | `CHECK ausleihe_startort_chk` und `ausleihe_endort_chk` |
 | GR12 kein Start ohne Standort | Prüfung in `fn_ausleihe_starten` |
 | GR13 genau ein Standort je Rad | `CHECK fahrrad_position_ort_chk` **und** Constraint-Trigger |
+| GR14 nur im Geschäftsgebiet abstellen | `fn_im_geschaeftsgebiet` in `fn_ausleihe_beenden` |
 
 ### GR11: warum kein NOT NULL
 
@@ -124,7 +125,28 @@ damit nicht mehr erreichbar. Die Prüfung in `fn_ausleihe_starten` bleibt
 trotzdem stehen. Sie kostet nichts und fängt den Fall ab, falls jemand
 GR13 später lockert. Gestaffelte Absicherung, nicht Redundanz.
 
-Neun von dreizehn Regeln setzt die Datenbank durch. Die drei übrigen
+### GR14: eine Fläche als Regel, nicht als Zeichnung
+
+Das Geschäftsgebiet war ein Vieleck im JavaScript der Karte. Die Seite
+zeichnete es, die Datenbank kannte es nicht — sie nahm beim Beenden
+einer Fahrt jede Koordinate an, auch eine in Hamburg. Jetzt steht die
+Fläche in `velocity.geschaeftsgebiet`, und die Karte zeichnet nach, was
+dort hinterlegt ist.
+
+Geprüft wird mit dem **eingebauten** Typ `polygon` und dem Operator `@>`:
+
+```sql
+select g.flaeche @> point(p_longitude, p_latitude)
+```
+
+PostGIS braucht es dafür nicht. Für ein einzelnes konvexes Vieleck wäre
+das zu viel Maschinerie; PostgreSQL bringt die geometrischen Typen im
+Sprachkern mit. Zu beachten ist allein die Reihenfolge: `point(x, y)`
+heißt hier `point(Längengrad, Breitengrad)` — vertauscht man sie, liegt
+Würzburg im Indischen Ozean.
+
+Neun von vierzehn Regeln setzt die Datenbank durch — GR14 gehört zu den
+fünf, die den vorgesehenen Weg über die Funktionsschicht brauchen. Die drei übrigen
 brauchen Kontext, den ein Constraint nicht hat: den angemeldeten Nutzer,
 das aktuelle Datum, den Zustand anderer Zeilen.
 

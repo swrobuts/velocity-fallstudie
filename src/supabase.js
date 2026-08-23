@@ -35,12 +35,18 @@ async function fetchAvailableBikes() {
     return ladeListe('v_verfuegbares_fahrrad');
 }
 
+async function fetchGeschaeftsgebiete() {
+    return ladeListe('v_geschaeftsgebiet');
+}
+
 async function fetchHoehenmarken() {
     return ladeListe('v_hoehenmarke');
 }
 
 async function fetchTarifkarten() {
-    return ladeListe('v_tarifkarte', '*', (q) => q.order('preis_pro_minute'));
+    // Reihenfolge des Datenmodells, nicht des Preises: sonst wandern die
+    // Karten bei jeder Preisaenderung durcheinander.
+    return ladeListe('v_tarifkarte', '*', (q) => q.order('typ_id'));
 }
 
 async function fetchTarife() {

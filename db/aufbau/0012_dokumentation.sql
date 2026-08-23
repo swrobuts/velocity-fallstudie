@@ -53,6 +53,22 @@ comment on column velocity.station.name             is 'Anzeigename auf der Kart
 comment on column velocity.station.adresse_id       is 'Anschrift der Station.';
 comment on column velocity.station.latitude         is 'Breitengrad in Dezimalgrad, WGS 84.';
 comment on column velocity.station.longitude        is 'Längengrad in Dezimalgrad, WGS 84.';
+comment on table  velocity.geschaeftsgebiet is
+  'Flaeche, innerhalb derer ein Rad ueberall abgestellt werden darf. Stand '
+  'frueher fest im JavaScript der Karte - eine Regel ohne Durchsetzung.';
+comment on column velocity.geschaeftsgebiet.gebiet_id is 'Surrogatschlüssel.';
+comment on column velocity.geschaeftsgebiet.name      is 'Name des Gebiets, zugleich Fachschlüssel.';
+comment on column velocity.geschaeftsgebiet.flaeche   is
+  'Das Vieleck als eingebauter Typ polygon, in der Reihenfolge (Längengrad, Breitengrad). '
+  'Punkt-in-Fläche prüft der Operator @>; PostGIS wird dafür nicht gebraucht.';
+comment on column velocity.geschaeftsgebiet.aktiv     is 'Nur aktive Gebiete gelten.';
+
+comment on view   velocity.v_geschaeftsgebiet is 'Öffentliche Umrisse der aktiven Geschäftsgebiete.';
+comment on column velocity.v_geschaeftsgebiet.gebiet_id is 'Schlüssel des Gebiets.';
+comment on column velocity.v_geschaeftsgebiet.name      is 'Name des Gebiets.';
+comment on column velocity.v_geschaeftsgebiet.umriss    is
+  'Das Vieleck als Text, Form ((Länge,Breite),…). Die Karte zeichnet daraus ihren Umriss.';
+
 comment on table  velocity.hoehenmarke is
   'Markante Hoehen rund um Wuerzburg als Bezugspunkte der Hoehengrafik. Keine '
   'Stationen, aber Redaktionsinhalt - deshalb in der Datenbank und nicht im Frontend.';

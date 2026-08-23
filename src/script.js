@@ -307,9 +307,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         const ziel = document.getElementById('pricing-grid');
         if (!ziel) return;
         const karten = await fetchTarifkarten();
-        ziel.innerHTML = karten.map((k, i) => `
-            <div class="price-card${i === 1 ? ' popular' : ''}">
-                ${i === 1 ? '<div class="badge-pop">Beliebteste Wahl</div>' : ''}
+        // Die Hervorhebung haengt am Fahrradtyp, nicht an der Position in
+        // der Liste. Sortiert wird nach typ_id; an die Position gebunden
+        // wanderte sie bei jeder Preisaenderung auf eine andere Karte -
+        // nach der Anhebung des Minutenpreises sass sie am Lastenrad.
+        ziel.innerHTML = karten.map((k) => {
+          const hervor = k.typ_code === 'EBIKE';
+          return `
+            <div class="price-card${hervor ? ' popular' : ''}">
+                ${hervor ? '<div class="badge-pop">Beliebteste Wahl</div>' : ''}
                 <div class="card-content">
                     <div class="header">${escapeHtml(k.bezeichnung)}</div>
                     <div class="price">${euro(k.preis_30_minuten)} <small>/ 30 Min</small></div>
@@ -318,11 +324,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                             `<li><i class="fa-solid fa-check"></i> ${escapeHtml(m)}</li>`).join('')}
                     </ul>
                 </div>
-                <button class="${i === 1 ? 'btn-primary' : 'btn-outline'} full-width"
+                <button class="${hervor ? 'btn-primary' : 'btn-outline'} full-width"
                         onclick="document.getElementById('map-section').scrollIntoView()">
                     Fahrt starten
                 </button>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     async function renderFaq() {
@@ -466,6 +473,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 .sort((a, b) => a.hoehe_m - b.hoehe_m);
             if (!hoehenMarken.length) hoehenMarken = await fetchHoehenmarken();
             hoehenspiegelZeichnen();
+            if (!geschaeftsgebiet) await geschaeftsgebietZeichnen();
 
             console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrräder`);
             return true;
@@ -484,17 +492,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         maxZoom: 19
     }).addTo(map);
 
-    // Geschaeftsgebiet Wuerzburg. Es bestimmt zugleich den Ausschnitt:
-    // ein fitBounds ueber ALLE Stationen zoege Schweinfurt mit hinein -
-    // dort gibt es drei Stationen, vierzig Kilometer entfernt - und
-    // Wuerzburg schrumpfte zu einem Klumpen.
-    const geschaeftsgebiet = L.polygon([
-        [49.8100, 9.9100], [49.8150, 9.9400], [49.7850, 9.9850],
-        [49.7750, 9.9600], [49.7700, 9.9300], [49.7850, 9.9000]
-    ], {
-        color: '#f00038', fillColor: '#f00038', fillOpacity: 0.05,
-        weight: 2, dashArray: '7, 7'
-    }).addTo(map);
+    // Das Geschaeftsgebiet kommt aus velocity.v_geschaeftsgebiet. Frueher
+    // stand das Vieleck hier fest im Skript - die Karte zeichnete eine
+    // Regel, die die Datenbank nicht kannte. Jetzt ist es umgekehrt: die
+    // Datenbank haelt die Regel und setzt sie beim Beenden einer Fahrt
+    // durch, die Karte zeichnet nur noch nach.
+    let geschaeftsgebiet = null;
+
+    // Der Typ polygon kommt als Text: ((Laenge,Breite),(Laenge,Breite),…)
+    // Leaflet will [Breite, Laenge] - deshalb wird gedreht.
+    function umrissLesen(text) {
+        return [...String(text).matchAll(/\(([-0-9.]+),([-0-9.]+)\)/g)]
+            .map(m => [Number(m[2]), Number(m[1])]);
+    }
+
+    async function geschaeftsgebietZeichnen() {
+        const gebiete = await fetchGeschaeftsgebiete();
+        const wue = gebiete.find(g => g.name === 'Würzburg') || gebiete[0];
+        if (!wue) return;
+        geschaeftsgebiet = L.polygon(umrissLesen(wue.umriss), {
+            color: '#f00038', fillColor: '#f00038', fillOpacity: 0.05,
+            weight: 2, dashArray: '7, 7'
+        }).addTo(map);
+        map.fitBounds(geschaeftsgebiet.getBounds(), { padding: [40, 40] });
+        karteEingepasst = true;
+    }
 
     const stationLayer = L.layerGroup().addTo(map);
     const bikeLayer = L.layerGroup().addTo(map);
@@ -598,7 +620,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
             ${zeilen || '<p class="pop-leer">Gerade kein Rad des gewählten Typs hier.</p>'}
             <p class="pop-fuss">Nach dem Leihen öffnet sich das Schloss automatisch.
-               Abstellen an jeder Station kostenlos.</p>
+               Abstellen an einer Station oder frei im rot umrandeten Geschäftsgebiet.</p>
           </div>`;
     }
 
@@ -683,12 +705,8 @@ document.addEventListener("DOMContentLoaded", async () => {
              .bindPopup(freiesRadPopover(rad), { maxWidth: 340, minWidth: 300 });
         }
 
-        // Einmal auf das Geschaeftsgebiet einpassen, statt auf einer
-        // festen Vorgabe zu bleiben - die nutzte die Flaeche schlecht aus.
-        if (!karteEingepasst) {
-            map.fitBounds(geschaeftsgebiet.getBounds(), { padding: [40, 40] });
-            karteEingepasst = true;
-        }
+        // Der Ausschnitt folgt dem Geschaeftsgebiet; das setzt
+        // geschaeftsgebietZeichnen, sobald die Sicht geladen ist.
     }
 
     checkboxes.forEach(cb => cb.addEventListener('change', karteZeichnen));

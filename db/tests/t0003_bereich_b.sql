@@ -246,3 +246,75 @@ begin
     '23503', null, 'Eine Station mit abgestellten Raedern laesst sich nicht loeschen');
 end;
 $$;
+
+-- =====================================================================
+--  GESCHAEFTSGEBIET
+--
+--  Die Flaeche, innerhalb derer frei abgestellt werden darf. Sie stand
+--  frueher nur als Vieleck im JavaScript der Karte - gezeichnet, aber
+--  nie geprueft. Punkt-in-Flaeche macht der eingebaute Operator @>,
+--  ohne PostGIS.
+-- =====================================================================
+
+create or replace function velocity_test.test_b_geschaeftsgebiet()
+returns setof text language plpgsql as $$
+begin
+  return next has_table('velocity'::name, 'geschaeftsgebiet'::name,
+                        'Tabelle geschaeftsgebiet existiert');
+  return next ok((select count(*) > 0 from velocity.geschaeftsgebiet where aktiv),
+                 'Mindestens ein aktives Geschäftsgebiet ist hinterlegt');
+
+  -- Innerhalb: Marktplatz und Campus Hubland
+  return next ok(velocity.fn_im_geschaeftsgebiet(49.7944, 9.9295),
+                 'Der Marktplatz liegt im Geschäftsgebiet');
+  return next ok(velocity.fn_im_geschaeftsgebiet(49.7810, 9.9720),
+                 'Der Campus Hubland liegt im Geschäftsgebiet');
+
+  -- Ausserhalb: Hoechberg und Schweinfurt
+  return next ok(not velocity.fn_im_geschaeftsgebiet(49.7900, 9.8800),
+                 'Höchberg liegt außerhalb');
+  return next ok(not velocity.fn_im_geschaeftsgebiet(50.0467, 10.2283),
+                 'Schweinfurt liegt außerhalb');
+
+  return next throws_ok(
+    $sql$insert into velocity.geschaeftsgebiet (name, flaeche)
+         values ('Zweipunkt', polygon '((9.9,49.8),(9.95,49.81))')$sql$,
+    '23514', null, 'Ein Vieleck mit zwei Ecken wird abgewiesen');
+end;
+$$;
+
+create or replace function velocity_test.test_b_beenden_nur_im_gebiet()
+returns setof text language plpgsql as $$
+declare
+  v_f record; v_a bigint; v_e record;
+begin
+  select * into v_f from velocity_test.fixture_rad_ort('geofence');
+  -- Die Vorrichtung legt einen eigenen Fahrradtyp an; der braucht einen
+  -- Preis, sonst bricht die Preisfindung ab, bevor der Ort geprueft ist.
+  insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr,
+                                      preis_pro_minute, tageshoechstpreis)
+  select m.typ_id, daterange(current_date - 30, null, '[)'), 1.00, 0.10, 20.00
+    from velocity.fahrrad f
+    join velocity.fahrradmodell m on m.modell_id = f.modell_id
+   where f.fahrrad_id = v_f.o_fahrrad_id;
+  insert into velocity.fahrrad_position (fahrrad_id, latitude, longitude)
+       values (v_f.o_fahrrad_id, 49.794400, 9.929500);
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_latitude, start_longitude, startzeit)
+       values ((select kunde_id from velocity.kunde order by kunde_id limit 1),
+               v_f.o_fahrrad_id, 49.794400, 9.929500, now())
+    returning ausleihe_id into v_a;
+
+  -- Hamburg liegt nicht in Wuerzburg. Frueher nahm die Datenbank das an.
+  select * into v_e from velocity.fn_ausleihe_beenden(
+    (select kunde_id from velocity.ausleihe where ausleihe_id = v_a),
+    v_a, null, 53.550000, 9.993000);
+  return next is(v_e.meldung, 'Abstellort liegt ausserhalb des Geschaeftsgebiets',
+                 'Abstellen außerhalb des Geschäftsgebiets wird abgewiesen');
+
+  select * into v_e from velocity.fn_ausleihe_beenden(
+    (select kunde_id from velocity.ausleihe where ausleihe_id = v_a),
+    v_a, null, 49.781000, 9.972000);
+  return next ok(v_e.gesamtbetrag is not null,
+                 'Abstellen am Hubland, also im Gebiet, wird angenommen');
+end;
+$$;

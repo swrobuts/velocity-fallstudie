@@ -63,3 +63,31 @@ select t.typ_code, p.gueltigkeit, p.startgebuehr, p.preis_pro_minute,
   from velocity.nutzungspreis p
   join velocity.fahrradtyp t using (typ_id)
  order by t.typ_id, lower(p.gueltigkeit);
+
+-- =====================================================================
+--  NACHTRAG 23.08.2026: Minutenpreis E-Bike Sport
+--
+--  0,10 -> 0,50 Euro je Minute.
+--
+--  Diesmal wird die laufende Periode NICHT geschlossen, sondern
+--  geaendert. Der Grund: sie hat heute begonnen, und ein Zeitraum
+--  [heute, heute) waere leer - daterange wuerde ihn verwerfen. Es gibt
+--  auch nichts zu schuetzen: keine einzige entgeltposition verweist auf
+--  diese Zeile, es wurde also noch nichts damit abgerechnet. Waere
+--  gestern schon eine Fahrt gelaufen, muesste hier wieder geschlossen
+--  und neu eroeffnet werden.
+--
+--  Nebenwirkung, die erwuenscht ist: der Tageshoechstpreis von 75 Euro
+--  greift jetzt nach 148 Minuten statt nach 740. Die Kappung ist damit
+--  wieder eine Regel, die man im Betrieb zu sehen bekommt.
+-- =====================================================================
+
+update velocity.nutzungspreis p
+   set preis_pro_minute = 0.50
+  from velocity.fahrradtyp t
+ where t.typ_id = p.typ_id
+   and t.typ_code = 'EBIKE'
+   and upper_inf(p.gueltigkeit)
+   and p.preis_pro_minute <> 0.50
+   and not exists (select 1 from velocity.entgeltposition e
+                    where e.nutzungspreis_id = p.preis_id);

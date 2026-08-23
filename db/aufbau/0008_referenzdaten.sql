@@ -76,7 +76,7 @@ insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro
 select t.typ_id, daterange(current_date, null, '[)'), p.start, p.minute, p.hoechst
   from (values
     ('CITY',  0.10, 0.10,  50.00),
-    ('EBIKE', 1.00, 0.10,  75.00),
+    ('EBIKE', 1.00, 0.50,  75.00),
     ('CARGO', 2.00, 0.10, 110.00)
   ) as p(typ_code, start, minute, hoechst)
   join velocity.fahrradtyp t on t.typ_code = p.typ_code
@@ -136,7 +136,7 @@ insert into velocity.nutzungsschritt (nummer, titel, beschreibung, icon_code) va
       'Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss öffnet sich automatisch.',
       'fa-qrcode'),
   (3, 'Parken und beenden',
-      'Stelle das Rad an einer Station (gratis) oder in der Flex-Zone (gegen Gebühr) ab. Schloss schließen, fertig.',
+      'Stelle das Rad an einer Station ab oder frei im rot umrandeten Geschäftsgebiet. Schloss schließen, fertig.',
       'fa-square-parking')
 on conflict (nummer) do update
   set titel = excluded.titel, beschreibung = excluded.beschreibung, icon_code = excluded.icon_code;
@@ -171,3 +171,14 @@ on conflict (name) do update
    set hoehe_m = excluded.hoehe_m, latitude = excluded.latitude,
        longitude = excluded.longitude, quelle = excluded.quelle,
        sortierung = excluded.sortierung;
+
+
+-- ---------------------------------------------------------------------
+-- Geschaeftsgebiet Wuerzburg. Die Eckpunkte standen bisher fest im
+-- JavaScript der Karte; jetzt zeichnet die Karte, was hier steht.
+-- Reihenfolge im Typ polygon: (Laengengrad, Breitengrad).
+-- ---------------------------------------------------------------------
+insert into velocity.geschaeftsgebiet (name, flaeche) values
+  ('Würzburg',
+   polygon '((9.9100,49.8100),(9.9400,49.8150),(9.9850,49.7850),(9.9600,49.7750),(9.9300,49.7700),(9.9000,49.7850))')
+on conflict (name) do update set flaeche = excluded.flaeche;

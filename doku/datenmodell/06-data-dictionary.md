@@ -183,6 +183,19 @@ Monatliches Freiminutenkontingent und dessen Verbrauch. Ersetzt einen mutierende
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
+## `geschaeftsgebiet` (Tabelle)
+
+Flaeche, innerhalb derer ein Rad ueberall abgestellt werden darf. Stand frueher fest im JavaScript der Karte - eine Regel ohne Durchsetzung.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `gebiet_id` | `bigint` | nein |  | Surrogatschlüssel. |
+| `name` | `text` | nein |  | Name des Gebiets, zugleich Fachschlüssel. |
+| `flaeche` | `polygon` | nein |  | Das Vieleck als eingebauter Typ polygon, in der Reihenfolge (Längengrad, Breitengrad). Punkt-in-Fläche prüft der Operator @>; PostGIS wird dafür nicht gebraucht. |
+| `aktiv` | `boolean` | nein | `true` | Nur aktive Gebiete gelten. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
 ## `hersteller` (Tabelle)
 
 Produzent eines Fahrradmodells.
@@ -456,6 +469,16 @@ Erzeugt das Data Dictionary aus dem Systemkatalog. Grundlage für doku/datenmode
 | `frage` | `text` | ja |  | Die Frage. |
 | `antwort` | `text` | ja |  | Die Antwort. |
 | `sortierung` | `integer` | ja |  | Reihenfolge auf der Seite. |
+
+## `v_geschaeftsgebiet` (Sicht)
+
+Öffentliche Umrisse der aktiven Geschäftsgebiete.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `gebiet_id` | `bigint` | ja |  | Schlüssel des Gebiets. |
+| `name` | `text` | ja |  | Name des Gebiets. |
+| `umriss` | `text` | ja |  | Das Vieleck als Text, Form ((Länge,Breite),…). Die Karte zeichnet daraus ihren Umriss. |
 
 ## `v_hoehenmarke` (Sicht)
 

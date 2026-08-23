@@ -32,7 +32,7 @@ GESPERRT = [
 # Ressourcen, die anon erreichen MUSS, damit die Website funktioniert.
 ERLAUBT = [
     "v_station", "v_verfuegbares_fahrrad", "v_tarifkarte", "v_tarif",
-    "v_faq", "v_nutzungsschritt", "v_kennzahl", "v_hoehenmarke",
+    "v_faq", "v_nutzungsschritt", "v_kennzahl", "v_hoehenmarke", "v_geschaeftsgebiet",
 ]
 
 

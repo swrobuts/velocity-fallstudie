@@ -37,6 +37,12 @@ select s.station_id,
           a.strasse, a.hausnummer, a.plz, a.ort,
           s.latitude, s.longitude, s.hoehe_m, s.kapazitaet;
 
+drop view if exists velocity.v_geschaeftsgebiet;
+create view velocity.v_geschaeftsgebiet as
+select gebiet_id, name, flaeche::text as umriss
+  from velocity.geschaeftsgebiet
+ where aktiv;
+
 drop view if exists velocity.v_hoehenmarke;
 create view velocity.v_hoehenmarke as
 select marke_id, name, hoehe_m, latitude, longitude, quelle

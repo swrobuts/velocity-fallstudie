@@ -201,6 +201,16 @@ begin
     return;
   end if;
 
+  -- Frei abstellen geht nur INNERHALB des Geschaeftsgebiets. Bisher stand
+  -- diese Regel nur als Vieleck im JavaScript der Karte - die Datenbank
+  -- nahm jede Koordinate an, auch eine in Hamburg.
+  if p_end_station_id is null
+     and not velocity.fn_im_geschaeftsgebiet(p_latitude, p_longitude) then
+    return query select null::numeric, null::integer,
+      'Abstellort liegt ausserhalb des Geschaeftsgebiets'::text;
+    return;
+  end if;
+
   update velocity.ausleihe a
      set endzeit        = now(),
          end_station_id = p_end_station_id,
