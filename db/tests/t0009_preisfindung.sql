@@ -60,8 +60,9 @@ begin
   end if;
 
   insert into velocity.ausleihe
-         (kunde_id, fahrrad_id, mitgliedschaft_id, startzeit, status)
-       values (o_kunde_id, v_rad, v_mgl,
+         (kunde_id, fahrrad_id, mitgliedschaft_id, start_latitude, start_longitude,
+          startzeit, status)
+       values (o_kunde_id, v_rad, v_mgl, 49.790000, 9.930000,
                now() - interval '60 minutes 30 seconds', 'aktiv')
     returning ausleihe_id into o_ausleihe_id;
 
@@ -74,7 +75,7 @@ returns setof text language plpgsql as $$
 declare v_f record; v_e record;
 begin
   select * into v_f from velocity_test.fixture_preisfall('f1', 10.00, null, 0);
-  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, null, null);
+  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
 
   return next is(v_e.dauer_minuten, 61, 'Dauer wird auf 61 angefangene Minuten aufgerundet');
   return next is(v_e.gesamtbetrag, 6.20::numeric, 'Ohne Tarif: 0,10 + 61 x 0,10 = 6,20 EUR');
@@ -94,7 +95,7 @@ returns setof text language plpgsql as $$
 declare v_f record; v_e record;
 begin
   select * into v_f from velocity_test.fixture_preisfall('f2', 10.00, 30, 0);
-  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, null, null);
+  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
 
   -- 0,10 + 6,10 - 3,00 (30 Freiminuten x 0,10)
   return next is(v_e.gesamtbetrag, 3.20::numeric, 'Teilweise Freiminuten: 3,20 EUR');
@@ -113,7 +114,7 @@ returns setof text language plpgsql as $$
 declare v_f record; v_e record;
 begin
   select * into v_f from velocity_test.fixture_preisfall('f3', 10.00, 300, 0);
-  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, null, null);
+  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
 
   return next is(v_e.gesamtbetrag, 0.10::numeric, 'Volle Freiminutendeckung: nur Startgebuehr');
   return next is((select verbraucht_minuten from velocity.freiminuten_periode
@@ -127,7 +128,7 @@ returns setof text language plpgsql as $$
 declare v_f record; v_e record;
 begin
   select * into v_f from velocity_test.fixture_preisfall('f4', 10.00, 0, 20.00);
-  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, null, null);
+  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
 
   -- 6,20 - 20 Prozent (1,24) = 4,96
   return next is(v_e.gesamtbetrag, 4.96::numeric, 'Rabatt von 20 Prozent ergibt 4,96 EUR');
@@ -143,7 +144,7 @@ returns setof text language plpgsql as $$
 declare v_f record; v_e record;
 begin
   select * into v_f from velocity_test.fixture_preisfall('f5', 5.00, null, 0);
-  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, null, null);
+  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
 
   return next is(v_e.gesamtbetrag, 5.00::numeric, 'Betrag wird auf den Tageshoechstpreis gekappt');
   return next is((select betrag from velocity.entgeltposition p
@@ -161,7 +162,7 @@ begin
   -- unter der Kappungsgrenze, es wird also NICHT gekappt. Waere die
   -- Reihenfolge umgekehrt, kaeme 4,00 heraus.
   select * into v_f from velocity_test.fixture_preisfall('f6', 5.00, 0, 20.00);
-  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, null, null);
+  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
 
   return next is(v_e.gesamtbetrag, 4.96::numeric,
                  'Rabatt wird vor der Kappung angewandt (Geschaeftsregel)');
@@ -180,14 +181,14 @@ begin
   insert into velocity.kunde (email, vorname, nachname)
        values ('fremd@example.org', 'Frieda', 'Fremd') returning kunde_id into v_fremd;
 
-  select * into v_e from velocity.fn_ausleihe_beenden(v_fremd, v_f.o_ausleihe_id, null, null, null);
+  select * into v_e from velocity.fn_ausleihe_beenden(v_fremd, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
   return next is(v_e.meldung, 'Keine Berechtigung für diese Ausleihe',
                  'Fremde Ausleihe kann nicht beendet werden (GR9)');
   return next is((select status::text from velocity.ausleihe where ausleihe_id = v_f.o_ausleihe_id),
                  'aktiv', 'Die fremde Ausleihe bleibt unveraendert aktiv');
 
-  perform velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, null, null);
-  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, null, null);
+  perform velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
+  select * into v_e from velocity.fn_ausleihe_beenden(v_f.o_kunde_id, v_f.o_ausleihe_id, null, 49.780000, 9.940000);
   return next is(v_e.meldung, 'Ausleihe ist nicht aktiv',
                  'Eine bereits beendete Ausleihe wird nicht erneut abgerechnet');
 end;
@@ -211,7 +212,8 @@ begin
   for i in 1..5 loop
     insert into velocity.fahrrad (rahmennummer, modell_id) values ('RN-P8-' || i, v_m)
       returning fahrrad_id into v_rad;
-    insert into velocity.fahrrad_position (fahrrad_id) values (v_rad);
+    insert into velocity.fahrrad_position (fahrrad_id, latitude, longitude)
+         values (v_rad, 49.790000, 9.930000);
     select * into v_e from velocity.fn_ausleihe_starten(v_kunde, v_rad);
     if i <= 4 then
       return next ok(v_e.ausleihe_id is not null, format('Ausleihe %s wird angenommen', i));
@@ -232,7 +234,7 @@ begin
   select * into v_e from velocity.api_ausleihe_starten(1::bigint);
   return next is(v_e.meldung, 'Nicht angemeldet', 'api_ausleihe_starten weist anonyme Aufrufe ab');
 
-  select * into v_e from velocity.api_ausleihe_beenden(1::bigint, null, null, null);
+  select * into v_e from velocity.api_ausleihe_beenden(1::bigint, null, 49.780000, 9.940000);
   return next is(v_e.meldung, 'Nicht angemeldet', 'api_ausleihe_beenden weist anonyme Aufrufe ab');
 end;
 $$;

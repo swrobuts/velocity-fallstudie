@@ -49,8 +49,34 @@ aufwendig, und eine Sortierreihenfolge lässt sich nicht nachträglich
 | GR8 Mindestalter 16 | `api_profil_aktualisieren` — **nicht** als `CHECK`, siehe unten |
 | GR9 nur eigene Ausleihe beenden | `auth.uid()`-Prüfung in `api_ausleihe_beenden` |
 | GR10 eine Rechnung je Kunde und Monat | `UNIQUE (kunde_id, periode_jahr, periode_monat)` |
+| GR11 genau eine Ortsangabe | `CHECK ausleihe_startort_chk` und `ausleihe_endort_chk` |
+| GR12 kein Start ohne Standort | Prüfung in `fn_ausleihe_starten` |
 
-Sieben von zehn Regeln setzt die Datenbank durch. Die drei übrigen
+### GR11: warum kein NOT NULL
+
+Naheliegend wäre `start_station_id NOT NULL`. Das wäre falsch: die
+Fallstudie kennt **zwei** Abstellarten — an einer Station oder frei im
+Stadtgebiet gegen Zuschlag. Gefordert ist also nicht „vorhanden", sondern
+„genau eines von beiden", und das kann nur ein `CHECK` ausdrücken:
+
+```sql
+check ( (start_station_id is not null and start_latitude is null and start_longitude is null)
+     or (start_station_id is null and start_latitude is not null and start_longitude is not null) )
+```
+
+Am Ende kommt die Zeit hinzu: solange die Fahrt läuft, darf es **keinen**
+Rückgabeort geben, danach genau einen. Der zweite `CHECK` bindet die
+Ortsangabe deshalb an `endzeit`.
+
+Die Regel hatte eine Nebenwirkung, die den Entwurf verbessert hat: die
+Fremdschlüssel auf `station` standen auf `ON DELETE SET NULL`. Mit der
+Ortspflicht wäre das fatal — das Löschen einer Station hätte die einzige
+Ortsangabe einer abgeschlossenen Fahrt stillschweigend entfernt und die
+Zeile ungültig gemacht. Sie stehen jetzt auf `ON DELETE RESTRICT`.
+Stationen werden über `betriebszeitraum` außer Betrieb genommen, nicht
+gelöscht.
+
+Neun von zwölf Regeln setzt die Datenbank durch. Die drei übrigen
 brauchen Kontext, den ein Constraint nicht hat: den angemeldeten Nutzer,
 das aktuelle Datum, den Zustand anderer Zeilen.
 

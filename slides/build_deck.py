@@ -110,7 +110,8 @@ def baue() -> Presentation:
     s = folie(prs, "Der Fall", "Anna fährt 61 Minuten. Das ist alles, was wir wissen.",
               "Aus diesem einen Satz entsteht das gesamte Datenmodell. Jede Frage, die "
               "diese Fahrt aufwirft, beantwortet ein Kapitel dieser Einheit — und am Ende "
-              "steht eine Datenbank, die Annas Rechnung selbst garantiert.")
+              "steht eine Datenbank, die Annas Rechnung selbst berechnet und ihre Regeln "
+              "erzwingt.")
     diagramm(s, bild("faden-annas-fahrt"), y=unter_intro(s), hoehe=190)
     sandband(s, "Prüfen Sie im Verlauf mit: Woher weiß die Datenbank am Ende, dass Anna "
                 "genau 4,96 Euro zahlt — und nicht 6,20 oder 4,00?", y=396)
@@ -180,7 +181,7 @@ def baue() -> Presentation:
     ], y=174, hoehe=42, luecke=5)
     faden(s, "GR5 entscheidet über Annas Rechnung: es gilt der Preis um 10:00 Uhr, nicht der von heute.")
     notizen(s, "Sechs von zehn. Rechts steht schon, wo die Regel später landet — das ist "
-               "der rote Faden durch die Umsetzung. GR7 bis GR10 folgen im physischen Entwurf.")
+               "der rote Faden durch die Umsetzung. GR7 bis GR12 folgen im physischen Entwurf.")
 
     # ═══════════════════════════════════════════ 2 Konzeptioneller Entwurf
     kapitel(prs, 2, "Konzeptioneller Entwurf",
@@ -429,8 +430,8 @@ def baue() -> Presentation:
     notizen(s, "Die Zeitzonenfalle ist real und teuer: eine Fahrt in der Nacht der "
                "Umstellung lässt sich mit timestamp ohne Zone nicht eindeutig einordnen.")
 
-    s = folie(prs, "5 · Physischer Entwurf", "Sieben von zehn Regeln erzwingt die Datenbank",
-              "Die oberen fünf gelten immer, auch bei direktem SQL-Zugriff. Die unteren zwei "
+    s = folie(prs, "5 · Physischer Entwurf", "Neun von zwölf Regeln erzwingt die Datenbank",
+              "Die oberen sechs gelten immer, auch bei direktem SQL-Zugriff. Die unteren drei "
               "nur, wenn man den vorgesehenen Weg nimmt — sie brauchen Kontext, den ein "
               "Constraint nicht hat.")
     tabelle(s, ["Regel", "Umsetzung", "Wirkt"],
@@ -439,9 +440,11 @@ def baue() -> Presentation:
              ["GR6", "GENERATED ALWAYS AS (ceil(…)) STORED", "immer"],
              ["GR7", "CHECK (verbraucht <= kontingent)", "immer"],
              ["GR10", "UNIQUE (kunde_id, periode_jahr, periode_monat)", "immer"],
+             ["GR11", "CHECK: Station oder Koordinaten, nie beides", "immer"],
              ["GR2, GR5", "Prüfung in fn_ausleihe_starten und _beenden", "nur über die Funktion"],
-             ["GR8, GR9", "Prüfung in der api_-Schicht", "nur über die Funktion"]],
-            y=186, spalten_b=[130, 520, 253.5], zeilen_h=30)
+             ["GR8, GR9", "Prüfung in der api_-Schicht", "nur über die Funktion"],
+             ["GR12", "Prüfung in fn_ausleihe_starten", "nur über die Funktion"]],
+            y=186, spalten_b=[130, 520, 253.5], zeilen_h=27)
     notizen(s, "Der Unterschied in der dritten Spalte ist der eigentliche Inhalt dieser "
                "Folie. Constraints sind unbestechlich, Funktionen kann man umgehen — "
                "deshalb muss die Fachlogik von außen unerreichbar sein.")
@@ -533,11 +536,11 @@ def baue() -> Presentation:
     tabelle(s, ["Position", "Menge", "Einzelbetrag", "Betrag", "Woher der Wert kommt"],
             [["STARTGEBUEHR", "1", "0,10", "+ 0,10", "nutzungspreis, gültig um 10:00 Uhr"],
              ["ZEITENTGELT", "61", "0,10", "+ 6,10", "dauer_minuten, aufgerundet"],
-             ["FREIMINUTEN", "0", "0,10", "− 0,00", "Kontingent im Monat schon verbraucht"],
-             ["TARIFRABATT", "1", "20 %", "− 1,24", "tarif_kondition zum Startzeitpunkt"],
-             ["HOECHSTPREIS", "1", "—", "− 0,00", "6,20 liegt unter der Obergrenze 15,00"]],
+             ["FREIMINUTEN", "0", "0,10", "- 0,00", "Kontingent im Monat schon verbraucht"],
+             ["TARIFRABATT", "1", "20 %", "- 1,24", "tarif_kondition zum Startzeitpunkt"],
+             ["HOECHSTPREIS", "1", "—", "- 0,00", "6,20 liegt unter der Obergrenze 15,00"]],
             y=178, spalten_b=[190, 90, 130, 120, 373.5], zeilen_h=30)
-    sandband(s, "6,20 − 1,24 = 4,96 Euro. Reihenfolge: Rabatt VOR der Kappung — umgekehrt "
+    sandband(s, "6,20 - 1,24 = 4,96 Euro. Reihenfolge: Rabatt VOR der Kappung — umgekehrt "
                 "käme 4,00 heraus, weil der Rabatt den bereits gedeckelten Betrag ein "
                 "zweites Mal senken würde.", y=364)
     faden(s, "Damit ist die Frage vom Anfang beantwortet: 4,96 Euro, und jede Zeile ist belegt.")

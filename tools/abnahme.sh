@@ -123,6 +123,18 @@ else
   grep -A3 '^FEHLER' /tmp/abnahme-erd.log | head -20 | sed 's/^/     /'
 fi
 
+# ------------------------------------- 7c Inhaltspruefung des Decks
+# check_deck.py prueft Geometrie. Dieser Pruefer sucht inhaltliche
+# Fehler: transliterierte Umlaute, Zeichen ausserhalb der Hausschrift,
+# Absolutheiten, doppelte Titel, Zahlen die vom Repository abweichen.
+schritt "Folieninhalte"
+if python3 tools/deck_audit.py >/tmp/abnahme-deck.log 2>&1; then
+  ergebnis 0 "$(grep -E '^[0-9]+ Folien geprueft' /tmp/abnahme-deck.log)"
+else
+  ergebnis 1 "Inhaltliche Befunde im Deck"
+  grep -vE '^$|geprueft|Repository' /tmp/abnahme-deck.log | head -12 | sed 's/^/     /'
+fi
+
 # --------------------------------------------------------- 8 Website
 schritt "Website spricht nur Sichten und api-Funktionen"
 verstoss=$(grep -oE "\.from\('[a-z_]+'\)" src/supabase.js | grep -v "'v_" || true)

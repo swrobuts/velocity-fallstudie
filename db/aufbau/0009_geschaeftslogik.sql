@@ -96,16 +96,34 @@ begin
 
   select * into v_pos from velocity.fahrrad_position where fahrrad_id = p_fahrrad_id;
 
+  -- Ein Rad ohne Standort kann niemand abholen. Bisher lief die Ausleihe
+  -- trotzdem an und schrieb eine Fahrt ohne Startort in die Tabelle; die
+  -- Ortspflicht macht daraus jetzt eine ausgesprochene Geschaeftsregel.
+  -- Im Bestand betrifft das nur ausgeliehene Raeder - die sind in Fahrt
+  -- und ohnehin nicht verfuegbar.
+  if v_pos.fahrrad_id is null
+     or (v_pos.station_id is null
+         and (v_pos.latitude is null or v_pos.longitude is null)) then
+    return query select null::bigint,
+      'Standort des Rades unbekannt, Ausleihe nicht moeglich'::text; return;
+  end if;
+
   -- Die zum Startzeitpunkt gueltige Mitgliedschaft wird fixiert, damit ein
   -- spaeterer Tarifwechsel die Bepreisung nicht rueckwirkend veraendert.
   select m.mitgliedschaft_id into v_mgl
     from velocity.mitgliedschaft m
    where m.kunde_id = p_kunde_id and m.gueltigkeit @> current_date;
 
+  -- Genau eine Ortsangabe, nie beide: steht das Rad an einer Station,
+  -- traegt die Station den Ort. Die Radposition fuehrt bei 316 von 352
+  -- Raedern beides gleichzeitig - das waere eine transitive Abhaengigkeit
+  -- (Station bestimmt die Koordinaten) und verletzt ausleihe_startort_chk.
   insert into velocity.ausleihe
     (kunde_id, fahrrad_id, mitgliedschaft_id, start_station_id, start_latitude, start_longitude)
   values
-    (p_kunde_id, p_fahrrad_id, v_mgl, v_pos.station_id, v_pos.latitude, v_pos.longitude)
+    (p_kunde_id, p_fahrrad_id, v_mgl, v_pos.station_id,
+     case when v_pos.station_id is null then v_pos.latitude  end,
+     case when v_pos.station_id is null then v_pos.longitude end)
   returning velocity.ausleihe.ausleihe_id into v_neu;
 
   update velocity.fahrrad set status = 'ausgeliehen' where fahrrad_id = p_fahrrad_id;
@@ -170,11 +188,21 @@ begin
     return query select null::numeric, null::integer, 'Ausleihe ist nicht aktiv'::text; return;
   end if;
 
+  -- Die Rueckgabe braucht genau eine Ortsangabe. Ohne diese Pruefung
+  -- schluege ausleihe_endort_chk zu - mit einer Meldung, die der
+  -- Anwendung nichts sagt. Fachliche Fehler gehoeren in die Meldung.
+  if (p_end_station_id is not null)
+     = (p_latitude is not null and p_longitude is not null) then
+    return query select null::numeric, null::integer,
+      'Rueckgabe braucht entweder eine Station oder Koordinaten, nicht beides'::text;
+    return;
+  end if;
+
   update velocity.ausleihe a
      set endzeit        = now(),
          end_station_id = p_end_station_id,
-         end_latitude   = p_latitude,
-         end_longitude  = p_longitude,
+         end_latitude   = case when p_end_station_id is null then p_latitude  end,
+         end_longitude  = case when p_end_station_id is null then p_longitude end,
          status         = 'abgeschlossen'
    where a.ausleihe_id = p_ausleihe_id
   returning * into v_a;
