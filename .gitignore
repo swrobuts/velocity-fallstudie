@@ -5,3 +5,6 @@ node_modules/
 .worktrees/
 __pycache__/
 doku/verifikation/*sicherung*/
+
+# Sperrdateien von Word/PowerPoint
+~$*
