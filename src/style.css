@@ -117,13 +117,23 @@ h1, h2, h3, h4 {
 
 /* --------------------------------------------------------- Wortmarke */
 .logo { display: flex; align-items: center; }
+/* Das Rad im O las sich als Fadenkreuz: Nabe plus vier Speichen ergibt
+   nun einmal ein Zielkreuz, und das Rad erkannte man erst als zweites.
+   Der Unterstrich loest das Wortspiel anders und besser - er ist die
+   Schreibweise, in der dieses Schema benannt ist (velocity, fahrrad_id,
+   verfuegbare_raeder). Die Marke steht damit in der Konvention ihrer
+   eigenen Datenbank, statt ein Sinnbild danebenzustellen. */
 .wortmarke {
-  display: inline-flex; align-items: center; gap: .03em;
-  font-family: var(--display); font-weight: 700;
-  font-size: 1.4rem; line-height: 1;
-  text-transform: uppercase; letter-spacing: .012em;
-  font-variation-settings: 'opsz' 40, 'SOFT' 0, 'WONK' 0;
+  display: inline-flex; align-items: baseline;
+  font-family: var(--mono); font-weight: 600;
+  font-size: 1.28rem; line-height: 1; letter-spacing: -.012em;
   color: var(--tinte);
+}
+.wm-fuge {
+  color: var(--signal);
+  /* Die Fuge steht auf der Grundlinie und traegt deshalb etwas mehr Fett,
+     sonst verschwindet sie zwischen den Versalhoehen. */
+  font-weight: 700;
 }
 .wm-city { color: var(--signal); }
 .wm-rad {
@@ -188,7 +198,7 @@ nav {
   align-items: stretch;                /* gemeinsame Ober- und Unterkante */
   /* Die Mindesthöhe kommt aus dem Kleinbildformat des Bildes; braucht der
      Satz mehr, wächst die Zeile und das Bild beschneidet sich weiter. */
-  min-height: min(calc(61.8vw / 1.5), 78vh);
+  /* Keine erzwungene Mindesthoehe: der Satz bestimmt, das Bild folgt. */
   padding: var(--luft-oben) 0 var(--luft-unten)
            max(var(--rand), calc((100vw - var(--spur)) / 2));
   background: var(--papier);
@@ -211,11 +221,14 @@ nav {
   grid-column: 1; max-width: none; margin: 0; padding: 0;
   display: flex; align-items: stretch;
 }
+/* Vorher stand hier space-between gegen eine erzwungene Mindesthoehe.
+   Das teilte die Restluft gleichmaessig auf und riss ein Loch zwischen
+   Schlagzeile und Unterzeile. Jetzt bestimmt der Satz die Hoehe der
+   Zeile, und das Foto fuellt sie - der Satz hat wieder einen Rhythmus. */
 .hero-typo-wrapper {
   max-width: 46ch; width: 100%;
-  display: flex; flex-direction: column; justify-content: space-between;
-  align-items: stretch;
-  gap: clamp(22px, 2.6vw, 36px);
+  display: flex; flex-direction: column; align-items: stretch;
+  gap: clamp(20px, 2.2vw, 30px);
 }
 /* Die Marke ist eine Pille, keine Leiste: sie darf sich nicht auf die
    Spaltenbreite dehnen. */
@@ -248,8 +261,12 @@ nav {
 /* ------------------------------------------------- Signature: Zähler */
 .meter {
   background: #fff; color: var(--tinte);
-  border: 2px solid var(--tinte); border-radius: var(--kante);
-  box-shadow: 7px 7px 0 var(--signal);
+  border: 1px solid var(--linie); border-left: 3px solid var(--signal);
+  border-radius: 0 var(--kante) var(--kante) 0;
+  box-shadow: 0 16px 34px -26px rgba(16, 39, 90, .55);
+  /* Der harte rote Versatzschatten sah nach Dialogfenster aus. Die rote
+     Kante links ist die Indexmarke eines Messgeraets - dasselbe Signal,
+     aber im Register des Gegenstands. */
   max-width: 100%;
 }
 .meter-head {
@@ -304,6 +321,73 @@ nav {
   text-transform: uppercase; color: var(--rasen);
 }
 .status-right strong { color: var(--tinte); font-weight: 600; }
+
+/* ---------------------------------------------------- Laengsschnitt */
+/* Die Signatur der Seite. Kein Schmuck, sondern die Begruendung des
+   Produkts: hundert Hoehenmeter zwischen Main und Campus. Bewusst OHNE
+   Abschnittskopf - eine Zeichnung, die sich selbst beschriftet, braucht
+   keine Ueberschrift davor, und die Seite hat davon ohnehin genug. */
+.profil {
+  padding: clamp(40px, 4.6vw, 68px) 0 clamp(30px, 3.4vw, 46px);
+  background: var(--papier);
+  border-top: 1px solid var(--linie);
+}
+.profil-svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.p-raster line { stroke: var(--linie); stroke-width: 1; stroke-dasharray: 2 5; }
+.p-raster text {
+  font-family: var(--mono); font-size: 11px; fill: var(--text-leise);
+  letter-spacing: .06em; text-anchor: end;
+}
+
+.p-flaeche { fill: url(#hang); }
+.p-linie   { fill: none; stroke: var(--signal); stroke-width: 2.6; stroke-linecap: round; }
+
+.p-leit   { stroke: var(--linie); stroke-width: 1; stroke-dasharray: 2 4; }
+.p-pfeil  { stroke: var(--tinte); stroke-width: 1.2; }
+.p-spitze { fill: var(--tinte); }
+.p-mass-text {
+  font-family: var(--display); font-weight: 700; font-size: 19px;
+  fill: var(--tinte); text-anchor: start;
+}
+.p-mass-text.p-klein {
+  font-family: var(--mono); font-weight: 500; font-size: 9.5px;
+  fill: var(--text-leise); letter-spacing: .12em; text-transform: uppercase;
+}
+
+.p-ort circle { fill: var(--tinte); }
+.p-ort circle.p-punkt-klein { fill: var(--papier); stroke: var(--signal); stroke-width: 2; }
+.p-name {
+  font-family: var(--body); font-weight: 600; font-size: 13px;
+  fill: var(--tinte); text-anchor: start;
+}
+.p-hoehe {
+  font-family: var(--mono); font-weight: 600; font-size: 12px;
+  fill: var(--signal); text-anchor: start; letter-spacing: .04em;
+}
+.p-name.p-ende, .p-hoehe.p-ende { text-anchor: end; }
+.p-name.p-mitte { text-anchor: middle; fill: var(--text-leise); font-weight: 500; }
+
+.p-grund line { stroke: var(--linie); stroke-width: 1; }
+.p-km line { stroke: var(--linie); }
+.p-km text {
+  font-family: var(--mono); font-size: 10.5px; fill: var(--text-leise);
+  text-anchor: middle; letter-spacing: .08em;
+}
+.p-km text:last-of-type { text-anchor: end; }
+
+.profil-fuss {
+  margin: clamp(14px, 1.6vw, 22px) 0 0;
+  font-family: var(--mono); font-size: .72rem; letter-spacing: .04em;
+  color: var(--text-leise);
+}
+.profil-fuss strong { color: var(--tinte); font-weight: 600; }
+
+/* Nur fuer Screenreader: die Zeichnung traegt ihre Ueberschrift im Bild. */
+.nur-vorlesen {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
 
 /* -------------------------------------------------------- Kennzahlen */
 /* Heller Grund statt Weiss: die Seite braucht zwischen Kopf und Ablauf
@@ -605,12 +689,15 @@ footer .wm-city { color: var(--signal); }
   .stat-item:nth-child(odd) { border-left: 0; padding-left: 0; }
   .howto-card { padding-left: 0; border-left: 0; }
   .footer-grid { grid-template-columns: 1fr; gap: 26px; }
+  /* Die Zeichnung braucht Breite. Unter 900 px scrollt sie waagerecht
+     in ihrem eigenen Kasten, statt auf Briefmarkengroesse zu schrumpfen. */
+  .profil .container { overflow-x: auto; }
+  .profil-svg { min-width: 720px; }
   .nav-links { display: none; }
   .mobile-menu-icon { display: block; }
 }
 @media (max-width: 560px) {
   body { font-size: 16px; }
-  .meter { box-shadow: 5px 5px 0 var(--signal); }
   .buttons-row { flex-direction: column; align-items: stretch; }
   .buttons-row .btn-hero-primary, .buttons-row .btn-hero-outline { text-align: center; }
 }
