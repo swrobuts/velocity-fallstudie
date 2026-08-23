@@ -24,7 +24,7 @@ select s.station_id,
        s.stationsnummer,
        s.name,
        a.strasse, a.hausnummer, a.plz, a.ort,
-       s.latitude, s.longitude,
+       s.latitude, s.longitude, s.hoehe_m,
        s.kapazitaet,
        count(*) filter (where f.status = 'verfuegbar')::integer as verfuegbare_raeder,
        greatest(s.kapazitaet - count(p.fahrrad_id), 0)::integer as freie_stellplaetze
@@ -35,7 +35,7 @@ select s.station_id,
  where s.betriebszeitraum @> current_date
  group by s.station_id, s.stationsnummer, s.name,
           a.strasse, a.hausnummer, a.plz, a.ort,
-          s.latitude, s.longitude, s.kapazitaet;
+          s.latitude, s.longitude, s.hoehe_m, s.kapazitaet;
 
 drop view if exists velocity.v_verfuegbares_fahrrad;
 create view velocity.v_verfuegbares_fahrrad as

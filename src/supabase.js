@@ -28,7 +28,7 @@ async function ladeListe(quelle, spalten = '*', aufbau = (q) => q) {
 async function fetchStations() {
     return ladeListe('v_station',
         'station_id, stationsnummer, name, strasse, hausnummer, plz, ort, ' +
-        'latitude, longitude, kapazitaet, verfuegbare_raeder, freie_stellplaetze');
+        'latitude, longitude, hoehe_m, kapazitaet, verfuegbare_raeder, freie_stellplaetze');
 }
 
 async function fetchAvailableBikes() {

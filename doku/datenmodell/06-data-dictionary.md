@@ -323,6 +323,7 @@ Fester Standort mit Stellplätzen, an dem Räder entliehen und abgestellt werden
 | `betriebszeitraum` | `daterange` | nein | `daterange(CURRENT_DATE, NULL::date, '[)'::text)` | Zeitraum, in dem die Station betrieben wird. Halboffen; nach oben offen bedeutet: weiterhin in Betrieb. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+| `hoehe_m` | `integer` | ja |  | Hoehenlage in Metern, aus den Koordinaten gegen zwei unabhaengige Gelaendemodelle bestimmt (Copernicus GLO-30 und EU-DEM v1.1) und gemittelt. Beides sind Oberflaechenmodelle: in bebautem Gebiet liegen sie rund zehn Meter zu hoch. Belastbar sind deshalb die Unterschiede, nicht die absoluten Werte - und genau die Unterschiede traegt die Anwendung vor. Gesetzt in db/betrieb/stationslage_korrigieren.sql. |
 
 ## `tarif` (Tabelle)
 
@@ -532,6 +533,7 @@ Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begren
 | `ort` | `text` | ja |  | Ort der Station. |
 | `latitude` | `numeric(9,6)` | ja |  | Breitengrad für den Kartenmarker. |
 | `longitude` | `numeric(9,6)` | ja |  | Längengrad für den Kartenmarker. |
+| `hoehe_m` | `integer` | ja |  | Hoehenlage der Station. Siehe station.hoehe_m zur Herkunft und zur Genauigkeit. |
 | `kapazitaet` | `integer` | ja |  | Anzahl der Stellplätze. |
 | `verfuegbare_raeder` | `integer` | ja |  | Zahl der aktuell entleihbaren Räder an dieser Station. |
 | `freie_stellplaetze` | `integer` | ja |  | Kapazität abzüglich der abgestellten Räder, nie negativ. |

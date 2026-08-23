@@ -355,26 +355,35 @@ nav {
   fill: var(--text-leise); letter-spacing: .12em; text-transform: uppercase;
 }
 
-.p-ort circle { fill: var(--tinte); }
-.p-ort circle.p-punkt-klein { fill: var(--papier); stroke: var(--signal); stroke-width: 2; }
-.p-name {
-  font-family: var(--body); font-weight: 600; font-size: 13px;
-  fill: var(--tinte); text-anchor: start;
-}
-.p-hoehe {
-  font-family: var(--mono); font-weight: 600; font-size: 12px;
-  fill: var(--signal); text-anchor: start; letter-spacing: .04em;
-}
-.p-name.p-ende, .p-hoehe.p-ende { text-anchor: end; }
-.p-name.p-mitte { text-anchor: middle; fill: var(--text-leise); font-weight: 500; }
+.p-grundlinie { stroke: var(--linie); stroke-width: 1; }
 
-.p-grund line { stroke: var(--linie); stroke-width: 1; }
-.p-km line { stroke: var(--linie); }
-.p-km text {
-  font-family: var(--mono); font-size: 10.5px; fill: var(--text-leise);
-  text-anchor: middle; letter-spacing: .08em;
+/* Eine Station: Lot auf die Grundlinie, Ring in Gesamtgroesse der
+   Belegung, Kern als gefuellter Anteil der Kapazitaet. Der Radius folgt
+   der Wurzel der Anzahl - die Kreisflaeche wuerde sonst uebertreiben. */
+.hs-satz {
+  font-family: var(--display); font-weight: 700; font-size: 26px;
+  fill: var(--tinte); letter-spacing: -.01em;
 }
-.p-km text:last-of-type { text-anchor: end; }
+.hs-satz-2 { fill: var(--signal); }
+
+.hs-lot  { stroke: var(--linie); stroke-width: 1; stroke-dasharray: 2 4; }
+.hs-ring { fill: var(--papier); stroke: var(--tinte); stroke-width: 1.6; }
+.hs-kern { fill: var(--signal); }
+.hs-zahl {
+  font-family: var(--mono); font-weight: 600; font-size: 12.5px;
+  fill: var(--tinte); text-anchor: middle; letter-spacing: .02em;
+}
+.hs-name {
+  font-family: var(--body); font-weight: 500; font-size: 12px;
+  fill: var(--text-leise); text-anchor: end;
+}
+.hs-station { transition: opacity .18s ease; cursor: default; }
+.hs-station:hover, .hs-station:focus-visible { outline: none; }
+.hs-station:hover .hs-ring,
+.hs-station:focus-visible .hs-ring { stroke: var(--signal); stroke-width: 2.4; }
+.hs-station:hover .hs-name,
+.hs-station:focus-visible .hs-name { fill: var(--tinte); font-weight: 600; }
+@media (prefers-reduced-motion: reduce) { .hs-station { transition: none; } }
 
 .profil-fuss {
   margin: clamp(14px, 1.6vw, 22px) 0 0;
@@ -382,6 +391,10 @@ nav {
   color: var(--text-leise);
 }
 .profil-fuss strong { color: var(--tinte); font-weight: 600; }
+.profil-fuss code {
+  font-family: var(--mono); font-size: .95em; color: var(--tinte);
+  background: var(--kreide); padding: .1em .38em; border-radius: 2px;
+}
 
 /* Nur fuer Screenreader: die Zeichnung traegt ihre Ueberschrift im Bild. */
 .nur-vorlesen {

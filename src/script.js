@@ -140,6 +140,120 @@ document.addEventListener("DOMContentLoaded", async () => {
             { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Euro';
     }
 
+    /* =================================================================
+       HOEHENSPIEGEL
+
+       Wuerzburg ist der Grund fuer die Pedelecs: rund hundert Hoehenmeter
+       zwischen der tiefsten und der hoechsten Station. Diese Zeichnung war
+       zuerst ein festverdrahtetes Schema - und ein Schema ist genau einmal
+       interessant. Jetzt kommt jeder Wert aus velocity.v_station: die Hoehe
+       als Stammdatum, die Belegung als Momentaufnahme. Beim naechsten Besuch
+       steht sie anders da, weil die Raeder anders stehen.
+
+       Der Kurvenzug verbindet die Stationen in der Reihenfolge ihrer Hoehe.
+       Er ist kein Streckenprofil und behauptet keinen Weg - er zeigt, wie
+       flach die Stadt am Fluss liegt und wie steil es zum Campus geht.
+       ================================================================= */
+    const HS = { b: 1240, h: 340, l: 74, r: 1108, o: 46, u: 250 };
+
+    function hoehenspiegelZeichnen(stationen) {
+        const ziel = document.getElementById('profil-bild');
+        if (!ziel) return;
+
+        const orte = stationen
+            .filter(s => s.ort === 'Würzburg' && Number.isFinite(s.hoehe_m))
+            .sort((a, b) => a.hoehe_m - b.hoehe_m);
+        if (orte.length < 2) { ziel.innerHTML = ''; return; }
+
+        const hMin = orte[0].hoehe_m, hMax = orte[orte.length - 1].hoehe_m;
+        const spanne = Math.max(hMax - hMin, 1);
+        // Etwas Luft ueber und unter den Randwerten, sonst kleben die
+        // Punkte an der Rahmenkante.
+        const von = hMin - spanne * 0.10, bis = hMax + spanne * 0.10;
+        const y = (h) => HS.o + (bis - h) / (bis - von) * (HS.u - HS.o);
+        const x = (i) => orte.length === 1 ? HS.l
+                       : HS.l + i * (HS.r - HS.l) / (orte.length - 1);
+
+        const punkte = orte.map((s, i) => ({ s, x: x(i), y: y(s.hoehe_m) }));
+        // Die obere Bildhaelfte bleibt leer, weil fast alle Stationen unten
+        // am Fluss liegen. Diese Leere ist die Aussage - also spricht sie
+        // sie aus, mit Zahlen aus denselben Daten.
+        const talZahl = orte.filter(s => s.hoehe_m <= hMin + 15).length;
+
+        // Weicher Kurvenzug durch die Punkte (Catmull-Rom als Bezier).
+        let d = `M${punkte[0].x.toFixed(1)} ${punkte[0].y.toFixed(1)}`;
+        for (let i = 0; i < punkte.length - 1; i++) {
+            const p0 = punkte[i - 1] || punkte[i], p1 = punkte[i];
+            const p2 = punkte[i + 1], p3 = punkte[i + 2] || p2;
+            const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+            const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+            d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)}`
+               + ` ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+        }
+
+        const marken = punkte.map(({ s, x, y }) => {
+            const frei = s.verfuegbare_raeder || 0;
+            const voll = Math.max(s.kapazitaet || 1, 1);
+            const anteil = Math.min(frei / voll, 1);
+            // Flaechentreu: der Radius waechst mit der Wurzel der Anzahl,
+            // sonst uebertreibt die Kreisflaeche den Unterschied.
+            const rad = 5 + Math.sqrt(frei) * 1.15;
+            return `
+      <g class="hs-station" tabindex="0" role="listitem"
+         aria-label="${escapeHtml(s.name)}, ${s.hoehe_m} Meter, ${frei} von ${voll} Rädern frei">
+        <line class="hs-lot" x1="${x.toFixed(1)}" y1="${y.toFixed(1)}"
+              x2="${x.toFixed(1)}" y2="${HS.u}"/>
+        <circle class="hs-ring" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rad.toFixed(1)}"/>
+        <circle class="hs-kern" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}"
+                r="${(rad * anteil).toFixed(1)}"/>
+        <text class="hs-zahl" x="${x.toFixed(1)}" y="${(y - rad - 8).toFixed(1)}">${frei}</text>
+        <text class="hs-name" transform="translate(${x.toFixed(1)} ${HS.u + 14}) rotate(-42)"
+              >${escapeHtml(s.name)}</text>
+        <title>${escapeHtml(s.name)} · ${s.hoehe_m} m · ${frei} von ${voll} frei</title>
+      </g>`;
+        }).join('');
+
+        const yTief = y(hMin), yHoch = y(hMax), xMass = HS.r + 34;
+        ziel.innerHTML = `
+    <svg class="profil-svg" viewBox="0 0 ${HS.b} ${HS.h}" role="list"
+         aria-label="Würzburger Stationen nach Höhenlage, mit der Zahl der gerade freien Räder">
+      <defs>
+        <linearGradient id="hang" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stop-color="var(--signal)" stop-opacity=".15"/>
+          <stop offset="100%" stop-color="var(--signal)" stop-opacity=".012"/>
+        </linearGradient>
+      </defs>
+
+      <g class="p-raster">
+        <line x1="${HS.l}" y1="${yTief.toFixed(1)}" x2="${HS.r}" y2="${yTief.toFixed(1)}"/>
+        <line x1="${HS.l}" y1="${yHoch.toFixed(1)}" x2="${HS.r}" y2="${yHoch.toFixed(1)}"/>
+        <text x="${HS.l - 10}" y="${(yTief + 3.8).toFixed(1)}">${hMin} m</text>
+        <text x="${HS.l - 10}" y="${(yHoch + 3.8).toFixed(1)}">${hMax} m</text>
+      </g>
+
+      <text class="hs-satz" x="${HS.l}" y="106">${talZahl} Stationen liegen unten am Fluss.</text>
+      <text class="hs-satz hs-satz-2" x="${HS.l}" y="140">Bis ${escapeHtml(orte[orte.length - 1].name)} sind es ${hMax - hMin} Höhenmeter.</text>
+
+      <path class="p-flaeche" d="${d} L${HS.r} ${HS.u} L${HS.l} ${HS.u} Z"/>
+      <path class="p-linie"   d="${d}"/>
+      <line class="p-grundlinie" x1="${HS.l}" y1="${HS.u}" x2="${HS.r}" y2="${HS.u}"/>
+      ${marken}
+
+      <g class="p-mass">
+        <line class="p-pfeil" x1="${xMass}" y1="${yHoch.toFixed(1)}"
+              x2="${xMass}" y2="${yTief.toFixed(1)}"/>
+        <path class="p-spitze" d="M${xMass - 4} ${(yHoch + 7).toFixed(1)}
+              L${xMass} ${yHoch.toFixed(1)} L${xMass + 4} ${(yHoch + 7).toFixed(1)} Z"/>
+        <path class="p-spitze" d="M${xMass - 4} ${(yTief - 7).toFixed(1)}
+              L${xMass} ${yTief.toFixed(1)} L${xMass + 4} ${(yTief - 7).toFixed(1)} Z"/>
+        <text class="p-mass-text" x="${xMass + 13}"
+              y="${((yHoch + yTief) / 2 - 2).toFixed(1)}">${hMax - hMin}</text>
+        <text class="p-mass-text p-klein" x="${xMass + 13}"
+              y="${((yHoch + yTief) / 2 + 13).toFixed(1)}">Höhenmeter</text>
+      </g>
+    </svg>`;
+    }
+
     async function renderKennzahlen() {
         const ziel = document.getElementById('stats-grid');
         if (!ziel) return;
@@ -294,6 +408,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById("bike-counter").innerText = bikes.length;
             // Die Stationszahl kommt aus velocity.v_kennzahl und wird von
             // renderKennzahlen gesetzt, nicht mehr hier.
+
+            // Der Hoehenspiegel liest dieselben Stationsdaten wie die Karte.
+            hoehenspiegelZeichnen(stations);
 
             console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrräder`);
             return true;

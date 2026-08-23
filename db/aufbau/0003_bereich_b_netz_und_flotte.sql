@@ -31,6 +31,16 @@ create table if not exists velocity.station (
   constraint station_adresse_fk foreign key (adresse_id)
     references velocity.adresse (adresse_id) on update cascade on delete restrict
 );
+
+-- Nachtraeglich ergaenzt: die Hoehenlage. Eine Station hat einen Ort, und
+-- in einer Stadt mit hundert Hoehenmetern Spreizung gehoert die Hoehe zum
+-- Ort dazu. Ueber alter table, damit bestehende Datenbanken sie bekommen -
+-- create table if not exists allein wuerde die Spalte nie anlegen.
+alter table velocity.station add column if not exists hoehe_m integer;
+alter table velocity.station drop constraint if exists station_hoehe_chk;
+alter table velocity.station add  constraint station_hoehe_chk
+  check (hoehe_m is null or hoehe_m between -500 and 5000);
+
 select velocity.fn_audit_anhaengen('station');
 
 -- ---------------------------------------------------------------------

@@ -53,6 +53,15 @@ comment on column velocity.station.name             is 'Anzeigename auf der Kart
 comment on column velocity.station.adresse_id       is 'Anschrift der Station.';
 comment on column velocity.station.latitude         is 'Breitengrad in Dezimalgrad, WGS 84.';
 comment on column velocity.station.longitude        is 'Längengrad in Dezimalgrad, WGS 84.';
+comment on column velocity.station.hoehe_m is
+  'Hoehenlage in Metern, aus den Koordinaten gegen zwei unabhaengige Gelaendemodelle '
+  'bestimmt (Copernicus GLO-30 und EU-DEM v1.1) und gemittelt. Beides sind '
+  'Oberflaechenmodelle: in bebautem Gebiet liegen sie rund zehn Meter zu hoch. '
+  'Belastbar sind deshalb die Unterschiede, nicht die absoluten Werte - und genau '
+  'die Unterschiede traegt die Anwendung vor. Gesetzt in '
+  'db/betrieb/stationslage_korrigieren.sql.';
+comment on column velocity.v_station.hoehe_m is
+  'Hoehenlage der Station. Siehe station.hoehe_m zur Herkunft und zur Genauigkeit.';
 comment on column velocity.station.kapazitaet       is 'Anzahl der Stellplätze, muss größer als null sein.';
 comment on column velocity.station.betriebszeitraum is 'Zeitraum, in dem die Station betrieben wird. Halboffen; nach oben offen bedeutet: weiterhin in Betrieb.';
 
