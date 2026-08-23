@@ -1,710 +1,1032 @@
 /* ============================================================
    VeloCity — Bike-Sharing Würzburg
 
-   HALTUNG
-   Collegiate, nicht kostümiert. Eine Universitätsstadt, ein Rad, ein
-   Berg: hell, aufgeräumt, hoher Kontrast. Oxford-Navy statt Schwarz,
-   dazu Kirschrot, Rasengrün, Messing. Genau EIN dunkles Band auf der
-   ganzen Seite gibt Rhythmus, ohne sie schwer zu machen.
+   HERKUNFT DER DESIGNSPRACHE
+   Der Kopfbereich stammt vom Nutzer (Paket velocity-startsite) und
+   ist unverändert übernommen. Alles Weitere auf dieser Seite wurde
+   auf dessen Sprache gezogen: Palette, Schriften, Formen, Rhythmus.
+   Die frühere Sprache (Fraunces als Auszeichnung, IBM Plex als Brot,
+   Oxford-Navy #10275A) ist damit vollständig ersetzt.
 
-   PROPORTION
-   Flächen folgen dem Goldenen Schnitt (38,2 zu 61,8): die Aufteilung
-   des Kopfbereichs, die Breite der Vorspänne, das Verhältnis von Luft
-   oben zu Luft unten in jedem Abschnitt. Schriftgrade folgen dagegen
-   einer grossen Terz (1,25) — der Sprung von phi ist für Text zu weit,
-   zwischen 17 und 27 Punkt fehlte jede Zwischenstufe.
+   PALETTE
+   Ein sehr tiefes Navy trägt die Fläche, ein einziges lautes Rot
+   setzt die Akzente, ein kühles Papierweiß hält die Seite hell.
+   Mint kommt nur dort vor, wo etwas gerade wirklich passiert:
+   Live-Punkt, Kicker der Produktkarte, laufende Ausleihe.
 
-   DAS FOTO
-   Es berührt keine Fläche. Eine Überblendung von hellem Grau in eine
-   graue Betonwand wird matschig, eine harte Kante schneidet. Also steht
-   das Bild als Platte im Kleinbildformat 3:2 mit Luft ringsum.
+   SCHRIFT
+   Avenir Next für den Fließtext, Avenir Next Condensed für die
+   grossen Zeilen, eine Systemmonospace für alle Etiketten.
+   ACHTUNG: Avenir Next liegt auf macOS, nicht auf Windows. Dort
+   greift Helvetica Neue, dann Arial — das Bild bleibt ruhig, wird
+   aber breiter. Wer Verbindlichkeit über alle Rechner braucht,
+   ersetzt den Stapel durch eine eingebundene Webschrift.
 
-   SIGNATURE
-   Der mitlaufende Fahrpreiszähler. Er rechnet mit denselben Regeln wie
-   die Datenbank — angefangene Minuten aufgerundet, Deckelung auf den
-   Tageshöchstpreis — und führt „minutengenau“ vor, statt es zu
-   behaupten. Er ist das eine laute Element; alles andere bleibt ruhig.
-
-   WORTMARKE
-   VELOCITY ist ein Wortspiel: Velo plus City ergibt Velocity. Das O
-   trägt die Pointe, deshalb IST es das Rad. Ein Symbol daneben wäre
-   Doppelung.
+   FORM
+   Schaltflächen sind Pillen (999px), Inhaltskarten haben eine harte
+   Kante (2px). Linien sind Haarlinien in --mist. Grosse Zeilen
+   laufen eng (letter-spacing bis -.065em), Etiketten weit (.16em).
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-
 :root {
-  /* Farbe */
-  --tinte:       #10275A;
-  --tinte-hell:  #1C3A7B;
-  --signal:      #E4002B;
-  --signal-tief: #B00020;
-  --rasen:       #0E7A4F;
-  --messing:     #E9A200;
-  --kreide:      #EEF2F8;
-  --kreide-tief: #DDE5F0;
-  --papier:      #FFFFFF;
-  --text:        #16233F;
-  --text-leise:  #5A6786;
-  --linie:       #CFD9E8;
+  /* Farbe — aus dem Entwurf des Nutzers */
+  --navy:       #061841;
+  --navy-2:     #0b255d;
+  --red:        #f00038;
+  --red-tief:   #c8002f;
+  --paper:      #f3f5f8;
+  --ink:        #111827;
+  --mist:       #dbe2ec;
+  --mint:       #58d6a1;
+  --grau:       #5c677a;
+  --grau-still: #68748a;
 
   /* Schrift */
-  --display: 'Fraunces', 'Iowan Old Style', Georgia, serif;
-  --body:    'IBM Plex Sans', 'Helvetica Neue', sans-serif;
-  --mono:    'IBM Plex Mono', 'SF Mono', Menlo, monospace;
+  --body-schrift: "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --schmal: "Avenir Next Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Schriftgrade, grosse Terz */
-  --t--1: .8rem;
-  --t-0:  1rem;
-  --t-1:  1.25rem;
-  --t-2:  1.5625rem;
-  --t-3:  1.953rem;
-  --t-4:  2.441rem;
+  /* Fliessende Grade — aus dem Entwurf */
+  --nav-font:     clamp(17px, 1.12vw, 19px);
+  --meta-font:    clamp(14px, .88vw, 15px);
+  --hero-font:    clamp(52px, 5.45vw, 96px);
+  --control-font: clamp(15px, 1.05vw, 17px);
+  --body-font:    clamp(15px, 1.05vw, 17px);
+  --titel-font:   clamp(40px, 5vw, 78px);
 
-  /* Fläche und Proportion */
-  --phi:        1.618;
-  --klein:      38.2%;
-  --spur:       1200px;
-  --rand:       clamp(20px, 5vw, 48px);
-  --luft-oben:  clamp(58px, 7.4vw, 96px);
-  --luft-unten: clamp(36px, 4.6vw, 59px);   /* 96 geteilt durch phi */
-  --kante:      3px;
+  /* Fläche */
+  --spur: 1240px;
+  --rand: clamp(22px, 4vw, 70px);
+  --luft: clamp(70px, 8vw, 130px);
 
-  /* Das Dreiband: Rips-Krawatte, auf eine Haarlinie eingedampft */
-  --band: linear-gradient(90deg,
-            var(--tinte) 0 34%, var(--signal) 34% 67%, var(--rasen) 67% 100%);
-
-  /* Altnamen, damit Bestandsregeln greifen */
-  --primary: var(--signal);
-  --dark:    var(--tinte);
-  --white:   var(--papier);
+  /* Zustandsgrössen der Bühne, vom Skript gesetzt */
+  --progress: 0;
+  --ebike-claim-opacity: 1;
+  --city-claim-opacity: 0;
+  --city-opacity: 0;
+  --ebike-opacity: 1;
+  --morph-visibility: 0;
+  --morph-progress: 0;
+  --transition-cover-opacity: 0;
+  --choice-opacity: 0;
+  --cta-opacity: 0;
+  --bike-scale: 1.06;
+  --bike-x: 3;
+  --city-align-scale-x: 1.026490;
+  --city-align-scale-y: 1.021277;
+  --city-align-x: 1.328187;
+  --city-align-y: -0.489011;
 }
 
-*, *::before, *::after { box-sizing: border-box; }
-
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
-}
+* { box-sizing: border-box; }
+html { scroll-behavior: auto; }
 
 body {
   margin: 0;
-  font-family: var(--body);
-  font-size: 17px;
-  line-height: 1.6;
-  color: var(--text);
-  background: var(--papier);
+  color: var(--ink);
+  background: var(--paper);
+  font-family: var(--body-schrift);
+  font-size: var(--body-font);
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3, h4 {
-  margin: 0; font-family: var(--display); font-weight: 600;
-  font-variation-settings: 'opsz' 96, 'SOFT' 0, 'WONK' 0;
-  letter-spacing: -0.015em; line-height: 1.06; color: var(--tinte);
-}
+button, a, input { font: inherit; }
+button { cursor: pointer; }
+img { max-width: 100%; }
+:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
 
 .container { max-width: var(--spur); margin: 0 auto; padding: 0 var(--rand); }
-.full-width { width: 100%; }
-:focus-visible { outline: 3px solid var(--messing); outline-offset: 3px; }
 
-/* ---------------------------------------------------------- Vorspann */
-.eyebrow {
-  display: block; margin-bottom: 16px;
-  font-family: var(--mono); font-size: .72rem; font-weight: 500;
-  letter-spacing: .18em; text-transform: uppercase; color: var(--signal);
-}
-
-/* --------------------------------------------------------- Wortmarke */
-.logo { display: flex; align-items: center; }
-/* Das Rad im O las sich als Fadenkreuz: Nabe plus vier Speichen ergibt
-   nun einmal ein Zielkreuz, und das Rad erkannte man erst als zweites.
-   Der Unterstrich loest das Wortspiel anders und besser - er ist die
-   Schreibweise, in der dieses Schema benannt ist (velocity, fahrrad_id,
-   verfuegbare_raeder). Die Marke steht damit in der Konvention ihrer
-   eigenen Datenbank, statt ein Sinnbild danebenzustellen. */
-.wortmarke {
-  display: inline-flex; align-items: baseline;
-  font-family: var(--mono); font-weight: 600;
-  font-size: 1.28rem; line-height: 1; letter-spacing: -.012em;
-  color: var(--tinte);
-}
-/* Fuge und City tragen dieselbe Farbe. Traegt nur die Fuge sie, liest
-   man ein Wort mit einem roten Fleck in der Mitte; so liest man Velo
-   gegen _City, und das Wortspiel steht in der Farbe. */
-.wm-fuge {
-  color: var(--signal);
-  /* Der Unterstrich sitzt unter der Grundlinie und wirkt duenner als die
-     Versalien daneben - etwas mehr Fett gleicht das aus. */
-  font-weight: 700;
-}
-.wm-city { color: var(--signal); }
-
-/* -------------------------------------------------------------- Nav */
-nav {
-  position: sticky; top: 0; z-index: 900;
-  background: rgba(255,255,255,.93);
-  backdrop-filter: saturate(180%) blur(10px);
-  border-bottom: 1px solid var(--linie);
-}
-.nav-flex { display: flex; justify-content: space-between; align-items: center; height: 70px; }
-.nav-links { list-style: none; display: flex; gap: 30px; align-items: center; margin: 0; padding: 0; }
-.nav-links a {
-  text-decoration: none; color: var(--text); font-weight: 500; font-size: .95rem;
-  padding-bottom: 3px; border-bottom: 2px solid transparent;
-  transition: border-color .18s, color .18s;
-}
-.nav-links a:hover { color: var(--signal); border-bottom-color: var(--signal); }
-.mobile-menu-icon { display: none; font-size: 1.4rem; cursor: pointer; color: var(--tinte); }
-
-/* --------------------------------------------------------- Schalter */
-.btn-primary, .btn-primary-nav, .btn-hero-primary,
-.btn-outline, .btn-hero-outline, .btn-end-rental {
-  font-family: var(--body); font-weight: 600; font-size: .95rem;
-  border-radius: var(--kante); border: 2px solid transparent;
-  padding: 12px 22px; cursor: pointer;
-  transition: background .16s, color .16s, border-color .16s;
-}
-.btn-primary, .btn-primary-nav, .btn-hero-primary {
-  background: var(--signal); color: #fff; border-color: var(--signal);
-}
-.btn-primary:hover, .btn-primary-nav:hover, .btn-hero-primary:hover {
-  background: var(--signal-tief); border-color: var(--signal-tief);
-}
-.btn-primary { width: 100%; padding: 14px 22px; }
-.btn-outline, .btn-hero-outline {
-  background: transparent; color: var(--tinte); border-color: var(--tinte);
-  text-decoration: none; display: inline-block;
-}
-.btn-outline:hover, .btn-hero-outline:hover { background: var(--tinte); color: #fff; }
-.full-width { display: block; text-align: center; }
-
-/* -------------------------------------------------------- Kopfbereich */
-.hero {
-  display: grid;
-  /* Echter Goldener Schnitt über fr-Einheiten. Ein aspect-ratio am Bild
-     wäre hier falsch: es leitet die BREITE aus der Höhe ab und
-     überstimmt damit die Spaltenaufteilung — der Schnitt lag dadurch bei
-     21 zu 79 statt bei 38 zu 62. */
-  grid-template-columns: 38.2fr 61.8fr;
-  gap: clamp(30px, 4.6vw, 76px);
-  align-items: stretch;                /* gemeinsame Ober- und Unterkante */
-  /* Die Mindesthöhe kommt aus dem Kleinbildformat des Bildes; braucht der
-     Satz mehr, wächst die Zeile und das Bild beschneidet sich weiter. */
-  /* Keine erzwungene Mindesthoehe: der Satz bestimmt, das Bild folgt. */
-  padding: var(--luft-oben) 0 var(--luft-unten)
-           max(var(--rand), calc((100vw - var(--spur)) / 2));
-  background: var(--papier);
-  border-bottom: 1px solid var(--linie);
-}
-/* Das Bild läuft nach rechts aus dem Satzspiegel. Es berührt links nur
-   Weiß — eine saubere Kante, kein Grau auf Grau. Das Kleinbildformat
-   bestimmt die Höhe des gesamten Kopfbereichs. */
-.hero::after {
-  content: ''; grid-column: 2; align-self: stretch;
-  background-image: url('https://assets.codepen.io/13949661/2026-01-09_09-00-56.png');
-  background-size: cover; background-position: 46% center;
-  border-radius: var(--kante) 0 0 var(--kante);
-}
-.overlay { display: none; }
-/* Der Satz verteilt sich über dieselbe Höhe wie das Bild: Kicker und
-   Überschrift oben, Zähler und Verfügbarkeit unten. Damit liegen vier
-   Kanten auf zwei Linien statt zwei Objekte nebeneinander. */
-.hero-container {
-  grid-column: 1; max-width: none; margin: 0; padding: 0;
-  display: flex; align-items: stretch;
-}
-/* Vorher stand hier space-between gegen eine erzwungene Mindesthoehe.
-   Das teilte die Restluft gleichmaessig auf und riss ein Loch zwischen
-   Schlagzeile und Unterzeile. Jetzt bestimmt der Satz die Hoehe der
-   Zeile, und das Foto fuellt sie - der Satz hat wieder einen Rhythmus. */
-.hero-typo-wrapper {
-  max-width: 46ch; width: 100%;
-  display: flex; flex-direction: column; align-items: stretch;
-  gap: clamp(20px, 2.2vw, 30px);
-}
-/* Die Marke ist eine Pille, keine Leiste: sie darf sich nicht auf die
-   Spaltenbreite dehnen. */
-.hero-typo-wrapper > .badge { align-self: flex-start; }
-
-.badge {
-  display: inline-block; margin-bottom: 20px; padding: 5px 13px;
-  font-family: var(--mono); font-size: .7rem; font-weight: 600;
-  letter-spacing: .18em; text-transform: uppercase;
-  color: var(--rasen); background: #fff;
-  border: 1px solid var(--rasen); border-radius: 999px;
-}
-
-.hero-block-headline { margin-bottom: 16px; }
-.hl-line-1, .hl-line-2 {
-  font-family: var(--display); font-weight: 600; color: var(--tinte);
-  font-variation-settings: 'opsz' 144, 'SOFT' 0, 'WONK' 0;
-  font-size: clamp(2.6rem, 4.6vw, 4.3rem); line-height: .96; letter-spacing: -0.032em;
-}
-.hl-line-2 { color: var(--signal); }
-
-.hero-block-sub { margin-bottom: 0; }
-.sub-line-1, .sub-line-2 { margin: 0; font-size: 1.02rem; line-height: 1.5; }
-.sub-line-1 { color: var(--text); font-weight: 500; }
-.sub-line-2 { color: var(--text-leise); }
-
-.hero-block-interaction { display: flex; flex-direction: column; gap: 22px; }
-.buttons-row { display: flex; gap: 12px; flex-wrap: wrap; }
-
-/* ------------------------------------------------- Signature: Zähler */
-.meter {
-  background: #fff; color: var(--tinte);
-  border: 1px solid var(--linie); border-left: 3px solid var(--signal);
-  border-radius: 0 var(--kante) var(--kante) 0;
-  box-shadow: 0 16px 34px -26px rgba(16, 39, 90, .55);
-  /* Der harte rote Versatzschatten sah nach Dialogfenster aus. Die rote
-     Kante links ist die Indexmarke eines Messgeraets - dasselbe Signal,
-     aber im Register des Gegenstands. */
-  max-width: 100%;
-}
-.meter-head {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 10px 15px; border-bottom: 1px solid var(--linie); flex-wrap: wrap;
-}
-.meter-eyebrow {
-  font-family: var(--mono); font-size: .66rem; font-weight: 500;
-  letter-spacing: .13em; text-transform: uppercase; color: var(--text-leise);
-}
-.meter-switch { display: flex; gap: 4px; }
-.meter-switch button {
-  font-family: var(--mono); font-size: .66rem; font-weight: 600; letter-spacing: .05em;
-  background: var(--kreide); color: var(--text-leise);
-  border: 1px solid var(--linie); border-radius: var(--kante);
-  padding: 4px 9px; cursor: pointer;
-  transition: background .14s, color .14s, border-color .14s;
-}
-.meter-switch button:hover { border-color: var(--tinte); color: var(--tinte); }
-.meter-switch button[aria-pressed="true"] {
-  background: var(--tinte); color: #fff; border-color: var(--tinte);
-}
-.meter-readout { display: flex; align-items: baseline; gap: 8px; padding: 16px 15px 4px; }
-.meter-value {
-  font-family: var(--mono); font-weight: 600;
-  font-size: clamp(2.6rem, 5.4vw, 3.6rem); line-height: 1;
-  letter-spacing: -0.045em; font-variant-numeric: tabular-nums;
-}
-.meter-unit { font-family: var(--mono); font-size: 1.2rem; font-weight: 500; color: var(--signal); }
-.meter-foot {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 6px 15px 13px; flex-wrap: wrap;
-}
-.meter-detail { font-family: var(--mono); font-size: .72rem; color: var(--text-leise); }
-.meter-clock {
-  font-family: var(--mono); font-size: .78rem; font-weight: 600;
-  color: #fff; background: var(--rasen); padding: 3px 9px;
-  border-radius: var(--kante); font-variant-numeric: tabular-nums;
-}
-
-/* Verfügbarkeit */
-.status-widget-aligned {
-  display: flex; align-items: center; gap: 13px; flex-wrap: wrap;
-  font-size: .9rem; color: var(--text-leise);
-}
-.status-left { display: flex; align-items: center; gap: 8px; }
-.status-icon { width: 8px; height: 8px; background: var(--rasen); border-radius: 50%; }
-.pulse { animation: puls 2.4s ease-in-out infinite; }
-@keyframes puls { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
-.status-label {
-  font-family: var(--mono); font-size: .66rem; letter-spacing: .16em;
-  text-transform: uppercase; color: var(--rasen);
-}
-.status-right strong { color: var(--tinte); font-weight: 600; }
-
-/* ---------------------------------------------------- Laengsschnitt */
-/* Die Signatur der Seite. Kein Schmuck, sondern die Begruendung des
-   Produkts: hundert Hoehenmeter zwischen Main und Campus. Bewusst OHNE
-   Abschnittskopf - eine Zeichnung, die sich selbst beschriftet, braucht
-   keine Ueberschrift davor, und die Seite hat davon ohnehin genug. */
-.profil {
-  padding: clamp(40px, 4.6vw, 68px) 0 clamp(30px, 3.4vw, 46px);
-  background: var(--papier);
-  border-top: 1px solid var(--linie);
-}
-.profil-svg { display: block; width: 100%; height: auto; overflow: visible; }
-
-.p-raster line { stroke: var(--linie); stroke-width: 1; stroke-dasharray: 2 5; }
-.p-raster text {
-  font-family: var(--mono); font-size: 11px; fill: var(--text-leise);
-  letter-spacing: .06em; text-anchor: end;
-}
-
-.p-flaeche { fill: url(#hang); }
-.p-linie   { fill: none; stroke: var(--signal); stroke-width: 2.6; stroke-linecap: round; }
-
-.p-leit   { stroke: var(--linie); stroke-width: 1; stroke-dasharray: 2 4; }
-.p-pfeil  { stroke: var(--tinte); stroke-width: 1.2; }
-.p-spitze { fill: var(--tinte); }
-.p-mass-text {
-  font-family: var(--display); font-weight: 700; font-size: 19px;
-  fill: var(--tinte); text-anchor: start;
-}
-.p-mass-text.p-klein {
-  font-family: var(--mono); font-weight: 500; font-size: 9.5px;
-  fill: var(--text-leise); letter-spacing: .12em; text-transform: uppercase;
-}
-
-.p-grundlinie { stroke: var(--linie); stroke-width: 1; }
-
-/* Eine Station: Lot auf die Grundlinie, Ring in Gesamtgroesse der
-   Belegung, Kern als gefuellter Anteil der Kapazitaet. Der Radius folgt
-   der Wurzel der Anzahl - die Kreisflaeche wuerde sonst uebertreiben. */
-.hs-satz {
-  font-family: var(--display); font-weight: 700; font-size: 26px;
-  fill: var(--tinte); letter-spacing: -.01em;
-}
-.hs-satz-2 { fill: var(--signal); }
-
-.hs-lot  { stroke: var(--linie); stroke-width: 1; stroke-dasharray: 2 4; }
-.hs-ring { fill: var(--papier); stroke: var(--tinte); stroke-width: 1.6; }
-.hs-kern { fill: var(--signal); }
-.hs-zahl {
-  font-family: var(--mono); font-weight: 600; font-size: 12.5px;
-  fill: var(--tinte); text-anchor: middle; letter-spacing: .02em;
-}
-.hs-name {
-  font-family: var(--body); font-weight: 500; font-size: 12px;
-  fill: var(--text-leise); text-anchor: end;
-}
-.hs-station { transition: opacity .18s ease; cursor: default; }
-.hs-station:hover, .hs-station:focus-visible { outline: none; }
-.hs-station:hover .hs-ring,
-.hs-station:focus-visible .hs-ring { stroke: var(--signal); stroke-width: 2.4; }
-.hs-station:hover .hs-name,
-.hs-station:focus-visible .hs-name { fill: var(--tinte); font-weight: 600; }
-@media (prefers-reduced-motion: reduce) { .hs-station { transition: none; } }
-
-.profil-fuss {
-  margin: clamp(14px, 1.6vw, 22px) 0 0;
-  font-family: var(--mono); font-size: .72rem; letter-spacing: .04em;
-  color: var(--text-leise);
-}
-.profil-fuss strong { color: var(--tinte); font-weight: 600; }
-.profil-fuss code {
-  font-family: var(--mono); font-size: .95em; color: var(--tinte);
-  background: var(--kreide); padding: .1em .38em; border-radius: 2px;
-}
-
-/* Nur fuer Screenreader: die Zeichnung traegt ihre Ueberschrift im Bild. */
 .nur-vorlesen {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
 }
 
-/* -------------------------------------------------------- Kennzahlen */
-/* Heller Grund statt Weiss: die Seite braucht zwischen Kopf und Ablauf
-   einen Wechsel im Hellwert, sonst laufen drei weisse Flaechen ineinander. */
-.stats-bar {
-  background: var(--kreide); border-block: 1px solid var(--kreide-tief);
-  padding: clamp(30px, 3.4vw, 46px) 0;
-}
-.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
-.stat-item { padding: 0 clamp(16px, 2vw, 30px); border-left: 1px solid var(--kreide-tief); }
-.stat-item:first-child { border-left: 0; padding-left: 0; }
-.stat-number {
-  display: block; margin-bottom: 7px;
-  font-family: var(--display); font-weight: 700; line-height: 1;
-  font-size: clamp(2rem, 4vw, 3rem); color: var(--tinte);
-  letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
-}
-.stat-label {
-  font-family: var(--mono); font-size: .68rem; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--text-leise);
+/* ---------------------------------------------------- Kopfzeile */
+
+.site-header {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 92px;
+  padding: 0 var(--rand);
+  color: var(--navy);
+  background: rgba(247, 249, 252, .985);
+  border-bottom: 1px solid rgba(6, 24, 65, .12);
+  box-shadow: 0 10px 34px rgba(6, 24, 65, .06);
 }
 
-/* ------------------------------------------------------- Abschnitte */
-.howto-section, .map-wrapper, .faq-section {
-  padding: var(--luft-oben) 0 var(--luft-unten); background: var(--papier);
+.brand {
+  color: var(--navy);
+  text-decoration: none;
+  font-size: clamp(30px, 2.2vw, 40px);
+  font-weight: 800;
+  letter-spacing: -.055em;
 }
-/* Das einzige dunkle Band der Seite. */
-.pricing { padding: var(--luft-oben) 0 var(--luft-unten); background: var(--tinte); color: #fff; }
+.brand span { color: var(--red); }
+/* Das O ist das Rad — ein Ring statt eines Buchstabens. */
+.brand i {
+  display: inline-block;
+  width: .44em; height: .44em;
+  margin: 0 .08em;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  vertical-align: .04em;
+}
 
-/* Der Kopf nimmt die volle Spur ein und teilt sie im Goldenen Schnitt:
-   Vorspann und Titel links, der Lesehinweis rechts auf gleicher Grundlinie.
-   Vorher endete er bei 61,8 Prozent und damit auf einer vierten rechten
-   Kante - die Seite hatte sieben verschiedene Fluchten. Jetzt sind es zwei:
-   die Spur und der rechte Anschnitt von Foto und Karte. */
+.site-nav { display: flex; gap: clamp(22px, 2.6vw, 48px); }
+.site-nav a {
+  color: inherit; text-decoration: none;
+  font-size: var(--nav-font); font-weight: 700; letter-spacing: .02em;
+  padding-bottom: 3px; border-bottom: 2px solid transparent;
+}
+.site-nav a:hover { color: var(--red); border-bottom-color: var(--red); }
+
+.login {
+  justify-self: end;
+  color: #fff;
+  background: var(--red);
+  text-decoration: none;
+  padding: 13px 20px;
+  border: 1px solid var(--red);
+  border-radius: 999px;
+  font-size: var(--nav-font);
+  font-weight: 700;
+}
+.login:hover { background: var(--red-tief); border-color: var(--red-tief); }
+
+/* ------------------------------------------------ Bühne (Hero) */
+/* Ab hier unverändert aus dem Entwurf des Nutzers übernommen. */
+
+.scroll-story { height: 360vh; min-height: 2400px; background: var(--navy); }
+
+.sticky-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 650px;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--navy);
+}
+
+.photo-layer {
+  position: absolute;
+  inset: -1.5%;
+  z-index: -5;
+  background-position: center;
+  background-size: cover;
+  transform: translateX(calc(var(--bike-x) * 1%)) scale(var(--bike-scale));
+  will-change: opacity, transform;
+}
+
+.photo-morph {
+  position: absolute;
+  inset: auto;
+  top: -1.5%; left: -1.5%;
+  z-index: -4;
+  width: 103%; height: 103%;
+  display: block;
+  opacity: var(--morph-visibility);
+  transform: translateX(calc(var(--bike-x) * 1%)) scale(var(--bike-scale));
+  transform-origin: center;
+  pointer-events: none;
+  will-change: opacity, transform;
+}
+.sticky-stage.no-webgl .photo-morph { display: none; }
+
+.photo-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background:
+    linear-gradient(90deg, rgba(247,249,252,.93) 0%, rgba(247,249,252,.80) 20%, rgba(247,249,252,.30) 39%, transparent 58%),
+    linear-gradient(0deg, rgba(6,24,65,.08) 0%, transparent 26%);
+  pointer-events: none;
+}
+
+.photo-city {
+  background-image: url("assets/velocity-bike-city-hero.png");
+  opacity: var(--city-opacity);
+  transform:
+    translateX(calc(var(--bike-x) * 1%))
+    scale(var(--bike-scale))
+    translate(calc(var(--city-align-x) * 1%), calc(var(--city-align-y) * 1%))
+    scale(var(--city-align-scale-x), var(--city-align-scale-y));
+}
+.photo-ebike {
+  background-image: url("assets/velocity-bike-hero.png");
+  opacity: var(--ebike-opacity);
+}
+
+.transition-cover {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: var(--transition-cover-opacity);
+  background: rgba(243, 245, 248, .72);
+  pointer-events: none;
+  will-change: opacity;
+}
+
+.top-meta {
+  position: absolute;
+  top: 122px;
+  left: var(--rand); right: var(--rand);
+  display: flex; align-items: center; justify-content: space-between;
+  color: var(--navy);
+  font: 750 var(--meta-font)/1.3 var(--mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 14px rgba(255, 255, 255, .82);
+}
+
+.live-indicator { display: inline-flex; align-items: center; gap: 10px; }
+.live-indicator::before {
+  content: "";
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--mint);
+  box-shadow: 0 0 0 7px rgba(88, 214, 161, .14);
+}
+.chapter { color: rgba(6, 24, 65, .72); }
+
+.claim {
+  position: absolute;
+  left: var(--rand);
+  top: clamp(190px, 24vh, 320px);
+  width: min(690px, 42vw);
+  color: var(--navy);
+  will-change: opacity, transform;
+}
+.claim h1 {
+  margin: 0;
+  font-family: var(--schmal);
+  font-size: var(--hero-font);
+  line-height: .99;
+  letter-spacing: -.026em;
+  font-weight: 800;
+  max-width: 100%;
+  text-wrap: balance;
+}
+.claim-line { display: block; }
+.headline-primary { color: var(--navy); }
+.headline-accent { margin-top: .34em; color: var(--red); }
+
+.claim-ebike {
+  opacity: var(--ebike-claim-opacity);
+  transform: translateY(calc((1 - var(--ebike-claim-opacity)) * -24px));
+}
+.claim-city {
+  opacity: var(--city-claim-opacity);
+  transform: translateY(calc((1 - var(--city-claim-opacity)) * 24px));
+}
+.claim-city h1 { font-size: calc(var(--hero-font) * .82); }
+
+.sticky-stage.is-manual .claim {
+  transition: opacity .52s cubic-bezier(.4, 0, .2, 1), transform .62s cubic-bezier(.4, 0, .2, 1);
+}
+.sticky-stage.is-manual .final-card {
+  transition: opacity .36s ease, transform .45s cubic-bezier(.4, 0, .2, 1);
+}
+
+.choice-panel {
+  position: absolute;
+  left: var(--rand);
+  bottom: clamp(72px, 9vh, 120px);
+  z-index: 4;
+  display: grid;
+  grid-template-columns: auto minmax(240px, 420px);
+  gap: 28px;
+  align-items: end;
+  opacity: var(--choice-opacity);
+  transform: translateY(calc((1 - var(--choice-opacity)) * 30px));
+  pointer-events: auto;
+}
+
+.product-tabs {
+  display: inline-flex;
+  padding: 5px;
+  background: #071943;
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 999px;
+  box-shadow: 0 12px 34px rgba(6, 24, 65, .18);
+}
+.product-tab {
+  min-height: 48px;
+  padding: 0 18px;
+  color: rgba(255, 255, 255, .7);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  font-weight: 750;
+  font-size: var(--control-font);
+}
+.product-tab[aria-selected="true"] { color: var(--navy); background: #fff; }
+
+.product-copy {
+  min-height: 98px;
+  padding: 16px 20px 17px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 14px;
+  color: #fff;
+  background: rgba(6, 24, 65, .96);
+  box-shadow: 0 18px 46px rgba(6, 24, 65, .20);
+}
+.product-kicker {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--mint);
+  font: 700 12px/1.2 var(--mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.product-copy strong {
+  display: block;
+  font-size: clamp(22px, 2vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -.03em;
+}
+.product-copy small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, .84);
+  font-size: var(--body-font);
+}
+
+.final-card {
+  position: absolute;
+  right: var(--rand);
+  bottom: clamp(52px, 8vh, 100px);
+  z-index: 6;
+  width: min(410px, 32vw);
+  padding: 26px;
+  color: var(--navy);
+  background: rgba(255, 255, 255, .94);
+  border-radius: 2px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .24);
+  opacity: var(--cta-opacity);
+  transform: translateY(calc((1 - var(--cta-opacity)) * 34px));
+  pointer-events: calc(var(--cta-opacity));
+}
+.final-card .label {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 28px;
+  font: 700 12px/1.3 var(--mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.final-card h2 {
+  margin: 0 0 10px;
+  font-family: var(--schmal);
+  font-size: clamp(28px, 2.8vw, 46px);
+  line-height: .98;
+  letter-spacing: -.05em;
+}
+.final-card p { margin: 0 0 24px; color: #58657a; font-size: var(--body-font); line-height: 1.5; }
+
+.primary-cta {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%;
+  padding: 17px 18px;
+  color: #fff;
+  background: var(--red);
+  border: 0;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: var(--control-font);
+}
+.primary-cta:hover { background: var(--red-tief); }
+.primary-cta span:last-child { font-size: 22px; }
+
+.scroll-hint {
+  position: absolute;
+  left: 50%; bottom: 28px;
+  display: flex; align-items: center; gap: 10px;
+  color: rgba(255, 255, 255, .62);
+  font: 700 10px/1 var(--mono);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+  opacity: var(--ebike-claim-opacity);
+}
+.scroll-hint::before { content: ""; width: 34px; height: 1px; background: currentColor; }
+
+.progress-rail {
+  position: absolute;
+  right: 0; top: 0;
+  width: 4px; height: 100%;
+  background: rgba(255, 255, 255, .1);
+}
+.progress-rail::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: calc(var(--progress) * 100%);
+  background: var(--red);
+}
+
+/* ---------------------------------------------------- Kennzahlen */
+/* Raster aus dem Entwurf, Werte aus velocity.v_kennzahl. */
+
+.facts {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  min-height: 72vh;
+  background: var(--paper);
+}
+.facts-copy { padding: clamp(70px, 9vw, 150px) clamp(28px, 7vw, 120px); }
+.facts-copy .eyebrow { color: var(--grau-still); }
+.facts h2 {
+  max-width: 9ch;
+  margin: 0 0 30px;
+  color: var(--navy);
+  font-family: var(--schmal);
+  font-size: clamp(48px, 6vw, 96px);
+  line-height: .92;
+  letter-spacing: -.065em;
+}
+.facts-copy > p { max-width: 38em; color: var(--grau); font-size: 19px; line-height: 1.6; }
+
+.stat-grid {
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #fff;
+  border-left: 1px solid var(--mist);
+}
+.stat {
+  display: flex; flex-direction: column; justify-content: space-between;
+  gap: 20px;
+  padding: clamp(32px, 4vw, 70px);
+  border-right: 1px solid var(--mist);
+  border-bottom: 1px solid var(--mist);
+}
+.stat b {
+  color: var(--navy);
+  font-family: var(--schmal);
+  font-size: clamp(48px, 5vw, 82px);
+  line-height: 1;
+  letter-spacing: -.06em;
+}
+.stat span {
+  color: #657189;
+  font: 700 11px/1.3 var(--mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------- Gemeinsame Teile */
+
+.eyebrow {
+  display: block;
+  margin: 0 0 28px;
+  color: rgba(6, 24, 65, .72);
+  font: 750 var(--meta-font)/1.3 var(--mono);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+/* Der Kopf jedes Abschnitts: Vorspann und Titel links, der
+   Lesehinweis rechts auf gleicher Grundlinie. */
 .section-header {
   display: grid;
-  grid-template-columns: 61.8fr 38.2fr;
-  grid-template-areas: 'vorspann hinweis' 'titel hinweis';
-  gap: 0 clamp(24px, 3.4vw, 64px);
-  margin-bottom: clamp(34px, 4vw, 56px);
-  padding-bottom: clamp(16px, 1.9vw, 26px);
-  border-bottom: 1px solid var(--linie);
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-areas: "vorspann hinweis" "titel hinweis";
+  gap: 0 clamp(28px, 4vw, 72px);
+  margin-bottom: clamp(40px, 4.6vw, 66px);
+  padding-bottom: clamp(18px, 2vw, 28px);
+  border-bottom: 1px solid var(--mist);
 }
-.section-header .eyebrow { grid-area: vorspann; }
+.section-header .eyebrow { grid-area: vorspann; margin-bottom: 20px; }
 .section-header h2 {
-  grid-area: titel; margin: 0;
-  font-size: clamp(2.1rem, 4.2vw, 3.3rem);
-  line-height: 1.04; letter-spacing: -0.015em;
+  grid-area: titel;
+  margin: 0;
+  color: var(--navy);
+  font-family: var(--schmal);
+  font-size: var(--titel-font);
+  line-height: .94;
+  letter-spacing: -.055em;
 }
 .section-header p {
-  grid-area: hinweis; align-self: end; margin: 0;
-  color: var(--text-leise); font-size: 1.02rem; line-height: 1.5;
+  grid-area: hinweis;
+  align-self: end;
+  margin: 0;
+  color: var(--grau);
+  line-height: 1.6;
 }
-.pricing .section-header { border-bottom-color: rgba(255,255,255,.22); }
-.pricing .section-header h2 { color: #fff; }
-.pricing .section-header p { color: rgba(255,255,255,.64); }
-.pricing .eyebrow { color: #FF7C92; }
 
-/* ------------------------------------------------------ So geht's */
-/* Nummerierung bleibt: hier ist die Reihenfolge echte Information - anders
-   als bei den Abschnitten der Seite, die keine Abfolge sind und deshalb
-   keine Ziffern tragen. Die Ziffer ist gross gesetzt, weil sie die einzige
-   Struktur ist, die dieser Abschnitt braucht; die Kaesten von frueher haben
-   nur Linien addiert. Das Sinnbild bleibt - es steht als icon_code in der
-   Datenbank und wird hier neben die Ziffer auf dieselbe Grundlinie gesetzt. */
+.howto-section, .faq-section { padding: var(--luft) 0; background: var(--paper); }
+.map-wrapper { padding: var(--luft) 0; background: #fff; }
+
+.btn-primary, .btn-outline, .btn-end-rental {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: var(--control-font);
+  padding: 14px 24px;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: background .18s ease, color .18s ease, border-color .18s ease;
+}
+.btn-primary { background: var(--red); border-color: var(--red); color: #fff; }
+.btn-primary:hover { background: var(--red-tief); border-color: var(--red-tief); }
+.btn-outline { background: transparent; border-color: rgba(6, 24, 65, .3); color: var(--navy); }
+.btn-outline:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
+.full-width { width: 100%; }
+
+/* ------------------------------------------------ Längsschnitt */
+
+.profil { padding: var(--luft) 0; background: #fff; border-top: 1px solid var(--mist); }
+.profil-svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.p-raster line { stroke: var(--mist); stroke-width: 1; stroke-dasharray: 2 5; }
+.p-raster text {
+  font-family: var(--mono); font-size: 11px; fill: var(--grau-still);
+  letter-spacing: .06em; text-anchor: end;
+}
+.p-flaeche { fill: url(#hang); }
+.p-linie { fill: none; stroke: var(--red); stroke-width: 2.6; stroke-linecap: round; }
+.p-grundlinie { stroke: var(--mist); stroke-width: 1; }
+.p-leit { stroke: var(--mist); stroke-width: 1; stroke-dasharray: 2 4; }
+.p-pfeil { stroke: var(--navy); stroke-width: 1.2; }
+.p-spitze { fill: var(--navy); }
+.p-mass-text {
+  font-family: var(--schmal); font-weight: 800; font-size: 22px;
+  fill: var(--navy); text-anchor: start; letter-spacing: -.04em;
+}
+.p-mass-text.p-klein {
+  font-family: var(--mono); font-weight: 700; font-size: 9.5px;
+  fill: var(--grau-still); letter-spacing: .14em; text-transform: uppercase;
+}
+.hs-satz {
+  font-family: var(--schmal); font-weight: 800; font-size: 32px;
+  fill: var(--navy); letter-spacing: -.045em;
+}
+.hs-satz-2 { fill: var(--red); }
+.hs-lot { stroke: var(--mist); stroke-width: 1; stroke-dasharray: 2 4; }
+.hs-ring { fill: #fff; stroke: var(--navy); stroke-width: 1.6; }
+.hs-kern { fill: var(--red); }
+.hs-zahl {
+  font-family: var(--mono); font-weight: 700; font-size: 12.5px;
+  fill: var(--navy); text-anchor: middle;
+}
+.hs-name {
+  font-family: var(--body-schrift); font-weight: 600; font-size: 12px;
+  fill: var(--grau-still); text-anchor: end;
+}
+.hs-station:focus-visible { outline: none; }
+.hs-station:hover .hs-ring, .hs-station:focus-visible .hs-ring {
+  stroke: var(--red); stroke-width: 2.4;
+}
+.hs-station:hover .hs-name, .hs-station:focus-visible .hs-name {
+  fill: var(--navy); font-weight: 700;
+}
+
+.profil-fuss {
+  margin: clamp(16px, 1.8vw, 24px) 0 0;
+  font-family: var(--mono); font-size: 12px; letter-spacing: .04em;
+  color: var(--grau-still);
+}
+.profil-fuss strong { color: var(--navy); font-weight: 700; }
+.profil-fuss code {
+  font-family: var(--mono); font-size: .95em; color: var(--navy);
+  background: var(--paper); padding: .1em .38em; border-radius: 2px;
+}
+
+/* ---------------------------------------------------- So geht's */
+
 .howto-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: clamp(24px, 3vw, 52px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: clamp(26px, 3.2vw, 56px);
 }
 .howto-card {
-  display: grid; align-items: baseline; column-gap: 13px;
+  display: grid;
+  align-items: baseline;
+  column-gap: 13px;
   grid-template-columns: auto 1fr;
-  grid-template-areas: 'ziffer sinnbild' 'titel titel' 'text text';
-  padding-left: clamp(20px, 2.4vw, 36px);
-  border-left: 1px solid var(--linie);
+  grid-template-areas: "ziffer sinnbild" "titel titel" "text text";
+  padding-left: clamp(22px, 2.6vw, 40px);
+  border-left: 1px solid var(--mist);
 }
 .howto-card:first-child { padding-left: 0; border-left: 0; }
+/* Die Reihenfolge ist hier echte Information — anders als bei den
+   Abschnitten der Seite, die keine Abfolge sind. */
 .step-number {
-  grid-area: ziffer; margin-bottom: 12px;
-  font-family: var(--display); font-weight: 700; line-height: 1;
-  font-size: clamp(2.4rem, 4.4vw, 3.4rem); color: var(--signal);
-  letter-spacing: -0.03em; font-variant-numeric: tabular-nums;
+  grid-area: ziffer;
+  margin-bottom: 14px;
+  font-family: var(--schmal); font-weight: 800; line-height: 1;
+  font-size: clamp(46px, 5vw, 76px);
+  color: var(--red);
+  letter-spacing: -.06em;
 }
 .step-number::before { content: '0'; }
 .icon-circle {
   grid-area: sinnbild; justify-self: start;
   width: auto; height: auto; margin: 0; padding: 0;
-  background: none; border: 0; color: var(--tinte); font-size: 1.1rem;
+  background: none; border: 0; color: var(--navy); font-size: 1.15rem;
 }
-.howto-card h3 { grid-area: titel; font-size: var(--t-1); margin-bottom: 8px; }
-.howto-card p { grid-area: text; margin: 0; color: var(--text-leise); font-size: .96rem; }
+.howto-card h3 {
+  grid-area: titel;
+  margin: 0 0 10px;
+  color: var(--navy);
+  font-size: clamp(19px, 1.5vw, 23px);
+  letter-spacing: -.02em;
+}
+.howto-card p { grid-area: text; margin: 0; color: var(--grau); }
 
-/* ------------------------------------------------------ Tarifkarten */
+/* ------------------------------------------------------- Tarife */
+/* Das einzige dunkle Band zwischen Bühne und Fusszeile. */
+
+.pricing { padding: var(--luft) 0; background: var(--navy); color: #fff; }
+.pricing .section-header { border-bottom-color: rgba(255, 255, 255, .2); }
+.pricing .section-header h2 { color: #fff; }
+.pricing .section-header p { color: rgba(255, 255, 255, .68); }
+.pricing .eyebrow { color: rgba(255, 255, 255, .62); }
+
 .pricing-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
   gap: clamp(18px, 2vw, 26px);
 }
 .price-card {
-  display: flex; flex-direction: column; justify-content: space-between; position: relative;
-  background: var(--tinte-hell); border: 1px solid rgba(255,255,255,.16);
-  border-radius: var(--kante); padding: 28px 24px 24px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  position: relative;
+  background: var(--navy-2);
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 2px;
+  padding: 30px 26px 26px;
 }
-/* Die Marke sass halb ausserhalb der Karte und schnitt deren Rand an.
-   Jetzt sitzt sie buendig in der Ecke, die Karte bleibt ein geschlossener
-   Koerper und hebt sich stattdessen durch Schatten heraus. */
 .price-card.popular {
-  border-color: var(--signal); background: #21458C;
-  box-shadow: 0 20px 44px -24px rgba(0,0,0,.8);
+  border-color: var(--red);
+  background: #10306f;
+  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, .85);
 }
 .badge-pop {
   position: absolute; top: 0; right: 0;
-  background: var(--signal); color: #fff;
-  font-family: var(--mono); font-size: .62rem; font-weight: 600;
+  background: var(--red); color: #fff;
+  font: 700 11px/1 var(--mono);
   letter-spacing: .14em; text-transform: uppercase;
-  padding: 5px 12px;
-  border-radius: 0 calc(var(--kante) - 1px) 0 var(--kante);
+  padding: 7px 13px;
 }
 .price-card .header {
-  font-family: var(--display); font-size: var(--t-2); font-weight: 700;
-  color: #fff; margin-bottom: 6px;
+  font-family: var(--schmal);
+  font-size: clamp(24px, 2vw, 32px);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -.04em;
+  margin-bottom: 8px;
 }
 .price-card .price {
-  font-family: var(--mono); font-size: 1.85rem; font-weight: 600; color: #fff;
-  letter-spacing: -0.035em; margin-bottom: 18px; font-variant-numeric: tabular-nums;
+  font-family: var(--schmal);
+  font-size: clamp(30px, 2.6vw, 44px);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -.05em;
+  margin-bottom: 22px;
 }
 .price-card .price small {
-  font-family: var(--mono); font-size: .78rem; font-weight: 400;
-  color: rgba(255,255,255,.5); letter-spacing: 0;
+  font-family: var(--mono); font-size: 12px; font-weight: 400;
+  color: rgba(255, 255, 255, .55); letter-spacing: .06em;
 }
-.features-list { list-style: none; padding: 0; margin: 0 0 22px; }
+.features-list { list-style: none; padding: 0; margin: 0 0 26px; }
 .features-list li {
-  display: flex; gap: 10px; align-items: baseline;
-  color: rgba(255,255,255,.82); font-size: .94rem; padding: 7px 0;
-  border-top: 1px solid rgba(255,255,255,.1);
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 0;
+  border-top: 1px solid rgba(255, 255, 255, .13);
+  color: rgba(255, 255, 255, .9);
+  font-size: var(--body-font);
 }
 .features-list li:first-child { border-top: 0; }
-.features-list i { color: #6FD3A3; font-size: .78rem; }
-.pricing .btn-outline { color: #fff; border-color: rgba(255,255,255,.38); }
-.pricing .btn-outline:hover { background: #fff; color: var(--tinte); border-color: #fff; }
+.features-list i { color: var(--mint); font-size: .8rem; }
+.pricing .btn-outline { color: #fff; border-color: rgba(255, 255, 255, .38); }
+.pricing .btn-outline:hover { background: #fff; color: var(--navy); border-color: #fff; }
 
-/* ------------------------------------------------------------ Karte */
-/* Die Karte lief ueber die volle Fensterbreite und fluchtete mit nichts.
-   Jetzt beginnt sie am linken Anschlag der Spur und laeuft rechts aus dem
-   Bild - dieselbe Figur wie das Foto im Kopfbereich. */
+/* Fahrpreiszähler — früher im Kopfbereich, jetzt bei den Tarifen. */
+.tarif-zaehler { margin-bottom: clamp(30px, 3.4vw, 48px); }
+.meter {
+  max-width: 460px;
+  background: #fff;
+  color: var(--navy);
+  border: 1px solid var(--mist);
+  border-left: 3px solid var(--red);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, .7);
+}
+.meter-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--mist);
+}
+.meter-eyebrow {
+  font: 700 10.5px/1.3 var(--mono);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+}
+.meter-switch { display: flex; gap: 4px; }
+.meter-switch button {
+  padding: 5px 10px;
+  font: 700 10.5px/1 var(--mono);
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--grau-still);
+  background: transparent;
+  border: 1px solid var(--mist);
+  border-radius: 999px;
+}
+.meter-switch button:hover { border-color: var(--navy); color: var(--navy); }
+.meter-switch button[aria-pressed="true"] {
+  background: var(--navy); border-color: var(--navy); color: #fff;
+}
+.meter-readout { display: flex; align-items: baseline; gap: 8px; padding: 18px 15px 6px; }
+.meter-value {
+  font-family: var(--schmal); font-weight: 800;
+  font-size: clamp(40px, 4vw, 58px); line-height: 1;
+  letter-spacing: -.055em;
+  font-variant-numeric: tabular-nums;
+}
+.meter-unit { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--red); }
+.meter-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 6px 15px 14px;
+}
+.meter-detail { font-family: var(--mono); font-size: 11px; color: var(--grau-still); }
+.meter-clock {
+  font-family: var(--mono); font-size: 12px; font-weight: 700;
+  color: #fff; background: var(--navy);
+  padding: 4px 9px; border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* -------------------------------------------------------- Karte */
+
 .map-container-shadow {
-  position: relative; overflow: hidden;
-  border: 1px solid var(--linie); border-right: 0;
-  border-radius: var(--kante) 0 0 var(--kante);
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--mist);
+  border-right: 0;
+  border-radius: 2px 0 0 2px;
   margin-left: max(var(--rand), calc((100vw - var(--spur)) / 2 + var(--rand)));
 }
-#map { height: 540px; width: 100%; }
+#map { height: 560px; width: 100%; }
+
 .map-controls {
-  position: absolute; top: 16px; left: 16px; z-index: 500;
-  background: #fff; border: 1px solid var(--tinte);
-  border-radius: var(--kante); padding: 14px 16px;
+  position: absolute; top: 18px; left: 18px; z-index: 500;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, .96);
+  border: 1px solid var(--mist);
+  border-radius: 2px;
+  box-shadow: 0 14px 34px rgba(6, 24, 65, .14);
 }
 .control-title {
-  font-family: var(--mono); font-size: .66rem; letter-spacing: .14em;
-  text-transform: uppercase; color: var(--text-leise); margin-bottom: 10px;
+  margin-bottom: 9px;
+  font: 700 10.5px/1 var(--mono);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
 }
-.filter-option { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: .89rem; cursor: pointer; }
-.filter-option input { accent-color: var(--signal); }
+.filter-option {
+  display: flex; align-items: center; gap: 9px;
+  padding: 3px 0; font-size: 14px; cursor: pointer; color: var(--navy);
+}
+.filter-option input { accent-color: var(--red); }
 .map-overlay-btn {
-  position: absolute; bottom: 20px; right: 20px; z-index: 500;
-  width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
-  background: var(--tinte); color: #fff; border-radius: var(--kante); cursor: pointer;
+  position: absolute; right: 18px; top: 18px; z-index: 500;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  background: #fff; color: var(--navy);
+  border: 1px solid var(--mist); border-radius: 999px;
+  cursor: pointer;
+  box-shadow: 0 14px 34px rgba(6, 24, 65, .14);
 }
-.map-legend { display: flex; flex-wrap: wrap; gap: 22px; margin-top: 18px; font-size: .84rem; color: var(--text-leise); }
+.map-legend {
+  display: flex; flex-wrap: wrap; gap: 22px;
+  margin-top: 20px;
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--grau-still);
+}
 .legend-item { display: flex; align-items: center; gap: 7px; }
 .legend-icon-wrapper { position: relative; display: inline-block; }
-.main-legend-icon { color: var(--tinte); }
+.main-legend-icon { color: var(--navy); }
 .sub-legend-icon { position: absolute; top: -3px; right: -7px; font-size: .55em; }
-.marker-bike { color: var(--tinte); font-size: 1.05rem; }
-.leaflet-popup-content { font-family: var(--body); font-size: .89rem; }
-.leaflet-popup-content b { font-family: var(--display); font-size: 1.02rem; }
+.marker-bike { color: var(--navy); font-size: 1.05rem; }
+.combined-icon-marker { position: relative; }
+.marker-sub { position: absolute; top: -4px; right: -6px; font-size: .55em; }
+.leaflet-popup-content { font-family: var(--body-schrift); font-size: 14px; }
+.leaflet-popup-content b { font-family: var(--schmal); font-size: 17px; letter-spacing: -.02em; }
 
-/* -------------------------------------------------------------- FAQ */
-/* Zwei Spalten: einspaltig endete die Liste auf einer eigenen rechten
-   Kante und liess die halbe Seite leer. */
+/* ---------------------------------------------------------- FAQ */
+
 .faq-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  column-gap: clamp(28px, 3.6vw, 64px);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: clamp(28px, 3.6vw, 68px);
 }
-.faq-grid details { border-bottom: 1px solid var(--linie); }
-.faq-grid details:nth-child(-n+2) { border-top: 1px solid var(--linie); }
+.faq-grid details { border-bottom: 1px solid var(--mist); }
+.faq-grid details:nth-child(-n+2) { border-top: 1px solid var(--mist); }
 .faq-grid summary {
   cursor: pointer; list-style: none; position: relative;
-  padding: 19px 34px 19px 0;
-  font-family: var(--display); font-size: var(--t-1); font-weight: 600; color: var(--tinte);
+  padding: 21px 36px 21px 0;
+  font-family: var(--schmal);
+  font-size: clamp(19px, 1.6vw, 25px);
+  font-weight: 800;
+  letter-spacing: -.03em;
+  color: var(--navy);
 }
 .faq-grid summary::-webkit-details-marker { display: none; }
 .faq-grid summary::after {
   content: '+'; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-  font-family: var(--mono); font-size: 1.35rem; color: var(--signal); line-height: 1;
+  font-family: var(--mono); font-size: 1.4rem; color: var(--red); line-height: 1;
 }
 .faq-grid details[open] summary::after { content: '–'; }
-.faq-content { padding: 0 34px 20px 0; color: var(--text-leise); }
+.faq-content { padding: 0 36px 22px 0; color: var(--grau); }
 
-/* ----------------------------------------------------------- Banner */
-.rental-banner {
-  position: sticky; top: 70px; z-index: 800;
-  background: var(--rasen); color: #fff; border-bottom: 2px solid var(--tinte);
-}
-.rental-banner .container {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; padding-top: 12px; padding-bottom: 12px; flex-wrap: wrap;
-}
-.rental-info { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: .94rem; }
-.rental-timer { font-family: var(--mono); font-weight: 600; font-variant-numeric: tabular-nums; }
-.btn-end-rental { background: #fff; color: var(--rasen); border-color: #fff; }
-.btn-end-rental:hover { background: var(--signal); color: #fff; border-color: var(--signal); }
+/* ----------------------------------------------------- Fusszeile */
 
-/* ------------------------------------------------------------ Modal */
+footer {
+  padding: var(--luft) 0 40px;
+  color: rgba(255, 255, 255, .72);
+  background: var(--navy);
+  border-top: 4px solid var(--red);
+}
+.footer-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: clamp(32px, 4vw, 70px);
+}
+footer .logo { margin-bottom: 14px; }
+/* Dieselbe Marke wie im Kopf, nur auf dunklem Grund: das Rot wird
+   heller, sonst verschwindet es im Navy. */
+.brand-fuss {
+  display: inline-block;
+  color: #fff;
+  font-size: clamp(28px, 2.2vw, 38px);
+}
+.brand-fuss span { color: #ff5f80; }
+.wortspiel {
+  margin: 0 0 18px;
+  font: 700 11px/1 var(--mono);
+  letter-spacing: .2em; text-transform: uppercase;
+  color: rgba(255, 255, 255, .45);
+}
+footer h4 {
+  margin: 0 0 16px;
+  color: #fff;
+  font: 700 11px/1 var(--mono);
+  letter-spacing: .16em; text-transform: uppercase;
+}
+footer ul { list-style: none; padding: 0; margin: 0; }
+footer li { margin-bottom: 9px; }
+footer a { color: rgba(255, 255, 255, .72); text-decoration: none; }
+footer a:hover { color: #fff; text-decoration: underline; }
+.impressum-sub {
+  margin-top: clamp(40px, 5vw, 70px);
+  padding-top: 22px;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  font-size: 14px;
+  color: rgba(255, 255, 255, .5);
+}
+
+/* --------------------------------------- Anmeldung und Ausleihe */
+
 .modal-overlay {
-  display: none; position: fixed; inset: 0; z-index: 2000; padding: 20px;
-  background: rgba(16,39,90,.72); align-items: center; justify-content: center;
+  display: none;
+  position: fixed; inset: 0; z-index: 1000;
+  align-items: center; justify-content: center;
+  padding: 24px;
+  background: rgba(6, 24, 65, .55);
+  backdrop-filter: blur(3px);
 }
+.modal-overlay.active { display: flex; }
 .modal-content {
-  background: #fff; border: 2px solid var(--tinte); border-radius: var(--kante);
-  width: 100%; max-width: 440px; position: relative; overflow: hidden;
+  position: relative;
+  width: min(460px, 100%);
+  padding: 34px 32px 32px;
+  background: #fff;
+  border-radius: 2px;
+  box-shadow: 0 40px 90px rgba(0, 0, 0, .35);
 }
-.auth-tabs { display: flex; border-bottom: 1px solid var(--linie); }
+.close-modal {
+  position: absolute; top: 14px; right: 16px;
+  border: 0; background: none;
+  font-size: 28px; line-height: 1; color: var(--grau-still);
+}
+.auth-tabs { display: flex; gap: 6px; margin-bottom: 26px; }
 .auth-tab {
-  flex: 1; padding: 15px; text-align: center; cursor: pointer;
-  font-family: var(--mono); font-size: .72rem; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--text-leise); border-bottom: 2px solid transparent;
+  flex: 1;
+  padding: 11px 0;
+  text-align: center;
+  border-radius: 999px;
+  font-weight: 700; font-size: 15px;
+  color: var(--grau-still);
+  background: var(--paper);
+  cursor: pointer;
 }
-.auth-tab.active { color: var(--tinte); border-bottom-color: var(--signal); }
-.form-wrapper { padding: 26px; }
+.auth-tab.active { background: var(--navy); color: #fff; }
 .auth-form { display: none; }
 .auth-form.active { display: block; }
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; margin-bottom: 6px; font-size: .8rem; font-weight: 600; color: var(--text-leise); }
+.form-title {
+  margin: 0 0 22px;
+  font-family: var(--schmal); font-size: 30px; font-weight: 800;
+  letter-spacing: -.04em; color: var(--navy);
+}
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block; margin-bottom: 6px;
+  font: 700 10.5px/1 var(--mono);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--grau-still);
+}
 .form-group input {
-  width: 100%; padding: 11px 12px; font-family: var(--body); font-size: .94rem;
-  border: 1px solid var(--linie); border-radius: var(--kante); background: var(--kreide);
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--mist);
+  border-radius: 2px;
+  background: #fff;
+  color: var(--ink);
 }
-.form-group input:focus { border-color: var(--tinte); background: #fff; outline: none; }
-.close-modal {
-  position: absolute; top: 12px; right: 14px; background: none; border: none;
-  font-size: 22px; cursor: pointer; color: var(--text-leise); line-height: 1;
-}
+.form-group input:focus { border-color: var(--navy); outline: none; }
 
-/* -------------------------------------------------------------- Fuß */
-footer {
-  background: var(--tinte); color: rgba(255,255,255,.66);
-  padding: clamp(48px, 6vw, 76px) 0 34px;
-  border-top: 6px solid transparent; border-image: var(--band) 1;
+.rental-banner {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+  padding: 14px 0;
+  background: var(--navy);
+  color: #fff;
+  border-top: 3px solid var(--mint);
 }
-footer .logo { margin-bottom: 12px; }
-footer .wortmarke { color: #fff; font-size: 1.7rem; }
-/* Signalrot auf Tinte ist zu dunkel - beide roten Teile werden heller. */
-footer .wm-fuge, footer .wm-city { color: #FF7C92; }
-/* Die Pointe wird genau einmal ausgesprochen — hier, wo eine
-   Markenzeile hingehört, und nicht in der Navigation. */
-.wortspiel {
-  margin: 0 0 16px;
-  font-family: var(--mono); font-size: .72rem; letter-spacing: .2em;
-  text-transform: uppercase; color: var(--messing);
+.rental-banner-content {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
 }
-.footer-grid { display: grid; grid-template-columns: 1.618fr 1fr 1fr; gap: 40px; }
-.footer-col h4 {
-  font-family: var(--mono); font-size: .7rem; letter-spacing: .16em;
-  text-transform: uppercase; color: rgba(255,255,255,.55);
-  margin-bottom: 14px; font-weight: 500;
-}
-.footer-col ul { list-style: none; padding: 0; margin: 0; }
-.footer-col li { padding: 4px 0; font-size: .92rem; }
-.footer-col a { color: rgba(255,255,255,.66); text-decoration: none; }
-.footer-col a:hover { color: #fff; }
-.footer-bottom {
-  border-top: 1px solid rgba(255,255,255,.12);
-  margin-top: 38px; padding-top: 22px; font-size: .8rem;
-}
+.rental-info { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 15px; }
+.rental-timer { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; }
+.btn-end-rental { background: #fff; color: var(--navy); border-color: #fff; }
+.btn-end-rental:hover { background: var(--mint); border-color: var(--mint); color: var(--navy); }
 
-/* --------------------------------------------------------- Schmal */
-@media (max-width: 900px) {
-  .hero {
-    grid-template-columns: 1fr;
-    gap: clamp(26px, 6vw, 40px);
-    min-height: 0;
-    padding: var(--luft-oben) var(--rand) var(--luft-unten);
-  }
-  .hero::after { aspect-ratio: 3 / 2; }
-  .hero-container, .hero::after { grid-column: 1; }
-  .hero::after { border-radius: var(--kante); }
-  .hero-typo-wrapper { max-width: none; gap: 26px; }
+/* ------------------------------------------------------- Umbruch */
+
+@media (max-width: 1100px) {
   .section-header {
     grid-template-columns: 1fr;
-    grid-template-areas: 'vorspann' 'titel' 'hinweis';
-    gap: 12px 0;
+    grid-template-areas: "vorspann" "titel" "hinweis";
+    gap: 14px 0;
   }
   .section-header p { align-self: start; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .site-header { grid-template-columns: 1fr auto; min-height: 74px; }
+  .site-nav { display: none; }
+  .top-meta { top: 100px; }
+  .scroll-story { height: 330vh; }
+  .photo-layer { inset: 0 -32% 0 -18%; background-position: 56% center; }
+  .claim { top: 27vh; bottom: auto; width: calc(100% - 48px); }
+  .claim h1 { font-size: var(--hero-font); max-width: 100%; }
+  .claim-city h1 { font-size: calc(var(--hero-font) * .82); }
+  .choice-panel { grid-template-columns: 1fr; gap: 15px; bottom: 64px; right: 24px; }
+  .product-copy { display: none; }
+  .final-card { top: 128px; right: 20px; bottom: auto; width: min(360px, calc(100% - 40px)); }
+  .scroll-hint { display: none; }
+  .facts { grid-template-columns: 1fr; }
+  .stat-grid { border-left: 0; }
   .faq-grid { grid-template-columns: 1fr; }
   .faq-grid details:nth-child(2) { border-top: 0; }
-  .faq-grid details:first-child { border-top: 1px solid var(--linie); }
-  .map-container-shadow { margin-left: var(--rand); margin-right: var(--rand);
-    border-right: 1px solid var(--linie); border-radius: var(--kante); }
-  .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 20px 0; }
-  .stat-item:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .faq-grid details:first-child { border-top: 1px solid var(--mist); }
   .howto-card { padding-left: 0; border-left: 0; }
-  .footer-grid { grid-template-columns: 1fr; gap: 26px; }
-  /* Die Zeichnung braucht Breite. Unter 900 px scrollt sie waagerecht
+  .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+  /* Die Zeichnung braucht Breite: unter 900 px scrollt sie waagerecht
      in ihrem eigenen Kasten, statt auf Briefmarkengroesse zu schrumpfen. */
   .profil .container { overflow-x: auto; }
   .profil-svg { min-width: 720px; }
-  .nav-links { display: none; }
-  .mobile-menu-icon { display: block; }
+  .map-container-shadow {
+    margin-left: var(--rand); margin-right: var(--rand);
+    border-right: 1px solid var(--mist); border-radius: 2px;
+  }
+  #map { height: 440px; }
 }
-@media (max-width: 560px) {
-  body { font-size: 16px; }
-  .buttons-row { flex-direction: column; align-items: stretch; }
-  .buttons-row .btn-hero-primary, .buttons-row .btn-hero-outline { text-align: center; }
+
+@media (max-width: 520px) {
+  .chapter { display: none; }
+  .photo-layer { inset: 0 -70% 0 -56%; background-position: center 28%; }
+  .claim { top: 25vh; }
+  .claim-city { top: 29vh; }
+  .choice-panel { bottom: 34px; }
+  .product-tab { padding: 0 14px; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .meter { max-width: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .scroll-story { height: 100vh; min-height: 720px; }
+  .photo-ebike { opacity: 1; transform: scale(1.03); }
+  .photo-city, .photo-morph, .claim-city, .transition-cover, .final-card { display: none; }
+  .claim-ebike { opacity: 1; transform: none; }
+  .choice-panel { opacity: 1; transform: none; }
+  .progress-rail, .scroll-hint { display: none; }
+  * { transition: none !important; animation: none !important; }
 }

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#061841">
     <title>VeloCity - Fahrradverleih Würzburg</title>
 
     <!-- Externe Styles -->
@@ -14,21 +15,6 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<nav id="navbar">
-  <div class="container nav-flex">
-    <div class="logo">
-      <span class="wortmarke" role="img" aria-label="VeloCity">Velo<span class="wm-fuge">_</span><span class="wm-city">City</span></span>
-    </div>
-    <ul class="nav-links">
-      <li><a href="#anleitung">So geht's</a></li>
-      <li><a href="#tarife">Preise</a></li>
-      <li><a href="#map-section">Live-Karte</a></li>
-      <li><button id="user-nav-btn" class="btn-primary-nav"><i class="fa-regular fa-user"></i> Login</button></li>
-    </ul>
-    <div class="mobile-menu-icon"><i class="fa-solid fa-bars"></i></div>
-  </div>
-</nav>
 
 <div id="auth-modal" class="modal-overlay">
     <div class="modal-content">
@@ -88,73 +74,102 @@
     </div>
 </div>
 
-<header class="hero">
-  <div class="overlay"></div>
-  <div class="container hero-container">
-
-    <div class="hero-typo-wrapper">
-
-      <span class="badge">Neu in Würzburg</span>
-
-      <div class="hero-block-headline">
-          <h1 class="hl-line-1">Würzburg hat einen Berg.</h1>
-          <h1 class="hl-line-2">Wir haben Rückenwind.</h1>
-      </div>
-
-      <div class="hero-block-sub">
-          <p class="sub-line-1">Pedelecs, abgerechnet je angefangener Minute.</p>
-          <p class="sub-line-2">Keine Grundgebühr, kein Vertrag.</p>
-      </div>
-
-      <div class="hero-block-interaction">
-          <div class="buttons-row">
-            <button class="btn-hero-primary" onclick="document.getElementById('map-section').scrollIntoView()"><i class="fa-solid fa-map-location-dot"></i> Rad finden</button>
-            <a href="#anleitung" class="btn-hero-outline">So geht's</a>
-          </div>
-
-          <!-- Der Fahrpreiszähler. Rechnet mit denselben Regeln wie die
-               Datenbank: angefangene Minuten aufgerundet, Deckelung auf
-               den Tageshöchstpreis. Die Sätze kommen aus v_tarifkarte. -->
-          <div class="meter" id="fare-meter">
-            <div class="meter-head">
-              <span class="meter-eyebrow">Beispielrechnung, läuft mit</span>
-              <div class="meter-switch" id="meter-switch" role="group" aria-label="Radtyp wählen"></div>
-            </div>
-            <div class="meter-readout">
-              <span class="meter-value" id="meter-value">0,00</span><span class="meter-unit">Euro</span>
-            </div>
-            <div class="meter-foot">
-              <span class="meter-detail" id="meter-detail">Tarife werden geladen</span>
-              <span class="meter-clock" id="meter-clock">00:00</span>
-            </div>
-          </div>
-
-          <div class="status-widget-aligned">
-             <div class="status-left">
-                 <div class="status-icon pulse"></div>
-                 <small class="status-label">Live</small>
-             </div>
-             <div class="status-right">
-                 <strong><span id="bike-counter">…</span> Räder</strong> gerade verfügbar
-             </div>
-          </div>
-      </div>
-
-    </div>
-  </div>
+<!-- ============================================================
+     KOPFZEILE
+     Fest am oberen Rand, damit sie ueber der Buehne stehen bleibt.
+     Der Login bleibt ein button mit id="user-nav-btn" - daran haengt
+     die Anmeldung in auth.js.
+     ============================================================ -->
+<header class="site-header" id="navbar">
+  <a class="brand" href="#top" aria-label="VeloCity Startseite">VEL<i></i><span>CITY</span></a>
+  <nav class="site-nav" aria-label="Hauptnavigation">
+    <a href="#anleitung">So geht&rsquo;s</a>
+    <a href="#tarife">Preise</a>
+    <a href="#map-section">Live-Karte</a>
+  </nav>
+  <button id="user-nav-btn" class="login" type="button">Login</button>
 </header>
 
+<main id="top">
+
 <!-- ============================================================
-     LAENGSSCHNITT MAIN -> HUBLAND
+     KOPFBEREICH
+     Vom Nutzer gestaltet und hier uebernommen: eine scrollgesteuerte
+     Buehne, die per WebGL zwischen City-Bike und E-Bike ueberblendet.
+     Ohne WebGL oder bei "Bewegung reduzieren" faellt sie auf eine
+     schlichte Ueberblendung zurueck.
 
-     Die eine Zeichnung, die diese Seite von jedem anderen Leihradsystem
-     unterscheidet. Wuerzburg hat einen Berg, und der ist der ganze Grund
-     fuer die Pedelecs. Bisher stand das nur als Satz im Kopfbereich.
-
-     Die beiden Endhoehen sind gemessen (zwei unabhaengige Gelaendemodelle,
-     Alte Mainbruecke rund 171 m, Campus Hubland rund 273 m). Der Verlauf
-     dazwischen ist schematisch - das steht auch so in der Bildunterschrift.
+     Zwei Anpassungen: die Bildpfade zeigen auf assets/, und die
+     Zahlen kommen aus der Datenbank statt fest im Text zu stehen.
      ============================================================ -->
+<section class="scroll-story" aria-label="VeloCity in Würzburg">
+  <div class="sticky-stage">
+    <div class="photo-layer photo-city" role="img" aria-label="Rotes VeloCity City-Bike vor einer Betonwand"></div>
+    <div class="photo-layer photo-ebike" role="img" aria-label="Rotes VeloCity E-Bike vor einer Betonwand"></div>
+    <canvas class="photo-morph" aria-hidden="true"></canvas>
+    <div class="photo-shade" aria-hidden="true"></div>
+    <div class="transition-cover" aria-hidden="true"></div>
+
+    <div class="top-meta">
+      <span class="live-indicator"><span id="bike-counter">…</span> Räder live</span>
+      <span class="chapter">Würzburg · <span id="stationen-zaehler">…</span> Stationen</span>
+    </div>
+
+    <div class="claim claim-ebike">
+      <p class="eyebrow">E-Bike · Unterstützung bis 25 km/h</p>
+      <h1>
+        <span class="claim-line headline-primary">Würzburg hat<br>viele Berge.</span>
+        <span class="claim-line headline-accent">Wir liefern den<br>Rückenwind.</span>
+      </h1>
+    </div>
+
+    <div class="claim claim-city">
+      <p class="eyebrow">City-Bike · klassisch &amp; direkt</p>
+      <h1>
+        <span class="claim-line headline-primary">Entspannt<br>shoppen.</span>
+        <span class="claim-line headline-accent">Noch entspannter<br>nach Hause cruisen.</span>
+      </h1>
+    </div>
+
+    <div class="choice-panel" id="angebot">
+      <div class="product-tabs" role="tablist" aria-label="Fahrradtyp wählen">
+        <button class="product-tab" role="tab" aria-selected="false" data-product="city" type="button">City-Bike</button>
+        <button class="product-tab" role="tab" aria-selected="true" data-product="ebike" type="button">E-Bike</button>
+      </div>
+      <div class="product-copy" aria-live="polite">
+        <span class="product-kicker">Aktuelle Auswahl</span>
+        <strong>Mehr Rückenwind für Würzburg.</strong>
+        <small>Elektrische Unterstützung, wenn du sie brauchst.</small>
+      </div>
+    </div>
+
+    <aside class="final-card">
+      <div class="label"><span>Live in Würzburg</span><span>● <span id="bike-counter-karte">…</span></span></div>
+      <h2>Bereit, wenn du es bist.</h2>
+      <p>Finde das passende Rad an einer Station in deiner Nähe.</p>
+      <a class="primary-cta" href="#map-section"><span>Live-Karte öffnen</span><span>↗</span></a>
+    </aside>
+
+    <div class="scroll-hint">Scrollen, um das Netz zu entdecken</div>
+    <div class="progress-rail" aria-hidden="true"></div>
+  </div>
+</section>
+
+<!-- ============================================================
+     KENNZAHLEN
+     Raster aus dem neuen Entwurf, Werte aus velocity.v_kennzahl -
+     deshalb traegt es die id stats-grid, an der renderKennzahlen haengt.
+     ============================================================ -->
+<section class="facts" aria-labelledby="facts-title">
+  <div class="facts-copy">
+    <p class="eyebrow">Ein System. Zwei Fahrgefühle.</p>
+    <h2 id="facts-title">Würzburg fährt flexibel.</h2>
+    <p>City-Bike für kurze, direkte Wege. E-Bike, wenn Unterstützung den Unterschied
+       macht. Beides gehört sichtbar zum selben Netz.</p>
+  </div>
+  <div class="stat-grid" id="stats-grid" aria-label="VeloCity Kennzahlen"></div>
+</section>
+
 <section class="profil" aria-labelledby="profil-titel">
   <div class="container">
     <h2 id="profil-titel" class="nur-vorlesen">Höhenprofil vom Main zum Hubland</h2>
@@ -167,12 +182,6 @@
       Quelle der Belegung: <code>velocity.v_station</code>.
     </p>
   </div>
-</section>
-
-<section class="stats-bar">
-    <div class="container stats-grid" id="stats-grid">
-        <!-- wird aus velocity.v_kennzahl geladen -->
-    </div>
 </section>
 
 <section id="anleitung" class="howto-section">
@@ -195,6 +204,28 @@
       <h2>Drei Klassen, ein Preismodell</h2>
       <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis. Die Zahlen unten stammen direkt aus der Preistabelle.</p>
     </div>
+
+    <!-- Der Fahrpreiszaehler stand frueher im Kopfbereich. Der ist
+         ersetzt, der Zaehler bleibt - er gehoert ohnehin zu den
+         Tarifen. Er rechnet mit denselben Regeln wie die Datenbank:
+         angefangene Minuten aufgerundet, Deckelung auf den
+         Tageshoechstpreis. Die Saetze kommen aus v_tarifkarte. -->
+    <div class="tarif-zaehler">
+    <div class="meter" id="fare-meter">
+      <div class="meter-head">
+        <span class="meter-eyebrow">Beispielrechnung, läuft mit</span>
+        <div class="meter-switch" id="meter-switch" role="group" aria-label="Radtyp wählen"></div>
+      </div>
+      <div class="meter-readout">
+        <span class="meter-value" id="meter-value">0,00</span><span class="meter-unit">Euro</span>
+      </div>
+      <div class="meter-foot">
+        <span class="meter-detail" id="meter-detail">Tarife werden geladen</span>
+        <span class="meter-clock" id="meter-clock">00:00</span>
+      </div>
+    </div>
+    </div>
+
     <div class="pricing-grid" id="pricing-grid">
       <!-- wird aus velocity.v_tarifkarte geladen -->
     </div>
@@ -236,12 +267,13 @@
         </div>
     </div>
 </section>
+</main>
 
 <footer>
     <div class="container footer-grid">
         <div class="footer-col">
             <div class="logo">
-              <span class="wortmarke" role="img" aria-label="VeloCity">Velo<span class="wm-fuge">_</span><span class="wm-city">City</span></span>
+              <span class="brand brand-fuss" role="img" aria-label="VeloCity">VEL<i></i><span>CITY</span></span>
             </div>
             <p class="wortspiel">Velo · City · Velocity</p>
             <p style="color: #9CA3AF; line-height: 1.6;">Das moderne Leihradsystem für Würzburg und Umgebung. Einfach, smart, elektrisch.</p>
@@ -273,6 +305,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Kopfbereich: Animationsmodell, WebGL-Morph, Steuerung -->
+<script src="velocity-scroll-model.js"></script>
+<script src="velocity-bike-morph.js"></script>
+<script src="hero.js"></script>
 
 <!-- App Scripts (Reihenfolge wichtig!) -->
 <script src="config.js"></script>

@@ -151,6 +151,19 @@ else
   grep -vE '^$|geprueft|Repository' /tmp/abnahme-deck.log | head -12 | sed 's/^/     /'
 fi
 
+# --------------------------- 7e Vertrag zwischen HTML und JavaScript
+# Das Skript sucht Elemente ueber getElementById. Verschwindet eines
+# beim Umbau, bricht die Seite still: keine Fehlermeldung, nur eine
+# Kachel, die leer bleibt. Beim Austausch des Kopfbereichs war das die
+# groesste Gefahr.
+schritt "HTML und JavaScript passen zusammen"
+if python3 tools/frontend_check.py >/tmp/abnahme-front.log 2>&1; then
+  ergebnis 0 "$(grep -E 'ids im HTML' /tmp/abnahme-front.log)"
+else
+  ergebnis 1 "Der Vertrag ist verletzt"
+  grep -vE '^$|ids im HTML' /tmp/abnahme-front.log | head -10 | sed 's/^/     /'
+fi
+
 # --------------------------------------------------------- 8 Website
 schritt "Website spricht nur Sichten und api-Funktionen"
 verstoss=$(grep -oE "\.from\('[a-z_]+'\)" src/supabase.js | grep -v "'v_" || true)

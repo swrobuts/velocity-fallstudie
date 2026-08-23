@@ -219,8 +219,8 @@ document.addEventListener("DOMContentLoaded", async () => {
          aria-label="Würzburger Stationen nach Höhenlage, mit der Zahl der gerade freien Räder">
       <defs>
         <linearGradient id="hang" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stop-color="var(--signal)" stop-opacity=".15"/>
-          <stop offset="100%" stop-color="var(--signal)" stop-opacity=".012"/>
+          <stop offset="0%"   stop-color="var(--red)" stop-opacity=".15"/>
+          <stop offset="100%" stop-color="var(--red)" stop-opacity=".012"/>
         </linearGradient>
       </defs>
 
@@ -258,11 +258,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         const ziel = document.getElementById('stats-grid');
         if (!ziel) return;
         const zeilen = await fetchKennzahlen();
+        // Markup nach dem Entwurf des Nutzers: b traegt den Wert,
+        // span das Etikett. Die Werte selbst kommen aus v_kennzahl.
         ziel.innerHTML = zeilen.map(k => `
-            <div class="stat-item">
-                <span class="stat-number">${escapeHtml(k.wert)}</span>
-                <span class="stat-label">${escapeHtml(k.label)}</span>
+            <div class="stat">
+                <b>${escapeHtml(k.wert)}</b>
+                <span>${escapeHtml(k.label)}</span>
             </div>`).join('');
+
+        // Dieselbe Quelle speist die Kopfzeile der Buehne.
+        const stationen = zeilen.find(k => k.schluessel === 'stationen');
+        const anzeige = document.getElementById('stationen-zaehler');
+        if (anzeige && stationen) anzeige.textContent = stationen.wert;
     }
 
     async function renderNutzungsschritte() {
@@ -405,7 +412,12 @@ document.addEventListener("DOMContentLoaded", async () => {
             db_Bikes = bikes;
 
             // Stats aktualisieren
-            document.getElementById("bike-counter").innerText = bikes.length;
+            // Zwei Stellen zeigen dieselbe Zahl: die Kopfzeile der
+            // Buehne und die Karte am unteren Rand.
+            for (const id of ['bike-counter', 'bike-counter-karte']) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = bikes.length;
+            }
             // Die Stationszahl kommt aus velocity.v_kennzahl und wird von
             // renderKennzahlen gesetzt, nicht mehr hier.
 
