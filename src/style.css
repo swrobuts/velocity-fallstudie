@@ -129,23 +129,16 @@ h1, h2, h3, h4 {
   font-size: 1.28rem; line-height: 1; letter-spacing: -.012em;
   color: var(--tinte);
 }
+/* Fuge und City tragen dieselbe Farbe. Traegt nur die Fuge sie, liest
+   man ein Wort mit einem roten Fleck in der Mitte; so liest man Velo
+   gegen _City, und das Wortspiel steht in der Farbe. */
 .wm-fuge {
   color: var(--signal);
-  /* Die Fuge steht auf der Grundlinie und traegt deshalb etwas mehr Fett,
-     sonst verschwindet sie zwischen den Versalhoehen. */
+  /* Der Unterstrich sitzt unter der Grundlinie und wirkt duenner als die
+     Versalien daneben - etwas mehr Fett gleicht das aus. */
   font-weight: 700;
 }
 .wm-city { color: var(--signal); }
-.wm-rad {
-  width: .84em; height: .84em; display: block; color: inherit;
-  /* Optischer Ausgleich: der Kreis wirkt sonst höher als die Versalien. */
-  transform: translateY(.015em);
-  transition: transform .55s cubic-bezier(.22,.61,.36,1);
-}
-.logo:hover .wm-rad { transform: translateY(.015em) rotate(120deg); }
-@media (prefers-reduced-motion: reduce) {
-  .logo:hover .wm-rad { transform: translateY(.015em); }
-}
 
 /* -------------------------------------------------------------- Nav */
 nav {
@@ -652,7 +645,8 @@ footer {
 }
 footer .logo { margin-bottom: 12px; }
 footer .wortmarke { color: #fff; font-size: 1.7rem; }
-footer .wm-city { color: var(--signal); }
+/* Signalrot auf Tinte ist zu dunkel - beide roten Teile werden heller. */
+footer .wm-fuge, footer .wm-city { color: #FF7C92; }
 /* Die Pointe wird genau einmal ausgesprochen — hier, wo eine
    Markenzeile hingehört, und nicht in der Navigation. */
 .wortspiel {
