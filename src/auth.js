@@ -111,11 +111,11 @@ function getUserDisplayName() {
 // Fehlermeldungen uebersetzen
 function translateAuthError(message) {
     const translations = {
-        'Invalid login credentials': 'Ungueltige E-Mail oder Passwort',
-        'Email not confirmed': 'Bitte bestaetigen Sie zuerst Ihre E-Mail-Adresse',
+        'Invalid login credentials': 'Ungültige E-Mail oder Passwort',
+        'Email not confirmed': 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse',
         'User already registered': 'Diese E-Mail-Adresse ist bereits registriert',
         'Password should be at least 6 characters': 'Passwort muss mindestens 6 Zeichen haben',
-        'Unable to validate email address: invalid format': 'Ungueltige E-Mail-Adresse',
+        'Unable to validate email address: invalid format': 'Ungültige E-Mail-Adresse',
         'Email rate limit exceeded': 'Zu viele Versuche. Bitte warten Sie einen Moment.'
     };
 

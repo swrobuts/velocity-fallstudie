@@ -19,7 +19,7 @@ create table if not exists velocity_demo.kunde_unsicher (
 insert into velocity_demo.kunde_unsicher (name, email, notiz)
 select 'Erfundene Person ' || i,
        'person' || i || '@beispiel.invalid',
-       'Frei erfundener Datensatz fuer die Vorlesung'
+       'Frei erfundener Datensatz für die Vorlesung'
   from generate_series(1, 25) i
  where not exists (select 1 from velocity_demo.kunde_unsicher);
 
@@ -34,10 +34,10 @@ grant usage on schema velocity_demo to anon, authenticated;
 grant select, insert, update, delete on velocity_demo.kunde_unsicher to anon, authenticated;
 
 comment on schema velocity_demo is
-  'Demoschema fuer die Sicherheitsfolien. Enthaelt ausschliesslich erfundene Daten.';
+  'Demoschema für die Sicherheitsfolien. Enthaelt ausschliesslich erfundene Daten.';
 comment on table velocity_demo.kunde_unsicher is
   'Absichtlich unsicher: FOR ALL TO anon USING (true). Nur zur Vorfuehrung.';
-comment on column velocity_demo.kunde_unsicher.id    is 'Surrogatschluessel.';
+comment on column velocity_demo.kunde_unsicher.id    is 'Surrogatschlüssel.';
 comment on column velocity_demo.kunde_unsicher.name  is 'Erfundener Name.';
 comment on column velocity_demo.kunde_unsicher.email is 'Erfundene Adresse unter .invalid.';
 comment on column velocity_demo.kunde_unsicher.notiz is 'Hinweis, dass die Daten erfunden sind.';

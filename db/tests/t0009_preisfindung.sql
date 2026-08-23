@@ -181,7 +181,7 @@ begin
        values ('fremd@example.org', 'Frieda', 'Fremd') returning kunde_id into v_fremd;
 
   select * into v_e from velocity.fn_ausleihe_beenden(v_fremd, v_f.o_ausleihe_id, null, null, null);
-  return next is(v_e.meldung, 'Keine Berechtigung fuer diese Ausleihe',
+  return next is(v_e.meldung, 'Keine Berechtigung für diese Ausleihe',
                  'Fremde Ausleihe kann nicht beendet werden (GR9)');
   return next is((select status::text from velocity.ausleihe where ausleihe_id = v_f.o_ausleihe_id),
                  'aktiv', 'Die fremde Ausleihe bleibt unveraendert aktiv');

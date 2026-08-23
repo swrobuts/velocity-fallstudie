@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VeloCity - Fahrradverleih Wuerzburg</title>
+    <title>VeloCity - Fahrradverleih Würzburg</title>
 
     <!-- Externe Styles -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
@@ -18,7 +18,7 @@
 <nav id="navbar">
   <div class="container nav-flex">
     <div class="logo">
-      <i class="fa-solid fa-bicycle"></i> Velo<strong>City</strong>
+      <span class="wortmarke" role="img" aria-label="VeloCity"><span class="wm-wort">VEL</span><svg class="wm-rad" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="2.1" fill="currentColor"/><path d="M12 3.2v3.4M12 17.4v3.4M3.2 12h3.4M17.4 12h3.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".5"/></svg><span class="wm-wort wm-city">CITY</span></span>
     </div>
     <ul class="nav-links">
       <li><a href="#anleitung">So geht's</a></li>
@@ -39,7 +39,7 @@
         </div>
         <div class="form-wrapper">
             <form id="login-form" class="auth-form active">
-                <h3 class="form-title">Willkommen zurueck!</h3>
+                <h3 class="form-title">Willkommen zurück!</h3>
                 <div class="form-group">
                     <label for="login-email">E-Mail Adresse</label>
                     <input type="email" id="login-email" name="email" placeholder="name@beispiel.de" required>
@@ -65,7 +65,7 @@
                     <input type="email" id="reg-email" name="email" placeholder="name@beispiel.de" required>
                 </div>
                 <div class="form-group">
-                    <label for="reg-password">Passwort waehlen</label>
+                    <label for="reg-password">Passwort wählen</label>
                     <input type="password" id="reg-password" name="password" minlength="6" placeholder="Min. 6 Zeichen" required>
                 </div>
                 <button type="submit" class="btn-primary full-width">Kostenlos registrieren</button>
@@ -94,7 +94,7 @@
 
     <div class="hero-typo-wrapper">
 
-      <span class="badge">Neu in Wuerzburg</span>
+      <span class="badge">Neu in Würzburg</span>
 
       <div class="hero-block-headline">
           <h1 class="hl-line-1">Deine Stadt.</h1>
@@ -102,8 +102,8 @@
       </div>
 
       <div class="hero-block-sub">
-          <p class="sub-line-1">Premium Mobilitaet fuer Wuerzburg.</p>
-          <p class="sub-line-2">Sportlich, smart & spontan.</p>
+          <p class="sub-line-1">Vom Main aufs Hubland: hundert Höhenmeter.</p>
+          <p class="sub-line-2">Deshalb die E-Bikes. Abgerechnet wird je Minute.</p>
       </div>
 
       <div class="hero-block-interaction">
@@ -112,13 +112,30 @@
             <a href="#anleitung" class="btn-hero-outline">So geht's</a>
           </div>
 
+          <!-- Der Fahrpreiszähler. Rechnet mit denselben Regeln wie die
+               Datenbank: angefangene Minuten aufgerundet, Deckelung auf
+               den Tageshöchstpreis. Die Sätze kommen aus v_tarifkarte. -->
+          <div class="meter" id="fare-meter">
+            <div class="meter-head">
+              <span class="meter-eyebrow">Beispielrechnung, läuft mit</span>
+              <div class="meter-switch" id="meter-switch" role="group" aria-label="Radtyp wählen"></div>
+            </div>
+            <div class="meter-readout">
+              <span class="meter-value" id="meter-value">0,00</span><span class="meter-unit">Euro</span>
+            </div>
+            <div class="meter-foot">
+              <span class="meter-detail" id="meter-detail">Tarife werden geladen</span>
+              <span class="meter-clock" id="meter-clock">00:00</span>
+            </div>
+          </div>
+
           <div class="status-widget-aligned">
              <div class="status-left">
                  <div class="status-icon pulse"></div>
-                 <small class="status-label">LIVE DATEN</small>
+                 <small class="status-label">Live</small>
              </div>
              <div class="status-right">
-                 <strong><span id="bike-counter">...</span> Raeder</strong> verfuegbar
+                 <strong><span id="bike-counter">…</span> Räder</strong> gerade verfügbar
              </div>
           </div>
       </div>
@@ -136,8 +153,9 @@
 <section id="anleitung" class="howto-section">
     <div class="container">
         <div class="section-header">
-            <h2>So einfach geht's</h2>
-            <p>In drei Schritten zu deinem Ziel.</p>
+            <span class="eyebrow">Ablauf</span>
+            <h2>Vom Bordstein auf die Straße</h2>
+            <p>Drei Schritte. Kein Papier, kein Schalter, keine Kaution.</p>
         </div>
         <div class="howto-grid" id="howto-grid">
             <!-- wird aus velocity.v_nutzungsschritt geladen -->
@@ -148,8 +166,9 @@
 <section id="tarife" class="pricing">
   <div class="container">
     <div class="section-header">
-      <h2>Ein Preismodell, drei Klassen</h2>
-      <p>Transparent. Fair. Minutengenaue Abrechnung.</p>
+      <span class="eyebrow">Tarife</span>
+      <h2>Drei Klassen, ein Preismodell</h2>
+      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis. Die Zahlen unten stammen direkt aus der Preistabelle.</p>
     </div>
     <div class="pricing-grid" id="pricing-grid">
       <!-- wird aus velocity.v_tarifkarte geladen -->
@@ -159,8 +178,9 @@
 
 <section id="map-section" class="map-wrapper">
     <div class="container section-header">
-        <h2>Live-Karte & Verfuegbarkeit</h2>
-        <p>Echtzeit-Daten aller Fahrzeuge. Nutze den Filter, um dein perfektes Rad zu finden.</p>
+        <span class="eyebrow">Karte</span>
+        <h2>Was gerade frei ist</h2>
+        <p>Jeder Punkt ist ein Rad, das in diesem Moment ausleihbar ist. Filtere nach Klasse.</p>
     </div>
 
     <div class="map-container-shadow">
@@ -185,7 +205,7 @@
 
 <section id="faq" class="faq-section">
     <div class="container">
-        <div class="section-header"><h2>Haeufige Fragen</h2><p>Alles was du wissen musst.</p></div>
+        <div class="section-header"><span class="eyebrow">Fragen</span><h2>Häufige Fragen</h2><p>Zahlung, Parken, Studierendentarif und was bei einem Defekt passiert.</p></div>
         <div class="faq-grid" id="faq-grid">
             <!-- wird aus velocity.v_faq geladen -->
         </div>
@@ -195,10 +215,11 @@
 <footer>
     <div class="container footer-grid">
         <div class="footer-col">
-            <div class="logo" style="color:white; margin-bottom: 20px;">
-              <i class="fa-solid fa-bicycle" style="color:var(--primary);"></i> Velo<strong>City</strong>
+            <div class="logo">
+              <span class="wortmarke" role="img" aria-label="VeloCity"><span class="wm-wort">VEL</span><svg class="wm-rad" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.4"/><circle cx="12" cy="12" r="2.1" fill="currentColor"/><path d="M12 3.2v3.4M12 17.4v3.4M3.2 12h3.4M17.4 12h3.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" opacity=".5"/></svg><span class="wm-wort wm-city">CITY</span></span>
             </div>
-            <p style="color: #9CA3AF; line-height: 1.6;">Das moderne Leihradsystem fuer Wuerzburg und Umgebung. Einfach, smart, elektrisch.</p>
+            <p class="wortspiel">Velo · City · Velocity</p>
+            <p style="color: #9CA3AF; line-height: 1.6;">Das moderne Leihradsystem für Würzburg und Umgebung. Einfach, smart, elektrisch.</p>
         </div>
         <div class="footer-col">
             <h4>Rechtliches</h4>
@@ -212,14 +233,14 @@
         <div class="footer-col">
             <h4>Kontakt</h4>
             <ul>
-                <li>VeloCity Wuerzburg GmbH</li>
-                <li>Sanderring 2, 97070 Wuerzburg</li>
+                <li>VeloCity Würzburg GmbH</li>
+                <li>Sanderring 2, 97070 Würzburg</li>
                 <li style="margin-top:10px;"><i class="fa-solid fa-envelope"></i> hilfe@velocity-wue.de</li>
             </ul>
         </div>
     </div>
     <div class="impressum-sub container">
-        <p>&copy; 2026 VeloCity Wuerzburg GmbH. Geschaeftsfuehrer: Max Mustermann. Amtsgericht Wuerzburg HRB 99999.</p>
+        <p>&copy; 2026 VeloCity Würzburg GmbH. Geschäftsführer: Max Mustermann. Amtsgericht Würzburg HRB 99999.</p>
     </div>
 </footer>
 

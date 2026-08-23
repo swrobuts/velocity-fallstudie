@@ -8,7 +8,7 @@ from (
   select 'a kunde' as bereich,
          (select count(*) from "cityBikesRental".kunde)          as soll_alt,
          (select count(*) from velocity.kunde)                    as ist_neu,
-         'Saetze mit unplausibler E-Mail werden ausgelassen'       as bemerkung
+         'Sätze mit unplausibler E-Mail werden ausgelassen'       as bemerkung
   union all
   select 'b station',
          (select count(*) from "cityBikesRental".station),

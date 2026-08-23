@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             await login(email, password);
             closeModal();
-            Toastify({ text: "Willkommen zurueck!", backgroundColor: "#10B981" }).showToast();
+            Toastify({ text: "Willkommen zurück!", backgroundColor: "#10B981" }).showToast();
 
             if (pendingReservationBikeId) {
                 setTimeout(() => {
@@ -115,7 +115,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         } catch (error) {
             if (error.message === 'EMAIL_CONFIRMATION_REQUIRED') {
-                Toastify({ text: "Konto erstellt! Bitte bestaetigen Sie Ihre E-Mail.", backgroundColor: "#F59E0B", duration: 6000 }).showToast();
+                Toastify({ text: "Konto erstellt! Bitte bestätigen Sie Ihre E-Mail.", backgroundColor: "#F59E0B", duration: 6000 }).showToast();
             } else {
                 Toastify({ text: error.message, backgroundColor: "#EF4444" }).showToast();
             }
@@ -172,7 +172,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="price-card${i === 1 ? ' popular' : ''}">
                 ${i === 1 ? '<div class="badge-pop">Beliebteste Wahl</div>' : ''}
                 <div class="card-content">
-                    <div class="icon-header"><i class="fa-solid fa-bicycle"></i></div>
                     <div class="header">${escapeHtml(k.bezeichnung)}</div>
                     <div class="price">${euro(k.preis_30_minuten)} <small>/ 30 Min</small></div>
                     <ul class="features-list">
@@ -198,8 +197,80 @@ document.addEventListener("DOMContentLoaded", async () => {
             </details>`).join('');
     }
 
+    // ===== FAHRPREISZAEHLER =====
+    // Rechnet mit denselben Regeln wie die Datenbank: angefangene Minuten
+    // werden aufgerundet (Geschaeftsregel GR6), der Betrag ist auf den
+    // Tageshoechstpreis gedeckelt. Die Saetze kommen aus v_tarifkarte,
+    // sind also nicht im Frontend hinterlegt.
+    let zaehlerTarife = [];
+    let zaehlerAktiv = 0;
+    const zaehlerStart = Date.now();
+
+    function zaehlerZeichnen() {
+        const wert   = document.getElementById('meter-value');
+        const detail = document.getElementById('meter-detail');
+        const uhr    = document.getElementById('meter-clock');
+        if (!wert || zaehlerTarife.length === 0) return;
+
+        const t = zaehlerTarife[zaehlerAktiv];
+        const sekunden = Math.floor((Date.now() - zaehlerStart) / 1000);
+        const minuten  = Math.ceil(sekunden / 60);   // angefangene Minuten, wie GR6
+
+        const roh = Number(t.startgebuehr) + minuten * Number(t.preis_pro_minute);
+        const betrag = Math.min(roh, Number(t.tageshoechstpreis));
+
+        wert.textContent = betrag.toLocaleString('de-DE',
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const mm = String(Math.floor(sekunden / 60)).padStart(2, '0');
+        const ss = String(sekunden % 60).padStart(2, '0');
+        uhr.textContent = `${mm}:${ss}`;
+
+        const gedeckelt = roh > Number(t.tageshoechstpreis);
+        // Knapp halten: die Zeile steht neben der Uhr und darf nicht umbrechen.
+        const zahl = (n) => Number(n).toLocaleString('de-DE',
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        detail.textContent = gedeckelt
+            ? `Tageshöchstpreis erreicht`
+            : `${zahl(t.startgebuehr)} Start · ${zahl(t.preis_pro_minute)}/Min · ` +
+              `max ${zahl(t.tageshoechstpreis)}`;
+    }
+
+    function zaehlerSchalterZeichnen() {
+        const ziel = document.getElementById('meter-switch');
+        if (!ziel) return;
+        ziel.innerHTML = zaehlerTarife.map((t, i) =>
+            `<button type="button" data-i="${i}" aria-pressed="${i === zaehlerAktiv}">` +
+            `${escapeHtml(t.typ_code)}</button>`).join('');
+        ziel.querySelectorAll('button').forEach(b => {
+            b.addEventListener('click', () => {
+                zaehlerAktiv = Number(b.dataset.i);
+                zaehlerSchalterZeichnen();
+                zaehlerZeichnen();
+            });
+        });
+    }
+
+    async function zaehlerStarten() {
+        if (!document.getElementById('fare-meter')) return;
+        const karten = await fetchTarifkarten();
+        zaehlerTarife = karten.filter(k => k.preis_pro_minute !== null);
+        if (zaehlerTarife.length === 0) {
+            document.getElementById('meter-detail').textContent =
+                'Tarife nicht verfügbar';
+            return;
+        }
+        // E-Bike voreingestellt: das ist das Rad fuer den Berg.
+        const ebike = zaehlerTarife.findIndex(t => t.typ_code === 'EBIKE');
+        zaehlerAktiv = ebike >= 0 ? ebike : 0;
+        zaehlerSchalterZeichnen();
+        zaehlerZeichnen();
+        setInterval(zaehlerZeichnen, 1000);
+    }
+
     async function renderInhalte() {
         await Promise.all([
+            zaehlerStarten(),
             renderKennzahlen(),
             renderNutzungsschritte(),
             renderTarifkarten(),
@@ -224,7 +295,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Die Stationszahl kommt aus velocity.v_kennzahl und wird von
             // renderKennzahlen gesetzt, nicht mehr hier.
 
-            console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrraeder`);
+            console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrräder`);
             return true;
         } catch (error) {
             console.error("Fehler beim Laden der Daten:", error);
@@ -450,7 +521,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 hideRentalBanner();
             }
         } catch (error) {
-            console.error('Fehler beim Pruefen aktiver Ausleihen:', error);
+            console.error('Fehler beim Prüfen aktiver Ausleihen:', error);
         }
     }
 

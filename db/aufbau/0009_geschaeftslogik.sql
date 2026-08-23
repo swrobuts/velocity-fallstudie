@@ -83,7 +83,7 @@ begin
   end if;
   if v_status <> 'verfuegbar' then
     return query select null::bigint,
-      format('Fahrrad nicht verfuegbar (Status: %s)', v_status)::text; return;
+      format('Fahrrad nicht verfügbar (Status: %s)', v_status)::text; return;
   end if;
 
   -- Geschaeftsregel GR2
@@ -164,7 +164,7 @@ begin
   end if;
   if v_a.kunde_id <> p_kunde_id then
     return query select null::numeric, null::integer,
-      'Keine Berechtigung fuer diese Ausleihe'::text; return;
+      'Keine Berechtigung für diese Ausleihe'::text; return;
   end if;
   if v_a.status <> 'aktiv' then
     return query select null::numeric, null::integer, 'Ausleihe ist nicht aktiv'::text; return;
@@ -192,7 +192,7 @@ begin
     from velocity.nutzungspreis np
    where np.typ_id = v_typ and np.gueltigkeit @> v_a.startzeit::date;
   if not found then
-    raise exception 'Kein gueltiger Preis fuer Fahrradtyp % am %', v_typ, v_a.startzeit::date
+    raise exception 'Kein gültiger Preis für Fahrradtyp % am %', v_typ, v_a.startzeit::date
       using errcode = 'P0002';
   end if;
 

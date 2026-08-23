@@ -29,15 +29,15 @@ create table if not exists velocity.uebernahme_protokoll (
 );
 
 comment on table velocity.uebernahme_protokoll is
-  'Protokoll der einmaligen Uebernahme aus dem Altschema cityBikesRental.';
-comment on column velocity.uebernahme_protokoll.protokoll_id  is 'Surrogatschluessel.';
-comment on column velocity.uebernahme_protokoll.lauf          is 'Zeitstempel des Uebernahmelaufs. Gleicher Wert fuer alle Zeilen eines Laufs.';
+  'Protokoll der einmaligen Übernahme aus dem Altschema cityBikesRental.';
+comment on column velocity.uebernahme_protokoll.protokoll_id  is 'Surrogatschlüssel.';
+comment on column velocity.uebernahme_protokoll.lauf          is 'Zeitstempel des Uebernahmelaufs. Gleicher Wert für alle Zeilen eines Laufs.';
 comment on column velocity.uebernahme_protokoll.quelle        is 'Gelesene Tabelle im Altschema.';
 comment on column velocity.uebernahme_protokoll.ziel          is 'Beschriebene Tabelle im Schema velocity.';
-comment on column velocity.uebernahme_protokoll.gelesen       is 'Anzahl der Saetze in der Quelle.';
-comment on column velocity.uebernahme_protokoll.geschrieben   is 'Anzahl der tatsaechlich neu angelegten Saetze.';
-comment on column velocity.uebernahme_protokoll.uebersprungen is 'Anzahl der bewusst ausgelassenen Saetze.';
-comment on column velocity.uebernahme_protokoll.hinweis       is 'Begruendung fuer Abweichungen und getroffene Annahmen.';
+comment on column velocity.uebernahme_protokoll.gelesen       is 'Anzahl der Sätze in der Quelle.';
+comment on column velocity.uebernahme_protokoll.geschrieben   is 'Anzahl der tatsächlich neu angelegten Sätze.';
+comment on column velocity.uebernahme_protokoll.uebersprungen is 'Anzahl der bewusst ausgelassenen Sätze.';
+comment on column velocity.uebernahme_protokoll.hinweis       is 'Begründung für Abweichungen und getroffene Annahmen.';
 
 -- Die Tabelle entsteht erst hier, also nach Schritt 0011. Damit sie nicht
 -- als einzige ohne Zeilenschutz dasteht, wird er gleich mitgesetzt.
@@ -72,7 +72,7 @@ begin
   insert into velocity.uebernahme_protokoll (lauf, quelle, ziel, gelesen, geschrieben, hinweis)
   values (v_lauf, 'cityBikesRental.kunde', 'velocity.adresse',
           (select count(*) from "cityBikesRental".kunde), v_nachher - v_vorher,
-          'Nur Saetze mit fuenfstelliger PLZ; dedupliziert ueber den Fachschluessel');
+          'Nur Sätze mit fuenfstelliger PLZ; dedupliziert über den Fachschluessel');
 
   -- 2 Kunden ------------------------------------------------------------
   select count(*) into v_vorher from velocity.kunde;
@@ -112,8 +112,8 @@ begin
   values (v_lauf, 'cityBikesRental.kunde', 'velocity.kunde',
           (select count(*) from "cityBikesRental".kunde), v_nachher - v_vorher,
           (select count(*) from "cityBikesRental".kunde) - (v_nachher - v_vorher),
-          'passwort_hash wird bewusst nicht uebernommen. auth_uid nur, wenn das '
-          || 'Konto in auth.users tatsaechlich existiert; von '
+          'passwort_hash wird bewusst nicht übernommen. auth_uid nur, wenn das '
+          || 'Konto in auth.users tatsächlich existiert; von '
           || (select count(*) from "cityBikesRental".auth_kunde_mapping)::text
           || ' Eintraegen in auth_kunde_mapping sind '
           || (select count(*) from "cityBikesRental".auth_kunde_mapping m
@@ -330,6 +330,6 @@ begin
   values (v_lauf, 'cityBikesRental.station_fahrradtyp', '-',
           (select count(*) from "cityBikesRental".station_fahrradtyp), 0,
           (select count(*) from "cityBikesRental".station_fahrradtyp),
-          'Bewusst nicht uebernommen: fachlich nirgends ausgewertet');
+          'Bewusst nicht übernommen: fachlich nirgends ausgewertet');
 
 end $$;
