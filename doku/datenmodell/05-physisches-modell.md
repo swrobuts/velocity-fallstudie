@@ -51,6 +51,7 @@ aufwendig, und eine Sortierreihenfolge lässt sich nicht nachträglich
 | GR10 eine Rechnung je Kunde und Monat | `UNIQUE (kunde_id, periode_jahr, periode_monat)` |
 | GR11 genau eine Ortsangabe | `CHECK ausleihe_startort_chk` und `ausleihe_endort_chk` |
 | GR12 kein Start ohne Standort | Prüfung in `fn_ausleihe_starten` |
+| GR13 genau ein Standort je Rad | `CHECK fahrrad_position_ort_chk` **und** Constraint-Trigger |
 
 ### GR11: warum kein NOT NULL
 
@@ -76,7 +77,54 @@ Zeile ungültig gemacht. Sie stehen jetzt auf `ON DELETE RESTRICT`.
 Stationen werden über `betriebszeitraum` außer Betrieb genommen, nicht
 gelöscht.
 
-Neun von zwölf Regeln setzt die Datenbank durch. Die drei übrigen
+### GR13: wo ein CHECK aufhört
+
+Ein Rad kennt genau drei Zustände:
+
+| Zustand | `station_id` | Koordinaten |
+|---|---|---|
+| an einer Station | gesetzt | leer |
+| frei im Stadtgebiet | leer | gesetzt |
+| in Fahrt | leer | leer |
+
+Im Bestand trugen **316 von 352** Zeilen Station *und* Koordinaten —
+dieselbe transitive Abhängigkeit wie bei der Ausleihe: die Station
+bestimmt den Ort, die Koordinaten daneben sind eine zweite Wahrheit, die
+auseinanderlaufen kann. Die Sicht `v_verfuegbares_fahrrad` fällt ohnehin
+über `coalesce` auf die Station zurück.
+
+Den ersten Teil — nie beides, Koordinaten immer als Paar — erledigt ein
+`CHECK`. Der dritte Zustand aber hängt am **Status des Rades**, und der
+steht in `fahrrad`, einer anderen Tabelle. Ein `CHECK` darf nicht über
+seine Zeile hinaussehen. Deshalb ein **Constraint-Trigger**:
+
+```sql
+create constraint trigger trg_radposition_ort
+  after insert or update on velocity.fahrrad_position
+  deferrable initially deferred
+  for each row execute function velocity.trg_radposition_pruefen();
+```
+
+`DEFERRABLE INITIALLY DEFERRED` ist keine Bequemlichkeit, sondern
+notwendig: `fn_ausleihe_starten` setzt erst den Status auf
+`ausgeliehen` und räumt dann die Position. Zwischen diesen beiden
+Anweisungen ist der Zustand zwangsläufig widersprüchlich. Geprüft wird
+am Ende der Transaktion, nicht mittendrin. Der Trigger hängt auch an
+`fahrrad.status` — sonst käme ein Rad aus der Wartung zurück, ohne dass
+jemand weiß, wo es steht.
+
+Der Nebeneffekt ist derselbe wie bei GR11: `fahrrad_position.station_id`
+stand auf `ON DELETE SET NULL` und macht damit aus einem abgestellten Rad
+eines ohne Standort. Jetzt `RESTRICT` — wer eine Station auflöst, räumt
+sie vorher leer.
+
+**Zum Verhältnis von GR12 und GR13:** Sobald GR13 gilt, kann ein
+ausleihbares Rad gar keinen unbekannten Standort mehr haben — GR12 ist
+damit nicht mehr erreichbar. Die Prüfung in `fn_ausleihe_starten` bleibt
+trotzdem stehen. Sie kostet nichts und fängt den Fall ab, falls jemand
+GR13 später lockert. Gestaffelte Absicherung, nicht Redundanz.
+
+Neun von dreizehn Regeln setzt die Datenbank durch. Die drei übrigen
 brauchen Kontext, den ein Constraint nicht hat: den angemeldeten Nutzer,
 das aktuelle Datum, den Zustand anderer Zeilen.
 

@@ -151,9 +151,118 @@ create table if not exists velocity.fahrrad_position (
     check (longitude is null or longitude between -180 and 180),
   constraint fahrrad_position_fahrrad_fk foreign key (fahrrad_id)
     references velocity.fahrrad (fahrrad_id) on update cascade on delete cascade,
+  -- restrict wie bei der Ausleihe: mit der Ortspflicht unten wuerde
+  -- set null aus einem abgestellten Rad eines ohne bekannten Standort
+  -- machen. Wer eine Station aufloest, raeumt sie vorher leer.
   constraint fahrrad_position_station_fk foreign key (station_id)
-    references velocity.station (station_id) on update cascade on delete set null
+    references velocity.station (station_id) on update cascade on delete restrict
 );
 select velocity.fn_audit_anhaengen('fahrrad_position');
+
+-- =====================================================================
+--  GR13: WO STEHT DAS RAD?
+--
+--  Ein Rad kennt genau drei Zustaende, und die Tabelle liess bisher
+--  jeden Mischmasch daraus zu:
+--
+--    an einer Station      station_id gesetzt, Koordinaten leer
+--    frei im Stadtgebiet   station_id leer,    Koordinaten gesetzt
+--    in Fahrt              beides leer - niemand weiss, wo es gerade ist
+--
+--  Im Bestand trugen 316 von 352 Zeilen Station UND Koordinaten. Das ist
+--  dieselbe transitive Abhaengigkeit wie bei der Ausleihe: die Station
+--  bestimmt den Ort, die Koordinaten daneben sind eine zweite Wahrheit,
+--  die auseinanderlaufen kann. Die Sicht v_verfuegbares_fahrrad faellt
+--  ohnehin ueber coalesce auf die Station zurueck.
+--
+--  Einmalige Normalisierung, bevor die Regel greift. Idempotent.
+--  In einer grossen Tabelle waere hier der Produktionsweg richtig:
+--  add constraint ... not valid, dann spaeter validate constraint -
+--  das vermeidet die lange Sperre. Bei 352 Zeilen waere das Theater.
+-- =====================================================================
+
+update velocity.fahrrad_position p
+   set latitude = null, longitude = null
+ where p.station_id is not null and (p.latitude is not null or p.longitude is not null);
+
+update velocity.fahrrad_position p
+   set station_id = null, latitude = null, longitude = null
+  from velocity.fahrrad f
+ where f.fahrrad_id = p.fahrrad_id and f.status = 'ausgeliehen'
+   and (p.station_id is not null or p.latitude is not null);
+
+-- Den Fremdschluessel bestehender Datenbanken auf restrict umstellen -
+-- create table if not exists ruehrt eine vorhandene Tabelle nicht an.
+alter table velocity.fahrrad_position drop constraint if exists fahrrad_position_station_fk;
+alter table velocity.fahrrad_position add  constraint fahrrad_position_station_fk
+  foreign key (station_id) references velocity.station (station_id)
+  on update cascade on delete restrict;
+
+-- Was in der Tabelle selbst steht, prueft ein CHECK: nie beides, und
+-- Koordinaten immer als Paar.
+alter table velocity.fahrrad_position drop constraint if exists fahrrad_position_ort_chk;
+alter table velocity.fahrrad_position add  constraint fahrrad_position_ort_chk check (
+      not (station_id is not null and (latitude is not null or longitude is not null))
+  and (latitude is null) = (longitude is null)
+);
+
+-- Der dritte Zustand haengt am STATUS DES RADES, und der steht in einer
+-- anderen Tabelle. Ein CHECK darf nicht ueber die Zeile hinaussehen -
+-- also ein Constraint-Trigger. Deferrable initially deferred, weil
+-- fn_ausleihe_starten und _beenden Status und Position in ZWEI
+-- Anweisungen setzen: zwischendurch ist der Zustand notwendig
+-- widerspruechlich, am Ende der Transaktion nicht mehr.
+create or replace function velocity.trg_radposition_pruefen()
+returns trigger
+language plpgsql
+set search_path = velocity, pg_temp
+as $$
+declare
+  v_rad    bigint := coalesce(new.fahrrad_id, old.fahrrad_id);
+  v_status velocity.fahrrad_status;
+  v_pos    velocity.fahrrad_position%rowtype;
+begin
+  select f.status into v_status from velocity.fahrrad f where f.fahrrad_id = v_rad;
+  if not found then return null; end if;          -- Rad geloescht, Kaskade laeuft
+  select * into v_pos from velocity.fahrrad_position where fahrrad_id = v_rad;
+  if not found then return null; end if;          -- keine Position gefuehrt
+
+  if v_pos.station_id is null and v_pos.latitude is null then
+    -- Kein Ort. Nur erlaubt, solange das Rad unterwegs oder ausgemustert ist.
+    if v_status not in ('ausgeliehen', 'ausgemustert') then
+      raise exception 'Rad % hat den Status % und braucht damit einen Standort: '
+                      'eine Station oder Koordinaten', v_rad, v_status
+        using errcode = '23514';
+    end if;
+  else
+    -- Ein Rad in Fahrt steht nirgends. Ein alter Ort waere eine Luege.
+    if v_status = 'ausgeliehen' then
+      raise exception 'Rad % ist ausgeliehen und darf keinen Standort tragen', v_rad
+        using errcode = '23514';
+    end if;
+  end if;
+  return null;
+end;
+$$;
+
+comment on function velocity.trg_radposition_pruefen() is
+  'Prueft GR13. Steht als Constraint-Trigger und nicht als CHECK, weil die '
+  'Regel den Status des Rades braucht - und der liegt in einer anderen Tabelle. '
+  'Genau da endet, was ein CHECK leisten kann.';
+
+drop trigger if exists trg_radposition_ort on velocity.fahrrad_position;
+create constraint trigger trg_radposition_ort
+  after insert or update on velocity.fahrrad_position
+  deferrable initially deferred
+  for each row execute function velocity.trg_radposition_pruefen();
+
+-- Auch die Gegenrichtung: wer den Status aendert, muss den Standort
+-- mitfuehren. Sonst kaeme ein Rad aus der Wartung zurueck, ohne dass
+-- jemand weiss, wo es steht.
+drop trigger if exists trg_fahrrad_status_ort on velocity.fahrrad;
+create constraint trigger trg_fahrrad_status_ort
+  after update of status on velocity.fahrrad
+  deferrable initially deferred
+  for each row execute function velocity.trg_radposition_pruefen();
 
 create index if not exists idx_fahrrad_position_station on velocity.fahrrad_position (station_id);

@@ -127,8 +127,11 @@ begin
   returning velocity.ausleihe.ausleihe_id into v_neu;
 
   update velocity.fahrrad set status = 'ausgeliehen' where fahrrad_id = p_fahrrad_id;
+  -- Ein Rad in Fahrt steht nirgends (GR13). Der alte Ort wird auch
+  -- geloescht - ihn stehen zu lassen waere eine Luege auf der Karte.
   update velocity.fahrrad_position
-     set station_id = null, aktualisiert_am = now()
+     set station_id = null, latitude = null, longitude = null,
+         aktualisiert_am = now()
    where fahrrad_id = p_fahrrad_id;
 
   return query select v_neu, 'Ausleihe gestartet'::text;
@@ -275,10 +278,13 @@ begin
   end if;
 
   update velocity.fahrrad set status = 'verfuegbar' where fahrrad_id = v_a.fahrrad_id;
+  -- Genau eine Ortsangabe (GR13): an einer Station traegt die Station
+  -- den Ort, sonst die Koordinaten. coalesce mit dem alten Wert waere
+  -- hier falsch - es hielte einen ueberholten Ort am Leben.
   update velocity.fahrrad_position
      set station_id      = p_end_station_id,
-         latitude        = coalesce(p_latitude,  latitude),
-         longitude       = coalesce(p_longitude, longitude),
+         latitude        = case when p_end_station_id is null then p_latitude  end,
+         longitude       = case when p_end_station_id is null then p_longitude end,
          aktualisiert_am = now()
    where fahrrad_id = v_a.fahrrad_id;
 
