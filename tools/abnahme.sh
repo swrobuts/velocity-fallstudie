@@ -123,6 +123,22 @@ else
   grep -A3 '^FEHLER' /tmp/abnahme-erd.log | head -20 | sed 's/^/     /'
 fi
 
+# ------------------------------- 7d Kein veraltetes PDF danebenlegen
+# Ein PDF, das aelter ist als das Deck, ist schlimmer als keines: es
+# sieht fertig aus und zeigt einen ueberholten Stand. Genau daran ist
+# einmal der Eindruck entstanden, die ER-Diagramme seien noch falsch -
+# die Quellen stimmten laengst, das PDF war fuenfzehn Stunden alt.
+schritt "PDF nicht aelter als das Deck"
+pdf="slides/velocity-datenbankentwurf.pdf"
+pptx="slides/velocity-datenbankentwurf.pptx"
+if [ ! -f "$pdf" ]; then
+  ergebnis 0 "kein PDF vorhanden, also keines das luegen kann"
+elif [ "$pdf" -nt "$pptx" ] || [ ! "$pptx" -nt "$pdf" ]; then
+  ergebnis 0 "PDF ist so aktuell wie das Deck"
+else
+  ergebnis 1 "PDF ist aelter als das Deck - neu exportieren oder loeschen"
+fi
+
 # ------------------------------------- 7c Inhaltspruefung des Decks
 # check_deck.py prueft Geometrie. Dieser Pruefer sucht inhaltliche
 # Fehler: transliterierte Umlaute, Zeichen ausserhalb der Hausschrift,
