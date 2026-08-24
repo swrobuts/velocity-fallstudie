@@ -61,23 +61,12 @@
 
   /* Zustandsgrössen der Bühne, vom Skript gesetzt */
   --progress: 0;
-  --ebike-claim-opacity: 1;
-  --city-claim-opacity: 0;
-  --city-opacity: 0;
-  --ebike-opacity: 1;
-  --morph-visibility: 0;
-  --morph-progress: 0;
   --ebike-exit: 0;
   --city-enter: 0;
-  --transition-cover-opacity: 0;
   --choice-opacity: 0;
   --cta-opacity: 0;
   --bike-scale: 1.06;
   --bike-x: 3;
-  --city-align-scale-x: 1.026490;
-  --city-align-scale-y: 1.021277;
-  --city-align-x: 1.328187;
-  --city-align-y: -0.489011;
 }
 
 * { box-sizing: border-box; }
@@ -333,70 +322,36 @@ img { max-width: 100%; }
   transform: translateX(calc(var(--bike-x) * 1%)) scale(var(--bike-scale));
 }
 
-/* Die Raeder sind freigestellt und liegen auf der stehenden Wand. Sie
-   wechseln den PLATZ, nicht die Deckkraft: das E-Bike faehrt nach links
-   aus dem Bild, das City-Bike von rechts herein. Auf halber Strecke
-   liegt eine volle Bildbreite zwischen ihnen - sie beruehren einander
-   nie, also gibt es auch keine Doppelbelichtung.
+/* Die drei Raeder haengen an EINER Schiene. Der Versatz ist der Abstand
+   zum aktuellen Ort mal eine Bildbreite - daraus folgt von selbst, dass
+   ein ankommendes Rad von rechts hereinfaehrt, ein gehendes nach links
+   hinaus, und dass nie zwei an derselben Stelle stehen.
 
-   Die Deckkraft greift nur an den Raendern, damit kein Rad hart an der
-   Bildkante abgeschnitten wird. */
-.photo-city {
-  background-image: url("assets/rad-city-frei.webp");
-  opacity: var(--city-opacity);
-  transform:
-    translateX(calc(var(--bike-x) * 1% + (1 - var(--city-enter)) * 104%))
-    scale(var(--bike-scale))
-    translate(calc(var(--city-align-x) * 1%), calc(var(--city-align-y) * 1%))
-    scale(var(--city-align-scale-x), var(--city-align-scale-y));
-}
+   104 statt 100 Prozent: ein Rest Luft, damit sich die Raeder auch bei
+   gerundeten Zwischenwerten nicht beruehren.
+
+   Vorher lief hier ein WebGL-Morph, der zwei Fotos ineinander rechnete.
+   Auf halber Strecke standen zwei Rahmen und vier Laufraeder versetzt
+   uebereinander - eine Doppelbelichtung, kein Uebergang. */
 .photo-ebike {
   background-image: url("assets/rad-ebike-frei.webp");
-  opacity: var(--ebike-opacity);
-  transform:
-    translateX(calc(var(--bike-x) * 1% - var(--ebike-exit) * 104%))
-    scale(var(--bike-scale));
+  opacity: var(--o-ebike);
+  transform: translateX(calc(var(--bike-x) * 1% + var(--x-ebike) * 104%))
+             scale(var(--bike-scale));
 }
-
-/* Der Loader steht still. Er nimmt am Ueberblenden nicht teil - ein
-   Lastenrad ist kein Zwischenschritt zwischen zwei Fahrraedern. */
+.photo-city {
+  background-image: url("assets/rad-city-frei.webp");
+  opacity: var(--o-city);
+  transform: translateX(calc(var(--bike-x) * 1% + var(--x-city) * 104%))
+             scale(var(--bike-scale));
+}
 .photo-cargo {
-  background-image: url("assets/velocity-bike-cargo-hero.jpg");
-  opacity: 0;
-  /* Ueber den beiden anderen Raedern, aber unter dem Schleier: sonst
-     liegt die linke Spalte nicht im aufgehellten Bereich und die
-     Schlagzeile verliert ihren Grund. */
-  z-index: -4;
-  /* Der Loader ist deutlich laenger als die beiden anderen Raeder und
-     laege ohne Verschiebung unter der Schlagzeile. Verschoben wird er
-     aber IM BILD, nicht ueber transform: eine verkleinerte Ebene gibt
-     ihre Raender frei, und dahinter kommt die Seite durch. */
-  transition: opacity .5s cubic-bezier(.4, 0, .2, 1);
-}
-.sticky-stage.is-cargo .photo-cargo { opacity: 1; }
-.sticky-stage.is-cargo .photo-city,
-.sticky-stage.is-cargo .photo-ebike,
-.sticky-stage.is-cargo .claim-ebike,
-.sticky-stage.is-cargo .claim-city { opacity: 0; }
-.sticky-stage.is-cargo .claim-cargo { opacity: 1; transform: none; }
-.sticky-stage.is-cargo .final-card { opacity: 0; }
-
-.claim-cargo {
-  opacity: 0;
-  transform: translateY(18px);
-  transition: opacity .42s ease, transform .5s cubic-bezier(.4, 0, .2, 1);
-  pointer-events: none;
+  background-image: url("assets/rad-cargo-frei.webp");
+  opacity: var(--o-cargo);
+  transform: translateX(calc(var(--bike-x) * 1% + var(--x-cargo) * 104%))
+             scale(var(--bike-scale));
 }
 
-.transition-cover {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  opacity: var(--transition-cover-opacity);
-  background: rgba(243, 245, 248, .72);
-  pointer-events: none;
-  will-change: opacity;
-}
 
 .top-meta {
   position: absolute;
@@ -464,14 +419,11 @@ img { max-width: 100%; }
 .headline-primary { color: var(--navy); }
 .headline-accent { margin-top: .34em; color: var(--red); }
 
-.claim-ebike {
-  opacity: var(--ebike-claim-opacity);
-  transform: translateY(calc((1 - var(--ebike-claim-opacity)) * -24px));
-}
-.claim-city {
-  opacity: var(--city-claim-opacity);
-  transform: translateY(calc((1 - var(--city-claim-opacity)) * 24px));
-}
+/* Jede Schlagzeile haengt an ihrem eigenen Rad. Sie tritt von unten
+   herein und nach oben ab - dieselbe Richtung wie die Buehne darunter. */
+.claim-ebike { opacity: var(--z-ebike); transform: translateY(calc((1 - var(--z-ebike)) * 20px)); }
+.claim-city  { opacity: var(--z-city);  transform: translateY(calc((1 - var(--z-city))  * 20px)); }
+.claim-cargo { opacity: var(--z-cargo); transform: translateY(calc((1 - var(--z-cargo)) * 20px)); }
 .claim-city h1 { font-size: calc(var(--hero-font) * .82); }
 
 .sticky-stage.is-manual .claim {
@@ -601,43 +553,60 @@ img { max-width: 100%; }
 .primary-cta:hover { background: var(--red-tief); }
 .primary-cta span:last-child { font-size: 22px; }
 
-/* Statt des Satzes "Scrollen, um das Netz zu entdecken" ein Pfeil.
+/* Der Scrollhinweis.
 
-   Zwei Fassungen davor waren zu leise: ein navyfarbener Winkel auf
-   grauem Beton, noch dazu im Schatten des Fahrradstaenders. Im echten
-   Browser nachgesehen - man findet ihn nur, wenn man weiss, wo er ist.
-   Ein Hinweis, den man suchen muss, ist keiner.
+   Drei Fassungen davor waren zu leise oder zu bieder: erst ein Satz,
+   dann ein kleiner Winkel auf grauem Beton, dann derselbe Winkel auf
+   einer weissen Scheibe - sichtbar, aber ohne Charakter.
 
-   Jetzt traegt er seinen eigenen Grund: eine helle Scheibe, die ihn von
-   jedem Bildinhalt abhebt. Sie ist kein Knopf und gibt sich auch nicht
-   als einer aus - kein Rand, keine harte Kante, nur ein weicher Schein. */
+   Jetzt ein Rad, das sich dreht, und ein Tropfen, der hindurchfaellt.
+   Der Ring ist ein Laufrad in Navy mit einer roten Speiche; der Punkt
+   faellt in der Hausfarbe hindurch und zieht die Richtung nach unten.
+   Das Bild passt zum Gegenstand und ist in jeder Sprache lesbar. */
 .scroll-hint {
   position: absolute;
-  left: 50%; bottom: 26px;
-  width: 52px; height: 52px;
+  left: 50%; bottom: 24px;
+  width: 64px; height: 64px;
   transform: translateX(-50%);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .82);
-  box-shadow: 0 8px 26px rgba(6, 24, 65, .18), 0 0 0 1px rgba(6, 24, 65, .06);
-  backdrop-filter: blur(6px);
-  opacity: var(--ebike-claim-opacity);
+  opacity: var(--z-ebike);
   pointer-events: none;
 }
+/* Der Grund: eine weiche Aufhellung, damit der Hinweis auf jedem
+   Bildinhalt steht - Beton, Asphalt oder Rad. */
+.scroll-hint::before {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255,255,255,.92), rgba(255,255,255,.55) 68%, transparent);
+}
+/* Das Laufrad. */
+.scroll-hint::after {
+  content: "";
+  position: absolute; inset: 11px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(6, 24, 65, .34);
+  border-top-color: var(--red);
+  animation: rollen 3.4s linear infinite;
+}
+/* Der Tropfen. */
 .scroll-hint span {
   position: absolute;
-  left: 50%; top: 50%;
-  width: 13px; height: 13px;
-  margin: -11px 0 0 -7px;
-  border-right: 2.5px solid var(--navy);
-  border-bottom: 2.5px solid var(--navy);
-  border-radius: 1px;
-  transform: rotate(45deg);
-  animation: tippen 1.8s cubic-bezier(.45, 0, .3, 1) infinite;
+  left: 50%; top: 18px;
+  width: 8px; height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: var(--red);
+  animation: fallen 1.9s cubic-bezier(.45, 0, .35, 1) infinite;
 }
-@keyframes tippen {
-  0%   { transform: translateY(0)   rotate(45deg); opacity: .32; }
-  40%  { transform: translateY(7px) rotate(45deg); opacity: .95; }
-  100% { transform: translateY(0)   rotate(45deg); opacity: .32; }
+@keyframes rollen {
+  to { transform: rotate(360deg); }
+}
+@keyframes fallen {
+  0%   { transform: translateY(0);    opacity: 0; }
+  22%  { opacity: 1; }
+  70%  { transform: translateY(26px); opacity: 1; }
+  100% { transform: translateY(33px); opacity: 0; }
+}
 }
 }
 }
@@ -1691,6 +1660,12 @@ footer a:hover { color: #fff; text-decoration: underline; }
 }
 
 @media (max-width: 520px) {
+  /* "221 RÄDER FREI · GERADE EBEN" brach hier in drei Zeilen um. Zwei
+     bewusst gesetzte sind besser als drei zufaellige. */
+  .live-zahl { flex-direction: column; align-items: flex-start; gap: 2px; }
+  .live-zahl b { padding-left: 22px; font-size: 42px; }
+  .live-zahl b::before { top: .36em; }
+  .live-zahl > span { font-size: 12.5px; letter-spacing: .12em; }
   /* Die Metazeile brach hier unruhig um. */
   .meta-lang { display: none; }
   .meta-kurz { display: inline; }
@@ -1713,9 +1688,12 @@ footer a:hover { color: #fff; text-decoration: underline; }
   html { scroll-behavior: auto; }
   .scroll-story { height: 100vh; min-height: 720px; }
   .photo-ebike { opacity: 1; transform: scale(1.03); }
-  .photo-city, .claim-city, .claim-cargo, .transition-cover, .final-card { display: none; }
-  .scroll-hint span { animation: none; opacity: .8; }
+  .photo-city, .photo-cargo, .claim-city, .claim-cargo, .final-card { display: none; }
+  .photo-ebike { opacity: 1; transform: none; }
+  .scroll-hint span, .scroll-hint::after { animation: none; }
+  .scroll-hint span { opacity: 1; transform: translateY(17px); }
   .claim-ebike { opacity: 1; transform: none; }
+  .choice-panel { opacity: 1; transform: none; }
   .choice-panel { opacity: 1; transform: none; }
   .progress-rail, .scroll-hint { display: none; }
   * { transition: none !important; animation: none !important; }

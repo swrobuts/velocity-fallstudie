@@ -178,7 +178,8 @@ pruefe('P2-01', J.count('animate: false') >= 3,
        'Der Ortswechsel haengt nicht an einer Animation')
 pruefe('P2-02', 'rechnerZeichnen(minutenSetzen(m, true))' in J,
        'Ungueltige Werte werden schon beim Tippen begrenzt')
-pruefe('P2-03', 'inert' in (SRC / 'hero.js').read_text(encoding='utf-8'),
+HERO = (SRC / 'hero.js').read_text(encoding='utf-8')
+pruefe('P2-03', '.inert = choiceAus' in HERO and '.inert = ctaAus' in HERO,
        'Unsichtbare Bedienflaechen sind inert')
 pruefe('P2-05', 'clamp(180vh, 40vh + 250vw, 360vh)' in C
        and '.scroll-story { height: 210vh' not in C,
@@ -273,13 +274,13 @@ pruefe('TEXT', 'Finde das passende Rad an einer Station' not in H,
 pruefe('TEXT', 'Einfach, smart, elektrisch' not in H,
        'Die Dreiwortformel im Fuss ist weg')
 pruefe('TEXT', 'Scrollen, um das Netz zu entdecken' not in H
-       and '@keyframes tippen' in C,
-       'Der Scrollhinweis ist ein Pfeil statt eines Satzes')
+       and '@keyframes fallen' in C and '@keyframes rollen' in C,
+       'Der Scrollhinweis ist ein Bild statt eines Satzes')
 # Zweimal war der Pfeil zu leise, weil er nur aus einem Winkel bestand
 # und keinen eigenen Grund hatte. Im echten Browser nachgesehen.
-pruefe('TEXT', '.scroll-hint {' in C and 'border-radius: 50%' in
-       C[C.index('.scroll-hint {'):C.index('.scroll-hint {') + 420],
-       'Der Pfeil traegt eine eigene Scheibe und steht auf jedem Grund')
+pruefe('TEXT', '.scroll-hint::before' in C and 'radial-gradient' in
+       C[C.index('.scroll-hint::before'):C.index('.scroll-hint::before') + 320],
+       'Der Hinweis traegt einen eigenen Grund und steht auf jedem Bild')
 
 print('\nBuehne — Wechsel statt Ueberblendung (25.08.)')
 MODELL = (SRC / 'velocity-scroll-model.js').read_text(encoding='utf-8')
@@ -289,10 +290,20 @@ pruefe('BUEHNE', 'photo-wand' in H and 'velocity-wand' in C,
        'Die Wand liegt als eigene Ebene unter den Raedern')
 pruefe('BUEHNE', 'rad-ebike-frei' in C and 'rad-city-frei' in C,
        'Die Raeder sind freigestellt')
-pruefe('BUEHNE', 'var(--ebike-exit) * 104%' in C and '(1 - var(--city-enter)) * 104%' in C,
-       'Sie wechseln den Platz - eine volle Bildbreite auseinander')
-pruefe('BUEHNE', 'transitionCoverOpacity: 0,' in MODELL,
-       'Kein Schleier mehr noetig: es gibt nichts zu ueberstrahlen')
+pruefe('BUEHNE', 'rad-cargo-frei' in C,
+       'Der E-Cargo Loader ist eine eigene Station, kein Sonderfall')
+for name in ('ebike', 'city', 'cargo'):
+    pruefe('BUEHNE', f'var(--x-{name}) * 104%' in C and f'var(--o-{name})' in C,
+           f'{name} haengt an der Schiene')
+pruefe('BUEHNE', "STATIONEN = ['ebike', 'city', 'cargo']" in MODELL,
+       'Das Modell fuehrt drei Stationen')
+# Ohne die Kommentare zu entfernen zaehlt die Erlaeuterung dessen, was
+# frueher dort stand, als Befund - derselbe Fehler wie beim SQL-Pruefer.
+MODELL_CODE = ohne_kommentare(MODELL)
+pruefe('BUEHNE', 'transitionCover' not in MODELL_CODE and 'morph' not in MODELL_CODE.lower(),
+       'Weder Schleier noch Morph sind im Code uebriggeblieben')
+pruefe('BUEHNE', 'getManualState' in MODELL and 'getManualState' in HERO,
+       'Die Pille faehrt dieselbe Schiene wie das Scrollen')
 produkt = re.search(r'<div class="product-tabs".*?</div>', H, flags=re.S)
 pruefe('TEXT', produkt and produkt.group().count('<button') == 3,
        'Die Produktwahl fuehrt alle drei Fahrradtypen')

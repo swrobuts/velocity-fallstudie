@@ -8,13 +8,6 @@
 
   const mix = (from, to, amount) => from + (to - from) * amount;
 
-  function getMorphEnvelope(rawCityMix) {
-    const progress = clamp(Number.isFinite(rawCityMix) ? rawCityMix : 0);
-    const visibility = smoothstep(0.001, 0.08, progress)
-      * (1 - smoothstep(0.92, 0.999, progress));
-    return { progress, visibility };
-  }
-
   function approachProgress(rawCurrent, rawTarget, rawDeltaMs) {
     const current = clamp(Number.isFinite(rawCurrent) ? rawCurrent : 0);
     const target = clamp(Number.isFinite(rawTarget) ? rawTarget : current);
@@ -41,166 +34,104 @@
     };
   }
 
-  function getBikeAlignment(product) {
-    if (product !== 'city') {
-      return {
-        scaleX: 1,
-        scaleY: 1,
-        translateXPx: 0,
-        translateYPx: 0,
-        translateXPercent: 0,
-        translateYPercent: 0,
-      };
-    }
+  /* DREI STATIONEN AUF EINER SCHIENE
+     -------------------------------------------------------------------
+     Der Kopfbereich zeigt nacheinander E-Bike, City-Bike und E-Cargo
+     Loader. Die drei stehen auf EINER Schiene, und der Scrollfortschritt
+     sagt nur, wo auf dieser Schiene man gerade ist:
 
-    // The source canvases are identical, but the photographed City Bike is
-    // slightly smaller and sits farther left. Match the wheel diameter first,
-    // then align the midpoint between both hubs and their shared ground line.
-    const imageWidth = 1618;
-    const imageHeight = 972;
-    const imageCenterX = imageWidth / 2;
-    const imageCenterY = imageHeight / 2;
-    const cityRearHub = { x: 458.3, y: 624.8 };
-    const cityFrontHub = { x: 1198.2, y: 624.8 };
-    const ebikeRearHub = { x: 470.5, y: 623 };
-    const ebikeFrontHub = { x: 1230, y: 623 };
-    const cityHubMidpoint = { x: (cityRearHub.x + cityFrontHub.x) / 2, y: cityRearHub.y };
-    const ebikeHubMidpoint = { x: (ebikeRearHub.x + ebikeFrontHub.x) / 2, y: ebikeRearHub.y };
-    const scaleX = (ebikeFrontHub.x - ebikeRearHub.x) / (cityFrontHub.x - cityRearHub.x);
-    const scaleY = 480 / 470;
-    const translateXPx = ebikeHubMidpoint.x - (imageCenterX + (cityHubMidpoint.x - imageCenterX) * scaleX);
-    const translateYPx = ebikeHubMidpoint.y - (imageCenterY + (cityHubMidpoint.y - imageCenterY) * scaleY);
+       ort = 0   E-Bike
+       ort = 1   City-Bike
+       ort = 2   E-Cargo Loader
 
+     Jedes Rad haengt an seiner Stelle. Sein Versatz ist der Abstand zum
+     aktuellen Ort mal eine Bildbreite, seine Deckkraft faellt mit
+     wachsendem Abstand. Daraus folgt von selbst, was vorher von Hand
+     getaktet war: was ankommt, faehrt von rechts herein, was geht, nach
+     links hinaus, und zwei Raeder stehen nie an derselben Stelle.
+
+     WARUM NICHT UEBERBLENDEN
+     Bis zum 25.08.2026 lief hier ein WebGL-Morph, der zwei Fotos
+     ineinander rechnete. Auf halber Strecke standen zwei Rahmen und
+     vier Laufraeder versetzt uebereinander - eine Doppelbelichtung, kein
+     Uebergang. Zwei Fotos VERSCHIEDENER Raeder lassen sich nicht
+     ineinander blenden, so kurz die Blende auch ist. Also wechseln sie
+     den Platz statt der Deckkraft.
+
+     Die Wand liegt als eigene, stehende Ebene darunter; die Raeder sind
+     freigestellt und massstabsgleich auf dieselbe Standlinie gesetzt.
+
+     HALTEN UND FAHREN
+     Zwischen den Stationen liegt jeweils eine Fahrt, davor und danach
+     ein Halt. Ohne diesen Halt liefe die Schiene durch und man haette
+     nie ein ruhiges Bild:
+
+       0.00 – 0.22  E-Bike haelt          (22 %)
+       0.22 – 0.38  Fahrt                 (16 %)
+       0.38 – 0.56  City-Bike haelt       (18 %)
+       0.56 – 0.72  Fahrt                 (16 %)
+       0.72 – 1.00  E-Cargo Loader haelt  (28 %, mit Auswahl und Aufruf)
+
+     Die Haltezeiten sind bewusst aehnlich lang. In der ersten Fassung
+     hielt das City-Bike nur 12 Prozent - es wirkte wie eine Durchfahrt
+     zwischen zwei Stationen statt wie eine eigene.
+  */
+  const STATIONEN = ['ebike', 'city', 'cargo'];
+
+  // Wie weit ein Rad vom aktuellen Ort entfernt sein darf, bevor es
+  // verblasst - und ab wann es ganz weg ist.
+  const NAH = 0.55;
+  const FERN = 0.92;
+
+  function radZustand(index, ort) {
+    const abstand = Math.abs(index - ort);
     return {
-      scaleX,
-      scaleY,
-      translateXPx,
-      translateYPx,
-      translateXPercent: translateXPx / imageWidth * 100,
-      translateYPercent: translateYPx / imageHeight * 100,
+      versatz: index - ort,                       // in Bildbreiten
+      deckkraft: 1 - smoothstep(NAH, FERN, abstand),
+      zeile: 1 - smoothstep(0.06, 0.34, abstand)  // die Schlagzeile dazu
     };
   }
 
-  /* WECHSEL STATT UEBERBLENDUNG
-     -------------------------------------------------------------------
-     Bis zum 25.08.2026 lief hier ein WebGL-Morph: beide Fotos gleichzeitig
-     sichtbar, ineinander gerechnet. Zwei verschiedene Fahrraeder lassen
-     sich aber nicht ineinander blenden. Auf halber Strecke standen zwei
-     Rahmen und vier Laufraeder versetzt uebereinander - das sah nicht
-     nach Verwandlung aus, sondern nach Darstellungsfehler.
-
-     Drei Versuche, zwei davon daneben:
-
-     1. Beide Fotos gleichzeitig sichtbar (der WebGL-Morph) - auf halber
-        Strecke zwei Rahmen und vier Laufraeder uebereinander.
-     2. Erst ab-, dann aufblenden - dann steht die Buehne fuer knapp
-        200 Bildpunkte Scrollweg leer.
-
-     Der Fehler steckte in der Annahme. Zwei Fotos VERSCHIEDENER Raeder
-     lassen sich nicht ineinander blenden, so kurz die Blende auch ist:
-     zwei Rahmen an derselben Stelle ergeben immer eine Doppelbelichtung.
-     Auch ein heller Schleier darueber macht daraus keine Verwandlung.
-
-     Also wechseln sie den PLATZ statt der Deckkraft. Die Raeder sind
-     freigestellt (rad-ebike-frei.png, rad-city-frei.png) und liegen auf
-     einer eigenen, stehenden Wand. Das E-Bike faehrt nach links aus dem
-     Bild, das City-Bike von rechts herein. Auf halber Strecke liegt
-     eine volle Bildbreite zwischen ihnen - sie beruehren einander nie.
-
-       0.00 – 0.36   E-Bike steht
-       0.36 – 0.52   Wechsel: eines raus, eines rein
-       0.52 – 1.00   City-Bike steht
-
-     Freigestellt wurden sie ueber den zeilenweisen Median des Fotos:
-     die Wand ist in jeder Zeile fast gleichmaessig, das Rad weicht
-     davon ab. Speichen, Reifen und Schatten bleiben erhalten. */
   function getScrollState(rawProgress) {
     const progress = clamp(Number.isFinite(rawProgress) ? rawProgress : 0);
-    const spatialShift = smoothstep(0.08, 0.78, progress);
+    const spatialShift = smoothstep(0.08, 0.86, progress);
 
-    // Ein Weg fuer beide: was das eine an Strecke gewinnt, verliert das
-    // andere. Die Deckkraft haelt dabei lange oben - sie greift erst,
-    // wenn das Rad ohnehin fast aus dem Bild ist.
-    const weg      = smoothstep(0.36, 0.52, progress);
-    const ebikeAus = weg;
-    const cityEin  = weg;
-    const cityReveal = cityEin;
+    // Der Ort auf der Schiene. Zwei Fahrten, dazwischen und danach Halt.
+    const ort = smoothstep(0.22, 0.38, progress) + smoothstep(0.56, 0.72, progress);
 
     return {
       progress,
-      activeProduct: progress < 0.44 ? 'ebike' : 'city',
-      ebikeClaimOpacity: 1 - smoothstep(0.26, 0.36, progress),
-      // Die Zeile kommt, sobald das Rad steht - nicht erst danach. Ohne
-      // das blieb die Buehne fuer rund 375 Bildpunkte wortlos.
-      cityClaimOpacity: smoothstep(0.49, 0.56, progress) * (1 - smoothstep(0.66, 0.72, progress)),
-      // Deckkraft nur an den Raendern: das ausfahrende Rad verblasst
-      // erst kurz vor dem Bildrand, das einfahrende ist da schon da.
-      cityOpacity: smoothstep(0.37, 0.45, progress),
-      ebikeOpacity: 1 - smoothstep(0.44, 0.52, progress),
-      fallbackCityOpacity: smoothstep(0.37, 0.45, progress),
-      fallbackEbikeOpacity: 1 - smoothstep(0.44, 0.52, progress),
-      // Der Morph ist stillgelegt. Die Felder bleiben, damit alter Code
-      // und die Tests nicht ins Leere greifen.
-      morphProgress: cityEin,
-      morphVisibility: 0,
-      // Kein Schleier mehr noetig: es gibt nichts zu ueberstrahlen.
-      transitionCoverOpacity: 0,
-      // Richtung fuer den Wechsel: abgehend zurueck, kommend vor.
-      ebikeExit: ebikeAus,
-      cityEnter: cityEin,
-      choiceOpacity: smoothstep(0.68, 0.76, progress),
-      ctaOpacity: smoothstep(0.78, 0.85, progress),
+      ort,
+      activeProduct: STATIONEN[Math.min(2, Math.round(ort))],
+      raeder: STATIONEN.map((name, i) => ({ name, ...radZustand(i, ort) })),
+      // Die letzte Zeile tritt ab, sobald Auswahl und Aufruf kommen.
+      letzteZeileDaempfung: 1 - smoothstep(0.82, 0.89, progress),
+      choiceOpacity: smoothstep(0.78, 0.86, progress),
+      ctaOpacity: smoothstep(0.89, 0.95, progress),
       bikeScale: mix(1.06, 1, spatialShift),
-      bikeX: mix(3, 0, spatialShift),
+      bikeX: mix(3, 0, spatialShift)
     };
   }
 
-  function getManualProductState(baseState, product) {
-    const selected = product === 'ebike' ? 'ebike' : 'city';
-    const cityOpacity = selected === 'city' ? 1 : 0;
+  /* Ein Klick auf die Pille faehrt dieselbe Schiene an - nur nicht ueber
+     den Scrollbalken, sondern in der Zeit. Damit sieht ein Wechsel per
+     Klick genauso aus wie einer beim Scrollen. */
+  function getManualState(baseState, ort) {
+    const gehalten = clamp(Number.isFinite(ort) ? ort : 0, 0, STATIONEN.length - 1);
     return {
       ...baseState,
-      activeProduct: selected,
-      cityOpacity,
-      ebikeOpacity: 1 - cityOpacity,
-      fallbackCityOpacity: cityOpacity,
-      fallbackEbikeOpacity: 1 - cityOpacity,
-      transitionCoverOpacity: 0,
-      morphProgress: cityOpacity,
-      morphVisibility: 0,
-    };
-  }
-
-  function getManualMorphState(baseState, fromProduct, toProduct, rawProgress) {
-    const elapsed = smoothstep(0, 1, clamp(Number.isFinite(rawProgress) ? rawProgress : 0));
-    const fromMix = fromProduct === 'city' ? 1 : 0;
-    const toMix = toProduct === 'city' ? 1 : 0;
-    const fallbackCityOpacity = mix(fromMix, toMix, elapsed);
-    const fallbackEbikeOpacity = 1 - fallbackCityOpacity;
-    const morph = getMorphEnvelope(fallbackCityOpacity);
-    const photoVisibility = 1 - morph.visibility;
-
-    return {
-      ...baseState,
-      activeProduct: elapsed < 0.5 ? fromProduct : toProduct,
-      cityOpacity: fallbackCityOpacity * photoVisibility,
-      ebikeOpacity: fallbackEbikeOpacity * photoVisibility,
-      fallbackCityOpacity,
-      fallbackEbikeOpacity,
-      transitionCoverOpacity: 0,
-      morphProgress: morph.progress,
-      morphVisibility: morph.visibility,
+      ort: gehalten,
+      activeProduct: STATIONEN[Math.min(2, Math.round(gehalten))],
+      raeder: STATIONEN.map((name, i) => ({ name, ...radZustand(i, gehalten) }))
     };
   }
 
   const api = {
     approachProgress,
     getScrollState,
+    getManualState,
     getTypographyScale,
-    getBikeAlignment,
-    getManualProductState,
-    getMorphEnvelope,
-    getManualMorphState,
+    STATIONEN,
   };
   globalScope.VelocityScrollModel = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
