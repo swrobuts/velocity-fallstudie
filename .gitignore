@@ -2,6 +2,12 @@
 .env.local
 node_modules/
 .DS_Store
+
+# Projektdateien der Entwicklungsumgebung. Sie gehoeren niemandem ausser
+# dem eigenen Rechner - und .idea/dataSources.xml trug die direkte
+# Postgres-Adresse samt Port und Benutzernamen ins oeffentliche
+# Repository. Kein Passwort, aber eine Einladung. (24.08.2026)
+.idea/
 .worktrees/
 __pycache__/
 doku/verifikation/*sicherung*/
