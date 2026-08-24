@@ -98,3 +98,34 @@ begin
     'Die Fachlogik ist auch fuer authenticated nicht direkt aufrufbar');
 end;
 $$;
+
+/* Ein Trigger auf auth.users, der in ein Fremdschema schreibt, kann jede
+   Registrierung zum Scheitern bringen. Genau das ist am 24.08.2026
+   passiert: "cityBikesRental".handle_new_user() legte bei jeder Anmeldung
+   einen neuen Altkunden an und lief bei bekannten E-Mails in den
+   Unique-Index. Die gesamte Auth-Transaktion fiel zurueck.
+
+   Dieser Test schlaegt an, solange ein solcher Trigger existiert. Er
+   entfernt ihn nicht - das ist eine Entscheidung ueber eine fremde
+   Anwendung und gehoert nicht in eine Testdatei. */
+create or replace function velocity_test.test_kein_altsystem_trigger_auf_auth()
+returns setof text language plpgsql as $$
+declare
+  v_namen text;
+begin
+  select string_agg(t.tgname || ' -> ' || pn.nspname || '.' || p.proname, ', ')
+    into v_namen
+    from pg_trigger t
+    join pg_class     c  on c.oid  = t.tgrelid
+    join pg_namespace n  on n.oid  = c.relnamespace
+    join pg_proc      p  on p.oid  = t.tgfoid
+    join pg_namespace pn on pn.oid = p.pronamespace
+   where n.nspname = 'auth' and c.relname = 'users'
+     and not t.tgisinternal
+     and pn.nspname = 'cityBikesRental';
+
+  return next is(v_namen, null,
+    'Kein Trigger auf auth.users schreibt ins Altschema' ||
+    coalesce(' — gefunden: ' || v_namen, ''));
+end;
+$$;

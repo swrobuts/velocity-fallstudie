@@ -7,19 +7,37 @@ let currentUser = null;
 let authStateListeners = [];
 
 // Auth State Change Handler registrieren
-supabaseClient.auth.onAuthStateChange(async (event, session) => {
+supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user ?? null;
     console.log('Auth State Changed:', event, currentUser?.email);
 
-    // Kundensatz sicherstellen, bevor die Oberflaeche reagiert.
-    // Idempotent: legt nur an, was noch fehlt. Ersetzt den frueheren
-    // Trigger auf auth.users - ein Fremdschema fasst diese Anwendung
-    // nicht an.
-    if (currentUser) {
-        await ensureKunde();
-    }
+    // Die Oberflaeche zuerst: sie darf nicht auf einen Netzaufruf warten.
+    benachrichtigen();
 
-    // Alle Listener benachrichtigen
+    /* Der Kundensatz danach, und ausdruecklich AUSSERHALB dieses
+       Rueckrufs. Supabase haelt waehrend onAuthStateChange eine Sperre;
+       wer darin auf einen weiteren Aufruf desselben Clients wartet -
+       ensureKunde ruft api_kunde_sicherstellen -, kann den Client
+       blockieren. Danach reagiert keine Anmeldung mehr, bis die Seite
+       neu geladen wird. setTimeout(0) loest den Aufruf aus der Sperre.
+
+       Idempotent: legt nur an, was noch fehlt, und verknuepft einen
+       vorhandenen Kundensatz derselben E-Mail, statt einen zweiten
+       anzulegen. Ersetzt den frueheren Trigger auf auth.users - ein
+       Fremdschema fasst diese Anwendung nicht an. */
+    if (currentUser) {
+        setTimeout(async () => {
+            try {
+                await ensureKunde();
+            } catch (e) {
+                console.error('Kundensatz konnte nicht sichergestellt werden:', e);
+            }
+            benachrichtigen();
+        }, 0);
+    }
+});
+
+function benachrichtigen() {
     authStateListeners.forEach(listener => {
         try {
             listener(currentUser);
@@ -27,7 +45,7 @@ supabaseClient.auth.onAuthStateChange(async (event, session) => {
             console.error('Auth listener error:', e);
         }
     });
-});
+}
 
 // Listener registrieren (wird bei Auth-Aenderungen aufgerufen)
 function onAuthStateChange(callback) {
@@ -145,6 +163,14 @@ function translateAuthError(message) {
             'Eine Nutzung ohne Konto ist nicht vorgesehen.',
         'Failed to fetch':
             'Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.',
+        // Diese Meldung kommt, wenn ein Trigger auf auth.users die
+        // Registrierung zurueckrollt - etwa weil zu dieser E-Mail schon
+        // Kundendaten aus dem Altsystem vorliegen. "Erneut versuchen"
+        // hilft dabei nicht und fuehrt in eine Sackgasse.
+        'Database error saving new user':
+            'Zu dieser E-Mail-Adresse liegen bereits Kundendaten vor. '
+            + 'Das Konto lässt sich daher nicht neu anlegen — bitte melde dich unter '
+            + 'hilfe@velocity-wue.de, dann verbinden wir dein bestehendes Konto.',
         'Invalid login credentials': 'Ungültige E-Mail oder Passwort',
         'Email not confirmed': 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse',
         'User already registered': 'Diese E-Mail-Adresse ist bereits registriert',

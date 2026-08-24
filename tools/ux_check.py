@@ -198,6 +198,60 @@ fehlend = [d for d in re.findall(r'(?:src|href)="(?!https?:|//|#|mailto:)([A-Za-
 pruefe('CACHE', not fehlend,
        f'Jede eigene Datei traegt einen Fingerabdruck{"" if not fehlend else " — fehlt bei " + ", ".join(d[0] for d in fehlend)}')
 
+# =====================================================================
+# Dritter Durchgang, 24.08.2026
+# =====================================================================
+print('\n\nRegressionspruefung 24.08.2026 — dritter Durchgang\n')
+
+print('P0 — fachliche Stopper')
+pruefe('P0-01', 'db_Stations[0]' not in J,
+       'Keine stillschweigende Vorgabestation mehr bei der Rueckgabe')
+pruefe('P0-01', 'rueckgabe-modal' in H and 'rueckgabeOeffnen' in J,
+       'Die Rueckgabe fragt nach dem Ort')
+pruefe('P0-01', 'imGeschaeftsgebiet' in J,
+       'Ein freier Standort wird vor dem Buchen geprueft')
+pruefe('P0-01', "name=\"rueckgabeart\"" in H,
+       'Station oder freies Abstellen sind zwei bewusste Wege')
+
+trigger_frei = True
+try:
+    import subprocess
+    trigger_frei = (WURZEL / 'db/aufbau/0013_altsystem_abloesen.sql').exists()
+except Exception:
+    pass
+pruefe('P0-02', 'Database error saving new user' in AUTH,
+       'Die Meldung bei vorhandenen Kundendaten ist verstaendlich')
+pruefe('P0-02', 'hilfe@velocity-wue.de' in AUTH,
+       'Sie nennt einen Weg statt eines sinnlosen zweiten Versuchs')
+
+print('\nP1 — kritisch')
+pruefe('P1-01', '.toastify { top: 108px !important; }' in C,
+       'Kurzmeldungen verdecken den Login-Knopf nicht mehr')
+pruefe('P1-01', 'function benachrichtigen()' in AUTH and 'setTimeout(async () =>' in AUTH,
+       'Der Auth-Rueckruf wartet nicht mehr in der Sperre auf einen Netzaufruf')
+pruefe('P1-03', 'rueckgabe-beleg' in H and 'belegZeigen' in J,
+       'Der Abschluss bleibt als Beleg stehen')
+pruefe('P1-03', 'beleg-posten' in H,
+       'Der Beleg zeigt die gebuchten Positionen')
+
+print('\nP2 — wichtig')
+pruefe('P2-01', "rad?.typ_bezeichnung" in J and 'rental-preis' in H,
+       'Der Fahrtbalken nennt Typ, Nummer und laufenden Betrag sofort')
+pruefe('P2-02', "/versendet werden|Verbindung/" in J,
+       'Ein zweiter Versuch wird nur angeboten, wo er helfen kann')
+pruefe('P2-03', '[inert], [inert] * { pointer-events: none !important; }' in C,
+       'Der Rueckfall fuer inert greift auch gegen spaetere Klassenregeln')
+
+print('\nDatenmodell')
+SICHTEN = (WURZEL / 'db/aufbau/0010_sichten.sql').read_text(encoding='utf-8')
+RECHTE  = (WURZEL / 'db/aufbau/0011_sicherheit.sql').read_text(encoding='utf-8')
+pruefe('SICHT', "'positionen'" in SICHTEN or 'as positionen' in SICHTEN,
+       'v_meine_ausleihe liefert die gebuchten Positionen')
+pruefe('RECHT', "'entgeltart'" in RECHTE,
+       'authenticated darf entgeltart lesen — sonst bleibt die Sicht leer')
+pruefe('LADEN', 'letzterLadeFehler' in (SRC / 'supabase.js').read_text(encoding='utf-8'),
+       'Ein Ladefehler wird nicht mehr als leere Liste ausgegeben')
+
 print('\nHandarbeit — vom Pruefer nicht entscheidbar:')
 print('  · Registrierung gegen den echten Dienst durchspielen (Passworteingabe)')
 print('  · Bildschirmleser auf der Karte und im Dialog')

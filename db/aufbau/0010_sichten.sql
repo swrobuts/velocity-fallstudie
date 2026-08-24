@@ -133,7 +133,19 @@ select a.ausleihe_id,
        ss.name as start_station,
        es.name as end_station,
        coalesce((select sum(ep.betrag) from velocity.entgeltposition ep
-                  where ep.ausleihe_id = a.ausleihe_id), 0)::numeric(10,2) as gesamtbetrag
+                  where ep.ausleihe_id = a.ausleihe_id), 0)::numeric(10,2) as gesamtbetrag,
+       -- Die Aufschluesselung gehoert zum Beleg. Ohne sie muesste die
+       -- Seite den Betrag nachrechnen, um ihn zu erklaeren - und damit
+       -- die Preisregeln ein zweites Mal fuehren. Der Beleg zeigt jetzt,
+       -- was tatsaechlich gebucht wurde.
+       coalesce((select jsonb_agg(jsonb_build_object(
+                          'bezeichnung', ea.bezeichnung,
+                          'code',        ea.code,
+                          'betrag',      ep.betrag)
+                        order by ep.sortierung, ep.position_id)
+                   from velocity.entgeltposition ep
+                   join velocity.entgeltart ea using (entgeltart_id)
+                  where ep.ausleihe_id = a.ausleihe_id), '[]'::jsonb) as positionen
   from velocity.ausleihe a
   join velocity.fahrrad       f on f.fahrrad_id = a.fahrrad_id
   join velocity.fahrradmodell m on m.modell_id  = f.modell_id

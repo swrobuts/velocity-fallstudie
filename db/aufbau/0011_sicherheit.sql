@@ -59,7 +59,15 @@ do $$
 declare
   v_t text;
 begin
-  foreach v_t in array array['station','fahrrad','fahrradmodell','fahrradtyp'] loop
+  -- entgeltart kam am 24.08.2026 dazu: v_meine_ausleihe nennt seit der
+  -- Belegansicht die Bezeichnung jeder Position. Ohne dieses Leserecht
+  -- lieferte die Sicht fuer angemeldete Kunden stillschweigend NULL
+  -- Zeilen - die Sicht laeuft mit security_invoker, und was der Aufrufer
+  -- nicht lesen darf, sieht er auch ueber sie nicht. Der Beleg blieb
+  -- deshalb leer, ohne Fehlermeldung.
+  -- Es ist eine Schluesseltabelle: Startgebuehr, Zeitentgelt. Kein
+  -- Personenbezug.
+  foreach v_t in array array['station','fahrrad','fahrradmodell','fahrradtyp','entgeltart'] loop
     execute format('drop policy if exists %I on velocity.%I', v_t || '_lesen_auth', v_t);
     execute format(
       'create policy %I on velocity.%I for select to authenticated using (true)',

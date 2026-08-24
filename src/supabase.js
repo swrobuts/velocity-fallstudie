@@ -14,13 +14,26 @@ const supabaseClient = window.supabase.createClient(
 
 // Einheitliche Fehlerbehandlung: Lesefehler liefern eine leere Liste,
 // damit ein Ausfall einer Sicht nicht die ganze Seite zerlegt.
+/* Eine leere Liste ist eine Aussage: "es gibt nichts". Ein Fehler ist
+   eine andere: "ich konnte nicht nachsehen". Beides als [] zu liefern hat
+   einen fehlenden GRANT auf entgeltart als "keine Fahrten" erscheinen
+   lassen - der Beleg blieb wortlos leer. Der Fehler wird jetzt gemerkt,
+   damit der Aufrufer ihn unterscheiden kann. */
+const ladeFehler = new Map();
+
 async function ladeListe(quelle, spalten = '*', aufbau = (q) => q) {
     const { data, error } = await aufbau(supabaseClient.from(quelle).select(spalten));
     if (error) {
         console.error(`Fehler beim Laden von ${quelle}:`, error.message);
+        ladeFehler.set(quelle, error.message);
         return [];
     }
+    ladeFehler.delete(quelle);
     return data || [];
+}
+
+function letzterLadeFehler(quelle) {
+    return ladeFehler.get(quelle) || null;
 }
 
 // ===== OEFFENTLICHE DATEN =====

@@ -418,8 +418,12 @@ img { max-width: 100%; }
   transition: opacity .36s ease, transform .45s cubic-bezier(.4, 0, .2, 1);
 }
 
-/* Rueckfall ohne inert-Unterstuetzung: was inert ist, nimmt keine Klicks. */
-[inert] { pointer-events: none; }
+/* Rueckfall ohne inert-Unterstuetzung: was inert ist, nimmt keine Klicks.
+   Mit !important, weil spaeter im Stil stehende Klassenregeln - etwa
+   .final-card - sonst gewinnen: beide haben dieselbe Spezifitaet, und
+   dann entscheidet die Reihenfolge. Wo der Browser inert kennt, ist die
+   Regel ohnehin ohne Wirkung; wo nicht, ist sie die einzige Sperre. */
+[inert], [inert] * { pointer-events: none !important; }
 
 .choice-panel {
   position: absolute;
@@ -1361,6 +1365,90 @@ footer a:hover { color: #fff; text-decoration: underline; }
   color: var(--ink);
 }
 .form-group input:focus { border-color: var(--navy); outline: none; }
+
+/* --------------------------------------------------- Kurzmeldungen */
+/* Die Meldungen erscheinen oben rechts - dort steht auch der Login. Bei
+   390 px ueberlappten sie ihn um 112 Punkte. Wer nach dem Abmelden
+   sofort wieder auf "Login" tippte, traf drei Sekunden lang den Toast
+   und hielt den Knopf fuer defekt. Genau so wurde es gemeldet:
+   "zustandsabhaengig", mal ging es, mal nicht.
+
+   Die Meldungen ruecken deshalb unter die Kopfzeile. !important ist
+   noetig, weil Toastify die Lage inline setzt. */
+.toastify { top: 108px !important; }
+@media (max-width: 900px) { .toastify { top: 88px !important; } }
+.toastify.toastify-bottom { top: auto !important; }
+
+/* ------------------------------------------------------ Rueckgabe */
+
+.modal-content.rueckgabe { width: min(520px, 100%); }
+.rueckgabe-rad {
+  margin: -14px 0 22px;
+  font: 700 12.5px/1.4 var(--mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--grau-still);
+}
+.rueckgabe-wahl { display: grid; gap: 10px; margin-bottom: 22px; }
+.rueckgabe-wahl label {
+  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
+  padding: 15px 17px;
+  border: 1px solid var(--mist); border-radius: 2px;
+  cursor: pointer;
+}
+.rueckgabe-wahl label:hover { border-color: var(--navy); }
+.rueckgabe-wahl input { margin-top: 3px; accent-color: var(--red); }
+.rueckgabe-wahl input:checked + span strong { color: var(--red); }
+.rueckgabe-wahl label:has(input:checked) { border-color: var(--navy); background: var(--paper); }
+.rueckgabe-wahl span { display: flex; flex-direction: column; gap: 3px; }
+.rueckgabe-wahl strong { color: var(--navy); font-size: 15.5px; }
+.rueckgabe-wahl small { color: var(--grau); font-size: 13.5px; line-height: 1.45; }
+
+.rueckgabe-block { margin-bottom: 20px; }
+.rueckgabe-block[hidden] { display: none; }
+.rueckgabe-marke {
+  display: block; margin-bottom: 7px;
+  font: 700 10.5px/1 var(--mono);
+  letter-spacing: .14em; text-transform: uppercase; color: var(--grau-still);
+}
+.rueckgabe-block select {
+  width: 100%; padding: 13px 14px;
+  border: 1px solid var(--mist); border-radius: 2px; background: #fff; color: var(--ink);
+}
+.rueckgabe-block select:focus { border-color: var(--navy); outline: none; }
+.rueckgabe-ort {
+  margin: 0 0 12px;
+  font-family: var(--mono); font-size: 13px; color: var(--grau);
+}
+.rueckgabe-status {
+  margin-bottom: 18px; padding: 13px 15px;
+  border-left: 4px solid var(--grau-still); background: var(--paper);
+  font-size: 14.5px; line-height: 1.5;
+}
+.rueckgabe-status[hidden] { display: none; }
+.rueckgabe-status.ist-erfolg  { border-left-color: #0f9d63; background: rgba(15, 157, 99, .09); }
+.rueckgabe-status.ist-fehler  { border-left-color: var(--red); background: rgba(240, 0, 56, .07); }
+.rueckgabe-status.ist-hinweis { border-left-color: #c98a00; background: rgba(201, 138, 0, .09); }
+
+/* Der Beleg. Er bleibt stehen, bis er geschlossen wird. */
+.beleg { margin: 0 0 18px; }
+.beleg div {
+  display: flex; justify-content: space-between; gap: 18px;
+  padding: 11px 0; border-bottom: 1px solid var(--mist);
+}
+.beleg dt { margin: 0; color: var(--grau-still); font-size: 14px; }
+.beleg dd { margin: 0; color: var(--navy); font-weight: 700; text-align: right; }
+.beleg div:last-child dd { font-size: 19px; }
+.beleg-posten { list-style: none; margin: 0 0 24px; padding: 0; }
+.beleg-posten li {
+  display: flex; justify-content: space-between; gap: 18px;
+  padding: 7px 0;
+  font-size: 13.5px; color: var(--grau);
+}
+.beleg-posten b { color: var(--navy); font-variant-numeric: tabular-nums; }
+
+.rental-preis {
+  font-family: var(--mono); font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--mint);
+}
 
 .rental-banner {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;

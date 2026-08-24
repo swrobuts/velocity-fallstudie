@@ -306,7 +306,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             } else {
                 // Bei einem Fehler des Mailservers ist der zweite Versuch
                 // oft schon erfolgreich - der Knopf spart das Neutippen.
-                const wiederholbar = /E-Mail|Verbindung/.test(error.message);
+                // Nur wo ein zweiter Versuch ueberhaupt helfen kann.
+                // Bei bereits vorhandenen Kundendaten hilft er nicht.
+                const wiederholbar = /versendet werden|Verbindung/.test(error.message);
                 statusZeigen('fehler', error.message, wiederholbar
                     ? { text: 'Erneut versuchen', tun: () => regForm.requestSubmit() }
                     : null);
@@ -1316,10 +1318,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             const result = await startRental(bikeId);
 
             if (result && result.ausleihe_id) {
+                // Typ und Rahmennummer stehen bereits in den geladenen
+                // Daten. Vorher trug der Balken bis zum naechsten Laden
+                // nur "Fahrrad" - der Kunde wusste nicht, welches Rad er
+                // gerade hat.
+                const rad = db_Bikes.find(r => r.fahrrad_id === bikeId);
                 activeRental = {
                     ausleihe_id: result.ausleihe_id,
                     fahrrad_id: bikeId,
-                    startzeit: new Date()
+                    startzeit: new Date(),
+                    bikeInfo: rad?.typ_bezeichnung || 'Fahrrad',
+                    rahmennummer: rad?.rahmennummer || '',
+                    typ_code: rad?.typ_code || null,
+                    startgebuehr: rad ? Number(rad.startgebuehr) : null,
+                    preis_pro_minute: rad ? Number(rad.preis_pro_minute) : null,
+                    tageshoechstpreis: rad ? Number(rad.tageshoechstpreis) : null
                 };
 
                 Toastify({
@@ -1355,11 +1368,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             const rentals = await fetchActiveRentals();
             if (rentals && rentals.length > 0) {
                 const rental = rentals[0];
+                const satz = rechnerTarife.find(t => t.typ_code === rental.typ_code);
                 activeRental = {
                     ausleihe_id: rental.ausleihe_id,
                     rahmennummer: rental.rahmennummer,
                     startzeit: new Date(rental.startzeit),
-                    bikeInfo: rental.typ_bezeichnung || 'Fahrrad'
+                    bikeInfo: rental.typ_bezeichnung || 'Fahrrad',
+                    typ_code: rental.typ_code || null,
+                    startgebuehr: satz ? Number(satz.startgebuehr) : null,
+                    preis_pro_minute: satz ? Number(satz.preis_pro_minute) : null,
+                    tageshoechstpreis: satz ? Number(satz.tageshoechstpreis) : null
                 };
                 showRentalBanner();
             } else {
@@ -1377,6 +1395,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const bikeInfo = document.getElementById("rental-bike-info");
         bikeInfo.textContent = `${activeRental.bikeInfo || 'Fahrrad'} ${activeRental.rahmennummer || ''}`.trim();
+        rentalBanner.setAttribute('aria-label',
+            `Laufende Fahrt mit ${bikeInfo.textContent}`);
 
         rentalBanner.style.display = "block";
         startRentalTimer();
@@ -1410,52 +1430,291 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         document.getElementById("rental-duration").textContent =
             `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+        // Der laufende Betrag, nach denselben Regeln wie die Datenbank:
+        // angefangene Minuten aufgerundet, Deckelung auf den
+        // Tageshoechstpreis. Nur wenn die Saetze bekannt sind - geraten
+        // wird nichts.
+        const anzeige = document.getElementById('rental-preis');
+        if (!anzeige) return;
+        if (activeRental.preis_pro_minute === null || activeRental.preis_pro_minute === undefined
+            || Number.isNaN(activeRental.preis_pro_minute)) { anzeige.textContent = ''; return; }
+        const angefangen = Math.max(1, Math.ceil(diff / 60));
+        const roh = activeRental.startgebuehr + angefangen * activeRental.preis_pro_minute;
+        const betrag = Math.min(roh, activeRental.tageshoechstpreis ?? roh);
+        anzeige.textContent = 'bisher ' + euro(betrag);
     }
 
-    // ===== AUSLEIHE BEENDEN =====
-    endRentalBtn.addEventListener("click", async () => {
-        if (!activeRental) return;
+    /* =================================================================
+       RUECKGABE
 
-        // Station auswaehlen (vorerst erste Station)
-        const endStation = db_Stations[0];
+       Vorher stand hier:
 
-        if (!endStation) {
-            Toastify({ text: "Keine Station gefunden", backgroundColor: "#EF4444" }).showToast();
+           // Station auswaehlen (vorerst erste Station)
+           const endStation = db_Stations[0];
+
+       Das "vorerst" hat drei Fassungen ueberlebt. db_Stations[0] ist
+       "Schweinfurt Markt"; eine Testfahrt vom Wuerzburger Marktplatz
+       wurde damit 40 Kilometer entfernt verbucht - in 57 Sekunden.
+       Falscher Bestand, falsche Position, unmoegliche Bewegungsdaten.
+
+       Wo ein Rad abgestellt wird, ist eine fachliche Angabe. Sie wird
+       jetzt erfragt: Station aus einer Liste, oder der eigene Standort
+       im Geschaeftsgebiet. Geraten wird nichts mehr.
+       ================================================================= */
+    const rueckgabeModal = document.getElementById('rueckgabe-modal');
+    const rueckgabeFrage = document.getElementById('rueckgabe-frage');
+    const rueckgabeBeleg = document.getElementById('rueckgabe-beleg');
+    const rueckgabeStatus = document.getElementById('rueckgabe-status');
+    let rueckgabeOrt = null;      // {latitude, longitude} aus der Ortung
+    let rueckgabeRuecksprung = null;
+
+    function rueckgabeMelden(art, text) {
+        if (!rueckgabeStatus) return;
+        rueckgabeStatus.hidden = false;
+        rueckgabeStatus.className = 'rueckgabe-status ist-' + art;
+        rueckgabeStatus.textContent = text;
+    }
+
+    function rueckgabeStatusLeeren() {
+        if (!rueckgabeStatus) return;
+        rueckgabeStatus.hidden = true;
+        rueckgabeStatus.textContent = '';
+    }
+
+    /* Liegt der Punkt im Geschaeftsgebiet? Dieselbe Frage beantwortet
+       die Datenbank verbindlich (GR15 ueber fn_im_geschaeftsgebiet).
+       Hier wird sie nur vorab gestellt, damit niemand erst nach dem
+       Absenden erfaehrt, dass er zu weit draussen steht. Strahlensatz-
+       Verfahren, weil Leaflet dafuer nichts mitbringt. */
+    function imGeschaeftsgebiet(breite, laenge) {
+        for (const flaeche of gebietFlaechen) {
+            const ecken = flaeche.getLatLngs()[0];
+            let drin = false;
+            for (let i = 0, j = ecken.length - 1; i < ecken.length; j = i++) {
+                const yi = ecken[i].lat, xi = ecken[i].lng;
+                const yj = ecken[j].lat, xj = ecken[j].lng;
+                if ((yi > breite) !== (yj > breite) &&
+                    laenge < (xj - xi) * (breite - yi) / (yj - yi) + xi) drin = !drin;
+            }
+            if (drin) return true;
+        }
+        return false;
+    }
+
+    function entfernungMeter(a, b) {
+        const R = 6371000, rad = Math.PI / 180;
+        const dLat = (b.lat - a.lat) * rad, dLon = (b.lng - a.lng) * rad;
+        const x = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+        return Math.round(2 * R * Math.asin(Math.sqrt(x)));
+    }
+
+    /* Die Stationsliste im Dialog. Kennt die Anwendung den Standort,
+       steht die naechstgelegene oben und die Entfernung dabei. */
+    function rueckgabeStationenFuellen() {
+        const feld = document.getElementById('rueckgabe-station');
+        if (!feld) return;
+        const hier = rueckgabeOrt ? L.latLng(rueckgabeOrt.latitude, rueckgabeOrt.longitude) : null;
+        const zeilen = db_Stations
+            .filter(st => st.latitude && st.longitude)
+            .map(st => ({ st, meter: hier ? entfernungMeter(hier, L.latLng(st.latitude, st.longitude)) : null }));
+        if (hier) zeilen.sort((a, b) => a.meter - b.meter);
+        else zeilen.sort((a, b) => a.st.name.localeCompare(b.st.name, 'de'));
+
+        feld.innerHTML = zeilen.map(({ st, meter }) =>
+            `<option value="${st.station_id}">${escapeHtml(st.name)}` +
+            `${st.ort ? ' · ' + escapeHtml(st.ort) : ''}` +
+            `${meter !== null ? ' · ' + (meter < 1000 ? meter + ' m' : (meter / 1000).toFixed(1) + ' km') : ''}` +
+            `</option>`).join('');
+    }
+
+    function rueckgabeArt() {
+        return document.querySelector('input[name="rueckgabeart"]:checked')?.value || 'station';
+    }
+
+    function rueckgabeAnsichtSetzen() {
+        const frei = rueckgabeArt() === 'frei';
+        document.getElementById('rueckgabe-station-block').hidden = frei;
+        document.getElementById('rueckgabe-frei-block').hidden = !frei;
+        rueckgabeStatusLeeren();
+    }
+
+    document.querySelectorAll('input[name="rueckgabeart"]').forEach(r =>
+        r.addEventListener('change', rueckgabeAnsichtSetzen));
+
+    document.getElementById('rueckgabe-standort')?.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+            rueckgabeMelden('fehler',
+                'Dieser Browser gibt keinen Standort heraus. Bitte gib das Rad an einer Station ab.');
             return;
         }
+        rueckgabeMelden('hinweis', 'Standort wird ermittelt …');
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                rueckgabeOrt = { latitude, longitude };
+                const drin = imGeschaeftsgebiet(latitude, longitude);
+                document.getElementById('rueckgabe-ort').textContent =
+                    `${latitude.toFixed(5)}, ${longitude.toFixed(5)}` +
+                    (pos.coords.accuracy ? ` (± ${Math.round(pos.coords.accuracy)} m)` : '');
+                rueckgabeStationenFuellen();
+                if (drin) {
+                    rueckgabeMelden('erfolg', 'Der Standort liegt im Geschäftsgebiet. Du kannst hier abstellen.');
+                } else {
+                    rueckgabeMelden('fehler',
+                        'Dieser Standort liegt außerhalb des Geschäftsgebiets. '
+                        + 'Dort lässt sich keine Fahrt beenden — bitte gib das Rad an einer Station ab.');
+                }
+            },
+            (fehler) => {
+                rueckgabeOrt = null;
+                rueckgabeMelden('fehler', fehler.code === 1
+                    ? 'Der Zugriff auf den Standort wurde abgelehnt. Bitte wähle eine Station.'
+                    : 'Der Standort ließ sich nicht ermitteln. Bitte wähle eine Station.');
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+    });
+
+    function rueckgabeOeffnen() {
+        if (!activeRental) return;
+        rueckgabeRuecksprung = document.activeElement;
+        rueckgabeOrt = null;
+        rueckgabeStatusLeeren();
+        rueckgabeFrage.hidden = false;
+        rueckgabeBeleg.hidden = true;
+        document.getElementById('rueckgabe-ort').textContent = 'Noch kein Standort ermittelt.';
+        document.querySelector('input[name="rueckgabeart"][value="station"]').checked = true;
+        rueckgabeAnsichtSetzen();
+        rueckgabeStationenFuellen();
+
+        const minuten = Math.max(1, Math.ceil((Date.now() - activeRental.startzeit) / 60000));
+        document.getElementById('rueckgabe-rad').textContent =
+            `${activeRental.bikeInfo || 'Fahrrad'} ${activeRental.rahmennummer || ''}`.trim()
+            + ` · seit ${minuten} ${minuten === 1 ? 'Minute' : 'Minuten'} unterwegs`;
+
+        rueckgabeModal.style.display = 'flex';
+        document.body.classList.add('dialog-offen');
+        document.getElementById('rueckgabe-station').focus();
+    }
+
+    function rueckgabeSchliessen() {
+        rueckgabeModal.style.display = 'none';
+        document.body.classList.remove('dialog-offen');
+        if (rueckgabeRuecksprung && document.contains(rueckgabeRuecksprung)) rueckgabeRuecksprung.focus();
+        rueckgabeRuecksprung = null;
+    }
+
+    function rueckgabeOffen() { return rueckgabeModal.style.display === 'flex'; }
+
+    document.getElementById('rueckgabe-schliessen')?.addEventListener('click', rueckgabeSchliessen);
+    document.getElementById('beleg-schliessen')?.addEventListener('click', rueckgabeSchliessen);
+    rueckgabeModal?.addEventListener('click', (e) => { if (e.target === rueckgabeModal) rueckgabeSchliessen(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && rueckgabeOffen()) { e.preventDefault(); rueckgabeSchliessen(); }
+        if (e.key !== 'Tab' || !rueckgabeOffen()) return;
+        const liste = Array.from(rueckgabeModal.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )).filter(el => !el.hidden && el.offsetParent !== null && !el.disabled);
+        if (!liste.length) return;
+        const erst = liste[0], letzt = liste[liste.length - 1];
+        if (e.shiftKey && document.activeElement === erst) { e.preventDefault(); letzt.focus(); }
+        else if (!e.shiftKey && document.activeElement === letzt) { e.preventDefault(); erst.focus(); }
+    });
+
+    endRentalBtn.addEventListener('click', rueckgabeOeffnen);
+
+    document.getElementById('rueckgabe-bestaetigen')?.addEventListener('click', async () => {
+        if (!activeRental) return;
+        const knopf = document.getElementById('rueckgabe-bestaetigen');
+        const art = rueckgabeArt();
+        let station = null, breite = null, laenge = null;
+
+        if (art === 'station') {
+            station = Number(document.getElementById('rueckgabe-station').value);
+            if (!station) { rueckgabeMelden('fehler', 'Bitte wähle eine Station.'); return; }
+        } else {
+            if (!rueckgabeOrt) {
+                rueckgabeMelden('fehler', 'Ermittle zuerst deinen Standort oder wähle eine Station.');
+                return;
+            }
+            if (!imGeschaeftsgebiet(rueckgabeOrt.latitude, rueckgabeOrt.longitude)) {
+                rueckgabeMelden('fehler',
+                    'Außerhalb des Geschäftsgebiets lässt sich keine Fahrt beenden.');
+                return;
+            }
+            breite = rueckgabeOrt.latitude; laenge = rueckgabeOrt.longitude;
+        }
+
+        knopf.disabled = true;
+        const beschriftung = knopf.textContent;
+        knopf.textContent = 'Wird gebucht …';
+        rueckgabeMelden('hinweis', 'Die Rückgabe wird verbucht …');
 
         try {
-            Toastify({ text: "Ausleihe wird beendet...", backgroundColor: "#6B7280" }).showToast();
-
-            const result = await endRental(activeRental.ausleihe_id, endStation.station_id);
-
-            const kosten = (result?.gesamtbetrag ?? null) !== null
-                ? euro(result.gesamtbetrag)
-                : '-';
-
-            Toastify({
-                text: `Ausleihe beendet! Dauer: ${result?.dauer_minuten ?? '-'} Min, Kosten: ${kosten}`,
-                duration: 6000,
-                gravity: "top",
-                position: "center",
-                backgroundColor: "#10B981"
-            }).showToast();
+            const ergebnis = await endRental(activeRental.ausleihe_id, station, breite, laenge);
+            const rad = `${activeRental.bikeInfo || 'Fahrrad'} ${activeRental.rahmennummer || ''}`.trim();
+            const ortText = art === 'station'
+                ? (db_Stations.find(st => st.station_id === station)?.name || 'Station')
+                : `frei abgestellt bei ${breite.toFixed(5)}, ${laenge.toFixed(5)}`;
 
             activeRental = null;
             hideRentalBanner();
+            belegZeigen(rad, ergebnis, ortText);
 
-            // Daten neu laden
             await loadData();
             karteZeichnen();
-
-        } catch (error) {
-            console.error('Fehler beim Beenden:', error);
-            Toastify({
-                text: `Fehler: ${error.message}`,
-                backgroundColor: "#EF4444"
-            }).showToast();
+        } catch (fehler) {
+            console.error('Fehler beim Beenden:', fehler);
+            rueckgabeMelden('fehler', fehler.message);
+        } finally {
+            knopf.disabled = false;
+            knopf.textContent = beschriftung;
         }
     });
+
+    /* Der Beleg bleibt stehen, bis er geschlossen wird. Vorher verschwand
+       der Abschluss mit einem Toast nach sechs Sekunden - und mit ihm die
+       einzige Stelle, an der Dauer, Ort und Betrag zu sehen waren. */
+    async function belegZeigen(rad, ergebnis, ortText) {
+        rueckgabeFrage.hidden = true;
+        rueckgabeBeleg.hidden = false;
+        rueckgabeStatusLeeren();
+
+        const zeilen = [
+            ['Fahrrad', rad],
+            ['Dauer', `${ergebnis?.dauer_minuten ?? '—'} Min`],
+            ['Abgestellt', ortText],
+            ['Gesamtbetrag', (ergebnis?.gesamtbetrag ?? null) !== null ? euro(ergebnis.gesamtbetrag) : '—']
+        ];
+        document.getElementById('beleg-liste').innerHTML = zeilen.map(([b, w]) =>
+            `<div><dt>${escapeHtml(b)}</dt><dd>${escapeHtml(w)}</dd></div>`).join('');
+
+        // Die Aufschluesselung kommt aus der Abrechnung, nicht aus dem
+        // Seitentext - sie muss zum Betrag passen, den die Datenbank
+        // gebucht hat.
+        const posten = document.getElementById('beleg-posten');
+        posten.innerHTML = '<li><span>Positionen werden geladen …</span></li>';
+        try {
+            const fahrten = await fetchRentalHistory();
+            const fehler = letzterLadeFehler('v_meine_ausleihe');
+            const letzte = fahrten[0];
+            if (fehler) {
+                // Nicht schweigen: der Betrag oben stimmt, nur die
+                // Aufschluesselung liess sich nicht holen.
+                posten.innerHTML = `<li><span>Die Aufschlüsselung ließ sich nicht laden.</span></li>`;
+            } else if (letzte && Array.isArray(letzte.positionen) && letzte.positionen.length) {
+                posten.innerHTML = letzte.positionen.map(pos =>
+                    `<li><span>${escapeHtml(pos.bezeichnung || pos.code || 'Position')}</span>` +
+                    `<b>${escapeHtml(euro(pos.betrag))}</b></li>`).join('');
+            } else {
+                posten.innerHTML = '';
+            }
+        } catch (e) {
+            posten.innerHTML = '';
+        }
+        document.getElementById('beleg-schliessen').focus();
+    }
 
     /* =================================================================
        NAVIGATION

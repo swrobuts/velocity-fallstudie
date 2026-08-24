@@ -12,7 +12,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=48361576">
+    <link rel="stylesheet" href="style.css?v=27200f27">
 </head>
 <body>
 
@@ -109,17 +109,87 @@
     </div>
 </div>
 
-<!-- Aktive Ausleihe Banner (wird per JS angezeigt) -->
+<!-- ============================================================
+     LAUFENDE FAHRT
+     Der Balken nennt Typ und Rahmennummer sofort - vorher stand dort
+     bis zum naechsten Neuladen nur "Fahrrad".
+     ============================================================ -->
 <div id="active-rental-banner" class="rental-banner" style="display: none;">
     <div class="container rental-banner-content">
         <div class="rental-info">
             <i class="fa-solid fa-bicycle"></i>
             <span id="rental-bike-info">-</span>
             <span class="rental-timer"><i class="fa-solid fa-clock"></i> <span id="rental-duration">0:00</span></span>
+            <span class="rental-preis" id="rental-preis"></span>
         </div>
         <button id="end-rental-btn" class="btn-end-rental">
-            <i class="fa-solid fa-square-parking"></i> Ausleihe beenden
+            <i class="fa-solid fa-square-parking"></i> Fahrt beenden
         </button>
+    </div>
+</div>
+
+<!-- ============================================================
+     RUECKGABE
+     Vorher loeste ein Klick auf "Ausleihe beenden" sofort die
+     endgueltige Buchung aus - und zwar an db_Stations[0], der ersten
+     Station der geladenen Liste. Das war "Schweinfurt Markt". Eine
+     Fahrt vom Wuerzburger Marktplatz landete damit 40 Kilometer
+     entfernt: falscher Bestand, falsche Position, unmoegliche
+     Bewegungsdaten. Wo ein Rad abgestellt wird, ist eine fachliche
+     Angabe. Sie wird hier erfragt, nicht geraten.
+     ============================================================ -->
+<div id="rueckgabe-modal" class="modal-overlay">
+    <div class="modal-content rueckgabe" role="dialog" aria-modal="true"
+         aria-labelledby="rueckgabe-titel">
+        <button class="close-modal" type="button" id="rueckgabe-schliessen"
+                aria-label="Rückgabe abbrechen">&times;</button>
+
+        <div id="rueckgabe-frage">
+            <h2 class="form-title" id="rueckgabe-titel">Wo stellst du das Rad ab?</h2>
+            <p class="rueckgabe-rad" id="rueckgabe-rad"></p>
+
+            <div class="rueckgabe-wahl" role="radiogroup" aria-labelledby="rueckgabe-titel">
+                <label>
+                    <input type="radio" name="rueckgabeart" value="station" checked>
+                    <span><strong>An einer Station</strong>
+                          <small>Rad ins Dock stellen, Schloss rastet ein.</small></span>
+                </label>
+                <label>
+                    <input type="radio" name="rueckgabeart" value="frei">
+                    <span><strong>Frei im Geschäftsgebiet</strong>
+                          <small>Überall in der roten Umrandung, ohne Zuschlag.</small></span>
+                </label>
+            </div>
+
+            <div class="rueckgabe-block" id="rueckgabe-station-block">
+                <label class="rueckgabe-marke" for="rueckgabe-station">Station</label>
+                <select id="rueckgabe-station"></select>
+            </div>
+
+            <div class="rueckgabe-block" id="rueckgabe-frei-block" hidden>
+                <label class="rueckgabe-marke">Standort</label>
+                <p class="rueckgabe-ort" id="rueckgabe-ort">Noch kein Standort ermittelt.</p>
+                <button type="button" class="btn-outline" id="rueckgabe-standort">
+                    Meinen Standort verwenden
+                </button>
+            </div>
+
+            <div class="rueckgabe-status" id="rueckgabe-status" role="status" aria-live="polite" hidden></div>
+
+            <button type="button" class="btn-primary full-width" id="rueckgabe-bestaetigen">
+                Fahrt hier beenden
+            </button>
+            <p class="auth-fuss">Die Zeit läuft bis zur Bestätigung weiter.</p>
+        </div>
+
+        <!-- Bleibt stehen, bis der Kunde ihn schliesst. Vorher verschwand
+             der Abschluss mit einem Toast nach sechs Sekunden. -->
+        <div id="rueckgabe-beleg" hidden>
+            <h2 class="form-title">Fahrt beendet</h2>
+            <dl class="beleg" id="beleg-liste"></dl>
+            <ul class="beleg-posten" id="beleg-posten"></ul>
+            <button type="button" class="btn-primary full-width" id="beleg-schliessen">Schließen</button>
+        </div>
     </div>
 </div>
 
@@ -440,9 +510,9 @@
 
 <!-- App Scripts (Reihenfolge wichtig!) -->
 <script src="config.js?v=a7625464"></script>
-<script src="supabase.js?v=e54c19cb"></script>
-<script src="auth.js?v=930d69a5"></script>
-<script src="script.js?v=4c31528e"></script>
+<script src="supabase.js?v=3f4d1cd4"></script>
+<script src="auth.js?v=61b78d72"></script>
+<script src="script.js?v=31c01aaa"></script>
 
 </body>
 </html>

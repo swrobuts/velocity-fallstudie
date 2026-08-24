@@ -389,6 +389,7 @@ comment on column velocity.v_meine_ausleihe.typ_bezeichnung is 'Name des Fahrrad
 comment on column velocity.v_meine_ausleihe.start_station   is 'Name der Entnahmestation, NULL bei freiem Abstellort.';
 comment on column velocity.v_meine_ausleihe.end_station     is 'Name der Rückgabestation, NULL bei freiem Abstellen.';
 comment on column velocity.v_meine_ausleihe.gesamtbetrag    is 'Summe aller Entgeltpositionen dieser Ausleihe.';
+comment on column velocity.v_meine_ausleihe.positionen      is 'Die gebuchten Entgeltpositionen als jsonb-Feld: Bezeichnung, Code und Betrag je Zeile. Der Beleg zeigt damit, was abgerechnet wurde, ohne die Preisregeln im Frontend nachzubauen.';
 
 comment on view velocity.v_meine_rechnung is
   'Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begrenzt durch RLS.';
