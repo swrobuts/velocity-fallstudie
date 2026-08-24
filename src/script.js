@@ -360,7 +360,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const map = L.map('map', {
         zoomControl: false,
         scrollWheelZoom: false,
-        maxBoundsViscosity: 0.85
+        maxBoundsViscosity: 0.85,
+        // Viertelstufen: der Ausschnitt laesst sich damit genauer an das
+        // Seitenverhaeltnis des Rahmens anpassen als in ganzen Stufen.
+        zoomSnap: 0.25,
+        zoomDelta: 0.5
     }).setView(APP_CONFIG.defaultMapCenter, APP_CONFIG.defaultZoom);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -592,7 +596,25 @@ document.addEventListener("DOMContentLoaded", async () => {
        der Karte und am Verweis "Live-Karte" in der Kopfzeile. */
     function gebietZeigen() {
         if (!geschaeftsgebiet) return;
-        map.fitBounds(geschaeftsgebiet.getBounds(), { padding: [46, 46] });
+        const grenzen = geschaeftsgebiet.getBounds();
+        map.fitBounds(grenzen, { padding: [30, 30] });
+
+        // Das Gebiet ist rund 6 mal 5 Kilometer, der Kartenrahmen aber
+        // viel breiter als hoch. fitBounds richtet sich nach der engeren
+        // Seite - also nach der Hoehe - und laesst links und rechts
+        // Landschaft stehen. Auf breiten Rahmen wird deshalb
+        // nachgezoomt, bis die Stadt die Breite traegt. Oben und unten
+        // wird dabei etwas beschnitten; maxBounds haelt den Ausschnitt
+        // trotzdem am Gebiet.
+        const el = map.getContainer();
+        const verhaeltnis = el.clientWidth / Math.max(el.clientHeight, 1);
+        if (verhaeltnis > 1.5) {
+            // 1.4 als Bezug: bei einem breiteren Rahmen wird so weit
+            // nachgezoomt, dass die Stadt die Breite traegt, der Umriss
+            // aber gerade noch ganz ins Bild passt.
+            const zu = Math.min(Math.log2(verhaeltnis / 1.4), 1.25);
+            map.setZoom(map.getZoom() + Math.round(zu * 4) / 4);
+        }
     }
 
     function karteZeichnen() {

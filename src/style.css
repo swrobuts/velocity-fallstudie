@@ -941,13 +941,15 @@ img { max-width: 100%; }
 
 /* ---------------------------------------------------------- FAQ */
 
-.faq-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  column-gap: clamp(28px, 3.6vw, 68px);
-}
+/* Einspaltig. Zweispaltig hingen je zwei Fragen in derselben
+   Rasterzeile: oeffnete man die eine, blieb neben der anderen eine
+   tote Flaeche in Antworthoehe stehen. */
+.faq-grid { display: block; }
 .faq-grid details { border-bottom: 1px solid var(--mist); }
-.faq-grid details:nth-child(-n+2) { border-top: 1px solid var(--mist); }
+.faq-grid details:first-child { border-top: 1px solid var(--mist); }
+/* Die Antwort laeuft nicht ueber die volle Breite - Fliesstext wird
+   jenseits von etwa 75 Zeichen schlecht lesbar. */
+.faq-content { max-width: 68ch; }
 .faq-grid summary {
   cursor: pointer; list-style: none; position: relative;
   padding: 21px 36px 21px 0;
@@ -1115,9 +1117,6 @@ footer a:hover { color: #fff; text-decoration: underline; }
      Die Haarlinie sitzt dann nur noch zwischen den Spalten. */
   .stat-grid { grid-template-columns: 1fr 1fr; row-gap: clamp(28px, 4vw, 44px); }
   .stat:nth-child(odd) { padding-left: 0; border-left: 0; }
-  .faq-grid { grid-template-columns: 1fr; }
-  .faq-grid details:nth-child(2) { border-top: 0; }
-  .faq-grid details:first-child { border-top: 1px solid var(--mist); }
   .howto-card { padding-left: 0; border-left: 0; }
   .footer-grid { grid-template-columns: 1fr; gap: 28px; }
   #map { height: clamp(420px, 66vh, 600px); }
