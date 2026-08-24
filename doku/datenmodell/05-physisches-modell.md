@@ -147,15 +147,31 @@ heißt hier `point(Längengrad, Breitengrad)` — vertauscht man sie, liegt
 Würzburg im Indischen Ozean.
 
 Die Funktion fragt über `exists` und verträgt deshalb beliebig viele
-Gebiete. Das war nötig: es gibt **zwei**, Würzburg und Schweinfurt.
-Zunächst stand nur Würzburg in der Tabelle — und damit lagen die drei
-Stationen am Schweinfurter THWS-Campus außerhalb jedes Geschäftsgebiets.
-Eine dort begonnene Fahrt hätte sich nach GR15 nirgends beenden lassen,
-nicht einmal an der eigenen Station. Aufgefallen ist das erst bei einer
-Prüfung von außen; ein Test hatte den Fehler sogar festgeschrieben
-(*„Schweinfurt liegt außerhalb"*). Seit dem 24.08.2026 sichert
-`test_station_liegt_im_geschaeftsgebiet` die Regel in die Gegenrichtung:
-**keine aktive Station darf außerhalb aller Gebiete liegen.**
+Gebiete. Geführt wird eines: **Würzburg.**
+
+Das war zwischenzeitlich anders. Der Altbestand enthielt drei Stationen
+in Schweinfurt, die zunächst außerhalb jedes Geschäftsgebiets lagen —
+eine dort begonnene Fahrt hätte sich nach GR15 nirgends beenden lassen.
+Der erste Reflex war, ein zweites Gebiet anzulegen. Das behob den
+Widerspruch und schuf einen größeren: vierzig Kilometer Landschaft
+zwischen zwei Flächen sind kein Netz, sondern zwei. Ein Rad kann die
+Strecke nicht zurücklegen, jede Aussage über Verfügbarkeit wird
+mehrdeutig, und die Rückgabe landete prompt in der falschen Stadt.
+
+Seit dem 25.08.2026 lässt die Übernahme Schweinfurt deshalb aus — als
+festgehaltene Entscheidung, nicht als stillen Löschvorgang
+(`db/betrieb/uebernahme_altdaten.sql`, `schweinfurt_ausgliedern.sql`).
+`test_station_liegt_im_geschaeftsgebiet` sichert die Regel in beide
+Richtungen: **keine aktive Station darf außerhalb aller Gebiete liegen** —
+und Schweinfurt darf nicht zurückkommen.
+
+Zwei Lehren stecken darin. Erstens: ein Widerspruch zwischen Daten und
+Regel lässt sich von beiden Seiten auflösen; welche Seite nachgibt, ist
+eine fachliche Entscheidung und keine technische. Zweitens: wer in
+Schweinfurt **wohnt**, bleibt Kunde. Die Anschrift eines Kunden hat mit
+dem Geschäftsgebiet nichts zu tun — ein
+`delete from adresse where ort = 'Schweinfurt'` hätte zwei Kunden ihre
+Rechnungsanschrift genommen. Der Fremdschlüssel hat es verhindert.
 
 ### Wann eine Regel prüft — und mit wessen Rechten
 

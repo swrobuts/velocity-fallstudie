@@ -55,8 +55,9 @@ python3 -m http.server 8765 --directory src
 
 Dann auf `http://localhost:8765`:
 
-1. **Abgemeldet ansehen.** Kennzahlenleiste zeigt **13 Stationen**
-   (10 in Würzburg, 3 in Schweinfurt), drei Tarifkarten mit
+1. **Abgemeldet ansehen.** Kennzahlenleiste zeigt **10 Stationen**
+   (alle in Würzburg; Schweinfurt wird seit dem 25.08.2026 nicht mehr
+   übernommen), drei Tarifkarten mit
    **3,10 / 16,00 / 5,00 Euro** für 30 Minuten, vier FAQ-Einträge, Karte mit
    Stations- und Fahrradmarkern. Browserkonsole ohne Fehler.
 

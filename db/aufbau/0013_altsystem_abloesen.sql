@@ -1,65 +1,71 @@
 -- =====================================================================
--- 0013  Das Altsystem darf die Registrierung nicht mehr blockieren
+-- 0013  Der Altsystem-Trigger auf auth.users wird stillgelegt
 -- =====================================================================
 --
--- BEFUND (Pruefung von aussen, 24.08.2026)
--- Eine Registrierung mit einer bereits bekannten E-Mail scheiterte an
--- "Database error saving new user". Die Ursache lag nicht in diesem
--- Schema, sondern eine Ebene darunter:
+-- ZWEI BEFUNDE, EINE URSACHE
 --
---   auth.users
---     +- Trigger on_auth_user_created
---          +- "cityBikesRental".handle_new_user()
---               +- insert into "cityBikesRental".kunde (email, ...)
+-- (1) Registrierung unmoeglich (Pruefung von aussen, 24.08.2026)
+--     Eine Anmeldung mit bekannter E-Mail scheiterte an "Database error
+--     saving new user":
 --
--- Die alte Fassung legte bei JEDER Registrierung einen neuen Altkunden
--- an. Fuer eine E-Mail, die dort schon steht - und das gilt fuer alle
--- 1015 uebernommenen Kunden - griff der Unique-Index kunde_email_key.
--- Der Insert schlug fehl, und weil er im Trigger der Auth-Transaktion
--- haengt, fiel die gesamte Registrierung zurueck. Es entstand weder ein
--- Auth-Benutzer noch sonst etwas.
+--       auth.users
+--         +- Trigger on_auth_user_created
+--              +- "cityBikesRental".handle_new_user()
+--                   +- insert into "cityBikesRental".kunde (email, ...)
 --
--- Damit war jeder Bestandskunde dauerhaft ausgesperrt: genau die Gruppe,
--- die ein Onlinekonto beanspruchen soll.
+--     Die Funktion legte bei JEDER Registrierung einen neuen Altkunden
+--     an. Fuer eine E-Mail, die dort schon stand - und das galt fuer alle
+--     1015 uebernommenen Kunden -, griff der Unique-Index
+--     kunde_email_key. Der Insert schlug fehl, und weil er im Trigger der
+--     Auth-Transaktion haengt, fiel die gesamte Registrierung zurueck.
 --
--- WARUM NICHT DER TRIGGER FAELLT
--- Der naheliegende Schritt waere gewesen, on_auth_user_created zu
--- entfernen. Das geht hier aus zwei Gruenden nicht:
+-- (2) Fremde Projekte im Kundenbestand (24.08.2026)
+--     auth.users ist auf diesem Server GEMEINSAM. Darauf laufen unter
+--     anderem die Lehrveranstaltungsevaluation (Schema qs, Tabellen
+--     lve_bogen, lve_item_response, lve_login_event) und weitere
+--     Projekte. Der Trigger unterschied nicht, WOFUER sich jemand
+--     anmeldete - er machte aus jeder Anmeldung einen Fahrradkunden.
 --
---   1. auth.users gehoert supabase_auth_admin. Der Zugang dieses
---      Projekts (postgres) ist dort nicht Eigentuemer und darf keinen
---      Trigger loeschen - "must be owner of relation users".
---   2. Der Trigger bedient eine ZWEITE Anwendung auf demselben Server.
---      Ihn ersatzlos zu streichen haette dort neue Registrierungen
---      stillschweigend ins Leere laufen lassen.
+--     Die Belege stehen im Datum:
 --
--- Die Funktion selbst gehoert postgres. Sie wird deshalb nicht entfernt,
--- sondern idempotent gemacht. Das loest dasselbe Problem, ohne die
--- Altanwendung zu beschaedigen - und ohne auth.users anzufassen.
+--       qs.allow_email              "cityBikesRental".kunde   Altfahrten
+--       robert.butscher@thws.de     +65 Minuten spaeter       0
+--         27.04.2026 05:07            27.04.2026 06:12
+--       arnd.gottschalk@thws.de     +114 Minuten spaeter      0
+--         06.05.2026 15:01            06.05.2026 16:55
 --
--- WAS DIE NEUE FASSUNG ANDERS MACHT
---   * Steht die E-Mail schon in "cityBikesRental".kunde, wird der
---     vorhandene Satz verwendet statt eines zweiten angelegt.
---   * Die Zuordnung auth_uid -> kunde_id entsteht nur, wenn sie fehlt.
---   * Und der wichtigste Punkt: die Funktion kann die Registrierung
---     NICHT MEHR ZUM SCHEITERN BRINGEN. Was hier schiefgeht, wird als
---     Warnung protokolliert; die Anmeldung laeuft weiter. Ein Trigger,
---     der in ein fremdes Schema schreibt, darf niemals das Tor zur
---     Anwendung zuhalten.
+--     Beide wurden freigeschaltet, meldeten sich bei der Evaluation an -
+--     und landeten im Fahrradverleih. Ohne je ein Rad geliehen zu haben.
+--     Zum Vergleich: swrobuts@googlemail.com ist Kunde seit 15.01.2026
+--     mit sieben Fahrten, also drei Monate vor dem LVE-Eintrag. Ein
+--     echter Kunde, kein Ueberlaeufer.
 --
--- Fuer diese Anwendung ist der Trigger ohnehin ohne Bedeutung:
+-- WARUM DIE FUNKTION UND NICHT DER TRIGGER
+-- auth.users gehoert supabase_auth_admin. Der Zugang dieses Projekts
+-- (postgres) ist dort nicht Eigentuemer und darf keinen Trigger loeschen
+-- - "must be owner of relation users". Die Funktion gehoert dagegen
+-- postgres. Sie wird deshalb auf einen Leerlauf gesetzt. Das ist in der
+-- Wirkung dasselbe wie das Entfernen des Triggers, mit dem Unterschied,
+-- dass die Zeile in pg_trigger stehenbleibt.
+--
+-- WAS DAS BEDEUTET
+-- Kein Projekt auf diesem Server erzeugt mehr Fahrradkunden. Diese
+-- Anwendung braucht den Trigger ohnehin nicht:
 -- velocity.api_kunde_sicherstellen() legt den Kundensatz beim ersten
--- Anmelden selbst an und verknuepft dabei einen vorhandenen Satz
--- derselben E-Mail, statt einen zweiten zu erzeugen.
+-- Anmelden an DER STELLE an, an der er hingehoert - und verknuepft dabei
+-- einen vorhandenen Satz derselben E-Mail, statt einen zweiten zu
+-- erzeugen. Wer sich fuer die Evaluation anmeldet, taucht hier nicht
+-- mehr auf.
+--
+-- SAUBER TRENNEN HEISST: DIE ANWENDUNG HOLT SICH, WAS SIE BRAUCHT.
+-- Sie laesst es sich nicht von einer gemeinsamen Tabelle zuschieben.
 --
 -- ZURUECKNEHMEN
--- Die urspruengliche Fassung steht im Git-Verlauf dieses Projekts und
--- im Bericht doku/verifikation/velocity-ux-regression-audit-2026-08-24-v3.md.
+-- Die urspruengliche Fassung steht im Git-Verlauf dieses Projekts.
 --
 -- NICHT ANGEFASST
 -- Auf auth.users liegt ein zweiter Trigger, trg_log_login_event, der in
--- das Schema qs zeigt. Der gehoert einer weiteren Anwendung und wird
--- hier weder veraendert noch entfernt.
+-- das Schema qs zeigt. Der gehoert der Evaluation und ist dort richtig.
 -- =====================================================================
 
 create or replace function "cityBikesRental".handle_new_user()
@@ -67,57 +73,19 @@ returns trigger
 language plpgsql
 security definer
 as $$
-declare
-  v_kunde_id integer;
 begin
-  begin
-    -- Vorhandenen Altkunden derselben E-Mail wiederverwenden.
-    select k.kunde_id into v_kunde_id
-      from "cityBikesRental".kunde k
-     where k.email = new.email;
-
-    if v_kunde_id is null then
-      insert into "cityBikesRental".kunde (
-        email, passwort_hash, vorname, nachname, registriert_am, aktiv
-      ) values (
-        new.email,
-        'SUPABASE_AUTH',
-        coalesce(new.raw_user_meta_data ->> 'vorname',  'Unbekannt'),
-        coalesce(new.raw_user_meta_data ->> 'nachname', 'Unbekannt'),
-        now(),
-        true
-      )
-      on conflict (email) do nothing
-      returning kunde_id into v_kunde_id;
-
-      -- Bei einem gleichzeitigen zweiten Versuch liefert do nothing
-      -- keine Zeile zurueck; dann steht sie inzwischen da.
-      if v_kunde_id is null then
-        select k.kunde_id into v_kunde_id
-          from "cityBikesRental".kunde k
-         where k.email = new.email;
-      end if;
-    end if;
-
-    if v_kunde_id is not null then
-      insert into "cityBikesRental".auth_kunde_mapping (auth_uid, kunde_id)
-      values (new.id, v_kunde_id)
-      on conflict do nothing;
-    end if;
-
-  exception when others then
-    -- Bewusst verschluckt: das Altsystem darf keine Registrierung
-    -- verhindern. Die Warnung landet im Serverprotokoll.
-    raise warning 'handle_new_user uebersprungen fuer %: % (%)',
-      new.email, sqlerrm, sqlstate;
-  end;
-
+  -- Leerlauf. Siehe den Kopf dieser Datei.
+  --
+  -- Der Trigger liegt auf einer Tabelle, die sich mehrere Anwendungen
+  -- teilen. Was hier passiert, passiert fuer alle - und darf deshalb
+  -- gar nichts sein. Wer einen Kundensatz braucht, legt ihn in seinem
+  -- eigenen Schema an, wenn er ihn braucht.
   return new;
 end;
 $$;
 
 comment on function "cityBikesRental".handle_new_user() is
-  'Legt fuer einen neuen Auth-Benutzer einen Altkunden an, sofern noch '
-  'keiner mit dieser E-Mail existiert. Idempotent und fehlertolerant - '
-  'seit 24.08.2026, nachdem die alte Fassung jede Registrierung eines '
-  'Bestandskunden am Unique-Index kunde_email_key scheitern liess.';
+  'Leerlauf seit 24.08.2026. Die Vorgaengerfassung legte bei jeder '
+  'Anmeldung auf dem gemeinsamen auth.users einen Fahrradkunden an - '
+  'auch fuer Anmeldungen anderer Projekte (LVE/qs) - und liess '
+  'Registrierungen bekannter E-Mails am Unique-Index scheitern.';

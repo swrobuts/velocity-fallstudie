@@ -137,9 +137,11 @@ begin
     return;
   end if;
 
-  return next ok(v_quelle ilike '%exception when others%',
-    v_ruft || ' faengt Fehler ab und laesst die Registrierung durch');
-  return next ok(v_quelle ilike '%on conflict%',
-    v_ruft || ' laeuft nicht mehr in den Unique-Index auf die E-Mail');
+  -- Der Trigger liegt auf einer Tabelle, die sich mehrere Anwendungen
+  -- teilen. Er darf deshalb weder schreiben noch scheitern.
+  return next ok(v_quelle not ilike '%insert into%kunde%',
+    v_ruft || ' legt bei einer Anmeldung keinen Kunden mehr an');
+  return next ok(v_quelle not ilike '%auth_kunde_mapping%',
+    v_ruft || ' schreibt auch keine Zuordnung mehr');
 end;
 $$;

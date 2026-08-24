@@ -11,30 +11,65 @@ set search_path = velocity_test, velocity, extensions, public;
 -- Zeilenzahlen: nach der Ende-zu-Ende-Pruefung aus Aufgabe 16 gibt es
 -- zusaetzliche Kunden und Ausleihen aus dem laufenden Betrieb. Fuer die
 -- Livemengen gilt deshalb nur eine Untergrenze.
+/* Zwei verschiedene Dinge, die gern verwechselt werden:
+
+   Das PROTOKOLL haelt fest, was bei einem Lauf geschehen IST. Es wird
+   nicht nachtraeglich umgeschrieben - der Lauf vom 22.08.2026 hat nun
+   einmal 13 Stationen und 352 Raeder geschrieben, damals einschliesslich
+   Schweinfurt. Ein Protokoll, das sich der Gegenwart anpasst, ist kein
+   Protokoll.
+
+   Der BESTAND ist der Stand von heute. Er wird gegen die Regel geprueft,
+   nicht gegen eine gemerkte Zahl: so viele Stationen, wie es im
+   Altbestand ausserhalb von Schweinfurt gibt. Dann haelt der Test auch,
+   wenn sich der Altbestand aendert. */
 create or replace function velocity_test.test_ue_mengen()
 returns setof text language plpgsql as $$
 begin
-  -- Ausgewertet wird das Maximum ueber alle Laeufe, nicht der letzte Lauf:
-  -- ein zweiter, idempotenter Lauf schreibt nichts mehr nach und wuerde
-  -- sonst faelschlich als Fehlschlag erscheinen.
+  -- Protokoll: der erste Lauf hat stattgefunden und ist festgehalten.
   return next is((select max(geschrieben) from velocity.uebernahme_protokoll
                    where ziel = 'velocity.kunde'), 1015,
                  'Das Protokoll weist 1015 uebernommene Kunden aus');
-  return next is((select max(geschrieben) from velocity.uebernahme_protokoll
-                   where ziel = 'velocity.station'), 13,
-                 'Das Protokoll weist 13 uebernommene Stationen aus');
+  return next cmp_ok((select max(geschrieben) from velocity.uebernahme_protokoll
+                       where ziel = 'velocity.station'), '>', 0,
+                     'Das Protokoll haelt den Stationslauf fest');
   return next is((select geschrieben from velocity.uebernahme_protokoll
                    where ziel = 'velocity.kunde'
                    order by lauf desc limit 1), 0,
                  'Ein erneuter Lauf schreibt nichts nach (Idempotenz)');
 
-  return next cmp_ok((select count(*)::int from velocity.kunde),   '>=', 1015,
-                     'Mindestens 1015 Kunden vorhanden');
-  return next is((select count(*)::int from velocity.station),        13, '13 Stationen vorhanden');
-  return next is((select count(*)::int from velocity.fahrrad),       352, '352 Raeder vorhanden');
-  return next cmp_ok((select count(*)::int from velocity.ausleihe), '>=',  32,
-                     'Mindestens 32 Ausleihen vorhanden');
-  return next is((select count(*)::int from velocity.mitgliedschaft), 10, '10 Mitgliedschaften vorhanden');
+  -- Bestand gegen die Regel, nicht gegen eine gemerkte Zahl.
+  return next is(
+    (select count(*)::int from velocity.station),
+    (select count(*)::int from "cityBikesRental".station where ort <> 'Schweinfurt'),
+    'So viele Stationen wie im Altbestand ausserhalb von Schweinfurt');
+
+  return next is(
+    (select count(*)::int from velocity.fahrrad),
+    (select count(*)::int from "cityBikesRental".fahrrad f
+      where f.station_id is null
+         or f.station_id not in (select station_id from "cityBikesRental".station
+                                  where ort = 'Schweinfurt')),
+    'So viele Raeder wie im Altbestand ausserhalb von Schweinfurt');
+
+  return next cmp_ok(
+    (select count(*)::int from velocity.kunde), '>=',
+    (select count(*)::int from "cityBikesRental".kunde),
+    'Mindestens so viele Kunden wie im Altbestand');
+
+  return next cmp_ok((select count(*)::int from velocity.ausleihe), '>=', 23,
+                     'Mindestens 23 Ausleihen vorhanden');
+  return next is((select count(*)::int from velocity.mitgliedschaft), 10,
+                 '10 Mitgliedschaften vorhanden');
+
+  -- Gegenprobe: nichts aus Schweinfurt ist zurueckgeblieben.
+  return next is((select count(*)::int from velocity.station s
+                    join velocity.adresse a using (adresse_id)
+                   where a.ort = 'Schweinfurt'), 0,
+                 'Keine Station in Schweinfurt');
+  return next is((select count(*)::int from velocity.geschaeftsgebiet
+                   where name = 'Schweinfurt'), 0,
+                 'Kein Geschaeftsgebiet Schweinfurt');
 end;
 $$;
 
@@ -88,8 +123,20 @@ declare
   v_alt numeric;
   v_neu numeric;
 begin
-  select coalesce(sum(kosten), 0) into v_alt
-    from "cityBikesRental".ausleihe where kosten is not null;
+  -- Verglichen wird der Teil, der uebernommen werden SOLL. Fahrten in
+  -- Schweinfurt gehoeren zu einem Netz, das dieses Modell nicht fuehrt;
+  -- ihre Betraege stehen deshalb auch nicht in der Summe.
+  select coalesce(sum(a.kosten), 0) into v_alt
+    from "cityBikesRental".ausleihe a
+   where a.kosten is not null
+     and a.start_station_id not in
+         (select station_id from "cityBikesRental".station where ort = 'Schweinfurt')
+     and (a.end_station_id is null or a.end_station_id not in
+         (select station_id from "cityBikesRental".station where ort = 'Schweinfurt'))
+     and a.fahrrad_id not in
+         (select fahrrad_id from "cityBikesRental".fahrrad
+           where station_id in (select station_id from "cityBikesRental".station
+                                 where ort = 'Schweinfurt'));
   select coalesce(sum(p.betrag), 0) into v_neu
     from velocity.entgeltposition p
     join velocity.entgeltart a on a.entgeltart_id = p.entgeltart_id

@@ -12,7 +12,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=27200f27">
+    <link rel="stylesheet" href="style.css?v=5dd020f3">
 </head>
 <body>
 
@@ -132,11 +132,11 @@
      RUECKGABE
      Vorher loeste ein Klick auf "Ausleihe beenden" sofort die
      endgueltige Buchung aus - und zwar an db_Stations[0], der ersten
-     Station der geladenen Liste. Das war "Schweinfurt Markt". Eine
-     Fahrt vom Wuerzburger Marktplatz landete damit 40 Kilometer
-     entfernt: falscher Bestand, falsche Position, unmoegliche
-     Bewegungsdaten. Wo ein Rad abgestellt wird, ist eine fachliche
-     Angabe. Sie wird hier erfragt, nicht geraten.
+     Station der geladenen Liste - damals eine vierzig Kilometer
+     entfernte. Eine Fahrt vom Marktplatz landete dort: falscher
+     Bestand, falsche Position, unmoegliche Bewegungsdaten. Wo ein Rad
+     abgestellt wird, ist eine fachliche Angabe. Sie wird hier erfragt,
+     nicht geraten.
      ============================================================ -->
 <div id="rueckgabe-modal" class="modal-overlay">
     <div class="modal-content rueckgabe" role="dialog" aria-modal="true"
@@ -258,13 +258,24 @@
   <div class="sticky-stage">
     <div class="photo-layer photo-city" role="img" aria-label="Rotes VeloCity City-Bike vor einer Betonwand"></div>
     <div class="photo-layer photo-ebike" role="img" aria-label="Rotes VeloCity E-Bike vor einer Betonwand"></div>
+    <!-- Der Loader nimmt am Ueberblenden nicht teil; er wird eingeblendet,
+         wenn man ihn waehlt. Ein Lastenrad ist kein Zwischenschritt
+         zwischen City und E-Bike. -->
+    <div class="photo-layer photo-cargo" role="img" aria-label="Rotes VeloCity E-Cargo Loader vor einer Betonwand"></div>
     <canvas class="photo-morph" aria-hidden="true"></canvas>
     <div class="photo-shade" aria-hidden="true"></div>
     <div class="transition-cover" aria-hidden="true"></div>
 
+    <!-- Vorher standen hier zwei Angaben in kleiner Versalschrift, beide
+         schwer zu lesen. Die Netzgroesse steht ohnehin in den Kennzahlen
+         eine Bildschirmhoehe weiter unten. Was hier zaehlt, ist die eine
+         Zahl, die sich staendig aendert - und die steht jetzt gross. -->
     <div class="top-meta">
-      <span class="live-indicator"><span id="bike-counter">…</span> Räder frei<span class="live-stand" id="live-stand"></span></span>
-      <span class="chapter">Würzburg &amp; Schweinfurt · <span id="stationen-zaehler">…</span> Stationen</span>
+      <p class="live-zahl">
+        <b id="bike-counter">…</b>
+        <span>Räder frei<i class="live-stand" id="live-stand"></i></span>
+      </p>
+      <span class="nur-vorlesen" id="stationen-zaehler"></span>
     </div>
 
     <div class="claim claim-ebike">
@@ -272,6 +283,15 @@
       <h1>
         <span class="claim-line headline-primary">Würzburg hat<br> viele Berge.</span>
         <span class="claim-line headline-accent">Wir liefern den<br> Rückenwind.</span>
+      </h1>
+    </div>
+
+    <div class="claim claim-cargo" aria-hidden="true">
+      <p class="eyebrow"><span class="meta-lang">E-Cargo Loader · bis 70 kg Zuladung</span>
+                         <span class="meta-kurz">E-Cargo · bis 70 kg</span></p>
+      <h1>
+        <span class="claim-line headline-primary">Der Wocheneinkauf<br> passt rein.</span>
+        <span class="claim-line headline-accent">Das Kind<br> auch.</span>
       </h1>
     </div>
 
@@ -284,9 +304,12 @@
     </div>
 
     <div class="choice-panel" id="angebot">
+      <!-- Drei Typen im Angebot, drei in der Wahl. Der Loader war hier
+           nicht vertreten; wer ihn suchte, fand ihn erst bei den Tarifen. -->
       <div class="product-tabs" role="group" aria-label="Fahrradtyp wählen">
         <button class="product-tab" aria-pressed="false" data-product="city" type="button">City-Bike</button>
         <button class="product-tab" aria-pressed="true" data-product="ebike" type="button">E-Bike</button>
+        <button class="product-tab" aria-pressed="false" data-product="cargo" type="button">E-Cargo</button>
       </div>
       <div class="product-copy" aria-live="polite">
         <span class="product-kicker">Aktuelle Auswahl</span>
@@ -298,7 +321,6 @@
     <aside class="final-card">
       <div class="label"><span>Gerade frei im Netz</span><span>● <span id="bike-counter-karte">…</span></span></div>
       <h2>Bereit, wenn du es bist.</h2>
-      <p>Finde das passende Rad an einer Station in deiner Nähe.</p>
       <a class="primary-cta" href="#map-section"><span>Live-Karte öffnen</span><span>↗</span></a>
     </aside>
 
@@ -310,7 +332,7 @@
       <span>Räder in deiner Nähe</span><span aria-hidden="true">↗</span>
     </a>
 
-    <div class="scroll-hint">Scrollen, um das Netz zu entdecken</div>
+    <div class="scroll-hint" aria-hidden="true"><span></span></div>
     <div class="progress-rail" aria-hidden="true"></div>
   </div>
 </section>
@@ -335,8 +357,6 @@
         <div class="section-header">
             <span class="eyebrow">Ablauf</span>
             <h2>So funktioniert eine Ausleihe</h2>
-            <p>Sie beginnt, wenn sich das Schloss öffnet, und endet, wenn du es wieder
-               schließt. Dazwischen zählt die Zeit — minutengenau.</p>
         </div>
         <div class="howto-grid" id="howto-grid">
             <!-- wird aus velocity.v_nutzungsschritt geladen -->
@@ -349,8 +369,7 @@
     <div class="section-header">
       <span class="eyebrow">Tarife</span>
       <h2>Drei Fahrradtypen, ein einfaches Prinzip</h2>
-      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis. Du siehst vor
-         der Fahrt, was sie kostet — und zahlst nie mehr als das Tagesmaximum deines Rades.</p>
+      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis.</p>
     </div>
 
     <!-- Der Fahrpreiszaehler stand frueher im Kopfbereich. Der ist
@@ -404,9 +423,6 @@
     <div class="container section-header">
         <span class="eyebrow">Karte</span>
         <h2>Was gerade frei ist</h2>
-        <p>Jede Scheibe ist eine Station und trägt die Zahl der Räder, die dort gerade frei
-           sind. Station auswählen, Fahrradtyp prüfen und die Ausleihe starten — für die
-           Ausleihe selbst brauchst du ein Konto.</p>
     </div>
 
     <div class="map-container-shadow">
@@ -424,9 +440,8 @@
             <p>Wähle links mindestens einen Typ, damit die Karte wieder Räder zeigt.</p>
             <button type="button" id="karte-alle-typen">Alle Typen anzeigen</button>
         </div>
-        <div class="karte-knoepfe" role="group" aria-label="Kartenausschnitt">
-            <button type="button" class="karte-zurueck" id="karte-zurueck" aria-pressed="true">Würzburg zeigen</button>
-            <button type="button" class="karte-zurueck" id="karte-netz" aria-pressed="false">Ganzes Netz</button>
+        <div class="karte-knoepfe">
+            <button type="button" class="karte-zurueck" id="karte-zurueck">Ganzes Netz zeigen</button>
         </div>
         <div class="karte-hinweis" id="karte-hinweis">Zum Zoomen in die Karte klicken</div>
     </div>
@@ -444,7 +459,6 @@
     </div>
 
     <p class="karte-stand container" id="karte-stand" role="status" aria-live="polite"></p>
-    <p class="karte-stand karte-ort container" id="karte-ort" role="status" aria-live="polite"></p>
 
     <div class="map-legend container">
         <div class="legend-item"><span class="legende-scheibe">7</span> Station — die Zahl nennt die freien Räder</div>
@@ -457,7 +471,7 @@
 
 <section id="faq" class="faq-section">
     <div class="container">
-        <div class="section-header"><span class="eyebrow">Fragen</span><h2>Häufige Fragen</h2><p>Zahlung, Parken, Studierendentarif und was bei einem Defekt passiert.</p></div>
+        <div class="section-header ohne-hinweis"><span class="eyebrow">Fragen</span><h2>Häufige Fragen</h2></div>
         <div class="faq-grid" id="faq-grid">
             <!-- wird aus velocity.v_faq geladen -->
         </div>
@@ -472,7 +486,7 @@
               <span class="brand brand-fuss" role="img" aria-label="VeloCity">VEL<i></i><span>CITY</span></span>
             </div>
             <p class="wortspiel">Velo · City · Velocity</p>
-            <p class="fuss-text">Das Leihradsystem für Würzburg und Schweinfurt. Einfach, smart, elektrisch.</p>
+            <p class="fuss-text">Das Leihradsystem für Würzburg.</p>
         </div>
         <div class="footer-col">
             <h4>Rechtliches</h4>
@@ -506,13 +520,13 @@
 <!-- Kopfbereich: Animationsmodell, WebGL-Morph, Steuerung -->
 <script src="velocity-scroll-model.js?v=22185d03"></script>
 <script src="velocity-bike-morph.js?v=7998427b"></script>
-<script src="hero.js?v=73db5fdc"></script>
+<script src="hero.js?v=bcdcea35"></script>
 
 <!-- App Scripts (Reihenfolge wichtig!) -->
 <script src="config.js?v=a7625464"></script>
 <script src="supabase.js?v=3f4d1cd4"></script>
 <script src="auth.js?v=61b78d72"></script>
-<script src="script.js?v=cef91a0f"></script>
+<script src="script.js?v=673f6440"></script>
 
 </body>
 </html>

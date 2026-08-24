@@ -90,8 +90,11 @@ pruefe('P2-03', 'scroll-margin-top' in C and 'zuAbschnitt' in J,
        'Sprungziele beruecksichtigen den festen Kopf und setzen den Fokus')
 pruefe('P2-04', 'clamp(180vh, 40vh + 250vw, 360vh)' in C,
        'Die Buehne ist mobil kurz und waechst stetig mit der Breite')
-pruefe('P2-05', 'Würzburg &amp; Schweinfurt' in H,
-       'Das Netz wird als Wuerzburg und Schweinfurt benannt')
+# Die Fassung vom 24.08. nannte "Wuerzburg & Schweinfurt". Schweinfurt ist
+# seither ausgegliedert - vierzig Kilometer ohne Verbindung sind kein Netz,
+# sondern zwei. Geprueft wird jetzt, dass keine Spur davon zurueckbleibt.
+pruefe('P2-05', 'Schweinfurt' not in H and 'Schweinfurt' not in J,
+       'Keine Spur von Schweinfurt mehr in der Oberflaeche')
 for zeile in re.findall(r'<span class="claim-line[^"]*">(.*?)</span>', H, flags=re.S):
     text = re.sub(r'<[^>]+>', '', zeile)
     pruefe('P2-06', not re.search(r'[a-zäöüß][A-ZÄÖÜ]', text),
@@ -132,7 +135,7 @@ print('\nGrundlagen')
 ids = re.findall(r'\bid="([^"]+)"', H)
 doppelt = {i for i in ids if ids.count(i) > 1}
 pruefe('HTML', not doppelt, f'Keine doppelten ids{" — " + ", ".join(sorted(doppelt)) if doppelt else ""}')
-pruefe('HTML', H.count('<h1') <= 2, 'Hoechstens die beiden Buehnen-Schlagzeilen als h1')
+pruefe('HTML', H.count('<h1') <= 3, 'Hoechstens die drei Buehnen-Schlagzeilen als h1')
 
 # =====================================================================
 # Regressionspruefung vom 24.08.2026, zweiter Durchgang
@@ -216,11 +219,17 @@ pruefe('P0-01', "name=\"rueckgabeart\"" in H,
 ALT = (WURZEL / 'db/aufbau/0013_altsystem_abloesen.sql')
 pruefe('P0-02', ALT.exists(), 'Der Altsystem-Trigger ist entschaerft (0013)')
 if ALT.exists():
-    quelle = ALT.read_text(encoding='utf-8')
-    pruefe('P0-02', 'exception when others' in quelle,
-           'Das Altsystem kann keine Registrierung mehr zu Fall bringen')
-    pruefe('P0-02', 'on conflict (email) do nothing' in quelle,
-           'Eine bekannte E-Mail laeuft nicht mehr in den Unique-Index')
+    # Ohne die Kommentare zu entfernen zaehlt die Erlaeuterung dessen,
+    # was frueher dort stand, als Befund - derselbe Fehler, den der
+    # Frontend-Pruefer schon einmal gemacht hat.
+    quelle = re.sub(r'--[^\n]*', '', ALT.read_text(encoding='utf-8'))
+    # Die Funktion ist inzwischen ein Leerlauf - sie legt gar keinen
+    # Altkunden mehr an. Damit kann sie weder eine Registrierung zu Fall
+    # bringen noch Anmeldungen fremder Projekte einsammeln.
+    pruefe('P0-02', 'insert into "cityBikesRental".kunde' not in quelle,
+           'Das Altsystem legt bei einer Anmeldung keinen Kunden mehr an')
+    pruefe('P0-02', 'Leerlauf' in quelle,
+           'Der Trigger auf der gemeinsamen auth.users tut nichts mehr')
 pruefe('P0-02', 'Database error saving new user' in AUTH,
        'Die Meldung bei vorhandenen Kundendaten ist verstaendlich')
 pruefe('P0-02', 'hilfe@velocity-wue.de' in AUTH,
@@ -253,6 +262,24 @@ pruefe('RECHT', "'entgeltart'" in RECHTE,
        'authenticated darf entgeltart lesen — sonst bleibt die Sicht leer')
 pruefe('LADEN', 'letzterLadeFehler' in (SRC / 'supabase.js').read_text(encoding='utf-8'),
        'Ein Ladefehler wird nicht mehr als leere Liste ausgegeben')
+
+print('\nOberflaeche — Floskeln und Netzgroesse (25.08.)')
+pruefe('TEXT', 'Jede Scheibe ist eine Station' not in H,
+       'Die erklaerende Bildunterschrift der Karte ist weg')
+pruefe('TEXT', 'Zahlung, Parken, Studierendentarif' not in H,
+       'Das Inhaltsverzeichnis ueber der FAQ ist weg')
+pruefe('TEXT', 'Finde das passende Rad an einer Station' not in H,
+       'Die Fuellzeile unter "Bereit, wenn du es bist" ist weg')
+pruefe('TEXT', 'Einfach, smart, elektrisch' not in H,
+       'Die Dreiwortformel im Fuss ist weg')
+pruefe('TEXT', 'Scrollen, um das Netz zu entdecken' not in H
+       and '@keyframes tippen' in C,
+       'Der Scrollhinweis ist ein Pfeil statt eines Satzes')
+produkt = re.search(r'<div class="product-tabs".*?</div>', H, flags=re.S)
+pruefe('TEXT', produkt and produkt.group().count('<button') == 3,
+       'Die Produktwahl fuehrt alle drei Fahrradtypen')
+pruefe('TEXT', 'live-zahl' in H and '.live-zahl b {' in C,
+       'Die Live-Zahl steht gross, nicht in Kleinversalien')
 
 print('\nHandarbeit — vom Pruefer nicht entscheidbar:')
 print('  · Registrierung gegen den echten Dienst durchspielen (Passworteingabe)')

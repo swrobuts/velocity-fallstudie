@@ -137,9 +137,9 @@ insert into velocity.faq_eintrag (frage, antwort, sortierung) values
   ('Wie kann ich bezahlen?',
    'Wir akzeptieren PayPal, Kreditkarte und SEPA-Lastschrift. Die Abrechnung erfolgt automatisch.', 1),
   ('Darf ich das Rad kurz parken?',
-   'Ja, absolut! Nutze in der App den Parkmodus. Die Miete läuft weiter, das Schloss verriegelt.', 2),
+   'Ja. Nutze in der App den Parkmodus: die Miete läuft weiter, das Schloss verriegelt.', 2),
   ('Gibt es Rabatte für Studierende?',
-   'Ja! Registriere dich einfach mit deiner Adresse @uni-wuerzburg.de für den Campus-Tarif.', 3),
+   'Registriere dich mit deiner Hochschuladresse für den Campus-Tarif.', 3),
   ('Was passiert bei einem Defekt?',
    'Melde den Schaden über die App. Wir beenden deine Miete sofort kostenfrei.', 4)
 on conflict (frage) do update
@@ -147,7 +147,7 @@ on conflict (frage) do update
 
 insert into velocity.nutzungsschritt (nummer, titel, beschreibung) values
   (1, 'App laden und finden',
-      'Registriere dich einmalig kostenlos. Finde in der Web-App oder nativen App das nächste freie Rad in deiner Nähe.'),
+      'Registriere dich einmalig kostenlos. Danach steht dir jedes freie Rad im Netz offen.'),
   (2, 'Scannen und losfahren',
       'Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss öffnet sich automatisch.'),
   (3, 'Parken und beenden',
@@ -192,15 +192,20 @@ on conflict (name) do update
 -- JavaScript der Karte; jetzt zeichnet die Karte, was hier steht.
 -- Reihenfolge im Typ polygon: (Laengengrad, Breitengrad).
 -- ---------------------------------------------------------------------
--- Zwei Gebiete, nicht eines. Drei Stationen liegen in Schweinfurt
--- (THWS-Campus); mit nur dem Wuerzburger Vieleck lagen sie ausserhalb
--- jedes Geschaeftsgebiets. Eine dort begonnene Fahrt haette sich nach
--- GR15 nirgends beenden lassen - auch nicht an der eigenen Station.
--- fn_im_geschaeftsgebiet fragt ueber exists, vertraegt also beliebig
--- viele Gebiete.
+-- EIN Gebiet. Es gab zeitweise ein zweites um Schweinfurt, weil der
+-- Altbestand dort drei Stationen fuehrte. Vierzig Kilometer Landschaft
+-- dazwischen machen daraus aber kein Netz, sondern zwei: ein Rad kann
+-- die Strecke nicht zuruecklegen, und jede Aussage ueber Verfuegbarkeit
+-- und Wege wird mehrdeutig. Schweinfurt wird deshalb bei der Uebernahme
+-- ausgelassen (siehe db/betrieb/uebernahme_altdaten.sql).
+--
+-- fn_im_geschaeftsgebiet fragt trotzdem ueber exists und vertraegt
+-- beliebig viele Gebiete - das Modell bleibt offen fuer eine echte
+-- Ausweitung, die dann ein zusammenhaengendes Netz waere.
 insert into velocity.geschaeftsgebiet (name, flaeche) values
   ('Würzburg',
-   polygon '((9.9100,49.8100),(9.9400,49.8150),(9.9850,49.7850),(9.9600,49.7750),(9.9300,49.7700),(9.9000,49.7850))'),
-  ('Schweinfurt',
-   polygon '((10.1900,50.0450),(10.2050,50.0700),(10.2500,50.0720),(10.2750,50.0480),(10.2550,50.0250),(10.2050,50.0230))')
+   polygon '((9.9100,49.8100),(9.9400,49.8150),(9.9850,49.7850),(9.9600,49.7750),(9.9300,49.7700),(9.9000,49.7850))')
 on conflict (name) do update set flaeche = excluded.flaeche;
+
+-- Ein frueher angelegtes Gebiet Schweinfurt wird wieder entfernt.
+delete from velocity.geschaeftsgebiet where name = 'Schweinfurt';

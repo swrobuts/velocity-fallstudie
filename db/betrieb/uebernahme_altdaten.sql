@@ -125,10 +125,27 @@ begin
                  greatest((select coalesce(max(substring(kundennummer from 3)::bigint), 0)
                              from velocity.kunde), 1));
 
-  -- 3 Adressen und Stationen -------------------------------------------
+  /* 3 Adressen und Stationen ------------------------------------------
+
+     GESCHAEFTSGEBIET IST WUERZBURG.
+
+     Der Altbestand fuehrt drei Stationen in Schweinfurt - vierzig
+     Kilometer entfernt, ohne Verbindung zum Wuerzburger Netz. Ein Rad
+     kann nicht in einer Minute von einer Stadt in die andere gelangen,
+     und ein Geschaeftsgebiet, das aus zwei getrennten Flaechen besteht,
+     macht jede Aussage ueber Verfuegbarkeit und Wege mehrdeutig.
+
+     Sie werden deshalb nicht uebernommen - zusammen mit ihren Raedern
+     und den Fahrten, die dort begannen oder endeten. Das ist eine
+     bewusste Entscheidung der Uebernahme, keine Panne; sie steht im
+     uebernahme_protokoll und im Abgleichsbericht.
+
+     Ausgelassen wird ueber den Ort, nicht ueber den Namen: eine Station
+     kann umbenannt werden, ihre Anschrift bleibt. */
   insert into velocity.adresse (strasse, hausnummer, plz, ort)
   select distinct s.strasse, coalesce(s.hausnummer, ''), s.plz, s.ort
     from "cityBikesRental".station s
+   where s.ort <> 'Schweinfurt'
   on conflict (strasse, hausnummer, plz, ort, land_code) do nothing;
 
   select count(*) into v_vorher from velocity.station;
@@ -146,13 +163,16 @@ begin
     join velocity.adresse a
       on a.strasse = s.strasse and a.hausnummer = coalesce(s.hausnummer, '')
      and a.plz = s.plz and a.ort = s.ort
+   where s.ort <> 'Schweinfurt'
   on conflict (stationsnummer) do nothing;
 
   select count(*) into v_nachher from velocity.station;
   insert into velocity.uebernahme_protokoll (lauf, quelle, ziel, gelesen, geschrieben, hinweis)
   values (v_lauf, 'cityBikesRental.station', 'velocity.station',
           (select count(*) from "cityBikesRental".station), v_nachher - v_vorher,
-          'Stationsnummer aus der alten station_id gebildet');
+          'Stationsnummer aus der alten station_id gebildet. '
+          || (select count(*) from "cityBikesRental".station where ort = 'Schweinfurt')::text
+          || ' Stationen in Schweinfurt bewusst ausgelassen: nicht im Geschaeftsgebiet');
 
   -- 4 Hersteller und Modelle -------------------------------------------
   -- Im Altbestand gibt es keine Modellangabe. Statt sie zu erfinden,
@@ -200,6 +220,9 @@ begin
                                  when 'E-Rad'     then 'Bestandsrad E-Bike'
                                  when 'LastenRad' then 'Bestandsrad Cargo'
                                end
+   -- Raeder, die in Schweinfurt stehen, bleiben mit ihrer Station drueben.
+   where not exists (select 1 from "cityBikesRental".station s
+                      where s.station_id = f.station_id and s.ort = 'Schweinfurt')
   on conflict (rahmennummer) do nothing;
 
   select count(*) into v_nachher from velocity.fahrrad;
@@ -299,7 +322,14 @@ begin
     join velocity.fahrrad nf on nf.rahmennummer = af.rahmennummer
     left join velocity.station nss on nss.stationsnummer = 'S-' || lpad(aa.start_station_id::text, 4, '0')
     left join velocity.station nes on nes.stationsnummer = 'S-' || lpad(aa.end_station_id::text,   4, '0')
-   where not exists (
+   -- Fahrten, die in Schweinfurt begannen oder endeten, gehoeren zu einem
+   -- Netz, das dieses Modell nicht kennt. Ohne diese Bedingung liefe der
+   -- LEFT JOIN auf NULL und die Zeile schlueg an ausleihe_startort_chk
+   -- fehl - eine Ausleihe hat genau EINEN Startort.
+   where not exists (select 1 from "cityBikesRental".station s
+                      where s.ort = 'Schweinfurt'
+                        and s.station_id in (aa.start_station_id, aa.end_station_id))
+     and not exists (
      select 1 from velocity.ausleihe va
       where va.kunde_id = nk.kunde_id and va.fahrrad_id = nf.fahrrad_id
         and va.startzeit = aa.startzeit at time zone 'Europe/Berlin');

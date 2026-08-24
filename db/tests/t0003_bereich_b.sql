@@ -271,16 +271,16 @@ begin
                  'Der Campus Hubland liegt im Geschäftsgebiet');
 
   -- Schweinfurt ist ein eigenes Gebiet. Dieser Test behauptete frueher
-  -- das Gegenteil und hielt damit den Fehler fest, statt ihn zu melden:
-  -- drei Stationen standen dort ausserhalb jeder Regel.
-  return next ok(velocity.fn_im_geschaeftsgebiet(50.0467, 10.2283),
-                 'Der Schweinfurter Hauptbahnhof liegt im Geschäftsgebiet');
-
-  -- Ausserhalb: Hoechberg, und die Landschaft zwischen beiden Staedten
+  -- Ausserhalb. Schweinfurt stand zwischenzeitlich als zweites Gebiet im
+  -- Modell, weil der Altbestand dort drei Stationen fuehrte. Vierzig
+  -- Kilometer ohne Verbindung sind aber kein Netz, sondern zwei; das
+  -- Gebiet ist seit dem 25.08.2026 wieder allein Wuerzburg.
   return next ok(not velocity.fn_im_geschaeftsgebiet(49.7900, 9.8800),
                  'Höchberg liegt außerhalb');
+  return next ok(not velocity.fn_im_geschaeftsgebiet(50.0467, 10.2283),
+                 'Schweinfurt liegt außerhalb');
   return next ok(not velocity.fn_im_geschaeftsgebiet(49.9200, 10.0500),
-                 'Das offene Land zwischen Würzburg und Schweinfurt liegt außerhalb');
+                 'Das offene Land nördlich von Würzburg liegt außerhalb');
 
   return next throws_ok(
     $sql$insert into velocity.geschaeftsgebiet (name, flaeche)

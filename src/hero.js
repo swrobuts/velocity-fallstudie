@@ -49,13 +49,34 @@
     };
 
     const productContent = {
-      city: ['Entspannt shoppen.', 'Noch entspannter nach Hause cruisen.'],
-      ebike: ['Wir liefern den Rückenwind.', 'Elektrische Unterstützung für Würzburgs Berge.']
+      city:  ['Entspannt shoppen.', 'Noch entspannter nach Hause cruisen.'],
+      ebike: ['Wir liefern den Rückenwind.', 'Elektrische Unterstützung für Würzburgs Berge.'],
+      cargo: ['Der Wocheneinkauf passt rein.', 'Bis 70 kg Zuladung, elektrisch unterstützt.']
     };
+
+    /* Der Loader nimmt am Ueberblenden nicht teil. Das Ueberblenden
+       verwandelt ein Rad in ein anderes; ein Lastenrad ist aber kein
+       Zwischenschritt zwischen City und E-Bike, sondern ein drittes
+       Fahrzeug. Es wird deshalb ein- und ausgeblendet, waehrend die
+       Buehne stillsteht - gesteuert ueber die Klasse is-cargo.
+
+       Angeboten werden drei Typen; wer nur zwei zur Wahl stellt, laesst
+       den dritten unter den Tisch fallen. */
+    const cargoClaim = document.querySelector('.claim-cargo');
+
+    function cargoSetzen(an) {
+      stage.classList.toggle('is-cargo', an);
+      if (cargoClaim) cargoClaim.setAttribute('aria-hidden', String(!an));
+      if (an) {
+        tabs.forEach(t => t.setAttribute('aria-pressed', String(t.dataset.product === 'cargo')));
+        productCopy.querySelector('strong').textContent = productContent.cargo[0];
+        productCopy.querySelector('small').textContent  = productContent.cargo[1];
+      }
+    }
 
     function renderProduct(product) {
       const selected = product === 'ebike' ? 'ebike' : 'city';
-      if (selected === renderedProduct) return;
+      if (selected === renderedProduct && !stage.classList.contains('is-cargo')) return;
       renderedProduct = selected;
       tabs.forEach(tab => tab.setAttribute('aria-pressed', String(tab.dataset.product === selected)));
       const [title, description] = productContent[selected];
@@ -127,6 +148,8 @@
     }
 
     function selectProduct(product, isManual = false) {
+      if (product === 'cargo') { cargoSetzen(true); return; }
+      cargoSetzen(false);
       const selected = product === 'ebike' ? 'ebike' : 'city';
       if (isManual) {
         animateManualProductChange(renderedProduct, selected);
@@ -178,6 +201,7 @@
     }
 
     function applyProgress(progress) {
+      if (stage.classList.contains('is-cargo')) cargoSetzen(false);
       state = getScrollState(progress);
       commitMotion(state);
       updateClaimVisibility(state);

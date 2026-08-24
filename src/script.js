@@ -710,12 +710,7 @@ document.addEventListener("DOMContentLoaded", async () => {
        Automatisierung, bei abgeschalteter Animation. Der Knopf sah dann
        aus, als tue er nichts: der Zustand wechselte, die Karte nicht.
        Ein Ortswechsel ist eine Navigation, keine Vorfuehrung. */
-    document.getElementById('karte-netz')?.addEventListener('click', () => {
-        if (!gebietFlaechen.length) return;
-        map.fitBounds(netzGrenzen(), { padding: [26, 26], animate: false });
-        ortMelden('Ganzes Netz: Würzburg und Schweinfurt.');
-        ortKnopfSetzen('netz');
-    });
+
     // light_all ist fast weiss - Strassen, Gruen und Wasser verschwinden
     // darin. Voyager bleibt hell, zeichnet die Stadt aber lesbar.
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -739,9 +734,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     async function geschaeftsgebietZeichnen() {
-        // Es gibt zwei Gebiete: Wuerzburg und Schweinfurt. Frueher zeichnete
-        // die Karte nur Wuerzburg - die drei Schweinfurter Stationen standen
-        // damit sichtbar ausserhalb jeder Regel.
+        // Das Geschaeftsgebiet ist Wuerzburg. fn_im_geschaeftsgebiet fragt
+        // ueber exists und vertraegt mehrere Gebiete; die Karte zeichnet
+        // deshalb alle, die die Datenbank liefert - heute eines.
         const gebiete = await fetchGeschaeftsgebiete();
         if (!gebiete.length) return;
         const stil = { color: '#f00038', fillColor: '#f00038', fillOpacity: 0.07,
@@ -756,9 +751,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Die Karte darf das Gebiet nicht verlassen. Ohne diese Grenze
         // landet man mit zwei Wischern in Fuchsstadt und findet nicht
         // zurueck - und genau das ist passiert.
-        // Die Grenze umfasst jetzt BEIDE Gebiete. Mit der alten Grenze um
-        // Wuerzburg allein waeren die drei Schweinfurter Stationen zwar
-        // gezeichnet, aber nicht erreichbar gewesen.
+        // Die Grenze umfasst alle gezeichneten Gebiete.
         const alle = netzGrenzen();
         map.setMaxBounds(alle.pad(0.25));
         map.setMinZoom(map.getBoundsZoom(alle) - 0.5);
@@ -954,11 +947,8 @@ document.addEventListener("DOMContentLoaded", async () => {
        Hier steckte ein boeser Fehler: getBounds() eines Vielecks liefert
        nicht eine Kopie, sondern das interne Objekt. Ein
            gebietFlaechen.reduce((b, f) => b.extend(f.getBounds()), …)
-       hat damit die Grenzen des ERSTEN Vielecks dauerhaft aufgeblaeht -
-       Wuerzburg umfasste danach auch Schweinfurt. Die Folge: der erste
-       Kartenausschnitt stimmte, jeder spaetere "Wuerzburg zeigen"-Klick
-       landete am Mindestzoom und zeigte beide Staedte. Von aussen sah es
-       aus, als taete der Knopf nichts.
+       blaeht damit die Grenzen des ERSTEN Vielecks dauerhaft auf. Solange
+       es zwei Gebiete gab, war der Ausschnitt danach dauerhaft falsch.
 
        L.latLngBounds([]) legt ein leeres Objekt an; extend fasst dort
        hinein, ohne die Vielecke anzufassen. */
@@ -966,20 +956,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         const grenzen = L.latLngBounds([]);
         gebietFlaechen.forEach(f => grenzen.extend(f.getBounds()));
         return grenzen;
-    }
-
-    /* Welche Ansicht gerade gilt, muss man sehen koennen - sonst wirkt
-       ein Knopf, der bereits aktiv ist, wie einer ohne Funktion. */
-    function ortKnopfSetzen(welcher) {
-        for (const [id, name] of [['karte-zurueck', 'wuerzburg'], ['karte-netz', 'netz']]) {
-            const k = document.getElementById(id);
-            if (k) k.setAttribute('aria-pressed', String(name === welcher));
-        }
-    }
-
-    function ortMelden(text) {
-        const el = document.getElementById('karte-ort');
-        if (el) el.textContent = text;
     }
 
     function gebietZeigen() {
@@ -1003,8 +979,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             const zu = Math.min(Math.log2(verhaeltnis / 1.4), 1.25);
             map.setZoom(map.getZoom() + Math.round(zu * 4) / 4, { animate: false });
         }
-        ortMelden('Würzburg — 10 Stationen im Geschäftsgebiet.');
-        ortKnopfSetzen('wuerzburg');
     }
 
     /* Wann traegt die Karte 45 einzelne Radsymbole zusaetzlich zu den 13
@@ -1455,10 +1429,10 @@ document.addEventListener("DOMContentLoaded", async () => {
            // Station auswaehlen (vorerst erste Station)
            const endStation = db_Stations[0];
 
-       Das "vorerst" hat drei Fassungen ueberlebt. db_Stations[0] ist
-       "Schweinfurt Markt"; eine Testfahrt vom Wuerzburger Marktplatz
-       wurde damit 40 Kilometer entfernt verbucht - in 57 Sekunden.
-       Falscher Bestand, falsche Position, unmoegliche Bewegungsdaten.
+       Das "vorerst" hat drei Fassungen ueberlebt. db_Stations[0] war
+       damals eine Station vierzig Kilometer entfernt; eine Testfahrt vom
+       Marktplatz wurde dort verbucht - in 57 Sekunden. Falscher Bestand,
+       falsche Position, unmoegliche Bewegungsdaten.
 
        Wo ein Rad abgestellt wird, ist eine fachliche Angabe. Sie wird
        jetzt erfragt: Station aus einer Liste, oder der eigene Standort
@@ -1518,11 +1492,11 @@ document.addEventListener("DOMContentLoaded", async () => {
        oben. Kennt sie ihn nicht, ist die Startstation der beste Anhalt -
        sie steht dann oben und ist vorausgewaehlt.
 
-       Der Grund: die Liste war alphabetisch, und ganz oben stand "Dom".
-       Eine Fahrt, die am Schweinfurter Markt begann, liess sich damit mit
-       einem Klick vierzig Kilometer entfernt zurueckgeben. Erlaubt ist
-       das - Raeder werden umgesetzt -, naheliegend nicht. Die Entfernung
-       steht jetzt bei jedem Eintrag, damit die Wahl bewusst faellt. */
+       Der Grund: die Liste war alphabetisch. Eine Fahrt liess sich damit
+       mit einem Klick am anderen Ende des Netzes zurueckgeben. Erlaubt
+       ist das - Raeder werden umgesetzt -, naheliegend nicht. Die
+       Entfernung steht jetzt bei jedem Eintrag, damit die Wahl bewusst
+       faellt. */
     function rueckgabeStationenFuellen() {
         const feld = document.getElementById('rueckgabe-station');
         if (!feld) return;
