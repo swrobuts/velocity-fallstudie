@@ -596,7 +596,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             <div class="pop-text">
               <strong>${escapeHtml(erstes.typ_bezeichnung)}</strong>
               <span class="pop-zahl">${raeder.length} frei</span>
-              <span class="pop-preis">${preis} für 30 Minuten${akku ? ' · ' : ''}</span>
+              <span class="pop-preis">${preis} / 30 Min</span>
               ${akku}
             </div>
             <button type="button" class="pop-leihen" data-rad="${bestes.fahrrad_id}">Leihen</button>
