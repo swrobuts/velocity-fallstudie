@@ -888,19 +888,22 @@ img { max-width: 100%; }
 
 .pop-typ {
   display: grid;
-  grid-template-columns: 66px 1fr auto;
+  grid-template-columns: 74px 1fr auto;
   align-items: center;
   gap: 13px;
   padding: 12px 18px;
   border-bottom: 1px solid var(--mist);
 }
+/* Die Raeder sind freigestellt: contain statt cover, damit das ganze
+   Rad zu sehen ist und nicht ein Ausschnitt davon. Weisser Grund, weil
+   die Freisteller auf Weiss stehen - so faellt keine Kante auf. */
 .pop-bild {
-  width: 66px; height: 44px;
+  width: 74px; height: 48px;
   overflow: hidden; border-radius: 2px;
-  background: var(--paper);
+  background: #fff;
   display: flex; align-items: center; justify-content: center;
 }
-.pop-bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pop-bild img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .pop-kein-bild { color: var(--grau-still); font-size: 17px; }
 .pop-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pop-text strong {
@@ -1166,8 +1169,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .profil .container { overflow-x: auto; }
   .profil-svg { min-width: 720px; }
   #map { height: clamp(420px, 66vh, 600px); }
-  .pop-typ { grid-template-columns: 54px 1fr auto; gap: 10px; padding: 11px 14px; }
-  .pop-bild { width: 54px; height: 38px; }
+  .pop-typ { grid-template-columns: 62px 1fr auto; gap: 10px; padding: 11px 14px; }
+  .pop-bild { width: 62px; height: 40px; }
 }
 
 @media (max-width: 520px) {
