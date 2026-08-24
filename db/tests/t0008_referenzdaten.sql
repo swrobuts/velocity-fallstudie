@@ -7,7 +7,9 @@ set search_path = velocity_test, velocity, extensions, public;
 create or replace function velocity_test.test_ref_entgeltarten()
 returns setof text language plpgsql as $$
 begin
-  return next is((select count(*)::int from velocity.entgeltart), 7,
+  -- Sechs, nicht sieben: der Zuschlag fuers freie Abstellen wurde
+  -- gestrichen, weil er nie erhoben wird.
+  return next is((select count(*)::int from velocity.entgeltart), 6,
                  'Es gibt sieben Entgeltarten');
   return next is((select vorzeichen from velocity.entgeltart where code = 'ZEITENTGELT'),
                  1::smallint, 'Zeitentgelt belastet');

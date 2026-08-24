@@ -620,7 +620,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>
             ${zeilen || '<p class="pop-leer">Gerade kein Rad des gewählten Typs hier.</p>'}
             <p class="pop-fuss">Nach dem Leihen öffnet sich das Schloss automatisch.
-               Abstellen an einer Station oder frei im rot umrandeten Geschäftsgebiet.</p>
+               Abstellen an einer Station oder frei im Geschäftsgebiet — ohne Zuschlag.</p>
           </div>`;
     }
 

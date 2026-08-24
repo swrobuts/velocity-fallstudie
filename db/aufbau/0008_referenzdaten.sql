@@ -18,10 +18,27 @@ insert into velocity.entgeltart (code, bezeichnung, vorzeichen) values
   ('FREIMINUTEN',               'Gutschrift Freiminuten',               -1),
   ('TARIFRABATT',               'Tarifrabatt',                          -1),
   ('HOECHSTPREIS_KAPPUNG',      'Kappung auf Tageshöchstpreis',        -1),
-  ('ZUSCHLAG_FREIES_ABSTELLEN', 'Zuschlag Abstellen außerhalb Station', 1),
   ('BESTANDSUEBERNAHME',        'Übernahme aus dem Altbestand',         1)
 on conflict (code) do update
   set bezeichnung = excluded.bezeichnung, vorzeichen = excluded.vorzeichen;
+
+-- Entfaellt: ZUSCHLAG_FREIES_ABSTELLEN.
+--
+-- Der Entwurf sah einen Zuschlag fuers Abstellen ausserhalb einer
+-- Station vor. Die Entgeltart stand seither in der Tabelle, wurde aber
+-- von der Geschaeftslogik nie erzeugt: die Seite versprach eine Gebuehr,
+-- das System berechnete keine. Entschieden wurde gegen den Zuschlag -
+-- Abstellen im Geschaeftsgebiet ist kostenfrei. Damit verschwindet die
+-- Art auch aus dem Modell, statt als Karteileiche eine Regel zu
+-- behaupten, die es nicht gibt.
+--
+-- Nur loeschen, wenn wirklich nichts darauf verweist. Ein Fremdschluessel
+-- aus entgeltposition wuerde das Loeschen ohnehin abweisen (on delete
+-- restrict); die Bedingung macht den Block wiederholbar.
+delete from velocity.entgeltart a
+ where a.code = 'ZUSCHLAG_FREIES_ABSTELLEN'
+   and not exists (select 1 from velocity.entgeltposition e
+                    where e.entgeltart_id = a.entgeltart_id);
 
 insert into velocity.zahlungsart (code, bezeichnung) values
   ('SEPA',        'SEPA-Lastschrift'),
@@ -136,7 +153,7 @@ insert into velocity.nutzungsschritt (nummer, titel, beschreibung, icon_code) va
       'Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss öffnet sich automatisch.',
       'fa-qrcode'),
   (3, 'Parken und beenden',
-      'Stelle das Rad an einer Station ab oder frei im rot umrandeten Geschäftsgebiet. Schloss schließen, fertig.',
+      'Stelle das Rad an einer Station ab oder frei im rot umrandeten Geschäftsgebiet — beides ohne Zuschlag. Schloss schließen, fertig.',
       'fa-square-parking')
 on conflict (nummer) do update
   set titel = excluded.titel, beschreibung = excluded.beschreibung, icon_code = excluded.icon_code;

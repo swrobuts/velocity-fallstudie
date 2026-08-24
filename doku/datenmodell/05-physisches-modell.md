@@ -58,7 +58,7 @@ aufwendig, und eine Sortierreihenfolge lässt sich nicht nachträglich
 
 Naheliegend wäre `start_station_id NOT NULL`. Das wäre falsch: die
 Fallstudie kennt **zwei** Abstellarten — an einer Station oder frei im
-Stadtgebiet gegen Zuschlag. Gefordert ist also nicht „vorhanden", sondern
+Stadtgebiet. Gefordert ist also nicht „vorhanden", sondern
 „genau eines von beiden", und das kann nur ein `CHECK` ausdrücken:
 
 ```sql

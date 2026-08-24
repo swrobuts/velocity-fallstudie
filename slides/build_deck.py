@@ -155,7 +155,7 @@ def baue() -> Presentation:
           "E-Cargo Loader, bis 100 kg Zuladung"]),
         ("Zwei Abstellarten",
          ["An einer festen Station, kostenfrei",
-          "Frei im Stadtgebiet gegen Zuschlag",
+          "Frei im Stadtgebiet, ohne Zuschlag",
           "Beides muss das Modell abbilden"]),
         ("Vier Tarife",
          ["Basis ohne Freiminuten",
