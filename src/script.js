@@ -46,42 +46,145 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    // ===== MODAL FUNKTIONEN =====
-    function openModal() {
-        modal.style.display = "flex";
-        document.querySelector('.auth-tab[data-target="login-form"]').click();
+    /* =================================================================
+       ANMELDEDIALOG
+
+       Vorher: ein div, das aussah wie ein Dialog. Der Fokus blieb beim
+       Oeffnen hinter dem Overlay auf "Login", Escape tat nichts, der
+       Hintergrund scrollte weiter, die Reiter waren divs ohne Tastatur.
+       Und nach dem Absenden blieb nur ein Toast, der nach drei Sekunden
+       verschwand - bei der Registrierung also praktisch keine Antwort.
+
+       Jetzt: Fokus wandert hinein, eine Falle haelt ihn drin, Escape
+       schliesst, der Fokus kehrt zurueck, der Hintergrund steht still.
+       Das Ergebnis bleibt als Zustand im Dialog stehen.
+       ================================================================= */
+    const statusFeld = document.getElementById('auth-status');
+    const reiter     = Array.from(document.querySelectorAll('.auth-tab'));
+    let ruecksprung  = null;   // wohin der Fokus nach dem Schliessen geht
+
+    function fokussierbare() {
+        return Array.from(modal.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )).filter(el => !el.hidden && el.offsetParent !== null && !el.disabled);
+    }
+
+    function statusZeigen(art, text, aktion) {
+        if (!statusFeld) return;
+        statusFeld.hidden = false;
+        statusFeld.className = 'auth-status ist-' + art;
+        statusFeld.innerHTML = `<span>${escapeHtml(text)}</span>` +
+            (aktion ? `<button type="button" class="auth-link" id="auth-status-aktion">${escapeHtml(aktion.text)}</button>` : '');
+        if (aktion) {
+            document.getElementById('auth-status-aktion').addEventListener('click', aktion.tun);
+        }
+    }
+
+    function statusLeeren() {
+        if (!statusFeld) return;
+        statusFeld.hidden = true;
+        statusFeld.textContent = '';
+        statusFeld.className = 'auth-status';
+    }
+
+    function reiterWaehlen(ziel) {
+        reiter.forEach(t => {
+            const aktiv = t.dataset.target === ziel;
+            t.classList.toggle('active', aktiv);
+            t.setAttribute('aria-selected', String(aktiv));
+            t.tabIndex = aktiv ? 0 : -1;
+        });
+        document.querySelectorAll('.auth-form').forEach(form => {
+            const aktiv = form.id === ziel;
+            form.classList.toggle('active', aktiv);
+            form.hidden = !aktiv;
+        });
+        statusLeeren();
+    }
+
+    function openModal(ziel) {
+        ruecksprung = document.activeElement;
+        modal.style.display = 'flex';
+        document.body.classList.add('dialog-offen');
+        reiterWaehlen(ziel || 'login-form');
+        // Der Fokus gehoert in den Dialog, nicht dahinter.
+        const erstes = modal.querySelector('.auth-form.active input');
+        (erstes || reiter[0]).focus();
     }
 
     function closeModal() {
-        modal.style.display = "none";
+        modal.style.display = 'none';
+        document.body.classList.remove('dialog-offen');
+        statusLeeren();
+        if (ruecksprung && document.contains(ruecksprung)) ruecksprung.focus();
+        ruecksprung = null;
     }
 
-    closeBtn.addEventListener("click", closeModal);
-    window.addEventListener("click", (e) => { if (e.target == modal) closeModal(); });
+    function dialogOffen() { return modal.style.display === 'flex'; }
 
-    // Tab-Wechsel
-    document.querySelectorAll(".auth-tab").forEach(tab => {
-        tab.addEventListener("click", () => {
-            document.querySelectorAll(".auth-tab").forEach(t => t.classList.remove("active"));
-            tab.classList.add("active");
-            const targetId = tab.getAttribute("data-target");
-            document.querySelectorAll(".auth-form").forEach(form => {
-                form.classList.remove("active");
-                if (form.id === targetId) form.classList.add("active");
-            });
+    closeBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    document.addEventListener('keydown', (e) => {
+        if (!dialogOffen()) return;
+        if (e.key === 'Escape') { e.preventDefault(); closeModal(); return; }
+        if (e.key !== 'Tab') return;
+        // Fokusfalle: am Rand umklappen statt hinter das Overlay zu laufen.
+        const liste = fokussierbare();
+        if (!liste.length) return;
+        const erst = liste[0], letzt = liste[liste.length - 1];
+        if (e.shiftKey && document.activeElement === erst) { e.preventDefault(); letzt.focus(); }
+        else if (!e.shiftKey && document.activeElement === letzt) { e.preventDefault(); erst.focus(); }
+    });
+
+    // Reiter: Klick und Pfeiltasten, wie es das Tab-Muster verlangt.
+    reiter.forEach((tab, i) => {
+        tab.addEventListener('click', () => reiterWaehlen(tab.dataset.target));
+        tab.addEventListener('keydown', (e) => {
+            const schritt = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1
+                          : e.key === 'Home' ? -i : e.key === 'End' ? reiter.length - 1 - i : 0;
+            if (!schritt && e.key !== 'Home' && e.key !== 'End') return;
+            e.preventDefault();
+            const naechst = reiter[(i + schritt + reiter.length) % reiter.length];
+            reiterWaehlen(naechst.dataset.target);
+            naechst.focus();
         });
     });
 
+    // Passwort sichtbar machen - sonst tippt man blind und wiederholt sich.
+    document.querySelectorAll('.passwort-zeigen').forEach(knopf => {
+        knopf.addEventListener('click', () => {
+            const feld = document.getElementById(knopf.dataset.feld);
+            const zeigen = feld.type === 'password';
+            feld.type = zeigen ? 'text' : 'password';
+            knopf.textContent = zeigen ? 'Verbergen' : 'Zeigen';
+            knopf.setAttribute('aria-pressed', String(zeigen));
+        });
+    });
+
+    // Ein Formular waehrend der Anfrage stillstellen.
+    function formSperren(form, gesperrt, text) {
+        const knopf = form.querySelector('button[type="submit"]');
+        form.querySelectorAll('input, button').forEach(el => el.disabled = gesperrt);
+        if (knopf) {
+            if (gesperrt) { knopf.dataset.text = knopf.textContent; knopf.textContent = text; }
+            else if (knopf.dataset.text) { knopf.textContent = knopf.dataset.text; }
+        }
+    }
+
     // ===== LOGIN HANDLER =====
-    document.getElementById("login-form").addEventListener("submit", async (e) => {
+    const loginForm = document.getElementById('login-form');
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById("login-email").value;
-        const password = document.getElementById("login-password").value;
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+        statusLeeren();
+        formSperren(loginForm, true, 'Wird geprüft …');
 
         try {
             await login(email, password);
             closeModal();
-            Toastify({ text: "Willkommen zurück!", backgroundColor: "#10B981" }).showToast();
+            Toastify({ text: 'Willkommen zurück!', backgroundColor: '#10B981' }).showToast();
 
             if (pendingReservationBikeId) {
                 setTimeout(() => {
@@ -90,22 +193,49 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }, 500);
             }
         } catch (error) {
-            Toastify({ text: error.message, backgroundColor: "#EF4444" }).showToast();
+            // Bleibt stehen. Ein Toast waere nach drei Sekunden weg.
+            statusZeigen('fehler', error.message);
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-password').focus();
+        } finally {
+            formSperren(loginForm, false);
+        }
+    });
+
+    // Neues Passwort anfordern - bisher gab es gar keinen Weg zurueck.
+    document.getElementById('passwort-vergessen')?.addEventListener('click', async () => {
+        const feld = document.getElementById('login-email');
+        const email = feld.value.trim();
+        if (!email) {
+            statusZeigen('hinweis', 'Trage zuerst deine E-Mail-Adresse ein.');
+            feld.focus();
+            return;
+        }
+        try {
+            await passwortZuruecksetzen(email);
+            statusZeigen('erfolg',
+                `Wir haben eine E-Mail an ${email} geschickt. Darin steht der Link, mit dem du ein neues Passwort setzt.`);
+        } catch (error) {
+            statusZeigen('fehler', error.message);
         }
     });
 
     // ===== REGISTER HANDLER =====
-    document.getElementById("register-form").addEventListener("submit", async (e) => {
+    const regForm = document.getElementById('register-form');
+    regForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const vorname = document.getElementById("reg-vorname").value;
-        const nachname = document.getElementById("reg-nachname").value;
-        const email = document.getElementById("reg-email").value;
-        const password = document.getElementById("reg-password").value;
+        const vorname  = document.getElementById('reg-vorname').value.trim();
+        const nachname = document.getElementById('reg-nachname').value.trim();
+        const email    = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+        statusLeeren();
+        formSperren(regForm, true, 'Konto wird angelegt …');
 
         try {
             await register(email, password, vorname, nachname);
+            // Angemeldet und fertig: der Dialog darf zu.
             closeModal();
-            Toastify({ text: "Konto erstellt! Willkommen bei VeloCity!", backgroundColor: "#10B981" }).showToast();
+            Toastify({ text: 'Konto erstellt. Willkommen bei VeloCity!', backgroundColor: '#10B981' }).showToast();
 
             if (pendingReservationBikeId) {
                 setTimeout(() => {
@@ -115,10 +245,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         } catch (error) {
             if (error.message === 'EMAIL_CONFIRMATION_REQUIRED') {
-                Toastify({ text: "Konto erstellt! Bitte bestätigen Sie Ihre E-Mail.", backgroundColor: "#F59E0B", duration: 6000 }).showToast();
+                // Genau der Fall, der vorher wie ein Fehlschlag aussah: das
+                // Konto ist da, es fehlt nur die Bestaetigung. Der Dialog
+                // bleibt offen und sagt, was als Naechstes zu tun ist.
+                regForm.reset();
+                statusZeigen('erfolg',
+                    `Konto angelegt. Wir haben eine Bestätigung an ${email} geschickt — öffne den Link darin, dann kannst du dich anmelden.`,
+                    { text: 'Zur Anmeldung', tun: () => {
+                        reiterWaehlen('login-form');
+                        document.getElementById('login-email').value = email;
+                        document.getElementById('login-password').focus();
+                    }});
             } else {
-                Toastify({ text: error.message, backgroundColor: "#EF4444" }).showToast();
+                statusZeigen('fehler', error.message);
+                document.getElementById('reg-email').focus();
             }
+        } finally {
+            formSperren(regForm, false);
         }
     });
 
@@ -197,13 +340,65 @@ document.addEventListener("DOMContentLoaded", async () => {
                             `<li><i class="fa-solid fa-check"></i> ${escapeHtml(m)}</li>`).join('')}
                     </ul>
                 </div>
-                <button class="${hervor ? 'btn-primary' : 'btn-outline'} full-width"
-                        onclick="document.getElementById('map-section').scrollIntoView()">
-                    Fahrt starten
+                <button type="button" data-typ="${escapeHtml(k.typ_code)}"
+                        class="karte-mit-typ ${hervor ? 'btn-primary' : 'btn-outline'} full-width">
+                    ${escapeHtml(k.bezeichnung)} auf der Karte zeigen
                 </button>
             </div>`;
         }).join('');
     }
+
+    /* Der Knopf hiess auf allen drei Karten "Fahrt starten" und startete
+       nichts - er sprang zur Karte und vergass dabei die Wahl, die man
+       gerade getroffen hatte. Jetzt heisst er, was er tut, setzt den
+       Filter und fuehrt den Fokus auf die Kartenueberschrift. */
+    document.addEventListener('click', (e) => {
+        const knopf = e.target.closest('.karte-mit-typ');
+        if (!knopf) return;
+        const kurz = TYP_FILTER[knopf.dataset.typ];
+        if (kurz) {
+            checkboxes.forEach(cb => cb.checked = (cb.value === kurz));
+            karteZeichnen();
+        }
+        zuAbschnitt('map-section');
+    });
+
+    /* Sprungziel sauber ansteuern: der Kopf ist fest und 92 px hoch, die
+       Ueberschrift lag danach darunter. scroll-margin-top im Stil regelt
+       das Sichtbare, der Fokus hier das Hoerbare. */
+    const wenigBewegung = matchMedia('(prefers-reduced-motion: reduce)');
+
+    function zuAbschnitt(id) {
+        const abschnitt = document.getElementById(id);
+        if (!abschnitt) return;
+
+        const vorher = window.scrollY;
+        const sanft = !wenigBewegung.matches;
+        abschnitt.scrollIntoView({ behavior: sanft ? 'smooth' : 'auto', block: 'start' });
+
+        // Sanftes Scrollen haengt an requestAnimationFrame. Laeuft das
+        // nicht - in einem Hintergrundtab, unter einer Automatisierung,
+        // bei abgeschalteter Animation -, bleibt die Seite einfach
+        // stehen und der Sprung fuehrt ins Leere. Deshalb wird
+        // nachgesehen und notfalls hart gesprungen.
+        if (sanft) {
+            setTimeout(() => {
+                if (Math.abs(window.scrollY - vorher) < 4 &&
+                    Math.abs(abschnitt.getBoundingClientRect().top) > 140) {
+                    abschnitt.scrollIntoView({ behavior: 'auto', block: 'start' });
+                }
+            }, 350);
+        }
+
+        const titel = abschnitt.querySelector('h1, h2');
+        if (titel) {
+            titel.setAttribute('tabindex', '-1');
+            // Erst nach dem Scrollen fokussieren, sonst springt der Browser
+            // ein zweites Mal und landet wieder oben.
+            setTimeout(() => titel.focus({ preventScroll: true }), 520);
+        }
+    }
+    window.zuAbschnitt = zuAbschnitt;
 
     async function renderFaq() {
         const ziel = document.getElementById('faq-grid');
@@ -241,14 +436,52 @@ document.addEventListener("DOMContentLoaded", async () => {
                  gekappt: roh > deckel };
     }
 
-    function rechnerZeichnen() {
+    // Eine Grenze, an die sich beide Bedienelemente halten. Vorher stand
+    // 1440 am Feld und 240 am Regler; bei 1440 zeigte das Feld 1440 und der
+    // Regler sprang auf 144 - zwei Zustaende fuer eine Eingabe.
+    const MIN_MINUTEN = 1;
+    const MAX_MINUTEN = 1440;
+
+    function minutenLesen() {
+        const feld = document.getElementById('meter-minuten');
+        const roh = Number(feld.value);
+        if (!Number.isFinite(roh) || feld.value.trim() === '') return null;
+        return Math.round(roh);
+    }
+
+    /* Der eingegebene Wert wird sichtbar zurechtgerueckt, nicht still
+       ersetzt. Vorher blieb "-5" im Feld stehen, waehrend intern mit 1
+       gerechnet wurde - bei Preisen ist das nicht hinnehmbar. */
+    function minutenSetzen(wert, ausFeld) {
+        const feld   = document.getElementById('meter-minuten');
+        const regler = document.getElementById('meter-regler');
+        const hinweis = document.getElementById('meter-grenze');
+        let minuten = wert;
+        let korrigiert = false;
+
+        if (minuten === null) { minuten = MIN_MINUTEN; korrigiert = ausFeld; }
+        if (minuten < MIN_MINUTEN) { minuten = MIN_MINUTEN; korrigiert = true; }
+        if (minuten > MAX_MINUTEN) { minuten = MAX_MINUTEN; korrigiert = true; }
+
+        if (String(feld.value) !== String(minuten)) feld.value = minuten;
+        regler.value = minuten;
+
+        if (hinweis) {
+            hinweis.textContent = korrigiert
+                ? `Möglich sind ${MIN_MINUTEN} bis ${MAX_MINUTEN} Minuten — auf ${minuten} gesetzt.`
+                : `${MIN_MINUTEN} bis ${MAX_MINUTEN} Minuten`;
+            hinweis.classList.toggle('ist-korrigiert', korrigiert);
+        }
+        return minuten;
+    }
+
+    function rechnerZeichnen(minuten) {
         const wert   = document.getElementById('meter-value');
         const posten = document.getElementById('meter-detail');
-        const feld   = document.getElementById('meter-minuten');
         if (!wert || !rechnerTarife.length) return;
 
         const t = rechnerTarife[rechnerAktiv];
-        const minuten = Math.max(1, Math.min(1440, Number(feld.value) || 1));
+        if (minuten === undefined) minuten = Number(document.getElementById('meter-regler').value);
         const r = rechnerBetrag(t, minuten);
 
         wert.textContent = r.betrag.toLocaleString('de-DE',
@@ -265,6 +498,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         posten.innerHTML = zeilen.map(([b, w], i) =>
             `<li${i === zeilen.length - 1 && r.gekappt ? ' class="ist-abzug"' : ''}>
                <span>${escapeHtml(b)}</span><b>${escapeHtml(w)}</b></li>`).join('');
+    }
+
+    function markenZeichnen() {
+        const jetzt = Number(document.getElementById('meter-regler').value);
+        document.querySelectorAll('.rechner-marken button').forEach(b =>
+            b.setAttribute('aria-pressed', String(Number(b.dataset.minuten) === jetzt)));
     }
 
     function rechnerTypenZeichnen() {
@@ -297,14 +536,32 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const feld   = document.getElementById('meter-minuten');
         const regler = document.getElementById('meter-regler');
+
+        // Waehrend des Tippens nur mitrechnen, nicht hineinregieren -
+        // sonst kann man "120" nicht eingeben, ohne bei "1" gestoert zu
+        // werden. Zurechtgerueckt wird beim Verlassen des Feldes.
         feld.addEventListener('input', () => {
-            if (Number(feld.value) <= Number(regler.max)) regler.value = feld.value;
-            rechnerZeichnen();
+            const m = minutenLesen();
+            if (m !== null && m >= MIN_MINUTEN && m <= MAX_MINUTEN) {
+                regler.value = m;
+                rechnerZeichnen(m);
+            }
         });
-        regler.addEventListener('input', () => { feld.value = regler.value; rechnerZeichnen(); });
+        feld.addEventListener('change', () => rechnerZeichnen(minutenSetzen(minutenLesen(), true)));
+        feld.addEventListener('blur',   () => rechnerZeichnen(minutenSetzen(minutenLesen(), true)));
+        regler.addEventListener('input', () => rechnerZeichnen(minutenSetzen(Number(regler.value))));
+
+        document.querySelectorAll('.rechner-marken button').forEach(b => {
+            b.addEventListener('click', () => {
+                rechnerZeichnen(minutenSetzen(Number(b.dataset.minuten)));
+                markenZeichnen();
+            });
+        });
 
         rechnerTypenZeichnen();
-        rechnerZeichnen();
+        minutenSetzen(30);
+        rechnerZeichnen(30);
+        markenZeichnen();
     }
 
     async function renderInhalte() {
@@ -342,6 +599,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Die Bezugshoehen fuers Popover, einmal geladen.
             if (!hoehenMarken.length) hoehenMarken = await fetchHoehenmarken();
             if (!geschaeftsgebiet) await geschaeftsgebietZeichnen();
+
+            standZeit = Date.now();
+            standSchreiben();
 
             console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrräder`);
             return true;
@@ -383,8 +643,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Zurueck aufs Gebiet: in der Karte und ueber den Verweis oben.
     document.getElementById('karte-zurueck')?.addEventListener('click', gebietZeigen);
-    document.querySelectorAll('a[href="#map-section"]').forEach(a =>
-        a.addEventListener('click', () => setTimeout(gebietZeigen, 400)));
+    document.getElementById('karte-netz')?.addEventListener('click', () => {
+        if (!gebietFlaechen.length) return;
+        const alle = gebietFlaechen.reduce((b, f) => b ? b.extend(f.getBounds()) : f.getBounds(), null);
+        map.fitBounds(alle, { padding: [26, 26] });
+    });
     // light_all ist fast weiss - Strassen, Gruen und Wasser verschwinden
     // darin. Voyager bleibt hell, zeichnet die Stadt aber lesbar.
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
@@ -397,7 +660,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Regel, die die Datenbank nicht kannte. Jetzt ist es umgekehrt: die
     // Datenbank haelt die Regel und setzt sie beim Beenden einer Fahrt
     // durch, die Karte zeichnet nur noch nach.
-    let geschaeftsgebiet = null;
+    let geschaeftsgebiet = null;   // Wuerzburg: der Ausschnitt beim Start
+    let gebietFlaechen = [];       // alle Gebiete, fuer die Gesamtansicht
 
     // Der Typ polygon kommt als Text: ((Laenge,Breite),(Laenge,Breite),…)
     // Leaflet will [Breite, Laenge] - deshalb wird gedreht.
@@ -407,19 +671,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     async function geschaeftsgebietZeichnen() {
+        // Es gibt zwei Gebiete: Wuerzburg und Schweinfurt. Frueher zeichnete
+        // die Karte nur Wuerzburg - die drei Schweinfurter Stationen standen
+        // damit sichtbar ausserhalb jeder Regel.
         const gebiete = await fetchGeschaeftsgebiete();
-        const wue = gebiete.find(g => g.name === 'Würzburg') || gebiete[0];
-        if (!wue) return;
-        geschaeftsgebiet = L.polygon(umrissLesen(wue.umriss), {
-            color: '#f00038', fillColor: '#f00038', fillOpacity: 0.07,
-            weight: 2.5, dashArray: '8, 6', lineJoin: 'round'
-        }).addTo(map);
+        if (!gebiete.length) return;
+        const stil = { color: '#f00038', fillColor: '#f00038', fillOpacity: 0.07,
+                       weight: 2.5, dashArray: '8, 6', lineJoin: 'round' };
+        gebietFlaechen = gebiete.map(g =>
+            L.polygon(umrissLesen(g.umriss), stil).addTo(map).bindTooltip(
+                `Geschäftsgebiet ${g.name}`, { sticky: true }));
+
+        const wue = gebiete.findIndex(g => g.name === 'Würzburg');
+        geschaeftsgebiet = gebietFlaechen[wue >= 0 ? wue : 0];
         gebietZeigen();
         // Die Karte darf das Gebiet nicht verlassen. Ohne diese Grenze
         // landet man mit zwei Wischern in Fuchsstadt und findet nicht
         // zurueck - und genau das ist passiert.
-        map.setMaxBounds(geschaeftsgebiet.getBounds().pad(0.45));
-        map.setMinZoom(map.getZoom() - 1);
+        // Die Grenze umfasst jetzt BEIDE Gebiete. Mit der alten Grenze um
+        // Wuerzburg allein waeren die drei Schweinfurter Stationen zwar
+        // gezeichnet, aber nicht erreichbar gewesen.
+        const alle = gebietFlaechen.reduce((b, f) => b ? b.extend(f.getBounds()) : f.getBounds(), null);
+        map.setMaxBounds(alle.pad(0.25));
+        map.setMinZoom(map.getBoundsZoom(alle) - 0.5);
         karteEingepasst = true;
     }
 
@@ -448,6 +722,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
     // Die Filterwerte im HTML sind kurz, der Fachschluessel ist lang.
     const TYP_FILTER = { CITY: 'city', EBIKE: 'ebike', CARGO: 'cargo' };
+    const TYP_NAME = { city: 'City-Bike', ebike: 'E-Bike Sport', cargo: 'E-Cargo Loader' };
 
     const checkboxes = document.querySelectorAll('.filter-option input');
 
@@ -468,7 +743,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     /* Eine Zeile im Popover: Bild, Name, Zahl, Preis, Schaltflaeche. */
-    function typZeile(typCode, raeder) {
+    function typZeile(typCode, raeder, ort) {
         const erstes = raeder[0];
         const bild = TYP_BILD[typCode];
         const preis = erstes.preis_pro_minute
@@ -504,7 +779,8 @@ document.addEventListener("DOMContentLoaded", async () => {
               <span class="pop-preis">${preis} / 30 Min</span>
               ${akku}
             </div>
-            <button type="button" class="pop-leihen" data-rad="${bestes.fahrrad_id}">Leihen</button>
+            <button type="button" class="pop-leihen" data-rad="${bestes.fahrrad_id}"
+                    aria-label="${escapeHtml(erstes.typ_bezeichnung)} ${escapeHtml(ort || '')} leihen">Leihen</button>
           </div>`;
     }
 
@@ -532,7 +808,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             nachTyp.get(r.typ_code).push(r);
         }
         const reihenfolge = ['CITY', 'EBIKE', 'CARGO'].filter(t => nachTyp.has(t));
-        const zeilen = reihenfolge.map(t => typZeile(t, nachTyp.get(t))).join('');
+        const ort = 'an der Station ' + station.name;
+        const zeilen = reihenfolge.map(t => typZeile(t, nachTyp.get(t), ort)).join('');
 
         return `
           <div class="pop">
@@ -557,7 +834,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <strong>${escapeHtml(rad.typ_bezeichnung)}</strong>
               <span class="pop-adresse">Rahmennummer ${escapeHtml(rad.rahmennummer)}</span>
             </div>
-            ${typZeile(rad.typ_code, [rad])}
+            ${typZeile(rad.typ_code, [rad], 'mit der Rahmennummer ' + rad.rahmennummer)}
             <p class="pop-fuss">Nach dem Leihen öffnet sich das Schloss automatisch.</p>
           </div>`;
     }
@@ -617,6 +894,40 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    /* Wann traegt die Karte 45 einzelne Radsymbole zusaetzlich zu den 13
+       Stationsscheiben? Auf 390 px nicht: dort entsteht ein Markerteppich
+       ohne Rangfolge, in dem die Stationen untergehen. Auf einem breiten
+       Rahmen sehr wohl - dort ist die Verteilung gerade die Aussage.
+
+       Die Schwelle haengt deshalb an der Rahmenbreite, nicht allein am
+       Zoom. Wer auf dem Telefon hineinzoomt, bekommt die Einzelraeder
+       trotzdem: dann ist genug Platz je Rad da. */
+    const KARTE_TRAEGT_AB = 700;   // Rahmenbreite in Punkten
+    const FREIE_AB_ZOOM   = 14.5;  // sonst erst ab dieser Zoomstufe
+
+    function freieSichtbar() {
+        return map.getContainer().clientWidth >= KARTE_TRAEGT_AB
+            || map.getZoom() >= FREIE_AB_ZOOM;
+    }
+
+    /* Jeder Marker braucht einen Namen. Vorher trugen die 13 Stationen
+       einen title und die 45 freien Raeder gar nichts - fuer einen
+       Screenreader 45 mal "Schaltflaeche". */
+    function markerBenennen(marker, name) {
+        marker.options.title = name;
+        const el = marker.getElement();
+        if (el) {
+            el.setAttribute('aria-label', name);
+            el.setAttribute('title', name);
+            el.setAttribute('role', 'button');
+        }
+    }
+
+    function standMelden(text) {
+        const el = document.getElementById('karte-stand');
+        if (el) el.textContent = text;
+    }
+
     function karteZeichnen() {
         stationLayer.clearLayers();
         bikeLayer.clearLayers();
@@ -636,28 +947,67 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         }
 
-        const punkte = [];
+        let stationenMitRad = 0;
         for (const station of db_Stations) {
             if (!station.latitude || !station.longitude) continue;
             const hier = proStation.get(station.station_id) || [];
-            punkte.push([station.latitude, station.longitude]);
-            L.marker([station.latitude, station.longitude], {
+            if (hier.length) stationenMitRad++;
+            const name = hier.length
+                ? `Station ${station.name}, ${hier.length} ${hier.length === 1 ? 'Rad' : 'Räder'} frei`
+                : `Station ${station.name}, gerade kein Rad des gewählten Typs`;
+            const marker = L.marker([station.latitude, station.longitude], {
                 icon: stationsSymbol(hier.length),
-                title: `${station.name} — ${hier.length} frei`
+                title: name,
+                alt: name
             }).addTo(stationLayer)
               .bindPopup(stationsPopover(station, hier), { maxWidth: 340, minWidth: 300 });
+            markerBenennen(marker, name);
         }
 
-        for (const rad of freie) {
-            punkte.push([rad.latitude, rad.longitude]);
-            L.marker([rad.latitude, rad.longitude], { icon: freiesSymbol(rad) })
-             .addTo(bikeLayer)
-             .bindPopup(freiesRadPopover(rad), { maxWidth: 340, minWidth: 300 });
+        // Frei abgestellte Raeder erst, wenn der Ausschnitt sie tragen kann.
+        // Sie liegen dann auch nicht mehr in der Tabulatorreihenfolge - das
+        // war der Grund fuer 97 fokussierbare Elemente auf einer Seite.
+        const zeigeFreie = freieSichtbar();
+        if (zeigeFreie) {
+            for (const rad of freie) {
+                const name = `${rad.typ_bezeichnung} ${rad.rahmennummer}, frei abgestellt`;
+                const marker = L.marker([rad.latitude, rad.longitude], {
+                    icon: freiesSymbol(rad), title: name, alt: name
+                }).addTo(bikeLayer)
+                  .bindPopup(freiesRadPopover(rad), { maxWidth: 340, minWidth: 300 });
+                markerBenennen(marker, name);
+            }
         }
+
+        const gewaehlt = Array.from(typen);
+        const typText = gewaehlt.length === 3 ? 'alle Fahrradtypen'
+                      : gewaehlt.length === 0 ? 'kein Fahrradtyp'
+                      : gewaehlt.map(t => TYP_NAME[t]).join(' und ');
+        standMelden(
+            `${raeder.length} Räder sichtbar an ${stationenMitRad} Stationen, gefiltert nach ${typText}. ` +
+            (freie.length === 0 ? ''
+             : zeigeFreie ? `${freie.length} davon stehen frei im Geschäftsgebiet.`
+             : `${freie.length} frei abgestellte Räder erscheinen beim Hineinzoomen.`));
 
         // Der Ausschnitt folgt dem Geschaeftsgebiet; das setzt
         // geschaeftsgebietZeichnen, sobald die Sicht geladen ist.
     }
+
+    // Beim Zoomen und beim Aendern der Fenstergroesse kann die Schwelle
+    // kippen; dann wird neu gezeichnet - aber nur dann.
+    let letzteSicht = null;
+    function sichtPruefen() {
+        const jetzt = freieSichtbar();
+        if (jetzt !== letzteSicht) { letzteSicht = jetzt; karteZeichnen(); }
+    }
+    map.on('zoomend', sichtPruefen);
+    map.on('resize', sichtPruefen);
+
+    // Leaflet beschriftet die Schliessen-Schaltflaeche englisch.
+    map.on('popupopen', (e) => {
+        const knopf = e.popup.getElement()?.querySelector('.leaflet-popup-close-button');
+        if (knopf) knopf.setAttribute('aria-label', 'Infofenster schließen');
+    });
 
     checkboxes.forEach(cb => cb.addEventListener('change', karteZeichnen));
 
@@ -841,6 +1191,64 @@ document.addEventListener("DOMContentLoaded", async () => {
             }).showToast();
         }
     });
+
+    /* =================================================================
+       NAVIGATION
+
+       Unter 1024 px stand .site-nav auf display:none und es gab keinen
+       Ersatz - die drei wichtigsten Wege waren auf dem Geraet, auf dem
+       man ein Leihrad sucht, nicht erreichbar.
+       ================================================================= */
+    const menueKnopf = document.getElementById('menue-knopf');
+    const menue = document.getElementById('menue');
+
+    function menueSetzen(offen) {
+        if (!menue || !menueKnopf) return;
+        menue.hidden = !offen;
+        menueKnopf.setAttribute('aria-expanded', String(offen));
+        menueKnopf.setAttribute('aria-label', offen ? 'Menü schließen' : 'Menü öffnen');
+        menueKnopf.classList.toggle('ist-offen', offen);
+    }
+
+    menueKnopf?.addEventListener('click', () => menueSetzen(menue.hidden));
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && menue && !menue.hidden) { menueSetzen(false); menueKnopf.focus(); }
+    });
+
+    // Jeder Sprung im Dokument geht ueber zuAbschnitt: der feste Kopf ist
+    // 92 px hoch, ohne das lag die Ueberschrift danach darunter, und der
+    // Fokus blieb auf dem Verweis, den man gerade verlassen hat.
+    document.querySelectorAll('.site-nav a[href^="#"], .menue a[href^="#"], .primary-cta[href^="#"], .kopf-karte[href^="#"], .hero-cta[href^="#"]')
+        .forEach(a => {
+            a.addEventListener('click', (e) => {
+                const id = a.getAttribute('href').slice(1);
+                if (!document.getElementById(id)) return;
+                e.preventDefault();
+                menueSetzen(false);
+                zuAbschnitt(id);
+                if (id === 'map-section') setTimeout(gebietZeigen, 520);
+            });
+        });
+
+    /* Der Knopf im ersten Bildschirm tritt ab, sobald die Buehne laeuft -
+       sonst liegt er spaeter unter der zweiten Schlagzeile. */
+    const heroCta = document.querySelector('.hero-cta');
+    if (heroCta) {
+        const ctaPruefen = () => heroCta.classList.toggle('ist-weg', window.scrollY > innerHeight * 0.28);
+        addEventListener('scroll', ctaPruefen, { passive: true });
+        ctaPruefen();
+    }
+
+    /* Die Zahl "293 Räder live" sah nach Messwert aus, trug aber keinen
+       Zeitpunkt. Jetzt steht dabei, wie alt sie ist. */
+    let standZeit = null;
+    function standSchreiben() {
+        const el = document.getElementById('live-stand');
+        if (!el || !standZeit) return;
+        const min = Math.floor((Date.now() - standZeit) / 60000);
+        el.textContent = min < 1 ? ' · gerade eben' : ` · vor ${min} Min.`;
+    }
+    setInterval(standSchreiben, 30000);
 
     // ===== INITIALISIERUNG =====
     await renderInhalte();

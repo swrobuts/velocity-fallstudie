@@ -81,6 +81,15 @@
 * { box-sizing: border-box; }
 html { scroll-behavior: auto; }
 
+/* Der Kopf ist fest und 92 px hoch. Ohne diese Reserve landet jedes
+   Sprungziel darunter und die Ueberschrift des Abschnitts ist verdeckt. */
+section[id], main[id] { scroll-margin-top: 108px; }
+section[id] h1, section[id] h2 { scroll-margin-top: 118px; }
+@media (max-width: 900px) { section[id] { scroll-margin-top: 88px; } }
+
+/* Der Hintergrund darf nicht mitscrollen, solange der Dialog offen ist. */
+body.dialog-offen { overflow: hidden; }
+
 body {
   margin: 0;
   color: var(--ink);
@@ -98,6 +107,15 @@ img { max-width: 100%; }
 :focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
 
 .container { max-width: var(--spur); margin: 0 auto; padding: 0 var(--rand); }
+
+.sprungmarke {
+  position: absolute; left: 12px; top: -60px; z-index: 60;
+  padding: 12px 18px;
+  background: var(--navy); color: #fff;
+  border-radius: 999px; font-weight: 700; text-decoration: none;
+  transition: top .18s ease;
+}
+.sprungmarke:focus { top: 12px; }
 
 .nur-vorlesen {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -159,6 +177,59 @@ img { max-width: 100%; }
   font-weight: 700;
 }
 .login:hover { background: var(--red-tief); border-color: var(--red-tief); }
+
+.kopf-aktionen {
+  justify-self: end;
+  display: flex; align-items: center; gap: 10px;
+}
+/* Die Karte ist der Weg, den mobile Besucher wirklich suchen. Sie bleibt
+   deshalb sichtbar, auch wenn der Rest ins Menue wandert. */
+.kopf-karte {
+  display: none;
+  padding: 12px 16px;
+  color: var(--navy); text-decoration: none;
+  border: 1px solid rgba(6, 24, 65, .28);
+  border-radius: 999px;
+  font-size: var(--nav-font); font-weight: 700;
+}
+.kopf-karte:hover { border-color: var(--navy); background: rgba(6, 24, 65, .05); }
+
+.menue-knopf {
+  display: none;
+  width: 46px; height: 46px;
+  flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  border: 1px solid rgba(6, 24, 65, .28);
+  border-radius: 999px;
+  background: transparent;
+}
+.menue-knopf span {
+  display: block; width: 18px; height: 2px;
+  background: var(--navy);
+  transition: transform .2s ease, opacity .2s ease;
+}
+.menue-knopf.ist-offen span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.menue-knopf.ist-offen span:nth-child(2) { opacity: 0; }
+.menue-knopf.ist-offen span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.menue {
+  position: fixed; z-index: 29;
+  top: 74px; left: 0; right: 0;
+  display: flex; flex-direction: column;
+  padding: 10px var(--rand) 22px;
+  background: rgba(247, 249, 252, .985);
+  border-bottom: 1px solid rgba(6, 24, 65, .12);
+  box-shadow: 0 18px 40px rgba(6, 24, 65, .1);
+}
+.menue[hidden] { display: none; }
+.menue a {
+  padding: 15px 0;
+  color: var(--navy); text-decoration: none;
+  font-family: var(--schmal);
+  font-size: 26px; font-weight: 800; letter-spacing: -.02em;
+  border-bottom: 1px solid var(--mist);
+}
+.menue a:last-child { border-bottom: 0; }
+.menue a:hover { color: var(--red); }
 
 /* ------------------------------------------------ Bühne (Hero) */
 /* Ab hier unverändert aus dem Entwurf des Nutzers übernommen. */
@@ -246,6 +317,9 @@ img { max-width: 100%; }
   text-shadow: 0 1px 14px rgba(255, 255, 255, .82);
 }
 
+.meta-kurz { display: none; }
+.live-stand { opacity: .7; letter-spacing: .1em; }
+
 .live-indicator { display: inline-flex; align-items: center; gap: 10px; }
 .live-indicator::before {
   content: "";
@@ -327,7 +401,7 @@ img { max-width: 100%; }
   font-weight: 750;
   font-size: var(--control-font);
 }
-.product-tab[aria-selected="true"] { color: var(--navy); background: #fff; }
+.product-tab[aria-pressed="true"] { color: var(--navy); background: #fff; }
 
 .product-copy {
   min-height: 98px;
@@ -701,6 +775,33 @@ img { max-width: 100%; }
 }
 .rechner-spalte input[type="range"]:focus-visible { outline: 2px solid var(--navy); outline-offset: 4px; }
 
+/* Vier Griffe fuer die Zeiten, die man wirklich eingibt. Der Regler
+   deckt jetzt den vollen Bereich bis 1440 ab; ohne diese Marken waere
+   eine Tagesmiete ein Millimeterspiel. */
+/* Vier Griffe in zwei Reihen. Nebeneinander passen sie in die Spalte
+   nicht - drei plus einer sah nach Umbruch aus, zwei mal zwei nach
+   Absicht. */
+.rechner-marken {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  margin-top: 14px;
+}
+.rechner-marken button {
+  padding: 8px 10px;
+  background: transparent; color: var(--grau);
+  border: 1px solid var(--mist); border-radius: 999px;
+  font: 700 12.5px/1 var(--body-schrift);
+}
+.rechner-marken button:hover { border-color: var(--navy); color: var(--navy); }
+.rechner-marken button[aria-pressed="true"] {
+  background: var(--navy); border-color: var(--navy); color: #fff;
+}
+.rechner-grenze {
+  margin: 10px 0 0;
+  font: 600 12.5px/1.4 var(--body-schrift);
+  color: var(--grau-still);
+}
+.rechner-grenze.ist-korrigiert { color: var(--red-tief); font-weight: 700; }
+
 /* Die Ergebnisspalte traegt den Betrag oben und die Posten darunter,
    damit die Summe auf einer Hoehe mit der Eingabe steht. */
 .rechner-summe { justify-content: space-between; gap: 10px; }
@@ -887,8 +988,12 @@ img { max-width: 100%; }
 /* Zurueck aufs Geschaeftsgebiet. Es gab hier frueher eine Schaltflaeche
    "Meinen Standort anzeigen", die nur ein alert() ausloeste - eine
    Attrappe. Diese hier tut etwas, das man wirklich braucht. */
-.karte-zurueck {
+.karte-knoepfe {
   position: absolute; right: 18px; top: 18px; z-index: 500;
+  display: flex; gap: 8px;
+}
+.karte-zurueck {
+  position: relative;
   padding: 11px 17px;
   background: #fff; color: var(--navy);
   border: 1px solid var(--mist); border-radius: 999px;
@@ -896,6 +1001,14 @@ img { max-width: 100%; }
   box-shadow: 0 14px 34px rgba(6, 24, 65, .16);
 }
 .karte-zurueck:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+/* Die Filter aendern die Karte sichtbar. Diese Zeile sagt es auch denen,
+   die sie nicht sehen - und den anderen schadet sie nicht. */
+.karte-stand {
+  margin: 18px auto 0;
+  font: 600 13.5px/1.5 var(--body-schrift);
+  color: var(--grau-still);
+}
 
 /* Solange das Mausrad gesperrt ist, sagt die Karte, wie man es freigibt.
    Nach dem ersten Klick verschwindet der Hinweis. */
@@ -989,12 +1102,15 @@ footer .logo { margin-bottom: 14px; }
   font-size: clamp(28px, 2.2vw, 38px);
 }
 .brand-fuss span { color: #ff5f80; }
+/* Vorher 11 px bei 45 % Weiss - rund 4,3:1 und damit unter der Schwelle
+   fuer normalen Text. Jetzt 13 px bei 72 %. */
 .wortspiel {
   margin: 0 0 18px;
-  font: 700 11px/1 var(--mono);
+  font: 700 13px/1.3 var(--mono);
   letter-spacing: .2em; text-transform: uppercase;
-  color: rgba(255, 255, 255, .45);
+  color: rgba(255, 255, 255, .72);
 }
+.fuss-text { color: rgba(255, 255, 255, .72); line-height: 1.6; }
 footer h4 {
   margin: 0 0 16px;
   color: #fff;
@@ -1037,11 +1153,12 @@ footer a:hover { color: #fff; text-decoration: underline; }
   border: 0; background: none;
   font-size: 28px; line-height: 1; color: var(--grau-still);
 }
-.auth-tabs { display: flex; gap: 6px; margin-bottom: 26px; }
+.auth-tabs { display: flex; gap: 6px; margin-bottom: 22px; }
 .auth-tab {
   flex: 1;
   padding: 11px 0;
   text-align: center;
+  border: 1px solid transparent;
   border-radius: 999px;
   font-weight: 700; font-size: 15px;
   color: var(--grau-still);
@@ -1051,6 +1168,47 @@ footer a:hover { color: #fff; text-decoration: underline; }
 .auth-tab.active { background: var(--navy); color: #fff; }
 .auth-form { display: none; }
 .auth-form.active { display: block; }
+.auth-form[hidden] { display: none; }
+
+/* Das Ergebnis einer Anmeldung oder Registrierung. Es bleibt stehen -
+   ein Toast war nach drei Sekunden weg, und genau deshalb sah eine
+   erfolgreiche Registrierung wie ein Fehlschlag aus. */
+.auth-status {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border-left: 4px solid var(--grau-still);
+  background: var(--paper);
+  font-size: 14.5px; line-height: 1.5;
+}
+.auth-status[hidden] { display: none; }
+.auth-status.ist-erfolg  { border-left-color: #0f9d63; background: rgba(15, 157, 99, .09); }
+.auth-status.ist-fehler  { border-left-color: var(--red); background: rgba(240, 0, 56, .07); }
+.auth-status.ist-hinweis { border-left-color: #c98a00; background: rgba(201, 138, 0, .09); }
+
+.feld-mit-knopf { position: relative; display: flex; }
+.feld-mit-knopf input { padding-right: 92px; }
+.passwort-zeigen {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  padding: 7px 11px;
+  background: var(--paper); color: var(--grau-still);
+  border: 1px solid var(--mist); border-radius: 999px;
+  font: 700 12px/1 var(--body-schrift);
+}
+.passwort-zeigen:hover { color: var(--navy); border-color: var(--navy); }
+
+.auth-fuss {
+  margin: 16px 0 0;
+  font-size: 13.5px; color: var(--grau-still); text-align: center;
+}
+.auth-fuss a { color: var(--navy); }
+.auth-link {
+  padding: 0; border: 0; background: none;
+  color: var(--navy); font-size: inherit; font-weight: 700;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.auth-link:hover { color: var(--red); }
+.modal-content button:disabled, .modal-content input:disabled { opacity: .55; cursor: progress; }
 .form-title {
   margin: 0 0 22px;
   font-family: var(--schmal); font-size: 30px; font-weight: 800;
@@ -1088,6 +1246,60 @@ footer a:hover { color: #fff; text-decoration: underline; }
 .btn-end-rental { background: #fff; color: var(--navy); border-color: #fff; }
 .btn-end-rental:hover { background: var(--mint); border-color: var(--mint); color: var(--navy); }
 
+/* ----------------------------------------------- Rechtstexte */
+/* Vorher standen im Fuss vier Verweise auf href="#". Bei Registrierung,
+   Standortdaten und Zahlung ist das kein Schoenheitsfehler. */
+
+.seite-recht { background: #fff; }
+.recht { padding: calc(92px + var(--luft)) 0 var(--luft); }
+.recht-warnung {
+  margin-bottom: clamp(40px, 5vw, 64px);
+  padding: 20px 24px;
+  border-left: 4px solid var(--red);
+  background: rgba(240, 0, 56, .06);
+  font-size: 15.5px; line-height: 1.6;
+}
+.recht-warnung strong { display: block; margin-bottom: 4px; color: var(--navy); }
+
+.recht h1 {
+  margin: 0;
+  font-family: var(--schmal);
+  font-size: var(--titel-font); font-weight: 800;
+  letter-spacing: -.035em; line-height: .98; color: var(--navy);
+}
+.recht-inhalt {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin: 34px 0 clamp(46px, 6vw, 78px);
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--mist);
+}
+.recht-inhalt a {
+  padding: 9px 16px;
+  color: var(--navy); text-decoration: none;
+  border: 1px solid var(--mist); border-radius: 999px;
+  font-weight: 700; font-size: 14.5px;
+}
+.recht-inhalt a:hover { border-color: var(--navy); background: var(--paper); }
+
+.recht-block { max-width: 74ch; margin-bottom: clamp(50px, 6vw, 84px); }
+.recht-block h2 {
+  margin: 0 0 20px;
+  font-family: var(--schmal);
+  font-size: clamp(30px, 3.2vw, 46px); font-weight: 800;
+  letter-spacing: -.03em; color: var(--navy);
+}
+.recht-block h3 {
+  margin: 30px 0 8px;
+  font: 700 11px/1 var(--mono);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+}
+.recht-block p { margin: 0 0 14px; line-height: 1.65; }
+.recht-liste { margin: 0; padding-left: 20px; }
+.recht-liste li { margin-bottom: 12px; line-height: 1.6; }
+.recht-hinweis { color: var(--grau-still); font-size: 14.5px; }
+.recht-zurueck { margin-top: 20px; }
+.recht-zurueck a { color: var(--navy); font-weight: 700; }
+
 /* ------------------------------------------------------- Umbruch */
 
 @media (max-width: 1100px) {
@@ -1100,11 +1312,48 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
 }
 
+@media (max-width: 1023px) {
+  /* Bis hierher verschwand die Navigation ersatzlos. Jetzt tritt das
+     Menue an ihre Stelle und die Karte bleibt als eigene Schaltflaeche
+     stehen - sie ist der Weg, den mobile Besucher wirklich suchen. */
+  .site-nav { display: none; }
+  .kopf-karte { display: inline-block; }
+  .menue-knopf { display: flex; }
+}
+
+@media (max-width: 620px) {
+  /* Auf sehr schmalen Geraeten traegt der Kopf nur noch Marke, Login
+     und Menue; die Karte steht dann im Menue. */
+  .kopf-karte { display: none; }
+}
+
+/* Nur auf schmalen Geraeten. Auf dem Desktop traegt die Kopfzeile den
+   Weg zur Karte und die Buehne braucht keinen zweiten Knopf. */
+.hero-cta { display: none; }
+
 @media (max-width: 900px) {
+  .hero-cta {
+    position: absolute;
+    left: var(--rand);
+    top: min(64vh, 560px);
+    z-index: 4;
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 15px 24px;
+    background: var(--red); color: #fff;
+    border-radius: 999px; text-decoration: none;
+    font-weight: 800; font-size: 16px; letter-spacing: -.01em;
+    box-shadow: 0 16px 40px rgba(240, 0, 56, .32);
+  }
+  .hero-cta:hover { background: var(--red-tief); }
+  .hero-cta.ist-weg { opacity: 0; pointer-events: none; transform: translateY(10px); }
+  .hero-cta { transition: opacity .3s ease, transform .3s ease; }
   .site-header { grid-template-columns: 1fr auto; min-height: 74px; }
   .site-nav { display: none; }
   .top-meta { top: 100px; }
-  .scroll-story { height: 330vh; }
+  /* Die Buehne war mobil rund 2970 px hoch - mehr als drei Bildschirme
+     vor der ersten Kennzahl. Die Inszenierung bleibt, die Strecke wird
+     auf gut zwei Bildschirme gekuerzt. */
+  .scroll-story { height: 210vh; min-height: 1500px; }
   .photo-layer { inset: 0 -32% 0 -18%; background-position: 56% center; }
   .claim { top: 27vh; bottom: auto; width: calc(100% - 48px); }
   .claim h1 { font-size: var(--hero-font); max-width: 100%; }
@@ -1125,7 +1374,13 @@ footer a:hover { color: #fff; text-decoration: underline; }
 }
 
 @media (max-width: 520px) {
+  .scroll-story { height: 185vh; min-height: 1200px; }
+  /* Die Metazeile brach hier unruhig um. */
+  .meta-lang { display: none; }
+  .meta-kurz { display: inline; }
   .chapter { display: none; }
+  .karte-knoepfe { right: 12px; top: 12px; flex-direction: column; }
+  .recht-block h2 { font-size: 30px; }
   .photo-layer { inset: 0 -70% 0 -56%; background-position: center 28%; }
   .claim { top: 25vh; }
   .claim-city { top: 29vh; }

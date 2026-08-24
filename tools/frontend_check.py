@@ -23,6 +23,16 @@ from pathlib import Path
 SRC = Path(__file__).resolve().parent.parent / "src"
 SKRIPTE = ["script.js", "auth.js", "supabase.js", "config.js"]
 
+# Was das Skript selbst in den Baum haengt, kann im HTML nicht stehen.
+# Die Liste bleibt kurz und wird hier gepflegt - sonst waere jede
+# dynamische Einblendung ein Dauerbefund.
+VOM_SKRIPT_ERZEUGT = {"auth-status-aktion"}
+
+# Klassen, die eine Fremdbibliothek vergibt. Sie stehen nie im HTML,
+# und ihr Fehlen waere kein Befund, sondern ein falscher Alarm.
+FREMDE_KLASSEN = {"leaflet-popup-close-button", "leaflet-marker-icon",
+                  "leaflet-tile", "leaflet-popup"}
+
 
 def main():
     roh = (SRC / "index.html").read_text(encoding="utf-8")
@@ -42,7 +52,7 @@ def main():
     vorhanden = re.findall(r'\sid="([^"]+)"', html)
     menge = set(vorhanden)
     for i in sorted(set(re.findall(r"getElementById\(\s*['\"]([^'\"]+)", js))):
-        if i not in menge:
+        if i not in menge and i not in VOM_SKRIPT_ERZEUGT:
             befunde.append(f'ANKER    #{i} wird gesucht, steht aber nicht im HTML')
 
     # --- doppelte ids ------------------------------------------------
@@ -55,12 +65,18 @@ def main():
         m = re.match(r'^\.([A-Za-z0-9_-]+)', s)
         if m and f'class="' not in html:
             continue
+        if m and m.group(1) in FREMDE_KLASSEN:
+            continue
         if m and not re.search(r'class="[^"]*\b' + re.escape(m.group(1)) + r'\b', html):
             befunde.append(f'KLASSE   {s} wird gesucht, keine Entsprechung im HTML')
 
     # --- eingebundene Dateien ----------------------------------------
     for pfad in re.findall(r'(?:src|href)="(?!https?:|#|mailto:)([^"]+)"', html):
-        rein = pfad.split("?")[0]
+        # Erst den Sprungpunkt abschneiden, dann die Abfrage: sonst sucht
+        # der Pruefer eine Datei namens "rechtliches.html#agb".
+        rein = pfad.split("#")[0].split("?")[0]
+        if not rein:
+            continue
         if not (SRC / rein).exists():
             befunde.append(f'QUELLE   {pfad} eingebunden, Datei fehlt')
 

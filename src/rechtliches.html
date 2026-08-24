@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#061841">
+    <meta name="robots" content="noindex">
+    <title>Rechtliches - VeloCity Würzburg</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="seite-recht">
+
+<header class="site-header">
+  <a class="brand" href="index.html" aria-label="VeloCity Startseite">VEL<i></i><span>CITY</span></a>
+  <nav class="site-nav" aria-label="Hauptnavigation">
+    <a href="index.html#anleitung">So geht&rsquo;s</a>
+    <a href="index.html#tarife">Preise</a>
+    <a href="index.html#map-section">Live-Karte</a>
+  </nav>
+  <a class="login" href="index.html">Zur Startseite</a>
+</header>
+
+<main class="recht" id="top">
+  <div class="container">
+
+    <!-- Der ehrlichste Teil dieser Seite steht ganz oben. Die frueheren
+         Verweise im Fuss zeigten auf href="#" und liefen ins Leere. Das
+         ist bei Registrierung, Standortdaten und Zahlung kein Schoenheits-
+         fehler, sondern ein Vertrauensbruch. Statt vier Scheinseiten
+         steht hier, was wirklich gilt. -->
+    <div class="recht-warnung" role="note">
+      <strong>Übungsbeispiel, kein Angebot.</strong>
+      VeloCity ist ein Fallbeispiel aus der Lehre. Die VeloCity Würzburg GmbH
+      existiert nicht, es werden keine Fahrräder vermietet, es fließt kein Geld
+      und es kommt kein Vertrag zustande. Die folgenden Texte zeigen, welche
+      Angaben ein echter Anbieter an dieser Stelle machen müsste — sie sind
+      keine Rechtsauskunft.
+    </div>
+
+    <div class="section-header ohne-hinweis">
+      <span class="eyebrow">Rechtliches</span>
+      <h1>Impressum, Datenschutz und Bedingungen</h1>
+    </div>
+
+    <nav class="recht-inhalt" aria-label="Inhalt dieser Seite">
+      <a href="#impressum">Impressum</a>
+      <a href="#datenschutz">Datenschutz</a>
+      <a href="#agb">AGB &amp; Nutzungsbedingungen</a>
+      <a href="#widerruf">Widerrufsrecht</a>
+    </nav>
+
+    <section id="impressum" class="recht-block" aria-labelledby="impressum-titel">
+      <h2 id="impressum-titel">Impressum</h2>
+      <p><strong>Angaben gemäß § 5 DDG</strong> — im Übungsbeispiel frei erfunden:</p>
+      <p>VeloCity Würzburg GmbH<br>
+         Sanderring 2<br>
+         97070 Würzburg</p>
+      <p>Vertreten durch: Max Mustermann<br>
+         Registergericht: Amtsgericht Würzburg<br>
+         Registernummer: HRB 99999<br>
+         Umsatzsteuer-Identifikationsnummer: DE000000000</p>
+      <p>Kontakt: <a href="mailto:hilfe@velocity-wue.de">hilfe@velocity-wue.de</a></p>
+      <p class="recht-hinweis">Die Anschrift gehört der Julius-Maximilians-Universität
+         Würzburg und steht hier nur als Platzhalter. Post an diese Adresse
+         erreicht niemanden, der für VeloCity zuständig wäre.</p>
+    </section>
+
+    <section id="datenschutz" class="recht-block" aria-labelledby="datenschutz-titel">
+      <h2 id="datenschutz-titel">Datenschutz</h2>
+      <p>Was diese Anwendung tatsächlich verarbeitet, lässt sich am Datenmodell
+         ablesen — deshalb steht es hier konkret und nicht als Textbaustein.</p>
+      <h3>Beim Anlegen eines Kontos</h3>
+      <p>Vorname, Nachname, E-Mail-Adresse und ein Passwort. Das Passwort wird
+         nicht im Klartext gespeichert, sondern von der Authentifizierung des
+         Datenbankservers als Hash abgelegt. Die Anwendung selbst sieht es nie.</p>
+      <h3>Bei einer Ausleihe</h3>
+      <p>Zeitpunkt von Beginn und Ende, das ausgeliehene Fahrrad, Start- und
+         Zielort sowie die daraus berechneten Entgeltpositionen. Der Ort ist
+         entweder eine Station oder ein Punkt im Geschäftsgebiet — je nachdem,
+         wo das Rad übernommen und abgestellt wurde.</p>
+      <h3>Beim bloßen Betrachten der Seite</h3>
+      <p>Die Karte lädt Kacheln von CARTO und OpenStreetMap; dabei erfährt der
+         Kachelserver die IP-Adresse. Es werden keine Analysedienste eingebunden
+         und keine Werbe- oder Trackingcookies gesetzt. Ohne Anmeldung speichert
+         die Anwendung nichts über Besucher.</p>
+      <h3>Rechte</h3>
+      <p>Auskunft, Berichtigung, Löschung, Einschränkung, Datenübertragbarkeit
+         und Widerspruch. In einem echten Betrieb wäre hier eine erreichbare
+         Stelle zu nennen; im Übungsbeispiel gibt es sie nicht.</p>
+    </section>
+
+    <section id="agb" class="recht-block" aria-labelledby="agb-titel">
+      <h2 id="agb-titel">AGB &amp; Nutzungsbedingungen</h2>
+      <p>Die folgenden Punkte geben die Regeln wieder, die im Datenmodell
+         tatsächlich durchgesetzt werden. Sie sind damit nachprüfbar und nicht
+         nur behauptet.</p>
+      <ul class="recht-liste">
+        <li><strong>Ein Rad je Person.</strong> Wer eine laufende Ausleihe hat,
+            kann kein zweites Rad übernehmen.</li>
+        <li><strong>Die Zeit zählt minutengenau.</strong> Angefangene Minuten
+            werden aufgerundet.</li>
+        <li><strong>Startgebühr plus Minutenpreis.</strong> Der Betrag ist auf
+            den Tageshöchstpreis des jeweiligen Fahrradtyps gedeckelt.</li>
+        <li><strong>Abstellen im Geschäftsgebiet.</strong> Innerhalb der rot
+            umrandeten Fläche darf das Rad überall abgestellt werden, ohne
+            Zuschlag. Außerhalb lässt sich eine Fahrt nicht beenden.</li>
+        <li><strong>Preise ändern sich nur nach vorn.</strong> Ein bereits
+            abgerechneter Zeitraum wird nicht rückwirkend überschrieben.</li>
+      </ul>
+    </section>
+
+    <section id="widerruf" class="recht-block" aria-labelledby="widerruf-titel">
+      <h2 id="widerruf-titel">Widerrufsrecht</h2>
+      <p>Bei einem Vertrag im Fernabsatz stünde Verbraucherinnen und Verbrauchern
+         grundsätzlich ein vierzehntägiges Widerrufsrecht zu. Für eine einzelne,
+         sofort begonnene Fahrt greift regelmäßig die Ausnahme für bereits
+         vollständig erbrachte Dienstleistungen.</p>
+      <p>Da hier kein Vertrag zustande kommt, gibt es nichts zu widerrufen. Ein
+         echter Anbieter müsste an dieser Stelle eine Musterwiderrufsbelehrung
+         samt Formular bereitstellen.</p>
+    </section>
+
+    <p class="recht-zurueck"><a href="index.html">← Zurück zur Startseite</a></p>
+  </div>
+</main>
+
+<footer>
+    <div class="container impressum-sub" style="margin-top:0;border-top:0;">
+        <p>&copy; 2026 VeloCity Würzburg GmbH — erfundenes Fallbeispiel aus der Lehre.</p>
+    </div>
+</footer>
+
+</body>
+</html>

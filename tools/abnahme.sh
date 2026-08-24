@@ -164,6 +164,19 @@ else
   grep -vE '^$|ids im HTML' /tmp/abnahme-front.log | head -10 | sed 's/^/     /'
 fi
 
+# Der Vertragspruefer oben sieht nur, ob die Elemente da sind. Ob die
+# Seite bedienbar ist, sieht er nicht - eine Aussenpruefung fand 45
+# unbenannte Marker, tote Rechtsverweise und einen Dialog ohne Rolle,
+# waehrend er null Befunde meldete. Dieser Pruefer haelt genau diese
+# Punkte fest, damit sie nicht unbemerkt zurueckkommen.
+schritt "Bedienbarkeit — Punkte aus dem UX-Audit vom 24.08.2026"
+if python3 tools/ux_check.py >/tmp/abnahme-ux.log 2>&1; then
+  ergebnis 0 "$(grep -c '^  ok' /tmp/abnahme-ux.log) Punkte nachgeprueft, alle erledigt"
+else
+  ergebnis 1 "$(grep -c '^  FEHL' /tmp/abnahme-ux.log) Punkt(e) offen"
+  grep '^  FEHL' /tmp/abnahme-ux.log | head -10 | sed 's/^/     /'
+fi
+
 # --------------------------------------------------------- 8 Website
 schritt "Website spricht nur Sichten und api-Funktionen"
 verstoss=$(grep -oE "\.from\('[a-z_]+'\)" src/supabase.js | grep -v "'v_" || true)

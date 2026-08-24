@@ -192,7 +192,15 @@ on conflict (name) do update
 -- JavaScript der Karte; jetzt zeichnet die Karte, was hier steht.
 -- Reihenfolge im Typ polygon: (Laengengrad, Breitengrad).
 -- ---------------------------------------------------------------------
+-- Zwei Gebiete, nicht eines. Drei Stationen liegen in Schweinfurt
+-- (THWS-Campus); mit nur dem Wuerzburger Vieleck lagen sie ausserhalb
+-- jedes Geschaeftsgebiets. Eine dort begonnene Fahrt haette sich nach
+-- GR15 nirgends beenden lassen - auch nicht an der eigenen Station.
+-- fn_im_geschaeftsgebiet fragt ueber exists, vertraegt also beliebig
+-- viele Gebiete.
 insert into velocity.geschaeftsgebiet (name, flaeche) values
   ('Würzburg',
-   polygon '((9.9100,49.8100),(9.9400,49.8150),(9.9850,49.7850),(9.9600,49.7750),(9.9300,49.7700),(9.9000,49.7850))')
+   polygon '((9.9100,49.8100),(9.9400,49.8150),(9.9850,49.7850),(9.9600,49.7750),(9.9300,49.7700),(9.9000,49.7850))'),
+  ('Schweinfurt',
+   polygon '((10.1900,50.0450),(10.2050,50.0700),(10.2500,50.0720),(10.2750,50.0480),(10.2550,50.0250),(10.2050,50.0230))')
 on conflict (name) do update set flaeche = excluded.flaeche;

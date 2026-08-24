@@ -44,9 +44,16 @@ python3 -m http.server 8765 --directory src
 
 Dann auf `http://localhost:8765`:
 
-1. **Abgemeldet ansehen.** Kennzahlenleiste zeigt **13 Stationen**, drei
-   Tarifkarten mit **3,10 / 4,00 / 5,00 Euro**, vier FAQ-Einträge, Karte mit
+1. **Abgemeldet ansehen.** Kennzahlenleiste zeigt **13 Stationen**
+   (10 in Würzburg, 3 in Schweinfurt), drei Tarifkarten mit
+   **3,10 / 16,00 / 5,00 Euro** für 30 Minuten, vier FAQ-Einträge, Karte mit
    Stations- und Fahrradmarkern. Browserkonsole ohne Fehler.
+
+   > Diese drei Beträge sind der Sollwert. Sie stehen seit dem 24.08.2026
+   > zusätzlich in `db/tests/t0010_sichten.sql` und fallen dort auf, wenn
+   > jemand die Preise ändert, ohne diese Anleitung nachzuziehen. Genau
+   > dieser Auseinanderlauf hat eine externe Prüfung zu der Annahme
+   > gebracht, 16,00 Euro seien ein Datenfehler.
 2. **Zugriffsschutz in der Konsole prüfen:**
    ```javascript
    await supabaseClient.from('kunde').select('*').limit(1)

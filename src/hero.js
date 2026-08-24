@@ -55,7 +55,7 @@
       const selected = product === 'ebike' ? 'ebike' : 'city';
       if (selected === renderedProduct) return;
       renderedProduct = selected;
-      tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.product === selected)));
+      tabs.forEach(tab => tab.setAttribute('aria-pressed', String(tab.dataset.product === selected)));
       const [title, description] = productContent[selected];
       productCopy.querySelector('strong').textContent = title;
       productCopy.querySelector('small').textContent = description;

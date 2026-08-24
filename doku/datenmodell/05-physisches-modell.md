@@ -140,11 +140,22 @@ Geprüft wird mit dem **eingebauten** Typ `polygon` und dem Operator `@>`:
 select g.flaeche @> point(p_longitude, p_latitude)
 ```
 
-PostGIS braucht es dafür nicht. Für ein einzelnes konvexes Vieleck wäre
-das zu viel Maschinerie; PostgreSQL bringt die geometrischen Typen im
+PostGIS braucht es dafür nicht. Für ein paar konvexe Vielecke wäre das
+zu viel Maschinerie; PostgreSQL bringt die geometrischen Typen im
 Sprachkern mit. Zu beachten ist allein die Reihenfolge: `point(x, y)`
 heißt hier `point(Längengrad, Breitengrad)` — vertauscht man sie, liegt
 Würzburg im Indischen Ozean.
+
+Die Funktion fragt über `exists` und verträgt deshalb beliebig viele
+Gebiete. Das war nötig: es gibt **zwei**, Würzburg und Schweinfurt.
+Zunächst stand nur Würzburg in der Tabelle — und damit lagen die drei
+Stationen am Schweinfurter THWS-Campus außerhalb jedes Geschäftsgebiets.
+Eine dort begonnene Fahrt hätte sich nach GR15 nirgends beenden lassen,
+nicht einmal an der eigenen Station. Aufgefallen ist das erst bei einer
+Prüfung von außen; ein Test hatte den Fehler sogar festgeschrieben
+(*„Schweinfurt liegt außerhalb"*). Seit dem 24.08.2026 sichert
+`test_station_liegt_im_geschaeftsgebiet` die Regel in die Gegenrichtung:
+**keine aktive Station darf außerhalb aller Gebiete liegen.**
 
 ### GR15: eine Zahl, die nie stimmte
 

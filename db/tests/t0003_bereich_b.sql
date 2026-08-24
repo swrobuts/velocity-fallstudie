@@ -270,11 +270,17 @@ begin
   return next ok(velocity.fn_im_geschaeftsgebiet(49.7810, 9.9720),
                  'Der Campus Hubland liegt im Geschäftsgebiet');
 
-  -- Ausserhalb: Hoechberg und Schweinfurt
+  -- Schweinfurt ist ein eigenes Gebiet. Dieser Test behauptete frueher
+  -- das Gegenteil und hielt damit den Fehler fest, statt ihn zu melden:
+  -- drei Stationen standen dort ausserhalb jeder Regel.
+  return next ok(velocity.fn_im_geschaeftsgebiet(50.0467, 10.2283),
+                 'Der Schweinfurter Hauptbahnhof liegt im Geschäftsgebiet');
+
+  -- Ausserhalb: Hoechberg, und die Landschaft zwischen beiden Staedten
   return next ok(not velocity.fn_im_geschaeftsgebiet(49.7900, 9.8800),
                  'Höchberg liegt außerhalb');
-  return next ok(not velocity.fn_im_geschaeftsgebiet(50.0467, 10.2283),
-                 'Schweinfurt liegt außerhalb');
+  return next ok(not velocity.fn_im_geschaeftsgebiet(49.9200, 10.0500),
+                 'Das offene Land zwischen Würzburg und Schweinfurt liegt außerhalb');
 
   return next throws_ok(
     $sql$insert into velocity.geschaeftsgebiet (name, flaeche)
@@ -398,5 +404,21 @@ begin
     return next pass('Kapazität lässt sich nicht unter den Bestand senken');
   end;
   set constraints all deferred;
+end;
+$$;
+
+/* Jede Station muss in einem Geschaeftsgebiet liegen. Drei Stationen in
+   Schweinfurt lagen ausserhalb des einzigen Gebiets - eine dort
+   begonnene Fahrt haette sich nach GR15 nirgends beenden lassen, auch
+   nicht an der eigenen Station. Aufgefallen ist das erst bei einer
+   Aussenpruefung. */
+create or replace function velocity_test.test_station_liegt_im_geschaeftsgebiet()
+returns setof text language plpgsql as $$
+begin
+  return next is(
+    (select count(*)::int from velocity.station s
+      where s.betriebszeitraum @> current_date
+        and not velocity.fn_im_geschaeftsgebiet(s.latitude, s.longitude)),
+    0, 'Keine aktive Station liegt ausserhalb aller Geschaeftsgebiete');
 end;
 $$;

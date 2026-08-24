@@ -77,6 +77,19 @@ async function register(email, password, vorname, nachname) {
     return data.user;
 }
 
+// ===== PASSWORT ZURUECKSETZEN =====
+// Bisher gab es keinen Weg zurueck ins Konto. Supabase schickt den Link
+// selbst; die Seite muss nur sagen, wohin er fuehren soll.
+async function passwortZuruecksetzen(email) {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+    });
+    if (error) {
+        console.error('Passwort-Reset-Fehler:', error);
+        throw new Error(translateAuthError(error.message));
+    }
+}
+
 // ===== LOGOUT =====
 async function logout() {
     const { error } = await supabaseClient.auth.signOut();
@@ -116,7 +129,9 @@ function translateAuthError(message) {
         'User already registered': 'Diese E-Mail-Adresse ist bereits registriert',
         'Password should be at least 6 characters': 'Passwort muss mindestens 6 Zeichen haben',
         'Unable to validate email address: invalid format': 'Ungültige E-Mail-Adresse',
-        'Email rate limit exceeded': 'Zu viele Versuche. Bitte warten Sie einen Moment.'
+        'Email rate limit exceeded': 'Zu viele Versuche. Bitte warten Sie einen Moment.',
+        'For security purposes, you can only request this after 60 seconds.':
+            'Aus Sicherheitsgründen ist das erst nach 60 Sekunden wieder möglich.'
     };
 
     return translations[message] || message;

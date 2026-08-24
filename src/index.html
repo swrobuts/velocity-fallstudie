@@ -16,45 +16,94 @@
 </head>
 <body>
 
+<!-- ============================================================
+     ANMELDUNG
+     Vorher war das ein div, das aussah wie ein Dialog: keine Rolle,
+     kein Name, keine Fokusfalle, Escape ohne Wirkung, Hintergrund
+     weiter scrollbar. Die Reiter waren divs und damit nicht mit der
+     Tastatur erreichbar. Jetzt traegt es role="dialog", aria-modal,
+     einen Namen ueber aria-labelledby und ein echtes Tab-Muster mit
+     Pfeiltasten. Die Rueckmeldung nach dem Absenden steht nicht mehr
+     nur in einem Toast, der nach drei Sekunden weg ist, sondern
+     bleibt als Zustand im Dialog stehen.
+     ============================================================ -->
 <div id="auth-modal" class="modal-overlay">
-    <div class="modal-content">
-        <button class="close-modal" aria-label="Schliessen">&times;</button>
-        <div class="auth-tabs">
-            <div class="auth-tab active" data-target="login-form">Anmelden</div>
-            <div class="auth-tab" data-target="register-form">Registrieren</div>
+    <div class="modal-content" role="dialog" aria-modal="true"
+         aria-labelledby="auth-titel" id="auth-dialog">
+        <button class="close-modal" type="button" aria-label="Dialog schließen">&times;</button>
+
+        <h2 class="nur-vorlesen" id="auth-titel">Anmelden oder Konto anlegen</h2>
+
+        <div class="auth-tabs" role="tablist" aria-label="Anmelden oder registrieren">
+            <button type="button" class="auth-tab active" role="tab" id="tab-login"
+                    aria-selected="true" aria-controls="login-form" tabindex="0"
+                    data-target="login-form">Anmelden</button>
+            <button type="button" class="auth-tab" role="tab" id="tab-register"
+                    aria-selected="false" aria-controls="register-form" tabindex="-1"
+                    data-target="register-form">Registrieren</button>
         </div>
+
+        <!-- Ergebnis einer Anmeldung oder Registrierung. Bleibt stehen,
+             bis der Nutzer etwas anderes tut. -->
+        <div id="auth-status" class="auth-status" role="status" aria-live="polite" hidden></div>
+
         <div class="form-wrapper">
-            <form id="login-form" class="auth-form active">
+            <form id="login-form" class="auth-form active" role="tabpanel"
+                  aria-labelledby="tab-login" novalidate>
                 <h3 class="form-title">Willkommen zurück!</h3>
                 <div class="form-group">
                     <label for="login-email">E-Mail Adresse</label>
-                    <input type="email" id="login-email" name="email" placeholder="name@beispiel.de" required>
+                    <input type="email" id="login-email" name="email" placeholder="name@beispiel.de"
+                           autocomplete="email" required>
                 </div>
                 <div class="form-group">
                     <label for="login-password">Passwort</label>
-                    <input type="password" id="login-password" name="password" placeholder="********" required>
+                    <div class="feld-mit-knopf">
+                        <input type="password" id="login-password" name="password" placeholder="********"
+                               autocomplete="current-password" required>
+                        <button type="button" class="passwort-zeigen" data-feld="login-password"
+                                aria-pressed="false">Zeigen</button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary full-width">Jetzt Anmelden</button>
+                <p class="auth-fuss">
+                    Passwort vergessen?
+                    <button type="button" class="auth-link" id="passwort-vergessen">Neues Passwort anfordern</button>
+                </p>
             </form>
-            <form id="register-form" class="auth-form">
+
+            <form id="register-form" class="auth-form" role="tabpanel"
+                  aria-labelledby="tab-register" novalidate hidden>
                 <h3 class="form-title">Neu bei VeloCity?</h3>
                 <div class="form-group">
                     <label for="reg-vorname">Vorname</label>
-                    <input type="text" id="reg-vorname" name="vorname" placeholder="Max" required>
+                    <input type="text" id="reg-vorname" name="vorname" placeholder="Max"
+                           autocomplete="given-name" required>
                 </div>
                 <div class="form-group">
                     <label for="reg-nachname">Nachname</label>
-                    <input type="text" id="reg-nachname" name="nachname" placeholder="Mustermann" required>
+                    <input type="text" id="reg-nachname" name="nachname" placeholder="Mustermann"
+                           autocomplete="family-name" required>
                 </div>
                 <div class="form-group">
                     <label for="reg-email">E-Mail Adresse</label>
-                    <input type="email" id="reg-email" name="email" placeholder="name@beispiel.de" required>
+                    <input type="email" id="reg-email" name="email" placeholder="name@beispiel.de"
+                           autocomplete="email" required>
                 </div>
                 <div class="form-group">
                     <label for="reg-password">Passwort wählen</label>
-                    <input type="password" id="reg-password" name="password" minlength="6" placeholder="Min. 6 Zeichen" required>
+                    <div class="feld-mit-knopf">
+                        <input type="password" id="reg-password" name="password" minlength="6"
+                               placeholder="Min. 6 Zeichen" autocomplete="new-password" required>
+                        <button type="button" class="passwort-zeigen" data-feld="reg-password"
+                                aria-pressed="false">Zeigen</button>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary full-width">Kostenlos registrieren</button>
+                <p class="auth-fuss">
+                    Mit dem Anlegen eines Kontos stimmst du den
+                    <a href="rechtliches.html#agb">Nutzungsbedingungen</a> zu.
+                </p>
             </form>
         </div>
     </div>
@@ -80,15 +129,36 @@
      Der Login bleibt ein button mit id="user-nav-btn" - daran haengt
      die Anmeldung in auth.js.
      ============================================================ -->
+<a class="sprungmarke" href="#facts-title">Zum Inhalt springen</a>
+
 <header class="site-header" id="navbar">
   <a class="brand" href="#top" aria-label="VeloCity Startseite">VEL<i></i><span>CITY</span></a>
+
   <nav class="site-nav" aria-label="Hauptnavigation">
     <a href="#anleitung">So geht&rsquo;s</a>
     <a href="#tarife">Preise</a>
     <a href="#map-section">Live-Karte</a>
   </nav>
-  <button id="user-nav-btn" class="login" type="button">Login</button>
+
+  <div class="kopf-aktionen">
+    <!-- Unter 1024 px verschwand die gesamte Navigation ersatzlos. Wer
+         mobil kam, musste bis zur Karte scrollen. Die Karte bleibt
+         deshalb hier dauerhaft erreichbar; der Rest steckt im Menue. -->
+    <a class="kopf-karte" href="#map-section">Live-Karte</a>
+    <button id="user-nav-btn" class="login" type="button">Login</button>
+    <button id="menue-knopf" class="menue-knopf" type="button"
+            aria-expanded="false" aria-controls="menue" aria-label="Menü öffnen">
+      <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+    </button>
+  </div>
 </header>
+
+<nav id="menue" class="menue" aria-label="Menü" hidden>
+  <a href="#anleitung">So geht&rsquo;s</a>
+  <a href="#tarife">Preise</a>
+  <a href="#map-section">Live-Karte</a>
+  <a href="rechtliches.html">Rechtliches</a>
+</nav>
 
 <main id="top">
 
@@ -111,30 +181,30 @@
     <div class="transition-cover" aria-hidden="true"></div>
 
     <div class="top-meta">
-      <span class="live-indicator"><span id="bike-counter">…</span> Räder live</span>
-      <span class="chapter">Würzburg · <span id="stationen-zaehler">…</span> Stationen</span>
+      <span class="live-indicator"><span id="bike-counter">…</span> Räder frei<span class="live-stand" id="live-stand"></span></span>
+      <span class="chapter">Würzburg &amp; Schweinfurt · <span id="stationen-zaehler">…</span> Stationen</span>
     </div>
 
     <div class="claim claim-ebike">
-      <p class="eyebrow">E-Bike · Unterstützung bis 25 km/h</p>
+      <p class="eyebrow"><span class="meta-lang">E-Bike · Unterstützung bis 25 km/h</span><span class="meta-kurz">E-Bike · bis 25 km/h</span></p>
       <h1>
-        <span class="claim-line headline-primary">Würzburg hat<br>viele Berge.</span>
-        <span class="claim-line headline-accent">Wir liefern den<br>Rückenwind.</span>
+        <span class="claim-line headline-primary">Würzburg hat<br> viele Berge.</span>
+        <span class="claim-line headline-accent">Wir liefern den<br> Rückenwind.</span>
       </h1>
     </div>
 
     <div class="claim claim-city">
-      <p class="eyebrow">City-Bike · klassisch &amp; direkt</p>
+      <p class="eyebrow"><span class="meta-lang">City-Bike · klassisch &amp; direkt</span><span class="meta-kurz">City-Bike · direkt</span></p>
       <h1>
-        <span class="claim-line headline-primary">Entspannt<br>shoppen.</span>
-        <span class="claim-line headline-accent">Noch entspannter<br>nach Hause cruisen.</span>
+        <span class="claim-line headline-primary">Entspannt<br> shoppen.</span>
+        <span class="claim-line headline-accent">Noch entspannter<br> nach Hause cruisen.</span>
       </h1>
     </div>
 
     <div class="choice-panel" id="angebot">
-      <div class="product-tabs" role="tablist" aria-label="Fahrradtyp wählen">
-        <button class="product-tab" role="tab" aria-selected="false" data-product="city" type="button">City-Bike</button>
-        <button class="product-tab" role="tab" aria-selected="true" data-product="ebike" type="button">E-Bike</button>
+      <div class="product-tabs" role="group" aria-label="Fahrradtyp wählen">
+        <button class="product-tab" aria-pressed="false" data-product="city" type="button">City-Bike</button>
+        <button class="product-tab" aria-pressed="true" data-product="ebike" type="button">E-Bike</button>
       </div>
       <div class="product-copy" aria-live="polite">
         <span class="product-kicker">Aktuelle Auswahl</span>
@@ -144,11 +214,19 @@
     </div>
 
     <aside class="final-card">
-      <div class="label"><span>Live in Würzburg</span><span>● <span id="bike-counter-karte">…</span></span></div>
+      <div class="label"><span>Gerade frei im Netz</span><span>● <span id="bike-counter-karte">…</span></span></div>
       <h2>Bereit, wenn du es bist.</h2>
       <p>Finde das passende Rad an einer Station in deiner Nähe.</p>
       <a class="primary-cta" href="#map-section"><span>Live-Karte öffnen</span><span>↗</span></a>
     </aside>
+
+    <!-- Im ersten Bildschirm stand mobil weder ein Ziel noch ein Hinweis,
+         dass Scrollen etwas ausloest. Im Kopf ist bei 390 px kein Platz
+         mehr: Marke, Login und Menue belegen 336 von 346 Punkten. Also
+         steht die Handlung hier, direkt unter der Schlagzeile. -->
+    <a class="hero-cta" href="#map-section">
+      <span>Räder in deiner Nähe</span><span aria-hidden="true">↗</span>
+    </a>
 
     <div class="scroll-hint">Scrollen, um das Netz zu entdecken</div>
     <div class="progress-rail" aria-hidden="true"></div>
@@ -188,9 +266,9 @@
   <div class="container">
     <div class="section-header">
       <span class="eyebrow">Tarife</span>
-      <h2>Drei Fahrradtypen, ein Preismodell</h2>
-      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis. Alle Zahlen
-         kommen aus der Preistabelle der Datenbank, nicht aus dem Seitentext.</p>
+      <h2>Drei Fahrradtypen, ein einfaches Prinzip</h2>
+      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis. Du siehst vor
+         der Fahrt, was sie kostet — und zahlst nie mehr als das Tagesmaximum deines Rades.</p>
     </div>
 
     <!-- Der Fahrpreiszaehler stand frueher im Kopfbereich. Der ist
@@ -208,11 +286,22 @@
         <label class="rechner-marke" for="meter-minuten">Fahrzeit</label>
         <div class="rechner-feld">
           <input type="number" id="meter-minuten" min="1" max="1440" step="1" value="30"
-                 inputmode="numeric" autocomplete="off">
+                 inputmode="numeric" autocomplete="off"
+                 aria-describedby="meter-grenze">
           <span>Minuten</span>
         </div>
-        <input type="range" id="meter-regler" min="1" max="240" step="1" value="30"
+        <input type="range" id="meter-regler" min="1" max="1440" step="1" value="30"
                aria-label="Fahrzeit in Minuten">
+        <!-- Feld und Regler liefen frueher auseinander: 1440 im Feld, 144 am
+             Regler. Beide tragen jetzt dieselbe Grenze. Die Sprungmarken
+             machen die langen Zeiten trotzdem in einem Griff erreichbar. -->
+        <div class="rechner-marken" role="group" aria-label="Fahrzeit vorwählen">
+          <button type="button" data-minuten="15">15 Min</button>
+          <button type="button" data-minuten="30">30 Min</button>
+          <button type="button" data-minuten="120">2 Std</button>
+          <button type="button" data-minuten="1440">1 Tag</button>
+        </div>
+        <p class="rechner-grenze" id="meter-grenze">1 bis 1440 Minuten</p>
       </div>
       <div class="rechner-spalte rechner-summe">
         <div class="rechner-ergebnis">
@@ -234,7 +323,8 @@
         <span class="eyebrow">Karte</span>
         <h2>Was gerade frei ist</h2>
         <p>Jede Scheibe ist eine Station und trägt die Zahl der Räder, die dort gerade frei
-           sind. Ein Klick schlüsselt nach Fahrradtyp auf und leiht direkt.</p>
+           sind. Station auswählen, Fahrradtyp prüfen und die Ausleihe starten — für die
+           Ausleihe selbst brauchst du ein Konto.</p>
     </div>
 
     <div class="map-container-shadow">
@@ -245,12 +335,20 @@
             <label class="filter-option"><input type="checkbox" value="cargo" checked> <span>E-Cargo Loader</span></label>
         </div>
         <div id="map"></div>
-        <button type="button" class="karte-zurueck" id="karte-zurueck">Würzburg zeigen</button>
+        <div class="karte-knoepfe">
+            <button type="button" class="karte-zurueck" id="karte-zurueck">Würzburg zeigen</button>
+            <button type="button" class="karte-zurueck" id="karte-netz">Ganzes Netz</button>
+        </div>
         <div class="karte-hinweis" id="karte-hinweis">Zum Zoomen in die Karte klicken</div>
     </div>
 
+    <!-- Die Filter aendern die Karte sichtbar, sagten es aber niemandem,
+         der sie nicht sieht. Die Zeile steht unter der Karte, nicht darin -
+         im Rahmen lag sie ueber den Kacheln. -->
+    <p class="karte-stand container" id="karte-stand" role="status" aria-live="polite"></p>
+
     <div class="map-legend container">
-        <div class="legend-item"><span class="legende-scheibe">7</span> Station mit sieben freien Rädern</div>
+        <div class="legend-item"><span class="legende-scheibe">7</span> Station — die Zahl nennt die freien Räder</div>
         <div class="legend-item"><span class="legende-rad ist-city"><i class="fa-solid fa-bicycle"></i></span> frei abgestelltes City-Bike</div>
         <div class="legend-item"><span class="legende-rad ist-ebike"><i class="fa-solid fa-bicycle"></i></span> frei abgestelltes E-Bike Sport</div>
         <div class="legend-item"><span class="legende-rad ist-cargo"><i class="fa-solid fa-bicycle"></i></span> frei abgestellter E-Cargo Loader</div>
@@ -275,15 +373,15 @@
               <span class="brand brand-fuss" role="img" aria-label="VeloCity">VEL<i></i><span>CITY</span></span>
             </div>
             <p class="wortspiel">Velo · City · Velocity</p>
-            <p style="color: #9CA3AF; line-height: 1.6;">Das moderne Leihradsystem für Würzburg und Umgebung. Einfach, smart, elektrisch.</p>
+            <p class="fuss-text">Das Leihradsystem für Würzburg und Schweinfurt. Einfach, smart, elektrisch.</p>
         </div>
         <div class="footer-col">
             <h4>Rechtliches</h4>
             <ul>
-                <li><a href="#">Impressum</a></li>
-                <li><a href="#">Datenschutz</a></li>
-                <li><a href="#">AGB & Nutzungsbedingungen</a></li>
-                <li><a href="#">Widerrufsrecht</a></li>
+                <li><a href="rechtliches.html#impressum">Impressum</a></li>
+                <li><a href="rechtliches.html#datenschutz">Datenschutz</a></li>
+                <li><a href="rechtliches.html#agb">AGB &amp; Nutzungsbedingungen</a></li>
+                <li><a href="rechtliches.html#widerruf">Widerrufsrecht</a></li>
             </ul>
         </div>
         <div class="footer-col">
@@ -296,7 +394,8 @@
         </div>
     </div>
     <div class="impressum-sub container">
-        <p>&copy; 2026 VeloCity Würzburg GmbH. Geschäftsführer: Max Mustermann. Amtsgericht Würzburg HRB 99999.</p>
+        <p>&copy; 2026 VeloCity Würzburg GmbH. Geschäftsführer: Max Mustermann. Amtsgericht Würzburg HRB 99999.
+           <a href="rechtliches.html">Erfundenes Fallbeispiel aus der Lehre.</a></p>
     </div>
 </footer>
 
