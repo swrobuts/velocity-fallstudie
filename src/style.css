@@ -84,7 +84,20 @@
      endet, und endet an der Flucht der Spur. Vorher stand das Rad auf
      einem Prozentwert und die Zeile daneben - bei jeder Fensterbreite
      ein anderes Verhaeltnis, mal Luft, mal Ueberschneidung. */
-  --textspalte: min(500px, 40vw);
+  /* DIE TEXTSPALTE RECHNET IN SCHRIFTGRAD, NICHT IN PUNKTEN.
+     Mit einem festen Deckel (500) wuchs die Schrift mit der
+     Fensterbreite, die Spalte aber nicht - auf einem breiten Schirm
+     standen die Schlagzeilen drei- und vierzeilig. Nachgemessen braucht
+     die breiteste ("Noch entspannter | nach Hause cruisen.") 7,97 em
+     fuer zwei Zeilen; 8,2 gibt etwas Luft. Weil beides am selben
+     Schriftgrad haengt, bleibt der Umbruch bei jeder Breite gleich.
+
+     Die Obergrenze ist die TATSAECHLICH freie Breite, nicht ein fester
+     Anteil des Fensters: mit 48vw war die Spalte zwischen 520 und 900
+     Punkten zu schmal, obwohl daneben nichts stand - dort wurden zwei
+     der sechs Schlagzeilen wieder dreizeilig. */
+  --textspalte: min(calc(var(--hero-font) * 8.2),
+                    calc(100% - 2 * var(--flucht)));
   --gasse: clamp(32px, 3.4vw, 64px);
   --rand: clamp(22px, 4vw, 70px);
   --luft: clamp(70px, 8vw, 130px);
@@ -551,7 +564,10 @@ img { max-width: 100%; }
 .claim-ebike { opacity: var(--z-ebike); transform: translateY(calc((1 - var(--z-ebike)) * 20px)); }
 .claim-city  { opacity: var(--z-city);  transform: translateY(calc((1 - var(--z-city))  * 20px)); }
 .claim-cargo { opacity: var(--z-cargo); transform: translateY(calc((1 - var(--z-cargo)) * 20px)); }
-.claim-city h1 { font-size: calc(var(--hero-font) * .82); }
+/* Das City-Bike stand in kleinerer Schrift, weil sein Satz der laengste
+   ist und in der schmalen Spalte sonst vierzeilig wurde. Mit der
+   mitwachsenden Spalte braucht es den Notbehelf nicht mehr - alle drei
+   Schlagzeilen stehen jetzt im selben Grad. */
 
 .sticky-stage.is-manual .claim {
   transition: opacity .52s cubic-bezier(.4, 0, .2, 1), transform .62s cubic-bezier(.4, 0, .2, 1);
@@ -1864,7 +1880,10 @@ footer a:hover { color: #fff; text-decoration: underline; }
      zweite Stufe mehr, sonst kehrt der Sprung zurueck. */
   .claim { top: 27vh; bottom: auto; width: calc(100% - 48px); }
   .claim h1 { font-size: var(--hero-font); max-width: 100%; }
-  .claim-city h1 { font-size: calc(var(--hero-font) * .82); }
+  /* Das City-Bike stand in kleinerer Schrift, weil sein Satz der laengste
+   ist und in der schmalen Spalte sonst vierzeilig wurde. Mit der
+   mitwachsenden Spalte braucht es den Notbehelf nicht mehr - alle drei
+   Schlagzeilen stehen jetzt im selben Grad. */
   .choice-panel { grid-template-columns: 1fr; gap: 15px; bottom: 64px; right: 24px; }
   .product-copy { display: none; }
   .final-card { top: 128px; right: 20px; bottom: auto; width: min(360px, calc(100% - 40px)); }
@@ -1892,7 +1911,12 @@ footer a:hover { color: #fff; text-decoration: underline; }
   /* Die laengste Schlagzeile - die des Loaders - braucht fuenf Zeilen.
      Bei 52 px blieb dem Rad darunter kaum Platz; 45 px lesen sich auf
      einem Telefon genauso gut und geben eine ganze Zeile Raum zurueck. */
-  :root { --hero-font: 45px; }
+  /* Auf dem Telefon ist die Spalte durch die Fensterbreite gedeckelt,
+     nicht durch den Schriftgrad - also muss hier der Schriftgrad
+     folgen, sonst werden zwei der sechs Schlagzeilen dreizeilig.
+     8,8 statt 8,2 als Teiler, weil 100vw den Rollbalken mitzaehlt und
+     die Spalte in Wirklichkeit etwas schmaler ist. */
+  :root { --hero-font: min(45px, calc((100vw - 2 * var(--rand)) / 8.8)); }
 
   /* "221 RÄDER FREI" brach hier in drei Zeilen um. Zwei bewusst
      gesetzte sind besser als drei zufaellige. */

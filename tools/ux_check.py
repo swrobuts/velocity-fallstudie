@@ -331,6 +331,13 @@ pruefe('BUEHNE', 'rad-cargo-frei' in C,
 # ist damit schmaler als die Seite - ein Rad, das nur um seine eigene
 # Breite faehrt, stuende beim Wechsel noch im Bild. Jede Ebene reicht
 # ihren Versatz ueber --x-rad an die gemeinsame Regel weiter.
+# Die Schlagzeilen sollen ueberall ZWEIZEILIG stehen. Das geht nur, wenn
+# die Textspalte im selben Mass rechnet wie die Schrift: mit einem festen
+# Deckel in Punkten wuchs die Schrift mit der Fensterbreite, die Spalte
+# aber nicht, und auf breiten Schirmen standen die Saetze drei- und
+# vierzeilig. Nachgemessen braucht die breiteste Zeile 7,97 em.
+pruefe('BUEHNE', 'var(--hero-font) * 8' in C.replace('\n', ' ').replace('  ', ' '),
+       'Die Textspalte rechnet im Schriftgrad, nicht in Punkten')
 pruefe('BUEHNE', 'var(--x-rad, 0) * 104vw' in C,
        'Die Schiene misst in Fensterbreiten')
 for name in ('ebike', 'city', 'cargo'):
