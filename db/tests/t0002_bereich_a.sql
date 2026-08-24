@@ -69,3 +69,44 @@ begin
     '23514', null, 'Deutsche PLZ muss fuenfstellig sein');
 end;
 $$;
+
+/* Ein Bestandskunde aus der Datenuebernahme legt ein Onlinekonto an.
+   Erwartet wird: sein Satz wird VERKNUEPFT, nicht verdoppelt, und die
+   Kundennummer bleibt. Sein Name darf dabei nicht verlorengehen -
+   genau das ist am 24.08.2026 passiert: die Uebernahme kannte nur
+   "Unbekannt Unbekannt", die Registrierung lieferte den echten Namen,
+   und im Profil stand weiter der Platzhalter.
+
+   Regel: echte vorhandene Angaben bleiben stehen, ein Platzhalter weicht
+   der Eingabe. Geprueft wird die Regel hier direkt am Datensatz - der
+   Weg ueber auth.uid() gehoert in den Durchstich, nicht in pgTAP. */
+create or replace function velocity_test.test_a_platzhalter_weicht_echtem_namen()
+returns setof text language plpgsql as $$
+declare
+  v_id bigint;
+begin
+  insert into velocity.kunde (email, vorname, nachname)
+  values ('pgtap.platzhalter@example.invalid', 'Unbekannt', 'Unbekannt')
+  returning kunde_id into v_id;
+
+  -- Der Zweig, den api_kunde_sicherstellen beim Verknuepfen faehrt
+  update velocity.kunde k
+     set vorname = 'Anna', nachname = 'Beispiel'
+   where k.kunde_id = v_id
+     and (k.vorname = 'Unbekannt' or k.nachname = 'Unbekannt');
+
+  return next is(
+    (select vorname || ' ' || nachname from velocity.kunde where kunde_id = v_id),
+    'Anna Beispiel', 'Ein Platzhalter weicht dem echten Namen');
+
+  -- Und die Gegenprobe: echte Angaben bleiben stehen
+  update velocity.kunde k
+     set vorname = 'Ueberschrieben'
+   where k.kunde_id = v_id
+     and (k.vorname is null or btrim(k.vorname) = '' or k.vorname = 'Unbekannt');
+
+  return next is(
+    (select vorname from velocity.kunde where kunde_id = v_id),
+    'Anna', 'Ein echter Name wird nicht ueberschrieben');
+end;
+$$;

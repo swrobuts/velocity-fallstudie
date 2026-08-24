@@ -2,13 +2,26 @@
 -- Abgleichsbericht der Datenuebernahme
 --
 -- Stellt Soll und Ist gegenueber. Abweichungen muessen erklaerbar sein.
+--
+-- WICHTIG: verglichen wird der Stand ZUM ZEITPUNKT DER UEBERNAHME, nicht
+-- der Stand von heute. Sobald die Seite in Betrieb ist, entstehen neue
+-- Kunden und neue Ausleihen - die sind kein Fehler der Uebernahme,
+-- sondern ihr Zweck. Der Bericht meldete sonst genau in dem Moment eine
+-- Abweichung, in dem der erste echte Kunde seine erste Fahrt machte.
+-- Der Stichtag steht in velocity.uebernahme_protokoll.
 -- =====================================================================
+with stichtag as (
+  select coalesce(max(lauf), now()) as zeitpunkt from velocity.uebernahme_protokoll
+)
 select bereich, soll_alt, ist_neu, ist_neu - soll_alt as abweichung, bemerkung
 from (
-  select 'a kunde' as bereich,
+  select 'a kunde (bis Stichtag)' as bereich,
          (select count(*) from "cityBikesRental".kunde)          as soll_alt,
-         (select count(*) from velocity.kunde)                    as ist_neu,
-         'Sätze mit unplausibler E-Mail werden ausgelassen'       as bemerkung
+         (select count(*) from velocity.kunde
+           where erstellt_am < (select zeitpunkt from stichtag)) as ist_neu,
+         'Sätze mit unplausibler E-Mail werden ausgelassen; '
+         || 'nach dem Stichtag angelegte Konten zaehlen nicht mit'
+                                                                 as bemerkung
   union all
   select 'b station',
          (select count(*) from "cityBikesRental".station),
@@ -18,9 +31,11 @@ from (
          (select count(*) from "cityBikesRental".fahrrad),
          (select count(*) from velocity.fahrrad), ''
   union all
-  select 'd ausleihe',
+  select 'd ausleihe (bis Stichtag)',
          (select count(*) from "cityBikesRental".ausleihe),
-         (select count(*) from velocity.ausleihe), ''
+         (select count(*) from velocity.ausleihe
+           where startzeit < (select zeitpunkt from stichtag)),
+         'Fahrten nach dem Stichtag sind neues Geschaeft'
   union all
   select 'e mitgliedschaft (nur aktive)',
          (select count(*) from "cityBikesRental".mitgliedschaft where aktiv),

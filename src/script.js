@@ -1330,6 +1330,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     bikeInfo: rad?.typ_bezeichnung || 'Fahrrad',
                     rahmennummer: rad?.rahmennummer || '',
                     typ_code: rad?.typ_code || null,
+                    start_station_id: rad?.station_id || null,
                     startgebuehr: rad ? Number(rad.startgebuehr) : null,
                     preis_pro_minute: rad ? Number(rad.preis_pro_minute) : null,
                     tageshoechstpreis: rad ? Number(rad.tageshoechstpreis) : null
@@ -1375,6 +1376,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     startzeit: new Date(rental.startzeit),
                     bikeInfo: rental.typ_bezeichnung || 'Fahrrad',
                     typ_code: rental.typ_code || null,
+                    start_station_id: (db_Stations.find(st => st.name === rental.start_station) || {}).station_id || null,
                     startgebuehr: satz ? Number(satz.startgebuehr) : null,
                     preis_pro_minute: satz ? Number(satz.preis_pro_minute) : null,
                     tageshoechstpreis: satz ? Number(satz.tageshoechstpreis) : null
@@ -1512,21 +1514,60 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     /* Die Stationsliste im Dialog. Kennt die Anwendung den Standort,
        steht die naechstgelegene oben und die Entfernung dabei. */
+    /* Kennt die Anwendung den Standort, steht die naechstgelegene Station
+       oben. Kennt sie ihn nicht, ist die Startstation der beste Anhalt -
+       sie steht dann oben und ist vorausgewaehlt.
+
+       Der Grund: die Liste war alphabetisch, und ganz oben stand "Dom".
+       Eine Fahrt, die am Schweinfurter Markt begann, liess sich damit mit
+       einem Klick vierzig Kilometer entfernt zurueckgeben. Erlaubt ist
+       das - Raeder werden umgesetzt -, naheliegend nicht. Die Entfernung
+       steht jetzt bei jedem Eintrag, damit die Wahl bewusst faellt. */
     function rueckgabeStationenFuellen() {
         const feld = document.getElementById('rueckgabe-station');
         if (!feld) return;
-        const hier = rueckgabeOrt ? L.latLng(rueckgabeOrt.latitude, rueckgabeOrt.longitude) : null;
+
+        const start = activeRental?.start_station_id
+            ? db_Stations.find(st => st.station_id === activeRental.start_station_id)
+            : null;
+        const bezug = rueckgabeOrt
+            ? L.latLng(rueckgabeOrt.latitude, rueckgabeOrt.longitude)
+            : (start && start.latitude ? L.latLng(start.latitude, start.longitude) : null);
+
         const zeilen = db_Stations
             .filter(st => st.latitude && st.longitude)
-            .map(st => ({ st, meter: hier ? entfernungMeter(hier, L.latLng(st.latitude, st.longitude)) : null }));
-        if (hier) zeilen.sort((a, b) => a.meter - b.meter);
+            .map(st => ({ st, meter: bezug ? entfernungMeter(bezug, L.latLng(st.latitude, st.longitude)) : null }));
+        if (bezug) zeilen.sort((a, b) => a.meter - b.meter);
         else zeilen.sort((a, b) => a.st.name.localeCompare(b.st.name, 'de'));
 
         feld.innerHTML = zeilen.map(({ st, meter }) =>
             `<option value="${st.station_id}">${escapeHtml(st.name)}` +
             `${st.ort ? ' · ' + escapeHtml(st.ort) : ''}` +
             `${meter !== null ? ' · ' + (meter < 1000 ? meter + ' m' : (meter / 1000).toFixed(1) + ' km') : ''}` +
+            `${meter === 0 ? ' · Startstation' : ''}` +
             `</option>`).join('');
+
+        if (start) feld.value = String(start.station_id);
+    }
+
+    /* Eine Station in einer anderen Stadt ist erlaubt, aber selten
+       gemeint. Statt es zu verbieten, wird nachgefragt. */
+    function rueckgabeEntfernungPruefen() {
+        const feld = document.getElementById('rueckgabe-station');
+        const ziel = db_Stations.find(st => st.station_id === Number(feld.value));
+        const start = activeRental?.start_station_id
+            ? db_Stations.find(st => st.station_id === activeRental.start_station_id)
+            : null;
+        if (!ziel || !start || !ziel.latitude || !start.latitude) { rueckgabeStatusLeeren(); return; }
+        const meter = entfernungMeter(L.latLng(start.latitude, start.longitude),
+                                      L.latLng(ziel.latitude, ziel.longitude));
+        if (meter > 5000) {
+            rueckgabeMelden('hinweis',
+                `${ziel.name} liegt ${(meter / 1000).toFixed(1)} km von deiner Startstation `
+                + `${start.name} entfernt. Stimmt das?`);
+        } else {
+            rueckgabeStatusLeeren();
+        }
     }
 
     function rueckgabeArt() {
@@ -1542,6 +1583,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.querySelectorAll('input[name="rueckgabeart"]').forEach(r =>
         r.addEventListener('change', rueckgabeAnsichtSetzen));
+    document.getElementById('rueckgabe-station')?.addEventListener('change', rueckgabeEntfernungPruefen);
 
     document.getElementById('rueckgabe-standort')?.addEventListener('click', () => {
         if (!navigator.geolocation) {

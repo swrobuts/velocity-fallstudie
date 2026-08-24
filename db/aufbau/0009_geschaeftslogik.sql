@@ -321,25 +321,71 @@ declare
   v_meta  jsonb;
   v_id    bigint;
   v_neu   boolean := false;
+  v_vorhanden boolean;
 begin
   if v_uid is null then
     raise exception 'Nicht angemeldet' using errcode = '28000';
   end if;
 
   select k.kunde_id into v_id from velocity.kunde k where k.auth_uid = v_uid;
+  -- FOUND wird von jeder folgenden Anweisung neu gesetzt, auch von einem
+  -- UPDATE. Der Befund wird deshalb sofort festgehalten.
+  v_vorhanden := found;
 
-  if not found then
+  if v_vorhanden then
+    /* Schon verknuepft - aber traegt der Satz noch Platzhalter aus der
+       Datenuebernahme? Dann werden sie jetzt ersetzt. Die Funktion laeuft
+       nach jeder Anmeldung; der Kundensatz heilt damit von selbst, sobald
+       echte Angaben vorliegen. Ohne diesen Zweig muesste jeder betroffene
+       Kunde von Hand nachgetragen werden. */
+    select u.raw_user_meta_data into v_meta from auth.users u where u.id = v_uid;
+
+    update velocity.kunde k
+       set vorname  = coalesce(nullif(v_meta ->> 'vorname',  ''), k.vorname),
+           nachname = coalesce(nullif(v_meta ->> 'nachname', ''), k.nachname)
+     where k.kunde_id = v_id
+       and (k.vorname  is null or btrim(k.vorname)  = '' or k.vorname  = 'Unbekannt'
+         or k.nachname is null or btrim(k.nachname) = '' or k.nachname = 'Unbekannt');
+  end if;
+
+  if not v_vorhanden then
     select u.email, u.raw_user_meta_data into v_email, v_meta
       from auth.users u where u.id = v_uid;
 
-    -- Existiert bereits ein Kundensatz mit dieser E-Mail (etwa aus der
-    -- Datenuebernahme), wird er mit dem Konto verknuepft statt doppelt
-    -- angelegt.
+    /* Existiert bereits ein Kundensatz mit dieser E-Mail (etwa aus der
+       Datenuebernahme), wird er mit dem Konto verknuepft statt doppelt
+       angelegt.
+
+       Beim Namen gilt eine Rangfolge, keine blinde Uebernahme:
+       vorhandene ECHTE Angaben bleiben stehen - sie stammen aus dem
+       Vertragsverhaeltnis und wiegen schwerer als ein Formularfeld.
+       Ein PLATZHALTER weicht dagegen der Eingabe.
+
+       Der Fall trat sofort auf: die Datenuebernahme kannte fuer diesen
+       Kunden nur "Unbekannt Unbekannt". Nach der Registrierung als
+       "Robert Butscher" stand im Profil weiterhin "Unbekannt" - der
+       Name war eingegeben und verschwunden. Aus Sicht des Kunden ein
+       Datenverlust, aus Sicht des Modells eine fehlende Regel. */
     insert into velocity.kunde (auth_uid, email, vorname, nachname)
     values (v_uid, v_email,
             coalesce(nullif(v_meta ->> 'vorname',  ''), 'Unbekannt'),
             coalesce(nullif(v_meta ->> 'nachname', ''), 'Unbekannt'))
-    on conflict (email) do update set auth_uid = excluded.auth_uid
+    on conflict (email) do update
+       set auth_uid = excluded.auth_uid,
+           vorname  = case
+                        when velocity.kunde.vorname is null
+                          or btrim(velocity.kunde.vorname) = ''
+                          or velocity.kunde.vorname = 'Unbekannt'
+                        then excluded.vorname
+                        else velocity.kunde.vorname
+                      end,
+           nachname = case
+                        when velocity.kunde.nachname is null
+                          or btrim(velocity.kunde.nachname) = ''
+                          or velocity.kunde.nachname = 'Unbekannt'
+                        then excluded.nachname
+                        else velocity.kunde.nachname
+                      end
     returning velocity.kunde.kunde_id into v_id;
 
     v_neu := true;

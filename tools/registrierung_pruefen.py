@@ -70,13 +70,20 @@ def main() -> int:
         uid = benutzer[0][0]
 
     # ---- 2 Kundensatz in velocity -----------------------------------
-    cur.execute("""select kunde_id, kundennummer, auth_uid, status
+    cur.execute("""select kunde_id, kundennummer, auth_uid, status, vorname, nachname
                      from velocity.kunde where lower(email) = %s
                     order by kunde_id""", (email,))
     kunden = cur.fetchall()
     if len(kunden) == 1:
-        kid, nummer, auth_uid, status = kunden[0]
+        kid, nummer, auth_uid, status, vorname, nachname = kunden[0]
         print(f'  {GRUEN}✓{AUS} Genau ein Kundensatz  {GRAU}{nummer} (kunde_id {kid}, {status}){AUS}')
+        # Die Datenuebernahme kannte fuer manche Kunden nur "Unbekannt".
+        # Beim ersten Anmelden weicht der Platzhalter dem echten Namen.
+        if 'Unbekannt' in (vorname or '', nachname or ''):
+            print(f'  {GELB}!{AUS} Name noch ein Platzhalter: {vorname} {nachname}'
+                  f'{GRAU} — wird beim naechsten Anmelden ersetzt{AUS}')
+        else:
+            print(f'  {GRUEN}✓{AUS} Name uebernommen  {GRAU}{vorname} {nachname}{AUS}')
         if auth_uid is None:
             print(f'  {GELB}!{AUS} Noch nicht verknuepft — das geschieht beim ersten Anmelden')
         elif uid and str(auth_uid) == str(uid):
@@ -88,7 +95,7 @@ def main() -> int:
         print(f'  {GELB}!{AUS} Kein Kundensatz — entsteht beim ersten Anmelden')
     else:
         print(f'  {ROT}✗{AUS} {len(kunden)} Kundensaetze: ' +
-              ', '.join(f'{n} ({k})' for k, n, _, _ in kunden))
+              ', '.join(f'{z[1]} ({z[0]})' for z in kunden))
         fehler += 1
 
     # ---- 3 Altschema ------------------------------------------------

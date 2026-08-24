@@ -125,6 +125,32 @@ den Login-Nachweis ist gelöscht. Bestand wie zuvor: 32 Ausleihen.
   Diagnoseversuchen dieses und des vorigen Durchgangs). Stand wieder
   1015, wie in der Datenübernahme.
 
+## Nach der echten Registrierung (24.08., 13:40)
+
+`swrobuts@googlemail.com` hat sich angemeldet. Der Bestandskunde
+**K-000013** wurde verknüpft, nicht verdoppelt, und sieht seine sieben
+übernommenen Fahrten. Dabei fielen zwei Dinge auf:
+
+- ☑ **Der Name ging verloren.** Die Datenübernahme kannte nur
+  „Unbekannt Unbekannt"; die Registrierung lieferte „Robert Butscher",
+  und `api_kunde_sicherstellen` setzte beim Verknüpfen ausdrücklich nur
+  die `auth_uid`. Aus Sicht des Kunden ein Datenverlust, aus Sicht des
+  Modells eine fehlende Regel. Sie lautet jetzt: **echte vorhandene
+  Angaben bleiben stehen, ein Platzhalter weicht der Eingabe.** Die
+  Funktion heilt den Satz bei jeder Anmeldung, also auch nachträglich —
+  zwei weitere Kunden mit Platzhalter profitieren davon, sobald sie sich
+  anmelden. Abgesichert in `t0002_bereich_a.sql`.
+- ☑ **Die Rückgabe ließ Dom zu, obwohl die Fahrt in Schweinfurt begann.**
+  Erlaubt ist das — Räder werden umgesetzt —, naheliegend nicht. Die
+  Stationsliste war alphabetisch, ganz oben stand „Dom". Jetzt ist die
+  **Startstation vorausgewählt**, jede Zeile trägt die Entfernung, und
+  über 5 km fragt der Dialog nach: *„Dom liegt 35.2 km von deiner
+  Startstation Schweinfurt Markt entfernt. Stimmt das?"*
+- ☑ **Der Abgleichsbericht schlug an, als der erste echte Kunde fuhr.**
+  Er verglich den Altbestand mit dem Stand von heute. Verglichen wird
+  jetzt der Stand **zum Stichtag der Übernahme**; neues Geschäft ist kein
+  Fehler der Migration, sondern ihr Zweck.
+
 ## Offen — Betreiberentscheidungen
 
 1. **SMTP.** Bestätigung und Passwort-Rücksetzung hängen daran.
