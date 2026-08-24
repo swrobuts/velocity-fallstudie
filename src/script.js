@@ -648,13 +648,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             db_Stations = stations;
             db_Bikes = bikes;
 
-            // Stats aktualisieren
-            // Zwei Stellen zeigen dieselbe Zahl: die Kopfzeile der
-            // Buehne und die Karte am unteren Rand.
-            for (const id of ['bike-counter']) {
-                const el = document.getElementById(id);
-                if (el) el.textContent = bikes.length;
+            // Die Zahl im Kopf der Buehne gehoert zum RAD, das dort
+            // gerade steht - am E-Bike-Halt die freien E-Bikes, nicht
+            // die 221 des ganzen Netzes. Die Buehne (hero.js) sagt,
+            // welcher Typ gemeint ist; hier wird nur gezaehlt.
+            bestandJeTyp = { alle: bikes.length, city: 0, ebike: 0, cargo: 0 };
+            for (const r of bikes) {
+                const kurz = TYP_FILTER[r.typ_code];
+                if (kurz) bestandJeTyp[kurz] += 1;
             }
+            radzahlFuerTyp(letzterHeroTyp ?? heroTypAusPille());
             // Die Stationszahl kommt aus velocity.v_kennzahl und wird von
             // renderKennzahlen gesetzt, nicht mehr hier.
 
@@ -782,17 +785,55 @@ document.addEventListener("DOMContentLoaded", async () => {
     const TYP_FILTER = { CITY: 'city', EBIKE: 'ebike', CARGO: 'cargo' };
     const TYP_NAME = { city: 'City-Bike', ebike: 'E-Bike Sport', cargo: 'E-Cargo Loader' };
 
+    /* Die Zahl im Kopf der Buehne
+       -------------------------------------------------------------
+       Sie zeigte bisher immer die Gesamtzahl - auch dann, wenn daneben
+       ein Lastenrad stand. Das las sich, als gaebe es 221 Lastenraeder.
+       Gezaehlt wird deshalb je Typ; welchen Typ die Buehne gerade zeigt,
+       meldet hero.js ueber window.VelocityBestand.zeigeTyp().
+
+       Vor dem Laden steht hier nichts - dann bleibt die Beschriftung
+       stehen und die Zahl auf den drei Punkten, die im HTML stehen. */
+    const TYP_ZAHLWORT = { city: 'City-Bikes frei', ebike: 'E-Bikes frei',
+                           cargo: 'E-Cargo frei', alle: 'Räder frei' };
+    let bestandJeTyp = null;
+    let letzterHeroTyp = null;
+
+    /* hero.js laeuft VOR dieser Datei (siehe Reihenfolge in index.html)
+       und meldet seinen Typ deshalb ins Leere - window.VelocityBestand
+       gibt es zu dem Zeitpunkt noch nicht. Statt die Reihenfolge zu
+       drehen (die Buehne soll frueh stehen, bevor Daten da sind), wird
+       der Typ hier notfalls an der Pille abgelesen: sie traegt ihn im
+       aria-pressed. */
+    function heroTypAusPille() {
+        const an = document.querySelector('.product-tab[aria-pressed="true"]');
+        return an?.dataset.product || 'alle';
+    }
+
+    function radzahlFuerTyp(kurz) {
+        if (TYP_ZAHLWORT[kurz]) letzterHeroTyp = kurz;
+        else if (letzterHeroTyp === null) letzterHeroTyp = heroTypAusPille();
+        if (!bestandJeTyp) return;
+        const zahl = document.getElementById('bike-counter');
+        const wort = document.getElementById('bike-counter-label');
+        if (zahl) zahl.textContent = bestandJeTyp[letzterHeroTyp];
+        if (wort) wort.textContent = TYP_ZAHLWORT[letzterHeroTyp];
+    }
+
+    window.VelocityBestand = { zeigeTyp: radzahlFuerTyp };
+
     const checkboxes = document.querySelectorAll('.filter-option input');
 
     function gewaehlteTypen() {
         return new Set(Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value));
     }
 
+    /* Frueher schrieb der Kartenfilter in dieselbe Zahl wie die Buehne.
+       Wer unten die Typen filterte und wieder hochscrollte, sah im Kopf
+       die gefilterte Zahl - ohne Anlass, denn oben steht kein Filter.
+       Die Buehne fuehrt ihre Zahl jetzt selbst (radzahlFuerTyp). */
     function radzahlAnzeigen(n) {
-        for (const id of ['bike-counter']) {
-            const el = document.getElementById(id);
-            if (el) el.textContent = n;
-        }
+        void n;
     }
 
     function akkuFarbe(prozent) {

@@ -322,7 +322,10 @@ def main() -> int:
     # das laengste ist.
     kanten, eigen = [], {}
     for ziel, A in fertig.items():
-        ys, _ = np.where(A[..., 3] > 2)
+        # Schwelle 6, nicht 2: der Schatten laeuft nach unten so weit
+        # aus, dass die letzten Zeilen nichts mehr zeigen. Sie kosteten
+        # aber Bildhoehe - und damit Groesse des Rades im Rahmen.
+        ys, _ = np.where(A[..., 3] > 6)
         kanten.append((int(ys.min()), int(ys.max())))
         _, xs = np.where(rohalpha[ziel] > 0.02)          # das Rad ohne Schatten
         eigen[ziel] = (int(xs.min()), int(xs.max()) + 1)
@@ -340,8 +343,8 @@ def main() -> int:
     # Punkte davor. Dass die drei dadurch nicht mehr denselben
     # Weltausschnitt zeigen, sieht niemand: sie fahren beim Wechsel
     # ohnehin eine ganze Bildschirmbreite weit.
-    y0 = max(0, min(k[0] for k in kanten) - 24)
-    y1 = min(list(fertig.values())[0].shape[0], max(k[1] for k in kanten) + 25)
+    y0 = max(0, min(k[0] for k in kanten) - 8)
+    y1 = min(list(fertig.values())[0].shape[0], max(k[1] for k in kanten) + 7)
     massstab = ZIELHOEHE / (y1 - y0)
     print(f'\nSenkrecht gemeinsam: y {y0}..{y1}  ->  {ZIELHOEHE} Punkte hoch\n')
 

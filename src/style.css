@@ -48,7 +48,10 @@
 
   /* Fliessende Grade — aus dem Entwurf */
   --nav-font:     clamp(17px, 1.12vw, 19px);
-  --meta-font:    clamp(14px, .88vw, 15px);
+  /* Die kleine Zeile ueber der Schlagzeile - und, spiegelbildlich, ueber
+     der Zahl. Sie stand auf 14 bis 15 Punkten und war neben einer
+     96-Punkt-Schlagzeile ein Fluestern. */
+  --meta-font:    clamp(15px, 1.02vw, 21px);
   --hero-font:    clamp(52px, 5.45vw, 96px);
   --control-font: clamp(15px, 1.05vw, 17px);
   --body-font:    clamp(15px, 1.05vw, 17px);
@@ -99,6 +102,25 @@
   --textspalte: min(calc(var(--hero-font) * 8.2),
                     calc(100% - 2 * var(--flucht)));
   --gasse: clamp(32px, 3.4vw, 64px);
+  /* Die Linie, an der die Buehne oben beginnt. Links die Zeile, rechts
+     die Zahl - beide fangen hier an. */
+  --kopflinie: clamp(132px, 16vh, 220px);
+  /* Der Abstand zwischen der kleinen Zeile und dem, was darunter steht.
+     Links die Schlagzeile, rechts die Zahl - beide muessen auf
+     derselben Oberkante sitzen, also braucht es EINEN Wert. Mit 28
+     links und 2 rechts stand die Zahl 26 Punkte zu hoch. */
+  --kicker-abstand: 28px;
+  /* Wie hoch das Rad stehen soll, und das Seitenverhaeltnis des
+     laengsten der drei (Lastenrad, 1622 zu 800 Punkte - siehe
+     tools/raeder_weissgrund.py). Beides zusammen bestimmt den Rahmen. */
+  --rad-hoehe: 86vh;
+  --rad-verhaeltnis: 2.1;
+  /* Die Breite des Rahmens - auch der Scrollhinweis rechnet damit, um
+     unter dem Motor zu stehen. Das Prozent loest sich gegen den
+     umgebenden Block auf, also gegen die Buehne; bei Ebene wie Hinweis
+     ist das dieselbe. */
+  --rad-breite: min(calc(100% - 2 * var(--rand)),
+                    calc(var(--rad-hoehe) * var(--rad-verhaeltnis)));
   --rand: clamp(22px, 4vw, 70px);
   --luft: clamp(70px, 8vw, 130px);
 
@@ -339,38 +361,48 @@ img { max-width: 100%; }
 
 .photo-layer {
   position: absolute;
-  /* Rechts endet die Ebene an der Flucht der Spur - hier loest sich das
-     Prozent im Ausdruck gegen den umgebenden Block auf, also gegen die
-     Buehne, und trifft damit genau die Spur. In background-position
-     wuerde dasselbe Prozent gegen "Flaeche minus Bild" rechnen und weit
-     danebenliegen; deshalb sitzt die Flucht an der EBENE. */
-  inset: 0 var(--flucht) 0 0;
+  /* BIS AN DEN BILDRAND, ohne Rest.
+     Erst hing das Vorderrad an der Flucht der Spur. Das liess
+     rechts einen Streifen frei, und den sieht man: das Bild hoert
+     sichtbar auf, statt aus dem Bild zu fahren. Jetzt beruehrt der
+     Reifen die Kante.
+
+     Zweiter Nutzen: die ganze Reihe rueckt nach rechts. Beim
+     Lastenrad, dem laengsten der drei, ragte der Sattel bis in die
+     Schlagzeile - jetzt nicht mehr. Die Groesse bleibt gleich. */
+  right: 0;   /* siehe Kommentar oben: bis an den Bildrand */
+  /* GANZ AN DEN UNTEREN RAND.
+     Unter der Standlinie traegt das Bild noch 11,4 Prozent seiner Hoehe
+     Schatten (Standlinie bei 88,6 Prozent, siehe
+     tools/raeder_weissgrund.py). Diese Zone ist der Platz, in dem der
+     Scrollhinweis steht - sie gehoert nicht dem Rad, sondern seinem
+     Schatten, und der laeuft dort ohnehin aus.
+
+     Mit bottom: 0 setzen die Reifen bei rund 92 Prozent der Buehnenhoehe
+     auf. Vorher standen darunter 119 Punkte Leere. */
+  bottom: 0;
+
+  /* GROESSE: SO GROSS WIE GEWUENSCHT, ABER NIE BREITER ALS DIE SPUR.
+     Eine reine Hoehenangabe reichte nicht. Bei 66 Prozent Hoehe passt
+     das E-Bike ueberall, das Lastenrad aber nicht: es ist ein Drittel
+     laenger, und auf einem flachen, schmalen Fenster (1024x700) lief
+     sein Hinterrad links aus dem Bild.
+
+     Der Rahmen hat deshalb das Seitenverhaeltnis des LAENGSTEN Rades
+     und ist auf die Spurbreite gedeckelt. Was hineinpasst, passt fuer
+     alle drei; und weil alle drei denselben Rahmen fuellen, behalten
+     sie ihren gemeinsamen Massstab - das Lastenrad bleibt sichtbar das
+     laengste, ohne je angeschnitten zu sein. */
+  width: var(--rad-breite);
+  aspect-ratio: var(--rad-verhaeltnis);
+
   z-index: -5;
   background-repeat: no-repeat;
-  /* DAS RAD STEHT AUF DER FLUCHT DER SPUR.
-     Sein Vorderrad endet dort, wo der Login-Knopf und die Live-Zahl
-     enden - eine Linie fuer alles, was rechts steht. Moeglich ist das,
-     weil die Bilder waagrecht randlos beschnitten sind: die Bildkante
-     IST die Reifenkante (siehe tools/raeder_weissgrund.py).
+  background-size: contain;
+  background-position: right bottom;
 
-     Die Zeile links darf dabei ueber das Hinterrad laufen. Bei einem
-     Bild im Verhaeltnis zwei zu eins ist das keine Nachlaessigkeit,
-     sondern die Bedingung dafuer, dass das Rad gross bleibt: ohne
-     Ueberschneidung blieben ihm 570 Punkte Breite und 270 Hoehe, und es
-     saehe aus wie eine Briefmarke. Lesbar bleibt die Zeile durch den
-     hellen Saum an der Schrift, nicht durch einen Schleier ueber dem
-     Bild - der hat zweimal das halbe Rad ausgewaschen. */
-  /* Die Groesse haengt an der HOEHE, nicht an der Breite: die drei
-     Bilder sind verschieden breit (das Lastenrad ist laenger), aber
-     gleich hoch und im selben Massstab. Ueber die Hoehe bleibt das
-     Groessenverhaeltnis erhalten. */
-  background-size: auto 48%;
-  background-position: right 68%;
   /* Die Schiene rechnet in Fensterbreiten: ein Rad, das nur um seine
      eigene Bildbreite faehrt, stuende beim Wechsel noch im Bild. */
-  /* Der Ruhe-Versatz aus dem Scrollmodell (--bike-x) ist hier raus: er
-     schob das Rad um drei Fensterprozent nach rechts und damit von der
-     Flucht herunter. Was bleibt, ist die Schiene. */
   transform: translateX(calc(var(--x-rad, 0) * 104vw));
   will-change: opacity, transform;
 }
@@ -431,17 +463,17 @@ img { max-width: 100%; }
    Auf halber Strecke standen zwei Rahmen und vier Laufraeder versetzt
    uebereinander - eine Doppelbelichtung, kein Uebergang. */
 .photo-ebike {
-  background-image: url("assets/rad-ebike-frei.webp?v=35080122");
+  background-image: url("assets/rad-ebike-frei.webp?v=f5ca0df0");
   opacity: var(--o-ebike);
   --x-rad: var(--x-ebike);
 }
 .photo-city {
-  background-image: url("assets/rad-city-frei.webp?v=e28fae0e");
+  background-image: url("assets/rad-city-frei.webp?v=ac9e0122");
   opacity: var(--o-city);
   --x-rad: var(--x-city);
 }
 .photo-cargo {
-  background-image: url("assets/rad-cargo-frei.webp?v=a7c91eeb");
+  background-image: url("assets/rad-cargo-frei.webp?v=de7c0a16");
   opacity: var(--o-cargo);
   --x-rad: var(--x-cargo);
 }
@@ -449,18 +481,13 @@ img { max-width: 100%; }
 
 .top-meta {
   position: absolute;
-  /* AN DIESELBE FLUCHT WIE DIE SCHLAGZEILE GEHAENGT.
-     Ein fester Wert in Punkten stimmte nur bei einer Fensterhoehe: die
-     Schlagzeile sitzt bei clamp(190px, 24vh, 320px), der Zaehler stand
-     daneben bei 132 - auf einem hohen Bildschirm klaffte es, auf einem
-     flachen ueberschnitt es sich.
-
-     Jetzt beginnt der Zaehler an derselben Linie und wird um seine
-     eigene Hoehe nach oben geschoben; die Zeile des Kickers bekommt er
-     wieder dazu. Ergebnis: seine Beschriftung liegt auf der Zeile des
-     Kickers, bei jeder Fensterhoehe. */
-  top: clamp(190px, 24vh, 320px);
-  transform: translateY(calc(-100% + 1.3 * var(--meta-font)));
+  /* OBEN AUF EINER LINIE MIT DER SCHLAGZEILE.
+     Vorher hing der Zaehler an der Unterkante der Kickerzeile: seine
+     Beschriftung lag genau auf ihr, die Zahl darueber ragte hinauf. Das
+     war eine Ausrichtung, aber die falsche - oben klaffte es. Jetzt
+     beginnen beide an derselben Linie, und der Block waechst nach
+     unten, so wie der Text auch. */
+  top: var(--kopflinie);
   left: var(--flucht); right: var(--flucht);
   color: var(--navy);
   text-shadow: 0 1px 16px rgba(255, 255, 255, .9);
@@ -487,7 +514,7 @@ img { max-width: 100%; }
 .live-zahl {
   display: flex; flex-direction: column;
   align-items: flex-end; justify-content: flex-start;
-  gap: 2px;
+  gap: var(--kicker-abstand);
   margin: 0;
   color: var(--navy);
   text-align: right;
@@ -496,11 +523,12 @@ img { max-width: 100%; }
   position: relative;
   padding-left: .42em;
   font-family: var(--schmal);
-  /* Nach oben gedeckelt, nicht aus Zurueckhaltung: auf einem breiten
-     UND flachen Bildschirm (1920x700) waere der Block sonst bis auf
-     vier Punkte an die Kopfleiste gestossen - er haengt ja an der
-     Schlagzeile und waechst nach oben. 78 laesst ueberall Luft. */
-  font-size: clamp(44px, 5.2vw, 78px);
+  /* DERSELBE GRAD WIE DIE SCHLAGZEILE.
+     Links "Einkauf passt rein.", rechts "18" - beide gleich gross und
+     beide auf derselben Oberkante. Der frueher noetige Deckel ist weg:
+     der Block waechst jetzt nach UNTEN, weil die Beschriftung oben
+     steht. Er kann der Kopfleiste also nicht mehr entgegenwachsen. */
+  font-size: var(--hero-font);
   font-weight: 800;
   letter-spacing: -.03em;
   line-height: 1;
@@ -518,8 +546,10 @@ img { max-width: 100%; }
   box-shadow: 0 0 0 .11em rgba(88, 214, 161, .16);
 }
 .live-zahl > span {
-  font: 700 clamp(11px, .92vw, 15px)/1.3 var(--mono);
-  letter-spacing: .2em;
+  /* Genau der Grad der Kickerzeile links (siehe .eyebrow) - die beiden
+     bilden zusammen die obere Zeile der Buehne. */
+  font: 750 var(--meta-font)/1.3 var(--mono);
+  letter-spacing: .18em;
   text-transform: uppercase;
   color: rgba(6, 24, 65, .78);
   padding-right: .1em;
@@ -528,7 +558,7 @@ img { max-width: 100%; }
 .claim {
   position: absolute;
   left: var(--flucht);
-  top: clamp(190px, 24vh, 320px);
+  top: var(--kopflinie);
   /* Die Spalte war 690 breit, die laengste Zeile misst 476. Der
      Ueberhang war unsichtbar, kostete aber genau die Breite, die das
      Rad daneben braucht - und ohne sie lief die Zeile ins Hinterrad. */
@@ -719,52 +749,73 @@ img { max-width: 100%; }
    Der Ring ist ein Laufrad in Navy mit einer roten Speiche; der Punkt
    faellt in der Hausfarbe hindurch und zieht die Richtung nach unten.
    Das Bild passt zum Gegenstand und ist in jeder Sprache lesbar. */
+/* DIE SCROLLSPUR
+   Drei weisse Winkel, die nacheinander nach unten laufen. Einer allein
+   sieht aus wie ein Zeichen; drei hintereinander sind eine Bewegung mit
+   Richtung - und genau die soll der Besucher nachmachen.
+
+   WO SIE STEHT
+   Unter dem Motorblock des E-Bikes, nicht am unteren Bildrand: dort
+   klebte sie und war kaum zu sehen. Beide Masse sind am Bild gemessen
+   (tools/raeder_weissgrund.py erzeugt es, die Zahlen stehen hier):
+
+     Motor waagrecht  46,4 % der Radbreite von dessen linkem Rand
+     Motor unten      74,5 % der Bildhoehe
+
+   Das Rad steht rechtsbuendig im Rahmen und fuellt 75,5 Prozent seiner
+   Breite (1269 zu 1680 Punkte). Daraus folgt der Abstand von rechts:
+   (1 - 0,464) * 0,755 = 0,405 der Rahmenbreite. Die Rahmenhoehe ist die
+   Rahmenbreite geteilt durch das Seitenverhaeltnis; 25,5 Prozent davon
+   liegen unter dem Motor. */
 .scroll-hint {
+  /* Der Hinweis bekommt DENSELBEN RAHMEN wie das Rad - gleiche Breite,
+     gleiches Seitenverhaeltnis, gleiche Ecke. Nur so kann er in Prozent
+     rechnen und trifft dabei dieselben Punkte.
+
+     Der Umweg ist noetig, weil Prozente in CSS nicht dasselbe bedeuten:
+     in "width" beziehen sie sich auf die Breite des umgebenden Blocks,
+     in "bottom" auf dessen HOEHE. Derselbe Ausdruck ergab dadurch
+     einmal 1845 und einmal 990 Punkte - der Pfeil sass hundert Punkte
+     zu tief. Innerhalb dieses Rahmens ist beides eindeutig. */
   position: absolute;
-  left: 50%; bottom: 24px;
-  width: 64px; height: 64px;
-  transform: translateX(-50%);
+  right: 0;
+  bottom: 0;
+  width: var(--rad-breite);
+  aspect-ratio: var(--rad-verhaeltnis);
   opacity: var(--z-ebike);
   pointer-events: none;
 }
-/* Der Grund: eine weiche Aufhellung, damit der Hinweis auf jedem
-   Bildinhalt steht - Beton, Asphalt oder Rad. */
-.scroll-hint::before {
-  content: "";
-  position: absolute; inset: 0;
-  border-radius: 50%;
-  /* Der helle Grund hinter dem Hinweis war noetig, solange dahinter
-     eine Betonwand stand. Vor hellem Grund ist Weiss auf Weiss
-     dagegen gar nichts - der Hinweis war praktisch unsichtbar. Jetzt
-     traegt ihn eine zarte Scheibe in der Hausfarbe. */
-  background: rgba(6, 24, 65, .035);
-}
-/* Das Laufrad. */
-.scroll-hint::after {
-  content: "";
-  position: absolute; inset: 11px;
-  border-radius: 50%;
-  border: 2px solid rgba(6, 24, 65, .26);
-  border-top-color: var(--red);
-  box-shadow: 0 6px 16px rgba(6, 24, 65, .10);
-  animation: rollen 3.4s linear infinite;
-}
-/* Der Tropfen. */
+/* Die Winkel: waagrecht unter dem Motor (40,5 % der Rahmenbreite von
+   rechts), senkrecht knapp unter seiner Unterkante (die liegt bei
+   25,5 % der Rahmenhoehe ueber dem Boden). */
 .scroll-hint span {
   position: absolute;
-  left: 50%; top: 18px;
-  width: 8px; height: 8px;
-  margin-left: -4px;
-  border-radius: 50%;
-  background: var(--red);
-  animation: fallen 1.9s cubic-bezier(.45, 0, .35, 1) infinite;
+  right: 40.5%;
+  bottom: calc(24% - 54px);
+  width: 34px; height: 34px;
+  margin-right: -17px;
+  border-right: 6px solid #fff;
+  border-bottom: 6px solid #fff;
+  border-radius: 4px;
+  transform: rotate(45deg);
+  filter: drop-shadow(0 2px 3px rgba(6, 24, 65, .55))
+          drop-shadow(0 8px 18px rgba(6, 24, 65, .35));
+  animation: pfeil-spur 1.9s cubic-bezier(.4, 0, .3, 1) infinite;
 }
-@keyframes rollen {
-  to { transform: rotate(360deg); }
+.scroll-hint span:nth-child(2) { animation-delay: -.28s; }
+.scroll-hint span:nth-child(3) { animation-delay: -.56s; }
+
+@keyframes pfeil-spur {
+  0%        { transform: rotate(45deg) translate(-6px, -6px); opacity: 0; }
+  22%       { transform: rotate(45deg) translate(-2px, -2px); opacity: .95; }
+  70%       { transform: rotate(45deg) translate(9px, 9px);   opacity: .5; }
+  92%, 100% { transform: rotate(45deg) translate(14px, 14px); opacity: 0; }
 }
-@keyframes fallen {
-  0%   { transform: translateY(0);    opacity: 0; }
-  22%  { opacity: 1; }
+
+
+
+
+
   70%  { transform: translateY(26px); opacity: 1; }
   100% { transform: translateY(33px); opacity: 0; }
 }
@@ -829,7 +880,7 @@ img { max-width: 100%; }
 
 .eyebrow {
   display: block;
-  margin: 0 0 28px;
+  margin: 0 0 var(--kicker-abstand);
   color: rgba(6, 24, 65, .72);
   font: 750 var(--meta-font)/1.3 var(--mono);
   letter-spacing: .18em;
@@ -1840,10 +1891,11 @@ footer a:hover { color: #fff; text-decoration: underline; }
        drei gleich breit gemacht - beim Wechsel waere das Lastenrad
        geschrumpft. 46vw ist die groesste Hoehe, bei der das breiteste
        der drei (das Lastenrad, Verhaeltnis 2,03) noch in die Seite
-       passt. */
+       passt. Seit das Lastenrad im Verhaeltnis 2,1 statt 2,03 steht,
+       sind es 44 statt 46. */
     inset: auto 0 20% 0;
     height: 30%;
-    background-size: auto 46vw;
+    background-size: auto 44vw;
     background-position: center bottom;
     transform: none;
   }
@@ -1949,8 +2001,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .scroll-story { height: 100vh; min-height: 720px; }
   .photo-city, .photo-cargo, .claim-city, .claim-cargo, .final-card { display: none; }
   .photo-ebike { opacity: 1; transform: none; }
-  .scroll-hint span, .scroll-hint::after { animation: none; }
-  .scroll-hint span { opacity: 1; transform: translateY(17px); }
+  .scroll-hint span { animation: none; transform: rotate(45deg); }
+  .scroll-hint span:nth-child(2), .scroll-hint span:nth-child(3) { display: none; }
   .claim-ebike { opacity: 1; transform: none; }
   .choice-panel { opacity: 1; transform: none; }
   .choice-panel { opacity: 1; transform: none; }

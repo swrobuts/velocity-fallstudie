@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=cbffd592">
+    <link rel="stylesheet" href="style.css?v=44aa96c2">
 </head>
 <body>
 
@@ -276,8 +276,14 @@
          Zahl, die sich staendig aendert - und die steht jetzt gross. -->
     <div class="top-meta">
       <p class="live-zahl">
+        <!-- Beschriftung OBEN, Zahl darunter - spiegelbildlich zur
+             linken Spalte, wo ueber der Schlagzeile die Kickerzeile
+             steht. Beide Spalten haben damit dieselbe Zweiteilung und
+             beginnen auf derselben Linie.
+             Die Beschriftung wechselt mit dem Rad: am E-Bike-Halt steht
+             dort "E-Bikes frei", nicht "Räder frei". -->
+        <span id="bike-counter-label">Räder frei</span>
         <b id="bike-counter">…</b>
-        <span>Räder frei</span>
       </p>
       <span class="nur-vorlesen" id="stationen-zaehler"></span>
     </div>
@@ -294,16 +300,25 @@
       <p class="eyebrow"><span class="meta-lang">E-Cargo Loader · bis 70 kg Zuladung</span>
                          <span class="meta-kurz">E-Cargo · bis 70 kg</span></p>
       <h1>
-        <span class="claim-line headline-primary">Der Wocheneinkauf<br> passt rein.</span>
-        <span class="claim-line headline-accent">Das Kind<br> auch.</span>
+        <!-- Kurz gehalten: "Der Wocheneinkauf passt rein. Das Kind auch."
+             brauchte vier Zeilen und war der laengste der drei Saetze.
+             Ohne Artikel liest es sich als Plakat, nicht als Satz - und
+             es passt in je eine Zeile. Der feste Umbruch entfaellt
+             deshalb; bei schmalen Fenstern bricht es von selbst. -->
+        <span class="claim-line headline-primary">Einkauf passt rein.</span>
+        <span class="claim-line headline-accent">Kind auch.</span>
       </h1>
     </div>
 
     <div class="claim claim-city">
       <p class="eyebrow"><span class="meta-lang">City-Bike · klassisch &amp; direkt</span><span class="meta-kurz">City-Bike · direkt</span></p>
       <h1>
-        <span class="claim-line headline-primary">Entspannt<br> shoppen.</span>
-        <span class="claim-line headline-accent">Noch entspannter<br> nach Hause cruisen.</span>
+        <!-- Wie beim Lastenrad gekuerzt: "Noch entspannter nach Hause
+             cruisen." war der laengste Satz der Seite und zwang die
+             Spalte in die Breite. "Dann" traegt denselben Gedanken in
+             einem Wort. -->
+        <span class="claim-line headline-primary">Entspannt shoppen.</span>
+        <span class="claim-line headline-accent">Dann nach Haus cruisen.</span>
       </h1>
     </div>
 
@@ -340,7 +355,9 @@
       <span>Räder in deiner Nähe</span><span aria-hidden="true">↗</span>
     </a>
 
-    <div class="scroll-hint" aria-hidden="true"><span></span></div>
+    <!-- Drei Winkel als Spur: sie laufen nacheinander nach unten und
+         zeigen damit die Richtung, in die gescrollt werden will. -->
+    <div class="scroll-hint" aria-hidden="true"><span></span><span></span><span></span></div>
     <div class="progress-rail" aria-hidden="true"></div>
   </div>
 </section>
@@ -533,13 +550,13 @@
      auf halber Strecke zwei Rahmen und vier Laufraeder uebereinander.
      Der Wechsel laeuft jetzt ohne WebGL. -->
 <script src="velocity-scroll-model.js?v=bb08b729"></script>
-<script src="hero.js?v=19cc8257"></script>
+<script src="hero.js?v=49647ee3"></script>
 
 <!-- App Scripts (Reihenfolge wichtig!) -->
 <script src="config.js?v=a7625464"></script>
 <script src="supabase.js?v=3f4d1cd4"></script>
 <script src="auth.js?v=61b78d72"></script>
-<script src="script.js?v=e47c9198"></script>
+<script src="script.js?v=ca948ec2"></script>
 
 </body>
 </html>

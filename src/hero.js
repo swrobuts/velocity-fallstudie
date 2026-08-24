@@ -137,6 +137,11 @@
     const [titel, unterzeile] = inhalt[name];
     productCopy.querySelector('strong').textContent = titel;
     productCopy.querySelector('small').textContent = unterzeile;
+    // Die Zahl oben rechts gehoert zum Rad, das hier steht. Sie zeigte
+    // bisher immer die Gesamtzahl - neben dem Lastenrad las sich das,
+    // als gaebe es zweihunderteinundzwanzig davon. script.js zaehlt,
+    // hier wird nur gesagt, welcher Typ gemeint ist.
+    window.VelocityBestand?.zeigeTyp(name);
   }
 
   function anwenden(fortschritt) {

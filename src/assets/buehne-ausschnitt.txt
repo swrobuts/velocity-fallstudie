@@ -1,7 +1,7 @@
 # Ausschnitt der Vorlagen aus src/assets/neu
 # senkrecht gemeinsam, waagrecht je Rad sein eigenes Vorderrad
 # oben unten zielhoehe
-392 2056 800
+408 2015 800
 rad-ebike-frei.webp 649 3199
 rad-city-frei.webp 647 3188
 rad-cargo-frei.webp 249 3623

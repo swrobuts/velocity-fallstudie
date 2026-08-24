@@ -296,18 +296,19 @@ pruefe('TEXT', 'Finde das passende Rad an einer Station' not in H,
        'Die Fuellzeile unter "Bereit, wenn du es bist" ist weg')
 pruefe('TEXT', 'Einfach, smart, elektrisch' not in H,
        'Die Dreiwortformel im Fuss ist weg')
+# Die Gestalt hat sich zweimal geaendert - erst Laufrad mit Tropfen,
+# dann Scheibe mit Pfeil, jetzt eine Spur aus drei weissen Winkeln.
+# Geprueft wird, was gleich bleibt: kein Satz, sondern eine Bewegung.
 pruefe('TEXT', 'Scrollen, um das Netz zu entdecken' not in H
-       and '@keyframes fallen' in C and '@keyframes rollen' in C,
-       'Der Scrollhinweis ist ein Bild statt eines Satzes')
-# Zweimal war der Pfeil zu leise, weil er nur aus einem Winkel bestand
-# und keinen eigenen Grund hatte. Im echten Browser nachgesehen.
-# Der Grund war damals WEISS, weil dahinter eine Betonwand stand. Seit
-# die Buehne hell ist, waere Weiss auf Weiss wieder nichts - geprueft
-# wird deshalb, dass es einen Grund gibt, nicht welche Farbe er hat.
-_hinweis = C[C.index('.scroll-hint::before'):C.index('.scroll-hint::before') + 420]
-pruefe('TEXT', '.scroll-hint::before' in C and 'background:' in _hinweis
-       and 'rgba(255,255,255' not in _hinweis,
-       'Der Hinweis traegt einen eigenen Grund, der zur Buehne passt')
+       and '@keyframes pfeil-spur' in C,
+       'Der Scrollhinweis ist eine Bewegung statt eines Satzes')
+# Zweimal war der Pfeil zu leise. Der erste Grund war ein weisser
+# Kreis - der half auf der Betonwand und war auf hellem Grund nichts.
+# Heute traegt der Pfeil selbst zwei Schlagschatten; die stehen an der
+# Form, nicht an einer Flaeche dahinter, und tragen auf jedem Grund.
+pruefe('TEXT', 'drop-shadow' in C[C.index('.scroll-hint span'):
+                                  C.index('.scroll-hint span') + 700],
+       'Der Pfeil hebt sich ohne Scheibe dahinter ab')
 
 print('\nBuehne — Wechsel statt Ueberblendung (25.08.)')
 MODELL = (SRC / 'velocity-scroll-model.js').read_text(encoding='utf-8')
