@@ -1,0 +1,45 @@
+# =====================================================================
+# bikes.butscher.cloud
+#
+# Ein statischer Auftritt hinter dem Traefik, der auf diesem Server
+# ohnehin laeuft. Kein Node, kein Build, kein Prozess der etwas rechnet:
+# die Seite besteht aus HTML, CSS, JavaScript und sechs Bildern. Alles
+# Dynamische kommt aus Supabase, direkt aus dem Browser.
+#
+# Das Muster ist dasselbe wie bei den anderen statischen Auftritten auf
+# diesem Server (lager, grundrechte, fruehjahre): nginx:alpine mit einem
+# schreibgeschuetzt eingehaengten Verzeichnis.
+#
+# NICHT von Hand hochladen. Es gibt tools/veroeffentlichen.sh; das
+# Werkzeug leitet ab, welche Dateien wirklich gebraucht werden, prueft
+# vorher die Fingerabdruecke und macht danach die Gegenprobe.
+# =====================================================================
+services:
+  bikes:
+    image: nginx:alpine
+    container_name: bikes
+    restart: unless-stopped
+    volumes:
+      # Schreibgeschuetzt: der Webserver hat auf dieser Seite nichts zu
+      # aendern. Was hier liegt, legt ausschliesslich das Werkzeug ab.
+      - /opt/bikes-deploy/site:/usr/share/nginx/html:ro
+      - /opt/bikes-deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - root_default
+    labels:
+      - traefik.enable=true
+      # HTTPS
+      - traefik.http.routers.bikes.rule=Host(`bikes.butscher.cloud`)
+      - traefik.http.routers.bikes.entrypoints=websecure
+      - traefik.http.routers.bikes.tls=true
+      - traefik.http.routers.bikes.tls.certresolver=mytlschallenge
+      - traefik.http.services.bikes.loadbalancer.server.port=80
+      # HTTP nur, um auf HTTPS zu verweisen
+      - traefik.http.routers.bikes-http.rule=Host(`bikes.butscher.cloud`)
+      - traefik.http.routers.bikes-http.entrypoints=web
+      - traefik.http.routers.bikes-http.middlewares=bikes-redirect
+      - traefik.http.middlewares.bikes-redirect.redirectscheme.scheme=https
+
+networks:
+  root_default:
+    external: true
