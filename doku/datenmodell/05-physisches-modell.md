@@ -53,6 +53,7 @@ aufwendig, und eine Sortierreihenfolge lässt sich nicht nachträglich
 | GR12 kein Start ohne Standort | Prüfung in `fn_ausleihe_starten` |
 | GR13 genau ein Standort je Rad | `CHECK fahrrad_position_ort_chk` **und** Constraint-Trigger |
 | GR14 nur im Geschäftsgebiet abstellen | `fn_im_geschaeftsgebiet` in `fn_ausleihe_beenden` |
+| GR15 nie mehr Räder als Stellplätze | Constraint-Trigger auf `fahrrad_position` **und** `station` |
 
 ### GR11: warum kein NOT NULL
 
@@ -145,7 +146,34 @@ Sprachkern mit. Zu beachten ist allein die Reihenfolge: `point(x, y)`
 heißt hier `point(Längengrad, Breitengrad)` — vertauscht man sie, liegt
 Würzburg im Indischen Ozean.
 
-Neun von vierzehn Regeln setzt die Datenbank durch — GR14 gehört zu den
+### GR15: eine Zahl, die nie stimmte
+
+Am Dom standen **30 Räder auf 10 Stellplätzen**, acht von zehn Würzburger
+Stationen waren überfüllt. Aufgefallen ist es nie, weil die Sicht es
+kaschierte:
+
+```sql
+greatest(s.kapazitaet - count(p.fahrrad_id), 0) as freie_stellplaetze
+```
+
+Das `greatest(…, 0)` macht die Zahl nie negativ — sie war also nie
+falsch und nie wahr. Ein Popover, das „28 von 10 Stellplätzen belegt"
+anzeigt, ist der Moment, in dem so etwas auffliegt.
+
+Wieder ein Constraint-Trigger statt eines `CHECK`: die Regel zählt
+Zeilen einer **anderen** Tabelle. Er hängt an beiden Seiten — am
+Abstellen *und* am Herabsetzen der Kapazität. Ohne die zweite Seite
+wäre das Schlupfloch offensichtlich: man setzt eine volle Station auf
+einen Stellplatz und die Regel ist umgangen.
+
+Die Daten wurden in `db/betrieb/flottenverteilung.sql` in Ordnung
+gebracht: Kapazitäten nach dem Charakter der Station, und 45 Räder frei
+im Stadtgebiet verteilt. Die Punkte liegen auf Verbindungslinien
+zwischen je zwei Stationen — das Geschäftsgebiet ist konvex, also liegt
+jeder solche Punkt zwangsläufig darin. Keine Zufallszahl, die daneben
+gehen könnte.
+
+Zehn von fünfzehn Regeln setzt die Datenbank durch — GR14 gehört zu den
 fünf, die den vorgesehenen Weg über die Funktionsschicht brauchen. Die drei übrigen
 brauchen Kontext, den ein Constraint nicht hat: den angemeldeten Nutzer,
 das aktuelle Datum, den Zustand anderer Zeilen.

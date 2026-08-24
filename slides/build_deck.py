@@ -181,7 +181,7 @@ def baue() -> Presentation:
     ], y=174, hoehe=42, luecke=5)
     faden(s, "GR5 entscheidet über Annas Rechnung: es gilt der Preis um 10:00 Uhr, nicht der von heute.")
     notizen(s, "Sechs von zehn. Rechts steht schon, wo die Regel später landet — das ist "
-               "der rote Faden durch die Umsetzung. GR7 bis GR13 folgen im physischen Entwurf.")
+               "der rote Faden durch die Umsetzung. GR7 bis GR15 folgen im physischen Entwurf.")
 
     # ═══════════════════════════════════════════ 2 Konzeptioneller Entwurf
     kapitel(prs, 2, "Konzeptioneller Entwurf",
@@ -430,9 +430,9 @@ def baue() -> Presentation:
     notizen(s, "Die Zeitzonenfalle ist real und teuer: eine Fahrt in der Nacht der "
                "Umstellung lässt sich mit timestamp ohne Zone nicht eindeutig einordnen.")
 
-    s = folie(prs, "5 · Physischer Entwurf", "Neun von dreizehn Regeln erzwingt die Datenbank",
-              "Die oberen sieben gelten immer, auch bei direktem SQL-Zugriff. Die unteren "
-              "drei nur, wenn man den vorgesehenen Weg nimmt — sie brauchen Kontext, den ein "
+    s = folie(prs, "5 · Physischer Entwurf", "Zehn von fünfzehn Regeln erzwingt die Datenbank",
+              "Die oberen acht gelten immer, auch bei direktem SQL-Zugriff. Die unteren "
+              "vier nur, wenn man den vorgesehenen Weg nimmt — sie brauchen Kontext, den ein "
               "Constraint nicht hat.")
     tabelle(s, ["Regel", "Umsetzung", "Wirkt"],
             [["GR1", "CREATE UNIQUE INDEX … WHERE status = 'aktiv'", "immer"],
@@ -442,10 +442,12 @@ def baue() -> Presentation:
              ["GR10", "UNIQUE (kunde_id, periode_jahr, periode_monat)", "immer"],
              ["GR11", "CHECK: Station oder Koordinaten, nie beides", "immer"],
              ["GR13", "CHECK + Constraint-Trigger (braucht den Radstatus)", "immer"],
+             ["GR15", "Constraint-Trigger: zählt Räder gegen Stellplätze", "immer"],
              ["GR2, GR5", "Prüfung in fn_ausleihe_starten und _beenden", "nur über die Funktion"],
              ["GR8, GR9", "Prüfung in der api_-Schicht", "nur über die Funktion"],
-             ["GR12", "Prüfung in fn_ausleihe_starten", "nur über die Funktion"]],
-            y=186, spalten_b=[130, 520, 253.5], zeilen_h=27)
+             ["GR12", "Prüfung in fn_ausleihe_starten", "nur über die Funktion"],
+             ["GR14", "fn_im_geschaeftsgebiet in fn_ausleihe_beenden", "nur über die Funktion"]],
+            y=176, spalten_b=[130, 520, 253.5], zeilen_h=24)
     notizen(s, "Der Unterschied in der dritten Spalte ist der eigentliche Inhalt dieser "
                "Folie. Constraints sind unbestechlich, Funktionen kann man umgehen — "
                "deshalb muss die Fachlogik von außen unerreichbar sein.")

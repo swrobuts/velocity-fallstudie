@@ -539,7 +539,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const TYP_BILD = {
         CITY:  'assets/rad-city.jpg',
         EBIKE: 'assets/rad-ebike.jpg',
-        CARGO: null                     // kein Foto hinterlegt
+        CARGO: 'assets/rad-cargo.jpg'   // vom Nutzer geliefert
     };
     // Die Filterwerte im HTML sind kurz, der Fachschluessel ist lang.
     const TYP_FILTER = { CITY: 'city', EBIKE: 'ebike', CARGO: 'cargo' };
@@ -589,7 +589,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         return `
           <div class="pop-typ">
             <div class="pop-bild">${bild
-                ? `<img src="${bild}" alt="${escapeHtml(erstes.typ_bezeichnung)}" loading="lazy">`
+                ? `<img src="${bild}" alt="${escapeHtml(erstes.typ_bezeichnung)}" loading="lazy"
+                        onerror="this.replaceWith(Object.assign(document.createElement('span'),
+                                 {className:'pop-kein-bild', innerHTML:'<i class=\'fa-solid fa-box\'></i>'}))">`
                 : `<span class="pop-kein-bild"><i class="fa-solid fa-box"></i></span>`}</div>
             <div class="pop-text">
               <strong>${escapeHtml(erstes.typ_bezeichnung)}</strong>

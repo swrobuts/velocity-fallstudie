@@ -318,3 +318,85 @@ begin
                  'Abstellen am Hubland, also im Gebiet, wird angenommen');
 end;
 $$;
+
+-- =====================================================================
+--  GR15: NIE MEHR RAEDER ALS STELLPLAETZE
+--
+--  Der Trigger ist initially deferred und feuert beim Commit; die
+--  Tests erzwingen ihn mit set constraints all immediate und stellen
+--  danach zurueck - er gilt sonst fuer alle folgenden Tests, weil
+--  pgTAP sie in einer einzigen Transaktion faehrt.
+-- =====================================================================
+
+create or replace function velocity_test.test_b_stellplaetze_begrenzt()
+returns setof text language plpgsql as $$
+declare
+  v_ad bigint; v_st bigint; v_typ bigint; v_h bigint; v_m bigint; v_rad bigint; i int;
+begin
+  insert into velocity.adresse (strasse, plz, ort) values ('Platzstr', '97070', 'Würzburg')
+    returning adresse_id into v_ad;
+  insert into velocity.station (stationsnummer, name, adresse_id, kapazitaet)
+       values ('S-P001', 'Teststation Stellplätze', v_ad, 2) returning station_id into v_st;
+  insert into velocity.fahrradtyp (typ_code, bezeichnung) values ('P-1', 'Platztestrad')
+    returning typ_id into v_typ;
+  insert into velocity.hersteller (name) values ('Platzhersteller') returning hersteller_id into v_h;
+  insert into velocity.fahrradmodell (hersteller_id, typ_id, modellbezeichnung)
+       values (v_h, v_typ, 'PM-1') returning modell_id into v_m;
+
+  -- Zwei Raeder passen auf zwei Stellplaetze.
+  for i in 1..2 loop
+    insert into velocity.fahrrad (rahmennummer, modell_id) values ('RN-P-' || i, v_m)
+      returning fahrrad_id into v_rad;
+    insert into velocity.fahrrad_position (fahrrad_id, station_id) values (v_rad, v_st);
+  end loop;
+  return next lives_ok('set constraints all immediate',
+                       'Zwei Räder auf zwei Stellplätzen sind in Ordnung');
+  set constraints all deferred;
+
+  -- Das dritte nicht.
+  insert into velocity.fahrrad (rahmennummer, modell_id) values ('RN-P-3', v_m)
+    returning fahrrad_id into v_rad;
+  insert into velocity.fahrrad_position (fahrrad_id, station_id) values (v_rad, v_st);
+  begin
+    set constraints all immediate;
+    return next fail('Ein drittes Rad auf zwei Stellplätzen hätte abgewiesen werden müssen');
+  exception when check_violation then
+    return next pass('Mehr Räder als Stellplätze werden abgewiesen');
+  end;
+  set constraints all deferred;
+end;
+$$;
+
+create or replace function velocity_test.test_b_kapazitaet_nicht_unterschreitbar()
+returns setof text language plpgsql as $$
+declare
+  v_ad bigint; v_st bigint; v_typ bigint; v_h bigint; v_m bigint; v_rad bigint; i int;
+begin
+  insert into velocity.adresse (strasse, plz, ort) values ('Schrumpfstr', '97070', 'Würzburg')
+    returning adresse_id into v_ad;
+  insert into velocity.station (stationsnummer, name, adresse_id, kapazitaet)
+       values ('S-P002', 'Teststation Schrumpfen', v_ad, 3) returning station_id into v_st;
+  insert into velocity.fahrradtyp (typ_code, bezeichnung) values ('P-2', 'Schrumpftestrad')
+    returning typ_id into v_typ;
+  insert into velocity.hersteller (name) values ('Schrumpfhersteller') returning hersteller_id into v_h;
+  insert into velocity.fahrradmodell (hersteller_id, typ_id, modellbezeichnung)
+       values (v_h, v_typ, 'SM-1') returning modell_id into v_m;
+  for i in 1..3 loop
+    insert into velocity.fahrrad (rahmennummer, modell_id) values ('RN-S-' || i, v_m)
+      returning fahrrad_id into v_rad;
+    insert into velocity.fahrrad_position (fahrrad_id, station_id) values (v_rad, v_st);
+  end loop;
+  set constraints all deferred;
+
+  -- Die Regel muss auch die andere Richtung abdecken: eine volle
+  -- Station kleiner zu machen waere sonst das Schlupfloch.
+  update velocity.station set kapazitaet = 1 where station_id = v_st;
+  begin
+    set constraints all immediate;
+    return next fail('Die Kapazität unter den Bestand zu senken hätte abgewiesen werden müssen');
+  exception when check_violation then
+    return next pass('Kapazität lässt sich nicht unter den Bestand senken');
+  end;
+  set constraints all deferred;
+end;
+$$;

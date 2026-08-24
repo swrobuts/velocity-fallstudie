@@ -58,18 +58,27 @@ $$;
 create or replace function velocity_test.test_ue_keine_zufallskoordinaten()
 returns setof text language plpgsql as $$
 begin
-  -- Im Altbestand hatte JEDES Rad Koordinaten aus random(). Uebernommen
-  -- werden nur Positionen, die sich aus der Station ergeben.
+  -- Im Altbestand hatte JEDES Rad Koordinaten aus random(), quer ueber
+  -- die Landkarte verstreut. Uebernommen wird davon keine einzige.
   --
-  -- Geprueft werden ausschliesslich Raeder, die nie ausgeliehen wurden:
-  -- ein regulaer frei abgestelltes Rad traegt zu Recht eine Koordinate
-  -- ohne Station.
+  -- Frueher stand hier: kein nie genutztes Rad traegt eine Koordinate.
+  -- Das galt nur, solange ueberhaupt kein Rad frei abgestellt war. Seit
+  -- der Flottenverteilung stehen 45 Raeder bewusst frei im Stadtgebiet -
+  -- die Regel war zu eng gefasst.
+  --
+  -- Die haltbare Invariante ist schaerfer und trifft den urspruenglichen
+  -- Zweck genauer: JEDE frei abgestellte Koordinate liegt im
+  -- Geschaeftsgebiet. Erfundene Werte tun das nicht.
   return next ok(
     (select count(*) from velocity.fahrrad_position p
       where p.station_id is null and p.latitude is not null
-        and not exists (select 1 from velocity.ausleihe a
-                         where a.fahrrad_id = p.fahrrad_id)) = 0,
-    'Kein nie genutztes Rad traegt eine aus random() erfundene Koordinate');
+        and not velocity.fn_im_geschaeftsgebiet(p.latitude, p.longitude)) = 0,
+    'Keine frei abgestellte Koordinate liegt ausserhalb des Geschaeftsgebiets');
+
+  return next ok(
+    (select count(*) from velocity.fahrrad_position p
+      where p.station_id is null and p.latitude is not null) > 0,
+    'Es gibt ueberhaupt frei abgestellte Raeder - die Pruefung laeuft nicht ins Leere');
 end;
 $$;
 

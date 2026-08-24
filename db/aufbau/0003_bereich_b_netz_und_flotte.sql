@@ -269,6 +269,68 @@ create index if not exists idx_fahrrad_position_station on velocity.fahrrad_posi
 
 
 -- =====================================================================
+--  GR15: NIE MEHR RAEDER ALS STELLPLAETZE
+--
+--  Eine Station hat endlich viele Stellplaetze. In den Altdaten standen
+--  am Dom 30 Raeder auf 10 Plaetzen, und acht von zehn Wuerzburger
+--  Stationen waren ueberfuellt. Die Sicht v_station kaschierte es:
+--  freie_stellplaetze rechnet mit greatest(..., 0) und wurde deshalb
+--  nie negativ - die Zahl war nie falsch und nie wahr.
+--
+--  Wieder ein Constraint-Trigger und kein CHECK: die Regel zaehlt
+--  Zeilen einer ANDEREN Tabelle. Deferrable, damit ein Umraeumen in
+--  mehreren Anweisungen zwischendurch ueber die Grenze gehen darf -
+--  gezaehlt wird am Ende der Transaktion.
+--
+--  Er haengt an beiden Seiten: am Abstellen und am Herabsetzen der
+--  Kapazitaet. Sonst koennte man eine volle Station auf null Plaetze
+--  setzen und die Regel waere umgangen.
+-- =====================================================================
+
+create or replace function velocity.trg_stellplaetze_pruefen()
+returns trigger
+language plpgsql
+set search_path = velocity, pg_temp
+as $$
+declare
+  v_station bigint := coalesce(new.station_id, old.station_id);
+  v_kap     integer;
+  v_dort    integer;
+  v_name    text;
+begin
+  if v_station is null then return null; end if;
+  select s.kapazitaet, s.name into v_kap, v_name
+    from velocity.station s where s.station_id = v_station;
+  if not found then return null; end if;          -- Station geloescht
+
+  select count(*) into v_dort
+    from velocity.fahrrad_position p where p.station_id = v_station;
+
+  if v_dort > v_kap then
+    raise exception 'Station % hat % Stellplaetze, es stehen aber % Raeder dort',
+      v_name, v_kap, v_dort using errcode = '23514';
+  end if;
+  return null;
+end;
+$$;
+
+comment on function velocity.trg_stellplaetze_pruefen() is
+  'Prueft GR15. Steht als Constraint-Trigger und nicht als CHECK, weil die Regel '
+  'Zeilen einer anderen Tabelle zaehlt.';
+
+drop trigger if exists trg_position_stellplaetze on velocity.fahrrad_position;
+create constraint trigger trg_position_stellplaetze
+  after insert or update of station_id on velocity.fahrrad_position
+  deferrable initially deferred
+  for each row execute function velocity.trg_stellplaetze_pruefen();
+
+drop trigger if exists trg_station_stellplaetze on velocity.station;
+create constraint trigger trg_station_stellplaetze
+  after update of kapazitaet on velocity.station
+  deferrable initially deferred
+  for each row execute function velocity.trg_stellplaetze_pruefen();
+
+-- =====================================================================
 --  GESCHAEFTSGEBIET
 --
 --  Innerhalb dieser Flaeche darf ein Rad ueberall abgestellt werden,

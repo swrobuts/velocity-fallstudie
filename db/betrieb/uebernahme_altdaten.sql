@@ -204,13 +204,18 @@ begin
 
   select count(*) into v_nachher from velocity.fahrrad;
 
-  -- Position: NUR aus der Station abgeleitet. Die random()-Koordinaten
-  -- des Altbestands werden verworfen.
-  insert into velocity.fahrrad_position (fahrrad_id, station_id, latitude, longitude)
+  -- Position: NUR die Station, keine Koordinaten. Die random()-Werte des
+  -- Altbestands werden verworfen.
+  --
+  -- Frueher standen hier zusaetzlich die Koordinaten der Station. Das
+  -- verletzt GR13 - ein Rad hat genau EINE Ortsangabe, und an einer
+  -- Station traegt die Station den Ort. Der CHECK
+  -- fahrrad_position_ort_chk weist das ab; auf einer frischen Datenbank
+  -- waere die Uebernahme daran gescheitert. Im Bestand fiel es nicht
+  -- auf, weil die Zeilen schon existierten und do nothing griff.
+  insert into velocity.fahrrad_position (fahrrad_id, station_id)
   select nf.fahrrad_id,
-         ns.station_id,
-         ns.latitude,
-         ns.longitude
+         ns.station_id
     from "cityBikesRental".fahrrad af
     join velocity.fahrrad nf on nf.rahmennummer = af.rahmennummer
     left join velocity.station ns
