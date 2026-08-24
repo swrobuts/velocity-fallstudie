@@ -1,0 +1,3 @@
+# Gemeinsamer Ausschnitt der drei Vorlagen aus src/assets/neu
+# links oben rechts unten zielbreite
+173 376 3719 2072 1618

@@ -845,17 +845,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* Wie hoch liegt diese Station, und wie weit ist es von dort noch
        hinauf? Die Bezugshoehen kommen aus velocity.v_hoehenmarke, die
        Hoehe der Station aus v_station. Fehlt eine der beiden Angaben,
-       entfaellt die Zeile - sie wird nicht geraten. */
+       entfaellt die Zeile - sie wird nicht geraten.
+
+       Hier stand bis zum 24.08.2026 nur "180 m" und darunter
+       "FRANKENWARTE +180 · STEINBURG +105". Was die Zahlen bedeuten,
+       musste man erraten: Entfernung? Hoehe? Und +180 wovon aus? Jetzt
+       sagt es die Zeile selbst - die Hoehe der Station ueber dem Meer,
+       und darunter, wie viele Hoehenmeter von DIESER Station aus noch
+       zu treten sind. */
     function hoehenZeile(station) {
         if (!Number.isFinite(station.hoehe_m) || !hoehenMarken.length) return '';
         const hinauf = hoehenMarken
             .filter(m => m.hoehe_m > station.hoehe_m)
-            .map(m => `${escapeHtml(m.name)} +${m.hoehe_m - station.hoehe_m}`)
+            .map(m => `${escapeHtml(m.name)} +${m.hoehe_m - station.hoehe_m} Hm`)
             .join(' · ');
         return `
             <div class="pop-hoehe">
-              <span class="pop-hoehe-wert">${station.hoehe_m} m</span>
-              <span class="pop-hoehe-rest">${hinauf || 'höchster Punkt im Netz'}</span>
+              <p class="pop-hoehe-kopf">
+                <span class="pop-hoehe-wert">${station.hoehe_m} m</span>
+                <span class="pop-hoehe-was">über dem Meer</span>
+              </p>
+              <p class="pop-hoehe-rest">${hinauf
+                ? `<span class="pop-hoehe-marke">Von hier hinauf:</span> ${hinauf}`
+                : 'Höchster Punkt im Netz'}</p>
             </div>`;
     }
 

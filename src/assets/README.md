@@ -1,5 +1,50 @@
 # Bilder
 
+## STAND 24.08.2026: NEUE VORLAGEN, WEISSER GRUND
+
+Die drei Raeder stehen jetzt vor **weissem Grund** (`neu/`, 3840x2307,
+PNG). Damit ist die Freistellung keine Schaetzung mehr, sondern eine
+Rechnung: `python3 tools/raeder_weissgrund.py`.
+
+Was weiter unten steht — die Betonwand, die zwei Hintergrundmodelle,
+`tools/raeder_freistellen.py` — betrifft die frueheren Aufnahmen. Es
+bleibt vorerst liegen, bis die neue Buehne steht.
+
+**Der Weg heute**
+
+1. Deckkraft aus dem Abstand zum weissen Grund. Der Grund wird am
+   Bildrand gemessen, nicht angenommen.
+2. Weisse Flaechen INNERHALB des Umrisses: nur der Schriftzug am Rahmen
+   gehoert zum Rad. Erkannt daran, dass er rundum von Rot umgeben UND
+   klein ist. Beide Bedingungen sind noetig - die Speichenzwickel sind
+   klein, aber nicht rot; das Rahmendreieck ist rot, aber nicht klein.
+   Jede Bedingung fuer sich hat einen sichtbaren Fehler erzeugt.
+3. Saum entsaeumen, damit kein heller Rand bleibt.
+4. Schatten zeichnen. Die Vorlagen bringen keinen Boden mit; der
+   Schatten folgt dem Abstand des Rades zum Boden, Spalte fuer Spalte.
+   Er steht IM BILD, nicht im Stylesheet - sonst liefe er beim
+   Verschieben davon.
+5. Alle drei gemeinsam beschneiden und auf 1618 Punkte verkleinern, mit
+   vorgewichtetem Alpha. Der Ausschnitt steht in
+   `buehne-ausschnitt.txt`, damit die Nachpruefung ihn nicht raten muss.
+
+Die Vorlagen sind bereits aufeinander normiert - gleiche Bildgroesse,
+gleiche Hoehe des Rades, gleiche Standlinie. Es wird deshalb NICHTS
+verschoben und NICHTS skaliert.
+
+Gespeichert wird verlustfrei; die drei Raeder wiegen zusammen rund
+1,4 MB. Die Buehne selbst ist gezeichnet (siehe `.buehne-grund` im
+Stylesheet), es gibt kein Hintergrundfoto mehr.
+
+**Nachgerechnet** von `tools/freisteller_pruefen.py`: die Deckkraft wird
+gegen die genauso beschnittene Vorlage gehalten, in beide Richtungen -
+zu viel faengt weissen Grund im Laufrad, zu wenig faengt zerfallene
+Speichen.
+
+---
+
+# Frueherer Stand: Aufnahmen vor einer Betonwand
+
 | Datei | Zweck |
 |---|---|
 | `velocity-bike-hero.png`, `velocity-bike-city-hero.png` | Die beiden grossen Motive der Buehne im Kopfbereich. Der WebGL-Morph blendet genau zwischen diesen beiden ueber — **nicht ersetzen**, ohne `velocity-bike-morph.js` mitzudenken. |

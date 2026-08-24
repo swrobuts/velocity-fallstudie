@@ -301,16 +301,27 @@ pruefe('TEXT', 'Scrollen, um das Netz zu entdecken' not in H
        'Der Scrollhinweis ist ein Bild statt eines Satzes')
 # Zweimal war der Pfeil zu leise, weil er nur aus einem Winkel bestand
 # und keinen eigenen Grund hatte. Im echten Browser nachgesehen.
-pruefe('TEXT', '.scroll-hint::before' in C and 'radial-gradient' in
-       C[C.index('.scroll-hint::before'):C.index('.scroll-hint::before') + 320],
-       'Der Hinweis traegt einen eigenen Grund und steht auf jedem Bild')
+# Der Grund war damals WEISS, weil dahinter eine Betonwand stand. Seit
+# die Buehne hell ist, waere Weiss auf Weiss wieder nichts - geprueft
+# wird deshalb, dass es einen Grund gibt, nicht welche Farbe er hat.
+_hinweis = C[C.index('.scroll-hint::before'):C.index('.scroll-hint::before') + 420]
+pruefe('TEXT', '.scroll-hint::before' in C and 'background:' in _hinweis
+       and 'rgba(255,255,255' not in _hinweis,
+       'Der Hinweis traegt einen eigenen Grund, der zur Buehne passt')
 
 print('\nBuehne — Wechsel statt Ueberblendung (25.08.)')
 MODELL = (SRC / 'velocity-scroll-model.js').read_text(encoding='utf-8')
 pruefe('BUEHNE', 'velocity-bike-morph.js' not in re.sub(r'<!--.*?-->', '', HTML, flags=re.S),
        'Der WebGL-Morph wird nicht mehr geladen')
-pruefe('BUEHNE', 'photo-wand' in H and 'velocity-wand' in C,
-       'Die Wand liegt als eigene Ebene unter den Raedern')
+# Bis zum 24.08.2026 lag hier eine freigestellte Betonwand. Die neuen
+# Aufnahmen stehen vor weissem Grund; der Untergrund ist seither
+# gezeichnet, und der Schatten steht im Bild jedes Rades. Geprueft wird
+# weiterhin dasselbe: dass der Grund EINE EIGENE EBENE ist und nicht
+# Teil der Radbilder - sonst kann kein Rad verschwinden, ohne ein Loch
+# zu hinterlassen.
+pruefe('BUEHNE', 'buehne-grund' in H and '.buehne-grund' in C
+       and 'velocity-wand' not in C,
+       'Der Grund liegt als eigene Ebene unter den Raedern')
 pruefe('BUEHNE', 'rad-ebike-frei' in C and 'rad-city-frei' in C,
        'Die Raeder sind freigestellt')
 pruefe('BUEHNE', 'rad-cargo-frei' in C,

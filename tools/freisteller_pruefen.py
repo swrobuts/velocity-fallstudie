@@ -1,30 +1,38 @@
 #!/usr/bin/env python3
 """Nachrechnen, dass die Freisteller die Vorlage nicht verfaelschen.
 
-Am 24.08.2026 fiel dem Nutzer auf, dass die Speichen zerrissen waren.
-Die Ursache lag in der Freistellung, nicht in der Vorlage - und mit
-blossem Auge war sie erst bei starker Vergroesserung zu sehen. Kein
-bestehender Pruefpunkt hat sie bemerkt, weil keiner die Bilder ansah.
+Kein Pruefpunkt hat je die Bilder angesehen. Deshalb blieb zweimal
+unbemerkt, was der Nutzer am grossen Bildschirm sofort sah:
 
-Drei Messungen, jede auf einen Fehler gemuenzt, den es wirklich gab:
+  24.08.2026, vormittags  Die Speichen zerfielen in gestrichelte Linien.
+                          Die Freistellung vor der Betonwand hatte eine
+                          zu hohe Schwelle.
+  24.08.2026, abends      Zwischen den Speichen stand weisser Grund
+                          statt des Seitenhintergrunds - ein weisser
+                          Faecher im Laufrad. Der Lochfueller hatte nach
+                          FLAECHE entschieden, und am Lastenrad sind die
+                          Zwickel kleiner als ein Buchstabe.
 
-  1. DECKENDE PUNKTE gleichen der Vorlage.
-     Wo das Alpha voll ist, darf sich nichts geaendert haben. Bei
-     Qualitaet 86 wich das Ergebnis dort im Mittel um vier Stufen ab,
-     in der Spitze um zweiundvierzig; seit die Raeder verlustfrei
-     gespeichert werden, ist die Abweichung null.
+Beide Fehler haben dieselbe Gestalt: die Deckkraft weicht von dem ab,
+was in der Vorlage steht. Genau das wird hier gemessen, und zwar gegen
+die Vorlage selbst.
 
-  2. DIE DUNKLEN STELLEN DER VORLAGE SIND DA.
-     Unabhaengige Gegenrechnung: welche Punkte der Aufnahme sind
-     deutlich dunkler als ihre Umgebung (mehr als 60 Stufen unter dem
-     oertlichen Median)? Das sind Speichen, Kette, Ritzel. Sie muessen
-     im Freisteller deckend sein. Der zerrissene Stand vom 24.08. kam
-     hier auf 78 Prozent, der heutige auf 98.
+WIE
+Die Vorlage wird genauso beschnitten und verkleinert wie im Werkzeug -
+der Ausschnitt steht in src/assets/buehne-ausschnitt.txt, damit die
+Pruefung die Rechnung nicht nachbauen (und denselben Fehler wiederholen)
+muss. Aus dem Abstand zum weissen Grund folgt, wie deckend jeder Punkt
+sein SOLLTE. Verglichen wird in beide Richtungen:
 
-  3. KEIN QUERBALKEN.
-     Die Kante zwischen Wand und Boden laeuft durch das ganze Bild.
-     Bleibt sie in der Maske haengen, spannt eine Zeile ueber fast die
-     volle Breite - das kann kein Fahrrad sein.
+  zu viel   Deckkraft, wo die Vorlage weiss ist  -> der weisse Faecher
+  zu wenig  Deckkraft, wo die Vorlage Rad zeigt  -> zerfallene Speichen
+
+Der Schatten ist gezeichnet und steht in der Vorlage nicht; die unteren
+14 Prozent bleiben deshalb aussen vor.
+
+Dazu eine dritte Messung, die den Faecher direkt benennt: deckende
+Punkte, die praktisch weiss sind. Erlaubt ist davon nur der Schriftzug
+am Rahmen - rund viertausend Punkte.
 
 Aufruf:  python3 tools/freisteller_pruefen.py
 """
@@ -33,22 +41,21 @@ import sys
 
 import numpy as np
 from PIL import Image
-from scipy import ndimage
 
 WURZEL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASSETS = os.path.join(WURZEL, 'src', 'assets')
+QUELLEN = os.path.join(ASSETS, 'neu')
 
 GRUEN, ROT, GRAU, AUS = '\033[0;32m', '\033[0;31m', '\033[0;90m', '\033[0m'
 
-MINDESTDECKUNG = 0.95
-MAXSPANNE = 1500
+PAARE = [('rad-ebike-frei.webp', 'e-bike'),
+         ('rad-city-frei.webp', 'city-bike'),
+         ('rad-cargo-frei.webp', 'cargo')]
 
-# Das Lastenrad hat keine unmittelbare Vorlage: es wird verkleinert und
-# verschoben eingepasst, dabei wird zwangslaeufig neu gerechnet. Fuer es
-# gilt nur die dritte Messung.
-PAARE = [('rad-ebike-frei.webp', 'velocity-bike-hero.png'),
-         ('rad-city-frei.webp', 'velocity-bike-city-hero.png'),
-         ('rad-cargo-frei.webp', None)]
+MAX_ZUVIEL = 0.010      # gemessen 0,37 bis 0,48 Prozent
+MAX_ZUWENIG = 0.010     # gemessen 0,17 bis 0,28 Prozent
+MAX_WEISS = 12000       # gemessen 3400 bis 4400 Punkte (der Schriftzug)
+OHNE_SCHATTEN = 0.86    # die unteren Zeilen tragen den gezeichneten Schatten
 
 fehler = 0
 
@@ -60,47 +67,58 @@ def melde(gut: bool, text: str) -> None:
         fehler += 1
 
 
-def dunkle_stellen(pfad: str) -> np.ndarray:
-    """Punkte, die deutlich dunkler sind als ihre naehere Umgebung."""
-    F = np.asarray(Image.open(pfad).convert('RGB')).astype(np.float32)
-    nah = np.stack([ndimage.median_filter(F[..., k], size=41, mode='nearest')
-                    for k in range(3)], axis=2)
-    return (nah - F).max(axis=2) > 60
+def ausschnitt() -> tuple:
+    pfad = os.path.join(ASSETS, 'buehne-ausschnitt.txt')
+    for zeile in open(pfad, encoding='utf-8'):
+        if not zeile.startswith('#') and zeile.strip():
+            x0, y0, x1, y1, breite = (int(t) for t in zeile.split())
+            return (x0, y0, x1, y1), breite
+    raise SystemExit(f'{pfad} enthaelt keinen Ausschnitt')
 
 
-for datei, vorlage in PAARE:
-    A = np.asarray(Image.open(os.path.join(ASSETS, datei)).convert('RGBA'))
-    alpha = A[..., 3]
-    print(f'\n{datei}')
+def main() -> int:
+    kasten, _ = ausschnitt()
+    dateien = os.listdir(QUELLEN)
 
-    if vorlage:
-        Q = np.asarray(Image.open(os.path.join(ASSETS, vorlage)).convert('RGB')).astype(int)
-        deckend = alpha == 255
-        abw = np.abs(A[..., :3].astype(int) - Q).max(axis=2)[deckend]
-        melde(abw.max() == 0,
-              f'Deckende Flaeche gleicht der Vorlage  {GRAU}{deckend.sum():,} Punkte, '
-              f'groesste Abweichung {abw.max()}{AUS}')
+    for ziel, stichwort in PAARE:
+        treffer = [f for f in dateien if stichwort in f]
+        if not treffer:
+            melde(False, f'Keine Vorlage fuer {stichwort}')
+            continue
+        print(f'\n{ziel}  {GRAU}gegen {treffer[0]}{AUS}')
 
-        soll = dunkle_stellen(os.path.join(ASSETS, vorlage))
-        deckung = float((alpha[soll] > 100).mean())
-        melde(deckung >= MINDESTDECKUNG,
-              f'Speichen, Kette und Ritzel stehen  {GRAU}{100*deckung:.1f} % von '
-              f'{soll.sum():,} dunklen Vorlagenpunkten, gefordert '
-              f'{100*MINDESTDECKUNG:.0f} %{AUS}')
+        A = np.asarray(Image.open(os.path.join(ASSETS, ziel)).convert('RGBA'))
+        ist = A[..., 3].astype(np.float32) / 255.0
+        hoehe, breite = ist.shape
 
-    m = alpha > 24
-    breit = 0
-    for y in range(m.shape[0]):
-        if m[y].any():
-            xs = np.where(m[y])[0]
-            if xs.max() - xs.min() > MAXSPANNE:
-                breit += 1
-    melde(breit == 0,
-          f'Keine Zeile spannt ueber {MAXSPANNE} Punkte  {GRAU}{breit} gefunden{AUS}')
+        Q = (Image.open(os.path.join(QUELLEN, treffer[0])).convert('RGB')
+             .crop(kasten).resize((breite, hoehe), Image.LANCZOS))
+        abstand = np.abs(np.asarray(Q).astype(np.float32) - 255).max(axis=2)
+        soll = np.clip((abstand - 4) / 12, 0, 1)
+
+        oben = slice(0, int(OHNE_SCHATTEN * hoehe))
+        zuviel = float(np.maximum(ist[oben] - soll[oben], 0).mean())
+        zuwenig = float(np.maximum(soll[oben] - ist[oben], 0).mean())
+
+        melde(zuviel <= MAX_ZUVIEL,
+              f'Kein Grund mitgenommen  {GRAU}{100*zuviel:.2f} % zu viel Deckkraft, '
+              f'erlaubt {100*MAX_ZUVIEL:.1f} %{AUS}')
+        melde(zuwenig <= MAX_ZUWENIG,
+              f'Nichts vom Rad verloren  {GRAU}{100*zuwenig:.2f} % zu wenig Deckkraft, '
+              f'erlaubt {100*MAX_ZUWENIG:.1f} %{AUS}')
+
+        weiss = int(((A[..., 3] > 200) & (A[..., :3].min(axis=2) > 238)).sum())
+        melde(weiss <= MAX_WEISS,
+              f'Kein weisser Faecher im Laufrad  {GRAU}{weiss} deckende weisse Punkte, '
+              f'erlaubt {MAX_WEISS}{AUS}')
+
+    print()
+    if fehler:
+        print(f'{ROT}{fehler} Befund(e).{AUS}')
+        return 1
+    print(f'{GRUEN}Die Freisteller sind sauber.{AUS}')
+    return 0
 
 
-print()
-if fehler:
-    print(f'{ROT}{fehler} Befund(e).{AUS}')
-    sys.exit(1)
-print(f'{GRUEN}Die Freisteller sind sauber.{AUS}')
+if __name__ == '__main__':
+    sys.exit(main())
