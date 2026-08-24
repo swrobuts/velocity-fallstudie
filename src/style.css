@@ -587,32 +587,53 @@ img { max-width: 100%; }
 
 /* Statt des Satzes "Scrollen, um das Netz zu entdecken" ein Pfeil, der
    nach unten tippt. Er sagt dasselbe in weniger Zeit und in jeder
-   Sprache. Bei abgeschalteter Animation steht er still - sichtbar
-   bleibt er trotzdem. */
+   Sprache.
+
+   Die erste Fassung war 13 Punkte gross bei 34 Prozent Deckkraft und
+   auf dem hellen Beton praktisch unsichtbar. Ein Hinweis, den man
+   suchen muss, ist keiner. Jetzt: zwei versetzte Winkel in Navy, eine
+   Haarlinie darueber als Anker, und ein heller Schein dahinter, damit
+   er auch auf einem dunklen Bildteil steht. */
 .scroll-hint {
   position: absolute;
-  left: 50%; bottom: 30px;
-  width: 30px; height: 46px;
+  left: 50%; bottom: 26px;
+  width: 26px; height: 78px;
   transform: translateX(-50%);
   opacity: var(--ebike-claim-opacity);
   pointer-events: none;
 }
-.scroll-hint span {
+/* Die Haarlinie: der Weg, den der Blick nehmen soll. */
+.scroll-hint::before {
+  content: "";
   position: absolute;
   left: 50%; top: 0;
-  width: 13px; height: 13px;
-  margin-left: -7px;
-  border-right: 2px solid var(--navy);
-  border-bottom: 2px solid var(--navy);
-  opacity: .34;
-  transform: rotate(45deg);
-  animation: tippen 1.9s cubic-bezier(.4, 0, .2, 1) infinite;
+  width: 1px; height: 30px;
+  margin-left: -.5px;
+  background: linear-gradient(180deg, transparent, rgba(6, 24, 65, .38));
+}
+.scroll-hint span,
+.scroll-hint span::after {
+  position: absolute;
+  left: 50%; top: 34px;
+  width: 15px; height: 15px;
+  margin-left: -8px;
+  border-right: 2.5px solid var(--navy);
+  border-bottom: 2.5px solid var(--navy);
+  border-radius: 2px;
+  filter: drop-shadow(0 1px 6px rgba(255, 255, 255, .95));
+  animation: tippen 2s cubic-bezier(.42, 0, .3, 1) infinite;
+}
+.scroll-hint span::after {
+  content: "";
+  left: 0; top: 0; margin-left: 0;
+  animation-delay: .28s;
 }
 @keyframes tippen {
-  0%   { transform: translateY(0) rotate(45deg);    opacity: 0; }
-  22%  { opacity: .5; }
-  60%  { transform: translateY(20px) rotate(45deg); opacity: .16; }
-  100% { transform: translateY(26px) rotate(45deg); opacity: 0; }
+  0%   { transform: translateY(-6px) rotate(45deg); opacity: 0; }
+  30%  { opacity: .78; }
+  70%  { opacity: .3; }
+  100% { transform: translateY(20px) rotate(45deg); opacity: 0; }
+}
 }
 
 .progress-rail {
@@ -1687,7 +1708,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .scroll-story { height: 100vh; min-height: 720px; }
   .photo-ebike { opacity: 1; transform: scale(1.03); }
   .photo-city, .photo-morph, .claim-city, .claim-cargo, .transition-cover, .final-card { display: none; }
-  .scroll-hint span { animation: none; opacity: .3; }
+  .scroll-hint span, .scroll-hint span::after { animation: none; opacity: .55; }
   .claim-ebike { opacity: 1; transform: none; }
   .choice-panel { opacity: 1; transform: none; }
   .progress-rail, .scroll-hint { display: none; }
