@@ -12,7 +12,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=35eb62f0">
+    <link rel="stylesheet" href="style.css?v=505f7613">
 </head>
 <body>
 
@@ -256,13 +256,16 @@
      ============================================================ -->
 <section class="scroll-story" aria-label="VeloCity in Würzburg">
   <div class="sticky-stage">
+    <!-- Die Wand liegt unter allen Raedern und bleibt stehen. Vorher war
+         sie Teil jedes Fotos; blendete man beide aus, blieb der nackte
+         Untergrund der Buehne. Jetzt wechselt nur das Rad. -->
+    <div class="photo-layer photo-wand" aria-hidden="true"></div>
     <div class="photo-layer photo-city" role="img" aria-label="Rotes VeloCity City-Bike vor einer Betonwand"></div>
     <div class="photo-layer photo-ebike" role="img" aria-label="Rotes VeloCity E-Bike vor einer Betonwand"></div>
     <!-- Der Loader nimmt am Ueberblenden nicht teil; er wird eingeblendet,
          wenn man ihn waehlt. Ein Lastenrad ist kein Zwischenschritt
          zwischen City und E-Bike. -->
     <div class="photo-layer photo-cargo" role="img" aria-label="Rotes VeloCity E-Cargo Loader vor einer Betonwand"></div>
-    <canvas class="photo-morph" aria-hidden="true"></canvas>
     <div class="photo-shade" aria-hidden="true"></div>
     <div class="transition-cover" aria-hidden="true"></div>
 
@@ -517,10 +520,13 @@
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-<!-- Kopfbereich: Animationsmodell, WebGL-Morph, Steuerung -->
-<script src="velocity-scroll-model.js?v=22185d03"></script>
-<script src="velocity-bike-morph.js?v=7998427b"></script>
-<script src="hero.js?v=bcdcea35"></script>
+<!-- Kopfbereich: Animationsmodell und Steuerung. Der WebGL-Morph
+     (velocity-bike-morph.js) wird seit dem 25.08.2026 nicht mehr
+     geladen: zwei verschiedene Fahrraeder ineinander zu rechnen ergab
+     auf halber Strecke zwei Rahmen und vier Laufraeder uebereinander.
+     Der Wechsel laeuft jetzt ohne WebGL. -->
+<script src="velocity-scroll-model.js?v=5209533f"></script>
+<script src="hero.js?v=3d378968"></script>
 
 <!-- App Scripts (Reihenfolge wichtig!) -->
 <script src="config.js?v=a7625464"></script>

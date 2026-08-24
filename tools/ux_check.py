@@ -275,6 +275,24 @@ pruefe('TEXT', 'Einfach, smart, elektrisch' not in H,
 pruefe('TEXT', 'Scrollen, um das Netz zu entdecken' not in H
        and '@keyframes tippen' in C,
        'Der Scrollhinweis ist ein Pfeil statt eines Satzes')
+# Zweimal war der Pfeil zu leise, weil er nur aus einem Winkel bestand
+# und keinen eigenen Grund hatte. Im echten Browser nachgesehen.
+pruefe('TEXT', '.scroll-hint {' in C and 'border-radius: 50%' in
+       C[C.index('.scroll-hint {'):C.index('.scroll-hint {') + 420],
+       'Der Pfeil traegt eine eigene Scheibe und steht auf jedem Grund')
+
+print('\nBuehne — Wechsel statt Ueberblendung (25.08.)')
+MODELL = (SRC / 'velocity-scroll-model.js').read_text(encoding='utf-8')
+pruefe('BUEHNE', 'velocity-bike-morph.js' not in re.sub(r'<!--.*?-->', '', HTML, flags=re.S),
+       'Der WebGL-Morph wird nicht mehr geladen')
+pruefe('BUEHNE', 'photo-wand' in H and 'velocity-wand' in C,
+       'Die Wand liegt als eigene Ebene unter den Raedern')
+pruefe('BUEHNE', 'rad-ebike-frei' in C and 'rad-city-frei' in C,
+       'Die Raeder sind freigestellt')
+pruefe('BUEHNE', 'var(--ebike-exit) * 104%' in C and '(1 - var(--city-enter)) * 104%' in C,
+       'Sie wechseln den Platz - eine volle Bildbreite auseinander')
+pruefe('BUEHNE', 'transitionCoverOpacity: 0,' in MODELL,
+       'Kein Schleier mehr noetig: es gibt nichts zu ueberstrahlen')
 produkt = re.search(r'<div class="product-tabs".*?</div>', H, flags=re.S)
 pruefe('TEXT', produkt and produkt.group().count('<button') == 3,
        'Die Produktwahl fuehrt alle drei Fahrradtypen')

@@ -25,7 +25,7 @@
     const ebikeClaim = document.querySelector('.claim-ebike');
     const cityClaim = document.querySelector('.claim-city');
     const ebikePhoto = document.querySelector('.photo-ebike');
-    const morphCanvas = document.querySelector('.photo-morph');
+
     const cityImageAlignment = getBikeAlignment('city');
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
     let state = getScrollState(0);
@@ -41,13 +41,6 @@
     let renderedProduct = null;
     let renderedEbikeHidden = null;
     let renderedCityHidden = null;
-    let morphRenderer = {
-      available: false,
-      render() {},
-      resize() {},
-      destroy() {}
-    };
-
     const productContent = {
       city:  ['Entspannt shoppen.', 'Noch entspannter nach Hause cruisen.'],
       ebike: ['Wir liefern den Rückenwind.', 'Elektrische Unterstützung für Würzburgs Berge.'],
@@ -84,12 +77,15 @@
       productCopy.querySelector('small').textContent = description;
     }
 
+    /* Der WebGL-Morph ist seit dem 25.08.2026 stillgelegt: zwei
+       verschiedene Fahrraeder ineinander zu rechnen ergab auf halber
+       Strecke eine Doppelbelichtung. Der Wechsel liegt jetzt im Modell
+       (velocity-scroll-model.js) und kommt ohne WebGL aus. */
     function commitMotion(nextState) {
       presentedState = nextState;
-      const useMorph = morphRenderer.available && !reducedMotion.matches;
-      const cityOpacity = useMorph ? nextState.cityOpacity : nextState.fallbackCityOpacity;
-      const ebikeOpacity = useMorph ? nextState.ebikeOpacity : nextState.fallbackEbikeOpacity;
-      const morphVisibility = useMorph ? nextState.morphVisibility : 0;
+      const cityOpacity = nextState.fallbackCityOpacity;
+      const ebikeOpacity = nextState.fallbackEbikeOpacity;
+      const morphVisibility = 0;
       stage.style.cssText = [
         `--progress:${nextState.progress.toFixed(4)}`,
         `--ebike-claim-opacity:${nextState.ebikeClaimOpacity.toFixed(4)}`,
@@ -106,9 +102,10 @@
         `--city-align-scale-x:${cityImageAlignment.scaleX.toFixed(6)}`,
         `--city-align-scale-y:${cityImageAlignment.scaleY.toFixed(6)}`,
         `--city-align-x:${cityImageAlignment.translateXPercent.toFixed(6)}`,
-        `--city-align-y:${cityImageAlignment.translateYPercent.toFixed(6)}`
+        `--city-align-y:${cityImageAlignment.translateYPercent.toFixed(6)}`,
+        `--ebike-exit:${(nextState.ebikeExit ?? 0).toFixed(4)}`,
+        `--city-enter:${(nextState.cityEnter ?? 0).toFixed(4)}`
       ].join(';');
-      if (useMorph && morphVisibility > 0.0001) morphRenderer.render(nextState.morphProgress);
     }
 
     /* Unsichtbar ist nicht gleich abwesend. Beide Bedienflaechen standen
@@ -239,30 +236,17 @@
       }
     }
 
+    /* Frueher wurde hier der WebGL-Renderer aufgebaut. Er ist entfallen;
+       der Wechsel braucht ihn nicht. Was bleibt, ist ein Anstoss, damit
+       der erste Zustand steht, bevor jemand scrollt. */
     async function initializeHero() {
-      morphRenderer = await window.VelocityBikeMorph.createRenderer(morphCanvas, {
-        ebikeUrl: './assets/velocity-bike-hero.png',
-        cityUrl: './assets/velocity-bike-city-hero.png',
-        cityAlignment: cityImageAlignment,
-        maxDevicePixelRatio: 2,
-        referenceElement: ebikePhoto,
-        onAvailabilityChange(available) {
-          stage.classList.toggle('no-webgl', !available);
-          commitMotion(presentedState);
-        }
-      });
-      stage.classList.toggle('no-webgl', !morphRenderer.available);
       commitMotion(presentedState);
     }
 
     tabs.forEach(tab => tab.addEventListener('click', () => selectProduct(tab.dataset.product, true)));
     addEventListener('scroll', requestRender, { passive: true });
-    addEventListener('resize', () => {
-      morphRenderer.resize();
-      requestRender();
-    });
+    addEventListener('resize', requestRender);
     reducedMotion.addEventListener?.('change', () => commitMotion(presentedState));
-    addEventListener('pagehide', () => morphRenderer.destroy(), { once: true });
     targetProgress = readNativeProgress();
     displayedProgress = targetProgress;
     applyProgress(displayedProgress);

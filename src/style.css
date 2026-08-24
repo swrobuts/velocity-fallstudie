@@ -67,6 +67,8 @@
   --ebike-opacity: 1;
   --morph-visibility: 0;
   --morph-progress: 0;
+  --ebike-exit: 0;
+  --city-enter: 0;
   --transition-cover-opacity: 0;
   --choice-opacity: 0;
   --cta-opacity: 0;
@@ -305,21 +307,6 @@ img { max-width: 100%; }
   will-change: opacity, transform;
 }
 
-.photo-morph {
-  position: absolute;
-  inset: auto;
-  top: -1.5%; left: -1.5%;
-  z-index: -4;
-  width: 103%; height: 103%;
-  display: block;
-  opacity: var(--morph-visibility);
-  transform: translateX(calc(var(--bike-x) * 1%)) scale(var(--bike-scale));
-  transform-origin: center;
-  pointer-events: none;
-  will-change: opacity, transform;
-}
-.sticky-stage.no-webgl .photo-morph { display: none; }
-
 .photo-shade {
   position: absolute;
   inset: 0;
@@ -330,26 +317,56 @@ img { max-width: 100%; }
   pointer-events: none;
 }
 
+/* Die Buehne. Sie steht immer und traegt alle drei Raeder - deshalb
+   koennen die Raeder verschwinden, ohne dass ein Loch entsteht. */
+/* Ausdruecklich ganz nach hinten. Alle Fotoebenen teilen sonst -5, und
+   dann entscheidet die Reihenfolge im Dokument - ein Verschieben im
+   HTML wuerde die Wand vor die Raeder holen. */
+/* Die Buehne wiegt zusammen rund 1,3 MB statt 6,8: die Wand und das
+   Lastenrad brauchen keine Transparenz und liegen als JPEG vor, die
+   beiden freigestellten Raeder als WebP mit Alphakanal. Die
+   Ausgangsaufnahmen des Nutzers bleiben unveraendert im Verzeichnis. */
+.photo-wand {
+  background-image: url("assets/velocity-wand.jpg");
+  opacity: 1;
+  z-index: -6;
+  transform: translateX(calc(var(--bike-x) * 1%)) scale(var(--bike-scale));
+}
+
+/* Die Raeder sind freigestellt und liegen auf der stehenden Wand. Sie
+   wechseln den PLATZ, nicht die Deckkraft: das E-Bike faehrt nach links
+   aus dem Bild, das City-Bike von rechts herein. Auf halber Strecke
+   liegt eine volle Bildbreite zwischen ihnen - sie beruehren einander
+   nie, also gibt es auch keine Doppelbelichtung.
+
+   Die Deckkraft greift nur an den Raendern, damit kein Rad hart an der
+   Bildkante abgeschnitten wird. */
 .photo-city {
-  background-image: url("assets/velocity-bike-city-hero.png");
+  background-image: url("assets/rad-city-frei.webp");
   opacity: var(--city-opacity);
   transform:
-    translateX(calc(var(--bike-x) * 1%))
+    translateX(calc(var(--bike-x) * 1% + (1 - var(--city-enter)) * 104%))
     scale(var(--bike-scale))
     translate(calc(var(--city-align-x) * 1%), calc(var(--city-align-y) * 1%))
     scale(var(--city-align-scale-x), var(--city-align-scale-y));
 }
 .photo-ebike {
-  background-image: url("assets/velocity-bike-hero.png");
+  background-image: url("assets/rad-ebike-frei.webp");
   opacity: var(--ebike-opacity);
+  transform:
+    translateX(calc(var(--bike-x) * 1% - var(--ebike-exit) * 104%))
+    scale(var(--bike-scale));
 }
 
 /* Der Loader steht still. Er nimmt am Ueberblenden nicht teil - ein
    Lastenrad ist kein Zwischenschritt zwischen zwei Fahrraedern. */
 .photo-cargo {
-  background-image: url("assets/velocity-bike-cargo-hero.png");
+  background-image: url("assets/velocity-bike-cargo-hero.jpg");
   opacity: 0;
-  z-index: -2;
+  /* Ueber den beiden anderen Raedern, aber unter dem Schleier: sonst
+     liegt die linke Spalte nicht im aufgehellten Bereich und die
+     Schlagzeile verliert ihren Grund. */
+  z-index: -4;
   /* Der Loader ist deutlich laenger als die beiden anderen Raeder und
      laege ohne Verschiebung unter der Schlagzeile. Verschoben wird er
      aber IM BILD, nicht ueber transform: eine verkleinerte Ebene gibt
@@ -359,7 +376,6 @@ img { max-width: 100%; }
 .sticky-stage.is-cargo .photo-cargo { opacity: 1; }
 .sticky-stage.is-cargo .photo-city,
 .sticky-stage.is-cargo .photo-ebike,
-.sticky-stage.is-cargo .photo-morph,
 .sticky-stage.is-cargo .claim-ebike,
 .sticky-stage.is-cargo .claim-city { opacity: 0; }
 .sticky-stage.is-cargo .claim-cargo { opacity: 1; transform: none; }
@@ -585,54 +601,44 @@ img { max-width: 100%; }
 .primary-cta:hover { background: var(--red-tief); }
 .primary-cta span:last-child { font-size: 22px; }
 
-/* Statt des Satzes "Scrollen, um das Netz zu entdecken" ein Pfeil, der
-   nach unten tippt. Er sagt dasselbe in weniger Zeit und in jeder
-   Sprache.
+/* Statt des Satzes "Scrollen, um das Netz zu entdecken" ein Pfeil.
 
-   Die erste Fassung war 13 Punkte gross bei 34 Prozent Deckkraft und
-   auf dem hellen Beton praktisch unsichtbar. Ein Hinweis, den man
-   suchen muss, ist keiner. Jetzt: zwei versetzte Winkel in Navy, eine
-   Haarlinie darueber als Anker, und ein heller Schein dahinter, damit
-   er auch auf einem dunklen Bildteil steht. */
+   Zwei Fassungen davor waren zu leise: ein navyfarbener Winkel auf
+   grauem Beton, noch dazu im Schatten des Fahrradstaenders. Im echten
+   Browser nachgesehen - man findet ihn nur, wenn man weiss, wo er ist.
+   Ein Hinweis, den man suchen muss, ist keiner.
+
+   Jetzt traegt er seinen eigenen Grund: eine helle Scheibe, die ihn von
+   jedem Bildinhalt abhebt. Sie ist kein Knopf und gibt sich auch nicht
+   als einer aus - kein Rand, keine harte Kante, nur ein weicher Schein. */
 .scroll-hint {
   position: absolute;
   left: 50%; bottom: 26px;
-  width: 26px; height: 78px;
+  width: 52px; height: 52px;
   transform: translateX(-50%);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: 0 8px 26px rgba(6, 24, 65, .18), 0 0 0 1px rgba(6, 24, 65, .06);
+  backdrop-filter: blur(6px);
   opacity: var(--ebike-claim-opacity);
   pointer-events: none;
 }
-/* Die Haarlinie: der Weg, den der Blick nehmen soll. */
-.scroll-hint::before {
-  content: "";
+.scroll-hint span {
   position: absolute;
-  left: 50%; top: 0;
-  width: 1px; height: 30px;
-  margin-left: -.5px;
-  background: linear-gradient(180deg, transparent, rgba(6, 24, 65, .38));
-}
-.scroll-hint span,
-.scroll-hint span::after {
-  position: absolute;
-  left: 50%; top: 34px;
-  width: 15px; height: 15px;
-  margin-left: -8px;
+  left: 50%; top: 50%;
+  width: 13px; height: 13px;
+  margin: -11px 0 0 -7px;
   border-right: 2.5px solid var(--navy);
   border-bottom: 2.5px solid var(--navy);
-  border-radius: 2px;
-  filter: drop-shadow(0 1px 6px rgba(255, 255, 255, .95));
-  animation: tippen 2s cubic-bezier(.42, 0, .3, 1) infinite;
-}
-.scroll-hint span::after {
-  content: "";
-  left: 0; top: 0; margin-left: 0;
-  animation-delay: .28s;
+  border-radius: 1px;
+  transform: rotate(45deg);
+  animation: tippen 1.8s cubic-bezier(.45, 0, .3, 1) infinite;
 }
 @keyframes tippen {
-  0%   { transform: translateY(-6px) rotate(45deg); opacity: 0; }
-  30%  { opacity: .78; }
-  70%  { opacity: .3; }
-  100% { transform: translateY(20px) rotate(45deg); opacity: 0; }
+  0%   { transform: translateY(0)   rotate(45deg); opacity: .32; }
+  40%  { transform: translateY(7px) rotate(45deg); opacity: .95; }
+  100% { transform: translateY(0)   rotate(45deg); opacity: .32; }
+}
 }
 }
 
@@ -1707,8 +1713,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   html { scroll-behavior: auto; }
   .scroll-story { height: 100vh; min-height: 720px; }
   .photo-ebike { opacity: 1; transform: scale(1.03); }
-  .photo-city, .photo-morph, .claim-city, .claim-cargo, .transition-cover, .final-card { display: none; }
-  .scroll-hint span, .scroll-hint span::after { animation: none; opacity: .55; }
+  .photo-city, .claim-city, .claim-cargo, .transition-cover, .final-card { display: none; }
+  .scroll-hint span { animation: none; opacity: .8; }
   .claim-ebike { opacity: 1; transform: none; }
   .choice-panel { opacity: 1; transform: none; }
   .progress-rail, .scroll-hint { display: none; }

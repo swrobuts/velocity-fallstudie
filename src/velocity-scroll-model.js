@@ -81,28 +81,73 @@
     };
   }
 
+  /* WECHSEL STATT UEBERBLENDUNG
+     -------------------------------------------------------------------
+     Bis zum 25.08.2026 lief hier ein WebGL-Morph: beide Fotos gleichzeitig
+     sichtbar, ineinander gerechnet. Zwei verschiedene Fahrraeder lassen
+     sich aber nicht ineinander blenden. Auf halber Strecke standen zwei
+     Rahmen und vier Laufraeder versetzt uebereinander - das sah nicht
+     nach Verwandlung aus, sondern nach Darstellungsfehler.
+
+     Drei Versuche, zwei davon daneben:
+
+     1. Beide Fotos gleichzeitig sichtbar (der WebGL-Morph) - auf halber
+        Strecke zwei Rahmen und vier Laufraeder uebereinander.
+     2. Erst ab-, dann aufblenden - dann steht die Buehne fuer knapp
+        200 Bildpunkte Scrollweg leer.
+
+     Der Fehler steckte in der Annahme. Zwei Fotos VERSCHIEDENER Raeder
+     lassen sich nicht ineinander blenden, so kurz die Blende auch ist:
+     zwei Rahmen an derselben Stelle ergeben immer eine Doppelbelichtung.
+     Auch ein heller Schleier darueber macht daraus keine Verwandlung.
+
+     Also wechseln sie den PLATZ statt der Deckkraft. Die Raeder sind
+     freigestellt (rad-ebike-frei.png, rad-city-frei.png) und liegen auf
+     einer eigenen, stehenden Wand. Das E-Bike faehrt nach links aus dem
+     Bild, das City-Bike von rechts herein. Auf halber Strecke liegt
+     eine volle Bildbreite zwischen ihnen - sie beruehren einander nie.
+
+       0.00 – 0.36   E-Bike steht
+       0.36 – 0.52   Wechsel: eines raus, eines rein
+       0.52 – 1.00   City-Bike steht
+
+     Freigestellt wurden sie ueber den zeilenweisen Median des Fotos:
+     die Wand ist in jeder Zeile fast gleichmaessig, das Rad weicht
+     davon ab. Speichen, Reifen und Schatten bleiben erhalten. */
   function getScrollState(rawProgress) {
     const progress = clamp(Number.isFinite(rawProgress) ? rawProgress : 0);
-    // The two photographs overlap continuously. A very light neutral veil at
-    // the midpoint softens their different geometries without creating a flash.
     const spatialShift = smoothstep(0.08, 0.78, progress);
-    const cityReveal = smoothstep(0.38, 0.50, progress);
-    const morph = getMorphEnvelope(cityReveal);
-    const photoVisibility = 1 - morph.visibility;
-    const transitionCoverOpacity = 0.18 * smoothstep(0.36, 0.44, progress) * (1 - smoothstep(0.44, 0.52, progress));
+
+    // Ein Weg fuer beide: was das eine an Strecke gewinnt, verliert das
+    // andere. Die Deckkraft haelt dabei lange oben - sie greift erst,
+    // wenn das Rad ohnehin fast aus dem Bild ist.
+    const weg      = smoothstep(0.36, 0.52, progress);
+    const ebikeAus = weg;
+    const cityEin  = weg;
+    const cityReveal = cityEin;
 
     return {
       progress,
       activeProduct: progress < 0.44 ? 'ebike' : 'city',
-      ebikeClaimOpacity: 1 - smoothstep(0.28, 0.36, progress),
-      cityClaimOpacity: smoothstep(0.48, 0.56, progress) * (1 - smoothstep(0.62, 0.68, progress)),
-      cityOpacity: cityReveal * photoVisibility,
-      ebikeOpacity: (1 - cityReveal) * photoVisibility,
-      fallbackCityOpacity: cityReveal,
-      fallbackEbikeOpacity: 1 - cityReveal,
-      morphProgress: morph.progress,
-      morphVisibility: morph.visibility,
-      transitionCoverOpacity,
+      ebikeClaimOpacity: 1 - smoothstep(0.26, 0.36, progress),
+      // Die Zeile kommt, sobald das Rad steht - nicht erst danach. Ohne
+      // das blieb die Buehne fuer rund 375 Bildpunkte wortlos.
+      cityClaimOpacity: smoothstep(0.49, 0.56, progress) * (1 - smoothstep(0.66, 0.72, progress)),
+      // Deckkraft nur an den Raendern: das ausfahrende Rad verblasst
+      // erst kurz vor dem Bildrand, das einfahrende ist da schon da.
+      cityOpacity: smoothstep(0.37, 0.45, progress),
+      ebikeOpacity: 1 - smoothstep(0.44, 0.52, progress),
+      fallbackCityOpacity: smoothstep(0.37, 0.45, progress),
+      fallbackEbikeOpacity: 1 - smoothstep(0.44, 0.52, progress),
+      // Der Morph ist stillgelegt. Die Felder bleiben, damit alter Code
+      // und die Tests nicht ins Leere greifen.
+      morphProgress: cityEin,
+      morphVisibility: 0,
+      // Kein Schleier mehr noetig: es gibt nichts zu ueberstrahlen.
+      transitionCoverOpacity: 0,
+      // Richtung fuer den Wechsel: abgehend zurueck, kommend vor.
+      ebikeExit: ebikeAus,
+      cityEnter: cityEin,
       choiceOpacity: smoothstep(0.68, 0.76, progress),
       ctaOpacity: smoothstep(0.78, 0.85, progress),
       bikeScale: mix(1.06, 1, spatialShift),
