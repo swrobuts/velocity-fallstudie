@@ -1,4 +1,14 @@
-"""Die drei Raeder freistellen und massstabsgleich auf dieselbe Buehne setzen."""
+"""Die drei Raeder freistellen und massstabsgleich auf dieselbe Buehne setzen.
+
+VERLUSTFREI GESPEICHERT (24.08.2026)
+Bei Qualitaet 86 wich das Ergebnis in deckenden Flaechen im Mittel um
+knapp vier Stufen von der Vorlage ab, in der Spitze um zweiundvierzig.
+Sichtbar ist das kaum - aber es ist eben doch nicht die Vorlage, und der
+Nutzer hat ausdruecklich Bilder ohne Artefakte verlangt. Verlustfrei
+kosten die drei Raeder zusammen rund 1,4 MB statt 470 KB. Die Wand bleibt
+JPEG: sie ist ohnehin synthetisch, und ihre Kompression hat kein Motiv,
+an dem man sie sehen koennte.
+"""
 from PIL import Image, ImageFilter
 import numpy as np
 from scipy import ndimage
@@ -14,42 +24,109 @@ def groesste_flaeche(maske):
     gr = ndimage.sum(maske, marken, range(1, n + 1))
     return marken == (int(np.argmax(gr)) + 1)
 
-def alpha_aus_foto(foto):
-    """Die Wand ist je Bildzeile fast gleichmaessig - das Rad weicht ab."""
-    F = np.asarray(foto.convert('RGB')).astype(np.float32)
-    diff = np.abs(F - np.median(F, axis=1, keepdims=True)).max(axis=2)
-    kern = groessste = groesste_flaeche(diff > 30)
-    weit = diff > 10
-    marken, _ = ndimage.label(weit)
-    gute = np.unique(marken[kern]); gute = gute[gute > 0]
-    maske = ndimage.binary_fill_holes(np.isin(marken, gute))
-    maske = groesste_flaeche(maske)
-    # Die Aufnahme traegt einen blassen Schatten des jeweils anderen
-    # Rades - ein Rest der urspruenglichen Ueberblendung. Solange beide
-    # Raeder ineinander geblendet wurden, fiel er nicht auf; jetzt, wo
-    # das andere Rad wirklich hereinfaehrt, waere er ein Geist. Die
-    # Schwelle liegt deshalb hoeher als noetig waere, um nur Wand zu
-    # entfernen.
-    alpha = np.clip((diff - 28) * 13, 0, 255) * maske
+def sanft(x, a, b):
+    """Weicher Uebergang von 0 auf 1 zwischen a und b."""
+    t = np.clip((x - a) / (b - a), 0, 1)
+    return t * t * (3 - 2 * t)
 
-    # Die Kante zwischen Wand und Boden laeuft quer durchs ganze Bild und
-    # haengt an den Reifen - sie kaeme beim Wandern als Streifen mit. Der
-    # Ausschnitt richtet sich deshalb nach dem SICHEREN Kern (diff > 60),
-    # in dem nur das Rad selbst liegt.
-    # Der aeussere Rand traegt Vignette und Wandschatten; er wird vorher
-    # ausgeblendet, damit er den Kern nicht bis an die Bildkante zieht.
-    hart = diff > 60
-    hart[:40, :] = False; hart[-40:, :] = False
-    hart[:, :40] = False; hart[:, -40:] = False
-    kern_hart = groesste_flaeche(hart)
-    ys, xs = np.where(kern_hart)
-    x0, x1 = max(0, int(xs.min()) - 10), min(alpha.shape[1], int(xs.max()) + 11)
-    y0, y1 = max(0, int(ys.min()) - 10), min(alpha.shape[0], int(ys.max()) + 11)
-    a = np.zeros_like(alpha)
-    a[y0:y1, x0:x1] = alpha[y0:y1, x0:x1]
-    a = bodenkante_entfernen(a)
-    # Der Grund ist hier die Wand selbst - zeilenweise geschaetzt.
-    return a, np.median(F, axis=1, keepdims=True)
+
+def grund_weit(F):
+    """Wand und Boden OHNE das Rad, zeilenweise aus radfreien Punkten.
+
+    Die erste Fassung nahm einfach den Median jeder Bildzeile. Das ist zu
+    grob: die Wand ist auch INNERHALB einer Zeile nicht gleich hell - die
+    Ausleuchtung faellt zu den Raendern ab. Der Rest lag dadurch im Mittel
+    bei sieben Stufen und in der Spitze bei fuenfundzwanzig, und deshalb
+    musste die Schwelle bei achtundzwanzig liegen. Eine Speiche ist ein
+    bis zwei Punkte breit; unter dieser Schwelle blieb von ihr eine
+    gestrichelte Linie. Genau das hat der Nutzer am 24.08.2026 gesehen.
+
+    Jetzt wird je Zeile zwischen den radfreien Punkten interpoliert. Der
+    Median der Zeile dient nur noch dazu, ueberhaupt erst zu erkennen, wo
+    das Rad ungefaehr steht (grosszuegig verbreitert). Das Ergebnis folgt
+    der Ausleuchtung waagrecht wie senkrecht; der Rest sinkt auf drei
+    Stufen, und die Schwelle darf auf zehn.
+    """
+    # Die Grobmaske darf die BODENKANTE nicht mitmarkieren. Mit dem
+    # Zeilenmedian tat sie genau das: an der schraeg verlaufenden Kante
+    # liegt eine Zeile halb auf der Wand und halb auf dem Boden, der
+    # Median liegt dazwischen, und beide Haelften weichen um mehr als
+    # vierzig Stufen ab - die ganze Zeile galt als Rad, es blieb kein
+    # Stuetzpunkt uebrig, und der Notbehelf schrieb den Median hinein.
+    # Der waagrechte Median ueber 401 Punkte rechnet NUR innerhalb der
+    # Zeile und folgt der Kante deshalb genau.
+    roh = np.stack([ndimage.median_filter(F[..., k], size=(1, 401), mode='nearest')
+                    for k in range(3)], axis=2)
+    grob = np.abs(F - roh).max(axis=2) > 40
+    grob = ndimage.binary_dilation(grob, iterations=8)
+    B = np.empty_like(F)
+    x = np.arange(F.shape[1])
+    for y in range(F.shape[0]):
+        frei = ~grob[y]
+        if frei.sum() < 20:                       # Zeile ganz vom Rad verdeckt
+            B[y] = np.median(F[y], axis=0)
+            continue
+        for k in range(3):
+            B[y, :, k] = np.interp(x, x[frei], F[y, frei, k])
+    return ndimage.gaussian_filter1d(B, 15, axis=1)
+
+
+def alpha_aus_foto(foto):
+    """Das Rad aus der Aufnahme loesen - mit ZWEI Hintergrundmodellen.
+
+    Ein einziges Modell kann beides nicht: aussen steht das Rad vor einer
+    glatten Wand, innen - zwischen Nabe und Felge - steht es vor
+    gekoerntem Pflaster. Was fuer das eine die richtige Schwelle ist, ist
+    fuer das andere die falsche.
+
+      weit  zeilenweise interpoliert (grund_weit). Glatt, folgt der
+            Ausleuchtung. Rest auf der Wand: drei Stufen.
+      nah   oertlicher Median ueber 41 Punkte. Er nimmt das Korn des
+            Pflasters mit auf und laesst duenne Dinge stehen - eine
+            Speiche ist zu schmal, um den Median zu bewegen.
+
+    DREI ZONEN
+
+      Kern    weit ueber 34: hier ist sicher Rad. Deckkraft eins.
+      Rand    drei Punkte um den Kern: hier wird gemischt. Gemessen wird
+              am KLEINEREN der beiden Reste - ein echter Hintergrundpunkt
+              ist in wenigstens einem Modell unauffaellig, ein Radpunkt in
+              keinem. Ohne das blieben helle Wolken am Rahmen stehen: das
+              weite Modell wird in radreichen Zeilen vom Rad selbst
+              verzogen.
+      Innen   die eingeschlossenen Flaechen, also die Radinneren. Dort
+              liegt Pflaster, dessen dunkle Kiesel bis auf hundert Stufen
+              kommen. Die Helligkeit allein entscheidet hier nicht - die
+              FORM entscheidet: eine Speiche ist lang, ein Kiesel ist
+              rund. Was kuerzer als zwanzig Punkte ist, faellt weg.
+    """
+    F = np.asarray(foto.convert('RGB')).astype(np.float32)
+    weit = grund_weit(F)
+    nah = np.stack([ndimage.median_filter(F[..., k], size=41, mode='nearest')
+                    for k in range(3)], axis=2)
+    d_weit = np.abs(F - weit).max(axis=2)
+    d_nah = np.abs(F - nah).max(axis=2)
+
+    kern = groesste_flaeche(d_weit > 34)
+    voll = ndimage.binary_fill_holes(kern)
+    breit = ndimage.binary_dilation(kern, iterations=3)
+
+    a = kern.astype(np.float32)
+    rand = breit & ~kern
+    a[rand] = sanft(np.minimum(d_weit, d_nah), 10, 26)[rand]
+
+    innen = voll & ~breit
+    a_innen = sanft(d_nah, 50, 80) * innen
+    marken, n = ndimage.label(a_innen > 0.15)
+    if n:
+        for i, feld in enumerate(ndimage.find_objects(marken), start=1):
+            laenge = max(feld[0].stop - feld[0].start, feld[1].stop - feld[1].start)
+            if laenge < 20:
+                a_innen[marken == i] = 0
+    a = np.maximum(a, a_innen)
+
+    return bodenkante_entfernen(a * 255.0), weit
+
 
 def alpha_aus_schachbrett(foto):
     rgb = np.asarray(foto.convert('RGB'))
@@ -80,17 +157,26 @@ def bodenkante_entfernen(alpha):
     gesetzten Pixeln; der Kasten des Lastenrads fuellt zwar ganze Zeilen,
     steht aber in langen senkrechten Zuegen.
     """
+    def zuglaenge(maske, achse):
+        """Laenge des Zuges, in dem jeder gesetzte Punkt steht."""
+        richtung = (np.array([[0, 1, 0], [0, 1, 0], [0, 1, 0]], bool) if achse == 0
+                    else np.array([[0, 0, 0], [1, 1, 1], [0, 0, 0]], bool))
+        marken, n = ndimage.label(maske, structure=richtung)
+        laenge = np.zeros(n + 1, np.int32)
+        if n:
+            laenge[1:] = ndimage.sum(maske, marken, range(1, n + 1)).astype(np.int32)
+        return laenge[marken]
+
     m = alpha > 24
-    senkrecht = np.array([[0, 1, 0], [0, 1, 0], [0, 1, 0]], bool)
-    marken, n = ndimage.label(m, structure=senkrecht)
-    if n == 0:
-        return alpha
-    laenge = np.zeros(n + 1, np.int32)
-    laenge[1:] = ndimage.sum(m, marken, range(1, n + 1)).astype(np.int32)
-    duenn = laenge[marken] < 8
-    volle_zeile = (m.sum(axis=1) > 500)[:, None]
-    alpha = np.where(m & duenn & volle_zeile, 0, alpha)
-    # Was jetzt noch lose herumliegt, gehoert nicht zum Rad.
+    # Frueher hing die Regel an der Zahl gesetzter Punkte je Zeile. Das
+    # war richtig, solange die Speichen ohnehin zerrissen waren - mit
+    # heilen Speichen sind dieselben Zeilen dicht besetzt, und die Regel
+    # frass genau das, was sie schuetzen sollte. Jetzt zaehlt die Form des
+    # einzelnen Zuges: sehr lang waagrecht UND sehr kurz senkrecht. Eine
+    # fast waagrechte Speiche kommt bei ihrer Dicke auf keine hundert
+    # Punkte Lauflaenge.
+    weg = m & (zuglaenge(m, 1) > 150) & (zuglaenge(m, 0) < 8)
+    alpha = np.where(weg, 0, alpha)
     return alpha * groesste_flaeche(alpha > 24)
 
 
@@ -221,11 +307,18 @@ def entsaeumen(rgb, alpha, grund):
     dort steht F fast nur noch aus Rauschen.
     """
     a = (alpha.astype(np.float32) / 255.0)[..., None]
-    sicher = np.maximum(a, 0.08)
+    sicher = np.maximum(a, 0.25)
     frei = (rgb.astype(np.float32) - (1 - a) * grund) / sicher
     # Nur im Saum ersetzen; im Kern ist das Bild ohnehin unveraendert.
+    # Die Untergrenze liegt bei einem Viertel und nicht bei acht Prozent:
+    # darunter wird durch eine sehr kleine Zahl geteilt, und aus Rauschen
+    # werden weisse und rote Spritzer. Auf den Speichen war das gut zu
+    # sehen. Zusaetzlich wird die Rechnung mit der Deckkraft eingeblendet,
+    # damit sie dort, wo sie unsicher ist, auch wenig aendert.
     saum = (a > 0.02) & (a < 0.97)
-    return np.where(saum, np.clip(frei, 0, 255), rgb).astype(np.uint8)
+    misch = np.clip((a - 0.02) / 0.35, 0, 1)
+    weich_frei = rgb.astype(np.float32) * (1 - misch) + np.clip(frei, 0, 255) * misch
+    return np.where(saum, weich_frei, rgb).astype(np.uint8)
 
 if __name__ == '__main__':
     # 1 E-Bike und City direkt aus den Aufnahmen. Sie kommen ZUERST -
@@ -240,11 +333,14 @@ if __name__ == '__main__':
         # ERST weichzeichnen, DANN entsaeumen: der Saum entsteht beim
         # Weichzeichnen. Andersherum rechnet man an einer harten Kante
         # herum, an der es nichts zu rechnen gibt - der Rand blieb hell.
-        weiche = np.asarray(weich(alpha))
+        # Nicht mehr weichzeichnen: die Kante kommt schon weich aus dem
+        # Uebergang zwischen den Schwellen. Ein Weichzeichner darueber
+        # duennt genau die Speichen aus, um die es hier geht.
+        weiche = alpha.astype(np.uint8)
         rgb = entsaeumen(np.asarray(foto.convert('RGB')), weiche, grund)
         Image.merge('RGBA', (*Image.fromarray(rgb).split(),
                              Image.fromarray(weiche))) \
-             .save('src/assets/' + ziel, format='WEBP', quality=86, method=6)
+             .save('src/assets/' + ziel, format='WEBP', lossless=True, method=6)
         k = kasten(alpha)
         masse[name] = k
         print(f'{name:6s} Kasten {k}  Breite {k[1] - k[0]}')
@@ -285,7 +381,7 @@ if __name__ == '__main__':
     dy = BODEN - standlinie(np.asarray(rad)[..., 3])            # auf die Standlinie
     buehne.alpha_composite(rad, (dx, dy))
     print(f'optische Mitte: Vorlagen {mitte_soll:.0f}, Lastenrad {mitte_ist:.0f} -> {dx:+d}')
-    buehne.save('src/assets/rad-cargo-frei.webp', format='WEBP', quality=86, method=6)
+    buehne.save('src/assets/rad-cargo-frei.webp', format='WEBP', lossless=True, method=6)
     k2 = kasten(np.asarray(buehne)[..., 3])
     print(f'cargo eingepasst: Kasten {k2}  Breite {k2[1] - k2[0]}, Versatz ({dx}, {dy})')
 

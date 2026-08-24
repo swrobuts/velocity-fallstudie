@@ -176,6 +176,17 @@ else
   grep '✗' /tmp/abnahme-durchstich.log | head -8 | sed 's/^/     /'
 fi
 
+# Kein Pruefpunkt sah je die Bilder an. Deshalb blieb wochenlang
+# unbemerkt, dass die Freistellung die Speichen zerriss - aufgefallen ist
+# es erst dem Nutzer, an einem grossen Bildschirm.
+schritt "Freisteller gegen die Vorlage"
+if python3 tools/freisteller_pruefen.py >/tmp/abnahme-frei.log 2>&1; then
+  ergebnis 0 "$(grep -c '✓' /tmp/abnahme-frei.log) Messungen an drei Raedern"
+else
+  ergebnis 1 "Freisteller weichen von der Vorlage ab"
+  grep '✗' /tmp/abnahme-frei.log | sed 's/^/     /'
+fi
+
 # Veraltete Dateien im Browsercache haben eine Pruefung von aussen zwei
 # kritische Befunde melden lassen, die es nicht mehr gab.
 schritt "Fingerabdruecke an den eingebundenen Dateien"

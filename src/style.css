@@ -362,19 +362,19 @@ img { max-width: 100%; }
    Auf halber Strecke standen zwei Rahmen und vier Laufraeder versetzt
    uebereinander - eine Doppelbelichtung, kein Uebergang. */
 .photo-ebike {
-  background-image: url("assets/rad-ebike-frei.webp?v=fb191533");
+  background-image: url("assets/rad-ebike-frei.webp?v=c58bd2fc");
   opacity: var(--o-ebike);
   transform: translateX(calc(var(--bike-x) * 1% + var(--x-ebike) * 104%))
              scale(var(--bike-scale));
 }
 .photo-city {
-  background-image: url("assets/rad-city-frei.webp?v=462c0628");
+  background-image: url("assets/rad-city-frei.webp?v=c9a34ff7");
   opacity: var(--o-city);
   transform: translateX(calc(var(--bike-x) * 1% + var(--x-city) * 104%))
              scale(var(--bike-scale));
 }
 .photo-cargo {
-  background-image: url("assets/rad-cargo-frei.webp?v=e2c6a37b");
+  background-image: url("assets/rad-cargo-frei.webp?v=2a8f5c26");
   opacity: var(--o-cargo);
   transform: translateX(calc(var(--bike-x) * 1% + var(--x-cargo) * 104%))
              scale(var(--bike-scale));

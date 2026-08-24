@@ -40,8 +40,8 @@ die Raeder wechseln den Platz statt der Deckkraft.
 **Neu erzeugen:** `python3 tools/raeder_freistellen.py` (aus dem
 Projektverzeichnis). Das Skript
 
-1. stellt E-Bike und City-Bike ueber den zeilenweisen Median frei — die
-   Wand ist in jeder Bildzeile nahezu gleichmaessig, das Rad weicht ab,
+1. stellt E-Bike und City-Bike mit ZWEI Hintergrundmodellen frei
+   (siehe unten),
 2. nimmt aus beiden Freistellern den Strich heraus, an dem Wand und
    Boden sich treffen: er ist Hintergrund, beruehrt aber beide Reifen
    und kaeme sonst als Flaeche mit,
@@ -68,8 +68,54 @@ wiederholt auch seine grossen Helligkeitsunterschiede, und die liest das
 Auge als Muster — dieselbe helle Stelle alle paar hundert Punkte. Das
 Korn wiederholt sich zwar ebenfalls, ist aber zu fein dafuer.
 
-Die Schwelle liegt bei `diff > 28`. Niedriger holt einen blassen
-Schatten des jeweils anderen Rades mit, der in beiden Aufnahmen steckt —
-ein Rest der urspruenglichen Ueberblendung. Solange beide ineinander
-geblendet wurden, fiel er nicht auf; jetzt waere er ein Geist. Hoeher
-frisst die Speichen.
+## Warum zwei Hintergrundmodelle
+
+Bis zum 24.08.2026 stand hier ein einziges: der Median jeder Bildzeile,
+mit der Schwelle `diff > 28`. Das Ergebnis sah aus der Entfernung
+richtig aus und war es nicht — bei voller Groesse zerfielen die Speichen
+in gestrichelte Linien, die Ritzel waren zerfressen, die Kette
+zerstueckelt. Der Nutzer hat es an einem grossen Bildschirm gesehen.
+
+Der Grund: die Wand ist auch INNERHALB einer Bildzeile nicht gleich
+hell — die Ausleuchtung faellt zu den Raendern ab. Der Rest lag deshalb
+im Mittel bei sieben Stufen und in der Spitze bei fuenfundzwanzig, und
+darum musste die Schwelle so hoch liegen. Eine Speiche ist ein bis zwei
+Punkte breit; unter dieser Schwelle blieb von ihr ein Strichmuster.
+
+Jetzt rechnet das Skript mit zwei Modellen, weil das Rad vor zwei
+verschiedenen Hintergruenden steht:
+
+| Modell | wie | wofuer | Rest auf reinem Hintergrund |
+|---|---|---|---|
+| **weit** | je Zeile zwischen radfreien Punkten interpoliert | die glatte Wand aussen | 3 Stufen |
+| **nah** | oertlicher Median ueber 41 Punkte | das gekoernte Pflaster im Radinneren | 2 Stufen auf der Wand, 10 auf dem Pflaster |
+
+Daraus drei Zonen:
+
+* **Kern** — `weit` ueber 34: sicher Rad, volle Deckkraft.
+* **Rand** — drei Punkte darum: gemessen am KLEINEREN der beiden Reste.
+  Ein echter Hintergrundpunkt ist in wenigstens einem Modell
+  unauffaellig, ein Radpunkt in keinem. Ohne diese Regel blieben helle
+  Wolken am Rahmen stehen — in radreichen Zeilen zieht das Rad das weite
+  Modell zu sich.
+* **Innen** — die eingeschlossenen Flaechen, also die Radinneren. Dort
+  liegen dunkle Kiesel, die es auf hundert Stufen bringen; Helligkeit
+  allein entscheidet hier nicht. Es entscheidet die FORM: eine Speiche
+  ist lang, ein Kiesel ist rund. Was kuerzer als zwanzig Punkte ist,
+  faellt weg.
+
+Die Schwelle darf dadurch von 28 auf 10 sinken. Gemessen an den Punkten
+der Aufnahme, die deutlich dunkler sind als ihre Umgebung — Speichen,
+Kette, Ritzel —, deckt der Freisteller jetzt 98 Prozent statt 78.
+
+**Verlustfrei gespeichert.** Bei WebP-Qualitaet 86 wich das Ergebnis in
+deckenden Flaechen im Mittel um knapp vier Stufen von der Vorlage ab, in
+der Spitze um zweiundvierzig. Das ist kaum zu sehen, aber es ist nicht
+die Vorlage. Verlustfrei kosten die drei Raeder zusammen rund 1,3 MB
+statt 470 KB. Die Wand bleibt JPEG — sie ist synthetisch, an ihr gibt es
+kein Motiv, an dem man Kompression sehen koennte.
+
+**Nachgerechnet** von `tools/freisteller_pruefen.py`, eingehaengt in
+`tools/abnahme.sh`: deckende Punkte gleichen der Vorlage exakt, die
+dunklen Stellen der Vorlage stehen zu mindestens 95 Prozent, und keine
+Bildzeile spannt ueber 1500 Punkte.
