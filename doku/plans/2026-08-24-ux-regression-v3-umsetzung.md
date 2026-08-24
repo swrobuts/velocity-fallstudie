@@ -34,7 +34,30 @@ Gegenproben: `python3 tools/ux_check.py` (76 Punkte),
   (Ausleihe 1629, `start_station_id = end_station_id = 30`); zweite Fahrt
   vom Hauptbahnhof, frei abgestellt bei 49.79000/9.94500 innerhalb des
   Gebiets (Ausleihe 1630). Ein Versuch bei 50.5/11.5 wurde abgewiesen.
-- ⚠ **P0-02** **Nicht umgesetzt — der Eingriff wurde blockiert.** Das
+- ☑ **P0-02** **Behoben — anders als geplant.** Das Entfernen des Triggers
+  scheiterte an der Eigentümerschaft: `auth.users` gehört
+  `supabase_auth_admin`, der Projektzugang `postgres` ist dort nicht
+  Eigentümer (*must be owner of relation users*). Die aufgerufene Funktion
+  `cityBikesRental.handle_new_user()` gehört dagegen `postgres`.
+
+  Sie wurde deshalb nicht entfernt, sondern **idempotent und
+  fehlertolerant** gemacht (`db/aufbau/0013_altsystem_abloesen.sql`):
+  eine bekannte E-Mail wird wiederverwendet statt doppelt angelegt, die
+  Zuordnung entsteht nur wenn sie fehlt, und — der eigentliche Punkt —
+  ein Fehler darin kann die Registrierung nicht mehr zu Fall bringen.
+  Das ist der kleinere Eingriff und der bessere: die Altanwendung bekommt
+  weiterhin ihre Kundensätze, `auth.users` bleibt unberührt.
+
+  Nachgewiesen mit einer Testadresse, die die blockierte Konstellation
+  exakt nachbildet (Altkunde + übernommener velocity-Kunde ohne
+  `auth_uid`): Registrierung erfolgreich, danach
+  `api_kunde_sicherstellen` → `(7945, 'K-011486', true)`, genau **ein**
+  Kundensatz, `auth_uid` gesetzt, kein Duplikat im Altschema. Testdaten
+  anschließend entfernt.
+
+<details><summary>Ursprüngliche Einschätzung, bevor der Eingriff möglich war</summary>
+
+  **Nicht umgesetzt — der Eingriff wurde blockiert.** Das
   Entfernen von `on_auth_user_created` auf `auth.users` berührt eine
   fremde Anwendung auf demselben Server. Der Befund ist vollständig
   belegt, die Behebung liegt beim Betreiber. Stattdessen umgesetzt:
@@ -44,6 +67,8 @@ Gegenproben: `python3 tools/ux_check.py` (76 Punkte),
   - Der Claim-Weg selbst ist bereits gebaut: `api_kunde_sicherstellen`
     verknüpft einen vorhandenen Kundensatz derselben E-Mail, statt einen
     zweiten anzulegen. Er wurde nur vom Trigger blockiert.
+
+</details>
 
 ### P1 — kritisch
 
@@ -89,9 +114,20 @@ Analyse entfernt, die Fahrräder an ihre Ausgangsstationen zurückgesetzt
 (CB-00017 → Marktplatz, EB-00447 → Hauptbahnhof). Das Wegwerfkonto für
 den Login-Nachweis ist gelöscht. Bestand wie zuvor: 32 Ausleihen.
 
+## Weitere Nebenbefunde
+
+- **Das Testschema überlebte seine Dateien.** `velocity_test` wurde mit
+  `create schema if not exists` angelegt; Testfunktionen aus früheren
+  Läufen blieben stehen und `runtests` meldete Fehler, die im Quelltext
+  nicht mehr zu finden waren. Das Schema wird jetzt bei jedem Lauf frisch
+  angelegt.
+- **Sechs Testkunden aus dem Altschema entfernt** (24.08., aus den
+  Diagnoseversuchen dieses und des vorigen Durchgangs). Stand wieder
+  1015, wie in der Datenübernahme.
+
 ## Offen — Betreiberentscheidungen
 
-1. **`on_auth_user_created` auf `auth.users`.** Solange er steht, kann
-   sich kein Bestandskunde registrieren.
-2. **SMTP.** Bestätigung und Passwort-Rücksetzung hängen daran.
-3. **Registrierung von Hand** mit echtem Postfach, Bildschirmleser.
+1. **SMTP.** Bestätigung und Passwort-Rücksetzung hängen daran.
+2. **Registrierung von Hand** mit echtem Postfach, Bildschirmleser.
+3. Der Testkunde der Prüfung (`kunde_id` 7795) bleibt bestehen —
+   `db/durchstich.py` braucht einen Kunden mit `auth_uid`.

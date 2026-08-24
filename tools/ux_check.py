@@ -213,12 +213,14 @@ pruefe('P0-01', 'imGeschaeftsgebiet' in J,
 pruefe('P0-01', "name=\"rueckgabeart\"" in H,
        'Station oder freies Abstellen sind zwei bewusste Wege')
 
-trigger_frei = True
-try:
-    import subprocess
-    trigger_frei = (WURZEL / 'db/aufbau/0013_altsystem_abloesen.sql').exists()
-except Exception:
-    pass
+ALT = (WURZEL / 'db/aufbau/0013_altsystem_abloesen.sql')
+pruefe('P0-02', ALT.exists(), 'Der Altsystem-Trigger ist entschaerft (0013)')
+if ALT.exists():
+    quelle = ALT.read_text(encoding='utf-8')
+    pruefe('P0-02', 'exception when others' in quelle,
+           'Das Altsystem kann keine Registrierung mehr zu Fall bringen')
+    pruefe('P0-02', 'on conflict (email) do nothing' in quelle,
+           'Eine bekannte E-Mail laeuft nicht mehr in den Unique-Index')
 pruefe('P0-02', 'Database error saving new user' in AUTH,
        'Die Meldung bei vorhandenen Kundendaten ist verstaendlich')
 pruefe('P0-02', 'hilfe@velocity-wue.de' in AUTH,

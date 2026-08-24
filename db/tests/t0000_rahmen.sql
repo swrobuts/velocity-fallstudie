@@ -6,7 +6,12 @@
 -- =====================================================================
 
 create extension if not exists pgtap with schema extensions;
-create schema if not exists velocity_test;
+-- Frisch anlegen, nicht nur sicherstellen. Sonst ueberleben
+-- Testfunktionen aus frueheren Laeufen, die es in den Dateien laengst
+-- nicht mehr gibt - runtests findet sie trotzdem und meldet Fehler, die
+-- niemand mehr im Quelltext sucht. Genau das ist am 24.08.2026 passiert.
+drop schema if exists velocity_test cascade;
+create schema velocity_test;
 set search_path = velocity_test, velocity, extensions, public;
 
 create or replace function velocity_test.test_rahmen_ist_einsatzbereit()

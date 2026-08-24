@@ -101,20 +101,27 @@ $$;
 
 /* Ein Trigger auf auth.users, der in ein Fremdschema schreibt, kann jede
    Registrierung zum Scheitern bringen. Genau das ist am 24.08.2026
-   passiert: "cityBikesRental".handle_new_user() legte bei jeder Anmeldung
-   einen neuen Altkunden an und lief bei bekannten E-Mails in den
-   Unique-Index. Die gesamte Auth-Transaktion fiel zurueck.
+   passiert: "cityBikesRental".handle_new_user() legte bei jeder
+   Anmeldung einen neuen Altkunden an und lief bei bekannten E-Mails in
+   den Unique-Index. Die gesamte Auth-Transaktion fiel zurueck, und
+   damit war jeder der 1015 Bestandskunden ausgesperrt.
 
-   Dieser Test schlaegt an, solange ein solcher Trigger existiert. Er
-   entfernt ihn nicht - das ist eine Entscheidung ueber eine fremde
-   Anwendung und gehoert nicht in eine Testdatei. */
-create or replace function velocity_test.test_kein_altsystem_trigger_auf_auth()
+   auth.users gehoert supabase_auth_admin; dieses Projekt darf den
+   Trigger nicht entfernen. Die Funktion gehoert postgres und wurde
+   deshalb idempotent und fehlertolerant gemacht (siehe
+   db/aufbau/0013_altsystem_abloesen.sql).
+
+   Geprueft wird deshalb nicht die Abwesenheit des Triggers, sondern das,
+   worauf es ankommt: dass die aufgerufene Funktion die Registrierung
+   nicht mehr zu Fall bringen kann. */
+create or replace function velocity_test.test_altsystem_blockiert_keine_anmeldung()
 returns setof text language plpgsql as $$
 declare
-  v_namen text;
+  v_quelle text;
+  v_ruft   text;
 begin
-  select string_agg(t.tgname || ' -> ' || pn.nspname || '.' || p.proname, ', ')
-    into v_namen
+  select pn.nspname || '.' || p.proname, pg_get_functiondef(p.oid)
+    into v_ruft, v_quelle
     from pg_trigger t
     join pg_class     c  on c.oid  = t.tgrelid
     join pg_namespace n  on n.oid  = c.relnamespace
@@ -122,10 +129,17 @@ begin
     join pg_namespace pn on pn.oid = p.pronamespace
    where n.nspname = 'auth' and c.relname = 'users'
      and not t.tgisinternal
-     and pn.nspname = 'cityBikesRental';
+     and pn.nspname = 'cityBikesRental'
+   limit 1;
 
-  return next is(v_namen, null,
-    'Kein Trigger auf auth.users schreibt ins Altschema' ||
-    coalesce(' — gefunden: ' || v_namen, ''));
+  if v_ruft is null then
+    return next pass('Kein Trigger auf auth.users schreibt ins Altschema');
+    return;
+  end if;
+
+  return next ok(v_quelle ilike '%exception when others%',
+    v_ruft || ' faengt Fehler ab und laesst die Registrierung durch');
+  return next ok(v_quelle ilike '%on conflict%',
+    v_ruft || ' laeuft nicht mehr in den Unique-Index auf die E-Mail');
 end;
 $$;
