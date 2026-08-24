@@ -55,7 +55,13 @@
   --titel-font:   clamp(40px, 5vw, 78px);
 
   /* Fläche */
-  --spur: 1240px;
+  /* Die Spur war 1240 breit. Auf einem breiten Schirm blieben davon
+     links und rechts ueber vierhundert Punkte Rand - ein Fuenftel der
+     Flaeche je Seite -, und alles wirkte in die Mitte gepresst. 1240 ist
+     ein Mass fuer Fliesstext; diese Seite ist ein Plakat mit einem
+     Produktbild. Der Fliesstext selbst bleibt schmal, dafuer sorgen
+     seine eigenen Grenzen (68ch in den Fragen, 74ch im Rechtstext). */
+  --spur: 1840px;
   /* EINE FLUCHT FUER DIE GANZE SEITE.
      Die Abschnitte stehen in einer 1240 breiten Spur, mittig; Kopfleiste
      und Buehne standen dagegen am Seitenrand. Ab 1240 Punkten Breite
@@ -571,7 +577,11 @@ img { max-width: 100%; }
   bottom: clamp(72px, 9vh, 120px);
   z-index: 4;
   display: grid;
-  grid-template-columns: auto minmax(200px, 1fr);
+  /* Die zweite Spalte waechst NICHT mit: auf breiten Schirmen zog sich
+     die Auswahlkarte sonst auf neunhundert Punkte und stand fast leer
+     da. Sie traegt drei kurze Zeilen; mehr als 420 braucht sie nie. */
+  grid-template-columns: auto minmax(200px, 420px);
+  justify-content: start;
   gap: 28px;
   align-items: end;
   opacity: var(--choice-opacity);
@@ -637,8 +647,10 @@ img { max-width: 100%; }
      Punkte auseinander. Das sieht man nicht einzeln, aber zusammen. */
   bottom: clamp(72px, 9vh, 120px);
   z-index: 6;
-  width: min(410px, 32vw);
-  padding: 26px;
+  /* 410 waren zu knapp: "Bereit, wenn du es bist." brach in zwei
+     Zeilen, und die Karte stand hoeher als noetig neben dem Rad. */
+  width: min(470px, 34vw);
+  padding: 26px 28px;
   color: var(--navy);
   background: rgba(255, 255, 255, .94);
   border-radius: 2px;
