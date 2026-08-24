@@ -55,7 +55,7 @@ insert into velocity.fahrradtyp (typ_code, bezeichnung, beschreibung, hat_elektr
   ('EBIKE', 'E-Bike Sport',
    'Pedelec mit 250 W Motor, Reichweite bis 50 km, Display mit Akkustand',        true,  20),
   ('CARGO', 'E-Cargo Loader',
-   'E-Lastenrad mit großer Transportbox, Tragkraft bis 80 kg',                   true, 100)
+   'E-Lastenrad mit großer Transportbox, Tragkraft bis 75 kg',                   true,  75)
 on conflict (typ_code) do update
   set bezeichnung  = excluded.bezeichnung,
       beschreibung = excluded.beschreibung,
@@ -71,7 +71,7 @@ select t.typ_id, m.sortierung, m.merkmal
     ('EBIKE', 1, 'Bosch Performance CX'),
     ('EBIKE', 2, 'Bis 25 km/h Unterstützung'),
     ('EBIKE', 3, 'Ideal fürs Hubland'),
-    ('CARGO', 1, 'Große Transportbox (100 kg)'),
+    ('CARGO', 1, 'Große Transportbox (75 kg)'),
     ('CARGO', 2, 'Starker E-Motor'),
     ('CARGO', 3, 'Sitzbank für zwei Kinder')
   ) as m(typ_code, sortierung, merkmal)
@@ -81,6 +81,13 @@ on conflict (typ_id, sortierung) do update set merkmal = excluded.merkmal;
 -- ---------------------------------------------------------------------
 -- Preise: uebernommen aus cityBikesRental.fahrradtyp, ab heute gueltig
 -- und nach oben offen.
+--
+-- Die Minutenpreise wurden am 25.08.2026 neu gesetzt: 0,10 fuer das
+-- City-Bike, 0,25 fuer das E-Bike, 0,50 fuer den Loader. Vorher kostete
+-- das Lastenrad mit 0,10 je Minute genauso wenig wie das einfachste Rad
+-- und weniger als das E-Bike - eine Reihenfolge, die niemand erklaeren
+-- konnte. Fuer die bestehende Datenbank siehe
+-- db/betrieb/preisanpassung_minutenpreis.sql.
 --
 -- Der Tageshoechstpreis wurde am 23.08.2026 angehoben. Eine frische
 -- Datenbank startet gleich mit den neuen Werten. In der bestehenden
@@ -93,8 +100,8 @@ insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro
 select t.typ_id, daterange(current_date, null, '[)'), p.start, p.minute, p.hoechst
   from (values
     ('CITY',  0.10, 0.10,  50.00),
-    ('EBIKE', 1.00, 0.50,  75.00),
-    ('CARGO', 2.00, 0.10, 110.00)
+    ('EBIKE', 1.00, 0.25,  75.00),
+    ('CARGO', 2.00, 0.50, 110.00)
   ) as p(typ_code, start, minute, hoechst)
   join velocity.fahrradtyp t on t.typ_code = p.typ_code
  where not exists (

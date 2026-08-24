@@ -44,7 +44,13 @@ $$;
 /* Die drei Sollpreise stehen hier, nicht nur in einer Anleitung. Eine
    Aussenpruefung hielt 16,00 EUR beim E-Bike fuer einen Datenfehler,
    weil TESTEN.md noch 4,00 EUR nannte - der Preis war richtig, das
-   Bezugsdokument veraltet. Ab jetzt faellt so etwas hier auf. */
+   Bezugsdokument veraltet. Ab jetzt faellt so etwas hier auf.
+
+   Stand 25.08.2026: die Minutenpreise wurden neu gestaffelt (0,10 /
+   0,25 / 0,50). Vorher kostete das Lastenrad je Minute genauso wenig
+   wie das City-Bike und ein Fuenftel des E-Bikes - fuer 30 Minuten war
+   es damit das GUENSTIGSTE der drei. Jetzt ist die Reihenfolge die
+   erwartete. Siehe db/betrieb/preisanpassung_minutenpreis.sql. */
 create or replace function velocity_test.test_v_tarifkarte_rechnet()
 returns setof text language plpgsql as $$
 begin
@@ -53,10 +59,10 @@ begin
     3.10::numeric, 'City-Bike: 0,10 + 30 x 0,10 = 3,10 EUR fuer 30 Minuten');
   return next is(
     (select preis_30_minuten from velocity.v_tarifkarte where typ_code = 'EBIKE'),
-    16.00::numeric, 'E-Bike Sport: 1,00 + 30 x 0,50 = 16,00 EUR fuer 30 Minuten');
+    8.50::numeric, 'E-Bike Sport: 1,00 + 30 x 0,25 = 8,50 EUR fuer 30 Minuten');
   return next is(
     (select preis_30_minuten from velocity.v_tarifkarte where typ_code = 'CARGO'),
-    5.00::numeric, 'E-Cargo Loader: 2,00 + 30 x 0,10 = 5,00 EUR fuer 30 Minuten');
+    17.00::numeric, 'E-Cargo Loader: 2,00 + 30 x 0,50 = 17,00 EUR fuer 30 Minuten');
   return next is(
     (select array_length(merkmale, 1) from velocity.v_tarifkarte where typ_code = 'EBIKE'),
     3, 'E-Bike bringt drei Merkmale fuer die Tarifkarte mit');
