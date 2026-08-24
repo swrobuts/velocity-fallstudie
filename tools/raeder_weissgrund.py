@@ -40,8 +40,7 @@ WURZEL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 QUELLEN = os.path.join(WURZEL, 'src', 'assets', 'neu')
 ZIELE = os.path.join(WURZEL, 'src', 'assets')
 
-BREITE, HOEHE = 1618, 972      # Buehnenmass, wie bisher
-BODEN = 862                    # gemeinsame Standlinie auf der Buehne
+ZIELHOEHE = 800                # gemeinsame Bildhoehe der drei Raeder
 
 GRAU, AUS = '\033[0;90m', '\033[0m'
 
@@ -302,7 +301,7 @@ def main() -> int:
     # Verkleinern auf das Buehnenmass.
     # ------------------------------------------------------------------
     # Erst alle drei fertig rechnen, dann gemeinsam beschneiden.
-    fertig = {}
+    fertig, rohalpha = {}, {}
     for name, ziel in ZUORDNUNG.items():
         treffer = [f for f in dateien if name in f]
         if not treffer:
@@ -310,6 +309,7 @@ def main() -> int:
             return 1
         b = befund[treffer[0]]
         rgb = entsaeumen(np.asarray(b['foto'].convert('RGB')), b['a'], b['grund'])
+        rohalpha[ziel] = b['a']
         rgb, a = schatten_legen(rgb, b['a'])
         fertig[ziel] = np.dstack([rgb, (a * 255).round().astype(np.uint8)])
 
@@ -320,28 +320,42 @@ def main() -> int:
     # haetten. Der Ausschnitt gilt fuer ALLE DREI gleich; nur so bleiben
     # sie deckungsgleich, und nur so bleibt sichtbar, dass das Lastenrad
     # das laengste ist.
-    kanten = []
-    for A in fertig.values():
-        ys, xs = np.where(A[..., 3] > 2)
-        kanten.append((xs.min(), xs.max(), ys.min(), ys.max()))
-    x0 = max(0, min(k[0] for k in kanten) - 40)
-    x1 = min(fertig[list(fertig)[0]].shape[1], max(k[1] for k in kanten) + 41)
-    y0 = max(0, min(k[2] for k in kanten) - 40)
-    y1 = min(fertig[list(fertig)[0]].shape[0], max(k[3] for k in kanten) + 41)
-    print(f'\nGemeinsamer Ausschnitt x {x0}..{x1}, y {y0}..{y1}  '
-          f'({x1-x0}x{y1-y0}, Seitenverhaeltnis {(x1-x0)/(y1-y0):.3f})\n')
+    kanten, eigen = [], {}
+    for ziel, A in fertig.items():
+        ys, _ = np.where(A[..., 3] > 2)
+        kanten.append((int(ys.min()), int(ys.max())))
+        _, xs = np.where(rohalpha[ziel] > 0.02)          # das Rad ohne Schatten
+        eigen[ziel] = (int(xs.min()), int(xs.max()) + 1)
 
-    # Der Ausschnitt wird festgehalten, damit die Nachpruefung die
-    # Vorlage genauso beschneiden kann wie das Werkzeug. Ohne diese
-    # Zeile muesste sie die Rechnung nachbauen und wuerde damit denselben
-    # Fehler wiederholen, den sie finden soll.
+    # SENKRECHT GEMEINSAM, WAAGRECHT EINZELN.
+    #
+    # Gemeinsam senkrecht und im gemeinsamen Massstab: alle drei stehen
+    # auf derselben Standlinie und sind gleich gross abgebildet. Daran
+    # darf nichts geruettelt werden - daraus lebt der Wechsel.
+    #
+    # Einzeln waagrecht: jedes Bild endet rechts an SEINEM Vorderrad.
+    # Nur so kann das Stylesheet jedes Rad auf die Flucht der Spur
+    # setzen. Bei einem gemeinsamen Ausschnitt beruehrt sie nur das
+    # breiteste - das Lastenrad -, die beiden anderen schwimmen hundert
+    # Punkte davor. Dass die drei dadurch nicht mehr denselben
+    # Weltausschnitt zeigen, sieht niemand: sie fahren beim Wechsel
+    # ohnehin eine ganze Bildschirmbreite weit.
+    y0 = max(0, min(k[0] for k in kanten) - 24)
+    y1 = min(list(fertig.values())[0].shape[0], max(k[1] for k in kanten) + 25)
+    massstab = ZIELHOEHE / (y1 - y0)
+    print(f'\nSenkrecht gemeinsam: y {y0}..{y1}  ->  {ZIELHOEHE} Punkte hoch\n')
+
     with open(os.path.join(ZIELE, 'buehne-ausschnitt.txt'), 'w', encoding='utf-8') as f:
-        f.write('# Gemeinsamer Ausschnitt der drei Vorlagen aus src/assets/neu\n')
-        f.write('# links oben rechts unten zielbreite\n')
-        f.write(f'{x0} {y0} {x1} {y1} {BREITE}\n')
+        f.write('# Ausschnitt der Vorlagen aus src/assets/neu\n')
+        f.write('# senkrecht gemeinsam, waagrecht je Rad sein eigenes Vorderrad\n')
+        f.write(f'# oben unten zielhoehe\n{y0} {y1} {ZIELHOEHE}\n')
+        for ziel, (x0, x1) in eigen.items():
+            f.write(f'{ziel} {x0} {x1}\n')
 
     for ziel, A in fertig.items():
-        bild = verkleinern(Image.fromarray(A[y0:y1, x0:x1], 'RGBA'), BREITE)
+        x0, x1 = eigen[ziel]
+        aus = Image.fromarray(A[y0:y1, x0:x1], 'RGBA')
+        bild = verkleinern(aus, max(1, round((x1 - x0) * massstab)))
         bild.save(os.path.join(ZIELE, ziel), format='WEBP', lossless=True, method=6)
         kb = os.path.getsize(os.path.join(ZIELE, ziel)) / 1024
         print(f'{ziel:24s} {bild.size[0]}x{bild.size[1]}  {kb:6.0f} KB')

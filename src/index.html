@@ -12,7 +12,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=43553565">
+    <link rel="stylesheet" href="style.css?v=1afb8c43">
 </head>
 <body>
 
@@ -321,8 +321,12 @@
       </div>
     </div>
 
+    <!-- Die Zahl der freien Raeder stand hier ein zweites Mal. Am
+         letzten Halt sieht man sie oben rechts gross und hier klein -
+         dieselbe Zahl zweimal auf einem Bildschirm, und die kleine sagt
+         nichts, was die grosse nicht schon sagt. Ohne sie ist die Karte
+         niedriger und verdeckt weniger vom Rad. (24.08.2026) -->
     <aside class="final-card">
-      <div class="label"><span>Gerade frei im Netz</span><span>● <span id="bike-counter-karte">…</span></span></div>
       <h2>Bereit, wenn du es bist.</h2>
       <a class="primary-cta" href="#map-section"><span>Live-Karte öffnen</span><span>↗</span></a>
     </aside>
@@ -348,7 +352,9 @@
 <section class="facts" aria-labelledby="facts-title">
   <div class="container">
     <div class="section-header ohne-hinweis">
-      <span class="eyebrow">Ein System. Zwei Fahrgefühle.</span>
+      <!-- "Zwei" stimmte, solange es E-Bike und City-Bike gab. Seit der
+           E-Cargo Loader eine eigene Station hat, sind es drei. -->
+      <span class="eyebrow">Ein System. Drei Fahrgefühle.</span>
       <h2 id="facts-title">Würzburg fährt flexibel.</h2>
     </div>
     <div class="stat-grid" id="stats-grid" aria-label="VeloCity Kennzahlen"></div>
@@ -532,7 +538,7 @@
 <script src="config.js?v=a7625464"></script>
 <script src="supabase.js?v=3f4d1cd4"></script>
 <script src="auth.js?v=61b78d72"></script>
-<script src="script.js?v=a5778e6e"></script>
+<script src="script.js?v=e47c9198"></script>
 
 </body>
 </html>

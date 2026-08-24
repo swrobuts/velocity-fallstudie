@@ -68,16 +68,25 @@ def melde(gut: bool, text: str) -> None:
 
 
 def ausschnitt() -> tuple:
+    """Senkrecht gemeinsam, waagrecht je Rad - so wie das Werkzeug schneidet."""
     pfad = os.path.join(ASSETS, 'buehne-ausschnitt.txt')
+    senkrecht, waagrecht = None, {}
     for zeile in open(pfad, encoding='utf-8'):
-        if not zeile.startswith('#') and zeile.strip():
-            x0, y0, x1, y1, breite = (int(t) for t in zeile.split())
-            return (x0, y0, x1, y1), breite
-    raise SystemExit(f'{pfad} enthaelt keinen Ausschnitt')
+        zeile = zeile.strip()
+        if not zeile or zeile.startswith('#'):
+            continue
+        teile = zeile.split()
+        if senkrecht is None:
+            senkrecht = tuple(int(t) for t in teile)          # y0 y1 zielhoehe
+        else:
+            waagrecht[teile[0]] = (int(teile[1]), int(teile[2]))
+    if senkrecht is None:
+        raise SystemExit(f'{pfad} enthaelt keinen Ausschnitt')
+    return senkrecht, waagrecht
 
 
 def main() -> int:
-    kasten, _ = ausschnitt()
+    (y0, y1, _hoehe), waagrecht = ausschnitt()
     dateien = os.listdir(QUELLEN)
 
     for ziel, stichwort in PAARE:
@@ -91,8 +100,9 @@ def main() -> int:
         ist = A[..., 3].astype(np.float32) / 255.0
         hoehe, breite = ist.shape
 
+        x0, x1 = waagrecht[ziel]
         Q = (Image.open(os.path.join(QUELLEN, treffer[0])).convert('RGB')
-             .crop(kasten).resize((breite, hoehe), Image.LANCZOS))
+             .crop((x0, y0, x1, y1)).resize((breite, hoehe), Image.LANCZOS))
         abstand = np.abs(np.asarray(Q).astype(np.float32) - 255).max(axis=2)
         soll = np.clip((abstand - 4) / 12, 0, 1)
 

@@ -56,6 +56,30 @@
 
   /* Fläche */
   --spur: 1240px;
+  /* EINE FLUCHT FUER DIE GANZE SEITE.
+     Die Abschnitte stehen in einer 1240 breiten Spur, mittig; Kopfleiste
+     und Buehne standen dagegen am Seitenrand. Ab 1240 Punkten Breite
+     liefen sie auseinander - bei 1440 begann die Schlagzeile der Buehne
+     bei 58, die Schlagzeile des naechsten Abschnitts bei 150. Zwei
+     Fluchten fuer dieselbe Rolle; das liest man, auch wenn man es nicht
+     benennen kann.
+
+     Die Formel liefert genau die Flucht der Spur: unterhalb von 1240 den
+     Seitenrand, darueber den Rand der Spur. Das Prozent bezieht sich auf
+     das Element, in dem die Variable BENUTZT wird - bei padding auf
+     dessen eigene Breite, bei left/right auf den umgebenden Block. In
+     beiden Faellen ist das die volle Seitenbreite, und zwar OHNE den
+     Rollbalken. Mit 100vw waere er mitgezaehlt, und die Flucht laege um
+     sieben Punkte daneben. */
+  --flucht: max(var(--rand), calc((100% - var(--spur)) / 2 + var(--rand)));
+  /* DIE BUEHNE IST EINE ZWEISPALTIGE SEITE.
+     Links die Zeile, rechts das Rad, dazwischen eine feste Gasse. Beide
+     Spalten kennen einander: das Rad beginnt dort, wo die Textspalte
+     endet, und endet an der Flucht der Spur. Vorher stand das Rad auf
+     einem Prozentwert und die Zeile daneben - bei jeder Fensterbreite
+     ein anderes Verhaeltnis, mal Luft, mal Ueberschneidung. */
+  --textspalte: min(500px, 40vw);
+  --gasse: clamp(32px, 3.4vw, 64px);
   --rand: clamp(22px, 4vw, 70px);
   --luft: clamp(70px, 8vw, 130px);
 
@@ -123,7 +147,7 @@ img { max-width: 100%; }
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   min-height: 92px;
-  padding: 0 var(--rand);
+  padding: 0 var(--flucht);
   color: var(--navy);
   background: rgba(247, 249, 252, .985);
   border-bottom: 1px solid rgba(6, 24, 65, .12);
@@ -296,26 +320,39 @@ img { max-width: 100%; }
 
 .photo-layer {
   position: absolute;
-  inset: -1.5%;
+  /* Rechts endet die Ebene an der Flucht der Spur - hier loest sich das
+     Prozent im Ausdruck gegen den umgebenden Block auf, also gegen die
+     Buehne, und trifft damit genau die Spur. In background-position
+     wuerde dasselbe Prozent gegen "Flaeche minus Bild" rechnen und weit
+     danebenliegen; deshalb sitzt die Flucht an der EBENE. */
+  inset: 0 var(--flucht) 0 0;
   z-index: -5;
-  /* Die Vorlage ist ein freigestelltes Rad auf durchsichtigem Grund,
-     eng beschnitten - sie traegt keinen Rand mehr, der Luft schaffen
-     wuerde. "contain" liesse sie deshalb die ganze Buehnenbreite
-     einnehmen, und die Schlagzeile laege mitten auf den Speichen.
-
-     70 Prozent und nach rechts gerueckt: links bleibt die Spalte fuer
-     die Zeile frei, das Rad bleibt gross, und sein Vorderrad stoesst
-     nicht an. Die Hoehe folgt daraus von selbst. */
-  background-size: 70% auto;
-  background-position: 90% 70%;
-  /* Ohne das kachelt der Freisteller. Auf dem Schreibtisch faellt es
-     nicht auf, weil "cover" die Flaeche fuellt; auf dem Telefon steht
-     "contain" - dort war ueber dem Rad die abgeschnittene Unterkante
-     einer Wiederholung zu sehen, zwei blasse Reifenboegen und der
-     Bodenstrich. Es sah aus wie ein Fehler im Bild und war eine
-     fehlende Zeile. (24.08.2026) */
   background-repeat: no-repeat;
-  transform: translateX(calc(var(--bike-x) * 1%)) scale(var(--bike-scale));
+  /* DAS RAD STEHT AUF DER FLUCHT DER SPUR.
+     Sein Vorderrad endet dort, wo der Login-Knopf und die Live-Zahl
+     enden - eine Linie fuer alles, was rechts steht. Moeglich ist das,
+     weil die Bilder waagrecht randlos beschnitten sind: die Bildkante
+     IST die Reifenkante (siehe tools/raeder_weissgrund.py).
+
+     Die Zeile links darf dabei ueber das Hinterrad laufen. Bei einem
+     Bild im Verhaeltnis zwei zu eins ist das keine Nachlaessigkeit,
+     sondern die Bedingung dafuer, dass das Rad gross bleibt: ohne
+     Ueberschneidung blieben ihm 570 Punkte Breite und 270 Hoehe, und es
+     saehe aus wie eine Briefmarke. Lesbar bleibt die Zeile durch den
+     hellen Saum an der Schrift, nicht durch einen Schleier ueber dem
+     Bild - der hat zweimal das halbe Rad ausgewaschen. */
+  /* Die Groesse haengt an der HOEHE, nicht an der Breite: die drei
+     Bilder sind verschieden breit (das Lastenrad ist laenger), aber
+     gleich hoch und im selben Massstab. Ueber die Hoehe bleibt das
+     Groessenverhaeltnis erhalten. */
+  background-size: auto 48%;
+  background-position: right 68%;
+  /* Die Schiene rechnet in Fensterbreiten: ein Rad, das nur um seine
+     eigene Bildbreite faehrt, stuende beim Wechsel noch im Bild. */
+  /* Der Ruhe-Versatz aus dem Scrollmodell (--bike-x) ist hier raus: er
+     schob das Rad um drei Fensterprozent nach rechts und damit von der
+     Flucht herunter. Was bleibt, ist die Schiene. */
+  transform: translateX(calc(var(--x-rad, 0) * 104vw));
   will-change: opacity, transform;
 }
 
@@ -375,22 +412,19 @@ img { max-width: 100%; }
    Auf halber Strecke standen zwei Rahmen und vier Laufraeder versetzt
    uebereinander - eine Doppelbelichtung, kein Uebergang. */
 .photo-ebike {
-  background-image: url("assets/rad-ebike-frei.webp?v=a121078b");
+  background-image: url("assets/rad-ebike-frei.webp?v=35080122");
   opacity: var(--o-ebike);
-  transform: translateX(calc(var(--bike-x) * 1% + var(--x-ebike) * 104%))
-             scale(var(--bike-scale));
+  --x-rad: var(--x-ebike);
 }
 .photo-city {
-  background-image: url("assets/rad-city-frei.webp?v=c1128100");
+  background-image: url("assets/rad-city-frei.webp?v=e28fae0e");
   opacity: var(--o-city);
-  transform: translateX(calc(var(--bike-x) * 1% + var(--x-city) * 104%))
-             scale(var(--bike-scale));
+  --x-rad: var(--x-city);
 }
 .photo-cargo {
-  background-image: url("assets/rad-cargo-frei.webp?v=22850bdb");
+  background-image: url("assets/rad-cargo-frei.webp?v=a7c91eeb");
   opacity: var(--o-cargo);
-  transform: translateX(calc(var(--bike-x) * 1% + var(--x-cargo) * 104%))
-             scale(var(--bike-scale));
+  --x-rad: var(--x-cargo);
 }
 
 
@@ -408,7 +442,7 @@ img { max-width: 100%; }
      Kickers, bei jeder Fensterhoehe. */
   top: clamp(190px, 24vh, 320px);
   transform: translateY(calc(-100% + 1.3 * var(--meta-font)));
-  left: var(--rand); right: var(--rand);
+  left: var(--flucht); right: var(--flucht);
   color: var(--navy);
   text-shadow: 0 1px 16px rgba(255, 255, 255, .9);
 }
@@ -474,9 +508,12 @@ img { max-width: 100%; }
 
 .claim {
   position: absolute;
-  left: var(--rand);
+  left: var(--flucht);
   top: clamp(190px, 24vh, 320px);
-  width: min(690px, 42vw);
+  /* Die Spalte war 690 breit, die laengste Zeile misst 476. Der
+     Ueberhang war unsichtbar, kostete aber genau die Breite, die das
+     Rad daneben braucht - und ohne sie lief die Zeile ins Hinterrad. */
+  width: var(--textspalte);
   color: var(--navy);
   will-change: opacity, transform;
 }
@@ -526,11 +563,15 @@ img { max-width: 100%; }
 
 .choice-panel {
   position: absolute;
-  left: var(--rand);
+  left: var(--flucht);
+  /* Rechts endet die Bank, bevor die Abschlusskarte beginnt. Vorher lief
+     die Auswahlkarte vierunddreissig Punkte unter sie - zwei Auflagen,
+     die einander ueberdecken, und keine davon absichtlich. */
+  right: calc(var(--flucht) + min(410px, 32vw) + clamp(24px, 2.2vw, 44px));
   bottom: clamp(72px, 9vh, 120px);
   z-index: 4;
   display: grid;
-  grid-template-columns: auto minmax(240px, 420px);
+  grid-template-columns: auto minmax(200px, 1fr);
   gap: 28px;
   align-items: end;
   opacity: var(--choice-opacity);
@@ -590,8 +631,11 @@ img { max-width: 100%; }
 
 .final-card {
   position: absolute;
-  right: var(--rand);
-  bottom: clamp(52px, 8vh, 100px);
+  right: var(--flucht);
+  /* Dieselbe Unterkante wie Pille und Auswahlkarte. Vorher standen die
+     drei Auflagen auf drei verschiedenen Linien - neun, elf und keine
+     Punkte auseinander. Das sieht man nicht einzeln, aber zusammen. */
+  bottom: clamp(72px, 9vh, 120px);
   z-index: 6;
   width: min(410px, 32vw);
   padding: 26px;
@@ -1763,14 +1807,16 @@ footer a:hover { color: #fff; text-decoration: underline; }
        ohnehin in einem anderen Massstab; das Rad steht deshalb nicht auf
        ihrer Bodenkante, sondern davor auf derselben Flaeche. Das liest
        sich als Tiefe, nicht als Fehler. */
-    inset: auto 0 17.6% 0;
-    height: 34%;
-    background-size: 110% auto;
+    /* Auch hier ueber die HOEHE, nicht die Breite: die drei Bilder sind
+       verschieden breit, und ein Prozentwert auf die Breite haette alle
+       drei gleich breit gemacht - beim Wechsel waere das Lastenrad
+       geschrumpft. 46vw ist die groesste Hoehe, bei der das breiteste
+       der drei (das Lastenrad, Verhaeltnis 2,03) noch in die Seite
+       passt. */
+    inset: auto 0 20% 0;
+    height: 30%;
+    background-size: auto 46vw;
     background-position: center bottom;
-    /* Die Buehne steht auf dem Telefon still. Vergroesserung und
-       Seitwaertsversatz aus dem Scrollmodell wirken hier trotzdem
-       weiter - 1,06-fach und drei Prozent nach rechts - und genau
-       daran wurde das Lastenrad links wie rechts angeschnitten. */
     transform: none;
   }
   /* Die Auswahl steht sofort; ihren Fokuszustand regelt hero.js. Die

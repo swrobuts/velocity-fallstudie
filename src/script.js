@@ -651,7 +651,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Stats aktualisieren
             // Zwei Stellen zeigen dieselbe Zahl: die Kopfzeile der
             // Buehne und die Karte am unteren Rand.
-            for (const id of ['bike-counter', 'bike-counter-karte']) {
+            for (const id of ['bike-counter']) {
                 const el = document.getElementById(id);
                 if (el) el.textContent = bikes.length;
             }
@@ -789,7 +789,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function radzahlAnzeigen(n) {
-        for (const id of ['bike-counter', 'bike-counter-karte']) {
+        for (const id of ['bike-counter']) {
             const el = document.getElementById(id);
             if (el) el.textContent = n;
         }

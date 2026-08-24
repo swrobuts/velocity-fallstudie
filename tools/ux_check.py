@@ -326,8 +326,15 @@ pruefe('BUEHNE', 'rad-ebike-frei' in C and 'rad-city-frei' in C,
        'Die Raeder sind freigestellt')
 pruefe('BUEHNE', 'rad-cargo-frei' in C,
        'Der E-Cargo Loader ist eine eigene Station, kein Sonderfall')
+# Die Schiene rechnet seit dem 24.08.2026 in FENSTERBREITEN, nicht in
+# Elementbreiten: die Radebene endet rechts an der Flucht der Spur und
+# ist damit schmaler als die Seite - ein Rad, das nur um seine eigene
+# Breite faehrt, stuende beim Wechsel noch im Bild. Jede Ebene reicht
+# ihren Versatz ueber --x-rad an die gemeinsame Regel weiter.
+pruefe('BUEHNE', 'var(--x-rad, 0) * 104vw' in C,
+       'Die Schiene misst in Fensterbreiten')
 for name in ('ebike', 'city', 'cargo'):
-    pruefe('BUEHNE', f'var(--x-{name}) * 104%' in C and f'var(--o-{name})' in C,
+    pruefe('BUEHNE', f'--x-rad: var(--x-{name})' in C and f'var(--o-{name})' in C,
            f'{name} haengt an der Schiene')
 pruefe('BUEHNE', "STATIONEN = ['ebike', 'city', 'cargo']" in MODELL,
        'Das Modell fuehrt drei Stationen')
