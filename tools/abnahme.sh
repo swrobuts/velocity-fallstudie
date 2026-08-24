@@ -164,6 +164,28 @@ else
   grep -vE '^$|ids im HTML' /tmp/abnahme-front.log | head -10 | sed 's/^/     /'
 fi
 
+# Der vollstaendige Weg: ausleihen, zurueckgeben, abrechnen - und zwar
+# unter der Rolle authenticated und mit echtem COMMIT. Ein pgTAP-Test
+# haette den Stopper vom 24.08.2026 nicht gefunden: die aufgeschobenen
+# Constraint-Trigger feuern erst beim COMMIT, und pgTAP rollt zurueck.
+schritt "Durchstich: Ausleihe bis Abrechnung"
+if python3 db/durchstich.py >/tmp/abnahme-durchstich.log 2>&1; then
+  ergebnis 0 "$(grep -c '✓' /tmp/abnahme-durchstich.log) Schritte fuer drei Fahrradtypen"
+else
+  ergebnis 1 "Der Weg bricht ab"
+  grep '✗' /tmp/abnahme-durchstich.log | head -8 | sed 's/^/     /'
+fi
+
+# Veraltete Dateien im Browsercache haben eine Pruefung von aussen zwei
+# kritische Befunde melden lassen, die es nicht mehr gab.
+schritt "Fingerabdruecke an den eingebundenen Dateien"
+if python3 tools/versionieren.py --pruefen >/tmp/abnahme-vers.log 2>&1; then
+  ergebnis 0 "alle Stempel aktuell"
+else
+  ergebnis 1 "Stempel veraltet — python3 tools/versionieren.py"
+  head -6 /tmp/abnahme-vers.log | sed 's/^/     /'
+fi
+
 # Der Vertragspruefer oben sieht nur, ob die Elemente da sind. Ob die
 # Seite bedienbar ist, sieht er nicht - eine Aussenpruefung fand 45
 # unbenannte Marker, tote Rechtsverweise und einen Dialog ohne Rolle,

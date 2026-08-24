@@ -42,6 +42,17 @@ müsste ein Benutzerkonto angelegt und ein Passwort eingegeben werden.
 python3 -m http.server 8765 --directory src
 ```
 
+> **Vor jedem Durchgang:** `python3 tools/versionieren.py`. Die Seite
+> bindet ihre Dateien mit einem Fingerabdruck ein (`script.js?v=…`).
+> Ohne den aktuellen Stempel serviert der Browser alte Fassungen — bei
+> einer Prüfung von außen führte genau das zu zwei gemeldeten Fehlern,
+> die längst behoben waren.
+
+> **Ausleihe und Abrechnung ohne Klicken:** `python3 db/durchstich.py`
+> geht den ganzen Weg für alle drei Fahrradtypen gegen die echte
+> Datenbank — unter der Rolle `authenticated`, mit echtem COMMIT, und
+> räumt danach hinter sich auf.
+
 Dann auf `http://localhost:8765`:
 
 1. **Abgemeldet ansehen.** Kennzahlenleiste zeigt **13 Stationen**

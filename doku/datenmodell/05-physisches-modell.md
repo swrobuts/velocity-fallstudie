@@ -157,6 +157,43 @@ Prüfung von außen; ein Test hatte den Fehler sogar festgeschrieben
 `test_station_liegt_im_geschaeftsgebiet` die Regel in die Gegenrichtung:
 **keine aktive Station darf außerhalb aller Gebiete liegen.**
 
+### Wann eine Regel prüft — und mit wessen Rechten
+
+Der teuerste Fehler dieses Projekts steckte nicht im Modell, sondern in
+einer Zeitangabe. Beide Constraint-Trigger sind `deferrable initially
+deferred`: sie feuern erst beim `COMMIT`. Das ist fachlich richtig —
+`fn_ausleihe_starten` setzt Status und Position in zwei Anweisungen,
+dazwischen ist der Zustand notwendig widersprüchlich.
+
+Nur: beim `COMMIT` ist `api_ausleihe_starten` längst zurückgekehrt, und
+mit ihr endet deren `security definer`. Die Prüfung lief damit unter der
+Rolle des Aufrufers — bei einer Ausleihe über die Website `authenticated`.
+Diese Rolle darf `fahrrad_position` nicht lesen, und soll es auch nicht.
+
+Das Ergebnis war eine Ausleihe, die sauber durchlief und am Ende doch
+scheiterte:
+
+```
+Funktion lieferte: (1569, 'Ausleihe gestartet')
+FEHLER: permission denied for table fahrrad_position
+CONTEXT: PL/pgSQL function trg_radposition_pruefen() line 9
+```
+
+In den Tests fiel das nie auf, weil pgTAP als `postgres` läuft **und**
+alles in einer Transaktion hält, die am Ende zurückgerollt wird — der
+`COMMIT`, an dem der Fehler hängt, kommt dort nie. Gefunden hat es erst
+eine Prüfung von außen, die die Seite wie ein Kunde bedient hat.
+
+Zwei Lehren, die über dieses Projekt hinausgehen:
+
+1. **Eine Integritätsprüfung muss die Daten sehen dürfen, über die sie
+   wacht** — unabhängig davon, wer die Zeile geschrieben hat. Beide
+   Triggerfunktionen sind deshalb `security definer` mit festgenageltem
+   `search_path` und gehören ausdrücklich `postgres`.
+2. **Ein Test, der nie committet, prüft die aufgeschobenen Regeln nicht.**
+   `db/durchstich.py` geht deshalb den ganzen Weg mit echten Commits unter
+   der Rolle `authenticated` und räumt danach hinter sich auf.
+
 ### GR15: eine Zahl, die nie stimmte
 
 Am Dom standen **30 Räder auf 10 Stellplätzen**, acht von zehn Würzburger

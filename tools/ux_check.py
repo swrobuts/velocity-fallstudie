@@ -53,8 +53,9 @@ pruefe('P1-01', '@media (max-width: 1023px)' in C and '.menue-knopf { display: f
        'Menue erscheint spaetestens unter 1024 px')
 pruefe('P1-02', 'Fahrt starten' not in H and 'Fahrt starten' not in J,
        'Kein Knopf verspricht mehr "Fahrt starten"')
-pruefe('P1-02', 'karte-mit-typ' in J and 'auf der Karte zeigen' in J,
-       'Tarif-Knopf sagt, was er tut')
+pruefe('P1-02', 'karte-mit-typ' in J and 'Auf der Karte zeigen' in J
+       and 'aria-label="${escapeHtml(k.bezeichnung)} auf der Karte zeigen"' in J,
+       'Tarif-Knopf sagt kurz was er tut und traegt den vollen Namen')
 pruefe('P1-02', "cb.checked = (cb.value === kurz)" in J,
        'Der gewaehlte Fahrradtyp wird als Kartenfilter uebernommen')
 pruefe('P1-03', 'auth-status' in H and "statusZeigen('erfolg'" in J,
@@ -87,8 +88,8 @@ pruefe('P2-02', 'minutenSetzen' in J and 'ist-korrigiert' in J,
        'Ungueltige Zeitwerte werden sichtbar zurechtgerueckt')
 pruefe('P2-03', 'scroll-margin-top' in C and 'zuAbschnitt' in J,
        'Sprungziele beruecksichtigen den festen Kopf und setzen den Fokus')
-pruefe('P2-04', '.scroll-story { height: 210vh' in C,
-       'Die mobile Buehne ist gekuerzt')
+pruefe('P2-04', 'clamp(180vh, 40vh + 250vw, 360vh)' in C,
+       'Die Buehne ist mobil kurz und waechst stetig mit der Breite')
 pruefe('P2-05', 'Würzburg &amp; Schweinfurt' in H,
        'Das Netz wird als Wuerzburg und Schweinfurt benannt')
 for zeile in re.findall(r'<span class="claim-line[^"]*">(.*?)</span>', H, flags=re.S):
@@ -133,10 +134,76 @@ doppelt = {i for i in ids if ids.count(i) > 1}
 pruefe('HTML', not doppelt, f'Keine doppelten ids{" — " + ", ".join(sorted(doppelt)) if doppelt else ""}')
 pruefe('HTML', H.count('<h1') <= 2, 'Hoechstens die beiden Buehnen-Schlagzeilen als h1')
 
+# =====================================================================
+# Regressionspruefung vom 24.08.2026, zweiter Durchgang
+# =====================================================================
+print('\n\nRegressionspruefung 24.08.2026 — zweiter Durchgang\n')
+
+print('P0 — Stopper')
+B = (WURZEL / 'db/aufbau/0003_bereich_b_netz_und_flotte.sql').read_text(encoding='utf-8')
+for funktion in ('trg_radposition_pruefen', 'trg_stellplaetze_pruefen'):
+    stelle = B.index(f'create or replace function velocity.{funktion}()')
+    kopf = B[stelle:stelle + 320]
+    pruefe('P0-01', 'security definer' in kopf,
+           f'{funktion} laeuft mit den Rechten des Eigners')
+pruefe('P0-01', (WURZEL / 'db/durchstich.py').exists(),
+       'Der Weg bis zur Abrechnung ist als Test hinterlegt')
+
+print('\nP1 — kritisch')
+pruefe('P1-01', 'Error sending confirmation email' in AUTH,
+       'Der Fehler des Mailversands ist uebersetzt')
+pruefe('P1-01', 'Unuebersetzte Auth-Meldung' in AUTH,
+       'Unbekannte Meldungen werden gerahmt statt roh durchgereicht')
+pruefe('P1-01', 'Erneut versuchen' in J, 'Nach einem Fehlversuch gibt es einen zweiten')
+pruefe('P1-02', 'passwortZuruecksetzen' in AUTH and 'resetPasswordForEmail' in AUTH,
+       'Passwort zuruecksetzen ist verdrahtet')
+pruefe('P1-03', 'konto-menue' in H and 'konto-abmelden' in H,
+       'Abmelden ist ein eigener, beschrifteter Eintrag')
+pruefe('P1-03', 'aria-label\', `Konto von ${name} — Menü öffnen`' in J,
+       'Der Kopfknopf sagt, was er tut')
+pruefe('P1-04', 'markerEntflechten' in J,
+       'Ueberdeckte Marker werden aufgefaechert')
+pruefe('P1-04', 'hat-infofenster' in J and 'hat-infofenster .map-controls' in C,
+       'Bedienelemente treten hinter das Infofenster zurueck')
+pruefe('P1-04', 'marker-rund' in J and '.marker-rund { clip-path: circle(50%); }' in C,
+       'Die Trefferflaeche folgt der sichtbaren Scheibe')
+
+print('\nP2 — wichtig')
+pruefe('P2-01', 'netzGrenzen' in J and 'L.latLngBounds([])' in J,
+       'Die Gebietsgrenzen werden nicht mehr mutiert')
+pruefe('P2-01', J.count('animate: false') >= 3,
+       'Der Ortswechsel haengt nicht an einer Animation')
+pruefe('P2-02', 'rechnerZeichnen(minutenSetzen(m, true))' in J,
+       'Ungueltige Werte werden schon beim Tippen begrenzt')
+pruefe('P2-03', 'inert' in (SRC / 'hero.js').read_text(encoding='utf-8'),
+       'Unsichtbare Bedienflaechen sind inert')
+pruefe('P2-05', 'clamp(180vh, 40vh + 250vw, 360vh)' in C
+       and '.scroll-story { height: 210vh' not in C,
+       'Kein Stufensprung mehr zwischen 900 und 901 px')
+pruefe('P2-06', 'stationsliste' in H and 'stationslisteZeichnen' in J,
+       'Die Stationsliste ist der verlaessliche Weg zur Station')
+pruefe('P2-07', 'karte-leer' in H and 'karte-alle-typen' in H,
+       'Der leere Filterzustand bietet einen Weg zurueck')
+
+print('\nP3 — Feinschliff')
+pruefe('P3-01', 'Auf der Karte zeigen' in J,
+       'Die Tarif-Knoepfe tragen dieselbe kurze Aufschrift')
+pruefe('P3-03', 'Bikes' not in H, 'Keine englischen Produktbegriffe in der Ansprache')
+pruefe('P3-04', "querySelector('.sprungmarke')" in J,
+       'Die Sprungmarke setzt den Fokus auf ihr Ziel')
+
+print('\nCache')
+fehlend = [d for d in re.findall(r'(?:src|href)="(?!https?:|//|#|mailto:)([A-Za-z0-9_./-]+\.(?:js|css))(\?v=[0-9a-f]+)?"', HTML)
+           if not d[1]]
+pruefe('CACHE', not fehlend,
+       f'Jede eigene Datei traegt einen Fingerabdruck{"" if not fehlend else " — fehlt bei " + ", ".join(d[0] for d in fehlend)}')
+
 print('\nHandarbeit — vom Pruefer nicht entscheidbar:')
 print('  · Registrierung gegen den echten Dienst durchspielen (Passworteingabe)')
 print('  · Bildschirmleser auf der Karte und im Dialog')
 print('  · Optischer Eindruck bei 390, 768, 900, 1024 und 1280 px')
+print('  · Bestaetigungsmail wirklich empfangen (Postfach)')
+print('  · python3 db/durchstich.py — Ausleihe bis Abrechnung gegen die echte Datenbank')
 
 print()
 if fehler:

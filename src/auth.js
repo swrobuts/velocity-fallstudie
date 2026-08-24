@@ -121,9 +121,30 @@ function getUserDisplayName() {
     return currentUser.email?.split('@')[0] || 'User';
 }
 
-// Fehlermeldungen uebersetzen
+/* Fehlermeldungen uebersetzen.
+
+   Eine Pruefung von aussen blieb bei "Error sending confirmation email"
+   haengen - englisch, ohne Ursache und ohne naechsten Schritt. Der
+   Mailversand haengt an einem Server, der auch einmal ausfaellt; dann
+   muss wenigstens dastehen, was zu tun ist. Unbekannte Meldungen werden
+   nicht mehr roh durchgereicht: sie bekommen einen deutschen Rahmen und
+   behalten den Originaltext in Klammern, damit man ihn melden kann. */
 function translateAuthError(message) {
     const translations = {
+        'Error sending confirmation email':
+            'Die Bestätigungs-E-Mail konnte gerade nicht versendet werden. '
+            + 'Das liegt am Mailserver, nicht an deinen Angaben — bitte in ein paar Minuten erneut versuchen.',
+        'Error sending recovery email':
+            'Die E-Mail zum Zurücksetzen konnte gerade nicht versendet werden. '
+            + 'Bitte in ein paar Minuten erneut versuchen.',
+        'Signups not allowed for this instance':
+            'Neue Konten sind auf diesem Server gerade nicht freigeschaltet.',
+        'Password should be at least 6 characters.':
+            'Passwort muss mindestens 6 Zeichen haben',
+        'Anonymous sign-ins are disabled':
+            'Eine Nutzung ohne Konto ist nicht vorgesehen.',
+        'Failed to fetch':
+            'Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.',
         'Invalid login credentials': 'Ungültige E-Mail oder Passwort',
         'Email not confirmed': 'Bitte bestätigen Sie zuerst Ihre E-Mail-Adresse',
         'User already registered': 'Diese E-Mail-Adresse ist bereits registriert',
@@ -134,7 +155,10 @@ function translateAuthError(message) {
             'Aus Sicherheitsgründen ist das erst nach 60 Sekunden wieder möglich.'
     };
 
-    return translations[message] || message;
+    if (translations[message]) return translations[message];
+    // Unbekannt: verstaendlich rahmen, Original mitgeben.
+    console.warn('Unuebersetzte Auth-Meldung:', message);
+    return `Das hat gerade nicht geklappt. Bitte versuche es erneut. (${message})`;
 }
 
 // Session beim Laden wiederherstellen

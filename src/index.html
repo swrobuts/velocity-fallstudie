@@ -12,7 +12,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=48361576">
 </head>
 <body>
 
@@ -146,6 +146,18 @@
          deshalb hier dauerhaft erreichbar; der Rest steckt im Menue. -->
     <a class="kopf-karte" href="#map-section">Live-Karte</a>
     <button id="user-nav-btn" class="login" type="button">Login</button>
+
+    <!-- Der Knopf zeigte im angemeldeten Zustand nur den Vornamen, und ein
+         Klick meldete sofort ab - ohne Ankuendigung, ohne Rueckfrage. Wer
+         nur nachsehen wollte, wer angemeldet ist, war es danach nicht
+         mehr. Jetzt oeffnet der Knopf dieses Menue. -->
+    <div class="konto-menue" id="konto-menue" hidden>
+      <p class="konto-wer">Angemeldet als <strong id="konto-name">—</strong><br>
+         <span id="konto-mail"></span></p>
+      <a href="#map-section">Rad finden</a>
+      <a href="rechtliches.html#datenschutz">Meine Daten</a>
+      <button type="button" id="konto-abmelden">Abmelden</button>
+    </div>
     <button id="menue-knopf" class="menue-knopf" type="button"
             aria-expanded="false" aria-controls="menue" aria-label="Menü öffnen">
       <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
@@ -335,9 +347,16 @@
             <label class="filter-option"><input type="checkbox" value="cargo" checked> <span>E-Cargo Loader</span></label>
         </div>
         <div id="map"></div>
-        <div class="karte-knoepfe">
-            <button type="button" class="karte-zurueck" id="karte-zurueck">Würzburg zeigen</button>
-            <button type="button" class="karte-zurueck" id="karte-netz">Ganzes Netz</button>
+        <!-- Sichtbar nur, wenn kein Fahrradtyp gewaehlt ist. Eine leere
+             Karte ohne Weg zurueck ist eine Sackgasse. -->
+        <div class="karte-leer" id="karte-leer" hidden>
+            <strong>Kein Fahrradtyp ausgewählt</strong>
+            <p>Wähle links mindestens einen Typ, damit die Karte wieder Räder zeigt.</p>
+            <button type="button" id="karte-alle-typen">Alle Typen anzeigen</button>
+        </div>
+        <div class="karte-knoepfe" role="group" aria-label="Kartenausschnitt">
+            <button type="button" class="karte-zurueck" id="karte-zurueck" aria-pressed="true">Würzburg zeigen</button>
+            <button type="button" class="karte-zurueck" id="karte-netz" aria-pressed="false">Ganzes Netz</button>
         </div>
         <div class="karte-hinweis" id="karte-hinweis">Zum Zoomen in die Karte klicken</div>
     </div>
@@ -345,7 +364,17 @@
     <!-- Die Filter aendern die Karte sichtbar, sagten es aber niemandem,
          der sie nicht sieht. Die Zeile steht unter der Karte, nicht darin -
          im Rahmen lag sie ueber den Kacheln. -->
+    <!-- Auf 390 px liegen die dreizehn Stationsscheiben im Zentrum
+         uebereinander. Ein Tipper auf "Marktplatz" oeffnete dann "Dom".
+         Diese Liste ist der verlaessliche Weg zur richtigen Station -
+         mit der Tastatur ohnehin, mit dem Finger erst recht. -->
+    <div class="stationsliste container" id="stationsliste">
+      <h3>Stationen im Netz</h3>
+      <ul id="stationsliste-eintraege"></ul>
+    </div>
+
     <p class="karte-stand container" id="karte-stand" role="status" aria-live="polite"></p>
+    <p class="karte-stand karte-ort container" id="karte-ort" role="status" aria-live="polite"></p>
 
     <div class="map-legend container">
         <div class="legend-item"><span class="legende-scheibe">7</span> Station — die Zahl nennt die freien Räder</div>
@@ -405,15 +434,15 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <!-- Kopfbereich: Animationsmodell, WebGL-Morph, Steuerung -->
-<script src="velocity-scroll-model.js"></script>
-<script src="velocity-bike-morph.js"></script>
-<script src="hero.js"></script>
+<script src="velocity-scroll-model.js?v=22185d03"></script>
+<script src="velocity-bike-morph.js?v=7998427b"></script>
+<script src="hero.js?v=73db5fdc"></script>
 
 <!-- App Scripts (Reihenfolge wichtig!) -->
-<script src="config.js"></script>
-<script src="supabase.js"></script>
-<script src="auth.js"></script>
-<script src="script.js"></script>
+<script src="config.js?v=a7625464"></script>
+<script src="supabase.js?v=e54c19cb"></script>
+<script src="auth.js?v=930d69a5"></script>
+<script src="script.js?v=4c31528e"></script>
 
 </body>
 </html>

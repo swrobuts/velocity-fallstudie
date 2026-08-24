@@ -18,30 +18,77 @@ document.addEventListener("DOMContentLoaded", async () => {
     const rentalBanner = document.getElementById("active-rental-banner");
     const endRentalBtn = document.getElementById("end-rental-btn");
 
+    /* =================================================================
+       KOPFZEILE IM ANGEMELDETEN ZUSTAND
+
+       Vorher trug der Knopf nur den Vornamen, und ein Klick meldete
+       sofort ab. Das war doppelt unguenstig: die Wirkung stand nirgends,
+       und wer sie ausloeste, konnte sich hinterher nicht sofort wieder
+       anmelden - eine Aussenpruefung meldete den Knopf danach als tot.
+       Jetzt oeffnet der Knopf ein Menue, und Abmelden ist ein eigener,
+       beschrifteter Eintrag.
+       ================================================================= */
+    const kontoMenue = document.getElementById('konto-menue');
+
+    function kontoMenueSetzen(offen) {
+        if (!kontoMenue) return;
+        kontoMenue.hidden = !offen;
+        userNavBtn.setAttribute('aria-expanded', String(offen));
+    }
+
+    function abmelden() {
+        kontoMenueSetzen(false);
+        logout()
+            .then(() => Toastify({ text: 'Abgemeldet. Bis bald!',
+                                   backgroundColor: '#374151', position: 'right' }).showToast())
+            .catch(err => Toastify({ text: err.message, backgroundColor: '#EF4444' }).showToast());
+    }
+
+    document.getElementById('konto-abmelden')?.addEventListener('click', abmelden);
+    kontoMenue?.querySelectorAll('a').forEach(a =>
+        a.addEventListener('click', () => kontoMenueSetzen(false)));
+
+    document.addEventListener('click', (e) => {
+        if (!kontoMenue || kontoMenue.hidden) return;
+        if (!kontoMenue.contains(e.target) && e.target !== userNavBtn
+            && !userNavBtn.contains(e.target)) kontoMenueSetzen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && kontoMenue && !kontoMenue.hidden) {
+            kontoMenueSetzen(false);
+            userNavBtn.focus();
+        }
+    });
+
     // ===== UI UPDATE FUNKTION =====
     function updateUI(user) {
         if (user) {
-            const displayName = getUserDisplayName();
-            userNavBtn.innerHTML = `<i class="fa-solid fa-circle-user"></i> ${displayName}`;
-            userNavBtn.classList.remove("btn-primary");
-            userNavBtn.classList.add("btn-outline");
-            userNavBtn.onclick = async (e) => {
+            const name = getUserDisplayName();
+            userNavBtn.innerHTML = `<i class="fa-solid fa-circle-user"></i> ${escapeHtml(name)}`;
+            userNavBtn.classList.remove('btn-primary');
+            userNavBtn.classList.add('btn-outline');
+            // Der zugaengliche Name sagt, was der Knopf tut - nicht nur,
+            // wer angemeldet ist.
+            userNavBtn.setAttribute('aria-label', `Konto von ${name} — Menü öffnen`);
+            userNavBtn.setAttribute('aria-expanded', 'false');
+            userNavBtn.setAttribute('aria-controls', 'konto-menue');
+            document.getElementById('konto-name').textContent = name;
+            document.getElementById('konto-mail').textContent = user.email || '';
+            userNavBtn.onclick = (e) => {
                 e.preventDefault();
-                try {
-                    await logout();
-                    Toastify({ text: "Erfolgreich ausgeloggt.", backgroundColor: "#374151", position: "right" }).showToast();
-                } catch (error) {
-                    Toastify({ text: error.message, backgroundColor: "#EF4444" }).showToast();
-                }
+                e.stopPropagation();
+                kontoMenueSetzen(kontoMenue.hidden);
             };
-            // Aktive Ausleihen pruefen
             checkActiveRentals();
         } else {
+            kontoMenueSetzen(false);
             userNavBtn.innerHTML = `<i class="fa-regular fa-user"></i> Login`;
-            userNavBtn.classList.add("btn-primary");
-            userNavBtn.classList.remove("btn-outline");
+            userNavBtn.classList.add('btn-primary');
+            userNavBtn.classList.remove('btn-outline');
+            userNavBtn.removeAttribute('aria-label');
+            userNavBtn.removeAttribute('aria-expanded');
+            userNavBtn.removeAttribute('aria-controls');
             userNavBtn.onclick = (e) => { e.preventDefault(); openModal(); };
-            // Banner verstecken
             hideRentalBanner();
         }
     }
@@ -257,7 +304,12 @@ document.addEventListener("DOMContentLoaded", async () => {
                         document.getElementById('login-password').focus();
                     }});
             } else {
-                statusZeigen('fehler', error.message);
+                // Bei einem Fehler des Mailservers ist der zweite Versuch
+                // oft schon erfolgreich - der Knopf spart das Neutippen.
+                const wiederholbar = /E-Mail|Verbindung/.test(error.message);
+                statusZeigen('fehler', error.message, wiederholbar
+                    ? { text: 'Erneut versuchen', tun: () => regForm.requestSubmit() }
+                    : null);
                 document.getElementById('reg-email').focus();
             }
         } finally {
@@ -341,8 +393,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                     </ul>
                 </div>
                 <button type="button" data-typ="${escapeHtml(k.typ_code)}"
-                        class="karte-mit-typ ${hervor ? 'btn-primary' : 'btn-outline'} full-width">
-                    ${escapeHtml(k.bezeichnung)} auf der Karte zeigen
+                        class="karte-mit-typ ${hervor ? 'btn-primary' : 'btn-outline'} full-width"
+                        aria-label="${escapeHtml(k.bezeichnung)} auf der Karte zeigen">
+                    Auf der Karte zeigen
                 </button>
             </div>`;
         }).join('');
@@ -537,19 +590,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         const feld   = document.getElementById('meter-minuten');
         const regler = document.getElementById('meter-regler');
 
-        // Waehrend des Tippens nur mitrechnen, nicht hineinregieren -
-        // sonst kann man "120" nicht eingeben, ohne bei "1" gestoert zu
-        // werden. Zurechtgerueckt wird beim Verlassen des Feldes.
+        /* Frueher wurde erst beim Verlassen des Feldes zurechtgerueckt.
+           Wer "0" oder "1441" eintippte und hinsah, las im Feld den einen
+           Wert und daneben einen Preis, der zu einem anderen gehoerte.
+           Bei Preisen ist das nicht hinnehmbar - also sofort begrenzen.
+           Zwischenstaende beim Tippen sind davon nicht betroffen: "1",
+           "12" und "120" liegen alle im erlaubten Bereich. */
         feld.addEventListener('input', () => {
             const m = minutenLesen();
             if (m !== null && m >= MIN_MINUTEN && m <= MAX_MINUTEN) {
                 regler.value = m;
                 rechnerZeichnen(m);
+                minutenSetzen(m);
+            } else if (feld.value.trim() !== '' && feld.value.trim() !== '-') {
+                rechnerZeichnen(minutenSetzen(m, true));
             }
+            markenZeichnen();
         });
-        feld.addEventListener('change', () => rechnerZeichnen(minutenSetzen(minutenLesen(), true)));
-        feld.addEventListener('blur',   () => rechnerZeichnen(minutenSetzen(minutenLesen(), true)));
-        regler.addEventListener('input', () => rechnerZeichnen(minutenSetzen(Number(regler.value))));
+        feld.addEventListener('change', () => { rechnerZeichnen(minutenSetzen(minutenLesen(), true)); markenZeichnen(); });
+        feld.addEventListener('blur',   () => { rechnerZeichnen(minutenSetzen(minutenLesen(), true)); markenZeichnen(); });
+        regler.addEventListener('input', () => { rechnerZeichnen(minutenSetzen(Number(regler.value))); markenZeichnen(); });
 
         document.querySelectorAll('.rechner-marken button').forEach(b => {
             b.addEventListener('click', () => {
@@ -643,10 +703,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Zurueck aufs Gebiet: in der Karte und ueber den Verweis oben.
     document.getElementById('karte-zurueck')?.addEventListener('click', gebietZeigen);
+    /* Ohne animate:false bleibt der Wechsel stehen, sobald die Seite
+       keine Bildwiederholung bekommt - im Hintergrundtab, unter einer
+       Automatisierung, bei abgeschalteter Animation. Der Knopf sah dann
+       aus, als tue er nichts: der Zustand wechselte, die Karte nicht.
+       Ein Ortswechsel ist eine Navigation, keine Vorfuehrung. */
     document.getElementById('karte-netz')?.addEventListener('click', () => {
         if (!gebietFlaechen.length) return;
-        const alle = gebietFlaechen.reduce((b, f) => b ? b.extend(f.getBounds()) : f.getBounds(), null);
-        map.fitBounds(alle, { padding: [26, 26] });
+        map.fitBounds(netzGrenzen(), { padding: [26, 26], animate: false });
+        ortMelden('Ganzes Netz: Würzburg und Schweinfurt.');
+        ortKnopfSetzen('netz');
     });
     // light_all ist fast weiss - Strassen, Gruen und Wasser verschwinden
     // darin. Voyager bleibt hell, zeichnet die Stadt aber lesbar.
@@ -691,7 +757,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // Die Grenze umfasst jetzt BEIDE Gebiete. Mit der alten Grenze um
         // Wuerzburg allein waeren die drei Schweinfurter Stationen zwar
         // gezeichnet, aber nicht erreichbar gewesen.
-        const alle = gebietFlaechen.reduce((b, f) => b ? b.extend(f.getBounds()) : f.getBounds(), null);
+        const alle = netzGrenzen();
         map.setMaxBounds(alle.pad(0.25));
         map.setMinZoom(map.getBoundsZoom(alle) - 0.5);
         karteEingepasst = true;
@@ -842,10 +908,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     /* Stationsmarker: eine Scheibe mit der Zahl der freien Raeder.
        Der Durchmesser waechst mit der Wurzel der Anzahl - die
        Kreisflaeche wuerde den Unterschied sonst uebertreiben. */
+    /* Die Scheibe ist rund, ihre Trefferflaeche war quadratisch. Bei
+       eng beieinanderliegenden Stationen deckte die Ecke der einen die
+       Mitte der anderen ab: ein Tipper auf "Marktplatz" oeffnete "Dom",
+       und zwar nur mit dem Finger - mit der Tastatur ging es. Genau
+       dieser Unterschied hat eine Pruefung von aussen stutzig gemacht.
+
+       clip-path beschneidet nicht nur das Bild, sondern auch die
+       Trefferflaeche. Zusaetzlich werden die Scheiben auf schmalen
+       Rahmen kleiner, damit sie sich seltener beruehren. */
     function stationsSymbol(anzahl) {
-        const d = Math.round(30 + Math.sqrt(anzahl) * 3.4);
+        const schmal = map.getContainer().clientWidth < 620;
+        const d = Math.round((schmal ? 24 : 30) + Math.sqrt(anzahl) * (schmal ? 2.2 : 3.4));
         return L.divIcon({
-            className: '',
+            className: 'marker-rund',
             html: `<div class="karten-station" style="width:${d}px;height:${d}px">
                      <span>${anzahl}</span></div>`,
             iconSize: [d, d],
@@ -858,7 +934,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const klasse = rad.typ_code === 'CARGO' ? 'ist-cargo'
                      : rad.hat_elektro ? 'ist-ebike' : 'ist-city';
         return L.divIcon({
-            className: '',
+            className: 'marker-rund',
             html: `<div class="karten-rad ${klasse}"><i class="fa-solid fa-bicycle"></i></div>`,
             // Mittig verankert wie die Stationsscheiben: der Kreis sitzt
             // AUF dem Punkt. Haengt er darueber, sehen Raeder nahe der
@@ -871,10 +947,43 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     /* Zurueck auf das Geschaeftsgebiet. Haengt an der Schaltflaeche in
        der Karte und am Verweis "Live-Karte" in der Kopfzeile. */
+    /* Die Umgrenzung aller Gebiete - in einem FRISCHEN Objekt.
+
+       Hier steckte ein boeser Fehler: getBounds() eines Vielecks liefert
+       nicht eine Kopie, sondern das interne Objekt. Ein
+           gebietFlaechen.reduce((b, f) => b.extend(f.getBounds()), …)
+       hat damit die Grenzen des ERSTEN Vielecks dauerhaft aufgeblaeht -
+       Wuerzburg umfasste danach auch Schweinfurt. Die Folge: der erste
+       Kartenausschnitt stimmte, jeder spaetere "Wuerzburg zeigen"-Klick
+       landete am Mindestzoom und zeigte beide Staedte. Von aussen sah es
+       aus, als taete der Knopf nichts.
+
+       L.latLngBounds([]) legt ein leeres Objekt an; extend fasst dort
+       hinein, ohne die Vielecke anzufassen. */
+    function netzGrenzen() {
+        const grenzen = L.latLngBounds([]);
+        gebietFlaechen.forEach(f => grenzen.extend(f.getBounds()));
+        return grenzen;
+    }
+
+    /* Welche Ansicht gerade gilt, muss man sehen koennen - sonst wirkt
+       ein Knopf, der bereits aktiv ist, wie einer ohne Funktion. */
+    function ortKnopfSetzen(welcher) {
+        for (const [id, name] of [['karte-zurueck', 'wuerzburg'], ['karte-netz', 'netz']]) {
+            const k = document.getElementById(id);
+            if (k) k.setAttribute('aria-pressed', String(name === welcher));
+        }
+    }
+
+    function ortMelden(text) {
+        const el = document.getElementById('karte-ort');
+        if (el) el.textContent = text;
+    }
+
     function gebietZeigen() {
         if (!geschaeftsgebiet) return;
         const grenzen = geschaeftsgebiet.getBounds();
-        map.fitBounds(grenzen, { padding: [30, 30] });
+        map.fitBounds(grenzen, { padding: [30, 30], animate: false });
 
         // Das Gebiet ist rund 6 mal 5 Kilometer, der Kartenrahmen aber
         // viel breiter als hoch. fitBounds richtet sich nach der engeren
@@ -890,8 +999,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             // nachgezoomt, dass die Stadt die Breite traegt, der Umriss
             // aber gerade noch ganz ins Bild passt.
             const zu = Math.min(Math.log2(verhaeltnis / 1.4), 1.25);
-            map.setZoom(map.getZoom() + Math.round(zu * 4) / 4);
+            map.setZoom(map.getZoom() + Math.round(zu * 4) / 4, { animate: false });
         }
+        ortMelden('Würzburg — 10 Stationen im Geschäftsgebiet.');
+        ortKnopfSetzen('wuerzburg');
     }
 
     /* Wann traegt die Karte 45 einzelne Radsymbole zusaetzlich zu den 13
@@ -923,9 +1034,86 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
+    /* Der Weg aus dem leeren Zustand heraus: eine Schaltflaeche, die
+       alle Haken zurueckholt. */
+    function leerhinweisZeigen(an) {
+        const el = document.getElementById('karte-leer');
+        if (!el) return;
+        el.hidden = !an;
+    }
+
     function standMelden(text) {
         const el = document.getElementById('karte-stand');
         if (el) el.textContent = text;
+    }
+
+    /* Marker je Station, damit die Liste unter der Karte dieselbe
+       Station oeffnen kann wie ein Tipper auf die Scheibe. */
+    const stationsMarker = new Map();
+    const fuehrungslinien = L.layerGroup().addTo(map);
+
+    /* =================================================================
+       MARKER AUFFAECHERN
+
+       Dom, Marktplatz und Juliuspromenade liegen keine 200 Meter
+       auseinander. Auf 390 px Kartenbreite sind das rund 13 Bildpunkte -
+       die Scheiben sind aber 33 Punkte breit. Sie MUESSEN sich
+       ueberdecken, und die obere faengt den Tipper fuer die untere ab.
+       Eine Pruefung von aussen hat genau das gefunden: ein Tipper auf
+       "Marktplatz" oeffnete "Dom", mit der Tastatur ging es dagegen.
+
+       Weder eine runde Trefferflaeche noch kleinere Scheiben loesen das:
+       die Mittelpunkte liegen naeher beieinander als die Radien. Also
+       werden die Scheiben auseinandergeschoben, bis sich keine zwei mehr
+       beruehren, und eine duenne Linie zeigt, wo die Station wirklich
+       steht. Der wahre Ort geht dabei nicht verloren - er steht in
+       marker.echterOrt.
+
+       Das Verfahren ist eine Entspannungsrechnung: solange sich zwei
+       Scheiben ueberlappen, schiebt sie jede die andere um die Haelfte
+       der Ueberdeckung fort. Nach wenigen Runden steht alles frei.
+       ================================================================= */
+    function markerEntflechten() {
+        fuehrungslinien.clearLayers();
+        const punkte = [];
+        stationsMarker.forEach(m => {
+            if (!m.echterOrt) return;
+            const soll = map.latLngToLayerPoint(m.echterOrt);
+            const gr = m.options.icon.options.iconSize[0] / 2 + 1.5;
+            punkte.push({ m, soll, ist: soll.clone(), r: gr });
+        });
+        if (punkte.length < 2) return;
+
+        for (let runde = 0; runde < 80; runde++) {
+            let bewegt = false;
+            for (let i = 0; i < punkte.length; i++) {
+                for (let j = i + 1; j < punkte.length; j++) {
+                    const a = punkte[i], b = punkte[j];
+                    let dx = b.ist.x - a.ist.x, dy = b.ist.y - a.ist.y;
+                    let abstand = Math.hypot(dx, dy);
+                    const noetig = a.r + b.r;
+                    if (abstand >= noetig) continue;
+                    if (abstand < 0.01) {          // exakt uebereinander
+                        const w = (i * 2.399 + j);  // fester Winkel je Paar
+                        dx = Math.cos(w); dy = Math.sin(w); abstand = 1;
+                    }
+                    const schub = (noetig - abstand) / 2 / abstand;
+                    a.ist.x -= dx * schub; a.ist.y -= dy * schub;
+                    b.ist.x += dx * schub; b.ist.y += dy * schub;
+                    bewegt = true;
+                }
+            }
+            if (!bewegt) break;
+        }
+
+        for (const p of punkte) {
+            const versatz = Math.hypot(p.ist.x - p.soll.x, p.ist.y - p.soll.y);
+            if (versatz < 1.5) { p.m.setLatLng(p.m.echterOrt); continue; }
+            p.m.setLatLng(map.layerPointToLatLng(p.ist));
+            L.polyline([map.layerPointToLatLng(p.soll), map.layerPointToLatLng(p.ist)],
+                       { color: '#061841', weight: 1, opacity: .32, interactive: false })
+             .addTo(fuehrungslinien);
+        }
     }
 
     function karteZeichnen() {
@@ -948,6 +1136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         let stationenMitRad = 0;
+        stationsMarker.clear();
         for (const station of db_Stations) {
             if (!station.latitude || !station.longitude) continue;
             const hier = proStation.get(station.station_id) || [];
@@ -962,6 +1151,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             }).addTo(stationLayer)
               .bindPopup(stationsPopover(station, hier), { maxWidth: 340, minWidth: 300 });
             markerBenennen(marker, name);
+            // Der wahre Ort bleibt erhalten, auch wenn der Marker gleich
+            // beiseitegeschoben wird - siehe markerEntflechten.
+            marker.echterOrt = L.latLng(station.latitude, station.longitude);
+            stationsMarker.set(station.station_id, marker);
         }
 
         // Frei abgestellte Raeder erst, wenn der Ausschnitt sie tragen kann.
@@ -972,25 +1165,83 @@ document.addEventListener("DOMContentLoaded", async () => {
             for (const rad of freie) {
                 const name = `${rad.typ_bezeichnung} ${rad.rahmennummer}, frei abgestellt`;
                 const marker = L.marker([rad.latitude, rad.longitude], {
-                    icon: freiesSymbol(rad), title: name, alt: name
+                    icon: freiesSymbol(rad), title: name, alt: name,
+                    // Stationen haben Vorrang. Ein frei abgestelltes Rad,
+                    // das zufaellig auf einer Stationsscheibe liegt, darf
+                    // ihr den Tipper nicht wegnehmen - die Station ist das
+                    // Ziel, nach dem gesucht wird.
+                    zIndexOffset: -500
                 }).addTo(bikeLayer)
                   .bindPopup(freiesRadPopover(rad), { maxWidth: 340, minWidth: 300 });
                 markerBenennen(marker, name);
             }
         }
 
+        // Sind alle Haken weg, ist die Karte leer. Eine Zahl allein hilft
+        // dann nicht weiter - es braucht den Weg zurueck.
         const gewaehlt = Array.from(typen);
-        const typText = gewaehlt.length === 3 ? 'alle Fahrradtypen'
-                      : gewaehlt.length === 0 ? 'kein Fahrradtyp'
+        if (!gewaehlt.length) {
+            standMelden('Kein Fahrradtyp ausgewählt — die Karte zeigt gerade keine Räder.');
+            leerhinweisZeigen(true);
+            return;
+        }
+        leerhinweisZeigen(false);
+
+        const typText = gewaehlt.length === 3 ? 'allen Fahrradtypen'
                       : gewaehlt.map(t => TYP_NAME[t]).join(' und ');
         standMelden(
-            `${raeder.length} Räder sichtbar an ${stationenMitRad} Stationen, gefiltert nach ${typText}. ` +
+            `${raeder.length} ${raeder.length === 1 ? 'Rad' : 'Räder'} an ` +
+            `${stationenMitRad} ${stationenMitRad === 1 ? 'Station' : 'Stationen'}, ` +
+            `gefiltert nach ${typText}. ` +
             (freie.length === 0 ? ''
              : zeigeFreie ? `${freie.length} davon stehen frei im Geschäftsgebiet.`
              : `${freie.length} frei abgestellte Räder erscheinen beim Hineinzoomen.`));
 
+        markerEntflechten();
+        stationslisteZeichnen(proStation);
+
         // Der Ausschnitt folgt dem Geschaeftsgebiet; das setzt
         // geschaeftsgebietZeichnen, sobald die Sicht geladen ist.
+    }
+
+    /* Dieselben Daten wie auf der Karte, nur als Liste. Ein Klick fuehrt
+       zur Station und oeffnet ihr Infofenster - auch dann, wenn drei
+       Scheiben uebereinanderliegen. */
+    function stationslisteZeichnen(proStation) {
+        const ziel = document.getElementById('stationsliste-eintraege');
+        if (!ziel) return;
+        const zeilen = db_Stations
+            .filter(st => st.latitude && st.longitude)
+            .map(st => ({ st, frei: (proStation.get(st.station_id) || []).length }))
+            .sort((a, b) => b.frei - a.frei || a.st.name.localeCompare(b.st.name, 'de'));
+
+        ziel.innerHTML = zeilen.map(({ st, frei }) => `
+            <li>
+              <button type="button" data-station="${st.station_id}">
+                <span class="sl-zahl${frei ? '' : ' ist-leer'}">${frei}</span>
+                <span class="sl-text">
+                  <strong>${escapeHtml(st.name)}</strong>
+                  <small>${escapeHtml(st.strasse || '')} ${escapeHtml(st.hausnummer || '')}${st.ort ? ' · ' + escapeHtml(st.ort) : ''}</small>
+                </span>
+                <span class="sl-frei">${frei === 1 ? 'Rad frei' : 'Räder frei'}</span>
+              </button>
+            </li>`).join('');
+
+        ziel.querySelectorAll('button').forEach(b => {
+            b.addEventListener('click', () => {
+                const id = Number(b.dataset.station);
+                const marker = stationsMarker.get(id);
+                if (!marker) return;
+                const ort = marker.getLatLng();
+                document.getElementById('map').scrollIntoView({ behavior: 'auto', block: 'center' });
+                map.setView(ort, Math.max(map.getZoom(), 15), { animate: false });
+                // Der Zoomsprung kann die Schwelle fuer die Einzelraeder
+                // ueberschreiten. Dann zeichnet die Karte neu und der
+                // Marker von eben ist nicht mehr derselbe - deshalb wird
+                // er nach dem Sprung erneut geholt.
+                (stationsMarker.get(id) || marker).openPopup();
+            });
+        });
     }
 
     // Beim Zoomen und beim Aendern der Fenstergroesse kann die Schwelle
@@ -1000,16 +1251,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         const jetzt = freieSichtbar();
         if (jetzt !== letzteSicht) { letzteSicht = jetzt; karteZeichnen(); }
     }
-    map.on('zoomend', sichtPruefen);
-    map.on('resize', sichtPruefen);
+    map.on('zoomend', () => { sichtPruefen(); markerEntflechten(); });
+    map.on('resize', () => { sichtPruefen(); markerEntflechten(); });
 
     // Leaflet beschriftet die Schliessen-Schaltflaeche englisch.
+    /* Filterkarte und Ortsumschalter liegen ueber der Kartenflaeche und
+       damit auch ueber dem Infofenster - auf 390 px verdeckten sie
+       dessen Kopf mit Name und Adresse, also genau die Angabe, wegen
+       der man es geoeffnet hat. Solange eines offen ist, treten sie ab.
+       Auf breiten Rahmen ist Platz genug; dort bleibt alles stehen. */
+    const kartenRahmen = document.querySelector('.map-container-shadow');
     map.on('popupopen', (e) => {
         const knopf = e.popup.getElement()?.querySelector('.leaflet-popup-close-button');
         if (knopf) knopf.setAttribute('aria-label', 'Infofenster schließen');
+        kartenRahmen?.classList.add('hat-infofenster');
     });
+    map.on('popupclose', () => kartenRahmen?.classList.remove('hat-infofenster'));
 
     checkboxes.forEach(cb => cb.addEventListener('change', karteZeichnen));
+
+    document.getElementById('karte-alle-typen')?.addEventListener('click', () => {
+        checkboxes.forEach(cb => cb.checked = true);
+        karteZeichnen();
+        checkboxes[0].focus();
+    });
 
     // Ein Klick im Popover leiht. Delegiert, weil Popovers erst beim
     // Oeffnen in den Baum kommen.
@@ -1199,6 +1464,18 @@ document.addEventListener("DOMContentLoaded", async () => {
        Ersatz - die drei wichtigsten Wege waren auf dem Geraet, auf dem
        man ein Leihrad sucht, nicht erreichbar.
        ================================================================= */
+    /* Die Sprungmarke zeigte auf #facts-title, setzte den Fokus dort aber
+       nicht. Wer sie benutzt, scrollt sonst zwar, tabbt danach aber
+       weiter oben aus der Kopfzeile heraus. */
+    document.querySelector('.sprungmarke')?.addEventListener('click', (e) => {
+        const ziel = document.getElementById(e.currentTarget.getAttribute('href').slice(1));
+        if (!ziel) return;
+        e.preventDefault();
+        ziel.setAttribute('tabindex', '-1');
+        ziel.scrollIntoView({ behavior: 'auto', block: 'start' });
+        ziel.focus({ preventScroll: true });
+    });
+
     const menueKnopf = document.getElementById('menue-knopf');
     const menue = document.getElementById('menue');
 

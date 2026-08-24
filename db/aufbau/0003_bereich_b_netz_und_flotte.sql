@@ -212,9 +212,31 @@ alter table velocity.fahrrad_position add  constraint fahrrad_position_ort_chk c
 -- fn_ausleihe_starten und _beenden Status und Position in ZWEI
 -- Anweisungen setzen: zwischendurch ist der Zustand notwendig
 -- widerspruechlich, am Ende der Transaktion nicht mehr.
+
+-- ---------------------------------------------------------------------
+-- WARUM security definer? Das war ein Stopper, kein Feinschliff.
+--
+-- Ein aufgeschobener Constraint-Trigger feuert beim COMMIT - also
+-- NACHDEM api_ausleihe_starten zurueckgekehrt ist. Damit endet auch
+-- deren security definer: die Pruefung laeuft wieder unter der Rolle
+-- des Aufrufers, und das ist bei einer Ausleihe ueber die Website
+-- authenticated. Diese Rolle darf fahrrad_position nicht lesen, und
+-- soll es auch nicht.
+--
+-- Die Folge: die Ausleihe lief sauber durch, die Regelpruefung scheiterte
+-- am Ende an "permission denied for table fahrrad_position", und die
+-- ganze Transaktion fiel zurueck. In den Tests fiel das nie auf - die
+-- laufen als postgres.
+--
+-- Eine Integritaetspruefung muss die Daten sehen duerfen, ueber die sie
+-- wacht, ganz gleich wer die Zeile geschrieben hat. Deshalb definer,
+-- und deshalb ein festgenagelter search_path: sonst koennte jemand mit
+-- eigenem Schema die Pruefung unterwandern.
+-- ---------------------------------------------------------------------
 create or replace function velocity.trg_radposition_pruefen()
 returns trigger
 language plpgsql
+security definer
 set search_path = velocity, pg_temp
 as $$
 declare
@@ -287,9 +309,12 @@ create index if not exists idx_fahrrad_position_station on velocity.fahrrad_posi
 --  setzen und die Regel waere umgangen.
 -- =====================================================================
 
+-- Auch diese Pruefung feuert erst beim COMMIT - siehe die Begruendung
+-- bei trg_radposition_pruefen.
 create or replace function velocity.trg_stellplaetze_pruefen()
 returns trigger
 language plpgsql
+security definer
 set search_path = velocity, pg_temp
 as $$
 declare
@@ -313,6 +338,12 @@ begin
   return null;
 end;
 $$;
+
+-- security definer laeuft unter dem EIGNER. Beide Funktionen gehoeren
+-- deshalb ausdruecklich postgres - nicht dem, der die Datei zufaellig
+-- einspielt.
+alter function velocity.trg_radposition_pruefen()  owner to postgres;
+alter function velocity.trg_stellplaetze_pruefen() owner to postgres;
 
 comment on function velocity.trg_stellplaetze_pruefen() is
   'Prueft GR15. Steht als Constraint-Trigger und nicht als CHECK, weil die Regel '

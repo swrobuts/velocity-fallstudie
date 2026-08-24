@@ -179,8 +179,43 @@ img { max-width: 100%; }
 .login:hover { background: var(--red-tief); border-color: var(--red-tief); }
 
 .kopf-aktionen {
+  position: relative;
   justify-self: end;
   display: flex; align-items: center; gap: 10px;
+}
+
+/* Kontomenue. Es haengt an der Kopfzeile, nicht am Knopf, damit es auf
+   schmalen Geraeten nicht ueber den Rand laeuft. */
+.konto-menue {
+  position: absolute; z-index: 40;
+  top: calc(100% + 10px); right: 0;
+  min-width: 236px;
+  padding: 16px 18px 14px;
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: 2px;
+  box-shadow: 0 26px 60px rgba(6, 24, 65, .18);
+}
+.konto-menue[hidden] { display: none; }
+.konto-wer {
+  margin: 0 0 12px; padding-bottom: 12px;
+  border-bottom: 1px solid var(--mist);
+  font-size: 14px; line-height: 1.5; color: var(--grau);
+}
+.konto-wer strong { color: var(--navy); }
+.konto-wer span { font-family: var(--mono); font-size: 12px; color: var(--grau-still); }
+.konto-menue a, .konto-menue button {
+  display: block; width: 100%;
+  padding: 10px 0;
+  text-align: left; text-decoration: none;
+  color: var(--navy); background: none; border: 0;
+  font-size: 15px; font-weight: 700;
+}
+.konto-menue a:hover, .konto-menue button:hover { color: var(--red); }
+.konto-menue button {
+  margin-top: 6px; padding-top: 12px;
+  border-top: 1px solid var(--mist);
+  color: var(--red);
 }
 /* Die Karte ist der Weg, den mobile Besucher wirklich suchen. Sie bleibt
    deshalb sichtbar, auch wenn der Rest ins Menue wandert. */
@@ -234,7 +269,21 @@ img { max-width: 100%; }
 /* ------------------------------------------------ Bühne (Hero) */
 /* Ab hier unverändert aus dem Entwurf des Nutzers übernommen. */
 
-.scroll-story { height: 360vh; min-height: 2400px; background: var(--navy); }
+/* Die Laenge der Buehne war gestuft: 360vh, unter 900 px 210vh, unter
+   520 px 185vh. Ein einziger Pixel Fensterbreite - 900 gegen 901 -
+   verlaengerte die Seite damit um rund siebzig Prozent. Wer ein Fenster
+   zieht, sieht die Seite springen.
+
+   Jetzt eine stetige Funktion. 40vh traegt den Sockel, 250vw laesst sie
+   mit der Breite wachsen, clamp haelt beide Enden:
+     bis  473 px Breite → 180vh   (Telefon, kurze Strecke)
+     ab  1024 px Breite → 360vh   (Schreibtisch, volle Inszenierung)
+   dazwischen laeuft es durch, ohne Kante. */
+.scroll-story {
+  height: clamp(180vh, 40vh + 250vw, 360vh);
+  min-height: 1100px;
+  background: var(--navy);
+}
 
 .sticky-stage {
   position: sticky;
@@ -369,6 +418,9 @@ img { max-width: 100%; }
   transition: opacity .36s ease, transform .45s cubic-bezier(.4, 0, .2, 1);
 }
 
+/* Rueckfall ohne inert-Unterstuetzung: was inert ist, nimmt keine Klicks. */
+[inert] { pointer-events: none; }
+
 .choice-panel {
   position: absolute;
   left: var(--rand);
@@ -446,7 +498,11 @@ img { max-width: 100%; }
   box-shadow: 0 24px 70px rgba(0, 0, 0, .24);
   opacity: var(--cta-opacity);
   transform: translateY(calc((1 - var(--cta-opacity)) * 34px));
-  pointer-events: calc(var(--cta-opacity));
+  /* pointer-events nimmt keine Zahl - die Zeile hier war wirkungslos.
+     Die Sperre setzt jetzt hero.js ueber inert; das deckt Zeigergeraet
+     und Tastatur zugleich ab. Diese Regel bleibt als Rueckfall, falls
+     inert nicht unterstuetzt wird. */
+  pointer-events: auto;
 }
 .final-card .label {
   display: flex; align-items: center; justify-content: space-between;
@@ -841,6 +897,10 @@ img { max-width: 100%; }
 /* ---- Marker ---- */
 /* Eine Station traegt eine Scheibe mit der Zahl der freien Raeder.
    Der Durchmesser kommt aus dem Skript und waechst mit der Wurzel. */
+/* Die Trefferflaeche folgt der sichtbaren Scheibe. Ohne das faengt die
+   Ecke des einen Markers die Mitte des naechsten ab. */
+.marker-rund { clip-path: circle(50%); }
+
 .karten-station {
   display: flex; align-items: center; justify-content: center;
   background: var(--navy);
@@ -1008,6 +1068,78 @@ img { max-width: 100%; }
   margin: 18px auto 0;
   font: 600 13.5px/1.5 var(--body-schrift);
   color: var(--grau-still);
+}
+
+/* Kein Typ gewaehlt: die Karte ist leer und sagt, wie es weitergeht. */
+.karte-leer {
+  position: absolute; inset: 0; z-index: 600;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 30px; text-align: center;
+  background: rgba(243, 245, 248, .93);
+  backdrop-filter: blur(2px);
+}
+.karte-leer[hidden] { display: none; }
+.karte-leer strong {
+  font-family: var(--schmal); font-size: clamp(26px, 3vw, 38px);
+  font-weight: 800; letter-spacing: -.03em; color: var(--navy);
+}
+.karte-leer p { margin: 0; max-width: 42ch; color: var(--grau); }
+.karte-leer button {
+  margin-top: 6px; padding: 13px 22px;
+  background: var(--navy); color: #fff;
+  border: 1px solid var(--navy); border-radius: 999px; font-weight: 700;
+}
+.karte-leer button:hover { background: var(--red); border-color: var(--red); }
+
+.karte-ort { margin-top: 4px; color: var(--grau); }
+
+/* Solange ein Infofenster offen ist, treten die Bedienelemente ab -
+   sonst verdecken sie auf schmalen Geraeten dessen Kopf. */
+.map-container-shadow.hat-infofenster .map-controls,
+.map-container-shadow.hat-infofenster .karte-knoepfe,
+.map-container-shadow.hat-infofenster .karte-hinweis { opacity: 0; pointer-events: none; }
+.map-controls, .karte-knoepfe { transition: opacity .18s ease; }
+
+/* ------------------------------------------------- Stationsliste */
+/* Der verlaessliche Weg zur richtigen Station. Auf der Karte liegen die
+   Scheiben im Zentrum uebereinander; hier steht jede fuer sich. */
+.stationsliste { margin-top: 26px; }
+.stationsliste h3 {
+  margin: 0 0 14px;
+  font: 700 11px/1 var(--mono);
+  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+}
+.stationsliste ul {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--mist);
+  border: 1px solid var(--mist);
+}
+.stationsliste li { background: #fff; }
+.stationsliste button {
+  display: grid; width: 100%;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center; gap: 14px;
+  padding: 13px 16px;
+  background: none; border: 0; text-align: left;
+}
+.stationsliste button:hover { background: var(--paper); }
+.sl-zahl {
+  display: grid; place-items: center;
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--navy); color: #fff;
+  font-family: var(--mono); font-weight: 700; font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.sl-zahl.ist-leer { background: var(--mist); color: var(--grau-still); }
+.sl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sl-text strong { color: var(--navy); font-size: 15.5px; }
+.sl-text small { color: var(--grau-still); font-size: 12.5px; }
+.sl-frei {
+  font: 700 10.5px/1 var(--mono);
+  letter-spacing: .12em; text-transform: uppercase; color: var(--grau-still);
 }
 
 /* Solange das Mausrad gesperrt ist, sagt die Karte, wie man es freigibt.
@@ -1350,10 +1482,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .site-header { grid-template-columns: 1fr auto; min-height: 74px; }
   .site-nav { display: none; }
   .top-meta { top: 100px; }
-  /* Die Buehne war mobil rund 2970 px hoch - mehr als drei Bildschirme
-     vor der ersten Kennzahl. Die Inszenierung bleibt, die Strecke wird
-     auf gut zwei Bildschirme gekuerzt. */
-  .scroll-story { height: 210vh; min-height: 1500px; }
+  /* Die Laenge regelt jetzt die clamp-Formel weiter oben - hier keine
+     zweite Stufe mehr, sonst kehrt der Sprung zurueck. */
   .photo-layer { inset: 0 -32% 0 -18%; background-position: 56% center; }
   .claim { top: 27vh; bottom: auto; width: calc(100% - 48px); }
   .claim h1 { font-size: var(--hero-font); max-width: 100%; }
@@ -1373,8 +1503,15 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .pop-bild { width: 62px; height: 40px; }
 }
 
+@media (max-width: 620px) {
+  /* Die Scheiben werden im Skript kleiner gezeichnet, nicht hier
+     skaliert - eine CSS-Skalierung verkleinert das Bild, laesst die
+     Trefferflaeche aber unveraendert und macht das Problem groesser. */
+  .stationsliste button { grid-template-columns: 40px 1fr; gap: 12px; }
+  .sl-frei { display: none; }
+}
+
 @media (max-width: 520px) {
-  .scroll-story { height: 185vh; min-height: 1200px; }
   /* Die Metazeile brach hier unruhig um. */
   .meta-lang { display: none; }
   .meta-kurz { display: inline; }

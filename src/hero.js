@@ -19,6 +19,8 @@
     const story = document.querySelector('.scroll-story');
     const stage = document.querySelector('.sticky-stage');
     const tabs = [...document.querySelectorAll('.product-tab')];
+    const choicePanel = document.querySelector('.choice-panel');
+    const finalCard = document.querySelector('.final-card');
     const productCopy = document.querySelector('.product-copy');
     const ebikeClaim = document.querySelector('.claim-ebike');
     const cityClaim = document.querySelector('.claim-city');
@@ -88,7 +90,30 @@
       if (useMorph && morphVisibility > 0.0001) morphRenderer.render(nextState.morphProgress);
     }
 
+    /* Unsichtbar ist nicht gleich abwesend. Beide Bedienflaechen standen
+       mit opacity:0 im Bild, blieben aber anklickbar, fokussierbar und im
+       Baum fuer Vorlesehilfen. Wer mit der Tastatur durch die Startseite
+       ging, landete in Schaltflaechen, die niemand sehen konnte.
+       inert nimmt beides in einem Zug: Zeigergeraet und Fokus.
+       Aufgefallen bei einer Pruefung von aussen am 24.08.2026. */
+    let choiceInert = null;
+    let ctaInert = null;
+
+    function updateControlAvailability(nextState) {
+      const choiceAus = nextState.choiceOpacity < 0.05;
+      const ctaAus = nextState.ctaOpacity < 0.05;
+      if (choiceAus !== choiceInert) {
+        choiceInert = choiceAus;
+        if (choicePanel) choicePanel.inert = choiceAus;
+      }
+      if (ctaAus !== ctaInert) {
+        ctaInert = ctaAus;
+        if (finalCard) finalCard.inert = ctaAus;
+      }
+    }
+
     function updateClaimVisibility(nextState) {
+      updateControlAvailability(nextState);
       const ebikeHidden = nextState.ebikeClaimOpacity < 0.5;
       const cityHidden = nextState.cityClaimOpacity < 0.5;
       if (ebikeHidden !== renderedEbikeHidden) {
