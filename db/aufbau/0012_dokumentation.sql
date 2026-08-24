@@ -292,7 +292,6 @@ comment on column velocity.nutzungsschritt.schritt_id   is 'Surrogatschlüssel.'
 comment on column velocity.nutzungsschritt.nummer       is 'Position in der Abfolge, zugleich Fachschlüssel.';
 comment on column velocity.nutzungsschritt.titel        is 'Überschrift der Karte.';
 comment on column velocity.nutzungsschritt.beschreibung is 'Erläuternder Text.';
-comment on column velocity.nutzungsschritt.icon_code    is 'Name des Font-Awesome-Symbols, etwa fa-qrcode.';
 
 comment on table velocity.kennzahl is
   'Kennzahl der Kopfleiste. Entweder mit festem Anzeigewert oder berechnet.';
@@ -370,7 +369,6 @@ comment on column velocity.v_nutzungsschritt.schritt_id   is 'Schlüssel des Sch
 comment on column velocity.v_nutzungsschritt.nummer       is 'Position in der Abfolge.';
 comment on column velocity.v_nutzungsschritt.titel        is 'Überschrift der Karte.';
 comment on column velocity.v_nutzungsschritt.beschreibung is 'Erläuternder Text.';
-comment on column velocity.v_nutzungsschritt.icon_code    is 'Name des Font-Awesome-Symbols.';
 
 comment on view velocity.v_kennzahl is 'Öffentliche Kennzahlen, feste und berechnete.';
 comment on column velocity.v_kennzahl.schluessel is 'Fachlicher Schlüssel der Kennzahl.';

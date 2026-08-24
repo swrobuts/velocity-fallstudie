@@ -297,7 +297,6 @@ Ein Schritt der Anleitung "So einfach geht es" auf der Website.
 | `nummer` | `integer` | nein |  | Position in der Abfolge, zugleich Fachschlüssel. |
 | `titel` | `text` | nein |  | Überschrift der Karte. |
 | `beschreibung` | `text` | nein |  | Erläuternder Text. |
-| `icon_code` | `text` | ja |  | Name des Font-Awesome-Symbols, etwa fa-qrcode. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
@@ -568,7 +567,6 @@ Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begren
 | `nummer` | `integer` | ja |  | Position in der Abfolge. |
 | `titel` | `text` | ja |  | Überschrift der Karte. |
 | `beschreibung` | `text` | ja |  | Erläuternder Text. |
-| `icon_code` | `text` | ja |  | Name des Font-Awesome-Symbols. |
 
 ## `v_station` (Sicht)
 

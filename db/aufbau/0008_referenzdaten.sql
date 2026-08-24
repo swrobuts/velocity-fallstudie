@@ -145,18 +145,15 @@ insert into velocity.faq_eintrag (frage, antwort, sortierung) values
 on conflict (frage) do update
   set antwort = excluded.antwort, sortierung = excluded.sortierung;
 
-insert into velocity.nutzungsschritt (nummer, titel, beschreibung, icon_code) values
+insert into velocity.nutzungsschritt (nummer, titel, beschreibung) values
   (1, 'App laden und finden',
-      'Registriere dich einmalig kostenlos. Finde in der Web-App oder nativen App das nächste freie Rad in deiner Nähe.',
-      'fa-mobile-screen-button'),
+      'Registriere dich einmalig kostenlos. Finde in der Web-App oder nativen App das nächste freie Rad in deiner Nähe.'),
   (2, 'Scannen und losfahren',
-      'Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss öffnet sich automatisch.',
-      'fa-qrcode'),
+      'Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss öffnet sich automatisch.'),
   (3, 'Parken und beenden',
-      'Stelle das Rad an einer Station ab oder frei im rot umrandeten Geschäftsgebiet — beides ohne Zuschlag. Schloss schließen, fertig.',
-      'fa-square-parking')
+      'Stelle das Rad an einer Station ab oder frei im rot umrandeten Geschäftsgebiet — beides ohne Zuschlag. Schloss schließen, fertig.')
 on conflict (nummer) do update
-  set titel = excluded.titel, beschreibung = excluded.beschreibung, icon_code = excluded.icon_code;
+  set titel = excluded.titel, beschreibung = excluded.beschreibung;
 
 insert into velocity.kennzahl (schluessel, anzeigewert, label, sortierung, ist_berechnet) values
   ('stationen',      null,     'Stationen',      1, true),

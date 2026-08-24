@@ -434,48 +434,37 @@ img { max-width: 100%; }
 /* ---------------------------------------------------- Kennzahlen */
 /* Raster aus dem Entwurf, Werte aus velocity.v_kennzahl. */
 
-.facts {
-  display: grid;
-  grid-template-columns: 1.15fr .85fr;
-  min-height: 72vh;
-  background: var(--paper);
-}
-.facts-copy { padding: clamp(70px, 9vw, 150px) clamp(28px, 7vw, 120px); }
-.facts-copy .eyebrow { color: var(--grau-still); }
-.facts h2 {
-  max-width: 9ch;
-  margin: 0 0 30px;
-  color: var(--navy);
-  font-family: var(--schmal);
-  font-size: clamp(48px, 6vw, 96px);
-  line-height: .92;
-  letter-spacing: -.065em;
-}
-.facts-copy > p { max-width: 38em; color: var(--grau); font-size: 19px; line-height: 1.6; }
+/* Die Kennzahlen folgen demselben Muster wie Ablauf, Tarife und FAQ:
+   Abschnittskopf, Haarlinie, Inhalt. Vorher hatten sie ein eigenes
+   Zweispalten-Layout mit min-height 72vh und space-between - zwischen
+   Zahl und Etikett klaffte dadurch ein Loch von dreihundert Pixeln,
+   und der Abschnitt fiel aus dem Rhythmus der Seite. */
+/* Unten weniger Luft: der naechste Abschnitt hat denselben Grund, die
+   doppelte Luft las sich als 230 Pixel Leere statt als Abschnittswechsel.
+   Wo die Farbe wechselt (Tarife, Fusszeile) bleibt es bei der vollen. */
+.facts { padding: var(--luft) 0 calc(var(--luft) * .35); background: var(--paper); }
 
 .stat-grid {
-  align-self: stretch;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  background: #fff;
-  border-left: 1px solid var(--mist);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
 }
 .stat {
-  display: flex; flex-direction: column; justify-content: space-between;
-  gap: 20px;
-  padding: clamp(32px, 4vw, 70px);
-  border-right: 1px solid var(--mist);
-  border-bottom: 1px solid var(--mist);
+  display: flex; flex-direction: column; gap: 10px;
+  padding-left: clamp(22px, 2.6vw, 40px);
+  border-left: 1px solid var(--mist);
 }
+.stat:first-child { padding-left: 0; border-left: 0; }
 .stat b {
   color: var(--navy);
   font-family: var(--schmal);
-  font-size: clamp(48px, 5vw, 82px);
+  font-size: clamp(44px, 5vw, 78px);
+  font-weight: 800;
   line-height: 1;
   letter-spacing: -.06em;
 }
 .stat span {
-  color: #657189;
+  color: var(--grau-still);
   font: 700 11px/1.3 var(--mono);
   letter-spacing: .14em;
   text-transform: uppercase;
@@ -513,6 +502,12 @@ img { max-width: 100%; }
   line-height: .94;
   letter-spacing: -.055em;
 }
+/* Ein Kopf ohne Lesehinweis braucht die zweite Spalte nicht - sonst
+   stuende die Ueberschrift auf zwei Dritteln und rechts bliebe Leere. */
+.section-header.ohne-hinweis {
+  grid-template-columns: 1fr;
+  grid-template-areas: 'vorspann' 'titel';
+}
 .section-header p {
   grid-area: hinweis;
   align-self: end;
@@ -540,78 +535,6 @@ img { max-width: 100%; }
 .btn-outline:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
 .full-width { width: 100%; }
 
-/* ------------------------------------------------ Längsschnitt */
-
-.profil { padding: var(--luft) 0; background: #fff; border-top: 1px solid var(--mist); }
-.profil-svg { display: block; width: 100%; height: auto; overflow: visible; }
-
-.p-raster line { stroke: var(--mist); stroke-width: 1; stroke-dasharray: 2 5; }
-.p-raster text {
-  font-family: var(--mono); font-size: 11px; fill: var(--grau-still);
-  letter-spacing: .06em; text-anchor: end;
-}
-.p-flaeche { fill: url(#hang); }
-.p-linie { fill: none; stroke: var(--red); stroke-width: 2.6; stroke-linecap: round; }
-.p-grundlinie { stroke: var(--mist); stroke-width: 1; }
-.p-leit { stroke: var(--mist); stroke-width: 1; stroke-dasharray: 2 4; }
-.p-pfeil { stroke: var(--navy); stroke-width: 1.2; }
-.p-spitze { fill: var(--navy); }
-.p-mass-text {
-  font-family: var(--schmal); font-weight: 800; font-size: 22px;
-  fill: var(--navy); text-anchor: start; letter-spacing: -.04em;
-}
-.p-mass-text.p-klein {
-  font-family: var(--mono); font-weight: 700; font-size: 9.5px;
-  fill: var(--grau-still); letter-spacing: .14em; text-transform: uppercase;
-}
-.hs-satz {
-  font-family: var(--schmal); font-weight: 800; font-size: 32px;
-  fill: var(--navy); letter-spacing: -.045em;
-}
-.hs-satz-2 { fill: var(--red); }
-.hs-lot { stroke: var(--mist); stroke-width: 1; stroke-dasharray: 2 4; }
-.hs-ring { fill: #fff; stroke: var(--navy); stroke-width: 1.6; }
-.hs-kern { fill: var(--red); }
-.hs-zahl {
-  font-family: var(--mono); font-weight: 700; font-size: 12.5px;
-  fill: var(--navy); text-anchor: middle;
-}
-.hs-name {
-  font-family: var(--body-schrift); font-weight: 600; font-size: 12px;
-  fill: var(--grau-still); text-anchor: end;
-}
-/* Bezugshoehen: die markanten Hoehen rund um Wuerzburg, aus
-   velocity.v_hoehenmarke. Sie liegen hinter der Kurve. */
-.hm line { stroke: var(--navy); stroke-width: 1; stroke-dasharray: 3 5; opacity: .3; }
-.hm text {
-  font: 700 10px/1 var(--mono);
-  letter-spacing: .12em; text-transform: uppercase;
-  fill: var(--grau-still);
-}
-
-.hs-station:focus-visible { outline: none; }
-/* Die auf der Karte gewaehlte Station tritt hervor. */
-.hs-station.ist-gewaehlt .hs-ring { stroke: var(--red); stroke-width: 3; }
-.hs-station.ist-gewaehlt .hs-name { fill: var(--navy); font-weight: 700; }
-.hs-station.ist-gewaehlt .hs-lot  { stroke: var(--red); opacity: .5; }
-.hs-station:hover .hs-ring, .hs-station:focus-visible .hs-ring {
-  stroke: var(--red); stroke-width: 2.4;
-}
-.hs-station:hover .hs-name, .hs-station:focus-visible .hs-name {
-  fill: var(--navy); font-weight: 700;
-}
-
-.profil-fuss {
-  margin: clamp(16px, 1.8vw, 24px) 0 0;
-  font-family: var(--mono); font-size: 12px; letter-spacing: .04em;
-  color: var(--grau-still);
-}
-.profil-fuss strong { color: var(--navy); font-weight: 700; }
-.profil-fuss code {
-  font-family: var(--mono); font-size: .95em; color: var(--navy);
-  background: var(--paper); padding: .1em .38em; border-radius: 2px;
-}
-
 /* ---------------------------------------------------- So geht's */
 
 .howto-grid {
@@ -620,39 +543,35 @@ img { max-width: 100%; }
   gap: clamp(26px, 3.2vw, 56px);
 }
 .howto-card {
-  display: grid;
-  align-items: baseline;
-  column-gap: 13px;
-  grid-template-columns: auto 1fr;
-  grid-template-areas: "ziffer sinnbild" "titel titel" "text text";
+  display: flex; flex-direction: column;
   padding-left: clamp(22px, 2.6vw, 40px);
   border-left: 1px solid var(--mist);
 }
 .howto-card:first-child { padding-left: 0; border-left: 0; }
 /* Die Reihenfolge ist hier echte Information — anders als bei den
    Abschnitten der Seite, die keine Abfolge sind. */
+/* Die Ziffer ist der Schrittzaehler und traegt dieselbe Schrift wie
+   die Kennzahlen - nur in Rot, weil hier eine Abfolge gemeint ist und
+   kein Messwert. Ein Sinnbild daneben stand frueher hier; auf
+   Kachelgroesse blieb davon ein Fleck, der nichts erklaerte. */
 .step-number {
-  grid-area: ziffer;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
   font-family: var(--schmal); font-weight: 800; line-height: 1;
-  font-size: clamp(46px, 5vw, 76px);
+  font-size: clamp(42px, 4.6vw, 70px);
   color: var(--red);
   letter-spacing: -.06em;
 }
 .step-number::before { content: '0'; }
-.icon-circle {
-  grid-area: sinnbild; justify-self: start;
-  width: auto; height: auto; margin: 0; padding: 0;
-  background: none; border: 0; color: var(--navy); font-size: 1.15rem;
-}
 .howto-card h3 {
-  grid-area: titel;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
   color: var(--navy);
-  font-size: clamp(19px, 1.5vw, 23px);
-  letter-spacing: -.02em;
+  font-family: var(--schmal);
+  font-weight: 800;
+  font-size: clamp(21px, 1.8vw, 27px);
+  line-height: 1.08;
+  letter-spacing: -.035em;
 }
-.howto-card p { grid-area: text; margin: 0; color: var(--grau); }
+.howto-card p { margin: 0; color: var(--grau); }
 
 /* ------------------------------------------------------- Tarife */
 /* Das einzige dunkle Band zwischen Bühne und Fusszeile. */
@@ -721,32 +640,39 @@ img { max-width: 100%; }
 .pricing .btn-outline { color: #fff; border-color: rgba(255, 255, 255, .38); }
 .pricing .btn-outline:hover { background: #fff; color: var(--navy); border-color: #fff; }
 
-/* Preisrechner — früher im Kopfbereich, jetzt bei den Tarifen.
-   Er rechnet mit denselben Regeln wie die Datenbank und schlüsselt
-   die Posten so auf, wie velocity.entgeltposition sie speichert. */
-.tarif-zaehler { margin-bottom: clamp(30px, 3.4vw, 48px); }
+/* Preisrechner — er stand frueher als schmaler Kasten links ueber den
+   drei Tarifkarten und liess zwei Drittel der Breite leer. Jetzt nimmt
+   er dieselbe Spur wie die Karten darunter und liegt quer: Auswahl,
+   Eingabe, Ergebnis. Die Haarlinien zwischen den Spalten sind dieselbe
+   Sprache wie bei den Kennzahlen und beim Ablauf.
+
+   Er rechnet mit denselben Regeln wie die Datenbank und schluesselt die
+   Posten so auf, wie velocity.entgeltposition sie speichert. */
+.tarif-zaehler { margin-bottom: clamp(26px, 3vw, 40px); }
 .rechner {
-  max-width: 520px;
+  display: grid;
+  grid-template-columns: minmax(272px, 1.05fr) minmax(196px, .82fr) minmax(250px, 1.1fr);
   background: #fff;
   color: var(--navy);
   border: 1px solid var(--mist);
   border-left: 3px solid var(--red);
   border-radius: 0 2px 2px 0;
-  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, .7);
+  box-shadow: 0 20px 44px -30px rgba(0, 0, 0, .8);
 }
-.rechner-kopf {
-  display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 12px;
-  padding: 15px 18px;
-  border-bottom: 1px solid var(--mist);
+.rechner-spalte {
+  display: flex; flex-direction: column;
+  gap: 12px;
+  padding: 20px clamp(18px, 2vw, 26px);
+  border-left: 1px solid var(--mist);
 }
+.rechner-spalte:first-child { border-left: 0; }
 .rechner-marke {
   font: 700 10.5px/1.3 var(--mono);
   letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
 }
 .rechner-typen { display: flex; gap: 5px; flex-wrap: wrap; }
 .rechner-typen button {
-  padding: 6px 12px;
+  padding: 7px 11px;
   font-size: 12px; font-weight: 700;
   color: var(--grau-still);
   background: transparent;
@@ -759,15 +685,9 @@ img { max-width: 100%; }
   background: var(--navy); border-color: var(--navy); color: #fff;
 }
 
-.rechner-eingabe { padding: 18px 18px 6px; }
-.rechner-eingabe label {
-  display: block; margin-bottom: 9px;
-  font: 700 10.5px/1 var(--mono);
-  letter-spacing: .14em; text-transform: uppercase; color: var(--grau-still);
-}
-.rechner-feld { display: flex; align-items: baseline; gap: 9px; margin-bottom: 14px; }
+.rechner-feld { display: flex; align-items: baseline; gap: 9px; }
 .rechner-feld input {
-  width: 108px;
+  width: 104px;
   padding: 9px 12px;
   font-family: var(--mono); font-size: 19px; font-weight: 700;
   color: var(--navy);
@@ -776,35 +696,32 @@ img { max-width: 100%; }
 }
 .rechner-feld input:focus { border-color: var(--navy); outline: none; }
 .rechner-feld span { font-size: 14px; color: var(--grau); }
-
-.rechner-eingabe input[type="range"] {
-  width: 100%; margin: 0;
-  accent-color: var(--red);
+.rechner-spalte input[type="range"] {
+  width: 100%; margin: 0; accent-color: var(--red);
 }
+.rechner-spalte input[type="range"]:focus-visible { outline: 2px solid var(--navy); outline-offset: 4px; }
 
-.rechner-ergebnis {
-  display: flex; align-items: baseline; gap: 9px;
-  padding: 10px 18px 4px;
-}
+/* Die Ergebnisspalte traegt den Betrag oben und die Posten darunter,
+   damit die Summe auf einer Hoehe mit der Eingabe steht. */
+.rechner-summe { justify-content: space-between; gap: 10px; }
+.rechner-ergebnis { display: flex; align-items: baseline; gap: 8px; }
 .rechner-betrag {
   font-family: var(--schmal); font-weight: 800;
-  font-size: clamp(44px, 4.4vw, 62px); line-height: 1;
+  font-size: clamp(38px, 3.6vw, 52px); line-height: 1;
   letter-spacing: -.055em;
   font-variant-numeric: tabular-nums;
 }
 .rechner-waehrung {
-  font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--red);
+  font-family: var(--mono); font-size: .95rem; font-weight: 600; color: var(--red);
 }
-
-.rechner-posten { list-style: none; margin: 0; padding: 8px 18px 18px; }
+.rechner-posten { list-style: none; margin: 0; padding: 0; }
 .rechner-posten li {
   display: flex; align-items: baseline; justify-content: space-between;
   gap: 14px;
-  padding: 7px 0;
+  padding: 6px 0;
   border-top: 1px solid var(--mist);
-  font-family: var(--mono); font-size: 12px; color: var(--grau);
+  font-family: var(--mono); font-size: 11.5px; color: var(--grau);
 }
-.rechner-posten li:first-child { border-top: 0; }
 .rechner-posten li b { color: var(--navy); font-variant-numeric: tabular-nums; }
 .rechner-posten li.ist-abzug, .rechner-posten li.ist-abzug b { color: var(--red); }
 
@@ -841,15 +758,17 @@ img { max-width: 100%; }
 /* Frei abgestellte Raeder. Die drei Typen unterscheiden sich durch die
    Farbe des Rings, nicht durch ein zweites Sinnbild darauf - das war
    auf Kartengroesse nicht zu erkennen. */
+/* Kleiner als die Stationsscheiben: eine Station ist die wichtigere
+   Information, ein einzeln abgestelltes Rad die Ausnahme. */
 .karten-rad {
   display: flex; align-items: center; justify-content: center;
-  width: 30px; height: 30px;
+  width: 24px; height: 24px;
   background: #fff;
   border: 2px solid var(--navy);
   border-radius: 999px;
   color: var(--navy);
-  font-size: 14px;
-  box-shadow: 0 5px 14px rgba(6, 24, 65, .3);
+  font-size: 11px;
+  box-shadow: 0 3px 10px rgba(6, 24, 65, .28);
 }
 .karten-rad.ist-ebike { border-color: var(--mint); color: #0f7a52; }
 .karten-rad.ist-cargo { border-color: var(--red);  color: var(--red); }
@@ -884,6 +803,23 @@ img { max-width: 100%; }
   display: block; margin-top: 7px;
   font: 700 11px/1 var(--mono);
   letter-spacing: .12em; text-transform: uppercase; color: var(--navy);
+}
+
+/* Wie hoch liegt die Station, und wie weit ist es von dort noch
+   hinauf? Stand frueher in einer eigenen Grafik unter der Karte. */
+.pop-hoehe {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--mist);
+  background: var(--paper);
+}
+.pop-hoehe-wert {
+  font-family: var(--schmal); font-weight: 800; font-size: 20px;
+  letter-spacing: -.03em; color: var(--navy);
+}
+.pop-hoehe-rest {
+  font: 700 10.5px/1.4 var(--mono);
+  letter-spacing: .1em; text-transform: uppercase; color: var(--grau-still);
 }
 
 .pop-typ {
@@ -948,15 +884,33 @@ img { max-width: 100%; }
   padding: 3px 0; font-size: 14px; cursor: pointer; color: var(--navy);
 }
 .filter-option input { accent-color: var(--red); }
-.map-overlay-btn {
+/* Zurueck aufs Geschaeftsgebiet. Es gab hier frueher eine Schaltflaeche
+   "Meinen Standort anzeigen", die nur ein alert() ausloeste - eine
+   Attrappe. Diese hier tut etwas, das man wirklich braucht. */
+.karte-zurueck {
   position: absolute; right: 18px; top: 18px; z-index: 500;
-  width: 42px; height: 42px;
-  display: flex; align-items: center; justify-content: center;
+  padding: 11px 17px;
   background: #fff; color: var(--navy);
   border: 1px solid var(--mist); border-radius: 999px;
-  cursor: pointer;
-  box-shadow: 0 14px 34px rgba(6, 24, 65, .14);
+  font-weight: 700; font-size: 13.5px;
+  box-shadow: 0 14px 34px rgba(6, 24, 65, .16);
 }
+.karte-zurueck:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
+
+/* Solange das Mausrad gesperrt ist, sagt die Karte, wie man es freigibt.
+   Nach dem ersten Klick verschwindet der Hinweis. */
+.karte-hinweis {
+  position: absolute; left: 50%; bottom: 20px; z-index: 500;
+  transform: translateX(-50%);
+  padding: 9px 16px;
+  background: rgba(6, 24, 65, .88); color: #fff;
+  border-radius: 999px;
+  font: 700 11px/1 var(--mono);
+  letter-spacing: .12em; text-transform: uppercase;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.karte-hinweis.ist-aus { opacity: 0; }
 .map-legend {
   display: flex; flex-wrap: wrap; gap: 22px;
   margin-top: 20px;
@@ -1157,17 +1111,15 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .product-copy { display: none; }
   .final-card { top: 128px; right: 20px; bottom: auto; width: min(360px, calc(100% - 40px)); }
   .scroll-hint { display: none; }
-  .facts { grid-template-columns: 1fr; }
-  .stat-grid { border-left: 0; }
+  /* Vier Zahlen nebeneinander werden hier zu eng: zwei mal zwei.
+     Die Haarlinie sitzt dann nur noch zwischen den Spalten. */
+  .stat-grid { grid-template-columns: 1fr 1fr; row-gap: clamp(28px, 4vw, 44px); }
+  .stat:nth-child(odd) { padding-left: 0; border-left: 0; }
   .faq-grid { grid-template-columns: 1fr; }
   .faq-grid details:nth-child(2) { border-top: 0; }
   .faq-grid details:first-child { border-top: 1px solid var(--mist); }
   .howto-card { padding-left: 0; border-left: 0; }
   .footer-grid { grid-template-columns: 1fr; gap: 28px; }
-  /* Die Zeichnung braucht Breite: unter 900 px scrollt sie waagerecht
-     in ihrem eigenen Kasten, statt auf Briefmarkengroesse zu schrumpfen. */
-  .profil .container { overflow-x: auto; }
-  .profil-svg { min-width: 720px; }
   #map { height: clamp(420px, 66vh, 600px); }
   .pop-typ { grid-template-columns: 62px 1fr auto; gap: 10px; padding: 11px 14px; }
   .pop-bild { width: 62px; height: 40px; }
@@ -1180,8 +1132,12 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .claim-city { top: 29vh; }
   .choice-panel { bottom: 34px; }
   .product-tab { padding: 0 14px; }
-  .stat-grid { grid-template-columns: 1fr; }
-  .meter { max-width: none; }
+  .stat-grid { grid-template-columns: 1fr; row-gap: 26px; }
+  .stat { padding-left: 0; border-left: 0; padding-top: 20px; border-top: 1px solid var(--mist); }
+  .stat:first-child { padding-top: 0; border-top: 0; }
+  .rechner { grid-template-columns: 1fr; }
+  .rechner-spalte { border-left: 0; border-top: 1px solid var(--mist); }
+  .rechner-spalte:first-child { border-top: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

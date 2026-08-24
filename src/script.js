@@ -140,137 +140,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Euro';
     }
 
-    /* =================================================================
-       HOEHENSPIEGEL
-
-       Wuerzburg ist der Grund fuer die Pedelecs: rund hundert Hoehenmeter
-       zwischen der tiefsten und der hoechsten Station. Diese Zeichnung war
-       zuerst ein festverdrahtetes Schema - und ein Schema ist genau einmal
-       interessant. Jetzt kommt jeder Wert aus velocity.v_station: die Hoehe
-       als Stammdatum, die Belegung als Momentaufnahme. Beim naechsten Besuch
-       steht sie anders da, weil die Raeder anders stehen.
-
-       Der Kurvenzug verbindet die Stationen in der Reihenfolge ihrer Hoehe.
-       Er ist kein Streckenprofil und behauptet keinen Weg - er zeigt, wie
-       flach die Stadt am Fluss liegt und wie steil es zum Campus geht.
-       ================================================================= */
-    const HS = { b: 1240, h: 400, l: 74, r: 1108, o: 46, u: 300 };
-
-    let hoehenMarken = [];      // aus velocity.v_hoehenmarke
-    let hoehenStationen = [];   // die Wuerzburger Stationen, nach Hoehe
-    let hoehenAuswahl = null;   // station_id, vom Kartenklick gesetzt
-
-    function hoehenspiegelZeichnen() {
-        const ziel = document.getElementById('profil-bild');
-        if (!ziel) return;
-
-        const orte = hoehenStationen;
-        if (orte.length < 2) { ziel.innerHTML = ''; return; }
-
-        const hMin = orte[0].hoehe_m;
-        const hMaxStation = orte[orte.length - 1].hoehe_m;
-        // Nur Hoehen ZEIGEN, die ueber dem Netz liegen. Der Campus Hubland
-        // ist selbst eine Station - als Linie waere er eine Dopplung.
-        // Im Satz unten kommt er trotzdem vor.
-        const linien = hoehenMarken.filter(m => m.hoehe_m > hMaxStation + 2);
-        const hMax = Math.max(hMaxStation, ...linien.map(m => m.hoehe_m));
-        const spanne = Math.max(hMax - hMin, 1);
-        const von = hMin - spanne * 0.08, bis = hMax + spanne * 0.08;
-        const y = (h) => HS.o + (bis - h) / (bis - von) * (HS.u - HS.o);
-        const x = (i) => orte.length === 1 ? HS.l
-                       : HS.l + i * (HS.r - HS.l) / (orte.length - 1);
-
-        const punkte = orte.map((s, i) => ({ s, x: x(i), y: y(s.hoehe_m) }));
-
-        let d = `M${punkte[0].x.toFixed(1)} ${punkte[0].y.toFixed(1)}`;
-        for (let i = 0; i < punkte.length - 1; i++) {
-            const p0 = punkte[i - 1] || punkte[i], p1 = punkte[i];
-            const p2 = punkte[i + 1], p3 = punkte[i + 2] || p2;
-            const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
-            const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
-            d += ` C${c1x.toFixed(1)} ${c1y.toFixed(1)} ${c2x.toFixed(1)} ${c2y.toFixed(1)}`
-               + ` ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
-        }
-
-        // Bezugshoehen als gestrichelte Linien quer durch das Bild.
-        // Die Beschriftungen werden waagerecht versetzt. Zwei Hoehen, die
-        // nur wenige Meter auseinanderliegen, haetten sonst Etiketten
-        // uebereinander.
-        const marken = linien.map((mk, i) => `
-      <g class="hm">
-        <line x1="${HS.l}" y1="${y(mk.hoehe_m).toFixed(1)}"
-              x2="${HS.r + 22}" y2="${y(mk.hoehe_m).toFixed(1)}"/>
-        <text x="${(HS.l + i * 250).toFixed(0)}" y="${(y(mk.hoehe_m) - 8).toFixed(1)}"
-              >${escapeHtml(mk.name)} · ${mk.hoehe_m} m</text>
-      </g>`).join('');
-
-        const gewaehlt = punkte.find(p => p.s.station_id === hoehenAuswahl);
-
-        const stationsmarken = punkte.map(({ s, x, y: py }) => {
-            const frei = s.verfuegbare_raeder || 0;
-            const voll = Math.max(s.kapazitaet || 1, 1);
-            const rad = 5 + Math.sqrt(frei) * 1.15;
-            const ist = s.station_id === hoehenAuswahl;
-            return `
-      <g class="hs-station${ist ? ' ist-gewaehlt' : ''}" tabindex="0" role="listitem"
-         aria-label="${escapeHtml(s.name)}, ${s.hoehe_m} Meter, ${frei} Räder frei">
-        <line class="hs-lot" x1="${x.toFixed(1)}" y1="${py.toFixed(1)}"
-              x2="${x.toFixed(1)}" y2="${HS.u}"/>
-        <circle class="hs-ring" cx="${x.toFixed(1)}" cy="${py.toFixed(1)}" r="${rad.toFixed(1)}"/>
-        <circle class="hs-kern" cx="${x.toFixed(1)}" cy="${py.toFixed(1)}"
-                r="${(rad * Math.min(frei / voll, 1)).toFixed(1)}"/>
-        <text class="hs-zahl" x="${x.toFixed(1)}" y="${(py - rad - 8).toFixed(1)}">${frei}</text>
-        <text class="hs-name" transform="translate(${x.toFixed(1)} ${HS.u + 14}) rotate(-42)"
-              >${escapeHtml(s.name)}</text>
-        <title>${escapeHtml(s.name)} · ${s.hoehe_m} m · ${frei} Räder frei</title>
-      </g>`;
-        }).join('');
-
-        // Der Satz im Bild: ohne Auswahl die Spreizung, mit Auswahl der
-        // Abstand von dort zu den Bezugshoehen.
-        let satz1, satz2;
-        if (gewaehlt) {
-            const abstaende = hoehenMarken
-                .map(mk => `${mk.name} +${mk.hoehe_m - gewaehlt.s.hoehe_m} m`)
-                .join(' · ');
-            satz1 = `Ab ${gewaehlt.s.name}, ${gewaehlt.s.hoehe_m} m.`;
-            satz2 = abstaende;
-        } else {
-            const tal = orte.filter(o => o.hoehe_m <= hMin + 15).length;
-            satz1 = `${tal} Stationen liegen unten am Fluss.`;
-            const hoechste = hoehenMarken.reduce((a, b) => (b.hoehe_m > a.hoehe_m ? b : a),
-                                                 hoehenMarken[0] || { name: '—', hoehe_m: hMin });
-            satz2 = `Bis zur ${hoechste.name} sind es ${hoechste.hoehe_m - hMin} Höhenmeter.`;
-        }
-
-        ziel.innerHTML = `
-    <svg class="profil-svg" viewBox="0 0 ${HS.b} ${HS.h}" role="list"
-         aria-label="Würzburger Stationen nach Höhenlage, mit den markanten Höhen der Stadt">
-      <defs>
-        <linearGradient id="hang" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stop-color="var(--red)" stop-opacity=".15"/>
-          <stop offset="100%" stop-color="var(--red)" stop-opacity=".012"/>
-        </linearGradient>
-      </defs>
-
-      ${marken}
-
-      <text class="hs-satz" x="${HS.l}" y="${HS.u - 92}">${escapeHtml(satz1)}</text>
-      <text class="hs-satz hs-satz-2" x="${HS.l}" y="${HS.u - 62}">${escapeHtml(satz2)}</text>
-
-      <path class="p-flaeche" d="${d} L${HS.r} ${HS.u} L${HS.l} ${HS.u} Z"/>
-      <path class="p-linie"   d="${d}"/>
-      <line class="p-grundlinie" x1="${HS.l}" y1="${HS.u}" x2="${HS.r}" y2="${HS.u}"/>
-      ${stationsmarken}
-    </svg>`;
-    }
-
-    /* Wird vom Kartenpopover aufgerufen: die Grafik zeigt dann, wie hoch
-       diese Station gegenueber den markanten Hoehen der Stadt liegt. */
-    function hoehenspiegelWaehlen(stationId) {
-        hoehenAuswahl = stationId;
-        hoehenspiegelZeichnen();
-    }
+    /* Bezugshoehen aus velocity.v_hoehenmarke. Sie standen frueher in
+       einer eigenen Grafik unter der Karte; die ist entfallen. Die
+       Angabe gehoert dorthin, wo man sie braucht: ins Popover der
+       Station, die man gerade anschaut. */
+    let hoehenMarken = [];
 
     async function renderKennzahlen() {
         const ziel = document.getElementById('stats-grid');
@@ -297,7 +171,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         ziel.innerHTML = zeilen.map(schritt => `
             <div class="howto-card">
                 <div class="step-number">${schritt.nummer}</div>
-                <div class="icon-circle"><i class="fa-solid ${escapeHtml(schritt.icon_code)}"></i></div>
                 <h3>${escapeHtml(schritt.titel)}</h3>
                 <p>${escapeHtml(schritt.beschreibung)}</p>
             </div>`).join('');
@@ -466,13 +339,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Die Stationszahl kommt aus velocity.v_kennzahl und wird von
             // renderKennzahlen gesetzt, nicht mehr hier.
 
-            // Der Hoehenspiegel liest dieselben Stationsdaten wie die Karte;
-            // die Bezugshoehen kommen aus velocity.v_hoehenmarke.
-            hoehenStationen = stations
-                .filter(s => s.ort === 'Würzburg' && Number.isFinite(s.hoehe_m))
-                .sort((a, b) => a.hoehe_m - b.hoehe_m);
+            // Die Bezugshoehen fuers Popover, einmal geladen.
             if (!hoehenMarken.length) hoehenMarken = await fetchHoehenmarken();
-            hoehenspiegelZeichnen();
             if (!geschaeftsgebiet) await geschaeftsgebietZeichnen();
 
             console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrräder`);
@@ -485,9 +353,37 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     // ===== KARTE INITIALISIEREN =====
-    const map = L.map('map', { zoomControl: false }).setView(APP_CONFIG.defaultMapCenter, APP_CONFIG.defaultZoom);
+    /* Das Mausrad zoomt NICHT von sich aus. Wer die Seite ueber der
+       Karte scrollt, will die Seite scrollen - nicht zoomen. Erst ein
+       Klick in die Karte gibt das Rad frei, ein Verlassen nimmt es
+       wieder. Genau das war das frustrierende Verhalten. */
+    const map = L.map('map', {
+        zoomControl: false,
+        scrollWheelZoom: false,
+        maxBoundsViscosity: 0.85
+    }).setView(APP_CONFIG.defaultMapCenter, APP_CONFIG.defaultZoom);
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+
+    const radHinweis = document.getElementById('karte-hinweis');
+    function radFreigeben() {
+        map.scrollWheelZoom.enable();
+        if (radHinweis) radHinweis.classList.add('ist-aus');
+    }
+    function radSperren() {
+        map.scrollWheelZoom.disable();
+        if (radHinweis) radHinweis.classList.remove('ist-aus');
+    }
+    map.on('click', radFreigeben);
+    map.on('focus', radFreigeben);
+    map.getContainer().addEventListener('mouseleave', radSperren);
+
+    // Zurueck aufs Gebiet: in der Karte und ueber den Verweis oben.
+    document.getElementById('karte-zurueck')?.addEventListener('click', gebietZeigen);
+    document.querySelectorAll('a[href="#map-section"]').forEach(a =>
+        a.addEventListener('click', () => setTimeout(gebietZeigen, 400)));
+    // light_all ist fast weiss - Strassen, Gruen und Wasser verschwinden
+    // darin. Voyager bleibt hell, zeichnet die Stadt aber lesbar.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap &copy; CARTO',
         maxZoom: 19
     }).addTo(map);
@@ -511,10 +407,15 @@ document.addEventListener("DOMContentLoaded", async () => {
         const wue = gebiete.find(g => g.name === 'Würzburg') || gebiete[0];
         if (!wue) return;
         geschaeftsgebiet = L.polygon(umrissLesen(wue.umriss), {
-            color: '#f00038', fillColor: '#f00038', fillOpacity: 0.05,
-            weight: 2, dashArray: '7, 7'
+            color: '#f00038', fillColor: '#f00038', fillOpacity: 0.07,
+            weight: 2.5, dashArray: '8, 6', lineJoin: 'round'
         }).addTo(map);
-        map.fitBounds(geschaeftsgebiet.getBounds(), { padding: [40, 40] });
+        gebietZeigen();
+        // Die Karte darf das Gebiet nicht verlassen. Ohne diese Grenze
+        // landet man mit zwei Wischern in Fuchsstadt und findet nicht
+        // zurueck - und genau das ist passiert.
+        map.setMaxBounds(geschaeftsgebiet.getBounds().pad(0.45));
+        map.setMinZoom(map.getZoom() - 1);
         karteEingepasst = true;
     }
 
@@ -603,6 +504,23 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>`;
     }
 
+    /* Wie hoch liegt diese Station, und wie weit ist es von dort noch
+       hinauf? Die Bezugshoehen kommen aus velocity.v_hoehenmarke, die
+       Hoehe der Station aus v_station. Fehlt eine der beiden Angaben,
+       entfaellt die Zeile - sie wird nicht geraten. */
+    function hoehenZeile(station) {
+        if (!Number.isFinite(station.hoehe_m) || !hoehenMarken.length) return '';
+        const hinauf = hoehenMarken
+            .filter(m => m.hoehe_m > station.hoehe_m)
+            .map(m => `${escapeHtml(m.name)} +${m.hoehe_m - station.hoehe_m}`)
+            .join(' · ');
+        return `
+            <div class="pop-hoehe">
+              <span class="pop-hoehe-wert">${station.hoehe_m} m</span>
+              <span class="pop-hoehe-rest">${hinauf || 'höchster Punkt im Netz'}</span>
+            </div>`;
+    }
+
     function stationsPopover(station, raeder) {
         const nachTyp = new Map();
         for (const r of raeder) {
@@ -620,6 +538,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <span class="pop-adresse">${escapeHtml(station.strasse || '')} ${escapeHtml(station.hausnummer || '')}${station.plz ? ' · ' + escapeHtml(station.plz) + ' ' + escapeHtml(station.ort) : ''}</span>
               <span class="pop-frei">${raeder.length} ${raeder.length === 1 ? 'Rad' : 'Räder'} gerade frei</span>
             </div>
+            ${hoehenZeile(station)}
             ${zeilen || '<p class="pop-leer">Gerade kein Rad des gewählten Typs hier.</p>'}
             <p class="pop-fuss">Nach dem Leihen öffnet sich das Schloss automatisch.
                Abstellen an einer Station oder frei im Geschäftsgebiet — ohne Zuschlag.</p>
@@ -660,11 +579,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         return L.divIcon({
             className: '',
             html: `<div class="karten-rad ${klasse}"><i class="fa-solid fa-bicycle"></i></div>`,
-            iconSize: [30, 30], iconAnchor: [15, 30], popupAnchor: [0, -30]
+            // Mittig verankert wie die Stationsscheiben: der Kreis sitzt
+            // AUF dem Punkt. Haengt er darueber, sehen Raeder nahe der
+            // Gebietsgrenze aus, als staenden sie ausserhalb.
+            iconSize: [24, 24], iconAnchor: [12, 12], popupAnchor: [0, -14]
         });
     }
 
     let karteEingepasst = false;
+
+    /* Zurueck auf das Geschaeftsgebiet. Haengt an der Schaltflaeche in
+       der Karte und am Verweis "Live-Karte" in der Kopfzeile. */
+    function gebietZeigen() {
+        if (!geschaeftsgebiet) return;
+        map.fitBounds(geschaeftsgebiet.getBounds(), { padding: [46, 46] });
+    }
 
     function karteZeichnen() {
         stationLayer.clearLayers();
@@ -694,10 +623,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 icon: stationsSymbol(hier.length),
                 title: `${station.name} — ${hier.length} frei`
             }).addTo(stationLayer)
-              .bindPopup(stationsPopover(station, hier), { maxWidth: 340, minWidth: 300 })
-              // Die Hoehengrafik weiter unten folgt der Auswahl auf der Karte.
-              .on('popupopen', () => hoehenspiegelWaehlen(station.station_id))
-              .on('popupclose', () => hoehenspiegelWaehlen(null));
+              .bindPopup(stationsPopover(station, hier), { maxWidth: 340, minWidth: 300 });
         }
 
         for (const rad of freie) {

@@ -135,7 +135,7 @@ ZAHLUNG(__zahlung_id__, rechnung_id → RECHNUNG,
 ```
 FAQ_EINTRAG(__faq_id__, frage [UK], antwort, sortierung, aktiv)
 
-NUTZUNGSSCHRITT(__schritt_id__, nummer [UK], titel, beschreibung, icon_code)
+NUTZUNGSSCHRITT(__schritt_id__, nummer [UK], titel, beschreibung)
 
 KENNZAHL(__kennzahl_id__, schluessel [UK], anzeigewert, label,
          sortierung, ist_berechnet)

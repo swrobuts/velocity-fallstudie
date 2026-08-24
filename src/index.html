@@ -161,28 +161,12 @@
      deshalb traegt es die id stats-grid, an der renderKennzahlen haengt.
      ============================================================ -->
 <section class="facts" aria-labelledby="facts-title">
-  <div class="facts-copy">
-    <p class="eyebrow">Ein System. Zwei Fahrgefühle.</p>
-    <h2 id="facts-title">Würzburg fährt flexibel.</h2>
-    <p>City-Bike für kurze, direkte Wege. E-Bike, wenn Unterstützung den Unterschied
-       macht. Beides gehört sichtbar zum selben Netz.</p>
-  </div>
-  <div class="stat-grid" id="stats-grid" aria-label="VeloCity Kennzahlen"></div>
-</section>
-
-<section class="profil" aria-labelledby="profil-titel">
   <div class="container">
-    <h2 id="profil-titel" class="nur-vorlesen">Höhenprofil vom Main zum Hubland</h2>
-    <div id="profil-bild"><!-- aus velocity.v_station gezeichnet --></div>
-
-    <p class="profil-fuss">
-      <strong>Jede Station nach ihrer Höhenlage, Belegung von eben.</strong>
-      Wähle auf der Karte oben eine Station, dann zeigt die Grafik, wie weit es von
-      dort noch hinauf ist. Höhen aus zwei Geländemodellen gemittelt; es sind
-      Oberflächenmodelle, in der Altstadt liegen sie rund zehn Meter zu hoch.
-      Belastbar sind die Unterschiede. Quellen:
-      <code>velocity.v_station</code> und <code>velocity.v_hoehenmarke</code>.
-    </p>
+    <div class="section-header ohne-hinweis">
+      <span class="eyebrow">Ein System. Zwei Fahrgefühle.</span>
+      <h2 id="facts-title">Würzburg fährt flexibel.</h2>
+    </div>
+    <div class="stat-grid" id="stats-grid" aria-label="VeloCity Kennzahlen"></div>
   </div>
 </section>
 
@@ -216,12 +200,12 @@
          Tageshoechstpreis. Die Saetze kommen aus v_tarifkarte. -->
     <div class="tarif-zaehler">
     <div class="rechner" id="fare-meter">
-      <div class="rechner-kopf">
+      <div class="rechner-spalte">
         <span class="rechner-marke">Was kostet eine Fahrt?</span>
         <div class="rechner-typen" id="meter-switch" role="group" aria-label="Fahrradtyp wählen"></div>
       </div>
-      <div class="rechner-eingabe">
-        <label for="meter-minuten">Fahrzeit</label>
+      <div class="rechner-spalte">
+        <label class="rechner-marke" for="meter-minuten">Fahrzeit</label>
         <div class="rechner-feld">
           <input type="number" id="meter-minuten" min="1" max="1440" step="1" value="30"
                  inputmode="numeric" autocomplete="off">
@@ -230,10 +214,12 @@
         <input type="range" id="meter-regler" min="1" max="240" step="1" value="30"
                aria-label="Fahrzeit in Minuten">
       </div>
-      <div class="rechner-ergebnis">
-        <span class="rechner-betrag" id="meter-value">0,00</span><span class="rechner-waehrung">Euro</span>
+      <div class="rechner-spalte rechner-summe">
+        <div class="rechner-ergebnis">
+          <span class="rechner-betrag" id="meter-value">0,00</span><span class="rechner-waehrung">Euro</span>
+        </div>
+        <ul class="rechner-posten" id="meter-detail"></ul>
       </div>
-      <ul class="rechner-posten" id="meter-detail"></ul>
     </div>
     </div>
 
@@ -259,7 +245,8 @@
             <label class="filter-option"><input type="checkbox" value="cargo" checked> <span>E-Cargo Loader</span></label>
         </div>
         <div id="map"></div>
-        <div class="map-overlay-btn" onclick="alert('Standort wird ermittelt...')" title="Meinen Standort anzeigen"><i class="fa-solid fa-location-crosshairs"></i></div>
+        <button type="button" class="karte-zurueck" id="karte-zurueck">Würzburg zeigen</button>
+        <div class="karte-hinweis" id="karte-hinweis">Zum Zoomen in die Karte klicken</div>
     </div>
 
     <div class="map-legend container">

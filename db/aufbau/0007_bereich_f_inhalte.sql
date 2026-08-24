@@ -31,13 +31,26 @@ create table if not exists velocity.nutzungsschritt (
   nummer       integer     not null,
   titel        text        not null,
   beschreibung text        not null,
-  icon_code    text,
   erstellt_am  timestamptz not null default now(),
   geaendert_am timestamptz not null default now(),
   constraint nutzungsschritt_nummer_uk  unique (nummer),
   constraint nutzungsschritt_nummer_chk check (nummer > 0)
 );
 select velocity.fn_audit_anhaengen('nutzungsschritt');
+
+-- Entfaellt: icon_code.
+--
+-- Die Spalte hielt den Namen eines Font-Awesome-Symbols. Auf
+-- Kachelgroesse blieb davon ein Fleck, der nichts erklaerte; die
+-- Anzeige ist entfernt. Eine Spalte, die niemand liest, behauptet ein
+-- Merkmal, das es fachlich nicht gibt - also weg damit.
+-- create table if not exists ruehrt bestehende Tabellen nicht an,
+-- deshalb hier ausdruecklich.
+-- cascade, weil v_nutzungsschritt auf der Spalte steht. Die Sicht wird
+-- in 0010 neu gebaut und in 0011 wieder freigegeben - die Kette laeuft
+-- immer vollstaendig. Wer nur diese eine Datei anwendet, steht so lange
+-- ohne die Sicht da; tools/rest_security_check.py wuerde das melden.
+alter table velocity.nutzungsschritt drop column if exists icon_code cascade;
 
 create table if not exists velocity.kennzahl (
   kennzahl_id   bigint generated always as identity primary key,

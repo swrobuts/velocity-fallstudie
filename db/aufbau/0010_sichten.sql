@@ -100,7 +100,7 @@ select faq_id, frage, antwort, sortierung
 
 drop view if exists velocity.v_nutzungsschritt;
 create view velocity.v_nutzungsschritt as
-select schritt_id, nummer, titel, beschreibung, icon_code
+select schritt_id, nummer, titel, beschreibung
   from velocity.nutzungsschritt;
 
 drop view if exists velocity.v_kennzahl;
