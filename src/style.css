@@ -396,7 +396,18 @@ img { max-width: 100%; }
 
 .top-meta {
   position: absolute;
-  top: 118px;
+  /* AN DIESELBE FLUCHT WIE DIE SCHLAGZEILE GEHAENGT.
+     Ein fester Wert in Punkten stimmte nur bei einer Fensterhoehe: die
+     Schlagzeile sitzt bei clamp(190px, 24vh, 320px), der Zaehler stand
+     daneben bei 132 - auf einem hohen Bildschirm klaffte es, auf einem
+     flachen ueberschnitt es sich.
+
+     Jetzt beginnt der Zaehler an derselben Linie und wird um seine
+     eigene Hoehe nach oben geschoben; die Zeile des Kickers bekommt er
+     wieder dazu. Ergebnis: seine Beschriftung liegt auf der Zeile des
+     Kickers, bei jeder Fensterhoehe. */
+  top: clamp(190px, 24vh, 320px);
+  transform: translateY(calc(-100% + 1.3 * var(--meta-font)));
   left: var(--rand); right: var(--rand);
   color: var(--navy);
   text-shadow: 0 1px 16px rgba(255, 255, 255, .9);
@@ -410,36 +421,55 @@ img { max-width: 100%; }
 /* RECHTS, nicht links (24.08.2026, auf Wunsch des Nutzers).
    Links stehen Kicker und Schlagzeile untereinander; die Zahl daneben
    machte aus einer Spalte drei Anfaenge. Rechts hat sie freien Grund
-   ueber dem Rad und stoert nichts. */
+   ueber dem Rad und stoert nichts.
+
+   UNTEREINANDER, nicht nebeneinander. Nebeneinander bremste die Zahl
+   die Beschriftung aus: beide teilten sich eine Zeile, und die Zahl
+   konnte nicht wachsen, ohne die Zeile ueber das Rad zu schieben.
+   Gestapelt und rechtsbuendig ist es ein Block - und die Zahl darf so
+   gross werden, wie es ihr zusteht. Sie ist das einzige auf dieser
+   Seite, das sich staendig aendert.
+
+   Die rechte Flucht ist dieselbe wie die des Login-Knopfs. */
 .live-zahl {
-  display: flex; align-items: baseline; justify-content: flex-end;
-  gap: 14px;
+  display: flex; flex-direction: column;
+  align-items: flex-end; justify-content: flex-start;
+  gap: 2px;
   margin: 0;
   color: var(--navy);
+  text-align: right;
 }
 .live-zahl b {
   position: relative;
-  padding-left: 26px;
+  padding-left: .42em;
   font-family: var(--schmal);
-  font-size: clamp(38px, 3.4vw, 58px);
+  /* Nach oben gedeckelt, nicht aus Zurueckhaltung: auf einem breiten
+     UND flachen Bildschirm (1920x700) waere der Block sonst bis auf
+     vier Punkte an die Kopfleiste gestossen - er haengt ja an der
+     Schlagzeile und waechst nach oben. 78 laesst ueberall Luft. */
+  font-size: clamp(44px, 5.2vw, 78px);
   font-weight: 800;
   letter-spacing: -.03em;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
+/* Der Punkt waechst mit der Zahl - in em, nicht in Punkten. Vorher
+   stand eine feste Groesse daneben, die bei grosser Zahl zum Staubkorn
+   wurde. */
 .live-zahl b::before {
   content: "";
-  position: absolute; left: 0; top: .42em;
-  width: 11px; height: 11px;
+  position: absolute; left: 0; top: .44em;
+  width: .17em; height: .17em;
   border-radius: 50%;
   background: var(--mint);
-  box-shadow: 0 0 0 7px rgba(88, 214, 161, .16);
+  box-shadow: 0 0 0 .11em rgba(88, 214, 161, .16);
 }
 .live-zahl > span {
-  font: 700 var(--meta-font)/1.3 var(--mono);
-  letter-spacing: .16em;
+  font: 700 clamp(11px, .92vw, 15px)/1.3 var(--mono);
+  letter-spacing: .2em;
   text-transform: uppercase;
   color: rgba(6, 24, 65, .78);
+  padding-right: .1em;
 }
 
 .claim {
@@ -1769,7 +1799,9 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .hero-cta { transition: opacity .3s ease, transform .3s ease; }
   .site-header { grid-template-columns: 1fr auto; min-height: 74px; }
   .site-nav { display: none; }
-  .top-meta { top: 100px; }
+  /* Auf dem Telefon steht der Zaehler oben links fuer sich; die
+     Kopplung an die Schlagzeile gilt dort nicht. */
+  .top-meta { top: 100px; transform: none; }
   /* Die Laenge regelt jetzt die clamp-Formel weiter oben - hier keine
      zweite Stufe mehr, sonst kehrt der Sprung zurueck. */
   .claim { top: 27vh; bottom: auto; width: calc(100% - 48px); }
