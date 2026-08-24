@@ -40,12 +40,33 @@ die Raeder wechseln den Platz statt der Deckkraft.
 **Neu erzeugen:** `python3 tools/raeder_freistellen.py` (aus dem
 Projektverzeichnis). Das Skript
 
-1. baut die Wand aus einem radfreien Streifen der E-Bike-Aufnahme
-   (x 62–239), gespiegelt gekachelt, mit ueberdecktem Poller,
-2. stellt E-Bike und City-Bike ueber den zeilenweisen Median frei — die
+1. stellt E-Bike und City-Bike ueber den zeilenweisen Median frei — die
    Wand ist in jeder Bildzeile nahezu gleichmaessig, das Rad weicht ab,
-3. misst den Hinterraddurchmesser jedes Rades und passt das Lastenrad
-   massstabsgleich auf dieselbe Standlinie ein.
+2. nimmt aus beiden Freistellern den Strich heraus, an dem Wand und
+   Boden sich treffen: er ist Hintergrund, beruehrt aber beide Reifen
+   und kaeme sonst als Flaeche mit,
+3. passt das Lastenrad auf dieselbe Standlinie und dieselbe optische
+   Mitte ein, auf 1360 Punkte Breite gebracht,
+4. baut zuletzt die Wand — aus einem Streifen, den die Maske als
+   radfrei ausweist, und zwar nur aus dessen KORN; die grossflaechige
+   Helligkeit kommt aus dem Zeilenmittel der ganzen Aufnahme.
+
+Die Reihenfolge ist Absicht: die Wand braucht die fertigen Masken, um
+den radfreien Streifen zu finden.
+
+**Warum kein Massstab ueber die Raeder.** Bis zum 24.08.2026 skalierte
+das Skript das Lastenrad ueber den gemessenen Hinterraddurchmesser. Die
+Messung griff sich in Wahrheit den STAENDER — er ist die tiefste Stelle
+des Umrisses —, und die Raeder sind ohnehin nicht vergleichbar: das
+Lastenrad faehrt vorn 20 Zoll, hinten 26, die anderen beiden 28.
+Massstabsgetreu waere das Lastenrad ueber 2000 Punkte breit und liefe
+aus dem Bild. Es steht deshalb auf 1360 Punkten, das 1,09-fache des
+E-Bikes: sichtbar das laengste der drei, ohne angeschnitten zu sein.
+
+**Warum nur das Korn gekachelt wird.** Ein gekachelter Streifen
+wiederholt auch seine grossen Helligkeitsunterschiede, und die liest das
+Auge als Muster — dieselbe helle Stelle alle paar hundert Punkte. Das
+Korn wiederholt sich zwar ebenfalls, ist aber zu fein dafuer.
 
 Die Schwelle liegt bei `diff > 28`. Niedriger holt einen blassen
 Schatten des jeweils anderen Rades mit, der in beiden Aufnahmen steckt —

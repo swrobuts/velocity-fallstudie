@@ -270,9 +270,17 @@ img { max-width: 100%; }
      bis  473 px Breite → 180vh   (Telefon, kurze Strecke)
      ab  1024 px Breite → 360vh   (Schreibtisch, volle Inszenierung)
    dazwischen laeuft es durch, ohne Kante. */
+/* Die Laenge der Buehne ist eine Rechnung, keine Geschmacksfrage: je
+   Fahrt legt ein Rad eine volle Bildbreite zurueck, und das soll rund
+   anderthalb Bildpunkte je Bildpunkt Scrollweg sein. Bei 360vh waren es
+   sechs - eine Mausradraste warf das Rad ueber ein Drittel der Breite,
+   und genau das wirkte ruckelig.
+
+   Mobil laeuft die Buehne gar nicht mehr (siehe Umbruch unten): auf
+   einem Telefon steht das Rad still und die Pille wechselt. */
 .scroll-story {
-  height: clamp(180vh, 40vh + 250vw, 360vh);
-  min-height: 1100px;
+  height: clamp(300vh, 40vh + 320vw, 470vh);
+  min-height: 2200px;
   background: var(--navy);
 }
 
@@ -292,6 +300,13 @@ img { max-width: 100%; }
   z-index: -5;
   background-position: center;
   background-size: cover;
+  /* Ohne das kachelt der Freisteller. Auf dem Schreibtisch faellt es
+     nicht auf, weil "cover" die Flaeche fuellt; auf dem Telefon steht
+     "contain" - dort war ueber dem Rad die abgeschnittene Unterkante
+     einer Wiederholung zu sehen, zwei blasse Reifenboegen und der
+     Bodenstrich. Es sah aus wie ein Fehler im Bild und war eine
+     fehlende Zeile. (24.08.2026) */
+  background-repeat: no-repeat;
   transform: translateX(calc(var(--bike-x) * 1%)) scale(var(--bike-scale));
   will-change: opacity, transform;
 }
@@ -300,8 +315,21 @@ img { max-width: 100%; }
   position: absolute;
   inset: 0;
   z-index: -3;
+  /* Der Verlauf traegt die Schlagzeile.
+
+     Er reichte bis 50 Prozent der Breite - und genau dort steht das
+     Hinterrad. Sein staerkster Abfall lag mitten auf dem Reifen: links
+     davon blass, rechts davon schwarz. Das las sich als zweites, graues
+     Rad hinter dem roten; der Nutzer hat es am 24.08.2026 als Artefakt
+     gemeldet, und er hatte recht - es war keins, es sah nur so aus.
+
+     Jetzt endet der Schleier bei 22 Prozent, vor dem Reifen. Die
+     Schlagzeile steht ueber die 22 Prozent hinaus auf blanker Wand, und
+     das traegt: dunkles Marineblau auf hellem Beton hat mehr als
+     zehnfachen Kontrast, das Rot mehr als vierfachen. Nur die kleine
+     Zeile darueber braucht den Grund - sie steht innerhalb. */
   background:
-    linear-gradient(90deg, rgba(247,249,252,.93) 0%, rgba(247,249,252,.80) 20%, rgba(247,249,252,.30) 39%, transparent 58%),
+    linear-gradient(90deg, rgba(247,249,252,.92) 0%, rgba(247,249,252,.78) 11%, rgba(247,249,252,.46) 21%, rgba(247,249,252,.20) 30%, transparent 40%),
     linear-gradient(0deg, rgba(6,24,65,.08) 0%, transparent 26%);
   pointer-events: none;
 }
@@ -316,7 +344,7 @@ img { max-width: 100%; }
    beiden freigestellten Raeder als WebP mit Alphakanal. Die
    Ausgangsaufnahmen des Nutzers bleiben unveraendert im Verzeichnis. */
 .photo-wand {
-  background-image: url("assets/velocity-wand.jpg");
+  background-image: url("assets/velocity-wand.jpg?v=21428dd8");
   opacity: 1;
   z-index: -6;
   transform: translateX(calc(var(--bike-x) * 1%)) scale(var(--bike-scale));
@@ -334,19 +362,19 @@ img { max-width: 100%; }
    Auf halber Strecke standen zwei Rahmen und vier Laufraeder versetzt
    uebereinander - eine Doppelbelichtung, kein Uebergang. */
 .photo-ebike {
-  background-image: url("assets/rad-ebike-frei.webp");
+  background-image: url("assets/rad-ebike-frei.webp?v=fb191533");
   opacity: var(--o-ebike);
   transform: translateX(calc(var(--bike-x) * 1% + var(--x-ebike) * 104%))
              scale(var(--bike-scale));
 }
 .photo-city {
-  background-image: url("assets/rad-city-frei.webp");
+  background-image: url("assets/rad-city-frei.webp?v=462c0628");
   opacity: var(--o-city);
   transform: translateX(calc(var(--bike-x) * 1% + var(--x-city) * 104%))
              scale(var(--bike-scale));
 }
 .photo-cargo {
-  background-image: url("assets/rad-cargo-frei.webp");
+  background-image: url("assets/rad-cargo-frei.webp?v=e2c6a37b");
   opacity: var(--o-cargo);
   transform: translateX(calc(var(--bike-x) * 1% + var(--x-cargo) * 104%))
              scale(var(--bike-scale));
@@ -395,7 +423,6 @@ img { max-width: 100%; }
   text-transform: uppercase;
   color: rgba(6, 24, 65, .78);
 }
-.live-stand { font-style: normal; opacity: .62; }
 
 .claim {
   position: absolute;
@@ -1611,11 +1638,82 @@ footer a:hover { color: #fff; text-decoration: underline; }
    Weg zur Karte und die Buehne braucht keinen zweiten Knopf. */
 .hero-cta { display: none; }
 
+/* ------------------------------------------------------------------
+   MOBIL: die Buehne steht still
+
+   Auf einem Telefon ist ein Fahrrad in ganzer Laenge ohnehin kaum zu
+   erkennen - und eine Scroll-Inszenierung, die dreimal ein Rad
+   durchschiebt, kostet dort nur Weg. Die Buehne wird deshalb zu einem
+   Bild: ein Rad, eine Zeile, ein Aufruf. Gewechselt wird ueber die
+   Pille, die dort ohnehin sichtbar ist.
+
+   Technisch: die Schiene laeuft weiter (hero.js rechnet unveraendert),
+   nur der Scrollfortschritt erreicht sie nicht mehr, weil die Buehne
+   nicht mehr laenger ist als der Bildschirm.
+   ------------------------------------------------------------------ */
 @media (max-width: 900px) {
+  .scroll-story { height: 100svh; min-height: 620px; }
+  .sticky-stage { position: relative; height: 100svh; min-height: 620px; }
+  .progress-rail { display: none; }
+
+  /* Das Rad steht GANZ im Bild, nicht angeschnitten. Auf dem Desktop
+     fuellt es den Rahmen (cover); auf einem hochkant stehenden Telefon
+     bliebe davon ein zufaelliger Ausschnitt - Lenker und Kiste, kein
+     Fahrrad. Hier also contain in einem eigenen Band.
+
+     Die Zahlen kommen aus dem Bild: die Wand traegt ihre Bodenlinie bei
+     88,7 Prozent der Bildhoehe, und unter dem Rad liegen im Bild noch
+     11,3 Prozent Luft. Das Band sitzt so, dass beides zusammenfaellt -
+     das Rad steht auf dem Boden der Wand, nicht daneben. */
+  /* Auf dem Telefon steht die Schlagzeile UEBER dem Rad, nicht daneben.
+     Ein Schleier von links stuetzt dort nichts - er bleicht nur das
+     Hinterrad aus. Er laeuft deshalb von oben nach unten: hell, wo die
+     Zeile steht, klar, wo das Rad steht. */
+  .photo-shade {
+    background:
+      linear-gradient(180deg, rgba(247,249,252,.92) 0%, rgba(247,249,252,.88) 40%,
+                              rgba(247,249,252,.50) 52%, transparent 58%),
+      linear-gradient(0deg, rgba(6,24,65,.10) 0%, transparent 22%);
+  }
+  .photo-ebike, .photo-city, .photo-cargo {
+    /* Das Band steht ZWISCHEN Schlagzeile und Aufruf, nicht darunter.
+       Vorher lag es tiefer; der rote Knopf und die Pille schnitten dem
+       Rad das Hinterrad ab, und in der Mitte klaffte leere Wand.
+
+       115 Prozent statt "contain": die Vorlage ist breiter als das Rad,
+       das darin steht - bei contain blieb links und rechts Leerraum, und
+       auf dem Telefon war das Rad dadurch nur 300 Punkte breit. Bei 115
+       Prozent misst es 345, das Lastenrad als breitestes 376 und bleibt
+       damit innerhalb der 390. Mehr geht nicht, ohne es anzuschneiden.
+
+       Der untere Rand ist so gewaehlt, dass die Reifen bei 680 Punkten
+       aufsetzen - knapp ueber dem Aufruf. Die Wand steht auf dem Telefon
+       ohnehin in einem anderen Massstab; das Rad steht deshalb nicht auf
+       ihrer Bodenkante, sondern davor auf derselben Flaeche. Das liest
+       sich als Tiefe, nicht als Fehler. */
+    inset: auto 0 17.6% 0;
+    height: 34%;
+    background-size: 110% auto;
+    background-position: center bottom;
+    /* Die Buehne steht auf dem Telefon still. Vergroesserung und
+       Seitwaertsversatz aus dem Scrollmodell wirken hier trotzdem
+       weiter - 1,06-fach und drei Prozent nach rechts - und genau
+       daran wurde das Lastenrad links wie rechts angeschnitten. */
+    transform: none;
+  }
+  /* Die Auswahl steht sofort; ihren Fokuszustand regelt hero.js. Die
+     Abschlusskarte entfaellt - ihren Platz nimmt der Aufruf in der
+     Buehne ein. */
+  .choice-panel { opacity: 1; transform: none; }
+  .final-card { display: none; }
   .hero-cta {
     position: absolute;
     left: var(--rand);
-    top: min(64vh, 560px);
+    /* Ans untere Ende, dicht ueber die Pille. Zwischen Schlagzeile und
+       Rad war kein Platz mehr, sobald eine Zeile fuenf statt vier
+       Zeilen brauchte - der Aufruf schnitt sie dann an. */
+    top: auto;
+    bottom: 104px;
     z-index: 4;
     display: inline-flex; align-items: center; gap: 12px;
     padding: 15px 24px;
@@ -1632,7 +1730,9 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .top-meta { top: 100px; }
   /* Die Laenge regelt jetzt die clamp-Formel weiter oben - hier keine
      zweite Stufe mehr, sonst kehrt der Sprung zurueck. */
-  .photo-layer { inset: 0 -32% 0 -18%; background-position: 56% center; }
+  /* Nur die Wand wird beschnitten - die Raeder stehen in ihrem eigenen
+     Band (siehe oben) und duerfen davon nichts abbekommen. */
+  .photo-wand { inset: 0 -32% 0 -18%; background-position: 56% center; }
   .claim { top: 27vh; bottom: auto; width: calc(100% - 48px); }
   .claim h1 { font-size: var(--hero-font); max-width: 100%; }
   .claim-city h1 { font-size: calc(var(--hero-font) * .82); }
@@ -1660,8 +1760,13 @@ footer a:hover { color: #fff; text-decoration: underline; }
 }
 
 @media (max-width: 520px) {
-  /* "221 RÄDER FREI · GERADE EBEN" brach hier in drei Zeilen um. Zwei
-     bewusst gesetzte sind besser als drei zufaellige. */
+  /* Die laengste Schlagzeile - die des Loaders - braucht fuenf Zeilen.
+     Bei 52 px blieb dem Rad darunter kaum Platz; 45 px lesen sich auf
+     einem Telefon genauso gut und geben eine ganze Zeile Raum zurueck. */
+  :root { --hero-font: 45px; }
+
+  /* "221 RÄDER FREI" brach hier in drei Zeilen um. Zwei bewusst
+     gesetzte sind besser als drei zufaellige. */
   .live-zahl { flex-direction: column; align-items: flex-start; gap: 2px; }
   .live-zahl b { padding-left: 22px; font-size: 42px; }
   .live-zahl b::before { top: .36em; }
@@ -1671,7 +1776,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .meta-kurz { display: inline; }
   .karte-knoepfe { right: 12px; top: 12px; flex-direction: column; }
   .recht-block h2 { font-size: 30px; }
-  .photo-layer { inset: 0 -70% 0 -56%; background-position: center 28%; }
+  .photo-wand { inset: 0 -70% 0 -56%; background-position: center 28%; }
   .claim { top: 25vh; }
   .claim-city { top: 29vh; }
   .choice-panel { bottom: 34px; }
@@ -1687,7 +1792,6 @@ footer a:hover { color: #fff; text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .scroll-story { height: 100vh; min-height: 720px; }
-  .photo-ebike { opacity: 1; transform: scale(1.03); }
   .photo-city, .photo-cargo, .claim-city, .claim-cargo, .final-card { display: none; }
   .photo-ebike { opacity: 1; transform: none; }
   .scroll-hint span, .scroll-hint::after { animation: none; }

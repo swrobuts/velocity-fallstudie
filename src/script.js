@@ -662,9 +662,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (!hoehenMarken.length) hoehenMarken = await fetchHoehenmarken();
             if (!geschaeftsgebiet) await geschaeftsgebietZeichnen();
 
-            standZeit = Date.now();
-            standSchreiben();
-
             console.log(`Geladen: ${stations.length} Stationen, ${bikes.length} Fahrräder`);
             return true;
         } catch (error) {
@@ -1791,16 +1788,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         ctaPruefen();
     }
 
-    /* Die Zahl "293 Räder live" sah nach Messwert aus, trug aber keinen
-       Zeitpunkt. Jetzt steht dabei, wie alt sie ist. */
-    let standZeit = null;
-    function standSchreiben() {
-        const el = document.getElementById('live-stand');
-        if (!el || !standZeit) return;
-        const min = Math.floor((Date.now() - standZeit) / 60000);
-        el.textContent = min < 1 ? ' · gerade eben' : ` · vor ${min} Min.`;
-    }
-    setInterval(standSchreiben, 30000);
+    /* Die Zeitangabe neben der Zahl ist entfallen. Sie beantwortete eine
+       Frage, die im Kopfbereich niemand stellt, und kostete die einzige
+       wirklich wechselnde Zahl der Seite ihre Ruhe. Die Aktualitaet
+       steht dort, wo sie zaehlt: in der Statuszeile unter der Karte. */
 
     // ===== INITIALISIERUNG =====
     await renderInhalte();

@@ -88,8 +88,16 @@ pruefe('P2-02', 'minutenSetzen' in J and 'ist-korrigiert' in J,
        'Ungueltige Zeitwerte werden sichtbar zurechtgerueckt')
 pruefe('P2-03', 'scroll-margin-top' in C and 'zuAbschnitt' in J,
        'Sprungziele beruecksichtigen den festen Kopf und setzen den Fokus')
-pruefe('P2-04', 'clamp(180vh, 40vh + 250vw, 360vh)' in C,
-       'Die Buehne ist mobil kurz und waechst stetig mit der Breite')
+# Der Punkt hiess urspruenglich "waechst stetig mit der Breite" und
+# pruefte den damaligen clamp()-Ausdruck woertlich. Die Buehne hat sich
+# seither zweimal geaendert: sie traegt jetzt drei Raeder statt zwei
+# (laengerer Weg noetig), und auf dem Telefon steht sie ganz still - dort
+# ist ein Rad nur 345 Punkte breit, an einer Scroll-Erzaehlung waere
+# nichts zu erkennen. Geprueft wird deshalb die ABSICHT, nicht der
+# Wortlaut: oben ein stetig wachsender Ausdruck, unten gar keiner.
+pruefe('P2-04', re.search(r'\.scroll-story\s*{[^}]*height:\s*clamp\([^)]*vw', C)
+       and re.search(r'\.scroll-story\s*{\s*height:\s*100svh', C),
+       'Die Buehne waechst oberhalb stetig mit der Breite und steht mobil still')
 # Die Fassung vom 24.08. nannte "Wuerzburg & Schweinfurt". Schweinfurt ist
 # seither ausgegliedert - vierzig Kilometer ohne Verbindung sind kein Netz,
 # sondern zwei. Geprueft wird jetzt, dass keine Spur davon zurueckbleibt.
@@ -128,8 +136,13 @@ pruefe('P3-03', 'Station mit sieben freien Rädern' not in H,
        'Die Legende ist grammatikalisch richtig')
 pruefe('P3-04', 'font: 700 13px/1.3 var(--mono)' in C,
        'Die Fussmarke ist mindestens 13 px gross')
-pruefe('P3-06', 'id="live-stand"' in H and 'standSchreiben' in J,
-       'Die Live-Zahl traegt einen Aktualitaetszeitpunkt')
+# Zurueckgenommen am 24.08.2026 auf Wunsch des Nutzers: neben der Zahl
+# stand "gerade eben". Eine Zahl, die sich selbst als aktuell bezeichnet,
+# sagt nichts - sie ist entweder aktuell oder sie ist falsch. Geprueft
+# wird jetzt, dass die Floskel wirklich ueberall weg ist.
+pruefe('P3-06', 'live-stand' not in H and 'live-stand' not in J
+       and 'gerade eben' not in H and 'gerade eben' not in J,
+       'Die Live-Zahl steht ohne Aktualitaetsfloskel')
 
 print('\nGrundlagen')
 ids = re.findall(r'\bid="([^"]+)"', H)
@@ -181,9 +194,19 @@ pruefe('P2-02', 'rechnerZeichnen(minutenSetzen(m, true))' in J,
 HERO = (SRC / 'hero.js').read_text(encoding='utf-8')
 pruefe('P2-03', '.inert = choiceAus' in HERO and '.inert = ctaAus' in HERO,
        'Unsichtbare Bedienflaechen sind inert')
-pruefe('P2-05', 'clamp(180vh, 40vh + 250vw, 360vh)' in C
-       and '.scroll-story { height: 210vh' not in C,
-       'Kein Stufensprung mehr zwischen 900 und 901 px')
+# Auch dieser Punkt hing am alten Wortlaut. Der Stufensprung, den er
+# verhindern sollte, war einer MITTEN in der Erzaehlung: 210vh gegen
+# 360vh, zwei verschiedene Laengen fuer dieselbe Sache. Der Sprung, der
+# heute bei 900 px steht, ist ein anderer - dort endet die Erzaehlung
+# ueberhaupt, und das ist gewollt. Geprueft wird, dass die Buehne genau
+# EINE Laengenformel hat und die feste Hoehe nur im Telefonzweig steht.
+laengen = [x.strip() for x in
+           re.findall(r'\.scroll-story\s*{[^}]*?height:\s*([^;]+);', C)]
+# Drei Hoehen, jede mit einem eigenen Grund: die Erzaehlung selbst, das
+# Telefon (dort steht sie still) und die abgeschaltete Bewegung.
+pruefe('P2-05', laengen == [laengen[0], '100svh', '100vh']
+       and laengen[0].startswith('clamp('),
+       f'Die Buehne hat genau drei Hoehen mit je einem Grund — gefunden: {laengen}')
 pruefe('P2-06', 'stationsliste' in H and 'stationslisteZeichnen' in J,
        'Die Stationsliste ist der verlaessliche Weg zur Station')
 pruefe('P2-07', 'karte-leer' in H and 'karte-alle-typen' in H,

@@ -16,7 +16,9 @@
 
     // Exponential damping stays consistent across 60/120 Hz displays and
     // absorbs large wheel or trackpad deltas without making the UI feel heavy.
-    const blend = 1 - Math.exp(-deltaMs / 80);
+    // 55 statt 80 ms: bei der langsameren Uebersetzung darf das Bild
+    // dichter an der Hand bleiben, ohne dass Radrasten durchschlagen.
+    const blend = 1 - Math.exp(-deltaMs / 55);
     return mix(current, target, blend);
   }
 
@@ -66,15 +68,24 @@
      ein Halt. Ohne diesen Halt liefe die Schiene durch und man haette
      nie ein ruhiges Bild:
 
-       0.00 – 0.22  E-Bike haelt          (22 %)
-       0.22 – 0.38  Fahrt                 (16 %)
-       0.38 – 0.56  City-Bike haelt       (18 %)
-       0.56 – 0.72  Fahrt                 (16 %)
-       0.72 – 1.00  E-Cargo Loader haelt  (28 %, mit Auswahl und Aufruf)
+       0.00 – 0.14  E-Bike haelt
+       0.14 – 0.42  Fahrt
+       0.42 – 0.58  City-Bike haelt
+       0.58 – 0.86  Fahrt
+       0.86 – 1.00  E-Cargo Loader haelt (mit Auswahl und Aufruf)
 
-     Die Haltezeiten sind bewusst aehnlich lang. In der ersten Fassung
-     hielt das City-Bike nur 12 Prozent - es wirkte wie eine Durchfahrt
-     zwischen zwei Stationen statt wie eine eigene.
+     WIE LANG EINE FAHRT SEIN MUSS
+     Das ist keine Geschmacksfrage, sondern eine Rechnung. Ein Rad legt
+     je Fahrt eine volle Bildbreite zurueck. Verteilt man das auf 16
+     Prozent eines 2340 Punkte langen Scrollwegs, wandert das Rad rund
+     SECHS Bildpunkte je Bildpunkt Scrollweg - eine einzige Mausradraste
+     wirft es dann ueber ein Drittel der Bildbreite. Genau das wirkte
+     ruckelig, obwohl die Seite dabei mit 120 Bildern je Sekunde lief
+     und kein einziges Bild verlor.
+
+     Bei 28 Prozent und einer laengeren Buehne liegt die Uebersetzung bei
+     rund 1,6 - eine Raste verschiebt das Rad um knapp zwei Rasten. Das
+     folgt der Hand, statt ihr davonzulaufen.
   */
   const STATIONEN = ['ebike', 'city', 'cargo'];
 
@@ -94,20 +105,24 @@
 
   function getScrollState(rawProgress) {
     const progress = clamp(Number.isFinite(rawProgress) ? rawProgress : 0);
-    const spatialShift = smoothstep(0.08, 0.86, progress);
+    const spatialShift = smoothstep(0.05, 0.92, progress);
 
     // Der Ort auf der Schiene. Zwei Fahrten, dazwischen und danach Halt.
-    const ort = smoothstep(0.22, 0.38, progress) + smoothstep(0.56, 0.72, progress);
+    const ort = smoothstep(0.14, 0.42, progress) + smoothstep(0.58, 0.86, progress);
 
     return {
       progress,
       ort,
       activeProduct: STATIONEN[Math.min(2, Math.round(ort))],
       raeder: STATIONEN.map((name, i) => ({ name, ...radZustand(i, ort) })),
-      // Die letzte Zeile tritt ab, sobald Auswahl und Aufruf kommen.
-      letzteZeileDaempfung: 1 - smoothstep(0.82, 0.89, progress),
-      choiceOpacity: smoothstep(0.78, 0.86, progress),
-      ctaOpacity: smoothstep(0.89, 0.95, progress),
+      /* Die letzte Zeile bleibt stehen. Sie trat frueher ab, sobald
+         Auswahl und Aufruf kamen - dabei stand sie eine ganze
+         Bildschirmhoehe lang halb verblasst ueber dem Rad und sah aus
+         wie ein Fehler. Zeile und Auswahl liegen in verschiedenen
+         Ecken; sie stoeren einander nicht. */
+      letzteZeileDaempfung: 1,
+      choiceOpacity: smoothstep(0.88, 0.93, progress),
+      ctaOpacity: smoothstep(0.94, 0.98, progress),
       bikeScale: mix(1.06, 1, spatialShift),
       bikeX: mix(3, 0, spatialShift)
     };

@@ -27,6 +27,11 @@ from pathlib import Path
 WURZEL = Path(__file__).resolve().parents[1]
 SRC = WURZEL / 'src'
 SEITEN = ['index.html', 'rechtliches.html']
+# Auch Stylesheets: die Bilder der Buehne stehen als url() darin, und
+# ohne Stempel liefert der Browser sie aus dem Cache. Genau das ist am
+# 25.08.2026 passiert - eine neu gebaute Wand kam nicht an, und der
+# Fehler sah aus wie ein Fehler im Bild.
+STYLESHEETS = ['style.css']
 
 
 def fingerabdruck(pfad: Path) -> str:
@@ -59,9 +64,42 @@ def stempeln(seite: Path, nur_pruefen: bool) -> list[str]:
     return abweichungen
 
 
+def bilder_stempeln(datei: Path, nur_pruefen: bool) -> list[str]:
+    """url(...) in einem Stylesheet mit dem Fingerabdruck der Datei versehen."""
+    text = datei.read_text(encoding='utf-8')
+    original = text
+    abweichungen = []
+
+    def ersetzen(treffer: re.Match) -> str:
+        pfad, alt = treffer.group(1), treffer.group(2)
+        ziel = (datei.parent / pfad).resolve()
+        if not ziel.exists():
+            abweichungen.append(f'{datei.name}: {pfad} fehlt')
+            return treffer.group(0)
+        neu = fingerabdruck(ziel)
+        if alt != neu:
+            abweichungen.append(f'{datei.name}: {pfad} {alt or "ohne Stempel"} -> {neu}')
+        return f'url("{pfad}?v={neu}")'
+
+    muster = (r'url\(\s*"(?!https?:|//|data:)'
+              r'([A-Za-z0-9_./-]+\.(?:png|jpg|jpeg|webp|svg|avif|woff2?))'
+              r'(?:\?v=([0-9a-f]*))?"\s*\)')
+    text = re.sub(muster, ersetzen, text)
+
+    if not nur_pruefen and text != original:
+        datei.write_text(text, encoding='utf-8')
+    return abweichungen
+
+
 def main() -> int:
     nur_pruefen = '--pruefen' in sys.argv
     alle = []
+    # Die Bilder ZUERST: ihr Stempel steht im Stylesheet, und dessen
+    # eigener Fingerabdruck muss den geaenderten Inhalt abbilden.
+    for name in STYLESHEETS:
+        datei = SRC / name
+        if datei.exists():
+            alle += bilder_stempeln(datei, nur_pruefen)
     for name in SEITEN:
         seite = SRC / name
         if seite.exists():

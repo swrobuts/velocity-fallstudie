@@ -38,10 +38,13 @@
     cargo: document.querySelector('.claim-cargo')
   };
 
+  /* Die Karte neben der Pille benennt die AUSWAHL. Sie wiederholte
+     bisher die Schlagzeile Wort fuer Wort - zwei Mal derselbe Satz auf
+     einem Bildschirm. Jetzt steht dort der Typ und wofuer er da ist. */
   const inhalt = {
-    ebike: ['Wir liefern den Rückenwind.', 'Elektrische Unterstützung für Würzburgs Berge.'],
-    city:  ['Entspannt shoppen.', 'Noch entspannter nach Hause cruisen.'],
-    cargo: ['Der Wocheneinkauf passt rein.', 'Bis 70 kg Zuladung, elektrisch unterstützt.']
+    ebike: ['E-Bike Sport', 'Für die Berge'],
+    city:  ['City-Bike', 'Für die kurzen Wege'],
+    cargo: ['E-Cargo Loader', 'Für alles, was mitmuss']
   };
 
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -97,7 +100,13 @@
      Aufgefallen bei einer Pruefung von aussen am 24.08.2026; beim Umbau
      der Buehne am 25.08. einmal verlorengegangen und hier wieder da. */
   function bedienbarkeit(neuerZustand) {
-    const choiceAus = neuerZustand.choiceOpacity < 0.05;
+    // Steht die Buehne still - auf dem Telefon ist sie nicht laenger als
+    // der Bildschirm -, erreicht sie der Scrollfortschritt nie. Dann
+    // waere die Pille dauerhaft inert und niemand koennte das Rad
+    // wechseln. Der Zustand haengt deshalb daran, ob es ueberhaupt
+    // etwas zu scrollen gibt.
+    const laeuft = story.offsetHeight - window.innerHeight > 40;
+    const choiceAus = laeuft && neuerZustand.choiceOpacity < 0.05;
     const ctaAus = neuerZustand.ctaOpacity < 0.05;
     if (choiceAus !== choiceInert) {
       choiceInert = choiceAus;
