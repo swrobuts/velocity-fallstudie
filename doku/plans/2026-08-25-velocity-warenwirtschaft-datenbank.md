@@ -3992,6 +3992,13 @@ node tools/mermaid_check.mjs doku/datenmodell/erd/*.mmd
 
 In `05-physisches-modell.md` die acht neuen Tabellen mit je einem Satz zur Begründung aufnehmen — insbesondere die Abweichung m:n bei den Rollen und den Verzicht auf `wartungsposition`.
 
+**Und eine Stelle nachziehen, die durch Aufgabe 5 falsch geworden ist:**
+`doku/datenmodell/05-physisches-modell.md` und `slides/build_deck.py`
+ordnen GR5 („Preis zum Startzeitpunkt der Fahrt") weiterhin
+`fn_ausleihe_beenden` zu. Die Regel lebt seit Aufgabe 5 in
+`fn_ausleihe_abrechnen`. Beide Stellen suchen und richtigstellen — das
+Foliendeck danach neu bauen, sonst steht die alte Zuordnung im PDF.
+
 In `README.md` die Prüfungszahl von 18 auf 24 heben und die drei Referenzdatendateien in der Werkzeugliste nennen, mit dem Hinweis, dass sie **erfundene** Daten erzeugen.
 
 - [ ] **Schritt 7: Alles zusammen prüfen**
