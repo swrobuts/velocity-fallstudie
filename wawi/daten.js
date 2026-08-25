@@ -23,14 +23,31 @@ const supabaseClient = window.supabase.createClient(
 // und verschieden bedeuten.
 const ladeFehler = new Map();
 
+// Wettlaufschutz: ruft jemand ladeListe zweimal hintereinander fuer
+// dieselbe Quelle auf, bevor die erste Antwort da ist - ab Aufgabe 2
+// passiert das real, sobald jemand schnell zwischen Arbeitsbereichen
+// wechselt -, koennen die beiden Antworten in beliebiger Reihenfolge
+// zurueckkommen. Ohne diesen Zaehler wuerde die zuletzt eintreffende
+// Antwort den ladeFehler-Eintrag setzen, selbst wenn sie zur AELTEREN
+// der beiden Anfragen gehoert - und wuerde damit den Stand der neueren
+// Anfrage ueberschreiben. Jede Anfrage merkt sich beim Start den dann
+// aktuellen Zaehlerstand; kommt sie zurueck, waehrend fuer dieselbe
+// Quelle laengst eine neuere Anfrage laeuft, wird ihr Eintrag verworfen.
+const ladeZaehler = new Map();
+
 async function ladeListe(quelle, spalten = '*', aufbau = (q) => q) {
+    const eigenerZaehler = (ladeZaehler.get(quelle) || 0) + 1;
+    ladeZaehler.set(quelle, eigenerZaehler);
+
     const { data, error } = await aufbau(supabaseClient.from(quelle).select(spalten));
+
+    const nochAktuell = ladeZaehler.get(quelle) === eigenerZaehler;
     if (error) {
         console.error(`Fehler beim Laden von ${quelle}:`, error.message);
-        ladeFehler.set(quelle, error.message);
+        if (nochAktuell) ladeFehler.set(quelle, error.message);
         return [];
     }
-    ladeFehler.delete(quelle);
+    if (nochAktuell) ladeFehler.delete(quelle);
     return data || [];
 }
 

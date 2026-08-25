@@ -11,12 +11,22 @@
 let rollenZwischenspeicher = null;
 const wechselRueckrufe = [];
 
-supabaseClient.auth.onAuthStateChange(() => {
-    // Bei jedem Wechsel verfaellt der Rollenspeicher. Ihn stehen zu
-    // lassen hiesse, dass nach einem Benutzerwechsel die Navigation des
-    // Vorgaengers stehen bleibt.
-    rollenZwischenspeicher = null;
-    setTimeout(() => wechselRueckrufe.forEach((r) => r()), 0);
+supabaseClient.auth.onAuthStateChange((ereignis) => {
+    // Nur bei einem ECHTEN Benutzerwechsel verfaellt der Rollenspeicher.
+    // TOKEN_REFRESHED kommt stuendlich waehrend einer laufenden Sitzung -
+    // dabei die Rollen neu zu laden hiesse fuenf RPC-Aufrufe und einen
+    // Neuaufbau der Navigation, waehrend jemand mitten in einer Buchung
+    // steckt.
+    if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(ereignis)) {
+        rollenZwischenspeicher = null;
+        // setTimeout mit 0: Supabase haelt waehrend onAuthStateChange
+        // eine Sperre. Ein Rueckruf, der von hier aus synchron wieder in
+        // den Client greift - und genau das tut jeder, der meineRollen()
+        // aufruft -, blockiert ihn. Dieselbe Falle steht in
+        // src/auth.js beschrieben; sie hat die Website einmal
+        // eingefroren.
+        setTimeout(() => wechselRueckrufe.forEach((r) => r()), 0);
+    }
 });
 
 function beiAnmeldungsWechsel(rueckruf) {
@@ -51,7 +61,16 @@ async function meineRollen() {
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return null;
 
-    const { data: istMitarbeiter } = await supabaseClient.rpc('ist_mitarbeiter');
+    // error MUSS ausgewertet werden. Ein technischer Fehlschlag liefert
+    // data = null - genau dieselbe Form wie ein berechtigtes "nein".
+    // Ohne diese Pruefung sieht ein Netzwerkfehler aus wie "kein
+    // Mitarbeiter", und die Oberflaeche zeigt "Kein Zugang" statt eines
+    // Fehlers. Spurlos, nicht einmal ein Eintrag in der Konsole.
+    const { data: istMitarbeiter, error: fehlerMitarbeiter } =
+        await supabaseClient.rpc('ist_mitarbeiter');
+    if (fehlerMitarbeiter) {
+        throw new Error(`Die Rollen liessen sich nicht ermitteln: ${fehlerMitarbeiter.message}`);
+    }
     if (!istMitarbeiter) {
         rollenZwischenspeicher = new Set();
         return rollenZwischenspeicher;
@@ -62,7 +81,10 @@ async function meineRollen() {
     // bleiben. hat_rolle verraet nur, was der Aufrufer ohnehin weiss.
     const treffer = await Promise.all(
         WAWI_CONFIG.rollen.map(async (code) => {
-            const { data } = await supabaseClient.rpc('hat_rolle', { p_code: code });
+            const { data, error } = await supabaseClient.rpc('hat_rolle', { p_code: code });
+            if (error) {
+                throw new Error(`Rolle ${code} liess sich nicht pruefen: ${error.message}`);
+            }
             return data ? code : null;
         })
     );
