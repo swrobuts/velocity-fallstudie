@@ -312,9 +312,11 @@ button {
 }
 
 /* ===== Werkzeugleiste: Aktionen vor der Liste, z. B. "Neu anlegen" =====
-   Erster Verwender ist die Flotte (wawi/flotte.js); die Klasse liegt
-   hier und nicht dort, weil dieselbe Leiste bei den naechsten
-   Arbeitsbereichen wiederkehrt. */
+   Baustein zeigeWerkzeugleiste() in wawi/rahmen.js - urspruenglich in
+   Flotte und Stationen je einzeln erfunden, dann zusammengelegt, weil
+   beide Bearbeiter unabhaengig dasselbe gebaut hatten (siehe Kommentar
+   dort). Die Klasse liegt hier, weil dieselbe Leiste bei jedem
+   Arbeitsbereich wiederkehrt, der sie benutzt. */
 
 .werkzeugleiste {
   flex: 0 0 auto;

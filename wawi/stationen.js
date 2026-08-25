@@ -2,9 +2,9 @@
 // VeloCity Warenwirtschaft — Stationen
 //
 // Derselbe Bau wie flotte.js (Aufgabe 4): Liste, Detailmaske, ein paar
-// Schaltflaechen, ein Anlegen-Einstieg ueber eine eigene Werkzeugleiste.
-// Ausschliesslich die neun Bausteine aus rahmen.js und die eigene Sicht
-// v_wawi_station - keine Basistabelle, keine fn_-Funktion.
+// Schaltflaechen, ein Anlegen-Einstieg ueber die geteilte Werkzeugleiste
+// aus rahmen.js. Ausschliesslich die Bausteine aus rahmen.js und die
+// eigene Sicht v_wawi_station - keine Basistabelle, keine fn_-Funktion.
 // ============================================
 
 bereichAnmelden({
@@ -20,9 +20,11 @@ bereichAnmelden({
 
 async function stationenAufbauen() {
     // Wer anlegen darf, bekommt den Knopf VOR der Liste zu sehen - nicht
-    // ausgegraut fuer die Leitung, sondern schlicht nicht vorhanden
-    // (dasselbe Muster wie flotteWerkzeugleisteAufbauen in flotte.js).
-    stationenWerkzeugleisteAufbauen();
+    // ausgegraut fuer die Leitung, sondern schlicht nicht vorhanden.
+    // Nur fuer disposition sichtbar - dieselbe Rolle, die
+    // api_station_anlegen in der Datenbank verlangt
+    // (fn_rolle_verlangen('disposition') in 0019_wawi_logik.sql).
+    zeigeWerkzeugleiste(darfRolle('disposition'), 'Neue Station anlegen', stationAnlegenMaske);
 
     const stationen = await ladeListe('v_wawi_station',
         'station_id, stationsnummer, name, strasse, hausnummer, plz, ort, ' +
@@ -53,7 +55,12 @@ async function stationenAufbauen() {
     // Das ist kein Fehler, aber eine Rueckgabe dort scheitert an GR15 -
     // und wer das nicht weiss, haelt es fuer einen Softwarefehler.
     const voll = stationen.filter((s) => s.frei === 0);
-    melde(voll.length
+    // meldeUebersicht statt melde: nach einer Buchung (Stilllegen,
+    // Anlegen - siehe stationMaske/stationAnlegenMaske) ruft genau
+    // dieser Aufruf hier sofort im Anschluss auf und ueberschriebe die
+    // gerade gezeigte Bestaetigung, bevor sie jemand liest. Siehe
+    // Begruendung bei meldeUebersicht() in rahmen.js.
+    meldeUebersicht(voll.length
         ? `${stationen.length} Stationen, ${voll.length} davon voll: ${voll.map((s) => s.name).join(', ')}`
         : `${stationen.length} Stationen`);
 }
@@ -113,51 +120,11 @@ function stationMaske(station) {
 
 // ===== Eine Station anlegen =====
 //
-// Eigener, an dieser Stelle im DOM liegender Werkzeugleisten-Container,
-// nach demselben Fund-oder-Anlegen-Muster wie flotteWerkzeugleiste() in
-// flotte.js: stationenAufbauen() laeuft nicht nur beim ersten Aufbau des
-// Bereichs, sondern auch nach jeder Buchung ueber stationMaske() - ohne
-// dieses Muster stapelten sich die Knoepfe bei jedem erneuten Aufruf.
-function stationenWerkzeugleiste() {
-    let el = document.getElementById('stationen-werkzeugleiste');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'stationen-werkzeugleiste';
-        el.className = 'werkzeugleiste';
-        const wurzel = document.getElementById('arbeitsliste');
-        wurzel.insertBefore(el, wurzel.firstChild);
-    }
-    el.replaceChildren();
-    return el;
-}
-
-// Nur fuer disposition sichtbar - dieselbe Rolle, die api_station_anlegen
-// in der Datenbank verlangt (fn_rolle_verlangen('disposition') in
-// 0019_wawi_logik.sql). Die Leitung sieht v_wawi_station zwar auch, aber
-// keinen Anlegen-Knopf: was man nicht darf, soll man nicht suchen.
-function stationenWerkzeugleisteAufbauen() {
-    if (!darfRolle('disposition')) {
-        document.getElementById('stationen-werkzeugleiste')?.remove();
-        return;
-    }
-    const leiste = stationenWerkzeugleiste();
-
-    const knopf = document.createElement('button');
-    knopf.type = 'button';
-    knopf.textContent = 'Neue Station anlegen';
-    knopf.className = 'knopf-haupt';
-    knopf.addEventListener('click', async () => {
-        knopf.disabled = true;
-        try {
-            stationAnlegenMaske();
-        } catch (fehler) {
-            melde(fehler.message, 'schlecht');
-        } finally {
-            knopf.disabled = false;
-        }
-    });
-    leiste.append(knopf);
-}
+// Der Einstieg dazu ist die Werkzeugleiste am Kopf von
+// stationenAufbauen() (zeigeWerkzeugleiste in rahmen.js) - kein eigener
+// Leisten-Baustein mehr hier. Die Leitung sieht v_wawi_station zwar
+// auch, aber keinen Anlegen-Knopf: was man nicht darf, soll man nicht
+// suchen.
 
 function stationAnlegenMaske() {
     zeigeMaske('Neue Station anlegen', [

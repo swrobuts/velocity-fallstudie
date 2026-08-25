@@ -1,11 +1,11 @@
 // ============================================
 // VeloCity Warenwirtschaft — Flotte
 //
-// Der erste echte Arbeitsbereich. Er benutzt ausschliesslich die neun
+// Der erste echte Arbeitsbereich. Er benutzt ausschliesslich die
 // Bausteine aus rahmen.js (bereichAnmelden, ladeListe, rufeAuf,
-// letzterLadeFehler, zeigeListe, zeigeMaske, melde, bestaetige,
-// frageNachGrund, darfRolle) und die eigene Sicht v_wawi_flotte -
-// keine Basistabelle, keine fn_-Funktion.
+// letzterLadeFehler, zeigeListe, zeigeMaske, zeigeWerkzeugleiste, melde,
+// meldeUebersicht, bestaetige, frageNachGrund, darfRolle) und die eigene
+// Sicht v_wawi_flotte - keine Basistabelle, keine fn_-Funktion.
 // ============================================
 
 bereichAnmelden({
@@ -23,7 +23,9 @@ async function flotteAufbauen() {
     // Wer anlegen darf, bekommt den Knopf VOR der Liste zu sehen - nicht
     // ausgegraut fuer die anderen beiden Rollen, sondern schlicht nicht
     // vorhanden (siehe radMaske weiter unten fuer denselben Grundsatz).
-    flotteWerkzeugleisteAufbauen();
+    // Nur fuer disposition sichtbar - dieselbe Rolle, die api_rad_anlegen
+    // in der Datenbank verlangt.
+    zeigeWerkzeugleiste(darfRolle('disposition'), 'Neues Rad anlegen', radAnlegenMaske);
 
     // 275 Raeder sind viel fuer eine ungefilterte Liste, aber nicht zu
     // viel, um sie auf einmal zu laden. Eine Suche ist hier nicht
@@ -49,7 +51,12 @@ async function flotteAufbauen() {
         { feld: 'offene_schaeden', titel: 'Schäden', formatieren: (n) => n || '' }
     ], radMaske);
 
-    melde(`${raeder.length} Räder`);
+    // meldeUebersicht statt melde: nach einer Buchung (Statuswechsel,
+    // Ausmustern, Anlegen - siehe radMaske/radAnlegenMaske) ruft genau
+    // dieser Aufruf hier sofort im Anschluss auf und ueberschriebe die
+    // gerade gezeigte Bestaetigung, bevor sie jemand liest. Siehe
+    // Begruendung bei meldeUebersicht() in rahmen.js.
+    meldeUebersicht(`${raeder.length} Räder`);
 }
 
 // Farbe traegt Bedeutung, nicht Dekoration: rot ist ein defektes Rad,
@@ -77,7 +84,18 @@ function radMaske(rad) {
     // darf. Der Knopf, den die Funktion ohnehin abweist, ist keine
     // Sicherheitsluecke - aber eine Einladung zu einer Fehlermeldung,
     // die niemand braucht.
-    if (darfRolle('disposition') || darfRolle('werkstatt')) {
+    //
+    // rad.status !== 'ausgemustert' ergaenzt gegenueber vorher: seit
+    // commit caf59b5 (GR13, Luecke M-0001) weist api_rad_status_setzen
+    // JEDEN Weg aus 'ausgemustert' zurueck ab - 'ausgemustert' ist ein
+    // Endzustand, keine Drehtuer (siehe Kommentar dort in
+    // 0019_wawi_logik.sql). Vorher liess sich ein ausgemustertes Rad
+    // ueber genau diese Knoepfe wieder auf 'verfuegbar' setzen, ohne
+    // Standort - GR13-Verstoss, gemessen statt vermutet. Die Knoepfe
+    // fuehrten seit der Sperre nur noch zuverlaessig zu einer Absage;
+    // dieselbe Regel wie beim Ausmustern-Knopf weiter unten gilt auch
+    // hier: was man nicht darf, wird nicht angezeigt, nicht ausgegraut.
+    if ((darfRolle('disposition') || darfRolle('werkstatt')) && rad.status !== 'ausgemustert') {
         for (const ziel of ['verfuegbar', 'wartung', 'defekt']) {
             if (rad.status === ziel) continue;
             knoepfe.push({
@@ -136,55 +154,10 @@ function radMaske(rad) {
 // und keine v_wawi_-Sicht liefert Modelle oder Stationen von sich aus in
 // einer fuer eine Eingabemaske passenden Form ausser v_wawi_modell
 // (Aufgabe 3, eigens dafuer angelegt) und v_wawi_station.
-
-// Eigener, an dieser Stelle im DOM liegender Werkzeugleisten-Container,
-// nach demselben Fund-oder-Anlegen-Muster wie reiterleiste() in
-// rahmen.js: flotteAufbauen() laeuft nicht nur beim ersten Aufbau des
-// Bereichs (dann ist #arbeitsliste leer), sondern auch nach jeder
-// Buchung ueber radMaske() - ohne dieses Muster stapelten sich die
-// Knoepfe bei jedem erneuten Aufruf.
-function flotteWerkzeugleiste() {
-    let el = document.getElementById('flotte-werkzeugleiste');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'flotte-werkzeugleiste';
-        el.className = 'werkzeugleiste';
-        const wurzel = document.getElementById('arbeitsliste');
-        wurzel.insertBefore(el, wurzel.firstChild);
-    }
-    el.replaceChildren();
-    return el;
-}
-
-// Nur fuer disposition sichtbar - dieselbe Rolle, die api_rad_anlegen in
-// der Datenbank verlangt (GR-Grundsatz dieser Oberflaeche: was man nicht
-// darf, soll man nicht suchen). Werkstatt und Leitung ohne disposition
-// bekommen deshalb gar keinen - auch keinen leeren - Leistenbereich: ein
-// Container ohne Inhalt bliebe sonst als schmaler, unerklaerter Streifen
-// ueber der Liste stehen.
-function flotteWerkzeugleisteAufbauen() {
-    if (!darfRolle('disposition')) {
-        document.getElementById('flotte-werkzeugleiste')?.remove();
-        return;
-    }
-    const leiste = flotteWerkzeugleiste();
-
-    const knopf = document.createElement('button');
-    knopf.type = 'button';
-    knopf.textContent = 'Neues Rad anlegen';
-    knopf.className = 'knopf-haupt';
-    knopf.addEventListener('click', async () => {
-        knopf.disabled = true;
-        try {
-            await radAnlegenMaske();
-        } catch (fehler) {
-            melde(fehler.message, 'schlecht');
-        } finally {
-            knopf.disabled = false;
-        }
-    });
-    leiste.append(knopf);
-}
+//
+// Der Einstieg dazu ist die Werkzeugleiste am Kopf von flotteAufbauen()
+// (zeigeWerkzeugleiste in rahmen.js) - kein eigener Leisten-Baustein
+// mehr hier, siehe Kommentar dort.
 
 async function radAnlegenMaske() {
     // Beide Sichten sind fuer dieselbe Rolle sichtbar wie der Knopf, der

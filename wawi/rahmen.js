@@ -151,10 +151,51 @@ async function bereichWechseln(schluessel) {
 // umbucht, braucht die Rueckmeldung dort, wo er ohnehin hinsieht - nicht
 // als Blase in einer Ecke, die nach drei Sekunden verschwindet. Deshalb
 // bleibt der Text stehen, bis der naechste kommt.
+//
+// Zwei Arten von Text teilen sich diese eine Zeile. Die Buchungs-
+// bestaetigung ("Rad ... ausgemustert.", art='gut') kommt aus einem
+// Knopf; direkt danach ruft jede *Aufbauen()-Funktion die Liste neu auf
+// und schliesst selbst mit einer Uebersichtsmeldung ("10 Stationen") ab.
+// Bisher liefen beide durch dasselbe melde() - die Uebersicht ueber-
+// schrieb die Bestaetigung im selben Atemzug, der Anwender sah nie, was
+// er gerade gebucht hatte (siehe fluessiges Beispiel im Auftrag).
+//
+// Geloest wird das NICHT ueber eine Warteschlange: wer zwanzig Buchungen
+// hintereinander macht, soll bei jeder SOFORT ihre eigene Bestaetigung
+// sehen, nicht eine Reihe alter Meldungen der Reihe nach abarbeiten -
+// die einundzwanzigste darf nicht hinter der ersten anstehen. Stattdessen
+// merkt sich die Statuszeile nur EIN Bit: ob die zuletzt gezeigte Meldung
+// eine noch "unverbrauchte" Bestaetigung war. meldeUebersicht() weiter
+// unten - von den *Aufbauen()-Funktionen an genau der Stelle aufgerufen,
+// an der bisher melde(...) stand - ueberspringt sich in diesem einen Fall
+// selbst und verbraucht die Markierung dabei; die naechste eigenstaendige
+// Uebersicht (z. B. beim naechsten Bereichswechsel oder beim naechsten
+// Laden ohne vorausgehende Buchung) zeigt wieder normal an. Eine
+// Fehlermeldung dagegen bleibt immer ein normaler melde(..., 'schlecht')-
+// Aufruf und laeuft nie durch diese Weiche - ein Ladefehler nach einer
+// erfolgreichen Buchung darf nicht hinter der alten Bestaetigung
+// verschwinden.
+let statuszeileUnverbraucht = false;
+
 function melde(text, art = 'neutral') {
     const zeile = document.getElementById('statuszeile');
     zeile.textContent = text;
     zeile.className = art;   // neutral | gut | warnung | schlecht
+    statuszeileUnverbraucht = art === 'gut';
+}
+
+// Fuer die abschliessende Meldung jeder *Aufbauen()-Funktion nach dem
+// Neuaufbau ihrer Liste - nicht fuer Fehler (die bleiben bei
+// melde(..., 'schlecht'), siehe Kommentar oben) und nicht fuer die
+// Bestaetigung selbst (die bleibt bei melde(..., 'gut') im Knopf-
+// Handler). Wird die Uebersicht durch eine frische, noch unverbrauchte
+// Bestaetigung ausgeloest, faellt sie fuer dieses eine Mal aus.
+function meldeUebersicht(text) {
+    if (statuszeileUnverbraucht) {
+        statuszeileUnverbraucht = false;
+        return;
+    }
+    melde(text);
 }
 
 // ===== Bestaetigungsdialog =====
@@ -337,6 +378,78 @@ function reiterleiste() {
         wurzel.insertBefore(el, wurzel.firstChild);
     }
     return el;
+}
+
+// ===== Werkzeugleiste =====
+//
+// Aktionen vor der Liste, z. B. "Neu anlegen". Flotte und Stationen
+// (Aufgaben 4 und 5) hatten das unabhaengig voneinander erfunden -
+// flotteWerkzeugleiste/flotteWerkzeugleisteAufbauen und
+// stationenWerkzeugleiste/stationenWerkzeugleisteAufbauen, wortgleich
+// bis auf den Namen, mit je einer eigenen ID. Der Auftrag gab dafuer
+// keinen Code vor; zwei Bearbeiter haben unabhaengig dasselbe Muster
+// gebaut - ein Zeichen, dass es hierher gehoert, nicht in jeden Bereich
+// einzeln.
+//
+// Find-or-create auf eine FESTE ID, als erstes Kind von #arbeitsliste
+// eingehaengt - dieselbe Machart wie listenKoerper() und reiterleiste()
+// oben. Genau deshalb braucht dieser Baustein KEINE eigene
+// Aufraeumlogik beim Bereichswechsel: bereichWechseln() leert
+// #arbeitsliste ohnehin per replaceChildren(), bevor der neue Bereich
+// aufbaut - das reisst die Werkzeugleiste des VORHERIGEN Bereichs mit
+// heraus, wie es listenkoerper/reiterleiste auch trifft. Eine
+// bereichseigene ID und ein bereichseigenes Wegraeumen (wie es die
+// beiden Vorlagen taten) waeren nur eine zweite Absicherung fuer
+// denselben Fall gewesen - und eine, die vergessen werden kann, wenn
+// der Container aus Versehen ausserhalb von #arbeitsliste haengt. Im
+// Browser nachgestellt: zwischen Flotte und Stationen hin- und
+// hergewechselt, jeweils mit und ohne disposition-Rolle - immer genau
+// eine oder gar keine Werkzeugleiste, nie zwei uebereinander.
+//
+// sichtbar: ob die aufrufende Rolle den Knopf ueberhaupt sehen darf
+// (ueblicherweise darfRolle(...)). false raeumt den Container komplett
+// ab, statt ihn leer stehen zu lassen - ein Container ohne Inhalt
+// bliebe sonst als schmaler, unerklaerter Streifen ueber der Liste
+// stehen (dasselbe Prinzip wie beim Fehlen ganzer Navigationspunkte:
+// was man nicht darf, wird nicht angezeigt, nicht ausgegraut).
+function werkzeugleiste() {
+    let el = document.getElementById('werkzeugleiste');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'werkzeugleiste';
+        el.className = 'werkzeugleiste';
+        const wurzel = document.getElementById('arbeitsliste');
+        wurzel.insertBefore(el, wurzel.firstChild);
+    }
+    el.replaceChildren();
+    return el;
+}
+
+function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
+    if (!sichtbar) {
+        document.getElementById('werkzeugleiste')?.remove();
+        return;
+    }
+    const leiste = werkzeugleiste();
+
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.textContent = titel;
+    knopf.className = 'knopf-haupt';
+    // Derselbe zentrale Fehlerfang wie bei den Knoepfen aus zeigeMaske()/
+    // zeigeLeermaske(): jeder Aufrufer muesste ihn sonst selbst
+    // nachbauen.
+    knopf.addEventListener('click', async () => {
+        knopf.disabled = true;
+        try {
+            await ausfuehren();
+        } catch (fehler) {
+            melde(fehler.message, 'schlecht');
+        } finally {
+            knopf.disabled = false;
+        }
+    });
+    leiste.append(knopf);
 }
 
 // spalten: [{ feld, titel, formatieren?, klasse? }]
