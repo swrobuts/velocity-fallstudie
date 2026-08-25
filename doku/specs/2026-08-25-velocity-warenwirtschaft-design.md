@@ -46,6 +46,8 @@ Zuordnungstabelle kostet wenig und löst es sauber.
 | Anmeldung | Dieselbe `auth.users`, Zuordnung über `mitarbeiter.auth_uid` | Ein Anmeldeweg, getrennte Rechte |
 | Adresse | `wawi.butscher.cloud` | Trennt Kundensicht und Innensicht schon in der Adresse |
 | Löschung von Kunden | **Anonymisieren, nicht löschen** | Rechnungen unterliegen zehn Jahren Aufbewahrungspflicht (§ 147 AO) |
+| Datenlage | **Referenzfahrten erzeugen**, als solche gekennzeichnet | 24 Bestandsfahrten tragen keine Auswertung |
+| Erster Mitarbeiter | Robert Butscher, alle vier Rollen, aus den Referenzdaten | Ohne ihn kann niemand den zweiten anlegen |
 
 ---
 
@@ -333,13 +335,16 @@ nicht acht Sekunden.
 ## 7 Umsetzung in zwei Schritten
 
 Der Entwurf ist zu groß für einen Umsetzungsplan: acht neue Tabellen,
-neun Sichten, dreizehn Funktionen — und daneben eine ganze Oberfläche.
+neun Sichten, vierzehn Funktionen, ein Referenzjahr an Daten — und
+daneben eine ganze Oberfläche.
 Beides in einem Plan hieße, die Hälfte der Aufgaben zu schreiben, bevor
 die andere Hälfte geprüft ist. Deshalb zwei Pläne nacheinander:
 
 1. **Datenbank** — Bereiche J, I, K, `distanz_km`, RLS, Sichten,
-   `api_`-Funktionen, pgTAP-Tests, Erweiterung von `tools/abnahme.sh`.
-   Am Ende steht ein prüfbares Ergebnis, auch ohne Oberfläche.
+   `api_`-Funktionen, die Referenzdaten aus Abschnitt 8, pgTAP-Tests und
+   die Erweiterung von `tools/abnahme.sh`. Am Ende steht ein prüfbares
+   Ergebnis, auch ohne Oberfläche: die Auswertungen liefern dann Zahlen,
+   die man gegenrechnen kann.
 2. **Oberfläche** — `wawi/`, Anmeldung, die fünf Arbeitsbereiche,
    Bereitstellung unter `wawi.butscher.cloud`.
 
@@ -349,22 +354,100 @@ nicht nur beschrieben sind.
 
 ---
 
-## 8 Offene Punkte
+## 8 Referenzdaten
 
-**Datenlage für die Auswertungen.** In `velocity.ausleihe` liegen
-derzeit 24 Fahrten, davon 23 abgeschlossen — alle zwischen Stationen,
-keine mit freien Koordinaten. Umsatz-, Kilometer- und CO₂-Auswertung
-funktionieren damit technisch, zeigen aber fast nichts. Für die Lehre
-wären einige hundert plausible Fahrten über mehrere Monate nützlich.
-**Zu entscheiden:** Referenzdaten erzeugen (und als solche kennzeichnen)
-oder mit der dünnen Lage arbeiten.
+Die Auswertungen brauchen etwas zum Auswerten. Was heute in der
+Datenbank liegt, taugt dafür nicht — und zwar aus einem Grund, der beim
+Nachsehen erst sichtbar wurde:
 
-**Erster Mitarbeiter.** Wer legt den ersten an, wenn das Anlegen
-Mitarbeiterrechte voraussetzt? Vorschlag: ein Satz in den
-Referenzdaten, verknüpft mit der bestehenden Kennung des Betreibers.
+| Befund | Zahl |
+|---|---|
+| Abgeschlossene Fahrten insgesamt | 23 |
+| davon mit einer Position, die aus der Preislogik stammt | **0** |
+| Fahrten ohne gültigen Preis an ihrem Starttag | 23 von 24 |
+| Rechnungen | 0 |
+| Kunden mit Mitgliedschaft | 10 von 1014 |
+| Räder mit Status `ausgeliehen` | 37 — bei **einer** offenen Ausleihe |
 
-**Der alte Prototyp** unter `erp/` spricht das Altschema an. Er bleibt
-zunächst liegen und wird weggeräumt, wenn die neue Oberfläche steht.
+Die übernommenen Fahrten tragen ausschließlich die Position
+`BESTANDSUEBERNAHME`: einen Pauschalbetrag aus dem Altsystem. Sie sind
+damit für eine Umsatzauswertung nach Radtyp brauchbar, für alles
+Weitere nicht — sie kennen weder Startgebühr noch Zeitentgelt noch
+Rabatt. Und die Preishistorie beginnt am 22.08.2026, also nach fast
+allen Fahrten. Das war bisher folgenlos, weil niemand sie nachrechnete.
+
+### 8.1 Was erzeugt wird
+
+Ein Referenzjahr vom **01.09.2025 bis 24.08.2026**:
+
+| Gegenstand | Umfang |
+|---|---|
+| Preisperioden ab 01.09.2025 | drei Typen, mit **einem** Preiswechsel im Referenzjahr |
+| Mitgliedschaften | rund 400 Kunden auf die vier Tarife verteilt |
+| Fahrten | rund 12 000, mit Tages-, Wochen- und Jahresgang |
+| Entgeltpositionen | aus der **echten Preislogik**, nicht gesetzt |
+| Rechnungen | monatlich je Kunde, aus den Positionen gerechnet |
+| `distanz_km` | bei etwa 60 % der Fahrten gesetzt, sonst `null` |
+
+Drei Entscheidungen dahinter sind wichtiger als die Zahlen:
+
+**Der Preiswechsel ist Absicht.** Bisher zeigt die Historisierung nur
+das Schema — eine Tabelle mit Gültigkeitszeitraum und einem
+`EXCLUDE`-Constraint. Mit einem Wechsel mitten im Referenzjahr wird sie
+in den Daten sichtbar: Fahrten vor dem Stichtag rechnen weiter mit dem
+alten Satz, und in der Monatsauswertung ist der Sprung zu sehen. GR5
+lässt sich damit nicht nur behaupten, sondern nachrechnen.
+
+**`distanz_km` bleibt bei 40 % leer.** Sonst wäre die Unterscheidung
+zwischen gemessenem und geschätztem Kilometer eine Spalte, die immer
+dasselbe sagt. Die Auswertung soll zeigen, wie sich der geschätzte
+Anteil auf die CO₂-Zahl auswirkt.
+
+**Die Beträge werden nicht gesetzt, sondern gerechnet.** Dafür wird die
+Preislogik aus `fn_ausleihe_beenden` in eine eigene Funktion
+`fn_ausleihe_abrechnen(ausleihe_id)` gezogen; `fn_ausleihe_beenden` ruft
+sie danach auf. Der Grund ist nicht Ordnungsliebe: `fn_ausleihe_beenden`
+setzt `endzeit = now()` und kann deshalb keine vergangene Fahrt
+abschließen. Ein Parameter „so tun, als sei es damals" wäre ein Loch im
+Zugriffsschutz — ein Kunde könnte sich billiger rechnen. Die
+Trennung löst beides: die neue Funktion **bepreist** nur, sie entscheidet
+nicht, wann die Fahrt endete.
+
+### 8.2 Wie sie gekennzeichnet werden
+
+In `uebernahme_protokoll` — der Tabelle, die schon jede Zeile der
+Altdatenübernahme mit Quelle, Menge und Hinweis festhält. Der Generator
+schreibt seinen Lauf dort ebenso hinein, mit `quelle = 'Referenzdaten
+(erzeugt)'` und dem `ausleihe_id`-Bereich.
+
+**Diese Zahlen sind erfunden.** Sie sind plausibel gebaut, aber sie
+messen nichts. Das steht so in der Dokumentation und im Kopf jeder
+erzeugenden Datei. Ein Lehrbeispiel darf mit erfundenen Daten arbeiten;
+es darf nur nicht so tun, als seien sie erhoben.
+
+Der Generator arbeitet mit festem Startwert (`setseed`), läuft also bei
+jedem Aufbau mit demselben Ergebnis durch — wie alles andere in `db/`
+auch.
+
+### 8.3 Nebenbei behoben
+
+Die 37 Räder im Status `ausgeliehen` bei einer offenen Ausleihe sind ein
+Widerspruch aus der Altdatenübernahme. Er fiel bisher nicht auf, weil
+keine Oberfläche Radstatus und Ausleihen nebeneinander zeigte — die
+Warenwirtschaft tut genau das auf ihrer ersten Maske. Der Generator
+gleicht den Status an die tatsächlich offenen Ausleihen an.
+
+### 8.4 Der erste Mitarbeiter
+
+Robert Butscher, verknüpft mit der bestehenden Kennung
+`swrobuts@googlemail.com`, mit allen vier Rollen. Diese Kennung gehört
+bereits Kunde 2334 — dieselbe Person ist also Kunde *und* Mitarbeiter.
+Das ist kein Versehen und wird auch nicht aufgelöst: `kunde` und
+`mitarbeiter` sind getrennte Sätze, die zufällig auf dieselbe Anmeldung
+zeigen. Wer sich auf der Website anmeldet, ist Kunde; wer sich in der
+Warenwirtschaft anmeldet, ist Mitarbeiter. Dass beides geht, ohne dass
+die Rechte durcheinandergeraten, ist eher ein Beleg für die Trennung als
+ein Einwand gegen sie.
 
 ---
 
