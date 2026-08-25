@@ -65,7 +65,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- Vorrichtung fuer die beiden folgenden Tests: eine eigene, garantiert
+-- Vorrichtung fuer die folgenden Tests: eine eigene, garantiert
 -- verrechenbare Fahrt in einer Periode, die weder das Referenzjahr
 -- (09/2025 bis 08/2026, db/betrieb/referenzdaten_*.sql) noch der
 -- uebernommene Altbestand beruehren. Ein Test, dessen Ergebnis davon
@@ -80,8 +80,33 @@ $$;
 -- bricht ohne gueltigen Preis mit "Kein gueltiger Preis" ab. Ein
 -- eigener Typ haelt die eigene Preisperiode aus der EXCLUDE-Constraint
 -- (typ_id, gueltigkeit) jeder bestehenden Preishistorie fern.
+--
+-- Die alte, vierparametrige Fassung wird explizit weggeworfen: "create
+-- or replace" ersetzt eine Funktion nur bei identischer Signatur, bei
+-- zusaetzlichen Parametern legt es einen zweiten, ueberladenen
+-- Eintrag an. Ohne den drop bliebe die alte Fassung stehen und ein
+-- Aufruf mit nur drei Argumenten (beide haben p_dauer als einzigen
+-- Pflichtparameter mit Default) waere doppeldeutig - "is not unique".
+drop function if exists velocity_test.fixture_e_verrechenbare_fahrt(text, integer, integer, integer);
+
+-- Die Preisparameter sind absichtlich frei waehlbar (nicht nur die
+-- Dauer): test_e_rechnungsbetrag_stimmt braucht eine Fahrt, deren
+-- Positionen NICHT alle dasselbe Vorzeichen tragen, sonst waere ein
+-- Rueckfall der doppelten Vorzeichenanwendung (siehe
+-- fn_rechnung_erzeugen, GR10-Kommentar) unsichtbar: fuer
+-- ausschliesslich positive Positionen ist betrag * vorzeichen dasselbe
+-- wie betrag. Ueber einen niedrigen tageshoechstpreis entsteht eine
+-- HOECHSTPREIS_KAPPUNG-Position (vorzeichen -1) - der billigste Weg zu
+-- einer negativen Position, weil er nur Zahlen aendert und keine
+-- weiteren Tabellen (Tarif, Mitgliedschaft, Freiminuten) braucht.
 create or replace function velocity_test.fixture_e_verrechenbare_fahrt(
-  p_suffix text, p_jahr integer, p_monat integer, p_dauer integer default 30
+  p_suffix        text,
+  p_jahr          integer,
+  p_monat         integer,
+  p_dauer         integer default 30,
+  p_startgebuehr  numeric default 1.00,
+  p_minutenpreis  numeric default 0.10,
+  p_hoechstpreis  numeric default 20.00
 )
 returns table (o_kunde_id bigint, o_ausleihe_id bigint)
 language plpgsql as $$
@@ -108,7 +133,7 @@ begin
   insert into velocity.nutzungspreis
          (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
        values (v_typ, daterange(make_date(p_jahr, 1, 1), make_date(p_jahr + 1, 1, 1), '[)'),
-               1.00, 0.10, 20.00);
+               p_startgebuehr, p_minutenpreis, p_hoechstpreis);
 
   v_start := make_timestamptz(p_jahr, p_monat, 15, 10, 0, 0);
   insert into velocity.ausleihe (kunde_id, fahrrad_id, start_latitude, start_longitude,
@@ -145,25 +170,65 @@ $$;
 
 create or replace function velocity_test.test_e_rechnungsbetrag_stimmt()
 returns setof text language plpgsql as $$
-declare v_r record;
+declare
+  v_a      record;   -- Fahrt A: wird gekappt, bleibt aber verrechenbar (netto > 0)
+  v_b      record;   -- Fahrt B: wird auf genau 0 gekappt, darf keine Rechnung ergeben
+  v_zahl   integer;
+  v_r      record;
 begin
-  -- Eigener Monat (04/2019) aus demselben Grund wie im Test oben: die
-  -- Pruefung soll GR10/den Rechnungsbetrag treffen, nicht zufaellig
+  -- Eigener Monat (07/2019) aus demselben Grund wie im Test oben: die
+  -- Pruefung soll fn_rechnung_erzeugen selbst treffen, nicht zufaellig
   -- davon abhaengen, ob eine Betriebsdatei diesen Monat schon
   -- abgerechnet hat.
-  perform velocity_test.fixture_e_verrechenbare_fahrt('betrag', 2019, 4);
-  perform velocity.fn_rechnung_erzeugen(2019, 4);
-  select * into v_r from velocity.rechnung
-   where periode_jahr = 2019 and periode_monat = 4
-   order by rechnung_id limit 1;
+  --
+  -- Fahrt A: Startgebuehr 5,00 + 20 Minuten a 1,00 = 25,00 vor der
+  -- Kappung; der Tageshoechstpreis liegt bei 12,00, die Kappung zieht
+  -- also 13,00 als eigene (negative) Position ab. Der erwartete
+  -- Nettobetrag ist deshalb GENAU der gewaehlte Tageshoechstpreis -
+  -- ein von Hand gebildeter Erwartungswert aus den Parametern, die
+  -- dieser Test selbst gesetzt hat, nicht die in fn_rechnung_erzeugen
+  -- verwendete Summenformel gegen sich selbst. Wuerde die doppelte
+  -- Vorzeichenanwendung aus dem urspruenglichen Planentwurf
+  -- zurueckkehren, wuerde die Kappung den Betrag ERHOEHEN statt
+  -- senken (25,00 + 13,00 = 38,00) - dieser Test wird dann rot, statt
+  -- faelschlich gruen zu bleiben, wie es die vorherige Fassung ohne
+  -- jede negative Position getan haette.
+  select * into v_a from velocity_test.fixture_e_verrechenbare_fahrt(
+    p_suffix => 'kappung_a', p_jahr => 2019, p_monat => 7,
+    p_dauer => 20, p_startgebuehr => 5.00, p_minutenpreis => 1.00, p_hoechstpreis => 12.00);
 
-  return next ok(v_r.rechnung_id is not null, 'Es gibt eine Rechnung fuer den Testmonat');
-  return next is(v_r.betrag_brutto, round(v_r.betrag_netto * (1 + v_r.ust_satz / 100), 2),
-                 'Brutto ist Netto plus Umsatzsteuer');
+  -- Fahrt B: Startgebuehr 0,00 + 5 Minuten a 1,00 = 5,00 vor der
+  -- Kappung, Tageshoechstpreis 0,00 - die Kappung zieht die vollen
+  -- 5,00 wieder ab, der Nettobetrag ist exakt 0,00. Damit durchlaeuft
+  -- dieser Test auch den having-Filter in fn_rechnung_erzeugen
+  -- (`> 0`), der bislang nie griff: kein Kunde in den Referenzdaten
+  -- oder den bisherigen Tests hatte je eine Monatssumme von 0 oder
+  -- darunter.
+  select * into v_b from velocity_test.fixture_e_verrechenbare_fahrt(
+    p_suffix => 'kappung_b', p_jahr => 2019, p_monat => 7,
+    p_dauer => 5, p_startgebuehr => 0.00, p_minutenpreis => 1.00, p_hoechstpreis => 0.00);
+
+  v_zahl := velocity.fn_rechnung_erzeugen(2019, 7);
+  return next is(v_zahl, 1,
+    'Von zwei Kunden im Testmonat erzeugt nur der mit positivem Nettobetrag eine Rechnung');
+
+  select * into v_r from velocity.rechnung
+   where periode_jahr = 2019 and periode_monat = 7 and kunde_id = v_a.o_kunde_id;
+  return next ok(v_r.rechnung_id is not null, 'Es gibt eine Rechnung fuer die gekappte, aber positive Fahrt');
+  return next is(v_r.betrag_netto, 12.00::numeric(10,2),
+                 'Der Nettobetrag entspricht dem von Hand vorgegebenen Tageshoechstpreis');
+  return next is(v_r.betrag_brutto, 14.28::numeric(10,2),
+                 'Der Bruttobetrag entspricht Netto plus 19 Prozent Umsatzsteuer');
   return next is(
     (select round(sum(betrag), 2) from velocity.rechnungsposition
       where rechnung_id = v_r.rechnung_id),
     v_r.betrag_netto,
     'Der Rechnungsbetrag ist die Summe seiner Positionen');
+
+  return next is(
+    (select count(*) from velocity.rechnung
+      where periode_jahr = 2019 and periode_monat = 7 and kunde_id = v_b.o_kunde_id),
+    0::bigint,
+    'Eine vollstaendig gekappte Fahrt (Nettobetrag 0) erzeugt keine Rechnung');
 end;
 $$;
