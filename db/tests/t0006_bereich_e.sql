@@ -63,3 +63,37 @@ begin
     '23514', null, 'Monat 13 wird abgewiesen');
 end;
 $$;
+
+create or replace function velocity_test.test_e_rechnung_je_kunde_und_monat()
+returns setof text language plpgsql as $$
+declare v_erst integer; v_zweit integer;
+begin
+  v_erst  := velocity.fn_rechnung_erzeugen(2026, 4);
+  -- GR10: ein zweiter Lauf darf keine zweite Rechnung erzeugen. Ohne
+  -- diese Eigenschaft waere ein versehentlich wiederholter
+  -- Monatsabschluss eine Doppelberechnung.
+  v_zweit := velocity.fn_rechnung_erzeugen(2026, 4);
+  return next cmp_ok(v_erst, '>', 0, 'Der erste Lauf erzeugt Rechnungen');
+  return next is(v_zweit, 0, 'Der zweite Lauf erzeugt keine weiteren');
+end;
+$$;
+
+create or replace function velocity_test.test_e_rechnungsbetrag_stimmt()
+returns setof text language plpgsql as $$
+declare v_r record;
+begin
+  perform velocity.fn_rechnung_erzeugen(2026, 5);
+  select * into v_r from velocity.rechnung
+   where periode_jahr = 2026 and periode_monat = 5
+   order by rechnung_id limit 1;
+
+  return next ok(v_r.rechnung_id is not null, 'Es gibt eine Rechnung fuer 05/2026');
+  return next is(v_r.betrag_brutto, round(v_r.betrag_netto * (1 + v_r.ust_satz / 100), 2),
+                 'Brutto ist Netto plus Umsatzsteuer');
+  return next is(
+    (select round(sum(betrag), 2) from velocity.rechnungsposition
+      where rechnung_id = v_r.rechnung_id),
+    v_r.betrag_netto,
+    'Der Rechnungsbetrag ist die Summe seiner Positionen');
+end;
+$$;

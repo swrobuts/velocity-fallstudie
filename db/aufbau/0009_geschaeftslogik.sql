@@ -2,13 +2,15 @@
 -- 0009 Geschaeftslogik
 --
 -- Zweck:      Ausleihe starten und beenden, Preisfindung, Anlegen und
---             Pflegen des Kundensatzes zur Anmeldung.
+--             Pflegen des Kundensatzes zur Anmeldung, monatlicher
+--             Rechnungslauf.
 -- Objekte:    velocity.fn_kunde_aus_auth, velocity.fn_position_anlegen,
 --             velocity.fn_ausleihe_starten, velocity.fn_ausleihe_abrechnen,
 --             velocity.fn_ausleihe_beenden,
 --             velocity.api_kunde_sicherstellen,
 --             velocity.api_profil_aktualisieren,
---             velocity.api_ausleihe_starten, velocity.api_ausleihe_beenden
+--             velocity.api_ausleihe_starten, velocity.api_ausleihe_beenden,
+--             velocity.fn_rechnung_erzeugen
 -- Ruecknahme: DROP FUNCTION fuer dieselben Namen.
 --
 -- Schichtung: fn_* traegt die Fachlogik und bekommt die kunde_id als
@@ -537,5 +539,90 @@ begin
   end if;
   return query select * from velocity.fn_ausleihe_beenden(
     v_kunde, p_ausleihe_id, p_end_station_id, p_latitude, p_longitude);
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- GR10: Rechnungen werden je Kunde und Monat genau einmal erzeugt. Die
+-- Regel stand seit Phase 1 in den Anforderungen und in einem UNIQUE-
+-- Constraint - erzeugt hat sie bis jetzt niemand.
+--
+-- Ein Monatslauf, kein Trigger: eine Rechnung entsteht zum
+-- Periodenende, nicht bei jeder Fahrt. Der Lauf ist wiederholbar; was
+-- schon abgerechnet ist, wird uebergangen (rechnung_periode_uk plus das
+-- NOT EXISTS unten treffen dieselbe Aussage zweimal - der Constraint
+-- schuetzt vor der Datenverletzung, das NOT EXISTS spart den Fehler).
+--
+-- entgeltposition.betrag ist bereits vorzeichenbehaftet: fn_position_
+-- anlegen multipliziert bei der Entstehung der Zeile mit dem
+-- Vorzeichen der Entgeltart (siehe oben). Wer hier nochmals mit
+-- entgeltart.vorzeichen multipliziert, hebt Rabatte und Kappungen
+-- wieder auf und rechnet zu hohe Rechnungen - die vorhandenen Sichten
+-- (v_meine_ausleihe) summieren deshalb ebenfalls nur ep.betrag, ohne
+-- erneute Vorzeichenkorrektur.
+create or replace function velocity.fn_rechnung_erzeugen(
+  p_jahr integer, p_monat integer
+)
+returns integer
+language plpgsql
+set search_path = velocity, pg_temp
+as $$
+declare
+  c_ust  constant numeric(5,2) := 19.00;
+  v_von  date := make_date(p_jahr, p_monat, 1);
+  v_bis  date := (make_date(p_jahr, p_monat, 1) + interval '1 month')::date;
+  v_k    record;
+  v_r    bigint;
+  v_netto numeric(10,2);
+  v_zahl integer := 0;
+begin
+  for v_k in
+    select a.kunde_id, round(sum(ep.betrag), 2) as netto
+      from velocity.ausleihe a
+      join velocity.entgeltposition ep using (ausleihe_id)
+     where a.startzeit >= v_von and a.startzeit < v_bis
+       and a.status = 'abgeschlossen'
+       and not exists (
+         select 1 from velocity.rechnung r
+          where r.kunde_id = a.kunde_id
+            and r.periode_jahr = p_jahr and r.periode_monat = p_monat)
+     group by a.kunde_id
+    having round(sum(ep.betrag), 2) > 0
+     order by a.kunde_id
+  loop
+    v_netto := v_k.netto;
+    insert into velocity.rechnung
+           (rechnungsnummer, kunde_id, periode_jahr, periode_monat,
+            erstellt_am_beleg, betrag_netto, ust_satz, ust_betrag,
+            betrag_brutto, status)
+    values (format('R-%s-%s-%s', p_jahr, lpad(p_monat::text, 2, '0'),
+                   lpad(v_k.kunde_id::text, 6, '0')),
+            v_k.kunde_id, p_jahr, p_monat, v_bis,
+            v_netto, c_ust, round(v_netto * c_ust / 100, 2),
+            round(v_netto * (1 + c_ust / 100), 2), 'gestellt')
+    returning rechnung_id into v_r;
+
+    -- Eine Position je Fahrt. Der Kunde soll auf seiner Rechnung
+    -- wiederfinden, welche Fahrt was gekostet hat - eine Summenzeile
+    -- waere billiger und nicht pruefbar.
+    insert into velocity.rechnungsposition
+           (rechnung_id, position_nr, ausleihe_id, beschreibung, betrag)
+    select v_r,
+           row_number() over (order by a.startzeit),
+           a.ausleihe_id,
+           format('Fahrt am %s, %s Minuten',
+                  to_char(a.startzeit, 'DD.MM.YYYY HH24:MI'), a.dauer_minuten),
+           round(sum(ep.betrag), 2)
+      from velocity.ausleihe a
+      join velocity.entgeltposition ep using (ausleihe_id)
+     where a.kunde_id = v_k.kunde_id
+       and a.startzeit >= v_von and a.startzeit < v_bis
+       and a.status = 'abgeschlossen'
+     group by a.ausleihe_id, a.startzeit, a.dauer_minuten;
+
+    v_zahl := v_zahl + 1;
+  end loop;
+
+  return v_zahl;
 end;
 $$;
