@@ -19,6 +19,46 @@ begin
 end;
 $$;
 
+-- Vorrichtung fuer die Negativpruefung: ein Mitarbeiter mit GENAU EINER
+-- Rolle. fixture_mitarbeiter allein kann nicht zeigen, dass eine Rolle
+-- eine Sicht zu Recht NICHT sieht - mit allen Rollen gleichzeitig sieht
+-- er ohnehin alles. Erst eine einzelne, gezielt zugeteilte Rolle macht
+-- den Ausschluss pruefbar.
+create or replace function velocity_test.fixture_mitarbeiter_mit_rolle(p_suffix text, p_rolle text)
+returns uuid language plpgsql as $$
+declare v_uid uuid := gen_random_uuid(); v_m bigint;
+begin
+  insert into velocity.mitarbeiter (personalnummer, auth_uid, vorname, nachname, email)
+       values ('T-' || p_suffix, v_uid, 'Tom', 'Test', 't-' || p_suffix || '@example.org')
+    returning mitarbeiter_id into v_m;
+  insert into velocity.mitarbeiter_rolle (mitarbeiter_id, rolle_id)
+  select v_m, rolle_id from velocity.rolle where code = p_rolle;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_uid)::text, true);
+  return v_uid;
+end;
+$$;
+
+-- Vorrichtung: je eine Zeile Schadensmeldung/Wartungsauftrag. Beide
+-- Tabellen sind in dieser Datenbank noch leer (keine Referenzdaten fuer
+-- die Instandhaltung) - ein is_empty()- oder "liefert Zeilen"-Test ohne
+-- eigene Zeile waere unabhaengig vom Rollenfilter immer wahr bzw. immer
+-- falsch und pruefte damit gar nichts. runtests() rollt die
+-- Testtransaktion nach jeder Funktion zurueck, es bleibt keine Spur.
+create or replace function velocity_test.fixture_schaden_und_auftrag()
+returns void language plpgsql as $$
+declare v_fahrrad_id bigint; v_kunde_id bigint; v_schaden_id bigint;
+begin
+  select fahrrad_id into v_fahrrad_id from velocity.fahrrad limit 1;
+  select kunde_id   into v_kunde_id   from velocity.kunde   limit 1;
+  insert into velocity.schadensmeldung
+         (fahrrad_id, melder_kunde_id, kategorie, beschreibung, schwere)
+  values (v_fahrrad_id, v_kunde_id, 'Test', 'Testmeldung fuer die Rollenpruefung', 'gering')
+    returning schadensmeldung_id into v_schaden_id;
+  insert into velocity.wartungsauftrag (auftragsnummer, fahrrad_id, schadensmeldung_id)
+  values ('WA-TEST-' || v_schaden_id, v_fahrrad_id, v_schaden_id);
+end;
+$$;
+
 create or replace function velocity_test.test_v_sichten_existieren()
 returns setof text language plpgsql as $$
 begin
@@ -33,14 +73,25 @@ $$;
 create or replace function velocity_test.test_v_ohne_rolle_keine_zeile()
 returns setof text language plpgsql as $$
 begin
+  -- schadensmeldung/wartungsauftrag sind sonst leer - siehe Kommentar an
+  -- fixture_schaden_und_auftrag.
+  perform velocity_test.fixture_schaden_und_auftrag();
   perform set_config('request.jwt.claims', '', true);
   -- Das ist die eigentliche Sperre: PostgREST meldet Kunden und
-  -- Mitarbeitende als dieselbe Datenbankrolle an. Wenn die Sicht nicht
-  -- selbst filtert, liest jeder Kunde alle Kundenstammdaten.
+  -- Mitarbeitende als dieselbe Datenbankrolle an. Wenn eine Sicht nicht
+  -- selbst filtert, liest jeder Kunde die Stammdaten aller anderen. Alle
+  -- fuenf Arbeitssichten muessen das zeigen, nicht nur zwei von fuenf -
+  -- genau die Luecke, die der Rest dieser Testdatei bisher offen liess.
   return next is_empty($q$ select 1 from velocity.v_wawi_kunde $q$,
                        'Ohne Anmeldung liefert v_wawi_kunde nichts');
   return next is_empty($q$ select 1 from velocity.v_wawi_flotte $q$,
                        'Ohne Anmeldung liefert v_wawi_flotte nichts');
+  return next is_empty($q$ select 1 from velocity.v_wawi_station $q$,
+                       'Ohne Anmeldung liefert v_wawi_station nichts');
+  return next is_empty($q$ select 1 from velocity.v_wawi_schaden $q$,
+                       'Ohne Anmeldung liefert v_wawi_schaden nichts');
+  return next is_empty($q$ select 1 from velocity.v_wawi_auftrag $q$,
+                       'Ohne Anmeldung liefert v_wawi_auftrag nichts');
 end;
 $$;
 
@@ -48,11 +99,47 @@ create or replace function velocity_test.test_v_mit_rolle_liefert_zeilen()
 returns setof text language plpgsql as $$
 declare v_n integer;
 begin
+  -- schadensmeldung/wartungsauftrag sind sonst leer - siehe Kommentar an
+  -- fixture_schaden_und_auftrag.
+  perform velocity_test.fixture_schaden_und_auftrag();
   perform velocity_test.fixture_mitarbeiter('sicht');
   select count(*) into v_n from velocity.v_wawi_flotte;
   return next cmp_ok(v_n, '>', 0, 'Mit Rolle liefert v_wawi_flotte Raeder');
   select count(*) into v_n from velocity.v_wawi_station;
   return next cmp_ok(v_n, '>', 0, 'Mit Rolle liefert v_wawi_station Stationen');
+  select count(*) into v_n from velocity.v_wawi_kunde;
+  return next cmp_ok(v_n, '>', 0, 'Mit Rolle liefert v_wawi_kunde Kunden');
+  select count(*) into v_n from velocity.v_wawi_schaden;
+  return next cmp_ok(v_n, '>', 0, 'Mit Rolle liefert v_wawi_schaden Meldungen');
+  select count(*) into v_n from velocity.v_wawi_auftrag;
+  return next cmp_ok(v_n, '>', 0, 'Mit Rolle liefert v_wawi_auftrag Auftraege');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Die beiden Tests oben zeigen nur, dass IRGENDEINE Rolle etwas sieht -
+-- mit allen vier Rollen gleichzeitig (fixture_mitarbeiter) sieht der
+-- Testmitarbeiter ohnehin jede Sicht. Der eigentliche Streitpunkt
+-- zwischen Kunde und Mitarbeiter ist die Trennung: dieselbe
+-- Datenbankrolle 'authenticated', aber unterschiedliche Sichtbarkeit je
+-- nach zugeteilter Fachrolle. Das prueft nur eine Zusicherung, die eine
+-- NICHT zugeteilte Rolle ausdruecklich als leer erwartet.
+create or replace function velocity_test.test_v_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('disposition-only', 'disposition');
+  select count(*) into v_n from velocity.v_wawi_flotte;
+  return next cmp_ok(v_n, '>', 0, 'Disposition sieht die Flotte');
+  select count(*) into v_n from velocity.v_wawi_kunde;
+  return next is(v_n, 0, 'Disposition sieht keine Kundenstammdaten - kundenservice/leitung sind nicht zugeteilt');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('kundenservice-only', 'kundenservice');
+  select count(*) into v_n from velocity.v_wawi_kunde;
+  return next cmp_ok(v_n, '>', 0, 'Kundenservice sieht die Kundenstammdaten');
+  select count(*) into v_n from velocity.v_wawi_flotte;
+  return next is(v_n, 0, 'Kundenservice sieht nicht die Flotte - disposition/werkstatt/leitung sind nicht zugeteilt');
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;

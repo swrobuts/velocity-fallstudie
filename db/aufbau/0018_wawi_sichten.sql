@@ -103,7 +103,11 @@ comment on column velocity.v_wawi_flotte.hersteller is
 comment on column velocity.v_wawi_flotte.modell is
   'Modellbezeichnung, fuer die Ersatzteilsuche in der Werkstatt.';
 comment on column velocity.v_wawi_flotte.status is
-  'Aktueller Betriebsstatus des Rades.';
+  'Aktueller Betriebsstatus des Rades - verfuegbar, ausgeliehen, wartung, '
+  'defekt oder ausgemustert. Anders als die oeffentliche '
+  'v_verfuegbares_fahrrad zeigt diese Sicht gerade auch die NICHT '
+  'verfuegbaren Raeder: die Disposition muss wissen, welches Rad in der '
+  'Wartung haengt, nicht nur, welches gerade fahrbereit ist.';
 comment on column velocity.v_wawi_flotte.angeschafft_am is
   'Anschaffungsdatum, Grundlage fuer Abschreibung und Alterseinschaetzung.';
 comment on column velocity.v_wawi_flotte.standort is
@@ -165,7 +169,7 @@ comment on view velocity.v_wawi_kunde is
   'Zahlungsmittel (GR17) und ohne alles aus dem Schema auth - was niemand '
   'braucht, wird nicht ausgeliefert. Filtert selbst ueber velocity.hat_rolle.';
 comment on column velocity.v_wawi_kunde.kunde_id is
-  'Schluessel des Kunden.';
+  'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_kunde.kundennummer is
   'Fachlicher, am Telefon nennbarer Schluessel des Kunden.';
 comment on column velocity.v_wawi_kunde.anrede is
@@ -236,7 +240,7 @@ comment on view velocity.v_wawi_station is
   'geloescht, deshalb bleibt sie hier sichtbar statt zu verschwinden). '
   'Filtert selbst ueber velocity.hat_rolle.';
 comment on column velocity.v_wawi_station.station_id is
-  'Schluessel der Station.';
+  'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_station.stationsnummer is
   'Fachlicher Schluessel der Station.';
 comment on column velocity.v_wawi_station.name is
@@ -296,7 +300,7 @@ comment on view velocity.v_wawi_schaden is
   'Alter, unabhaengig vom Bearbeitungsstand. Filtert selbst ueber '
   'velocity.hat_rolle.';
 comment on column velocity.v_wawi_schaden.schadensmeldung_id is
-  'Schluessel der Meldung.';
+  'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_schaden.fahrrad_id is
   'Das gemeldete Rad.';
 comment on column velocity.v_wawi_schaden.rahmennummer is
@@ -345,7 +349,7 @@ comment on view velocity.v_wawi_auftrag is
   'Arbeitssicht der Werkstatt: jeder Wartungsauftrag mit Rad, Bearbeiter und '
   'Bearbeitungsstand. Filtert selbst ueber velocity.hat_rolle.';
 comment on column velocity.v_wawi_auftrag.wartungsauftrag_id is
-  'Schluessel des Auftrags.';
+  'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_auftrag.auftragsnummer is
   'Fachlicher, in der Werkstatt gesprochener Schluessel des Auftrags.';
 comment on column velocity.v_wawi_auftrag.fahrrad_id is
