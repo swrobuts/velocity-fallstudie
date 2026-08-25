@@ -246,3 +246,28 @@ begin
   return next ok(v_e.ausleihe_id is null, 'Es entsteht keine Ausleihe ohne Startort');
 end;
 $$;
+
+create or replace function velocity_test.test_d_distanz_ist_optional()
+returns setof text language plpgsql as $$
+declare v_f record; v_a bigint;
+begin
+  return next has_column('velocity'::name, 'ausleihe'::name, 'distanz_km'::name,
+                         'ausleihe traegt eine Distanz');
+  return next col_is_null('velocity'::name, 'ausleihe'::name, 'distanz_km'::name,
+                          'Die Distanz darf fehlen: null heisst nicht gemessen');
+
+  select * into v_f from velocity_test.fixture_rad('distanz');
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_latitude, start_longitude, startzeit)
+       values (v_f.o_kunde_id, v_f.o_fahrrad_id, 49.79, 9.93, now() - interval '1 hour')
+    returning ausleihe_id into v_a;
+
+  -- Eine negative Strecke ist kein Messfehler, sondern ein Denkfehler.
+  return next throws_ok(
+    format($q$ update velocity.ausleihe set distanz_km = -1 where ausleihe_id = %s $q$, v_a),
+    '23514', null,
+    'Negative Distanz wird abgewiesen');
+  return next lives_ok(
+    format($q$ update velocity.ausleihe set distanz_km = 0 where ausleihe_id = %s $q$, v_a),
+    'Null Kilometer sind erlaubt: eine Fahrt kann dort enden, wo sie begann');
+end;
+$$;

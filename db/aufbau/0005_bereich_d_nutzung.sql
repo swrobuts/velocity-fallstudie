@@ -62,6 +62,27 @@ create table if not exists velocity.ausleihe (
   constraint ausleihe_endstation_fk foreign key (end_station_id)
     references velocity.station (station_id) on update cascade on delete restrict
 );
+
+-- Nachtraeglich ergaenzt fuer die Warenwirtschaft: die gefahrene
+-- Strecke. Nullable mit Absicht - null heisst "nicht gemessen", nicht
+-- "null Kilometer". Wo sie fehlt, schaetzt v_wawi_km_co2 aus der
+-- Luftlinie und kennzeichnet die Zeile als geschaetzt.
+alter table velocity.ausleihe
+  add column if not exists distanz_km numeric(8,2);
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'ausleihe_distanz_chk') then
+    alter table velocity.ausleihe
+      add constraint ausleihe_distanz_chk
+      check (distanz_km is null or distanz_km >= 0);
+  end if;
+end;
+$$;
+
+comment on column velocity.ausleihe.distanz_km is
+  'Gefahrene Strecke in Kilometern. null bedeutet nicht gemessen, nicht null Kilometer.';
+
 select velocity.fn_audit_anhaengen('ausleihe');
 
 -- =====================================================================
