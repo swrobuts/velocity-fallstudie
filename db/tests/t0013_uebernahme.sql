@@ -59,8 +59,18 @@ begin
 
   return next cmp_ok((select count(*)::int from velocity.ausleihe), '>=', 23,
                      'Mindestens 23 Ausleihen vorhanden');
-  return next is((select count(*)::int from velocity.mitgliedschaft), 10,
-                 '10 Mitgliedschaften vorhanden');
+  -- Wie bei kunde und ausleihe: das Protokoll haelt den Uebernahmelauf
+  -- exakt fest, der Bestand nur als Untergrenze. Seit Aufgabe 6 legt
+  -- db/betrieb/referenzdaten_grundlage.sql zusaetzliche, ERFUNDENE
+  -- Mitgliedschaften an - eine exakte Pruefung auf 10 wuerde bei jedem
+  -- Lauf dieser Datei zu Unrecht fehlschlagen.
+  return next is(
+    (select max(geschrieben) from velocity.uebernahme_protokoll
+      where ziel = 'velocity.mitgliedschaft, velocity.freiminuten_periode'),
+    10,
+    'Das Protokoll weist 10 uebernommene Mitgliedschaften aus');
+  return next cmp_ok((select count(*)::int from velocity.mitgliedschaft), '>=', 10,
+                     'Mindestens so viele Mitgliedschaften wie im Altbestand uebernommen');
 
   -- Gegenprobe: nichts aus Schweinfurt ist zurueckgeblieben.
   return next is((select count(*)::int from velocity.station s

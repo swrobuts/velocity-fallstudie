@@ -8,6 +8,20 @@ was hier liegt, betrifft nur die konkrete Instanz.
 | `uebernahme_altdaten.sql` | Einmalige Übernahme aus `cityBikesRental`, mit Protokoll |
 | `abgleichsbericht.sql` | Soll-Ist-Vergleich nach der Übernahme |
 | `altschema_absichern.sql` | Schließt den anonymen Zugriff im Altschema |
+| `referenzdaten_grundlage.sql` | Referenzjahr, Teil 1: Preisperioden, Tarifkonditionen, Mitgliedschaften, erster Mitarbeiter |
+
+## Referenzdaten für das Lehrjahr
+
+Drei Dateien bauen gemeinsam ein Referenzjahr an Bewegungsdaten auf, auf
+dem die Warenwirtschaft überhaupt etwas auszuwerten hat. Sie müssen in
+dieser Reihenfolge laufen, weil jede die vorherige voraussetzt:
+
+`referenzdaten_grundlage.sql` → `referenzdaten_fahrten.sql` → `referenzdaten_rechnungen.sql`
+
+(die beiden letzteren entstehen erst mit den Folgeaufgaben). **Alle drei
+erzeugen ERFUNDENE Daten** — plausibel gebaut, aber nicht erhoben. Jede
+Datei sagt das in ihrem Kopf, und jeder Lauf wird in
+`velocity.uebernahme_protokoll` festgehalten.
 
 ## Ein Schema für PostgREST freischalten
 
