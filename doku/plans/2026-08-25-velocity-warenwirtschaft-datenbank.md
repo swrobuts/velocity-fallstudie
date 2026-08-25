@@ -73,7 +73,7 @@ Diese Vorgaben gelten für **jede** Aufgabe und werden dort nicht wiederholt.
 | `db/betrieb/referenzdaten_fahrten.sql` | rund 12 000 Fahrten samt Bepreisung, Radstatus angleichen |
 | `db/betrieb/referenzdaten_rechnungen.sql` | Monatsrechnungen über das Referenzjahr |
 | `db/tests/t0014_bereich_j.sql` … `t0019_wawi_logik.sql` | je eine Testdatei zur zugehörigen Aufbaudatei |
-| `tools/abnahme.sh` | **ändern:** neue Prüfungen 19 bis 24 |
+| `tools/abnahme.sh` | **ändern:** neue Prüfungen 19 bis 25 |
 | `doku/datenmodell/erd/erd-wawi.mmd` | **ändern:** gebaute Bereiche vom Entwurf abgrenzen |
 
 Die Sicherheitsfunktionen stehen **vor** den Sichten, nicht dahinter. Der
@@ -3763,6 +3763,20 @@ select velocity.fn_protokoll_anhaengen('fahrrad',     'fahrrad_id');
 select velocity.fn_protokoll_anhaengen('station',     'station_id');
 
 -- ---- Rechte ----------------------------------------------------------
+-- ERST entziehen, DANN gezielt vergeben. Diese Zeile ist nicht
+-- vorsorglich, sie ist notwendig: PostgreSQL gibt jeder NEU angelegten
+-- Funktion implizit EXECUTE an PUBLIC, und die Zeile
+-- "alter default privileges ... revoke execute on functions from public"
+-- in 0011 hat in dieser Datenbank nachweislich KEINEN Eintrag in
+-- pg_default_acl erzeugt - sie schuetzt neue Funktionen also nicht,
+-- entgegen ihrem eigenen Kommentar. Aufgefallen ist das in Aufgabe 5:
+-- nach einem Lauf von 0009 allein stand fn_ausleihe_abrechnen mit
+-- proacl = null da, also offen fuer anon und authenticated.
+--
+-- Ohne diese Zeile waeren api_kunde_auskunft und
+-- api_kunde_anonymisieren fuer jeden angemeldeten Kunden aufrufbar.
+revoke all on all functions in schema velocity from public, anon, authenticated;
+
 -- Nur die api_-Funktionen und die Sichten, keine Tabelle.
 grant execute on function
   velocity.api_rad_anlegen(text, bigint, bigint),
@@ -3839,7 +3853,7 @@ In `doku/datenmodell/01-anforderungen.md` die Tabelle unter GR15 fortsetzen. Die
 
 Darunter den Hinweis, dass GR16 bis GR22 aus Phase 2 stammen und in `doku/specs/2026-08-25-velocity-warenwirtschaft-design.md` begründet sind.
 
-- [ ] **Schritt 2: Sechs Prüfungen an `tools/abnahme.sh` anhängen**
+- [ ] **Schritt 2: Sieben Prüfungen an `tools/abnahme.sh` anhängen**
 
 `abnahme.sh` kennt keine Hilfsfunktion `pruefe`, sondern das Paar
 `schritt "Titel"` und `ergebnis <0|1> "Meldung"`; `nr` zählt selbst
@@ -3913,7 +3927,36 @@ PYEOF
 [ "$n" = "0" ] && ergebnis 0 "alle Annahmen mit Quelle" \
                || ergebnis 1 "$n Annahmen ohne Quelle"
 
-# --------------------------------------------- 24 Radstatus
+# --------------------------------------------- 24 Funktionsrechte
+schritt "Keine Funktion ist versehentlich fuer jeden ausfuehrbar"
+# PostgreSQL gibt jeder neu angelegten Funktion implizit EXECUTE an
+# PUBLIC. Die Zeile "alter default privileges" in 0011 faengt das
+# NICHT ab - in Aufgabe 5 nachgemessen. Es bleibt der explizite
+# revoke, und der wirkt nur, wenn er nach der letzten Funktion laeuft.
+n=$(python3 - <<'PYEOF'
+import os, psycopg
+for z in open('.env', encoding='utf-8'):
+    z = z.strip()
+    if z and not z.startswith('#') and '=' in z:
+        k, v = z.split('=', 1); os.environ.setdefault(k, v)
+c = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
+                    dbname=os.environ['PGDATABASE'], user=os.environ['PGUSER'],
+                    password=os.environ['PGPASSWORD']).cursor()
+c.execute("""select count(*) from pg_proc p
+               join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'velocity'
+                and p.proname not like 'api\\_%'
+                and (p.proacl is null
+                     or exists (select 1 from aclexplode(p.proacl) a
+                                 join pg_roles r on r.oid = a.grantee
+                                where r.rolname in ('anon','authenticated')))""")
+print(c.fetchone()[0])
+PYEOF
+)
+[ "$n" = "0" ] && ergebnis 0 "nur api_-Funktionen sind freigegeben" \
+               || ergebnis 1 "$n Nicht-api-Funktion(en) fuer anon oder authenticated ausfuehrbar"
+
+# --------------------------------------------- 25 Radstatus
 schritt "Radstatus und offene Ausleihen stimmen ueberein"
 # Genau dieser Widerspruch lag 37-fach in den uebernommenen Daten und
 # fiel nie auf, weil keine Oberflaeche beides nebeneinander zeigte.
@@ -3947,11 +3990,11 @@ Phase 1 **und** 2 erweitern.
 ```bash
 bash tools/abnahme.sh
 ```
-Erwartet: 24 Prüfungen, alle grün.
+Erwartet: 25 Prüfungen, alle grün.
 
 - [ ] **Schritt 4: Jede neue Prüfung gegen sich selbst testen**
 
-Eine Prüfung, die nie rot war, prüft nichts. Für jede der sechs einmal den Fehlerfall herstellen und bestätigen, dass sie anschlägt — danach zurücknehmen. Beispiel für Prüfung 23:
+Eine Prüfung, die nie rot war, prüft nichts. Für jede der sieben einmal den Fehlerfall herstellen und bestätigen, dass sie anschlägt — danach zurücknehmen. Beispiel für Prüfung 23:
 
 ```bash
 python3 -c "
@@ -3999,7 +4042,7 @@ ordnen GR5 („Preis zum Startzeitpunkt der Fahrt") weiterhin
 `fn_ausleihe_abrechnen`. Beide Stellen suchen und richtigstellen — das
 Foliendeck danach neu bauen, sonst steht die alte Zuordnung im PDF.
 
-In `README.md` die Prüfungszahl von 18 auf 24 heben und die drei Referenzdatendateien in der Werkzeugliste nennen, mit dem Hinweis, dass sie **erfundene** Daten erzeugen.
+In `README.md` die Prüfungszahl von 18 auf 25 heben und die drei Referenzdatendateien in der Werkzeugliste nennen, mit dem Hinweis, dass sie **erfundene** Daten erzeugen.
 
 - [ ] **Schritt 7: Alles zusammen prüfen**
 
