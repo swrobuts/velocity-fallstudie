@@ -80,6 +80,18 @@ update velocity.tarif_kondition k
 -- dasselbe ist wie "insgesamt genau einmal". Der Marker aus dem
 -- Uebernahmeprotokoll traegt hier die Idempotenz, nicht die
 -- Kandidatenauswahl.
+--
+-- v_neu wird am Ende des Blocks per set_config() in eine
+-- transaktionslokale Einstellung geschrieben (dritter Parameter true =
+-- nur fuer diese Transaktion, verschwindet beim commit). Grund: das
+-- Uebernahmeprotokoll unten in Schritt 6 muss das DELTA dieses Laufs
+-- eintragen, nicht den Gesamtbestand - wie db/betrieb/uebernahme_altdaten.sql
+-- es mit v_nachher - v_vorher vorrechnet, und wie t0013_uebernahme.sql
+-- es prueft. Der Wert entsteht aber als lokale PL/pgSQL-Variable in
+-- diesem anonymen Block und waere ausserhalb seines "end;" verloren;
+-- set_config/current_setting ist der uebliche Weg, einen Wert innerhalb
+-- derselben Transaktion ueber Blockgrenzen hinweg weiterzureichen, ohne
+-- eine Tabelle dafuer anzulegen.
 do $$
 declare
   c_anzahl constant integer := 400;
@@ -90,6 +102,9 @@ begin
      where quelle = 'Referenzdaten (erzeugt)'
        and ziel like 'velocity.nutzungspreis%'
   ) then
+    -- Nichts Neues in diesem Lauf - das Protokoll unten traegt dafuer
+    -- 0 ein, nicht (versehentlich) den letzten bekannten Wert.
+    perform set_config('velocity.referenzdaten_mitgliedschaft_neu', '0', true);
     raise notice 'Mitgliedschaften bereits angelegt, Block 4 wird uebersprungen';
     return;
   end if;
@@ -123,6 +138,7 @@ begin
 
   get diagnostics v_neu = row_count;
   raise notice 'Mitgliedschaften angelegt: %', v_neu;
+  perform set_config('velocity.referenzdaten_mitgliedschaft_neu', v_neu::text, true);
 
   -- Freiminuten je Monat des Referenzjahres. Ohne sie hat der
   -- Studenten- und OEPNV-Tarif im Referenzjahr keinen Vorteil, und die
@@ -181,7 +197,12 @@ insert into velocity.uebernahme_protokoll
 select now(), 'Referenzdaten (erzeugt)',
        'velocity.nutzungspreis, velocity.mitgliedschaft, velocity.freiminuten_periode, velocity.mitarbeiter',
        0,
-       (select count(*) from velocity.mitgliedschaft),
+       -- Das DELTA dieses Laufs (aus Block 4 durchgereicht, siehe dort),
+       -- nicht der Gesamtbestand an velocity.mitgliedschaft. Ein
+       -- Gesamtbestand waere eine andere Zahl, die aussieht wie
+       -- dieselbe - und wuerde db/betrieb/uebernahme_altdaten.sql und
+       -- der Pruefung in t0013_uebernahme.sql widersprechen.
+       coalesce(current_setting('velocity.referenzdaten_mitgliedschaft_neu', true)::int, 0),
        0,
        'ERFUNDENE Daten fuer die Lehre, nicht erhoben. Preisperioden ab 2025-09-01 '
        'mit einem Wechsel des Minutenpreises zum 2026-03-01; Tarifkonditionen '
@@ -243,3 +264,13 @@ $$;
 -- delete from velocity.mitarbeiter_rolle where mitarbeiter_id in
 --   (select mitarbeiter_id from velocity.mitarbeiter where personalnummer = 'M-0001');
 -- delete from velocity.mitarbeiter where personalnummer = 'M-0001';
+-- delete from velocity.uebernahme_protokoll
+--  where quelle = 'Referenzdaten (erzeugt)'
+--    and ziel like 'velocity.nutzungspreis%';
+--  -- Zwingend, nicht optional: an genau diesem Protokolleintrag haengt
+--  -- die Idempotenzsperre von Block 4 (siehe dort). Bleibt er nach der
+--  -- Ruecknahme stehen, haelt ein erneuter Lauf dieser Datei die
+--  -- Mitgliedschaften faelschlich fuer bereits angelegt und ueberspringt
+--  -- Block 4 dauerhaft - die Sperre behauptet dann etwas, das nicht mehr
+--  -- stimmt. Ohne diese Zeile ist die Ruecknahme kein Ruecknahmepfad,
+--  -- sondern eine Falle fuer den naechsten Lauf.
