@@ -37,10 +37,35 @@ from thws import (  # noqa: E402
 )
 
 WURZEL  = pathlib.Path(__file__).resolve().parent.parent
+
+# Frueher diente ein konkretes BINT-Vorlesungsdeck aus dem Werkzeug
+# thws-deck-batch als Vorlage (nur fuer Layouts und Fussmasken, keine
+# Inhalte). Dieses Werkzeug ist abgeloest, der Ordner existiert nicht
+# mehr - ein fest verdrahteter absoluter Pfad auf ein fremdes Deck war
+# der Grund, warum das Bauen kaputtging. Die Nachfolge ist der Skill
+# thws-slides: sein Master traegt dieselben drei benoetigten Layouts
+# (Frontpage_Digital, Chapter, Slide) und enthaelt bereits null Folien,
+# sodass leere_praesentation() nichts zu entfernen hat.
 VORLAGE = pathlib.Path(
+    "/Users/robert/.claude/skills/thws-slides/assets/template.pptx"
+)
+_VORLAGE_ALT = pathlib.Path(
     "/Users/robert/Library/CloudStorage/OneDrive-Persönlich/Vorlesungen/"
     "thws-deck-batch/decks/BINT_E4_Datenmodellierung_WS2627_v3.pptx"
 )
+if not VORLAGE.exists():
+    if _VORLAGE_ALT.exists():
+        VORLAGE = _VORLAGE_ALT
+    else:
+        raise SystemExit(
+            "Vorlage fuer das Foliendeck fehlt. Gesucht wurden:\n"
+            f"  1) {VORLAGE}  (Master des Skills thws-slides)\n"
+            f"  2) {_VORLAGE_ALT}  (alte, abgeloeste Vorlage)\n"
+            "Keine der beiden Dateien existiert. Ohne Vorlage fehlen die "
+            "Layouts Frontpage_Digital/Chapter/Slide, das Deck kann nicht "
+            "gebaut werden - Pfad korrigieren oder Vorlage bereitstellen."
+        )
+
 ZIEL   = WURZEL / "slides" / "velocity-datenbankentwurf.pptx"
 ASSETS = WURZEL / "slides" / "assets"
 

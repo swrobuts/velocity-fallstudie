@@ -1,7 +1,7 @@
 # Foliendeck — Datenbankentwurf am Fallbeispiel VeloCity
 
-43 Folien im THWS-Design. Gebaut aus dem Vorlagendeck
-`BINT_E4_Datenmodellierung_WS2627_v3.pptx`, das Thema, Layouts und Fußmasken liefert.
+43 Folien im THWS-Design. Gebaut aus dem leeren Master des Skills `thws-slides`
+(`assets/template.pptx`), der die Layouts Frontpage_Digital, Chapter und Slide liefert.
 
 ## Das didaktische Gerüst
 

@@ -90,12 +90,24 @@ $$;
 -- Das Aenderungsprotokoll darf niemand aendern, auch die Leitung nicht.
 -- Ein Protokoll, das sich nachtraeglich glaetten laesst, beweist nichts
 -- (Art. 5 Abs. 2 DSGVO, Rechenschaftspflicht).
+--
+-- AS RESTRICTIVE ist hier keine Stilfrage, sondern der ganze Witz der
+-- Regel. Permissive Regeln (der Default) werden mit ODER verknuepft:
+-- eine using(false) unter mehreren permissiven Regeln verbietet nichts,
+-- sie wird von jeder permissiven Regel ueberstimmt, die etwas erlaubt -
+-- nachgemessen mit einer testweise angelegten zusaetzlichen permissiven
+-- Regel `for update using (true)`, gegen die das using(false) von hier
+-- wirkungslos blieb, das UPDATE ging durch. Restriktive Regeln werden
+-- dagegen mit UND verknuepft und koennen von keiner permissiven Regel
+-- mehr aufgehoben werden - das ist die einzige Fassung, die die
+-- Unveraenderlichkeit tatsaechlich erzwingt, unabhaengig davon, welche
+-- weiteren Regeln je auf dieser Tabelle entstehen.
 drop policy if exists aenderungsprotokoll_unveraenderlich on velocity.aenderungsprotokoll;
 create policy aenderungsprotokoll_unveraenderlich on velocity.aenderungsprotokoll
-  for update using (false);
+  as restrictive for update using (false);
 drop policy if exists aenderungsprotokoll_unloeschbar on velocity.aenderungsprotokoll;
 create policy aenderungsprotokoll_unloeschbar on velocity.aenderungsprotokoll
-  for delete using (false);
+  as restrictive for delete using (false);
 
 -- ---- Rechte ----------------------------------------------------------
 -- Keine Basistabelle wird freigegeben. Die Warenwirtschaft spricht
