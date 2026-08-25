@@ -26,7 +26,7 @@ Diese Vorgaben gelten für **jede** Aufgabe und werden dort nicht wiederholt.
 - **Primärschlüssel:** `<tabelle>_id bigint generated always as identity primary key`.
 - **Zeitstempel:** ausnahmslos `timestamptz`. **Geld:** `numeric(10,2)`. Niemals `float` für Beträge.
 - **Löschregeln:** `on update cascade on delete restrict` als Standard; `cascade` nur bei echter Existenzabhängigkeit (Positionen zu ihrem Kopf).
-- **Audit:** jede neue Basistabelle trägt `erstellt_am timestamptz not null default now()` und `geaendert_am timestamptz not null default now()` sowie `select velocity.fn_audit_anhaengen('<tabelle>');` direkt nach dem `create table`.
+- **Audit:** jede neue Basistabelle trägt `erstellt_am timestamptz not null default now()` und `geaendert_am timestamptz not null default now()` sowie `select velocity.fn_audit_anhaengen('<tabelle>');` nach dem `create table` — die beiden RLS-Zeilen dürfen dazwischenstehen, damit Tabelle, Schutz und Audit als ein Block zusammenbleiben.
 - **Idempotenz:** jede Datei unter `db/aufbau/` muss zweimal hintereinander fehlerfrei laufen. `create table if not exists`, `create or replace`, `drop policy if exists` vor `create policy`, ENUMs über den `do`-Block in `0001`, Constraints über `do`-Block mit `pg_constraint`-Prüfung.
 - **Dateikopf:** jede SQL-Datei beginnt mit einem Kommentarblock aus Zweck, Objekten und Rücknahme — Vorbild `db/aufbau/0005_bereich_d_nutzung.sql`.
 - **Kommentare auf Deutsch, ohne Umlaute im SQL-Quelltext** (die bestehenden Dateien schreiben `Ruecknahme`, `Gueltigkeit`); in Markdown und in `comment on`-Texten sind Umlaute erwünscht.
