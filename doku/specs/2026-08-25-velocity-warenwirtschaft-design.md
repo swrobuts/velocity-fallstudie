@@ -173,8 +173,28 @@ wer Mitarbeiter ist.
 | Was | Wie verhindert | Nachweis |
 |---|---|---|
 | Passwort | Liegt in `auth.users`; auf Schema `auth` hat weder `anon` noch `authenticated` Rechte | Abnahme fragt es von außen ab |
-| Zahlungsmittel | Kein `SELECT` auf `velocity.zahlungsmittel`, keine Sicht reicht es durch | Abnahme prüft Rechte und Sichten |
+| Zahlungsmittel | Zeilenregel `zahlungsmittel_eigene`: sichtbar sind nur die **eigenen**; keine `v_wawi_`-Sicht und keine `api_`-Funktion reicht fremde durch | Abnahme prüft Regel, Sichten und Funktionen |
 | Einzelne Fahrten eines Kunden | Kundenmaske zeigt Stammdaten und Rechnungsstatus; Fahrten nur als Summe | Sicht liefert keine `ausleihe_id` |
+
+**Warum hier eine Zeilenregel steht und kein Rechteentzug.** Der erste
+Entwurf verlangte schlicht: kein `SELECT` auf `velocity.zahlungsmittel`
+für Mitarbeitende. Das ist nicht erreichbar, und der Grund ist derselbe,
+der diesen ganzen Bereich prägt: PostgREST meldet Kunden **und**
+Mitarbeitende als dieselbe Datenbankrolle `authenticated` an. Ein Entzug,
+der Mitarbeitende sperrt, sperrt Kunden mit — und ein Kunde muss sein
+eigenes Zahlungsmittel sehen können.
+
+Beim Bauen ist genau das passiert: der Entzug stand in der Datei, und ein
+Kunde kam nicht mehr an seine eigenen Daten. Die Trennung kann deshalb
+nicht am Recht hängen, sondern nur an der Zeilenregel. Sie begrenzt auf
+`kunde.auth_uid = auth.uid()`. Wer als Mitarbeiter die Tabelle abfragt,
+sieht seine eigenen Zahlungsmittel, falls er zufällig auch Kunde ist —
+und sonst nichts. Fremde Bezahldaten bekommt er auf keinem Weg.
+
+Das ist keine Abschwächung von GR17, sondern seine einzig mögliche
+Umsetzung. Und es ist der Punkt, an dem die Fallstudie zeigt, dass
+Zugriffsschutz in einer geteilten Rolle nicht aus Rechten kommt, sondern
+aus Regeln.
 
 Der dritte Punkt ist der unauffälligste und der wichtigste: eine Liste
 von Fahrten mit Start, Ziel und Uhrzeit ist ein **Bewegungsprofil**.
@@ -220,7 +240,7 @@ der Ausleihe.
 | Nr. | Regel | Umsetzung |
 |---|---|---|
 | GR16 | Nur aktive Mitarbeitende haben Zugriff | `ist_mitarbeiter()` prüft den Status |
-| GR17 | Mitarbeitende sehen keine Zahlungsmittel | Kein Recht, keine Sicht |
+| GR17 | Mitarbeitende sehen keine fremden Zahlungsmittel | Zeilenregel `zahlungsmittel_eigene`, keine Sicht |
 | GR18 | Ein Kunde mit Rechnungen wird anonymisiert, nie gelöscht | `api_kunde_anonymisieren`; `ON DELETE RESTRICT` |
 | GR19 | Jede Änderung an Kundenstammdaten wird protokolliert | Trigger auf `kunde` |
 | GR20 | Ein Rad mit laufender Ausleihe darf nicht ausgemustert werden | CHECK im `api_`-Aufruf |

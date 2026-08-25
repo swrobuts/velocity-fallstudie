@@ -2161,12 +2161,21 @@ $$;
 create or replace function velocity_test.test_s_zahlungsmittel_bleibt_gesperrt()
 returns setof text language plpgsql as $$
 begin
-  -- GR17: Mitarbeitende sehen keine Zahlungsmittel. Das darf nicht an
-  -- der Disziplin der Oberflaeche haengen, sondern am Recht.
-  return next ok(not has_table_privilege('authenticated', 'velocity.zahlungsmittel', 'SELECT'),
-                 'authenticated darf zahlungsmittel nicht lesen');
+  -- GR17. Nicht ueber das Recht geprueft, sondern ueber die Regel: ein
+  -- Entzug fuer authenticated traefe Kunden und Mitarbeitende zugleich,
+  -- weil PostgREST beide als dieselbe Rolle anmeldet.
   return next ok(not has_table_privilege('anon', 'velocity.zahlungsmittel', 'SELECT'),
                  'anon darf zahlungsmittel nicht lesen');
+  return next isnt_empty(
+    $q$ select 1 from pg_policies
+         where schemaname = 'velocity' and tablename = 'zahlungsmittel'
+           and cmd = 'SELECT' and qual like '%auth.uid()%' $q$,
+    'Die Zeilenregel begrenzt zahlungsmittel auf die eigene Kennung');
+  return next is_empty(
+    $q$ select policyname from pg_policies
+         where schemaname = 'velocity' and tablename = 'zahlungsmittel'
+           and cmd = 'SELECT' and qual not like '%auth.uid()%' $q$,
+    'Es gibt keine zweite Leseregel, die daran vorbeifuehrt');
   return next is_empty(
     $q$ select c.relname from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
@@ -2345,10 +2354,19 @@ begin
 end;
 $$;
 
--- GR17: zahlungsmittel bleibt gesperrt. Die Zeile ist redundant zur
--- Schleife darueber und steht trotzdem hier, damit sie beim Lesen
--- auffaellt und niemand sie versehentlich aufhebt.
-revoke all on velocity.zahlungsmittel from anon, authenticated;
+-- KEIN pauschaler revoke auf zahlungsmittel. Der stand hier im ersten
+-- Entwurf und war falsch: 0017 laeuft nach 0011, die Zeile entzog also
+-- auch den Kundengrant. Ein Kunde kam nicht mehr an sein eigenes
+-- Zahlungsmittel - und GR17 verlangt das nicht, sie spricht von
+-- MITARBEITENDEN.
+--
+-- Der Punkt ist grundsaetzlich: Kunden und Mitarbeitende sind fuer
+-- PostgreSQL dieselbe Rolle. Ein Recht, das dem einen genommen wird, ist
+-- dem anderen genommen. Die Trennung kann hier deshalb nicht am Recht
+-- haengen, sondern nur an der Zeilenregel zahlungsmittel_eigene aus
+-- 0011: sie begrenzt auf kunde.auth_uid = auth.uid(). Wer als
+-- Mitarbeiter abfragt, sieht seine eigenen Zahlungsmittel, falls er
+-- zufaellig auch Kunde ist - und sonst nichts.
 
 -- Diese beiden Funktionen MUESSEN fuer authenticated ausfuehrbar sein.
 -- Nachgemessen: eine Sicht traegt NICHT die Ausfuehrungsrechte ihres
