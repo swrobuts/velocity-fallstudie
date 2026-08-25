@@ -1821,7 +1821,7 @@ for z in open('.env',encoding='utf-8'):
 c=psycopg.connect(host=os.environ['PGHOST'],port=os.environ['PGPORT'],dbname=os.environ['PGDATABASE'],
                   user=os.environ['PGUSER'],password=os.environ['PGPASSWORD']).cursor()
 c.execute('''select to_char(a.startzeit,'YYYY-MM') monat, t.typ_code,
-                    count(*) fahrten, round(sum(ep.betrag*ea.vorzeichen),2) umsatz
+                    count(*) fahrten, round(sum(ep.betrag),2) umsatz
                from velocity.ausleihe a
                join velocity.entgeltposition ep using (ausleihe_id)
                join velocity.entgeltart ea using (entgeltart_id)
@@ -1946,7 +1946,7 @@ declare
   v_zahl integer := 0;
 begin
   for v_k in
-    select a.kunde_id, round(sum(ep.betrag * ea.vorzeichen), 2) as netto
+    select a.kunde_id, round(sum(ep.betrag), 2) as netto
       from velocity.ausleihe a
       join velocity.entgeltposition ep using (ausleihe_id)
       join velocity.entgeltart      ea using (entgeltart_id)
@@ -1957,7 +1957,7 @@ begin
           where r.kunde_id = a.kunde_id
             and r.periode_jahr = p_jahr and r.periode_monat = p_monat)
      group by a.kunde_id
-    having round(sum(ep.betrag * ea.vorzeichen), 2) > 0
+    having round(sum(ep.betrag), 2) > 0
      order by a.kunde_id
   loop
     v_netto := v_k.netto;
@@ -1982,7 +1982,7 @@ begin
            a.ausleihe_id,
            format('Fahrt am %s, %s Minuten',
                   to_char(a.startzeit, 'DD.MM.YYYY HH24:MI'), a.dauer_minuten),
-           round(sum(ep.betrag * ea.vorzeichen), 2)
+           round(sum(ep.betrag), 2)
       from velocity.ausleihe a
       join velocity.entgeltposition ep using (ausleihe_id)
       join velocity.entgeltart      ea using (entgeltart_id)
@@ -2686,7 +2686,7 @@ begin
   -- schlimmer als keine.
   return next is(
     (select round(sum(umsatz), 2) from velocity.v_wawi_umsatz_radtyp),
-    (select round(sum(ep.betrag * ea.vorzeichen), 2)
+    (select round(sum(ep.betrag), 2)
        from velocity.entgeltposition ep
        join velocity.entgeltart ea using (entgeltart_id)
        join velocity.ausleihe a using (ausleihe_id)
@@ -2752,14 +2752,29 @@ Erwartet: die drei neuen Funktionen schlagen fehl.
 -- ---- Umsatz nach Radtyp ----------------------------------------------
 -- Monatsweise, weil eine Jahressumme keine Frage beantwortet, die
 -- jemand tatsaechlich stellt.
+-- ACHTUNG, teuer erkaufte Erkenntnis: hier steht sum(ep.betrag) und
+-- NICHT sum(ep.betrag * ea.vorzeichen). fn_position_anlegen speichert
+-- den Betrag bereits vorzeichenbehaftet (round(...) * v_art.vorzeichen).
+-- Ein zweites Mal mit dem Vorzeichen zu multiplizieren dreht Rabatte,
+-- Freiminuten und die Hoechstpreis-Kappung ins Positive und macht
+-- Gutschriften zu Einnahmen. Der erste Entwurf dieses Plans tat genau
+-- das, an neun Stellen. Gemessen am Referenzjahr haette es den Umsatz
+-- von 35 387 auf 72 973 Euro aufgeblaeht - eine Ueberzeichnung um 106
+-- Prozent, die keiner Plausibilitaetspruefung aufgefallen waere, weil
+-- alle Zahlen gleichmaessig zu hoch gewesen waeren.
+--
+-- Der Join auf entgeltart bleibt trotzdem: die Sichten brauchen ihn
+-- nicht fuer das Vorzeichen, aber spaetere Auswertungen nach Entgeltart
+-- schon, und ohne ihn faellt beim Lesen nicht auf, dass es Positionen
+-- mit negativem Betrag gibt.
 create or replace view velocity.v_wawi_umsatz_radtyp as
 select date_trunc('month', a.startzeit)::date              as monat,
        t.typ_code,
        t.bezeichnung                                       as typ,
        count(distinct a.ausleihe_id)                       as fahrten,
        sum(a.dauer_minuten)                                as minuten,
-       round(sum(ep.betrag * ea.vorzeichen), 2)            as umsatz,
-       round(sum(ep.betrag * ea.vorzeichen)
+       round(sum(ep.betrag), 2)            as umsatz,
+       round(sum(ep.betrag)
              / nullif(count(distinct a.ausleihe_id), 0), 2) as umsatz_je_fahrt
   from velocity.ausleihe a
   join velocity.entgeltposition ep using (ausleihe_id)
@@ -2781,8 +2796,8 @@ select date_trunc('month', a.startzeit)::date   as monat,
        coalesce(tr.bezeichnung, 'Ohne Mitgliedschaft') as tarif,
        count(distinct a.kunde_id)               as kunden,
        count(distinct a.ausleihe_id)            as fahrten,
-       round(sum(ep.betrag * ea.vorzeichen), 2) as umsatz,
-       round(sum(ep.betrag * ea.vorzeichen)
+       round(sum(ep.betrag), 2) as umsatz,
+       round(sum(ep.betrag)
              / nullif(count(distinct a.kunde_id), 0), 2) as umsatz_je_kunde
   from velocity.ausleihe a
   join velocity.entgeltposition ep using (ausleihe_id)
