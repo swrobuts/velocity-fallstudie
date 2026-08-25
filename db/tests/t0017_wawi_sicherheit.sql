@@ -54,12 +54,21 @@ $$;
 create or replace function velocity_test.test_s_zahlungsmittel_bleibt_gesperrt()
 returns setof text language plpgsql as $$
 begin
-  -- GR17: Mitarbeitende sehen keine Zahlungsmittel. Das darf nicht an
-  -- der Disziplin der Oberflaeche haengen, sondern am Recht.
-  return next ok(not has_table_privilege('authenticated', 'velocity.zahlungsmittel', 'SELECT'),
-                 'authenticated darf zahlungsmittel nicht lesen');
+  -- GR17. Nicht ueber das Recht geprueft, sondern ueber die Regel: ein
+  -- Entzug fuer authenticated traefe Kunden und Mitarbeitende zugleich,
+  -- weil PostgREST beide als dieselbe Rolle anmeldet.
   return next ok(not has_table_privilege('anon', 'velocity.zahlungsmittel', 'SELECT'),
                  'anon darf zahlungsmittel nicht lesen');
+  return next isnt_empty(
+    $q$ select 1 from pg_policies
+         where schemaname = 'velocity' and tablename = 'zahlungsmittel'
+           and cmd = 'SELECT' and qual like '%auth.uid()%' $q$,
+    'Die Zeilenregel begrenzt zahlungsmittel auf die eigene Kennung');
+  return next is_empty(
+    $q$ select policyname from pg_policies
+         where schemaname = 'velocity' and tablename = 'zahlungsmittel'
+           and cmd = 'SELECT' and qual not like '%auth.uid()%' $q$,
+    'Es gibt keine zweite Leseregel, die daran vorbeifuehrt');
   return next is_empty(
     $q$ select c.relname from pg_class c
           join pg_namespace n on n.oid = c.relnamespace

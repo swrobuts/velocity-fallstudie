@@ -136,10 +136,19 @@ begin
 end;
 $$;
 
--- GR17: zahlungsmittel bleibt gesperrt. Die Zeile ist redundant zur
--- Schleife darueber und steht trotzdem hier, damit sie beim Lesen
--- auffaellt und niemand sie versehentlich aufhebt.
-revoke all on velocity.zahlungsmittel from anon, authenticated;
+-- KEIN pauschaler revoke auf zahlungsmittel. Der stand hier im ersten
+-- Entwurf und war falsch: 0017 laeuft nach 0011, die Zeile entzog also
+-- auch den Kundengrant. Ein Kunde kam nicht mehr an sein eigenes
+-- Zahlungsmittel - und GR17 verlangt das nicht, sie spricht von
+-- MITARBEITENDEN.
+--
+-- Der Punkt ist grundsaetzlich: Kunden und Mitarbeitende sind fuer
+-- PostgreSQL dieselbe Rolle. Ein Recht, das dem einen genommen wird, ist
+-- dem anderen genommen. Die Trennung kann hier deshalb nicht am Recht
+-- haengen, sondern nur an der Zeilenregel zahlungsmittel_eigene aus
+-- 0011: sie begrenzt auf kunde.auth_uid = auth.uid(). Wer als
+-- Mitarbeiter abfragt, sieht seine eigenen Zahlungsmittel, falls er
+-- zufaellig auch Kunde ist - und sonst nichts.
 
 -- Diese beiden Funktionen MUESSEN fuer authenticated ausfuehrbar sein.
 -- Nachgemessen: eine Sicht traegt NICHT die Ausfuehrungsrechte ihres
