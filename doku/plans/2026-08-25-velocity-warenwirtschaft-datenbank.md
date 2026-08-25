@@ -31,6 +31,24 @@ Diese Vorgaben gelten für **jede** Aufgabe und werden dort nicht wiederholt.
 - **Dateikopf:** jede SQL-Datei beginnt mit einem Kommentarblock aus Zweck, Objekten und Rücknahme — Vorbild `db/aufbau/0005_bereich_d_nutzung.sql`.
 - **Kommentare auf Deutsch, ohne Umlaute im SQL-Quelltext** (die bestehenden Dateien schreiben `Ruecknahme`, `Gueltigkeit`); in Markdown und in `comment on`-Texten sind Umlaute erwünscht.
 - **Kommentare begründen, sie beschreiben nicht.** Nicht „legt die Tabelle rolle an", sondern warum die Zuordnung m:n ist. Der bestehende Bestand hält das durch; er ist der Maßstab.
+- **Jede neue Tabelle, jede neue Sicht und jede neue Fachspalte bekommt
+  einen Kommentar.** Das ist kein guter Vorsatz, sondern ein
+  durchgesetzter Standard: `test_doku_vollstaendig` in
+  `db/tests/t0012_dokumentation.sql` sammelt alle Tabellen, Sichten und
+  Spalten ohne `obj_description`/`col_description` ein und schlägt fehl,
+  sobald eine fehlt. Ausgenommen sind nur `erstellt_am` und
+  `geaendert_am`. Vorbild für Ton und Länge: `db/aufbau/0012_dokumentation.sql`
+  — der Kommentar sagt, **wofür** die Spalte da ist oder **warum** sie so
+  aussieht, nicht wie sie heißt. `comment on column velocity.mitarbeiter.auth_uid
+  is 'Verknuepfung zur Anmeldung. Leer, solange sich die Person nie angemeldet hat.'`
+  ist ein Kommentar; `is 'Die auth_uid'` ist keiner.
+- **Row Level Security wird in derselben Datei eingeschaltet, die die
+  Tabelle anlegt** — `enable` und `force`, auch wenn die Regeln erst
+  später kommen. `test_s_rls_ueberall_aktiv` in
+  `db/tests/t0011_sicherheit.sql` prüft das über alle Basistabellen
+  hinweg. Eine Tabelle mit eingeschaltetem RLS und ohne Regel weist jeden
+  Zugriff ab — das ist zwischen ihrer Anlage und Aufgabe 9 genau das
+  richtige Verhalten.
 - **Neue Geschäftsregeln GR16 bis GR22** sind in Abschnitt 4.4 der Spec definiert. Wer eine umsetzt, nennt sie im Kommentar beim Namen.
 - **Commits:** deutschsprachige Nachrichten, Präfixe `feat:`, `fix:`, `docs:`, `test:`, `chore:`. Jede Aufgabe endet mit genau einem Commit. **Nicht pushen.**
 - **Arbeitsverzeichnis:** der Worktree `…/BikesRental/Web/.worktrees/velocity-datenmodell`. Alle Pfade sind relativ dazu.
@@ -166,6 +184,13 @@ $$;
 ```bash
 python3 db/test.py db/tests/t0014_bereich_j.sql
 ```
+
+Danach die beiden schemaweiten Prüfungen, die jede neue Tabelle betreffen:
+
+```bash
+python3 db/test.py db/tests/t0011_sicherheit.sql db/tests/t0012_dokumentation.sql
+```
+Erwartet: `test_s_rls_ueberall_aktiv` und `test_doku_vollstaendig` grün. Schlagen sie fehl, nennen sie die Tabelle oder Spalte, der RLS oder ein Kommentar fehlt.
 Erwartet: Fehler, weil `velocity.rolle` nicht existiert.
 
 - [ ] **Schritt 4: Aufbaudatei schreiben**
@@ -406,6 +431,13 @@ $$;
 ```bash
 python3 db/test.py db/tests/t0015_bereich_i.sql
 ```
+
+Danach die beiden schemaweiten Prüfungen, die jede neue Tabelle betreffen:
+
+```bash
+python3 db/test.py db/tests/t0011_sicherheit.sql db/tests/t0012_dokumentation.sql
+```
+Erwartet: `test_s_rls_ueberall_aktiv` und `test_doku_vollstaendig` grün. Schlagen sie fehl, nennen sie die Tabelle oder Spalte, der RLS oder ein Kommentar fehlt.
 Erwartet: Fehler, weil `velocity.schadensmeldung` nicht existiert.
 
 - [ ] **Schritt 3: Aufbaudatei schreiben**
@@ -696,6 +728,13 @@ $$;
 ```bash
 python3 db/test.py db/tests/t0016_bereich_k.sql
 ```
+
+Danach die beiden schemaweiten Prüfungen, die jede neue Tabelle betreffen:
+
+```bash
+python3 db/test.py db/tests/t0011_sicherheit.sql db/tests/t0012_dokumentation.sql
+```
+Erwartet: `test_s_rls_ueberall_aktiv` und `test_doku_vollstaendig` grün. Schlagen sie fehl, nennen sie die Tabelle oder Spalte, der RLS oder ein Kommentar fehlt.
 Erwartet: Fehler, weil `velocity.aenderungsprotokoll` nicht existiert.
 
 - [ ] **Schritt 3: Aufbaudatei schreiben**
@@ -2188,9 +2227,14 @@ comment on function velocity.ist_mitarbeiter() is
   'Einziger Ort, an dem entschieden wird, wer Mitarbeiter ist. GR16.';
 
 -- ---- Row Level Security ---------------------------------------------
--- Die Basistabellen bleiben fuer anon und authenticated ohnehin ohne
--- Recht. RLS ist die zweite Sperre: sie greift auch dann, wenn spaeter
--- versehentlich ein grant gesetzt wird.
+-- RLS ist auf diesen Tabellen bereits seit ihrer Anlage eingeschaltet
+-- (globale Randbedingung). Bis hierher hiess das: niemand kommt heran,
+-- weil keine Regel existiert. Jetzt kommen die Regeln dazu.
+--
+-- enable und force stehen trotzdem noch einmal hier - idempotent und
+-- billig. Sie sind die Zusicherung, dass diese Datei fuer sich allein
+-- einen vollstaendigen Zustand herstellt und nicht darauf baut, dass
+-- eine fruehere Datei etwas nicht vergessen hat.
 do $$
 declare v_t text;
 begin
