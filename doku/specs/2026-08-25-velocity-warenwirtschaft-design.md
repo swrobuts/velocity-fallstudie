@@ -243,7 +243,7 @@ der Ausleihe.
 | GR16 | Nur aktive Mitarbeitende haben Zugriff | `ist_mitarbeiter()` prüft den Status |
 | GR17 | Mitarbeitende sehen keine fremden Zahlungsmittel | Zeilenregel `zahlungsmittel_eigene`, keine Sicht |
 | GR18 | Ein Kunde mit Rechnungen wird anonymisiert, nie gelöscht | `api_kunde_anonymisieren`; `ON DELETE RESTRICT` |
-| GR19 | Jede Änderung an Kundenstammdaten wird protokolliert | Trigger auf `kunde` |
+| GR19 | Jede Änderung an Stammdaten wird feldweise protokolliert | Trigger auf `kunde`, `mitarbeiter`, `station` |
 | GR20 | Ein Rad mit laufender Ausleihe darf nicht ausgemustert werden | CHECK im `api_`-Aufruf |
 | GR21 | Jede Statusänderung eines Rades erzeugt ein `fahrrad_ereignis` | Trigger auf `fahrrad` |
 | GR22 | Eine Station mit Rädern oder Fahrten wird stillgelegt, nicht gelöscht | `betriebszeitraum` schließen |
