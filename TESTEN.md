@@ -58,14 +58,19 @@ Dann auf `http://localhost:8765`:
 1. **Abgemeldet ansehen.** Kennzahlenleiste zeigt **10 Stationen**
    (alle in Würzburg; Schweinfurt wird seit dem 25.08.2026 nicht mehr
    übernommen), drei Tarifkarten mit
-   **3,10 / 16,00 / 5,00 Euro** für 30 Minuten, vier FAQ-Einträge, Karte mit
+   **3,10 / 8,50 / 17,00 Euro** für 30 Minuten, vier FAQ-Einträge, Karte mit
    Stations- und Fahrradmarkern. Browserkonsole ohne Fehler.
 
    > Diese drei Beträge sind der Sollwert. Sie stehen seit dem 24.08.2026
    > zusätzlich in `db/tests/t0010_sichten.sql` und fallen dort auf, wenn
    > jemand die Preise ändert, ohne diese Anleitung nachzuziehen. Genau
-   > dieser Auseinanderlauf hat eine externe Prüfung zu der Annahme
-   > gebracht, 16,00 Euro seien ein Datenfehler.
+   > dieser Auseinanderlauf hat eine externe Prüfung einmal zu der
+   > Annahme gebracht, der E-Bike-Preis sei ein Datenfehler — er war
+   > richtig, die Anleitung war alt.
+   >
+   > Stand 25.08.2026: die Minutenpreise wurden neu gestaffelt (0,10 /
+   > 0,25 / 0,50 statt 0,10 / 0,50 / 0,10). Vorher war das Lastenrad für
+   > 30 Minuten das günstigste der drei.
 2. **Zugriffsschutz in der Konsole prüfen:**
    ```javascript
    await supabaseClient.from('kunde').select('*').limit(1)

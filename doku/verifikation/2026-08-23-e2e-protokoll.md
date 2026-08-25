@@ -7,6 +7,16 @@ Belege sind DOM-Auswertungen und Konsolenausgaben aus dem laufenden
 Browser, nicht Bildschirmfotos: sie sind maschinell erhoben, exakt
 zitierbar und lassen sich jederzeit wiederholen.
 
+> **Dies ist eine Aufzeichnung, kein Sollwert.** Die Zahlen unten sind
+> der Zustand vom 23.08.2026 und stimmen absichtlich nicht mehr mit
+> heute überein — Schweinfurt ist seit dem 25.08. ausgegliedert (13 → 10
+> Stationen, 293 → 221 Räder), und die Minutenpreise wurden neu
+> gestaffelt (3,10 / 4,00 / 5,00 → 3,10 / 8,50 / 17,00 Euro für 30
+> Minuten). Ein Protokoll wird nicht rückwirkend geändert; wer die
+> aktuellen Erwartungen sucht, findet sie in `TESTEN.md`. Die
+> Schrittfolge selbst — was man in welcher Reihenfolge prüft — gilt
+> unverändert, und darauf verweist auch `tools/abnahme.sh`.
+
 ## 1 Öffentliche Ansicht, abgemeldet
 
 | Prüfpunkt | Erwartung | Ergebnis |
