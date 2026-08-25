@@ -299,10 +299,22 @@ function angemeldeterBenutzer() {
     return supabaseClient.auth.getUser();
 }
 
-// Liefert ein Set der Rollencodes. Leeres Set heisst: angemeldet, aber
-// kein Mitarbeiter - der haeufigste Fall, weil jeder KUNDE sich hier
-// anmelden koennte. Die Oberflaeche muss das unterscheiden koennen,
-// deshalb null fuer "gar nicht angemeldet".
+// VIER Rueckgaben, weil es vier Faelle gibt und drei davon leicht
+// verwechselt werden:
+//
+//   null        gar nicht angemeldet
+//   false       angemeldet, aber kein Mitarbeiter - der haeufigste Fall,
+//               weil jeder KUNDE sich hier anmelden kann
+//   Set (leer)  Mitarbeiter, aber ohne jede Rolle. Ein echter Kollege
+//               mit einem Eintrag in velocity.mitarbeiter, dem nur
+//               niemand eine Aufgabe zugeteilt hat. Ihm "Sie sind nicht
+//               als Mitarbeitendenkonto hinterlegt" zu sagen waere
+//               schlicht falsch - und er wuesste nicht, wen er fragen
+//               soll.
+//   Set (voll)  Mitarbeiter mit Rollen
+//
+// Der Unterschied zwischen false und dem leeren Set kostet eine Zeile
+// und erspart einem Kollegen einen Anruf bei der falschen Stelle.
 async function meineRollen() {
     if (rollenZwischenspeicher) return rollenZwischenspeicher;
 
@@ -320,8 +332,8 @@ async function meineRollen() {
         throw new Error(`Die Rollen liessen sich nicht ermitteln: ${fehlerMitarbeiter.message}`);
     }
     if (!istMitarbeiter) {
-        rollenZwischenspeicher = new Set();
-        return rollenZwischenspeicher;
+        rollenZwischenspeicher = false;
+        return false;
     }
 
     // Vier einzelne Aufrufe statt einer Sicht auf mitarbeiter_rolle: die
@@ -343,7 +355,7 @@ async function meineRollen() {
 
 - [ ] **Schritt 4: `wawi/index.html` — das Gerüst**
 
-Eine Seite mit vier Zuständen, die einander ablösen: Anmeldemaske, „kein Mitarbeiter", Arbeitsoberfläche, Ladezustand. Verwende genau diese `id`-Werte — `tools/wawi_check.py` aus Aufgabe 9 prüft den Vertrag zwischen HTML und JavaScript gegen sie:
+Eine Seite mit fünf Zuständen, die einander ablösen: Anmeldemaske, „kein Mitarbeiter", Arbeitsoberfläche, Ladezustand. Verwende genau diese `id`-Werte — `tools/wawi_check.py` aus Aufgabe 9 prüft den Vertrag zwischen HTML und JavaScript gegen sie:
 
 ```html
 <!doctype html>
@@ -373,6 +385,17 @@ Eine Seite mit vier Zuständen, die einander ablösen: Anmeldemaske, „kein Mit
     <button type="submit">Anmelden</button>
     <p id="anmeldung-fehler" class="fehler" role="alert"></p>
   </form>
+
+  <!-- Ein echter Kollege ohne zugeteilte Rolle. Ihm zu sagen, er sei
+       kein Mitarbeiter, waere falsch - und er wuesste nicht, wen er
+       fragen soll. Deshalb ein eigener Zustand mit einem Hinweis, der
+       weiterhilft. -->
+  <div id="zustand-ohne-rolle" class="vollbild" hidden>
+    <h1>Noch keine Aufgabe zugeteilt</h1>
+    <p>Ihr Mitarbeitendenkonto ist angelegt, aber es ist Ihnen noch kein
+       Aufgabenbereich zugeordnet. Die Leitung kann das nachtragen.</p>
+    <button id="knopf-abmelden-ohne-rolle" type="button">Abmelden</button>
+  </div>
 
   <div id="zustand-kein-mitarbeiter" class="vollbild" hidden>
     <h1>Kein Zugang</h1>
@@ -513,9 +536,10 @@ Der Kern von `rahmen.js`, und der Grund, warum diese Aufgabe eigen ist:
 // Die Oberflaeche muss DREI Zustaende unterscheiden koennen, die im
 // Browser gleich aussehen:
 //
-//   1. nicht angemeldet          -> Anmeldemaske
+//   1. nicht angemeldet             -> Anmeldemaske
 //   2. angemeldet, kein Mitarbeiter -> Hinweis, kein Zugang
-//   3. angemeldet, Mitarbeiter   -> Arbeitsoberflaeche
+//   3. Mitarbeiter ohne Rolle       -> Hinweis, wer helfen kann
+//   4. Mitarbeiter mit Rollen       -> Arbeitsoberflaeche
 //
 // Der zweite Fall ist der haeufigste und der, den man vergisst: JEDER
 // Kunde kann sich hier anmelden, weil es dieselbe auth.users ist. Er
@@ -536,11 +560,12 @@ async function seiteAufbauen() {
     const rollen = await meineRollen();
 
     zeige('zustand-laden', false);
-    zeige('zustand-anmeldung', rollen === null);
-    zeige('zustand-kein-mitarbeiter', rollen !== null && rollen.size === 0);
-    zeige('zustand-arbeit', rollen !== null && rollen.size > 0);
+    zeige('zustand-anmeldung',        rollen === null);
+    zeige('zustand-kein-mitarbeiter', rollen === false);
+    zeige('zustand-ohne-rolle',       rollen instanceof Set && rollen.size === 0);
+    zeige('zustand-arbeit',           rollen instanceof Set && rollen.size > 0);
 
-    if (rollen && rollen.size > 0) {
+    if (rollen instanceof Set && rollen.size > 0) {
         await navigationAufbauen(rollen);
     }
 }
