@@ -267,9 +267,17 @@ code=$(curl -s -o /dev/null -w '%{http_code}' \
 
 # --------------------------------------------- 20 Zahlungsmittel
 schritt "Zahlungsmittel bleiben gesperrt"
-# GR17, der wichtigste Einzelnachweis des Bereichs: Mitarbeitende
-# duerfen Bezahldaten nicht sehen, und zwar nicht, weil die Oberflaeche
-# sie nicht anzeigt, sondern weil das Recht fehlt.
+# Diese Pruefung laeuft mit dem anon-Schluessel, ohne jede Anmeldung -
+# und fuer anon fehlt das Recht tatsaechlich, das ist hier korrekt.
+# GR17 (Mitarbeitende duerfen Bezahldaten nicht sehen) ist NICHT dieser
+# Fall: 0011 gewaehrt authenticated ausdruecklich GRANT SELECT auf
+# zahlungsmittel (0011:171, ein Kunde muss sein eigenes lesen koennen),
+# das Recht ist also da. Die Trennung zwischen Kunde und Mitarbeitendem
+# leistet allein die Zeilenregel zahlungsmittel_eigene - 0017 begruendet
+# das auf zwoelf Zeilen. Diese REST-Pruefung sieht davon nichts, weil
+# sie ueberhaupt nicht mit einer Mitarbeiter-Anmeldung laeuft; der
+# eigentliche GR17-Nachweis steht in
+# db/tests/t0019_wawi_logik.sql::test_l_kundenservice_kennt_keine_zahlungsmittel.
 # Accept-Profile: velocity aus demselben Grund wie bei Pruefung 19: ohne
 # den Header landet die Anfrage im falschen (leeren) Default-Schema und
 # der 404 bewiese nichts ueber velocity.zahlungsmittel.
@@ -312,15 +320,28 @@ else
 fi
 
 # --------------------------------------------- 22 Sichten ohne Anmeldung
-schritt "WaWi-Sichten sind ohne Anmeldung leer"
-# Nicht 403, sondern leer: PostgREST meldet Kunden und Mitarbeitende als
-# dieselbe Rolle an, deshalb filtert jede Sicht selbst ueber
-# velocity.hat_rolle. Eine leere Antwort ist hier der Beweis.
+schritt "WaWi-Sichten sind ohne Anmeldung unerreichbar"
+# War hier als "liefert []" formuliert: die Annahme, PostgREST melde
+# Kunden und Mitarbeitende als dieselbe Rolle an und jede Sicht filtere
+# deshalb selbst ueber velocity.hat_rolle auf eine leere Liste herunter.
+# Nachgemessen (Gesamtpruefung 25.08.2026): anon hat auf keiner
+# v_wawi_-Sicht ueberhaupt ein GRANT SELECT - PostgREST antwortet mit
+# HTTP 401 "permission denied for view v_wawi_flotte", bevor die
+# Zeilenschranke der Sicht ueberhaupt zum Zug kommt. Das ist die
+# staerkere Lage, nicht die schwaechere: eine Sicht, die anon gar nicht
+# erreicht, ist besser geschuetzt als eine, die eine leere Liste
+# zurueckgibt - eine leere Liste laesst offen, ob das Recht fehlt oder
+# die Zeilenschranke nur zufaellig nichts traf. Wie Pruefung 21 zaehlt
+# deshalb nur ein expliziter 401 als Beweis.
 # Accept-Profile: velocity - siehe Begruendung bei Pruefung 19/20.
-inhalt=$(curl -s "$URL/rest/v1/v_wawi_flotte?select=fahrrad_id&limit=1" \
+code=$(curl -s -o /dev/null -w '%{http_code}' \
+        "$URL/rest/v1/v_wawi_flotte?select=fahrrad_id&limit=1" \
         -H "apikey: $KEY" -H "Accept-Profile: velocity")
-[ "$inhalt" = "[]" ] && ergebnis 0 "v_wawi_flotte liefert []" \
-                     || ergebnis 1 "v_wawi_flotte liefert: $inhalt"
+case "$code" in
+  401) ergebnis 0 "v_wawi_flotte antwortet mit HTTP 401" ;;
+  200) ergebnis 1 "v_wawi_flotte antwortet mit HTTP 200" ;;
+  *)   ergebnis 1 "kein Beweis, HTTP $code weder 200 noch 401" ;;
+esac
 
 # --------------------------------------------- 23 Rechenannahmen
 schritt "Jede Rechenannahme nennt ihre Quelle"
@@ -421,6 +442,33 @@ PYEOF
 [ "$n" = "0" ] && ergebnis 0 "nur api_-Funktionen sind freigegeben" \
                || ergebnis 1 "$n Nicht-api-Funktion(en) fuer anon oder authenticated ausfuehrbar"
 
+# Gesamtpruefung Punkt 7: die Abfrage oben schliesst api_* VOLLSTAENDIG
+# aus - sie haette also nie bemerkt, wenn eine api_-Funktion fuer anon
+# ausfuehrbar wuerde. api_-Funktionen sind die einzigen, die vom Browser
+# erreichbar sind (anon ist der oeffentliche Schluessel ohne Anmeldung);
+# authenticated soll sie ausfuehren, anon nicht.
+n2=$(python3 - <<'PYEOF'
+import os, psycopg
+for z in open('.env', encoding='utf-8'):
+    z = z.strip()
+    if z and not z.startswith('#') and '=' in z:
+        k, v = z.split('=', 1); os.environ.setdefault(k, v)
+c = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
+                    dbname=os.environ['PGDATABASE'], user=os.environ['PGUSER'],
+                    password=os.environ['PGPASSWORD']).cursor()
+c.execute("""select count(*) from pg_proc p
+               join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'velocity'
+                and p.proname like 'api\\_%'
+                and exists (select 1 from aclexplode(p.proacl) a
+                             join pg_roles r on r.oid = a.grantee
+                            where r.rolname = 'anon')""")
+print(c.fetchone()[0])
+PYEOF
+)
+[ "$n2" = "0" ] && ergebnis 0 "keine api_-Funktion fuer anon ausfuehrbar" \
+                || ergebnis 1 "$n2 api_-Funktion(en) fuer anon ausfuehrbar"
+
 # --------------------------------------------- 26 Radstatus
 schritt "Radstatus und offene Ausleihen stimmen ueberein"
 # Genau dieser Widerspruch lag 37-fach in den uebernommenen Daten und
@@ -443,6 +491,31 @@ PYEOF
 )
 [ "$n" = "0" ] && ergebnis 0 "kein Rad mit widerspruechlichem Status" \
                || ergebnis 1 "$n Raeder mit widerspruechlichem Status"
+
+# --------------------------------------------- 27 Fahruntauglich nicht verfuegbar
+schritt "Kein Rad mit offener fahruntauglicher Meldung ist verfuegbar"
+# Gegenstueck zu 26: api_rad_status_setzen liess ein Rad ungeprueft auf
+# 'verfuegbar', selbst mit einer offenen fahruntauglichen Meldung. Diese
+# sechs Zeilen haetten den Befund gefunden.
+n=$(python3 - <<'PYEOF'
+import os, psycopg
+for z in open('.env', encoding='utf-8'):
+    z = z.strip()
+    if z and not z.startswith('#') and '=' in z:
+        k, v = z.split('=', 1); os.environ.setdefault(k, v)
+c = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
+                    dbname=os.environ['PGDATABASE'], user=os.environ['PGUSER'],
+                    password=os.environ['PGPASSWORD']).cursor()
+c.execute("""select count(*) from velocity.fahrrad f
+              where f.status = 'verfuegbar' and exists (
+                select 1 from velocity.schadensmeldung sm
+                 where sm.fahrrad_id = f.fahrrad_id and sm.schwere = 'fahruntauglich'
+                   and sm.status in ('offen', 'in_arbeit'))""")
+print(c.fetchone()[0])
+PYEOF
+)
+[ "$n" = "0" ] && ergebnis 0 "kein fahruntaugliches Rad auf verfuegbar" \
+               || ergebnis 1 "$n Rad/Raeder fahruntauglich, aber verfuegbar"
 
 # ----------------------------------------------------------- Ergebnis
 printf '\n%s────────────────────────────────────────%s\n' "$blau" "$aus"

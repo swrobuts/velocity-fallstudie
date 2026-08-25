@@ -209,6 +209,53 @@ begin
 end;
 $$;
 
+-- W-Befund Gesamtpruefung Punkt 2: api_rad_status_setzen war der dritte
+-- und meistbenutzte Pfad zum Status 'verfuegbar' - anders als
+-- fn_ausleihe_beenden (0009) und api_auftrag_erledigen (oben) prufte er
+-- nicht, ob noch eine fahruntaugliche Meldung offen ist. Ueber den
+-- ECHTEN Weg nachgestellt: api_schaden_melden zuerst, danach der Versuch,
+-- ueber api_rad_status_setzen zurueck auf 'verfuegbar' zu setzen - nicht
+-- ueber ein direktes UPDATE, das den gemeldeten Fall gar nicht erzeugt.
+create or replace function velocity_test.test_l_status_verfuegbar_blockt_fahruntauglich()
+returns setof text language plpgsql as $$
+declare v_f record; v_station bigint; v_s bigint;
+begin
+  select * into v_f from velocity_test.fixture_rad('statusfahruntauglich');
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  insert into velocity.fahrrad_position (fahrrad_id, station_id, akkustand_prozent)
+       values (v_f.o_fahrrad_id, v_station, 80);
+
+  perform velocity_test.fixture_rollen('statusfahruntauglich', array['werkstatt']);
+  v_s := velocity.api_schaden_melden(v_f.o_fahrrad_id, 'Rahmen', 'Rahmen gebrochen',
+                                      'fahruntauglich');
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_f.o_fahrrad_id),
+    'defekt', 'Die Meldung setzt das Rad selbst schon auf defekt');
+
+  -- Der eigentliche Befund: ohne die Pruefung liesse sich das Rad hier
+  -- trotz offener fahruntauglicher Meldung auf 'verfuegbar' setzen.
+  return next throws_ok(
+    format($q$ select velocity.api_rad_status_setzen(%s, 'verfuegbar', null) $q$,
+           v_f.o_fahrrad_id),
+    'P0001', null,
+    'api_rad_status_setzen weist verfuegbar bei offener fahruntauglicher Meldung zurueck');
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_f.o_fahrrad_id),
+    'defekt', 'Das Rad bleibt defekt, die abgewiesene Anweisung aendert nichts');
+  return next isnt_empty(
+    format($q$ select 1 from velocity.schadensmeldung
+                where schadensmeldung_id = %s and status = 'offen' $q$, v_s),
+    'Die Meldung bleibt offen');
+
+  -- Andere Zielstaende bleiben frei - die Pruefung gilt nur 'verfuegbar'.
+  perform velocity.api_rad_status_setzen(v_f.o_fahrrad_id, 'wartung', null);
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_f.o_fahrrad_id),
+    'wartung', 'Andere Zielstaende bleiben trotz offener Meldung erreichbar');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
 -- GR15: seit ihrer Entstehung in 0003_bereich_b_netz_und_flotte.sql ohne
 -- jeden Regressionstest in der gesamten Kette. trg_stellplaetze_pruefen
 -- ist ein "deferrable initially deferred" Constraint-Trigger und feuert

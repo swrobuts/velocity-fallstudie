@@ -1,6 +1,22 @@
 -- =====================================================================
--- 0013  Der Altsystem-Trigger auf auth.users wird stillgelegt
+-- Der Altsystem-Trigger auf auth.users wird stillgelegt
 -- =====================================================================
+--
+-- VERSCHOBEN aus db/aufbau/0013_altsystem_abloesen.sql (Gesamtpruefung
+-- vom 25.08.2026). Als Aufbaudatei war sie die einzige der neunzehn, die
+-- gegen eine leere Datenbank nicht durchlief: sie setzt
+-- "cityBikesRental".handle_new_user() auf Leerlauf und scheitert dort,
+-- wo dieses Schema nicht existiert, mit "schema \"cityBikesRental\" does
+-- not exist" - dokumentiert und ausprobiert ueber genau den Befehl, den
+-- TESTEN.md und README.md fuer den Aufbau nennen:
+-- python3 db/run.py db/aufbau/*.sql. Eine Existenzpruefung haette das
+-- Symptom stumm geschluckt, aber die eigentliche Ursache verdeckt: die
+-- Datei repariert keinen Entwurf, sie entschaerft einen Trigger auf
+-- einer gemeinsam genutzten Produktionsinstanz (siehe unten) - dieselbe
+-- Beschreibung, die db/betrieb/README.md fuer alles hier gibt: "betrifft
+-- nur die konkrete Instanz". Ihr Schwesterstueck
+-- altschema_absichern.sql lag deshalb bereits hier, nicht unter
+-- db/aufbau/.
 --
 -- ZWEI BEFUNDE, EINE URSACHE
 --

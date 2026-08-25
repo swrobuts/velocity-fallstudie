@@ -635,21 +635,36 @@ def baue() -> Presentation:
           "Beide erben das Recht weiterhin",
           "über PUBLIC. Die Fachlogik bleibt",
           "aufrufbar."], False),
-        ("wirksam", "PUBLIC ausdrücklich mit entziehen",
+        ("wirksam — der einzige Schutz", "PUBLIC ausdrücklich mit entziehen",
          ["revoke all on all functions",
           "  in schema velocity",
           "  from public, anon, authenticated;",
           "",
-          "alter default privileges",
-          "  in schema velocity",
-          "  revoke execute on functions",
-          "  from public;"], False),
-        y=176, hoehe=210)
-    sandband(s, "Aufgedeckt hat das ein Test, nicht Nachdenken. Rechte werden geprüft, "
-                "nicht angenommen.", y=400)
-    notizen(s, "Die zweite Anweisung verhindert den Rückfall bei künftig angelegten "
-               "Funktionen. Ohne sie schnappt die Falle beim nächsten CREATE FUNCTION "
-               "wieder zu.")
+          "Muss nach jeder neu angelegten",
+          "Funktion in diesem Schema",
+          "erneut laufen."], False),
+        y=176, hoehe=190)
+    sandkarte(s, "Placebo gemessen statt angenommen",
+              ["alter default privileges … revoke execute on functions from public "
+               "sollte künftige Funktionen automatisch schützen. Gegenprobe auf dieser "
+               "Instanz: kein Eintrag in pg_default_acl, eine danach angelegte "
+               "Testfunktion bekam trotzdem EXECUTE für PUBLIC.",
+               "In einer gewöhnlichen PostgreSQL-Installation wirkt die Anweisung — "
+               "hier nachweislich nicht. Deshalb bleibt das REVOKE oben die einzige "
+               "Absicherung, und es muss nach jedem CREATE FUNCTION erneut laufen."],
+              y=376, hoehe=108, warnung=True)
+    notizen(s, "Der interessante Lehrpunkt ist nicht die ALTER-DEFAULT-PRIVILEGES-Zeile "
+               "selbst, sondern dass sie in einer gewöhnlichen PostgreSQL-Installation "
+               "wirkt und auf dieser Instanz gemessen nicht: kein Eintrag in "
+               "pg_default_acl, gegengeprüft per Abfrage direkt danach und durch eine "
+               "Testfunktion in einem Scratch-Schema, die trotzdem EXECUTE für PUBLIC "
+               "bekam. Ein Sicherheitskonzept, das eine Schutzmaßnahme behauptet, die es "
+               "nicht gibt, ist gefährlicher als eine bekannte Lücke. Der einzige "
+               "tatsächliche Schutz für künftig angelegte Funktionen ist das explizite "
+               "REVOKE weiter oben — erneut ausgeführt nach jeder neu angelegten Funktion "
+               "in diesem Schema. Aufgedeckt hat das ein Test, nicht Nachdenken: "
+               "test_s_keine_oeffentliche_funktion in db/tests/t0011_sicherheit.sql und "
+               "Abnahmeprüfung 25 fangen das Vergessen zweifach ab.")
 
     s = folie(prs, "7 · Zugriffsschutz", "Nachweis statt Behauptung — auf drei Wegen",
               "Ein Sicherheitskonzept, das nur beschrieben ist, ist wertlos. Geprüft wird in "

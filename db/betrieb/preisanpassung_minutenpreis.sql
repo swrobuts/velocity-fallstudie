@@ -17,7 +17,7 @@
 --  WIE das geschieht, ist derselbe Punkt wie bei
 --  preisanpassung_tageshoechstpreis.sql: die laufende Periode wird zum
 --  heutigen Tag GESCHLOSSEN und eine neue eroeffnet. Der alte Satz wird
---  nicht ueberschrieben, denn entgeltposition.preis_id zeigt auf
+--  nicht ueberschrieben, denn entgeltposition.nutzungspreis_id zeigt auf
 --  genau diese Zeile. Geschaeftsregel GR5 verlangt den Preis zum
 --  STARTZEITPUNKT der Fahrt; das geht nur mit Historie. Der
 --  EXCLUDE-Constraint auf nutzungspreis weist jede Ueberschneidung ab.

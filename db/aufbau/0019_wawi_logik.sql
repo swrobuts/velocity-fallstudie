@@ -28,9 +28,22 @@
 -- Sweep-Ausnahme in test_s_keine_oeffentliche_funktion nicht erfasst:
 -- sie ist interne Fachlogik, keine Schnittstelle. Wer sie direkt
 -- aufrufen koennte, bekaeme die Mitarbeiter-ID zu jeder beliebigen
--- Rolle - ohne selbst etwas anzulegen. db/aufbau/0011_sicherheit.sql
--- muss deshalb nach dieser Datei erneut laufen: es entzieht jeder neu
--- angelegten Funktion das automatische PUBLIC-Ausfuehrungsrecht.
+-- Rolle - ohne selbst etwas anzulegen.
+--
+-- Hier stand bis zur Gesamtpruefung vom 25.08.2026 der Hinweis,
+-- db/aufbau/0011_sicherheit.sql muesse nach dieser Datei erneut laufen,
+-- um jeder neu angelegten Funktion das automatische
+-- PUBLIC-Ausfuehrungsrecht zu entziehen. Das stimmte, als 0019 noch
+-- keinen eigenen Rechteblock hatte - inzwischen erledigt der Abschnitt
+-- "Rechte" am Ende dieser Datei genau das selbst (revoke all on all
+-- functions in schema velocity from public, anon, authenticated, dann
+-- gezielte GRANTs), aus demselben Grund, aus dem 0011 seine eigene
+-- ALTER-DEFAULT-PRIVILEGES-Zeile verloren hat: sich auf eine andere
+-- Datei zu verlassen, die man vergessen kann, ist kein Schutz. Wer der
+-- alten Anweisung folgte und 0011 nach 0019 erneut laufen liess, entzog
+-- damit authenticated wieder alle sechzehn Warenwirtschaftsfunktionen,
+-- beide Rollenfunktionen und fn_luftlinie_km - und damit jede
+-- v_wawi_-Sicht (nachgemessen). 0011 muss nach 0019 NICHT mehr laufen.
 create or replace function velocity.fn_rolle_verlangen(p_code text)
 returns bigint
 language plpgsql
@@ -128,6 +141,24 @@ begin
   if p_status = 'ausgemustert' then
     raise exception 'Zum Ausmustern api_rad_ausmustern verwenden'
       using errcode = 'P0001';
+  end if;
+
+  -- Dieselbe Regel wie in fn_ausleihe_beenden (0009) und
+  -- api_auftrag_erledigen (oben in dieser Datei): ein Rad mit offener
+  -- fahruntauglicher Meldung darf nicht als 'verfuegbar' markiert
+  -- werden. Ohne diese Pruefung liess sich ein Rad direkt nach
+  -- api_schaden_melden(..., 'fahruntauglich') ueber genau diese
+  -- Funktion zurueck in die Ausleihliste setzen, waehrend die Meldung
+  -- offen blieb - nachgestellt und bestaetigt. Andere Zielstaende
+  -- bleiben unberuehrt.
+  if p_status = 'verfuegbar' and exists (
+    select 1 from velocity.schadensmeldung sm
+     where sm.fahrrad_id = p_fahrrad_id
+       and sm.schwere = 'fahruntauglich'
+       and sm.status in ('offen', 'in_arbeit')
+  ) then
+    raise exception 'Rad % hat eine offene fahruntaugliche Meldung, kann nicht verfuegbar werden',
+      p_fahrrad_id using errcode = 'P0001';
   end if;
 
   update velocity.fahrrad

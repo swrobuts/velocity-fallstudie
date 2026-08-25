@@ -292,13 +292,20 @@ select sm.schadensmeldung_id,
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id = mo.typ_id
  where velocity.hat_rolle('werkstatt')
-    or velocity.hat_rolle('disposition')
     or velocity.hat_rolle('leitung');
 
 comment on view velocity.v_wawi_schaden is
   'Arbeitssicht der Werkstatt: jede Schadensmeldung mit Rad, Schwere und '
   'Alter, unabhaengig vom Bearbeitungsstand. Filtert selbst ueber '
-  'velocity.hat_rolle.';
+  'velocity.hat_rolle. Bewusst OHNE disposition (Spec 5.1 nennt nur '
+  'werkstatt) - Gesamtpruefung Punkt 3: die Disposition sieht ihren Bedarf '
+  'fuer die Flottenplanung, offene Schaeden je Rad, bereits ueber '
+  'v_wawi_flotte.offene_schaeden und .hoechste_schwere. Freitext '
+  '(kategorie, beschreibung) und melderart braucht sie dafuer nicht - "was '
+  'niemand braucht, wird nicht ausgeliefert" (Spec 4.2). Ein frueherer '
+  'Entwurf liess disposition hier zusaetzlich zu; das war derselbe '
+  'Rechteueberschuss, der bei v_wawi_umsatz_radtyp weiter unten schon '
+  'einmal zurueckgenommen wurde.';
 comment on column velocity.v_wawi_schaden.schadensmeldung_id is
   'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_schaden.fahrrad_id is
@@ -558,7 +565,22 @@ select a.ausleihe_id,
          on tempo.code = 'reisegeschwindigkeit'
         and tempo.gueltigkeit @> a.startzeit::date
  where a.status = 'abgeschlossen'
-   and velocity.ist_mitarbeiter();
+   -- Gesamtpruefung Punkt 3: ist_mitarbeiter() allein liess jede
+   -- Fachrolle durch, auch kundenservice - der eine Mitarbeiter mit
+   -- NUR dieser Rolle liest damit ausleihe_id, kunde_id und startzeit
+   -- je Einzelfahrt, also das Bewegungsprofil eines Kunden. Spec
+   -- doku/specs/2026-08-25-velocity-warenwirtschaft-design.md, 4.2:
+   -- "eine Liste von Fahrten mit Start, Ziel und Uhrzeit ist ein
+   -- Bewegungsprofil. Der Kundenservice braucht es nicht ... Was
+   -- niemand braucht, wird nicht ausgeliefert." Der vormalige Kommentar
+   -- hier zitierte denselben Satz - "eine Sicht, die ihre Schranke von
+   -- einer anderen erbt, hat keine eigene" - als Begruendung, WARUM
+   -- diese Sicht KEINE eigene Rollenschranke braucht. Das war die
+   -- falsche Schlussfolgerung aus dem richtigen Satz: v_wawi_km_co2
+   -- aggregiert und hat ihre eigene hat_rolle('leitung')-Schranke exakt
+   -- deshalb bekommen; die hier zugrundeliegende Einzelfahrt-Sicht
+   -- brauchte dieselbe, hatte sie aber nicht.
+   and velocity.hat_rolle('leitung');
 
 -- ---- Kilometer und CO2 -----------------------------------------------
 -- Die Ersparnis ist die Differenz zum Pkw, nicht die Emission des
@@ -581,25 +603,30 @@ select date_trunc('month', k.startzeit)::date as monat,
     on eigen.code = case when k.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
    and eigen.gueltigkeit @> k.startzeit::date
  where k.kilometer is not null
-   -- Der Filter gehoert AUCH hierher, nicht nur in die Hilfssicht.
-   -- v_wawi_fahrt_km prueft nur ist_mitarbeiter() - das laesst jede
-   -- Fachrolle durch, auch Werkstatt und Kundenservice. Die Spec
-   -- reserviert die Auswertungen fuer die Leitung, und eine Sicht, die
-   -- ihre Schranke von einer anderen Sicht erbt, hat keine eigene. Der
-   -- erste Entwurf verliess sich auf ist_mitarbeiter() aus
-   -- v_wawi_fahrt_km und liess damit jede Fachrolle durch - ein
-   -- kritischer Befund, siehe .superpowers/sdd/2026-08-25-velocity-
-   -- warenwirtschaft-datenbank/aufgabe-11-fix-bericht.md.
+   -- Der Filter gehoert AUCH hierher, nicht nur in die zugrundeliegende
+   -- Sicht. Die Spec reserviert die Auswertungen fuer die Leitung, und
+   -- eine Sicht, die ihre Schranke ausschliesslich von einer anderen
+   -- Sicht erbt, hat keine eigene. Der erste Entwurf verliess sich
+   -- allein auf ist_mitarbeiter() aus v_wawi_fahrt_km und liess damit
+   -- jede Fachrolle durch - ein kritischer Befund, siehe
+   -- .superpowers/sdd/2026-08-25-velocity-warenwirtschaft-datenbank/
+   -- aufgabe-11-fix-bericht.md. v_wawi_fahrt_km traegt seit der
+   -- Gesamtpruefung dieselbe hat_rolle('leitung')-Schranke inzwischen
+   -- selbst; die Zeile hier bleibt trotzdem stehen, statt sich darauf
+   -- zu verlassen.
    and velocity.hat_rolle('leitung')
  group by 1, 2;
 
 comment on view velocity.v_wawi_fahrt_km is
   'Einzige Stelle, an der Strecken geschaetzt werden. ist_geschaetzt sagt, ob; '
-  'verfahren sagt, WOMIT. Absichtlich nur velocity.ist_mitarbeiter() als '
-  'Schranke (jede Fachrolle darf die einzelne Fahrt-km sehen) - die engere '
-  'Rollenschranke fuer die Auswertung selbst steht in v_wawi_km_co2, nicht '
-  'hier: eine Sicht, die ihre Schranke von einer anderen erbt, hat keine '
-  'eigene.';
+  'verfahren sagt, WOMIT. Traegt seit der Gesamtpruefung vom 25.08.2026 eine '
+  'eigene velocity.hat_rolle(''leitung'')-Schranke statt nur '
+  'velocity.ist_mitarbeiter(): die Zeilen fuehren ausleihe_id, kunde_id und '
+  'startzeit je Einzelfahrt, also ein Bewegungsprofil - Spec 4.2 gibt das '
+  'ausdruecklich nur der Leitung, nicht jeder Fachrolle. Der fruehere Stand '
+  'begruendete das Fehlen der eigenen Schranke mit demselben Satz, der hier '
+  'jetzt fuer das Gegenteil steht: eine Sicht, die ihre Schranke von einer '
+  'anderen erbt, hat keine eigene.';
 comment on column velocity.v_wawi_fahrt_km.ausleihe_id is
   'Schluessel der Fahrt, fuer den Verweis aus v_wawi_km_co2 auf die einzelne '
   'Ausleihe hinter der Aggregation.';

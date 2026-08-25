@@ -144,6 +144,36 @@ begin
 end;
 $$;
 
+-- Gesamtpruefung Punkt 3: v_wawi_fahrt_km fuehrte ausleihe_id, kunde_id
+-- und startzeit je Einzelfahrt und filterte bis dahin nur ueber
+-- velocity.ist_mitarbeiter() - das liess JEDE Fachrolle durch, auch
+-- kundenservice. Ein Mitarbeiter mit NUR dieser Rolle konnte damit die
+-- vollstaendige Fahrtenliste eines Kunden mit Zeitstempeln abrufen: ein
+-- Bewegungsprofil, das Spec 4.2 dem Kundenservice ausdruecklich verweigert.
+-- Nach dem Muster von test_v_rollentrennung_greift oben: genau EINE nicht
+-- zugeteilte Rolle pruefen, nicht fixture_mitarbeiter mit allen Rollen.
+create or replace function velocity_test.test_v_fahrt_km_nur_leitung()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('kundenservice-fahrtkm', 'kundenservice');
+  select count(*) into v_n from velocity.v_wawi_fahrt_km;
+  return next is(v_n, 0,
+    'Kundenservice sieht keine Einzelfahrten - v_wawi_fahrt_km ist ein Bewegungsprofil, nur leitung darf');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('werkstatt-fahrtkm', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_fahrt_km;
+  return next is(v_n, 0, 'Werkstatt sieht keine Einzelfahrten - nur leitung ist zugeteilt');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('leitung-fahrtkm', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_fahrt_km;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht die Einzelfahrten');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
 create or replace function velocity_test.test_v_kunde_ohne_bewegungsprofil()
 returns setof text language plpgsql as $$
 begin

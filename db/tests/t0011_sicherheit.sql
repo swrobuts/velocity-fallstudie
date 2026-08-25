@@ -166,9 +166,10 @@ $$;
 create or replace function velocity_test.test_s_keine_oeffentliche_funktion()
 returns setof text language plpgsql as $$
 declare
-  v_offen text;
+  v_offen_intern text;
+  v_offen_api    text;
 begin
-  select string_agg(p.proname, ', ' order by p.proname) into v_offen
+  select string_agg(p.proname, ', ' order by p.proname) into v_offen_intern
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'velocity'
      and p.proname not like 'api\_%'
@@ -176,10 +177,28 @@ begin
      and (has_function_privilege('anon',          p.oid, 'execute')
        or has_function_privilege('authenticated', p.oid, 'execute'));
 
-  return next is(v_offen, null,
+  return next is(v_offen_intern, null,
     coalesce('Keine interne Funktion ist fuer anon/authenticated ausfuehrbar (offen: '
-             || v_offen || ')',
+             || v_offen_intern || ')',
              'Keine interne Funktion (alles ausser api_* und der Ausnahmeliste) ist fuer anon oder authenticated ausfuehrbar'));
+
+  -- Gesamtpruefung Punkt 7: der Sweep oben schliesst api\_% VOLLSTAENDIG
+  -- aus - er haette also nie bemerkt, wenn eine api_-Funktion fuer anon
+  -- ausfuehrbar wuerde. Genau api_-Funktionen sind die einzigen, die vom
+  -- Browser aus erreichbar sind (anon ist der oeffentliche Schluessel
+  -- ohne Anmeldung); authenticated soll sie ausfuehren duerfen, anon
+  -- nicht. Die zweite Haelfte prueft jetzt genau das. Gegenprobe
+  -- durchgefuehrt: mit einem testweisen "grant execute ... to anon" auf
+  -- eine api_-Funktion wurde dieser Sweep rot, danach zurueckgenommen.
+  select string_agg(p.proname, ', ' order by p.proname) into v_offen_api
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'velocity'
+     and p.proname like 'api\_%'
+     and has_function_privilege('anon', p.oid, 'execute');
+
+  return next is(v_offen_api, null,
+    coalesce('api_-Funktion fuer anon ausfuehrbar (offen: ' || v_offen_api || ')',
+             'Keine api_-Funktion ist fuer anon ausfuehrbar'));
 end;
 $$;
 
@@ -193,7 +212,9 @@ $$;
    auth.users gehoert supabase_auth_admin; dieses Projekt darf den
    Trigger nicht entfernen. Die Funktion gehoert postgres und wurde
    deshalb idempotent und fehlertolerant gemacht (siehe
-   db/aufbau/0013_altsystem_abloesen.sql).
+   db/betrieb/altsystem_abloesen.sql - verschoben aus db/aufbau/0013_,
+   weil sie rein instanzspezifisch ist und gegen eine leere Datenbank
+   nicht durchlief).
 
    Geprueft wird deshalb nicht die Abwesenheit des Triggers, sondern das,
    worauf es ankommt: dass die aufgerufene Funktion die Registrierung

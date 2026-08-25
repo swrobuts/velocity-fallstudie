@@ -39,7 +39,10 @@ was dastand; der Fehler lag eine Ebene tiefer.
    `supabase_auth_admin`, der Projektzugang ist dort nicht Eigentümer
    (*must be owner of relation users*). Die Funktion gehört `postgres`
    und wurde deshalb entkernt — in der Wirkung dasselbe.
-   Siehe `db/aufbau/0013_altsystem_abloesen.sql`.
+   Siehe `db/betrieb/altsystem_abloesen.sql` (verschoben aus
+   `db/aufbau/0013_`, Gesamtpruefung 25.08.2026: als Aufbaudatei lief sie
+   gegen eine leere Datenbank nicht durch, weil das Schema
+   `cityBikesRental` dort nicht existiert — rein instanzspezifisch).
 2. **Beide Fremdeinträge entfernt** — aus `velocity.kunde` und aus
    `cityBikesRental.kunde` samt Zuordnung.
 3. **Abgesichert** in `db/tests/t0011_sicherheit.sql`: ein Trigger auf

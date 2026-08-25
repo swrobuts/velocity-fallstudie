@@ -240,8 +240,8 @@ pruefe('P0-01', 'imGeschaeftsgebiet' in J,
 pruefe('P0-01', "name=\"rueckgabeart\"" in H,
        'Station oder freies Abstellen sind zwei bewusste Wege')
 
-ALT = (WURZEL / 'db/aufbau/0013_altsystem_abloesen.sql')
-pruefe('P0-02', ALT.exists(), 'Der Altsystem-Trigger ist entschaerft (0013)')
+ALT = (WURZEL / 'db/betrieb/altsystem_abloesen.sql')
+pruefe('P0-02', ALT.exists(), 'Der Altsystem-Trigger ist entschaerft (db/betrieb/altsystem_abloesen.sql)')
 if ALT.exists():
     # Ohne die Kommentare zu entfernen zaehlt die Erlaeuterung dessen,
     # was frueher dort stand, als Befund - derselbe Fehler, den der
