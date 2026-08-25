@@ -55,7 +55,7 @@ aufwendig, und eine Sortierreihenfolge lässt sich nicht nachträglich
 | GR14 nur im Geschäftsgebiet abstellen | `fn_im_geschaeftsgebiet` in `fn_ausleihe_beenden` |
 | GR15 nie mehr Räder als Stellplätze | Constraint-Trigger auf `fahrrad_position` **und** `station` |
 | GR16 nur aktive Mitarbeitende haben Zugriff | `velocity.hat_rolle`/`ist_mitarbeiter` prüft `mitarbeiter.status = 'aktiv'` in jeder Policy |
-| GR17 keine Zahlungsmittel, keine Passwörter für Mitarbeitende | Kunde und Mitarbeiter sind für PostgreSQL dieselbe Rolle `authenticated` — die Trennung kann also nicht am `GRANT` hängen, sondern nur an der Zeilenregel `zahlungsmittel_eigene` (`kunde.auth_uid = auth.uid()`); `auth.users` bleibt außerhalb von PostgREST |
+| GR17 keine fremden Zahlungsmittel, keine Passwörter für Mitarbeitende | Kunde und Mitarbeiter sind für PostgreSQL dieselbe Rolle `authenticated` — die Trennung kann also nicht am `GRANT` hängen, sondern nur an der Zeilenregel `zahlungsmittel_eigene` (`kunde.auth_uid = auth.uid()`); ein Mitarbeiter, der zufällig auch Kunde ist, sieht dadurch seine eigenen Zahlungsmittel, keine fremden; `auth.users` bleibt außerhalb von PostgREST |
 | GR18 Kunde mit Rechnungen wird anonymisiert, nie gelöscht | `api_kunde_anonymisieren`; `rechnung_kunde_fk` steht auf `ON DELETE RESTRICT` |
 | GR19 Stammdatenänderung feldweise protokolliert | Trigger `velocity.fn_protokoll_schreiben`, angehängt über `fn_protokoll_anhaengen` |
 | GR20 Rad mit laufender Ausleihe wird nicht ausgemustert | Prüfung in der schreibenden `api_`-Funktion vor dem Statuswechsel |

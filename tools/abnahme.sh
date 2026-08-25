@@ -282,15 +282,34 @@ code=$(curl -s -o /dev/null -w '%{http_code}' \
 # --------------------------------------------- 21 Basistabellen der WaWi
 schritt "Warenwirtschaft spricht keine Basistabelle an"
 # Accept-Profile: velocity - siehe Begruendung bei Pruefung 19/20.
+# "nicht 200" reicht hier nicht als Beweis: ein PostgREST-Cache-Miss
+# (404, "table not found in the schema cache") sieht von aussen genauso
+# aus wie ein sauberer Rechteentzug, beweist aber gar nichts - er zeigt
+# nur, dass PostgREST die Tabelle noch nicht kennt, nicht dass sie
+# gesperrt ist. Bei fehlenden Rechten antwortet PostgREST nachweislich
+# mit 401 (siehe zahlungsmittel-Probe in Pruefung 20). Nur ein
+# expliziter 401 zaehlt deshalb als Beweis; jeder andere Code als 200
+# oder 401 macht die Pruefung selbst rot, statt stillschweigend gruen
+# zu werden.
 offen=""
+unklar=""
 for t in mitarbeiter rolle mitarbeiter_rolle schadensmeldung wartungsauftrag \
          fahrrad_ereignis aenderungsprotokoll; do
   code=$(curl -s -o /dev/null -w '%{http_code}' \
           "$URL/rest/v1/$t?select=*&limit=1" -H "apikey: $KEY" -H "Accept-Profile: velocity")
-  [ "$code" = "200" ] && offen="$offen $t"
+  case "$code" in
+    401) ;;
+    200) offen="$offen $t" ;;
+    *)   unklar="$unklar $t(HTTP $code)" ;;
+  esac
 done
-[ -z "$offen" ] && ergebnis 0 "keine der sieben Tabellen ist lesbar" \
-                || ergebnis 1 "erreichbar:$offen"
+if [ -n "$offen" ]; then
+  ergebnis 1 "erreichbar:$offen"
+elif [ -n "$unklar" ]; then
+  ergebnis 1 "kein Beweis, HTTP weder 200 noch 401:$unklar"
+else
+  ergebnis 0 "alle sieben Tabellen antworten mit HTTP 401"
+fi
 
 # --------------------------------------------- 22 Sichten ohne Anmeldung
 schritt "WaWi-Sichten sind ohne Anmeldung leer"
