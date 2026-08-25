@@ -466,7 +466,16 @@ git commit -m "feat(wawi): Geruest, Datenzugriff und Anmeldung"
 
 **Schnittstellen:**
 - Nutzt: `meineRollen()`, `beiAnmeldungsWechsel()`, `anmelden()`, `abmelden()` aus Aufgabe 1
-- Liefert: `bereichAnmelden(bereich)` zum Registrieren eines Arbeitsbereichs; `melde(text, art)` für die Statuszeile; `zeigeListe(zeilen, spalten, beiAuswahl)`; `zeigeMaske(felder, knoepfe)`; `bestaetige(frage)`
+- Liefert — **alles, was die Aufgaben 4 bis 8 aufrufen; es gibt keine zweite Stelle für Bausteine**:
+  - `bereichAnmelden(bereich)` — registriert einen Arbeitsbereich
+  - `melde(text, art)` — Statuszeile; `art` ist `neutral` | `gut` | `warnung` | `schlecht`
+  - `zeigeListe(zeilen, spalten, beiAuswahl)` — Arbeitsliste mit Tastaturnavigation
+  - `zeigeMaske(titel, felder, knoepfe)` — Detailmaske
+  - `zeigeLeermaske(titel, erklaerung, angebot)` — die Liste ist leer, und das hat einen Grund
+  - `zeigeUnterreiter(reiter, aktiv, beiWechsel)` — zwei Listen in einem Bereich
+  - `bestaetige(frage, bestaetigungswort)` — Dialog; mit Wort muss es eingetippt werden
+  - `frageNachGrund(titel)` — einzeiliger Eingabedialog, liefert `null` bei Abbruch
+  - `darfRolle(code)` — synchron, aus dem Rollenspeicher; `code` ist einer der vier Rollencodes
 
 - [ ] **Schritt 1: Die drei Zustände auseinanderhalten**
 
@@ -600,7 +609,35 @@ function zeigeMaske(titel, felder, knoepfe) {
 
 Bau beide aus. Die Liste braucht: Kopfzeile, Zeilen, Auswahlmarkierung, Tastaturnavigation mit Pfeil hoch und runter, und eine **Leermaske** — ein Satz, der sagt, warum nichts da ist, nicht ein leerer Kasten.
 
-- [ ] **Schritt 5: Tastaturbedienung**
+- [ ] **Schritt 5: Die vier kleinen Bausteine**
+
+Sie sind klein, aber sie gehören hierher und nicht in den ersten Bereich, der sie braucht — sonst stehen sie in `flotte.js` und `kunden.js` importiert aus `flotte.js`, was in einer Woche niemand mehr versteht.
+
+```javascript
+// Ein einzeiliger Eingabedialog. Liefert null bei Abbruch - und der
+// Aufrufer muss das pruefen: eine Buchung ohne Grund ist eine Buchung,
+// die spaeter niemand erklaeren kann.
+async function frageNachGrund(titel) { /* <dialog> mit einem <input> */ }
+
+// Eine leere Liste ist kein leerer Kasten. Sie sagt, WARUM nichts da ist,
+// und bietet an, was als Naechstes zu tun waere.
+function zeigeLeermaske(titel, erklaerung, angebot = null) { /* ... */ }
+
+// Zwei Listen in einem Bereich, wenn sie fachlich zusammengehoeren.
+// reiter: [{ schluessel, titel }]
+function zeigeUnterreiter(reiter, aktiv, beiWechsel) { /* ... */ }
+
+// Synchron, weil jeder Maskenaufbau es mehrfach fragt. Der
+// Rollenspeicher aus anmeldung.js ist zu diesem Zeitpunkt gefuellt -
+// seiteAufbauen() hat ihn geladen, bevor irgendein Bereich baut.
+function darfRolle(code) {
+    return geladeneRollen !== null && geladeneRollen.has(code);
+}
+```
+
+`geladeneRollen` ist der Wert, den `seiteAufbauen()` von `meineRollen()` bekommen hat. Halte ihn in `rahmen.js` als Modulvariable — nicht in `anmeldung.js`, denn dort ist er ein Zwischenspeicher mit anderer Lebensdauer.
+
+- [ ] **Schritt 6: Tastaturbedienung**
 
 ```javascript
 // Tastatur vor Maus. Eine Arbeitsmaske, die Maushandbetrieb erzwingt,
@@ -613,7 +650,7 @@ document.addEventListener('keydown', (e) => {
 });
 ```
 
-- [ ] **Schritt 6: Anmeldung verdrahten und von Hand prüfen**
+- [ ] **Schritt 7: Anmeldung verdrahten und von Hand prüfen**
 
 Formular an `anmelden()` hängen, beide Abmeldeknöpfe an `abmelden()`, `beiAnmeldungsWechsel(seiteAufbauen)` registrieren, am Ende `seiteAufbauen()` aufrufen.
 
@@ -625,7 +662,7 @@ Dann prüfen — und zwar **alle drei Zustände**:
 
 Und die Tastatur: Tab erreicht jedes Bedienelement, der Fokus ist sichtbar, `Escape` schließt den Bestätigungsdialog.
 
-- [ ] **Schritt 7: Commit**
+- [ ] **Schritt 8: Commit**
 
 ```bash
 git add wawi/
@@ -845,7 +882,7 @@ function radMaske(rad) {
     // darf. Der Knopf, den die Funktion ohnehin abweist, ist keine
     // Sicherheitsluecke - aber eine Einladung zu einer Fehlermeldung,
     // die niemand braucht.
-    if (darfDisponieren() || darfWerkeln()) {
+    if (darfRolle('disposition') || darfRolle('werkstatt')) {
         for (const ziel of ['verfuegbar', 'wartung', 'defekt']) {
             if (rad.status === ziel) continue;
             knoepfe.push({
@@ -863,7 +900,7 @@ function radMaske(rad) {
         }
     }
 
-    if (darfDisponieren() && rad.status !== 'ausgemustert') {
+    if (darfRolle('disposition') && rad.status !== 'ausgemustert') {
         knoepfe.push({
             titel: 'Ausmustern',
             art: 'gefaehrlich',
@@ -1292,7 +1329,7 @@ async function schaedenZeigen() {
         { feld: 'schwere',      titel: 'Schwere',
           klasse: (s) => (s === 'fahruntauglich' ? 'schlecht' : s === 'mittel' ? 'warnung' : '') },
         { feld: 'gemeldet_am',  titel: 'Gemeldet' },
-        { feld: 'offen_seit',   titel: 'Offen seit', formatieren: alterKurz },
+        { feld: 'offen_seit',   titel: 'Offen seit', formatieren: alterKurz },   // alterKurz baust du hier, es wird nur hier gebraucht
         { feld: 'status',       titel: 'Stand' }
     ], schadenMaske);
 
