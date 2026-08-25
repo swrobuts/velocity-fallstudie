@@ -7,7 +7,9 @@
 -- Objekte:    Schema velocity
 --             Erweiterung extensions.btree_gist
 --             ENUM kunde_status, fahrrad_status, ausleihe_status,
---                  tarifart, rechnung_status, zahlung_status
+--                  tarifart, rechnung_status, zahlung_status,
+--                  mitarbeiter_status, schaden_schwere, schaden_status,
+--                  auftrag_status, fahrrad_ereignisart
 --             Funktion velocity.fn_audit_setzen()
 --             Funktion velocity.fn_audit_anhaengen(text)
 -- Ruecknahme: DROP SCHEMA velocity CASCADE;
@@ -40,7 +42,13 @@ begin
       ('ausleihe_status', array['aktiv','abgeschlossen','storniert']),
       ('tarifart',        array['standard','vorteil']),
       ('rechnung_status', array['entwurf','gestellt','bezahlt','storniert']),
-      ('zahlung_status',  array['offen','gebucht','fehlgeschlagen','erstattet'])
+      ('zahlung_status',     array['offen','gebucht','fehlgeschlagen','erstattet']),
+      -- Bereich J und I, Phase 2 (Warenwirtschaft)
+      ('mitarbeiter_status', array['aktiv','beurlaubt','ausgeschieden']),
+      ('schaden_schwere',    array['gering','mittel','fahruntauglich']),
+      ('schaden_status',     array['offen','in_arbeit','behoben','verworfen']),
+      ('auftrag_status',     array['offen','in_arbeit','erledigt','abgebrochen']),
+      ('fahrrad_ereignisart',array['angeschafft','status_geaendert','gewartet','umgesetzt','ausgemustert'])
     ) as t(name, labels)
   loop
     if not exists (
