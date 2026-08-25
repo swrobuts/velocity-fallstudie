@@ -33,6 +33,9 @@ create table if not exists velocity.aenderungsprotokoll (
   constraint aenderungsprotokoll_mitarbeiter_fk foreign key (mitarbeiter_id)
     references velocity.mitarbeiter (mitarbeiter_id) on update cascade on delete restrict
 );
+-- RLS an, aber ohne Regel: Policies kommen erst mit Aufgabe 9. Bis dahin
+-- weist die Tabelle jeden Zugriff ab statt versehentlich offen zu stehen -
+-- force auch fuer den Tabelleneigentuemer, sonst greift enable allein nicht.
 alter table velocity.aenderungsprotokoll enable row level security;
 alter table velocity.aenderungsprotokoll force  row level security;
 select velocity.fn_audit_anhaengen('aenderungsprotokoll');
@@ -60,6 +63,8 @@ create table if not exists velocity.rechenannahme (
   constraint rechenannahme_zeitraum_ex
     exclude using gist (code with =, gueltigkeit with &&)
 );
+-- Wie aenderungsprotokoll: RLS ohne Policy bis Aufgabe 9, force gegen den
+-- Eigentuemer.
 alter table velocity.rechenannahme enable row level security;
 alter table velocity.rechenannahme force  row level security;
 select velocity.fn_audit_anhaengen('rechenannahme');
@@ -154,16 +159,16 @@ select v.code, v.wert, v.einheit, v.gueltigkeit, v.quelle, v.erlaeuterung
 -- jeder Tabelle und jeder Fachspalte (ausser erstellt_am/geaendert_am).
 -- ---------------------------------------------------------------------
 comment on table velocity.aenderungsprotokoll is
-  'Feldweise Spur jeder Aenderung an protokollierten Tabellen (Art. 5 Abs. 2 DSGVO). Eine Zeile je geaendertem Feld, nicht je Anweisung, damit sich die Historie eines einzelnen Feldes ohne Werkzeug herausfiltern laesst.';
+  'Feldweise Spur jeder Aenderung an protokollierten Tabellen (Art. 5 Abs. 2 DSGVO). Eine Zeile je geaendertem Feld, nicht je Anweisung, damit sich die Historie eines einzelnen Feldes ohne Werkzeug herausfiltern laesst. tabelle/datensatz_id sind eine Spur, keine gepruefte Beziehung - wie beleg_tabelle/beleg_id bei fahrrad_ereignis.';
 comment on column velocity.aenderungsprotokoll.protokoll_id is 'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.aenderungsprotokoll.zeitpunkt is 'Zeitpunkt der protokollierten Aenderung, unabhaengig vom technischen erstellt_am dieser Zeile.';
 comment on column velocity.aenderungsprotokoll.mitarbeiter_id is 'Wer die Aenderung ausgeloest hat. NULL, wenn kein angemeldeter Mitarbeiter ermittelbar war, etwa bei einem Wartungsskript - ein erfundener Verursacher waere schlechter als keiner.';
-comment on column velocity.aenderungsprotokoll.tabelle is 'Name der veraenderten Tabelle, aus tg_table_name des ausloesenden Triggers.';
-comment on column velocity.aenderungsprotokoll.datensatz_id is 'Primaerschluesselwert des veraenderten Datensatzes in seiner Tabelle.';
+comment on column velocity.aenderungsprotokoll.tabelle is 'Name der veraenderten Tabelle, aus tg_table_name des ausloesenden Triggers. Bewusst ohne Fremdschluessel: der Trigger und diese Tabelle sind fuer beliebige Zieltabellen gebaut, ein FK koennte nur auf eine einzige davon zeigen.';
+comment on column velocity.aenderungsprotokoll.datensatz_id is 'Primaerschluesselwert des veraenderten Datensatzes in seiner Tabelle. Bewusst ohne Fremdschluessel, siehe Kommentar an tabelle und an der Tabelle selbst.';
 comment on column velocity.aenderungsprotokoll.aktion is 'Art der Aenderung: INSERT, UPDATE oder DELETE, siehe aenderungsprotokoll_aktion_chk.';
 comment on column velocity.aenderungsprotokoll.feld is 'Name des veraenderten Feldes. Eine Zeile je Feld statt ein JSON-Klumpen, damit "wer hat je die E-Mail geaendert" ohne Werkzeug beantwortbar bleibt (GR19).';
-comment on column velocity.aenderungsprotokoll.wert_alt is 'Wert des Feldes vor der Aenderung, als Text. NULL bei INSERT.';
-comment on column velocity.aenderungsprotokoll.wert_neu is 'Wert des Feldes nach der Aenderung, als Text. NULL bei DELETE.';
+comment on column velocity.aenderungsprotokoll.wert_alt is 'Wert des Feldes vor der Aenderung, als Text. NULL bei INSERT. Text statt Originaltyp, weil ein und derselbe Trigger auf jede Tabelle und jede Spalte passen muss - ein typisierter Wert bräuchte eine eigene Spalte je Datentyp.';
+comment on column velocity.aenderungsprotokoll.wert_neu is 'Wert des Feldes nach der Aenderung, als Text. NULL bei DELETE. Gleicher Grund wie wert_alt: generischer Typ fuer einen tabellenunabhaengigen Trigger.';
 
 comment on table velocity.rechenannahme is
   'Zahlen, die eine Auswertung annimmt statt sie zu messen. Jede nennt ihre Quelle.';
