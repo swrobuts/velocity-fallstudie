@@ -311,6 +311,17 @@ button {
   font-weight: 600;
 }
 
+/* ===== Werkzeugleiste: Aktionen vor der Liste, z. B. "Neu anlegen" =====
+   Erster Verwender ist die Flotte (wawi/flotte.js); die Klasse liegt
+   hier und nicht dort, weil dieselbe Leiste bei den naechsten
+   Arbeitsbereichen wiederkehrt. */
+
+.werkzeugleiste {
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--linie);
+}
+
 /* ===== Arbeitstabelle (zeigeListe) ===== */
 
 #listenkoerper {
@@ -364,6 +375,11 @@ button {
 .arbeitstabelle td.schlecht { color: var(--schlecht); font-weight: 600; }
 .arbeitstabelle td.warnung  { color: var(--warnung-text); font-weight: 600; }
 .arbeitstabelle td.gut      { color: var(--gut); font-weight: 600; }
+/* Ausgemustert: sichtbar, aber bewusst zurueckgenommen statt betont -
+   das Rad ist erledigt, keine Auffaelligkeit, die Aufmerksamkeit
+   verlangt. Diese Klasse fehlte hier, obwohl statusKlasse() in
+   flotte.js sie von Anfang an zurueckgibt. */
+.arbeitstabelle td.leise    { color: var(--text-leise); }
 
 /* ===== Leermaske (zeigeLeermaske) ===== */
 
