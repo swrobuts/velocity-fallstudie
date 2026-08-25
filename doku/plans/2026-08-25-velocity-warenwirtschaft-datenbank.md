@@ -716,9 +716,42 @@ begin
     $q$ select code from velocity.rechenannahme where upper_inf(gueltigkeit) order by code $q$,
     $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),('umwegfaktor') $q$,
     'Alle vier Rechenannahmen haben eine laufende Periode');
-  return next is_empty(
-    $q$ select code from velocity.rechenannahme where quelle is null or btrim(quelle) = '' $q$,
-    'Jede Annahme nennt ihre Quelle');
+  -- Nicht pruefen, dass keine Zeile ohne Quelle DA ist - das kann keine
+  -- sein, quelle ist not null mit CHECK. Pruefen, dass eine solche Zeile
+  -- gar nicht erst hineinkommt. Sonst waere die Zusicherung immer wahr.
+  return next throws_ok(
+    $q$ insert into velocity.rechenannahme (code, wert, einheit, gueltigkeit, quelle)
+        values ('test_ohne_quelle', 1, 'x',
+                daterange(date '1999-01-01', date '1999-02-01', '[)'), '   ') $q$,
+    '23514', null,
+    'Eine Annahme ohne Quelle wird abgewiesen');
+end;
+$$;
+
+create or replace function velocity_test.test_k_protokoll_bei_insert_und_delete()
+returns setof text language plpgsql as $$
+declare v_k bigint; v_n integer;
+begin
+  -- Der Trigger ist generisch und faengt alle drei Operationen ab. Bisher
+  -- war nur UPDATE geprueft - ausgerechnet bei INSERT und DELETE steht in
+  -- fn_protokoll_schreiben aber die heikle Stelle: eine der beiden
+  -- jsonb-Seiten ist leer, und v_id muss trotzdem gefunden werden.
+  insert into velocity.kunde (email, vorname, nachname)
+       values ('k-insert@example.org', 'Kai', 'Test') returning kunde_id into v_k;
+  select count(*) into v_n from velocity.aenderungsprotokoll
+   where tabelle = 'kunde' and datensatz_id = v_k and aktion = 'INSERT';
+  return next cmp_ok(v_n, '>', 0, 'Ein INSERT wird protokolliert');
+  return next is(
+    (select wert_alt from velocity.aenderungsprotokoll
+      where tabelle = 'kunde' and datensatz_id = v_k
+        and aktion = 'INSERT' and feld = 'vorname'),
+    null, 'Beim INSERT gibt es keinen alten Wert');
+
+  delete from velocity.kunde where kunde_id = v_k;
+  select count(*) into v_n from velocity.aenderungsprotokoll
+   where tabelle = 'kunde' and datensatz_id = v_k and aktion = 'DELETE';
+  return next cmp_ok(v_n, '>', 0,
+    'Ein DELETE wird protokolliert - der Satz ist weg, die Spur bleibt');
 end;
 $$;
 ```
@@ -905,7 +938,7 @@ Denselben Befehl **ein zweites Mal** laufen lassen.
 ```bash
 python3 db/test.py db/tests/t0016_bereich_k.sql
 ```
-Erwartet: alle fünf Testfunktionen `ok`.
+Erwartet: alle sechs Testfunktionen `ok`.
 
 - [ ] **Schritt 5: Bestehende Tests gegenprüfen**
 
