@@ -32,7 +32,7 @@
 --     auf 65: 65 * 0.51 * 358 ergibt rund 11900 - das "rund 12000" der
 --     Zusage.
 --
---  2. Die urspruengliche Waechterabfrage prüfte per exists(), ob
+--  2. Die urspruengliche Waechterabfrage pruefte per exists(), ob
 --     irgendeine Ausleihe im Referenzzeitraum bereits eine
 --     ZEITENTGELT-Position traegt. In dieser Datenbank existiert
 --     bereits genau eine solche Zeile (ausleihe_id 2686, Kunde 2334 -
@@ -196,7 +196,10 @@ $$;
 -- 37 Raeder standen auf 'ausgeliehen' bei einer einzigen offenen
 -- Ausleihe - ein Widerspruch aus der Altdatenuebernahme. Er fiel nie
 -- auf, weil keine Oberflaeche Radstatus und Ausleihen nebeneinander
--- zeigte. Die erste Maske der Warenwirtschaft tut genau das.
+-- zeigte. Die erste Maske der Warenwirtschaft tut genau das. Von den
+-- 37 passt genau eines wirklich zur einen aktiven Ausleihe (die
+-- Kontrolle am Dateiende prueft das); die uebrigen 36 sind der
+-- eigentliche Widerspruch und werden unten korrigiert.
 --
 -- ABWEICHUNG VOM URSPRUENGLICHEN ENTWURF (beim Lauf gefunden): die
 -- reine status-Aktualisierung schlug zuerst am GR13-Waechter
@@ -216,10 +219,17 @@ $$;
 -- reichlich), nicht gleichmaessig - erfunden wie die uebrigen
 -- Referenzdaten, aber noetig, damit der Bestand ueberhaupt
 -- widerspruchsfrei wird.
+-- greatest(..., 0): die kumulierten Grenzen unten setzen voraus, dass
+-- keine Station schon vor diesem Lauf ueber ihrer Kapazitaet belegt ist.
+-- Das stimmt in dieser Datenlage (siehe Bericht), ist aber keine
+-- Systemgarantie - waere frei negativ, verschoeben sich die Bereiche
+-- und koennten sich ueberlappen. greatest(...,0) faengt das ab: eine
+-- bereits ueberfuellte Station bekommt dann einfach keine weiteren
+-- Raeder zugeteilt, statt die Verteilung zu verfaelschen.
 with frei as (
-  select s.station_id, s.kapazitaet
+  select s.station_id, greatest(s.kapazitaet
          - (select count(*) from velocity.fahrrad_position p2
-             where p2.station_id = s.station_id) as frei
+             where p2.station_id = s.station_id), 0) as frei
     from velocity.station s
    where s.betriebszeitraum @> date '2026-08-24'
 ), bereich as (
