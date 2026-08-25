@@ -113,6 +113,47 @@ begin
 end;
 $$;
 
+-- test_s_api_rechte oben nennt einzelne Funktionen beim Namen - genau
+-- deshalb ist fn_ausleihe_abrechnen bei ihrer Einfuehrung durchgerutscht,
+-- bis eine externe Pruefung es aufgedeckt hat. Eine namentliche Liste
+-- vergisst man; ein Sweep ueber alle Funktionen des Schemas nicht.
+--
+-- Warum das ueberhaupt eine eigene Pruefung braucht: die Anweisung
+-- "alter default privileges in schema velocity revoke execute on
+-- functions from public" - die genau das kuenftig automatisch haette
+-- sichern sollen - legt in dieser Datenbank nachweislich keinen Eintrag
+-- in pg_default_acl an (siehe Kommentar in db/aufbau/0011_sicherheit.sql).
+-- Jede neu angelegte Funktion entsteht also mit proacl = null, was PUBLIC
+-- (und damit anon und authenticated, die PUBLIC immer erben) automatisch
+-- EXECUTE gibt, bis das "revoke all on all functions ..." weiter oben in
+-- dieser Datei erneut laeuft. Dieser Sweep ist das Sicherheitsnetz fuer
+-- genau dieses Vergessen.
+--
+-- has_function_privilege auf die Rollennamen selbst geprueft, nicht nur
+-- pg_proc.proacl gelesen: has_function_privilege rechnet die Vererbung
+-- ueber PUBLIC automatisch ein, ein blosser Blick auf proacl (das bei
+-- implizitem PUBLIC-Zugriff oft schlicht null ist) wuerde die Luecke
+-- gerade nicht zeigen - das war ja genau der Fehler, der uebersehen
+-- wurde.
+create or replace function velocity_test.test_s_keine_oeffentliche_funktion()
+returns setof text language plpgsql as $$
+declare
+  v_offen text;
+begin
+  select string_agg(p.proname, ', ' order by p.proname) into v_offen
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'velocity'
+     and p.proname not like 'api\_%'
+     and (has_function_privilege('anon',          p.oid, 'execute')
+       or has_function_privilege('authenticated', p.oid, 'execute'));
+
+  return next is(v_offen, null,
+    coalesce('Keine interne Funktion ist fuer anon/authenticated ausfuehrbar (offen: '
+             || v_offen || ')',
+             'Keine interne Funktion (alles ausser api_*) ist fuer anon oder authenticated ausfuehrbar'));
+end;
+$$;
+
 /* Ein Trigger auf auth.users, der in ein Fremdschema schreibt, kann jede
    Registrierung zum Scheitern bringen. Genau das ist am 24.08.2026
    passiert: "cityBikesRental".handle_new_user() legte bei jeder

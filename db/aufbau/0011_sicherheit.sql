@@ -29,9 +29,30 @@ revoke all on all sequences in schema velocity from anon, authenticated;
 -- ---------------------------------------------------------------------
 revoke all on all functions in schema velocity from public, anon, authenticated;
 
--- Damit die Falle auch bei kuenftig angelegten Funktionen nicht wieder
--- zuschnappt:
-alter default privileges in schema velocity revoke execute on functions from public;
+-- Hier stand bis zum 25.08.2026 "alter default privileges in schema
+-- velocity revoke execute on functions from public;" mit dem
+-- Kommentar, das schuetze auch kuenftig angelegte Funktionen
+-- automatisch. Das stimmte nicht: die Anweisung legt in dieser
+-- (Supabase-verwalteten) Datenbank ueberhaupt keinen Eintrag in
+-- pg_default_acl an - gegengeprueft per select gegen pg_default_acl
+-- direkt danach und per Anlegen einer Testfunktion in einem
+-- Scratch-Schema, die trotzdem EXECUTE fuer PUBLIC bekam. Die Rolle
+-- postgres hat hier rolsuper = false; ob das die Ursache ist, wurde
+-- nicht weiter verfolgt. Aufgefallen ist das bei der Sicherheitspruefung
+-- zu Aufgabe 5 (fn_ausleihe_abrechnen entstand mit proacl = null und
+-- war fuer anon/authenticated ausfuehrbar, bis dieser Block hier erneut
+-- lief) - siehe .superpowers/sdd/2026-08-25-velocity-warenwirtschaft-
+-- datenbank/aufgabe-5-report.md.
+--
+-- Die wirkungslose Zeile wurde entfernt statt mit einem richtiggestellten
+-- Kommentar stehen zu bleiben: eine Anweisung, die nachweislich nichts
+-- tut, ist kein harmloser Fallback, sondern eine Einladung, sich auf sie
+-- zu verlassen. Der EINZIGE Schutz fuer neue Funktionen ist das REVOKE
+-- direkt oberhalb - und das muss deshalb nach jeder neu angelegten
+-- Funktion in diesem Schema erneut laufen. test_s_keine_oeffentliche_funktion
+-- in db/tests/t0011_sicherheit.sql sichert das als Sweep ueber alle
+-- Funktionen ab (Ausnahme: api_*, die absichtlich fuer authenticated
+-- freigegeben sind), statt sich auf eine namentliche Liste zu verlassen.
 
 -- ---------------------------------------------------------------------
 -- RLS auf jeder Basistabelle einschalten
