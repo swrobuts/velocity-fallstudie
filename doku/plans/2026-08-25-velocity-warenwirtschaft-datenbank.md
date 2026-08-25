@@ -982,8 +982,13 @@ begin
                           'Die Distanz darf fehlen: null heisst nicht gemessen');
 
   select * into v_f from velocity_test.fixture_rad('distanz');
-  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit)
-       values (v_f.o_kunde_id, v_f.o_fahrrad_id, null, now() - interval '1 hour')
+  -- Koordinaten statt Station: ausleihe_startort_chk verlangt GENAU eine
+  -- Ortsangabe. Alle drei Felder null waere keine, und der Insert
+  -- scheiterte am Constraint, bevor der Test etwas pruefen koennte.
+  insert into velocity.ausleihe (kunde_id, fahrrad_id,
+                                 start_latitude, start_longitude, startzeit)
+       values (v_f.o_kunde_id, v_f.o_fahrrad_id, 49.79, 9.93,
+               now() - interval '1 hour')
     returning ausleihe_id into v_a;
 
   -- Eine negative Strecke ist kein Messfehler, sondern ein Denkfehler.
