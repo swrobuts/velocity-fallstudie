@@ -714,8 +714,8 @@ returns setof text language plpgsql as $$
 begin
   return next results_eq(
     $q$ select code from velocity.rechenannahme where upper_inf(gueltigkeit) order by code $q$,
-    $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),('umwegfaktor') $q$,
-    'Alle vier Rechenannahmen haben eine laufende Periode');
+    $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),('reisegeschwindigkeit'),('umwegfaktor') $q$,
+    'Alle fuenf Rechenannahmen haben eine laufende Periode');
   -- Nicht pruefen, dass keine Zeile ohne Quelle DA ist - das kann keine
   -- sein, quelle ist not null mit CHECK. Pruefen, dass eine solche Zeile
   -- gar nicht erst hineinkommt. Sonst waere die Zusicherung immer wahr.
@@ -915,7 +915,11 @@ select v.code, v.wert, v.einheit, v.gueltigkeit, v.quelle, v.erlaeuterung
      'Fahrrad ohne Motor, im Wesentlichen Herstellung und Wartung'),
     ('umwegfaktor',   1.2500, 'Faktor',     daterange(date '2025-01-01', null, '[)'),
      'Annahme dieser Fallstudie, nicht gemessen',
-     'Verhaeltnis der tatsaechlich gefahrenen Strecke zur Luftlinie im Stadtverkehr')
+     'Verhaeltnis der tatsaechlich gefahrenen Strecke zur Luftlinie im Stadtverkehr'),
+    ('reisegeschwindigkeit', 13.0000, 'km/h', daterange(date '2025-01-01', null, '[)'),
+     'Annahme dieser Fallstudie, nicht gemessen',
+     'Nur fuer Rundfahrten: wer dort startet, wo er endet, hat eine Luftlinie von '
+     'null. Dann bleibt die Dauer als einzige Grundlage.')
   ) as v(code, wert, einheit, gueltigkeit, quelle, erlaeuterung)
  where not exists (
    select 1 from velocity.rechenannahme r
@@ -2840,7 +2844,10 @@ select date_trunc('month', a.startzeit)::date              as monat,
   join velocity.fahrradmodell   mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp      t  on t.typ_id     = mo.typ_id
  where a.status = 'abgeschlossen'
-   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('disposition'))
+   -- Nur die Leitung. Die Spec gibt die Zusatzrolle disposition
+   -- ausdruecklich nur der Stationsauslastung - dort braucht die
+   -- Disposition sie fuer die taegliche Arbeit, beim Umsatz nicht.
+   and velocity.hat_rolle('leitung')
  group by 1, 2, 3;
 
 -- ---- Umsatz nach Kundengruppe ----------------------------------------
@@ -2875,15 +2882,40 @@ select a.ausleihe_id,
        a.startzeit,
        a.kunde_id,
        t.typ_code,
-       coalesce(
-         a.distanz_km,
-         round(velocity.fn_luftlinie_km(
+       -- Drei Faelle, und der dritte ist der Grund fuer diesen Block.
+       -- Eine Rundfahrt endet dort, wo sie begann: ihre Luftlinie ist
+       -- strukturell null, gefahren wurde trotzdem. Ohne den mittleren
+       -- Zweig traegt rund jede zehnte Fahrt null Kilometer bei, die
+       -- CO2-Ersparnis ist systematisch zu niedrig, und es faellt
+       -- nirgends auf - der Anteil geschaetzter Fahrten sieht dabei
+       -- voellig normal aus.
+       case
+         when a.distanz_km is not null then a.distanz_km
+         when velocity.fn_luftlinie_km(
+                coalesce(s1.latitude,  a.start_latitude),
+                coalesce(s1.longitude, a.start_longitude),
+                coalesce(s2.latitude,  a.end_latitude),
+                coalesce(s2.longitude, a.end_longitude)) = 0
+           then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
+         else round(velocity.fn_luftlinie_km(
                  coalesce(s1.latitude,  a.start_latitude),
                  coalesce(s1.longitude, a.start_longitude),
                  coalesce(s2.latitude,  a.end_latitude),
                  coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
-       )                        as kilometer,
-       a.distanz_km is null     as ist_geschaetzt
+       end                      as kilometer,
+       a.distanz_km is null     as ist_geschaetzt,
+       -- WELCHES Verfahren geschaetzt hat, gehoert sichtbar in die
+       -- Zeile. Zwei Schaetzungen, die dieselbe Spalte fuellen und sich
+       -- unterschiedlich irren, muss man auseinanderhalten koennen.
+       case when a.distanz_km is not null then 'gemessen'
+            when velocity.fn_luftlinie_km(
+                   coalesce(s1.latitude,  a.start_latitude),
+                   coalesce(s1.longitude, a.start_longitude),
+                   coalesce(s2.latitude,  a.end_latitude),
+                   coalesce(s2.longitude, a.end_longitude)) = 0
+              then 'aus_dauer'
+            else 'aus_luftlinie'
+       end                      as verfahren
   from velocity.ausleihe a
   join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
@@ -2892,6 +2924,9 @@ select a.ausleihe_id,
   left join velocity.station s2 on s2.station_id = a.end_station_id
   left join velocity.rechenannahme ra
          on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
+  left join velocity.rechenannahme tempo
+         on tempo.code = 'reisegeschwindigkeit'
+        and tempo.gueltigkeit @> a.startzeit::date
  where a.status = 'abgeschlossen'
    and velocity.ist_mitarbeiter();
 
@@ -2904,6 +2939,7 @@ select date_trunc('month', k.startzeit)::date as monat,
        k.typ_code,
        count(*)                                        as fahrten,
        round(sum(k.kilometer), 1)                      as kilometer,
+       count(*) filter (where k.ist_geschaetzt)        as fahrten_geschaetzt,
        round(avg(case when k.ist_geschaetzt then 1.0 else 0.0 end), 3)
                                                        as anteil_geschaetzt,
        round(sum(k.kilometer * (pkw.wert - eigen.wert)) / 1000.0, 2)
@@ -2915,6 +2951,12 @@ select date_trunc('month', k.startzeit)::date as monat,
     on eigen.code = case when k.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
    and eigen.gueltigkeit @> k.startzeit::date
  where k.kilometer is not null
+   -- Der Filter gehoert AUCH hierher, nicht nur in die Hilfssicht.
+   -- v_wawi_fahrt_km prueft nur ist_mitarbeiter() - das laesst jede
+   -- Fachrolle durch, auch Werkstatt und Kundenservice. Die Spec
+   -- reserviert die Auswertungen fuer die Leitung, und eine Sicht, die
+   -- ihre Schranke von einer anderen erbt, hat keine eigene.
+   and velocity.hat_rolle('leitung')
  group by 1, 2;
 
 -- ---- Stationsauslastung ----------------------------------------------
