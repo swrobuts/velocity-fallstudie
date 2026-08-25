@@ -3834,6 +3834,7 @@ git commit -m "feat(wawi): Kundenpflege, Auskunft und Anonymisierung nach Art. 1
 - Ändern: `tools/abnahme.sh` (Prüfungen 19 bis 23)
 - Ändern: `doku/datenmodell/01-anforderungen.md` (GR16 bis GR22)
 - Ändern: `doku/datenmodell/05-physisches-modell.md` (die neuen Bereiche)
+- Ändern: `doku/datenmodell/07-sicherheitskonzept.md` (Schutz, den es nicht gibt)
 - Ändern: `doku/datenmodell/erd/erd-wawi.mmd` (gebaut vs. entworfen)
 - Ändern: `README.md` (Werkzeugliste, Prüfungszahl)
 
@@ -4034,6 +4035,21 @@ node tools/mermaid_check.mjs doku/datenmodell/erd/*.mmd
 - [ ] **Schritt 6: `05-physisches-modell.md` und `README.md` ergänzen**
 
 In `05-physisches-modell.md` die acht neuen Tabellen mit je einem Satz zur Begründung aufnehmen — insbesondere die Abweichung m:n bei den Rollen und den Verzicht auf `wartungsposition`.
+
+**Zuerst eine Stelle, die sicherheitsrelevant falsch ist:**
+`doku/datenmodell/07-sicherheitskonzept.md` beschreibt
+`alter default privileges in schema velocity revoke execute on functions
+from public` weiterhin als wirksamen Schutz für künftig angelegte
+Funktionen. Die Anweisung ist in Aufgabe 5 entfernt worden, weil sie in
+dieser Datenbank nachweislich keinen `pg_default_acl`-Eintrag erzeugt
+und nichts geschützt hat. Ein Sicherheitskonzept, das eine Schutzmaßnahme
+behauptet, die es nicht gibt, ist gefährlicher als eine Lücke, von der
+man weiß. Stelle die Stelle richtig: der Schutz kommt allein aus dem
+expliziten `revoke all on all functions in schema velocity from public,
+anon, authenticated`, dieser muss nach jeder neu angelegten Funktion
+erneut laufen, und abgesichert wird das durch die Sweep-Testfunktion
+`test_s_keine_oeffentliche_funktion` in `db/tests/t0011_sicherheit.sql`
+sowie durch Abnahmeprüfung 24.
 
 **Und eine Stelle nachziehen, die durch Aufgabe 5 falsch geworden ist:**
 `doku/datenmodell/05-physisches-modell.md` und `slides/build_deck.py`
