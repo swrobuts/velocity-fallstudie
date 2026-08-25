@@ -242,7 +242,7 @@ $$;
 create or replace function velocity_test.test_p_abrechnen_gleicht_beenden()
 returns setof text language plpgsql as $$
 declare
-  v_f1 record; v_f2 record; v_a1 bigint; v_a2 bigint;
+  v_f1 record; v_f2 record; v_e1 record; v_a1 bigint; v_a2 bigint;
   v_summe1 numeric; v_summe2 numeric; v_station bigint;
 begin
   select station_id into v_station from velocity.station order by station_id limit 1;
@@ -251,20 +251,23 @@ begin
   select * into v_f1 from velocity_test.fixture_rad('abr-a');
   -- fixture_rad legt einen frischen Fahrradtyp ohne Preis an; ohne einen
   -- gueltigen nutzungspreis liefe die Bepreisung sofort in P0002.
+  -- Der niedrige Tageshoechstpreis (5.00 gegen 1.00 + 37 x 0.20 = 8.40)
+  -- ist bewusst so gewaehlt, dass die Kappung greift - sonst deckte der
+  -- Vergleich nur zwei der fuenf moeglichen Positionsarten ab.
   insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
-    select m.typ_id, daterange(current_date - 365, null, '[)'), 1.00, 0.20, 20.00
+    select m.typ_id, daterange(current_date - 365, null, '[)'), 1.00, 0.20, 5.00
       from velocity.fahrrad f join velocity.fahrradmodell m on m.modell_id = f.modell_id
      where f.fahrrad_id = v_f1.o_fahrrad_id;
   insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit)
        values (v_f1.o_kunde_id, v_f1.o_fahrrad_id, v_station, now() - interval '37 minutes')
     returning ausleihe_id into v_a1;
-  select gesamtbetrag into v_summe1
-    from velocity.fn_ausleihe_beenden(v_f1.o_kunde_id, v_a1, v_station);
+  select * into v_e1 from velocity.fn_ausleihe_beenden(v_f1.o_kunde_id, v_a1, v_station);
+  v_summe1 := v_e1.gesamtbetrag;
 
   -- Weg B: die Fahrt ist schon abgeschlossen und wird nur bepreist.
   select * into v_f2 from velocity_test.fixture_rad('abr-b');
   insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
-    select m.typ_id, daterange(current_date - 365, null, '[)'), 1.00, 0.20, 20.00
+    select m.typ_id, daterange(current_date - 365, null, '[)'), 1.00, 0.20, 5.00
       from velocity.fahrrad f join velocity.fahrradmodell m on m.modell_id = f.modell_id
      where f.fahrrad_id = v_f2.o_fahrrad_id;
   insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit,
@@ -274,6 +277,11 @@ begin
     returning ausleihe_id into v_a2;
   v_summe2 := velocity.fn_ausleihe_abrechnen(v_a2);
 
+  -- Ohne diese Pruefung waere is(NULL, NULL) auch gruen, wenn Weg A aus
+  -- einem ganz anderen Grund gescheitert waere und gesamtbetrag deshalb
+  -- leer bliebe.
+  return next is(v_e1.meldung, 'Ausleihe beendet',
+                 'Weg A ist tatsaechlich erfolgreich beendet worden');
   return next is(v_summe2, v_summe1,
                  'Beide Wege kommen auf denselben Betrag');
   return next results_eq(
@@ -302,11 +310,36 @@ begin
        values (v_f.o_kunde_id, v_f.o_fahrrad_id, v_station, now() - interval '10 minutes')
     returning ausleihe_id into v_a;
   -- Eine laufende Fahrt hat noch keine Dauer. Sie zu bepreisen hiesse,
-  -- eine Zahl zu erfinden.
+  -- eine Zahl zu erfinden. Der Meldungstext ist Teil der Erwartung,
+  -- damit der Test nicht auch bei einer ganz anderen Ausnahme mit
+  -- demselben SQLSTATE gruen bliebe.
   return next throws_ok(
     format($q$ select velocity.fn_ausleihe_abrechnen(%s) $q$, v_a),
-    'P0001', null,
+    'P0001', format('Ausleihe %s ist noch nicht beendet', v_a),
     'Eine noch laufende Fahrt wird nicht bepreist');
+end;
+$$;
+
+create or replace function velocity_test.test_p_abrechnen_weist_stornierte_fahrt_ab()
+returns setof text language plpgsql as $$
+declare v_f record; v_a bigint; v_station bigint;
+begin
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  select * into v_f from velocity_test.fixture_rad('abr-storno');
+  -- ausleihe_abgeschlossen_chk verlangt eine Endzeit nur bei Status
+  -- 'abgeschlossen', verbietet sie bei 'storniert' aber nicht - eine
+  -- stornierte Fahrt kann also technisch eine Endzeit tragen. Ohne den
+  -- eigenen Statuswaechter in fn_ausleihe_abrechnen wuerde sie trotzdem
+  -- bepreist, obwohl sie storniert und nicht abgeschlossen ist.
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit,
+                                 end_station_id, endzeit, status)
+       values (v_f.o_kunde_id, v_f.o_fahrrad_id, v_station, now() - interval '15 minutes',
+               v_station, now(), 'storniert')
+    returning ausleihe_id into v_a;
+  return next throws_ok(
+    format($q$ select velocity.fn_ausleihe_abrechnen(%s) $q$, v_a),
+    'P0001', format('Ausleihe %s ist nicht abgeschlossen (Status %s)', v_a, 'storniert'),
+    'Eine stornierte Fahrt wird nicht bepreist, auch wenn sie eine Endzeit traegt');
 end;
 $$;
 
@@ -316,6 +349,10 @@ declare v_f record; v_a bigint; v_station bigint;
 begin
   select station_id into v_station from velocity.station order by station_id limit 1;
   select * into v_f from velocity_test.fixture_rad('abr-doppelt');
+  -- fixture_preisfall passt hier nicht: sie legt die Ausleihe selbst als
+  -- 'aktiv' an (fuer Tests von fn_ausleihe_beenden), diese Ausleihe muss
+  -- aber schon 'abgeschlossen' sein, damit fn_ausleihe_abrechnen sie
+  -- ueberhaupt annimmt. Deshalb fixture_rad und der Preis von Hand.
   insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
     select m.typ_id, daterange(current_date - 365, null, '[)'), 1.00, 0.20, 20.00
       from velocity.fahrrad f join velocity.fahrradmodell m on m.modell_id = f.modell_id
@@ -329,7 +366,7 @@ begin
   -- Zweimal abrechnen hiesse zweimal kassieren.
   return next throws_ok(
     format($q$ select velocity.fn_ausleihe_abrechnen(%s) $q$, v_a),
-    'P0001', null,
+    'P0001', format('Ausleihe %s ist bereits abgerechnet', v_a),
     'Eine bereits bepreiste Fahrt wird nicht erneut bepreist');
 end;
 $$;

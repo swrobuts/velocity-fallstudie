@@ -96,6 +96,20 @@ begin
     not has_function_privilege('authenticated',
       'velocity.fn_ausleihe_beenden(bigint,bigint,bigint,numeric,numeric)', 'execute'),
     'Die Fachlogik ist auch fuer authenticated nicht direkt aufrufbar');
+  -- fn_ausleihe_abrechnen bepreist eine Fahrt ohne jede Berechtigungs-
+  -- pruefung (das uebernimmt die aufrufende fn_ausleihe_beenden bzw. die
+  -- api-Schicht). Bliebe sie fuer anon oder authenticated aufrufbar,
+  -- koennte jeder mit dem oeffentlichen Schluessel fremde Ausleihen
+  -- abrechnen lassen - genau die PUBLIC-Falle, die oben schon einmal
+  -- zugeschlagen hat.
+  return next ok(
+    not has_function_privilege('anon',
+      'velocity.fn_ausleihe_abrechnen(bigint)', 'execute'),
+    'Die Bepreisung ist fuer anon nicht aufrufbar');
+  return next ok(
+    not has_function_privilege('authenticated',
+      'velocity.fn_ausleihe_abrechnen(bigint)', 'execute'),
+    'Die Bepreisung ist auch fuer authenticated nicht direkt aufrufbar');
 end;
 $$;
 

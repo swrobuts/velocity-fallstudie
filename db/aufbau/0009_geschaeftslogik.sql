@@ -177,6 +177,15 @@ begin
   if v_a.endzeit is null then
     raise exception 'Ausleihe % ist noch nicht beendet', p_ausleihe_id using errcode = 'P0001';
   end if;
+  -- ausleihe_abgeschlossen_chk erlaubt endzeit is not null auch bei
+  -- status 'storniert' - eine stornierte Fahrt kann also technisch
+  -- eine Endzeit tragen, ohne dass ueberhaupt gefahren wurde. Nur
+  -- 'abgeschlossen' bedeutet: die Fahrt ist reell zu Ende gegangen und
+  -- darf bepreist werden.
+  if v_a.status <> 'abgeschlossen' then
+    raise exception 'Ausleihe % ist nicht abgeschlossen (Status %)', p_ausleihe_id, v_a.status
+      using errcode = 'P0001';
+  end if;
   if exists (select 1 from velocity.entgeltposition e where e.ausleihe_id = p_ausleihe_id) then
     raise exception 'Ausleihe % ist bereits abgerechnet', p_ausleihe_id using errcode = 'P0001';
   end if;
