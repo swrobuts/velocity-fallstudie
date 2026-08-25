@@ -3332,8 +3332,14 @@ begin
   -- (GR18) und Stationen (GR22).
   delete from velocity.fahrrad_position where fahrrad_id = p_fahrrad_id;
 
+  -- coalesce, nicht blanke Verkettung: bemerkung || null ergibt null und
+  -- loeschte die vom Trigger geschriebene Begruendung stillschweigend.
+  -- api_rad_status_setzen prueft p_bemerkung deshalb auf null - hier
+  -- fehlte dieselbe Vorsicht.
   update velocity.fahrrad_ereignis
-     set mitarbeiter_id = v_m, bemerkung = bemerkung || ' - ' || p_grund
+     set mitarbeiter_id = v_m,
+         bemerkung = coalesce(bemerkung, '') ||
+                     coalesce(' - ' || nullif(btrim(p_grund), ''), '')
    where ereignis_id = (select max(ereignis_id) from velocity.fahrrad_ereignis
                          where fahrrad_id = p_fahrrad_id);
 end;
@@ -3357,14 +3363,19 @@ begin
        values (p_strasse, p_hausnummer, p_plz, p_ort)
     returning adresse_id into v_adresse;
 
-  select 'ST-' || lpad((coalesce(max(substring(stationsnummer from '\d+')::integer), 0) + 1)::text,
-                       3, '0')
+  -- Format S-0000, nicht ST-000. Der Bestand heisst S-0001 bis S-0010,
+  -- und 0012_dokumentation.sql schreibt es als "Fachlicher Schluessel im
+  -- Format S-0000" fest. Der erste Entwurf erzeugte ST-001 und haette
+  -- eine zweite, inkompatible Nummernserie neben die bestehende
+  -- gestellt - unbemerkt, weil kein Test das Format prueft.
+  select 'S-' || lpad((coalesce(max(substring(stationsnummer from '\d+')::integer), 0) + 1)::text,
+                      4, '0')
     into v_nummer
-    from velocity.station where stationsnummer ~ '^ST-\d+$';
+    from velocity.station where stationsnummer ~ '^S-\d+$';
 
   insert into velocity.station
          (stationsnummer, name, adresse_id, latitude, longitude, kapazitaet)
-       values (coalesce(v_nummer, 'ST-001'), p_name, v_adresse,
+       values (coalesce(v_nummer, 'S-0001'), p_name, v_adresse,
                p_latitude, p_longitude, p_kapazitaet)
     returning station_id into v_s;
 
