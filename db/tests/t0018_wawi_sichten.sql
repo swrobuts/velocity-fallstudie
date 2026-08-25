@@ -344,3 +344,33 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;
+
+-- Die beiden Tests oben pruefen die Grenze nur zur Haelfte: die
+-- Auswahllisten-Probe vergibt ueber fixture_mitarbeiter ALLE vier Rollen und
+-- zeigt so nur, dass irgendeine Rolle etwas sieht; die Disposition-Probe
+-- prueft trotz ihres Namens ausschliesslich, dass kundenservice aussen vor
+-- bleibt. Ungeprueft: dass disposition ALLEIN Zeilen sieht, und dass
+-- werkstatt ausgeschlossen ist. Gerade werkstatt ist der heikle Fall - die
+-- Schwestersicht v_wawi_flotte laesst werkstatt zu, und beim Nachbauen
+-- weiterer Sichten wird genau diese Zeile kopiert.
+create or replace function velocity_test.test_v_modell_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('modell-disposition', 'disposition');
+  select count(*) into v_n from velocity.v_wawi_modell;
+  return next cmp_ok(v_n, '>', 0, 'Disposition allein sieht die Modellliste');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('modell-leitung', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_modell;
+  return next cmp_ok(v_n, '>', 0, 'Leitung allein sieht die Modellliste');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('modell-werkstatt', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_modell;
+  return next is(v_n, 0,
+    'Werkstatt sieht die Modellliste nicht - anders als bei v_wawi_flotte ist sie hier nicht zugeteilt');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
