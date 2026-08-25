@@ -152,7 +152,7 @@ def baue() -> Presentation:
         ("Drei Fahrzeugklassen",
          ["City-Bike, Stadtrad ohne Motor",
           "E-Bike Sport, Pedelec bis 25 km/h",
-          "E-Cargo Loader, bis 100 kg Zuladung"]),
+          "E-Cargo Loader, bis 75 kg Zuladung"]),
         ("Zwei Abstellarten",
          ["An einer festen Station, kostenfrei",
           "Frei im Stadtgebiet, ohne Zuschlag",
@@ -541,7 +541,7 @@ def baue() -> Presentation:
              ["ZEITENTGELT", "61", "0,10", "+ 6,10", "dauer_minuten, aufgerundet"],
              ["FREIMINUTEN", "0", "0,10", "- 0,00", "Kontingent im Monat schon verbraucht"],
              ["TARIFRABATT", "1", "20 %", "- 1,24", "tarif_kondition zum Startzeitpunkt"],
-             ["HOECHSTPREIS", "1", "—", "- 0,00", "6,20 liegt unter der Obergrenze 15,00"]],
+             ["HOECHSTPREIS", "1", "—", "- 0,00", "6,20 liegt unter der Obergrenze 50,00"]],
             y=178, spalten_b=[190, 90, 130, 120, 373.5], zeilen_h=30)
     sandband(s, "6,20 - 1,24 = 4,96 Euro. Reihenfolge: Rabatt VOR der Kappung — umgekehrt "
                 "käme 4,00 heraus, weil der Rabatt den bereits gedeckelten Betrag ein "

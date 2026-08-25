@@ -63,10 +63,11 @@ angepassten `src/config.js`.
 ## Werkzeuge
 
 ```bash
-bash tools/abnahme.sh                  # alle 17 Prüfungen
+bash tools/abnahme.sh                  # alle 18 Prüfungen
 python3 tools/versionieren.py          # Fingerabdrücke der eingebundenen Dateien
 python3 tools/ux_check.py              # Bedienbarkeit und Regressionen
 python3 tools/freisteller_pruefen.py   # die Radbilder gegen ihre Vorlagen
+python3 tools/folien_gegen_db.py       # Zahlen im Foliendeck gegen die Datenbank
 python3 tools/raeder_weissgrund.py     # Radbilder neu erzeugen
 bash tools/veroeffentlichen.sh         # auf den Server stellen
 ```
