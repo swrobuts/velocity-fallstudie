@@ -102,17 +102,34 @@ create policy aenderungsprotokoll_unloeschbar on velocity.aenderungsprotokoll
 -- ausschliesslich Sichten und api_-Funktionen an - dieselbe Regel wie
 -- fuer die Website, und tools/abnahme.sh prueft sie von aussen.
 --
--- NICHT "revoke all on all tables in schema velocity": ALL TABLES
--- schliesst in PostgreSQL die Sichten mit ein. Diese eine Anweisung
--- haette der Website jedes Leserecht genommen und die Startseite
--- abgeschaltet. Deshalb ausdruecklich nur relkind = 'r'.
+-- Zwei Einschraenkungen, beide teuer gelernt.
+--
+-- ERSTENS nicht "revoke all on all tables in schema velocity": ALL
+-- TABLES schliesst in PostgreSQL die Sichten mit ein und haette der
+-- Website jedes Leserecht genommen.
+--
+-- ZWEITENS - und das war der eigentliche Fehler - nicht ueber ALLE
+-- Basistabellen des Schemas iterieren, sondern nur ueber die acht
+-- neuen. Die erste Fassung tat das und riss die Rechte mit, die
+-- 0011_sicherheit.sql fuer die "eigene Zeilen"-Regeln der Kunden
+-- vergeben hatte: kunde, ausleihe, entgeltposition, mitgliedschaft,
+-- rechnung und weitere. Folge war kein theoretisches Risiko, sondern
+-- ein Funktionsbruch - v_meine_ausleihe und v_meine_rechnung laufen mit
+-- security_invoker = true und brauchen die Rechte des AUFRUFERS. Ein
+-- angemeldeter Kunde bekam "permission denied for table ausleihe" und
+-- sah seine eigenen Fahrten nicht mehr.
+--
+-- Aufgefallen ist es erst in der Pruefung, per SET ROLE authenticated.
+-- Weder die pgTAP-Kette noch tools/abnahme.sh haben es bemerkt: der
+-- REST-Test prueft nur mit dem anon-Key und erwartet dort ohnehin eine
+-- Sperre, und der Durchstich ruft authenticated nur ueber
+-- security-definer-Funktionen auf.
 do $$
 declare v_t text;
 begin
-  for v_t in
-    select c.relname
-      from pg_class c join pg_namespace n on n.oid = c.relnamespace
-     where n.nspname = 'velocity' and c.relkind = 'r'
+  foreach v_t in array array['rolle','mitarbeiter','mitarbeiter_rolle',
+                             'schadensmeldung','wartungsauftrag','fahrrad_ereignis',
+                             'aenderungsprotokoll','rechenannahme']
   loop
     execute format('revoke all on velocity.%I from anon, authenticated', v_t);
   end loop;
