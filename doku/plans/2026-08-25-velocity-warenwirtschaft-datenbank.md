@@ -2993,7 +2993,7 @@ git commit -m "feat(wawi): Auswertungen - Umsatz, Kilometer und CO2 mit ausgewie
 
 **Schnittstellen:**
 - Nutzt: `velocity.hat_rolle(text)`, `velocity.mitarbeiter_id_aus_auth()` aus Aufgabe 9
-- Liefert: `velocity.fn_rolle_verlangen(p_code text) returns bigint`; `api_rad_anlegen(p_rahmennummer text, p_modell_id bigint, p_station_id bigint) returns bigint`; `api_rad_status_setzen(p_fahrrad_id bigint, p_status text, p_bemerkung text) returns void`; `api_rad_ausmustern(p_fahrrad_id bigint, p_grund text) returns void`; `api_station_anlegen(p_name text, p_strasse text, p_hausnummer text, p_plz text, p_ort text, p_latitude numeric, p_longitude numeric, p_kapazitaet integer) returns bigint`; `api_station_stilllegen(p_station_id bigint, p_zum date) returns void`
+- Liefert: `velocity.fn_rolle_verlangen(p_code text) returns bigint`; `api_rad_anlegen(p_rahmennummer text, p_modell_id bigint, p_station_id bigint) returns bigint` — Station ist Pflicht (GR13); `api_rad_status_setzen(p_fahrrad_id bigint, p_status text, p_bemerkung text) returns void`; `api_rad_ausmustern(p_fahrrad_id bigint, p_grund text) returns void`; `api_station_anlegen(p_name text, p_strasse text, p_hausnummer text, p_plz text, p_ort text, p_latitude numeric, p_longitude numeric, p_kapazitaet integer) returns bigint`; `api_station_stilllegen(p_station_id bigint, p_zum date) returns void`
 
 - [ ] **Schritt 1: Testdatei anlegen**
 
@@ -3023,15 +3023,16 @@ $$;
 
 create or replace function velocity_test.test_l_ohne_rolle_kein_schreiben()
 returns setof text language plpgsql as $$
-declare v_modell bigint;
+declare v_modell bigint; v_station bigint;
 begin
   select modell_id into v_modell from velocity.fahrradmodell order by modell_id limit 1;
+  select station_id into v_station from velocity.station order by station_id limit 1;
   perform velocity_test.fixture_rollen('ohne', array['werkstatt']);
   -- Werkstatt darf reparieren, nicht beschaffen. Die Pruefung sitzt in
   -- der Funktion, nicht in der Oberflaeche: sonst genuegte ein
   -- HTTP-Aufruf an PostgREST, um sie zu umgehen.
   return next throws_ok(
-    format($q$ select velocity.api_rad_anlegen('RN-L-1', %s, null) $q$, v_modell),
+    format($q$ select velocity.api_rad_anlegen('RN-L-1', %s, %s) $q$, v_modell, v_station),
     '42501', null,
     'Ohne Rolle disposition kein neues Rad');
   perform set_config('request.jwt.claims', '', true);
@@ -3040,11 +3041,19 @@ $$;
 
 create or replace function velocity_test.test_l_rad_anlegen_und_status()
 returns setof text language plpgsql as $$
-declare v_modell bigint; v_f bigint; v_n integer;
+declare v_modell bigint; v_f bigint; v_n integer; v_station bigint;
 begin
   select modell_id into v_modell from velocity.fahrradmodell order by modell_id limit 1;
+  select station_id into v_station from velocity.station order by station_id limit 1;
   perform velocity_test.fixture_rollen('rad', array['disposition']);
-  v_f := velocity.api_rad_anlegen('RN-L-2', v_modell, null);
+  v_f := velocity.api_rad_anlegen('RN-L-2', v_modell, v_station);
+
+  -- GR13: ohne Station geht es nicht. Ein Rad auf 'verfuegbar' ohne Ort
+  -- laesst der Trigger trg_radposition_pruefen nicht zu.
+  return next throws_ok(
+    format($q$ select velocity.api_rad_anlegen('RN-L-3', %s, null) $q$, v_modell),
+    'P0001', 'Ein neues Rad braucht eine Station (GR13)',
+    'Ein Rad ohne Station wird abgewiesen');
   return next ok(v_f is not null, 'Das Rad wird angelegt');
 
   -- GR21: die Anschaffung steht in der Lebenslaufakte.
@@ -3163,8 +3172,17 @@ end;
 $$;
 
 -- ---- Flotte ----------------------------------------------------------
+-- p_station_id ist PFLICHT, kein Vorgabewert. GR13 verlangt fuer jedes
+-- Rad, das nicht gerade unterwegs oder ausgemustert ist, einen Ort. Ein
+-- neues Rad steht auf 'verfuegbar' - ohne Station scheitert der Trigger
+-- trg_radposition_pruefen mit "braucht damit einen Standort". Nachgemessen,
+-- nicht vermutet: der erste Entwurf hatte hier "default null" und waere
+-- bei jedem Aufruf ohne Station gescheitert.
+--
+-- Fachlich ist das auch richtig: ein Rad, das ins System kommt, steht
+-- irgendwo. Wer es nicht weiss, hat es nicht angeschafft.
 create or replace function velocity.api_rad_anlegen(
-  p_rahmennummer text, p_modell_id bigint, p_station_id bigint default null
+  p_rahmennummer text, p_modell_id bigint, p_station_id bigint
 )
 returns bigint
 language plpgsql
@@ -3174,6 +3192,11 @@ as $$
 declare v_m bigint; v_f bigint;
 begin
   v_m := velocity.fn_rolle_verlangen('disposition');
+
+  if p_station_id is null then
+    raise exception 'Ein neues Rad braucht eine Station (GR13)'
+      using errcode = 'P0001';
+  end if;
 
   insert into velocity.fahrrad (rahmennummer, modell_id, status, angeschafft_am)
        values (p_rahmennummer, p_modell_id, 'verfuegbar', current_date)
