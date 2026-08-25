@@ -151,51 +151,124 @@ async function bereichWechseln(schluessel) {
 // umbucht, braucht die Rueckmeldung dort, wo er ohnehin hinsieht - nicht
 // als Blase in einer Ecke, die nach drei Sekunden verschwindet. Deshalb
 // bleibt der Text stehen, bis der naechste kommt.
-//
-// Zwei Arten von Text teilen sich diese eine Zeile. Die Buchungs-
-// bestaetigung ("Rad ... ausgemustert.", art='gut') kommt aus einem
-// Knopf; direkt danach ruft jede *Aufbauen()-Funktion die Liste neu auf
-// und schliesst selbst mit einer Uebersichtsmeldung ("10 Stationen") ab.
-// Bisher liefen beide durch dasselbe melde() - die Uebersicht ueber-
-// schrieb die Bestaetigung im selben Atemzug, der Anwender sah nie, was
-// er gerade gebucht hatte (siehe fluessiges Beispiel im Auftrag).
-//
-// Geloest wird das NICHT ueber eine Warteschlange: wer zwanzig Buchungen
-// hintereinander macht, soll bei jeder SOFORT ihre eigene Bestaetigung
-// sehen, nicht eine Reihe alter Meldungen der Reihe nach abarbeiten -
-// die einundzwanzigste darf nicht hinter der ersten anstehen. Stattdessen
-// merkt sich die Statuszeile nur EIN Bit: ob die zuletzt gezeigte Meldung
-// eine noch "unverbrauchte" Bestaetigung war. meldeUebersicht() weiter
-// unten - von den *Aufbauen()-Funktionen an genau der Stelle aufgerufen,
-// an der bisher melde(...) stand - ueberspringt sich in diesem einen Fall
-// selbst und verbraucht die Markierung dabei; die naechste eigenstaendige
-// Uebersicht (z. B. beim naechsten Bereichswechsel oder beim naechsten
-// Laden ohne vorausgehende Buchung) zeigt wieder normal an. Eine
-// Fehlermeldung dagegen bleibt immer ein normaler melde(..., 'schlecht')-
-// Aufruf und laeuft nie durch diese Weiche - ein Ladefehler nach einer
-// erfolgreichen Buchung darf nicht hinter der alten Bestaetigung
-// verschwinden.
-let statuszeileUnverbraucht = false;
-
 function melde(text, art = 'neutral') {
     const zeile = document.getElementById('statuszeile');
     zeile.textContent = text;
     zeile.className = art;   // neutral | gut | warnung | schlecht
-    statuszeileUnverbraucht = art === 'gut';
+    // Von neuerVorgang() gelesen und dort sofort verbraucht (siehe
+    // dortiger Kommentar) - deshalb hier roh und ungeprueft gesetzt.
+    letzteMeldeArt = art;
 }
 
-// Fuer die abschliessende Meldung jeder *Aufbauen()-Funktion nach dem
-// Neuaufbau ihrer Liste - nicht fuer Fehler (die bleiben bei
-// melde(..., 'schlecht'), siehe Kommentar oben) und nicht fuer die
-// Bestaetigung selbst (die bleibt bei melde(..., 'gut') im Knopf-
-// Handler). Wird die Uebersicht durch eine frische, noch unverbrauchte
-// Bestaetigung ausgeloest, faellt sie fuer dieses eine Mal aus.
-function meldeUebersicht(text) {
-    if (statuszeileUnverbraucht) {
-        statuszeileUnverbraucht = false;
+// ===== Vorgangsverwaltung =====
+//
+// ERSTER ANLAUF (verworfen): eine Buchungsbestaetigung ("Rad ...
+// ausgemustert.", art='gut') kommt aus einem Knopf; direkt danach ruft
+// jede *Aufbauen()-Funktion die Liste neu auf und schloss frueher mit
+// einer eigenen Uebersichtsmeldung ("10 Stationen") ab, die die
+// Bestaetigung sofort ueberschrieb. Die erste Loesung dafuer war EIN
+// gemeinsames Bit ("die letzte Meldung war eine noch unverbrauchte
+// Bestaetigung"). Die Pruefung hat das durchfallen lassen, mit zwei
+// nachgestellten Befunden:
+//
+//   1. Zwei Buchungen kurz hintereinander, deren Neuaufbauten sich
+//      ueberholen (Buchung A startet ihren Neuaufbau, dann Buchung B
+//      ihren - B's Bestaetigung steht, dann kommt ZUERST A's Neuaufbau
+//      zurueck). Ein einzelnes Bit weiss nicht, dass die Bestaetigung
+//      inzwischen zu B gehoert, nicht zu A - A's Neuaufbau "verbraucht"
+//      das Bit, das fuer B gedacht war, und B's eigener Neuaufbau
+//      schreibt danach ungebremst seine Uebersicht ueber B's eigene,
+//      noch druckfrische Bestaetigung.
+//   2. Ein Bereichswechsel waehrend ein Neuaufbau des VORHERIGEN
+//      Bereichs noch laeuft: kommt der spaet zurueck, schreibt er Liste
+//      UND Statuszeile des NEUEN Bereichs voll, obwohl die Navigation
+//      laengst woanders steht. Das Bit schuetzt nicht davor - es kennt
+//      nur "war zuletzt eine Bestaetigung da", nicht "gehoert dieser
+//      Neuaufbau ueberhaupt noch zur Gegenwart".
+//
+// Beiden Befunden gemeinsam: es gab keine Stelle, an der ein Neuaufbau
+// merken konnte, dass ER SELBST veraltet ist. Ein Bit kennt nur DASS
+// etwas war, nicht WOZU es gehoerte.
+//
+// LOESUNG: jeder Vorgang (jeder Aufruf einer *Aufbauen()-Funktion)
+// bekommt beim Start eine eigene, fortlaufende Kennung. neuerVorgang()
+// liefert sie; jeder weitere Schreibversuch dieses Vorgangs - Liste
+// (zeigeListe) UND Statuszeile (meldeVorgang) - traegt diese Kennung
+// vor sich her und prueft bei sich SELBST, ob sie noch die aktuelle
+// ist. Ein Vorgang, dessen Kennung inzwischen ueberholt wurde -von
+// einem neueren Neuaufbau DESSELBEN Bereichs (Befund 1) oder vom
+// Neuaufbau eines ANDEREN Bereichs nach einem Wechsel (Befund 2) -
+// schreibt gar nichts mehr, weder Liste noch Statuszeile. Kein Bit,
+// keine Warteschlange: die zwanzigste Buchung einer Reihe zeigt weiter
+// sofort ihre eigene Bestaetigung, unabhaengig davon, wie lange die
+// vorherigen Neuaufbauten noch unterwegs sind.
+//
+// Die Bestaetigung selbst haengt jetzt am VORGANG statt an einem
+// geteilten Bit: neuerVorgang() liest, OHNE await dazwischen, welche
+// Art die zuletzt sichtbare Meldung hatte (letzteMeldeArt, von melde()
+// gesetzt). melde(..., 'gut') und der direkt folgende Aufruf einer
+// *Aufbauen()-Funktion stehen in JEDEM Aufrufer als zwei aufeinander-
+// folgende Anweisungen OHNE dazwischenliegendes await - JavaScript
+// raeumt dazwischen nichts anderes ab. Zeigt die Statuszeile in diesem
+// Moment noch eine frische Bestaetigung, gehoert sie zu GENAU DEM
+// Vorgang, der jetzt beginnt - nicht zu irgendeinem frueheren. Die
+// Markierung wird dabei sofort verbraucht (letzteMeldeArt = null):
+// ein zweiter, unabhaengiger Neuaufbau nach demselben Vorgang (ohne
+// neue Buchung dazwischen) soll seine eigene Uebersicht wieder normal
+// zeigen, nicht ein zweites Mal von derselben, laengst gezeigten
+// Bestaetigung unterdrueckt werden.
+//
+// Verwerfen gehoert HIERHER, nicht in die Bereiche (Ruling der
+// zweiten Pruefung): jeder der fuenf Arbeitsbereiche ruft nur
+// neuerVorgang() (eine Zeile, ganz am Anfang jeder *Aufbauen()-
+// Funktion) und reicht die Kennung an zeigeListe()/meldeVorgang()
+// weiter - die Entscheidung, ob ein Schreibversuch noch gilt, faellt
+// ausschliesslich hier.
+let vorgangsZaehler = 0;
+let aktuellerVorgang = 0;            // Kennung des zuletzt gestarteten Vorgangs
+let vorgangMitOffenerBestaetigung = null;  // Kennung, deren Bestaetigung noch "frisch" ist
+let letzteMeldeArt = null;           // von melde() gesetzt, von neuerVorgang() verbraucht
+
+// Von jeder *Aufbauen()-Funktion als ALLERERSTE Anweisung aufzurufen,
+// vor jedem await. Liefert die Kennung dieses Vorgangs.
+function neuerVorgang() {
+    vorgangsZaehler += 1;
+    aktuellerVorgang = vorgangsZaehler;
+    vorgangMitOffenerBestaetigung = letzteMeldeArt === 'gut' ? aktuellerVorgang : null;
+    letzteMeldeArt = null;   // verbraucht - siehe Begruendung oben
+    return aktuellerVorgang;
+}
+
+// true, wenn kennung noch der zuletzt gestartete Vorgang ist - false,
+// wenn seitdem ein neuerer begonnen hat (ein weiterer Neuaufbau
+// desselben Bereichs, ein Bereichswechsel, oder beides).
+function istAktuellerVorgang(kennung) {
+    return kennung === aktuellerVorgang;
+}
+
+// Die Statuszeilen-Schreibstelle jeder *Aufbauen()-Funktion - sowohl
+// fuer den Ladefehler-Zweig (art='schlecht') als auch fuer die
+// abschliessende Uebersichtsmeldung (art='neutral', Vorgabewert). NICHT
+// fuer die Bestaetigung selbst, die bleibt ein direkter Aufruf von
+// melde(text, 'gut') im Knopf-Handler, BEVOR die *Aufbauen()-Funktion
+// (und mit ihr neuerVorgang()) ueberhaupt laeuft.
+//
+// Ein veralteter Vorgang schreibt ueberhaupt nichts - auch keinen
+// Fehler: gehoert der Vorgang nicht mehr zur Gegenwart (Bereich
+// gewechselt, oder ein neuerer Neuaufbau laeuft bereits), ist auch sein
+// eigener Ladefehler nicht mehr relevant, siehe Befund 2 oben. Nur
+// innerhalb eines noch aktuellen Vorgangs gilt die Reihenfolge aus dem
+// Auftrag: eine Uebersichtsmeldung (art='neutral') faellt genau einmal
+// aus, wenn dieser Vorgang noch eine unverbrauchte Bestaetigung traegt -
+// ein Fehler (art='schlecht') dagegen schreibt IMMER, unterdrueckt durch
+// nichts.
+function meldeVorgang(kennung, text, art = 'neutral') {
+    if (!istAktuellerVorgang(kennung)) return;
+    if (art === 'neutral' && vorgangMitOffenerBestaetigung === kennung) {
+        vorgangMitOffenerBestaetigung = null;   // verbraucht, Bestaetigung bleibt stehen
         return;
     }
-    melde(text);
+    melde(text, art);
 }
 
 // ===== Bestaetigungsdialog =====
@@ -452,10 +525,17 @@ function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
     leiste.append(knopf);
 }
 
+// kennung: von neuerVorgang() geliefert, siehe Kommentar dort. Ein
+// veralteter Vorgang zeichnet die Liste nicht mehr - sonst ueberschriebe
+// ein spaet zurueckkommender Neuaufbau eines VORHERIGEN Bereichs oder
+// eines ueberholten Buchungsvorgangs die Liste, die der Anwender gerade
+// vor sich hat.
 // spalten: [{ feld, titel, formatieren?, klasse? }]
 // Bei Klick UND bei Pfeiltaste: beiAuswahl(zeile) aufrufen und die
 // Zeile als ausgewaehlt markieren.
-function zeigeListe(zeilen, spalten, beiAuswahl) {
+function zeigeListe(kennung, zeilen, spalten, beiAuswahl) {
+    if (!istAktuellerVorgang(kennung)) return;
+
     listenZeilen = zeilen;
     listenAuswahl = beiAuswahl;
     listenIndex = -1;

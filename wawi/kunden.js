@@ -77,6 +77,17 @@ function suchwert(text) {
 }
 
 async function kundenAufbauen(suchtext) {
+    // ALLERERSTE Anweisung, vor jedem await - siehe Kommentar bei
+    // neuerVorgang() in rahmen.js und bei flotteAufbauen() in flotte.js.
+    // Schuetzt hier nebenbei auch vor einer zweiten, ganz eigenen Race:
+    // die Suche unten loest kundenAufbauen() bei jedem beruhigten
+    // Tippen erneut aus (300ms Debounce). Tippt jemand waehrend eine
+    // aeltere Suchanfrage noch unterwegs ist weiter, kommt die AELTERE
+    // Antwort manchmal NACH der neueren zurueck - ohne Kennung ueberschriebe
+    // sie die Liste der neueren Suche mit ihren eigenen, laengst
+    // ueberholten Treffern.
+    const vorgang = neuerVorgang();
+
     // Kein Standardwert '' im Funktionskopf: bereichWechseln() in
     // rahmen.js ruft jedes aufbauen() ohne Argument auf (das gilt fuer
     // alle fuenf Bereiche gleich, nicht nur fuer Kunden - siehe dort).
@@ -115,11 +126,14 @@ async function kundenAufbauen(suchtext) {
 
     const fehler = letzterLadeFehler('v_wawi_kunde');
     if (fehler) {
-        melde(`Die Kunden liessen sich nicht laden: ${fehler}`, 'schlecht');
+        // meldeVorgang statt melde: ein inzwischen veralteter Aufruf
+        // (siehe Kommentar bei neuerVorgang() oben und in rahmen.js)
+        // meldet auch seinen eigenen Ladefehler nicht mehr.
+        meldeVorgang(vorgang, `Die Kunden liessen sich nicht laden: ${fehler}`, 'schlecht');
         return;
     }
 
-    zeigeListe(kunden, [
+    zeigeListe(vorgang, kunden, [
         { feld: 'kundennummer', titel: 'Nummer' },
         { feld: 'nachname',     titel: 'Nachname' },
         { feld: 'vorname',      titel: 'Vorname' },
@@ -142,12 +156,13 @@ async function kundenAufbauen(suchtext) {
     // fehlender Knopf in dieser Oberflaeche (siehe auch der
     // Bestaetigungstext beim Sperren-Knopf weiter unten).
     //
-    // meldeUebersicht statt melde: nach einer Buchung (Sperren,
+    // meldeVorgang statt melde: nach einer Buchung (Sperren,
     // Anonymisieren, Anlegen - siehe kundeMaske/kundeAnlegenMaske) ruft
     // genau dieser Aufruf hier sofort im Anschluss auf und ueberschriebe
-    // die gerade gezeigte Bestaetigung, bevor sie jemand liest. Siehe
-    // Begruendung bei meldeUebersicht() in rahmen.js.
-    meldeUebersicht(kunden.length === 200
+    // die gerade gezeigte Bestaetigung, bevor sie jemand liest, wenn er
+    // noch zu DIESEM Vorgang gehoert. Siehe Begruendung bei
+    // meldeVorgang() in rahmen.js.
+    meldeVorgang(vorgang, kunden.length === 200
         ? '200 von mehr Kunden — bitte weiter eingrenzen'
         : suchtext
             ? `${kunden.length} Kunden zu „${suchtext}“`

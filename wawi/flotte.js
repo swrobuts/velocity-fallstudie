@@ -4,8 +4,8 @@
 // Der erste echte Arbeitsbereich. Er benutzt ausschliesslich die
 // Bausteine aus rahmen.js (bereichAnmelden, ladeListe, rufeAuf,
 // letzterLadeFehler, zeigeListe, zeigeMaske, zeigeWerkzeugleiste, melde,
-// meldeUebersicht, bestaetige, frageNachGrund, darfRolle) und die eigene
-// Sicht v_wawi_flotte - keine Basistabelle, keine fn_-Funktion.
+// neuerVorgang, meldeVorgang, bestaetige, frageNachGrund, darfRolle) und
+// die eigene Sicht v_wawi_flotte - keine Basistabelle, keine fn_-Funktion.
 // ============================================
 
 bereichAnmelden({
@@ -20,6 +20,14 @@ bereichAnmelden({
 });
 
 async function flotteAufbauen() {
+    // ALLERERSTE Anweisung, vor jedem await (siehe Kommentar bei
+    // neuerVorgang() in rahmen.js): fuenf Buchungen hintereinander lesen
+    // fuenfmal ueber diese Zeile fuenf verschiedene Kennungen ein. Kommt
+    // ein aelterer Aufruf dieser Funktion spaeter zurueck als ein
+    // juengerer, erkennt er an seiner eigenen, dann veralteten Kennung,
+    // dass er nichts mehr schreiben darf - weder Liste noch Statuszeile.
+    const vorgang = neuerVorgang();
+
     // Wer anlegen darf, bekommt den Knopf VOR der Liste zu sehen - nicht
     // ausgegraut fuer die anderen beiden Rollen, sondern schlicht nicht
     // vorhanden (siehe radMaske weiter unten fuer denselben Grundsatz).
@@ -39,11 +47,15 @@ async function flotteAufbauen() {
 
     const fehler = letzterLadeFehler('v_wawi_flotte');
     if (fehler) {
-        melde(`Die Flotte liess sich nicht laden: ${fehler}`, 'schlecht');
+        // meldeVorgang statt melde: ist dieser Aufruf inzwischen
+        // veraltet (ueberholt oder der Bereich gewechselt), gehoert auch
+        // sein eigener Ladefehler nicht mehr zur Gegenwart - siehe
+        // Kommentar bei meldeVorgang() in rahmen.js (Befund 2).
+        meldeVorgang(vorgang, `Die Flotte liess sich nicht laden: ${fehler}`, 'schlecht');
         return;
     }
 
-    zeigeListe(raeder, [
+    zeigeListe(vorgang, raeder, [
         { feld: 'rahmennummer',   titel: 'Rahmennummer' },
         { feld: 'typ_code',       titel: 'Typ' },
         { feld: 'status',         titel: 'Status', klasse: statusKlasse },
@@ -51,12 +63,13 @@ async function flotteAufbauen() {
         { feld: 'offene_schaeden', titel: 'Schäden', formatieren: (n) => n || '' }
     ], radMaske);
 
-    // meldeUebersicht statt melde: nach einer Buchung (Statuswechsel,
+    // meldeVorgang statt melde: nach einer Buchung (Statuswechsel,
     // Ausmustern, Anlegen - siehe radMaske/radAnlegenMaske) ruft genau
     // dieser Aufruf hier sofort im Anschluss auf und ueberschriebe die
-    // gerade gezeigte Bestaetigung, bevor sie jemand liest. Siehe
-    // Begruendung bei meldeUebersicht() in rahmen.js.
-    meldeUebersicht(`${raeder.length} Räder`);
+    // gerade gezeigte Bestaetigung, bevor sie jemand liest, wenn er noch
+    // zu DIESEM Vorgang gehoert. Siehe Begruendung bei meldeVorgang() in
+    // rahmen.js.
+    meldeVorgang(vorgang, `${raeder.length} Räder`);
 }
 
 // Farbe traegt Bedeutung, nicht Dekoration: rot ist ein defektes Rad,

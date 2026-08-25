@@ -19,6 +19,10 @@ bereichAnmelden({
 });
 
 async function stationenAufbauen() {
+    // ALLERERSTE Anweisung, vor jedem await - siehe Kommentar bei
+    // neuerVorgang() in rahmen.js und bei flotteAufbauen() in flotte.js.
+    const vorgang = neuerVorgang();
+
     // Wer anlegen darf, bekommt den Knopf VOR der Liste zu sehen - nicht
     // ausgegraut fuer die Leitung, sondern schlicht nicht vorhanden.
     // Nur fuer disposition sichtbar - dieselbe Rolle, die
@@ -32,9 +36,15 @@ async function stationenAufbauen() {
         (q) => q.order('stationsnummer'));
 
     const fehler = letzterLadeFehler('v_wawi_station');
-    if (fehler) { melde(`Die Stationen liessen sich nicht laden: ${fehler}`, 'schlecht'); return; }
+    if (fehler) {
+        // meldeVorgang statt melde: ein inzwischen veralteter Aufruf
+        // (siehe Kommentar dort) meldet auch seinen eigenen Ladefehler
+        // nicht mehr.
+        meldeVorgang(vorgang, `Die Stationen liessen sich nicht laden: ${fehler}`, 'schlecht');
+        return;
+    }
 
-    zeigeListe(stationen, [
+    zeigeListe(vorgang, stationen, [
         { feld: 'stationsnummer', titel: 'Nummer' },
         { feld: 'name',           titel: 'Station' },
         { feld: 'ort',            titel: 'Ort' },
@@ -55,12 +65,13 @@ async function stationenAufbauen() {
     // Das ist kein Fehler, aber eine Rueckgabe dort scheitert an GR15 -
     // und wer das nicht weiss, haelt es fuer einen Softwarefehler.
     const voll = stationen.filter((s) => s.frei === 0);
-    // meldeUebersicht statt melde: nach einer Buchung (Stilllegen,
+    // meldeVorgang statt melde: nach einer Buchung (Stilllegen,
     // Anlegen - siehe stationMaske/stationAnlegenMaske) ruft genau
     // dieser Aufruf hier sofort im Anschluss auf und ueberschriebe die
-    // gerade gezeigte Bestaetigung, bevor sie jemand liest. Siehe
-    // Begruendung bei meldeUebersicht() in rahmen.js.
-    meldeUebersicht(voll.length
+    // gerade gezeigte Bestaetigung, bevor sie jemand liest, wenn er noch
+    // zu DIESEM Vorgang gehoert. Siehe Begruendung bei meldeVorgang() in
+    // rahmen.js.
+    meldeVorgang(vorgang, voll.length
         ? `${stationen.length} Stationen, ${voll.length} davon voll: ${voll.map((s) => s.name).join(', ')}`
         : `${stationen.length} Stationen`);
 }
