@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VeloCity Warenwirtschaft</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="../src/assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <!-- Vier Zustaende, von denen immer genau einer sichtbar ist. Kein
+       Seitenwechsel: die Sitzung, die Rollen und die Statuszeile
+       ueberleben jeden Bereichswechsel. -->
+  <div id="zustand-laden" class="vollbild">Einen Moment …</div>
+
+  <form id="zustand-anmeldung" class="vollbild anmeldung" hidden>
+    <h1>VeloCity Warenwirtschaft</h1>
+    <label for="feld-email">E-Mail</label>
+    <input id="feld-email" type="email" autocomplete="username" required>
+    <label for="feld-passwort">Passwort</label>
+    <input id="feld-passwort" type="password" autocomplete="current-password" required>
+    <button type="submit">Anmelden</button>
+    <p id="anmeldung-fehler" class="fehler" role="alert"></p>
+  </form>
+
+  <div id="zustand-kein-mitarbeiter" class="vollbild" hidden>
+    <h1>Kein Zugang</h1>
+    <p>Dieses Konto ist bei VeloCity nicht als Mitarbeitendenkonto hinterlegt.
+       Wenn Sie Kundin oder Kunde sind, finden Sie Ihren Bereich unter
+       <a href="https://bikes.butscher.cloud">bikes.butscher.cloud</a>.</p>
+    <button id="knopf-abmelden-fremd" type="button">Abmelden</button>
+  </div>
+
+  <div id="zustand-arbeit" hidden>
+    <header id="kopfleiste">
+      <span class="wortmarke">VeloCity <b>WaWi</b></span>
+      <input id="feld-suche" type="search" placeholder="Suchen" aria-label="Suchen">
+      <span id="benutzer-anzeige"></span>
+      <button id="knopf-abmelden" type="button">Abmelden</button>
+    </header>
+
+    <nav id="navigation" aria-label="Aufgabenbereiche"></nav>
+
+    <main id="arbeitsbereich">
+      <section id="arbeitsliste" aria-label="Arbeitsliste"></section>
+      <section id="detailmaske" aria-label="Detailmaske"></section>
+    </main>
+
+    <!-- aria-live: die Statuszeile ist die Rueckmeldung fuer jede
+         Buchung. Wer mit der Tastatur arbeitet oder einen Screenreader
+         benutzt, bekommt sie sonst nie mit. -->
+    <footer id="statuszeile" role="status" aria-live="polite"></footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="daten.js"></script>
+  <script src="anmeldung.js"></script>
+  <script src="rahmen.js"></script>
+</body>
+</html>

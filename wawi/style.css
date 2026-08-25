@@ -1,0 +1,262 @@
+/* ============================================
+   VeloCity Warenwirtschaft — Grundraster
+
+   Eine Arbeitsoberflaeche darf voll sein. Sie wird acht Stunden am Tag
+   benutzt, nicht acht Sekunden - Information je Bildschirm zaehlt mehr
+   als Weissraum. Deshalb kleinere Grade und engere Zeilen als auf der
+   Website, aber dieselben Farben: wer zwischen beiden wechselt, soll
+   nicht das Produkt wechseln.
+   ============================================ */
+
+:root {
+  --marine:      #061841;
+  --rot:         #f00038;
+  --grund:       #f7f8fa;
+  --flaeche:     #ffffff;
+  --linie:       #d8dce4;
+  --text:        #1c2333;
+  --text-leise:  #5a6478;
+  --gut:         #1d7a44;
+  --warnung:     #b8860b;
+  /* --warnung selbst faellt auf weissem Grund auf 3.25:1 - unter der
+     verlangten Untergrenze von 4.5:1. Fuer Fliesstext (Statuszeile,
+     Fehlermeldungen) gilt deshalb dieser abgedunkelte Ton, 5.3:1 auf
+     Weiss; --warnung bleibt fuer Flaechen wie Rahmen oder Hintergrund. */
+  --warnung-text: #8a6508;
+  --schlecht:    #c0301c;
+  --zeile:       28px;
+  --schrift:     14px;
+  --nav-breite:  200px;
+  --kopf-hoehe:  48px;
+  --fuss-hoehe:  32px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: var(--schrift);
+  color: var(--text);
+  background: var(--grund);
+  overflow: hidden;   /* die Seite als Ganzes scrollt nie */
+}
+
+/* Ohne diese Regel gewinnt jede eigene display-Angabe (.vollbild,
+   #zustand-arbeit) gegen das hidden-Attribut: Autorenregeln schlagen
+   die UA-Regel "[hidden] { display: none }" unabhaengig von der
+   Spezifitaet. Ohne den Vorrang hier waeren nie "genau einer sichtbar",
+   sondern alle vier Zustaende gleichzeitig da - nur uebereinander
+   gestapelt und darum meist unbemerkt. */
+[hidden] {
+  display: none !important;
+}
+
+/* Sichtbarer Tastaturfokus. Ohne ihn ist die versprochene
+   Tastaturbedienung eine Behauptung. */
+:focus-visible {
+  outline: 2px solid var(--rot);
+  outline-offset: 1px;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+/* ===== Vollbildzustaende: Laden, Anmeldung, Kein Zugang ===== */
+
+.vollbild {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  gap: 8px;
+}
+
+#zustand-laden {
+  color: var(--text-leise);
+}
+
+.vollbild h1 {
+  color: var(--marine);
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+.vollbild p {
+  max-width: 480px;
+  color: var(--text-leise);
+  line-height: 1.5;
+}
+
+.vollbild p a {
+  color: var(--marine);
+}
+
+.anmeldung {
+  width: 100%;
+  max-width: 320px;
+  /* .vollbild zentriert nur die eigenen Kinder, nicht sich selbst: ohne
+     margin:auto bliebe das Formular an der 320px breiten linken Kante
+     stehen, egal wie breit das Fenster ist. */
+  margin: 0 auto;
+}
+
+.anmeldung label {
+  align-self: flex-start;
+  font-weight: 600;
+  color: var(--text-leise);
+  margin-top: 4px;
+}
+
+.anmeldung input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--linie);
+  border-radius: 4px;
+  font: inherit;
+  color: var(--text);
+  background: var(--flaeche);
+}
+
+.anmeldung button[type="submit"] {
+  width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  background: var(--marine);
+  color: var(--flaeche);
+  font-weight: 600;
+}
+
+.anmeldung button[type="submit"]:hover {
+  background: #0a2560;
+}
+
+.fehler {
+  color: var(--schlecht);
+  min-height: 1.2em;
+  margin: 4px 0 0;
+}
+
+#zustand-kein-mitarbeiter button {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: 1px solid var(--linie);
+  border-radius: 4px;
+  background: var(--flaeche);
+  color: var(--text);
+}
+
+/* ===== Arbeitszustand: Kopfleiste fest, Navigation links fest,
+   darunter Liste und Maske nebeneinander, Statuszeile unten fest ===== */
+
+#zustand-arbeit {
+  display: grid;
+  grid-template-columns: var(--nav-breite) 1fr;
+  grid-template-rows: var(--kopf-hoehe) 1fr var(--fuss-hoehe);
+  grid-template-areas: "kopf kopf" "nav arbeit" "fuss fuss";
+  height: 100vh;
+}
+
+#kopfleiste {
+  grid-area: kopf;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  background: var(--marine);
+  color: var(--flaeche);
+}
+
+#kopfleiste .wortmarke {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+#kopfleiste .wortmarke b {
+  color: var(--rot);
+}
+
+#feld-suche {
+  flex: 1;
+  max-width: 320px;
+  padding: 5px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font: inherit;
+}
+
+#benutzer-anzeige {
+  color: #c9d2e8;
+  font-size: 12px;
+}
+
+#kopfleiste #knopf-abmelden {
+  padding: 5px 12px;
+  border: 1px solid #ffffff55;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--flaeche);
+}
+
+#kopfleiste #knopf-abmelden:hover {
+  background: #ffffff22;
+}
+
+#navigation {
+  grid-area: nav;
+  background: var(--flaeche);
+  border-right: 1px solid var(--linie);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+#arbeitsbereich {
+  grid-area: arbeit;
+  display: flex;
+  min-height: 0;   /* Kinder duerfen kleiner als ihr Inhalt sein und selbst scrollen */
+  background: var(--grund);
+}
+
+#arbeitsliste {
+  flex: 1 1 55%;
+  overflow-y: auto;
+  border-right: 1px solid var(--linie);
+  background: var(--flaeche);
+}
+
+#detailmaske {
+  flex: 1 1 45%;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+#statuszeile {
+  grid-area: fuss;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  background: var(--flaeche);
+  border-top: 1px solid var(--linie);
+  color: var(--text-leise);
+}
+
+/* Farbe traegt Bedeutung, nicht Dekoration. Die Klassen setzt melde()
+   aus rahmen.js; die Farben selbst gehoeren aber ins Grundraster. */
+#statuszeile.gut      { color: var(--gut); }
+#statuszeile.warnung   { color: var(--warnung-text); }
+#statuszeile.schlecht  { color: var(--schlecht); }
