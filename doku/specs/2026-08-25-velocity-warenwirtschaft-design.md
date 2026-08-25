@@ -131,6 +131,7 @@ zu messen — mit Quelle und Gültigkeitszeitraum:
 | `co2_ebike` | dasselbe fürs Pedelec (Strom für den Antrieb) |
 | `co2_rad` | dasselbe fürs Rad ohne Motor |
 | `umwegfaktor` | Verhältnis gefahrener Strecke zur Luftlinie |
+| `reisegeschwindigkeit` | km/h; greift nur bei Rundfahrten, deren Luftlinie null ist |
 
 **Diese Zahlen gehören in die Datenbank, nicht in den Code.** In genau
 dieser Fallstudie sind Zahlen schon dreimal auseinandergelaufen, weil
@@ -281,11 +282,22 @@ einzelner Fahrt und ist die **einzige** Stelle, an der geschätzt wird.
 Eine Schätzung, die an mehreren Orten entsteht, ist eine Schätzung, die
 irgendwann an einem davon anders ausfällt.
 
+**Der dritte Fall kam erst beim Bauen ans Licht.** Eine Rundfahrt endet
+dort, wo sie begann — ihre Luftlinie ist strukturell null, gefahren wurde
+trotzdem. Das betraf rund jede zehnte Fahrt, und die CO₂-Ersparnis war
+entsprechend zu niedrig, ohne dass irgendetwas darauf hingedeutet hätte:
+der ausgewiesene Anteil geschätzter Fahrten sah dabei völlig normal aus.
+Deshalb schätzt die Sicht dort aus der Dauer, und eine Spalte `verfahren`
+sagt je Zeile, welche der drei Grundlagen gegriffen hat. Zwei
+Schätzungen, die dieselbe Spalte füllen und sich unterschiedlich irren,
+muss man auseinanderhalten können.
+
 Die Kilometersicht rechnet:
 
 ```
 distanz_km, wenn gesetzt
 sonst  Luftlinie(Start, Ziel) × Umwegfaktor aus rechenannahme
+und wenn diese Luftlinie null ist:  Dauer × Reisegeschwindigkeit
 ```
 
 Die Luftlinie kommt aus den Stationskoordinaten (Haversine, ohne
