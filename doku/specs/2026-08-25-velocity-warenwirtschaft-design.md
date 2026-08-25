@@ -212,17 +212,22 @@ die Buchhaltung bleibt vollständig.
 
 ### 4.4 Neue Geschäftsregeln
 
+Die Nummern setzen die Reihe aus Phase 1 fort. Sie beginnen bei 16, weil
+GR1 bis GR15 in `doku/datenmodell/01-anforderungen.md` bereits vergeben
+und im Quelltext zitiert sind — GR11 bis GR15 tragen dort die Ortsregeln
+der Ausleihe.
+
 | Nr. | Regel | Umsetzung |
 |---|---|---|
-| GR11 | Nur aktive Mitarbeitende haben Zugriff | `ist_mitarbeiter()` prüft den Status |
-| GR12 | Mitarbeitende sehen keine Zahlungsmittel | Kein Recht, keine Sicht |
-| GR13 | Ein Kunde mit Rechnungen wird anonymisiert, nie gelöscht | `api_kunde_anonymisieren`; `ON DELETE RESTRICT` |
-| GR14 | Jede Änderung an Kundenstammdaten wird protokolliert | Trigger auf `kunde` |
-| GR15 | Ein Rad mit laufender Ausleihe darf nicht ausgemustert werden | CHECK im `api_`-Aufruf |
-| GR16 | Jede Statusänderung eines Rades erzeugt ein `fahrrad_ereignis` | Trigger auf `fahrrad` |
-| GR17 | Eine Station mit Rädern oder Fahrten wird stillgelegt, nicht gelöscht | `betriebszeitraum` schließen |
+| GR16 | Nur aktive Mitarbeitende haben Zugriff | `ist_mitarbeiter()` prüft den Status |
+| GR17 | Mitarbeitende sehen keine Zahlungsmittel | Kein Recht, keine Sicht |
+| GR18 | Ein Kunde mit Rechnungen wird anonymisiert, nie gelöscht | `api_kunde_anonymisieren`; `ON DELETE RESTRICT` |
+| GR19 | Jede Änderung an Kundenstammdaten wird protokolliert | Trigger auf `kunde` |
+| GR20 | Ein Rad mit laufender Ausleihe darf nicht ausgemustert werden | CHECK im `api_`-Aufruf |
+| GR21 | Jede Statusänderung eines Rades erzeugt ein `fahrrad_ereignis` | Trigger auf `fahrrad` |
+| GR22 | Eine Station mit Rädern oder Fahrten wird stillgelegt, nicht gelöscht | `betriebszeitraum` schließen |
 
-GR17 spiegelt GR13 auf der Netzseite: auch eine Station verschwindet
+GR22 spiegelt GR18 auf der Netzseite: auch eine Station verschwindet
 nicht, sie hört auf zu existieren *ab einem Datum*.
 
 ---
@@ -250,6 +255,11 @@ nicht, sie hört auf zu existieren *ab einem Datum*.
 
 Auswertungen sieht die Rolle `leitung`; die Stationsauslastung
 zusätzlich `disposition`, weil sie dort zur täglichen Arbeit gehört.
+
+Dazu kommt eine Hilfssicht `v_wawi_fahrt_km`: sie hält die Strecke je
+einzelner Fahrt und ist die **einzige** Stelle, an der geschätzt wird.
+Eine Schätzung, die an mehreren Orten entsteht, ist eine Schätzung, die
+irgendwann an einem davon anders ausfällt.
 
 Die Kilometersicht rechnet:
 
@@ -335,7 +345,7 @@ nicht acht Sekunden.
 ## 7 Umsetzung in zwei Schritten
 
 Der Entwurf ist zu groß für einen Umsetzungsplan: acht neue Tabellen,
-neun Sichten, vierzehn Funktionen, ein Referenzjahr an Daten — und
+zehn Sichten, vierzehn Funktionen, ein Referenzjahr an Daten — und
 daneben eine ganze Oberfläche.
 Beides in einem Plan hieße, die Hälfte der Aufgaben zu schreiben, bevor
 die andere Hälfte geprüft ist. Deshalb zwei Pläne nacheinander:
