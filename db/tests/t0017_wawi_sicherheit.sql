@@ -53,22 +53,50 @@ $$;
 
 create or replace function velocity_test.test_s_zahlungsmittel_bleibt_gesperrt()
 returns setof text language plpgsql as $$
+declare
+  v_abweichung text;
 begin
   -- GR17. Nicht ueber das Recht geprueft, sondern ueber die Regel: ein
   -- Entzug fuer authenticated traefe Kunden und Mitarbeitende zugleich,
   -- weil PostgREST beide als dieselbe Rolle anmeldet.
   return next ok(not has_table_privilege('anon', 'velocity.zahlungsmittel', 'SELECT'),
                  'anon darf zahlungsmittel nicht lesen');
-  return next isnt_empty(
-    $q$ select 1 from pg_policies
-         where schemaname = 'velocity' and tablename = 'zahlungsmittel'
-           and cmd = 'SELECT' and qual like '%auth.uid()%' $q$,
-    'Die Zeilenregel begrenzt zahlungsmittel auf die eigene Kennung');
-  return next is_empty(
-    $q$ select policyname from pg_policies
-         where schemaname = 'velocity' and tablename = 'zahlungsmittel'
-           and cmd = 'SELECT' and qual not like '%auth.uid()%' $q$,
-    'Es gibt keine zweite Leseregel, die daran vorbeifuehrt');
+
+  -- Absichtlich grob statt fein: eine fruehere Fassung sah nur Regeln mit
+  -- cmd = 'SELECT' an. Eine Regel "for all using (true)" traegt cmd = 'ALL'
+  -- und waere komplett unbeobachtet durchgerutscht - nachgemessen, sie
+  -- liess Kunde A live die Bezahldaten von Kunde B lesen, waehrend alle
+  -- vier Zusicherungen grau-gruen blieben. Deshalb hier keine Bedingung
+  -- auf cmd, sondern eine Zusicherung ueber ALLE Regeln der Tabelle: es
+  -- gibt genau eine, sie heisst zahlungsmittel_eigene, gilt fuer SELECT
+  -- und filtert ueber auth.uid(). Jede zusaetzliche Regel - gleich
+  -- welchen cmd-Werts, gleich wie formuliert - laesst diesen Test rot
+  -- werden und nennt sie beim Namen. Das ist bei einer Tabelle mit
+  -- Bezahldaten die richtige Haerte: wer hier kuenftig eine zweite Regel
+  -- braucht, soll ueber einen roten Test stolpern und das bewusst
+  -- entscheiden, statt sie beilaeufig hinzuzufuegen.
+  select string_agg(
+           format('%s (cmd=%s, ueber_auth_uid=%s)', policyname, cmd,
+                  qual like '%auth.uid()%'),
+           ', ' order by policyname)
+    into v_abweichung
+    from pg_policies
+   where schemaname = 'velocity' and tablename = 'zahlungsmittel'
+     and not (policyname = 'zahlungsmittel_eigene' and cmd = 'SELECT'
+              and qual like '%auth.uid()%');
+
+  if v_abweichung is null and not exists (
+       select 1 from pg_policies
+        where schemaname = 'velocity' and tablename = 'zahlungsmittel'
+          and policyname = 'zahlungsmittel_eigene')
+  then
+    v_abweichung := 'zahlungsmittel_eigene fehlt';
+  end if;
+
+  return next is(v_abweichung, null,
+    coalesce('Regel(n) auf zahlungsmittel weichen ab: ' || v_abweichung,
+             'Auf zahlungsmittel gibt es ausschliesslich zahlungsmittel_eigene, fuer SELECT ueber auth.uid()'));
+
   return next is_empty(
     $q$ select c.relname from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
