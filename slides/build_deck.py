@@ -176,7 +176,7 @@ def baue() -> Presentation:
         ("GR2", "Ein Kunde hat höchstens vier aktive Ausleihen", "Prüfung in der Funktion"),
         ("GR3", "Ein Kunde hat zu einem Zeitpunkt einen Tarif", "EXCLUDE-Constraint"),
         ("GR4", "Preise und Konditionen überlappen sich nie", "EXCLUDE-Constraint"),
-        ("GR5", "Bepreist wird mit dem Preis zur Startzeit", "in fn_ausleihe_beenden"),
+        ("GR5", "Bepreist wird mit dem Preis zur Startzeit", "in fn_ausleihe_abrechnen"),
         ("GR6", "Angefangene Minuten werden aufgerundet", "GENERATED-Spalte"),
     ], y=174, hoehe=42, luecke=5)
     faden(s, "GR5 entscheidet über Annas Rechnung: es gilt der Preis um 10:00 Uhr, nicht der von heute.")
@@ -443,7 +443,7 @@ def baue() -> Presentation:
              ["GR11", "CHECK: Station oder Koordinaten, nie beides", "immer"],
              ["GR13", "CHECK + Constraint-Trigger (braucht den Radstatus)", "immer"],
              ["GR15", "Constraint-Trigger: zählt Räder gegen Stellplätze", "immer"],
-             ["GR2, GR5", "Prüfung in fn_ausleihe_starten und _beenden", "nur über die Funktion"],
+             ["GR2, GR5", "Prüfung in fn_ausleihe_starten und fn_ausleihe_abrechnen", "nur über die Funktion"],
              ["GR8, GR9", "Prüfung in der api_-Schicht", "nur über die Funktion"],
              ["GR12", "Prüfung in fn_ausleihe_starten", "nur über die Funktion"],
              ["GR14", "fn_im_geschaeftsgebiet in fn_ausleihe_beenden", "nur über die Funktion"]],

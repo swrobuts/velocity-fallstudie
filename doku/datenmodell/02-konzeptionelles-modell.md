@@ -48,7 +48,7 @@ Quelle: `erd/uebersicht-bereiche.mmd`.
 | `erd/erd-kern.mmd` | Bereiche A bis D mit allen Attributen |
 | `erd/erd-abrechnung.mmd` | Bereich E |
 | `erd/erd-inhalte.mmd` | Bereich F |
-| `erd/erd-wawi.mmd` | Bereiche G bis J, entworfen für Phase 2 |
+| `erd/erd-wawi.mmd` | Bereiche G bis K für Phase 2 — I, J und K gebaut (Aufgaben 9–13), G und H bleiben Entwurf |
 
 ## Acht Entwurfsentscheidungen und ihre Begründung
 

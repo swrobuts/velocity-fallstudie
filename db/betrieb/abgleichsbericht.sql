@@ -66,7 +66,11 @@ from (
   union all
   select 'e mitgliedschaft (nur aktive)',
          (select count(*) from "cityBikesRental".mitgliedschaft where aktiv),
-         (select count(*) from velocity.mitgliedschaft), ''
+         (select count(*) from velocity.mitgliedschaft),
+         'Rund 400 zusaetzliche Mitgliedschaften stammen aus '
+         || 'db/betrieb/referenzdaten_grundlage.sql (erfundene Referenzdaten '
+         || 'fuer das Auswertungsjahr, siehe velocity.uebernahme_protokoll) - '
+         || 'kein Uebernahmefehler'
   union all
   select 'f Summe Altbetraege in Cent (ohne Schweinfurt)',
          (select coalesce(round(sum(a.kosten) * 100), 0) from "cityBikesRental".ausleihe a

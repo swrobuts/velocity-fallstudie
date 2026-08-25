@@ -43,7 +43,7 @@ aufwendig, und eine Sortierreihenfolge lässt sich nicht nachträglich
 | GR2 höchstens vier aktive Ausleihen | Prüfung in `fn_ausleihe_starten` |
 | GR3 ein gültiger Tarif je Kunde | `EXCLUDE USING gist (kunde_id WITH =, gueltigkeit WITH &&)` |
 | GR4 Preise überlappen nie | `EXCLUDE` auf `nutzungspreis` und `tarif_kondition` |
-| GR5 Preis zum Startzeitpunkt | `fn_ausleihe_beenden`, Verweis in `entgeltposition.nutzungspreis_id` |
+| GR5 Preis zum Startzeitpunkt | `fn_ausleihe_abrechnen`, Verweis in `entgeltposition.nutzungspreis_id` |
 | GR6 angefangene Minuten | `GENERATED ALWAYS AS (ceil(...)) STORED` |
 | GR7 Verbrauch ≤ Kontingent | `CHECK (verbraucht_minuten <= kontingent_minuten)` |
 | GR8 Mindestalter 16 | `api_profil_aktualisieren` — **nicht** als `CHECK`, siehe unten |
@@ -54,6 +54,39 @@ aufwendig, und eine Sortierreihenfolge lässt sich nicht nachträglich
 | GR13 genau ein Standort je Rad | `CHECK fahrrad_position_ort_chk` **und** Constraint-Trigger |
 | GR14 nur im Geschäftsgebiet abstellen | `fn_im_geschaeftsgebiet` in `fn_ausleihe_beenden` |
 | GR15 nie mehr Räder als Stellplätze | Constraint-Trigger auf `fahrrad_position` **und** `station` |
+| GR16 nur aktive Mitarbeitende haben Zugriff | `velocity.hat_rolle`/`ist_mitarbeiter` prüft `mitarbeiter.status = 'aktiv'` in jeder Policy |
+| GR17 keine Zahlungsmittel, keine Passwörter für Mitarbeitende | Kunde und Mitarbeiter sind für PostgreSQL dieselbe Rolle `authenticated` — die Trennung kann also nicht am `GRANT` hängen, sondern nur an der Zeilenregel `zahlungsmittel_eigene` (`kunde.auth_uid = auth.uid()`); `auth.users` bleibt außerhalb von PostgREST |
+| GR18 Kunde mit Rechnungen wird anonymisiert, nie gelöscht | `api_kunde_anonymisieren`; `rechnung_kunde_fk` steht auf `ON DELETE RESTRICT` |
+| GR19 Stammdatenänderung feldweise protokolliert | Trigger `velocity.fn_protokoll_schreiben`, angehängt über `fn_protokoll_anhaengen` |
+| GR20 Rad mit laufender Ausleihe wird nicht ausgemustert | Prüfung in der schreibenden `api_`-Funktion vor dem Statuswechsel |
+| GR21 Statusänderung erzeugt Ereignis in der Lebenslaufakte | Trigger `trg_fahrrad_ereignis` auf `velocity.fahrrad` |
+| GR22 Station mit Rädern wird stillgelegt, nicht gelöscht | `betriebszeitraum` schließen statt `DELETE`, spiegelt GR18 auf der Netzseite |
+
+## Bereich I, J, K: die acht neuen Tabellen
+
+Aufgaben 9 bis 13 haben die Warenwirtschaft nicht vollständig gebaut,
+sondern nur die Bereiche, die ohne eigene Artikelverwaltung auskommen:
+**I Instandhaltung**, **J Personal** und **K Protokoll**. Beschaffung
+(G) und Lager (H) blieben Entwurf, siehe `erd/erd-wawi.mmd`.
+
+| Tabelle | Bereich | Warum sie so aussieht |
+|---|---|---|
+| `rolle` | J | Referenztabelle statt ENUM: Rollen bekommen Rechte angehängt, ein ENUM-Label kann nichts tragen |
+| `mitarbeiter` | J | Eigene Entität statt Erweiterung von `kunde` — anders als ein Kunde hat ein Mitarbeiter keine Vertragsbeziehung, sondern Rollen |
+| `mitarbeiter_rolle` | J | **Abweichung vom Entwurf:** m:n statt der geplanten 1:n-Beziehung `ROLLE \|\|--o{ MITARBEITER`. Wer Werkstatt *und* Disposition macht, bräuchte sonst eine Sammelrolle und bekäme mit ihr Rechte, die keine ihrer beiden Aufgaben verlangt — das widerspräche Art. 5 Abs. 1 lit. c DSGVO (Datenminimierung) |
+| `schadensmeldung` | I | Zwei nullable Fremdschlüssel (`melder_kunde_id`, `melder_mitarbeiter_id`) statt eines Pflichtfelds: der Melder ist wahlweise Kunde oder Mitarbeiter, `schadensmeldung_melder_chk` erzwingt genau einen von beiden |
+| `wartungsauftrag` | I | `mitarbeiter_id` nullable, weil ein Auftrag offen liegen kann, bevor ihn jemand annimmt; `schadensmeldung_id` nullable, weil eine geplante Inspektion keinen Schaden als Anlass hat |
+| `fahrrad_ereignis` | I | Lebenslaufakte eines Rades (GR21); `beleg_tabelle`/`beleg_id` sind bewusst ungeprüft, weil ein Fremdschlüssel nur auf eine einzige Ursprungstabelle zeigen könnte |
+| `aenderungsprotokoll` | K | Feldweise Spur (GR19), eine Zeile je geändertem Feld statt ein JSON-Klumpen, damit sich die Historie einer einzelnen Spalte ohne Werkzeug filtern lässt |
+| `rechenannahme` | K | Jede Zahl, die eine Auswertung annimmt statt sie zu messen, mit Quelle und Gültigkeit — Zahlen liefen in dieser Fallstudie schon dreimal auseinander, weil sie an zwei Stellen standen |
+
+**Nicht gebaut: `wartungsposition`.** Sie verbindet einen Wartungsauftrag
+mit verbauten Artikeln und einer Lagerbewegung. Ohne Bereich G
+(Beschaffung, liefert `artikel`) und H (Lager, liefert `lagerbewegung`)
+gibt es nichts, worauf sie zeigen könnte — sie bliebe eine Tabelle mit
+zwei Fremdschlüsseln ins Leere. Ebenso nicht gebaut: `umsetzungsauftrag`
+(Rädertransport zwischen Stationen) — der Personalteil von Bereich J
+wurde umgesetzt, der Logistikteil nicht.
 
 ### GR11: warum kein NOT NULL
 

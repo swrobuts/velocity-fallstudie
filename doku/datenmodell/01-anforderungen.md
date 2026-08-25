@@ -52,6 +52,17 @@ fertigen System **durchgesetzt** sein, nicht nur dokumentiert.
 | GR13 | Ein Rad steht **an einer Station** oder **frei im Stadtgebiet** oder ist **in Fahrt** — nie zweierlei zugleich |
 | GR14 | Frei abgestellt wird nur **innerhalb des Geschäftsgebiets** |
 | GR15 | An einer Station stehen nie mehr Räder als **Stellplätze** |
+| GR16 | Nur aktive Mitarbeitende haben Zugriff auf die Warenwirtschaft |
+| GR17 | Mitarbeitende sehen keine Zahlungsmittel und keine Passwörter |
+| GR18 | Ein Kunde mit Rechnungen wird anonymisiert, nie gelöscht |
+| GR19 | Jede Änderung an Stammdaten wird feldweise protokolliert |
+| GR20 | Ein Rad mit laufender Ausleihe wird nicht ausgemustert |
+| GR21 | Jede Statusänderung eines Rades erzeugt ein Ereignis in der Lebenslaufakte |
+| GR22 | Eine Station mit Rädern wird stillgelegt, nicht gelöscht |
+
+GR16 bis GR22 stammen aus Phase 2 (Warenwirtschaft) und sind in
+`doku/specs/2026-08-25-velocity-warenwirtschaft-design.md`, Abschnitt 4.4,
+begründet.
 
 Wo jede Regel durchgesetzt wird, steht in `05-physisches-modell.md`.
 

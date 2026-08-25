@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fuehrt alle automatischen Pruefungen der Phase 1 aus.
+# Fuehrt alle automatischen Pruefungen der Phase 1 und Phase 2 aus.
 #
 # Aufruf:  bash tools/abnahme.sh
 #
@@ -22,7 +22,7 @@ ergebnis() {
   else printf '%s   ✗ %s%s\n' "$rot" "$2" "$aus"; fehler=$((fehler+1)); fi
 }
 
-printf '%sAbnahme Phase 1 — VeloCity%s\n' "$blau" "$aus"
+printf '%sAbnahme Phase 1 und 2 — VeloCity%s\n' "$blau" "$aus"
 printf '%s%s%s\n' "$grau" "$(date '+%d.%m.%Y %H:%M')" "$aus"
 
 # ---------------------------------------------------------------- 1 .env
@@ -249,6 +249,178 @@ if [ -f slides/velocity-datenbankentwurf.pptx ]; then
 else
   ergebnis 1 "slides/velocity-datenbankentwurf.pptx fehlt — python3 slides/build_deck.py"
 fi
+
+# --------------------------------------------- 19 Passwoerter
+schritt "Passwoerter sind von aussen unerreichbar"
+KEY=$(grep '^SUPABASE_ANON_KEY=' .env 2>/dev/null | cut -d= -f2-)
+URL=$(grep '^SUPABASE_URL=' .env 2>/dev/null | cut -d= -f2-)
+# Das Schema auth ist fuer PostgREST nicht freigegeben. Diese Pruefung
+# haelt fest, dass das so bleibt - sie ist der Nachweis zu GR17.
+# Accept-Profile: auth ist Absicht, nicht Beiwerk: ohne den Header
+# fragt PostgREST das Default-Schema "public" ab, in dem "users" gar
+# nicht existiert - der Aufruf schluege dann unabhaengig vom
+# tatsaechlichen Schutz von auth.users mit 404 fehl und bewiese nichts.
+code=$(curl -s -o /dev/null -w '%{http_code}' \
+        "$URL/rest/v1/users?select=id" -H "apikey: $KEY" -H "Accept-Profile: auth")
+[ "$code" = "200" ] && ergebnis 1 "auth.users antwortet mit 200" \
+                    || ergebnis 0 "auth.users nicht erreichbar (HTTP $code)"
+
+# --------------------------------------------- 20 Zahlungsmittel
+schritt "Zahlungsmittel bleiben gesperrt"
+# GR17, der wichtigste Einzelnachweis des Bereichs: Mitarbeitende
+# duerfen Bezahldaten nicht sehen, und zwar nicht, weil die Oberflaeche
+# sie nicht anzeigt, sondern weil das Recht fehlt.
+# Accept-Profile: velocity aus demselben Grund wie bei Pruefung 19: ohne
+# den Header landet die Anfrage im falschen (leeren) Default-Schema und
+# der 404 bewiese nichts ueber velocity.zahlungsmittel.
+code=$(curl -s -o /dev/null -w '%{http_code}' \
+        "$URL/rest/v1/zahlungsmittel?select=zahlungsmittel_id" \
+        -H "apikey: $KEY" -H "Accept-Profile: velocity")
+[ "$code" = "200" ] && ergebnis 1 "zahlungsmittel antwortet mit 200" \
+                    || ergebnis 0 "zahlungsmittel gesperrt (HTTP $code)"
+
+# --------------------------------------------- 21 Basistabellen der WaWi
+schritt "Warenwirtschaft spricht keine Basistabelle an"
+# Accept-Profile: velocity - siehe Begruendung bei Pruefung 19/20.
+offen=""
+for t in mitarbeiter rolle mitarbeiter_rolle schadensmeldung wartungsauftrag \
+         fahrrad_ereignis aenderungsprotokoll; do
+  code=$(curl -s -o /dev/null -w '%{http_code}' \
+          "$URL/rest/v1/$t?select=*&limit=1" -H "apikey: $KEY" -H "Accept-Profile: velocity")
+  [ "$code" = "200" ] && offen="$offen $t"
+done
+[ -z "$offen" ] && ergebnis 0 "keine der sieben Tabellen ist lesbar" \
+                || ergebnis 1 "erreichbar:$offen"
+
+# --------------------------------------------- 22 Sichten ohne Anmeldung
+schritt "WaWi-Sichten sind ohne Anmeldung leer"
+# Nicht 403, sondern leer: PostgREST meldet Kunden und Mitarbeitende als
+# dieselbe Rolle an, deshalb filtert jede Sicht selbst ueber
+# velocity.hat_rolle. Eine leere Antwort ist hier der Beweis.
+# Accept-Profile: velocity - siehe Begruendung bei Pruefung 19/20.
+inhalt=$(curl -s "$URL/rest/v1/v_wawi_flotte?select=fahrrad_id&limit=1" \
+        -H "apikey: $KEY" -H "Accept-Profile: velocity")
+[ "$inhalt" = "[]" ] && ergebnis 0 "v_wawi_flotte liefert []" \
+                     || ergebnis 1 "v_wawi_flotte liefert: $inhalt"
+
+# --------------------------------------------- 23 Rechenannahmen
+schritt "Jede Rechenannahme nennt ihre Quelle"
+# Eine Zahl ohne Herkunft ist eine Behauptung. Der CHECK-Constraint
+# rechenannahme_quelle_chk weist eine leere Quelle bereits ab; diese
+# Pruefung ist die zweite Sperre und faellt auf, wenn der Constraint
+# je verschwindet. Nachgemessen: ein INSERT mit leerer Quelle scheitert
+# schon am Constraint, bevor diese Abfrage je eine Zeile sieht - erst
+# nach probeweisem DROP CONSTRAINT liess sich der Zaehler auf 1 heben.
+# Genau das macht diese Pruefung zur zweiten, nicht zur einzigen Sperre.
+n=$(python3 - <<'PYEOF'
+import os, psycopg
+for z in open('.env', encoding='utf-8'):
+    z = z.strip()
+    if z and not z.startswith('#') and '=' in z:
+        k, v = z.split('=', 1); os.environ.setdefault(k, v)
+c = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
+                    dbname=os.environ['PGDATABASE'], user=os.environ['PGUSER'],
+                    password=os.environ['PGPASSWORD']).cursor()
+c.execute("select count(*) from velocity.rechenannahme "
+          "where quelle is null or btrim(quelle) = ''")
+print(c.fetchone()[0])
+PYEOF
+)
+[ "$n" = "0" ] && ergebnis 0 "alle Annahmen mit Quelle" \
+               || ergebnis 1 "$n Annahmen ohne Quelle"
+
+# --------------------------------------------- 24 Kundensicht
+schritt "Ein angemeldeter Kunde sieht seine eigenen Fahrten"
+# Diese Pruefung gibt es, weil genau hier eine Luecke klaffte: der
+# Rechteentzug in 0017 riss die Grants mit, die 0011 fuer die
+# "eigene Zeilen"-Regeln vergeben hatte. v_meine_ausleihe laeuft mit
+# security_invoker = true und braucht die Rechte des Aufrufers.
+# Bemerkt hat es weder die Testkette noch der REST-Test mit anon-Key,
+# sondern erst ein SET ROLE authenticated in einer Pruefung.
+n=$(python3 - <<'PYEOF'
+import os, psycopg
+for z in open('.env', encoding='utf-8'):
+    z = z.strip()
+    if z and not z.startswith('#') and '=' in z:
+        k, v = z.split('=', 1); os.environ.setdefault(k, v)
+con = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
+                      dbname=os.environ['PGDATABASE'], user=os.environ['PGUSER'],
+                      password=os.environ['PGPASSWORD'])
+c = con.cursor()
+try:
+    c.execute('set local role authenticated')
+    for sicht in ('v_meine_ausleihe', 'v_meine_rechnung', 'v_mein_profil'):
+        c.execute(f'select count(*) from velocity.{sicht}')
+    print('0')
+except Exception as e:
+    print(str(e).split(chr(10))[0])
+finally:
+    con.rollback()
+PYEOF
+)
+[ "$n" = "0" ] && ergebnis 0 "v_meine_ausleihe, v_meine_rechnung und v_mein_profil sind lesbar" \
+               || ergebnis 1 "$n"
+
+# --------------------------------------------- 25 Funktionsrechte
+schritt "Keine Funktion ist versehentlich fuer jeden ausfuehrbar"
+# PostgreSQL gibt jeder neu angelegten Funktion implizit EXECUTE an
+# PUBLIC. Die Zeile "alter default privileges" in 0011 faengt das
+# NICHT ab - in Aufgabe 5 nachgemessen. Es bleibt der explizite
+# revoke, und er wirkt nur, wenn er nach der letzten Funktion laeuft.
+n=$(python3 - <<'PYEOF'
+import os, psycopg
+for z in open('.env', encoding='utf-8'):
+    z = z.strip()
+    if z and not z.startswith('#') and '=' in z:
+        k, v = z.split('=', 1); os.environ.setdefault(k, v)
+c = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
+                    dbname=os.environ['PGDATABASE'], user=os.environ['PGUSER'],
+                    password=os.environ['PGPASSWORD']).cursor()
+c.execute("""select count(*) from pg_proc p
+               join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'velocity'
+                and p.proname not like 'api\\_%'
+                -- ist_mitarbeiter/hat_rolle: dieselbe dokumentierte
+                -- Ausnahme wie in test_s_keine_oeffentliche_funktion
+                -- (db/tests/t0011_sicherheit.sql) - eine Sicht traegt
+                -- nicht die Rechte ihres Eigentuemers, deshalb muessen
+                -- beide fuer authenticated ausfuehrbar sein, damit die
+                -- v_wawi_*-Sichten ueberhaupt laufen. Beide sind
+                -- security definer und geben ausschliesslich ueber den
+                -- Aufrufer selbst Auskunft.
+                and p.proname not in ('ist_mitarbeiter', 'hat_rolle')
+                and (p.proacl is null
+                     or exists (select 1 from aclexplode(p.proacl) a
+                                 join pg_roles r on r.oid = a.grantee
+                                where r.rolname in ('anon','authenticated')))""")
+print(c.fetchone()[0])
+PYEOF
+)
+[ "$n" = "0" ] && ergebnis 0 "nur api_-Funktionen sind freigegeben" \
+               || ergebnis 1 "$n Nicht-api-Funktion(en) fuer anon oder authenticated ausfuehrbar"
+
+# --------------------------------------------- 26 Radstatus
+schritt "Radstatus und offene Ausleihen stimmen ueberein"
+# Genau dieser Widerspruch lag 37-fach in den uebernommenen Daten und
+# fiel nie auf, weil keine Oberflaeche beides nebeneinander zeigte.
+n=$(python3 - <<'PYEOF'
+import os, psycopg
+for z in open('.env', encoding='utf-8'):
+    z = z.strip()
+    if z and not z.startswith('#') and '=' in z:
+        k, v = z.split('=', 1); os.environ.setdefault(k, v)
+c = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
+                    dbname=os.environ['PGDATABASE'], user=os.environ['PGUSER'],
+                    password=os.environ['PGPASSWORD']).cursor()
+c.execute("""select count(*) from velocity.fahrrad f
+              where (f.status = 'ausgeliehen') <> exists (
+                select 1 from velocity.ausleihe a
+                 where a.fahrrad_id = f.fahrrad_id and a.status = 'aktiv')""")
+print(c.fetchone()[0])
+PYEOF
+)
+[ "$n" = "0" ] && ergebnis 0 "kein Rad mit widerspruechlichem Status" \
+               || ergebnis 1 "$n Raeder mit widerspruechlichem Status"
 
 # ----------------------------------------------------------- Ergebnis
 printf '\n%s────────────────────────────────────────%s\n' "$blau" "$aus"

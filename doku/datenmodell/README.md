@@ -33,7 +33,7 @@ node tools/mermaid_check.mjs doku/datenmodell/erd/*.mmd
 | `erd-kern.mmd` | Bereiche A–D mit allen Attributen |
 | `erd-abrechnung.mmd` | Bereich E |
 | `erd-inhalte.mmd` | Bereich F |
-| `erd-wawi.mmd` | Bereiche G–J, Phase 2 |
+| `erd-wawi.mmd` | Bereiche G–K, Phase 2 — I, J, K gebaut, G und H entworfen |
 
 ## Data Dictionary neu erzeugen
 

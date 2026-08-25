@@ -63,13 +63,19 @@ angepassten `src/config.js`.
 ## Werkzeuge
 
 ```bash
-bash tools/abnahme.sh                  # alle 18 Prüfungen
+bash tools/abnahme.sh                  # alle 26 Prüfungen
 python3 tools/versionieren.py          # Fingerabdrücke der eingebundenen Dateien
 python3 tools/ux_check.py              # Bedienbarkeit und Regressionen
 python3 tools/freisteller_pruefen.py   # die Radbilder gegen ihre Vorlagen
 python3 tools/zahlen_gegen_db.py       # Anleitung und Vortrag gegen die Datenbank
 python3 tools/raeder_weissgrund.py     # Radbilder neu erzeugen
 bash tools/veroeffentlichen.sh         # auf den Server stellen
+
+# db/betrieb/referenzdaten_grundlage.sql   ERFUNDENE Preisperioden und
+# db/betrieb/referenzdaten_fahrten.sql     Mitgliedschaften, Fahrten und
+# db/betrieb/referenzdaten_rechnungen.sql  Monatsrechnungen fuer ein
+#   volles Auswertungsjahr — plausibel gebaut, aber nicht erhoben. Jeder
+#   Lauf steht in velocity.uebernahme_protokoll.
 ```
 
 `tools/abnahme.sh` fasst alles zusammen — von der Idempotenz der

@@ -1,42 +1,64 @@
 erDiagram
-    ADRESSE ||--o{ LIEFERANT : "Sitz von"
-    LIEFERANT ||--o{ ARTIKEL : "liefert"
-    ARTIKELGRUPPE ||--o{ ARTIKEL : "gliedert"
-    LIEFERANT ||--o{ BESTELLUNG : "erhaelt"
-    BESTELLUNG ||--|{ BESTELLPOSITION : "besteht aus"
-    ARTIKEL ||--o{ BESTELLPOSITION : "wird bestellt als"
-    BESTELLUNG ||--o{ WARENEINGANG : "wird erfuellt durch"
-    WARENEINGANG ||--|{ LAGERBEWEGUNG : "bucht ein"
-    LAGER ||--o{ LAGERBEWEGUNG : "wird bebucht"
-    ARTIKEL ||--o{ LAGERBEWEGUNG : "bewegt sich als"
-    FAHRRAD ||--o{ SCHADENSMELDUNG : "betrifft"
-    KUNDE ||--o{ SCHADENSMELDUNG : "meldet"
-    SCHADENSMELDUNG ||--o| WARTUNGSAUFTRAG : "loest aus"
-    FAHRRAD ||--o{ WARTUNGSAUFTRAG : "wird instandgesetzt in"
-    MITARBEITER ||--o{ WARTUNGSAUFTRAG : "bearbeitet"
-    WARTUNGSAUFTRAG ||--o{ WARTUNGSPOSITION : "verbraucht"
-    ARTIKEL ||--o{ WARTUNGSPOSITION : "wird verbaut als"
-    WARTUNGSPOSITION ||--|| LAGERBEWEGUNG : "bucht aus"
-    ROLLE ||--o{ MITARBEITER : "qualifiziert"
-    MITARBEITER ||--o{ UMSETZUNGSAUFTRAG : "fuehrt aus"
-    STATION ||--o{ UMSETZUNGSAUFTRAG : "Quelle oder Ziel"
-    FAHRRAD ||--o{ FAHRRAD_EREIGNIS : "durchlaeuft"
+    %% =================================================================
+    %% GEBAUT (Aufgaben 9 bis 13, Bereiche I Instandhaltung,
+    %% J Personal, K Protokoll). Jede Kardinalitaet hier ist gegen den
+    %% Systemkatalog geprueft - tools/erd_check.py vergleicht sie mit
+    %% den tatsaechlichen Fremdschluesseln in velocity und schlaegt an,
+    %% wenn ein "||" behauptet, was ein NULL zulassender Fremdschluessel
+    %% nicht haelt.
+    %% =================================================================
+    FAHRRAD          ||--o{ SCHADENSMELDUNG    : "betrifft"
+    KUNDE            |o--o{ SCHADENSMELDUNG    : "meldet, sofern vom Kunden"
+    MITARBEITER      |o--o{ SCHADENSMELDUNG    : "meldet, sofern intern"
+    FAHRRAD          ||--o{ WARTUNGSAUFTRAG    : "wird instandgesetzt in"
+    SCHADENSMELDUNG  |o--o{ WARTUNGSAUFTRAG    : "loest aus"
+    MITARBEITER      |o--o{ WARTUNGSAUFTRAG    : "bearbeitet, sobald zugeteilt"
+    FAHRRAD          ||--o{ FAHRRAD_EREIGNIS   : "durchlaeuft"
+    MITARBEITER      |o--o{ FAHRRAD_EREIGNIS   : "loest aus, wenn auth.uid() aufloesbar ist"
+    MITARBEITER      ||--o{ MITARBEITER_ROLLE  : "haelt"
+    ROLLE            ||--o{ MITARBEITER_ROLLE  : "wird zugeordnet"
+    MITARBEITER      |o--o{ AENDERUNGSPROTOKOLL : "loest aus, wenn anmeldbar"
+
+    %% =================================================================
+    %% ENTWORFEN, NICHT GEBAUT (Bereiche G Beschaffung und H Lager, dazu
+    %% wartungsposition und umsetzungsauftrag). Fuer keine dieser
+    %% Tabellen existiert ein Fremdschluessel im Systemkatalog -
+    %% erd_check.py ueberspringt jede Zeile hier deshalb als
+    %% "konzeptionelle Entitaet ohne eigene Tabelle" statt sie als
+    %% Fehler zu zaehlen. Das ist beabsichtigt: dieser Teil des Modells
+    %% ist Entwurf, keine Behauptung ueber eine gebaute Datenbank.
+    %% =================================================================
+    ADRESSE          ||--o{ LIEFERANT         : "Sitz von (entworfen)"
+    LIEFERANT        ||--o{ ARTIKEL           : "liefert (entworfen)"
+    ARTIKELGRUPPE    ||--o{ ARTIKEL           : "gliedert (entworfen)"
+    LIEFERANT        ||--o{ BESTELLUNG        : "erhaelt (entworfen)"
+    BESTELLUNG       ||--|{ BESTELLPOSITION   : "besteht aus (entworfen)"
+    ARTIKEL          ||--o{ BESTELLPOSITION   : "wird bestellt als (entworfen)"
+    BESTELLUNG       ||--o{ WARENEINGANG      : "wird erfuellt durch (entworfen)"
+    WARENEINGANG     ||--|{ LAGERBEWEGUNG     : "bucht ein (entworfen)"
+    LAGER            ||--o{ LAGERBEWEGUNG     : "wird bebucht (entworfen)"
+    ARTIKEL          ||--o{ LAGERBEWEGUNG     : "bewegt sich als (entworfen)"
+    WARTUNGSAUFTRAG  ||--o{ WARTUNGSPOSITION  : "verbraucht (entworfen)"
+    ARTIKEL          ||--o{ WARTUNGSPOSITION  : "wird verbaut als (entworfen)"
+    WARTUNGSPOSITION ||--|| LAGERBEWEGUNG     : "bucht aus (entworfen)"
+    MITARBEITER      ||--o{ UMSETZUNGSAUFTRAG : "fuehrt aus (entworfen)"
+    STATION          ||--o{ UMSETZUNGSAUFTRAG : "Quelle oder Ziel (entworfen)"
 
     LIEFERANT {
-        bigint lieferant_id PK
+        bigint lieferant_id PK "entworfen, nicht gebaut (Bereich G)"
         text lieferantennummer UK
         text name
         bigint adresse_id FK
         text email
     }
     ARTIKELGRUPPE {
-        bigint artikelgruppe_id PK
+        bigint artikelgruppe_id PK "entworfen, nicht gebaut (Bereich G)"
         text code UK
         text bezeichnung
         bigint uebergeordnet_id FK "Hierarchie"
     }
     ARTIKEL {
-        bigint artikel_id PK
+        bigint artikel_id PK "entworfen, nicht gebaut (Bereich G)"
         text artikelnummer UK
         text bezeichnung
         bigint artikelgruppe_id FK
@@ -46,7 +68,7 @@ erDiagram
         integer meldebestand
     }
     BESTELLUNG {
-        bigint bestellung_id PK
+        bigint bestellung_id PK "entworfen, nicht gebaut (Bereich G)"
         text bestellnummer UK
         bigint lieferant_id FK
         date bestellt_am
@@ -54,7 +76,7 @@ erDiagram
         bestellung_status status
     }
     BESTELLPOSITION {
-        bigint bestellposition_id PK
+        bigint bestellposition_id PK "entworfen, nicht gebaut (Bereich G)"
         bigint bestellung_id FK
         integer position_nr "UK mit bestellung_id"
         bigint artikel_id FK
@@ -62,19 +84,19 @@ erDiagram
         numeric einzelpreis
     }
     WARENEINGANG {
-        bigint wareneingang_id PK
+        bigint wareneingang_id PK "entworfen, nicht gebaut (Bereich G)"
         bigint bestellung_id FK
         date eingegangen_am
         text lieferscheinnummer
     }
     LAGER {
-        bigint lager_id PK
+        bigint lager_id PK "entworfen, nicht gebaut (Bereich H)"
         text code UK
         text bezeichnung
         bigint adresse_id FK
     }
     LAGERBEWEGUNG {
-        bigint bewegung_id PK
+        bigint bewegung_id PK "entworfen, nicht gebaut (Bereich H)"
         bigint artikel_id FK
         bigint lager_id FK
         bewegungsart art "ZUGANG, ABGANG, UMLAGERUNG, KORREKTUR"
@@ -83,38 +105,41 @@ erDiagram
         text belegreferenz
     }
     FAHRRAD {
-        bigint fahrrad_id PK
+        bigint fahrrad_id PK "aus Phase 1"
         text rahmennummer UK
         fahrrad_status status
     }
     FAHRRAD_EREIGNIS {
-        bigint ereignis_id PK
+        bigint ereignis_id PK "gebaut (Bereich I) - Lebenslaufakte, GR21"
         bigint fahrrad_id FK
-        ereignisart art
-        timestamptz eingetreten_am
-        text belegreferenz
+        bigint mitarbeiter_id FK "NULL, wenn keine auth.uid() aufloesbar war"
+        ereignisart ereignisart
+        timestamptz zeitpunkt
+        text beleg_tabelle "Spur, keine gepruefte Beziehung"
+        bigint beleg_id "Spur, keine gepruefte Beziehung"
     }
     SCHADENSMELDUNG {
-        bigint schadensmeldung_id PK
+        bigint schadensmeldung_id PK "gebaut (Bereich I)"
         bigint fahrrad_id FK
-        bigint kunde_id FK "NULL bei interner Meldung"
+        bigint melder_kunde_id FK "genau einer von beiden Meldern gesetzt"
+        bigint melder_mitarbeiter_id FK "genau einer von beiden Meldern gesetzt"
         timestamptz gemeldet_am
         text beschreibung
         schaden_schwere schwere
     }
     WARTUNGSAUFTRAG {
-        bigint wartungsauftrag_id PK
+        bigint wartungsauftrag_id PK "gebaut (Bereich I)"
         text auftragsnummer UK
         bigint fahrrad_id FK
-        bigint schadensmeldung_id FK
-        bigint mitarbeiter_id FK
-        wartungsart art "INSPEKTION, REPARATUR"
+        bigint schadensmeldung_id FK "NULL bei Inspektion ohne Anlass"
+        bigint mitarbeiter_id FK "NULL, solange niemandem zugeteilt"
         timestamptz eroeffnet_am
-        timestamptz abgeschlossen_am
+        timestamptz erledigt_am
+        integer arbeitszeit_minuten
         auftrag_status status
     }
     WARTUNGSPOSITION {
-        bigint wartungsposition_id PK
+        bigint wartungsposition_id PK "entworfen, nicht gebaut - braucht ARTIKEL (Bereich G) und LAGERBEWEGUNG (Bereich H), die es nicht gibt"
         bigint wartungsauftrag_id FK
         bigint artikel_id FK
         bigint bewegung_id FK
@@ -122,20 +147,39 @@ erDiagram
         numeric arbeitszeit_minuten
     }
     MITARBEITER {
-        bigint mitarbeiter_id PK
+        bigint mitarbeiter_id PK "gebaut (Bereich J)"
         text personalnummer UK
-        text vorname
-        text nachname
-        bigint rolle_id FK
+        text email UK
         uuid auth_uid UK
+        mitarbeiter_status status "GR16: nur aktiv hat Zugriff"
     }
     ROLLE {
-        bigint rolle_id PK
+        bigint rolle_id PK "gebaut (Bereich J)"
         text code UK
         text bezeichnung
     }
+    MITARBEITER_ROLLE {
+        bigint mitarbeiter_id PK "gebaut (Bereich J) - Teil des zusammengesetzten Schluessels; m:n statt der im Entwurf vorgesehenen 1:n-Beziehung ROLLE-MITARBEITER, siehe 05-physisches-modell.md"
+        bigint rolle_id PK "Teil des zusammengesetzten Schluessels"
+    }
+    AENDERUNGSPROTOKOLL {
+        bigint protokoll_id PK "gebaut (Bereich K) - feldweise Spur, GR19"
+        bigint mitarbeiter_id FK "NULL bei anonymem Ursprung, z.B. Wartungsskript"
+        text tabelle "kein FK - Ziel ist beliebig, siehe Tabellenkommentar"
+        bigint datensatz_id "kein FK, aus demselben Grund wie tabelle"
+        text aktion "INSERT, UPDATE, DELETE"
+        text feld
+    }
+    RECHENANNAHME {
+        bigint annahme_id PK "gebaut (Bereich K) - ohne eigene Beziehung, siehe Tabellenkommentar"
+        text code UK "mit gueltigkeit ueberschneidungsfrei"
+        numeric wert
+        text einheit
+        daterange gueltigkeit
+        text quelle "Pflicht, siehe rechenannahme_quelle_chk"
+    }
     UMSETZUNGSAUFTRAG {
-        bigint umsetzungsauftrag_id PK
+        bigint umsetzungsauftrag_id PK "entworfen, nicht gebaut - Logistikteil von Bereich J wurde nicht umgesetzt"
         bigint von_station_id FK
         bigint nach_station_id FK
         bigint mitarbeiter_id FK
@@ -144,15 +188,15 @@ erDiagram
         auftrag_status status
     }
     STATION {
-        bigint station_id PK
+        bigint station_id PK "aus Phase 1"
         text name
     }
     KUNDE {
-        bigint kunde_id PK
+        bigint kunde_id PK "aus Phase 1"
         text kundennummer UK
     }
     ADRESSE {
-        bigint adresse_id PK
+        bigint adresse_id PK "aus Phase 1"
         text plz
         text ort
     }

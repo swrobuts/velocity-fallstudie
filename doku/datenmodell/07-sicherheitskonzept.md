@@ -68,13 +68,47 @@ greift deshalb **nicht**: beide Rollen erben das Recht weiterhin über
 
 ```sql
 revoke all on all functions in schema velocity from public, anon, authenticated;
-alter default privileges in schema velocity revoke execute on functions from public;
 ```
 
-Ohne die erste Zeile hätte jeder mit dem öffentlichen anon-Key
+Ohne diese Zeile hätte jeder mit dem öffentlichen anon-Key
 `fn_ausleihe_beenden` aufrufen und damit fremde Ausleihen abrechnen
 können. Aufgedeckt hat das der Test `test_s_api_rechte` — nicht
 Nachdenken, sondern Prüfen.
+
+**Es gibt keinen automatischen Schutz für künftig angelegte Funktionen.**
+Naheliegend wäre, den Schutz mit
+
+```sql
+alter default privileges in schema velocity revoke execute on functions from public;
+```
+
+dauerhaft zu machen. Das stand hier bis zum 25.08.2026 auch so — und war
+falsch. Die Anweisung legt in dieser (Supabase-verwalteten) Datenbank
+nachweislich **keinen** Eintrag in `pg_default_acl` an, gegengeprüft
+per Abfrage gegen `pg_default_acl` direkt danach und durch Anlegen einer
+Testfunktion, die trotzdem `EXECUTE` für `PUBLIC` bekam. Sie schützt
+also **nichts**. Aufgefallen ist das bei der Sicherheitsprüfung zu
+Aufgabe 5: `fn_ausleihe_abrechnen` entstand mit `proacl = null` und war
+für `anon`/`authenticated` ausführbar, bis der `revoke all`-Block erneut
+lief.
+
+Ein Sicherheitskonzept, das eine Schutzmaßnahme behauptet, die es nicht
+gibt, ist gefährlicher als eine bekannte Lücke — deshalb steht hier
+stattdessen der tatsächliche Schutzmechanismus: der explizite
+
+```sql
+revoke all on all functions in schema velocity from public, anon, authenticated;
+```
+
+muss nach **jeder** neu angelegten Funktion erneut laufen (siehe
+`db/aufbau/0011_sicherheit.sql` und, für die Warenwirtschaft,
+`db/aufbau/0019_wawi_logik.sql`). Wer diesen Schritt vergisst, wird von
+zwei Seiten abgesichert: der Sweep-Testfunktion
+`test_s_keine_oeffentliche_funktion` in `db/tests/t0011_sicherheit.sql`,
+die jede Funktion des Schemas gegen `PUBLIC`-Ausführbarkeit prüft statt
+nur eine benannte Liste, und Abnahmeprüfung 25 „Keine Funktion ist
+versehentlich für jeden ausführbar" (`tools/abnahme.sh`), die dieselbe
+Prüfung gegen die Live-Datenbank fährt.
 
 ## Kein Trigger auf `auth.users`
 

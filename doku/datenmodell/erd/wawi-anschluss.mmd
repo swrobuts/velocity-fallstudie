@@ -1,17 +1,24 @@
 erDiagram
+    %% Gebaut (Aufgaben 9-13): schadensmeldung, wartungsauftrag - Bereich
+    %% I. Entworfen, nicht gebaut: wartungsposition, artikel, lieferant,
+    %% lager, lagerbewegung, umsetzungsauftrag (Bereiche G, H und der
+    %% Logistikteil von J) - Details und Begruendung in
+    %% doku/datenmodell/erd/erd-wawi.mmd.
     FAHRRAD       ||--o{ SCHADENSMELDUNG  : "betrifft"
-    KUNDE         ||--o{ SCHADENSMELDUNG  : "meldet"
-    SCHADENSMELDUNG ||--o| WARTUNGSAUFTRAG : "löst aus"
+    KUNDE         |o--o{ SCHADENSMELDUNG  : "meldet, sofern vom Kunden"
+    MITARBEITER   |o--o{ SCHADENSMELDUNG  : "meldet, sofern intern"
+    SCHADENSMELDUNG |o--o{ WARTUNGSAUFTRAG : "löst aus"
     FAHRRAD       ||--o{ WARTUNGSAUFTRAG  : "wird instandgesetzt in"
-    MITARBEITER   ||--o{ WARTUNGSAUFTRAG  : "bearbeitet"
-    WARTUNGSAUFTRAG ||--o{ WARTUNGSPOSITION : "verbraucht"
-    ARTIKEL       ||--o{ WARTUNGSPOSITION : "wird verbaut als"
-    WARTUNGSPOSITION ||--|| LAGERBEWEGUNG : "bucht aus"
-    LIEFERANT     ||--o{ ARTIKEL          : "liefert"
-    LAGER         ||--o{ LAGERBEWEGUNG    : "wird bebucht"
-    STATION       ||--o{ UMSETZUNGSAUFTRAG : "Quelle oder Ziel"
+    MITARBEITER   |o--o{ WARTUNGSAUFTRAG  : "bearbeitet, sobald zugeteilt"
+    WARTUNGSAUFTRAG ||--o{ WARTUNGSPOSITION : "verbraucht (entworfen)"
+    ARTIKEL       ||--o{ WARTUNGSPOSITION : "wird verbaut als (entworfen)"
+    WARTUNGSPOSITION ||--|| LAGERBEWEGUNG : "bucht aus (entworfen)"
+    LIEFERANT     ||--o{ ARTIKEL          : "liefert (entworfen)"
+    LAGER         ||--o{ LAGERBEWEGUNG    : "wird bebucht (entworfen)"
+    STATION       ||--o{ UMSETZUNGSAUFTRAG : "Quelle oder Ziel (entworfen)"
 
     FAHRRAD     { bigint fahrrad_id PK "aus Phase 1" }
     KUNDE       { bigint kunde_id PK "aus Phase 1" }
     STATION     { bigint station_id PK "aus Phase 1" }
+    WARTUNGSPOSITION { bigint wartungsposition_id PK "entworfen, nicht gebaut - braucht ARTIKEL und LAGERBEWEGUNG aus Bereich G/H" }
     LAGERBEWEGUNG { numeric menge "vorzeichenbehaftet; Bestand ist ein Aggregat" }
