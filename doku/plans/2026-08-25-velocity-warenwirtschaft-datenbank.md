@@ -3702,12 +3702,42 @@ begin
          where m.kunde_id = p_kunde_id order by lower(m.gueltigkeit)) x), '[]'::jsonb),
     'fahrten', coalesce((
       select jsonb_agg(to_jsonb(x)) from (
+        -- Die Koordinaten gehoeren in die Auskunft. Sie sind das
+        -- Genaueste, was ueber den Aufenthalt dieser Person gespeichert
+        -- ist - und ausgerechnet sie bleiben nach einer Anonymisierung
+        -- stehen. Wer Auskunft verlangt, hat ein Recht darauf zu
+        -- erfahren, was da liegt.
         select a.ausleihe_id, a.startzeit, a.endzeit, a.dauer_minuten, a.distanz_km,
-               s1.name as von, s2.name as nach
+               s1.name as von, s2.name as nach,
+               a.start_latitude, a.start_longitude,
+               a.end_latitude, a.end_longitude
           from velocity.ausleihe a
           left join velocity.station s1 on s1.station_id = a.start_station_id
           left join velocity.station s2 on s2.station_id = a.end_station_id
          where a.kunde_id = p_kunde_id order by a.startzeit) x), '[]'::jsonb),
+    'zahlungen', coalesce((
+      select jsonb_agg(to_jsonb(x)) from (
+        select z.zahlung_id, z.betrag, z.gebucht_am, z.status
+          from velocity.zahlung z
+         where z.kunde_id = p_kunde_id order by z.gebucht_am) x), '[]'::jsonb),
+    'schadensmeldungen', coalesce((
+      select jsonb_agg(to_jsonb(x)) from (
+        select sm.schadensmeldung_id, sm.gemeldet_am, sm.kategorie,
+               sm.beschreibung, sm.schwere, sm.status
+          from velocity.schadensmeldung sm
+         where sm.melder_kunde_id = p_kunde_id order by sm.gemeldet_am) x), '[]'::jsonb),
+    'freiminuten', coalesce((
+      select jsonb_agg(to_jsonb(x)) from (
+        select fp.jahr, fp.monat, fp.kontingent_minuten, fp.verbraucht_minuten
+          from velocity.freiminuten_periode fp
+          join velocity.mitgliedschaft m using (mitgliedschaft_id)
+         where m.kunde_id = p_kunde_id order by fp.jahr, fp.monat) x), '[]'::jsonb),
+    'protokoll', coalesce((
+      select jsonb_agg(to_jsonb(x)) from (
+        select ap.zeitpunkt, ap.feld, ap.wert_alt, ap.wert_neu
+          from velocity.aenderungsprotokoll ap
+         where ap.tabelle = 'kunde' and ap.datensatz_id = p_kunde_id
+         order by ap.zeitpunkt) x), '[]'::jsonb),
     'rechnungen', coalesce((
       select jsonb_agg(to_jsonb(x)) from (
         select r.rechnungsnummer, r.periode_jahr, r.periode_monat,
@@ -3768,7 +3798,31 @@ begin
     raise exception 'Kunde % nicht gefunden', p_kunde_id using errcode = 'P0001';
   end if;
 
-  -- Zahlungsmittel werden geloescht, nicht anonymisiert: sie
+  -- WAS DIESE FUNKTION NICHT LEISTET - und das gehoert hierher, nicht
+  -- in eine Fussnote:
+  --
+  -- 1. Die Fahrten bleiben stehen. Sie tragen die Abrechnung, und
+  --    Paragraf 147 AO verlangt sie. Sie tragen aber auch Startzeit,
+  --    Endzeit und bei frei abgestellten Raedern Koordinaten auf sechs
+  --    Nachkommastellen. Wer ein Jahr lang werktags um 07:40 vom selben
+  --    Punkt losfaehrt, ist damit wieder auffindbar, auch ohne Namen.
+  --    Eine echte Anonymisierung muesste die Orte vergroebern oder die
+  --    Zeiten runden. Das tut diese Funktion nicht, und wer sie
+  --    einsetzt, sollte es wissen.
+  --
+  -- 2. Freitexte werden nicht durchsucht. In
+  --    schadensmeldung.beschreibung oder rechnungsposition.beschreibung
+  --    kann ein Name stehen, den niemand dort vermutet hat. Generisch
+  --    loesbar ist das nicht.
+  --
+  -- 3. Das Altschema cityBikesRental liegt unveraendert auf derselben
+  --    Datenbank und haelt ueber tausend Kunden mit Vorname, Nachname
+  --    und E-Mail im Klartext. db/betrieb/altschema_absichern.sql sperrt
+  --    dort die RECHTE, nicht die DATEN. Fuer jeden uebernommenen Kunden
+  --    ist der Antrag nach Art. 17 damit erst erfuellt, wenn auch das
+  --    Altschema geraeumt ist.
+  --
+  -- Zahlungsmittel dagegen werden geloescht, nicht anonymisiert: sie
   -- unterliegen keiner Aufbewahrungspflicht und haben ohne Person
   -- keinen Zweck.
   delete from velocity.zahlungsmittel where kunde_id = p_kunde_id;
@@ -3789,14 +3843,47 @@ begin
          status       = 'geschlossen'
    where kunde_id = p_kunde_id;
 
-  -- Die Adresse nur dann loeschen, wenn keine gestellte Rechnung sie
-  -- noch braucht. Sonst bleibt sie stehen und traegt nur noch die
-  -- Rechnung, nicht mehr den Kunden.
+  -- Die Adresse loeschen, wenn kein anderer Satz sie noch braucht.
+  -- Geprueft werden kunde und station - die einzigen beiden Tabellen
+  -- mit einem Fremdschluessel auf adresse. rechnung hat keinen; siehe
+  -- den Absatz darunter.
   if v_adresse is not null
      and not exists (select 1 from velocity.kunde k where k.rechnungsadresse_id = v_adresse)
      and not exists (select 1 from velocity.station s where s.adresse_id = v_adresse) then
     delete from velocity.adresse where adresse_id = v_adresse;
   end if;
+
+  -- HIER STEHT DER EIGENTLICHE LEHRPUNKT DIESER FUNKTION.
+  --
+  -- Der UPDATE oben hat trg_kunde_protokoll ausgeloest. Damit steht im
+  -- Aenderungsprotokoll jetzt zeilenweise, WAS geloescht wurde:
+  --     vorname      Petra              -> Geloescht
+  --     email        petra@example.org  -> anonym-4711@velocity.invalid
+  --     telefon      0931 4711          -> null
+  --     geburtsdatum 1988-07-07         -> null
+  -- Die Loeschung erzeugt also die Kopie, die sie beseitigen soll. Ein
+  -- Protokoll ist kein Rechnungsbeleg; Paragraf 147 AO deckt es nicht,
+  -- und Art. 17 Abs. 3 lit. b greift fuer es nicht.
+  --
+  -- Aufgeloest wird das nicht durch Loeschen der Protokollzeilen -
+  -- dann verschwaende auch die Spur, WER wann geaendert hat, und Art. 5
+  -- Abs. 2 DSGVO verlangt genau die. Aufgeloest wird es, indem die
+  -- WERTE unkenntlich gemacht werden und die Zeile bleibt. Das Protokoll
+  -- sagt danach: an diesem Tag hat dieser Mitarbeiter diese sechs Felder
+  -- geaendert. Es sagt nicht mehr, wie die Person hiess.
+  --
+  -- Dass ausgerechnet diese Funktion das darf, obwohl auf
+  -- aenderungsprotokoll UPDATE using (false) liegt, ist kein Widerspruch,
+  -- sondern die Regel: sie ist security definer und laeuft unter einer
+  -- Rolle mit BYPASSRLS. Genau eine Funktion im ganzen Schema darf das
+  -- Protokoll anfassen, und es ist die, die Art. 17 umsetzt.
+  update velocity.aenderungsprotokoll
+     set wert_alt = case when wert_alt is null then null else '[anonymisiert]' end,
+         wert_neu = case when wert_neu is null then null else '[anonymisiert]' end
+   where tabelle = 'kunde'
+     and datensatz_id = p_kunde_id
+     and feld in ('vorname','nachname','email','telefon','geburtsdatum',
+                  'anrede','auth_uid','rechnungsadresse_id');
 
   insert into velocity.aenderungsprotokoll
          (mitarbeiter_id, tabelle, datensatz_id, aktion, feld, wert_alt, wert_neu)
@@ -3822,9 +3909,18 @@ begin
                p_schwere::velocity.schaden_schwere)
     returning schadensmeldung_id into v_s;
 
-  -- Ein fahruntaugliches Rad gehoert sofort aus dem Verkehr. Das darf
-  -- nicht davon abhaengen, ob jemand daran denkt, danach noch den
-  -- Status zu setzen.
+  -- Ein fahruntaugliches Rad gehoert sofort aus dem Verkehr. Der erste
+  -- Entwurf schrieb hier "and status <> 'ausgeliehen'" - mit der
+  -- Begruendung, ein Rad in Fahrt duerfe keinen anderen Status tragen.
+  -- Das stimmt, und es war trotzdem falsch: fn_ausleihe_beenden setzt
+  -- bei der Rueckgabe bedingungslos auf 'verfuegbar'. Ein waehrend der
+  -- Fahrt als fahruntauglich gemeldetes Rad stand danach wieder in der
+  -- Ausleihliste - mit gebrochenem Rahmen.
+  --
+  -- GR13 verbietet weiterhin, einem Rad in Fahrt einen Standort oder
+  -- einen anderen Status zu geben. Deshalb wird hier nicht der Status
+  -- gesetzt, sondern die Rueckgabe uebernimmt ihn: fn_ausleihe_beenden
+  -- fragt vor dem Freigeben, ob eine fahruntaugliche Meldung offen ist.
   if p_schwere = 'fahruntauglich' then
     update velocity.fahrrad set status = 'defekt'
      where fahrrad_id = p_fahrrad_id and status <> 'ausgeliehen';
@@ -3844,11 +3940,26 @@ as $$
 declare v_m bigint; v_w bigint; v_nummer text;
 begin
   v_m := velocity.fn_rolle_verlangen('werkstatt');
+
+  -- Die Meldung muss zu DIESEM Rad gehoeren. Ohne diese Pruefung
+  -- erklaert ein Zahlendreher in der Meldungsnummer einen fremden
+  -- Schaden fuer behoben und laesst das tatsaechlich defekte Rad im
+  -- Verkehr.
+  if p_schadensmeldung_id is not null
+     and not exists (select 1 from velocity.schadensmeldung sm
+                      where sm.schadensmeldung_id = p_schadensmeldung_id
+                        and sm.fahrrad_id = p_fahrrad_id) then
+    raise exception 'Schadensmeldung % gehoert nicht zu Rad %',
+      p_schadensmeldung_id, p_fahrrad_id using errcode = 'P0001';
+  end if;
+
+  -- Nummer aus einer Sequenz, nicht aus count(*). Ein geloeschter
+  -- Auftrag machte die Funktion sonst fuer den Rest des Jahres
+  -- unbrauchbar, und zwei gleichzeitige Aufrufe kollidierten am
+  -- unique-Constraint. Dasselbe Muster wie bei seq_kundennummer.
   select 'WA-' || to_char(now(), 'YYYY') || '-'
-         || lpad((count(*) + 1)::text, 5, '0')
-    into v_nummer
-    from velocity.wartungsauftrag
-   where eroeffnet_am >= date_trunc('year', now());
+         || lpad(nextval('velocity.seq_wartungsauftrag')::text, 5, '0')
+    into v_nummer;
 
   insert into velocity.wartungsauftrag
          (auftragsnummer, fahrrad_id, schadensmeldung_id, mitarbeiter_id, status)
@@ -3912,8 +4023,16 @@ $$;
 -- kunde traegt das Protokoll seit 0016. Diese drei kommen dazu, sobald
 -- es Funktionen gibt, die sie aendern.
 select velocity.fn_protokoll_anhaengen('mitarbeiter', 'mitarbeiter_id');
-select velocity.fn_protokoll_anhaengen('fahrrad',     'fahrrad_id');
 select velocity.fn_protokoll_anhaengen('station',     'station_id');
+
+-- BEWUSST NICHT auf fahrrad. Die Tabelle wird nicht in erster Linie von
+-- der Warenwirtschaft geaendert, sondern von jeder einzelnen Fahrt:
+-- api_ausleihe_starten setzt 'ausgeliehen', fn_ausleihe_beenden
+-- 'verfuegbar'. Bei 12 000 Fahrten im Jahr waeren das 24 000
+-- Protokollzeilen, wortgleich zu den Ereigniszeilen, die
+-- fahrrad_ereignis fuer genau diesen Zweck bereits fuehrt (GR21).
+-- aenderungsprotokoll ist die Spur an den STAMMdaten (GR19, Art. 5
+-- Abs. 2 DSGVO); sie zur Bewegungstabelle zu machen, entwertet beide.
 
 -- ---- Rechte ----------------------------------------------------------
 -- ERST entziehen, DANN gezielt vergeben. Diese Zeile ist nicht
@@ -3945,6 +4064,17 @@ grant execute on function
   velocity.api_schaden_melden(bigint, text, text, text),
   velocity.api_auftrag_eroeffnen(bigint, bigint),
   velocity.api_auftrag_erledigen(bigint, integer, text)
+to authenticated;
+
+-- fn_luftlinie_km gehoert dazu, obwohl sie nicht api_ heisst. Sie wird
+-- aus v_wawi_fahrt_km heraus aufgerufen, und eine Sicht traegt NICHT
+-- die Ausfuehrungsrechte ihres Eigentuemers. Ohne diesen Grant scheitert
+-- v_wawi_km_co2 mit "permission denied for function fn_luftlinie_km" -
+-- fuer jeden angemeldeten Nutzer, Mitarbeiter eingeschlossen. Vor dem
+-- revoke oben lebte sie vom impliziten PUBLIC-Recht; danach nicht mehr.
+-- Unbedenklich: sie rechnet eine Formel und liest keine Tabelle.
+grant execute on function
+  velocity.fn_luftlinie_km(numeric, numeric, numeric, numeric)
 to authenticated;
 
 grant select on
