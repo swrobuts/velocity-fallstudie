@@ -3280,10 +3280,17 @@ begin
   -- GR17. Der Test steht hier ein zweites Mal, in der Rolle, die dem
   -- Kunden am naechsten ist: wenn irgendwo eine Luecke entsteht, dann
   -- hier.
+  --
+  -- set local role ist keine Umstaendlichkeit, sondern der Kern des
+  -- Tests: db/test.py verbindet sich als postgres, und ein Superuser
+  -- umgeht JEDE Rechtepruefung. Ohne Rollenwechsel koennte dieser Test
+  -- nie fehlschlagen - er waere eine Zusicherung, die nichts zusichert.
+  set local role authenticated;
   return next throws_ok(
     $q$ select 1 from velocity.zahlungsmittel limit 1 $q$,
     '42501', null,
     'Auch der Kundenservice kommt nicht an die Zahlungsmittel');
+  reset role;
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;

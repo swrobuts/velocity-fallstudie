@@ -14,3 +14,6 @@ doku/verifikation/*sicherung*/
 
 # Sperrdateien von Word/PowerPoint
 ~$*
+
+# Arbeitsbereich der Subagenten-Ausfuehrung (Ledger, Briefs, Reviewpakete)
+.superpowers/
