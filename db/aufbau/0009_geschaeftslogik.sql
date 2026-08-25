@@ -4,7 +4,8 @@
 -- Zweck:      Ausleihe starten und beenden, Preisfindung, Anlegen und
 --             Pflegen des Kundensatzes zur Anmeldung.
 -- Objekte:    velocity.fn_kunde_aus_auth, velocity.fn_position_anlegen,
---             velocity.fn_ausleihe_starten, velocity.fn_ausleihe_beenden,
+--             velocity.fn_ausleihe_starten, velocity.fn_ausleihe_abrechnen,
+--             velocity.fn_ausleihe_beenden,
 --             velocity.api_kunde_sicherstellen,
 --             velocity.api_profil_aktualisieren,
 --             velocity.api_ausleihe_starten, velocity.api_ausleihe_beenden
@@ -139,30 +140,20 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- Ausleihe beenden und bepreisen
+-- Bepreist eine BEREITS abgeschlossene Fahrt. Herausgeloest aus
+-- fn_ausleihe_beenden, weil dort endzeit = now() gesetzt wird und die
+-- Funktion deshalb keine vergangene Fahrt abschliessen kann - fuer die
+-- Referenzdaten (db/betrieb/referenzdaten_fahrten.sql) ist genau das
+-- noetig. Ein Parameter "Endzeit frei waehlbar" an fn_ausleihe_beenden
+-- waere die naheliegende Abkuerzung und zugleich ein Loch im
+-- Zugriffsschutz: ein Kunde koennte sich billiger rechnen. Diese
+-- Funktion bepreist nur; sie entscheidet nicht, wann die Fahrt endete.
 --
--- Reihenfolge der Positionen:
---   1 Startgebuehr
---   2 Zeitentgelt ueber ALLE gefahrenen Minuten
---   3 Gutschrift der Freiminuten (negativ)
---   4 Tarifrabatt auf die Zwischensumme (negativ)
---   5 Kappung auf den Tageshoechstpreis (negativ)
---
--- Das Zeitentgelt wird bewusst ueber alle Minuten gebildet und die
--- Freiminuten als eigene Gutschrift abgezogen. So ist auf der Rechnung
--- ablesbar, was der Tarifvorteil wert war.
---
--- Der Rabatt wird VOR der Kappung angewandt. Umgekehrt wuerde der
--- Rabatt den bereits gedeckelten Betrag noch einmal senken.
+-- Sie ist bewusst NICHT security definer und wird nicht an anon oder
+-- authenticated freigegeben.
 -- ---------------------------------------------------------------------
-create or replace function velocity.fn_ausleihe_beenden(
-  p_kunde_id       bigint,
-  p_ausleihe_id    bigint,
-  p_end_station_id bigint  default null,
-  p_latitude       numeric default null,
-  p_longitude      numeric default null
-)
-returns table (gesamtbetrag numeric, dauer_minuten integer, meldung text)
+create or replace function velocity.fn_ausleihe_abrechnen(p_ausleihe_id bigint)
+returns numeric
 language plpgsql
 set search_path = velocity, pg_temp
 as $$
@@ -181,44 +172,14 @@ begin
   select * into v_a from velocity.ausleihe a
    where a.ausleihe_id = p_ausleihe_id for update;
   if not found then
-    return query select null::numeric, null::integer, 'Ausleihe nicht gefunden'::text; return;
+    raise exception 'Ausleihe % nicht gefunden', p_ausleihe_id using errcode = 'P0001';
   end if;
-  if v_a.kunde_id <> p_kunde_id then
-    return query select null::numeric, null::integer,
-      'Keine Berechtigung für diese Ausleihe'::text; return;
+  if v_a.endzeit is null then
+    raise exception 'Ausleihe % ist noch nicht beendet', p_ausleihe_id using errcode = 'P0001';
   end if;
-  if v_a.status <> 'aktiv' then
-    return query select null::numeric, null::integer, 'Ausleihe ist nicht aktiv'::text; return;
+  if exists (select 1 from velocity.entgeltposition e where e.ausleihe_id = p_ausleihe_id) then
+    raise exception 'Ausleihe % ist bereits abgerechnet', p_ausleihe_id using errcode = 'P0001';
   end if;
-
-  -- Die Rueckgabe braucht genau eine Ortsangabe. Ohne diese Pruefung
-  -- schluege ausleihe_endort_chk zu - mit einer Meldung, die der
-  -- Anwendung nichts sagt. Fachliche Fehler gehoeren in die Meldung.
-  if (p_end_station_id is not null)
-     = (p_latitude is not null and p_longitude is not null) then
-    return query select null::numeric, null::integer,
-      'Rueckgabe braucht entweder eine Station oder Koordinaten, nicht beides'::text;
-    return;
-  end if;
-
-  -- Frei abstellen geht nur INNERHALB des Geschaeftsgebiets. Bisher stand
-  -- diese Regel nur als Vieleck im JavaScript der Karte - die Datenbank
-  -- nahm jede Koordinate an, auch eine in Hamburg.
-  if p_end_station_id is null
-     and not velocity.fn_im_geschaeftsgebiet(p_latitude, p_longitude) then
-    return query select null::numeric, null::integer,
-      'Abstellort liegt ausserhalb des Geschaeftsgebiets'::text;
-    return;
-  end if;
-
-  update velocity.ausleihe a
-     set endzeit        = now(),
-         end_station_id = p_end_station_id,
-         end_latitude   = case when p_end_station_id is null then p_latitude  end,
-         end_longitude  = case when p_end_station_id is null then p_longitude end,
-         status         = 'abgeschlossen'
-   where a.ausleihe_id = p_ausleihe_id
-  returning * into v_a;
 
   v_dauer := v_a.dauer_minuten;
 
@@ -286,6 +247,90 @@ begin
               1, v_ueberschuss, v_preis.preis_id, 50);
     v_summe := v_preis.tageshoechstpreis;
   end if;
+
+  return v_summe;
+end;
+$$;
+
+-- ---------------------------------------------------------------------
+-- Ausleihe beenden und bepreisen
+--
+-- Reihenfolge der Positionen:
+--   1 Startgebuehr
+--   2 Zeitentgelt ueber ALLE gefahrenen Minuten
+--   3 Gutschrift der Freiminuten (negativ)
+--   4 Tarifrabatt auf die Zwischensumme (negativ)
+--   5 Kappung auf den Tageshoechstpreis (negativ)
+--
+-- Das Zeitentgelt wird bewusst ueber alle Minuten gebildet und die
+-- Freiminuten als eigene Gutschrift abgezogen. So ist auf der Rechnung
+-- ablesbar, was der Tarifvorteil wert war.
+--
+-- Der Rabatt wird VOR der Kappung angewandt. Umgekehrt wuerde der
+-- Rabatt den bereits gedeckelten Betrag noch einmal senken.
+-- ---------------------------------------------------------------------
+create or replace function velocity.fn_ausleihe_beenden(
+  p_kunde_id       bigint,
+  p_ausleihe_id    bigint,
+  p_end_station_id bigint  default null,
+  p_latitude       numeric default null,
+  p_longitude      numeric default null
+)
+returns table (gesamtbetrag numeric, dauer_minuten integer, meldung text)
+language plpgsql
+set search_path = velocity, pg_temp
+as $$
+declare
+  v_a           velocity.ausleihe%rowtype;
+  v_dauer       integer;
+  v_summe       numeric(10,2);
+begin
+  select * into v_a from velocity.ausleihe a
+   where a.ausleihe_id = p_ausleihe_id for update;
+  if not found then
+    return query select null::numeric, null::integer, 'Ausleihe nicht gefunden'::text; return;
+  end if;
+  if v_a.kunde_id <> p_kunde_id then
+    return query select null::numeric, null::integer,
+      'Keine Berechtigung für diese Ausleihe'::text; return;
+  end if;
+  if v_a.status <> 'aktiv' then
+    return query select null::numeric, null::integer, 'Ausleihe ist nicht aktiv'::text; return;
+  end if;
+
+  -- Die Rueckgabe braucht genau eine Ortsangabe. Ohne diese Pruefung
+  -- schluege ausleihe_endort_chk zu - mit einer Meldung, die der
+  -- Anwendung nichts sagt. Fachliche Fehler gehoeren in die Meldung.
+  if (p_end_station_id is not null)
+     = (p_latitude is not null and p_longitude is not null) then
+    return query select null::numeric, null::integer,
+      'Rueckgabe braucht entweder eine Station oder Koordinaten, nicht beides'::text;
+    return;
+  end if;
+
+  -- Frei abstellen geht nur INNERHALB des Geschaeftsgebiets. Bisher stand
+  -- diese Regel nur als Vieleck im JavaScript der Karte - die Datenbank
+  -- nahm jede Koordinate an, auch eine in Hamburg.
+  if p_end_station_id is null
+     and not velocity.fn_im_geschaeftsgebiet(p_latitude, p_longitude) then
+    return query select null::numeric, null::integer,
+      'Abstellort liegt ausserhalb des Geschaeftsgebiets'::text;
+    return;
+  end if;
+
+  update velocity.ausleihe a
+     set endzeit        = now(),
+         end_station_id = p_end_station_id,
+         end_latitude   = case when p_end_station_id is null then p_latitude  end,
+         end_longitude  = case when p_end_station_id is null then p_longitude end,
+         status         = 'abgeschlossen'
+   where a.ausleihe_id = p_ausleihe_id
+  returning * into v_a;
+
+  v_dauer := v_a.dauer_minuten;
+  -- Die Preisermittlung steht in fn_ausleihe_abrechnen, damit sie auch
+  -- fuer bereits abgeschlossene Fahrten zur Verfuegung steht.
+  v_summe := velocity.fn_ausleihe_abrechnen(p_ausleihe_id);
 
   update velocity.fahrrad set status = 'verfuegbar' where fahrrad_id = v_a.fahrrad_id;
   -- Genau eine Ortsangabe (GR13): an einer Station traegt die Station

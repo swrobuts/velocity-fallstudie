@@ -238,3 +238,98 @@ begin
   return next is(v_e.meldung, 'Nicht angemeldet', 'api_ausleihe_beenden weist anonyme Aufrufe ab');
 end;
 $$;
+
+create or replace function velocity_test.test_p_abrechnen_gleicht_beenden()
+returns setof text language plpgsql as $$
+declare
+  v_f1 record; v_f2 record; v_a1 bigint; v_a2 bigint;
+  v_summe1 numeric; v_summe2 numeric; v_station bigint;
+begin
+  select station_id into v_station from velocity.station order by station_id limit 1;
+
+  -- Weg A: die Fahrt wird regulaer beendet.
+  select * into v_f1 from velocity_test.fixture_rad('abr-a');
+  -- fixture_rad legt einen frischen Fahrradtyp ohne Preis an; ohne einen
+  -- gueltigen nutzungspreis liefe die Bepreisung sofort in P0002.
+  insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
+    select m.typ_id, daterange(current_date - 365, null, '[)'), 1.00, 0.20, 20.00
+      from velocity.fahrrad f join velocity.fahrradmodell m on m.modell_id = f.modell_id
+     where f.fahrrad_id = v_f1.o_fahrrad_id;
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit)
+       values (v_f1.o_kunde_id, v_f1.o_fahrrad_id, v_station, now() - interval '37 minutes')
+    returning ausleihe_id into v_a1;
+  select gesamtbetrag into v_summe1
+    from velocity.fn_ausleihe_beenden(v_f1.o_kunde_id, v_a1, v_station);
+
+  -- Weg B: die Fahrt ist schon abgeschlossen und wird nur bepreist.
+  select * into v_f2 from velocity_test.fixture_rad('abr-b');
+  insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
+    select m.typ_id, daterange(current_date - 365, null, '[)'), 1.00, 0.20, 20.00
+      from velocity.fahrrad f join velocity.fahrradmodell m on m.modell_id = f.modell_id
+     where f.fahrrad_id = v_f2.o_fahrrad_id;
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit,
+                                 end_station_id, endzeit, status)
+       values (v_f2.o_kunde_id, v_f2.o_fahrrad_id, v_station, now() - interval '37 minutes',
+               v_station, now(), 'abgeschlossen')
+    returning ausleihe_id into v_a2;
+  v_summe2 := velocity.fn_ausleihe_abrechnen(v_a2);
+
+  return next is(v_summe2, v_summe1,
+                 'Beide Wege kommen auf denselben Betrag');
+  return next results_eq(
+    format($q$ select ea.code, ep.menge, ep.einzelbetrag, ep.betrag
+                 from velocity.entgeltposition ep
+                 join velocity.entgeltart ea using (entgeltart_id)
+                where ep.ausleihe_id = %s order by ep.sortierung $q$, v_a2),
+    format($q$ select ea.code, ep.menge, ep.einzelbetrag, ep.betrag
+                 from velocity.entgeltposition ep
+                 join velocity.entgeltart ea using (entgeltart_id)
+                where ep.ausleihe_id = %s order by ep.sortierung $q$, v_a1),
+    'Beide Wege erzeugen dieselben Positionen in derselben Reihenfolge');
+end;
+$$;
+
+create or replace function velocity_test.test_p_abrechnen_weist_offene_fahrt_ab()
+returns setof text language plpgsql as $$
+declare v_f record; v_a bigint; v_station bigint;
+begin
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  select * into v_f from velocity_test.fixture_rad('abr-offen');
+  -- ausleihe_startort_chk verlangt genau eine Ortsangabe; die Station
+  -- steht hier fuer den Start, weil die Fahrt gar nicht so weit kommen
+  -- soll - es geht nur um die fehlende endzeit.
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit)
+       values (v_f.o_kunde_id, v_f.o_fahrrad_id, v_station, now() - interval '10 minutes')
+    returning ausleihe_id into v_a;
+  -- Eine laufende Fahrt hat noch keine Dauer. Sie zu bepreisen hiesse,
+  -- eine Zahl zu erfinden.
+  return next throws_ok(
+    format($q$ select velocity.fn_ausleihe_abrechnen(%s) $q$, v_a),
+    'P0001', null,
+    'Eine noch laufende Fahrt wird nicht bepreist');
+end;
+$$;
+
+create or replace function velocity_test.test_p_abrechnen_nur_einmal()
+returns setof text language plpgsql as $$
+declare v_f record; v_a bigint; v_station bigint;
+begin
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  select * into v_f from velocity_test.fixture_rad('abr-doppelt');
+  insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
+    select m.typ_id, daterange(current_date - 365, null, '[)'), 1.00, 0.20, 20.00
+      from velocity.fahrrad f join velocity.fahrradmodell m on m.modell_id = f.modell_id
+     where f.fahrrad_id = v_f.o_fahrrad_id;
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit,
+                                 end_station_id, endzeit, status)
+       values (v_f.o_kunde_id, v_f.o_fahrrad_id, v_station, now() - interval '20 minutes',
+               v_station, now(), 'abgeschlossen')
+    returning ausleihe_id into v_a;
+  perform velocity.fn_ausleihe_abrechnen(v_a);
+  -- Zweimal abrechnen hiesse zweimal kassieren.
+  return next throws_ok(
+    format($q$ select velocity.fn_ausleihe_abrechnen(%s) $q$, v_a),
+    'P0001', null,
+    'Eine bereits bepreiste Fahrt wird nicht erneut bepreist');
+end;
+$$;
