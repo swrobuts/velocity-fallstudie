@@ -382,6 +382,16 @@ button {
    verlangt. Diese Klasse fehlte hier, obwohl statusKlasse() in
    flotte.js sie von Anfang an zurueckgibt. */
 .arbeitstabelle td.leise    { color: var(--text-leise); }
+/* Rechtsbuendig fuer Zahlenspalten (Aufgabe 8, Auswertungen): eine Tabelle
+   ohne Diagrammbibliothek lebt davon, dass Zahlen bei gleicher Grosse
+   untereinanderstehen - linksbuendig zerreisst jede Spalte in Ziffern
+   unterschiedlicher Breite und macht das Ueberfliegen einer Monatsreihe
+   muehsam. font-variant-numeric haelt zusaetzlich jede Ziffer gleich breit
+   (tabellarische statt proportionale Ziffern), sonst verschieben sich die
+   Kommastellen selbst bei rechtsbuendigem Text noch minimal. Kombinierbar
+   mit schlecht/warnung/gut: zeigeListe setzt beide Klassennamen als EINEN
+   String ("zahl warnung"), CSS wendet beide Regeln an.  */
+.arbeitstabelle td.zahl     { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ===== Leermaske (zeigeLeermaske) ===== */
 
