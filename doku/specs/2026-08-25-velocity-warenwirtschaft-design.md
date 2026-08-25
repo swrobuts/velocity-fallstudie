@@ -264,6 +264,13 @@ nicht, sie hört auf zu existieren *ab einem Datum*.
 | `v_wawi_station` | Station, Kapazität, belegt, frei, Betriebszeitraum | disposition |
 | `v_wawi_schaden` | Offene Meldungen mit Rad, Schwere, Alter | werkstatt |
 | `v_wawi_auftrag` | Wartungsaufträge mit Bearbeiter und Stand | werkstatt |
+| `v_wawi_modell` | Modell, Hersteller, Typ, Zuladung, Räder im Bestand — Auswahlliste für `api_rad_anlegen` | disposition |
+
+`v_wawi_modell` kam erst nach den übrigen fünf: Sie wurde erst beim Bau
+der Oberfläche vermisst, als sich zeigte, dass `api_rad_anlegen` eine
+`modell_id` verlangt, die keine der bis dahin geplanten Sichten
+herausgab — die ersten fünf waren aus den Auswertungen abgeleitet,
+nicht aus den Eingaben der Erfassungsmasken.
 
 ### 5.2 Auswertungen
 

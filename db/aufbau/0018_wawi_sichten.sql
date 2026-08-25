@@ -11,14 +11,17 @@
 --             v_wawi_kunde, v_wawi_station, v_wawi_schaden,
 --             v_wawi_auftrag, v_wawi_umsatz_radtyp,
 --             v_wawi_umsatz_kundengruppe, v_wawi_km_co2,
---             v_wawi_stationsauslastung
+--             v_wawi_stationsauslastung, v_wawi_modell
 -- Ruecknahme: DROP VIEW fuer dieselben Namen; DROP FUNCTION
 --             velocity.fn_luftlinie_km(numeric,numeric,numeric,numeric);
 --
--- Hinweis:    Diese Datei entsteht in zwei Aufgaben. Aufgabe 10 legt die
+-- Hinweis:    Diese Datei entsteht in drei Aufgaben. Aufgabe 10 legt die
 --             fuenf Arbeitssichten an (Flotte, Kunden, Stationen,
 --             Schaeden, Auftraege) und die Haversine-Funktion, die die
---             Auswertungssichten aus Aufgabe 11 brauchen werden.
+--             Auswertungssichten aus Aufgabe 11 brauchen werden. Aufgabe 3
+--             des Oberflaechenplans ergaenzt v_wawi_modell: eine Sicht
+--             fuer eine Eingabemaske statt fuer eine Auswertung, die beim
+--             Bau der Oberflaeche als fehlend auffiel.
 -- =====================================================================
 
 -- Luftlinie nach Haversine, ohne PostGIS - dieselbe Entscheidung wie
@@ -754,3 +757,65 @@ comment on column velocity.v_wawi_stationsauslastung.fuellstand is
   'bei einer Station ohne Stellplaetze (kapazitaet = 0), was laut '
   'station_kapazitaet_chk nicht vorkommen sollte, aber nullif schuetzt vor '
   'einer Division durch null statt einem Fehler ohne Kontext.';
+
+-- =====================================================================
+-- Aufgabe 3 (Oberflaechenplan): v_wawi_modell - die fehlende Sicht auf
+-- die Radmodelle
+-- =====================================================================
+
+-- ---- Radmodelle -------------------------------------------------------
+-- Eine Sicht fuer eine EINGABEmaske, nicht fuer eine Auswertung. Sie ist
+-- beim Bau der Oberflaeche entstanden, weil api_rad_anlegen eine
+-- modell_id verlangt und keine Sicht sie herausgab - der einzige Ausweg
+-- waere ein Zugriff auf die Basistabelle gewesen, und den gibt es nicht.
+--
+-- Der Fehler dahinter ist lehrreich: die Sichten aus Schritt 1 wurden aus
+-- den Auswertungen abgeleitet, nicht aus den Eingaben. Eine Maske
+-- braucht mehr als eine Liste - sie braucht auch das, was in ihre
+-- Auswahlfelder gehoert.
+create or replace view velocity.v_wawi_modell as
+select mo.modell_id,
+       h.name                as hersteller,
+       mo.modellbezeichnung,
+       t.typ_id,
+       t.typ_code,
+       t.bezeichnung         as typ,
+       t.hat_elektro,
+       t.zuladung_kg,
+       -- Wie viele Raeder dieses Modells schon im Bestand sind. In einer
+       -- Auswahlliste ist das die nuetzlichste Zusatzangabe: sie sagt,
+       -- was ueblich ist, ohne dass jemand nachsehen muss.
+       (select count(*) from velocity.fahrrad f
+         where f.modell_id = mo.modell_id and f.status <> 'ausgemustert')
+                             as raeder_im_bestand
+  from velocity.fahrradmodell mo
+  join velocity.hersteller    h on h.hersteller_id = mo.hersteller_id
+  join velocity.fahrradtyp    t on t.typ_id        = mo.typ_id
+ where velocity.hat_rolle('disposition')
+    or velocity.hat_rolle('leitung');
+
+comment on view velocity.v_wawi_modell is
+  'Auswahlliste fuer die Radanlage. Entstanden beim Bau der Oberflaeche, weil api_rad_anlegen eine modell_id verlangt und keine Sicht sie herausgab.';
+comment on column velocity.v_wawi_modell.modell_id is
+  'Schluessel des Modells, der Wert, den api_rad_anlegen als p_modell_id erwartet.';
+comment on column velocity.v_wawi_modell.hersteller is
+  'Name des Herstellers, fuer die Auswahlliste ohne Nachschlagen einer Nummer.';
+comment on column velocity.v_wawi_modell.modellbezeichnung is
+  'Modellbezeichnung laut Stammdaten, zusammen mit hersteller die lesbare '
+  'Kennung des Eintrags.';
+comment on column velocity.v_wawi_modell.typ_id is
+  'Schluessel des Fahrradtyps, falls die Oberflaeche danach filtert oder '
+  'gruppiert.';
+comment on column velocity.v_wawi_modell.typ_code is
+  'Fachlicher Schluessel des Fahrradtyps.';
+comment on column velocity.v_wawi_modell.typ is
+  'Anzeigename des Fahrradtyps.';
+comment on column velocity.v_wawi_modell.hat_elektro is
+  'Wahr bei einem Modell mit Elektroantrieb - hilft der Auswahlliste, City- '
+  'von E-Bike-Modellen zu unterscheiden, ohne den Typnamen zu parsen.';
+comment on column velocity.v_wawi_modell.zuladung_kg is
+  'Maximale Zuladung des Fahrradtyps laut Stammdaten. NULL, wenn der Typ '
+  'keine Zuladungsgrenze fuehrt.';
+comment on column velocity.v_wawi_modell.raeder_im_bestand is
+  'Zahl der nicht ausgemusterten Raeder dieses Modells im Bestand - zeigt an, '
+  'was ueblich ist, ohne dass jemand in der Flottensicht nachsehen muss.';

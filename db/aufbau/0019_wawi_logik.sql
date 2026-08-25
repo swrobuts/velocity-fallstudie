@@ -868,9 +868,14 @@ grant execute on function
   velocity.fn_luftlinie_km(numeric, numeric, numeric, numeric)
 to authenticated;
 
+-- v_wawi_modell (Aufgabe 3 des Oberflaechenplans) gehoert in diese Liste,
+-- sonst ist sie fuer die Oberflaeche tot: die Sweep-Pruefung in
+-- tools/abnahme.sh faengt fehlende Rechte nur bei Funktionen ab, nicht
+-- bei Sichten.
 grant select on
   velocity.v_wawi_flotte, velocity.v_wawi_kunde, velocity.v_wawi_station,
   velocity.v_wawi_schaden, velocity.v_wawi_auftrag, velocity.v_wawi_fahrt_km,
   velocity.v_wawi_umsatz_radtyp, velocity.v_wawi_umsatz_kundengruppe,
-  velocity.v_wawi_km_co2, velocity.v_wawi_stationsauslastung
+  velocity.v_wawi_km_co2, velocity.v_wawi_stationsauslastung,
+  velocity.v_wawi_modell
 to authenticated;
