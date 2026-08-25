@@ -247,6 +247,39 @@ begin
 end;
 $$;
 
+-- Trifft den Trigger selbst, ohne den Umweg ueber eine api_-Funktion:
+-- Positionszeile loeschen, Status aendern. Genau diese Kombination war
+-- die gemessene Luecke (M-0001) - erreichbar ueber api_rad_ausmustern,
+-- das die Positionszeile absichtlich loescht, gefolgt von
+-- api_rad_status_setzen(..., 'verfuegbar'). Ein Test, der nur die beiden
+-- api_-Funktionen durchspielt, wuerde die naechste Regression nicht
+-- bemerken, wenn irgendwann ein dritter Weg an api_rad_status_setzen
+-- vorbeischreibt - deshalb hier zusaetzlich direkt gegen die Tabellen.
+create or replace function velocity_test.test_b_position_geloescht_bleibt_pflicht()
+returns setof text language plpgsql as $$
+declare
+  v_f record;
+begin
+  select * into v_f from velocity_test.fixture_rad_ort('7');
+  insert into velocity.fahrrad_position (fahrrad_id, station_id)
+       values (v_f.o_fahrrad_id, v_f.o_station_id);
+
+  -- Die Positionszeile verschwindet komplett - nicht nur ihr Ort wird
+  -- geleert. Vor der Korrektur liess "if not found then return null" den
+  -- Trigger hier klaglos aussteigen.
+  delete from velocity.fahrrad_position where fahrrad_id = v_f.o_fahrrad_id;
+  update velocity.fahrrad set status = 'verfuegbar' where fahrrad_id = v_f.o_fahrrad_id;
+
+  begin
+    set constraints all immediate;
+    return next fail('Ein Rad ohne jede Positionszeile und mit Status verfuegbar haette abgewiesen werden muessen');
+  exception when check_violation then
+    return next pass('Eine geloeschte Positionszeile ersetzt keinen Standort - GR13 greift weiterhin');
+  end;
+  set constraints all deferred;
+end;
+$$;
+
 -- =====================================================================
 --  GESCHAEFTSGEBIET
 --

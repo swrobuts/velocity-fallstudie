@@ -590,6 +590,50 @@ begin
 end;
 $$;
 
+-- GR13, gemessene Luecke M-0001: ausgemustert ist ein Endzustand.
+--
+-- api_rad_ausmustern loescht die Positionszeile mit gutem Grund - ein
+-- ausgemustertes Rad hat keinen Ort mehr (s. Kommentar dort). Das wurde
+-- einmal mit "nichts zu pruefen" verwechselt: api_rad_status_setzen liess
+-- sich danach klaglos auf 'verfuegbar' zuruecksetzen, ganz ohne dass ein
+-- neuer Standort hinterlegt wurde - nachgestellt als M-0001 in einer
+-- zurueckgerollten Transaktion ("set constraints all immediate erzwingt,
+-- kein Fehler"). Dieser Test stellt genau diesen Weg nach: ausmustern,
+-- dann ueber dieselbe Oberflaechen-Funktion auf 'verfuegbar' setzen,
+-- Ablehnung erwarten - und zwar sofort, nicht erst beim COMMIT.
+create or replace function velocity_test.test_l_ausgemustert_kein_weg_zurueck()
+returns setof text language plpgsql as $$
+declare v_f record; v_station bigint;
+begin
+  select * into v_f from velocity_test.fixture_rad('ausgemustertzurueck');
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  insert into velocity.fahrrad_position (fahrrad_id, station_id, akkustand_prozent)
+       values (v_f.o_fahrrad_id, v_station, 80);
+
+  perform velocity_test.fixture_rollen('ausgemustertzurueck', array['disposition']);
+  perform velocity.api_rad_ausmustern(v_f.o_fahrrad_id, 'Rahmenbruch');
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_f.o_fahrrad_id),
+    'ausgemustert', 'Das Rad ist nach dem Ausmustern ausgemustert');
+  return next is(
+    (select count(*)::int from velocity.fahrrad_position where fahrrad_id = v_f.o_fahrrad_id),
+    0, 'Die Positionszeile ist nach dem Ausmustern weg');
+
+  -- Der eigentliche Befund: ohne die Pruefung liesse sich das Rad hier
+  -- klaglos auf 'verfuegbar' zuruecksetzen - Status verfuegbar, keine
+  -- Positionszeile, kein Standort.
+  return next throws_ok(
+    format($q$ select velocity.api_rad_status_setzen(%s, 'verfuegbar', null) $q$,
+           v_f.o_fahrrad_id),
+    'P0001', null,
+    'api_rad_status_setzen weist die Wiederbelebung eines ausgemusterten Rades zurueck');
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_f.o_fahrrad_id),
+    'ausgemustert', 'Das Rad bleibt ausgemustert, die abgewiesene Anweisung aendert nichts');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
 create or replace function velocity_test.test_l_auftrag_eroeffnen_prueft_zugehoerigkeit()
 returns setof text language plpgsql as $$
 declare v_f1 bigint; v_f2 bigint; v_s1 bigint;

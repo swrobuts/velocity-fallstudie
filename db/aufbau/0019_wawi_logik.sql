@@ -143,6 +143,23 @@ begin
       using errcode = 'P0001';
   end if;
 
+  -- GR13, gemessene Luecke M-0001: ausgemustert ist ein Endzustand, kein
+  -- Statuswert wie jeder andere. Die Spezifikation schweigt zum Lebenslauf
+  -- danach, aber die Fachlogik selbst entscheidet die Richtung: eine
+  -- Ausmusterung ist ein eigener Weg mit eigener Begruendung
+  -- (api_rad_ausmustern, s.u.), keine Drehtuer. api_rad_ausmustern loescht
+  -- dabei absichtlich die Positionszeile - ein ausgemustertes Rad hat
+  -- keinen Ort mehr. Ohne diese Pruefung liess sich so ein Rad ueber genau
+  -- diese Funktion klaglos auf 'verfuegbar' zuruecksetzen: Status
+  -- verfuegbar, keine Positionszeile, kein Standort - nachgestellt und
+  -- bestaetigt (M-0001). trg_radposition_pruefen faengt das inzwischen
+  -- auch ab, aber erst beim COMMIT und mit der Sprache eines Constraints;
+  -- diese Pruefung weist es der Oberflaeche vorher verstaendlich zurueck.
+  if (select f.status from velocity.fahrrad f where f.fahrrad_id = p_fahrrad_id) = 'ausgemustert' then
+    raise exception 'Rad % ist ausgemustert und bleibt es - kein Weg zurueck ueber diese Funktion',
+      p_fahrrad_id using errcode = 'P0001';
+  end if;
+
   -- Dieselbe Regel wie in fn_ausleihe_beenden (0009) und
   -- api_auftrag_erledigen (oben in dieser Datei): ein Rad mit offener
   -- fahruntauglicher Meldung darf nicht als 'verfuegbar' markiert
