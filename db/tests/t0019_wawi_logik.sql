@@ -88,14 +88,21 @@ $$;
 
 create or replace function velocity_test.test_l_station_wird_stillgelegt_nicht_geloescht()
 returns setof text language plpgsql as $$
-declare v_s bigint;
+declare v_s bigint; v_beginn date;
 begin
   perform velocity_test.fixture_rollen('stat', array['disposition']);
   v_s := velocity.api_station_anlegen('Teststation L', 'Teststrasse', '1',
                                       '97070', 'Wuerzburg', 49.79, 9.93, 12);
   return next ok(v_s is not null, 'Die Station wird angelegt');
+  select lower(betriebszeitraum) into v_beginn from velocity.station where station_id = v_s;
 
-  perform velocity.api_station_stilllegen(v_s, current_date);
+  -- Absichtlich NICHT current_date als p_zum: der Betriebsbeginn ist
+  -- ebenfalls current_date (Vorgabewert beim Anlegen), und
+  -- daterange(x, x, '[)') ist LEER - Postgres liefert lower()/upper()
+  -- fuer eine leere Reichweite als NULL. Genau diesen Fall weist
+  -- api_station_stilllegen inzwischen zurueck (s.u.); der eigentliche,
+  -- realistische Fall ist eine spaetere Stilllegung.
+  perform velocity.api_station_stilllegen(v_s, current_date + 30);
   -- GR22: eine Station verschwindet nicht, sie hoert ab einem Datum auf
   -- zu existieren. Sonst verloeren alle Fahrten dorthin ihren Ort.
   return next ok(
@@ -104,6 +111,157 @@ begin
   return next ok(
     not (select upper_inf(betriebszeitraum) from velocity.station where station_id = v_s),
     'Ihr Betriebszeitraum ist geschlossen');
+  -- Bislang unbewiesen: die bisherigen Zusicherungen liessen ein
+  -- Stilllegen durchgehen, das versehentlich auch den Betriebsbeginn
+  -- ueberschreibt. api_station_stilllegen baut die neue Reichweite
+  -- ausdruecklich aus dem zuvor gelesenen Betriebsbeginn - hier wird
+  -- das auch nachgewiesen, nicht nur angenommen.
+  return next is(
+    (select lower(betriebszeitraum) from velocity.station where station_id = v_s),
+    v_beginn, 'Der Betriebsbeginn bleibt beim Stilllegen unveraendert');
+
+  -- Gefunden beim Schreiben der obigen Zusicherung, nicht angefordert:
+  -- eine Stilllegung am Tag des Betriebsbeginns (oder davor) erzeugte
+  -- vor der Korrektur eine leere Reichweite und loeschte den
+  -- Betriebsbeginn ersatzlos. api_station_stilllegen weist das jetzt
+  -- zurueck, statt die Station stillschweigend ohne bekannten Anfang
+  -- zurueckzulassen.
+  return next throws_ok(
+    format($q$ select velocity.api_station_stilllegen(%s, %L) $q$, v_s, v_beginn),
+    'P0001', null,
+    'Stilllegen am Tag des Betriebsbeginns wird abgewiesen statt eine leere Reichweite zu erzeugen');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- GR-unabhaengige Fachregel aus 0012_dokumentation.sql: "Fachlicher
+-- Schluessel im Format S-0000", identisch zum Bestand S-0001..S-0010.
+-- Eine fruehere Fassung dieser Funktion erzeugte "ST-001" - ein Format,
+-- das der Bestand nie getroffen haette (eigener Filter ^ST-\d+$ findet
+-- die echten Stationen nicht), und das bei jeder Neuanlage wieder bei 1
+-- angefangen haette. Nur "ok(v_s is not null)" haette das nie gefangen -
+-- deshalb hier eine eigene, formatscharfe Zusicherung.
+create or replace function velocity_test.test_l_stationsnummer_format()
+returns setof text language plpgsql as $$
+declare v_s1 bigint; v_s2 bigint; v_nr1 text; v_nr2 text; v_erwartet integer;
+begin
+  perform velocity_test.fixture_rollen('nrformat', array['disposition']);
+
+  select coalesce(max(substring(stationsnummer from '\d+')::integer), 0) + 1
+    into v_erwartet
+    from velocity.station where stationsnummer ~ '^S-\d+$';
+
+  v_s1 := velocity.api_station_anlegen('Teststation Format 1', 'Teststrasse', '1',
+                                       '97070', 'Wuerzburg', 49.79, 9.93, 10);
+  select stationsnummer into v_nr1 from velocity.station where station_id = v_s1;
+  return next is(v_nr1, 'S-' || lpad(v_erwartet::text, 4, '0'),
+                'Die neue Station setzt die bestehende Nummernserie S-0000 fort');
+
+  v_s2 := velocity.api_station_anlegen('Teststation Format 2', 'Teststrasse', '2',
+                                       '97070', 'Wuerzburg', 49.80, 9.94, 10);
+  select stationsnummer into v_nr2 from velocity.station where station_id = v_s2;
+  return next is(v_nr2, 'S-' || lpad((v_erwartet + 1)::text, 4, '0'),
+                'Die zweite neue Station bekommt die naechste Nummer, keine Kollision');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Zwei Verzweigungen von api_rad_status_setzen, die bislang keine der
+-- vorhandenen Testfunktionen durchlief: test_l_rad_anlegen_und_status
+-- meldet seine Vorrichtung nur mit der Rolle disposition an, sodass der
+-- werkstatt-Zweig (hat_rolle('werkstatt') = true) nie durchlaufen wurde
+-- und ebenso wenig der Fall, dass gar keine der beiden Rollen zutrifft.
+create or replace function velocity_test.test_l_status_setzen_rollen_und_grenzen()
+returns setof text language plpgsql as $$
+declare v_f record; v_station bigint;
+begin
+  select * into v_f from velocity_test.fixture_rad('statusgrenzen');
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  insert into velocity.fahrrad_position (fahrrad_id, station_id, akkustand_prozent)
+       values (v_f.o_fahrrad_id, v_station, 80);
+
+  -- Zweig 1: Werkstatt darf den Status setzen, auch ohne die Rolle
+  -- disposition.
+  perform velocity_test.fixture_rollen('statusgrenzen1', array['werkstatt']);
+  perform velocity.api_rad_status_setzen(v_f.o_fahrrad_id, 'wartung', null);
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_f.o_fahrrad_id),
+    'wartung', 'Werkstatt darf den Status ohne Rolle disposition setzen');
+
+  -- Die Ablehnung von 'ausgemustert' greift, solange ueberhaupt eine der
+  -- beiden Rollen vorliegt - noch niemand hatte das bislang geprueft.
+  return next throws_ok(
+    format($q$ select velocity.api_rad_status_setzen(%s, 'ausgemustert', null) $q$,
+           v_f.o_fahrrad_id),
+    'P0001', 'Zum Ausmustern api_rad_ausmustern verwenden',
+    'api_rad_status_setzen weist die Ausmusterung zurueck');
+  perform set_config('request.jwt.claims', '', true);
+
+  -- Zweig 2: weder werkstatt noch disposition - der else-Zweig von
+  -- fn_rolle_verlangen('disposition') muss greifen.
+  perform velocity_test.fixture_rollen('statusgrenzen2', array['kundenservice']);
+  return next throws_ok(
+    format($q$ select velocity.api_rad_status_setzen(%s, 'verfuegbar', null) $q$,
+           v_f.o_fahrrad_id),
+    '42501', null,
+    'Ohne werkstatt und ohne disposition kein Statuswechsel');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- GR15: seit ihrer Entstehung in 0003_bereich_b_netz_und_flotte.sql ohne
+-- jeden Regressionstest in der gesamten Kette. trg_stellplaetze_pruefen
+-- ist ein "deferrable initially deferred" Constraint-Trigger und feuert
+-- planmaessig erst beim COMMIT - pgTAPs runtests() rollt aber jede
+-- Testfunktion ueber ein SAVEPOINT zurueck, ohne je zu committen. Ein
+-- Test ohne Gegenmassnahme waere IMMER gruen, unabhaengig davon, ob die
+-- Regel noch gilt oder laengst kaputt ist - er prueft nichts.
+--
+-- "set constraints all immediate" erzwingt die aufgeschobene Pruefung
+-- an genau der Stelle, an der es steht, statt sie bis zum (hier nie
+-- stattfindenden) Transaktionsende aufzuschieben.
+create or replace function velocity_test.fixture_stellplatz_ueberschreiten(
+  p_rahmennummer text, p_modell_id bigint, p_station_id bigint
+) returns void language plpgsql as $$
+begin
+  perform velocity.api_rad_anlegen(p_rahmennummer, p_modell_id, p_station_id);
+  set constraints all immediate;
+end;
+$$;
+
+create or replace function velocity_test.test_l_stellplaetze_werden_erzwungen()
+returns setof text language plpgsql as $$
+declare
+  v_station bigint; v_kap integer; v_belegt integer; v_frei integer;
+  v_modell bigint; v_i integer;
+begin
+  select modell_id into v_modell from velocity.fahrradmodell order by modell_id limit 1;
+
+  -- Die Station mit den wenigsten freien Plaetzen auswaehlen, damit
+  -- moeglichst wenig Testraeder noetig sind, um sie randvoll zu machen.
+  select s.station_id, s.kapazitaet,
+         (select count(*) from velocity.fahrrad_position p where p.station_id = s.station_id)
+    into v_station, v_kap, v_belegt
+    from velocity.station s
+   order by s.kapazitaet - (select count(*) from velocity.fahrrad_position p
+                              where p.station_id = s.station_id) asc
+   limit 1;
+  v_frei := v_kap - v_belegt;
+
+  perform velocity_test.fixture_rollen('stell', array['disposition']);
+
+  -- Randvoll machen, ueber die echte Schnittstelle - nicht an ihr
+  -- vorbei, sonst prueft der Test die api_-Schicht nicht mehr mit.
+  for v_i in 1..v_frei loop
+    perform velocity.api_rad_anlegen('RN-STELL-' || v_i, v_modell, v_station);
+  end loop;
+
+  return next throws_ok(
+    format($q$ select velocity_test.fixture_stellplatz_ueberschreiten(
+                 'RN-STELL-ueberzaehlig', %s, %s) $q$, v_modell, v_station),
+    '23514', null,
+    'Eine bis zur Kapazitaet gefuellte Station weist ein weiteres Rad ab (GR15)');
+
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;

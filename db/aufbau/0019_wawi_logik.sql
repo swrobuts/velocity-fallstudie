@@ -188,8 +188,17 @@ begin
   -- Lebenslaufakte bleibt davon unberuehrt.
   delete from velocity.fahrrad_position where fahrrad_id = p_fahrrad_id;
 
+  -- p_grund kann leer oder NULL ankommen - der Funktionskopf erzwingt
+  -- kein NOT NULL. "bemerkung || ' - ' || p_grund" ergaebe bei
+  -- p_grund = null insgesamt NULL und loeschte damit stillschweigend
+  -- die GR21-Begruendung, die der Trigger trg_fahrrad_ereignis beim
+  -- obigen UPDATE gerade erst geschrieben hat. api_rad_status_setzen
+  -- vermeidet genau das mit einer eigenen IF-Pruefung; hier fehlte
+  -- dieselbe Vorsicht. nullif(btrim(...), '') faengt zusaetzlich einen
+  -- nur aus Leerzeichen bestehenden Grund ab.
   update velocity.fahrrad_ereignis
-     set mitarbeiter_id = v_m, bemerkung = bemerkung || ' - ' || p_grund
+     set mitarbeiter_id = v_m,
+         bemerkung = bemerkung || coalesce(' - ' || nullif(btrim(p_grund), ''), '')
    where ereignis_id = (select max(ereignis_id) from velocity.fahrrad_ereignis
                          where fahrrad_id = p_fahrrad_id);
 end;
@@ -213,14 +222,21 @@ begin
        values (p_strasse, p_hausnummer, p_plz, p_ort)
     returning adresse_id into v_adresse;
 
-  select 'ST-' || lpad((coalesce(max(substring(stationsnummer from '\d+')::integer), 0) + 1)::text,
-                       3, '0')
+  -- Format S-0000, nicht ST-0000: 0012_dokumentation.sql legt es fest
+  -- ("Fachlicher Schluessel im Format S-0000"), und der Bestand traegt
+  -- S-0001 bis S-0010. Ein abweichendes Praefix waere keine Fortsetzung
+  -- dieser Nummernserie, sondern eine zweite, unvereinbare daneben - und
+  -- der Filter haette den Bestand nie gefunden, sondern bei jeder
+  -- Neuanlage wieder bei 1 angefangen. Nachgemessen und korrigiert, nicht
+  -- neu erfunden: siehe test_l_stationsnummer_format.
+  select 'S-' || lpad((coalesce(max(substring(stationsnummer from '\d+')::integer), 0) + 1)::text,
+                       4, '0')
     into v_nummer
-    from velocity.station where stationsnummer ~ '^ST-\d+$';
+    from velocity.station where stationsnummer ~ '^S-\d+$';
 
   insert into velocity.station
          (stationsnummer, name, adresse_id, latitude, longitude, kapazitaet)
-       values (coalesce(v_nummer, 'ST-001'), p_name, v_adresse,
+       values (coalesce(v_nummer, 'S-0001'), p_name, v_adresse,
                p_latitude, p_longitude, p_kapazitaet)
     returning station_id into v_s;
 
@@ -236,9 +252,27 @@ language plpgsql
 security definer
 set search_path = velocity, pg_temp
 as $$
-declare v_m bigint; v_raeder integer;
+declare v_m bigint; v_raeder integer; v_beginn date;
 begin
   v_m := velocity.fn_rolle_verlangen('disposition');
+
+  select lower(betriebszeitraum) into v_beginn
+    from velocity.station where station_id = p_station_id;
+  if not found then
+    raise exception 'Station % nicht gefunden', p_station_id using errcode = 'P0001';
+  end if;
+
+  -- Gefunden beim Testen der Zusicherung "Betriebsbeginn bleibt
+  -- unveraendert", nicht angefordert: daterange(v_beginn, p_zum, '[)')
+  -- mit p_zum <= v_beginn ist LEER, und Postgres liefert lower()/upper()
+  -- fuer eine leere Reichweite als NULL zurueck - der Betriebsbeginn
+  -- ginge damit unwiederbringlich verloren, obwohl die Station laut
+  -- GR22 als Satz erhalten bleiben soll. Deshalb hier abgewiesen statt
+  -- stillschweigend eine Reichweite ohne Anfang zu erzeugen.
+  if p_zum <= v_beginn then
+    raise exception 'Station % kann nicht vor oder am Tag ihres Betriebsbeginns (%) stillgelegt werden',
+      p_station_id, v_beginn using errcode = 'P0001';
+  end if;
 
   -- GR22: eine Station wird stillgelegt, nicht geloescht. Ein delete
   -- scheiterte ohnehin am on delete restrict der Ausleihen - aber mit
@@ -251,11 +285,8 @@ begin
   end if;
 
   update velocity.station
-     set betriebszeitraum = daterange(lower(betriebszeitraum), p_zum, '[)')
+     set betriebszeitraum = daterange(v_beginn, p_zum, '[)')
    where station_id = p_station_id;
-  if not found then
-    raise exception 'Station % nicht gefunden', p_station_id using errcode = 'P0001';
-  end if;
 end;
 $$;
 
