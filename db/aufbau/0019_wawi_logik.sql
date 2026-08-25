@@ -7,8 +7,16 @@
 --             prueft sie von aussen.
 -- Objekte:    velocity.fn_rolle_verlangen, velocity.api_rad_anlegen,
 --             api_rad_status_setzen, api_rad_ausmustern,
---             api_station_anlegen, api_station_stilllegen
--- Ruecknahme: DROP FUNCTION fuer dieselben Namen.
+--             api_station_anlegen, api_station_stilllegen,
+--             api_kunde_anlegen, api_kunde_aktualisieren, api_kunde_sperren,
+--             api_kunde_auskunft (Art. 15 DSGVO), api_kunde_anonymisieren
+--             (Art. 17 DSGVO statt DELETE), api_schaden_melden,
+--             api_auftrag_eroeffnen, api_auftrag_erledigen; ausserdem das
+--             Anhaengen des Aenderungsprotokolls (GR19) an mitarbeiter,
+--             fahrrad und station.
+-- Ruecknahme: DROP FUNCTION fuer dieselben Namen. Fuer das Protokoll je
+--             DROP TRIGGER trg_<tabelle>_protokoll auf mitarbeiter,
+--             fahrrad, station.
 -- =====================================================================
 
 -- Jede api_-Funktion beginnt mit fn_rolle_verlangen. Der Rueckgabewert
@@ -250,3 +258,407 @@ begin
   end if;
 end;
 $$;
+
+-- ---- Kunden ----------------------------------------------------------
+create or replace function velocity.api_kunde_anlegen(
+  p_vorname text, p_nachname text, p_email text, p_telefon text default null
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint; v_k bigint;
+begin
+  v_m := velocity.fn_rolle_verlangen('kundenservice');
+  insert into velocity.kunde (vorname, nachname, email, telefon, status)
+       values (p_vorname, p_nachname, lower(btrim(p_email)), p_telefon, 'aktiv')
+    returning kunde_id into v_k;
+  -- auth_uid bleibt leer: das Konto entsteht, wenn sich die Person das
+  -- erste Mal anmeldet. Ein Mitarbeiter kann und soll kein Passwort
+  -- setzen.
+  return v_k;
+end;
+$$;
+
+create or replace function velocity.api_kunde_aktualisieren(
+  p_kunde_id bigint, p_vorname text, p_nachname text, p_telefon text default null,
+  p_strasse text default null, p_hausnummer text default null,
+  p_plz text default null, p_ort text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint; v_adresse bigint;
+begin
+  v_m := velocity.fn_rolle_verlangen('kundenservice');
+
+  if p_strasse is not null then
+    select rechnungsadresse_id into v_adresse from velocity.kunde where kunde_id = p_kunde_id;
+    if v_adresse is null then
+      insert into velocity.adresse (strasse, hausnummer, plz, ort)
+           values (p_strasse, p_hausnummer, p_plz, p_ort) returning adresse_id into v_adresse;
+    else
+      update velocity.adresse
+         set strasse = p_strasse, hausnummer = p_hausnummer, plz = p_plz, ort = p_ort
+       where adresse_id = v_adresse;
+    end if;
+  end if;
+
+  update velocity.kunde
+     set vorname = p_vorname, nachname = p_nachname, telefon = p_telefon,
+         rechnungsadresse_id = coalesce(v_adresse, rechnungsadresse_id)
+   where kunde_id = p_kunde_id;
+  if not found then
+    raise exception 'Kunde % nicht gefunden', p_kunde_id using errcode = 'P0001';
+  end if;
+  -- Die E-Mail wird bewusst NICHT geaendert: sie ist der Anmeldename.
+  -- Sie zu aendern ist eine Kontoaenderung und gehoert dem Kunden.
+end;
+$$;
+
+create or replace function velocity.api_kunde_sperren(
+  p_kunde_id bigint, p_grund text
+)
+returns void
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint;
+begin
+  v_m := velocity.fn_rolle_verlangen('kundenservice');
+  if exists (select 1 from velocity.ausleihe a
+              where a.kunde_id = p_kunde_id and a.status = 'aktiv') then
+    raise exception 'Kunde % ist gerade unterwegs. Erst Rueckgabe abwarten.', p_kunde_id
+      using errcode = 'P0001';
+  end if;
+  update velocity.kunde set status = 'gesperrt' where kunde_id = p_kunde_id;
+  if not found then
+    raise exception 'Kunde % nicht gefunden', p_kunde_id using errcode = 'P0001';
+  end if;
+  insert into velocity.aenderungsprotokoll
+         (mitarbeiter_id, tabelle, datensatz_id, aktion, feld, wert_alt, wert_neu)
+  values (v_m, 'kunde', p_kunde_id, 'UPDATE', 'sperrgrund', null, p_grund);
+end;
+$$;
+
+-- Art. 15 DSGVO: Auskunft. Alles zu einer Person in EINEM Dokument -
+-- nicht, weil JSON schoen waere, sondern weil die Auskunft als Ganzes
+-- herausgegeben wird und nicht als sieben Abfragen.
+create or replace function velocity.api_kunde_auskunft(p_kunde_id bigint)
+returns jsonb
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint; v_j jsonb;
+begin
+  v_m := velocity.fn_rolle_verlangen('kundenservice');
+
+  select jsonb_build_object(
+    'erteilt_am', now(),
+    'rechtsgrundlage', 'Art. 15 DSGVO',
+    'stammdaten', (
+      select to_jsonb(x) from (
+        select k.kunde_id, k.kundennummer, k.anrede, k.vorname, k.nachname,
+               k.email, k.telefon, k.geburtsdatum, k.status, k.registriert_am,
+               a.strasse, a.hausnummer, a.plz, a.ort
+          from velocity.kunde k
+          left join velocity.adresse a on a.adresse_id = k.rechnungsadresse_id
+         where k.kunde_id = p_kunde_id) x),
+    'mitgliedschaften', coalesce((
+      select jsonb_agg(to_jsonb(x)) from (
+        select m.mitgliedschaft_id, t.tarif_code, t.bezeichnung, m.gueltigkeit
+          from velocity.mitgliedschaft m
+          join velocity.tarif t on t.tarif_id = m.tarif_id
+         where m.kunde_id = p_kunde_id order by lower(m.gueltigkeit)) x), '[]'::jsonb),
+    'fahrten', coalesce((
+      select jsonb_agg(to_jsonb(x)) from (
+        select a.ausleihe_id, a.startzeit, a.endzeit, a.dauer_minuten, a.distanz_km,
+               s1.name as von, s2.name as nach
+          from velocity.ausleihe a
+          left join velocity.station s1 on s1.station_id = a.start_station_id
+          left join velocity.station s2 on s2.station_id = a.end_station_id
+         where a.kunde_id = p_kunde_id order by a.startzeit) x), '[]'::jsonb),
+    'rechnungen', coalesce((
+      select jsonb_agg(to_jsonb(x)) from (
+        select r.rechnungsnummer, r.periode_jahr, r.periode_monat,
+               r.betrag_netto, r.ust_betrag, r.betrag_brutto, r.status
+          from velocity.rechnung r
+         where r.kunde_id = p_kunde_id
+         order by r.periode_jahr, r.periode_monat) x), '[]'::jsonb)
+    -- Zahlungsmittel stehen hier NICHT (GR17). Sie sind Teil der
+    -- Auskunft, die der Kunde selbst ueber sein Konto erhaelt; der
+    -- Kundenservice bekommt sie nie zu sehen, auch nicht mittelbar.
+  ) into v_j;
+
+  if v_j -> 'stammdaten' = 'null'::jsonb then
+    raise exception 'Kunde % nicht gefunden', p_kunde_id using errcode = 'P0001';
+  end if;
+
+  -- Wer Daten einsieht, hinterlaesst eine Spur (GR19).
+  insert into velocity.aenderungsprotokoll
+         (mitarbeiter_id, tabelle, datensatz_id, aktion, feld, wert_alt, wert_neu)
+  values (v_m, 'kunde', p_kunde_id, 'UPDATE', 'auskunft_erteilt', null,
+          'Auskunft nach Art. 15 DSGVO erteilt');
+
+  return v_j;
+end;
+$$;
+
+-- Art. 17 DSGVO: Loeschung. Umgesetzt als Anonymisierung.
+--
+-- Warum nicht delete: Paragraf 147 AO verlangt zehn Jahre Aufbewahrung
+-- fuer Rechnungsbelege. Art. 17 Abs. 3 lit. b DSGVO nimmt genau solche
+-- rechtlichen Pflichten von der Loeschpflicht aus. Wer den Kunden
+-- loescht, verstoesst gegen das Steuerrecht; wer gar nichts tut, gegen
+-- die DSGVO. Anonymisieren erfuellt beides: die Person ist nicht mehr
+-- identifizierbar, die Buchhaltung bleibt vollstaendig.
+--
+-- Das ist der zentrale Lehrpunkt dieses Bereichs: "Recht auf Loeschung"
+-- ist im Datenmodell keine DELETE-Anweisung.
+create or replace function velocity.api_kunde_anonymisieren(
+  p_kunde_id bigint, p_grund text
+)
+returns void
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint; v_adresse bigint; v_offen integer;
+begin
+  v_m := velocity.fn_rolle_verlangen('kundenservice');
+
+  select count(*) into v_offen from velocity.ausleihe a
+   where a.kunde_id = p_kunde_id and a.status = 'aktiv';
+  if v_offen > 0 then
+    raise exception 'Kunde % hat eine laufende Fahrt', p_kunde_id using errcode = 'P0001';
+  end if;
+
+  select rechnungsadresse_id into v_adresse from velocity.kunde where kunde_id = p_kunde_id;
+  if not found then
+    raise exception 'Kunde % nicht gefunden', p_kunde_id using errcode = 'P0001';
+  end if;
+
+  -- Zahlungsmittel werden geloescht, nicht anonymisiert: sie
+  -- unterliegen keiner Aufbewahrungspflicht und haben ohne Person
+  -- keinen Zweck.
+  delete from velocity.zahlungsmittel where kunde_id = p_kunde_id;
+
+  update velocity.kunde
+     set vorname      = 'Geloescht',
+         nachname     = 'Geloescht',
+         -- Nicht leeren, sondern ersetzen: auf email liegt ein
+         -- UNIQUE-Constraint, und mehrere anonymisierte Kunden
+         -- muessen nebeneinander bestehen koennen. Die Domain
+         -- .invalid ist per RFC 2606 dauerhaft unaufloesbar.
+         email        = 'anonym-' || p_kunde_id || '@velocity.invalid',
+         telefon      = null,
+         geburtsdatum = null,
+         anrede       = null,
+         auth_uid     = null,
+         rechnungsadresse_id = null,
+         status       = 'geschlossen'
+   where kunde_id = p_kunde_id;
+
+  -- Die Adresse nur dann loeschen, wenn keine gestellte Rechnung sie
+  -- noch braucht. Sonst bleibt sie stehen und traegt nur noch die
+  -- Rechnung, nicht mehr den Kunden.
+  --
+  -- Bekannter Befund, hier bewusst nicht behoben: velocity.rechnung
+  -- traegt selbst KEINE Empfaengerdaten - weder Name noch Anschrift,
+  -- nur kunde_id. Die Adresse bleibt also nicht deshalb stehen, weil
+  -- eine Rechnung sie noch als eigenen, eingefrorenen Beleg braucht -
+  -- sie hat nie einen eigenen gehabt. Nach dieser Anonymisierung laesst
+  -- sich zu keiner Rechnung mehr sagen, an wen oder wohin sie ging; nur
+  -- die Betraege (Aufbewahrungspflicht nach Paragraf 147 AO) bleiben
+  -- unveraendert. Ob eine Rechnung ihre eigene Anschrift zum
+  -- Ausstellungszeitpunkt einfrieren muesste, ist eine
+  -- Modellierungsfrage fuer den Auftraggeber und eine Schemaaenderung
+  -- ausserhalb dieses Plans - nicht Gegenstand dieser Funktion.
+  if v_adresse is not null
+     and not exists (select 1 from velocity.kunde k where k.rechnungsadresse_id = v_adresse)
+     and not exists (select 1 from velocity.station s where s.adresse_id = v_adresse) then
+    delete from velocity.adresse where adresse_id = v_adresse;
+  end if;
+
+  insert into velocity.aenderungsprotokoll
+         (mitarbeiter_id, tabelle, datensatz_id, aktion, feld, wert_alt, wert_neu)
+  values (v_m, 'kunde', p_kunde_id, 'UPDATE', 'anonymisiert', null, p_grund);
+end;
+$$;
+
+-- ---- Instandhaltung --------------------------------------------------
+create or replace function velocity.api_schaden_melden(
+  p_fahrrad_id bigint, p_kategorie text, p_beschreibung text, p_schwere text
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint; v_s bigint;
+begin
+  v_m := velocity.fn_rolle_verlangen('werkstatt');
+  insert into velocity.schadensmeldung
+         (fahrrad_id, melder_mitarbeiter_id, kategorie, beschreibung, schwere)
+       values (p_fahrrad_id, v_m, p_kategorie, p_beschreibung,
+               p_schwere::velocity.schaden_schwere)
+    returning schadensmeldung_id into v_s;
+
+  -- Ein fahruntaugliches Rad gehoert sofort aus dem Verkehr. Das darf
+  -- nicht davon abhaengen, ob jemand daran denkt, danach noch den
+  -- Status zu setzen.
+  if p_schwere = 'fahruntauglich' then
+    update velocity.fahrrad set status = 'defekt'
+     where fahrrad_id = p_fahrrad_id and status <> 'ausgeliehen';
+  end if;
+  return v_s;
+end;
+$$;
+
+create or replace function velocity.api_auftrag_eroeffnen(
+  p_fahrrad_id bigint, p_schadensmeldung_id bigint default null
+)
+returns bigint
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint; v_w bigint; v_nummer text;
+begin
+  v_m := velocity.fn_rolle_verlangen('werkstatt');
+  select 'WA-' || to_char(now(), 'YYYY') || '-'
+         || lpad((count(*) + 1)::text, 5, '0')
+    into v_nummer
+    from velocity.wartungsauftrag
+   where eroeffnet_am >= date_trunc('year', now());
+
+  insert into velocity.wartungsauftrag
+         (auftragsnummer, fahrrad_id, schadensmeldung_id, mitarbeiter_id, status)
+       values (v_nummer, p_fahrrad_id, p_schadensmeldung_id, v_m, 'in_arbeit')
+    returning wartungsauftrag_id into v_w;
+
+  if p_schadensmeldung_id is not null then
+    update velocity.schadensmeldung set status = 'in_arbeit'
+     where schadensmeldung_id = p_schadensmeldung_id;
+  end if;
+  update velocity.fahrrad set status = 'wartung'
+   where fahrrad_id = p_fahrrad_id and status <> 'ausgeliehen';
+  return v_w;
+end;
+$$;
+
+create or replace function velocity.api_auftrag_erledigen(
+  p_wartungsauftrag_id bigint, p_arbeitszeit_minuten integer, p_bemerkung text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint; v_w velocity.wartungsauftrag%rowtype; v_offen integer;
+begin
+  v_m := velocity.fn_rolle_verlangen('werkstatt');
+  update velocity.wartungsauftrag
+     set status = 'erledigt', erledigt_am = now(),
+         arbeitszeit_minuten = p_arbeitszeit_minuten,
+         bemerkung = p_bemerkung, mitarbeiter_id = coalesce(mitarbeiter_id, v_m)
+   where wartungsauftrag_id = p_wartungsauftrag_id
+  returning * into v_w;
+  if not found then
+    raise exception 'Auftrag % nicht gefunden', p_wartungsauftrag_id using errcode = 'P0001';
+  end if;
+
+  if v_w.schadensmeldung_id is not null then
+    update velocity.schadensmeldung set status = 'behoben'
+     where schadensmeldung_id = v_w.schadensmeldung_id;
+  end if;
+
+  insert into velocity.fahrrad_ereignis
+         (fahrrad_id, ereignisart, mitarbeiter_id, bemerkung, beleg_tabelle, beleg_id)
+  values (v_w.fahrrad_id, 'gewartet', v_m, coalesce(p_bemerkung, 'Wartung erledigt'),
+          'wartungsauftrag', v_w.wartungsauftrag_id);
+
+  -- Das Rad wird nur frei, wenn kein anderer Schaden mehr offen ist.
+  -- Sonst repariert man eine Bremse und schickt ein Rad mit gebrochener
+  -- Gabel zurueck auf die Strasse.
+  select count(*) into v_offen from velocity.schadensmeldung sm
+   where sm.fahrrad_id = v_w.fahrrad_id and sm.status in ('offen', 'in_arbeit');
+  if v_offen = 0 then
+    update velocity.fahrrad set status = 'verfuegbar'
+     where fahrrad_id = v_w.fahrrad_id and status = 'wartung';
+  end if;
+end;
+$$;
+
+-- ---- GR19 auf die uebrigen Stammdaten ausweiten ----------------------
+-- kunde traegt das Protokoll seit 0016. Diese drei kommen dazu, sobald
+-- es Funktionen gibt, die sie aendern.
+select velocity.fn_protokoll_anhaengen('mitarbeiter', 'mitarbeiter_id');
+select velocity.fn_protokoll_anhaengen('fahrrad',     'fahrrad_id');
+select velocity.fn_protokoll_anhaengen('station',     'station_id');
+
+-- ---- Rechte ----------------------------------------------------------
+-- ERST entziehen, DANN gezielt vergeben. Diese Zeile ist nicht
+-- vorsorglich, sie ist notwendig: PostgreSQL gibt jeder NEU angelegten
+-- Funktion implizit EXECUTE an PUBLIC, und die Zeile
+-- "alter default privileges ... revoke execute on functions from public"
+-- in 0011 hat in dieser Datenbank nachweislich KEINEN Eintrag in
+-- pg_default_acl erzeugt - sie schuetzt neue Funktionen also nicht,
+-- entgegen ihrem eigenen Kommentar. Aufgefallen ist das in Aufgabe 5:
+-- nach einem Lauf von 0009 allein stand fn_ausleihe_abrechnen mit
+-- proacl = null da, also offen fuer anon und authenticated.
+--
+-- Ohne diese Zeile waeren api_kunde_auskunft und
+-- api_kunde_anonymisieren fuer jeden angemeldeten Kunden aufrufbar.
+revoke all on all functions in schema velocity from public, anon, authenticated;
+
+-- Nur die api_-Funktionen und die Sichten, keine Tabelle.
+--
+-- Nachtrag zur pauschalen Zeile oben: "revoke all on ALL functions"
+-- trifft nicht nur die in dieser Datei neu angelegten Funktionen,
+-- sondern JEDE Funktion im Schema velocity - auch die vier
+-- Website-Funktionen aus 0009/0011 (api_kunde_sicherstellen,
+-- api_profil_aktualisieren, api_ausleihe_starten, api_ausleihe_beenden)
+-- und ist_mitarbeiter/hat_rolle aus 0017. 0019 ist die letzte Datei der
+-- Aufbaukette und laeuft nach 0011 und 0017 - ohne diese sechs hier
+-- erneut aufzufuehren, wuerde ihr eigener Grant durch den Grant dieser
+-- Zeile unbemerkt wieder entzogen: die lebende Website koennte sich
+-- nicht mehr anmelden und keine Ausleihe mehr abrechnen, und jede
+-- v_wawi_-Sicht schluege mit "permission denied for function hat_rolle"
+-- fehl (siehe Kommentar in 0017). Nachgemessen mit
+-- has_function_privilege('authenticated', ...) direkt nach einem
+-- Testlauf dieser Datei: alle sechs standen auf false, bevor diese
+-- Zeilen ergaenzt wurden.
+grant execute on function
+  velocity.api_kunde_sicherstellen(),
+  velocity.api_profil_aktualisieren(text, text, text, date, text, text, text, text),
+  velocity.api_ausleihe_starten(bigint),
+  velocity.api_ausleihe_beenden(bigint, bigint, numeric, numeric),
+  velocity.ist_mitarbeiter(),
+  velocity.hat_rolle(text),
+  velocity.api_rad_anlegen(text, bigint, bigint),
+  velocity.api_rad_status_setzen(bigint, text, text),
+  velocity.api_rad_ausmustern(bigint, text),
+  velocity.api_station_anlegen(text, text, text, text, text, numeric, numeric, integer),
+  velocity.api_station_stilllegen(bigint, date),
+  velocity.api_kunde_anlegen(text, text, text, text),
+  velocity.api_kunde_aktualisieren(bigint, text, text, text, text, text, text, text),
+  velocity.api_kunde_sperren(bigint, text),
+  velocity.api_kunde_auskunft(bigint),
+  velocity.api_kunde_anonymisieren(bigint, text),
+  velocity.api_schaden_melden(bigint, text, text, text),
+  velocity.api_auftrag_eroeffnen(bigint, bigint),
+  velocity.api_auftrag_erledigen(bigint, integer, text)
+to authenticated;
+
+grant select on
+  velocity.v_wawi_flotte, velocity.v_wawi_kunde, velocity.v_wawi_station,
+  velocity.v_wawi_schaden, velocity.v_wawi_auftrag, velocity.v_wawi_fahrt_km,
+  velocity.v_wawi_umsatz_radtyp, velocity.v_wawi_umsatz_kundengruppe,
+  velocity.v_wawi_km_co2, velocity.v_wawi_stationsauslastung
+to authenticated;
