@@ -147,7 +147,11 @@ select v.code, v.wert, v.einheit, v.gueltigkeit, v.quelle, v.erlaeuterung
      'Fahrrad ohne Motor, im Wesentlichen Herstellung und Wartung'),
     ('umwegfaktor',   1.2500, 'Faktor',     daterange(date '2025-01-01', null, '[)'),
      'Annahme dieser Fallstudie, nicht gemessen',
-     'Verhaeltnis der tatsaechlich gefahrenen Strecke zur Luftlinie im Stadtverkehr')
+     'Verhaeltnis der tatsaechlich gefahrenen Strecke zur Luftlinie im Stadtverkehr'),
+    ('reisegeschwindigkeit', 13.0000, 'km/h', daterange(date '2025-01-01', null, '[)'),
+     'Annahme dieser Fallstudie, nicht gemessen',
+     'Nur fuer Rundfahrten: wer dort startet, wo er endet, hat eine Luftlinie von '
+     'null. Dann bleibt die Dauer als einzige Grundlage.')
   ) as v(code, wert, einheit, gueltigkeit, quelle, erlaeuterung)
  where not exists (
    select 1 from velocity.rechenannahme r

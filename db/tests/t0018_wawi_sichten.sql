@@ -223,3 +223,56 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;
+
+-- Fix (Aufgabe 11, zweiter Durchgang): die vier Auswertungssichten oben
+-- wurden bislang nur mit fixture_mitarbeiter geprueft - der traegt ALLE
+-- vier Rollen gleichzeitig und sieht deshalb ohnehin alles. Das deckt
+-- keinen Rollenfilter auf, auch keinen fehlenden: v_wawi_km_co2 filterte
+-- ueber v_wawi_fahrt_km zunaechst nur ist_mitarbeiter() (jede Fachrolle),
+-- nicht hat_rolle('leitung') - und kein bisheriger Test haette das
+-- gemerkt. Wie test_v_rollentrennung_greift oben: genau EINE Rolle
+-- zuteilen und pruefen, dass eine NICHT zugeteilte Rolle leer bleibt.
+create or replace function velocity_test.test_v_auswertung_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  -- werkstatt darf keine der vier Auswertungen sehen: weder umsatz_radtyp/
+  -- umsatz_kundengruppe/km_co2 (nur leitung) noch stationsauslastung
+  -- (nur disposition/leitung).
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('werkstatt-auswertung', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_umsatz_radtyp;
+  return next is(v_n, 0, 'Werkstatt sieht keinen Umsatz nach Radtyp - nur leitung ist zugeteilt');
+  select count(*) into v_n from velocity.v_wawi_umsatz_kundengruppe;
+  return next is(v_n, 0, 'Werkstatt sieht keinen Umsatz nach Kundengruppe - nur leitung ist zugeteilt');
+  select count(*) into v_n from velocity.v_wawi_km_co2;
+  return next is(v_n, 0,
+    'Werkstatt sieht keine CO2-Auswertung - ist_mitarbeiter() aus v_wawi_fahrt_km allein reicht nicht, '
+    'v_wawi_km_co2 braucht ihren eigenen hat_rolle(''leitung'')-Filter');
+  select count(*) into v_n from velocity.v_wawi_stationsauslastung;
+  return next is(v_n, 0, 'Werkstatt sieht keine Stationsauslastung - nur disposition/leitung sind zugeteilt');
+  perform set_config('request.jwt.claims', '', true);
+
+  -- leitung sieht alle vier.
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('leitung-auswertung', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_umsatz_radtyp;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht den Umsatz nach Radtyp');
+  select count(*) into v_n from velocity.v_wawi_umsatz_kundengruppe;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht den Umsatz nach Kundengruppe');
+  select count(*) into v_n from velocity.v_wawi_km_co2;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht die CO2-Auswertung');
+  select count(*) into v_n from velocity.v_wawi_stationsauslastung;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht die Stationsauslastung');
+  perform set_config('request.jwt.claims', '', true);
+
+  -- disposition sieht NUR die Stationsauslastung, nicht die drei anderen.
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('disposition-auswertung', 'disposition');
+  select count(*) into v_n from velocity.v_wawi_stationsauslastung;
+  return next cmp_ok(v_n, '>', 0, 'Disposition sieht die Stationsauslastung');
+  select count(*) into v_n from velocity.v_wawi_umsatz_radtyp;
+  return next is(v_n, 0,
+    'Disposition sieht keinen Umsatz nach Radtyp - die Spec gibt ihr nur die Stationsauslastung');
+  select count(*) into v_n from velocity.v_wawi_km_co2;
+  return next is(v_n, 0, 'Disposition sieht keine CO2-Auswertung - nur leitung ist zugeteilt');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;

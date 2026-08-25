@@ -72,8 +72,8 @@ returns setof text language plpgsql as $$
 begin
   return next results_eq(
     $q$ select code from velocity.rechenannahme where upper_inf(gueltigkeit) order by code $q$,
-    $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),('umwegfaktor') $q$,
-    'Alle vier Rechenannahmen haben eine laufende Periode');
+    $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),('reisegeschwindigkeit'),('umwegfaktor') $q$,
+    'Alle fuenf Rechenannahmen haben eine laufende Periode');
   -- Nicht pruefen, dass keine Zeile ohne Quelle DA ist - das kann keine
   -- sein, quelle ist not null mit CHECK. Pruefen, dass eine solche Zeile
   -- gar nicht erst hineinkommt. Sonst waere die Zusicherung immer wahr.

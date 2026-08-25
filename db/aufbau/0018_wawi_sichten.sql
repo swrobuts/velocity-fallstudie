@@ -414,13 +414,20 @@ select date_trunc('month', a.startzeit)::date              as monat,
   join velocity.fahrradmodell   mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp      t  on t.typ_id     = mo.typ_id
  where a.status = 'abgeschlossen'
-   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('disposition'))
+   -- Nur die Leitung. Die Spec gibt die Zusatzrolle disposition
+   -- ausdruecklich nur der Stationsauslastung - dort braucht die
+   -- Disposition sie fuer die taegliche Arbeit, beim Umsatz nicht. Der
+   -- erste Entwurf liess disposition hier zusaetzlich zu; das war ein
+   -- Rechteueberschuss, keine Vereinfachung.
+   and velocity.hat_rolle('leitung')
  group by 1, 2, 3;
 
 comment on view velocity.v_wawi_umsatz_radtyp is
-  'Monatsumsatz je Fahrradtyp fuer Leitung und Disposition. sum(ep.betrag) ohne '
-  'zweite Multiplikation mit vorzeichen - siehe Kommentar am create view. '
-  'Filtert selbst ueber velocity.hat_rolle.';
+  'Monatsumsatz je Fahrradtyp, ausschliesslich fuer die Leitung - die Spec '
+  'reserviert Auswertungen fuer diese Rolle, disposition bekommt nur die '
+  'Stationsauslastung. sum(ep.betrag) ohne zweite Multiplikation mit '
+  'vorzeichen - siehe Kommentar am create view. Filtert selbst ueber '
+  'velocity.hat_rolle.';
 comment on column velocity.v_wawi_umsatz_radtyp.monat is
   'Erster Tag des Monats der Fahrt (startzeit), Gruppierungsschluessel fuer '
   'einen Zeitverlauf statt einer bedeutungslosen Jahressumme.';
@@ -491,20 +498,54 @@ comment on column velocity.v_wawi_umsatz_kundengruppe.umsatz_je_kunde is
 -- und die Kennzeichnung, DASS geschaetzt wurde. Eine Kennzahl, die ihre
 -- eigene Unsicherheit nicht mitliefert, ist fuer Marketing brauchbar
 -- und fuer alles andere gefaehrlich.
+--
+-- Fix (Aufgabe 11, zweiter Durchgang): "create or replace view" darf nur
+-- Spalten ANHAENGEN, nicht mittendrin einfuegen. v_wawi_km_co2 bekommt
+-- unten die neue Spalte fahrten_geschaetzt zwischen kilometer und
+-- anteil_geschaetzt - das waere mit "create or replace" gescheitert.
+-- Deshalb hier ein "drop ... cascade": es reisst v_wawi_km_co2 mit, die
+-- weiter unten in derselben Datei neu angelegt wird.
+drop view if exists velocity.v_wawi_fahrt_km cascade;
+
 create or replace view velocity.v_wawi_fahrt_km as
 select a.ausleihe_id,
        a.startzeit,
        a.kunde_id,
        t.typ_code,
-       coalesce(
-         a.distanz_km,
-         round(velocity.fn_luftlinie_km(
+       -- Drei Faelle, und der dritte ist der Grund fuer diesen Block.
+       -- Eine Rundfahrt endet dort, wo sie begann: ihre Luftlinie ist
+       -- strukturell null, gefahren wurde trotzdem. Ohne den mittleren
+       -- Zweig traegt rund jede zehnte Fahrt null Kilometer bei, die
+       -- CO2-Ersparnis ist systematisch zu niedrig, und es faellt
+       -- nirgends auf - der Anteil geschaetzter Fahrten sieht dabei
+       -- voellig normal aus.
+       case
+         when a.distanz_km is not null then a.distanz_km
+         when velocity.fn_luftlinie_km(
+                coalesce(s1.latitude,  a.start_latitude),
+                coalesce(s1.longitude, a.start_longitude),
+                coalesce(s2.latitude,  a.end_latitude),
+                coalesce(s2.longitude, a.end_longitude)) = 0
+           then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
+         else round(velocity.fn_luftlinie_km(
                  coalesce(s1.latitude,  a.start_latitude),
                  coalesce(s1.longitude, a.start_longitude),
                  coalesce(s2.latitude,  a.end_latitude),
                  coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
-       )                        as kilometer,
-       a.distanz_km is null     as ist_geschaetzt
+       end                      as kilometer,
+       a.distanz_km is null     as ist_geschaetzt,
+       -- WELCHES Verfahren geschaetzt hat, gehoert sichtbar in die
+       -- Zeile. Zwei Schaetzungen, die dieselbe Spalte fuellen und sich
+       -- unterschiedlich irren, muss man auseinanderhalten koennen.
+       case when a.distanz_km is not null then 'gemessen'
+            when velocity.fn_luftlinie_km(
+                   coalesce(s1.latitude,  a.start_latitude),
+                   coalesce(s1.longitude, a.start_longitude),
+                   coalesce(s2.latitude,  a.end_latitude),
+                   coalesce(s2.longitude, a.end_longitude)) = 0
+              then 'aus_dauer'
+            else 'aus_luftlinie'
+       end                      as verfahren
   from velocity.ausleihe a
   join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
@@ -513,6 +554,9 @@ select a.ausleihe_id,
   left join velocity.station s2 on s2.station_id = a.end_station_id
   left join velocity.rechenannahme ra
          on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
+  left join velocity.rechenannahme tempo
+         on tempo.code = 'reisegeschwindigkeit'
+        and tempo.gueltigkeit @> a.startzeit::date
  where a.status = 'abgeschlossen'
    and velocity.ist_mitarbeiter();
 
@@ -525,6 +569,7 @@ select date_trunc('month', k.startzeit)::date as monat,
        k.typ_code,
        count(*)                                        as fahrten,
        round(sum(k.kilometer), 1)                      as kilometer,
+       count(*) filter (where k.ist_geschaetzt)        as fahrten_geschaetzt,
        round(avg(case when k.ist_geschaetzt then 1.0 else 0.0 end), 3)
                                                        as anteil_geschaetzt,
        round(sum(k.kilometer * (pkw.wert - eigen.wert)) / 1000.0, 2)
@@ -536,16 +581,31 @@ select date_trunc('month', k.startzeit)::date as monat,
     on eigen.code = case when k.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
    and eigen.gueltigkeit @> k.startzeit::date
  where k.kilometer is not null
+   -- Der Filter gehoert AUCH hierher, nicht nur in die Hilfssicht.
+   -- v_wawi_fahrt_km prueft nur ist_mitarbeiter() - das laesst jede
+   -- Fachrolle durch, auch Werkstatt und Kundenservice. Die Spec
+   -- reserviert die Auswertungen fuer die Leitung, und eine Sicht, die
+   -- ihre Schranke von einer anderen Sicht erbt, hat keine eigene. Der
+   -- erste Entwurf verliess sich auf ist_mitarbeiter() aus
+   -- v_wawi_fahrt_km und liess damit jede Fachrolle durch - ein
+   -- kritischer Befund, siehe .superpowers/sdd/2026-08-25-velocity-
+   -- warenwirtschaft-datenbank/aufgabe-11-fix-bericht.md.
+   and velocity.hat_rolle('leitung')
  group by 1, 2;
 
 comment on view velocity.v_wawi_fahrt_km is
-  'Einzige Stelle, an der Strecken geschaetzt werden. ist_geschaetzt sagt, ob.';
+  'Einzige Stelle, an der Strecken geschaetzt werden. ist_geschaetzt sagt, ob; '
+  'verfahren sagt, WOMIT. Absichtlich nur velocity.ist_mitarbeiter() als '
+  'Schranke (jede Fachrolle darf die einzelne Fahrt-km sehen) - die engere '
+  'Rollenschranke fuer die Auswertung selbst steht in v_wawi_km_co2, nicht '
+  'hier: eine Sicht, die ihre Schranke von einer anderen erbt, hat keine '
+  'eigene.';
 comment on column velocity.v_wawi_fahrt_km.ausleihe_id is
   'Schluessel der Fahrt, fuer den Verweis aus v_wawi_km_co2 auf die einzelne '
   'Ausleihe hinter der Aggregation.';
 comment on column velocity.v_wawi_fahrt_km.startzeit is
   'Beginn der Fahrt, Grundlage der Monatsgruppierung und der Zeitscheibe fuer '
-  'Umwegfaktor und CO2-Annahmen (rechenannahme.gueltigkeit).';
+  'Umwegfaktor, Reisegeschwindigkeit und CO2-Annahmen (rechenannahme.gueltigkeit).';
 comment on column velocity.v_wawi_fahrt_km.kunde_id is
   'Fahrender Kunde, fuer eine spaetere Auswertung je Kunde ohne erneuten Join '
   'auf ausleihe.';
@@ -553,37 +613,63 @@ comment on column velocity.v_wawi_fahrt_km.typ_code is
   'Fahrradtyp der Fahrt, bestimmt in v_wawi_km_co2 die passende CO2-Annahme '
   '(co2_rad fuer CITY, sonst co2_ebike).';
 comment on column velocity.v_wawi_fahrt_km.kilometer is
-  'Gemessene Strecke (ausleihe.distanz_km), wo vorhanden; sonst die Luftlinie '
-  'zwischen Start- und Endpunkt mal Umwegfaktor (rechenannahme). NULL, wenn '
-  'weder Distanz noch beide Koordinatenpaare vorliegen - eine erfundene Zahl '
-  'aus einem halben Koordinatenpaar waere schlimmer als keine.';
+  'Drei Faelle, siehe verfahren: gemessene Strecke (ausleihe.distanz_km), wo '
+  'vorhanden; sonst, bei einer Rundfahrt mit Luftlinie null (Start- und '
+  'Endpunkt gleich), aus der Dauer geschaetzt (rechenannahme '
+  'reisegeschwindigkeit); sonst aus der Luftlinie zwischen Start- und '
+  'Endpunkt mal Umwegfaktor (rechenannahme). NULL, wenn weder Distanz noch '
+  'beide Koordinatenpaare vorliegen - eine erfundene Zahl aus einem halben '
+  'Koordinatenpaar waere schlimmer als keine.';
 comment on column velocity.v_wawi_fahrt_km.ist_geschaetzt is
-  'Wahr, wenn kilometer aus der Luftlinie geschaetzt statt gemessen wurde. '
-  'Gehoert zu jeder Verwendung von kilometer dazu, siehe Kopfkommentar der '
-  'Sicht.';
+  'Wahr, wenn kilometer nicht gemessen wurde (verfahren aus_dauer oder '
+  'aus_luftlinie). Gehoert zu jeder Verwendung von kilometer dazu, siehe '
+  'Kopfkommentar der Sicht.';
+comment on column velocity.v_wawi_fahrt_km.verfahren is
+  'gemessen, aus_dauer oder aus_luftlinie - WOMIT kilometer ermittelt wurde. '
+  'Noetig, weil ist_geschaetzt allein zwei verschiedene Schaetzverfahren in '
+  'einen Topf wuerfe: aus_dauer (Rundfahrten, Luftlinie strukturell null, '
+  'Reisegeschwindigkeit als Grundlage) und aus_luftlinie (Luftlinie mal '
+  'Umwegfaktor) irren sich auf unterschiedliche Weise und muessen sich '
+  'getrennt auswerten lassen.';
 comment on view velocity.v_wawi_km_co2 is
-  'CO2-Ersparnis gegenueber dem Pkw. anteil_geschaetzt gehoert in jede Darstellung dieser Zahl.';
+  'CO2-Ersparnis gegenueber dem Pkw, ausschliesslich fuer die Leitung - eigener '
+  'Rollenfilter (hat_rolle(''leitung'')), nicht nur geerbt aus '
+  'v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt gehoeren in jede '
+  'Darstellung dieser Zahl.';
 comment on column velocity.v_wawi_km_co2.monat is
   'Erster Tag des Monats der Fahrt (v_wawi_fahrt_km.startzeit).';
 comment on column velocity.v_wawi_km_co2.typ_code is
   'Fahrradtyp, bestimmt die verglichene Eigenemission (co2_rad vs. co2_ebike).';
 comment on column velocity.v_wawi_km_co2.fahrten is
   'Zahl der Fahrten mit bekannter oder geschaetzter Kilometerzahl in diesem '
-  'Monat und Typ.';
+  'Monat und Typ. Nenner fuer anteil_geschaetzt.';
 comment on column velocity.v_wawi_km_co2.kilometer is
   'Summe der gefahrenen Kilometer, gemessen und geschaetzt gemeinsam - '
-  'anteil_geschaetzt sagt, wie viel davon Schaetzung ist.';
+  'anteil_geschaetzt und fahrten_geschaetzt sagen, wie viel davon Schaetzung '
+  'ist.';
+comment on column velocity.v_wawi_km_co2.fahrten_geschaetzt is
+  'Zaehler zu anteil_geschaetzt: Anzahl der Fahrten dieser Zeile mit '
+  'geschaetzter statt gemessener Kilometerzahl. Noetig, weil ein einfaches '
+  'Mittel von anteil_geschaetzt ueber mehrere Zeilen NICHT den '
+  'fahrtgewichteten Gesamtanteil ergibt, sobald die Zeilen unterschiedlich '
+  'gross sind (hier: 1 bis ueber 1000 Fahrten je Monat/Typ) - wer richtig '
+  'gewichten will, summiert fahrten_geschaetzt und fahrten getrennt und '
+  'teilt erst danach.';
 comment on column velocity.v_wawi_km_co2.anteil_geschaetzt is
-  'Anteil der Fahrten dieser Zeile, deren Kilometer geschaetzt statt gemessen '
-  'wurden (0 bis 1). Ohne diese Spalte waere kilometer eine Zahl ohne '
-  'Herkunftsangabe - sie ist die Unsicherheit von kilometer und co2_ersparnis_kg, '
-  'kein optionales Detail.';
+  'Anteil der Fahrten DIESER ZEILE, deren Kilometer geschaetzt statt gemessen '
+  'wurden (0 bis 1) - keine ueber Zeilen gemittelte Kennzahl. Ein arithmetisches '
+  'Mittel dieser Spalte ueber mehrere Monate/Typen ist NICHT der '
+  'Gesamtanteil, weil die Zeilen sehr unterschiedlich viele Fahrten tragen '
+  '(1 bis ueber 1000); dafuer fahrten_geschaetzt verwenden. Ohne diese Spalte '
+  'waere kilometer eine Zahl ohne Herkunftsangabe - sie ist die Unsicherheit '
+  'von kilometer und co2_ersparnis_kg, kein optionales Detail.';
 comment on column velocity.v_wawi_km_co2.co2_ersparnis_kg is
   'Differenz zwischen der CO2-Last eines vergleichbaren Pkw und der des '
   'tatsaechlich genutzten Fahrzeugs (rechenannahme co2_pkw minus co2_rad bzw. '
   'co2_ebike, beide in g CO2e/Pkm, daher /1000 fuer kg) fuer die gefahrenen '
   'Kilometer dieser Zeile. Basiert teilweise auf geschaetzten Kilometern - '
-  'siehe anteil_geschaetzt, ohne den diese Zahl unbelegt waere.';
+  'siehe anteil_geschaetzt und fahrten_geschaetzt, ohne die diese Zahl '
+  'unbelegt waere.';
 
 -- ---- Stationsauslastung ----------------------------------------------
 -- Zu- und Abgaenge zaehlen ausschliesslich abgeschlossene Ausleihen: eine
