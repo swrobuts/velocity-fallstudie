@@ -2592,9 +2592,17 @@ select w.wartungsauftrag_id,
 ```bash
 python3 db/run.py db/aufbau/0018_wawi_sichten.sql
 python3 db/run.py db/aufbau/0018_wawi_sichten.sql
-python3 db/test.py db/tests/t0018_wawi_sichten.sql
+python3 db/test.py db/tests/t0018_wawi_sichten.sql db/tests/t0012_dokumentation.sql
 ```
 Erwartet: beide Läufe fehlerfrei, alle Testfunktionen `ok`.
+
+**`test_doku_vollstaendig` betrifft Sichten genauso wie Tabellen** — und
+zwar samt jeder einzelnen Spalte. Die fünf Sichten dieser Aufgabe haben
+zusammen rund sechzig Spalten; jede braucht ein `comment on column`. Das
+ist der Preis dafür, dass in diesem Projekt niemand raten muss, was
+`saldo` oder `hoechste_schwere` bedeutet. Schreibe die Kommentare
+zusammen mit der Sicht, nicht hinterher: bei sechzig Spalten am Stück
+entstehen sonst sechzig Wiederholungen des Spaltennamens.
 
 Falls `create or replace view` mit `cannot change name of view column` scheitert: die Sicht mit `drop view if exists velocity.<name> cascade;` davor abräumen. `create or replace` kann Spalten nur anhängen, nicht umbenennen.
 
@@ -2827,9 +2835,13 @@ comment on view velocity.v_wawi_km_co2 is
 ```bash
 python3 db/run.py db/aufbau/0018_wawi_sichten.sql
 python3 db/run.py db/aufbau/0018_wawi_sichten.sql
-python3 db/test.py db/tests/t0018_wawi_sichten.sql
+python3 db/test.py db/tests/t0018_wawi_sichten.sql db/tests/t0012_dokumentation.sql
 ```
-Erwartet: beide Läufe fehlerfrei, alle acht Testfunktionen `ok`.
+Erwartet: beide Läufe fehlerfrei, alle acht Testfunktionen `ok` — und
+`test_doku_vollstaendig` grün. Auch die fünf Auswertungssichten brauchen
+Kommentare an der Sicht und an jeder Spalte. Bei `anteil_geschaetzt` und
+`co2_ersparnis_kg` ist der Kommentar wichtiger als anderswo: er hält
+fest, dass die eine Zahl die Unsicherheit der anderen ist.
 
 - [ ] **Schritt 5: Die Zahlen ansehen**
 
