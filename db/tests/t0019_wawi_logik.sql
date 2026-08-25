@@ -322,6 +322,23 @@ begin
   return next ok(v_j ? 'mitgliedschaften','Die Auskunft enthaelt die Mitgliedschaften');
   return next ok(v_j ? 'fahrten',         'Die Auskunft enthaelt die Fahrten');
   return next ok(v_j ? 'rechnungen',      'Die Auskunft enthaelt die Rechnungen');
+  -- W3: die urspruengliche Fassung liess Zahlungen, Schadensmeldungen,
+  -- das Freiminutenkonto und das Aenderungsprotokoll selbst aus - eine
+  -- Auskunft, die nur die Haelfte der gespeicherten Daten zeigt, ist
+  -- keine Auskunft nach Art. 15 DSGVO.
+  return next ok(v_j ? 'zahlungen',         'Die Auskunft enthaelt die Zahlungen');
+  return next ok(v_j ? 'schadensmeldungen', 'Die Auskunft enthaelt die Schadensmeldungen');
+  return next ok(v_j ? 'freiminuten',       'Die Auskunft enthaelt das Freiminutenkonto');
+  return next ok(v_j ? 'protokoll',         'Die Auskunft enthaelt das Aenderungsprotokoll');
+  -- Ebenfalls W3: die Koordinaten je Fahrt gehoeren dazu - sie sind das
+  -- Genaueste, was ueber den Aufenthalt der Person gespeichert ist.
+  -- 'fahrten' ist hier leer (keine Ausleihe angelegt); geprueft wird,
+  -- dass das jsonb-Objekt die Spalten kennt, sobald es eine Zeile gibt -
+  -- siehe test_l_fahruntauglich_bleibt_defekt_nach_rueckgabe fuer eine
+  -- echte Fahrt.
+  return next ok(
+    pg_typeof(v_j -> 'fahrten') = 'jsonb'::regtype,
+    'Der Fahrten-Abschnitt ist ein jsonb-Array, auch ohne Fahrt');
   -- Aber nicht das, was auch der Kundenservice nicht sehen darf.
   return next ok(not (v_j ? 'zahlungsmittel'),
                  'Die Auskunft enthaelt keine Zahlungsmittel');
@@ -414,6 +431,134 @@ begin
   return next is(
     (select status::text from velocity.fahrrad where fahrrad_id = v_f),
     'verfuegbar', 'Das Rad ist wieder verfuegbar');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+create or replace function velocity_test.test_l_anonymisierung_scrubbt_protokoll()
+returns setof text language plpgsql as $$
+declare v_k bigint; v_treffer integer;
+begin
+  insert into velocity.kunde (email, vorname, nachname, telefon, geburtsdatum)
+       values ('l-scrub@example.org', 'Petra', 'Musterfrau', '0931 0000', date '1988-07-07')
+    returning kunde_id into v_k;
+
+  perform velocity_test.fixture_rollen('scrub', array['kundenservice']);
+  -- Kunde anlegen, aendern, anonymisieren - alle drei Schritte
+  -- hinterlassen Protokollzeilen, nicht nur der letzte.
+  perform velocity.api_kunde_aktualisieren(v_k, 'Petra', 'Musterfrau', '0931 4711');
+  perform velocity.api_kunde_anonymisieren(v_k, 'Bericht: Nachweis Protokollbereinigung');
+
+  -- K1, der eigentliche Punkt: kein Klarname, keine echte
+  -- Telefonnummer, keine echte E-Mail und kein Geburtsdatum stehen mehr
+  -- im Protokoll - weder aus der vorherigen Aenderung noch aus der
+  -- Anonymisierung selbst. Die Loeschung darf nicht die Kopie sein, die
+  -- sie beseitigen soll.
+  select count(*) into v_treffer
+    from velocity.aenderungsprotokoll
+   where tabelle = 'kunde' and datensatz_id = v_k
+     and (wert_alt ilike '%Petra%'      or wert_neu ilike '%Petra%'
+       or wert_alt ilike '%Musterfrau%' or wert_neu ilike '%Musterfrau%'
+       or wert_alt like '%0931%'        or wert_neu like '%0931%'
+       or wert_alt ilike '%l-scrub@example.org%'
+       or wert_alt like '%1988-07-07%'  or wert_neu like '%1988-07-07%');
+  return next is(v_treffer, 0,
+    'Kein Klarname, keine echte Telefonnummer/E-Mail/Geburtsdatum stehen mehr im Protokoll');
+
+  -- Die Zeilen selbst bleiben stehen, mit Zeitpunkt und Mitarbeiter -
+  -- Art. 5 Abs. 2 DSGVO verlangt die Spur, WER WANN geaendert hat, auch
+  -- nach einer Anonymisierung. Geloescht wuerde auch diese Spur tilgen.
+  return next ok(
+    (select count(*) > 0 from velocity.aenderungsprotokoll
+      where tabelle = 'kunde' and datensatz_id = v_k and feld = 'telefon'
+        and zeitpunkt is not null and mitarbeiter_id is not null),
+    'Die Protokollzeilen zu telefon bleiben bestehen, mit Zeitpunkt und Mitarbeiter');
+  return next ok(
+    (select count(*) > 0 from velocity.aenderungsprotokoll
+      where tabelle = 'kunde' and datensatz_id = v_k and feld = 'vorname'),
+    'Auch die Protokollzeile zu vorname aus der Anonymisierung selbst bleibt bestehen');
+
+  -- Der Anonymisierungsgrund selbst ist kein Personenbezug und bleibt
+  -- lesbar - er beschreibt den Vorgang, nicht die Person.
+  return next is(
+    (select wert_neu from velocity.aenderungsprotokoll
+      where tabelle = 'kunde' and datensatz_id = v_k and feld = 'anonymisiert'),
+    'Bericht: Nachweis Protokollbereinigung',
+    'Der Anonymisierungsgrund selbst bleibt lesbar');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+create or replace function velocity_test.test_l_fahruntauglich_bleibt_defekt_nach_rueckgabe()
+returns setof text language plpgsql as $$
+declare
+  v_kunde bigint; v_typ bigint; v_h bigint; v_m bigint; v_rad bigint;
+  v_station bigint; v_e record; v_a bigint; v_s bigint;
+begin
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  insert into velocity.kunde (email, vorname, nachname)
+       values ('l-fahruntauglich@example.org', 'Finn', 'Fahrt') returning kunde_id into v_kunde;
+  insert into velocity.fahrradtyp (typ_code, bezeichnung)
+       values ('L-FU', 'Fahruntauglichtestrad') returning typ_id into v_typ;
+  -- fn_ausleihe_beenden ruft fn_ausleihe_abrechnen auf und scheitert
+  -- ohne einen gueltigen Preis fuer den Typ (P0002) - der echte Weg
+  -- verlangt den vollen Aufbau, nicht nur das Rad.
+  insert into velocity.nutzungspreis (typ_id, gueltigkeit, startgebuehr, preis_pro_minute, tageshoechstpreis)
+       values (v_typ, daterange(current_date - 1, null, '[)'), 0.10, 0.10, 10.00);
+  insert into velocity.hersteller (name) values ('Hersteller L-FU') returning hersteller_id into v_h;
+  insert into velocity.fahrradmodell (hersteller_id, typ_id, modellbezeichnung)
+       values (v_h, v_typ, 'M-L-FU') returning modell_id into v_m;
+  insert into velocity.fahrrad (rahmennummer, modell_id) values ('RN-L-FU', v_m) returning fahrrad_id into v_rad;
+  insert into velocity.fahrrad_position (fahrrad_id, station_id) values (v_rad, v_station);
+
+  -- Der echte Weg, nicht fixture_wartungsrad: fn_ausleihe_starten legt
+  -- die Fahrt genauso an wie api_ausleihe_starten es fuer einen
+  -- angemeldeten Kunden taete, nur ohne den Umweg ueber auth.uid().
+  select * into v_e from velocity.fn_ausleihe_starten(v_kunde, v_rad);
+  v_a := v_e.ausleihe_id;
+  return next ok(v_a is not null, 'Die Fahrt startet');
+
+  -- Waehrend der Fahrt: ein fahruntauglicher Schaden wird gemeldet.
+  perform velocity_test.fixture_rollen('fu', array['werkstatt']);
+  v_s := velocity.api_schaden_melden(v_rad, 'Rahmen', 'Rahmen gebrochen', 'fahruntauglich');
+  perform set_config('request.jwt.claims', '', true);
+
+  -- GR13: das Rad ist noch in Fahrt, der Status bleibt 'ausgeliehen' -
+  -- api_schaden_melden darf ihn nicht ueberschreiben.
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_rad),
+    'ausgeliehen', 'Waehrend der Fahrt bleibt der Status ausgeliehen (GR13)');
+
+  -- Rueckgabe ueber den echten Weg.
+  perform velocity.fn_ausleihe_beenden(v_kunde, v_a, v_station, null, null);
+
+  -- K2, der eigentliche Punkt: die Rueckgabe darf ein fahruntaugliches
+  -- Rad nicht wieder freigeben.
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_rad),
+    'defekt', 'Ein waehrend der Fahrt fahruntauglich gemeldetes Rad bleibt nach der Rueckgabe defekt');
+  return next is(
+    (select status::text from velocity.schadensmeldung where schadensmeldung_id = v_s),
+    'offen', 'Die Meldung bleibt offen - die Rueckgabe behebt sie nicht von selbst');
+end;
+$$;
+
+create or replace function velocity_test.test_l_auftrag_eroeffnen_prueft_zugehoerigkeit()
+returns setof text language plpgsql as $$
+declare v_f1 bigint; v_f2 bigint; v_s1 bigint;
+begin
+  v_f1 := velocity_test.fixture_wartungsrad('zug1');
+  v_f2 := velocity_test.fixture_wartungsrad('zug2');
+  perform velocity_test.fixture_rollen('zug', array['werkstatt']);
+  v_s1 := velocity.api_schaden_melden(v_f1, 'Licht', 'Licht faellt aus', 'gering');
+
+  -- W6: ein Zahlendreher darf nicht den Schaden eines FREMDEN Rades
+  -- fuer einen Auftrag aufgreifen, waehrend das tatsaechlich gemeldete
+  -- Rad unbearbeitet bleibt.
+  return next throws_ok(
+    format($q$ select velocity.api_auftrag_eroeffnen(%s, %s) $q$, v_f2, v_s1),
+    'P0001', null,
+    'Eine Meldung zu einem fremden Rad wird abgewiesen');
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;

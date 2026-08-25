@@ -343,7 +343,24 @@ begin
   -- fuer bereits abgeschlossene Fahrten zur Verfuegung steht.
   v_summe := velocity.fn_ausleihe_abrechnen(p_ausleihe_id);
 
-  update velocity.fahrrad set status = 'verfuegbar' where fahrrad_id = v_a.fahrrad_id;
+  -- K2: Ein waehrend der Fahrt als fahruntauglich gemeldetes Rad darf
+  -- die Rueckgabe nicht ungeprueft ueberschreiben. api_schaden_melden
+  -- (db/aufbau/0019_wawi_logik.sql) setzt ein Rad in Fahrt bewusst
+  -- nicht selbst auf 'defekt' - GR13 verbietet einem Rad in Fahrt einen
+  -- anderen Status als 'ausgeliehen'. Die Rueckgabe hier ist deshalb
+  -- die einzige Stelle, die den Zustand nachholen kann. Ohne diese
+  -- Pruefung stand ein Rad mit gebrochenem Rahmen nach der Rueckgabe
+  -- wieder als 'verfuegbar' da - nachgestellt und bestaetigt.
+  if exists (
+    select 1 from velocity.schadensmeldung sm
+     where sm.fahrrad_id = v_a.fahrrad_id
+       and sm.schwere = 'fahruntauglich'
+       and sm.status in ('offen', 'in_arbeit')
+  ) then
+    update velocity.fahrrad set status = 'defekt' where fahrrad_id = v_a.fahrrad_id;
+  else
+    update velocity.fahrrad set status = 'verfuegbar' where fahrrad_id = v_a.fahrrad_id;
+  end if;
   -- Genau eine Ortsangabe (GR13): an einer Station traegt die Station
   -- den Ort, sonst die Koordinaten. coalesce mit dem alten Wert waere
   -- hier falsch - es hielte einen ueberholten Ort am Leben.

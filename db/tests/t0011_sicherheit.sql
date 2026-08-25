@@ -155,6 +155,14 @@ $$;
 -- naemlich false. mitarbeiter_id_aus_auth() steht bewusst NICHT auf
 -- dieser Liste: sie wird nur aus den beiden anderen heraus aufgerufen,
 -- und dort greifen die Rechte des Eigentuemers (security definer).
+--
+-- fn_luftlinie_km (0018/0019, W1): eine Sicht traegt NICHT die
+-- Ausfuehrungsrechte ihres Eigentuemers - nachgemessen, "select * from
+-- v_wawi_km_co2" als authenticated scheitert ohne diesen Grant mit
+-- "permission denied for function fn_luftlinie_km". Unbedenklich, weil
+-- sie eine Formel aus vier numeric-Parametern berechnet und keine
+-- Tabelle liest - kein Aufrufer erfaehrt durch sie etwas ueber irgendeine
+-- Person.
 create or replace function velocity_test.test_s_keine_oeffentliche_funktion()
 returns setof text language plpgsql as $$
 declare
@@ -164,7 +172,7 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'velocity'
      and p.proname not like 'api\_%'
-     and p.proname not in ('ist_mitarbeiter', 'hat_rolle')
+     and p.proname not in ('ist_mitarbeiter', 'hat_rolle', 'fn_luftlinie_km')
      and (has_function_privilege('anon',          p.oid, 'execute')
        or has_function_privilege('authenticated', p.oid, 'execute'));
 

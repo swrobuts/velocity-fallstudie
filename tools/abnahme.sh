@@ -380,15 +380,18 @@ c.execute("""select count(*) from pg_proc p
                join pg_namespace n on n.oid = p.pronamespace
               where n.nspname = 'velocity'
                 and p.proname not like 'api\\_%'
-                -- ist_mitarbeiter/hat_rolle: dieselbe dokumentierte
-                -- Ausnahme wie in test_s_keine_oeffentliche_funktion
+                -- ist_mitarbeiter/hat_rolle/fn_luftlinie_km: dieselbe
+                -- dokumentierte Ausnahme wie in
+                -- test_s_keine_oeffentliche_funktion
                 -- (db/tests/t0011_sicherheit.sql) - eine Sicht traegt
                 -- nicht die Rechte ihres Eigentuemers, deshalb muessen
-                -- beide fuer authenticated ausfuehrbar sein, damit die
-                -- v_wawi_*-Sichten ueberhaupt laufen. Beide sind
-                -- security definer und geben ausschliesslich ueber den
-                -- Aufrufer selbst Auskunft.
-                and p.proname not in ('ist_mitarbeiter', 'hat_rolle')
+                -- alle drei fuer authenticated ausfuehrbar sein, damit
+                -- die v_wawi_*-Sichten ueberhaupt laufen. Alle drei sind
+                -- security definer; die ersten beiden geben
+                -- ausschliesslich ueber den Aufrufer selbst Auskunft,
+                -- fn_luftlinie_km berechnet eine Formel aus vier
+                -- numeric-Parametern und liest keine Tabelle.
+                and p.proname not in ('ist_mitarbeiter', 'hat_rolle', 'fn_luftlinie_km')
                 and (p.proacl is null
                      or exists (select 1 from aclexplode(p.proacl) a
                                  join pg_roles r on r.oid = a.grantee
