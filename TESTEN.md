@@ -61,12 +61,15 @@ Dann auf `http://localhost:8765`:
    **3,10 / 8,50 / 17,00 Euro** für 30 Minuten, vier FAQ-Einträge, Karte mit
    Stations- und Fahrradmarkern. Browserkonsole ohne Fehler.
 
-   > Diese drei Beträge sind der Sollwert. Sie stehen seit dem 24.08.2026
-   > zusätzlich in `db/tests/t0010_sichten.sql` und fallen dort auf, wenn
-   > jemand die Preise ändert, ohne diese Anleitung nachzuziehen. Genau
-   > dieser Auseinanderlauf hat eine externe Prüfung einmal zu der
-   > Annahme gebracht, der E-Bike-Preis sei ein Datenfehler — er war
-   > richtig, die Anleitung war alt.
+   > Stationszahl und Beträge werden gegen die Datenbank geprüft:
+   > `tools/zahlen_gegen_db.py` liest sie aus dieser Datei und hält sie
+   > gegen `v_kennzahl` und `v_tarifkarte`. Wer die Preise ändert, ohne
+   > diese Anleitung nachzuziehen, bekommt die Abnahme rot. Genau dieser
+   > Auseinanderlauf hat eine externe Prüfung einmal zu der Annahme
+   > gebracht, der E-Bike-Preis sei ein Datenfehler — er war richtig,
+   > die Anleitung war alt. Die Beträge stehen zusätzlich in
+   > `db/tests/t0010_sichten.sql`, dort aber als Erwartung an die
+   > Preisrechnung, nicht als Abgleich mit diesem Text.
    >
    > Stand 25.08.2026: die Minutenpreise wurden neu gestaffelt (0,10 /
    > 0,25 / 0,50 statt 0,10 / 0,50 / 0,10). Vorher war das Lastenrad für

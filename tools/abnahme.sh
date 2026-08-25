@@ -179,14 +179,15 @@ fi
 # Kein Pruefpunkt sah je die Bilder an. Deshalb blieb wochenlang
 # unbemerkt, dass die Freistellung die Speichen zerriss - aufgefallen ist
 # es erst dem Nutzer, an einem grossen Bildschirm.
-# Zahlen wandern: sie stehen in der Datenbank, im Test, auf der Seite und
-# im Vortrag - und wenn sich eine aendert, aendern sich selten alle vier.
-schritt "Zahlen im Foliendeck gegen die Datenbank"
-if python3 tools/folien_gegen_db.py >/tmp/abnahme-folien-db.log 2>&1; then
-  ergebnis 0 "$(grep -oE '[0-9]+ Zahlen' /tmp/abnahme-folien-db.log | head -1) stimmen"
+# Zahlen wandern: sie stehen in der Datenbank, im Test, auf der Seite, in
+# der Anleitung und im Vortrag - und wenn sich eine aendert, aendern sich
+# selten alle fuenf. Die Datenbank ist die Quelle, der Text folgt ihr.
+schritt "Zahlen in Anleitung und Vortrag gegen die Datenbank"
+if python3 tools/zahlen_gegen_db.py >/tmp/abnahme-zahlen-db.log 2>&1; then
+  ergebnis 0 "$(grep -c '✓' /tmp/abnahme-zahlen-db.log) Abgleiche stimmen"
 else
-  ergebnis 1 "Zahlen im Deck weichen von der Datenbank ab"
-  grep '✗' /tmp/abnahme-folien-db.log | sed 's/^/     /'
+  ergebnis 1 "Zahlen weichen von der Datenbank ab"
+  grep '✗' /tmp/abnahme-zahlen-db.log | sed 's/^/     /'
 fi
 
 schritt "Freisteller gegen die Vorlage"
