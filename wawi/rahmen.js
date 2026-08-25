@@ -441,15 +441,29 @@ function listenKoerper() {
     return el;
 }
 
+// Anders als werkzeugleiste()/listenKoerper() JEDES Mal neu an die
+// erste Stelle gehaengt, nicht nur bei der Neuanlage: Instandhaltung
+// (Aufgabe 7) blendet ihre Werkzeugleiste je nach Unterreiter ein und
+// aus - zeigeWerkzeugleiste(false, ...) entfernt das Element dabei
+// vollstaendig (siehe dort). Kommt es spaeter wieder, legt
+// werkzeugleiste() ein NEUES Element an und haengt es vor den
+// jeweils aktuellen ersten Kind - traf das bislang unveraendert
+// dagebliebene reiterleiste-Element, sprang die Werkzeugleiste ueber
+// die Reiter, obwohl instandhaltungAufbauen() sie in der Reihenfolge
+// Werkzeugleiste-dann-Reiter aufbaut. Im Browser nachgestellt: Reiter
+// wechseln, Werkzeugleiste dabei aus- und wieder einblenden lassen -
+// Reiter standen danach unter der Werkzeugleiste, nicht mehr darueber.
+// Ein insertBefore auf ein bereits eingehaengtes Element VERSCHIEBT es
+// nur, dupliziert es nicht - deshalb hier ohne Neuanlage-Bedingung.
 function reiterleiste() {
+    const wurzel = document.getElementById('arbeitsliste');
     let el = document.getElementById('reiterleiste');
     if (!el) {
         el = document.createElement('div');
         el.id = 'reiterleiste';
         el.setAttribute('role', 'tablist');
-        const wurzel = document.getElementById('arbeitsliste');
-        wurzel.insertBefore(el, wurzel.firstChild);
     }
+    wurzel.insertBefore(el, wurzel.firstChild);
     return el;
 }
 
