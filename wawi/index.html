@@ -11,7 +11,7 @@
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
-  <!-- Vier Zustaende, von denen immer genau einer sichtbar ist. Kein
+  <!-- Fuenf Zustaende, von denen immer genau einer sichtbar ist. Kein
        Seitenwechsel: die Sitzung, die Rollen und die Statuszeile
        ueberleben jeden Bereichswechsel. -->
   <div id="zustand-laden" class="vollbild">Einen Moment …</div>
@@ -32,6 +32,18 @@
        Wenn Sie Kundin oder Kunde sind, finden Sie Ihren Bereich unter
        <a href="https://bikes.butscher.cloud">bikes.butscher.cloud</a>.</p>
     <button id="knopf-abmelden-fremd" type="button">Abmelden</button>
+  </div>
+
+  <!-- Anders als "Kein Zugang": dieses Konto IST als Mitarbeitendenkonto
+       hinterlegt, es fehlt nur die Rollenzuteilung. Der Text schickt
+       deshalb zur Leitung, nicht zur Kontoverwaltung - genau das war der
+       Befund aus der Pruefung. -->
+  <div id="zustand-ohne-rolle" class="vollbild" hidden>
+    <h1>Noch keine Rolle zugeteilt</h1>
+    <p>Ihr Konto ist bei VeloCity als Mitarbeitendenkonto hinterlegt, aber
+       es wurde noch kein Aufgabenbereich zugeordnet. Wenden Sie sich an
+       die Leitung, damit sie Ihnen eine Rolle zuteilt.</p>
+    <button id="knopf-abmelden-ohne-rolle" type="button">Abmelden</button>
   </div>
 
   <div id="zustand-arbeit" hidden>

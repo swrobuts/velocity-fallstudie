@@ -1,18 +1,31 @@
 // ============================================
 // VeloCity Warenwirtschaft — Rahmen
 //
-// Die Oberflaeche muss DREI Zustaende unterscheiden koennen, die im
+// Die Oberflaeche muss VIER Zustaende unterscheiden koennen, die im
 // Browser gleich aussehen:
 //
-//   1. nicht angemeldet          -> Anmeldemaske
+//   1. nicht angemeldet             -> Anmeldemaske
 //   2. angemeldet, kein Mitarbeiter -> Hinweis, kein Zugang
-//   3. angemeldet, Mitarbeiter   -> Arbeitsoberflaeche
+//   3. Mitarbeiter ohne Rolle       -> Hinweis, wer helfen kann
+//   4. Mitarbeiter mit Rollen       -> Arbeitsoberflaeche
 //
 // Der zweite Fall ist der haeufigste und der, den man vergisst: JEDER
 // Kunde kann sich hier anmelden, weil es dieselbe auth.users ist. Er
 // bekaeme dann eine Oberflaeche, in der jede Sicht null Zeilen liefert -
 // fehlerfrei, leer, unerklaerlich. Deshalb wird vor dem Aufbau gefragt,
 // nicht danach.
+//
+// Der dritte Fall ist der, der bei genau einem Mitarbeiter im Bestand
+// (VeloCity heute) zum NORMALFALL fuer jeden zweiten neuen Kollegen wird:
+// ein echtes Mitarbeiterkonto, dem noch niemand eine Rolle zugeteilt hat.
+// meineRollen() liefert dafuer ein LEERES Set - anders als "false" fuer
+// "kein Mitarbeiter". Beide vorher gleich zu behandeln ("Kein Zugang")
+// schickte diesen Fall in die falsche Richtung: er gehoert nicht zur
+// Kundenverwaltung, sondern zur Leitung, die eine Rolle nachtragen kann.
+// Deshalb hier vier Faelle statt drei, unterschieden per
+// `rollen instanceof Set` statt per Wahrheitswert - ein leeres Set ist
+// falsy in JavaScript, eine reine `if (rollen)`-Pruefung haette es mit
+// "nicht angemeldet"/"kein Mitarbeiter" verwechselt.
 // ============================================
 
 const bereiche = new Map();
@@ -53,18 +66,24 @@ async function seiteAufbauen() {
         zeige('zustand-laden', true);
         zeige('zustand-anmeldung', false);
         zeige('zustand-kein-mitarbeiter', false);
+        zeige('zustand-ohne-rolle', false);
         zeige('zustand-arbeit', false);
         return;
     }
 
     geladeneRollen = rollen;
 
+    // instanceof Set statt Wahrheitswert: ein LEERES Set (Mitarbeiter
+    // ohne Rolle) ist falsy und wuerde von einer if(rollen)-Pruefung
+    // nicht von null/false unterschieden - genau der Fehler, den diese
+    // Aufgabe korrigiert (siehe Kommentar am Dateianfang).
     zeige('zustand-laden', false);
     zeige('zustand-anmeldung', rollen === null);
-    zeige('zustand-kein-mitarbeiter', rollen !== null && rollen.size === 0);
-    zeige('zustand-arbeit', rollen !== null && rollen.size > 0);
+    zeige('zustand-kein-mitarbeiter', rollen === false);
+    zeige('zustand-ohne-rolle', rollen instanceof Set && rollen.size === 0);
+    zeige('zustand-arbeit', rollen instanceof Set && rollen.size > 0);
 
-    if (rollen && rollen.size > 0) {
+    if (rollen instanceof Set && rollen.size > 0) {
         await navigationAufbauen(rollen);
     }
 }
@@ -543,8 +562,14 @@ function zeigeUnterreiter(reiter, aktiv, beiWechsel) {
 // Synchron, weil jeder Maskenaufbau es mehrfach fragt. Der
 // Rollenspeicher ist zu diesem Zeitpunkt gefuellt - seiteAufbauen() hat
 // ihn geladen, bevor irgendein Bereich baut.
+//
+// instanceof Set statt einer Pruefung auf null: geladeneRollen kann jetzt
+// auch false sein (kein Mitarbeiter). false.has(...) wuerfe eine
+// TypeError - deny-by-default heisst hier, jeden Nicht-Set-Fall
+// gleichermassen als "keine Rolle" zu behandeln, nicht nur den
+// Anfangszustand vor dem ersten Laden.
 function darfRolle(code) {
-    return geladeneRollen !== null && geladeneRollen.has(code);
+    return geladeneRollen instanceof Set && geladeneRollen.has(code);
 }
 
 // ===== Tastaturbedienung =====
@@ -619,6 +644,9 @@ document.getElementById('zustand-anmeldung').addEventListener('submit', async (e
 
 document.getElementById('knopf-abmelden').addEventListener('click', () => abmelden());
 document.getElementById('knopf-abmelden-fremd').addEventListener('click', () => abmelden());
+// Der einzige Ausweg aus "Mitarbeiter ohne Rolle": ohne diesen Knopf
+// saesse dort jemand fest, bis die Leitung eine Rolle zutraegt.
+document.getElementById('knopf-abmelden-ohne-rolle').addEventListener('click', () => abmelden());
 
 // beiAnmeldungsWechsel() ruft NICHT sofort mit dem aktuellen Zustand auf
 // (anders als das Vorbild src/auth.js) - deshalb wird seiteAufbauen()

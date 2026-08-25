@@ -51,12 +51,32 @@ function angemeldeterBenutzer() {
     return supabaseClient.auth.getUser();
 }
 
-// Liefert ein Set der Rollencodes. Leeres Set heisst: angemeldet, aber
-// kein Mitarbeiter - der haeufigste Fall, weil jeder KUNDE sich hier
-// anmelden koennte. Die Oberflaeche muss das unterscheiden koennen,
-// deshalb null fuer "gar nicht angemeldet".
+// Liefert VIER moegliche Zustaende, nicht drei - ein Mitarbeiter ohne
+// zugeteilte Rolle ist etwas anderes als ein Kunde ohne Mitarbeiterkonto,
+// auch wenn beide vorher als leeres Set durchgingen:
+//
+//   null        gar nicht angemeldet
+//   false       angemeldet, aber kein Mitarbeiter
+//   Set (leer)  Mitarbeiter, aber (noch) ohne zugeteilte Rolle
+//   Set (voll)  Mitarbeiter mit Rollen
+//
+// Der Unterschied zwischen "kein Mitarbeiter" und "Mitarbeiter ohne
+// Rolle" entscheidet, wohin die Oberflaeche jemanden schickt: der eine
+// gehoert zur Kundenverwaltung, der andere braucht nur eine Rollen-
+// zuteilung durch die Leitung. Beide als leeres Set zu behandeln haette
+// bei genau einem Mitarbeiter im Bestand jeden zweiten neuen Kollegen
+// in die falsche Richtung geschickt.
 async function meineRollen() {
-    if (rollenZwischenspeicher) return rollenZwischenspeicher;
+    // Zwischenspeicher-Pruefung ausdruecklich NICHT auf Wahrheitswert:
+    // false ist ein echtes, zwischenspeicherbares Ergebnis (kein
+    // Mitarbeiter) und wuerde eine truthy-Pruefung als "noch nicht
+    // geladen" missverstehen - dann waere der Speicher fuer diesen Fall
+    // wirkungslos und jeder Aufruf fragte erneut. null bleibt der
+    // Sentinel-Wert fuer "noch nicht geladen", weil "gar nicht
+    // angemeldet" (ebenfalls null) unten NIE in den Speicher geschrieben
+    // wird - der naechste Aufruf soll ja pruefen duerfen, ob inzwischen
+    // eine Sitzung besteht.
+    if (rollenZwischenspeicher !== null) return rollenZwischenspeicher;
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return null;
@@ -72,7 +92,7 @@ async function meineRollen() {
         throw new Error(`Die Rollen liessen sich nicht ermitteln: ${fehlerMitarbeiter.message}`);
     }
     if (!istMitarbeiter) {
-        rollenZwischenspeicher = new Set();
+        rollenZwischenspeicher = false;
         return rollenZwischenspeicher;
     }
 

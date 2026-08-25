@@ -166,7 +166,11 @@ button {
   margin: 4px 0 0;
 }
 
-#zustand-kein-mitarbeiter button {
+/* Gemeinsames Aussehen fuer die Abmelden-Knoepfe der beiden
+   Hinweiszustaende (kein Mitarbeiter / Mitarbeiter ohne Rolle) - in
+   beiden ist er der einzige Ausweg. */
+#zustand-kein-mitarbeiter button,
+#zustand-ohne-rolle button {
   margin-top: 12px;
   padding: 8px 16px;
   border: 1px solid var(--linie);
