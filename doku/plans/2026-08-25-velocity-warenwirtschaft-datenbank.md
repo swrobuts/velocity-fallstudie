@@ -1447,7 +1447,12 @@ insert into velocity.uebernahme_protokoll
 select now(), 'Referenzdaten (erzeugt)',
        'velocity.nutzungspreis, velocity.mitgliedschaft, velocity.freiminuten_periode, velocity.mitarbeiter',
        0,
-       (select count(*) from velocity.mitgliedschaft),
+       -- Das DELTA dieses Laufs, nicht der Gesamtbestand. Das Protokoll
+       -- haelt fest, was ein Lauf getan hat - db/betrieb/uebernahme_altdaten.sql
+       -- rechnet dafuer v_nachher - v_vorher, und t0013_uebernahme.sql
+       -- prueft genau diese Semantik. Ein Gesamtbestand an dieser Stelle
+       -- waere eine andere Zahl, die aussieht wie dieselbe.
+       v_neu_gesamt,
        0,
        'ERFUNDENE Daten fuer die Lehre, nicht erhoben. Preisperioden ab 2025-09-01 '
        'mit einem Wechsel des Minutenpreises zum 2026-03-01; Tarifkonditionen '
