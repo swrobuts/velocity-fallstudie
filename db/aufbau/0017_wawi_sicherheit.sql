@@ -123,3 +123,25 @@ $$;
 -- Schleife darueber und steht trotzdem hier, damit sie beim Lesen
 -- auffaellt und niemand sie versehentlich aufhebt.
 revoke all on velocity.zahlungsmittel from anon, authenticated;
+
+-- Diese beiden Funktionen MUESSEN fuer authenticated ausfuehrbar sein.
+-- Nachgemessen: eine Sicht traegt NICHT die Ausfuehrungsrechte ihres
+-- Eigentuemers. Ein "select * from v_wawi_flotte" als authenticated
+-- scheitert sonst mit "permission denied for function hat_rolle" -
+-- und damit jede einzelne Sicht der Warenwirtschaft.
+--
+-- Dass das unbedenklich ist, liegt an ihrem Zuschnitt, nicht an ihrer
+-- Harmlosigkeit: beide sind security definer und filtern ausschliesslich
+-- ueber auth.uid(). Ein Aufrufer erfaehrt durch sie nur etwas ueber SICH
+-- SELBST - ob er Mitarbeiter ist und welche Rollen er traegt. Ueber
+-- andere Personen geben sie nichts preis, und sie taugen auch nicht als
+-- Orakel: hat_rolle('gibtsnicht') liefert dieselbe Antwort wie
+-- hat_rolle('leitung') fuer einen Kunden, naemlich false.
+--
+-- mitarbeiter_id_aus_auth bleibt bewusst gesperrt. Sie wird nur aus den
+-- beiden anderen heraus aufgerufen, und dort greifen die Rechte des
+-- Eigentuemers.
+grant execute on function
+  velocity.ist_mitarbeiter(),
+  velocity.hat_rolle(text)
+to authenticated;

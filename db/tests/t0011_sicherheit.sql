@@ -135,6 +135,26 @@ $$;
 -- implizitem PUBLIC-Zugriff oft schlicht null ist) wuerde die Luecke
 -- gerade nicht zeigen - das war ja genau der Fehler, der uebersehen
 -- wurde.
+-- Namentliche Ausnahmeliste, absichtlich nur diese zwei Namen und nicht
+-- ein Muster wie "ist\_%" oder "hat\_%": ein Muster wuerde jede kuenftige
+-- Funktion mit passendem Praefix unbeobachtet durchwinken. Diese Liste
+-- muss fuer jede neue Ausnahme von Hand erweitert werden, sonst schlaegt
+-- der Sweep an - das ist gewollt.
+--
+-- ist_mitarbeiter() und hat_rolle(text) (0017): eine Sicht traegt NICHT
+-- die Ausfuehrungsrechte ihres Eigentuemers - nachgemessen, ein
+-- "select * from v_wawi_flotte" als authenticated scheitert ohne diesen
+-- Grant mit "permission denied for function hat_rolle", und zwar bei
+-- jeder einzelnen v_wawi_*-Sicht. Unbedenklich sind beide nicht, weil sie
+-- harmlos waeren, sondern wegen ihres Zuschnitts: beide sind security
+-- definer und filtern ausschliesslich ueber auth.uid(). Ein Aufrufer
+-- erfaehrt durch sie nur etwas ueber SICH SELBST - ob er Mitarbeiter ist
+-- und welche Rollen er traegt. Ueber andere Personen geben sie nichts
+-- preis, und sie taugen auch nicht als Orakel: hat_rolle('gibtsnicht')
+-- liefert fuer einen Kunden dieselbe Antwort wie hat_rolle('leitung'),
+-- naemlich false. mitarbeiter_id_aus_auth() steht bewusst NICHT auf
+-- dieser Liste: sie wird nur aus den beiden anderen heraus aufgerufen,
+-- und dort greifen die Rechte des Eigentuemers (security definer).
 create or replace function velocity_test.test_s_keine_oeffentliche_funktion()
 returns setof text language plpgsql as $$
 declare
@@ -144,13 +164,14 @@ begin
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'velocity'
      and p.proname not like 'api\_%'
+     and p.proname not in ('ist_mitarbeiter', 'hat_rolle')
      and (has_function_privilege('anon',          p.oid, 'execute')
        or has_function_privilege('authenticated', p.oid, 'execute'));
 
   return next is(v_offen, null,
     coalesce('Keine interne Funktion ist fuer anon/authenticated ausfuehrbar (offen: '
              || v_offen || ')',
-             'Keine interne Funktion (alles ausser api_*) ist fuer anon oder authenticated ausfuehrbar'));
+             'Keine interne Funktion (alles ausser api_* und der Ausnahmeliste) ist fuer anon oder authenticated ausfuehrbar'));
 end;
 $$;
 
