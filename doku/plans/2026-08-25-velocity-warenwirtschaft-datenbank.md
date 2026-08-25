@@ -2332,6 +2332,28 @@ $$;
 -- Schleife darueber und steht trotzdem hier, damit sie beim Lesen
 -- auffaellt und niemand sie versehentlich aufhebt.
 revoke all on velocity.zahlungsmittel from anon, authenticated;
+
+-- Diese beiden Funktionen MUESSEN fuer authenticated ausfuehrbar sein.
+-- Nachgemessen: eine Sicht traegt NICHT die Ausfuehrungsrechte ihres
+-- Eigentuemers. Ein "select * from v_wawi_flotte" als authenticated
+-- scheitert sonst mit "permission denied for function hat_rolle" -
+-- und damit jede einzelne Sicht der Warenwirtschaft.
+--
+-- Dass das unbedenklich ist, liegt an ihrem Zuschnitt, nicht an ihrer
+-- Harmlosigkeit: beide sind security definer und filtern ausschliesslich
+-- ueber auth.uid(). Ein Aufrufer erfaehrt durch sie nur etwas ueber SICH
+-- SELBST - ob er Mitarbeiter ist und welche Rollen er traegt. Ueber
+-- andere Personen geben sie nichts preis, und sie taugen auch nicht als
+-- Orakel: hat_rolle('gibtsnicht') liefert dieselbe Antwort wie
+-- hat_rolle('leitung') fuer einen Kunden, naemlich false.
+--
+-- mitarbeiter_id_aus_auth bleibt bewusst gesperrt. Sie wird nur aus den
+-- beiden anderen heraus aufgerufen, und dort greifen die Rechte des
+-- Eigentuemers.
+grant execute on function
+  velocity.ist_mitarbeiter(),
+  velocity.hat_rolle(text)
+to authenticated;
 ```
 
 - [ ] **Schritt 4: Anwenden, Idempotenz prüfen, Tests laufen lassen**
@@ -4055,6 +4077,26 @@ node tools/mermaid_check.mjs doku/datenmodell/erd/*.mmd
 - [ ] **Schritt 6: `05-physisches-modell.md` und `README.md` ergänzen**
 
 In `05-physisches-modell.md` die acht neuen Tabellen mit je einem Satz zur Begründung aufnehmen — insbesondere die Abweichung m:n bei den Rollen und den Verzicht auf `wartungsposition`.
+
+**Und zwei Prüfungen, die seit Aufgabe 2 beziehungsweise 6 rot sind:**
+
+`tools/abnahme.sh` meldet „Diagramm widerspricht dem Systemkatalog" und
+„keine unerklaerte Abweichung". Beides ist von diesem Plan verursacht und
+gehört hierher:
+
+- Das ERD `doku/datenmodell/erd/erd-wawi.mmd` beschreibt Kardinalitäten,
+  die wir bewusst anders gebaut haben: `KUNDE ||--o{ SCHADENSMELDUNG`
+  (der Melder ist wahlweise Kunde **oder** Mitarbeiter, also `|o--o{`),
+  `MITARBEITER ||--o{ WARTUNGSAUFTRAG` (`mitarbeiter_id` ist nullable),
+  `ROLLE ||--o{ MITARBEITER` (wir haben m:n gebaut) — und
+  `WARTUNGSPOSITION`, die es nicht gibt. Zieh das Diagramm auf das
+  gebaute Modell nach und kennzeichne, was entworfen und nicht gebaut ist.
+- Der Abgleichsbericht vergleicht die Mengen im Altschema mit denen in
+  `velocity`. Durch die Referenzdaten aus den Aufgaben 6 bis 8 gehen sie
+  auseinander — zu Recht, aber unerklärt. Trag in
+  `db/betrieb/abgleichsbericht.sql` eine Bemerkung nach, die den
+  Unterschied benennt: die Abweichung stammt aus erzeugten
+  Referenzdaten, nicht aus einem Übernahmefehler.
 
 **Zuerst eine Stelle, die sicherheitsrelevant falsch ist:**
 `doku/datenmodell/07-sicherheitskonzept.md` beschreibt
