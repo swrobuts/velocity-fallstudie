@@ -7,9 +7,15 @@
 // eigene Sicht v_wawi_station - keine Basistabelle, keine fn_-Funktion.
 // ============================================
 
+// Navigations-Icon (Gestaltungsauftrag, Punkt 3): eine Standortmarkierung
+// - derselbe Gedanke wie beim Fahrrad-Icon in flotte.js, dieselbe
+// Strichfamilie (siehe .bereich-icon in style.css).
+const ICON_STATIONEN = '<svg viewBox="0 0 24 24"><path d="M12 21c-4.2-4.6-6.5-8.1-6.5-11a6.5 6.5 0 1 1 13 0c0 2.9-2.3 6.4-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>';
+
 bereichAnmelden({
     schluessel: 'stationen',
     titel: 'Stationen',
+    icon: ICON_STATIONEN,
     // Dieselben Rollen, die auch v_wawi_station durchlaesst (siehe
     // db/aufbau/0018_wawi_sichten.sql) - waeren sie hier weiter gefasst,
     // saehe etwa die Werkstatt den Menuepunkt und dahinter eine leere

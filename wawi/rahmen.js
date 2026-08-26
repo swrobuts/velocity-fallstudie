@@ -40,7 +40,17 @@ let aktiverBereich = null;
 let geladeneRollen = null;
 
 function bereichAnmelden(bereich) {
-    // bereich: { schluessel, titel, rollen: [...], aufbauen: async (ziel) => {} }
+    // bereich: { schluessel, titel, rollen: [...], icon, aufbauen: async (ziel) => {} }
+    // icon: rohes '<svg viewBox="0 0 24 24">...</svg>'-Markup, EIN MAL je
+    // Bereich als Konstante geschrieben - derselbe Aufbau wie aktion.svg
+    // in zeigeListe()/zeilenAktionenZelle() weiter unten (kein Icon-Font,
+    // keine externe Abhaengigkeit). navigationAufbauen() setzt aria-hidden
+    // zentral auf den Wrapper, nicht das Icon selbst schreiben lassen -
+    // damit bleibt die Stummschaltung (Gestaltungsauftrag Punkt 3: neben
+    // dem ohnehin sichtbaren Text darf ein Screenreader es nicht ein
+    // zweites Mal vorlesen) an EINER Stelle garantiert, statt sich auf
+    // fuenf gleichlautende Attribute in fuenf Bereichsdateien zu
+    // verlassen.
     bereiche.set(bereich.schluessel, bereich);
 }
 
@@ -107,9 +117,32 @@ async function navigationAufbauen(rollen) {
     for (const bereich of erlaubt) {
         const knopf = document.createElement('button');
         knopf.type = 'button';
-        knopf.textContent = bereich.titel;
         knopf.dataset.bereich = bereich.schluessel;
         knopf.addEventListener('click', () => bereichWechseln(bereich.schluessel));
+
+        // Icon links, Beschriftung rechts - zwei eigene Knoten statt
+        // eines gemeinsamen textContent, weil bereich.icon rohes
+        // SVG-Markup ist (siehe Kommentar bei bereichAnmelden()) und ein
+        // <button>.textContent das sonst als Text statt als Grafik
+        // ausgegeben haette. aria-hidden auf dem WRAPPER, nicht auf dem
+        // Icon selbst: das Icon ist hier reine Wiedererkennung neben dem
+        // ohnehin sichtbaren Text - ein Screenreader soll "Flotte" genau
+        // einmal vorlesen, nicht "Bild, Flotte" (Gestaltungsauftrag,
+        // Punkt 3).
+        const iconWrapper = document.createElement('span');
+        iconWrapper.className = 'bereich-icon';
+        iconWrapper.setAttribute('aria-hidden', 'true');
+        // bereich.icon ist wie aktion.svg in zeilenAktionenZelle() eine
+        // im jeweiligen Bereich fest verdrahtete Konstante, keine
+        // Nutzereingabe - innerHTML ist hier aus demselben Grund
+        // unbedenklich wie dort.
+        iconWrapper.innerHTML = bereich.icon;
+        knopf.append(iconWrapper);
+
+        const beschriftung = document.createElement('span');
+        beschriftung.textContent = bereich.titel;
+        knopf.append(beschriftung);
+
         nav.append(knopf);
     }
 
@@ -992,6 +1025,13 @@ function sparkline(werte, optionen = {}) {
 // auswertungen.js), wo die Zahl bereits als eigener Kachelwert daneben
 // steht und nicht doppelt erscheinen soll.
 //
+// In einer TABELLENSPALTE dagegen (mehrere Zeilen untereinander) NICHT
+// direkt mit textInhalt aufrufen - siehe balkenSpalten() weiter unten,
+// das genau diesen Fall (Balken und Betrag als gemeinsame, rechtsbündige
+// Gruppe in EINER Zelle) durch zwei getrennte Spalten ersetzt hat, weil
+// unterschiedlich breite Beträge sonst die Nulllinie des Balkens von
+// Zeile zu Zeile verschieben (Gestaltungsauftrag, Punkt 5).
+//
 // optionen.farbe: CSS-Farbwert für die Füllung - Vorgabe --marine
 // (neutral: "hier ist eine Zahl"), überschreibbar, wo Farbe tatsächlich
 // etwas bedeutet (z. B. eine volle Station in --warnung-text, siehe
@@ -1092,6 +1132,76 @@ function zahlSkaliert(formatiert) {
     return spanne;
 }
 
+// ===== Balkenspalte (Gestaltungsauftrag, Punkt 5) =====
+//
+// "Zudem ist die Ausrichtung der Balken nicht korrekt, da gibt es keine
+// vertikale Flucht" - woertlich der Auftrag. Der Grund: zellbalken() legte
+// Balken UND Betrag bislang in EINE Zelle, als rechtsbuendige GRUPPE
+// (.zellbalken, justify-content: flex-end). Weil der Betrag mal 7,70 €
+// und mal 2.011,20 € breit ist, verschob das die ganze Gruppe von Zeile
+// zu Zeile unterschiedlich weit nach links - der Balken selbst teilte
+// zwar mit jeder anderen Zeile dieselbe SKALA (maximum), aber nicht
+// dieselbe NULLLINIE. Als Vergleichsmittel (Bissantz: "Zahlen sehen statt
+// lesen") ist ein Balken ohne gemeinsame Nulllinie wertlos - genau der
+// Befund, den diese Funktion behebt.
+//
+// Die Loesung ist keine neue Zeichentechnik, sondern eine ANDERE
+// Tabellenstruktur: der Balken bekommt eine EIGENE Spalte fester Breite
+// (.balken-spalte in style.css, 76px, unabhaengig vom Zelleninhalt),
+// die Zahl eine ZWEITE, gewohnt rechtsbuendige Spalte daneben. Jede Zeile
+// beginnt ihren Balken dadurch an DERSELBEN Bildschirmposition, egal wie
+// breit der Betrag der jeweiligen Zeile ist.
+//
+// Liefert ZWEI Spaltendefinitionen zum Einfuegen in ein spalten-Array
+// (Spread-Syntax, siehe Aufrufer in auswertungen.js) statt einer - der
+// Baustein steht HIER, weil vier Berichte in auswertungen.js unabhaengig
+// densselben Fehler geerbt haetten, waere er dort viermal von Hand
+// nachgebaut worden (derselbe Befund wie bei werkzeugleiste()/
+// uebersichtsstreifen() weiter oben: ein wiederkehrendes Muster gehoert
+// EINMAL nach rahmen.js, nicht mehrfach in einen Bereich).
+//
+// feld/titel: wie bei jeder Spalte - titel gilt fuer die ZAHLENSPALTE,
+// die Balkenspalte bleibt visuell ohne Ueberschrift (siehe ariaLabel
+// unten) statt denselben Titel ein zweites Mal zu zeigen.
+// maximum: die gemeinsame Skala ueber ALLE sichtbaren Zeilen (Bissantz) -
+// vom Aufrufer einmal ermittelt, wie bisher direkt an zellbalken()
+// uebergeben.
+// formatText(wert): formatiert NUR den Zahlwert zu einem fertigen String
+// (z. B. geldFormat) - zahlSkaliert() wird hier zentral angewendet, ein
+// Aufrufer muss es nicht mehr selbst tun.
+// optionen.klasse: String ODER (zeile) => String fuer die Zahlenspalte,
+// Vorgabe 'zahl' (siehe zahlKlasse() in auswertungen.js).
+// optionen.farbe: String ODER (wert, zeile) => String, an zellbalken()
+// weitergereicht - als Funktion, weil eine Balkenfarbe von der Zeile
+// abhaengen kann (Stationsauslastung: bernstein sobald der Fuellstand
+// voll ist).
+// optionen.ariaLabel: der zugaengliche Name der titel-losen
+// Balkenspalte, Vorgabe "<titel> (Balken)" - dieselbe Ueberlegung wie
+// bei der Aktionen-Spalte in zeigeListe() weiter unten: keine sichtbare
+// zweite Ueberschrift, aber eine <th> ohne jeden Namen liesse die Spalte
+// fuer einen Screenreader namenlos wirken.
+function balkenSpalten(feld, titel, maximum, formatText, optionen = {}) {
+    const { klasse = 'zahl', farbe = null, ariaLabel = `${titel} (Balken)` } = optionen;
+    return [
+        {
+            feld,
+            titel: '',
+            ariaLabel,
+            klasse: 'balken-spalte',
+            formatieren: (wert, zeile) => zellbalken(
+                wert, maximum, null,
+                farbe ? { farbe: typeof farbe === 'function' ? farbe(wert, zeile) : farbe } : {}
+            )
+        },
+        {
+            feld,
+            titel,
+            klasse,
+            formatieren: (wert) => zahlSkaliert(formatText(wert))
+        }
+    ];
+}
+
 // kennung: von neuerVorgang() geliefert, siehe Kommentar dort. Ein
 // veralteter Vorgang zeichnet die Liste nicht mehr - sonst überschriebe
 // ein spät zurückkommender Neuaufbau eines VORHERIGEN Bereichs oder
@@ -1140,7 +1250,14 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     const kopfZeile = document.createElement('tr');
     for (const spalte of spalten) {
         const th = document.createElement('th');
-        th.textContent = spalte.titel;
+        th.textContent = spalte.titel || '';
+        // ariaLabel: fuer eine Spalte OHNE sichtbaren Titel (siehe
+        // balkenSpalten() weiter unten) - dieselbe Ueberlegung wie bei
+        // der Aktionen-Spalte direkt darunter: eine zweite, sichtbare
+        // Ueberschrift ("Umsatz") neben der bereits betitelten
+        // Zahlenspalte waere Wiederholung, aber eine <th> ganz ohne
+        // Namen liesse die Spalte fuer einen Screenreader namenlos.
+        if (!spalte.titel && spalte.ariaLabel) th.setAttribute('aria-label', spalte.ariaLabel);
         kopfZeile.append(th);
     }
     if (aktionen) {

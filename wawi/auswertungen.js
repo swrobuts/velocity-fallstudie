@@ -26,9 +26,16 @@
 // v_wawi_km_co2 liefert schon die richtige, aggregierte Ebene.
 // ============================================
 
+// Navigations-Icon (Gestaltungsauftrag, Punkt 3): drei ansteigende
+// Balken - dieselbe Bissantz-Sprache wie die Balken/Sparklines dieses
+// Bereichs selbst, dieselbe Strichfamilie wie die vier anderen
+// Bereichs-Icons (siehe .bereich-icon in style.css).
+const ICON_AUSWERTUNGEN = '<svg viewBox="0 0 24 24"><path d="M6 19v-6M12 19V6M18 19v-9"/></svg>';
+
 bereichAnmelden({
     schluessel: 'auswertungen',
     titel: 'Auswertungen',
+    icon: ICON_AUSWERTUNGEN,
     // Nur die Leitung. v_wawi_stationsauslastung lässt zusätzlich
     // disposition durch (0018_wawi_sichten.sql, "hat_rolle('disposition')
     // or hat_rolle('leitung')") - die drei anderen Sichten filtern
@@ -345,13 +352,14 @@ async function umsatzRadtypZeigen(vorgang) {
         { feld: 'monat',          titel: 'Monat',        formatieren: (w) => monatFormat(w) },
         { feld: 'fahrten',        titel: 'Fahrten',      formatieren: zahlFormat, klasse: zahlKlasse() },
         { feld: 'minuten',        titel: 'Minuten',      formatieren: zahlFormat, klasse: zahlKlasse() },
-        {
-            // Bissantz: Balken in der Zelle, an einer GEMEINSAMEN Skala
-            // ausgerichtet - umsatzMaximum gilt für jede Zeile der Liste,
-            // nicht neu je Zeile berechnet.
-            feld: 'umsatz', titel: 'Umsatz', klasse: zahlKlasse(),
-            formatieren: (w) => zellbalken(w, umsatzMaximum, zahlSkaliert(geldFormat(w)))
-        },
+        // Bissantz: Balken an einer GEMEINSAMEN Skala ausgerichtet -
+        // umsatzMaximum gilt für jede Zeile der Liste, nicht neu je Zeile
+        // berechnet. Balken und Betrag in ZWEI Spalten (balkenSpalten() in
+        // rahmen.js), nicht mehr in einer gemeinsamen, rechtsbündigen
+        // Zelle - siehe dortiger Kommentar (Gestaltungsauftrag, Punkt 5:
+        // "keine vertikale Flucht", weil 7,70 € und 2.011,20 € die Gruppe
+        // unterschiedlich breit machten und den Balken mitzogen).
+        ...balkenSpalten('umsatz', 'Umsatz', umsatzMaximum, geldFormat),
         {
             feld: 'umsatz_je_fahrt', titel: 'Je Fahrt', klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(geldFormat(w))
@@ -506,15 +514,14 @@ async function umsatzKundengruppeZeigen(vorgang) {
         { feld: 'tarif',           titel: 'Tarif' },
         { feld: 'kunden',          titel: 'Kunden',     formatieren: zahlFormat, klasse: zahlKlasse() },
         { feld: 'fahrten',         titel: 'Fahrten',    formatieren: zahlFormat, klasse: zahlKlasse() },
-        {
-            // Dieselbe gemeinsame Skala wie im Radtyp-Reiter (Hichert:
-            // einheitliche Notation über alle Auswertungen) - hier über
-            // die Zeilen DIESER Tabelle, nicht über beide Umsatztabellen
-            // gemeinsam, weil "Umsatz je Monat und Tarif" und "Umsatz je
-            // Monat und Radtyp" unterschiedliche Vergleichsgruppen sind.
-            feld: 'umsatz', titel: 'Umsatz', klasse: zahlKlasse(),
-            formatieren: (w) => zellbalken(w, umsatzMaximum, zahlSkaliert(geldFormat(w)))
-        },
+        // Dieselbe gemeinsame Skala wie im Radtyp-Reiter (Hichert:
+        // einheitliche Notation über alle Auswertungen) - hier über die
+        // Zeilen DIESER Tabelle, nicht über beide Umsatztabellen
+        // gemeinsam, weil "Umsatz je Monat und Tarif" und "Umsatz je
+        // Monat und Radtyp" unterschiedliche Vergleichsgruppen sind.
+        // Balken/Betrag in zwei Spalten (balkenSpalten(), siehe
+        // Kommentar dort und im Radtyp-Reiter oben).
+        ...balkenSpalten('umsatz', 'Umsatz', umsatzMaximum, geldFormat),
         {
             feld: 'umsatz_je_kunde', titel: 'Je Kunde', klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(geldFormat(w))
@@ -631,10 +638,10 @@ async function kmCo2Zeigen(vorgang) {
         { feld: 'monat',    titel: 'Monat',   formatieren: (w) => monatFormat(w) },
         { feld: 'typ_code', titel: 'Radtyp' },
         { feld: 'fahrten',  titel: 'Fahrten', formatieren: zahlFormat, klasse: zahlKlasse() },
-        {
-            feld: 'kilometer', titel: 'Kilometer', klasse: zahlKlasse(),
-            formatieren: (w) => zellbalken(w, kilometerMaximum, zahlSkaliert(kmFormat(w)))
-        },
+        // Balken/Betrag in zwei Spalten (balkenSpalten() in rahmen.js) -
+        // siehe Kommentar dort und im Radtyp-Reiter (Gestaltungsauftrag,
+        // Punkt 5).
+        ...balkenSpalten('kilometer', 'Kilometer', kilometerMaximum, kmFormat),
         {
             // Schritt 2 des Auftrags, korrigiert - siehe Kommentar bei
             // co2ZelleText()/co2ZelleElement() weiter oben: der
@@ -774,18 +781,20 @@ async function stationsauslastungZeigen(vorgang) {
             formatieren: (w) => (w > 0 ? `+${zahlFormat(w)}` : zahlFormat(w)),
             klasse: (z) => zahlKlasse(z.saldo < 0 ? 'warnung' : z.saldo > 0 ? 'gut' : '')
         },
-        {
-            // Bissantz-Balken an einer FESTEN gemeinsamen Skala (0-100 %,
-            // nicht das Maximum dieser Liste) - anders als bei den
-            // Umsatzspalten ist hier die Obergrenze fachlich vorgegeben
-            // (eine Station kann nicht mehr als voll sein), keine relative
-            // Größe unter den zehn Zeilen. Farbe wie in der Textspalte
-            // daneben: bernstein, sobald die Station voll ist.
-            feld: 'fuellstand', titel: 'Füllstand',
-            formatieren: (w) => zellbalken(w, 1, prozentFormat(w),
-                { farbe: w >= 1 ? 'var(--warnung-text)' : 'var(--marine)' }),
+        // Bissantz-Balken an einer FESTEN gemeinsamen Skala (0-100 %,
+        // nicht das Maximum dieser Liste) - anders als bei den
+        // Umsatzspalten ist hier die Obergrenze fachlich vorgegeben (eine
+        // Station kann nicht mehr als voll sein), keine relative Größe
+        // unter den zehn Zeilen. Farbe wie in der Textspalte daneben:
+        // bernstein, sobald die Station voll ist - als Funktion an
+        // balkenSpalten() übergeben, weil sie vom WERT dieser Zeile
+        // abhängt (siehe Kommentar dort). Balken/Betrag in zwei Spalten,
+        // aus demselben Grund wie in den drei Reitern davor
+        // (Gestaltungsauftrag, Punkt 5).
+        ...balkenSpalten('fuellstand', 'Füllstand', 1, prozentFormat, {
+            farbe: (w) => (w >= 1 ? 'var(--warnung-text)' : 'var(--marine)'),
             klasse: (z) => zahlKlasse(z.fuellstand >= 1 ? 'warnung' : '')
-        }
+        })
     ], stationsauslastungMaske);
 
     zeigeUebersicht(vorgang, stationsauslastungUebersicht(zeilen));

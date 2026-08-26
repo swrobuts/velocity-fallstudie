@@ -20,9 +20,17 @@
 // fn_-Funktion.
 // ============================================
 
+// Navigations-Icon (Gestaltungsauftrag, Punkt 3): derselbe Schraubenschluessel
+// wie der Flotten-Status "In Wartung" (siehe RAD_ICONS.wartung in flotte.js) -
+// dieselbe Bedeutung verdient dasselbe Symbol, nicht ein zweites,
+// aehnliches. Strichfamilie wie die vier anderen Bereichs-Icons (siehe
+// .bereich-icon in style.css).
+const ICON_INSTANDHALTUNG = '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 005.4-5.4l-2.6 2.6-2-2z"/></svg>';
+
 bereichAnmelden({
     schluessel: 'instandhaltung',
     titel: 'Instandhaltung',
+    icon: ICON_INSTANDHALTUNG,
     // Dieselben Rollen, die auch v_wawi_schaden und v_wawi_auftrag
     // durchlassen (0018_wawi_sichten.sql) - waeren sie hier weiter
     // gefasst, saehe etwa die Disposition den Menuepunkt und dahinter

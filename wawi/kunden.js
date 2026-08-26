@@ -13,9 +13,22 @@
 // keine fn_-Funktion.
 // ============================================
 
+// Navigations-Icon (Gestaltungsauftrag, Punkt 3): eine Person - derselbe
+// Gedanke wie beim Fahrrad-Icon in flotte.js, dieselbe Strichfamilie
+// (siehe .bereich-icon in style.css).
+const ICON_KUNDSCHAFT = '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-4 3.2-6.6 7-6.6s7 2.6 7 6.6"/></svg>';
+
 bereichAnmelden({
     schluessel: 'kunden',
-    titel: 'Kunden',
+    // Gestaltungsauftrag, Punkt 2: "Kunden" -> "Kundschaft" - NUR der
+    // angezeigte Titel. Der Schluessel 'kunden' (Rollenpruefungen,
+    // Navigationszustand), der Dateiname kunden.js und jede darauf
+    // aufbauende Funktion/Variable bleiben unangetastet - eine
+    // Umbenennung des SCHLUESSELS haette v_wawi_kunde, alle Aufrufer und
+    // tools/wawi_check.py mitgerissen, ohne dass der Auftrag danach
+    // verlangt.
+    titel: 'Kundschaft',
+    icon: ICON_KUNDSCHAFT,
     // Dieselben Rollen, die auch v_wawi_kunde durchlaesst (siehe
     // db/aufbau/0018_wawi_sichten.sql) - waeren sie hier weiter gefasst,
     // saehe etwa die Werkstatt den Menuepunkt und dahinter eine leere

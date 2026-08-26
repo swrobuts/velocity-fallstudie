@@ -221,14 +221,34 @@ button {
   color: var(--flaeche);
 }
 
+/* Wortmarke (Gestaltungsauftrag, Punkt 1): "VeloCity WaWi" trug das
+   Produktwort frueher in --rot - reine Deko, denn Rot bedeutet in dieser
+   Warenwirtschaft sonst immer etwas (ein defektes Rad, eine
+   unumkehrbare Handlung, "hier hinsehen" bei aktiver Navigation/Reiter,
+   siehe .sparklinie-markierung weiter unten). Firma und Produkt trennen
+   sich jetzt ueber GEWICHT (leicht/fett) statt ueber Farbe, dazwischen
+   eine schmale, halbtransparente Linie statt eines Trennzeichens im
+   Fliesstext - ruhig und beruflich, wie der Auftrag verlangt. */
 #kopfleiste .wortmarke {
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   letter-spacing: 0.02em;
   justify-self: start;
 }
 
-#kopfleiste .wortmarke b {
-  color: var(--rot);
+.wortmarke-firma {
+  font-weight: 400;
+}
+
+.wortmarke-produkt {
+  font-weight: 700;
+}
+
+.wortmarke-trenner {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 #feld-suche {
@@ -366,6 +386,13 @@ button {
   background: var(--grund);
 }
 
+/* Gestaltungsauftrag, Punkt 2: die fünf Rubriken sollen als solche
+   erkennbar sein, nicht als fünf gleich schwere Textzeilen. padding
+   oben/unten (statt der Knöpfe direkt gegeneinanderzustellen) gibt dem
+   ganzen Streifen die Luft, die DATEV Unternehmen online als Maßstab
+   vorgibt; gap zwischen den Knöpfen trennt jede Rubrik sichtbar von der
+   nächsten, statt dass nur die Haarlinie am aktiven Eintrag den
+   Unterschied macht. */
 #navigation {
   grid-area: nav;
   background: var(--flaeche);
@@ -373,16 +400,31 @@ button {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  padding: 12px 8px;
 }
 
 /* Ein Eintrag je erlaubtem Bereich - rahmen.js erzeugt sie, hier nur
    das Aussehen. Nicht erlaubte Bereiche stehen erst gar nicht im DOM,
-   deshalb reicht reines Styling der vorhandenen Knöpfe. */
+   deshalb reicht reines Styling der vorhandenen Knöpfe.
+   flex mit Icon (siehe .bereich-icon unten, Gestaltungsauftrag Punkt 3):
+   grössere Innenabstaende und ein eigener Rahmenradius machen aus der
+   Zeile eine abgegrenzte Flaeche statt eines blossen Textes - dieselbe
+   "Rubrik statt Zeile"-Absicht wie oben bei #navigation. */
 #navigation button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-align: left;
-  padding: 12px 16px;
+  padding: 11px 14px;
   border: none;
-  border-left: 3px solid transparent;
+  /* 4px schon im Ruhezustand (transparent), nicht erst am aktiven
+     Eintrag: sonst verschoebe der Wechsel auf aria-current="page" Icon
+     und Text um die Differenz zur bisherigen 3px-Breite - derselbe
+     Grundsatz wie bei .zeilen-aktionen-zelle in dieser Datei ("Layout
+     verschiebt sich" ist der Fehler, vor dem der Auftrag warnt). */
+  border-left: 4px solid transparent;
+  border-radius: 6px;
   background: transparent;
   color: var(--text);
   font-size: var(--schrift);
@@ -392,11 +434,44 @@ button {
   background: var(--grund);
 }
 
+/* Deutlichere Auszeichnung des aktiven Bereichs (Gestaltungsauftrag,
+   Punkt 2): die Fahne selbst ist schon im Ruhezustand 4px breit (statt
+   vormals 3px, siehe Kommentar oben) und faerbt sich hier nur ein - dazu
+   ein Hauch dunklerer Hintergrund als der blosse Hover-Ton, damit der
+   aktive Eintrag auf den ersten Blick auffaellt, nicht erst am
+   Fettschnitt des Textes. */
 #navigation button[aria-current="page"] {
   border-left-color: var(--rot);
-  background: var(--grund);
+  background: #eef1f7;
   color: var(--marine);
   font-weight: 600;
+}
+
+/* ===== Rubrik-Icons (Gestaltungsauftrag, Punkt 3) =====
+   EIN Regelsatz fuer alle fuenf Icons statt einer Klasse je Symbol - das
+   IST die "Familie", die der Auftrag verlangt: gleiche Strichstaerke,
+   gleiches Raster, gleiche optische Groesse, unabhaengig davon, welches
+   der fuenf bereich.icon-Markups (siehe die *.js-Dateien) gerade
+   einghaengt ist. stroke: currentColor statt einer eigenen Farbe: das
+   Icon folgt damit automatisch der Textfarbe des Knopfs (Ruhezustand,
+   :hover, aria-current="page") - eine zweite Farbregel je Zustand
+   entfaellt. Dieselbe Sprache (1.6px Strich, rund) wie .zeilen-aktion
+   svg weiter unten, die einzige andere Stelle dieser Oberflaeche mit
+   selbst gezeichneten Icons - eine zweite, andersartige Bildsprache
+   waere kein zweites Vokabular, sondern ein Bruch. */
+.bereich-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.bereich-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 #arbeitsbereich {
@@ -484,22 +559,33 @@ button {
   border-bottom: 1px solid var(--linie);
 }
 
-/* ===== Übersichtsstreifen (zeigeUebersicht, Gestaltungsauftrag Auswertungen) =====
-   Ruhig und dicht statt schmückend - DATEV Unternehmen online als
-   Maßstab (siehe Auftrag): eine Haarlinie trennt die Kacheln
-   voneinander und den Streifen von der Tabelle darunter, kein Rahmen um
-   jede einzelne Zahl, keine Hintergrundfarbe außer der Fläche selbst. */
+/* ===== Übersichtsstreifen (zeigeUebersicht, Gestaltungsauftrag Punkt 4) =====
+   Wörtlich der Auftrag: "Die Kopfleiste mit den Sparklines ist sehr
+   gedrängt, hebe das deutlich besser von den unteren Tabellen ab und
+   gestalte es nochmals deutlich professioneller." Zwei Änderungen dafür,
+   beide aus der DATEV-Leitlinie ("großzügiger Weißraum"), nicht aus
+   zusätzlichem Schmuck:
+   1. Der Streifen bekommt den hellen Grundton (--grund), sonst nur
+      Seitenhintergrund/Hover - anders als die reine Haarlinie zuvor setzt
+      das den Streifen auf den ERSTEN Blick von der weißen Tabelle
+      darunter ab, nicht erst beim genauen Hinsehen an der 1px-Kante.
+   2. Deutlich mehr Innenabstand je Kachel (siehe .uebersichtskachel/
+      -titel/-zeile/-hinweis unten) - Zahl, Sparkline und Erläuterung
+      standen vorher auf 10px Rand zusammengedrängt, das war der
+      konkrete Befund ("sehr gedrängt"). Beides gilt für ALLE FÜNF
+      Bereiche gleichzeitig, weil der Streifen hier - an EINER Stelle -
+      und nicht in jedem Bereich einzeln definiert ist. */
 .uebersichtsstreifen {
   flex: 0 0 auto;
   display: flex;
   border-bottom: 1px solid var(--linie);
-  background: var(--flaeche);
+  background: var(--grund);
 }
 
 .uebersichtskachel {
   flex: 1 1 0;
   min-width: 0;
-  padding: 10px 16px;
+  padding: 18px 24px;
   border-right: 1px solid var(--linie);
 }
 
@@ -510,19 +596,19 @@ button {
 .uebersichtskachel-titel {
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
   color: var(--text-leise);
-  margin-bottom: 2px;
+  margin-bottom: 8px;
 }
 
 .uebersichtskachel-zeile {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
 
 .uebersichtskachel-wert {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--marine);
   font-variant-numeric: tabular-nums;
@@ -538,7 +624,7 @@ button {
 .uebersichtskachel-hinweis {
   font-size: 11px;
   color: var(--text-leise);
-  margin-top: 3px;
+  margin-top: 8px;
   line-height: 1.4;
 }
 
@@ -648,6 +734,30 @@ button {
 
 .zellbalken-grafik {
   flex: 0 0 auto;
+}
+
+/* ===== Balkenspalte (balkenSpalten() in rahmen.js, Gestaltungsauftrag
+   Punkt 5) =====
+   "Keine vertikale Flucht", wörtlich der Auftrag: solange Balken und
+   Betrag dieselbe Zelle als rechtsbündige GRUPPE teilten (.zellbalken
+   oben), verschob ein unterschiedlich breiter Betrag (7,70 € gegen
+   2.011,20 €) die ganze Gruppe von Zeile zu Zeile - der Balken selbst
+   begann dadurch nie an derselben Bildschirmposition, obwohl alle Zeilen
+   dieselbe Skala teilten. Eine EIGENE Spalte fester Breite behebt das:
+   die Zelle hat jetzt nur noch den Balken als Inhalt, keinen
+   Zellennachbarn mehr, der sie unterschiedlich breit machen könnte - 76px
+   = 56px Balkenbreite (zellbalken()-Vorgabe) plus beidseitig etwas Luft.
+   flex-start statt des ererbten flex-end (siehe .zellbalken oben): der
+   Balken soll an der LINKEN Spaltenkante beginnen, in Lesereihenfolge vor
+   dem rechtsbündigen Betrag in der Nachbarspalte - nicht an die rechte
+   Kante seiner eigenen, jetzt ohnehin schon knappen Spalte gedrückt. */
+.balken-spalte {
+  width: 76px;
+  white-space: nowrap;
+}
+
+.balken-spalte .zellbalken {
+  justify-content: flex-start;
 }
 
 .zellbalken-hintergrund {

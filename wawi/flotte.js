@@ -8,9 +8,17 @@
 // die eigene Sicht v_wawi_flotte - keine Basistabelle, keine fn_-Funktion.
 // ============================================
 
+// Navigations-Icon (Gestaltungsauftrag, Punkt 3): ein Fahrrad, aus zwei
+// Radkreisen und einem Rahmen-Pfad - dasselbe Raster/dieselbe
+// Strichstaerke wie die vier anderen Bereichs-Icons (siehe .bereich-icon
+// in style.css, die Familie entsteht dort aus EINEM Regelsatz, nicht aus
+// fuenf Einzelfestlegungen).
+const ICON_FLOTTE = '<svg viewBox="0 0 24 24"><circle cx="6.5" cy="17" r="3.3"/><circle cx="17.5" cy="17" r="3.3"/><path d="M6.5 17l4-8.5h3.4l3.1 5.5h3.5"/><path d="M12.6 12l-2.3 5"/></svg>';
+
 bereichAnmelden({
     schluessel: 'flotte',
     titel: 'Flotte',
+    icon: ICON_FLOTTE,
     // Dieselben Rollen, die auch v_wawi_flotte durchlaesst. Waeren sie
     // hier weiter gefasst, saehe ein Werkstattmitarbeiter den Menuepunkt
     // und dahinter eine leere Liste - der schlechteste aller Zustaende,

@@ -48,7 +48,22 @@
 
   <div id="zustand-arbeit" hidden>
     <header id="kopfleiste">
-      <span class="wortmarke">VeloCity <b>WaWi</b></span>
+      <!-- Frueher stand hier "VeloCity WaWi" mit dem zweiten Wort in
+           --rot - reine Deko, ohne dass Rot hier irgendetwas bedeutete.
+           Rot traegt in dieser Warenwirtschaft sonst ueberall Bedeutung
+           (ein defektes Rad, eine unumkehrbare Handlung, "hier
+           hinsehen" bei aktiver Navigation/Reiter, siehe style.css) -
+           dieselbe Farbe an der Wortmarke ohne einen dieser Gruende
+           verwaesserte das. Firma/Produkt unterscheiden sich jetzt allein
+           ueber GEWICHT (leicht/fett, .wortmarke-firma/-produkt), getrennt
+           durch eine schmale Linie statt eines Farbwechsels - ruhig und
+           beruflich, wie der Auftrag es verlangt, ohne eine Bedeutung zu
+           beanspruchen, die nicht ihre ist. -->
+      <span class="wortmarke">
+        <span class="wortmarke-firma">VeloCity</span>
+        <span class="wortmarke-trenner" aria-hidden="true"></span>
+        <span class="wortmarke-produkt">WaWi</span>
+      </span>
       <input id="feld-suche" type="search" placeholder="Suchen" aria-label="Suchen">
       <!-- Frueher stand hier "swrobuts@googlemail.com · disposition,
            werkstatt, ..." als Fliesstext direkt in der Kopfleiste - der
