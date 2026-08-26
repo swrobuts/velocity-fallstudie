@@ -99,30 +99,30 @@ on conflict (code) do update
       beschreibung = excluded.beschreibung;
 
 comment on table velocity.mitarbeiter_rolle is
-  'Zuordnung m:n. Abweichung vom Entwurf aus Phase 1, begruendet mit Datenminimierung.';
+  'Zuordnung m:n. Abweichung vom Entwurf aus Phase 1, begründet mit Datenminimierung.';
 
 -- ---------------------------------------------------------------------
 -- Dokumentation: test_doku_vollstaendig verlangt einen Kommentar an
 -- jeder Tabelle und jeder Fachspalte (ausser erstellt_am/geaendert_am).
 -- ---------------------------------------------------------------------
 comment on table velocity.rolle is
-  'Fachliche Klassifikation von Aufgabenbereichen. Tabelle statt ENUM, weil ihr spaeter Rechte angehaengt werden - siehe Kommentar am create table.';
-comment on column velocity.rolle.rolle_id is 'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
-comment on column velocity.rolle.code is 'Fachlicher Schluessel, in Code und Policies referenzierbar - anders als bezeichnung, die sich aendern darf, ohne dass etwas bricht.';
-comment on column velocity.rolle.bezeichnung is 'Anzeigename der Rolle in der Oberflaeche.';
-comment on column velocity.rolle.beschreibung is 'Erlaeutert den Aufgabenzuschnitt der Rolle. Optional, weil nicht jede kuenftige Rolle Erklaerungsbedarf hat.';
+  'Fachliche Klassifikation von Aufgabenbereichen. Tabelle statt ENUM, weil ihr später Rechte angehängt werden - siehe Kommentar am create table.';
+comment on column velocity.rolle.rolle_id is 'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
+comment on column velocity.rolle.code is 'Fachlicher Schlüssel, in Code und Policies referenzierbar - anders als bezeichnung, die sich ändern darf, ohne dass etwas bricht.';
+comment on column velocity.rolle.bezeichnung is 'Anzeigename der Rolle in der Oberfläche.';
+comment on column velocity.rolle.beschreibung is 'Erläutert den Aufgabenzuschnitt der Rolle. Optional, weil nicht jede künftige Rolle Erklärungsbedarf hat.';
 
 comment on table velocity.mitarbeiter is
-  'Person, die die Warenwirtschaft bedient. Anders als kunde keine Vertragsbeziehung, sondern eine oder mehrere Rollen ueber mitarbeiter_rolle.';
-comment on column velocity.mitarbeiter.mitarbeiter_id is 'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
-comment on column velocity.mitarbeiter.personalnummer is 'Fachlicher Schluessel der Personalverwaltung, unabhaengig vom Anmeldekonto.';
-comment on column velocity.mitarbeiter.auth_uid is 'Verknuepfung zur Anmeldung. Leer, solange sich die Person nie angemeldet hat.';
+  'Person, die die Warenwirtschaft bedient. Anders als kunde keine Vertragsbeziehung, sondern eine oder mehrere Rollen über mitarbeiter_rolle.';
+comment on column velocity.mitarbeiter.mitarbeiter_id is 'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
+comment on column velocity.mitarbeiter.personalnummer is 'Fachlicher Schlüssel der Personalverwaltung, unabhängig vom Anmeldekonto.';
+comment on column velocity.mitarbeiter.auth_uid is 'Verknüpfung zur Anmeldung. Leer, solange sich die Person nie angemeldet hat.';
 comment on column velocity.mitarbeiter.vorname is 'Vorname laut Personalakte.';
 comment on column velocity.mitarbeiter.nachname is 'Nachname laut Personalakte.';
-comment on column velocity.mitarbeiter.email is 'Dienstliche Kontaktadresse, zugleich eindeutiges Merkmal fuer die Anmeldung.';
+comment on column velocity.mitarbeiter.email is 'Dienstliche Kontaktadresse, zugleich eindeutiges Merkmal für die Anmeldung.';
 comment on column velocity.mitarbeiter.eingetreten_am is 'Datum des Diensteintritts. Bezugspunkt von mitarbeiter_austritt_chk, das ein Austrittsdatum davor abweist.';
 comment on column velocity.mitarbeiter.ausgetreten_am is 'Datum des Ausscheidens. NULL, solange die Person aktiv oder beurlaubt ist; Pflicht sobald status = ausgeschieden (GR16, siehe mitarbeiter_ausgeschieden_chk).';
-comment on column velocity.mitarbeiter.status is 'aktiv, beurlaubt oder ausgeschieden. Erst der Status entscheidet ueber den Zugriff, das Austrittsdatum allein wuerde nicht reichen (GR16).';
+comment on column velocity.mitarbeiter.status is 'aktiv, beurlaubt oder ausgeschieden. Erst der Status entscheidet über den Zugriff, das Austrittsdatum allein würde nicht reichen (GR16).';
 
-comment on column velocity.mitarbeiter_rolle.mitarbeiter_id is 'Haelfte des zusammengesetzten Schluessels: welcher Mitarbeiter die Rolle hat.';
-comment on column velocity.mitarbeiter_rolle.rolle_id is 'Haelfte des zusammengesetzten Schluessels: welche Rolle zugeordnet ist.';
+comment on column velocity.mitarbeiter_rolle.mitarbeiter_id is 'Hälfte des zusammengesetzten Schlüssels: welcher Mitarbeiter die Rolle hat.';
+comment on column velocity.mitarbeiter_rolle.rolle_id is 'Hälfte des zusammengesetzten Schlüssels: welche Rolle zugeordnet ist.';

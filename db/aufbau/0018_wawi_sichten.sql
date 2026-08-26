@@ -49,8 +49,8 @@ $$;
 
 comment on function velocity.fn_luftlinie_km(numeric, numeric, numeric, numeric) is
   'Distanz zweier Koordinaten in km nach Haversine, ohne PostGIS. Liefert null, '
-  'sobald ein Punkt fehlt - eine geschaetzte Distanz aus einem halben Koordinatenpaar '
-  'waere Erfindung, keine Schaetzung.';
+  'sobald ein Punkt fehlt - eine geschätzte Distanz aus einem halben Koordinatenpaar '
+  'wäre Erfindung, keine Schätzung.';
 
 -- ---- Flotte ----------------------------------------------------------
 create or replace view velocity.v_wawi_flotte as
@@ -90,47 +90,47 @@ select f.fahrrad_id,
     or velocity.hat_rolle('leitung');
 
 comment on view velocity.v_wawi_flotte is
-  'Arbeitssicht der Flotte fuer Disposition und Werkstatt: ein Rad je Zeile mit '
+  'Arbeitssicht der Flotte für Disposition und Werkstatt: ein Rad je Zeile mit '
   'Standort, Wartungshistorie und dem dringlichsten offenen Schaden. Filtert '
-  'selbst ueber velocity.hat_rolle, siehe Kopfkommentar der Datei.';
+  'selbst über velocity.hat_rolle, siehe Kopfkommentar der Datei.';
 comment on column velocity.v_wawi_flotte.fahrrad_id is
-  'Schluessel des Rades, fuer Verweise in die Werkstatt- und Auftragssichten.';
+  'Schlüssel des Rades, für Verweise in die Werkstatt- und Auftragssichten.';
 comment on column velocity.v_wawi_flotte.rahmennummer is
   'Am Rahmen ablesbare Nummer, der Bezug zum physischen Rad vor Ort.';
 comment on column velocity.v_wawi_flotte.typ_code is
-  'Fachlicher Schluessel des Fahrradtyps, fuer Filter in der Oberflaeche.';
+  'Fachlicher Schlüssel des Fahrradtyps, für Filter in der Oberfläche.';
 comment on column velocity.v_wawi_flotte.typ is
   'Anzeigename des Fahrradtyps.';
 comment on column velocity.v_wawi_flotte.hersteller is
   'Name des Herstellers laut Modellstammdaten.';
 comment on column velocity.v_wawi_flotte.modell is
-  'Modellbezeichnung, fuer die Ersatzteilsuche in der Werkstatt.';
+  'Modellbezeichnung, für die Ersatzteilsuche in der Werkstatt.';
 comment on column velocity.v_wawi_flotte.status is
   'Aktueller Betriebsstatus des Rades - verfuegbar, ausgeliehen, wartung, '
-  'defekt oder ausgemustert. Anders als die oeffentliche '
+  'defekt oder ausgemustert. Anders als die öffentliche '
   'v_verfuegbares_fahrrad zeigt diese Sicht gerade auch die NICHT '
-  'verfuegbaren Raeder: die Disposition muss wissen, welches Rad in der '
-  'Wartung haengt, nicht nur, welches gerade fahrbereit ist.';
+  'verfügbaren Räder: die Disposition muss wissen, welches Rad in der '
+  'Wartung hängt, nicht nur, welches gerade fahrbereit ist.';
 comment on column velocity.v_wawi_flotte.angeschafft_am is
-  'Anschaffungsdatum, Grundlage fuer Abschreibung und Alterseinschaetzung.';
+  'Anschaffungsdatum, Grundlage für Abschreibung und Alterseinschätzung.';
 comment on column velocity.v_wawi_flotte.standort is
   'Name der Station, an der das Rad steht. NULL bei freiem Abstellort oder '
   'laufender Fahrt.';
 comment on column velocity.v_wawi_flotte.latitude is
-  'Breitengrad der zuletzt gemeldeten Position, unabhaengig von einer Station.';
+  'Breitengrad der zuletzt gemeldeten Position, unabhängig von einer Station.';
 comment on column velocity.v_wawi_flotte.longitude is
-  'Laengengrad der zuletzt gemeldeten Position, unabhaengig von einer Station.';
+  'Längengrad der zuletzt gemeldeten Position, unabhängig von einer Station.';
 comment on column velocity.v_wawi_flotte.akkustand_prozent is
-  'Ladestand des Akkus. NULL bei Raedern ohne Elektroantrieb.';
+  'Ladestand des Akkus. NULL bei Rädern ohne Elektroantrieb.';
 comment on column velocity.v_wawi_flotte.letzte_wartung is
   'Abschlusszeitpunkt des zuletzt erledigten Wartungsauftrags. NULL, wenn das '
   'Rad noch nie in der Werkstatt war.';
 comment on column velocity.v_wawi_flotte.offene_schaeden is
   'Zahl der noch nicht abgeschlossenen Schadensmeldungen (offen oder in_arbeit).';
 comment on column velocity.v_wawi_flotte.hoechste_schwere is
-  'Schwerste noch offene Meldung nach der natuerlichen Rangfolge des ENUM '
+  'Schwerste noch offene Meldung nach der natürlichen Rangfolge des ENUM '
   '(gering < mittel < fahruntauglich), nicht alphabetisch. NULL, wenn keine '
-  'offene Meldung vorliegt - entscheidet, ob das Rad ueberhaupt eingeplant '
+  'offene Meldung vorliegt - entscheidet, ob das Rad überhaupt eingeplant '
   'werden darf.';
 
 -- ---- Kunden ----------------------------------------------------------
@@ -170,26 +170,26 @@ comment on view velocity.v_wawi_kunde is
   'Arbeitssicht des Kundenservice: Stammdaten, laufender Tarif und Kontostand '
   'je Kunde. Bewusst ohne einzelne Fahrten (Bewegungsprofil), ohne '
   'Zahlungsmittel (GR17) und ohne alles aus dem Schema auth - was niemand '
-  'braucht, wird nicht ausgeliefert. Filtert selbst ueber velocity.hat_rolle.';
+  'braucht, wird nicht ausgeliefert. Filtert selbst über velocity.hat_rolle.';
 comment on column velocity.v_wawi_kunde.kunde_id is
-  'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
+  'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_kunde.kundennummer is
-  'Fachlicher, am Telefon nennbarer Schluessel des Kunden.';
+  'Fachlicher, am Telefon nennbarer Schlüssel des Kunden.';
 comment on column velocity.v_wawi_kunde.anrede is
-  'Anrede fuer die Korrespondenz.';
+  'Anrede für die Korrespondenz.';
 comment on column velocity.v_wawi_kunde.vorname is
   'Vorname des Kunden.';
 comment on column velocity.v_wawi_kunde.nachname is
   'Nachname des Kunden.';
 comment on column velocity.v_wawi_kunde.email is
-  'Kontaktadresse, zugleich eindeutiges Merkmal fuer die Anmeldung.';
+  'Kontaktadresse, zugleich eindeutiges Merkmal für die Anmeldung.';
 comment on column velocity.v_wawi_kunde.telefon is
-  'Telefonische Kontaktmoeglichkeit, optional.';
+  'Telefonische Kontaktmöglichkeit, optional.';
 comment on column velocity.v_wawi_kunde.status is
   'aktiv, gesperrt oder geschlossen - der Kundenservice muss ihn sehen, um '
-  'eine Sperre ueberhaupt erklaeren zu koennen.';
+  'eine Sperre überhaupt erklären zu können.';
 comment on column velocity.v_wawi_kunde.registriert_am is
-  'Zeitpunkt der Registrierung, unabhaengig vom technischen erstellt_am.';
+  'Zeitpunkt der Registrierung, unabhängig vom technischen erstellt_am.';
 comment on column velocity.v_wawi_kunde.strasse is
   'Strasse der Rechnungsadresse. NULL, solange keine hinterlegt ist.';
 comment on column velocity.v_wawi_kunde.hausnummer is
@@ -199,7 +199,7 @@ comment on column velocity.v_wawi_kunde.plz is
 comment on column velocity.v_wawi_kunde.ort is
   'Ort der Rechnungsadresse.';
 comment on column velocity.v_wawi_kunde.tarif_code is
-  'Fachlicher Schluessel des aktuell laufenden Tarifs. NULL ohne aktive '
+  'Fachlicher Schlüssel des aktuell laufenden Tarifs. NULL ohne aktive '
   'Mitgliedschaft.';
 comment on column velocity.v_wawi_kunde.tarif is
   'Anzeigename des aktuell laufenden Tarifs.';
@@ -212,7 +212,7 @@ comment on column velocity.v_wawi_kunde.fahrten_gesamt is
 comment on column velocity.v_wawi_kunde.fahrten_offen is
   'Anzahl aktuell laufender Ausleihen, typischerweise null oder eins.';
 comment on column velocity.v_wawi_kunde.umsatz_brutto is
-  'Summe aller Rechnungsbetraege des Kunden, unabhaengig vom Zahlungsstatus.';
+  'Summe aller Rechnungsbeträge des Kunden, unabhängig vom Zahlungsstatus.';
 comment on column velocity.v_wawi_kunde.offener_betrag is
   'Summe der gestellten, noch nicht bezahlten Rechnungen - der Betrag, um den '
   'es bei einer Mahnung geht.';
@@ -240,12 +240,12 @@ select s.station_id,
 comment on view velocity.v_wawi_station is
   'Arbeitssicht der Disposition: Kapazitaet und Belegung je Station, samt '
   'stillgelegter Stationen (GR22 - eine Station wird stillgelegt, nicht '
-  'geloescht, deshalb bleibt sie hier sichtbar statt zu verschwinden). '
-  'Filtert selbst ueber velocity.hat_rolle.';
+  'gelöscht, deshalb bleibt sie hier sichtbar statt zu verschwinden). '
+  'Filtert selbst über velocity.hat_rolle.';
 comment on column velocity.v_wawi_station.station_id is
-  'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
+  'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_station.stationsnummer is
-  'Fachlicher Schluessel der Station.';
+  'Fachlicher Schlüssel der Station.';
 comment on column velocity.v_wawi_station.name is
   'Anzeigename der Station.';
 comment on column velocity.v_wawi_station.strasse is
@@ -257,24 +257,24 @@ comment on column velocity.v_wawi_station.plz is
 comment on column velocity.v_wawi_station.ort is
   'Ort des Stationsstandorts.';
 comment on column velocity.v_wawi_station.latitude is
-  'Breitengrad fuer den Kartenmarker.';
+  'Breitengrad für den Kartenmarker.';
 comment on column velocity.v_wawi_station.longitude is
-  'Laengengrad fuer den Kartenmarker.';
+  'Längengrad für den Kartenmarker.';
 comment on column velocity.v_wawi_station.kapazitaet is
-  'Zahl der Stellplaetze laut Stammdaten.';
+  'Zahl der Stellplätze laut Stammdaten.';
 comment on column velocity.v_wawi_station.belegt is
-  'Zahl der Raeder, die aktuell an dieser Station stehen.';
+  'Zahl der Räder, die aktuell an dieser Station stehen.';
 comment on column velocity.v_wawi_station.frei is
-  'Kapazitaet abzueglich belegt. Anders als die oeffentliche v_station ohne '
-  'greatest(..., 0): GR15 verhindert Ueberfuellung bereits beim Abstellen, '
-  'ein negativer Wert waere hier also ein Alarmsignal und keine Zahl, die '
+  'Kapazitaet abzüglich belegt. Anders als die öffentliche v_station ohne '
+  'greatest(..., 0): GR15 verhindert Überfüllung bereits beim Abstellen, '
+  'ein negativer Wert wäre hier also ein Alarmsignal und keine Zahl, die '
   'kaschiert werden sollte.';
 comment on column velocity.v_wawi_station.betriebszeitraum is
   'Zeitraum, in dem die Station betrieben wird oder wurde. Offenes Ende '
   'bedeutet weiterhin in Betrieb.';
 comment on column velocity.v_wawi_station.in_betrieb is
-  'Wahr, solange betriebszeitraum kein Ende traegt. Kurzform fuer die '
-  'Oberflaeche, ohne dass sie den Bereichstyp selbst auswerten muss.';
+  'Wahr, solange betriebszeitraum kein Ende trägt. Kurzform für die '
+  'Oberfläche, ohne dass sie den Bereichstyp selbst auswerten muss.';
 
 -- ---- Schadensmeldungen -----------------------------------------------
 create or replace view velocity.v_wawi_schaden as
@@ -299,44 +299,44 @@ select sm.schadensmeldung_id,
 
 comment on view velocity.v_wawi_schaden is
   'Arbeitssicht der Werkstatt: jede Schadensmeldung mit Rad, Schwere und '
-  'Alter, unabhaengig vom Bearbeitungsstand. Filtert selbst ueber '
+  'Alter, unabhängig vom Bearbeitungsstand. Filtert selbst über '
   'velocity.hat_rolle. Bewusst OHNE disposition (Spec 5.1 nennt nur '
-  'werkstatt) - Gesamtpruefung Punkt 3: die Disposition sieht ihren Bedarf '
-  'fuer die Flottenplanung, offene Schaeden je Rad, bereits ueber '
+  'werkstatt) - Gesamtprüfung Punkt 3: die Disposition sieht ihren Bedarf '
+  'für die Flottenplanung, offene Schäden je Rad, bereits über '
   'v_wawi_flotte.offene_schaeden und .hoechste_schwere. Freitext '
-  '(kategorie, beschreibung) und melderart braucht sie dafuer nicht - "was '
-  'niemand braucht, wird nicht ausgeliefert" (Spec 4.2). Ein frueherer '
-  'Entwurf liess disposition hier zusaetzlich zu; das war derselbe '
-  'Rechteueberschuss, der bei v_wawi_umsatz_radtyp weiter unten schon '
-  'einmal zurueckgenommen wurde.';
+  '(kategorie, beschreibung) und melderart braucht sie dafür nicht - "was '
+  'niemand braucht, wird nicht ausgeliefert" (Spec 4.2). Ein früherer '
+  'Entwurf liess disposition hier zusätzlich zu; das war derselbe '
+  'Rechteüberschuss, der bei v_wawi_umsatz_radtyp weiter unten schon '
+  'einmal zurückgenommen wurde.';
 comment on column velocity.v_wawi_schaden.schadensmeldung_id is
-  'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
+  'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_schaden.fahrrad_id is
   'Das gemeldete Rad.';
 comment on column velocity.v_wawi_schaden.rahmennummer is
   'Am Rahmen ablesbare Nummer des gemeldeten Rades.';
 comment on column velocity.v_wawi_schaden.typ_code is
-  'Fahrradtyp des gemeldeten Rades, fuer Filter in der Werkstattliste.';
+  'Fahrradtyp des gemeldeten Rades, für Filter in der Werkstattliste.';
 comment on column velocity.v_wawi_schaden.gemeldet_am is
   'Zeitpunkt der Meldung.';
 comment on column velocity.v_wawi_schaden.melderart is
-  '"Kunde" oder "Mitarbeiter" - wer gemeldet hat, nicht wer genau. Fuer die '
-  'Werkstatt zaehlt nur die Herkunft der Meldung, eine Rueckfrage laeuft '
-  'ueber den Kundenservice bzw. die Personalliste, nicht ueber diese Sicht.';
+  '"Kunde" oder "Mitarbeiter" - wer gemeldet hat, nicht wer genau. Für die '
+  'Werkstatt zählt nur die Herkunft der Meldung, eine Rückfrage läuft '
+  'über den Kundenservice bzw. die Personalliste, nicht über diese Sicht.';
 comment on column velocity.v_wawi_schaden.kategorie is
   'Freitextliche Grobeinordnung des Schadens, etwa Bremse oder Licht.';
 comment on column velocity.v_wawi_schaden.beschreibung is
   'Freitext des Melders, was am Rad auffiel.';
 comment on column velocity.v_wawi_schaden.schwere is
-  'Einordnung der Dringlichkeit; fahruntauglich sperrt das Rad faktisch fuer '
+  'Einordnung der Dringlichkeit; fahruntauglich sperrt das Rad faktisch für '
   'die Werkstattplanung.';
 comment on column velocity.v_wawi_schaden.status is
   'Bearbeitungsstand der Meldung: offen, in_arbeit, behoben oder verworfen.';
 comment on column velocity.v_wawi_schaden.offen_seit is
   'Zeitspanne seit der Meldung bis jetzt - die Wartezeit, nicht ein fester '
-  'Zeitpunkt, damit sie beim naechsten Aufruf automatisch weiterlaeuft.';
+  'Zeitpunkt, damit sie beim nächsten Aufruf automatisch weiterläuft.';
 comment on column velocity.v_wawi_schaden.auftraege is
-  'Zahl der Wartungsauftraege, die aus dieser Meldung entstanden sind. Mehr '
+  'Zahl der Wartungsaufträge, die aus dieser Meldung entstanden sind. Mehr '
   'als einer zeigt einen wiederholten oder nachgebesserten Fall an.';
 
 -- ---- Wartungsauftraege -----------------------------------------------
@@ -357,33 +357,33 @@ select w.wartungsauftrag_id,
 
 comment on view velocity.v_wawi_auftrag is
   'Arbeitssicht der Werkstatt: jeder Wartungsauftrag mit Rad, Bearbeiter und '
-  'Bearbeitungsstand. Filtert selbst ueber velocity.hat_rolle.';
+  'Bearbeitungsstand. Filtert selbst über velocity.hat_rolle.';
 comment on column velocity.v_wawi_auftrag.wartungsauftrag_id is
-  'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
+  'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_auftrag.auftragsnummer is
-  'Fachlicher, in der Werkstatt gesprochener Schluessel des Auftrags.';
+  'Fachlicher, in der Werkstatt gesprochener Schlüssel des Auftrags.';
 comment on column velocity.v_wawi_auftrag.fahrrad_id is
   'Das Rad, an dem gearbeitet wird.';
 comment on column velocity.v_wawi_auftrag.rahmennummer is
-  'Am Rahmen ablesbare Nummer des Rades, fuer den Werkstattzuruf ohne '
+  'Am Rahmen ablesbare Nummer des Rades, für den Werkstattzuruf ohne '
   'Nachschlagen.';
 comment on column velocity.v_wawi_auftrag.schadensmeldung_id is
-  'Ausloesende Meldung. NULL bei einer geplanten Inspektion ohne konkreten '
+  'Auslösende Meldung. NULL bei einer geplanten Inspektion ohne konkreten '
   'Schaden.';
 comment on column velocity.v_wawi_auftrag.eroeffnet_am is
-  'Zeitpunkt der Auftragseroeffnung.';
+  'Zeitpunkt der Auftragseröffnung.';
 comment on column velocity.v_wawi_auftrag.erledigt_am is
-  'Zeitpunkt des Abschlusses. NULL, solange der Auftrag laeuft.';
+  'Zeitpunkt des Abschlusses. NULL, solange der Auftrag läuft.';
 comment on column velocity.v_wawi_auftrag.status is
   'Bearbeitungsstand des Auftrags: offen, in_arbeit, erledigt oder '
   'abgebrochen.';
 comment on column velocity.v_wawi_auftrag.arbeitszeit_minuten is
-  'Aufgewendete Werkstattzeit in Minuten. NULL, solange der Auftrag laeuft.';
+  'Aufgewendete Werkstattzeit in Minuten. NULL, solange der Auftrag läuft.';
 comment on column velocity.v_wawi_auftrag.bemerkung is
   'Freitext der Werkstatt zum Auftrag, etwa verbaute Ersatzteile ohne '
   'eigenen Lagerbezug.';
 comment on column velocity.v_wawi_auftrag.bearbeiter is
-  'Voller Name des zustaendigen Werkstattmitarbeiters. NULL, solange der '
+  'Voller Name des zuständigen Werkstattmitarbeiters. NULL, solange der '
   'Auftrag noch niemandem zugeteilt ist.';
 
 -- =====================================================================
@@ -433,16 +433,16 @@ select date_trunc('month', a.startzeit)::date              as monat,
  group by 1, 2, 3;
 
 comment on view velocity.v_wawi_umsatz_radtyp is
-  'Monatsumsatz je Fahrradtyp, ausschliesslich fuer die Leitung - die Spec '
-  'reserviert Auswertungen fuer diese Rolle, disposition bekommt nur die '
+  'Monatsumsatz je Fahrradtyp, ausschliesslich für die Leitung - die Spec '
+  'reserviert Auswertungen für diese Rolle, disposition bekommt nur die '
   'Stationsauslastung. sum(ep.betrag) ohne zweite Multiplikation mit '
-  'vorzeichen - siehe Kommentar am create view. Filtert selbst ueber '
+  'vorzeichen - siehe Kommentar am create view. Filtert selbst über '
   'velocity.hat_rolle.';
 comment on column velocity.v_wawi_umsatz_radtyp.monat is
-  'Erster Tag des Monats der Fahrt (startzeit), Gruppierungsschluessel fuer '
+  'Erster Tag des Monats der Fahrt (startzeit), Gruppierungsschlüssel für '
   'einen Zeitverlauf statt einer bedeutungslosen Jahressumme.';
 comment on column velocity.v_wawi_umsatz_radtyp.typ_code is
-  'Fachlicher Schluessel des Fahrradtyps.';
+  'Fachlicher Schlüssel des Fahrradtyps.';
 comment on column velocity.v_wawi_umsatz_radtyp.typ is
   'Anzeigename des Fahrradtyps.';
 comment on column velocity.v_wawi_umsatz_radtyp.fahrten is
@@ -452,10 +452,10 @@ comment on column velocity.v_wawi_umsatz_radtyp.minuten is
 comment on column velocity.v_wawi_umsatz_radtyp.umsatz is
   'Summe der Entgeltpositionen (ep.betrag), bereits vorzeichenbehaftet aus '
   'fn_position_anlegen. Keine zweite Multiplikation mit vorzeichen - das '
-  'wuerde Rabatte und Kappungen zu Einnahmen machen, siehe Kopfkommentar.';
+  'würde Rabatte und Kappungen zu Einnahmen machen, siehe Kopfkommentar.';
 comment on column velocity.v_wawi_umsatz_radtyp.umsatz_je_fahrt is
-  'umsatz geteilt durch fahrten, die Kennzahl fuer den Vergleich zwischen '
-  'Radtypen unabhaengig von deren Flottengroesse.';
+  'umsatz geteilt durch fahrten, die Kennzahl für den Vergleich zwischen '
+  'Radtypen unabhängig von deren Flottengrösse.';
 
 -- ---- Umsatz nach Kundengruppe ----------------------------------------
 -- Die Gruppe ist der Tarif zum Zeitpunkt der FAHRT, nicht der heutige.
@@ -480,15 +480,15 @@ select date_trunc('month', a.startzeit)::date   as monat,
  group by 1, 2, 3;
 
 comment on view velocity.v_wawi_umsatz_kundengruppe is
-  'Monatsumsatz je Tarifgruppe fuer die Leitung. Die Gruppe ist der Tarif zum '
+  'Monatsumsatz je Tarifgruppe für die Leitung. Die Gruppe ist der Tarif zum '
   'Zeitpunkt der Fahrt (a.mitgliedschaft_id), nicht der heutige - siehe '
   'Kommentar am create view. sum(ep.betrag) ohne zweite Multiplikation mit '
-  'vorzeichen, wie bei v_wawi_umsatz_radtyp. Filtert selbst ueber '
+  'vorzeichen, wie bei v_wawi_umsatz_radtyp. Filtert selbst über '
   'velocity.hat_rolle.';
 comment on column velocity.v_wawi_umsatz_kundengruppe.monat is
   'Erster Tag des Monats der Fahrt.';
 comment on column velocity.v_wawi_umsatz_kundengruppe.tarif_code is
-  'Fachlicher Schluessel des Tarifs zum Fahrtzeitpunkt, oder OHNE ohne '
+  'Fachlicher Schlüssel des Tarifs zum Fahrtzeitpunkt, oder OHNE ohne '
   'zugeordnete Mitgliedschaft (etwa Einzelfahrten ohne Vertrag).';
 comment on column velocity.v_wawi_umsatz_kundengruppe.tarif is
   'Anzeigename des Tarifs, oder "Ohne Mitgliedschaft" als Sammelgruppe.';
@@ -500,8 +500,8 @@ comment on column velocity.v_wawi_umsatz_kundengruppe.umsatz is
   'Summe der Entgeltpositionen (ep.betrag), bereits vorzeichenbehaftet - siehe '
   'Kopfkommentar von v_wawi_umsatz_radtyp.';
 comment on column velocity.v_wawi_umsatz_kundengruppe.umsatz_je_kunde is
-  'umsatz geteilt durch kunden, die Kennzahl fuer den Vergleich zwischen '
-  'Tarifgruppen unabhaengig von deren Kundenzahl.';
+  'umsatz geteilt durch kunden, die Kennzahl für den Vergleich zwischen '
+  'Tarifgruppen unabhängig von deren Kundenzahl.';
 
 -- ---- Strecke je Fahrt ------------------------------------------------
 -- Hilfssicht. Sie traegt die einzige Stelle, an der geschaetzt wird -
@@ -621,85 +621,85 @@ select date_trunc('month', k.startzeit)::date as monat,
  group by 1, 2;
 
 comment on view velocity.v_wawi_fahrt_km is
-  'Einzige Stelle, an der Strecken geschaetzt werden. ist_geschaetzt sagt, ob; '
-  'verfahren sagt, WOMIT. Traegt seit der Gesamtpruefung vom 25.08.2026 eine '
+  'Einzige Stelle, an der Strecken geschätzt werden. ist_geschaetzt sagt, ob; '
+  'verfahren sagt, WOMIT. Trägt seit der Gesamtprüfung vom 25.08.2026 eine '
   'eigene velocity.hat_rolle(''leitung'')-Schranke statt nur '
-  'velocity.ist_mitarbeiter(): die Zeilen fuehren ausleihe_id, kunde_id und '
+  'velocity.ist_mitarbeiter(): die Zeilen führen ausleihe_id, kunde_id und '
   'startzeit je Einzelfahrt, also ein Bewegungsprofil - Spec 4.2 gibt das '
-  'ausdruecklich nur der Leitung, nicht jeder Fachrolle. Der fruehere Stand '
-  'begruendete das Fehlen der eigenen Schranke mit demselben Satz, der hier '
-  'jetzt fuer das Gegenteil steht: eine Sicht, die ihre Schranke von einer '
+  'ausdrücklich nur der Leitung, nicht jeder Fachrolle. Der frühere Stand '
+  'begründete das Fehlen der eigenen Schranke mit demselben Satz, der hier '
+  'jetzt für das Gegenteil steht: eine Sicht, die ihre Schranke von einer '
   'anderen erbt, hat keine eigene.';
 comment on column velocity.v_wawi_fahrt_km.ausleihe_id is
-  'Schluessel der Fahrt, fuer den Verweis aus v_wawi_km_co2 auf die einzelne '
+  'Schlüssel der Fahrt, für den Verweis aus v_wawi_km_co2 auf die einzelne '
   'Ausleihe hinter der Aggregation.';
 comment on column velocity.v_wawi_fahrt_km.startzeit is
-  'Beginn der Fahrt, Grundlage der Monatsgruppierung und der Zeitscheibe fuer '
+  'Beginn der Fahrt, Grundlage der Monatsgruppierung und der Zeitscheibe für '
   'Umwegfaktor, Reisegeschwindigkeit und CO2-Annahmen (rechenannahme.gueltigkeit).';
 comment on column velocity.v_wawi_fahrt_km.kunde_id is
-  'Fahrender Kunde, fuer eine spaetere Auswertung je Kunde ohne erneuten Join '
+  'Fahrender Kunde, für eine spätere Auswertung je Kunde ohne erneuten Join '
   'auf ausleihe.';
 comment on column velocity.v_wawi_fahrt_km.typ_code is
   'Fahrradtyp der Fahrt, bestimmt in v_wawi_km_co2 die passende CO2-Annahme '
-  '(co2_rad fuer CITY, sonst co2_ebike).';
+  '(co2_rad für CITY, sonst co2_ebike).';
 comment on column velocity.v_wawi_fahrt_km.kilometer is
-  'Drei Faelle, siehe verfahren: gemessene Strecke (ausleihe.distanz_km), wo '
+  'Drei Fälle, siehe verfahren: gemessene Strecke (ausleihe.distanz_km), wo '
   'vorhanden; sonst, bei einer Rundfahrt mit Luftlinie null (Start- und '
-  'Endpunkt gleich), aus der Dauer geschaetzt (rechenannahme '
+  'Endpunkt gleich), aus der Dauer geschätzt (rechenannahme '
   'reisegeschwindigkeit); sonst aus der Luftlinie zwischen Start- und '
   'Endpunkt mal Umwegfaktor (rechenannahme). NULL, wenn weder Distanz noch '
   'beide Koordinatenpaare vorliegen - eine erfundene Zahl aus einem halben '
-  'Koordinatenpaar waere schlimmer als keine.';
+  'Koordinatenpaar wäre schlimmer als keine.';
 comment on column velocity.v_wawi_fahrt_km.ist_geschaetzt is
   'Wahr, wenn kilometer nicht gemessen wurde (verfahren aus_dauer oder '
-  'aus_luftlinie). Gehoert zu jeder Verwendung von kilometer dazu, siehe '
+  'aus_luftlinie). Gehört zu jeder Verwendung von kilometer dazu, siehe '
   'Kopfkommentar der Sicht.';
 comment on column velocity.v_wawi_fahrt_km.verfahren is
   'gemessen, aus_dauer oder aus_luftlinie - WOMIT kilometer ermittelt wurde. '
-  'Noetig, weil ist_geschaetzt allein zwei verschiedene Schaetzverfahren in '
-  'einen Topf wuerfe: aus_dauer (Rundfahrten, Luftlinie strukturell null, '
+  'Nötig, weil ist_geschaetzt allein zwei verschiedene Schätzverfahren in '
+  'einen Topf würfe: aus_dauer (Rundfahrten, Luftlinie strukturell null, '
   'Reisegeschwindigkeit als Grundlage) und aus_luftlinie (Luftlinie mal '
-  'Umwegfaktor) irren sich auf unterschiedliche Weise und muessen sich '
+  'Umwegfaktor) irren sich auf unterschiedliche Weise und müssen sich '
   'getrennt auswerten lassen.';
 comment on view velocity.v_wawi_km_co2 is
-  'CO2-Ersparnis gegenueber dem Pkw, ausschliesslich fuer die Leitung - eigener '
+  'CO2-Ersparnis gegenüber dem Pkw, ausschliesslich für die Leitung - eigener '
   'Rollenfilter (hat_rolle(''leitung'')), nicht nur geerbt aus '
-  'v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt gehoeren in jede '
+  'v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt gehören in jede '
   'Darstellung dieser Zahl.';
 comment on column velocity.v_wawi_km_co2.monat is
   'Erster Tag des Monats der Fahrt (v_wawi_fahrt_km.startzeit).';
 comment on column velocity.v_wawi_km_co2.typ_code is
   'Fahrradtyp, bestimmt die verglichene Eigenemission (co2_rad vs. co2_ebike).';
 comment on column velocity.v_wawi_km_co2.fahrten is
-  'Zahl der Fahrten mit bekannter oder geschaetzter Kilometerzahl in diesem '
-  'Monat und Typ. Nenner fuer anteil_geschaetzt.';
+  'Zahl der Fahrten mit bekannter oder geschätzter Kilometerzahl in diesem '
+  'Monat und Typ. Nenner für anteil_geschaetzt.';
 comment on column velocity.v_wawi_km_co2.kilometer is
-  'Summe der gefahrenen Kilometer, gemessen und geschaetzt gemeinsam - '
-  'anteil_geschaetzt und fahrten_geschaetzt sagen, wie viel davon Schaetzung '
+  'Summe der gefahrenen Kilometer, gemessen und geschätzt gemeinsam - '
+  'anteil_geschaetzt und fahrten_geschaetzt sagen, wie viel davon Schätzung '
   'ist.';
 comment on column velocity.v_wawi_km_co2.fahrten_geschaetzt is
-  'Zaehler zu anteil_geschaetzt: Anzahl der Fahrten dieser Zeile mit '
-  'geschaetzter statt gemessener Kilometerzahl. Noetig, weil ein einfaches '
-  'Mittel von anteil_geschaetzt ueber mehrere Zeilen NICHT den '
+  'Zähler zu anteil_geschaetzt: Anzahl der Fahrten dieser Zeile mit '
+  'geschätzter statt gemessener Kilometerzahl. Nötig, weil ein einfaches '
+  'Mittel von anteil_geschaetzt über mehrere Zeilen NICHT den '
   'fahrtgewichteten Gesamtanteil ergibt, sobald die Zeilen unterschiedlich '
-  'gross sind (hier: 1 bis ueber 1000 Fahrten je Monat/Typ) - wer richtig '
+  'gross sind (hier: 1 bis über 1000 Fahrten je Monat/Typ) - wer richtig '
   'gewichten will, summiert fahrten_geschaetzt und fahrten getrennt und '
   'teilt erst danach.';
 comment on column velocity.v_wawi_km_co2.anteil_geschaetzt is
-  'Anteil der Fahrten DIESER ZEILE, deren Kilometer geschaetzt statt gemessen '
-  'wurden (0 bis 1) - keine ueber Zeilen gemittelte Kennzahl. Ein arithmetisches '
-  'Mittel dieser Spalte ueber mehrere Monate/Typen ist NICHT der '
+  'Anteil der Fahrten DIESER ZEILE, deren Kilometer geschätzt statt gemessen '
+  'wurden (0 bis 1) - keine über Zeilen gemittelte Kennzahl. Ein arithmetisches '
+  'Mittel dieser Spalte über mehrere Monate/Typen ist NICHT der '
   'Gesamtanteil, weil die Zeilen sehr unterschiedlich viele Fahrten tragen '
-  '(1 bis ueber 1000); dafuer fahrten_geschaetzt verwenden. Ohne diese Spalte '
-  'waere kilometer eine Zahl ohne Herkunftsangabe - sie ist die Unsicherheit '
+  '(1 bis über 1000); dafür fahrten_geschaetzt verwenden. Ohne diese Spalte '
+  'wäre kilometer eine Zahl ohne Herkunftsangabe - sie ist die Unsicherheit '
   'von kilometer und co2_ersparnis_kg, kein optionales Detail.';
 comment on column velocity.v_wawi_km_co2.co2_ersparnis_kg is
   'Differenz zwischen der CO2-Last eines vergleichbaren Pkw und der des '
-  'tatsaechlich genutzten Fahrzeugs (rechenannahme co2_pkw minus co2_rad bzw. '
-  'co2_ebike, beide in g CO2e/Pkm, daher /1000 fuer kg) fuer die gefahrenen '
-  'Kilometer dieser Zeile. Basiert teilweise auf geschaetzten Kilometern - '
+  'tatsächlich genutzten Fahrzeugs (rechenannahme co2_pkw minus co2_rad bzw. '
+  'co2_ebike, beide in g CO2e/Pkm, daher /1000 für kg) für die gefahrenen '
+  'Kilometer dieser Zeile. Basiert teilweise auf geschätzten Kilometern - '
   'siehe anteil_geschaetzt und fahrten_geschaetzt, ohne die diese Zahl '
-  'unbelegt waere.';
+  'unbelegt wäre.';
 
 -- ---- Stationsauslastung ----------------------------------------------
 -- Zu- und Abgaenge zaehlen ausschliesslich abgeschlossene Ausleihen: eine
@@ -726,18 +726,18 @@ select s.station_id,
  where velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung');
 
 comment on view velocity.v_wawi_stationsauslastung is
-  'Zu- und Abgaenge sowie aktueller Fuellstand je Station, fuer Disposition '
-  'und Leitung. Zaehlt ausschliesslich abgeschlossene Ausleihen - eine '
+  'Zu- und Abgaenge sowie aktueller Fuellstand je Station, für Disposition '
+  'und Leitung. Zählt ausschliesslich abgeschlossene Ausleihen - eine '
   'laufende Fahrt hat an ihrer Endstation noch keinen Zugang. Filtert selbst '
-  'ueber velocity.hat_rolle.';
+  'über velocity.hat_rolle.';
 comment on column velocity.v_wawi_stationsauslastung.station_id is
-  'Schluessel der Station.';
+  'Schlüssel der Station.';
 comment on column velocity.v_wawi_stationsauslastung.stationsnummer is
-  'Fachlicher Schluessel der Station.';
+  'Fachlicher Schlüssel der Station.';
 comment on column velocity.v_wawi_stationsauslastung.name is
   'Anzeigename der Station.';
 comment on column velocity.v_wawi_stationsauslastung.kapazitaet is
-  'Zahl der Stellplaetze laut Stammdaten, Nenner von fuellstand.';
+  'Zahl der Stellplätze laut Stammdaten, Nenner von fuellstand.';
 comment on column velocity.v_wawi_stationsauslastung.abgaenge is
   'Zahl der abgeschlossenen Ausleihen, die an dieser Station begonnen haben - '
   'wie oft ein Rad hier abgeholt wurde.';
@@ -745,17 +745,17 @@ comment on column velocity.v_wawi_stationsauslastung.zugaenge is
   'Zahl der abgeschlossenen Ausleihen, die an dieser Station geendet haben - '
   'wie oft ein Rad hier abgestellt wurde.';
 comment on column velocity.v_wawi_stationsauslastung.saldo is
-  'zugaenge minus abgaenge. Positiv heisst, die Station sammelt ueber die Zeit '
-  'mehr Raeder an, als sie abgibt - ein Hinweis fuer die Disposition, wo '
+  'zugaenge minus abgaenge. Positiv heisst, die Station sammelt über die Zeit '
+  'mehr Räder an, als sie abgibt - ein Hinweis für die Disposition, wo '
   'nachverteilt werden muss.';
 comment on column velocity.v_wawi_stationsauslastung.belegt is
-  'Zahl der Raeder, die aktuell laut fahrrad_position an dieser Station '
-  'stehen - der Momentanwert, anders als abgaenge/zugaenge, die ueber die '
-  'gesamte Historie zaehlen.';
+  'Zahl der Räder, die aktuell laut fahrrad_position an dieser Station '
+  'stehen - der Momentanwert, anders als abgaenge/zugaenge, die über die '
+  'gesamte Historie zählen.';
 comment on column velocity.v_wawi_stationsauslastung.fuellstand is
   'belegt geteilt durch kapazitaet, gerundet auf drei Nachkommastellen. NULL '
-  'bei einer Station ohne Stellplaetze (kapazitaet = 0), was laut '
-  'station_kapazitaet_chk nicht vorkommen sollte, aber nullif schuetzt vor '
+  'bei einer Station ohne Stellplätze (kapazitaet = 0), was laut '
+  'station_kapazitaet_chk nicht vorkommen sollte, aber nullif schützt vor '
   'einer Division durch null statt einem Fehler ohne Kontext.';
 
 -- =====================================================================
@@ -795,19 +795,19 @@ select mo.modell_id,
     or velocity.hat_rolle('leitung');
 
 comment on view velocity.v_wawi_modell is
-  'Auswahlliste fuer die Radanlage. Entstanden beim Bau der Oberflaeche, weil api_rad_anlegen eine modell_id verlangt und keine Sicht sie herausgab.';
+  'Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_rad_anlegen eine modell_id verlangt und keine Sicht sie herausgab.';
 comment on column velocity.v_wawi_modell.modell_id is
-  'Schluessel des Modells, der Wert, den api_rad_anlegen als p_modell_id erwartet.';
+  'Schlüssel des Modells, der Wert, den api_rad_anlegen als p_modell_id erwartet.';
 comment on column velocity.v_wawi_modell.hersteller is
-  'Name des Herstellers, fuer die Auswahlliste ohne Nachschlagen einer Nummer.';
+  'Name des Herstellers, für die Auswahlliste ohne Nachschlagen einer Nummer.';
 comment on column velocity.v_wawi_modell.modellbezeichnung is
   'Modellbezeichnung laut Stammdaten, zusammen mit hersteller die lesbare '
   'Kennung des Eintrags.';
 comment on column velocity.v_wawi_modell.typ_id is
-  'Schluessel des Fahrradtyps, falls die Oberflaeche danach filtert oder '
+  'Schlüssel des Fahrradtyps, falls die Oberfläche danach filtert oder '
   'gruppiert.';
 comment on column velocity.v_wawi_modell.typ_code is
-  'Fachlicher Schluessel des Fahrradtyps.';
+  'Fachlicher Schlüssel des Fahrradtyps.';
 comment on column velocity.v_wawi_modell.typ is
   'Anzeigename des Fahrradtyps.';
 comment on column velocity.v_wawi_modell.hat_elektro is
@@ -815,7 +815,7 @@ comment on column velocity.v_wawi_modell.hat_elektro is
   'von E-Bike-Modellen zu unterscheiden, ohne den Typnamen zu parsen.';
 comment on column velocity.v_wawi_modell.zuladung_kg is
   'Maximale Zuladung des Fahrradtyps laut Stammdaten. NULL, wenn der Typ '
-  'keine Zuladungsgrenze fuehrt.';
+  'keine Zuladungsgrenze führt.';
 comment on column velocity.v_wawi_modell.raeder_im_bestand is
-  'Zahl der nicht ausgemusterten Raeder dieses Modells im Bestand - zeigt an, '
-  'was ueblich ist, ohne dass jemand in der Flottensicht nachsehen muss.';
+  'Zahl der nicht ausgemusterten Räder dieses Modells im Bestand - zeigt an, '
+  'was üblich ist, ohne dass jemand in der Flottensicht nachsehen muss.';

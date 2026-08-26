@@ -57,8 +57,8 @@ begin
   values (now(), 'Referenzdaten (erzeugt)',
           'velocity.rechnung, velocity.rechnungsposition',
           0, v_summe, 0,
-          format('ERFUNDENE Rechnungen fuer die Lehre, nicht erhoben - berechnet '
-                 'aus den ebenfalls erfundenen Referenzfahrten. Monatslauf ueber '
+          format('ERFUNDENE Rechnungen für die Lehre, nicht erhoben - berechnet '
+                 'aus den ebenfalls erfundenen Referenzfahrten. Monatslauf über '
                  '09/2025 bis 07/2026 (elf Monate); 08/2026 bleibt bewusst '
                  'unabgerechnet, weil dieser Monat beim Lauf noch nicht vorbei '
                  'ist. %s neue Rechnungen in diesem Lauf.', v_summe));

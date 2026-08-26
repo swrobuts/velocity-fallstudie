@@ -280,7 +280,7 @@ end;
 $$;
 
 comment on function velocity.trg_radposition_pruefen() is
-  'Prueft GR13. Steht als Constraint-Trigger und nicht als CHECK, weil die '
+  'Prüft GR13. Steht als Constraint-Trigger und nicht als CHECK, weil die '
   'Regel den Status des Rades braucht - und der liegt in einer anderen Tabelle. '
   'Genau da endet, was ein CHECK leisten kann.';
 
@@ -382,8 +382,8 @@ alter function velocity.trg_radposition_pruefen()  owner to postgres;
 alter function velocity.trg_stellplaetze_pruefen() owner to postgres;
 
 comment on function velocity.trg_stellplaetze_pruefen() is
-  'Prueft GR15. Steht als Constraint-Trigger und nicht als CHECK, weil die Regel '
-  'Zeilen einer anderen Tabelle zaehlt.';
+  'Prüft GR15. Steht als Constraint-Trigger und nicht als CHECK, weil die Regel '
+  'Zeilen einer anderen Tabelle zählt.';
 
 drop trigger if exists trg_position_stellplaetze on velocity.fahrrad_position;
 create constraint trigger trg_position_stellplaetze
@@ -442,5 +442,5 @@ as $$
 $$;
 
 comment on function velocity.fn_im_geschaeftsgebiet(numeric, numeric) is
-  'Wahr, wenn der Punkt in einem aktiven Geschaeftsgebiet liegt. Nutzt den '
+  'Wahr, wenn der Punkt in einem aktiven Geschäftsgebiet liegt. Nutzt den '
   'eingebauten Operator @> auf polygon - ohne PostGIS.';

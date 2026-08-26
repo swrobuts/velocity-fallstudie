@@ -184,8 +184,8 @@ begin
   values (now(), 'Referenzdaten (erzeugt)',
           'velocity.ausleihe, velocity.entgeltposition',
           0, v_zahl, 0,
-          format('ERFUNDENE Fahrten fuer die Lehre, nicht erhoben. '
-                 'ausleihe_id %s bis %s, Zeitraum %s bis %s. Betraege durch '
+          format('ERFUNDENE Fahrten für die Lehre, nicht erhoben. '
+                 'ausleihe_id %s bis %s, Zeitraum %s bis %s. Beträge durch '
                  'fn_ausleihe_abrechnen gerechnet, nicht gesetzt. distanz_km '
                  'bei rund 60 Prozent gesetzt, sonst null.',
                  v_erste + 1, v_letzte, c_von, c_bis));

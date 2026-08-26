@@ -147,10 +147,10 @@ select v.code, v.wert, v.einheit, v.gueltigkeit, v.quelle, v.erlaeuterung
      'Fahrrad ohne Motor, im Wesentlichen Herstellung und Wartung'),
     ('umwegfaktor',   1.2500, 'Faktor',     daterange(date '2025-01-01', null, '[)'),
      'Annahme dieser Fallstudie, nicht gemessen',
-     'Verhaeltnis der tatsaechlich gefahrenen Strecke zur Luftlinie im Stadtverkehr'),
+     'Verhältnis der tatsächlich gefahrenen Strecke zur Luftlinie im Stadtverkehr'),
     ('reisegeschwindigkeit', 13.0000, 'km/h', daterange(date '2025-01-01', null, '[)'),
      'Annahme dieser Fallstudie, nicht gemessen',
-     'Nur fuer Rundfahrten: wer dort startet, wo er endet, hat eine Luftlinie von '
+     'Nur für Rundfahrten: wer dort startet, wo er endet, hat eine Luftlinie von '
      'null. Dann bleibt die Dauer als einzige Grundlage.')
   ) as v(code, wert, einheit, gueltigkeit, quelle, erlaeuterung)
  where not exists (
@@ -158,29 +158,48 @@ select v.code, v.wert, v.einheit, v.gueltigkeit, v.quelle, v.erlaeuterung
     where r.code = v.code and r.gueltigkeit && v.gueltigkeit
  );
 
+-- Umlaute in der Erlaeuterung nachziehen: das insert oben trifft eine
+-- bereits vorhandene Zeile (gleicher code, ueberlappende gueltigkeit)
+-- nicht erneut, siehe "where not exists" oben. Ohne dieses update bliebe
+-- eine schon angelegte Zeile bei der alten, transliterierten Schreibweise
+-- stehen, auch nachdem die Werte oben berichtigt sind. Idempotent: nach
+-- dem ersten Lauf stimmt erlaeuterung bereits ueberein, das where greift
+-- dann nicht mehr.
+update velocity.rechenannahme
+   set erlaeuterung = v.erlaeuterung
+  from (values
+    ('umwegfaktor',
+     'Verhältnis der tatsächlich gefahrenen Strecke zur Luftlinie im Stadtverkehr'),
+    ('reisegeschwindigkeit',
+     'Nur für Rundfahrten: wer dort startet, wo er endet, hat eine Luftlinie von '
+     'null. Dann bleibt die Dauer als einzige Grundlage.')
+  ) as v(code, erlaeuterung)
+ where rechenannahme.code = v.code
+   and rechenannahme.erlaeuterung <> v.erlaeuterung;
+
 -- ---------------------------------------------------------------------
 -- Dokumentation: test_doku_vollstaendig verlangt einen Kommentar an
 -- jeder Tabelle und jeder Fachspalte (ausser erstellt_am/geaendert_am).
 -- ---------------------------------------------------------------------
 comment on table velocity.aenderungsprotokoll is
-  'Feldweise Spur jeder Aenderung an protokollierten Tabellen (Art. 5 Abs. 2 DSGVO). Eine Zeile je geaendertem Feld, nicht je Anweisung, damit sich die Historie eines einzelnen Feldes ohne Werkzeug herausfiltern laesst. tabelle/datensatz_id sind eine Spur, keine gepruefte Beziehung - wie beleg_tabelle/beleg_id bei fahrrad_ereignis.';
-comment on column velocity.aenderungsprotokoll.protokoll_id is 'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
-comment on column velocity.aenderungsprotokoll.zeitpunkt is 'Zeitpunkt der protokollierten Aenderung, unabhaengig vom technischen erstellt_am dieser Zeile.';
-comment on column velocity.aenderungsprotokoll.mitarbeiter_id is 'Wer die Aenderung ausgeloest hat. NULL, wenn kein angemeldeter Mitarbeiter ermittelbar war, etwa bei einem Wartungsskript - ein erfundener Verursacher waere schlechter als keiner.';
-comment on column velocity.aenderungsprotokoll.tabelle is 'Name der veraenderten Tabelle, aus tg_table_name des ausloesenden Triggers. Bewusst ohne Fremdschluessel: der Trigger und diese Tabelle sind fuer beliebige Zieltabellen gebaut, ein FK koennte nur auf eine einzige davon zeigen.';
-comment on column velocity.aenderungsprotokoll.datensatz_id is 'Primaerschluesselwert des veraenderten Datensatzes in seiner Tabelle. Bewusst ohne Fremdschluessel, siehe Kommentar an tabelle und an der Tabelle selbst.';
-comment on column velocity.aenderungsprotokoll.aktion is 'Art der Aenderung: INSERT, UPDATE oder DELETE, siehe aenderungsprotokoll_aktion_chk.';
-comment on column velocity.aenderungsprotokoll.feld is 'Name des veraenderten Feldes. Eine Zeile je Feld statt ein JSON-Klumpen, damit "wer hat je die E-Mail geaendert" ohne Werkzeug beantwortbar bleibt (GR19).';
-comment on column velocity.aenderungsprotokoll.wert_alt is 'Wert des Feldes vor der Aenderung, als Text. NULL bei INSERT. Text statt Originaltyp, weil ein und derselbe Trigger auf jede Tabelle und jede Spalte passen muss - ein typisierter Wert bräuchte eine eigene Spalte je Datentyp.';
-comment on column velocity.aenderungsprotokoll.wert_neu is 'Wert des Feldes nach der Aenderung, als Text. NULL bei DELETE. Gleicher Grund wie wert_alt: generischer Typ fuer einen tabellenunabhaengigen Trigger.';
+  'Feldweise Spur jeder Änderung an protokollierten Tabellen (Art. 5 Abs. 2 DSGVO). Eine Zeile je geändertem Feld, nicht je Anweisung, damit sich die Historie eines einzelnen Feldes ohne Werkzeug herausfiltern lässt. tabelle/datensatz_id sind eine Spur, keine geprüfte Beziehung - wie beleg_tabelle/beleg_id bei fahrrad_ereignis.';
+comment on column velocity.aenderungsprotokoll.protokoll_id is 'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
+comment on column velocity.aenderungsprotokoll.zeitpunkt is 'Zeitpunkt der protokollierten Änderung, unabhängig vom technischen erstellt_am dieser Zeile.';
+comment on column velocity.aenderungsprotokoll.mitarbeiter_id is 'Wer die Änderung ausgelöst hat. NULL, wenn kein angemeldeter Mitarbeiter ermittelbar war, etwa bei einem Wartungsskript - ein erfundener Verursacher wäre schlechter als keiner.';
+comment on column velocity.aenderungsprotokoll.tabelle is 'Name der veränderten Tabelle, aus tg_table_name des auslösenden Triggers. Bewusst ohne Fremdschlüssel: der Trigger und diese Tabelle sind für beliebige Zieltabellen gebaut, ein FK könnte nur auf eine einzige davon zeigen.';
+comment on column velocity.aenderungsprotokoll.datensatz_id is 'Primärschlüsselwert des veränderten Datensatzes in seiner Tabelle. Bewusst ohne Fremdschlüssel, siehe Kommentar an tabelle und an der Tabelle selbst.';
+comment on column velocity.aenderungsprotokoll.aktion is 'Art der Änderung: INSERT, UPDATE oder DELETE, siehe aenderungsprotokoll_aktion_chk.';
+comment on column velocity.aenderungsprotokoll.feld is 'Name des veränderten Feldes. Eine Zeile je Feld statt ein JSON-Klumpen, damit "wer hat je die E-Mail geändert" ohne Werkzeug beantwortbar bleibt (GR19).';
+comment on column velocity.aenderungsprotokoll.wert_alt is 'Wert des Feldes vor der Änderung, als Text. NULL bei INSERT. Text statt Originaltyp, weil ein und derselbe Trigger auf jede Tabelle und jede Spalte passen muss - ein typisierter Wert bräuchte eine eigene Spalte je Datentyp.';
+comment on column velocity.aenderungsprotokoll.wert_neu is 'Wert des Feldes nach der Änderung, als Text. NULL bei DELETE. Gleicher Grund wie wert_alt: generischer Typ für einen tabellenunabhängigen Trigger.';
 
 comment on table velocity.rechenannahme is
   'Zahlen, die eine Auswertung annimmt statt sie zu messen. Jede nennt ihre Quelle.';
-comment on column velocity.rechenannahme.annahme_id is 'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
-comment on column velocity.rechenannahme.code is 'Fachlicher Bezeichner der Annahme, etwa co2_pkw oder umwegfaktor. Auswertungen suchen darueber, nicht ueber den Surrogatschluessel.';
+comment on column velocity.rechenannahme.annahme_id is 'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
+comment on column velocity.rechenannahme.code is 'Fachlicher Bezeichner der Annahme, etwa co2_pkw oder umwegfaktor. Auswertungen suchen darüber, nicht über den Surrogatschlüssel.';
 comment on column velocity.rechenannahme.wert is 'Der angenommene Zahlenwert in der angegebenen Einheit.';
-comment on column velocity.rechenannahme.einheit is 'Einheit von wert, etwa g CO2e/Pkm, damit der Wert ohne Rueckfrage einzuordnen ist.';
-comment on column velocity.rechenannahme.gueltigkeit is 'Zeitraum, fuer den dieser Wert gilt. Ueberschneidungsfrei je code erzwungen durch rechenannahme_zeitraum_ex, damit eine Auswertung zu jedem Tag genau einen Wert findet.';
+comment on column velocity.rechenannahme.einheit is 'Einheit von wert, etwa g CO2e/Pkm, damit der Wert ohne Rückfrage einzuordnen ist.';
+comment on column velocity.rechenannahme.gueltigkeit is 'Zeitraum, für den dieser Wert gilt. Überschneidungsfrei je code erzwungen durch rechenannahme_zeitraum_ex, damit eine Auswertung zu jedem Tag genau einen Wert findet.';
 comment on column velocity.rechenannahme.quelle is
   'Pflichtangabe. Eine Annahme ohne Herkunft ist eine Behauptung.';
 comment on column velocity.rechenannahme.erlaeuterung is 'Freitext, was der Wert genau umfasst, etwa ob eine Vorkette eingerechnet ist.';

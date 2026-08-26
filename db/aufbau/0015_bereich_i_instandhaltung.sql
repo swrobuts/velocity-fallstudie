@@ -163,36 +163,36 @@ create trigger trg_fahrrad_ereignis
 -- ---------------------------------------------------------------------
 comment on table velocity.schadensmeldung is
   'Meldung eines Schadens an einem Rad, Ausgangspunkt der Instandhaltung. Genau ein Melder je Meldung, siehe schadensmeldung_melder_chk.';
-comment on column velocity.schadensmeldung.schadensmeldung_id is 'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
+comment on column velocity.schadensmeldung.schadensmeldung_id is 'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.schadensmeldung.fahrrad_id is 'Das gemeldete Rad.';
-comment on column velocity.schadensmeldung.gemeldet_am is 'Zeitpunkt der Meldung, unabhaengig vom technischen erstellt_am.';
-comment on column velocity.schadensmeldung.melder_kunde_id is 'Meldender Kunde. Gesetzt oder melder_mitarbeiter_id, nie beide (schadensmeldung_melder_chk) - sonst wuesste niemand, wen man zur Nachfrage anspricht.';
-comment on column velocity.schadensmeldung.melder_mitarbeiter_id is 'Meldender Mitarbeiter, etwa nach einer Sichtpruefung in der Werkstatt. Gesetzt oder melder_kunde_id, nie beide.';
+comment on column velocity.schadensmeldung.gemeldet_am is 'Zeitpunkt der Meldung, unabhängig vom technischen erstellt_am.';
+comment on column velocity.schadensmeldung.melder_kunde_id is 'Meldender Kunde. Gesetzt oder melder_mitarbeiter_id, nie beide (schadensmeldung_melder_chk) - sonst wüsste niemand, wen man zur Nachfrage anspricht.';
+comment on column velocity.schadensmeldung.melder_mitarbeiter_id is 'Meldender Mitarbeiter, etwa nach einer Sichtprüfung in der Werkstatt. Gesetzt oder melder_kunde_id, nie beide.';
 comment on column velocity.schadensmeldung.kategorie is 'Freitextliche Grobeinordnung des Schadens, etwa Bremse oder Licht. Keine feste Liste, weil sich Schadensbilder nicht sauber vorab abschliessen lassen.';
 comment on column velocity.schadensmeldung.beschreibung is 'Freitext des Melders, was am Rad auffiel.';
-comment on column velocity.schadensmeldung.schwere is 'Einordnung der Dringlichkeit; fahruntauglich sperrt das Rad faktisch fuer die Werkstattplanung, ohne dass diese Tabelle den Fahrradstatus selbst setzt.';
-comment on column velocity.schadensmeldung.status is 'Bearbeitungsstand der Meldung, unabhaengig vom Status des zugehoerigen Wartungsauftrags.';
+comment on column velocity.schadensmeldung.schwere is 'Einordnung der Dringlichkeit; fahruntauglich sperrt das Rad faktisch für die Werkstattplanung, ohne dass diese Tabelle den Fahrradstatus selbst setzt.';
+comment on column velocity.schadensmeldung.status is 'Bearbeitungsstand der Meldung, unabhängig vom Status des zugehörigen Wartungsauftrags.';
 
 comment on table velocity.wartungsauftrag is
   'Arbeitsauftrag der Werkstatt: eine Reparatur nach Schadensmeldung oder eine geplante Inspektion ohne Anlass.';
-comment on column velocity.wartungsauftrag.wartungsauftrag_id is 'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
-comment on column velocity.wartungsauftrag.auftragsnummer is 'Fachlicher, in der Werkstatt gesprochener Schluessel - eindeutig ueber wartungsauftrag_nummer_uk, damit ein Zuruf wie "Auftrag WA-..." keine Verwechslung zulaesst.';
+comment on column velocity.wartungsauftrag.wartungsauftrag_id is 'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
+comment on column velocity.wartungsauftrag.auftragsnummer is 'Fachlicher, in der Werkstatt gesprochener Schlüssel - eindeutig über wartungsauftrag_nummer_uk, damit ein Zuruf wie "Auftrag WA-..." keine Verwechslung zulässt.';
 comment on column velocity.wartungsauftrag.fahrrad_id is 'Das Rad, an dem gearbeitet wird.';
-comment on column velocity.wartungsauftrag.schadensmeldung_id is 'Ausloesende Meldung. NULL bei einer geplanten Inspektion ohne konkreten Schaden.';
-comment on column velocity.wartungsauftrag.mitarbeiter_id is 'Zustaendiger Werkstattmitarbeiter. NULL, solange der Auftrag noch niemandem zugeteilt ist.';
-comment on column velocity.wartungsauftrag.eroeffnet_am is 'Zeitpunkt der Auftragseroeffnung. Bezugspunkt von wartungsauftrag_zeitfolge_chk.';
+comment on column velocity.wartungsauftrag.schadensmeldung_id is 'Auslösende Meldung. NULL bei einer geplanten Inspektion ohne konkreten Schaden.';
+comment on column velocity.wartungsauftrag.mitarbeiter_id is 'Zuständiger Werkstattmitarbeiter. NULL, solange der Auftrag noch niemandem zugeteilt ist.';
+comment on column velocity.wartungsauftrag.eroeffnet_am is 'Zeitpunkt der Auftragseröffnung. Bezugspunkt von wartungsauftrag_zeitfolge_chk.';
 comment on column velocity.wartungsauftrag.erledigt_am is 'Zeitpunkt des Abschlusses. Pflicht sobald status = erledigt (wartungsauftrag_erledigt_chk), sonst liesse sich die Durchlaufzeit nicht auswerten.';
 comment on column velocity.wartungsauftrag.status is 'Bearbeitungsstand des Auftrags.';
-comment on column velocity.wartungsauftrag.arbeitszeit_minuten is 'Aufgewendete Werkstattzeit in Minuten, fuer die Nachkalkulation. Optional, solange der Auftrag laeuft.';
+comment on column velocity.wartungsauftrag.arbeitszeit_minuten is 'Aufgewendete Werkstattzeit in Minuten, für die Nachkalkulation. Optional, solange der Auftrag läuft.';
 comment on column velocity.wartungsauftrag.bemerkung is 'Freitext der Werkstatt zum Auftrag, etwa verbaute Ersatzteile ohne eigenen Lagerbezug.';
 
 comment on table velocity.fahrrad_ereignis is
-  'Lebenslaufakte eines Rades. beleg_tabelle/beleg_id sind eine Spur, keine gepruefte Beziehung.';
-comment on column velocity.fahrrad_ereignis.ereignis_id is 'Surrogatschluessel, fachlich bedeutungslos und deshalb stabil.';
+  'Lebenslaufakte eines Rades. beleg_tabelle/beleg_id sind eine Spur, keine geprüfte Beziehung.';
+comment on column velocity.fahrrad_ereignis.ereignis_id is 'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.fahrrad_ereignis.fahrrad_id is 'Das betroffene Rad. on delete cascade, weil ein Ereignis ohne sein Rad keine eigene Bedeutung hat.';
-comment on column velocity.fahrrad_ereignis.zeitpunkt is 'Zeitpunkt des Ereignisses, fuer die chronologische Lebenslaufakte.';
+comment on column velocity.fahrrad_ereignis.zeitpunkt is 'Zeitpunkt des Ereignisses, für die chronologische Lebenslaufakte.';
 comment on column velocity.fahrrad_ereignis.ereignisart is 'Art des Ereignisses (GR21), etwa Statuswechsel oder Ausmusterung.';
-comment on column velocity.fahrrad_ereignis.mitarbeiter_id is 'Mitarbeiter, unter dessen Anmeldung das Ereignis entstand. NULL, wenn der Trigger auslaeuft, ohne eine passende auth.uid() zu finden - etwa bei einem Lauf als postgres.';
-comment on column velocity.fahrrad_ereignis.bemerkung is 'Freitext zum Ereignis, beim Statuswechsel automatisch mit alt -> neu befuellt.';
-comment on column velocity.fahrrad_ereignis.beleg_tabelle is 'Name der Tabelle des ausloesenden Vorgangs, etwa fahrrad. Bewusst ungeprueft, siehe Kommentar an der Tabelle.';
-comment on column velocity.fahrrad_ereignis.beleg_id is 'Zeigt auf den ausloesenden Vorgang. Bewusst ungeprueft, siehe Kommentar an der Tabelle.';
+comment on column velocity.fahrrad_ereignis.mitarbeiter_id is 'Mitarbeiter, unter dessen Anmeldung das Ereignis entstand. NULL, wenn der Trigger ausläuft, ohne eine passende auth.uid() zu finden - etwa bei einem Lauf als postgres.';
+comment on column velocity.fahrrad_ereignis.bemerkung is 'Freitext zum Ereignis, beim Statuswechsel automatisch mit alt -> neu befüllt.';
+comment on column velocity.fahrrad_ereignis.beleg_tabelle is 'Name der Tabelle des auslösenden Vorgangs, etwa fahrrad. Bewusst ungeprüft, siehe Kommentar an der Tabelle.';
+comment on column velocity.fahrrad_ereignis.beleg_id is 'Zeigt auf den auslösenden Vorgang. Bewusst ungeprüft, siehe Kommentar an der Tabelle.';

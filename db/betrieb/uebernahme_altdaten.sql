@@ -31,7 +31,7 @@ create table if not exists velocity.uebernahme_protokoll (
 comment on table velocity.uebernahme_protokoll is
   'Protokoll der einmaligen Übernahme aus dem Altschema cityBikesRental.';
 comment on column velocity.uebernahme_protokoll.protokoll_id  is 'Surrogatschlüssel.';
-comment on column velocity.uebernahme_protokoll.lauf          is 'Zeitstempel des Uebernahmelaufs. Gleicher Wert für alle Zeilen eines Laufs.';
+comment on column velocity.uebernahme_protokoll.lauf          is 'Zeitstempel des Übernahmelaufs. Gleicher Wert für alle Zeilen eines Laufs.';
 comment on column velocity.uebernahme_protokoll.quelle        is 'Gelesene Tabelle im Altschema.';
 comment on column velocity.uebernahme_protokoll.ziel          is 'Beschriebene Tabelle im Schema velocity.';
 comment on column velocity.uebernahme_protokoll.gelesen       is 'Anzahl der Sätze in der Quelle.';
@@ -72,7 +72,7 @@ begin
   insert into velocity.uebernahme_protokoll (lauf, quelle, ziel, gelesen, geschrieben, hinweis)
   values (v_lauf, 'cityBikesRental.kunde', 'velocity.adresse',
           (select count(*) from "cityBikesRental".kunde), v_nachher - v_vorher,
-          'Nur Sätze mit fuenfstelliger PLZ; dedupliziert über den Fachschluessel');
+          'Nur Sätze mit fünfstelliger PLZ; dedupliziert über den Fachschlüssel');
 
   -- 2 Kunden ------------------------------------------------------------
   select count(*) into v_vorher from velocity.kunde;
@@ -115,10 +115,10 @@ begin
           'passwort_hash wird bewusst nicht übernommen. auth_uid nur, wenn das '
           || 'Konto in auth.users tatsächlich existiert; von '
           || (select count(*) from "cityBikesRental".auth_kunde_mapping)::text
-          || ' Eintraegen in auth_kunde_mapping sind '
+          || ' Einträgen in auth_kunde_mapping sind '
           || (select count(*) from "cityBikesRental".auth_kunde_mapping m
                where not exists (select 1 from auth.users u where u.id = m.auth_uid))::text
-          || ' verwaist (die alte Tabelle hatte keinen Fremdschluessel).');
+          || ' verwaist (die alte Tabelle hatte keinen Fremdschlüssel).');
 
   -- Nummernkreis nachziehen, damit neue Kunden nicht kollidieren
   perform setval('velocity.seq_kundennummer',
@@ -172,7 +172,7 @@ begin
           (select count(*) from "cityBikesRental".station), v_nachher - v_vorher,
           'Stationsnummer aus der alten station_id gebildet. '
           || (select count(*) from "cityBikesRental".station where ort = 'Schweinfurt')::text
-          || ' Stationen in Schweinfurt bewusst ausgelassen: nicht im Geschaeftsgebiet');
+          || ' Stationen in Schweinfurt bewusst ausgelassen: nicht im Geschäftsgebiet');
 
   -- 4 Hersteller und Modelle -------------------------------------------
   -- Im Altbestand gibt es keine Modellangabe. Statt sie zu erfinden,
@@ -358,7 +358,7 @@ begin
   insert into velocity.uebernahme_protokoll (lauf, quelle, ziel, gelesen, geschrieben, hinweis)
   values (v_lauf, 'cityBikesRental.ausleihe', 'velocity.ausleihe, velocity.entgeltposition',
           (select count(*) from "cityBikesRental".ausleihe), v_nachher - v_vorher,
-          'Altbetraege als Position BESTANDSUEBERNAHME; historische Preise sind nicht rekonstruierbar');
+          'Altbeträge als Position BESTANDSUEBERNAHME; historische Preise sind nicht rekonstruierbar');
 
   -- 8 Nicht uebernommen -------------------------------------------------
   insert into velocity.uebernahme_protokoll (lauf, quelle, ziel, gelesen, geschrieben, uebersprungen, hinweis)

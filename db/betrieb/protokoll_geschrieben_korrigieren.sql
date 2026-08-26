@@ -48,7 +48,7 @@ begin;
 update velocity.uebernahme_protokoll
    set geschrieben = 400,
        hinweis = hinweis || ' [Korrigiert am 25.08.2026: das Feld trug '
-                 || 'faelschlich den Gesamtbestand 410 statt der 400 in '
+                 || 'fälschlich den Gesamtbestand 410 statt der 400 in '
                  || 'diesem Lauf geschriebenen Zeilen. Ursache war ein '
                  || 'Fehler in der Vorgabe, nicht in den Daten.]'
  where protokoll_id = 43

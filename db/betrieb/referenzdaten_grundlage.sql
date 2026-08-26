@@ -204,9 +204,9 @@ select now(), 'Referenzdaten (erzeugt)',
        -- der Pruefung in t0013_uebernahme.sql widersprechen.
        coalesce(current_setting('velocity.referenzdaten_mitgliedschaft_neu', true)::int, 0),
        0,
-       'ERFUNDENE Daten fuer die Lehre, nicht erhoben. Preisperioden ab 2025-09-01 '
+       'ERFUNDENE Daten für die Lehre, nicht erhoben. Preisperioden ab 2025-09-01 '
        'mit einem Wechsel des Minutenpreises zum 2026-03-01; Tarifkonditionen '
-       'rueckdatiert; rund 400 Mitgliedschaften; erster Mitarbeiter M-0001.'
+       'rückdatiert; rund 400 Mitgliedschaften; erster Mitarbeiter M-0001.'
  where not exists (
    select 1 from velocity.uebernahme_protokoll
     where quelle = 'Referenzdaten (erzeugt)'

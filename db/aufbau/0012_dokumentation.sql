@@ -54,8 +54,8 @@ comment on column velocity.station.adresse_id       is 'Anschrift der Station.';
 comment on column velocity.station.latitude         is 'Breitengrad in Dezimalgrad, WGS 84.';
 comment on column velocity.station.longitude        is 'Längengrad in Dezimalgrad, WGS 84.';
 comment on table  velocity.geschaeftsgebiet is
-  'Flaeche, innerhalb derer ein Rad ueberall abgestellt werden darf. Stand '
-  'frueher fest im JavaScript der Karte - eine Regel ohne Durchsetzung.';
+  'Fläche, innerhalb derer ein Rad überall abgestellt werden darf. Stand '
+  'früher fest im JavaScript der Karte - eine Regel ohne Durchsetzung.';
 comment on column velocity.geschaeftsgebiet.gebiet_id is 'Surrogatschlüssel.';
 comment on column velocity.geschaeftsgebiet.name      is 'Name des Gebiets, zugleich Fachschlüssel.';
 comment on column velocity.geschaeftsgebiet.flaeche   is
@@ -70,7 +70,7 @@ comment on column velocity.v_geschaeftsgebiet.umriss    is
   'Das Vieleck als Text, Form ((Länge,Breite),…). Die Karte zeichnet daraus ihren Umriss.';
 
 comment on table  velocity.hoehenmarke is
-  'Markante Hoehen rund um Wuerzburg als Bezugspunkte der Hoehengrafik. Keine '
+  'Markante Höhen rund um Würzburg als Bezugspunkte der Höhengrafik. Keine '
   'Stationen, aber Redaktionsinhalt - deshalb in der Datenbank und nicht im Frontend.';
 comment on column velocity.hoehenmarke.marke_id   is 'Surrogatschlüssel.';
 comment on column velocity.hoehenmarke.name       is 'Name der Höhe, zugleich Fachschlüssel.';
@@ -91,14 +91,14 @@ comment on column velocity.v_hoehenmarke.longitude is 'Längengrad.';
 comment on column velocity.v_hoehenmarke.quelle    is 'Herkunft des Höhenwerts.';
 
 comment on column velocity.station.hoehe_m is
-  'Hoehenlage in Metern, aus den Koordinaten gegen zwei unabhaengige Gelaendemodelle '
+  'Höhenlage in Metern, aus den Koordinaten gegen zwei unabhängige Geländemodelle '
   'bestimmt (Copernicus GLO-30 und EU-DEM v1.1) und gemittelt. Beides sind '
-  'Oberflaechenmodelle: in bebautem Gebiet liegen sie rund zehn Meter zu hoch. '
+  'Oberflächenmodelle: in bebautem Gebiet liegen sie rund zehn Meter zu hoch. '
   'Belastbar sind deshalb die Unterschiede, nicht die absoluten Werte - und genau '
-  'die Unterschiede traegt die Anwendung vor. Gesetzt in '
+  'die Unterschiede trägt die Anwendung vor. Gesetzt in '
   'db/betrieb/stationslage_korrigieren.sql.';
 comment on column velocity.v_station.hoehe_m is
-  'Hoehenlage der Station. Siehe station.hoehe_m zur Herkunft und zur Genauigkeit.';
+  'Höhenlage der Station. Siehe station.hoehe_m zur Herkunft und zur Genauigkeit.';
 comment on column velocity.station.kapazitaet       is 'Anzahl der Stellplätze, muss größer als null sein.';
 comment on column velocity.station.betriebszeitraum is 'Zeitraum, in dem die Station betrieben wird. Halboffen; nach oben offen bedeutet: weiterhin in Betrieb.';
 
