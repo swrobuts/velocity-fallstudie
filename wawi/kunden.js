@@ -241,7 +241,15 @@ async function kundenAufbauen(suchtext) {
         // waere nie wahr und die Faerbung fiele lautlos aus. Derselbe
         // Fund wie statusKlasse in flotte.js und die frei-Spalte in
         // stationen.js (siehe dortige Kommentare), hier zum dritten Mal.
-        { feld: 'status',       titel: 'Status',
+        // filterbar:false (Spaltenkopf-Baustein, rahmen.js): der
+        // Statusfilter oben (kundenFilterStatus) filtert bereits
+        // SERVERSEITIG genau dieses Feld, vor der 200er-Grenze - ein
+        // zweiter, rein clientseitiger Filter auf denselben Werten
+        // koennte sich mit dem ersten widersprechen (Filterleiste
+        // "gesperrt", Spaltenkopf "aktiv" -> immer null Zeilen unter den
+        // geladenen 200), siehe der lange Kommentar bei zeigeListe() in
+        // rahmen.js.
+        { feld: 'status',       titel: 'Status', filterbar: false,
           klasse: (z) => (z.status === 'gesperrt' ? 'warnung' : z.status === 'geschlossen' ? 'leise' : '') },
         { feld: 'tarif_code',   titel: 'Tarif', formatieren: (t) => t || '—' }
     ], kundeMaske, kundeZeilenAktionen);

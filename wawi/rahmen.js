@@ -1180,8 +1180,13 @@ function zahlSkaliert(formatiert) {
 // bei der Aktionen-Spalte in zeigeListe() weiter unten: keine sichtbare
 // zweite Ueberschrift, aber eine <th> ohne jeden Namen liesse die Spalte
 // fuer einen Screenreader namenlos wirken.
+// optionen.summierbar: an die ZAHLENSPALTE (nicht an die namenlose
+// Balkenspalte, dort waere eine Zwischensumme ohnehin unsichtbar)
+// durchgereicht - siehe der lange Kommentar bei zeigeListe() oben, warum
+// das der Bereich entscheiden muss und der Baustein es nicht selbst
+// erraet ("umsatz" ist additiv, "umsatz_je_fahrt" waere es nicht).
 function balkenSpalten(feld, titel, maximum, formatText, optionen = {}) {
-    const { klasse = 'zahl', farbe = null, ariaLabel = `${titel} (Balken)` } = optionen;
+    const { klasse = 'zahl', farbe = null, ariaLabel = `${titel} (Balken)`, summierbar = false } = optionen;
     return [
         {
             feld,
@@ -1197,19 +1202,164 @@ function balkenSpalten(feld, titel, maximum, formatText, optionen = {}) {
             feld,
             titel,
             klasse,
+            summierbar,
             formatieren: (wert) => zahlSkaliert(formatText(wert))
         }
     ];
 }
+
+// ===== Spaltenkopf: Sortieren, Filtern, Gruppieren =====
+//
+// "Man sollte immer bei den Spaltenkoepfen sortieren, filtern und
+// gruppieren koennen - bei allen Tabellen", woertlich der Auftrag. "Bei
+// allen Tabellen" heisst: ein Baustein HIER, kein Anbau in fuenf
+// Dateien - genau wie Werkzeugleiste/Filterleiste/Uebersichtsstreifen
+// weiter oben schon denselben Fund hatten (zwei Bereiche erfanden
+// dieselbe Werkzeugleiste unabhaengig voneinander, siehe dortiger
+// Kommentar). zeigeListe() bleibt deshalb nach aussen UNVERAENDERT
+// (dieselben fuenf Parameter, derselbe erste Parameter "kennung" -
+// tools/wawi_check.py prueft das ueber alle Aufrufer hinweg) - die drei
+// Faehigkeiten haengen ausschliesslich an zusaetzlichen, OPTIONALEN
+// Eigenschaften der einzelnen Spaltenobjekte, derselben Machart wie die
+// bereits bestehenden "klasse"/"formatieren"/"ariaLabel":
+//
+//   sortierbar   (Vorgabe: true, sobald die Spalte einen titel traegt)
+//   filterbar    (Vorgabe: true, sobald die Spalte einen titel traegt)
+//   gruppierbar  (Vorgabe: true, sobald die Spalte einen titel traegt)
+//   summierbar   (Vorgabe: false - MUSS vom Bereich ausdruecklich gesetzt
+//                werden, siehe Begruendung weiter unten)
+//   sortierwert(zeile)   liefert den VERGLEICHBAREN Wert fuer Sortierung
+//                UND Gruppierung, wenn er vom rohen Feldwert abweicht
+//                (siehe "Nach Wert, nicht nach Anzeige" unten)
+//   filterTyp    'auswahl' | 'schwelle' | 'text' - erzwingt die Art des
+//                Filterfelds, statt sie aus den geladenen Werten zu
+//                erraten (siehe spaltenFilterTyp() weiter unten)
+//   summeFormatieren(summe)   formatiert eine Gruppen-Zwischensumme,
+//                wenn formatieren() dafuer nicht taugt (co2_ersparnis_kg
+//                in auswertungen.js braucht z. B. die ganze Zeile fuer
+//                den Schaetzanteil - eine Zwischensumme hat keine Zeile)
+//
+// NACH WERT, NICHT NACH ANZEIGE (Auftrag, woertlich): sortiert wird
+// IMMER ueber spaltenWert() weiter unten - den rohen zeile[feld]-Wert
+// oder, wenn angegeben, sortierwert(zeile). Fuer die meisten Spalten ist
+// das bereits derselbe Wert, den formatieren() nur ANDERS SCHREIBT
+// (2011.2 vs. "2.011,20 €", das ISO-Datum "2026-03-01" vs. "Mär 2026") -
+// eine Zahl bleibt eine Zahl, ein ISO-Datum sortiert als Text schon
+// richtig chronologisch. Wo der rohe Wert selbst KEINE Rangfolge traegt
+// (schwere: 'gering'/'mittel'/'fahruntauglich' alphabetisch waere
+// 'fahruntauglich' vor 'gering' - genau der Fehler, der in diesem
+// Projekt schon einmal ein fahruntaugliches Rad als "gering" zeigte -
+// oder offen_seit: ein Postgres-Intervalltext, an dem "10 Tage" vor "2
+// Tage" laege), liefert instandhaltung.js ein eigenes sortierwert(zeile)
+// mit an dieser Stelle bereits vorhandenen Hilfsfunktionen (siehe dort).
+//
+// ALTE UND NEUE FILTER (Auftrag: "die duerfen sich nicht widersprechen"):
+// Flotte (Status/Radtyp/Station), Kundschaft (Status) und Instandhaltung
+// (Schwere/Mindestalter) haben schon eine eigene zeigeFilterleiste() ueber
+// GENAU denselben Spalten, die jetzt auch hier filterbar waeren - bei
+// Kundschaft zusaetzlich SERVERSEITIG (die 200-von-1014-Grenze, siehe
+// Kommentar bei kundenAufbauen() in kunden.js). Zwei unabhaengige Filter
+// auf demselben Feld koennten sich gegenseitig aufheben (Filterleiste
+// "gesperrt", Spaltenkopf "aktiv" -> immer null Zeilen) - "schlimmer als
+// einer" (Auftrag). Die betroffenen Spalten setzen deshalb bewusst
+// filterbar:false (flotte.js: status/typ_code/standort; kunden.js:
+// status; instandhaltung.js: schwere/offen_seit) - EIN Feld, EIN
+// Bedienelement. Ueberall sonst ist der neue Spaltenkopf-Filter rein
+// ADDITIV: er schraenkt nur weiter ein, was der Bereich (Filterleiste,
+// Suche, die 200er-Grenze) bereits geladen und gezeigt hat - dieselbe
+// Beziehung wie ein Excel-Autofilter ueber einem bereits eingegrenzten
+// Datenausschnitt, nie ein zweiter, widerspruechlicher Blick auf
+// dieselbe Grundgesamtheit. Bei Kundschaft bleibt das ehrlich, WEIL die
+// 200er-Grenze schon in der Statuszeile steht (kundenAufbauen()) -
+// dieser Baustein taeuscht nichts Neues vor, er filtert nur das, was
+// ohnehin schon als "200 von mehr" ausgewiesen ist.
+//
+// SUMMIERBAR NUR MIT AUSDRUECKLICHEM OPT-IN (Auftrag: "sag im Baustein,
+// welche Spalten summierbar sind, und rechne nur die"): eine
+// Durchschnittsspalte summiert ist Unsinn (umsatz_je_fahrt,
+// umsatz_je_kunde - "man summiert Durchschnitte nicht, man gewichtet
+// sie", derselbe Fehler wie beim ungewichteten Schaetzanteil bei CO2:
+// 53,2 % statt 40,0 %, siehe anteilGewichtet() in auswertungen.js), eine
+// Zaehl-Spalte ueber MEHRERE MONATE summiert kann DOPPELT zaehlen
+// (v_wawi_umsatz_kundengruppe.kunden zaehlt Kunden JE MONAT - ueber
+// mehrere Monate summiert waere ein Kunde, der zwoelf Monate lang faehrt,
+// zwoelfmal gezaehlt). Nur der jeweilige BEREICH kennt diese fachliche
+// Bedeutung einer Spalte; der Baustein hier kennt sie nicht und rechnet
+// deshalb NIE von sich aus - er summiert ausschliesslich Spalten, die ihr
+// summierbar:true ausdruecklich mitgeben (siehe summierbar-Eintraege in
+// auswertungen.js/flotte.js). Wo keine Spalte summierbar ist, zeigt eine
+// Gruppe nur ihre Zeilenzahl - "nichts hinschreiben ist besser als etwas
+// Falsches" (Auftrag).
+//
+// FOKUS UND TASTATUR: jeder Klick auf einen Spaltenkopf (Sortieren,
+// Gruppieren, Filtern) zeichnet die GANZE Tabelle neu (dieselbe volle
+// Neuerstellung wie zeigeListe() sie schon immer macht) - ohne
+// Gegenmassnahme spraenge der Tastaturfokus dabei auf <body> zurueck,
+// weil das gerade fokussierte Element mit dem alten DOM verschwindet.
+// fokusMerken()/fokusWiederherstellen() unten haltem ihn am GLEICHEN
+// Bedienelement (ueber data-spaltenkopf-feld/-rolle identifiziert) fest -
+// bei einem Texteingabefeld sogar mitsamt Cursorposition, sonst spraenge
+// der Cursor bei jedem Tastendruck ans Ende zurueck (siehe die
+// 300ms-Verzoegerung bei Text-/Schwellenfiltern weiter unten, demselben
+// Muster wie die Kundensuche in kunden.js und der Alters-Schieber in
+// instandhaltung.js).
+//
+// KEIN NEUER *AUFBAUEN()-VORGANG: anders als jede Buchung oder jeder
+// Filterleiste-Wechsel ruft ein Klick hier NICHT neuerVorgang() auf und
+// laedt nichts nach - die Zeilen sind schon da, ein Klick aendert nur
+// die DARSTELLUNG derselben, bereits geladenen zeilen. kennung bleibt
+// deshalb ueber beliebig viele Spaltenkopf-Klicks hinweg dieselbe, und
+// istAktuellerVorgang(kennung) bleibt so lange wahr, wie kein ECHTER
+// Neuaufbau (Bereichswechsel, Reiterwechsel, Buchung) dazwischenkommt.
+//
+// KEIN zeigeLeermaske() BEI "KEIN TREFFER FUER DIESEN SPALTENFILTER":
+// anders als die Erprobung nahelegt ("dafuer gibt es zeigeLeermaske")
+// wuerde zeigeLeermaske() den KOMPLETTEN Inhalt von #listenkoerper
+// wegwerfen - einschliesslich der Kopf- und Filterzeile selbst, in der
+// die Spaltenkopf-Filter stecken. Genau das widerspraeche dem Vorbild
+// dieses Bausteins: flotte.js betont ausdruecklich, dass bei "kein
+// Treffer" "der Filter sichtbar UND BEDIENBAR bleibt" (siehe
+// flotteAufbauen()), weil die alte Filterleiste ein EIGENES Element
+// ausserhalb von #listenkoerper ist. Die neuen Spaltenkopf-Filter
+// dagegen stecken IM <thead> derselben Tabelle - sie mit
+// zeigeLeermaske() zu entfernen hiesse, dass niemand den zu engen Filter
+// mehr FEINJUSTIEREN koennte, nur noch komplett zuruecksetzen. Eine
+// eigene, schlanke Leerzeile INNERHALB der bestehenden Tabelle (siehe
+// baueLeerzeile() weiter unten) haelt Kopf- und Filterzeile stattdessen
+// unangetastet - dieselbe Garantie wie bei den Bereichs-eigenen
+// Filtern, nur eine Ebene tiefer.
+let spaltenkopfListe = null;               // { kennung, zeilen, spalten, beiAuswahl, aktionen }
+let spaltenkopfSignatur = null;            // Fingerabdruck der Spaltenliste, siehe zeigeListe()
+let spaltenkopfSortFeld = null;            // spalte.feld, das aktuell sortiert, oder null
+let spaltenkopfSortRichtung = 0;           // 0 = Ausgangsordnung, 1 = aufsteigend, -1 = absteigend
+let spaltenkopfGruppe = null;              // spalte.feld, nach dem gruppiert wird, oder null
+let spaltenkopfFilterwerte = new Map();    // spalte.feld -> Filterwert
+
+// Feather-Stil, dieselbe Familie wie RAD_ICONS/SCHADEN_ICONS/KUNDE_ICONS
+// in den Bereichen (24x24, currentColor per CSS, siehe .bereich-icon in
+// style.css) - EIN Chevron statt dreier verschiedener SVGs fuer
+// aufsteigend/absteigend/neutral: Drehung (180°) und Deckkraft
+// unterscheiden die drei Zustaende per CSS (siehe .spaltenkopf-sortsymbol*
+// in style.css), kein Innerhtml-Austausch bei jedem Klick noetig.
+const SPALTENKOPF_SORT_ICON = '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>';
+// "Ebenen"-Symbol (drei versetzte Rauten) - "nach dieser Spalte
+// gruppieren". aria-pressed traegt den Ein/Aus-Zustand, nicht ein
+// zweites Icon.
+const SPALTENKOPF_GRUPPE_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4l9 5-9 5-9-5 9-5z"/>' +
+    '<path d="M3 14l9 5 9-5"/></svg>';
 
 // kennung: von neuerVorgang() geliefert, siehe Kommentar dort. Ein
 // veralteter Vorgang zeichnet die Liste nicht mehr - sonst überschriebe
 // ein spät zurückkommender Neuaufbau eines VORHERIGEN Bereichs oder
 // eines überholten Buchungsvorgangs die Liste, die der Anwender gerade
 // vor sich hat.
-// spalten: [{ feld, titel, formatieren?, klasse? }] - formatieren(wert, zeile)
+// spalten: [{ feld, titel, formatieren?, klasse?, ariaLabel?, sortierbar?,
+//             filterbar?, gruppierbar?, summierbar?, sortierwert?,
+//             filterTyp?, summeFormatieren? }] - formatieren(wert, zeile)
 // darf einen String ODER ein einzelnes Element liefern (siehe Kommentar
-// an der Stelle weiter unten, wo die Zelle gebaut wird).
+// an der Stelle weiter unten, wo die Zelle gebaut wird); die uebrigen
+// Eigenschaften sind Sortieren/Filtern/Gruppieren vorbehalten, siehe der
+// lange Kommentar oben.
 // Bei Klick UND bei Pfeiltaste: beiAuswahl(zeile) aufrufen und die
 // Zeile als ausgewählt markieren.
 //
@@ -1226,16 +1376,100 @@ function balkenSpalten(feld, titel, maximum, formatText, optionen = {}) {
 //   hier zentral gefangen und in die Statuszeile übersetzt.
 //
 // Ohne aktionen (der Vorgabewert) verändert sich am Ergebnis nichts -
-// keine zusätzliche Spalte, keine Zeile muss etwas davon wissen. Das
-// ist mit Absicht so: der Auftrag verlangt den Baustein hier in
-// rahmen.js, aber nur EINEN Bereich (flotte.js) als Beleg dafür, dass
-// er verdrahtet ist - die anderen vier bleiben unangetastet und laufen
-// unverändert weiter, bis sie in einem späteren Schritt eigene
-// aktionen liefern.
+// keine zusätzliche Spalte, keine Zeile muss etwas davon wissen.
 function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     if (!istAktuellerVorgang(kennung)) return;
 
-    listenZeilen = zeilen;
+    // Fingerabdruck der Spaltenliste: dieselbe Tabelle (Bereich,
+    // Unterreiter) behaelt Sortierung/Filter/Gruppierung ueber einen
+    // Neuaufbau hinweg (eine Buchung, ein erneutes Laden) - genau das
+    // "Wiederfinden", das flotteFilterStatus in flotte.js fuer die alte
+    // Filterleiste schon vormacht ("ein Bereichswechsel selbst setzt sie
+    // NICHT zurueck"), hier einmal fuer alle Bereiche statt je Bereich
+    // neu erfunden. Eine ANDERE Tabelle (andere Spalten - Bereichswechsel
+    // oder Unterreiterwechsel) faengt dagegen sauber bei null an; ohne
+    // diesen Vergleich ueberlebte etwa eine Sortierung nach "Nummer" aus
+    // der Flotte einen Wechsel zu Stationen, obwohl "Nummer" dort etwas
+    // ganz anderes waere.
+    const signatur = spalten.map((s) => `${s.feld}|${s.titel || ''}`).join(',') + (aktionen ? '|+' : '');
+    if (signatur !== spaltenkopfSignatur) {
+        spaltenkopfSignatur = signatur;
+        spaltenkopfSortFeld = null;
+        spaltenkopfSortRichtung = 0;
+        spaltenkopfGruppe = null;
+        spaltenkopfFilterwerte = new Map();
+    }
+
+    spaltenkopfListe = { kennung, zeilen, spalten, beiAuswahl, aktionen };
+    zeichneArbeitstabelle();
+}
+
+// Der eigentliche Zeichenvorgang - getrennt von zeigeListe(), weil jeder
+// Klick auf einen Spaltenkopf ihn erneut ausloest, OHNE dass ein neuer
+// *Aufbauen()-Vorgang lief (siehe Kopfkommentar oben). Liest
+// ausschliesslich aus dem Modulzustand oben; zeigeListe() selbst ist nur
+// noch die Stelle, an der dieser Zustand mit frischen Zeilen/Spalten
+// befuellt wird.
+function zeichneArbeitstabelle() {
+    const { kennung, zeilen: zeilenOriginal, spalten, beiAuswahl, aktionen } = spaltenkopfListe;
+    if (!istAktuellerVorgang(kennung)) return;
+
+    const fokusMerkmal = fokusMerken();
+
+    // ----- Filtern -----
+    const gefiltert = zeilenOriginal.filter((zeile) => spalten.every((spalte) => {
+        if (!istFilterbar(spalte)) return true;
+        const filterwert = spaltenkopfFilterwerte.get(spalte.feld);
+        if (filterwert === undefined) return true;
+        const rohwert = zeile[spalte.feld];
+        const typ = spaltenFilterTyp(spalte, zeilenOriginal);
+        if (typ === 'schwelle') return typeof rohwert === 'number' && rohwert >= filterwert;
+        if (typ === 'auswahl') return String(rohwert ?? '') === filterwert;
+        // Erst HIER kleingeschrieben, nicht schon beim Speichern des
+        // Filterworts (siehe spaltenkopfFilterfeld() weiter unten): der
+        // gespeicherte Wert bleibt der Originaltext, den die Person
+        // getippt hat - sonst zeigte das Eingabefeld nach dem naechsten
+        // Neuzeichnen "chang" statt des getippten "Chang" (im Browser
+        // nachgestellt und bestaetigt, siehe Bericht).
+        return String(rohwert ?? '').toLocaleLowerCase('de').includes(filterwert.toLocaleLowerCase('de'));
+    }));
+
+    // ----- Sortieren -----
+    // { zeile, index }: index ist die Ausgangsordnung (die Reihenfolge, in
+    // der der Bereich die Zeilen geladen hat - bei den Auswertungen etwa
+    // "erst Radtyp, dann Monat", selbst schon bedeutungstragend, siehe
+    // Auftrag). Ein dritter Klick auf denselben Spaltenkopf setzt
+    // spaltenkopfSortRichtung auf 0 zurueck - die Sortierung faellt dann
+    // unten aus, und die Reihenfolge ist wieder GENAU diese
+    // Ausgangsordnung, nicht irgendeine neu berechnete.
+    let indiziert = gefiltert.map((zeile, index) => ({ zeile, index }));
+    const sortSpalte = spaltenkopfSortFeld
+        ? spalten.find((s) => s.feld === spaltenkopfSortFeld && istSortierbar(s)) : null;
+    if (sortSpalte && spaltenkopfSortRichtung !== 0) {
+        indiziert = [...indiziert].sort((a, b) => {
+            const wa = spaltenWert(sortSpalte, a.zeile);
+            const wb = spaltenWert(sortSpalte, b.zeile);
+            const aLeer = wa === null || wa === undefined || wa === '';
+            const bLeer = wb === null || wb === undefined || wb === '';
+            // Leere Werte immer ans Ende, UNABHAENGIG von der Richtung -
+            // sonst spraenge eine leere Zeile beim Umschalten von auf-
+            // nach absteigend von ganz unten nach ganz oben, obwohl sich
+            // an ihrer fehlenden Angabe nichts geaendert hat.
+            if (aLeer && bLeer) return a.index - b.index;
+            if (aLeer) return 1;
+            if (bLeer) return -1;
+            const vergleich = vergleicheWerte(wa, wb) * spaltenkopfSortRichtung;
+            return vergleich !== 0 ? vergleich : a.index - b.index;   // stabil bei Gleichstand
+        });
+    }
+    const angezeigt = indiziert.map((e) => e.zeile);
+
+    // ----- Gruppieren -----
+    const gruppenSpalte = spaltenkopfGruppe
+        ? spalten.find((s) => s.feld === spaltenkopfGruppe && istGruppierbar(s)) : null;
+    const gruppen = gruppenSpalte ? gruppiere(angezeigt, gruppenSpalte) : null;
+
+    listenZeilen = angezeigt;
     listenAuswahl = beiAuswahl;
     listenIndex = -1;
     listenZeilenElemente = [];
@@ -1243,22 +1477,195 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     const wurzel = listenKoerper();
     wurzel.replaceChildren();
 
+    // Hinweiszeile (Auftrag: "der Zustand muss sichtbar sein... und ein
+    // Weg zurueck") - nur eingeblendet, wenn tatsaechlich etwas vom
+    // Spaltenkopf aus eingeschraenkt/gruppiert wurde, sonst waere sie
+    // Zierrat (derselbe Massstab wie bei zeigeFilterleiste() weiter
+    // oben). Zeigt zusaetzlich N-von-M an: bei Kundschaft ist "M" hier
+    // die Zahl der bereits geladenen (hoechstens 200) Zeilen, NICHT die
+    // 1014 insgesamt - konsistent mit der Statuszeile in kunden.js, die
+    // genau das schon offenlegt.
+    if (spaltenkopfFilterwerte.size > 0 || gruppenSpalte) {
+        wurzel.append(spaltenkopfHinweis(zeilenOriginal.length, angezeigt.length, gruppenSpalte));
+    }
+
     const tabelle = document.createElement('table');
     tabelle.className = 'arbeitstabelle';
+    tabelle.append(spaltenkopfKopfzeile(spalten, aktionen));
 
+    const koerper = document.createElement('tbody');
+    if (angezeigt.length === 0 && zeilenOriginal.length > 0) {
+        koerper.append(baueLeerzeile(spalten, aktionen));
+    } else if (gruppen) {
+        let laufIndex = 0;
+        for (const gruppe of gruppen) {
+            koerper.append(spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte));
+            for (const zeile of gruppe.zeilen) {
+                koerper.append(baueDatenzeile(zeile, spalten, aktionen, laufIndex));
+                laufIndex += 1;
+            }
+        }
+    } else {
+        angezeigt.forEach((zeile, index) => koerper.append(baueDatenzeile(zeile, spalten, aktionen, index)));
+    }
+    tabelle.append(koerper);
+    wurzel.append(tabelle);
+
+    fokusWiederherstellen(fokusMerkmal);
+}
+
+// ----- Fokuserhalt ueber einen vollstaendigen Neuaufbau der Tabelle -----
+//
+// Jeder Klick auf einen Spaltenkopf (und jede Eingabe in ein
+// Spaltenfilterfeld) reisst die ganze Tabelle ab und baut sie neu auf -
+// dieselbe volle Neuerstellung, die zeigeListe() schon immer macht.
+// Ohne diese beiden Funktionen spraenge der Tastaturfokus dabei auf
+// <body> zurueck: das gerade fokussierte Element existiert nach
+// replaceChildren() nicht mehr. data-spaltenkopf-feld/-rolle
+// identifizieren dasselbe Bedienelement in der NEUEN Tabelle, ohne dass
+// zeigeListe() dafuer eine ID-Fabrik bräuchte.
+function fokusMerken() {
+    const el = document.activeElement;
+    if (!el || !el.dataset || !el.dataset.spaltenkopfFeld) return null;
+    return {
+        feld: el.dataset.spaltenkopfFeld,
+        rolle: el.dataset.spaltenkopfRolle,
+        selektion: typeof el.selectionStart === 'number' ? [el.selectionStart, el.selectionEnd] : null
+    };
+}
+
+function fokusWiederherstellen(merkmal) {
+    if (!merkmal) return;
+    const ziel = listenKoerper().querySelector(
+        `[data-spaltenkopf-feld="${merkmal.feld}"][data-spaltenkopf-rolle="${merkmal.rolle}"]`);
+    if (!ziel) return;
+    ziel.focus();
+    if (merkmal.selektion && typeof ziel.setSelectionRange === 'function') {
+        // <input type="number"> erlaubt in manchen Browsern keine
+        // Selektion (wirft eine InvalidStateError) - der Fokus selbst
+        // (oben) ist damit trotzdem gesetzt, nur der Cursor bleibt an
+        // seiner Vorgabeposition statt an der zuvor getippten Stelle.
+        try { ziel.setSelectionRange(merkmal.selektion[0], merkmal.selektion[1]); } catch { /* siehe oben */ }
+    }
+}
+
+// ----- Vorgabewerte je Faehigkeit -----
+//
+// Alle drei sind "an, sobald die Spalte einen sichtbaren Titel traegt" -
+// eine Balkenspalte (leerer Titel, siehe balkenSpalten() weiter unten)
+// oder die Aktionen-Spalte haben nichts, das sich beschriften liesse,
+// und werden deshalb nie angeboten. Ein Bereich schaltet eine einzelne
+// Faehigkeit fuer eine einzelne Spalte gezielt ab (":false"), wenn es
+// dafuer schon ein eigenes Bedienelement gibt (siehe der lange Kommentar
+// weiter oben) - nie andersherum: eine Spalte MUSS nicht extra
+// eingeschaltet werden, um "immer... bei allen Tabellen" zu erfuellen.
+function istSortierbar(spalte) { return Boolean(spalte.titel) && spalte.sortierbar !== false; }
+function istFilterbar(spalte) { return Boolean(spalte.titel) && spalte.filterbar !== false; }
+function istGruppierbar(spalte) { return Boolean(spalte.titel) && spalte.gruppierbar !== false; }
+
+// Der Wert, nach dem sortiert/gruppiert wird - NIE der formatierte
+// Anzeigetext (siehe "Nach Wert, nicht nach Anzeige" oben).
+function spaltenWert(spalte, zeile) {
+    return spalte.sortierwert ? spalte.sortierwert(zeile) : zeile[spalte.feld];
+}
+
+// Allgemeiner Wertevergleich: Zahlen numerisch, alles andere als Text
+// ueber die deutsche Kollationsfolge (localeCompare mit numeric:true,
+// damit "Rad 9" vor "Rad 10" liegt, nicht dahinter). Erwartet bereits
+// nicht-leere Werte - leere werden von den beiden Aufrufstellen (Sortieren
+// oben, Filteroptionen weiter unten) vorher herausgefiltert, jede mit
+// ihrer eigenen Regel, WOHIN ein leerer Wert gehoert.
+function vergleicheWerte(a, b) {
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    if (typeof a === 'boolean' && typeof b === 'boolean') return a === b ? 0 : (a ? 1 : -1);
+    return String(a).localeCompare(String(b), 'de', { numeric: true, sensitivity: 'base' });
+}
+
+// Erraet die Art des Filterfelds aus den TATSAECHLICH GELADENEN Werten
+// (Auftrag: "was sinnvoll ist, haengt vom Spaltentyp ab - bei wenigen
+// verschiedenen Werten eine Auswahl, bei Zahlen eher eine Grenze, bei
+// Text eine Eingabe"), sofern der Bereich nicht selbst filterTyp
+// vorgibt. zeilenOriginal (nicht die schon gefilterte Teilmenge!): die
+// Optionen einer Auswahl duerfen nicht schrumpfen, nur weil ein ANDERER
+// Spaltenfilter gerade etwas ausblendet - sonst verschwaende eine
+// gewaehlte Option unter der Hand aus ihrem eigenen <select>.
+function spaltenFilterTyp(spalte, zeilenOriginal) {
+    if (spalte.filterTyp) return spalte.filterTyp;
+    const werte = zeilenOriginal.map((z) => z[spalte.feld]).filter((w) => w !== null && w !== undefined && w !== '');
+    if (werte.length === 0) return 'text';
+    if (werte.every((w) => typeof w === 'number')) return 'schwelle';
+    const verschiedene = new Set(werte.map(String));
+    return verschiedene.size <= 10 ? 'auswahl' : 'text';
+}
+
+// Anzeigetext fuer EINEN Wert - fuer Auswahloptionen und
+// Gruppenueberschriften. Nutzt formatieren() wieder, wenn vorhanden
+// (dieselbe Zahl/dasselbe Datum erscheint dann genauso wie in der
+// Tabellenzelle selbst, "Mär 2026" statt "2026-03-01") - liefert
+// formatieren ein Element (zahlSkaliert() etc.), zaehlt dessen
+// textContent, nicht das Element selbst: eine Gruppenueberschrift ist
+// Fliesstext, kein zweites Tabellenfeld.
+function spaltenBeschriftungFuerWert(spalte, zeile) {
+    if (!zeile) return '—';
+    const wert = zeile[spalte.feld];
+    if (spalte.formatieren) {
+        const ergebnis = spalte.formatieren(wert, zeile);
+        return ergebnis instanceof Node ? ergebnis.textContent : String(ergebnis);
+    }
+    return wert === null || wert === undefined || wert === '' ? '—' : String(wert);
+}
+
+// Teilt zeilenListe (bereits gefiltert/sortiert) in Gruppen nach
+// spalte.feld - eine Map, damit die Reihenfolge der ERSTEN Sichtung
+// erhalten bleibt (JS-Maps iterieren in Einfuegereihenfolge): eine
+// bereits sinnvoll sortierte Liste (Auswertungen: Radtyp, dann Monat)
+// ergibt so Gruppen IN DERSELBEN Reihenfolge, keine neue alphabetische
+// Ordnung, die den Zusammenhang zerrisse.
+function gruppiere(zeilenListe, spalte) {
+    const eimer = new Map();
+    for (const zeile of zeilenListe) {
+        const schluessel = String(zeile[spalte.feld] ?? '');
+        if (!eimer.has(schluessel)) {
+            eimer.set(schluessel, { beschriftung: spaltenBeschriftungFuerWert(spalte, zeile), zeilen: [] });
+        }
+        eimer.get(schluessel).zeilen.push(zeile);
+    }
+    return [...eimer.values()];
+}
+
+// ----- Kopfzeile(n): Titel/Sortieren/Gruppieren, darunter die Filterzeile -----
+function spaltenkopfKopfzeile(spalten, aktionen) {
     const kopf = document.createElement('thead');
-    const kopfZeile = document.createElement('tr');
+
+    const titelZeile = document.createElement('tr');
     for (const spalte of spalten) {
         const th = document.createElement('th');
-        th.textContent = spalte.titel || '';
+        const hatTitel = Boolean(spalte.titel);
         // ariaLabel: fuer eine Spalte OHNE sichtbaren Titel (siehe
         // balkenSpalten() weiter unten) - dieselbe Ueberlegung wie bei
         // der Aktionen-Spalte direkt darunter: eine zweite, sichtbare
         // Ueberschrift ("Umsatz") neben der bereits betitelten
         // Zahlenspalte waere Wiederholung, aber eine <th> ganz ohne
         // Namen liesse die Spalte fuer einen Screenreader namenlos.
-        if (!spalte.titel && spalte.ariaLabel) th.setAttribute('aria-label', spalte.ariaLabel);
-        kopfZeile.append(th);
+        if (!hatTitel && spalte.ariaLabel) th.setAttribute('aria-label', spalte.ariaLabel);
+
+        const sortierbar = istSortierbar(spalte);
+        const gruppierbar = istGruppierbar(spalte);
+        if (sortierbar) {
+            const aktiv = spaltenkopfSortFeld === spalte.feld && spaltenkopfSortRichtung !== 0;
+            th.setAttribute('aria-sort', aktiv ? (spaltenkopfSortRichtung === 1 ? 'ascending' : 'descending') : 'none');
+        }
+
+        if (hatTitel && (sortierbar || gruppierbar)) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'spaltenkopf';
+            wrapper.append(sortierbar ? spaltenkopfSortknopf(spalte) : spaltenkopfTitelOhneSortierung(spalte));
+            if (gruppierbar) wrapper.append(spaltenkopfGruppenknopf(spalte));
+            th.append(wrapper);
+        } else {
+            th.textContent = spalte.titel || '';
+        }
+        titelZeile.append(th);
     }
     if (aktionen) {
         // Keine sichtbare Beschriftung - eine Spaltenüberschrift "Aktionen"
@@ -1267,45 +1674,349 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
         // <th> ohne jeden Namen liesse die letzte Spalte namenlos wirken.
         const th = document.createElement('th');
         th.setAttribute('aria-label', 'Aktionen');
-        kopfZeile.append(th);
+        titelZeile.append(th);
     }
-    kopf.append(kopfZeile);
-    tabelle.append(kopf);
+    kopf.append(titelZeile);
 
-    const koerper = document.createElement('tbody');
-    zeilen.forEach((zeile, index) => {
-        const tr = document.createElement('tr');
-        tr.tabIndex = -1;
-        for (const spalte of spalten) {
-            const td = document.createElement('td');
-            const wert = zeile[spalte.feld];
-            const inhalt = spalte.formatieren ? spalte.formatieren(wert, zeile) : (wert ?? '');
-            // formatieren darf statt eines Strings auch ein einzelnes
-            // Element liefern - eine Sparkline, einen Zellbalken oder eine
-            // typografisch skalierte Zahl (siehe sparkline()/zellbalken()/
-            // zahlSkaliert() weiter unten). textContent wäre dafür der
-            // falsche Weg: ein Element dort hineingeschrieben erschiene
-            // als "[object HTMLSpanElement]", nicht als das Element
-            // selbst. replaceChildren() nimmt ein Element ODER (weiterhin)
-            // einen String gleich sicher entgegen wie vorher textContent -
-            // keine innerHTML-Stelle kommt dazu, an der ein
-            // Schadensmeldungstext oder Kundenname durchliefe.
-            if (inhalt instanceof Node) {
-                td.replaceChildren(inhalt);
-            } else {
-                td.textContent = inhalt;
-            }
-            const klasse = typeof spalte.klasse === 'function' ? spalte.klasse(zeile) : spalte.klasse;
-            if (klasse) td.className = klasse;
-            tr.append(td);
+    // Filterzeile nur, wenn mindestens eine Spalte tatsaechlich filterbar
+    // ist - sonst waere eine zweite, komplett leere Kopfzeile Zierrat
+    // (derselbe Massstab wie bei zeigeFilterleiste() weiter oben: "ein
+    // Bedienelement, das nichts filtert, ist Zierrat"). Beide <tr>
+    // bleiben Kinder DESSELBEN <thead> - .arbeitstabelle thead ist
+    // "position: sticky", das gilt fuer das ganze Element, nicht Zeile
+    // fuer Zeile: beide kleben zusammen am oberen Rand, unveraendert
+    // gegenueber vorher.
+    if (spalten.some((s) => istFilterbar(s))) {
+        kopf.append(spaltenkopfFilterzeile(spalten, aktionen));
+    }
+
+    return kopf;
+}
+
+function spaltenkopfTitelOhneSortierung(spalte) {
+    const spanne = document.createElement('span');
+    spanne.textContent = spalte.titel;
+    return spanne;
+}
+
+function spaltenkopfSortknopf(spalte) {
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'spaltenkopf-sortknopf';
+    knopf.dataset.spaltenkopfFeld = spalte.feld;
+    knopf.dataset.spaltenkopfRolle = 'sortieren';
+
+    const titelSpanne = document.createElement('span');
+    titelSpanne.textContent = spalte.titel;
+    knopf.append(titelSpanne);
+
+    const aktiv = spaltenkopfSortFeld === spalte.feld && spaltenkopfSortRichtung !== 0;
+    const symbol = document.createElement('span');
+    symbol.className = 'spaltenkopf-sortsymbol'
+        + (aktiv ? ' spaltenkopf-sortsymbol-aktiv' : '')
+        + (aktiv && spaltenkopfSortRichtung === 1 ? ' spaltenkopf-sortsymbol-auf' : '');
+    // Konstantes Markup, keine Nutzereingabe - derselbe Ausnahmefall wie
+    // RAD_ICONS/SCHADEN_ICONS in den Bereichen (siehe dortiger Kommentar).
+    symbol.innerHTML = SPALTENKOPF_SORT_ICON;
+    symbol.setAttribute('aria-hidden', 'true');   // der Text daneben UND aria-label sagen es bereits
+    knopf.append(symbol);
+
+    knopf.setAttribute('aria-label', `Nach ${spalte.titel} sortieren`
+        + (aktiv ? `, aktuell ${spaltenkopfSortRichtung === 1 ? 'aufsteigend' : 'absteigend'}` : ''));
+
+    // Klick UND Tastatur: ein <button> ist beides ohne weiteren Code -
+    // Enter/Leertaste loesen 'click' nativ aus (Auftrag: "mit der
+    // Tastatur erreichbar UND bedienbar", kein Nachbau eines
+    // Tastatur-Handlers fuer etwas, das der Browser schon kann).
+    knopf.addEventListener('click', () => {
+        if (spaltenkopfSortFeld !== spalte.feld) {
+            spaltenkopfSortFeld = spalte.feld;
+            spaltenkopfSortRichtung = 1;
+        } else if (spaltenkopfSortRichtung === 1) {
+            spaltenkopfSortRichtung = -1;
+        } else if (spaltenkopfSortRichtung === -1) {
+            // Dritter Klick: zurueck zur Ausgangsordnung (Auftrag).
+            spaltenkopfSortFeld = null;
+            spaltenkopfSortRichtung = 0;
+        } else {
+            spaltenkopfSortRichtung = 1;
         }
-        if (aktionen) tr.append(zeilenAktionenZelle(aktionen(zeile) || []));
-        tr.addEventListener('click', () => zeileWaehlen(index));
-        koerper.append(tr);
-        listenZeilenElemente.push(tr);
+        zeichneArbeitstabelle();
     });
-    tabelle.append(koerper);
-    wurzel.append(tabelle);
+
+    return knopf;
+}
+
+function spaltenkopfGruppenknopf(spalte) {
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'spaltenkopf-gruppenknopf';
+    knopf.dataset.spaltenkopfFeld = spalte.feld;
+    knopf.dataset.spaltenkopfRolle = 'gruppieren';
+    const aktiv = spaltenkopfGruppe === spalte.feld;
+    knopf.setAttribute('aria-pressed', String(aktiv));
+    knopf.setAttribute('aria-label', `Nach ${spalte.titel} gruppieren`);
+    knopf.innerHTML = SPALTENKOPF_GRUPPE_ICON;
+    knopf.addEventListener('click', () => {
+        // Immer nur EINE Gruppierung ueber die ganze Tabelle - ein Klick
+        // auf eine ANDERE Spalte ersetzt die vorherige (kein
+        // verschachteltes Gruppieren, das der Auftrag nicht verlangt),
+        // ein Klick auf dieselbe hebt sie wieder auf.
+        spaltenkopfGruppe = aktiv ? null : spalte.feld;
+        zeichneArbeitstabelle();
+    });
+    return knopf;
+}
+
+function spaltenkopfFilterzeile(spalten, aktionen) {
+    const zeile = document.createElement('tr');
+    zeile.className = 'spaltenkopf-filterzeile';
+    for (const spalte of spalten) {
+        const th = document.createElement('th');
+        if (istFilterbar(spalte)) th.append(spaltenkopfFilterfeld(spalte));
+        zeile.append(th);
+    }
+    if (aktionen) zeile.append(document.createElement('th'));
+    return zeile;
+}
+
+// Baut das eigentliche Filter-Bedienelement - Auswahl, Schwelle oder
+// Text, siehe spaltenFilterTyp() weiter oben. Alle drei tragen
+// data-spaltenkopf-feld/-rolle="filtern" fuer den Fokuserhalt (siehe
+// fokusMerken()/fokusWiederherstellen() oben) und ein aria-label, weil
+// keines von ihnen ein <label for> aus dem statischen HTML hat (sie
+// entstehen dynamisch, wie die Felder aus zeigeMaske()).
+function spaltenkopfFilterfeld(spalte) {
+    const { zeilen: zeilenOriginal } = spaltenkopfListe;
+    const typ = spaltenFilterTyp(spalte, zeilenOriginal);
+    const aktuellerWert = spaltenkopfFilterwerte.get(spalte.feld);
+
+    if (typ === 'auswahl') {
+        const auswahl = document.createElement('select');
+        auswahl.dataset.spaltenkopfFeld = spalte.feld;
+        auswahl.dataset.spaltenkopfRolle = 'filtern';
+        auswahl.setAttribute('aria-label', `${spalte.titel} filtern`);
+
+        const alle = document.createElement('option');
+        alle.value = '';
+        alle.textContent = 'Alle';
+        auswahl.append(alle);
+
+        const distinct = new Map();   // roher Wert (als String) -> Beispielzeile fuer die Beschriftung
+        for (const zeile of zeilenOriginal) {
+            const roh = zeile[spalte.feld];
+            if (roh === null || roh === undefined || roh === '') continue;
+            const schluessel = String(roh);
+            if (!distinct.has(schluessel)) distinct.set(schluessel, zeile);
+        }
+        const sortiert = [...distinct.entries()].sort(([, za], [, zb]) =>
+            vergleicheWerte(spaltenWert(spalte, za), spaltenWert(spalte, zb)));
+        for (const [schluessel, beispielZeile] of sortiert) {
+            const option = document.createElement('option');
+            option.value = schluessel;
+            option.textContent = spaltenBeschriftungFuerWert(spalte, beispielZeile);
+            if (aktuellerWert === schluessel) option.selected = true;
+            auswahl.append(option);
+        }
+
+        // 'change' statt 'input': feuert erst beim Abschluss der Auswahl,
+        // kein Zumuellen der Tabelle waehrend des Durchblaetterns mit den
+        // Pfeiltasten - dieselbe Ueberlegung wie beim Auswahl-Typ in
+        // zeigeFilterleiste() weiter oben.
+        auswahl.addEventListener('change', () => {
+            if (auswahl.value === '') spaltenkopfFilterwerte.delete(spalte.feld);
+            else spaltenkopfFilterwerte.set(spalte.feld, auswahl.value);
+            zeichneArbeitstabelle();
+        });
+        return auswahl;
+    }
+
+    const eingabe = document.createElement('input');
+    eingabe.type = typ === 'schwelle' ? 'number' : 'text';
+    eingabe.dataset.spaltenkopfFeld = spalte.feld;
+    eingabe.dataset.spaltenkopfRolle = 'filtern';
+    eingabe.setAttribute('aria-label', typ === 'schwelle' ? `Mindestwert für ${spalte.titel}` : `${spalte.titel} filtern`);
+    eingabe.placeholder = typ === 'schwelle' ? '≥' : 'Suche…';
+    if (aktuellerWert !== undefined) eingabe.value = typ === 'schwelle' ? String(aktuellerWert) : aktuellerWert;
+
+    // 300ms Verzoegerung wie bei der Kundensuche (kunden.js) und dem
+    // Alters-Schieber (instandhaltung.js): ohne sie loeste jeder
+    // Tastendruck einen kompletten Tabellen-Neuaufbau aus UND risse dabei
+    // - siehe fokusMerken()/fokusWiederherstellen() oben - genau das
+    // Eingabefeld weg, in das gerade getippt wird.
+    let verzoegerung = null;
+    eingabe.addEventListener('input', () => {
+        clearTimeout(verzoegerung);
+        verzoegerung = setTimeout(() => {
+            const text = eingabe.value.trim();
+            if (text === '') {
+                spaltenkopfFilterwerte.delete(spalte.feld);
+            } else if (typ === 'schwelle') {
+                const zahl = Number(text.replace(',', '.'));
+                if (Number.isFinite(zahl)) spaltenkopfFilterwerte.set(spalte.feld, zahl);
+                else spaltenkopfFilterwerte.delete(spalte.feld);
+            } else {
+                // Unveraendert gespeichert (nicht kleingeschrieben) - das
+                // Feld zeigt nach dem Neuzeichnen sonst nicht mehr das,
+                // was getippt wurde (siehe Kommentar beim Filtern oben).
+                spaltenkopfFilterwerte.set(spalte.feld, text);
+            }
+            zeichneArbeitstabelle();
+        }, 300);
+    });
+    return eingabe;
+}
+
+// Hinweiszeile ueber der Tabelle - sichtbarer Zustand UND ein Weg zurueck
+// (Auftrag), siehe der lange Kommentar bei zeigeListe() oben. Nur
+// eingeblendet, wenn tatsaechlich gefiltert oder gruppiert wird.
+function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
+    const zeile = document.createElement('div');
+    zeile.className = 'spaltenkopf-hinweis';
+
+    if (spaltenkopfFilterwerte.size > 0) {
+        const text = document.createElement('span');
+        text.textContent = angezeigtAnzahl === gesamt
+            ? `${gesamt} Zeilen`
+            : `${angezeigtAnzahl} von ${gesamt} Zeilen (Spaltenfilter aktiv)`;
+        zeile.append(text);
+
+        const zuruecksetzen = document.createElement('button');
+        zuruecksetzen.type = 'button';
+        zuruecksetzen.className = 'spaltenkopf-hinweis-knopf';
+        zuruecksetzen.textContent = 'Spaltenfilter zurücksetzen';
+        zuruecksetzen.addEventListener('click', () => {
+            spaltenkopfFilterwerte = new Map();
+            zeichneArbeitstabelle();
+        });
+        zeile.append(zuruecksetzen);
+    }
+
+    if (gruppenSpalte) {
+        const text = document.createElement('span');
+        text.textContent = `Gruppiert nach ${gruppenSpalte.titel}`;
+        zeile.append(text);
+
+        const aufheben = document.createElement('button');
+        aufheben.type = 'button';
+        aufheben.className = 'spaltenkopf-hinweis-knopf';
+        aufheben.textContent = 'Gruppierung aufheben';
+        aufheben.addEventListener('click', () => {
+            spaltenkopfGruppe = null;
+            zeichneArbeitstabelle();
+        });
+        zeile.append(aufheben);
+    }
+
+    return zeile;
+}
+
+// Gruppen-Ueberschriftszeile: Beschriftung + je summierbarer Spalte eine
+// Zwischensumme (Auftrag: "eine Zwischensumme je Gruppe, wo Summieren
+// fachlich stimmt" - und NUR dort, siehe der lange Kommentar bei
+// zeigeListe() oben zu summierbar). <th scope="rowgroup"> statt <td>:
+// eine Gruppenzeile IST eine Ueberschrift fuer die Zeilen darunter, ein
+// Bildschirmleser soll das auch als solche ansagen.
+function spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte) {
+    const tr = document.createElement('tr');
+    tr.className = 'gruppenkopf-zeile';
+
+    const th = document.createElement('th');
+    th.setAttribute('scope', 'rowgroup');
+    th.colSpan = spalten.length + (aktionen ? 1 : 0);
+
+    const beschriftung = document.createElement('span');
+    beschriftung.className = 'gruppenkopf-beschriftung';
+    beschriftung.textContent = `${gruppenSpalte.titel}: ${gruppe.beschriftung} (${gruppe.zeilen.length})`;
+    th.append(beschriftung);
+
+    for (const spalte of spalten) {
+        if (!spalte.summierbar || !spalte.titel) continue;
+        const summe = gruppe.zeilen.reduce((s, z) => s + (Number(z[spalte.feld]) || 0), 0);
+        const teil = document.createElement('span');
+        teil.className = 'gruppenkopf-teilsumme';
+        teil.append(document.createTextNode(`${spalte.titel}: `));
+        // summeFormatieren() statt formatieren(): eine Zwischensumme hat
+        // keine ZEILE, die ein formatieren(wert, zeile) mit zeile-Zugriff
+        // (z. B. co2ZelleElement() in auswertungen.js) brauchen wuerde -
+        // siehe der lange Kommentar bei zeigeListe() oben.
+        const formatiert = spalte.summeFormatieren ? spalte.summeFormatieren(summe)
+            : spalte.formatieren ? spalte.formatieren(summe)
+            : summe.toLocaleString('de-DE');
+        teil.append(formatiert instanceof Node ? formatiert : document.createTextNode(String(formatiert)));
+        th.append(teil);
+    }
+
+    tr.append(th);
+    return tr;
+}
+
+// Baut EINE Datenzeile - derselbe Zellenaufbau, den zeigeListe() vor
+// dieser Erweiterung inline hatte, nur herausgeloest, weil er jetzt aus
+// zwei Stellen aufgerufen wird (flach ohne Gruppierung, oder je Gruppe
+// einmal). index ist die Position in listenZeilen/listenZeilenElemente
+// (siehe zeileWaehlen() weiter unten) - bei Gruppierung ein fortlaufender
+// Zaehler UEBER alle Gruppen hinweg, nicht je Gruppe neu bei 0: eine
+// stabile Bucket-Aufteilung (siehe gruppiere() oben, Map in
+// Einfuegereihenfolge) reiht die Zeilen dabei exakt wieder in ihrer
+// urspruenglichen Reihenfolge auf, sodass dieser Zaehler und die flache
+// Liste "angezeigt" immer dieselbe Zeile meinen.
+function baueDatenzeile(zeile, spalten, aktionen, index) {
+    const tr = document.createElement('tr');
+    tr.tabIndex = -1;
+    for (const spalte of spalten) {
+        const td = document.createElement('td');
+        const wert = zeile[spalte.feld];
+        const inhalt = spalte.formatieren ? spalte.formatieren(wert, zeile) : (wert ?? '');
+        // formatieren darf statt eines Strings auch ein einzelnes
+        // Element liefern - eine Sparkline, einen Zellbalken oder eine
+        // typografisch skalierte Zahl (siehe sparkline()/zellbalken()/
+        // zahlSkaliert() weiter unten). textContent wäre dafür der
+        // falsche Weg: ein Element dort hineingeschrieben erschiene
+        // als "[object HTMLSpanElement]", nicht als das Element
+        // selbst. replaceChildren() nimmt ein Element ODER (weiterhin)
+        // einen String gleich sicher entgegen wie vorher textContent -
+        // keine innerHTML-Stelle kommt dazu, an der ein
+        // Schadensmeldungstext oder Kundenname durchliefe.
+        if (inhalt instanceof Node) {
+            td.replaceChildren(inhalt);
+        } else {
+            td.textContent = inhalt;
+        }
+        const klasse = typeof spalte.klasse === 'function' ? spalte.klasse(zeile) : spalte.klasse;
+        if (klasse) td.className = klasse;
+        tr.append(td);
+    }
+    if (aktionen) tr.append(zeilenAktionenZelle(aktionen(zeile) || []));
+    tr.addEventListener('click', () => zeileWaehlen(index));
+    listenZeilenElemente.push(tr);
+    return tr;
+}
+
+// "Kein Treffer fuer diesen Spaltenfilter" (Erprobung, Auftrag) - eine
+// schlanke Zeile INNERHALB der bestehenden Tabelle statt eines Aufrufs
+// von zeigeLeermaske(), das Kopf- UND Filterzeile mit wegraeumen wuerde
+// (siehe der lange Kommentar bei zeigeListe() oben, Abschnitt "KEIN
+// zeigeLeermaske()"). listenZeilen bleibt dabei [] (siehe
+// zeichneArbeitstabelle() oben) - der globale Pfeiltasten-Handler prueft
+// das bereits ("if (listenZeilen.length === 0) return"), es gibt hier
+// nichts zusaetzlich abzusichern.
+function baueLeerzeile(spalten, aktionen) {
+    const tr = document.createElement('tr');
+    tr.className = 'spaltenkopf-leerzeile';
+    const td = document.createElement('td');
+    td.colSpan = spalten.length + (aktionen ? 1 : 0);
+    td.append(document.createTextNode('Keine Zeile erfüllt die gewählte Einschränkung am Spaltenkopf. '));
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.textContent = 'Spaltenfilter zurücksetzen';
+    knopf.addEventListener('click', () => {
+        spaltenkopfFilterwerte = new Map();
+        zeichneArbeitstabelle();
+    });
+    td.append(knopf);
+    tr.append(td);
+    return tr;
 }
 
 // Baut die Icon-Zelle EINER Zeile - für JEDE Zeile aufgerufen, auch
@@ -1714,8 +2425,16 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
         // Nicht feuern, während jemand in einem Eingabefeld der Maske
         // tippt - dort bewegen Pfeiltasten den Cursor, nicht die Liste.
+        // BUTTON kam mit den Spaltenkopf-Bedienelementen dazu (Sortieren/
+        // Gruppieren, siehe zeigeListe() weiter oben): ohne diese
+        // Ergänzung riss ArrowDown/ArrowUp den Tastaturfokus von einem
+        // gerade fokussierten Spaltenkopf-Knopf (oder jedem anderen
+        // Knopf dieser Oberfläche) in die Zeilenauswahl der Liste, statt
+        // schlicht nichts zu tun - im Browser nachgestellt: Tab zum
+        // Knopf "Neues Rad anlegen", ArrowDown gedrückt, Fokus sprang
+        // ungefragt auf die erste Tabellenzeile.
         const zielTag = document.activeElement?.tagName;
-        if (zielTag === 'INPUT' || zielTag === 'TEXTAREA' || zielTag === 'SELECT') return;
+        if (zielTag === 'INPUT' || zielTag === 'TEXTAREA' || zielTag === 'SELECT' || zielTag === 'BUTTON') return;
         if (listenZeilen.length === 0) return;
         e.preventDefault();
         const richtung = e.key === 'ArrowDown' ? 1 : -1;

@@ -156,12 +156,26 @@ async function flotteAufbauen() {
     // Maske - wer nur den Status setzen oder ausmustern will, muss die
     // Zeile dafuer nicht erst oeffnen. Siehe radHandlungen() weiter
     // unten fuer die gemeinsame Grundlage beider Darstellungen.
+    // filterbar:false bei status/typ_code/standort (Spaltenkopf-Baustein,
+    // rahmen.js): fuer alle drei gibt es bereits die Filterleiste oben
+    // (flotteFilterStatus/-Typ/-Standort) - ein zweiter, unabhaengiger
+    // Filter auf demselben Feld koennte sich mit dem ersten widersprechen
+    // (Filterleiste "verfuegbar", Spaltenkopf "defekt" -> immer null
+    // Zeilen), siehe der lange Kommentar bei zeigeListe() in rahmen.js.
+    // Gruppieren bleibt fuer alle drei an - das ist eine neue Faehigkeit,
+    // die es vorher gar nicht gab, und widerspricht der Filterleiste
+    // nicht (Anzeige, keine Einschraenkung).
+    // offene_schaeden: summierbar - eine echte Anzahl je Rad (kein
+    // Durchschnitt, keine Ueberzaehlung ueber Zeitraeume wie bei
+    // v_wawi_umsatz_kundengruppe.kunden, siehe auswertungen.js), die
+    // Summe je Gruppe (z. B. alle Raeder mit Status "defekt") ist
+    // fachlich sinnvoll.
     zeigeListe(vorgang, raederSichtbar, [
         { feld: 'rahmennummer',   titel: 'Rahmennummer' },
-        { feld: 'typ_code',       titel: 'Typ' },
-        { feld: 'status',         titel: 'Status', klasse: statusKlasse },
-        { feld: 'standort',       titel: 'Standort' },
-        { feld: 'offene_schaeden', titel: 'Schäden', formatieren: (n) => n || '' }
+        { feld: 'typ_code',       titel: 'Typ', filterbar: false },
+        { feld: 'status',         titel: 'Status', klasse: statusKlasse, filterbar: false },
+        { feld: 'standort',       titel: 'Standort', filterbar: false },
+        { feld: 'offene_schaeden', titel: 'Schäden', formatieren: (n) => n || '', summierbar: true }
     ], radMaske, radZeilenAktionen);
 
     // meldeVorgang statt melde: nach einer Buchung (Statuswechsel,

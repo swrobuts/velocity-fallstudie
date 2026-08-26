@@ -245,6 +245,20 @@ async function schaedenZeigen(vorgang) {
         { feld: 'kategorie',    titel: 'Kategorie' },
         {
             feld: 'schwere', titel: 'Schwere',
+            // filterbar:false (Spaltenkopf-Baustein, rahmen.js): der
+            // Schwere-Filter oben (instandhaltungFilterSchwere) deckt
+            // dieses Feld bereits ab - ein zweiter, unabhaengiger Filter
+            // koennte sich damit widersprechen, siehe der lange
+            // Kommentar bei zeigeListe() in rahmen.js.
+            // sortierwert: 'gering'/'mittel'/'fahruntauglich' alphabetisch
+            // sortiert wuerde 'fahruntauglich' vor 'gering' zeigen - der
+            // Fehler, der in diesem Projekt schon einmal ein
+            // fahruntaugliches Rad als "gering" hat erscheinen lassen
+            // (siehe Auftrag). SCHWERE_RANG (siehe unten) traegt die
+            // tatsaechliche Rangfolge, sortiert wird nach dem Wert, nicht
+            // nach der Anzeige.
+            filterbar: false,
+            sortierwert: (z) => SCHWERE_RANG[z.schwere] ?? -1,
             // Nur EIN Parameter (die ganze Zeile), nicht (s) wie im
             // Auftragstext: zeigeListe in rahmen.js ruft eine
             // Funktions-Spalte als spalte.klasse(zeile) auf, nicht
@@ -255,7 +269,21 @@ async function schaedenZeigen(vorgang) {
             klasse: (z) => (z.schwere === 'fahruntauglich' ? 'schlecht' : z.schwere === 'mittel' ? 'warnung' : '')
         },
         { feld: 'gemeldet_am',  titel: 'Gemeldet' },
-        { feld: 'offen_seit',   titel: 'Offen seit', formatieren: alterKurz },
+        {
+            feld: 'offen_seit', titel: 'Offen seit', formatieren: alterKurz,
+            // filterbar:false: der Mindestalter-Schieber oben deckt
+            // dieses Feld bereits ab, und praeziser (eine echte
+            // Stundenschwelle statt einer aus den geladenen Werten
+            // geratenen) - ein zweiter Filter waere hier nicht nur
+            // ueberfluessig, sondern schwaecher als der vorhandene.
+            // sortierwert: offen_seit ist ein Postgres-Intervalltext
+            // ("2 days 03:05:00") - als Text sortiert laege "10 Tage" vor
+            // "2 Tage" (die Ziffer '1' < '2'). alterInStunden() (siehe
+            // unten, fuer den Schieber ohnehin schon vorhanden) liefert
+            // die tatsaechlich vergleichbare Zahl.
+            filterbar: false,
+            sortierwert: (z) => alterInStunden(z.offen_seit)
+        },
         { feld: 'status',       titel: 'Stand' }
     ], schadenMaske, schadenZeilenAktionen);
 
@@ -265,6 +293,15 @@ async function schaedenZeigen(vorgang) {
         ? `${sichtbar.length}${zusatz} offene Schäden, davon ${dringend} fahruntauglich`
         : `${sichtbar.length}${zusatz} offene Schäden`);
 }
+
+// Rangfolge von schwere, fuer die sortierwert-Eigenschaft der
+// Schwere-Spalte in schaedenZeigen() oben (Spaltenkopf-Sortieren,
+// rahmen.js) - alphabetisch stuende 'fahruntauglich' vor 'gering',
+// genau der Fehler, der in diesem Projekt schon einmal ein
+// fahruntaugliches Rad als "gering" hat erscheinen lassen (siehe
+// Auftrag). Dieselben drei Werte wie im Schwere-Filter oben
+// (instandhaltungFilterSchwere).
+const SCHWERE_RANG = { gering: 0, mittel: 1, fahruntauglich: 2 };
 
 // offen_seit kommt als Postgres-Intervall-Text (IntervalStyle 'postgres')
 // ueber PostgREST herein, z. B. "2 days 03:05:00.123456", "05:03:10" oder

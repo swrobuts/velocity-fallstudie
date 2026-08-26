@@ -348,10 +348,20 @@ async function umsatzRadtypZeigen(vorgang) {
 
     const umsatzMaximum = Math.max(...zeilen.map((z) => z.umsatz));
     zeigeListe(vorgang, zeilenMitVeraenderung, [
+        // gruppierbar (Vorgabe) bei 'typ': "Umsatz nach Radtyp" nach
+        // Radtyp gruppiert ist "der eigentliche Gewinn" (Auftrag) - die
+        // Zwischensumme je Gruppe kommt aus den summierbar:true-Spalten
+        // unten (Fahrten, Minuten, Umsatz), nicht aus Je-Fahrt/Δ - siehe
+        // der lange Kommentar bei zeigeListe() in rahmen.js.
         { feld: 'typ',            titel: 'Radtyp' },
         { feld: 'monat',          titel: 'Monat',        formatieren: (w) => monatFormat(w) },
-        { feld: 'fahrten',        titel: 'Fahrten',      formatieren: zahlFormat, klasse: zahlKlasse() },
-        { feld: 'minuten',        titel: 'Minuten',      formatieren: zahlFormat, klasse: zahlKlasse() },
+        // summierbar: Fahrten und Minuten sind echte Zaehlwerte JE MONAT
+        // - anders als v_wawi_umsatz_kundengruppe.kunden (dort zaehlt
+        // dieselbe Person in mehreren Monaten mehrfach, siehe dort)
+        // gehoert eine Fahrt/eine gefahrene Minute zu GENAU einem Monat,
+        // eine Summe ueber mehrere Monate hinweg zaehlt nichts doppelt.
+        { feld: 'fahrten',        titel: 'Fahrten',      formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'minuten',        titel: 'Minuten',      formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
         // Bissantz: Balken an einer GEMEINSAMEN Skala ausgerichtet -
         // umsatzMaximum gilt für jede Zeile der Liste, nicht neu je Zeile
         // berechnet. Balken und Betrag in ZWEI Spalten (balkenSpalten() in
@@ -359,7 +369,10 @@ async function umsatzRadtypZeigen(vorgang) {
         // Zelle - siehe dortiger Kommentar (Gestaltungsauftrag, Punkt 5:
         // "keine vertikale Flucht", weil 7,70 € und 2.011,20 € die Gruppe
         // unterschiedlich breit machten und den Balken mitzogen).
-        ...balkenSpalten('umsatz', 'Umsatz', umsatzMaximum, geldFormat),
+        // summierbar: Umsatz ist additiv ueber Monate UND ueber Radtypen -
+        // die Kontrollzahl 35.454,47 € aus der Statuszeile ist genau die
+        // Summe aller Gruppen-Zwischensummen, siehe Bericht.
+        ...balkenSpalten('umsatz', 'Umsatz', umsatzMaximum, geldFormat, { summierbar: true }),
         {
             feld: 'umsatz_je_fahrt', titel: 'Je Fahrt', klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(geldFormat(w))
@@ -512,16 +525,28 @@ async function umsatzKundengruppeZeigen(vorgang) {
     zeigeListe(vorgang, zeilen, [
         { feld: 'monat',           titel: 'Monat',      formatieren: (w) => monatFormat(w) },
         { feld: 'tarif',           titel: 'Tarif' },
+        // 'kunden' bewusst NICHT summierbar (anders als 'fahrten'/'umsatz'
+        // unten): die Spalte zaehlt Kunden JE MONAT - dieselbe Person mit
+        // einer laufenden Mitgliedschaft steckt in zwoelf Monatszeilen
+        // zwoelfmal. Eine Gruppen-Zwischensumme ueber mehrere Monate (etwa
+        // nach Tarif gruppiert) wuerde sie zwoelfmal zaehlen - derselbe
+        // Fehlertyp wie beim ungewichteten Schaetzanteil bei CO2
+        // (53,2 % statt 40,0 %, siehe anteilGewichtet() weiter oben):
+        // "man summiert Durchschnitte/Bestandszaehlungen nicht, man
+        // gewichtet bzw. zaehlt sie neu" (Auftrag).
         { feld: 'kunden',          titel: 'Kunden',     formatieren: zahlFormat, klasse: zahlKlasse() },
-        { feld: 'fahrten',         titel: 'Fahrten',    formatieren: zahlFormat, klasse: zahlKlasse() },
+        // summierbar: eine Fahrt gehoert zu GENAU einem Monat, additiv
+        // ueber Monate - kein Doppelzaehl-Risiko wie bei 'kunden' oben.
+        { feld: 'fahrten',         titel: 'Fahrten',    formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
         // Dieselbe gemeinsame Skala wie im Radtyp-Reiter (Hichert:
         // einheitliche Notation über alle Auswertungen) - hier über die
         // Zeilen DIESER Tabelle, nicht über beide Umsatztabellen
         // gemeinsam, weil "Umsatz je Monat und Tarif" und "Umsatz je
         // Monat und Radtyp" unterschiedliche Vergleichsgruppen sind.
         // Balken/Betrag in zwei Spalten (balkenSpalten(), siehe
-        // Kommentar dort und im Radtyp-Reiter oben).
-        ...balkenSpalten('umsatz', 'Umsatz', umsatzMaximum, geldFormat),
+        // Kommentar dort und im Radtyp-Reiter oben). summierbar: derselbe
+        // additive Umsatz wie im Radtyp-Reiter.
+        ...balkenSpalten('umsatz', 'Umsatz', umsatzMaximum, geldFormat, { summierbar: true }),
         {
             feld: 'umsatz_je_kunde', titel: 'Je Kunde', klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(geldFormat(w))
@@ -637,18 +662,30 @@ async function kmCo2Zeigen(vorgang) {
     zeigeListe(vorgang, zeilen, [
         { feld: 'monat',    titel: 'Monat',   formatieren: (w) => monatFormat(w) },
         { feld: 'typ_code', titel: 'Radtyp' },
-        { feld: 'fahrten',  titel: 'Fahrten', formatieren: zahlFormat, klasse: zahlKlasse() },
+        // summierbar: Fahrten je Monat/Radtyp, additiv - kein
+        // Doppelzaehl-Risiko (jede Fahrt gehoert zu genau einer Zeile).
+        { feld: 'fahrten',  titel: 'Fahrten', formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
         // Balken/Betrag in zwei Spalten (balkenSpalten() in rahmen.js) -
         // siehe Kommentar dort und im Radtyp-Reiter (Gestaltungsauftrag,
-        // Punkt 5).
-        ...balkenSpalten('kilometer', 'Kilometer', kilometerMaximum, kmFormat),
+        // Punkt 5). summierbar: gefahrene Kilometer sind additiv.
+        ...balkenSpalten('kilometer', 'Kilometer', kilometerMaximum, kmFormat, { summierbar: true }),
         {
             // Schritt 2 des Auftrags, korrigiert - siehe Kommentar bei
             // co2ZelleText()/co2ZelleElement() weiter oben: der
             // Schätzanteil DIESER ZEILE steht direkt neben der Zahl,
             // nicht in einer Fußnote.
+            //
+            // summierbar: die Kilogramm-Ersparnis selbst ist additiv -
+            // NUR die Zahl, nicht der daneben angezeigte Schätzanteil
+            // (der ist ein gewichteter Anteil, siehe anteilGewichtet()
+            // weiter oben, und wuerde in einer Zwischensumme naiv/falsch
+            // gemittelt). summeFormatieren() statt formatieren(): eine
+            // Zwischensumme hat keine ZEILE, die co2ZelleElement()
+            // bräuchte (die liest zeile.anteil_geschaetzt) - sie bekommt
+            // stattdessen nur die reine kg-Zahl, ohne (falschen) Anteil.
             feld: 'co2_ersparnis_kg', titel: 'CO₂-Ersparnis',
-            formatieren: (w, z) => co2ZelleElement(z), klasse: zahlKlasse()
+            formatieren: (w, z) => co2ZelleElement(z), klasse: zahlKlasse(),
+            summierbar: true, summeFormatieren: (summe) => kgFormat(summe)
         }
     ], kmCo2Maske);
 
@@ -768,16 +805,25 @@ async function stationsauslastungZeigen(vorgang) {
     zeigeListe(vorgang, zeilen, [
         { feld: 'stationsnummer', titel: 'Nummer' },
         { feld: 'name',           titel: 'Station' },
-        { feld: 'kapazitaet',     titel: 'Kapazität', formatieren: zahlFormat, klasse: zahlKlasse() },
-        { feld: 'belegt',         titel: 'Belegt',    formatieren: zahlFormat, klasse: zahlKlasse() },
-        { feld: 'abgaenge',       titel: 'Abgänge',   formatieren: zahlFormat, klasse: zahlKlasse() },
-        { feld: 'zugaenge',       titel: 'Zugänge',   formatieren: zahlFormat, klasse: zahlKlasse() },
+        // summierbar bei kapazitaet/belegt/abgaenge/zugaenge/saldo: jede
+        // Zeile ist eine EIGENE Station, jeder Wert eine echte Zaehlung
+        // fuer genau diese Station (kein Durchschnitt, keine Zeile, die
+        // in mehreren Gruppen gleichzeitig steckt) - eine Zwischensumme
+        // ueber eine Gruppe von Stationen (z. B. "alle mit negativem
+        // Saldo", falls danach gruppiert wird) ist additiv unbedenklich.
+        // 'fuellstand' bleibt bewusst NICHT summierbar: das ist ein
+        // Verhaeltnis (belegt/kapazitaet), Verhaeltnisse summiert man
+        // nicht - derselbe Fehlertyp wie bei umsatz_je_fahrt.
+        { feld: 'kapazitaet',     titel: 'Kapazität', formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'belegt',         titel: 'Belegt',    formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'abgaenge',       titel: 'Abgänge',   formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'zugaenge',       titel: 'Zugänge',   formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
         {
             // Farbe trägt Bedeutung: eine Station, die dauerhaft mehr
             // Raeder abgibt als sie bekommt (Saldo negativ), blutet leer
             // und muss von Hand nachgefüllt werden - keine Dekoration,
             // sondern derselbe Signalgedanke wie "frei" in stationen.js.
-            feld: 'saldo', titel: 'Saldo',
+            feld: 'saldo', titel: 'Saldo', summierbar: true,
             formatieren: (w) => (w > 0 ? `+${zahlFormat(w)}` : zahlFormat(w)),
             klasse: (z) => zahlKlasse(z.saldo < 0 ? 'warnung' : z.saldo > 0 ? 'gut' : '')
         },
@@ -790,7 +836,8 @@ async function stationsauslastungZeigen(vorgang) {
         // balkenSpalten() übergeben, weil sie vom WERT dieser Zeile
         // abhängt (siehe Kommentar dort). Balken/Betrag in zwei Spalten,
         // aus demselben Grund wie in den drei Reitern davor
-        // (Gestaltungsauftrag, Punkt 5).
+        // (Gestaltungsauftrag, Punkt 5). Kein summierbar hier (Vorgabe
+        // false) - fuellstand ist ein Verhaeltnis, siehe Kommentar oben.
         ...balkenSpalten('fuellstand', 'Füllstand', 1, prozentFormat, {
             farbe: (w) => (w >= 1 ? 'var(--warnung-text)' : 'var(--marine)'),
             klasse: (z) => zahlKlasse(z.fuellstand >= 1 ? 'warnung' : '')
