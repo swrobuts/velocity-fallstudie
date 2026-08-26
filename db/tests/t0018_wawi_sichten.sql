@@ -507,3 +507,142 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;
+
+-- =====================================================================
+-- "Sichten verweben" (Gestaltungsauftrag Punkt 2b): v_wawi_fahrten_je_tag_rad
+-- =====================================================================
+
+-- DER WICHTIGSTE TEST DIESER DATEI (Auftrag, woertlich): kein
+-- Kundenbezug in den Spalten. Positiv (die erlaubten Spalten sind da)
+-- UND negativ (die verbotenen fehlen) - eine Sicht, die nur behauptet,
+-- keinen Personenbezug zu tragen, waere derselbe Fehlschlag wie der
+-- fruehere Entwurf von v_wawi_fahrt_km, der sich auf eine geerbte
+-- Schranke verliess, die es nicht gab (siehe deren Kopfkommentar in
+-- 0018_wawi_sichten.sql). ausleihe_id fehlt bewusst zusaetzlich zu
+-- kunde_id/kundennummer: sie liesse sich ueber v_wawi_fahrt_km (dort nur
+-- fuer leitung lesbar) wieder auf eine Person zurueckfuehren.
+create or replace function velocity_test.test_v_fahrten_je_tag_rad_existiert_ohne_personenbezug()
+returns setof text language plpgsql as $$
+begin
+  return next has_view('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name,
+                       'v_wawi_fahrten_je_tag_rad existiert');
+
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'tag'::name,
+                         'nennt den Tag');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'fahrrad_id'::name,
+                         'nennt das Rad (fuer den Querverweis in die Flotte)');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'rahmennummer'::name,
+                         'nennt die Rahmennummer');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'typ_code'::name,
+                         'nennt den Radtyp');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'start_station'::name,
+                         'nennt die Startstation');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'ziel_station'::name,
+                         'nennt die Zielstation');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'dauer_minuten'::name,
+                         'nennt die Dauer');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'kilometer'::name,
+                         'nennt die Strecke');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'ist_geschaetzt'::name,
+                         'kennzeichnet eine geschaetzte Strecke');
+
+  return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'ausleihe_id'::name,
+                           'nennt keine Fahrt-Kennung (liesse sich ueber v_wawi_fahrt_km zurueckverfolgen)');
+  return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'kunde_id'::name,
+                           'nennt keinen Kunden');
+  return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'kundennummer'::name,
+                           'nennt keine Kundennummer');
+  return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'vorname'::name,
+                           'nennt keinen Vornamen');
+  return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'nachname'::name,
+                           'nennt keinen Nachnamen');
+  return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'startzeit'::name,
+                           'nennt keine Uhrzeit - nur den Tag, der schon aus dem Klickkontext bekannt ist');
+end;
+$$;
+
+-- Rollenschranke: POSITIVE Probe fuer BEIDE zugeteilten Rollen (leitung
+-- UND disposition, siehe Kopfkommentar der Sicht fuer die Begruendung
+-- beider) UND eine NEGATIVE Probe fuer eine dritte, nicht zugeteilte
+-- Rolle - dieselbe Gegenprobe wie bei v_wawi_fahrten_je_tag_rollentrennung_greift
+-- oben, nur mit zwei erlaubten statt einer.
+create or replace function velocity_test.test_v_fahrten_je_tag_rad_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('tagrad-leitung', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_fahrten_je_tag_rad;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht die Raeder je Tag');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('tagrad-disposition', 'disposition');
+  select count(*) into v_n from velocity.v_wawi_fahrten_je_tag_rad;
+  return next cmp_ok(v_n, '>', 0,
+    'Disposition sieht die Raeder je Tag - Flottenbetrieb, keine Kundenauswertung');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('tagrad-werkstatt', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_fahrten_je_tag_rad;
+  return next is(v_n, 0, 'Werkstatt sieht keine Raeder je Tag - weder leitung noch disposition ist zugeteilt');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Dieselben Fahrten, nur nach Rad statt nach Tag aggregiert geschnitten -
+-- der Lehrpunkt des Auftrags wörtlich als Zahl geprüft: die Zeilenzahl
+-- dieser Sicht JE TAG muss der fahrten-Spalte von v_wawi_fahrten_je_tag
+-- fuer denselben Tag entsprechen. Ohne diese Gegenprobe koennte ein Join-
+-- Fehler (z. B. ein versehentlicher inner statt left join auf die
+-- Stationen) stillschweigend Zeilen verschlucken, ohne dass es eine der
+-- beiden anderen Proben aufdeckte.
+create or replace function velocity_test.test_v_fahrten_je_tag_rad_stimmt_mit_tagessumme_ueberein()
+returns setof text language plpgsql as $$
+begin
+  perform velocity_test.fixture_mitarbeiter('tagrad-summe');
+
+  return next is_empty($q$
+    select 1
+      from (select tag, count(*) as radzeilen from velocity.v_wawi_fahrten_je_tag_rad group by 1) r
+      join velocity.v_wawi_fahrten_je_tag t using (tag)
+     where r.radzeilen <> t.fahrten
+  $q$, 'Zeilenzahl je Tag in v_wawi_fahrten_je_tag_rad = fahrten in v_wawi_fahrten_je_tag');
+
+  -- Gegenprobe, dass obige Pruefung ueberhaupt etwas vergleicht (siehe
+  -- dasselbe Muster bei test_v_fahrten_je_tag_stimmt_mit_monatssichten_ueberein).
+  return next cmp_ok(
+    (select count(*)::int from (
+       select tag from velocity.v_wawi_fahrten_je_tag_rad
+       intersect
+       select tag from velocity.v_wawi_fahrten_je_tag) gemeinsam),
+    '>', 0, 'Es gibt ueberhaupt gemeinsame Tage zwischen beiden Sichten');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Der starke Tag aus dem Auftrag (4. September 2025, 61 Fahrten,
+-- wörtlich genannt): eine Liste dieser Groesse muss vollstaendig und
+-- ohne stille Kuerzung ankommen - "das ist eine Liste, keine
+-- Datenflut, aber pruef, was beim staerksten Tag passiert".
+create or replace function velocity_test.test_v_fahrten_je_tag_rad_september_2025()
+returns setof text language plpgsql as $$
+declare v_n integer; v_ohne_rahmennummer integer;
+begin
+  perform velocity_test.fixture_mitarbeiter('tagrad-sept2025');
+
+  select count(*) into v_n from velocity.v_wawi_fahrten_je_tag_rad where tag = '2025-09-04';
+  return next is(v_n, 61, '4. September 2025: 61 Raeder-Zeilen, wie v_wawi_fahrten_je_tag.fahrten (Auftrag)');
+
+  select count(*) into v_ohne_rahmennummer
+    from velocity.v_wawi_fahrten_je_tag_rad
+   where tag = '2025-09-04' and rahmennummer is null;
+  return next is(v_ohne_rahmennummer, 0, 'Jede der 61 Zeilen nennt eine Rahmennummer - keine stumme Luecke');
+
+  -- Ein schwacher Tag desselben Monats zur Gegenprobe: die Sicht liefert
+  -- nicht bei jedem Tag zufaellig genau 61 Zeilen zurueck.
+  select count(*) into v_n from velocity.v_wawi_fahrten_je_tag_rad where tag = '2025-09-01';
+  return next isnt(v_n, 61, 'Ein anderer Tag desselben Monats liefert eine andere Zeilenzahl');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;

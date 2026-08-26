@@ -12,11 +12,11 @@
 --             v_wawi_auftrag, v_wawi_umsatz_radtyp,
 --             v_wawi_umsatz_kundengruppe, v_wawi_km_co2,
 --             v_wawi_stationsauslastung, v_wawi_modell,
---             v_wawi_fahrten_je_tag
+--             v_wawi_fahrten_je_tag, v_wawi_fahrten_je_tag_rad
 -- Ruecknahme: DROP VIEW fuer dieselben Namen; DROP FUNCTION
 --             velocity.fn_luftlinie_km(numeric,numeric,numeric,numeric);
 --
--- Hinweis:    Diese Datei entsteht in vier Aufgaben. Aufgabe 10 legt die
+-- Hinweis:    Diese Datei entsteht in fuenf Aufgaben. Aufgabe 10 legt die
 --             fuenf Arbeitssichten an (Flotte, Kunden, Stationen,
 --             Schaeden, Auftraege) und die Haversine-Funktion, die die
 --             Auswertungssichten aus Aufgabe 11 brauchen werden. Aufgabe 3
@@ -26,6 +26,10 @@
 --             Aufgabe ergaenzt v_wawi_fahrten_je_tag: die Monatssichten
 --             aus Aufgabe 11 aggregieren je Monat, ein Klick auf einen
 --             Monat braucht aber Tageszahlen, die es bislang nicht gab.
+--             "Sichten verweben" (Gestaltungsauftrag Punkt 2b) ergaenzt
+--             v_wawi_fahrten_je_tag_rad: ein Klick auf einen Tag braucht
+--             die Raeder, die an diesem Tag gefahren sind - ohne
+--             Personenbezug, siehe deren ausfuehrlicher Kommentar.
 -- =====================================================================
 
 -- Luftlinie nach Haversine, ohne PostGIS - dieselbe Entscheidung wie
@@ -886,3 +890,136 @@ comment on column velocity.v_wawi_fahrten_je_tag.fahrten is
   'passenden Zeilen jeder der drei Monatssichten ergeben. Genau das prüft '
   'test_v_fahrten_je_tag_stimmt_mit_monatssichten_ueberein in '
   't0018_wawi_sichten.sql als wichtigste Zusicherung dieser Sicht.';
+
+-- =====================================================================
+-- "Sichten verweben" (Gestaltungsauftrag Punkt 2b): v_wawi_fahrten_je_tag_rad
+-- - die dritte Ebene des Drill-Downs (Monat -> Tag -> Räder)
+-- =====================================================================
+
+-- ---- Fahrten je Tag und Rad --------------------------------------------
+-- Wörtlich der Auftrag: "ein Klick auf das Datum würde die weiteren
+-- Infos offenlegen, nämlich welche Instanzen der Räder an diesem Tag
+-- gefahren sind, mit allen Detaildaten." Diese Sicht ist genau das -
+-- eine Zeile je Fahrt eines Tages, aber vom RAD her gesehen, nicht vom
+-- Kunden her.
+--
+-- DIE FACHLICHE GRENZE (der wichtigste Teil dieser Sicht, wortgleich zum
+-- Anlass bei v_wawi_fahrt_km oben): eine Liste von Fahrten mit kunde_id
+-- und Zeitstempel ist ein Bewegungsprofil - deshalb wurde v_wawi_fahrt_km
+-- weiter oben authenticated ausdrücklich ENTZOGEN. Ein Fahrtenverlauf JE
+-- RAD ist etwas anderes: ein Fahrrad ist keine Person, und "Rahmennummer
+-- FR-1234 stand am 4. September zweimal an Station Marktplatz" ist
+-- Flottenbetrieb, kein Bewegungsprofil eines Menschen - dieselben
+-- Fahrten, nur nach Rad statt nach Kunde geschnitten, sind deshalb
+-- zulässig. Die Grenze sitzt, wie bei v_wawi_fahrten_je_tag, in der
+-- SPALTENLISTE selbst, nicht nur in diesem Kommentar: keine kunde_id,
+-- keine kundennummer, kein Name, keine ausleihe_id (die ließe sich über
+-- v_wawi_fahrt_km - dort ohnehin nur für leitung lesbar - wieder auf eine
+-- Person zurückführen) - nichts, worüber sich ein Kunde herstellen ließe.
+-- Rahmennummer, Radtyp, Start-/Zielstation, Dauer und Strecke bleiben,
+-- weil die Disposition genau das für die tägliche Flottensteuerung
+-- braucht (welches Rad war wo, wie lange, wie weit).
+--
+-- KEIN JOIN AUF v_wawi_fahrt_km, obwohl die Kilometerformel von dort
+-- eins zu eins übernommen ist: jene Sicht trägt selbst
+-- "and velocity.hat_rolle('leitung')" in ihrer eigenen WHERE-Klausel. Ein
+-- Join hierher würde für ein Konto mit NUR disposition (ohne leitung) an
+-- dieser Stelle für JEDE Zeile null Treffer liefern, obwohl die
+-- WHERE-Klausel DIESER Sicht disposition ausdrücklich zulässt (siehe
+-- ROLLE unten) - eine Sicht würde so ungewollt die engere Schranke einer
+-- anderen erben. Die Drei-Fall-Formel steht deshalb ein zweites Mal hier,
+-- Zeile für Zeile identisch zu v_wawi_fahrt_km.kilometer.
+--
+-- ROLLE: leitung UND disposition, nicht nur eine von beiden. leitung
+-- erreicht diese Sicht über den bestehenden Drill-Down-Pfad (Auswertungen
+-- -> Monat -> Tag), der lückenlos auf hat_rolle('leitung') steht
+-- (v_wawi_umsatz_radtyp/_kundengruppe, v_wawi_km_co2,
+-- v_wawi_fahrten_je_tag) - ohne diese Rolle liefe der dritte Klick für
+-- genau die Rolle ins Leere, die die ersten beiden Ebenen überhaupt erst
+-- sehen darf. disposition kommt DAZU: das ist die im Gestaltungsauftrag
+-- ausdrücklich benannte Rolle für die tägliche Flottensteuerung (sie
+-- sieht bereits v_wawi_flotte, v_wawi_station und
+-- v_wawi_stationsauslastung), und diese Sicht trägt - anders als
+-- v_wawi_umsatz_radtyp/_kundengruppe/v_wawi_km_co2, die bewusst NUR
+-- leitung bekommen - weder Umsatz noch irgendeinen Kundenbezug, der eine
+-- Erweiterung über leitung hinaus rechtfertigungsbedürftig machen würde.
+create or replace view velocity.v_wawi_fahrten_je_tag_rad as
+select date_trunc('day', a.startzeit)::date as tag,
+       f.fahrrad_id,
+       f.rahmennummer,
+       t.typ_code,
+       t.bezeichnung        as typ,
+       s1.name              as start_station,
+       s2.name              as ziel_station,
+       a.dauer_minuten,
+       -- Identische Drei-Fall-Formel wie velocity.v_wawi_fahrt_km.kilometer
+       -- weiter oben - siehe "KEIN JOIN" im Kopfkommentar, warum sie hier
+       -- kopiert statt wiederverwendet steht.
+       case
+         when a.distanz_km is not null then a.distanz_km
+         when velocity.fn_luftlinie_km(
+                coalesce(s1.latitude,  a.start_latitude),
+                coalesce(s1.longitude, a.start_longitude),
+                coalesce(s2.latitude,  a.end_latitude),
+                coalesce(s2.longitude, a.end_longitude)) = 0
+           then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
+         else round(velocity.fn_luftlinie_km(
+                 coalesce(s1.latitude,  a.start_latitude),
+                 coalesce(s1.longitude, a.start_longitude),
+                 coalesce(s2.latitude,  a.end_latitude),
+                 coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
+       end                  as kilometer,
+       a.distanz_km is null as ist_geschaetzt
+  from velocity.ausleihe a
+  join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
+  join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
+  join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
+  left join velocity.station s1 on s1.station_id = a.start_station_id
+  left join velocity.station s2 on s2.station_id = a.end_station_id
+  left join velocity.rechenannahme ra
+         on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
+  left join velocity.rechenannahme tempo
+         on tempo.code = 'reisegeschwindigkeit'
+        and tempo.gueltigkeit @> a.startzeit::date
+ where a.status = 'abgeschlossen'
+   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('disposition'));
+
+comment on view velocity.v_wawi_fahrten_je_tag_rad is
+  'Dritte Ebene des Drill-Downs (Monat -> Tag -> Räder): jede an einem Tag '
+  'abgeschlossene Fahrt, vom RAD her gesehen statt vom Kunden - Flottenbetrieb, '
+  'kein Bewegungsprofil. Bewusst OHNE ausleihe_id, kunde_id, kundennummer oder '
+  'Name: dieselben Fahrten wie v_wawi_fahrten_je_tag, nach Rad statt nach Kunde '
+  'geschnitten - siehe ausführlicher Kopfkommentar am create view für die '
+  'Begründung dieser Grenze. Kein Join auf v_wawi_fahrt_km (deren eigene '
+  'hat_rolle(''leitung'')-Schranke würde disposition sonst ungewollt '
+  'ausschließen) - die Kilometerformel steht deshalb ein zweites Mal hier. '
+  'Filtert selbst über velocity.hat_rolle(''leitung'') oder '
+  'velocity.hat_rolle(''disposition'').';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.tag is
+  'Kalendertag der Fahrt (startzeit) - derselbe Wert wie '
+  'v_wawi_fahrten_je_tag.tag, hier je Fahrt statt aggregiert. Für die '
+  'Oberfläche der PostgREST-Filterschlüssel dieser Sicht (tag=eq.JJJJ-MM-TT).';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.fahrrad_id is
+  'Schlüssel des Rades, für den Sprung von dieser Zeile in die Flottensicht '
+  '(v_wawi_flotte) - der Querverweis aus dem Gestaltungsauftrag Punkt 3.';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.rahmennummer is
+  'Am Rahmen ablesbare Nummer, der Bezug zum physischen Rad vor Ort.';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.typ_code is
+  'Fachlicher Schlüssel des Fahrradtyps.';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.typ is
+  'Anzeigename des Fahrradtyps.';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.start_station is
+  'Name der Station, an der die Fahrt begann. NULL bei freiem Abstellort als '
+  'Startpunkt.';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.ziel_station is
+  'Name der Station, an der die Fahrt endete. NULL bei freiem Abstellort als '
+  'Zielpunkt.';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.dauer_minuten is
+  'Dauer der Fahrt in Minuten.';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.kilometer is
+  'Gefahrene Strecke - gemessen oder geschätzt, siehe ist_geschaetzt und die '
+  'Drei-Fall-Formel im Kopfkommentar (identisch zu v_wawi_fahrt_km.kilometer). '
+  'NULL, wenn weder Distanz noch beide Koordinatenpaare vorliegen.';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.ist_geschaetzt is
+  'Wahr, wenn kilometer nicht gemessen, sondern aus Dauer oder Luftlinie '
+  'geschätzt wurde - gehört zu jeder Anzeige von kilometer dazu.';

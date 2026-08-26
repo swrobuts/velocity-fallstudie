@@ -410,6 +410,32 @@ function radZeilenAktionen(rad) {
 function radMaske(rad) {
     const knoepfe = radHandlungen(rad);
 
+    // Querverweis (Gestaltungsauftrag Punkt 3): "Rad in der Flotte -> seine
+    // Schadensmeldungen". NICHT in radHandlungen() (siehe deren
+    // Kopfkommentar-Nachbarschaft): dessen Eintraege tragen ein ziel-Feld
+    // fuer RAD_ICONS und erscheinen zusaetzlich als Zeilen-Icon
+    // (radZeilenAktionen()) - ein Bereichssprung dort haette dort ein Icon
+    // gebraucht, das es nicht gibt, und waere obendrein aus der Liste
+    // heraus (statt nur aus der geoeffneten Maske) anklickbar gewesen,
+    // ohne dass "seine Schadensmeldungen" fuer eine Reihe von Raedern auf
+    // einen Blick noch Sinn ergaebe.
+    //
+    // darfBereich() zuerst (Auftrag: "wird nicht angeboten"), UND nur bei
+    // tatsaechlich vorhandenen offenen Schaeden - ein Sprung ins Leere
+    // (Instandhaltung zeigt nur offene/in_arbeit, siehe schaedenZeigen())
+    // waere kein Arbeitsweg, nur ein Umweg.
+    if (darfBereich('instandhaltung') && rad.offene_schaeden > 0) {
+        knoepfe.push({
+            titel: `Schadensmeldungen (${rad.offene_schaeden})`,
+            art: 'neben',
+            ausfuehren: async () => {
+                instandhaltungZeigeSchaeden();   // siehe dortiger Kommentar - muss VOR bereichWechseln() laufen
+                await bereichSprung('instandhaltung', `Rad ${rad.rahmennummer} aus der Flotte`,
+                    () => setzeSpaltenkopfFilter('rahmennummer', rad.rahmennummer));
+            }
+        });
+    }
+
     zeigeMaske(`Rad ${rad.rahmennummer}`, [
         { name: 'typ',            titel: 'Typ',              wert: `${rad.typ} (${rad.typ_code})`, nurLesen: true },
         { name: 'modell',         titel: 'Modell',           wert: `${rad.hersteller} ${rad.modell}`, nurLesen: true },

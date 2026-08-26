@@ -930,10 +930,21 @@ to authenticated;
 -- dass ihn hier etwas gebraucht haette.
 revoke select on velocity.v_wawi_fahrt_km from authenticated;
 
+-- v_wawi_fahrten_je_tag_rad (Gestaltungsauftrag "Sichten verweben",
+-- Punkt 2b) gehoert ABSICHTLICH ERST NACH dem revoke oben in diese Liste,
+-- nicht davor: sie liest dieselben Fahrten wie v_wawi_fahrt_km, nur nach
+-- Rad statt nach Kunde geschnitten (siehe deren Kopfkommentar in
+-- 0018_wawi_sichten.sql) - wer diese Datei von oben nach unten liest,
+-- soll erst die Begruendung sehen, WARUM die kundenbezogene Sicht
+-- gesperrt wird, bevor die rad-bezogene Schwestersicht direkt darunter
+-- freigegeben wird. Technisch waere die Reihenfolge beliebig (zwei
+-- unabhaengige Sichten, kein gemeinsamer Zustand), diese Reihenfolge ist
+-- eine bewusste Lesefuehrung, keine Notwendigkeit.
 grant select on
   velocity.v_wawi_flotte, velocity.v_wawi_kunde, velocity.v_wawi_station,
   velocity.v_wawi_schaden, velocity.v_wawi_auftrag,
   velocity.v_wawi_umsatz_radtyp, velocity.v_wawi_umsatz_kundengruppe,
   velocity.v_wawi_km_co2, velocity.v_wawi_stationsauslastung,
-  velocity.v_wawi_modell, velocity.v_wawi_fahrten_je_tag
+  velocity.v_wawi_modell, velocity.v_wawi_fahrten_je_tag,
+  velocity.v_wawi_fahrten_je_tag_rad
 to authenticated;

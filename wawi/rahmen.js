@@ -231,7 +231,18 @@ function initialenAus(vorname, nachname, email) {
     return (quelle.slice(0, 2) || '?').toUpperCase();
 }
 
-async function bereichWechseln(schluessel) {
+// herkunftstext (optional, Gestaltungsauftrag Punkt 3): "sagen, woher man
+// kommt" - von bereichSprung() weiter unten gesetzt, sonst nirgends
+// (Navigationsklick, erster Bereich beim Anmelden). OHNE eigenes Zutun
+// haette ein Sprung hier keine Wirkung gehabt: das melde('') am Ende
+// dieser Funktion (siehe dort) loescht die Statuszeile bei JEDEM
+// Bereichswechsel bedingungslos, GENAU DAMIT ein alter Stand aus dem
+// VORHERIGEN Bereich nicht als scheinbar aktuelle Meldung im neuen
+// stehen bleibt - ein einfaches melde(herkunftstext, 'gut') VOR
+// bereichWechseln() (wie bei jeder Buchung ueblich, siehe neuerVorgang())
+// würde von genau diesem Loeschen sofort wieder ueberschrieben. Der
+// Parameter tritt deshalb an die Stelle des sonst leeren melde('')-Rufs.
+async function bereichWechseln(schluessel, herkunftstext = null) {
     aktiverBereich = bereiche.get(schluessel);
     document.querySelectorAll('#navigation button').forEach((k) => {
         k.setAttribute('aria-current', k.dataset.bereich === schluessel ? 'page' : 'false');
@@ -278,7 +289,16 @@ async function bereichWechseln(schluessel) {
         feldSucheGlobal.setAttribute('aria-label', 'Suche in diesem Bereich nicht verfügbar');
     }
 
-    melde('');
+    // herkunftstext gesetzt -> als frische Bestaetigung ('gut') stehen
+    // lassen, GENAU wie eine Buchung: der direkt folgende Aufruf von
+    // aktiverBereich.aufbauen() (der als erste Anweisung neuerVorgang()
+    // ausfuehrt, siehe dort) liest letzteMeldeArt OHNE dazwischenliegendes
+    // await und unterdrueckt damit die eigene neutrale Uebersichtsmeldung
+    // genau einmal - der Sprunggrund bleibt sichtbar, statt sofort von
+    // "12 Schadensmeldungen" ueberschrieben zu werden. Ohne herkunftstext
+    // (der ueberwiegende Regelfall: Navigationsklick) unveraendert leer,
+    // wie zuvor.
+    melde(herkunftstext || '', herkunftstext ? 'gut' : 'neutral');
     await aktiverBereich.aufbauen();
 }
 
@@ -2303,6 +2323,11 @@ function zeileWaehlen(index) {
 
 let hauptknopfElement = null;
 
+// Feather-Stil, dieselbe Familie wie SPALTENKOPF_SORT_ICON/aktion.svg
+// (24x24, currentColor per CSS) - ein einfaches Kreuz fuer die
+// Schliessen-Schaltflaeche in zeigeMaske() (Gestaltungsauftrag Punkt 1).
+const DETAILMASKE_SCHLIESSEN_ICON = '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+
 // felder: [{ name, titel, wert, typ, nurLesen?, optionen? }]
 // knöpfe: [{ titel, art, ausführen: async () => {} }]
 // art: 'haupt' | 'neben' | 'gefährlich' | 'schaffend'
@@ -2328,9 +2353,32 @@ function zeigeMaske(titel, felder, knoepfe) {
     wurzel.replaceChildren();
     hauptknopfElement = null;
 
+    // Kopfzeile mit Titel UND einer sichtbaren Schliessen-Schaltflaeche
+    // (Gestaltungsauftrag Punkt 1: "das fehlt einfach" - Escape allein
+    // war vorher der EINZIGE Weg zurueck, unsichtbar fuer jeden, der die
+    // Taste nicht kennt oder mit der Maus arbeitet). Ein <div> statt des
+    // <h2> direkt an der Wurzel, weil Titel und Knopf nebeneinander
+    // stehen muessen - #detailmaske h2 traegt seine bisherige Formatierung
+    // unveraendert weiter, nur eine Ebene tiefer (siehe style.css).
+    const kopf = document.createElement('div');
+    kopf.className = 'detailmaske-kopf';
+
     const ueberschrift = document.createElement('h2');
     ueberschrift.textContent = titel;
-    wurzel.append(ueberschrift);
+    kopf.append(ueberschrift);
+
+    const schliessenKnopf = document.createElement('button');
+    schliessenKnopf.type = 'button';
+    schliessenKnopf.className = 'detailmaske-schliessen';
+    schliessenKnopf.setAttribute('aria-label', 'Details schliessen');
+    schliessenKnopf.title = 'Details schliessen (Esc)';
+    // Rohes SVG-Markup, dieselbe Machart wie SPALTENKOPF_SORT_ICON/
+    // aktion.svg - eine feste Konstante dieser Datei, keine Nutzereingabe.
+    schliessenKnopf.innerHTML = DETAILMASKE_SCHLIESSEN_ICON;
+    schliessenKnopf.addEventListener('click', () => { maskeSchliessen(); });
+    kopf.append(schliessenKnopf);
+
+    wurzel.append(kopf);
 
     const form = document.createElement('form');
     form.className = 'detailformular';
@@ -2377,6 +2425,18 @@ function zeigeMaske(titel, felder, knoepfe) {
         }
         eingabe.id = `feld-maske-${feld.name}`;
         eingabe.name = feld.name;
+        // Ausgangswert festhalten (Gestaltungsauftrag Punkt 1: "wer gerade
+        // in einem Feld tippt, erwartet beim ersten Escape das Verwerfen
+        // der Eingabe" UND "ungespeicherte Eingaben duerfen nicht durch
+        // ein versehentliches Escape verloren gehen"). Ein data-Attribut
+        // statt eines separaten Moduls-Zustands: der Vergleichswert lebt
+        // damit AM Feld selbst, ueberlebt unveraendert, welches Feld
+        // gerade den Fokus traegt, und verschwindet automatisch mit dem
+        // Feld, wenn die Maske neu aufgebaut oder geschlossen wird - kein
+        // eigenes Aufraeumen noetig. String(...) normalisiert dabei
+        // Zahlen/null/undefined auf denselben Vergleichstyp wie
+        // eingabe.value (immer ein String).
+        eingabe.dataset.ursprungswert = String(feld.wert ?? '');
         zeile.append(eingabe);
         form.append(zeile);
     }
@@ -2535,6 +2595,83 @@ function darfRolle(code) {
     return geladeneRollen instanceof Set && geladeneRollen.has(code);
 }
 
+// ===== Querverweise (Gestaltungsauftrag Punkt 3: "Sichten verweben") =====
+//
+// "Insgesamt also noch viel mehr die Infos untereinander verweben, damit
+// sich die Sichten ergaenzen und richtige Workflows moeglich machen" -
+// woertlich der Auftrag. Heute sind die fuenf Bereiche fuenf Inseln:
+// dieselbe Rahmennummer taucht in Flotte UND Instandhaltung auf, ohne
+// dass ein Klick von einer zur anderen fuehrt. EIN Baustein hier statt
+// eines eigenen Sprungs je Bereichspaar - dieselbe Wiederholungsfalle wie
+// bei Werkzeugleiste/Filterleiste/Uebersichtsstreifen weiter oben (siehe
+// deren Kopfkommentare): fuenf Bereiche, die denselben Sprung unabhaengig
+// voneinander nachbauen wuerden, sobald ein zweites Bereichspaar dazukommt.
+//
+// DIE ROLLEN ENTSCHEIDEN MIT (Auftrag, woertlich): darfBereich() prueft
+// dieselben bereich.rollen, die navigationAufbauen() oben schon fuer die
+// Menuepunkte selbst auswertet - ein Sprung in einen Bereich, den die
+// angemeldete Rolle nicht sehen darf, ist dieselbe Einladung zu einer
+// unerklaerten Leere wie ein Menuepunkt fuer einen Bereich ohne eigene
+// Berechtigung (siehe Kopfkommentar bei navigationAufbauen()). Der
+// AUFRUFER prueft darfBereich(), BEVOR er den Sprung-Knopf ueberhaupt
+// baut - "was man nicht darf, wird nicht angeboten", nicht ausgegraut.
+// bereichSprung() selbst prueft zusaetzlich, defensiv: ein Aufrufer, der
+// das vergisst, bekommt einen wortlosen Fehlschlag statt eines Sprungs in
+// eine Navigation, die derselbe Nutzer im Menue nie zu sehen bekaeme.
+function darfBereich(schluessel) {
+    const bereich = bereiche.get(schluessel);
+    return Boolean(bereich) && bereich.rollen.some((r) => darfRolle(r));
+}
+
+// zielSchluessel: bereich.schluessel des Ziels (siehe bereichAnmelden()).
+// herkunftstext: "gekommen von ..." - erscheint als Bestaetigung in der
+//   Statuszeile DES ZIELBEREICHS ("sagen, woher man kommt", Auftrag
+//   woertlich). Wird an bereichWechseln() durchgereicht statt hier selbst
+//   per melde() gesetzt - bereichWechseln() loescht die Statuszeile bei
+//   JEDEM Wechsel bedingungslos (siehe dortiger Kommentar), ein melde()
+//   HIER waere von genau diesem Loeschen sofort wieder ueberschrieben
+//   worden.
+// einrichten: optionales async () => {}, LAEUFT NACH bereichWechseln() -
+//   der Zielbereich hat seine erste Liste dann bereits geladen und
+//   gezeichnet (setzeSpaltenkopfFilter()/waehleZeileMit() unten setzen
+//   genau darauf auf). Ein bereichseigenes "vorher" (z. B. Instandhaltung
+//   auf den Unterreiter "Schaeden" stellen, BEVOR ihr eigenes aufbauen()
+//   laeuft) gehoert NICHT hierher, sondern in eine eigene, vom Zielbereich
+//   selbst angebotene Funktion (siehe instandhaltungZeigeSchaeden() in
+//   instandhaltung.js) - dieser Baustein kennt die Interna keines
+//   einzelnen Bereichs.
+async function bereichSprung(zielSchluessel, herkunftstext, einrichten = null) {
+    if (!darfBereich(zielSchluessel)) return;   // siehe Kopfkommentar oben
+    await bereichWechseln(zielSchluessel, herkunftstext);
+    if (einrichten) await einrichten();
+}
+
+// "... dorthin FILTERN ..." (Auftrag) - setzt einen Spaltenkopf-Filter
+// (zeigeListe()) von AUSSEN, fuer den Einsatz als einrichten() bei
+// bereichSprung() oben. feld muss eine Spalte sein, die die geladene
+// Liste des ZIELBEREICHS tatsaechlich anbietet (siehe zeigeListe()) -
+// sonst wird der Eintrag zwar gesetzt, aber von keiner Spalte abgefragt
+// und filtert folglich nichts. zeichneArbeitstabelle() zeichnet sofort
+// neu, mit demselben Zustand, den ein Klick auf ein Spaltenkopf-
+// Filterfeld auch ausloesen wuerde - kein zweiter Ladevorgang noetig,
+// der Zielbereich hat seine Zeilen (spaltenkopfListe) bereits.
+function setzeSpaltenkopfFilter(feld, wert) {
+    spaltenkopfFilterwerte.set(feld, wert);
+    if (spaltenkopfListe) zeichneArbeitstabelle();
+}
+
+// "... oder AUSWAEHLEN" (Auftrag) - waehlt von AUSSEN die Zeile aus,
+// deren vergleichsfeld genau wert traegt (z. B. fahrrad_id), fuer den
+// Einsatz als einrichten() bei bereichSprung() oben. Wortlos folgenlos,
+// wenn keine Zeile passt (etwa weil die Zielzeile in der Zwischenzeit
+// den Bearbeitungsstand gewechselt hat und aus einer gefilterten Liste
+// gefallen ist) - derselbe Grundsatz wie bei jedem anderen veralteten
+// Zustand in dieser Oberflaeche: kein Absturz, keine falsche Auswahl.
+function waehleZeileMit(vergleichsfeld, wert) {
+    const index = listenZeilen.findIndex((z) => z[vergleichsfeld] === wert);
+    if (index !== -1) zeileWaehlen(index);
+}
+
 // ===== Profilmenü =====
 //
 // Bedienung des Rundknopfs oben rechts (Punkt 3). Absichtlich getrennt
@@ -2644,6 +2781,69 @@ function maskeVerwerfen() {
     }
 }
 
+// ----- Ungespeicherte Eingaben (Gestaltungsauftrag Punkt 1) -----
+//
+// feldGeaendert() vergleicht den AKTUELLEN Feldwert mit dem in
+// zeigeMaske() hinterlegten data-ursprungswert (siehe dort) - simpel und
+// bewusst OHNE Kenntnis der Feldart: ein <select> traegt seinen
+// gewaehlten Wert ebenso in .value wie ein <input> oder <textarea>,
+// derselbe Stringvergleich passt fuer alle drei.
+function feldGeaendert(element) {
+    return element.dataset.ursprungswert !== undefined && element.value !== element.dataset.ursprungswert;
+}
+
+// true, sobald IRGENDEIN Feld der offenen Maske vom Ausgangswert
+// abweicht - unabhaengig davon, wo der Tastaturfokus gerade steht. Nur
+// Elemente mit data-ursprungswert zaehlen (siehe zeigeMaske()); Knoepfe
+// und sonstige Kinder der Maske tragen dieses Attribut nicht und werden
+// von querySelectorAll('[data-ursprungswert]') schon deshalb nicht
+// erfasst.
+function maskeHatUngespeicherteEingaben() {
+    return [...document.querySelectorAll('#detailmaske [data-ursprungswert]')].some(feldGeaendert);
+}
+
+// Der user-ausgeloeste Schliessvorgang (Schaltflaeche ODER Escape, siehe
+// Tastaturbedienung weiter unten) - anders als maskeVerwerfen() selbst,
+// das WEITERHIN das stille, ungefragte Werkzeug fuer PROGRAMMATISCHE
+// Wechsel bleibt (Reiterwechsel in instandhaltung.js/auswertungen.js:
+// dort wird lediglich die Detailmaske des VORHERIGEN Reiters entfernt,
+// bevor der naechste seine eigene aufbaut - kein Anwenderwunsch, keine
+// Rueckfrage noetig, sonst muesste jeder Reiterklick erst einen Dialog
+// wegklicken).
+//
+// Rueckfrage NUR, wenn tatsaechlich etwas abweicht (Auftrag: "darf nicht
+// durch ein versehentliches Escape verloren gehen") - eine unveraenderte
+// Maske schliesst sich sofort, ohne Umweg ueber bestaetige(). Bricht die
+// Person die Rueckfrage ab, bleibt die Maske UNVERAENDERT offen: "gar
+// nicht erst schliessen" ist hier bewusst die gewaehlte Haelfte der im
+// Auftrag offen gelassenen Entscheidung ("nachfragen, oder gar nicht
+// erst schliessen") - eine dritte Option (z. B. automatisch speichern)
+// wuerde eine Buchung ohne ausdrueckliches "Speichern" ausloesen, was
+// diese Warenwirtschaft nirgends sonst tut.
+//
+// Fokus zurueck zur Ursprungszeile (Auftrag Punkt 1, woertlich): die
+// Zeilenreferenz wird VOR maskeVerwerfen() gesichert, weil das dortige
+// Zuruecksetzen von listenIndex auf -1 den Zugriff ueber
+// listenZeilenElemente[listenIndex] danach nicht mehr hergeben wuerde.
+// Ohne offene Zeile (z. B. keine Auswahl bekannt) bleibt der Fokus
+// unangetastet - es gibt kein sinnvolleres Ziel als "wo er ohnehin war".
+async function maskeSchliessen() {
+    const maske = document.getElementById('detailmaske');
+    if (!maske.hasChildNodes()) return;
+
+    if (maskeHatUngespeicherteEingaben()) {
+        const weiter = await bestaetige(
+            'Diese Maske enthaelt Eingaben, die noch nicht gespeichert wurden.\n\n' +
+            'Werden sie jetzt geschlossen, gehen sie verloren - es wird nichts gebucht.'
+        );
+        if (!weiter) return;   // Abbruch: Maske bleibt offen, nichts geht verloren
+    }
+
+    const ursprungszeile = listenIndex !== -1 ? listenZeilenElemente[listenIndex] : null;
+    maskeVerwerfen();
+    ursprungszeile?.focus();
+}
+
 document.addEventListener('keydown', (e) => {
     // Ein offener <dialog> behandelt Escape (und seine eigene Fokusfalle)
     // selbst - siehe bestätige(). Würde dieser Listener hier zusätzlich
@@ -2662,7 +2862,40 @@ document.addEventListener('keydown', (e) => {
             knopfProfil.focus();   // Fokus sichtbar dorthin zurück, wo er herkam
             return;
         }
-        maskeVerwerfen();
+
+        const maske = document.getElementById('detailmaske');
+        if (!maske.hasChildNodes()) return;   // nichts offen, nichts zu tun
+
+        // RANGFOLGE (Gestaltungsauftrag Punkt 1, woertlich verlangt):
+        // "wer gerade in einem Feld tippt, erwartet beim ersten Escape
+        // das Verwerfen der Eingabe, nicht das Schliessen der Maske".
+        // Deshalb PRIORITAET 1 - steht der Fokus in einem veraenderten
+        // Feld DIESER Maske, wird NUR dieses eine Feld auf seinen
+        // Ausgangswert zurueckgesetzt, die Maske bleibt offen, und der
+        // Tastendruck ist damit verbraucht (kein Fall-Through in
+        // PRIORITAET 2 im selben Tastendruck - sonst schlösse derselbe
+        // Escape sofort auch noch die ganze Maske, obwohl gerade erst
+        // ein einzelnes Feld gemeint war). Ein zweiter Escape-Druck
+        // direkt danach findet das Feld dann unveraendert vor und faellt
+        // folgerichtig auf PRIORITAET 2 durch.
+        const aktiv = document.activeElement;
+        const feldOffen = aktiv && maske.contains(aktiv) && aktiv.dataset.ursprungswert !== undefined;
+        if (feldOffen && feldGeaendert(aktiv)) {
+            e.preventDefault();
+            aktiv.value = aktiv.dataset.ursprungswert;
+            return;
+        }
+
+        // PRIORITAET 2: kein einzelnes Feld mehr zu verwerfen (entweder
+        // stand der Fokus gar nicht in einem Feld dieser Maske, oder das
+        // fokussierte Feld ist bereits unveraendert) - jetzt gilt Escape
+        // dem Schliessen der GANZEN Maske. maskeSchliessen() fragt selbst
+        // nach, falls ANDERE Felder noch unveraendert-ungespeichert
+        // dastehen (siehe dortiger Kommentar) - hier ohne await aufgerufen,
+        // weil ein synchroner keydown-Handler kein await kennt; die
+        // Rueckfrage laeuft als eigener <dialog> und faengt sich selbst
+        // im obigen dialog[open]-Fruehausstieg.
+        maskeSchliessen();
         return;
     }
     if (e.key === 's' && (e.ctrlKey || e.metaKey)) {

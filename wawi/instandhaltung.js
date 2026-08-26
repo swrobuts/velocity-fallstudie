@@ -41,6 +41,20 @@ bereichAnmelden({
 
 let unterbereich = 'schaeden';   // 'schaeden' | 'auftraege'
 
+// Fuer den Querverweis aus der Flotte (Gestaltungsauftrag Punkt 3: "Rad
+// in der Flotte -> seine Schadensmeldungen"). unterbereich ueberlebt
+// bewusst einen Bereichswechsel (siehe Kommentar dort) - ohne diese
+// Funktion landete ein Sprung aus der Flotte auf dem Unterreiter, den
+// diese Instandhaltungs-Sitzung zuletzt zufaellig zeigte ("Auftraege"),
+// statt auf den Schadensmeldungen, die der Sprung eigentlich meint. Muss
+// VOR bereichWechseln() laufen (siehe bereichSprung() in rahmen.js -
+// deren einrichten() laeuft erst DANACH, wenn instandhaltungAufbauen()
+// bereits den falschen Unterreiter geladen haette), deshalb eine eigene,
+// von aussen aufrufbare Funktion statt eines einrichten()-Hooks.
+function instandhaltungZeigeSchaeden() {
+    unterbereich = 'schaeden';
+}
+
 // Filterzustand (Gestaltungsauftrag, Punkt 2) - nur fuer den Schaeden-
 // Unterreiter ("nach Schwere, nach Alter der Meldung", woertlich der
 // Auftrag). instandhaltungFilterAlterStunden=0 bedeutet "alle", siehe
@@ -396,6 +410,29 @@ function schadenZeilenAktionen(schaden) {
 
 function schadenMaske(schaden) {
     const knoepfe = schadenHandlungen(schaden);
+
+    // Querverweis (Gestaltungsauftrag Punkt 3, wörtlich genannt):
+    // "Schadensmeldung -> das Rad". darfBereich() zuerst - eine Rolle,
+    // die Flotte nicht sehen darf, bekommt den Knopf nicht angeboten.
+    // Bekannte Grenze: waehleZeileMit() (rahmen.js) findet die Zeile nur
+    // in der bereits GELADENEN und noch aktiv GEFILTERTEN Flottenliste
+    // (flotteFilterStatus/-Typ/-Standort ueberleben einen Bereichswechsel
+    // absichtlich, siehe deren Kommentar in flotte.js) - steht das Rad
+    // hinter einem stehengebliebenen Filter (etwa "nur verfuegbar", ein
+    // gemeldetes Rad ist aber oft 'defekt'), springt der Sprung zwar in
+    // die Flotte, waehlt die Zeile aber nicht aus. Kein Absturz, keine
+    // falsche Auswahl - nur ein stiller Rest, den ein eigener
+    // "Filter zuruecksetzen"-Aufruf hier vermeiden koennte, aber auf
+    // Kosten eines fremden Bereichs, der ungefragt seinen Filterzustand
+    // verliert, nur weil irgendwo ein Sprung hinfuehrte.
+    if (darfBereich('flotte')) {
+        knoepfe.push({
+            titel: 'Rad in der Flotte',
+            art: 'neben',
+            ausfuehren: () => bereichSprung('flotte', `Schadensmeldung zu ${schaden.rahmennummer}`,
+                () => waehleZeileMit('fahrrad_id', schaden.fahrrad_id))
+        });
+    }
 
     zeigeMaske(`Meldung zu ${schaden.rahmennummer}`, [
         { name: 'rahmennummer', titel: 'Rad',        wert: `${schaden.rahmennummer} (${schaden.typ_code})`, nurLesen: true },

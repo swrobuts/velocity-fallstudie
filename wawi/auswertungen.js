@@ -187,6 +187,28 @@ function monatFormat(monat) {
 const MONATSNAMEN_VOLL = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
     'September', 'Oktober', 'November', 'Dezember'];
 
+// ===== Datumsformat der Tagestabelle (Gestaltungsauftrag Punkt 2a) =====
+//
+// "Nicht 1., 2., 3. Tag, sondern schon das Datum, mit Wochentag" -
+// wörtlich der Auftrag, samt Begründung: "Sa, 4. Okt 2025" erklärt einen
+// Ausschlag, den "4." nicht erklärt, weil der Jahresgang dieser Daten
+// einen Wochenrhythmus trägt (Wochenenden fahren anders als Werktage).
+//
+// tag kommt als ISO-Datumstext ('2025-10-04') herein. new Date(tag) läse
+// das als UTC-Mitternacht und könnte je nach Zeitzone des Browsers einen
+// Tag zurück- oder vorspringen - derselbe Fallstrick, den die
+// Monatsrandberechnung in monatsdrilldownEinfuegen() weiter unten schon
+// vermeidet. Deshalb hier wie dort in die drei Zahlanteile zerlegt und
+// über new Date(jahr, monat, tag) mit LOKALEN Zeitkomponenten gebaut -
+// keine ISO-Zeitzonenkonvertierung im Spiel, getDay() liefert exakt den
+// Wochentag des gemeinten Kalendertags.
+const WOCHENTAGE_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+function tagFormat(tag) {
+    const [jahr, monat, tagNummer] = tag.split('-').map(Number);
+    const wochentag = WOCHENTAGE_KURZ[new Date(jahr, monat - 1, tagNummer).getDay()];
+    return `${wochentag}, ${tagNummer}. ${MONATSNAMEN[monat - 1]} ${jahr}`;
+}
+
 // Rechtsbündige Zahlenspalte, optional mit einer zweiten Klasse für
 // Bedeutung (schlecht/warnung/gut) - siehe Kommentar bei
 // ".arbeitstabelle td.zahl" in style.css. zeigeListe() in rahmen.js setzt
@@ -493,7 +515,174 @@ async function monatsdrilldownEinfuegen(monat) {
 
     const thead = document.createElement('thead');
     const kopfzeile = document.createElement('tr');
-    for (const spaltentitel of ['Tag', 'Fahrten']) {
+    for (const spaltentitel of ['Datum', 'Fahrten']) {
+        const th = document.createElement('th');
+        th.textContent = spaltentitel;
+        th.scope = 'col';
+        kopfzeile.append(th);
+    }
+    thead.append(kopfzeile);
+    tabelle.append(thead);
+
+    // Jede eigene Öffnung dieses Monats bekommt ihre eigene, frische
+    // Tabelle (zeigeMaske() leert #detailmaske bei jedem Zeilenwechsel,
+    // siehe Kopfkommentar dieser Funktion) - kein Tag ist deshalb beim
+    // Aufbau bereits ausgewählt, unabhängig davon, was in einem zuvor
+    // geöffneten Monat markiert war.
+    let tagZeileAusgewaehlt = null;
+
+    const tbody = document.createElement('tbody');
+    tage.forEach((tag, i) => {
+        const tr = document.createElement('tr');
+        const kopf = document.createElement('th');
+        kopf.scope = 'row';
+
+        // Gestaltungsauftrag Punkt 2b: "ein Klick auf das Datum würde
+        // die weiteren Infos offenlegen" - deshalb ein <button> IM <th>
+        // statt reinen Texts, als einzige anklickbare Spalte dieser
+        // Tabelle (siehe angepasster Kommentar bei .monatsdrilldown-tabelle
+        // in style.css). tagIso ist der PostgREST-Filterschlüssel
+        // (tag=eq.JJJJ-MM-TT) von v_wawi_fahrten_je_tag_rad, tagFormat()
+        // liefert die lesbare Form MIT Wochentag (Punkt 2a).
+        //
+        // Aus jahr/monatsnummer gebaut (beide oben schon aus monat
+        // geparst), NICHT aus monat selbst: monat traegt hier bereits
+        // einen Tagesanteil ("2025-09-01", date_trunc('month', ...)::date
+        // aus der Sicht) - ein zweites "-04" einfach angehaengt haette
+        // "2025-09-01-04" ergeben, und tagFormat()s Destrukturierung
+        // (nur die ersten drei Teile) haette daraus fuer JEDE Zeile
+        // denselben ersten Tag gelesen, statt fuer jede Zeile ihren
+        // eigenen. Im Browser nachgestellt und gefunden: alle 30 Tage
+        // einer Monatstabelle zeigten "Mo, 1. Sep 2025".
+        const tagIso = `${jahr}-${String(monatsnummer).padStart(2, '0')}-${String(tag).padStart(2, '0')}`;
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'monatsdrilldown-tag-knopf';
+        knopf.textContent = tagFormat(tagIso);
+        knopf.addEventListener('click', () => {
+            // Sofortige Markierung, ohne auf die Antwort zu warten -
+            // dieselbe Reihenfolge wie zeileWaehlen() in rahmen.js
+            // (Auswahl zuerst sichtbar, Inhalt folgt nach): "wo bin ich"
+            // (Auftrag) muss beim Klick selbst schon stimmen, nicht erst
+            // nach einer Netzwerkantwort.
+            tagZeileAusgewaehlt?.classList.remove('monatsdrilldown-tag-ausgewaehlt');
+            tr.classList.add('monatsdrilldown-tag-ausgewaehlt');
+            tagZeileAusgewaehlt = tr;
+            tagdrilldownEinfuegen(tagIso, wurzel, knopf);
+        });
+        kopf.append(knopf);
+
+        const wertZelle = document.createElement('td');
+        wertZelle.className = zahlKlasse(werte[i] === maximum ? 'auffaellig' : '');
+        wertZelle.textContent = zahlFormat(werte[i]);
+        tr.append(kopf, wertZelle);
+        tbody.append(tr);
+    });
+    tabelle.append(tbody);
+    abschnitt.append(tabelle);
+
+    wurzel.append(abschnitt);
+}
+
+// ===== Dritte Ebene: Räder je Tag (Gestaltungsauftrag Punkt 2b) =====
+//
+// Wettlaufschutz nach demselben Muster wie drilldownZaehler oben, eine
+// Ebene tiefer: klickt jemand zwei Tage schnell hintereinander, darf die
+// später gestartete, aber frueher zurueckkommende Abfrage nicht von der
+// langsameren ueberschrieben werden.
+let tagdrilldownZaehler = 0;
+
+// wurzel: #detailmaske, vom Aufrufer durchgereicht statt hier erneut
+// per getElementById geholt - monatsdrilldownEinfuegen() hat sie schon
+// einmal aufgeloest, eine zweite Auflösung waere nur eine zweite
+// Gelegenheit, denselben Fehler zu machen (dort: "wurzel" fehlt, wenn
+// die Maske inzwischen weg ist).
+// herkunftsKnopf: der Datum-Knopf, aus dem dieser Aufruf kam - fuer den
+// "Weg zurueck" unten (Fokus zurueck zur Zeile, dieselbe Idee wie
+// maskeSchliessen() in rahmen.js fuer die Detailmaske insgesamt).
+async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
+    const vorgang = laufenderVorgang();
+    const eigenerMonatsZaehler = drilldownZaehler;   // siehe Kommentar oben
+    const eigenerTagZaehler = ++tagdrilldownZaehler;
+
+    // Alte Ebene 3 sofort raus, VOR dem await: ein zweiter Tag,
+    // angeklickt bevor die Antwort des ersten da ist, soll nicht erst
+    // beide Tabellen gleichzeitig zeigen, bevor die erste verschwindet.
+    document.getElementById('tagdrilldown')?.remove();
+
+    const zeilen = await ladeListe('v_wawi_fahrten_je_tag_rad',
+        'fahrrad_id, rahmennummer, typ_code, typ, start_station, ziel_station, dauer_minuten, kilometer, ist_geschaetzt',
+        (q) => q.eq('tag', tagIso).order('rahmennummer'));
+
+    // Vier unabhaengige Gruende, warum dieses Ergebnis nicht mehr gilt:
+    // Bereich/Reiter gewechselt (istAktuellerVorgang), eine andere
+    // Monatszeile geoeffnet (drilldownZaehler), ein anderer Tag
+    // angeklickt (tagdrilldownZaehler), oder die Maske ist inzwischen
+    // ganz weg (wurzel nicht mehr im DOM - moeglich, wenn maskeSchliessen()
+    // aus rahmen.js zwischen Klick und Antwort schloss).
+    if (!istAktuellerVorgang(vorgang) || eigenerMonatsZaehler !== drilldownZaehler
+        || eigenerTagZaehler !== tagdrilldownZaehler || !wurzel.isConnected) return;
+
+    const abschnitt = document.createElement('section');
+    abschnitt.id = 'tagdrilldown';
+    abschnitt.className = 'tagdrilldown';
+
+    // Kopfzeile MIT Rueckweg: "ein Weg zurueck auf jede Ebene ist
+    // Pflicht, und man muss jederzeit sehen, wo man ist" (Auftrag). Die
+    // Ueberschrift nennt den Tag (wo man ist), der Knopf daneben nimmt
+    // die Ebene wieder weg, ohne die ganze Detailmaske zu schliessen
+    // (das bliebe Punkt 1 vorbehalten) - man landet wieder bei der
+    // Tagestabelle aus Ebene 2, nicht beim Ausgangspunkt Ebene 1.
+    const kopf = document.createElement('div');
+    kopf.className = 'tagdrilldown-kopf';
+    const ueberschrift = document.createElement('h3');
+    ueberschrift.textContent = `Räder am ${tagFormat(tagIso)}`;
+    kopf.append(ueberschrift);
+
+    const zurueckKnopf = document.createElement('button');
+    zurueckKnopf.type = 'button';
+    zurueckKnopf.className = 'knopf-neben tagdrilldown-zurueck';
+    zurueckKnopf.textContent = 'Zurück zur Tagesübersicht';
+    zurueckKnopf.addEventListener('click', () => {
+        document.querySelector('.monatsdrilldown-tag-ausgewaehlt')
+            ?.classList.remove('monatsdrilldown-tag-ausgewaehlt');
+        abschnitt.remove();
+        herkunftsKnopf.focus();   // Fokus zurueck zur Ursprungszeile, dieselbe Idee wie bei Punkt 1
+    });
+    kopf.append(zurueckKnopf);
+    abschnitt.append(kopf);
+
+    const fehler = letzterLadeFehler('v_wawi_fahrten_je_tag_rad');
+    if (fehler) {
+        const hinweis = document.createElement('p');
+        hinweis.className = 'monatsdrilldown-fehler';
+        hinweis.textContent = `Die Räder dieses Tages liessen sich nicht laden: ${fehler}`;
+        abschnitt.append(hinweis);
+        wurzel.append(abschnitt);
+        return;
+    }
+
+    if (zeilen.length === 0) {
+        // Kommt vor: ein Betriebstag ohne jede Fahrt (Saeule der Hoehe 0
+        // in der Grafik darueber, siehe Kommentar bei saeulengrafik() in
+        // rahmen.js) ist ein gueltiger Klickziel, keine fehlerhafte
+        // Eingabe - "keine Fahrten" ist eine gueltige, erwartbare Antwort.
+        const leer = document.createElement('p');
+        leer.textContent = 'An diesem Tag wurde kein Rad gefahren.';
+        abschnitt.append(leer);
+        wurzel.append(abschnitt);
+        return;
+    }
+
+    const tabelle = document.createElement('table');
+    tabelle.className = 'monatsdrilldown-tabelle';
+    const beschriftung = document.createElement('caption');
+    beschriftung.textContent = `Räder am ${tagFormat(tagIso)} - kein Kundenbezug, siehe v_wawi_fahrten_je_tag_rad`;
+    tabelle.append(beschriftung);
+
+    const thead = document.createElement('thead');
+    const kopfzeile = document.createElement('tr');
+    for (const spaltentitel of ['Rahmennummer', 'Typ', 'Start', 'Ziel', 'Dauer', 'Strecke']) {
         const th = document.createElement('th');
         th.textContent = spaltentitel;
         th.scope = 'col';
@@ -503,17 +692,44 @@ async function monatsdrilldownEinfuegen(monat) {
     tabelle.append(thead);
 
     const tbody = document.createElement('tbody');
-    tage.forEach((tag, i) => {
+    for (const zeile of zeilen) {
         const tr = document.createElement('tr');
+
+        // Rahmennummer bleibt Text, kein Querverweis-Sprung in DIESER
+        // Tabelle: bereichSprung() (rahmen.js, Punkt 3) wechselt den
+        // ganzen Arbeitsbereich - von einer dritten Ebene innerhalb der
+        // Auswertungen aus waere das ein Sprung "quer durch zwei
+        // Bereiche gleichzeitig" (Auswertungen -> Flotte) ohne jede
+        // Zwischenstation, und diese Zeile hat keine radAnlegenMaske-
+        // aehnliche Zielansicht, in der ein einzelnes Rad ausgewaehlt
+        // werden koennte (flotteAufbauen() zeigt IMMER die volle Liste).
+        // Der Querverweis aus Punkt 3 sitzt deshalb dort, wo er ein
+        // bestehendes Ziel trifft: Flotte -> Schadensmeldungen und
+        // Schadensmeldung -> Rad (siehe rahmen.js, bereichSprung()).
         const kopf = document.createElement('th');
         kopf.scope = 'row';
-        kopf.textContent = `${tag}.`;
-        const wertZelle = document.createElement('td');
-        wertZelle.className = zahlKlasse(werte[i] === maximum ? 'auffaellig' : '');
-        wertZelle.textContent = zahlFormat(werte[i]);
-        tr.append(kopf, wertZelle);
+        kopf.textContent = zeile.rahmennummer;
+        const typZelle = document.createElement('td');
+        typZelle.textContent = zeile.typ;
+        const startZelle = document.createElement('td');
+        startZelle.textContent = zeile.start_station || '—';
+        const zielZelle = document.createElement('td');
+        zielZelle.textContent = zeile.ziel_station || '—';
+        const dauerZelle = document.createElement('td');
+        dauerZelle.className = 'zahl';
+        dauerZelle.textContent = minutenFormat(zeile.dauer_minuten);
+        const streckeZelle = document.createElement('td');
+        streckeZelle.className = 'zahl';
+        // ist_geschaetzt gehoert IMMER neben die Zahl, nicht nur bei
+        // v_wawi_km_co2 - dieselbe Regel wie dort ("eine Kennzahl, die
+        // ihre eigene Unsicherheit nicht mitliefert, ist gefaehrlich").
+        streckeZelle.textContent = zeile.kilometer === null
+            ? '—'
+            : `${kmFormat(zeile.kilometer)}${zeile.ist_geschaetzt ? ' (geschätzt)' : ''}`;
+
+        tr.append(kopf, typZelle, startZelle, zielZelle, dauerZelle, streckeZelle);
         tbody.append(tr);
-    });
+    }
     tabelle.append(tbody);
     abschnitt.append(tabelle);
 

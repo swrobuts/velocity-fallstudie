@@ -227,9 +227,19 @@ button {
 /* ===== Arbeitszustand: Kopfleiste fest, Navigation links fest,
    darunter Liste und Maske nebeneinander, Statuszeile unten fest ===== */
 
+/* minmax(0, 1fr) statt nur 1fr fuer die "arbeit"-Spalte (gefunden bei
+   der Erprobung von Punkt 2b, dieselbe Ursache wie bei #detailmaske und
+   #arbeitsliste weiter unten, nur eine Ebene hoeher): eine breite
+   Arbeitstabelle oder die neue Raeder-je-Tag-Tabelle bestimmt sonst die
+   automatische Mindestbreite der ganzen Spalte - #zustand-arbeit selbst
+   (und mit ihm die Seite) wurde dadurch breiter als der Bildschirm,
+   OBWOHL #arbeitsliste/#detailmaske je fuer sich schon overflow-x:auto
+   tragen. minmax(0, 1fr) ist der dafuer vorgesehene Grid-Baustein: die
+   Spalte darf auf 0 schrumpfen, jedes Kind scrollt dann innerhalb seiner
+   eigenen Breite, keines zwingt mehr die Spalte selbst zum Wachsen. */
 #zustand-arbeit {
   display: grid;
-  grid-template-columns: var(--nav-breite) 1fr;
+  grid-template-columns: var(--nav-breite) minmax(0, 1fr);
   grid-template-rows: var(--kopf-hoehe) 1fr var(--fuss-hoehe);
   grid-template-areas: "kopf kopf" "nav arbeit" "fuss fuss";
   height: 100vh;
@@ -617,6 +627,12 @@ button {
   grid-area: arbeit;
   display: flex;
   min-height: 0;   /* Kinder dürfen kleiner als ihr Inhalt sein und selbst scrollen */
+  /* min-width:0 aus demselben Grund, nur fuer die waagerechte Achse
+     (siehe minmax(0, 1fr) bei #zustand-arbeit): ohne sie bliebe DIESES
+     Grid-Element selbst an die automatische Mindestbreite seiner Kinder
+     gebunden, auch wenn die Spalte per minmax(0, 1fr) schon nachgeben
+     duerfte. */
+  min-width: 0;
   background: var(--grund);
 }
 
@@ -638,9 +654,20 @@ button {
    105+, Safari 15.4+, Firefox 121+) - für ein Lehrprojekt auf aktuellen
    Browsern kein Kompromiss, sondern die einzige rein deklarative Lösung
    ohne eine einzige zusätzliche JavaScript-Zeile. */
+/* overflow-x: auto ergaenzt bei derselben Erprobung wie bei #detailmaske
+   weiter unten, aus demselben Grund (siehe dortiger Kommentar): OHNE sie
+   bestimmt eine breite Arbeitstabelle die automatische Mindestbreite
+   DIESES Flex-Kindes, #detailmaske wird dadurch auf der GEGENSEITE auf 0
+   zusammengedrueckt (der Flex-Algorithmus raeumt einem nicht schrumpf-
+   baren Geschwister jeden verfuegbaren Platz zuerst ein) - unabhaengig
+   davon, dass #detailmaske selbst laengst overflow-x:auto traegt. Im
+   Browser nachgestellt: sobald "Umsatz nach Radtyp" eine breite Tabelle
+   zeigt UND gleichzeitig eine Detailmaske offen ist, kollabierte
+   #detailmaske auf 0px Breite, obwohl sie sichtbaren Inhalt hatte. */
 #arbeitsliste {
   flex: 1 1 55%;
   overflow-y: auto;
+  overflow-x: auto;
   border-right: 1px solid var(--linie);
   background: var(--flaeche);
   display: flex;
@@ -1097,10 +1124,15 @@ button {
   color: var(--schlecht);
 }
 
-/* Eigene, kompaktere Tabelle statt .arbeitstabelle: die Zeilen hier sind
-   nicht anklickbar (kein Zeilen-Cursor, kein Hover-Umschlag) und tragen
-   ausschliesslich Text - dieselbe rechtsbuendige Zahlenspalte wie dort
-   (.zahl, .auffaellig), aber ohne die Klick-Semantik einer Arbeitsliste. */
+/* Eigene, kompaktere Tabelle statt .arbeitstabelle: die ZEILEN selbst
+   sind nicht anklickbar (kein Zeilen-Cursor, kein Hover-Umschlag auf der
+   ganzen <tr>) - dieselbe rechtsbuendige Zahlenspalte wie dort (.zahl,
+   .auffaellig), aber ohne die Klick-Semantik einer Arbeitsliste. NUR die
+   erste Spalte der Tagestabelle (das Datum, Gestaltungsauftrag Punkt 2b)
+   ist seit der Verweben-Aufgabe eine eigene, gezielt klickbare
+   Schaltflaeche - .monatsdrilldown-tag-knopf weiter unten setzt dafuer
+   die Zeigersemantik selbst, statt die ganze Zeile faelschlich anklickbar
+   wirken zu lassen. */
 .monatsdrilldown-tabelle {
   width: 100%;
   border-collapse: collapse;
@@ -1144,6 +1176,73 @@ button {
   font-weight: 700;
 }
 
+/* Datum-Schaltflaeche der Tagestabelle (Gestaltungsauftrag Punkt 2b) -
+   sieht wie ein Link aus (Marine, Unterstreichung erst bei Hover/Fokus:
+   Tufte, Ink nur wo sie gebraucht wird), damit klar ist: NUR diese
+   Spalte fuehrt weiter, die Fahrten-Spalte daneben bleibt reiner Text.
+   text-align:left und width:100%, weil <button> sonst inline schrumpft
+   und die Klickflaeche kleiner waere als die ganze Zelle. */
+.monatsdrilldown-tag-knopf {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--marine);
+  font: inherit;
+  cursor: pointer;
+}
+
+.monatsdrilldown-tag-knopf:hover,
+.monatsdrilldown-tag-knopf:focus-visible {
+  text-decoration: underline;
+}
+
+/* "man muss jederzeit sehen, wo man ist" (Auftrag) - derselbe Farbton
+   wie .arbeitstabelle tbody tr.ausgewaehlt, damit "diese Zeile ist gerade
+   aufgeklappt" ueberall in dieser Oberflaeche gleich aussieht. */
+.monatsdrilldown-tag-ausgewaehlt {
+  background: #eef1fb;
+}
+
+/* ===== Dritte Ebene: Raeder je Tag (Gestaltungsauftrag Punkt 2b) ===== */
+
+.tagdrilldown {
+  border-top: 1px solid var(--linie);
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.tagdrilldown-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.tagdrilldown-kopf h3 {
+  color: var(--marine);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Kleiner als der uebliche .knopf-neben (siehe dortige Groesse in
+   .velocity-dialog) - dieser Rueckweg steht INNERHALB einer bereits
+   engen Detailmaske (~45% Fensterbreite), kein eigener Dialog.
+   Zusammengesetzter Selektor (.knopf-neben.tagdrilldown-zurueck) statt
+   nur der eigenen Klasse: .knopf-neben selbst steht WEITER UNTEN in
+   dieser Datei (bei den vier knopf-*-Grundformen) und würde eine
+   gleich-spezifische Einzelklassen-Regel hier oben per Kaskadenreihenfolge
+   überschreiben - die höhere Spezifität von zwei Klassen gemeinsam macht
+   das unabhängig von der Position in der Datei sicher. */
+.knopf-neben.tagdrilldown-zurueck {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
 /* Bissantz: die tragenden Ziffern bleiben in voller Stärke, Tausender-
    punkte und Nachkommastellen (samt Einheit) treten zurück. text-leise
    misst 5.95:1 auf Weiß (siehe Bericht) - über der Untergrenze von 4.5:1
@@ -1159,7 +1258,9 @@ button {
 #listenkoerper {
   flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
   overflow-y: auto;
+  overflow-x: auto;
 }
 
 .arbeitstabelle {
@@ -1585,9 +1686,23 @@ button {
   margin: 0 0 16px;
 }
 
+/* Gefunden bei der Erprobung von Punkt 2b: die neue Raeder-je-Tag-Tabelle
+   (sechs Spalten, zwei davon Stationsnamen wie "Universität Sanderring")
+   ist teils breiter als 45% des Fensters. Ohne overflow-x waechst ein
+   Flex-Kind per Spezifikation NIE unter die Mindestbreite seines Inhalts
+   (automatisches min-width: auto) - #detailmaske wurde dadurch selbst
+   breiter als sein zugeteilter Platz und riss #arbeitsbereich samt der
+   ganzen Seite in einen waagerechten Scrollbalken. overflow-x: auto
+   setzt die automatische Mindestbreite laut Spezifikation auf 0 zurueck
+   UND liefert die noetige Bildlaufleiste fuer eine wirklich zu breite
+   Tabelle - beides in einer Zeile. Im Browser nachgestellt: Auswertungen
+   -> Umsatz nach Radtyp -> ein Monat -> "Do, 4. Sep 2025" - vorher riss
+   das die ganze Seite seitlich auf, jetzt scrollt nur die Tabelle
+   innerhalb der Maske. */
 #detailmaske {
   flex: 1 1 45%;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 16px;
   transition: flex-basis 160ms ease, padding 160ms ease;
 }
@@ -1604,10 +1719,59 @@ button {
   overflow: hidden;
 }
 
+/* Titel UND Schliessen-Schaltflaeche nebeneinander (Gestaltungsauftrag
+   Punkt 1 - siehe zeigeMaske() in rahmen.js). margin-bottom sitzt jetzt
+   hier statt am h2 selbst, damit der Abstand zur ersten Formularzeile
+   gleich bleibt, egal ob der Titel ein- oder zweizeilig umbricht. */
+.detailmaske-kopf {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
 #detailmaske h2 {
   color: var(--marine);
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 16px;
+}
+
+/* Immer sichtbar (anders als .zeilen-aktion, das erst bei :hover/
+   :focus-within einer Tabellenzeile erscheint) - eine Detailmaske hat
+   nur eine Zeile, deren "Zeile" bereits vollstaendig sichtbar/fokussiert
+   ist; ein zusaetzliches Ein-/Ausblenden brachte hier keinen Vorteil,
+   nur ein zusaetzliches Risiko, dass die Schaltflaeche uebersehen wird -
+   genau das Gegenteil von "das fehlt einfach" aus dem Auftrag. */
+.detailmaske-schliessen {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-leise);   /* 5.9:1 auf --grund/--flaeche, gemessen */
+}
+
+.detailmaske-schliessen:hover,
+.detailmaske-schliessen:focus-visible {
+  background: var(--flaeche);
+  border-color: var(--linie);
+  color: var(--marine);
+}
+
+.detailmaske-schliessen svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ===== Detailformular (zeigeMaske) ===== */
