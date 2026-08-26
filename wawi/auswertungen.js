@@ -12,11 +12,13 @@
 //
 // Ausschließlich die Bausteine aus rahmen.js (bereichAnmelden, ladeListe,
 // letzterLadeFehler, zeigeListe, zeigeMaske, zeigeLeermaske,
-// zeigeUnterreiter, melde, meldeVorgang, neuerVorgang, maskeVerwerfen)
-// und die eigenen Sichten v_wawi_umsatz_radtyp, v_wawi_umsatz_kundengruppe,
-// v_wawi_km_co2, v_wawi_stationsauslastung - keine Basistabelle, keine
-// fn_-Funktion. rufeAuf() taucht in dieser Datei bewusst nicht auf: es
-// gibt in diesem Bereich nichts zu schreiben.
+// zeigeUnterreiter, melde, meldeVorgang, neuerVorgang, laufenderVorgang,
+// istAktuellerVorgang, baueKachel, sparkline, zellbalken, saeulengrafik,
+// zahlSkaliert, maskeVerwerfen) und die eigenen Sichten
+// v_wawi_umsatz_radtyp, v_wawi_umsatz_kundengruppe, v_wawi_km_co2,
+// v_wawi_stationsauslastung, v_wawi_fahrten_je_tag (Drill-Down-Aufgabe) -
+// keine Basistabelle, keine fn_-Funktion. rufeAuf() taucht in dieser
+// Datei bewusst nicht auf: es gibt in diesem Bereich nichts zu schreiben.
 //
 // v_wawi_fahrt_km wird bewusst NICHT gelesen (auch nicht für eine
 // eigene Fahrtenliste): sie führt Einzelfahrten mit kunde_id und
@@ -149,6 +151,17 @@ function monatFormat(monat) {
     const [jahr, monatsnummer] = monat.split('-');
     return `${MONATSNAMEN[Number(monatsnummer) - 1]} ${jahr}`;
 }
+
+// Ausgeschrieben, nur für den Drill-Down (monatsdrilldownEinfuegen()
+// weiter unten): der Auftrag selbst formuliert seine Referenzzahlen mit
+// dem vollen Monatsnamen ("der 4. September mit 61 Fahrten"), nicht der
+// dreibuchstabigen Kurzform, die monatFormat() für die Tabellenspalte
+// verwendet. Zwei Wortlisten für zwei unterschiedliche Zwecke, keine
+// Ableitung der einen aus der anderen - "Mär" ließe sich nicht
+// zuverlässig zu "März" verlängern, ohne selbst wieder eine Tabelle zu
+// pflegen.
+const MONATSNAMEN_VOLL = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
+    'September', 'Oktober', 'November', 'Dezember'];
 
 // Rechtsbündige Zahlenspalte, optional mit einer zweiten Klasse für
 // Bedeutung (schlecht/warnung/gut) - siehe Kommentar bei
@@ -287,6 +300,200 @@ function anteilGewichtet(zeilen) {
     const fahrten    = zeilen.reduce((s, z) => s + z.fahrten, 0);
     const geschaetzt = zeilen.reduce((s, z) => s + z.fahrten_geschaetzt, 0);
     return fahrten ? geschaetzt / fahrten : 0;
+}
+
+// ===== Drill-Down: Tage eines angeklickten Monats =====
+//
+// EINMAL hier statt dreimal in den drei *Maske()-Funktionen weiter unten
+// (Umsatz nach Radtyp/Kundengruppe, Kilometer und CO2 - alle drei
+// zeigen Monatszeilen und rufen deshalb dieselbe Funktion aus ihrer
+// eigenen *Maske() heraus auf).
+//
+// Zeigt IMMER die Tagessumme ÜBER ALLE Radtypen UND Tarife, unabhängig
+// davon, welche Zeile (welcher Radtyp/Tarif) angeklickt wurde: der
+// Auftrag beschreibt den Drill-Down als Eigenschaft des MONATS ("ich
+// klicke auf den Monat ... und bekomme eine Säulengrafik"), nicht der
+// Kombination aus Monat und Radtyp/Tarif - und v_wawi_fahrten_je_tag
+// führt bewusst keine solche Aufteilung (siehe deren Kommentar in
+// 0018_wawi_sichten.sql). Die Überschrift sagt "gesamt" deshalb
+// ausdrücklich dazu, damit niemand die Tageszahlen für "nur diese eine
+// Zeile" hält - "alle Radtypen" allein wäre dafür sogar irreführend: in
+// der Kundengruppe-Maske ist die angeklickte Zeile nach TARIF
+// unterschieden, nicht nach Radtyp, und "alle Radtypen" spräche dort die
+// eigentlich fehlende Aufteilung gar nicht an.
+//
+// Wettlaufschutz nach demselben Muster wie ladeZaehler in daten.js:
+// klickt jemand schnell zwei Zeilen hintereinander, bevor die erste
+// Tagesabfrage zurück ist, darf die SPÄTER gestartete, aber FRÜHER
+// zurückkommende Abfrage nicht von der langsameren überschrieben werden
+// - und die langsamere darf nicht mehr an die inzwischen für eine ANDERE
+// Zeile neu aufgebaute Maske andocken. istAktuellerVorgang() allein
+// reicht dafür nicht: ein Bereichs-/Reiterwechsel ändert den Vorgang,
+// aber zwei Klicks auf zwei verschiedene Monatszeilen IM SELBEN Reiter
+// bleiben derselbe Vorgang.
+let drilldownZaehler = 0;
+
+async function monatsdrilldownEinfuegen(monat) {
+    // Kennung des Bereichs-Vorgangs, der lief, als die Zeile ausgewählt
+    // wurde - dasselbe Muster wie laufenderVorgang() bei radAnlegenMaske()
+    // in flotte.js: diese Funktion ist selbst kein *Aufbauen()-Vorgang
+    // und darf keinen eigenen über neuerVorgang() ziehen.
+    const vorgang = laufenderVorgang();
+    const eigenerZaehler = ++drilldownZaehler;
+
+    const [jahr, monatsnummerText] = monat.split('-');
+    const monatsnummer = Number(monatsnummerText);
+    const naechsterMonat = monatsnummer === 12
+        ? `${Number(jahr) + 1}-01-01`
+        : `${jahr}-${String(monatsnummer + 1).padStart(2, '0')}-01`;
+    // new Date(jahr, monatsnummer, 0): monatsnummer ist 1-basiert (9 für
+    // September), JS-Date-Monate sind 0-basiert (9 = Oktober) - Tag 0
+    // des so gebildeten Monats ist deshalb der LETZTE Tag des
+    // eigentlich gemeinten Monats. Rechnet mit den lokalen
+    // Datumsanteilen, keinem ISO-String - keine Zeitzonenverschiebung
+    // möglich, die hier eine falsche Tageszahl einschmuggeln könnte.
+    const tageImMonat = new Date(Number(jahr), monatsnummer, 0).getDate();
+
+    const zeilen = await ladeListe('v_wawi_fahrten_je_tag', 'tag, fahrten',
+        (q) => q.gte('tag', `${monat}`).lt('tag', naechsterMonat).order('tag'));
+
+    // Bereich/Reiter gewechselt ODER eine neuere Zeile ausgewählt,
+    // während diese Abfrage unterwegs war - dann gehört weder ein
+    // Fehler noch die Grafik selbst noch zur Gegenwart (Muster wie bei
+    // meldeVorgang() in rahmen.js, Befund 2 dort).
+    if (!istAktuellerVorgang(vorgang) || eigenerZaehler !== drilldownZaehler) return;
+
+    const wurzel = document.getElementById('detailmaske');
+    if (!wurzel) return;
+
+    const abschnitt = document.createElement('section');
+    abschnitt.className = 'monatsdrilldown';
+    const ueberschrift = document.createElement('h3');
+    ueberschrift.textContent = `Fahrten je Tag — ${monatFormat(monat)} (gesamt, alle Radtypen und Tarife)`;
+    abschnitt.append(ueberschrift);
+
+    const fehler = letzterLadeFehler('v_wawi_fahrten_je_tag');
+    if (fehler) {
+        const hinweis = document.createElement('p');
+        hinweis.className = 'monatsdrilldown-fehler';
+        hinweis.textContent = `Die Tageszahlen liessen sich nicht laden: ${fehler}`;
+        abschnitt.append(hinweis);
+        wurzel.append(abschnitt);
+        return;
+    }
+
+    // Tagesarray LÜCKENLOS über alle Kalendertage des Monats - ein Tag
+    // ohne Betrieb liefert keine Zeile aus der Sicht (siehe deren
+    // Kommentar in 0018_wawi_sichten.sql), ist aber null Fahrten, keine
+    // fehlende Säule. Eine ausgelassene Kategorie sähe in der Grafik wie
+    // ein Ladefehler aus (Auftrag, ausdrücklich benannt).
+    const tage = Array.from({ length: tageImMonat }, (_, i) => i + 1);
+    const fahrtenNachTag = new Map(zeilen.map((z) => [Number(z.tag.slice(8, 10)), z.fahrten]));
+    const werte = tage.map((tag) => fahrtenNachTag.get(tag) ?? 0);
+
+    const gesamt = werte.reduce((s, w) => s + w, 0);
+    const minimum = Math.min(...werte);
+    const maximum = Math.max(...werte);
+    // Fallstrick aus dem Auftrag, wörtlich: "Wenn zwei Tage denselben
+    // Höchstwert haben, gibt es zwei Spitzentage." Deshalb ALLE Indizes
+    // mit dem Maximalwert sammeln, nicht nur den ersten gefundenen -
+    // dieselbe Entscheidung für das Minimum, aus Konsistenz.
+    const minTage    = tage.filter((_, i) => werte[i] === minimum);
+    const maxIndizes = tage.map((_, i) => i).filter((i) => werte[i] === maximum);
+    const maxTage    = maxIndizes.map((i) => tage[i]);
+
+    const monatNameVoll = MONATSNAMEN_VOLL[monatsnummer - 1];
+    const tageListe = (liste) => liste.length > 1
+        ? `${liste.slice(0, -1).join('., ')}. und ${liste[liste.length - 1]}.`
+        : `${liste[0]}.`;
+    // "1 Fahrt", nicht "1 Fahrten" - ein Monat mit nur ein bis zwei
+    // Fahrten insgesamt (Januar 2025 im Referenzjahr) trifft diesen Fall
+    // wirklich, kein theoretisches Beispiel.
+    const fahrtenWort = (n) => (n === 1 ? 'Fahrt' : 'Fahrten');
+
+    const grafik = saeulengrafik(werte, tage.map((t) => `${t}. ${monatNameVoll}`), {
+        beschriftung: `Fahrten je Tag im ${monatNameVoll} ${jahr}, gesamt über alle Radtypen und Tarife: zwischen ` +
+            `${zahlFormat(minimum)} und ${zahlFormat(maximum)} ${fahrtenWort(maximum)}, im Mittel ` +
+            `${zahlFormat(Math.round(gesamt / tage.length))}. Am meisten Fahrten am ` +
+            `${tageListe(maxTage)} ${monatNameVoll} mit je ${zahlFormat(maximum)} ${fahrtenWort(maximum)}.`,
+        markierIndizes: maxIndizes
+    });
+    abschnitt.append(grafik);
+
+    // ===== Zusammenfassung (Auftrag, wörtlich: Min, Max, Anzahl pro
+    // Monat, Tag mit den meisten Fahrten) - dieselben Kacheln wie im
+    // Übersichtsstreifen oben (baueKachel() in rahmen.js), nur in einem
+    // 2x2-Raster statt einer Reihe (siehe .monatsdrilldown-kacheln in
+    // style.css: die Detailmaske ist schmaler als #arbeitsliste). =====
+    const kacheln = document.createElement('div');
+    kacheln.className = 'monatsdrilldown-kacheln';
+    kacheln.append(
+        baueKachel({
+            titel: 'Minimum',
+            wert: zahlSkaliert(zahlFormat(minimum)),
+            hinweis: `${tageListe(minTage)} ${monatNameVoll}`
+        }),
+        baueKachel({
+            titel: 'Maximum',
+            wert: zahlSkaliert(zahlFormat(maximum)),
+            hinweis: `${tageListe(maxTage)} ${monatNameVoll}`
+        }),
+        baueKachel({
+            titel: 'Anzahl pro Monat',
+            wert: zahlSkaliert(zahlFormat(gesamt)),
+            hinweis: `${monatFormat(monat)}, gesamt`
+        }),
+        baueKachel({
+            titel: 'Tag mit den meisten Fahrten',
+            wert: `${tageListe(maxTage)} ${monatNameVoll}`,
+            hinweis: maxTage.length > 1
+                ? `${maxTage.length} Tage gleichauf, je ${zahlFormat(maximum)} ${fahrtenWort(maximum)}`
+                : `${zahlFormat(maximum)} ${fahrtenWort(maximum)}`
+        })
+    );
+    abschnitt.append(kacheln);
+
+    // ===== Tabelle: dieselben Zahlen, auch ohne Augen erreichbar =====
+    // "Eine Grafik, die Information trägt, darf für einen Screenreader
+    // nicht stumm sein" (Auftrag) - die Grafik selbst trägt ihre
+    // Zusammenfassung im aria-label, jeden einzelnen Tageswert liest
+    // diese Tabelle vor, kein <span class="nur-vorlesen">-Versteck: in
+    // dieser Warenwirtschaft ist Zahlendichte erwünscht (siehe Dateikopf
+    // von style.css), die Tabelle nützt deshalb auch sehenden Blicken,
+    // die den exakten Wert eines Tages statt nur die Säulenhöhe wollen.
+    const tabelle = document.createElement('table');
+    tabelle.className = 'monatsdrilldown-tabelle';
+    const beschriftung = document.createElement('caption');
+    beschriftung.textContent = `Fahrten je Tag, ${monatFormat(monat)}`;
+    tabelle.append(beschriftung);
+
+    const thead = document.createElement('thead');
+    const kopfzeile = document.createElement('tr');
+    for (const spaltentitel of ['Tag', 'Fahrten']) {
+        const th = document.createElement('th');
+        th.textContent = spaltentitel;
+        th.scope = 'col';
+        kopfzeile.append(th);
+    }
+    thead.append(kopfzeile);
+    tabelle.append(thead);
+
+    const tbody = document.createElement('tbody');
+    tage.forEach((tag, i) => {
+        const tr = document.createElement('tr');
+        const kopf = document.createElement('th');
+        kopf.scope = 'row';
+        kopf.textContent = `${tag}.`;
+        const wertZelle = document.createElement('td');
+        wertZelle.className = zahlKlasse(werte[i] === maximum ? 'auffaellig' : '');
+        wertZelle.textContent = zahlFormat(werte[i]);
+        tr.append(kopf, wertZelle);
+        tbody.append(tr);
+    });
+    tabelle.append(tbody);
+    abschnitt.append(tabelle);
+
+    wurzel.append(abschnitt);
 }
 
 // ===== Umsatz nach Radtyp =====
@@ -482,7 +689,12 @@ function umsatzRadtypUebersicht(zeilen) {
     return kacheln;
 }
 
-function umsatzRadtypMaske(zeile) {
+// async wegen des Drill-Downs (monatsdrilldownEinfuegen() lädt die
+// Tageszahlen nach) - zeileWaehlen() in rahmen.js ruft diese Funktion
+// ohne await auf, das ist hier gewollt: die Grundmaske (zeigeMaske())
+// steht synchron sofort, die Tagesgrafik hängt sich erst danach an, wenn
+// ihre eigene Ladeanfrage zurück ist.
+async function umsatzRadtypMaske(zeile) {
     zeigeMaske(`${zeile.typ} · ${monatFormat(zeile.monat)}`, [
         { name: 'typ',            titel: 'Radtyp',    wert: `${zeile.typ} (${zeile.typ_code})`, nurLesen: true },
         { name: 'monat',          titel: 'Monat',      wert: monatFormat(zeile.monat), nurLesen: true },
@@ -492,6 +704,7 @@ function umsatzRadtypMaske(zeile) {
         { name: 'umsatz_je_fahrt', titel: 'Je Fahrt',  wert: geldFormat(zeile.umsatz_je_fahrt), nurLesen: true },
         { name: 'veraenderung',   titel: 'Δ ggü. Vormonat', wert: veraenderungFormat(zeile.veraenderungJeFahrt), nurLesen: true }
     ], []);
+    await monatsdrilldownEinfuegen(zeile.monat);
 }
 
 // ===== Umsatz nach Kundengruppe =====
@@ -614,7 +827,8 @@ function umsatzKundengruppeUebersicht(zeilen) {
     return kacheln;
 }
 
-function umsatzKundengruppeMaske(zeile) {
+// async wegen des Drill-Downs - siehe Kommentar bei umsatzRadtypMaske().
+async function umsatzKundengruppeMaske(zeile) {
     zeigeMaske(`${zeile.tarif} · ${monatFormat(zeile.monat)}`, [
         { name: 'tarif',           titel: 'Tarif',    wert: `${zeile.tarif} (${zeile.tarif_code})`, nurLesen: true },
         { name: 'monat',           titel: 'Monat',    wert: monatFormat(zeile.monat), nurLesen: true },
@@ -623,6 +837,7 @@ function umsatzKundengruppeMaske(zeile) {
         { name: 'umsatz',          titel: 'Umsatz',   wert: geldFormat(zeile.umsatz), nurLesen: true },
         { name: 'umsatz_je_kunde', titel: 'Je Kunde', wert: geldFormat(zeile.umsatz_je_kunde), nurLesen: true }
     ], []);
+    await monatsdrilldownEinfuegen(zeile.monat);
 }
 
 // ===== Kilometer und CO2 =====
@@ -749,7 +964,8 @@ function kmCo2Uebersicht(zeilen) {
     ];
 }
 
-function kmCo2Maske(zeile) {
+// async wegen des Drill-Downs - siehe Kommentar bei umsatzRadtypMaske().
+async function kmCo2Maske(zeile) {
     zeigeMaske(`${zeile.typ_code} · ${monatFormat(zeile.monat)}`, [
         { name: 'typ_code', titel: 'Radtyp',    wert: zeile.typ_code, nurLesen: true },
         { name: 'monat',    titel: 'Monat',      wert: monatFormat(zeile.monat), nurLesen: true },
@@ -763,6 +979,7 @@ function kmCo2Maske(zeile) {
         },
         { name: 'co2_ersparnis_kg', titel: 'CO₂-Ersparnis', wert: co2ZelleText(zeile), nurLesen: true }
     ], []);
+    await monatsdrilldownEinfuegen(zeile.monat);
 }
 
 // ===== Stationsauslastung =====

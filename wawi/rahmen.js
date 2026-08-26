@@ -893,33 +893,44 @@ function zeigeUebersicht(kennung, kacheln) {
     const leiste = uebersichtsstreifen();
     if (!kacheln || kacheln.length === 0) { leiste.remove(); return; }
 
-    for (const kachel of kacheln) {
-        const feld = document.createElement('div');
-        feld.className = 'uebersichtskachel';
+    for (const kachel of kacheln) leiste.append(baueKachel(kachel));
+}
 
-        const titel = document.createElement('div');
-        titel.className = 'uebersichtskachel-titel';
-        titel.textContent = kachel.titel;
-        feld.append(titel);
+// Das Kachel-Markup selbst, herausgezogen aus zeigeUebersicht() (siehe
+// dort): der Drill-Down (monatsdrilldownEinfuegen() in auswertungen.js)
+// braucht dieselben vier Kacheln - Min, Max, Anzahl pro Monat, Tag mit
+// den meisten Fahrten - aber NICHT im #uebersichtsstreifen am Kopf von
+// #arbeitsliste, sondern in der Detailmaske. Zwei Aufrufer, die beide
+// dieselbe Handvoll DOM-Zeilen von Hand nachbauen, wären derselbe
+// Befund wie bei werkzeugleiste()/uebersichtsstreifen() selbst: ein
+// wiederkehrendes Muster gehört EINMAL hierher, nicht mehrfach in einen
+// Bereich - hier zusätzlich nicht mehrfach in DIESE Datei.
+function baueKachel(kachel) {
+    const feld = document.createElement('div');
+    feld.className = 'uebersichtskachel';
 
-        const zeile = document.createElement('div');
-        zeile.className = 'uebersichtskachel-zeile';
-        const wert = document.createElement('div');
-        wert.className = 'uebersichtskachel-wert';
-        wert.append(kachel.wert);
-        zeile.append(wert);
-        if (kachel.grafik) zeile.append(kachel.grafik);
-        feld.append(zeile);
+    const titel = document.createElement('div');
+    titel.className = 'uebersichtskachel-titel';
+    titel.textContent = kachel.titel;
+    feld.append(titel);
 
-        if (kachel.hinweis) {
-            const hinweis = document.createElement('div');
-            hinweis.className = 'uebersichtskachel-hinweis';
-            hinweis.textContent = kachel.hinweis;
-            feld.append(hinweis);
-        }
+    const zeile = document.createElement('div');
+    zeile.className = 'uebersichtskachel-zeile';
+    const wert = document.createElement('div');
+    wert.className = 'uebersichtskachel-wert';
+    wert.append(kachel.wert);
+    zeile.append(wert);
+    if (kachel.grafik) zeile.append(kachel.grafik);
+    feld.append(zeile);
 
-        leiste.append(feld);
+    if (kachel.hinweis) {
+        const hinweis = document.createElement('div');
+        hinweis.className = 'uebersichtskachel-hinweis';
+        hinweis.textContent = kachel.hinweis;
+        feld.append(hinweis);
     }
+
+    return feld;
 }
 
 // ===== Zeichenbausteine: Sparkline (Tufte) und Zellbalken (Bissantz) =====
@@ -1079,6 +1090,155 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
         wrapper.append(text);
     }
     return wrapper;
+}
+
+// ===== Zeichenbaustein: Säulengrafik (Drill-Down-Aufgabe) =====
+//
+// Drittes Geschwister von sparkline()/zellbalken() oben, allgemein und
+// nicht auswertungsspezifisch gehalten wie beide - der Aufrufer liefert
+// Werte, Achsenbeschriftungen und einen zugänglichen Namen, diese
+// Funktion weiß nichts von "Fahrten" oder "Monaten".
+//
+// Der fachliche Unterschied zu den beiden Geschwistern, und der Grund,
+// warum diese Funktion NICHT einfach zellbalken() im Kreis aufruft:
+// dort KODIERT die Länge einen ANTEIL an einer fest vorgegebenen
+// Gesamtbreite (ein Füllstand zwischen 0 und 100 %, ein Umsatz zwischen
+// 0 und dem Zeilenmaximum) - die Nulllinie ist dort automatisch die
+// linke Kante der Zelle. Eine Säule dagegen steht FREI im Raum; ohne
+// eine EIGENS gezeichnete Nulllinie könnte ihre Höhe genauso gut ab
+// einem beliebigen Sockel beginnen, und zwei Säulen im Verhältnis 2:1
+// sähen dann nicht mehr im Verhältnis 2:1 aus. Deshalb ist die Skala
+// hier IMMER bei 0 verankert (maximum kommt ausschließlich aus den
+// Werten selbst, nie aus einem vom Aufrufer übergebenen Minimum) - eine
+// abgeschnittene y-Achse ist in diesem Projekt für Positionsgrafiken
+// (Sparkline) zulässig, für längenkodierende Grafiken wie diese
+// ausdrücklich nicht (fachliche Regel des Gestaltungsauftrags).
+//
+// werte: Zahlen in Anzeigereihenfolge, EINE je Kategorie (Tag im
+// Monat). Ein fehlender Betriebstag ist null FAHRTEN (eine Säule der
+// Höhe 0, sichtbar auf der Grundlinie), keine ausgelassene Kategorie -
+// der Aufrufer muss die Lücke deshalb selbst mit 0 auffüllen, BEVOR er
+// diese Funktion ruft (siehe monatsdrilldownEinfuegen() in
+// auswertungen.js): ein einfach ausgelassener Index sähe hier genauso
+// aus wie eine fehlende Säule und wäre von einem Ladefehler nicht zu
+// unterscheiden.
+// beschriftungenX: Array gleicher Länge, für die Tooltip-Titel je Säule
+// und die drei Eckpunkte der x-Achsenbeschriftung (erster/mittlerer/
+// letzter Tag) - keine volle Beschriftung jeder einzelnen Säule, dafür
+// ist eine Spalte mit 28 bis 31 Werten zu schmal.
+// optionen.beschriftung: der zugängliche Name der GESAMTEN Grafik
+// (role="img"), eine fertig formulierte Zusammenfassung (Minimum,
+// Maximum, Spitzentag) - dieselbe Pflicht wie bei sparkline() oben
+// ("eine Grafik, die Information trägt, darf für einen Screenreader
+// nicht stumm sein"). Die Tages-für-Tages-Zahlen selbst gehören NICHT
+// in dieses eine Label (31 Zahlen in einem Satz wären für einen
+// Screenreader ebenso unbrauchbar wie für ein Auge) - dafür baut der
+// Aufrufer zusätzlich eine normale <table>, siehe dort.
+// optionen.markierIndizes: hervorgehobene Säulen in --rot, als ARRAY
+// statt eines einzelnen Index wie bei sparkline()s markierIndex - zwei
+// Tage können denselben Höchstwert tragen (Auftrag, ausdrücklich als
+// Fallstrick benannt), dann sind es zwei Spitzentage, nicht einer.
+function saeulengrafik(werte, beschriftungenX, optionen = {}) {
+    const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [] } = optionen;
+
+    const block = document.createElement('div');
+    block.className = 'saeulengrafik-block';
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    svg.classList.add('saeulengrafik');
+
+    if (beschriftung) {
+        svg.setAttribute('role', 'img');
+        svg.setAttribute('aria-label', beschriftung);
+    } else {
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+    }
+
+    const werteBereinigt = (werte || []).map((w) => w || 0);
+    // Nulllinie ist PFLICHT (siehe Kopfkommentar): die Skala beginnt
+    // IMMER bei 0, deshalb kommt "maximum" ausschliesslich aus den
+    // Werten selbst - Math.max(1, ...) nur, damit ein Monat mit
+    // durchgehend 0 Fahrten nicht durch 0 teilt, nicht als versteckte
+    // Untergrenze der Achse.
+    const maximum = Math.max(1, ...werteBereinigt);
+
+    if (werteBereinigt.length > 0) {
+        const anzahl = werteBereinigt.length;
+        const abstand = breite / anzahl;
+        const saeulenbreite = Math.max(0.5, abstand - 1);
+
+        // Grundlinie: rein dekorativ (jede Saeule steht ohnehin auf ihr
+        // auf), macht aber sichtbar, dass eine Saeule der Hoehe 0 BEWUSST
+        // keine Hoehe hat, statt wie eine fehlende Kategorie auszusehen.
+        const grundlinie = document.createElementNS(SVG_NS, 'line');
+        grundlinie.setAttribute('x1', 0);
+        grundlinie.setAttribute('x2', breite);
+        grundlinie.setAttribute('y1', hoehe - 0.5);
+        grundlinie.setAttribute('y2', hoehe - 0.5);
+        grundlinie.setAttribute('class', 'saeulengrafik-grundlinie');
+        svg.append(grundlinie);
+
+        werteBereinigt.forEach((wert, i) => {
+            // 2px Luft oben, damit der hoechste Wert nicht exakt auf der
+            // Kontur des <svg> liegt (dieselbe Ueberlegung wie der 1px-
+            // Rand bei sparkline() oben).
+            const saeulenhoehe = (wert / maximum) * (hoehe - 2);
+            const rect = document.createElementNS(SVG_NS, 'rect');
+            rect.setAttribute('x', (i * abstand).toFixed(2));
+            rect.setAttribute('y', (hoehe - saeulenhoehe).toFixed(2));
+            rect.setAttribute('width', saeulenbreite.toFixed(2));
+            rect.setAttribute('height', Math.max(0, saeulenhoehe).toFixed(2));
+            rect.setAttribute('class', markierIndizes.includes(i)
+                ? 'saeulengrafik-saeule saeulengrafik-saeule-markiert'
+                : 'saeulengrafik-saeule');
+            if (beschriftungenX && beschriftungenX[i] !== undefined) {
+                // <title> auf dem einzelnen <rect>: ein Tooltip beim
+                // Hovern EINER Saeule, ohne die Grafik als Ganzes stumm
+                // zu machen (svg traegt aria-label bereits fuer sich).
+                const titel = document.createElementNS(SVG_NS, 'title');
+                titel.textContent = `${beschriftungenX[i]}: ${wert}`;
+                rect.append(titel);
+            }
+            svg.append(rect);
+        });
+    }
+
+    // y-Achse: nur 0 und das Maximum, keine Zwischenwerte - die
+    // begleitende Tabelle (Aufrufer) traegt jede einzelne Zahl bereits
+    // exakt, diese beiden Eckwerte dienen nur der groben Einordnung
+    // "wie hoch ist hoch". aria-hidden: rein visuelle Orientierung,
+    // redundant zu optionen.beschriftung und zur Tabelle.
+    const yAchse = document.createElement('div');
+    yAchse.className = 'saeulengrafik-y-achse';
+    yAchse.setAttribute('aria-hidden', 'true');
+    const yOben = document.createElement('span');
+    yOben.textContent = maximum.toLocaleString('de-DE');
+    const yUnten = document.createElement('span');
+    yUnten.textContent = '0';
+    yAchse.append(yOben, yUnten);
+
+    block.append(yAchse, svg);
+
+    if (beschriftungenX && beschriftungenX.length > 0) {
+        const xAchse = document.createElement('div');
+        xAchse.className = 'saeulengrafik-x-achse';
+        xAchse.setAttribute('aria-hidden', 'true');
+        const indexMitte = Math.floor((beschriftungenX.length - 1) / 2);
+        [0, indexMitte, beschriftungenX.length - 1].forEach((i, position) => {
+            // Bei sehr wenigen Kategorien (< 3) faellt "Mitte" mit
+            // "erster" oder "letzter" zusammen - dann nicht doppelt
+            // anzeigen.
+            if (position === 1 && (i === 0 || i === beschriftungenX.length - 1)) return;
+            const span = document.createElement('span');
+            span.textContent = beschriftungenX[i];
+            xAchse.append(span);
+        });
+        block.append(xAchse);
+    }
+
+    return block;
 }
 
 // ===== Zeichenbaustein: typografische Skalierung (Bissantz) =====

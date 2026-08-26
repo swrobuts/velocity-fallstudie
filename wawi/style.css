@@ -768,6 +768,156 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* ===== Säulengrafik (saeulengrafik() in rahmen.js, Drill-Down-Aufgabe) =====
+   Grid statt Flex, damit die x-Achse (Zeile 2) exakt unter dem <svg>
+   beginnt, unabhängig davon, wie breit die y-Achsen-Beschriftung links
+   (Zeile 1, Spalte 1) gerade ist ("34" gegen "1.939" sind unterschiedlich
+   breit) - mit Flex würde die zweite Zeile bei jedem Monat neu
+   verrutschen. */
+.saeulengrafik-block {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 8px;
+  margin: 4px 0 16px;
+}
+
+.saeulengrafik {
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  height: 120px;
+  overflow: visible;
+}
+
+.saeulengrafik-saeule {
+  fill: var(--marine);
+}
+
+/* --rot: derselbe Akzent wie die Sparkline-Markierung und die aktive
+   Navigation - "hier hinsehen" (der Spitzentag), nicht "schlecht". */
+.saeulengrafik-saeule-markiert {
+  fill: var(--rot);
+}
+
+.saeulengrafik-grundlinie {
+  stroke: var(--linie);
+  stroke-width: 1;
+}
+
+.saeulengrafik-y-achse {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 11px;
+  color: var(--text-leise);
+  font-variant-numeric: tabular-nums;
+  padding: 1px 0;
+}
+
+.saeulengrafik-x-achse {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-leise);
+  margin-top: 4px;
+}
+
+/* ===== Zusammenfassung und Tabelle des Drill-Downs (auswertungen.js,
+   monatsdrilldownEinfuegen()) =====
+   Zwei Spalten statt der vier des #uebersichtsstreifen oben - die
+   Detailmaske ist nur ~45% der Fensterbreite (siehe #detailmaske weiter
+   unten), vier Kacheln in einer Reihe liessen "Tag mit den meisten
+   Fahrten" dort auf eine Wortbreite von 100px umbrechen. */
+.monatsdrilldown {
+  border-top: 1px solid var(--linie);
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.monatsdrilldown h3 {
+  color: var(--marine);
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.monatsdrilldown-kacheln {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--linie);
+  background: var(--grund);
+  margin-bottom: 16px;
+}
+
+.monatsdrilldown-kacheln .uebersichtskachel {
+  border-right: 1px solid var(--linie);
+  border-bottom: 1px solid var(--linie);
+  padding: 12px 16px;
+}
+
+.monatsdrilldown-kacheln .uebersichtskachel:nth-child(2n) {
+  border-right: none;
+}
+
+.monatsdrilldown-kacheln .uebersichtskachel:nth-last-child(-n+2) {
+  border-bottom: none;
+}
+
+.monatsdrilldown-fehler {
+  color: var(--schlecht);
+}
+
+/* Eigene, kompaktere Tabelle statt .arbeitstabelle: die Zeilen hier sind
+   nicht anklickbar (kein Zeilen-Cursor, kein Hover-Umschlag) und tragen
+   ausschliesslich Text - dieselbe rechtsbuendige Zahlenspalte wie dort
+   (.zahl, .auffaellig), aber ohne die Klick-Semantik einer Arbeitsliste. */
+.monatsdrilldown-tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.monatsdrilldown-tabelle caption {
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-leise);
+  margin-bottom: 4px;
+}
+
+.monatsdrilldown-tabelle th,
+.monatsdrilldown-tabelle td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--linie);
+  text-align: left;
+}
+
+.monatsdrilldown-tabelle thead th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-leise);
+}
+
+.monatsdrilldown-tabelle td.zahl {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nur Gewicht, keine Farbe: --rot misst 4.41:1 auf Weiß (siehe
+   Kommentar bei AUFFAELLIGKEITS_SCHWELLE in auswertungen.js) - unter der
+   hier verlangten 4.5:1-Untergrenze für Fließtext. Dieselbe Entscheidung
+   wie bei .arbeitstabelle td.auffaellig: Tufte, Ink nur wo sie etwas
+   bedeutet, nicht zwingend Farbe. Die Säule selbst darf --rot tragen
+   (3:1 reicht für Grafik, gemessen 4.41:1 liegt darüber), der Text in
+   dieser Tabellenzeile nicht.  */
+.monatsdrilldown-tabelle td.auffaellig {
+  font-weight: 700;
+}
+
 /* Bissantz: die tragenden Ziffern bleiben in voller Stärke, Tausender-
    punkte und Nachkommastellen (samt Einheit) treten zurück. text-leise
    misst 5.95:1 auf Weiß (siehe Bericht) - über der Untergrenze von 4.5:1

@@ -11,17 +11,21 @@
 --             v_wawi_kunde, v_wawi_station, v_wawi_schaden,
 --             v_wawi_auftrag, v_wawi_umsatz_radtyp,
 --             v_wawi_umsatz_kundengruppe, v_wawi_km_co2,
---             v_wawi_stationsauslastung, v_wawi_modell
+--             v_wawi_stationsauslastung, v_wawi_modell,
+--             v_wawi_fahrten_je_tag
 -- Ruecknahme: DROP VIEW fuer dieselben Namen; DROP FUNCTION
 --             velocity.fn_luftlinie_km(numeric,numeric,numeric,numeric);
 --
--- Hinweis:    Diese Datei entsteht in drei Aufgaben. Aufgabe 10 legt die
+-- Hinweis:    Diese Datei entsteht in vier Aufgaben. Aufgabe 10 legt die
 --             fuenf Arbeitssichten an (Flotte, Kunden, Stationen,
 --             Schaeden, Auftraege) und die Haversine-Funktion, die die
 --             Auswertungssichten aus Aufgabe 11 brauchen werden. Aufgabe 3
 --             des Oberflaechenplans ergaenzt v_wawi_modell: eine Sicht
 --             fuer eine Eingabemaske statt fuer eine Auswertung, die beim
---             Bau der Oberflaeche als fehlend auffiel.
+--             Bau der Oberflaeche als fehlend auffiel. Die Drill-Down-
+--             Aufgabe ergaenzt v_wawi_fahrten_je_tag: die Monatssichten
+--             aus Aufgabe 11 aggregieren je Monat, ein Klick auf einen
+--             Monat braucht aber Tageszahlen, die es bislang nicht gab.
 -- =====================================================================
 
 -- Luftlinie nach Haversine, ohne PostGIS - dieselbe Entscheidung wie
@@ -819,3 +823,66 @@ comment on column velocity.v_wawi_modell.zuladung_kg is
 comment on column velocity.v_wawi_modell.raeder_im_bestand is
   'Zahl der nicht ausgemusterten Räder dieses Modells im Bestand - zeigt an, '
   'was üblich ist, ohne dass jemand in der Flottensicht nachsehen muss.';
+
+-- =====================================================================
+-- Drill-Down-Aufgabe: v_wawi_fahrten_je_tag - Tagesaggregation für die
+-- Säulengrafik hinter einem angeklickten Monat
+-- =====================================================================
+
+-- ---- Fahrten je Tag ---------------------------------------------------
+-- Der fachlich heikle Punkt zuerst, weil er die ganze Sicht bestimmt:
+-- v_wawi_fahrt_km (Einzelfahrten mit kunde_id und Zeitstempel) wurde
+-- authenticated kürzlich ausdrücklich ENTZOGEN, weil eine Liste von
+-- Fahrten mit Uhrzeit ein Bewegungsprofil ist (siehe deren Kopfkommentar
+-- weiter oben). "Am 4. September gab es 61 Fahrten" ist etwas anderes -
+-- eine TAGESSUMME ohne Personenbezug lässt sich nicht zu einer
+-- Einzelfahrt zurückrechnen. Die Grenze sitzt deshalb HIER in der Sicht
+-- selbst (group by date_trunc('day', ...), keine ausleihe_id, keine
+-- kunde_id, keine Uhrzeit in der Ausgabe), nicht nur in diesem Kommentar
+-- - dieselbe Lehre wie beim vormaligen Fehlversuch bei v_wawi_fahrt_km:
+-- eine Schranke, die nur behauptet wird, ist keine.
+--
+-- Bewusst OHNE Radtyp-Spalte: der Drill-Down aus einer Monatszeile
+-- beantwortet "wie viele Fahrten gab es an diesem Tag insgesamt" - genau
+-- die Frage, die der Auftrag mit den Referenzzahlen stellt (September
+-- 2025: 34 bis 61, Spitzentag der 4.). Er fragt nicht "wie viele
+-- City-Bike-Fahrten", und die Oberfläche zeigt die Tagesgrafik deshalb
+-- für JEDE angeklickte Monatszeile gleich, unabhängig vom Radtyp/Tarif
+-- dieser Zeile (siehe monatsdrilldownEinfuegen() in auswertungen.js) -
+-- eine zusätzliche Gruppierung nach typ_code würde eine Frage
+-- beantworten, die niemand gestellt hat, und nur die Gegenprobe unten
+-- verkomplizieren: OHNE Radtyp-Spalte muss die Tagessumme eines Monats
+-- unabhängig davon, ob man v_wawi_umsatz_radtyp, v_wawi_umsatz_kundengruppe
+-- oder v_wawi_km_co2 über den Monat aufsummiert, immer dieselbe Zahl
+-- ergeben - drei voneinander unabhängige Kontrollrechnungen zu einer
+-- Sicht, nicht nur eine.
+create or replace view velocity.v_wawi_fahrten_je_tag as
+select date_trunc('day', a.startzeit)::date as tag,
+       count(distinct a.ausleihe_id)        as fahrten
+  from velocity.ausleihe a
+ where a.status = 'abgeschlossen'
+   and velocity.hat_rolle('leitung')
+ group by 1;
+
+comment on view velocity.v_wawi_fahrten_je_tag is
+  'Tagesaggregation der abgeschlossenen Fahrten für den Drill-Down aus einer '
+  'angeklickten Monatszeile der Auswertungen. Absichtlich ohne Personenbezug: '
+  'keine ausleihe_id, keine kunde_id, keine Uhrzeit - eine Tagessumme ist kein '
+  'Bewegungsprofil, anders als v_wawi_fahrt_km (siehe deren Kopfkommentar). '
+  'Bewusst ohne Radtyp-Spalte, siehe Kommentar am create view. Filtert selbst '
+  'über velocity.hat_rolle(''leitung''), dieselbe Rolle wie die drei '
+  'Monatssichten, aus denen heraus der Drill-Down aufgerufen wird.';
+comment on column velocity.v_wawi_fahrten_je_tag.tag is
+  'Kalendertag der Fahrt (startzeit), die x-Achse der Säulengrafik. Ein Tag '
+  'ohne abgeschlossene Fahrt taucht hier NICHT als Zeile auf - die Oberfläche '
+  'muss ihn selbst als null Fahrten ergänzen, sonst sieht eine echte Lücke im '
+  'Betrieb wie ein Ladefehler aus (siehe monatsdrilldownEinfuegen() in '
+  'auswertungen.js).';
+comment on column velocity.v_wawi_fahrten_je_tag.fahrten is
+  'Zahl der an diesem Tag abgeschlossenen Ausleihen, dieselbe Zählweise '
+  '(count(distinct ausleihe_id) where status = ''abgeschlossen'') wie in '
+  'v_wawi_umsatz_radtyp/v_wawi_umsatz_kundengruppe/v_wawi_km_co2 - die Summe '
+  'dieser Spalte über einen Monat muss deshalb die fahrten-Summe der '
+  'passenden Zeilen jeder der drei Monatssichten ergeben. Genau das prüft '
+  'test_v_fahrten_je_tag_stimmt_mit_monatssichten_ueberein in '
+  't0018_wawi_sichten.sql als wichtigste Zusicherung dieser Sicht.';

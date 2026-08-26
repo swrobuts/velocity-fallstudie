@@ -374,3 +374,136 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;
+
+-- =====================================================================
+-- Drill-Down-Aufgabe: v_wawi_fahrten_je_tag
+-- =====================================================================
+
+-- Existenz, Dokumentation (test_doku_vollstaendig in t0012 prueft die
+-- KOMMENTARE bereits schemaweit) und kein Personenbezug: keine
+-- ausleihe_id, keine kunde_id, keine Uhrzeit - dieselbe Probe wie bei
+-- test_v_kunde_ohne_bewegungsprofil oben, nur fuer die neue Sicht.
+create or replace function velocity_test.test_v_fahrten_je_tag_existiert_ohne_personenbezug()
+returns setof text language plpgsql as $$
+begin
+  return next has_view('velocity'::name, 'v_wawi_fahrten_je_tag'::name,
+                       'v_wawi_fahrten_je_tag existiert');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'tag'::name,
+                         'v_wawi_fahrten_je_tag nennt den Tag');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'fahrten'::name,
+                         'v_wawi_fahrten_je_tag nennt die Zahl der Fahrten');
+  return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'ausleihe_id'::name,
+                           'v_wawi_fahrten_je_tag nennt keine einzelne Fahrt');
+  return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'kunde_id'::name,
+                           'v_wawi_fahrten_je_tag nennt keinen Kunden');
+end;
+$$;
+
+-- Rollenschranke: nach demselben Muster wie test_v_modell_rollentrennung_greift
+-- oben eine POSITIVE Probe (leitung sieht Zeilen) UND eine NEGATIVE
+-- (werkstatt sieht keine) - eine Sicht, die ihre Schranke von einer
+-- anderen Sicht erbt, hat keine eigene (siehe Kopfkommentar der Sicht).
+create or replace function velocity_test.test_v_fahrten_je_tag_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('tag-leitung', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_fahrten_je_tag;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht Tageszeilen');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('tag-werkstatt', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_fahrten_je_tag;
+  return next is(v_n, 0, 'Werkstatt sieht keine Tageszeilen - nur leitung ist zugeteilt');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Die wichtigste Zusicherung dieser Sicht (Auftrag, woertlich: "zwei Wege
+-- zur selben Zahl, die auseinanderlaufen koennen"): die Tagessummen eines
+-- Monats muessen der Monatszahl entsprechen - und zwar gegen ALLE DREI
+-- Monatssichten aus Aufgabe 11, nicht nur eine, weil v_wawi_fahrten_je_tag
+-- bewusst keine Radtyp-/Tarifspalte fuehrt (siehe Kopfkommentar der Sicht
+-- in 0018_wawi_sichten.sql) und die Tagessumme deshalb JEDER der drei
+-- Aufteilungen gleichzeitig entsprechen muss.
+create or replace function velocity_test.test_v_fahrten_je_tag_stimmt_mit_monatssichten_ueberein()
+returns setof text language plpgsql as $$
+begin
+  perform velocity_test.fixture_mitarbeiter('tagessumme');
+
+  return next is_empty($q$
+    select 1
+      from (select date_trunc('month', tag)::date as monat, sum(fahrten) as tagessumme
+              from velocity.v_wawi_fahrten_je_tag
+             group by 1) t
+      join (select monat, sum(fahrten) as monatssumme
+              from velocity.v_wawi_umsatz_radtyp
+             group by 1) m using (monat)
+     where t.tagessumme <> m.monatssumme
+  $q$, 'Tagessumme je Monat = Monatssumme aus v_wawi_umsatz_radtyp (ueber alle Radtypen)');
+
+  return next is_empty($q$
+    select 1
+      from (select date_trunc('month', tag)::date as monat, sum(fahrten) as tagessumme
+              from velocity.v_wawi_fahrten_je_tag
+             group by 1) t
+      join (select monat, sum(fahrten) as monatssumme
+              from velocity.v_wawi_umsatz_kundengruppe
+             group by 1) m using (monat)
+     where t.tagessumme <> m.monatssumme
+  $q$, 'Tagessumme je Monat = Monatssumme aus v_wawi_umsatz_kundengruppe (ueber alle Tarife)');
+
+  return next is_empty($q$
+    select 1
+      from (select date_trunc('month', tag)::date as monat, sum(fahrten) as tagessumme
+              from velocity.v_wawi_fahrten_je_tag
+             group by 1) t
+      join (select monat, sum(fahrten) as monatssumme
+              from velocity.v_wawi_km_co2
+             group by 1) m using (monat)
+     where t.tagessumme <> m.monatssumme
+  $q$, 'Tagessumme je Monat = Monatssumme aus v_wawi_km_co2 (ueber alle Radtypen)');
+
+  -- Gegenprobe, dass die drei is_empty()-Proben ueberhaupt etwas
+  -- pruefen und nicht bloss leer sind, weil keine der drei Sichten
+  -- gemeinsame Monate hat: mindestens ein Monat muss auf beiden Seiten
+  -- vorkommen, sonst waeren alle drei Proben trivial erfuellt.
+  return next cmp_ok(
+    (select count(*)::int from (
+       select date_trunc('month', tag)::date as monat from velocity.v_wawi_fahrten_je_tag
+       intersect
+       select monat from velocity.v_wawi_umsatz_radtyp) gemeinsam),
+    '>', 0, 'Es gibt ueberhaupt gemeinsame Monate zwischen Tages- und Monatssicht');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- September 2025 (Auftrag, woertlich gemessen): min 34, max 61, Spitzentag
+-- der 4. September. Die Datenbank direkt gegen diese drei Zahlen - nicht
+-- nur die Monatszahl - schuetzt vor einem Off-by-one-Fehler in
+-- date_trunc('day', ...) oder einem falschen Zeitzonen-Cast, den die
+-- Monatssummen-Gegenprobe oben allein nicht aufdecken wuerde (die
+-- pruefte nur die SUMME, nicht die Verteilung auf die einzelnen Tage).
+create or replace function velocity_test.test_v_fahrten_je_tag_september_2025()
+returns setof text language plpgsql as $$
+declare v_min integer; v_max integer; v_spitzentag date;
+begin
+  perform velocity_test.fixture_mitarbeiter('sept2025');
+
+  select min(fahrten), max(fahrten)
+    into v_min, v_max
+    from velocity.v_wawi_fahrten_je_tag
+   where tag >= '2025-09-01' and tag < '2025-10-01';
+  return next is(v_min, 34, 'September 2025: Minimum 34 Fahrten (Auftrag, gemessen)');
+  return next is(v_max, 61, 'September 2025: Maximum 61 Fahrten (Auftrag, gemessen)');
+
+  select tag into v_spitzentag
+    from velocity.v_wawi_fahrten_je_tag
+   where tag >= '2025-09-01' and tag < '2025-10-01' and fahrten = 61;
+  return next is(v_spitzentag, '2025-09-04'::date,
+    'September 2025: Spitzentag der 4. September (Auftrag, gemessen)');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
