@@ -67,7 +67,7 @@ async function auswertungenAufbauen() {
     // beschreiben.
     const vorgang = neuerVorgang();
 
-    zeigeUnterreiter([
+    zeigeUnterreiter(vorgang, [
         { schluessel: 'umsatz_radtyp',       titel: 'Umsatz nach Radtyp' },
         { schluessel: 'umsatz_kundengruppe', titel: 'Umsatz nach Kundengruppe' },
         { schluessel: 'km_co2',              titel: 'Kilometer und CO₂' },
@@ -199,6 +199,7 @@ async function umsatzRadtypZeigen(vorgang) {
         // Navigation den Bereich zeigt (z. B. eine Rolle, die zwischen
         // Laden der Navigation und Laden dieser Liste entzogen wurde).
         zeigeLeermaske(
+            vorgang,
             'Kein Umsatz nach Radtyp',
             'Es liegt keine Monatszeile vor. Bei einem gefuellten Referenzjahr ist das ' +
             'ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt ' +
@@ -253,6 +254,7 @@ async function umsatzKundengruppeZeigen(vorgang) {
 
     if (zeilen.length === 0) {
         zeigeLeermaske(
+            vorgang,
             'Kein Umsatz nach Kundengruppe',
             'Es liegt keine Monatszeile vor. Bei einem gefuellten Referenzjahr ist das ' +
             'ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt ' +
@@ -306,6 +308,7 @@ async function kmCo2Zeigen(vorgang) {
 
     if (zeilen.length === 0) {
         zeigeLeermaske(
+            vorgang,
             'Keine Kilometer- und CO2-Zeilen',
             'Es liegt keine Monatszeile vor. Bei einem gefuellten Referenzjahr ist das ' +
             'ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt ' +
@@ -387,6 +390,7 @@ async function stationsauslastungZeigen(vorgang) {
 
     if (zeilen.length === 0) {
         zeigeLeermaske(
+            vorgang,
             'Keine Stationsauslastung',
             'Es liegt keine Station vor. Bei zehn angelegten Stationen ist das ' +
             'ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt ' +

@@ -58,7 +58,7 @@ async function instandhaltungAufbauen() {
     zeigeWerkzeugleiste(unterbereich === 'schaeden' && darfRolle('werkstatt'),
         'Schaden melden', schadenMeldenMaske);
 
-    zeigeUnterreiter([
+    zeigeUnterreiter(vorgang, [
         { schluessel: 'schaeden',  titel: 'Offene Schäden' },
         { schluessel: 'auftraege', titel: 'Wartungsaufträge' }
     ], unterbereich, async (gewaehlt) => {
@@ -103,6 +103,7 @@ async function schaedenZeigen(vorgang) {
         // die Software kaputt ist - das ist der eigentliche Lehrpunkt
         // dieser Aufgabe (siehe Dateikopf).
         zeigeLeermaske(
+            vorgang,
             'Keine offenen Schäden',
             'Es liegt derzeit keine Schadensmeldung vor. Das ist der Normalfall — ' +
             'gemeldet wird, wenn an einem Rad etwas auffällt.',
@@ -207,6 +208,15 @@ function schadenMaske(schaden) {
 // ===== Ein Schaden melden =====
 
 async function schadenMeldenMaske() {
+    // Kennung des Bereichs-Vorgangs, der lief, als dieser Knopf gedrueckt
+    // wurde - dieselbe Absicherung wie bei radAnlegenMaske() in flotte.js
+    // (WICHTIG 4, siehe Begruendung bei laufenderVorgang() in rahmen.js).
+    // Diese Maske laedt selbst nach (die Flotte, siehe unten), bevor sie
+    // ueberhaupt eine Maske zeigt - ein Reiterwechsel zu "Wartungsaufträge"
+    // oder ein Bereichswechsel WAEHREND dieses Ladens duerfte die dann
+    // veraltete Maske nicht mehr ueber den neuen Bildschirm legen.
+    const vorgang = laufenderVorgang();
+
     // v_wawi_flotte ist fuer dieselbe Rolle sichtbar wie der Knopf, der
     // hierher fuehrt (werkstatt, siehe Bereichsrollen oben und
     // 0018_wawi_sichten.sql) - eine leere Auswahlliste hiesse hier also
@@ -217,6 +227,10 @@ async function schadenMeldenMaske() {
         // nichts mehr repariert - dieselbe Ausblendung wie beim
         // Statuswechsel-Knopf in flotte.js.
         (q) => q.neq('status', 'ausgemustert').order('rahmennummer'));
+
+    // Siehe radAnlegenMaske() in flotte.js: ein inzwischen ueberholter
+    // Vorgang schreibt nichts mehr, weder Fehler noch Maske.
+    if (!istAktuellerVorgang(vorgang)) return;
 
     const fehler = letzterLadeFehler('v_wawi_flotte');
     if (fehler) {
@@ -314,6 +328,7 @@ async function auftraegeZeigen(vorgang) {
 
     if (auftraege.length === 0) {
         zeigeLeermaske(
+            vorgang,
             'Keine laufenden Wartungsaufträge',
             'Es liegt derzeit kein Wartungsauftrag vor. Ein Auftrag entsteht aus einer ' +
             'offenen Schadensmeldung — dort gibt es den Knopf „Auftrag eröffnen“.',

@@ -150,23 +150,33 @@ async function kundenAufbauen(suchtext) {
         { feld: 'tarif_code',   titel: 'Tarif', formatieren: (t) => t || '—' }
     ], kundeMaske);
 
-    // 519 der 1014 Kunden stehen auf 'gesperrt'. Wer das nicht weiss,
-    // haelt die vielen gelben Zeilen fuer einen Fehler. Und es gibt
-    // derzeit keine Funktion, die entsperrt - eine bekannte Luecke, kein
-    // fehlender Knopf in dieser Oberflaeche (siehe auch der
-    // Bestaetigungstext beim Sperren-Knopf weiter unten).
-    //
+    // WICHTIG 6: 519 der 1014 Kunden stehen auf 'gesperrt', und es gibt
+    // derzeit keine Funktion, die entsperrt (bekannte Luecke, siehe auch
+    // der Bestaetigungstext beim Sperren-Knopf in kundeMaske). Die
+    // Erklaerung dazu stand bisher nur im Quelltext und im Dialog beim
+    // NEU-Sperren - beides erreicht nicht, wer die Liste oeffnet und die
+    // vielen gelben Zeilen sieht (die klasse-Funktion oben faerbt sie).
+    // Genau DORT, wo es gelesen wird, gehoert der Hinweis hin - deshalb
+    // hier in der Statuszeile, direkt bei der Zeilenzahl, nach demselben
+    // Muster wie die "X davon voll"-Meldung in stationen.js.
+    const gesperrt = kunden.filter((k) => k.status === 'gesperrt').length;
+
     // meldeVorgang statt melde: nach einer Buchung (Sperren,
     // Anonymisieren, Anlegen - siehe kundeMaske/kundeAnlegenMaske) ruft
     // genau dieser Aufruf hier sofort im Anschluss auf und ueberschriebe
     // die gerade gezeigte Bestaetigung, bevor sie jemand liest, wenn er
     // noch zu DIESEM Vorgang gehoert. Siehe Begruendung bei
     // meldeVorgang() in rahmen.js.
-    meldeVorgang(vorgang, kunden.length === 200
-        ? '200 von mehr Kunden — bitte weiter eingrenzen'
-        : suchtext
-            ? `${kunden.length} Kunden zu „${suchtext}“`
-            : `${kunden.length} Kunden`);
+    let uebersicht;
+    if (kunden.length === 200) {
+        uebersicht = '200 von mehr Kunden — bitte weiter eingrenzen';
+    } else {
+        uebersicht = suchtext ? `${kunden.length} Kunden zu „${suchtext}“` : `${kunden.length} Kunden`;
+        if (gesperrt) {
+            uebersicht += `, ${gesperrt} davon gesperrt — es gibt derzeit keine Funktion, die entsperrt`;
+        }
+    }
+    meldeVorgang(vorgang, uebersicht);
 }
 
 function kundeMaske(kunde) {
@@ -181,8 +191,26 @@ function kundeMaske(kunde) {
     // Sie zeigt auch keine Zahlungsmittel (GR17) und nichts aus dem
     // Schema auth. Das Passwort ist fuer diese Oberflaeche schlicht
     // unerreichbar, nicht nur ausgeblendet.
-    const knoepfe = [
-        {
+    //
+    // KRITISCH 1: alle vier Knoepfe unten stehen zusaetzlich hinter
+    // darfRolle('kundenservice') - der Bereich selbst ist fuer
+    // ['kundenservice', 'leitung'] angemeldet (siehe bereichAnmelden()
+    // oben), aber api_kunde_aktualisieren, api_kunde_sperren,
+    // api_kunde_auskunft UND api_kunde_anonymisieren verlangen in der
+    // Datenbank strikt 'kundenservice' (fn_rolle_verlangen('kundenservice'),
+    // 0019_wawi_logik.sql) - 'leitung' allein reicht dort NICHT. Ohne diese
+    // Pruefung saehe eine Leitung ohne kundenservice-Rolle alle vier
+    // Knoepfe, einschliesslich "Loeschung nach Art. 17": sie koennte
+    // "LOESCHEN" eintippen, einen Grund angeben und bekaeme die
+    // Rechteverweigerung erst am Ende von rufeAuf(). Dieselbe Regel wie
+    // ueberall sonst in dieser Oberflaeche: was man nicht darf, wird nicht
+    // angezeigt, nicht ausgegraut (siehe stationMaske() in stationen.js
+    // fuer denselben Fund an derselben Stelle - Bereich fuer zwei Rollen
+    // offen, Funktion nur fuer eine).
+    const knoepfe = [];
+
+    if (darfRolle('kundenservice')) {
+        knoepfe.push({
             titel: 'Speichern',
             art: 'haupt',
             ausfuehren: async () => {
@@ -218,10 +246,10 @@ function kundeMaske(kunde) {
                 melde(`${vorname} ${nachname} gespeichert.`, 'gut');
                 await kundenAufbauen();
             }
-        }
-    ];
+        });
+    }
 
-    if (kunde.status === 'aktiv') {
+    if (darfRolle('kundenservice') && kunde.status === 'aktiv') {
         knoepfe.push({
             titel: 'Sperren',
             // 'gefaehrlich' statt des 'neben' aus dem Auftragstext, und
@@ -250,9 +278,11 @@ function kundeMaske(kunde) {
         });
     }
 
-    knoepfe.push({ titel: 'Auskunft nach Art. 15', art: 'neben', ausfuehren: () => auskunftZeigen(kunde) });
+    if (darfRolle('kundenservice')) {
+        knoepfe.push({ titel: 'Auskunft nach Art. 15', art: 'neben', ausfuehren: () => auskunftZeigen(kunde) });
+    }
 
-    if (kunde.status !== 'geschlossen') {
+    if (darfRolle('kundenservice') && kunde.status !== 'geschlossen') {
         knoepfe.push({ titel: 'Löschung nach Art. 17', art: 'gefaehrlich',
                        ausfuehren: () => anonymisieren(kunde) });
     }
@@ -261,6 +291,13 @@ function kundeMaske(kunde) {
         { name: 'anrede',    titel: 'Anrede',    wert: kunde.anrede || '',    typ: 'text' },
         { name: 'vorname',   titel: 'Vorname',   wert: kunde.vorname,          typ: 'text' },
         { name: 'nachname',  titel: 'Nachname',  wert: kunde.nachname,         typ: 'text' },
+        // WICHTIG 7: der Status hatte bisher kein eigenes Feld, nur die
+        // mittelbare Zeilenfarbe in der Liste (siehe klasse-Funktion in
+        // kundenAufbauen()) und die Auswahl der Knoepfe darueber. Wer
+        // eine Zeile oeffnet, soll den Status direkt lesen koennen, nicht
+        // aus der Abwesenheit eines Knopfes erschliessen muessen - dieselbe
+        // Machart wie die uebrigen nur lesenden Feldern (typ, tarif, ...).
+        { name: 'status',    titel: 'Status',    wert: kunde.status,          nurLesen: true },
         // E-Mail nur lesend: sie ist der Anmeldename. Sie zu aendern ist
         // eine Kontoaenderung und gehoert dem Kunden, nicht uns.
         { name: 'email',     titel: 'E-Mail',    wert: kunde.email,            nurLesen: true },

@@ -246,6 +246,33 @@ function istAktuellerVorgang(kennung) {
     return kennung === aktuellerVorgang;
 }
 
+// Liefert die Kennung des Vorgangs, der GERADE laeuft - anders als
+// neuerVorgang() OHNE selbst einen neuen zu beginnen. Fuer Masken, die vor
+// dem Anzeigen selbst nachladen (radAnlegenMaske() in flotte.js: Promise.all
+// ueber Modelle und Stationen; schadenMeldenMaske() in instandhaltung.js:
+// die Flotte) und deshalb zwischen ihrem eigenen Start und ihrem
+// zeigeMaske()-Aufruf einen Bereichswechsel oder Unterreiterwechsel
+// erleben koennen. Diese Masken sind selbst KEIN *Aufbauen()-Vorgang und
+// duerfen keinen eigenen ziehen - neuerVorgang() verbraucht dabei
+// letzteMeldeArt (siehe dort), was einer Anlegemaske ohne eigene
+// Buchungsbestaetigung faelschlich eine fremde Bestaetigung klauen wuerde.
+// Sie merken sich stattdessen beim Start, welcher *Aufbauen()-Vorgang
+// gerade lief, und pruefen nach ihrem eigenen Laden per
+// istAktuellerVorgang(), ob er es immer noch ist.
+//
+// Im Browser nachgestellt (WICHTIG 4): Flotte -> "Neues Rad anlegen"
+// geklickt -> vor der Rueckkehr (Promise.all noch unterwegs) zu Stationen
+// gewechselt. Ohne diese Pruefung erschien die Anlegemaske verspaetet UEBER
+// der Stationenliste; ein Klick auf "Anlegen" dort legte wirklich ein Rad
+// an, und der anschliessende flotteAufbauen() bekam die NEUESTE Kennung und
+// ueberschrieb damit die gerade angezeigte Stationenliste, waehrend die
+// Navigation weiterhin "Stationen" zeigte. Mit der Pruefung bricht
+// radAnlegenMaske() nach dem Bereichswechsel wortlos ab, wie ein
+// veralteter *Aufbauen()-Vorgang auch.
+function laufenderVorgang() {
+    return aktuellerVorgang;
+}
+
 // Die Statuszeilen-Schreibstelle jeder *Aufbauen()-Funktion - sowohl
 // fuer den Ladefehler-Zweig (art='schlecht') als auch fuer die
 // abschliessende Uebersichtsmeldung (art='neutral', Vorgabewert). NICHT
@@ -286,9 +313,22 @@ function bestaetige(frage, bestaetigungswort = null) {
         const dialog = document.createElement('dialog');
         dialog.className = 'velocity-dialog';
 
-        const text = document.createElement('p');
-        text.textContent = frage;
-        dialog.append(text);
+        // frage traegt bei den wichtigeren Dialogen mehrere inhaltliche
+        // Bloecke, getrennt durch eine Leerzeile (\n\n) - der Art.-17-Dialog
+        // in kunden.js etwa WAS VERSCHWINDET, WAS BLEIBT, WAS DAS NICHT
+        // LEISTET und den Unumkehrbarkeits-Hinweis. EIN <p> mit textContent
+        // faltet solche Zeilenumbrueche zu einem einzigen Fliesstext
+        // zusammen - .velocity-dialog p kennt kein white-space: pre-line.
+        // Deshalb hier ein eigenes <p> je Block, weiterhin ausschliesslich
+        // ueber textContent gesetzt, nie ueber innerHTML: ein Text ohne
+        // Leerzeile (die meisten Aufrufer) ergibt unveraendert genau ein
+        // <p>. Allgemein geloest, weil jeder Dialog ueber bestaetige()
+        // laeuft - nicht nur der Art.-17-Fall, der den Fehler gefunden hat.
+        for (const block of frage.split('\n\n')) {
+            const absatz = document.createElement('p');
+            absatz.textContent = block;
+            dialog.append(absatz);
+        }
 
         let eingabe = null;
         const bestaetigenKnopf = document.createElement('button');
@@ -703,8 +743,24 @@ function zeigeMaske(titel, felder, knoepfe) {
 
 // Eine leere Liste ist kein leerer Kasten. Sie sagt, WARUM nichts da ist,
 // und bietet an, was als Naechstes zu tun waere.
+//
+// kennung: von neuerVorgang() geliefert, genau wie bei zeigeListe() -
+// und aus demselben Grund (KRITISCH 2). Seit f1ef6c3 traegt jeder
+// Neuaufbau eine Kennung; zeigeListe() prueft sie, zeigeLeermaske() tat
+// es bisher NICHT, obwohl sie nach demselben await steht wie zeigeListe()
+// in jeder *Zeigen()-Funktion (schaedenZeigen()/auftraegeZeigen() in
+// instandhaltung.js). Im Browser nachgestellt: Instandhaltung, Reiter
+// "Auftraege" angeklickt (Vorgang A, damals leer) und sofort zurueck auf
+// "Schaeden" (Vorgang B, gefuellt). B loeste zuerst auf und zeigte die
+// Schadensliste; A loeste dann VERSPAETET auf und ueberschrieb sie
+// klaglos mit "Keine laufenden Wartungsauftraege" - waehrend der Reiter
+// weiterhin "Offene Schaeden" anzeigte und die Werkzeugleiste "Schaden
+// melden" stehen liess. Ein in sich widersprüchlicher Bildschirm, den
+// dieselbe Pruefung wie bei zeigeListe() verhindert.
 // angebot: { titel, ausfuehren: async () => {} } | null
-function zeigeLeermaske(titel, erklaerung, angebot = null) {
+function zeigeLeermaske(kennung, titel, erklaerung, angebot = null) {
+    if (!istAktuellerVorgang(kennung)) return;
+
     listenZeilen = [];
     listenAuswahl = null;
     listenIndex = -1;
@@ -750,8 +806,21 @@ function zeigeLeermaske(titel, erklaerung, angebot = null) {
 }
 
 // Zwei Listen in einem Bereich, wenn sie fachlich zusammengehoeren.
+//
+// kennung: dieselbe Absicherung wie bei zeigeListe()/zeigeLeermaske()
+// (WICHTIG 3, aus derselben Pruefung wie KRITISCH 2). Heute laeuft jeder
+// Aufruf zufaellig SYNCHRON direkt nach neuerVorgang() (siehe
+// instandhaltungAufbauen()/auswertungenAufbauen()), also ist der Fehler
+// beim jetzigen Baustand nicht auslösbar - aber die Schnittstelle bot
+// bislang gar keine Kennung an. Ein kuenftiger Bereich, der die Reiter
+// erst NACH einem await aufbaut (etwa nach einem eigenen Nachladen),
+// erbte den Fehler aus KRITISCH 2 ohne dass ihn hier etwas hinderte. Die
+// Pruefung kostet den heutigen synchronen Fall nichts (kennung ist dann
+// immer aktuell) und schuetzt den naechsten Aufrufer trotzdem.
 // reiter: [{ schluessel, titel }]
-function zeigeUnterreiter(reiter, aktiv, beiWechsel) {
+function zeigeUnterreiter(kennung, reiter, aktiv, beiWechsel) {
+    if (!istAktuellerVorgang(kennung)) return;
+
     const leiste = reiterleiste();
     leiste.replaceChildren();
     for (const r of reiter) {

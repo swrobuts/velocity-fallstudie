@@ -173,6 +173,15 @@ function radMaske(rad) {
 // mehr hier, siehe Kommentar dort.
 
 async function radAnlegenMaske() {
+    // Kennung des Bereichs-Vorgangs, der lief, als dieser Knopf gedrueckt
+    // wurde - siehe laufenderVorgang() in rahmen.js fuer die Begruendung
+    // und den im Browser nachgestellten Fall (WICHTIG 4): Flotte -> "Neues
+    // Rad anlegen" -> vor der Rueckkehr (Promise.all unten noch unterwegs)
+    // zu Stationen gewechselt. Diese Maske ist selbst kein *Aufbauen()-
+    // Vorgang und darf keinen eigenen ueber neuerVorgang() ziehen (siehe
+    // dort) - sie merkt sich nur, welcher Vorgang gerade lief.
+    const vorgang = laufenderVorgang();
+
     // Beide Sichten sind fuer dieselbe Rolle sichtbar wie der Knopf, der
     // hierher fuehrt (disposition) - eine leere Auswahlliste hiesse hier
     // also einen technischen Fehler, keine fehlende Berechtigung.
@@ -183,6 +192,12 @@ async function radAnlegenMaske() {
         ladeListe('v_wawi_station', 'station_id, name, frei, in_betrieb',
             (q) => q.order('name'))
     ]);
+
+    // Der Bereich (oder Stationen selbst per Neuaufbau) kann inzwischen
+    // gewechselt haben, waehrend beide Sichten liefen - dann gehoert
+    // weder ein Ladefehler noch die Maske selbst noch zur Gegenwart,
+    // dieselbe Regel wie bei meldeVorgang() in rahmen.js (Befund 2 dort).
+    if (!istAktuellerVorgang(vorgang)) return;
 
     const fehlerModell = letzterLadeFehler('v_wawi_modell');
     const fehlerStation = letzterLadeFehler('v_wawi_station');
