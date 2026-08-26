@@ -24,11 +24,56 @@
      Weiß; --warnung bleibt für Flächen wie Rahmen oder Hintergrund. */
   --warnung-text: #8a6508;
   --schlecht:    #c0301c;
-  --zeile:       28px;
+  /* 34px statt vormals 28px (Gestaltungsauftrag, zweiter Anlauf auf
+     "deutlich luftiger"): mehr Zeilenhoehe UND mehr Innenabstand je
+     Zelle, siehe .arbeitstabelle td weiter unten. Erprobt bei 900px
+     Fensterhoehe (siehe Bericht): 15 Datenzeilen statt vormals 18 passen
+     noch ohne Scrollen unter den Streifen - eine Warenwirtschaft, die
+     275 Raeder den ganzen Tag zeigt, darf dafuer nicht auf's Scrollen
+     angewiesen sein, deshalb keine staerkere Vergroesserung. */
+  --zeile:       34px;
   --schrift:     14px;
   --nav-breite:  200px;
-  --kopf-hoehe:  48px;
+  /* 60px statt vormals 48px - explizit "vor allem im Kopfbereich"
+     verlangt (zweiter Anlauf, siehe Bericht: beim ersten war das zu
+     wenig sichtbar). */
+  --kopf-hoehe:  60px;
   --fuss-hoehe:  32px;
+  /* Leiser als --linie (1.38:1 auf Weiss, siehe Kommentar bei
+     .spaltenkopf-filterzeile weiter unten) - eigens fuer die
+     Tabellenzeilen selbst (Punkt 2: Tufte, "so wenig Linien wie moeglich,
+     so viel Ruhe wie noetig" - die Struktur soll aus dem jetzt
+     grosszuegigeren Zeilenabstand kommen, nicht aus einer kraeftigen
+     Kontur). Die Kopfzeile (.arbeitstabelle th) und alle sonstigen
+     Rahmen bleiben bei --linie - nur die sich wiederholende
+     Zeile-fuer-Zeile-Linie im Tabellenkoerper wird leiser. */
+  --linie-tabelle: #eceef2;
+  /* Zebrastreifen (Punkt 3, optional ueber Einstellungen/localStorage) -
+     sichtbar unterscheidbar von Weiss (1.17:1 gemessen) UND von den
+     Hervorhebungsfarben fuer Ueberfahren (--grund, 1.06:1 auf Weiss) und
+     Auswahl (#eef1fb, 1.13:1 auf Weiss) - drei erkennbar verschiedene
+     helle Toene statt einer Verwechslung "ist das jetzt Streifen oder
+     Hover?". WICHTIG, per Erprobung erst im zweiten Anlauf gefunden: ein
+     zunaechst gewaehlter kraeftigerer Ton (#e3e6ee) unterschritt die
+     4,5:1-Untergrenze fuer FLIESSTEXT auf gestreiften Zeilen - td.warnung
+     (--warnung-text) kam dort nur auf 4.26:1, td.gut (--gut) auf 4.29:1,
+     obwohl beide auf Weiss/--grund laengst genug Kontrast hatten. Ein
+     Zebramuster darf die Lesbarkeit der STATUSFARBEN nicht unterlaufen,
+     die es selbst gar nicht betrifft - deshalb dieser hellere Ton, gegen
+     ALLE vier in dieser Warenwirtschaft verwendeten Textfarben auf
+     gestreiftem Grund gemessen: --text 13.44:1, --text-leise 5.09:1,
+     --schlecht 4.88:1, --gut 4.59:1, --warnung-text 4.56:1 - jede über
+     4,5:1, die knappste (--warnung-text) mit gerade einmal 0.06 Reserve. */
+  --zebra: #ecedf3;
+  /* Kontur der SKALA eines Zellbalkens (Punkt 1) - siehe .zellbalken-
+     hintergrund weiter unten: vorher fuellte der "leere" Teil des
+     Balkens in genau der Farbe der ihn umgebenden Flaeche (--grund),
+     wurde dadurch unsichtbar, und aus dem Balken wurde fuer das Auge
+     "ein Wert ohne Skala" - genau der im Auftrag benannte Befund. 3.64:1
+     auf Weiss / 3.43:1 auf --grund (gemessen), über der fuer Grafik
+     verlangten Untergrenze von 3:1 in BEIDEN Kontexten (Tabellenzelle
+     bzw. Uebersichtskachel). */
+  --skala-rahmen: #7c8797;
 }
 
 * {
@@ -215,8 +260,13 @@ button {
      breit und die Suche liegt exakt in der Mitte der Kopfleiste. */
   grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr);
   align-items: center;
-  gap: 16px;
-  padding: 0 16px;
+  gap: 24px;
+  /* 28px statt vormals 16px - der zweite, staerkere Anlauf auf "deutlich
+     luftiger... vor allem im Kopfbereich" (Auftrag woertlich): die
+     Kopfleiste ist selbst schon hoeher (--kopf-hoehe, siehe :root), hier
+     zusaetzlich mehr Luft links/rechts, damit Wortmarke und Profilbereich
+     nicht an der Kante kleben. */
+  padding: 0 28px;
   background: var(--marine);
   color: var(--flaeche);
 }
@@ -251,14 +301,58 @@ button {
   background: rgba(255, 255, 255, 0.35);
 }
 
+/* Punkt 5, woertlich: "es ist ein weisses Rechteck auf dunklem Grund und
+   sagt nicht, wonach es sucht oder ob es gerade etwas einschraenkt". Drei
+   Ergaenzungen dagegen, keine reine Farbaenderung:
+   1. Ein Lupen-Symbol (dekorativ, aria-hidden waere hier unnoetig - ein
+      <input> selbst nimmt kein Kind-Markup auf, das Symbol liegt daher
+      als background-image bewusst NUR dekorativ vor, ohne eigenes
+      Element und ohne eigenen Namen fuer einen Screenreader).
+   2. bereichWechseln() in rahmen.js setzt placeholder/aria-label jetzt
+      GEZIELT je Bereich (bereich.suchePlatzhalter) statt des immer
+      gleichen "Suchen" - das Feld sagt dadurch, WONACH es sucht, und
+      wird fuer Bereiche OHNE Suche (bislang alle ausser Kundschaft)
+      sichtbar deaktiviert statt weiter untaetig dazustehen.
+   3. .feld-suche-aktiv (von kunden.js gesetzt, sobald das Feld nicht
+      leer ist) hebt den Rahmen farblich hervor - dieselbe "greift gerade
+      ein"-Auskunft wie .spaltenkopf-filter-aktiv weiter unten, nur fuer
+      dieses eine, bereichsuebergreifende Feld. */
 #feld-suche {
   justify-self: center;
   width: 100%;
   max-width: 320px;
-  padding: 5px 10px;
+  padding: 6px 10px 6px 32px;
   border: 1px solid transparent;
   border-radius: 4px;
   font: inherit;
+  color: var(--text);
+  background-color: var(--flaeche);
+  background-repeat: no-repeat;
+  background-position: 10px center;
+  background-size: 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235a6478' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M21 21l-4.3-4.3'/%3E%3C/svg%3E");
+}
+
+#feld-suche::placeholder {
+  color: var(--text-leise);
+}
+
+/* Nicht bloss ausgegraut: der Platzhaltertext selbst ("In diesem Bereich
+   keine Suche", siehe bereichWechseln()) sagt bereits, WARUM - disabled
+   verhindert zusaetzlich, dass hier scheinbar folgenlos getippt werden
+   kann. */
+#feld-suche:disabled {
+  background-color: rgba(255, 255, 255, 0.55);
+  cursor: not-allowed;
+}
+
+/* "Ob es gerade etwas einschraenkt" (Auftrag) - derselbe Rahmenton wie
+   bei einem greifenden Spaltenfilter (.spaltenkopf-filter-aktiv weiter
+   unten), hier gegen den dunklen Kopfleisten-Hintergrund als kraeftiger
+   Rahmen statt einer Flaechenfarbe, sonst verschwaende der Hinweis vor
+   der marinen Umgebung. */
+#feld-suche.feld-suche-aktiv {
+  border-color: var(--rot);
 }
 
 /* ===== Profilbereich: Rundknopf + aufklappbares Menü (Punkt 3) =====
@@ -386,6 +480,47 @@ button {
   background: var(--grund);
 }
 
+/* ===== Einstellungen im Profilmenue (Punkt 3: Zebramuster als
+   Wahlmoeglichkeit) =====
+   Eigener Abschnitt statt eines weiteren .profilmenue-eintrag-Knopfs:
+   eine Ueberschrift ("Einstellungen") ist kein Bedienelement, sondern
+   ordnet den Schalter darunter ein - solange es nur diese eine
+   Einstellung gibt, gibt es nichts zum Auf-/Zuklappen. */
+.profilmenue-abschnitt {
+  padding: 6px 6px 10px;
+  border-top: 1px solid var(--linie);
+  margin-top: 4px;
+}
+
+.profilmenue-abschnitt-titel {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-leise);
+  margin-bottom: 8px;
+}
+
+.profilmenue-schalter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.profilmenue-schalter input[type="checkbox"] {
+  /* accent-color statt eines selbst gezeichneten Schalters: eine
+     Kontrollkaestchen-Optik ist fuer EINE Einstellung ausreichend
+     ehrlich (keine An/Aus-Illustration noetig, die einen Zustand
+     vortaeuscht, den es noch nicht gibt) und erbt automatisch Tastatur-
+     und Fokusverhalten der nativen Checkbox. */
+  accent-color: var(--marine);
+  width: 16px;
+  height: 16px;
+}
+
 /* Gestaltungsauftrag, Punkt 2: die fünf Rubriken sollen als solche
    erkennbar sein, nicht als fünf gleich schwere Textzeilen. padding
    oben/unten (statt der Knöpfe direkt gegeneinanderzustellen) gibt dem
@@ -400,8 +535,12 @@ button {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 12px 8px;
+  /* 4px/18px 10px statt vormals 2px/12px 8px - Punkt 1, zweiter Anlauf:
+     mehr Abstand zwischen den fuenf Rubriken UND mehr Rand rundum, damit
+     die Navigation nicht dichter wirkt als der jetzt luftigere
+     Kopfbereich daneben. */
+  gap: 4px;
+  padding: 18px 10px;
 }
 
 /* Ein Eintrag je erlaubtem Bereich - rahmen.js erzeugt sie, hier nur
@@ -416,7 +555,7 @@ button {
   align-items: center;
   gap: 10px;
   text-align: left;
-  padding: 11px 14px;
+  padding: 12px 16px;
   border: none;
   /* 4px schon im Ruhezustand (transparent), nicht erst am aktiven
      Eintrag: sonst verschoebe der Wechsel auf aria-current="page" Icon
@@ -528,7 +667,7 @@ button {
 }
 
 #reiterleiste .reiter {
-  padding: 10px 16px;
+  padding: 12px 18px;
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
@@ -555,7 +694,11 @@ button {
 
 .werkzeugleiste {
   flex: 0 0 auto;
-  padding: 10px 12px;
+  /* 12px/16px statt vormals 10px/12px - Punkt 1, derselbe grosszuegigere
+     Massstab wie beim Uebersichtsstreifen/der Navigation, damit die
+     "Leisten" oberhalb der Tabelle nicht enger wirken als ihre direkte
+     Umgebung. */
+  padding: 12px 16px;
   border-bottom: 1px solid var(--linie);
 }
 
@@ -575,17 +718,46 @@ button {
       konkrete Befund ("sehr gedrängt"). Beides gilt für ALLE FÜNF
       Bereiche gleichzeitig, weil der Streifen hier - an EINER Stelle -
       und nicht in jedem Bereich einzeln definiert ist. */
+/* Kein border-bottom mehr, sondern ein echter Leerraum bis zur Tabelle
+   (Punkt 1, woertlich: "Abstand zwischen Streifen und Tabelle"): eine
+   1px-Kontur allein macht aus zwei Flaechen noch keine zwei ABSCHNITTE -
+   der helle Grundton des Streifens (--grund) grenzt sich jetzt durch
+   einen echten Zwischenraum vom weissen #listenkoerper darunter ab, in
+   dem die weisse Flaeche von #arbeitsliste selbst durchscheint (siehe
+   dort). margin statt padding: ein zusaetzliches padding-bottom bliebe
+   noch INNERHALB des grauen Streifenhintergrunds und saehe aus wie ein
+   groesserer Streifen, kein Abstand ZUM naechsten Abschnitt. */
 .uebersichtsstreifen {
   flex: 0 0 auto;
   display: flex;
-  border-bottom: 1px solid var(--linie);
   background: var(--grund);
+  margin-bottom: 20px;
 }
 
+/* Gemeinsames Raster fuer ALLE Kacheln (Punkt 1, konkreter Befund): vor
+   dieser Ueberarbeitung bauten "Stationen" (Sparkline direkt an der
+   Zahl), "Volle Stationen" (Zellbalken mitten im Zwischenraum) und
+   "Gesamtbelegung" (Zellbalken am rechten Rand, siehe .zellbalken weiter
+   unten) faktisch drei verschiedene Anordnungen, weil jede Kachel ihre
+   Grafik einfach als naechstes Flex-Kind neben den Wert stellte und
+   .zellbalken selbst width:100%+flex-end mitbrachte (fuer die
+   Tabellenspalte gedacht, siehe balkenSpalten() weiter unten - dort
+   richtig, hier falsch angewendet). display:flex + column ordnet jetzt
+   Titel/Zahl+Grafik/Hinweis in DREI FESTEN Zeilen an; min-height auf der
+   mittleren Zeile (siehe .uebersichtskachel-zeile) haelt diese Zeile
+   GLEICH HOCH, ob eine Kachel eine Grafik traegt oder nicht ("Kunden
+   gesamt" in kunden.js z. B. hat gar keine) - genau der im Auftrag
+   verlangte Fall, der nicht "in sich zusammenfallen" darf. */
 .uebersichtskachel {
   flex: 1 1 0;
   min-width: 0;
-  padding: 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* 24px/28px statt vormals 18px/24px - Punkt 1: "sehr gedraengt" war
+     der wörtliche Befund schon beim ersten Anlauf, hier nochmals
+     grosszuegiger. */
+  padding: 24px 28px;
   border-right: 1px solid var(--linie);
 }
 
@@ -598,21 +770,53 @@ button {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-leise);
-  margin-bottom: 8px;
 }
 
 .uebersichtskachel-zeile {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
+  /* Siehe Kommentar bei .uebersichtskachel oben: feste Mindesthoehe
+     dieser Zeile, unabhaengig davon, ob eine Grafik danebensteht - ohne
+     sie waere eine Kachel ohne Grafik (nur die Zahl) niedriger als eine
+     mit Sparkline/Zellbalken, und "Titel"/"Hinweis" saessen von Kachel zu
+     Kachel auf unterschiedlicher Hoehe statt am selben Platz im Raster. */
+  min-height: 28px;
 }
 
 .uebersichtskachel-wert {
+  flex: 0 0 auto;
   font-size: 24px;
   font-weight: 700;
   color: var(--marine);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* Die Grafik (Sparkline ODER Zellbalken, siehe baueKachel() in
+   rahmen.js) ist IMMER das Element NACH der Zahl und bekommt hier -
+   unabhaengig davon, welches der beiden sie ist - denselben festen Platz
+   am rechten Rand der Zeile: margin-left:auto schiebt sie dorthin, ohne
+   dass eine Kachel ohne Grafik betroffen waere (dann gibt es kein
+   ":not(:only-child)"-Element, das die Regel treffen koennte). Das ist
+   das gemeinsame Raster, das der Auftrag verlangt - dieselbe Spalte fuer
+   die Grafik in JEDER Kachel, ob "Stationen", "Volle Stationen" oder
+   "Gesamtbelegung". */
+.uebersichtskachel-zeile > :last-child:not(.uebersichtskachel-wert) {
+  margin-left: auto;
+}
+
+/* .zellbalken bringt aus der Tabellenspalte (.balken-spalte, siehe
+   balkenSpalten() weiter unten) width:100% und justify-content:flex-end
+   mit - dort richtig (der Balken soll die ganze feste Spaltenbreite
+   ausfuellen), in einer Kachel dagegen der Grund, warum "Gesamtbelegung"
+   bislang ganz an den rechten Kachelrand gedrueckt wirkte, unabhaengig
+   von der Position der Zahl. Hier auf natuerliche Breite zurueckgesetzt,
+   exakt dieselbe Ausrichtung wie eine Sparkline daneben (siehe
+   margin-left:auto oben, das beide gleich behandelt). */
+.uebersichtskachel-zeile .zellbalken {
+  width: auto;
+  justify-content: flex-start;
 }
 
 .uebersichtskachel-pfeil {
@@ -624,7 +828,6 @@ button {
 .uebersichtskachel-hinweis {
   font-size: 11px;
   color: var(--text-leise);
-  margin-top: 8px;
   line-height: 1.4;
 }
 
@@ -644,16 +847,19 @@ button {
 }
 
 /* ===== Filterleiste (zeigeFilterleiste, Gestaltungsauftrag Bedienelemente) =====
-   Dieselbe Ruhe wie .werkzeugleiste - eine schmale Zeile mit ein paar
-   beschrifteten Reglern, keine zweite Farbwelt neben Werkzeug- und
-   Übersichtsleiste. */
+   Punkt 5: "auch die Filter... besser abheben" - derselbe helle
+   Grundton wie der Uebersichtsstreifen (--grund) statt einer reinen
+   weissen Flaeche, die sich von #arbeitsliste (ebenfalls weiss)
+   ueberhaupt nicht unterschied. Mehr Innenabstand (12px/16px statt
+   vormals 8px/12px) aus demselben Grund wie bei .werkzeugleiste oben. */
 .filterleiste {
   flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 16px;
-  padding: 8px 12px;
+  padding: 12px 16px;
+  background: var(--grund);
   border-bottom: 1px solid var(--linie);
 }
 
@@ -760,8 +966,28 @@ button {
   justify-content: flex-start;
 }
 
+/* Punkt 1, konkreter Befund: die "leere" Restflaeche eines Zellbalkens
+   fuellte bisher in GENAU der Farbe seiner Umgebung (--grund, ob als
+   Kachel- oder als Tabellenhintergrund) - unsichtbar, und aus dem Balken
+   wurde fuer das Auge "ein Wert ohne Skala, an der er sich messen
+   liesse" (Auftrag, woertlich, am Beispiel "Volle Stationen": ein
+   schwebendes kleines Quadrat statt eines erkennbaren Anteils). Die
+   Entscheidung faellt auf "er bekommt eine Skala", nicht auf "er gehoert
+   weg": der Wert TRAEGT eine echte Information (ein Anteil an einem
+   Gesamt - 2 von 10 Stationen, 77 % Belegung, siehe stationen.js), nur
+   die Skala selbst war unsichtbar. In flotte.js stehen vier solcher
+   Balken nebeneinander (Einsatzbereit/Ausgeliehen/Wartung/Defekt,
+   dieselbe Gesamtzahl als Nenner) - dort ist der Vergleich UEBER die
+   Kacheln hinweg sogar ausdruecklich gewollt (Bissantz: "an einer
+   gemeinsamen Skala ausgerichtet"), und genau dafuer muss die Skala
+   sichtbar sein. Die Kontur (--skala-rahmen, siehe :root, 3.64:1 auf
+   Weiss / 3.43:1 auf --grund, gemessen) macht die volle Breite - "das
+   ist 100 %" - jetzt in JEDEM Kontext erkennbar, die Fuellung bleibt
+   dezent. */
 .zellbalken-hintergrund {
   fill: var(--grund);
+  stroke: var(--skala-rahmen);
+  stroke-width: 1;
 }
 
 .zellbalken-text {
@@ -949,7 +1175,11 @@ button {
 
 .arbeitstabelle th {
   text-align: left;
-  padding: 8px 12px;
+  /* 11px/14px statt vormals 8px/12px (Punkt 2) - der Kopf bleibt an der
+     kraeftigeren --linie (siehe Kommentar bei --linie-tabelle in :root):
+     er ist die Kante, an der die sticky Kopfzeile vom scrollenden Inhalt
+     abgesetzt ist, und darf deutlicher bleiben als die Zeilen darunter. */
+  padding: 11px 14px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -957,14 +1187,51 @@ button {
   border-bottom: 1px solid var(--linie);
 }
 
+/* Punkt 2, woertlich: Zeilenhoehe, Innenabstaende, Linienfuehrung. Mehr
+   Luft je Zelle (9px/14px statt vormals 6px/12px, dazu --zeile selbst
+   von 28px auf 34px erhoeht, siehe :root) UND eine leisere Trennlinie
+   (--linie-tabelle statt --linie) - Tufte: "so wenig Linien wie moeglich,
+   so viel Ruhe wie noetig", die Zeile fuer Zeile wiederkehrende Kontur
+   tritt zurueck, waehrend der jetzt grosszuegigere Abstand selbst schon
+   Struktur genug liefert. */
 .arbeitstabelle td {
-  padding: 6px 12px;
+  padding: 9px 14px;
   height: var(--zeile);
-  border-bottom: 1px solid var(--linie);
+  border-bottom: 1px solid var(--linie-tabelle);
 }
 
 .arbeitstabelle tbody tr {
   cursor: pointer;
+}
+
+/* ===== Zebramuster (Punkt 3, optional) =====
+   "Optional ein Zebramuster anbieten" - woertlich der Auftrag, deshalb
+   ueber body.zebra-an geschaltet statt fest an, siehe der Schalter im
+   Profilmenue (rahmen.js, Einstellungen) und dessen localStorage-
+   Speicherung dort. Gruppenkopf- und Leerzeilen bleiben ausgenommen -
+   beide tragen bereits eine EIGENE Bedeutung (Gruppierung bzw. "kein
+   Treffer"), ein zusaetzlicher Streifen dort waere nur Verwirrung
+   darueber, ob die Zeile "gerade zufaellig gerade" ist oder etwas
+   Eigenes bedeutet.
+   :where(...) STATT EINES NORMALEN SELEKTORS: ohne :where() traegt
+   "body.zebra-an .arbeitstabelle tbody tr:nth-child(even)" bereits FUeR
+   SICH mehr Spezifitaet ((0,3,3), wegen des body.zebra-an-Praefixes) als
+   ".arbeitstabelle tbody tr:hover"/".ausgewaehlt" weiter unten ((0,2,2))
+   - ein gestreiftes Ueberfahren/eine gestreifte Auswahl wuerde den
+   Zebra-Ton dann NICHT verdraengen, egal in welcher Reihenfolge die
+   Regeln im Stylesheet stehen. Genau das verbietet der Auftrag
+   ausdruecklich ("muss auf hellen UND dunklen Streifen erkennbar
+   bleiben"). :where() setzt die Spezifitaet der GESAMTEN Selektorliste
+   darin auf (0,0,0) - garantiert unabhaengig von Reihenfolge UND
+   Verschachtelung, dass jede andere Regel mit echter Spezifitaet
+   (:hover/.ausgewaehlt eingeschlossen) gewinnt. Weil :hover/.ausgewaehlt
+   den Hintergrund zudem vollstaendig ERSETZEN (nicht ueberlagern), sieht
+   eine ueberfahrene/ausgewaehlte Zeile ohnehin IDENTISCH aus, ob sie
+   zuvor hell oder gestreift war - der gemessene Kontrast (siehe Bericht)
+   ist dadurch fuer beide Faelle exakt derselbe Wert, nicht nur
+   "wahrscheinlich ausreichend". */
+:where(body.zebra-an .arbeitstabelle tbody tr:nth-child(even):not(.gruppenkopf-zeile):not(.spaltenkopf-leerzeile)) {
+  background: var(--zebra);
 }
 
 .arbeitstabelle tbody tr:hover {
@@ -1094,18 +1361,29 @@ button {
 .spaltenkopf {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
+/* Punkt 4, woertlich: "sie sind jetzt Bedienelemente und duerfen das
+   zeigen". Vorher trugen beide Knoepfe border:none und ein
+   background:transparent, das bei :hover auf var(--flaeche) wechselte -
+   GENAU die Farbe, die die sticky Kopfzeile ohnehin schon als eigenen
+   Hintergrund traegt (.arbeitstabelle thead), also unsichtbar: der
+   einzige Hover-Hinweis war ein Farbwechsel der Schrift, derselbe
+   "Versalien mit einem winzigen Zeichen daneben"-Eindruck, den der
+   Auftrag bemaengelt. Ein echter Rahmen (--text-leise, dieselbe
+   Randfarbe wie die Filterfelder direkt darunter, siehe
+   .spaltenkopf-filterzeile weiter unten - 5.95:1 auf Weiss statt der zu
+   schwachen --linie mit 1.37:1) macht aus beiden von Anfang an
+   erkennbare Bedienelemente, nicht erst beim Ueberfahren. */
 .spaltenkopf-sortknopf,
 .spaltenkopf-gruppenknopf {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border: none;
-  background: transparent;
-  padding: 3px 5px;
-  margin: -3px -5px;
+  gap: 5px;
+  border: 1px solid var(--text-leise);
+  background: var(--flaeche);
+  padding: 4px 8px;
   border-radius: 4px;
   color: inherit;
   font: inherit;
@@ -1116,7 +1394,8 @@ button {
 
 .spaltenkopf-sortknopf:hover,
 .spaltenkopf-gruppenknopf:hover {
-  background: var(--flaeche);
+  background: var(--grund);
+  border-color: var(--marine);
   color: var(--marine);
 }
 
@@ -1126,18 +1405,22 @@ button {
    ueberall in dieser Oberflaeche gleich aussieht. */
 .spaltenkopf-gruppenknopf[aria-pressed="true"] {
   background: #eef1f7;
+  border-color: var(--marine);
   color: var(--marine);
 }
 
 .spaltenkopf-sortsymbol {
   display: inline-flex;
   flex: 0 0 auto;
-  opacity: 0.45;
+  /* 0.6 statt vormals 0.45 (Punkt 4): das Chevron soll als Teil eines
+     erkennbaren Bedienelements auffallen, nicht als "winziges Zeichen"
+     kaum wahrnehmbar danebenstehen. */
+  opacity: 0.6;
 }
 
 .spaltenkopf-sortsymbol svg {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
@@ -1157,10 +1440,17 @@ button {
   transform: rotate(180deg);
 }
 
+/* Punkt 5, woertlich: "die Filterzeile sitzt heute unmittelbar unter den
+   Spaltenkoepfen, ohne Absetzung". Ein eigener, leiser Grundton
+   (--grund) setzt die Filterzeile jetzt sichtbar von der Titel/Sortier-
+   Zeile darueber (var(--flaeche), weiss) ab, statt dass nur die duenne
+   Trennlinie beide Zeilen unterscheidet - dieselbe Trennung, die
+   .uebersichtsstreifen fuer sich schon gegenueber der Tabelle nutzt. */
 .spaltenkopf-filterzeile th {
-  padding: 4px 8px;
+  padding: 6px 8px;
   text-transform: none;
   letter-spacing: normal;
+  background: var(--grund);
   border-bottom: 1px solid var(--linie);
 }
 
@@ -1168,7 +1458,7 @@ button {
 .spaltenkopf-filterzeile input {
   width: 100%;
   min-width: 56px;
-  padding: 3px 5px;
+  padding: 4px 6px;
   /* --text-leise statt --linie (anders als .filterfeld select oben,
      unveraendert gelassen - das ist die bestehende Filterleiste, nicht
      Teil dieses Bausteins): gemessen liegt --linie auf Weiss bei nur
@@ -1182,6 +1472,20 @@ button {
   font-size: 12px;
   color: var(--text);
   background: var(--flaeche);
+}
+
+/* "Ein greifender Filter muss anders aussehen als ein leerer" (Punkt 5,
+   woertlich): spaltenkopfFilterfeld() in rahmen.js setzt diese Klasse
+   GENAU dann, wenn spaltenkopfFilterwerte fuer diese Spalte einen Wert
+   traegt - unabhaengig davon, ob es ein <select> oder ein <input> ist.
+   Dieselbe "aktiv"-Farbe wie ueberall sonst in dieser Oberflaeche
+   (#eef1f7, siehe aria-pressed am Gruppierungsknopf und
+   aria-current="page" in der Navigation) statt einer neuen vierten
+   Bedeutung fuer dieselbe Sache. */
+.spaltenkopf-filterzeile .spaltenkopf-filter-aktiv {
+  background: #eef1f7;
+  border-color: var(--marine);
+  font-weight: 600;
 }
 
 /* Sichtbarer Zustand UND ein Weg zurueck (Auftrag) - nur eingeblendet,

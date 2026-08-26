@@ -83,7 +83,28 @@
             <span id="profil-email" class="profilmenue-email"></span>
           </div>
           <div id="profil-rollen" class="profilmenue-rollen"></div>
-          <button id="knopf-einstellungen" type="button" class="profilmenue-eintrag">Einstellungen</button>
+          <!-- Gestaltungsauftrag Punkt 3: "optional ein Zebramuster
+               anbieten" - der Menuepunkt "Einstellungen" existierte
+               bisher nur als Ankuendigung ("gibt es noch nicht", siehe
+               vorherige Fassung dieser Datei). Jetzt eine echte, wenn
+               auch noch einzelne Einstellung: eine Ueberschrift statt
+               eines Knopfs (es gibt nichts zum Auf-/Zuklappen, solange es
+               nur diese eine Einstellung gibt), darunter der eigentliche
+               Schalter. -->
+          <div class="profilmenue-abschnitt">
+            <span class="profilmenue-abschnitt-titel">Einstellungen</span>
+            <label class="profilmenue-schalter">
+              <!-- aria-label zusaetzlich zur umschliessenden <label>, obwohl
+                   diese als Wrapper barrierefrei genuegen wuerde:
+                   tools/wawi_check.py (Vertrag LABEL) erkennt nur ein
+                   <label for="..."> oder ein aria-label/aria-labelledby AUF
+                   dem Feld selbst, kein umschliessendes <label> ohne for -
+                   derselbe Text wie im sichtbaren <span> daneben, kein
+                   zweiter Inhalt. -->
+              <input type="checkbox" id="schalter-zebra" aria-label="Zebrastreifen in Tabellen">
+              <span>Zebrastreifen in Tabellen</span>
+            </label>
+          </div>
           <button id="knopf-abmelden" type="button" class="profilmenue-eintrag">Abmelden</button>
         </div>
       </div>

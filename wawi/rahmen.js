@@ -40,7 +40,15 @@ let aktiverBereich = null;
 let geladeneRollen = null;
 
 function bereichAnmelden(bereich) {
-    // bereich: { schluessel, titel, rollen: [...], icon, aufbauen: async (ziel) => {} }
+    // bereich: { schluessel, titel, rollen: [...], icon, aufbauen: async (ziel) => {},
+    //            suchePlatzhalter? }
+    // suchePlatzhalter (optional, Gestaltungsauftrag Punkt 5): der
+    // Platzhalter-/aria-label-Text fuer das gemeinsame Suchfeld in der
+    // Kopfleiste, GENAU dann gesetzt, wenn dieser Bereich das Feld
+    // tatsaechlich auswertet (heute nur kunden.js). bereichWechseln()
+    // weiter unten aktiviert/beschriftet das Feld damit, oder deaktiviert
+    // es sichtbar, statt es fuer jeden Bereich gleichermassen (und fuer
+    // die meisten wirkungslos) anzubieten - siehe dortiger Kommentar.
     // icon: rohes '<svg viewBox="0 0 24 24">...</svg>'-Markup, EIN MAL je
     // Bereich als Konstante geschrieben - derselbe Aufbau wie aktion.svg
     // in zeigeListe()/zeilenAktionenZelle() weiter unten (kein Icon-Font,
@@ -243,6 +251,32 @@ async function bereichWechseln(schluessel) {
     listenAuswahl = null;
     listenIndex = -1;
     listenZeilenElemente = [];
+
+    // Punkt 5 der Gestaltung: "es sagt nicht, wonach es sucht, oder ob
+    // es gerade etwas einschraenkt" - das Suchfeld liegt in der
+    // gemeinsamen Kopfleiste (index.html) und damit ausserhalb jedes
+    // einzelnen Bereichs, heute nutzt es aber nur Kundschaft
+    // (kunden.js). suchePlatzhalter ist deshalb ein OPTIONALES Feld am
+    // bereich-Objekt (siehe bereichAnmelden() oben): vorhanden, wird das
+    // Feld aktiviert und benannt; fehlt es, wird das Feld sichtbar
+    // deaktiviert statt weiter scheinbar bedienbar, aber folgenlos
+    // dazustehen - dieselbe "was man nicht darf/nicht kann, wird nicht
+    // angeboten"-Haltung wie bei der Navigation weiter oben. Der Wert
+    // wird zusaetzlich geleert: ein Suchtext aus dem VORHERIGEN Bereich
+    // durfte den neuen sonst ungefragt mitnehmen, obwohl er dort nie
+    // eingegeben wurde.
+    const feldSucheGlobal = document.getElementById('feld-suche');
+    feldSucheGlobal.value = '';
+    feldSucheGlobal.classList.remove('feld-suche-aktiv');
+    if (aktiverBereich.suchePlatzhalter) {
+        feldSucheGlobal.disabled = false;
+        feldSucheGlobal.placeholder = aktiverBereich.suchePlatzhalter;
+        feldSucheGlobal.setAttribute('aria-label', aktiverBereich.suchePlatzhalter);
+    } else {
+        feldSucheGlobal.disabled = true;
+        feldSucheGlobal.placeholder = 'In diesem Bereich keine Suche';
+        feldSucheGlobal.setAttribute('aria-label', 'Suche in diesem Bereich nicht verfügbar');
+    }
 
     melde('');
     await aktiverBereich.aufbauen();
@@ -1064,11 +1098,17 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
     svg.setAttribute('focusable', 'false');
     svg.classList.add('zellbalken-grafik');
 
+    // 0.5px eingerueckt statt bei 0/0..breite/hoehe: die Kontur, die
+    // .zellbalken-hintergrund jetzt traegt (siehe style.css - vorher gab
+    // es hier gar keine, siehe Kommentar dort), liegt sonst zur Haelfte
+    // ausserhalb des viewBox und wird vom Standard-overflow:hidden des
+    // <svg> auf der Aussenseite gekappt - eingerueckt bleibt die 1px-
+    // Linie ringsum vollstaendig sichtbar, nicht nur zur Haelfte.
     const hintergrund = document.createElementNS(SVG_NS, 'rect');
-    hintergrund.setAttribute('x', 0);
-    hintergrund.setAttribute('y', 0);
-    hintergrund.setAttribute('width', breite);
-    hintergrund.setAttribute('height', hoehe);
+    hintergrund.setAttribute('x', 0.5);
+    hintergrund.setAttribute('y', 0.5);
+    hintergrund.setAttribute('width', Math.max(0, breite - 1));
+    hintergrund.setAttribute('height', Math.max(0, hoehe - 1));
     hintergrund.setAttribute('class', 'zellbalken-hintergrund');
     svg.append(hintergrund);
 
@@ -1956,6 +1996,12 @@ function spaltenkopfFilterfeld(spalte) {
         auswahl.dataset.spaltenkopfFeld = spalte.feld;
         auswahl.dataset.spaltenkopfRolle = 'filtern';
         auswahl.setAttribute('aria-label', `${spalte.titel} filtern`);
+        // Punkt 5, woertlich: "ein greifender Filter muss anders
+        // aussehen als ein leerer" - aktuellerWert ist nur gesetzt,
+        // solange spaltenkopfFilterwerte fuer dieses Feld tatsaechlich
+        // etwas eintraegt (siehe 'change' weiter unten, das bei "Alle"
+        // wieder loescht), deshalb reicht diese eine Bedingung.
+        if (aktuellerWert !== undefined) auswahl.classList.add('spaltenkopf-filter-aktiv');
 
         const alle = document.createElement('option');
         alle.value = '';
@@ -1997,7 +2043,16 @@ function spaltenkopfFilterfeld(spalte) {
     eingabe.dataset.spaltenkopfRolle = 'filtern';
     eingabe.setAttribute('aria-label', typ === 'schwelle' ? `Mindestwert für ${spalte.titel}` : `${spalte.titel} filtern`);
     eingabe.placeholder = typ === 'schwelle' ? '≥' : 'Suche…';
-    if (aktuellerWert !== undefined) eingabe.value = typ === 'schwelle' ? String(aktuellerWert) : aktuellerWert;
+    // Dieselbe Bedingung wie beim <select>-Zweig oben (siehe dortiger
+    // Kommentar) - hier zusaetzlich der Grund, warum die Klasse erst
+    // NACH dem Debounce (siehe setTimeout unten) wechselt: das ist
+    // derselbe Zeitpunkt, zu dem die Tabelle selbst tatsaechlich neu
+    // gefiltert wird - "aktiv" soll nicht frueher aufleuchten, als der
+    // Filter wirklich zu greifen beginnt.
+    if (aktuellerWert !== undefined) {
+        eingabe.value = typ === 'schwelle' ? String(aktuellerWert) : aktuellerWert;
+        eingabe.classList.add('spaltenkopf-filter-aktiv');
+    }
 
     // 300ms Verzoegerung wie bei der Kundensuche (kunden.js) und dem
     // Alters-Schieber (instandhaltung.js): ohne sie loeste jeder
@@ -2528,12 +2583,45 @@ document.addEventListener('click', (e) => {
     profilmenueSchliessen();
 });
 
-document.getElementById('knopf-einstellungen').addEventListener('click', () => {
-    profilmenueSchliessen();
-    // Ehrlich statt stumm: es gibt noch keine Einstellungsseite. Der
-    // Menüpunkt zu verstecken oder zu deaktivieren hätte dieselbe
-    // Frage nur verschoben ("warum fehlt er/ warum tut er nichts?").
-    melde('Einstellungen gibt es in dieser Warenwirtschaft noch nicht.', 'neutral');
+// ===== Einstellungen (Gestaltungsauftrag Punkt 3: Zebramuster als
+// Wahlmoeglichkeit, "optional anbieten" statt fest einzuschalten) =====
+//
+// localStorage statt einer Spalte/Tabelle in der Datenbank: eine reine
+// Anzeigepraeferenz ohne jede fachliche Bedeutung - sie beeinflusst
+// keine Buchung, keinen Bestand, keine Sicht. Der Auftrag verlangt an
+// anderer Stelle ausdruecklich "Verfeinerung, nicht Umbau" und "nichts
+// an der Datenbank aendern" - eine neue Spalte nur fuer "mag diese
+// Person Streifen" waere beides zugleich verletzt, fuer einen Wert, der
+// nirgends sonst gebraucht wird. localStorage ueberlebt von sich aus
+// jeden Neuaufbau UND jeden Bereichswechsel (beide leeren nur
+// #arbeitsliste/#detailmaske, siehe bereichWechseln() oben, nie den
+// Browserspeicher) - genau die vom Auftrag verlangte Haltbarkeit, ganz
+// ohne eigene Zwischenspeicherung hier im Skript.
+const ZEBRA_SPEICHERSCHLUESSEL = 'velocity-wawi-zebra';
+
+function zebraGespeichert() {
+    return localStorage.getItem(ZEBRA_SPEICHERSCHLUESSEL) === 'an';
+}
+
+// Reines CSS-Zebra (siehe body.zebra-an in style.css): eine Klasse auf
+// <body> genuegt, kein Neuzeichnen der gerade sichtbaren Tabelle noetig -
+// anders als Sortieren/Filtern/Gruppieren aendert dieser Schalter nicht,
+// WELCHE Zeilen dastehen, nur ihr Aussehen.
+function zebraAnwenden(aktiv) {
+    document.body.classList.toggle('zebra-an', aktiv);
+}
+
+// Sofort beim Laden dieser Datei, vor jedem ersten Tabellenaufbau -
+// sonst zeichnete die allererste Liste eines Arbeitstages kurz
+// ungestreift, bis irgendein spaeterer Codepfad die Einstellung zum
+// ersten Mal anwendet.
+zebraAnwenden(zebraGespeichert());
+
+const schalterZebra = document.getElementById('schalter-zebra');
+schalterZebra.checked = zebraGespeichert();
+schalterZebra.addEventListener('change', () => {
+    zebraAnwenden(schalterZebra.checked);
+    localStorage.setItem(ZEBRA_SPEICHERSCHLUESSEL, schalterZebra.checked ? 'an' : 'aus');
 });
 
 // ===== Tastaturbedienung =====

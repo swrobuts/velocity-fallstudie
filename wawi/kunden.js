@@ -34,7 +34,12 @@ bereichAnmelden({
     // saehe etwa die Werkstatt den Menuepunkt und dahinter eine leere
     // Liste, wie im Flotte-Kommentar begruendet.
     rollen: ['kundenservice', 'leitung'],
-    aufbauen: kundenAufbauen
+    aufbauen: kundenAufbauen,
+    // Gestaltungsauftrag Punkt 5: das Suchfeld soll sagen, WONACH es
+    // sucht - siehe suchwert()/die .or()-Abfrage weiter unten
+    // (Nachname, Vorname, E-Mail, Kundennummer) und bereichWechseln() in
+    // rahmen.js, das diesen Text als Platzhalter UND aria-label setzt.
+    suchePlatzhalter: 'Kundschaft: Name, E-Mail, Kundennummer'
 });
 
 // ===== Suche =====
@@ -57,6 +62,11 @@ feldSuche.addEventListener('input', () => {
     // kundenAufbauen() ausloest und deren Liste unter der Hand
     // ueberschreibt.
     if (aktiverBereich?.schluessel !== 'kunden') return;
+    // Punkt 5: "ob es gerade etwas einschraenkt" - sofort beim Tippen,
+    // nicht erst nach der 300ms-Verzoegerung unten, sonst wirkte das
+    // Feld fuer einen kurzen Moment weiter "leer", obwohl schon etwas
+    // darinsteht.
+    feldSuche.classList.toggle('feld-suche-aktiv', feldSuche.value.trim() !== '');
     clearTimeout(sucheVerzoegerung);
     // 300ms: reaktionsschnell genug, um sich sofort anzufuehlen, lang
     // genug, dass ein normaler Tippfluss nicht bei jedem Buchstaben eine
