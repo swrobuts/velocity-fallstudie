@@ -98,17 +98,33 @@ for s in "${SEITEN[@]}"; do cp "wawi/$s" "$BAU/"; done
 # schneiden, falls es ihn eines Tages doch gibt). Was von einem fremden
 # Server kommt (supabase-js liegt auf jsdelivr), faellt heraus - es
 # liegt hier gar nicht und muss nicht mitgeliefert werden.
+# Einfache UND doppelte Anfuehrungszeichen: ein <script src='...'> mit
+# einfachen fiel durch das alte, nur-doppelte Muster lautlos durch -
+# nicht ausgeliefert, in Schritt 5 nicht geprueft, kein Abbruch, keine
+# Meldung, die Seite im Browser kaputt trotz gemeldetem Erfolg.
 # Kein mapfile: macOS liefert Bash 3.2 aus.
+CODE_DATEIEN="$(grep -ohE "(src|href)=[\"'][^\"']+\.(js|css)(\?v=[0-9a-f]+)?[\"']" wawi/index.html \
+         | sed -E "s/.*[\"']([^\"'?]+).*/\1/" \
+         | grep -vE '^(https?:)?//' \
+         | sort -u)"
 ANZ_CODE=0
 while IFS= read -r d; do
   [[ -z "$d" ]] && continue
   [[ -f "wawi/$d" ]] || schlecht "$d wird eingebunden, fehlt aber in wawi/"
   cp "wawi/$d" "$BAU/"
   ANZ_CODE=$((ANZ_CODE + 1))
-done < <(grep -ohE '(src|href)="[^"]+\.(js|css)(\?v=[0-9a-f]+)?"' wawi/index.html \
-         | sed -E 's/.*"([^"?]+).*/\1/' \
-         | grep -vE '^(https?:)?//' \
-         | sort -u)
+done <<< "$CODE_DATEIEN"
+
+# Gegenprobe zur Ableitung: eine Liste, die etwas NICHT findet, sieht
+# genauso leer aus wie eine, bei der es nicht da ist. Deshalb zusaetz-
+# lich pruefen, dass jede lokale .js-Datei in wawi/ (config.js einge-
+# schlossen) auch tatsaechlich von der Seite eingebunden wird - sonst
+# faellt ein vergessenes <script>-Tag erst im Browser auf, nicht hier.
+while IFS= read -r js; do
+  [[ -z "$js" ]] && continue
+  grep -qxF "$js" <<< "$CODE_DATEIEN" \
+    || schlecht "wawi/$js liegt vor, wird aber von keiner Seite eingebunden"
+done < <(cd wawi && ls -1 *.js 2>/dev/null | sort -u)
 
 mkdir -p "$BAU/assets"
 ANZ_BILD=0
@@ -125,13 +141,29 @@ gut "$(( ${#SEITEN[@]} + ANZ_CODE )) Dateien Code, $ANZ_BILD Bilder ${GRAU}(zusa
 
 # ---------------------------------------------------------------------
 schritt "3 Auf den Server"
-ssh "$HOST" "mkdir -p $FERN/site"
-scp -q deploy/wawi-nginx.conf "$HOST:$FERN/nginx.conf"
-scp -q deploy/wawi-compose.yml "$HOST:$FERN/docker-compose.yml"
+# mkdir und beide scp aendern den Server sofort - sie muessen daher
+# HINTER der Trockenlauf-Weiche stehen, nicht nur der rsync-Aufruf.
+# Gemessen, nicht vermutet: vor dieser Korrektur lagen unter
+# /opt/wawi-deploy/ bereits docker-compose.yml, nginx.conf und ein
+# leeres site/ - obwohl dieses Skript nie ohne --trocken lief. --trocken
+# hatte nur den rsync stumm geschaltet, mkdir/scp liefen immer.
+if [[ -z "$TROCKEN" ]]; then
+  ssh "$HOST" "mkdir -p $FERN/site"
+  scp -q deploy/wawi-nginx.conf "$HOST:$FERN/nginx.conf"
+  scp -q deploy/wawi-compose.yml "$HOST:$FERN/docker-compose.yml"
+fi
 # --delete: was hier nicht mehr gebraucht wird, liegt dort auch nicht
 # mehr herum.
 rsync -rltz --delete $TROCKEN "$BAU/" "$HOST:$FERN/site/"
-if [[ -n "$TROCKEN" ]]; then gut "Probelauf, nichts geschrieben"; exit 0; fi
+if [[ -n "$TROCKEN" ]]; then
+  gut "Probelauf: mkdir, scp, rsync (simuliert) und Behaelter-Start haben nichts geschrieben"
+  # Nicht nur "nichts geschrieben" behaupten, sondern auch sagen, was
+  # dieser Trockenlauf NICHT geprueft hat: er bricht per exit 0 ab,
+  # bevor Schritt 5 je laeuft. Die Gegenprobe von aussen (HTTP-Status,
+  # Titel im HTML, jedes Skript einzeln) findet also nie statt.
+  printf '   %s!%s ungeprueft: die Gegenprobe von aussen (Schritt 5) laeuft im Trockenlauf nie\n' "$ROT" "$AUS"
+  exit 0
+fi
 
 # Rechte gehoeren zum Ziel, nicht zur Quelle - siehe Kopf dieser Datei.
 ssh "$HOST" "chmod -R a+rX $FERN/site"
@@ -169,19 +201,16 @@ WEITER=$(curl -s -o /dev/null -w '%{http_code}' "http://wawi.butscher.cloud/" ||
   || schlecht "http://wawi.butscher.cloud verweist nicht auf https (antwortet mit $WEITER)"
 gut "HTTP verweist auf HTTPS ${GRAU}($WEITER)${AUS}"
 
-# Die Skriptliste kommt aus wawi/index.html, nicht aus dieser Datei -
-# genau wie in Schritt 2. Eine gepflegte Liste hier wuerde nach dem
-# naechsten neuen Arbeitsbereich genau das Skript nicht pruefen, das
-# gerade neu dazugekommen ist.
+# Die Skriptliste kommt aus $CODE_DATEIEN (Schritt 2), nicht aus einer
+# zweiten eigenen Ableitung hier - zwei Stellen, die dieselbe Liste aus
+# index.html herleiten, laufen sonst irgendwann auseinander (z.B. wenn
+# nur eine von beiden auf einfache Anfuehrungszeichen erweitert wird).
 while IFS= read -r skript; do
   [[ -z "$skript" ]] && continue
   CODE=$(curl -s -o /dev/null -w '%{http_code}' "$ADRESSE/$skript" || true)
   [[ "$CODE" == "200" ]] \
     && gut "$skript antwortet mit 200" \
     || schlecht "$skript antwortet mit $CODE"
-done < <(grep -ohE '(src|href)="[^"]+\.(js|css)(\?v=[0-9a-f]+)?"' wawi/index.html \
-         | sed -E 's/.*"([^"?]+).*/\1/' \
-         | grep -vE '^(https?:)?//' \
-         | sort -u)
+done <<< "$CODE_DATEIEN"
 
 printf '\n%sSteht: %s%s\n\n' "$GRUEN" "$ADRESSE" "$AUS"
