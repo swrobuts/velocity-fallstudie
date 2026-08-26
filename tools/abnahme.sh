@@ -39,9 +39,16 @@ fi
 
 # ------------------------------------------------- 2 Aufbaukette zweimal
 schritt "Aufbaukette, zweimal (Idempotenz)"
+# Dateizahl GEZAEHLT statt eingetragen: eine feste Zahl hier ("12
+# Dateien") stand bis zur Gesamtpruefung vom 26.08.2026 unveraendert im
+# Text, waehrend db/aufbau/ laengst auf 18 Dateien gewachsen war - die
+# Pruefung blieb gruen, meldete aber eine falsche Zahl. Genau diese Sorte
+# Fehler hat einmal dazu gefuehrt, dass eine externe Pruefung einen
+# richtigen Betrag fuer einen Datenfehler hielt (siehe TESTEN.md).
+dateizahl=$(ls db/aufbau/*.sql | wc -l | tr -d ' ')
 if python3 db/run.py db/aufbau/*.sql >/tmp/abnahme1.log 2>&1 &&
    python3 db/run.py db/aufbau/*.sql >/tmp/abnahme2.log 2>&1; then
-  ergebnis 0 "12 Dateien, zweimal fehlerfrei"
+  ergebnis 0 "$dateizahl Dateien, zweimal fehlerfrei"
 else
   ergebnis 1 "Aufbau fehlgeschlagen — siehe /tmp/abnahme2.log"
   tail -5 /tmp/abnahme2.log | sed 's/^/     /'
@@ -516,6 +523,49 @@ PYEOF
 )
 [ "$n" = "0" ] && ergebnis 0 "kein fahruntaugliches Rad auf verfuegbar" \
                || ergebnis 1 "$n Rad/Raeder fahruntauglich, aber verfuegbar"
+
+# --------------------------------------------- 28 WaWi-Vertrag
+schritt "Warenwirtschaft: Vertrag zwischen HTML und JavaScript"
+if python3 tools/wawi_check.py >/tmp/abnahme-wawi.log 2>&1; then
+  ergebnis 0 "$(grep -c '^  ok' /tmp/abnahme-wawi.log) Punkte nachgeprueft"
+else
+  ergebnis 1 "$(grep -c '^  FEHL' /tmp/abnahme-wawi.log) Punkt(e) offen"
+  grep '^  FEHL' /tmp/abnahme-wawi.log | head -10 | sed 's/^/     /'
+fi
+
+# --------------------------------------------- 29 WaWi spricht nur Sichten
+schritt "Warenwirtschaft spricht nur Sichten und api-Funktionen"
+# Dieselbe Regel wie fuer die Website, und derselbe Test - nur gegen
+# wawi/daten.js. Ein Zugriff auf eine Basistabelle waere hier
+# gefaehrlicher als dort: die Warenwirtschaft sieht Personendaten.
+verstoss=$(grep -oE "\.from\('[a-z_]+'\)" wawi/daten.js wawi/*.js | grep -v "'v_wawi" || true)
+verstoss="$verstoss$(grep -oE "rpc\('[a-z_]+'" wawi/*.js | grep -vE "'(api_|ist_mitarbeiter|hat_rolle)" || true)"
+if [ -z "$(echo "$verstoss" | tr -d '[:space:]')" ]; then
+  ergebnis 0 "keine Basistabelle, keine fn_-Funktion in der Warenwirtschaft"
+else
+  ergebnis 1 "Verstoss: $verstoss"
+fi
+
+# --------------------------------------------- 30 WaWi erreichbar
+schritt "wawi.butscher.cloud antwortet"
+code=$(curl -s -o /tmp/wawi.html -w '%{http_code}' https://wawi.butscher.cloud)
+if [ "$code" = "200" ] && grep -q "VeloCity Warenwirtschaft" /tmp/wawi.html; then
+  ergebnis 0 "erreichbar und liefert die Anmeldeseite"
+else
+  ergebnis 1 "HTTP $code, Inhalt unerwartet"
+fi
+
+# --------------------------------------------- 31 kein Kundenzugang
+schritt "Warenwirtschaft weist Nicht-Mitarbeitende ab"
+# Der haeufigste Fall und der, den man vergisst: JEDER Kunde kann sich
+# anmelden, weil es dieselbe auth.users ist. Die Oberflaeche muss das
+# vor dem Aufbau erkennen, nicht danach.
+if grep -q "zustand-kein-mitarbeiter" wawi/index.html && \
+   grep -q "zustand-kein-mitarbeiter" wawi/rahmen.js; then
+  ergebnis 0 "Der Zustand 'kein Mitarbeiter' ist gebaut und wird geschaltet"
+else
+  ergebnis 1 "Der Zustand 'kein Mitarbeiter' fehlt"
+fi
 
 # ----------------------------------------------------------- Ergebnis
 printf '\n%s────────────────────────────────────────%s\n' "$blau" "$aus"
