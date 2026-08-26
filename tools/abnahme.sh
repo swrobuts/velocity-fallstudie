@@ -442,15 +442,55 @@ schritt "WaWi-Sichten sind ohne Anmeldung unerreichbar"
 # zurueckgibt - eine leere Liste laesst offen, ob das Recht fehlt oder
 # die Zeilenschranke nur zufaellig nichts traf. Wie Pruefung 21 zaehlt
 # deshalb nur ein expliziter 401 als Beweis.
-# Accept-Profile: velocity - siehe Begruendung bei Pruefung 19/20.
-code=$(curl -s -o /dev/null -w '%{http_code}' \
-        "$URL/rest/v1/v_wawi_flotte?select=fahrrad_id&limit=1" \
-        -H "apikey: $KEY" -H "Accept-Profile: velocity")
-case "$code" in
-  401) ergebnis 0 "v_wawi_flotte antwortet mit HTTP 401" ;;
-  200) ergebnis 1 "v_wawi_flotte antwortet mit HTTP 200" ;;
-  *)   ergebnis 1 "kein Beweis, HTTP $code weder 200 noch 401" ;;
-esac
+#
+# Bis zur Gesamtpruefung vom 26.08.2026 fragte diese Pruefung nur
+# v_wawi_flotte ab - eine von zehn Sichten. Haette sie alle geprueft,
+# waere der eigentliche Befund von selbst aufgefallen: v_wawi_modell
+# antwortet mit HTTP 404 (PGRST205, "not in schema cache"), nicht mit
+# 401, weil sie neu ist und PostgREST seinen Schema-Cache seit ihrer
+# Anlage nicht neu geladen hat. Die Liste unten wird deshalb wie bei
+# Pruefung 2 und 4 ABGELEITET, nicht aufgezaehlt: sie liest denselben
+# "grant select on ... to authenticated"-Block am Ende von
+# db/aufbau/0019_wawi_logik.sql, der auch tatsaechlich bestimmt, welche
+# Sicht authenticated erreichen darf. v_wawi_fahrt_km steht dort
+# ABSICHTLICH nicht (siehe Kommentar dort: Bewegungsprofil, ihr wurde
+# das Recht mit einem revoke wieder entzogen) und taucht deshalb hier
+# zu Recht nicht auf - sie soll fuer niemanden ohne eigene Rolle
+# erreichbar sein, ihre Abwesenheit in dieser Liste ist kein Fehler.
+sichten=$(python3 - <<'PY'
+import re
+text = open('db/aufbau/0019_wawi_logik.sql', encoding='utf-8').read()
+text = re.sub(r'--[^\n]*', '', text)   # Zeilenkommentare raus, sonst zaehlen Beispielnamen darin mit
+treffer = re.search(r'grant\s+select\s+on\s+([^;]*?)\s+to\s+authenticated\s*;', text, re.S)
+if treffer:
+    for name in re.findall(r'velocity\.(v_wawi_\w+)', treffer.group(1)):
+        print(name)
+PY
+)
+if [ -z "$sichten" ]; then
+  ergebnis 1 "kein grant-Block mit v_wawi_-Sichten gefunden - Pruefung haette nichts geprueft"
+else
+  offen=""
+  unklar=""
+  for s in $sichten; do
+    code=$(curl -s -o /dev/null -w '%{http_code}' \
+            "$URL/rest/v1/$s?select=*&limit=1" \
+            -H "apikey: $KEY" -H "Accept-Profile: velocity")
+    case "$code" in
+      401) ;;
+      200) offen="$offen $s" ;;
+      *)   unklar="$unklar $s(HTTP $code)" ;;
+    esac
+  done
+  anzahl=$(echo "$sichten" | wc -w | tr -d ' ')
+  if [ -n "$offen" ]; then
+    ergebnis 1 "ohne Anmeldung erreichbar:$offen"
+  elif [ -n "$unklar" ]; then
+    ergebnis 1 "kein Beweis, HTTP weder 200 noch 401:$unklar"
+  else
+    ergebnis 0 "alle $anzahl Sichten antworten mit HTTP 401"
+  fi
+fi
 
 # --------------------------------------------- 23 Rechenannahmen
 schritt "Jede Rechenannahme nennt ihre Quelle"

@@ -70,7 +70,7 @@ angepassten `src/config.js`.
 Dieselbe didaktische Entscheidung wie bei der Website — kein Framework,
 kein Build-Schritt —, aber eine eigene Anwendung für andere Personen:
 `wawi/` bedient Disposition, Werkstatt, Kundenservice und Leitung, nicht
-die Kundschaft. Acht JavaScript-Dateien (`config.js`, `daten.js`,
+die Kundschaft. Neun JavaScript-Dateien (`config.js`, `daten.js`,
 `anmeldung.js`, `rahmen.js` und fünf Arbeitsbereiche), ein Stylesheet,
 keine Abhängigkeit außer `supabase-js` aus dem CDN. Angemeldet wird über
 dieselbe `auth.users` wie bei der Website — die Trennung zwischen Kunden

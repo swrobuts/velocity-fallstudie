@@ -179,9 +179,13 @@ Dann auf `http://localhost:8766`, angemeldet mit `swrobuts@googlemail.com`
 1. **Navigation ansehen.** Alle fünf Arbeitsbereiche (Flotte, Stationen,
    Kunden, Instandhaltung, Auswertungen) sind sichtbar — dieses Konto
    trägt jede Rolle. Browserkonsole ohne Fehler.
-2. **Ein Rad anlegen, umbuchen, ausmustern** (Flotte). Jede Buchung
-   bestätigt sich in der Statuszeile am unteren Rand, nicht in einer
-   verschwindenden Ecke.
+2. **Formulare zum Anlegen, Umbuchen und Ausmustern ansehen, aber nicht
+   abschicken** (Flotte). Eine echte Bestätigung schriebe ein Rad in den
+   gemeinsamen Referenzdatenbestand der Lehrveranstaltung, das dort
+   nicht hingehört. Wie beim Löschdialog in Punkt 4 reicht
+   Escape/Abbrechen, um Feldaufbau und Tastaturbedienung zu prüfen. Dass
+   eine Bestätigung sich in der Statuszeile am unteren Rand meldet,
+   deckt bereits `tools/wawi_check.py` ab (Vertrag STATUS).
 3. **Instandhaltung ansehen.** Die Schadensmeldungen 1038–1044 und die
    Wartungsaufträge 676–678 sind **gewollte Erprobungsdaten** aus dieser
    Aufgabe — kein Datenfehler, wenn sie dort stehen.

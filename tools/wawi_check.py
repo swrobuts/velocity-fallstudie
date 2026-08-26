@@ -3,7 +3,7 @@
 Warenwirtschaft (wawi/). Vorbild: tools/ux_check.py, das denselben
 Dienst fuer die Website leistet.
 
-Acht Skripte teilen sich hier einen einzigen, ungemodulten Namensraum
+Neun Skripte teilen sich hier einen einzigen, ungemodulten Namensraum
 (config.js, daten.js, anmeldung.js, rahmen.js und fuenf Arbeitsbereiche).
 Diese Datei zaehlt sie NICHT auf - sie liest sie aus wawi/index.html
 heraus, aus demselben Grund, aus dem tools/wawi_veroeffentlichen.sh das
@@ -25,7 +25,7 @@ Was geprueft wird:
   TASTATUR   Strg+S und Escape werden behandelt
   SYNTAX     jedes Skript ist fuer sich genommen syntaktisch gueltig
   NAMENSRAUM keine oberste Deklaration (let/const/function) kommt in
-             mehr als einem der acht Skripte vor
+             mehr als einem der neun Skripte vor
   VORGANG    jede *Aufbauen()-Funktion beginnt mit neuerVorgang(); die
              vier Bausteine zeigeListe/meldeVorgang/zeigeLeermaske/
              zeigeUnterreiter werden nirgends ohne die Kennung als
@@ -233,7 +233,7 @@ for name in SKRIPT_NAMEN:
 # bereichAnmelden()-Aufruf HINTER der zweiten, gescheiterten Datei stand,
 # meldete sich nie an. Heute heisst die Variable in auswertungen.js
 # "auswertungenReiter" - dieser Pruefer haelt fest, dass sie es bleibt.
-print('\nVertrag: kein Name kollidiert ueber die acht Skripte hinweg')
+print(f'\nVertrag: kein Name kollidiert ueber die {len(SKRIPTE)} Skripte hinweg')
 fundort: dict[str, set[str]] = {}
 for name, text in SKRIPTE.items():
     for m in re.finditer(r'^(?:let|const)\s+(\w+)', text, re.M):

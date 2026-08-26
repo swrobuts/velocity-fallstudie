@@ -34,7 +34,7 @@ Dagegen sprechen zwei Dinge, die schon im Sicherheitskonzept
 
 Die Warenwirtschaft (`wawi/`) ist deshalb ein eigenes, unabhängig
 auslieferbares Verzeichnis: eigenes `index.html`, eigenes `style.css`,
-acht eigene JavaScript-Dateien, kein Verweis zurück in `src/`. Sie liest
+neun eigene JavaScript-Dateien, kein Verweis zurück in `src/`. Sie liest
 ausschließlich `v_wawi_*`-Sichten und schreibt ausschließlich über
 `api_*`-Funktionen — dieselbe Regel wie bei der Website, jetzt geprüft
 gegen ein zweites, unabhängiges Verzeichnis (`tools/abnahme.sh`,
@@ -228,6 +228,6 @@ wertlos, solange sie nicht geprüft ist.
 | Ebene | Werkzeug |
 |---|---|
 | In der Datenbank | `db/tests/t0017_wawi_sicherheit.sql`, `t0018_wawi_sichten.sql` — Rollentrennung, `null` bei fehlender Rolle, kein Bewegungsprofil |
-| Vertrag HTML/JavaScript | `tools/wawi_check.py` — jede Zustandsschale wird geschaltet, keine Namensraum-Kollision zwischen den acht Skripten, die Vorgangs-Kennung wird nirgends vergessen |
+| Vertrag HTML/JavaScript | `tools/wawi_check.py` — jede Zustandsschale wird geschaltet, keine Namensraum-Kollision zwischen den neun Skripten, die Vorgangs-Kennung wird nirgends vergessen |
 | Über die REST-Schnittstelle | `tools/abnahme.sh`, Prüfungen 21/22/29 — Basistabellen gesperrt, Sichten ohne Anmeldung unerreichbar, nur `v_wawi_*`/`api_*` im Quelltext |
 | Im Betrieb | Prüfung 30 — `wawi.butscher.cloud` liefert die Anmeldeseite; Prüfung 31 — ein Kunde ohne Mitarbeiterkonto wird abgewiesen |
