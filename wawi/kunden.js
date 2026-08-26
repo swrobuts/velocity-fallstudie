@@ -76,6 +76,25 @@ function suchwert(text) {
     return `"%${escaped}%"`;
 }
 
+// ===== Statusfilter (Gestaltungsauftrag, Punkt 2) =====
+//
+// "Ein Filter nach Status (aktiv/gesperrt/geschlossen) macht die 519
+// begreifbar" - woertlich der Auftrag. SERVERSEITIG per .eq() in der
+// Ladeliste unten, aus demselben Grund wie die Suche direkt darueber:
+// v_wawi_kunde traegt 1014 Zeilen, die Arbeitsliste begrenzt sie per
+// .limit(200) auf die ersten 200 nach Nachname - ein Filter, der nur in
+// diesen bereits geladenen 200 suchte, zeigte bei "gesperrt" (519 von
+// 1014) einen willkuerlichen Ausschnitt statt der tatsaechlich
+// gesperrten Kunden, abhaengig davon, wie viele "A...-K..."-Nachnamen
+// zufaellig gesperrt sind. Das waere genau die im Auftrag beschriebene
+// Luege: ein Filter, der vorgibt, ueber allen Kunden zu suchen, aber nur
+// ueber einem Bruchteil sucht, ohne das zu sagen.
+let kundenFilterStatus = 'alle';
+
+function kundenStatusText(status) {
+    return { aktiv: 'Aktiv', gesperrt: 'Gesperrt', geschlossen: 'Geschlossen' }[status] || status;
+}
+
 async function kundenAufbauen(suchtext) {
     // ALLERERSTE Anweisung, vor jedem await - siehe Kommentar bei
     // neuerVorgang() in rahmen.js und bei flotteAufbauen() in flotte.js.
@@ -109,27 +128,85 @@ async function kundenAufbauen(suchtext) {
     // Oberflaeche mehr, sondern eine der Datenbank.
     zeigeWerkzeugleiste(darfRolle('kundenservice'), 'Neuen Kunden anlegen', kundeAnlegenMaske);
 
-    const kunden = await ladeListe('v_wawi_kunde',
-        'kunde_id, kundennummer, anrede, vorname, nachname, email, telefon, status, ' +
-        'registriert_am, strasse, hausnummer, plz, ort, tarif_code, tarif, ' +
-        'mitgliedschaft_seit, fahrten_gesamt, fahrten_offen, umsatz_brutto, offener_betrag',
-        (q) => {
-            let abfrage = q;
-            if (suchtext) {
-                const w = suchwert(suchtext);
-                abfrage = abfrage.or(
-                    `nachname.ilike.${w},vorname.ilike.${w},` +
-                    `email.ilike.${w},kundennummer.ilike.${w}`);
-            }
-            return abfrage.order('nachname').limit(200);
-        });
+    // Vier Anfragen parallel: die eigentliche (Such- und filter-
+    // abhaengige, auf 200 begrenzte) Arbeitsliste, UND drei reine
+    // Zaehl-Anfragen (zaehleZeilen(), daten.js) fuer den Uebersichts-
+    // streifen - die muessen den GESAMTEN Bestand zaehlen, unabhaengig
+    // von Suchtext, Statusfilter und der 200er-Grenze (siehe
+    // kundenUebersicht() weiter unten und der Kommentar bei
+    // kundenFilterStatus oben).
+    const [kunden, gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl] = await Promise.all([
+        ladeListe('v_wawi_kunde',
+            'kunde_id, kundennummer, anrede, vorname, nachname, email, telefon, status, ' +
+            'registriert_am, strasse, hausnummer, plz, ort, tarif_code, tarif, ' +
+            'mitgliedschaft_seit, fahrten_gesamt, fahrten_offen, umsatz_brutto, offener_betrag',
+            (q) => {
+                let abfrage = q;
+                if (suchtext) {
+                    const w = suchwert(suchtext);
+                    abfrage = abfrage.or(
+                        `nachname.ilike.${w},vorname.ilike.${w},` +
+                        `email.ilike.${w},kundennummer.ilike.${w}`);
+                }
+                if (kundenFilterStatus !== 'alle') abfrage = abfrage.eq('status', kundenFilterStatus);
+                return abfrage.order('nachname').limit(200);
+            }),
+        zaehleZeilen('v_wawi_kunde'),
+        zaehleZeilen('v_wawi_kunde', (q) => q.eq('status', 'gesperrt')),
+        // WARUM GIBT ES KEINE ADRESSE BEI DEN KUNDEN? (Auftraggeber-Frage,
+        // Gestaltungsauftrag Punkt 4) - 901 von 1014 haben tatsaechlich
+        // eine, 113 nicht. .is('strasse', null) statt .is('adresse_id',
+        // null): v_wawi_kunde liefert kein adresse_id, strasse ist der
+        // naechstliegende NULL-Indikator derselben Rechnungsadresse.
+        zaehleZeilen('v_wawi_kunde', (q) => q.is('strasse', null))
+    ]);
 
     const fehler = letzterLadeFehler('v_wawi_kunde');
     if (fehler) {
         // meldeVorgang statt melde: ein inzwischen veralteter Aufruf
         // (siehe Kommentar bei neuerVorgang() oben und in rahmen.js)
         // meldet auch seinen eigenen Ladefehler nicht mehr.
+        zeigeUebersicht(vorgang, []);
         meldeVorgang(vorgang, `Die Kunden liessen sich nicht laden: ${fehler}`, 'schlecht');
+        return;
+    }
+
+    zeigeUebersicht(vorgang, kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl));
+
+    zeigeFilterleiste(vorgang, true, [
+        {
+            name: 'status', titel: 'Status', wert: kundenFilterStatus,
+            optionen: [
+                { wert: 'alle', text: 'Alle' },
+                { wert: 'aktiv', text: 'Aktiv' },
+                { wert: 'gesperrt', text: 'Gesperrt' },
+                { wert: 'geschlossen', text: 'Geschlossen' }
+            ],
+            beiAenderung: (neu) => { kundenFilterStatus = neu; kundenAufbauen(); }
+        }
+    ]);
+
+    if (kunden.length === 0) {
+        // Grenzfall "kein Treffer" (Erprobung, Auftrag) - fuer Kunden
+        // erreichbar ueber Suchtext UND/ODER Statusfilter, deshalb bietet
+        // das Zuruecksetzen beides gemeinsam an. Der Filter bleibt dabei
+        // sichtbar (siehe zeigeFilterleiste() oben), nur die Suche selbst
+        // muss von Hand geleert werden - ein Rueckweg dafuer ueber
+        // angebot waere ein zweiter Weg neben dem Suchfeld in der
+        // Kopfleiste, fuer denselben Effekt.
+        zeigeLeermaske(
+            vorgang,
+            'Keine Kunden mit diesem Filter',
+            suchtext
+                ? `Kein Kunde zu „${suchtext}“ erfüllt zusätzlich die gewählte Einschränkung.`
+                : 'Kein Kunde erfüllt die gewählte Einschränkung.',
+            kundenFilterStatus !== 'alle'
+                ? { titel: 'Statusfilter zurücksetzen', ausfuehren: async () => {
+                      kundenFilterStatus = 'alle'; await kundenAufbauen();
+                  } }
+                : null
+        );
+        meldeVorgang(vorgang, 'Keine Kunden mit diesem Filter');
         return;
     }
 
@@ -137,6 +214,12 @@ async function kundenAufbauen(suchtext) {
         { feld: 'kundennummer', titel: 'Nummer' },
         { feld: 'nachname',     titel: 'Nachname' },
         { feld: 'vorname',      titel: 'Vorname' },
+        // WICHTIG (Gestaltungsauftrag, Punkt 4): "die Liste zeigt keinen
+        // Ort" - Nummer, Nachname, Vorname, Status, Tarif, mehr nicht.
+        // 901 von 1014 Kunden HABEN einen (siehe ohneAdresseAnzahl oben);
+        // ohne diese Spalte war er in der Liste unsichtbar, obwohl die
+        // Maske ihn laengst zeigte.
+        { feld: 'ort',           titel: 'Ort', formatieren: (o) => o || '—' },
         // Nur EIN Parameter (die ganze Zeile), nicht (s) wie im
         // Auftragstext: zeigeListe in rahmen.js ruft eine Funktions-
         // Spalte als spalte.klasse(zeile) auf, nicht spalte.klasse(wert).
@@ -148,18 +231,7 @@ async function kundenAufbauen(suchtext) {
         { feld: 'status',       titel: 'Status',
           klasse: (z) => (z.status === 'gesperrt' ? 'warnung' : z.status === 'geschlossen' ? 'leise' : '') },
         { feld: 'tarif_code',   titel: 'Tarif', formatieren: (t) => t || '—' }
-    ], kundeMaske);
-
-    // WICHTIG 6: 519 der 1014 Kunden stehen auf 'gesperrt', und es gibt
-    // derzeit keine Funktion, die entsperrt (bekannte Luecke, siehe auch
-    // der Bestaetigungstext beim Sperren-Knopf in kundeMaske). Die
-    // Erklaerung dazu stand bisher nur im Quelltext und im Dialog beim
-    // NEU-Sperren - beides erreicht nicht, wer die Liste oeffnet und die
-    // vielen gelben Zeilen sieht (die klasse-Funktion oben faerbt sie).
-    // Genau DORT, wo es gelesen wird, gehoert der Hinweis hin - deshalb
-    // hier in der Statuszeile, direkt bei der Zeilenzahl, nach demselben
-    // Muster wie die "X davon voll"-Meldung in stationen.js.
-    const gesperrt = kunden.filter((k) => k.status === 'gesperrt').length;
+    ], kundeMaske, kundeZeilenAktionen);
 
     // meldeVorgang statt melde: nach einer Buchung (Sperren,
     // Anonymisieren, Anlegen - siehe kundeMaske/kundeAnlegenMaske) ruft
@@ -167,16 +239,95 @@ async function kundenAufbauen(suchtext) {
     // die gerade gezeigte Bestaetigung, bevor sie jemand liest, wenn er
     // noch zu DIESEM Vorgang gehoert. Siehe Begruendung bei
     // meldeVorgang() in rahmen.js.
-    let uebersicht;
-    if (kunden.length === 200) {
-        uebersicht = '200 von mehr Kunden — bitte weiter eingrenzen';
-    } else {
-        uebersicht = suchtext ? `${kunden.length} Kunden zu „${suchtext}“` : `${kunden.length} Kunden`;
-        if (gesperrt) {
-            uebersicht += `, ${gesperrt} davon gesperrt — es gibt derzeit keine Funktion, die entsperrt`;
-        }
+    //
+    // Der "X davon gesperrt"-Hinweis, den es hier frueher gab (WICHTIG 6),
+    // ist in die Uebersichtskachel "Gesperrt" gewandert (siehe
+    // kundenUebersicht()) - er zaehlte bisher aus den hoechstens 200
+    // GELADENEN Zeilen, nicht aus allen 1014. Ungefiltert waeren das
+    // die ersten 200 Nachnamen alphabetisch, nicht die tatsaechlichen
+    // 519 - derselbe Fehler, vor dem der Gestaltungsauftrag beim Filter
+    // ausdruecklich warnt ("Ein Filter, der nur die geladenen 200 von
+    // 1014 durchsucht, luegt"), hier schon vor dieser Aufgabe im
+    // Statuszeilen-Text vorhanden. Die Kachel zaehlt ueber zaehleZeilen()
+    // richtig; die Statuszeile beschraenkt sich jetzt auf das, was sie
+    // tatsaechlich weiss: wie viele der (ggf. eingegrenzten) Treffer
+    // geladen sind.
+    const einschraenkung = [
+        suchtext ? `zu „${suchtext}“` : null,
+        kundenFilterStatus !== 'alle' ? `Status ${kundenStatusText(kundenFilterStatus)}` : null
+    ].filter(Boolean).join(', ');
+    const zusatz = einschraenkung ? ` (${einschraenkung})` : '';
+    meldeVorgang(vorgang, kunden.length === 200
+        ? `200 von mehr Kunden${zusatz} — bitte weiter eingrenzen`
+        : `${kunden.length} Kunden${zusatz}`);
+}
+
+// ===== Uebersicht (Gestaltungsauftrag, Punkt 1) =====
+//
+// "1014, davon 519 gesperrt. Diese Zahl erschreckt, wenn sie unerklaert
+// dasteht - und es gibt bis heute KEINE Funktion, die entsperrt" -
+// woertlich der Auftrag. Alle drei Zahlen kommen aus zaehleZeilen()
+// (daten.js), nicht aus der geladenen (hoechstens 200 Zeilen tragenden)
+// Arbeitsliste - siehe Kommentar an der Aufrufstelle in kundenAufbauen().
+function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl) {
+    const anzeige = (n) => (n === null ? '—' : n.toLocaleString('de-DE'));
+
+    const kacheln = [
+        { titel: 'Kunden gesamt', wert: zahlSkaliert(anzeige(gesamtAnzahl)) }
+    ];
+
+    if (gesperrtAnzahl !== null) {
+        const wert = document.createElement('span');
+        wert.className = 'ton-warnung';
+        wert.append(zahlSkaliert(anzeige(gesperrtAnzahl)));
+        kacheln.push({
+            titel: 'Gesperrt',
+            wert,
+            grafik: gesamtAnzahl ? zellbalken(gesperrtAnzahl, gesamtAnzahl, null, { farbe: 'var(--warnung-text)' }) : undefined,
+            hinweis: 'Es gibt derzeit keine Funktion, die eine Sperrung aufhebt'
+        });
     }
-    meldeVorgang(vorgang, uebersicht);
+
+    if (ohneAdresseAnzahl !== null) {
+        kacheln.push({
+            titel: 'Ohne Adresse',
+            wert: zahlSkaliert(anzeige(ohneAdresseAnzahl)),
+            grafik: gesamtAnzahl ? zellbalken(ohneAdresseAnzahl, gesamtAnzahl) : undefined,
+            hinweis: 'Lässt sich in der Maske nachtragen'
+        });
+    }
+
+    return kacheln;
+}
+
+// Fuenfter Parameter von zeigeListe() (Punkt 3 der Gestaltung): einzig
+// "Auskunft nach Art. 15" qualifiziert sich - eine reine Leseabfrage
+// ohne Buchung, "das Beilaeufige" (Auftrag). "Speichern" braucht die
+// gerade eingetippten Feldwerte der OFFENEN Maske und ist damit kein
+// zeilenbezogenes, in sich abgeschlossenes Icon. "Sperren" und
+// "Loeschung nach Art. 17" sind 'gefaehrlich' (siehe kundeMaske unten) -
+// "eine gefaehrliche Handlung gehoert nicht als Icon in eine Zeile"
+// (Gestaltungsauftrag, Punkt 3) schliesst beide ausdruecklich aus.
+//
+// darfRolle('kundenservice') wiederholt hier dieselbe Pruefung wie in
+// kundeMaske() unten (KRITISCH 1: alle vier Funktionen hinter
+// api_kunde_* verlangen 'kundenservice', 'leitung' allein reicht nicht) -
+// ohne sie saehe eine Leitung ohne kundenservice-Rolle das Auskunfts-Icon
+// in jeder Zeile, obwohl api_kunde_auskunft ihr die Ausfuehrung verweigert.
+const KUNDE_ICONS = {
+    // Feather "file-text": Dokument mit Textzeilen - "Auskunft ansehen".
+    auskunft: '<svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>' +
+        '<polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>' +
+        '<line x1="16" y1="17" x2="8" y2="17"/></svg>'
+};
+
+function kundeZeilenAktionen(kunde) {
+    if (!darfRolle('kundenservice')) return [];
+    return [{
+        titel: 'Auskunft nach Art. 15',
+        svg: KUNDE_ICONS.auskunft,
+        ausfuehren: () => auskunftZeigen(kunde)
+    }];
 }
 
 function kundeMaske(kunde) {
@@ -302,6 +453,20 @@ function kundeMaske(kunde) {
         // eine Kontoaenderung und gehoert dem Kunden, nicht uns.
         { name: 'email',     titel: 'E-Mail',    wert: kunde.email,            nurLesen: true },
         { name: 'telefon',   titel: 'Telefon',   wert: kunde.telefon || '',    typ: 'tel' },
+        // WARUM GIBT ES KEINE ADRESSE BEI DEN KUNDEN? (Auftraggeber-Frage,
+        // Gestaltungsauftrag Punkt 4): 113 von 1014 Kunden haben tatsaechlich
+        // keine hinterlegt (kundenUebersicht() zeigt die Zahl bereits im
+        // Streifen) - die vier Felder darunter waren dafuer bislang einfach
+        // leer, ununterscheidbar von einem Ladefehler ("diese Verwechslung
+        // hat in diesem Projekt schon mehrfach Zeit gekostet", Auftrag).
+        // Nur fuer GENAU diesen Fall, nicht fuer jeden Kunden: wer eine
+        // Adresse hat, sieht seine gefuellten Felder, keine ueberfluessige
+        // Erklaerung obendrueber.
+        ...(!kunde.strasse ? [{
+            name: 'adresse_hinweis', titel: 'Adresse', typ: 'mehrzeilig', nurLesen: true,
+            wert: 'Für diese Person ist keine Adresse hinterlegt - das ist kein Ladefehler. ' +
+                  'Die Felder darunter lassen sich ausfüllen, um eine nachzutragen.'
+        }] : []),
         { name: 'strasse',   titel: 'Straße',    wert: kunde.strasse || '',    typ: 'text' },
         { name: 'hausnummer', titel: 'Nr.',      wert: kunde.hausnummer || '', typ: 'text' },
         { name: 'plz',       titel: 'PLZ',       wert: kunde.plz || '',        typ: 'text' },

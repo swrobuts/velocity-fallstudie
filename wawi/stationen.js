@@ -40,9 +40,19 @@ async function stationenAufbauen() {
         // meldeVorgang statt melde: ein inzwischen veralteter Aufruf
         // (siehe Kommentar dort) meldet auch seinen eigenen Ladefehler
         // nicht mehr.
+        zeigeUebersicht(vorgang, []);
         meldeVorgang(vorgang, `Die Stationen liessen sich nicht laden: ${fehler}`, 'schlecht');
         return;
     }
+
+    zeigeUebersicht(vorgang, stationenUebersicht(stationen));
+
+    // KEIN Filter hier (Gestaltungsauftrag, Punkt 2, woertlich): "bei
+    // zehn Zeilen braucht es keinen Filter. Bau keinen. Ein
+    // Bedienelement, das nichts filtert, ist Zierrat." Flotte (275
+    // Zeilen), Kunden (1014) und Instandhaltung (Schwere/Alter mehrerer
+    // Meldungen) haben je einen zeigeFilterleiste()-Aufruf - Stationen
+    // absichtlich nicht, kein vergessener Baustein.
 
     zeigeListe(vorgang, stationen, [
         { feld: 'stationsnummer', titel: 'Nummer' },
@@ -60,6 +70,18 @@ async function stationenAufbauen() {
         // enthaelt.
         { feld: 'frei',           titel: 'Frei',   klasse: (z) => (z.frei === 0 ? 'warnung' : '') }
     ], stationMaske);
+    // KEIN fuenfter Parameter (Zeilenicons, Punkt 3): stationMaske()
+    // unten kennt genau eine Handlung, "Stilllegen" - und die ist
+    // 'gefaehrlich' (Endzustand ohne Weg zurueck, siehe dortiger
+    // Kommentar). "Eine gefaehrliche Handlung gehoert nicht als Icon in
+    // eine Zeile" (Gestaltungsauftrag, Punkt 3) laesst fuer Stationen
+    // damit keine sichere Handlung uebrig, die sich beilaeufig aus der
+    // Liste heraus ausloesen liesse. Ein aktionen-Callback, der fuer
+    // jede Zeile trotzdem eine (dann staendig leere) Icon-Spalte
+    // anhaengte, waere reine Dekoration - derselbe Massstab, den der
+    // Auftrag fuer einen wirkungslosen Filter anlegt ("Zierrat ist in
+    // diesem Projekt ein Mangel"), hier auf eine Spalte statt auf ein
+    // Bedienelement angewendet.
 
     // Zwei Stationen sind randvoll (S-0001 mit 40/40, S-0002 mit 25/25).
     // Das ist kein Fehler, aber eine Rueckgabe dort scheitert an GR15 -
@@ -74,6 +96,61 @@ async function stationenAufbauen() {
     meldeVorgang(vorgang, voll.length
         ? `${stationen.length} Stationen, ${voll.length} davon voll: ${voll.map((s) => s.name).join(', ')}`
         : `${stationen.length} Stationen`);
+}
+
+// ===== Uebersicht (Gestaltungsauftrag, Punkt 1) =====
+//
+// "Eine volle Station nimmt keine Rueckgabe an - das ist die wichtigste
+// Zahl des Bereichs" (Auftrag) - deshalb an zweiter Stelle, direkt nach
+// dem blossen Bestand, mit den Namen der betroffenen Stationen im
+// Hinweis (dieselbe Machart wie "Volle Stationen" im Reiter
+// "Stationsauslastung" von auswertungen.js - dort aus
+// v_wawi_stationsauslastung.fuellstand, hier unabhaengig aus
+// v_wawi_station.frei/.kapazitaet, weil dieser Bereich ausschliesslich
+// diese eine Sicht liest, siehe Dateikopf).
+function stationenUebersicht(stationen) {
+    const gesamt = stationen.length;
+    const gesamtKapazitaet = stationen.reduce((s, z) => s + z.kapazitaet, 0);
+    const gesamtBelegt = stationen.reduce((s, z) => s + z.belegt, 0);
+    const volle = stationen.filter((s) => s.frei === 0);
+    const stillgelegt = stationen.filter((s) => !s.in_betrieb).length;
+
+    const kacheln = [
+        {
+            titel: 'Stationen',
+            wert: zahlSkaliert(String(gesamt)),
+            // Small multiples (Tufte): Fuellstand jeder einzelnen
+            // Station, sortiert nach Stationsnummer wie die Tabelle
+            // darunter - dieselbe Idee wie stationsauslastungUebersicht()
+            // in auswertungen.js, hier aus belegt/kapazitaet statt aus
+            // der dortigen eigenen fuellstand-Spalte berechnet.
+            grafik: sparkline(stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0)), {
+                beschriftung: `Füllstand der ${gesamt} Stationen, sortiert nach Stationsnummer`
+            }),
+            hinweis: stillgelegt ? `${stillgelegt} davon stillgelegt` : 'alle in Betrieb'
+        }
+    ];
+
+    if (volle.length > 0) {
+        const wert = document.createElement('span');
+        wert.className = 'ton-warnung';
+        wert.textContent = String(volle.length);
+        kacheln.push({
+            titel: 'Volle Stationen',
+            wert,
+            grafik: zellbalken(volle.length, gesamt, null, { farbe: 'var(--warnung-text)' }),
+            hinweis: `${volle.map((s) => s.name).join(', ')} - nimmt keine Rückgabe an`
+        });
+    }
+
+    kacheln.push({
+        titel: 'Gesamtbelegung',
+        wert: `${Math.round((gesamtKapazitaet ? gesamtBelegt / gesamtKapazitaet : 0) * 100)} %`,
+        grafik: zellbalken(gesamtBelegt, gesamtKapazitaet),
+        hinweis: `${gesamtBelegt} von ${gesamtKapazitaet} Stellplätzen belegt`
+    });
+
+    return kacheln;
 }
 
 function stationMaske(station) {

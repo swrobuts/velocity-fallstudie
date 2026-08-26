@@ -33,6 +33,13 @@ bereichAnmelden({
 
 let unterbereich = 'schaeden';   // 'schaeden' | 'auftraege'
 
+// Filterzustand (Gestaltungsauftrag, Punkt 2) - nur fuer den Schaeden-
+// Unterreiter ("nach Schwere, nach Alter der Meldung", woertlich der
+// Auftrag). instandhaltungFilterAlterStunden=0 bedeutet "alle", siehe
+// schaedenZeigen() weiter unten.
+let instandhaltungFilterSchwere = 'alle';
+let instandhaltungFilterAlterStunden = 0;
+
 async function instandhaltungAufbauen() {
     // ALLERERSTE Anweisung, vor jedem await (siehe Kommentar bei
     // neuerVorgang() in rahmen.js): instandhaltungAufbauen() ist die
@@ -76,8 +83,61 @@ async function instandhaltungAufbauen() {
         await instandhaltungAufbauen();
     });
 
+    // Bereichsweite Kennzahlen (Punkt 1 des Gestaltungsauftrags) -
+    // UNABHAENGIG vom aktiven Unterreiter (beide Listen darunter zeigen
+    // nur offen/in_arbeit) und unabhaengig von den Filtern unten:
+    // "7 Schadensmeldungen, 3 Wartungsauftraege" ist die Gesamtzahl ueber
+    // ALLE Bearbeitungsstaende, nicht nur die aktuell offenen fuenf bzw.
+    // eine. zaehleZeilen() (daten.js) liefert das, ohne dafuer die
+    // Zeilen selbst zu laden - bei dieser Groessenordnung waere ein
+    // zweiter voller Request vertretbar gewesen, aber ein Zaehl-Request
+    // ist die ehrlichere Wahl: er behauptet nicht, Zeilen geladen zu
+    // haben, die niemand ansieht.
+    const [gesamtSchaeden, gesamtAuftraege, gesamtFahruntauglichOffen] = await Promise.all([
+        zaehleZeilen('v_wawi_schaden'),
+        zaehleZeilen('v_wawi_auftrag'),
+        zaehleZeilen('v_wawi_schaden',
+            (q) => q.eq('schwere', 'fahruntauglich').in('status', ['offen', 'in_arbeit']))
+    ]);
+    zeigeUebersicht(vorgang, instandhaltungUebersicht(gesamtSchaeden, gesamtAuftraege, gesamtFahruntauglichOffen));
+
     if (unterbereich === 'schaeden') await schaedenZeigen(vorgang);
     else                             await auftraegeZeigen(vorgang);
+}
+
+// ===== Uebersicht (Gestaltungsauftrag, Punkt 1) =====
+//
+// "7 Schadensmeldungen, 3 Wartungsauftraege. Wenige Daten - der Streifen
+// muss auch mit fast nichts wuerdig aussehen und darf nicht leer wirken"
+// - woertlich der Auftrag. Drei Kacheln mit echten, kleinen Zahlen statt
+// einer einzigen: die dritte (fahruntauglich UND offen) verbindet zwei
+// der drei Zahlen zu einer Kennzahl, die keine der beiden allein zeigt -
+// genau das "wortgroße Bild daneben" (Auftrag), auch bei einer
+// Grundgesamtheit von sieben.
+function instandhaltungUebersicht(gesamtSchaeden, gesamtAuftraege, gesamtFahruntauglichOffen) {
+    const anzeige = (n) => (n === null ? '—' : String(n));
+
+    const kacheln = [
+        { titel: 'Schadensmeldungen gesamt', wert: zahlSkaliert(anzeige(gesamtSchaeden)),
+          hinweis: 'über alle Bearbeitungsstände' },
+        { titel: 'Wartungsaufträge gesamt', wert: zahlSkaliert(anzeige(gesamtAuftraege)),
+          hinweis: 'über alle Bearbeitungsstände' }
+    ];
+
+    if (gesamtFahruntauglichOffen !== null) {
+        const wert = document.createElement('span');
+        if (gesamtFahruntauglichOffen > 0) wert.className = 'ton-schlecht';
+        wert.textContent = anzeige(gesamtFahruntauglichOffen);
+        kacheln.push({
+            titel: 'Fahruntauglich, offen',
+            wert,
+            grafik: gesamtSchaeden ? zellbalken(gesamtFahruntauglichOffen, gesamtSchaeden, null,
+                { farbe: 'var(--schlecht)' }) : undefined,
+            hinweis: 'sperrt das Rad, sobald es nicht gerade in Fahrt ist'
+        });
+    }
+
+    return kacheln;
 }
 
 // ===== Offene Schäden =====
@@ -92,6 +152,7 @@ async function schaedenZeigen(vorgang) {
     if (fehler) {
         // meldeVorgang statt melde: siehe Kommentar bei meldeVorgang() in
         // rahmen.js und bei flotteAufbauen() in flotte.js.
+        zeigeFilterleiste(vorgang, false, null);
         meldeVorgang(vorgang, `Die Schäden liessen sich nicht laden: ${fehler}`, 'schlecht');
         return;
     }
@@ -102,6 +163,13 @@ async function schaedenZeigen(vorgang) {
         // Mitarbeiter, der am Montag hier landet, soll nicht raten, ob
         // die Software kaputt ist - das ist der eigentliche Lehrpunkt
         // dieser Aufgabe (siehe Dateikopf).
+        //
+        // KEIN Filter bei einer wirklich leeren Liste - ein Filter ohne
+        // eine einzige Zeile darunter waere Zierrat (siehe Kommentar bei
+        // zeigeFilterleiste() in rahmen.js). Der Grenzfall "gefiltert
+        // leer" (mindestens eine Meldung, aber keine passt) wird weiter
+        // unten separat behandelt, MIT sichtbarem Filter.
+        zeigeFilterleiste(vorgang, false, null);
         zeigeLeermaske(
             vorgang,
             'Keine offenen Schäden',
@@ -113,7 +181,58 @@ async function schaedenZeigen(vorgang) {
         return;
     }
 
-    zeigeListe(vorgang, schaeden, [
+    // Slider-Obergrenze aus den tatsaechlich geladenen Meldungen
+    // gewonnen, nicht fest eingetragen - im heutigen Bestand liegen alle
+    // fuenf offenen Meldungen um die zwoelf Stunden auseinander (siehe
+    // Bericht), eine fest eingetragene Obergrenze (etwa 30 Tage) liesse
+    // den Schieber ueber weite Strecken wirkungslos. Math.max(1, ...):
+    // ein <input type="range"> mit min=max=0 liesse sich nicht bedienen,
+    // waeren alle Meldungen taufrisch.
+    const schieberMax = Math.max(1, Math.ceil(Math.max(...schaeden.map((s) => alterInStunden(s.offen_seit)))));
+    if (instandhaltungFilterAlterStunden > schieberMax) instandhaltungFilterAlterStunden = 0;
+
+    const sichtbar = schaeden.filter((s) =>
+        (instandhaltungFilterSchwere === 'alle' || s.schwere === instandhaltungFilterSchwere)
+        && alterInStunden(s.offen_seit) >= instandhaltungFilterAlterStunden);
+
+    zeigeFilterleiste(vorgang, true, [
+        {
+            name: 'schwere', titel: 'Schwere', wert: instandhaltungFilterSchwere,
+            optionen: [
+                { wert: 'alle', text: 'Alle' },
+                { wert: 'gering', text: 'gering' },
+                { wert: 'mittel', text: 'mittel' },
+                { wert: 'fahruntauglich', text: 'fahruntauglich' }
+            ],
+            beiAenderung: (neu) => { instandhaltungFilterSchwere = neu; instandhaltungAufbauen(); }
+        },
+        {
+            name: 'alter', titel: 'Mindestalter', typ: 'schieber',
+            min: 0, max: schieberMax, step: 1, wert: instandhaltungFilterAlterStunden,
+            beschriftung: (stunden) => (stunden === 0 ? 'alle' : `≥ ${stunden} Std.`),
+            beiAenderung: (neu) => { instandhaltungFilterAlterStunden = neu; instandhaltungAufbauen(); }
+        }
+    ]);
+
+    if (sichtbar.length === 0) {
+        zeigeLeermaske(
+            vorgang,
+            'Keine Schäden mit diesem Filter',
+            'Keine offene Schadensmeldung erfüllt die gewählte Einschränkung.',
+            {
+                titel: 'Filter zurücksetzen',
+                ausfuehren: async () => {
+                    instandhaltungFilterSchwere = 'alle';
+                    instandhaltungFilterAlterStunden = 0;
+                    await instandhaltungAufbauen();
+                }
+            }
+        );
+        meldeVorgang(vorgang, 'Keine Schäden mit diesem Filter');
+        return;
+    }
+
+    zeigeListe(vorgang, sichtbar, [
         { feld: 'rahmennummer', titel: 'Rad' },
         { feld: 'kategorie',    titel: 'Kategorie' },
         {
@@ -130,12 +249,13 @@ async function schaedenZeigen(vorgang) {
         { feld: 'gemeldet_am',  titel: 'Gemeldet' },
         { feld: 'offen_seit',   titel: 'Offen seit', formatieren: alterKurz },
         { feld: 'status',       titel: 'Stand' }
-    ], schadenMaske);
+    ], schadenMaske, schadenZeilenAktionen);
 
-    const dringend = schaeden.filter((s) => s.schwere === 'fahruntauglich').length;
+    const dringend = sichtbar.filter((s) => s.schwere === 'fahruntauglich').length;
+    const zusatz = sichtbar.length === schaeden.length ? '' : ` von ${schaeden.length}`;
     meldeVorgang(vorgang, dringend
-        ? `${schaeden.length} offene Schäden, davon ${dringend} fahruntauglich`
-        : `${schaeden.length} offene Schäden`);
+        ? `${sichtbar.length}${zusatz} offene Schäden, davon ${dringend} fahruntauglich`
+        : `${sichtbar.length}${zusatz} offene Schäden`);
 }
 
 // offen_seit kommt als Postgres-Intervall-Text (IntervalStyle 'postgres')
@@ -156,8 +276,29 @@ function alterKurz(intervall) {
     return minuten > 0 ? `${minuten} ${minuten === 1 ? 'Minute' : 'Minuten'}` : 'gerade eben';
 }
 
-function schadenMaske(schaden) {
-    const knoepfe = [];
+// Denselben Intervall-Text wie alterKurz() (siehe dort) in eine Zahl in
+// Stunden gewandelt - fuer den Alters-Schieber (Vergleich, Sortierung
+// der Obergrenze), waehrend alterKurz() fuer die Tabellenzelle eine grob
+// gerundete, LESBARE Form liefert. Beide lesen denselben Text mit
+// unterschiedlichem Ziel, deshalb zwei Funktionen statt einer mit einem
+// zusaetzlichen Modus-Parameter.
+function alterInStunden(intervall) {
+    if (!intervall) return 0;
+    const tageMatch = intervall.match(/(\d+)\s+days?/);
+    const tage = tageMatch ? Number(tageMatch[1]) : 0;
+    const zeitMatch = intervall.match(/(\d+):(\d+):(\d+)/);
+    const stunden = zeitMatch ? Number(zeitMatch[1]) : 0;
+    const minuten = zeitMatch ? Number(zeitMatch[2]) : 0;
+    return tage * 24 + stunden + minuten / 60;
+}
+
+// Gemeinsame Handlungsliste fuer schadenMaske() (Knopf in der
+// Detailmaske) UND schadenZeilenAktionen() (Icon in der Zeile, Punkt 3
+// der Gestaltung) - dieselbe Regel (Rolle, Status), einmal formuliert,
+// nicht zweimal gepflegt. Dieselbe Machart wie radHandlungen() in
+// flotte.js.
+function schadenHandlungen(schaden) {
+    const handlungen = [];
 
     // Nur anbieten, solange die Meldung noch offen ist - bei 'in_arbeit'
     // laeuft schon ein Auftrag (schaden.auftraege >= 1), ein zweiter waere
@@ -166,7 +307,7 @@ function schadenMaske(schaden) {
     // zu DIESEM Rad gehoert - siehe 0019_wawi_logik.sql) - die Maske darf
     // den unsinnigen Aufruf trotzdem nicht anbieten.
     if (darfRolle('werkstatt') && schaden.status === 'offen') {
-        knoepfe.push({
+        handlungen.push({
             titel: 'Auftrag eröffnen',
             // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
             // eroeffnet einen neuen Wartungsauftrag, siehe Begruendung bei
@@ -180,6 +321,36 @@ function schadenMaske(schaden) {
             }
         });
     }
+
+    return handlungen;
+}
+
+// Feather "clipboard" mit Plus - "Auftrag eröffnen". Die einzige
+// Handlung aus schadenHandlungen() ist 'schaffend', keine 'gefaehrliche'
+// - anders als radZeilenAktionen() in flotte.js muss hier deshalb nichts
+// herausgefiltert werden (siehe Kommentar dort fuer den Fall, der es
+// erfordert).
+const SCHADEN_ICONS = {
+    auftrag: '<svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/>' +
+        '<path d="M9 3h6v3H9z"/><path d="M12 11v6M9 14h6"/></svg>'
+};
+
+// Fuenfter Parameter von zeigeListe() (Punkt 3 der Gestaltung): wer nur
+// einen Auftrag eroeffnen will, muss die Zeile dafuer nicht erst
+// oeffnen - "Erledigen" in auftragMaske() weiter unten bekommt dagegen
+// KEIN Icon: es braucht die Arbeitszeit (und optional eine Bemerkung)
+// aus der offenen Maske, ist also kein in sich abgeschlossener,
+// zeilenbezogener Klick wie "Speichern" in kunden.js.
+function schadenZeilenAktionen(schaden) {
+    return schadenHandlungen(schaden).map((h) => ({
+        titel: h.titel,
+        svg: SCHADEN_ICONS.auftrag,
+        ausfuehren: h.ausfuehren
+    }));
+}
+
+function schadenMaske(schaden) {
+    const knoepfe = schadenHandlungen(schaden);
 
     zeigeMaske(`Meldung zu ${schaden.rahmennummer}`, [
         { name: 'rahmennummer', titel: 'Rad',        wert: `${schaden.rahmennummer} (${schaden.typ_code})`, nurLesen: true },
@@ -323,6 +494,16 @@ async function auftragEroeffnen(schaden) {
 // ===== Wartungsaufträge =====
 
 async function auftraegeZeigen(vorgang) {
+    // Kein Filter in diesem Unterreiter (Gestaltungsauftrag, Punkt 2:
+    // "nach Schwere, nach Alter DER MELDUNG" - beides Eigenschaften einer
+    // Schadensmeldung, nicht eines Auftrags) - und deshalb ausdruecklich
+    // ABGERAEUMT: die Filterleiste ist ein find-or-create-Element wie die
+    // Werkzeugleiste (siehe deren Kommentar in rahmen.js) und ueberlebt
+    // sonst unveraendert einen Unterreiterwechsel weg von "Offene
+    // Schäden" - dieselbe Karteileichen-Falle, die die Werkzeugleiste
+    // hier schon einmal hatte.
+    zeigeFilterleiste(vorgang, false, null);
+
     const auftraege = await ladeListe('v_wawi_auftrag',
         'wartungsauftrag_id, auftragsnummer, fahrrad_id, rahmennummer, schadensmeldung_id, ' +
         'eroeffnet_am, erledigt_am, status, arbeitszeit_minuten, bemerkung, bearbeiter',

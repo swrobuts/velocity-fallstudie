@@ -55,6 +55,27 @@ function letzterLadeFehler(quelle) {
     return ladeFehler.get(quelle) || null;
 }
 
+// Fuer Uebersichtskacheln, die eine GESAMTZAHL brauchen, ohne dafuer die
+// zugehoerigen Zeilen zu laden (Gestaltungsauftrag, Punkt 1): "1014
+// Kunden, davon 519 gesperrt" gilt unabhaengig vom Suchtext UND von der
+// 200er-Grenze der Kundenliste (siehe kundenUebersicht() in kunden.js) -
+// eine Kachel, die das aus den geladenen (hoechstens 200) Zeilen
+// herleitete, zeigte bei 1014 Kunden einen falschen, von der
+// Nachname-Sortierung abhaengigen Zufallswert statt der echten Zahl.
+// PostgREST liefert die Gesamtzahl einer Abfrage OHNE ihre Zeilen ueber
+// { count: 'exact', head: true } - ein Zaehl-Request ist um
+// Groessenordnungen billiger, als 1014 Zeilen zu laden, nur um sie zu
+// zaehlen.
+async function zaehleZeilen(quelle, aufbau = (q) => q) {
+    const { count, error } = await aufbau(
+        supabaseClient.from(quelle).select('*', { count: 'exact', head: true }));
+    if (error) {
+        console.error(`Fehler beim Zaehlen von ${quelle}:`, error.message);
+        return null;
+    }
+    return count;
+}
+
 // Schreibende Aufrufe. Anders als beim Lesen wird der Fehler NICHT
 // geschluckt: wer bucht, muss wissen, ob die Buchung angekommen ist.
 async function rufeAuf(funktion, argumente = {}) {

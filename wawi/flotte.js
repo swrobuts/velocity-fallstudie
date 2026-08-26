@@ -19,6 +19,17 @@ bereichAnmelden({
     aufbauen: flotteAufbauen
 });
 
+// Filterzustand (Gestaltungsauftrag, Punkt 2) - modulweit wie
+// auswertungenReiter/unterbereich in den Nachbardateien, ueberlebt also
+// einen Neuaufbau (Buchung, Reiterwechsel gibt es hier nicht) und wird
+// erst durch "Filter zuruecksetzen" oder einen Bereichswechsel wieder
+// veraendert (ein Bereichswechsel selbst setzt sie NICHT zurueck - wer
+// von Flotte weg- und wieder hinwechselt, soll seinen Filter wiederfinden,
+// nicht neu einstellen muessen).
+let flotteFilterStatus = 'alle';
+let flotteFilterTyp = 'alle';
+let flotteFilterStandort = 'alle';
+
 async function flotteAufbauen() {
     // ALLERERSTE Anweisung, vor jedem await (siehe Kommentar bei
     // neuerVorgang() in rahmen.js): fuenf Buchungen hintereinander lesen
@@ -36,9 +47,15 @@ async function flotteAufbauen() {
     zeigeWerkzeugleiste(darfRolle('disposition'), 'Neues Rad anlegen', radAnlegenMaske);
 
     // 275 Raeder sind viel fuer eine ungefilterte Liste, aber nicht zu
-    // viel, um sie auf einmal zu laden. Eine Suche ist hier nicht
-    // vorgesehen (die kommt erst beim Kundenbereich) - eine Sortierung
-    // nach Rahmennummer reicht, um darin etwas wiederzufinden.
+    // viel, um sie auf einmal zu laden - anders als bei Kunden (Punkt 2
+    // des Gestaltungsauftrags: 1014 Zeilen, serverseitig auf 200
+    // begrenzt) gibt es hier weder ein .limit() noch eine serverseitige
+    // Einschraenkung. Der Status-/Typ-/Stationsfilter unten filtert
+    // deshalb bewusst im BROWSER, im bereits vollstaendig geladenen
+    // Array raeder: eine zweite Anfrage je Filteraenderung waere fuer
+    // 275 Zeilen unnoetig, und die Uebersichtskacheln (die den GESAMTEN
+    // Bestand zeigen sollen, nicht die gefilterte Teilmenge) brauchen die
+    // vollstaendige Liste ohnehin.
     const raeder = await ladeListe('v_wawi_flotte',
         'fahrrad_id, rahmennummer, typ_code, typ, hersteller, modell, status, ' +
         'angeschafft_am, standort, akkustand_prozent, letzte_wartung, ' +
@@ -51,7 +68,77 @@ async function flotteAufbauen() {
         // veraltet (ueberholt oder der Bereich gewechselt), gehoert auch
         // sein eigener Ladefehler nicht mehr zur Gegenwart - siehe
         // Kommentar bei meldeVorgang() in rahmen.js (Befund 2).
+        zeigeUebersicht(vorgang, []);
         meldeVorgang(vorgang, `Die Flotte liess sich nicht laden: ${fehler}`, 'schlecht');
+        return;
+    }
+
+    // Die Uebersicht (Punkt 1) beschreibt IMMER die ganze Flotte, nie die
+    // gefilterte Teilmenge - "womit oeffnet jemand diesen Bereich" ist
+    // eine Frage an den Gesamtbestand, nicht an eine gerade gewaehlte
+    // Einschraenkung.
+    zeigeUebersicht(vorgang, flotteUebersicht(raeder));
+
+    const { typen, standorte } = flotteFilterOptionen(raeder);
+    zeigeFilterleiste(vorgang, true, [
+        {
+            name: 'status', titel: 'Status', wert: flotteFilterStatus,
+            optionen: [
+                { wert: 'alle', text: 'Alle' },
+                { wert: 'verfuegbar', text: 'Verfügbar' },
+                { wert: 'ausgeliehen', text: 'Ausgeliehen' },
+                { wert: 'wartung', text: 'Wartung' },
+                { wert: 'defekt', text: 'Defekt' },
+                { wert: 'ausgemustert', text: 'Ausgemustert' }
+            ],
+            beiAenderung: (neu) => { flotteFilterStatus = neu; flotteAufbauen(); }
+        },
+        {
+            name: 'typ', titel: 'Radtyp', wert: flotteFilterTyp,
+            // Aus den geladenen Zeilen gewonnen statt fest eingetragen
+            // (CITY/EBIKE/CARGO heute) - ein vierter Radtyp braeuchte
+            // sonst eine eigene Codeaenderung hier, obwohl die Flotte
+            // ihn schon zeigen wuerde.
+            optionen: [{ wert: 'alle', text: 'Alle' },
+                       ...typen.map(([code, name]) => ({ wert: code, text: name }))],
+            beiAenderung: (neu) => { flotteFilterTyp = neu; flotteAufbauen(); }
+        },
+        {
+            name: 'standort', titel: 'Station', wert: flotteFilterStandort,
+            optionen: [
+                { wert: 'alle', text: 'Alle' },
+                // standort ist NULL bei laufender Fahrt oder freiem
+                // Abstellort (siehe v_wawi_flotte.standort in
+                // 0018_wawi_sichten.sql) - ein eigener Auswahlpunkt statt
+                // eines stummen Ausschlusses aus der Liste.
+                { wert: 'unterwegs', text: 'unterwegs (kein Standort)' },
+                ...standorte.map((s) => ({ wert: s, text: s }))
+            ],
+            beiAenderung: (neu) => { flotteFilterStandort = neu; flotteAufbauen(); }
+        }
+    ]);
+
+    const raederSichtbar = raederGefiltert(raeder);
+
+    if (raeder.length > 0 && raederSichtbar.length === 0) {
+        // Der Grenzfall "kein Treffer" (Erprobung, Auftrag): der Filter
+        // bleibt sichtbar und bedienbar (siehe zeigeFilterleiste() oben),
+        // nur die Tabelle weicht der Leermaske mit einem Rueckweg.
+        zeigeLeermaske(
+            vorgang,
+            'Keine Räder mit diesem Filter',
+            'Kein Rad in der Flotte erfüllt die gewählte Einschränkung.',
+            {
+                titel: 'Filter zurücksetzen',
+                ausfuehren: async () => {
+                    flotteFilterStatus = 'alle';
+                    flotteFilterTyp = 'alle';
+                    flotteFilterStandort = 'alle';
+                    await flotteAufbauen();
+                }
+            }
+        );
+        meldeVorgang(vorgang, 'Kein Rad mit diesem Filter');
         return;
     }
 
@@ -61,7 +148,7 @@ async function flotteAufbauen() {
     // Maske - wer nur den Status setzen oder ausmustern will, muss die
     // Zeile dafuer nicht erst oeffnen. Siehe radHandlungen() weiter
     // unten fuer die gemeinsame Grundlage beider Darstellungen.
-    zeigeListe(vorgang, raeder, [
+    zeigeListe(vorgang, raederSichtbar, [
         { feld: 'rahmennummer',   titel: 'Rahmennummer' },
         { feld: 'typ_code',       titel: 'Typ' },
         { feld: 'status',         titel: 'Status', klasse: statusKlasse },
@@ -75,7 +162,79 @@ async function flotteAufbauen() {
     // gerade gezeigte Bestaetigung, bevor sie jemand liest, wenn er noch
     // zu DIESEM Vorgang gehoert. Siehe Begruendung bei meldeVorgang() in
     // rahmen.js.
-    meldeVorgang(vorgang, `${raeder.length} Räder`);
+    meldeVorgang(vorgang, raederSichtbar.length === raeder.length
+        ? `${raeder.length} Räder`
+        : `${raederSichtbar.length} von ${raeder.length} Rädern`);
+}
+
+// ===== Uebersicht und Filter (Gestaltungsauftrag, Punkte 1 und 2) =====
+//
+// "Wer die Flotte oeffnet, will wissen, wie viele einsatzbereit sind und
+// wo es klemmt" - die vier Kacheln bilden genau die vier moeglichen
+// Werte von status ab (ausgemustert bleibt aussen vor: im heutigen
+// Bestand gibt es keine ausgemusterten Raeder, und ein Rad in diesem
+// Zustand braucht ohnehin keine Aufmerksamkeit mehr - siehe
+// radHandlungen() weiter unten, das auf 'ausgemustert' selbst keine
+// Handlung mehr anbietet).
+function flotteUebersicht(raeder) {
+    const gesamt = raeder.length;
+    const zaehler = (status) => raeder.filter((r) => r.status === status).length;
+    const verfuegbar = zaehler('verfuegbar');
+    const ausgeliehen = zaehler('ausgeliehen');
+    const wartung = zaehler('wartung');
+    const defekt = zaehler('defekt');
+    const anteil = (n) => (gesamt ? `${Math.round((n / gesamt) * 100)} %` : '—');
+
+    const wertMitTon = (n, ton) => {
+        const spanne = document.createElement('span');
+        if (ton) spanne.className = ton;
+        spanne.append(zahlSkaliert(String(n)));
+        return spanne;
+    };
+
+    return [
+        {
+            titel: 'Einsatzbereit',
+            wert: zahlSkaliert(String(verfuegbar)),
+            grafik: zellbalken(verfuegbar, gesamt),
+            hinweis: `${anteil(verfuegbar)} von ${gesamt} Rädern`
+        },
+        {
+            titel: 'Ausgeliehen',
+            wert: zahlSkaliert(String(ausgeliehen)),
+            grafik: zellbalken(ausgeliehen, gesamt),
+            hinweis: 'gerade unterwegs'
+        },
+        {
+            titel: 'In Wartung',
+            wert: wertMitTon(wartung, 'ton-warnung'),
+            grafik: zellbalken(wartung, gesamt, null, { farbe: 'var(--warnung-text)' }),
+            hinweis: 'in der Werkstatt'
+        },
+        {
+            titel: 'Defekt',
+            wert: wertMitTon(defekt, defekt > 0 ? 'ton-schlecht' : ''),
+            grafik: zellbalken(defekt, gesamt, null, { farbe: 'var(--schlecht)' }),
+            hinweis: 'wo es klemmt'
+        }
+    ];
+}
+
+// Optionen aus den bereits geladenen Zeilen gewonnen, nicht fest
+// eingetragen - siehe Kommentar am Aufrufort in flotteAufbauen().
+function flotteFilterOptionen(raeder) {
+    const typen = [...new Map(raeder.map((r) => [r.typ_code, r.typ])).entries()]
+        .sort(([a], [b]) => a.localeCompare(b));
+    const standorte = [...new Set(raeder.map((r) => r.standort).filter(Boolean))].sort();
+    return { typen, standorte };
+}
+
+function raederGefiltert(raeder) {
+    return raeder.filter((r) =>
+        (flotteFilterStatus === 'alle' || r.status === flotteFilterStatus) &&
+        (flotteFilterTyp === 'alle' || r.typ_code === flotteFilterTyp) &&
+        (flotteFilterStandort === 'alle'
+            || (flotteFilterStandort === 'unterwegs' ? !r.standort : r.standort === flotteFilterStandort)));
 }
 
 // Farbe traegt Bedeutung, nicht Dekoration: rot ist ein defektes Rad,
@@ -207,13 +366,23 @@ const RAD_ICONS = {
 // Fuenfter Parameter von zeigeListe() (rahmen.js) - dieselben Handlungen
 // wie radMaske() unten, aus radHandlungen() gewonnen, hier nur mit Icon
 // statt mit Text dargestellt.
+//
+// OHNE 'gefaehrlich': "eine gefaehrliche Handlung gehoert nicht als Icon
+// in eine Zeile" (Gestaltungsauftrag, Punkt 3) - 'ausmustern' bleibt
+// deshalb der Maske vorbehalten, trotz eigenem Bestaetigungsdialog. In
+// der ersten Fassung dieser Funktion (Schritt A, vor dieser Regel) stand
+// hier noch ein rot eingefaerbtes Ausmustern-Icon; diese Aufgabe zieht
+// die Regel nachtraeglich gerade, damit Flotte nicht eine andere
+// Formsprache traegt als Kunden (Loeschung nach Art. 17 bleibt ebenso
+// aus der Zeile) und Instandhaltung.
 function radZeilenAktionen(rad) {
-    return radHandlungen(rad).map((h) => ({
-        titel: h.titel,
-        svg: RAD_ICONS[h.ziel],
-        art: h.art === 'gefaehrlich' ? 'gefaehrlich' : undefined,
-        ausfuehren: h.ausfuehren
-    }));
+    return radHandlungen(rad)
+        .filter((h) => h.art !== 'gefaehrlich')
+        .map((h) => ({
+            titel: h.titel,
+            svg: RAD_ICONS[h.ziel],
+            ausfuehren: h.ausfuehren
+        }));
 }
 
 function radMaske(rad) {

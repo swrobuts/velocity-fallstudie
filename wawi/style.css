@@ -549,6 +549,66 @@ button {
   color: var(--warnung-text);
 }
 
+/* Dasselbe für die schlechte Bedeutung (td.schlecht) - Flotte (defekte
+   Räder) und Instandhaltung (fahruntaugliche, noch offene Meldungen)
+   brauchen beide eine Kachel, die eindeutig "hier klemmt es" statt
+   "hier eine Zahl" sagt. */
+.ton-schlecht {
+  color: var(--schlecht);
+}
+
+/* ===== Filterleiste (zeigeFilterleiste, Gestaltungsauftrag Bedienelemente) =====
+   Dieselbe Ruhe wie .werkzeugleiste - eine schmale Zeile mit ein paar
+   beschrifteten Reglern, keine zweite Farbwelt neben Werkzeug- und
+   Übersichtsleiste. */
+.filterleiste {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--linie);
+}
+
+.filterfeld {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.filterfeld label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-leise);
+}
+
+.filterfeld select {
+  padding: 4px 6px;
+  border: 1px solid var(--linie);
+  border-radius: 4px;
+  font: inherit;
+  color: var(--text);
+  background: var(--flaeche);
+}
+
+.filterfeld-schieber {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterfeld-schieber input[type="range"] {
+  width: 140px;
+}
+
+.filterfeld-wert {
+  font-size: 12px;
+  color: var(--text-leise);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 /* ===== Zeichenbausteine: Sparkline, Zellbalken, typografische Skalierung
    (sparkline()/zellbalken()/zahlSkaliert() in rahmen.js) ===== */
 

@@ -657,6 +657,149 @@ function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
     leiste.append(knopf);
 }
 
+// ===== Filterleiste (Gestaltungsauftrag, Punkt 2) =====
+//
+// "Dann ist die UI nicht besonders kreativ, es fehlen oftmals Filter,
+// Slider oder andere Bedienelemente" - woertlich der Auftrag. Flotte
+// (Status, Radtyp, Station), Kunden (Status) und Instandhaltung (Schwere,
+// Alter) hatten das unabhaengig voneinander gebraucht - derselbe Befund
+// wie bei der Werkzeugleiste oben (siehe dortiger Kommentar): ein
+// Baustein hier statt vier eigene Bauarten. Stationen bekommt BEWUSST
+// keinen: zehn Zeilen brauchen keinen Filter, und ein Bedienelement, das
+// nichts filtert, ist Zierrat (Auftrag).
+//
+// Find-or-create auf eine feste id, unmittelbar vor listenKoerper()
+// eingehaengt - dieselbe Machart wie uebersichtsstreifen()/reiterleiste()/
+// werkzeugleiste() oben, aus demselben Grund: der Streifen soll stabil an
+// derselben Stelle stehen, unabhaengig davon, in welcher Reihenfolge ein
+// Bereich seine Bausteine aufbaut. Ruft ein Bereich zeigeUebersicht() VOR
+// zeigeFilterleiste() auf (wie alle vier Verbraucher es tun), landet die
+// Filterleiste dank derselben insertBefore(el, listenKoerper())-Logik
+// zwischen Uebersicht und Tabelle - die Uebersicht beschreibt IMMER den
+// gesamten Bestand, der Filter schraenkt NUR die Tabelle darunter ein.
+function filterleiste() {
+    const wurzel = document.getElementById('arbeitsliste');
+    let el = document.getElementById('filterleiste');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'filterleiste';
+        el.className = 'filterleiste';
+    }
+    wurzel.insertBefore(el, listenKoerper());
+    el.replaceChildren();
+    return el;
+}
+
+// kennung: dieselbe Absicherung wie bei zeigeUebersicht()/zeigeListe() -
+// ein Reiterwechsel, dessen Filterleiste erst nach einem eigenen await
+// zurueckkommt, dürfte einen inzwischen überholten Bildschirm nicht mehr
+// beschreiben.
+//
+// sichtbar=false raeumt die Leiste komplett ab statt sie leer stehen zu
+// lassen - dasselbe Prinzip wie bei zeigeWerkzeugleiste(false, ...) und
+// aus demselben Grund noetig wie dort: Instandhaltung zeigt den Alters-/
+// Schwere-Filter NUR im Unterreiter "Offene Schäden", nicht bei
+// "Wartungsaufträge" - ohne dieses Abraeumen bliebe die Filterleiste des
+// vorherigen Unterreiters als Karteileiche stehen (dieselbe Falle, die
+// werkzeugleiste() oben fuer genau diesen Bereich schon einmal gefunden
+// hat).
+//
+// filter: [{ name, titel, typ?, optionen?, wert, beiAenderung(neuerWert),
+//            min?, max?, step?, beschriftung? }]
+// - typ 'auswahl' (Vorgabe): <select> mit optionen [{wert, text}] -
+//   feuert sofort bei Auswahl, kein Zumuellen der Statuszeile moeglich
+//   (ein select aendert sich nicht waehrend des Tippens).
+// - typ 'schieber': <input type="range"> zwischen min und max - feuert
+//   bei JEDER Mausbewegung ein 'input'-Ereignis; ohne Verzoegerung loeste
+//   das bei jedem Pixel einen kompletten Neuaufbau aus. 300ms Verzoegerung,
+//   dieselbe Zeitspanne wie die Kundensuche (kunden.js) - danach ERST
+//   beiAenderung() aufgerufen, mit dem zuletzt gezogenen Wert.
+// - beschriftung(wert) (nur 'schieber'): formatiert den aktuellen Wert
+//   fuer die Anzeige NEBEN dem Schieber ("≥ 3 Std." statt der blossen
+//   Zahl 3) UND fuer aria-valuetext, damit ein Bildschirmleser dieselbe
+//   Einordnung hoert wie ein sehender Blick.
+//
+// Die Vorgangs-Kennung UND der Schieber zusammen (Auftrag: "der Filter
+// muss die Vorgangs-Kennung beachten"): die 300ms-Verzoegerung eines
+// Schiebers kann laenger laufen als der Bereich lebt, den er gerade
+// filtert - Schieber gezogen, sofort zu einem anderen Bereich (oder
+// Unterreiter) gewechselt, BEVOR die 300ms um sind. Ohne Pruefung riefe
+// der dann verspaetet feuernde Timer beiAenderung() trotzdem auf - eine
+// Funktion, die typischerweise den *Aufbauen()-Vorgang eines Bereichs
+// anstoesst, der laengst nicht mehr der aktuelle ist. istAktuellerVorgang()
+// faengt genau das ab: kennung aendert sich nur, wenn seitdem ein neuer
+// Vorgang begonnen hat (neuer Bereich, neuer Unterreiter, oder derselbe
+// Bereich erneut) - dann bleibt der verspaetete Aufruf wortlos aus.
+function zeigeFilterleiste(kennung, sichtbar, filter) {
+    if (!istAktuellerVorgang(kennung)) return;
+    if (!sichtbar || !filter || filter.length === 0) {
+        document.getElementById('filterleiste')?.remove();
+        return;
+    }
+
+    const leiste = filterleiste();
+    for (const f of filter) {
+        const feld = document.createElement('div');
+        feld.className = 'filterfeld';
+
+        const label = document.createElement('label');
+        label.textContent = f.titel;
+        label.htmlFor = `filter-${f.name}`;
+        feld.append(label);
+
+        if (f.typ === 'schieber') {
+            const anzeige = document.createElement('span');
+            anzeige.className = 'filterfeld-wert';
+            const beschriften = (wert) => (f.beschriftung ? f.beschriftung(wert) : String(wert));
+            anzeige.textContent = beschriften(f.wert);
+
+            const eingabe = document.createElement('input');
+            eingabe.type = 'range';
+            eingabe.id = `filter-${f.name}`;
+            eingabe.min = f.min;
+            eingabe.max = f.max;
+            eingabe.step = f.step ?? 1;
+            eingabe.value = f.wert;
+            eingabe.setAttribute('aria-valuetext', beschriften(f.wert));
+
+            let verzoegerung = null;
+            eingabe.addEventListener('input', () => {
+                const wert = Number(eingabe.value);
+                const text = beschriften(wert);
+                anzeige.textContent = text;
+                eingabe.setAttribute('aria-valuetext', text);
+                clearTimeout(verzoegerung);
+                verzoegerung = setTimeout(() => {
+                    if (!istAktuellerVorgang(kennung)) return;   // siehe Kommentar oben
+                    f.beiAenderung(wert);
+                }, 300);
+            });
+
+            const schieberZeile = document.createElement('div');
+            schieberZeile.className = 'filterfeld-schieber';
+            schieberZeile.append(eingabe, anzeige);
+            feld.append(schieberZeile);
+        } else {
+            const eingabe = document.createElement('select');
+            eingabe.id = `filter-${f.name}`;
+            for (const option of f.optionen) {
+                const opt = document.createElement('option');
+                opt.value = option.wert;
+                opt.textContent = option.text;
+                if (option.wert === f.wert) opt.selected = true;
+                eingabe.append(opt);
+            }
+            eingabe.addEventListener('change', () => {
+                if (!istAktuellerVorgang(kennung)) return;
+                f.beiAenderung(eingabe.value);
+            });
+            feld.append(eingabe);
+        }
+
+        leiste.append(feld);
+    }
+}
+
 // ===== Übersichtsstreifen (Gestaltungsauftrag Auswertungen, Punkt 1) =====
 //
 // "Interessant wäre auch immer eine kleine Übersicht über den Tabellen,
