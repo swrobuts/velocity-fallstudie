@@ -194,7 +194,26 @@ async function kundenAufbauen(suchtext) {
         return;
     }
 
-    zeigeUebersicht(vorgang, kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl));
+    // NACH dem Promise.all oben, NICHT darin - eigener, sequentieller
+    // Aufruf (Punkt 5, Verteilung): ladeListe() (daten.js) verwaltet
+    // ladeFehler/ladeZaehler ueber die "quelle" ALS SCHLUESSEL - ZWEI
+    // GLEICHZEITIGE ladeListe('v_wawi_kunde', ...)-Aufrufe (die grosse
+    // Arbeitsliste oben UND diese schlanke Ladeliste) teilten sich sonst
+    // denselben Zaehler und koennten sich je nach Antwortreihenfolge
+    // gegenseitig als "veraltet" markieren (siehe Kopfkommentar bei
+    // ladeListe() in daten.js: der Mechanismus ist fuer AUFEINANDER-
+    // FOLGENDE Aufrufe derselben Quelle gedacht, nicht fuer zwei
+    // ABSICHTLICH gleichzeitig unterschiedliche Projektionen derselben
+    // Sicht). Sequenziell nacheinander vermeidet die Kollision vollstaendig
+    // - der Zeitverlust ist bei 1014 Zeilen mit einer einzigen Spalte
+    // vernachlaessigbar. Ein Fehlschlag HIER wird bewusst NICHT wie oben
+    // behandelt (kein Abbruch der ganzen Kundenliste nur wegen einer
+    // Verteilungskachel) - ladeListe() liefert dann [], und
+    // umsatzKonzentration() (siehe kundenUebersicht()) laesst die Kachel
+    // schlicht weg ("lieber keine Kachel als eine falsche").
+    const alleUmsaetze = await ladeListe('v_wawi_kunde', 'umsatz_brutto');
+
+    zeigeUebersicht(vorgang, kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleUmsaetze));
 
     zeigeFilterleiste(vorgang, true, [
         {
@@ -300,7 +319,7 @@ async function kundenAufbauen(suchtext) {
 // woertlich der Auftrag. Alle drei Zahlen kommen aus zaehleZeilen()
 // (daten.js), nicht aus der geladenen (hoechstens 200 Zeilen tragenden)
 // Arbeitsliste - siehe Kommentar an der Aufrufstelle in kundenAufbauen().
-function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl) {
+function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleUmsaetze) {
     const anzeige = (n) => (n === null ? '—' : n.toLocaleString('de-DE'));
 
     const kacheln = [
@@ -315,7 +334,11 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl) {
             titel: 'Gesperrt',
             wert,
             grafik: gesamtAnzahl ? zellbalken(gesperrtAnzahl, gesamtAnzahl, null, { farbe: 'var(--warnung-text)' }) : undefined,
-            hinweis: 'Es gibt derzeit keine Funktion, die eine Sperrung aufhebt'
+            // Echter Bezug (Gestaltungsauftrag Punkt 1: "2 von 10 - dann
+            // ist es ein Anteil") direkt im Text.
+            hinweis: gesamtAnzahl
+                ? `${gesperrtAnzahl} von ${gesamtAnzahl} Kunden - es gibt derzeit keine Funktion, die eine Sperrung aufhebt`
+                : 'Es gibt derzeit keine Funktion, die eine Sperrung aufhebt'
         });
     }
 
@@ -324,11 +347,92 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl) {
             titel: 'Ohne Adresse',
             wert: zahlSkaliert(anzeige(ohneAdresseAnzahl)),
             grafik: gesamtAnzahl ? zellbalken(ohneAdresseAnzahl, gesamtAnzahl) : undefined,
-            hinweis: 'Lässt sich in der Maske nachtragen'
+            hinweis: gesamtAnzahl
+                ? `${ohneAdresseAnzahl} von ${gesamtAnzahl} Kunden - lässt sich in der Maske nachtragen`
+                : 'Lässt sich in der Maske nachtragen'
         });
     }
 
+    // ===== Verteilung (Gestaltungsauftrag Punkt 5) =====
+    //
+    // "Wie verteilt sich der Umsatz auf die Kundschaft - tragen wenige
+    // den Großteil?" - woertlich eines der drei Beispiele des Auftrags.
+    // alleUmsaetze (siehe kundenAufbauen()) traegt umsatz_brutto ALLER
+    // 1014 Kunden, nicht nur der hoechstens 200 GELADENEN - dieselbe
+    // Ueberlegung wie bei gesamtAnzahl/gesperrtAnzahl/ohneAdresseAnzahl
+    // oben (per zaehleZeilen()): eine Verteilung ueber nur 200 von 1014
+    // waere genau die "Luege", vor der der Auftrag beim Statusfilter
+    // schon warnt (siehe Kommentar bei kundenFilterStatus).
+    //
+    // umsatzKonzentration() selbst liefert null bei leerem/fehlgeschlagenem
+    // Laden (siehe dort) - erst das Ergebnis pruefen, NICHT alleUmsaetze
+    // (ein leeres Array [] ist truthy in JavaScript, "if (alleUmsaetze)"
+    // allein haette bei einem Ladefehler ein null-Objekt in kacheln
+    // geschoben und baueKachel() in rahmen.js beim Lesen von kachel.titel
+    // zum Absturz gebracht).
+    const konzentration = umsatzKonzentration(alleUmsaetze);
+    if (konzentration) kacheln.push(konzentration);
+
     return kacheln;
+}
+
+// alleUmsaetze: Zeilen mit genau EINEM Feld, umsatz_brutto, je Kunde
+// (siehe kundenAufbauen()) - v_wawi_kunde.umsatz_brutto ist die Summe
+// ALLER Rechnungsbetraege des Kunden (brutto, inkl. USt.), UNABHAENGIG
+// vom Zahlungsstatus (siehe Kommentar an der Sicht, 0018_wawi_sichten.sql).
+//
+// WICHTIG, gegen die Datenbank geprueft (siehe Bericht): das ist NICHT
+// dieselbe Zahl wie "Umsatz gesamt" in den Auswertungen (35.454,47 €).
+// Jene Summe kommt aus entgeltposition.betrag (den einzelnen Fahrt-
+// Entgelten, netto) über v_wawi_umsatz_radtyp/_kundengruppe; diese hier
+// aus rechnung.betrag_brutto (dem tatsaechlich gestellten Rechnungs-
+// betrag, brutto) über v_wawi_kunde - beide Wege fassen "Umsatz"
+// unterschiedlich (37.262,75 € brutto laut Rechnung gegen 35.454,47 €
+// netto laut Fahrtentgelt, gegen die Datenbank nachgerechnet). Deshalb
+// hier bewusst NIE das Wort "Umsatz" fuer diese Kachel, sondern
+// "Rechnungsvolumen" - zwei echte, aber verschiedene Zahlen unter
+// demselben Namen waeren genau die Art Fehler, vor der Punkt 5 warnt
+// ("rechne jede Zahl unabhaengig gegen die Datenbank nach").
+//
+// TOP-10-%-ANTEIL statt eines Gini-Koeffizienten oder aehnlicher Mass-
+// zahlen: "tragen wenige den Grossteil" (Auftrag, woertlich) beantwortet
+// sich direkt und ohne weitere Erklaerung noetig als "die oberen 10 % der
+// Kundschaft tragen X % des Rechnungsvolumens" - ceil(n * 0.1), nicht
+// floor(): bei 1014 Kunden sind das 102 (nicht 101), lieber einen Kunden
+// zu viel im "oberen Zehntel" als eines zu wenig.
+//
+// MEDIAN NEBEN DEM MITTEL (Auftrag, woertlich als Beispiel genannt): bei
+// 1014 Kunden, davon 519 OHNE JEDE RECHNUNG (identisch mit "Gesperrt"
+// oben, gegen die Datenbank geprueft - siehe Bericht), liegt der Median
+// bei 0 €, waehrend das Mittel wegen der wenigen zahlungsstarken Kunden
+// trotzdem deutlich darueber liegt - genau die Schiefe, die eine einzelne
+// Durchschnittszahl verschluckt haette.
+function umsatzKonzentration(alleUmsaetze) {
+    if (!alleUmsaetze || alleUmsaetze.length === 0) return null;
+
+    const geldFormat = (betrag) => Number(betrag).toLocaleString('de-DE',
+        { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+
+    const werteAbsteigend = alleUmsaetze.map((z) => Number(z.umsatz_brutto) || 0).sort((a, b) => b - a);
+    const n = werteAbsteigend.length;
+    const gesamt = werteAbsteigend.reduce((s, w) => s + w, 0);
+    const zehntel = Math.max(1, Math.ceil(n * 0.1));
+    const top10Summe = werteAbsteigend.slice(0, zehntel).reduce((s, w) => s + w, 0);
+    const mitteIndex = Math.floor((n - 1) / 2);
+    // werteAbsteigend ist absteigend sortiert - der Median (die mittleren
+    // Werte) ist davon unabhaengig derselbe wie bei aufsteigender Sortierung.
+    const median = n % 2 === 1 ? werteAbsteigend[mitteIndex] : (werteAbsteigend[mitteIndex] + werteAbsteigend[mitteIndex + 1]) / 2;
+    const mittel = gesamt / n;
+    const anteilProzent = gesamt ? (top10Summe / gesamt * 100).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '0';
+
+    return {
+        titel: 'Rechnungsvolumen: obere 10 %',
+        wert: `${anteilProzent} %`,
+        grafik: gesamt ? zellbalken(top10Summe, gesamt) : undefined,
+        hinweis: `${zehntel} von ${n} Kunden vereinen ${geldFormat(top10Summe)} von ${geldFormat(gesamt)} ` +
+            `Rechnungsvolumen (inkl. USt., ≠ Umsatz in Auswertungen) · Median ${geldFormat(median)}, ` +
+            `Mittel ${geldFormat(mittel)} je Kunde`
+    };
 }
 
 // Fuenfter Parameter von zeigeListe() (Punkt 3 der Gestaltung): einzig

@@ -235,6 +235,21 @@ function reiheJeMonat(zeilen, feld) {
         .map(([monat, wert]) => ({ monat, wert }));
 }
 
+// Veränderung des letzten gegenüber dem vorletzten Element einer nach
+// Monat aufsteigend sortierten Reihe (siehe reiheJeMonat() oben) - für
+// die kachel.veraenderung-Zeile der Übersichtskacheln (Gestaltungsauftrag
+// Punkt 2, siehe veraenderungZeile() weiter unten). null bei weniger als
+// zwei Monaten ODER einem Vormonat von 0 (derselbe Schutz wie bei
+// groessterSprung() weiter unten: eine Veränderung "ausgehend von 0" ist
+// keine sinnvolle Prozentangabe) - dieselbe "lieber keine Angabe als eine
+// falsche" wie überall sonst in dieser Datei.
+function letzteVeraenderung(reiheAufsteigend) {
+    if (reiheAufsteigend.length < 2) return null;
+    const vorher = reiheAufsteigend[reiheAufsteigend.length - 2].wert;
+    const jetzt = reiheAufsteigend[reiheAufsteigend.length - 1].wert;
+    return vorher ? (jetzt - vorher) / vorher : null;
+}
+
 // Das Element mit dem größten (sucheMinimum=false) bzw. kleinsten
 // (sucheMinimum=true) Wert in feld - für "die volatilste Station", "der
 // schwächste Monat", ohne für jeden Fall eine eigene Schleife.
@@ -282,6 +297,27 @@ function veraenderungFormat(veraenderung) {
     if (veraenderung === null) return '—';
     const vorzeichen = veraenderung > 0 ? '+' : '';
     return `${vorzeichen}${(veraenderung * 100).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`;
+}
+
+// ===== Veränderungszeile für die Übersichtskacheln (Gestaltungsauftrag
+// Punkt 2, Vorbild-Auftrag: "▼ −5 ggü. Vorm.") =====
+//
+// kachel.veraenderung (siehe baueKachel() in rahmen.js) - EIN
+// Richtungspfeil plus veraenderungFormat() plus ein Bezugstext ("ggü.
+// Vormonat"). Bewusst kein eigenes Farbschema für die Richtung (siehe
+// die CSS-Regel bei .uebersichtskachel-veraenderung in style.css für die
+// ausführliche Begründung: derselbe Grundsatz wie bei
+// veraenderungFormat() selbst, ein Anstieg ist nicht per se gut).
+// null (kein Vormonat, siehe veraenderungFormat() oben) liefert KEIN
+// Element zurück, sondern null - eine Kachel ohne echten Vergleich soll
+// keine leere/sinnlose Veränderungszeile zeigen, sondern gar keine (siehe
+// "ohne kachel.veraenderung ändert sich nichts", baueKachel()).
+function veraenderungZeile(veraenderung, bezugstext = 'ggü. Vormonat') {
+    if (veraenderung === null) return null;
+    const zeile = document.createElement('span');
+    const pfeil = veraenderung > 0 ? '▲' : veraenderung < 0 ? '▼' : '▬';
+    zeile.textContent = `${pfeil} ${veraenderungFormat(veraenderung)} ${bezugstext}`;
+    return zeile;
 }
 
 // Schwelle, ab der eine Veränderung in der Tabelle hervorgehoben wird -
@@ -914,23 +950,30 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
 
     const kachelnUmsatz = {
         titel: 'Umsatz gesamt',
+        veraenderung: veraenderungZeile(letzteVeraenderung(umsatzLetztesJahr)),
         wert: zahlSkaliert(geldFormat(gesamtUmsatz)),
-        grafik: sparkline(umsatzLetztesJahr.map((r) => r.wert), {
-            beschriftung: `Monatsumsatz der letzten zwölf Monate, von ` +
-                `${geldFormat(Math.min(...umsatzLetztesJahr.map((r) => r.wert)))} bis ` +
-                `${geldFormat(Math.max(...umsatzLetztesJahr.map((r) => r.wert)))}`
-        }),
+        grafik: saeulenSparkline(umsatzLetztesJahr.map((r) => r.wert),
+            `Monatsumsatz der letzten zwölf Monate (${monatFormat(umsatzLetztesJahr[0].monat)} bis ` +
+            `${monatFormat(umsatzLetztesJahr.at(-1).monat)}), von ` +
+            `${geldFormat(Math.min(...umsatzLetztesJahr.map((r) => r.wert)))} bis ` +
+            `${geldFormat(Math.max(...umsatzLetztesJahr.map((r) => r.wert)))} - die dunkle Säule ganz rechts ` +
+            `ist der aktuelle Monat, ${monatFormat(umsatzLetztesJahr.at(-1).monat)} mit ` +
+            `${geldFormat(umsatzLetztesJahr.at(-1).wert)}`
+        ),
         hinweis: 'Verlauf der letzten 12 Monate'
     };
 
     const kachelnFahrten = {
         titel: 'Fahrten gesamt',
+        veraenderung: veraenderungZeile(letzteVeraenderung(fahrtenLetztesJahr)),
         wert: zahlSkaliert(zahlFormat(gesamtFahrten)),
-        grafik: sparkline(fahrtenLetztesJahr.map((r) => r.wert), {
-            beschriftung: `Fahrten je Monat: ${zahlFormat(tiefpunkt.wert)} im ${monatFormat(tiefpunkt.monat)} ` +
-                `am niedrigsten, ${zahlFormat(hoehepunkt.wert)} im ${monatFormat(hoehepunkt.monat)} am höchsten`,
-            markierIndex: fahrtenLetztesJahr.indexOf(hoehepunkt)
-        }),
+        grafik: saeulenSparkline(fahrtenLetztesJahr.map((r) => r.wert),
+            `Fahrten je Monat, letzte zwölf Monate: ${zahlFormat(tiefpunkt.wert)} im ${monatFormat(tiefpunkt.monat)} ` +
+            `am niedrigsten, ${zahlFormat(hoehepunkt.wert)} im ${monatFormat(hoehepunkt.monat)} am höchsten - die ` +
+            `dunkle Säule ganz rechts ist der aktuelle Monat, ${monatFormat(fahrtenLetztesJahr.at(-1).monat)} mit ` +
+            `${zahlFormat(fahrtenLetztesJahr.at(-1).wert)} Fahrten`,
+            { markierIndizes: [fahrtenLetztesJahr.indexOf(hoehepunkt)] }
+        ),
         hinweis: `Jahresgang: ${monatFormat(tiefpunkt.monat)} am niedrigsten, ${monatFormat(hoehepunkt.monat)} am höchsten`
     };
 
@@ -996,11 +1039,16 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
         kacheln.push({
             titel: 'Auffällig: Umsatz je Fahrt City-Bike',
             wert: wertKnoten,
-            grafik: sparkline(cityBetrieb.map((z) => z.umsatz_je_fahrt), {
-                beschriftung: `Umsatz je Fahrt City-Bike: Sprung von ${geldFormat(sprung.vorherigerWert)} ` +
-                    `auf ${geldFormat(sprung.wert)} ab ${monatFormat(sprung.monat)}`,
-                markierIndex: sprung.index
-            }),
+            // aktuellIndex: null - diese Reihe zeigt einen SPRUNG
+            // (Tarifwechsel), keinen "wo stehen wir heute"-Verlauf; die
+            // markierte Säule ist der Sprungmonat, nicht "jetzt" (siehe
+            // Kopfkommentar bei saeulenSparkline() in rahmen.js).
+            grafik: saeulenSparkline(cityBetrieb.map((z) => z.umsatz_je_fahrt),
+                `Umsatz je Fahrt City-Bike, ${cityBetrieb.length} Monate ab ${monatFormat(cityBetrieb[0].monat)}: ` +
+                `Sprung von ${geldFormat(sprung.vorherigerWert)} auf ${geldFormat(sprung.wert)} ` +
+                `ab ${monatFormat(sprung.monat)}, in Rot markiert`,
+                { markierIndizes: [sprung.index], aktuellIndex: null }
+            ),
             hinweis: `${veraenderungFormat(sprung.veraenderung)} ab ${monatFormat(sprung.monat)} - Tarifwechsel`
         });
     }
@@ -1137,10 +1185,13 @@ function umsatzKundengruppeUebersicht(zeilen) {
     const kacheln = [
         {
             titel: 'Umsatz gesamt',
+            veraenderung: veraenderungZeile(letzteVeraenderung(letzteZwoelf)),
             wert: zahlSkaliert(geldFormat(gesamtUmsatz)),
-            grafik: sparkline(letzteZwoelf.map((r) => r.wert), {
-                beschriftung: 'Monatsumsatz der letzten zwölf Monate, dieselbe Reihe wie im Reiter "Umsatz nach Radtyp"'
-            }),
+            grafik: saeulenSparkline(letzteZwoelf.map((r) => r.wert),
+                `Monatsumsatz der letzten zwölf Monate (${monatFormat(letzteZwoelf[0].monat)} bis ` +
+                `${monatFormat(letzteZwoelf.at(-1).monat)}), dieselbe Reihe wie im Reiter "Umsatz nach Radtyp" - ` +
+                `die dunkle Säule ganz rechts ist der aktuelle Monat, ${geldFormat(letzteZwoelf.at(-1).wert)}`
+            ),
             hinweis: 'Verlauf der letzten 12 Monate - Kontrollrechnung zum Reiter "Umsatz nach Radtyp"'
         },
         {
@@ -1290,6 +1341,8 @@ async function kmCo2Zeigen(vorgang) {
 function kmCo2Uebersicht(zeilen) {
     const co2Reihe = reiheJeMonat(zeilen, 'co2_ersparnis_kg');
     const kmReihe = reiheJeMonat(zeilen, 'kilometer');
+    const co2LetzteZwoelf = co2Reihe.slice(-12);
+    const kmLetzteZwoelf = kmReihe.slice(-12);
     const gesamtCo2 = co2Reihe.reduce((s, r) => s + r.wert, 0);
     const gesamtKm = kmReihe.reduce((s, r) => s + r.wert, 0);
     const gesamtFahrten = zeilen.reduce((s, z) => s + z.fahrten, 0);
@@ -1300,20 +1353,26 @@ function kmCo2Uebersicht(zeilen) {
     return [
         {
             titel: 'CO₂-Ersparnis gesamt',
+            veraenderung: veraenderungZeile(letzteVeraenderung(co2LetzteZwoelf)),
             wert: zahlSkaliert(kgFormat(gesamtCo2)),
-            grafik: sparkline(co2Reihe.slice(-12).map((r) => r.wert), {
-                beschriftung: `CO2-Ersparnis je Monat, letzte zwölf Monate, von ` +
-                    `${kgFormat(Math.min(...co2Reihe.slice(-12).map((r) => r.wert)))} bis ` +
-                    `${kgFormat(Math.max(...co2Reihe.slice(-12).map((r) => r.wert)))}`
-            }),
+            grafik: saeulenSparkline(co2LetzteZwoelf.map((r) => r.wert),
+                `CO2-Ersparnis je Monat, letzte zwölf Monate (${monatFormat(co2LetzteZwoelf[0].monat)} bis ` +
+                `${monatFormat(co2LetzteZwoelf.at(-1).monat)}), von ` +
+                `${kgFormat(Math.min(...co2LetzteZwoelf.map((r) => r.wert)))} bis ` +
+                `${kgFormat(Math.max(...co2LetzteZwoelf.map((r) => r.wert)))} - die dunkle Säule ganz rechts ` +
+                `ist der aktuelle Monat, ${kgFormat(co2LetzteZwoelf.at(-1).wert)}`
+            ),
             hinweis: 'Verlauf der letzten 12 Monate'
         },
         {
             titel: 'Kilometer gesamt',
+            veraenderung: veraenderungZeile(letzteVeraenderung(kmLetzteZwoelf)),
             wert: zahlSkaliert(kmFormat(gesamtKm)),
-            grafik: sparkline(kmReihe.slice(-12).map((r) => r.wert), {
-                beschriftung: `Gefahrene Kilometer je Monat, letzte zwölf Monate`
-            }),
+            grafik: saeulenSparkline(kmLetzteZwoelf.map((r) => r.wert),
+                `Gefahrene Kilometer je Monat, letzte zwölf Monate (${monatFormat(kmLetzteZwoelf[0].monat)} bis ` +
+                `${monatFormat(kmLetzteZwoelf.at(-1).monat)}) - die dunkle Säule ganz rechts ist der aktuelle ` +
+                `Monat, ${kmFormat(kmLetzteZwoelf.at(-1).wert)}`
+            ),
             hinweis: 'Verlauf der letzten 12 Monate'
         },
         {
@@ -1464,11 +1523,15 @@ function stationsauslastungUebersicht(zeilen) {
         {
             titel: 'Stationen',
             wert: zahlFormat(zeilen.length),
-            grafik: sparkline(zeilen.map((z) => z.fuellstand), {
-                beschriftung: `Füllstand der ${zeilen.length} Stationen, zwischen ` +
-                    `${prozentFormat(Math.min(...zeilen.map((z) => z.fuellstand)))} und ` +
-                    `${prozentFormat(Math.max(...zeilen.map((z) => z.fuellstand)))}`
-            }),
+            // aktuellIndex: null - eine "letzte Station nach Nummer" ist
+            // kein aktueller Zeitraum, die Hervorhebung waere hier
+            // sinnlos (siehe Kopfkommentar bei saeulenSparkline()).
+            grafik: saeulenSparkline(zeilen.map((z) => z.fuellstand),
+                `Füllstand der ${zeilen.length} Stationen, sortiert nach Stationsnummer, zwischen ` +
+                `${prozentFormat(Math.min(...zeilen.map((z) => z.fuellstand)))} und ` +
+                `${prozentFormat(Math.max(...zeilen.map((z) => z.fuellstand)))}`,
+                { aktuellIndex: null }
+            ),
             hinweis: 'Füllstand je Station, sortiert nach Stationsnummer'
         }
     ];
@@ -1490,18 +1553,23 @@ function stationsauslastungUebersicht(zeilen) {
         kacheln.push({
             titel: 'Volle Stationen',
             wert,
-            hinweis: volle.map((z) => z.name).join(', ')
+            // Echter Bezug im Hinweis (Gestaltungsauftrag Punkt 1: "2 von
+            // 10 - dann ist es ein Anteil"), auch ohne eigene Balkengrafik.
+            hinweis: `${zahlFormat(volle.length)} von ${zahlFormat(zeilen.length)} Stationen: ` +
+                volle.map((z) => z.name).join(', ')
         });
     }
 
     kacheln.push({
         titel: 'Größtes Ungleichgewicht',
         wert: schwaechsteStation.name,
-        grafik: sparkline(zeilen.map((z) => z.saldo), {
-            beschriftung: `Saldo der ${zeilen.length} Stationen, von ${zahlFormat(Math.min(...zeilen.map((z) => z.saldo)))} ` +
-                `bis ${zahlFormat(Math.max(...zeilen.map((z) => z.saldo)))} - am niedrigsten bei ${schwaechsteStation.name}`,
-            markierIndex: zeilen.indexOf(schwaechsteStation)
-        }),
+        grafik: saeulenSparkline(zeilen.map((z) => z.saldo),
+            `Saldo der ${zeilen.length} Stationen, sortiert nach Stationsnummer, von ` +
+            `${zahlFormat(Math.min(...zeilen.map((z) => z.saldo)))} bis ` +
+            `${zahlFormat(Math.max(...zeilen.map((z) => z.saldo)))} - am niedrigsten (rot markiert) ` +
+            `bei ${schwaechsteStation.name}`,
+            { markierIndizes: [zeilen.indexOf(schwaechsteStation)], aktuellIndex: null }
+        ),
         hinweis: `Saldo ${zahlFormat(schwaechsteStation.saldo)} - gibt mehr Räder ab, als sie bekommt`
     });
 

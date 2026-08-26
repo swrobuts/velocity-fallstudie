@@ -130,9 +130,13 @@ function stationenUebersicht(stationen) {
             // darunter - dieselbe Idee wie stationsauslastungUebersicht()
             // in auswertungen.js, hier aus belegt/kapazitaet statt aus
             // der dortigen eigenen fuellstand-Spalte berechnet.
-            grafik: sparkline(stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0)), {
-                beschriftung: `Füllstand der ${gesamt} Stationen, sortiert nach Stationsnummer`
-            }),
+            // aktuellIndex: null - "die letzte Station nach Nummer" ist
+            // kein aktueller Zeitraum (siehe Kopfkommentar bei
+            // saeulenSparkline() in rahmen.js).
+            grafik: saeulenSparkline(stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0)),
+                `Füllstand der ${gesamt} Stationen, sortiert nach Stationsnummer`,
+                { aktuellIndex: null }
+            ),
             hinweis: stillgelegt ? `${stillgelegt} davon stillgelegt` : 'alle in Betrieb'
         }
     ];
@@ -145,7 +149,12 @@ function stationenUebersicht(stationen) {
             titel: 'Volle Stationen',
             wert,
             grafik: zellbalken(volle.length, gesamt, null, { farbe: 'var(--warnung-text)' }),
-            hinweis: `${volle.map((s) => s.name).join(', ')} - nimmt keine Rückgabe an`
+            // Echter Bezug (Gestaltungsauftrag Punkt 1: "2 von 10 - dann
+            // ist es ein Anteil und darf wie einer aussehen") direkt im
+            // Text, statt sich auf die "Stationen"-Kachel davor zu
+            // verlassen, um den Nenner zu erschliessen.
+            hinweis: `${volle.length} von ${gesamt} Stationen: ${volle.map((s) => s.name).join(', ')} ` +
+                `- nimmt keine Rückgabe an`
         });
     }
 
@@ -154,6 +163,34 @@ function stationenUebersicht(stationen) {
         wert: `${Math.round((gesamtKapazitaet ? gesamtBelegt / gesamtKapazitaet : 0) * 100)} %`,
         grafik: zellbalken(gesamtBelegt, gesamtKapazitaet),
         hinweis: `${gesamtBelegt} von ${gesamtKapazitaet} Stellplätzen belegt`
+    });
+
+    // ===== Verteilung (Gestaltungsauftrag Punkt 5) =====
+    //
+    // "Wie verteilen sich die Stationen zwischen leer und voll?" -
+    // woertlich eines der drei Beispiele des Auftrags. "Gesamtbelegung"
+    // oben beantwortet nur, wie voll das NETZ ALS GANZES ist (kapazitaets-
+    // gewichtet); das sagt nichts darueber, ob alle zehn Stationen nahe
+    // beieinander liegen oder weit auseinanderklaffen. Median NEBEN der
+    // Spannweite (Auftrag, woertlich als Beispiel genannt) statt eines
+    // Histogramms: bei nur zehn Stationen haette ein Histogramm mit
+    // seinen ueblichen 5-10 Kaesten kaum mehr als eine Station je Kasten
+    // und waere fuer diese Groessenordnung Uebertreibung, waehrend
+    // Spannweite+Median die Frage direkt beantworten. Rein aus den
+    // bereits geladenen Zeilen berechnet, KEINE zusaetzliche Abfrage.
+    const fuellstaende = stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0)).sort((a, b) => a - b);
+    const minFuellstand = fuellstaende[0];
+    const maxFuellstand = fuellstaende[fuellstaende.length - 1];
+    const mitteIndex = Math.floor((fuellstaende.length - 1) / 2);
+    const medianFuellstand = fuellstaende.length % 2 === 1
+        ? fuellstaende[mitteIndex]
+        : (fuellstaende[mitteIndex] + fuellstaende[mitteIndex + 1]) / 2;
+    const leer = stationen.filter((s) => s.belegt === 0).length;
+    kacheln.push({
+        titel: 'Füllstand-Spannweite',
+        wert: `${Math.round(minFuellstand * 100)}–${Math.round(maxFuellstand * 100)} %`,
+        hinweis: `Median ${Math.round(medianFuellstand * 100)} % · ${volle.length} von ${gesamt} randvoll` +
+            (leer ? `, ${leer} von ${gesamt} leer` : ', keine leer')
     });
 
     return kacheln;

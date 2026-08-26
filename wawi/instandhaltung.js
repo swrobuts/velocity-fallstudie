@@ -155,7 +155,13 @@ function instandhaltungUebersicht(gesamtSchaeden, gesamtAuftraege, gesamtFahrunt
             wert,
             grafik: gesamtSchaeden ? zellbalken(gesamtFahruntauglichOffen, gesamtSchaeden, null,
                 { farbe: 'var(--schlecht)' }) : undefined,
-            hinweis: 'sperrt das Rad, sobald es nicht gerade in Fahrt ist'
+            // Echter Bezug (Gestaltungsauftrag Punkt 1: "2 von 10 - dann
+            // ist es ein Anteil") - derselbe Nenner, den der Balken schon
+            // als Skala traegt, jetzt auch in Text ausgeschrieben.
+            hinweis: gesamtSchaeden
+                ? `${gesamtFahruntauglichOffen} von ${gesamtSchaeden} Schadensmeldungen insgesamt - ` +
+                  `sperrt das Rad, sobald es nicht gerade in Fahrt ist`
+                : 'sperrt das Rad, sobald es nicht gerade in Fahrt ist'
         });
     }
 

@@ -64,11 +64,24 @@ async function flotteAufbauen() {
     // 275 Zeilen unnoetig, und die Uebersichtskacheln (die den GESAMTEN
     // Bestand zeigen sollen, nicht die gefilterte Teilmenge) brauchen die
     // vollstaendige Liste ohnehin.
-    const raeder = await ladeListe('v_wawi_flotte',
-        'fahrrad_id, rahmennummer, typ_code, typ, hersteller, modell, status, ' +
-        'angeschafft_am, standort, akkustand_prozent, letzte_wartung, ' +
-        'offene_schaeden, hoechste_schwere',
-        (q) => q.order('rahmennummer'));
+    // fahrtenLetzte30Tage (Punkt 5, Verteilung "Fahrten je Rad"): NUR
+    // geladen, wenn die zugrundeliegende Sicht diese Rolle ueberhaupt
+    // durchlaesst (siehe fahrtenJeRadVerteilung() weiter unten, ROLLE-
+    // Absatz) - fuer ein reines Werkstattkonto bleibt es null, nicht ein
+    // leeres [], damit die Kachel dort spaeter GAR NICHT erscheint statt
+    // faelschlich "0 Fahrten je Rad" zu zeigen. Parallel zu raeder
+    // geladen: beide Anfragen sind unabhaengig voneinander.
+    const dreissigTageZurueck = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const [raeder, fahrtenLetzte30Tage] = await Promise.all([
+        ladeListe('v_wawi_flotte',
+            'fahrrad_id, rahmennummer, typ_code, typ, hersteller, modell, status, ' +
+            'angeschafft_am, standort, akkustand_prozent, letzte_wartung, ' +
+            'offene_schaeden, hoechste_schwere',
+            (q) => q.order('rahmennummer')),
+        (darfRolle('disposition') || darfRolle('leitung'))
+            ? ladeListe('v_wawi_fahrten_je_tag_rad', 'fahrrad_id', (q) => q.gte('tag', dreissigTageZurueck))
+            : Promise.resolve(null)
+    ]);
 
     const fehler = letzterLadeFehler('v_wawi_flotte');
     if (fehler) {
@@ -85,7 +98,7 @@ async function flotteAufbauen() {
     // gefilterte Teilmenge - "womit oeffnet jemand diesen Bereich" ist
     // eine Frage an den Gesamtbestand, nicht an eine gerade gewaehlte
     // Einschraenkung.
-    zeigeUebersicht(vorgang, flotteUebersicht(raeder));
+    zeigeUebersicht(vorgang, flotteUebersicht(raeder, fahrtenLetzte30Tage));
 
     const { typen, standorte } = flotteFilterOptionen(raeder);
     zeigeFilterleiste(vorgang, true, [
@@ -198,7 +211,7 @@ async function flotteAufbauen() {
 // Zustand braucht ohnehin keine Aufmerksamkeit mehr - siehe
 // radHandlungen() weiter unten, das auf 'ausgemustert' selbst keine
 // Handlung mehr anbietet).
-function flotteUebersicht(raeder) {
+function flotteUebersicht(raeder, fahrtenLetzte30Tage) {
     const gesamt = raeder.length;
     const zaehler = (status) => raeder.filter((r) => r.status === status).length;
     const verfuegbar = zaehler('verfuegbar');
@@ -214,7 +227,16 @@ function flotteUebersicht(raeder) {
         return spanne;
     };
 
-    return [
+    // Echter Bezug in JEDEM der vier Hinweise (Gestaltungsauftrag Punkt 1):
+    // vorher trug nur "Einsatzbereit" die Zaehlerangabe ("X % von Y
+    // Raedern"), die uebrigen drei blieben rein qualitativ ("gerade
+    // unterwegs" ...). Vier Balken mit gemeinsamer Skala (derselbe Nenner
+    // "gesamt") duerfen zwar schon allein durch den Laengenvergleich UEBER
+    // die Kacheln hinweg als Anteil gelesen werden (Bissantz: "an einer
+    // gemeinsamen Skala ausgerichtet") - jede Kachel soll aber auch FUER
+    // SICH ALLEIN stehen koennen, ohne dass man die drei Nachbarkacheln
+    // danebenhalten muss, um den Nenner zu erschliessen.
+    const kacheln = [
         {
             titel: 'Einsatzbereit',
             wert: zahlSkaliert(String(verfuegbar)),
@@ -225,21 +247,77 @@ function flotteUebersicht(raeder) {
             titel: 'Ausgeliehen',
             wert: zahlSkaliert(String(ausgeliehen)),
             grafik: zellbalken(ausgeliehen, gesamt),
-            hinweis: 'gerade unterwegs'
+            hinweis: `${anteil(ausgeliehen)} von ${gesamt} Rädern · gerade unterwegs`
         },
         {
             titel: 'In Wartung',
             wert: wertMitTon(wartung, 'ton-warnung'),
             grafik: zellbalken(wartung, gesamt, null, { farbe: 'var(--warnung-text)' }),
-            hinweis: 'in der Werkstatt'
+            hinweis: `${anteil(wartung)} von ${gesamt} Rädern · in der Werkstatt`
         },
         {
             titel: 'Defekt',
             wert: wertMitTon(defekt, defekt > 0 ? 'ton-schlecht' : ''),
             grafik: zellbalken(defekt, gesamt, null, { farbe: 'var(--schlecht)' }),
-            hinweis: 'wo es klemmt'
+            hinweis: `${anteil(defekt)} von ${gesamt} Rädern · wo es klemmt`
         }
     ];
+
+    // fahrtenLetzte30Tage === null: die Rolle sieht v_wawi_fahrten_je_tag_rad
+    // nicht (siehe Aufrufstelle in flotteAufbauen()) - dann faellt die
+    // Kachel ganz weg, statt eine falsche Null vorzutaeuschen.
+    if (fahrtenLetzte30Tage !== null) {
+        const verteilung = fahrtenJeRadVerteilung(raeder, fahrtenLetzte30Tage);
+        if (verteilung) kacheln.push(verteilung);
+    }
+
+    return kacheln;
+}
+
+// ===== Verteilung (Gestaltungsauftrag Punkt 5) =====
+//
+// "Wie verteilen sich die Fahrten je Rad - arbeiten alle gleich, oder
+// stehen manche still?" - woertlich eines der drei Beispiele des
+// Auftrags. v_wawi_fahrten_je_tag_rad (Drill-Down-Sicht, disposition UND
+// leitung) traegt EINE ZEILE JE FAHRT, nicht aggregiert je Rad - dieselbe
+// Sicht ungefiltert zu laden waere ueber 12.000 Zeilen fuer eine einzige
+// Kennzahl (dieselbe "keine Basis fuer eine blosse Kennzahl"-Abwaegung,
+// die kundenAufbauen() schon bei den 1014 Kunden per zaehleZeilen() trifft,
+// hier auf ein Zeitfenster statt auf eine Zaehl-Anfrage angewendet).
+// Deshalb NUR die letzten 30 Tage (.gte('tag', ...)) - genug fuer ein
+// ehrliches "wird gerade gleichmaessig gefahren", ohne 18 Monate Historie
+// laden zu muessen, um eine einzige Verteilungskachel zu befuellen.
+//
+// darfRolle-Wache (siehe Aufrufstelle in flotteAufbauen()): die Sicht
+// selbst filtert auf disposition/leitung, NICHT auf werkstatt (siehe
+// 0018_wawi_sichten.sql) - ein Werkstattkonto bekaeme dieselbe Anfrage mit
+// null Zeilen zurueck, und OHNE die Wache saehe die Kachel dann faelschlich
+// "alle 275 Raeder mit 0 Fahrten" statt schlicht zu fehlen ("was man nicht
+// darf, wird nicht angezeigt", nicht als falsche Null vorgetaeuscht).
+function fahrtenJeRadVerteilung(raeder, fahrtenLetzte30Tage) {
+    const zaehlerJeRad = new Map(raeder.map((r) => [r.fahrrad_id, 0]));
+    for (const zeile of fahrtenLetzte30Tage) {
+        zaehlerJeRad.set(zeile.fahrrad_id, (zaehlerJeRad.get(zeile.fahrrad_id) || 0) + 1);
+    }
+    const werte = [...zaehlerJeRad.values()].sort((a, b) => a - b);
+    if (werte.length === 0) return null;
+
+    const minimum = werte[0];
+    const maximum = werte[werte.length - 1];
+    const mitteIndex = Math.floor((werte.length - 1) / 2);
+    const median = werte.length % 2 === 1
+        ? werte[mitteIndex] : (werte[mitteIndex] + werte[mitteIndex + 1]) / 2;
+    const mittel = werte.reduce((s, w) => s + w, 0) / werte.length;
+    const stillstehend = werte.filter((w) => w === 0).length;
+
+    return {
+        titel: 'Fahrten je Rad (30 Tage)',
+        wert: `${minimum}–${maximum}`,
+        hinweis: `Median ${median.toLocaleString('de-DE')}, Mittel ${mittel.toLocaleString('de-DE',
+            { maximumFractionDigits: 1 })} je Rad` + (stillstehend
+            ? ` · ${stillstehend} von ${werte.length} Rädern ohne eine einzige Fahrt`
+            : ` · jedes der ${werte.length} Räder mindestens einmal gefahren`)
+    };
 }
 
 // Optionen aus den bereits geladenen Zeilen gewonnen, nicht fest

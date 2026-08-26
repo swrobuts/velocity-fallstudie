@@ -24,14 +24,17 @@
      Weiß; --warnung bleibt für Flächen wie Rahmen oder Hintergrund. */
   --warnung-text: #8a6508;
   --schlecht:    #c0301c;
-  /* 34px statt vormals 28px (Gestaltungsauftrag, zweiter Anlauf auf
-     "deutlich luftiger"): mehr Zeilenhoehe UND mehr Innenabstand je
-     Zelle, siehe .arbeitstabelle td weiter unten. Erprobt bei 900px
-     Fensterhoehe (siehe Bericht): 15 Datenzeilen statt vormals 18 passen
-     noch ohne Scrollen unter den Streifen - eine Warenwirtschaft, die
-     275 Raeder den ganzen Tag zeigt, darf dafuer nicht auf's Scrollen
-     angewiesen sein, deshalb keine staerkere Vergroesserung. */
-  --zeile:       34px;
+  /* 40px statt vormals 34px (Gestaltungsauftrag, DRITTER Anlauf - wörtlich:
+     "geh diesmal deutlich weiter, als dir richtig vorkommt"). Der zweite
+     Anlauf blieb bei 34px stehen, AUSDRÜCKLICH um ohne Scrollen 15 Zeilen
+     zu zeigen (siehe Git-Historie dieses Kommentars) - genau diese
+     Zurückhaltung war der Fehler, den die dritte Rüge benennt: eine
+     Warenwirtschaft mit 275 Rädern SCROLLT ohnehin, sobald mehr als eine
+     Handvoll Zeilen zu sehen sind, ob nun 15 oder 12 ohne Scrollen passen,
+     ändert daran nichts - "nicht auf's Scrollen angewiesen sein" war ein
+     Ziel, das diese Tabelle nie erreicht hat, und das Festhalten daran hat
+     nur die Zeile gestaucht. */
+  --zeile:       40px;
   --schrift:     14px;
   --nav-breite:  200px;
   /* 60px statt vormals 48px - explizit "vor allem im Kopfbereich"
@@ -65,14 +68,16 @@
      --schlecht 4.88:1, --gut 4.59:1, --warnung-text 4.56:1 - jede über
      4,5:1, die knappste (--warnung-text) mit gerade einmal 0.06 Reserve. */
   --zebra: #ecedf3;
-  /* Kontur der SKALA eines Zellbalkens (Punkt 1) - siehe .zellbalken-
-     hintergrund weiter unten: vorher fuellte der "leere" Teil des
-     Balkens in genau der Farbe der ihn umgebenden Flaeche (--grund),
-     wurde dadurch unsichtbar, und aus dem Balken wurde fuer das Auge
-     "ein Wert ohne Skala" - genau der im Auftrag benannte Befund. 3.64:1
-     auf Weiss / 3.43:1 auf --grund (gemessen), über der fuer Grafik
-     verlangten Untergrenze von 3:1 in BEIDEN Kontexten (Tabellenzelle
-     bzw. Uebersichtskachel). */
+  /* WAR die Kontur der Skala eines Zellbalkens - genau die Kontur, die
+     jeden Balken zur Fuellstandsanzeige machte (siehe die ausfuehrliche
+     Begruendung bei .zellbalken-hintergrund weiter unten, zweiter
+     Anlauf). Der Name (und die Farbe selbst) bleibt: dieselbe, schon
+     gemessene neutrale Flaechenfarbe (3.64:1 auf Weiss / 3.43:1 auf
+     --grund, ueber der fuer Grafik verlangten Untergrenze von 3:1) wird
+     jetzt als GRUNDFARBE der Saeulen-Sparkline weiterverwendet (siehe
+     .saeulensparkline-saeule weiter unten) statt einer neuen,
+     unvermessenen "hellblauen" Farbe nur fuer dieses eine Bauteil -
+     dieselbe Farbe aus unserer Palette, ein zweiter Verwendungszweck. */
   --skala-rahmen: #7c8797;
 }
 
@@ -545,12 +550,12 @@ button {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  /* 4px/18px 10px statt vormals 2px/12px 8px - Punkt 1, zweiter Anlauf:
-     mehr Abstand zwischen den fuenf Rubriken UND mehr Rand rundum, damit
-     die Navigation nicht dichter wirkt als der jetzt luftigere
-     Kopfbereich daneben. */
-  gap: 4px;
-  padding: 18px 10px;
+  /* 8px/24px 14px statt vormals 4px/18px 10px - dritter Anlauf, deutlich
+     weiter als beim zweiten: mehr Abstand zwischen den fuenf Rubriken UND
+     mehr Rand rundum, damit die Navigation nicht dichter wirkt als der
+     jetzt luftigere Kopfbereich daneben. */
+  gap: 8px;
+  padding: 24px 14px;
 }
 
 /* Ein Eintrag je erlaubtem Bereich - rahmen.js erzeugt sie, hier nur
@@ -565,34 +570,49 @@ button {
   align-items: center;
   gap: 10px;
   text-align: left;
-  padding: 12px 16px;
+  /* 13px/16px statt vormals 12px/16px (Punkt 3, dritter Anlauf) - kein
+     border-left mehr (siehe Kommentar bei aria-current="page" weiter
+     unten, Punkt 6): ohne die frühere 4px-Fahne braucht dieser Ruhezustand
+     kein reserviertes transparentes Randstück mehr, das den Wechsel zum
+     aktiven Zustand layoutstabil hält. */
+  padding: 13px 16px;
   border: none;
-  /* 4px schon im Ruhezustand (transparent), nicht erst am aktiven
-     Eintrag: sonst verschoebe der Wechsel auf aria-current="page" Icon
-     und Text um die Differenz zur bisherigen 3px-Breite - derselbe
-     Grundsatz wie bei .zeilen-aktionen-zelle in dieser Datei ("Layout
-     verschiebt sich" ist der Fehler, vor dem der Auftrag warnt). */
-  border-left: 4px solid transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: var(--text);
   font-size: var(--schrift);
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
 #navigation button:hover {
   background: var(--grund);
 }
 
-/* Deutlichere Auszeichnung des aktiven Bereichs (Gestaltungsauftrag,
-   Punkt 2): die Fahne selbst ist schon im Ruhezustand 4px breit (statt
-   vormals 3px, siehe Kommentar oben) und faerbt sich hier nur ein - dazu
-   ein Hauch dunklerer Hintergrund als der blosse Hover-Ton, damit der
-   aktive Eintrag auf den ersten Blick auffaellt, nicht erst am
-   Fettschnitt des Textes. */
+/* GESTALTUNGSAUFTRAG PUNKT 6 ("dröge und altbacken", "nimm dir
+   Freiheit"): die Navigation ist das Element, das man in dieser
+   Oberflaeche am haeufigsten ansieht - sie steht acht Stunden am Tag am
+   Bildschirmrand, bei jedem Bereichswechsel neu wahrgenommen. Die
+   bisherige Auszeichnung (eine 4px-Fahne in --rot, ein Hauch hellerer
+   Hintergrund #eef1f7) war genau die "kaum wahrnehmbare Kontur"-Sprache,
+   die der Auftrag an anderer Stelle (Punkt 4, Spaltenkopf) schon einmal
+   als zu zurueckhaltend bemaengelt hat. Diese Fassung ersetzt sie durch
+   eine VOLLE Flaeche in --marine mit weisser Schrift - derselbe Farbton,
+   den .uebersichtskachel-wert und jede hervorgehobene Zahl in dieser
+   Warenwirtschaft ohnehin schon als "das ist die Hauptaussage" tragen:
+   der aktive Bereich bekommt damit dieselbe visuelle Sprache wie die
+   Zahlen, die er zeigt, statt eine vierte, eigens erfundene
+   Auszeichnungsart. Kontrast weiss auf --marine: 17.29:1 (gemessen, siehe
+   Bericht) - weit über der fuer Text verlangten Untergrenze von 4.5:1.
+   DAS EINGEGANGENE RISIKO (Bericht): eine volle Farbflaeche ist ein
+   groesseres visuelles Gewicht als eine duenne Fahne - bei fuenf
+   Eintraegen und ein paar Wechseln ueber den Tag verteilt bleibt das im
+   Rahmen, koennte bei einer kuenftig laengeren Liste (mehr als fuenf
+   Bereiche) aber unruhiger wirken; sollte das eintreten, ist eine
+   schmalere Markierung (z. B. nur der Icon-Kreis gefuellt) der
+   naheliegende Rueckbau. */
 #navigation button[aria-current="page"] {
-  border-left-color: var(--rot);
-  background: #eef1f7;
-  color: var(--marine);
+  background: var(--marine);
+  color: #ffffff;
   font-weight: 600;
 }
 
@@ -721,11 +741,11 @@ button {
 
 .werkzeugleiste {
   flex: 0 0 auto;
-  /* 12px/16px statt vormals 10px/12px - Punkt 1, derselbe grosszuegigere
-     Massstab wie beim Uebersichtsstreifen/der Navigation, damit die
-     "Leisten" oberhalb der Tabelle nicht enger wirken als ihre direkte
-     Umgebung. */
-  padding: 12px 16px;
+  /* 20px/24px statt vormals 12px/16px - dritter Anlauf, deutlich weiter
+     als beim zweiten: derselbe grosszuegigere Massstab wie beim
+     Uebersichtsstreifen/der Navigation, damit die "Leisten" oberhalb der
+     Tabelle nicht enger wirken als ihre direkte Umgebung. */
+  padding: 20px 24px;
   border-bottom: 1px solid var(--linie);
 }
 
@@ -758,7 +778,8 @@ button {
   flex: 0 0 auto;
   display: flex;
   background: var(--grund);
-  margin-bottom: 20px;
+  /* 28px statt vormals 20px - dritter Anlauf. */
+  margin-bottom: 28px;
 }
 
 /* Gemeinsames Raster fuer ALLE Kacheln (Punkt 1, konkreter Befund): vor
@@ -780,11 +801,13 @@ button {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  /* 24px/28px statt vormals 18px/24px - Punkt 1: "sehr gedraengt" war
-     der wörtliche Befund schon beim ersten Anlauf, hier nochmals
-     grosszuegiger. */
-  padding: 24px 28px;
+  /* 14px statt vormals 10px - dritter Anlauf. */
+  gap: 14px;
+  /* 32px/36px statt vormals 24px/28px - DRITTER Anlauf auf "sehr
+     gedraengt" (Punkt 1/3): "geh diesmal deutlich weiter, als dir richtig
+     vorkommt" (Auftrag, woertlich) - zwei vorherige Nachbesserungen (erst
+     18/24, dann 24/28) waren beide noch zu wenig. */
+  padding: 32px 36px;
   border-right: 1px solid var(--linie);
 }
 
@@ -820,7 +843,22 @@ button {
   white-space: nowrap;
 }
 
-/* Die Grafik (Sparkline ODER Zellbalken, siehe baueKachel() in
+/* Vorbild-Auftrag, Punkt 2: "▼ −5 ggü. Vorm." - eine kleine Zeile MIT
+   Richtungspfeil ÜBER der Zahl/Grafik (siehe kachel.veraenderung,
+   baueKachel() in rahmen.js). Bewusst OHNE Farbe für die Richtung selbst
+   (kein Rot/Grün): dieselbe Regel wie bei veraenderungFormat() in
+   auswertungen.js ("ein Preisanstieg ist nicht per se gut oder schlecht,
+   nur bemerkenswert") gilt hier ein zweites Mal - Farbe bliebe der
+   tatsächlichen Bedeutung vorbehalten (--gut/--schlecht/--warnung an
+   anderer Stelle dieser Oberfläche), nicht der bloßen Richtung eines
+   Monatsvergleichs. */
+.uebersichtskachel-veraenderung {
+  font-size: 12px;
+  color: var(--text-leise);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Die Grafik (Säulen-Sparkline ODER Zellbalken, siehe baueKachel() in
    rahmen.js) ist IMMER das Element NACH der Zahl und bekommt hier -
    unabhaengig davon, welches der beiden sie ist - denselben festen Platz
    am rechten Rand der Zeile: margin-left:auto schiebt sie dorthin, ohne
@@ -828,9 +866,31 @@ button {
    ":not(:only-child)"-Element, das die Regel treffen koennte). Das ist
    das gemeinsame Raster, das der Auftrag verlangt - dieselbe Spalte fuer
    die Grafik in JEDER Kachel, ob "Stationen", "Volle Stationen" oder
-   "Gesamtbelegung". */
+   "Gesamtbelegung". GILT NICHT für Kacheln mit einer Säulen-Sparkline -
+   siehe die eigene Regel direkt im Anschluss, die für genau diesen Fall
+   die umgekehrte Anordnung verlangt ("Zahl groß rechts", Vorbild-Auftrag). */
 .uebersichtskachel-zeile > :last-child:not(.uebersichtskachel-wert) {
   margin-left: auto;
+}
+
+/* "Zahl groß rechts" (Vorbild-Auftrag, wörtlich übernommen) für Kacheln
+   mit einer Säulen-Sparkline: die Grafik links, die große Zahl rechts -
+   umgekehrt zur sonstigen Anordnung dieser Kacheln (siehe Regel direkt
+   darüber). Per order() statt flex-direction:row-reverse: row-reverse
+   würde die physische Bedeutung von margin-left umkehren und mit der
+   Regel darüber kollidieren, sobald beide je nach Grafikart abwechselnd
+   griffen - order() ändert nur die VISUELLE Reihenfolge, margin-left
+   behält seine gewohnte Wirkung. Trifft ausschließlich Kacheln mit dieser
+   einen neuen Grafikart (:has(.saeulensparkline)) - jede Kachel mit
+   einem Zellbalken oder ganz ohne Grafik bleibt bei der Regel oben. */
+.uebersichtskachel-zeile:has(.saeulensparkline) > .uebersichtskachel-wert {
+  order: 2;
+  margin-left: auto;
+}
+
+.uebersichtskachel-zeile:has(.saeulensparkline) > :last-child:not(.uebersichtskachel-wert) {
+  order: 1;
+  margin-left: 0;
 }
 
 /* .zellbalken bringt aus der Tabellenspalte (.balken-spalte, siehe
@@ -877,15 +937,21 @@ button {
    Punkt 5: "auch die Filter... besser abheben" - derselbe helle
    Grundton wie der Uebersichtsstreifen (--grund) statt einer reinen
    weissen Flaeche, die sich von #arbeitsliste (ebenfalls weiss)
-   ueberhaupt nicht unterschied. Mehr Innenabstand (12px/16px statt
-   vormals 8px/12px) aus demselben Grund wie bei .werkzeugleiste oben. */
+   ueberhaupt nicht unterschied. Noch einmal deutlich mehr Innenabstand
+   (20px/24px statt vormals 12px/16px, dritter Anlauf) aus demselben
+   Grund wie bei .werkzeugleiste oben. margin-bottom NEU (Punkt 3, dritter
+   Anlauf, gemessen: die Filterleiste stiess vorher mit exakt 0px Abstand
+   direkt auf die Tabelle - border-bottom allein trennt eine Flaeche von
+   der naechsten, schafft aber keinen Zwischenraum, siehe derselbe Fund
+   bei .uebersichtsstreifen weiter oben). */
 .filterleiste {
   flex: 0 0 auto;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 16px;
-  padding: 12px 16px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
   background: var(--grund);
   border-bottom: 1px solid var(--linie);
 }
@@ -928,33 +994,56 @@ button {
   white-space: nowrap;
 }
 
-/* ===== Zeichenbausteine: Sparkline, Zellbalken, typografische Skalierung
-   (sparkline()/zellbalken()/zahlSkaliert() in rahmen.js) ===== */
-
-.sparklinie {
+/* ===== Zeichenbausteine: Säulen-Sparkline, Zellbalken, typografische
+   Skalierung (saeulenSparkline()/zellbalken()/zahlSkaliert() in
+   rahmen.js) =====
+   Gestaltungsauftrag Punkt 2, wörtlich: "Wir machen statt einer Linie
+   Säulen als Sparklines." Ersetzt .sparklinie* vollständig (siehe
+   Kopfkommentar bei saeulenSparkline() in rahmen.js, warum die
+   Linienvariante ersatzlos entfernt statt nur ergänzt wurde) - keine der
+   beiden Klassenfamilien existiert mehr parallel zur anderen. */
+.saeulensparkline {
   display: inline-block;
   vertical-align: middle;
   flex: 0 0 auto;
   overflow: visible;
 }
 
-.sparklinie-linie {
-  fill: none;
-  stroke: var(--marine);
-  stroke-width: 1.4;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
+/* Grundfarbe = --skala-rahmen (siehe :root, dieselbe schon gemessene
+   Farbe, die zuvor die jetzt entfernte Zellbalken-Kontur trug) statt
+   einer neu erfundenen "hellblauen" Farbe: "Farben aus unserer Palette"
+   (Auftrag) heißt hier, eine bereits vermessene Fläche wiederzuverwenden,
+   nicht die Palette um einen weiteren, ungeprüften Ton zu erweitern. */
+.saeulensparkline-saeule {
+  fill: var(--skala-rahmen);
 }
 
-.sparklinie-punkt {
+/* Die AKTUELLE Säule (Vorbild-Auftrag: "die letzte deutlich dunkler -
+   das ist der aktuelle Zeitraum, und man sieht sofort, wo man steht") in
+   vollem --marine statt der helleren Grundfarbe - derselbe Ton, den
+   .uebersichtskachel-wert für die Zahl daneben ohnehin schon trägt, die
+   Säule und die große Zahl gehören damit sichtbar zusammen. */
+.saeulensparkline-saeule-aktuell {
   fill: var(--marine);
 }
 
-/* --rot: derselbe Akzent wie die aktive Navigation/der aktive Reiter -
-   "hier hinsehen", nicht "schlecht" (dafür steht --schlecht). */
-.sparklinie-markierung {
+/* --rot: derselbe Akzent wie der aktive Reiter (die Navigation trägt
+   diesen Akzent seit Punkt 6 nicht mehr, siehe #navigation weiter oben) -
+   "hier hinsehen" (ein Extremwert, ein Tarifwechsel), nicht "schlecht"
+   (dafür steht --schlecht) und nicht "aktuell" (dafür steht die Klasse
+   oben) - siehe der Vorrang-Kommentar bei saeulenSparkline() in
+   rahmen.js, falls beides denselben Index träfe. */
+.saeulensparkline-saeule-markiert {
   fill: var(--rot);
+}
+
+/* Nur gezeichnet, wenn die Reihe negative Werte trägt (Saldo, siehe
+   saeulenSparkline() in rahmen.js) - dieselbe Farbe wie die Grundlinie
+   der großen Säulengrafik (.saeulengrafik-grundlinie), aus demselben
+   Grund an dieser kleineren Stelle wiederverwendet. */
+.saeulensparkline-grundlinie {
+  stroke: var(--linie);
+  stroke-width: 1;
 }
 
 .zellbalken {
@@ -993,28 +1082,29 @@ button {
   justify-content: flex-start;
 }
 
-/* Punkt 1, konkreter Befund: die "leere" Restflaeche eines Zellbalkens
-   fuellte bisher in GENAU der Farbe seiner Umgebung (--grund, ob als
-   Kachel- oder als Tabellenhintergrund) - unsichtbar, und aus dem Balken
-   wurde fuer das Auge "ein Wert ohne Skala, an der er sich messen
-   liesse" (Auftrag, woertlich, am Beispiel "Volle Stationen": ein
-   schwebendes kleines Quadrat statt eines erkennbaren Anteils). Die
-   Entscheidung faellt auf "er bekommt eine Skala", nicht auf "er gehoert
-   weg": der Wert TRAEGT eine echte Information (ein Anteil an einem
-   Gesamt - 2 von 10 Stationen, 77 % Belegung, siehe stationen.js), nur
-   die Skala selbst war unsichtbar. In flotte.js stehen vier solcher
-   Balken nebeneinander (Einsatzbereit/Ausgeliehen/Wartung/Defekt,
-   dieselbe Gesamtzahl als Nenner) - dort ist der Vergleich UEBER die
-   Kacheln hinweg sogar ausdruecklich gewollt (Bissantz: "an einer
-   gemeinsamen Skala ausgerichtet"), und genau dafuer muss die Skala
-   sichtbar sein. Die Kontur (--skala-rahmen, siehe :root, 3.64:1 auf
-   Weiss / 3.43:1 auf --grund, gemessen) macht die volle Breite - "das
-   ist 100 %" - jetzt in JEDEM Kontext erkennbar, die Fuellung bleibt
-   dezent. */
+/* KORRIGIERT (Gestaltungsauftrag, zweiter Anlauf), wörtlich der Befund:
+   "Warum sind die Balken gefüllt? Das macht keinen Sinn, was zeigt die
+   Füllstandsanzeige, das müssten normale Balken sein." Der vorherige
+   Anlauf hatte hier eine Kontur um die "leere" Restfläche ergänzt (siehe
+   Git-Historie), um EINEN einzelnen Balken in einer Kachel sichtbar zu
+   machen, der sonst in der Farbe seiner Umgebung verschwand - die Kontur
+   machte aber aus JEDEM Zellbalken, auch aus jedem einzelnen Balken in
+   einer Tabellenspalte, eine Fuellstandsanzeige: eine geschlossene
+   Kontur um eine Restflaeche suggeriert zwingend "das ist ein Behaelter,
+   die Fuellung ist ein Anteil DAVON" - bei einem Umsatz von 2.011,20 €
+   gibt es aber kein "voll". Ein Balken in einer Tabellenspalte ist ein
+   Balken: eine Flaeche, deren Laenge den Wert traegt, auf gemeinsamer
+   Nulllinie und gemeinsamer Skala (siehe balkenSpalten() in rahmen.js) -
+   sonst nichts, keine Kontur, kein Behaelter.
+   Der EINZELBALKEN in einer Kachel (fuer den die Kontur urspruenglich
+   gedacht war) braucht dafuer eine ANDERE Loesung als eine Grafikkontur:
+   er bekommt jetzt einen ECHTEN, in Text ausgeschriebenen Bezug direkt
+   im Kachel-Hinweis ("2 von 10 Stationen", "519 von 1014 Kunden", siehe
+   stationen.js/kunden.js/flotte.js/instandhaltung.js) - dann ist der
+   Balken ein Anteil und DARF wie einer aussehen, ohne dass die Grafik
+   selbst eine Gefaess-Form vortaeuschen muss. */
 .zellbalken-hintergrund {
   fill: var(--grund);
-  stroke: var(--skala-rahmen);
-  stroke-width: 1;
 }
 
 .zellbalken-text {
@@ -1276,11 +1366,12 @@ button {
 
 .arbeitstabelle th {
   text-align: left;
-  /* 11px/14px statt vormals 8px/12px (Punkt 2) - der Kopf bleibt an der
-     kraeftigeren --linie (siehe Kommentar bei --linie-tabelle in :root):
-     er ist die Kante, an der die sticky Kopfzeile vom scrollenden Inhalt
-     abgesetzt ist, und darf deutlicher bleiben als die Zeilen darunter. */
-  padding: 11px 14px;
+  /* 16px/18px statt vormals 11px/14px (Gestaltungsauftrag, dritter
+     Anlauf - "geh deutlich weiter"): der Kopf bleibt an der kraeftigeren
+     --linie (siehe Kommentar bei --linie-tabelle in :root): er ist die
+     Kante, an der die sticky Kopfzeile vom scrollenden Inhalt abgesetzt
+     ist, und darf deutlicher bleiben als die Zeilen darunter. */
+  padding: 16px 18px;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -1288,15 +1379,16 @@ button {
   border-bottom: 1px solid var(--linie);
 }
 
-/* Punkt 2, woertlich: Zeilenhoehe, Innenabstaende, Linienfuehrung. Mehr
-   Luft je Zelle (9px/14px statt vormals 6px/12px, dazu --zeile selbst
-   von 28px auf 34px erhoeht, siehe :root) UND eine leisere Trennlinie
-   (--linie-tabelle statt --linie) - Tufte: "so wenig Linien wie moeglich,
-   so viel Ruhe wie noetig", die Zeile fuer Zeile wiederkehrende Kontur
-   tritt zurueck, waehrend der jetzt grosszuegigere Abstand selbst schon
-   Struktur genug liefert. */
+/* Punkt 2, woertlich: Zeilenhoehe, Innenabstaende, Linienfuehrung. Noch
+   einmal deutlich mehr Luft je Zelle (13px/18px statt vormals 9px/14px,
+   dazu --zeile von 34px auf 40px, siehe :root und dessen Kommentar zum
+   dritten Anlauf) UND eine leisere Trennlinie (--linie-tabelle statt
+   --linie) - Tufte: "so wenig Linien wie moeglich, so viel Ruhe wie
+   noetig", die Zeile fuer Zeile wiederkehrende Kontur tritt zurueck,
+   waehrend der jetzt grosszuegigere Abstand selbst schon Struktur genug
+   liefert. */
 .arbeitstabelle td {
-  padding: 9px 14px;
+  padding: 13px 18px;
   height: var(--zeile);
   border-bottom: 1px solid var(--linie-tabelle);
 }
@@ -1500,10 +1592,14 @@ button {
   color: var(--marine);
 }
 
-/* aria-pressed traegt den Zustand, keine zweite Ikone - dieselbe Farbe
-   wie der aktive Reiter/die aktive Navigation (#eef1f7, siehe
-   #navigation button[aria-current="page"] weiter oben), damit "aktiv"
-   ueberall in dieser Oberflaeche gleich aussieht. */
+/* aria-pressed traegt den Zustand, keine zweite Ikone - derselbe helle
+   "aktiv"-Ton (#eef1f7), den auch der Filter-Auswahlzustand weiter unten
+   traegt (siehe .spaltenkopf-filter-aktiv), damit "aktiv" innerhalb der
+   Tabelle ueberall gleich aussieht. Die Navigation traegt seit Punkt 6
+   (siehe #navigation button[aria-current="page"] weiter oben) einen
+   eigenen, kraeftigeren Ton (--marine) - ein bewusster Unterschied:
+   diese Flaeche hier ist ein kleines Bedienelement in einer Tabellen-
+   zeile, keine ganztaegig sichtbare Rubrik. */
 .spaltenkopf-gruppenknopf[aria-pressed="true"] {
   background: #eef1f7;
   border-color: var(--marine);
@@ -1541,14 +1637,83 @@ button {
   transform: rotate(180deg);
 }
 
+/* Rücksetz-Icons (Gestaltungsauftrag Punkt 4: "In der Tabellenspalte
+   brauchen wir ein Reset-Icon zum Zurücksetzen der Gruppierung" - und,
+   geprüft, dasselbe Problem bei Sortierung und Text-/Schwellenfiltern,
+   siehe SPALTENKOPF_RESET_ICON in rahmen.js). Kleiner als
+   .zeilen-aktion (dort 26px, hier 20px): die Spaltenkopfzeile ist schon
+   voller Bedienelemente auf engem Raum, ein zweiter Knopf in
+   Zeilenaktionsgröße würde den Kopf höher machen als nötig. Dieselbe
+   Sprache trotzdem - transparent im Ruhezustand, ein sichtbarer Rahmen
+   erst bei :hover/:focus, currentColor im SVG. */
+.spaltenkopf-sortreset,
+.spaltenkopf-filterreset {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-leise);
+}
+
+.spaltenkopf-sortreset:hover,
+.spaltenkopf-filterreset:hover {
+  background: var(--flaeche);
+  border-color: var(--text-leise);
+  color: var(--schlecht);
+}
+
+.spaltenkopf-sortreset svg,
+.spaltenkopf-filterreset svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+/* Umschließt Eingabefeld UND Rücksetz-Icon (siehe spaltenkopfFilterfeld()
+   in rahmen.js) - width:100% wandert von .spaltenkopf-filterzeile input
+   (weiter unten) auf DIESEN Wrapper, sonst würde das Eingabefeld selbst
+   die volle Zellenbreite beanspruchen und das Icon aus der Zelle
+   herausdrücken. */
+.spaltenkopf-filterfeld-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.spaltenkopf-filterfeld-wrapper input {
+  width: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 /* Punkt 5, woertlich: "die Filterzeile sitzt heute unmittelbar unter den
    Spaltenkoepfen, ohne Absetzung". Ein eigener, leiser Grundton
    (--grund) setzt die Filterzeile jetzt sichtbar von der Titel/Sortier-
    Zeile darueber (var(--flaeche), weiss) ab, statt dass nur die duenne
    Trennlinie beide Zeilen unterscheidet - dieselbe Trennung, die
    .uebersichtsstreifen fuer sich schon gegenueber der Tabelle nutzt. */
+/* Gestaltungsauftrag, dritter Anlauf, wörtlich: "Spaltenköpfe mit
+   Schaltern, direkt darunter eine zweite Zeile Eingabefelder, direkt
+   darunter die Daten - drei dichte Zeilen ohne Atempause." Ein <tr> im
+   <thead> kennt kein margin (border-collapse:collapse) - die einzige Luft,
+   die eine Tabellenzeile bekommen kann, ist ihr eigenes padding. 12px/14px
+   statt vormals 6px/8px, mehr als verdoppelt: gemessen (siehe Bericht)
+   stiessen Titel-, Filter- und erste Datenzeile vorher mit exakt 0px
+   Zwischenraum aneinander (jede endete exakt dort, wo die naechste
+   begann) - keine der drei Zeilen hatte fuer sich betrachtet zu wenig
+   Land, aber zusammengenommen ergab sich ein einziger dichter Block. */
 .spaltenkopf-filterzeile th {
-  padding: 6px 8px;
+  padding: 12px 14px;
   text-transform: none;
   letter-spacing: normal;
   background: var(--grund);
@@ -1579,10 +1744,9 @@ button {
    woertlich): spaltenkopfFilterfeld() in rahmen.js setzt diese Klasse
    GENAU dann, wenn spaltenkopfFilterwerte fuer diese Spalte einen Wert
    traegt - unabhaengig davon, ob es ein <select> oder ein <input> ist.
-   Dieselbe "aktiv"-Farbe wie ueberall sonst in dieser Oberflaeche
-   (#eef1f7, siehe aria-pressed am Gruppierungsknopf und
-   aria-current="page" in der Navigation) statt einer neuen vierten
-   Bedeutung fuer dieselbe Sache. */
+   Dieselbe "aktiv"-Farbe wie beim Gruppierungsknopf (#eef1f7, siehe
+   aria-pressed weiter oben) statt einer neuen vierten Bedeutung fuer
+   dieselbe Sache innerhalb der Tabelle. */
 .spaltenkopf-filterzeile .spaltenkopf-filter-aktiv {
   background: #eef1f7;
   border-color: var(--marine);

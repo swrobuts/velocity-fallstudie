@@ -921,13 +921,22 @@ function uebersichtsstreifen() {
 // zurückkommt, dürfte einen inzwischen überholten Bildschirm nicht mehr
 // beschreiben (siehe Kopfkommentar bei neuerVorgang()).
 //
-// kacheln: [{ titel, wert, grafik?, hinweis? }]
+// kacheln: [{ titel, wert, veraenderung?, grafik?, hinweis? }]
 // - titel: die Frage, die die Kachel beantwortet ("Umsatz gesamt", ...).
 // - wert: String ODER Element - ein Element für typografisch skalierte
 //   Zahlen (siehe zahlSkaliert() weiter unten) oder eine eingefärbte
 //   Bedeutung, sonst reicht ein String.
-// - grafik (optional): ein <svg>-Element, typischerweise aus sparkline()
-//   oder zellbalken() - das "wortgroße Bild daneben" aus dem Auftrag.
+// - veraenderung (optional, Gestaltungsauftrag Punkt 2): eine kleine
+//   Zeile MIT Richtungspfeil ÜBER der Zahl ("▼ −5 % ggü. Vormonat") -
+//   String ODER Element. Getrennt von hinweis (das steht UNTER der
+//   Zahl): der Auftrag zeigt die Veränderung ausdrücklich ÜBER dem
+//   Verlauf, nicht als weitere Randnotiz danach. Nur dort gesetzt, wo
+//   ein Vormonat/-zeitraum fachlich existiert (siehe die saeulen-
+//   sparkline-Kacheln in auswertungen.js) - kein Feld, das jede Kachel
+//   nachliefern müsste.
+// - grafik (optional): ein <svg>-Element bzw. ein von saeulenSparkline()
+//   gelieferter Block - das "wortgroße Bild daneben" aus dem Auftrag,
+//   oder ein Zellbalken (zellbalken()) für einen echten Anteil.
 // - hinweis (optional): eine zweite, leisere Zeile unter der Zahl - die
 //   Einordnung, nicht die Kennzahl selbst ("42 % des Umsatzes ohne feste
 //   Mitgliedschaft"). Hierhin gehört auch eine Unsicherheit, die NEBEN
@@ -968,6 +977,13 @@ function baueKachel(kachel) {
     titel.textContent = kachel.titel;
     feld.append(titel);
 
+    if (kachel.veraenderung) {
+        const veraenderung = document.createElement('div');
+        veraenderung.className = 'uebersichtskachel-veraenderung';
+        veraenderung.append(kachel.veraenderung);
+        feld.append(veraenderung);
+    }
+
     const zeile = document.createElement('div');
     zeile.className = 'uebersichtskachel-zeile';
     const wert = document.createElement('div');
@@ -987,7 +1003,7 @@ function baueKachel(kachel) {
     return feld;
 }
 
-// ===== Zeichenbausteine: Sparkline (Tufte) und Zellbalken (Bissantz) =====
+// ===== Zeichenbausteine: Säulen-Sparkline (Bissantz) und Zellbalken =====
 //
 // Beide als selbst gezeichnetes Inline-SVG, ohne Diagrammbibliothek und
 // ohne CDN - harte Grenze dieses Projekts (siehe Dateikopf). Beide bauen
@@ -998,78 +1014,141 @@ function baueKachel(kachel) {
 // zweite Bauart für dasselbe Ergebnis.
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// werte: Zahlen in Anzeigereihenfolge - chronologisch bei einem
-// Zeitverlauf, aber ebenso gültig über eine andere Achse (siehe
-// stationsauslastungZeigen() in auswertungen.js, wo dieselbe Funktion
-// den Füllstand bzw. Saldo der zehn Stationen statt Monate trägt: "small
-// multiples" heißt bei Tufte eine Reihe vergleichbarer Werte, nicht
-// zwingend eine Zeitreihe).
+// GESTALTUNGSAUFTRAG, PUNKT 2, wörtlich: "Die Sparklines in dem
+// Kopfbereich sind sinnlos, weil nicht verständlich, was sagen diese
+// aus? Wir machen statt einer Linie Säulen als Sparklines." Diese
+// Funktion ersetzt die frühere sparkline() (eine Polylinie mit einem
+// Punkt am Ende) an JEDER ihrer neun Aufrufstellen (auswertungen.js,
+// stationen.js) - es gibt im heutigen Bestand keine Reihe, für die eine
+// LINIE (die einen KONTINUIERLICHEN Zwischenverlauf suggeriert) noch die
+// richtige Aussage wäre: jeder Wert ist eine diskrete, abgeschlossene
+// Kategorie (ein Monat, ein Tag, eine Station), keine Messung entlang
+// einer stetigen Größe. Deshalb ist sparkline() ersatzlos entfernt, nicht
+// nur ergänzt - eine zweite, kaum noch gebrauchte Bauart für praktisch
+// denselben Zweck wäre selbst wieder der Befund, den die Werkzeugleiste/
+// Filterleiste/Übersichtsstreifen-Bausteine weiter oben schon einmal
+// beseitigt haben (siehe deren Kopfkommentare).
 //
-// optionen.beschriftung: der zugängliche Name (role="img" + aria-label).
-// OHNE beschriftung gilt die Grafik als rein schmückend (aria-hidden) -
-// eine Sparkline, die nichts über die FORM des Verlaufs sagt, was die
-// daneben stehende Zahl nicht auch hergäbe, wäre für einen Bildschirm-
-// leser sonst stumme Information (Auftrag: "eine Grafik, die Information
-// trägt, darf für einen Screenreader nicht stumm sein"). Der Aufrufer
-// entscheidet das bewusst je Sparkline, nicht diese Funktion pauschal.
+// werte: Zahlen in Anzeigereihenfolge - meist Monate/Tage, aber ebenso
+// gültig über eine andere Achse (stationsauslastungZeigen() in
+// auswertungen.js: der Füllstand bzw. Saldo der zehn Stationen statt
+// Monate - "small multiples" heißt bei Tufte eine Reihe vergleichbarer
+// Werte, nicht zwingend eine Zeitreihe).
 //
-// optionen.markierIndex: hebt EINEN Punkt hervor (den Knick beim
-// Tarifwechsel, das Minimum eines Saldos, ...) in --rot - demselben
-// Farbakzent, den die aktive Navigation und der aktive Reiter in
-// style.css schon tragen (Aufmerksamkeit lenken, nicht "schlecht" - dafür
-// steht in dieser Warenwirtschaft die andere, eigene Farbe --schlecht).
-function sparkline(werte, optionen = {}) {
-    const { breite = 72, hoehe = 22, beschriftung = null, markierIndex = null } = optionen;
+// beschriftung ist HIER, anders als bei der früheren sparkline(), KEIN
+// optionaler Schlüssel in optionen, sondern ein eigenes, PFLICHTIGES
+// Funktionsargument: der zweite Teil desselben Auftragssatzes ("jede muss
+// beschriftet sein - welcher Zeitraum, welche Größe, und wo der aktuelle
+// Wert darin liegt") ist keine Empfehlung, die ein Aufrufer vergessen
+// könnte, sondern die eigentliche Beanstandung. Ein struktureller Zwang
+// (die Funktion lässt sich ohne dieses Argument gar nicht sinnvoll
+// aufrufen) hält das zuverlässiger fest als ein Kommentar, der nur
+// empfiehlt, es zu setzen.
+//
+// optionen.aktuellIndex (Vorgabe: die letzte Säule, siehe unten): DIE
+// Säule, die den GEGENWÄRTIGEN Zeitraum trägt, farblich abgesetzt
+// (--marine, kräftig) gegen die helleren, vergangenen Säulen
+// (--skala-rahmen, derselbe schon gemessene Grauton wie der Balkenrahmen
+// unten - kein neuer, ungemessener Farbwert nur für dieses eine Bauteil).
+// "letzte Säule deutlich dunkler" (Vorbild-Auftrag) gilt NUR, wo es
+// tatsächlich einen "aktuellen" Zeitraum gibt - bei den stationsbasierten
+// Reihen (siehe oben) hat "die letzte Station" keine solche Bedeutung,
+// dort bleibt aktuellIndex bewusst null (keine Säule dunkler als die
+// anderen) UND das aufrufende Kachel-Objekt lässt kachel.veraenderung
+// weg (siehe baueKachel() weiter oben) - eine "Veränderung gegenüber der
+// letzten Station" wäre sinnlos, wo keine Zeitachse existiert.
+// null unterdrückt die Hervorhebung ausdrücklich (nicht nur Vorgabewert
+// weglassen, siehe die Prüfung unten): -1 oder eine andere ungültige
+// Zahl träfe ohnehin keinen Index und hätte denselben Effekt, aber ein
+// eigener null-Zweig macht die Absicht ausdrücklich statt sich auf einen
+// Zufallstreffer zu verlassen.
+//
+// optionen.markierIndizes: wie zuvor bei sparkline()s markierIndex, aber
+// als Array (wie bei saeulengrafik() weiter unten: zwei Extremwerte
+// können gleich hoch sein) - hebt in --rot hervor, "hier hinsehen"
+// (Tarifwechsel, Minimum), nicht "aktuell" und nicht "schlecht". Kann mit
+// aktuellIndex zusammenfallen (der jüngste Monat IST zugleich der
+// Tiefpunkt) - dann gewinnt --rot: es ist die spezifischere Aussage
+// ("das hier ist bemerkenswert"), "aktuell" ist demgegenüber nur die
+// Grundbedeutung jeder Reihe mit Zeitachse.
+function saeulenSparkline(werte, beschriftung, optionen = {}) {
+    const { breite = 72, hoehe = 26 } = optionen;
+    const markierIndizes = optionen.markierIndizes || [];
+    // Vorgabe: die letzte Säule ist "aktuell" - der Regelfall bei einer
+    // absteigend chronologischen bzw. aufsteigend bis heute laufenden
+    // Reihe (jede Aufrufstelle in auswertungen.js). optionen.aktuellIndex
+    // === null (ausdrücklich, siehe Kommentar oben) schaltet das ab.
+    const aktuellIndex = optionen.aktuellIndex === null
+        ? null : (optionen.aktuellIndex ?? (werte ? werte.length - 1 : null));
 
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
     svg.setAttribute('width', breite);
     svg.setAttribute('height', hoehe);
-    svg.classList.add('sparklinie');
+    svg.classList.add('saeulensparkline');
+    // role="img" bedingungslos, nicht wie zuvor bei sparkline() nur bei
+    // gesetzter beschriftung: beschriftung ist jetzt Pflicht (siehe oben),
+    // der bedingte Zweig entfiele ohnehin auf immer denselben Fall.
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', beschriftung);
 
-    if (beschriftung) {
-        svg.setAttribute('role', 'img');
-        svg.setAttribute('aria-label', beschriftung);
-    } else {
-        svg.setAttribute('aria-hidden', 'true');
-        svg.setAttribute('focusable', 'false');
+    const werteBereinigt = (werte || []).map((w) => w || 0);
+    if (werteBereinigt.length === 0) return svg;   // nichts zu zeichnen, aber ein gültiges <svg>
+
+    // Nulllinie ist PFLICHT (Auftrag, ausdrücklich - dieselbe Regel wie
+    // bei saeulengrafik() weiter unten) - UND MUSS AUCH BEI NEGATIVEN
+    // WERTEN STIMMEN: ein Saldo (stationsauslastungUebersicht() in
+    // auswertungen.js: "gibt mehr Räder ab, als sie bekommt") kann
+    // negativ sein, anders als jede der übrigen Reihen dieser Funktion
+    // (Umsatz, Fahrten, Kilometer, Füllstand - nie unter 0). Ein einfacher
+    // "Höhe ab der Grundlinie unten"-Balken wie bei saeulengrafik() würde
+    // eine negative Säule entweder unsichtbar (Höhe auf 0 gekappt) oder
+    // unterhalb des sichtbaren viewBox zeichnen - beides ist stumm falsch,
+    // nicht bloß unschön. Die Nulllinie liegt deshalb IMMER am tatsächlichen
+    // Wert 0 im Bereich [minimum, maximum], nicht pauschal am unteren
+    // Rand: bei einer durchgehend nichtnegativen Reihe (der Regelfall)
+    // liegt minimum bei 0 und die Nulllinie damit ohnehin unten - optisch
+    // unverändert gegenüber einer reinen "ab der Grundlinie"-Zeichnung -,
+    // bei einer Reihe mit negativen Werten liegt sie mittendrin, positive
+    // Säulen wachsen nach oben, negative nach unten.
+    const minimum = Math.min(0, ...werteBereinigt);
+    const maximum = Math.max(0, ...werteBereinigt);
+    const spanne = (maximum - minimum) || 1;   // alle Werte 0: keine Division durch 0
+    const anzahl = werteBereinigt.length;
+    const abstand = breite / anzahl;
+    const saeulenbreite = Math.max(0.5, abstand - 1.2);
+    // 1px Luft oben UND unten, dieselbe Überlegung wie bei saeulengrafik().
+    const yVon = (wert) => (hoehe - 1) - ((wert - minimum) / spanne) * (hoehe - 2) + 0.5;
+    const nullY = yVon(0);
+
+    // Sichtbare Nulllinie NUR, wenn sie nicht ohnehin mit dem unteren
+    // Rand zusammenfällt (minimum < 0, siehe oben) - bei einer rein
+    // nichtnegativen Reihe läge sie exakt auf der Kontur des <svg> und
+    // wäre dort ununterscheidbar vom Rand selbst, eine zusätzliche Linie
+    // dann reine Redundanz.
+    if (minimum < 0) {
+        const grundlinie = document.createElementNS(SVG_NS, 'line');
+        grundlinie.setAttribute('x1', 0);
+        grundlinie.setAttribute('x2', breite);
+        grundlinie.setAttribute('y1', nullY.toFixed(1));
+        grundlinie.setAttribute('y2', nullY.toFixed(1));
+        grundlinie.setAttribute('class', 'saeulensparkline-grundlinie');
+        svg.append(grundlinie);
     }
 
-    if (!werte || werte.length < 2) return svg;   // nichts zu zeichnen, aber ein gültiges <svg>
-
-    const minimum = Math.min(...werte);
-    const maximum = Math.max(...werte);
-    const spanne = maximum - minimum || 1;   // eine flache Reihe (alle Werte gleich) teilt nicht durch null
-    const schrittweite = breite / (werte.length - 1);
-    // 1px Rand oben/unten, damit ein Extremwert nicht genau auf der
-    // Kontur des <svg> liegt und dort optisch abgeschnitten wirkt.
-    const yVon = (wert) => 1 + (hoehe - 2) * (1 - (wert - minimum) / spanne);
-    const punkte = werte.map((wert, i) => [i * schrittweite, yVon(wert)]);
-
-    const linie = document.createElementNS(SVG_NS, 'polyline');
-    linie.setAttribute('points', punkte.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '));
-    linie.setAttribute('class', 'sparklinie-linie');
-    svg.append(linie);
-
-    // Der letzte Punkt bekommt immer einen Marker - der Blick einer
-    // Zeitreihe landet ohnehin am aktuellen Rand.
-    const [endeX, endeY] = punkte[punkte.length - 1];
-    const endpunkt = document.createElementNS(SVG_NS, 'circle');
-    endpunkt.setAttribute('cx', endeX);
-    endpunkt.setAttribute('cy', endeY);
-    endpunkt.setAttribute('r', 1.5);
-    endpunkt.setAttribute('class', 'sparklinie-punkt');
-    svg.append(endpunkt);
-
-    if (markierIndex !== null && markierIndex >= 0 && markierIndex < punkte.length) {
-        const [mx, my] = punkte[markierIndex];
-        const markierung = document.createElementNS(SVG_NS, 'circle');
-        markierung.setAttribute('cx', mx);
-        markierung.setAttribute('cy', my);
-        markierung.setAttribute('r', 2.2);
-        markierung.setAttribute('class', 'sparklinie-markierung');
-        svg.append(markierung);
-    }
+    werteBereinigt.forEach((wert, i) => {
+        const wertY = yVon(wert);
+        const rect = document.createElementNS(SVG_NS, 'rect');
+        rect.setAttribute('x', (i * abstand).toFixed(1));
+        rect.setAttribute('y', Math.min(nullY, wertY).toFixed(1));
+        rect.setAttribute('width', saeulenbreite.toFixed(1));
+        rect.setAttribute('height', Math.abs(wertY - nullY).toFixed(1));
+        const klassen = ['saeulensparkline-saeule'];
+        if (markierIndizes.includes(i)) klassen.push('saeulensparkline-saeule-markiert');
+        else if (i === aktuellIndex) klassen.push('saeulensparkline-saeule-aktuell');
+        rect.setAttribute('class', klassen.join(' '));
+        svg.append(rect);
+    });
 
     return svg;
 }
@@ -1118,17 +1197,19 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
     svg.setAttribute('focusable', 'false');
     svg.classList.add('zellbalken-grafik');
 
-    // 0.5px eingerueckt statt bei 0/0..breite/hoehe: die Kontur, die
-    // .zellbalken-hintergrund jetzt traegt (siehe style.css - vorher gab
-    // es hier gar keine, siehe Kommentar dort), liegt sonst zur Haelfte
-    // ausserhalb des viewBox und wird vom Standard-overflow:hidden des
-    // <svg> auf der Aussenseite gekappt - eingerueckt bleibt die 1px-
-    // Linie ringsum vollstaendig sichtbar, nicht nur zur Haelfte.
+    // KEINE Kontur mehr (Gestaltungsauftrag, zweiter Anlauf - siehe die
+    // ausfuehrliche Begruendung bei .zellbalken-hintergrund in style.css):
+    // eine Kontur um diese Restflaeche machte aus jedem Balken eine
+    // Fuellstandsanzeige, "was bei einem Umsatz von 2.011,20 € keinen
+    // Sinn ergibt" (Auftrag, woertlich). Die Flaeche deckt deshalb wieder
+    // exakt das ganze viewBox ab, ohne Einrueckung - die fruehere
+    // 0.5px-Einrueckung diente ausschliesslich dazu, die jetzt entfernte
+    // Kontur ringsum sichtbar zu halten.
     const hintergrund = document.createElementNS(SVG_NS, 'rect');
-    hintergrund.setAttribute('x', 0.5);
-    hintergrund.setAttribute('y', 0.5);
-    hintergrund.setAttribute('width', Math.max(0, breite - 1));
-    hintergrund.setAttribute('height', Math.max(0, hoehe - 1));
+    hintergrund.setAttribute('x', 0);
+    hintergrund.setAttribute('y', 0);
+    hintergrund.setAttribute('width', breite);
+    hintergrund.setAttribute('height', hoehe);
     hintergrund.setAttribute('class', 'zellbalken-hintergrund');
     svg.append(hintergrund);
 
@@ -1154,9 +1235,9 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
 
 // ===== Zeichenbaustein: Säulengrafik (Drill-Down-Aufgabe) =====
 //
-// Drittes Geschwister von sparkline()/zellbalken() oben, allgemein und
-// nicht auswertungsspezifisch gehalten wie beide - der Aufrufer liefert
-// Werte, Achsenbeschriftungen und einen zugänglichen Namen, diese
+// Drittes Geschwister von saeulenSparkline()/zellbalken() oben, allgemein
+// und nicht auswertungsspezifisch gehalten wie beide - der Aufrufer
+// liefert Werte, Achsenbeschriftungen und einen zugänglichen Namen, diese
 // Funktion weiß nichts von "Fahrten" oder "Monaten".
 //
 // Der fachliche Unterschied zu den beiden Geschwistern, und der Grund,
@@ -1170,9 +1251,10 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
 // sähen dann nicht mehr im Verhältnis 2:1 aus. Deshalb ist die Skala
 // hier IMMER bei 0 verankert (maximum kommt ausschließlich aus den
 // Werten selbst, nie aus einem vom Aufrufer übergebenen Minimum) - eine
-// abgeschnittene y-Achse ist in diesem Projekt für Positionsgrafiken
-// (Sparkline) zulässig, für längenkodierende Grafiken wie diese
-// ausdrücklich nicht (fachliche Regel des Gestaltungsauftrags).
+// abgeschnittene y-Achse ist für längenkodierende Grafiken in diesem
+// Projekt an KEINER Stelle zulässig (fachliche Regel des Gestaltungs-
+// auftrags): saeulenSparkline() oben verankert ihre Säulen aus demselben
+// Grund ebenfalls bei 0, nicht nur diese Funktion hier.
 //
 // werte: Zahlen in Anzeigereihenfolge, EINE je Kategorie (Tag im
 // Monat). Ein fehlender Betriebstag ist null FAHRTEN (eine Säule der
@@ -1188,15 +1270,15 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
 // ist eine Spalte mit 28 bis 31 Werten zu schmal.
 // optionen.beschriftung: der zugängliche Name der GESAMTEN Grafik
 // (role="img"), eine fertig formulierte Zusammenfassung (Minimum,
-// Maximum, Spitzentag) - dieselbe Pflicht wie bei sparkline() oben
+// Maximum, Spitzentag) - dieselbe Pflicht wie bei saeulenSparkline() oben
 // ("eine Grafik, die Information trägt, darf für einen Screenreader
 // nicht stumm sein"). Die Tages-für-Tages-Zahlen selbst gehören NICHT
 // in dieses eine Label (31 Zahlen in einem Satz wären für einen
 // Screenreader ebenso unbrauchbar wie für ein Auge) - dafür baut der
 // Aufrufer zusätzlich eine normale <table>, siehe dort.
 // optionen.markierIndizes: hervorgehobene Säulen in --rot, als ARRAY
-// statt eines einzelnen Index wie bei sparkline()s markierIndex - zwei
-// Tage können denselben Höchstwert tragen (Auftrag, ausdrücklich als
+// statt eines einzelnen Index wie zuvor bei sparkline()s markierIndex -
+// zwei Tage können denselben Höchstwert tragen (Auftrag, ausdrücklich als
 // Fallstrick benannt), dann sind es zwei Spitzentage, nicht einer.
 function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [] } = optionen;
@@ -1243,7 +1325,7 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
         werteBereinigt.forEach((wert, i) => {
             // 2px Luft oben, damit der hoechste Wert nicht exakt auf der
             // Kontur des <svg> liegt (dieselbe Ueberlegung wie der 1px-
-            // Rand bei sparkline() oben).
+            // Rand bei saeulenSparkline() oben).
             const saeulenhoehe = (wert / maximum) * (hoehe - 2);
             const rect = document.createElementNS(SVG_NS, 'rect');
             rect.setAttribute('x', (i * abstand).toFixed(2));
@@ -1567,6 +1649,29 @@ const SPALTENKOPF_SORT_ICON = '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/>
 // zweites Icon.
 const SPALTENKOPF_GRUPPE_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4l9 5-9 5-9-5 9-5z"/>' +
     '<path d="M3 14l9 5 9-5"/></svg>';
+
+// Rücksetz-Icon (Gestaltungsauftrag Punkt 4, wörtlich: "In der
+// Tabellenspalte brauchen wir ein Reset-Icon zum Zurücksetzen der
+// Gruppierung", sichtbar nur, wenn gruppiert ist). Dasselbe Kreuz wie
+// DETAILMASKE_SCHLIESSEN_ICON weiter unten - EIN "Zustand aufheben"-
+// Symbol für die ganze Oberfläche, kein zweites Vokabular nur für den
+// Spaltenkopf. Geprüft, wie im Auftrag verlangt ("ob Sortierung und
+// Filter denselben Weg zurück brauchen - sie haben dasselbe Problem"):
+// beide haben tatsächlich dasselbe Problem, wenn auch nicht identisch
+// gelöst (siehe unten). Eine
+// aktive Sortierung liess sich bisher nur ueber einen DRITTEN Klick auf
+// denselben Spaltenkopf wieder aufheben (auf/ab/aus) - keine eigene,
+// sofort sichtbare Rueckstellung wie bei der Gruppierung. Ein aktives
+// Text-/Schwellenfilterfeld liess sich nur durch manuelles Leeren
+// zuruecksetzen; ein Auswahl-Filter dagegen traegt mit der Option "Alle"
+// bereits einen gleichwertigen, immer sichtbaren Weg zurueck - dafuer
+// braucht es kein zweites Bedienelement. Deshalb bekommen HIER die
+// Sortierung (spaltenkopfSortknopf) und die Text-/Schwellenfilterfelder
+// (spaltenkopfFilterfeld) je ein eigenes, nur im aktiven Zustand
+// sichtbares Rücksetz-Icon dazu - dieselbe Icon-Konstante, derselbe
+// Grundsatz ("sichtbar nur, wenn es etwas zurückzusetzen gibt") wie hier
+// bei der Gruppierung.
+const SPALTENKOPF_RESET_ICON = '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 
 // kennung: von neuerVorgang() geliefert, siehe Kommentar dort. Ein
 // veralteter Vorgang zeichnet die Liste nicht mehr - sonst überschriebe
@@ -1964,19 +2069,62 @@ function spaltenkopfSortknopf(spalte) {
         zeichneArbeitstabelle();
     });
 
-    return knopf;
+    // Rücksetz-Icon (siehe SPALTENKOPF_RESET_ICON weiter oben): EIN
+    // eigener, direkter Weg zurück zur Ausgangsordnung, statt zweimal
+    // zusätzlich denselben Sortierknopf klicken zu müssen (auf ->
+    // ab -> aus). Nur sichtbar, solange DIESE Spalte aktiv sortiert
+    // ist - ein zweiter Knopf für "es gibt nichts zurückzusetzen" wäre
+    // Zierrat (derselbe Maßstab wie beim Gruppierungsknopf und der
+    // Filterleiste, siehe dortige Kommentare). Ein EIGENER Knopf statt
+    // ihn dem Sortierknopf selbst anzuhängen: ein Klick auf den
+    // Sortierknopf soll weiterhin die Richtung ZYKLISCH weiterschalten
+    // (wer versehentlich daneben klickt, verliert die Sortierung nicht
+    // sofort ganz) - Zurücksetzen ist eine andere, ausdrücklichere
+    // Absicht und verdient ein eigenes Ziel für Maus UND Tastatur.
+    if (!aktiv) return knopf;
+    const fragment = document.createDocumentFragment();
+    fragment.append(knopf);
+    const zuruecksetzen = document.createElement('button');
+    zuruecksetzen.type = 'button';
+    zuruecksetzen.className = 'spaltenkopf-sortreset';
+    zuruecksetzen.dataset.spaltenkopfFeld = spalte.feld;
+    zuruecksetzen.dataset.spaltenkopfRolle = 'sortreset';
+    zuruecksetzen.setAttribute('aria-label', `Sortierung nach ${spalte.titel} zurücksetzen`);
+    zuruecksetzen.title = 'Sortierung zurücksetzen';
+    zuruecksetzen.innerHTML = SPALTENKOPF_RESET_ICON;
+    zuruecksetzen.addEventListener('click', () => {
+        spaltenkopfSortFeld = null;
+        spaltenkopfSortRichtung = 0;
+        zeichneArbeitstabelle();
+    });
+    fragment.append(zuruecksetzen);
+    return fragment;
 }
 
+// Gestaltungsauftrag Punkt 4, wörtlich: "In der Tabellenspalte brauchen
+// wir ein Reset-Icon zum Zurücksetzen der Gruppierung", sichtbar nur,
+// wenn gruppiert ist. EIN Knopf, kein zweiter daneben: anders als beim
+// Sortierknopf (siehe spaltenkopfSortknopf() oben, wo derselbe Klick auf
+// den Hauptknopf weiterhin nur zyklisch die RICHTUNG wechselt und ein
+// zweiter Klick nötig wäre, um ganz aufzuheben) macht ein zweiter Klick
+// auf DIESEN Knopf immer schon die Gruppierung rückgängig - das
+// Rücksetz-Icon ersetzt hier deshalb einfach das Symbol DESSELBEN
+// Knopfs, statt einen zusätzlichen zu brauchen.
 function spaltenkopfGruppenknopf(spalte) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
+    const aktiv = spaltenkopfGruppe === spalte.feld;
+    // Der aktive Zustand wird bereits über [aria-pressed="true"] gestylt
+    // (siehe style.css) - keine zweite, eigene Klasse dafuer noetig.
     knopf.className = 'spaltenkopf-gruppenknopf';
     knopf.dataset.spaltenkopfFeld = spalte.feld;
     knopf.dataset.spaltenkopfRolle = 'gruppieren';
-    const aktiv = spaltenkopfGruppe === spalte.feld;
     knopf.setAttribute('aria-pressed', String(aktiv));
-    knopf.setAttribute('aria-label', `Nach ${spalte.titel} gruppieren`);
-    knopf.innerHTML = SPALTENKOPF_GRUPPE_ICON;
+    knopf.setAttribute('aria-label', aktiv
+        ? `Gruppierung nach ${spalte.titel} aufheben`
+        : `Nach ${spalte.titel} gruppieren`);
+    knopf.title = aktiv ? 'Gruppierung zurücksetzen' : 'Gruppieren';
+    knopf.innerHTML = aktiv ? SPALTENKOPF_RESET_ICON : SPALTENKOPF_GRUPPE_ICON;
     knopf.addEventListener('click', () => {
         // Immer nur EINE Gruppierung ueber die ganze Tabelle - ein Klick
         // auf eine ANDERE Spalte ersetzt die vorherige (kein
@@ -2099,7 +2247,32 @@ function spaltenkopfFilterfeld(spalte) {
             zeichneArbeitstabelle();
         }, 300);
     });
-    return eingabe;
+
+    // Rücksetz-Icon (siehe SPALTENKOPF_RESET_ICON weiter oben, und der
+    // Kommentar dort zu "Sortierung und Filter... dasselbe Problem"): ein
+    // Auswahl-Filter (Zweig oben) hat mit der Option "Alle" schon einen
+    // eigenen, immer sichtbaren Weg zurueck - ein Text-/Schwellenfeld
+    // dagegen liess sich bisher nur durch manuelles Leeren zuruecksetzen.
+    // Nur sichtbar, solange ein Wert steht (derselbe Massstab wie bei
+    // spaltenkopf-filter-aktiv oben) - ein Feld ohne Inhalt hat nichts
+    // zurueckzusetzen.
+    if (aktuellerWert === undefined) return eingabe;
+    const wrapper = document.createElement('span');
+    wrapper.className = 'spaltenkopf-filterfeld-wrapper';
+    wrapper.append(eingabe);
+    const zuruecksetzen = document.createElement('button');
+    zuruecksetzen.type = 'button';
+    zuruecksetzen.className = 'spaltenkopf-filterreset';
+    zuruecksetzen.setAttribute('aria-label', `${spalte.titel}-Filter zurücksetzen`);
+    zuruecksetzen.title = 'Filter zurücksetzen';
+    zuruecksetzen.innerHTML = SPALTENKOPF_RESET_ICON;
+    zuruecksetzen.addEventListener('click', () => {
+        clearTimeout(verzoegerung);
+        spaltenkopfFilterwerte.delete(spalte.feld);
+        zeichneArbeitstabelle();
+    });
+    wrapper.append(zuruecksetzen);
+    return wrapper;
 }
 
 // Hinweiszeile ueber der Tabelle - sichtbarer Zustand UND ein Weg zurueck
@@ -2204,10 +2377,10 @@ function baueDatenzeile(zeile, spalten, aktionen, index) {
         const wert = zeile[spalte.feld];
         const inhalt = spalte.formatieren ? spalte.formatieren(wert, zeile) : (wert ?? '');
         // formatieren darf statt eines Strings auch ein einzelnes
-        // Element liefern - eine Sparkline, einen Zellbalken oder eine
-        // typografisch skalierte Zahl (siehe sparkline()/zellbalken()/
-        // zahlSkaliert() weiter unten). textContent wäre dafür der
-        // falsche Weg: ein Element dort hineingeschrieben erschiene
+        // Element liefern - eine Säulen-Sparkline, einen Zellbalken oder
+        // eine typografisch skalierte Zahl (siehe saeulenSparkline()/
+        // zellbalken()/zahlSkaliert() weiter unten). textContent wäre
+        // dafür der falsche Weg: ein Element dort hineingeschrieben erschiene
         // als "[object HTMLSpanElement]", nicht als das Element
         // selbst. replaceChildren() nimmt ein Element ODER (weiterhin)
         // einen String gleich sicher entgegen wie vorher textContent -
