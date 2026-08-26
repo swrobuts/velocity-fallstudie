@@ -54,6 +54,9 @@ for s in "${SEITEN[@]}"; do cp "src/$s" "$BAU/"; done
 # alles, was Seiten, Stil und Skripte an Bildern nennen. Was von einem
 # fremden Server kommt (Leaflet und Toastify liegen auf jsdelivr und
 # unpkg), faellt heraus - es liegt hier gar nicht.
+# Einfache UND doppelte Anfuehrungszeichen: ein <script src='...'> mit
+# einfachen fiel durch das alte, nur-doppelte Muster lautlos durch -
+# nicht ausgeliefert, kein Abbruch, keine Meldung.
 # Kein mapfile: macOS liefert Bash 3.2 aus, und das Werkzeug soll auf
 # dem Rechner laufen, auf dem es gebraucht wird.
 ANZ_CODE=0
@@ -62,8 +65,8 @@ while IFS= read -r d; do
   [[ -f "src/$d" ]] || schlecht "$d wird eingebunden, fehlt aber in src/"
   cp "src/$d" "$BAU/"
   ANZ_CODE=$((ANZ_CODE + 1))
-done < <(grep -ohE '(src|href)="[^"]+\.(js|css)(\?v=[0-9a-f]+)?"' src/*.html \
-         | sed -E 's/.*"([^"?]+).*/\1/' \
+done < <(grep -ohE "(src|href)=[\"'][^\"']+\.(js|css)(\?v=[0-9a-f]+)?[\"']" src/*.html \
+         | sed -E "s/.*[\"']([^\"'?]+).*/\1/" \
          | grep -vE '^(https?:)?//' \
          | sort -u)
 
@@ -82,14 +85,34 @@ gut "$(( ${#SEITEN[@]} + ANZ_CODE )) Dateien Code, $ANZ_BILD Bilder ${GRAU}(zusa
 
 # ---------------------------------------------------------------------
 schritt "3 Auf den Server"
-ssh "$HOST" "mkdir -p $FERN/site"
-scp -q deploy/nginx.conf "$HOST:$FERN/nginx.conf"
-scp -q deploy/docker-compose.yml "$HOST:$FERN/docker-compose.yml"
+# mkdir und beide scp aendern den Server sofort - sie muessen daher
+# HINTER der Trockenlauf-Weiche stehen, nicht nur der rsync-Aufruf.
+# Gemessen am Schwesterskript (tools/wawi_veroeffentlichen.sh): dort
+# lagen nach reinen --trocken-Laeufen bereits docker-compose.yml,
+# nginx.conf und ein leeres site/ auf dem Server, obwohl es nie ohne
+# --trocken lief - --trocken hatte nur den rsync stumm geschaltet.
+# Hier ist die Folge schwerer, weil $FERN eine laufende Website ist:
+# wer eine geaenderte deploy/nginx.conf zur sicheren Vorschau trocken
+# laufen liesse, haette sie damit veroeffentlicht - ohne je entschieden
+# zu haben, live zu gehen.
+if [[ -z "$TROCKEN" ]]; then
+  ssh "$HOST" "mkdir -p $FERN/site"
+  scp -q deploy/nginx.conf "$HOST:$FERN/nginx.conf"
+  scp -q deploy/docker-compose.yml "$HOST:$FERN/docker-compose.yml"
+fi
 # --delete: was hier nicht mehr gebraucht wird, liegt dort auch nicht
 # mehr herum. Sonst sammeln sich ueber die Jahre Dateien an, von denen
 # niemand weiss, ob sie noch jemand aufruft.
 rsync -rltz --delete $TROCKEN "$BAU/" "$HOST:$FERN/site/"
-if [[ -n "$TROCKEN" ]]; then gut "Probelauf, nichts geschrieben"; exit 0; fi
+if [[ -n "$TROCKEN" ]]; then
+  gut "Probelauf: mkdir, scp, rsync (simuliert) und Behaelter-Start haben nichts geschrieben"
+  # Nicht nur "nichts geschrieben" behaupten, sondern auch sagen, was
+  # dieser Trockenlauf NICHT geprueft hat: er bricht per exit 0 ab,
+  # bevor Schritt 5 je laeuft. Die Gegenprobe von aussen (HTTP-Status,
+  # Fingerabdruck-Vergleich, HTTP->HTTPS-Redirect) findet also nie statt.
+  printf '   %s!%s ungeprueft: die Gegenprobe von aussen (Schritt 5) laeuft im Trockenlauf nie\n' "$ROT" "$AUS"
+  exit 0
+fi
 
 # Rechte gehoeren zum Ziel, nicht zur Quelle. Ohne diese Zeile erbt das
 # Verzeichnis die 700 des Arbeitsverzeichnisses; der nginx laeuft im

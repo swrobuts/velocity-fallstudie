@@ -22,6 +22,96 @@ ergebnis() {
   else printf '%s   ✗ %s%s\n' "$rot" "$2" "$aus"; fehler=$((fehler+1)); fi
 }
 
+# Prueft, dass eine Menge von Dateien nur erlaubte Sichten liest und nur
+# erlaubte Funktionen aufruft.
+#
+# Die fruehere Fassung (bis 26.08.2026) suchte woertlich nach
+# .from('name') und rpc('name') mit genau einem einfachen
+# Anfuehrungszeichen und keinem Leerzeichen. Vier Schreibweisen liefen
+# unbemerkt durch: .from("name") mit doppelten Anfuehrungszeichen,
+# .from( 'name' ) mit Leerraum, .from(variable) ganz ohne
+# Anfuehrungszeichen und rpc("name") ebenso mit doppelten. Der Code, der
+# das aufdeckte, stand woertlich in einer Pruefanweisung - niemand hatte
+# im echten Code etwas geschwaecht.
+#
+# Ausserdem sah die alte Fassung ueberhaupt nur nach woertlichem
+# .from()/.rpc() im Quelltext, waehrend Website und Warenwirtschaft
+# tatsaechlich ausschliesslich ueber die Hilfsfunktionen ladeListe() und
+# rufeAuf() zugreifen (src/supabase.js, wawi/daten.js) - der Name der
+# Sicht bzw. Funktion steht also fast nirgends als woertliches
+# .from()/.rpc(), sondern als woertliches Argument von ladeListe()/
+# rufeAuf(). Diese Fassung prueft deshalb beide Ebenen: den direkten
+# Aufruf auf supabaseClient (faengt einen Umgehungsversuch der
+# Hilfsfunktionen ab) und den Aufruf der Hilfsfunktionen selbst (das ist
+# der Weg, den der echte Code tatsaechlich nimmt).
+#
+# Ein Aufruf ohne Anfuehrungszeichen (eine Variable) ist damit noch
+# erkennbar, aber fuer sich kein Verstoss - das gilt genau fuer die
+# Definition von ladeListe()/rufeAuf() selbst, die den Sichten-/
+# Funktionsnamen als Parameter entgegennehmen. Die Pruefung kann den
+# tatsaechlichen Namen an dieser Stelle nicht beurteilen und sagt das
+# als HINWEIS, statt es stillschweigend zu uebergehen.
+#
+# Aufruf: pruefe_direktzugriff <Dateien, eine je Zeile> <erlaubte
+#         .from()/ladeListe()-Praefixe, kommagetrennt> <erlaubte
+#         .rpc()/rufeAuf()-Praefixe, kommagetrennt> <zusaetzlich
+#         erlaubte woertliche Funktionsnamen, kommagetrennt, darf leer
+#         sein>
+pruefe_direktzugriff() {
+  DZ_DATEIEN="$1" DZ_FROM_PRAEFIXE="$2" DZ_RPC_PRAEFIXE="$3" DZ_RPC_NAMEN="$4" \
+  python3 - <<'PYEOF'
+import os, re, sys
+
+dateien = [p for p in os.environ.get('DZ_DATEIEN', '').split('\n') if p]
+from_praefixe = tuple(p for p in os.environ.get('DZ_FROM_PRAEFIXE', '').split(',') if p)
+rpc_praefixe  = tuple(p for p in os.environ.get('DZ_RPC_PRAEFIXE', '').split(',') if p)
+rpc_namen     = set(n for n in os.environ.get('DZ_RPC_NAMEN', '').split(',') if n)
+
+# Ein Argument ist entweder einfach oder doppelt zitiert, oder es ist
+# gar kein Literal (eine Variable/ein Ausdruck) - dann greift die letzte
+# Alternative und die Pruefung merkt sich das als "nicht beurteilbar".
+ARG = r"\s*(?:'([^']*)'|\"([^\"]*)\"|([^,)\s][^,)]*))"
+kopf_from = re.compile(r"(?:supabaseClient\s*\.\s*from|(?<!function )\bladeListe)\s*\(" + ARG)
+kopf_rpc  = re.compile(r"(?:supabaseClient\s*\.\s*rpc|(?<!function )\brufeAuf)\s*\(" + ARG)
+
+verstoss = []
+unklar = []
+
+def pruefe(regex, pfad, text, art, praefixe, namen):
+    for m in regex.finditer(text):
+        zeile_nr = text.count('\n', 0, m.start()) + 1
+        einq, doppelq, frei = m.groups()
+        ort = f"{pfad}:{zeile_nr}"
+        if einq is not None:
+            wert = einq
+        elif doppelq is not None:
+            wert = doppelq
+        else:
+            unklar.append(
+                f"{ort}  {art}(...) kein Literal, nicht automatisch "
+                f"beurteilbar: {(frei or '').strip()[:50]}")
+            continue
+        if not (wert.startswith(praefixe) or wert in namen):
+            verstoss.append(f"{ort}  {art}('{wert}')")
+
+for pfad in dateien:
+    try:
+        text = open(pfad, encoding='utf-8').read()
+    except FileNotFoundError:
+        continue
+    pruefe(kopf_from, pfad, text, 'from', from_praefixe, set())
+    pruefe(kopf_rpc, pfad, text, 'rpc', rpc_praefixe, rpc_namen)
+
+for u in unklar:
+    print(f"HINWEIS {u}")
+for v in verstoss:
+    print(f"FEHLER  {v}")
+if not verstoss and not unklar:
+    print("ok      keine Basistabelle, keine verbotene Funktion, alle Aufrufe Literale")
+sys.exit(1 if verstoss else 0)
+PYEOF
+}
+
 printf '%sAbnahme Phase 1 und 2 — VeloCity%s\n' "$blau" "$aus"
 printf '%s%s%s\n' "$grau" "$(date '+%d.%m.%Y %H:%M')" "$aus"
 
@@ -39,9 +129,16 @@ fi
 
 # ------------------------------------------------- 2 Aufbaukette zweimal
 schritt "Aufbaukette, zweimal (Idempotenz)"
+# Dateizahl GEZAEHLT statt eingetragen: eine feste Zahl hier ("12
+# Dateien") stand bis zur Gesamtpruefung vom 26.08.2026 unveraendert im
+# Text, waehrend db/aufbau/ laengst auf 18 Dateien gewachsen war - die
+# Pruefung blieb gruen, meldete aber eine falsche Zahl. Genau diese Sorte
+# Fehler hat einmal dazu gefuehrt, dass eine externe Pruefung einen
+# richtigen Betrag fuer einen Datenfehler hielt (siehe TESTEN.md).
+dateizahl=$(ls db/aufbau/*.sql | wc -l | tr -d ' ')
 if python3 db/run.py db/aufbau/*.sql >/tmp/abnahme1.log 2>&1 &&
    python3 db/run.py db/aufbau/*.sql >/tmp/abnahme2.log 2>&1; then
-  ergebnis 0 "12 Dateien, zweimal fehlerfrei"
+  ergebnis 0 "$dateizahl Dateien, zweimal fehlerfrei"
 else
   ergebnis 1 "Aufbau fehlgeschlagen — siehe /tmp/abnahme2.log"
   tail -5 /tmp/abnahme2.log | sed 's/^/     /'
@@ -59,10 +156,20 @@ fi
 
 # --------------------------------------------------- 4 Zugriffsschutz
 schritt "Zugriffsschutz ueber die REST-Schnittstelle"
+# Zahlen GEZAEHLT statt eingetragen, aus derselben Ueberlegung wie bei
+# Pruefung 2: hier stand bis zur Gesamtpruefung vom 26.08.2026 "7 Sichten
+# oeffentlich" fest im Text - waehrend die ERLAUBT-Liste in
+# rest_security_check.py laengst auf neun Sichten gewachsen war. Die
+# Pruefung blieb gruen, meldete aber eine falsche Zahl; siehe TESTEN.md.
+# Gezaehlt wird aus dem tatsaechlichen Pruefprotokoll, nicht aus der
+# Quelle nachgezaehlt - nur das belegt, dass jede einzelne Ressource
+# auch wirklich geprueft und nicht bloss aufgelistet wurde.
 python3 tools/rest_security_check.py >/tmp/abnahme-sec.log 2>&1
 rc=$?
 case $rc in
-  0) ergebnis 0 "13 Ressourcen gesperrt, 7 Sichten oeffentlich" ;;
+  0) gesperrt=$(grep -c ': kein Zugriff' /tmp/abnahme-sec.log)
+     oeffentlich=$(grep -c ': oeffentlich erreichbar' /tmp/abnahme-sec.log)
+     ergebnis 0 "$gesperrt Ressourcen gesperrt, $oeffentlich Sichten oeffentlich" ;;
   2) ergebnis 1 "Schema velocity ist bei PostgREST nicht freigegeben — die Pruefung belegt nichts"
      sed 's/^/     /' /tmp/abnahme-sec.log ;;
   *) ergebnis 1 "Abweichungen gefunden"
@@ -223,12 +330,14 @@ fi
 
 # --------------------------------------------------------- 8 Website
 schritt "Website spricht nur Sichten und api-Funktionen"
-verstoss=$(grep -oE "\.from\('[a-z_]+'\)" src/supabase.js | grep -v "'v_" || true)
-verstoss="$verstoss$(grep -oE "rpc\('[a-z_]+'" src/supabase.js | grep -v "'api_" || true)"
-if [ -z "$(echo "$verstoss" | tr -d '[:space:]')" ]; then
+dz_log=$(pruefe_direktzugriff "src/supabase.js" "v_" "api_" "")
+dz_rc=$?
+echo "$dz_log" | grep '^HINWEIS' | sed 's/^/     /'
+if [ "$dz_rc" -eq 0 ]; then
   ergebnis 0 "keine Basistabelle, keine fn_-Funktion im Frontend"
 else
-  ergebnis 1 "Direktzugriff gefunden: $verstoss"
+  ergebnis 1 "Direktzugriff gefunden"
+  echo "$dz_log" | grep '^FEHLER' | sed 's/^/     /'
 fi
 if node --check src/supabase.js 2>/dev/null && node --check src/script.js 2>/dev/null \
    && node --check src/auth.js 2>/dev/null && node --check src/config.js 2>/dev/null; then
@@ -333,15 +442,55 @@ schritt "WaWi-Sichten sind ohne Anmeldung unerreichbar"
 # zurueckgibt - eine leere Liste laesst offen, ob das Recht fehlt oder
 # die Zeilenschranke nur zufaellig nichts traf. Wie Pruefung 21 zaehlt
 # deshalb nur ein expliziter 401 als Beweis.
-# Accept-Profile: velocity - siehe Begruendung bei Pruefung 19/20.
-code=$(curl -s -o /dev/null -w '%{http_code}' \
-        "$URL/rest/v1/v_wawi_flotte?select=fahrrad_id&limit=1" \
-        -H "apikey: $KEY" -H "Accept-Profile: velocity")
-case "$code" in
-  401) ergebnis 0 "v_wawi_flotte antwortet mit HTTP 401" ;;
-  200) ergebnis 1 "v_wawi_flotte antwortet mit HTTP 200" ;;
-  *)   ergebnis 1 "kein Beweis, HTTP $code weder 200 noch 401" ;;
-esac
+#
+# Bis zur Gesamtpruefung vom 26.08.2026 fragte diese Pruefung nur
+# v_wawi_flotte ab - eine von zehn Sichten. Haette sie alle geprueft,
+# waere der eigentliche Befund von selbst aufgefallen: v_wawi_modell
+# antwortet mit HTTP 404 (PGRST205, "not in schema cache"), nicht mit
+# 401, weil sie neu ist und PostgREST seinen Schema-Cache seit ihrer
+# Anlage nicht neu geladen hat. Die Liste unten wird deshalb wie bei
+# Pruefung 2 und 4 ABGELEITET, nicht aufgezaehlt: sie liest denselben
+# "grant select on ... to authenticated"-Block am Ende von
+# db/aufbau/0019_wawi_logik.sql, der auch tatsaechlich bestimmt, welche
+# Sicht authenticated erreichen darf. v_wawi_fahrt_km steht dort
+# ABSICHTLICH nicht (siehe Kommentar dort: Bewegungsprofil, ihr wurde
+# das Recht mit einem revoke wieder entzogen) und taucht deshalb hier
+# zu Recht nicht auf - sie soll fuer niemanden ohne eigene Rolle
+# erreichbar sein, ihre Abwesenheit in dieser Liste ist kein Fehler.
+sichten=$(python3 - <<'PY'
+import re
+text = open('db/aufbau/0019_wawi_logik.sql', encoding='utf-8').read()
+text = re.sub(r'--[^\n]*', '', text)   # Zeilenkommentare raus, sonst zaehlen Beispielnamen darin mit
+treffer = re.search(r'grant\s+select\s+on\s+([^;]*?)\s+to\s+authenticated\s*;', text, re.S)
+if treffer:
+    for name in re.findall(r'velocity\.(v_wawi_\w+)', treffer.group(1)):
+        print(name)
+PY
+)
+if [ -z "$sichten" ]; then
+  ergebnis 1 "kein grant-Block mit v_wawi_-Sichten gefunden - Pruefung haette nichts geprueft"
+else
+  offen=""
+  unklar=""
+  for s in $sichten; do
+    code=$(curl -s -o /dev/null -w '%{http_code}' \
+            "$URL/rest/v1/$s?select=*&limit=1" \
+            -H "apikey: $KEY" -H "Accept-Profile: velocity")
+    case "$code" in
+      401) ;;
+      200) offen="$offen $s" ;;
+      *)   unklar="$unklar $s(HTTP $code)" ;;
+    esac
+  done
+  anzahl=$(echo "$sichten" | wc -w | tr -d ' ')
+  if [ -n "$offen" ]; then
+    ergebnis 1 "ohne Anmeldung erreichbar:$offen"
+  elif [ -n "$unklar" ]; then
+    ergebnis 1 "kein Beweis, HTTP weder 200 noch 401:$unklar"
+  else
+    ergebnis 0 "alle $anzahl Sichten antworten mit HTTP 401"
+  fi
+fi
 
 # --------------------------------------------- 23 Rechenannahmen
 schritt "Jede Rechenannahme nennt ihre Quelle"
@@ -516,6 +665,52 @@ PYEOF
 )
 [ "$n" = "0" ] && ergebnis 0 "kein fahruntaugliches Rad auf verfuegbar" \
                || ergebnis 1 "$n Rad/Raeder fahruntauglich, aber verfuegbar"
+
+# --------------------------------------------- 28 WaWi-Vertrag
+schritt "Warenwirtschaft: Vertrag zwischen HTML und JavaScript"
+if python3 tools/wawi_check.py >/tmp/abnahme-wawi.log 2>&1; then
+  ergebnis 0 "$(grep -c '^  ok' /tmp/abnahme-wawi.log) Punkte nachgeprueft"
+else
+  ergebnis 1 "$(grep -c '^  FEHL' /tmp/abnahme-wawi.log) Punkt(e) offen"
+  grep '^  FEHL' /tmp/abnahme-wawi.log | head -10 | sed 's/^/     /'
+fi
+
+# --------------------------------------------- 29 WaWi spricht nur Sichten
+schritt "Warenwirtschaft spricht nur Sichten und api-Funktionen"
+# Dieselbe Regel wie fuer die Website, und derselbe Test (siehe
+# pruefe_direktzugriff oben) - nur gegen wawi/*.js. Ein Zugriff auf eine
+# Basistabelle waere hier gefaehrlicher als dort: die Warenwirtschaft
+# sieht Personendaten.
+dz_log=$(pruefe_direktzugriff "$(printf '%s\n' wawi/*.js)" "v_wawi" "api_" "ist_mitarbeiter,hat_rolle")
+dz_rc=$?
+echo "$dz_log" | grep '^HINWEIS' | sed 's/^/     /'
+if [ "$dz_rc" -eq 0 ]; then
+  ergebnis 0 "keine Basistabelle, keine fn_-Funktion in der Warenwirtschaft"
+else
+  ergebnis 1 "Direktzugriff gefunden"
+  echo "$dz_log" | grep '^FEHLER' | sed 's/^/     /'
+fi
+
+# --------------------------------------------- 30 WaWi erreichbar
+schritt "wawi.butscher.cloud antwortet"
+code=$(curl -s -o /tmp/wawi.html -w '%{http_code}' https://wawi.butscher.cloud)
+if [ "$code" = "200" ] && grep -q "VeloCity Warenwirtschaft" /tmp/wawi.html; then
+  ergebnis 0 "erreichbar und liefert die Anmeldeseite"
+else
+  ergebnis 1 "HTTP $code, Inhalt unerwartet"
+fi
+
+# --------------------------------------------- 31 kein Kundenzugang
+schritt "Warenwirtschaft weist Nicht-Mitarbeitende ab"
+# Der haeufigste Fall und der, den man vergisst: JEDER Kunde kann sich
+# anmelden, weil es dieselbe auth.users ist. Die Oberflaeche muss das
+# vor dem Aufbau erkennen, nicht danach.
+if grep -q "zustand-kein-mitarbeiter" wawi/index.html && \
+   grep -q "zustand-kein-mitarbeiter" wawi/rahmen.js; then
+  ergebnis 0 "Der Zustand 'kein Mitarbeiter' ist gebaut und wird geschaltet"
+else
+  ergebnis 1 "Der Zustand 'kein Mitarbeiter' fehlt"
+fi
 
 # ----------------------------------------------------------- Ergebnis
 printf '\n%s────────────────────────────────────────%s\n' "$blau" "$aus"

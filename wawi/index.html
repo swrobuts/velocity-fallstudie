@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VeloCity Warenwirtschaft</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Eigene Kopie, kein Verweis nach ../src: die Warenwirtschaft wird
+       als eigenes Verzeichnis ausgeliefert und hat oberhalb ihrer Wurzel
+       nichts. Der Verweis lieferte schon lokal einen 404. -->
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <!-- Fuenf Zustaende, von denen immer genau einer sichtbar ist. Kein
+       Seitenwechsel: die Sitzung, die Rollen und die Statuszeile
+       ueberleben jeden Bereichswechsel. -->
+  <div id="zustand-laden" class="vollbild">Einen Moment …</div>
+
+  <form id="zustand-anmeldung" class="vollbild anmeldung" hidden>
+    <h1>VeloCity Warenwirtschaft</h1>
+    <label for="feld-email">E-Mail</label>
+    <input id="feld-email" type="email" autocomplete="username" required>
+    <label for="feld-passwort">Passwort</label>
+    <input id="feld-passwort" type="password" autocomplete="current-password" required>
+    <button type="submit">Anmelden</button>
+    <p id="anmeldung-fehler" class="fehler" role="alert"></p>
+  </form>
+
+  <div id="zustand-kein-mitarbeiter" class="vollbild" hidden>
+    <h1>Kein Zugang</h1>
+    <p>Dieses Konto ist bei VeloCity nicht als Mitarbeitendenkonto hinterlegt.
+       Wenn Sie Kundin oder Kunde sind, finden Sie Ihren Bereich unter
+       <a href="https://bikes.butscher.cloud">bikes.butscher.cloud</a>.</p>
+    <button id="knopf-abmelden-fremd" type="button">Abmelden</button>
+  </div>
+
+  <!-- Anders als "Kein Zugang": dieses Konto IST als Mitarbeitendenkonto
+       hinterlegt, es fehlt nur die Rollenzuteilung. Der Text schickt
+       deshalb zur Leitung, nicht zur Kontoverwaltung - genau das war der
+       Befund aus der Pruefung. -->
+  <div id="zustand-ohne-rolle" class="vollbild" hidden>
+    <h1>Noch keine Rolle zugeteilt</h1>
+    <p>Ihr Konto ist bei VeloCity als Mitarbeitendenkonto hinterlegt, aber
+       es wurde noch kein Aufgabenbereich zugeordnet. Wenden Sie sich an
+       die Leitung, damit sie Ihnen eine Rolle zuteilt.</p>
+    <button id="knopf-abmelden-ohne-rolle" type="button">Abmelden</button>
+  </div>
+
+  <div id="zustand-arbeit" hidden>
+    <header id="kopfleiste">
+      <span class="wortmarke">VeloCity <b>WaWi</b></span>
+      <input id="feld-suche" type="search" placeholder="Suchen" aria-label="Suchen">
+      <span id="benutzer-anzeige"></span>
+      <button id="knopf-abmelden" type="button">Abmelden</button>
+    </header>
+
+    <nav id="navigation" aria-label="Aufgabenbereiche"></nav>
+
+    <main id="arbeitsbereich">
+      <section id="arbeitsliste" aria-label="Arbeitsliste"></section>
+      <section id="detailmaske" aria-label="Detailmaske"></section>
+    </main>
+
+    <!-- aria-live: die Statuszeile ist die Rueckmeldung fuer jede
+         Buchung. Wer mit der Tastatur arbeitet oder einen Screenreader
+         benutzt, bekommt sie sonst nie mit. -->
+    <footer id="statuszeile" role="status" aria-live="polite"></footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="daten.js"></script>
+  <script src="anmeldung.js"></script>
+  <script src="rahmen.js"></script>
+  <!-- Nach rahmen.js: jeder Arbeitsbereich meldet sich beim Laden ueber
+       bereichAnmelden() an, das muss also schon existieren. -->
+  <script src="flotte.js"></script>
+  <script src="stationen.js"></script>
+  <script src="kunden.js"></script>
+  <script src="instandhaltung.js"></script>
+  <script src="auswertungen.js"></script>
+</body>
+</html>

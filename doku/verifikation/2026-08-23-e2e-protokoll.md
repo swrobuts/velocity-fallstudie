@@ -53,7 +53,7 @@ sie von außen aufrufbar, ließen sich fremde Ausleihen abrechnen. Genau
 das ist ausgeschlossen.
 
 Zusätzlich extern über PostgREST, `tools/rest_security_check.py`:
-13 gesperrte Ressourcen liefern HTTP 401, 7 öffentliche Sichten
+13 gesperrte Ressourcen liefern HTTP 401, 9 öffentliche Sichten
 HTTP 200, `0 Abweichung(en)`.
 
 ## 3 Nicht von mir geprüft: der angemeldete Ablauf

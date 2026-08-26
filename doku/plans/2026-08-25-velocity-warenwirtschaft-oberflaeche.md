@@ -141,7 +141,7 @@ velocity.hat_rolle(p_code)   -> boolean     -- 'disposition' | 'werkstatt' | 'ku
 ## Aufgabe 1: Gerüst und Anmeldung
 
 **Dateien:**
-- Anlegen: `wawi/index.html`, `wawi/style.css`, `wawi/config.js`, `wawi/daten.js`, `wawi/anmeldung.js`
+- Anlegen: `wawi/index.html`, `wawi/style.css`, `wawi/config.js`, `wawi/daten.js`, `wawi/anmeldung.js`, `wawi/assets/favicon.svg` (Kopie aus `src/assets/`)
 
 **Schnittstellen:**
 - Liefert: `SUPABASE_CONFIG`, `WAWI_CONFIG`; `anmelden(email, passwort)`, `abmelden()`, `angemeldeterBenutzer()`, `meineRollen()` (liefert `Set<string>`), `beiAnmeldungsWechsel(rueckruf)`; `ladeListe(quelle, spalten, aufbau)`, `letzterLadeFehler(quelle)`, `rufeAuf(funktion, argumente)`
@@ -259,12 +259,22 @@ function uebersetzeFehler(meldung) {
 let rollenZwischenspeicher = null;
 const wechselRueckrufe = [];
 
-supabaseClient.auth.onAuthStateChange(() => {
-    // Bei jedem Wechsel verfaellt der Rollenspeicher. Ihn stehen zu
-    // lassen hiesse, dass nach einem Benutzerwechsel die Navigation des
-    // Vorgaengers stehen bleibt.
-    rollenZwischenspeicher = null;
-    setTimeout(() => wechselRueckrufe.forEach((r) => r()), 0);
+supabaseClient.auth.onAuthStateChange((ereignis) => {
+    // Nur bei einem ECHTEN Benutzerwechsel verfaellt der Rollenspeicher.
+    // TOKEN_REFRESHED kommt stuendlich waehrend einer laufenden Sitzung -
+    // dabei die Rollen neu zu laden hiesse fuenf RPC-Aufrufe und einen
+    // Neuaufbau der Navigation, waehrend jemand mitten in einer Buchung
+    // steckt.
+    if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(ereignis)) {
+        rollenZwischenspeicher = null;
+        // setTimeout mit 0: Supabase haelt waehrend onAuthStateChange
+        // eine Sperre. Ein Rueckruf, der von hier aus synchron wieder in
+        // den Client greift - und genau das tut jeder, der meineRollen()
+        // aufruft -, blockiert ihn. Dieselbe Falle steht in
+        // src/auth.js beschrieben; sie hat die Website einmal
+        // eingefroren.
+        setTimeout(() => wechselRueckrufe.forEach((r) => r()), 0);
+    }
 });
 
 function beiAnmeldungsWechsel(rueckruf) {
@@ -289,20 +299,41 @@ function angemeldeterBenutzer() {
     return supabaseClient.auth.getUser();
 }
 
-// Liefert ein Set der Rollencodes. Leeres Set heisst: angemeldet, aber
-// kein Mitarbeiter - der haeufigste Fall, weil jeder KUNDE sich hier
-// anmelden koennte. Die Oberflaeche muss das unterscheiden koennen,
-// deshalb null fuer "gar nicht angemeldet".
+// VIER Rueckgaben, weil es vier Faelle gibt und drei davon leicht
+// verwechselt werden:
+//
+//   null        gar nicht angemeldet
+//   false       angemeldet, aber kein Mitarbeiter - der haeufigste Fall,
+//               weil jeder KUNDE sich hier anmelden kann
+//   Set (leer)  Mitarbeiter, aber ohne jede Rolle. Ein echter Kollege
+//               mit einem Eintrag in velocity.mitarbeiter, dem nur
+//               niemand eine Aufgabe zugeteilt hat. Ihm "Sie sind nicht
+//               als Mitarbeitendenkonto hinterlegt" zu sagen waere
+//               schlicht falsch - und er wuesste nicht, wen er fragen
+//               soll.
+//   Set (voll)  Mitarbeiter mit Rollen
+//
+// Der Unterschied zwischen false und dem leeren Set kostet eine Zeile
+// und erspart einem Kollegen einen Anruf bei der falschen Stelle.
 async function meineRollen() {
     if (rollenZwischenspeicher) return rollenZwischenspeicher;
 
     const { data: { user } } = await supabaseClient.auth.getUser();
     if (!user) return null;
 
-    const { data: istMitarbeiter } = await supabaseClient.rpc('ist_mitarbeiter');
+    // error MUSS ausgewertet werden. Ein technischer Fehlschlag liefert
+    // data = null - genau dieselbe Form wie ein berechtigtes "nein".
+    // Ohne diese Pruefung sieht ein Netzwerkfehler aus wie "kein
+    // Mitarbeiter", und die Oberflaeche zeigt "Kein Zugang" statt eines
+    // Fehlers. Spurlos, nicht einmal ein Eintrag in der Konsole.
+    const { data: istMitarbeiter, error: fehlerMitarbeiter } =
+        await supabaseClient.rpc('ist_mitarbeiter');
+    if (fehlerMitarbeiter) {
+        throw new Error(`Die Rollen liessen sich nicht ermitteln: ${fehlerMitarbeiter.message}`);
+    }
     if (!istMitarbeiter) {
-        rollenZwischenspeicher = new Set();
-        return rollenZwischenspeicher;
+        rollenZwischenspeicher = false;
+        return false;
     }
 
     // Vier einzelne Aufrufe statt einer Sicht auf mitarbeiter_rolle: die
@@ -310,7 +341,10 @@ async function meineRollen() {
     // bleiben. hat_rolle verraet nur, was der Aufrufer ohnehin weiss.
     const treffer = await Promise.all(
         WAWI_CONFIG.rollen.map(async (code) => {
-            const { data } = await supabaseClient.rpc('hat_rolle', { p_code: code });
+            const { data, error } = await supabaseClient.rpc('hat_rolle', { p_code: code });
+            if (error) {
+                throw new Error(`Rolle ${code} liess sich nicht pruefen: ${error.message}`);
+            }
             return data ? code : null;
         })
     );
@@ -321,7 +355,7 @@ async function meineRollen() {
 
 - [ ] **Schritt 4: `wawi/index.html` — das Gerüst**
 
-Eine Seite mit vier Zuständen, die einander ablösen: Anmeldemaske, „kein Mitarbeiter", Arbeitsoberfläche, Ladezustand. Verwende genau diese `id`-Werte — `tools/wawi_check.py` aus Aufgabe 9 prüft den Vertrag zwischen HTML und JavaScript gegen sie:
+Eine Seite mit fünf Zuständen, die einander ablösen: Anmeldemaske, „kein Mitarbeiter", Arbeitsoberfläche, Ladezustand. Verwende genau diese `id`-Werte — `tools/wawi_check.py` aus Aufgabe 9 prüft den Vertrag zwischen HTML und JavaScript gegen sie:
 
 ```html
 <!doctype html>
@@ -331,7 +365,10 @@ Eine Seite mit vier Zuständen, die einander ablösen: Anmeldemaske, „kein Mit
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VeloCity Warenwirtschaft</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="../src/assets/favicon.svg" type="image/svg+xml">
+  <!-- Eigene Kopie, kein Verweis nach ../src: die Warenwirtschaft wird
+       als eigenes Verzeichnis ausgeliefert und hat oberhalb ihrer Wurzel
+       nichts. Der Verweis lieferte schon lokal einen 404. -->
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 </head>
 <body>
   <!-- Vier Zustaende, von denen immer genau einer sichtbar ist. Kein
@@ -348,6 +385,17 @@ Eine Seite mit vier Zuständen, die einander ablösen: Anmeldemaske, „kein Mit
     <button type="submit">Anmelden</button>
     <p id="anmeldung-fehler" class="fehler" role="alert"></p>
   </form>
+
+  <!-- Ein echter Kollege ohne zugeteilte Rolle. Ihm zu sagen, er sei
+       kein Mitarbeiter, waere falsch - und er wuesste nicht, wen er
+       fragen soll. Deshalb ein eigener Zustand mit einem Hinweis, der
+       weiterhilft. -->
+  <div id="zustand-ohne-rolle" class="vollbild" hidden>
+    <h1>Noch keine Aufgabe zugeteilt</h1>
+    <p>Ihr Mitarbeitendenkonto ist angelegt, aber es ist Ihnen noch kein
+       Aufgabenbereich zugeordnet. Die Leitung kann das nachtragen.</p>
+    <button id="knopf-abmelden-ohne-rolle" type="button">Abmelden</button>
+  </div>
 
   <div id="zustand-kein-mitarbeiter" class="vollbild" hidden>
     <h1>Kein Zugang</h1>
@@ -466,7 +514,16 @@ git commit -m "feat(wawi): Geruest, Datenzugriff und Anmeldung"
 
 **Schnittstellen:**
 - Nutzt: `meineRollen()`, `beiAnmeldungsWechsel()`, `anmelden()`, `abmelden()` aus Aufgabe 1
-- Liefert: `bereichAnmelden(bereich)` zum Registrieren eines Arbeitsbereichs; `melde(text, art)` für die Statuszeile; `zeigeListe(zeilen, spalten, beiAuswahl)`; `zeigeMaske(felder, knoepfe)`; `bestaetige(frage)`
+- Liefert — **alles, was die Aufgaben 4 bis 8 aufrufen; es gibt keine zweite Stelle für Bausteine**:
+  - `bereichAnmelden(bereich)` — registriert einen Arbeitsbereich
+  - `melde(text, art)` — Statuszeile; `art` ist `neutral` | `gut` | `warnung` | `schlecht`
+  - `zeigeListe(zeilen, spalten, beiAuswahl)` — Arbeitsliste mit Tastaturnavigation
+  - `zeigeMaske(titel, felder, knoepfe)` — Detailmaske
+  - `zeigeLeermaske(titel, erklaerung, angebot)` — die Liste ist leer, und das hat einen Grund
+  - `zeigeUnterreiter(reiter, aktiv, beiWechsel)` — zwei Listen in einem Bereich
+  - `bestaetige(frage, bestaetigungswort)` — Dialog; mit Wort muss es eingetippt werden
+  - `frageNachGrund(titel)` — einzeiliger Eingabedialog, liefert `null` bei Abbruch
+  - `darfRolle(code)` — synchron, aus dem Rollenspeicher; `code` ist einer der vier Rollencodes
 
 - [ ] **Schritt 1: Die drei Zustände auseinanderhalten**
 
@@ -479,9 +536,10 @@ Der Kern von `rahmen.js`, und der Grund, warum diese Aufgabe eigen ist:
 // Die Oberflaeche muss DREI Zustaende unterscheiden koennen, die im
 // Browser gleich aussehen:
 //
-//   1. nicht angemeldet          -> Anmeldemaske
+//   1. nicht angemeldet             -> Anmeldemaske
 //   2. angemeldet, kein Mitarbeiter -> Hinweis, kein Zugang
-//   3. angemeldet, Mitarbeiter   -> Arbeitsoberflaeche
+//   3. Mitarbeiter ohne Rolle       -> Hinweis, wer helfen kann
+//   4. Mitarbeiter mit Rollen       -> Arbeitsoberflaeche
 //
 // Der zweite Fall ist der haeufigste und der, den man vergisst: JEDER
 // Kunde kann sich hier anmelden, weil es dieselbe auth.users ist. Er
@@ -502,11 +560,12 @@ async function seiteAufbauen() {
     const rollen = await meineRollen();
 
     zeige('zustand-laden', false);
-    zeige('zustand-anmeldung', rollen === null);
-    zeige('zustand-kein-mitarbeiter', rollen !== null && rollen.size === 0);
-    zeige('zustand-arbeit', rollen !== null && rollen.size > 0);
+    zeige('zustand-anmeldung',        rollen === null);
+    zeige('zustand-kein-mitarbeiter', rollen === false);
+    zeige('zustand-ohne-rolle',       rollen instanceof Set && rollen.size === 0);
+    zeige('zustand-arbeit',           rollen instanceof Set && rollen.size > 0);
 
-    if (rollen && rollen.size > 0) {
+    if (rollen instanceof Set && rollen.size > 0) {
         await navigationAufbauen(rollen);
     }
 }
@@ -600,7 +659,35 @@ function zeigeMaske(titel, felder, knoepfe) {
 
 Bau beide aus. Die Liste braucht: Kopfzeile, Zeilen, Auswahlmarkierung, Tastaturnavigation mit Pfeil hoch und runter, und eine **Leermaske** — ein Satz, der sagt, warum nichts da ist, nicht ein leerer Kasten.
 
-- [ ] **Schritt 5: Tastaturbedienung**
+- [ ] **Schritt 5: Die vier kleinen Bausteine**
+
+Sie sind klein, aber sie gehören hierher und nicht in den ersten Bereich, der sie braucht — sonst stehen sie in `flotte.js` und `kunden.js` importiert aus `flotte.js`, was in einer Woche niemand mehr versteht.
+
+```javascript
+// Ein einzeiliger Eingabedialog. Liefert null bei Abbruch - und der
+// Aufrufer muss das pruefen: eine Buchung ohne Grund ist eine Buchung,
+// die spaeter niemand erklaeren kann.
+async function frageNachGrund(titel) { /* <dialog> mit einem <input> */ }
+
+// Eine leere Liste ist kein leerer Kasten. Sie sagt, WARUM nichts da ist,
+// und bietet an, was als Naechstes zu tun waere.
+function zeigeLeermaske(titel, erklaerung, angebot = null) { /* ... */ }
+
+// Zwei Listen in einem Bereich, wenn sie fachlich zusammengehoeren.
+// reiter: [{ schluessel, titel }]
+function zeigeUnterreiter(reiter, aktiv, beiWechsel) { /* ... */ }
+
+// Synchron, weil jeder Maskenaufbau es mehrfach fragt. Der
+// Rollenspeicher aus anmeldung.js ist zu diesem Zeitpunkt gefuellt -
+// seiteAufbauen() hat ihn geladen, bevor irgendein Bereich baut.
+function darfRolle(code) {
+    return geladeneRollen !== null && geladeneRollen.has(code);
+}
+```
+
+`geladeneRollen` ist der Wert, den `seiteAufbauen()` von `meineRollen()` bekommen hat. Halte ihn in `rahmen.js` als Modulvariable — nicht in `anmeldung.js`, denn dort ist er ein Zwischenspeicher mit anderer Lebensdauer.
+
+- [ ] **Schritt 6: Tastaturbedienung**
 
 ```javascript
 // Tastatur vor Maus. Eine Arbeitsmaske, die Maushandbetrieb erzwingt,
@@ -613,7 +700,7 @@ document.addEventListener('keydown', (e) => {
 });
 ```
 
-- [ ] **Schritt 6: Anmeldung verdrahten und von Hand prüfen**
+- [ ] **Schritt 7: Anmeldung verdrahten und von Hand prüfen**
 
 Formular an `anmelden()` hängen, beide Abmeldeknöpfe an `abmelden()`, `beiAnmeldungsWechsel(seiteAufbauen)` registrieren, am Ende `seiteAufbauen()` aufrufen.
 
@@ -625,7 +712,7 @@ Dann prüfen — und zwar **alle drei Zustände**:
 
 Und die Tastatur: Tab erreicht jedes Bedienelement, der Fokus ist sichtbar, `Escape` schließt den Bestätigungsdialog.
 
-- [ ] **Schritt 7: Commit**
+- [ ] **Schritt 8: Commit**
 
 ```bash
 git add wawi/
@@ -845,7 +932,7 @@ function radMaske(rad) {
     // darf. Der Knopf, den die Funktion ohnehin abweist, ist keine
     // Sicherheitsluecke - aber eine Einladung zu einer Fehlermeldung,
     // die niemand braucht.
-    if (darfDisponieren() || darfWerkeln()) {
+    if (darfRolle('disposition') || darfRolle('werkstatt')) {
         for (const ziel of ['verfuegbar', 'wartung', 'defekt']) {
             if (rad.status === ziel) continue;
             knoepfe.push({
@@ -863,7 +950,7 @@ function radMaske(rad) {
         }
     }
 
-    if (darfDisponieren() && rad.status !== 'ausgemustert') {
+    if (darfRolle('disposition') && rad.status !== 'ausgemustert') {
         knoepfe.push({
             titel: 'Ausmustern',
             art: 'gefaehrlich',
@@ -1292,7 +1379,7 @@ async function schaedenZeigen() {
         { feld: 'schwere',      titel: 'Schwere',
           klasse: (s) => (s === 'fahruntauglich' ? 'schlecht' : s === 'mittel' ? 'warnung' : '') },
         { feld: 'gemeldet_am',  titel: 'Gemeldet' },
-        { feld: 'offen_seit',   titel: 'Offen seit', formatieren: alterKurz },
+        { feld: 'offen_seit',   titel: 'Offen seit', formatieren: alterKurz },   // alterKurz baust du hier, es wird nur hier gebraucht
         { feld: 'status',       titel: 'Stand' }
     ], schadenMaske);
 

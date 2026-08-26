@@ -306,3 +306,71 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;
+
+-- Aufgabe 3 (Oberflaechenplan): v_wawi_modell - die Auswahlliste, ohne die
+-- api_rad_anlegen keine modell_id fuer eine neue Radanlage hergibt.
+create or replace function velocity_test.test_v_modell_fuer_die_auswahlliste()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  return next has_view('velocity'::name, 'v_wawi_modell'::name, 'v_wawi_modell existiert');
+
+  perform velocity_test.fixture_mitarbeiter('modell');
+  select count(*) into v_n from velocity.v_wawi_modell;
+  -- Ohne Zeilen kann die Maske kein Rad anlegen. Der Bestand fuehrt drei
+  -- Modelle; die Zahl selbst ist nicht der Punkt, die Bewohnbarkeit schon.
+  return next cmp_ok(v_n, '>', 0, 'Die Auswahlliste ist nicht leer');
+
+  -- Die Sicht ist fuer eine EINGABEmaske da. Wer ein Rad anlegt, muss
+  -- Hersteller und Typ lesen koennen, sonst waehlt er eine Nummer.
+  return next has_column('velocity'::name, 'v_wawi_modell'::name, 'hersteller'::name,
+                         'v_wawi_modell nennt den Hersteller');
+  return next has_column('velocity'::name, 'v_wawi_modell'::name, 'typ_code'::name,
+                         'v_wawi_modell nennt den Radtyp');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+create or replace function velocity_test.test_v_modell_nur_fuer_disposition()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  -- Wer keine Raeder anlegt, braucht die Modellliste nicht. Dieselbe
+  -- Schranke wie bei v_wawi_flotte, aus demselben Grund: eine Sicht, die
+  -- ihre Schranke von einer anderen erbt, hat keine eigene.
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('modell-ks', 'kundenservice');
+  select count(*) into v_n from velocity.v_wawi_modell;
+  return next is(v_n, 0, 'Der Kundenservice sieht die Modellliste nicht');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Die beiden Tests oben pruefen die Grenze nur zur Haelfte: die
+-- Auswahllisten-Probe vergibt ueber fixture_mitarbeiter ALLE vier Rollen und
+-- zeigt so nur, dass irgendeine Rolle etwas sieht; die Disposition-Probe
+-- prueft trotz ihres Namens ausschliesslich, dass kundenservice aussen vor
+-- bleibt. Ungeprueft: dass disposition ALLEIN Zeilen sieht, und dass
+-- werkstatt ausgeschlossen ist. Gerade werkstatt ist der heikle Fall - die
+-- Schwestersicht v_wawi_flotte laesst werkstatt zu, und beim Nachbauen
+-- weiterer Sichten wird genau diese Zeile kopiert.
+create or replace function velocity_test.test_v_modell_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('modell-disposition', 'disposition');
+  select count(*) into v_n from velocity.v_wawi_modell;
+  return next cmp_ok(v_n, '>', 0, 'Disposition allein sieht die Modellliste');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('modell-leitung', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_modell;
+  return next cmp_ok(v_n, '>', 0, 'Leitung allein sieht die Modellliste');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('modell-werkstatt', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_modell;
+  return next is(v_n, 0,
+    'Werkstatt sieht die Modellliste nicht - anders als bei v_wawi_flotte ist sie hier nicht zugeteilt');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;

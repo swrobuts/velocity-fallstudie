@@ -696,7 +696,7 @@ def baue() -> Presentation:
               "der Datenbank, über die Schnittstelle und im Browser.")
     regel_streifen(s, [
         ("In der Datenbank", "RLS überall aktiv, anon ohne Tabellenrechte, Rollenwechsel-Probe", "pgTAP, t0011"),
-        ("Über die Schnittstelle", "13 gesperrte Ressourcen, 7 öffentliche Sichten", "HTTP 401 gegen 200"),
+        ("Über die Schnittstelle", "13 gesperrte Ressourcen, 9 öffentliche Sichten", "HTTP 401 gegen 200"),
         ("Im Browser", "Aufrufe der abgemeldeten Seite in der Konsole", "permission denied"),
     ], y=188, hoehe=52, chip_b=200)
     sandkarte(s, "Eine Falle im Prüfwerkzeug selbst",

@@ -247,7 +247,19 @@ begin
   select f.status into v_status from velocity.fahrrad f where f.fahrrad_id = v_rad;
   if not found then return null; end if;          -- Rad geloescht, Kaskade laeuft
   select * into v_pos from velocity.fahrrad_position where fahrrad_id = v_rad;
-  if not found then return null; end if;          -- keine Position gefuehrt
+  -- KEIN "if not found then return null" hier: das stand einmal genau so
+  -- da und wurde per M-0001 als die Luecke nachgemessen, die GR13 gerade
+  -- verhindern soll. "Keine Positionszeile" ist kein Fall von "nichts zu
+  -- pruefen", sondern die radikalste Form von "kein Standort" - schlimmer
+  -- als eine Zeile mit leeren Feldern, nicht harmloser. Erreichbar war das
+  -- ueber api_rad_ausmustern: die Funktion loescht die Positionszeile
+  -- absichtlich (ein ausgemustertes Rad hat keinen Ort mehr), aber danach
+  -- liess sich das Rad ueber api_rad_status_setzen(..., 'verfuegbar')
+  -- klaglos wiederbeleben, ganz ohne dass je ein Standort hinterlegt
+  -- wurde. select ... into auf eine nicht gefundene Zeile setzt v_pos
+  -- ohnehin komplett auf NULL, darum reicht es, den fruehen Ausstieg zu
+  -- streichen: die fehlende Zeile faellt von selbst in denselben Zweig
+  -- wie eine vorhandene Zeile ohne Ort.
 
   if v_pos.station_id is null and v_pos.latitude is null then
     -- Kein Ort. Nur erlaubt, solange das Rad unterwegs oder ausgemustert ist.
@@ -272,9 +284,15 @@ comment on function velocity.trg_radposition_pruefen() is
   'Regel den Status des Rades braucht - und der liegt in einer anderen Tabelle. '
   'Genau da endet, was ein CHECK leisten kann.';
 
+-- Auch "or delete": wer die Positionszeile eines Rades entfernt, das noch
+-- verfuegbar/wartung/defekt ist, erzeugt am Bestand genau den Zustand
+-- ohne Standort, den GR13 verbietet - ganz ohne dass ein UPDATE auf
+-- fahrrad.status noetig waere. Ohne dieses Ereignis liefe ein blankes
+-- DELETE ungeprueft durch: dieselbe Luecke wie M-0001, nur ohne den
+-- Umweg ueber api_rad_ausmustern.
 drop trigger if exists trg_radposition_ort on velocity.fahrrad_position;
 create constraint trigger trg_radposition_ort
-  after insert or update on velocity.fahrrad_position
+  after insert or update or delete on velocity.fahrrad_position
   deferrable initially deferred
   for each row execute function velocity.trg_radposition_pruefen();
 
@@ -284,6 +302,24 @@ create constraint trigger trg_radposition_ort
 drop trigger if exists trg_fahrrad_status_ort on velocity.fahrrad;
 create constraint trigger trg_fahrrad_status_ort
   after update of status on velocity.fahrrad
+  deferrable initially deferred
+  for each row execute function velocity.trg_radposition_pruefen();
+
+-- Und der dritte Weg zu einem Rad ohne Standort: ein blankes INSERT.
+-- Gesamtpruefung 26.08.2026, gemessen statt vermutet: "insert into
+-- velocity.fahrrad (..., status) values (..., 'verfuegbar')" ganz ohne
+-- zugehoerige fahrrad_position-Zeile lief bis hierher durch, auch nach
+-- "set constraints all immediate" - trg_fahrrad_status_ort feuert nur
+-- bei "update of status", nicht bei insert, und trg_radposition_ort
+-- haengt an fahrrad_position, die hier nie angefasst wird. Ueber
+-- api_rad_anlegen und ueber PostgREST ist der Weg dicht (die Basistabelle
+-- ist authenticated entzogen, die Funktion verlangt eine Station) - aber
+-- genau der rohe INSERT ist der Weg jeder Datenuebernahme, und der
+-- Kommentar oben an dieser Regel darf nicht so lesen, als sei die Wurzel
+-- bereits vollstaendig verriegelt.
+drop trigger if exists trg_fahrrad_insert_ort on velocity.fahrrad;
+create constraint trigger trg_fahrrad_insert_ort
+  after insert on velocity.fahrrad
   deferrable initially deferred
   for each row execute function velocity.trg_radposition_pruefen();
 

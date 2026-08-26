@@ -17,6 +17,7 @@ Anforderungsanalyse → Konzeptioneller Entwurf → Normalisierung
 | [05-physisches-modell.md](05-physisches-modell.md) | Datentypen, Constraints als Geschäftsregeln, `EXCLUDE`, Indizes |
 | [06-data-dictionary.md](06-data-dictionary.md) | Erzeugt aus dem Systemkatalog, nicht von Hand pflegen |
 | [07-sicherheitskonzept.md](07-sicherheitskonzept.md) | Bedrohungsmodell, *default deny*, RLS, Nachweise |
+| [08-warenwirtschaft.md](08-warenwirtschaft.md) | Trennung durch Regel statt Recht, was Mitarbeitende nicht sehen, Löschung nach Art. 17 |
 | [A1-datenuebernahme.md](A1-datenuebernahme.md) | Anhang: Übernahme des Altbestands, betrieblich |
 
 ## Diagramme
