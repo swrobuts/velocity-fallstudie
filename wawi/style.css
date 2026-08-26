@@ -1,9 +1,9 @@
 /* ============================================
    VeloCity Warenwirtschaft — Grundraster
 
-   Eine Arbeitsoberflaeche darf voll sein. Sie wird acht Stunden am Tag
-   benutzt, nicht acht Sekunden - Information je Bildschirm zaehlt mehr
-   als Weissraum. Deshalb kleinere Grade und engere Zeilen als auf der
+   Eine Arbeitsoberfläche darf voll sein. Sie wird acht Stunden am Tag
+   benutzt, nicht acht Sekunden - Information je Bildschirm zählt mehr
+   als Weißraum. Deshalb kleinere Grade und engere Zeilen als auf der
    Website, aber dieselben Farben: wer zwischen beiden wechselt, soll
    nicht das Produkt wechseln.
    ============================================ */
@@ -18,10 +18,10 @@
   --text-leise:  #5a6478;
   --gut:         #1d7a44;
   --warnung:     #b8860b;
-  /* --warnung selbst faellt auf weissem Grund auf 3.25:1 - unter der
-     verlangten Untergrenze von 4.5:1. Fuer Fliesstext (Statuszeile,
+  /* --warnung selbst fällt auf weißem Grund auf 3.25:1 - unter der
+     verlangten Untergrenze von 4.5:1. Für Fliesstext (Statuszeile,
      Fehlermeldungen) gilt deshalb dieser abgedunkelte Ton, 5.3:1 auf
-     Weiss; --warnung bleibt fuer Flaechen wie Rahmen oder Hintergrund. */
+     Weiß; --warnung bleibt für Flächen wie Rahmen oder Hintergrund. */
   --warnung-text: #8a6508;
   --schlecht:    #c0301c;
   --zeile:       28px;
@@ -51,9 +51,9 @@ body {
 
 /* Ohne diese Regel gewinnt jede eigene display-Angabe (.vollbild,
    #zustand-arbeit) gegen das hidden-Attribut: Autorenregeln schlagen
-   die UA-Regel "[hidden] { display: none }" unabhaengig von der
-   Spezifitaet. Ohne den Vorrang hier waeren nie "genau einer sichtbar",
-   sondern alle vier Zustaende gleichzeitig da - nur uebereinander
+   die UA-Regel "[hidden] { display: none }" unabhängig von der
+   Spezifität. Ohne den Vorrang hier wären nie "genau einer sichtbar",
+   sondern alle vier Zustände gleichzeitig da - nur übereinander
    gestapelt und darum meist unbemerkt. */
 [hidden] {
   display: none !important;
@@ -71,7 +71,7 @@ button {
   cursor: pointer;
 }
 
-/* ===== Vollbildzustaende: Laden, Anmeldung, Kein Zugang ===== */
+/* ===== Vollbildzustände: Laden, Anmeldung, Kein Zugang ===== */
 
 .vollbild {
   height: 100vh;
@@ -88,13 +88,13 @@ button {
   color: var(--text-leise);
 }
 
-/* Wird gesetzt, wenn seiteAufbauen() den Wurf von meineRollen() faengt.
-   Es gibt keinen fuenften Zustand dafuer: der Ladezustand ist der
+/* Wird gesetzt, wenn seiteAufbauen() den Wurf von meineRollen() fängt.
+   Es gibt keinen fünften Zustand dafür: der Ladezustand ist der
    einzige, der in diesem Fall noch sichtbar ist, und wird umgewidmet. */
 #zustand-laden.fehler-anzeige {
   color: var(--schlecht);
   max-width: 480px;
-  /* Ohne margin:auto blieb der Text linksbuendig am Rand statt zentriert
+  /* Ohne margin:auto blieb der Text linksbündig am Rand statt zentriert
      stehen - derselbe Effekt wie bei .anmeldung in Aufgabe 1 (siehe
      dortiger Kommentar): max-width schrumpft die Box, zentriert sie aber
      nicht von selbst. Im Browser reproduziert: mit der ersten Fassung
@@ -166,8 +166,8 @@ button {
   margin: 4px 0 0;
 }
 
-/* Gemeinsames Aussehen fuer die Abmelden-Knoepfe der beiden
-   Hinweiszustaende (kein Mitarbeiter / Mitarbeiter ohne Rolle) - in
+/* Gemeinsames Aussehen für die Abmelden-Knöpfe der beiden
+   Hinweiszustände (kein Mitarbeiter / Mitarbeiter ohne Rolle) - in
    beiden ist er der einzige Ausweg. */
 #zustand-kein-mitarbeiter button,
 #zustand-ohne-rolle button {
@@ -191,27 +191,27 @@ button {
 }
 
 /* Drei Spalten statt eines flex-Bandes: Wortmarke, Suche, Profil. Ein
-   flex-Band haette die Suche nur "irgendwo in der Mitte des Restplatzes"
-   stehen lassen, abhaengig davon, wie breit Wortmarke und Profilbereich
-   gerade sind - Punkt 2 des Auftrags verlangt ausdruecklich die MITTE
-   der Kopfleiste, nicht die Mitte einer Luecke. 1fr auto 1fr zentriert
-   die Suche unabhaengig von der Breite der beiden Aussenspalten, solange
-   beide Aussenspalten selbst nicht breiter als der jeweils andere
+   flex-Band hätte die Suche nur "irgendwo in der Mitte des Restplatzes"
+   stehen lassen, abhängig davon, wie breit Wortmarke und Profilbereich
+   gerade sind - Punkt 2 des Auftrags verlangt ausdrücklich die MITTE
+   der Kopfleiste, nicht die Mitte einer Lücke. 1fr auto 1fr zentriert
+   die Suche unabhängig von der Breite der beiden Außenspalten, solange
+   beide Außenspalten selbst nicht breiter als der jeweils andere
    Rand werden - bei Wortmarke und einem einzelnen Rundknopf ist das
    gegeben. */
 #kopfleiste {
   grid-area: kopf;
   display: grid;
-  /* NICHT "1fr auto 1fr": ein reines 1fr traegt ein implizites
-     Mindestmass von auto (= Inhaltsbreite) - die Wortmarke ("VeloCity
+  /* NICHT "1fr auto 1fr": ein reines 1fr trägt ein implizites
+     Mindestmaß von auto (= Inhaltsbreite) - die Wortmarke ("VeloCity
      WaWi", ca. 103px) ist deutlich breiter als der Profilknopf (32px),
-     also bekaeme die linke Spalte allein durch ihren MINDESTBEDARF mehr
+     also bekäme die linke Spalte allein durch ihren MINDESTBEDARF mehr
      Platz als die rechte, obwohl beide "1fr" tragen. Das Ergebnis: die
      mittlere (auto-)Spalte mit der Suche rutscht sichtbar nach rechts -
      im Browser gemessen rund 97px daneben statt in der Mitte. minmax(...,
-     1fr) ersetzt das Inhalts-Minimum durch ein FESTES, fuer beide Seiten
-     GLEICHES Minimum (grosszuegig ueber der breiteren der beiden Seiten,
-     der Wortmarke) - erst DANN sind beide Aussenspalten wirklich gleich
+     1fr) ersetzt das Inhalts-Minimum durch ein FESTES, für beide Seiten
+     GLEICHES Minimum (großzügig über der breiteren der beiden Seiten,
+     der Wortmarke) - erst DANN sind beide Außenspalten wirklich gleich
      breit und die Suche liegt exakt in der Mitte der Kopfleiste. */
   grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr);
   align-items: center;
@@ -241,12 +241,12 @@ button {
   font: inherit;
 }
 
-/* ===== Profilbereich: Rundknopf + aufklappbares Menue (Punkt 3) =====
-   Ersetzt den fruehreren Fliesstext "email · rollen" und den separaten
+/* ===== Profilbereich: Rundknopf + aufklappbares Menü (Punkt 3) =====
+   Ersetzt den frühreren Fliesstext "email · rollen" und den separaten
    Abmelden-Knopf in der Kopfleiste. Der Rundknopf selbst zeigt nichts
    als das Konterfei (hier: Initialen) - alles Weitere steht erst im
-   Menue, das rahmen.js am Ende ("Profilmenue verdrahten") oeffnet und
-   schliesst. */
+   Menü, das rahmen.js am Ende ("Profilmenü verdrahten") öffnet und
+   schließt. */
 .profilbereich {
   position: relative;
   justify-self: end;
@@ -262,9 +262,9 @@ button {
   display: flex;
 }
 
-/* outline-offset groesser als die globale Vorgabe (1px): bei einem
-   Kreis dieser Groesse laege der Standard-Ring sonst so knapp am Rand,
-   dass er die runde Form optisch kappt statt sie zu umschliessen. */
+/* outline-offset größer als die globale Vorgabe (1px): bei einem
+   Kreis dieser Größe läge der Standard-Ring sonst so knapp am Rand,
+   dass er die runde Form optisch kappt statt sie zu umschließen. */
 .profilknopf:focus-visible {
   outline-offset: 3px;
 }
@@ -277,7 +277,7 @@ button {
    es fehlt nur
      avatar.style.backgroundImage = `url(...)`; avatar.textContent = '';
    in profilAufbauen() (siehe Kommentar dort) - das Feld hinter den
-   Initialen ist bereits ein Bildcontainer, keine reine Textflaeche. */
+   Initialen ist bereits ein Bildcontainer, keine reine Textfläche. */
 .profilknopf-avatar {
   width: 100%;
   height: 100%;
@@ -330,7 +330,7 @@ button {
 }
 
 /* Rollen als ruhige Marken, nicht als Fliesstext - genau der Punkt, den
-   der Auftraggeber an der alten Kopfzeile bemaengelt hat ("disposition,
+   der Auftraggeber an der alten Kopfzeile bemängelt hat ("disposition,
    werkstatt, kundenservice, leitung" als eine lange, durch Kommas
    getrennte Kette). */
 .profilmenue-rollen {
@@ -377,7 +377,7 @@ button {
 
 /* Ein Eintrag je erlaubtem Bereich - rahmen.js erzeugt sie, hier nur
    das Aussehen. Nicht erlaubte Bereiche stehen erst gar nicht im DOM,
-   deshalb reicht reines Styling der vorhandenen Knoepfe. */
+   deshalb reicht reines Styling der vorhandenen Knöpfe. */
 #navigation button {
   text-align: left;
   padding: 12px 16px;
@@ -402,28 +402,28 @@ button {
 #arbeitsbereich {
   grid-area: arbeit;
   display: flex;
-  min-height: 0;   /* Kinder duerfen kleiner als ihr Inhalt sein und selbst scrollen */
+  min-height: 0;   /* Kinder dürfen kleiner als ihr Inhalt sein und selbst scrollen */
   background: var(--grund);
 }
 
-/* flex-basis statt einer festen Breite, UND uebergangsfaehig (Punkt 1):
-   #detailmaske selbst traegt schon die Marke, ob gerade etwas offen ist
-   - leer (":empty", siehe unten) heisst "keine Maske offen", ganz
-   gleich WARUM: noch keine Zeile ausgewaehlt, eine Auswertung ganz ohne
+/* flex-basis statt einer festen Breite, UND übergangsfähig (Punkt 1):
+   #detailmaske selbst trägt schon die Marke, ob gerade etwas offen ist
+   - leer (":empty", siehe unten) heißt "keine Maske offen", ganz
+   gleich WARUM: noch keine Zeile ausgewählt, eine Auswertung ganz ohne
    Detailmaske, oder eine Maske, die gerade per Escape/zeigeLeermaske()
-   wieder geschlossen wurde. rahmen.js leert und fuellt #detailmaske an
+   wieder geschlossen wurde. rahmen.js leert und füllt #detailmaske an
    genau vier Stellen (bereichWechseln, zeigeMaske, zeigeLeermaske,
    maskeVerwerfen) ohnehin schon per replaceChildren()/append() - kein
-   Bereich musste dafuer auch nur eine Zeile aendern, diese Regel liest
-   nur das ohnehin vorhandene Ergebnis. :empty allein haette #detailmaske
+   Bereich musste dafür auch nur eine Zeile ändern, diese Regel liest
+   nur das ohnehin vorhandene Ergebnis. :empty allein hätte #detailmaske
    selbst kollabieren lassen, aber die Nachbarspalte #arbeitsliste nicht
-   automatisch breiter gemacht - dafuer braucht es :has() auf dem
+   automatisch breiter gemacht - dafür braucht es :has() auf dem
    gemeinsamen Elternelement, weil #arbeitsliste im DOM VOR #detailmaske
    steht und CSS keinen "vorheriges Geschwister"-Selektor ohne :has()
    kennt. :has() gilt seit 2023 in allen evergreen Browsern (Chrome/Edge
-   105+, Safari 15.4+, Firefox 121+) - fuer ein Lehrprojekt auf aktuellen
-   Browsern kein Kompromiss, sondern die einzige rein deklarative Loesung
-   ohne eine einzige zusaetzliche JavaScript-Zeile. */
+   105+, Safari 15.4+, Firefox 121+) - für ein Lehrprojekt auf aktuellen
+   Browsern kein Kompromiss, sondern die einzige rein deklarative Lösung
+   ohne eine einzige zusätzliche JavaScript-Zeile. */
 #arbeitsliste {
   flex: 1 1 55%;
   overflow-y: auto;
@@ -435,9 +435,9 @@ button {
 }
 
 /* Detailmaske leer -> Liste auf volle Breite, keine Trennlinie ins
-   Leere. flex-grow bleibt bei 1 fuer beide Seiten (siehe #detailmaske
-   unten) - nur flex-basis aendert sich, das allein reicht, damit der
-   gesamte Restplatz der Liste zufaellt, sobald die Maske nichts mehr
+   Leere. flex-grow bleibt bei 1 für beide Seiten (siehe #detailmaske
+   unten) - nur flex-basis ändert sich, das allein reicht, damit der
+   gesamte Restplatz der Liste zufällt, sobald die Maske nichts mehr
    beansprucht. */
 #arbeitsbereich:has(#detailmaske:empty) #arbeitsliste {
   flex-basis: 100%;
@@ -472,9 +472,9 @@ button {
 }
 
 /* ===== Werkzeugleiste: Aktionen vor der Liste, z. B. "Neu anlegen" =====
-   Baustein zeigeWerkzeugleiste() in wawi/rahmen.js - urspruenglich in
+   Baustein zeigeWerkzeugleiste() in wawi/rahmen.js - ursprünglich in
    Flotte und Stationen je einzeln erfunden, dann zusammengelegt, weil
-   beide Bearbeiter unabhaengig dasselbe gebaut hatten (siehe Kommentar
+   beide Bearbeiter unabhängig dasselbe gebaut hatten (siehe Kommentar
    dort). Die Klasse liegt hier, weil dieselbe Leiste bei jedem
    Arbeitsbereich wiederkehrt, der sie benutzt. */
 
@@ -482,6 +482,130 @@ button {
   flex: 0 0 auto;
   padding: 10px 12px;
   border-bottom: 1px solid var(--linie);
+}
+
+/* ===== Übersichtsstreifen (zeigeUebersicht, Gestaltungsauftrag Auswertungen) =====
+   Ruhig und dicht statt schmückend - DATEV Unternehmen online als
+   Maßstab (siehe Auftrag): eine Haarlinie trennt die Kacheln
+   voneinander und den Streifen von der Tabelle darunter, kein Rahmen um
+   jede einzelne Zahl, keine Hintergrundfarbe außer der Fläche selbst. */
+.uebersichtsstreifen {
+  flex: 0 0 auto;
+  display: flex;
+  border-bottom: 1px solid var(--linie);
+  background: var(--flaeche);
+}
+
+.uebersichtskachel {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 10px 16px;
+  border-right: 1px solid var(--linie);
+}
+
+.uebersichtskachel:last-child {
+  border-right: none;
+}
+
+.uebersichtskachel-titel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-leise);
+  margin-bottom: 2px;
+}
+
+.uebersichtskachel-zeile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.uebersichtskachel-wert {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--marine);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.uebersichtskachel-pfeil {
+  color: var(--text-leise);
+  font-weight: 400;
+  font-size: 15px;
+}
+
+.uebersichtskachel-hinweis {
+  font-size: 11px;
+  color: var(--text-leise);
+  margin-top: 3px;
+  line-height: 1.4;
+}
+
+/* Wiederverwendbarer Farbton außerhalb der Tabelle - dieselbe Bedeutung
+   wie td.warnung dort (siehe .arbeitstabelle td.warnung weiter unten),
+   nur nicht an eine Tabellenzelle gebunden. */
+.ton-warnung {
+  color: var(--warnung-text);
+}
+
+/* ===== Zeichenbausteine: Sparkline, Zellbalken, typografische Skalierung
+   (sparkline()/zellbalken()/zahlSkaliert() in rahmen.js) ===== */
+
+.sparklinie {
+  display: inline-block;
+  vertical-align: middle;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.sparklinie-linie {
+  fill: none;
+  stroke: var(--marine);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.sparklinie-punkt {
+  fill: var(--marine);
+}
+
+/* --rot: derselbe Akzent wie die aktive Navigation/der aktive Reiter -
+   "hier hinsehen", nicht "schlecht" (dafür steht --schlecht). */
+.sparklinie-markierung {
+  fill: var(--rot);
+}
+
+.zellbalken {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+  width: 100%;
+}
+
+.zellbalken-grafik {
+  flex: 0 0 auto;
+}
+
+.zellbalken-hintergrund {
+  fill: var(--grund);
+}
+
+.zellbalken-text {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Bissantz: die tragenden Ziffern bleiben in voller Stärke, Tausender-
+   punkte und Nachkommastellen (samt Einheit) treten zurück. text-leise
+   misst 5.95:1 auf Weiß (siehe Bericht) - über der Untergrenze von 4.5:1
+   für Fließtext, obwohl die Schrift hier kleiner/leiser wirkt als der
+   Hauptteil. */
+.zahl-nebenteil {
+  color: var(--text-leise);
+  font-weight: 400;
 }
 
 /* ===== Arbeitstabelle (zeigeListe) ===== */
@@ -531,41 +655,48 @@ button {
   background: #eef1fb;
 }
 
-/* Farbe traegt Bedeutung, nicht Dekoration: Status-Zellen wie "defekt"
-   nutzen diese Klassen ueber die spalten-klasse von zeigeListe, nicht
-   umgekehrt eingefaerbte Reihen fuer alles. */
+/* Farbe trägt Bedeutung, nicht Dekoration: Status-Zellen wie "defekt"
+   nutzen diese Klassen über die spalten-klasse von zeigeListe, nicht
+   umgekehrt eingefärbte Reihen für alles. */
 .arbeitstabelle td.schlecht { color: var(--schlecht); font-weight: 600; }
 .arbeitstabelle td.warnung  { color: var(--warnung-text); font-weight: 600; }
 .arbeitstabelle td.gut      { color: var(--gut); font-weight: 600; }
-/* Ausgemustert: sichtbar, aber bewusst zurueckgenommen statt betont -
-   das Rad ist erledigt, keine Auffaelligkeit, die Aufmerksamkeit
+/* Ausgemustert: sichtbar, aber bewusst zurückgenommen statt betont -
+   das Rad ist erledigt, keine Auffälligkeit, die Aufmerksamkeit
    verlangt. Diese Klasse fehlte hier, obwohl statusKlasse() in
-   flotte.js sie von Anfang an zurueckgibt. */
+   flotte.js sie von Anfang an zurückgibt. */
 .arbeitstabelle td.leise    { color: var(--text-leise); }
-/* Rechtsbuendig fuer Zahlenspalten (Aufgabe 8, Auswertungen): eine Tabelle
-   ohne Diagrammbibliothek lebt davon, dass Zahlen bei gleicher Grosse
-   untereinanderstehen - linksbuendig zerreisst jede Spalte in Ziffern
-   unterschiedlicher Breite und macht das Ueberfliegen einer Monatsreihe
-   muehsam. font-variant-numeric haelt zusaetzlich jede Ziffer gleich breit
+/* Veränderungsspalte "Δ ggü. Vormonat" (Umsatz nach Radtyp): eine
+   auffällige Veränderung wird durch GEWICHT hervorgehoben, nicht durch
+   Farbe - ein Preisanstieg ist nicht per se "gut" oder "schlecht" wie
+   eine volle Station oder ein negativer Saldo, nur bemerkenswert (siehe
+   istAuffaellig() in auswertungen.js). Tufte: Ink nur, wo sie etwas
+   bedeutet, keine dritte Farbe für eine dritte Bedeutung erfinden. */
+.arbeitstabelle td.auffaellig { font-weight: 700; }
+/* Rechtsbündig für Zahlenspalten (Aufgabe 8, Auswertungen): eine Tabelle
+   ohne Diagrammbibliothek lebt davon, dass Zahlen bei gleicher Große
+   untereinanderstehen - linksbündig zerreisst jede Spalte in Ziffern
+   unterschiedlicher Breite und macht das Überfliegen einer Monatsreihe
+   mühsam. font-variant-numeric hält zusätzlich jede Ziffer gleich breit
    (tabellarische statt proportionale Ziffern), sonst verschieben sich die
-   Kommastellen selbst bei rechtsbuendigem Text noch minimal. Kombinierbar
+   Kommastellen selbst bei rechtsbündigem Text noch minimal. Kombinierbar
    mit schlecht/warnung/gut: zeigeListe setzt beide Klassennamen als EINEN
    String ("zahl warnung"), CSS wendet beide Regeln an.  */
 .arbeitstabelle td.zahl     { text-align: right; font-variant-numeric: tabular-nums; }
 
-/* ===== Zeilenaktionen (Punkt 5) — Baustein zeigeListe()'s fuenfter,
-   optionaler Parameter in rahmen.js. Die Icons werden fuer JEDE Zeile
+/* ===== Zeilenaktionen (Punkt 5) — Baustein zeigeListe()'s fünfter,
+   optionaler Parameter in rahmen.js. Die Icons werden für JEDE Zeile
    angelegt (nicht erst bei :hover erzeugt) und nur per opacity
    ein-/ausgeblendet - genau deshalb verschiebt ihr Erscheinen nichts:
    die Zelle beansprucht ihren Platz von Anfang an, auch wenn nichts zu
    sehen ist. opacity statt visibility, weil ein per Tab fokussierter
-   Knopf mit visibility:hidden fuer die Tastatur unerreichbar waere (der
-   Browser ueberspringt ihn beim Tabben) - mit opacity:0 bleibt er im
-   Fokusweg und wird sichtbar, SOBALD er den Fokus erhaelt (:focus-within
+   Knopf mit visibility:hidden für die Tastatur unerreichbar wäre (der
+   Browser überspringt ihn beim Tabben) - mit opacity:0 bleibt er im
+   Fokusweg und wird sichtbar, SOBALD er den Fokus erhält (:focus-within
    greift dabei schon auf der eigenen Zeile, nicht erst auf einem
    Elternelement). pointer-events:none verhindert nur den MAUS-Klick auf
-   ein unsichtbares Icon; Tastaturaktivierung (Enter/Leertaste) haengt
-   nicht an pointer-events und bleibt unberuehrt. */
+   ein unsichtbares Icon; Tastaturaktivierung (Enter/Leertaste) hängt
+   nicht an pointer-events und bleibt unberührt. */
 .zeilen-aktionen-zelle {
   width: 1%;
   white-space: nowrap;
@@ -605,9 +736,9 @@ button {
   color: var(--marine);
 }
 
-/* currentColor statt einer eigenen Fuellfarbe je Icon: die Symbole
-   erben so automatisch die Zustaende oben (Ruhezustand, :hover) und die
-   gefaehrliche Einfaerbung darunter, ohne eine zweite Farbregel je
+/* currentColor statt einer eigenen Füllfarbe je Icon: die Symbole
+   erben so automatisch die Zustände oben (Ruhezustand, :hover) und die
+   gefährliche Einfärbung darunter, ohne eine zweite Farbregel je
    Zustand. */
 .zeilen-aktion svg {
   width: 16px;
@@ -619,10 +750,10 @@ button {
   stroke-linejoin: round;
 }
 
-/* Gefaehrliche Zeilenaktionen (z. B. Ausmustern) in derselben Farbe wie
-   knopf-gefaehrlich: Rot ist ein defektes Rad oder eine unumkehrbare
-   Handlung, keine Dekoration - dieselbe Regel wie beim Knopf gilt fuer
-   sein Icon-Gegenstueck in der Zeile. */
+/* Gefährliche Zeilenaktionen (z. B. Ausmustern) in derselben Farbe wie
+   knopf-gefährlich: Rot ist ein defektes Rad oder eine unumkehrbare
+   Handlung, keine Dekoration - dieselbe Regel wie beim Knopf gilt für
+   sein Icon-Gegenstück in der Zeile. */
 .zeilen-aktion.zeilen-aktion-gefaehrlich {
   color: var(--schlecht);
 }
@@ -664,8 +795,8 @@ button {
 /* Leer -> auf 0 kollabieren, statt als 45% breiter, komplett unbenutzter
    Streifen mit eigenem Padding stehen zu bleiben. Zusammen mit der
    #arbeitsliste-Regel oben (:has(#detailmaske:empty)) ergibt das genau
-   den in Punkt 1 verlangten Zustand: keine Detailmaske -> Liste ueber
-   die volle Breite, Scrollleiste am tatsaechlichen rechten Rand statt
+   den in Punkt 1 verlangten Zustand: keine Detailmaske -> Liste über
+   die volle Breite, Scrollleiste am tatsächlichen rechten Rand statt
    bei 55% der Fensterbreite. */
 #detailmaske:empty {
   flex-basis: 0;
@@ -717,7 +848,7 @@ button {
   resize: vertical;
 }
 
-/* ===== Knopfleisten: gemeinsam fuer Detailmaske, Leermaske, Dialoge ===== */
+/* ===== Knopfleisten: gemeinsam für Detailmaske, Leermaske, Dialoge ===== */
 
 .knopfleiste {
   display: flex;
@@ -746,17 +877,17 @@ button {
   background: #0a2560;
 }
 
-/* ===== Punkt 4: Handlungsknoepfe gruen =====
-   Nicht jeder bisherige knopf-haupt wird gruen - siehe Begruendung bei
+/* ===== Punkt 4: Handlungsknöpfe grün =====
+   Nicht jeder bisherige knopf-haupt wird grün - siehe Begründung bei
    zeigeWerkzeugleiste() und der art-Erlaeuterung von zeigeMaske() in
-   rahmen.js. Kurzfassung: gruen (--gut) bekommt eine vierte Kategorie,
-   'schaffend', fuer Knoepfe, die etwas NEU entstehen lassen (Rad,
+   rahmen.js. Kurzfassung: grün (--gut) bekommt eine vierte Kategorie,
+   'schaffend', für Knöpfe, die etwas NEU entstehen lassen (Rad,
    Station, Kunde, Auftrag, Schadensmeldung anlegen) - 'haupt' bleibt
-   fuer den sonstigen Hauptknopf einer Maske (Speichern einer
+   für den sonstigen Hauptknopf einer Maske (Speichern einer
    bestehenden Zeile, Erledigen eines laufenden Auftrags, den generischen
-   "Bestaetigen" in frageNachGrund()), wo eine gruene Anlegen-Farbe die
-   Handlung falsch beschreiben wuerde. Weiss auf --gut misst 5.36:1,
-   ueber der geforderten Untergrenze von 4.5:1 (gemessen, siehe Bericht -
+   "Bestätigen" in frageNachGrund()), wo eine grüne Anlegen-Farbe die
+   Handlung falsch beschreiben würde. Weiß auf --gut misst 5.36:1,
+   über der geforderten Untergrenze von 4.5:1 (gemessen, siehe Bericht -
    nicht nur "sollte passen"). */
 .knopf-schaffend {
   background: var(--gut);
@@ -765,9 +896,9 @@ button {
 
 .knopf-schaffend:hover {
   /* Abgedunkelt wie beim Hover von knopf-haupt (dort wird marine sogar
-     AUFGEHELLT, hier bewusst das uebliche Muster "dunkler bei Hover" -
-     ein Kontrastwert von 8.04:1 fuer Weiss auf diesem Ton bleibt
-     reichlich ueber der Untergrenze). */
+     AUFGEHELLT, hier bewusst das übliche Muster "dunkler bei Hover" -
+     ein Kontrastwert von 8.04:1 für Weiß auf diesem Ton bleibt
+     reichlich über der Untergrenze). */
   background: #155c33;
 }
 
@@ -782,7 +913,7 @@ button {
 }
 
 /* Rot ist ein defektes Rad, nicht ein Knopf - aber hier ist Rot
-   fachlich richtig: die Aktion ist tatsaechlich gefaehrlich
+   fachlich richtig: die Aktion ist tatsächlich gefährlich
    (Ausmusterung, Sperrung, Anonymisierung), keine Dekoration. */
 .knopf-gefaehrlich {
   background: var(--flaeche);
@@ -803,7 +934,7 @@ button {
   cursor: default;
 }
 
-/* ===== Dialoge (bestaetige, frageNachGrund) =====
+/* ===== Dialoge (bestätige, frageNachGrund) =====
 
    <dialog>.showModal() liefert Fokusfalle und Escape-Verhalten von sich
    aus (siehe Kommentar in rahmen.js) - hier nur das Aussehen, keine
@@ -860,8 +991,8 @@ button {
   color: var(--text-leise);
 }
 
-/* Farbe traegt Bedeutung, nicht Dekoration. Die Klassen setzt melde()
-   aus rahmen.js; die Farben selbst gehoeren aber ins Grundraster. */
+/* Farbe trägt Bedeutung, nicht Dekoration. Die Klassen setzt melde()
+   aus rahmen.js; die Farben selbst gehören aber ins Grundraster. */
 #statuszeile.gut      { color: var(--gut); }
 #statuszeile.warnung   { color: var(--warnung-text); }
 #statuszeile.schlecht  { color: var(--schlecht); }

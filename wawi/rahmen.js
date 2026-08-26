@@ -1,30 +1,30 @@
 // ============================================
 // VeloCity Warenwirtschaft — Rahmen
 //
-// Die Oberflaeche muss VIER Zustaende unterscheiden koennen, die im
+// Die Oberfläche muss VIER Zustände unterscheiden können, die im
 // Browser gleich aussehen:
 //
 //   1. nicht angemeldet             -> Anmeldemaske
 //   2. angemeldet, kein Mitarbeiter -> Hinweis, kein Zugang
 //   3. Mitarbeiter ohne Rolle       -> Hinweis, wer helfen kann
-//   4. Mitarbeiter mit Rollen       -> Arbeitsoberflaeche
+//   4. Mitarbeiter mit Rollen       -> Arbeitsoberfläche
 //
-// Der zweite Fall ist der haeufigste und der, den man vergisst: JEDER
+// Der zweite Fall ist der häufigste und der, den man vergisst: JEDER
 // Kunde kann sich hier anmelden, weil es dieselbe auth.users ist. Er
-// bekaeme dann eine Oberflaeche, in der jede Sicht null Zeilen liefert -
-// fehlerfrei, leer, unerklaerlich. Deshalb wird vor dem Aufbau gefragt,
+// bekäme dann eine Oberfläche, in der jede Sicht null Zeilen liefert -
+// fehlerfrei, leer, unerklärlich. Deshalb wird vor dem Aufbau gefragt,
 // nicht danach.
 //
 // Der dritte Fall ist der, der bei genau einem Mitarbeiter im Bestand
-// (VeloCity heute) zum NORMALFALL fuer jeden zweiten neuen Kollegen wird:
+// (VeloCity heute) zum NORMALFALL für jeden zweiten neuen Kollegen wird:
 // ein echtes Mitarbeiterkonto, dem noch niemand eine Rolle zugeteilt hat.
-// meineRollen() liefert dafuer ein LEERES Set - anders als "false" fuer
+// meineRollen() liefert dafür ein LEERES Set - anders als "false" für
 // "kein Mitarbeiter". Beide vorher gleich zu behandeln ("Kein Zugang")
-// schickte diesen Fall in die falsche Richtung: er gehoert nicht zur
+// schickte diesen Fall in die falsche Richtung: er gehört nicht zur
 // Kundenverwaltung, sondern zur Leitung, die eine Rolle nachtragen kann.
-// Deshalb hier vier Faelle statt drei, unterschieden per
+// Deshalb hier vier Fälle statt drei, unterschieden per
 // `rollen instanceof Set` statt per Wahrheitswert - ein leeres Set ist
-// falsy in JavaScript, eine reine `if (rollen)`-Pruefung haette es mit
+// falsy in JavaScript, eine reine `if (rollen)`-Prüfung hätte es mit
 // "nicht angemeldet"/"kein Mitarbeiter" verwechselt.
 // ============================================
 
@@ -32,10 +32,10 @@ const bereiche = new Map();
 let aktiverBereich = null;
 
 // Der Wert, den seiteAufbauen() zuletzt von meineRollen() bekommen hat.
-// Gehoert hierher und nicht in anmeldung.js: dort ist rollenZwischenspeicher
-// ein technischer Zwischenspeicher mit eigener Lebensdauer (verfaellt bei
+// Gehört hierher und nicht in anmeldung.js: dort ist rollenZwischenspeicher
+// ein technischer Zwischenspeicher mit eigener Lebensdauer (verfällt bei
 // jedem echten Benutzerwechsel, siehe dortiger Kommentar). darfRolle()
-// fragt dagegen den Stand, den DIESE Seite zuletzt tatsaechlich geladen
+// fragt dagegen den Stand, den DIESE Seite zuletzt tatsächlich geladen
 // und zur Navigation verwendet hat - das ist ein anderer Zeitpunkt.
 let geladeneRollen = null;
 
@@ -49,13 +49,13 @@ async function seiteAufbauen() {
     try {
         rollen = await meineRollen();
     } catch (fehler) {
-        // meineRollen() wirft seit der Pruefung von Aufgabe 1 bei einem
+        // meineRollen() wirft seit der Prüfung von Aufgabe 1 bei einem
         // technischen Fehlschlag, statt still ein leeres Rollen-Set zu
         // liefern - genau damit ein Netzwerk- oder Rechtefehler nicht wie
         // "kein Mitarbeiter" aussieht. Wird der Wurf hier nicht gefangen,
-        // laeuft er als unbehandelte Ablehnung ins Leere: keiner der vier
-        // Zustaende wird je sichtbar, die Seite bleibt wortlos beim
-        // Ladetext stehen. Es gibt keinen eigenen fuenften Zustand fuer
+        // läuft er als unbehandelte Ablehnung ins Leere: keiner der vier
+        // Zustände wird je sichtbar, die Seite bleibt wortlos beim
+        // Ladetext stehen. Es gibt keinen eigenen fünften Zustand für
         // diesen Fall - der Ladezustand ist der einzige, der ohnehin noch
         // sichtbar ist, wenn das hier passiert, und wird deshalb zur
         // Fehleranzeige umgewidmet.
@@ -74,7 +74,7 @@ async function seiteAufbauen() {
     geladeneRollen = rollen;
 
     // instanceof Set statt Wahrheitswert: ein LEERES Set (Mitarbeiter
-    // ohne Rolle) ist falsy und wuerde von einer if(rollen)-Pruefung
+    // ohne Rolle) ist falsy und würde von einer if(rollen)-Prüfung
     // nicht von null/false unterschieden - genau der Fehler, den diese
     // Aufgabe korrigiert (siehe Kommentar am Dateianfang).
     zeige('zustand-laden', false);
@@ -92,7 +92,7 @@ function zeige(id, sichtbar) {
     document.getElementById(id).hidden = !sichtbar;
 }
 
-// ===== Rollenabhaengige Navigation =====
+// ===== Rollenabhängige Navigation =====
 
 // Was eine Rolle nicht darf, wird NICHT angezeigt - nicht ausgegraut.
 // Was man nicht darf, soll man nicht suchen. Ein ausgegrauter Eintrag
@@ -119,41 +119,51 @@ async function navigationAufbauen(rollen) {
     if (erlaubt.length) await bereichWechseln(erlaubt[0].schluessel);
 }
 
-// Fruehrer stand hier direkt "email · rolle1, rolle2, ..." in
+// Frührer stand hier direkt "email · rolle1, rolle2, ..." in
 // #benutzer-anzeige, einem einzelnen <span> in der Kopfleiste (Punkt 3
-// der Gestaltung). Jetzt fuellt diese Funktion das aufklappbare
-// Profilmenue - Bedienung (auf/zu, Escape, Klick daneben) wird davon
-// GETRENNT, einmalig beim Laden verdrahtet (siehe "Profilmenue"
-// weiter unten): navigationAufbauen() und damit profilAufbauen() laeuft
+// der Gestaltung). Jetzt füllt diese Funktion das aufklappbare
+// Profilmenü - Bedienung (auf/zu, Escape, Klick daneben) wird davon
+// GETRENNT, einmalig beim Laden verdrahtet (siehe "Profilmenü"
+// weiter unten): navigationAufbauen() und damit profilAufbauen() läuft
 // bei jedem seiteAufbauen()-Durchlauf erneut (z. B. nach USER_UPDATED,
-// siehe anmeldung.js), ein hier zusaetzlich angehaengter Klick-Handler
-// wuerde sich mit der Zeit vervielfachen.
+// siehe anmeldung.js), ein hier zusätzlich angehängter Klick-Handler
+// würde sich mit der Zeit vervielfachen.
 function profilAufbauen(benutzer, rollen) {
     const meta = benutzer.user_metadata || {};
     const vorname = meta.vorname || '';
     const nachname = meta.nachname || '';
     const anzeigeName = (vorname || nachname) ? `${vorname} ${nachname}`.trim() : benutzer.email;
 
-    // Konterfei: es gibt kein Mitarbeiterfoto, deshalb Initialen aus Vor-
-    // und Nachname - beides liegt (falls gepflegt) in user_metadata,
-    // demselben Feld, aus dem getUserDisplayName() in src/auth.js fuer
-    // Kundenkonten schon den Vornamen liest (siehe dortiger Kommentar).
-    // velocity.mitarbeiter fuehrt zwar ebenfalls vorname/nachname, ist
-    // aber ueber keine v_wawi_-Sicht und keine RPC fuer den eigenen
-    // Datensatz erreichbar - das anzulegen waere eine Datenbankaenderung,
-    // die dieser Auftrag ausdruecklich nicht vorsieht. Fehlt die
-    // Metadatenangabe, werden die Initialen NOTFALLS aus der E-Mail
-    // abgeleitet (siehe initialenAus()).
-    //
-    // Ein ECHTES Foto ist trotzdem mit einer einzigen Zeile eintauschbar,
-    // ohne diese Funktion sonst anzufassen - die Regel dahinter setzt
-    // .profilknopf-avatar in style.css bereits als Bildflaeche an
-    // (background-size: cover):
-    //   const avatar = document.getElementById('profil-initialen');
-    //   avatar.style.backgroundImage = `url(${bildUrl})`;
-    //   avatar.textContent = '';   // sonst ueberlagern sich Initialen und Foto
-    document.getElementById('profil-initialen').textContent =
-        initialenAus(vorname, nachname, benutzer.email);
+    // Konterfei: Initialen aus Vor- und Nachname - beides liegt (falls
+    // gepflegt) in user_metadata, demselben Feld, aus dem
+    // getUserDisplayName() in src/auth.js für Kundenkonten schon den
+    // Vornamen liest (siehe dortiger Kommentar). velocity.mitarbeiter
+    // führt zwar ebenfalls vorname/nachname, ist aber über keine
+    // v_wawi_-Sicht und keine RPC für den eigenen Datensatz erreichbar -
+    // das anzulegen wäre eine Datenbankänderung, die dieser Auftrag
+    // ausdrücklich nicht vorsieht. Fehlt die Metadatenangabe, werden die
+    // Initialen NOTFALLS aus der E-Mail abgeleitet (siehe initialenAus()).
+    const avatar = document.getElementById('profil-initialen');
+    avatar.style.backgroundImage = '';
+    avatar.textContent = initialenAus(vorname, nachname, benutzer.email);
+
+    // Das Konterfei selbst (assets/konterfei.png, auf 128px verkleinert -
+    // ein Mitarbeiterfoto in Ausgangsgröße war 215 KB für einen
+    // 40-Pixel-Rundknopf) tritt an die Stelle der Initialen, SOBALD es
+    // tatsächlich geladen ist - nicht schon beim bloßen Setzen von
+    // backgroundImage, das nimmt kein fehlendes Bild zur Kenntnis. Ein
+    // eigenes Image() zum Vorladen ist deshalb nötig: erst sein 'load'
+    // ersetzt die Initialen, sein 'error' lässt sie unangetastet stehen -
+    // genau der im Auftrag verlangte Rückfall, falls das Bild fehlt oder
+    // nicht erreichbar ist. .profilknopf-avatar setzt background-size:
+    // cover bereits als Bildfläche an, hier ist dafür keine zweite Regel
+    // nötig.
+    const vorschau = new Image();
+    vorschau.onload = () => {
+        avatar.style.backgroundImage = `url(assets/konterfei.png)`;
+        avatar.textContent = '';   // sonst überlagern sich Initialen und Foto
+    };
+    vorschau.src = 'assets/konterfei.png';
 
     document.getElementById('profil-name').textContent = anzeigeName;
     document.getElementById('profil-email').textContent = benutzer.email;
@@ -170,10 +180,10 @@ function profilAufbauen(benutzer, rollen) {
 
 function initialenAus(vorname, nachname, email) {
     if (vorname && nachname) return (vorname[0] + nachname[0]).toUpperCase();
-    // Notfall-Ableitung aus der E-Mail (Auftrag Punkt 3, ausdruecklich
+    // Notfall-Ableitung aus der E-Mail (Auftrag Punkt 3, ausdrücklich
     // erlaubt): die ersten beiden Buchstaben vor dem @. Nicht einfach
     // die ersten zwei ZEICHEN, weil ein Postfach wie "m.mueller@..." sonst
-    // "M." statt "MM" ergaebe - ein Punkt ist kein Initial.
+    // "M." statt "MM" ergäbe - ein Punkt ist kein Initial.
     const lokal = (email || '').split('@')[0];
     const buchstaben = lokal.replace(/[^a-zA-Z]/g, '');
     const quelle = buchstaben.length >= 2 ? buchstaben : lokal;
@@ -188,11 +198,11 @@ async function bereichWechseln(schluessel) {
 
     // Arbeitsliste UND Detailmaske leeren, nicht nur die Maske: sonst
     // blieben die Unterreiter oder die letzte Liste des VORHERIGEN
-    // Bereichs als Karteileiche stehen, bis der neue Bereich zufaellig
+    // Bereichs als Karteileiche stehen, bis der neue Bereich zufällig
     // selbst wieder zeigeListe()/zeigeUnterreiter() aufruft. Der
-    // Listenzustand (Auswahl, Zeilen) gehoert ebenfalls zurueckgesetzt -
-    // eine ausgewaehlte Zeile eines fremden Bereichs darf nicht als
-    // "ausgewaehlt" im neuen Bereich weiterleben.
+    // Listenzustand (Auswahl, Zeilen) gehört ebenfalls zurückgesetzt -
+    // eine ausgewählte Zeile eines fremden Bereichs darf nicht als
+    // "ausgewählt" im neuen Bereich weiterleben.
     document.getElementById('arbeitsliste').replaceChildren();
     document.getElementById('detailmaske').replaceChildren();
     hauptknopfElement = null;
@@ -207,86 +217,86 @@ async function bereichWechseln(schluessel) {
 
 // ===== Die Statuszeile =====
 
-// Jede Buchung wird hier bestaetigt. Wer zwanzig Raeder nacheinander
-// umbucht, braucht die Rueckmeldung dort, wo er ohnehin hinsieht - nicht
+// Jede Buchung wird hier bestätigt. Wer zwanzig Raeder nacheinander
+// umbucht, braucht die Rückmeldung dort, wo er ohnehin hinsieht - nicht
 // als Blase in einer Ecke, die nach drei Sekunden verschwindet. Deshalb
-// bleibt der Text stehen, bis der naechste kommt.
+// bleibt der Text stehen, bis der nächste kommt.
 function melde(text, art = 'neutral') {
     const zeile = document.getElementById('statuszeile');
     zeile.textContent = text;
     zeile.className = art;   // neutral | gut | warnung | schlecht
     // Von neuerVorgang() gelesen und dort sofort verbraucht (siehe
-    // dortiger Kommentar) - deshalb hier roh und ungeprueft gesetzt.
+    // dortiger Kommentar) - deshalb hier roh und ungeprüft gesetzt.
     letzteMeldeArt = art;
 }
 
 // ===== Vorgangsverwaltung =====
 //
-// ERSTER ANLAUF (verworfen): eine Buchungsbestaetigung ("Rad ...
+// ERSTER ANLAUF (verworfen): eine Buchungsbestätigung ("Rad ...
 // ausgemustert.", art='gut') kommt aus einem Knopf; direkt danach ruft
-// jede *Aufbauen()-Funktion die Liste neu auf und schloss frueher mit
-// einer eigenen Uebersichtsmeldung ("10 Stationen") ab, die die
-// Bestaetigung sofort ueberschrieb. Die erste Loesung dafuer war EIN
+// jede *Aufbauen()-Funktion die Liste neu auf und schloss früher mit
+// einer eigenen Übersichtsmeldung ("10 Stationen") ab, die die
+// Bestätigung sofort überschrieb. Die erste Lösung dafür war EIN
 // gemeinsames Bit ("die letzte Meldung war eine noch unverbrauchte
-// Bestaetigung"). Die Pruefung hat das durchfallen lassen, mit zwei
+// Bestätigung"). Die Prüfung hat das durchfallen lassen, mit zwei
 // nachgestellten Befunden:
 //
 //   1. Zwei Buchungen kurz hintereinander, deren Neuaufbauten sich
-//      ueberholen (Buchung A startet ihren Neuaufbau, dann Buchung B
-//      ihren - B's Bestaetigung steht, dann kommt ZUERST A's Neuaufbau
-//      zurueck). Ein einzelnes Bit weiss nicht, dass die Bestaetigung
-//      inzwischen zu B gehoert, nicht zu A - A's Neuaufbau "verbraucht"
-//      das Bit, das fuer B gedacht war, und B's eigener Neuaufbau
-//      schreibt danach ungebremst seine Uebersicht ueber B's eigene,
-//      noch druckfrische Bestaetigung.
-//   2. Ein Bereichswechsel waehrend ein Neuaufbau des VORHERIGEN
-//      Bereichs noch laeuft: kommt der spaet zurueck, schreibt er Liste
+//      überholen (Buchung A startet ihren Neuaufbau, dann Buchung B
+//      ihren - B's Bestätigung steht, dann kommt ZUERST A's Neuaufbau
+//      zurück). Ein einzelnes Bit weiß nicht, dass die Bestätigung
+//      inzwischen zu B gehört, nicht zu A - A's Neuaufbau "verbraucht"
+//      das Bit, das für B gedacht war, und B's eigener Neuaufbau
+//      schreibt danach ungebremst seine Übersicht über B's eigene,
+//      noch druckfrische Bestätigung.
+//   2. Ein Bereichswechsel während ein Neuaufbau des VORHERIGEN
+//      Bereichs noch läuft: kommt der spät zurück, schreibt er Liste
 //      UND Statuszeile des NEUEN Bereichs voll, obwohl die Navigation
-//      laengst woanders steht. Das Bit schuetzt nicht davor - es kennt
-//      nur "war zuletzt eine Bestaetigung da", nicht "gehoert dieser
-//      Neuaufbau ueberhaupt noch zur Gegenwart".
+//      längst woanders steht. Das Bit schützt nicht davor - es kennt
+//      nur "war zuletzt eine Bestätigung da", nicht "gehört dieser
+//      Neuaufbau überhaupt noch zur Gegenwart".
 //
 // Beiden Befunden gemeinsam: es gab keine Stelle, an der ein Neuaufbau
 // merken konnte, dass ER SELBST veraltet ist. Ein Bit kennt nur DASS
-// etwas war, nicht WOZU es gehoerte.
+// etwas war, nicht WOZU es gehörte.
 //
-// LOESUNG: jeder Vorgang (jeder Aufruf einer *Aufbauen()-Funktion)
+// LÖSUNG: jeder Vorgang (jeder Aufruf einer *Aufbauen()-Funktion)
 // bekommt beim Start eine eigene, fortlaufende Kennung. neuerVorgang()
 // liefert sie; jeder weitere Schreibversuch dieses Vorgangs - Liste
-// (zeigeListe) UND Statuszeile (meldeVorgang) - traegt diese Kennung
-// vor sich her und prueft bei sich SELBST, ob sie noch die aktuelle
-// ist. Ein Vorgang, dessen Kennung inzwischen ueberholt wurde -von
+// (zeigeListe) UND Statuszeile (meldeVorgang) - trägt diese Kennung
+// vor sich her und prüft bei sich SELBST, ob sie noch die aktuelle
+// ist. Ein Vorgang, dessen Kennung inzwischen überholt wurde -von
 // einem neueren Neuaufbau DESSELBEN Bereichs (Befund 1) oder vom
 // Neuaufbau eines ANDEREN Bereichs nach einem Wechsel (Befund 2) -
 // schreibt gar nichts mehr, weder Liste noch Statuszeile. Kein Bit,
 // keine Warteschlange: die zwanzigste Buchung einer Reihe zeigt weiter
-// sofort ihre eigene Bestaetigung, unabhaengig davon, wie lange die
+// sofort ihre eigene Bestätigung, unabhängig davon, wie lange die
 // vorherigen Neuaufbauten noch unterwegs sind.
 //
-// Die Bestaetigung selbst haengt jetzt am VORGANG statt an einem
+// Die Bestätigung selbst hängt jetzt am VORGANG statt an einem
 // geteilten Bit: neuerVorgang() liest, OHNE await dazwischen, welche
 // Art die zuletzt sichtbare Meldung hatte (letzteMeldeArt, von melde()
 // gesetzt). melde(..., 'gut') und der direkt folgende Aufruf einer
 // *Aufbauen()-Funktion stehen in JEDEM Aufrufer als zwei aufeinander-
 // folgende Anweisungen OHNE dazwischenliegendes await - JavaScript
-// raeumt dazwischen nichts anderes ab. Zeigt die Statuszeile in diesem
-// Moment noch eine frische Bestaetigung, gehoert sie zu GENAU DEM
-// Vorgang, der jetzt beginnt - nicht zu irgendeinem frueheren. Die
+// räumt dazwischen nichts anderes ab. Zeigt die Statuszeile in diesem
+// Moment noch eine frische Bestätigung, gehört sie zu GENAU DEM
+// Vorgang, der jetzt beginnt - nicht zu irgendeinem früheren. Die
 // Markierung wird dabei sofort verbraucht (letzteMeldeArt = null):
-// ein zweiter, unabhaengiger Neuaufbau nach demselben Vorgang (ohne
-// neue Buchung dazwischen) soll seine eigene Uebersicht wieder normal
-// zeigen, nicht ein zweites Mal von derselben, laengst gezeigten
-// Bestaetigung unterdrueckt werden.
+// ein zweiter, unabhängiger Neuaufbau nach demselben Vorgang (ohne
+// neue Buchung dazwischen) soll seine eigene Übersicht wieder normal
+// zeigen, nicht ein zweites Mal von derselben, längst gezeigten
+// Bestätigung unterdrückt werden.
 //
-// Verwerfen gehoert HIERHER, nicht in die Bereiche (Ruling der
-// zweiten Pruefung): jeder der fuenf Arbeitsbereiche ruft nur
+// Verwerfen gehört HIERHER, nicht in die Bereiche (Ruling der
+// zweiten Prüfung): jeder der fünf Arbeitsbereiche ruft nur
 // neuerVorgang() (eine Zeile, ganz am Anfang jeder *Aufbauen()-
 // Funktion) und reicht die Kennung an zeigeListe()/meldeVorgang()
-// weiter - die Entscheidung, ob ein Schreibversuch noch gilt, faellt
-// ausschliesslich hier.
+// weiter - die Entscheidung, ob ein Schreibversuch noch gilt, fällt
+// ausschließlich hier.
 let vorgangsZaehler = 0;
 let aktuellerVorgang = 0;            // Kennung des zuletzt gestarteten Vorgangs
-let vorgangMitOffenerBestaetigung = null;  // Kennung, deren Bestaetigung noch "frisch" ist
+let vorgangMitOffenerBestaetigung = null;  // Kennung, deren Bestätigung noch "frisch" ist
 let letzteMeldeArt = null;           // von melde() gesetzt, von neuerVorgang() verbraucht
 
 // Von jeder *Aufbauen()-Funktion als ALLERERSTE Anweisung aufzurufen,
@@ -295,7 +305,7 @@ function neuerVorgang() {
     vorgangsZaehler += 1;
     aktuellerVorgang = vorgangsZaehler;
     vorgangMitOffenerBestaetigung = letzteMeldeArt === 'gut' ? aktuellerVorgang : null;
-    letzteMeldeArt = null;   // verbraucht - siehe Begruendung oben
+    letzteMeldeArt = null;   // verbraucht - siehe Begründung oben
     return aktuellerVorgang;
 }
 
@@ -306,27 +316,27 @@ function istAktuellerVorgang(kennung) {
     return kennung === aktuellerVorgang;
 }
 
-// Liefert die Kennung des Vorgangs, der GERADE laeuft - anders als
-// neuerVorgang() OHNE selbst einen neuen zu beginnen. Fuer Masken, die vor
+// Liefert die Kennung des Vorgangs, der GERADE läuft - anders als
+// neuerVorgang() OHNE selbst einen neuen zu beginnen. Für Masken, die vor
 // dem Anzeigen selbst nachladen (radAnlegenMaske() in flotte.js: Promise.all
-// ueber Modelle und Stationen; schadenMeldenMaske() in instandhaltung.js:
+// über Modelle und Stationen; schadenMeldenMaske() in instandhaltung.js:
 // die Flotte) und deshalb zwischen ihrem eigenen Start und ihrem
 // zeigeMaske()-Aufruf einen Bereichswechsel oder Unterreiterwechsel
-// erleben koennen. Diese Masken sind selbst KEIN *Aufbauen()-Vorgang und
-// duerfen keinen eigenen ziehen - neuerVorgang() verbraucht dabei
+// erleben können. Diese Masken sind selbst KEIN *Aufbauen()-Vorgang und
+// dürfen keinen eigenen ziehen - neuerVorgang() verbraucht dabei
 // letzteMeldeArt (siehe dort), was einer Anlegemaske ohne eigene
-// Buchungsbestaetigung faelschlich eine fremde Bestaetigung klauen wuerde.
+// Buchungsbestätigung fälschlich eine fremde Bestätigung klauen würde.
 // Sie merken sich stattdessen beim Start, welcher *Aufbauen()-Vorgang
 // gerade lief, und pruefen nach ihrem eigenen Laden per
 // istAktuellerVorgang(), ob er es immer noch ist.
 //
 // Im Browser nachgestellt (WICHTIG 4): Flotte -> "Neues Rad anlegen"
-// geklickt -> vor der Rueckkehr (Promise.all noch unterwegs) zu Stationen
-// gewechselt. Ohne diese Pruefung erschien die Anlegemaske verspaetet UEBER
+// geklickt -> vor der Rückkehr (Promise.all noch unterwegs) zu Stationen
+// gewechselt. Ohne diese Prüfung erschien die Anlegemaske verspätet ÜBER
 // der Stationenliste; ein Klick auf "Anlegen" dort legte wirklich ein Rad
-// an, und der anschliessende flotteAufbauen() bekam die NEUESTE Kennung und
-// ueberschrieb damit die gerade angezeigte Stationenliste, waehrend die
-// Navigation weiterhin "Stationen" zeigte. Mit der Pruefung bricht
+// an, und der anschließende flotteAufbauen() bekam die NEUESTE Kennung und
+// überschrieb damit die gerade angezeigte Stationenliste, während die
+// Navigation weiterhin "Stationen" zeigte. Mit der Prüfung bricht
 // radAnlegenMaske() nach dem Bereichswechsel wortlos ab, wie ein
 // veralteter *Aufbauen()-Vorgang auch.
 function laufenderVorgang() {
@@ -334,38 +344,38 @@ function laufenderVorgang() {
 }
 
 // Die Statuszeilen-Schreibstelle jeder *Aufbauen()-Funktion - sowohl
-// fuer den Ladefehler-Zweig (art='schlecht') als auch fuer die
-// abschliessende Uebersichtsmeldung (art='neutral', Vorgabewert). NICHT
-// fuer die Bestaetigung selbst, die bleibt ein direkter Aufruf von
+// für den Ladefehler-Zweig (art='schlecht') als auch für die
+// abschließende Übersichtsmeldung (art='neutral', Vorgabewert). NICHT
+// für die Bestätigung selbst, die bleibt ein direkter Aufruf von
 // melde(text, 'gut') im Knopf-Handler, BEVOR die *Aufbauen()-Funktion
-// (und mit ihr neuerVorgang()) ueberhaupt laeuft.
+// (und mit ihr neuerVorgang()) überhaupt läuft.
 //
-// Ein veralteter Vorgang schreibt ueberhaupt nichts - auch keinen
-// Fehler: gehoert der Vorgang nicht mehr zur Gegenwart (Bereich
-// gewechselt, oder ein neuerer Neuaufbau laeuft bereits), ist auch sein
+// Ein veralteter Vorgang schreibt überhaupt nichts - auch keinen
+// Fehler: gehört der Vorgang nicht mehr zur Gegenwart (Bereich
+// gewechselt, oder ein neuerer Neuaufbau läuft bereits), ist auch sein
 // eigener Ladefehler nicht mehr relevant, siehe Befund 2 oben. Nur
 // innerhalb eines noch aktuellen Vorgangs gilt die Reihenfolge aus dem
-// Auftrag: eine Uebersichtsmeldung (art='neutral') faellt genau einmal
-// aus, wenn dieser Vorgang noch eine unverbrauchte Bestaetigung traegt -
-// ein Fehler (art='schlecht') dagegen schreibt IMMER, unterdrueckt durch
+// Auftrag: eine Übersichtsmeldung (art='neutral') fällt genau einmal
+// aus, wenn dieser Vorgang noch eine unverbrauchte Bestätigung trägt -
+// ein Fehler (art='schlecht') dagegen schreibt IMMER, unterdrückt durch
 // nichts.
 function meldeVorgang(kennung, text, art = 'neutral') {
     if (!istAktuellerVorgang(kennung)) return;
     if (art === 'neutral' && vorgangMitOffenerBestaetigung === kennung) {
-        vorgangMitOffenerBestaetigung = null;   // verbraucht, Bestaetigung bleibt stehen
+        vorgangMitOffenerBestaetigung = null;   // verbraucht, Bestätigung bleibt stehen
         return;
     }
     melde(text, art);
 }
 
-// ===== Bestaetigungsdialog =====
+// ===== Bestätigungsdialog =====
 
-// Fuer alles, was sich nicht zurueckholen laesst. Kein window.confirm:
-// das laesst sich nicht gestalten und nicht mit der Tastatur bedienen,
-// wie der Rest dieser Oberflaeche. <dialog>.showModal() uebernimmt die
-// Fokusfalle von sich aus und schliesst bei Escape ueber sein eigenes
-// 'cancel'-Ereignis, unabhaengig vom globalen keydown-Listener aus
-// Schritt 6 - der ueberspringt Escape deshalb, solange ein <dialog>
+// Für alles, was sich nicht zurückholen lässt. Kein window.confirm:
+// das lässt sich nicht gestalten und nicht mit der Tastatur bedienen,
+// wie der Rest dieser Oberfläche. <dialog>.showModal() übernimmt die
+// Fokusfalle von sich aus und schließt bei Escape über sein eigenes
+// 'cancel'-Ereignis, unabhängig vom globalen keydown-Listener aus
+// Schritt 6 - der überspringt Escape deshalb, solange ein <dialog>
 // offen ist (siehe dort), statt selbst zu reagieren und mit dem
 // Browser um dieselbe Taste zu konkurrieren.
 function bestaetige(frage, bestaetigungswort = null) {
@@ -373,17 +383,17 @@ function bestaetige(frage, bestaetigungswort = null) {
         const dialog = document.createElement('dialog');
         dialog.className = 'velocity-dialog';
 
-        // frage traegt bei den wichtigeren Dialogen mehrere inhaltliche
-        // Bloecke, getrennt durch eine Leerzeile (\n\n) - der Art.-17-Dialog
+        // frage trägt bei den wichtigeren Dialogen mehrere inhaltliche
+        // Blöcke, getrennt durch eine Leerzeile (\n\n) - der Art.-17-Dialog
         // in kunden.js etwa WAS VERSCHWINDET, WAS BLEIBT, WAS DAS NICHT
         // LEISTET und den Unumkehrbarkeits-Hinweis. EIN <p> mit textContent
-        // faltet solche Zeilenumbrueche zu einem einzigen Fliesstext
+        // faltet solche Zeilenumbrüche zu einem einzigen Fliesstext
         // zusammen - .velocity-dialog p kennt kein white-space: pre-line.
-        // Deshalb hier ein eigenes <p> je Block, weiterhin ausschliesslich
-        // ueber textContent gesetzt, nie ueber innerHTML: ein Text ohne
-        // Leerzeile (die meisten Aufrufer) ergibt unveraendert genau ein
-        // <p>. Allgemein geloest, weil jeder Dialog ueber bestaetige()
-        // laeuft - nicht nur der Art.-17-Fall, der den Fehler gefunden hat.
+        // Deshalb hier ein eigenes <p> je Block, weiterhin ausschließlich
+        // über textContent gesetzt, nie über innerHTML: ein Text ohne
+        // Leerzeile (die meisten Aufrufer) ergibt unverändert genau ein
+        // <p>. Allgemein gelöst, weil jeder Dialog über bestätige()
+        // läuft - nicht nur der Art.-17-Fall, der den Fehler gefunden hat.
         for (const block of frage.split('\n\n')) {
             const absatz = document.createElement('p');
             absatz.textContent = block;
@@ -397,8 +407,8 @@ function bestaetige(frage, bestaetigungswort = null) {
         bestaetigenKnopf.className = 'knopf-gefaehrlich';
 
         if (bestaetigungswort) {
-            // Ein Klick allein darf hier nicht reichen - das ist fuer
-            // die Anonymisierung gedacht und fuer nichts sonst.
+            // Ein Klick allein darf hier nicht reichen - das ist für
+            // die Anonymisierung gedacht und für nichts sonst.
             const label = document.createElement('label');
             label.htmlFor = 'dialog-bestaetigungswort';
             label.textContent = `Zum Bestaetigen "${bestaetigungswort}" eintippen:`;
@@ -423,8 +433,8 @@ function bestaetige(frage, bestaetigungswort = null) {
         abbrechenKnopf.type = 'button';
         abbrechenKnopf.textContent = 'Abbrechen';
         abbrechenKnopf.className = 'knopf-neben';
-        // dialog.close() loest nur 'close' aus, nicht 'cancel' - der
-        // Rueckgabewert entscheidet unten einheitlich ueber das Ergebnis,
+        // dialog.close() löst nur 'close' aus, nicht 'cancel' - der
+        // Rückgabewert entscheidet unten einheitlich über das Ergebnis,
         // egal ob per Klick oder per Escape geschlossen wurde.
         abbrechenKnopf.addEventListener('click', () => dialog.close('nein'));
         bestaetigenKnopf.addEventListener('click', () => dialog.close('ja'));
@@ -440,9 +450,9 @@ function bestaetige(frage, bestaetigungswort = null) {
         });
 
         dialog.showModal();
-        // Ohne Bestaetigungswort faellt der Anfangsfokus bewusst auf
-        // Abbrechen: ein versehentliches Enter darf eine gefaehrliche
-        // Aktion nicht bestaetigen. Mit Wort faellt er auf das Feld, weil
+        // Ohne Bestätigungswort fällt der Anfangsfokus bewusst auf
+        // Abbrechen: ein versehentliches Enter darf eine gefährliche
+        // Aktion nicht bestätigen. Mit Wort fällt er auf das Feld, weil
         // dort ohnehin zuerst getippt werden muss.
         (eingabe || abbrechenKnopf).focus();
     });
@@ -450,7 +460,7 @@ function bestaetige(frage, bestaetigungswort = null) {
 
 // Ein einzeiliger Eingabedialog. Liefert null bei Abbruch - und der
 // Aufrufer muss das pruefen: eine Buchung ohne Grund ist eine Buchung,
-// die spaeter niemand erklaeren kann.
+// die später niemand erklären kann.
 function frageNachGrund(titel) {
     return new Promise((ergebnisMelden) => {
         const dialog = document.createElement('dialog');
@@ -491,7 +501,7 @@ function frageNachGrund(titel) {
             }
             dialog.close('ja');
         });
-        // Enter im Feld bestaetigt - ein Dialog mit genau einem Feld ist
+        // Enter im Feld bestätigt - ein Dialog mit genau einem Feld ist
         // der Fall, in dem das erwartet wird.
         eingabe.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
@@ -517,8 +527,8 @@ function frageNachGrund(titel) {
 
 // ===== Arbeitsliste =====
 //
-// Liste und Maske gleichzeitig. Der Bearbeitungsfluss ist: auswaehlen,
-// aendern, speichern, naechster Satz - ohne Seitenwechsel. Das ist der
+// Liste und Maske gleichzeitig. Der Bearbeitungsfluss ist: auswählen,
+// ändern, speichern, nächster Satz - ohne Seitenwechsel. Das ist der
 // Unterschied zwischen einer Arbeitsmaske und einer Website.
 
 let listenZeilen = [];
@@ -528,9 +538,9 @@ let listenZeilenElemente = [];
 
 // #arbeitsliste kann zwei Kinder tragen: die Reiterleiste (nur wenn
 // zeigeUnterreiter benutzt wurde) und den Listenkoerper. Beide werden
-// bei Bedarf angelegt, unabhaengig davon, in welcher Reihenfolge
+// bei Bedarf angelegt, unabhängig davon, in welcher Reihenfolge
 // zeigeListe/zeigeUnterreiter/zeigeLeermaske aufgerufen werden -
-// reiterleiste() haengt sich immer als erstes Kind ein.
+// reiterleiste() hängt sich immer als erstes Kind ein.
 function listenKoerper() {
     let el = document.getElementById('listenkoerper');
     if (!el) {
@@ -542,18 +552,18 @@ function listenKoerper() {
 }
 
 // Anders als werkzeugleiste()/listenKoerper() JEDES Mal neu an die
-// erste Stelle gehaengt, nicht nur bei der Neuanlage: Instandhaltung
+// erste Stelle gehängt, nicht nur bei der Neuanlage: Instandhaltung
 // (Aufgabe 7) blendet ihre Werkzeugleiste je nach Unterreiter ein und
 // aus - zeigeWerkzeugleiste(false, ...) entfernt das Element dabei
-// vollstaendig (siehe dort). Kommt es spaeter wieder, legt
-// werkzeugleiste() ein NEUES Element an und haengt es vor den
-// jeweils aktuellen ersten Kind - traf das bislang unveraendert
-// dagebliebene reiterleiste-Element, sprang die Werkzeugleiste ueber
+// vollständig (siehe dort). Kommt es später wieder, legt
+// werkzeugleiste() ein NEUES Element an und hängt es vor den
+// jeweils aktuellen ersten Kind - traf das bislang unverändert
+// dagebliebene reiterleiste-Element, sprang die Werkzeugleiste über
 // die Reiter, obwohl instandhaltungAufbauen() sie in der Reihenfolge
 // Werkzeugleiste-dann-Reiter aufbaut. Im Browser nachgestellt: Reiter
 // wechseln, Werkzeugleiste dabei aus- und wieder einblenden lassen -
-// Reiter standen danach unter der Werkzeugleiste, nicht mehr darueber.
-// Ein insertBefore auf ein bereits eingehaengtes Element VERSCHIEBT es
+// Reiter standen danach unter der Werkzeugleiste, nicht mehr darüber.
+// Ein insertBefore auf ein bereits eingehängtes Element VERSCHIEBT es
 // nur, dupliziert es nicht - deshalb hier ohne Neuanlage-Bedingung.
 function reiterleiste() {
     const wurzel = document.getElementById('arbeitsliste');
@@ -570,33 +580,33 @@ function reiterleiste() {
 // ===== Werkzeugleiste =====
 //
 // Aktionen vor der Liste, z. B. "Neu anlegen". Flotte und Stationen
-// (Aufgaben 4 und 5) hatten das unabhaengig voneinander erfunden -
+// (Aufgaben 4 und 5) hatten das unabhängig voneinander erfunden -
 // flotteWerkzeugleiste/flotteWerkzeugleisteAufbauen und
 // stationenWerkzeugleiste/stationenWerkzeugleisteAufbauen, wortgleich
-// bis auf den Namen, mit je einer eigenen ID. Der Auftrag gab dafuer
-// keinen Code vor; zwei Bearbeiter haben unabhaengig dasselbe Muster
-// gebaut - ein Zeichen, dass es hierher gehoert, nicht in jeden Bereich
+// bis auf den Namen, mit je einer eigenen ID. Der Auftrag gab dafür
+// keinen Code vor; zwei Bearbeiter haben unabhängig dasselbe Muster
+// gebaut - ein Zeichen, dass es hierher gehört, nicht in jeden Bereich
 // einzeln.
 //
 // Find-or-create auf eine FESTE ID, als erstes Kind von #arbeitsliste
-// eingehaengt - dieselbe Machart wie listenKoerper() und reiterleiste()
+// eingehängt - dieselbe Machart wie listenKoerper() und reiterleiste()
 // oben. Genau deshalb braucht dieser Baustein KEINE eigene
-// Aufraeumlogik beim Bereichswechsel: bereichWechseln() leert
+// Aufräumlogik beim Bereichswechsel: bereichWechseln() leert
 // #arbeitsliste ohnehin per replaceChildren(), bevor der neue Bereich
 // aufbaut - das reisst die Werkzeugleiste des VORHERIGEN Bereichs mit
 // heraus, wie es listenkoerper/reiterleiste auch trifft. Eine
-// bereichseigene ID und ein bereichseigenes Wegraeumen (wie es die
-// beiden Vorlagen taten) waeren nur eine zweite Absicherung fuer
+// bereichseigene ID und ein bereichseigenes Wegräumen (wie es die
+// beiden Vorlagen taten) wären nur eine zweite Absicherung für
 // denselben Fall gewesen - und eine, die vergessen werden kann, wenn
-// der Container aus Versehen ausserhalb von #arbeitsliste haengt. Im
+// der Container aus Versehen außerhalb von #arbeitsliste hängt. Im
 // Browser nachgestellt: zwischen Flotte und Stationen hin- und
 // hergewechselt, jeweils mit und ohne disposition-Rolle - immer genau
-// eine oder gar keine Werkzeugleiste, nie zwei uebereinander.
+// eine oder gar keine Werkzeugleiste, nie zwei übereinander.
 //
-// sichtbar: ob die aufrufende Rolle den Knopf ueberhaupt sehen darf
-// (ueblicherweise darfRolle(...)). false raeumt den Container komplett
+// sichtbar: ob die aufrufende Rolle den Knopf überhaupt sehen darf
+// (üblicherweise darfRolle(...)). false räumt den Container komplett
 // ab, statt ihn leer stehen zu lassen - ein Container ohne Inhalt
-// bliebe sonst als schmaler, unerklaerter Streifen ueber der Liste
+// bliebe sonst als schmaler, unerklärter Streifen über der Liste
 // stehen (dasselbe Prinzip wie beim Fehlen ganzer Navigationspunkte:
 // was man nicht darf, wird nicht angezeigt, nicht ausgegraut).
 function werkzeugleiste() {
@@ -623,16 +633,16 @@ function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
     knopf.type = 'button';
     knopf.textContent = titel;
     // knopf-schaffend statt knopf-haupt (Punkt 4 der Gestaltung): jeder
-    // einzige Aufruf dieses Bausteins ueber alle fuenf Bereiche legt
+    // einzige Aufruf dieses Bausteins über alle fünf Bereiche legt
     // etwas NEU an - "Neues Rad anlegen", "Neuen Kunden anlegen", "Neue
     // Station anlegen", "Schaden melden" - die Werkzeugleiste hat
     // laut ihrem eigenen Kopf-Kommentar oben ohnehin keinen anderen
-    // Zweck. Gruen ist hier eindeutig, siehe die ausfuehrlichere
-    // Begruendung bei der art-Erlaeuterung von zeigeMaske() weiter unten
-    // fuer die Faelle, in denen es das NICHT ist.
+    // Zweck. Grün ist hier eindeutig, siehe die ausführlichere
+    // Begründung bei der art-Erlaeuterung von zeigeMaske() weiter unten
+    // für die Fälle, in denen es das NICHT ist.
     knopf.className = 'knopf-schaffend';
-    // Derselbe zentrale Fehlerfang wie bei den Knoepfen aus zeigeMaske()/
-    // zeigeLeermaske(): jeder Aufrufer muesste ihn sonst selbst
+    // Derselbe zentrale Fehlerfang wie bei den Knöpfen aus zeigeMaske()/
+    // zeigeLeermaske(): jeder Aufrufer müsste ihn sonst selbst
     // nachbauen.
     knopf.addEventListener('click', async () => {
         knopf.disabled = true;
@@ -647,33 +657,327 @@ function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
     leiste.append(knopf);
 }
 
-// kennung: von neuerVorgang() geliefert, siehe Kommentar dort. Ein
-// veralteter Vorgang zeichnet die Liste nicht mehr - sonst ueberschriebe
-// ein spaet zurueckkommender Neuaufbau eines VORHERIGEN Bereichs oder
-// eines ueberholten Buchungsvorgangs die Liste, die der Anwender gerade
-// vor sich hat.
-// spalten: [{ feld, titel, formatieren?, klasse? }]
-// Bei Klick UND bei Pfeiltaste: beiAuswahl(zeile) aufrufen und die
-// Zeile als ausgewaehlt markieren.
+// ===== Übersichtsstreifen (Gestaltungsauftrag Auswertungen, Punkt 1) =====
 //
-// aktionen (Punkt 5, optional): (zeile) => [{ titel, svg, art?, ausfuehren: async () => {} }]
-// - titel: der zugaengliche Name des Icon-Knopfs (aria-label/title), da
+// "Interessant wäre auch immer eine kleine Übersicht über den Tabellen,
+// in denen Dinge zusammengefasst und veranschaulicht werden" - wörtlich
+// der Auftrag. Tufte dazu: wenige, aussagekräftige Zahlen mit wortgroßen
+// Grafiken daneben (Sparklines) statt eines separaten großen Diagramms -
+// "small multiples" statt Deko. Der Streifen sitzt ÜBER der Liste, in
+// derselben Ansicht: man verlässt die Tabelle nicht, um ihre zusammen-
+// gefasste Form zu sehen.
+//
+// Find-or-create auf eine feste id, unmittelbar vor listenKoerper()
+// eingehängt - dieselbe Machart wie reiterleiste()/werkzeugleiste() oben.
+// Dadurch steht der Streifen unabhängig von der Aufrufreihenfolge IMMER
+// zwischen einer eventuellen Reiter-/Werkzeugleiste und der Tabelle
+// selbst, nie darüber oder darunter vertauscht - genau das Problem, das
+// reiterleiste() weiter oben für sich schon lösen musste.
+function uebersichtsstreifen() {
+    const wurzel = document.getElementById('arbeitsliste');
+    let el = document.getElementById('uebersichtsstreifen');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'uebersichtsstreifen';
+        el.className = 'uebersichtsstreifen';
+    }
+    wurzel.insertBefore(el, listenKoerper());
+    el.replaceChildren();
+    return el;
+}
+
+// kennung: dieselbe Absicherung wie bei zeigeListe()/zeigeLeermaske() -
+// ein Reiterwechsel, dessen Übersicht erst nach einem eigenen await
+// zurückkommt, dürfte einen inzwischen überholten Bildschirm nicht mehr
+// beschreiben (siehe Kopfkommentar bei neuerVorgang()).
+//
+// kacheln: [{ titel, wert, grafik?, hinweis? }]
+// - titel: die Frage, die die Kachel beantwortet ("Umsatz gesamt", ...).
+// - wert: String ODER Element - ein Element für typografisch skalierte
+//   Zahlen (siehe zahlSkaliert() weiter unten) oder eine eingefärbte
+//   Bedeutung, sonst reicht ein String.
+// - grafik (optional): ein <svg>-Element, typischerweise aus sparkline()
+//   oder zellbalken() - das "wortgroße Bild daneben" aus dem Auftrag.
+// - hinweis (optional): eine zweite, leisere Zeile unter der Zahl - die
+//   Einordnung, nicht die Kennzahl selbst ("42 % des Umsatzes ohne feste
+//   Mitgliedschaft"). Hierhin gehört auch eine Unsicherheit, die NEBEN
+//   der Zahl stehen muss statt in einer Fußnote (Schätzanteil bei
+//   Kilometer/CO2, siehe auswertungen.js).
+//
+// Ohne kacheln (leeres Array, z. B. beim Leer- oder Fehlerzustand einer
+// Liste) wird der Streifen abgeräumt statt leer stehen gelassen - dasselbe
+// Prinzip wie bei zeigeWerkzeugleiste(false, ...): ein Container ohne
+// Inhalt bliebe sonst als schmaler, unerklärter Streifen stehen, und ohne
+// dieses explizite Abräumen überlebte die Übersicht des VORHERIGEN
+// Reiters unverändert einen Reiterwechsel, der selbst keine Übersicht
+// mehr zeigen will (bereichWechseln() leert #arbeitsliste nur beim
+// BEREICHSwechsel, nicht beim Reiterwechsel innerhalb der Auswertungen).
+function zeigeUebersicht(kennung, kacheln) {
+    if (!istAktuellerVorgang(kennung)) return;
+    const leiste = uebersichtsstreifen();
+    if (!kacheln || kacheln.length === 0) { leiste.remove(); return; }
+
+    for (const kachel of kacheln) {
+        const feld = document.createElement('div');
+        feld.className = 'uebersichtskachel';
+
+        const titel = document.createElement('div');
+        titel.className = 'uebersichtskachel-titel';
+        titel.textContent = kachel.titel;
+        feld.append(titel);
+
+        const zeile = document.createElement('div');
+        zeile.className = 'uebersichtskachel-zeile';
+        const wert = document.createElement('div');
+        wert.className = 'uebersichtskachel-wert';
+        wert.append(kachel.wert);
+        zeile.append(wert);
+        if (kachel.grafik) zeile.append(kachel.grafik);
+        feld.append(zeile);
+
+        if (kachel.hinweis) {
+            const hinweis = document.createElement('div');
+            hinweis.className = 'uebersichtskachel-hinweis';
+            hinweis.textContent = kachel.hinweis;
+            feld.append(hinweis);
+        }
+
+        leiste.append(feld);
+    }
+}
+
+// ===== Zeichenbausteine: Sparkline (Tufte) und Zellbalken (Bissantz) =====
+//
+// Beide als selbst gezeichnetes Inline-SVG, ohne Diagrammbibliothek und
+// ohne CDN - harte Grenze dieses Projekts (siehe Dateikopf). Beide bauen
+// ihr <svg> über createElementNS(), nicht über innerHTML: die Werte
+// kommen zwar aus v_wawi_-Sichten und nicht von einer Nutzereingabe, aber
+// ein zweiter, innerHTML-basierter Weg neben dem createElement-Weg, den
+// der Rest dieser Datei sonst überall verwendet, wäre eine unnötige
+// zweite Bauart für dasselbe Ergebnis.
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// werte: Zahlen in Anzeigereihenfolge - chronologisch bei einem
+// Zeitverlauf, aber ebenso gültig über eine andere Achse (siehe
+// stationsauslastungZeigen() in auswertungen.js, wo dieselbe Funktion
+// den Füllstand bzw. Saldo der zehn Stationen statt Monate trägt: "small
+// multiples" heißt bei Tufte eine Reihe vergleichbarer Werte, nicht
+// zwingend eine Zeitreihe).
+//
+// optionen.beschriftung: der zugängliche Name (role="img" + aria-label).
+// OHNE beschriftung gilt die Grafik als rein schmückend (aria-hidden) -
+// eine Sparkline, die nichts über die FORM des Verlaufs sagt, was die
+// daneben stehende Zahl nicht auch hergäbe, wäre für einen Bildschirm-
+// leser sonst stumme Information (Auftrag: "eine Grafik, die Information
+// trägt, darf für einen Screenreader nicht stumm sein"). Der Aufrufer
+// entscheidet das bewusst je Sparkline, nicht diese Funktion pauschal.
+//
+// optionen.markierIndex: hebt EINEN Punkt hervor (den Knick beim
+// Tarifwechsel, das Minimum eines Saldos, ...) in --rot - demselben
+// Farbakzent, den die aktive Navigation und der aktive Reiter in
+// style.css schon tragen (Aufmerksamkeit lenken, nicht "schlecht" - dafür
+// steht in dieser Warenwirtschaft die andere, eigene Farbe --schlecht).
+function sparkline(werte, optionen = {}) {
+    const { breite = 72, hoehe = 22, beschriftung = null, markierIndex = null } = optionen;
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    svg.setAttribute('width', breite);
+    svg.setAttribute('height', hoehe);
+    svg.classList.add('sparklinie');
+
+    if (beschriftung) {
+        svg.setAttribute('role', 'img');
+        svg.setAttribute('aria-label', beschriftung);
+    } else {
+        svg.setAttribute('aria-hidden', 'true');
+        svg.setAttribute('focusable', 'false');
+    }
+
+    if (!werte || werte.length < 2) return svg;   // nichts zu zeichnen, aber ein gültiges <svg>
+
+    const minimum = Math.min(...werte);
+    const maximum = Math.max(...werte);
+    const spanne = maximum - minimum || 1;   // eine flache Reihe (alle Werte gleich) teilt nicht durch null
+    const schrittweite = breite / (werte.length - 1);
+    // 1px Rand oben/unten, damit ein Extremwert nicht genau auf der
+    // Kontur des <svg> liegt und dort optisch abgeschnitten wirkt.
+    const yVon = (wert) => 1 + (hoehe - 2) * (1 - (wert - minimum) / spanne);
+    const punkte = werte.map((wert, i) => [i * schrittweite, yVon(wert)]);
+
+    const linie = document.createElementNS(SVG_NS, 'polyline');
+    linie.setAttribute('points', punkte.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' '));
+    linie.setAttribute('class', 'sparklinie-linie');
+    svg.append(linie);
+
+    // Der letzte Punkt bekommt immer einen Marker - der Blick einer
+    // Zeitreihe landet ohnehin am aktuellen Rand.
+    const [endeX, endeY] = punkte[punkte.length - 1];
+    const endpunkt = document.createElementNS(SVG_NS, 'circle');
+    endpunkt.setAttribute('cx', endeX);
+    endpunkt.setAttribute('cy', endeY);
+    endpunkt.setAttribute('r', 1.5);
+    endpunkt.setAttribute('class', 'sparklinie-punkt');
+    svg.append(endpunkt);
+
+    if (markierIndex !== null && markierIndex >= 0 && markierIndex < punkte.length) {
+        const [mx, my] = punkte[markierIndex];
+        const markierung = document.createElementNS(SVG_NS, 'circle');
+        markierung.setAttribute('cx', mx);
+        markierung.setAttribute('cy', my);
+        markierung.setAttribute('r', 2.2);
+        markierung.setAttribute('class', 'sparklinie-markierung');
+        svg.append(markierung);
+    }
+
+    return svg;
+}
+
+// wert/maximum: derselbe Maßstab für JEDE Zeile einer Spalte (Bissantz:
+// "an einer gemeinsamen Skala ausgerichtet") - der Aufrufer ermittelt
+// maximum EINMAL über alle sichtbaren Zeilen, nicht je Zeile neu (sonst
+// wäre der längste Balken in jeder Zeile gleich lang und der Vergleich
+// zwischen Zeilen sinnlos).
+//
+// textInhalt: der bereits formatierte Zellentext (String oder, für eine
+// typografisch skalierte Zahl, ein von zahlSkaliert() gebautes Element) -
+// der Balken ERSETZT den Text nicht, er steht daneben. Eine Zahl, die man
+// nur noch als Balken sähe, wäre für einen Bildschirmleser bedeutungslos
+// und für einen späteren Exportzweck unbrauchbar. null/undefined lässt
+// die Textspanne weg - für eine reine Anteilsgrafik in einer
+// Übersichtskachel (siehe umsatzKundengruppeUebersicht() in
+// auswertungen.js), wo die Zahl bereits als eigener Kachelwert daneben
+// steht und nicht doppelt erscheinen soll.
+//
+// optionen.farbe: CSS-Farbwert für die Füllung - Vorgabe --marine
+// (neutral: "hier ist eine Zahl"), überschreibbar, wo Farbe tatsächlich
+// etwas bedeutet (z. B. eine volle Station in --warnung-text, siehe
+// stationsauslastungZeigen() in auswertungen.js).
+//
+// aria-hidden auf dem <svg>: der Balken ist eine zweite, rein visuelle
+// Darstellung DESSELBEN Werts, der als Text daneben steht - anders als
+// eine Sparkline (die eine Form zeigt, die der Text allein nicht hergibt)
+// trägt er für sich keine zusätzliche Information.
+function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
+    const { breite = 56, hoehe = 12, farbe = 'var(--marine)' } = optionen;
+    const anteil = maximum > 0 ? Math.max(0, Math.min(1, wert / maximum)) : 0;
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    svg.setAttribute('width', breite);
+    svg.setAttribute('height', hoehe);
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.classList.add('zellbalken-grafik');
+
+    const hintergrund = document.createElementNS(SVG_NS, 'rect');
+    hintergrund.setAttribute('x', 0);
+    hintergrund.setAttribute('y', 0);
+    hintergrund.setAttribute('width', breite);
+    hintergrund.setAttribute('height', hoehe);
+    hintergrund.setAttribute('class', 'zellbalken-hintergrund');
+    svg.append(hintergrund);
+
+    const fuellung = document.createElementNS(SVG_NS, 'rect');
+    fuellung.setAttribute('x', 0);
+    fuellung.setAttribute('y', 0);
+    fuellung.setAttribute('width', breite * anteil);
+    fuellung.setAttribute('height', hoehe);
+    fuellung.setAttribute('fill', farbe);
+    svg.append(fuellung);
+
+    const wrapper = document.createElement('span');
+    wrapper.className = 'zellbalken';
+    wrapper.append(svg);
+    if (textInhalt !== null && textInhalt !== undefined && textInhalt !== '') {
+        const text = document.createElement('span');
+        text.className = 'zellbalken-text';
+        text.append(textInhalt);
+        wrapper.append(text);
+    }
+    return wrapper;
+}
+
+// ===== Zeichenbaustein: typografische Skalierung (Bissantz) =====
+//
+// "Zahlen soll man sehen, nicht lesen": die tragenden Ziffern (Größen-
+// ordnung) bleiben in voller Stärke, Tausenderpunkte und die
+// Nachkommastellen (samt Einheit) treten optisch zurück - eine
+// mehrstellige Zahl wird so auf einen Blick erfasst, nicht Ziffer für
+// Ziffer gelesen.
+//
+// Nimmt eine FERTIG formatierte deutsche Zahl entgegen (Punkt und Komma
+// schon gesetzt, z. B. von geldFormat()/kgFormat() in auswertungen.js) -
+// das Zerlegen des deutschen Zahlenformats gehört hierher, weil jeder
+// Bereich mit einer eigenen, ähnlichen Formatierungsfunktion dieselbe
+// Aufteilung braucht; WAS gerundet und WELCHE Einheit angehängt wird,
+// bleibt Sache des Aufrufers.
+//
+// Kein Treffer (ein Text, der nicht wie eine Zahl aussieht) gibt den
+// Eingabetext unverändert als einzelnen Textknoten zurück - eine
+// typografische Verzierung darf niemals dazu führen, dass eine Zahl aus
+// der Tabelle verschwindet, nur weil sie einem erwarteten Muster nicht
+// entspricht.
+function zahlSkaliert(formatiert) {
+    const treffer = String(formatiert).match(/^(-?\d{1,3}(?:\.\d{3})*)(,\d+)?(.*)$/);
+    const spanne = document.createElement('span');
+    spanne.className = 'zahl-skaliert';
+    if (!treffer) {
+        spanne.textContent = formatiert;
+        return spanne;
+    }
+
+    const [, ganzzahl, dezimal, rest] = treffer;
+    // Tausenderpunkte selbst leiser, die tragenden Ziffern normal -
+    // deshalb die Gruppen einzeln angehängt statt die ganze Ganzzahl als
+    // einen Textknoten.
+    ganzzahl.split('.').forEach((gruppe, i) => {
+        if (i > 0) {
+            const trenner = document.createElement('span');
+            trenner.className = 'zahl-nebenteil';
+            trenner.textContent = '.';
+            spanne.append(trenner);
+        }
+        spanne.append(gruppe);
+    });
+    if (dezimal || rest) {
+        const neben = document.createElement('span');
+        neben.className = 'zahl-nebenteil';
+        neben.textContent = (dezimal || '') + rest;
+        spanne.append(neben);
+    }
+    return spanne;
+}
+
+// kennung: von neuerVorgang() geliefert, siehe Kommentar dort. Ein
+// veralteter Vorgang zeichnet die Liste nicht mehr - sonst überschriebe
+// ein spät zurückkommender Neuaufbau eines VORHERIGEN Bereichs oder
+// eines überholten Buchungsvorgangs die Liste, die der Anwender gerade
+// vor sich hat.
+// spalten: [{ feld, titel, formatieren?, klasse? }] - formatieren(wert, zeile)
+// darf einen String ODER ein einzelnes Element liefern (siehe Kommentar
+// an der Stelle weiter unten, wo die Zelle gebaut wird).
+// Bei Klick UND bei Pfeiltaste: beiAuswahl(zeile) aufrufen und die
+// Zeile als ausgewählt markieren.
+//
+// aktionen (Punkt 5, optional): (zeile) => [{ titel, svg, art?, ausführen: async () => {} }]
+// - titel: der zugängliche Name des Icon-Knopfs (aria-label/title), da
 //   ein Icon allein keinen hat.
 // - svg: rohes <svg>...</svg>-Markup, EIN MAL je Bereich als Konstante
 //   geschrieben (siehe iconAus() in flotte.js) - kein Icon-Font, keine
-//   externe Abhaengigkeit, wie im Auftrag verlangt.
-// - art: 'gefaehrlich', um dieselbe rote Einfaerbung wie knopf-gefaehrlich
-//   zu bekommen (siehe .zeilen-aktion-gefaehrlich in style.css); sonst
+//   externe Abhängigkeit, wie im Auftrag verlangt.
+// - art: 'gefährlich', um dieselbe rote Einfärbung wie knopf-gefährlich
+//   zu bekommen (siehe .zeilen-aktion-gefährlich in style.css); sonst
 //   weggelassen.
-// - ausfuehren: wie bei den Knoepfen aus zeigeMaske() - Fehler werden
-//   hier zentral gefangen und in die Statuszeile uebersetzt.
+// - ausführen: wie bei den Knöpfen aus zeigeMaske() - Fehler werden
+//   hier zentral gefangen und in die Statuszeile übersetzt.
 //
-// Ohne aktionen (der Vorgabewert) veraendert sich am Ergebnis nichts -
-// keine zusaetzliche Spalte, keine Zeile muss etwas davon wissen. Das
+// Ohne aktionen (der Vorgabewert) verändert sich am Ergebnis nichts -
+// keine zusätzliche Spalte, keine Zeile muss etwas davon wissen. Das
 // ist mit Absicht so: der Auftrag verlangt den Baustein hier in
-// rahmen.js, aber nur EINEN Bereich (flotte.js) als Beleg dafuer, dass
+// rahmen.js, aber nur EINEN Bereich (flotte.js) als Beleg dafür, dass
 // er verdrahtet ist - die anderen vier bleiben unangetastet und laufen
-// unveraendert weiter, bis sie in einem spaeteren Schritt eigene
+// unverändert weiter, bis sie in einem späteren Schritt eigene
 // aktionen liefern.
 function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     if (!istAktuellerVorgang(kennung)) return;
@@ -697,9 +1001,9 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
         kopfZeile.append(th);
     }
     if (aktionen) {
-        // Keine sichtbare Beschriftung - eine Spaltenueberschrift "Aktionen"
-        // ueber lauter blossen Icon-Zellen waere reine Deko. aria-label
-        // haelt die Tabelle fuer Screenreader trotzdem vollstaendig: eine
+        // Keine sichtbare Beschriftung - eine Spaltenüberschrift "Aktionen"
+        // über lauter blossen Icon-Zellen wäre reine Deko. aria-label
+        // hält die Tabelle für Screenreader trotzdem vollständig: eine
         // <th> ohne jeden Namen liesse die letzte Spalte namenlos wirken.
         const th = document.createElement('th');
         th.setAttribute('aria-label', 'Aktionen');
@@ -715,7 +1019,22 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
         for (const spalte of spalten) {
             const td = document.createElement('td');
             const wert = zeile[spalte.feld];
-            td.textContent = spalte.formatieren ? spalte.formatieren(wert, zeile) : (wert ?? '');
+            const inhalt = spalte.formatieren ? spalte.formatieren(wert, zeile) : (wert ?? '');
+            // formatieren darf statt eines Strings auch ein einzelnes
+            // Element liefern - eine Sparkline, einen Zellbalken oder eine
+            // typografisch skalierte Zahl (siehe sparkline()/zellbalken()/
+            // zahlSkaliert() weiter unten). textContent wäre dafür der
+            // falsche Weg: ein Element dort hineingeschrieben erschiene
+            // als "[object HTMLSpanElement]", nicht als das Element
+            // selbst. replaceChildren() nimmt ein Element ODER (weiterhin)
+            // einen String gleich sicher entgegen wie vorher textContent -
+            // keine innerHTML-Stelle kommt dazu, an der ein
+            // Schadensmeldungstext oder Kundenname durchliefe.
+            if (inhalt instanceof Node) {
+                td.replaceChildren(inhalt);
+            } else {
+                td.textContent = inhalt;
+            }
             const klasse = typeof spalte.klasse === 'function' ? spalte.klasse(zeile) : spalte.klasse;
             if (klasse) td.className = klasse;
             tr.append(td);
@@ -729,15 +1048,15 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     wurzel.append(tabelle);
 }
 
-// Baut die Icon-Zelle EINER Zeile - fuer JEDE Zeile aufgerufen, auch
-// wenn die Liste fuer diese Zeile keine einzige Handlung anbietet (dann
-// bleibt die Zelle leer, aber vorhanden). Genau das haelt die Spalte in
+// Baut die Icon-Zelle EINER Zeile - für JEDE Zeile aufgerufen, auch
+// wenn die Liste für diese Zeile keine einzige Handlung anbietet (dann
+// bleibt die Zelle leer, aber vorhanden). Genau das hält die Spalte in
 // jeder Zeile gleich breit: eine Zelle, die erst bei :hover ins DOM
-// kaeme, wuerde die Tabellenspalte beim ersten Ueberfahren einer Zeile
-// nachtraeglich aufweiten - das "Layout verschiebt sich"-Problem, vor
-// dem der Auftrag ausdruecklich warnt. Sichtbar/unsichtbar regelt
-// stattdessen ausschliesslich CSS (.zeilen-aktionen, opacity statt
-// display - siehe dortiger Kommentar fuer den Tastatur-Grund).
+// käme, würde die Tabellenspalte beim ersten Überfahren einer Zeile
+// nachträglich aufweiten - das "Layout verschiebt sich"-Problem, vor
+// dem der Auftrag ausdrücklich warnt. Sichtbar/unsichtbar regelt
+// stattdessen ausschließlich CSS (.zeilen-aktionen, opacity statt
+// display - siehe dortiger Kommentar für den Tastatur-Grund).
 function zeilenAktionenZelle(liste) {
     const td = document.createElement('td');
     td.className = 'zeilen-aktionen-zelle';
@@ -755,12 +1074,12 @@ function zeilenAktionenZelle(liste) {
         // aktion.svg ist keine Nutzereingabe, sondern eine im jeweiligen
         // Bereich fest verdrahtete Konstante (siehe iconAus() in
         // flotte.js) - innerHTML ist hier deshalb unbedenklich, anders
-        // als bei jedem textContent-Aufruf in bestaetige()/frageNachGrund()
-        // weiter oben, wo tatsaechlich Benutzereingaben durchlaufen.
+        // als bei jedem textContent-Aufruf in bestätige()/frageNachGrund()
+        // weiter oben, wo tatsächlich Benutzereingaben durchlaufen.
         knopf.innerHTML = aktion.svg;
         knopf.addEventListener('click', async (e) => {
-            // Sonst waehlte derselbe Klick zusaetzlich die ganze Zeile
-            // aus (tr traegt weiter unten einen eigenen 'click'-Handler,
+            // Sonst wählte derselbe Klick zusätzlich die ganze Zeile
+            // aus (tr trägt weiter unten einen eigenen 'click'-Handler,
             // der bei jedem Klick INNERHALB der Zeile feuert).
             e.stopPropagation();
             knopf.disabled = true;
@@ -799,25 +1118,25 @@ function zeileWaehlen(index) {
 let hauptknopfElement = null;
 
 // felder: [{ name, titel, wert, typ, nurLesen?, optionen? }]
-// knoepfe: [{ titel, art, ausfuehren: async () => {} }]
-// art: 'haupt' | 'neben' | 'gefaehrlich' | 'schaffend'
+// knöpfe: [{ titel, art, ausführen: async () => {} }]
+// art: 'haupt' | 'neben' | 'gefährlich' | 'schaffend'
 //
-// 'schaffend' (Punkt 4 der Gestaltung, gruen wie --gut) kam mit dieser
-// Bearbeitung dazu, ausdruecklich NEBEN 'haupt' statt an dessen Stelle:
-// vor dieser Aenderung liefen sowohl "Anlegen"-Knoepfe (ein neues Rad,
+// 'schaffend' (Punkt 4 der Gestaltung, grün wie --gut) kam mit dieser
+// Bearbeitung dazu, ausdrücklich NEBEN 'haupt' statt an dessen Stelle:
+// vor dieser Änderung liefen sowohl "Anlegen"-Knöpfe (ein neues Rad,
 // eine neue Station, ein neuer Kunde, ein neuer Wartungsauftrag, eine
 // neue Schadensmeldung entsteht) als auch reine "Speichern"/"Erledigen"-
-// Knoepfe (eine BESTEHENDE Zeile aendern bzw. abschliessen) unter
-// demselben 'haupt'. Gruen fuer das Anlegen ist eindeutig - es laesst
-// etwas entstehen. Fuer "Speichern" (kunden.js, eine bestehende Person
-// aendern) oder "Erledigen" (instandhaltung.js, einen laufenden Auftrag
-// abschliessen) waere Gruen dagegen irrefuehrend: nichts NEUES entsteht
-// dabei, und ein rein nach Farbe scannender Blick koennte "gruen = fertig
-// buchen" mit "gruen = neu anlegen" verwechseln. Deshalb bleiben diese
-// beiden Faelle bei 'haupt' (marine, wie zuvor) - nur die tatsaechlichen
+// Knöpfe (eine BESTEHENDE Zeile ändern bzw. abschließen) unter
+// demselben 'haupt'. Grün für das Anlegen ist eindeutig - es lässt
+// etwas entstehen. Für "Speichern" (kunden.js, eine bestehende Person
+// ändern) oder "Erledigen" (instandhaltung.js, einen laufenden Auftrag
+// abschließen) wäre Grün dagegen irreführend: nichts NEUES entsteht
+// dabei, und ein rein nach Farbe scannender Blick könnte "grün = fertig
+// buchen" mit "grün = neu anlegen" verwechseln. Deshalb bleiben diese
+// beiden Fälle bei 'haupt' (marine, wie zuvor) - nur die tatsächlichen
 // Neuanlagen (flotte.js, kunden.js kundeAnlegenMaske, instandhaltung.js
 // Auftrag eroeffnen/Schaden melden, stationen.js) wurden auf 'schaffend'
-// umgestellt. Weiss auf --gut misst 5.36:1 (gemessen, siehe Bericht).
+// umgestellt. Weiß auf --gut misst 5.36:1 (gemessen, siehe Bericht).
 function zeigeMaske(titel, felder, knoepfe) {
     const wurzel = document.getElementById('detailmaske');
     wurzel.replaceChildren();
@@ -829,8 +1148,8 @@ function zeigeMaske(titel, felder, knoepfe) {
 
     const form = document.createElement('form');
     form.className = 'detailformular';
-    // Kein natives Absenden - gespeichert wird ueber die Knoepfe bzw.
-    // ueber Strg+S (maskeSpeichern), nicht ueber Enter/Submit.
+    // Kein natives Absenden - gespeichert wird über die Knöpfe bzw.
+    // über Strg+S (maskeSpeichern), nicht über Enter/Submit.
     form.addEventListener('submit', (e) => e.preventDefault());
 
     for (const feld of felder) {
@@ -863,7 +1182,7 @@ function zeigeMaske(titel, felder, knoepfe) {
         } else {
             eingabe = document.createElement('input');
             // Deutsche Typangaben auf die passenden HTML5-Eingabetypen
-            // abbilden; alles andere (z. B. 'email') geht unveraendert
+            // abbilden; alles andere (z. B. 'email') geht unverändert
             // durch.
             const typZuordnung = { zahl: 'number', datum: 'date' };
             eingabe.type = typZuordnung[feld.typ] || feld.typ || 'text';
@@ -885,11 +1204,11 @@ function zeigeMaske(titel, felder, knoepfe) {
         knopf.textContent = def.titel;
         knopf.className = `knopf-${def.art}`;
         // Fehler werden hier zentral gefangen, statt in jedem
-        // ausfuehren() einzeln: rufeAuf() aus daten.js wirft mit
+        // ausführen() einzeln: rufeAuf() aus daten.js wirft mit
         // Absicht bei einem Fehlschlag, damit der Aufrufer ihn nicht
         // schlucken kann. Diese Stelle ist der eine Ort, an dem alle
-        // fuenf Arbeitsbereiche diesen Wurf einheitlich in die
-        // Statuszeile uebersetzen.
+        // fünf Arbeitsbereiche diesen Wurf einheitlich in die
+        // Statuszeile übersetzen.
         knopf.addEventListener('click', async () => {
             knopf.disabled = true;
             try {
@@ -903,9 +1222,9 @@ function zeigeMaske(titel, felder, knoepfe) {
         knopfleiste.append(knopf);
         // Strg+S (maskeSpeichern()) klickt hauptknopfElement - das muss
         // seit der Aufteilung in 'haupt'/'schaffend' BEIDE Kategorien
-        // erfassen, sonst waere die Tastaturbedienung fuer jede
-        // "Anlegen"-Maske stumm geworden, nur weil ihr Knopf jetzt gruen
-        // statt marine ist. Eine Maske hat ohnehin hoechstens einen
+        // erfassen, sonst wäre die Tastaturbedienung für jede
+        // "Anlegen"-Maske stumm geworden, nur weil ihr Knopf jetzt grün
+        // statt marine ist. Eine Maske hat ohnehin höchstens einen
         // dieser beiden - nie 'haupt' UND 'schaffend' gleichzeitig -,
         // deshalb bleibt "genau ein Hauptknopf" so oder so gewahrt.
         if (def.art === 'haupt' || def.art === 'schaffend') hauptknopfElement = knopf;
@@ -914,22 +1233,22 @@ function zeigeMaske(titel, felder, knoepfe) {
 }
 
 // Eine leere Liste ist kein leerer Kasten. Sie sagt, WARUM nichts da ist,
-// und bietet an, was als Naechstes zu tun waere.
+// und bietet an, was als Nächstes zu tun wäre.
 //
 // kennung: von neuerVorgang() geliefert, genau wie bei zeigeListe() -
-// und aus demselben Grund (KRITISCH 2). Seit f1ef6c3 traegt jeder
-// Neuaufbau eine Kennung; zeigeListe() prueft sie, zeigeLeermaske() tat
+// und aus demselben Grund (KRITISCH 2). Seit f1ef6c3 trägt jeder
+// Neuaufbau eine Kennung; zeigeListe() prüft sie, zeigeLeermaske() tat
 // es bisher NICHT, obwohl sie nach demselben await steht wie zeigeListe()
 // in jeder *Zeigen()-Funktion (schaedenZeigen()/auftraegeZeigen() in
 // instandhaltung.js). Im Browser nachgestellt: Instandhaltung, Reiter
-// "Auftraege" angeklickt (Vorgang A, damals leer) und sofort zurueck auf
-// "Schaeden" (Vorgang B, gefuellt). B loeste zuerst auf und zeigte die
-// Schadensliste; A loeste dann VERSPAETET auf und ueberschrieb sie
-// klaglos mit "Keine laufenden Wartungsauftraege" - waehrend der Reiter
+// "Auftraege" angeklickt (Vorgang A, damals leer) und sofort zurück auf
+// "Schaeden" (Vorgang B, gefüllt). B löste zuerst auf und zeigte die
+// Schadensliste; A löste dann VERSPÄTET auf und überschrieb sie
+// klaglos mit "Keine laufenden Wartungsaufträge" - während der Reiter
 // weiterhin "Offene Schaeden" anzeigte und die Werkzeugleiste "Schaden
 // melden" stehen liess. Ein in sich widersprüchlicher Bildschirm, den
-// dieselbe Pruefung wie bei zeigeListe() verhindert.
-// angebot: { titel, ausfuehren: async () => {} } | null
+// dieselbe Prüfung wie bei zeigeListe() verhindert.
+// angebot: { titel, ausführen: async () => {} } | null
 function zeigeLeermaske(kennung, titel, erklaerung, angebot = null) {
     if (!istAktuellerVorgang(kennung)) return;
 
@@ -956,16 +1275,16 @@ function zeigeLeermaske(kennung, titel, erklaerung, angebot = null) {
         const knopf = document.createElement('button');
         knopf.type = 'button';
         knopf.textContent = angebot.titel;
-        // Bewusst 'knopf-haupt' (marine) statt 'knopf-schaffend' (gruen),
+        // Bewusst 'knopf-haupt' (marine) statt 'knopf-schaffend' (grün),
         // anders als bei zeigeWerkzeugleiste() weiter oben: DIESES Angebot
-        // ist nicht immer eine Neuanlage. instandhaltung.js bietet ueber
-        // denselben Parameter sowohl "Schaden melden" (legt tatsaechlich
+        // ist nicht immer eine Neuanlage. instandhaltung.js bietet über
+        // denselben Parameter sowohl "Schaden melden" (legt tatsächlich
         // etwas an) als auch "Zu den offenen Schäden" (wechselt nur den
         // Unterreiter, legt nichts an) an - ein hier fest verdrahtetes
-        // Gruen waere im zweiten Fall falsch. Ein eigenes 'art'-Feld im
-        // angebot-Objekt haette das sauber getrennt, war fuer eine leere
+        // Grün wäre im zweiten Fall falsch. Ein eigenes 'art'-Feld im
+        // angebot-Objekt hätte das sauber getrennt, war für eine leere
         // Liste als Randfall aber mehr Aufwand, als der heutige Bestand
-        // (zwei von vier Aufrufern nutzen ueberhaupt ein angebot) rechtfertigt.
+        // (zwei von vier Aufrufern nutzen überhaupt ein angebot) rechtfertigt.
         knopf.className = 'knopf-haupt';
         knopf.addEventListener('click', async () => {
             knopf.disabled = true;
@@ -981,24 +1300,24 @@ function zeigeLeermaske(kennung, titel, erklaerung, angebot = null) {
     }
     wurzel.append(kasten);
 
-    // Ohne Zeilen gibt es nichts auszuwaehlen - eine noch offene Maske
-    // bezoege sich sonst auf eine Zeile, die gerade verschwunden ist.
+    // Ohne Zeilen gibt es nichts auszuwählen - eine noch offene Maske
+    // bezöge sich sonst auf eine Zeile, die gerade verschwunden ist.
     document.getElementById('detailmaske').replaceChildren();
     hauptknopfElement = null;
 }
 
-// Zwei Listen in einem Bereich, wenn sie fachlich zusammengehoeren.
+// Zwei Listen in einem Bereich, wenn sie fachlich zusammengehören.
 //
 // kennung: dieselbe Absicherung wie bei zeigeListe()/zeigeLeermaske()
-// (WICHTIG 3, aus derselben Pruefung wie KRITISCH 2). Heute laeuft jeder
-// Aufruf zufaellig SYNCHRON direkt nach neuerVorgang() (siehe
+// (WICHTIG 3, aus derselben Prüfung wie KRITISCH 2). Heute läuft jeder
+// Aufruf zufällig SYNCHRON direkt nach neuerVorgang() (siehe
 // instandhaltungAufbauen()/auswertungenAufbauen()), also ist der Fehler
 // beim jetzigen Baustand nicht auslösbar - aber die Schnittstelle bot
-// bislang gar keine Kennung an. Ein kuenftiger Bereich, der die Reiter
+// bislang gar keine Kennung an. Ein künftiger Bereich, der die Reiter
 // erst NACH einem await aufbaut (etwa nach einem eigenen Nachladen),
 // erbte den Fehler aus KRITISCH 2 ohne dass ihn hier etwas hinderte. Die
-// Pruefung kostet den heutigen synchronen Fall nichts (kennung ist dann
-// immer aktuell) und schuetzt den naechsten Aufrufer trotzdem.
+// Prüfung kostet den heutigen synchronen Fall nichts (kennung ist dann
+// immer aktuell) und schützt den nächsten Aufrufer trotzdem.
 // reiter: [{ schluessel, titel }]
 function zeigeUnterreiter(kennung, reiter, aktiv, beiWechsel) {
     if (!istAktuellerVorgang(kennung)) return;
@@ -1018,25 +1337,25 @@ function zeigeUnterreiter(kennung, reiter, aktiv, beiWechsel) {
 }
 
 // Synchron, weil jeder Maskenaufbau es mehrfach fragt. Der
-// Rollenspeicher ist zu diesem Zeitpunkt gefuellt - seiteAufbauen() hat
+// Rollenspeicher ist zu diesem Zeitpunkt gefüllt - seiteAufbauen() hat
 // ihn geladen, bevor irgendein Bereich baut.
 //
-// instanceof Set statt einer Pruefung auf null: geladeneRollen kann jetzt
-// auch false sein (kein Mitarbeiter). false.has(...) wuerfe eine
-// TypeError - deny-by-default heisst hier, jeden Nicht-Set-Fall
-// gleichermassen als "keine Rolle" zu behandeln, nicht nur den
+// instanceof Set statt einer Prüfung auf null: geladeneRollen kann jetzt
+// auch false sein (kein Mitarbeiter). false.has(...) würfe eine
+// TypeError - deny-by-default heißt hier, jeden Nicht-Set-Fall
+// gleichermaßen als "keine Rolle" zu behandeln, nicht nur den
 // Anfangszustand vor dem ersten Laden.
 function darfRolle(code) {
     return geladeneRollen instanceof Set && geladeneRollen.has(code);
 }
 
-// ===== Profilmenue =====
+// ===== Profilmenü =====
 //
 // Bedienung des Rundknopfs oben rechts (Punkt 3). Absichtlich getrennt
-// von profilAufbauen() oben, das nur den INHALT fuellt: profilAufbauen()
-// laeuft bei jedem seiteAufbauen()-Durchlauf erneut, ein hier
-// angehaengter Klick-Handler wuerde sich also mit der Zeit vervielfachen,
-// wenn er dort staende. Hier, am Skriptende, laeuft er dagegen GENAU
+// von profilAufbauen() oben, das nur den INHALT füllt: profilAufbauen()
+// läuft bei jedem seiteAufbauen()-Durchlauf erneut, ein hier
+// angehängter Klick-Handler würde sich also mit der Zeit vervielfachen,
+// wenn er dort stände. Hier, am Skriptende, läuft er dagegen GENAU
 // EINMAL - derselbe Aufbau wie bei "Anmeldung verdrahten" unten.
 const knopfProfil = document.getElementById('knopf-profil');
 const profilmenue = document.getElementById('profilmenue');
@@ -1057,8 +1376,8 @@ function profilmenueOeffnen() {
 }
 
 // Ein <button> reagiert schon von sich aus auf Enter UND Leertaste wie
-// auf einen Klick - ein eigener keydown-Handler fuer das OEFFNEN waere
-// eine zweite, ueberfluessige Umsetzung derselben Tastaturbedienung.
+// auf einen Klick - ein eigener keydown-Handler für das ÖFFNEN wäre
+// eine zweite, überflüssige Umsetzung derselben Tastaturbedienung.
 // Nur das SCHLIESSEN per Escape braucht eine eigene Behandlung, weiter
 // unten im globalen keydown-Listener.
 knopfProfil.addEventListener('click', () => {
@@ -1066,12 +1385,12 @@ knopfProfil.addEventListener('click', () => {
     else profilmenueOeffnen();
 });
 
-// Klick ausserhalb schliesst das Menue. Auf 'click' verdrahtet, nicht
-// 'pointerdown': der oeffnende Klick auf knopfProfil selbst durchlaeuft
-// wegen der Ereignisblase erst den eigenen Handler oben (Menue geht auf)
+// Klick außerhalb schließt das Menü. Auf 'click' verdrahtet, nicht
+// 'pointerdown': der öffnende Klick auf knopfProfil selbst durchläuft
+// wegen der Ereignisblase erst den eigenen Handler oben (Menü geht auf)
 // und danach, im selben Klick, diesen document-Handler - der aber
-// erkennt ueber knopfProfil.contains(e.target), dass der Klick INNERHALB
-// des Profilbereichs lag, und laesst das gerade geoeffnete Menue in Ruhe.
+// erkennt über knopfProfil.contains(e.target), dass der Klick INNERHALB
+// des Profilbereichs lag, und lässt das gerade geöffnete Menü in Ruhe.
 document.addEventListener('click', (e) => {
     if (!profilmenueOffen()) return;
     if (knopfProfil.contains(e.target) || profilmenue.contains(e.target)) return;
@@ -1081,7 +1400,7 @@ document.addEventListener('click', (e) => {
 document.getElementById('knopf-einstellungen').addEventListener('click', () => {
     profilmenueSchliessen();
     // Ehrlich statt stumm: es gibt noch keine Einstellungsseite. Der
-    // Menuepunkt zu verstecken oder zu deaktivieren haette dieselbe
+    // Menüpunkt zu verstecken oder zu deaktivieren hätte dieselbe
     // Frage nur verschoben ("warum fehlt er/ warum tut er nichts?").
     melde('Einstellungen gibt es in dieser Warenwirtschaft noch nicht.', 'neutral');
 });
@@ -1108,32 +1427,32 @@ function maskeVerwerfen() {
 
 document.addEventListener('keydown', (e) => {
     // Ein offener <dialog> behandelt Escape (und seine eigene Fokusfalle)
-    // selbst - siehe bestaetige(). Wuerde dieser Listener hier zusaetzlich
-    // reagieren, verwuerfe Escape gleichzeitig die Maske IM Hintergrund,
-    // waehrend der Dialog sich schliesst: zwei Wirkungen fuer einen
+    // selbst - siehe bestätige(). Würde dieser Listener hier zusätzlich
+    // reagieren, verwürfe Escape gleichzeitig die Maske IM Hintergrund,
+    // während der Dialog sich schließt: zwei Wirkungen für einen
     // Tastendruck.
     if (document.querySelector('dialog[open]')) return;
 
     if (e.key === 'Escape') {
-        // Das Profilmenue zuerst pruefen: ist es offen, gehoert Escape
-        // IHM - sonst verwuerfe derselbe Tastendruck zusaetzlich eine im
-        // Hintergrund vielleicht offene Detailmaske, zwei Wirkungen fuer
+        // Das Profilmenü zuerst pruefen: ist es offen, gehört Escape
+        // IHM - sonst verwürfe derselbe Tastendruck zusätzlich eine im
+        // Hintergrund vielleicht offene Detailmaske, zwei Wirkungen für
         // einen Tastendruck (dieselbe Falle wie beim <dialog> oben).
         if (profilmenueOffen()) {
             profilmenueSchliessen();
-            knopfProfil.focus();   // Fokus sichtbar dorthin zurueck, wo er herkam
+            knopfProfil.focus();   // Fokus sichtbar dorthin zurück, wo er herkam
             return;
         }
         maskeVerwerfen();
         return;
     }
     if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();   // sonst oeffnet der Browser seinen eigenen Speichern-Dialog
+        e.preventDefault();   // sonst öffnet der Browser seinen eigenen Speichern-Dialog
         maskeSpeichern();
         return;
     }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-        // Nicht feuern, waehrend jemand in einem Eingabefeld der Maske
+        // Nicht feuern, während jemand in einem Eingabefeld der Maske
         // tippt - dort bewegen Pfeiltasten den Cursor, nicht die Liste.
         const zielTag = document.activeElement?.tagName;
         if (zielTag === 'INPUT' || zielTag === 'TEXTAREA' || zielTag === 'SELECT') return;
@@ -1156,10 +1475,10 @@ document.getElementById('zustand-anmeldung').addEventListener('submit', async (e
             document.getElementById('feld-email').value,
             document.getElementById('feld-passwort').value
         );
-        // Kein seiteAufbauen() hier: onAuthStateChange (SIGNED_IN) loest
-        // ueber beiAnmeldungsWechsel weiter unten denselben Aufbau aus.
-        // Ein zweiter Aufruf hier wuerde meineRollen() zweimal parallel
-        // anstossen.
+        // Kein seiteAufbauen() hier: onAuthStateChange (SIGNED_IN) löst
+        // über beiAnmeldungsWechsel weiter unten denselben Aufbau aus.
+        // Ein zweiter Aufruf hier würde meineRollen() zweimal parallel
+        // anstoßen.
     } catch (fehler) {
         fehlerAnzeige.textContent = fehler.message;
     }
@@ -1168,12 +1487,12 @@ document.getElementById('zustand-anmeldung').addEventListener('submit', async (e
 document.getElementById('knopf-abmelden').addEventListener('click', () => abmelden());
 document.getElementById('knopf-abmelden-fremd').addEventListener('click', () => abmelden());
 // Der einzige Ausweg aus "Mitarbeiter ohne Rolle": ohne diesen Knopf
-// saesse dort jemand fest, bis die Leitung eine Rolle zutraegt.
+// sässe dort jemand fest, bis die Leitung eine Rolle zuträgt.
 document.getElementById('knopf-abmelden-ohne-rolle').addEventListener('click', () => abmelden());
 
 // beiAnmeldungsWechsel() ruft NICHT sofort mit dem aktuellen Zustand auf
 // (anders als das Vorbild src/auth.js) - deshalb wird seiteAufbauen()
-// unten zusaetzlich einmal von Hand angestossen, fuer den allerersten
+// unten zusätzlich einmal von Hand angestoßen, für den allerersten
 // Seitenaufruf.
 beiAnmeldungsWechsel(seiteAufbauen);
 seiteAufbauen();
