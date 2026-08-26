@@ -175,7 +175,7 @@ wer Mitarbeiter ist.
 |---|---|---|
 | Passwort | Liegt in `auth.users`; auf Schema `auth` hat weder `anon` noch `authenticated` Rechte | Abnahme fragt es von außen ab |
 | Zahlungsmittel | Zeilenregel `zahlungsmittel_eigene`: sichtbar sind nur die **eigenen**; keine `v_wawi_`-Sicht und keine `api_`-Funktion reicht fremde durch | Abnahme prüft Regel, Sichten und Funktionen |
-| Einzelne Fahrten eines Kunden | Kundenmaske zeigt Stammdaten und Rechnungsstatus; Fahrten nur als Summe | Sicht liefert keine `ausleihe_id` |
+| Einzelne Fahrten eines Kunden — **im Arbeitsalltag** | Kundenmaske zeigt Stammdaten und Rechnungsstatus; Fahrten nur als Summe. Die **Auskunft nach Art. 15** ist die ausdrückliche Ausnahme, siehe 4.3 | Sicht liefert keine `ausleihe_id`; pgTAP `test_v_kunde_ohne_bewegungsprofil` |
 
 **Warum hier eine Zeilenregel steht und kein Rechteentzug.** Der erste
 Entwurf verlangte schlicht: kein `SELECT` auf `velocity.zahlungsmittel`
@@ -202,12 +202,40 @@ von Fahrten mit Start, Ziel und Uhrzeit ist ein **Bewegungsprofil**.
 Der Kundenservice braucht es nicht, die Auswertung braucht nur Summen.
 Was niemand braucht, wird nicht ausgeliefert.
 
+**Und doch gibt es genau einen Weg dorthin — mit Absicht.** Die Auskunft
+nach Art. 15 muss der betroffenen Person *alles* geben, was über sie
+gespeichert ist; ein Bewegungsprofil, das man vor ihr selbst verbirgt,
+wäre kein Datenschutz, sondern sein Gegenteil. Wer für sie Auskunft
+erteilt, sieht die Fahrten deshalb notwendigerweise mit.
+
+Das ist keine Lücke in der Zeile darüber, sondern die Stelle, an der
+zwei Grundsätze desselben Gesetzes gegeneinander stehen: Art. 5 Abs. 1
+lit. c verlangt Datenminimierung, Art. 15 verlangt Vollständigkeit.
+Auflösen lässt sich das nicht durch Wegnehmen, sondern nur durch
+Begrenzen des Anlasses — die Fahrten erscheinen ausschließlich in der
+Auskunft, nie in einer Arbeitsmaske, und jeder Aufruf hinterlässt nach
+GR19 eine Spur im Änderungsprotokoll. Wer Daten einsieht, ist danach
+benennbar.
+
+Für die Lehre ist gerade dieser Widerspruch der Ertrag. Eine Regel, die
+keine Ausnahme kennt, ist meistens eine, die noch niemand ernsthaft
+angewandt hat.
+
 ### 4.3 Betroffenenrechte
 
 **Auskunft (Art. 15).** `api_kunde_auskunft(kunde_id)` liefert alles,
-was zu einer Person gespeichert ist, als ein JSON-Dokument — Stammdaten,
-Mitgliedschaften, Fahrten, Rechnungen. Nur für Rolle `kundenservice`,
-und der Aufruf selbst wird protokolliert.
+was zu einer Person gespeichert ist, als ein JSON-Dokument mit acht
+Abschnitten: `stammdaten`, `mitgliedschaften`, `fahrten`, `rechnungen`,
+`zahlungen`, `schadensmeldungen`, `freiminuten`, `protokoll`. Nur für
+Rolle `kundenservice`, und der Aufruf selbst wird protokolliert.
+
+**Der Abschnitt `fahrten` enthält Start, Ziel, Zeitstempel und
+Koordinaten je Fahrt** — also genau das Bewegungsprofil, das 4.2 aus dem
+Arbeitsalltag heraushält. Das ist gewollt und in 4.2 begründet: Art. 15
+verlangt Vollständigkeit, und die Auskunft ist der einzige Anlass, zu
+dem diese Daten die Datenbank verlassen dürfen. `zahlungsmittel` fehlt
+dagegen auch hier — GR17 kennt keine Ausnahme, weil die Bezahldaten
+Dritter betreffen, nicht die auskunftsberechtigte Person.
 
 **Löschung (Art. 17) = Anonymisieren.** `api_kunde_anonymisieren(kunde_id, grund)`:
 

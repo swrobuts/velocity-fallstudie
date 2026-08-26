@@ -125,20 +125,72 @@ sind bewusst und werden von `db/tests/t0018_wawi_sichten.sql`
 - **Keine Bezahldaten.** `v_wawi_kunde` nennt weder ein Zahlungsmittel
   noch dessen Token. Der Kundenservice braucht zum Auskunftgeben und
   Anonymisieren keinen Zugriff auf Zahlungsmittel — und bekommt keinen.
-- **Keine einzelne Fahrt.** `v_wawi_kunde` liefert Fahrten und Umsatz nur
-  als **Summe**. Eine Liste einzelner Fahrten mit Start, Ziel und Uhrzeit
-  ist ein Bewegungsprofil, und der Kundenservice braucht für seine
-  Aufgabe (Auskunft, Anonymisierung, Sperrung) keins.
+- **Keine einzelne Fahrt — im Arbeitsalltag.** `v_wawi_kunde` liefert
+  Fahrten und Umsatz nur als **Summe**. Eine Liste einzelner Fahrten mit
+  Start, Ziel und Uhrzeit ist ein Bewegungsprofil, und für Sperrung oder
+  Anonymisierung braucht es keins. Genau **eine** Ausnahme gibt es, und
+  sie ist gewollt: die Auskunft nach Art. 15 (weiter unten).
 
 Dieselbe Zurückhaltung gilt für eine ganze Sicht, nicht nur für einzelne
-Spalten: `v_wawi_fahrt_km` — die Hilfssicht mit Einzelfahrten,
+Spalten — und hier steckt eine Lehre, die uns erst die Schlussprüfung
+gebracht hat. `v_wawi_fahrt_km` ist die Hilfssicht mit Einzelfahrten,
 `kunde_id` und Zeitstempel, aus der `v_wawi_km_co2` seine Monatszahlen
-bildet — ist nur `leitung` zugeteilt, keiner der anderen drei Rollen, und
-die Warenwirtschaft baut absichtlich **keine** Maske darauf. Technisch
-wäre eine Fahrtenliste aus dieser Sicht kein Problem; fachlich wäre sie
-genau das Bewegungsprofil, dessen Fernhalten der ganze Witz der
-Rollentrennung ist. Wer eine Fahrtenliste „braucht“, hat damit ein
-anderes Problem als eine fehlende Sicht.
+bildet. Lange lautete der Schutz: „die Warenwirtschaft baut absichtlich
+keine Maske darauf.“
+
+**Das war kein Schutz.** Wer angemeldet ist, braucht keine Maske — die
+Sicht war über PostgREST unter ihrem Namen abrufbar, 12 047 Zeilen, und
+mit `v_wawi_kunde` verbunden ergab das einen namentlichen
+Fahrtenverlauf. Eine Zusage darüber, was man *nicht baut*, ist keine
+Schranke; eine Schranke ist, was jemand nicht *umgehen* kann.
+
+Heute ist der Sicht das Leserecht für `authenticated` entzogen. Dass die
+Auswertung trotzdem funktioniert, liegt an einer Eigenschaft von
+PostgreSQL, die hier zum Lehrstück taugt: eine Sicht greift auf ihre
+Grundlagen mit den Rechten **ihres Eigentümers** zu, nicht mit denen des
+Aufrufers (solange sie nicht als `security_invoker` angelegt ist).
+`v_wawi_km_co2` liest also weiter aus `v_wawi_fahrt_km`, während der
+direkte Weg dorthin mit `permission denied` endet. Das Recht auf die
+Hilfssicht war von Anfang an überflüssig — es hat nur niemand geprüft.
+
+## Die Auskunft nach Art. 15 DSGVO — die gewollte Ausnahme
+
+Oben steht: keine einzelnen Fahrten. Der Knopf „Auskunft nach Art. 15“
+in der Kundenmaske zeigt sie trotzdem — mit Start, Ziel, Zeitstempel und
+Koordinaten. Das ist kein Versehen, und es lohnt sich, den Widerspruch
+nicht wegzuerklären, sondern anzusehen.
+
+`api_kunde_auskunft` liefert acht Abschnitte: `stammdaten`,
+`mitgliedschaften`, `fahrten`, `rechnungen`, `zahlungen`,
+`schadensmeldungen`, `freiminuten`, `protokoll`. Art. 15 verlangt
+Vollständigkeit — die betroffene Person hat ein Recht darauf zu
+erfahren, was über sie gespeichert ist, und das Bewegungsprofil ist der
+Teil, der sie am meisten angeht. Ein Profil, das man vor ihr selbst
+verbirgt, wäre kein Datenschutz.
+
+Damit stehen zwei Grundsätze desselben Gesetzes gegeneinander:
+
+| Grundsatz | Verlangt |
+|---|---|
+| Art. 5 Abs. 1 lit. c — Datenminimierung | so wenig wie möglich |
+| Art. 15 — Auskunftsrecht | vollständig |
+
+**Auflösen lässt sich das nicht durch Wegnehmen, sondern nur durch
+Begrenzen des Anlasses.** Die Fahrten erscheinen ausschließlich in der
+Auskunft, nie in einer Arbeitsmaske, nie in einer Liste, nie in einer
+Auswertung. Und jeder Aufruf schreibt nach GR19 einen Eintrag ins
+Änderungsprotokoll: wer Daten einsieht, ist danach benennbar. Deshalb
+steht der Hinweis darauf in der Maske **über** dem Knopf und nicht
+darunter — wer klickt, soll vorher wissen, dass er eine Spur
+hinterlässt.
+
+Eine Ausnahme gilt auch hier nicht: `zahlungsmittel` fehlt in der
+Auskunft. GR17 kennt keine, weil Bezahldaten Dritte betreffen — die
+Bank, den Zahlungsdienstleister — und nicht nur die Person, die fragt.
+
+Für die Lehre ist gerade dieser Widerspruch der Ertrag. Eine Regel, die
+keine Ausnahme kennt, ist meistens eine, die noch niemand ernsthaft
+angewandt hat.
 
 ## Der Weg der Löschung nach Art. 17 DSGVO
 
