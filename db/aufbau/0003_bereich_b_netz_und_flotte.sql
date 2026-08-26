@@ -305,6 +305,24 @@ create constraint trigger trg_fahrrad_status_ort
   deferrable initially deferred
   for each row execute function velocity.trg_radposition_pruefen();
 
+-- Und der dritte Weg zu einem Rad ohne Standort: ein blankes INSERT.
+-- Gesamtpruefung 26.08.2026, gemessen statt vermutet: "insert into
+-- velocity.fahrrad (..., status) values (..., 'verfuegbar')" ganz ohne
+-- zugehoerige fahrrad_position-Zeile lief bis hierher durch, auch nach
+-- "set constraints all immediate" - trg_fahrrad_status_ort feuert nur
+-- bei "update of status", nicht bei insert, und trg_radposition_ort
+-- haengt an fahrrad_position, die hier nie angefasst wird. Ueber
+-- api_rad_anlegen und ueber PostgREST ist der Weg dicht (die Basistabelle
+-- ist authenticated entzogen, die Funktion verlangt eine Station) - aber
+-- genau der rohe INSERT ist der Weg jeder Datenuebernahme, und der
+-- Kommentar oben an dieser Regel darf nicht so lesen, als sei die Wurzel
+-- bereits vollstaendig verriegelt.
+drop trigger if exists trg_fahrrad_insert_ort on velocity.fahrrad;
+create constraint trigger trg_fahrrad_insert_ort
+  after insert on velocity.fahrrad
+  deferrable initially deferred
+  for each row execute function velocity.trg_radposition_pruefen();
+
 create index if not exists idx_fahrrad_position_station on velocity.fahrrad_position (station_id);
 
 

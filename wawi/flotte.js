@@ -108,7 +108,20 @@ function radMaske(rad) {
     // fuehrten seit der Sperre nur noch zuverlaessig zu einer Absage;
     // dieselbe Regel wie beim Ausmustern-Knopf weiter unten gilt auch
     // hier: was man nicht darf, wird nicht angezeigt, nicht ausgegraut.
-    if ((darfRolle('disposition') || darfRolle('werkstatt')) && rad.status !== 'ausgemustert') {
+    //
+    // rad.status !== 'ausgeliehen' ergaenzt in der Gesamtpruefung: ein
+    // Rad in Fahrt hat KEINE Positionszeile (die entsteht erst wieder
+    // bei der Rueckgabe), und GR13 verlangt fuer 'verfuegbar', 'wartung'
+    // und 'defekt' zwingend einen Standort. api_rad_status_setzen nimmt
+    // aber gar keinen Standort entgegen - jeder der drei Knoepfe fuehrt
+    // fuer ein Rad auf 'ausgeliehen' deshalb IMMER zur Absage, und zwar
+    // mit einer Standort-Meldung, die in die falsche Richtung weist (die
+    // Ursache ist die laufende Fahrt, nicht ein vergessener Standort).
+    // Nachgemessen mit Rad 599 (Gesamtpruefung, zurueckgerollt): alle
+    // drei Ziele scheitern, zwei davon woertlich mit "braucht damit
+    // einen Standort".
+    if ((darfRolle('disposition') || darfRolle('werkstatt'))
+        && rad.status !== 'ausgemustert' && rad.status !== 'ausgeliehen') {
         for (const ziel of ['verfuegbar', 'wartung', 'defekt']) {
             if (rad.status === ziel) continue;
             knoepfe.push({
@@ -127,7 +140,13 @@ function radMaske(rad) {
         }
     }
 
-    if (darfRolle('disposition') && rad.status !== 'ausgemustert') {
+    // Dieselbe Ergaenzung wie oben, aus demselben Fund: api_rad_ausmustern
+    // weist ein Rad in Fahrt zwar mit einer klaren Meldung ab ("ist in
+    // Fahrt und kann nicht ausgemustert werden", GR20) statt mit der
+    // irrefuehrenden Standort-Meldung von oben - aber es bleibt eine
+    // sichere Absage, und die Regel dieses Projekts fragt nicht, wie
+    // klar die Absage ist, sondern ob es ueberhaupt eine ist.
+    if (darfRolle('disposition') && rad.status !== 'ausgemustert' && rad.status !== 'ausgeliehen') {
         knoepfe.push({
             titel: 'Ausmustern',
             art: 'gefaehrlich',

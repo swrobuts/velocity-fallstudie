@@ -699,9 +699,21 @@ begin
   -- gesetzt, sondern die Rueckgabe uebernimmt ihn: fn_ausleihe_beenden
   -- (db/aufbau/0009_geschaeftslogik.sql) fragt vor dem Freigeben, ob
   -- eine fahruntaugliche Meldung offen ist.
+  --
+  -- "and status <> 'ausgemustert'" ergaenzt in der Gesamtpruefung:
+  -- 'ausgemustert' ist seit commit caf59b5 ein Endzustand, keine Drehtuer
+  -- (Begruendung an der ausfuehrlichen Stelle in api_rad_status_setzen
+  -- oben in dieser Datei). Diese Funktion pruefte das bisher nicht selbst
+  -- und verliess sich stillschweigend auf den GR13-Trigger, der ein
+  -- ausgemustertes Rad ohnehin schon vor jedem anderen Status schuetzt -
+  -- aber mit der Standort-Meldung von trg_radposition_pruefen, nicht mit
+  -- der Endzustands-Meldung, die dieser Fall eigentlich verdient. Die
+  -- Oberflaeche erreicht das heute nicht (beide Masken filtern
+  -- ausgemusterte Raeder heraus), aber die Regel gehoert an die Stelle,
+  -- die den Status setzt, nicht nur an die Oberflaeche, die sie verbirgt.
   if p_schwere = 'fahruntauglich' then
     update velocity.fahrrad set status = 'defekt'
-     where fahrrad_id = p_fahrrad_id and status <> 'ausgeliehen';
+     where fahrrad_id = p_fahrrad_id and status not in ('ausgeliehen', 'ausgemustert');
   end if;
   return v_s;
 end;
@@ -745,8 +757,13 @@ begin
     update velocity.schadensmeldung set status = 'in_arbeit'
      where schadensmeldung_id = p_schadensmeldung_id;
   end if;
+  -- "and status <> 'ausgemustert'" ergaenzt aus demselben Grund wie in
+  -- api_schaden_melden oben: 'ausgemustert' ist ein Endzustand (siehe
+  -- api_rad_status_setzen), diese Funktion hielt sich bisher nur ueber
+  -- den GR13-Trigger daran, mit dessen Standort-Meldung statt einer
+  -- Endzustands-Meldung.
   update velocity.fahrrad set status = 'wartung'
-   where fahrrad_id = p_fahrrad_id and status <> 'ausgeliehen';
+   where fahrrad_id = p_fahrrad_id and status not in ('ausgeliehen', 'ausgemustert');
   return v_w;
 end;
 $$;
@@ -889,9 +906,33 @@ to authenticated;
 -- sonst ist sie fuer die Oberflaeche tot: die Sweep-Pruefung in
 -- tools/abnahme.sh faengt fehlende Rechte nur bei Funktionen ab, nicht
 -- bei Sichten.
+--
+-- v_wawi_fahrt_km ist ABSICHTLICH NICHT in dieser Liste - anders als bei
+-- der Gesamtpruefung vom 25.08.2026 zuvor. Sie ist die Hilfssicht mit der
+-- Einzelfahrt: 12047 Zeilen mit kunde_id und Zeitstempel je Fahrt, fuer
+-- jedes Konto mit 'leitung' ueber PostgREST abrufbar. Verbunden mit
+-- v_wawi_kunde (dieselbe Rolle liest sie) waere das ein namentlicher
+-- Fahrtenverlauf je Kunde - das Bewegungsprofil, dessen Fernhalten Spec
+-- 4.2 zum Lehrpunkt macht ("was niemand braucht, wird nicht
+-- ausgeliefert"). Der Grant war dazu technisch ueberfluessig: keine der
+-- elf v_wawi_-Sichten traegt security_invoker (alle Eigentuemer
+-- postgres, nachgemessen ueber pg_class.reloptions), v_wawi_km_co2 liest
+-- v_wawi_fahrt_km deshalb mit den Rechten IHRES Eigentuemers, nicht mit
+-- denen der aufrufenden Rolle - GENAU wie fn_luftlinie_km es fuer
+-- Funktionen NICHT tut (siehe Kommentar dort: eine Sicht traegt nicht
+-- automatisch die Rechte ihres Eigentuemers weiter an aufgerufene
+-- FUNKTIONEN, wohl aber an gelesene TABELLEN UND SICHTEN). Nachgemessen
+-- in einer zurueckgerollten Transaktion als authenticated/M-0001: nach
+-- "revoke select on v_wawi_fahrt_km from authenticated" scheitert der
+-- direkte Zugriff auf v_wawi_fahrt_km mit "permission denied", waehrend
+-- v_wawi_km_co2 unveraendert 46 Zeilen liefert. Der Grant blieb bisher
+-- nur stehen, weil er dem Muster der anderen zehn Sichten folgte, ohne
+-- dass ihn hier etwas gebraucht haette.
+revoke select on velocity.v_wawi_fahrt_km from authenticated;
+
 grant select on
   velocity.v_wawi_flotte, velocity.v_wawi_kunde, velocity.v_wawi_station,
-  velocity.v_wawi_schaden, velocity.v_wawi_auftrag, velocity.v_wawi_fahrt_km,
+  velocity.v_wawi_schaden, velocity.v_wawi_auftrag,
   velocity.v_wawi_umsatz_radtyp, velocity.v_wawi_umsatz_kundengruppe,
   velocity.v_wawi_km_co2, velocity.v_wawi_stationsauslastung,
   velocity.v_wawi_modell

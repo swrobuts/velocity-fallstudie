@@ -634,6 +634,58 @@ begin
 end;
 $$;
 
+-- Gesamtpruefung 26.08.2026, Befund '"Ausgemustert ist Endzustand" steht
+-- nur an einer Stelle': api_schaden_melden schrieb bisher
+-- "and status <> 'ausgeliehen'" - ein ausgemustertes Rad waere damit
+-- klaglos wieder auf 'defekt' gesetzt worden, nur eben nicht ueber die
+-- Oberflaeche (beide Masken filtern ausgemusterte Raeder heraus). Dieser
+-- Test ruft die Funktion direkt auf, so wie ein zukuenftiger dritter Weg
+-- es koennte.
+create or replace function velocity_test.test_l_ausgemustert_bleibt_bei_schaden_melden()
+returns setof text language plpgsql as $$
+declare v_f record; v_station bigint; v_s bigint;
+begin
+  select * into v_f from velocity_test.fixture_rad('schadenausgemustert');
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  insert into velocity.fahrrad_position (fahrrad_id, station_id) values (v_f.o_fahrrad_id, v_station);
+
+  perform velocity_test.fixture_rollen('schadenausgemustert1', array['disposition']);
+  perform velocity.api_rad_ausmustern(v_f.o_fahrrad_id, 'Rahmenbruch');
+
+  perform velocity_test.fixture_rollen('schadenausgemustert2', array['werkstatt']);
+  v_s := velocity.api_schaden_melden(v_f.o_fahrrad_id, 'Rahmen', 'Rahmen gebrochen', 'fahruntauglich');
+  return next ok(v_s is not null, 'Die Meldung selbst wird trotzdem angelegt');
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_f.o_fahrrad_id),
+    'ausgemustert',
+    'Ein ausgemustertes Rad bleibt ausgemustert, auch nach einer fahruntauglichen Meldung');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Dieselbe Ergaenzung, dieselbe Begruendung, fuer api_auftrag_eroeffnen.
+create or replace function velocity_test.test_l_ausgemustert_bleibt_bei_auftrag_eroeffnen()
+returns setof text language plpgsql as $$
+declare v_f record; v_station bigint; v_w bigint;
+begin
+  select * into v_f from velocity_test.fixture_rad('auftragausgemustert');
+  select station_id into v_station from velocity.station order by station_id limit 1;
+  insert into velocity.fahrrad_position (fahrrad_id, station_id) values (v_f.o_fahrrad_id, v_station);
+
+  perform velocity_test.fixture_rollen('auftragausgemustert1', array['disposition']);
+  perform velocity.api_rad_ausmustern(v_f.o_fahrrad_id, 'Rahmenbruch');
+
+  perform velocity_test.fixture_rollen('auftragausgemustert2', array['werkstatt']);
+  v_w := velocity.api_auftrag_eroeffnen(v_f.o_fahrrad_id, null);
+  return next ok(v_w is not null, 'Der Auftrag selbst wird trotzdem angelegt');
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_f.o_fahrrad_id),
+    'ausgemustert',
+    'Ein ausgemustertes Rad bleibt ausgemustert, auch nach einem neuen Wartungsauftrag');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
 create or replace function velocity_test.test_l_auftrag_eroeffnen_prueft_zugehoerigkeit()
 returns setof text language plpgsql as $$
 declare v_f1 bigint; v_f2 bigint; v_s1 bigint;

@@ -280,6 +280,34 @@ begin
 end;
 $$;
 
+-- Gesamtpruefung 26.08.2026, Befund "GR13 hat auf dem INSERT-Weg keine
+-- Wache": anders als test_b_verfuegbar_braucht_standort oben (das ERST
+-- eine leere Positionszeile einfuegt und DANN prueft) bleibt hier die
+-- Positionszeile komplett aus - fixture_rad_ort() legt das Rad an und
+-- sonst nichts. Vor trg_fahrrad_insert_ort feuerte dabei ueberhaupt kein
+-- Trigger: trg_radposition_ort haengt an fahrrad_position, die hier nie
+-- angefasst wird, und trg_fahrrad_status_ort an "update of status" -
+-- ein blankes INSERT ist keins von beidem. Ein Rad mit Status
+-- 'verfuegbar' (Vorgabewert) und ohne jede Positionszeile liess sich so
+-- anlegen und ueberstand "set constraints all immediate" (nachgemessen,
+-- in einer zurueckgerollten Transaktion, siehe Bericht).
+create or replace function velocity_test.test_b_insert_ohne_position_braucht_standort()
+returns setof text language plpgsql as $$
+declare
+  v_f record;
+begin
+  select * into v_f from velocity_test.fixture_rad_ort('8');
+
+  begin
+    set constraints all immediate;
+    return next fail('Ein per INSERT angelegtes Rad ohne jede Positionszeile haette abgewiesen werden muessen');
+  exception when check_violation then
+    return next pass('Ein blankes INSERT ohne Positionszeile wird beim Commit abgewiesen (GR13)');
+  end;
+  set constraints all deferred;
+end;
+$$;
+
 -- =====================================================================
 --  GESCHAEFTSGEBIET
 --
