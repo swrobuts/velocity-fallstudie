@@ -21,7 +21,7 @@ vergeben.
 
 | Rolle | Erreicht |
 |---|---|
-| `anon` | ausschließlich die sieben öffentlichen Sichten |
+| `anon` | ausschließlich die neun öffentlichen Sichten |
 | `authenticated` | zusätzlich die eigenen Zeilen von neun Tabellen und die vier `api_`-Funktionen |
 | niemand von außen | Basistabellen mit Personenbezug, `adresse`, die `fn_`-Fachlogik |
 
@@ -142,7 +142,7 @@ auf drei Wegen:
 | Weg | Werkzeug |
 |---|---|
 | In der Datenbank | `db/tests/t0011_sicherheit.sql` — RLS überall aktiv, `anon` ohne Tabellenrechte, Rollenwechsel-Probe |
-| Über die REST-Schnittstelle | `tools/rest_security_check.py` — 13 gesperrte Ressourcen, 7 öffentliche |
+| Über die REST-Schnittstelle | `tools/rest_security_check.py` — 13 gesperrte Ressourcen, 9 öffentliche |
 | Im Browser | Konsolenaufrufe der abgemeldeten Seite, siehe `doku/verifikation/` |
 
 ### Eine Falle im Prüfwerkzeug selbst

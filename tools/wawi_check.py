@@ -173,7 +173,14 @@ for ausdruck in sorted(set(id_ausdruecke)):
 # FOKUS — sichtbarer Tastaturfokus
 # =====================================================================
 print('\nVertrag: sichtbarer Tastaturfokus ist definiert')
-pruefe('FOKUS', ':focus-visible' in CSS,
+# Substring-Suche waere hier zu grob: ":focus-visible-erweitert { }" -
+# eine ungueltige, wirkungslose Pseudoklasse - enthielte die Zeichenkette
+# ":focus-visible" trotzdem und wuerde die Pruefung bestehen lassen,
+# obwohl keine einzige echte :focus-visible-Regel mehr existiert. Der
+# Lookahead verlangt, dass nach "focus-visible" kein weiteres
+# Bezeichnerzeichen (Buchstabe, Ziffer, Bindestrich) folgt, sodass genau
+# der Selektor erkannt wird - nicht jeder Text, der ihn als Praefix traegt.
+pruefe('FOKUS', bool(re.search(r':focus-visible(?![\w-])', CSS)),
        'style.css definiert :focus-visible - ohne sie ist die Tastaturbedienung nur behauptet')
 
 # =====================================================================

@@ -22,6 +22,96 @@ ergebnis() {
   else printf '%s   ✗ %s%s\n' "$rot" "$2" "$aus"; fehler=$((fehler+1)); fi
 }
 
+# Prueft, dass eine Menge von Dateien nur erlaubte Sichten liest und nur
+# erlaubte Funktionen aufruft.
+#
+# Die fruehere Fassung (bis 26.08.2026) suchte woertlich nach
+# .from('name') und rpc('name') mit genau einem einfachen
+# Anfuehrungszeichen und keinem Leerzeichen. Vier Schreibweisen liefen
+# unbemerkt durch: .from("name") mit doppelten Anfuehrungszeichen,
+# .from( 'name' ) mit Leerraum, .from(variable) ganz ohne
+# Anfuehrungszeichen und rpc("name") ebenso mit doppelten. Der Code, der
+# das aufdeckte, stand woertlich in einer Pruefanweisung - niemand hatte
+# im echten Code etwas geschwaecht.
+#
+# Ausserdem sah die alte Fassung ueberhaupt nur nach woertlichem
+# .from()/.rpc() im Quelltext, waehrend Website und Warenwirtschaft
+# tatsaechlich ausschliesslich ueber die Hilfsfunktionen ladeListe() und
+# rufeAuf() zugreifen (src/supabase.js, wawi/daten.js) - der Name der
+# Sicht bzw. Funktion steht also fast nirgends als woertliches
+# .from()/.rpc(), sondern als woertliches Argument von ladeListe()/
+# rufeAuf(). Diese Fassung prueft deshalb beide Ebenen: den direkten
+# Aufruf auf supabaseClient (faengt einen Umgehungsversuch der
+# Hilfsfunktionen ab) und den Aufruf der Hilfsfunktionen selbst (das ist
+# der Weg, den der echte Code tatsaechlich nimmt).
+#
+# Ein Aufruf ohne Anfuehrungszeichen (eine Variable) ist damit noch
+# erkennbar, aber fuer sich kein Verstoss - das gilt genau fuer die
+# Definition von ladeListe()/rufeAuf() selbst, die den Sichten-/
+# Funktionsnamen als Parameter entgegennehmen. Die Pruefung kann den
+# tatsaechlichen Namen an dieser Stelle nicht beurteilen und sagt das
+# als HINWEIS, statt es stillschweigend zu uebergehen.
+#
+# Aufruf: pruefe_direktzugriff <Dateien, eine je Zeile> <erlaubte
+#         .from()/ladeListe()-Praefixe, kommagetrennt> <erlaubte
+#         .rpc()/rufeAuf()-Praefixe, kommagetrennt> <zusaetzlich
+#         erlaubte woertliche Funktionsnamen, kommagetrennt, darf leer
+#         sein>
+pruefe_direktzugriff() {
+  DZ_DATEIEN="$1" DZ_FROM_PRAEFIXE="$2" DZ_RPC_PRAEFIXE="$3" DZ_RPC_NAMEN="$4" \
+  python3 - <<'PYEOF'
+import os, re, sys
+
+dateien = [p for p in os.environ.get('DZ_DATEIEN', '').split('\n') if p]
+from_praefixe = tuple(p for p in os.environ.get('DZ_FROM_PRAEFIXE', '').split(',') if p)
+rpc_praefixe  = tuple(p for p in os.environ.get('DZ_RPC_PRAEFIXE', '').split(',') if p)
+rpc_namen     = set(n for n in os.environ.get('DZ_RPC_NAMEN', '').split(',') if n)
+
+# Ein Argument ist entweder einfach oder doppelt zitiert, oder es ist
+# gar kein Literal (eine Variable/ein Ausdruck) - dann greift die letzte
+# Alternative und die Pruefung merkt sich das als "nicht beurteilbar".
+ARG = r"\s*(?:'([^']*)'|\"([^\"]*)\"|([^,)\s][^,)]*))"
+kopf_from = re.compile(r"(?:supabaseClient\s*\.\s*from|(?<!function )\bladeListe)\s*\(" + ARG)
+kopf_rpc  = re.compile(r"(?:supabaseClient\s*\.\s*rpc|(?<!function )\brufeAuf)\s*\(" + ARG)
+
+verstoss = []
+unklar = []
+
+def pruefe(regex, pfad, text, art, praefixe, namen):
+    for m in regex.finditer(text):
+        zeile_nr = text.count('\n', 0, m.start()) + 1
+        einq, doppelq, frei = m.groups()
+        ort = f"{pfad}:{zeile_nr}"
+        if einq is not None:
+            wert = einq
+        elif doppelq is not None:
+            wert = doppelq
+        else:
+            unklar.append(
+                f"{ort}  {art}(...) kein Literal, nicht automatisch "
+                f"beurteilbar: {(frei or '').strip()[:50]}")
+            continue
+        if not (wert.startswith(praefixe) or wert in namen):
+            verstoss.append(f"{ort}  {art}('{wert}')")
+
+for pfad in dateien:
+    try:
+        text = open(pfad, encoding='utf-8').read()
+    except FileNotFoundError:
+        continue
+    pruefe(kopf_from, pfad, text, 'from', from_praefixe, set())
+    pruefe(kopf_rpc, pfad, text, 'rpc', rpc_praefixe, rpc_namen)
+
+for u in unklar:
+    print(f"HINWEIS {u}")
+for v in verstoss:
+    print(f"FEHLER  {v}")
+if not verstoss and not unklar:
+    print("ok      keine Basistabelle, keine verbotene Funktion, alle Aufrufe Literale")
+sys.exit(1 if verstoss else 0)
+PYEOF
+}
+
 printf '%sAbnahme Phase 1 und 2 — VeloCity%s\n' "$blau" "$aus"
 printf '%s%s%s\n' "$grau" "$(date '+%d.%m.%Y %H:%M')" "$aus"
 
@@ -66,10 +156,20 @@ fi
 
 # --------------------------------------------------- 4 Zugriffsschutz
 schritt "Zugriffsschutz ueber die REST-Schnittstelle"
+# Zahlen GEZAEHLT statt eingetragen, aus derselben Ueberlegung wie bei
+# Pruefung 2: hier stand bis zur Gesamtpruefung vom 26.08.2026 "7 Sichten
+# oeffentlich" fest im Text - waehrend die ERLAUBT-Liste in
+# rest_security_check.py laengst auf neun Sichten gewachsen war. Die
+# Pruefung blieb gruen, meldete aber eine falsche Zahl; siehe TESTEN.md.
+# Gezaehlt wird aus dem tatsaechlichen Pruefprotokoll, nicht aus der
+# Quelle nachgezaehlt - nur das belegt, dass jede einzelne Ressource
+# auch wirklich geprueft und nicht bloss aufgelistet wurde.
 python3 tools/rest_security_check.py >/tmp/abnahme-sec.log 2>&1
 rc=$?
 case $rc in
-  0) ergebnis 0 "13 Ressourcen gesperrt, 7 Sichten oeffentlich" ;;
+  0) gesperrt=$(grep -c ': kein Zugriff' /tmp/abnahme-sec.log)
+     oeffentlich=$(grep -c ': oeffentlich erreichbar' /tmp/abnahme-sec.log)
+     ergebnis 0 "$gesperrt Ressourcen gesperrt, $oeffentlich Sichten oeffentlich" ;;
   2) ergebnis 1 "Schema velocity ist bei PostgREST nicht freigegeben — die Pruefung belegt nichts"
      sed 's/^/     /' /tmp/abnahme-sec.log ;;
   *) ergebnis 1 "Abweichungen gefunden"
@@ -230,12 +330,14 @@ fi
 
 # --------------------------------------------------------- 8 Website
 schritt "Website spricht nur Sichten und api-Funktionen"
-verstoss=$(grep -oE "\.from\('[a-z_]+'\)" src/supabase.js | grep -v "'v_" || true)
-verstoss="$verstoss$(grep -oE "rpc\('[a-z_]+'" src/supabase.js | grep -v "'api_" || true)"
-if [ -z "$(echo "$verstoss" | tr -d '[:space:]')" ]; then
+dz_log=$(pruefe_direktzugriff "src/supabase.js" "v_" "api_" "")
+dz_rc=$?
+echo "$dz_log" | grep '^HINWEIS' | sed 's/^/     /'
+if [ "$dz_rc" -eq 0 ]; then
   ergebnis 0 "keine Basistabelle, keine fn_-Funktion im Frontend"
 else
-  ergebnis 1 "Direktzugriff gefunden: $verstoss"
+  ergebnis 1 "Direktzugriff gefunden"
+  echo "$dz_log" | grep '^FEHLER' | sed 's/^/     /'
 fi
 if node --check src/supabase.js 2>/dev/null && node --check src/script.js 2>/dev/null \
    && node --check src/auth.js 2>/dev/null && node --check src/config.js 2>/dev/null; then
@@ -535,15 +637,18 @@ fi
 
 # --------------------------------------------- 29 WaWi spricht nur Sichten
 schritt "Warenwirtschaft spricht nur Sichten und api-Funktionen"
-# Dieselbe Regel wie fuer die Website, und derselbe Test - nur gegen
-# wawi/daten.js. Ein Zugriff auf eine Basistabelle waere hier
-# gefaehrlicher als dort: die Warenwirtschaft sieht Personendaten.
-verstoss=$(grep -oE "\.from\('[a-z_]+'\)" wawi/daten.js wawi/*.js | grep -v "'v_wawi" || true)
-verstoss="$verstoss$(grep -oE "rpc\('[a-z_]+'" wawi/*.js | grep -vE "'(api_|ist_mitarbeiter|hat_rolle)" || true)"
-if [ -z "$(echo "$verstoss" | tr -d '[:space:]')" ]; then
+# Dieselbe Regel wie fuer die Website, und derselbe Test (siehe
+# pruefe_direktzugriff oben) - nur gegen wawi/*.js. Ein Zugriff auf eine
+# Basistabelle waere hier gefaehrlicher als dort: die Warenwirtschaft
+# sieht Personendaten.
+dz_log=$(pruefe_direktzugriff "$(printf '%s\n' wawi/*.js)" "v_wawi" "api_" "ist_mitarbeiter,hat_rolle")
+dz_rc=$?
+echo "$dz_log" | grep '^HINWEIS' | sed 's/^/     /'
+if [ "$dz_rc" -eq 0 ]; then
   ergebnis 0 "keine Basistabelle, keine fn_-Funktion in der Warenwirtschaft"
 else
-  ergebnis 1 "Verstoss: $verstoss"
+  ergebnis 1 "Direktzugriff gefunden"
+  echo "$dz_log" | grep '^FEHLER' | sed 's/^/     /'
 fi
 
 # --------------------------------------------- 30 WaWi erreichbar

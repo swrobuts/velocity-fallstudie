@@ -5,7 +5,7 @@
 
 ## Warum eine zweite Oberfläche und kein Verwaltungsbereich
 
-Die Website (`src/`) spricht sieben öffentliche Sichten und vier
+Die Website (`src/`) spricht neun öffentliche Sichten und vier
 `api_`-Funktionen an — genug, um eine Fahrt zu buchen, aber nichts, womit
 sich der Betrieb steuern ließe. Ein Rad als defekt melden, eine Station
 stilllegen, einen Kunden nach Art. 17 DSGVO löschen: das sind andere
