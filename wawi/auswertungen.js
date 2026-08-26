@@ -14,11 +14,18 @@
 // letzterLadeFehler, zeigeListe, zeigeMaske, zeigeLeermaske,
 // zeigeUnterreiter, melde, meldeVorgang, neuerVorgang, laufenderVorgang,
 // istAktuellerVorgang, baueKachel, sparkline, zellbalken, saeulengrafik,
-// zahlSkaliert, maskeVerwerfen) und die eigenen Sichten
+// zahlSkaliert, maskeVerwerfen), zaehleZeilen() aus daten.js (Aufgabe
+// "analytischer" - eine reine Zaehlanfrage als Bezugsgroesse, dasselbe
+// Muster wie in kunden.js/instandhaltung.js) und die eigenen Sichten
 // v_wawi_umsatz_radtyp, v_wawi_umsatz_kundengruppe, v_wawi_km_co2,
-// v_wawi_stationsauslastung, v_wawi_fahrten_je_tag (Drill-Down-Aufgabe) -
-// keine Basistabelle, keine fn_-Funktion. rufeAuf() taucht in dieser
-// Datei bewusst nicht auf: es gibt in diesem Bereich nichts zu schreiben.
+// v_wawi_stationsauslastung, v_wawi_fahrten_je_tag (Drill-Down-Aufgabe),
+// v_wawi_flotte (Aufgabe "analytischer" - ausschliesslich als
+// Bezugsgroesse fuer "Umsatz je Rad und Tag", siehe
+// umsatzRadtypZeigen()/umsatzRadtypUebersicht(); KEINE neue Sicht dafuer
+// noetig, v_wawi_flotte war schon vorhanden und fuer 'leitung'
+// freigegeben) - keine Basistabelle, keine fn_-Funktion. rufeAuf() taucht
+// in dieser Datei bewusst nicht auf: es gibt in diesem Bereich nichts zu
+// schreiben.
 //
 // v_wawi_fahrt_km wird bewusst NICHT gelesen (auch nicht für eine
 // eigene Fahrtenliste): sie führt Einzelfahrten mit kunde_id und
@@ -140,6 +147,23 @@ function prozentFormat(anteil) {
 function prozentFormatFein(anteil) {
     return `${(anteil * 100).toLocaleString('de-DE',
         { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+}
+
+// Eine Nachkommastelle, ohne Einheit - fuer die drei neuen "je"-Spalten
+// unten (Minuten je Fahrt, Kilometer je Fahrt, Fahrten je Kunde), deren
+// Werte oft zwischen 5 und 60 liegen: zahlFormat() rundet auf ganze
+// Zahlen und verschluckte dort echte Unterschiede (19,2 vs. 19,4 Minuten
+// saehen beide als "19" aus), kgFormat()/geldFormat() bringen eine
+// Einheit mit, die hier falsch waere. minutenFormat() haengt "min" an
+// denselben Zahlkern, statt eine dritte, fast identische Funktion zu
+// schreiben.
+function zahlFormatFein(zahl) {
+    return Number(zahl).toLocaleString('de-DE',
+        { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}
+
+function minutenFormat(minuten) {
+    return `${zahlFormatFein(minuten)} min`;
 }
 
 // monat kommt als Datumstext des Monatsersten ('2026-03-01' o.ae.) über
@@ -507,9 +531,26 @@ async function umsatzRadtypZeigen(vorgang) {
     // wer den Verlauf eines Typs lesen will (das ist praktisch immer die
     // Frage, nicht "was geschah im Juni über alle Typen"), muss dafür
     // nicht mehr selbst filtern.
-    const zeilen = await ladeListe('v_wawi_umsatz_radtyp',
-        'monat, typ_code, typ, fahrten, minuten, umsatz, umsatz_je_fahrt',
-        (q) => q.order('typ_code').order('monat'));
+    // Parallel zur Monatsliste geladen, nicht danach: zaehleZeilen()
+    // (daten.js) fragt nur die Gesamtzahl ab, ohne dafuer die 275 Zeilen
+    // von v_wawi_flotte zu laden (dasselbe Muster wie die drei
+    // Zaehl-Anfragen in kundenAufbauen(), kunden.js). Der Nenner fuer
+    // "Umsatz je Rad und Tag" unten in umsatzRadtypUebersicht() -
+    // ausdruecklich ohne 'ausgemustert' (.neq, dasselbe Muster wie die
+    // Ersatzteilliste in instandhaltung.js): ein abgeschriebenes Rad
+    // erwirtschaftet nichts mehr und gehoert nicht in die Flotte, die
+    // sich tragen soll. Ein Fehler beim Zaehlen liefert null statt eines
+    // Wurfs (siehe zaehleZeilen()) - umsatzRadtypUebersicht() laesst die
+    // Kachel dann einfach weg, genau wie kundenUebersicht() es bei den
+    // eigenen Zaehl-Anfragen schon tut, statt den ganzen Reiter mit
+    // "schlecht" zu melden: eine fehlende Bezugsgroesse fuer EINE Kachel
+    // ist kein Grund, die Monatsliste selbst als gescheitert auszuweisen.
+    const [zeilen, flottengroesse] = await Promise.all([
+        ladeListe('v_wawi_umsatz_radtyp',
+            'monat, typ_code, typ, fahrten, minuten, umsatz, umsatz_je_fahrt',
+            (q) => q.order('typ_code').order('monat')),
+        zaehleZeilen('v_wawi_flotte', (q) => q.neq('status', 'ausgemustert'))
+    ]);
 
     const fehler = letzterLadeFehler('v_wawi_umsatz_radtyp');
     if (fehler) {
@@ -546,11 +587,22 @@ async function umsatzRadtypZeigen(vorgang) {
     // über den typ_code-Vergleich erkannt und liefert bewusst null statt
     // eines Vergleichs über Typgrenzen hinweg, der fachlich keinen Sinn
     // ergäbe (siehe veraenderungFormat()).
+    // minutenJeFahrt: dieselbe Rechnung wie umsatz_je_fahrt (aus der
+    // Sicht), nur clientseitig statt in SQL - fahrten und minuten
+    // stehen als Summen JE ZEILE bereits fest (eine Zeile ist ein Monat
+    // UND ein Radtyp), die Division innerhalb DERSELBEN Zeile zaehlt
+    // keine Falle ein: der Fehler, vor dem anteilGewichtet() weiter oben
+    // warnt, entsteht erst, wenn man einen Quotienten UEBER ZEILEN
+    // HINWEG mittelt, nicht wenn man ihn INNERHALB einer bereits
+    // korrekt aggregierten Zeile bildet - exakt dieselbe Unterscheidung,
+    // die veraenderungJeFahrt hier schon immer genutzt hat, um
+    // clientseitig statt in der Sicht zu rechnen.
     const zeilenMitVeraenderung = zeilen.map((z, i) => {
         const vorherige = i > 0 && zeilen[i - 1].typ_code === z.typ_code ? zeilen[i - 1] : null;
         const veraenderungJeFahrt = vorherige && vorherige.umsatz_je_fahrt
             ? (z.umsatz_je_fahrt - vorherige.umsatz_je_fahrt) / vorherige.umsatz_je_fahrt : null;
-        return { ...z, veraenderungJeFahrt, vorherigeFahrten: vorherige ? vorherige.fahrten : null };
+        const minutenJeFahrt = z.fahrten ? z.minuten / z.fahrten : null;
+        return { ...z, veraenderungJeFahrt, vorherigeFahrten: vorherige ? vorherige.fahrten : null, minutenJeFahrt };
     });
 
     const umsatzMaximum = Math.max(...zeilen.map((z) => z.umsatz));
@@ -584,6 +636,18 @@ async function umsatzRadtypZeigen(vorgang) {
             feld: 'umsatz_je_fahrt', titel: 'Je Fahrt', klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(geldFormat(w))
         },
+        // Frage, die weder "Fahrten" noch "Minuten" (beide Summen JE
+        // MONAT, siehe Kommentar dort) beantworten: wie lange dauert
+        // EINE Fahrt dieses Radtyps typischerweise? Ein Cargo-Rad mit
+        // Anhaenger fuer den Wocheneinkauf und ein City-Bike zur
+        // Bahnhofsfahrt unterscheiden sich hier fachlich, nicht nur in
+        // der Minutensumme, die bei unterschiedlicher Flottengroesse
+        // ohnehin nicht vergleichbar waere. NICHT summierbar - ein
+        // Mittelwert, derselbe Fehlertyp wie umsatz_je_fahrt.
+        {
+            feld: 'minutenJeFahrt', titel: 'Minuten je Fahrt', klasse: zahlKlasse(),
+            formatieren: (w) => zahlSkaliert(minutenFormat(w))
+        },
         {
             feld: 'veraenderungJeFahrt', titel: 'Δ ggü. Vormonat',
             formatieren: veraenderungFormat,
@@ -591,7 +655,7 @@ async function umsatzRadtypZeigen(vorgang) {
         }
     ], umsatzRadtypMaske);
 
-    zeigeUebersicht(vorgang, umsatzRadtypUebersicht(zeilen));
+    zeigeUebersicht(vorgang, umsatzRadtypUebersicht(zeilen, flottengroesse));
 
     // Gesamtsumme UND Fahrten insgesamt in der Statuszeile - die
     // Kontrollzahl aus Schritt 3 des Auftrags (35 454,47 €) soll man
@@ -603,11 +667,16 @@ async function umsatzRadtypZeigen(vorgang) {
         `Umsatz gesamt ${geldFormat(gesamtUmsatz)}`);
 }
 
-// Drei Kacheln für die drei Fragen, mit denen jemand diesen Reiter öffnet
-// (Auftrag: "wie ist der Verlauf, wo liegt der Schwerpunkt, was ist
-// auffällig") - nicht die Gesamtsumme allein, die steht schon in der
-// Statuszeile und wäre als einzige Kachel eine bloße Wiederholung.
-function umsatzRadtypUebersicht(zeilen) {
+// Vier Kacheln: die drei fuer die Fragen, mit denen jemand diesen Reiter
+// öffnet (Auftrag: "wie ist der Verlauf, wo liegt der Schwerpunkt, was
+// ist auffällig") - nicht die Gesamtsumme allein, die steht schon in der
+// Statuszeile und wäre als einzige Kachel eine bloße Wiederholung - PLUS
+// die vierte, neu hinzugekommene Frage: TRÄGT sich die Flotte überhaupt?
+// 35.454,47 € Jahresumsatz klingt für sich genommen nach etwas, ohne dass
+// klar wäre, ob es viel oder wenig ist - "Umsatz je Rad und Tag" setzt
+// die Zahl in Bezug zu dem, was sie erwirtschaften soll (siehe
+// flottengroesse-Parameter unten).
+function umsatzRadtypUebersicht(zeilen, flottengroesse) {
     const umsatzReihe = reiheJeMonat(zeilen, 'umsatz');
     const fahrtenReihe = reiheJeMonat(zeilen, 'fahrten');
     const gesamtUmsatz = umsatzReihe.reduce((s, r) => s + r.wert, 0);
@@ -650,6 +719,40 @@ function umsatzRadtypUebersicht(zeilen) {
     };
 
     const kacheln = [kachelnUmsatz, kachelnFahrten];
+
+    // "Umsatz je Rad und Tag": genau die Kennzahl, die der Auftrag als
+    // Beispiel nennt, um "analytischer" von "mehr Zahlen" abzugrenzen -
+    // 35.454,47 € ist ein Fakt, "trägt sich die Flotte damit" ist eine
+    // Frage, die erst ein Bezug beantwortet. flottengroesse kommt aus
+    // v_wawi_flotte (siehe die Zaehl-Anfrage in umsatzRadtypZeigen()) -
+    // OHNE ausgemusterte Räder, weil ein abgeschriebenes Rad nichts mehr
+    // erwirtschaftet und den Nenner nur kuenstlich verkleinern wuerde.
+    // gesamtUmsatzLetztesJahr statt gesamtUmsatz (oben, alle 18 Monate
+    // inkl. der sechs Testmonate): dieselbe Zwoelf-Monats-Abgrenzung wie
+    // bei der Sparkline daneben, aus demselben Grund (siehe Kommentar bei
+    // umsatzLetztesJahr oben) - ein Nenner aus 275 HEUTIGEN Rädern neben
+    // einem Zaehler aus eineinhalb Jahren mit wechselnder Flottengroesse
+    // waere unehrlich vermischt. 365 Tage statt der tatsaechlichen
+    // Tageszahl des Zwoelf-Monats-Fensters: im aktuellen Bestand
+    // (September 2025 bis August 2026, kein Schaltjahr) sind das exakt
+    // 365 - eine Rundung, die erst in einem Schaltjahr um einen Tag
+    // daneben läge, nicht heute. Kachel entfällt ganz, wenn die
+    // Zaehl-Anfrage scheiterte (flottengroesse dann null, siehe
+    // zaehleZeilen() in daten.js) oder die Flotte leer ist - derselbe
+    // "lieber keine Kachel als eine falsche" wie bei kundenUebersicht()
+    // in kunden.js.
+    if (flottengroesse) {
+        const gesamtUmsatzLetztesJahr = umsatzLetztesJahr.reduce((s, r) => s + r.wert, 0);
+        const tageBetrachtet = 365;
+        const jeRadJahr = gesamtUmsatzLetztesJahr / flottengroesse;
+        const jeRadTag = jeRadJahr / tageBetrachtet;
+        kacheln.push({
+            titel: 'Umsatz je Rad und Tag',
+            wert: zahlSkaliert(geldFormat(jeRadTag)),
+            hinweis: `${geldFormat(jeRadJahr)} je Jahr · bezogen auf ${zahlFormat(flottengroesse)} Räder im ` +
+                `Bestand (ohne Ausgemusterte) · letzte 12 Monate`
+        });
+    }
 
     // Der Preissprung (Gestaltungsauftrag, Punkt 4): NICHT der Radtyp mit
     // dem grössten gefundenen Ausschlag über alle drei Typen - eine
@@ -702,6 +805,7 @@ async function umsatzRadtypMaske(zeile) {
         { name: 'minuten',        titel: 'Minuten',    wert: zahlFormat(zeile.minuten), nurLesen: true },
         { name: 'umsatz',         titel: 'Umsatz',     wert: geldFormat(zeile.umsatz), nurLesen: true },
         { name: 'umsatz_je_fahrt', titel: 'Je Fahrt',  wert: geldFormat(zeile.umsatz_je_fahrt), nurLesen: true },
+        { name: 'minuten_je_fahrt', titel: 'Minuten je Fahrt', wert: minutenFormat(zeile.minutenJeFahrt), nurLesen: true },
         { name: 'veraenderung',   titel: 'Δ ggü. Vormonat', wert: veraenderungFormat(zeile.veraenderungJeFahrt), nurLesen: true }
     ], []);
     await monatsdrilldownEinfuegen(zeile.monat);
@@ -734,8 +838,23 @@ async function umsatzKundengruppeZeigen(vorgang) {
         return;
     }
 
+    // fahrtenJeKunde: dieselbe clientseitige Rechnung wie minutenJeFahrt
+    // im Radtyp-Reiter (siehe dortiger Kommentar) - fahrten und kunden
+    // sind bereits korrekt aggregierte Summen DERSELBEN Zeile (ein Monat,
+    // ein Tarif), die Division innerhalb dieser einen Zeile faellt nicht
+    // in die Mittelwert-Falle. Beantwortet eine andere Frage als
+    // umsatz_je_kunde (Geld je Kopf): wie OFT nutzt eine Kundengruppe ihre
+    // Mitgliedschaft im Monat - "OHNE Mitgliedschaft" fährt nur, wer
+    // gerade ein Rad braucht, "STUDENT"/"BASIS" pendeln damit. Gegen die
+    // Datenbank nachgerechnet (Bericht): ueber den gesamten Bestand liegt
+    // "OHNE" bei rund 8 Fahrten je Kunde, jede echte Mitgliedschaft bei
+    // rund 20 - ein Unterschied, den umsatz_je_kunde allein nicht zeigt.
+    const zeilenMitFahrtenJeKunde = zeilen.map((z) => (
+        { ...z, fahrtenJeKunde: z.kunden ? z.fahrten / z.kunden : null }
+    ));
+
     const umsatzMaximum = Math.max(...zeilen.map((z) => z.umsatz));
-    zeigeListe(vorgang, zeilen, [
+    zeigeListe(vorgang, zeilenMitFahrtenJeKunde, [
         { feld: 'monat',           titel: 'Monat',      formatieren: (w) => monatFormat(w) },
         { feld: 'tarif',           titel: 'Tarif' },
         // 'kunden' bewusst NICHT summierbar (anders als 'fahrten'/'umsatz'
@@ -763,6 +882,13 @@ async function umsatzKundengruppeZeigen(vorgang) {
         {
             feld: 'umsatz_je_kunde', titel: 'Je Kunde', klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(geldFormat(w))
+        },
+        // Siehe Kommentar bei zeilenMitFahrtenJeKunde oben. NICHT
+        // summierbar - ein Verhaeltnis, derselbe Fehlertyp wie
+        // umsatz_je_kunde.
+        {
+            feld: 'fahrtenJeKunde', titel: 'Fahrten je Kunde', klasse: zahlKlasse(),
+            formatieren: (w) => zahlSkaliert(zahlFormatFein(w))
         }
     ], umsatzKundengruppeMaske);
 
@@ -835,7 +961,8 @@ async function umsatzKundengruppeMaske(zeile) {
         { name: 'kunden',          titel: 'Kunden',   wert: zahlFormat(zeile.kunden), nurLesen: true },
         { name: 'fahrten',         titel: 'Fahrten',  wert: zahlFormat(zeile.fahrten), nurLesen: true },
         { name: 'umsatz',          titel: 'Umsatz',   wert: geldFormat(zeile.umsatz), nurLesen: true },
-        { name: 'umsatz_je_kunde', titel: 'Je Kunde', wert: geldFormat(zeile.umsatz_je_kunde), nurLesen: true }
+        { name: 'umsatz_je_kunde', titel: 'Je Kunde', wert: geldFormat(zeile.umsatz_je_kunde), nurLesen: true },
+        { name: 'fahrten_je_kunde', titel: 'Fahrten je Kunde', wert: zahlFormatFein(zeile.fahrtenJeKunde), nurLesen: true }
     ], []);
     await monatsdrilldownEinfuegen(zeile.monat);
 }
@@ -873,8 +1000,21 @@ async function kmCo2Zeigen(vorgang) {
     // eine Erweiterung, die niemand beauftragt hat. Der Code selbst ist
     // in dieser Tabelle so kurz und so wenig mehrdeutig (zwei bis drei
     // Werte), dass er unübersetzt lesbar bleibt.
+    // kilometerJeFahrt: dieselbe clientseitige Rechnung wie
+    // minutenJeFahrt/fahrtenJeKunde in den beiden Reitern davor (siehe
+    // dortiger Kommentar) - kilometer und fahrten sind bereits korrekt
+    // aggregierte Summen DERSELBEN Zeile. Beantwortet, wie weit eine
+    // typische Fahrt dieses Radtyps geht - anders als "Kilometer" (Summe
+    // je Monat, oben) unabhaengig davon, wie viele Fahrten im Monat
+    // stattfanden, und damit zwischen Radtypen mit sehr unterschiedlicher
+    // Flottengroesse (Cargo: 25 Räder, City: 198, siehe Bericht)
+    // tatsaechlich vergleichbar.
+    const zeilenMitKmJeFahrt = zeilen.map((z) => (
+        { ...z, kilometerJeFahrt: z.fahrten ? z.kilometer / z.fahrten : null }
+    ));
+
     const kilometerMaximum = Math.max(...zeilen.map((z) => z.kilometer));
-    zeigeListe(vorgang, zeilen, [
+    zeigeListe(vorgang, zeilenMitKmJeFahrt, [
         { feld: 'monat',    titel: 'Monat',   formatieren: (w) => monatFormat(w) },
         { feld: 'typ_code', titel: 'Radtyp' },
         // summierbar: Fahrten je Monat/Radtyp, additiv - kein
@@ -884,6 +1024,12 @@ async function kmCo2Zeigen(vorgang) {
         // siehe Kommentar dort und im Radtyp-Reiter (Gestaltungsauftrag,
         // Punkt 5). summierbar: gefahrene Kilometer sind additiv.
         ...balkenSpalten('kilometer', 'Kilometer', kilometerMaximum, kmFormat, { summierbar: true }),
+        // Siehe Kommentar bei zeilenMitKmJeFahrt oben. NICHT summierbar -
+        // ein Verhaeltnis, derselbe Fehlertyp wie umsatz_je_fahrt.
+        {
+            feld: 'kilometerJeFahrt', titel: 'Kilometer je Fahrt', klasse: zahlKlasse(),
+            formatieren: (w) => zahlSkaliert(kmFormat(w))
+        },
         {
             // Schritt 2 des Auftrags, korrigiert - siehe Kommentar bei
             // co2ZelleText()/co2ZelleElement() weiter oben: der
@@ -971,6 +1117,7 @@ async function kmCo2Maske(zeile) {
         { name: 'monat',    titel: 'Monat',      wert: monatFormat(zeile.monat), nurLesen: true },
         { name: 'fahrten',  titel: 'Fahrten',    wert: zahlFormat(zeile.fahrten), nurLesen: true },
         { name: 'kilometer', titel: 'Kilometer', wert: kmFormat(zeile.kilometer), nurLesen: true },
+        { name: 'kilometer_je_fahrt', titel: 'Kilometer je Fahrt', wert: kmFormat(zeile.kilometerJeFahrt), nurLesen: true },
         {
             name: 'fahrten_geschaetzt', titel: 'Davon geschätzt',
             wert: `${zahlFormat(zeile.fahrten_geschaetzt)} von ${zahlFormat(zeile.fahrten)} Fahrten ` +
@@ -1078,6 +1225,25 @@ function stationsauslastungUebersicht(zeilen) {
     const volle = zeilen.filter((z) => z.fuellstand >= 1);
     const schwaechsteStation = extremwert(zeilen, 'saldo', true);
 
+    // Netzauslastung gesamt: die Frage, die "Stationen" (Anzahl) und
+    // "Volle Stationen" (Extremfall) offenlassen - wie voll ist das
+    // NETZ ALS GANZES, die Zahl fuer eine Kapazitaetsplanung ("brauchen
+    // wir insgesamt mehr Stellplaetze"). KAPAZITAETSGEWICHTET
+    // (sum(belegt)/sum(kapazitaet)), NICHT der Durchschnitt der zehn
+    // fuellstand-Werte - derselbe Fehlertyp wie beim ungewichteten
+    // Schätzanteil bei CO2 (anteilGewichtet() weiter oben): eine große
+    // Station zaehlt hier so viel wie eine kleine, wenn man bloss ihre
+    // ANTEILE mittelt, obwohl sie absolut mehr Stellplätze stellt. Beim
+    // heutigen Bestand (Kapazitaeten 20 bis 40, siehe Bericht) liegen
+    // beide Rechnungen nah beieinander (77,3 % gegen 76,8 %) - der
+    // Unterschied ist trotzdem kein Rundungsfehler, sondern eine andere
+    // Formel, die bei staerker divergierenden Stationsgroessen (ein
+    // künftiger Grossstandort neben den heutigen Zehn) deutlich
+    // auseinanderlaufen wuerde.
+    const gesamtBelegt = zeilen.reduce((s, z) => s + z.belegt, 0);
+    const gesamtKapazitaet = zeilen.reduce((s, z) => s + z.kapazitaet, 0);
+    const naiverMittelwertFuellstand = zeilen.reduce((s, z) => s + z.fuellstand, 0) / zeilen.length;
+
     const kacheln = [
         {
             titel: 'Stationen',
@@ -1090,6 +1256,16 @@ function stationsauslastungUebersicht(zeilen) {
             hinweis: 'Füllstand je Station, sortiert nach Stationsnummer'
         }
     ];
+
+    if (gesamtKapazitaet > 0) {
+        kacheln.push({
+            titel: 'Netzauslastung gesamt',
+            wert: prozentFormatFein(gesamtBelegt / gesamtKapazitaet),
+            grafik: zellbalken(gesamtBelegt, gesamtKapazitaet),
+            hinweis: `${zahlFormat(gesamtBelegt)} von ${zahlFormat(gesamtKapazitaet)} Stellplätzen belegt · ` +
+                `kapazitätsgewichtet, nicht der Durchschnitt der Einzelwerte (${prozentFormatFein(naiverMittelwertFuellstand)})`
+        });
+    }
 
     if (volle.length > 0) {
         const wert = document.createElement('span');
