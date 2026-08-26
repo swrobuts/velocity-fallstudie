@@ -114,10 +114,70 @@ async function navigationAufbauen(rollen) {
     }
 
     const benutzer = (await angemeldeterBenutzer()).data.user;
-    document.getElementById('benutzer-anzeige').textContent =
-        `${benutzer.email} · ${[...rollen].join(', ')}`;
+    profilAufbauen(benutzer, rollen);
 
     if (erlaubt.length) await bereichWechseln(erlaubt[0].schluessel);
+}
+
+// Fruehrer stand hier direkt "email · rolle1, rolle2, ..." in
+// #benutzer-anzeige, einem einzelnen <span> in der Kopfleiste (Punkt 3
+// der Gestaltung). Jetzt fuellt diese Funktion das aufklappbare
+// Profilmenue - Bedienung (auf/zu, Escape, Klick daneben) wird davon
+// GETRENNT, einmalig beim Laden verdrahtet (siehe "Profilmenue"
+// weiter unten): navigationAufbauen() und damit profilAufbauen() laeuft
+// bei jedem seiteAufbauen()-Durchlauf erneut (z. B. nach USER_UPDATED,
+// siehe anmeldung.js), ein hier zusaetzlich angehaengter Klick-Handler
+// wuerde sich mit der Zeit vervielfachen.
+function profilAufbauen(benutzer, rollen) {
+    const meta = benutzer.user_metadata || {};
+    const vorname = meta.vorname || '';
+    const nachname = meta.nachname || '';
+    const anzeigeName = (vorname || nachname) ? `${vorname} ${nachname}`.trim() : benutzer.email;
+
+    // Konterfei: es gibt kein Mitarbeiterfoto, deshalb Initialen aus Vor-
+    // und Nachname - beides liegt (falls gepflegt) in user_metadata,
+    // demselben Feld, aus dem getUserDisplayName() in src/auth.js fuer
+    // Kundenkonten schon den Vornamen liest (siehe dortiger Kommentar).
+    // velocity.mitarbeiter fuehrt zwar ebenfalls vorname/nachname, ist
+    // aber ueber keine v_wawi_-Sicht und keine RPC fuer den eigenen
+    // Datensatz erreichbar - das anzulegen waere eine Datenbankaenderung,
+    // die dieser Auftrag ausdruecklich nicht vorsieht. Fehlt die
+    // Metadatenangabe, werden die Initialen NOTFALLS aus der E-Mail
+    // abgeleitet (siehe initialenAus()).
+    //
+    // Ein ECHTES Foto ist trotzdem mit einer einzigen Zeile eintauschbar,
+    // ohne diese Funktion sonst anzufassen - die Regel dahinter setzt
+    // .profilknopf-avatar in style.css bereits als Bildflaeche an
+    // (background-size: cover):
+    //   const avatar = document.getElementById('profil-initialen');
+    //   avatar.style.backgroundImage = `url(${bildUrl})`;
+    //   avatar.textContent = '';   // sonst ueberlagern sich Initialen und Foto
+    document.getElementById('profil-initialen').textContent =
+        initialenAus(vorname, nachname, benutzer.email);
+
+    document.getElementById('profil-name').textContent = anzeigeName;
+    document.getElementById('profil-email').textContent = benutzer.email;
+
+    const rollenKasten = document.getElementById('profil-rollen');
+    rollenKasten.replaceChildren();
+    for (const rolle of rollen) {
+        const marke = document.createElement('span');
+        marke.className = 'rollen-marke';
+        marke.textContent = rolle;
+        rollenKasten.append(marke);
+    }
+}
+
+function initialenAus(vorname, nachname, email) {
+    if (vorname && nachname) return (vorname[0] + nachname[0]).toUpperCase();
+    // Notfall-Ableitung aus der E-Mail (Auftrag Punkt 3, ausdruecklich
+    // erlaubt): die ersten beiden Buchstaben vor dem @. Nicht einfach
+    // die ersten zwei ZEICHEN, weil ein Postfach wie "m.mueller@..." sonst
+    // "M." statt "MM" ergaebe - ein Punkt ist kein Initial.
+    const lokal = (email || '').split('@')[0];
+    const buchstaben = lokal.replace(/[^a-zA-Z]/g, '');
+    const quelle = buchstaben.length >= 2 ? buchstaben : lokal;
+    return (quelle.slice(0, 2) || '?').toUpperCase();
 }
 
 async function bereichWechseln(schluessel) {
@@ -562,7 +622,15 @@ function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.textContent = titel;
-    knopf.className = 'knopf-haupt';
+    // knopf-schaffend statt knopf-haupt (Punkt 4 der Gestaltung): jeder
+    // einzige Aufruf dieses Bausteins ueber alle fuenf Bereiche legt
+    // etwas NEU an - "Neues Rad anlegen", "Neuen Kunden anlegen", "Neue
+    // Station anlegen", "Schaden melden" - die Werkzeugleiste hat
+    // laut ihrem eigenen Kopf-Kommentar oben ohnehin keinen anderen
+    // Zweck. Gruen ist hier eindeutig, siehe die ausfuehrlichere
+    // Begruendung bei der art-Erlaeuterung von zeigeMaske() weiter unten
+    // fuer die Faelle, in denen es das NICHT ist.
+    knopf.className = 'knopf-schaffend';
     // Derselbe zentrale Fehlerfang wie bei den Knoepfen aus zeigeMaske()/
     // zeigeLeermaske(): jeder Aufrufer muesste ihn sonst selbst
     // nachbauen.
@@ -587,7 +655,27 @@ function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
 // spalten: [{ feld, titel, formatieren?, klasse? }]
 // Bei Klick UND bei Pfeiltaste: beiAuswahl(zeile) aufrufen und die
 // Zeile als ausgewaehlt markieren.
-function zeigeListe(kennung, zeilen, spalten, beiAuswahl) {
+//
+// aktionen (Punkt 5, optional): (zeile) => [{ titel, svg, art?, ausfuehren: async () => {} }]
+// - titel: der zugaengliche Name des Icon-Knopfs (aria-label/title), da
+//   ein Icon allein keinen hat.
+// - svg: rohes <svg>...</svg>-Markup, EIN MAL je Bereich als Konstante
+//   geschrieben (siehe iconAus() in flotte.js) - kein Icon-Font, keine
+//   externe Abhaengigkeit, wie im Auftrag verlangt.
+// - art: 'gefaehrlich', um dieselbe rote Einfaerbung wie knopf-gefaehrlich
+//   zu bekommen (siehe .zeilen-aktion-gefaehrlich in style.css); sonst
+//   weggelassen.
+// - ausfuehren: wie bei den Knoepfen aus zeigeMaske() - Fehler werden
+//   hier zentral gefangen und in die Statuszeile uebersetzt.
+//
+// Ohne aktionen (der Vorgabewert) veraendert sich am Ergebnis nichts -
+// keine zusaetzliche Spalte, keine Zeile muss etwas davon wissen. Das
+// ist mit Absicht so: der Auftrag verlangt den Baustein hier in
+// rahmen.js, aber nur EINEN Bereich (flotte.js) als Beleg dafuer, dass
+// er verdrahtet ist - die anderen vier bleiben unangetastet und laufen
+// unveraendert weiter, bis sie in einem spaeteren Schritt eigene
+// aktionen liefern.
+function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     if (!istAktuellerVorgang(kennung)) return;
 
     listenZeilen = zeilen;
@@ -608,6 +696,15 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl) {
         th.textContent = spalte.titel;
         kopfZeile.append(th);
     }
+    if (aktionen) {
+        // Keine sichtbare Beschriftung - eine Spaltenueberschrift "Aktionen"
+        // ueber lauter blossen Icon-Zellen waere reine Deko. aria-label
+        // haelt die Tabelle fuer Screenreader trotzdem vollstaendig: eine
+        // <th> ohne jeden Namen liesse die letzte Spalte namenlos wirken.
+        const th = document.createElement('th');
+        th.setAttribute('aria-label', 'Aktionen');
+        kopfZeile.append(th);
+    }
     kopf.append(kopfZeile);
     tabelle.append(kopf);
 
@@ -623,12 +720,63 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl) {
             if (klasse) td.className = klasse;
             tr.append(td);
         }
+        if (aktionen) tr.append(zeilenAktionenZelle(aktionen(zeile) || []));
         tr.addEventListener('click', () => zeileWaehlen(index));
         koerper.append(tr);
         listenZeilenElemente.push(tr);
     });
     tabelle.append(koerper);
     wurzel.append(tabelle);
+}
+
+// Baut die Icon-Zelle EINER Zeile - fuer JEDE Zeile aufgerufen, auch
+// wenn die Liste fuer diese Zeile keine einzige Handlung anbietet (dann
+// bleibt die Zelle leer, aber vorhanden). Genau das haelt die Spalte in
+// jeder Zeile gleich breit: eine Zelle, die erst bei :hover ins DOM
+// kaeme, wuerde die Tabellenspalte beim ersten Ueberfahren einer Zeile
+// nachtraeglich aufweiten - das "Layout verschiebt sich"-Problem, vor
+// dem der Auftrag ausdruecklich warnt. Sichtbar/unsichtbar regelt
+// stattdessen ausschliesslich CSS (.zeilen-aktionen, opacity statt
+// display - siehe dortiger Kommentar fuer den Tastatur-Grund).
+function zeilenAktionenZelle(liste) {
+    const td = document.createElement('td');
+    td.className = 'zeilen-aktionen-zelle';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'zeilen-aktionen';
+
+    for (const aktion of liste) {
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = aktion.art === 'gefaehrlich'
+            ? 'zeilen-aktion zeilen-aktion-gefaehrlich' : 'zeilen-aktion';
+        knopf.setAttribute('aria-label', aktion.titel);
+        knopf.title = aktion.titel;
+        // aktion.svg ist keine Nutzereingabe, sondern eine im jeweiligen
+        // Bereich fest verdrahtete Konstante (siehe iconAus() in
+        // flotte.js) - innerHTML ist hier deshalb unbedenklich, anders
+        // als bei jedem textContent-Aufruf in bestaetige()/frageNachGrund()
+        // weiter oben, wo tatsaechlich Benutzereingaben durchlaufen.
+        knopf.innerHTML = aktion.svg;
+        knopf.addEventListener('click', async (e) => {
+            // Sonst waehlte derselbe Klick zusaetzlich die ganze Zeile
+            // aus (tr traegt weiter unten einen eigenen 'click'-Handler,
+            // der bei jedem Klick INNERHALB der Zeile feuert).
+            e.stopPropagation();
+            knopf.disabled = true;
+            try {
+                await aktion.ausfuehren();
+            } catch (fehler) {
+                melde(fehler.message, 'schlecht');
+            } finally {
+                knopf.disabled = false;
+            }
+        });
+        wrapper.append(knopf);
+    }
+
+    td.append(wrapper);
+    return td;
 }
 
 function zeileWaehlen(index) {
@@ -652,7 +800,24 @@ let hauptknopfElement = null;
 
 // felder: [{ name, titel, wert, typ, nurLesen?, optionen? }]
 // knoepfe: [{ titel, art, ausfuehren: async () => {} }]
-// art: 'haupt' | 'neben' | 'gefaehrlich'
+// art: 'haupt' | 'neben' | 'gefaehrlich' | 'schaffend'
+//
+// 'schaffend' (Punkt 4 der Gestaltung, gruen wie --gut) kam mit dieser
+// Bearbeitung dazu, ausdruecklich NEBEN 'haupt' statt an dessen Stelle:
+// vor dieser Aenderung liefen sowohl "Anlegen"-Knoepfe (ein neues Rad,
+// eine neue Station, ein neuer Kunde, ein neuer Wartungsauftrag, eine
+// neue Schadensmeldung entsteht) als auch reine "Speichern"/"Erledigen"-
+// Knoepfe (eine BESTEHENDE Zeile aendern bzw. abschliessen) unter
+// demselben 'haupt'. Gruen fuer das Anlegen ist eindeutig - es laesst
+// etwas entstehen. Fuer "Speichern" (kunden.js, eine bestehende Person
+// aendern) oder "Erledigen" (instandhaltung.js, einen laufenden Auftrag
+// abschliessen) waere Gruen dagegen irrefuehrend: nichts NEUES entsteht
+// dabei, und ein rein nach Farbe scannender Blick koennte "gruen = fertig
+// buchen" mit "gruen = neu anlegen" verwechseln. Deshalb bleiben diese
+// beiden Faelle bei 'haupt' (marine, wie zuvor) - nur die tatsaechlichen
+// Neuanlagen (flotte.js, kunden.js kundeAnlegenMaske, instandhaltung.js
+// Auftrag eroeffnen/Schaden melden, stationen.js) wurden auf 'schaffend'
+// umgestellt. Weiss auf --gut misst 5.36:1 (gemessen, siehe Bericht).
 function zeigeMaske(titel, felder, knoepfe) {
     const wurzel = document.getElementById('detailmaske');
     wurzel.replaceChildren();
@@ -736,7 +901,14 @@ function zeigeMaske(titel, felder, knoepfe) {
             }
         });
         knopfleiste.append(knopf);
-        if (def.art === 'haupt') hauptknopfElement = knopf;
+        // Strg+S (maskeSpeichern()) klickt hauptknopfElement - das muss
+        // seit der Aufteilung in 'haupt'/'schaffend' BEIDE Kategorien
+        // erfassen, sonst waere die Tastaturbedienung fuer jede
+        // "Anlegen"-Maske stumm geworden, nur weil ihr Knopf jetzt gruen
+        // statt marine ist. Eine Maske hat ohnehin hoechstens einen
+        // dieser beiden - nie 'haupt' UND 'schaffend' gleichzeitig -,
+        // deshalb bleibt "genau ein Hauptknopf" so oder so gewahrt.
+        if (def.art === 'haupt' || def.art === 'schaffend') hauptknopfElement = knopf;
     }
     wurzel.append(knopfleiste);
 }
@@ -784,6 +956,16 @@ function zeigeLeermaske(kennung, titel, erklaerung, angebot = null) {
         const knopf = document.createElement('button');
         knopf.type = 'button';
         knopf.textContent = angebot.titel;
+        // Bewusst 'knopf-haupt' (marine) statt 'knopf-schaffend' (gruen),
+        // anders als bei zeigeWerkzeugleiste() weiter oben: DIESES Angebot
+        // ist nicht immer eine Neuanlage. instandhaltung.js bietet ueber
+        // denselben Parameter sowohl "Schaden melden" (legt tatsaechlich
+        // etwas an) als auch "Zu den offenen Schäden" (wechselt nur den
+        // Unterreiter, legt nichts an) an - ein hier fest verdrahtetes
+        // Gruen waere im zweiten Fall falsch. Ein eigenes 'art'-Feld im
+        // angebot-Objekt haette das sauber getrennt, war fuer eine leere
+        // Liste als Randfall aber mehr Aufwand, als der heutige Bestand
+        // (zwei von vier Aufrufern nutzen ueberhaupt ein angebot) rechtfertigt.
         knopf.className = 'knopf-haupt';
         knopf.addEventListener('click', async () => {
             knopf.disabled = true;
@@ -848,6 +1030,62 @@ function darfRolle(code) {
     return geladeneRollen instanceof Set && geladeneRollen.has(code);
 }
 
+// ===== Profilmenue =====
+//
+// Bedienung des Rundknopfs oben rechts (Punkt 3). Absichtlich getrennt
+// von profilAufbauen() oben, das nur den INHALT fuellt: profilAufbauen()
+// laeuft bei jedem seiteAufbauen()-Durchlauf erneut, ein hier
+// angehaengter Klick-Handler wuerde sich also mit der Zeit vervielfachen,
+// wenn er dort staende. Hier, am Skriptende, laeuft er dagegen GENAU
+// EINMAL - derselbe Aufbau wie bei "Anmeldung verdrahten" unten.
+const knopfProfil = document.getElementById('knopf-profil');
+const profilmenue = document.getElementById('profilmenue');
+
+function profilmenueOffen() {
+    return !profilmenue.hidden;
+}
+
+function profilmenueSchliessen() {
+    if (!profilmenueOffen()) return;
+    profilmenue.hidden = true;
+    knopfProfil.setAttribute('aria-expanded', 'false');
+}
+
+function profilmenueOeffnen() {
+    profilmenue.hidden = false;
+    knopfProfil.setAttribute('aria-expanded', 'true');
+}
+
+// Ein <button> reagiert schon von sich aus auf Enter UND Leertaste wie
+// auf einen Klick - ein eigener keydown-Handler fuer das OEFFNEN waere
+// eine zweite, ueberfluessige Umsetzung derselben Tastaturbedienung.
+// Nur das SCHLIESSEN per Escape braucht eine eigene Behandlung, weiter
+// unten im globalen keydown-Listener.
+knopfProfil.addEventListener('click', () => {
+    if (profilmenueOffen()) profilmenueSchliessen();
+    else profilmenueOeffnen();
+});
+
+// Klick ausserhalb schliesst das Menue. Auf 'click' verdrahtet, nicht
+// 'pointerdown': der oeffnende Klick auf knopfProfil selbst durchlaeuft
+// wegen der Ereignisblase erst den eigenen Handler oben (Menue geht auf)
+// und danach, im selben Klick, diesen document-Handler - der aber
+// erkennt ueber knopfProfil.contains(e.target), dass der Klick INNERHALB
+// des Profilbereichs lag, und laesst das gerade geoeffnete Menue in Ruhe.
+document.addEventListener('click', (e) => {
+    if (!profilmenueOffen()) return;
+    if (knopfProfil.contains(e.target) || profilmenue.contains(e.target)) return;
+    profilmenueSchliessen();
+});
+
+document.getElementById('knopf-einstellungen').addEventListener('click', () => {
+    profilmenueSchliessen();
+    // Ehrlich statt stumm: es gibt noch keine Einstellungsseite. Der
+    // Menuepunkt zu verstecken oder zu deaktivieren haette dieselbe
+    // Frage nur verschoben ("warum fehlt er/ warum tut er nichts?").
+    melde('Einstellungen gibt es in dieser Warenwirtschaft noch nicht.', 'neutral');
+});
+
 // ===== Tastaturbedienung =====
 //
 // Tastatur vor Maus. Eine Arbeitsmaske, die Maushandbetrieb erzwingt,
@@ -877,6 +1115,15 @@ document.addEventListener('keydown', (e) => {
     if (document.querySelector('dialog[open]')) return;
 
     if (e.key === 'Escape') {
+        // Das Profilmenue zuerst pruefen: ist es offen, gehoert Escape
+        // IHM - sonst verwuerfe derselbe Tastendruck zusaetzlich eine im
+        // Hintergrund vielleicht offene Detailmaske, zwei Wirkungen fuer
+        // einen Tastendruck (dieselbe Falle wie beim <dialog> oben).
+        if (profilmenueOffen()) {
+            profilmenueSchliessen();
+            knopfProfil.focus();   // Fokus sichtbar dorthin zurueck, wo er herkam
+            return;
+        }
         maskeVerwerfen();
         return;
     }

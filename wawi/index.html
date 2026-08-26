@@ -50,8 +50,28 @@
     <header id="kopfleiste">
       <span class="wortmarke">VeloCity <b>WaWi</b></span>
       <input id="feld-suche" type="search" placeholder="Suchen" aria-label="Suchen">
-      <span id="benutzer-anzeige"></span>
-      <button id="knopf-abmelden" type="button">Abmelden</button>
+      <!-- Frueher stand hier "swrobuts@googlemail.com · disposition,
+           werkstatt, ..." als Fliesstext direkt in der Kopfleiste - der
+           Auftraggeber wollte das ausdruecklich nicht mehr lesen. Jetzt
+           ein einzelner Rundknopf (Konterfei-Ersatz: Initialen, siehe
+           profilAufbauen() in rahmen.js) und alles Bisherige plus mehr
+           im aufklappbaren Menue dahinter. -->
+      <div class="profilbereich">
+        <button id="knopf-profil" type="button" class="profilknopf"
+                aria-haspopup="true" aria-expanded="false" aria-controls="profilmenue"
+                aria-label="Profil und Einstellungen">
+          <span id="profil-initialen" class="profilknopf-avatar" aria-hidden="true"></span>
+        </button>
+        <div id="profilmenue" class="profilmenue" hidden>
+          <div class="profilmenue-kopf">
+            <span id="profil-name" class="profilmenue-name"></span>
+            <span id="profil-email" class="profilmenue-email"></span>
+          </div>
+          <div id="profil-rollen" class="profilmenue-rollen"></div>
+          <button id="knopf-einstellungen" type="button" class="profilmenue-eintrag">Einstellungen</button>
+          <button id="knopf-abmelden" type="button" class="profilmenue-eintrag">Abmelden</button>
+        </div>
+      </div>
     </header>
 
     <nav id="navigation" aria-label="Aufgabenbereiche"></nav>

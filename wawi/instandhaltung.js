@@ -168,7 +168,12 @@ function schadenMaske(schaden) {
     if (darfRolle('werkstatt') && schaden.status === 'offen') {
         knoepfe.push({
             titel: 'Auftrag eröffnen',
-            art: 'haupt',
+            // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
+            // eroeffnet einen neuen Wartungsauftrag, siehe Begruendung bei
+            // der art-Erlaeuterung von zeigeMaske() in rahmen.js. Das
+            // "Erledigen" weiter unten in auftragMaske() (einen
+            // BESTEHENDEN Auftrag abschliessen) bleibt bewusst bei 'haupt'.
+            art: 'schaffend',
             ausfuehren: async () => {
                 await auftragEroeffnen(schaden);
                 await instandhaltungAufbauen();
@@ -263,7 +268,10 @@ async function schadenMeldenMaske() {
     ], [
         {
             titel: 'Melden',
-            art: 'haupt',
+            // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
+            // legt eine neue Schadensmeldung an, siehe Begruendung bei
+            // der art-Erlaeuterung von zeigeMaske() in rahmen.js.
+            art: 'schaffend',
             ausfuehren: async () => {
                 const fahrradId = Number(document.getElementById('feld-maske-fahrrad_id').value);
                 const kategorie = document.getElementById('feld-maske-kategorie').value.trim();

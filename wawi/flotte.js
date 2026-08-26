@@ -55,13 +55,19 @@ async function flotteAufbauen() {
         return;
     }
 
+    // Fuenfter Parameter radZeilenAktionen (Punkt 5 der Gestaltung, Beleg
+    // fuer den neuen Baustein in rahmen.js): dieselben Handlungen wie in
+    // radMaske() unten, nur als Icons statt als Knoepfe in der offenen
+    // Maske - wer nur den Status setzen oder ausmustern will, muss die
+    // Zeile dafuer nicht erst oeffnen. Siehe radHandlungen() weiter
+    // unten fuer die gemeinsame Grundlage beider Darstellungen.
     zeigeListe(vorgang, raeder, [
         { feld: 'rahmennummer',   titel: 'Rahmennummer' },
         { feld: 'typ_code',       titel: 'Typ' },
         { feld: 'status',         titel: 'Status', klasse: statusKlasse },
         { feld: 'standort',       titel: 'Standort' },
         { feld: 'offene_schaeden', titel: 'Schäden', formatieren: (n) => n || '' }
-    ], radMaske);
+    ], radMaske, radZeilenAktionen);
 
     // meldeVorgang statt melde: nach einer Buchung (Statuswechsel,
     // Ausmustern, Anlegen - siehe radMaske/radAnlegenMaske) ruft genau
@@ -90,8 +96,16 @@ function statusKlasse(zeile) {
     return '';
 }
 
-function radMaske(rad) {
-    const knoepfe = [];
+// Gemeinsame Handlungsliste fuer radMaske() (Knoepfe in der Detailmaske)
+// UND radZeilenAktionen() (Icons beim Ueberfahren einer Zeile, Punkt 5
+// der Gestaltung) - dieselben Regeln (Rolle, Status), einmal formuliert,
+// nicht zweimal gepflegt. Jeder Eintrag traegt zusaetzlich "ziel": kein
+// Text zum Anzeigen, sondern ein stabiler Schluessel, an dem
+// radIconFuer() unten das passende Icon erkennt (Text ("Auf ${ziel}
+// setzen") und Icon duerfen sich frei aendern, ohne dass eines vom
+// anderen abgeleitet werden muesste).
+function radHandlungen(rad) {
+    const handlungen = [];
 
     // Statuswechsel nur fuer die Rolle, die ihn auch in der Datenbank
     // darf. Der Knopf, den die Funktion ohnehin abweist, ist keine
@@ -124,8 +138,9 @@ function radMaske(rad) {
         && rad.status !== 'ausgemustert' && rad.status !== 'ausgeliehen') {
         for (const ziel of ['verfuegbar', 'wartung', 'defekt']) {
             if (rad.status === ziel) continue;
-            knoepfe.push({
+            handlungen.push({
                 titel: `Auf ${ziel} setzen`,
+                ziel,
                 art: 'neben',
                 ausfuehren: async () => {
                     const grund = await frageNachGrund(`Warum ${ziel}?`);
@@ -147,8 +162,9 @@ function radMaske(rad) {
     // sichere Absage, und die Regel dieses Projekts fragt nicht, wie
     // klar die Absage ist, sondern ob es ueberhaupt eine ist.
     if (darfRolle('disposition') && rad.status !== 'ausgemustert' && rad.status !== 'ausgeliehen') {
-        knoepfe.push({
+        handlungen.push({
             titel: 'Ausmustern',
+            ziel: 'ausmustern',
             art: 'gefaehrlich',
             ausfuehren: async () => {
                 // Ausmustern ist nicht zurueckzuholen: das Rad verliert
@@ -167,6 +183,41 @@ function radMaske(rad) {
             }
         });
     }
+
+    return handlungen;
+}
+
+// Kleine Inline-SVGs (Feather-Icons-Stil, 24x24, ein <path> je Symbol) -
+// keine Icon-Schrift, keine externe Abhaengigkeit, wie im Auftrag
+// verlangt. stroke="currentColor" fehlt absichtlich im Markup selbst:
+// .zeilen-aktion svg in style.css setzt stroke: currentColor zentral,
+// damit jedes Icon automatisch die Ruhe-/Hover-/Gefahr-Farbe seines
+// Knopfes erbt, ohne das hier fuer jedes Symbol zu wiederholen.
+const RAD_ICONS = {
+    // Haken im Kreis - "auf verfuegbar setzen".
+    verfuegbar: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>',
+    // Schraubenschluessel - "auf wartung setzen".
+    wartung: '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 005.4-5.4l-2.6 2.6-2-2z"/></svg>',
+    // Warndreieck - "auf defekt setzen".
+    defekt: '<svg viewBox="0 0 24 24"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.3"/></svg>',
+    // Auslagern-Pfeil (Kiste mit Pfeil nach aussen) - "ausmustern".
+    ausmustern: '<svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 011-1h6"/><path d="M20 8V5a1 1 0 00-1-1h-6"/><rect x="4" y="8" width="16" height="12" rx="1"/><path d="M12 12v5m0 0l-2-2m2 2l2-2"/></svg>'
+};
+
+// Fuenfter Parameter von zeigeListe() (rahmen.js) - dieselben Handlungen
+// wie radMaske() unten, aus radHandlungen() gewonnen, hier nur mit Icon
+// statt mit Text dargestellt.
+function radZeilenAktionen(rad) {
+    return radHandlungen(rad).map((h) => ({
+        titel: h.titel,
+        svg: RAD_ICONS[h.ziel],
+        art: h.art === 'gefaehrlich' ? 'gefaehrlich' : undefined,
+        ausfuehren: h.ausfuehren
+    }));
+}
+
+function radMaske(rad) {
+    const knoepfe = radHandlungen(rad);
 
     zeigeMaske(`Rad ${rad.rahmennummer}`, [
         { name: 'typ',            titel: 'Typ',              wert: `${rad.typ} (${rad.typ_code})`, nurLesen: true },
@@ -252,7 +303,10 @@ async function radAnlegenMaske() {
     ], [
         {
             titel: 'Anlegen',
-            art: 'haupt',
+            // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
+            // dieser Knopf legt ein neues Rad an, siehe Begruendung bei
+            // der art-Erlaeuterung von zeigeMaske() in rahmen.js.
+            art: 'schaffend',
             ausfuehren: async () => {
                 const rahmennummer = document.getElementById('feld-maske-rahmennummer').value.trim();
                 if (!rahmennummer) {

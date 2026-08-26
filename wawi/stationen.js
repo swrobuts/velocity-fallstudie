@@ -150,7 +150,10 @@ function stationAnlegenMaske() {
     ], [
         {
             titel: 'Anlegen',
-            art: 'haupt',
+            // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
+            // legt eine neue Station an, siehe Begruendung bei der
+            // art-Erlaeuterung von zeigeMaske() in rahmen.js.
+            art: 'schaffend',
             ausfuehren: async () => {
                 const feld = (name) => document.getElementById(`feld-maske-${name}`).value.trim();
 

@@ -489,7 +489,12 @@ function kundeAnlegenMaske() {
     ], [
         {
             titel: 'Anlegen',
-            art: 'haupt',
+            // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
+            // legt einen neuen Kunden an, siehe Begruendung bei der
+            // art-Erlaeuterung von zeigeMaske() in rahmen.js. Das
+            // "Speichern" weiter oben in kundeMaske() (eine BESTEHENDE
+            // Person aendern) bleibt bewusst bei 'haupt'.
+            art: 'schaffend',
             ausfuehren: async () => {
                 const feld = (name) => document.getElementById(`feld-maske-${name}`).value.trim();
 
