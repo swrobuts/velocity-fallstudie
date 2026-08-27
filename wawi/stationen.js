@@ -84,6 +84,14 @@ let stationenRaederAlle = [];
 let stationenVerkehrAlle = [];
 let stationenKundenorteAlle = [];
 
+// Die Stationsliste selbst, aus demselben Grund zwischengespeichert wie
+// die drei Arrays oben: stationDetailkarteAbschnitt() (zweiter Auftrag,
+// "die Karte ... wenn ich auf Details gehe") braucht ALLE Stationen, um
+// die naechsten Nachbarn der angezeigten zu finden - stationMaske()
+// bekommt von zeileWaehlen()/der Kartenmarke aber nur die EINE angeklickte
+// Zeile uebergeben, nicht die ganze Liste.
+let stationenAlle = [];
+
 async function stationenAufbauen() {
     // ALLERERSTE Anweisung, vor jedem await - siehe Kommentar bei
     // neuerVorgang() in rahmen.js und bei flotteAufbauen() in flotte.js.
@@ -118,7 +126,7 @@ async function stationenAufbauen() {
     // 14 Zeilen sind kein Preis, gegen den es sich lohnte, den Umschalter
     // auf der Karte mit einer eigenen Nachladung und einer eigenen
     // Wettlauf-Absicherung zu bauen.
-    const [stationen, raeder, verkehr, kundenorte] = await Promise.all([
+    const [stationen, raeder, verkehr, kundenorte, auslastung] = await Promise.all([
         ladeListe('v_wawi_station',
             'station_id, stationsnummer, name, strasse, hausnummer, plz, ort, ' +
             'latitude, longitude, kapazitaet, belegt, frei, betriebszeitraum, in_betrieb',
@@ -129,7 +137,17 @@ async function stationenAufbauen() {
         ladeListe('v_wawi_stationsverkehr_zeitfenster',
             'station_id, wochentyp, zeitfenster_start_stunde, abgaenge_je_tag, ' +
             'zugaenge_je_tag, tage_erfasst'),
-        ladeListe('v_wawi_kundenorte', 'ort, latitude, longitude, kunden')
+        ladeListe('v_wawi_kundenorte', 'ort, latitude, longitude, kunden'),
+        // Fuenfte Sicht, neu in diesem Bereich (Gestaltungsauftrag,
+        // "Der Saldo ist die eigentliche Geschichte dieses Bereichs" -
+        // woertlich): saldo (zugaenge minus abgaenge, siehe deren Kopf-
+        // kommentar in 0018_wawi_sichten.sql) ist eine ueber die gesamte
+        // Historie gezaehlte Groesse, die sich aus station.belegt/.frei
+        // (reinen Momentanwerten) nicht herleiten liesse - nur diese
+        // Sicht kennt sie. Dieselbe Sicht wie stationsauslastungZeigen()
+        // in auswertungen.js, hier zusaetzlich IM STATIONEN-KOPF, wo der
+        // Auftrag sie ausdruecklich vermisst.
+        ladeListe('v_wawi_stationsauslastung', 'station_id, saldo')
     ]);
 
     const fehler = letzterLadeFehler('v_wawi_station');
@@ -142,17 +160,20 @@ async function stationenAufbauen() {
         return;
     }
 
-    // Raeder/Verkehr/Kundenorte sind eine ERGAENZUNG der Stationsliste,
-    // kein Ersatz fuer sie - ein Ladefehler dort darf die Stationsliste
-    // selbst nicht verhindern (die Kernfrage "wie viele Stationen, wie
-    // voll" bleibt beantwortbar). Die jeweilige Detailmaske bzw. die
-    // Karte meldet einen solchen Fehler stattdessen selbst, siehe
-    // stationRaederAbschnitt()/stationVerkehrAbschnitt() unten.
+    // Raeder/Verkehr/Kundenorte/Auslastung sind eine ERGAENZUNG der
+    // Stationsliste, kein Ersatz fuer sie - ein Ladefehler dort darf die
+    // Stationsliste selbst nicht verhindern (die Kernfrage "wie viele
+    // Stationen, wie voll" bleibt beantwortbar). Die jeweilige
+    // Detailmaske bzw. die Karte meldet einen solchen Fehler stattdessen
+    // selbst, siehe stationRaederAbschnitt()/stationVerkehrAbschnitt()
+    // unten; stationenUebersicht() unten laesst die Saldo-Kachel bei
+    // einem Ladefehler dort schlicht weg (siehe dort).
     stationenRaederAlle = raeder;
     stationenVerkehrAlle = verkehr;
     stationenKundenorteAlle = kundenorte;
+    stationenAlle = stationen;
 
-    zeigeUebersicht(vorgang, stationenUebersicht(stationen));
+    zeigeUebersicht(vorgang, stationenUebersicht(stationen, auslastung));
 
     // KEIN Filter hier (Gestaltungsauftrag, Punkt 2, woertlich): "bei
     // zehn Zeilen braucht es keinen Filter. Bau keinen. Ein
@@ -228,12 +249,37 @@ function stationenStatuszeileText(stationen) {
 // v_wawi_stationsauslastung.fuellstand, hier unabhaengig aus
 // v_wawi_station.frei/.kapazitaet, weil dieser Bereich ausschliesslich
 // diese eine Sicht liest, siehe Dateikopf).
-function stationenUebersicht(stationen) {
+function stationenUebersicht(stationen, auslastung) {
     const gesamt = stationen.length;
     const gesamtKapazitaet = stationen.reduce((s, z) => s + z.kapazitaet, 0);
     const gesamtBelegt = stationen.reduce((s, z) => s + z.belegt, 0);
     const volle = stationen.filter((s) => s.frei === 0);
     const stillgelegt = stationen.filter((s) => !s.in_betrieb).length;
+
+    // EINMAL berechnet (Stationsreihenfolge, nicht sortiert) - sowohl die
+    // Sparkline der ersten Kachel als auch die Min/Max-Werte in ihrem
+    // Hinweis brauchen dieselbe Reihe; eine zweite, eigene Berechnung
+    // koennte sonst leise auseinanderlaufen (Hausregel: jede Zahl EINMAL
+    // rechnen, nicht mehrfach mit demselben Ergebnis erhofft).
+    const fuellstaendeJeStation = stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0));
+    const minFuellstandAlle = Math.round(Math.min(...fuellstaendeJeStation) * 100);
+    const maxFuellstandAlle = Math.round(Math.max(...fuellstaendeJeStation) * 100);
+
+    // GESTALTUNGSAUFTRAG, wörtlich: "die zehn Säulen sind nicht erklärt.
+    // Der Hinweis sagt 'alle in Betrieb' - das erklärt die Säulen nicht.
+    // Was zeigen sie? Füllstand je Station? Dann muss es dastehen." Der
+    // sichtbare Hinweis beschrieb bislang etwas ANDERES als die Grafik
+    // (den Betriebsstatus, nicht den Füllstand) - genau umgekehrt zum
+    // Schwesterreiter "Stationsauslastung" in auswertungen.js, wo
+    // hint.fillLevelPerStation schon immer der SICHTBARE Hinweis ist,
+    // nicht nur das aria-label. Hier jetzt dieselbe Aufteilung: der
+    // sichtbare Hinweis beschreibt IMMER die Grafik (Größe + Spanne), der
+    // Betriebsstatus (die einzige Zahl, die sich zwischen den Stationen
+    // tatsächlich ändern kann) wird NUR angehängt, wenn er von der
+    // Erwartung abweicht ("alle in Betrieb" war ohnehin reiner Zierrat,
+    // siehe die entsprechende Regel bei einem wirkungslosen Filter).
+    const fuellstandHinweis = t('hint.fillLevelPerStationRange',
+        { min: zahlFormat(minFuellstandAlle), max: zahlFormat(maxFuellstandAlle) });
 
     const kacheln = [
         {
@@ -246,12 +292,20 @@ function stationenUebersicht(stationen) {
             // der dortigen eigenen fuellstand-Spalte berechnet.
             // aktuellIndex: null - "die letzte Station nach Nummer" ist
             // kein aktueller Zeitraum (siehe Kopfkommentar bei
-            // saeulenSparkline() in rahmen.js).
-            grafik: saeulenSparkline(stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0)),
-                t('hint.fillLevelPerStation'),
+            // saeulenSparkline() in rahmen.js). aria-label TRAEGT die
+            // Min/Max-Spanne (hint.fillLevelBetween, wie im Schwester-
+            // reiter) - der sichtbare Hinweis darunter sagt dieselbe
+            // Spanne knapper, siehe fuellstandHinweis oben.
+            grafik: saeulenSparkline(fuellstaendeJeStation,
+                t('hint.fillLevelBetween', {
+                    stationenPhrase: mengeFormat(gesamt, 'station'),
+                    min: `${zahlFormat(minFuellstandAlle)} %`, max: `${zahlFormat(maxFuellstandAlle)} %`
+                }),
                 { aktuellIndex: null }
             ),
-            hinweis: stillgelegt ? t('hint.decommissionedCount', { n: zahlFormat(stillgelegt) }) : t('hint.allInOperation')
+            hinweis: stillgelegt
+                ? `${fuellstandHinweis} · ${t('hint.decommissionedCount', { n: zahlFormat(stillgelegt) })}`
+                : fuellstandHinweis
         }
     ];
 
@@ -326,25 +380,177 @@ function stationenUebersicht(stationen) {
     // und waere fuer diese Groessenordnung Uebertreibung, waehrend
     // Spannweite+Median die Frage direkt beantworten. Rein aus den
     // bereits geladenen Zeilen berechnet, KEINE zusaetzliche Abfrage.
-    const fuellstaende = stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0)).sort((a, b) => a - b);
-    const minFuellstand = fuellstaende[0];
-    const maxFuellstand = fuellstaende[fuellstaende.length - 1];
-    const mitteIndex = Math.floor((fuellstaende.length - 1) / 2);
-    const medianFuellstand = fuellstaende.length % 2 === 1
-        ? fuellstaende[mitteIndex]
-        : (fuellstaende[mitteIndex] + fuellstaende[mitteIndex + 1]) / 2;
+    // Sortierte KOPIE der oben schon berechneten Reihe (nicht neu aus
+    // stationen hergeleitet - dieselbe Zahl, zweimal gebraucht, EINMAL
+    // gerechnet).
+    const fuellstaendeSortiert = [...fuellstaendeJeStation].sort((a, b) => a - b);
+    const minFuellstand = fuellstaendeSortiert[0];
+    const maxFuellstand = fuellstaendeSortiert[fuellstaendeSortiert.length - 1];
+    const mitteIndex = Math.floor((fuellstaendeSortiert.length - 1) / 2);
+    const medianFuellstand = fuellstaendeSortiert.length % 2 === 1
+        ? fuellstaendeSortiert[mitteIndex]
+        : (fuellstaendeSortiert[mitteIndex] + fuellstaendeSortiert[mitteIndex + 1]) / 2;
     const leer = stationen.filter((s) => s.belegt === 0).length;
+    const minProzent = Math.round(minFuellstand * 100);
+    const maxProzent = Math.round(maxFuellstand * 100);
+    const medianProzent = Math.round(medianFuellstand * 100);
     kacheln.push({
         titel: t('tile.fillRange'),
-        wert: `${zahlFormat(Math.round(minFuellstand * 100))}–${zahlFormat(Math.round(maxFuellstand * 100))} %`,
+        wert: `${zahlFormat(minProzent)}–${zahlFormat(maxProzent)} %`,
+        // GESTALTUNGSAUFTRAG, wörtlich: "gar keine Grafik. Ausgerechnet
+        // eine Spannweite, die man zeichnen könnte." stationenSpannweite-
+        // Grafik() (unten in dieser Datei) zeichnet Minimum, Median und
+        // Maximum auf einer FESTEN 0-100-%-Skala - derselbe Grundsatz wie
+        // bei saeulenSparkline()/saeulengrafik() in rahmen.js (keine
+        // abgeschnittene Achse), hier als Band statt als Säulen, weil eine
+        // Spannweite eine andere Form ist als ein Verlauf über zehn
+        // Einzelwerte (die zeigt die "Stationen"-Kachel bereits).
+        grafik: stationenSpannweiteGrafik(minFuellstand, medianFuellstand, maxFuellstand,
+            t('hint.fillRangeChartAria', {
+                stationenPhrase: mengeFormat(gesamt, 'station'),
+                min: zahlFormat(minProzent), max: zahlFormat(maxProzent), median: zahlFormat(medianProzent)
+            })),
         hinweis: t('hint.fillRangeDetail', {
-            median: zahlFormat(Math.round(medianFuellstand * 100)), voll: zahlFormat(volle.length),
+            median: zahlFormat(medianProzent), voll: zahlFormat(volle.length),
             stationenPhrase: mengeFormat(gesamt, 'station'),
             leerZusatz: leer ? t('hint.andEmptyCount', { n: zahlFormat(leer), stationenPhrase: mengeFormat(gesamt, 'station') }) : t('hint.noneEmpty')
         })
     });
 
+    // ===== Größtes Ungleichgewicht (Gestaltungsauftrag, wörtlich: "Der
+    // Saldo ist die eigentliche Geschichte dieses Bereichs ... Das ist die
+    // Frage, mit der ein Disponent morgens hierher kommt - und sie steht
+    // heute nirgends im Kopf.") =====
+    //
+    // saldo (zugaenge minus abgaenge, siehe v_wawi_stationsauslastung in
+    // 0018_wawi_sichten.sql) kommt aus einer FÜNFTEN, eigens dafür
+    // geladenen Sicht (siehe stationenAufbauen()) - weder station.belegt
+    // noch .frei (reine Momentanwerte) könnten diese über die gesamte
+    // Historie gezählte Größe herleiten. Größte ABSOLUTE Abweichung, NICHT
+    // (wie extremwert(..., true) im Schwesterreiter von auswertungen.js)
+    // immer nur der kleinste, also negativste Wert: eine Station, die
+    // Räder in großem Stil ANSAMMELT (Sanderau, +122 im heutigen Bestand),
+    // ist für die Disposition ebenso eine "Frage" wie eine, die sie
+    // verliert (Zellerau, -65) - der Auftrag nennt ausdrücklich BEIDE
+    // Enden als "die Frage". Bei einem Gleichstand zweier Beträge (z. B.
+    // +50/-50) gewinnt die ZUERST gefundene (niedrigster Stationsindex) -
+    // ein beliebiger, aber deterministischer Tiebreak, kein Zufallswert.
+    if (letzterLadeFehler('v_wawi_stationsauslastung')) {
+        // Ladefehler nicht stumm verschlucken, aber auch nicht die ganze
+        // Übersicht blockieren (dieselbe Haltung wie bei Rädern/Verkehr/
+        // Kundenorten oben) - diese eine Kachel entfällt schlicht.
+    } else if (auslastung && auslastung.length > 0) {
+        const saldoNachId = new Map(auslastung.map((a) => [a.station_id, a.saldo]));
+        const stationenMitSaldo = stationen.filter((s) => saldoNachId.has(s.station_id));
+        if (stationenMitSaldo.length > 0) {
+            const saldi = stationenMitSaldo.map((s) => saldoNachId.get(s.station_id));
+            let extremIndex = 0;
+            saldi.forEach((s, i) => { if (Math.abs(s) > Math.abs(saldi[extremIndex])) extremIndex = i; });
+            const schwaechsteStation = stationenMitSaldo[extremIndex];
+            const schwaechsterSaldo = saldi[extremIndex];
+            const saldoText = schwaechsterSaldo > 0 ? `+${zahlFormat(schwaechsterSaldo)}` : zahlFormat(schwaechsterSaldo);
+            kacheln.push({
+                titel: t('tile.biggestImbalance'),
+                wert: schwaechsteStation.name,
+                grafik: saeulenSparkline(saldi, t('hint.saldoChartAria', {
+                    stationenPhrase: mengeFormat(stationenMitSaldo.length, 'station'),
+                    min: zahlFormat(Math.min(...saldi)), max: zahlFormat(Math.max(...saldi)),
+                    name: schwaechsteStation.name
+                }), { markierIndizes: [extremIndex], aktuellIndex: null }),
+                hinweis: schwaechsterSaldo < 0
+                    ? t('hint.worstStationBalance', { saldo: saldoText })
+                    : t('hint.stationCollectsBalance', { saldo: saldoText })
+            });
+        }
+    }
+
     return kacheln;
+}
+
+// ===== Fuellstand-Spannweite: eigene kleine Bandgrafik =====
+//
+// GESTALTUNGSAUFTRAG, wörtlich: "FÜLLSTAND-SPANNWEITE 30-70 % - gar keine
+// Grafik. Ausgerechnet eine Spannweite, die man zeichnen könnte." Kein
+// neuer rahmen.js-Baustein (dieselbe Ueberlegung wie bei
+// zeitfensterDivergenzGrafik() weiter unten): eine Spannweite mit Median
+// hat innerhalb der heutigen fuenf Bereiche nur diesen einen Verbraucher -
+// anders als donut()/saeulenSparkline()/zellbalken(), die der Auftrag
+// ausdruecklich als GETEILTE Bausteine verlangt, weil mehrere Bereiche sie
+// brauchen (siehe deren Kopfkommentare in rahmen.js).
+//
+// FESTE SKALA 0-100 % (keine abgeschnittene Achse - dieselbe Regel wie bei
+// saeulenSparkline()/saeulengrafik() in rahmen.js): der Fuellstand ist
+// fachlich auf [0, 100 %] begrenzt. Eine aus minAnteil/maxAnteil selbst
+// abgeleitete Achse liesse ein eng beieinanderliegendes Netz (30-40 %)
+// genauso breit erscheinen wie ein weit gespreiztes (0-100 %) - genau die
+// Verzerrung, die die Kachel beheben soll ("wie weit liegen die Stationen
+// auseinander").
+//
+// minAnteil/medianAnteil/maxAnteil: Anteile 0..1 (wie ueberall sonst in
+// dieser Datei), NICHT Prozentzahlen - der Aufrufer rundet fuer Text
+// separat, diese Funktion rechnet auf der ungerundeten Skala.
+function stationenSpannweiteGrafik(minAnteil, medianAnteil, maxAnteil, beschriftung) {
+    const breite = 168, hoehe = 44;
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    svg.setAttribute('width', breite);
+    svg.setAttribute('height', hoehe);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.classList.add('fuellstandspanne');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', beschriftung);
+
+    const mitteY = hoehe / 2;
+    // 4px Luft links/rechts, damit die Ticks bei 0 % und 100 % nicht auf
+    // der Kontur des <svg> liegen (dieselbe Ueberlegung wie der 1px-Rand
+    // bei saeulenSparkline() in rahmen.js).
+    const x = (anteil) => 4 + Math.max(0, Math.min(1, anteil)) * (breite - 8);
+
+    const grundlinie = document.createElementNS(SVG_NS, 'line');
+    grundlinie.setAttribute('x1', x(0).toFixed(1));
+    grundlinie.setAttribute('x2', x(1).toFixed(1));
+    grundlinie.setAttribute('y1', mitteY.toFixed(1));
+    grundlinie.setAttribute('y2', mitteY.toFixed(1));
+    grundlinie.setAttribute('class', 'fuellstandspanne-grundlinie');
+    svg.append(grundlinie);
+
+    // 0/50/100-%-Ticks, rein orientierend (aria-hidden) - dieselbe
+    // Zurueckhaltung wie die y-Achse bei saeulengrafik() in rahmen.js: die
+    // genauen Zahlen stehen bereits im Kachelwert und im Hinweis.
+    [0, 0.5, 1].forEach((anteil) => {
+        const tick = document.createElementNS(SVG_NS, 'line');
+        tick.setAttribute('x1', x(anteil).toFixed(1));
+        tick.setAttribute('x2', x(anteil).toFixed(1));
+        tick.setAttribute('y1', (mitteY - 4).toFixed(1));
+        tick.setAttribute('y2', (mitteY + 4).toFixed(1));
+        tick.setAttribute('class', 'fuellstandspanne-tick');
+        tick.setAttribute('aria-hidden', 'true');
+        svg.append(tick);
+    });
+
+    // Das Band selbst (Minimum bis Maximum) - die eigentliche Aussage der
+    // Kachel, auf derselben festen Skala wie die Ticks.
+    const band = document.createElementNS(SVG_NS, 'rect');
+    band.setAttribute('x', x(minAnteil).toFixed(1));
+    band.setAttribute('y', (mitteY - 3).toFixed(1));
+    band.setAttribute('width', Math.max(0, x(maxAnteil) - x(minAnteil)).toFixed(1));
+    band.setAttribute('height', 6);
+    band.setAttribute('class', 'fuellstandspanne-band');
+    svg.append(band);
+
+    // Median als eigener, hoeherer Strich - dieselbe Farbe wie das Band
+    // (kein zweiter Farbwert fuer denselben neutralen "hier ist ein
+    // Wert"-Zweck), aber durch die groessere Hoehe klar vom Band
+    // unterscheidbar, auch wenn Median und ein Bandende zusammenfallen.
+    const median = document.createElementNS(SVG_NS, 'line');
+    median.setAttribute('x1', x(medianAnteil).toFixed(1));
+    median.setAttribute('x2', x(medianAnteil).toFixed(1));
+    median.setAttribute('y1', (mitteY - 9).toFixed(1));
+    median.setAttribute('y2', (mitteY + 9).toFixed(1));
+    median.setAttribute('class', 'fuellstandspanne-median');
+    svg.append(median);
+
+    return svg;
 }
 
 function stationMaske(station) {
@@ -396,17 +602,22 @@ function stationMaske(station) {
           wert: station.in_betrieb ? t('misc.inOperation') : t('misc.decommissionedState'), nurLesen: true }
     ], knoepfe);
 
-    // Drei zusaetzliche Abschnitte UNTER der von zeigeMaske() gebauten
+    // VIER zusaetzliche Abschnitte UNTER der von zeigeMaske() gebauten
     // Grundmaske - dieselbe Machart wie monatsdrilldownEinfuegen() in
     // auswertungen.js (dort async wegen eines eigenen Nachladens, hier
     // SYNCHRON: die Daten liegen bereits vollstaendig in
-    // stationenRaederAlle/stationenVerkehrAlle, siehe Kopfkommentar
-    // dieser Datei). #detailmaske wurde von zeigeMaske() gerade erst
-    // geleert und neu gefuellt (replaceChildren, siehe dort) - die
-    // folgenden append()-Aufrufe haengen sich dahinter an, sie ersetzen
-    // nichts.
+    // stationenRaederAlle/stationenVerkehrAlle/stationenAlle, siehe
+    // Kopfkommentar dieser Datei). #detailmaske wurde von zeigeMaske()
+    // gerade erst geleert und neu gefuellt (replaceChildren, siehe dort) -
+    // die folgenden append()-Aufrufe haengen sich dahinter an, sie
+    // ersetzen nichts. Karte VOR Raeder/Verkehr: "wo liegt sie, wie voll
+    // ist sie" gehoert zusammen mit dem Belegungsdonut direkt darueber,
+    // bevor die beiden operativen Tabellen folgen (zweiter Auftrag:
+    // "die Karte mit dem eingetragenen Standort, wenn ich auf Details
+    // gehe").
     const wurzel = document.getElementById('detailmaske');
     wurzel.append(stationBelegungAbschnitt(station));
+    wurzel.append(stationDetailkarteAbschnitt(station));
     wurzel.append(stationRaederAbschnitt(station));
     wurzel.append(stationVerkehrAbschnitt(station));
 }
@@ -447,6 +658,101 @@ function stationBelegungAbschnitt(station) {
         farbe: voll ? 'var(--warnung-text)' : 'var(--marine)',
         bruch: `${station.belegt} / ${station.kapazitaet}`
     }));
+
+    return abschnitt;
+}
+
+// ===== Landkarte in der Detailmaske (zweiter Auftrag, wörtlich: "Mir
+// fehlt außerdem immer noch die Karte mit dem eingetragenen Standort,
+// wenn ich auf Details gehe.") =====
+//
+// Es GAB bereits eine Karte (stationenKarteZeichnen() oben, im eigenen
+// Unterreiter "Landkarte") - der Auftrag will sie ZUSAETZLICH in der
+// Detailmaske EINER Station, nicht eine zweite, eigens dafuer gezeichnete
+// Karte ("Benutze sie, statt eine zweite Karte zu bauen"). Dieselbe
+// Funktion wird deshalb HIER wiederverwendet, nur mit anderen Argumenten:
+//
+// AUSSCHNITT: nicht alle zehn Stationen zu gleichen Teilen, sondern diese
+// EINE Station plus ihre STATIONDETAILKARTE_NACHBARN naechsten Nachbarn
+// nach Luftlinie - bei zehn Stationen auf engem Stadtgebiet wuerde "alle
+// zehn" praktisch dieselbe Ausdehnung zeigen wie die Uebersichtskarte und
+// nichts vom "diese eine Station" vermitteln; alle zehn WEGZULASSEN bis
+// auf die eine wuerde umgekehrt genau die Nachbarn verstecken, die laut
+// Auftrag beim Umraeumen helfen ("sie zu zeigen hilft der Disposition,
+// weil man sieht, wohin man umräumen kann"). Vier Nachbarn plus die
+// Station selbst treffen diese Mitte.
+// MASSSTAB: kleinere Zeichenflaeche als die Uebersichtskarte (siehe
+// .stationdetailkarte .stationenkarte-svg in style.css) - sie sitzt in
+// der schmaleren Detailmaske, nicht in der vollen Arbeitsliste.
+// HERVORHEBUNG: ein Ring in --rot um GENAU die angezeigte Station (siehe
+// optionen.hervorgehobenId bei stationenKarteZeichnen()) - ohne ihn waere
+// unter fuenf gleich gezeichneten Donut-Marken nicht zu erkennen, "das
+// bin ich".
+// KEIN Kundenschalter hier (anders als die Uebersichtskarte): diese Karte
+// beantwortet "wo liegt diese Station und wer ist in der Naehe, um
+// umzuraeumen", keine Marktgebiets-Frage - ein zweiter, hier ungenutzter
+// Schalter waere Zierrat.
+const STATIONDETAILKARTE_NACHBARN = 4;
+
+function stationDetailkarteAbschnitt(station) {
+    const abschnitt = document.createElement('section');
+    abschnitt.className = 'stationdetailkarte';
+
+    const ueberschrift = document.createElement('h3');
+    ueberschrift.textContent = t('tile.stationMap');
+    abschnitt.append(ueberschrift);
+
+    if (station.latitude == null || station.longitude == null) {
+        // KEIN theoretischer Fall: station_lat_chk/-lon_chk (0003_bereich_
+        // b_netz_und_flotte.sql) lauten ausdruecklich "latitude is null OR
+        // ... between -90 and 90" - eine Station OHNE Koordinaten ist in
+        // diesem Schema gueltig, nicht nur denkbar. stationenKarteZeichnen()
+        // ueberspringt eine solche Station bereits stillschweigend (siehe
+        // dort); diese Detailkarte braucht dieselbe Absicherung, sonst
+        // stuende hier eine "leere Flaeche, die wie ein Fehler aussieht" -
+        // genau das verbietet dieselbe Regel wie bei stationRaederAbschnitt()/
+        // stationVerkehrAbschnitt() oben.
+        const hinweis = document.createElement('p');
+        hinweis.className = 'stationdetailkarte-leer';
+        hinweis.textContent = t('tile.noStationLocation');
+        abschnitt.append(hinweis);
+        return abschnitt;
+    }
+
+    const erklaerung = document.createElement('p');
+    erklaerung.className = 'stationenkarte-erklaerung';
+    // ZWEI Saetze (Auftrag: "Beschrifte das ausdruecklich, damit niemand
+    // sie fuer massstabsgetreu haelt", siehe stationenKarteZeigen() oben) -
+    // UND, zusaetzlich, WORIN sich dieser Ausschnitt von der Uebersichts-
+    // karte unterscheidet (Auftrag: "Ueberleg, was in einer Detailkarte
+    // anders ist ... Ausschnitt").
+    erklaerung.textContent = `${t('map.schematicNote')} ${t('map.detailAreaNote')}`;
+    abschnitt.append(erklaerung);
+
+    // Naechste Nachbarn nach Luftlinie, mit derselben Laengengrad-
+    // Korrektur wie stationenKarteProjektion() weiter oben (kappa bei der
+    // Breite DIESER Station - fuer eine reine Sortierung nach Entfernung
+    // genuegt eine lokale Naeherung, eine exakte Grosskreisdistanz waere
+    // fuer 10 km Stadtgebiet unnoetiger Aufwand).
+    const kappa = Math.cos((Number(station.latitude) * Math.PI) / 180);
+    const nachbarnMitAbstand = stationenAlle
+        .filter((s) => s.station_id !== station.station_id && s.latitude != null && s.longitude != null)
+        .map((s) => {
+            const dLat = Number(s.latitude) - Number(station.latitude);
+            const dLon = (Number(s.longitude) - Number(station.longitude)) * kappa;
+            return { station: s, distanzQuadrat: dLat * dLat + dLon * dLon };
+        })
+        .sort((a, b) => a.distanzQuadrat - b.distanzQuadrat)
+        .slice(0, STATIONDETAILKARTE_NACHBARN)
+        .map((e) => e.station);
+
+    const ausschnittStationen = [station, ...nachbarnMitAbstand];
+
+    const kartenflaeche = document.createElement('div');
+    kartenflaeche.className = 'stationenkarte-flaeche';
+    kartenflaeche.append(stationenKarteZeichnen(ausschnittStationen, [], false,
+        { breite: 460, hoehe: 320, hervorgehobenId: station.station_id }));
+    abschnitt.append(kartenflaeche);
 
     return abschnitt;
 }
@@ -862,9 +1168,23 @@ const STATIONENKARTE_MAIN_STUETZPUNKTE = [
 // laegen Orte wie Karlstadt oder Marktheidenfeld (deutlich ausserhalb der
 // im Auftrag genannten Stationsspanne) ausserhalb des sichtbaren Bereichs,
 // sobald der Schalter sie einblendet.
-function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar) {
-    const breite = 680;
-    const hoehe = 460;
+//
+// optionen.breite/.hoehe (Vorgabe 680/460, die Uebersichtskarte): DIESELBE
+// Zeichnung wird auch fuer die Detailkarte einer einzelnen Station wieder-
+// verwendet (stationDetailkarteAbschnitt() weiter unten, zweiter Auftrag
+// "die Karte ... wenn ich auf Details gehe") - dort sitzt sie in der
+// schmaleren Detailmaske statt in der vollen Arbeitsliste und bekommt
+// deshalb eine kleinere Flaeche uebergeben, KEINE zweite, eigens
+// gezeichnete Karte (Auftrag: "Benutze sie, statt eine zweite Karte zu
+// bauen").
+// optionen.hervorgehobenId: station_id der Station, die zusaetzlich zu
+// ihrer Donut-Marke einen Ring in --rot bekommt ("hier hinsehen", derselbe
+// Akzent wie eine markierte Saeule in saeulenSparkline()) - fuer die
+// Detailkarte GENAU die Station, deren Maske gerade offen ist; in der
+// Uebersichtskarte bleibt der Parameter weg (null), dort ist keine Marke
+// vor den anderen ausgezeichnet.
+function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar, optionen = {}) {
+    const { breite = 680, hoehe = 460, hervorgehobenId = null } = optionen;
     const rand = 46;
 
     const stationsPunkte = stationen
@@ -957,8 +1277,27 @@ function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar) {
         const p = proj.projizieren(Number(station.latitude), Number(station.longitude));
         const durchmesser = stationenKarteStationsDurchmesser(station.kapazitaet, kapMin, kapMax);
         const voll = station.frei === 0;
+        const istHervorgehoben = hervorgehobenId != null && station.station_id === hervorgehobenId;
         const beschriftung = t('map.stationBelegLabel', { name: station.name, belegt: zahlFormat(station.belegt), kapazitaet: zahlFormat(station.kapazitaet) })
-            + (voll ? t('map.stationFullSuffix') : '') + t('map.openDetailsSuffix');
+            + (voll ? t('map.stationFullSuffix') : '')
+            + (istHervorgehoben ? t('map.currentStationSuffix') : '')
+            + t('map.openDetailsSuffix');
+
+        // Ring in --rot HINTER der Donut-Marke (Auftrag, zweiter Teil:
+        // "die Karte mit dem eingetragenen Standort, wenn ich auf Details
+        // gehe") - ohne diesen Ring waere die eigene Station unter ihren
+        // Nachbarn nicht von einer beliebigen anderen zu unterscheiden.
+        // Zuerst gezeichnet (unter der Marke, siehe svg.append() Reihenfolge
+        // unten), damit sie den Donut nicht verdeckt.
+        if (istHervorgehoben) {
+            const ring = document.createElementNS(SVG_NS, 'circle');
+            ring.setAttribute('cx', p.x.toFixed(1));
+            ring.setAttribute('cy', p.y.toFixed(1));
+            ring.setAttribute('r', (durchmesser / 2 + 5).toFixed(1));
+            ring.setAttribute('class', 'stationenkarte-station-hervorhebung');
+            ring.setAttribute('aria-hidden', 'true');
+            svg.append(ring);
+        }
 
         // donut() wiederverwendet, nicht neu gezeichnet (Auftrag: "die
         // anderen Bereiche werden ihn brauchen") - "Groesse = Kapazitaet,

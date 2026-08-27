@@ -951,12 +951,23 @@ button {
      sie waere eine Kachel ohne Grafik (nur die Zahl) niedriger als eine
      mit Sparkline/Zellbalken, und "Titel"/"Hinweis" saessen von Kachel zu
      Kachel auf unterschiedlicher Hoehe statt am selben Platz im Raster.
-     44px statt vormals 28px: an die neue Sparkline-Hoehe angepasst (siehe
-     saeulenSparkline() in rahmen.js, breite/hoehe jetzt 168/44 statt
-     72/26) - sonst waere die Zeile niedriger als die Grafik, die sie
-     enthalten soll, und die Sparkline risse den Titel/Hinweis-Abstand
-     der eigenen Kachel wieder auseinander. */
-  min-height: 44px;
+     84px statt vormals 44px - VIERTER Anlauf, Befund "Stationen":
+     44px war an saeulenSparkline() (168/44) angepasst, aber donut() lief
+     in genau EINER Kachel dieses Bereichs ("Gesamtbelegung", durchmesser
+     84) schon damals ueber diese 44px hinaus - die Zeile wurde dort vom
+     INHALT auf 84px aufgetrieben, waehrend jede Nachbarkachel bei 44px
+     blieb. align-items:stretch auf #uebersichtsstreifen zieht zwar jede
+     KACHEL auf dieselbe AUSSENHOEHE, aber die inneren Zeilen blieben
+     unterschiedlich hoch - der Hinweis der schmaleren Kacheln saß dadurch
+     hoeher als der der Donut-Kachel, sichtbar als unbegruendeter
+     Leerraum genau dort ("darunter abgehaengt ein Text", Auftrag,
+     woertlich). 84px ist das Maximum, das irgendeine Grafik in einem
+     Uebersichtsstreifen heute tatsaechlich braucht (siehe donut() in
+     stationen.js) - ALLE FUENF Bereiche teilen sich diese eine Zahl, egal
+     ob ihre eigenen Grafiken kleiner sind (Bissantz-Balken, saeulen-
+     sparkline), damit "gleiche Zonen an gleicher Stelle" fuer jede Kachel
+     jedes Bereichs gilt, nicht nur innerhalb einer einzelnen Zeile. */
+  min-height: 84px;
 }
 
 .uebersichtskachel-wert {
@@ -1043,12 +1054,17 @@ button {
    ausdrücklich stehen: diese Regel ist die spezifischere, sie muss auch
    dann noch unmissverständlich richtig sein, wenn die Vorgabe oben sich
    je wieder ändert. */
-.uebersichtskachel-zeile:has(.saeulensparkline) > .uebersichtskachel-wert {
+/* .fuellstandspanne (stationenSpannweiteGrafik() in stationen.js) reiht
+   sich HIER ein, nicht als eigene Regel: eine Spannweite mit Median ist
+   wie eine Saeulen-Sparkline eine FORM (ein Verlauf ueber mehrere Werte),
+   keine einzelne Anteilsflaeche wie Zellbalken/Donut - "Grafik links,
+   Zahl rechts" gilt fuer beide Formen gleichermassen. */
+.uebersichtskachel-zeile:has(.saeulensparkline, .fuellstandspanne) > .uebersichtskachel-wert {
   order: 2;
   margin-left: auto;
 }
 
-.uebersichtskachel-zeile:has(.saeulensparkline) > :last-child:not(.uebersichtskachel-wert) {
+.uebersichtskachel-zeile:has(.saeulensparkline, .fuellstandspanne) > :last-child:not(.uebersichtskachel-wert) {
   order: 1;
   margin-left: 0;
 }
@@ -1420,6 +1436,46 @@ button {
 .saeulensparkline-grundlinie {
   stroke: var(--linie);
   stroke-width: 1;
+}
+
+/* ===== Fuellstand-Spannweite (stationenSpannweiteGrafik() in
+   stationen.js, Befund: "Ausgerechnet eine Spannweite, die man zeichnen
+   koennte" - die Kachel hatte bislang gar keine Grafik) =====
+   Dieselbe Kachelbreite/-hoehe wie .saeulensparkline (168x44, ueber CSS
+   auf die tatsaechliche Kachelbreite gestreckt) - beide sind dieselbe
+   FORM-Familie (siehe :has(.saeulensparkline, .fuellstandspanne) weiter
+   oben), nicht zwei verschiedene Groessen fuer denselben Zeilenplatz. */
+.fuellstandspanne {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 90px;
+  max-width: 220px;
+  height: 44px;
+  overflow: visible;
+}
+
+.fuellstandspanne-grundlinie {
+  stroke: var(--skala-rahmen);
+  stroke-width: 1;
+}
+
+.fuellstandspanne-tick {
+  stroke: var(--skala-rahmen);
+  stroke-width: 1;
+}
+
+/* --marine, derselbe neutrale "hier ist ein Wert"-Ton wie
+   .uebersichtskachel-wert - eine Spannweite ist keine Warnung und kein
+   Extremwert, der eine eigene Bedeutungsfarbe (--rot/--warnung-text)
+   rechtfertigen wuerde. */
+.fuellstandspanne-band {
+  fill: var(--marine);
+}
+
+.fuellstandspanne-median {
+  stroke: var(--marine);
+  stroke-width: 2;
 }
 
 .zellbalken {
@@ -2712,15 +2768,17 @@ button {
 #statuszeile.warnung   { color: var(--warnung-text); }
 #statuszeile.schlecht  { color: var(--schlecht); }
 
-/* ===== Detailmaske einer Station: Belegung, Räder, Verkehr
-   (stationBelegungAbschnitt()/stationRaederAbschnitt()/
-   stationVerkehrAbschnitt() in stationen.js, Gestaltungsauftrag
-   Stationen, Punkte 1-3) =====
+/* ===== Detailmaske einer Station: Belegung, Landkarte, Räder, Verkehr
+   (stationBelegungAbschnitt()/stationDetailkarteAbschnitt()/
+   stationRaederAbschnitt()/stationVerkehrAbschnitt() in stationen.js,
+   Gestaltungsauftrag Stationen, Punkte 1-3, und "Mir fehlt ... die Karte
+   ... wenn ich auf Details gehe") =====
    Dieselbe Machart wie .monatsdrilldown weiter oben (auswertungen.js):
    ein eigener, oben abgetrennter Abschnitt UNTER der von zeigeMaske()
    gebauten Grundmaske, kein neuer Baustein in rahmen.js - anders als
    donut() braucht dieses Layout keinen zweiten Verbraucher. */
 .stationbelegung,
+.stationdetailkarte,
 .stationraeder,
 .stationverkehr {
   border-top: 1px solid var(--linie);
@@ -2729,11 +2787,41 @@ button {
 }
 
 .stationbelegung h3,
+.stationdetailkarte h3,
 .stationraeder h3,
 .stationverkehr h3 {
   color: var(--marine);
   font-size: 14px;
   margin: 0 0 8px;
+}
+
+/* Die Detailkarte wiederverwendet .stationenkarte-svg/-erklaerung
+   (stationenKarteZeichnen() in stationen.js) unveraendert, sitzt hier
+   aber in der schmaleren Detailmaske statt in der vollen Arbeitsliste -
+   eine eigene, kleinere Maximalbreite statt der 760px der Uebersichtskarte,
+   sonst liesse ein zu breit vorgegebenes <svg> in dieser schmaleren Spalte
+   unnoetig viel Luft rechts stehen. */
+.stationdetailkarte .stationenkarte-svg {
+  max-width: 420px;
+}
+
+.stationdetailkarte .stationenkarte-erklaerung {
+  margin-bottom: 8px;
+}
+
+/* Hervorhebung der angezeigten Station auf der Detailkarte (Auftrag:
+   "die Karte mit dem eingetragenen Standort, wenn ich auf Details gehe" -
+   ohne ein sichtbares "das bin ich" waere die eigene Marke unter den
+   Nachbarn nicht zu finden). --rot: derselbe Akzent wie "hier hinsehen"
+   bei einer markierten Saeule (.saeulensparkline-saeule-markiert) - ein
+   Extremum im Sinne von "besonders", nicht "schlecht" (dafuer steht
+   --schlecht). Ring HINTER der Donut-Marke gezeichnet (siehe
+   stationenKarteZeichnen()), damit die Marke selbst unveraendert bleibt
+   und nur ein zusaetzlicher, gut sichtbarer Kreis sie umrahmt. */
+.stationenkarte-station-hervorhebung {
+  fill: none;
+  stroke: var(--rot);
+  stroke-width: 2.5;
 }
 
 .stationverkehr h4 {
@@ -2771,7 +2859,8 @@ button {
 .stationraeder-leer,
 .stationraeder-fehler,
 .stationverkehr-leer,
-.stationverkehr-fehler {
+.stationverkehr-fehler,
+.stationdetailkarte-leer {
   color: var(--text-leise);
   font-size: 12px;
 }

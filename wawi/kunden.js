@@ -278,8 +278,11 @@ async function kundenAufbauen(suchtext) {
     // Grund wie oben: eine Verteilung ueber nur die (hoechstens 200)
     // GELADENEN Zeilen waere genau die "Luege", vor der der Auftrag beim
     // Statusfilter schon warnt (siehe Kommentar bei kundenFilterStatus).
+    // ort NEU dazu (Befund "Kunden gesamt": "keine Grafik, die halbe
+    // Kachel leer") - kundenOrtVerteilung() weiter unten braucht sie, um
+    // aus der Kachel "Kunden gesamt" selbst eine Verteilung zu zeichnen.
     const alleKennzahlen = await ladeListe('v_wawi_kunde',
-        'status, tarif_code, umsatz_brutto, fahrten_gesamt, registriert_am');
+        'status, tarif_code, umsatz_brutto, fahrten_gesamt, registriert_am, ort');
 
     zeigeUebersicht(vorgang, kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKennzahlen));
 
@@ -421,8 +424,18 @@ async function kundenAufbauen(suchtext) {
 function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKennzahlen) {
     const anzeige = (n) => (n === null ? '—' : zahlFormat(n));
 
+    // GESTALTUNGSAUFTRAG, wörtlich der Befund: "KUNDEN GESAMT 1.014 - keine
+    // Grafik, die halbe Kachel leer." Diese Kachel war die EINZIGE in der
+    // ganzen Oberflaeche ohne jede Grafik UND ohne jeden Hinweis - jede
+    // andere "gesamt"-Kachel (Flotte, Stationen, Instandhaltung) traegt
+    // mindestens eine der beiden. kundenOrtVerteilung() weiter unten macht
+    // aus der blossen Zahl eine Verteilung, "aus der die Gesamtzahl
+    // entsteht" (Auftrag, woertlich als Vorschlag genannt) - faellt bei
+    // fehlenden Daten (Ladefehler bei alleKennzahlen) auf die reine Zahl
+    // zurueck, NICHT auf eine erfundene Grafik.
     const kacheln = [
-        { titel: t('tile.customersTotal'), wert: zahlSkaliert(anzeige(gesamtAnzahl)) }
+        kundenOrtVerteilung(gesamtAnzahl, alleKennzahlen)
+        || { titel: t('tile.customersTotal'), wert: zahlSkaliert(anzeige(gesamtAnzahl)) }
     ];
 
     if (gesperrtAnzahl !== null) {
@@ -497,6 +510,56 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleK
     return kacheln;
 }
 
+// ===== Verteilung nach Wohnort - traegt die Kachel "Kunden gesamt"
+// (Gestaltungsauftrag, Befund: "keine Grafik, die halbe Kachel leer") =====
+//
+// alleKennzahlen: siehe kundenAufbauen() - traegt seit dieser Aufgabe auch
+// ort ALLER 1014 Kunden (113 davon NULL - siehe "Ohne Adresse" oben, die
+// zaehlt hier bewusst NICHT mit: ein Kunde ohne Adresse hat keinen Ort,
+// den man in einer Wohnort-Verteilung zeigen koennte, und "Ohne Adresse"
+// hat bereits ihre eigene Kachel).
+//
+// GLEICHE FORM wie jede andere Verteilung dieser Oberflaeche (Punkt 1:
+// "eine Verteilung sieht in jedem Bereich gleich aus") - dieselbe Saeulen-
+// Sparkline wie tarifVerteilung() oben, hier ueber Wohnorte statt Tarife,
+// absteigend nach Anzahl (die groesste Gruppe zuerst, aus demselben Grund
+// wie dort) und mit markierIndizes auf dem groessten Balken ("hier
+// hinsehen": Wuerzburg selbst dominiert die Kundschaft, siehe Kommentar
+// bei der 'ort'-Spalte in kundenAufbauen()).
+//
+// gesamtAnzahl bleibt der WERT der Kachel (aus zaehleZeilen(), die echte
+// Gesamtzahl UNABHAENGIG von den hoechstens 200 geladenen Zeilen - siehe
+// Kopfkommentar bei kundenUebersicht()) - die Verteilung ist die
+// ERKLAERUNG dieser Zahl ("aus der die Gesamtzahl entsteht", Auftrag,
+// woertlich als moeglicher Weg genannt), nicht ihr Ersatz.
+function kundenOrtVerteilung(gesamtAnzahl, alleKennzahlen) {
+    if (!alleKennzahlen || alleKennzahlen.length === 0) return null;
+
+    const zaehlerJeOrt = new Map();
+    for (const z of alleKennzahlen) {
+        if (!z.ort) continue;   // ohne Adresse - eigene Kachel, siehe oben
+        zaehlerJeOrt.set(z.ort, (zaehlerJeOrt.get(z.ort) || 0) + 1);
+    }
+    if (zaehlerJeOrt.size === 0) return null;
+
+    const gruppen = [...zaehlerJeOrt.entries()].sort(([, a], [, b]) => b - a);
+    const [groessterOrt, groessteAnzahl] = gruppen[0];
+    const bezugsgroesse = gesamtAnzahl ?? alleKennzahlen.length;
+    const anteil = Math.round((groessteAnzahl / bezugsgroesse) * 100);
+
+    return {
+        titel: t('tile.customersTotal'),
+        wert: zahlSkaliert(zahlFormat(bezugsgroesse)),
+        grafik: saeulenSparkline(gruppen.map(([, n]) => n),
+            t('hint.locationDistributionAria', {
+                anteil: zahlFormat(anteil), ort: groessterOrt, orteAnzahl: zahlFormat(gruppen.length)
+            }),
+            { aktuellIndex: null, markierIndizes: [0] }),
+        hinweis: t('hint.locationDistributionDetail',
+            { anteil: zahlFormat(anteil), ort: groessterOrt, orteAnzahl: zahlFormat(gruppen.length) })
+    };
+}
+
 // alleKennzahlen: siehe kundenAufbauen() - Zeilen mit status, tarif_code,
 // umsatz_brutto, fahrten_gesamt, registriert_am ALLER 1014 Kunden.
 //
@@ -510,6 +573,16 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleK
 // (Hausregel: jede neue Kennzahl gegen die Datenbank nachrechnen). Liefert
 // null, wenn alleKennzahlen leer blieb oder keine gesperrten Zeilen traegt
 // - der Aufrufer faellt dann auf den alten Text zurueck (siehe oben).
+//
+// GESTALTUNGSAUFTRAG, wörtlich der Befund: "519 von 519 Kunden - alle 519
+// noch nie gefahren - dreimal dieselbe Zahl in einem Satz." kundenPhrase
+// TRÄGT die Zahl bereits ("519 Kunden") - ein zusätzliches "n von" davor
+// wiederholte genau diese Zahl nur noch einmal, ohne eine zweite,
+// tatsächlich andere Größe zu nennen (anders als z. B. bei "hint.
+// fullStationsShare" in stationen.js, wo Zähler UND Nenner zwei
+// verschiedene Zahlen sind). hint.blockedNeverRiddenAll/-Some (rahmen.js)
+// nennen die Gesamtzahl deshalb nur noch EINMAL, über kundenPhrase - kein
+// eigenes {n} mehr in beiden Texten.
 function gesperrtNieGefahren(alleKennzahlen, gesperrtAnzahl) {
     if (!alleKennzahlen || alleKennzahlen.length === 0) return null;
     const gesperrte = alleKennzahlen.filter((z) => z.status === 'gesperrt');
@@ -529,8 +602,8 @@ function gesperrtNieGefahren(alleKennzahlen, gesperrtAnzahl) {
     // ein einziger gesperrter Kunde mit einer Fahrt dazu, muss der Text
     // das selbst erkennen, nicht weiter "alle" behaupten.
     return nieGefahren.length === gesperrte.length
-        ? t('hint.blockedNeverRiddenAll', { n: zahlFormat(gesperrte.length), kundenPhrase, vonJahr, bisJahr })
-        : t('hint.blockedNeverRiddenSome', { n: zahlFormat(gesperrte.length), kundenPhrase, nie: zahlFormat(nieGefahren.length) });
+        ? t('hint.blockedNeverRiddenAll', { kundenPhrase, vonJahr, bisJahr })
+        : t('hint.blockedNeverRiddenSome', { kundenPhrase, nie: zahlFormat(nieGefahren.length) });
 }
 
 // GESTALTUNGSAUFTRAG PUNKT 2: "Sieh selbst nach, was da ist, und wähl
@@ -605,12 +678,22 @@ function tarifVerteilung(alleKennzahlen) {
 // floor(): bei 1014 Kunden sind das 102 (nicht 101), lieber einen Kunden
 // zu viel im "oberen Zehntel" als eines zu wenig.
 //
-// MEDIAN NEBEN DEM MITTEL (Auftrag, woertlich als Beispiel genannt): bei
-// 1014 Kunden, davon 519 OHNE JEDE RECHNUNG (identisch mit "Gesperrt"
-// oben, gegen die Datenbank geprueft - siehe Bericht), liegt der Median
-// bei 0 €, waehrend das Mittel wegen der wenigen zahlungsstarken Kunden
-// trotzdem deutlich darueber liegt - genau die Schiefe, die eine einzelne
-// Durchschnittszahl verschluckt haette.
+// GESTALTUNGSAUFTRAG, wörtlich der Befund an dieser Kachel: "vier Zeilen
+// Hinweistext. Das ist kein Hinweis, das ist ein Absatz." Der Hinweis trug
+// bislang FÜNF Zahlen in einem Satz (Zehntel, Kundenzahl, Top-10-Summe,
+// Gesamtsumme, dazu Median UND Mittel) plus einen Klammerzusatz zur
+// Abgrenzung gegenüber den Auswertungen - bei elf-Pixel-Schrift in einer
+// von fünf gleich breiten Kacheln lief das auf mehrere Zeilen hinaus.
+// "Der Hinweis ist eine Zeile, höchstens zwei" (Auftrag) heißt hier: die
+// Kachel behält NUR den Anteil UND seinen echten Bezug (Zehntel-Anzahl,
+// Top-10-Summe von Gesamtsumme - "ein Balken braucht eine Skala"), Median/
+// Mittel und der Auswertungs-Abgrenzungshinweis entfallen aus dem
+// sichtbaren Text. Die Abgrenzung selbst bleibt trotzdem gewahrt: sie
+// steckt bereits im TITEL ("Rechnungsvolumen" statt "Umsatz", siehe
+// Kommentar bei alleUmsaetze oben) - der Hinweis muss die Warnung nicht
+// zusätzlich ausbuchstabieren, wenn der Name selbst schon vor der
+// Verwechslung schützt. Median/Mittel bleiben deshalb unberechnet, keine
+// tote Variable für einen Text, den es nicht mehr gibt.
 function umsatzKonzentration(alleUmsaetze) {
     if (!alleUmsaetze || alleUmsaetze.length === 0) return null;
 
@@ -621,11 +704,6 @@ function umsatzKonzentration(alleUmsaetze) {
     const gesamt = werteAbsteigend.reduce((s, w) => s + w, 0);
     const zehntel = Math.max(1, Math.ceil(n * 0.1));
     const top10Summe = werteAbsteigend.slice(0, zehntel).reduce((s, w) => s + w, 0);
-    const mitteIndex = Math.floor((n - 1) / 2);
-    // werteAbsteigend ist absteigend sortiert - der Median (die mittleren
-    // Werte) ist davon unabhaengig derselbe wie bei aufsteigender Sortierung.
-    const median = n % 2 === 1 ? werteAbsteigend[mitteIndex] : (werteAbsteigend[mitteIndex] + werteAbsteigend[mitteIndex + 1]) / 2;
-    const mittel = gesamt / n;
     const anteilProzent = gesamt ? zahlFormat(top10Summe / gesamt * 100, { maximumFractionDigits: 1 }) : '0';
 
     return {
@@ -634,8 +712,7 @@ function umsatzKonzentration(alleUmsaetze) {
         grafik: gesamt ? zellbalken(top10Summe, gesamt) : undefined,
         hinweis: t('hint.top10Detail', {
             zehntel: zahlFormat(zehntel), kundenPhrase: mengeFormat(n, 'kunde'),
-            top10: geldFormat(top10Summe), gesamt: geldFormat(gesamt),
-            median: geldFormat(median), mittel: geldFormat(mittel)
+            top10: geldFormat(top10Summe), gesamt: geldFormat(gesamt)
         })
     };
 }
