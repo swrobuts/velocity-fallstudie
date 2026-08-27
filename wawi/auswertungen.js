@@ -1083,15 +1083,14 @@ async function umsatzRadtypZeigen(vorgang) {
 // ist auffällig") - nicht die Gesamtsumme allein, die steht schon in der
 // Statuszeile und wäre als einzige Kachel eine bloße Wiederholung - PLUS
 // die vierte, neu hinzugekommene Frage: TRÄGT sich die Flotte überhaupt?
-// 35.454,47 € Jahresumsatz klingt für sich genommen nach etwas, ohne dass
-// klar wäre, ob es viel oder wenig ist - "Umsatz je Rad und Tag" setzt
-// die Zahl in Bezug zu dem, was sie erwirtschaften soll (siehe
+// 35.387,17 € Umsatz der letzten 12 Monate (die Kachel "Umsatz gesamt"
+// direkt daneben) klingt für sich genommen nach etwas, ohne dass klar
+// wäre, ob es viel oder wenig ist - "Umsatz je Rad und Tag" setzt die
+// Zahl in Bezug zu dem, was sie erwirtschaften soll (siehe
 // flottengroesse-Parameter unten).
 function umsatzRadtypUebersicht(zeilen, flottengroesse) {
     const umsatzReihe = reiheJeMonat(zeilen, 'umsatz');
     const fahrtenReihe = reiheJeMonat(zeilen, 'fahrten');
-    const gesamtUmsatz = umsatzReihe.reduce((s, r) => s + r.wert, 0);
-    const gesamtFahrten = fahrtenReihe.reduce((s, r) => s + r.wert, 0);
 
     // "Referenzjahr" operationalisiert als die zwölf jüngsten Monate mit
     // Daten, nicht als Kalenderjahr: die sechs frühen Testmonate (Januar-
@@ -1107,10 +1106,28 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
     const tiefpunkt = extremwert(fahrtenLetztesJahr, 'wert', true);
     const hoehepunkt = extremwert(fahrtenLetztesJahr, 'wert', false);
 
+    // BUGFIX (Gestaltungsauftrag, Kachelbefund): die grosse Zahl bezog sich
+    // bislang auf ALLE 18 Monate (umsatzReihe/fahrtenReihe ungekuerzt),
+    // waehrend Sparkline, Hinweis ("Verlauf der letzten 12 Monate") UND
+    // die Veraenderungszeile ("ggue. Vormonat") bereits auf umsatzLetztesJahr/
+    // fahrtenLetztesJahr (12 Monate) beruhten - eine Kachel mit drei
+    // verschiedenen Bezugsraeumen, obwohl sie wie EINE Aussage aussieht
+    // ("35.454,47 €" neben "▼ −21,8 % ggü. Vormonat" liest sich als "der
+    // GESAMTUMSATZ ist gefallen", tatsaechlich fiel nur der letzte Monat
+    // gegenueber dem vorletzten). Jetzt EIN Bezugsraum fuer die ganze
+    // Kachel: die grosse Zahl ist dieselbe Zwoelf-Monats-Summe wie die
+    // Saeulen daneben. Die 18-Monats-Summe geht dabei nicht verloren - sie
+    // steht bereits als Kontrollzahl in der Statuszeile unter der Liste
+    // (siehe meldeVorgang() am Ende von umsatzRadtypZeigen()), wo ein
+    // Gesamtwert ueber den kompletten geladenen Bestand tatsaechlich die
+    // richtige Aussage ist (eine Tabelle mit allen 18 Monatszeilen).
+    const gesamtUmsatzLetztesJahr = umsatzLetztesJahr.reduce((s, r) => s + r.wert, 0);
+    const gesamtFahrtenLetztesJahr = fahrtenLetztesJahr.reduce((s, r) => s + r.wert, 0);
+
     const kachelnUmsatz = {
         titel: t('tile.revenueTotal'),
         veraenderung: veraenderungZeile(letzteVeraenderung(umsatzLetztesJahr)),
-        wert: zahlSkaliert(geldFormat(gesamtUmsatz)),
+        wert: zahlSkaliert(geldFormat(gesamtUmsatzLetztesJahr)),
         grafik: saeulenSparkline(umsatzLetztesJahr.map((r) => r.wert),
             t('hint.monthlyRevenueChartAria', {
                 vonMonat: monatFormat(umsatzLetztesJahr[0].monat), bisMonat: monatFormat(umsatzLetztesJahr.at(-1).monat),
@@ -1125,15 +1142,27 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
     const kachelnFahrten = {
         titel: t('tile.ridesTotal'),
         veraenderung: veraenderungZeile(letzteVeraenderung(fahrtenLetztesJahr)),
-        wert: zahlSkaliert(zahlFormat(gesamtFahrten)),
+        wert: zahlSkaliert(zahlFormat(gesamtFahrtenLetztesJahr)),
+        // KEIN markierIndizes mehr auf dem Hoehepunkt-Monat (Gestaltungs-
+        // auftrag, Farbbefund): --rot bedeutet in dieser Oberflaeche
+        // durchgehend "ein defektes Rad" oder "eine unumkehrbare Handlung"
+        // (siehe die Wortmarken-Begruendung weiter oben in dieser Datei
+        // bzw. in style.css) - ein Hoechstwert ist keine Warnung und kein
+        // Ereignis, das "hier hinsehen" verdient (anders als der echte
+        // Tarifwechsel bei kacheln.push({titel: notableRevenuePerRideCityBike})
+        // weiter unten, wo markierIndizes einen TATSAECHLICHEN Sprung
+        // zeigt). Die dunkle --marine-Saeule fuer den AKTUELLEN Monat gibt
+        // es bereits (aktuellIndex, Vorgabe der letzten Saeule) - der
+        // Spitzenmonat bleibt ueber die Balkenhoehe UND den Hinweistext
+        // (hint.yearlyPattern nennt Tief- und Hochmonat woertlich) sichtbar,
+        // ohne eine zweite, semantisch falsche Auszeichnung zu brauchen.
         grafik: saeulenSparkline(fahrtenLetztesJahr.map((r) => r.wert),
             t('hint.monthlyRidesChartAria', {
                 min: zahlFormat(tiefpunkt.wert), tiefMonat: monatFormat(tiefpunkt.monat),
                 max: zahlFormat(hoehepunkt.wert), hochMonat: monatFormat(hoehepunkt.monat),
                 aktuellMonat: monatFormat(fahrtenLetztesJahr.at(-1).monat),
                 aktuellPhrase: mengeFormat(fahrtenLetztesJahr.at(-1).wert, 'fahrt')
-            }),
-            { markierIndizes: [fahrtenLetztesJahr.indexOf(hoehepunkt)] }
+            })
         ),
         hinweis: t('hint.yearlyPattern', { tief: monatFormat(tiefpunkt.monat), hoch: monatFormat(hoehepunkt.monat) })
     };
@@ -1141,18 +1170,18 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
     const kacheln = [kachelnUmsatz, kachelnFahrten];
 
     // "Umsatz je Rad und Tag": genau die Kennzahl, die der Auftrag als
-    // Beispiel nennt, um "analytischer" von "mehr Zahlen" abzugrenzen -
-    // 35.454,47 € ist ein Fakt, "trägt sich die Flotte damit" ist eine
-    // Frage, die erst ein Bezug beantwortet. flottengroesse kommt aus
-    // v_wawi_flotte (siehe die Zaehl-Anfrage in umsatzRadtypZeigen()) -
-    // OHNE ausgemusterte Räder, weil ein abgeschriebenes Rad nichts mehr
-    // erwirtschaftet und den Nenner nur kuenstlich verkleinern wuerde.
-    // gesamtUmsatzLetztesJahr statt gesamtUmsatz (oben, alle 18 Monate
-    // inkl. der sechs Testmonate): dieselbe Zwoelf-Monats-Abgrenzung wie
-    // bei der Sparkline daneben, aus demselben Grund (siehe Kommentar bei
-    // umsatzLetztesJahr oben) - ein Nenner aus 275 HEUTIGEN Rädern neben
-    // einem Zaehler aus eineinhalb Jahren mit wechselnder Flottengroesse
-    // waere unehrlich vermischt. 365 Tage statt der tatsaechlichen
+    // Beispiel nennt, um "analytischer" von "mehr Zahlen" abzugrenzen - die
+    // grosse Zahl der Nachbarkachel ("Umsatz gesamt") ist ein Fakt, "trägt
+    // sich die Flotte damit" ist eine Frage, die erst ein Bezug beantwortet.
+    // flottengroesse kommt aus v_wawi_flotte (siehe die Zaehl-Anfrage in
+    // umsatzRadtypZeigen()) - OHNE ausgemusterte Räder, weil ein
+    // abgeschriebenes Rad nichts mehr erwirtschaftet und den Nenner nur
+    // kuenstlich verkleinern wuerde. gesamtUmsatzLetztesJahr (oben,
+    // dieselbe Zwoelf-Monats-Summe wie in kachelnUmsatz.wert) statt einer
+    // Summe ueber alle 18 Monate inkl. der sechs Testmonate: ein Nenner aus
+    // 275 HEUTIGEN Rädern neben einem Zaehler aus eineinhalb Jahren mit
+    // wechselnder Flottengroesse waere unehrlich vermischt. 365 Tage statt
+    // der tatsaechlichen
     // Tageszahl des Zwoelf-Monats-Fensters: im aktuellen Bestand
     // (September 2025 bis August 2026, kein Schaltjahr) sind das exakt
     // 365 - eine Rundung, die erst in einem Schaltjahr um einen Tag
@@ -1162,7 +1191,6 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
     // "lieber keine Kachel als eine falsche" wie bei kundenUebersicht()
     // in kunden.js.
     if (flottengroesse) {
-        const gesamtUmsatzLetztesJahr = umsatzLetztesJahr.reduce((s, r) => s + r.wert, 0);
         const tageBetrachtet = 365;
         const jeRadJahr = gesamtUmsatzLetztesJahr / flottengroesse;
         const jeRadTag = jeRadJahr / tageBetrachtet;
@@ -1332,8 +1360,14 @@ async function umsatzKundengruppeZeigen(vorgang) {
 // Auswertungen hinweg, nicht nur innerhalb einer Tabelle).
 function umsatzKundengruppeUebersicht(zeilen) {
     const umsatzReihe = reiheJeMonat(zeilen, 'umsatz');
+    // gesamtUmsatz bleibt die volle 18-Monats-Summe - sie ist der richtige
+    // Nenner fuer "groesste Kundengruppe"/"ohne Mitgliedschaft" weiter
+    // unten (ein Anteil am GESAMTEN geladenen Bestand, nicht an einem
+    // Ausschnitt davon). Fuer die erste Kachel dagegen (siehe kacheln[0]
+    // unten) braucht es die ZWOELF-Monats-Summe - siehe der Kommentar dort.
     const gesamtUmsatz = umsatzReihe.reduce((s, r) => s + r.wert, 0);
     const letzteZwoelf = umsatzReihe.slice(-12);
+    const gesamtUmsatzLetzteZwoelf = letzteZwoelf.reduce((s, r) => s + r.wert, 0);
 
     const umsatzJeTarif = new Map();
     for (const z of zeilen) umsatzJeTarif.set(z.tarif_code, (umsatzJeTarif.get(z.tarif_code) || 0) + z.umsatz);
@@ -1346,7 +1380,18 @@ function umsatzKundengruppeUebersicht(zeilen) {
         {
             titel: t('tile.revenueTotal'),
             veraenderung: veraenderungZeile(letzteVeraenderung(letzteZwoelf)),
-            wert: zahlSkaliert(geldFormat(gesamtUmsatz)),
+            // BUGFIX, derselbe Befund wie bei kachelnUmsatz in
+            // umsatzRadtypUebersicht() oben: die Zahl trug bislang die
+            // vollen 18 Monate (gesamtUmsatz), waehrend Sparkline UND
+            // Hinweistext ausdruecklich "die letzten 12 Monate" zeigen
+            // (hint.last12MonthsCrossCheck sagt das woertlich - die Zahl
+            // widersprach also schon ihrem EIGENEN Hinweistext). Jetzt
+            // gesamtUmsatzLetzteZwoelf: dieselbe Zwoelf-Monats-Summe wie in
+            // "Umsatz gesamt" im Radtyp-Reiter, die Gegenprobe zwischen
+            // beiden Reitern bleibt damit intakt (beide Gruppierungen
+            // summieren dieselben Entgeltpositionen desselben Zeitraums,
+            // nur anders aufgeteilt) - nur eben am RICHTIGEN Bezugsraum.
+            wert: zahlSkaliert(geldFormat(gesamtUmsatzLetzteZwoelf)),
             grafik: saeulenSparkline(letzteZwoelf.map((r) => r.wert),
                 t('hint.crossCheckChartAria', {
                     vonMonat: monatFormat(letzteZwoelf[0].monat), bisMonat: monatFormat(letzteZwoelf.at(-1).monat),
@@ -1502,8 +1547,18 @@ function kmCo2Uebersicht(zeilen) {
     const kmReihe = reiheJeMonat(zeilen, 'kilometer');
     const co2LetzteZwoelf = co2Reihe.slice(-12);
     const kmLetzteZwoelf = kmReihe.slice(-12);
-    const gesamtCo2 = co2Reihe.reduce((s, r) => s + r.wert, 0);
-    const gesamtKm = kmReihe.reduce((s, r) => s + r.wert, 0);
+    // BUGFIX, derselbe Befund wie bei den beiden Kacheln in
+    // umsatzRadtypUebersicht()/umsatzKundengruppeUebersicht() oben: die
+    // grosse Zahl bezog sich zuvor auf ALLE 18 Monate (co2Reihe/kmReihe
+    // ungekuerzt reduziert), waehrend Sparkline, "Verlauf der letzten 12
+    // Monate" UND die Veraenderungszeile bereits auf co2LetzteZwoelf/
+    // kmLetzteZwoelf beruhten - hier deshalb direkt aus der bereits
+    // gekuerzten Zwoelf-Monats-Reihe summiert, kein zweiter, laengerer
+    // Bezugsraum mehr. Die 18-Monats-Summe bleibt trotzdem erreichbar: sie
+    // steht bereits als Kontrollzahl in der Statuszeile (meldeVorgang() in
+    // kmCo2Zeigen(), eigene, dort schon vorhandene Berechnung).
+    const gesamtCo2LetzteZwoelf = co2LetzteZwoelf.reduce((s, r) => s + r.wert, 0);
+    const gesamtKmLetzteZwoelf = kmLetzteZwoelf.reduce((s, r) => s + r.wert, 0);
     const gesamtFahrten = zeilen.reduce((s, z) => s + z.fahrten, 0);
     const gesamtGeschaetzt = zeilen.reduce((s, z) => s + z.fahrten_geschaetzt, 0);
     const anteil = anteilGewichtet(zeilen);
@@ -1513,7 +1568,7 @@ function kmCo2Uebersicht(zeilen) {
         {
             titel: t('tile.co2SavingsTotal'),
             veraenderung: veraenderungZeile(letzteVeraenderung(co2LetzteZwoelf)),
-            wert: zahlSkaliert(kgFormat(gesamtCo2)),
+            wert: zahlSkaliert(kgFormat(gesamtCo2LetzteZwoelf)),
             grafik: saeulenSparkline(co2LetzteZwoelf.map((r) => r.wert),
                 t('hint.monthlyCo2ChartAria', {
                     vonMonat: monatFormat(co2LetzteZwoelf[0].monat), bisMonat: monatFormat(co2LetzteZwoelf.at(-1).monat),
@@ -1527,7 +1582,7 @@ function kmCo2Uebersicht(zeilen) {
         {
             titel: t('tile.kilometersTotal'),
             veraenderung: veraenderungZeile(letzteVeraenderung(kmLetzteZwoelf)),
-            wert: zahlSkaliert(kmFormat(gesamtKm)),
+            wert: zahlSkaliert(kmFormat(gesamtKmLetzteZwoelf)),
             grafik: saeulenSparkline(kmLetzteZwoelf.map((r) => r.wert),
                 t('hint.monthlyKmChartAria', {
                     vonMonat: monatFormat(kmLetzteZwoelf[0].monat), bisMonat: monatFormat(kmLetzteZwoelf.at(-1).monat),

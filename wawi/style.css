@@ -895,11 +895,14 @@ button {
    .zellbalken selbst width:100%+flex-end mitbrachte (fuer die
    Tabellenspalte gedacht, siehe balkenSpalten() weiter unten - dort
    richtig, hier falsch angewendet). display:flex + column ordnet jetzt
-   Titel/Zahl+Grafik/Hinweis in DREI FESTEN Zeilen an; min-height auf der
-   mittleren Zeile (siehe .uebersichtskachel-zeile) haelt diese Zeile
-   GLEICH HOCH, ob eine Kachel eine Grafik traegt oder nicht ("Kunden
-   gesamt" in kunden.js z. B. hat gar keine) - genau der im Auftrag
-   verlangte Fall, der nicht "in sich zusammenfallen" darf. */
+   Titel/Veraenderung/Zahl+Grafik/Hinweis in VIER FESTEN Zeilen an (anfangs
+   drei - die Veraenderungszeile kam als vierte hinzu, siehe deren
+   min-height-Kommentar bei .uebersichtskachel-veraenderung weiter unten,
+   aus demselben "faellt nicht in sich zusammen"-Grund); min-height auf
+   der mittleren Zahl+Grafik-Zeile (siehe .uebersichtskachel-zeile) haelt
+   diese Zeile GLEICH HOCH, ob eine Kachel eine Grafik traegt oder nicht
+   ("Kunden gesamt" in kunden.js z. B. hat gar keine) - genau der im
+   Auftrag verlangte Fall, der nicht "in sich zusammenfallen" darf. */
 .uebersichtskachel {
   flex: 1 1 0;
   min-width: 0;
@@ -934,8 +937,13 @@ button {
      dieser Zeile, unabhaengig davon, ob eine Grafik danebensteht - ohne
      sie waere eine Kachel ohne Grafik (nur die Zahl) niedriger als eine
      mit Sparkline/Zellbalken, und "Titel"/"Hinweis" saessen von Kachel zu
-     Kachel auf unterschiedlicher Hoehe statt am selben Platz im Raster. */
-  min-height: 28px;
+     Kachel auf unterschiedlicher Hoehe statt am selben Platz im Raster.
+     44px statt vormals 28px: an die neue Sparkline-Hoehe angepasst (siehe
+     saeulenSparkline() in rahmen.js, breite/hoehe jetzt 168/44 statt
+     72/26) - sonst waere die Zeile niedriger als die Grafik, die sie
+     enthalten soll, und die Sparkline risse den Titel/Hinweis-Abstand
+     der eigenen Kachel wieder auseinander. */
+  min-height: 44px;
 }
 
 .uebersichtskachel-wert {
@@ -945,6 +953,25 @@ button {
   color: var(--marine);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  /* Gestaltungsauftrag, "gemeinsames Raster"-Befund: eine Kachel OHNE
+     jede Grafik (z. B. "Umsatz je Rad und Tag" in auswertungen.js,
+     "Fahrten je Rad, 30 Tage" in flotte.js) stand bislang links, während
+     ihre Nachbarn mit Säulen-Sparkline die Zahl rechts zeigen (siehe
+     :has(.saeulensparkline) weiter unten) - in EINER Reihe (z. B. den vier
+     Kacheln im Reiter "Umsatz nach Radtyp") sprang die Zahl damit von
+     Kachel zu Kachel zwischen links und rechts hin und her, eine von drei
+     unterschiedlichen Bauformen nebeneinander, die der Auftrag ausdrücklich
+     bemängelt. margin-left:auto HIER als Vorgabe (nicht erst in der
+     spezifischeren Sparkline-Regel) behandelt eine Kachel ohne Grafik wie
+     eine Sparkline-Kachel ohne Daten: "die Antwort steht rechts" gilt jetzt
+     für JEDE Kachel gleich, unabhängig davon, ob und welche Grafik daneben
+     steht - eine bewusst gewählte, einheitliche Form statt der zufälligen
+     Restposition, die entstand, wenn einfach keine Regel griff. Für
+     Zellbalken/Donut (Anteilsgrafiken, kein Verlauf) unten ausdrücklich
+     wieder zurückgesetzt: dort ist "Zahl links, Anteil rechts" die
+     etablierte, bereits stimmige Lesrichtung (Bissantz-Balken lesen sich
+     von der Zahl zur Fläche), die dieser Auftrag nicht in Frage stellt. */
+  margin-left: auto;
 }
 
 /* Vorbild-Auftrag, Punkt 2: "▼ −5 ggü. Vorm." - eine kleine Zeile MIT
@@ -955,38 +982,54 @@ button {
    nur bemerkenswert") gilt hier ein zweites Mal - Farbe bliebe der
    tatsächlichen Bedeutung vorbehalten (--gut/--schlecht/--warnung an
    anderer Stelle dieser Oberfläche), nicht der bloßen Richtung eines
-   Monatsvergleichs. */
+   Monatsvergleichs.
+   min-height (Gestaltungsauftrag, "gemeinsames Raster"-Befund): baueKachel()
+   in rahmen.js legt dieses Element jetzt IMMER an, auch ohne
+   kachel.veraenderung - ohne eine reservierte Mindesthöhe wäre die Zeile
+   dann zwar vorhanden, aber leer und damit 0px hoch, und eine Kachel ohne
+   Veränderung säße ihren Nachbarn mit Veränderung wieder ein Stück näher
+   am Titel gegenüber (derselbe "fällt in sich zusammen"-Fehler, den
+   .uebersichtskachel-zeile weiter unten schon für die Grafik löst). Höhe
+   an font-size(12px) * line-height ausgerichtet, keine willkürliche Zahl. */
 .uebersichtskachel-veraenderung {
   font-size: 12px;
   color: var(--text-leise);
   font-variant-numeric: tabular-nums;
+  min-height: 1.4em;
 }
 
-/* Die Grafik (Säulen-Sparkline ODER Zellbalken, siehe baueKachel() in
-   rahmen.js) ist IMMER das Element NACH der Zahl und bekommt hier -
-   unabhaengig davon, welches der beiden sie ist - denselben festen Platz
-   am rechten Rand der Zeile: margin-left:auto schiebt sie dorthin, ohne
-   dass eine Kachel ohne Grafik betroffen waere (dann gibt es kein
-   ":not(:only-child)"-Element, das die Regel treffen koennte). Das ist
-   das gemeinsame Raster, das der Auftrag verlangt - dieselbe Spalte fuer
-   die Grafik in JEDER Kachel, ob "Stationen", "Volle Stationen" oder
-   "Gesamtbelegung". GILT NICHT für Kacheln mit einer Säulen-Sparkline -
-   siehe die eigene Regel direkt im Anschluss, die für genau diesen Fall
-   die umgekehrte Anordnung verlangt ("Zahl groß rechts", Vorbild-Auftrag). */
-.uebersichtskachel-zeile > :last-child:not(.uebersichtskachel-wert) {
+/* Anteilsgrafiken (Zellbalken UND Donut, siehe baueKachel() in rahmen.js)
+   bleiben bei "Zahl links, Anteil rechts": margin-left:auto auf der Zahl
+   (Vorgabe jetzt, siehe .uebersichtskachel-wert oben) wird hier gezielt
+   zurückgesetzt, und stattdessen wandert das auto-margin auf die Grafik
+   selbst - dieselbe Umkehr wie bei der Säulen-Sparkline weiter unten,
+   nur mit vertauschten Rollen. Das ist das gemeinsame Raster, das der
+   Auftrag verlangt - dieselbe Spalte für die Anteilsgrafik in JEDER
+   Kachel, ob "Stationen", "Volle Stationen" oder "Gesamtbelegung"
+   (Donut). GILT NICHT für Kacheln mit einer Säulen-Sparkline - siehe die
+   eigene Regel direkt im Anschluss, die für genau diesen Fall die
+   umgekehrte Anordnung verlangt ("Zahl groß rechts", Vorbild-Auftrag) und
+   deshalb margin-left:auto auf der Zahl ausdrücklich BEHÄLT. */
+.uebersichtskachel-zeile:has(.zellbalken, .donut) > .uebersichtskachel-wert {
+  margin-left: 0;
+}
+
+.uebersichtskachel-zeile:has(.zellbalken, .donut) > :last-child:not(.uebersichtskachel-wert) {
   margin-left: auto;
 }
 
 /* "Zahl groß rechts" (Vorbild-Auftrag, wörtlich übernommen) für Kacheln
    mit einer Säulen-Sparkline: die Grafik links, die große Zahl rechts -
-   umgekehrt zur sonstigen Anordnung dieser Kacheln (siehe Regel direkt
+   umgekehrt zur Anordnung bei einer Anteilsgrafik (siehe Regel direkt
    darüber). Per order() statt flex-direction:row-reverse: row-reverse
    würde die physische Bedeutung von margin-left umkehren und mit der
    Regel darüber kollidieren, sobald beide je nach Grafikart abwechselnd
    griffen - order() ändert nur die VISUELLE Reihenfolge, margin-left
-   behält seine gewohnte Wirkung. Trifft ausschließlich Kacheln mit dieser
-   einen neuen Grafikart (:has(.saeulensparkline)) - jede Kachel mit
-   einem Zellbalken oder ganz ohne Grafik bleibt bei der Regel oben. */
+   behält seine gewohnte Wirkung. margin-left:auto hier ist inzwischen
+   redundant zur Vorgabe auf .uebersichtskachel-wert selbst, bleibt aber
+   ausdrücklich stehen: diese Regel ist die spezifischere, sie muss auch
+   dann noch unmissverständlich richtig sein, wenn die Vorgabe oben sich
+   je wieder ändert. */
 .uebersichtskachel-zeile:has(.saeulensparkline) > .uebersichtskachel-wert {
   order: 2;
   margin-left: auto;
@@ -1003,8 +1046,8 @@ button {
    ausfuellen), in einer Kachel dagegen der Grund, warum "Gesamtbelegung"
    bislang ganz an den rechten Kachelrand gedrueckt wirkte, unabhaengig
    von der Position der Zahl. Hier auf natuerliche Breite zurueckgesetzt,
-   exakt dieselbe Ausrichtung wie eine Sparkline daneben (siehe
-   margin-left:auto oben, das beide gleich behandelt). */
+   damit der Balken bei natürlicher Größe direkt neben der Zahl beginnt,
+   statt sich selbst nochmals an den Rand zu schieben. */
 .uebersichtskachel-zeile .zellbalken {
   width: auto;
   justify-content: flex-start;
@@ -1301,10 +1344,27 @@ button {
    Kopfkommentar bei saeulenSparkline() in rahmen.js, warum die
    Linienvariante ersatzlos entfernt statt nur ergänzt wurde) - keine der
    beiden Klassenfamilien existiert mehr parallel zur anderen. */
+/* Gestaltungsauftrag, wörtlich: "Sparklines sind sehr winzig und nutzen
+   den Platz nicht ideal." Vorher flex:0 0 auto (starr auf die 72px des
+   <svg width>-Attributs) - bei einer mehrere hundert Pixel breiten Kachel
+   blieb zwischen der 72px breiten Grafik und der Zahl daneben regelmäßig
+   über 150px leere Fläche, kein Weißraum (der träfe eine bewusste
+   Trennung), sondern schlicht ungenutzter Platz. flex:1 1 auto + width:
+   100% lässt die Grafik jetzt den Rest der Zeile ausfüllen, den die feste
+   Zahl (flex:0 0 auto) übrig lässt - min-width haelt sie auch in einer
+   Reihe mit fünf Kacheln (Flotte: vier Zellbalken-Kacheln plus die
+   Verteilungskachel) noch lesbar, max-width verhindert eine unnötig lang
+   gezogene Grafik in einer Reihe mit nur zwei, sehr breiten Kacheln.
+   preserveAspectRatio="none" (siehe saeulenSparkline() in rahmen.js) sorgt
+   dafür, dass das <svg> diese CSS-Größe auch wirklich ausfüllt, statt
+   mittig im eigenen, unveränderten Seitenverhältnis eingepasst zu bleiben. */
 .saeulensparkline {
-  display: inline-block;
-  vertical-align: middle;
-  flex: 0 0 auto;
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 90px;
+  max-width: 220px;
+  height: 44px;
   overflow: visible;
 }
 

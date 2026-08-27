@@ -4324,12 +4324,25 @@ function baueKachel(kachel) {
     titel.textContent = kachel.titel;
     feld.append(titel);
 
-    if (kachel.veraenderung) {
-        const veraenderung = document.createElement('div');
-        veraenderung.className = 'uebersichtskachel-veraenderung';
-        veraenderung.append(kachel.veraenderung);
-        feld.append(veraenderung);
-    }
+    // IMMER angelegt, auch ohne kachel.veraenderung (Gestaltungsauftrag,
+    // "gemeinsames Raster"-Befund): fehlte dieses Element ganz, rueckte die
+    // mittlere Zeile (Zahl+Grafik) einer Kachel OHNE Veraenderung ein
+    // Stueck naeher an den Titel heran als bei ihren Nachbarn MIT
+    // Veraenderung - eine Kachelreihe faellt dann schon in der Vertikalen
+    // auseinander, bevor ueberhaupt jemand auf Grafik oder Zahl schaut
+    // (genau der Befund: "Umsatz je Rad und Tag"/"Auffällig" in
+    // umsatzRadtypUebersicht() bauen je nach Datenlage unterschiedlich
+    // viele dieser drei Zeilen). CSS reserviert dafuer eine feste
+    // Mindesthoehe auf .uebersichtskachel-veraenderung (siehe style.css) -
+    // eine leere Zeile bleibt damit leer, aber PLATZHALTEND, statt gar
+    // nicht zu existieren. KEIN Platzhaltertext hinein (kein "-" o. Ä.):
+    // das waere eine erfundene Aussage ueber einen Vormonat, den es
+    // fachlich gar nicht gibt (siehe Kopfkommentar bei zeigeUebersicht()
+    // weiter oben, warum veraenderung bewusst optional bleibt).
+    const veraenderung = document.createElement('div');
+    veraenderung.className = 'uebersichtskachel-veraenderung';
+    if (kachel.veraenderung) veraenderung.append(kachel.veraenderung);
+    feld.append(veraenderung);
 
     const zeile = document.createElement('div');
     zeile.className = 'uebersichtskachel-zeile';
@@ -4418,8 +4431,27 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // Tiefpunkt) - dann gewinnt --rot: es ist die spezifischere Aussage
 // ("das hier ist bemerkenswert"), "aktuell" ist demgegenüber nur die
 // Grundbedeutung jeder Reihe mit Zeitachse.
+// GESTALTUNGSAUFTRAG, wörtlich: "Sparklines sind sehr winzig und nutzen
+// den Platz nicht ideal." Gemessen im Browser (vorher, siehe Bericht): bei
+// den bisherigen Vorgaben (breite 72, hoehe 26) blieb zwischen der 72px
+// breiten Grafik und der rechts stehenden Zahl bei einer mehrere hundert
+// Pixel breiten Kachel eine leere Flaeche von oft über 150px - kein
+// Weissraum (der TRENNT bewusst), sondern ungenutzter Platz, weil zwei
+// Elemente lediglich an ihre jeweiligen Raender gedrueckt wurden. breite/
+// hoehe sind deshalb mehr als verdoppelt (168/44 statt 72/26) UND das
+// <svg> bekommt zusaetzlich preserveAspectRatio="none": ohne dieses
+// Attribut wuerde ein SVG, dessen tatsaechliche Kachelbreite (per CSS,
+// siehe .saeulensparkline in style.css) von seinem viewBox-Seitenverhaeltnis
+// abweicht, mittig eingepasst UND liesse oben/unten oder links/rechts
+// wieder Leerraum entstehen (genau der Effekt, den dieser Auftrag
+// beseitigen soll) - "none" streckt stattdessen auf die volle, von CSS
+// zugewiesene Flaeche. Das verzerrt bei einer reinen Rechteck-Grafik ohne
+// diagonale Linien nichts an der WERTAUSSAGE (jede Saeule bleibt exakt so
+// hoch, wie ihr Anteil an [minimum, maximum] es verlangt - nur die
+// Spaltenbreite variiert mit der tatsaechlichen Kachelbreite, was bei
+// zwoelf gleich breiten Saeulen ohnehin gewollt ist).
 function saeulenSparkline(werte, beschriftung, optionen = {}) {
-    const { breite = 72, hoehe = 26 } = optionen;
+    const { breite = 168, hoehe = 44 } = optionen;
     const markierIndizes = optionen.markierIndizes || [];
     // Vorgabe: die letzte Säule ist "aktuell" - der Regelfall bei einer
     // absteigend chronologischen bzw. aufsteigend bis heute laufenden
@@ -4432,6 +4464,7 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
     svg.setAttribute('width', breite);
     svg.setAttribute('height', hoehe);
+    svg.setAttribute('preserveAspectRatio', 'none');
     svg.classList.add('saeulensparkline');
     // role="img" bedingungslos, nicht wie zuvor bei sparkline() nur bei
     // gesetzter beschriftung: beschriftung ist jetzt Pflicht (siehe oben),

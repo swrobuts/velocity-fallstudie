@@ -470,8 +470,11 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleU
 // vom Zahlungsstatus (siehe Kommentar an der Sicht, 0018_wawi_sichten.sql).
 //
 // WICHTIG, gegen die Datenbank geprueft (siehe Bericht): das ist NICHT
-// dieselbe Zahl wie "Umsatz gesamt" in den Auswertungen (35.454,47 €).
-// Jene Summe kommt aus entgeltposition.betrag (den einzelnen Fahrt-
+// dieselbe Zahl wie die Kontrollzahl der Statuszeile unter "Umsatz nach
+// Radtyp"/"Umsatz nach Kundengruppe" in den Auswertungen (35.454,47 € -
+// NICHT die 35.387,17 € der Kachel "Umsatz gesamt" dort, die bewusst nur
+// die letzten 12 Monate zeigt, siehe umsatzRadtypUebersicht() in
+// auswertungen.js). Jene Summe kommt aus entgeltposition.betrag (den einzelnen Fahrt-
 // Entgelten, netto) über v_wawi_umsatz_radtyp/_kundengruppe; diese hier
 // aus rechnung.betrag_brutto (dem tatsaechlich gestellten Rechnungs-
 // betrag, brutto) über v_wawi_kunde - beide Wege fassen "Umsatz"
