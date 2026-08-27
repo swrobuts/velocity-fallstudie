@@ -97,6 +97,11 @@ async function flotteAufbauen() {
         // sein eigener Ladefehler nicht mehr zur Gegenwart - siehe
         // Kommentar bei meldeVorgang() in rahmen.js (Befund 2).
         zeigeUebersicht(vorgang, []);
+        // Dieselbe Aufraeumpflicht wie bei zeigeUebersicht(vorgang, [])
+        // direkt darueber, nur fuer den eigenen Baustein: sonst bliebe bei
+        // einem Ladefehler NACH einem zuvor erfolgreichen Aufbau die
+        // Radtyp-Reihe eines fruehreren, jetzt ueberholten Bestands stehen.
+        document.getElementById('flotte-typkacheln')?.remove();
         meldeVorgang(vorgang, `Die Flotte liess sich nicht laden: ${fehler}`, 'schlecht');
         return;
     }
@@ -108,6 +113,15 @@ async function flotteAufbauen() {
     zeigeUebersicht(vorgang, flotteUebersicht(raeder, fahrtenLetzte30Tage));
 
     const { typen, standorte } = flotteFilterOptionen(raeder);
+    // Gestaltungsauftrag, woertlich: "Bei Flotte vermisse ich Produktbilder,
+    // wir haben ja die Bikes auch als Bilder, warum werden die nicht
+    // miniaturisiert im Kopf angezeigt, damit ich das Produkt/Flotte auch
+    // sehe." raeder (UNGEFILTERT) und typen (aus denselben ungefilterten
+    // Zeilen, siehe flotteFilterOptionen() weiter unten) - dieselbe
+    // Begruendung wie bei zeigeUebersicht() direkt darueber: die Frage
+    // "was fahren wir ueberhaupt" bezieht sich auf die ganze Flotte, nicht
+    // auf eine gerade gewaehlte Einschraenkung.
+    flotteTypkachelnZeigen(vorgang, raeder, typen);
     zeigeFilterleiste(vorgang, true, [
         {
             // Kein { wert: 'alle', ... } mehr in den Optionen - der
@@ -336,6 +350,133 @@ function flotteFilterOptionen(raeder) {
         .sort(([a], [b]) => a.localeCompare(b));
     const standorte = [...new Set(raeder.map((r) => r.standort).filter(Boolean))].sort();
     return { typen, standorte };
+}
+
+// ===== Radtyp-Kacheln mit Produktbild (Gestaltungsauftrag, woertlich:
+// "Bei Flotte vermisse ich Produktbilder ... damit ich das Produkt/Flotte
+// auch sehe") =====
+//
+// UEBER DEN TYPCODE zugeordnet, nicht ueber die Reihenfolge im
+// assets-Verzeichnis oder im Bestand (Auftrag, ausdruecklich): eine
+// Zuordnung per Position waere lautlos falsch, sobald ein Radtyp
+// umsortiert wird oder ein vierter dazukommt - "eine falsche Zuordnung
+// faellt niemandem auf, der die Raeder nicht kennt" (Auftrag). typ_code
+// traegt heute CITY/CARGO/EBIKE (siehe v_wawi_flotte, gepruefte Werte).
+// Fehlt ein Eintrag hier (ein vierter Radtyp ohne Bild), liefert der
+// Zugriff darunter schlicht undefined - flotteTypkachelnZeigen() prueft
+// das explizit und laesst die Kachel dann ohne Bild, statt ein <img
+// src="undefined"> zu erzeugen.
+//
+// Miniaturisiert aus src/assets/rad-*-frei.webp (freigestellt, Alphakanal
+// bereits vorhanden) auf 128px Bildhoehe - genug fuer eine scharfe
+// Darstellung bei ~56px CSS-Hoehe auch auf einem Retina-Bildschirm, ohne
+// die 500-600 KB grosse Ausgangsdatei ungekuerzt auszuliefern (503–602 KB
+// vorher, 15–17 KB nachher je Datei - dieselbe Groessenordnung wie
+// profilAufbauen()s Konterfei in rahmen.js, 215 KB auf 23 KB verkleinert).
+// NACH wawi/assets/ kopiert, nicht nach src/assets/ verlinkt: wawi/ wird
+// eigenstaendig ausgeliefert (siehe tools/wawi_veroeffentlichen.sh), ein
+// Verweis auf ../src/assets/ liefe im Betrieb ins Leere.
+const RADTYP_BILDER = {
+    CITY:  'assets/rad-city-mini.webp',
+    CARGO: 'assets/rad-cargo-mini.webp',
+    EBIKE: 'assets/rad-ebike-mini.webp'
+};
+
+// Eigenstaendiger Kopfbaustein NUR fuer Flotte, anders als Werkzeugleiste/
+// Filterleiste/Uebersichtsstreifen in rahmen.js: dort brauchten zwei oder
+// mehr Bereiche unabhaengig voneinander dasselbe Muster (siehe deren
+// Kopfkommentare dort). Hier ist es ausschliesslich die Flotte, die ihre
+// Raeder auch als Bild zeigen soll - deshalb lokal in dieser Datei, nicht
+// in rahmen.js.
+//
+// EIGENE Reihe UNTER der Status-Uebersicht (zeigeUebersicht() am
+// Aufrufort), nicht als weitere Kacheln IN ihr: die vier Status-Kacheln
+// (Einsatzbereit/Ausgeliehen/Wartung/Defekt) und die Radtyp-Kacheln
+// beantworten zwei verschiedene Fragen ("wie einsatzbereit ist die
+// Flotte" gegenueber "was fahren wir ueberhaupt") - sie in eine einzige,
+// gleichmaessig geteilte Zeile zu zwingen (#uebersichtsstreifen teilt die
+// Breite gleichmaessig unter allen Kindern, siehe .uebersichtskachel in
+// style.css) haette bis zu acht Kacheln in eine Zeile gequetscht, genau
+// die "sehr gedraengt"-Ruege, die diese Oberflaeche schon dreimal traf
+// (siehe Kopfkommentar von style.css).
+//
+// kennung: dieselbe Wettlaufabsicherung wie bei zeigeUebersicht() in
+// rahmen.js - flotteAufbauen() ruft diese Funktion zwar ohne
+// dazwischenliegendes await auf, aber ein zweiter, gleichlautender
+// Aufrufer waere ohne die Pruefung ein stiller Unterschied zwischen
+// beiden Bausteinen.
+function flotteTypkachelnZeigen(kennung, raeder, typen) {
+    if (!istAktuellerVorgang(kennung)) return;
+
+    let leiste = document.getElementById('flotte-typkacheln');
+    if (!leiste) {
+        leiste = document.createElement('div');
+        leiste.id = 'flotte-typkacheln';
+        leiste.className = 'flotte-typkacheln';
+    }
+    // insertBefore(..., listenKoerper()) statt eines eigenen Ankers -
+    // dieselbe Find-or-create-Machart wie uebersichtsstreifen()/
+    // filterleiste() in rahmen.js (siehe deren Kommentare): listenKoerper()
+    // legt den Tabellenkoerper bei Bedarf an, und jedes Element, das VOR
+    // ihm eingehaengt wird, bleibt an seinem Platz stehen, unabhaengig von
+    // der Aufrufreihenfolge der uebrigen Kopfbausteine.
+    document.getElementById('arbeitsliste').insertBefore(leiste, listenKoerper());
+    leiste.replaceChildren();
+
+    if (raeder.length === 0) { leiste.remove(); return; }
+
+    const gesamt = raeder.length;
+    for (const [code, name] of typen) {
+        const anzahl = raeder.filter((r) => r.typ_code === code).length;
+
+        const kachel = document.createElement('div');
+        kachel.className = 'flotte-typkachel';
+
+        const bildQuelle = RADTYP_BILDER[code];
+        if (bildQuelle) {
+            // NUR schmueckend: der Radtypname steht ohnehin gleich daneben
+            // als Text (Gestaltungsauftrag, woertlich: "ein Bild, das
+            // neben einer Beschriftung dasselbe wiederholt, ist fuer
+            // einen Screenreader Laerm") - deshalb alt="" UND aria-hidden,
+            // statt den Radtyp ein zweites Mal vorlesen zu lassen.
+            const bild = document.createElement('img');
+            bild.className = 'flotte-typkachel-bild';
+            bild.src = bildQuelle;
+            bild.alt = '';
+            bild.setAttribute('aria-hidden', 'true');
+            // "Ein fehlendes Bild darf die Kachel nicht zerreissen"
+            // (Auftrag, woertlich) - der Fall mit gaenzlich fehlendem
+            // Eintrag in RADTYP_BILDER ist bereits durch bildQuelle
+            // abgefangen (kein <img> erst gar nicht erzeugt); dieser
+            // 'error'-Fall haengt zusaetzlich ab, falls die Datei selbst
+            // einmal nicht erreichbar ist - das <img> raeumt sich dann
+            // selbst weg, statt als kaputtes Symbol stehenzubleiben.
+            bild.addEventListener('error', () => bild.remove());
+            kachel.append(bild);
+        }
+
+        const text = document.createElement('div');
+        text.className = 'flotte-typkachel-text';
+
+        const titel = document.createElement('div');
+        titel.className = 'flotte-typkachel-titel';
+        titel.textContent = name;
+        text.append(titel);
+
+        const wert = document.createElement('div');
+        wert.className = 'flotte-typkachel-wert';
+        wert.append(zahlSkaliert(String(anzahl)));
+        text.append(wert);
+
+        const hinweis = document.createElement('div');
+        hinweis.className = 'flotte-typkachel-hinweis';
+        const anteil = gesamt ? Math.round((anzahl / gesamt) * 100) : 0;
+        hinweis.textContent = `${anteil} % der Flotte`;
+        text.append(hinweis);
+
+        kachel.append(text);
+        leiste.append(kachel);
+    }
 }
 
 // Set.size === 0 heisst "Alle" (siehe Kommentar bei flotteFilterStatus

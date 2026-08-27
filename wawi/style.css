@@ -984,6 +984,71 @@ button {
   line-height: 1.4;
 }
 
+/* ===== Radtyp-Kacheln mit Produktbild (flotte.js, flotteTypkachelnAufbauen)
+   =====
+   Gestaltungsauftrag, wörtlich: "Bei Flotte vermisse ich Produktbilder ...
+   damit ich das Produkt/Flotte auch sehe." Eigene Reihe UNTER dem
+   Uebersichtsstreifen, keine weiteren Kacheln IN ihm - Begruendung siehe
+   Kopfkommentar von flotteTypkachelnAufbauen() in flotte.js. flex-wrap,
+   nicht die feste Gleichverteilung von .uebersichtsstreifen: drei
+   Radtyp-Kacheln mit Bild sollen auch bei schmalem Fenster untereinander
+   Platz finden statt sich auf eine unlesbare Restbreite zu quetschen. */
+.flotte-typkacheln {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.flotte-typkachel {
+  flex: 1 1 220px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border: 1px solid var(--linie);
+  background: var(--flaeche);
+}
+
+/* Feste Hoehe, Breite frei (object-fit: contain) - die drei Radtypen
+   haben unterschiedliche Seitenverhaeltnisse (Cargo-Lastenrad deutlich
+   breiter als City-/E-Bike), eine feste Breite haette das breitere Bild
+   entweder abgeschnitten oder die schmaleren unnoetig gestreckt. */
+.flotte-typkachel-bild {
+  flex: 0 0 auto;
+  height: 56px;
+  width: auto;
+  max-width: 110px;
+  object-fit: contain;
+}
+
+.flotte-typkachel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.flotte-typkachel-titel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-leise);
+}
+
+.flotte-typkachel-wert {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--marine);
+  font-variant-numeric: tabular-nums;
+}
+
+.flotte-typkachel-hinweis {
+  font-size: 11px;
+  color: var(--text-leise);
+}
+
 /* Wiederverwendbarer Farbton außerhalb der Tabelle - dieselbe Bedeutung
    wie td.warnung dort (siehe .arbeitstabelle td.warnung weiter unten),
    nur nicht an eine Tabellenzelle gebunden. */
@@ -1454,13 +1519,12 @@ button {
 
 /* Eigene, kompaktere Tabelle statt .arbeitstabelle: die ZEILEN selbst
    sind nicht anklickbar (kein Zeilen-Cursor, kein Hover-Umschlag auf der
-   ganzen <tr>) - dieselbe rechtsbuendige Zahlenspalte wie dort (.zahl,
-   .auffaellig), aber ohne die Klick-Semantik einer Arbeitsliste. NUR die
-   erste Spalte der Tagestabelle (das Datum, Gestaltungsauftrag Punkt 2b)
-   ist seit der Verweben-Aufgabe eine eigene, gezielt klickbare
-   Schaltflaeche - .monatsdrilldown-tag-knopf weiter unten setzt dafuer
-   die Zeigersemantik selbst, statt die ganze Zeile faelschlich anklickbar
-   wirken zu lassen. */
+   ganzen <tr>) - dieselbe rechtsbuendige Zahlenspalte wie dort (.zahl),
+   aber ohne die Klick-Semantik einer Arbeitsliste. Seit der Kalender-
+   Nachbesserung nur noch fuer die DRITTE Ebene im Einsatz (Raeder an
+   einem Tag, tagdrilldownEinfuegen() in auswertungen.js) - die zweite
+   Ebene (Tage eines Monats) ist jetzt .monatskalender weiter unten, kein
+   <table>-mit-Datumsspalte mehr. */
 .monatsdrilldown-tabelle {
   width: 100%;
   border-collapse: collapse;
@@ -1493,45 +1557,167 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-/* Nur Gewicht, keine Farbe: --rot misst 4.41:1 auf Weiß (siehe
-   Kommentar bei AUFFAELLIGKEITS_SCHWELLE in auswertungen.js) - unter der
-   hier verlangten 4.5:1-Untergrenze für Fließtext. Dieselbe Entscheidung
-   wie bei .arbeitstabelle td.auffaellig: Tufte, Ink nur wo sie etwas
-   bedeutet, nicht zwingend Farbe. Die Säule selbst darf --rot tragen
-   (3:1 reicht für Grafik, gemessen 4.41:1 liegt darüber), der Text in
-   dieser Tabellenzeile nicht.  */
-.monatsdrilldown-tabelle td.auffaellig {
-  font-weight: 700;
+/* ===== Monatskalender (monatsdrilldownEinfuegen() in auswertungen.js,
+   Gestaltungsauftrag: "wir bauen statt der Tagesliste eine
+   Kalendersicht") =====
+   Ersetzt die fruehere einspaltige Tagestabelle (siehe Git-Historie
+   dieses Abschnitts) - Wochentage als Spaltenkoepfe, Wochen als Zeilen,
+   weiterhin eine <table> (Auftrag: "ein Kalender ist eine Tabelle"). */
+.monatskalender {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+  margin-bottom: 12px;
 }
 
-/* Datum-Schaltflaeche der Tagestabelle (Gestaltungsauftrag Punkt 2b) -
-   sieht wie ein Link aus (Marine, Unterstreichung erst bei Hover/Fokus:
-   Tufte, Ink nur wo sie gebraucht wird), damit klar ist: NUR diese
-   Spalte fuehrt weiter, die Fahrten-Spalte daneben bleibt reiner Text.
-   text-align:left und width:100%, weil <button> sonst inline schrumpft
-   und die Klickflaeche kleiner waere als die ganze Zelle. */
-.monatsdrilldown-tag-knopf {
-  display: block;
-  width: 100%;
+.monatskalender caption {
   text-align: left;
-  padding: 0;
-  border: none;
+  font-size: 11px;
+  color: var(--text-leise);
+  margin-bottom: 6px;
+}
+
+.monatskalender thead th {
+  padding: 4px 2px 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-leise);
+  text-align: center;
+  font-weight: 400;
+  border-bottom: 1px solid var(--linie);
+}
+
+/* Gestaltungsauftrag, woertlich: "der Wochenrhythmus ist in diesen
+   Daten echt ... lass es sichtbar werden, ohne den Kalender zu bunt zu
+   machen" - eine leise Flaeche (--grund, derselbe helle Grundton wie der
+   Uebersichtsstreifen) NUR am Spaltenkopf markiert Samstag/Sonntag als
+   eigene Kategorie, ohne mit der Fahrten-Farbskala der einzelnen Kachel
+   zu konkurrieren (siehe .monatskalender-stufe-* weiter unten - zwei
+   unabhaengige Bedeutungen, zwei getrennte Stellen im Markup). */
+.monatskalender-wochenende {
+  background: var(--grund);
+}
+
+.monatskalender-zelle {
+  padding: 2px;
+  vertical-align: top;
+}
+
+/* "Kein Tag" (Rand vor dem 1. bzw. nach dem Letzten) MUSS anders
+   aussehen als "0 Fahrten" (Auftrag, ausdruecklich) - eine leere Flaeche
+   ohne Rahmen und ohne Kachel, statt einer umrandeten .monatskalender-
+   stufe-0 mit einer "0" darin. */
+.monatskalender-leer {
   background: transparent;
-  color: var(--marine);
+}
+
+/* Die Kachel selbst: Tag UND Fahrtenzahl als Text (Auftrag: "die Zahl
+   muss ablesbar bleiben"), die Stufenfarbe (.monatskalender-stufe-*
+   weiter unten) tritt als ZWEITE, zusaetzliche Kodierung hinzu. Ein
+   <button>, keine <div> - mit der Tastatur erreichbar, ohne eigenes
+   Tastatur-Handling (Auftrag: "sie muss mit der Tastatur erreichbar
+   sein"), genau wie der fruehere Datum-Knopf der Tagesliste.
+   filter statt einer zweiten festen Hover-Farbe je Stufe: brightness()
+   verdunkelt JEDE der fuenf Stufenfarben gleichermassen sichtbar, ohne
+   fuenf eigene Hover-Toene messen und pflegen zu muessen. */
+.monatskalender-tag-knopf {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 4px 2px;
+  border: 1px solid var(--linie);
   font: inherit;
   cursor: pointer;
 }
 
-.monatsdrilldown-tag-knopf:hover,
-.monatsdrilldown-tag-knopf:focus-visible {
-  text-decoration: underline;
+.monatskalender-tag-knopf:hover {
+  filter: brightness(0.94);
 }
 
-/* "man muss jederzeit sehen, wo man ist" (Auftrag) - derselbe Farbton
-   wie .arbeitstabelle tbody tr.ausgewaehlt, damit "diese Zeile ist gerade
-   aufgeklappt" ueberall in dieser Oberflaeche gleich aussieht. */
-.monatsdrilldown-tag-ausgewaehlt {
-  background: #eef1fb;
+.monatskalender-tag-nummer {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.monatskalender-tag-wert {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* FUENF STUFEN AUF DER MARINE-SKALA (--marine gemischt mit Weiss),
+   KONTRAST GEMESSEN (Auftrag: "Kontrast ... messen" gilt auch fuer eine
+   Farbskala) - jede Zeile traegt ihren eigenen Nachweis:
+     Stufe 0 (0 Fahrten):        weiss, dunkler Text   - 15.70:1
+     Stufe 1 (> 0-25 % Maximum): #8c95a8, dunkler Text -  5.22:1 Text,
+                                  Flaeche selbst 3.01:1 gegen Weiss
+     Stufe 2 (>25-50 % Maximum): #657089, weisser Text -  4.96:1
+     Stufe 3 (>50-75 % Maximum): #3d4b6b, weisser Text -  8.69:1
+     Stufe 4 (>75-100% Maximum): --marine, weisser Text - 17.29:1
+   Der Sprung von dunklem zu weissem Text zwischen Stufe 1 und 2 ist kein
+   Stilbruch, sondern der Punkt, an dem dunkler Text auf dieser Skala
+   selbst unter 4,5:1 faellt (bei Stufe 2 nur noch 3.16:1) - weisser Text
+   uebernimmt genau dort, wo er seinerseits ueber 4,5:1 liegt. */
+.monatskalender-stufe-0 { background: var(--flaeche); color: var(--text); }
+.monatskalender-stufe-1 { background: #8c95a8;         color: var(--text); }
+.monatskalender-stufe-2 { background: #657089;         color: #fff; }
+.monatskalender-stufe-3 { background: #3d4b6b;         color: #fff; }
+.monatskalender-stufe-4 { background: var(--marine);   color: #fff; }
+
+/* "man muss jederzeit sehen, wo man ist" (Auftrag) - ein Rahmen statt
+   einer Hintergrundfarbe wie beim frueheren .monatsdrilldown-tag-
+   ausgewaehlt: die Flaeche der Kachel traegt hier schon eine Bedeutung
+   (die Fahrtenstufe), eine ueberschreibende Auswahlfarbe wuerde genau
+   diese Bedeutung fuer die ausgewaehlte Kachel verdecken. HALO-TECHNIK
+   statt einer einzelnen Rahmenfarbe: ein 2px weisser Ring direkt an der
+   Kante, dahinter ein 4px marinefarbener - eine einzelne Farbe (egal
+   welche) verschwoemme auf mindestens einer der fuenf Stufen mit deren
+   eigener Flaeche (Marine auf Stufe 4 waere unsichtbar, Weiss auf Stufe
+   0 ebenso). Gemessen: auf jeder der fuenf Stufen erreicht MINDESTENS
+   einer der beiden Ringe die geforderten 3:1 fuer Grafik/Bedienelemente
+   (Stufe 0: Marine-Ring 17.29:1 - Stufe 1: Weiss 3.01:1, Marine 5.75:1 -
+   Stufe 2: Weiss 4.96:1, Marine 3.48:1 - Stufe 3: Weiss 8.69:1 - Stufe 4:
+   Weiss 17.29:1). */
+.monatskalender-tag-ausgewaehlt {
+  box-shadow: inset 0 0 0 2px var(--flaeche), inset 0 0 0 4px var(--marine);
+}
+
+.monatskalender-legende {
+  font-size: 11px;
+  color: var(--text-leise);
+}
+
+.monatskalender-legende-satz {
+  margin: 0 0 8px;
+}
+
+.monatskalender-legende-skala {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.monatskalender-legende-eintrag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Rahmen in --skala-rahmen (3.64:1 auf Weiss, dieselbe schon gemessene
+   Flaeche wie beim Zellbalken-Hintergrund) statt --linie: die Stufe-0-
+   Marke ist selbst weiss wie ihr Hintergrund und braeuchte ohne einen
+   sichtbaren Rahmen ueberhaupt keine erkennbare Kontur. */
+.monatskalender-legende-marke {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border: 1px solid var(--skala-rahmen);
 }
 
 /* ===== Dritte Ebene: Raeder je Tag (Gestaltungsauftrag Punkt 2b) ===== */

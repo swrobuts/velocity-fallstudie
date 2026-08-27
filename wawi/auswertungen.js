@@ -203,6 +203,17 @@ const MONATSNAMEN_VOLL = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
 // keine ISO-Zeitzonenkonvertierung im Spiel, getDay() liefert exakt den
 // Wochentag des gemeinten Kalendertags.
 const WOCHENTAGE_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+// Kalenderkopf beginnt am Montag (deutsche Konvention, ISO 8601) - anders
+// als WOCHENTAGE_KURZ oben, das bei Index 0 = Sonntag direkt JS' eigene
+// getDay()-Reihenfolge übernimmt. Aus DEMSELBEN Array neu sortiert, nicht
+// ein zweites Mal von Hand eingetragen: zwei Wortlisten mit denselben
+// sieben Namen in unterschiedlicher Reihenfolge liefen sonst irgendwann
+// auseinander, sobald nur eine von beiden geändert wird. Verwendet von
+// monatsdrilldownEinfuegen() weiter unten für die Spaltenköpfe des
+// Monatskalenders.
+const WOCHENTAGE_MO_ZUERST = [1, 2, 3, 4, 5, 6, 0].map((i) => WOCHENTAGE_KURZ[i]);
+
 function tagFormat(tag) {
     const [jahr, monat, tagNummer] = tag.split('-').map(Number);
     const wochentag = WOCHENTAGE_KURZ[new Date(jahr, monat - 1, tagNummer).getDay()];
@@ -535,87 +546,195 @@ async function monatsdrilldownEinfuegen(monat) {
     );
     abschnitt.append(kacheln);
 
-    // ===== Tabelle: dieselben Zahlen, auch ohne Augen erreichbar =====
-    // "Eine Grafik, die Information trägt, darf für einen Screenreader
-    // nicht stumm sein" (Auftrag) - die Grafik selbst trägt ihre
-    // Zusammenfassung im aria-label, jeden einzelnen Tageswert liest
-    // diese Tabelle vor, kein <span class="nur-vorlesen">-Versteck: in
-    // dieser Warenwirtschaft ist Zahlendichte erwünscht (siehe Dateikopf
-    // von style.css), die Tabelle nützt deshalb auch sehenden Blicken,
-    // die den exakten Wert eines Tages statt nur die Säulenhöhe wollen.
-    const tabelle = document.createElement('table');
-    tabelle.className = 'monatsdrilldown-tabelle';
-    const beschriftung = document.createElement('caption');
-    beschriftung.textContent = `Fahrten je Tag, ${monatFormat(monat)}`;
-    tabelle.append(beschriftung);
+    // ===== Kalender statt Tagesliste (Gestaltungsauftrag, wörtlich: "wir
+    // bauen statt der Tagesliste eine Kalendersicht und wenn ich auf eine
+    // Kachel im Kalender klicke kommen unten die Einzeldaten") =====
+    //
+    // EIN KALENDER IST EINE TABELLE (Auftrag, als Antwort auf den selbst
+    // benannten Fallstrick "eine Tabelle ist für einen Screenreader gut
+    // lesbar, ein Kalender aus <div>-Kacheln wäre es nicht"): Wochentage
+    // als Spaltenköpfe (<th scope="col">), Wochen als Zeilen - dieselbe
+    // <table>/<caption>/<th>-Grundlage wie die frühere Tagesliste, nur zu
+    // sieben Spalten umgruppiert statt einer einzigen Datumsspalte. Die
+    // Barrierefreiheit entsteht damit aus der Struktur selbst, nicht aus
+    // einer nachträglichen ARIA-Reparatur.
+    //
+    // ZAHL UND FARBE, NICHT NUR FARBE (Auftrag, wörtlich: "ein Kalender,
+    // der Werte nur über Farbintensität zeigt, zwingt zum Schätzen"):
+    // jede Kachel zeigt Tag UND Fahrtenzahl als Text (siehe
+    // .monatskalender-tag-nummer/-wert weiter unten), die Färbung TRITT
+    // HINZU, ersetzt den Text nirgends.
+    //
+    // FÜNF STUFEN, RELATIV ZUM MONATSHÖCHSTWERT - derselbe Bezug wie die
+    // Säulengrafik direkt darüber, die ebenfalls auf `maximum` skaliert
+    // ist: 0 Fahrten bleibt ungefärbt (Weiß), eine gefärbte Nullfläche
+    // wäre eine Behauptung über nichts. Die vier ÜBRIGEN Stufen sind
+    // ceil(wert / maximum * 4) - vier Anteile von je 25 Prozentpunkten
+    // des Höchstwerts (>0-25 %, >25-50 %, >50-75 %, >75-100 %). Dieselben
+    // vier Grenzen benennt die Legende weiter unten wortgleich als
+    // Prozentanteile, keine zweite, unabhängige Ableitung - und ein
+    // PROZENTANTEIL statt fester Fahrtenzahlen, weil die vier Stufen
+    // selbst für jeden Monat unverändert gelten, ein absoluter Grenzwert
+    // aber nur für DIESEN einen Monat richtig wäre.
+    //
+    // FARBEN GEMESSEN (Auftrag: "Kontrast ... messen" gilt auch für eine
+    // Farbskala, nicht nur für Fließtext): vier Töne auf der
+    // Marine-Skala (--marine gemischt mit Weiß), keine vier neuen,
+    // unvermessenen Farben - siehe .monatskalender-stufe-* in style.css
+    // für die genauen Werte und denselben Kontrast-Nachweis ein zweites
+    // Mal am Ort der Definition.
+    const stufeVonWert = (wert) => (wert === 0 ? 0 : Math.min(4, Math.ceil((wert / maximum) * 4)));
 
-    const thead = document.createElement('thead');
-    const kopfzeile = document.createElement('tr');
-    for (const spaltentitel of ['Datum', 'Fahrten']) {
+    const kalender = document.createElement('table');
+    kalender.className = 'monatskalender';
+    const kalenderBeschriftung = document.createElement('caption');
+    kalenderBeschriftung.textContent = `Fahrten je Tag, ${monatFormat(monat)}`;
+    kalender.append(kalenderBeschriftung);
+
+    const kalenderKopf = document.createElement('thead');
+    const kalenderKopfzeile = document.createElement('tr');
+    WOCHENTAGE_MO_ZUERST.forEach((name, i) => {
         const th = document.createElement('th');
-        th.textContent = spaltentitel;
         th.scope = 'col';
-        kopfzeile.append(th);
-    }
-    thead.append(kopfzeile);
-    tabelle.append(thead);
+        th.textContent = name;
+        // i 5/6 = Samstag/Sonntag (Montag zuerst, siehe WOCHENTAGE_MO_ZUERST
+        // oben) - Gestaltungsauftrag, wörtlich: "der Wochenrhythmus ist in
+        // diesen Daten echt ... lass es sichtbar werden, ohne den Kalender
+        // zu bunt zu machen". Eine eigene, LEISE Kennzeichnung der
+        // Wochenend-SPALTENKÖPFE (statt einer weiteren Farbe an der
+        // einzelnen Kachel, die schon die Fahrtenzahl trägt) macht den
+        // Rhythmus auf einen Blick sichtbar, ohne die Werteskala mit einer
+        // zweiten Bedeutung zu überladen.
+        if (i >= 5) th.className = 'monatskalender-wochenende';
+        kalenderKopfzeile.append(th);
+    });
+    kalenderKopf.append(kalenderKopfzeile);
+    kalender.append(kalenderKopf);
 
-    // Jede eigene Öffnung dieses Monats bekommt ihre eigene, frische
-    // Tabelle (zeigeMaske() leert #detailmaske bei jedem Zeilenwechsel,
-    // siehe Kopfkommentar dieser Funktion) - kein Tag ist deshalb beim
+    // Montag-Index des 1. des Monats (0 = Montag ... 6 = Sonntag) - aus
+    // denselben lokalen Datumsanteilen gebaut wie tagFormat() oben, aus
+    // demselben Grund: kein ISO-String, keine Zeitzonenverschiebung durch
+    // die Zeitzone des Browsers. new Date(...).getDay() liefert 0 für
+    // Sonntag; (getDay() + 6) % 7 dreht das auf einen Montag-zuerst-Index.
+    const ersterWochentag = new Date(Number(jahr), monatsnummer - 1, 1).getDay();
+    const fuehrendeLeerfelder = (ersterWochentag + 6) % 7;
+    const wochenAnzahl = Math.ceil((fuehrendeLeerfelder + tageImMonat) / 7);
+
+    const kalenderKoerper = document.createElement('tbody');
+    // Jede eigene Öffnung dieses Monats bekommt ihren eigenen, frischen
+    // Kalender (zeigeMaske() leert #detailmaske bei jedem Zeilenwechsel,
+    // siehe Kopfkommentar dieser Funktion) - keine Kachel ist deshalb beim
     // Aufbau bereits ausgewählt, unabhängig davon, was in einem zuvor
     // geöffneten Monat markiert war.
-    let tagZeileAusgewaehlt = null;
+    let tagKnopfAusgewaehlt = null;
 
-    const tbody = document.createElement('tbody');
-    tage.forEach((tag, i) => {
-        const tr = document.createElement('tr');
-        const kopf = document.createElement('th');
-        kopf.scope = 'row';
+    for (let woche = 0; woche < wochenAnzahl; woche++) {
+        const zeile = document.createElement('tr');
+        for (let spalte = 0; spalte < 7; spalte++) {
+            const feldIndex = woche * 7 + spalte;
+            const tagNummer = feldIndex - fuehrendeLeerfelder + 1;
+            const td = document.createElement('td');
 
-        // Gestaltungsauftrag Punkt 2b: "ein Klick auf das Datum würde
-        // die weiteren Infos offenlegen" - deshalb ein <button> IM <th>
-        // statt reinen Texts, als einzige anklickbare Spalte dieser
-        // Tabelle (siehe angepasster Kommentar bei .monatsdrilldown-tabelle
-        // in style.css). tagIso ist der PostgREST-Filterschlüssel
-        // (tag=eq.JJJJ-MM-TT) von v_wawi_fahrten_je_tag_rad, tagFormat()
-        // liefert die lesbare Form MIT Wochentag (Punkt 2a).
-        //
-        // Aus jahr/monatsnummer gebaut (beide oben schon aus monat
-        // geparst), NICHT aus monat selbst: monat traegt hier bereits
-        // einen Tagesanteil ("2025-09-01", date_trunc('month', ...)::date
-        // aus der Sicht) - ein zweites "-04" einfach angehaengt haette
-        // "2025-09-01-04" ergeben, und tagFormat()s Destrukturierung
-        // (nur die ersten drei Teile) haette daraus fuer JEDE Zeile
-        // denselben ersten Tag gelesen, statt fuer jede Zeile ihren
-        // eigenen. Im Browser nachgestellt und gefunden: alle 30 Tage
-        // einer Monatstabelle zeigten "Mo, 1. Sep 2025".
-        const tagIso = `${jahr}-${String(monatsnummer).padStart(2, '0')}-${String(tag).padStart(2, '0')}`;
-        const knopf = document.createElement('button');
-        knopf.type = 'button';
-        knopf.className = 'monatsdrilldown-tag-knopf';
-        knopf.textContent = tagFormat(tagIso);
-        knopf.addEventListener('click', () => {
-            // Sofortige Markierung, ohne auf die Antwort zu warten -
-            // dieselbe Reihenfolge wie zeileWaehlen() in rahmen.js
-            // (Auswahl zuerst sichtbar, Inhalt folgt nach): "wo bin ich"
-            // (Auftrag) muss beim Klick selbst schon stimmen, nicht erst
-            // nach einer Netzwerkantwort.
-            tagZeileAusgewaehlt?.classList.remove('monatsdrilldown-tag-ausgewaehlt');
-            tr.classList.add('monatsdrilldown-tag-ausgewaehlt');
-            tagZeileAusgewaehlt = tr;
-            tagdrilldownEinfuegen(tagIso, wurzel, knopf);
-        });
-        kopf.append(knopf);
+            if (tagNummer < 1 || tagNummer > tageImMonat) {
+                // "Kein Tag" MUSS anders aussehen als "0 Fahrten" (Auftrag,
+                // ausdrücklich) - eine leere, randlose Zelle statt einer
+                // gefärbten oder umrandeten Kachel mit einer "0" darin
+                // (siehe .monatskalender-leer in style.css). aria-hidden:
+                // nichts hier vorzulesen - ein Screenreader soll eine
+                // Wochenzeile am Monatsrand nicht mit sieben Zellen
+                // ankündigen und einen Teil davon dann stumm lassen.
+                td.className = 'monatskalender-leer';
+                td.setAttribute('aria-hidden', 'true');
+                zeile.append(td);
+                continue;
+            }
 
-        const wertZelle = document.createElement('td');
-        wertZelle.className = zahlKlasse(werte[i] === maximum ? 'auffaellig' : '');
-        wertZelle.textContent = zahlFormat(werte[i]);
-        tr.append(kopf, wertZelle);
-        tbody.append(tr);
+            const i = tagNummer - 1;   // Index in tage[]/werte[] - siehe deren Aufbau weiter oben
+            const wert = werte[i];
+            // Aus jahr/monatsnummer gebaut (beide oben schon aus monat
+            // geparst), NICHT aus monat selbst: monat trägt hier bereits
+            // einen Tagesanteil ("2025-09-01", date_trunc('month', ...)::date
+            // aus der Sicht) - ein zweites "-04" einfach angehängt hätte
+            // "2025-09-01-04" ergeben. Derselbe Fallstrick, den die
+            // frühere Tagesliste hier schon vermied.
+            const tagIso = `${jahr}-${String(monatsnummer).padStart(2, '0')}-${String(tagNummer).padStart(2, '0')}`;
+            const stufe = stufeVonWert(wert);
+
+            td.className = 'monatskalender-zelle';
+            const knopf = document.createElement('button');
+            knopf.type = 'button';
+            knopf.className = `monatskalender-tag-knopf monatskalender-stufe-${stufe}`;
+            // Zugänglicher Name trägt DATUM UND WERT (Auftrag,
+            // ausdrücklich) - überschreibt per aria-label den Text, den
+            // ein Screenreader sonst aus den beiden <span> darunter
+            // zusammensetzen würde ("4" gefolgt von "12" ergäbe "412",
+            // nicht "4. Fahrten: 12"). tagFormat() liefert dieselbe Form
+            // MIT Wochentag wie zuvor die Tagesliste (Gestaltungsauftrag
+            // Punkt 2a, unverändert gültig).
+            knopf.setAttribute('aria-label', `${tagFormat(tagIso)}: ${zahlFormat(wert)} ${fahrtenWort(wert)}`);
+
+            const tagSpanne = document.createElement('span');
+            tagSpanne.className = 'monatskalender-tag-nummer';
+            tagSpanne.textContent = String(tagNummer);
+            const wertSpanne = document.createElement('span');
+            wertSpanne.className = 'monatskalender-tag-wert';
+            wertSpanne.textContent = zahlFormat(wert);
+            knopf.append(tagSpanne, wertSpanne);
+
+            knopf.addEventListener('click', () => {
+                // Sofortige Markierung, ohne auf die Antwort zu warten -
+                // dieselbe Reihenfolge wie zeileWaehlen() in rahmen.js
+                // (Auswahl zuerst sichtbar, Inhalt folgt nach): "wo bin
+                // ich" (Auftrag) muss beim Klick selbst schon stimmen,
+                // nicht erst nach einer Netzwerkantwort.
+                tagKnopfAusgewaehlt?.classList.remove('monatskalender-tag-ausgewaehlt');
+                knopf.classList.add('monatskalender-tag-ausgewaehlt');
+                tagKnopfAusgewaehlt = knopf;
+                tagdrilldownEinfuegen(tagIso, wurzel, knopf);
+            });
+
+            td.append(knopf);
+            zeile.append(td);
+        }
+        kalenderKoerper.append(zeile);
+    }
+    kalender.append(kalenderKoerper);
+    abschnitt.append(kalender);
+
+    // ===== Legende (Gestaltungsauftrag, wörtlich: "eine Einfärbung ohne
+    // Skala ist eine Behauptung") - dieselben vier Grenzen wie
+    // stufeVonWert() oben, als Prozentanteile vom Monatshöchstwert benannt
+    // statt fester Fahrtenzahlen (Begründung siehe dort). =====
+    const legende = document.createElement('div');
+    legende.className = 'monatskalender-legende';
+    const legendeSatz = document.createElement('p');
+    legendeSatz.className = 'monatskalender-legende-satz';
+    legendeSatz.textContent = `Farbe = Fahrten dieses Tages im Verhältnis zum verkehrsreichsten Tag ` +
+        `des Monats (${zahlFormat(maximum)} ${fahrtenWort(maximum)}).`;
+    legende.append(legendeSatz);
+
+    const legendeSkala = document.createElement('div');
+    legendeSkala.className = 'monatskalender-legende-skala';
+    ['0', '> 0–25 %', '> 25–50 %', '> 50–75 %', '> 75–100 %'].forEach((text, stufe) => {
+        const eintrag = document.createElement('span');
+        eintrag.className = 'monatskalender-legende-eintrag';
+
+        const marke = document.createElement('span');
+        marke.className = `monatskalender-legende-marke monatskalender-stufe-${stufe}`;
+        // Die Marke selbst ist reine Illustration der Beschriftung daneben
+        // (derselbe Grundsatz wie bei den Bereichs-Icons in rahmen.js) -
+        // die Bedeutung jeder Stufe steht als Text im nächsten <span>,
+        // nicht nur in der Farbe.
+        marke.setAttribute('aria-hidden', 'true');
+
+        const beschriftungSpanne = document.createElement('span');
+        beschriftungSpanne.textContent = text;
+
+        eintrag.append(marke, beschriftungSpanne);
+        legendeSkala.append(eintrag);
     });
-    tabelle.append(tbody);
-    abschnitt.append(tabelle);
+    legende.append(legendeSkala);
+    abschnitt.append(legende);
 
     wurzel.append(abschnitt);
 }
@@ -680,8 +799,8 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
     zurueckKnopf.className = 'knopf-neben tagdrilldown-zurueck';
     zurueckKnopf.textContent = 'Zurück zur Tagesübersicht';
     zurueckKnopf.addEventListener('click', () => {
-        document.querySelector('.monatsdrilldown-tag-ausgewaehlt')
-            ?.classList.remove('monatsdrilldown-tag-ausgewaehlt');
+        document.querySelector('.monatskalender-tag-ausgewaehlt')
+            ?.classList.remove('monatskalender-tag-ausgewaehlt');
         abschnitt.remove();
         herkunftsKnopf.focus();   // Fokus zurueck zur Ursprungszeile, dieselbe Idee wie bei Punkt 1
     });
