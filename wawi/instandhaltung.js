@@ -107,208 +107,214 @@ async function instandhaltungAufbauen() {
         await instandhaltungAufbauen();
     });
 
-    // Bereichsweite Kennzahlen (Punkt 1 des Gestaltungsauftrags) -
-    // UNABHAENGIG vom aktiven Unterreiter (beide Listen darunter zeigen
-    // nur offen/in_arbeit) und unabhaengig von den Filtern unten:
-    // "7 Schadensmeldungen, 3 Wartungsauftraege" ist die Gesamtzahl ueber
-    // ALLE Bearbeitungsstaende, nicht nur die aktuell offenen fuenf bzw.
-    // eine. zaehleZeilen() (daten.js) liefert das, ohne dafuer die
-    // Zeilen selbst zu laden - bei dieser Groessenordnung waere ein
-    // zweiter voller Request vertretbar gewesen, aber ein Zaehl-Request
-    // ist die ehrlichere Wahl: er behauptet nicht, Zeilen geladen zu
-    // haben, die niemand ansieht.
-    // GESTALTUNGSAUFTRAG PUNKT 4, woertlich: "Bei Instandhaltung hätte ich
-    // auch gern die schönen Bilder der Räder wie bei Flotte, dazu mehr
-    // KPIs im Header." Drei weitere, ebenso billige Anfragen dazu:
-    // gesamtAuftraegeLaufend (eine zweite Zaehl-Anfrage, derselbe Baustein
-    // wie die drei bestehenden), schaedenTypCodes (eine schlanke
-    // Ladeliste MIT genau einer Spalte, ueber ALLE Schadensmeldungen,
-    // nicht nur die aktuell offenen fuenf - "welcher Typ wie oft in der
-    // Werkstatt war" ist eine Frage an den GESAMTEN Bestand, dieselbe
-    // Ueberlegung wie bei gesamtSchaeden/gesamtAuftraege oben) und
-    // radtypNamen (v_wawi_schaden traegt nur typ_code, keinen
-    // ausgeschriebenen Namen - siehe deren Spaltenliste - v_wawi_modell
-    // dagegen schon; neun Modellzeilen statt einer vierten, eigens
-    // angelegten Uebersetzungstabelle nur fuer drei Radtypnamen, die
-    // ohnehin schon woanders in der Datenbank stehen).
-    const [gesamtSchaeden, gesamtAuftraege, gesamtFahruntauglichOffen, gesamtAuftraegeLaufend, schaedenTypCodes, modelleFuerTypnamen] = await Promise.all([
-        zaehleZeilen('v_wawi_schaden'),
-        zaehleZeilen('v_wawi_auftrag'),
-        zaehleZeilen('v_wawi_schaden',
-            (q) => q.eq('schwere', 'fahruntauglich').in('status', ['offen', 'in_arbeit'])),
-        zaehleZeilen('v_wawi_auftrag', (q) => q.eq('status', 'in_arbeit')),
-        ladeListe('v_wawi_schaden', 'typ_code'),
+    // ALLE Schadensmeldungen und ALLE Wartungsauftraege, unabhaengig vom
+    // aktiven Unterreiter und unabhaengig von den Filtern unten: die
+    // Kopftafel zeigt jeden der sieben Faelle EINZELN (siehe
+    // instandhaltungKopftafel() weiter unten), also auch die zwei bereits
+    // behobenen, die in keiner der beiden Listen darunter mehr
+    // auftauchen (beide filtern auf offen/in_arbeit).
+    //
+    // ZWEI VOLLE LADEANFRAGEN STATT VIER ZAEHL-ANFRAGEN, anders als
+    // bisher: solange der Kopf nur vier Zahlen zeigte, war zaehleZeilen()
+    // die ehrlichere Wahl (es behauptete nicht, Zeilen geladen zu haben,
+    // die niemand ansieht). Jetzt sieht sie jemand - jede einzelne. Und
+    // sieben plus drei Zeilen sind kein Preis: es sind weniger Daten als
+    // eine einzige der frueheren Zaehlanfragen an Netzverkehr kostete.
+    const [alleSchaeden, alleAuftraege, modelleFuerTypnamen] = await Promise.all([
+        ladeListe('v_wawi_schaden',
+            'schadensmeldung_id, rahmennummer, typ_code, gemeldet_am, kategorie, ' +
+            'schwere, status, auftraege',
+            (q) => q.order('gemeldet_am')),
+        ladeListe('v_wawi_auftrag',
+            'wartungsauftrag_id, schadensmeldung_id, status, arbeitszeit_minuten'),
         ladeListe('v_wawi_modell', 'typ_code, typ')
     ]);
-    zeigeUebersicht(vorgang, instandhaltungUebersicht(gesamtSchaeden, gesamtAuftraege, gesamtFahruntauglichOffen, gesamtAuftraegeLaufend));
-    instandhaltungTypkachelnZeigen(vorgang, schaedenTypCodes, modelleFuerTypnamen);
+    zeigeKopftafel(vorgang, instandhaltungKopftafel(
+        alleSchaeden, alleAuftraege,
+        // v_wawi_schaden traegt nur typ_code, keinen ausgeschriebenen
+        // Namen (siehe deren Spaltenliste) - v_wawi_modell dagegen schon.
+        // Neun Modellzeilen statt einer eigens angelegten
+        // Uebersetzungstabelle nur fuer drei Radtypnamen, die ohnehin
+        // schon in der Datenbank stehen.
+        new Map(modelleFuerTypnamen.map((m) => [m.typ_code, m.typ]))));
 
     if (unterbereich === 'schaeden') await schaedenZeigen(vorgang);
     else                             await auftraegeZeigen(vorgang);
 }
 
-// ===== Bilder je Radtyp (Gestaltungsauftrag Punkt 4) =====
+// ===== Kopftafel der Instandhaltung =====
 //
-// "Bei Instandhaltung hätte ich auch gern die schönen Bilder der Räder
-// wie bei Flotte" - woertlich der Auftrag, UND "die Bilder tragen hier
-// ohnehin: sie zeigen, welcher Typ wie oft in der Werkstatt ist" (Bericht-
-// Vorgabe). Dieselben drei Bilder/derselbe Baustein wie
-// flotteTypkachelnZeigen() in flotte.js (RADTYP_BILDER dort, hier nur
-// gelesen - flotte.js laedt in index.html VOR instandhaltung.js, siehe
-// dortiger Kommentar zum gemeinsamen, ungemodulten Namensraum), aber mit
-// einer ANDEREN Zaehlgroesse: nicht "wie viele Raeder dieses Typs gibt es
-// in der Flotte", sondern "wie viele Schadensmeldungen betreffen diesen
-// Typ, insgesamt". GESTALTUNGSAUFTRAG PUNKT 1 (gemeinsame Form): dieselbe
-// Bauart wie in flotte.js - drei Bild-Kacheln in einer eigenen Reihe unter
-// dem Uebersichtsstreifen, dieselbe CSS-Klasse (.flotte-typkachel* deckt
-// beide Bereiche ab, siehe style.css) statt einer zweiten, aehnlichen
-// Bauart nur fuer Instandhaltung.
+// HIER IST DIE ZEILE DER FALL SELBST - und das ist keine Ausnahme vom
+// Muster, sondern seine Regel: "die Zeile ist die feinste Gliederung,
+// die noch in den Kopf passt" (siehe zeigeKopftafel() in rahmen.js).
+// Bei 275 Raedern sind das neun Modelle, bei 1014 Kunden fuenf
+// Tarifgruppen - bei SIEBEN Schadensmeldungen sind es die sieben
+// Meldungen. Eine Gliederung waere hier nicht feiner als die Sache
+// selbst, sondern groeber.
 //
-// ALLE DREI TYPEN IMMER GEZEIGT, auch mit 0 Meldungen (anders als
-// flotteTypkachelnZeigen(), das nur tatsaechlich vorkommende Typen
-// zeigt): "0 von 7" ist hier selbst die Aussage (City-Bikes sind die
-// EINZIGEN Raeder mit Schadensmeldungen im heutigen Bestand, siehe
-// Bericht) - sie wegzulassen, weil kein einziger Cargo- oder E-Bike-
-// Schaden vorliegt, verschwiege genau den Befund, den die Bilder zeigen
-// sollen.
-function instandhaltungTypkachelnZeigen(kennung, schaedenTypCodes, modelleFuerTypnamen) {
-    if (!istAktuellerVorgang(kennung)) return;
+// KEINE KENNZAHLEN, UND ZWAR AUSDRUECKLICH (Auftrag, woertlich: "Bei
+// dieser Menge sind Kennzahlen schnell albern"). Die sieben Meldungen
+// wurden alle am selben Tag erfasst; jede Zeitkennzahl ("mittlere
+// Bearbeitungsdauer", "Meldungen je Woche", "Quote je Radtyp") waere
+// eine Statistik ueber eine Stichprobe von sieben, von denen zwei
+// erledigt sind - sie spraenge beim naechsten erledigten Auftrag um
+// zweistellige Prozentwerte und behauptete dabei eine Genauigkeit, die
+// die Daten nicht hergeben. Deshalb hat diese Tafel als einzige der
+// fuenf KEINE Abweichungsspalte: es gibt keinen Bezugswert, gegen den
+// ehrlich zu messen waere. Die Fussnote sagt das, statt die Luecke zu
+// verschweigen oder mit einem Platzhalter zu fuellen.
+//
+// WAS DIE TAFEL DAFUER ZEIGT, UND DIE LISTE DARUNTER NICHT KANN: sie
+// verbindet DREI Quellen in einer Zeile - die Meldung (v_wawi_schaden),
+// ihren Wartungsauftrag (v_wawi_auftrag) und dessen erfasste Arbeitszeit.
+// Die beiden Unterreiter darunter zeigen ENTWEDER Meldungen ODER
+// Auftraege, nie beides nebeneinander; welcher Schaden ueberhaupt schon
+// einen Auftrag hat und wie viel daran gearbeitet wurde, steht in keiner
+// der beiden Listen.
+//
+// DIE BILDER (Auftrag, woertlich: "hätte ich auch gern die schönen
+// Bilder der Räder wie bei Flotte") stehen jetzt als EIN Bild in der
+// Tafelbeschriftung statt als drei Kacheln darunter - und dieses eine
+// Bild TRAEGT den Befund: alle sieben Meldungen betreffen City-Bikes.
+// Drei Kacheln, von denen zwei "0" zeigen, sagten dasselbe mit dreimal
+// so viel Flaeche. Sind mehrere Radtypen betroffen, entfaellt das Bild
+// (siehe unten) - dann waere ein einzelnes Bild schlicht falsch.
+function instandhaltungKopftafel(schaeden, auftraege, radtypNamen) {
+    if (!schaeden || schaeden.length === 0) return null;
 
-    let leiste = document.getElementById('instandhaltung-typkacheln');
-    if (!leiste) {
-        leiste = document.createElement('div');
-        leiste.id = 'instandhaltung-typkacheln';
-        leiste.className = 'flotte-typkacheln';
+    // Auftrag je Meldung. Eine Meldung KANN mehrere Auftraege haben
+    // (v_wawi_schaden.auftraege zaehlt sie) - im heutigen Bestand hat
+    // keine mehr als einen. Die Arbeitszeit wird deshalb SUMMIERT, nicht
+    // "der erste Auftrag gewinnt": eine zweite Reparatur am selben
+    // Schaden ist zusaetzliche Arbeit, kein Ersatz fuer die erste.
+    const arbeitJeMeldung = new Map();
+    for (const auftrag of auftraege || []) {
+        if (auftrag.schadensmeldung_id == null) continue;
+        const bisher = arbeitJeMeldung.get(auftrag.schadensmeldung_id) || { minuten: 0, auftraege: 0 };
+        bisher.minuten += Number(auftrag.arbeitszeit_minuten) || 0;
+        bisher.auftraege += 1;
+        arbeitJeMeldung.set(auftrag.schadensmeldung_id, bisher);
     }
-    // insertBefore(..., listenKoerper()) statt reiterleiste(): dieselbe
-    // Find-or-create-Machart wie flotteTypkachelnZeigen() in flotte.js
-    // (siehe dortiger Kommentar) - listenKoerper() legt den Tabellenkoerper
-    // bei Bedarf an, und ALLES, was VOR ihm eingehaengt wird, bleibt an
-    // seinem Platz stehen. instandhaltungTypkachelnZeigen() wird NACH
-    // zeigeUebersicht() aufgerufen (siehe instandhaltungAufbauen()), das
-    // seinerseits denselben Anker benutzt - die Reihenfolge der Aufrufe
-    // entscheidet damit zuverlaessig ueber die Reihenfolge im DOM
-    // (Uebersicht zuerst aufgebaut, dann diese Reihe: Uebersicht steht
-    // oben, Bilder darunter, Tabelle zuunterst).
-    document.getElementById('arbeitsliste').insertBefore(leiste, listenKoerper());
-    leiste.replaceChildren();
 
-    const gesamt = schaedenTypCodes.length;
-    if (gesamt === 0) { leiste.remove(); return; }
+    const zeilen = [...schaeden].sort((a, b) => {
+        // Schwerster Schaden zuoberst, bei gleicher Schwere der aelteste
+        // zuerst - die Reihenfolge, in der eine Werkstatt sie abarbeiten
+        // wuerde, nicht die der Datenbankschluessel.
+        const schwere = (INSTANDHALTUNG_SCHWERE_STUFE[b.schwere] || 0) - (INSTANDHALTUNG_SCHWERE_STUFE[a.schwere] || 0);
+        if (schwere !== 0) return schwere;
+        return String(a.gemeldet_am).localeCompare(String(b.gemeldet_am));
+    }).map((schaden) => ({
+        ...schaden,
+        minuten: (arbeitJeMeldung.get(schaden.schadensmeldung_id) || { minuten: 0 }).minuten,
+        hatAuftrag: arbeitJeMeldung.has(schaden.schadensmeldung_id)
+    }));
 
-    // Namen aus modelleFuerTypnamen gewonnen (v_wawi_modell traegt sowohl
-    // typ_code als auch die ausgeschriebene Bezeichnung typ), NICHT aus
-    // schaedenTypCodes selbst (das kennt nur den Code, siehe v_wawi_schaden).
-    // ALLE bekannten Typen in derselben alphabetischen Reihenfolge wie
-    // flotteFilterOptionen() in flotte.js (dort: .sort(([a],[b]) =>
-    // a.localeCompare(b)) ueber typ_code) - dieselbe Sortierung an zwei
-    // Stellen, damit "City-Bike, Cargo-Bike, E-Bike" nicht in Flotte anders
-    // herum steht als in Instandhaltung.
-    const typNamen = new Map(modelleFuerTypnamen.map((m) => [m.typ_code, m.typ]));
-    const alleTypen = [...typNamen.keys()].sort((a, b) => a.localeCompare(b));
+    const raeder = new Set(schaeden.map((s) => s.rahmennummer));
+    const typCodes = [...new Set(schaeden.map((s) => s.typ_code).filter(Boolean))];
+    const typName = (code) => (radtypNamen && radtypNamen.get(code)) || code;
 
-    for (const code of alleTypen) {
-        const name = typNamen.get(code);
-        const anzahl = schaedenTypCodes.filter((s) => s.typ_code === code).length;
+    const tage = [...new Set(schaeden.map((s) => datumFormat(s.gemeldet_am)))];
+    const laufend = zeilen.filter((z) => z.status !== 'behoben').length;
+    const minutenGesamt = zeilen.reduce((s, z) => s + z.minuten, 0);
 
-        const kachel = document.createElement('div');
-        kachel.className = 'flotte-typkachel';
-
-        const bildQuelle = RADTYP_BILDER[code];
-        if (bildQuelle) {
-            const bild = document.createElement('img');
-            bild.className = 'flotte-typkachel-bild';
-            bild.src = bildQuelle;
-            bild.alt = '';
-            bild.setAttribute('aria-hidden', 'true');
-            bild.addEventListener('error', () => bild.remove());
-            kachel.append(bild);
-        }
-
-        const text = document.createElement('div');
-        text.className = 'flotte-typkachel-text';
-
-        const titel = document.createElement('div');
-        titel.className = 'flotte-typkachel-titel';
-        titel.textContent = name;
-        text.append(titel);
-
-        const wert = document.createElement('div');
-        wert.className = 'flotte-typkachel-wert';
-        wert.append(zahlSkaliert(String(anzahl)));
-        text.append(wert);
-
-        const hinweis = document.createElement('div');
-        hinweis.className = 'flotte-typkachel-hinweis';
-        const anteil = gesamt ? Math.round((anzahl / gesamt) * 100) : 0;
-        hinweis.textContent = t('hint.percentOfDamageReports', { anteil: zahlFormat(anteil) });
-        text.append(hinweis);
-
-        kachel.append(text);
-        leiste.append(kachel);
-    }
+    return {
+        titel: t('board.maintenanceTitle'),
+        bezug: t('board.maintenanceReference', {
+            schadenPhrase: mengeFormat(schaeden.length, 'schadensmeldung'),
+            raederPhrase: mengeFormat(raeder.size, 'rad'),
+            typen: typCodes.map(typName).join(', '),
+            auftraegePhrase: mengeFormat((auftraege || []).length, 'auftrag'),
+            tag: tage.length === 1 ? tage[0] : `${tage[tage.length - 1]} - ${tage[0]}`
+        }),
+        // NUR bei genau EINEM betroffenen Radtyp - sonst behauptete das
+        // Bild eine Eindeutigkeit, die es nicht gibt (siehe Kopfkommentar).
+        bild: typCodes.length === 1 && RADTYP_BILDER[typCodes[0]]
+            ? { quelle: RADTYP_BILDER[typCodes[0]], alt: typName(typCodes[0]) }
+            : null,
+        spalten: [
+            {
+                art: 'rubrik',
+                titel: t('col.case'),
+                wert: (z) => z.rahmennummer || t('col.together'),
+                zusatz: (z) => (z.summenzeile ? null : z.kategorie)
+            },
+            {
+                art: 'groesse',
+                titel: t('col.workTime'),
+                einheit: t('unit.minutes'),
+                wert: (z) => z.minuten,
+                format: (n) => zahlFormat(n)
+            },
+            {
+                art: 'struktur',
+                titel: t('col.severity'),
+                einheit: t('unit.threeSteps'),
+                segmente: (z) => {
+                    const stufe = INSTANDHALTUNG_SCHWERE_STUFE[z.schwere] || 0;
+                    return [
+                        // t('schwere.'+code), NICHT statusAnzeige(): die
+                        // Schwere ist ein eigener Aufzaehlungstyp mit
+                        // eigener Uebersetzungsreihe (siehe die Filter-
+                        // und Maskenfelder weiter unten, die sie schon
+                        // immer so lesen) - statusAnzeige() kennt nur die
+                        // Bearbeitungsstaende und haette den Rohwert
+                        // unuebersetzt durchgereicht.
+                        { wert: stufe, name: t('schwere.' + z.schwere),
+                          klasse: INSTANDHALTUNG_SCHWERE_SEGMENT[z.schwere] || 'seg-ruhend' },
+                        // Der unausgefuellte Rest der Leiter, in der
+                        // Flaechenfarbe des Untergrunds: erst er macht aus
+                        // dem Balken eine SKALA ("zwei von drei Stufen")
+                        // statt einer beliebig langen Flaeche.
+                        { wert: 3 - stufe, name: '', klasse: 'seg-leer' }
+                    ];
+                },
+                beschriftung: (z) => t('board.maintenanceSeverityAria', {
+                    rad: z.rahmennummer, schwere: t('schwere.' + z.schwere),
+                    stufe: zahlFormat(INSTANDHALTUNG_SCHWERE_STUFE[z.schwere] || 0)
+                })
+            },
+            {
+                art: 'profil',
+                titel: t('col.progress'),
+                einheit: t('unit.reportedToFixed'),
+                punkt: (z) => INSTANDHALTUNG_STAND_STUFE[z.status] ?? null,
+                beschriftung: (z) => t('board.maintenanceProgressAria', {
+                    rad: z.rahmennummer, stand: statusAnzeige(z.status, true),
+                    auftrag: z.hatAuftrag ? t('board.maintenanceHasOrder') : t('board.maintenanceNoOrder')
+                })
+            }
+        ],
+        zeilen,
+        summe: { summenzeile: true, rahmennummer: t('col.together'), minuten: minutenGesamt },
+        fussnote: t('board.maintenanceFootnote', {
+            schadenPhrase: mengeFormat(schaeden.length, 'schadensmeldung'),
+            offen: zahlFormat(laufend),
+            minuten: zahlFormat(minutenGesamt)
+        })
+    };
 }
 
-// ===== Uebersicht (Gestaltungsauftrag, Punkt 1) =====
-//
-// "7 Schadensmeldungen, 3 Wartungsauftraege. Wenige Daten - der Streifen
-// muss auch mit fast nichts wuerdig aussehen und darf nicht leer wirken"
-// - woertlich der Auftrag. Drei Kacheln mit echten, kleinen Zahlen statt
-// einer einzigen: die dritte (fahruntauglich UND offen) verbindet zwei
-// der drei Zahlen zu einer Kennzahl, die keine der beiden allein zeigt -
-// genau das "wortgroße Bild daneben" (Auftrag), auch bei einer
-// Grundgesamtheit von sieben.
-function instandhaltungUebersicht(gesamtSchaeden, gesamtAuftraege, gesamtFahruntauglichOffen, gesamtAuftraegeLaufend) {
-    const anzeige = (n) => (n === null ? '—' : String(n));
+// Die Schwere ist eine ORDNUNG, keine Zahl - drei Stufen, aufsteigend.
+// Als Zahl 1/2/3 nur, um sie auf einer Leiter von drei Stufen ZEICHNEN
+// zu koennen; es wird nirgends damit gerechnet (kein Mittelwert, keine
+// Summe - "die mittlere Schwere 1,86" waere genau die Art Kennzahl, die
+// dieser Bereich nicht traegt, siehe Kopfkommentar).
+const INSTANDHALTUNG_SCHWERE_STUFE = { gering: 1, mittel: 2, fahruntauglich: 3 };
 
-    const kacheln = [
-        { titel: t('tile.damageReportsTotal'), wert: zahlSkaliert(anzeige(gesamtSchaeden)),
-          hinweis: t('hint.overallStates') },
-        { titel: t('tile.workOrdersTotal'), wert: zahlSkaliert(anzeige(gesamtAuftraege)),
-          hinweis: t('hint.overallStates') }
-    ];
+// Farbe traegt Bedeutung: "fahruntauglich" ist ein Rad, das nicht mehr
+// fahren darf - dieselbe Bedeutung, die --schlecht in dieser Oberflaeche
+// ueberall hat. "mittel" ist eine Warnung, "gering" bloss eine Notiz.
+const INSTANDHALTUNG_SCHWERE_SEGMENT = {
+    gering: 'seg-ruhend',
+    mittel: 'seg-warnung',
+    fahruntauglich: 'seg-schlecht'
+};
 
-    if (gesamtFahruntauglichOffen !== null) {
-        const wert = document.createElement('span');
-        if (gesamtFahruntauglichOffen > 0) wert.className = 'ton-schlecht';
-        wert.textContent = anzeige(gesamtFahruntauglichOffen);
-        kacheln.push({
-            titel: t('tile.unrideableOpen'),
-            wert,
-            grafik: gesamtSchaeden ? zellbalken(gesamtFahruntauglichOffen, gesamtSchaeden, null,
-                { farbe: 'var(--schlecht)' }) : undefined,
-            // Echter Bezug (Gestaltungsauftrag Punkt 1: "2 von 10 - dann
-            // ist es ein Anteil") - derselbe Nenner, den der Balken schon
-            // als Skala traegt, jetzt auch in Text ausgeschrieben.
-            hinweis: gesamtSchaeden
-                ? t('msg.unrideableShare', { n: zahlFormat(gesamtFahruntauglichOffen), schadenPhrase: mengeFormat(gesamtSchaeden, 'schadensmeldung') })
-                : t('msg.unrideableShareNoTotal')
-        });
-    }
-
-    // GESTALTUNGSAUFTRAG PUNKT 4, woertlich: "dazu mehr KPIs im Header."
-    // Eine vierte, echte Kennzahl statt einer erfundenen (siehe Bericht,
-    // Abschnitt "weggelassen"): wie viele der Wartungsauftraege noch
-    // LAUFEN (status='in_arbeit'), gegen gesamtAuftraege als Nenner - im
-    // heutigen Bestand 1 von 3 (siehe Bericht). "Mittlere Bearbeitungszeit"
-    // wurde bewusst NICHT ergaenzt: bei nur ZWEI erledigten Auftraegen
-    // waere ein Mittelwert eine Kennzahl ueber eine Stichprobe von zwei,
-    // die bei der naechsten Erledigung um mehrere Minuten springen wuerde -
-    // "Kennzahlen ueber sieben Faelle sind schnell albern" (Auftrag,
-    // woertlich).
-    if (gesamtAuftraegeLaufend !== null) {
-        kacheln.push({
-            titel: t('tile.workOrdersRunning'),
-            wert: zahlSkaliert(anzeige(gesamtAuftraegeLaufend)),
-            grafik: gesamtAuftraege ? zellbalken(gesamtAuftraegeLaufend, gesamtAuftraege) : undefined,
-            hinweis: gesamtAuftraege
-                ? t('hint.workOrdersRunningShare', { n: zahlFormat(gesamtAuftraegeLaufend), auftraegePhrase: mengeFormat(gesamtAuftraege, 'auftrag') })
-                : undefined
-        });
-    }
-
-    return kacheln;
-}
+// Der Bearbeitungsstand als Lage auf einer dreistufigen Achse
+// (gemeldet - in Arbeit - behoben). Position kodiert, nicht Laenge: eine
+// beschnittene Achse waere hier zulaessig, es gibt aber gar keine, die
+// man beschneiden koennte - die drei Stufen SIND die ganze Achse.
+const INSTANDHALTUNG_STAND_STUFE = { offen: 0, in_arbeit: 1, behoben: 2 };
 
 // ===== Offene Schäden =====
 

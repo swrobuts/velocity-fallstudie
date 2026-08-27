@@ -853,86 +853,364 @@ button {
   border-bottom: 1px solid var(--linie);
 }
 
-/* ===== Übersichtsstreifen (zeigeUebersicht, Gestaltungsauftrag Punkt 4) =====
-   Wörtlich der Auftrag: "Die Kopfleiste mit den Sparklines ist sehr
-   gedrängt, hebe das deutlich besser von den unteren Tabellen ab und
-   gestalte es nochmals deutlich professioneller." Zwei Änderungen dafür,
-   beide aus der DATEV-Leitlinie ("großzügiger Weißraum"), nicht aus
-   zusätzlichem Schmuck:
-   1. Der Streifen bekommt den hellen Grundton (--grund), sonst nur
-      Seitenhintergrund/Hover - anders als die reine Haarlinie zuvor setzt
-      das den Streifen auf den ERSTEN Blick von der weißen Tabelle
-      darunter ab, nicht erst beim genauen Hinsehen an der 1px-Kante.
-   2. Deutlich mehr Innenabstand je Kachel (siehe .uebersichtskachel/
-      -titel/-zeile/-hinweis unten) - Zahl, Sparkline und Erläuterung
-      standen vorher auf 10px Rand zusammengedrängt, das war der
-      konkrete Befund ("sehr gedrängt"). Beides gilt für ALLE FÜNF
-      Bereiche gleichzeitig, weil der Streifen hier - an EINER Stelle -
-      und nicht in jedem Bereich einzeln definiert ist. */
-/* Kein border-bottom mehr, sondern ein echter Leerraum bis zur Tabelle
-   (Punkt 1, woertlich: "Abstand zwischen Streifen und Tabelle"): eine
-   1px-Kontur allein macht aus zwei Flaechen noch keine zwei ABSCHNITTE -
-   der helle Grundton des Streifens (--grund) grenzt sich jetzt durch
-   einen echten Zwischenraum vom weissen #listenkoerper darunter ab, in
-   dem die weisse Flaeche von #arbeitsliste selbst durchscheint (siehe
-   dort). margin statt padding: ein zusaetzliches padding-bottom bliebe
-   noch INNERHALB des grauen Streifenhintergrunds und saehe aus wie ein
-   groesserer Streifen, kein Abstand ZUM naechsten Abschnitt. */
-.uebersichtsstreifen {
+/* ===== Kopftafel (zeigeKopftafel() in rahmen.js) =====
+
+   DIESER BLOCK HAT DAS KACHELBAND ERSETZT, das hier vier Anlaeufe lang
+   stand (.uebersichtsstreifen/.uebersichtskachel, jeder Anlauf mit mehr
+   Innenabstand als der vorige - zuletzt 32px/36px je Kachel und 84px
+   Mindesthoehe fuer die Grafikzeile). Der letzte Befund lautete:
+   "insgesamt sind die Header allesamt mangelhaft und entwerten alles.
+   Das muss um Laengen besser werden, viel analytischer, viel bessere und
+   professionellere Datenvisualisierung a la Tufte/Bissantz/Hichert."
+
+   Der Fehler war nicht die Menge des Weissraums, sondern wofuer er
+   ausgegeben wurde: ein Dutzend Werte auf tausend Pixel Breite. Diese
+   Tafel kehrt das um - dieselbe Bildschirmhoehe traegt jetzt 60 bis 170
+   Werte. Deshalb hier bewusst ENGE Zeilen (20px) und kleine Grade (12px
+   Text, 10px Spaltenkopf): eine Warenwirtschaft wird acht Stunden am Tag
+   benutzt, nicht acht Sekunden (siehe Dateikopf) - Information je
+   Bildschirm zaehlt mehr als Luft. Gemessen bleibt trotzdem alles:
+   --text auf --flaeche 15.70:1, --text-leise auf --flaeche 5.95:1,
+   --marine 17.29:1 - jede weit ueber den 4,5:1 fuer Fliesstext.
+
+   .uebersichtskachel* weiter unten bleibt bestehen: der Monats-Drill-Down
+   in der Detailmaske (monatsdrilldownEinfuegen() in auswertungen.js)
+   benutzt baueKachel() unveraendert weiter - dort sind es tatsaechlich
+   vier Einzelwerte zu einem Monat, keine Gliederung eines Bestands. */
+.kopftafel {
   flex: 0 0 auto;
-  display: flex;
-  /* flex-wrap NEU (Erprobung, Gestaltungsauftrag Punkt 1/3): Flotte zeigt
-     seit flotteAltersstruktur() (siehe flotte.js) fuenf Kacheln statt
-     vier, eine davon mit einer Saeulen-Sparkline, deren <svg> selbst nie
-     unter 90px schrumpft (siehe .saeulensparkline min-width weiter
-     unten). Bei einem schmaleren Fenster oder einem sechsten Tab-Reiter
-     mit noch mehr Kacheln kaeme .uebersichtskachel (min-width:0) sonst
-     irgendwann an den Punkt, an dem Zahl und Grafik derselben Kachel sich
-     ueberlagern, statt Platz fuer eine zweite Zeile zu bekommen (im
-     Browser nachgestellt, siehe Bericht - dort mit einer inzwischen
-     wieder entfernten sechsten Kachel). flex-wrap ist die Absicherung
-     dagegen; bei den ueblichen vier bis fuenf Kacheln in einem normal
-     breiten Fenster aendert es sichtbar nichts. */
-  flex-wrap: wrap;
+  /* Der Streifen hebt sich weiterhin durch Flaeche vom weissen
+     Tabellenkoerper ab (der Befund "hebe das deutlich besser von den
+     unteren Tabellen ab" gilt unveraendert), aber mit deutlich weniger
+     Polster als das Kachelband: die Tafel traegt ihre Struktur selbst,
+     sie braucht keine Rahmenwirkung mehr, um nicht leer zu wirken. */
   background: var(--grund);
-  /* 28px statt vormals 20px - dritter Anlauf. */
-  margin-bottom: 28px;
+  padding: 12px 16px 10px;
+  margin-bottom: 16px;
+  /* Eine Tafel mit fuenf Spalten kann in einem sehr schmalen Fenster
+     breiter werden als der Arbeitsbereich. Sie darf dann in SICH
+     scrollen - was sie nicht darf, ist die ganze Seite waagerecht
+     schieben oder Spalten stillschweigend abschneiden. */
+  overflow-x: auto;
 }
 
-/* Gemeinsames Raster fuer ALLE Kacheln (Punkt 1, konkreter Befund): vor
-   dieser Ueberarbeitung bauten "Stationen" (Sparkline direkt an der
-   Zahl), "Volle Stationen" (Zellbalken mitten im Zwischenraum) und
-   "Gesamtbelegung" (Zellbalken am rechten Rand, siehe .zellbalken weiter
-   unten) faktisch drei verschiedene Anordnungen, weil jede Kachel ihre
-   Grafik einfach als naechstes Flex-Kind neben den Wert stellte und
-   .zellbalken selbst width:100%+flex-end mitbrachte (fuer die
-   Tabellenspalte gedacht, siehe balkenSpalten() weiter unten - dort
-   richtig, hier falsch angewendet). display:flex + column ordnet jetzt
-   Titel/Veraenderung/Zahl+Grafik/Hinweis in VIER FESTEN Zeilen an (anfangs
-   drei - die Veraenderungszeile kam als vierte hinzu, siehe deren
-   min-height-Kommentar bei .uebersichtskachel-veraenderung weiter unten,
-   aus demselben "faellt nicht in sich zusammen"-Grund); min-height auf
-   der mittleren Zahl+Grafik-Zeile (siehe .uebersichtskachel-zeile) haelt
-   diese Zeile GLEICH HOCH, ob eine Kachel eine Grafik traegt oder nicht
-   ("Kunden gesamt" in kunden.js z. B. hat gar keine) - genau der im
-   Auftrag verlangte Fall, der nicht "in sich zusammenfallen" darf. */
-.uebersichtskachel {
-  flex: 1 1 0;
-  min-width: 0;
+/* width:max-content, NICHT 100 %: bei geschlossener Detailmaske ist
+   #arbeitsliste ueber 1200px breit, und eine auf volle Breite gezogene
+   Tabelle schob dann mehrere hundert Pixel Leerraum zwischen den
+   Rubriknamen und seine Zahl - eine Zahlenkolonne, die man mit dem
+   Finger suchen muss (im Browser gemessen, siehe Bericht). Auf
+   Inhaltsbreite stehen Name, Zahl, Balken und Grafik dicht beieinander
+   und bleiben als Zeile lesbar; die Tafel bleibt links buendig zur
+   Tabelle darunter. max-width:100 % haelt sie bei geoeffneter
+   Detailmaske (#arbeitsliste auf 55 %) im Rahmen; reicht auch das nicht,
+   scrollt .kopftafel in sich (siehe overflow-x dort), statt Spalten
+   stillschweigend abzuschneiden. (width:auto oder fit-content taten es
+   NICHT: eine Tabelle in einem Block-Elternteil nimmt in Chrome die volle
+   verfuegbare Breite - im Browser gemessen: 1207px statt der 696px, die
+   ihr Inhalt braucht.) */
+.kopftafel-tabelle {
+  width: max-content;
+  max-width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Titel und Bezugszeile stehen NEBEN der Tabelle, nicht als <caption> in
+   ihr - die Begruendung (Breitenrechnung) steht bei zeigeKopftafel() in
+   rahmen.js. Zugaenglicher Name der Tabelle bleiben beide, ueber
+   aria-labelledby. */
+.kopftafel-kopf {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+.kopftafel-kopftexte {
   display: flex;
   flex-direction: column;
-  /* 14px statt vormals 10px - dritter Anlauf. */
-  gap: 14px;
-  /* 32px/36px statt vormals 24px/28px - DRITTER Anlauf auf "sehr
-     gedraengt" (Punkt 1/3): "geh diesmal deutlich weiter, als dir richtig
-     vorkommt" (Auftrag, woertlich) - zwei vorherige Nachbesserungen (erst
-     18/24, dann 24/28) waren beide noch zu wenig. */
-  padding: 32px 36px;
-  border-right: 1px solid var(--linie);
+  gap: 2px;
+  min-width: 0;
 }
 
-.uebersichtskachel:last-child {
-  border-right: none;
+/* Feste Hoehe, Breite frei (object-fit: contain) - die drei Radtypen
+   haben unterschiedliche Seitenverhaeltnisse (das Lastenrad ist deutlich
+   breiter als City- und E-Bike), eine feste Breite haette das breitere
+   Bild entweder abgeschnitten oder die schmaleren gestreckt. */
+.kopftafel-bild {
+  flex: 0 0 auto;
+  height: 40px;
+  width: auto;
+  max-width: 84px;
+  object-fit: contain;
+}
+
+.kopftafel-titel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--marine);
+}
+
+.kopftafel-bezug {
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-leise);
+  line-height: 1.4;
+}
+
+/* Spaltenkopf: klein, leise, mit der Einheit als zweiter Zeile darunter
+   (Hichert/IBCS - eine Zahlenspalte, die nicht sagt, WORIN sie misst,
+   ist eine Ratefrage). vertical-align:bottom haelt die Namen aller
+   Spalten auf einer Linie, auch wenn eine ueber zwei Zeilen umbricht. */
+.kopftafel-tabelle thead th {
+  padding: 0 8px 4px;
+  border-bottom: 1px solid var(--linie);
+  vertical-align: bottom;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-leise);
+  text-align: left;
+  white-space: normal;
+}
+
+/* Ueber der Zahl-und-Balken-Spaltengruppe (colspan=2) steht der Titel
+   rechtsbuendig - also unmittelbar ueber der Zahl, die er benennt, nicht
+   ueber dem Balken daneben. */
+.kopftafel-kopf-groesse,
+.kopftafel-kopf-abweichung {
+  text-align: right;
+}
+
+.kopftafel-spaltenname,
+.kopftafel-spalteneinheit {
+  display: block;
+}
+
+.kopftafel-spalteneinheit {
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 400;
+  /* Die Einheit ist eine Fussnote am Spaltenkopf, keine zweite
+     Ueberschrift - deshalb noch kleiner als der Name darueber, aber in
+     derselben, gemessenen Farbe (--text-leise, 5.60:1 auf --grund). */
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+/* 2px Zeilenluft, nicht mehr: dreizehn Zeilen (Flotte) plus Kopfzeile
+   plus Fussnote muessen zusammen so viel Hoehe lassen, dass unter der
+   Tafel noch mehrere Zeilen der Arbeitsliste sichtbar bleiben - im
+   Browser gemessen, siehe Bericht. */
+.kopftafel-tabelle td,
+.kopftafel-tabelle th {
+  padding: 2px 8px;
+}
+
+.kopftafel-zeile-daten {
+  border-bottom: 1px solid var(--linie-tabelle);
+}
+
+.kopftafel-rubrik {
+  font-weight: 400;
+  text-align: left;
+  color: var(--text);
+  /* Die Rubrikspalte nimmt den Rest der Breite auf: alle uebrigen Spalten
+     sind inhaltlich fest breit (Zahl, Balken, Grafik), nur der Name darf
+     mitwachsen. */
+  min-width: 150px;
+  /* Bild und Text bleiben in EINER Zeile, damit eine Gruppenzeile mit
+     Produktbild nicht hoeher wird als eine ohne - sonst huepfte das
+     Raster der Tafel von Gruppe zu Gruppe. */
+  white-space: nowrap;
+}
+
+.kopftafel-zeilenbild {
+  height: 22px;
+  width: auto;
+  max-width: 40px;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.kopftafel-rubriktexte {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kopftafel-rubrikzusatz {
+  font-size: 11px;
+  color: var(--text-leise);
+}
+
+/* Zahlenzellen: rechtsbuendig und so schmal wie ihr Inhalt (width:1% ist
+   der uebliche Weg, einer Tabellenzelle "so schmal wie moeglich" zu
+   sagen) - dadurch beginnt der Balken der Nachbarzelle in JEDER Zeile an
+   derselben Bildschirmposition. Genau das war der Befund, den
+   balkenSpalten() in der Arbeitsliste schon einmal beheben musste:
+   "keine vertikale Flucht". */
+.kopftafel-zahl {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+  color: var(--marine);
+}
+
+.kopftafel-grafik {
+  width: 1%;
+  white-space: nowrap;
+  /* line-height:0 verhindert, dass die Grundlinie der Textzeile unter dem
+     <svg> die Zeile um mehrere Pixel hoeher macht, als die Grafik ist. */
+  line-height: 0;
+}
+
+/* Gruppenzeile (Radtyp ueber seinen Modellen): traegt Namen, Bild und die
+   Zwischensumme, aber KEINEN Balken - sie steht ausserhalb der
+   gemeinsamen Skala (siehe kopftafelZeile() in rahmen.js). Eine Linie
+   darueber statt einer Flaeche dahinter: eine zweite Hintergrundfarbe
+   neben --grund und dem Zebra der Arbeitsliste waere ein dritter,
+   unnoetiger Grauton. */
+.kopftafel-zeile-gruppe > * {
+  padding-top: 6px;
+  font-weight: 700;
+}
+
+.kopftafel-zeile-gruppe .kopftafel-rubrikzusatz {
+  font-weight: 400;
+}
+
+/* Summenzeile im <tfoot>: dieselbe Auszeichnung wie eine Gruppenzeile,
+   zusaetzlich eine kraeftigere Trennlinie darueber - sie schliesst die
+   Tafel ab, statt eine weitere Gliederungsebene zu eroeffnen. */
+.kopftafel-zeile-summe > * {
+  border-top: 1px solid var(--linie);
+  padding-top: 5px;
+  font-weight: 700;
+}
+
+.kopftafel-fussnote {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-leise);
+  /* Nicht ueber die ganze Breite laufen lassen: eine Fussnote von 200
+     Zeichen in einer Zeile ist unlesbar, egal wie breit das Fenster ist. */
+  max-width: 92ch;
+}
+
+/* ===== Strukturbalken (strukturBalken() in rahmen.js) =====
+
+   FARBE TRAEGT BEDEUTUNG, NICHT REIHENFOLGE. Die vier Segmentklassen
+   heissen deshalb nach ihrer AUSSAGE und nicht nach ihrem Platz im
+   Balken - derselbe Satz Klassen gilt in allen fuenf Bereichen:
+
+     seg-aktiv     die Flaeche, die arbeitet: ein ausgeliehenes Rad, ein
+                   belegter Stellplatz, ein Kunde mit Fahrten, eine
+                   gemessene Strecke.            --marine, 17.29:1
+     seg-ruhend    die Flaeche, die bereitsteht: verfuegbar, frei, ohne
+                   Fahrt.                        --skala-rahmen, 3.64:1
+     seg-warnung   die Flaeche, die Aufmerksamkeit braucht: Wartung, eine
+                   volle Station, ein gesperrtes Konto, eine geschaetzte
+                   Zahl.                         --warnung-text, 5.32:1
+     seg-schlecht  die Flaeche, die nicht mehr geht: ein defektes Rad,
+                   ein fahruntauglicher Schaden. --schlecht, 5.71:1
+     seg-leer      der unausgefuellte Rest einer festen Skala (die
+                   dreistufige Schwereleiter)    --flaeche
+
+   ALLE VIER FUELLFARBEN LIEGEN UEBER DEN 3:1, DIE WCAG 1.4.11 FUER
+   GRAFIK VERLANGT - aber gegeneinander tun sie das nicht:
+   --warnung-text gegen --schlecht kommt auf 1.07:1, --skala-rahmen gegen
+   --warnung-text auf 1.46:1 (gemessen). Zwei solche Segmente koennen
+   unmittelbar aneinanderstossen. strukturBalken() legt deshalb eine 1px
+   breite Fuge zwischen die Segmente, in der der helle Untergrund
+   durchscheint: dadurch ist JEDE Segmentgrenze eine Kante gegen den
+   Untergrund, unabhaengig davon, welche zwei Farben zusammentreffen.
+   Die zweite Absicherung ist die feste REIHENFOLGE der Segmente (siehe
+   FLOTTE_STATUS_REIHE in flotte.js) - wer die Farben nicht unterscheiden
+   kann, liest sie an ihrer Position ab, und der <title> jedes Segments
+   nennt Namen und Zahl im Klartext. */
+.strukturbalken {
+  display: block;
+}
+
+.strukturbalken-segment.seg-aktiv    { fill: var(--marine); }
+.strukturbalken-segment.seg-ruhend   { fill: var(--skala-rahmen); }
+.strukturbalken-segment.seg-warnung  { fill: var(--warnung-text); }
+.strukturbalken-segment.seg-schlecht { fill: var(--schlecht); }
+.strukturbalken-segment.seg-leer     { fill: var(--flaeche); }
+
+/* ===== Abweichungsbalken (abweichungsBalken() in rahmen.js) =====
+   KEINE Ampelfarbe fuer die Richtung (siehe die Begruendung dort): eine
+   Abweichung ist eine Abweichung, ob "mehr" gut ist, weiss nur der
+   Bereich - und Rot ist in dieser Oberflaeche dem defekten Rad und der
+   unumkehrbaren Handlung vorbehalten. Positive wie negative Balken
+   tragen deshalb --marine; die Richtung liest man an der Seite, auf der
+   der Balken liegt. */
+.abweichungsbalken {
+  display: block;
+}
+
+.abweichungsbalken-flaeche {
+  fill: var(--marine);
+}
+
+/* Die Nulllinie ist die ganze Aussage dieser Spalte - sie muss sichtbar
+   sein, auch dort, wo kein Balken sie kreuzt. --feld-rahmen (3.64:1 auf
+   Weiss, 3.43:1 auf --grund) statt --linie (1.29:1): eine Achse ist
+   Grafik im Sinne von WCAG 1.4.11, keine dekorative Trennlinie. */
+.abweichungsbalken-null {
+  stroke: var(--feld-rahmen);
+  stroke-width: 1;
+}
+
+/* ===== Lagepunkt (lagepunkt() in rahmen.js) =====
+   Ein Wert auf einer fuer alle Zeilen identischen Achse. Zehn davon
+   untereinander ergeben einen Punktschwarm, aus dem Verteilung und
+   Ausreisser unmittelbar hervorgehen - die Achse selbst bleibt leise
+   (sie ist nur das Lineal), der Punkt traegt die Aussage. */
+.lagepunkt {
+  display: block;
+}
+
+.lagepunkt-achse {
+  stroke: var(--linie);
+  stroke-width: 1;
+}
+
+.lagepunkt-marke {
+  fill: var(--marine);
+}
+
+/* In der Kopftafel sitzen die Saeulen-Sparklines in einer 20px hohen
+   Tabellenzeile, nicht in einer 84px hohen Kachel - die dortigen
+   Vorgaben (100 % Breite, min-width 90px, 44px Hoehe) wuerden die Zeile
+   auseinandertreiben. Die tatsaechliche Groesse steht am <svg> selbst
+   (96x16, siehe kopftafelZeile() in rahmen.js); hier wird nur die
+   Kachel-Regel zurueckgenommen. */
+.kopftafel .saeulensparkline {
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+}
+
+/* ===== Kachel (baueKachel() in rahmen.js) =====
+   Nur noch fuer den Monats-Drill-Down IN DER DETAILMASKE im Einsatz
+   (siehe .monatsdrilldown-kacheln weiter unten, das Raster und Abstaende
+   selbst setzt). Das frueher hier definierte KACHELBAND ueber jeder
+   Liste (#uebersichtsstreifen) ist entfallen - siehe die ausfuehrliche
+   Begruendung im Kopf des .kopftafel-Blocks direkt darueber. */
+.uebersichtskachel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .uebersichtskachel-titel {
@@ -945,141 +1223,28 @@ button {
 .uebersichtskachel-zeile {
   display: flex;
   align-items: center;
-  gap: 16px;
-  /* Siehe Kommentar bei .uebersichtskachel oben: feste Mindesthoehe
-     dieser Zeile, unabhaengig davon, ob eine Grafik danebensteht - ohne
-     sie waere eine Kachel ohne Grafik (nur die Zahl) niedriger als eine
-     mit Sparkline/Zellbalken, und "Titel"/"Hinweis" saessen von Kachel zu
-     Kachel auf unterschiedlicher Hoehe statt am selben Platz im Raster.
-     84px statt vormals 44px - VIERTER Anlauf, Befund "Stationen":
-     44px war an saeulenSparkline() (168/44) angepasst, aber donut() lief
-     in genau EINER Kachel dieses Bereichs ("Gesamtbelegung", durchmesser
-     84) schon damals ueber diese 44px hinaus - die Zeile wurde dort vom
-     INHALT auf 84px aufgetrieben, waehrend jede Nachbarkachel bei 44px
-     blieb. align-items:stretch auf #uebersichtsstreifen zieht zwar jede
-     KACHEL auf dieselbe AUSSENHOEHE, aber die inneren Zeilen blieben
-     unterschiedlich hoch - der Hinweis der schmaleren Kacheln saß dadurch
-     hoeher als der der Donut-Kachel, sichtbar als unbegruendeter
-     Leerraum genau dort ("darunter abgehaengt ein Text", Auftrag,
-     woertlich). 84px ist das Maximum, das irgendeine Grafik in einem
-     Uebersichtsstreifen heute tatsaechlich braucht (siehe donut() in
-     stationen.js) - ALLE FUENF Bereiche teilen sich diese eine Zahl, egal
-     ob ihre eigenen Grafiken kleiner sind (Bissantz-Balken, saeulen-
-     sparkline), damit "gleiche Zonen an gleicher Stelle" fuer jede Kachel
-     jedes Bereichs gilt, nicht nur innerhalb einer einzelnen Zeile. */
-  min-height: 84px;
+  gap: 12px;
 }
 
 .uebersichtskachel-wert {
   flex: 0 0 auto;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--marine);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  /* Gestaltungsauftrag, "gemeinsames Raster"-Befund: eine Kachel OHNE
-     jede Grafik (z. B. "Umsatz je Rad und Tag" in auswertungen.js,
-     "Fahrten je Rad, 30 Tage" in flotte.js) stand bislang links, während
-     ihre Nachbarn mit Säulen-Sparkline die Zahl rechts zeigen (siehe
-     :has(.saeulensparkline) weiter unten) - in EINER Reihe (z. B. den vier
-     Kacheln im Reiter "Umsatz nach Radtyp") sprang die Zahl damit von
-     Kachel zu Kachel zwischen links und rechts hin und her, eine von drei
-     unterschiedlichen Bauformen nebeneinander, die der Auftrag ausdrücklich
-     bemängelt. margin-left:auto HIER als Vorgabe (nicht erst in der
-     spezifischeren Sparkline-Regel) behandelt eine Kachel ohne Grafik wie
-     eine Sparkline-Kachel ohne Daten: "die Antwort steht rechts" gilt jetzt
-     für JEDE Kachel gleich, unabhängig davon, ob und welche Grafik daneben
-     steht - eine bewusst gewählte, einheitliche Form statt der zufälligen
-     Restposition, die entstand, wenn einfach keine Regel griff. Für
-     Zellbalken/Donut (Anteilsgrafiken, kein Verlauf) unten ausdrücklich
-     wieder zurückgesetzt: dort ist "Zahl links, Anteil rechts" die
-     etablierte, bereits stimmige Lesrichtung (Bissantz-Balken lesen sich
-     von der Zahl zur Fläche), die dieser Auftrag nicht in Frage stellt. */
-  margin-left: auto;
 }
 
-/* Vorbild-Auftrag, Punkt 2: "▼ −5 ggü. Vorm." - eine kleine Zeile MIT
-   Richtungspfeil ÜBER der Zahl/Grafik (siehe kachel.veraenderung,
-   baueKachel() in rahmen.js). Bewusst OHNE Farbe für die Richtung selbst
-   (kein Rot/Grün): dieselbe Regel wie bei veraenderungFormat() in
-   auswertungen.js ("ein Preisanstieg ist nicht per se gut oder schlecht,
-   nur bemerkenswert") gilt hier ein zweites Mal - Farbe bliebe der
-   tatsächlichen Bedeutung vorbehalten (--gut/--schlecht/--warnung an
-   anderer Stelle dieser Oberfläche), nicht der bloßen Richtung eines
-   Monatsvergleichs.
-   min-height (Gestaltungsauftrag, "gemeinsames Raster"-Befund): baueKachel()
-   in rahmen.js legt dieses Element jetzt IMMER an, auch ohne
-   kachel.veraenderung - ohne eine reservierte Mindesthöhe wäre die Zeile
-   dann zwar vorhanden, aber leer und damit 0px hoch, und eine Kachel ohne
-   Veränderung säße ihren Nachbarn mit Veränderung wieder ein Stück näher
-   am Titel gegenüber (derselbe "fällt in sich zusammen"-Fehler, den
-   .uebersichtskachel-zeile weiter unten schon für die Grafik löst). Höhe
-   an font-size(12px) * line-height ausgerichtet, keine willkürliche Zahl. */
+/* baueKachel() legt diese Zeile immer an, auch ohne Inhalt - ohne eine
+   reservierte Mindesthoehe saesse eine Kachel ohne Veraenderung ihren
+   Nachbarn naeher am Titel gegenueber, und das 2x2-Raster des
+   Drill-Downs faellt in sich zusammen. Hoehe an font-size mal
+   line-height ausgerichtet, keine willkuerliche Zahl. */
 .uebersichtskachel-veraenderung {
   font-size: 12px;
   color: var(--text-leise);
   font-variant-numeric: tabular-nums;
   min-height: 1.4em;
-}
-
-/* Anteilsgrafiken (Zellbalken UND Donut, siehe baueKachel() in rahmen.js)
-   bleiben bei "Zahl links, Anteil rechts": margin-left:auto auf der Zahl
-   (Vorgabe jetzt, siehe .uebersichtskachel-wert oben) wird hier gezielt
-   zurückgesetzt, und stattdessen wandert das auto-margin auf die Grafik
-   selbst - dieselbe Umkehr wie bei der Säulen-Sparkline weiter unten,
-   nur mit vertauschten Rollen. Das ist das gemeinsame Raster, das der
-   Auftrag verlangt - dieselbe Spalte für die Anteilsgrafik in JEDER
-   Kachel, ob "Stationen", "Volle Stationen" oder "Gesamtbelegung"
-   (Donut). GILT NICHT für Kacheln mit einer Säulen-Sparkline - siehe die
-   eigene Regel direkt im Anschluss, die für genau diesen Fall die
-   umgekehrte Anordnung verlangt ("Zahl groß rechts", Vorbild-Auftrag) und
-   deshalb margin-left:auto auf der Zahl ausdrücklich BEHÄLT. */
-.uebersichtskachel-zeile:has(.zellbalken, .donut) > .uebersichtskachel-wert {
-  margin-left: 0;
-}
-
-.uebersichtskachel-zeile:has(.zellbalken, .donut) > :last-child:not(.uebersichtskachel-wert) {
-  margin-left: auto;
-}
-
-/* "Zahl groß rechts" (Vorbild-Auftrag, wörtlich übernommen) für Kacheln
-   mit einer Säulen-Sparkline: die Grafik links, die große Zahl rechts -
-   umgekehrt zur Anordnung bei einer Anteilsgrafik (siehe Regel direkt
-   darüber). Per order() statt flex-direction:row-reverse: row-reverse
-   würde die physische Bedeutung von margin-left umkehren und mit der
-   Regel darüber kollidieren, sobald beide je nach Grafikart abwechselnd
-   griffen - order() ändert nur die VISUELLE Reihenfolge, margin-left
-   behält seine gewohnte Wirkung. margin-left:auto hier ist inzwischen
-   redundant zur Vorgabe auf .uebersichtskachel-wert selbst, bleibt aber
-   ausdrücklich stehen: diese Regel ist die spezifischere, sie muss auch
-   dann noch unmissverständlich richtig sein, wenn die Vorgabe oben sich
-   je wieder ändert. */
-/* .fuellstandspanne (stationenSpannweiteGrafik() in stationen.js) reiht
-   sich HIER ein, nicht als eigene Regel: eine Spannweite mit Median ist
-   wie eine Saeulen-Sparkline eine FORM (ein Verlauf ueber mehrere Werte),
-   keine einzelne Anteilsflaeche wie Zellbalken/Donut - "Grafik links,
-   Zahl rechts" gilt fuer beide Formen gleichermassen. */
-.uebersichtskachel-zeile:has(.saeulensparkline, .fuellstandspanne) > .uebersichtskachel-wert {
-  order: 2;
-  margin-left: auto;
-}
-
-.uebersichtskachel-zeile:has(.saeulensparkline, .fuellstandspanne) > :last-child:not(.uebersichtskachel-wert) {
-  order: 1;
-  margin-left: 0;
-}
-
-/* .zellbalken bringt aus der Tabellenspalte (.balken-spalte, siehe
-   balkenSpalten() weiter unten) width:100% und justify-content:flex-end
-   mit - dort richtig (der Balken soll die ganze feste Spaltenbreite
-   ausfuellen), in einer Kachel dagegen der Grund, warum "Gesamtbelegung"
-   bislang ganz an den rechten Kachelrand gedrueckt wirkte, unabhaengig
-   von der Position der Zahl. Hier auf natuerliche Breite zurueckgesetzt,
-   damit der Balken bei natürlicher Größe direkt neben der Zahl beginnt,
-   statt sich selbst nochmals an den Rand zu schieben. */
-.uebersichtskachel-zeile .zellbalken {
-  width: auto;
-  justify-content: flex-start;
 }
 
 .uebersichtskachel-pfeil {
@@ -1094,90 +1259,6 @@ button {
   line-height: 1.4;
 }
 
-/* ===== Radtyp-Kacheln mit Produktbild (flotte.js: flotteTypkachelnZeigen();
-   instandhaltung.js: instandhaltungTypkachelnZeigen()) =====
-   Gestaltungsauftrag, wörtlich: "Bei Flotte vermisse ich Produktbilder ...
-   damit ich das Produkt/Flotte auch sehe" UND (Instandhaltung, spaeter
-   dazugekommen) "hätte ich auch gern die schönen Bilder der Räder wie bei
-   Flotte" - EIN Bauteil fuer BEIDE Bereiche (Gestaltungsauftrag Punkt 1:
-   "gleiche Bauteile"), nicht zwei aehnliche CSS-Bloecke unter zwei
-   Klassennamen. Eigene Reihe UNTER dem Uebersichtsstreifen, keine
-   weiteren Kacheln IN ihm - Begruendung siehe Kopfkommentar von
-   flotteTypkachelnZeigen() in flotte.js. flex-wrap, nicht die feste
-   Gleichverteilung von .uebersichtsstreifen: drei Radtyp-Kacheln mit Bild
-   sollen auch bei schmalem Fenster untereinander Platz finden statt sich
-   auf eine unlesbare Restbreite zu quetschen. */
-.flotte-typkacheln {
-  flex: 0 0 auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-.flotte-typkachel {
-  flex: 1 1 220px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  border: 1px solid var(--linie);
-  background: var(--flaeche);
-}
-
-/* Feste Hoehe, Breite frei (object-fit: contain) - die drei Radtypen
-   haben unterschiedliche Seitenverhaeltnisse (Cargo-Lastenrad deutlich
-   breiter als City-/E-Bike), eine feste Breite haette das breitere Bild
-   entweder abgeschnitten oder die schmaleren unnoetig gestreckt. */
-.flotte-typkachel-bild {
-  flex: 0 0 auto;
-  height: 56px;
-  width: auto;
-  max-width: 110px;
-  object-fit: contain;
-}
-
-.flotte-typkachel-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.flotte-typkachel-titel {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--text-leise);
-}
-
-.flotte-typkachel-wert {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--marine);
-  font-variant-numeric: tabular-nums;
-}
-
-.flotte-typkachel-hinweis {
-  font-size: 11px;
-  color: var(--text-leise);
-}
-
-/* Wiederverwendbarer Farbton außerhalb der Tabelle - dieselbe Bedeutung
-   wie td.warnung dort (siehe .arbeitstabelle td.warnung weiter unten),
-   nur nicht an eine Tabellenzelle gebunden. */
-.ton-warnung {
-  color: var(--warnung-text);
-}
-
-/* Dasselbe für die schlechte Bedeutung (td.schlecht) - Flotte (defekte
-   Räder) und Instandhaltung (fahruntaugliche, noch offene Meldungen)
-   brauchen beide eine Kachel, die eindeutig "hier klemmt es" statt
-   "hier eine Zahl" sagt. */
-.ton-schlecht {
-  color: var(--schlecht);
-}
-
 /* ===== Filterleiste (zeigeFilterleiste, Gestaltungsauftrag Bedienelemente) =====
    Punkt 5: "auch die Filter... besser abheben" - derselbe helle
    Grundton wie der Uebersichtsstreifen (--grund) statt einer reinen
@@ -1188,7 +1269,7 @@ button {
    Anlauf, gemessen: die Filterleiste stiess vorher mit exakt 0px Abstand
    direkt auf die Tabelle - border-bottom allein trennt eine Flaeche von
    der naechsten, schafft aber keinen Zwischenraum, siehe derselbe Fund
-   bei .uebersichtsstreifen weiter oben). */
+   bei .kopftafel weiter oben). */
 .filterleiste {
   flex: 0 0 auto;
   display: flex;
@@ -1438,58 +1519,6 @@ button {
   stroke-width: 1;
 }
 
-/* ===== Fuellstand-Spannweite (stationenSpannweiteGrafik() in
-   stationen.js, Befund: "Ausgerechnet eine Spannweite, die man zeichnen
-   koennte" - die Kachel hatte bislang gar keine Grafik) =====
-   Dieselbe Kachelbreite/-hoehe wie .saeulensparkline (168x44, ueber CSS
-   auf die tatsaechliche Kachelbreite gestreckt) - beide sind dieselbe
-   FORM-Familie (siehe :has(.saeulensparkline, .fuellstandspanne) weiter
-   oben), nicht zwei verschiedene Groessen fuer denselben Zeilenplatz. */
-.fuellstandspanne {
-  display: block;
-  flex: 1 1 auto;
-  width: 100%;
-  min-width: 90px;
-  max-width: 220px;
-  height: 44px;
-  overflow: visible;
-}
-
-.fuellstandspanne-grundlinie {
-  stroke: var(--skala-rahmen);
-  stroke-width: 1;
-}
-
-.fuellstandspanne-tick {
-  stroke: var(--skala-rahmen);
-  stroke-width: 1;
-}
-
-/* --marine, derselbe neutrale "hier ist ein Wert"-Ton wie
-   .uebersichtskachel-wert - eine Spannweite ist keine Warnung und kein
-   Extremwert, der eine eigene Bedeutungsfarbe (--rot/--warnung-text)
-   rechtfertigen wuerde. */
-.fuellstandspanne-band {
-  fill: var(--marine);
-}
-
-.fuellstandspanne-median {
-  stroke: var(--marine);
-  stroke-width: 2;
-}
-
-.zellbalken {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-.zellbalken-grafik {
-  flex: 0 0 auto;
-}
-
 /* ===== Balkenspalte (balkenSpalten() in rahmen.js, Gestaltungsauftrag
    Punkt 5) =====
    "Keine vertikale Flucht", wörtlich der Auftrag: solange Balken und
@@ -1646,10 +1675,11 @@ button {
 
 /* ===== Zusammenfassung und Tabelle des Drill-Downs (auswertungen.js,
    monatsdrilldownEinfuegen()) =====
-   Zwei Spalten statt der vier des #uebersichtsstreifen oben - die
-   Detailmaske ist nur ~45% der Fensterbreite (siehe #detailmaske weiter
-   unten), vier Kacheln in einer Reihe liessen "Tag mit den meisten
-   Fahrten" dort auf eine Wortbreite von 100px umbrechen. */
+   Zwei Spalten statt einer Reihe: die Detailmaske ist nur ~45% der
+   Fensterbreite (siehe #detailmaske weiter unten), vier Kacheln
+   nebeneinander liessen "Tag mit den meisten Fahrten" dort auf eine
+   Wortbreite von 100px umbrechen. Der einzige verbliebene Ort, an dem
+   baueKachel() noch zum Einsatz kommt - siehe dort. */
 .monatsdrilldown {
   border-top: 1px solid var(--linie);
   margin-top: 20px;
@@ -1940,9 +1970,22 @@ button {
 
 /* ===== Arbeitstabelle (zeigeListe) ===== */
 
+/* min-height NEU (und nicht mehr 0): #arbeitsliste ist ein Flex-Kasten
+   fester Hoehe, in dem Werkzeugleiste, Kopftafel, Filterleiste und
+   Tabellenkoerper untereinanderstehen. Mit min-height:0 durfte der
+   Tabellenkoerper auf 0px schrumpfen, sobald die Bausteine darueber
+   zusammen mehr Platz brauchten - und weil #arbeitsliste dann NICHT
+   ueberlief, gab es auch keinen Rollbalken: die Liste war schlicht weg,
+   ohne dass etwas darauf hingewiesen haette (in dieser Oberflaeche schon
+   einmal passiert, siehe die Git-Historie von flotte.js). Eine
+   Untergrenze von 140px - Kopfzeile plus zwei Datenzeilen - kehrt das
+   um: der Tabellenkoerper bleibt sichtbar, und der ueberschuessige Platz
+   wird zum Ueberlauf von #arbeitsliste, das dafuer bereits overflow-y:
+   auto traegt. Schrumpfen unter die Inhaltshoehe bleibt weiter erlaubt
+   (min-height, nicht height) - nur eben nicht bis ins Nichts. */
 #listenkoerper {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 140px;
   min-width: 0;
   overflow-y: auto;
   overflow-x: auto;
@@ -2321,7 +2364,7 @@ button {
    (--grund) setzt die Filterzeile jetzt sichtbar von der Titel/Sortier-
    Zeile darueber (var(--flaeche), weiss) ab, statt dass nur die duenne
    Trennlinie beide Zeilen unterscheidet - dieselbe Trennung, die
-   .uebersichtsstreifen fuer sich schon gegenueber der Tabelle nutzt. */
+   .kopftafel fuer sich schon gegenueber der Tabelle nutzt. */
 /* Gestaltungsauftrag, dritter Anlauf, wörtlich: "Spaltenköpfe mit
    Schaltern, direkt darunter eine zweite Zeile Eingabefelder, direkt
    darunter die Daten - drei dichte Zeilen ohne Atempause." Ein <tr> im
@@ -2560,8 +2603,8 @@ button {
 
 /* Gestaltungsauftrag Punkt 5, wörtlich: "ich will in der rechten Kachel
    das Bild des jeweiligen Rades sehen" - #detailmaske IST diese rechte
-   Kachel (siehe dort). Derselbe Rahmen/Hintergrund wie .flotte-typkachel,
-   aber als eigener Block ueber dem Formular statt einer Zeile daneben:
+   Kachel (siehe dort). Als eigener Block ueber dem Formular, nicht als
+   Zeile daneben:
    hier ist das Bild der Aufmacher der ganzen Maske, kein kleines
    Beiwerk neben einer Kennzahl. */
 .detailmaske-bild {

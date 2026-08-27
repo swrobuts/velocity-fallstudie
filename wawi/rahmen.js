@@ -205,18 +205,33 @@ function zeitFormat(datum, optionen) {
 // die Funktion bekommt eine FERTIG formatierte Zahl und muss ihre
 // Gruppen erkennen, um die Tausendertrennzeichen optisch zurueckzunehmen -
 // dafuer muss sie wissen, WELCHES Zeichen in der aktuellen Sprache die
-// Gruppe trennt (Punkt in de-DE, Komma in en-US) und welches die
-// Dezimalstelle einleitet.
+// Gruppe trennt (Punkt in de-DE, Komma in en-US, ein schmales geschuetztes
+// Leerzeichen in pl-PL) und welches die Dezimalstelle einleitet.
+//
+// GEMESSEN AN 1.234.567,5 UND NICHT MEHR AN 1.234,5: Polnisch, Spanisch
+// und Italienisch gruppieren VIERSTELLIGE Zahlen gar nicht ("1234,5"),
+// die Probe lieferte dort also ueberhaupt kein group-Teil und fiel auf den
+// Vorgabewert '.' zurueck. Fuer Spanisch/Italienisch stimmte dieser Zufall
+// gerade noch, fuer Polnisch (U+00A0) nicht: zahlSkaliert() hielt das
+// Leerzeichen dann fuer das Ende der Zahl und liess von "35 387,17 €" nur
+// die "35" in voller Staerke stehen, der ganze Rest verblasste (im Browser
+// nachgestellt, siehe Bericht). Siebenstellig gruppiert JEDE der sechs
+// Sprachen.
+// Eine JAHRESZAHL ist keine Menge: "2.021" ist ein Tausendertrennzeichen
+// an einer Stelle, an der niemand eines erwartet (im Browser aufgefallen,
+// siehe Bericht - der Spaltenkopf der Flotte las sich als "2.021 - 2.025").
+// Intl kennt dafuer useGrouping:false; die Sprache bestimmt weiterhin die
+// Ziffernform, nur die Gruppierung faellt weg.
+function jahrFormat(jahr) {
+    return zahlFormat(jahr, { useGrouping: false });
+}
+
 function zahlTrennzeichen() {
-    const teile = new Intl.NumberFormat(localeTag()).formatToParts(1234.5);
+    const teile = new Intl.NumberFormat(localeTag()).formatToParts(1234567.5);
     return {
         gruppe: teile.find((tl) => tl.type === 'group')?.value || '.',
         dezimal: teile.find((tl) => tl.type === 'decimal')?.value || ','
     };
-}
-
-function regexEscape(zeichen) {
-    return zeichen.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 const UEBERSETZUNGEN = {
   de: {
@@ -273,26 +288,18 @@ const UEBERSETZUNGEN = {
     "status.raw.verworfen": "verworfen",
     "status.label.behoben": "behoben",
     "status.raw.behoben": "behoben",
-    "hint.saldoChartAria": "Saldo der {stationenPhrase}, sortiert nach Stationsnummer, von {min} bis {max} - am niedrigsten (rot markiert) bei {name}",
-    "hint.fillLevelBetween": "Füllstand der {stationenPhrase}, sortiert nach Stationsnummer, zwischen {min} und {max}",
     "msg.stationsWithoutBikeSuffix": ", {n} davon ohne Rad",
     "empty.noStationOccupancyText": "Es liegt keine Station vor. Bei zehn angelegten Stationen ist das ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt fehlender Daten.",
     "empty.noStationOccupancyTitle": "Keine Stationsauslastung",
     "msg.stationOccupancyLoadFailed": "Die Stationsauslastung ließ sich nicht laden: {fehler}",
     "misc.estimatedRidesDetail": "{geschaetzt} von {fahrtenPhrase} ({prozent})",
-    "hint.monthlyKmChartAria": "Gefahrene Kilometer je Monat, letzte zwölf Monate ({vonMonat} bis {bisMonat}) - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellWert}",
-    "hint.monthlyCo2ChartAria": "CO2-Ersparnis je Monat, letzte zwölf Monate ({vonMonat} bis {bisMonat}), von {min} bis {max} - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellWert}",
     "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, CO₂-Ersparnis gesamt {co2}, davon {prozent} geschätzt (fahrtgewichtet)",
     "empty.noKmCo2Title": "Keine Kilometer- und CO2-Zeilen",
     "msg.kmCo2LoadFailed": "Kilometer und CO₂ ließen sich nicht laden: {fehler}",
     "field.jeKunde": "Je Kunde",
-    "hint.crossCheckChartAria": "Monatsumsatz der letzten zwölf Monate ({vonMonat} bis {bisMonat}), dieselbe Reihe wie im Reiter \"Umsatz nach Radtyp\" - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellWert}",
     "msg.revenueByCustomerGroupSummary": "{monatszeilen}, Umsatz gesamt {umsatz}",
     "empty.noRevenueByCustomerGroupTitle": "Kein Umsatz nach Kundengruppe",
     "msg.revenueByCustomerGroupLoadFailed": "Der Umsatz nach Kundengruppe ließ sich nicht laden: {fehler}",
-    "hint.cityBikeJumpChartAria": "Umsatz je Fahrt City-Bike, {n} Monate ab {vonMonat}: Sprung von {von} auf {nach} ab {sprungMonat}, in Rot markiert",
-    "hint.monthlyRidesChartAria": "Fahrten je Monat, letzte zwölf Monate: {min} im {tiefMonat} am niedrigsten, {max} im {hochMonat} am höchsten - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellMonat} mit {aktuellPhrase}",
-    "hint.monthlyRevenueChartAria": "Monatsumsatz der letzten zwölf Monate ({vonMonat} bis {bisMonat}), von {min} bis {max} - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellMonat} mit {aktuellWert}",
     "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, Umsatz gesamt {umsatz}",
     "msg.revenueByBikeTypeLoadFailed": "Der Umsatz nach Radtyp ließ sich nicht laden: {fehler}",
     "empty.noRevenueByBikeTypeText": "Es liegt keine Monatszeile vor. Bei einem gefuellten Referenzjahr ist das ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt fehlender Daten.",
@@ -341,7 +348,6 @@ const UEBERSETZUNGEN = {
     "hint.trafficPatternAria": "{wochentypTitel} bei {name}, gemittelt über {tage} Tage. Die meisten Abgänge liegen im Zeitfenster {zeitfensterAb} mit {maxAb} je Tag, die meisten Zugänge im Zeitfenster {zeitfensterZu} mit {maxZu} je Tag.",
     "hint.stationFullNote": " Die Station ist voll und nimmt aktuell keine Rückgabe an.",
     "hint.stationOccupancyAria": "Belegung {name}: {belegt} von {kapazitaet} Stellplätzen, {prozent} Prozent. 100 Prozent ist die Kapazität dieser einen Station.{vollZusatz}",
-    "hint.networkOccupancyAria": "Netzweite Auslastung über alle {stationenPhrase} zusammen: {belegt} von {kapazitaet} Stellplätzen belegt, {prozent} Prozent. 100 Prozent ist die Gesamtkapazität des ganzen Stationsnetzes, nicht die einer einzelnen Station.",
     "map.openDetailsSuffix": ". Details öffnen.",
     "map.stationFullSuffix": ", voll - nimmt aktuell keine Rückgabe an",
     "map.stationBelegLabel": "{name}: {belegt} von {kapazitaet} Stellplätzen belegt",
@@ -352,7 +358,6 @@ const UEBERSETZUNGEN = {
     "nav.originDamageReport": "Schadensmeldung zu {rahmennummer}",
     "nav.originBikeFromStation": "Rad {rahmennummer} von {name}",
     "nav.originBikeFromFleet": "Rad {rahmennummer} aus der Flotte",
-    "hint.percentOfFleet": "{anteil} % der Flotte",
     "index.title": "VeloCity Warenwirtschaft",
     "index.loading": "Einen Moment …",
     "index.loginEmail": "E-Mail",
@@ -526,40 +531,12 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} hat noch eine laufende Fahrt. Erst die Rückgabe abwarten.",
     "art17.doneMessage": "Kunde {nummer} anonymisiert. Rechnungen und Fahrten bleiben erhalten.",
     "art17.confirmWord": "LOESCHEN",
-    "tile.available": "Einsatzbereit",
-    "tile.onLoan": "Ausgeliehen",
-    "tile.inMaintenance": "In Wartung",
-    "tile.faulty": "Defekt",
-    "tile.stations": "Stationen",
-    "tile.fullStations": "Volle Stationen",
-    "tile.networkOccupancy": "Gesamtbelegung – alle Stationen",
-    "tile.fillRange": "Füllstand-Spannweite",
-    "tile.customersTotal": "Kunden gesamt",
-    "tile.blocked": "Gesperrt",
-    "tile.noAddress": "Ohne Adresse",
-    "tile.invoiceTop10": "Rechnungsvolumen: obere 10 %",
-    "tile.damageReportsTotal": "Schadensmeldungen gesamt",
-    "tile.workOrdersTotal": "Wartungsaufträge gesamt",
-    "tile.unrideableOpen": "Fahruntauglich, offen",
     "tile.minimum": "Minimum",
     "tile.maximum": "Maximum",
     "tile.countPerMonth": "Anzahl pro Monat",
     "tile.dayWithMostRides": "Tag mit den meisten Fahrten",
-    "tile.revenueTotal": "Umsatz gesamt",
-    "tile.ridesTotal": "Fahrten gesamt",
-    "tile.revenuePerBikeDay": "Umsatz je Rad und Tag",
-    "tile.notableRevenuePerRideCityBike": "Auffällig: Umsatz je Fahrt City-Bike",
-    "tile.largestCustomerGroup": "Größte Kundengruppe",
-    "tile.notableNoMembership": "Auffällig: ohne Mitgliedschaft",
-    "tile.co2SavingsTotal": "CO₂-Ersparnis gesamt",
-    "tile.kilometersTotal": "Kilometer gesamt",
-    "tile.ofWhichEstimatedWeighted": "Davon geschätzt (fahrtgewichtet)",
-    "tile.networkOccupancyTotal": "Netzauslastung gesamt",
-    "tile.biggestImbalance": "Größtes Ungleichgewicht",
     "tile.occupancy": "Belegung",
     "tile.trafficByTimeSlot": "Zu- und Abgang nach Zeitfenster",
-    "tile.departuresPerDayTop": "Abgänge je Tag (oben)",
-    "tile.arrivalsPerDayBottom": "Zugänge je Tag (unten)",
     "tile.weekdays": "Werktags (Mo–Fr)",
     "tile.weekend": "Wochenende (Sa/So)",
     "tile.bikesAtStation": "Räder an dieser Station ({n})",
@@ -591,7 +568,6 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Lage im Netz",
     "tile.noStationLocation": "Für diese Station liegen keine Koordinaten vor.",
     "common.and": "und",
-    "misc.changeVsPrevMonth": "ggü. Vormonat",
     "msg.bikeNowSetTo": "{rahmennummer} steht jetzt auf {ziel}.",
     "msg.confirmDecommission": "{rahmennummer} endgültig ausmustern? Das Rad verliert seinen Standort und erscheint in keiner Liste mehr. Seine Fahrten bleiben erhalten.",
     "msg.bikeDecommissioned": "{rahmennummer} ausgemustert.",
@@ -626,60 +602,116 @@ const UEBERSETZUNGEN = {
     "msg.workOrderOpened": "Auftrag {id} eröffnet, Rad steht auf Wartung.",
     "msg.workOrdersLoadFailed": "Die Aufträge ließen sich nicht laden: {fehler}",
     "msg.workOrderCompleted": "Auftrag {auftragsnummer} erledigt.",
-    "msg.unrideableShare": "{n} von {schadenPhrase} insgesamt - sperrt das Rad, sobald es nicht gerade in Fahrt ist",
-    "msg.unrideableShareNoTotal": "sperrt das Rad, sobald es nicht gerade in Fahrt ist",
-    "hint.shareOfBikes": "{anteil} von {raederPhrase}",
-    "hint.shareOnLoan": "{anteil} von {raederPhrase} · gerade unterwegs",
-    "hint.shareMaintenance": "{anteil} von {raederPhrase} · in der Werkstatt",
-    "hint.shareFaulty": "{anteil} von {raederPhrase} · wo es klemmt",
-    "hint.allInOperation": "alle in Betrieb",
-    "hint.decommissionedCount": "{n} davon stillgelegt",
-    "hint.fullStationsShare": "{n} von {stationenPhrase}: {liste} - nimmt keine Rückgabe an",
-    "hint.networkOccupancyDetail": "{belegt} von {kapazitaet} Stellplätzen belegt, über alle {stationenPhrase}",
-    "hint.fillRangeDetail": "Median {median} % · {voll} von {stationenPhrase} randvoll{leerZusatz}",
-    "hint.andEmptyCount": ", {n} von {stationenPhrase} leer",
-    "hint.noneEmpty": ", keine leer",
-    "hint.fillRangeChartAria": "Füllstand-Spannweite über {stationenPhrase}: von {min} % bis {max} %, Median {median} %",
-    "hint.blockedShare": "{n} von {kundenPhrase} - es gibt derzeit keine Funktion, die eine Sperrung aufhebt",
-    "hint.noUnblockFunction": "Es gibt derzeit keine Funktion, die eine Sperrung aufhebt",
-    "hint.noAddressShare": "{n} von {kundenPhrase} - lässt sich in der Maske nachtragen",
-    "hint.addLaterInForm": "Lässt sich in der Maske nachtragen",
-    "hint.top10Detail": "{zehntel} von {kundenPhrase} vereinen {top10} von {gesamt}",
-    "hint.overallStates": "über alle Bearbeitungsstände",
-    "hint.last12MonthsTrend": "Verlauf der letzten 12 Monate",
-    "hint.last12MonthsCrossCheck": "Verlauf der letzten 12 Monate - Kontrollrechnung zum Reiter \"Umsatz nach Radtyp\"",
-    "hint.yearlyPattern": "Jahresgang: {tief} am niedrigsten, {hoch} am höchsten",
-    "hint.perBikePerDayDetail": "{jeRadJahr} je Jahr · bezogen auf {raederPhrase} im Bestand (ohne Ausgemusterte) · letzte 12 Monate",
-    "hint.tariffChangeFrom": "{veraenderung} ab {monat} - Tarifwechsel",
-    "hint.shareOfRevenue": "{prozent} des Umsatzes ({geld})",
-    "hint.revenueWithoutTariff": "{geld} Umsatz aus Fahrten ohne aktiven Tarif",
-    "hint.estimatedShareOfRides": "{geschaetzt} von {fahrtenPhrase} geschätzt - NICHT {naiv}, wie das einfache Mittel der Zeilen nahelegen würde",
-    "hint.fillLevelPerStation": "Füllstand je Station, sortiert nach Stationsnummer",
-    "hint.fillLevelPerStationRange": "Füllstand je Station: {min}–{max} %",
-    "hint.networkOccupancyWeighted": "{belegt} von {kapazitaet} Stellplätzen belegt · kapazitätsgewichtet, nicht der Durchschnitt der Einzelwerte ({naiv})",
-    "hint.fullStationsList": "{voll} von {stationenPhrase}: {liste}",
-    "hint.worstStationBalance": "Saldo {saldo} - gibt mehr Räder ab, als sie bekommt",
-    "hint.stationCollectsBalance": "Saldo {saldo} – sammelt mehr Räder an, als sie abgibt",
-    "tile.fleetAge": "Altersstruktur der Flotte",
-    "hint.fleetAgeAria": "Baujahr-Verteilung der Flotte, {vonJahr} bis {bisJahr}",
-    "hint.fleetAgeDetail": "{anteil} % der Flotte ({n} von {raederPhrase}) aus {jahr} – ältester Jahrgang im Bestand",
-    "hint.ridesPerBikeBucketsAria": "Fahrten je Rad, letzte 30 Tage, in Bereiche gruppiert",
-    "tile.tariffDistribution": "Verteilung nach Tarif",
-    "hint.tariffDistributionAria": "Kundschaft nach Tarif verteilt",
-    "hint.tariffDistributionDetail": "{anteil} % ({n} von {kundenPhrase}) ohne aktiven Tarif – größte Gruppe",
-    "hint.blockedNeverRiddenAll": "{kundenPhrase} – noch nie gefahren, registriert {vonJahr}–{bisJahr}",
-    "hint.blockedNeverRiddenSome": "{kundenPhrase} – {nie} davon noch nie gefahren",
-    "hint.locationDistributionAria": "Kundschaft nach Wohnort, größte Gruppe zuerst: {anteil} % in {ort}, verteilt über {orteAnzahl} Orte",
-    "hint.locationDistributionDetail": "{anteil} % in {ort}, verteilt über {orteAnzahl} Orte",
-    "tile.workOrdersRunning": "Laufende Aufträge",
-    "hint.workOrdersRunningShare": "{n} von {auftraegePhrase} – noch nicht abgeschlossen",
-    "hint.percentOfDamageReports": "{anteil} % der Schadensmeldungen",
     "field.baujahr": "Baujahr",
     "field.gewicht": "Gewicht",
     "field.gangzahl": "Gangzahl",
     "field.rahmenhoehe": "Rahmenhöhe",
     "field.akkukapazitaet": "Akkukapazität",
     "field.reichweite": "Reichweite",
+    "col.together": "Zusammen",
+    "col.model": "Modell",
+    "col.stock": "Bestand",
+    "col.statusMix": "Zustand",
+    "col.modelYear": "Baujahr",
+    "col.utilisationDeviation": "Einsatzquote ggü. Flotte",
+    "col.station": "Station",
+    "col.capacity": "Stellplätze",
+    "col.occupancy": "Belegung",
+    "col.occupied": "belegt",
+    "col.free": "frei",
+    "col.dailyRhythm": "Tagesgang",
+    "col.balance": "Saldo",
+    "col.tariffGroup": "Tarifgruppe",
+    "col.customers": "Kundschaft",
+    "col.customerMix": "Nutzung",
+    "col.signups": "Zugänge",
+    "col.revenueDeviation": "Umsatz- ggü. Kundenanteil",
+    "col.case": "Fall",
+    "col.workTime": "Arbeitszeit",
+    "col.severity": "Schwere",
+    "col.progress": "Bearbeitungsstand",
+    "col.bikeType": "Radtyp",
+    "col.revenue": "Umsatz",
+    "col.halfYearMix": "Halbjahr",
+    "col.summerHalf": "Sommerhalbjahr",
+    "col.winterHalf": "Winterhalbjahr",
+    "col.monthlyCourse": "Monatsverlauf",
+    "col.revenueVsRides": "Umsatz- ggü. Fahrtenanteil",
+    "col.kilometres": "Kilometer",
+    "col.dataQuality": "Datenlage",
+    "col.measured": "gemessen",
+    "col.estimated": "geschätzt",
+    "col.kmPerRideDeviation": "km je Fahrt ggü. Schnitt",
+    "col.movements": "Bewegungen",
+    "col.fillLevel": "Füllstand",
+    "unit.bikes": "Räder",
+    "unit.shareOfRow": "Anteil der Zeile",
+    "unit.percentagePoints": "Prozentpunkte",
+    "unit.dockingPoints": "Stellplätze",
+    "unit.departuresPerWorkday": "Abgänge je Werktag, 0–24 Uhr",
+    "unit.ridesArrivalsMinusDepartures": "Fahrten, Zugang minus Abgang",
+    "unit.persons": "Personen",
+    "unit.minutes": "Minuten",
+    "unit.threeSteps": "3 Stufen",
+    "unit.reportedToFixed": "gemeldet bis behoben",
+    "unit.euroTwelveMonths": "Euro, 12 Monate",
+    "unit.summerWinter": "Sommer / Winter",
+    "unit.kmTwelveMonths": "Summe, 12 Monate",
+    "unit.ridesMeasuredEstimated": "Fahrten, gemessen / geschätzt",
+    "unit.kmPerRide": "Kilometer je Fahrt",
+    "unit.departuresPlusArrivals": "Abgänge und Zugänge",
+    "unit.zeroToHundred": "0–100 %",
+    "board.fleetTitle": "Bestand nach Modell",
+    "board.fleetReference": "{raederPhrase} · {modellePhrase} von {herstellerPhrase} · Baujahre {vonJahr}–{bisJahr} · {quote} % gerade ausgeliehen",
+    "board.fleetStatusAria": "{name}: {aufteilung}",
+    "board.fleetYearAria": "{name}, Baujahr {jahr}, auf der Skala {vonJahr} bis {bisJahr}",
+    "board.fleetDeviationAria": "{name}: {quote} % ausgeliehen, ganze Flotte {flottenquote} %",
+    "board.fleetFootnote": "Abweichung: Anteil ausgeliehener Räder je Modell gegenüber {quote} % in der gesamten Flotte – aus Summen gerechnet, nicht als Mittel der neun Modellquoten.",
+    "board.stationsTitle": "Netz nach Station",
+    "board.stationsReference": "{stationenPhrase} · {belegt} von {kapazitaet} Stellplätzen belegt ({prozent} %) · Saldo über alle abgeschlossenen Fahrten",
+    "board.stationOccupancyAria": "{name}: {belegt} von {kapazitaet} Stellplätzen belegt, {prozent} %",
+    "board.stationRhythmAria": "{name}: Tagesgang der Abgänge, Spitze zwischen {stunde} Uhr mit {wert} Fahrten je Werktag",
+    "board.stationBalanceAria": "{name}: {zugaenge} Zugänge, {abgaenge} Abgänge, Saldo {saldo}",
+    "board.stationsFootnote": "Die Abgänge liegen bei allen Stationen zwischen {min} und {max} – die Nachfrage ist gleichmäßig verteilt, die Unterschiede stecken allein im Saldo.",
+    "board.customersTitle": "Kartei nach Tarifgruppe",
+    "board.customersReference": "{kundenPhrase} · {gesperrt} gesperrt · {volumen} Rechnungsvolumen · {imOrt} in {ort}, verteilt über {ortePhrase}",
+    "board.customersNoTariff": "Ohne aktiven Tarif",
+    "board.customersWithRides": "mit Fahrten",
+    "board.customersNoRides": "ohne Fahrt",
+    "board.customersRevenueShare": "{anteil} % des Volumens",
+    "board.customersMixAria": "{name}: {aufteilung}",
+    "board.customersSignupsAria": "{name}: Zugänge {vonJahr} bis {bisJahr}, Höchstwert {max} im Jahr {maxJahr}",
+    "board.customersDeviationAria": "{name}: {umsatzanteil} % des Volumens bei {kundenanteil} % der Kundschaft",
+    "board.customersActiveMax": "höchstens {kundenPhrase} im Monat",
+    "board.customersFootnote": "Die oberen {zehntel} Kundinnen und Kunden tragen {anteil} % des Rechnungsvolumens; {ohneAdresse} Datensätze haben keine Adresse.",
+    "board.maintenanceTitle": "Die einzelnen Fälle",
+    "board.maintenanceReference": "{schadenPhrase} · {raederPhrase} betroffen ({typen}) · {auftraegePhrase} · gemeldet {tag}",
+    "board.maintenanceSeverityAria": "{rad}: {schwere}, Stufe {stufe} von 3",
+    "board.maintenanceProgressAria": "{rad}: {stand}, {auftrag}",
+    "board.maintenanceHasOrder": "Wartungsauftrag vorhanden",
+    "board.maintenanceNoOrder": "kein Wartungsauftrag",
+    "board.maintenanceFootnote": "Keine Abweichungsspalte und keine Mittelwerte: {schadenPhrase}, davon {offen} unerledigt, {minuten} Minuten erfasste Arbeitszeit – jede Kennzahl wäre hier eine Statistik über sich selbst.",
+    "board.revenueTypeTitle": "Zwölf Monate nach Radtyp",
+    "board.revenueGroupTitle": "Zwölf Monate nach Tarifgruppe",
+    "board.revenueReference": "{umsatz} und {fahrtenPhrase}, {vonMonat} bis {bisMonat}",
+    "board.revenueReferenceWithFleet": "{umsatz} und {fahrtenPhrase}, {vonMonat} bis {bisMonat} · {jeRadTag} je Rad und Tag ({raederPhrase})",
+    "board.revenuePerRide": "{betrag} je Fahrt",
+    "board.halfYearAria": "{name}: {sommer} % im Sommerhalbjahr, {winter} % im Winterhalbjahr",
+    "board.monthlyCourseAria": "{name}: Verlauf {vonMonat} bis {bisMonat}, Höchstwert {max} im {maxMonat}, zuletzt {aktuell}",
+    "board.revenueVsRidesAria": "{name}: {umsatzanteil} % des Umsatzes bei {fahrtenanteil} % der Fahrten",
+    "board.revenueTypeFootnote": "Umsatz je Fahrt beim City-Bike: {von} auf {nach} ({veraenderung}) ab {monat} – der einzige Tarifwechsel im Zeitraum.",
+    "board.revenueGroupFootnote": "Kundenzahlen einzelner Monate lassen sich nicht addieren – dieselben Personen fahren in mehreren Monaten. Die Rubrik nennt deshalb den stärksten Monat, keine Summe.",
+    "board.kmTitle": "Wegstrecke nach Radtyp",
+    "board.kmReference": "{km} auf {fahrtenPhrase}, {vonMonat} bis {bisMonat} · {anteil} der Fahrten geschätzt",
+    "board.co2PerRide": "{kg} CO₂ je Fahrt",
+    "board.qualityAria": "{name}: {anteil} geschätzt, {geschaetzt} von {fahrten} Fahrten",
+    "board.kmPerRideAria": "{name}: {je} je Fahrt, Schnitt {schnitt}",
+    "board.kmFootnote": "Der Schätzanteil ({anteil}) ist fahrtgewichtet gerechnet, nicht als Mittel der Monatsanteile: das ergäbe im gezeigten Zeitraum {ungewichtet} und über alle {monatszeilen} sogar {alleUngewichtet} statt {alleGewichtet} – schwach besetzte Monate wiegen in einem Mittel genauso schwer wie starke.",
+    "board.stationLoadTitle": "Bewegung nach Station",
+    "board.stationLoadReference": "{stationenPhrase} · {fahrten} Abgänge über die gesamte Historie",
+    "board.fillLevelAria": "{name}: Füllstand {prozent} %",
+    "board.stationLoadFootnote": "Die Abgänge liegen zwischen {min} und {max} – die Nachfrage ist gleichmäßig verteilt, zu entscheiden ist allein anhand des Saldos.",
+    "board.halfYearFootnote": "Der Winteranteil liegt in jeder Zeile zwischen {min} % und {max} % – der Jahresgang trifft alle gleich und unterscheidet die Zeilen nicht.",
   },
   en: {
     "common.cancel": "Cancel",
@@ -735,26 +767,18 @@ const UEBERSETZUNGEN = {
     "status.raw.verworfen": "Dismissed",
     "status.label.behoben": "Fixed",
     "status.raw.behoben": "Fixed",
-    "hint.saldoChartAria": "Balance of {stationenPhrase}, sorted by station number, from {min} to {max} - lowest (marked in red) at {name}",
-    "hint.fillLevelBetween": "Fill level of {stationenPhrase}, sorted by station number, between {min} and {max}",
     "msg.stationsWithoutBikeSuffix": ", {n} of them without a bike",
     "empty.noStationOccupancyText": "There is no station. With ten stations set up, that is unusual - a temporary loss of role could be the cause rather than missing data.",
     "empty.noStationOccupancyTitle": "No station occupancy",
     "msg.stationOccupancyLoadFailed": "Could not load station occupancy: {fehler}",
     "misc.estimatedRidesDetail": "{geschaetzt} of {fahrtenPhrase} ({prozent})",
-    "hint.monthlyKmChartAria": "Kilometres ridden per month, last twelve months ({vonMonat} to {bisMonat}) - the dark bar on the far right is the current month, {aktuellWert}",
-    "hint.monthlyCo2ChartAria": "CO2 savings per month, last twelve months ({vonMonat} to {bisMonat}), from {min} to {max} - the dark bar on the far right is the current month, {aktuellWert}",
     "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, total CO₂ savings {co2}, of which {prozent} estimated (ride-weighted)",
     "empty.noKmCo2Title": "No kilometre and CO2 rows",
     "msg.kmCo2LoadFailed": "Could not load kilometres and CO2: {fehler}",
     "field.jeKunde": "Per customer",
-    "hint.crossCheckChartAria": "Monthly revenue for the last twelve months ({vonMonat} to {bisMonat}), the same series as in the \"Revenue by bike type\" tab - the dark bar on the far right is the current month, {aktuellWert}",
     "msg.revenueByCustomerGroupSummary": "{monatszeilen}, total revenue {umsatz}",
     "empty.noRevenueByCustomerGroupTitle": "No revenue by customer group",
     "msg.revenueByCustomerGroupLoadFailed": "Could not load revenue by customer group: {fehler}",
-    "hint.cityBikeJumpChartAria": "Revenue per ride, City-Bike, {n} months from {vonMonat}: jump from {von} to {nach} starting {sprungMonat}, marked in red",
-    "hint.monthlyRidesChartAria": "Rides per month, last twelve months: lowest at {min} in {tiefMonat}, highest at {max} in {hochMonat} - the dark bar on the far right is the current month, {aktuellMonat} with {aktuellPhrase}",
-    "hint.monthlyRevenueChartAria": "Monthly revenue for the last twelve months ({vonMonat} to {bisMonat}), from {min} to {max} - the dark bar on the far right is the current month, {aktuellMonat} with {aktuellWert}",
     "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, total revenue {umsatz}",
     "msg.revenueByBikeTypeLoadFailed": "Could not load revenue by bike type: {fehler}",
     "empty.noRevenueByBikeTypeText": "There is no monthly row. With a populated reference year that is unusual - a temporary loss of role could be the cause rather than missing data.",
@@ -803,7 +827,6 @@ const UEBERSETZUNGEN = {
     "hint.trafficPatternAria": "{wochentypTitel} at {name}, averaged over {tage} days. Most departures fall in the time slot {zeitfensterAb} with {maxAb} per day, most arrivals in the time slot {zeitfensterZu} with {maxZu} per day.",
     "hint.stationFullNote": " The station is full and is not currently accepting returns.",
     "hint.stationOccupancyAria": "Occupancy {name}: {belegt} of {kapazitaet} docks, {prozent} percent. 100 percent is the capacity of this one station.{vollZusatz}",
-    "hint.networkOccupancyAria": "Network-wide occupancy across all {stationenPhrase}: {belegt} of {kapazitaet} docks occupied, {prozent} percent. 100 percent is the total capacity of the whole station network, not that of a single station.",
     "map.openDetailsSuffix": ". Open details.",
     "map.currentStationSuffix": " - this is the station shown",
     "map.stationFullSuffix": ", full - not currently accepting returns",
@@ -814,7 +837,6 @@ const UEBERSETZUNGEN = {
     "nav.originDamageReport": "Damage report for {rahmennummer}",
     "nav.originBikeFromStation": "Bike {rahmennummer} from {name}",
     "nav.originBikeFromFleet": "Bike {rahmennummer} from the fleet",
-    "hint.percentOfFleet": "{anteil} % of the fleet",
     "index.title": "VeloCity Inventory Management",
     "index.loading": "One moment …",
     "index.loginEmail": "Email",
@@ -988,40 +1010,12 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} still has a ride in progress. Please wait for the return first.",
     "art17.doneMessage": "Customer {nummer} anonymised. Invoices and rides are retained.",
     "art17.confirmWord": "LOESCHEN",
-    "tile.available": "Ready for use",
-    "tile.onLoan": "On loan",
-    "tile.inMaintenance": "In maintenance",
-    "tile.faulty": "Faulty",
-    "tile.stations": "Stations",
-    "tile.fullStations": "Full stations",
-    "tile.networkOccupancy": "Total occupancy – all stations",
-    "tile.fillRange": "Fill-level range",
-    "tile.customersTotal": "Customers total",
-    "tile.blocked": "Blocked",
-    "tile.noAddress": "Without address",
-    "tile.invoiceTop10": "Invoice volume: top 10 %",
-    "tile.damageReportsTotal": "Damage reports total",
-    "tile.workOrdersTotal": "Work orders total",
-    "tile.unrideableOpen": "Unrideable, open",
     "tile.minimum": "Minimum",
     "tile.maximum": "Maximum",
     "tile.countPerMonth": "Count per month",
     "tile.dayWithMostRides": "Day with the most rides",
-    "tile.revenueTotal": "Revenue total",
-    "tile.ridesTotal": "Rides total",
-    "tile.revenuePerBikeDay": "Revenue per bike and day",
-    "tile.notableRevenuePerRideCityBike": "Notable: revenue per ride, City-Bike",
-    "tile.largestCustomerGroup": "Largest customer group",
-    "tile.notableNoMembership": "Notable: without membership",
-    "tile.co2SavingsTotal": "CO₂ savings total",
-    "tile.kilometersTotal": "Kilometres total",
-    "tile.ofWhichEstimatedWeighted": "Of which estimated (ride-weighted)",
-    "tile.networkOccupancyTotal": "Total network occupancy",
-    "tile.biggestImbalance": "Biggest imbalance",
     "tile.occupancy": "Occupancy",
     "tile.trafficByTimeSlot": "Arrivals and departures by time slot",
-    "tile.departuresPerDayTop": "Departures per day (top)",
-    "tile.arrivalsPerDayBottom": "Arrivals per day (bottom)",
     "tile.weekdays": "Weekdays (Mon–Fri)",
     "tile.weekend": "Weekend (Sat/Sun)",
     "tile.bikesAtStation": "Bikes at this station ({n})",
@@ -1053,7 +1047,6 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Location in the network",
     "tile.noStationLocation": "No coordinates are available for this station.",
     "common.and": "and",
-    "misc.changeVsPrevMonth": "vs. previous month",
     "msg.bikeNowSetTo": "{rahmennummer} is now set to {ziel}.",
     "msg.confirmDecommission": "Permanently decommission {rahmennummer}? The bike loses its location and no longer appears in any list. Its rides are retained.",
     "msg.bikeDecommissioned": "{rahmennummer} decommissioned.",
@@ -1088,60 +1081,116 @@ const UEBERSETZUNGEN = {
     "msg.workOrderOpened": "Work order {id} opened, bike set to maintenance.",
     "msg.workOrdersLoadFailed": "Could not load the work orders: {fehler}",
     "msg.workOrderCompleted": "Work order {auftragsnummer} completed.",
-    "msg.unrideableShare": "{n} of {schadenPhrase} in total - blocks the bike as soon as it is not currently being ridden",
-    "msg.unrideableShareNoTotal": "blocks the bike as soon as it is not currently being ridden",
-    "hint.shareOfBikes": "{anteil} of {raederPhrase}",
-    "hint.shareOnLoan": "{anteil} of {raederPhrase} · currently under way",
-    "hint.shareMaintenance": "{anteil} of {raederPhrase} · in the workshop",
-    "hint.shareFaulty": "{anteil} of {raederPhrase} · where it’s stuck",
-    "hint.allInOperation": "all in operation",
-    "hint.decommissionedCount": "{n} of which decommissioned",
-    "hint.fullStationsShare": "{n} of {stationenPhrase}: {liste} - not accepting returns",
-    "hint.networkOccupancyDetail": "{belegt} of {kapazitaet} docks occupied, across all {stationenPhrase}",
-    "hint.fillRangeDetail": "Median {median} % · {voll} of {stationenPhrase} completely full{leerZusatz}",
-    "hint.fillRangeChartAria": "Fill-level range across {stationenPhrase}: from {min}% to {max}%, median {median}%",
-    "hint.andEmptyCount": ", {n} of {stationenPhrase} empty",
-    "hint.noneEmpty": ", none empty",
-    "hint.blockedShare": "{n} of {kundenPhrase} - there is currently no function to lift a block",
-    "hint.noUnblockFunction": "There is currently no function to lift a block",
-    "hint.noAddressShare": "{n} of {kundenPhrase} - can be added later in the form",
-    "hint.addLaterInForm": "Can be added later in the form",
-    "hint.top10Detail": "{zehntel} of {kundenPhrase} together hold {top10} of {gesamt}",
-    "hint.overallStates": "across all processing states",
-    "hint.last12MonthsTrend": "Trend over the last 12 months",
-    "hint.last12MonthsCrossCheck": "Trend over the last 12 months - cross-check against the \"Revenue by bike type\" tab",
-    "hint.yearlyPattern": "Yearly pattern: lowest in {tief}, highest in {hoch}",
-    "hint.perBikePerDayDetail": "{jeRadJahr} per year · based on {raederPhrase} in the fleet (excluding decommissioned) · last 12 months",
-    "hint.tariffChangeFrom": "{veraenderung} from {monat} - tariff change",
-    "hint.shareOfRevenue": "{prozent} of revenue ({geld})",
-    "hint.revenueWithoutTariff": "{geld} revenue from rides without an active plan",
-    "hint.estimatedShareOfRides": "{geschaetzt} of {fahrtenPhrase} estimated - NOT {naiv}, as the simple average of the rows would suggest",
-    "hint.fillLevelPerStation": "Fill level per station, sorted by station number",
-    "hint.fillLevelPerStationRange": "Fill level per station: {min}–{max}%",
-    "hint.networkOccupancyWeighted": "{belegt} of {kapazitaet} docks occupied · capacity-weighted, not the average of the individual values ({naiv})",
-    "hint.fullStationsList": "{voll} of {stationenPhrase}: {liste}",
-    "hint.worstStationBalance": "Balance {saldo} - gives away more bikes than it receives",
-    "hint.stationCollectsBalance": "Balance {saldo} – collects more bikes than it gives away",
-    "tile.fleetAge": "Fleet age structure",
-    "hint.fleetAgeAria": "Fleet distribution by model year, {vonJahr} to {bisJahr}",
-    "hint.fleetAgeDetail": "{anteil}% of the fleet ({n} of {raederPhrase}) is from {jahr} – oldest model year in stock",
-    "hint.ridesPerBikeBucketsAria": "Rides per bike, last 30 days, grouped into ranges",
-    "tile.tariffDistribution": "Distribution by plan",
-    "hint.tariffDistributionAria": "Customers distributed by plan",
-    "hint.tariffDistributionDetail": "{anteil}% ({n} of {kundenPhrase}) with no active plan – largest group",
-    "hint.blockedNeverRiddenAll": "{kundenPhrase} – have never ridden, registered {vonJahr}–{bisJahr}",
-    "hint.blockedNeverRiddenSome": "{kundenPhrase} – {nie} of them have never ridden",
-    "hint.locationDistributionAria": "Customers by home location, largest group first: {anteil}% in {ort}, spread across {orteAnzahl} locations",
-    "hint.locationDistributionDetail": "{anteil}% in {ort}, spread across {orteAnzahl} locations",
-    "tile.workOrdersRunning": "Active work orders",
-    "hint.workOrdersRunningShare": "{n} of {auftraegePhrase} – not yet completed",
-    "hint.percentOfDamageReports": "{anteil}% of damage reports",
     "field.baujahr": "Model year",
     "field.gewicht": "Weight",
     "field.gangzahl": "Gears",
     "field.rahmenhoehe": "Frame size",
     "field.akkukapazitaet": "Battery capacity",
     "field.reichweite": "Range",
+    "col.together": "Together",
+    "col.model": "Model",
+    "col.stock": "Stock",
+    "col.statusMix": "Condition",
+    "col.modelYear": "Model year",
+    "col.utilisationDeviation": "Utilisation vs. fleet",
+    "col.station": "Station",
+    "col.capacity": "Docking points",
+    "col.occupancy": "Occupancy",
+    "col.occupied": "occupied",
+    "col.free": "free",
+    "col.dailyRhythm": "Daily pattern",
+    "col.balance": "Balance",
+    "col.tariffGroup": "Tariff group",
+    "col.customers": "Customers",
+    "col.customerMix": "Usage",
+    "col.signups": "Sign-ups",
+    "col.revenueDeviation": "Revenue vs. customer share",
+    "col.case": "Case",
+    "col.workTime": "Work time",
+    "col.severity": "Severity",
+    "col.progress": "Progress",
+    "col.bikeType": "Bike type",
+    "col.revenue": "Revenue",
+    "col.halfYearMix": "Half-year",
+    "col.summerHalf": "summer half-year",
+    "col.winterHalf": "winter half-year",
+    "col.monthlyCourse": "Monthly course",
+    "col.revenueVsRides": "Revenue vs. ride share",
+    "col.kilometres": "Kilometres",
+    "col.dataQuality": "Data basis",
+    "col.measured": "measured",
+    "col.estimated": "estimated",
+    "col.kmPerRideDeviation": "km per ride vs. average",
+    "col.movements": "Movements",
+    "col.fillLevel": "Fill level",
+    "unit.bikes": "bikes",
+    "unit.shareOfRow": "share of row",
+    "unit.percentagePoints": "percentage points",
+    "unit.dockingPoints": "docking points",
+    "unit.departuresPerWorkday": "departures per workday, 0–24 h",
+    "unit.ridesArrivalsMinusDepartures": "rides, arrivals minus departures",
+    "unit.persons": "persons",
+    "unit.minutes": "minutes",
+    "unit.threeSteps": "3 steps",
+    "unit.reportedToFixed": "reported to fixed",
+    "unit.euroTwelveMonths": "euro, 12 months",
+    "unit.summerWinter": "summer / winter",
+    "unit.kmTwelveMonths": "total, 12 months",
+    "unit.ridesMeasuredEstimated": "rides, measured / estimated",
+    "unit.kmPerRide": "kilometres per ride",
+    "unit.departuresPlusArrivals": "departures and arrivals",
+    "unit.zeroToHundred": "0–100 %",
+    "board.fleetTitle": "Stock by model",
+    "board.fleetReference": "{raederPhrase} · {modellePhrase} from {herstellerPhrase} · model years {vonJahr}–{bisJahr} · {quote} % on loan right now",
+    "board.fleetStatusAria": "{name}: {aufteilung}",
+    "board.fleetYearAria": "{name}, model year {jahr}, on the scale {vonJahr} to {bisJahr}",
+    "board.fleetDeviationAria": "{name}: {quote} % on loan, whole fleet {flottenquote} %",
+    "board.fleetFootnote": "Deviation: share of bikes on loan per model against {quote} % across the whole fleet – computed from totals, not as the average of the nine model ratios.",
+    "board.stationsTitle": "Network by station",
+    "board.stationsReference": "{stationenPhrase} · {belegt} of {kapazitaet} docking points occupied ({prozent} %) · balance over all completed rides",
+    "board.stationOccupancyAria": "{name}: {belegt} of {kapazitaet} docking points occupied, {prozent} %",
+    "board.stationRhythmAria": "{name}: daily pattern of departures, peak between {stunde} h with {wert} rides per workday",
+    "board.stationBalanceAria": "{name}: {zugaenge} arrivals, {abgaenge} departures, balance {saldo}",
+    "board.stationsFootnote": "Departures range from {min} to {max} across all stations – demand is evenly spread, the differences lie solely in the balance.",
+    "board.customersTitle": "Records by tariff group",
+    "board.customersReference": "{kundenPhrase} · {gesperrt} blocked · {volumen} invoiced · {imOrt} in {ort}, spread over {ortePhrase}",
+    "board.customersNoTariff": "No active tariff",
+    "board.customersWithRides": "with rides",
+    "board.customersNoRides": "without a ride",
+    "board.customersRevenueShare": "{anteil} % of the volume",
+    "board.customersMixAria": "{name}: {aufteilung}",
+    "board.customersSignupsAria": "{name}: sign-ups {vonJahr} to {bisJahr}, peak {max} in {maxJahr}",
+    "board.customersDeviationAria": "{name}: {umsatzanteil} % of the volume with {kundenanteil} % of the customers",
+    "board.customersActiveMax": "at most {kundenPhrase} in a month",
+    "board.customersFootnote": "The top {zehntel} customers account for {anteil} % of the invoiced volume; {ohneAdresse} records have no address.",
+    "board.maintenanceTitle": "The individual cases",
+    "board.maintenanceReference": "{schadenPhrase} · {raederPhrase} affected ({typen}) · {auftraegePhrase} · reported {tag}",
+    "board.maintenanceSeverityAria": "{rad}: {schwere}, step {stufe} of 3",
+    "board.maintenanceProgressAria": "{rad}: {stand}, {auftrag}",
+    "board.maintenanceHasOrder": "work order exists",
+    "board.maintenanceNoOrder": "no work order",
+    "board.maintenanceFootnote": "No deviation column and no averages: {schadenPhrase}, {offen} of them unresolved, {minuten} minutes of recorded work – any ratio here would be a statistic about itself.",
+    "board.revenueTypeTitle": "Twelve months by bike type",
+    "board.revenueGroupTitle": "Twelve months by tariff group",
+    "board.revenueReference": "{umsatz} and {fahrtenPhrase}, {vonMonat} to {bisMonat}",
+    "board.revenueReferenceWithFleet": "{umsatz} and {fahrtenPhrase}, {vonMonat} to {bisMonat} · {jeRadTag} per bike per day ({raederPhrase})",
+    "board.revenuePerRide": "{betrag} per ride",
+    "board.halfYearAria": "{name}: {sommer} % in the summer half-year, {winter} % in the winter half-year",
+    "board.monthlyCourseAria": "{name}: course {vonMonat} to {bisMonat}, peak {max} in {maxMonat}, latest {aktuell}",
+    "board.revenueVsRidesAria": "{name}: {umsatzanteil} % of revenue with {fahrtenanteil} % of rides",
+    "board.revenueTypeFootnote": "Revenue per ride for the City-Bike: {von} to {nach} ({veraenderung}) from {monat} – the only tariff change in the period.",
+    "board.revenueGroupFootnote": "Monthly customer counts cannot be added up – the same people ride in several months. The row label therefore names the strongest month, not a total.",
+    "board.kmTitle": "Distance by bike type",
+    "board.kmReference": "{km} over {fahrtenPhrase}, {vonMonat} to {bisMonat} · {anteil} of rides estimated",
+    "board.co2PerRide": "{kg} CO₂ per ride",
+    "board.qualityAria": "{name}: {anteil} estimated, {geschaetzt} of {fahrten} rides",
+    "board.kmPerRideAria": "{name}: {je} per ride, average {schnitt}",
+    "board.kmFootnote": "The estimated share ({anteil}) is weighted by rides, not averaged over monthly shares: that would give {ungewichtet} for the period shown and even {alleUngewichtet} instead of {alleGewichtet} across all {monatszeilen} – in a plain average, thinly populated months weigh as much as busy ones.",
+    "board.stationLoadTitle": "Movement by station",
+    "board.stationLoadReference": "{stationenPhrase} · {fahrten} departures over the entire history",
+    "board.fillLevelAria": "{name}: fill level {prozent} %",
+    "board.stationLoadFootnote": "Departures range from {min} to {max} – demand is evenly spread, the only thing to decide on is the balance.",
+    "board.halfYearFootnote": "The winter share lies between {min} % and {max} % in every row – the seasonal pattern affects all alike and does not tell the rows apart.",
   },
   tr: {
     "common.cancel": "Vazgeç",
@@ -1197,26 +1246,18 @@ const UEBERSETZUNGEN = {
     "status.raw.verworfen": "Reddedildi",
     "status.label.behoben": "Giderildi",
     "status.raw.behoben": "Giderildi",
-    "hint.saldoChartAria": "İstasyon numarasına göre sıralı {stationenPhrase} bakiyesi, {min} ile {max} arasında - en düşük (kırmızıyla işaretli) {name}",
-    "hint.fillLevelBetween": "İstasyon numarasına göre sıralı {stationenPhrase} doluluğu, {min} ile {max} arasında",
     "msg.stationsWithoutBikeSuffix": ", bunlardan {n} tanesi bisikletsiz",
     "empty.noStationOccupancyText": "Herhangi bir istasyon bulunmuyor. On istasyon tanımlıyken bu olağandışıdır - eksik veri yerine geçici bir rol kaybı söz konusu olabilir.",
     "empty.noStationOccupancyTitle": "İstasyon doluluğu yok",
     "msg.stationOccupancyLoadFailed": "İstasyon doluluğu yüklenemedi: {fehler}",
     "misc.estimatedRidesDetail": "{fahrtenPhrase} içinden {geschaetzt} tanesi ({prozent})",
-    "hint.monthlyKmChartAria": "Aylık kat edilen kilometre, son on iki ay ({vonMonat} - {bisMonat}) - en sağdaki koyu sütun mevcut ay, {aktuellWert}",
-    "hint.monthlyCo2ChartAria": "Aylık CO2 tasarrufu, son on iki ay ({vonMonat} - {bisMonat}), {min} ile {max} arasında - en sağdaki koyu sütun mevcut ay, {aktuellWert}",
     "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, toplam CO₂ tasarrufu {co2}, bunun {prozent} tahmini (sürüş ağırlıklı)",
     "empty.noKmCo2Title": "Kilometre ve CO2 satırı yok",
     "msg.kmCo2LoadFailed": "Kilometre ve CO2 yüklenemedi: {fehler}",
     "field.jeKunde": "Müşteri başına",
-    "hint.crossCheckChartAria": "Son on iki ayın aylık cirosu ({vonMonat} - {bisMonat}), \"Bisiklet tipine göre ciro\" sekmesindekiyle aynı seri - en sağdaki koyu sütun mevcut ay, {aktuellWert}",
     "msg.revenueByCustomerGroupSummary": "{monatszeilen}, toplam ciro {umsatz}",
     "empty.noRevenueByCustomerGroupTitle": "Müşteri grubuna göre ciro yok",
     "msg.revenueByCustomerGroupLoadFailed": "Müşteri grubuna göre ciro yüklenemedi: {fehler}",
-    "hint.cityBikeJumpChartAria": "City-Bike sürüş başına ciro, {vonMonat} itibarıyla {n} ay: {sprungMonat} itibarıyla {von} değerinden {nach} değerine sıçrama, kırmızıyla işaretlendi",
-    "hint.monthlyRidesChartAria": "Aylık sürüşler, son on iki ay: en düşük {tiefMonat} ayında {min}, en yüksek {hochMonat} ayında {max} - en sağdaki koyu sütun mevcut ay olan {aktuellMonat}, {aktuellPhrase} ile",
-    "hint.monthlyRevenueChartAria": "Son on iki ayın aylık cirosu ({vonMonat} - {bisMonat}), {min} ile {max} arasında - en sağdaki koyu sütun mevcut ay olan {aktuellMonat}, {aktuellWert} ile",
     "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, toplam ciro {umsatz}",
     "msg.revenueByBikeTypeLoadFailed": "Bisiklet tipine göre ciro yüklenemedi: {fehler}",
     "empty.noRevenueByBikeTypeText": "Herhangi bir aylık satır bulunmuyor. Dolu bir referans yılında bu olağandışıdır - eksik veri yerine geçici bir rol kaybı söz konusu olabilir.",
@@ -1265,7 +1306,6 @@ const UEBERSETZUNGEN = {
     "hint.trafficPatternAria": "{name}, {tage} gün ortalaması, {wochentypTitel}. En çok çıkış {zeitfensterAb} zaman diliminde, günde {maxAb}; en çok giriş {zeitfensterZu} zaman diliminde, günde {maxZu}.",
     "hint.stationFullNote": " İstasyon dolu ve şu anda iade kabul etmiyor.",
     "hint.stationOccupancyAria": "Doluluk {name}: {kapazitaet} yerden {belegt}, yüzde {prozent}. Yüzde 100, bu tek istasyonun kapasitesidir.{vollZusatz}",
-    "hint.networkOccupancyAria": "Tüm {stationenPhrase} genelinde ağ çapında doluluk: {kapazitaet} yerden {belegt} tanesi dolu, yüzde {prozent}. Yüzde 100, tek bir istasyonun değil, tüm istasyon ağının toplam kapasitesidir.",
     "map.openDetailsSuffix": ". Ayrıntıları aç.",
     "map.currentStationSuffix": " - görüntülenen istasyon budur",
     "map.stationFullSuffix": ", dolu - şu anda iade kabul etmiyor",
@@ -1276,7 +1316,6 @@ const UEBERSETZUNGEN = {
     "nav.originDamageReport": "{rahmennummer} için hasar bildirimi",
     "nav.originBikeFromStation": "{name} istasyonundan {rahmennummer} bisikleti",
     "nav.originBikeFromFleet": "Filodan {rahmennummer} bisikleti",
-    "hint.percentOfFleet": "Filonun %{anteil}’si",
     "index.title": "VeloCity Stok Yönetimi",
     "index.loading": "Bir dakika …",
     "index.loginEmail": "E-posta",
@@ -1450,40 +1489,12 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} için devam eden bir sürüş var. Önce iadenin yapılmasını bekleyin.",
     "art17.doneMessage": "Müşteri {nummer} anonimleştirildi. Faturalar ve sürüşler saklanmaya devam eder.",
     "art17.confirmWord": "LOESCHEN",
-    "tile.available": "Kullanıma hazır",
-    "tile.onLoan": "Kirada",
-    "tile.inMaintenance": "Bakımda",
-    "tile.faulty": "Arızalı",
-    "tile.stations": "İstasyonlar",
-    "tile.fullStations": "Dolu istasyonlar",
-    "tile.networkOccupancy": "Toplam doluluk – tüm istasyonlar",
-    "tile.fillRange": "Doluluk aralığı",
-    "tile.customersTotal": "Toplam müşteri",
-    "tile.blocked": "Engellendi",
-    "tile.noAddress": "Adressiz",
-    "tile.invoiceTop10": "Fatura hacmi: üst %10",
-    "tile.damageReportsTotal": "Toplam hasar bildirimi",
-    "tile.workOrdersTotal": "Toplam iş emri",
-    "tile.unrideableOpen": "Sürüşe uygun değil, açık",
     "tile.minimum": "Minimum",
     "tile.maximum": "Maksimum",
     "tile.countPerMonth": "Aya göre sayı",
     "tile.dayWithMostRides": "En çok sürüşün olduğu gün",
-    "tile.revenueTotal": "Toplam ciro",
-    "tile.ridesTotal": "Toplam sürüş",
-    "tile.revenuePerBikeDay": "Bisiklet ve gün başına ciro",
-    "tile.notableRevenuePerRideCityBike": "Dikkat çekici: City-Bike sürüş başına ciro",
-    "tile.largestCustomerGroup": "En büyük müşteri grubu",
-    "tile.notableNoMembership": "Dikkat çekici: üyeliksiz",
-    "tile.co2SavingsTotal": "Toplam CO₂ tasarrufu",
-    "tile.kilometersTotal": "Toplam kilometre",
-    "tile.ofWhichEstimatedWeighted": "Bunun tahmini kısmı (sürüş ağırlıklı)",
-    "tile.networkOccupancyTotal": "Toplam ağ doluluğu",
-    "tile.biggestImbalance": "En büyük dengesizlik",
     "tile.occupancy": "Doluluk",
     "tile.trafficByTimeSlot": "Zaman dilimine göre giriş ve çıkış",
-    "tile.departuresPerDayTop": "Günlük çıkış (üstte)",
-    "tile.arrivalsPerDayBottom": "Günlük giriş (altta)",
     "tile.weekdays": "Hafta içi (Pzt–Cum)",
     "tile.weekend": "Hafta sonu (Cmt/Paz)",
     "tile.bikesAtStation": "Bu istasyondaki bisikletler ({n})",
@@ -1515,7 +1526,6 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Ağdaki konum",
     "tile.noStationLocation": "Bu istasyon için koordinat bulunmuyor.",
     "common.and": "ve",
-    "misc.changeVsPrevMonth": "önceki aya göre",
     "msg.bikeNowSetTo": "{rahmennummer} artık {ziel} olarak ayarlandı.",
     "msg.confirmDecommission": "{rahmennummer} kalıcı olarak hizmetten mi çıkarılsın? Bisiklet konumunu kaybeder ve artık hiçbir listede görünmez. Sürüşleri saklanmaya devam eder.",
     "msg.bikeDecommissioned": "{rahmennummer} hizmetten çıkarıldı.",
@@ -1550,60 +1560,116 @@ const UEBERSETZUNGEN = {
     "msg.workOrderOpened": "İş emri {id} açıldı, bisiklet bakıma alındı.",
     "msg.workOrdersLoadFailed": "İş emirleri yüklenemedi: {fehler}",
     "msg.workOrderCompleted": "İş emri {auftragsnummer} tamamlandı.",
-    "msg.unrideableShare": "toplam {schadenPhrase} içinden {n} tanesi - bisiklet o an sürülmüyorsa hemen kilitlenir",
-    "msg.unrideableShareNoTotal": "bisiklet o an sürülmüyorsa hemen kilitlenir",
-    "hint.shareOfBikes": "{raederPhrase} içinde {anteil}",
-    "hint.shareOnLoan": "{raederPhrase} içinde {anteil} · şu anda yolda",
-    "hint.shareMaintenance": "{raederPhrase} içinde {anteil} · atölyede",
-    "hint.shareFaulty": "{raederPhrase} içinde {anteil} · sorunlu olanlar",
-    "hint.allInOperation": "tümü işletimde",
-    "hint.decommissionedCount": "bunlardan {n} tanesi kullanımdan kaldırıldı",
-    "hint.fullStationsShare": "{stationenPhrase} içinden {n}: {liste} - iade kabul etmiyor",
-    "hint.networkOccupancyDetail": "{stationenPhrase} genelinde {kapazitaet} yerden {belegt} tanesi dolu",
-    "hint.fillRangeDetail": "Medyan %{median} · {stationenPhrase} içinden {voll} tanesi tıklım tıklım dolu{leerZusatz}",
-    "hint.fillRangeChartAria": "{stationenPhrase} genelinde doluluk aralığı: %{min} ile %{max} arasında, medyan %{median}",
-    "hint.andEmptyCount": ", {stationenPhrase} içinden {n} tanesi boş",
-    "hint.noneEmpty": ", hiçbiri boş değil",
-    "hint.blockedShare": "{kundenPhrase} içinden {n} - şu anda bir engeli kaldıran işlev bulunmuyor",
-    "hint.noUnblockFunction": "Şu anda bir engeli kaldıran işlev bulunmuyor",
-    "hint.noAddressShare": "{kundenPhrase} içinden {n} - formda daha sonra eklenebilir",
-    "hint.addLaterInForm": "Formda daha sonra eklenebilir",
-    "hint.top10Detail": "{kundenPhrase} içinden {zehntel} tanesi, {gesamt} içinden {top10} tutarını elinde tutuyor",
-    "hint.overallStates": "tüm işlem durumları genelinde",
-    "hint.last12MonthsTrend": "Son 12 ayın seyri",
-    "hint.last12MonthsCrossCheck": "Son 12 ayın seyri - \"Bisiklet tipine göre ciro\" sekmesiyle kontrol hesaplaması",
-    "hint.yearlyPattern": "Yıllık seyir: en düşük {tief}, en yüksek {hoch}",
-    "hint.perBikePerDayDetail": "Yılda {jeRadJahr} · filodaki {raederPhrase} baz alınarak (hizmet dışı olanlar hariç) · son 12 ay",
-    "hint.tariffChangeFrom": "{monat} itibarıyla {veraenderung} - tarife değişikliği",
-    "hint.shareOfRevenue": "Cironun {prozent} ({geld})",
-    "hint.revenueWithoutTariff": "Aktif tarifesi olmayan sürüşlerden {geld} ciro",
-    "hint.estimatedShareOfRides": "{fahrtenPhrase} içinden {geschaetzt} tanesi tahmini - satırların basit ortalamasının önerdiği gibi {naiv} DEĞİL",
-    "hint.fillLevelPerStation": "İstasyon numarasına göre sıralı istasyon doluluğu",
-    "hint.fillLevelPerStationRange": "İstasyon başına doluluk: %{min}–%{max}",
-    "hint.networkOccupancyWeighted": "{kapazitaet} yerden {belegt} tanesi dolu · kapasiteye göre ağırlıklandırılmıştır, tek tek değerlerin ortalaması değildir ({naiv})",
-    "hint.fullStationsList": "{stationenPhrase} içinden {voll}: {liste}",
-    "hint.worstStationBalance": "Bakiye {saldo} - aldığından daha fazla bisiklet veriyor",
-    "hint.stationCollectsBalance": "Bakiye {saldo} – verdiğinden daha fazla bisiklet topluyor",
-    "tile.fleetAge": "Filonun yaş yapısı",
-    "hint.fleetAgeAria": "Filonun model yılına göre dağılımı, {vonJahr} - {bisJahr}",
-    "hint.fleetAgeDetail": "Filonun %{anteil}'i ({raederPhrase} içinden {n}) {jahr} yılından – stoktaki en eski model yılı",
-    "hint.ridesPerBikeBucketsAria": "Bisiklet başına sürüş, son 30 gün, aralıklara gruplandırılmış",
-    "tile.tariffDistribution": "Tarifeye göre dağılım",
-    "hint.tariffDistributionAria": "Müşteriler tarifeye göre dağıtılmış",
-    "hint.tariffDistributionDetail": "%{anteil} ({kundenPhrase} içinden {n}) aktif tarifesi yok – en büyük grup",
-    "hint.blockedNeverRiddenAll": "{kundenPhrase} – hiç sürüş yapmadı, {vonJahr}–{bisJahr} arasında kaydoldu",
-    "hint.blockedNeverRiddenSome": "{kundenPhrase} – bunlardan {nie} tanesi hiç sürüş yapmadı",
-    "hint.locationDistributionAria": "Yaşadığı yere göre müşteriler, en büyük grup önce: {ort}'ta %{anteil}, {orteAnzahl} yerleşim yerine dağılmış",
-    "hint.locationDistributionDetail": "{ort}'ta %{anteil}, {orteAnzahl} yerleşim yerine dağılmış",
-    "tile.workOrdersRunning": "Devam eden iş emirleri",
-    "hint.workOrdersRunningShare": "{auftraegePhrase} içinden {n} – henüz tamamlanmadı",
-    "hint.percentOfDamageReports": "Hasar bildirimlerinin %{anteil}'i",
     "field.baujahr": "Model yılı",
     "field.gewicht": "Ağırlık",
     "field.gangzahl": "Vites sayısı",
     "field.rahmenhoehe": "Kadro boyu",
     "field.akkukapazitaet": "Batarya kapasitesi",
     "field.reichweite": "Menzil",
+    "col.together": "Toplam",
+    "col.model": "Model",
+    "col.stock": "Mevcut",
+    "col.statusMix": "Durum",
+    "col.modelYear": "Model yılı",
+    "col.utilisationDeviation": "Filoya göre kullanım",
+    "col.station": "İstasyon",
+    "col.capacity": "Park yeri",
+    "col.occupancy": "Doluluk",
+    "col.occupied": "dolu",
+    "col.free": "boş",
+    "col.dailyRhythm": "Gün içi seyir",
+    "col.balance": "Denge",
+    "col.tariffGroup": "Tarife grubu",
+    "col.customers": "Müşteri",
+    "col.customerMix": "Kullanım",
+    "col.signups": "Yeni kayıt",
+    "col.revenueDeviation": "Ciro ile müşteri payı farkı",
+    "col.case": "Vaka",
+    "col.workTime": "Çalışma süresi",
+    "col.severity": "Ciddiyet",
+    "col.progress": "İşlem durumu",
+    "col.bikeType": "Bisiklet tipi",
+    "col.revenue": "Ciro",
+    "col.halfYearMix": "Yarıyıl",
+    "col.summerHalf": "yaz yarıyılı",
+    "col.winterHalf": "kış yarıyılı",
+    "col.monthlyCourse": "Aylık seyir",
+    "col.revenueVsRides": "Ciro ile sürüş payı farkı",
+    "col.kilometres": "Kilometre",
+    "col.dataQuality": "Veri durumu",
+    "col.measured": "ölçülmüş",
+    "col.estimated": "tahmini",
+    "col.kmPerRideDeviation": "Sürüş başına km ile ortalama farkı",
+    "col.movements": "Hareketler",
+    "col.fillLevel": "Doluluk oranı",
+    "unit.bikes": "bisiklet",
+    "unit.shareOfRow": "satır payı",
+    "unit.percentagePoints": "yüzde puanı",
+    "unit.dockingPoints": "park yeri",
+    "unit.departuresPerWorkday": "iş günü başına çıkış, 0–24",
+    "unit.ridesArrivalsMinusDepartures": "sürüş, giriş eksi çıkış",
+    "unit.persons": "kişi",
+    "unit.minutes": "dakika",
+    "unit.threeSteps": "3 kademe",
+    "unit.reportedToFixed": "bildirimden giderilmeye",
+    "unit.euroTwelveMonths": "avro, 12 ay",
+    "unit.summerWinter": "yaz / kış",
+    "unit.kmTwelveMonths": "toplam, 12 ay",
+    "unit.ridesMeasuredEstimated": "sürüş, ölçülmüş / tahmini",
+    "unit.kmPerRide": "sürüş başına kilometre",
+    "unit.departuresPlusArrivals": "çıkış ve giriş",
+    "unit.zeroToHundred": "0–100 %",
+    "board.fleetTitle": "Modele göre mevcut",
+    "board.fleetReference": "{raederPhrase} · {herstellerPhrase} üreticiden {modellePhrase} · model yılları {vonJahr}–{bisJahr} · şu anda %{quote} kirada",
+    "board.fleetStatusAria": "{name}: {aufteilung}",
+    "board.fleetYearAria": "{name}, model yılı {jahr}, {vonJahr}–{bisJahr} ölçeğinde",
+    "board.fleetDeviationAria": "{name}: %{quote} kirada, tüm filo %{flottenquote}",
+    "board.fleetFootnote": "Sapma: model başına kirada olan bisiklet payı, tüm filodaki %{quote} ile karşılaştırılır – dokuz model oranının ortalaması değil, toplamlardan hesaplanır.",
+    "board.stationsTitle": "İstasyona göre ağ",
+    "board.stationsReference": "{stationenPhrase} · {kapazitaet} park yerinden {belegt} dolu (%{prozent}) · tamamlanan tüm sürüşlerin dengesi",
+    "board.stationOccupancyAria": "{name}: {kapazitaet} park yerinden {belegt} dolu, %{prozent}",
+    "board.stationRhythmAria": "{name}: çıkışların gün içi seyri, zirve {stunde} arasında, iş günü başına {wert} sürüş",
+    "board.stationBalanceAria": "{name}: {zugaenge} giriş, {abgaenge} çıkış, denge {saldo}",
+    "board.stationsFootnote": "Çıkışlar tüm istasyonlarda {min} ile {max} arasında – talep eşit dağılmış, farklar yalnızca dengede.",
+    "board.customersTitle": "Tarife grubuna göre kayıtlar",
+    "board.customersReference": "{kundenPhrase} · {gesperrt} engellenmiş · {volumen} fatura hacmi · {ort} içinde {imOrt}, {ortePhrase} arasında dağılmış",
+    "board.customersNoTariff": "Aktif tarife yok",
+    "board.customersWithRides": "sürüşü olan",
+    "board.customersNoRides": "sürüşü olmayan",
+    "board.customersRevenueShare": "hacmin %{anteil} kadarı",
+    "board.customersMixAria": "{name}: {aufteilung}",
+    "board.customersSignupsAria": "{name}: {vonJahr}–{bisJahr} yeni kayıtlar, en yüksek {max} ({maxJahr})",
+    "board.customersDeviationAria": "{name}: müşterilerin %{kundenanteil} kadarıyla hacmin %{umsatzanteil} kadarı",
+    "board.customersActiveMax": "ayda en fazla {kundenPhrase}",
+    "board.customersFootnote": "En üstteki {zehntel} müşteri fatura hacminin %{anteil} kadarını taşıyor; {ohneAdresse} kayıtta adres yok.",
+    "board.maintenanceTitle": "Tek tek vakalar",
+    "board.maintenanceReference": "{schadenPhrase} · etkilenen {raederPhrase} ({typen}) · {auftraegePhrase} · bildirim {tag}",
+    "board.maintenanceSeverityAria": "{rad}: {schwere}, 3 kademeden {stufe}",
+    "board.maintenanceProgressAria": "{rad}: {stand}, {auftrag}",
+    "board.maintenanceHasOrder": "iş emri var",
+    "board.maintenanceNoOrder": "iş emri yok",
+    "board.maintenanceFootnote": "Sapma sütunu ve ortalama yok: {schadenPhrase}, bunlardan {offen} tanesi açık, kayıtlı {minuten} dakika çalışma – buradaki her oran kendi kendisinin istatistiği olurdu.",
+    "board.revenueTypeTitle": "Bisiklet tipine göre on iki ay",
+    "board.revenueGroupTitle": "Tarife grubuna göre on iki ay",
+    "board.revenueReference": "{umsatz} ve {fahrtenPhrase}, {vonMonat}–{bisMonat}",
+    "board.revenueReferenceWithFleet": "{umsatz} ve {fahrtenPhrase}, {vonMonat}–{bisMonat} · bisiklet başına günde {jeRadTag} ({raederPhrase})",
+    "board.revenuePerRide": "sürüş başına {betrag}",
+    "board.halfYearAria": "{name}: %{sommer} yaz yarıyılında, %{winter} kış yarıyılında",
+    "board.monthlyCourseAria": "{name}: {vonMonat}–{bisMonat} seyri, en yüksek {max} ({maxMonat}), son {aktuell}",
+    "board.revenueVsRidesAria": "{name}: sürüşlerin %{fahrtenanteil} kadarıyla cironun %{umsatzanteil} kadarı",
+    "board.revenueTypeFootnote": "City-Bike'ta sürüş başına ciro: {monat} itibarıyla {von} yerine {nach} ({veraenderung}) – dönemdeki tek tarife değişikliği.",
+    "board.revenueGroupFootnote": "Aylık müşteri sayıları toplanamaz; aynı kişiler birden çok ayda sürüş yapar. Bu nedenle satır etiketi toplamı değil, en güçlü ayı gösterir.",
+    "board.kmTitle": "Bisiklet tipine göre mesafe",
+    "board.kmReference": "{fahrtenPhrase} üzerinde {km}, {vonMonat}–{bisMonat} · sürüşlerin {anteil} kadarı tahmini",
+    "board.co2PerRide": "sürüş başına {kg} CO₂",
+    "board.qualityAria": "{name}: {anteil} tahmini, {fahrten} sürüşten {geschaetzt} tanesi",
+    "board.kmPerRideAria": "{name}: sürüş başına {je}, ortalama {schnitt}",
+    "board.kmFootnote": "Tahmin payı ({anteil}) sürüşe göre ağırlıklı hesaplanır, aylık payların ortalaması değildir: gösterilen dönemde bu {ungewichtet}, tüm {monatszeilen} genelinde ise {alleGewichtet} yerine {alleUngewichtet} verirdi – düz ortalamada az sürüşlü aylar yoğun aylarla aynı ağırlığa sahiptir.",
+    "board.stationLoadTitle": "İstasyona göre hareket",
+    "board.stationLoadReference": "{stationenPhrase} · tüm geçmişte {fahrten} çıkış",
+    "board.fillLevelAria": "{name}: doluluk %{prozent}",
+    "board.stationLoadFootnote": "Çıkışlar {min} ile {max} arasında – talep eşit dağılmış, karar yalnızca dengeye göre verilir.",
+    "board.halfYearFootnote": "Kış payı her satırda %{min} ile %{max} arasında – mevsimsellik hepsini aynı ölçüde etkiler ve satırları birbirinden ayırmaz.",
   },
   es: {
     "common.cancel": "Cancelar",
@@ -1659,26 +1725,18 @@ const UEBERSETZUNGEN = {
     "status.raw.verworfen": "Descartado",
     "status.label.behoben": "Resuelto",
     "status.raw.behoben": "Resuelto",
-    "hint.saldoChartAria": "Saldo de {stationenPhrase}, ordenado por número de estación, de {min} a {max}; el más bajo (marcado en rojo) en {name}",
-    "hint.fillLevelBetween": "Nivel de ocupación de {stationenPhrase}, ordenado por número de estación, entre {min} y {max}",
     "msg.stationsWithoutBikeSuffix": ", {n} de ellas sin ninguna bicicleta",
     "empty.noStationOccupancyText": "No hay ninguna estación. Con diez estaciones creadas, esto es inusual: podría deberse a una pérdida temporal de rol en lugar de datos faltantes.",
     "empty.noStationOccupancyTitle": "Sin ocupación de estaciones",
     "msg.stationOccupancyLoadFailed": "No se pudo cargar la ocupación de estaciones: {fehler}",
     "misc.estimatedRidesDetail": "{geschaetzt} de {fahrtenPhrase} ({prozent})",
-    "hint.monthlyKmChartAria": "Kilómetros recorridos por mes, últimos doce meses ({vonMonat} a {bisMonat}); la barra oscura del extremo derecho es el mes actual, {aktuellWert}",
-    "hint.monthlyCo2ChartAria": "Ahorro de CO2 por mes, últimos doce meses ({vonMonat} a {bisMonat}), de {min} a {max}; la barra oscura del extremo derecho es el mes actual, {aktuellWert}",
     "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, ahorro total de CO₂ {co2}, de los cuales {prozent} estimado (ponderado por viajes)",
     "empty.noKmCo2Title": "Sin filas de kilómetros y CO2",
     "msg.kmCo2LoadFailed": "No se pudieron cargar los kilómetros y el CO2: {fehler}",
     "field.jeKunde": "Por cliente",
-    "hint.crossCheckChartAria": "Facturación mensual de los últimos doce meses ({vonMonat} a {bisMonat}), la misma serie que en la pestaña «Facturación por tipo de bicicleta»; la barra oscura del extremo derecho es el mes actual, {aktuellWert}",
     "msg.revenueByCustomerGroupSummary": "{monatszeilen}, facturación total {umsatz}",
     "empty.noRevenueByCustomerGroupTitle": "Sin facturación por grupo de clientes",
     "msg.revenueByCustomerGroupLoadFailed": "No se pudo cargar la facturación por grupo de clientes: {fehler}",
-    "hint.cityBikeJumpChartAria": "Facturación por viaje, City-Bike, {n} meses desde {vonMonat}: salto de {von} a {nach} a partir de {sprungMonat}, marcado en rojo",
-    "hint.monthlyRidesChartAria": "Viajes por mes, últimos doce meses: el más bajo {min} en {tiefMonat}, el más alto {max} en {hochMonat}; la barra oscura del extremo derecho es el mes actual, {aktuellMonat} con {aktuellPhrase}",
-    "hint.monthlyRevenueChartAria": "Facturación mensual de los últimos doce meses ({vonMonat} a {bisMonat}), de {min} a {max}; la barra oscura del extremo derecho es el mes actual, {aktuellMonat} con {aktuellWert}",
     "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, facturación total {umsatz}",
     "msg.revenueByBikeTypeLoadFailed": "No se pudo cargar la facturación por tipo de bicicleta: {fehler}",
     "empty.noRevenueByBikeTypeText": "No hay ninguna fila mensual. Con un año de referencia con datos, esto es inusual: podría deberse a una pérdida temporal de rol en lugar de datos faltantes.",
@@ -1727,7 +1785,6 @@ const UEBERSETZUNGEN = {
     "hint.trafficPatternAria": "{wochentypTitel} en {name}, promediado en {tage} días. La mayoría de las salidas se producen en la franja {zeitfensterAb} con {maxAb} al día, la mayoría de las llegadas en la franja {zeitfensterZu} con {maxZu} al día.",
     "hint.stationFullNote": " La estación está llena y no admite devoluciones en este momento.",
     "hint.stationOccupancyAria": "Ocupación {name}: {belegt} de {kapazitaet} plazas, {prozent} por ciento. El 100 % es la capacidad de esta única estación.{vollZusatz}",
-    "hint.networkOccupancyAria": "Ocupación de toda la red en {stationenPhrase}: {belegt} de {kapazitaet} plazas ocupadas, {prozent} por ciento. El 100 % es la capacidad total de toda la red de estaciones, no la de una sola estación.",
     "map.openDetailsSuffix": ". Abrir detalles.",
     "map.currentStationSuffix": " - esta es la estación mostrada",
     "map.stationFullSuffix": ", llena - no admite devoluciones en este momento",
@@ -1738,7 +1795,6 @@ const UEBERSETZUNGEN = {
     "nav.originDamageReport": "Notificación de avería de {rahmennummer}",
     "nav.originBikeFromStation": "Bicicleta {rahmennummer} de {name}",
     "nav.originBikeFromFleet": "Bicicleta {rahmennummer} de la flota",
-    "hint.percentOfFleet": "{anteil} % de la flota",
     "index.title": "VeloCity Gestión de Inventario",
     "index.loading": "Un momento …",
     "index.loginEmail": "Correo electrónico",
@@ -1912,40 +1968,12 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} todavía tiene un viaje en curso. Espere primero a la devolución.",
     "art17.doneMessage": "Cliente {nummer} anonimizado. Las facturas y los viajes se conservan.",
     "art17.confirmWord": "LOESCHEN",
-    "tile.available": "Disponible",
-    "tile.onLoan": "Alquilada",
-    "tile.inMaintenance": "En mantenimiento",
-    "tile.faulty": "Averiada",
-    "tile.stations": "Estaciones",
-    "tile.fullStations": "Estaciones llenas",
-    "tile.networkOccupancy": "Ocupación total – todas las estaciones",
-    "tile.fillRange": "Rango de nivel de ocupación",
-    "tile.customersTotal": "Total de clientes",
-    "tile.blocked": "Bloqueados",
-    "tile.noAddress": "Sin dirección",
-    "tile.invoiceTop10": "Volumen de facturación: 10 % superior",
-    "tile.damageReportsTotal": "Total de averías",
-    "tile.workOrdersTotal": "Total de órdenes de trabajo",
-    "tile.unrideableOpen": "No apta para circular, abierta",
     "tile.minimum": "Mínimo",
     "tile.maximum": "Máximo",
     "tile.countPerMonth": "Cantidad por mes",
     "tile.dayWithMostRides": "Día con más viajes",
-    "tile.revenueTotal": "Facturación total",
-    "tile.ridesTotal": "Viajes totales",
-    "tile.revenuePerBikeDay": "Facturación por bicicleta y día",
-    "tile.notableRevenuePerRideCityBike": "Destacado: facturación por viaje City-Bike",
-    "tile.largestCustomerGroup": "Grupo de clientes más grande",
-    "tile.notableNoMembership": "Destacado: sin membresía",
-    "tile.co2SavingsTotal": "Ahorro total de CO₂",
-    "tile.kilometersTotal": "Kilómetros totales",
-    "tile.ofWhichEstimatedWeighted": "De los cuales estimado (ponderado por viajes)",
-    "tile.networkOccupancyTotal": "Ocupación total de la red",
-    "tile.biggestImbalance": "Mayor desequilibrio",
     "tile.occupancy": "Ocupación",
     "tile.trafficByTimeSlot": "Llegadas y salidas por franja horaria",
-    "tile.departuresPerDayTop": "Salidas por día (arriba)",
-    "tile.arrivalsPerDayBottom": "Llegadas por día (abajo)",
     "tile.weekdays": "Días laborables (lun.–vie.)",
     "tile.weekend": "Fin de semana (sáb./dom.)",
     "tile.bikesAtStation": "Bicicletas en esta estación ({n})",
@@ -1977,7 +2005,6 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Ubicación en la red",
     "tile.noStationLocation": "No hay coordenadas disponibles para esta estación.",
     "common.and": "y",
-    "misc.changeVsPrevMonth": "frente al mes anterior",
     "msg.bikeNowSetTo": "{rahmennummer} ahora está en {ziel}.",
     "msg.confirmDecommission": "¿Dar de baja definitivamente {rahmennummer}? La bicicleta pierde su ubicación y ya no aparece en ninguna lista. Sus viajes se conservan.",
     "msg.bikeDecommissioned": "{rahmennummer} dada de baja.",
@@ -2012,60 +2039,116 @@ const UEBERSETZUNGEN = {
     "msg.workOrderOpened": "Orden de trabajo {id} abierta, bicicleta en mantenimiento.",
     "msg.workOrdersLoadFailed": "No se pudieron cargar las órdenes de trabajo: {fehler}",
     "msg.workOrderCompleted": "Orden de trabajo {auftragsnummer} completada.",
-    "msg.unrideableShare": "{n} de {schadenPhrase} en total: bloquea la bicicleta en cuanto no está en uso",
-    "msg.unrideableShareNoTotal": "bloquea la bicicleta en cuanto no está en uso",
-    "hint.shareOfBikes": "{anteil} de {raederPhrase}",
-    "hint.shareOnLoan": "{anteil} de {raederPhrase} · actualmente en ruta",
-    "hint.shareMaintenance": "{anteil} de {raederPhrase} · en el taller",
-    "hint.shareFaulty": "{anteil} de {raederPhrase} · donde hay problemas",
-    "hint.allInOperation": "todas en funcionamiento",
-    "hint.decommissionedCount": "{n} de ellas dadas de baja",
-    "hint.fullStationsShare": "{n} de {stationenPhrase}: {liste} - no admite devoluciones",
-    "hint.networkOccupancyDetail": "{belegt} de {kapazitaet} plazas ocupadas, en {stationenPhrase}",
-    "hint.fillRangeDetail": "Mediana {median} % · {voll} de {stationenPhrase} completamente llenas{leerZusatz}",
-    "hint.fillRangeChartAria": "Rango de nivel de ocupación en {stationenPhrase}: de {min} % a {max} %, mediana {median} %",
-    "hint.andEmptyCount": ", {n} de {stationenPhrase} vacías",
-    "hint.noneEmpty": ", ninguna vacía",
-    "hint.blockedShare": "{n} de {kundenPhrase} - actualmente no existe ninguna función para levantar un bloqueo",
-    "hint.noUnblockFunction": "Actualmente no existe ninguna función para levantar un bloqueo",
-    "hint.noAddressShare": "{n} de {kundenPhrase} - se puede añadir después en el formulario",
-    "hint.addLaterInForm": "Se puede añadir después en el formulario",
-    "hint.top10Detail": "{zehntel} de {kundenPhrase} concentran {top10} de {gesamt}",
-    "hint.overallStates": "en todos los estados de tramitación",
-    "hint.last12MonthsTrend": "Evolución de los últimos 12 meses",
-    "hint.last12MonthsCrossCheck": "Evolución de los últimos 12 meses - cálculo de control con la pestaña «Facturación por tipo de bicicleta»",
-    "hint.yearlyPattern": "Patrón anual: mínimo en {tief}, máximo en {hoch}",
-    "hint.perBikePerDayDetail": "{jeRadJahr} al año · en relación con {raederPhrase} en la flota (sin las dadas de baja) · últimos 12 meses",
-    "hint.tariffChangeFrom": "{veraenderung} desde {monat} - cambio de tarifa",
-    "hint.shareOfRevenue": "{prozent} de la facturación ({geld})",
-    "hint.revenueWithoutTariff": "{geld} de facturación de viajes sin tarifa activa",
-    "hint.estimatedShareOfRides": "{geschaetzt} de {fahrtenPhrase} estimados - NO {naiv}, como sugeriría la media simple de las filas",
-    "hint.fillLevelPerStation": "Nivel de ocupación por estación, ordenado por número de estación",
-    "hint.fillLevelPerStationRange": "Nivel de ocupación por estación: {min}–{max} %",
-    "hint.networkOccupancyWeighted": "{belegt} de {kapazitaet} plazas ocupadas · ponderado por capacidad, no la media de los valores individuales ({naiv})",
-    "hint.fullStationsList": "{voll} de {stationenPhrase}: {liste}",
-    "hint.worstStationBalance": "Saldo {saldo} - entrega más bicicletas de las que recibe",
-    "hint.stationCollectsBalance": "Saldo {saldo} – acumula más bicicletas de las que entrega",
-    "tile.fleetAge": "Estructura de antigüedad de la flota",
-    "hint.fleetAgeAria": "Distribución de la flota por año de fabricación, {vonJahr} a {bisJahr}",
-    "hint.fleetAgeDetail": "El {anteil} % de la flota ({n} de {raederPhrase}) es de {jahr} – el año más antiguo en existencia",
-    "hint.ridesPerBikeBucketsAria": "Viajes por bicicleta, últimos 30 días, agrupados en rangos",
-    "tile.tariffDistribution": "Distribución por tarifa",
-    "hint.tariffDistributionAria": "Clientela distribuida por tarifa",
-    "hint.tariffDistributionDetail": "El {anteil} % ({n} de {kundenPhrase}) sin tarifa activa – el grupo más grande",
-    "hint.blockedNeverRiddenAll": "{kundenPhrase} – nunca han viajado, registrados entre {vonJahr} y {bisJahr}",
-    "hint.blockedNeverRiddenSome": "{kundenPhrase} – {nie} de ellos nunca han viajado",
-    "hint.locationDistributionAria": "Clientes por lugar de residencia, el grupo más grande primero: {anteil} % en {ort}, repartidos en {orteAnzahl} localidades",
-    "hint.locationDistributionDetail": "{anteil} % en {ort}, repartidos en {orteAnzahl} localidades",
-    "tile.workOrdersRunning": "Órdenes en curso",
-    "hint.workOrdersRunningShare": "{n} de {auftraegePhrase} – aún sin completar",
-    "hint.percentOfDamageReports": "{anteil} % de los partes de avería",
     "field.baujahr": "Año de fabricación",
     "field.gewicht": "Peso",
     "field.gangzahl": "Número de marchas",
     "field.rahmenhoehe": "Altura del cuadro",
     "field.akkukapazitaet": "Capacidad de la batería",
     "field.reichweite": "Autonomía",
+    "col.together": "En conjunto",
+    "col.model": "Modelo",
+    "col.stock": "Existencias",
+    "col.statusMix": "Estado",
+    "col.modelYear": "Año de fabricación",
+    "col.utilisationDeviation": "Uso frente a la flota",
+    "col.station": "Estación",
+    "col.capacity": "Plazas",
+    "col.occupancy": "Ocupación",
+    "col.occupied": "ocupadas",
+    "col.free": "libres",
+    "col.dailyRhythm": "Curva diaria",
+    "col.balance": "Saldo",
+    "col.tariffGroup": "Grupo tarifario",
+    "col.customers": "Clientela",
+    "col.customerMix": "Uso",
+    "col.signups": "Altas",
+    "col.revenueDeviation": "Ingresos frente a cuota de clientes",
+    "col.case": "Caso",
+    "col.workTime": "Tiempo de trabajo",
+    "col.severity": "Gravedad",
+    "col.progress": "Estado de tramitación",
+    "col.bikeType": "Tipo de bicicleta",
+    "col.revenue": "Ingresos",
+    "col.halfYearMix": "Semestre",
+    "col.summerHalf": "semestre de verano",
+    "col.winterHalf": "semestre de invierno",
+    "col.monthlyCourse": "Curva mensual",
+    "col.revenueVsRides": "Ingresos frente a cuota de viajes",
+    "col.kilometres": "Kilómetros",
+    "col.dataQuality": "Base de datos",
+    "col.measured": "medido",
+    "col.estimated": "estimado",
+    "col.kmPerRideDeviation": "km por viaje frente a la media",
+    "col.movements": "Movimientos",
+    "col.fillLevel": "Nivel de llenado",
+    "unit.bikes": "bicicletas",
+    "unit.shareOfRow": "proporción de la fila",
+    "unit.percentagePoints": "puntos porcentuales",
+    "unit.dockingPoints": "plazas",
+    "unit.departuresPerWorkday": "salidas por día laborable, 0–24 h",
+    "unit.ridesArrivalsMinusDepartures": "viajes, llegadas menos salidas",
+    "unit.persons": "personas",
+    "unit.minutes": "minutos",
+    "unit.threeSteps": "3 niveles",
+    "unit.reportedToFixed": "de notificado a resuelto",
+    "unit.euroTwelveMonths": "euros, 12 meses",
+    "unit.summerWinter": "verano / invierno",
+    "unit.kmTwelveMonths": "total, 12 meses",
+    "unit.ridesMeasuredEstimated": "viajes, medidos / estimados",
+    "unit.kmPerRide": "kilómetros por viaje",
+    "unit.departuresPlusArrivals": "salidas y llegadas",
+    "unit.zeroToHundred": "0–100 %",
+    "board.fleetTitle": "Existencias por modelo",
+    "board.fleetReference": "{raederPhrase} · {modellePhrase} de {herstellerPhrase} · años {vonJahr}–{bisJahr} · {quote} % en préstamo ahora",
+    "board.fleetStatusAria": "{name}: {aufteilung}",
+    "board.fleetYearAria": "{name}, año {jahr}, en la escala de {vonJahr} a {bisJahr}",
+    "board.fleetDeviationAria": "{name}: {quote} % en préstamo, flota completa {flottenquote} %",
+    "board.fleetFootnote": "Desviación: proporción de bicicletas en préstamo por modelo frente al {quote} % de toda la flota, calculada a partir de sumas y no como media de las nueve proporciones.",
+    "board.stationsTitle": "Red por estación",
+    "board.stationsReference": "{stationenPhrase} · {belegt} de {kapazitaet} plazas ocupadas ({prozent} %) · saldo de todos los viajes finalizados",
+    "board.stationOccupancyAria": "{name}: {belegt} de {kapazitaet} plazas ocupadas, {prozent} %",
+    "board.stationRhythmAria": "{name}: curva diaria de salidas, máximo entre las {stunde} h con {wert} viajes por día laborable",
+    "board.stationBalanceAria": "{name}: {zugaenge} llegadas, {abgaenge} salidas, saldo {saldo}",
+    "board.stationsFootnote": "Las salidas oscilan entre {min} y {max} en todas las estaciones: la demanda está repartida por igual y las diferencias solo aparecen en el saldo.",
+    "board.customersTitle": "Fichero por grupo tarifario",
+    "board.customersReference": "{kundenPhrase} · {gesperrt} bloqueados · {volumen} facturados · {imOrt} en {ort}, repartidos en {ortePhrase}",
+    "board.customersNoTariff": "Sin tarifa activa",
+    "board.customersWithRides": "con viajes",
+    "board.customersNoRides": "sin viajes",
+    "board.customersRevenueShare": "{anteil} % del volumen",
+    "board.customersMixAria": "{name}: {aufteilung}",
+    "board.customersSignupsAria": "{name}: altas de {vonJahr} a {bisJahr}, máximo {max} en {maxJahr}",
+    "board.customersDeviationAria": "{name}: {umsatzanteil} % del volumen con {kundenanteil} % de la clientela",
+    "board.customersActiveMax": "como máximo {kundenPhrase} al mes",
+    "board.customersFootnote": "Los {zehntel} clientes principales aportan el {anteil} % del volumen facturado; {ohneAdresse} registros no tienen dirección.",
+    "board.maintenanceTitle": "Los casos concretos",
+    "board.maintenanceReference": "{schadenPhrase} · {raederPhrase} afectadas ({typen}) · {auftraegePhrase} · notificados el {tag}",
+    "board.maintenanceSeverityAria": "{rad}: {schwere}, nivel {stufe} de 3",
+    "board.maintenanceProgressAria": "{rad}: {stand}, {auftrag}",
+    "board.maintenanceHasOrder": "existe orden de trabajo",
+    "board.maintenanceNoOrder": "sin orden de trabajo",
+    "board.maintenanceFootnote": "Sin columna de desviación ni promedios: {schadenPhrase}, {offen} sin resolver, {minuten} minutos de trabajo registrados; cualquier ratio sería aquí una estadística sobre sí misma.",
+    "board.revenueTypeTitle": "Doce meses por tipo de bicicleta",
+    "board.revenueGroupTitle": "Doce meses por grupo tarifario",
+    "board.revenueReference": "{umsatz} y {fahrtenPhrase}, de {vonMonat} a {bisMonat}",
+    "board.revenueReferenceWithFleet": "{umsatz} y {fahrtenPhrase}, de {vonMonat} a {bisMonat} · {jeRadTag} por bicicleta y día ({raederPhrase})",
+    "board.revenuePerRide": "{betrag} por viaje",
+    "board.halfYearAria": "{name}: {sommer} % en el semestre de verano, {winter} % en el de invierno",
+    "board.monthlyCourseAria": "{name}: curva de {vonMonat} a {bisMonat}, máximo {max} en {maxMonat}, último {aktuell}",
+    "board.revenueVsRidesAria": "{name}: {umsatzanteil} % de los ingresos con {fahrtenanteil} % de los viajes",
+    "board.revenueTypeFootnote": "Ingresos por viaje de la City-Bike: de {von} a {nach} ({veraenderung}) desde {monat}, el único cambio de tarifa del periodo.",
+    "board.revenueGroupFootnote": "Las cifras mensuales de clientes no se pueden sumar: las mismas personas viajan en varios meses. Por eso la fila indica el mes más fuerte y no una suma.",
+    "board.kmTitle": "Distancia por tipo de bicicleta",
+    "board.kmReference": "{km} en {fahrtenPhrase}, de {vonMonat} a {bisMonat} · {anteil} de los viajes estimados",
+    "board.co2PerRide": "{kg} de CO₂ por viaje",
+    "board.qualityAria": "{name}: {anteil} estimado, {geschaetzt} de {fahrten} viajes",
+    "board.kmPerRideAria": "{name}: {je} por viaje, media {schnitt}",
+    "board.kmFootnote": "La proporción estimada ({anteil}) se pondera por viajes y no se promedia sobre las proporciones mensuales: eso daría {ungewichtet} en el periodo mostrado e incluso {alleUngewichtet} en lugar de {alleGewichtet} sobre {monatszeilen}; en una media simple, los meses poco poblados pesan tanto como los fuertes.",
+    "board.stationLoadTitle": "Movimiento por estación",
+    "board.stationLoadReference": "{stationenPhrase} · {fahrten} salidas en todo el histórico",
+    "board.fillLevelAria": "{name}: nivel de llenado {prozent} %",
+    "board.stationLoadFootnote": "Las salidas oscilan entre {min} y {max}: la demanda está repartida por igual y lo único que decide es el saldo.",
+    "board.halfYearFootnote": "La proporción de invierno está entre el {min} % y el {max} % en todas las filas: la estacionalidad afecta a todas por igual y no distingue entre ellas.",
   },
   it: {
     "common.cancel": "Annulla",
@@ -2121,26 +2204,18 @@ const UEBERSETZUNGEN = {
     "status.raw.verworfen": "Respinto",
     "status.label.behoben": "Risolto",
     "status.raw.behoben": "Risolto",
-    "hint.saldoChartAria": "Saldo di {stationenPhrase}, ordinato per numero di stazione, da {min} a {max}; il più basso (evidenziato in rosso) a {name}",
-    "hint.fillLevelBetween": "Livello di riempimento di {stationenPhrase}, ordinato per numero di stazione, tra {min} e {max}",
     "msg.stationsWithoutBikeSuffix": ", di cui {n} senza bici",
     "empty.noStationOccupancyText": "Non è presente alcuna stazione. Con dieci stazioni create, ciò è insolito: potrebbe trattarsi di una perdita temporanea del ruolo anziché di dati mancanti.",
     "empty.noStationOccupancyTitle": "Nessuna occupazione delle stazioni",
     "msg.stationOccupancyLoadFailed": "Impossibile caricare l’occupazione delle stazioni: {fehler}",
     "misc.estimatedRidesDetail": "{geschaetzt} su {fahrtenPhrase} ({prozent})",
-    "hint.monthlyKmChartAria": "Chilometri percorsi al mese, ultimi dodici mesi ({vonMonat} - {bisMonat}); la barra scura all’estrema destra è il mese corrente, {aktuellWert}",
-    "hint.monthlyCo2ChartAria": "Risparmio di CO2 al mese, ultimi dodici mesi ({vonMonat} - {bisMonat}), da {min} a {max}; la barra scura all’estrema destra è il mese corrente, {aktuellWert}",
     "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, risparmio totale di CO₂ {co2}, di cui {prozent} stimato (ponderato per corsa)",
     "empty.noKmCo2Title": "Nessuna riga di chilometri e CO2",
     "msg.kmCo2LoadFailed": "Impossibile caricare chilometri e CO2: {fehler}",
     "field.jeKunde": "Per cliente",
-    "hint.crossCheckChartAria": "Fatturato mensile degli ultimi dodici mesi ({vonMonat} - {bisMonat}), la stessa serie della scheda \"Fatturato per tipo di bici\"; la barra scura all’estrema destra è il mese corrente, {aktuellWert}",
     "msg.revenueByCustomerGroupSummary": "{monatszeilen}, fatturato totale {umsatz}",
     "empty.noRevenueByCustomerGroupTitle": "Nessun fatturato per gruppo di clienti",
     "msg.revenueByCustomerGroupLoadFailed": "Impossibile caricare il fatturato per gruppo di clienti: {fehler}",
-    "hint.cityBikeJumpChartAria": "Fatturato per corsa, City-Bike, {n} mesi da {vonMonat}: salto da {von} a {nach} a partire da {sprungMonat}, evidenziato in rosso",
-    "hint.monthlyRidesChartAria": "Corse al mese, ultimi dodici mesi: minimo {min} a {tiefMonat}, massimo {max} a {hochMonat}; la barra scura all’estrema destra è il mese corrente, {aktuellMonat} con {aktuellPhrase}",
-    "hint.monthlyRevenueChartAria": "Fatturato mensile degli ultimi dodici mesi ({vonMonat} - {bisMonat}), da {min} a {max}; la barra scura all’estrema destra è il mese corrente, {aktuellMonat} con {aktuellWert}",
     "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, fatturato totale {umsatz}",
     "msg.revenueByBikeTypeLoadFailed": "Impossibile caricare il fatturato per tipo di bici: {fehler}",
     "empty.noRevenueByBikeTypeText": "Non è presente alcuna riga mensile. Con un anno di riferimento popolato, ciò è insolito: potrebbe trattarsi di una perdita temporanea del ruolo anziché di dati mancanti.",
@@ -2189,7 +2264,6 @@ const UEBERSETZUNGEN = {
     "hint.trafficPatternAria": "{wochentypTitel} a {name}, media su {tage} giorni. La maggior parte delle uscite si verifica nella fascia {zeitfensterAb} con {maxAb} al giorno, la maggior parte degli ingressi nella fascia {zeitfensterZu} con {maxZu} al giorno.",
     "hint.stationFullNote": " La stazione è piena e non accetta restituzioni al momento.",
     "hint.stationOccupancyAria": "Occupazione {name}: {belegt} stalli su {kapazitaet}, {prozent} percento. Il 100% è la capacità di questa singola stazione.{vollZusatz}",
-    "hint.networkOccupancyAria": "Occupazione a livello di rete su {stationenPhrase}: {belegt} stalli occupati su {kapazitaet}, {prozent} percento. Il 100% è la capacità totale dell’intera rete di stazioni, non quella di una singola stazione.",
     "map.openDetailsSuffix": ". Apri dettagli.",
     "map.currentStationSuffix": " - questa è la stazione visualizzata",
     "map.stationFullSuffix": ", piena - non accetta restituzioni al momento",
@@ -2200,7 +2274,6 @@ const UEBERSETZUNGEN = {
     "nav.originDamageReport": "Segnalazione di guasto per {rahmennummer}",
     "nav.originBikeFromStation": "Bici {rahmennummer} da {name}",
     "nav.originBikeFromFleet": "Bici {rahmennummer} dalla flotta",
-    "hint.percentOfFleet": "{anteil} % della flotta",
     "index.title": "VeloCity Gestione Magazzino",
     "index.loading": "Un momento…",
     "index.loginEmail": "E-mail",
@@ -2374,40 +2447,12 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} ha ancora una corsa in corso. Attendere prima la restituzione.",
     "art17.doneMessage": "Cliente {nummer} anonimizzato. Fatture e corse vengono conservate.",
     "art17.confirmWord": "LOESCHEN",
-    "tile.available": "Pronta all’uso",
-    "tile.onLoan": "In noleggio",
-    "tile.inMaintenance": "In manutenzione",
-    "tile.faulty": "Guasto",
-    "tile.stations": "Stazioni",
-    "tile.fullStations": "Stazioni piene",
-    "tile.networkOccupancy": "Occupazione totale – tutte le stazioni",
-    "tile.fillRange": "Intervallo del livello di riempimento",
-    "tile.customersTotal": "Totale clienti",
-    "tile.blocked": "Bloccati",
-    "tile.noAddress": "Senza indirizzo",
-    "tile.invoiceTop10": "Volume fatturato: 10 % superiore",
-    "tile.damageReportsTotal": "Totale segnalazioni di guasto",
-    "tile.workOrdersTotal": "Totale ordini di lavoro",
-    "tile.unrideableOpen": "Non idonea alla marcia, aperta",
     "tile.minimum": "Minimo",
     "tile.maximum": "Massimo",
     "tile.countPerMonth": "Numero per mese",
     "tile.dayWithMostRides": "Giorno con più corse",
-    "tile.revenueTotal": "Fatturato totale",
-    "tile.ridesTotal": "Corse totali",
-    "tile.revenuePerBikeDay": "Fatturato per bici e giorno",
-    "tile.notableRevenuePerRideCityBike": "Notevole: fatturato per corsa City-Bike",
-    "tile.largestCustomerGroup": "Gruppo di clienti più numeroso",
-    "tile.notableNoMembership": "Notevole: senza abbonamento",
-    "tile.co2SavingsTotal": "Risparmio totale di CO₂",
-    "tile.kilometersTotal": "Chilometri totali",
-    "tile.ofWhichEstimatedWeighted": "Di cui stimato (ponderato per corsa)",
-    "tile.networkOccupancyTotal": "Occupazione totale della rete",
-    "tile.biggestImbalance": "Squilibrio maggiore",
     "tile.occupancy": "Occupazione",
     "tile.trafficByTimeSlot": "Ingressi e uscite per fascia oraria",
-    "tile.departuresPerDayTop": "Uscite al giorno (in alto)",
-    "tile.arrivalsPerDayBottom": "Ingressi al giorno (in basso)",
     "tile.weekdays": "Giorni feriali (lun–ven)",
     "tile.weekend": "Fine settimana (sab/dom)",
     "tile.bikesAtStation": "Bici in questa stazione ({n})",
@@ -2439,7 +2484,6 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Posizione nella rete",
     "tile.noStationLocation": "Per questa stazione non sono disponibili coordinate.",
     "common.and": "e",
-    "misc.changeVsPrevMonth": "rispetto al mese precedente",
     "msg.bikeNowSetTo": "{rahmennummer} ora è impostata su {ziel}.",
     "msg.confirmDecommission": "Dismettere definitivamente {rahmennummer}? La bici perde la sua posizione e non compare più in nessun elenco. Le sue corse vengono conservate.",
     "msg.bikeDecommissioned": "{rahmennummer} dismessa.",
@@ -2474,60 +2518,116 @@ const UEBERSETZUNGEN = {
     "msg.workOrderOpened": "Ordine di lavoro {id} aperto, bici in manutenzione.",
     "msg.workOrdersLoadFailed": "Impossibile caricare gli ordini di lavoro: {fehler}",
     "msg.workOrderCompleted": "Ordine di lavoro {auftragsnummer} completato.",
-    "msg.unrideableShare": "{n} su {schadenPhrase} totali - blocca la bici non appena non è in uso",
-    "msg.unrideableShareNoTotal": "blocca la bici non appena non è in uso",
-    "hint.shareOfBikes": "{anteil} su {raederPhrase}",
-    "hint.shareOnLoan": "{anteil} su {raederPhrase} · attualmente in viaggio",
-    "hint.shareMaintenance": "{anteil} su {raederPhrase} · in officina",
-    "hint.shareFaulty": "{anteil} su {raederPhrase} · dove c’è un problema",
-    "hint.allInOperation": "tutte in esercizio",
-    "hint.decommissionedCount": "{n} di esse dismesse",
-    "hint.fullStationsShare": "{n} su {stationenPhrase}: {liste} - non accetta restituzioni",
-    "hint.networkOccupancyDetail": "{belegt} stalli occupati su {kapazitaet}, in tutte le {stationenPhrase}",
-    "hint.fillRangeDetail": "Mediana {median} % · {voll} su {stationenPhrase} completamente piene{leerZusatz}",
-    "hint.fillRangeChartAria": "Intervallo del livello di riempimento su {stationenPhrase}: da {min}% a {max}%, mediana {median}%",
-    "hint.andEmptyCount": ", {n} su {stationenPhrase} vuote",
-    "hint.noneEmpty": ", nessuna vuota",
-    "hint.blockedShare": "{n} su {kundenPhrase} - al momento non esiste una funzione per rimuovere un blocco",
-    "hint.noUnblockFunction": "Al momento non esiste una funzione per rimuovere un blocco",
-    "hint.noAddressShare": "{n} su {kundenPhrase} - può essere aggiunto in seguito nel modulo",
-    "hint.addLaterInForm": "Può essere aggiunto in seguito nel modulo",
-    "hint.top10Detail": "{zehntel} su {kundenPhrase} concentrano {top10} su {gesamt}",
-    "hint.overallStates": "in tutti gli stati di lavorazione",
-    "hint.last12MonthsTrend": "Andamento degli ultimi 12 mesi",
-    "hint.last12MonthsCrossCheck": "Andamento degli ultimi 12 mesi - calcolo di controllo rispetto alla scheda \"Fatturato per tipo di bici\"",
-    "hint.yearlyPattern": "Andamento annuale: minimo a {tief}, massimo a {hoch}",
-    "hint.perBikePerDayDetail": "{jeRadJahr} all’anno · riferito a {raederPhrase} in flotta (escluse le dismesse) · ultimi 12 mesi",
-    "hint.tariffChangeFrom": "{veraenderung} da {monat} - cambio tariffa",
-    "hint.shareOfRevenue": "{prozent} del fatturato ({geld})",
-    "hint.revenueWithoutTariff": "{geld} di fatturato da corse senza tariffa attiva",
-    "hint.estimatedShareOfRides": "{geschaetzt} corse stimate su {fahrtenPhrase} - NON {naiv}, come suggerirebbe la media semplice delle righe",
-    "hint.fillLevelPerStation": "Livello di riempimento per stazione, ordinato per numero di stazione",
-    "hint.fillLevelPerStationRange": "Livello di riempimento per stazione: {min}–{max}%",
-    "hint.networkOccupancyWeighted": "{belegt} stalli occupati su {kapazitaet} · ponderato per capacità, non la media dei singoli valori ({naiv})",
-    "hint.fullStationsList": "{voll} su {stationenPhrase}: {liste}",
-    "hint.worstStationBalance": "Saldo {saldo} - cede più bici di quante ne riceva",
-    "hint.stationCollectsBalance": "Saldo {saldo} – accumula più bici di quante ne ceda",
-    "tile.fleetAge": "Struttura per anzianità della flotta",
-    "hint.fleetAgeAria": "Distribuzione della flotta per anno di produzione, dal {vonJahr} al {bisJahr}",
-    "hint.fleetAgeDetail": "Il {anteil}% della flotta ({n} su {raederPhrase}) è del {jahr} – l'annata più vecchia in giacenza",
-    "hint.ridesPerBikeBucketsAria": "Corse per bici, ultimi 30 giorni, raggruppate in fasce",
-    "tile.tariffDistribution": "Distribuzione per tariffa",
-    "hint.tariffDistributionAria": "Clientela distribuita per tariffa",
-    "hint.tariffDistributionDetail": "Il {anteil}% ({n} su {kundenPhrase}) senza tariffa attiva – il gruppo più numeroso",
-    "hint.blockedNeverRiddenAll": "{kundenPhrase} – non hanno mai pedalato, registrati tra il {vonJahr} e il {bisJahr}",
-    "hint.blockedNeverRiddenSome": "{kundenPhrase} – {nie} di questi non hanno mai pedalato",
-    "hint.locationDistributionAria": "Clientela per luogo di residenza, gruppo più grande per primo: {anteil}% a {ort}, distribuita su {orteAnzahl} località",
-    "hint.locationDistributionDetail": "{anteil}% a {ort}, distribuita su {orteAnzahl} località",
-    "tile.workOrdersRunning": "Ordini in corso",
-    "hint.workOrdersRunningShare": "{n} su {auftraegePhrase} – non ancora conclusi",
-    "hint.percentOfDamageReports": "{anteil}% delle segnalazioni di guasto",
     "field.baujahr": "Anno di produzione",
     "field.gewicht": "Peso",
     "field.gangzahl": "Numero di marce",
     "field.rahmenhoehe": "Altezza del telaio",
     "field.akkukapazitaet": "Capacità della batteria",
     "field.reichweite": "Autonomia",
+    "col.together": "Insieme",
+    "col.model": "Modello",
+    "col.stock": "Consistenza",
+    "col.statusMix": "Stato",
+    "col.modelYear": "Anno di costruzione",
+    "col.utilisationDeviation": "Utilizzo rispetto alla flotta",
+    "col.station": "Stazione",
+    "col.capacity": "Stalli",
+    "col.occupancy": "Occupazione",
+    "col.occupied": "occupati",
+    "col.free": "liberi",
+    "col.dailyRhythm": "Andamento giornaliero",
+    "col.balance": "Saldo",
+    "col.tariffGroup": "Gruppo tariffario",
+    "col.customers": "Clientela",
+    "col.customerMix": "Utilizzo",
+    "col.signups": "Nuove iscrizioni",
+    "col.revenueDeviation": "Ricavi rispetto alla quota clienti",
+    "col.case": "Caso",
+    "col.workTime": "Tempo di lavoro",
+    "col.severity": "Gravità",
+    "col.progress": "Stato di lavorazione",
+    "col.bikeType": "Tipo di bici",
+    "col.revenue": "Ricavi",
+    "col.halfYearMix": "Semestre",
+    "col.summerHalf": "semestre estivo",
+    "col.winterHalf": "semestre invernale",
+    "col.monthlyCourse": "Andamento mensile",
+    "col.revenueVsRides": "Ricavi rispetto alla quota corse",
+    "col.kilometres": "Chilometri",
+    "col.dataQuality": "Base dei dati",
+    "col.measured": "misurato",
+    "col.estimated": "stimato",
+    "col.kmPerRideDeviation": "km per corsa rispetto alla media",
+    "col.movements": "Movimenti",
+    "col.fillLevel": "Livello di riempimento",
+    "unit.bikes": "bici",
+    "unit.shareOfRow": "quota della riga",
+    "unit.percentagePoints": "punti percentuali",
+    "unit.dockingPoints": "stalli",
+    "unit.departuresPerWorkday": "partenze per giorno feriale, 0–24",
+    "unit.ridesArrivalsMinusDepartures": "corse, arrivi meno partenze",
+    "unit.persons": "persone",
+    "unit.minutes": "minuti",
+    "unit.threeSteps": "3 livelli",
+    "unit.reportedToFixed": "da segnalato a risolto",
+    "unit.euroTwelveMonths": "euro, 12 mesi",
+    "unit.summerWinter": "estate / inverno",
+    "unit.kmTwelveMonths": "totale, 12 mesi",
+    "unit.ridesMeasuredEstimated": "corse, misurate / stimate",
+    "unit.kmPerRide": "chilometri per corsa",
+    "unit.departuresPlusArrivals": "partenze e arrivi",
+    "unit.zeroToHundred": "0–100 %",
+    "board.fleetTitle": "Consistenza per modello",
+    "board.fleetReference": "{raederPhrase} · {modellePhrase} di {herstellerPhrase} · anni {vonJahr}–{bisJahr} · {quote} % attualmente in prestito",
+    "board.fleetStatusAria": "{name}: {aufteilung}",
+    "board.fleetYearAria": "{name}, anno {jahr}, sulla scala da {vonJahr} a {bisJahr}",
+    "board.fleetDeviationAria": "{name}: {quote} % in prestito, intera flotta {flottenquote} %",
+    "board.fleetFootnote": "Scostamento: quota di bici in prestito per modello rispetto al {quote} % dell'intera flotta, calcolata dalle somme e non come media delle nove quote.",
+    "board.stationsTitle": "Rete per stazione",
+    "board.stationsReference": "{stationenPhrase} · {belegt} di {kapazitaet} stalli occupati ({prozent} %) · saldo su tutte le corse concluse",
+    "board.stationOccupancyAria": "{name}: {belegt} di {kapazitaet} stalli occupati, {prozent} %",
+    "board.stationRhythmAria": "{name}: andamento giornaliero delle partenze, picco tra le {stunde} con {wert} corse per giorno feriale",
+    "board.stationBalanceAria": "{name}: {zugaenge} arrivi, {abgaenge} partenze, saldo {saldo}",
+    "board.stationsFootnote": "Le partenze vanno da {min} a {max} in tutte le stazioni: la domanda è distribuita uniformemente, le differenze stanno solo nel saldo.",
+    "board.customersTitle": "Anagrafica per gruppo tariffario",
+    "board.customersReference": "{kundenPhrase} · {gesperrt} bloccati · {volumen} fatturati · {imOrt} a {ort}, distribuiti su {ortePhrase}",
+    "board.customersNoTariff": "Senza tariffa attiva",
+    "board.customersWithRides": "con corse",
+    "board.customersNoRides": "senza corse",
+    "board.customersRevenueShare": "{anteil} % del volume",
+    "board.customersMixAria": "{name}: {aufteilung}",
+    "board.customersSignupsAria": "{name}: iscrizioni dal {vonJahr} al {bisJahr}, massimo {max} nel {maxJahr}",
+    "board.customersDeviationAria": "{name}: {umsatzanteil} % del volume con {kundenanteil} % della clientela",
+    "board.customersActiveMax": "al massimo {kundenPhrase} al mese",
+    "board.customersFootnote": "I primi {zehntel} clienti portano il {anteil} % del volume fatturato; {ohneAdresse} record non hanno indirizzo.",
+    "board.maintenanceTitle": "I singoli casi",
+    "board.maintenanceReference": "{schadenPhrase} · {raederPhrase} coinvolte ({typen}) · {auftraegePhrase} · segnalati il {tag}",
+    "board.maintenanceSeverityAria": "{rad}: {schwere}, livello {stufe} di 3",
+    "board.maintenanceProgressAria": "{rad}: {stand}, {auftrag}",
+    "board.maintenanceHasOrder": "ordine di lavoro presente",
+    "board.maintenanceNoOrder": "nessun ordine di lavoro",
+    "board.maintenanceFootnote": "Nessuna colonna di scostamento e nessuna media: {schadenPhrase}, di cui {offen} non risolti, {minuten} minuti di lavoro registrati – qui ogni indice sarebbe una statistica su sé stessa.",
+    "board.revenueTypeTitle": "Dodici mesi per tipo di bici",
+    "board.revenueGroupTitle": "Dodici mesi per gruppo tariffario",
+    "board.revenueReference": "{umsatz} e {fahrtenPhrase}, da {vonMonat} a {bisMonat}",
+    "board.revenueReferenceWithFleet": "{umsatz} e {fahrtenPhrase}, da {vonMonat} a {bisMonat} · {jeRadTag} per bici al giorno ({raederPhrase})",
+    "board.revenuePerRide": "{betrag} per corsa",
+    "board.halfYearAria": "{name}: {sommer} % nel semestre estivo, {winter} % in quello invernale",
+    "board.monthlyCourseAria": "{name}: andamento da {vonMonat} a {bisMonat}, massimo {max} in {maxMonat}, ultimo {aktuell}",
+    "board.revenueVsRidesAria": "{name}: {umsatzanteil} % dei ricavi con {fahrtenanteil} % delle corse",
+    "board.revenueTypeFootnote": "Ricavi per corsa della City-Bike: da {von} a {nach} ({veraenderung}) da {monat} – l'unico cambio di tariffa del periodo.",
+    "board.revenueGroupFootnote": "I conteggi mensili dei clienti non si sommano: le stesse persone viaggiano in più mesi. La riga indica quindi il mese più forte, non un totale.",
+    "board.kmTitle": "Percorrenza per tipo di bici",
+    "board.kmReference": "{km} su {fahrtenPhrase}, da {vonMonat} a {bisMonat} · {anteil} delle corse stimate",
+    "board.co2PerRide": "{kg} di CO₂ per corsa",
+    "board.qualityAria": "{name}: {anteil} stimato, {geschaetzt} di {fahrten} corse",
+    "board.kmPerRideAria": "{name}: {je} per corsa, media {schnitt}",
+    "board.kmFootnote": "La quota stimata ({anteil}) è ponderata per corse e non è la media delle quote mensili: quella darebbe {ungewichtet} nel periodo mostrato e addirittura {alleUngewichtet} invece di {alleGewichtet} su {monatszeilen} – in una media semplice i mesi poco popolati pesano quanto quelli forti.",
+    "board.stationLoadTitle": "Movimento per stazione",
+    "board.stationLoadReference": "{stationenPhrase} · {fahrten} partenze sull'intero storico",
+    "board.fillLevelAria": "{name}: livello di riempimento {prozent} %",
+    "board.stationLoadFootnote": "Le partenze vanno da {min} a {max}: la domanda è uniforme, a decidere è solo il saldo.",
+    "board.halfYearFootnote": "La quota invernale è tra il {min} % e il {max} % in ogni riga: la stagionalità colpisce tutte allo stesso modo e non distingue le righe.",
   },
   pl: {
     "common.cancel": "Anuluj",
@@ -2583,26 +2683,18 @@ const UEBERSETZUNGEN = {
     "status.raw.verworfen": "Odrzucono",
     "status.label.behoben": "Naprawiono",
     "status.raw.behoben": "Naprawiono",
-    "hint.saldoChartAria": "Saldo {stationenPhrase}, posortowane według numeru stacji, od {min} do {max} - najniższe (zaznaczone na czerwono) na stacji {name}",
-    "hint.fillLevelBetween": "Poziom zapełnienia {stationenPhrase}, posortowany według numeru stacji, od {min} do {max}",
     "msg.stationsWithoutBikeSuffix": ", w tym {n} bez roweru",
     "empty.noStationOccupancyText": "Brak stacji. Przy dziesięciu utworzonych stacjach jest to nietypowe — możliwą przyczyną jest chwilowa utrata roli, a nie brak danych.",
     "empty.noStationOccupancyTitle": "Brak obłożenia stacji",
     "msg.stationOccupancyLoadFailed": "Nie udało się wczytać obłożenia stacji: {fehler}",
     "misc.estimatedRidesDetail": "{geschaetzt} z {fahrtenPhrase} ({prozent})",
-    "hint.monthlyKmChartAria": "Przejechane kilometry miesięcznie, ostatnie dwanaście miesięcy ({vonMonat}-{bisMonat}) - ciemny słupek po prawej to bieżący miesiąc, {aktuellWert}",
-    "hint.monthlyCo2ChartAria": "Oszczędność CO2 miesięcznie, ostatnie dwanaście miesięcy ({vonMonat}-{bisMonat}), od {min} do {max} - ciemny słupek po prawej to bieżący miesiąc, {aktuellWert}",
     "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, oszczędność CO₂ ogółem {co2}, w tym {prozent} szacowane (ważone przejazdami)",
     "empty.noKmCo2Title": "Brak wierszy kilometrów i CO2",
     "msg.kmCo2LoadFailed": "Nie udało się wczytać kilometrów i CO2: {fehler}",
     "field.jeKunde": "Na klienta",
-    "hint.crossCheckChartAria": "Miesięczny obrót z ostatnich dwunastu miesięcy ({vonMonat}-{bisMonat}), ta sama seria co na karcie „Obrót wg typu roweru” - ciemny słupek po prawej to bieżący miesiąc, {aktuellWert}",
     "msg.revenueByCustomerGroupSummary": "{monatszeilen}, obrót ogółem {umsatz}",
     "empty.noRevenueByCustomerGroupTitle": "Brak obrotu wg grupy klientów",
     "msg.revenueByCustomerGroupLoadFailed": "Nie udało się wczytać obrotu wg grupy klientów: {fehler}",
-    "hint.cityBikeJumpChartAria": "Obrót na przejazd City-Bike, {n} miesięcy od {vonMonat}: skok z {von} do {nach} od {sprungMonat}, zaznaczone na czerwono",
-    "hint.monthlyRidesChartAria": "Przejazdy miesięcznie, ostatnie dwanaście miesięcy: najniżej {min} w {tiefMonat}, najwyżej {max} w {hochMonat} - ciemny słupek po prawej to bieżący miesiąc, {aktuellMonat} z {aktuellPhrase}",
-    "hint.monthlyRevenueChartAria": "Miesięczny obrót z ostatnich dwunastu miesięcy ({vonMonat}-{bisMonat}), od {min} do {max} - ciemny słupek po prawej to bieżący miesiąc, {aktuellMonat} z {aktuellWert}",
     "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, obrót ogółem {umsatz}",
     "msg.revenueByBikeTypeLoadFailed": "Nie udało się wczytać obrotu wg typu roweru: {fehler}",
     "empty.noRevenueByBikeTypeText": "Brak wiersza miesięcznego. Przy wypełnionym roku referencyjnym jest to nietypowe — możliwą przyczyną jest chwilowa utrata roli, a nie brak danych.",
@@ -2651,7 +2743,6 @@ const UEBERSETZUNGEN = {
     "hint.trafficPatternAria": "{wochentypTitel} na stacji {name}, uśrednione z {tage} dni. Najwięcej wyjazdów przypada na przedział {zeitfensterAb} z {maxAb} dziennie, najwięcej przyjazdów na przedział {zeitfensterZu} z {maxZu} dziennie.",
     "hint.stationFullNote": " Stacja jest pełna i obecnie nie przyjmuje zwrotów.",
     "hint.stationOccupancyAria": "Zapełnienie {name}: {belegt} z {kapazitaet} miejsc, {prozent} procent. 100 procent to pojemność tej jednej stacji.{vollZusatz}",
-    "hint.networkOccupancyAria": "Obłożenie sieci we wszystkich {stationenPhrase}: {belegt} z {kapazitaet} miejsc zajętych, {prozent} procent. 100 procent to całkowita pojemność całej sieci stacji, a nie jednej stacji.",
     "map.openDetailsSuffix": ". Otwórz szczegóły.",
     "map.currentStationSuffix": " - to jest wyświetlana stacja",
     "map.stationFullSuffix": ", pełna - obecnie nie przyjmuje zwrotów",
@@ -2662,7 +2753,6 @@ const UEBERSETZUNGEN = {
     "nav.originDamageReport": "Zgłoszenie usterki dla {rahmennummer}",
     "nav.originBikeFromStation": "Rower {rahmennummer} ze stacji {name}",
     "nav.originBikeFromFleet": "Rower {rahmennummer} z floty",
-    "hint.percentOfFleet": "{anteil}% floty",
     "index.title": "VeloCity Gospodarka Magazynowa",
     "index.loading": "Chwileczkę…",
     "index.loginEmail": "E-mail",
@@ -2836,40 +2926,12 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} ma jeszcze trwający przejazd. Najpierw poczekaj na zwrot roweru.",
     "art17.doneMessage": "Klient {nummer} zanonimizowany. Faktury i przejazdy zostają zachowane.",
     "art17.confirmWord": "LOESCHEN",
-    "tile.available": "Gotowy do użycia",
-    "tile.onLoan": "Wypożyczony",
-    "tile.inMaintenance": "W konserwacji",
-    "tile.faulty": "Uszkodzony",
-    "tile.stations": "Stacje",
-    "tile.fullStations": "Pełne stacje",
-    "tile.networkOccupancy": "Całkowite zapełnienie – wszystkie stacje",
-    "tile.fillRange": "Zakres poziomu zapełnienia",
-    "tile.customersTotal": "Klienci ogółem",
-    "tile.blocked": "Zablokowani",
-    "tile.noAddress": "Bez adresu",
-    "tile.invoiceTop10": "Wolumen faktur: górne 10%",
-    "tile.damageReportsTotal": "Zgłoszenia usterek ogółem",
-    "tile.workOrdersTotal": "Zlecenia ogółem",
-    "tile.unrideableOpen": "Niezdatny do jazdy, otwarte",
     "tile.minimum": "Minimum",
     "tile.maximum": "Maksimum",
     "tile.countPerMonth": "Liczba na miesiąc",
     "tile.dayWithMostRides": "Dzień z największą liczbą przejazdów",
-    "tile.revenueTotal": "Obrót ogółem",
-    "tile.ridesTotal": "Przejazdy ogółem",
-    "tile.revenuePerBikeDay": "Obrót na rower i dzień",
-    "tile.notableRevenuePerRideCityBike": "Zwraca uwagę: obrót na przejazd City-Bike",
-    "tile.largestCustomerGroup": "Największa grupa klientów",
-    "tile.notableNoMembership": "Zwraca uwagę: bez członkostwa",
-    "tile.co2SavingsTotal": "Oszczędność CO₂ ogółem",
-    "tile.kilometersTotal": "Kilometry ogółem",
-    "tile.ofWhichEstimatedWeighted": "W tym szacowane (ważone przejazdami)",
-    "tile.networkOccupancyTotal": "Całkowite obłożenie sieci",
-    "tile.biggestImbalance": "Największa nierównowaga",
     "tile.occupancy": "Zapełnienie",
     "tile.trafficByTimeSlot": "Przyjazdy i wyjazdy wg przedziału czasowego",
-    "tile.departuresPerDayTop": "Wyjazdy dziennie (u góry)",
-    "tile.arrivalsPerDayBottom": "Przyjazdy dziennie (u dołu)",
     "tile.weekdays": "Dni robocze (pon.–pt.)",
     "tile.weekend": "Weekend (sob./niedz.)",
     "tile.bikesAtStation": "Rowery na tej stacji ({n})",
@@ -2901,7 +2963,6 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Położenie w sieci",
     "tile.noStationLocation": "Dla tej stacji brak współrzędnych.",
     "common.and": "i",
-    "misc.changeVsPrevMonth": "względem poprzedniego miesiąca",
     "msg.bikeNowSetTo": "{rahmennummer} ma teraz status {ziel}.",
     "msg.confirmDecommission": "Trwale wycofać {rahmennummer} z eksploatacji? Rower traci swoją lokalizację i nie pojawia się już na żadnej liście. Jego przejazdy zostają zachowane.",
     "msg.bikeDecommissioned": "{rahmennummer} wycofano z eksploatacji.",
@@ -2936,60 +2997,116 @@ const UEBERSETZUNGEN = {
     "msg.workOrderOpened": "Otwarto zlecenie {id}, rower w konserwacji.",
     "msg.workOrdersLoadFailed": "Nie udało się wczytać zleceń: {fehler}",
     "msg.workOrderCompleted": "Zlecenie {auftragsnummer} zakończono.",
-    "msg.unrideableShare": "{n} z {schadenPhrase} ogółem — blokuje rower, gdy tylko nie jest w trasie",
-    "msg.unrideableShareNoTotal": "blokuje rower, gdy tylko nie jest w trasie",
-    "hint.shareOfBikes": "{anteil} z {raederPhrase}",
-    "hint.shareOnLoan": "{anteil} z {raederPhrase} · obecnie w trasie",
-    "hint.shareMaintenance": "{anteil} z {raederPhrase} · w warsztacie",
-    "hint.shareFaulty": "{anteil} z {raederPhrase} · tam, gdzie jest problem",
-    "hint.allInOperation": "wszystkie w eksploatacji",
-    "hint.decommissionedCount": "{n} z nich wyłączono z eksploatacji",
-    "hint.fullStationsShare": "{n} z {stationenPhrase}: {liste} - nie przyjmuje zwrotów",
-    "hint.networkOccupancyDetail": "{belegt} z {kapazitaet} miejsc zajętych, we wszystkich {stationenPhrase}",
-    "hint.fillRangeDetail": "Mediana {median}% · {voll} z {stationenPhrase} całkowicie pełnych{leerZusatz}",
-    "hint.fillRangeChartAria": "Zakres zapełnienia dla {stationenPhrase}: od {min}% do {max}%, mediana {median}%",
-    "hint.andEmptyCount": ", {n} z {stationenPhrase} pustych",
-    "hint.noneEmpty": ", żadna pusta",
-    "hint.blockedShare": "{n} z {kundenPhrase} - obecnie nie ma funkcji cofającej blokadę",
-    "hint.noUnblockFunction": "Obecnie nie ma funkcji cofającej blokadę",
-    "hint.noAddressShare": "{n} z {kundenPhrase} - można uzupełnić później w formularzu",
-    "hint.addLaterInForm": "Można uzupełnić później w formularzu",
-    "hint.top10Detail": "{zehntel} z {kundenPhrase} skupia {top10} z {gesamt}",
-    "hint.overallStates": "we wszystkich stanach przetwarzania",
-    "hint.last12MonthsTrend": "Trend z ostatnich 12 miesięcy",
-    "hint.last12MonthsCrossCheck": "Trend z ostatnich 12 miesięcy - obliczenie kontrolne względem karty „Obrót wg typu roweru”",
-    "hint.yearlyPattern": "Wzorzec roczny: najniższy w {tief}, najwyższy w {hoch}",
-    "hint.perBikePerDayDetail": "{jeRadJahr} rocznie · w odniesieniu do {raederPhrase} we flocie (bez wycofanych) · ostatnie 12 miesięcy",
-    "hint.tariffChangeFrom": "{veraenderung} od {monat} - zmiana taryfy",
-    "hint.shareOfRevenue": "{prozent} obrotu ({geld})",
-    "hint.revenueWithoutTariff": "{geld} obrotu z przejazdów bez aktywnej taryfy",
-    "hint.estimatedShareOfRides": "{geschaetzt} z {fahrtenPhrase} oszacowano - NIE {naiv}, jak sugerowałaby prosta średnia wierszy",
-    "hint.fillLevelPerStation": "Poziom zapełnienia wg stacji, posortowany według numeru stacji",
-    "hint.fillLevelPerStationRange": "Zapełnienie na stację: {min}–{max}%",
-    "hint.networkOccupancyWeighted": "{belegt} z {kapazitaet} miejsc zajętych · ważone pojemnością, nie średnia wartości pojedynczych ({naiv})",
-    "hint.fullStationsList": "{voll} z {stationenPhrase}: {liste}",
-    "hint.worstStationBalance": "Saldo {saldo} - oddaje więcej rowerów, niż otrzymuje",
-    "hint.stationCollectsBalance": "Saldo {saldo} – gromadzi więcej rowerów, niż oddaje",
-    "tile.fleetAge": "Struktura wieku floty",
-    "hint.fleetAgeAria": "Rozkład floty według rocznika, {vonJahr}–{bisJahr}",
-    "hint.fleetAgeDetail": "{anteil}% floty ({n} z {raederPhrase}) pochodzi z {jahr} – najstarszy rocznik w zasobie",
-    "hint.ridesPerBikeBucketsAria": "Przejazdy na rower, ostatnie 30 dni, pogrupowane w przedziały",
-    "tile.tariffDistribution": "Rozkład wg taryfy",
-    "hint.tariffDistributionAria": "Klienci rozłożeni według taryfy",
-    "hint.tariffDistributionDetail": "{anteil}% ({n} z {kundenPhrase}) bez aktywnej taryfy – największa grupa",
-    "hint.blockedNeverRiddenAll": "{kundenPhrase} – nigdy nie jeździli, zarejestrowani {vonJahr}–{bisJahr}",
-    "hint.blockedNeverRiddenSome": "{kundenPhrase} – {nie} z nich nigdy nie jeździło",
-    "hint.locationDistributionAria": "Klienci według miejsca zamieszkania, największa grupa najpierw: {anteil}% w {ort}, rozproszeni po {orteAnzahl} miejscowościach",
-    "hint.locationDistributionDetail": "{anteil}% w {ort}, rozproszeni po {orteAnzahl} miejscowościach",
-    "tile.workOrdersRunning": "Trwające zlecenia",
-    "hint.workOrdersRunningShare": "{n} z {auftraegePhrase} – jeszcze nieukończone",
-    "hint.percentOfDamageReports": "{anteil}% zgłoszeń usterek",
     "field.baujahr": "Rocznik",
     "field.gewicht": "Waga",
     "field.gangzahl": "Liczba biegów",
     "field.rahmenhoehe": "Wysokość ramy",
     "field.akkukapazitaet": "Pojemność akumulatora",
     "field.reichweite": "Zasięg",
+    "col.together": "Razem",
+    "col.model": "Model",
+    "col.stock": "Stan",
+    "col.statusMix": "Stan techniczny",
+    "col.modelYear": "Rocznik",
+    "col.utilisationDeviation": "Wykorzystanie wzgl. floty",
+    "col.station": "Stacja",
+    "col.capacity": "Miejsca",
+    "col.occupancy": "Zajętość",
+    "col.occupied": "zajęte",
+    "col.free": "wolne",
+    "col.dailyRhythm": "Rytm dnia",
+    "col.balance": "Saldo",
+    "col.tariffGroup": "Grupa taryfowa",
+    "col.customers": "Klienci",
+    "col.customerMix": "Korzystanie",
+    "col.signups": "Przybyli",
+    "col.revenueDeviation": "Przychód wzgl. udziału klientów",
+    "col.case": "Przypadek",
+    "col.workTime": "Czas pracy",
+    "col.severity": "Waga",
+    "col.progress": "Stan realizacji",
+    "col.bikeType": "Typ roweru",
+    "col.revenue": "Przychód",
+    "col.halfYearMix": "Półrocze",
+    "col.summerHalf": "półrocze letnie",
+    "col.winterHalf": "półrocze zimowe",
+    "col.monthlyCourse": "Przebieg miesięczny",
+    "col.revenueVsRides": "Przychód wzgl. udziału przejazdów",
+    "col.kilometres": "Kilometry",
+    "col.dataQuality": "Podstawa danych",
+    "col.measured": "zmierzone",
+    "col.estimated": "szacowane",
+    "col.kmPerRideDeviation": "km na przejazd wzgl. średniej",
+    "col.movements": "Ruchy",
+    "col.fillLevel": "Poziom napełnienia",
+    "unit.bikes": "rowery",
+    "unit.shareOfRow": "udział wiersza",
+    "unit.percentagePoints": "punkty procentowe",
+    "unit.dockingPoints": "miejsca",
+    "unit.departuresPerWorkday": "wyjazdy na dzień roboczy, 0–24",
+    "unit.ridesArrivalsMinusDepartures": "przejazdy, przyjazdy minus wyjazdy",
+    "unit.persons": "osoby",
+    "unit.minutes": "minuty",
+    "unit.threeSteps": "3 stopnie",
+    "unit.reportedToFixed": "od zgłoszenia do usunięcia",
+    "unit.euroTwelveMonths": "euro, 12 miesięcy",
+    "unit.summerWinter": "lato / zima",
+    "unit.kmTwelveMonths": "suma, 12 miesięcy",
+    "unit.ridesMeasuredEstimated": "przejazdy, zmierzone / szacowane",
+    "unit.kmPerRide": "kilometry na przejazd",
+    "unit.departuresPlusArrivals": "wyjazdy i przyjazdy",
+    "unit.zeroToHundred": "0–100 %",
+    "board.fleetTitle": "Stan według modelu",
+    "board.fleetReference": "{raederPhrase} · {modellePhrase} od {herstellerPhrase} · roczniki {vonJahr}–{bisJahr} · {quote} % obecnie wypożyczonych",
+    "board.fleetStatusAria": "{name}: {aufteilung}",
+    "board.fleetYearAria": "{name}, rocznik {jahr}, na skali od {vonJahr} do {bisJahr}",
+    "board.fleetDeviationAria": "{name}: {quote} % wypożyczonych, cała flota {flottenquote} %",
+    "board.fleetFootnote": "Odchylenie: udział wypożyczonych rowerów na model wobec {quote} % całej floty – liczone z sum, a nie jako średnia dziewięciu udziałów.",
+    "board.stationsTitle": "Sieć według stacji",
+    "board.stationsReference": "{stationenPhrase} · {belegt} z {kapazitaet} miejsc zajętych ({prozent} %) · saldo ze wszystkich zakończonych przejazdów",
+    "board.stationOccupancyAria": "{name}: {belegt} z {kapazitaet} miejsc zajętych, {prozent} %",
+    "board.stationRhythmAria": "{name}: rytm dnia wyjazdów, szczyt między {stunde} z {wert} przejazdami na dzień roboczy",
+    "board.stationBalanceAria": "{name}: {zugaenge} przyjazdów, {abgaenge} wyjazdów, saldo {saldo}",
+    "board.stationsFootnote": "Wyjazdy mieszczą się we wszystkich stacjach między {min} a {max} – popyt jest równomierny, różnice tkwią wyłącznie w saldzie.",
+    "board.customersTitle": "Kartoteka według grupy taryfowej",
+    "board.customersReference": "{kundenPhrase} · {gesperrt} zablokowanych · {volumen} obrotu · {imOrt} w {ort}, rozłożone na {ortePhrase}",
+    "board.customersNoTariff": "Bez aktywnej taryfy",
+    "board.customersWithRides": "z przejazdami",
+    "board.customersNoRides": "bez przejazdu",
+    "board.customersRevenueShare": "{anteil} % obrotu",
+    "board.customersMixAria": "{name}: {aufteilung}",
+    "board.customersSignupsAria": "{name}: przybyli od {vonJahr} do {bisJahr}, maksimum {max} w {maxJahr}",
+    "board.customersDeviationAria": "{name}: {umsatzanteil} % obrotu przy {kundenanteil} % klientów",
+    "board.customersActiveMax": "najwyżej {kundenPhrase} w miesiącu",
+    "board.customersFootnote": "Górni {zehntel} klienci odpowiadają za {anteil} % obrotu; {ohneAdresse} rekordów nie ma adresu.",
+    "board.maintenanceTitle": "Poszczególne przypadki",
+    "board.maintenanceReference": "{schadenPhrase} · {raederPhrase} objętych ({typen}) · {auftraegePhrase} · zgłoszono {tag}",
+    "board.maintenanceSeverityAria": "{rad}: {schwere}, stopień {stufe} z 3",
+    "board.maintenanceProgressAria": "{rad}: {stand}, {auftrag}",
+    "board.maintenanceHasOrder": "istnieje zlecenie",
+    "board.maintenanceNoOrder": "brak zlecenia",
+    "board.maintenanceFootnote": "Bez kolumny odchylenia i bez średnich: {schadenPhrase}, w tym {offen} nierozwiązanych, {minuten} minut zapisanej pracy – każdy wskaźnik byłby tu statystyką o sobie samym.",
+    "board.revenueTypeTitle": "Dwanaście miesięcy według typu roweru",
+    "board.revenueGroupTitle": "Dwanaście miesięcy według grupy taryfowej",
+    "board.revenueReference": "{umsatz} i {fahrtenPhrase}, od {vonMonat} do {bisMonat}",
+    "board.revenueReferenceWithFleet": "{umsatz} i {fahrtenPhrase}, od {vonMonat} do {bisMonat} · {jeRadTag} na rower dziennie ({raederPhrase})",
+    "board.revenuePerRide": "{betrag} na przejazd",
+    "board.halfYearAria": "{name}: {sommer} % w półroczu letnim, {winter} % w zimowym",
+    "board.monthlyCourseAria": "{name}: przebieg od {vonMonat} do {bisMonat}, maksimum {max} w {maxMonat}, ostatnio {aktuell}",
+    "board.revenueVsRidesAria": "{name}: {umsatzanteil} % przychodu przy {fahrtenanteil} % przejazdów",
+    "board.revenueTypeFootnote": "Przychód na przejazd dla City-Bike: z {von} na {nach} ({veraenderung}) od {monat} – jedyna zmiana taryfy w okresie.",
+    "board.revenueGroupFootnote": "Miesięcznych liczb klientów nie można sumować – te same osoby jeżdżą w wielu miesiącach. Wiersz podaje więc najsilniejszy miesiąc, nie sumę.",
+    "board.kmTitle": "Dystans według typu roweru",
+    "board.kmReference": "{km} na {fahrtenPhrase}, od {vonMonat} do {bisMonat} · {anteil} przejazdów szacowanych",
+    "board.co2PerRide": "{kg} CO₂ na przejazd",
+    "board.qualityAria": "{name}: {anteil} szacowane, {geschaetzt} z {fahrten} przejazdów",
+    "board.kmPerRideAria": "{name}: {je} na przejazd, średnia {schnitt}",
+    "board.kmFootnote": "Udział szacowany ({anteil}) liczony jest z wagą przejazdów, a nie jako średnia udziałów miesięcznych: ta dałaby {ungewichtet} w pokazanym okresie, a na {monatszeilen} nawet {alleUngewichtet} zamiast {alleGewichtet} – w zwykłej średniej słabo obsadzone miesiące ważą tyle samo co silne.",
+    "board.stationLoadTitle": "Ruch według stacji",
+    "board.stationLoadReference": "{stationenPhrase} · {fahrten} wyjazdów w całej historii",
+    "board.fillLevelAria": "{name}: poziom napełnienia {prozent} %",
+    "board.stationLoadFootnote": "Wyjazdy mieszczą się między {min} a {max} – popyt jest równomierny, decyduje wyłącznie saldo.",
+    "board.halfYearFootnote": "Udział zimowy mieści się w każdym wierszu między {min} % a {max} % – sezonowość dotyka wszystkich jednakowo i nie różnicuje wierszy.",
   },
 };
 
@@ -3081,6 +3198,30 @@ const MENGENFORMEN = {
     es: { one: "{n} fila mensual", other: "{n} filas mensuales" },
     it: { one: "{n} riga mensile", other: "{n} righe mensili" },
     pl: { one: "{n} wiersz miesięczny", few: "{n} wiersze miesięczne", many: "{n} wierszy miesięcznych", other: "{n} wiersza miesięcznego" },
+  },
+  "modell": {
+    de: { "one": "{n} Modell", "other": "{n} Modelle" },
+    en: { "one": "{n} model", "other": "{n} models" },
+    tr: { "one": "{n} model", "other": "{n} model" },
+    es: { "one": "{n} modelo", "other": "{n} modelos" },
+    it: { "one": "{n} modello", "other": "{n} modelli" },
+    pl: { "one": "{n} model", "few": "{n} modele", "many": "{n} modeli", "other": "{n} modelu" },
+  },
+  "hersteller": {
+    de: { "one": "{n} Hersteller", "other": "{n} Herstellern" },
+    en: { "one": "{n} manufacturer", "other": "{n} manufacturers" },
+    tr: { "one": "{n} üretici", "other": "{n} üretici" },
+    es: { "one": "{n} fabricante", "other": "{n} fabricantes" },
+    it: { "one": "{n} produttore", "other": "{n} produttori" },
+    pl: { "one": "{n} producenta", "few": "{n} producentów", "many": "{n} producentów", "other": "{n} producenta" },
+  },
+  "ort": {
+    de: { "one": "{n} Ort", "other": "{n} Orte" },
+    en: { "one": "{n} town", "other": "{n} towns" },
+    tr: { "one": "{n} yer", "other": "{n} yer" },
+    es: { "one": "{n} localidad", "other": "{n} localidades" },
+    it: { "one": "{n} località", "other": "{n} località" },
+    pl: { "one": "{n} miejscowość", "few": "{n} miejscowości", "many": "{n} miejscowości", "other": "{n} miejscowości" },
   },
 };
 
@@ -3967,13 +4108,13 @@ function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
 // nichts filtert, ist Zierrat (Auftrag).
 //
 // Find-or-create auf eine feste id, unmittelbar vor listenKoerper()
-// eingehaengt - dieselbe Machart wie uebersichtsstreifen()/reiterleiste()/
-// werkzeugleiste() oben, aus demselben Grund: der Streifen soll stabil an
+// eingehaengt - dieselbe Machart wie kopftafelWurzel()/reiterleiste()/
+// werkzeugleiste(), aus demselben Grund: der Streifen soll stabil an
 // derselben Stelle stehen, unabhaengig davon, in welcher Reihenfolge ein
-// Bereich seine Bausteine aufbaut. Ruft ein Bereich zeigeUebersicht() VOR
+// Bereich seine Bausteine aufbaut. Ruft ein Bereich zeigeKopftafel() VOR
 // zeigeFilterleiste() auf (wie alle vier Verbraucher es tun), landet die
 // Filterleiste dank derselben insertBefore(el, listenKoerper())-Logik
-// zwischen Uebersicht und Tabelle - die Uebersicht beschreibt IMMER den
+// zwischen Kopftafel und Tabelle - die Kopftafel beschreibt IMMER den
 // gesamten Bestand, der Filter schraenkt NUR die Tabelle darunter ein.
 function filterleiste() {
     const wurzel = document.getElementById('arbeitsliste');
@@ -4237,7 +4378,7 @@ function filterleisteFokusWiederherstellen(merkmal) {
     )?.focus();
 }
 
-// kennung: dieselbe Absicherung wie bei zeigeUebersicht()/zeigeListe() -
+// kennung: dieselbe Absicherung wie bei zeigeKopftafel()/zeigeListe() -
 // ein Reiterwechsel, dessen Filterleiste erst nach einem eigenen await
 // zurueckkommt, dürfte einen inzwischen überholten Bildschirm nicht mehr
 // beschreiben.
@@ -4372,87 +4513,27 @@ function zeigeFilterleiste(kennung, sichtbar, filter) {
     filterleisteFokusWiederherstellen(fokusMerkmal);
 }
 
-// ===== Übersichtsstreifen (Gestaltungsauftrag Auswertungen, Punkt 1) =====
+// ===== Kachel (nur noch fuer den Drill-Down in der Detailmaske) =====
 //
-// "Interessant wäre auch immer eine kleine Übersicht über den Tabellen,
-// in denen Dinge zusammengefasst und veranschaulicht werden" - wörtlich
-// der Auftrag. Tufte dazu: wenige, aussagekräftige Zahlen mit wortgroßen
-// Grafiken daneben (Sparklines) statt eines separaten großen Diagramms -
-// "small multiples" statt Deko. Der Streifen sitzt ÜBER der Liste, in
-// derselben Ansicht: man verlässt die Tabelle nicht, um ihre zusammen-
-// gefasste Form zu sehen.
+// WAR das Muster des Kopfbereichs (vier bis fuenf Kacheln nebeneinander
+// ueber jeder Liste, ueber #uebersichtsstreifen eingehaengt). Dieses
+// Kachelband ist ersatzlos entfallen - siehe die ausfuehrliche
+// Begruendung bei zeigeKopftafel() weiter unten, das es in allen fuenf
+// Bereichen abgeloest hat.
 //
-// Find-or-create auf eine feste id, unmittelbar vor listenKoerper()
-// eingehängt - dieselbe Machart wie reiterleiste()/werkzeugleiste() oben.
-// Dadurch steht der Streifen unabhängig von der Aufrufreihenfolge IMMER
-// zwischen einer eventuellen Reiter-/Werkzeugleiste und der Tabelle
-// selbst, nie darüber oder darunter vertauscht - genau das Problem, das
-// reiterleiste() weiter oben für sich schon lösen musste.
-function uebersichtsstreifen() {
-    const wurzel = document.getElementById('arbeitsliste');
-    let el = document.getElementById('uebersichtsstreifen');
-    if (!el) {
-        el = document.createElement('div');
-        el.id = 'uebersichtsstreifen';
-        el.className = 'uebersichtsstreifen';
-    }
-    wurzel.insertBefore(el, listenKoerper());
-    el.replaceChildren();
-    return el;
-}
+// baueKachel() SELBST bleibt, weil es einen zweiten, davon unabhaengigen
+// Verwender hat: monatsdrilldownEinfuegen() in auswertungen.js zeigt
+// Min/Max/Summe/Spitzentag eines angeklickten Monats in einem 2x2-Raster
+// IN DER DETAILMASKE. Dort ist die Kachel richtig - es sind vier
+// Einzelwerte zu genau einem Monat, keine Gliederung eines Bestands, und
+// die Detailmaske ist zu schmal fuer eine Tafel. Die Kritik am
+// Kachelband galt dem KOPFBEREICH, nicht der Form an sich.
 
-// kennung: dieselbe Absicherung wie bei zeigeListe()/zeigeLeermaske() -
-// ein Reiterwechsel, dessen Übersicht erst nach einem eigenen await
-// zurückkommt, dürfte einen inzwischen überholten Bildschirm nicht mehr
-// beschreiben (siehe Kopfkommentar bei neuerVorgang()).
-//
-// kacheln: [{ titel, wert, veraenderung?, grafik?, hinweis? }]
-// - titel: die Frage, die die Kachel beantwortet ("Umsatz gesamt", ...).
-// - wert: String ODER Element - ein Element für typografisch skalierte
-//   Zahlen (siehe zahlSkaliert() weiter unten) oder eine eingefärbte
-//   Bedeutung, sonst reicht ein String.
-// - veraenderung (optional, Gestaltungsauftrag Punkt 2): eine kleine
-//   Zeile MIT Richtungspfeil ÜBER der Zahl ("▼ −5 % ggü. Vormonat") -
-//   String ODER Element. Getrennt von hinweis (das steht UNTER der
-//   Zahl): der Auftrag zeigt die Veränderung ausdrücklich ÜBER dem
-//   Verlauf, nicht als weitere Randnotiz danach. Nur dort gesetzt, wo
-//   ein Vormonat/-zeitraum fachlich existiert (siehe die saeulen-
-//   sparkline-Kacheln in auswertungen.js) - kein Feld, das jede Kachel
-//   nachliefern müsste.
-// - grafik (optional): ein <svg>-Element bzw. ein von saeulenSparkline()
-//   gelieferter Block - das "wortgroße Bild daneben" aus dem Auftrag,
-//   oder ein Zellbalken (zellbalken()) für einen echten Anteil.
-// - hinweis (optional): eine zweite, leisere Zeile unter der Zahl - die
-//   Einordnung, nicht die Kennzahl selbst ("42 % des Umsatzes ohne feste
-//   Mitgliedschaft"). Hierhin gehört auch eine Unsicherheit, die NEBEN
-//   der Zahl stehen muss statt in einer Fußnote (Schätzanteil bei
-//   Kilometer/CO2, siehe auswertungen.js).
-//
-// Ohne kacheln (leeres Array, z. B. beim Leer- oder Fehlerzustand einer
-// Liste) wird der Streifen abgeräumt statt leer stehen gelassen - dasselbe
-// Prinzip wie bei zeigeWerkzeugleiste(false, ...): ein Container ohne
-// Inhalt bliebe sonst als schmaler, unerklärter Streifen stehen, und ohne
-// dieses explizite Abräumen überlebte die Übersicht des VORHERIGEN
-// Reiters unverändert einen Reiterwechsel, der selbst keine Übersicht
-// mehr zeigen will (bereichWechseln() leert #arbeitsliste nur beim
-// BEREICHSwechsel, nicht beim Reiterwechsel innerhalb der Auswertungen).
-function zeigeUebersicht(kennung, kacheln) {
-    if (!istAktuellerVorgang(kennung)) return;
-    const leiste = uebersichtsstreifen();
-    if (!kacheln || kacheln.length === 0) { leiste.remove(); return; }
-
-    for (const kachel of kacheln) leiste.append(baueKachel(kachel));
-}
-
-// Das Kachel-Markup selbst, herausgezogen aus zeigeUebersicht() (siehe
-// dort): der Drill-Down (monatsdrilldownEinfuegen() in auswertungen.js)
-// braucht dieselben vier Kacheln - Min, Max, Anzahl pro Monat, Tag mit
-// den meisten Fahrten - aber NICHT im #uebersichtsstreifen am Kopf von
-// #arbeitsliste, sondern in der Detailmaske. Zwei Aufrufer, die beide
-// dieselbe Handvoll DOM-Zeilen von Hand nachbauen, wären derselbe
-// Befund wie bei werkzeugleiste()/uebersichtsstreifen() selbst: ein
-// wiederkehrendes Muster gehört EINMAL hierher, nicht mehrfach in einen
-// Bereich - hier zusätzlich nicht mehrfach in DIESE Datei.
+// Vier Einzelwerte zu EINEM angeklickten Monat (Min, Max, Anzahl pro
+// Monat, Tag mit den meisten Fahrten), in einem 2x2-Raster in der
+// Detailmaske - siehe monatsdrilldownEinfuegen() in auswertungen.js.
+// Bleibt hier in rahmen.js und nicht dort: die Kachel ist eine
+// allgemeine Form, kein auswertungseigenes Bauteil.
 function baueKachel(kachel) {
     const feld = document.createElement('div');
     feld.className = 'uebersichtskachel';
@@ -4629,8 +4710,19 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
     // unverändert gegenüber einer reinen "ab der Grundlinie"-Zeichnung -,
     // bei einer Reihe mit negativen Werten liegt sie mittendrin, positive
     // Säulen wachsen nach oben, negative nach unten.
-    const minimum = Math.min(0, ...werteBereinigt);
-    const maximum = Math.max(0, ...werteBereinigt);
+    // optionen.minimum/maximum: eine von AUSSEN vorgegebene, GEMEINSAME
+    // Skala - der Fall "small multiples" (Tufte), bei dem mehrere Reihen
+    // untereinander stehen und nur dann vergleichbar sind, wenn sie
+    // dieselbe Achse teilen. kopftafel() weiter unten ermittelt diese
+    // Grenzen einmal ueber alle Zeilen und reicht sie durch; ohne sie
+    // skalierte jede Reihe auf ihr eigenes Maximum, zehn Stationen mit
+    // voellig verschiedenem Verkehr saehen gleich hoch aus, und die
+    // Kleingrafik waere genau das Ornament, das dieser Auftrag ruegt.
+    // Math.min/max mit 0 bleibt AUCH hier: die Nulllinie ist Pflicht
+    // (siehe oben), eine von aussen gesetzte Untergrenze ueber 0 wuerde
+    // die Saeulen auf einen erfundenen Sockel stellen.
+    const minimum = Math.min(0, optionen.minimum ?? 0, ...werteBereinigt);
+    const maximum = Math.max(0, optionen.maximum ?? 0, ...werteBereinigt);
     const spanne = (maximum - minimum) || 1;   // alle Werte 0: keine Division durch 0
     const anzahl = werteBereinigt.length;
     const abstand = breite / anzahl;
@@ -4749,6 +4841,215 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
         wrapper.append(text);
     }
     return wrapper;
+}
+
+// ===== Zeichenbaustein: Strukturbalken (100 %) =====
+//
+// EIN Balken, der eine Menge in ihre Teile zerlegt - nicht "wie viel",
+// sondern "woraus". Die Skala ist IMMER die Summe der Segmente, also
+// 100 %: dadurch sind die Balken ZWEIER ZEILEN unmittelbar vergleichbar,
+// auch wenn die eine 60 und die andere 12 Raeder zaehlt (Tufte, small
+// multiples: gleich gebaute Grafiken untereinander, die man ohne
+// Umrechnen nebeneinanderhalten kann). Die absolute Groesse steht
+// daneben in der Groessenspalte - beide Fragen getrennt beantwortet,
+// statt beide in eine Grafik zu quetschen.
+//
+// segmente: [{ wert, name, klasse }] - klasse ist eine CSS-Klasse, keine
+// Farbe als Zeichenkette: die Bedeutung ("wartung", "defekt") steht damit
+// an EINER Stelle in style.css und nicht in fuenf Bereichsdateien
+// verstreut. Segmente mit wert 0 werden uebersprungen (kein 0px breites
+// Rechteck, das nur den Trennstrich seines Nachbarn verdoppelt).
+//
+// TRENNFUGEN IN DER FLAECHENFARBE DES UNTERGRUNDS zwischen den
+// Segmenten: die vier Statusfarben sind fuer sich gemessen (siehe
+// style.css), aber ZWEI davon koennen unmittelbar aneinanderstossen, und
+// dann gilt nicht mehr ihr Kontrast gegen Weiss, sondern der
+// gegeneinander (--warnung-text gegen --schlecht kommt auf 1.66:1, weit
+// unter den 3:1 fuer Grafik). Eine Fuge von 1px loest das strukturell -
+// jede Segmentgrenze ist dadurch immer eine Kante gegen den hellen
+// Untergrund, unabhaengig davon, welche zwei Farben zusammentreffen.
+function strukturBalken(segmente, beschriftung, optionen = {}) {
+    const { breite = 96, hoehe = 12, fuge = 1 } = optionen;
+    const gefiltert = (segmente || []).filter((s) => s.wert > 0);
+    const summe = gefiltert.reduce((s, seg) => s + seg.wert, 0);
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    svg.setAttribute('width', breite);
+    svg.setAttribute('height', hoehe);
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.classList.add('strukturbalken');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', beschriftung);
+    if (summe <= 0) return svg;   // nichts zu zerlegen, aber ein gueltiges <svg>
+
+    // EIN SEGMENT, DAS ES GIBT, MUSS MAN SEHEN. Ein gesperrter Kunde von
+    // 112 sind 0,86px auf einem 96px-Balken, drei defekte Raeder von 275
+    // sind 1,05px - beide waeren nach dem Abzug der Fuge unsichtbar, und
+    // "unsichtbar" liest sich als "gibt es nicht". Jedes Segment mit Wert
+    // > 0 bekommt deshalb eine Mindestbreite; die dafuer noetigen Pixel
+    // werden dem GROESSTEN Segment abgezogen, damit die Summe exakt die
+    // Balkenbreite bleibt. Das verzerrt die Anteile um maximal
+    // mindestbreite Pixel je winzigem Segment - ein bewusst in Kauf
+    // genommener Fehler von rund einem Prozentpunkt gegen einen Befund,
+    // der sonst gar nicht erscheint. Die genaue Zahl steht ohnehin im
+    // <title> jedes Segments und im aria-label des ganzen Balkens.
+    const mindestbreite = Math.min(2, breite / gefiltert.length);
+    const breiten = gefiltert.map((segment) => (segment.wert / summe) * breite);
+    let schuld = 0;
+    breiten.forEach((w, i) => { if (w < mindestbreite) { schuld += mindestbreite - w; breiten[i] = mindestbreite; } });
+    if (schuld > 0) {
+        const groesster = breiten.indexOf(Math.max(...breiten));
+        breiten[groesster] = Math.max(mindestbreite, breiten[groesster] - schuld);
+    }
+
+    let x = 0;
+    gefiltert.forEach((segment, i) => {
+        const segmentbreite = breiten[i];
+        const rect = document.createElementNS(SVG_NS, 'rect');
+        rect.setAttribute('x', x.toFixed(2));
+        rect.setAttribute('y', 0);
+        // Die Fuge wird dem VORANGEHENDEN Segment abgezogen, nicht
+        // zwischen beide gelegt: so bleibt die Summe der Segmentbreiten
+        // exakt die volle Balkenbreite, das letzte Segment endet buendig
+        // am rechten Rand, und ein Anteil von 100 % sieht auch aus wie
+        // ein voller Balken.
+        const abzug = i < gefiltert.length - 1 ? Math.min(fuge, segmentbreite / 2) : 0;
+        rect.setAttribute('width', Math.max(0.5, segmentbreite - abzug).toFixed(2));
+        rect.setAttribute('height', hoehe);
+        rect.setAttribute('class', `strukturbalken-segment ${segment.klasse}`);
+        const titel = document.createElementNS(SVG_NS, 'title');
+        titel.textContent = `${segment.name}: ${zahlFormat(segment.wert)}`;
+        rect.append(titel);
+        svg.append(rect);
+        x += segmentbreite;
+    });
+    return svg;
+}
+
+// ===== Zeichenbaustein: Abweichungsbalken (Hichert/IBCS) =====
+//
+// Eine Abweichung ist eine EIGENE Groesse, keine zweite Lesart einer
+// Absolutzahl - IBCS weist sie deshalb in einer eigenen Spalte aus, mit
+// einer eigenen, um die Null zentrierten Skala. Genau das macht dieser
+// Baustein: die Nulllinie liegt in der MITTE der Flaeche, ein positiver
+// Wert waechst nach rechts, ein negativer nach links, und beide Seiten
+// teilen sich dieselbe Skala (maximumBetrag, vom Aufrufer EINMAL ueber
+// alle Zeilen ermittelt). Ohne diese gemeinsame Skala waere die laengste
+// Abweichung in jeder Zeile gleich lang und der Vergleich zwischen den
+// Zeilen sinnlos - derselbe Grund, aus dem zellbalken() sein Maximum
+// nicht je Zeile neu bildet.
+//
+// KEINE AMPELFARBE: eine Abweichung ist erst einmal nur eine Abweichung.
+// Ob "mehr" gut ist (Umsatz) oder schlecht (Raeder, die sich an einer
+// Station stauen), weiss nur der Bereich - und in dieser Oberflaeche ist
+// Rot dem defekten Rad und der unumkehrbaren Handlung vorbehalten (siehe
+// style.css). Positive und negative Balken tragen deshalb DIESELBE
+// Farbe; die Richtung liest man an der Seite, auf der der Balken liegt,
+// nicht an seinem Farbton.
+function abweichungsBalken(wert, maximumBetrag, beschriftung, optionen = {}) {
+    const { breite = 84, hoehe = 12 } = optionen;
+    const mitte = breite / 2;
+    const grenze = maximumBetrag > 0 ? maximumBetrag : 1;
+    const laenge = Math.min(1, Math.abs(wert) / grenze) * (mitte - 1);
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    svg.setAttribute('width', breite);
+    svg.setAttribute('height', hoehe);
+    svg.classList.add('abweichungsbalken');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', beschriftung);
+
+    if (Math.abs(wert) > 0) {
+        const rect = document.createElementNS(SVG_NS, 'rect');
+        rect.setAttribute('x', (wert >= 0 ? mitte : mitte - laenge).toFixed(2));
+        rect.setAttribute('y', 1);
+        rect.setAttribute('width', Math.max(0.5, laenge).toFixed(2));
+        rect.setAttribute('height', hoehe - 2);
+        rect.setAttribute('class', 'abweichungsbalken-flaeche');
+        svg.append(rect);
+    }
+
+    // Die Nulllinie ZULETZT gezeichnet, damit sie ueber der Flaeche
+    // liegt: bei einer sehr kleinen Abweichung waere sie sonst von der
+    // Mindestbreite des Balkens (0.5px) verdeckt und die Achse haette
+    // genau dort eine Luecke, wo man sie am noetigsten braucht.
+    const nulllinie = document.createElementNS(SVG_NS, 'line');
+    nulllinie.setAttribute('x1', mitte);
+    nulllinie.setAttribute('x2', mitte);
+    nulllinie.setAttribute('y1', 0);
+    nulllinie.setAttribute('y2', hoehe);
+    nulllinie.setAttribute('class', 'abweichungsbalken-null');
+    svg.append(nulllinie);
+    return svg;
+}
+
+// Der Text zu einem Abweichungsbalken - EINMAL hier, statt in jedem der
+// vier Bereiche fast gleich: das Vorzeichen wird bei einer Abweichung
+// IMMER gesetzt (IBCS - "+12,0" und "12,0" sind nicht dieselbe Aussage),
+// und die negative Null wird eingefangen. Letzteres ist kein
+// Schoenheitsfehler: -0,02 Prozentpunkte runden auf -0 (JavaScript kennt
+// eine negative Null), und die Oberflaeche schrieb dann "-0,0" - eine
+// Abweichung, die es nicht gibt, mit einer Richtung, die sie nicht hat.
+// wert === 0 ist fuer -0 wahr und normalisiert es damit zu 0.
+function abweichungText(wert, nachkommastellen = 1) {
+    const bereinigt = wert === 0 ? 0 : wert;
+    const zahl = zahlFormat(bereinigt, {
+        minimumFractionDigits: nachkommastellen, maximumFractionDigits: nachkommastellen
+    });
+    return bereinigt > 0 ? `+${zahl}` : zahl;
+}
+
+// ===== Zeichenbaustein: Lagepunkt auf gemeinsamer Achse =====
+//
+// Fuer eine Reihe, die je Zeile nur EINEN Wert hat und trotzdem
+// verglichen werden soll: das Baujahr eines Modells, der Fuellstand
+// einer Station, die Bearbeitungsstufe eines Falls. Eine Saeulen-
+// Sparkline waere hier sinnlos (eine einzelne Saeule zeigt keine Form),
+// eine blosse Zahl in einer Spalte laesst sich nicht ueberfliegen. Ein
+// Punkt auf einer fuer ALLE Zeilen identischen Achse dagegen schon -
+// zehn solche Zeilen untereinander ergeben einen Punktschwarm, aus dem
+// Verteilung und Ausreisser unmittelbar hervorgehen (Tufte).
+//
+// minimum/maximum kommen vom Aufrufer, nicht aus dem Einzelwert: sie
+// sind die GEMEINSAME Achse. kopftafel() unten ermittelt sie einmal ueber
+// alle Zeilen und reicht sie durch - kein Bereich kann sie versehentlich
+// je Zeile neu bilden.
+//
+// Position kodiert (nicht Laenge): eine abgeschnittene Achse waere hier
+// also zulaessig - und ist es auch (Baujahre 2021-2025 bei 0 beginnen zu
+// lassen, waere Unsinn). Die Achse wird deshalb als sichtbare Linie MIT
+// beiden Endwerten im aria-label gezeichnet, damit klar ist, worauf der
+// Punkt sich bezieht.
+function lagepunkt(wert, minimum, maximum, beschriftung, optionen = {}) {
+    const { breite = 84, hoehe = 12, radius = 3.2 } = optionen;
+    const spanne = (maximum - minimum) || 1;
+    const anteil = Math.max(0, Math.min(1, (wert - minimum) / spanne));
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    svg.setAttribute('width', breite);
+    svg.setAttribute('height', hoehe);
+    svg.classList.add('lagepunkt');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', beschriftung);
+
+    const achse = document.createElementNS(SVG_NS, 'line');
+    achse.setAttribute('x1', radius);
+    achse.setAttribute('x2', breite - radius);
+    achse.setAttribute('y1', hoehe / 2);
+    achse.setAttribute('y2', hoehe / 2);
+    achse.setAttribute('class', 'lagepunkt-achse');
+    svg.append(achse);
+
+    const punkt = document.createElementNS(SVG_NS, 'circle');
+    punkt.setAttribute('cx', (radius + anteil * (breite - 2 * radius)).toFixed(2));
+    punkt.setAttribute('cy', hoehe / 2);
+    punkt.setAttribute('r', radius);
+    punkt.setAttribute('class', 'lagepunkt-marke');
+    svg.append(punkt);
+    return svg;
 }
 
 // ===== Zeichenbaustein: Donut (Gestaltungsauftrag Stationen, Punkt 2) =====
@@ -5018,65 +5319,524 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
 
 // ===== Zeichenbaustein: typografische Skalierung (Bissantz) =====
 //
-// "Zahlen soll man sehen, nicht lesen": die tragenden Ziffern (Größen-
-// ordnung) bleiben in voller Stärke, Tausenderpunkte und die
-// Nachkommastellen (samt Einheit) treten optisch zurück - eine
-// mehrstellige Zahl wird so auf einen Blick erfasst, nicht Ziffer für
-// Ziffer gelesen.
+// DIE REGEL, NEU GEFASST (Gestaltungsauftrag, woertlich: "Warum ist die 0
+// fett? Was soll der Mist."). Sie lautet NICHT "Vorkommastellen fett" -
+// das war die alte, an der Position des Dezimalzeichens festgemachte
+// Fassung, und sie ist bei jeder Zahl unter Eins genau verkehrt herum:
+// bei 0,35 € betonte sie die fuehrende Null, die nichts traegt, und
+// daempfte ",35", wo die ganze Information steckt.
 //
+// Sie lautet: DIE STELLEN HERVORHEBEN, DIE DIE GROESSENORDNUNG TRAGEN,
+// UND DIE ZURUECKNEHMEN, DIE SIE NICHT TRAGEN. Umgesetzt ueber GELTENDE
+// ZIFFERN statt ueber eine feste Position:
+//
+//   1. Fuehrende Nullen tragen nichts - sie sind leise. ("0," in "0,35")
+//   2. Die ersten GELTENDE_ZIFFERN Ziffern ab der ersten Ziffer ungleich
+//      null tragen die Groessenordnung - sie stehen in voller Staerke.
+//   3. Alles danach verfeinert nur noch die Genauigkeit - leise.
+//   4. Trennzeichen (Tausender wie Dezimal) sind Gliederung, keine
+//      Information - immer leise.
+//   5. Das VORZEICHEN traegt so viel wie keine Ziffer sonst (ein Saldo
+//      von -65 ist etwas anderes als einer von 65) - immer voll stark.
+//   6. Die EINHEIT (€, %, kg) und ein vorangestelltes Waehrungszeichen
+//      sagen, WORIN gemessen wird, nicht WIE VIEL - leise.
+//
+// Damit faellt die Betonung dorthin, wo sie hingehoert, unabhaengig
+// davon, wo das Dezimalzeichen steht:
+//   35.387,17 €  ->  35.3 stark, 87,17 € leise   (die Tausender)
+//   0,35 €       ->  35 stark,   0, und  € leise (die Nachkommastellen)
+//   -65          ->  -65 stark
+//
+// DREI GELTENDE ZIFFERN, nicht zwei und nicht vier: drei legen die
+// Groessenordnung UND die erste Verfeinerung fest ("35,4 Tausend"), was
+// ein Auge in einem Zug erfasst. Eine vierte Ziffer aendert an der
+// wahrgenommenen Groesse nichts mehr - genau die Stelle, an der Bissantz
+// die Staerke zuruecknimmt.
+const GELTENDE_ZIFFERN = 3;
+
 // Nimmt eine FERTIG formatierte Zahl der AKTUELLEN Sprache entgegen
 // (Trennzeichen schon gesetzt, z. B. von geldFormat()/kgFormat() in
-// auswertungen.js) - das Zerlegen des Zahlenformats gehört hierher, weil
-// jeder Bereich mit einer eigenen, ähnlichen Formatierungsfunktion
+// auswertungen.js) - das Zerlegen des Zahlenformats gehoert hierher, weil
+// jeder Bereich mit einer eigenen, aehnlichen Formatierungsfunktion
 // dieselbe Aufteilung braucht; WAS gerundet und WELCHE Einheit
-// angehängt wird, bleibt Sache des Aufrufers.
+// angehaengt wird, bleibt Sache des Aufrufers.
 //
-// MEHRSPRACHIGKEIT (Fallstrick 2): frueher fest von deutschen
-// Trennzeichen ausgegangen (Punkt = Tausender, Komma = Dezimal) - fuer
-// Englisch (Komma = Tausender, Punkt = Dezimal) traf das Muster nicht
-// mehr zu, und die ganze Zahl waere unskaliert als Fliesstext
-// durchgerutscht (siehe der Kein-Treffer-Zweig unten). zahlTrennzeichen()
-// liefert die Zeichen der GERADE gewaehlten Sprache, das Muster wird
-// bei jedem Aufruf neu danach gebaut.
+// MEHRSPRACHIGKEIT, ZWEITER FALLSTRICK - EIN VORANGESTELLTES
+// WAEHRUNGSZEICHEN: die vorherige Fassung verlangte per regulaerem
+// Ausdruck, dass die Zahl am ANFANG der Zeichenkette steht (^-?\d...).
+// Intl liefert Euro-Betraege aber in zwei der sechs Sprachen mit dem
+// Zeichen VORNE - en-US "€35,387.17", tr-TR "€35.387,17" (im Browser
+// nachgemessen, siehe Bericht) -, und dort traf das Muster gar nicht
+// mehr zu: JEDER Geldbetrag rutschte in diesen beiden Sprachen
+// unskaliert als Fliesstext durch. Diese Fassung sucht deshalb nicht
+// mehr nach einem Muster ab Zeichenkettenanfang, sondern LIEST die
+// Zeichenkette durch und teilt sie in Vorspann / Ziffernkoerper /
+// Nachspann - das ist unabhaengig davon, auf welcher Seite die Einheit
+// steht.
 //
-// Kein Treffer (ein Text, der nicht wie eine Zahl aussieht) gibt den
-// Eingabetext unverändert als einzelnen Textknoten zurück - eine
-// typografische Verzierung darf niemals dazu führen, dass eine Zahl aus
+// Kein Ziffernkoerper (ein Text, der gar keine Ziffer enthaelt) gibt den
+// Eingabetext unveraendert als einzelnen Textknoten zurueck - eine
+// typografische Verzierung darf niemals dazu fuehren, dass eine Zahl aus
 // der Tabelle verschwindet, nur weil sie einem erwarteten Muster nicht
 // entspricht.
 function zahlSkaliert(formatiert) {
+    const text = String(formatiert);
     const { gruppe: gruppenzeichen, dezimal: dezimalzeichen } = zahlTrennzeichen();
-    const gEsc = regexEscape(gruppenzeichen);
-    const dEsc = regexEscape(dezimalzeichen);
-    const muster = new RegExp(`^(-?\\d{1,3}(?:${gEsc}\\d{3})*)(${dEsc}\\d+)?(.*)$`);
-    const treffer = String(formatiert).match(muster);
     const spanne = document.createElement('span');
     spanne.className = 'zahl-skaliert';
-    if (!treffer) {
-        spanne.textContent = formatiert;
-        return spanne;
-    }
 
-    const [, ganzzahl, dezimal, rest] = treffer;
-    // Tausendertrennzeichen selbst leiser, die tragenden Ziffern normal -
-    // deshalb die Gruppen einzeln angehängt statt die ganze Ganzzahl als
-    // einen Textknoten.
-    ganzzahl.split(gruppenzeichen).forEach((gruppe, i) => {
-        if (i > 0) {
-            const trenner = document.createElement('span');
-            trenner.className = 'zahl-nebenteil';
-            trenner.textContent = gruppenzeichen;
-            spanne.append(trenner);
+    const istZiffer = (z) => z >= '0' && z <= '9';
+    const istTrenner = (z) => z === gruppenzeichen || z === dezimalzeichen;
+
+    const ersteZiffer = [...text].findIndex(istZiffer);
+    if (ersteZiffer === -1) { spanne.textContent = text; return spanne; }
+
+    // Der Ziffernkoerper endet beim ersten Zeichen, das weder Ziffer noch
+    // Trennzeichen der aktuellen Sprache ist - alles danach ist Einheit
+    // (" €", " %", " kg"). Bewusst NICHT ueber alle Ziffern der ganzen
+    // Zeichenkette hinweg: bei "30-70 %" waere sonst die 70 Teil desselben
+    // Koerpers und die Zaehlung der geltenden Ziffern liefe ueber zwei
+    // getrennte Zahlen hinweg.
+    let koerperEnde = ersteZiffer;
+    while (koerperEnde < text.length && (istZiffer(text[koerperEnde]) || istTrenner(text[koerperEnde]))) koerperEnde++;
+    // Ein Trennzeichen unmittelbar VOR der Einheit gehoert nicht mehr zur
+    // Zahl (kaeme in keinem heutigen Format vor, waere aber sonst eine
+    // stumme Verschiebung um ein Zeichen).
+    while (koerperEnde > ersteZiffer && istTrenner(text[koerperEnde - 1])) koerperEnde--;
+
+    const leise = (inhalt) => {
+        if (!inhalt) return;
+        const el = document.createElement('span');
+        el.className = 'zahl-nebenteil';
+        el.textContent = inhalt;
+        spanne.append(el);
+    };
+
+    // ----- Vorspann: Vorzeichen stark, Waehrungszeichen und Leerraum leise -----
+    // Zeichenweise getrennt statt in einem Stueck, weil "-€1,234.50"
+    // (en-US, negativ) beides enthaelt und in dieser Reihenfolge.
+    // U+2212 (echtes Minuszeichen) neben dem ASCII-Bindestrich: Intl
+    // liefert je nach Sprache das eine oder das andere.
+    let stapel = '';
+    const stapelLeeren = () => { leise(stapel); stapel = ''; };
+    for (const zeichen of text.slice(0, ersteZiffer)) {
+        if (zeichen === '-' || zeichen === '−' || zeichen === '+') {
+            stapelLeeren();
+            spanne.append(zeichen);
+        } else {
+            stapel += zeichen;
         }
-        spanne.append(gruppe);
-    });
-    if (dezimal || rest) {
-        const neben = document.createElement('span');
-        neben.className = 'zahl-nebenteil';
-        neben.textContent = (dezimal || '') + rest;
-        spanne.append(neben);
     }
+    stapelLeeren();
+
+    // ----- Ziffernkoerper -----
+    // gezaehlt wird ab der ersten Ziffer ungleich null; ist die Zahl
+    // insgesamt null ("0", "0,00"), gibt es keine geltende Ziffer - dann
+    // traegt die erste Null selbst die ganze Aussage und bleibt stark,
+    // statt dass eine Null gaenzlich verblasst.
+    const koerper = text.slice(ersteZiffer, koerperEnde);
+    const hatZifferUngleichNull = [...koerper].some((z) => istZiffer(z) && z !== '0');
+    // Bei einer glatten Null gibt es nichts zu skalieren: die EINE Null
+    // ist die Aussage, jede weitere ("0,00") nur Formatierung.
+    const geltendeGrenze = hatZifferUngleichNull ? GELTENDE_ZIFFERN : 1;
+    let geltendeGesehen = 0;
+    let ersteZifferUngleichNullGesehen = false;
+    for (const zeichen of koerper) {
+        if (!istZiffer(zeichen)) { stapel += zeichen; continue; }        // Trennzeichen: immer leise
+        if (!ersteZifferUngleichNullGesehen && zeichen === '0' && hatZifferUngleichNull) {
+            stapel += zeichen;                                            // fuehrende Null: traegt nichts
+            continue;
+        }
+        ersteZifferUngleichNullGesehen = true;
+        if (geltendeGesehen < geltendeGrenze) {
+            stapelLeeren();
+            spanne.append(zeichen);
+            geltendeGesehen++;
+        } else {
+            stapel += zeichen;                                            // jenseits der geltenden Ziffern
+        }
+    }
+    stapelLeeren();
+
+    // ----- Nachspann: Einheit -----
+    leise(text.slice(koerperEnde));
     return spanne;
+}
+
+// ===== Kopftafel: der Kopfbereich JEDES Arbeitsbereichs =====
+//
+// DAS MUSTER, UND WARUM ES DAS KACHELBAND ABLOEST (Gestaltungsauftrag,
+// woertlich: "insgesamt sind die Header allesamt mangelhaft und entwerten
+// alles. Das muss um Laengen besser werden, viel analytischer, viel
+// bessere und professionellere Datenvisualisierung a la Tufte/Bissantz/
+// Hichert.").
+//
+// Das abgeloeste Muster war die Dashboard-Kachel: vier bis fuenf Felder
+// nebeneinander, in jedem eine grosse Zahl, eine kleine Grafik, eine
+// Hinweiszeile. Auf gut tausend Pixel Breite standen darin, ueber alle
+// fuenf Bereiche gemittelt, ein gutes Dutzend Werte - und jeder davon
+// eine ZAEHLUNG aus genau der Liste, die zwei Zentimeter darunter
+// ohnehin steht. Vier Nachbesserungen haben die Kacheln huebscher
+// gemacht, ohne dass sie mehr gesagt haetten. Genau dieses Muster
+// kritisieren die drei genannten Schulen; mehr Innenabstand um eine
+// informationsarme Flaeche herum macht sie nicht reicher.
+//
+// Die Kopftafel dreht die Anordnung um: statt WENIGER KACHELN
+// NEBENEINANDER stehen VIELE ZEILEN UNTEREINANDER, und jede Zeile ist
+// GLEICH GEBAUT. Die Zeilen sind die natuerliche Gliederung des
+// Bestands, ueber den die Liste darunter Auskunft gibt (die neun Modelle,
+// die zehn Stationen, die fuenf Tarifgruppen, die drei Radtypen) - und
+// wo der Bestand klein genug ist, um jeden Fall selbst zu zeigen, SIND
+// die Zeilen die Faelle (Instandhaltung, sieben Meldungen). Das ist die
+// eine Regel, aus der alles Uebrige folgt: DIE ZEILE IST DIE FEINSTE
+// GLIEDERUNG, DIE NOCH IN DEN KOPF PASST.
+//
+// Die Spalten sind in JEDEM Bereich dieselben vier Fragen, in derselben
+// Reihenfolge, mit derselben Notation (Hichert/IBCS):
+//
+//   1. RUBRIK           wer oder was
+//   2. GROESSE          wie viel  - Zahl UND Balken, gemeinsame
+//                       Nullpunkt-Skala ueber alle Zeilen (Bissantz)
+//   3. ZUSAMMENSETZUNG  woraus    - 100-%-Strukturbalken, dadurch
+//                       zwischen ungleich grossen Zeilen vergleichbar
+//   4. PROFIL           wie verteilt oder entwickelt - Kleingrafik mit
+//                       gemeinsamer Skala ueber alle Zeilen (Tufte,
+//                       small multiples)
+//   5. ABWEICHUNG       wie weit vom Bezug - eigene Spalte, eigene um
+//                       die Null zentrierte Skala (Hichert/IBCS)
+//
+// EINE SPALTE, DIE IN EINEM BEREICH NICHTS EHRLICHES ZU SAGEN HAT, FAELLT
+// WEG - sie wird NICHT mit einem Platzhalter gefuellt. Instandhaltung
+// hat keine Abweichungsspalte, weil es bei sieben gleichzeitig
+// gemeldeten Faellen keinen Bezugswert gibt, gegen den zu messen waere;
+// die Fussnote sagt das ausdruecklich. Eine erfundene Kennzahl waere der
+// schwerere Fehler als eine fehlende Spalte.
+//
+// DIE GEMEINSAMEN SKALEN RECHNET DIESE FUNKTION, NICHT DER BEREICH.
+// Das ist der eigentliche Grund, warum die Tafel ein eigener Baustein
+// ist und nicht fuenfmal von Hand gebaut wird: "gemeinsame Skala" ist
+// die Regel, an der Balkenvergleiche am leichtesten stumm scheitern
+// (siehe balkenSpalten() weiter unten, das genau diesen Fehler schon
+// einmal beheben musste). Hier kann kein Bereich sie versehentlich je
+// Zeile neu bilden - er liefert Werte, die Tafel bildet das Maximum.
+//
+// Find-or-create auf eine feste id, unmittelbar vor listenKoerper()
+// eingehaengt - dieselbe Machart wie reiterleiste()/werkzeugleiste()
+// oben, damit die Tafel unabhaengig von der Aufrufreihenfolge immer
+// zwischen Reiter-/Werkzeug-/Filterleiste und der Tabelle steht.
+// Fortlaufend, damit die ids der Beschriftung (aria-labelledby, siehe
+// unten) ueber mehrere Aufbauten hinweg eindeutig bleiben: waehrend eines
+// Reiterwechsels koennen die alte und die neue Tafel fuer einen
+// Wimpernschlag gleichzeitig im Baum stehen, und zwei Elemente mit
+// derselben id machen jedes aria-labelledby mehrdeutig.
+let kopftafelZaehler = 0;
+
+function kopftafelWurzel() {
+    const wurzel = document.getElementById('arbeitsliste');
+    let el = document.getElementById('kopftafel');
+    if (!el) {
+        el = document.createElement('section');
+        el.id = 'kopftafel';
+        el.className = 'kopftafel';
+    }
+    wurzel.insertBefore(el, listenKoerper());
+    el.replaceChildren();
+    return el;
+}
+
+// kennung: dieselbe Wettlaufabsicherung wie bei zeigeListe()/
+// zeigeLeermaske() - ein Reiterwechsel, dessen Kopftafel erst nach einem
+// eigenen await zurueckkommt, darf einen inzwischen ueberholten
+// Bildschirm nicht mehr beschreiben (siehe neuerVorgang()).
+//
+// tafel === null (oder ohne Zeilen) raeumt die Tafel ab, statt sie leer
+// stehen zu lassen - derselbe Grund wie bei zeigeWerkzeugleiste(false):
+// ohne dieses ausdrueckliche Abraeumen ueberlebte die Tafel des
+// VORHERIGEN Reiters einen Reiterwechsel, der selbst keine mehr zeigen
+// will (bereichWechseln() leert #arbeitsliste nur beim BEREICHSwechsel).
+//
+// tafel = {
+//   titel:     was die Tafel gliedert ("Bestand nach Modell")
+//   bezug:     EINE Zeile Grundgesamtheit und Bezugsraum - die Angabe,
+//              ohne die keine Zahl darunter einzuordnen waere
+//   bild:      { quelle, alt } optional - ein Produktbild, das eine
+//              Aussage TRAEGT (siehe instandhaltung.js), nicht schmueckt
+//   spalten:   siehe kopftafelSpalte() unten
+//   zeilen:    beliebige Objekte; zeile.istGruppe === true macht daraus
+//              eine Gruppenzeile (bleibt aus jeder gemeinsamen Skala
+//              heraus, siehe unten)
+//   summe:     optionale Zeile fuer den Tabellenfuss (ebenfalls aus den
+//              Skalen heraus: ein Gesamtwert sprengte jede Zeilenskala)
+//   fussnote:  optional - wo eine Spalte fehlt oder eine Zahl eine
+//              Einschraenkung traegt, steht der Grund HIER und nicht in
+//              einem Handbuch
+// }
+function zeigeKopftafel(kennung, tafel) {
+    if (!istAktuellerVorgang(kennung)) return;
+    const wurzel = kopftafelWurzel();
+    if (!tafel || !tafel.zeilen || tafel.zeilen.length === 0) { wurzel.remove(); return; }
+
+    // ----- Gemeinsame Skalen, EINMAL ueber alle Datenzeilen -----
+    // Gruppenzeilen und die Summenzeile bleiben ausdruecklich draussen:
+    // ein Gruppen- oder Gesamtwert ist per Bauart groesser als jede
+    // Einzelzeile und wuerde die Skala so stauchen, dass die
+    // Einzelzeilen - um die es geht - nicht mehr unterscheidbar waeren.
+    const datenzeilen = tafel.zeilen.filter((z) => !z.istGruppe);
+    const skalen = tafel.spalten.map((spalte) => kopftafelSkala(spalte, datenzeilen));
+
+    // ----- Tabelle -----
+    const tabelle = document.createElement('table');
+    tabelle.className = 'kopftafel-tabelle';
+
+    // DIE BESCHRIFTUNG STEHT NEBEN DER TABELLE, NICHT ALS <caption> IN
+    // IHR - und ist ueber aria-labelledby trotzdem ihr zugaenglicher
+    // Name. Der Grund ist Layout, nicht Semantik: eine <caption> geht in
+    // die Breitenrechnung der Tabelle ein, und die Bezugszeile ist oft
+    // ueber 120 Zeichen lang. Die Tabelle wurde dadurch auf die Laenge
+    // eines Satzes gezogen, und zwischen dem Rubriknamen und seiner Zahl
+    // standen mehrere hundert Pixel Leerraum - eine Zahlenkolonne, die
+    // man mit dem Finger suchen muss (im Browser gemessen, siehe
+    // Bericht). Mit aria-labelledby bleibt der Name der Tabelle
+    // vollstaendig erhalten (Titel UND Bezugszeile, in dieser
+    // Reihenfolge), ohne dass ein Bildschirmleser etwas doppelt
+    // vorliest.
+    kopftafelZaehler += 1;
+    const titelId = `kopftafel-titel-${kopftafelZaehler}`;
+    const bezugId = `kopftafel-bezug-${kopftafelZaehler}`;
+
+    const kopf = document.createElement('div');
+    kopf.className = 'kopftafel-kopf';
+    if (tafel.bild) {
+        const bild = document.createElement('img');
+        bild.className = 'kopftafel-bild';
+        bild.src = tafel.bild.quelle;
+        // alt TRAEGT hier etwas (anders als bei den frueheren
+        // Radtyp-Kacheln, wo der Typname unmittelbar daneben stand und das
+        // Bild ihn nur wiederholte): dieses Bild IST der Befund - "alle
+        // sieben Meldungen betreffen City-Bikes" (instandhaltung.js).
+        bild.alt = tafel.bild.alt;
+        // Ein fehlendes Bild darf den Kopf nicht zerreissen - es raeumt
+        // sich selbst weg statt als kaputtes Symbol stehenzubleiben.
+        bild.addEventListener('error', () => bild.remove());
+        kopf.append(bild);
+    }
+    const kopftexte = document.createElement('div');
+    kopftexte.className = 'kopftafel-kopftexte';
+    const titel = document.createElement('h2');
+    titel.className = 'kopftafel-titel';
+    titel.id = titelId;
+    titel.textContent = tafel.titel;
+    kopftexte.append(titel);
+    if (tafel.bezug) {
+        const bezug = document.createElement('p');
+        bezug.className = 'kopftafel-bezug';
+        bezug.id = bezugId;
+        bezug.textContent = tafel.bezug;
+        kopftexte.append(bezug);
+    }
+    kopf.append(kopftexte);
+    wurzel.append(kopf);
+    tabelle.setAttribute('aria-labelledby', tafel.bezug ? `${titelId} ${bezugId}` : titelId);
+
+    const kopfzeile = document.createElement('tr');
+    tafel.spalten.forEach((spalte) => {
+        const th = document.createElement('th');
+        th.setAttribute('scope', 'col');
+        // Zwei physische Spalten fuer Groesse und Abweichung (Zahl und
+        // Balken getrennt): eine gemeinsame Zelle liesse die Nulllinie
+        // des Balkens mit der Breite der Zahl von Zeile zu Zeile wandern -
+        // derselbe Befund, den balkenSpalten() weiter unten schon einmal
+        // beheben musste.
+        if (spalte.art === 'groesse' || spalte.art === 'abweichung') th.setAttribute('colspan', '2');
+        th.className = `kopftafel-kopf-${spalte.art}`;
+        const name = document.createElement('span');
+        name.className = 'kopftafel-spaltenname';
+        name.textContent = spalte.titel;
+        th.append(name);
+        // DIE EINHEIT GEHOERT IN DEN SPALTENKOPF (Hichert/IBCS): eine
+        // Zahlenspalte, die nicht sagt, WORIN sie misst, ist eine
+        // Ratefrage. Zweite, leisere Zeile im selben <th>, damit sie
+        // nicht als eigene Tabellenzeile Hoehe kostet.
+        if (spalte.einheit) {
+            const einheit = document.createElement('span');
+            einheit.className = 'kopftafel-spalteneinheit';
+            einheit.textContent = spalte.einheit;
+            th.append(einheit);
+        }
+        kopfzeile.append(th);
+    });
+    const kopfteil = document.createElement('thead');
+    kopfteil.append(kopfzeile);
+    tabelle.append(kopfteil);
+
+    const koerper = document.createElement('tbody');
+    for (const zeile of tafel.zeilen) {
+        koerper.append(kopftafelZeile(zeile, tafel.spalten, skalen, zeile.istGruppe ? 'gruppe' : 'daten'));
+    }
+    tabelle.append(koerper);
+
+    if (tafel.summe) {
+        const fuss = document.createElement('tfoot');
+        fuss.append(kopftafelZeile(tafel.summe, tafel.spalten, skalen, 'summe'));
+        tabelle.append(fuss);
+    }
+    wurzel.append(tabelle);
+
+    if (tafel.fussnote) {
+        const fussnote = document.createElement('p');
+        fussnote.className = 'kopftafel-fussnote';
+        fussnote.textContent = tafel.fussnote;
+        wurzel.append(fussnote);
+    }
+}
+
+// Die gemeinsame Skala EINER Spalte ueber ALLE Datenzeilen - siehe der
+// Absatz "DIE GEMEINSAMEN SKALEN RECHNET DIESE FUNKTION" oben.
+//
+// 'groesse': das Maximum, denn Laenge kodiert - der Nullpunkt ist
+//   Pflicht und liegt fest bei 0 (Hausregel des Projekts, dieselbe wie
+//   bei saeulengrafik()/saeulenSparkline()).
+// 'abweichung': der groesste BETRAG, denn die Skala ist um die Null
+//   symmetrisch - sonst waere eine Abweichung von -65 kuerzer oder
+//   laenger als eine von +65.
+// 'profil': Minimum UND Maximum ueber alle Reihen bzw. alle Punkte
+//   zusammen - hier kodiert Position, eine beschnittene Achse ist also
+//   zulaessig (Baujahre bei 0 beginnen zu lassen waere Unsinn); ist die
+//   Reihe eine Saeulenreihe, zieht saeulenSparkline() die Null von sich
+//   aus mit hinein, weil dort wieder Laenge kodiert.
+function kopftafelSkala(spalte, datenzeilen) {
+    if (spalte.art === 'groesse') {
+        const werte = datenzeilen.map((z) => Number(spalte.wert(z)) || 0);
+        return { maximum: Math.max(0, ...werte) };
+    }
+    if (spalte.art === 'abweichung') {
+        const werte = datenzeilen.map((z) => Math.abs(Number(spalte.wert(z)) || 0));
+        return { maximumBetrag: Math.max(0, ...werte) };
+    }
+    if (spalte.art === 'profil') {
+        const alle = [];
+        for (const zeile of datenzeilen) {
+            if (spalte.reihe) alle.push(...(spalte.reihe(zeile) || []).map((w) => Number(w) || 0));
+            else if (spalte.punkt) {
+                const w = spalte.punkt(zeile);
+                if (w !== null && w !== undefined) alle.push(Number(w));
+            }
+        }
+        if (alle.length === 0) return { minimum: 0, maximum: 1 };
+        return { minimum: Math.min(...alle), maximum: Math.max(...alle) };
+    }
+    return {};
+}
+
+// art: 'daten' | 'gruppe' | 'summe' - Gruppen- und Summenzeilen zeigen
+// nur, was fuer sie ehrlich ist: eine Zahl und (bei einer Gruppe) ihre
+// Zusammensetzung, aber KEINEN Balken auf einer Skala, aus der sie
+// herausgenommen wurden, und kein Profil und keine Abweichung, die es
+// fuer eine Zusammenfassung gar nicht gibt.
+function kopftafelZeile(zeile, spalten, skalen, art) {
+    const tr = document.createElement('tr');
+    tr.className = `kopftafel-zeile kopftafel-zeile-${art}`;
+
+    spalten.forEach((spalte, i) => {
+        const skala = skalen[i];
+
+        if (spalte.art === 'rubrik') {
+            const th = document.createElement('th');
+            th.setAttribute('scope', 'row');
+            th.className = 'kopftafel-rubrik';
+            if (spalte.bild) {
+                const quelle = spalte.bild(zeile);
+                if (quelle) {
+                    const bild = document.createElement('img');
+                    bild.className = 'kopftafel-zeilenbild';
+                    bild.src = quelle;
+                    // Rein schmueckend: der Name steht unmittelbar
+                    // daneben (siehe die Begruendung bei tafel.bild oben,
+                    // dort liegt der Fall anders herum).
+                    bild.alt = '';
+                    bild.setAttribute('aria-hidden', 'true');
+                    bild.addEventListener('error', () => bild.remove());
+                    th.append(bild);
+                }
+            }
+            const texte = document.createElement('span');
+            texte.className = 'kopftafel-rubriktexte';
+            const name = document.createElement('span');
+            name.className = 'kopftafel-rubrikname';
+            name.textContent = spalte.wert(zeile);
+            texte.append(name);
+            const zusatz = spalte.zusatz ? spalte.zusatz(zeile) : null;
+            if (zusatz) {
+                const nebenname = document.createElement('span');
+                nebenname.className = 'kopftafel-rubrikzusatz';
+                nebenname.textContent = zusatz;
+                texte.append(nebenname);
+            }
+            th.append(texte);
+            tr.append(th);
+            return;
+        }
+
+        if (spalte.art === 'groesse' || spalte.art === 'abweichung') {
+            const wert = spalte.wert(zeile);
+            const zahlZelle = document.createElement('td');
+            zahlZelle.className = `kopftafel-zahl kopftafel-zahl-${spalte.art}`;
+            if (wert === null || wert === undefined) {
+                zahlZelle.textContent = '';
+            } else {
+                zahlZelle.append(zahlSkaliert(spalte.format(wert)));
+                if (spalte.klasse) zahlZelle.classList.add(spalte.klasse(zeile));
+            }
+            const grafikZelle = document.createElement('td');
+            grafikZelle.className = `kopftafel-grafik kopftafel-grafik-${spalte.art}`;
+            // Balken NUR in Datenzeilen (siehe Kopfkommentar dieser
+            // Funktion): Gruppen- und Summenwerte stehen ausserhalb der
+            // gemeinsamen Skala, ein Balken dafuer waere entweder
+            // uebergross oder auf die Skalenbreite gekappt - beides
+            // waere eine falsche Laenge, und Laenge ist hier die Aussage.
+            if (art === 'daten' && wert !== null && wert !== undefined) {
+                grafikZelle.append(spalte.art === 'groesse'
+                    ? zellbalken(wert, skala.maximum, null,
+                        { breite: 76, hoehe: 11, farbe: spalte.farbe ? spalte.farbe(zeile) : 'var(--marine)' })
+                    : abweichungsBalken(wert, skala.maximumBetrag, spalte.beschriftung(zeile)));
+            }
+            tr.append(zahlZelle, grafikZelle);
+            return;
+        }
+
+        const zelle = document.createElement('td');
+        zelle.className = `kopftafel-grafik kopftafel-grafik-${spalte.art}`;
+
+        if (spalte.art === 'struktur') {
+            // Gruppenzeilen behalten ihren Strukturbalken: er ist auf
+            // 100 % ihrer eigenen Summe normiert und deshalb - anders als
+            // ein Laengenbalken - auch fuer eine Zusammenfassung richtig.
+            if (art !== 'summe' || spalte.auchSumme) {
+                zelle.append(strukturBalken(spalte.segmente(zeile), spalte.beschriftung(zeile)));
+            }
+        } else if (spalte.art === 'profil' && art === 'daten') {
+            if (spalte.reihe) {
+                const reihe = spalte.reihe(zeile) || [];
+                if (reihe.length > 0) {
+                    zelle.append(saeulenSparkline(reihe, spalte.beschriftung(zeile), {
+                        breite: 96, hoehe: 16, aktuellIndex: spalte.aktuellIndex ?? null,
+                        // DIE GEMEINSAME SKALE, hier durchgereicht: ohne
+                        // sie skalierte jede Zeile auf ihr eigenes
+                        // Maximum, zehn Reihen saehen gleich hoch aus und
+                        // "small multiples" waeren blosse Zierschriften.
+                        minimum: skala.minimum, maximum: skala.maximum
+                    }));
+                }
+            } else if (spalte.punkt) {
+                const punkt = spalte.punkt(zeile);
+                if (punkt !== null && punkt !== undefined) {
+                    zelle.append(lagepunkt(punkt, skala.minimum, skala.maximum, spalte.beschriftung(zeile)));
+                }
+            }
+        }
+        tr.append(zelle);
+    });
+    return tr;
 }
 
 // ===== Balkenspalte (Gestaltungsauftrag, Punkt 5) =====
@@ -5104,7 +5864,7 @@ function zahlSkaliert(formatiert) {
 // Baustein steht HIER, weil vier Berichte in auswertungen.js unabhaengig
 // densselben Fehler geerbt haetten, waere er dort viermal von Hand
 // nachgebaut worden (derselbe Befund wie bei werkzeugleiste()/
-// uebersichtsstreifen() weiter oben: ein wiederkehrendes Muster gehoert
+// kopftafelWurzel() weiter oben: ein wiederkehrendes Muster gehoert
 // EINMAL nach rahmen.js, nicht mehrfach in einen Bereich).
 //
 // feld/titel: wie bei jeder Spalte - titel gilt fuer die ZAHLENSPALTE,

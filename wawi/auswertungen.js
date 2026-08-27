@@ -137,17 +137,19 @@ function prozentFormat(anteil) {
     return `${zahlFormat(Math.round(anteil * 100))} %`;
 }
 
-// Eine Nachkommastelle statt gerundeter ganzer Prozent - nur für die
-// Übersichtskacheln, wo genau EIN Prozentwert (der
-// fahrtgewichtete Schätzanteil, siehe anteilGewichtet()) gegen einen
-// zweiten, absichtlich falschen Vergleichswert steht (40,0 % gegen
-// 53,2 % - siehe kmCo2Uebersicht()) - ohne die Nachkommastelle sähen
-// zwei nah beieinanderliegende, aber unterschiedliche Werte nach
-// Rundung leicht gleich aus. Die Tabellenspalten selbst bleiben bei der
-// gröberen prozentFormat(), die reicht dort aus.
+// Eine Nachkommastelle statt gerundeter ganzer Prozent - fuer die Stellen,
+// an denen ZWEI nah beieinanderliegende Anteile GEGENEINANDER gestellt
+// werden (die Fussnote der Kilometer-Tafel: fahrtgewichteter Schaetzanteil
+// gegen das blosse Mittel der Monatsanteile, 40,0 % gegen 40,2 % im
+// Zwoelf-Monats-Fenster und 40,1 % gegen 53,2 % ueber alle geladenen
+// Monate). Ohne die Nachkommastelle saehen die beiden ersten nach Rundung
+// gleich aus, und die Gegenprobe verlöre genau die Aussage, wegen der sie
+// dasteht. Die Tabellenspalten selbst bleiben bei der groeberen
+// prozentFormat(), die reicht dort aus.
 function prozentFormatFein(anteil) {
     return `${zahlFormat(anteil * 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 }
+
 
 // Eine Nachkommastelle, ohne Einheit - fuer die drei neuen "je"-Spalten
 // unten (Minuten je Fahrt, Kilometer je Fahrt, Fahrten je Kunde), deren
@@ -256,45 +258,8 @@ function zahlKlasse(zusatz = '') {
     return zusatz ? `zahl ${zusatz}` : 'zahl';
 }
 
-// ===== Bausteine für die Übersichtsstreifen (Gestaltungsauftrag, Punkt 1) =====
-//
-// Reine Rechenhilfen, allgemein über alle vier Reiter - jeder von ihnen
-// braucht "eine Reihe je Monat" oder "den Extremwert einer Liste", keiner
-// braucht dafür eine eigene Kopie derselben zehn Zeilen.
 
-// zeilen tragen dieselbe Zahl mehrfach (einmal je Radtyp/Tarif in
-// diesem Monat) - reiheJeMonat() summiert sie zu EINER Zeile je Monat
-// auf, aufsteigend sortiert, für eine Sparkline über den Gesamtverlauf.
-function reiheJeMonat(zeilen, feld) {
-    const summen = new Map();
-    for (const z of zeilen) summen.set(z.monat, (summen.get(z.monat) || 0) + z[feld]);
-    return [...summen.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([monat, wert]) => ({ monat, wert }));
-}
 
-// Veränderung des letzten gegenüber dem vorletzten Element einer nach
-// Monat aufsteigend sortierten Reihe (siehe reiheJeMonat() oben) - für
-// die kachel.veraenderung-Zeile der Übersichtskacheln (Gestaltungsauftrag
-// Punkt 2, siehe veraenderungZeile() weiter unten). null bei weniger als
-// zwei Monaten ODER einem Vormonat von 0 (derselbe Schutz wie bei
-// groessterSprung() weiter unten: eine Veränderung "ausgehend von 0" ist
-// keine sinnvolle Prozentangabe) - dieselbe "lieber keine Angabe als eine
-// falsche" wie überall sonst in dieser Datei.
-function letzteVeraenderung(reiheAufsteigend) {
-    if (reiheAufsteigend.length < 2) return null;
-    const vorher = reiheAufsteigend[reiheAufsteigend.length - 2].wert;
-    const jetzt = reiheAufsteigend[reiheAufsteigend.length - 1].wert;
-    return vorher ? (jetzt - vorher) / vorher : null;
-}
-
-// Das Element mit dem größten (sucheMinimum=false) bzw. kleinsten
-// (sucheMinimum=true) Wert in feld - für "die volatilste Station", "der
-// schwächste Monat", ohne für jeden Fall eine eigene Schleife.
-function extremwert(elemente, feld, sucheMinimum) {
-    return elemente.reduce((bisher, el) =>
-        (sucheMinimum ? el[feld] < bisher[feld] : el[feld] > bisher[feld]) ? el : bisher);
-}
 
 // Untergrenze für "echten Betrieb" statt eines Testmonats mit ein oder
 // zwei Fahrten: die ersten Monate im Bestand (Januar-Juni 2025) tragen
@@ -337,26 +302,6 @@ function veraenderungFormat(veraenderung) {
     return `${vorzeichen}${zahlFormat(veraenderung * 100, { maximumFractionDigits: 1 })} %`;
 }
 
-// ===== Veränderungszeile für die Übersichtskacheln (Gestaltungsauftrag
-// Punkt 2, Vorbild-Auftrag: "▼ −5 ggü. Vorm.") =====
-//
-// kachel.veraenderung (siehe baueKachel() in rahmen.js) - EIN
-// Richtungspfeil plus veraenderungFormat() plus ein Bezugstext ("ggü.
-// Vormonat"). Bewusst kein eigenes Farbschema für die Richtung (siehe
-// die CSS-Regel bei .uebersichtskachel-veraenderung in style.css für die
-// ausführliche Begründung: derselbe Grundsatz wie bei
-// veraenderungFormat() selbst, ein Anstieg ist nicht per se gut).
-// null (kein Vormonat, siehe veraenderungFormat() oben) liefert KEIN
-// Element zurück, sondern null - eine Kachel ohne echten Vergleich soll
-// keine leere/sinnlose Veränderungszeile zeigen, sondern gar keine (siehe
-// "ohne kachel.veraenderung ändert sich nichts", baueKachel()).
-function veraenderungZeile(veraenderung, bezugstext = t('misc.changeVsPrevMonth')) {
-    if (veraenderung === null) return null;
-    const zeile = document.createElement('span');
-    const pfeil = veraenderung > 0 ? '▲' : veraenderung < 0 ? '▼' : '▬';
-    zeile.textContent = `${pfeil} ${veraenderungFormat(veraenderung)} ${bezugstext}`;
-    return zeile;
-}
 
 // Schwelle, ab der eine Veränderung in der Tabelle hervorgehoben wird -
 // bewusst nur per Fettung (Tufte: Ink nur, wo sie etwas bedeutet), NICHT
@@ -967,7 +912,7 @@ async function umsatzRadtypZeigen(vorgang) {
 
     const fehler = letzterLadeFehler('v_wawi_umsatz_radtyp');
     if (fehler) {
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         meldeVorgang(vorgang, t('msg.revenueByBikeTypeLoadFailed', { fehler }), 'schlecht');
         return;
     }
@@ -980,7 +925,7 @@ async function umsatzRadtypZeigen(vorgang) {
         // dass hat_rolle('leitung') gerade false liefert, obwohl die
         // Navigation den Bereich zeigt (z. B. eine Rolle, die zwischen
         // Laden der Navigation und Laden dieser Liste entzogen wurde).
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         zeigeLeermaske(
             vorgang,
             t('empty.noRevenueByBikeTypeTitle'),
@@ -1066,7 +1011,7 @@ async function umsatzRadtypZeigen(vorgang) {
         }
     ], umsatzRadtypMaske);
 
-    zeigeUebersicht(vorgang, umsatzRadtypUebersicht(zeilen, flottengroesse));
+    zeigeKopftafel(vorgang, umsatzRadtypKopftafel(zeilen, flottengroesse));
 
     // Gesamtsumme UND Fahrten insgesamt in der Statuszeile - die
     // Kontrollzahl aus Schritt 3 des Auftrags (35 454,47 €) soll man
@@ -1078,173 +1023,528 @@ async function umsatzRadtypZeigen(vorgang) {
         umsatz: geldFormat(gesamtUmsatz) }));
 }
 
-// Vier Kacheln: die drei fuer die Fragen, mit denen jemand diesen Reiter
-// öffnet (Auftrag: "wie ist der Verlauf, wo liegt der Schwerpunkt, was
-// ist auffällig") - nicht die Gesamtsumme allein, die steht schon in der
-// Statuszeile und wäre als einzige Kachel eine bloße Wiederholung - PLUS
-// die vierte, neu hinzugekommene Frage: TRÄGT sich die Flotte überhaupt?
-// 35.387,17 € Umsatz der letzten 12 Monate (die Kachel "Umsatz gesamt"
-// direkt daneben) klingt für sich genommen nach etwas, ohne dass klar
-// wäre, ob es viel oder wenig ist - "Umsatz je Rad und Tag" setzt die
-// Zahl in Bezug zu dem, was sie erwirtschaften soll (siehe
-// flottengroesse-Parameter unten).
-function umsatzRadtypUebersicht(zeilen, flottengroesse) {
-    const umsatzReihe = reiheJeMonat(zeilen, 'umsatz');
-    const fahrtenReihe = reiheJeMonat(zeilen, 'fahrten');
+// ===== Kopftafeln der Auswertungen =====
+//
+// Alle vier Reiter dieses Bereichs zeigen Monatszeilen: 36 bis 60 Zeilen,
+// in denen jede einzelne Zahl richtig, aber keine Struktur sichtbar ist.
+// Die Kopftafel fasst dieselben Zeilen nach der Dimension zusammen, die
+// die Tabelle in die Laenge zieht (Radtyp, Tarif, Station), und stellt
+// den zwoelf Monatswerten jeder Gruppe EINE gemeinsame Achse unter -
+// damit werden aus drei Zahlenkolonnen drei vergleichbare Verlaeufe
+// (Tufte, small multiples).
+//
+// DER BEFUND, DEN ERST DIE ABWEICHUNGSSPALTE SICHTBAR MACHT: das
+// City-Bike traegt fast drei Viertel aller Fahrten, aber nur knapp ein
+// Drittel des Umsatzes; Lastenrad und E-Bike umgekehrt. Diese Aussage
+// steht in KEINER der 36 Monatszeilen und laesst sich aus ihnen auch
+// nicht ablesen - sie entsteht erst, wenn man zwei Anteile voneinander
+// abzieht (IBCS: die Abweichung ist eine eigene Groesse mit eigener
+// Spalte und eigener, um die Null zentrierter Skala).
+//
+// ZWOELF MONATE, NICHT ALLE GELADENEN: dieselbe Fensterwahl wie bisher
+// in den Kacheln (siehe die Begruendung, die frueher an
+// umsatzRadtypUebersicht() stand) - die sechs fruehen Testmonate liegen
+// mehr als ein Jahr vor dem juengsten Monat und fallen dadurch von
+// selbst heraus, ohne dass dafuer ein eigens gewaehlter Schwellenwert
+// noetig waere. Die Tabelle darunter zeigt unveraendert ALLE geladenen
+// Monate; die Bezugszeile der Tafel sagt deshalb ausdruecklich, welches
+// Fenster sie meint.
+function auswertungenMonatsgliederung(zeilen, schluesselVon, nameVon) {
+    const alleMonate = [...new Set(zeilen.map((z) => z.monat))].sort();
+    const fenster = alleMonate.slice(-12);
+    const imFenster = new Set(fenster);
 
-    // "Referenzjahr" operationalisiert als die zwölf jüngsten Monate mit
-    // Daten, nicht als Kalenderjahr: die sechs frühen Testmonate (Januar-
-    // Juni 2025, siehe MINDEST_FAHRTEN_JE_MONAT weiter oben) liegen mehr
-    // als ein Jahr vor dem aktuellsten Monat und fallen damit von selbst
-    // heraus - ohne dass dafür ein eigens gewählter Schwellenwert nötig
-    // wäre. Das trifft sich in diesem Bestand mit "seit dem echten
-    // Betriebsstart", muss es aber nicht: die Regel bleibt auch dann
-    // richtig, wenn ein künftiges Betriebsjahr die Testmonate irgendwann
-    // aus dem Zwölf-Monats-Fenster schiebt.
-    const umsatzLetztesJahr = umsatzReihe.slice(-12);
-    const fahrtenLetztesJahr = fahrtenReihe.slice(-12);
-    const tiefpunkt = extremwert(fahrtenLetztesJahr, 'wert', true);
-    const hoehepunkt = extremwert(fahrtenLetztesJahr, 'wert', false);
-
-    // BUGFIX (Gestaltungsauftrag, Kachelbefund): die grosse Zahl bezog sich
-    // bislang auf ALLE 18 Monate (umsatzReihe/fahrtenReihe ungekuerzt),
-    // waehrend Sparkline, Hinweis ("Verlauf der letzten 12 Monate") UND
-    // die Veraenderungszeile ("ggue. Vormonat") bereits auf umsatzLetztesJahr/
-    // fahrtenLetztesJahr (12 Monate) beruhten - eine Kachel mit drei
-    // verschiedenen Bezugsraeumen, obwohl sie wie EINE Aussage aussieht
-    // ("35.454,47 €" neben "▼ −21,8 % ggü. Vormonat" liest sich als "der
-    // GESAMTUMSATZ ist gefallen", tatsaechlich fiel nur der letzte Monat
-    // gegenueber dem vorletzten). Jetzt EIN Bezugsraum fuer die ganze
-    // Kachel: die grosse Zahl ist dieselbe Zwoelf-Monats-Summe wie die
-    // Saeulen daneben. Die 18-Monats-Summe geht dabei nicht verloren - sie
-    // steht bereits als Kontrollzahl in der Statuszeile unter der Liste
-    // (siehe meldeVorgang() am Ende von umsatzRadtypZeigen()), wo ein
-    // Gesamtwert ueber den kompletten geladenen Bestand tatsaechlich die
-    // richtige Aussage ist (eine Tabelle mit allen 18 Monatszeilen).
-    const gesamtUmsatzLetztesJahr = umsatzLetztesJahr.reduce((s, r) => s + r.wert, 0);
-    const gesamtFahrtenLetztesJahr = fahrtenLetztesJahr.reduce((s, r) => s + r.wert, 0);
-
-    const kachelnUmsatz = {
-        titel: t('tile.revenueTotal'),
-        veraenderung: veraenderungZeile(letzteVeraenderung(umsatzLetztesJahr)),
-        wert: zahlSkaliert(geldFormat(gesamtUmsatzLetztesJahr)),
-        grafik: saeulenSparkline(umsatzLetztesJahr.map((r) => r.wert),
-            t('hint.monthlyRevenueChartAria', {
-                vonMonat: monatFormat(umsatzLetztesJahr[0].monat), bisMonat: monatFormat(umsatzLetztesJahr.at(-1).monat),
-                min: geldFormat(Math.min(...umsatzLetztesJahr.map((r) => r.wert))),
-                max: geldFormat(Math.max(...umsatzLetztesJahr.map((r) => r.wert))),
-                aktuellMonat: monatFormat(umsatzLetztesJahr.at(-1).monat), aktuellWert: geldFormat(umsatzLetztesJahr.at(-1).wert)
-            })
-        ),
-        hinweis: t('hint.last12MonthsTrend')
-    };
-
-    const kachelnFahrten = {
-        titel: t('tile.ridesTotal'),
-        veraenderung: veraenderungZeile(letzteVeraenderung(fahrtenLetztesJahr)),
-        wert: zahlSkaliert(zahlFormat(gesamtFahrtenLetztesJahr)),
-        // KEIN markierIndizes mehr auf dem Hoehepunkt-Monat (Gestaltungs-
-        // auftrag, Farbbefund): --rot bedeutet in dieser Oberflaeche
-        // durchgehend "ein defektes Rad" oder "eine unumkehrbare Handlung"
-        // (siehe die Wortmarken-Begruendung weiter oben in dieser Datei
-        // bzw. in style.css) - ein Hoechstwert ist keine Warnung und kein
-        // Ereignis, das "hier hinsehen" verdient (anders als der echte
-        // Tarifwechsel bei kacheln.push({titel: notableRevenuePerRideCityBike})
-        // weiter unten, wo markierIndizes einen TATSAECHLICHEN Sprung
-        // zeigt). Die dunkle --marine-Saeule fuer den AKTUELLEN Monat gibt
-        // es bereits (aktuellIndex, Vorgabe der letzten Saeule) - der
-        // Spitzenmonat bleibt ueber die Balkenhoehe UND den Hinweistext
-        // (hint.yearlyPattern nennt Tief- und Hochmonat woertlich) sichtbar,
-        // ohne eine zweite, semantisch falsche Auszeichnung zu brauchen.
-        grafik: saeulenSparkline(fahrtenLetztesJahr.map((r) => r.wert),
-            t('hint.monthlyRidesChartAria', {
-                min: zahlFormat(tiefpunkt.wert), tiefMonat: monatFormat(tiefpunkt.monat),
-                max: zahlFormat(hoehepunkt.wert), hochMonat: monatFormat(hoehepunkt.monat),
-                aktuellMonat: monatFormat(fahrtenLetztesJahr.at(-1).monat),
-                aktuellPhrase: mengeFormat(fahrtenLetztesJahr.at(-1).wert, 'fahrt')
-            })
-        ),
-        hinweis: t('hint.yearlyPattern', { tief: monatFormat(tiefpunkt.monat), hoch: monatFormat(hoehepunkt.monat) })
-    };
-
-    const kacheln = [kachelnUmsatz, kachelnFahrten];
-
-    // "Umsatz je Rad und Tag": genau die Kennzahl, die der Auftrag als
-    // Beispiel nennt, um "analytischer" von "mehr Zahlen" abzugrenzen - die
-    // grosse Zahl der Nachbarkachel ("Umsatz gesamt") ist ein Fakt, "trägt
-    // sich die Flotte damit" ist eine Frage, die erst ein Bezug beantwortet.
-    // flottengroesse kommt aus v_wawi_flotte (siehe die Zaehl-Anfrage in
-    // umsatzRadtypZeigen()) - OHNE ausgemusterte Räder, weil ein
-    // abgeschriebenes Rad nichts mehr erwirtschaftet und den Nenner nur
-    // kuenstlich verkleinern wuerde. gesamtUmsatzLetztesJahr (oben,
-    // dieselbe Zwoelf-Monats-Summe wie in kachelnUmsatz.wert) statt einer
-    // Summe ueber alle 18 Monate inkl. der sechs Testmonate: ein Nenner aus
-    // 275 HEUTIGEN Rädern neben einem Zaehler aus eineinhalb Jahren mit
-    // wechselnder Flottengroesse waere unehrlich vermischt. 365 Tage statt
-    // der tatsaechlichen
-    // Tageszahl des Zwoelf-Monats-Fensters: im aktuellen Bestand
-    // (September 2025 bis August 2026, kein Schaltjahr) sind das exakt
-    // 365 - eine Rundung, die erst in einem Schaltjahr um einen Tag
-    // daneben läge, nicht heute. Kachel entfällt ganz, wenn die
-    // Zaehl-Anfrage scheiterte (flottengroesse dann null, siehe
-    // zaehleZeilen() in daten.js) oder die Flotte leer ist - derselbe
-    // "lieber keine Kachel als eine falsche" wie bei kundenUebersicht()
-    // in kunden.js.
-    if (flottengroesse) {
-        const tageBetrachtet = 365;
-        const jeRadJahr = gesamtUmsatzLetztesJahr / flottengroesse;
-        const jeRadTag = jeRadJahr / tageBetrachtet;
-        kacheln.push({
-            titel: t('tile.revenuePerBikeDay'),
-            wert: zahlSkaliert(geldFormat(jeRadTag)),
-            hinweis: t('hint.perBikePerDayDetail', { jeRadJahr: geldFormat(jeRadJahr), raederPhrase: mengeFormat(flottengroesse, 'rad') })
-        });
+    const gruppen = new Map();
+    for (const zeile of zeilen) {
+        if (!imFenster.has(zeile.monat)) continue;
+        const schluessel = schluesselVon(zeile);
+        let gruppe = gruppen.get(schluessel);
+        if (!gruppe) {
+            gruppe = { schluessel, name: nameVon(zeile), jeMonat: new Map() };
+            gruppen.set(schluessel, gruppe);
+        }
+        gruppe.jeMonat.set(zeile.monat, zeile);
     }
+    return { fenster, gruppen: [...gruppen.values()] };
+}
 
-    // Der Preissprung (Gestaltungsauftrag, Punkt 4): NICHT der Radtyp mit
-    // dem grössten gefundenen Ausschlag über alle drei Typen - eine
-    // solche Suche griffe bei kleiner werdender Stichprobe (E-Bike trägt
-    // in manchen Monaten nur 44-130 Fahrten) genauso in die Sprungfeder-
-    // Falle wie ein ungewichteter Mittelwert: gegen die Daten geprüft
-    // (siehe Bericht) liefert "größter Ausschlag über alle Typen" sogar
-    // einen E-Bike-Monat, nicht den tatsächlichen, dokumentierten
-    // Tarifwechsel beim City-Bike. Der Fund selbst - WELCHER Radtyp einen
-    // Tarifwechsel hatte - ist eine fachliche Tatsache, keine Statistik;
-    // gesucht wird hier deshalb GEZIELT im City-Bike, mit derselben
-    // Testmonat-Schwelle wie beim Jahresgang oben.
+// Eine Reihe ueber das Zwoelf-Monats-Fenster, LUECKEN ALS NULL: ein
+// Monat, in dem eine Gruppe gar nicht vorkommt (kein Cargo-Umsatz im
+// Januar), ist eine Saeule der Hoehe 0 - keine ausgelassene Kategorie.
+// Ein einfach uebersprungener Monat saehe genauso aus wie eine kuerzere
+// Reihe und waere von einem Ladefehler nicht zu unterscheiden (derselbe
+// Grund wie bei saeulengrafik() in rahmen.js, dort schon benannt).
+function auswertungenReihe(gruppe, fenster, feld) {
+    return fenster.map((monat) => Number(gruppe.jeMonat.get(monat)?.[feld]) || 0);
+}
+
+function auswertungenSumme(gruppe, fenster, feld) {
+    return auswertungenReihe(gruppe, fenster, feld).reduce((s, w) => s + w, 0);
+}
+
+// Sommerhalbjahr April bis September, Winterhalbjahr Oktober bis Maerz -
+// nach der KALENDERMONATSNUMMER, nicht nach der Position im Fenster: das
+// Fenster wandert mit jedem neuen Monat, die Jahreszeit nicht.
+function auswertungenIstSommer(monat) {
+    const nummer = Number(String(monat).slice(5, 7));
+    return nummer >= 4 && nummer <= 9;
+}
+
+// DIE AUSSAGE DER HALBJAHRESSPALTE IST IHRE GLEICHFOERMIGKEIT, und die
+// muss dastehen, sonst sieht die Spalte wie Zierrat aus: alle drei
+// Radtypen (und alle fuenf Tarifgruppen) tragen im Winterhalbjahr fast
+// denselben Umsatzanteil. Genau das ist der Befund - der Jahresgang ist
+// eine Eigenschaft des NETZES, keine des Produkts, und er taugt deshalb
+// nicht zur Unterscheidung der Zeilen. Small multiples zeigen
+// Gleichheit ebenso gut wie Unterschied (Tufte); verschwiegen werden
+// darf sie deswegen nicht.
+function auswertungenWinterspanne(gruppen, fenster, feld) {
+    const anteile = gruppen.map((g) => {
+        const { sommer, winter } = auswertungenHalbjahrSegmente(g, fenster, feld);
+        const summe = sommer + winter;
+        return summe ? winter / summe : 0;
+    });
+    return { min: Math.round(Math.min(...anteile) * 100), max: Math.round(Math.max(...anteile) * 100) };
+}
+
+function auswertungenHalbjahrSegmente(gruppe, fenster, feld) {
+    let sommer = 0, winter = 0;
+    for (const monat of fenster) {
+        const wert = Number(gruppe.jeMonat.get(monat)?.[feld]) || 0;
+        if (auswertungenIstSommer(monat)) sommer += wert; else winter += wert;
+    }
+    return { sommer, winter };
+}
+
+// ===== Reiter "Umsatz nach Radtyp" =====
+function umsatzRadtypKopftafel(zeilen, flottengroesse) {
+    if (!zeilen || zeilen.length === 0) return null;
+    const { fenster, gruppen } = auswertungenMonatsgliederung(
+        zeilen, (z) => z.typ_code, (z) => z.typ);
+    if (gruppen.length === 0) return null;
+
+    const umsatzGesamt = gruppen.reduce((s, g) => s + auswertungenSumme(g, fenster, 'umsatz'), 0);
+    const fahrtenGesamt = gruppen.reduce((s, g) => s + auswertungenSumme(g, fenster, 'fahrten'), 0);
+    gruppen.sort((a, b) => auswertungenSumme(b, fenster, 'umsatz') - auswertungenSumme(a, fenster, 'umsatz'));
+
+    // VERHAELTNISZAHLEN AUS SUMMEN (Hausregel): Umsatz- und Fahrtenanteil
+    // beide aus den Zwoelf-Monats-SUMMEN, nicht als Mittel der zwoelf
+    // Monatsanteile - ein Januar mit 208 Fahrten haette dabei dasselbe
+    // Gewicht bekommen wie ein Juli mit 1939.
+    const umsatzanteil = (g) => (umsatzGesamt ? auswertungenSumme(g, fenster, 'umsatz') / umsatzGesamt : 0);
+    const fahrtenanteil = (g) => (fahrtenGesamt ? auswertungenSumme(g, fenster, 'fahrten') / fahrtenGesamt : 0);
+
+    // Ueber ALLE geladenen Monate gesucht, nicht nur ueber das
+    // Zwoelf-Monats-Fenster: der Tarifwechsel ist ein Ereignis der
+    // Betriebsgeschichte, kein Wert des Berichtszeitraums - dieselbe
+    // Testmonat-Schwelle wie bisher.
     const cityBetrieb = zeilen
         .filter((z) => z.typ_code === 'CITY' && z.fahrten >= MINDEST_FAHRTEN_JE_MONAT)
         .sort((a, b) => a.monat.localeCompare(b.monat));
-    const sprung = groessterSprung(cityBetrieb, 'umsatz_je_fahrt');
-    if (sprung) {
-        const wertKnoten = document.createElement('span');
-        wertKnoten.append(zahlSkaliert(geldFormat(sprung.vorherigerWert)));
-        const pfeil = document.createElement('span');
-        pfeil.className = 'uebersichtskachel-pfeil';
-        pfeil.textContent = ' → ';
-        wertKnoten.append(pfeil, zahlSkaliert(geldFormat(sprung.wert)));
+    const preissprung = groessterSprung(cityBetrieb, 'umsatz_je_fahrt');
+    const winterspanne = auswertungenWinterspanne(gruppen, fenster, 'umsatz');
 
-        kacheln.push({
-            titel: t('tile.notableRevenuePerRideCityBike'),
-            wert: wertKnoten,
-            // aktuellIndex: null - diese Reihe zeigt einen SPRUNG
-            // (Tarifwechsel), keinen "wo stehen wir heute"-Verlauf; die
-            // markierte Säule ist der Sprungmonat, nicht "jetzt" (siehe
-            // Kopfkommentar bei saeulenSparkline() in rahmen.js).
-            grafik: saeulenSparkline(cityBetrieb.map((z) => z.umsatz_je_fahrt),
-                t('hint.cityBikeJumpChartAria', {
-                    n: zahlFormat(cityBetrieb.length), vonMonat: monatFormat(cityBetrieb[0].monat),
-                    von: geldFormat(sprung.vorherigerWert), nach: geldFormat(sprung.wert),
-                    sprungMonat: monatFormat(sprung.monat)
-                }),
-                { markierIndizes: [sprung.index], aktuellIndex: null }
-            ),
-            hinweis: t('hint.tariffChangeFrom', { veraenderung: veraenderungFormat(sprung.veraenderung), monat: monatFormat(sprung.monat) })
-        });
-    }
-
-    return kacheln;
+    return {
+        titel: t('board.revenueTypeTitle'),
+        // "Umsatz je Rad und Tag" - die Kennzahl, die "analytischer" von
+        // "mehr Zahlen" unterscheidet: der Gesamtumsatz ist ein Fakt,
+        // "traegt sich die Flotte damit" ist eine Frage, die erst ein
+        // Bezug beantwortet. flottengroesse kommt aus v_wawi_flotte OHNE
+        // ausgemusterte Raeder (siehe die Zaehl-Anfrage in
+        // umsatzRadtypZeigen()) - ein abgeschriebenes Rad erwirtschaftet
+        // nichts mehr und wuerde den Nenner nur kuenstlich vergroessern.
+        // 365 Tage: das Zwoelf-Monats-Fenster ist im heutigen Bestand
+        // genau ein Jahr ohne Schalttag.
+        bezug: flottengroesse
+            ? t('board.revenueReferenceWithFleet', {
+                umsatz: geldFormat(umsatzGesamt), fahrtenPhrase: mengeFormat(fahrtenGesamt, 'fahrt'),
+                vonMonat: monatFormat(fenster[0]), bisMonat: monatFormat(fenster[fenster.length - 1]),
+                jeRadTag: geldFormat(umsatzGesamt / flottengroesse / 365),
+                raederPhrase: mengeFormat(flottengroesse, 'rad')
+            })
+            : t('board.revenueReference', {
+                umsatz: geldFormat(umsatzGesamt), fahrtenPhrase: mengeFormat(fahrtenGesamt, 'fahrt'),
+                vonMonat: monatFormat(fenster[0]), bisMonat: monatFormat(fenster[fenster.length - 1])
+            }),
+        spalten: auswertungenGeldSpalten({
+            rubrikTitel: t('col.bikeType'),
+            fenster, umsatzanteil, fahrtenanteil,
+            zusatz: (g) => t('board.revenuePerRide', {
+                betrag: geldFormat(auswertungenSumme(g, fenster, 'fahrten')
+                    ? auswertungenSumme(g, fenster, 'umsatz') / auswertungenSumme(g, fenster, 'fahrten') : 0)
+            })
+        }),
+        zeilen: gruppen,
+        summe: {
+            summenzeile: true, name: t('col.together'),
+            summeUmsatz: umsatzGesamt, jeMonat: new Map()
+        },
+        // DER PREISWECHSEL ALS FUSSNOTE, nicht als eigene Spalte: er ist
+        // ein EINMALIGES Ereignis in genau EINER der drei Zeilen (das
+        // City-Bike, zum 1. Maerz 2026) - eine Spalte dafuer stuende in
+        // zwei von drei Zeilen leer und behauptete eine Regelmaessigkeit,
+        // die es nicht gibt. Gesucht wird deshalb GEZIELT im City-Bike
+        // und nicht "der groesste Ausschlag ueber alle Typen": eine
+        // solche Suche liefert bei kleiner werdender Stichprobe (E-Bike
+        // traegt in manchen Monaten nur 44 Fahrten) einen zufaelligen
+        // E-Bike-Monat statt des tatsaechlichen, dokumentierten
+        // Tarifwechsels - gegen die Daten geprueft, siehe Bericht.
+        // Zwei vollstaendige Saetze, mit Leerzeichen verbunden - nicht
+        // ein Satz aus zwei uebersetzten Bruchstuecken: jeder Teil bleibt
+        // in jeder Sprache fuer sich uebersetzbar.
+        fussnote: [
+            preissprung
+                ? t('board.revenueTypeFootnote', {
+                    von: geldFormat(preissprung.vorherigerWert), nach: geldFormat(preissprung.wert),
+                    veraenderung: veraenderungFormat(preissprung.veraenderung),
+                    monat: monatFormat(preissprung.monat)
+                })
+                : null,
+            t('board.halfYearFootnote', {
+                min: zahlFormat(winterspanne.min), max: zahlFormat(winterspanne.max)
+            })
+        ].filter(Boolean).join(' ')
+    };
 }
+
+// Die vier Spalten, die sich die beiden Umsatz-Reiter teilen - EINMAL
+// beschrieben, nicht zweimal fast gleich: die Reiter unterscheiden sich
+// nur darin, WONACH sie gliedern (Radtyp gegen Tarif), nicht darin, was
+// sie ueber eine Gruppe aussagen.
+function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenanteil, zusatz }) {
+    return [
+        {
+            art: 'rubrik',
+            titel: rubrikTitel,
+            wert: (z) => z.name,
+            zusatz: (z) => (z.summenzeile ? null : zusatz(z))
+        },
+        {
+            art: 'groesse',
+            titel: t('col.revenue'),
+            einheit: t('unit.euroTwelveMonths'),
+            wert: (z) => (z.summenzeile ? z.summeUmsatz : auswertungenSumme(z, fenster, 'umsatz')),
+            format: (n) => geldFormat(n)
+        },
+        {
+            art: 'struktur',
+            titel: t('col.halfYearMix'),
+            einheit: t('unit.summerWinter'),
+            segmente: (z) => {
+                const { sommer, winter } = auswertungenHalbjahrSegmente(z, fenster, 'umsatz');
+                return [
+                    { wert: sommer, name: t('col.summerHalf'), klasse: 'seg-aktiv' },
+                    { wert: winter, name: t('col.winterHalf'), klasse: 'seg-ruhend' }
+                ];
+            },
+            beschriftung: (z) => {
+                const { sommer, winter } = auswertungenHalbjahrSegmente(z, fenster, 'umsatz');
+                const summe = sommer + winter;
+                return t('board.halfYearAria', {
+                    name: z.name,
+                    sommer: zahlFormat(summe ? Math.round(sommer / summe * 100) : 0),
+                    winter: zahlFormat(summe ? Math.round(winter / summe * 100) : 0)
+                });
+            }
+        },
+        {
+            art: 'profil',
+            titel: t('col.monthlyCourse'),
+            einheit: `${monatFormat(fenster[0])} - ${monatFormat(fenster[fenster.length - 1])}`,
+            reihe: (z) => (z.summenzeile ? null : auswertungenReihe(z, fenster, 'umsatz')),
+            // aktuellIndex: die LETZTE Saeule ist der juengste Monat -
+            // hier gibt es, anders als bei einer Reihe ueber Stationen
+            // oder Baujahre, tatsaechlich einen "aktuellen" Zeitraum.
+            aktuellIndex: 11,
+            beschriftung: (z) => {
+                const reihe = auswertungenReihe(z, fenster, 'umsatz');
+                const hoechster = Math.max(...reihe);
+                return t('board.monthlyCourseAria', {
+                    name: z.name, vonMonat: monatFormat(fenster[0]),
+                    bisMonat: monatFormat(fenster[fenster.length - 1]),
+                    max: geldFormat(hoechster), maxMonat: monatFormat(fenster[reihe.indexOf(hoechster)]),
+                    aktuell: geldFormat(reihe[reihe.length - 1])
+                });
+            }
+        },
+        {
+            art: 'abweichung',
+            titel: t('col.revenueVsRides'),
+            einheit: t('unit.percentagePoints'),
+            wert: (z) => (z.summenzeile ? null
+                : Math.round((umsatzanteil(z) - fahrtenanteil(z)) * 1000) / 10),
+            format: (n) => abweichungText(n),
+            beschriftung: (z) => t('board.revenueVsRidesAria', {
+                name: z.name,
+                umsatzanteil: zahlFormat(Math.round(umsatzanteil(z) * 1000) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+                fahrtenanteil: zahlFormat(Math.round(fahrtenanteil(z) * 1000) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+            })
+        }
+    ];
+}
+
+// ===== Reiter "Umsatz nach Kundengruppe" =====
+function umsatzKundengruppeKopftafel(zeilen) {
+    if (!zeilen || zeilen.length === 0) return null;
+    const { fenster, gruppen } = auswertungenMonatsgliederung(
+        zeilen, (z) => z.tarif_code, (z) => z.tarif);
+    if (gruppen.length === 0) return null;
+
+    const umsatzGesamt = gruppen.reduce((s, g) => s + auswertungenSumme(g, fenster, 'umsatz'), 0);
+    const fahrtenGesamt = gruppen.reduce((s, g) => s + auswertungenSumme(g, fenster, 'fahrten'), 0);
+    gruppen.sort((a, b) => auswertungenSumme(b, fenster, 'umsatz') - auswertungenSumme(a, fenster, 'umsatz'));
+
+    const umsatzanteil = (g) => (umsatzGesamt ? auswertungenSumme(g, fenster, 'umsatz') / umsatzGesamt : 0);
+    const fahrtenanteil = (g) => (fahrtenGesamt ? auswertungenSumme(g, fenster, 'fahrten') / fahrtenGesamt : 0);
+    const winterspanne = auswertungenWinterspanne(gruppen, fenster, 'umsatz');
+
+    return {
+        titel: t('board.revenueGroupTitle'),
+        bezug: t('board.revenueReference', {
+            umsatz: geldFormat(umsatzGesamt), fahrtenPhrase: mengeFormat(fahrtenGesamt, 'fahrt'),
+            vonMonat: monatFormat(fenster[0]), bisMonat: monatFormat(fenster[fenster.length - 1])
+        }),
+        spalten: auswertungenGeldSpalten({
+            rubrikTitel: t('col.tariffGroup'),
+            fenster, umsatzanteil, fahrtenanteil,
+            // kunden ist je Monatszeile die Zahl der AKTIVEN Kundinnen und
+            // Kunden dieses Tarifs - ueber zwoelf Monate summiert waere sie
+            // eine Mehrfachzaehlung derselben Personen. Deshalb der
+            // HOECHSTWERT der zwoelf Monate ("so viele waren es im
+            // staerksten Monat"), nicht die Summe.
+            zusatz: (g) => t('board.customersActiveMax', {
+                kundenPhrase: mengeFormat(Math.max(...auswertungenReihe(g, fenster, 'kunden')), 'kunde')
+            })
+        }),
+        zeilen: gruppen,
+        summe: { summenzeile: true, name: t('col.together'), summeUmsatz: umsatzGesamt, jeMonat: new Map() },
+        fussnote: `${t('board.revenueGroupFootnote')} ${t('board.halfYearFootnote', {
+            min: zahlFormat(winterspanne.min), max: zahlFormat(winterspanne.max)
+        })}`
+    };
+}
+
+// ===== Reiter "Kilometer und CO2" =====
+function kmCo2Kopftafel(zeilen) {
+    if (!zeilen || zeilen.length === 0) return null;
+    const { fenster, gruppen } = auswertungenMonatsgliederung(
+        zeilen, (z) => z.typ_code, (z) => z.typ_code);
+    if (gruppen.length === 0) return null;
+
+    gruppen.sort((a, b) => auswertungenSumme(b, fenster, 'kilometer') - auswertungenSumme(a, fenster, 'kilometer'));
+    const kmGesamt = gruppen.reduce((s, g) => s + auswertungenSumme(g, fenster, 'kilometer'), 0);
+    const fahrtenGesamt = gruppen.reduce((s, g) => s + auswertungenSumme(g, fenster, 'fahrten'), 0);
+    const geschaetztGesamt = gruppen.reduce((s, g) => s + auswertungenSumme(g, fenster, 'fahrten_geschaetzt'), 0);
+    // DER FEHLER, DER HIER SCHON EINMAL 13 PROZENTPUNKTE GEKOSTET HAT:
+    // der Schaetzanteil ist "geschaetzte Fahrten durch alle Fahrten",
+    // NICHT der Mittelwert der Monats-/Typanteile (ungewichtet 53,2 %
+    // gegen fahrtgewichtet 40,0 %, siehe Bericht). Beide Zaehler kommen
+    // deshalb aus Summen ueber dasselbe Fenster.
+    const schaetzanteil = fahrtenGesamt ? geschaetztGesamt / fahrtenGesamt : 0;
+    // DIE GEGENPROBE STEHT IN DER FUSSNOTE, mit Zahlen statt mit einer
+    // Behauptung: derselbe Anteil, einmal fahrtgewichtet und einmal als
+    // schlichtes Mittel der Monatsanteile. Im Zwoelf-Monats-Fenster
+    // liegen beide dicht beieinander (40,0 gegen 40,2 % - jeder Monat
+    // traegt hier aehnlich viele Fahrten); ueber ALLE geladenen Monate
+    // klaffen sie weit auseinander (40,1 gegen 53,2 %), weil die sechs
+    // duennen Testmonate im ungewichteten Mittel genauso schwer wiegen
+    // wie ein Juli mit 1939 Fahrten. Beide Paare stehen da - erst der
+    // Vergleich macht sichtbar, WORAN der Unterschied haengt, und genau
+    // dieser Fehler hat in diesem Projekt schon einmal 13 Prozentpunkte
+    // gekostet.
+    const mittelDerAnteile = (reihen) => (reihen.length
+        ? reihen.reduce((s, z) => s + (Number(z.anteil_geschaetzt) || 0), 0) / reihen.length : 0);
+    const imFenster = new Set(fenster);
+    const ungewichtetFenster = mittelDerAnteile(zeilen.filter((z) => imFenster.has(z.monat)));
+    const ungewichtetAlle = mittelDerAnteile(zeilen);
+    const fahrtenAlle = zeilen.reduce((s, z) => s + (Number(z.fahrten) || 0), 0);
+    const geschaetztAlle = zeilen.reduce((s, z) => s + (Number(z.fahrten_geschaetzt) || 0), 0);
+    const gewichtetAlle = fahrtenAlle ? geschaetztAlle / fahrtenAlle : 0;
+    const kmJeFahrtGesamt = fahrtenGesamt ? kmGesamt / fahrtenGesamt : 0;
+    const kmJeFahrt = (g) => {
+        const fahrten = auswertungenSumme(g, fenster, 'fahrten');
+        return fahrten ? auswertungenSumme(g, fenster, 'kilometer') / fahrten : 0;
+    };
+
+    return {
+        titel: t('board.kmTitle'),
+        bezug: t('board.kmReference', {
+            km: kmFormat(kmGesamt), fahrtenPhrase: mengeFormat(fahrtenGesamt, 'fahrt'),
+            vonMonat: monatFormat(fenster[0]), bisMonat: monatFormat(fenster[fenster.length - 1]),
+            anteil: prozentFormat(schaetzanteil)
+        }),
+        spalten: [
+            {
+                art: 'rubrik',
+                titel: t('col.bikeType'),
+                wert: (z) => z.name,
+                zusatz: (z) => (z.summenzeile ? null
+                    : t('board.co2PerRide', {
+                        kg: kgFormat(auswertungenSumme(z, fenster, 'fahrten')
+                            ? auswertungenSumme(z, fenster, 'co2_ersparnis_kg') / auswertungenSumme(z, fenster, 'fahrten') : 0)
+                    }))
+            },
+            {
+                art: 'groesse',
+                titel: t('col.kilometres'),
+                einheit: t('unit.kmTwelveMonths'),
+                wert: (z) => (z.summenzeile ? z.summeKm : auswertungenSumme(z, fenster, 'kilometer')),
+                format: (n) => kmFormat(n)
+            },
+            {
+                art: 'struktur',
+                titel: t('col.dataQuality'),
+                einheit: t('unit.ridesMeasuredEstimated'),
+                segmente: (z) => {
+                    const fahrten = z.summenzeile ? fahrtenGesamt : auswertungenSumme(z, fenster, 'fahrten');
+                    const geschaetzt = z.summenzeile ? geschaetztGesamt : auswertungenSumme(z, fenster, 'fahrten_geschaetzt');
+                    return [
+                        { wert: fahrten - geschaetzt, name: t('col.measured'), klasse: 'seg-aktiv' },
+                        // Geschaetzte Fahrten in --warnung-text, nicht in
+                        // einem neutralen Grau: eine Schaetzung ist eine
+                        // Einschraenkung der Aussage und keine zweite,
+                        // gleichwertige Sorte Messwert - genau die Farbe,
+                        // die in dieser Oberflaeche "hier ist etwas nicht
+                        // im Reinen" bedeutet.
+                        { wert: geschaetzt, name: t('col.estimated'), klasse: 'seg-warnung' }
+                    ];
+                },
+                auchSumme: true,
+                beschriftung: (z) => {
+                    const fahrten = z.summenzeile ? fahrtenGesamt : auswertungenSumme(z, fenster, 'fahrten');
+                    const geschaetzt = z.summenzeile ? geschaetztGesamt : auswertungenSumme(z, fenster, 'fahrten_geschaetzt');
+                    return t('board.qualityAria', {
+                        name: z.name, anteil: prozentFormat(fahrten ? geschaetzt / fahrten : 0),
+                        geschaetzt: zahlFormat(geschaetzt), fahrten: zahlFormat(fahrten)
+                    });
+                }
+            },
+            {
+                art: 'profil',
+                titel: t('col.monthlyCourse'),
+                einheit: `${monatFormat(fenster[0])} - ${monatFormat(fenster[fenster.length - 1])}`,
+                reihe: (z) => (z.summenzeile ? null : auswertungenReihe(z, fenster, 'kilometer')),
+                aktuellIndex: 11,
+                beschriftung: (z) => {
+                    const reihe = auswertungenReihe(z, fenster, 'kilometer');
+                    const hoechster = Math.max(...reihe);
+                    return t('board.monthlyCourseAria', {
+                        name: z.name, vonMonat: monatFormat(fenster[0]),
+                        bisMonat: monatFormat(fenster[fenster.length - 1]),
+                        max: kmFormat(hoechster), maxMonat: monatFormat(fenster[reihe.indexOf(hoechster)]),
+                        aktuell: kmFormat(reihe[reihe.length - 1])
+                    });
+                }
+            },
+            {
+                art: 'abweichung',
+                titel: t('col.kmPerRideDeviation'),
+                einheit: t('unit.kmPerRide'),
+                wert: (z) => (z.summenzeile ? null : Math.round((kmJeFahrt(z) - kmJeFahrtGesamt) * 100) / 100),
+                format: (n) => abweichungText(n, 2),
+                beschriftung: (z) => t('board.kmPerRideAria', {
+                    name: z.name, je: kmFormat(kmJeFahrt(z)), schnitt: kmFormat(kmJeFahrtGesamt)
+                })
+            }
+        ],
+        zeilen: gruppen,
+        summe: { summenzeile: true, name: t('col.together'), summeKm: kmGesamt, jeMonat: new Map() },
+        fussnote: t('board.kmFootnote', {
+            anteil: prozentFormatFein(schaetzanteil), ungewichtet: prozentFormatFein(ungewichtetFenster),
+            alleGewichtet: prozentFormatFein(gewichtetAlle), alleUngewichtet: prozentFormatFein(ungewichtetAlle),
+            monatszeilen: mengeFormat(zeilen.length, 'monatszeile')
+        })
+    };
+}
+
+// ===== Reiter "Stationsauslastung" =====
+//
+// Dieselben zehn Stationen wie im Bereich "Stationen", aber eine andere
+// Frage: dort geht es um den Bestand JETZT (wie voll ist welche Station,
+// wann wird sie gefahren), hier um die ueber die gesamte Historie
+// gezaehlte Bewegung. Deshalb eine eigene Tafel und nicht dieselbe:
+// Groesse ist hier die Fahrtenzahl, nicht die Kapazitaet.
+function stationsauslastungKopftafel(zeilen) {
+    if (!zeilen || zeilen.length === 0) return null;
+
+    const fahrtenVon = (z) => (Number(z.abgaenge) || 0) + (Number(z.zugaenge) || 0);
+    const fuellstandVon = (z) => (z.kapazitaet ? (Number(z.belegt) || 0) / z.kapazitaet : 0);
+    const abgaenge = zeilen.map((z) => Number(z.abgaenge) || 0);
+
+    return {
+        titel: t('board.stationLoadTitle'),
+        bezug: t('board.stationLoadReference', {
+            stationenPhrase: mengeFormat(zeilen.length, 'station'),
+            fahrten: zahlFormat(zeilen.reduce((s, z) => s + (Number(z.abgaenge) || 0), 0))
+        }),
+        spalten: [
+            {
+                art: 'rubrik',
+                titel: t('col.station'),
+                wert: (z) => z.name,
+                zusatz: (z) => (z.summenzeile ? null : z.stationsnummer)
+            },
+            {
+                art: 'groesse',
+                titel: t('col.movements'),
+                einheit: t('unit.departuresPlusArrivals'),
+                wert: (z) => (z.summenzeile ? z.summeFahrten : fahrtenVon(z)),
+                format: (n) => zahlFormat(n)
+            },
+            {
+                art: 'struktur',
+                titel: t('col.occupancy'),
+                einheit: t('unit.shareOfRow'),
+                auchSumme: true,
+                segmente: (z) => [
+                    { wert: Number(z.belegt) || 0, name: t('col.occupied'),
+                      klasse: (Number(z.belegt) || 0) >= z.kapazitaet ? 'seg-warnung' : 'seg-aktiv' },
+                    { wert: Math.max(0, z.kapazitaet - (Number(z.belegt) || 0)), name: t('col.free'), klasse: 'seg-ruhend' }
+                ],
+                beschriftung: (z) => t('board.stationOccupancyAria', {
+                    name: z.name, belegt: zahlFormat(z.belegt), kapazitaet: zahlFormat(z.kapazitaet),
+                    prozent: zahlFormat(Math.round(fuellstandVon(z) * 100))
+                })
+            },
+            {
+                art: 'profil',
+                titel: t('col.fillLevel'),
+                einheit: t('unit.zeroToHundred'),
+                punkt: (z) => (z.summenzeile ? null : Math.round(fuellstandVon(z) * 100)),
+                beschriftung: (z) => t('board.fillLevelAria', {
+                    name: z.name, prozent: zahlFormat(Math.round(fuellstandVon(z) * 100))
+                })
+            },
+            {
+                art: 'abweichung',
+                titel: t('col.balance'),
+                einheit: t('unit.ridesArrivalsMinusDepartures'),
+                wert: (z) => (z.summenzeile ? null : Number(z.saldo) || 0),
+                format: (n) => abweichungText(n, 0),
+                beschriftung: (z) => t('board.stationBalanceAria', {
+                    name: z.name, zugaenge: zahlFormat(z.zugaenge), abgaenge: zahlFormat(z.abgaenge),
+                    saldo: zahlFormat(z.saldo)
+                })
+            }
+        ],
+        zeilen,
+        summe: {
+            summenzeile: true, name: t('col.together'),
+            summeFahrten: zeilen.reduce((s, z) => s + fahrtenVon(z), 0),
+            belegt: zeilen.reduce((s, z) => s + (Number(z.belegt) || 0), 0),
+            kapazitaet: zeilen.reduce((s, z) => s + z.kapazitaet, 0)
+        },
+        // Der eigentliche Befund dieser Tafel steht NICHT in der
+        // Groessenspalte, sondern darin, wie WENIG sie sich unterscheidet:
+        // zehn fast gleich lange Balken heissen, dass die Nachfrage
+        // gleichmaessig verteilt ist - und dass alles, was ein Disponent
+        // hier zu entscheiden hat, in der Saldospalte rechts steht.
+        fussnote: t('board.stationLoadFootnote', {
+            min: zahlFormat(Math.min(...abgaenge)), max: zahlFormat(Math.max(...abgaenge))
+        })
+    };
+}
+
 
 // async wegen des Drill-Downs (monatsdrilldownEinfuegen() lädt die
 // Tageszahlen nach) - zeileWaehlen() in rahmen.js ruft diese Funktion
@@ -1274,13 +1574,13 @@ async function umsatzKundengruppeZeigen(vorgang) {
 
     const fehler = letzterLadeFehler('v_wawi_umsatz_kundengruppe');
     if (fehler) {
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         meldeVorgang(vorgang, t('msg.revenueByCustomerGroupLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
     if (zeilen.length === 0) {
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         zeigeLeermaske(
             vorgang,
             t('empty.noRevenueByCustomerGroupTitle'),
@@ -1344,7 +1644,7 @@ async function umsatzKundengruppeZeigen(vorgang) {
         }
     ], umsatzKundengruppeMaske);
 
-    zeigeUebersicht(vorgang, umsatzKundengruppeUebersicht(zeilen));
+    zeigeKopftafel(vorgang, umsatzKundengruppeKopftafel(zeilen));
 
     // Dieselbe Gesamtsumme wie im Radtyp-Reiter (35 454,47 € - beide
     // Sichten summieren dieselben Entgeltpositionen, nur anders
@@ -1355,76 +1655,6 @@ async function umsatzKundengruppeZeigen(vorgang) {
     meldeVorgang(vorgang, t('msg.revenueByCustomerGroupSummary', { monatszeilen: mengeFormat(zeilen.length, 'monatszeile'), umsatz: geldFormat(gesamtUmsatz) }));
 }
 
-// Drei Kacheln, in derselben Reihenfolge Verlauf/Schwerpunkt/auffällig
-// wie im Radtyp-Reiter (Hichert: einheitliche Notation über alle
-// Auswertungen hinweg, nicht nur innerhalb einer Tabelle).
-function umsatzKundengruppeUebersicht(zeilen) {
-    const umsatzReihe = reiheJeMonat(zeilen, 'umsatz');
-    // gesamtUmsatz bleibt die volle 18-Monats-Summe - sie ist der richtige
-    // Nenner fuer "groesste Kundengruppe"/"ohne Mitgliedschaft" weiter
-    // unten (ein Anteil am GESAMTEN geladenen Bestand, nicht an einem
-    // Ausschnitt davon). Fuer die erste Kachel dagegen (siehe kacheln[0]
-    // unten) braucht es die ZWOELF-Monats-Summe - siehe der Kommentar dort.
-    const gesamtUmsatz = umsatzReihe.reduce((s, r) => s + r.wert, 0);
-    const letzteZwoelf = umsatzReihe.slice(-12);
-    const gesamtUmsatzLetzteZwoelf = letzteZwoelf.reduce((s, r) => s + r.wert, 0);
-
-    const umsatzJeTarif = new Map();
-    for (const z of zeilen) umsatzJeTarif.set(z.tarif_code, (umsatzJeTarif.get(z.tarif_code) || 0) + z.umsatz);
-    const gruppen = [...umsatzJeTarif.entries()].sort(([, a], [, b]) => b - a);
-    const [groessterCode, groessterUmsatz] = gruppen[0];
-    const groessteGruppe = zeilen.find((z) => z.tarif_code === groessterCode).tarif;
-    const ohneUmsatz = umsatzJeTarif.get('OHNE') || 0;
-
-    const kacheln = [
-        {
-            titel: t('tile.revenueTotal'),
-            veraenderung: veraenderungZeile(letzteVeraenderung(letzteZwoelf)),
-            // BUGFIX, derselbe Befund wie bei kachelnUmsatz in
-            // umsatzRadtypUebersicht() oben: die Zahl trug bislang die
-            // vollen 18 Monate (gesamtUmsatz), waehrend Sparkline UND
-            // Hinweistext ausdruecklich "die letzten 12 Monate" zeigen
-            // (hint.last12MonthsCrossCheck sagt das woertlich - die Zahl
-            // widersprach also schon ihrem EIGENEN Hinweistext). Jetzt
-            // gesamtUmsatzLetzteZwoelf: dieselbe Zwoelf-Monats-Summe wie in
-            // "Umsatz gesamt" im Radtyp-Reiter, die Gegenprobe zwischen
-            // beiden Reitern bleibt damit intakt (beide Gruppierungen
-            // summieren dieselben Entgeltpositionen desselben Zeitraums,
-            // nur anders aufgeteilt) - nur eben am RICHTIGEN Bezugsraum.
-            wert: zahlSkaliert(geldFormat(gesamtUmsatzLetzteZwoelf)),
-            grafik: saeulenSparkline(letzteZwoelf.map((r) => r.wert),
-                t('hint.crossCheckChartAria', {
-                    vonMonat: monatFormat(letzteZwoelf[0].monat), bisMonat: monatFormat(letzteZwoelf.at(-1).monat),
-                    aktuellWert: geldFormat(letzteZwoelf.at(-1).wert)
-                })
-            ),
-            hinweis: t('hint.last12MonthsCrossCheck')
-        },
-        {
-            titel: t('tile.largestCustomerGroup'),
-            wert: groessteGruppe,
-            grafik: zellbalken(groessterUmsatz, gesamtUmsatz),
-            hinweis: t('hint.shareOfRevenue', { prozent: prozentFormatFein(groessterUmsatz / gesamtUmsatz), geld: geldFormat(groessterUmsatz) })
-        }
-    ];
-
-    // Auffällig, gegen die Daten geprüft (siehe Bericht): fast die Hälfte
-    // des Umsatzes kommt von Fahrten OHNE aktive Mitgliedschaft - eine
-    // Zahl, die man ohne diese Kachel erst durch Aufsummieren von 13
-    // Zeilen quer über 18 Monate fände. tarif_code 'OHNE' kommt direkt
-    // aus der Sicht (siehe 0018_wawi_sichten.sql: "coalesce(tr.tarif_code,
-    // 'OHNE')"), kein selbst erfundener Sonderfall.
-    if (ohneUmsatz > 0) {
-        kacheln.push({
-            titel: t('tile.notableNoMembership'),
-            wert: prozentFormatFein(ohneUmsatz / gesamtUmsatz),
-            grafik: zellbalken(ohneUmsatz, gesamtUmsatz),
-            hinweis: t('hint.revenueWithoutTariff', { geld: geldFormat(ohneUmsatz) })
-        });
-    }
-
-    return kacheln;
-}
 
 // async wegen des Drill-Downs - siehe Kommentar bei umsatzRadtypMaske().
 async function umsatzKundengruppeMaske(zeile) {
@@ -1449,13 +1679,13 @@ async function kmCo2Zeigen(vorgang) {
 
     const fehler = letzterLadeFehler('v_wawi_km_co2');
     if (fehler) {
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         meldeVorgang(vorgang, t('msg.kmCo2LoadFailed', { fehler }), 'schlecht');
         return;
     }
 
     if (zeilen.length === 0) {
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         zeigeLeermaske(
             vorgang,
             t('empty.noKmCo2Title'),
@@ -1521,7 +1751,7 @@ async function kmCo2Zeigen(vorgang) {
         }
     ], kmCo2Maske);
 
-    zeigeUebersicht(vorgang, kmCo2Uebersicht(zeilen));
+    zeigeKopftafel(vorgang, kmCo2Kopftafel(zeilen));
 
     // Die Kontrollrechnung aus Schritt 3: Gesamtersparnis UND der
     // fahrtgewichtete Gesamtanteil - NICHT der Mittelwert der
@@ -1534,73 +1764,6 @@ async function kmCo2Zeigen(vorgang) {
     }));
 }
 
-// Dritte Kachel ist der Kern dieses Reiters, nicht schmückendes Beiwerk:
-// der fahrtgewichtete Schätzanteil MUSS hier stehen, weil er sonst genau
-// die Fußnoten-Behandlung bekäme, die der Auftrag ausdrücklich verbietet
-// ("Die Unsicherheit steht neben der Zahl, nicht in einer Fußnote") - und
-// der Hinweis zeigt zusätzlich den falschen, ungewichteten Mittelwert
-// gegen den richtigen, damit die Falle nicht nur im Code-Kommentar von
-// anteilGewichtet() steht, sondern auch für die Leitung sichtbar ist, die
-// diese Tabelle tatsächlich liest.
-function kmCo2Uebersicht(zeilen) {
-    const co2Reihe = reiheJeMonat(zeilen, 'co2_ersparnis_kg');
-    const kmReihe = reiheJeMonat(zeilen, 'kilometer');
-    const co2LetzteZwoelf = co2Reihe.slice(-12);
-    const kmLetzteZwoelf = kmReihe.slice(-12);
-    // BUGFIX, derselbe Befund wie bei den beiden Kacheln in
-    // umsatzRadtypUebersicht()/umsatzKundengruppeUebersicht() oben: die
-    // grosse Zahl bezog sich zuvor auf ALLE 18 Monate (co2Reihe/kmReihe
-    // ungekuerzt reduziert), waehrend Sparkline, "Verlauf der letzten 12
-    // Monate" UND die Veraenderungszeile bereits auf co2LetzteZwoelf/
-    // kmLetzteZwoelf beruhten - hier deshalb direkt aus der bereits
-    // gekuerzten Zwoelf-Monats-Reihe summiert, kein zweiter, laengerer
-    // Bezugsraum mehr. Die 18-Monats-Summe bleibt trotzdem erreichbar: sie
-    // steht bereits als Kontrollzahl in der Statuszeile (meldeVorgang() in
-    // kmCo2Zeigen(), eigene, dort schon vorhandene Berechnung).
-    const gesamtCo2LetzteZwoelf = co2LetzteZwoelf.reduce((s, r) => s + r.wert, 0);
-    const gesamtKmLetzteZwoelf = kmLetzteZwoelf.reduce((s, r) => s + r.wert, 0);
-    const gesamtFahrten = zeilen.reduce((s, z) => s + z.fahrten, 0);
-    const gesamtGeschaetzt = zeilen.reduce((s, z) => s + z.fahrten_geschaetzt, 0);
-    const anteil = anteilGewichtet(zeilen);
-    const naiverMittelwert = zeilen.reduce((s, z) => s + z.anteil_geschaetzt, 0) / zeilen.length;
-
-    return [
-        {
-            titel: t('tile.co2SavingsTotal'),
-            veraenderung: veraenderungZeile(letzteVeraenderung(co2LetzteZwoelf)),
-            wert: zahlSkaliert(kgFormat(gesamtCo2LetzteZwoelf)),
-            grafik: saeulenSparkline(co2LetzteZwoelf.map((r) => r.wert),
-                t('hint.monthlyCo2ChartAria', {
-                    vonMonat: monatFormat(co2LetzteZwoelf[0].monat), bisMonat: monatFormat(co2LetzteZwoelf.at(-1).monat),
-                    min: kgFormat(Math.min(...co2LetzteZwoelf.map((r) => r.wert))),
-                    max: kgFormat(Math.max(...co2LetzteZwoelf.map((r) => r.wert))),
-                    aktuellWert: kgFormat(co2LetzteZwoelf.at(-1).wert)
-                })
-            ),
-            hinweis: t('hint.last12MonthsTrend')
-        },
-        {
-            titel: t('tile.kilometersTotal'),
-            veraenderung: veraenderungZeile(letzteVeraenderung(kmLetzteZwoelf)),
-            wert: zahlSkaliert(kmFormat(gesamtKmLetzteZwoelf)),
-            grafik: saeulenSparkline(kmLetzteZwoelf.map((r) => r.wert),
-                t('hint.monthlyKmChartAria', {
-                    vonMonat: monatFormat(kmLetzteZwoelf[0].monat), bisMonat: monatFormat(kmLetzteZwoelf.at(-1).monat),
-                    aktuellWert: kmFormat(kmLetzteZwoelf.at(-1).wert)
-                })
-            ),
-            hinweis: t('hint.last12MonthsTrend')
-        },
-        {
-            titel: t('tile.ofWhichEstimatedWeighted'),
-            wert: prozentFormatFein(anteil),
-            grafik: zellbalken(gesamtGeschaetzt, gesamtFahrten),
-            hinweis: t('hint.estimatedShareOfRides', {
-                geschaetzt: zahlFormat(gesamtGeschaetzt), fahrtenPhrase: mengeFormat(gesamtFahrten, 'fahrt'), naiv: prozentFormatFein(naiverMittelwert)
-            })
-        }
-    ];
-}
 
 // async wegen des Drill-Downs - siehe Kommentar bei umsatzRadtypMaske().
 async function kmCo2Maske(zeile) {
@@ -1641,13 +1804,13 @@ async function stationsauslastungZeigen(vorgang) {
 
     const fehler = letzterLadeFehler('v_wawi_stationsauslastung');
     if (fehler) {
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         meldeVorgang(vorgang, t('msg.stationOccupancyLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
     if (zeilen.length === 0) {
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         zeigeLeermaske(
             vorgang,
             t('empty.noStationOccupancyTitle'),
@@ -1699,106 +1862,12 @@ async function stationsauslastungZeigen(vorgang) {
         })
     ], stationsauslastungMaske);
 
-    zeigeUebersicht(vorgang, stationsauslastungUebersicht(zeilen));
+    zeigeKopftafel(vorgang, stationsauslastungKopftafel(zeilen));
 
     const leer = zeilen.filter((z) => z.belegt === 0).length;
     meldeVorgang(vorgang, `${mengeFormat(zeilen.length, 'station')}${leer ? t('msg.stationsWithoutBikeSuffix', { n: zahlFormat(leer) }) : ''}`);
 }
 
-// Anders als die drei Reiter davor führt diese Sicht keine Monatsspalte
-// (siehe Kopfkommentar der Funktion oben) - "Verlauf" gibt es hier nicht,
-// deshalb tragen die Sparklines dieser Kacheln keine Zeitachse, sondern
-// die zehn Stationen selbst als Achse (sortiert nach Stationsnummer, wie
-// die Tabelle darunter) - Tufte nennt das "small multiples": eine Form,
-// die die Verteilung über vergleichbare Einheiten zeigt, nicht zwingend
-// über Zeit.
-function stationsauslastungUebersicht(zeilen) {
-    const volle = zeilen.filter((z) => z.fuellstand >= 1);
-    const schwaechsteStation = extremwert(zeilen, 'saldo', true);
-
-    // Netzauslastung gesamt: die Frage, die "Stationen" (Anzahl) und
-    // "Volle Stationen" (Extremfall) offenlassen - wie voll ist das
-    // NETZ ALS GANZES, die Zahl fuer eine Kapazitaetsplanung ("brauchen
-    // wir insgesamt mehr Stellplaetze"). KAPAZITAETSGEWICHTET
-    // (sum(belegt)/sum(kapazitaet)), NICHT der Durchschnitt der zehn
-    // fuellstand-Werte - derselbe Fehlertyp wie beim ungewichteten
-    // Schätzanteil bei CO2 (anteilGewichtet() weiter oben): eine große
-    // Station zaehlt hier so viel wie eine kleine, wenn man bloss ihre
-    // ANTEILE mittelt, obwohl sie absolut mehr Stellplätze stellt. Beim
-    // heutigen Bestand (Kapazitaeten 20 bis 40, siehe Bericht) liegen
-    // beide Rechnungen nah beieinander (77,3 % gegen 76,8 %) - der
-    // Unterschied ist trotzdem kein Rundungsfehler, sondern eine andere
-    // Formel, die bei staerker divergierenden Stationsgroessen (ein
-    // künftiger Grossstandort neben den heutigen Zehn) deutlich
-    // auseinanderlaufen wuerde.
-    const gesamtBelegt = zeilen.reduce((s, z) => s + z.belegt, 0);
-    const gesamtKapazitaet = zeilen.reduce((s, z) => s + z.kapazitaet, 0);
-    const naiverMittelwertFuellstand = zeilen.reduce((s, z) => s + z.fuellstand, 0) / zeilen.length;
-
-    const kacheln = [
-        {
-            titel: t('tile.stations'),
-            wert: zahlFormat(zeilen.length),
-            // aktuellIndex: null - eine "letzte Station nach Nummer" ist
-            // kein aktueller Zeitraum, die Hervorhebung waere hier
-            // sinnlos (siehe Kopfkommentar bei saeulenSparkline()).
-            grafik: saeulenSparkline(zeilen.map((z) => z.fuellstand),
-                t('hint.fillLevelBetween', {
-                    stationenPhrase: mengeFormat(zeilen.length, 'station'),
-                    min: prozentFormat(Math.min(...zeilen.map((z) => z.fuellstand))),
-                    max: prozentFormat(Math.max(...zeilen.map((z) => z.fuellstand)))
-                }),
-                { aktuellIndex: null }
-            ),
-            hinweis: t('hint.fillLevelPerStation')
-        }
-    ];
-
-    if (gesamtKapazitaet > 0) {
-        kacheln.push({
-            titel: t('tile.networkOccupancyTotal'),
-            wert: prozentFormatFein(gesamtBelegt / gesamtKapazitaet),
-            grafik: zellbalken(gesamtBelegt, gesamtKapazitaet),
-            hinweis: t('hint.networkOccupancyWeighted', {
-                belegt: zahlFormat(gesamtBelegt), kapazitaet: zahlFormat(gesamtKapazitaet),
-                naiv: prozentFormatFein(naiverMittelwertFuellstand)
-            })
-        });
-    }
-
-    if (volle.length > 0) {
-        const wert = document.createElement('span');
-        wert.className = 'ton-warnung';
-        wert.textContent = zahlFormat(volle.length);
-        kacheln.push({
-            titel: t('tile.fullStations'),
-            wert,
-            // Echter Bezug im Hinweis (Gestaltungsauftrag Punkt 1: "2 von
-            // 10 - dann ist es ein Anteil"), auch ohne eigene Balkengrafik.
-            hinweis: t('hint.fullStationsList', {
-                voll: zahlFormat(volle.length), stationenPhrase: mengeFormat(zeilen.length, 'station'),
-                liste: volle.map((z) => z.name).join(', ')
-            })
-        });
-    }
-
-    kacheln.push({
-        titel: t('tile.biggestImbalance'),
-        wert: schwaechsteStation.name,
-        grafik: saeulenSparkline(zeilen.map((z) => z.saldo),
-            t('hint.saldoChartAria', {
-                stationenPhrase: mengeFormat(zeilen.length, 'station'),
-                min: zahlFormat(Math.min(...zeilen.map((z) => z.saldo))),
-                max: zahlFormat(Math.max(...zeilen.map((z) => z.saldo))),
-                name: schwaechsteStation.name
-            }),
-            { markierIndizes: [zeilen.indexOf(schwaechsteStation)], aktuellIndex: null }
-        ),
-        hinweis: t('hint.worstStationBalance', { saldo: zahlFormat(schwaechsteStation.saldo) })
-    });
-
-    return kacheln;
-}
 
 function stationsauslastungMaske(zeile) {
     zeigeMaske(`${zeile.stationsnummer} · ${zeile.name}`, [

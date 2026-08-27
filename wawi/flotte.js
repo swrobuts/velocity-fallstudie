@@ -68,21 +68,15 @@ async function flotteAufbauen() {
     // Einschraenkung. Der Status-/Typ-/Stationsfilter unten filtert
     // deshalb bewusst im BROWSER, im bereits vollstaendig geladenen
     // Array raeder: eine zweite Anfrage je Filteraenderung waere fuer
-    // 275 Zeilen unnoetig, und die Uebersichtskacheln (die den GESAMTEN
-    // Bestand zeigen sollen, nicht die gefilterte Teilmenge) brauchen die
+    // 275 Zeilen unnoetig, und die Kopftafel (die den GESAMTEN Bestand
+    // gliedern soll, nicht die gefilterte Teilmenge) braucht die
     // vollstaendige Liste ohnehin.
-    // Die fruehere zweite Anfrage hier (v_wawi_fahrten_je_tag_rad, fuer
-    // eine "Fahrten je Rad (30 Tage)"-Kachel) ist erprobt wieder entfernt
-    // (siehe Bericht): mit ihr UND flotteAltersstruktur() (Punkt 3, siehe
-    // dort) trugen sechs Kacheln je EIGENER 168px-Sparkline zusammen mehr
-    // Breite, als eine Zeile bei ueblicher Fensterbreite fasst - der
-    // Streifen brach auf zwei Zeilen um und liess dabei #listenkoerper auf
-    // 0px Hoehe zusammenfallen: die 275 Raeder waren nicht mehr sichtbar,
-    // ohne das Fenster von Hand zu vergroessern (im Browser nachgestellt,
-    // siehe Bericht). Eine durchgehend erreichbare Tabelle wiegt schwerer
-    // als eine zweite Verteilungskachel - flotteAltersstruktur() bekommt
-    // die Sparkline, weil der Auftrag sie ausdruecklich als "die
-    // interessanteste" benennt (siehe dort).
+    // KEINE ZWEITE ANFRAGE fuer den Kopf: die Kopftafel gliedert nach
+    // Modell, Status und Baujahr - alle drei Angaben stehen bereits in
+    // dieser einen Zeile (v_wawi_flotte reicht sie aus fahrradmodell
+    // durch). Die neun Modellzeilen des Kopfes und die 275 Radzeilen der
+    // Liste kommen damit aus DERSELBEN Ladung, koennen also nicht
+    // auseinanderlaufen.
     const raeder = await ladeListe('v_wawi_flotte',
         'fahrrad_id, rahmennummer, typ_code, typ, hersteller, modell, status, ' +
         'angeschafft_am, standort, akkustand_prozent, letzte_wartung, ' +
@@ -96,12 +90,7 @@ async function flotteAufbauen() {
         // veraltet (ueberholt oder der Bereich gewechselt), gehoert auch
         // sein eigener Ladefehler nicht mehr zur Gegenwart - siehe
         // Kommentar bei meldeVorgang() in rahmen.js (Befund 2).
-        zeigeUebersicht(vorgang, []);
-        // Dieselbe Aufraeumpflicht wie bei zeigeUebersicht(vorgang, [])
-        // direkt darueber, nur fuer den eigenen Baustein: sonst bliebe bei
-        // einem Ladefehler NACH einem zuvor erfolgreichen Aufbau die
-        // Radtyp-Reihe eines fruehreren, jetzt ueberholten Bestands stehen.
-        document.getElementById('flotte-typkacheln')?.remove();
+        zeigeKopftafel(vorgang, null);
         meldeVorgang(vorgang, t('msg.fleetLoadFailed', { fehler }), 'schlecht');
         return;
     }
@@ -110,18 +99,9 @@ async function flotteAufbauen() {
     // gefilterte Teilmenge - "womit oeffnet jemand diesen Bereich" ist
     // eine Frage an den Gesamtbestand, nicht an eine gerade gewaehlte
     // Einschraenkung.
-    zeigeUebersicht(vorgang, flotteUebersicht(raeder));
+    zeigeKopftafel(vorgang, flotteKopftafel(raeder));
 
     const { typen, standorte } = flotteFilterOptionen(raeder);
-    // Gestaltungsauftrag, woertlich: "Bei Flotte vermisse ich Produktbilder,
-    // wir haben ja die Bikes auch als Bilder, warum werden die nicht
-    // miniaturisiert im Kopf angezeigt, damit ich das Produkt/Flotte auch
-    // sehe." raeder (UNGEFILTERT) und typen (aus denselben ungefilterten
-    // Zeilen, siehe flotteFilterOptionen() weiter unten) - dieselbe
-    // Begruendung wie bei zeigeUebersicht() direkt darueber: die Frage
-    // "was fahren wir ueberhaupt" bezieht sich auf die ganze Flotte, nicht
-    // auf eine gerade gewaehlte Einschraenkung.
-    flotteTypkachelnZeigen(vorgang, raeder, typen);
     zeigeFilterleiste(vorgang, true, [
         {
             // Kein { wert: 'alle', ... } mehr in den Optionen - der
@@ -237,143 +217,206 @@ async function flotteAufbauen() {
         : t('common.xOfPhrase', { x: zahlFormat(raederSichtbar.length), phrase: mengeFormat(raeder.length, 'rad') }));
 }
 
-// ===== Uebersicht und Filter (Gestaltungsauftrag, Punkte 1 und 2) =====
+// ===== Kopftafel der Flotte =====
 //
-// "Wer die Flotte oeffnet, will wissen, wie viele einsatzbereit sind und
-// wo es klemmt" - die vier Kacheln bilden genau die vier moeglichen
-// Werte von status ab (ausgemustert bleibt aussen vor: im heutigen
-// Bestand gibt es keine ausgemusterten Raeder, und ein Rad in diesem
-// Zustand braucht ohnehin keine Aufmerksamkeit mehr - siehe
-// radHandlungen() weiter unten, das auf 'ausgemustert' selbst keine
-// Handlung mehr anbietet).
-function flotteUebersicht(raeder) {
+// DIE FRAGE, DIE DIESER KOPF BEANTWORTET: "Welches Modell steht wie oft
+// im Bestand, wie alt ist es, wie viel davon faehrt gerade - und welches
+// Modell faellt dabei aus dem Rahmen?"
+//
+// Die Liste darunter kann das nicht zeigen: sie fuehrt 275 einzelne
+// Raeder, nach Rahmennummer sortiert. Wer aus ihr die Struktur des
+// Bestands lesen will, muss sie erst sortieren, gruppieren und im Kopf
+// zusammenzaehlen. Genau diese Zusammenfassung ist der Kopf - und sie
+// zaehlt NICHT einfach dieselbe Liste noch einmal: die Einsatzquote je
+// Modell gegen die Quote der Gesamtflotte (letzte Spalte) steht in
+// keiner Zeile der Tabelle und laesst sich aus ihr auch nicht ablesen.
+//
+// ZEILEN SIND DIE NEUN MODELLE, gruppiert nach den drei Radtypen - die
+// feinste Gliederung, die noch in den Kopf passt (siehe zeigeKopftafel()
+// in rahmen.js). Drei Radtyp-Zeilen allein waeren zu grob (sie
+// verstecken, dass CityLine 1 und Urbano X beide City-Bikes sind und
+// sich um vier Baujahre unterscheiden), 275 Radzeilen waeren die Liste
+// selbst.
+//
+// DIE PRODUKTBILDER (Gestaltungsauftrag, frueher woertlich: "Bei Flotte
+// vermisse ich Produktbilder ... damit ich das Produkt/Flotte auch
+// sehe") stehen jetzt IN der Gruppenzeile ihres Radtyps statt in einer
+// eigenen Kachelreihe darunter. Das ist derselbe Wunsch, an der
+// richtigen Stelle erfuellt: das Bild sitzt neben der Zahl, die es
+// betrifft, und kostet keine eigene Zeile Bildschirmhoehe mehr.
+function flotteKopftafel(raeder) {
+    if (raeder.length === 0) return null;
+
     const gesamt = raeder.length;
-    const zaehler = (status) => raeder.filter((r) => r.status === status).length;
-    const verfuegbar = zaehler('verfuegbar');
-    const ausgeliehen = zaehler('ausgeliehen');
-    const wartung = zaehler('wartung');
-    const defekt = zaehler('defekt');
-    const anteil = (n) => (gesamt ? `${Math.round((n / gesamt) * 100)} %` : '—');
 
-    const wertMitTon = (n, ton) => {
-        const spanne = document.createElement('span');
-        if (ton) spanne.className = ton;
-        spanne.append(zahlSkaliert(String(n)));
-        return spanne;
-    };
-
-    // Echter Bezug in JEDEM der vier Hinweise (Gestaltungsauftrag Punkt 1):
-    // vorher trug nur "Einsatzbereit" die Zaehlerangabe ("X % von Y
-    // Raedern"), die uebrigen drei blieben rein qualitativ ("gerade
-    // unterwegs" ...). Vier Balken mit gemeinsamer Skala (derselbe Nenner
-    // "gesamt") duerfen zwar schon allein durch den Laengenvergleich UEBER
-    // die Kacheln hinweg als Anteil gelesen werden (Bissantz: "an einer
-    // gemeinsamen Skala ausgerichtet") - jede Kachel soll aber auch FUER
-    // SICH ALLEIN stehen koennen, ohne dass man die drei Nachbarkacheln
-    // danebenhalten muss, um den Nenner zu erschliessen.
-    const raederPhrase = mengeFormat(gesamt, 'rad');
-    const kacheln = [
-        {
-            titel: t('tile.available'),
-            wert: zahlSkaliert(String(verfuegbar)),
-            grafik: zellbalken(verfuegbar, gesamt),
-            hinweis: t('hint.shareOfBikes', { anteil: anteil(verfuegbar), raederPhrase })
-        },
-        {
-            titel: t('tile.onLoan'),
-            wert: zahlSkaliert(String(ausgeliehen)),
-            grafik: zellbalken(ausgeliehen, gesamt),
-            hinweis: t('hint.shareOnLoan', { anteil: anteil(ausgeliehen), raederPhrase })
-        },
-        {
-            titel: t('tile.inMaintenance'),
-            wert: wertMitTon(wartung, 'ton-warnung'),
-            grafik: zellbalken(wartung, gesamt, null, { farbe: 'var(--warnung-text)' }),
-            hinweis: t('hint.shareMaintenance', { anteil: anteil(wartung), raederPhrase })
-        },
-        {
-            titel: t('tile.faulty'),
-            wert: wertMitTon(defekt, defekt > 0 ? 'ton-schlecht' : ''),
-            grafik: zellbalken(defekt, gesamt, null, { farbe: 'var(--schlecht)' }),
-            hinweis: t('hint.shareFaulty', { anteil: anteil(defekt), raederPhrase })
+    // Ein Eintrag je Modell. baujahr/hersteller kommen aus dem MODELL
+    // (v_wawi_flotte reicht sie aus fahrradmodell durch, siehe deren
+    // Definition) und sind darum innerhalb eines Modells konstant - das
+    // erste gefundene Rad genuegt, ein Mittelwert waere hier eine
+    // Rechnung ueber lauter gleiche Werte.
+    const nachModell = new Map();
+    for (const rad of raeder) {
+        const schluessel = `${rad.typ_code} ${rad.modell}`;
+        let eintrag = nachModell.get(schluessel);
+        if (!eintrag) {
+            eintrag = { typCode: rad.typ_code, typ: rad.typ, modell: rad.modell,
+                        hersteller: rad.hersteller, baujahr: rad.baujahr,
+                        bestand: 0, status: new Map() };
+            nachModell.set(schluessel, eintrag);
         }
-    ];
-
-    // GESTALTUNGSAUFTRAG PUNKT 3, woertlich: "Flotte hat auch keinen
-    // besonders analytisch interessanten Header, fehlen Verteilungen ...
-    // Die Altersstruktur ist die interessanteste - sie sagt, wann
-    // investiert werden muss." UNGATED, anders als eine fruehere, inzwischen
-    // wieder entfernte fuenfte Kachel "Fahrten je Rad" (siehe Bericht):
-    // baujahr steht in genau der Zeile, die ohnehin schon fuer jede der
-    // drei Rollen geladen wird (siehe der select in flotteAufbauen()),
-    // keine zusaetzliche, rollenbeschraenkte Sicht noetig - auch die
-    // Werkstatt sieht diese Kachel also.
-    const altersstruktur = flotteAltersstruktur(raeder);
-    if (altersstruktur) kacheln.push(altersstruktur);
-
-    return kacheln;
-}
-
-// ===== Altersstruktur (Gestaltungsauftrag Punkt 3) =====
-//
-// Neu moeglich seit den echten Herstellerdaten (Baujahr 2021-2025 statt
-// des vorherigen Platzhalters "unbekannt", siehe Bericht zu
-// d4b66c5) - vorher gab es hier schlicht nichts zu verteilen. Gruppiert
-// nach dem tatsaechlichen Baujahr jedes Rades, NICHT nach angeschafft_am:
-// beides fiele im heutigen Bestand zwar zusammen (jedes Rad wurde im
-// Baujahr seines Modells beschafft), aber "Baujahr" ist die Angabe, die
-// der Auftrag ausdruecklich nennt und die ueber den Investitionsbedarf
-// entscheidet - ein spaeter gebraucht gekauftes Rad haette ein aelteres
-// Baujahr als sein angeschafft_am, ohne dass dieser Bestand das heute
-// zeigt.
-function flotteAltersstruktur(raeder) {
-    const gesamt = raeder.length;
-    if (gesamt === 0) return null;
-
-    const zaehlerJeJahr = new Map();
-    for (const r of raeder) {
-        if (r.baujahr == null) continue;
-        zaehlerJeJahr.set(r.baujahr, (zaehlerJeJahr.get(r.baujahr) || 0) + 1);
+        eintrag.bestand += 1;
+        eintrag.status.set(rad.status, (eintrag.status.get(rad.status) || 0) + 1);
     }
-    if (zaehlerJeJahr.size === 0) return null;   // keine Rolle laedt baujahr NULL bei allen Zeilen im heutigen Bestand, aber ehrlich abgefangen
 
-    const jahre = [...zaehlerJeJahr.keys()].sort((a, b) => a - b);
-    const werte = jahre.map((j) => zaehlerJeJahr.get(j));
-    const aeltestesJahr = jahre[0];
-    const aeltesteAnzahl = zaehlerJeJahr.get(aeltestesJahr);
-    const anteil = Math.round((aeltesteAnzahl / gesamt) * 100);
-    const raederPhrase = mengeFormat(gesamt, 'rad');
+    // VERHAELTNISZAHL AUS SUMMEN, nicht als Mittel von Einzelquotienten
+    // (Hausregel des Projekts, an dieser Oberflaeche schon einmal 13
+    // Prozentpunkte teuer): die Flottenquote ist "alle ausgeliehenen
+    // Raeder durch alle Raeder", NICHT der Durchschnitt der neun
+    // Modellquoten - neun Modelle mit 10 bis 60 Raedern haetten dabei
+    // dasselbe Gewicht bekommen.
+    const ausgeliehenGesamt = raeder.filter((r) => r.status === 'ausgeliehen').length;
+    const flottenquote = ausgeliehenGesamt / gesamt;
+
+    const zaehle = (eintrag, status) => eintrag.status.get(status) || 0;
+    const segmenteVon = (eintrag) => FLOTTE_STATUS_REIHE.map((status) => ({
+        wert: zaehle(eintrag, status),
+        name: statusAnzeige(status, true),
+        klasse: FLOTTE_STATUS_SEGMENT[status]
+    }));
+    const strukturText = (eintrag) => FLOTTE_STATUS_REIHE
+        .filter((status) => zaehle(eintrag, status) > 0)
+        .map((status) => `${statusAnzeige(status, true)} ${zahlFormat(zaehle(eintrag, status))}`)
+        .join(', ');
+
+    // Radtyp-Gruppen in der Reihenfolge, in der die Radtypen im Bestand
+    // vorkommen; innerhalb einer Gruppe das groesste Modell zuerst - so
+    // steht immer oben, was den Bestand traegt.
+    const typen = [...new Map(raeder.map((r) => [r.typ_code, r.typ])).entries()]
+        .sort(([a], [b]) => a.localeCompare(b));
+
+    const zeilen = [];
+    for (const [typCode, typName] of typen) {
+        const modelleDesTyps = [...nachModell.values()]
+            .filter((m) => m.typCode === typCode)
+            .sort((a, b) => b.bestand - a.bestand);
+        if (modelleDesTyps.length === 0) continue;
+
+        const gruppe = {
+            istGruppe: true,
+            typCode,
+            name: typName,
+            bestand: modelleDesTyps.reduce((s, m) => s + m.bestand, 0),
+            status: new Map()
+        };
+        for (const modell of modelleDesTyps) {
+            for (const [status, anzahl] of modell.status) {
+                gruppe.status.set(status, (gruppe.status.get(status) || 0) + anzahl);
+            }
+        }
+        zeilen.push(gruppe, ...modelleDesTyps);
+    }
+
+    const gesamtzeile = { name: t('col.together'), bestand: gesamt, status: new Map() };
+    for (const rad of raeder) gesamtzeile.status.set(rad.status, (gesamtzeile.status.get(rad.status) || 0) + 1);
+
+    const baujahre = raeder.map((r) => r.baujahr).filter((j) => j != null);
+    const vonJahr = baujahre.length ? Math.min(...baujahre) : null;
+    const bisJahr = baujahre.length ? Math.max(...baujahre) : null;
+    const hersteller = new Set(raeder.map((r) => r.hersteller).filter(Boolean));
 
     return {
-        titel: t('tile.fleetAge'),
-        // Die ANZAHL des aeltesten Jahrgangs als Wert (nicht der
-        // Jahresbereich "2021-2025", wie eine erste Fassung es zeigte) -
-        // erprobt (siehe Bericht): dieselbe Kachel muss neben vier
-        // Statuskacheln in EINER Zeile Platz finden, und ein neunstelliger
-        // Bereichstext liess sie dabei ueber den sichtbaren Rand
-        // hinauslaufen. Eine reine Zahl ist ausserdem die Form, die JEDE
-        // Nachbarkachel hier schon traegt (146/110/16/3) - Zahl vorn,
-        // Anteil im Hinweis dahinter (siehe hint.fleetAgeDetail unten),
-        // "gleiche Form" (Punkt 1) gilt damit auch INNERHALB der
-        // Flotten-Uebersicht, nicht nur zwischen den Bereichen.
-        wert: zahlSkaliert(zahlFormat(aeltesteAnzahl)),
-        // GESTALTUNGSAUFTRAG PUNKT 1 (gemeinsame Form): dieselbe
-        // Saeulen-Sparkline wie jede andere Verteilung in dieser
-        // Oberflaeche (Fuellstaende in stationen.js, Umsatzreihen in
-        // auswertungen.js) - "eine Verteilung sieht in jedem Bereich
-        // gleich aus" (Auftrag, woertlich), unabhaengig davon, ob sie
-        // Raeder oder Kunden zaehlt. aktuellIndex: null wie bei jeder
-        // anderen NICHT-zeitbasierten Reihe (siehe Kopfkommentar bei
-        // saeulenSparkline() in rahmen.js) - "das juengste Baujahr" ist
-        // kein aktueller Zeitraum.
-        grafik: saeulenSparkline(werte,
-            t('hint.fleetAgeAria', { vonJahr: String(jahre[0]), bisJahr: String(jahre[jahre.length - 1]) }),
-            { aktuellIndex: null }),
-        hinweis: t('hint.fleetAgeDetail', {
-            anteil: zahlFormat(anteil), n: zahlFormat(aeltesteAnzahl), raederPhrase, jahr: String(aeltestesJahr)
-        })
+        titel: t('board.fleetTitle'),
+        bezug: t('board.fleetReference', {
+            raederPhrase: mengeFormat(gesamt, 'rad'),
+            modellePhrase: mengeFormat(nachModell.size, 'modell'),
+            herstellerPhrase: mengeFormat(hersteller.size, 'hersteller'),
+            vonJahr: vonJahr === null ? '?' : jahrFormat(vonJahr),
+            bisJahr: bisJahr === null ? '?' : jahrFormat(bisJahr),
+            quote: zahlFormat(Math.round(flottenquote * 100))
+        }),
+        spalten: [
+            {
+                art: 'rubrik',
+                titel: t('col.model'),
+                wert: (z) => z.name || z.modell,
+                zusatz: (z) => (z.istGruppe || !z.hersteller ? null : z.hersteller),
+                // Bild NUR in der Gruppenzeile: dasselbe Bild in jeder der
+                // vier City-Zeilen zu wiederholen waere genau der Laerm,
+                // den der Auftrag frueher schon an einer Beschriftung
+                // geruegt hat, die ein Bild nur verdoppelt.
+                bild: (z) => (z.istGruppe ? RADTYP_BILDER[z.typCode] || null : null)
+            },
+            {
+                art: 'groesse',
+                titel: t('col.stock'),
+                einheit: t('unit.bikes'),
+                wert: (z) => z.bestand,
+                format: (n) => zahlFormat(n)
+            },
+            {
+                art: 'struktur',
+                titel: t('col.statusMix'),
+                einheit: t('unit.shareOfRow'),
+                auchSumme: true,
+                segmente: segmenteVon,
+                beschriftung: (z) => t('board.fleetStatusAria', {
+                    name: z.name || z.modell, aufteilung: strukturText(z)
+                })
+            },
+            {
+                art: 'profil',
+                titel: t('col.modelYear'),
+                einheit: vonJahr === null ? '' : `${jahrFormat(vonJahr)} – ${jahrFormat(bisJahr)}`,
+                punkt: (z) => (z.istGruppe ? null : z.baujahr),
+                beschriftung: (z) => t('board.fleetYearAria', {
+                    name: z.modell, jahr: jahrFormat(z.baujahr),
+                    vonJahr: jahrFormat(vonJahr), bisJahr: jahrFormat(bisJahr)
+                })
+            },
+            {
+                art: 'abweichung',
+                titel: t('col.utilisationDeviation'),
+                einheit: t('unit.percentagePoints'),
+                wert: (z) => (z.istGruppe || !z.bestand ? null
+                    : Math.round((zaehle(z, 'ausgeliehen') / z.bestand - flottenquote) * 1000) / 10),
+                format: (n) => abweichungText(n),
+                beschriftung: (z) => t('board.fleetDeviationAria', {
+                    name: z.modell,
+                    quote: zahlFormat(Math.round((zaehle(z, 'ausgeliehen') / z.bestand) * 100)),
+                    flottenquote: zahlFormat(Math.round(flottenquote * 100))
+                })
+            }
+        ],
+        zeilen,
+        summe: gesamtzeile,
+        fussnote: t('board.fleetFootnote', { quote: zahlFormat(Math.round(flottenquote * 100)) })
     };
 }
+
+// In welcher Reihenfolge die vier Statuswerte im Strukturbalken stehen -
+// IMMER dieselbe, in jeder Zeile und in jeder Gruppe. Das ist nicht
+// Kosmetik, sondern die Bedingung dafuer, dass man die Balken zweier
+// Zeilen ueberhaupt vergleichen kann: eine wechselnde Reihenfolge machte
+// aus derselben Aufteilung zwei verschiedene Bilder. Sie ist zugleich die
+// zweite Absicherung gegen den Farbfall - "Wartung" (--warnung-text) und
+// "Defekt" (--schlecht) unterscheiden sich in der HELLIGKEIT kaum (1.07:1
+// gemessen), wohl aber im Farbton und eben in ihrer festen Position ganz
+// rechts im Balken.
+const FLOTTE_STATUS_REIHE = ['ausgeliehen', 'verfuegbar', 'wartung', 'defekt'];
+
+// Welche Statusfarbe welche Bedeutung traegt - an EINER Stelle, nicht in
+// jedem Aufruf von strukturBalken(): "ausgeliehen" ist die Flaeche, die
+// verdient (voll), "verfuegbar" die, die bereitsteht (ruhig), Wartung und
+// Defekt sind Warnung und Schaden. Ein 'ausgemustert' im Bestand faellt
+// bewusst auf 'seg-ruhend' zurueck statt auf eine eigene, unvermessene
+// fuenfte Farbe - im heutigen Bestand kommt es nicht vor.
+const FLOTTE_STATUS_SEGMENT = {
+    ausgeliehen: 'seg-aktiv',
+    verfuegbar:  'seg-ruhend',
+    wartung:     'seg-warnung',
+    defekt:      'seg-schlecht',
+    ausgemustert: 'seg-ruhend'
+};
 
 // Optionen aus den bereits geladenen Zeilen gewonnen, nicht fest
 // eingetragen - siehe Kommentar am Aufrufort in flotteAufbauen().
@@ -384,9 +427,10 @@ function flotteFilterOptionen(raeder) {
     return { typen, standorte };
 }
 
-// ===== Radtyp-Kacheln mit Produktbild (Gestaltungsauftrag, woertlich:
-// "Bei Flotte vermisse ich Produktbilder ... damit ich das Produkt/Flotte
-// auch sehe") =====
+// ===== Produktbilder je Radtyp (Gestaltungsauftrag, woertlich: "Bei
+// Flotte vermisse ich Produktbilder, wir haben ja die Bikes auch als
+// Bilder, warum werden die nicht miniaturisiert im Kopf angezeigt, damit
+// ich das Produkt/Flotte auch sehe") =====
 //
 // UEBER DEN TYPCODE zugeordnet, nicht ueber die Reihenfolge im
 // assets-Verzeichnis oder im Bestand (Auftrag, ausdruecklich): eine
@@ -395,121 +439,31 @@ function flotteFilterOptionen(raeder) {
 // faellt niemandem auf, der die Raeder nicht kennt" (Auftrag). typ_code
 // traegt heute CITY/CARGO/EBIKE (siehe v_wawi_flotte, gepruefte Werte).
 // Fehlt ein Eintrag hier (ein vierter Radtyp ohne Bild), liefert der
-// Zugriff darunter schlicht undefined - flotteTypkachelnZeigen() prueft
-// das explizit und laesst die Kachel dann ohne Bild, statt ein <img
-// src="undefined"> zu erzeugen.
+// Zugriff schlicht undefined - zeigeKopftafel() in rahmen.js prueft das
+// und laesst die Zelle dann ohne Bild, statt ein <img src="undefined">
+// zu erzeugen.
+//
+// Die frueher eigenstaendige Kachelreihe unter dem Kopfstreifen
+// (flotteTypkachelnZeigen(), dieselbe Bauart auch in instandhaltung.js)
+// ist mit dem Kachelband selbst entfallen: die Bilder stehen jetzt IN der
+// Kopftafel - bei Flotte in der Gruppenzeile ihres Radtyps, bei
+// Instandhaltung in der Tafelbeschriftung, wo das eine Bild den Befund
+// traegt ("alle sieben Meldungen betreffen City-Bikes"). Derselbe Wunsch,
+// dieselben Dateien, eine Bildschirmzeile weniger.
 //
 // Miniaturisiert aus src/assets/rad-*-frei.webp (freigestellt, Alphakanal
 // bereits vorhanden) auf 128px Bildhoehe - genug fuer eine scharfe
-// Darstellung bei ~56px CSS-Hoehe auch auf einem Retina-Bildschirm, ohne
-// die 500-600 KB grosse Ausgangsdatei ungekuerzt auszuliefern (503–602 KB
-// vorher, 15–17 KB nachher je Datei - dieselbe Groessenordnung wie
-// profilAufbauen()s Konterfei in rahmen.js, 215 KB auf 23 KB verkleinert).
-// NACH wawi/assets/ kopiert, nicht nach src/assets/ verlinkt: wawi/ wird
-// eigenstaendig ausgeliefert (siehe tools/wawi_veroeffentlichen.sh), ein
-// Verweis auf ../src/assets/ liefe im Betrieb ins Leere.
+// Darstellung auch auf einem Retina-Bildschirm, ohne die 500-600 KB
+// grosse Ausgangsdatei ungekuerzt auszuliefern (503-602 KB vorher, 15-17
+// KB nachher je Datei). NACH wawi/assets/ kopiert, nicht nach
+// src/assets/ verlinkt: wawi/ wird eigenstaendig ausgeliefert (siehe
+// tools/wawi_veroeffentlichen.sh), ein Verweis auf ../src/assets/ liefe
+// im Betrieb ins Leere.
 const RADTYP_BILDER = {
     CITY:  'assets/rad-city-mini.webp',
     CARGO: 'assets/rad-cargo-mini.webp',
     EBIKE: 'assets/rad-ebike-mini.webp'
 };
-
-// Eigenstaendiger Kopfbaustein NUR fuer Flotte, anders als Werkzeugleiste/
-// Filterleiste/Uebersichtsstreifen in rahmen.js: dort brauchten zwei oder
-// mehr Bereiche unabhaengig voneinander dasselbe Muster (siehe deren
-// Kopfkommentare dort). Hier ist es ausschliesslich die Flotte, die ihre
-// Raeder auch als Bild zeigen soll - deshalb lokal in dieser Datei, nicht
-// in rahmen.js.
-//
-// EIGENE Reihe UNTER der Status-Uebersicht (zeigeUebersicht() am
-// Aufrufort), nicht als weitere Kacheln IN ihr: die vier Status-Kacheln
-// (Einsatzbereit/Ausgeliehen/Wartung/Defekt) und die Radtyp-Kacheln
-// beantworten zwei verschiedene Fragen ("wie einsatzbereit ist die
-// Flotte" gegenueber "was fahren wir ueberhaupt") - sie in eine einzige,
-// gleichmaessig geteilte Zeile zu zwingen (#uebersichtsstreifen teilt die
-// Breite gleichmaessig unter allen Kindern, siehe .uebersichtskachel in
-// style.css) haette bis zu acht Kacheln in eine Zeile gequetscht, genau
-// die "sehr gedraengt"-Ruege, die diese Oberflaeche schon dreimal traf
-// (siehe Kopfkommentar von style.css).
-//
-// kennung: dieselbe Wettlaufabsicherung wie bei zeigeUebersicht() in
-// rahmen.js - flotteAufbauen() ruft diese Funktion zwar ohne
-// dazwischenliegendes await auf, aber ein zweiter, gleichlautender
-// Aufrufer waere ohne die Pruefung ein stiller Unterschied zwischen
-// beiden Bausteinen.
-function flotteTypkachelnZeigen(kennung, raeder, typen) {
-    if (!istAktuellerVorgang(kennung)) return;
-
-    let leiste = document.getElementById('flotte-typkacheln');
-    if (!leiste) {
-        leiste = document.createElement('div');
-        leiste.id = 'flotte-typkacheln';
-        leiste.className = 'flotte-typkacheln';
-    }
-    // insertBefore(..., listenKoerper()) statt eines eigenen Ankers -
-    // dieselbe Find-or-create-Machart wie uebersichtsstreifen()/
-    // filterleiste() in rahmen.js (siehe deren Kommentare): listenKoerper()
-    // legt den Tabellenkoerper bei Bedarf an, und jedes Element, das VOR
-    // ihm eingehaengt wird, bleibt an seinem Platz stehen, unabhaengig von
-    // der Aufrufreihenfolge der uebrigen Kopfbausteine.
-    document.getElementById('arbeitsliste').insertBefore(leiste, listenKoerper());
-    leiste.replaceChildren();
-
-    if (raeder.length === 0) { leiste.remove(); return; }
-
-    const gesamt = raeder.length;
-    for (const [code, name] of typen) {
-        const anzahl = raeder.filter((r) => r.typ_code === code).length;
-
-        const kachel = document.createElement('div');
-        kachel.className = 'flotte-typkachel';
-
-        const bildQuelle = RADTYP_BILDER[code];
-        if (bildQuelle) {
-            // NUR schmueckend: der Radtypname steht ohnehin gleich daneben
-            // als Text (Gestaltungsauftrag, woertlich: "ein Bild, das
-            // neben einer Beschriftung dasselbe wiederholt, ist fuer
-            // einen Screenreader Laerm") - deshalb alt="" UND aria-hidden,
-            // statt den Radtyp ein zweites Mal vorlesen zu lassen.
-            const bild = document.createElement('img');
-            bild.className = 'flotte-typkachel-bild';
-            bild.src = bildQuelle;
-            bild.alt = '';
-            bild.setAttribute('aria-hidden', 'true');
-            // "Ein fehlendes Bild darf die Kachel nicht zerreissen"
-            // (Auftrag, woertlich) - der Fall mit gaenzlich fehlendem
-            // Eintrag in RADTYP_BILDER ist bereits durch bildQuelle
-            // abgefangen (kein <img> erst gar nicht erzeugt); dieser
-            // 'error'-Fall haengt zusaetzlich ab, falls die Datei selbst
-            // einmal nicht erreichbar ist - das <img> raeumt sich dann
-            // selbst weg, statt als kaputtes Symbol stehenzubleiben.
-            bild.addEventListener('error', () => bild.remove());
-            kachel.append(bild);
-        }
-
-        const text = document.createElement('div');
-        text.className = 'flotte-typkachel-text';
-
-        const titel = document.createElement('div');
-        titel.className = 'flotte-typkachel-titel';
-        titel.textContent = name;
-        text.append(titel);
-
-        const wert = document.createElement('div');
-        wert.className = 'flotte-typkachel-wert';
-        wert.append(zahlSkaliert(String(anzahl)));
-        text.append(wert);
-
-        const hinweis = document.createElement('div');
-        hinweis.className = 'flotte-typkachel-hinweis';
-        const anteil = gesamt ? Math.round((anzahl / gesamt) * 100) : 0;
-        hinweis.textContent = t('hint.percentOfFleet', { anteil: zahlFormat(anteil) });
-        text.append(hinweis);
-
-        kachel.append(text);
-        leiste.append(kachel);
-    }
-}
 
 // Set.size === 0 heisst "Alle" (siehe Kommentar bei flotteFilterStatus
 // oben). Der Standort-Sonderfall 'unterwegs' (kein Standort, r.standort

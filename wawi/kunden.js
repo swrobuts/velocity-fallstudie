@@ -206,11 +206,10 @@ async function kundenAufbauen(suchtext) {
 
     // Vier Anfragen parallel: die eigentliche (Such- und filter-
     // abhaengige, auf 200 begrenzte) Arbeitsliste, UND drei reine
-    // Zaehl-Anfragen (zaehleZeilen(), daten.js) fuer den Uebersichts-
-    // streifen - die muessen den GESAMTEN Bestand zaehlen, unabhaengig
-    // von Suchtext, Statusfilter und der 200er-Grenze (siehe
-    // kundenUebersicht() weiter unten und der Kommentar bei
-    // kundenFilterStatus oben).
+    // Zaehl-Anfragen (zaehleZeilen(), daten.js) fuer die Kopftafel - die
+    // muessen den GESAMTEN Bestand zaehlen, unabhaengig von Suchtext,
+    // Statusfilter und der 200er-Grenze (siehe kundenKopftafel() weiter
+    // unten und der Kommentar bei kundenFilterStatus oben).
     const [kunden, gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl] = await Promise.all([
         ladeListe('v_wawi_kunde',
             'kunde_id, kundennummer, anrede, vorname, nachname, email, telefon, status, ' +
@@ -246,7 +245,7 @@ async function kundenAufbauen(suchtext) {
         // meldeVorgang statt melde: ein inzwischen veralteter Aufruf
         // (siehe Kommentar bei neuerVorgang() oben und in rahmen.js)
         // meldet auch seinen eigenen Ladefehler nicht mehr.
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         meldeVorgang(vorgang, t('msg.customersLoadFailed', { fehler }), 'schlecht');
         return;
     }
@@ -278,13 +277,14 @@ async function kundenAufbauen(suchtext) {
     // Grund wie oben: eine Verteilung ueber nur die (hoechstens 200)
     // GELADENEN Zeilen waere genau die "Luege", vor der der Auftrag beim
     // Statusfilter schon warnt (siehe Kommentar bei kundenFilterStatus).
-    // ort NEU dazu (Befund "Kunden gesamt": "keine Grafik, die halbe
-    // Kachel leer") - kundenOrtVerteilung() weiter unten braucht sie, um
-    // aus der Kachel "Kunden gesamt" selbst eine Verteilung zu zeichnen.
+    // ort traegt die Wohnort-Angabe der Bezugszeile ("573 in Wuerzburg,
+    // verteilt ueber 14 Orte"), tarif den ausgeschriebenen Namen jeder
+    // Tarifgruppe - beide werden von kundenKopftafel() weiter unten
+    // gebraucht und stehen ohnehin in derselben Zeile.
     const alleKennzahlen = await ladeListe('v_wawi_kunde',
-        'status, tarif_code, umsatz_brutto, fahrten_gesamt, registriert_am, ort');
+        'status, tarif_code, tarif, umsatz_brutto, fahrten_gesamt, registriert_am, ort');
 
-    zeigeUebersicht(vorgang, kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKennzahlen));
+    zeigeKopftafel(vorgang, kundenKopftafel(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKennzahlen));
 
     zeigeFilterleiste(vorgang, true, [
         {
@@ -392,8 +392,9 @@ async function kundenAufbauen(suchtext) {
     // meldeVorgang() in rahmen.js.
     //
     // Der "X davon gesperrt"-Hinweis, den es hier frueher gab (WICHTIG 6),
-    // ist in die Uebersichtskachel "Gesperrt" gewandert (siehe
-    // kundenUebersicht()) - er zaehlte bisher aus den hoechstens 200
+    // steht jetzt in der Bezugszeile und in der Zusammensetzungsspalte
+    // der Kopftafel (siehe kundenKopftafel()) - er zaehlte bisher aus den
+    // hoechstens 200
     // GELADENEN Zeilen, nicht aus allen 1014. Ungefiltert waeren das
     // die ersten 200 Nachnamen alphabetisch, nicht die tatsaechlichen
     // 519 - derselbe Fehler, vor dem der Gestaltungsauftrag beim Filter
@@ -414,305 +415,190 @@ async function kundenAufbauen(suchtext) {
         : `${mengeFormat(kunden.length, 'kunde')}${zusatz}`);
 }
 
-// ===== Uebersicht (Gestaltungsauftrag, Punkt 1) =====
+// ===== Kopftafel der Kundschaft =====
 //
-// "1014, davon 519 gesperrt. Diese Zahl erschreckt, wenn sie unerklaert
-// dasteht - und es gibt bis heute KEINE Funktion, die entsperrt" -
-// woertlich der Auftrag. Alle drei Zahlen kommen aus zaehleZeilen()
-// (daten.js), nicht aus der geladenen (hoechstens 200 Zeilen tragenden)
-// Arbeitsliste - siehe Kommentar an der Aufrufstelle in kundenAufbauen().
-function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKennzahlen) {
-    const anzeige = (n) => (n === null ? '—' : zahlFormat(n));
-
-    // GESTALTUNGSAUFTRAG, wörtlich der Befund: "KUNDEN GESAMT 1.014 - keine
-    // Grafik, die halbe Kachel leer." Diese Kachel war die EINZIGE in der
-    // ganzen Oberflaeche ohne jede Grafik UND ohne jeden Hinweis - jede
-    // andere "gesamt"-Kachel (Flotte, Stationen, Instandhaltung) traegt
-    // mindestens eine der beiden. kundenOrtVerteilung() weiter unten macht
-    // aus der blossen Zahl eine Verteilung, "aus der die Gesamtzahl
-    // entsteht" (Auftrag, woertlich als Vorschlag genannt) - faellt bei
-    // fehlenden Daten (Ladefehler bei alleKennzahlen) auf die reine Zahl
-    // zurueck, NICHT auf eine erfundene Grafik.
-    const kacheln = [
-        kundenOrtVerteilung(gesamtAnzahl, alleKennzahlen)
-        || { titel: t('tile.customersTotal'), wert: zahlSkaliert(anzeige(gesamtAnzahl)) }
-    ];
-
-    if (gesperrtAnzahl !== null) {
-        const wert = document.createElement('span');
-        wert.className = 'ton-warnung';
-        wert.append(zahlSkaliert(anzeige(gesperrtAnzahl)));
-        kacheln.push({
-            titel: t('tile.blocked'),
-            wert,
-            grafik: gesamtAnzahl ? zellbalken(gesperrtAnzahl, gesamtAnzahl, null, { farbe: 'var(--warnung-text)' }) : undefined,
-            // GESTALTUNGSAUFTRAG PUNKT 2, woertlich: "519 von 1014 sind
-            // gesperrt. Wer sind die? Seit wann? Haben sie je gefahren?
-            // Das ist die auffaelligste Zahl des Bereichs und steht
-            // unkommentiert da." gesperrtNieGefahren() weiter unten
-            // beantwortet genau das, unabhaengig gegen alleKennzahlen
-            // nachgerechnet (nicht gegen die separate zaehleZeilen()-Zahl
-            // gesperrtAnzahl oben - beide muessen fachlich uebereinstimmen,
-            // kommen aber aus zwei unabhaengigen Anfragen, siehe Hausregel
-            // "jede Kennzahl unabhaengig nachrechnen"). Faellt auf den
-            // alten, unkommentierten Text zurueck, wenn alleKennzahlen
-            // leer blieb (Ladefehler) oder gar keine Gesperrten darin
-            // stehen - "lieber der alte, richtige Satz als ein erfundener".
-            hinweis: gesamtAnzahl
-                ? (gesperrtNieGefahren(alleKennzahlen, gesperrtAnzahl)
-                    || t('hint.blockedShare', { n: zahlFormat(gesperrtAnzahl), kundenPhrase: mengeFormat(gesamtAnzahl, 'kunde') }))
-                : t('hint.noUnblockFunction')
-        });
-    }
-
-    if (ohneAdresseAnzahl !== null) {
-        kacheln.push({
-            titel: t('tile.noAddress'),
-            wert: zahlSkaliert(anzeige(ohneAdresseAnzahl)),
-            grafik: gesamtAnzahl ? zellbalken(ohneAdresseAnzahl, gesamtAnzahl) : undefined,
-            hinweis: gesamtAnzahl
-                ? t('hint.noAddressShare', { n: zahlFormat(ohneAdresseAnzahl), kundenPhrase: mengeFormat(gesamtAnzahl, 'kunde') })
-                : t('hint.addLaterInForm')
-        });
-    }
-
-    // ===== Verteilung nach Tarif (Gestaltungsauftrag Punkt 2) =====
-    //
-    // "Was eine Kundschaft von 1014 wirklich beschreibt: wie sie sich
-    // verteilt. Nach Tarif ..." - woertlich der Auftrag. GLEICHE FORM wie
-    // jede andere Verteilung dieser Oberflaeche (Punkt 1: "eine Verteilung
-    // sieht in jedem Bereich gleich aus") - dieselbe Saeulen-Sparkline wie
-    // die Altersstruktur der Flotte (flotteAltersstruktur() in flotte.js),
-    // hier ueber Tarifgruppen statt ueber Baujahre.
-    const tarifVert = tarifVerteilung(alleKennzahlen);
-    if (tarifVert) kacheln.push(tarifVert);
-
-    // ===== Verteilung des Rechnungsvolumens (Gestaltungsauftrag Punkt 5) =====
-    //
-    // "Wie verteilt sich der Umsatz auf die Kundschaft - tragen wenige
-    // den Großteil?" - woertlich eines der drei Beispiele des Auftrags.
-    // alleKennzahlen (siehe kundenAufbauen()) traegt umsatz_brutto ALLER
-    // 1014 Kunden, nicht nur der hoechstens 200 GELADENEN - dieselbe
-    // Ueberlegung wie bei gesamtAnzahl/gesperrtAnzahl/ohneAdresseAnzahl
-    // oben (per zaehleZeilen()): eine Verteilung ueber nur 200 von 1014
-    // waere genau die "Luege", vor der der Auftrag beim Statusfilter
-    // schon warnt (siehe Kommentar bei kundenFilterStatus).
-    //
-    // umsatzKonzentration() selbst liefert null bei leerem/fehlgeschlagenem
-    // Laden (siehe dort) - erst das Ergebnis pruefen, NICHT alleKennzahlen
-    // (ein leeres Array [] ist truthy in JavaScript, "if (alleKennzahlen)"
-    // allein haette bei einem Ladefehler ein null-Objekt in kacheln
-    // geschoben und baueKachel() in rahmen.js beim Lesen von kachel.titel
-    // zum Absturz gebracht).
-    const konzentration = umsatzKonzentration(alleKennzahlen);
-    if (konzentration) kacheln.push(konzentration);
-
-    return kacheln;
-}
-
-// ===== Verteilung nach Wohnort - traegt die Kachel "Kunden gesamt"
-// (Gestaltungsauftrag, Befund: "keine Grafik, die halbe Kachel leer") =====
+// DIE FRAGE, DIE DIESER KOPF BEANTWORTET: "Wer traegt eigentlich den
+// Umsatz - und wie viel von diesen 1014 Datensaetzen ist ueberhaupt
+// Kundschaft?"
 //
-// alleKennzahlen: siehe kundenAufbauen() - traegt seit dieser Aufgabe auch
-// ort ALLER 1014 Kunden (113 davon NULL - siehe "Ohne Adresse" oben, die
-// zaehlt hier bewusst NICHT mit: ein Kunde ohne Adresse hat keinen Ort,
-// den man in einer Wohnort-Verteilung zeigen koennte, und "Ohne Adresse"
-// hat bereits ihre eigene Kachel).
+// Die Liste darunter zeigt hoechstens 200 der 1014 Zeilen (serverseitig
+// begrenzt) und beantwortet damit ueber die Gesamtheit gar nichts. Die
+// Tafel rechnet ueber ALLE 1014 (eigene, schlanke Ladeliste, siehe
+// kundenAufbauen()) - und ihre letzte Spalte stellt die Frage, die eine
+// blosse Zaehlung nie stellen koennte: WIE WEIT LIEGT DER UMSATZANTEIL
+// EINER TARIFGRUPPE UEBER ODER UNTER IHREM KUNDENANTEIL. Das ist eine
+// Abweichung im Sinne der IBCS-Notation, keine zweite Zaehlung, und sie
+// steht in keiner Zeile der Tabelle darunter.
 //
-// GLEICHE FORM wie jede andere Verteilung dieser Oberflaeche (Punkt 1:
-// "eine Verteilung sieht in jedem Bereich gleich aus") - dieselbe Saeulen-
-// Sparkline wie tarifVerteilung() oben, hier ueber Wohnorte statt Tarife,
-// absteigend nach Anzahl (die groesste Gruppe zuerst, aus demselben Grund
-// wie dort) und mit markierIndizes auf dem groessten Balken ("hier
-// hinsehen": Wuerzburg selbst dominiert die Kundschaft, siehe Kommentar
-// bei der 'ort'-Spalte in kundenAufbauen()).
-//
-// gesamtAnzahl bleibt der WERT der Kachel (aus zaehleZeilen(), die echte
-// Gesamtzahl UNABHAENGIG von den hoechstens 200 geladenen Zeilen - siehe
-// Kopfkommentar bei kundenUebersicht()) - die Verteilung ist die
-// ERKLAERUNG dieser Zahl ("aus der die Gesamtzahl entsteht", Auftrag,
-// woertlich als moeglicher Weg genannt), nicht ihr Ersatz.
-function kundenOrtVerteilung(gesamtAnzahl, alleKennzahlen) {
+// ZEILEN SIND DIE FUENF TARIFGRUPPEN, einschliesslich der Gruppe "ohne
+// aktiven Tarif" - die groesste von allen. Sie wegzulassen, weil sie
+// technisch kein Tarif ist, hiesse 604 von 1014 Personen aus dem Kopf zu
+// streichen und ausgerechnet den Befund zu verschweigen, den der Auftrag
+// als "die auffaelligste Zahl des Bereichs" benennt: die 519 Gesperrten
+// stecken fast vollstaendig in dieser einen Zeile, und keine einzige von
+// ihnen ist je gefahren.
+function kundenKopftafel(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKennzahlen) {
     if (!alleKennzahlen || alleKennzahlen.length === 0) return null;
 
-    const zaehlerJeOrt = new Map();
-    for (const z of alleKennzahlen) {
-        if (!z.ort) continue;   // ohne Adresse - eigene Kachel, siehe oben
-        zaehlerJeOrt.set(z.ort, (zaehlerJeOrt.get(z.ort) || 0) + 1);
-    }
-    if (zaehlerJeOrt.size === 0) return null;
-
-    const gruppen = [...zaehlerJeOrt.entries()].sort(([, a], [, b]) => b - a);
-    const [groessterOrt, groessteAnzahl] = gruppen[0];
-    const bezugsgroesse = gesamtAnzahl ?? alleKennzahlen.length;
-    const anteil = Math.round((groessteAnzahl / bezugsgroesse) * 100);
-
-    return {
-        titel: t('tile.customersTotal'),
-        wert: zahlSkaliert(zahlFormat(bezugsgroesse)),
-        grafik: saeulenSparkline(gruppen.map(([, n]) => n),
-            t('hint.locationDistributionAria', {
-                anteil: zahlFormat(anteil), ort: groessterOrt, orteAnzahl: zahlFormat(gruppen.length)
-            }),
-            { aktuellIndex: null, markierIndizes: [0] }),
-        hinweis: t('hint.locationDistributionDetail',
-            { anteil: zahlFormat(anteil), ort: groessterOrt, orteAnzahl: zahlFormat(gruppen.length) })
-    };
-}
-
-// alleKennzahlen: siehe kundenAufbauen() - Zeilen mit status, tarif_code,
-// umsatz_brutto, fahrten_gesamt, registriert_am ALLER 1014 Kunden.
-//
-// GESTALTUNGSAUFTRAG PUNKT 2, woertlich die konkrete Frage: "519 von 1014
-// sind gesperrt. Wer sind die? Seit wann? Haben sie je gefahren?"
-// Nachgerechnet (siehe Bericht): JEDER der 519 gesperrten Kunden hat
-// fahrten_gesamt = 0 - eine Sperrung faellt in diesem Bestand fachlich mit
-// "hat noch nie gebucht" zusammen. Das ist ein echter, ueberpruefbarer
-// Befund dieses Datenstands, keine Vermutung - deshalb hier UNABHAENGIG
-// aus alleKennzahlen nachgerechnet statt einfach als Text behauptet
-// (Hausregel: jede neue Kennzahl gegen die Datenbank nachrechnen). Liefert
-// null, wenn alleKennzahlen leer blieb oder keine gesperrten Zeilen traegt
-// - der Aufrufer faellt dann auf den alten Text zurueck (siehe oben).
-//
-// GESTALTUNGSAUFTRAG, wörtlich der Befund: "519 von 519 Kunden - alle 519
-// noch nie gefahren - dreimal dieselbe Zahl in einem Satz." kundenPhrase
-// TRÄGT die Zahl bereits ("519 Kunden") - ein zusätzliches "n von" davor
-// wiederholte genau diese Zahl nur noch einmal, ohne eine zweite,
-// tatsächlich andere Größe zu nennen (anders als z. B. bei "hint.
-// fullStationsShare" in stationen.js, wo Zähler UND Nenner zwei
-// verschiedene Zahlen sind). hint.blockedNeverRiddenAll/-Some (rahmen.js)
-// nennen die Gesamtzahl deshalb nur noch EINMAL, über kundenPhrase - kein
-// eigenes {n} mehr in beiden Texten.
-function gesperrtNieGefahren(alleKennzahlen, gesperrtAnzahl) {
-    if (!alleKennzahlen || alleKennzahlen.length === 0) return null;
-    const gesperrte = alleKennzahlen.filter((z) => z.status === 'gesperrt');
-    if (gesperrte.length === 0) return null;
-
-    const nieGefahren = gesperrte.filter((z) => !z.fahrten_gesamt);
-    const kundenPhrase = mengeFormat(gesperrtAnzahl, 'kunde');
-
-    // Registrierungsspanne (Punkt 2: "seit wann?") - nur ueber die
-    // tatsaechlich geladenen gesperrten Zeilen, nicht ueber alle 1014.
-    const jahre = gesperrte.map((z) => new Date(z.registriert_am).getFullYear()).sort((a, b) => a - b);
-    const vonJahr = String(jahre[0]);
-    const bisJahr = String(jahre[jahre.length - 1]);
-
-    // alle vs. einige: KEIN hartkodiertes "alle", auch wenn es im
-    // heutigen Bestand fuer jede der 519 Zeilen zutrifft - kaeme morgen
-    // ein einziger gesperrter Kunde mit einer Fahrt dazu, muss der Text
-    // das selbst erkennen, nicht weiter "alle" behaupten.
-    return nieGefahren.length === gesperrte.length
-        ? t('hint.blockedNeverRiddenAll', { kundenPhrase, vonJahr, bisJahr })
-        : t('hint.blockedNeverRiddenSome', { kundenPhrase, nie: zahlFormat(nieGefahren.length) });
-}
-
-// GESTALTUNGSAUFTRAG PUNKT 2: "Sieh selbst nach, was da ist, und wähl
-// aus." tarif_code ist NULL bei einem Kunden ohne aktuell gueltige
-// Mitgliedschaft (v_wawi_kunde, LEFT JOIN auf mitgliedschaft/tarif) -
-// nachgerechnet die groesste der fuenf Gruppen im heutigen Bestand (604
-// von 1014, siehe Bericht), groesser als jeder einzelne echte Tarif. Die
-// Beschriftung dafuer (misc.noMembership, "ohne Mitgliedschaft") gibt es
-// bereits - dieselbe Gruppe, die auswertungenUmsatzKundengruppe() in
-// auswertungen.js unter "tile.notableNoMembership" umsatzseitig zeigt,
-// hier kopfzahlenseitig: EIN Fund, zwei Bereiche, derselbe Begriff statt
-// einer zweiten Erfindung fuer dieselbe Sache.
-function tarifVerteilung(alleKennzahlen) {
-    if (!alleKennzahlen || alleKennzahlen.length === 0) return null;
     const gesamt = alleKennzahlen.length;
 
-    const zaehlerJeTarif = new Map();
-    for (const z of alleKennzahlen) {
-        const schluessel = z.tarif_code || null;
-        zaehlerJeTarif.set(schluessel, (zaehlerJeTarif.get(schluessel) || 0) + 1);
+    const nachTarif = new Map();
+    for (const kunde of alleKennzahlen) {
+        // tarif ist NULL, wenn keine gueltige Mitgliedschaft besteht
+        // (LEFT JOIN in v_wawi_kunde) - eine eigene, benannte Gruppe, kein
+        // uebersprungener Datensatz.
+        const schluessel = kunde.tarif_code || 'OHNE';
+        let eintrag = nachTarif.get(schluessel);
+        if (!eintrag) {
+            eintrag = {
+                schluessel,
+                name: kunde.tarif || t('board.customersNoTariff'),
+                kunden: 0, gefahren: 0, ohneFahrt: 0, gesperrt: 0,
+                umsatz: 0, jahre: new Map()
+            };
+            nachTarif.set(schluessel, eintrag);
+        }
+        eintrag.kunden += 1;
+        eintrag.umsatz += Number(kunde.umsatz_brutto) || 0;
+        if (kunde.status === 'gesperrt') eintrag.gesperrt += 1;
+        else if ((Number(kunde.fahrten_gesamt) || 0) > 0) eintrag.gefahren += 1;
+        else eintrag.ohneFahrt += 1;
+        if (kunde.registriert_am) {
+            const jahr = new Date(kunde.registriert_am).getFullYear();
+            eintrag.jahre.set(jahr, (eintrag.jahre.get(jahr) || 0) + 1);
+        }
     }
 
-    // Absteigend nach Anzahl - "die groesste Gruppe zuerst" ist hier die
-    // aussagekraeftigere Reihenfolge als eine alphabetische Tarifliste,
-    // weil genau DIESE Gruppe (ohne Tarif) den Hinweistext traegt.
-    const gruppen = [...zaehlerJeTarif.entries()].sort(([, a], [, b]) => b - a);
-    const [groessterSchluessel, groessteAnzahl] = gruppen[0];
-    const anteil = Math.round((groessteAnzahl / gesamt) * 100);
-    const kundenPhrase = mengeFormat(gesamt, 'kunde');
+    const gruppen = [...nachTarif.values()].sort((a, b) => b.kunden - a.kunden);
+    const umsatzGesamt = gruppen.reduce((s, g) => s + g.umsatz, 0);
 
-    return {
-        titel: t('tile.tariffDistribution'),
-        wert: `${zahlFormat(anteil)} %`,
-        grafik: saeulenSparkline(gruppen.map(([, n]) => n), t('hint.tariffDistributionAria'), { aktuellIndex: null }),
-        hinweis: groessterSchluessel === null
-            ? t('hint.tariffDistributionDetail', { anteil: zahlFormat(anteil), n: zahlFormat(groessteAnzahl), kundenPhrase })
-            // Randfall (heute nicht der Fall, siehe Bericht): die groesste
-            // Gruppe traegt einen echten Tarif statt "ohne Mitgliedschaft" -
-            // dann reicht der generische "X % von Y"-Baustein, kein
-            // spezifischer "ohne aktiven Tarif"-Text, der hier nicht zutraefe.
-            : t('common.xOfPhrase', { x: `${zahlFormat(anteil)} %`, phrase: kundenPhrase })
+    // Jahresachse EINMAL ueber alle Gruppen aufgespannt, mit LUECKEN ALS
+    // NULL statt als ausgelassener Kategorie: eine Gruppe ohne Zugang im
+    // Jahr 2013 muss dort eine Saeule der Hoehe 0 zeigen, sonst saehe ihre
+    // Reihe kuerzer aus als die der Nachbarzeile und beide waeren nicht
+    // mehr vergleichbar (derselbe Grund wie bei saeulengrafik() in
+    // rahmen.js, dort schon einmal ausdruecklich benannt).
+    const alleJahre = new Set();
+    for (const gruppe of gruppen) for (const jahr of gruppe.jahre.keys()) alleJahre.add(jahr);
+    const jahresachse = [...alleJahre].sort((a, b) => a - b);
+    const reiheVon = (gruppe) => jahresachse.map((jahr) => gruppe.jahre.get(jahr) || 0);
+
+    // VERHAELTNISZAHL AUS SUMMEN (Hausregel): Umsatzanteil ist "Summe der
+    // Rechnungsbetraege dieser Gruppe durch Summe aller Rechnungsbetraege",
+    // NICHT der Mittelwert der Einzelanteile - 604 Kunden mit 0 Euro haetten
+    // sonst dasselbe Gewicht wie 215 mit dreistelligen Betraegen.
+    const umsatzanteil = (gruppe) => (umsatzGesamt ? gruppe.umsatz / umsatzGesamt : 0);
+    const kundenanteil = (gruppe) => gruppe.kunden / gesamt;
+
+    const strukturText = (gruppe) => [
+        gruppe.gefahren ? `${t('board.customersWithRides')} ${zahlFormat(gruppe.gefahren)}` : null,
+        gruppe.ohneFahrt ? `${t('board.customersNoRides')} ${zahlFormat(gruppe.ohneFahrt)}` : null,
+        gruppe.gesperrt ? `${statusAnzeige('gesperrt', true)} ${zahlFormat(gruppe.gesperrt)}` : null
+    ].filter(Boolean).join(', ');
+
+    const gesamtzeile = {
+        summenzeile: true, name: t('col.together'), kunden: gesamt,
+        gefahren: gruppen.reduce((s, g) => s + g.gefahren, 0),
+        ohneFahrt: gruppen.reduce((s, g) => s + g.ohneFahrt, 0),
+        gesperrt: gruppen.reduce((s, g) => s + g.gesperrt, 0),
+        umsatz: umsatzGesamt, jahre: new Map()
     };
-}
 
-// alleUmsaetze (Parametername unveraendert, obwohl die Zeilen inzwischen
-// mehr als nur umsatz_brutto tragen - siehe alleKennzahlen in
-// kundenAufbauen(): nur dieses eine Feld wird hier tatsaechlich gelesen):
-// v_wawi_kunde.umsatz_brutto ist die Summe
-// ALLER Rechnungsbetraege des Kunden (brutto, inkl. USt.), UNABHAENGIG
-// vom Zahlungsstatus (siehe Kommentar an der Sicht, 0018_wawi_sichten.sql).
-//
-// WICHTIG, gegen die Datenbank geprueft (siehe Bericht): das ist NICHT
-// dieselbe Zahl wie die Kontrollzahl der Statuszeile unter "Umsatz nach
-// Radtyp"/"Umsatz nach Kundengruppe" in den Auswertungen (35.454,47 € -
-// NICHT die 35.387,17 € der Kachel "Umsatz gesamt" dort, die bewusst nur
-// die letzten 12 Monate zeigt, siehe umsatzRadtypUebersicht() in
-// auswertungen.js). Jene Summe kommt aus entgeltposition.betrag (den einzelnen Fahrt-
-// Entgelten, netto) über v_wawi_umsatz_radtyp/_kundengruppe; diese hier
-// aus rechnung.betrag_brutto (dem tatsaechlich gestellten Rechnungs-
-// betrag, brutto) über v_wawi_kunde - beide Wege fassen "Umsatz"
-// unterschiedlich (37.262,75 € brutto laut Rechnung gegen 35.454,47 €
-// netto laut Fahrtentgelt, gegen die Datenbank nachgerechnet). Deshalb
-// hier bewusst NIE das Wort "Umsatz" fuer diese Kachel, sondern
-// "Rechnungsvolumen" - zwei echte, aber verschiedene Zahlen unter
-// demselben Namen waeren genau die Art Fehler, vor der Punkt 5 warnt
-// ("rechne jede Zahl unabhaengig gegen die Datenbank nach").
-//
-// TOP-10-%-ANTEIL statt eines Gini-Koeffizienten oder aehnlicher Mass-
-// zahlen: "tragen wenige den Grossteil" (Auftrag, woertlich) beantwortet
-// sich direkt und ohne weitere Erklaerung noetig als "die oberen 10 % der
-// Kundschaft tragen X % des Rechnungsvolumens" - ceil(n * 0.1), nicht
-// floor(): bei 1014 Kunden sind das 102 (nicht 101), lieber einen Kunden
-// zu viel im "oberen Zehntel" als eines zu wenig.
-//
-// GESTALTUNGSAUFTRAG, wörtlich der Befund an dieser Kachel: "vier Zeilen
-// Hinweistext. Das ist kein Hinweis, das ist ein Absatz." Der Hinweis trug
-// bislang FÜNF Zahlen in einem Satz (Zehntel, Kundenzahl, Top-10-Summe,
-// Gesamtsumme, dazu Median UND Mittel) plus einen Klammerzusatz zur
-// Abgrenzung gegenüber den Auswertungen - bei elf-Pixel-Schrift in einer
-// von fünf gleich breiten Kacheln lief das auf mehrere Zeilen hinaus.
-// "Der Hinweis ist eine Zeile, höchstens zwei" (Auftrag) heißt hier: die
-// Kachel behält NUR den Anteil UND seinen echten Bezug (Zehntel-Anzahl,
-// Top-10-Summe von Gesamtsumme - "ein Balken braucht eine Skala"), Median/
-// Mittel und der Auswertungs-Abgrenzungshinweis entfallen aus dem
-// sichtbaren Text. Die Abgrenzung selbst bleibt trotzdem gewahrt: sie
-// steckt bereits im TITEL ("Rechnungsvolumen" statt "Umsatz", siehe
-// Kommentar bei alleUmsaetze oben) - der Hinweis muss die Warnung nicht
-// zusätzlich ausbuchstabieren, wenn der Name selbst schon vor der
-// Verwechslung schützt. Median/Mittel bleiben deshalb unberechnet, keine
-// tote Variable für einen Text, den es nicht mehr gibt.
-function umsatzKonzentration(alleUmsaetze) {
-    if (!alleUmsaetze || alleUmsaetze.length === 0) return null;
+    // Konzentration: welchen Anteil am gesamten Rechnungsvolumen traegt
+    // das oberste Zehntel der Kundschaft? Aus DENSELBEN 1014 Zeilen
+    // gerechnet wie die Tafel selbst, nicht aus einer zweiten Anfrage -
+    // zwei Wege zu derselben Zahl koennten leise auseinanderlaufen.
+    const umsaetzeAbsteigend = alleKennzahlen
+        .map((k) => Number(k.umsatz_brutto) || 0).sort((a, b) => b - a);
+    const zehntel = Math.max(1, Math.ceil(gesamt * 0.1));
+    const top10 = umsaetzeAbsteigend.slice(0, zehntel).reduce((s, w) => s + w, 0);
 
-    const geldFormat = (betrag) => geldFormatZentral(betrag);
-
-    const werteAbsteigend = alleUmsaetze.map((z) => Number(z.umsatz_brutto) || 0).sort((a, b) => b - a);
-    const n = werteAbsteigend.length;
-    const gesamt = werteAbsteigend.reduce((s, w) => s + w, 0);
-    const zehntel = Math.max(1, Math.ceil(n * 0.1));
-    const top10Summe = werteAbsteigend.slice(0, zehntel).reduce((s, w) => s + w, 0);
-    const anteilProzent = gesamt ? zahlFormat(top10Summe / gesamt * 100, { maximumFractionDigits: 1 }) : '0';
+    const orte = new Set(alleKennzahlen.map((k) => k.ort).filter(Boolean));
+    const nachOrt = new Map();
+    for (const kunde of alleKennzahlen) {
+        if (!kunde.ort) continue;
+        nachOrt.set(kunde.ort, (nachOrt.get(kunde.ort) || 0) + 1);
+    }
+    const groessterOrt = [...nachOrt.entries()].sort((a, b) => b[1] - a[1])[0] || null;
 
     return {
-        titel: t('tile.invoiceTop10'),
-        wert: `${anteilProzent} %`,
-        grafik: gesamt ? zellbalken(top10Summe, gesamt) : undefined,
-        hinweis: t('hint.top10Detail', {
-            zehntel: zahlFormat(zehntel), kundenPhrase: mengeFormat(n, 'kunde'),
-            top10: geldFormat(top10Summe), gesamt: geldFormat(gesamt)
+        titel: t('board.customersTitle'),
+        bezug: t('board.customersReference', {
+            kundenPhrase: mengeFormat(gesamtAnzahl ?? gesamt, 'kunde'),
+            gesperrt: zahlFormat(gesperrtAnzahl ?? gesamtzeile.gesperrt),
+            volumen: geldFormatZentral(umsatzGesamt),
+            ort: groessterOrt ? groessterOrt[0] : '?',
+            imOrt: groessterOrt ? zahlFormat(groessterOrt[1]) : '0',
+            ortePhrase: mengeFormat(orte.size, 'ort')
+        }),
+        spalten: [
+            {
+                art: 'rubrik',
+                titel: t('col.tariffGroup'),
+                wert: (z) => z.name,
+                zusatz: (z) => (z.summenzeile || !umsatzGesamt ? null
+                    : t('board.customersRevenueShare', {
+                        anteil: zahlFormat(Math.round(umsatzanteil(z) * 1000) / 10,
+                            { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                    }))
+            },
+            {
+                art: 'groesse',
+                titel: t('col.customers'),
+                einheit: t('unit.persons'),
+                wert: (z) => z.kunden,
+                format: (n) => zahlFormat(n)
+            },
+            {
+                art: 'struktur',
+                titel: t('col.customerMix'),
+                einheit: t('unit.shareOfRow'),
+                auchSumme: true,
+                segmente: (z) => [
+                    { wert: z.gefahren, name: t('board.customersWithRides'), klasse: 'seg-aktiv' },
+                    { wert: z.ohneFahrt, name: t('board.customersNoRides'), klasse: 'seg-ruhend' },
+                    { wert: z.gesperrt, name: statusAnzeige('gesperrt', true), klasse: 'seg-warnung' }
+                ],
+                beschriftung: (z) => t('board.customersMixAria', { name: z.name, aufteilung: strukturText(z) })
+            },
+            {
+                art: 'profil',
+                titel: t('col.signups'),
+                einheit: jahresachse.length
+                    ? `${jahrFormat(jahresachse[0])} - ${jahrFormat(jahresachse[jahresachse.length - 1])}`
+                    : '',
+                reihe: (z) => (z.summenzeile ? null : reiheVon(z)),
+                beschriftung: (z) => {
+                    const reihe = reiheVon(z);
+                    const hoechster = Math.max(...reihe);
+                    return t('board.customersSignupsAria', {
+                        name: z.name, vonJahr: jahrFormat(jahresachse[0]),
+                        bisJahr: jahrFormat(jahresachse[jahresachse.length - 1]),
+                        max: zahlFormat(hoechster),
+                        maxJahr: jahrFormat(jahresachse[reihe.indexOf(hoechster)])
+                    });
+                }
+            },
+            {
+                art: 'abweichung',
+                titel: t('col.revenueDeviation'),
+                einheit: t('unit.percentagePoints'),
+                wert: (z) => (z.summenzeile ? null
+                    : Math.round((umsatzanteil(z) - kundenanteil(z)) * 1000) / 10),
+                format: (n) => abweichungText(n),
+                beschriftung: (z) => t('board.customersDeviationAria', {
+                    name: z.name,
+                    umsatzanteil: zahlFormat(Math.round(umsatzanteil(z) * 1000) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+                    kundenanteil: zahlFormat(Math.round(kundenanteil(z) * 1000) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                })
+            }
+        ],
+        zeilen: gruppen,
+        summe: gesamtzeile,
+        fussnote: t('board.customersFootnote', {
+            zehntel: zahlFormat(zehntel),
+            anteil: umsatzGesamt ? zahlFormat(top10 / umsatzGesamt * 100, { maximumFractionDigits: 1 }) : '0',
+            ohneAdresse: zahlFormat(ohneAdresseAnzahl ?? 0)
         })
     };
 }
@@ -869,8 +755,8 @@ function kundeMaske(kunde) {
         { name: 'telefon',   titel: t('field.telefon'),   wert: kunde.telefon || '',    typ: 'tel' },
         // WARUM GIBT ES KEINE ADRESSE BEI DEN KUNDEN? (Auftraggeber-Frage,
         // Gestaltungsauftrag Punkt 4): 113 von 1014 Kunden haben tatsaechlich
-        // keine hinterlegt (kundenUebersicht() zeigt die Zahl bereits im
-        // Streifen) - die vier Felder darunter waren dafuer bislang einfach
+        // keine hinterlegt (die Fussnote der Kopftafel nennt die Zahl
+        // bereits) - die vier Felder darunter waren dafuer bislang einfach
         // leer, ununterscheidbar von einem Ladefehler ("diese Verwechslung
         // hat in diesem Projekt schon mehrfach Zeit gekostet", Auftrag).
         // Nur fuer GENAU diesen Fall, nicht fuer jeden Kunden: wer eine

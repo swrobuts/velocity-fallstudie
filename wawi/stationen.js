@@ -15,11 +15,13 @@
 //      Fremdschluessel statt eines Textvergleichs auf
 //      v_wawi_flotte.standort - siehe Kopfkommentar der Sicht in
 //      0018_wawi_sichten.sql).
-//   2. "vermisse auch die Auslastung der Stellplätze als Donutchart" (in
-//      der Uebersicht) und "ein Donut-Chart fuer die Belegung ... 100 %
-//      ist die Kapazitaet" (in den Details) - donut() in rahmen.js,
-//      zweimal verwendet: netzweit in stationenUebersicht(), je Station
-//      in stationBelegungAbschnitt().
+//   2. "ein Donut-Chart fuer die Belegung ... 100 % ist die Kapazitaet"
+//      (in den Details) - donut() in rahmen.js, in
+//      stationBelegungAbschnitt(). Der zweite, netzweite Donut im Kopf
+//      ist mit dem Kachelband entfallen: die Kopftafel zeigt die Belegung
+//      JEDER der zehn Stationen als Strukturbalken auf gemeinsamer Skala
+//      und darunter die Zeile "Zusammen" - eine einzelne Netzzahl im Ring
+//      waere daneben nur noch dieselbe Zahl ein zweites Mal.
 //   3. "den Abgang/Zugang nach Zeitslots als Grafik sehen" -
 //      stationVerkehrAbschnitt() unten, aus
 //      v_wawi_stationsverkehr_zeitfenster (Zweistundenbloecke, Werktag/
@@ -147,7 +149,7 @@ async function stationenAufbauen() {
         // Sicht kennt sie. Dieselbe Sicht wie stationsauslastungZeigen()
         // in auswertungen.js, hier zusaetzlich IM STATIONEN-KOPF, wo der
         // Auftrag sie ausdruecklich vermisst.
-        ladeListe('v_wawi_stationsauslastung', 'station_id, saldo')
+        ladeListe('v_wawi_stationsauslastung', 'station_id, abgaenge, zugaenge, saldo')
     ]);
 
     const fehler = letzterLadeFehler('v_wawi_station');
@@ -155,7 +157,7 @@ async function stationenAufbauen() {
         // meldeVorgang statt melde: ein inzwischen veralteter Aufruf
         // (siehe Kommentar dort) meldet auch seinen eigenen Ladefehler
         // nicht mehr.
-        zeigeUebersicht(vorgang, []);
+        zeigeKopftafel(vorgang, null);
         meldeVorgang(vorgang, t('msg.stationsLoadFailed', { fehler }), 'schlecht');
         return;
     }
@@ -166,14 +168,14 @@ async function stationenAufbauen() {
     // Stationen, wie voll" bleibt beantwortbar). Die jeweilige
     // Detailmaske bzw. die Karte meldet einen solchen Fehler stattdessen
     // selbst, siehe stationRaederAbschnitt()/stationVerkehrAbschnitt()
-    // unten; stationenUebersicht() unten laesst die Saldo-Kachel bei
-    // einem Ladefehler dort schlicht weg (siehe dort).
+    // unten; stationenKopftafel() unten laesst die Tagesgang- bzw. die
+    // Saldospalte bei einem Ladefehler dort schlicht weg (siehe dort).
     stationenRaederAlle = raeder;
     stationenVerkehrAlle = verkehr;
     stationenKundenorteAlle = kundenorte;
     stationenAlle = stationen;
 
-    zeigeUebersicht(vorgang, stationenUebersicht(stationen, auslastung));
+    zeigeKopftafel(vorgang, stationenKopftafel(stationen, verkehr, auslastung));
 
     // KEIN Filter hier (Gestaltungsauftrag, Punkt 2, woertlich): "bei
     // zehn Zeilen braucht es keinen Filter. Bau keinen. Ein
@@ -239,318 +241,168 @@ function stationenStatuszeileText(stationen) {
         : mengeFormat(stationen.length, 'station');
 }
 
-// ===== Uebersicht (Gestaltungsauftrag, Punkt 1 und Punkt 2) =====
+// ===== Kopftafel der Stationen =====
 //
-// "Eine volle Station nimmt keine Rueckgabe an - das ist die wichtigste
-// Zahl des Bereichs" (Auftrag) - deshalb an zweiter Stelle, direkt nach
-// dem blossen Bestand, mit den Namen der betroffenen Stationen im
-// Hinweis (dieselbe Machart wie "Volle Stationen" im Reiter
-// "Stationsauslastung" von auswertungen.js - dort aus
-// v_wawi_stationsauslastung.fuellstand, hier unabhaengig aus
-// v_wawi_station.frei/.kapazitaet, weil dieser Bereich ausschliesslich
-// diese eine Sicht liest, siehe Dateikopf).
-function stationenUebersicht(stationen, auslastung) {
-    const gesamt = stationen.length;
+// DIE FRAGE, DIE DIESER KOPF BEANTWORTET: "Welche Station laeuft ueber,
+// welche laeuft leer, wann wird sie ueberhaupt gebraucht - und wo muss
+// heute jemand Raeder umsetzen?"
+//
+// Die Liste darunter fuehrt dieselben zehn Stationen, zeigt aber je
+// Station nur einen Momentwert (belegt von Kapazitaet). Drei Dinge, die
+// ein Disponent morgens braucht, stehen dort nicht und koennen dort auch
+// nicht stehen, weil sie aus zwei weiteren Sichten kommen:
+//
+//   - der TAGESGANG (wann diese Station gefahren wird - eine Reihe von
+//     zwoelf Zweistundenbloecken, keine einzelne Zahl),
+//   - der SALDO (ob sie ueber die gesamte Historie Raeder ansammelt oder
+//     verliert - "die eigentliche Geschichte dieses Bereichs", Auftrag),
+//   - und beides IM VERGLEICH ueber alle zehn Stationen, auf EINER Skala.
+//
+// Genau dafuer sind die zehn Zeilen gleich gebaut: zehn Tagesgaenge
+// untereinander auf derselben Achse sind Tuftes small multiples - man
+// sieht auf einen Blick, dass alle zehn Stationen denselben Rhythmus
+// haben (Morgenspitze, Mittag, starke Nachmittagsspitze) und sich fast
+// nur im Saldo unterscheiden. Diese Aussage kann keine einzelne Kachel
+// treffen, egal wie gross ihre Zahl ist.
+function stationenKopftafel(stationen, verkehr, auslastung) {
+    if (!stationen || stationen.length === 0) return null;
+
     const gesamtKapazitaet = stationen.reduce((s, z) => s + z.kapazitaet, 0);
     const gesamtBelegt = stationen.reduce((s, z) => s + z.belegt, 0);
-    const volle = stationen.filter((s) => s.frei === 0);
-    const stillgelegt = stationen.filter((s) => !s.in_betrieb).length;
 
-    // EINMAL berechnet (Stationsreihenfolge, nicht sortiert) - sowohl die
-    // Sparkline der ersten Kachel als auch die Min/Max-Werte in ihrem
-    // Hinweis brauchen dieselbe Reihe; eine zweite, eigene Berechnung
-    // koennte sonst leise auseinanderlaufen (Hausregel: jede Zahl EINMAL
-    // rechnen, nicht mehrfach mit demselben Ergebnis erhofft).
-    const fuellstaendeJeStation = stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0));
-    const minFuellstandAlle = Math.round(Math.min(...fuellstaendeJeStation) * 100);
-    const maxFuellstandAlle = Math.round(Math.max(...fuellstaendeJeStation) * 100);
+    // Saldo und Abgaenge je Station aus v_wawi_stationsauslastung - eine
+    // ueber die gesamte Historie gezaehlte Groesse, die sich aus
+    // station.belegt/.frei (reinen Momentanwerten) nicht herleiten liesse.
+    // Faellt diese Sicht aus (Ladefehler), entfallen die betroffenen
+    // Spalten, nicht die ganze Tafel: "lieber eine Spalte weniger als
+    // eine erfundene" - dieselbe Haltung wie bisher bei der Saldo-Kachel.
+    const auslastungFehler = Boolean(letzterLadeFehler('v_wawi_stationsauslastung'));
+    const nachId = new Map((auslastung || []).map((a) => [a.station_id, a]));
+    const hatSaldo = !auslastungFehler && nachId.size > 0;
 
-    // GESTALTUNGSAUFTRAG, wörtlich: "die zehn Säulen sind nicht erklärt.
-    // Der Hinweis sagt 'alle in Betrieb' - das erklärt die Säulen nicht.
-    // Was zeigen sie? Füllstand je Station? Dann muss es dastehen." Der
-    // sichtbare Hinweis beschrieb bislang etwas ANDERES als die Grafik
-    // (den Betriebsstatus, nicht den Füllstand) - genau umgekehrt zum
-    // Schwesterreiter "Stationsauslastung" in auswertungen.js, wo
-    // hint.fillLevelPerStation schon immer der SICHTBARE Hinweis ist,
-    // nicht nur das aria-label. Hier jetzt dieselbe Aufteilung: der
-    // sichtbare Hinweis beschreibt IMMER die Grafik (Größe + Spanne), der
-    // Betriebsstatus (die einzige Zahl, die sich zwischen den Stationen
-    // tatsächlich ändern kann) wird NUR angehängt, wenn er von der
-    // Erwartung abweicht ("alle in Betrieb" war ohnehin reiner Zierrat,
-    // siehe die entsprechende Regel bei einem wirkungslosen Filter).
-    const fuellstandHinweis = t('hint.fillLevelPerStationRange',
-        { min: zahlFormat(minFuellstandAlle), max: zahlFormat(maxFuellstandAlle) });
+    // Tagesgang: die zwoelf Zweistundenbloecke EINES Werktags, je Station.
+    // Nur 'werktag' (nicht Wochenende): zwei Reihen je Zeile waeren zwei
+    // Grafiken in einer Zelle und damit gerade nicht mehr small multiples;
+    // der Werktag traegt die Spitzen, um die es der Disposition geht.
+    // Wochenende steht unveraendert in der Detailmaske jeder Station
+    // (stationVerkehrAbschnitt() weiter unten) - der Kopf zeigt den
+    // Vergleich, die Maske die Tiefe.
+    const verkehrFehler = Boolean(letzterLadeFehler('v_wawi_stationsverkehr_zeitfenster'));
+    const tagesgang = new Map();
+    if (!verkehrFehler) {
+        for (const zeile of verkehr || []) {
+            if (zeile.wochentyp !== 'werktag') continue;
+            let reihe = tagesgang.get(zeile.station_id);
+            if (!reihe) { reihe = new Array(12).fill(0); tagesgang.set(zeile.station_id, reihe); }
+            reihe[Math.floor(zeile.zeitfenster_start_stunde / 2)] = Number(zeile.abgaenge_je_tag) || 0;
+        }
+    }
+    const hatTagesgang = tagesgang.size > 0;
 
-    const kacheln = [
+    const stundeText = (index) => `${zahlFormat(index * 2)}-${zahlFormat(index * 2 + 2)}`;
+    const spitzeVon = (reihe) => {
+        const hoechster = Math.max(...reihe);
+        return { wert: hoechster, index: reihe.indexOf(hoechster) };
+    };
+
+    const spalten = [
         {
-            titel: t('tile.stations'),
-            wert: zahlSkaliert(String(gesamt)),
-            // Small multiples (Tufte): Fuellstand jeder einzelnen
-            // Station, sortiert nach Stationsnummer wie die Tabelle
-            // darunter - dieselbe Idee wie stationsauslastungUebersicht()
-            // in auswertungen.js, hier aus belegt/kapazitaet statt aus
-            // der dortigen eigenen fuellstand-Spalte berechnet.
-            // aktuellIndex: null - "die letzte Station nach Nummer" ist
-            // kein aktueller Zeitraum (siehe Kopfkommentar bei
-            // saeulenSparkline() in rahmen.js). aria-label TRAEGT die
-            // Min/Max-Spanne (hint.fillLevelBetween, wie im Schwester-
-            // reiter) - der sichtbare Hinweis darunter sagt dieselbe
-            // Spanne knapper, siehe fuellstandHinweis oben.
-            grafik: saeulenSparkline(fuellstaendeJeStation,
-                t('hint.fillLevelBetween', {
-                    stationenPhrase: mengeFormat(gesamt, 'station'),
-                    min: `${zahlFormat(minFuellstandAlle)} %`, max: `${zahlFormat(maxFuellstandAlle)} %`
-                }),
-                { aktuellIndex: null }
-            ),
-            hinweis: stillgelegt
-                ? `${fuellstandHinweis} · ${t('hint.decommissionedCount', { n: zahlFormat(stillgelegt) })}`
-                : fuellstandHinweis
+            art: 'rubrik',
+            titel: t('col.station'),
+            wert: (z) => z.name,
+            zusatz: (z) => (z.summenzeile ? null : z.ort)
+        },
+        {
+            art: 'groesse',
+            titel: t('col.capacity'),
+            einheit: t('unit.dockingPoints'),
+            wert: (z) => z.kapazitaet,
+            format: (n) => zahlFormat(n)
+        },
+        {
+            art: 'struktur',
+            titel: t('col.occupancy'),
+            einheit: t('unit.shareOfRow'),
+            auchSumme: true,
+            segmente: (z) => [
+                // Eine VOLLE Station traegt ihren Balken in --warnung-text
+                // statt in --marine: dort passt kein zurueckgegebenes Rad
+                // mehr hinein, und das ist eine Handlungsaufforderung, kein
+                // Bestwert. Dieselbe Bedeutung, die die Farbe in dieser
+                // Oberflaeche ueberall traegt.
+                { wert: z.belegt, name: t('col.occupied'), klasse: z.frei === 0 ? 'seg-warnung' : 'seg-aktiv' },
+                { wert: z.frei, name: t('col.free'), klasse: 'seg-ruhend' }
+            ],
+            beschriftung: (z) => t('board.stationOccupancyAria', {
+                name: z.name, belegt: zahlFormat(z.belegt), kapazitaet: zahlFormat(z.kapazitaet),
+                prozent: zahlFormat(z.kapazitaet ? Math.round((z.belegt / z.kapazitaet) * 100) : 0)
+            })
         }
     ];
 
-    if (volle.length > 0) {
-        const wert = document.createElement('span');
-        wert.className = 'ton-warnung';
-        wert.textContent = String(volle.length);
-        kacheln.push({
-            titel: t('tile.fullStations'),
-            wert,
-            grafik: zellbalken(volle.length, gesamt, null, { farbe: 'var(--warnung-text)' }),
-            // Echter Bezug (Gestaltungsauftrag Punkt 1: "2 von 10 - dann
-            // ist es ein Anteil und darf wie einer aussehen") direkt im
-            // Text, statt sich auf die "Stationen"-Kachel davor zu
-            // verlassen, um den Nenner zu erschliessen.
-            hinweis: t('hint.fullStationsShare',
-                { n: zahlFormat(volle.length), stationenPhrase: mengeFormat(gesamt, 'station'),
-                  liste: volle.map((s) => s.name).join(', ') })
+    if (hatTagesgang) {
+        spalten.push({
+            art: 'profil',
+            titel: t('col.dailyRhythm'),
+            einheit: t('unit.departuresPerWorkday'),
+            reihe: (z) => tagesgang.get(z.station_id) || null,
+            beschriftung: (z) => {
+                const reihe = tagesgang.get(z.station_id) || [];
+                const spitze = spitzeVon(reihe);
+                return t('board.stationRhythmAria', {
+                    name: z.name, stunde: stundeText(spitze.index),
+                    wert: zahlFormat(spitze.wert, { maximumFractionDigits: 2 })
+                });
+            }
         });
     }
 
-    // ===== Donut fuer die Gesamtauslastung (Gestaltungsauftrag Punkt 2,
-    // wörtlich: "vermisse auch die Auslastung der Stellplätze als
-    // Donutchart") =====
-    //
-    // 100 % IST HIER DIE GESAMTKAPAZITAET DES GANZEN NETZES, NICHT EINER
-    // EINZELNEN STATION (Auftrag, ausdruecklich als zu entscheidende
-    // Frage benannt): der Streifen steht UEBER der ganzen Liste aller
-    // zehn Stationen, seine Kennzahl kann sich deshalb nur auf das ganze
-    // Netz beziehen - fuer EINE Station gibt es den zweiten Donut in
-    // stationBelegungAbschnitt() weiter unten. Um jede Verwechslung
-    // auszuschliessen, sagt das ausdrueckliche BOTH der Kacheltitel ("-
-    // alle Stationen") UND der Hinweistext darunter UND das aria-label
-    // des Donuts selbst dieselbe Einordnung - dreifach, nicht nur einmal,
-    // weil genau diese Verwechslung (eine Station vs. das ganze Netz) der
-    // Auftrag ausdruecklich als Fallstrick benennt.
-    //
-    // kachel.wert bleibt LEER: die Zahl steht bereits IM Donut (Auftrag:
-    // "ein Donut ohne Zahl ist eine Schaetzaufgabe" - donut() in
-    // rahmen.js zeichnet Prozent und Bruch deshalb selbst). Eine zweite,
-    // separate Zahl daneben waere dieselbe Zahl zweimal, nicht eine
-    // zusaetzliche Information - anders als bei der Saeulen-Sparkline
-    // oben, wo "10" (die Stationszahl) und die Sparkline (der Fuellstand
-    // JEDER einzelnen Station) tatsaechlich zwei verschiedene Aussagen
-    // sind.
-    const netzFuellstandProzent = gesamtKapazitaet ? Math.round((gesamtBelegt / gesamtKapazitaet) * 100) : 0;
-    const netzBeschriftung = t('hint.networkOccupancyAria', {
-        stationenPhrase: mengeFormat(gesamt, 'station'), belegt: zahlFormat(gesamtBelegt),
-        kapazitaet: zahlFormat(gesamtKapazitaet), prozent: zahlFormat(netzFuellstandProzent) });
-    kacheln.push({
-        titel: t('tile.networkOccupancy'),
-        wert: '',
-        grafik: donut(gesamtBelegt, gesamtKapazitaet, netzBeschriftung, {
-            durchmesser: 84,
-            dicke: 11,
-            bruch: `${gesamtBelegt} / ${gesamtKapazitaet}`
-        }),
-        hinweis: t('hint.networkOccupancyDetail',
-            { belegt: zahlFormat(gesamtBelegt), kapazitaet: zahlFormat(gesamtKapazitaet), stationenPhrase: mengeFormat(gesamt, 'station') })
-    });
-
-    // ===== Verteilung (Gestaltungsauftrag Punkt 5) =====
-    //
-    // "Wie verteilen sich die Stationen zwischen leer und voll?" -
-    // woertlich eines der drei Beispiele des Auftrags. "Gesamtbelegung"
-    // oben beantwortet nur, wie voll das NETZ ALS GANZES ist (kapazitaets-
-    // gewichtet); das sagt nichts darueber, ob alle zehn Stationen nahe
-    // beieinander liegen oder weit auseinanderklaffen. Median NEBEN der
-    // Spannweite (Auftrag, woertlich als Beispiel genannt) statt eines
-    // Histogramms: bei nur zehn Stationen haette ein Histogramm mit
-    // seinen ueblichen 5-10 Kaesten kaum mehr als eine Station je Kasten
-    // und waere fuer diese Groessenordnung Uebertreibung, waehrend
-    // Spannweite+Median die Frage direkt beantworten. Rein aus den
-    // bereits geladenen Zeilen berechnet, KEINE zusaetzliche Abfrage.
-    // Sortierte KOPIE der oben schon berechneten Reihe (nicht neu aus
-    // stationen hergeleitet - dieselbe Zahl, zweimal gebraucht, EINMAL
-    // gerechnet).
-    const fuellstaendeSortiert = [...fuellstaendeJeStation].sort((a, b) => a - b);
-    const minFuellstand = fuellstaendeSortiert[0];
-    const maxFuellstand = fuellstaendeSortiert[fuellstaendeSortiert.length - 1];
-    const mitteIndex = Math.floor((fuellstaendeSortiert.length - 1) / 2);
-    const medianFuellstand = fuellstaendeSortiert.length % 2 === 1
-        ? fuellstaendeSortiert[mitteIndex]
-        : (fuellstaendeSortiert[mitteIndex] + fuellstaendeSortiert[mitteIndex + 1]) / 2;
-    const leer = stationen.filter((s) => s.belegt === 0).length;
-    const minProzent = Math.round(minFuellstand * 100);
-    const maxProzent = Math.round(maxFuellstand * 100);
-    const medianProzent = Math.round(medianFuellstand * 100);
-    kacheln.push({
-        titel: t('tile.fillRange'),
-        wert: `${zahlFormat(minProzent)}–${zahlFormat(maxProzent)} %`,
-        // GESTALTUNGSAUFTRAG, wörtlich: "gar keine Grafik. Ausgerechnet
-        // eine Spannweite, die man zeichnen könnte." stationenSpannweite-
-        // Grafik() (unten in dieser Datei) zeichnet Minimum, Median und
-        // Maximum auf einer FESTEN 0-100-%-Skala - derselbe Grundsatz wie
-        // bei saeulenSparkline()/saeulengrafik() in rahmen.js (keine
-        // abgeschnittene Achse), hier als Band statt als Säulen, weil eine
-        // Spannweite eine andere Form ist als ein Verlauf über zehn
-        // Einzelwerte (die zeigt die "Stationen"-Kachel bereits).
-        grafik: stationenSpannweiteGrafik(minFuellstand, medianFuellstand, maxFuellstand,
-            t('hint.fillRangeChartAria', {
-                stationenPhrase: mengeFormat(gesamt, 'station'),
-                min: zahlFormat(minProzent), max: zahlFormat(maxProzent), median: zahlFormat(medianProzent)
-            })),
-        hinweis: t('hint.fillRangeDetail', {
-            median: zahlFormat(medianProzent), voll: zahlFormat(volle.length),
-            stationenPhrase: mengeFormat(gesamt, 'station'),
-            leerZusatz: leer ? t('hint.andEmptyCount', { n: zahlFormat(leer), stationenPhrase: mengeFormat(gesamt, 'station') }) : t('hint.noneEmpty')
-        })
-    });
-
-    // ===== Größtes Ungleichgewicht (Gestaltungsauftrag, wörtlich: "Der
-    // Saldo ist die eigentliche Geschichte dieses Bereichs ... Das ist die
-    // Frage, mit der ein Disponent morgens hierher kommt - und sie steht
-    // heute nirgends im Kopf.") =====
-    //
-    // saldo (zugaenge minus abgaenge, siehe v_wawi_stationsauslastung in
-    // 0018_wawi_sichten.sql) kommt aus einer FÜNFTEN, eigens dafür
-    // geladenen Sicht (siehe stationenAufbauen()) - weder station.belegt
-    // noch .frei (reine Momentanwerte) könnten diese über die gesamte
-    // Historie gezählte Größe herleiten. Größte ABSOLUTE Abweichung, NICHT
-    // (wie extremwert(..., true) im Schwesterreiter von auswertungen.js)
-    // immer nur der kleinste, also negativste Wert: eine Station, die
-    // Räder in großem Stil ANSAMMELT (Sanderau, +122 im heutigen Bestand),
-    // ist für die Disposition ebenso eine "Frage" wie eine, die sie
-    // verliert (Zellerau, -65) - der Auftrag nennt ausdrücklich BEIDE
-    // Enden als "die Frage". Bei einem Gleichstand zweier Beträge (z. B.
-    // +50/-50) gewinnt die ZUERST gefundene (niedrigster Stationsindex) -
-    // ein beliebiger, aber deterministischer Tiebreak, kein Zufallswert.
-    if (letzterLadeFehler('v_wawi_stationsauslastung')) {
-        // Ladefehler nicht stumm verschlucken, aber auch nicht die ganze
-        // Übersicht blockieren (dieselbe Haltung wie bei Rädern/Verkehr/
-        // Kundenorten oben) - diese eine Kachel entfällt schlicht.
-    } else if (auslastung && auslastung.length > 0) {
-        const saldoNachId = new Map(auslastung.map((a) => [a.station_id, a.saldo]));
-        const stationenMitSaldo = stationen.filter((s) => saldoNachId.has(s.station_id));
-        if (stationenMitSaldo.length > 0) {
-            const saldi = stationenMitSaldo.map((s) => saldoNachId.get(s.station_id));
-            let extremIndex = 0;
-            saldi.forEach((s, i) => { if (Math.abs(s) > Math.abs(saldi[extremIndex])) extremIndex = i; });
-            const schwaechsteStation = stationenMitSaldo[extremIndex];
-            const schwaechsterSaldo = saldi[extremIndex];
-            const saldoText = schwaechsterSaldo > 0 ? `+${zahlFormat(schwaechsterSaldo)}` : zahlFormat(schwaechsterSaldo);
-            kacheln.push({
-                titel: t('tile.biggestImbalance'),
-                wert: schwaechsteStation.name,
-                grafik: saeulenSparkline(saldi, t('hint.saldoChartAria', {
-                    stationenPhrase: mengeFormat(stationenMitSaldo.length, 'station'),
-                    min: zahlFormat(Math.min(...saldi)), max: zahlFormat(Math.max(...saldi)),
-                    name: schwaechsteStation.name
-                }), { markierIndizes: [extremIndex], aktuellIndex: null }),
-                hinweis: schwaechsterSaldo < 0
-                    ? t('hint.worstStationBalance', { saldo: saldoText })
-                    : t('hint.stationCollectsBalance', { saldo: saldoText })
-            });
-        }
+    if (hatSaldo) {
+        spalten.push({
+            art: 'abweichung',
+            titel: t('col.balance'),
+            einheit: t('unit.ridesArrivalsMinusDepartures'),
+            wert: (z) => (z.summenzeile ? null : (nachId.get(z.station_id)?.saldo ?? null)),
+            format: (n) => abweichungText(n, 0),
+            beschriftung: (z) => {
+                const eintrag = nachId.get(z.station_id) || {};
+                return t('board.stationBalanceAria', {
+                    name: z.name, zugaenge: zahlFormat(eintrag.zugaenge ?? 0),
+                    abgaenge: zahlFormat(eintrag.abgaenge ?? 0), saldo: zahlFormat(eintrag.saldo ?? 0)
+                });
+            }
+        });
     }
 
-    return kacheln;
-}
+    const abgaengeAlle = hatSaldo
+        ? stationen.map((s) => nachId.get(s.station_id)?.abgaenge).filter((n) => n != null)
+        : [];
 
-// ===== Fuellstand-Spannweite: eigene kleine Bandgrafik =====
-//
-// GESTALTUNGSAUFTRAG, wörtlich: "FÜLLSTAND-SPANNWEITE 30-70 % - gar keine
-// Grafik. Ausgerechnet eine Spannweite, die man zeichnen könnte." Kein
-// neuer rahmen.js-Baustein (dieselbe Ueberlegung wie bei
-// zeitfensterDivergenzGrafik() weiter unten): eine Spannweite mit Median
-// hat innerhalb der heutigen fuenf Bereiche nur diesen einen Verbraucher -
-// anders als donut()/saeulenSparkline()/zellbalken(), die der Auftrag
-// ausdruecklich als GETEILTE Bausteine verlangt, weil mehrere Bereiche sie
-// brauchen (siehe deren Kopfkommentare in rahmen.js).
-//
-// FESTE SKALA 0-100 % (keine abgeschnittene Achse - dieselbe Regel wie bei
-// saeulenSparkline()/saeulengrafik() in rahmen.js): der Fuellstand ist
-// fachlich auf [0, 100 %] begrenzt. Eine aus minAnteil/maxAnteil selbst
-// abgeleitete Achse liesse ein eng beieinanderliegendes Netz (30-40 %)
-// genauso breit erscheinen wie ein weit gespreiztes (0-100 %) - genau die
-// Verzerrung, die die Kachel beheben soll ("wie weit liegen die Stationen
-// auseinander").
-//
-// minAnteil/medianAnteil/maxAnteil: Anteile 0..1 (wie ueberall sonst in
-// dieser Datei), NICHT Prozentzahlen - der Aufrufer rundet fuer Text
-// separat, diese Funktion rechnet auf der ungerundeten Skala.
-function stationenSpannweiteGrafik(minAnteil, medianAnteil, maxAnteil, beschriftung) {
-    const breite = 168, hoehe = 44;
-    const svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
-    svg.setAttribute('width', breite);
-    svg.setAttribute('height', hoehe);
-    svg.setAttribute('preserveAspectRatio', 'none');
-    svg.classList.add('fuellstandspanne');
-    svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', beschriftung);
-
-    const mitteY = hoehe / 2;
-    // 4px Luft links/rechts, damit die Ticks bei 0 % und 100 % nicht auf
-    // der Kontur des <svg> liegen (dieselbe Ueberlegung wie der 1px-Rand
-    // bei saeulenSparkline() in rahmen.js).
-    const x = (anteil) => 4 + Math.max(0, Math.min(1, anteil)) * (breite - 8);
-
-    const grundlinie = document.createElementNS(SVG_NS, 'line');
-    grundlinie.setAttribute('x1', x(0).toFixed(1));
-    grundlinie.setAttribute('x2', x(1).toFixed(1));
-    grundlinie.setAttribute('y1', mitteY.toFixed(1));
-    grundlinie.setAttribute('y2', mitteY.toFixed(1));
-    grundlinie.setAttribute('class', 'fuellstandspanne-grundlinie');
-    svg.append(grundlinie);
-
-    // 0/50/100-%-Ticks, rein orientierend (aria-hidden) - dieselbe
-    // Zurueckhaltung wie die y-Achse bei saeulengrafik() in rahmen.js: die
-    // genauen Zahlen stehen bereits im Kachelwert und im Hinweis.
-    [0, 0.5, 1].forEach((anteil) => {
-        const tick = document.createElementNS(SVG_NS, 'line');
-        tick.setAttribute('x1', x(anteil).toFixed(1));
-        tick.setAttribute('x2', x(anteil).toFixed(1));
-        tick.setAttribute('y1', (mitteY - 4).toFixed(1));
-        tick.setAttribute('y2', (mitteY + 4).toFixed(1));
-        tick.setAttribute('class', 'fuellstandspanne-tick');
-        tick.setAttribute('aria-hidden', 'true');
-        svg.append(tick);
-    });
-
-    // Das Band selbst (Minimum bis Maximum) - die eigentliche Aussage der
-    // Kachel, auf derselben festen Skala wie die Ticks.
-    const band = document.createElementNS(SVG_NS, 'rect');
-    band.setAttribute('x', x(minAnteil).toFixed(1));
-    band.setAttribute('y', (mitteY - 3).toFixed(1));
-    band.setAttribute('width', Math.max(0, x(maxAnteil) - x(minAnteil)).toFixed(1));
-    band.setAttribute('height', 6);
-    band.setAttribute('class', 'fuellstandspanne-band');
-    svg.append(band);
-
-    // Median als eigener, hoeherer Strich - dieselbe Farbe wie das Band
-    // (kein zweiter Farbwert fuer denselben neutralen "hier ist ein
-    // Wert"-Zweck), aber durch die groessere Hoehe klar vom Band
-    // unterscheidbar, auch wenn Median und ein Bandende zusammenfallen.
-    const median = document.createElementNS(SVG_NS, 'line');
-    median.setAttribute('x1', x(medianAnteil).toFixed(1));
-    median.setAttribute('x2', x(medianAnteil).toFixed(1));
-    median.setAttribute('y1', (mitteY - 9).toFixed(1));
-    median.setAttribute('y2', (mitteY + 9).toFixed(1));
-    median.setAttribute('class', 'fuellstandspanne-median');
-    svg.append(median);
-
-    return svg;
+    return {
+        titel: t('board.stationsTitle'),
+        bezug: t('board.stationsReference', {
+            stationenPhrase: mengeFormat(stationen.length, 'station'),
+            belegt: zahlFormat(gesamtBelegt), kapazitaet: zahlFormat(gesamtKapazitaet),
+            prozent: zahlFormat(gesamtKapazitaet ? Math.round((gesamtBelegt / gesamtKapazitaet) * 100) : 0)
+        }),
+        spalten,
+        zeilen: stationen,
+        summe: {
+            summenzeile: true, name: t('col.together'),
+            kapazitaet: gesamtKapazitaet, belegt: gesamtBelegt, frei: gesamtKapazitaet - gesamtBelegt
+        },
+        // DER BEFUND, DEN DIE TAFEL ZEIGT, IN EINEM SATZ: die Nachfrage ist
+        // ueber alle zehn Stationen fast gleich (die Spanne der Abgaenge ist
+        // schmal), die Unterschiede stecken ausschliesslich im Saldo. Genau
+        // das ist der Grund, warum die Groessenspalte hier die Kapazitaet
+        // zeigt und nicht die Fahrtenzahl: zehn nahezu gleich lange Balken
+        // waeren eine wahre, aber nutzlose Grafik.
+        fussnote: abgaengeAlle.length > 0
+            ? t('board.stationsFootnote', {
+                min: zahlFormat(Math.min(...abgaengeAlle)), max: zahlFormat(Math.max(...abgaengeAlle))
+            })
+            : null
+    };
 }
 
 function stationMaske(station) {
@@ -626,12 +478,11 @@ function stationMaske(station) {
 //
 // "Wenn ich auf die Details einer Station klicke, will ich da ein
 // Donut-Chart fuer die Belegung sehen, 100 % ist die Kapazitaet" -
-// woertlich der Auftrag. Anders als der Netz-Donut in
-// stationenUebersicht() oben ist die Skala hier fuer JEDE Station eine
+// woertlich der Auftrag. Die Skala ist hier fuer JEDE Station eine
 // ANDERE Zahl (ihre eigene Kapazitaet) - der Donut sagt das selbst in
 // seinem aria-label, damit niemand die 100 % dieser einen Station mit den
-// 100 % des ganzen Netzes verwechselt (derselbe Fallstrick wie oben, hier
-// aus der anderen Richtung benannt).
+// 100 % des ganzen Netzes verwechselt, das die Kopftafel am Kopf der
+// Liste in ihrer Zeile "Zusammen" ausweist.
 function stationBelegungAbschnitt(station) {
     const abschnitt = document.createElement('section');
     abschnitt.className = 'stationbelegung';
