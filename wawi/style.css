@@ -346,6 +346,24 @@ button {
   font-weight: 400;
 }
 
+/* "VeloCity" ist jetzt ein Verweis nach bikes.butscher.cloud (siehe
+   index.html) - color:inherit haelt ihn im selben Weiss wie den Rest
+   der Kopfleiste (Punkt 1 dieses Auftrags: Farbe ist in dieser
+   Warenwirtschaft kein Dekormittel, ein blauer Standard-Linkfarbton
+   ohne eigene Bedeutung waere genau das). Die Unterstreichung UNGEFRAGT
+   sichtbar (nicht erst bei :hover) macht ihn "als solcher erkennbar"
+   (Auftrag) - auch fuer eine Beruehrbedienung ohne Hover-Zustand.
+   text-decoration-color: currentColor (Vorgabe) -> dieselbe bereits
+   gemessene Weiss-auf-Marine-Lesbarkeit wie der Fliesstext selbst, ohne
+   eine zweite, unvermessene Farbe einzufuehren. Der sichtbare
+   Tastaturfokus kommt unveraendert von der globalen :focus-visible-Regel
+   weiter oben (--rot), wie schon bei .profilknopf. */
+.wortmarke-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .wortmarke-produkt {
   font-weight: 700;
 }
@@ -2992,13 +3010,13 @@ button {
   margin: 0 0 8px;
 }
 
-/* Die Detailkarte wiederverwendet .stationenkarte-svg/-erklaerung
-   (stationenKarteZeichnen() in stationen.js) unveraendert, sitzt hier
-   aber in der schmaleren Detailmaske statt in der vollen Arbeitsliste -
-   eine eigene, kleinere Maximalbreite statt der 760px der Uebersichtskarte,
-   sonst liesse ein zu breit vorgegebenes <svg> in dieser schmaleren Spalte
-   unnoetig viel Luft rechts stehen. */
-.stationdetailkarte .stationenkarte-svg {
+/* Die Detailkarte wiederverwendet .stationenkarte-leaflet-huelle/
+   -erklaerung (stationenKarteZeichnen() in stationen.js) unveraendert,
+   sitzt hier aber in der schmaleren Detailmaske statt in der vollen
+   Arbeitsliste - eine eigene, kleinere Maximalbreite statt der 760px
+   der Uebersichtskarte, sonst liesse eine zu breit vorgegebene Karte in
+   dieser schmaleren Spalte unnoetig viel Luft rechts stehen. */
+.stationdetailkarte .stationenkarte-leaflet-huelle {
   max-width: 420px;
 }
 
@@ -3012,9 +3030,12 @@ button {
    Nachbarn nicht zu finden). --rot: derselbe Akzent wie "hier hinsehen"
    bei einer markierten Saeule (.saeulensparkline-saeule-markiert) - ein
    Extremum im Sinne von "besonders", nicht "schlecht" (dafuer steht
-   --schlecht). Ring HINTER der Donut-Marke gezeichnet (siehe
-   stationenKarteZeichnen()), damit die Marke selbst unveraendert bleibt
-   und nur ein zusaetzlicher, gut sichtbarer Kreis sie umrahmt. */
+   --schlecht). Jetzt ein eigener, nicht interaktiver L.circleMarker
+   HINTER der Donut-Marke (stationenKarteInitialisieren() in
+   stationen.js, Leaflets Overlay-Pane liegt fest unter dem Marker-Pane) -
+   Leaflet setzt fill/stroke selbst nur als SVG-Praesentationsattribute
+   (niedrigste Prioritaet der Kaskade), diese Klasse hier gewinnt daher
+   unveraendert, ganz ohne !important. */
 .stationenkarte-station-hervorhebung {
   fill: none;
   stroke: var(--rot);
@@ -3122,8 +3143,9 @@ button {
   text-anchor: middle;
 }
 
-/* ===== Landkarte (stationenKarteZeichnen() in stationen.js,
-   Gestaltungsauftrag Stationen, Punkt 4) =====
+/* ===== Landkarte (stationenKarteZeichnen()/stationenKarteInitialisieren()
+   in stationen.js, Gestaltungsauftrag Stationen, Punkt 4 - jetzt mit
+   Leaflet statt selbst gezeichnetem SVG, siehe dortiger Kopfkommentar) =====
    Eigenes Verzeichnis statt .monatsdrilldown-Optik: die Karte lebt in
    #arbeitsliste (eine eigene Ansicht neben der Tabelle, siehe
    Kopfkommentar von stationenAufbauen()), nicht in #detailmaske. */
@@ -3164,43 +3186,53 @@ button {
   justify-content: center;
 }
 
-.stationenkarte-svg {
-  /* display:block ist Pflicht, kein Stil-Detail: ein <svg> ist per
-     UA-Vorgabe inline, dasselbe Kaestchenmodell wie <img> ohne
-     display:block - inline traegt einen kleinen Nachkommastellen-
-     Leerraum UNTER der Grafik und, schwerwiegender, ließ #arbeitsliste
-     bei der Erprobung ueberlaufenden Karteninhalt NICHT als
-     scrollbaren Overflow erkennen (scrollHeight blieb gleich
-     clientHeight, obwohl die Karte sichtbar unten abgeschnitten war). */
-  display: block;
+.stationenkarte-leaflet-huelle {
   width: 100%;
   max-width: 760px;
-  height: auto;
 }
 
-/* --linie statt einer "Wasser"-Farbe extra dafuer: der Main ist hier
-   ausdruecklich ANGEDEUTET, kein hydrologisch korrektes Merkmal (siehe
-   Kopfkommentar bei STATIONENKARTE_MAIN_STUETZPUNKTE in stationen.js) -
-   ein kraeftiger Blauton haette ihm mehr Gewicht gegeben, als eine grobe
-   Schema-Linie verdient. */
-.stationenkarte-fluss {
-  fill: none;
-  stroke: var(--linie);
-  stroke-width: 7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+/* Leaflet verlangt eine explizite Pixelhoehe seines Behaelters
+   (stationenKarteZeichnen() setzt sie inline je optionen.hoehe) - eine
+   Breite dagegen regelt allein diese Klasse hier, ueber max-width je
+   nach Kontext (Uebersichtskarte 760px, Detailkarte 420px siehe oben). */
+.stationenkarte-leaflet {
+  width: 100%;
+  border-radius: 4px;   /* rein optisch, kein Bedeutungstraeger */
 }
 
-.stationenkarte-fluss-text {
-  font-size: 10px;
-  fill: var(--text-leise);
+/* Fehlt Leaflet selbst (Skript blockiert, kein Netz) oder bleiben die
+   Kacheln aus (Kachelserver nicht erreichbar): Text statt einer leeren
+   Flaeche, die wie ein Fehler dieser Anwendung aussaehe (Auftrag, siehe
+   ERPROBEN-Abschnitt der Aufgabe). Zwei Farben fuer zwei verschiedene
+   Schweregrade: --schlecht (5.71:1 auf Weiss), wenn die Karte komplett
+   fehlt, --warnung-text (5.32:1 auf Weiss), wenn nur die Kacheln fehlen
+   und die Stationsmarken trotzdem funktionieren (unten weiterhin
+   sichtbar/bedienbar, siehe stationenKarteInitialisieren()). */
+.stationenkarte-fehler {
+  color: var(--schlecht);
+  font-size: 13px;
+  padding: 16px 0;
 }
 
-.stationenkarte-station-text {
-  font-size: 10px;
-  fill: var(--text);
-  text-anchor: middle;
-  font-variant-numeric: tabular-nums;
+.stationenkarte-kachelhinweis {
+  color: var(--warnung-text);
+  font-size: 12px;
+  margin: 8px 0 0;
+}
+
+/* Weisse Scheibe HINTER jeder Donut-Marke (stationenKarteStationsMarke()
+   in stationen.js) - haelt die in donut() dokumentierten
+   Kontrastmessungen (Kopfkommentar dort: "gegen Weiss gemessen") gueltig,
+   obwohl unter der Marke jetzt eine Kartenkachel beliebiger Farbe liegt
+   statt einer kontrollierten weissen Seite. box-shadow zusaetzlich zur
+   Flaeche: ein duenner Schlagschatten haelt die Marke auch dann als
+   EIGENE Form erkennbar, wenn eine helle Kachel (Schnee, Sand, ein
+   Gebaeudegrundriss) sonst kaum gegen eine weisse Scheibe abstaeche. */
+.stationenkarte-station-huelle {
+  display: flex;
+  background: var(--flaeche);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
 /* donut() zeichnet Prozent und Bruch IMMER (Auftrag: "ein Donut ohne
@@ -3210,62 +3242,80 @@ button {
    bemessen, dort 84-120px). Bei 30px liefe die Zahl ueber den Ring
    hinaus, statt in ihm zu stehen. Die Zahl geht dabei NICHT verloren
    (Auftrag weiterhin erfuellt): jede Marke traegt ihr eigenes
-   aria-label UND ein <title> fuer den Mauszeiger (siehe
-   stationenKarteZeichnen() in stationen.js) mit derselben Zahl im
+   aria-label UND einen nativen Mauszeiger-Tooltip (title, siehe
+   stationenKarteStationsMarke() in stationen.js) mit derselben Zahl im
    Klartext, UND ein Klick oeffnet dieselbe Zahl noch einmal gross im
    Belegungs-Donut der Detailmaske. */
-.stationenkarte-station .donut-text-prozent,
-.stationenkarte-station .donut-text-bruch {
+.stationenkarte-station-huelle .donut-text-prozent,
+.stationenkarte-station-huelle .donut-text-bruch {
   display: none;
 }
 
-.stationenkarte-station {
+.stationenkarte-station-icon {
   cursor: pointer;
 }
 
-.stationenkarte-station:focus-visible {
-  outline: 2px solid var(--rot);
-  outline-offset: 2px;
+/* outline-offset groesser als die globale Vorgabe (1px, :focus-visible
+   weiter oben): bei einem Kreis dieser Groesse (30-58px) laege der
+   Standardring sonst so knapp am Rand, dass er die runde Form optisch
+   kappt statt sie zu umschliessen - dieselbe Ueberlegung wie bei
+   .profilknopf:focus-visible weiter oben. */
+.stationenkarte-station-icon:focus-visible {
+  outline-offset: 3px;
 }
 
 /* stroke: --flaeche (weiss) als Halo - unabhaengig davon, was gerade
-   darunter liegt (eine Stationsmarke, der Fluss, eine andere
-   Kundenmarke), bleibt der Kreis dadurch als EIGENE Form erkennbar,
-   statt mit seiner Umgebung zu verschmelzen (siehe Bericht: --kunden
-   gegen --marine misst nur 2.01:1, gegen --skala-rahmen nur 2.36:1 -
-   beide unter der fuer Grafik verlangten 3:1, wenn zwei Flaechen ohne
-   Trennung aneinanderstossen wuerden). */
+   darunter liegt (eine Kartenkachel beliebiger Farbe, eine Stationsmarke,
+   eine andere Kundenmarke), bleibt der Kreis dadurch als EIGENE Form
+   erkennbar, statt mit seiner Umgebung zu verschmelzen (siehe Bericht:
+   --kunden gegen --marine misst nur 2.01:1, gegen --skala-rahmen nur
+   2.36:1 - beide unter der fuer Grafik verlangten 3:1, wenn zwei
+   Flaechen ohne Trennung aneinanderstiessen). filter: drop-shadow
+   zusaetzlich zum Halo, aus demselben Grund wie bei
+   .stationenkarte-station-huelle oben: ein Kachelton nahe Weiss liesse
+   sonst selbst den weissen Rand kaum hervortreten. */
 .stationenkarte-kundenort-kreis {
   fill: var(--kunden);
   stroke: var(--flaeche);
   stroke-width: 1.5;
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.4));
+}
+
+/* Die Stations-/Kundenbeschriftungen sind jetzt Leaflet-Tooltips (HTML),
+   keine <text>-Elemente in einem gemeinsamen <svg> mehr - deshalb
+   color/text-align statt der bisherigen SVG-Eigenschaften fill/
+   text-anchor, und die Leaflet-Vorgabeoptik der Tooltip-Sprechblase
+   (weisser Kasten, Rahmen, Schlagschatten, Pfeilspitze - siehe
+   .leaflet-tooltip in leaflet.css) wird unten bewusst abgeschaltet: eine
+   bestaendig sichtbare Kartenbeschriftung soll wie eine Beschriftung
+   aussehen, nicht wie eine Sprechblase. text-shadow als Halo (statt
+   eines Kastens) haelt die Schrift dabei trotzdem vor beliebigen
+   Kachelfarben lesbar - dieselbe Kachel-Unabhaengigkeit wie beim
+   weissen Rand der Kundenmarke oben, nur fuer Text statt fuer eine
+   Flaeche. */
+.leaflet-tooltip.stationenkarte-station-text,
+.leaflet-tooltip.stationenkarte-kundenort-text {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.leaflet-tooltip-bottom.stationenkarte-station-text::before,
+.leaflet-tooltip-bottom.stationenkarte-kundenort-text::before {
+  display: none;
+}
+
+.stationenkarte-station-text {
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 3px var(--flaeche), 0 0 3px var(--flaeche), 0 0 3px var(--flaeche);
 }
 
 .stationenkarte-kundenort-text {
+  color: var(--text-leise);
   font-size: 9px;
-  fill: var(--text-leise);
-  text-anchor: middle;
-}
-
-.stationenkarte-massstab {
-  stroke: var(--text-leise);
-  stroke-width: 1;
-}
-
-.stationenkarte-massstab-text {
-  font-size: 9px;
-  fill: var(--text-leise);
-  text-anchor: middle;
-  stroke: none;
-}
-
-.stationenkarte-nordpfeil {
-  fill: var(--text-leise);
-}
-
-.stationenkarte-nordpfeil-text {
-  font-size: 10px;
-  fill: var(--text-leise);
-  text-anchor: middle;
-  font-weight: 700;
+  text-shadow: 0 0 3px var(--flaeche), 0 0 3px var(--flaeche), 0 0 3px var(--flaeche);
 }

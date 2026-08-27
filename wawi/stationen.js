@@ -406,6 +406,15 @@ function stationenKopftafel(stationen, verkehr, auslastung) {
 }
 
 function stationMaske(station) {
+    // Eine vorherige Detailkarte (falls #detailmaske gerade eine
+    // Leaflet-Karte einer ANDEREN Station zeigt) muss VOR zeigeMaske()
+    // weg - zeigeMaske() leert #detailmaske gleich per replaceChildren(),
+    // danach waere ihr Container nicht mehr im Baum auffindbar und die
+    // Leaflet-Instanz liefe als Leiche mit eigenen Fenster-Listenern
+    // weiter (siehe stationenKarteAltEntfernen() bei stationenKarteZeichnen()
+    // unten).
+    stationenKarteAltEntfernen(document.getElementById('detailmaske'));
+
     const knoepfe = [];
 
     // darfRolle('disposition') ergaenzt gegenueber dem woertlichen
@@ -533,8 +542,9 @@ function stationBelegungAbschnitt(station) {
 // weil man sieht, wohin man umräumen kann"). Vier Nachbarn plus die
 // Station selbst treffen diese Mitte.
 // MASSSTAB: kleinere Zeichenflaeche als die Uebersichtskarte (siehe
-// .stationdetailkarte .stationenkarte-svg in style.css) - sie sitzt in
-// der schmaleren Detailmaske, nicht in der vollen Arbeitsliste.
+// .stationdetailkarte .stationenkarte-leaflet-wrapper in style.css) -
+// sie sitzt in der schmaleren Detailmaske, nicht in der vollen
+// Arbeitsliste.
 // HERVORHEBUNG: ein Ring in --rot um GENAU die angezeigte Station (siehe
 // optionen.hervorgehobenId bei stationenKarteZeichnen()) - ohne ihn waere
 // unter fuenf gleich gezeichneten Donut-Marken nicht zu erkennen, "das
@@ -572,19 +582,22 @@ function stationDetailkarteAbschnitt(station) {
 
     const erklaerung = document.createElement('p');
     erklaerung.className = 'stationenkarte-erklaerung';
-    // ZWEI Saetze (Auftrag: "Beschrifte das ausdruecklich, damit niemand
-    // sie fuer massstabsgetreu haelt", siehe stationenKarteZeigen() oben) -
-    // UND, zusaetzlich, WORIN sich dieser Ausschnitt von der Uebersichts-
-    // karte unterscheidet (Auftrag: "Ueberleg, was in einer Detailkarte
-    // anders ist ... Ausschnitt").
-    erklaerung.textContent = `${t('map.schematicNote')} ${t('map.detailAreaNote')}`;
+    // Zwei Saetze: WAS die Marken bedeuten (map.mapNote, dieselbe
+    // Erklaerung wie auf der Uebersichtskarte) UND, zusaetzlich, WORIN
+    // sich dieser Ausschnitt von ihr unterscheidet (Auftrag: "Ueberleg,
+    // was in einer Detailkarte anders ist ... Ausschnitt").
+    erklaerung.textContent = `${t('map.mapNote')} ${t('map.detailAreaNote')}`;
     abschnitt.append(erklaerung);
 
-    // Naechste Nachbarn nach Luftlinie, mit derselben Laengengrad-
-    // Korrektur wie stationenKarteProjektion() weiter oben (kappa bei der
-    // Breite DIESER Station - fuer eine reine Sortierung nach Entfernung
-    // genuegt eine lokale Naeherung, eine exakte Grosskreisdistanz waere
-    // fuer 10 km Stadtgebiet unnoetiger Aufwand).
+    // Naechste Nachbarn nach Luftlinie, mit einer Laengengrad-Korrektur
+    // (kappa bei der Breite DIESER Station - ein Laengengrad ist bei rund
+    // 49.8 Grad Nord nur noch cos(49.8°) so lang wie ein Breitengrad, wer
+    // beides gleich gewichtet, verzerrt die Distanz). Das ist reine
+    // Sortierung nach Entfernung fuer NACHBARSCHAFT (nicht das Zeichnen
+    // der Karte selbst - das erledigt jetzt Leaflets eigene Projektion,
+    // siehe stationenKarteZeichnen() unten) - dafuer genuegt eine lokale
+    // Naeherung, eine exakte Grosskreisdistanz waere fuer 10 km
+    // Stadtgebiet unnoetiger Aufwand.
     const kappa = Math.cos((Number(station.latitude) * Math.PI) / 180);
     const nachbarnMitAbstand = stationenAlle
         .filter((s) => s.station_id !== station.station_id && s.latitude != null && s.longitude != null)
@@ -602,7 +615,7 @@ function stationDetailkarteAbschnitt(station) {
     const kartenflaeche = document.createElement('div');
     kartenflaeche.className = 'stationenkarte-flaeche';
     kartenflaeche.append(stationenKarteZeichnen(ausschnittStationen, [], false,
-        { breite: 460, hoehe: 320, hervorgehobenId: station.station_id }));
+        { hoehe: 320, hervorgehobenId: station.station_id }));
     abschnitt.append(kartenflaeche);
 
     return abschnitt;
@@ -917,21 +930,59 @@ function zeitfensterDivergenzGrafik(zeitfenster, maximum, beschriftung) {
     return svg;
 }
 
-// ===== Landkarte (Gestaltungsauftrag Punkt 4) =====
+// ===== Landkarte (Gestaltungsauftrag Punkt 4, jetzt mit Leaflet) =====
 //
 // "Mir fehlen Landkarten für die Stationen, ich möchte eine neue Sicht
 // haben, in der die Standorte auch als Landkarten visualisiert sind und
 // sich zusätzlich die Kunden einblenden lassen" - woertlich der Auftrag.
 //
-// KEINE KARTENKACHELN (Auftrag, ausdruecklich als harte Grenze benannt):
-// jede Kartenkachel waere eine Fremdanfrage aus dem Browser des Nutzers -
-// nach der Projektregel ("kein Framework, keine Abhaengigkeit ausser
-// supabase-js v2") ebenso ausgeschlossen wie ein Diagrammbaustein fuer
-// donut()/saeulenSparkline() oben. Die Karte ist deshalb selbst
-// gezeichnetes Inline-SVG aus den echten Stationskoordinaten (v_wawi_
-// station.latitude/.longitude) und den echten Ortskoordinaten
-// (velocity.ort_koordinate ueber v_wawi_kundenorte) - keine externe
-// Anfrage, keine Kartenkachel.
+// FRUEHER SELBST GEZEICHNETES SVG, JETZT LEAFLET - der Auftraggeber,
+// woertlich, zu jener ersten Fassung: "warum verwendest du keine Karte
+// wie Leaflet und machst die Karte selber? Das macht null Sinn." Er hat
+// recht: eine schematische Flaeche ohne Strassen beantwortet "wo ist
+// diese Station" gerade nicht. Die damalige Projektregel ("keine
+// Abhaengigkeit ausser supabase-js", didaktisch begruendet) gilt fuer
+// eine KARTE nicht mehr - die Abkehr und ihre Begruendung stehen
+// ausfuehrlich in doku/plans/2026-08-25-velocity-warenwirtschaft-oberflaeche.md
+// (dort auch, warum die Regel fuer ALLES ANDERE weiterhin gilt), die
+// Datenschutz-Abwaegung unten in doku/datenmodell/08-warenwirtschaft.md.
+//
+// WAS AUS DER SVG-FASSUNG ERHALTEN BLEIBT (der fachliche Gehalt, nicht
+// die Zeichnung):
+//   - KREISGROESSE = KAPAZITAET, FUELLUNG = BELEGUNG: donut() aus
+//     rahmen.js, unveraendert wiederverwendet - nur nicht mehr direkt in
+//     ein <svg> gezeichnet, sondern als HTML-Marke in eine Leaflet-
+//     L.divIcon eingesetzt (stationenKarteStationsMarke() unten). Leaflet
+//     erlaubt options.html als ECHTES Element statt eines HTML-Strings -
+//     donut() baut ohnehin per DOM-API, kein Text aus der Datenbank lief
+//     hier je durch innerHTML.
+//   - KUNDSCHAFT AGGREGIERT JE ORT, NIE JE PERSON: v_wawi_kundenorte,
+//     dieselbe Begruendung wie zuvor (siehe deren Kopfkommentar in
+//     0018_wawi_sichten.sql) - einzelne Wohnadressen als Punkte waeren
+//     das Wohnprofil, das diese Fallstudie ausdruecklich fernhaelt.
+//   - DIE HERVORHEBUNG der angezeigten Station in der Detailkarte (ein
+//     Ring in --rot, jetzt ein eigener, nicht interaktiver
+//     L.circleMarker UNTER der Donut-Marke).
+//   - TASTATURBEDIENUNG UND ZUGAENGLICHE NAMEN je Marke (siehe
+//     stationenKarteStationsMarke()/stationenKarteKundenortMarke()
+//     unten) - Leaflets EIGENE Bedienelemente (Zoom, Kartenfokus fuer
+//     Pfeiltasten-Navigation) sind serienmaessig per Tastatur erreichbar;
+//     der Zoom-Regler bekommt hier nur lokalisierte Titel (map.zoomIn/
+//     -Out) statt der englischen Vorgabe.
+//
+// DIE FREMDANFRAGE - EINE ABWAEGUNG, KEINE WARNUNG: jede Kartenkachel
+// ist eine eigene HTTP-Anfrage des Mitarbeitenden-Browsers an einen
+// fremden Server (hier: OpenStreetMap, siehe STATIONENKARTE_KACHELN
+// unten), der dabei IP-Adresse UND den betrachteten Kartenausschnitt
+// erfaehrt - in einer Fallstudie, die sonst Datensparsamkeit lehrt, eine
+// bewusste Abwaegung: eine brauchbare Karte GEGEN diese eine
+// Fremdanfrage. Dieselbe Abwaegung steht ausfuehrlich in
+// doku/datenmodell/08-warenwirtschaft.md; die konkrete Ladestelle traegt
+// unten in stationenKarteInitialisieren() ihren eigenen Kommentar. Der
+// Kundenschalter unten aendert NICHTS an dieser Anfrage - er entscheidet
+// nur, welche EIGENEN Marken (aus bereits geladenen Daten) auf der
+// ohnehin geladenen Karte erscheinen, er sendet selbst nichts
+// Zusaetzliches an den Kachelserver.
 function stationenKarteZeigen(kennung, stationen) {
     if (!istAktuellerVorgang(kennung)) return;
 
@@ -946,6 +997,11 @@ function stationenKarteZeigen(kennung, stationen) {
     listenZeilenElemente = [];
 
     const wurzel = listenKoerper();
+    // Eine vorherige Uebersichtskarte (falls #arbeitsliste gerade schon
+    // eine Leaflet-Karte zeigt, etwa nach einem Reiterwechsel zurueck zu
+    // "Landkarte") muss VOR replaceChildren() weg - siehe
+    // stationenKarteAltEntfernen() unten.
+    stationenKarteAltEntfernen(wurzel);
     wurzel.replaceChildren();
 
     const rahmen = document.createElement('div');
@@ -956,11 +1012,7 @@ function stationenKarteZeigen(kennung, stationen) {
 
     const erklaerung = document.createElement('p');
     erklaerung.className = 'stationenkarte-erklaerung';
-    // Ausdruecklich als Schema beschriftet (Auftrag: "Beschrifte das
-    // ausdruecklich, damit niemand sie fuer massstabsgetreu haelt") -
-    // und die Bedeutung der Marken in Text, nicht nur in der Grafik
-    // selbst.
-    erklaerung.textContent = t('map.schematicNote');
+    erklaerung.textContent = t('map.mapNote');
     kopf.append(erklaerung);
 
     const schalterLabel = document.createElement('label');
@@ -985,6 +1037,11 @@ function stationenKarteZeigen(kennung, stationen) {
     // (stationenKundenorteAlle) liegen bereits vollstaendig vor.
     schalter.addEventListener('change', () => {
         stationenKarteKundenSichtbar = schalter.checked;
+        // Die ALTE Karte (mit oder ohne Kundschaft) traegt eine eigene
+        // Leaflet-Instanz, die replaceChildren() unten aus dem Baum
+        // nimmt, ohne sie selbst aufzuraeumen - siehe
+        // stationenKarteAltEntfernen().
+        stationenKarteAltEntfernen(kartenflaeche);
         kartenflaeche.replaceChildren(
             stationenKarteZeichnen(stationen, stationenKundenorteAlle, stationenKarteKundenSichtbar));
     });
@@ -1001,215 +1058,374 @@ function stationenKarteZeigen(kennung, stationen) {
     hauptknopfElement = null;
 }
 
-// Reale Bruecken-Koordinaten (OpenStreetMap/Nominatim, siehe Bericht) als
-// grobe Stuetzpunkte fuer die Main-Andeutung - kein erfundener Flusslauf,
-// aber auch keine vollstaendige Nachzeichnung: drei Punkte innerhalb der
-// Stationsspanne (49.781-49.805 Nord) genuegen fuer eine "grobe Linie,
-// erkennbar als Schema" (Auftrag, woertlich), mehr wuerde eine Genauigkeit
-// vortaeuschen, die diese Karte nicht hat und nicht braucht.
-const STATIONENKARTE_MAIN_STUETZPUNKTE = [
-    { lat: 49.7987476, lon: 9.9228351 },   // Friedensbrücke
-    { lat: 49.7929796, lon: 9.9256566 },   // Alte Mainbrücke
-    { lat: 49.7863749, lon: 9.9267634 }    // Ludwigsbrücke
-];
+// Leaflet raeumt eigene Fensterlistener/laufende Kachel-Anfragen nur bei
+// einem echten .remove() auf - ein blosses Entfernen des Kartenbehaelters
+// aus dem DOM (replaceChildren(), an allen Aufrufstellen oben/unten)
+// taete das NICHT von selbst, das waere ein Leck bei jedem Kartenwechsel.
+// behaelter: der ELTERNKNOTEN, der die alte Karte (falls vorhanden) noch
+// enthaelt - stationenKarteZeichnen() unten haengt die L.map-Instanz
+// dazu als Eigenschaft an ihr <div class="stationenkarte-leaflet">, kein
+// zweiter, getrennt zu pflegender Verweis irgendwo im Modul.
+function stationenKarteAltEntfernen(behaelter) {
+    behaelter?.querySelector?.('.stationenkarte-leaflet')?._leafletKarte?.remove();
+}
+
+// Kachelquelle: OpenStreetMap direkt (kein Drittanbieter-Dienst dazwischen -
+// weniger Parteien, die den Kartenausschnitt sehen). Die exakte URL UND
+// dass Browser die Nutzungsbedingungen automatisch erfuellen (User-Agent,
+// Referer, Caching - siehe operations.osmfoundation.org/policies/tiles),
+// stehen in deren Tile Usage Policy; fuer den Umfang dieser Fallstudie
+// (eine Handvoll Mitarbeitende, keine Massennutzung) bleibt das
+// ausdruecklich erlaubte "leichte Nutzung". Einzige eigene Pflicht: eine
+// sichtbare Quellenangabe (STATIONENKARTE_ATTRIBUTION unten) - Leaflet
+// zeigt sie automatisch unten rechts (attributionControl, Vorgabe).
+const STATIONENKARTE_KACHELN = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+// "© OpenStreetMap contributors" bleibt UNVERAENDERT in jeder Sprache -
+// dieselbe Entscheidung wie bei "WaWi" in der Wortmarke (siehe
+// index.html): eine Quellenangabe ist kein Oberflaechentext, sondern ein
+// von OpenStreetMap selbst vorgeschlagener, feststehender Wortlaut.
+const STATIONENKARTE_ATTRIBUTION =
+    '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors';
+
+// Wuerzburg, Marktplatz - Standardausschnitt NUR fuer den Randfall "keine
+// einzige Station/Kundschaft traegt eine Koordinate" (station_lat_chk/
+// -lon_chk in 0003_bereich_b_netz_und_flotte.sql erlauben das
+// ausdruecklich, siehe stationDetailkarteAbschnitt() oben) - map.fitBounds()
+// wirft ohne mindestens einen Punkt eine Exception, ein fester Ausschnitt
+// faengt das ab, ohne die Karte deshalb leer bleiben zu lassen.
+const STATIONENKARTE_STANDARDMITTE = [49.7913, 9.9534];
+const STATIONENKARTE_STANDARDZOOM = 12;
 
 // stationen: fuer die Stationsmarken, IMMER gezeichnet.
 // kundenorte: v_wawi_kundenorte-Zeilen, nur bei kundenSichtbar gezeichnet
-// UND (Punkt 4b, ausdruecklich) in die Kartenausdehnung einbezogen - sonst
+// UND in die Kartenausdehnung einbezogen (map.fitBounds() unten) - sonst
 // laegen Orte wie Karlstadt oder Marktheidenfeld (deutlich ausserhalb der
-// im Auftrag genannten Stationsspanne) ausserhalb des sichtbaren Bereichs,
-// sobald der Schalter sie einblendet.
+// Stationsspanne) ausserhalb des sichtbaren Bereichs, sobald der Schalter
+// sie einblendet.
 //
-// optionen.breite/.hoehe (Vorgabe 680/460, die Uebersichtskarte): DIESELBE
-// Zeichnung wird auch fuer die Detailkarte einer einzelnen Station wieder-
-// verwendet (stationDetailkarteAbschnitt() weiter unten, zweiter Auftrag
-// "die Karte ... wenn ich auf Details gehe") - dort sitzt sie in der
+// optionen.hoehe (Vorgabe 460, die Uebersichtskarte): DIESELBE Funktion
+// wird auch fuer die Detailkarte einer einzelnen Station wiederverwendet
+// (stationDetailkarteAbschnitt() weiter oben) - dort sitzt sie in der
 // schmaleren Detailmaske statt in der vollen Arbeitsliste und bekommt
-// deshalb eine kleinere Flaeche uebergeben, KEINE zweite, eigens
-// gezeichnete Karte (Auftrag: "Benutze sie, statt eine zweite Karte zu
-// bauen").
+// deshalb eine kleinere Hoehe uebergeben, KEINE zweite, eigens gezeichnete
+// Karte (Auftrag: "Benutze sie, statt eine zweite Karte zu bauen"). Die
+// BREITE braucht (anders als bei der fruehreren SVG-Fassung) keinen
+// eigenen Parameter mehr - style.css regelt sie ueber max-width je
+// Kontext (.stationenkarte-leaflet-huelle bzw. .stationdetailkarte
+// .stationenkarte-leaflet-huelle), Leaflet selbst verlangt nur eine feste
+// PIXELHOEHE (unten als inline style gesetzt), keine feste Breite.
 // optionen.hervorgehobenId: station_id der Station, die zusaetzlich zu
-// ihrer Donut-Marke einen Ring in --rot bekommt ("hier hinsehen", derselbe
-// Akzent wie eine markierte Saeule in saeulenSparkline()) - fuer die
-// Detailkarte GENAU die Station, deren Maske gerade offen ist; in der
-// Uebersichtskarte bleibt der Parameter weg (null), dort ist keine Marke
-// vor den anderen ausgezeichnet.
+// ihrer Donut-Marke einen Ring in --rot bekommt ("hier hinsehen") - fuer
+// die Detailkarte GENAU die Station, deren Maske gerade offen ist; in der
+// Uebersichtskarte bleibt der Parameter weg (null).
 function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar, optionen = {}) {
-    const { breite = 680, hoehe = 460, hervorgehobenId = null } = optionen;
-    const rand = 46;
+    const { hoehe = 460, hervorgehobenId = null } = optionen;
 
-    const stationsPunkte = stationen
-        .filter((s) => s.latitude != null && s.longitude != null)
-        .map((s) => ({ lat: Number(s.latitude), lon: Number(s.longitude) }));
-    const kundenPunkte = kundenSichtbar
-        ? kundenorte.filter((o) => o.latitude != null && o.longitude != null)
-            .map((o) => ({ lat: Number(o.latitude), lon: Number(o.longitude) }))
-        : [];
+    const huelle = document.createElement('div');
+    huelle.className = 'stationenkarte-leaflet-huelle';
 
-    const proj = stationenKarteProjektion(stationsPunkte.concat(kundenPunkte), breite, hoehe, rand);
+    if (typeof L === 'undefined') {
+        // Das Leaflet-<script> selbst kam nicht an (CDN blockiert, kein
+        // Netz beim ersten Laden der Seite) - eine leere Flaeche saehe
+        // wie ein eigener Fehler dieser Anwendung aus (Auftrag): Text
+        // statt Stille, dieselbe Haltung wie bei jedem anderen
+        // Ladefehler dieser Oberflaeche (siehe stationRaederAbschnitt()/
+        // stationVerkehrAbschnitt() oben).
+        const hinweis = document.createElement('p');
+        hinweis.className = 'stationenkarte-fehler';
+        hinweis.textContent = t('map.libraryUnavailable');
+        huelle.append(hinweis);
+        return huelle;
+    }
 
-    const svg = document.createElementNS(SVG_NS, 'svg');
-    svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
-    svg.classList.add('stationenkarte-svg');
     // role="group", NICHT role="img": diese Karte hat anklickbare
-    // Stationsmarken (siehe unten) - ein "img" behauptet fuer einen
-    // Screenreader ein einziges, flaches Bild und wuerde interaktive
-    // Kinder ignorieren bzw. unerreichbar machen. Die knappe Zusammen-
-    // fassung hier ist die Kartenerklaerung ausserhalb der Grafik
-    // (.stationenkarte-erklaerung) UND die Karte selbst; jede einzelne
-    // Marke traegt zusaetzlich ihr EIGENES aria-label (siehe unten).
-    svg.setAttribute('role', 'group');
-    svg.setAttribute('aria-label', kundenSichtbar
+    // Stationsmarken - ein "img" behauptet fuer einen Screenreader ein
+    // einziges, flaches Bild und wuerde interaktive Kinder unerreichbar
+    // machen. Jede einzelne Marke traegt zusaetzlich ihr EIGENES
+    // aria-label (siehe stationenKarteStationsMarke() unten).
+    huelle.setAttribute('role', 'group');
+    huelle.setAttribute('aria-label', kundenSichtbar
         ? t('map.areaWithCustomers', { stationenPhrase: mengeFormat(stationen.length, 'station') })
         : t('map.area', { stationenPhrase: mengeFormat(stationen.length, 'station') }));
 
-    // Main (schematisch) - siehe Kopfkommentar bei
-    // STATIONENKARTE_MAIN_STUETZPUNKTE. aria-hidden: rein orientierende
-    // Andeutung, keine eigene Information, die ein Screenreader braeuchte.
-    const mainPunkte = STATIONENKARTE_MAIN_STUETZPUNKTE.map((p) => proj.projizieren(p.lat, p.lon));
-    const fluss = document.createElementNS(SVG_NS, 'polyline');
-    fluss.setAttribute('points', mainPunkte.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
-    fluss.setAttribute('class', 'stationenkarte-fluss');
-    fluss.setAttribute('aria-hidden', 'true');
-    svg.append(fluss);
-    const flussText = document.createElementNS(SVG_NS, 'text');
-    flussText.setAttribute('x', (mainPunkte[0].x + 8).toFixed(1));
-    flussText.setAttribute('y', (mainPunkte[0].y - 6).toFixed(1));
-    flussText.setAttribute('class', 'stationenkarte-fluss-text');
-    flussText.setAttribute('aria-hidden', 'true');
-    flussText.textContent = t('map.riverLabel');
-    svg.append(flussText);
+    const flaeche = document.createElement('div');
+    flaeche.className = 'stationenkarte-leaflet';
+    // Leaflet verlangt eine feste PIXELHOEHE seines Behaelters (eine
+    // Prozenthoehe allein funktioniert bei ihm nicht zuverlaessig) - die
+    // Breite bleibt bewusst der CSS-Klasse ueberlassen (siehe
+    // Kopfkommentar oben).
+    flaeche.style.height = `${hoehe}px`;
+    huelle.append(flaeche);
 
-    // Kundenmarken ZUERST (unten in der Zeichenreihenfolge), Stations-
-    // marken DARUEBER: eine Station soll nie hinter einem grossen
-    // Kundenkreis verschwinden, auch wenn beide geografisch nah beieinander
-    // liegen (z. B. eine Station im Zentrum, nah an "Würzburg" selbst).
+    const kachelhinweis = document.createElement('p');
+    kachelhinweis.className = 'stationenkarte-kachelhinweis';
+    kachelhinweis.textContent = t('map.tilesUnavailable');
+    kachelhinweis.hidden = true;
+    huelle.append(kachelhinweis);
+
+    // Leaflet braucht eine im Dokument ANGEHAENGTE, layoutete Flaeche fuer
+    // eine sinnvolle Groesse (getBoundingClientRect() eines noch nicht
+    // eingehaengten Elements ist 0x0) - der Aufrufer haengt "huelle" aber
+    // erst NACH dieser Funktion ein (siehe stationenKarteZeigen()/
+    // stationDetailkarteAbschnitt()). Ein requestAnimationFrame laeuft
+    // nach dem naechsten Layout, also nach dem synchronen append()-Aufruf
+    // des Aufrufers, der im selben Makrotask folgt.
+    requestAnimationFrame(() => {
+        stationenKarteInitialisieren(flaeche, kachelhinweis, stationen, kundenorte, kundenSichtbar, hervorgehobenId);
+    });
+
+    return huelle;
+}
+
+function stationenKarteInitialisieren(flaeche, kachelhinweis, stationen, kundenorte, kundenSichtbar, hervorgehobenId) {
+    const karte = L.map(flaeche, {
+        // Eine eingebettete Karte in einer scrollbaren Seite: das
+        // Mausrad soll die SEITE scrollen, nicht ungefragt in die Karte
+        // hineinzoomen, sobald der Zeiger sie nur ueberquert. Erst ein
+        // bewusster Klick/Tastaturfokus aktiviert das Rad wieder (siehe
+        // die beiden Ereignisse unten) - derselbe, in Leaflets eigener
+        // Anleitung empfohlene Griff fuer Karten, die nicht die ganze
+        // Seite einnehmen.
+        scrollWheelZoom: false,
+        zoomControl: false
+    });
+    // Verweis fuer stationenKarteAltEntfernen() - siehe dortiger
+    // Kommentar: die Karte haengt sich selbst an ihren Behaelter, kein
+    // zweiter, getrennt zu pflegender Speicherort im Modul.
+    flaeche._leafletKarte = karte;
+
+    karte.on('focus', () => karte.scrollWheelZoom.enable());
+    karte.on('blur', () => karte.scrollWheelZoom.disable());
+
+    // zoomControl:false oben + eigener Aufruf hier: NUR damit
+    // zoomInTitle/zoomOutTitle lokalisiert sind (map.zoomIn/-Out) statt
+    // der englischen Leaflet-Vorgabe "Zoom in"/"Zoom out" - die
+    // Oberflaeche ist sechssprachig, ein automatisch mitgeliefertes
+    // Bedienelement darf davon nicht ausgenommen bleiben.
+    L.control.zoom({ zoomInTitle: t('map.zoomIn'), zoomOutTitle: t('map.zoomOut') }).addTo(karte);
+    L.control.scale({ metric: true, imperial: false }).addTo(karte);
+
+    // DIE STELLE, DIE DIE KACHELN LAEDT (siehe Kopfkommentar bei
+    // stationenKarteZeigen() oben und die ausfuehrliche Abwaegung in
+    // doku/datenmodell/08-warenwirtschaft.md): jede Kachel ist eine
+    // eigene HTTP-Anfrage des Mitarbeitenden-Browsers an OpenStreetMap,
+    // die dabei IP-Adresse und den betrachteten Kartenausschnitt
+    // mitteilt. Bewusste Abwaegung, keine versehentliche Nebenwirkung:
+    // eine brauchbare Karte gegen genau diese eine Fremdanfrage.
+    let kachelnGeladen = 0;
+    const kacheln = L.tileLayer(STATIONENKARTE_KACHELN, {
+        maxZoom: 19,
+        attribution: STATIONENKARTE_ATTRIBUTION
+    });
+    kacheln.on('tileload', () => {
+        kachelnGeladen++;
+        kachelhinweis.hidden = true;
+    });
+    kacheln.on('tileerror', () => {
+        // Erst nach einer kurzen Frist pruefen, nicht bei der ersten
+        // einzelnen Fehlkachel: eine verlorene Kachel am Kartenrand ist
+        // normaler Netzbetrieb, kein Totalausfall. Traf in der Frist
+        // KEINE einzige Kachel ein (kein Netz, Tile-Server blockiert),
+        // zeigt der Hinweis das - eine Karte, die dann leer und stumm
+        // bliebe, saehe wie ein Fehler dieser Anwendung aus (Auftrag),
+        // waehrend tatsaechlich nur der Kachelserver nicht erreichbar
+        // war. Die Stationsmarken selbst haengen NICHT an den Kacheln
+        // (siehe unten) und bleiben unabhaengig davon an der richtigen
+        // Position sichtbar und bedienbar.
+        setTimeout(() => {
+            if (kachelnGeladen === 0) kachelhinweis.hidden = false;
+        }, 4000);
+    });
+    kacheln.addTo(karte);
+
+    // Kundenmarken ZUERST, Stationsmarken DARUEBER: eine Station soll
+    // nie hinter einem grossen Kundenkreis verschwinden, auch wenn beide
+    // geografisch nah beieinander liegen. Leaflets feste Pane-Reihenfolge
+    // (Overlay-Pane fuer L.circleMarker liegt IMMER unter dem Marker-Pane
+    // fuer L.marker/L.divIcon) erledigt das von selbst, unabhaengig von
+    // der Reihenfolge der addTo()-Aufrufe unten.
+    const punkte = [];
     if (kundenSichtbar) {
         const maxKunden = Math.max(1, ...kundenorte.map((o) => o.kunden));
         for (const ort of kundenorte) {
             if (ort.latitude == null || ort.longitude == null) continue;
-            const p = proj.projizieren(Number(ort.latitude), Number(ort.longitude));
-            const radius = stationenKarteKundenRadius(ort.kunden, maxKunden);
-
-            const gruppe = document.createElementNS(SVG_NS, 'g');
-            gruppe.setAttribute('class', 'stationenkarte-kundenort');
-            gruppe.setAttribute('role', 'img');
-            gruppe.setAttribute('aria-label', t('map.customersAtLocation', { ort: ort.ort, kundenPhrase: mengeFormat(ort.kunden, 'kunde') }));
-
-            const kreis = document.createElementNS(SVG_NS, 'circle');
-            kreis.setAttribute('cx', p.x.toFixed(1));
-            kreis.setAttribute('cy', p.y.toFixed(1));
-            kreis.setAttribute('r', radius.toFixed(1));
-            kreis.setAttribute('class', 'stationenkarte-kundenort-kreis');
-            gruppe.append(kreis);
-
-            // Sichtbare Zahl NEBEN der Flaeche (dieselbe Regel wie bei
-            // donut() in rahmen.js: "Kunden aus der Flaechengroesse
-            // schaetzen" waere fuer Veitshoechheim (58) gegen Karlstadt
-            // (9) ebenso eine Schaetzaufgabe wie ein Donut ohne Zahl).
-            const beschriftung = document.createElementNS(SVG_NS, 'text');
-            beschriftung.setAttribute('x', p.x.toFixed(1));
-            beschriftung.setAttribute('y', (p.y + radius + 11).toFixed(1));
-            beschriftung.setAttribute('class', 'stationenkarte-kundenort-text');
-            beschriftung.setAttribute('aria-hidden', 'true');
-            beschriftung.textContent = t('map.customerLabelShort', { ort: ort.ort, n: zahlFormat(ort.kunden) });
-            gruppe.append(beschriftung);
-
-            svg.append(gruppe);
+            punkte.push([Number(ort.latitude), Number(ort.longitude)]);
+            stationenKarteKundenortMarke(ort, maxKunden).addTo(karte);
         }
     }
 
     const kapazitaeten = stationen.map((s) => s.kapazitaet);
     const kapMin = Math.min(...kapazitaeten);
     const kapMax = Math.max(...kapazitaeten);
-
     for (const station of stationen) {
         if (station.latitude == null || station.longitude == null) continue;
-        const p = proj.projizieren(Number(station.latitude), Number(station.longitude));
-        const durchmesser = stationenKarteStationsDurchmesser(station.kapazitaet, kapMin, kapMax);
-        const voll = station.frei === 0;
+        const latlng = [Number(station.latitude), Number(station.longitude)];
+        punkte.push(latlng);
+
         const istHervorgehoben = hervorgehobenId != null && station.station_id === hervorgehobenId;
-        const beschriftung = t('map.stationBelegLabel', { name: station.name, belegt: zahlFormat(station.belegt), kapazitaet: zahlFormat(station.kapazitaet) })
-            + (voll ? t('map.stationFullSuffix') : '')
-            + (istHervorgehoben ? t('map.currentStationSuffix') : '')
-            + t('map.openDetailsSuffix');
-
-        // Ring in --rot HINTER der Donut-Marke (Auftrag, zweiter Teil:
-        // "die Karte mit dem eingetragenen Standort, wenn ich auf Details
-        // gehe") - ohne diesen Ring waere die eigene Station unter ihren
-        // Nachbarn nicht von einer beliebigen anderen zu unterscheiden.
-        // Zuerst gezeichnet (unter der Marke, siehe svg.append() Reihenfolge
-        // unten), damit sie den Donut nicht verdeckt.
         if (istHervorgehoben) {
-            const ring = document.createElementNS(SVG_NS, 'circle');
-            ring.setAttribute('cx', p.x.toFixed(1));
-            ring.setAttribute('cy', p.y.toFixed(1));
-            ring.setAttribute('r', (durchmesser / 2 + 5).toFixed(1));
-            ring.setAttribute('class', 'stationenkarte-station-hervorhebung');
-            ring.setAttribute('aria-hidden', 'true');
-            svg.append(ring);
+            // Ring in --rot HINTER der Donut-Marke (zweiter Auftrag:
+            // "die Karte mit dem eingetragenen Standort, wenn ich auf
+            // Details gehe") - ohne diesen Ring waere die eigene Station
+            // unter ihren Nachbarn nicht von einer beliebigen anderen zu
+            // unterscheiden.
+            L.circleMarker(latlng, {
+                radius: stationenKarteStationsDurchmesser(station.kapazitaet, kapMin, kapMax) / 2 + 5,
+                className: 'stationenkarte-station-hervorhebung',
+                interactive: false
+            }).addTo(karte);
         }
+        stationenKarteStationsMarke(station, kapMin, kapMax, istHervorgehoben).addTo(karte);
+    }
 
-        // donut() wiederverwendet, nicht neu gezeichnet (Auftrag: "die
-        // anderen Bereiche werden ihn brauchen") - "Groesse = Kapazitaet,
-        // Fuellung = Belegung" (Auftrag, woertlich) ist damit exakt
-        // dieselbe Grafik wie in der Detailmaske, nur eingebettet in eine
-        // Karte statt in eine Kachel.
-        const markierung = donut(station.belegt, station.kapazitaet, beschriftung, {
-            durchmesser,
-            dicke: Math.max(4, durchmesser * 0.16),
-            farbe: voll ? 'var(--warnung-text)' : 'var(--marine)'
-        });
-        // role/aria-label des Donuts hier ABSICHTLICH stummgeschaltet:
-        // die umschliessende <g> unten traegt bereits die vollstaendige
-        // Beschriftung UND die Klick-/Tastaturbedienung - ein
-        // Screenreader soll "Hauptbahnhof: 28 von 40 ... Details oeffnen"
-        // genau EINMAL hoeren, nicht zusaetzlich "Bild, 70 Prozent" vom
-        // verschachtelten Donut (dasselbe Prinzip wie aria-hidden auf dem
-        // Icon-Wrapper in navigationAufbauen(), rahmen.js).
-        markierung.removeAttribute('role');
-        markierung.setAttribute('aria-hidden', 'true');
-        markierung.setAttribute('x', (p.x - durchmesser / 2).toFixed(1));
-        markierung.setAttribute('y', (p.y - durchmesser / 2).toFixed(1));
+    if (punkte.length > 0) {
+        // maxZoom begrenzt nur den Randfall einer sehr engen Punktwolke
+        // (etwa vier direkt benachbarte Stationen in der Detailkarte) -
+        // ohne ihn zoomte fitBounds() dort so nah heran, dass der
+        // "wer ist in der Naehe"-Zusammenhang selbst verloren ginge.
+        karte.fitBounds(L.latLngBounds(punkte), { padding: [30, 30], maxZoom: 16 });
+    } else {
+        karte.setView(STATIONENKARTE_STANDARDMITTE, STATIONENKARTE_STANDARDZOOM);
+    }
+}
 
-        const marke = document.createElementNS(SVG_NS, 'g');
-        marke.setAttribute('class', 'stationenkarte-station');
-        marke.setAttribute('tabindex', '0');
-        marke.setAttribute('role', 'button');
-        marke.setAttribute('aria-label', beschriftung);
-        // <title> zusaetzlich zu aria-label: aria-label allein erzeugt
-        // KEINEN nativen Mauszeiger-Tooltip (das lesen nur Screenreader) -
-        // ohne <title> haette eine sehende Maus-Bedienung keinen Weg an
-        // die Zahl, die donut() auf dieser Markengroesse bewusst
-        // ausblendet (siehe .stationenkarte-station .donut-text-prozent
-        // in style.css).
-        const titelElement = document.createElementNS(SVG_NS, 'title');
-        titelElement.textContent = beschriftung;
-        marke.append(titelElement);
-        marke.addEventListener('click', () => stationMaske(station));
-        marke.addEventListener('keydown', (e) => {
+// Eine Stationsmarke: donut() (rahmen.js) traegt Groesse=Kapazitaet und
+// Fuellung=Belegung unveraendert weiter, jetzt als L.divIcon statt
+// direkt ins Karten-<svg> gezeichnet.
+function stationenKarteStationsMarke(station, kapMin, kapMax, istHervorgehoben) {
+    const durchmesser = stationenKarteStationsDurchmesser(station.kapazitaet, kapMin, kapMax);
+    const voll = station.frei === 0;
+    const beschriftung = t('map.stationBelegLabel', { name: station.name, belegt: zahlFormat(station.belegt), kapazitaet: zahlFormat(station.kapazitaet) })
+        + (voll ? t('map.stationFullSuffix') : '')
+        + (istHervorgehoben ? t('map.currentStationSuffix') : '')
+        + t('map.openDetailsSuffix');
+
+    // Weisse Scheibe HINTER dem Donut (per CSS auf .stationenkarte-
+    // station-huelle): haelt die in donut() dokumentierten Kontrast-
+    // messungen (siehe Kopfkommentar dort, "gegen Weiss gemessen") auch
+    // jetzt noch gueltig, wo unter der Marke keine kontrollierte weisse
+    // Seite mehr liegt, sondern eine Kartenkachel beliebiger Farbe.
+    const huelle = document.createElement('div');
+    huelle.className = 'stationenkarte-station-huelle';
+
+    const markierung = donut(station.belegt, station.kapazitaet, beschriftung, {
+        durchmesser,
+        dicke: Math.max(4, durchmesser * 0.16),
+        farbe: voll ? 'var(--warnung-text)' : 'var(--marine)'
+    });
+    // role/aria-label des Donuts hier ABSICHTLICH stummgeschaltet: der
+    // Leaflet-Marker selbst traegt gleich die vollstaendige Beschriftung
+    // UND die Klick-/Tastaturbedienung (title/alt unten plus
+    // options.keyboard) - ein Screenreader soll "Hauptbahnhof: 28 von 40
+    // ... Details oeffnen" genau EINMAL hoeren.
+    markierung.removeAttribute('role');
+    markierung.setAttribute('aria-hidden', 'true');
+    huelle.append(markierung);
+
+    // options.html als ECHTES Element (kein HTML-String): Leaflet haengt
+    // es per appendChild an, ohne innerHTML - wichtig, weil station.name
+    // zwar keine Freitext-Schadensmeldung ist, aber trotzdem aus der
+    // Datenbank stammt (siehe Hausregel).
+    const icon = L.divIcon({
+        html: huelle,
+        // EIGENE Klasse statt der Leaflet-Vorgabe 'leaflet-div-icon' -
+        // die brächte ein weisses Kaestchen mit grauem Rahmen mit
+        // (.leaflet-div-icon in leaflet.css), das unsere runde,
+        // schattierte Huelle nur verdeckt haette.
+        className: 'stationenkarte-station-icon',
+        iconSize: [durchmesser, durchmesser],
+        iconAnchor: [durchmesser / 2, durchmesser / 2]
+    });
+
+    const marke = L.marker([Number(station.latitude), Number(station.longitude)], {
+        icon,
+        keyboard: true,
+        // title setzt die native .title-Eigenschaft (Mauszeiger-Tooltip),
+        // KEIN innerHTML - noetig, weil donut() bei dieser Markengroesse
+        // (30-58px) den Prozentwert selbst ausblendet (siehe
+        // .stationenkarte-station-huelle .donut-text-prozent in
+        // style.css), eine sehende Maus-Bedienung braucht trotzdem einen
+        // Weg an die Zahl.
+        title: beschriftung,
+        alt: beschriftung
+    });
+
+    // Name UND Tastaturbedienung erst NACH dem Einhaengen setzbar -
+    // getElement() liefert vor 'add' noch nichts (Leaflet erzeugt das
+    // Icon-Element erst dann).
+    marke.on('add', () => {
+        const element = marke.getElement();
+        element.setAttribute('aria-label', beschriftung);
+        // Enter UND Leertaste: dieselben beiden Tasten, mit denen ein
+        // <button> nativ ausgeloest wird - Leaflets eigener role="button"
+        // (options.keyboard, siehe oben) verspricht diese Bedienung, ohne
+        // sie fuer ein <div> von selbst umzusetzen.
+        element.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 stationMaske(station);
             }
         });
-        marke.append(markierung);
+    });
+    marke.on('click', () => stationMaske(station));
 
-        const label = document.createElementNS(SVG_NS, 'text');
-        label.setAttribute('x', p.x.toFixed(1));
-        label.setAttribute('y', (p.y + durchmesser / 2 + 12).toFixed(1));
-        label.setAttribute('class', 'stationenkarte-station-text');
-        label.setAttribute('aria-hidden', 'true');
-        label.textContent = station.stationsnummer;
-        marke.append(label);
+    // <text>-Beschriftung der SVG-Fassung ersetzt durch eine dauerhaft
+    // sichtbare Leaflet-Tooltip - aria-hidden, weil element.aria-label
+    // oben (bzw. das title-Attribut) den Namen bereits vollstaendig
+    // vorliest bzw. anzeigt; diese Zahl ist ein rein sehendes
+    // Schnellueberblick-Hilfsmittel.
+    const nummer = document.createElement('span');
+    nummer.setAttribute('aria-hidden', 'true');
+    nummer.textContent = station.stationsnummer;
+    marke.bindTooltip(nummer, {
+        permanent: true,
+        direction: 'bottom',
+        offset: L.point(0, durchmesser / 2 + 2),
+        className: 'stationenkarte-station-text',
+        interactive: false
+    });
 
-        svg.append(marke);
-    }
+    return marke;
+}
 
-    svg.append(stationenKarteMassstabsbalken(proj, breite, hoehe, rand));
-    svg.append(stationenKarteNordpfeil(breite, rand));
+// Eine Kundenort-Marke: Flaeche = Kundenzahl (flaechenproportional, siehe
+// stationenKarteKundenRadius() unten), plus eine sichtbare Zahl daneben -
+// "ein Kreis ohne Zahl waere eine Schaetzaufgabe" (derselbe Grundsatz wie
+// bei donut(), hier auf die Kundenmarke uebertragen: Wuerzburg (573)
+// gegen Karlstadt (9) sind aus der Flaeche allein nicht sicher
+// auseinanderzuhalten).
+function stationenKarteKundenortMarke(ort, maxKunden) {
+    const radius = stationenKarteKundenRadius(ort.kunden, maxKunden);
+    const beschriftung = t('map.customersAtLocation', { ort: ort.ort, kundenPhrase: mengeFormat(ort.kunden, 'kunde') });
 
-    return svg;
+    const kreis = L.circleMarker([Number(ort.latitude), Number(ort.longitude)], {
+        radius,
+        className: 'stationenkarte-kundenort-kreis',
+        // interactive:false: dieselbe Behandlung wie zuvor die <g> im
+        // SVG - ein Klick hier loeste nie etwas aus, nur role="img" samt
+        // aria-label (unten, nach dem Einhaengen gesetzt) machen die
+        // Zahl fuer einen Screenreader auffindbar.
+        interactive: false
+    });
+    kreis.on('add', () => {
+        const element = kreis.getElement();
+        element?.setAttribute('role', 'img');
+        element?.setAttribute('aria-label', beschriftung);
+    });
+
+    const zahl = document.createElement('span');
+    zahl.setAttribute('aria-hidden', 'true');   // role="img" oben traegt die Bedeutung bereits vollstaendig
+    zahl.textContent = t('map.customerLabelShort', { ort: ort.ort, n: zahlFormat(ort.kunden) });
+    kreis.bindTooltip(zahl, {
+        permanent: true,
+        direction: 'bottom',
+        offset: L.point(0, radius),
+        className: 'stationenkarte-kundenort-text',
+        interactive: false
+    });
+
+    return kreis;
 }
 
 // Kreisdurchmesser linear zwischen 30 und 58 px ueber die tatsaechliche
@@ -1237,137 +1453,6 @@ function stationenKarteKundenRadius(kunden, maxKunden) {
     const anteil = maxKunden > 0 ? kunden / maxKunden : 0;
     const flaeche = flaecheMin + anteil * (flaecheMax - flaecheMin);
     return Math.sqrt(flaeche / Math.PI);
-}
-
-// Aequidistante Zylinderprojektion (Plate Carrée) um die MITTLERE Breite
-// der uebergebenen Punkte - fuer ein derart kleines Gebiet (unter 40 km
-// Kantenlaenge selbst mit eingeblendeter Kundschaft) unabhaengig von
-// jeder aufwendigeren Projektion ausreichend genau.
-//
-// DIE LAENGENGRAD-KORREKTUR IST PFLICHT (Auftrag, ausdruecklich als
-// Fallstrick benannt): "ein Grad Laenge ist auf dieser Breite deutlich
-// kuerzer als ein Grad Breite - wer beides gleich skaliert, verzerrt."
-// Bei rund 49.8 Grad Nord ist ein Laengengrad nur noch cos(49.8°) ≈ 0.646
-// so lang wie ein Breitengrad - kappa unten korrigiert genau das, INDEM
-// jede Laengengrad-Differenz vor der eigentlichen Skalierung mit kappa
-// multipliziert wird, sodass beide Achsen anschliessend in derselben
-// "Breitengrad-aequivalenten" Einheit vorliegen und EIN gemeinsamer
-// Massstab (massstab unten) fuer beide Richtungen gilt.
-function stationenKarteProjektion(punkte, breite, hoehe, rand) {
-    const latWerte = punkte.map((p) => p.lat);
-    const lonWerte = punkte.map((p) => p.lon);
-    const latMin = Math.min(...latWerte);
-    const latMax = Math.max(...latWerte);
-    const lonMin = Math.min(...lonWerte);
-    const lonMax = Math.max(...lonWerte);
-    const latMitte = (latMin + latMax) / 2;
-    const kappa = Math.cos((latMitte * Math.PI) / 180);
-
-    // Mindestspanne, falls jemals nur ein einzelner Punkt hereinkaeme
-    // (heute nicht der Fall: mindestens zehn Stationen) - schuetzt vor
-    // einer Division durch 0, nicht vor einem realistischen Datenfall.
-    const breiteGrad = Math.max(latMax - latMin, 0.002);
-    const laengeGrad = Math.max((lonMax - lonMin) * kappa, 0.002);
-
-    const nutzbarBreite = breite - 2 * rand;
-    const nutzbarHoehe = hoehe - 2 * rand;
-    const massstab = Math.min(nutzbarBreite / laengeGrad, nutzbarHoehe / breiteGrad);
-
-    // Zentrieren: die kuerzere Achse bekommt sonst unnoetig Luft nur auf
-    // EINER Seite statt symmetrisch auf beiden.
-    const versatzX = rand + (nutzbarBreite - laengeGrad * massstab) / 2;
-    const versatzY = rand + (nutzbarHoehe - breiteGrad * massstab) / 2;
-
-    return {
-        massstab,
-        projizieren(lat, lon) {
-            return {
-                x: versatzX + (lon - lonMin) * kappa * massstab,
-                y: versatzY + (latMax - lat) * massstab   // Norden = oben
-            };
-        }
-    };
-}
-
-// Massstabsbalken: rundet auf eine "runde" Kilometerzahl ab, die nicht
-// breiter als ein Achtel der Kartenbreite wird - eine Karte, deren
-// Ausdehnung sich je nach eingeblendeter Kundschaft aendert (siehe
-// stationenKarteZeichnen()), braucht einen Massstab, der sich MIT ihr
-// aendert, kein fest eingezeichneter Wert.
-function stationenKarteMassstabsbalken(proj, breite, hoehe, rand) {
-    const KM_PRO_GRAD_BREITE = 111.32;   // Mittelwert - fuer eine schematische Karte ausreichend genau
-    const pixelProKm = proj.massstab / KM_PRO_GRAD_BREITE;
-    const kandidaten = [0.25, 0.5, 1, 2, 5, 10, 20, 50];
-    const maxBreitePixel = breite / 8;
-    let km = kandidaten[0];
-    for (const k of kandidaten) {
-        if (k * pixelProKm <= maxBreitePixel) km = k;
-    }
-    const laengePixel = km * pixelProKm;
-
-    const gruppe = document.createElementNS(SVG_NS, 'g');
-    gruppe.setAttribute('class', 'stationenkarte-massstab');
-    // aria-hidden: ein kartografischer Massstab ist eine Konvention fuer
-    // sehende Nutzung der Grafik selbst, kein Ersatz fuer die textuelle
-    // Erklaerung (.stationenkarte-erklaerung) - dieselbe Behandlung wie
-    // die Achsenbeschriftung bei saeulengrafik() in rahmen.js.
-    gruppe.setAttribute('aria-hidden', 'true');
-
-    const y = hoehe - rand / 2;
-    const x0 = rand;
-    const x1 = rand + laengePixel;
-
-    const balken = document.createElementNS(SVG_NS, 'line');
-    balken.setAttribute('x1', x0);
-    balken.setAttribute('x2', x1);
-    balken.setAttribute('y1', y);
-    balken.setAttribute('y2', y);
-    gruppe.append(balken);
-
-    for (const x of [x0, x1]) {
-        const tick = document.createElementNS(SVG_NS, 'line');
-        tick.setAttribute('x1', x);
-        tick.setAttribute('x2', x);
-        tick.setAttribute('y1', y - 4);
-        tick.setAttribute('y2', y + 4);
-        gruppe.append(tick);
-    }
-
-    const text = document.createElementNS(SVG_NS, 'text');
-    text.setAttribute('x', ((x0 + x1) / 2).toFixed(1));
-    text.setAttribute('y', (y - 8).toFixed(1));
-    text.setAttribute('class', 'stationenkarte-massstab-text');
-    text.textContent = km < 1 ? `${Math.round(km * 1000)} m` : `${km} km`;
-    gruppe.append(text);
-
-    return gruppe;
-}
-
-// Nordpfeil: eine einfache Dreiecksspitze mit "N" - genug, um die
-// Orientierung der Karte zu benennen, ohne die "Schema, keine Landkarte"-
-// Beschriftung (siehe stationenKarteZeigen()) durch ein aufwendigeres
-// Symbol zu unterlaufen.
-function stationenKarteNordpfeil(breite, rand) {
-    const gruppe = document.createElementNS(SVG_NS, 'g');
-    gruppe.setAttribute('class', 'stationenkarte-nordpfeil');
-    gruppe.setAttribute('aria-hidden', 'true');   // rein orientierende Konvention, siehe Massstabsbalken oben
-
-    const x = breite - rand / 2 - 4;
-    const ySpitze = rand / 2 - 8;
-    const yFuss = rand / 2 + 12;
-
-    const pfeil = document.createElementNS(SVG_NS, 'path');
-    pfeil.setAttribute('d', `M ${x} ${ySpitze} L ${x - 6} ${yFuss} L ${x} ${yFuss - 4} L ${x + 6} ${yFuss} Z`);
-    gruppe.append(pfeil);
-
-    const text = document.createElementNS(SVG_NS, 'text');
-    text.setAttribute('x', x);
-    text.setAttribute('y', yFuss + 12);
-    text.setAttribute('class', 'stationenkarte-nordpfeil-text');
-    text.textContent = 'N';
-    gruppe.append(text);
-
-    return gruppe;
 }
 
 // ===== Eine Station anlegen =====

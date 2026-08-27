@@ -9,6 +9,21 @@
        als eigenes Verzeichnis ausgeliefert und hat oberhalb ihrer Wurzel
        nichts. Der Verweis lieferte schon lokal einen 404. -->
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <!-- Leaflet 1.9.4, dasselbe CDN-Muster wie supabase-js unten
+       (<script src="https://cdn.jsdelivr.net/...">, kein Bauschritt).
+       Version FEST verankert, nicht @latest - ein Foliendeck, das im
+       naechsten Semester ploetzlich anders aussieht, waere ein
+       Aergernis (Auftraggeber, sinngemaess). Die vom Auftraggeber
+       verlangte Abkehr von der alten Projektregel "keine Abhaengigkeit
+       ausser supabase-js" steht ausfuehrlich in
+       doku/plans/2026-08-25-velocity-warenwirtschaft-oberflaeche.md
+       und in doku/datenmodell/08-warenwirtschaft.md.
+       integrity-Hashes von https://leafletjs.com/download.html
+       uebernommen (dort sha256, nicht die von jsdelivr sonst ueblichen
+       sha384) und lokal gegen die jsdelivr-Auslieferung nachgerechnet -
+       beide Wege liefern byteidentische Dateien. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
 </head>
 <body>
   <!-- Fuenf Zustaende, von denen immer genau einer sichtbar ist. Kein
@@ -75,7 +90,30 @@
            als Wort steht (Titel, Anmeldemaske), nicht in der zwei Buchstaben
            kurzen Wortmarke. -->
       <span class="wortmarke">
-        <span class="wortmarke-firma">VeloCity</span>
+        <!-- Gestaltungsauftrag, woertlich: "ein Klick auf VeloCity im
+             linken oberen Eck sollte bikes.butscher.cloud aufrufen." NUR
+             "VeloCity", nicht der ganze Schriftzug: "WaWi" benennt genau
+             DIESE Anwendung, ein Klick darauf zur oeffentlichen
+             Kundenwebsite zu schicken waere der falsche Zielort fuer das
+             falsche Wort.
+             target="_blank"/rel="noopener": diese Oberflaeche ist eine
+             Arbeitsanwendung mit ungespeicherten Eingaben (siehe
+             maskeHatUngespeicherteEingaben() in rahmen.js) - ein
+             versehentlicher Klick auf die Wortmarke darf keine offene
+             Maske wegreissen, deshalb ein NEUER Tab statt desselben
+             Fensters. noopener: der neue Tab bekaeme sonst per
+             window.opener Zugriff auf dieses Fenster zurueck - eine
+             bekannte Luecke bei target="_blank", unabhaengig davon, dass
+             das Ziel hier die eigene Website ist.
+             aria-label statt des sichtbaren Texts allein: der nackte
+             Linktext "VeloCity" sagt einem Screenreader nicht, wohin der
+             Link fuehrt oder dass er einen neuen Tab oeffnet (WCAG
+             "Link Purpose") - beides steht deshalb explizit im
+             aria-label, nicht nur im sichtbaren Wort. -->
+        <a class="wortmarke-firma wortmarke-link" href="https://bikes.butscher.cloud"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="VeloCity – öffentliche Website, öffnet in neuem Tab"
+           data-i18n-aria="index.brandLinkAria">VeloCity</a>
         <span class="wortmarke-trenner" aria-hidden="true"></span>
         <span class="wortmarke-produkt">WaWi</span>
       </span>
@@ -178,6 +216,11 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Leaflet-Skript zum <link> im <head> (siehe dortiger Kommentar) -
+       VOR rahmen.js/stationen.js, die den globalen Namen "L" erst zur
+       Laufzeit brauchen, nicht schon beim Parsen. -->
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
   <script src="config.js"></script>
   <script src="daten.js"></script>
   <script src="anmeldung.js"></script>

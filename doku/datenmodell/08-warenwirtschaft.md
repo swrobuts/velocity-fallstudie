@@ -153,6 +153,61 @@ Aufrufers (solange sie nicht als `security_invoker` angelegt ist).
 direkte Weg dorthin mit `permission denied` endet. Das Recht auf die
 Hilfssicht war von Anfang an überflüssig — es hat nur niemand geprüft.
 
+## Die Landkarte der Stationen — eine Fremdanfrage gegen eine brauchbare Karte
+
+Die Stationskarte in `wawi/stationen.js` zeichnet Kartenkacheln von
+OpenStreetMap über Leaflet (siehe `wawi/index.html` und den Kopfkommentar
+von `stationenKarteZeigen()` in `wawi/stationen.js`) — eine Abkehr von der
+ursprünglichen Projektregel „keine Abhängigkeit außer `supabase-js`"
+(siehe die überholte Stelle in
+`doku/plans/2026-08-25-velocity-warenwirtschaft-oberflaeche.md`), die
+hier ausdrücklich benannt gehört, weil sie eine neue Art von
+Datenabfluss einführt, die diese Fallstudie sonst gerade vermeidet.
+
+**Der Unterschied zu `supabase-js` ist wichtig.** `supabase-js` liefert
+einmalig JavaScript-Code aus — der Browser lädt ihn, führt ihn aus, und
+danach spricht er nur noch mit `supabase.butscher.cloud`, demselben
+Server, den diese Anwendung ohnehin kontaktiert. Eine Kartenkachel ist
+etwas anderes: **jeder Kartenblick** löst laufende, neue HTTP-Anfragen an
+`tile.openstreetmap.org` aus, einen Server, der mit dieser Fallstudie
+sonst nichts zu tun hat. Jede dieser Anfragen trägt zwangsläufig die
+IP-Adresse des anfragenden Rechners und den genauen Kartenausschnitt
+(Koordinaten, Zoomstufe) — das ist, wie HTTP funktioniert, nicht
+vermeidbar, sobald man Kartenkacheln überhaupt lädt.
+
+**Das ist eine Abwägung, keine Nachlässigkeit.** Die Alternative — eine
+selbst gezeichnete, schematische Karte ohne echte Straßen, wie die erste
+Fassung dieser Oberfläche sie hatte — beantwortete die Frage nicht, für
+die eine Landkarte überhaupt gebraucht wird: „wo liegt diese Station,
+wer ist in der Nähe." Der Auftraggeber hat das wörtlich so benannt (siehe
+Kopfkommentar der Karte in `wawi/stationen.js`) und recht behalten. Eine
+Fallstudie, die Datensparsamkeit lehren will, muss deshalb auch die
+Kehrseite lehren dürfen: manche Funktion lohnt sich trotz einer echten,
+messbaren Fremdanfrage — solange die Anfrage benannt, ihr Umfang
+begrenzt und ihr Nutzen den Umständen angemessen ist. Für eine Handvoll
+Mitarbeitende, die eine Karte gelegentlich öffnen, ist das der Fall;
+für eine öffentliche, stark frequentierte Anwendung wäre dieselbe
+Abwägung möglicherweise anders ausgefallen (siehe die Nutzungsbedingungen
+unter `operations.osmfoundation.org/policies/tiles/`, die genau
+deswegen zwischen „leichter Nutzung" und Massenbetrieb unterscheiden).
+
+**Was die Fremdanfrage NICHT preisgibt:** Sie transportiert ausschließlich
+den sichtbaren Kartenausschnitt — keine Stations- oder Kundendaten. Der
+Schalter „Kundschaft anzeigen" auf der Karte sendet dabei überhaupt
+nichts an den Kachelserver; er entscheidet nur, welche bereits geladenen,
+längst aggregierten Marken (siehe unten) auf der ohnehin schon
+angeforderten Karte zusätzlich eingeblendet werden.
+
+**Die Kundschaft bleibt dabei aggregiert, nicht individuell — dieselbe
+Regel wie überall sonst in diesem Dokument.** Die Karte zeigt niemals
+einzelne Kundenadressen als Punkte; sie zeigt `v_wawi_kundenorte`, eine
+je Ort **gezählte** Kundschaft (`ort`, `latitude`, `longitude`, `kunden`)
+aus `velocity.ort_koordinate` (siehe deren Kopfkommentar in
+`db/aufbau/0018_wawi_sichten.sql`). Ein Punkt je Wohnadresse wäre exakt
+das Bewegungs-/Wohnprofil, das der Abschnitt „Was ein Mitarbeiter nicht
+sieht" oben für Fahrten bereits ausschließt — dieselbe Zurückhaltung gilt
+hier für Wohnorte.
+
 ## Die Auskunft nach Art. 15 DSGVO — die gewollte Ausnahme
 
 Oben steht: keine einzelnen Fahrten. Der Knopf „Auskunft nach Art. 15“
