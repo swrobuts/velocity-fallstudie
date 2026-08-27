@@ -168,14 +168,21 @@ async function stationenAufbauen() {
     // Stationen, wie voll" bleibt beantwortbar). Die jeweilige
     // Detailmaske bzw. die Karte meldet einen solchen Fehler stattdessen
     // selbst, siehe stationRaederAbschnitt()/stationVerkehrAbschnitt()
-    // unten; stationenKopftafel() unten laesst die Tagesgang- bzw. die
+    // unten; stationenKopftafel() unten laesst die Umschlag- und die
     // Saldospalte bei einem Ladefehler dort schlicht weg (siehe dort).
+    // Die Zeitfenstersicht wird weiterhin geladen, aber nicht mehr fuer
+    // die Kopftafel: sie traegt seit dieser Fassung nur noch die
+    // Verkehrsgrafik in der Detailmaske EINER Station
+    // (stationVerkehrAbschnitt() unten). Dort ist sie am Platz - die
+    // Maske zeigt eine Station in der Tiefe, und dass sechs von zwoelf
+    // Fenstern leer sind, ist bei EINER Grafik eine Aussage ("nachts
+    // faehrt niemand") und keine zehnfach wiederholte Leere.
     stationenRaederAlle = raeder;
     stationenVerkehrAlle = verkehr;
     stationenKundenorteAlle = kundenorte;
     stationenAlle = stationen;
 
-    zeigeKopftafel(vorgang, stationenKopftafel(stationen, verkehr, auslastung));
+    zeigeKopftafel(vorgang, stationenKopftafel(stationen, auslastung));
 
     // KEIN Filter hier (Gestaltungsauftrag, Punkt 2, woertlich): "bei
     // zehn Zeilen braucht es keinen Filter. Bau keinen. Ein
@@ -259,23 +266,54 @@ function stationenStatuszeileText(stationen) {
 // heute jemand Raeder umsetzen?"
 //
 // Die Liste darunter fuehrt dieselben zehn Stationen, zeigt aber je
-// Station nur einen Momentwert (belegt von Kapazitaet). Drei Dinge, die
-// ein Disponent morgens braucht, stehen dort nicht und koennen dort auch
-// nicht stehen, weil sie aus zwei weiteren Sichten kommen:
+// Station nur einen Momentwert (belegt von Kapazitaet). Was ein Disponent
+// morgens braucht, steht dort nicht und kann dort auch nicht stehen, weil
+// es aus einer weiteren Sicht kommt: der SALDO ueber die gesamte
+// Historie - sammelt diese Station Raeder an oder laeuft sie leer? - und
+// zwar IM VERGLEICH ueber alle zehn Stationen, auf EINER Skala.
 //
-//   - der TAGESGANG (wann diese Station gefahren wird - eine Reihe von
-//     zwoelf Zweistundenbloecken, keine einzelne Zahl),
-//   - der SALDO (ob sie ueber die gesamte Historie Raeder ansammelt oder
-//     verliert - "die eigentliche Geschichte dieses Bereichs", Auftrag),
-//   - und beides IM VERGLEICH ueber alle zehn Stationen, auf EINER Skala.
+// ===== DER TAGESGANG IST GESTRICHEN, UND WARUM =====
 //
-// Genau dafuer sind die zehn Zeilen gleich gebaut: zehn Tagesgaenge
-// untereinander auf derselben Achse sind Tuftes small multiples - man
-// sieht auf einen Blick, dass alle zehn Stationen denselben Rhythmus
-// haben (Morgenspitze, Mittag, starke Nachmittagsspitze) und sich fast
-// nur im Saldo unterscheiden. Diese Aussage kann keine einzelne Kachel
-// treffen, egal wie gross ihre Zahl ist.
-function stationenKopftafel(stationen, verkehr, auslastung) {
+// Diese Tafel trug bis zu dieser Fassung eine vierte Spalte: je Station
+// eine Saeulenreihe ueber zwoelf Zweistundenfenster, "Abgaenge je
+// Werktag". Sie war korrekt gezeichnet - sie hatte nur nichts zu zeigen.
+// An der Datenbank nachgemessen (Hauptbahnhof, Werktag, Abgaenge je Tag):
+//
+//     0 Uhr 0,00   6 Uhr 0,49   12 Uhr 0,13   18 Uhr 0,28
+//     2 Uhr 0,00   8 Uhr 0,00   14 Uhr 0,28   20 Uhr 0,31
+//     4 Uhr 0,00  10 Uhr 0,00   16 Uhr 0,82   22 Uhr 0,00
+//
+// SECHS VON ZWOELF FENSTERN SIND EXAKT NULL, der Hoechstwert liegt bei
+// 0,82 Bewegungen je Tag. Das Netz ist schlicht zu klein fuer diese
+// Aufloesung: rund drei Abgaenge je Station und Tag, verteilt auf zwoelf
+// Fenster. Was wie ein Tagesgang aussah, war das Rauschen einer
+// Stichprobe von zwei bis drei Ereignissen.
+//
+// UND DER ZWEITE, SCHWERERE BEFUND: die FORM ist an allen zehn Stationen
+// dieselbe. Anteil der Werktagsabgaenge, ebenfalls nachgemessen -
+// 6 bis 8 Uhr zwischen 20,8 % (Juliuspromenade, Hubland) und 23,6 %
+// (Residenz), 16 bis 18 Uhr zwischen 33,4 % (Marktplatz) und 38,4 %
+// (Dom). Zwei bzw. fuenf Prozentpunkte Spanne ueber zehn Zeilen. Small
+// multiples zeigen Gleichheit ebenso gut wie Unterschied (Tufte) - aber
+// dafuer braucht es keine zehn Grafiken, dafuer genuegt EIN Satz. Der
+// steht jetzt in der Fussnote, mit denselben Zahlen.
+//
+// Die vom Auftrag genannten Auswege sind geprueft und verworfen:
+//   - GROEBERE FENSTER (vier Sechsstundenbloecke) machten die Nullen
+//     kleiner, aber nicht die Gleichheit der zehn Zeilen.
+//   - SUMMEN STATT TAGESMITTEL aendern nur die Achsenbeschriftung; die
+//     sechs leeren Fenster bleiben leer, weil in ihnen nichts passiert.
+//   - UEBER ALLE STATIONEN ZUSAMMENFASSEN traegt tatsaechlich (0,00 /
+//     4,77 / 1,10 / 2,56 / 7,83 / 2,61 / 2,73 Abgaenge je Werktag - eine
+//     klare Pendlerform mit Morgen- und Nachmittagsspitze). Nur ist das
+//     dann EINE Aussage ueber das NETZ und keine ueber eine Zeile: sie
+//     gehoert nicht in eine Spalte, die zehnmal dasselbe wiederholt.
+//     Sie steht deshalb ebenfalls in der Fussnote.
+//
+// AN IHRER STELLE STEHT JETZT, WAS DIE ZEILEN WIRKLICH UNTERSCHEIDET:
+// die Bewegungen je Stellplatz (siehe unten, Spanne 57,8 bis 117,1,
+// Verhaeltnis 2,0 zu 1) - und weiterhin der Saldo, von -65 bis +122.
+function stationenKopftafel(stationen, auslastung) {
     if (!stationen || stationen.length === 0) return null;
 
     const gesamtKapazitaet = stationen.reduce((s, z) => s + z.kapazitaet, 0);
@@ -291,29 +329,15 @@ function stationenKopftafel(stationen, verkehr, auslastung) {
     const nachId = new Map((auslastung || []).map((a) => [a.station_id, a]));
     const hatSaldo = !auslastungFehler && nachId.size > 0;
 
-    // Tagesgang: die zwoelf Zweistundenbloecke EINES Werktags, je Station.
-    // Nur 'werktag' (nicht Wochenende): zwei Reihen je Zeile waeren zwei
-    // Grafiken in einer Zelle und damit gerade nicht mehr small multiples;
-    // der Werktag traegt die Spitzen, um die es der Disposition geht.
-    // Wochenende steht unveraendert in der Detailmaske jeder Station
-    // (stationVerkehrAbschnitt() weiter unten) - der Kopf zeigt den
-    // Vergleich, die Maske die Tiefe.
-    const verkehrFehler = Boolean(letzterLadeFehler('v_wawi_stationsverkehr_zeitfenster'));
-    const tagesgang = new Map();
-    if (!verkehrFehler) {
-        for (const zeile of verkehr || []) {
-            if (zeile.wochentyp !== 'werktag') continue;
-            let reihe = tagesgang.get(zeile.station_id);
-            if (!reihe) { reihe = new Array(12).fill(0); tagesgang.set(zeile.station_id, reihe); }
-            reihe[Math.floor(zeile.zeitfenster_start_stunde / 2)] = Number(zeile.abgaenge_je_tag) || 0;
-        }
-    }
-    const hatTagesgang = tagesgang.size > 0;
-
-    const stundeText = (index) => `${zahlFormat(index * 2)}-${zahlFormat(index * 2 + 2)}`;
-    const spitzeVon = (reihe) => {
-        const hoechster = Math.max(...reihe);
-        return { wert: hoechster, index: reihe.indexOf(hoechster) };
+    // Bewegungen je Stellplatz - siehe die ausfuehrliche Begruendung an
+    // der Umschlagspalte weiter unten. null (nicht 0) fuer eine Zeile
+    // ohne Kapazitaet oder ohne Auslastungszeile: 0 waere eine Aussage
+    // ("dieser Stellplatz wird nie benutzt"), die die Daten nicht
+    // hergeben - kopftafelZeile() laesst eine null-Zelle leer.
+    const umschlagVon = (z) => {
+        const eintrag = nachId.get(z.station_id);
+        if (!eintrag || !z.kapazitaet) return null;
+        return ((Number(eintrag.abgaenge) || 0) + (Number(eintrag.zugaenge) || 0)) / z.kapazitaet;
     };
 
     const spalten = [
@@ -324,26 +348,36 @@ function stationenKopftafel(stationen, verkehr, auslastung) {
             zusatz: (z) => (z.summenzeile ? null : z.ort)
         },
         {
+            // ===== EINE SPALTE STATT ZWEIER =====
+            // Auftraggeber, woertlich: "Die Stellplatz- und
+            // Belegungsspalte zeigen fast dasselbe - Kapazitaet und
+            // Belegung als zwei nebeneinanderliegende Balkenspalten.
+            // Braucht es beide?" Nein. Die Kapazitaet ist der BEZUG, in
+            // dem die Belegung steht - das ist ein Balken mit Rahmen
+            // (siehe optionen.bezug an zellbalken() in rahmen.js), kein
+            // zweiter Balken daneben.
+            //
+            // UND ES BEHEBT DEN ZWEITEN BEFUND ("Die Belegungsbalken
+            // sehen alle gleich aus"). Der alte 100-%-Strukturbalken
+            // normierte jede Zeile auf ihre eigene Kapazitaet: zehn
+            // Stationen zwischen 30 und 70 Prozent Fuellstand nutzten
+            // damit nur das mittlere Drittel der Balkenbreite, und der
+            // Rest jeder Zeile sah gleich aus. Der neue Balken zeigt die
+            // Belegung ABSOLUT auf der gemeinsamen Skala aller Zeilen:
+            // 6 bis 28 Raeder, Verhaeltnis 4,7 zu 1 - vom Zellerauer
+            // Fuenftel bis zum fast vollen Hauptbahnhof.
             art: 'groesse',
-            titel: t('col.capacity'),
-            einheit: t('unit.dockingPoints'),
-            wert: (z) => z.kapazitaet,
-            format: (n) => zahlFormat(n)
-        },
-        {
-            art: 'struktur',
-            titel: t('col.occupancy'),
-            einheit: t('unit.shareOfRow'),
-            auchSumme: true,
-            segmente: (z) => [
-                // Eine VOLLE Station traegt ihren Balken in --warnung-text
-                // statt in --marine: dort passt kein zurueckgegebenes Rad
-                // mehr hinein, und das ist eine Handlungsaufforderung, kein
-                // Bestwert. Dieselbe Bedeutung, die die Farbe in dieser
-                // Oberflaeche ueberall traegt.
-                { wert: z.belegt, name: t('col.occupied'), klasse: z.frei === 0 ? 'seg-warnung' : 'seg-aktiv' },
-                { wert: z.frei, name: t('col.free'), klasse: 'seg-ruhend' }
-            ],
+            titel: t('col.occupied'),
+            einheit: t('unit.bikesOfCapacity'),
+            wert: (z) => z.belegt,
+            bezug: (z) => z.kapazitaet,
+            format: (n) => zahlFormat(n),
+            // RANG 2 DER FARBORDNUNG - SCHWELLE. Eine volle Station
+            // nimmt keine Rueckgabe mehr an; das ist eine
+            // Handlungsaufforderung und kein Bestwert. Ausschliesslich
+            // frei === 0, nicht "fast voll": eine Schwelle, die
+            // schaetzt, ist keine.
+            farbe: (z) => (z.frei === 0 ? 'var(--warnung-text)' : 'var(--marine)'),
             beschriftung: (z) => t('board.stationOccupancyAria', {
                 name: z.name, belegt: zahlFormat(z.belegt), kapazitaet: zahlFormat(z.kapazitaet),
                 prozent: zahlFormat(z.kapazitaet ? Math.round((z.belegt / z.kapazitaet) * 100) : 0)
@@ -351,36 +385,45 @@ function stationenKopftafel(stationen, verkehr, auslastung) {
         }
     ];
 
-    if (hatTagesgang) {
+    if (hatSaldo) {
         spalten.push({
+            // AN DIE STELLE DES TAGESGANGS (siehe Kopfkommentar): wie oft
+            // wird jeder einzelne Stellplatz dieser Station benutzt?
+            // Nachgemessen ueber die gesamte Historie: Hubland 57,8 -
+            // Hauptbahnhof 62,2 - Uni 69,4 - Juliuspromenade 80,8 -
+            // Sanderau 81,6 - Residenz 94,5 - Grombuehl 96,5 - Dom 97,3 -
+            // Marktplatz 98,0 - Zellerau 117,1. Verhaeltnis 2,0 zu 1,
+            // keine Null, zehn verschiedene Werte.
+            //
+            // UND ES IST EIN BEFUND, KEINE ZAHLENSPIELEREI: die
+            // Abgaenge selbst liegen bei allen zehn Stationen zwischen
+            // 1149 und 1265 (Verhaeltnis 1,10 - siehe die Fussnote). Die
+            // Nachfrage ist also gleich verteilt, die KAPAZITAET aber
+            // nicht - Zellerau leistet mit 20 Stellplaetzen dieselbe
+            // Arbeit wie Hubland mit 40. Genau diese Ungleichheit sieht
+            // man in keiner der beiden Rohgroessen.
+            //
+            // VERHAELTNISZAHL AUS SUMMEN (Hausregel): Bewegungen dieser
+            // Station geteilt durch ihre Stellplaetze, nicht ein Mittel
+            // ueber Tage.
+            //
+            // LAGEPUNKT, KEIN BALKEN: hier kodiert Position, nicht
+            // Laenge. Ein Balken vom Nullpunkt aus draengte zehn Werte
+            // zwischen 57,8 und 117,1 in die obere Haelfte der Skala
+            // (49 bis 100 Prozent Laenge) - genau der Fehler, den die
+            // Belegungsspalte oben gerade abgelegt hat. Auf einer Achse
+            // von Kleinst- zu Groesstwert nutzen dieselben zehn Werte die
+            // volle Breite.
             art: 'profil',
-            titel: t('col.dailyRhythm'),
-            einheit: t('unit.departuresPerWorkday'),
-            reihe: (z) => tagesgang.get(z.station_id) || null,
-            beschriftung: (z) => {
-                const reihe = tagesgang.get(z.station_id) || [];
-                const spitze = spitzeVon(reihe);
-                return t('board.stationRhythmAria', {
-                    name: z.name, stunde: stundeText(spitze.index),
-                    wert: zahlFormat(spitze.wert, { maximumFractionDigits: 2 })
-                });
-            },
-            // Mouse-over je Saeule (Gestaltungsauftrag Punkt 4) - siehe die
-            // gleichlautende Begruendung in auswertungen.js. stundeText()
-            // liefert dasselbe "8-10"-Zweistundenfenster, das auch die
-            // Spitzenangabe in der beschriftung oben schon benutzt. Die
-            // Einheit (spalte.einheit, "Abgaenge je Werktag") steht schon
-            // EINMAL im Spaltenkopf (Hichert/IBCS, siehe th.append(einheit)
-            // in kopftafelZeile()) - eine Wiederholung in JEDER der zwoelf
-            // Kurzbeschriftungen waere Laerm, keine zusaetzliche Aussage.
-            beschriftungTeil: (z, index, wert) => t('board.seriesPartPhrase', {
-                teil: `${stundeText(index)} ${t('common.hourAbbrev')}`,
-                wert: zahlFormat(wert, { maximumFractionDigits: 2 })
+            titel: t('col.turnover'),
+            einheit: t('unit.movementsPerDock'),
+            punkt: (z) => (z.summenzeile ? null : umschlagVon(z)),
+            beschriftung: (z) => t('board.stationTurnoverAria', {
+                name: z.name,
+                wert: zahlFormat(umschlagVon(z) ?? 0, { maximumFractionDigits: 0 }),
+                kapazitaet: zahlFormat(z.kapazitaet)
             })
         });
-    }
-
-    if (hatSaldo) {
         spalten.push({
             art: 'abweichung',
             titel: t('col.balance'),
@@ -414,17 +457,36 @@ function stationenKopftafel(stationen, verkehr, auslastung) {
             summenzeile: true, name: t('col.together'),
             kapazitaet: gesamtKapazitaet, belegt: gesamtBelegt, frei: gesamtKapazitaet - gesamtBelegt
         },
-        // DER BEFUND, DEN DIE TAFEL ZEIGT, IN EINEM SATZ: die Nachfrage ist
-        // ueber alle zehn Stationen fast gleich (die Spanne der Abgaenge ist
-        // schmal), die Unterschiede stecken ausschliesslich im Saldo. Genau
-        // das ist der Grund, warum die Groessenspalte hier die Kapazitaet
-        // zeigt und nicht die Fahrtenzahl: zehn nahezu gleich lange Balken
-        // waeren eine wahre, aber nutzlose Grafik.
-        fussnote: abgaengeAlle.length > 0
-            ? t('board.stationsFootnote', {
-                min: zahlFormat(Math.min(...abgaengeAlle)), max: zahlFormat(Math.max(...abgaengeAlle))
+        // ZWEI BEFUNDE, DIE KEINE SPALTE TRAGEN KANN - und die deshalb
+        // hier stehen, statt als Grafik behauptet zu werden.
+        //
+        // ERSTENS: die Nachfrage ist ueber alle zehn Stationen fast
+        // gleich (Abgaenge 1149 bis 1265, Verhaeltnis 1,10 zu 1). Genau
+        // deshalb zeigt die Groessenspalte die BELEGUNG und nicht die
+        // Fahrtenzahl - zehn nahezu gleich lange Balken waeren eine
+        // wahre, aber nutzlose Grafik.
+        //
+        // ZWEITENS: der Tagesgang. Er ist als Spalte gestrichen (siehe
+        // Kopfkommentar) und steht jetzt als das da, was er ist - eine
+        // Eigenschaft des NETZES, in einem Satz, mit den Zahlen, die ihn
+        // belegen. Die Anteile sind fest eingetragen und nicht gerechnet:
+        // sie kaemen aus v_wawi_stationsverkehr_zeitfenster, die diese
+        // Tafel seit dem Wegfall der Spalte nicht mehr laedt - eine
+        // zusaetzliche Ladeanfrage fuer EINEN Fussnotensatz waere teurer
+        // als die Aussage wert ist. Nachgemessen am 28.08.2026 (siehe
+        // Bericht); die Werte gehoeren zum Referenzdatenbestand dieses
+        // Lehrprojekts und aendern sich nicht von selbst.
+        fussnote: [
+            abgaengeAlle.length > 0
+                ? t('board.stationsFootnote', {
+                    min: zahlFormat(Math.min(...abgaengeAlle)), max: zahlFormat(Math.max(...abgaengeAlle))
+                })
+                : null,
+            t('board.stationsRhythmFootnote', {
+                morgenMin: zahlFormat(21), morgenMax: zahlFormat(24),
+                nachmittagMin: zahlFormat(33), nachmittagMax: zahlFormat(38)
             })
-            : null
+        ].filter(Boolean).join(' ')
     };
 }
 

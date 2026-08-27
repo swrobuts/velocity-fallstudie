@@ -327,6 +327,19 @@ function flotteKopftafel(raeder) {
     const gesamtzeile = { name: t('col.together'), bestand: gesamt, status: new Map() };
     for (const rad of raeder) gesamtzeile.status.set(rad.status, (gesamtzeile.status.get(rad.status) || 0) + 1);
 
+    // EIN EINSATZBEREITES RAD OHNE STANDORT IST EIN PROBLEM (Auftrag,
+    // woertlich - Rang 2 der Farbordnung, "Schwelle"): es steht als
+    // verfuegbar in der Kartei, aber niemand weiss, wo. Gezaehlt wird
+    // ausdruecklich NUR ueber 'verfuegbar' - die 110 ausgeliehenen
+    // Raeder haben ebenfalls keinen Stationsplatz, und das ist bei einem
+    // Rad, auf dem gerade jemand faehrt, der Normalfall und kein Befund.
+    // In der Datenbank nachgezaehlt: 137 Raeder ohne Stationsplatz, davon
+    // 110 ausgeliehen und 27 verfuegbar. Eine Zahl, die beide Faelle
+    // zusammenwuerfe, waere um das Fuenffache zu gross und damit
+    // wertlos.
+    const ohneStandort = raeder.filter(
+        (r) => r.status === 'verfuegbar' && !r.standort).length;
+
     const baujahre = raeder.map((r) => r.baujahr).filter((j) => j != null);
     const vonJahr = baujahre.length ? Math.min(...baujahre) : null;
     const bisJahr = baujahre.length ? Math.max(...baujahre) : null;
@@ -359,7 +372,20 @@ function flotteKopftafel(raeder) {
                 titel: t('col.stock'),
                 einheit: t('unit.bikes'),
                 wert: (z) => z.bestand,
-                format: (n) => zahlFormat(n)
+                format: (n) => zahlFormat(n),
+                // RANG 4 DER FARBORDNUNG - ZUGEHOERIGKEIT (kategorieFarbe()
+                // in rahmen.js). Die neun Modellzeilen stehen in drei
+                // Radtyp-Bloecken; der Balken traegt jetzt die Farbe
+                // seines Blocks. Der Nutzen ist nicht Schmuck, sondern
+                // Wiedererkennung: dasselbe Blau steht in "Umsatz nach
+                // Radtyp" und in "Wegstrecke nach Radtyp" wieder fuer das
+                // City-Bike. Wer die Flotte im Kopf hat, findet sie in den
+                // Auswertungen ohne die Beschriftung zu lesen.
+                // Die Laenge kodiert weiterhin allein den Bestand - die
+                // Farbe nimmt ihr nichts weg, sie beantwortet eine zweite
+                // Frage ("zu wem gehoert die Zeile"), die bislang nur die
+                // Einrueckung beantwortete.
+                farbe: (z) => kategorieFarbe(z.typCode) || 'var(--marine)'
             },
             {
                 art: 'struktur',
@@ -397,7 +423,20 @@ function flotteKopftafel(raeder) {
         ],
         zeilen,
         summe: gesamtzeile,
-        fussnote: t('board.fleetFootnote', { quote: zahlFormat(Math.round(flottenquote * 100)) })
+        // Zwei vollstaendige Saetze, mit Leerzeichen verbunden - nicht
+        // ein Satz aus zwei uebersetzten Bruchstuecken (dieselbe Regel
+        // wie bei der Umsatztafel in auswertungen.js): jeder Teil bleibt
+        // in jeder Sprache fuer sich uebersetzbar. Der zweite Satz
+        // entfaellt, wenn es nichts zu melden gibt - eine Fussnote, die
+        // "0 Raeder ohne Standort" schreibt, meldet einen Nicht-Befund.
+        fussnote: [
+            t('board.fleetFootnote', { quote: zahlFormat(Math.round(flottenquote * 100)) }),
+            ohneStandort > 0
+                ? t('board.fleetNoLocationFootnote', {
+                    raederPhrase: mengeFormat(ohneStandort, 'rad')
+                })
+                : null
+        ].filter(Boolean).join(' ')
     };
 }
 

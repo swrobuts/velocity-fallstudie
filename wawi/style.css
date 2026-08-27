@@ -25,15 +25,26 @@
    Deshalb gilt ab hier EINE Regel fuer alle acht Bereiche, und sie
    steht hier oben, damit sie nicht wieder auseinanderlaeuft:
 
-   1. DREI FLAECHENRAENGE, mehr nicht.
-      --marine          Anwendungsrahmen ganz oben (Kopfleiste).
-      --flaeche-rahmen  worin BEDIENT wird: Navigation, Statuszeile,
-                        Reiter-, Werkzeug-, Filterleiste, Kopftafel,
-                        Spaltenkopf, Maskenkopf.
-      --flaeche         worin DATEN stehen: Tabellenkoerper,
-                        Detailmaskenkoerper.
-      Wer einen Bereich einordnen will, fragt nur: bediene ich hier,
-      oder lese ich hier?
+   1. DREI FLAECHENRAENGE, mehr nicht - und der mittlere gilt NUR FUER
+      DEN RAHMEN DER ANWENDUNG.
+      --marine          Anwendungsrahmen oben (Kopfleiste).
+      --flaeche-rahmen  Anwendungsrahmen links und unten: Navigation
+                        und Statuszeile. SONST NICHTS.
+      --flaeche         das Arbeitsblatt selbst - Reiter-, Werkzeug-,
+                        Filterleiste, Kopftafel, Spaltenkopf,
+                        Tabellenkoerper, Maske.
+      Wer einen Bereich einordnen will, fragt nur: bin ich im Blatt
+      oder an seinem Rand?
+
+      ZWEITER ANLAUF, und der Grund steht in der Farbordnung weiter
+      unten. Die erste Fassung dieser Regel fragte "bediene ich hier
+      oder lese ich hier" - und faerbte damit ACHT gleichzeitig
+      sichtbare Streifen in EINEN Ton: Navigation, Reiterleiste,
+      Werkzeugleiste, Kopftafel, Filterleiste, Tabellenkopf,
+      Spaltenkopf-Filterzeile, Statuszeile. Der Auftraggeber, woertlich:
+      "das viele Grau ist stoerend ohne Ende". Ein Ton, der acht
+      Bereiche gleich einfaerbt, gliedert keinen davon. Die Gliederung
+      INNERHALB des Blatts leistet jetzt allein Punkt 2 - die Kante.
 
    2. JEDE BEREICHSGRENZE TRAEGT DIESELBE LINIE, --kontur, gemessen
       3,64:1 auf --flaeche und 3,11:1 auf --flaeche-rahmen. Keine Grenze
@@ -62,7 +73,14 @@
   /* ===== FLAECHEN: drei Raenge, siehe Gliederungsregel oben ===== */
   --marine:      #061841;
   --rot:         #f00038;
-  /* Bedienbereiche. 1,17:1 gegen --flaeche - bewusst nicht dunkler:
+  /* Der RAHMEN der Anwendung (Navigation links, Statuszeile unten) und
+     - als einzige Ausnahme innerhalb des Blatts - die gewaehlte
+     Tabellenzeile. Das ist keine Inkonsequenz, sondern der Grund, warum
+     der Ton ueberhaupt bleibt: seit das Blatt durchgehend weiss ist,
+     faellt eine getoente Zeile darin ueberhaupt erst auf. Frueher trugen
+     ACHT Flaechen diesen Ton gleichzeitig, und genau deshalb sagte er
+     nichts (siehe "UND DAS GRAU" in der Farbordnung weiter unten).
+     1,17:1 gegen --flaeche - bewusst nicht dunkler:
      die Statuszeile liegt auf dieser Flaeche und faerbt ihren Text je
      nach Meldungsart. Bei #e6ebf3 faellt --warnung-text auf 4,45:1 und
      damit unter die Grenze; #e9edf4 haelt alle vier Statusfarben
@@ -162,6 +180,106 @@
      seine 4,5:1 (--marine-hell 13,64:1, --gut-dunkel 8,04:1). */
   --marine-hell: #0a2560;
   --gut-dunkel:  #155c33;
+
+  /* ============================================================
+     ===== DIE FARBORDNUNG =====
+
+     Befund des Auftraggebers, wörtlich: "das viele Grau ist störend
+     ohne Ende" und aus "Farbe trägt Bedeutung" sei "keine Farbe"
+     geworden. Beides trifft zu, und beides hat dieselbe Ursache: die
+     Projektregel wurde über zwölf Runden als "möglichst wenig Farbe"
+     gelesen statt als "jede Farbe muss ihre Bedeutung nennen können".
+     Das Ergebnis war eine graue Wüste mit navyblauen Balken darin -
+     und Daten, in denen Vorzeichen, Schwellen und Zugehörigkeit
+     stecken, die nirgends zu sehen waren.
+
+     Ab hier steht die Ordnung an EINER Stelle, in fünf Rängen. Wer
+     eine Farbe vergeben will, sucht ihren Rang; wer eine Farbe sieht,
+     findet hier ihre Bedeutung. Was in keinen Rang passt, bekommt
+     keine Farbe.
+
+     RANG 1 · ALARM — bleibt reserviert, wird nicht verwässert.
+       --schlecht    #c0301c  ein defektes/fahruntaugliches Rad, eine
+                              fehlgeschlagene Buchung.
+       --rot         #f00038  "hier hinsehen": Tastaturfokus, aktiver
+                              Reiter, aktive Navigation, eine
+                              unumkehrbare Handlung.
+       KEINE weitere Verwendung. Insbesondere trägt die
+       Abweichungsspalte KEIN Rot: ein negativer Saldo ist eine
+       Richtung, kein Schaden.
+
+     RANG 2 · SCHWELLE — eine fachliche Grenze ist überschritten.
+       --warnung-text #8a6508 volle Station (nimmt keine Rückgabe mehr
+                              an), Rad in Wartung, gesperrtes Konto,
+                              geschätzte statt gemessener Zahl,
+                              einsatzbereites Rad ohne Standort.
+       --gut          #1d7a44 eine Buchung ist durchgegangen.
+
+     RANG 3 · VORZEICHEN — NEU. Positiv und negativ sind fachlich
+       gegensätzlich und müssen es auch aussehen (der Saldo reicht von
+       −65 bis +122; zwei Stationen an seinen Enden sahen bisher gleich
+       aus).
+       --abweichung-plus  #0b3b7a  über dem Bezug, Zugänge überwiegen
+       --abweichung-minus #a8551a  unter dem Bezug, Abgänge überwiegen
+       Gemessen: 10,93:1 bzw. 5,28:1 auf --flaeche, 9,31:1 / 4,49:1 auf
+       --flaeche-rahmen - beide weit über den 3:1 aus WCAG 1.4.11.
+       Gegeneinander messen sie nur 2,07:1, aber sie berühren sich nie:
+       zwischen ihnen liegt immer die Nulllinie, und die SEITE der
+       Nulllinie kodiert dasselbe Vorzeichen ein zweites Mal. Wer die
+       beiden Töne nicht unterscheiden kann, liest die Richtung
+       weiterhin an der Lage ab - Farbe verdoppelt hier eine Aussage,
+       sie trägt sie nicht allein (WCAG 1.4.1).
+       Warum nicht Grün/Rot: eine Station, die Räder ansammelt, ist
+       nicht "gut", und eine, die leerläuft, nicht "schlecht" - beides
+       ist Arbeit für die Disposition. Und Rot gehört Rang 1.
+
+     RANG 4 · ZUGEHÖRIGKEIT — NEU. Die drei Radtypen und die fünf
+       Tarifgruppen sind Kategorien, die man über Bereiche hinweg
+       wiedererkennen soll: dasselbe City-Bike-Blau in der Flotte, im
+       Umsatz nach Radtyp und in der Wegstrecke.
+       --kat-1 #2f6fb0 Blau      --kat-4 #93286b Beere
+       --kat-2 #6b3fa0 Violett   --kat-5 #4a5568 Schiefer
+       --kat-3 #0f6b63 Petrol
+       Fünf Töne GLEICHER Helligkeit (untereinander 1,01:1 bis 1,46:1) -
+       das ist Absicht: eine Kategorie darf nicht dadurch wichtiger
+       aussehen, dass ihr Ton dunkler ist. Unterschieden werden sie am
+       Farbton. Gegen jeden Untergrund, auf dem sie vorkommen, halten
+       alle fünf mindestens 4,45:1 (gemessen gegen --flaeche,
+       --flaeche-rahmen, --grund, --zebra) - über den 3:1 für Grafik.
+       Sie sind ausschliesslich FLÄCHENfarben (Balkenfüllung); als
+       Textfarbe werden sie nicht vergeben, und keine von ihnen steht
+       je unmittelbar neben einer anderen.
+       Die Zuordnung Code -> Ton steht in kategorieFarbe() in rahmen.js,
+       nicht hier: sie ist eine Frage der Fachdaten, nicht des
+       Stilblatts.
+
+     RANG 5 · NEUTRAL — alles, was keine der vier Bedeutungen trägt.
+       --marine          die Grösse selbst, wo es keine Kategorie gibt
+       --grafik-neutral  die ruhende Hälfte eines Strukturbalkens
+       --kontur          jede Linie, die gesehen werden muss
+
+     ===== UND DAS GRAU =====
+     Nicht "mehr Farbe überall", sondern WENIGER FLÄCHEN IM SELBEN
+     GRAUTON. Vorher trugen ACHT gleichzeitig sichtbare Flächen
+     denselben Ton --flaeche-rahmen: Navigation, Reiterleiste,
+     Werkzeugleiste, Kopftafel, Filterleiste, Tabellenkopf,
+     Spaltenkopf-Filterzeile, Statuszeile. Ein Ton, der acht Bereiche
+     gleich einfärbt, gliedert nichts - er ermüdet nur.
+     Jetzt trägt ihn NUR NOCH DER RAHMEN DER ANWENDUNG: die Navigation
+     links und die Statuszeile unten (oben schliesst --marine ab).
+     Alles dazwischen ist das Arbeitsblatt - weiss, gegliedert allein
+     durch --kontur-Kanten. Das ist dieselbe Gliederungsregel wie im
+     Dateikopf, nur richtig angewandt: die Frage ist nicht "bediene ich
+     hier", sondern "bin ich im Blatt oder an seinem Rand". Zwei
+     Flächen statt acht.
+     ============================================================ */
+  --abweichung-plus:  #0b3b7a;
+  --abweichung-minus: #a8551a;
+  --kat-1: #2f6fb0;
+  --kat-2: #6b3fa0;
+  --kat-3: #0f6b63;
+  --kat-4: #93286b;
+  --kat-5: #4a5568;
 
   /* ===== ABSTANDSREIHE =====
      Ausgezaehlt standen in dieser Datei 19 verschiedene Abstandswerte:
@@ -1077,8 +1195,14 @@ a.wortmarke-link:active {
      Innenabstand ZWISCHEN zwei Reitern soll --raum-4 bleiben, nur der
      Abstand des ersten zur Bereichskante ist --raum-5. */
   padding-left: var(--raum-2);
-  background: var(--flaeche-rahmen);
-  border-bottom: 1px solid var(--linie);
+  /* WAR --flaeche-rahmen (siehe "UND DAS GRAU" in der Farbordnung):
+     die Reiterleiste liegt IM Arbeitsblatt, nicht an seinem Rand. Die
+     Kante uebernimmt jetzt allein die Gliederung, und sie steigt dafuer
+     von --linie (1,37:1) auf --kontur (3,64:1) - eine Grenze, die man
+     ohne Flaechenunterschied erkennen muss, ist Grafik im Sinne von
+     WCAG 1.4.11. */
+  background: var(--flaeche);
+  border-bottom: 1px solid var(--kontur);
   flex: 0 0 auto;
 }
 
@@ -1115,8 +1239,9 @@ a.wortmarke-link:active {
      Uebersichtsstreifen/der Navigation, damit die "Leisten" oberhalb der
      Tabelle nicht enger wirken als ihre direkte Umgebung. */
   padding: var(--raum-4) var(--raum-5);
-  background: var(--flaeche-rahmen);
-  border-bottom: 1px solid var(--linie);
+  /* Wie .reiterleiste oben: Blatt statt Rand, Kante statt Flaeche. */
+  background: var(--flaeche);
+  border-bottom: 1px solid var(--kontur);
 }
 
 /* ===== Kopftafel (zeigeKopftafel() in rahmen.js) =====
@@ -1163,7 +1288,13 @@ a.wortmarke-link:active {
      als zuvor (18px/22px/16px statt 12px/16px/10px, vierter Anlauf gegen
      "zu wenig Luft" - siehe der lange Kommentar oben) - die Tafel darf
      dabei hoeher werden, sie ist seit dem letzten Auftrag einklappbar. */
-  background: var(--flaeche-rahmen);
+  /* WAR --flaeche-rahmen. Die Kopftafel ist der Kopf DES BLATTS, nicht
+     sein Rand - und sie war der groesste der acht gleichfarbigen
+     Streifen. Sie steht jetzt auf weissem Grund: die Grafiken darin
+     (Balken, Saeulen, Punkte) sind gegen Weiss gemessen, gegen
+     --flaeche-rahmen verloren sie durchgaengig ein halbes
+     Kontrastverhaeltnis. */
+  background: var(--flaeche);
   /* 22px waagerecht -> --raum-5: die Tafel begann bei 222px, die
      Werkzeugleiste darueber bei 224px, die Tabelle darunter bei 218px.
      Drei linke Kanten in einer Spalte, gemessen im Browser. Jetzt eine.
@@ -1172,7 +1303,7 @@ a.wortmarke-link:active {
      als lose Platte neben der Filterleiste stehen, statt beide als
      einen Kopfbereich lesbar zu machen. */
   padding: var(--raum-4) var(--raum-5);
-  border-bottom: 1px solid var(--linie);
+  border-bottom: 1px solid var(--kontur);
   /* Eine Tafel mit fuenf Spalten kann in einem sehr schmalen Fenster
      breiter werden als der Arbeitsbereich. Sie darf dann in SICH
      scrollen - was sie nicht darf, ist die ganze Seite waagerecht
@@ -1355,9 +1486,12 @@ a.wortmarke-link:active {
 
 /* Ueber der Zahl-und-Balken-Spaltengruppe (colspan=2) steht der Titel
    rechtsbuendig - also unmittelbar ueber der Zahl, die er benennt, nicht
-   ueber dem Balken daneben. */
+   ueber dem Balken daneben. .kopftafel-kopf-zahl ist die reine
+   Zahlenspalte ohne Balken (art:'zahl', siehe kopftafelZeile() in
+   rahmen.js) und richtet sich aus demselben Grund ebenso aus. */
 .kopftafel-kopf-groesse,
-.kopftafel-kopf-abweichung {
+.kopftafel-kopf-abweichung,
+.kopftafel-kopf-zahl {
   text-align: right;
 }
 
@@ -1562,27 +1696,69 @@ a.wortmarke-link:active {
 .strukturbalken-segment.seg-leer     { fill: var(--flaeche); }
 
 /* ===== Abweichungsbalken (abweichungsBalken() in rahmen.js) =====
-   KEINE Ampelfarbe fuer die Richtung (siehe die Begruendung dort): eine
-   Abweichung ist eine Abweichung, ob "mehr" gut ist, weiss nur der
-   Bereich - und Rot ist in dieser Oberflaeche dem defekten Rad und der
-   unumkehrbaren Handlung vorbehalten. Positive wie negative Balken
-   tragen deshalb --marine; die Richtung liest man an der Seite, auf der
-   der Balken liegt. */
+   RANG 3 DER FARBORDNUNG - VORZEICHEN. Die vorige Fassung gab beiden
+   Richtungen --marine, mit der Begruendung, eine Abweichung sei erst
+   einmal nur eine Abweichung. Der Auftraggeber, woertlich: "Eine
+   Station, die Raeder ansammelt, und eine, die leerlaeuft, sind
+   fachlich gegensaetzlich - sie sehen heute gleich aus." Jetzt tragen
+   sie --abweichung-plus und --abweichung-minus; Begruendung, Messwerte
+   und der Grund GEGEN eine Gruen/Rot-Ampel stehen in der Farbordnung
+   in :root.
+   .abweichungsbalken ist seit dieser Fassung der WRAPPER (<span>) und
+   nicht mehr das <svg> selbst - siehe .abweichungsbalken-null unten.
+   position:relative macht ihn zum Bezugsrahmen der Nulllinie. */
 .abweichungsbalken {
+  position: relative;
   display: block;
 }
 
-.abweichungsbalken-flaeche {
-  fill: var(--marine);
+.abweichungsbalken-grafik {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
-/* Die Nulllinie ist die ganze Aussage dieser Spalte - sie muss sichtbar
-   sein, auch dort, wo kein Balken sie kreuzt. --kontur (3.64:1 auf
-   Weiss, 3.43:1 auf --grund) statt --linie (1.29:1): eine Achse ist
-   Grafik im Sinne von WCAG 1.4.11, keine dekorative Trennlinie. */
+.abweichungsbalken-flaeche.abweichung-plus  { fill: var(--abweichung-plus); }
+.abweichungsbalken-flaeche.abweichung-minus { fill: var(--abweichung-minus); }
+
+/* DIE NULLLINIE, ZWEITER ANLAUF (Auftraggeber, woertlich: "Der Saldo
+   hat keine sichtbare Nulllinie. Ein Balken, der nach links oder rechts
+   geht, braucht die Achse, von der aus er geht.").
+
+   Sie stand schon bisher in der Mitte - aber als <line> INNERHALB des
+   12px hohen <svg>. Zwischen zwei Zeilen liegen zweimal 12px
+   Zellenabstand (--raum-3, siehe .kopftafel-tabelle td); die Achse
+   bestand damit aus 12px Strich und 24px Luecke, immer abwechselnd. Was
+   als EINE Achse gemeint war, las sich als gestrichelte Reihe - und wo
+   eine Zeile keinen Wert trug, fehlte auch ihr Strich.
+
+   Jetzt ein eigenes Element im Wrapper, das ueber die volle ZELLENhoehe
+   reicht: top/bottom greifen um genau den Zellenabstand ueber das <svg>
+   hinaus, sodass die Achsen benachbarter Zeilen einander beruehren und
+   eine durchgehende Senkrechte ergeben - von der Kopfzeile bis zur
+   Summenzeile.
+   --kontur (3,64:1 auf --flaeche) statt --linie (1,37:1): eine Achse
+   ist Grafik im Sinne von WCAG 1.4.11, keine dekorative Trennlinie.
+   pointer-events:none, damit die Linie das Hinweisfenster des Balkens
+   unter ihr nicht abfaengt. */
 .abweichungsbalken-null {
-  stroke: var(--kontur);
-  stroke-width: 1;
+  position: absolute;
+  left: 50%;
+  /* Zellenabstand (--raum-3) PLUS 6px. Die Datenzeile ist 39px hoch
+     (12px Grafik, zweimal 12px Polster, 1px Zeilenlinie, Rundung), eine
+     GRUPPENzeile durch ihr zusaetzliches padding-top noch etwas mehr -
+     mit genau --raum-3 blieben im Browser gemessen 2 bis 3px Luft
+     zwischen zwei Achsenstuecken. Die 6px lassen sie einander sicher
+     ueberlappen: ein Ueberstand ist unsichtbar (dieselbe Farbe auf
+     derselben Senkrechten), eine Luecke nicht. Oben und unten steht die
+     Achse dadurch um 6px ueber die erste bzw. letzte Zeile hinaus -
+     gewollt, sie bindet die Spalte an Kopf- und Summenzeile an. */
+  top: calc(-1 * var(--raum-3) - 6px);
+  bottom: calc(-1 * var(--raum-3) - 6px);
+  width: 1px;
+  margin-left: -0.5px;
+  background: var(--kontur);
+  pointer-events: none;
 }
 
 /* ===== Lagepunkt (lagepunkt() in rahmen.js) =====
@@ -1919,7 +2095,11 @@ a.wortmarke-link:active {
   align-items: flex-end;
   gap: var(--raum-4);
   padding: var(--raum-4) var(--raum-5);
-  background: var(--flaeche-rahmen);
+  /* Wie .reiterleiste/.werkzeugleiste/.kopftafel: Blatt statt Rand.
+     Die untere Kante trennt sie von der Tabelle - sie war frueher
+     unnoetig, solange die Flaeche selbst trennte. */
+  background: var(--flaeche);
+  border-bottom: 1px solid var(--kontur);
 }
 
 .filterfeld {
@@ -2215,6 +2395,23 @@ a.wortmarke-link:active {
    selbst eine Gefaess-Form vortaeuschen muss. */
 .zellbalken-hintergrund {
   fill: var(--grund);
+}
+
+/* Der Bezugsrahmen (optionen.bezug an zellbalken() in rahmen.js) - die
+   Kapazitaet, in der die Belegung steht. Ein UMRISS, keine zweite
+   Flaeche: er nennt eine Grenze, und eine Grenze ist eine Linie. Damit
+   ersetzt EINE Spalte die frueheren zwei (Stellplaetze als Balken,
+   Belegung als zweiter Balken daneben) - siehe der Kopfkommentar bei
+   zellbalken() in rahmen.js.
+   --kontur (3,64:1 auf --flaeche) statt --linie (1,37:1) aus demselben
+   Grund wie bei der Nulllinie weiter oben: er traegt Information, WCAG
+   1.4.11 verlangt dafuer 3:1. fill:none, damit die --grund-Flaeche des
+   Balkens darunter durchscheint - der Rahmen soll die Kapazitaet
+   umreissen, nicht eine dritte Flaechenfarbe einfuehren. */
+.zellbalken-bezug {
+  fill: none;
+  stroke: var(--kontur);
+  stroke-width: 1;
 }
 
 .zellbalken-text {
@@ -2645,15 +2842,18 @@ a.wortmarke-link:active {
   border-collapse: collapse;
 }
 
-/* Die Kopfzeile GEHOERT zum Kopfbereich, nicht zu den Daten: hier wird
-   sortiert, gefiltert und gruppiert. Sie traegt deshalb dieselbe
-   Flaeche wie die Leisten darueber - und weil sie sticky ist, bleibt
-   der Kopfbereich beim Scrollen als getoenter Block sichtbar, waehrend
-   die weissen Datenzeilen darunter durchlaufen. */
+/* Die Kopfzeile ist sticky und braucht deshalb eine DECKENDE Flaeche -
+   sonst schoeben die scrollenden Datenzeilen sichtbar durch sie
+   hindurch. Sie traegt jetzt --flaeche (weiss) statt --flaeche-rahmen:
+   die Toenung war einer der acht gleichfarbigen Streifen (siehe "UND
+   DAS GRAU" in der Farbordnung), und sie hatte hier obendrein keine
+   Aufgabe mehr - die Kante zwischen Kopf und Daten traegt bereits
+   --kontur an .arbeitstabelle th, und die Grossbuchstaben-Auszeichnung
+   des Kopftexts unterscheidet ihn ohnehin von jeder Datenzeile. */
 .arbeitstabelle thead {
   position: sticky;
   top: 0;
-  background: var(--flaeche-rahmen);
+  background: var(--flaeche);
 }
 
 .arbeitstabelle th {
@@ -3077,7 +3277,11 @@ a.wortmarke-link:active {
   padding: var(--raum-3) var(--raum-4);
   text-transform: none;
   letter-spacing: normal;
-  background: var(--flaeche-rahmen);
+  /* WAR --flaeche-rahmen (siehe "UND DAS GRAU" in der Farbordnung).
+     Die Filterfelder selbst tragen einen Umriss von 5,95:1 und stehen
+     dadurch auch auf weissem Grund als Felder da - die Toenung
+     ringsherum war nie das, was sie lesbar machte. */
+  background: var(--flaeche);
   border-bottom: 1px solid var(--linie);
 }
 
@@ -3134,7 +3338,10 @@ a.wortmarke-link:active {
   font-size: var(--grad-3);
   color: var(--text-leise);
   border-bottom: 1px solid var(--linie);
-  background: var(--flaeche-rahmen);
+  /* WAR --flaeche-rahmen - siehe "UND DAS GRAU" in der Farbordnung.
+     Diese Zeile erscheint ohnehin nur, wenn ein Filter greift; ihre
+     Aussage traegt der Text, nicht die Flaeche. */
+  background: var(--flaeche);
 }
 
 .spaltenkopf-hinweis-knopf {

@@ -454,34 +454,66 @@ function kundenKopftafel(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKe
                 schluessel,
                 name: kunde.tarif || t('board.customersNoTariff'),
                 kunden: 0, gefahren: 0, ohneFahrt: 0, gesperrt: 0,
-                umsatz: 0, jahre: new Map()
+                umsatz: 0, fahrten: 0
             };
             nachTarif.set(schluessel, eintrag);
         }
         eintrag.kunden += 1;
         eintrag.umsatz += Number(kunde.umsatz_brutto) || 0;
+        eintrag.fahrten += Number(kunde.fahrten_gesamt) || 0;
         if (kunde.status === 'gesperrt') eintrag.gesperrt += 1;
         else if ((Number(kunde.fahrten_gesamt) || 0) > 0) eintrag.gefahren += 1;
         else eintrag.ohneFahrt += 1;
-        if (kunde.registriert_am) {
-            const jahr = new Date(kunde.registriert_am).getFullYear();
-            eintrag.jahre.set(jahr, (eintrag.jahre.get(jahr) || 0) + 1);
-        }
+        // registriert_am wird hier NICHT mehr eingesammelt: die
+        // Zugaenge je Jahr sind als Spalte gestrichen (siehe die
+        // Begruendung bei umsatzJeFahrt() weiter unten). Das Feld bleibt
+        // in der Liste darunter als Spalte "Kunde seit" stehen, wo es
+        // eine Einzelangabe ist und keine Verteilung behauptet.
     }
 
     const gruppen = [...nachTarif.values()].sort((a, b) => b.kunden - a.kunden);
     const umsatzGesamt = gruppen.reduce((s, g) => s + g.umsatz, 0);
 
-    // Jahresachse EINMAL ueber alle Gruppen aufgespannt, mit LUECKEN ALS
-    // NULL statt als ausgelassener Kategorie: eine Gruppe ohne Zugang im
-    // Jahr 2013 muss dort eine Saeule der Hoehe 0 zeigen, sonst saehe ihre
-    // Reihe kuerzer aus als die der Nachbarzeile und beide waeren nicht
-    // mehr vergleichbar (derselbe Grund wie bei saeulengrafik() in
-    // rahmen.js, dort schon einmal ausdruecklich benannt).
-    const alleJahre = new Set();
-    for (const gruppe of gruppen) for (const jahr of gruppe.jahre.keys()) alleJahre.add(jahr);
-    const jahresachse = [...alleJahre].sort((a, b) => a - b);
-    const reiheVon = (gruppe) => jahresachse.map((jahr) => gruppe.jahre.get(jahr) || 0);
+    // ===== DIE ANMELDUNGEN JE JAHR SIND GESTRICHEN, UND WARUM =====
+    //
+    // Diese Tafel trug bis zu dieser Fassung eine Profilspalte mit den
+    // Zugaengen je Kalenderjahr - 27 Saeulen (2000 bis 2026) je
+    // Tarifgruppe, auf einer gemeinsamen Skala. An den Daten
+    // nachgerechnet, Hoechstwert je Zeile:
+    //
+    //     ohne Tarif      31   = 100,0 % der Skalenhoehe
+    //     Basistarif      15   =  48,4 %
+    //     Studententarif   9   =  29,0 %
+    //     OEPNV-Abo        5   =  16,1 %
+    //     Premium          2   =   6,5 %
+    //
+    // Vier von fuenf Zeilen blieben damit unter der halben Hoehe, die
+    // unterste bei einem Fuenfzehntel - auf 16 Bildschirmpixeln sind das
+    // ein bis zwei Pixel, also eine flache Linie. Dazu 27 Saeulen in
+    // einer 96 Pixel breiten Zelle: 3,5 Pixel je Saeule, schmaler als
+    // die Fuge zwischen ihnen. Die gemeinsame Skala war richtig (ohne
+    // sie waeren die Zeilen nicht vergleichbar) - sie machte nur
+    // sichtbar, dass hier vier Zeilen nichts zu zeigen haben.
+    //
+    // Und die Frage dahinter trug ohnehin nicht: die Anmeldejahre
+    // reichen bis 2000 zurueck, der Fahrbetrieb beginnt im Januar 2025.
+    // Wann jemand ein Konto angelegt hat, sagt ueber die heutige
+    // Kundschaft wenig.
+    //
+    // AN IHRER STELLE STEHT DER UMSATZ JE FAHRT - die Zahl, die
+    // erklaert, warum die Abweichungsspalte rechts so weit ausschlaegt.
+    // Nachgerechnet: 4,43 EUR (ohne Tarif), 4,26 (Basis), 1,43
+    // (Premium), 1,22 (Student), 1,20 (OEPNV-Abo). Zwei deutlich
+    // getrennte Gruppen im Verhaeltnis 3,7 zu 1, und zwar ein Befund und
+    // keine Zahlenspielerei: wer ein Abo zahlt, faehrt je Fahrt billig -
+    // die Abogruppen tragen 24 bis 26 Fahrten je Kopf, die Kundschaft
+    // ohne Tarif 3,4.
+    //
+    // VERHAELTNISZAHL AUS SUMMEN (Hausregel): Rechnungsvolumen der
+    // Gruppe geteilt durch ihre Fahrten - nicht der Mittelwert der
+    // Einzelquotienten, bei dem 604 Personen mit null bis zwei Fahrten
+    // dasselbe Gewicht bekaemen wie 215 Vielfahrer.
+    const umsatzJeFahrt = (gruppe) => (gruppe.fahrten ? gruppe.umsatz / gruppe.fahrten : 0);
 
     // VERHAELTNISZAHL AUS SUMMEN (Hausregel): Umsatzanteil ist "Summe der
     // Rechnungsbetraege dieser Gruppe durch Summe aller Rechnungsbetraege",
@@ -501,7 +533,8 @@ function kundenKopftafel(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKe
         gefahren: gruppen.reduce((s, g) => s + g.gefahren, 0),
         ohneFahrt: gruppen.reduce((s, g) => s + g.ohneFahrt, 0),
         gesperrt: gruppen.reduce((s, g) => s + g.gesperrt, 0),
-        umsatz: umsatzGesamt, jahre: new Map()
+        umsatz: umsatzGesamt,
+        fahrten: gruppen.reduce((s, g) => s + g.fahrten, 0)
     };
 
     // Konzentration: welchen Anteil am gesamten Rechnungsvolumen traegt
@@ -547,44 +580,63 @@ function kundenKopftafel(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKe
                 titel: t('col.customers'),
                 einheit: t('unit.persons'),
                 wert: (z) => z.kunden,
-                format: (n) => zahlFormat(n)
+                format: (n) => zahlFormat(n),
+                // RANG 4 DER FARBORDNUNG - ZUGEHOERIGKEIT (kategorieFarbe()
+                // in rahmen.js). Dieselben fuenf Toene tragen die
+                // Tarifgruppen im Reiter "Umsatz nach Tarifgruppe" der
+                // Auswertungen; "ohne Tarif" bekommt den Schieferton, der
+                // sich von den vier bunten Gruppen absetzt, ohne selbst
+                // eine Gruppe zu behaupten - es IST keine.
+                farbe: (z) => kategorieFarbe(z.schluessel) || 'var(--marine)'
             },
             {
                 art: 'struktur',
                 titel: t('col.customerMix'),
                 einheit: t('unit.shareOfRow'),
                 auchSumme: true,
+                // ZWEI SEGMENTE STATT DREIER. "ohne Fahrt" ist im
+                // heutigen Bestand in ALLEN FUENF Zeilen exakt null
+                // (nachgezaehlt: jede nicht gesperrte Kundin, jeder
+                // nicht gesperrte Kunde hat mindestens eine
+                // abgeschlossene Fahrt) - ein Segment, das nie
+                // erscheint, ist kein Segment, sondern ein Eintrag in
+                // einer Legende, den niemand je zuordnen kann.
+                // strukturBalken() liess es ohnehin schon weg (wert 0
+                // wird uebersprungen); es stand nur noch in der
+                // Beschriftung und in dieser Liste.
+                //
+                // Was die Spalte damit sagt, sagt sie klar: vier Zeilen
+                // ein voller Balken, eine Zeile zu 86 % gesperrt (518
+                // von 604 ohne Tarif). Der Kontrast 14 % gegen 100 % ist
+                // der ganze Inhalt dieser Spalte - und er ist sichtbar,
+                // das genuegt.
                 segmente: (z) => [
                     { wert: z.gefahren, name: t('board.customersWithRides'), klasse: 'seg-aktiv' },
-                    { wert: z.ohneFahrt, name: t('board.customersNoRides'), klasse: 'seg-ruhend' },
                     { wert: z.gesperrt, name: statusAnzeige('gesperrt', true), klasse: 'seg-warnung' }
                 ],
                 beschriftung: (z) => t('board.customersMixAria', { name: z.name, aufteilung: strukturText(z) })
             },
             {
+                // ERSETZT DIE ANMELDUNGEN JE JAHR - Begruendung und
+                // Messwerte stehen oben bei umsatzJeFahrt().
+                //
+                // LAGEPUNKT, KEINE SAEULENREIHE: es ist EIN Wert je
+                // Zeile, keine Form ueber die Zeit. Und kein Balken vom
+                // Nullpunkt: fuenf Werte zwischen 1,20 und 4,43 EUR
+                // laegen dort zwischen 27 und 100 Prozent Laenge und
+                // liessen die drei Abogruppen (1,20 / 1,22 / 1,43) zu
+                // einem Klumpen verschmelzen. Auf einer Achse von
+                // Kleinst- zu Groesstwert stehen sie getrennt, und die
+                // Luecke zwischen den beiden Gruppen ist genau die
+                // Aussage.
                 art: 'profil',
-                titel: t('col.signups'),
-                einheit: jahresachse.length
-                    ? `${jahrFormat(jahresachse[0])} - ${jahrFormat(jahresachse[jahresachse.length - 1])}`
-                    : '',
-                reihe: (z) => (z.summenzeile ? null : reiheVon(z)),
-                beschriftung: (z) => {
-                    const reihe = reiheVon(z);
-                    const hoechster = Math.max(...reihe);
-                    return t('board.customersSignupsAria', {
-                        name: z.name, vonJahr: jahrFormat(jahresachse[0]),
-                        bisJahr: jahrFormat(jahresachse[jahresachse.length - 1]),
-                        max: zahlFormat(hoechster),
-                        maxJahr: jahrFormat(jahresachse[reihe.indexOf(hoechster)])
-                    });
-                },
-                // Mouse-over je Saeule (Gestaltungsauftrag Punkt 4) - siehe
-                // die gleichlautende Begruendung in auswertungen.js.
-                // mengeFormat statt einer nackten Zahl: "12 Kunden" ist
-                // derselbe Bezug, den die Rubrikspalte fuer jede Zeile
-                // schon traegt (Tarifgruppe + Anzahl), hier nur je Jahr.
-                beschriftungTeil: (z, index, wert) => t('board.seriesPartPhrase', {
-                    teil: jahrFormat(jahresachse[index]), wert: mengeFormat(wert, 'kunde')
+                titel: t('col.revenuePerRideColumn'),
+                einheit: t('unit.euroPerRide'),
+                punkt: (z) => (z.summenzeile ? null : Math.round(umsatzJeFahrt(z) * 100) / 100),
+                beschriftung: (z) => t('board.customersRevenuePerRideAria', {
+                    name: z.name,
+                    betrag: geldFormatZentral(umsatzJeFahrt(z)),
+                    fahrtenPhrase: mengeFormat(z.fahrten, 'fahrt')
                 })
             },
             {

@@ -1169,6 +1169,12 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
         spalten: auswertungenGeldSpalten({
             rubrikTitel: t('col.bikeType'),
             fenster, umsatzanteil, fahrtenanteil,
+            // Der Balken traegt hier die FAHRTEN, nicht den Umsatz -
+            // siehe die Begruendung mit den Messwerten bei
+            // auswertungenGeldSpalten() weiter unten (drei Umsaetze im
+            // Verhaeltnis 1,13 zu 1 gegen drei Fahrtenzahlen im
+            // Verhaeltnis 8,0 zu 1).
+            groesse: 'fahrten',
             zusatz: (g) => t('board.revenuePerRide', {
                 betrag: geldFormat(auswertungenSumme(g, fenster, 'fahrten')
                     ? auswertungenSumme(g, fenster, 'umsatz') / auswertungenSumme(g, fenster, 'fahrten') : 0)
@@ -1177,7 +1183,7 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
         zeilen: gruppen,
         summe: {
             summenzeile: true, name: t('col.together'),
-            summeUmsatz: umsatzGesamt, jeMonat: new Map()
+            summeUmsatz: umsatzGesamt, summeFahrten: fahrtenGesamt, jeMonat: new Map()
         },
         // DER PREISWECHSEL ALS FUSSNOTE, nicht als eigene Spalte: er ist
         // ein EINMALIGES Ereignis in genau EINER der drei Zeilen (das
@@ -1207,88 +1213,142 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
     };
 }
 
-// Die vier Spalten, die sich die beiden Umsatz-Reiter teilen - EINMAL
+// Die Spalten, die sich die beiden Umsatz-Reiter teilen - EINMAL
 // beschrieben, nicht zweimal fast gleich: die Reiter unterscheiden sich
 // nur darin, WONACH sie gliedern (Radtyp gegen Tarif), nicht darin, was
 // sie ueber eine Gruppe aussagen.
-function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenanteil, zusatz }) {
-    return [
+//
+// ===== DER HALBJAHRESMIX IST GESTRICHEN, UND WARUM =====
+//
+// Hier stand eine Strukturspalte "Sommer-/Winterhalbjahr". Nachgerechnet
+// ueber das Zwoelfmonatsfenster, Winteranteil am Umsatz:
+//
+//     Radtyp:       Cargo 27,1 %   E-Bike 26,7 %   City 25,0 %
+//     Tarifgruppe:  zwischen 21,4 % und 31,8 %
+//
+// Zwei Prozentpunkte Spanne ueber drei Zeilen, zehn ueber fuenf. Drei
+// bzw. fuenf 100-%-Balken, deren Trennkante an praktisch derselben
+// Stelle sitzt - eine Spalte, die zeigt, dass es nichts zu zeigen gibt.
+//
+// Der frühere Kommentar an dieser Stelle verteidigte genau das: "die
+// Aussage der Halbjahresspalte IST ihre Gleichfoermigkeit". Das stimmt
+// als Befund und ist als Grafik trotzdem falsch - eine Gleichheit
+// braucht keine fuenf gleich aussehenden Balken, sie braucht einen Satz.
+// Der steht unveraendert in der Fussnote beider Reiter
+// (board.halfYearFootnote, mit den gemessenen Grenzen), und dort ist er
+// jetzt das Einzige, was diese Aussage traegt - statt einer Spalte, die
+// dieselbe Aussage viermal wiederholt und dabei aussieht, als
+// unterschiede sie etwas.
+//
+// ===== WELCHE GROESSE DEN BALKEN TRAEGT, ENTSCHEIDET DER REITER =====
+//
+// optionen.groesse: 'umsatz' oder 'fahrten'. Der Grund ist wieder eine
+// Messung, kein Geschmack:
+//
+//   NACH TARIFGRUPPE traegt der Umsatz. Fuenf Gruppen zwischen 249,76 und
+//   18.172,32 EUR - Verhaeltnis 73 zu 1, der Balken zeigt eine echte
+//   Rangfolge.
+//
+//   NACH RADTYP traegt er NICHT. Drei Radtypen zwischen 11.219,14 und
+//   12.628,08 EUR - Verhaeltnis 1,13 zu 1. Vom Nullpunkt aus gezeichnet
+//   waeren das drei Balken mit 89, 91 und 100 Prozent Laenge: kein Auge
+//   unterscheidet die. Der Umsatz steht dort deshalb als reine Zahl
+//   (art:'zahl'), und den Balken traegt die FAHRTENZAHL - 1.081 / 2.328 /
+//   8.620, Verhaeltnis 8,0 zu 1.
+//
+//   Und das ist nicht bloss ein Ausweichen: die Spannung zwischen beiden
+//   Groessen IST der Befund dieses Reiters. Drei Radtypen bringen fast
+//   denselben Umsatz mit voellig verschieden vielen Fahrten - genau das
+//   misst die Abweichungsspalte rechts (Cargo +26,7, E-Bike +13,3, City
+//   -40,0 Prozentpunkte). Zahl und Balken nebeneinander machen sichtbar,
+//   woher dieser Ausschlag kommt.
+function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenanteil, zusatz,
+                                   groesse = 'umsatz' }) {
+    const spalten = [
         {
             art: 'rubrik',
             titel: rubrikTitel,
             wert: (z) => z.name,
             zusatz: (z) => (z.summenzeile ? null : zusatz(z))
-        },
-        {
+        }
+    ];
+
+    const umsatzWert = (z) => (z.summenzeile ? z.summeUmsatz : auswertungenSumme(z, fenster, 'umsatz'));
+
+    if (groesse === 'fahrten') {
+        spalten.push({
+            art: 'zahl',
+            titel: t('col.revenue'),
+            einheit: t('unit.euroTwelveMonths'),
+            wert: umsatzWert,
+            format: (n) => geldFormat(n)
+        });
+        spalten.push({
+            art: 'groesse',
+            titel: t('col.rides'),
+            einheit: t('unit.ridesTwelveMonths'),
+            wert: (z) => (z.summenzeile ? z.summeFahrten : auswertungenSumme(z, fenster, 'fahrten')),
+            format: (n) => zahlFormat(n),
+            // RANG 4 DER FARBORDNUNG - derselbe Ton, den dieser Radtyp in
+            // der Flotte und in der Wegstrecke traegt (kategorieFarbe()
+            // in rahmen.js).
+            farbe: (z) => kategorieFarbe(z.schluessel) || 'var(--marine)'
+        });
+    } else {
+        spalten.push({
             art: 'groesse',
             titel: t('col.revenue'),
             einheit: t('unit.euroTwelveMonths'),
-            wert: (z) => (z.summenzeile ? z.summeUmsatz : auswertungenSumme(z, fenster, 'umsatz')),
-            format: (n) => geldFormat(n)
+            wert: umsatzWert,
+            format: (n) => geldFormat(n),
+            farbe: (z) => kategorieFarbe(z.schluessel) || 'var(--marine)'
+        });
+    }
+
+    spalten.push({
+        art: 'profil',
+        titel: t('col.monthlyCourse'),
+        einheit: `${monatFormat(fenster[0])} - ${monatFormat(fenster[fenster.length - 1])}`,
+        reihe: (z) => (z.summenzeile ? null : auswertungenReihe(z, fenster, 'umsatz')),
+        // aktuellIndex: die LETZTE Saeule ist der juengste Monat -
+        // hier gibt es, anders als bei einer Reihe ueber Stationen
+        // oder Baujahre, tatsaechlich einen "aktuellen" Zeitraum.
+        aktuellIndex: 11,
+        beschriftung: (z) => {
+            const reihe = auswertungenReihe(z, fenster, 'umsatz');
+            const hoechster = Math.max(...reihe);
+            return t('board.monthlyCourseAria', {
+                name: z.name, vonMonat: monatFormat(fenster[0]),
+                bisMonat: monatFormat(fenster[fenster.length - 1]),
+                max: geldFormat(hoechster), maxMonat: monatFormat(fenster[reihe.indexOf(hoechster)]),
+                aktuell: geldFormat(reihe[reihe.length - 1])
+            });
         },
-        {
-            art: 'struktur',
-            titel: t('col.halfYearMix'),
-            einheit: t('unit.summerWinter'),
-            segmente: (z) => {
-                const { sommer, winter } = auswertungenHalbjahrSegmente(z, fenster, 'umsatz');
-                return [
-                    { wert: sommer, name: t('col.summerHalf'), klasse: 'seg-aktiv' },
-                    { wert: winter, name: t('col.winterHalf'), klasse: 'seg-ruhend' }
-                ];
-            },
-            beschriftung: (z) => {
-                const { sommer, winter } = auswertungenHalbjahrSegmente(z, fenster, 'umsatz');
-                const summe = sommer + winter;
-                return t('board.halfYearAria', {
-                    name: z.name,
-                    sommer: zahlFormat(summe ? Math.round(sommer / summe * 100) : 0),
-                    winter: zahlFormat(summe ? Math.round(winter / summe * 100) : 0)
-                });
-            }
-        },
-        {
-            art: 'profil',
-            titel: t('col.monthlyCourse'),
-            einheit: `${monatFormat(fenster[0])} - ${monatFormat(fenster[fenster.length - 1])}`,
-            reihe: (z) => (z.summenzeile ? null : auswertungenReihe(z, fenster, 'umsatz')),
-            // aktuellIndex: die LETZTE Saeule ist der juengste Monat -
-            // hier gibt es, anders als bei einer Reihe ueber Stationen
-            // oder Baujahre, tatsaechlich einen "aktuellen" Zeitraum.
-            aktuellIndex: 11,
-            beschriftung: (z) => {
-                const reihe = auswertungenReihe(z, fenster, 'umsatz');
-                const hoechster = Math.max(...reihe);
-                return t('board.monthlyCourseAria', {
-                    name: z.name, vonMonat: monatFormat(fenster[0]),
-                    bisMonat: monatFormat(fenster[fenster.length - 1]),
-                    max: geldFormat(hoechster), maxMonat: monatFormat(fenster[reihe.indexOf(hoechster)]),
-                    aktuell: geldFormat(reihe[reihe.length - 1])
-                });
-            },
-            // Mouse-over JE SAEULE (Gestaltungsauftrag Punkt 4) - siehe
-            // saeulenSparkline()/kopftafelZeile() in rahmen.js. index statt
-            // erneutem Nachschlagen von fenster.length: der Aufrufer dort
-            // reicht immer denselben Index, mit dem auch die Saeule selbst
-            // gezeichnet wurde.
-            beschriftungTeil: (z, index, wert) => t('board.seriesPartPhrase', {
-                teil: monatFormat(fenster[index]), wert: geldFormat(wert)
-            })
-        },
-        {
-            art: 'abweichung',
-            titel: t('col.revenueVsRides'),
-            einheit: t('unit.percentagePoints'),
-            wert: (z) => (z.summenzeile ? null
-                : Math.round((umsatzanteil(z) - fahrtenanteil(z)) * 1000) / 10),
-            format: (n) => abweichungText(n),
-            beschriftung: (z) => t('board.revenueVsRidesAria', {
-                name: z.name,
-                umsatzanteil: zahlFormat(Math.round(umsatzanteil(z) * 1000) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
-                fahrtenanteil: zahlFormat(Math.round(fahrtenanteil(z) * 1000) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-            })
-        }
-    ];
+        // Mouse-over JE SAEULE (Gestaltungsauftrag Punkt 4) - siehe
+        // saeulenSparkline()/kopftafelZeile() in rahmen.js. index statt
+        // erneutem Nachschlagen von fenster.length: der Aufrufer dort
+        // reicht immer denselben Index, mit dem auch die Saeule selbst
+        // gezeichnet wurde.
+        beschriftungTeil: (z, index, wert) => t('board.seriesPartPhrase', {
+            teil: monatFormat(fenster[index]), wert: geldFormat(wert)
+        })
+    });
+
+    spalten.push({
+        art: 'abweichung',
+        titel: t('col.revenueVsRides'),
+        einheit: t('unit.percentagePoints'),
+        wert: (z) => (z.summenzeile ? null
+            : Math.round((umsatzanteil(z) - fahrtenanteil(z)) * 1000) / 10),
+        format: (n) => abweichungText(n),
+        beschriftung: (z) => t('board.revenueVsRidesAria', {
+            name: z.name,
+            umsatzanteil: zahlFormat(Math.round(umsatzanteil(z) * 1000) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+            fahrtenanteil: zahlFormat(Math.round(fahrtenanteil(z) * 1000) / 10, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+        })
+    });
+
+    return spalten;
 }
 
 // ===== Reiter "Umsatz nach Kundengruppe" =====
@@ -1376,6 +1436,20 @@ function kmCo2Kopftafel(zeilen) {
 
     return {
         titel: t('board.kmTitle'),
+        // ===== DIE SPALTE "DATENGUETE" IST GESTRICHEN, UND WARUM =====
+        // Hier stand ein 100-%-Strukturbalken "gemessen / geschaetzt".
+        // Nachgerechnet ueber das Zwoelfmonatsfenster liegt der
+        // Schaetzanteil bei Cargo 38,7 %, City 41,3 %, E-Bike 39,2 % -
+        // 2,6 Prozentpunkte Spanne ueber drei Zeilen. Drei Balken mit
+        // derselben Trennkante.
+        // Die Einschraenkung selbst faellt damit NICHT weg, im Gegenteil:
+        // sie steht doppelt im Text, wo sie hingehoert - in der
+        // Bezugszeile gleich hier darunter ("40,0 % der Fahrten
+        // geschaetzt") und ausfuehrlich in der Fussnote, samt der
+        // Gegenrechnung fahrtgewichtet gegen ungewichtet. Ein Vorbehalt
+        // ist ein Satz, keine Flaeche: dass er fuer alle drei Radtypen
+        // gleichermassen gilt, sagt der Satz genauer als drei gleich
+        // aussehende Balken.
         bezug: t('board.kmReference', {
             km: kmFormat(kmGesamt), fahrtenPhrase: mengeFormat(fahrtenGesamt, 'fahrt'),
             vonMonat: monatFormat(fenster[0]), bisMonat: monatFormat(fenster[fenster.length - 1]),
@@ -1397,35 +1471,12 @@ function kmCo2Kopftafel(zeilen) {
                 titel: t('col.kilometres'),
                 einheit: t('unit.kmTwelveMonths'),
                 wert: (z) => (z.summenzeile ? z.summeKm : auswertungenSumme(z, fenster, 'kilometer')),
-                format: (n) => kmFormat(n)
-            },
-            {
-                art: 'struktur',
-                titel: t('col.dataQuality'),
-                einheit: t('unit.ridesMeasuredEstimated'),
-                segmente: (z) => {
-                    const fahrten = z.summenzeile ? fahrtenGesamt : auswertungenSumme(z, fenster, 'fahrten');
-                    const geschaetzt = z.summenzeile ? geschaetztGesamt : auswertungenSumme(z, fenster, 'fahrten_geschaetzt');
-                    return [
-                        { wert: fahrten - geschaetzt, name: t('col.measured'), klasse: 'seg-aktiv' },
-                        // Geschaetzte Fahrten in --warnung-text, nicht in
-                        // einem neutralen Grau: eine Schaetzung ist eine
-                        // Einschraenkung der Aussage und keine zweite,
-                        // gleichwertige Sorte Messwert - genau die Farbe,
-                        // die in dieser Oberflaeche "hier ist etwas nicht
-                        // im Reinen" bedeutet.
-                        { wert: geschaetzt, name: t('col.estimated'), klasse: 'seg-warnung' }
-                    ];
-                },
-                auchSumme: true,
-                beschriftung: (z) => {
-                    const fahrten = z.summenzeile ? fahrtenGesamt : auswertungenSumme(z, fenster, 'fahrten');
-                    const geschaetzt = z.summenzeile ? geschaetztGesamt : auswertungenSumme(z, fenster, 'fahrten_geschaetzt');
-                    return t('board.qualityAria', {
-                        name: z.name, anteil: prozentFormat(fahrten ? geschaetzt / fahrten : 0),
-                        geschaetzt: zahlFormat(geschaetzt), fahrten: zahlFormat(fahrten)
-                    });
-                }
+                format: (n) => kmFormat(n),
+                // RANG 4 DER FARBORDNUNG - dieselben drei Toene wie in
+                // der Flotte und im Umsatz nach Radtyp. Hier traegt die
+                // Groesse den Balken ohne Vorbehalt: 6.022 / 13.567 /
+                // 30.362 km, Verhaeltnis 5,0 zu 1.
+                farbe: (z) => kategorieFarbe(z.schluessel) || 'var(--marine)'
             },
             {
                 art: 'profil',
@@ -1472,15 +1523,43 @@ function kmCo2Kopftafel(zeilen) {
 // ===== Reiter "Stationsauslastung" =====
 //
 // Dieselben zehn Stationen wie im Bereich "Stationen", aber eine andere
-// Frage: dort geht es um den Bestand JETZT (wie voll ist welche Station,
-// wann wird sie gefahren), hier um die ueber die gesamte Historie
-// gezaehlte Bewegung. Deshalb eine eigene Tafel und nicht dieselbe:
-// Groesse ist hier die Fahrtenzahl, nicht die Kapazitaet.
+// Frage: dort geht es um den Bestand JETZT (wie voll ist welche
+// Station), hier um die ueber die gesamte Historie gezaehlte Bewegung.
+//
+// ===== ZWEI SPALTEN HABEN DIE PRUEFUNG NICHT BESTANDEN =====
+//
+// ERSTENS DIE GROESSE. Sie zeigte die Bewegungen (Abgaenge plus
+// Zugaenge): 2.310 bis 2.488 ueber zehn Stationen - Verhaeltnis 1,08 zu
+// 1. Zehn Balken zwischen 93 und 100 Prozent Laenge, also zehn gleich
+// lange Balken. Die alte Fussnote gab das sogar zu ("die Nachfrage ist
+// gleichmaessig verteilt") - eine Grafik, die ihre eigene Nutzlosigkeit
+// in der Fussnote erklaert, gehoert ersetzt, nicht erklaert.
+// Jetzt steht dort die Bewegung JE STELLPLATZ: 57,8 (Hubland) bis 117,1
+// (Zellerau), Verhaeltnis 2,0 zu 1. Derselbe Befund wie im Bereich
+// "Stationen" und aus demselben Grund lesenswert - die Nachfrage ist
+// gleich verteilt, die Kapazitaet nicht. Die absolute Bewegungszahl
+// bleibt als reine Zahl daneben stehen (art:'zahl'), sie ist die
+// Grundlage der Rechnung und darf nicht verschwinden.
+//
+// ZWEITENS DIE BELEGUNG. Der 100-%-Strukturbalken "belegt / frei" zeigte
+// exakt denselben Quotienten wie die Fuellstandsspalte daneben - zweimal
+// dieselbe Zahl, einmal als Flaeche, einmal als Punkt. Von den beiden
+// bleibt der PUNKT: er sitzt auf einer Achse von 30 bis 70 Prozent und
+// nutzt damit die volle Spaltenbreite, waehrend der Strukturbalken
+// dieselben zehn Werte in das mittlere Drittel einer 0-bis-100-Skala
+// druckte (genau der Befund des Auftraggebers: "nutzt sie den
+// verfuegbaren Bereich, oder drueckt sie zehn Werte in ein Drittel der
+// Breite?").
 function stationsauslastungKopftafel(zeilen) {
     if (!zeilen || zeilen.length === 0) return null;
 
     const fahrtenVon = (z) => (Number(z.abgaenge) || 0) + (Number(z.zugaenge) || 0);
     const fuellstandVon = (z) => (z.kapazitaet ? (Number(z.belegt) || 0) / z.kapazitaet : 0);
+    // VERHAELTNISZAHL AUS SUMMEN (Hausregel): Bewegungen dieser Station
+    // geteilt durch ihre Stellplaetze. Dieselbe Rechnung wie
+    // umschlagVon() in stationen.js - beide Tafeln muessen dieselbe Zahl
+    // nennen, sonst haette VeloCity zwei Wahrheiten ueber Zellerau.
+    const umschlagVon = (z) => (z.kapazitaet ? fahrtenVon(z) / z.kapazitaet : null);
     const abgaenge = zeilen.map((z) => Number(z.abgaenge) || 0);
 
     return {
@@ -1497,25 +1576,32 @@ function stationsauslastungKopftafel(zeilen) {
                 zusatz: (z) => (z.summenzeile ? null : z.stationsnummer)
             },
             {
-                art: 'groesse',
+                art: 'zahl',
                 titel: t('col.movements'),
                 einheit: t('unit.departuresPlusArrivals'),
                 wert: (z) => (z.summenzeile ? z.summeFahrten : fahrtenVon(z)),
                 format: (n) => zahlFormat(n)
             },
             {
-                art: 'struktur',
-                titel: t('col.occupancy'),
-                einheit: t('unit.shareOfRow'),
-                auchSumme: true,
-                segmente: (z) => [
-                    { wert: Number(z.belegt) || 0, name: t('col.occupied'),
-                      klasse: (Number(z.belegt) || 0) >= z.kapazitaet ? 'seg-warnung' : 'seg-aktiv' },
-                    { wert: Math.max(0, z.kapazitaet - (Number(z.belegt) || 0)), name: t('col.free'), klasse: 'seg-ruhend' }
-                ],
-                beschriftung: (z) => t('board.stationOccupancyAria', {
-                    name: z.name, belegt: zahlFormat(z.belegt), kapazitaet: zahlFormat(z.kapazitaet),
-                    prozent: zahlFormat(Math.round(fuellstandVon(z) * 100))
+                // BALKEN HIER, LAGEPUNKT IN stationen.js - und das ist
+                // kein Versehen: dort ist die Groessenspalte bereits von
+                // der Belegung besetzt, der Umschlag steht also in der
+                // Profilspalte und kodiert Position. Hier ist die
+                // Groessenspalte frei, und ein Balken vom Nullpunkt ist
+                // die staerkere Darstellung, solange die Werte ihn
+                // tragen: 57,8 bis 117,1 ergeben Balkenlaengen von 49 bis
+                // 100 Prozent - ein halber Balken Unterschied zwischen
+                // Hubland und Zellerau. (Zum Vergleich: die abgeloeste
+                // Bewegungsspalte lag bei 93 bis 100 Prozent.)
+                art: 'groesse',
+                titel: t('col.turnover'),
+                einheit: t('unit.movementsPerDock'),
+                wert: (z) => (z.summenzeile ? null : umschlagVon(z)),
+                format: (n) => zahlFormat(n, { maximumFractionDigits: 0 }),
+                beschriftung: (z) => t('board.stationTurnoverAria', {
+                    name: z.name,
+                    wert: zahlFormat(umschlagVon(z) ?? 0, { maximumFractionDigits: 0 }),
+                    kapazitaet: zahlFormat(z.kapazitaet)
                 })
             },
             {
@@ -1546,17 +1632,17 @@ function stationsauslastungKopftafel(zeilen) {
             belegt: zeilen.reduce((s, z) => s + (Number(z.belegt) || 0), 0),
             kapazitaet: zeilen.reduce((s, z) => s + z.kapazitaet, 0)
         },
-        // Der eigentliche Befund dieser Tafel steht NICHT in der
-        // Groessenspalte, sondern darin, wie WENIG sie sich unterscheidet:
-        // zehn fast gleich lange Balken heissen, dass die Nachfrage
-        // gleichmaessig verteilt ist - und dass alles, was ein Disponent
-        // hier zu entscheiden hat, in der Saldospalte rechts steht.
+        // Der eigentliche Befund dieser Tafel steht in der Saldospalte
+        // rechts (-65 bis +122 ueber zehn Stationen, Verhaeltnis 30 zu 1
+        // zwischen groesstem und kleinstem Betrag) - alles, was ein
+        // Disponent hier zu entscheiden hat, steht dort. Die Fussnote
+        // nennt die Zahl, die das begruendet: die Abgaenge selbst
+        // unterscheiden sich kaum.
         fussnote: t('board.stationLoadFootnote', {
             min: zahlFormat(Math.min(...abgaenge)), max: zahlFormat(Math.max(...abgaenge))
         })
     };
 }
-
 
 // async wegen des Drill-Downs (monatsdrilldownEinfuegen() lädt die
 // Tageszahlen nach) - zeileWaehlen() in rahmen.js ruft diese Funktion

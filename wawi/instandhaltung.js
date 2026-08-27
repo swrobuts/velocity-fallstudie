@@ -247,7 +247,23 @@ function instandhaltungKopftafel(schaeden, auftraege, radtypNamen) {
                 zusatz: (z) => (z.summenzeile ? null : z.kategorie)
             },
             {
-                art: 'groesse',
+                // ZAHL OHNE BALKEN (art:'zahl', siehe kopftafelZeile() in
+                // rahmen.js). Die Arbeitszeit hat die Pruefung als
+                // GRAFIK nicht bestanden, als ZAHL sehr wohl:
+                // nachgezaehlt tragen fuenf der sieben Meldungen exakt
+                // null Minuten (nur die beiden behobenen Faelle haben
+                // einen erledigten Auftrag mit 45 bzw. 30 Minuten). Fuenf
+                // Balken der Laenge null sind fuenf leere Zellen, in
+                // denen "noch nicht bearbeitet" und "keine Angabe" gleich
+                // aussehen - und die beiden uebrigen ergaeben einen
+                // Vergleich zwischen zwei Werten, fuer den es keine
+                // Grafik braucht.
+                //
+                // Die Zahl bleibt, weil sie eine Frage beantwortet ("was
+                // hat die Werkstatt hier schon investiert") und weil die
+                // Summe darunter (75 Minuten) der einzige Mengenwert
+                // dieser Tafel ist.
+                art: 'zahl',
                 titel: t('col.workTime'),
                 einheit: t('unit.minutes'),
                 wert: (z) => z.minuten,

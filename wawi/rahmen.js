@@ -621,16 +621,14 @@ const UEBERSETZUNGEN = {
     "col.modelYear": "Baujahr",
     "col.utilisationDeviation": "Einsatzquote ggü. Flotte",
     "col.station": "Station",
-    "col.capacity": "Stellplätze",
-    "col.occupancy": "Belegung",
-    "col.occupied": "belegt",
-    "col.free": "frei",
-    "col.dailyRhythm": "Tagesgang",
+    "col.occupied": "Belegt",
+    "col.turnover": "Umschlag",
+    "col.rides": "Fahrten",
+    "col.revenuePerRideColumn": "Umsatz je Fahrt",
     "col.balance": "Saldo",
     "col.tariffGroup": "Tarifgruppe",
     "col.customers": "Kundschaft",
     "col.customerMix": "Nutzung",
-    "col.signups": "Zugänge",
     "col.revenueDeviation": "Umsatz- ggü. Kundenanteil",
     "col.case": "Fall",
     "col.workTime": "Arbeitszeit",
@@ -638,32 +636,26 @@ const UEBERSETZUNGEN = {
     "col.progress": "Bearbeitungsstand",
     "col.bikeType": "Radtyp",
     "col.revenue": "Umsatz",
-    "col.halfYearMix": "Halbjahr",
-    "col.summerHalf": "Sommerhalbjahr",
-    "col.winterHalf": "Winterhalbjahr",
     "col.monthlyCourse": "Monatsverlauf",
     "col.revenueVsRides": "Umsatz- ggü. Fahrtenanteil",
     "col.kilometres": "Kilometer",
-    "col.dataQuality": "Datenlage",
-    "col.measured": "gemessen",
-    "col.estimated": "geschätzt",
     "col.kmPerRideDeviation": "km je Fahrt ggü. Schnitt",
     "col.movements": "Bewegungen",
     "col.fillLevel": "Füllstand",
     "unit.bikes": "Räder",
     "unit.shareOfRow": "Anteil der Zeile",
     "unit.percentagePoints": "Prozentpunkte",
-    "unit.dockingPoints": "Stellplätze",
-    "unit.departuresPerWorkday": "Abgänge je Werktag, 0–24 Uhr",
     "unit.ridesArrivalsMinusDepartures": "Fahrten, Zugang minus Abgang",
     "unit.persons": "Personen",
     "unit.minutes": "Minuten",
     "unit.threeSteps": "3 Stufen",
     "unit.reportedToFixed": "gemeldet bis behoben",
     "unit.euroTwelveMonths": "Euro, 12 Monate",
-    "unit.summerWinter": "Sommer / Winter",
+    "unit.bikesOfCapacity": "Räder, Rahmen = Stellplätze",
+    "unit.movementsPerDock": "Bewegungen je Stellplatz",
+    "unit.euroPerRide": "Euro",
+    "unit.ridesTwelveMonths": "Fahrten, 12 Monate",
     "unit.kmTwelveMonths": "Summe, 12 Monate",
-    "unit.ridesMeasuredEstimated": "Fahrten, gemessen / geschätzt",
     "unit.kmPerRide": "Kilometer je Fahrt",
     "unit.departuresPlusArrivals": "Abgänge und Zugänge",
     "unit.zeroToHundred": "0–100 %",
@@ -673,20 +665,22 @@ const UEBERSETZUNGEN = {
     "board.fleetYearAria": "{name}, Baujahr {jahr}, auf der Skala {vonJahr} bis {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % ausgeliehen, ganze Flotte {flottenquote} %",
     "board.fleetFootnote": "Abweichung: Anteil ausgeliehener Räder je Modell gegenüber {quote} % in der gesamten Flotte – aus Summen gerechnet, nicht als Mittel der neun Modellquoten.",
+    "board.fleetNoLocationFootnote": "{raederPhrase} gelten als verfügbar, tragen aber keinen Standort – in der Kartei einsatzbereit und im Netz nicht auffindbar.",
     "board.stationsTitle": "Netz nach Station",
     "board.stationsReference": "{stationenPhrase} · {belegt} von {kapazitaet} Stellplätzen belegt ({prozent} %) · Saldo über alle abgeschlossenen Fahrten",
     "board.stationOccupancyAria": "{name}: {belegt} von {kapazitaet} Stellplätzen belegt, {prozent} %",
-    "board.stationRhythmAria": "{name}: Tagesgang der Abgänge, Spitze zwischen {stunde} Uhr mit {wert} Fahrten je Werktag",
     "board.stationBalanceAria": "{name}: {zugaenge} Zugänge, {abgaenge} Abgänge, Saldo {saldo}",
     "board.stationsFootnote": "Die Abgänge liegen bei allen Stationen zwischen {min} und {max} – die Nachfrage ist gleichmäßig verteilt, die Unterschiede stecken allein im Saldo.",
+    "board.stationTurnoverAria": "{name}: {wert} Bewegungen je Stellplatz bei {kapazitaet} Stellplätzen",
+    "board.stationsRhythmFootnote": "Der Tagesgang ist an allen Stationen derselbe: {morgenMin} bis {morgenMax} % der Werktagsabgänge fallen auf 6 bis 8 Uhr, {nachmittagMin} bis {nachmittagMax} % auf 16 bis 18 Uhr. Er beschreibt das Netz, nicht die einzelne Station – deshalb steht er hier und nicht als Spalte.",
     "board.customersTitle": "Kartei nach Tarifgruppe",
     "board.customersReference": "{kundenPhrase} · {gesperrt} gesperrt · {volumen} Rechnungsvolumen · {imOrt} in {ort}, verteilt über {ortePhrase}",
     "board.customersNoTariff": "Ohne aktiven Tarif",
     "board.customersWithRides": "mit Fahrten",
     "board.customersNoRides": "ohne Fahrt",
     "board.customersRevenueShare": "{anteil} % des Volumens",
+    "board.customersRevenuePerRideAria": "{name}: {betrag} je Fahrt auf {fahrtenPhrase}",
     "board.customersMixAria": "{name}: {aufteilung}",
-    "board.customersSignupsAria": "{name}: Zugänge {vonJahr} bis {bisJahr}, Höchstwert {max} im Jahr {maxJahr}",
     "board.customersDeviationAria": "{name}: {umsatzanteil} % des Volumens bei {kundenanteil} % der Kundschaft",
     "board.customersActiveMax": "höchstens {kundenPhrase} im Monat",
     "board.customersFootnote": "Die oberen {zehntel} Kundinnen und Kunden tragen {anteil} % des Rechnungsvolumens; {ohneAdresse} Datensätze haben keine Adresse.",
@@ -702,7 +696,6 @@ const UEBERSETZUNGEN = {
     "board.revenueReference": "{umsatz} und {fahrtenPhrase}, {vonMonat} bis {bisMonat}",
     "board.revenueReferenceWithFleet": "{umsatz} und {fahrtenPhrase}, {vonMonat} bis {bisMonat} · {jeRadTag} je Rad und Tag ({raederPhrase})",
     "board.revenuePerRide": "{betrag} je Fahrt",
-    "board.halfYearAria": "{name}: {sommer} % im Sommerhalbjahr, {winter} % im Winterhalbjahr",
     "board.monthlyCourseAria": "{name}: Verlauf {vonMonat} bis {bisMonat}, Höchstwert {max} im {maxMonat}, zuletzt {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % des Umsatzes bei {fahrtenanteil} % der Fahrten",
     "board.revenueTypeFootnote": "Umsatz je Fahrt beim City-Bike: {von} auf {nach} ({veraenderung}) ab {monat} – der einzige Tarifwechsel im Zeitraum.",
@@ -710,7 +703,6 @@ const UEBERSETZUNGEN = {
     "board.kmTitle": "Wegstrecke nach Radtyp",
     "board.kmReference": "{km} auf {fahrtenPhrase}, {vonMonat} bis {bisMonat} · {anteil} der Fahrten geschätzt",
     "board.co2PerRide": "{kg} CO₂ je Fahrt",
-    "board.qualityAria": "{name}: {anteil} geschätzt, {geschaetzt} von {fahrten} Fahrten",
     "board.kmPerRideAria": "{name}: {je} je Fahrt, Schnitt {schnitt}",
     "board.kmFootnote": "Der Schätzanteil ({anteil}) ist fahrtgewichtet gerechnet, nicht als Mittel der Monatsanteile: das ergäbe im gezeigten Zeitraum {ungewichtet} und über alle {monatszeilen} sogar {alleUngewichtet} statt {alleGewichtet} – schwach besetzte Monate wiegen in einem Mittel genauso schwer wie starke.",
     "board.stationLoadTitle": "Bewegung nach Station",
@@ -1106,16 +1098,14 @@ const UEBERSETZUNGEN = {
     "col.modelYear": "Model year",
     "col.utilisationDeviation": "Utilisation vs. fleet",
     "col.station": "Station",
-    "col.capacity": "Docking points",
-    "col.occupancy": "Occupancy",
-    "col.occupied": "occupied",
-    "col.free": "free",
-    "col.dailyRhythm": "Daily pattern",
+    "col.occupied": "Occupied",
+    "col.turnover": "Turnover",
+    "col.rides": "Rides",
+    "col.revenuePerRideColumn": "Revenue per ride",
     "col.balance": "Balance",
     "col.tariffGroup": "Tariff group",
     "col.customers": "Customers",
     "col.customerMix": "Usage",
-    "col.signups": "Sign-ups",
     "col.revenueDeviation": "Revenue vs. customer share",
     "col.case": "Case",
     "col.workTime": "Work time",
@@ -1123,32 +1113,26 @@ const UEBERSETZUNGEN = {
     "col.progress": "Progress",
     "col.bikeType": "Bike type",
     "col.revenue": "Revenue",
-    "col.halfYearMix": "Half-year",
-    "col.summerHalf": "summer half-year",
-    "col.winterHalf": "winter half-year",
     "col.monthlyCourse": "Monthly course",
     "col.revenueVsRides": "Revenue vs. ride share",
     "col.kilometres": "Kilometres",
-    "col.dataQuality": "Data basis",
-    "col.measured": "measured",
-    "col.estimated": "estimated",
     "col.kmPerRideDeviation": "km per ride vs. average",
     "col.movements": "Movements",
     "col.fillLevel": "Fill level",
     "unit.bikes": "bikes",
     "unit.shareOfRow": "share of row",
     "unit.percentagePoints": "percentage points",
-    "unit.dockingPoints": "docking points",
-    "unit.departuresPerWorkday": "departures per workday, 0–24 h",
     "unit.ridesArrivalsMinusDepartures": "rides, arrivals minus departures",
     "unit.persons": "persons",
     "unit.minutes": "minutes",
     "unit.threeSteps": "3 steps",
     "unit.reportedToFixed": "reported to fixed",
     "unit.euroTwelveMonths": "euro, 12 months",
-    "unit.summerWinter": "summer / winter",
+    "unit.bikesOfCapacity": "bikes, frame = docking points",
+    "unit.movementsPerDock": "movements per docking point",
+    "unit.euroPerRide": "euro",
+    "unit.ridesTwelveMonths": "rides, 12 months",
     "unit.kmTwelveMonths": "total, 12 months",
-    "unit.ridesMeasuredEstimated": "rides, measured / estimated",
     "unit.kmPerRide": "kilometres per ride",
     "unit.departuresPlusArrivals": "departures and arrivals",
     "unit.zeroToHundred": "0–100 %",
@@ -1158,20 +1142,22 @@ const UEBERSETZUNGEN = {
     "board.fleetYearAria": "{name}, model year {jahr}, on the scale {vonJahr} to {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % on loan, whole fleet {flottenquote} %",
     "board.fleetFootnote": "Deviation: share of bikes on loan per model against {quote} % across the whole fleet – computed from totals, not as the average of the nine model ratios.",
+    "board.fleetNoLocationFootnote": "{raederPhrase} count as available but carry no location – ready in the records and untraceable in the network.",
     "board.stationsTitle": "Network by station",
     "board.stationsReference": "{stationenPhrase} · {belegt} of {kapazitaet} docking points occupied ({prozent} %) · balance over all completed rides",
     "board.stationOccupancyAria": "{name}: {belegt} of {kapazitaet} docking points occupied, {prozent} %",
-    "board.stationRhythmAria": "{name}: daily pattern of departures, peak between {stunde} h with {wert} rides per workday",
     "board.stationBalanceAria": "{name}: {zugaenge} arrivals, {abgaenge} departures, balance {saldo}",
     "board.stationsFootnote": "Departures range from {min} to {max} across all stations – demand is evenly spread, the differences lie solely in the balance.",
+    "board.stationTurnoverAria": "{name}: {wert} movements per docking point across {kapazitaet} docking points",
+    "board.stationsRhythmFootnote": "The daily pattern is the same at every station: {morgenMin} to {morgenMax} % of weekday departures fall between 6 and 8 h, {nachmittagMin} to {nachmittagMax} % between 16 and 18 h. It describes the network, not the individual station – which is why it stands here and not as a column.",
     "board.customersTitle": "Records by tariff group",
     "board.customersReference": "{kundenPhrase} · {gesperrt} blocked · {volumen} invoiced · {imOrt} in {ort}, spread over {ortePhrase}",
     "board.customersNoTariff": "No active tariff",
     "board.customersWithRides": "with rides",
     "board.customersNoRides": "without a ride",
     "board.customersRevenueShare": "{anteil} % of the volume",
+    "board.customersRevenuePerRideAria": "{name}: {betrag} per ride across {fahrtenPhrase}",
     "board.customersMixAria": "{name}: {aufteilung}",
-    "board.customersSignupsAria": "{name}: sign-ups {vonJahr} to {bisJahr}, peak {max} in {maxJahr}",
     "board.customersDeviationAria": "{name}: {umsatzanteil} % of the volume with {kundenanteil} % of the customers",
     "board.customersActiveMax": "at most {kundenPhrase} in a month",
     "board.customersFootnote": "The top {zehntel} customers account for {anteil} % of the invoiced volume; {ohneAdresse} records have no address.",
@@ -1187,7 +1173,6 @@ const UEBERSETZUNGEN = {
     "board.revenueReference": "{umsatz} and {fahrtenPhrase}, {vonMonat} to {bisMonat}",
     "board.revenueReferenceWithFleet": "{umsatz} and {fahrtenPhrase}, {vonMonat} to {bisMonat} · {jeRadTag} per bike per day ({raederPhrase})",
     "board.revenuePerRide": "{betrag} per ride",
-    "board.halfYearAria": "{name}: {sommer} % in the summer half-year, {winter} % in the winter half-year",
     "board.monthlyCourseAria": "{name}: course {vonMonat} to {bisMonat}, peak {max} in {maxMonat}, latest {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % of revenue with {fahrtenanteil} % of rides",
     "board.revenueTypeFootnote": "Revenue per ride for the City-Bike: {von} to {nach} ({veraenderung}) from {monat} – the only tariff change in the period.",
@@ -1195,7 +1180,6 @@ const UEBERSETZUNGEN = {
     "board.kmTitle": "Distance by bike type",
     "board.kmReference": "{km} over {fahrtenPhrase}, {vonMonat} to {bisMonat} · {anteil} of rides estimated",
     "board.co2PerRide": "{kg} CO₂ per ride",
-    "board.qualityAria": "{name}: {anteil} estimated, {geschaetzt} of {fahrten} rides",
     "board.kmPerRideAria": "{name}: {je} per ride, average {schnitt}",
     "board.kmFootnote": "The estimated share ({anteil}) is weighted by rides, not averaged over monthly shares: that would give {ungewichtet} for the period shown and even {alleUngewichtet} instead of {alleGewichtet} across all {monatszeilen} – in a plain average, thinly populated months weigh as much as busy ones.",
     "board.stationLoadTitle": "Movement by station",
@@ -1591,16 +1575,14 @@ const UEBERSETZUNGEN = {
     "col.modelYear": "Model yılı",
     "col.utilisationDeviation": "Filoya göre kullanım",
     "col.station": "İstasyon",
-    "col.capacity": "Park yeri",
-    "col.occupancy": "Doluluk",
-    "col.occupied": "dolu",
-    "col.free": "boş",
-    "col.dailyRhythm": "Gün içi seyir",
+    "col.occupied": "Dolu",
+    "col.turnover": "Devir",
+    "col.rides": "Seferler",
+    "col.revenuePerRideColumn": "Sefer başına ciro",
     "col.balance": "Denge",
     "col.tariffGroup": "Tarife grubu",
     "col.customers": "Müşteri",
     "col.customerMix": "Kullanım",
-    "col.signups": "Yeni kayıt",
     "col.revenueDeviation": "Ciro ile müşteri payı farkı",
     "col.case": "Vaka",
     "col.workTime": "Çalışma süresi",
@@ -1608,32 +1590,26 @@ const UEBERSETZUNGEN = {
     "col.progress": "İşlem durumu",
     "col.bikeType": "Bisiklet tipi",
     "col.revenue": "Ciro",
-    "col.halfYearMix": "Yarıyıl",
-    "col.summerHalf": "yaz yarıyılı",
-    "col.winterHalf": "kış yarıyılı",
     "col.monthlyCourse": "Aylık seyir",
     "col.revenueVsRides": "Ciro ile sürüş payı farkı",
     "col.kilometres": "Kilometre",
-    "col.dataQuality": "Veri durumu",
-    "col.measured": "ölçülmüş",
-    "col.estimated": "tahmini",
     "col.kmPerRideDeviation": "Sürüş başına km ile ortalama farkı",
     "col.movements": "Hareketler",
     "col.fillLevel": "Doluluk oranı",
     "unit.bikes": "bisiklet",
     "unit.shareOfRow": "satır payı",
     "unit.percentagePoints": "yüzde puanı",
-    "unit.dockingPoints": "park yeri",
-    "unit.departuresPerWorkday": "iş günü başına çıkış, 0–24",
     "unit.ridesArrivalsMinusDepartures": "sürüş, giriş eksi çıkış",
     "unit.persons": "kişi",
     "unit.minutes": "dakika",
     "unit.threeSteps": "3 kademe",
     "unit.reportedToFixed": "bildirimden giderilmeye",
     "unit.euroTwelveMonths": "avro, 12 ay",
-    "unit.summerWinter": "yaz / kış",
+    "unit.bikesOfCapacity": "bisiklet, çerçeve = park yeri",
+    "unit.movementsPerDock": "park yeri başına hareket",
+    "unit.euroPerRide": "avro",
+    "unit.ridesTwelveMonths": "sefer, 12 ay",
     "unit.kmTwelveMonths": "toplam, 12 ay",
-    "unit.ridesMeasuredEstimated": "sürüş, ölçülmüş / tahmini",
     "unit.kmPerRide": "sürüş başına kilometre",
     "unit.departuresPlusArrivals": "çıkış ve giriş",
     "unit.zeroToHundred": "0–100 %",
@@ -1643,20 +1619,22 @@ const UEBERSETZUNGEN = {
     "board.fleetYearAria": "{name}, model yılı {jahr}, {vonJahr}–{bisJahr} ölçeğinde",
     "board.fleetDeviationAria": "{name}: %{quote} kirada, tüm filo %{flottenquote}",
     "board.fleetFootnote": "Sapma: model başına kirada olan bisiklet payı, tüm filodaki %{quote} ile karşılaştırılır – dokuz model oranının ortalaması değil, toplamlardan hesaplanır.",
+    "board.fleetNoLocationFootnote": "{raederPhrase} müsait görünüyor ama konumu yok – kayıtta hazır, ağda bulunamıyor.",
     "board.stationsTitle": "İstasyona göre ağ",
     "board.stationsReference": "{stationenPhrase} · {kapazitaet} park yerinden {belegt} dolu (%{prozent}) · tamamlanan tüm sürüşlerin dengesi",
     "board.stationOccupancyAria": "{name}: {kapazitaet} park yerinden {belegt} dolu, %{prozent}",
-    "board.stationRhythmAria": "{name}: çıkışların gün içi seyri, zirve {stunde} arasında, iş günü başına {wert} sürüş",
     "board.stationBalanceAria": "{name}: {zugaenge} giriş, {abgaenge} çıkış, denge {saldo}",
     "board.stationsFootnote": "Çıkışlar tüm istasyonlarda {min} ile {max} arasında – talep eşit dağılmış, farklar yalnızca dengede.",
+    "board.stationTurnoverAria": "{name}: {kapazitaet} park yerinde park yeri başına {wert} hareket",
+    "board.stationsRhythmFootnote": "Günlük seyir bütün istasyonlarda aynı: hafta içi çıkışların % {morgenMin} ila {morgenMax} kadarı 6-8 arasında, % {nachmittagMin} ila {nachmittagMax} kadarı 16-18 arasında gerçekleşir. Tek bir istasyonu değil ağı tanımlar – bu yüzden sütun olarak değil burada yer alır.",
     "board.customersTitle": "Tarife grubuna göre kayıtlar",
     "board.customersReference": "{kundenPhrase} · {gesperrt} engellenmiş · {volumen} fatura hacmi · {ort} içinde {imOrt}, {ortePhrase} arasında dağılmış",
     "board.customersNoTariff": "Aktif tarife yok",
     "board.customersWithRides": "sürüşü olan",
     "board.customersNoRides": "sürüşü olmayan",
     "board.customersRevenueShare": "hacmin %{anteil} kadarı",
+    "board.customersRevenuePerRideAria": "{name}: {fahrtenPhrase} için sefer başına {betrag}",
     "board.customersMixAria": "{name}: {aufteilung}",
-    "board.customersSignupsAria": "{name}: {vonJahr}–{bisJahr} yeni kayıtlar, en yüksek {max} ({maxJahr})",
     "board.customersDeviationAria": "{name}: müşterilerin %{kundenanteil} kadarıyla hacmin %{umsatzanteil} kadarı",
     "board.customersActiveMax": "ayda en fazla {kundenPhrase}",
     "board.customersFootnote": "En üstteki {zehntel} müşteri fatura hacminin %{anteil} kadarını taşıyor; {ohneAdresse} kayıtta adres yok.",
@@ -1672,7 +1650,6 @@ const UEBERSETZUNGEN = {
     "board.revenueReference": "{umsatz} ve {fahrtenPhrase}, {vonMonat}–{bisMonat}",
     "board.revenueReferenceWithFleet": "{umsatz} ve {fahrtenPhrase}, {vonMonat}–{bisMonat} · bisiklet başına günde {jeRadTag} ({raederPhrase})",
     "board.revenuePerRide": "sürüş başına {betrag}",
-    "board.halfYearAria": "{name}: %{sommer} yaz yarıyılında, %{winter} kış yarıyılında",
     "board.monthlyCourseAria": "{name}: {vonMonat}–{bisMonat} seyri, en yüksek {max} ({maxMonat}), son {aktuell}",
     "board.revenueVsRidesAria": "{name}: sürüşlerin %{fahrtenanteil} kadarıyla cironun %{umsatzanteil} kadarı",
     "board.revenueTypeFootnote": "City-Bike'ta sürüş başına ciro: {monat} itibarıyla {von} yerine {nach} ({veraenderung}) – dönemdeki tek tarife değişikliği.",
@@ -1680,7 +1657,6 @@ const UEBERSETZUNGEN = {
     "board.kmTitle": "Bisiklet tipine göre mesafe",
     "board.kmReference": "{fahrtenPhrase} üzerinde {km}, {vonMonat}–{bisMonat} · sürüşlerin {anteil} kadarı tahmini",
     "board.co2PerRide": "sürüş başına {kg} CO₂",
-    "board.qualityAria": "{name}: {anteil} tahmini, {fahrten} sürüşten {geschaetzt} tanesi",
     "board.kmPerRideAria": "{name}: sürüş başına {je}, ortalama {schnitt}",
     "board.kmFootnote": "Tahmin payı ({anteil}) sürüşe göre ağırlıklı hesaplanır, aylık payların ortalaması değildir: gösterilen dönemde bu {ungewichtet}, tüm {monatszeilen} genelinde ise {alleGewichtet} yerine {alleUngewichtet} verirdi – düz ortalamada az sürüşlü aylar yoğun aylarla aynı ağırlığa sahiptir.",
     "board.stationLoadTitle": "İstasyona göre hareket",
@@ -2076,16 +2052,14 @@ const UEBERSETZUNGEN = {
     "col.modelYear": "Año de fabricación",
     "col.utilisationDeviation": "Uso frente a la flota",
     "col.station": "Estación",
-    "col.capacity": "Plazas",
-    "col.occupancy": "Ocupación",
-    "col.occupied": "ocupadas",
-    "col.free": "libres",
-    "col.dailyRhythm": "Curva diaria",
+    "col.occupied": "Ocupadas",
+    "col.turnover": "Rotación",
+    "col.rides": "Viajes",
+    "col.revenuePerRideColumn": "Ingresos por viaje",
     "col.balance": "Saldo",
     "col.tariffGroup": "Grupo tarifario",
     "col.customers": "Clientela",
     "col.customerMix": "Uso",
-    "col.signups": "Altas",
     "col.revenueDeviation": "Ingresos frente a cuota de clientes",
     "col.case": "Caso",
     "col.workTime": "Tiempo de trabajo",
@@ -2093,32 +2067,26 @@ const UEBERSETZUNGEN = {
     "col.progress": "Estado de tramitación",
     "col.bikeType": "Tipo de bicicleta",
     "col.revenue": "Ingresos",
-    "col.halfYearMix": "Semestre",
-    "col.summerHalf": "semestre de verano",
-    "col.winterHalf": "semestre de invierno",
     "col.monthlyCourse": "Curva mensual",
     "col.revenueVsRides": "Ingresos frente a cuota de viajes",
     "col.kilometres": "Kilómetros",
-    "col.dataQuality": "Base de datos",
-    "col.measured": "medido",
-    "col.estimated": "estimado",
     "col.kmPerRideDeviation": "km por viaje frente a la media",
     "col.movements": "Movimientos",
     "col.fillLevel": "Nivel de llenado",
     "unit.bikes": "bicicletas",
     "unit.shareOfRow": "proporción de la fila",
     "unit.percentagePoints": "puntos porcentuales",
-    "unit.dockingPoints": "plazas",
-    "unit.departuresPerWorkday": "salidas por día laborable, 0–24 h",
     "unit.ridesArrivalsMinusDepartures": "viajes, llegadas menos salidas",
     "unit.persons": "personas",
     "unit.minutes": "minutos",
     "unit.threeSteps": "3 niveles",
     "unit.reportedToFixed": "de notificado a resuelto",
     "unit.euroTwelveMonths": "euros, 12 meses",
-    "unit.summerWinter": "verano / invierno",
+    "unit.bikesOfCapacity": "bicicletas, marco = plazas",
+    "unit.movementsPerDock": "movimientos por plaza",
+    "unit.euroPerRide": "euros",
+    "unit.ridesTwelveMonths": "viajes, 12 meses",
     "unit.kmTwelveMonths": "total, 12 meses",
-    "unit.ridesMeasuredEstimated": "viajes, medidos / estimados",
     "unit.kmPerRide": "kilómetros por viaje",
     "unit.departuresPlusArrivals": "salidas y llegadas",
     "unit.zeroToHundred": "0–100 %",
@@ -2128,20 +2096,22 @@ const UEBERSETZUNGEN = {
     "board.fleetYearAria": "{name}, año {jahr}, en la escala de {vonJahr} a {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % en préstamo, flota completa {flottenquote} %",
     "board.fleetFootnote": "Desviación: proporción de bicicletas en préstamo por modelo frente al {quote} % de toda la flota, calculada a partir de sumas y no como media de las nueve proporciones.",
+    "board.fleetNoLocationFootnote": "{raederPhrase} figuran como disponibles pero no tienen ubicación: listas en el registro e imposibles de localizar en la red.",
     "board.stationsTitle": "Red por estación",
     "board.stationsReference": "{stationenPhrase} · {belegt} de {kapazitaet} plazas ocupadas ({prozent} %) · saldo de todos los viajes finalizados",
     "board.stationOccupancyAria": "{name}: {belegt} de {kapazitaet} plazas ocupadas, {prozent} %",
-    "board.stationRhythmAria": "{name}: curva diaria de salidas, máximo entre las {stunde} h con {wert} viajes por día laborable",
     "board.stationBalanceAria": "{name}: {zugaenge} llegadas, {abgaenge} salidas, saldo {saldo}",
     "board.stationsFootnote": "Las salidas oscilan entre {min} y {max} en todas las estaciones: la demanda está repartida por igual y las diferencias solo aparecen en el saldo.",
+    "board.stationTurnoverAria": "{name}: {wert} movimientos por plaza con {kapazitaet} plazas",
+    "board.stationsRhythmFootnote": "El ritmo diario es el mismo en todas las estaciones: entre el {morgenMin} y el {morgenMax} % de las salidas de días laborables se producen de 6 a 8 h y entre el {nachmittagMin} y el {nachmittagMax} % de 16 a 18 h. Describe la red y no la estación concreta, y por eso figura aquí y no como columna.",
     "board.customersTitle": "Fichero por grupo tarifario",
     "board.customersReference": "{kundenPhrase} · {gesperrt} bloqueados · {volumen} facturados · {imOrt} en {ort}, repartidos en {ortePhrase}",
     "board.customersNoTariff": "Sin tarifa activa",
     "board.customersWithRides": "con viajes",
     "board.customersNoRides": "sin viajes",
     "board.customersRevenueShare": "{anteil} % del volumen",
+    "board.customersRevenuePerRideAria": "{name}: {betrag} por viaje en {fahrtenPhrase}",
     "board.customersMixAria": "{name}: {aufteilung}",
-    "board.customersSignupsAria": "{name}: altas de {vonJahr} a {bisJahr}, máximo {max} en {maxJahr}",
     "board.customersDeviationAria": "{name}: {umsatzanteil} % del volumen con {kundenanteil} % de la clientela",
     "board.customersActiveMax": "como máximo {kundenPhrase} al mes",
     "board.customersFootnote": "Los {zehntel} clientes principales aportan el {anteil} % del volumen facturado; {ohneAdresse} registros no tienen dirección.",
@@ -2157,7 +2127,6 @@ const UEBERSETZUNGEN = {
     "board.revenueReference": "{umsatz} y {fahrtenPhrase}, de {vonMonat} a {bisMonat}",
     "board.revenueReferenceWithFleet": "{umsatz} y {fahrtenPhrase}, de {vonMonat} a {bisMonat} · {jeRadTag} por bicicleta y día ({raederPhrase})",
     "board.revenuePerRide": "{betrag} por viaje",
-    "board.halfYearAria": "{name}: {sommer} % en el semestre de verano, {winter} % en el de invierno",
     "board.monthlyCourseAria": "{name}: curva de {vonMonat} a {bisMonat}, máximo {max} en {maxMonat}, último {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % de los ingresos con {fahrtenanteil} % de los viajes",
     "board.revenueTypeFootnote": "Ingresos por viaje de la City-Bike: de {von} a {nach} ({veraenderung}) desde {monat}, el único cambio de tarifa del periodo.",
@@ -2165,7 +2134,6 @@ const UEBERSETZUNGEN = {
     "board.kmTitle": "Distancia por tipo de bicicleta",
     "board.kmReference": "{km} en {fahrtenPhrase}, de {vonMonat} a {bisMonat} · {anteil} de los viajes estimados",
     "board.co2PerRide": "{kg} de CO₂ por viaje",
-    "board.qualityAria": "{name}: {anteil} estimado, {geschaetzt} de {fahrten} viajes",
     "board.kmPerRideAria": "{name}: {je} por viaje, media {schnitt}",
     "board.kmFootnote": "La proporción estimada ({anteil}) se pondera por viajes y no se promedia sobre las proporciones mensuales: eso daría {ungewichtet} en el periodo mostrado e incluso {alleUngewichtet} en lugar de {alleGewichtet} sobre {monatszeilen}; en una media simple, los meses poco poblados pesan tanto como los fuertes.",
     "board.stationLoadTitle": "Movimiento por estación",
@@ -2561,16 +2529,14 @@ const UEBERSETZUNGEN = {
     "col.modelYear": "Anno di costruzione",
     "col.utilisationDeviation": "Utilizzo rispetto alla flotta",
     "col.station": "Stazione",
-    "col.capacity": "Stalli",
-    "col.occupancy": "Occupazione",
-    "col.occupied": "occupati",
-    "col.free": "liberi",
-    "col.dailyRhythm": "Andamento giornaliero",
+    "col.occupied": "Occupati",
+    "col.turnover": "Rotazione",
+    "col.rides": "Corse",
+    "col.revenuePerRideColumn": "Ricavo per corsa",
     "col.balance": "Saldo",
     "col.tariffGroup": "Gruppo tariffario",
     "col.customers": "Clientela",
     "col.customerMix": "Utilizzo",
-    "col.signups": "Nuove iscrizioni",
     "col.revenueDeviation": "Ricavi rispetto alla quota clienti",
     "col.case": "Caso",
     "col.workTime": "Tempo di lavoro",
@@ -2578,32 +2544,26 @@ const UEBERSETZUNGEN = {
     "col.progress": "Stato di lavorazione",
     "col.bikeType": "Tipo di bici",
     "col.revenue": "Ricavi",
-    "col.halfYearMix": "Semestre",
-    "col.summerHalf": "semestre estivo",
-    "col.winterHalf": "semestre invernale",
     "col.monthlyCourse": "Andamento mensile",
     "col.revenueVsRides": "Ricavi rispetto alla quota corse",
     "col.kilometres": "Chilometri",
-    "col.dataQuality": "Base dei dati",
-    "col.measured": "misurato",
-    "col.estimated": "stimato",
     "col.kmPerRideDeviation": "km per corsa rispetto alla media",
     "col.movements": "Movimenti",
     "col.fillLevel": "Livello di riempimento",
     "unit.bikes": "bici",
     "unit.shareOfRow": "quota della riga",
     "unit.percentagePoints": "punti percentuali",
-    "unit.dockingPoints": "stalli",
-    "unit.departuresPerWorkday": "partenze per giorno feriale, 0–24",
     "unit.ridesArrivalsMinusDepartures": "corse, arrivi meno partenze",
     "unit.persons": "persone",
     "unit.minutes": "minuti",
     "unit.threeSteps": "3 livelli",
     "unit.reportedToFixed": "da segnalato a risolto",
     "unit.euroTwelveMonths": "euro, 12 mesi",
-    "unit.summerWinter": "estate / inverno",
+    "unit.bikesOfCapacity": "bici, cornice = stalli",
+    "unit.movementsPerDock": "movimenti per stallo",
+    "unit.euroPerRide": "euro",
+    "unit.ridesTwelveMonths": "corse, 12 mesi",
     "unit.kmTwelveMonths": "totale, 12 mesi",
-    "unit.ridesMeasuredEstimated": "corse, misurate / stimate",
     "unit.kmPerRide": "chilometri per corsa",
     "unit.departuresPlusArrivals": "partenze e arrivi",
     "unit.zeroToHundred": "0–100 %",
@@ -2613,20 +2573,22 @@ const UEBERSETZUNGEN = {
     "board.fleetYearAria": "{name}, anno {jahr}, sulla scala da {vonJahr} a {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % in prestito, intera flotta {flottenquote} %",
     "board.fleetFootnote": "Scostamento: quota di bici in prestito per modello rispetto al {quote} % dell'intera flotta, calcolata dalle somme e non come media delle nove quote.",
+    "board.fleetNoLocationFootnote": "{raederPhrase} risultano disponibili ma senza posizione: pronte in archivio e introvabili in rete.",
     "board.stationsTitle": "Rete per stazione",
     "board.stationsReference": "{stationenPhrase} · {belegt} di {kapazitaet} stalli occupati ({prozent} %) · saldo su tutte le corse concluse",
     "board.stationOccupancyAria": "{name}: {belegt} di {kapazitaet} stalli occupati, {prozent} %",
-    "board.stationRhythmAria": "{name}: andamento giornaliero delle partenze, picco tra le {stunde} con {wert} corse per giorno feriale",
     "board.stationBalanceAria": "{name}: {zugaenge} arrivi, {abgaenge} partenze, saldo {saldo}",
     "board.stationsFootnote": "Le partenze vanno da {min} a {max} in tutte le stazioni: la domanda è distribuita uniformemente, le differenze stanno solo nel saldo.",
+    "board.stationTurnoverAria": "{name}: {wert} movimenti per stallo su {kapazitaet} stalli",
+    "board.stationsRhythmFootnote": "L'andamento giornaliero è identico in tutte le stazioni: dal {morgenMin} al {morgenMax} % delle partenze feriali cade tra le 6 e le 8, dal {nachmittagMin} al {nachmittagMax} % tra le 16 e le 18. Descrive la rete e non la singola stazione: per questo sta qui e non in una colonna.",
     "board.customersTitle": "Anagrafica per gruppo tariffario",
     "board.customersReference": "{kundenPhrase} · {gesperrt} bloccati · {volumen} fatturati · {imOrt} a {ort}, distribuiti su {ortePhrase}",
     "board.customersNoTariff": "Senza tariffa attiva",
     "board.customersWithRides": "con corse",
     "board.customersNoRides": "senza corse",
     "board.customersRevenueShare": "{anteil} % del volume",
+    "board.customersRevenuePerRideAria": "{name}: {betrag} per corsa su {fahrtenPhrase}",
     "board.customersMixAria": "{name}: {aufteilung}",
-    "board.customersSignupsAria": "{name}: iscrizioni dal {vonJahr} al {bisJahr}, massimo {max} nel {maxJahr}",
     "board.customersDeviationAria": "{name}: {umsatzanteil} % del volume con {kundenanteil} % della clientela",
     "board.customersActiveMax": "al massimo {kundenPhrase} al mese",
     "board.customersFootnote": "I primi {zehntel} clienti portano il {anteil} % del volume fatturato; {ohneAdresse} record non hanno indirizzo.",
@@ -2642,7 +2604,6 @@ const UEBERSETZUNGEN = {
     "board.revenueReference": "{umsatz} e {fahrtenPhrase}, da {vonMonat} a {bisMonat}",
     "board.revenueReferenceWithFleet": "{umsatz} e {fahrtenPhrase}, da {vonMonat} a {bisMonat} · {jeRadTag} per bici al giorno ({raederPhrase})",
     "board.revenuePerRide": "{betrag} per corsa",
-    "board.halfYearAria": "{name}: {sommer} % nel semestre estivo, {winter} % in quello invernale",
     "board.monthlyCourseAria": "{name}: andamento da {vonMonat} a {bisMonat}, massimo {max} in {maxMonat}, ultimo {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % dei ricavi con {fahrtenanteil} % delle corse",
     "board.revenueTypeFootnote": "Ricavi per corsa della City-Bike: da {von} a {nach} ({veraenderung}) da {monat} – l'unico cambio di tariffa del periodo.",
@@ -2650,7 +2611,6 @@ const UEBERSETZUNGEN = {
     "board.kmTitle": "Percorrenza per tipo di bici",
     "board.kmReference": "{km} su {fahrtenPhrase}, da {vonMonat} a {bisMonat} · {anteil} delle corse stimate",
     "board.co2PerRide": "{kg} di CO₂ per corsa",
-    "board.qualityAria": "{name}: {anteil} stimato, {geschaetzt} di {fahrten} corse",
     "board.kmPerRideAria": "{name}: {je} per corsa, media {schnitt}",
     "board.kmFootnote": "La quota stimata ({anteil}) è ponderata per corse e non è la media delle quote mensili: quella darebbe {ungewichtet} nel periodo mostrato e addirittura {alleUngewichtet} invece di {alleGewichtet} su {monatszeilen} – in una media semplice i mesi poco popolati pesano quanto quelli forti.",
     "board.stationLoadTitle": "Movimento per stazione",
@@ -3046,16 +3006,14 @@ const UEBERSETZUNGEN = {
     "col.modelYear": "Rocznik",
     "col.utilisationDeviation": "Wykorzystanie wzgl. floty",
     "col.station": "Stacja",
-    "col.capacity": "Miejsca",
-    "col.occupancy": "Zajętość",
-    "col.occupied": "zajęte",
-    "col.free": "wolne",
-    "col.dailyRhythm": "Rytm dnia",
+    "col.occupied": "Zajęte",
+    "col.turnover": "Rotacja",
+    "col.rides": "Przejazdy",
+    "col.revenuePerRideColumn": "Przychód na przejazd",
     "col.balance": "Saldo",
     "col.tariffGroup": "Grupa taryfowa",
     "col.customers": "Klienci",
     "col.customerMix": "Korzystanie",
-    "col.signups": "Przybyli",
     "col.revenueDeviation": "Przychód wzgl. udziału klientów",
     "col.case": "Przypadek",
     "col.workTime": "Czas pracy",
@@ -3063,32 +3021,26 @@ const UEBERSETZUNGEN = {
     "col.progress": "Stan realizacji",
     "col.bikeType": "Typ roweru",
     "col.revenue": "Przychód",
-    "col.halfYearMix": "Półrocze",
-    "col.summerHalf": "półrocze letnie",
-    "col.winterHalf": "półrocze zimowe",
     "col.monthlyCourse": "Przebieg miesięczny",
     "col.revenueVsRides": "Przychód wzgl. udziału przejazdów",
     "col.kilometres": "Kilometry",
-    "col.dataQuality": "Podstawa danych",
-    "col.measured": "zmierzone",
-    "col.estimated": "szacowane",
     "col.kmPerRideDeviation": "km na przejazd wzgl. średniej",
     "col.movements": "Ruchy",
     "col.fillLevel": "Poziom napełnienia",
     "unit.bikes": "rowery",
     "unit.shareOfRow": "udział wiersza",
     "unit.percentagePoints": "punkty procentowe",
-    "unit.dockingPoints": "miejsca",
-    "unit.departuresPerWorkday": "wyjazdy na dzień roboczy, 0–24",
     "unit.ridesArrivalsMinusDepartures": "przejazdy, przyjazdy minus wyjazdy",
     "unit.persons": "osoby",
     "unit.minutes": "minuty",
     "unit.threeSteps": "3 stopnie",
     "unit.reportedToFixed": "od zgłoszenia do usunięcia",
     "unit.euroTwelveMonths": "euro, 12 miesięcy",
-    "unit.summerWinter": "lato / zima",
+    "unit.bikesOfCapacity": "rowery, ramka = miejsca postojowe",
+    "unit.movementsPerDock": "ruchy na miejsce postojowe",
+    "unit.euroPerRide": "euro",
+    "unit.ridesTwelveMonths": "przejazdy, 12 miesięcy",
     "unit.kmTwelveMonths": "suma, 12 miesięcy",
-    "unit.ridesMeasuredEstimated": "przejazdy, zmierzone / szacowane",
     "unit.kmPerRide": "kilometry na przejazd",
     "unit.departuresPlusArrivals": "wyjazdy i przyjazdy",
     "unit.zeroToHundred": "0–100 %",
@@ -3098,20 +3050,22 @@ const UEBERSETZUNGEN = {
     "board.fleetYearAria": "{name}, rocznik {jahr}, na skali od {vonJahr} do {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % wypożyczonych, cała flota {flottenquote} %",
     "board.fleetFootnote": "Odchylenie: udział wypożyczonych rowerów na model wobec {quote} % całej floty – liczone z sum, a nie jako średnia dziewięciu udziałów.",
+    "board.fleetNoLocationFootnote": "{raederPhrase} figurują jako dostępne, lecz nie mają lokalizacji – gotowe w kartotece i nie do odnalezienia w sieci.",
     "board.stationsTitle": "Sieć według stacji",
     "board.stationsReference": "{stationenPhrase} · {belegt} z {kapazitaet} miejsc zajętych ({prozent} %) · saldo ze wszystkich zakończonych przejazdów",
     "board.stationOccupancyAria": "{name}: {belegt} z {kapazitaet} miejsc zajętych, {prozent} %",
-    "board.stationRhythmAria": "{name}: rytm dnia wyjazdów, szczyt między {stunde} z {wert} przejazdami na dzień roboczy",
     "board.stationBalanceAria": "{name}: {zugaenge} przyjazdów, {abgaenge} wyjazdów, saldo {saldo}",
     "board.stationsFootnote": "Wyjazdy mieszczą się we wszystkich stacjach między {min} a {max} – popyt jest równomierny, różnice tkwią wyłącznie w saldzie.",
+    "board.stationTurnoverAria": "{name}: {wert} ruchów na miejsce postojowe przy {kapazitaet} miejscach",
+    "board.stationsRhythmFootnote": "Rozkład dobowy jest taki sam na wszystkich stacjach: od {morgenMin} do {morgenMax} % wyjazdów w dni robocze przypada na godziny 6–8, a od {nachmittagMin} do {nachmittagMax} % na 16–18. Opisuje sieć, a nie pojedynczą stację – dlatego stoi tutaj, a nie w kolumnie.",
     "board.customersTitle": "Kartoteka według grupy taryfowej",
     "board.customersReference": "{kundenPhrase} · {gesperrt} zablokowanych · {volumen} obrotu · {imOrt} w {ort}, rozłożone na {ortePhrase}",
     "board.customersNoTariff": "Bez aktywnej taryfy",
     "board.customersWithRides": "z przejazdami",
     "board.customersNoRides": "bez przejazdu",
     "board.customersRevenueShare": "{anteil} % obrotu",
+    "board.customersRevenuePerRideAria": "{name}: {betrag} na przejazd przy {fahrtenPhrase}",
     "board.customersMixAria": "{name}: {aufteilung}",
-    "board.customersSignupsAria": "{name}: przybyli od {vonJahr} do {bisJahr}, maksimum {max} w {maxJahr}",
     "board.customersDeviationAria": "{name}: {umsatzanteil} % obrotu przy {kundenanteil} % klientów",
     "board.customersActiveMax": "najwyżej {kundenPhrase} w miesiącu",
     "board.customersFootnote": "Górni {zehntel} klienci odpowiadają za {anteil} % obrotu; {ohneAdresse} rekordów nie ma adresu.",
@@ -3127,7 +3081,6 @@ const UEBERSETZUNGEN = {
     "board.revenueReference": "{umsatz} i {fahrtenPhrase}, od {vonMonat} do {bisMonat}",
     "board.revenueReferenceWithFleet": "{umsatz} i {fahrtenPhrase}, od {vonMonat} do {bisMonat} · {jeRadTag} na rower dziennie ({raederPhrase})",
     "board.revenuePerRide": "{betrag} na przejazd",
-    "board.halfYearAria": "{name}: {sommer} % w półroczu letnim, {winter} % w zimowym",
     "board.monthlyCourseAria": "{name}: przebieg od {vonMonat} do {bisMonat}, maksimum {max} w {maxMonat}, ostatnio {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % przychodu przy {fahrtenanteil} % przejazdów",
     "board.revenueTypeFootnote": "Przychód na przejazd dla City-Bike: z {von} na {nach} ({veraenderung}) od {monat} – jedyna zmiana taryfy w okresie.",
@@ -3135,7 +3088,6 @@ const UEBERSETZUNGEN = {
     "board.kmTitle": "Dystans według typu roweru",
     "board.kmReference": "{km} na {fahrtenPhrase}, od {vonMonat} do {bisMonat} · {anteil} przejazdów szacowanych",
     "board.co2PerRide": "{kg} CO₂ na przejazd",
-    "board.qualityAria": "{name}: {anteil} szacowane, {geschaetzt} z {fahrten} przejazdów",
     "board.kmPerRideAria": "{name}: {je} na przejazd, średnia {schnitt}",
     "board.kmFootnote": "Udział szacowany ({anteil}) liczony jest z wagą przejazdów, a nie jako średnia udziałów miesięcznych: ta dałaby {ungewichtet} w pokazanym okresie, a na {monatszeilen} nawet {alleUngewichtet} zamiast {alleGewichtet} – w zwykłej średniej słabo obsadzone miesiące ważą tyle samo co silne.",
     "board.stationLoadTitle": "Ruch według stacji",
@@ -4791,6 +4743,53 @@ window.addEventListener('scroll', hinweisfensterVerstecken, true);
 // zweite Bauart für dasselbe Ergebnis.
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+// ===== RANG 4 DER FARBORDNUNG: ZUGEHÖRIGKEIT =====
+//
+// Welche Kategorie welchen Ton trägt - an EINER Stelle, für alle neun
+// Tafeln. Die Töne selbst und ihre Begründung stehen in der Farbordnung
+// in style.css (fünf Töne gleicher Helligkeit, unterschieden am
+// Farbton, jeder über 4,45:1 gegen jeden Untergrund); WELCHER Code
+// welchen bekommt, ist dagegen eine Frage der Fachdaten und gehört
+// deshalb hierher.
+//
+// DER ZWECK IST WIEDERERKENNUNG ÜBER BEREICHE HINWEG. Das City-Bike
+// trägt dasselbe Blau in der Flotte (vier Modellzeilen unter einer
+// Gruppenzeile), im Umsatz nach Radtyp und in der Wegstrecke - drei
+// Tafeln, drei Fragen, eine Farbe. Ohne diese Tabelle vergäbe jeder
+// Bereich seine Töne für sich, und derselbe Radtyp sähe dreimal
+// verschieden aus.
+//
+// DIE ZUORDNUNG IST FEST, NICHT NACH REIHENFOLGE VERGEBEN. Eine
+// Vergabe "erste Zeile bekommt kat-1" wäre bequem, aber die Zeilen sind
+// nach Grösse sortiert - eine Umbuchung, die das Cargo-Rad am E-Bike
+// vorbeiziehen lässt, tauschte dann still die Farben, und wer die Tafel
+// von gestern im Kopf hat, läse sie falsch.
+//
+// UNBEKANNTER CODE => null, und der Aufrufer nimmt --marine (Rang 5,
+// neutral). Kein Reihum-Vergeben eines der fünf Töne an einen sechsten
+// Code: eine Farbe, die nur deshalb da ist, weil eine Liste länger
+// wurde, nennt keine Bedeutung - und genau das war der Fehler, den
+// diese Ordnung beheben soll.
+const KATEGORIE_FARBE = {
+    // Radtypen (velocity.fahrradtyp.typ_code)
+    CITY:    'var(--kat-1)',   // Blau    - der Bestandsträger, 198 von 275 Rädern
+    EBIKE:   'var(--kat-3)',   // Petrol
+    CARGO:   'var(--kat-2)',   // Violett
+    // Tarifgruppen (velocity.tarif.tarif_code)
+    BASIS:   'var(--kat-1)',
+    STUDENT: 'var(--kat-3)',
+    OEPNV:   'var(--kat-2)',
+    PREMIUM: 'var(--kat-4)',
+    // "Ohne Tarif" ist keine Tarifgruppe, sondern ihr Fehlen - deshalb
+    // der Schieferton, der sich von den vier bunten Gruppen absetzt,
+    // ohne selbst eine Gruppe zu behaupten.
+    OHNE:    'var(--kat-5)'
+};
+
+function kategorieFarbe(code) {
+    return KATEGORIE_FARBE[code] || null;
+}
+
 // GESTALTUNGSAUFTRAG, PUNKT 2, wörtlich: "Die Sparklines in dem
 // Kopfbereich sind sinnlos, weil nicht verständlich, was sagen diese
 // aus? Wir machen statt einer Linie Säulen als Sparklines." Diese
@@ -5013,16 +5012,37 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
 // Zeile zu Zeile verschieben (Gestaltungsauftrag, Punkt 5).
 //
 // optionen.farbe: CSS-Farbwert für die Füllung - Vorgabe --marine
-// (neutral: "hier ist eine Zahl"), überschreibbar, wo Farbe tatsächlich
-// etwas bedeutet (z. B. eine volle Station in --warnung-text, siehe
-// stationsauslastungZeigen() in auswertungen.js).
+// (Rang 5 der Farbordnung, neutral: "hier ist eine Zahl"). Überschrieben
+// wird sie an genau zwei Stellen, und beide nennen eine Bedeutung:
+// Rang 4 (Zugehörigkeit, kategorieFarbe() weiter oben - der Radtyp, die
+// Tarifgruppe) und Rang 2 (Schwelle - eine volle Station in
+// --warnung-text). Alles andere bleibt --marine.
+//
+// optionen.bezug: EIN ZWEITER WERT AUF DERSELBEN SKALA, als Umriss
+// hinter der Füllung gezeichnet. Damit wird aus zwei Spalten eine:
+//
+//   Auftraggeber, wörtlich: "Die Stellplatz- und Belegungsspalte zeigen
+//   fast dasselbe - Kapazität und Belegung als zwei nebeneinander-
+//   liegende Balkenspalten. Braucht es beide?"
+//
+// Nein. Die Kapazität ist der BEZUG, die Belegung der Wert darin - das
+// ist ein Balken mit einem Rahmen, kein zweiter Balken daneben. Der
+// Umriss reicht bis zur Kapazität (auf der gemeinsamen Skala aller
+// Zeilen), die Füllung bis zur Belegung. Beide Fragen ("wie gross ist
+// die Station" und "wie voll ist sie") stehen damit in EINER Grafik,
+// und die Füllung nutzt endlich die volle Skalenbreite: die Belegung
+// reicht von 6 bis 28 Rädern (Verhältnis 4,7), während der Anteil
+// allein nur von 30 auf 70 % ging und damit über zwei Drittel jedes
+// Balkens ungenutzt liess (genau der zweite Befund des Auftraggebers).
+// Ohne bezug bleibt alles wie bisher - ein Balken ohne Rahmen.
 //
 // aria-hidden auf dem <svg>: der Balken ist eine zweite, rein visuelle
 // Darstellung DESSELBEN Werts, der als Text daneben steht - anders als
 // eine Sparkline (die eine Form zeigt, die der Text allein nicht hergibt)
 // trägt er für sich keine zusätzliche Information.
 function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
-    const { breite = 56, hoehe = 12, farbe = 'var(--marine)', beschriftung = null } = optionen;
+    const { breite = 56, hoehe = 12, farbe = 'var(--marine)', beschriftung = null,
+            bezug = null } = optionen;
     const anteil = maximum > 0 ? Math.max(0, Math.min(1, wert / maximum)) : 0;
 
     const svg = document.createElementNS(SVG_NS, 'svg');
@@ -5075,6 +5095,28 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
     fuellung.setAttribute('height', hoehe);
     fuellung.setAttribute('fill', farbe);
     svg.append(fuellung);
+
+    // Der BEZUGSRAHMEN (optionen.bezug, siehe Kopfkommentar): ein
+    // Umriss auf DERSELBEN Skala, NACH der Fuellung gezeichnet - sonst
+    // deckte die Fuellung seine linke, obere und untere Kante zu, und
+    // aus dem Rahmen bliebe nur ein Strich rechts uebrig.
+    // vector-effect="non-scaling-stroke": das <svg> wird per CSS in der
+    // Breite gestreckt (preserveAspectRatio="none", siehe oben) - ohne
+    // dieses Attribut waeren die senkrechten Kanten des Rahmens
+    // mitgestreckt und damit dicker als die waagerechten. Das halbe
+    // Pixel Einrueckung haelt die Kontur vollstaendig im viewBox; ohne
+    // sie faellt die aeussere Haelfte der Strichbreite heraus.
+    if (bezug !== null && bezug !== undefined && maximum > 0) {
+        const bezugAnteil = Math.max(0, Math.min(1, bezug / maximum));
+        const rahmen = document.createElementNS(SVG_NS, 'rect');
+        rahmen.setAttribute('x', 0.5);
+        rahmen.setAttribute('y', 0.5);
+        rahmen.setAttribute('width', Math.max(0, breite * bezugAnteil - 1));
+        rahmen.setAttribute('height', hoehe - 1);
+        rahmen.setAttribute('class', 'zellbalken-bezug');
+        rahmen.setAttribute('vector-effect', 'non-scaling-stroke');
+        svg.append(rahmen);
+    }
 
     const wrapper = document.createElement('span');
     wrapper.className = 'zellbalken';
@@ -5207,18 +5249,63 @@ function strukturBalken(segmente, beschriftung, optionen = {}) {
 // Zeilen sinnlos - derselbe Grund, aus dem zellbalken() sein Maximum
 // nicht je Zeile neu bildet.
 //
-// KEINE AMPELFARBE: eine Abweichung ist erst einmal nur eine Abweichung.
-// Ob "mehr" gut ist (Umsatz) oder schlecht (Raeder, die sich an einer
-// Station stauen), weiss nur der Bereich - und in dieser Oberflaeche ist
-// Rot dem defekten Rad und der unumkehrbaren Handlung vorbehalten (siehe
-// style.css). Positive und negative Balken tragen deshalb DIESELBE
-// Farbe; die Richtung liest man an der Seite, auf der der Balken liegt,
-// nicht an seinem Farbton.
+// VORZEICHENFARBE — NEU, UND WARUM SIE KEINE AMPEL IST.
+// Die vorige Fassung gab beiden Richtungen DIESELBE Farbe, mit der
+// Begruendung, eine Abweichung sei erst einmal nur eine Abweichung.
+// Der Befund des Auftraggebers dagegen: "Der Saldo geht von -65 bis
+// +122. Eine Station, die Raeder ansammelt, und eine, die leerlaeuft,
+// sind fachlich GEGENSAETZLICH - sie sehen heute gleich aus." Das
+// stimmt: dass sie auf verschiedenen Seiten der Null liegen, war die
+// einzige Unterscheidung, und die verschwand, sobald zwei Balken kurz
+// waren. Positiv und negativ tragen deshalb jetzt Rang 3 der
+// Farbordnung: --abweichung-plus (Tiefblau) und --abweichung-minus
+// (Ocker).
+//
+// KEINE AMPEL, und das ist der Unterschied: Gruen/Rot behauptete "mehr
+// ist gut". Ob mehr gut ist, weiss aber nur der Bereich - eine Station,
+// an der sich Raeder stauen, ist so viel Arbeit wie eine, die leer
+// laeuft. Blau/Ocker nennt die RICHTUNG, nicht das Urteil. Und Rot
+// bleibt, wo es hingehoert: beim defekten Rad und bei der unumkehrbaren
+// Handlung (Rang 1).
+//
+// FARBE VERDOPPELT HIER, SIE TRAEGT NICHT ALLEIN (WCAG 1.4.1): die
+// Seite der Nulllinie kodiert dasselbe Vorzeichen ein zweites Mal, und
+// die Zahl links daneben traegt es ein drittes Mal als "+"/"-" (siehe
+// abweichungText() weiter unten).
+//
+// DIE NULLLINIE, ZWEITER ANLAUF. Sie stand schon bisher in der Mitte,
+// aber NUR ueber die 12px Hoehe des jeweiligen Balkens - zwischen zwei
+// Zeilen lagen 24px Zellenabstand ohne Linie, und was als Achse gemeint
+// war, las sich als eine Reihe kurzer Striche. Auftraggeber, woertlich:
+// "Der Saldo hat keine sichtbare Nulllinie." Die Linie ist deshalb
+// jetzt kein SVG-Element mehr, sondern ein eigenes, ueber die volle
+// ZELLENhoehe reichendes Element (siehe .abweichungsbalken-null in
+// style.css): senkrecht durchgehend ueber alle Zeilen, eine Achse
+// statt einer Strichfolge.
 function abweichungsBalken(wert, maximumBetrag, beschriftung, optionen = {}) {
     const { breite = 84, hoehe = 12 } = optionen;
     const mitte = breite / 2;
     const grenze = maximumBetrag > 0 ? maximumBetrag : 1;
     const laenge = Math.min(1, Math.abs(wert) / grenze) * (mitte - 1);
+
+    // WRAPPER STATT EINEM REINEN <svg> - dieselbe Bauart, die lagepunkt()
+    // weiter unten schon benutzt und aus demselben Grund: ein Teil dieser
+    // Grafik (die Nulllinie) muss ueber die Grenze des <svg> hinaus bis
+    // an den oberen und unteren Rand der TABELLENZELLE reichen, damit die
+    // Achsen benachbarter Zeilen zu einer durchgehenden Linie
+    // zusammenwachsen. Innerhalb eines <svg> mit fester Hoehe ginge das
+    // nicht.
+    const wrapper = document.createElement('span');
+    wrapper.className = 'abweichungsbalken';
+    wrapper.setAttribute('role', 'img');
+    wrapper.setAttribute('aria-label', beschriftung);
+    // Dieselbe beschriftung ZUSAETZLICH als eigenes Hinweisfenster
+    // (Gestaltungsauftrag Punkt 2): aria-label allein wird von keinem
+    // Browser sichtbar angezeigt, nur von einem Screenreader vorgelesen.
+    // tabIndex macht denselben Balken auch per Tastatur erreichbar - kein
+    // Zusatzaufwand beim Aufrufer noetig, der Text liegt hier schon vor.
+    wrapper.tabIndex = 0;
+    hinweisfensterVerknuepfen(wrapper, beschriftung);
 
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
@@ -5232,17 +5319,13 @@ function abweichungsBalken(wert, maximumBetrag, beschriftung, optionen = {}) {
     // nicht-gleichfoermige Streckung dieses Verhaeltnisses veraendert den
     // kodierten Wert nicht, nur seine Pixelgroesse auf dem Bildschirm.
     svg.setAttribute('preserveAspectRatio', 'none');
-    svg.classList.add('abweichungsbalken');
-    svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', beschriftung);
-
-    // Dieselbe beschriftung ZUSAETZLICH als eigenes Hinweisfenster
-    // (Gestaltungsauftrag Punkt 2): aria-label allein wird von keinem
-    // Browser sichtbar angezeigt, nur von einem Screenreader vorgelesen.
-    // tabIndex macht denselben Balken auch per Tastatur erreichbar - kein
-    // Zusatzaufwand beim Aufrufer noetig, der Text liegt hier schon vor.
-    svg.tabIndex = 0;
-    hinweisfensterVerknuepfen(svg, beschriftung);
+    svg.classList.add('abweichungsbalken-grafik');
+    // aria-hidden am <svg>, weil der WRAPPER den zugaenglichen Namen
+    // traegt (siehe oben) - zwei Namen fuer dieselbe Grafik liesse ein
+    // Bildschirmleser doppelt vorlesen. Dieselbe Aufteilung wie bei
+    // zellbalken()/lagepunkt().
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
 
     if (Math.abs(wert) > 0) {
         const rect = document.createElementNS(SVG_NS, 'rect');
@@ -5250,22 +5333,52 @@ function abweichungsBalken(wert, maximumBetrag, beschriftung, optionen = {}) {
         rect.setAttribute('y', 1);
         rect.setAttribute('width', Math.max(0.5, laenge).toFixed(2));
         rect.setAttribute('height', hoehe - 2);
-        rect.setAttribute('class', 'abweichungsbalken-flaeche');
+        // RANG 3 DER FARBORDNUNG (siehe Kopfkommentar): die Richtung
+        // steht in der Klasse, nicht in einer Farbe als Zeichenkette -
+        // dieselbe Trennung wie bei den seg-*-Klassen des
+        // Strukturbalkens. Wer die Toene aendern will, findet sie in
+        // style.css und nicht in fuenf Bereichsdateien.
+        rect.setAttribute('class', 'abweichungsbalken-flaeche '
+            + (wert > 0 ? 'abweichung-plus' : 'abweichung-minus'));
         svg.append(rect);
     }
+    wrapper.append(svg);
 
-    // Die Nulllinie ZULETZT gezeichnet, damit sie ueber der Flaeche
+    // Die Nulllinie ZULETZT eingehaengt, damit sie ueber der Flaeche
     // liegt: bei einer sehr kleinen Abweichung waere sie sonst von der
     // Mindestbreite des Balkens (0.5px) verdeckt und die Achse haette
     // genau dort eine Luecke, wo man sie am noetigsten braucht.
-    const nulllinie = document.createElementNS(SVG_NS, 'line');
-    nulllinie.setAttribute('x1', mitte);
-    nulllinie.setAttribute('x2', mitte);
-    nulllinie.setAttribute('y1', 0);
-    nulllinie.setAttribute('y2', hoehe);
-    nulllinie.setAttribute('class', 'abweichungsbalken-null');
-    svg.append(nulllinie);
-    return svg;
+    const nulllinie = document.createElement('span');
+    nulllinie.className = 'abweichungsbalken-null';
+    nulllinie.setAttribute('aria-hidden', 'true');
+    wrapper.append(nulllinie);
+    return wrapper;
+}
+
+// DIE NULLLINIE ALLEIN, OHNE BALKEN - fuer Gruppen- und Summenzeilen.
+//
+// Dritter Anlauf auf denselben Befund ("Der Saldo hat keine sichtbare
+// Nulllinie"). Der zweite (die Achse ueber die volle Zellenhoehe, siehe
+// abweichungsBalken() oben) machte sie durchgehend - aber NUR in
+// Datenzeilen. Gruppenzeilen und die Summenzeile tragen keinen Balken
+// (sie stehen ausserhalb der gemeinsamen Skala, siehe Kopfkommentar bei
+// kopftafelZeile()), und damit fehlte dort auch die Achse: in der Flotte
+// klaffte sie an drei Radtyp-Zeilen um 88 Pixel auf, im Browser
+// gemessen. Eine Achse mit Loechern ist keine Achse.
+//
+// Die Zeile hat an dieser Stelle nichts zu SAGEN - sie hat nur die Achse
+// weiterzuführen. Deshalb aria-hidden, kein tabIndex und kein
+// Hinweisfenster: fuer einen Bildschirmleser ist hier tatsaechlich
+// nichts, und ein Tabstopp auf einem leeren Lineal waere ein Halt ohne
+// Inhalt.
+function abweichungsAchse() {
+    const wrapper = document.createElement('span');
+    wrapper.className = 'abweichungsbalken';
+    wrapper.setAttribute('aria-hidden', 'true');
+    const nulllinie = document.createElement('span');
+    nulllinie.className = 'abweichungsbalken-null';
+    wrapper.append(nulllinie);
+    return wrapper;
 }
 
 // Der Text zu einem Abweichungsbalken - EINMAL hier, statt in jedem der
@@ -5810,26 +5923,51 @@ function zahlSkaliert(formatiert) {
 // eine Regel, aus der alles Uebrige folgt: DIE ZEILE IST DIE FEINSTE
 // GLIEDERUNG, DIE NOCH IN DEN KOPF PASST.
 //
-// Die Spalten sind in JEDEM Bereich dieselben vier Fragen, in derselben
+// Die Spalten sind in JEDEM Bereich dieselben Fragen, in derselben
 // Reihenfolge, mit derselben Notation (Hichert/IBCS):
 //
 //   1. RUBRIK           wer oder was
-//   2. GROESSE          wie viel  - Zahl UND Balken, gemeinsame
-//                       Nullpunkt-Skala ueber alle Zeilen (Bissantz)
-//   3. ZUSAMMENSETZUNG  woraus    - 100-%-Strukturbalken, dadurch
+//   2. ZAHL             wie viel, OHNE Balken - fuer eine Groesse, die
+//                       genannt werden muss, deren Werte sich aber
+//                       nicht genug unterscheiden, als dass ein
+//                       Laengenvergleich etwas zeigte (siehe unten)
+//   3. GROESSE          wie viel  - Zahl UND Balken, gemeinsame
+//                       Nullpunkt-Skala ueber alle Zeilen (Bissantz);
+//                       optional mit einem BEZUGSRAHMEN, wenn es eine
+//                       fachliche Obergrenze gibt (Kapazitaet)
+//   4. ZUSAMMENSETZUNG  woraus    - 100-%-Strukturbalken, dadurch
 //                       zwischen ungleich grossen Zeilen vergleichbar
-//   4. PROFIL           wie verteilt oder entwickelt - Kleingrafik mit
+//   5. PROFIL           wie verteilt oder entwickelt - Kleingrafik mit
 //                       gemeinsamer Skala ueber alle Zeilen (Tufte,
 //                       small multiples)
-//   5. ABWEICHUNG       wie weit vom Bezug - eigene Spalte, eigene um
-//                       die Null zentrierte Skala (Hichert/IBCS)
+//   6. ABWEICHUNG       wie weit vom Bezug - eigene Spalte, eigene um
+//                       die Null zentrierte Skala, Vorzeichenfarbe
+//                       (Hichert/IBCS, Rang 3 der Farbordnung)
 //
 // EINE SPALTE, DIE IN EINEM BEREICH NICHTS EHRLICHES ZU SAGEN HAT, FAELLT
-// WEG - sie wird NICHT mit einem Platzhalter gefuellt. Instandhaltung
-// hat keine Abweichungsspalte, weil es bei sieben gleichzeitig
-// gemeldeten Faellen keinen Bezugswert gibt, gegen den zu messen waere;
-// die Fussnote sagt das ausdruecklich. Eine erfundene Kennzahl waere der
-// schwerere Fehler als eine fehlende Spalte.
+// WEG - sie wird NICHT mit einem Platzhalter gefuellt und auch nicht
+// schoener gezeichnet. Instandhaltung hat keine Abweichungsspalte, weil
+// es bei sieben gleichzeitig gemeldeten Faellen keinen Bezugswert gibt,
+// gegen den zu messen waere; die Fussnote sagt das ausdruecklich. Eine
+// erfundene Kennzahl waere der schwerere Fehler als eine fehlende
+// Spalte.
+//
+// DIE PRUEFUNG, DIE UEBER EINE SPALTE ENTSCHEIDET (Auftrag, woertlich:
+// "Geh jede Grafik in jeder der neun Tafeln durch und pruefe, ob ihre
+// Daten sie tragen."). Drei Fragen, an den echten Werten gemessen und
+// im Bericht mit Zahlen belegt:
+//   1. Unterscheiden sich die Werte genug, dass man es SIEHT?
+//      (Spannweite, Zahl der Nullen, Verhaeltnis groesster zu kleinstem)
+//   2. Ist die Darstellungsart die richtige fuer DIESE Verteilung?
+//   3. Beantwortet die Grafik eine Frage, die jemand hat?
+// Fuenf Spalten haben diese Pruefung nicht bestanden und sind gestrichen
+// bzw. ersetzt - die Begruendung steht jeweils an ihrer Stelle im
+// Bereich. Am deutlichsten der Tagesgang der Stationen: sechs von zwoelf
+// Zweistundenfenstern exakt null, Hoechstwert 0,82 Abgaenge je Werktag,
+// und die FORM ueber alle zehn Stationen praktisch gleich (6-8 Uhr
+// zwischen 20,8 und 23,6 Prozent, 16-18 Uhr zwischen 33,4 und 38,4
+// Prozent). Zehn small multiples, die dasselbe zeigen, sind keine small
+// multiples, sondern zehnmal dieselbe Grafik.
 //
 // DIE GEMEINSAMEN SKALEN RECHNET DIESE FUNKTION, NICHT DER BEREICH.
 // Das ist der eigentliche Grund, warum die Tafel ein eigener Baustein
@@ -6166,6 +6304,16 @@ function zeigeKopftafel(kennung, tafel) {
 function kopftafelSkala(spalte, datenzeilen) {
     if (spalte.art === 'groesse') {
         const werte = datenzeilen.map((z) => Number(spalte.wert(z)) || 0);
+        // Traegt die Spalte einen BEZUG (spalte.bezug, siehe zellbalken()
+        // in rahmen.js - die Kapazitaet, in der die Belegung steht), geht
+        // er MIT in die gemeinsame Skala: Rahmen und Fuellung muessen
+        // dieselbe Skala teilen, sonst waere ein Rahmen laenger als die
+        // Skala, die ihn zeichnet. Der Bezug ist fachlich immer >= dem
+        // Wert (eine Station ist nie ueberbelegt), Math.max deckt
+        // trotzdem beide Faelle ab, statt sich darauf zu verlassen.
+        if (spalte.bezug) {
+            werte.push(...datenzeilen.map((z) => Number(spalte.bezug(z)) || 0));
+        }
         return { maximum: Math.max(0, ...werte) };
     }
     if (spalte.art === 'abweichung') {
@@ -6245,6 +6393,36 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
             return;
         }
 
+        // 'zahl': eine Zahl OHNE Balken, EINE Zelle statt zweier.
+        //
+        // Der Anlass ist eine Pruefung, die zwei Groessenspalten nicht
+        // bestanden haben (Auftrag: "Unterscheiden sich die Werte genug,
+        // dass man es sehen kann?"). Die Arbeitszeit der Instandhaltung
+        // ist in FUENF von SIEBEN Faellen exakt null - fuenf unsichtbare
+        // Balken, in denen "noch nicht bearbeitet" und "keine Angabe"
+        // gleich aussehen. Und der Zwoelfmonatsumsatz der drei Radtypen
+        // liegt zwischen 11.219 und 12.628 Euro, ein Verhaeltnis von
+        // 1,13 zu 1: drei Balken zwischen 89 und 100 Prozent Laenge,
+        // zwischen denen kein Auge unterscheidet.
+        //
+        // Beide Zahlen bleiben trotzdem stehen - eine Tafel ueber
+        // Arbeitszeit ohne Arbeitszeit waere albern. Nur ihr Balken
+        // faellt weg. Das ist der ehrliche Schnitt: der Wert steht da,
+        // die Grafik behauptet keinen Unterschied mehr, den es nicht
+        // gibt. Wo der Vergleich stattdessen sichtbar wird, sagt die
+        // jeweilige Fussnote.
+        if (spalte.art === 'zahl') {
+            const wert = spalte.wert(zeile);
+            const zelle = document.createElement('td');
+            zelle.className = 'kopftafel-zahl kopftafel-zahl-zahl';
+            if (wert !== null && wert !== undefined) {
+                zelle.append(zahlSkaliert(spalte.format(wert)));
+                if (spalte.klasse) zelle.classList.add(spalte.klasse(zeile));
+            }
+            tr.append(zelle);
+            return;
+        }
+
         if (spalte.art === 'groesse' || spalte.art === 'abweichung') {
             const wert = spalte.wert(zeile);
             const zahlZelle = document.createElement('td');
@@ -6262,15 +6440,34 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
             // gemeinsamen Skala, ein Balken dafuer waere entweder
             // uebergross oder auf die Skalenbreite gekappt - beides
             // waere eine falsche Laenge, und Laenge ist hier die Aussage.
+            // Die Nulllinie laeuft durch JEDE Zeile, auch durch die ohne
+            // Balken - siehe abweichungsAchse() weiter oben.
+            if (spalte.art === 'abweichung'
+                && !(art === 'daten' && wert !== null && wert !== undefined)) {
+                grafikZelle.append(abweichungsAchse());
+            }
             if (art === 'daten' && wert !== null && wert !== undefined) {
                 grafikZelle.append(spalte.art === 'groesse'
                     ? zellbalken(wert, skala.maximum, null, {
-                        breite: 76, hoehe: 11, farbe: spalte.farbe ? spalte.farbe(zeile) : 'var(--marine)',
+                        breite: 76, hoehe: 11,
+                        // RANG 4/2 DER FARBORDNUNG, falls der Bereich eine
+                        // Bedeutung zu nennen hat (Zugehoerigkeit oder
+                        // Schwelle) - sonst Rang 5, --marine.
+                        farbe: spalte.farbe ? spalte.farbe(zeile) : 'var(--marine)',
+                        // Der Bezugsrahmen, falls die Spalte einen kennt
+                        // (Kapazitaet, in der die Belegung steht) - siehe
+                        // zellbalken() in rahmen.js.
+                        bezug: spalte.bezug ? spalte.bezug(zeile) : null,
                         // Mouse-over-Bezug (Gestaltungsauftrag Punkt 4):
                         // "60" allein sagt weniger als "CityLine 1: 60
                         // Raeder" - Rubrikname plus derselbe formatierte
                         // Wert, der ohnehin schon links daneben steht.
-                        beschriftung: `${rubrikName}: ${spalte.format(wert)}${spalte.einheit ? ' ' + spalte.einheit : ''}`
+                        // Traegt die Spalte eine eigene beschriftung
+                        // (weil Fuellung UND Rahmen erklaert werden
+                        // muessen), hat die Vorrang.
+                        beschriftung: spalte.beschriftung
+                            ? spalte.beschriftung(zeile)
+                            : `${rubrikName}: ${spalte.format(wert)}${spalte.einheit ? ' ' + spalte.einheit : ''}`
                     })
                     : abweichungsBalken(wert, skala.maximumBetrag, spalte.beschriftung(zeile)));
             }
