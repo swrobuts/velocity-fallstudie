@@ -51,6 +51,18 @@
      Rahmen bleiben bei --linie - nur die sich wiederholende
      Zeile-fuer-Zeile-Linie im Tabellenkoerper wird leiser. */
   --linie-tabelle: #eceef2;
+
+  /* Rahmen von BEDIENELEMENTEN - Eingabefelder, Auswahlen, Knoepfe.
+     Bewusst getrennt von --linie (#d8dce4): das traegt Trennlinien in
+     Tabellen und Flaechen, und die duerfen leise bleiben. Ein Rahmen,
+     der ein Bedienelement ueberhaupt erst als solches erkennbar macht,
+     faellt dagegen unter WCAG 1.4.11 und braucht 3:1.
+     Gemessen gegen die drei Untergruende, auf denen Felder vorkommen:
+     --flaeche 3.64:1, --grund 3.43:1, --zebra 3.12:1. --linie lag bei
+     1.37 / 1.29 / 1.18 und verfehlte die Grenze um mehr als das Doppelte.
+     Derselbe Wert wie --skala-rahmen, aber eigener Name: dort umreisst er
+     eine Grafik, hier ein Bedienelement - sie koennen auseinanderlaufen. */
+  --feld-rahmen: #7c8797;
   /* Zebrastreifen (Punkt 3, optional ueber Einstellungen/localStorage) -
      sichtbar unterscheidbar von Weiss (1.17:1 gemessen) UND von den
      Hervorhebungsfarben fuer Ueberfahren (--grund, 1.06:1 auf Weiss) und
@@ -198,7 +210,7 @@ button {
 .anmeldung input {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rahmen);
   border-radius: 4px;
   font: inherit;
   color: var(--text);
@@ -233,7 +245,7 @@ button {
 #zustand-ohne-rolle button {
   margin-top: 12px;
   padding: 8px 16px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rahmen);
   border-radius: 4px;
   background: var(--flaeche);
   color: var(--text);
@@ -620,7 +632,7 @@ button {
   font-size: 13px;
   color: var(--text);
   background: var(--grund);
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rahmen);
   border-radius: 4px;
   padding: 4px 6px;
   /* Kein max-width - Türkisch/Polnisch tragen längere Sprachnamen als
@@ -1127,7 +1139,7 @@ button {
 
 .filterfeld select {
   padding: 4px 6px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rahmen);
   border-radius: 4px;
   font: inherit;
   color: var(--text);
@@ -1157,7 +1169,7 @@ button {
    Filterleiste (.filterfeld) UND weiter unten im Spaltenkopf
    (.spaltenkopf-filterzeile) - ein Regelsatz fuer beide, dieselbe
    Ueberlegung wie beim Baustein selbst (siehe dessen Kopfkommentar in
-   rahmen.js). border: var(--text-leise) statt var(--linie) - Letztere
+   rahmen.js). border: var(--text-leise) statt var(--feld-rahmen) - Letztere
    misst nur 1,37:1 auf Weiss (siehe Kommentar bei
    .spaltenkopf-filterzeile select weiter unten), weit unter den fuer
    Bedienelement-Umrisse verlangten 3:1; var(--text-leise) liegt bei
@@ -1252,7 +1264,7 @@ button {
   padding: 5px 6px;
   margin-bottom: 4px;
   border: none;
-  border-bottom: 1px solid var(--linie);
+  border-bottom: 1px solid var(--feld-rahmen);
   border-radius: 0;
   background: transparent;
   font: inherit;
@@ -1657,7 +1669,7 @@ button {
   width: 100%;
   min-height: 44px;
   padding: 4px 2px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rahmen);
   font: inherit;
   cursor: pointer;
 }
@@ -2407,7 +2419,7 @@ button {
 .formularzeile select,
 .formularzeile textarea {
   padding: 6px 8px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rahmen);
   border-radius: 4px;
   font: inherit;
   color: var(--text);
@@ -2482,7 +2494,7 @@ button {
 
 .knopf-neben {
   background: var(--flaeche);
-  border-color: var(--linie);
+  border-color: var(--feld-rahmen);
   color: var(--text);
 }
 
@@ -2553,7 +2565,7 @@ button {
 .velocity-dialog input {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--linie);
+  border: 1px solid var(--feld-rahmen);
   border-radius: 4px;
   font: inherit;
   margin-bottom: 4px;
