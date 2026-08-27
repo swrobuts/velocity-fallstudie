@@ -3687,7 +3687,35 @@ async function bereichWechseln(schluessel, herkunftstext = null) {
     // (der ueberwiegende Regelfall: Navigationsklick) unveraendert leer,
     // wie zuvor.
     melde(herkunftstext || '', herkunftstext ? 'gut' : 'neutral');
-    await aktiverBereich.aufbauen();
+
+    // DER FEHLENDE LADEZUSTAND. Bis hierher ist die Arbeitsliste
+    // geleert; aufbauen() holt jetzt seine Daten und braucht dafuer eine
+    // Netzwerkstrecke. In dieser Zeit stand der ganze Arbeitsbereich
+    // leer und weiss da, ohne ein Wort - nicht zu unterscheiden von
+    // "dieser Bereich hat nichts anzuzeigen" oder "hier ist etwas
+    // kaputt". Einen Ladezustand gab es nur fuer die Seite als Ganzes
+    // beim Start (#zustand-laden), fuer keinen einzigen Bereichswechsel.
+    // Kein role="status"/aria-live: die Statuszeile IST das Live-Gebiet
+    // dieser Oberflaeche (siehe index.html), eine zweite sprechende
+    // Stelle fuer denselben Vorgang liesse einen Bildschirmleser zweimal
+    // dasselbe melden.
+    // remove() im finally und nicht danach: die Bausteine der Bereiche
+    // (zeigeWerkzeugleiste, zeigeKopftafel, zeigeListe) HAENGEN AN die
+    // Arbeitsliste an, sie ersetzen ihren Inhalt nicht - der Platzhalter
+    // bliebe sonst zwischen Werkzeugleiste und Kopftafel stehen (im
+    // Browser genau so gesehen). finally statt einer Zeile nach dem
+    // await: wirft aufbauen(), stuende sonst "Einen Moment ..." fuer
+    // immer da und behauptete, es laufe noch etwas.
+    const platzhalter = document.createElement('p');
+    platzhalter.className = 'ladehinweis';
+    platzhalter.textContent = t('index.loading');
+    document.getElementById('arbeitsliste').append(platzhalter);
+
+    try {
+        await aktiverBereich.aufbauen();
+    } finally {
+        platzhalter.remove();
+    }
 }
 
 // ===== Die Statuszeile =====

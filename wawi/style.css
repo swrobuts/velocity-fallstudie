@@ -6,42 +6,92 @@
    als Weißraum. Deshalb kleinere Grade und engere Zeilen als auf der
    Website, aber dieselben Farben: wer zwischen beiden wechselt, soll
    nicht das Produkt wechseln.
+
+   ===== DIE GLIEDERUNGSREGEL =====
+
+   Befund des Auftraggebers, woertlich: "die Bildschirmabschnitte, z. B.
+   die obere Kopfleiste oder auch der linke Randbereich, heben sich
+   ueberhaupt nicht ab, alles fliesst ineinander". Nachgemessen war er
+   noch genauer im Recht, als er wusste: Navigation und Arbeitsliste
+   trugen DIESELBE Flaeche (#ffffff), Statuszeile und Navigation
+   ebenfalls, und die einzige Kante dazwischen mass 1,37:1 - unter jeder
+   Wahrnehmungsschwelle und weit unter den 3:1, die WCAG 1.4.11 fuer eine
+   bedeutungstragende Grafik verlangt. Die getoenten Streifen
+   (Kopftafel, Filterleiste) hoben sich mit 1,06:1 ab, also gar nicht.
+   Dazu vier verschiedene Trennmittel ohne Regel: die Kopfleiste nur
+   Flaeche, die Werkzeugleiste nur Linie, die Kopftafel nur Flaeche ohne
+   Linie, die Filterleiste Flaeche UND Linie UND Abstand.
+
+   Deshalb gilt ab hier EINE Regel fuer alle acht Bereiche, und sie
+   steht hier oben, damit sie nicht wieder auseinanderlaeuft:
+
+   1. DREI FLAECHENRAENGE, mehr nicht.
+      --marine          Anwendungsrahmen ganz oben (Kopfleiste).
+      --flaeche-rahmen  worin BEDIENT wird: Navigation, Statuszeile,
+                        Reiter-, Werkzeug-, Filterleiste, Kopftafel,
+                        Spaltenkopf, Maskenkopf.
+      --flaeche         worin DATEN stehen: Tabellenkoerper,
+                        Detailmaskenkoerper.
+      Wer einen Bereich einordnen will, fragt nur: bediene ich hier,
+      oder lese ich hier?
+
+   2. JEDE BEREICHSGRENZE TRAEGT DIESELBE LINIE, --kontur, gemessen
+      3,64:1 auf --flaeche und 3,11:1 auf --flaeche-rahmen. Keine Grenze
+      ohne Linie, keine Linie ohne Grenze. --linie (1,37:1) bleibt, wo
+      sie hingehoert: fuer Trennungen INNERHALB eines Bereichs, wo das
+      Auge schon weiss, dass es zusammengehoert.
+
+   3. ABSTAND IST KEIN TRENNMITTEL. Bereiche stossen aneinander; der
+      Freiraum lebt INNERHALB eines Bereichs als Innenabstand. Die
+      frueheren Aussenabstaende zwischen den Streifen (gemessen 0 / 24 /
+      16 px) liessen den Kopfbereich in lose Platten zerfallen, statt
+      ihn als einen Bereich lesbar zu machen.
+
+   4. ZEILENZUSTAENDE IN DER TABELLE UNTERSCHEIDEN SICH DURCH EINEN
+      BALKEN LINKS, NICHT DURCH DIE FLAECHE. Grund ist gemessen, nicht
+      Geschmack: auf einer hellen Flaeche, die die vier Statusfarben
+      (--text-leise, --gut, --warnung-text, --schlecht) noch mit 4,5:1
+      traegt, ist hoechstens 1,17:1 gegen Weiss moeglich - eine
+      Flaechenmarkierung kann die fuer einen Zustand verlangten 3:1
+      also NIE erreichen. Ein Balken kann es: grau (--kontur, 3,64:1)
+      heisst "der Zeiger steht darauf", marine (17,29:1) heisst "diese
+      Zeile ist gewaehlt".
    ============================================ */
 
 :root {
+  /* ===== FLAECHEN: drei Raenge, siehe Gliederungsregel oben ===== */
   --marine:      #061841;
   --rot:         #f00038;
+  /* Bedienbereiche. 1,17:1 gegen --flaeche - bewusst nicht dunkler:
+     die Statuszeile liegt auf dieser Flaeche und faerbt ihren Text je
+     nach Meldungsart. Bei #e6ebf3 faellt --warnung-text auf 4,45:1 und
+     damit unter die Grenze; #e9edf4 haelt alle vier Statusfarben
+     (--text-leise 5,07:1, --gut 4,56:1, --warnung-text 4,53:1,
+     --schlecht 4,86:1). Die Bereichsgrenze traegt ohnehin die Kante,
+     nicht dieser Ton - er gruppiert, er trennt nicht. */
+  --flaeche-rahmen: #e9edf4;
+  /* Leichte Toenung INNERHALB des Arbeitsblatts - schreibgeschuetztes
+     Feld, Bildflaeche, Zeile im Zugriff. Frueher trug dieser eine Ton
+     zusaetzlich den Seitengrund UND die Flaeche der Bedienbereiche:
+     ein Wert, vier Aussagen. Die beiden Bereichsaufgaben sind an
+     --flaeche-rahmen abgegeben, --grund behaelt nur noch die eine. */
   --grund:       #f7f8fa;
   --flaeche:     #ffffff;
   --linie:       #d8dce4;
   --text:        #1c2333;
   --text-leise:  #5a6478;
   --gut:         #1d7a44;
-  --warnung:     #b8860b;
-  /* --warnung selbst fällt auf weißem Grund auf 3.25:1 - unter der
-     verlangten Untergrenze von 4.5:1. Für Fliesstext (Statuszeile,
-     Fehlermeldungen) gilt deshalb dieser abgedunkelte Ton, 5.3:1 auf
-     Weiß; --warnung bleibt für Flächen wie Rahmen oder Hintergrund. */
+  /* Der frueher hier stehende Ton --warnung (#b8860b) ist ersatzlos
+     entfallen: er fiel auf weissem Grund auf 3,25:1 - unter der fuer
+     Text verlangten Untergrenze -, war deshalb "fuer Flaechen
+     vorgesehen" und wurde in 3570 Zeilen kein einziges Mal benutzt. Ein
+     Eintrag in der Palette, den nichts verwendet, ist keine Farbe der
+     Oberflaeche, sondern eine Fussangel fuer den naechsten Bearbeiter.
+     Warnender Text traegt ausschliesslich diesen abgedunkelten Ton -
+     5,32:1 auf --flaeche, 4,53:1 auf --flaeche-rahmen, 4,70:1 auf einer
+     Zeile im Zugriff, 4,96:1 auf einem Zebrastreifen. */
   --warnung-text: #8a6508;
   --schlecht:    #c0301c;
-  /* 40px statt vormals 34px (Gestaltungsauftrag, DRITTER Anlauf - wörtlich:
-     "geh diesmal deutlich weiter, als dir richtig vorkommt"). Der zweite
-     Anlauf blieb bei 34px stehen, AUSDRÜCKLICH um ohne Scrollen 15 Zeilen
-     zu zeigen (siehe Git-Historie dieses Kommentars) - genau diese
-     Zurückhaltung war der Fehler, den die dritte Rüge benennt: eine
-     Warenwirtschaft mit 275 Rädern SCROLLT ohnehin, sobald mehr als eine
-     Handvoll Zeilen zu sehen sind, ob nun 15 oder 12 ohne Scrollen passen,
-     ändert daran nichts - "nicht auf's Scrollen angewiesen sein" war ein
-     Ziel, das diese Tabelle nie erreicht hat, und das Festhalten daran hat
-     nur die Zeile gestaucht. */
-  --zeile:       40px;
-  --schrift:     14px;
-  --nav-breite:  200px;
-  /* 60px statt vormals 48px - explizit "vor allem im Kopfbereich"
-     verlangt (zweiter Anlauf, siehe Bericht: beim ersten war das zu
-     wenig sichtbar). */
-  --kopf-hoehe:  60px;
-  --fuss-hoehe:  32px;
   /* Leiser als --linie (1.38:1 auf Weiss, siehe Kommentar bei
      .spaltenkopf-filterzeile weiter unten) - eigens fuer die
      Tabellenzeilen selbst (Punkt 2: Tufte, "so wenig Linien wie moeglich,
@@ -52,45 +102,51 @@
      Zeile-fuer-Zeile-Linie im Tabellenkoerper wird leiser. */
   --linie-tabelle: #eceef2;
 
-  /* Rahmen von BEDIENELEMENTEN - Eingabefelder, Auswahlen, Knoepfe.
-     Bewusst getrennt von --linie (#d8dce4): das traegt Trennlinien in
-     Tabellen und Flaechen, und die duerfen leise bleiben. Ein Rahmen,
-     der ein Bedienelement ueberhaupt erst als solches erkennbar macht,
-     faellt dagegen unter WCAG 1.4.11 und braucht 3:1.
-     Gemessen gegen die drei Untergruende, auf denen Felder vorkommen:
-     --flaeche 3.64:1, --grund 3.43:1, --zebra 3.12:1. --linie lag bei
-     1.37 / 1.29 / 1.18 und verfehlte die Grenze um mehr als das Doppelte.
-     Derselbe Wert wie --skala-rahmen, aber eigener Name: dort umreisst er
-     eine Grafik, hier ein Bedienelement - sie koennen auseinanderlaufen. */
-  --feld-rahmen: #7c8797;
+  /* JEDE Linie, die gesehen werden MUSS - der Rahmen eines
+     Bedienelements ebenso wie die Kante zwischen zwei Bereichen. Hiess
+     frueher --kontur und galt nur fuer Bedienelemente; die
+     Bereichskanten liefen derweil ueber --linie (1,37:1) und waren
+     damit unsichtbar. Beides ist aber DIESELBE Frage - "ist hier eine
+     Grenze, die ich erkennen muss?" -, und WCAG 1.4.11 beantwortet sie
+     fuer beide gleich: 3:1. Ein Name, eine Regel.
+     Gemessen gegen alle Untergruende, auf denen diese Linie vorkommt:
+     --flaeche 3,64:1, --flaeche-rahmen 3,11:1, --grund 3,43:1,
+     --zebra 3,12:1, --marine gegen Weiss ohnehin. --linie lag bei
+     1,37 / 1,29 / 1,18 und verfehlte die Grenze um mehr als das Doppelte.
+     --linie SELBST bleibt bestehen und behaelt genau eine Aufgabe: eine
+     Trennung INNERHALB eines Bereichs, wo das Auge bereits weiss, dass
+     es zusammengehoert (Tabellenkopf, Rahmen einer Karte). */
+  --kontur: #7c8797;
   /* Zebrastreifen (Punkt 3, optional ueber Einstellungen/localStorage) -
-     sichtbar unterscheidbar von Weiss (1.17:1 gemessen) UND von den
-     Hervorhebungsfarben fuer Ueberfahren (--grund, 1.06:1 auf Weiss) und
-     Auswahl (#eef1fb, 1.13:1 auf Weiss) - drei erkennbar verschiedene
-     helle Toene statt einer Verwechslung "ist das jetzt Streifen oder
-     Hover?". WICHTIG, per Erprobung erst im zweiten Anlauf gefunden: ein
-     zunaechst gewaehlter kraeftigerer Ton (#e3e6ee) unterschritt die
-     4,5:1-Untergrenze fuer FLIESSTEXT auf gestreiften Zeilen - td.warnung
-     (--warnung-text) kam dort nur auf 4.26:1, td.gut (--gut) auf 4.29:1,
-     obwohl beide auf Weiss/--grund laengst genug Kontrast hatten. Ein
-     Zebramuster darf die Lesbarkeit der STATUSFARBEN nicht unterlaufen,
-     die es selbst gar nicht betrifft - deshalb dieser hellere Ton, gegen
-     ALLE vier in dieser Warenwirtschaft verwendeten Textfarben auf
-     gestreiftem Grund gemessen: --text 13.44:1, --text-leise 5.09:1,
-     --schlecht 4.88:1, --gut 4.59:1, --warnung-text 4.56:1 - jede über
-     4,5:1, die knappste (--warnung-text) mit gerade einmal 0.06 Reserve. */
+     1,17:1 gegen --flaeche, gegen alle vier Textfarben auf gestreiftem
+     Grund gemessen: --text 13,44:1, --text-leise 5,09:1, --schlecht
+     4,88:1, --gut 4,59:1, --warnung-text 4,56:1. Der Wert selbst ist
+     unveraendert geblieben, seine BEGRUENDUNG aber nicht mehr dieselbe:
+     die alte Fassung dieses Kommentars rechtfertigte ihn damit, dass er
+     sich von den Hervorhebungsfarben fuer Ueberfahren und Auswahl
+     unterscheiden muesse - und genau daran scheiterte er, denn er war
+     mit 1,17:1 KRAEFTIGER als die damalige Auswahl (1,13:1): das
+     Schmuckmuster war lauter als die Angabe, welche Zeile gerade gemeint
+     ist. Diesen Abstand muss der Ton nicht mehr halten. Ueberfahren und
+     Auswahl liegen seit dieser Fassung im BALKEN links (siehe
+     Gliederungsregel Punkt 4 im Dateikopf) und sind damit unabhaengig
+     davon erkennbar, ob die Zeile gestreift ist oder nicht - der
+     Streifen darf wieder das sein, was er ist: ein Rhythmus, der dem
+     Auge hilft, eine breite Zeile zu verfolgen. */
   --zebra: #ecedf3;
-  /* WAR die Kontur der Skala eines Zellbalkens - genau die Kontur, die
-     jeden Balken zur Fuellstandsanzeige machte (siehe die ausfuehrliche
-     Begruendung bei .zellbalken-hintergrund weiter unten, zweiter
-     Anlauf). Der Name (und die Farbe selbst) bleibt: dieselbe, schon
-     gemessene neutrale Flaechenfarbe (3.64:1 auf Weiss / 3.43:1 auf
-     --grund, ueber der fuer Grafik verlangten Untergrenze von 3:1) wird
-     jetzt als GRUNDFARBE der Saeulen-Sparkline weiterverwendet (siehe
-     .saeulensparkline-saeule weiter unten) statt einer neuen,
-     unvermessenen "hellblauen" Farbe nur fuer dieses eine Bauteil -
-     dieselbe Farbe aus unserer Palette, ein zweiter Verwendungszweck. */
-  --skala-rahmen: #7c8797;
+  /* Die neutrale FLAECHENFARBE fuer Grafik: die ruhende Haelfte eines
+     Strukturbalkens, die Saeulen einer Sparkline, der Ring eines
+     Donuts, der Zugang in der Zeitfenstergrafik. Hiess frueher
+     --grafik-neutral, weil sie einmal die Kontur einer Balkenskala war -
+     diese Kontur gibt es seit zwei Anlaeufen nicht mehr, fuenf der
+     sechs Verwendungen sind seither Fuellungen. Ein Name, der etwas
+     anderes sagt als jede seiner Verwendungen, fuehrt den naechsten
+     Bearbeiter in die Irre; der Wert selbst bleibt unveraendert und
+     bleibt gemessen (3,64:1 auf --flaeche, 3,43:1 auf --grund - ueber
+     den 3:1 fuer Grafik). Gleicher Wert wie --kontur, getrennter Name:
+     dort eine Linie, hier eine Flaeche - beide muessen 3:1 halten, aber
+     sie duerfen auseinanderlaufen. */
+  --grafik-neutral: #7c8797;
   /* Gestaltungsauftrag Stationen, Punkt 4: die Landkarte braucht eine
      EIGENE, neue Bedeutung ("das hier ist Kundschaft, keine Station/kein
      Rad") - keine der bestehenden Farben passt, ohne eine schon vergebene
@@ -101,6 +157,62 @@
      Palette klar unterscheidet, damit eine Kundenmarke auf der Karte nie
      mit einer Stationsmarke verwechselt werden kann. */
   --kunden: #5b3a8f;
+  /* Zustandsformen der beiden Handlungsfarben - siehe .knopf-haupt:hover
+     und .knopf-schaffend:hover weiter unten. Weiss haelt auf beiden
+     seine 4,5:1 (--marine-hell 13,64:1, --gut-dunkel 8,04:1). */
+  --marine-hell: #0a2560;
+  --gut-dunkel:  #155c33;
+
+  /* ===== ABSTANDSREIHE =====
+     Ausgezaehlt standen in dieser Datei 19 verschiedene Abstandswerte:
+     1, 2, 3, 4, 5, 6, 8, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 28, 32.
+     Keiner davon war falsch, aber zusammen ergaben sie keine Reihe -
+     jeder war fuer sich gewachsen, und deshalb konnte auch nichts
+     fluchten: der Innenabstand der Werkzeugleiste (24), der der
+     Kopftafel (22) und der einer Tabellenzelle (18) landeten drei
+     verschiedene linke Kanten uebereinander.
+     Sechs Stufen reichen fuer diese Oberflaeche. Wer einen siebten Wert
+     braucht, braucht in Wahrheit einen der sechs. */
+  --raum-0:  2px;   /* nur INNERHALB eines Bauteils: zwei Zeilen einer
+                       Kalenderzelle, zwei Zeilen der Sitzungsinfo - kein
+                       Abstand zwischen Dingen, sondern Luft in einem Ding */
+  --raum-1:  4px;   /* Beschriftung zu ihrem Feld, Symbol zu seinem Wort */
+  --raum-2:  8px;   /* zwischen Geschwistern in einer Reihe */
+  --raum-3: 12px;   /* Innenabstand kleiner Bedienelemente, Zeilenluft */
+  --raum-4: 16px;   /* Innenabstand einer Zelle, Abstand zweier Bloecke */
+  --raum-5: 24px;   /* Innenabstand eines BEREICHS - die linke Kante */
+  --raum-6: 32px;   /* nur, wo ein Bereich fuer sich allein steht */
+
+  /* ===== SCHRIFTREIHE =====
+     Es waren zwoelf Grade (9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 22 und
+     zusaetzlich 14px ein zweites Mal als var(--schrift) geschrieben) -
+     und mehrere davon bedeuteten dasselbe: der Titel der Kopftafel stand
+     auf 13px, der Titel der Detailmaske auf 16px, obwohl beide ein <h2>
+     und beide der Titel eines Bereichs sind. Feldbeschriftungen standen
+     auf 11px in der Filterleiste und auf 12px in der Maske. Eine
+     Rangfolge, in der drei Grade denselben Rang tragen, ist keine.
+     Sechs Grade, jeder mit genau einer Aufgabe: */
+  --grad-1: 10px;   /* Beschriftung IN einer Grafik, Spalteneinheit */
+  --grad-2: 11px;   /* Beiwerk: Bezugszeile, Fussnote, Sitzungsinfo */
+  --grad-3: 12px;   /* Nebentext: Tabellenkopf, Kopftafelzelle, Beschriftung */
+  --grad-4: 14px;   /* Lesegrad: jede Datenzelle, jedes Eingabefeld */
+  --grad-5: 16px;   /* Titel eines Bereichs: Kopftafel, Maske, Dialog */
+  --grad-6: 20px;   /* die eine grosse Zahl, der eine Seitentitel */
+
+  /* Zeilenhoehe der Arbeitstabelle. Kein Wert der Abstandsreihe: die
+     Reihe ordnet ABSTAENDE, das hier ist ein Mass des Bauteils selbst -
+     40px stammen aus dem dritten Anlauf auf "die Zeilen sind zu eng"
+     (siehe Git-Historie) und sollen sich nicht mitverschieben, wenn
+     jemand einmal eine Abstandsstufe nachjustiert.
+     Der frueher hier stehende Name --schrift ist entfallen: er hielt
+     denselben Wert wie --grad-4, und nachdem alle font-size-Angaben auf
+     die Schriftreihe umgestellt sind, benutzte ihn nichts mehr. Ein
+     zweiter Name fuer denselben Wert, den keine Regel mehr aufruft, ist
+     genau die Fussangel, wegen der auch --warnung entfallen ist. */
+  --zeile:       40px;
+  --nav-breite:  200px;
+  --kopf-hoehe:  60px;
+  --fuss-hoehe:  32px;
 }
 
 * {
@@ -115,9 +227,15 @@ body {
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  font-size: var(--schrift);
+  font-size: var(--grad-4);
   color: var(--text);
-  background: var(--grund);
+  /* Der Grund der Seite ist im Arbeitszustand nie zu sehen (das Raster
+     deckt 100vh), wohl aber in den vier Vollbildzustaenden - Laden,
+     Anmeldung, Kein Zugang, Ohne Rolle. Dort ist er der
+     Anwendungsrahmen, nicht das Arbeitsblatt: dieselbe Flaeche wie
+     Navigation und Statuszeile, gegen die die weissen Eingabefelder der
+     Anmeldung ueberhaupt erst als Felder lesbar werden. */
+  background: var(--flaeche-rahmen);
   overflow: hidden;   /* die Seite als Ganzes scrollt nie */
 }
 
@@ -143,6 +261,38 @@ button {
   cursor: pointer;
 }
 
+/* ===== DER GEDRUECKTE ZUSTAND =====
+   Ausgezaehlt kam ":active" in dieser Datei vorher KEIN EINZIGES Mal
+   vor: kein Knopf dieser Warenwirtschaft gab zurueck, dass er gedrueckt
+   wurde. Bei einer Oberflaeche, in der ein Klick eine Buchung ausloest,
+   ist das die auffaelligste Luecke der ganzen Zustandsliste - zwischen
+   Druck und Antwort der Datenbank liegt eine Netzwerkstrecke, und
+   solange nichts passiert, drueckt man ein zweites Mal.
+   EINE Regel fuer alle statt einer je Knopfform: der Druck wird nicht
+   ueber die Farbe angezeigt (die traegt in dieser Oberflaeche ueberall
+   Bedeutung und ist je Knopfform eine andere), sondern ueber eine
+   Verschiebung um einen Pixel nach unten - dieselbe Rueckmeldung fuer
+   den marineblauen Hauptknopf, den gruenen Anlegen-Knopf, den roten
+   Gefahrenknopf, eine Rubrik in der Navigation und ein Zeilensymbol.
+   transform statt margin/top: es loest kein neues Layout aus und kann
+   deshalb keine Zeile verschieben, die daneben steht.
+   :not(:disabled) - ein gesperrter Knopf darf nicht so tun, als
+   reagierte er. */
+button:active:not(:disabled),
+a.wortmarke-link:active {
+  transform: translateY(1px);
+}
+
+/* Wer "Bewegung reduzieren" eingestellt hat, bekommt denselben Zustand
+   ohne Bewegung: der Rahmen wird gedunkelt statt der Knopf verschoben. */
+@media (prefers-reduced-motion: reduce) {
+  button:active:not(:disabled),
+  a.wortmarke-link:active {
+    transform: none;
+    border-color: var(--marine);
+  }
+}
+
 /* ===== Vollbildzustände: Laden, Anmeldung, Kein Zugang ===== */
 
 .vollbild {
@@ -152,8 +302,8 @@ button {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 24px;
-  gap: 8px;
+  padding: var(--raum-5);
+  gap: var(--raum-2);
 }
 
 #zustand-laden {
@@ -177,8 +327,8 @@ button {
 
 .vollbild h1 {
   color: var(--marine);
-  margin: 0 0 16px;
-  font-size: 22px;
+  margin: 0 0 var(--raum-4);
+  font-size: var(--grad-6);
 }
 
 .vollbild p {
@@ -204,13 +354,13 @@ button {
   align-self: flex-start;
   font-weight: 600;
   color: var(--text-leise);
-  margin-top: 4px;
+  margin-top: var(--raum-1);
 }
 
 .anmeldung input {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--feld-rahmen);
+  padding: var(--raum-2) var(--raum-2);
+  border: 1px solid var(--kontur);
   border-radius: 4px;
   font: inherit;
   color: var(--text);
@@ -219,8 +369,8 @@ button {
 
 .anmeldung button[type="submit"] {
   width: 100%;
-  margin-top: 12px;
-  padding: 10px;
+  margin-top: var(--raum-3);
+  padding: var(--raum-2);
   border: none;
   border-radius: 4px;
   background: var(--marine);
@@ -229,23 +379,31 @@ button {
 }
 
 .anmeldung button[type="submit"]:hover {
-  background: #0a2560;
+  background: var(--marine-hell);
 }
 
 .fehler {
   color: var(--schlecht);
   min-height: 1.2em;
-  margin: 4px 0 0;
+  margin: var(--raum-1) 0 0;
 }
 
 /* Gemeinsames Aussehen für die Abmelden-Knöpfe der beiden
    Hinweiszustände (kein Mitarbeiter / Mitarbeiter ohne Rolle) - in
    beiden ist er der einzige Ausweg. */
 #zustand-kein-mitarbeiter button,
+/* Die beiden Vollbild-Abmeldeknoepfe hatten als einzige Knoepfe der
+   Oberflaeche keinen Ueberfahren-Zustand. */
+#zustand-kein-mitarbeiter button:hover,
+#zustand-ohne-rolle button:hover {
+  background: var(--grund);
+  border-color: var(--marine);
+}
+
 #zustand-ohne-rolle button {
-  margin-top: 12px;
-  padding: 8px 16px;
-  border: 1px solid var(--feld-rahmen);
+  margin-top: var(--raum-3);
+  padding: var(--raum-2) var(--raum-4);
+  border: 1px solid var(--kontur);
   border-radius: 4px;
   background: var(--flaeche);
   color: var(--text);
@@ -315,13 +473,18 @@ button {
      #feld-suche { width:100%; max-width:480px } tatsaechlich. */
   grid-template-columns: minmax(260px, 1fr) minmax(300px, 480px) minmax(260px, 1fr);
   align-items: center;
-  gap: 24px;
+  gap: var(--raum-5);
   /* 28px statt vormals 16px - der zweite, staerkere Anlauf auf "deutlich
      luftiger... vor allem im Kopfbereich" (Auftrag woertlich): die
      Kopfleiste ist selbst schon hoeher (--kopf-hoehe, siehe :root), hier
      zusaetzlich mehr Luft links/rechts, damit Wortmarke und Profilbereich
      nicht an der Kante kleben. */
-  padding: 0 28px;
+  /* 28px -> --raum-5: derselbe linke Rand wie in jedem anderen Bereich
+     dieser Oberflaeche. Die Statuszeile unten stand bei 16px, die
+     Kopfleiste bei 28px - zwei Baender ueber die volle Breite mit zwei
+     verschiedenen Raendern. Jetzt fluchten Wortmarke oben und
+     Statusmeldung unten. */
+  padding: 0 var(--raum-5);
   background: var(--marine);
   color: var(--flaeche);
 }
@@ -337,7 +500,7 @@ button {
 #kopfleiste .wortmarke {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--raum-2);
   letter-spacing: 0.02em;
   justify-self: start;
 }
@@ -362,6 +525,16 @@ button {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* Beide Verweise der Oberflaeche (Wortmarke in der Kopfleiste,
+   bikes.butscher.cloud in der Kein-Zugang-Maske) hatten keinen
+   Ueberfahren-Zustand. Die Staerke der Unterstreichung statt ihrer
+   Farbe: die Farbe traegt hier bereits die Lesbarkeit auf marinem
+   Grund und darf sich nicht aendern. */
+.wortmarke-link:hover,
+.vollbild p a:hover {
+  text-decoration-thickness: 2px;
 }
 
 .wortmarke-produkt {
@@ -400,7 +573,7 @@ button {
      braucht dieser Text samt Lupe und Innenabstand rund 400px, 480px
      laesst zusaetzlich Luft, statt ihn nur knapp passend zu machen. */
   max-width: 480px;
-  padding: 6px 10px 6px 32px;
+  padding: var(--raum-2) var(--raum-2) var(--raum-2) var(--raum-6);
   border: 1px solid transparent;
   border-radius: 4px;
   font: inherit;
@@ -450,7 +623,7 @@ button {
      damit aus dem Flussfluss heraus, genau wie zuvor. */
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--raum-3);
 }
 
 /* Drei Angaben, "wenig Platz oben rechts - knapp und ruhig, es ist
@@ -468,8 +641,8 @@ button {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 1px;
-  font-size: 11px;
+  gap: var(--raum-0);
+  font-size: var(--grad-2);
   line-height: 1.3;
   color: rgba(255, 255, 255, 0.78);
   text-align: right;
@@ -510,8 +683,8 @@ button {
 
   #kopfleiste {
     grid-template-columns: minmax(130px, 1fr) minmax(220px, 1fr) minmax(130px, 1fr);
-    gap: 12px;
-    padding: 0 12px;
+    gap: var(--raum-3);
+    padding: 0 var(--raum-3);
   }
 }
 
@@ -552,12 +725,15 @@ button {
   background-size: cover;
   background-position: center;
   color: var(--marine);
-  font-size: 12px;
+  font-size: var(--grad-3);
   font-weight: 600;
 }
 
+/* Der frueher hier stehende Einzelwert #e8ebf3 war ein vierter heller
+   Ton ohne Namen und ohne Beleg. Die Flaeche der Bedienbereiche traegt
+   dieselbe Aufgabe ("hier wird bedient") und ist gemessen. */
 .profilknopf:hover .profilknopf-avatar {
-  background-color: #e8ebf3;
+  background-color: var(--flaeche-rahmen);
 }
 
 .profilmenue {
@@ -570,15 +746,15 @@ button {
   border: 1px solid var(--linie);
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(6, 24, 65, 0.18);
-  padding: 12px;
+  padding: var(--raum-3);
   z-index: 10;
 }
 
 .profilmenue-kopf {
   display: flex;
   flex-direction: column;
-  padding-bottom: 10px;
-  margin-bottom: 8px;
+  padding-bottom: var(--raum-2);
+  margin-bottom: var(--raum-2);
   border-bottom: 1px solid var(--linie);
 }
 
@@ -588,7 +764,7 @@ button {
 }
 
 .profilmenue-email {
-  font-size: 12px;
+  font-size: var(--grad-3);
   color: var(--text-leise);
 }
 
@@ -599,17 +775,17 @@ button {
 .profilmenue-rollen {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 10px;
+  gap: var(--raum-2);
+  margin-bottom: var(--raum-2);
 }
 
 .rollen-marke {
-  padding: 2px 8px;
+  padding: var(--raum-0) var(--raum-2);
   border-radius: 999px;
   background: var(--grund);
   border: 1px solid var(--linie);
   color: var(--text-leise);
-  font-size: 11px;
+  font-size: var(--grad-2);
   text-transform: capitalize;
 }
 
@@ -617,7 +793,7 @@ button {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 8px 6px;
+  padding: var(--raum-2) var(--raum-2);
   border: none;
   border-radius: 4px;
   background: transparent;
@@ -636,25 +812,25 @@ button {
    ordnet den Schalter darunter ein - solange es nur diese eine
    Einstellung gibt, gibt es nichts zum Auf-/Zuklappen. */
 .profilmenue-abschnitt {
-  padding: 6px 6px 10px;
+  padding: var(--raum-2) var(--raum-2) var(--raum-2);
   border-top: 1px solid var(--linie);
-  margin-top: 4px;
+  margin-top: var(--raum-1);
 }
 
 .profilmenue-abschnitt-titel {
   display: block;
-  font-size: 11px;
+  font-size: var(--grad-2);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-leise);
-  margin-bottom: 8px;
+  margin-bottom: var(--raum-2);
 }
 
 .profilmenue-schalter {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--raum-2);
   cursor: pointer;
   color: var(--text);
 }
@@ -678,19 +854,19 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--raum-2);
+  margin-top: var(--raum-2);
   color: var(--text);
 }
 
 .profilmenue-sprachwahl select {
   font: inherit;
-  font-size: 13px;
+  font-size: var(--grad-4);
   color: var(--text);
-  background: var(--grund);
-  border: 1px solid var(--feld-rahmen);
+  background: var(--flaeche);
+  border: 1px solid var(--kontur);
   border-radius: 4px;
-  padding: 4px 6px;
+  padding: var(--raum-1) var(--raum-2);
   /* Kein max-width - Türkisch/Polnisch tragen längere Sprachnamen als
      Deutsch (siehe Bericht, Fallstrick "Textlänge") und sollen nicht
      abgeschnitten werden. */
@@ -705,8 +881,14 @@ button {
    Unterschied macht. */
 #navigation {
   grid-area: nav;
-  background: var(--flaeche);
-  border-right: 1px solid var(--linie);
+  /* HIER SASS DER HAUPTBEFUND DES AUFTRAGGEBERS ("der linke Randbereich
+     hebt sich ueberhaupt nicht ab"). Nachgemessen: die Navigation trug
+     #ffffff, die Arbeitsliste daneben ebenfalls #ffffff - es gab
+     schlicht keine Flaechenunterscheidung, nur eine Kante von 1,37:1.
+     Jetzt Rang 1 der Gliederungsregel (hier wird BEDIENT, nicht
+     gelesen) und eine Kante, die man sieht. */
+  background: var(--flaeche-rahmen);
+  border-right: 1px solid var(--kontur);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -714,8 +896,8 @@ button {
      weiter als beim zweiten: mehr Abstand zwischen den fuenf Rubriken UND
      mehr Rand rundum, damit die Navigation nicht dichter wirkt als der
      jetzt luftigere Kopfbereich daneben. */
-  gap: 8px;
-  padding: 24px 14px;
+  gap: var(--raum-2);
+  padding: var(--raum-5) var(--raum-3);
 }
 
 /* Ein Eintrag je erlaubtem Bereich - rahmen.js erzeugt sie, hier nur
@@ -728,24 +910,28 @@ button {
 #navigation button {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--raum-2);
   text-align: left;
   /* 13px/16px statt vormals 12px/16px (Punkt 3, dritter Anlauf) - kein
      border-left mehr (siehe Kommentar bei aria-current="page" weiter
      unten, Punkt 6): ohne die frühere 4px-Fahne braucht dieser Ruhezustand
      kein reserviertes transparentes Randstück mehr, das den Wechsel zum
      aktiven Zustand layoutstabil hält. */
-  padding: 13px 16px;
+  padding: var(--raum-3) var(--raum-4);
   border: none;
   border-radius: 8px;
   background: transparent;
   color: var(--text);
-  font-size: var(--schrift);
+  font-size: var(--grad-4);
   transition: background-color 120ms ease, color 120ms ease;
 }
 
+/* Auf einer getoenten Flaeche hebt sich ein Ueberfahren nach OBEN ab,
+   nicht nach unten: die Rubrik wird weiss wie das Arbeitsblatt daneben.
+   Dieselbe Richtung ueberall dort, wo ein Bedienelement auf
+   --flaeche-rahmen sitzt. */
 #navigation button:hover {
-  background: var(--grund);
+  background: var(--flaeche);
 }
 
 /* GESTALTUNGSAUFTRAG PUNKT 6 ("dröge und altbacken", "nimm dir
@@ -772,7 +958,7 @@ button {
    naheliegende Rueckbau. */
 #navigation button[aria-current="page"] {
   background: var(--marine);
-  color: #ffffff;
+  color: var(--flaeche);
   font-weight: 600;
 }
 
@@ -813,7 +999,10 @@ button {
      gebunden, auch wenn die Spalte per minmax(0, 1fr) schon nachgeben
      duerfte. */
   min-width: 0;
-  background: var(--grund);
+  /* Rang 2: das Arbeitsblatt. War --grund und damit dieselbe Toenung
+     wie die Streifen darauf - die Streifen hoben sich mit 1,06:1 also
+     von gar nichts ab. */
+  background: var(--flaeche);
 }
 
 /* flex-basis statt einer festen Breite, UND übergangsfähig (Punkt 1):
@@ -848,7 +1037,10 @@ button {
   flex: 1 1 55%;
   overflow-y: auto;
   overflow-x: auto;
-  border-right: 1px solid var(--linie);
+  /* Bereichskante zur Detailmaske - dieselbe --kontur wie jede andere
+     Bereichskante. Sie ist die EINZIGE Linie zwischen den beiden
+     Spalten; die Maske traegt links bewusst keine zweite. */
+  border-right: 1px solid var(--kontur);
   background: var(--flaeche);
   display: flex;
   flex-direction: column;
@@ -867,19 +1059,36 @@ button {
 
 /* ===== Unterreiter: zwei Listen in einem Bereich (zeigeUnterreiter) ===== */
 
+/* Erster Streifen des Kopfbereichs. Reiterleiste, Werkzeugleiste,
+   Kopftafel und Filterleiste sind KEINE vier Bereiche, sondern die
+   Streifen EINES Bereichs: des Kopfbereichs ueber der Liste. Deshalb
+   tragen sie alle dieselbe Flaeche, stossen ohne Aussenabstand
+   aneinander und trennen sich untereinander nur mit der leisen --linie.
+   Die eine kraeftige Kante des ganzen Blocks sitzt unter der Kopfzeile
+   der Tabelle (siehe .arbeitstabelle th weiter unten) - dort, wo
+   Bedienung endet und Daten anfangen. */
 #reiterleiste {
   display: flex;
+  /* padding-left --raum-2 plus dem --raum-4 des Reiters selbst ergibt
+     denselben Bereichsrand --raum-5 wie ueberall - der Reitertext
+     fluchtet damit mit dem Titel der Kopftafel und der ersten
+     Tabellenspalte darunter, statt 8px davor zu beginnen. Der
+     Innenabstand kann nicht einfach am Reiter haengen: der waagerechte
+     Innenabstand ZWISCHEN zwei Reitern soll --raum-4 bleiben, nur der
+     Abstand des ersten zur Bereichskante ist --raum-5. */
+  padding-left: var(--raum-2);
+  background: var(--flaeche-rahmen);
   border-bottom: 1px solid var(--linie);
   flex: 0 0 auto;
 }
 
 #reiterleiste .reiter {
-  padding: 12px 18px;
+  padding: var(--raum-3) var(--raum-4);
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--text-leise);
-  font-size: var(--schrift);
+  font-size: var(--grad-4);
 }
 
 #reiterleiste .reiter:hover {
@@ -905,7 +1114,8 @@ button {
      als beim zweiten: derselbe grosszuegigere Massstab wie beim
      Uebersichtsstreifen/der Navigation, damit die "Leisten" oberhalb der
      Tabelle nicht enger wirken als ihre direkte Umgebung. */
-  padding: 20px 24px;
+  padding: var(--raum-4) var(--raum-5);
+  background: var(--flaeche-rahmen);
   border-bottom: 1px solid var(--linie);
 }
 
@@ -953,9 +1163,16 @@ button {
      als zuvor (18px/22px/16px statt 12px/16px/10px, vierter Anlauf gegen
      "zu wenig Luft" - siehe der lange Kommentar oben) - die Tafel darf
      dabei hoeher werden, sie ist seit dem letzten Auftrag einklappbar. */
-  background: var(--grund);
-  padding: 18px 22px 16px;
-  margin-bottom: 24px;
+  background: var(--flaeche-rahmen);
+  /* 22px waagerecht -> --raum-5: die Tafel begann bei 222px, die
+     Werkzeugleiste darueber bei 224px, die Tabelle darunter bei 218px.
+     Drei linke Kanten in einer Spalte, gemessen im Browser. Jetzt eine.
+     margin-bottom: 24px ist ersatzlos entfallen - siehe Punkt 3 der
+     Gliederungsregel im Dateikopf: der Aussenabstand liess die Tafel
+     als lose Platte neben der Filterleiste stehen, statt beide als
+     einen Kopfbereich lesbar zu machen. */
+  padding: var(--raum-4) var(--raum-5);
+  border-bottom: 1px solid var(--linie);
   /* Eine Tafel mit fuenf Spalten kann in einem sehr schmalen Fenster
      breiter werden als der Arbeitsbereich. Sie darf dann in SICH
      scrollen - was sie nicht darf, ist die ganze Seite waagerecht
@@ -1060,7 +1277,7 @@ button {
   width: 100%;
   max-width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--grad-3);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1071,17 +1288,17 @@ button {
 .kopftafel-kopf {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--raum-4);
   /* WAR 8px (vierter Anlauf gegen "zu wenig Abstaende", siehe der lange
      Kommentar bei .kopftafel oben) - der Abstand zwischen Titel/Bezugs-
      zeile und der ersten Tabellenzeile darunter. */
-  padding-bottom: 16px;
+  padding-bottom: var(--raum-4);
 }
 
 .kopftafel-kopftexte {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--raum-0);
   min-width: 0;
 }
 
@@ -1097,16 +1314,20 @@ button {
   object-fit: contain;
 }
 
+/* Rang eines Bereichstitels, wie #detailmaske h2, .leermaske h2 und
+   .velocity-dialog h2 - dieselbe Marke <h2>, dieselbe Aufgabe. Stand
+   vorher auf 13px und damit als einziger Bereichstitel drei Grade unter
+   den uebrigen. */
 .kopftafel-titel {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--grad-5);
   font-weight: 700;
   color: var(--marine);
 }
 
 .kopftafel-bezug {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--grad-2);
   color: var(--text-leise);
   line-height: 1.4;
 }
@@ -1120,11 +1341,11 @@ button {
      weiter unten - dieselbe Spaltenflucht), unten von 4px auf 10px
      (vierter Anlauf gegen "zu wenig Abstaende") - oben bleibt 0, das
      traegt vertical-align:bottom weiterhin allein. */
-  padding: 0 14px 10px;
+  padding: 0 var(--raum-4) var(--raum-2);
   border-bottom: 1px solid var(--linie);
   vertical-align: bottom;
   font-weight: 600;
-  font-size: 10px;
+  font-size: var(--grad-1);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-leise);
@@ -1152,7 +1373,7 @@ button {
   /* Die Einheit ist eine Fussnote am Spaltenkopf, keine zweite
      Ueberschrift - deshalb noch kleiner als der Name darueber, aber in
      derselben, gemessenen Farbe (--text-leise, 5.60:1 auf --grund). */
-  font-size: 10px;
+  font-size: var(--grad-1);
   opacity: 0.85;
 }
 
@@ -1170,7 +1391,7 @@ button {
    kopftafelEingeklappt() in rahmen.js). */
 .kopftafel-tabelle td,
 .kopftafel-tabelle th {
-  padding: 11px 14px;
+  padding: var(--raum-3) var(--raum-4);
 }
 
 .kopftafel-zeile-daten {
@@ -1215,18 +1436,18 @@ button {
   max-width: 40px;
   object-fit: contain;
   vertical-align: middle;
-  margin-right: 8px;
+  margin-right: var(--raum-2);
 }
 
 .kopftafel-rubriktexte {
   display: inline-flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--raum-2);
   min-width: 0;
 }
 
 .kopftafel-rubrikzusatz {
-  font-size: 11px;
+  font-size: var(--grad-2);
   color: var(--text-leise);
 }
 
@@ -1267,7 +1488,7 @@ button {
    13px). Die zweite Klasse hebt die Spezifitaet ueber die der
    allgemeinen Regel. */
 .kopftafel-tabelle .kopftafel-zeile-gruppe > * {
-  padding-top: 13px;
+  padding-top: var(--raum-3);
   font-weight: 700;
 }
 
@@ -1282,7 +1503,7 @@ button {
    oben. */
 .kopftafel-tabelle .kopftafel-zeile-summe > * {
   border-top: 1px solid var(--linie);
-  padding-top: 11px;
+  padding-top: var(--raum-3);
   font-weight: 700;
 }
 
@@ -1290,8 +1511,8 @@ button {
    .kopftafel oben) - der Abstand zwischen der Summenzeile und dieser
    Fussnote. */
 .kopftafel-fussnote {
-  margin: 14px 0 0;
-  font-size: 11px;
+  margin: var(--raum-4) 0 0;
+  font-size: var(--grad-2);
   line-height: 1.45;
   color: var(--text-leise);
   /* Nicht ueber die ganze Breite laufen lassen: eine Fussnote von 200
@@ -1309,7 +1530,7 @@ button {
                    belegter Stellplatz, ein Kunde mit Fahrten, eine
                    gemessene Strecke.            --marine, 17.29:1
      seg-ruhend    die Flaeche, die bereitsteht: verfuegbar, frei, ohne
-                   Fahrt.                        --skala-rahmen, 3.64:1
+                   Fahrt.                        --grafik-neutral, 3.64:1
      seg-warnung   die Flaeche, die Aufmerksamkeit braucht: Wartung, eine
                    volle Station, ein gesperrtes Konto, eine geschaetzte
                    Zahl.                         --warnung-text, 5.32:1
@@ -1320,7 +1541,7 @@ button {
 
    ALLE VIER FUELLFARBEN LIEGEN UEBER DEN 3:1, DIE WCAG 1.4.11 FUER
    GRAFIK VERLANGT - aber gegeneinander tun sie das nicht:
-   --warnung-text gegen --schlecht kommt auf 1.07:1, --skala-rahmen gegen
+   --warnung-text gegen --schlecht kommt auf 1.07:1, --grafik-neutral gegen
    --warnung-text auf 1.46:1 (gemessen). Zwei solche Segmente koennen
    unmittelbar aneinanderstossen. strukturBalken() legt deshalb eine 1px
    breite Fuge zwischen die Segmente, in der der helle Untergrund
@@ -1335,7 +1556,7 @@ button {
 }
 
 .strukturbalken-segment.seg-aktiv    { fill: var(--marine); }
-.strukturbalken-segment.seg-ruhend   { fill: var(--skala-rahmen); }
+.strukturbalken-segment.seg-ruhend   { fill: var(--grafik-neutral); }
 .strukturbalken-segment.seg-warnung  { fill: var(--warnung-text); }
 .strukturbalken-segment.seg-schlecht { fill: var(--schlecht); }
 .strukturbalken-segment.seg-leer     { fill: var(--flaeche); }
@@ -1356,11 +1577,11 @@ button {
 }
 
 /* Die Nulllinie ist die ganze Aussage dieser Spalte - sie muss sichtbar
-   sein, auch dort, wo kein Balken sie kreuzt. --feld-rahmen (3.64:1 auf
+   sein, auch dort, wo kein Balken sie kreuzt. --kontur (3.64:1 auf
    Weiss, 3.43:1 auf --grund) statt --linie (1.29:1): eine Achse ist
    Grafik im Sinne von WCAG 1.4.11, keine dekorative Trennlinie. */
 .abweichungsbalken-null {
-  stroke: var(--feld-rahmen);
+  stroke: var(--kontur);
   stroke-width: 1;
 }
 
@@ -1596,7 +1817,7 @@ button {
   position: fixed;
   z-index: 30;
   max-width: 260px;
-  padding: 6px 10px;
+  padding: var(--raum-2) var(--raum-2);
   /* --marine als Flaeche, Weiss als Text - derselbe Kontrast wie --text
      auf --flaeche (17.29:1, siehe Kopfkommentar bei .kopftafel oben):
      das Kontrastmass ist symmetrisch, Vorder- und Hintergrundfarbe
@@ -1604,8 +1825,8 @@ button {
      nachgerechnet (weiss auf --marine): 17.29:1, weit ueber den 4,5:1
      fuer Fliesstext. */
   background: var(--marine);
-  color: #fff;
-  font-size: 12px;
+  color: var(--flaeche);
+  font-size: var(--grad-3);
   line-height: 1.4;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(6, 24, 65, 0.35);
@@ -1630,12 +1851,12 @@ button {
 .uebersichtskachel {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--raum-2);
   min-width: 0;
 }
 
 .uebersichtskachel-titel {
-  font-size: 11px;
+  font-size: var(--grad-2);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-leise);
@@ -1644,12 +1865,12 @@ button {
 .uebersichtskachel-zeile {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--raum-3);
 }
 
 .uebersichtskachel-wert {
   flex: 0 0 auto;
-  font-size: 20px;
+  font-size: var(--grad-6);
   font-weight: 700;
   color: var(--marine);
   font-variant-numeric: tabular-nums;
@@ -1662,7 +1883,7 @@ button {
    Drill-Downs faellt in sich zusammen. Hoehe an font-size mal
    line-height ausgerichtet, keine willkuerliche Zahl. */
 .uebersichtskachel-veraenderung {
-  font-size: 12px;
+  font-size: var(--grad-3);
   color: var(--text-leise);
   font-variant-numeric: tabular-nums;
   min-height: 1.4em;
@@ -1671,11 +1892,11 @@ button {
 .uebersichtskachel-pfeil {
   color: var(--text-leise);
   font-weight: 400;
-  font-size: 15px;
+  font-size: var(--grad-4);
 }
 
 .uebersichtskachel-hinweis {
-  font-size: 11px;
+  font-size: var(--grad-2);
   color: var(--text-leise);
   line-height: 1.4;
 }
@@ -1696,28 +1917,26 @@ button {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 16px;
-  padding: 20px 24px;
-  margin-bottom: 16px;
-  background: var(--grund);
-  border-bottom: 1px solid var(--linie);
+  gap: var(--raum-4);
+  padding: var(--raum-4) var(--raum-5);
+  background: var(--flaeche-rahmen);
 }
 
 .filterfeld {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--raum-1);
 }
 
 .filterfeld label {
-  font-size: 11px;
+  font-size: var(--grad-2);
   font-weight: 600;
   color: var(--text-leise);
 }
 
 .filterfeld select {
-  padding: 4px 6px;
-  border: 1px solid var(--feld-rahmen);
+  padding: var(--raum-1) var(--raum-2);
+  border: 1px solid var(--kontur);
   border-radius: 4px;
   font: inherit;
   color: var(--text);
@@ -1727,7 +1946,7 @@ button {
 .filterfeld-schieber {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--raum-2);
 }
 
 .filterfeld-schieber input[type="range"] {
@@ -1735,7 +1954,7 @@ button {
 }
 
 .filterfeld-wert {
-  font-size: 12px;
+  font-size: var(--grad-3);
   color: var(--text-leise);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -1747,7 +1966,7 @@ button {
    Filterleiste (.filterfeld) UND weiter unten im Spaltenkopf
    (.spaltenkopf-filterzeile) - ein Regelsatz fuer beide, dieselbe
    Ueberlegung wie beim Baustein selbst (siehe dessen Kopfkommentar in
-   rahmen.js). border: var(--text-leise) statt var(--feld-rahmen) - Letztere
+   rahmen.js). border: var(--text-leise) statt var(--kontur) - Letztere
    misst nur 1,37:1 auf Weiss (siehe Kommentar bei
    .spaltenkopf-filterzeile select weiter unten), weit unter den fuer
    Bedienelement-Umrisse verlangten 3:1; var(--text-leise) liegt bei
@@ -1762,18 +1981,25 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: var(--raum-2);
   width: 100%;
   min-width: 120px;
   max-width: 220px;
-  padding: 4px 8px;
+  padding: var(--raum-1) var(--raum-2);
   border: 1px solid var(--text-leise);
   border-radius: 4px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--grad-3);
   color: var(--text);
   background: var(--flaeche);
   text-align: left;
+}
+
+/* Ueberfahren fehlte diesem Knopf als einzigem der Filterleiste - jeder
+   andere Knopf dieser Oberflaeche hatte einen. */
+.mehrfachauswahl-knopf:hover {
+  border-color: var(--marine);
+  color: var(--marine);
 }
 
 .mehrfachauswahl-zusammenfassung {
@@ -1795,7 +2021,7 @@ button {
   flex: 0 0 auto;
   width: 0;
   height: 0;
-  margin-left: 2px;
+  margin-left: var(--raum-0);
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
   border-top: 5px solid var(--text-leise);
@@ -1807,12 +2033,14 @@ button {
 }
 
 /* "Ein greifender Filter muss anders aussehen als ein leerer" (Punkt 5
-   der vorherigen Gestaltungsrunde, hier unveraendert gueltig) - dieselbe
-   "aktiv"-Farbe wie beim Gruppierungsknopf/.spaltenkopf-filter-aktiv
-   weiter unten (#eef1f7), keine vierte Bedeutung fuer dieselbe Sache. */
+   der vorherigen Gestaltungsrunde, hier unveraendert gueltig) - und
+   jetzt dieselbe Sprache wie an den beiden anderen Stellen, an denen
+   etwas einschraenkt: roter Rahmen (Suchfeld in der Kopfleiste,
+   Spaltenfilter in der Tabelle). Der frueher hier stehende Flaechenton
+   war von der Farbe der ausgewaehlten Zeile nicht zu unterscheiden. */
 .mehrfachauswahl-aktiv {
-  background: #eef1f7;
-  border-color: var(--marine);
+  border-color: var(--rot);
+  box-shadow: 0 0 0 1px var(--rot);
   font-weight: 600;
 }
 
@@ -1823,12 +2051,12 @@ button {
   z-index: 20;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--raum-0);
   min-width: 180px;
   max-width: 260px;
   max-height: 240px;
   overflow-y: auto;
-  padding: 6px;
+  padding: var(--raum-2);
   background: var(--flaeche);
   border: 1px solid var(--linie);
   border-radius: 6px;
@@ -1839,14 +2067,14 @@ button {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 5px 6px;
-  margin-bottom: 4px;
+  padding: var(--raum-1) var(--raum-2);
+  margin-bottom: var(--raum-1);
   border: none;
-  border-bottom: 1px solid var(--feld-rahmen);
+  border-bottom: 1px solid var(--kontur);
   border-radius: 0;
   background: transparent;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--grad-3);
   font-weight: 600;
   color: var(--marine);
 }
@@ -1858,10 +2086,10 @@ button {
 .mehrfachauswahl-option {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
+  gap: var(--raum-2);
+  padding: var(--raum-1) var(--raum-2);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--grad-3);
   color: var(--text);
   white-space: nowrap;
   cursor: pointer;
@@ -1903,13 +2131,13 @@ button {
   overflow: visible;
 }
 
-/* Grundfarbe = --skala-rahmen (siehe :root, dieselbe schon gemessene
+/* Grundfarbe = --grafik-neutral (siehe :root, dieselbe schon gemessene
    Farbe, die zuvor die jetzt entfernte Zellbalken-Kontur trug) statt
    einer neu erfundenen "hellblauen" Farbe: "Farben aus unserer Palette"
    (Auftrag) heißt hier, eine bereits vermessene Fläche wiederzuverwenden,
    nicht die Palette um einen weiteren, ungeprüften Ton zu erweitern. */
 .saeulensparkline-saeule {
-  fill: var(--skala-rahmen);
+  fill: var(--grafik-neutral);
 }
 
 /* Die AKTUELLE Säule (Vorbild-Auftrag: "die letzte deutlich dunkler -
@@ -1995,9 +2223,9 @@ button {
 
 /* ===== Donut (donut() in rahmen.js, Gestaltungsauftrag Stationen,
    Punkt 2) =====
-   Hintergrundring in --skala-rahmen statt --linie: --linie liegt bei nur
+   Hintergrundring in --grafik-neutral statt --linie: --linie liegt bei nur
    1.37:1 auf Weiss (siehe :root-Kommentar, "eine Linie" ist bewusst leise
-   gehalten), weit unter der fuer Grafik verlangten 3:1. --skala-rahmen
+   gehalten), weit unter der fuer Grafik verlangten 3:1. --grafik-neutral
    traegt bereits 3.64:1 (siehe Kommentar bei .saeulensparkline-saeule
    oben) und wird hier aus demselben Grund ein drittes Mal verwendet
    statt eines weiteren, unvermessenen Grautons. */
@@ -2010,7 +2238,7 @@ button {
 
 .donut-hintergrund {
   fill: none;
-  stroke: var(--skala-rahmen);
+  stroke: var(--grafik-neutral);
 }
 
 .donut-vordergrund {
@@ -2019,7 +2247,7 @@ button {
 }
 
 .donut-text-prozent {
-  font-size: 17px;
+  font-size: var(--grad-5);
   font-weight: 700;
   fill: var(--marine);
   text-anchor: middle;
@@ -2028,7 +2256,7 @@ button {
 }
 
 .donut-text-bruch {
-  font-size: 10px;
+  font-size: var(--grad-1);
   fill: var(--text-leise);
   text-anchor: middle;
   dominant-baseline: central;
@@ -2044,8 +2272,8 @@ button {
 .saeulengrafik-block {
   display: grid;
   grid-template-columns: auto 1fr;
-  column-gap: 8px;
-  margin: 4px 0 16px;
+  column-gap: var(--raum-2);
+  margin: var(--raum-1) 0 var(--raum-4);
 }
 
 .saeulengrafik {
@@ -2078,10 +2306,10 @@ button {
   flex-direction: column;
   justify-content: space-between;
   align-items: flex-end;
-  font-size: 11px;
+  font-size: var(--grad-2);
   color: var(--text-leise);
   font-variant-numeric: tabular-nums;
-  padding: 1px 0;
+  padding: var(--raum-0) 0;
 }
 
 .saeulengrafik-x-achse {
@@ -2089,9 +2317,9 @@ button {
   grid-row: 2;
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--grad-2);
   color: var(--text-leise);
-  margin-top: 4px;
+  margin-top: var(--raum-1);
 }
 
 /* ===== Zusammenfassung und Tabelle des Drill-Downs (auswertungen.js,
@@ -2103,14 +2331,14 @@ button {
    baueKachel() noch zum Einsatz kommt - siehe dort. */
 .monatsdrilldown {
   border-top: 1px solid var(--linie);
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: var(--raum-5);
+  padding-top: var(--raum-4);
 }
 
 .monatsdrilldown h3 {
   color: var(--marine);
-  font-size: 14px;
-  margin: 0 0 8px;
+  font-size: var(--grad-4);
+  margin: 0 0 var(--raum-2);
 }
 
 .monatsdrilldown-kacheln {
@@ -2118,13 +2346,13 @@ button {
   grid-template-columns: 1fr 1fr;
   border: 1px solid var(--linie);
   background: var(--grund);
-  margin-bottom: 16px;
+  margin-bottom: var(--raum-4);
 }
 
 .monatsdrilldown-kacheln .uebersichtskachel {
   border-right: 1px solid var(--linie);
   border-bottom: 1px solid var(--linie);
-  padding: 12px 16px;
+  padding: var(--raum-3) var(--raum-4);
 }
 
 .monatsdrilldown-kacheln .uebersichtskachel:nth-child(2n) {
@@ -2150,25 +2378,25 @@ button {
 .monatsdrilldown-tabelle {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--grad-4);
 }
 
 .monatsdrilldown-tabelle caption {
   text-align: left;
-  font-size: 11px;
+  font-size: var(--grad-2);
   color: var(--text-leise);
-  margin-bottom: 4px;
+  margin-bottom: var(--raum-1);
 }
 
 .monatsdrilldown-tabelle th,
 .monatsdrilldown-tabelle td {
-  padding: 3px 8px;
+  padding: var(--raum-1) var(--raum-2);
   border-bottom: 1px solid var(--linie);
   text-align: left;
 }
 
 .monatsdrilldown-tabelle thead th {
-  font-size: 11px;
+  font-size: var(--grad-2);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--text-leise);
@@ -2189,20 +2417,20 @@ button {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 12px;
-  margin-bottom: 12px;
+  font-size: var(--grad-3);
+  margin-bottom: var(--raum-3);
 }
 
 .monatskalender caption {
   text-align: left;
-  font-size: 11px;
+  font-size: var(--grad-2);
   color: var(--text-leise);
-  margin-bottom: 6px;
+  margin-bottom: var(--raum-2);
 }
 
 .monatskalender thead th {
-  padding: 4px 2px 8px;
-  font-size: 10px;
+  padding: var(--raum-1) var(--raum-0) var(--raum-2);
+  font-size: var(--grad-1);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--text-leise);
@@ -2223,7 +2451,7 @@ button {
 }
 
 .monatskalender-zelle {
-  padding: 2px;
+  padding: var(--raum-0);
   vertical-align: top;
 }
 
@@ -2249,11 +2477,11 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: var(--raum-0);
   width: 100%;
   min-height: 44px;
-  padding: 4px 2px;
-  border: 1px solid var(--feld-rahmen);
+  padding: var(--raum-1) var(--raum-0);
+  border: 1px solid var(--kontur);
   font: inherit;
   cursor: pointer;
 }
@@ -2268,7 +2496,7 @@ button {
 }
 
 .monatskalender-tag-wert {
-  font-size: 11px;
+  font-size: var(--grad-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2287,9 +2515,9 @@ button {
    uebernimmt genau dort, wo er seinerseits ueber 4,5:1 liegt. */
 .monatskalender-stufe-0 { background: var(--flaeche); color: var(--text); }
 .monatskalender-stufe-1 { background: #8c95a8;         color: var(--text); }
-.monatskalender-stufe-2 { background: #657089;         color: #fff; }
-.monatskalender-stufe-3 { background: #3d4b6b;         color: #fff; }
-.monatskalender-stufe-4 { background: var(--marine);   color: #fff; }
+.monatskalender-stufe-2 { background: #657089;         color: var(--flaeche); }
+.monatskalender-stufe-3 { background: #3d4b6b;         color: var(--flaeche); }
+.monatskalender-stufe-4 { background: var(--marine);   color: var(--flaeche); }
 
 /* "man muss jederzeit sehen, wo man ist" (Auftrag) - ein Rahmen statt
    einer Hintergrundfarbe wie beim frueheren .monatsdrilldown-tag-
@@ -2310,27 +2538,27 @@ button {
 }
 
 .monatskalender-legende {
-  font-size: 11px;
+  font-size: var(--grad-2);
   color: var(--text-leise);
 }
 
 .monatskalender-legende-satz {
-  margin: 0 0 8px;
+  margin: 0 0 var(--raum-2);
 }
 
 .monatskalender-legende-skala {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--raum-3);
 }
 
 .monatskalender-legende-eintrag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--raum-2);
 }
 
-/* Rahmen in --skala-rahmen (3.64:1 auf Weiss, dieselbe schon gemessene
+/* Rahmen in --grafik-neutral (3.64:1 auf Weiss, dieselbe schon gemessene
    Flaeche wie beim Zellbalken-Hintergrund) statt --linie: die Stufe-0-
    Marke ist selbst weiss wie ihr Hintergrund und braeuchte ohne einen
    sichtbaren Rahmen ueberhaupt keine erkennbare Kontur. */
@@ -2339,28 +2567,28 @@ button {
   width: 12px;
   height: 12px;
   flex: 0 0 auto;
-  border: 1px solid var(--skala-rahmen);
+  border: 1px solid var(--grafik-neutral);
 }
 
 /* ===== Dritte Ebene: Raeder je Tag (Gestaltungsauftrag Punkt 2b) ===== */
 
 .tagdrilldown {
   border-top: 1px solid var(--linie);
-  margin-top: 16px;
-  padding-top: 12px;
+  margin-top: var(--raum-4);
+  padding-top: var(--raum-3);
 }
 
 .tagdrilldown-kopf {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--raum-3);
+  margin-bottom: var(--raum-2);
 }
 
 .tagdrilldown-kopf h3 {
   color: var(--marine);
-  font-size: 14px;
+  font-size: var(--grad-4);
   margin: 0;
 }
 
@@ -2375,8 +2603,8 @@ button {
    das unabhängig von der Position in der Datei sicher. */
 .knopf-neben.tagdrilldown-zurueck {
   flex: 0 0 auto;
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: var(--raum-1) var(--raum-2);
+  font-size: var(--grad-3);
 }
 
 /* Bissantz: die tragenden Ziffern bleiben in voller Stärke, Tausender-
@@ -2417,10 +2645,15 @@ button {
   border-collapse: collapse;
 }
 
+/* Die Kopfzeile GEHOERT zum Kopfbereich, nicht zu den Daten: hier wird
+   sortiert, gefiltert und gruppiert. Sie traegt deshalb dieselbe
+   Flaeche wie die Leisten darueber - und weil sie sticky ist, bleibt
+   der Kopfbereich beim Scrollen als getoenter Block sichtbar, waehrend
+   die weissen Datenzeilen darunter durchlaufen. */
 .arbeitstabelle thead {
   position: sticky;
   top: 0;
-  background: var(--flaeche);
+  background: var(--flaeche-rahmen);
 }
 
 .arbeitstabelle th {
@@ -2430,12 +2663,15 @@ button {
      --linie (siehe Kommentar bei --linie-tabelle in :root): er ist die
      Kante, an der die sticky Kopfzeile vom scrollenden Inhalt abgesetzt
      ist, und darf deutlicher bleiben als die Zeilen darunter. */
-  padding: 16px 18px;
-  font-size: 12px;
+  padding: var(--raum-3) var(--raum-4);
+  font-size: var(--grad-3);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--text-leise);
-  border-bottom: 1px solid var(--linie);
+  /* DIE Kante des Kopfbereichs: oberhalb wird bedient, unterhalb wird
+     gelesen. Die einzige Stelle in dieser Spalte, an der --kontur
+     steht - alle Trennungen innerhalb des Kopfbereichs bleiben leise. */
+  border-bottom: 1px solid var(--kontur);
 }
 
 /* Punkt 2, woertlich: Zeilenhoehe, Innenabstaende, Linienfuehrung. Noch
@@ -2447,9 +2683,25 @@ button {
    waehrend der jetzt grosszuegigere Abstand selbst schon Struktur genug
    liefert. */
 .arbeitstabelle td {
-  padding: 13px 18px;
+  padding: var(--raum-3) var(--raum-4);
   height: var(--zeile);
   border-bottom: 1px solid var(--linie-tabelle);
+}
+
+/* DIE EINE LINKE KANTE. Zellen tragen --raum-4 Innenabstand, damit die
+   Spalten nicht auseinanderlaufen; die erste und die letzte Zelle
+   bekommen --raum-5 zur Bereichskante hin - denselben Wert wie
+   Werkzeugleiste, Kopftafel und Filterleiste darueber. Gemessen standen
+   dort vorher 224 / 222 / 218 px nebeneinander; jetzt beginnt jede
+   Zeile dieses Bereichs an derselben Stelle. */
+.arbeitstabelle th:first-child,
+.arbeitstabelle td:first-child {
+  padding-left: var(--raum-5);
+}
+
+.arbeitstabelle th:last-child,
+.arbeitstabelle td:last-child {
+  padding-right: var(--raum-5);
 }
 
 .arbeitstabelle tbody tr {
@@ -2486,12 +2738,35 @@ button {
   background: var(--zebra);
 }
 
+/* ===== Zeilenzustaende (Gliederungsregel Punkt 4 im Dateikopf) =====
+   Gemessen war der bisherige Stand: Ueberfahren hob sich mit 1,06:1 ab,
+   die AUSGEWAEHLTE Zeile mit 1,13:1 auf Weiss und 1,04:1 auf einem
+   Zebrastreifen. Die Auswahl sagt, zu welchem Datensatz die offene
+   Detailmaske gehoert - das ist Information, allein ueber Farbe
+   getragen, und sie war praktisch unsichtbar. Eine kraeftigere Flaeche
+   war kein Ausweg: schon bei 1,20:1 faellt --warnung-text in derselben
+   Zeile unter 4,5:1. Ein Balken links unterliegt dieser Schranke nicht.
+   Ueberfahren: grauer Balken (--kontur, 3,64:1 auf --flaeche, 3,31:1
+   auf einem Zebrastreifen) OHNE Flaechenwechsel - der Streifen bleibt
+   damit sichtbar, statt unter dem Zeiger zu verschwinden. */
 .arbeitstabelle tbody tr:hover {
-  background: var(--grund);
+  box-shadow: inset 3px 0 0 var(--kontur);
 }
 
-.arbeitstabelle tbody tr.ausgewaehlt {
-  background: #eef1fb;
+/* Ausgewaehlt: mariner Balken (17,29:1) und dieselbe Flaeche, die auch
+   der Kopfbereich traegt. Das ist keine Verwechslung, sondern die
+   Verbindung: die gewaehlte Zeile IST der Griff der offenen Maske, und
+   sie traegt denselben Ton wie die uebrigen Bedienflaechen. Alle vier
+   Statusfarben halten auf dieser Flaeche ihre 4,5:1 (--text-leise
+   5,07:1, --gut 4,56:1, --warnung-text 4,53:1, --schlecht 4,86:1).
+   Auch beim Ueberfahren bleibt der marine Balken stehen (eigene, spaeter
+   stehende Regel mit hoeherer Spezifitaet): die Auswahl ist ein
+   dauerhafter Zustand, das Ueberfahren ein voruebergehender - der
+   dauerhafte darf vom voruebergehenden nicht ueberschrieben werden. */
+.arbeitstabelle tbody tr.ausgewaehlt,
+.arbeitstabelle tbody tr.ausgewaehlt:hover {
+  background: var(--flaeche-rahmen);
+  box-shadow: inset 3px 0 0 var(--marine);
 }
 
 /* Farbe trägt Bedeutung, nicht Dekoration: Status-Zellen wie "defekt"
@@ -2539,12 +2814,12 @@ button {
 .zeilen-aktionen-zelle {
   width: 1%;
   white-space: nowrap;
-  padding: 4px 8px;
+  padding: var(--raum-1) var(--raum-2);
 }
 
 .zeilen-aktionen {
   display: flex;
-  gap: 4px;
+  gap: var(--raum-1);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
@@ -2613,7 +2888,7 @@ button {
 .spaltenkopf {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--raum-2);
 }
 
 /* Punkt 4, woertlich: "sie sind jetzt Bedienelemente und duerfen das
@@ -2632,10 +2907,10 @@ button {
 .spaltenkopf-gruppenknopf {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--raum-1);
   border: 1px solid var(--text-leise);
   background: var(--flaeche);
-  padding: 4px 8px;
+  padding: var(--raum-1) var(--raum-2);
   border-radius: 4px;
   color: inherit;
   font: inherit;
@@ -2646,23 +2921,25 @@ button {
 
 .spaltenkopf-sortknopf:hover,
 .spaltenkopf-gruppenknopf:hover {
-  background: var(--grund);
+  background: var(--flaeche-rahmen);
   border-color: var(--marine);
   color: var(--marine);
 }
 
-/* aria-pressed traegt den Zustand, keine zweite Ikone - derselbe helle
-   "aktiv"-Ton (#eef1f7), den auch der Filter-Auswahlzustand weiter unten
-   traegt (siehe .spaltenkopf-filter-aktiv), damit "aktiv" innerhalb der
-   Tabelle ueberall gleich aussieht. Die Navigation traegt seit Punkt 6
-   (siehe #navigation button[aria-current="page"] weiter oben) einen
-   eigenen, kraeftigeren Ton (--marine) - ein bewusster Unterschied:
-   diese Flaeche hier ist ein kleines Bedienelement in einer Tabellen-
-   zeile, keine ganztaegig sichtbare Rubrik. */
+/* Der bisherige "aktiv"-Ton #eef1f7 mass 1,13:1 gegen Weiss und war
+   damit von der Farbe der AUSGEWAEHLTEN ZEILE (#eef1fb, ebenfalls
+   1,13:1) nicht zu unterscheiden - zwei Toene, die gleich aussahen und
+   Verschiedenes bedeuteten. Er ist ersatzlos entfallen. Ein
+   eingeschalteter Umschalter traegt jetzt dieselbe Sprache wie die
+   aktive Rubrik in der Navigation: volle Flaeche in --marine, weisse
+   Schrift (17,29:1). Das Argument der vorigen Fassung - "ein kleines
+   Bedienelement, keine ganztaegig sichtbare Rubrik" - hat einen
+   unsichtbaren Zustand hervorgebracht; ein Zustand, den man nicht
+   sieht, ist keiner. */
 .spaltenkopf-gruppenknopf[aria-pressed="true"] {
-  background: #eef1f7;
+  background: var(--marine);
   border-color: var(--marine);
-  color: var(--marine);
+  color: var(--flaeche);
 }
 
 .spaltenkopf-sortsymbol {
@@ -2770,7 +3047,7 @@ button {
 .spaltenkopf-filterfeld-wrapper {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--raum-1);
   width: 100%;
 }
 
@@ -2797,10 +3074,10 @@ button {
    begann) - keine der drei Zeilen hatte fuer sich betrachtet zu wenig
    Land, aber zusammengenommen ergab sich ein einziger dichter Block. */
 .spaltenkopf-filterzeile th {
-  padding: 12px 14px;
+  padding: var(--raum-3) var(--raum-4);
   text-transform: none;
   letter-spacing: normal;
-  background: var(--grund);
+  background: var(--flaeche-rahmen);
   border-bottom: 1px solid var(--linie);
 }
 
@@ -2808,7 +3085,7 @@ button {
 .spaltenkopf-filterzeile input {
   width: 100%;
   min-width: 56px;
-  padding: 4px 6px;
+  padding: var(--raum-1) var(--raum-2);
   /* --text-leise statt --linie (anders als .filterfeld select oben,
      unveraendert gelassen - das ist die bestehende Filterleiste, nicht
      Teil dieses Bausteins): gemessen liegt --linie auf Weiss bei nur
@@ -2819,7 +3096,7 @@ button {
   border: 1px solid var(--text-leise);
   border-radius: 4px;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--grad-3);
   color: var(--text);
   background: var(--flaeche);
 }
@@ -2828,12 +3105,18 @@ button {
    woertlich): spaltenkopfFilterfeld() in rahmen.js setzt diese Klasse
    GENAU dann, wenn spaltenkopfFilterwerte fuer diese Spalte einen Wert
    traegt - unabhaengig davon, ob es ein <select> oder ein <input> ist.
-   Dieselbe "aktiv"-Farbe wie beim Gruppierungsknopf (#eef1f7, siehe
-   aria-pressed weiter oben) statt einer neuen vierten Bedeutung fuer
-   dieselbe Sache innerhalb der Tabelle. */
+   DIESELBE Sprache wie beim globalen Suchfeld (#feld-suche.
+   feld-suche-aktiv in der Kopfleiste): ein roter Rahmen. In dieser
+   Warenwirtschaft heisst Rot "hier hinsehen" - das gilt fuer ein Feld,
+   das den Bestand gerade beschneidet, ebenso wie fuer das Suchfeld
+   oben. Der Rahmen wird ueber einen Schlagschatten VERDOPPELT statt
+   ueber eine zweite Randbreite: 2px border verschoebe das Feld um einen
+   Pixel, sobald der Filter greift, und liesse die ganze Zeile zucken.
+   Kein Flaechenwechsel mehr - der frueher hier stehende Ton war von der
+   Auswahlfarbe der Tabellenzeile nicht zu unterscheiden. */
 .spaltenkopf-filterzeile .spaltenkopf-filter-aktiv {
-  background: #eef1f7;
-  border-color: var(--marine);
+  border-color: var(--rot);
+  box-shadow: 0 0 0 1px var(--rot);
   font-weight: 600;
 }
 
@@ -2846,12 +3129,12 @@ button {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
-  padding: 6px 12px;
-  font-size: 12px;
+  gap: var(--raum-3);
+  padding: var(--raum-2) var(--raum-3);
+  font-size: var(--grad-3);
   color: var(--text-leise);
   border-bottom: 1px solid var(--linie);
-  background: var(--grund);
+  background: var(--flaeche-rahmen);
 }
 
 .spaltenkopf-hinweis-knopf {
@@ -2860,9 +3143,18 @@ button {
   padding: 0;
   color: var(--marine);
   font: inherit;
-  font-size: 12px;
+  font-size: var(--grad-3);
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* Beide Textknoepfe dieser Oberflaeche (dieser hier und der
+   "Filter zuruecksetzen" in der Leerzeile) hatten keinen
+   Ueberfahren-Zustand. Ein unterstrichener Text, der sich beim
+   Ueberfahren nicht ruehrt, sieht aus wie Fliesstext mit Unterstrich. */
+.spaltenkopf-hinweis-knopf:hover,
+.spaltenkopf-leerzeile button:hover {
+  color: var(--rot);
 }
 
 /* Gruppen-Ueberschriftszeile (<th scope="rowgroup">, siehe
@@ -2871,7 +3163,7 @@ button {
    abhebt, ohne eine dritte Flaechenfarbe einzufuehren. */
 .gruppenkopf-zeile th {
   text-align: left;
-  padding: 6px 12px;
+  padding: var(--raum-2) var(--raum-3);
   background: var(--grund);
   border-bottom: 1px solid var(--linie);
   border-top: 1px solid var(--linie);
@@ -2880,11 +3172,11 @@ button {
 }
 
 .gruppenkopf-beschriftung {
-  margin-right: 16px;
+  margin-right: var(--raum-4);
 }
 
 .gruppenkopf-teilsumme {
-  margin-right: 16px;
+  margin-right: var(--raum-4);
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   color: var(--text-leise);
@@ -2897,13 +3189,13 @@ button {
    wie es die Bereichs-eigenen Filter fuer sich selbst schon verlangen
    (siehe flotteAufbauen() in flotte.js). */
 .spaltenkopf-leerzeile td {
-  padding: 16px 12px;
+  padding: var(--raum-4) var(--raum-3);
   color: var(--text-leise);
   text-align: center;
 }
 
 .spaltenkopf-leerzeile button {
-  margin-left: 8px;
+  margin-left: var(--raum-2);
   border: none;
   background: none;
   padding: 0;
@@ -2913,25 +3205,38 @@ button {
   cursor: pointer;
 }
 
+/* ===== Ladehinweis beim Bereichswechsel (bereichWechseln() in
+   rahmen.js) =====
+   Dieselbe Form wie der Ladezustand der ganzen Seite (#zustand-laden):
+   ein leiser Satz in der Mitte der Flaeche, keine Spielerei. Er steht
+   nur die paar Zehntelsekunden bis zur Antwort der Datenbank - was hier
+   blinkt oder sich dreht, wuerde in dieser Zeit nur zappeln. */
+.ladehinweis {
+  margin: auto;
+  padding: var(--raum-6);
+  color: var(--text-leise);
+  text-align: center;
+}
+
 /* ===== Leermaske (zeigeLeermaske) ===== */
 
 .leermaske {
   margin: auto;
   max-width: 360px;
-  padding: 32px;
+  padding: var(--raum-6);
   text-align: center;
 }
 
 .leermaske h2 {
   color: var(--marine);
-  margin: 0 0 8px;
-  font-size: 16px;
+  margin: 0 0 var(--raum-2);
+  font-size: var(--grad-5);
 }
 
 .leermaske p {
   color: var(--text-leise);
   line-height: 1.5;
-  margin: 0 0 16px;
+  margin: 0 0 var(--raum-4);
 }
 
 /* Gefunden bei der Erprobung von Punkt 2b: die neue Raeder-je-Tag-Tabelle
@@ -2951,7 +3256,16 @@ button {
   flex: 1 1 45%;
   overflow-y: auto;
   overflow-x: auto;
-  padding: 16px;
+  /* Rang 2 der Gliederungsregel: hier stehen Daten, also weiss wie die
+     Liste. Die Bereichskante zwischen beiden traegt --kontur und sitzt
+     an #arbeitsliste (border-right) - EINE Linie, nicht zwei. Die
+     Flaeche ausdruecklich gesetzt statt vom Elternelement geerbt: wer
+     hier spaeter etwas aendert, soll den Rang lesen koennen. Der
+     Innenabstand ist derselbe --raum-5 wie in jedem anderen Bereich;
+     er stand vorher auf 16px und liess die Maske enger beginnen als die
+     Liste daneben. */
+  background: var(--flaeche);
+  padding: var(--raum-5);
   transition: flex-basis 160ms ease, padding 160ms ease;
 }
 
@@ -2971,18 +3285,33 @@ button {
    Punkt 1 - siehe zeigeMaske() in rahmen.js). margin-bottom sitzt jetzt
    hier statt am h2 selbst, damit der Abstand zur ersten Formularzeile
    gleich bleibt, egal ob der Titel ein- oder zweizeilig umbricht. */
+/* Der Titel gehoert nicht zum Formular darunter, sondern benennt die
+   ganze Maske - eine leise Linie sagt das, dieselbe --linie wie jede
+   andere Trennung innerhalb eines Bereichs (die kraeftige --kontur
+   traegt in dieser Spalte nur die Aussenkante zur Liste hin).
+   BEWUSST NICHT MITLAUFEND (position: sticky) - im Browser erprobt und
+   wieder verworfen: der Rollbereich ist #detailmaske SELBST und traegt
+   einen Innenabstand, und die Haftflaeche eines sticky-Elements endet an
+   dessen Inhaltskante, nicht an der Oberkante des Rollbereichs. Der
+   Titel blieb dadurch 24px unterhalb kleben, und das erste Formularfeld
+   schob sich in diesem Streifen sichtbar ueber ihn hinweg. Den
+   Innenabstand dafuer an die Kinder zu verteilen ginge nicht: die
+   Bereiche haengen eigene Bloecke in diese Maske (Stationsverkehr,
+   Monats-Drill-Down), die eine solche Regel gar nicht kennen wuerden. */
 .detailmaske-kopf {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--raum-3);
+  padding-bottom: var(--raum-3);
+  margin-bottom: var(--raum-5);
+  border-bottom: 1px solid var(--linie);
 }
 
 #detailmaske h2 {
   color: var(--marine);
   margin: 0;
-  font-size: 16px;
+  font-size: var(--grad-5);
 }
 
 /* Immer sichtbar (anders als .zeilen-aktion, das erst bei :hover/
@@ -3032,8 +3361,8 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: var(--raum-5);
+  margin-bottom: var(--raum-5);
   border: 1px solid var(--linie);
   background: var(--grund);
 }
@@ -3050,21 +3379,21 @@ button {
 .formularzeile {
   display: flex;
   flex-direction: column;
-  margin-bottom: 12px;
+  margin-bottom: var(--raum-3);
 }
 
 .formularzeile label {
   font-weight: 600;
   color: var(--text-leise);
-  margin-bottom: 4px;
-  font-size: 12px;
+  margin-bottom: var(--raum-1);
+  font-size: var(--grad-3);
 }
 
 .formularzeile input,
 .formularzeile select,
 .formularzeile textarea {
-  padding: 6px 8px;
-  border: 1px solid var(--feld-rahmen);
+  padding: var(--raum-2) var(--raum-2);
+  border: 1px solid var(--kontur);
   border-radius: 4px;
   font: inherit;
   color: var(--text);
@@ -3087,8 +3416,8 @@ button {
 
 .knopfleiste {
   display: flex;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--raum-2);
+  margin-top: var(--raum-4);
   justify-content: flex-end;
 }
 
@@ -3096,7 +3425,7 @@ button {
 .knopf-neben,
 .knopf-gefaehrlich,
 .knopf-schaffend {
-  padding: 8px 16px;
+  padding: var(--raum-2) var(--raum-4);
   border: 1px solid transparent;
   border-radius: 4px;
   font: inherit;
@@ -3108,8 +3437,12 @@ button {
   color: var(--flaeche);
 }
 
+/* Aufgehellte Marine bzw. abgedunkeltes Gruen als eigene Merkmale statt
+   als Einzelwerte mitten im Regelwerk: beide sind reine Zustandsformen
+   ihrer Grundfarbe, und wer die Grundfarbe aendert, muss den Zustand
+   mitaendern - dafuer muss er ihn finden koennen. */
 .knopf-haupt:hover {
-  background: #0a2560;
+  background: var(--marine-hell);
 }
 
 /* ===== Punkt 4: Handlungsknöpfe grün =====
@@ -3134,12 +3467,12 @@ button {
      AUFGEHELLT, hier bewusst das übliche Muster "dunkler bei Hover" -
      ein Kontrastwert von 8.04:1 für Weiß auf diesem Ton bleibt
      reichlich über der Untergrenze). */
-  background: #155c33;
+  background: var(--gut-dunkel);
 }
 
 .knopf-neben {
   background: var(--flaeche);
-  border-color: var(--feld-rahmen);
+  border-color: var(--kontur);
   color: var(--text);
 }
 
@@ -3178,7 +3511,7 @@ button {
 .velocity-dialog {
   min-width: 320px;
   max-width: 420px;
-  padding: 20px;
+  padding: var(--raum-5);
   border: none;
   border-radius: 6px;
   box-shadow: 0 8px 24px rgba(6, 24, 65, 0.25);
@@ -3190,12 +3523,12 @@ button {
 
 .velocity-dialog h2 {
   color: var(--marine);
-  margin: 0 0 12px;
-  font-size: 16px;
+  margin: 0 0 var(--raum-3);
+  font-size: var(--grad-5);
 }
 
 .velocity-dialog p {
-  margin: 0 0 12px;
+  margin: 0 0 var(--raum-3);
   line-height: 1.5;
 }
 
@@ -3203,26 +3536,34 @@ button {
   display: block;
   font-weight: 600;
   color: var(--text-leise);
-  margin-bottom: 4px;
-  font-size: 12px;
+  margin-bottom: var(--raum-1);
+  font-size: var(--grad-3);
 }
 
 .velocity-dialog input {
   width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--feld-rahmen);
+  padding: var(--raum-2) var(--raum-2);
+  border: 1px solid var(--kontur);
   border-radius: 4px;
   font: inherit;
-  margin-bottom: 4px;
+  margin-bottom: var(--raum-1);
 }
 
+/* Zweiter Teil des Befunds "die Bildschirmabschnitte heben sich nicht
+   ab": die Statuszeile trug #ffffff und stand damit auf derselben
+   Flaeche wie die Navigation links darueber und wie die Arbeitsliste -
+   eine Zeile Text am unteren Rand, die nach uebriggebliebenem Text
+   aussah statt nach einem Bereich. Jetzt derselbe Rang wie die
+   Navigation (beides Anwendungsrahmen, in beiden wird nicht gelesen,
+   sondern abgelesen), dieselbe Kante wie ueberall, und derselbe linke
+   Rand wie die Kopfleiste ganz oben. */
 #statuszeile {
   grid-area: fuss;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  background: var(--flaeche);
-  border-top: 1px solid var(--linie);
+  padding: 0 var(--raum-5);
+  background: var(--flaeche-rahmen);
+  border-top: 1px solid var(--kontur);
   color: var(--text-leise);
 }
 
@@ -3246,8 +3587,8 @@ button {
 .stationraeder,
 .stationverkehr {
   border-top: 1px solid var(--linie);
-  margin-top: 20px;
-  padding-top: 16px;
+  margin-top: var(--raum-5);
+  padding-top: var(--raum-4);
 }
 
 .stationbelegung h3,
@@ -3255,8 +3596,8 @@ button {
 .stationraeder h3,
 .stationverkehr h3 {
   color: var(--marine);
-  font-size: 14px;
-  margin: 0 0 8px;
+  font-size: var(--grad-4);
+  margin: 0 0 var(--raum-2);
 }
 
 /* Die Detailkarte wiederverwendet .stationenkarte-leaflet-huelle/
@@ -3270,7 +3611,7 @@ button {
 }
 
 .stationdetailkarte .stationenkarte-erklaerung {
-  margin-bottom: 8px;
+  margin-bottom: var(--raum-2);
 }
 
 /* Hervorhebung der angezeigten Station auf der Detailkarte (Auftrag:
@@ -3293,26 +3634,26 @@ button {
 
 .stationverkehr h4 {
   color: var(--text);
-  font-size: 12px;
-  margin: 0 0 6px;
+  font-size: var(--grad-3);
+  margin: 0 0 var(--raum-2);
 }
 
 .stationraeder-tabelle {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--grad-4);
 }
 
 .stationraeder-tabelle th,
 .stationraeder-tabelle td {
-  padding: 3px 8px;
+  padding: var(--raum-1) var(--raum-2);
   border-bottom: 1px solid var(--linie);
   text-align: left;
 }
 
 .stationraeder-tabelle thead th,
 .stationraeder-tabelle tr:first-child th {
-  font-size: 11px;
+  font-size: var(--grad-2);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   color: var(--text-leise);
@@ -3329,7 +3670,7 @@ button {
 .stationverkehr-fehler,
 .stationdetailkarte-leer {
   color: var(--text-leise);
-  font-size: 12px;
+  font-size: var(--grad-3);
 }
 
 .stationraeder-fehler,
@@ -3341,7 +3682,7 @@ button {
    stationen.js, Gestaltungsauftrag Stationen, Punkt 3) =====
    Zwei Farben statt einer: Abgang (--marine, dieselbe "das ist die
    Hauptreihe"-Farbe wie die aktuelle Sparkline-Säule) und Zugang
-   (--skala-rahmen, dieselbe schon gemessene neutrale Fläche wie die
+   (--grafik-neutral, dieselbe schon gemessene neutrale Fläche wie die
    übrigen Sparkline-Säulen) - beide bereits gemessen (17.29:1 bzw.
    3.64:1 auf Weiß), keine dritte, unvermessene Farbe nur für diesen
    einen Baustein. Bewusst NICHT --gut/--schlecht: ein Zugang ist nicht
@@ -3349,16 +3690,16 @@ button {
    nur ihre schiefe Verteilung über den Tag ist die eigentliche Aussage. */
 .stationverkehr-legende {
   display: flex;
-  gap: 16px;
-  font-size: 11px;
+  gap: var(--raum-4);
+  font-size: var(--grad-2);
   color: var(--text-leise);
-  margin-bottom: 8px;
+  margin-bottom: var(--raum-2);
 }
 
 .stationverkehr-legende-eintrag {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--raum-2);
 }
 
 .stationverkehr-legende-eintrag::before {
@@ -3370,10 +3711,10 @@ button {
 }
 
 .stationverkehr-legende-abgang::before { background: var(--marine); }
-.stationverkehr-legende-zugang::before { background: var(--skala-rahmen); }
+.stationverkehr-legende-zugang::before { background: var(--grafik-neutral); }
 
 .stationverkehr-block {
-  margin-bottom: 16px;
+  margin-bottom: var(--raum-4);
 }
 
 .zeitfenstergrafik {
@@ -3385,9 +3726,9 @@ button {
 
 .zeitfenstergrafik-grundlinie { stroke: var(--linie); stroke-width: 1; }
 .zeitfenstergrafik-abgang     { fill: var(--marine); }
-.zeitfenstergrafik-zugang     { fill: var(--skala-rahmen); }
+.zeitfenstergrafik-zugang     { fill: var(--grafik-neutral); }
 .zeitfenstergrafik-achse {
-  font-size: 9px;
+  font-size: var(--grad-1);
   fill: var(--text-leise);
   text-anchor: middle;
 }
@@ -3398,11 +3739,17 @@ button {
    Eigenes Verzeichnis statt .monatsdrilldown-Optik: die Karte lebt in
    #arbeitsliste (eine eigene Ansicht neben der Tabelle, siehe
    Kopfkommentar von stationenAufbauen()), nicht in #detailmaske. */
+/* Waagerecht --raum-5 wie jeder andere Bereichsrand dieser Oberflaeche:
+   die Karte sass bei 232px, waehrend Reiterleiste, Werkzeugleiste,
+   Kopftafel und Tabelle daneben alle bei 224px begannen. Senkrecht
+   bleibt --raum-6: eine Landkarte braucht oben und unten mehr Luft als
+   eine Tabellenzeile, das ist eine Entscheidung ueber diesen einen
+   Baustein und laeuft der Flucht nicht zuwider. */
 .stationenkarte {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 28px 32px;
+  gap: var(--raum-5);
+  padding: var(--raum-6) var(--raum-5);
 }
 
 .stationenkarte-kopf {
@@ -3410,12 +3757,12 @@ button {
   flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--raum-4);
 }
 
 .stationenkarte-erklaerung {
   color: var(--text-leise);
-  font-size: 12px;
+  font-size: var(--grad-3);
   max-width: 60ch;
   margin: 0;
   line-height: 1.5;
@@ -3424,9 +3771,9 @@ button {
 .stationenkarte-schalter {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--raum-2);
   white-space: nowrap;
-  font-size: 13px;
+  font-size: var(--grad-4);
 }
 
 .stationenkarte-flaeche {
@@ -3459,14 +3806,14 @@ button {
    sichtbar/bedienbar, siehe stationenKarteInitialisieren()). */
 .stationenkarte-fehler {
   color: var(--schlecht);
-  font-size: 13px;
-  padding: 16px 0;
+  font-size: var(--grad-4);
+  padding: var(--raum-4) 0;
 }
 
 .stationenkarte-kachelhinweis {
   color: var(--warnung-text);
-  font-size: 12px;
-  margin: 8px 0 0;
+  font-size: var(--grad-3);
+  margin: var(--raum-2) 0 0;
 }
 
 /* Weisse Scheibe HINTER jeder Donut-Marke (stationenKarteStationsMarke()
@@ -3517,7 +3864,7 @@ button {
    darunter liegt (eine Kartenkachel beliebiger Farbe, eine Stationsmarke,
    eine andere Kundenmarke), bleibt der Kreis dadurch als EIGENE Form
    erkennbar, statt mit seiner Umgebung zu verschmelzen (siehe Bericht:
-   --kunden gegen --marine misst nur 2.01:1, gegen --skala-rahmen nur
+   --kunden gegen --marine misst nur 2.01:1, gegen --grafik-neutral nur
    2.36:1 - beide unter der fuer Grafik verlangten 3:1, wenn zwei
    Flaechen ohne Trennung aneinanderstiessen). filter: drop-shadow
    zusaetzlich zum Halo, aus demselben Grund wie bei
@@ -3557,7 +3904,7 @@ button {
 
 .stationenkarte-station-text {
   color: var(--text);
-  font-size: 10px;
+  font-size: var(--grad-1);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 3px var(--flaeche), 0 0 3px var(--flaeche), 0 0 3px var(--flaeche);
@@ -3565,6 +3912,6 @@ button {
 
 .stationenkarte-kundenort-text {
   color: var(--text-leise);
-  font-size: 9px;
+  font-size: var(--grad-1);
   text-shadow: 0 0 3px var(--flaeche), 0 0 3px var(--flaeche), 0 0 3px var(--flaeche);
 }

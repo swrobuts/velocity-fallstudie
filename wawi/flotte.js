@@ -203,7 +203,15 @@ async function flotteAufbauen() {
         // vergessen.
         { feld: 'standort',       titel: t('field.standort'), filterbar: false,
           formatieren: (wert) => wert || t('misc.underway') },
-        { feld: 'offene_schaeden', titel: t('field.schaeden'), formatieren: (n) => n || '', summierbar: true }
+        // klasse:'zahl' (Vorgabe der Arbeitstabelle, siehe
+        // .arbeitstabelle td.zahl in style.css): eine Anzahl ist eine
+        // Zahl und gehoert rechtsbuendig mit Tabellenziffern gesetzt,
+        // wie jede Zahlenspalte der Auswertungen. Diese Spalte lief als
+        // einzige Anzahl der Flotte linksbuendig - derselbe Wert, zwei
+        // Erscheinungsformen, je nachdem, in welchem Bereich man ihn
+        // ansieht.
+        { feld: 'offene_schaeden', titel: t('field.schaeden'), klasse: 'zahl',
+          formatieren: (n) => n || '', summierbar: true }
     ], radMaske, radZeilenAktionen);
 
     // meldeVorgang statt melde: nach einer Buchung (Statuswechsel,

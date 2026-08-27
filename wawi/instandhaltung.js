@@ -25,6 +25,14 @@
 // dieselbe Bedeutung verdient dasselbe Symbol, nicht ein zweites,
 // aehnliches. Strichfamilie wie die vier anderen Bereichs-Icons (siehe
 // .bereich-icon in style.css).
+// Anzeigeform eines Zeitstempels in einer Tabellenspalte - Tag, Monat,
+// Jahr, ohne Uhrzeit. Dieselbe Form, die die Kundschaft ueber
+// kundenDatumFormat() schon benutzt (kunden.js); die Uhrzeit einer
+// Schadensmeldung interessiert in der Uebersicht nicht, das Alter steht
+// ohnehin in der Nachbarspalte "Offen seit". datumFormat() aus rahmen.js
+// folgt dabei der eingestellten Sprache, nicht fest de-DE.
+const ZEITSTEMPEL_FORMAT = { day: '2-digit', month: '2-digit', year: 'numeric' };
+
 const ICON_INSTANDHALTUNG = '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 005.4-5.4l-2.6 2.6-2-2z"/></svg>';
 
 bereichAnmelden({
@@ -438,7 +446,19 @@ async function schaedenZeigen(vorgang) {
             // hier zum vierten Mal.
             klasse: (z) => (z.schwere === 'fahruntauglich' ? 'schlecht' : z.schwere === 'mittel' ? 'warnung' : '')
         },
-        { feld: 'gemeldet_am',  titel: t('field.gemeldet') },
+        // formatieren NEU: gemeldet_am ist ein timestamptz und kam
+        // deshalb als roher ISO-Zeitstempel aus PostgREST
+        // ("2026-08-25T23:00:00+00:00") - genau so stand er auch in der
+        // Spalte, waehrend dieselbe Art Angabe in der Kundschaft
+        // ("Kunde seit", registriert_am) laengst als "06.02.2016"
+        // erschien. Ein Feld, zwei Erscheinungsformen, je nach Bereich.
+        // filterbar:false aus demselben Grund wie dort: der
+        // Spaltenkopf-Filter vergleicht gegen den ROHEN Zellwert, ein im
+        // Anzeigeformat getippter Suchtext faende dort nie einen
+        // Treffer. Sortierbar bleibt die Spalte (Vorgabe) - ein
+        // ISO-Zeitstempel sortiert als Text schon chronologisch.
+        { feld: 'gemeldet_am',  titel: t('field.gemeldet'), filterbar: false,
+          formatieren: (wert) => (wert ? datumFormat(wert, ZEITSTEMPEL_FORMAT) : '') },
         {
             feld: 'offen_seit', titel: t('field.offenSeit'), formatieren: alterKurz,
             // filterbar:false: der Mindestalter-Schieber oben deckt
@@ -769,7 +789,8 @@ async function auftraegeZeigen(vorgang) {
         { feld: 'auftragsnummer',  titel: t('field.auftrag') },
         { feld: 'status',          titel: t('field.stand'), formatieren: (wert) => statusAnzeige(wert),
           klasse: (z) => (z.status === 'offen' ? 'warnung' : '') },
-        { feld: 'eroeffnet_am',    titel: t('field.eroeffnet') },
+        { feld: 'eroeffnet_am',    titel: t('field.eroeffnet'), filterbar: false,
+          formatieren: (wert) => (wert ? datumFormat(wert, ZEITSTEMPEL_FORMAT) : '') },
         { feld: 'bearbeiter',      titel: t('field.bearbeiter'), formatieren: (w) => w || '—' }
     ], auftragMaske);
 

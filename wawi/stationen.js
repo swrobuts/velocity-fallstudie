@@ -193,7 +193,13 @@ async function stationenAufbauen() {
             { feld: 'stationsnummer', titel: t('field.nummer') },
             { feld: 'name',           titel: t('field.station') },
             { feld: 'ort',            titel: t('field.ort') },
-            { feld: 'belegt',         titel: t('field.belegt'), formatieren: (b, z) => `${zahlFormat(b)} / ${zahlFormat(z.kapazitaet)}` },
+            // klasse:'zahl' auf beiden Anzahlspalten, aus demselben Grund
+            // wie bei offene_schaeden in flotte.js: eine Anzahl steht in
+            // dieser Warenwirtschaft rechtsbuendig mit Tabellenziffern.
+            // "7 / 20" ebenfalls - der Bruch ist eine Zahl mit ihrem
+            // Bezug, keine Beschriftung.
+            { feld: 'belegt',         titel: t('field.belegt'), klasse: 'zahl',
+              formatieren: (b, z) => `${zahlFormat(b)} / ${zahlFormat(z.kapazitaet)}` },
             // Nur EIN Parameter (die ganze Zeile), nicht (f) wie im
             // Auftragstext: zeigeListe in rahmen.js ruft eine Funktions-
             // Spalte als spalte.klasse(zeile) auf, nicht spalte.klasse(wert).
@@ -203,7 +209,12 @@ async function stationenAufbauen() {
             // statusKlasse in flotte.js (siehe dortiger Kommentar), hier nur
             // wiederholt, weil der Auftragstext den Fehler ein zweites Mal
             // enthaelt.
-            { feld: 'frei',           titel: t('field.frei'),   klasse: (z) => (z.frei === 0 ? 'warnung' : '') }
+            // zeigeListe() setzt den Rueckgabewert als EINEN
+            // Klassenstring (siehe baueDatenzeile() in rahmen.js) - 'zahl
+            // warnung' wendet beide Regeln an, genau wie es die
+            // Auswertungen fuer ihre Zahlenspalten schon tun.
+            { feld: 'frei',           titel: t('field.frei'),
+              klasse: (z) => (z.frei === 0 ? 'zahl warnung' : 'zahl') }
         ], stationMaske);
         // KEIN fuenfter Parameter (Zeilenicons, Punkt 3): stationMaske()
         // unten kennt genau eine Handlung, "Stilllegen" - und die ist
