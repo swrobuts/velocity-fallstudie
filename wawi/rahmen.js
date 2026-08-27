@@ -4618,6 +4618,140 @@ function baueKachel(kachel) {
     return feld;
 }
 
+// ===== Hinweisfenster (Gestaltungsauftrag Kopftafel, Punkt 2) =====
+//
+// "Es gibt kein Mouse-on-over" - woertlich der Befund, und doch FALSCH:
+// es gibt eins, als natives SVG-<title> bzw. HTML-title-Attribut an
+// jeder Grafik dieser Tafel (siehe zellbalken()/strukturBalken()/
+// abweichungsBalken()/saeulenSparkline()/lagepunkt() weiter unten, VOR
+// dieser Aenderung). Der Auftraggeber hat es schlicht nicht bemerkt -
+// aus gutem Grund: ein natives <title> erscheint erst nach rund einer
+// Sekunde Verharren, in der Darstellung des BETRIEBSSYSTEMS (nicht der
+// Seite), oft in der Naehe des Zeigers statt am Element - fuer "die
+// Daten muessen sich intuitiv ablesen lassen" schlicht zu unauffaellig.
+// Ein zweiter, unabhaengiger Mangel kommt hinzu: <title> reagiert NUR
+// auf :hover, nie auf Tastaturfokus - fuer jemanden, der die Tafel per
+// Tastatur bedient, existiert die Beschriftung dann ueberhaupt nicht.
+//
+// EIN gemeinsames DOM-Element fuer die GANZE Oberflaeche statt eines
+// eigenen pro Balken/Saeule/Segment: zur selben Zeit ist ohnehin nie
+// mehr als eine Beschriftung sichtbar (Maus und Tastaturfokus zeigen
+// beide auf genau eine Stelle), ein wiederverwendetes Element erspart
+// einer Tafel mit 13 Zeilen mal vier Grafikspalten hunderte nie
+// gebrauchte <div>s.
+let hinweisfensterElement = null;
+
+function hinweisfensterHolen() {
+    if (hinweisfensterElement) return hinweisfensterElement;
+    const el = document.createElement('div');
+    el.className = 'hinweisfenster';
+    // role="presentation": der Text steht bereits als aria-label/als
+    // Element-eigenes title-Attribut am Ausloeser (siehe
+    // hinweisfensterVerknuepfen() unten) - ein Bildschirmleser hat ihn
+    // damit schon, eine zweite Vorlesung desselben Inhalts ueber dieses
+    // <div> waere Laerm, kein Zugewinn.
+    el.setAttribute('role', 'presentation');
+    el.hidden = true;
+    document.body.append(el);
+    hinweisfensterElement = el;
+    return el;
+}
+
+// ankerRechteck: das getBoundingClientRect() des Ausloesers, nicht die
+// Zeigerposition - der Ausloeser selbst bewegt sich nicht (anders als
+// eine Drag-Operation), das Fenster darf deshalb an EINER berechneten
+// Stelle stehen bleiben, statt bei jeder Mausbewegung neu zu rechnen.
+function hinweisfensterZeigen(text, ankerRechteck) {
+    if (!text) return;
+    const el = hinweisfensterHolen();
+    el.textContent = text;
+    el.hidden = false;
+
+    // ERST NACH dem Einblenden messen - offsetWidth/-Height sind an
+    // einem hidden-Element immer 0.
+    const breite = el.offsetWidth;
+    const hoehe = el.offsetHeight;
+    const luft = 8;
+
+    // Vorgabe: mittig UEBER dem Anker. GESTALTUNGSAUFTRAG, erster
+    // Stolperstein, woertlich genannt: "ein Hinweisfenster, das am Rand
+    // aus dem Bild laeuft" - die Kopftafel-Grafiken der LETZTEN Spalte
+    // stehen ganz rechts im Fenster, ein mittig zentriertes Fenster
+    // ragte dort ueber den rechten Bildschirmrand hinaus. Deshalb an
+    // BEIDEN Raendern gegen das sichtbare Fenster geklemmt (nicht gegen
+    // die Tafel - die darf in sich scrollen, siehe .kopftafel in
+    // style.css, und bliebe dabei trotzdem im Fenster).
+    let x = ankerRechteck.left + ankerRechteck.width / 2 - breite / 2;
+    x = Math.max(luft, Math.min(x, window.innerWidth - breite - luft));
+
+    let y = ankerRechteck.top - hoehe - luft;
+    // Passt es oben nicht hin (die Kopftafel klebt am oberen
+    // Fensterrand, z. B. direkt nach dem Ausklappen), erscheint es
+    // stattdessen UNTER dem Anker statt teilweise unsichtbar darueber.
+    if (y < luft) y = ankerRechteck.bottom + luft;
+
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+}
+
+function hinweisfensterVerstecken() {
+    if (hinweisfensterElement) hinweisfensterElement.hidden = true;
+}
+
+// Bindet Maus UND Tastaturfokus an EIN Element mit EINEM Text - der
+// Regelfall bei einer Grafik, die insgesamt EINEN Wert zeigt
+// (zellbalken/abweichungsBalken/lagepunkt) oder bei der ZUSAMMENFASSUNG
+// einer mehrteiligen Grafik (das <svg> von strukturBalken()/
+// saeulenSparkline() selbst, zusaetzlich zu den Teilen - siehe
+// hinweisfensterTeilVerknuepfen() unten).
+//
+// focus/blur decken GENAU den zweiten Mangel des nativen <title> ab
+// (siehe Kopfkommentar oben): "was nur die Maus erreicht, ist fuer
+// einen Teil der Nutzer nicht da" (Auftrag, woertlich) - jemand, der
+// mit Tab zu dieser Grafik springt, sieht dieselbe Beschriftung, ohne
+// je eine Maus zu beruehren.
+function hinweisfensterVerknuepfen(ziel, text) {
+    ziel.addEventListener('mouseenter', () => hinweisfensterZeigen(text, ziel.getBoundingClientRect()));
+    ziel.addEventListener('mouseleave', hinweisfensterVerstecken);
+    ziel.addEventListener('focus', () => hinweisfensterZeigen(text, ziel.getBoundingClientRect()));
+    ziel.addEventListener('blur', hinweisfensterVerstecken);
+}
+
+// Fuer EINEN Teil einer mehrteiligen Grafik (eine Saeule von zwoelf, ein
+// Abschnitt eines Strukturbalkens) - GESTALTUNGSAUFTRAG, woertlich: "bei
+// mehrteiligen Grafiken je Teil". Bewusst OHNE eigenes mouseleave: das
+// Verstecken bleibt dem umschliessenden <svg> ueberlassen (siehe
+// hinweisfensterVerknuepfen() oben, dort dafuer aufgerufen) - sonst
+// risse ein kurzes mouseleave beim Wechsel von einer Saeule zur naechsten
+// das Fenster bei jedem Uebergang auf und wieder zu, obwohl der Zeiger
+// die Grafik nie tatsaechlich verlassen hat. Kein eigenes focus/blur:
+// einzelne <rect>-Teile bekommen bewusst KEIN tabindex (dieselbe
+// Begruendung wie beim <title> je <rect>, das saeulenSparkline() aus
+// genau diesem Grund nie einzeln fuer Bildschirmleser oeffnete - ein
+// Bildschirmleser bekommt die vollstaendige Aufzaehlung stattdessen
+// gebuendelt ueber das aria-label des ganzen <svg>) - fuer Tastaturfokus
+// gilt deshalb hier dieselbe EINE Zusammenfassung wie fuer einen
+// Bildschirmleser, nicht ein Tabstopp je Teil.
+function hinweisfensterTeilVerknuepfen(teil, text) {
+    teil.addEventListener('mouseenter', () => hinweisfensterZeigen(text, teil.getBoundingClientRect()));
+}
+
+// ZWEITER Stolperstein aus dem Gestaltungsauftrag, woertlich: "ein
+// Fenster, das haengenbleibt, wenn der Zeiger die Tafel schnell
+// verlaesst oder die Tafel eingeklappt wird". Ein Einklappen (siehe
+// kopftafelUmschalterKnopf() weiter unten) und ein Neuaufbau der Tafel
+// (siehe kopftafelWurzel() weiter unten) entfernen bzw. verbergen ihre
+// Grafiken PROGRAMMATISCH, nicht durch eine tatsaechliche
+// Mausbewegung - kein mouseleave feuert dabei, und ein zu diesem
+// Zeitpunkt offenes Fenster bliebe offen und zeigte auf ein Element, das
+// es nicht mehr gibt oder nicht mehr sichtbar ist. Ein Scroll-Ereignis auf dem
+// GESAMTEN Fenster (capture:true, damit auch das eigene overflow-x:auto
+// der Kopftafel erfasst wird - siehe .kopftafel in style.css) ist die
+// dritte, allgemeine Absicherung: ein verschobener Anker ohne
+// nachgefuehrte Fensterposition waere sonst ploetzlich neben, statt auf
+// dem Element, das es beschriftet.
+window.addEventListener('scroll', hinweisfensterVerstecken, true);
+
 // ===== Zeichenbausteine: Säulen-Sparkline (Bissantz) und Zellbalken =====
 //
 // Beide als selbst gezeichnetes Inline-SVG, ohne Diagrammbibliothek und
@@ -4739,15 +4873,21 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
     // erscheinen: das macht die Reihe fuer einen Bildschirmleser lesbar,
     // OHNE dass er zwoelf einzelne, gar nicht fokussierbare <rect>
     // nacheinander anfahren muesste (ein <svg role="img"> fasst seinen
-    // gesamten Inhalt fuer Assistenztechnik zu EINEM Blatt zusammen -
-    // ein <title> je <rect> waere fuer sie unsichtbar, siehe unten). Der
-    // Mouse-over selbst kommt trotzdem zusaetzlich UEBER das <title> je
-    // Saeule (unten in der forEach-Schleife) - fuer sehende Maus-Nutzer
-    // schneller als die ganze Aufzaehlung vorzulesen.
+    // gesamten Inhalt fuer Assistenztechnik zu EINEM Blatt zusammen).
+    // Der Mouse-over kommt trotzdem zusaetzlich JE SAEULE (unten in der
+    // forEach-Schleife, ueber hinweisfensterTeilVerknuepfen()) - fuer
+    // sehende Maus-Nutzer schneller abzulesen als die ganze Aufzaehlung.
     if (typeof optionen.titelJeIndex === 'function') {
         const aufzaehlung = werteBereinigt.map((w, i) => optionen.titelJeIndex(i, w)).join(', ');
         svg.setAttribute('aria-label', `${beschriftung}. ${aufzaehlung}`);
     }
+
+    // Tastaturfokus auf dem GANZEN <svg>, nicht je Saeule (siehe die
+    // Begruendung bei hinweisfensterTeilVerknuepfen() oben) - dieselbe
+    // vollstaendige aria-label-Aufzaehlung, die ein Bildschirmleser
+    // bekommt, erscheint hier zusaetzlich sichtbar als Hinweisfenster.
+    svg.tabIndex = 0;
+    hinweisfensterVerknuepfen(svg, svg.getAttribute('aria-label'));
 
     // Nulllinie ist PFLICHT (Auftrag, ausdrücklich - dieselbe Regel wie
     // bei saeulengrafik() weiter unten) - UND MUSS AUCH BEI NEGATIVEN
@@ -4813,9 +4953,7 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
         else if (i === aktuellIndex) klassen.push('saeulensparkline-saeule-aktuell');
         rect.setAttribute('class', klassen.join(' '));
         if (typeof optionen.titelJeIndex === 'function') {
-            const titel = document.createElementNS(SVG_NS, 'title');
-            titel.textContent = optionen.titelJeIndex(i, wert);
-            rect.append(titel);
+            hinweisfensterTeilVerknuepfen(rect, optionen.titelJeIndex(i, wert));
         }
         svg.append(rect);
     });
@@ -4879,18 +5017,12 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
     svg.setAttribute('focusable', 'false');
     svg.classList.add('zellbalken-grafik');
 
-    // Mouse-over (Gestaltungsauftrag Punkt 4) UEBER ein <title>-Kind,
-    // nicht ueber das globale HTML-title-Attribut: bei SVG ist <title>
-    // der einzige Weg, der auch in Firefox/Safari zuverlaessig einen
-    // nativen Tooltip zeigt. aria-hidden oben aendert daran nichts - es
-    // blendet nur die Bedeutung fuer Screenreader aus (der Wert steht
-    // ohnehin schon als sichtbarer Text in der Nachbarzelle, siehe
-    // kopftafelZeile()), die Maus-Anzeige ist davon unabhaengig.
-    if (beschriftung) {
-        const titel = document.createElementNS(SVG_NS, 'title');
-        titel.textContent = beschriftung;
-        svg.append(titel);
-    }
+    // KEIN Hinweisfenster HIER am <svg> - es ist aria-hidden (siehe oben)
+    // und traegt deshalb bewusst KEINEN eigenen Tastaturfokus (ein
+    // fokussierbares, zugleich aria-hidden Element waere ein WCAG-
+    // Verstoss, 4.1.2). Die Maus- und Tastatur-Anbindung sitzt stattdessen
+    // gleich am WRAPPER weiter unten - der ist nicht aria-hidden und
+    // traegt seine eigene, sonst fehlende aria-label.
 
     // KEINE Kontur mehr (Gestaltungsauftrag, zweiter Anlauf - siehe die
     // ausfuehrliche Begruendung bei .zellbalken-hintergrund in style.css):
@@ -4924,6 +5056,19 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
         text.className = 'zellbalken-text';
         text.append(textInhalt);
         wrapper.append(text);
+    }
+    // Hinweisfenster (Gestaltungsauftrag Punkt 2) NUR, wenn eine
+    // Beschriftung vorliegt - balkenSpalten() weiter unten ruft
+    // zellbalken() ohne eine auf (der Zellenwert steht dort schon
+    // sichtbar in der Nachbarspalte, siehe dortiger Kommentar), ein
+    // Tabstopp ohne Text waere fuer die Tastatur nur ein leerer Halt.
+    // aria-label HIER statt am (aria-hidden) <svg>: der Wrapper ist das
+    // einzige Element dieser Grafik, das ueberhaupt einen zugaenglichen
+    // Namen tragen darf.
+    if (beschriftung) {
+        wrapper.tabIndex = 0;
+        wrapper.setAttribute('aria-label', beschriftung);
+        hinweisfensterVerknuepfen(wrapper, beschriftung);
     }
     return wrapper;
 }
@@ -4968,6 +5113,16 @@ function strukturBalken(segmente, beschriftung, optionen = {}) {
     svg.setAttribute('aria-label', beschriftung);
     if (summe <= 0) return svg;   // nichts zu zerlegen, aber ein gueltiges <svg>
 
+    // Tastaturfokus auf dem GANZEN Balken, nicht je Segment - dieselbe
+    // Begruendung wie bei saeulenSparkline() oben: ein Bildschirmleser
+    // bekommt die Aufteilung ohnehin nur als EINE aria-label-Aufzaehlung
+    // (siehe strukturText() in flotte.js), ein Tastaturnutzer sieht hier
+    // dieselbe Zusammenfassung, sichtbar statt vorgelesen. Die Maus
+    // bekommt zusaetzlich JE SEGMENT ihr eigenes Hinweisfenster (unten in
+    // der forEach-Schleife).
+    svg.tabIndex = 0;
+    hinweisfensterVerknuepfen(svg, beschriftung);
+
     // EIN SEGMENT, DAS ES GIBT, MUSS MAN SEHEN. Ein gesperrter Kunde von
     // 112 sind 0,86px auf einem 96px-Balken, drei defekte Raeder von 275
     // sind 1,05px - beide waeren nach dem Abzug der Fuge unsichtbar, und
@@ -4978,7 +5133,8 @@ function strukturBalken(segmente, beschriftung, optionen = {}) {
     // mindestbreite Pixel je winzigem Segment - ein bewusst in Kauf
     // genommener Fehler von rund einem Prozentpunkt gegen einen Befund,
     // der sonst gar nicht erscheint. Die genaue Zahl steht ohnehin im
-    // <title> jedes Segments und im aria-label des ganzen Balkens.
+    // Hinweisfenster jedes Segments (siehe hinweisfensterTeilVerknuepfen()
+    // in der forEach-Schleife unten) und im aria-label des ganzen Balkens.
     const mindestbreite = Math.min(2, breite / gefiltert.length);
     const breiten = gefiltert.map((segment) => (segment.wert / summe) * breite);
     let schuld = 0;
@@ -5003,9 +5159,7 @@ function strukturBalken(segmente, beschriftung, optionen = {}) {
         rect.setAttribute('width', Math.max(0.5, segmentbreite - abzug).toFixed(2));
         rect.setAttribute('height', hoehe);
         rect.setAttribute('class', `strukturbalken-segment ${segment.klasse}`);
-        const titel = document.createElementNS(SVG_NS, 'title');
-        titel.textContent = `${segment.name}: ${zahlFormat(segment.wert)}`;
-        rect.append(titel);
+        hinweisfensterTeilVerknuepfen(rect, `${segment.name}: ${zahlFormat(segment.wert)}`);
         svg.append(rect);
         x += segmentbreite;
     });
@@ -5054,13 +5208,13 @@ function abweichungsBalken(wert, maximumBetrag, beschriftung, optionen = {}) {
     svg.setAttribute('role', 'img');
     svg.setAttribute('aria-label', beschriftung);
 
-    // Dieselbe beschriftung ZUSAETZLICH als <title> (Gestaltungsauftrag
-    // Punkt 4, Mouse-over): aria-label allein wird von keinem Browser als
-    // Tooltip angezeigt, nur von einem Screenreader vorgelesen. Kein
-    // Zusatzaufwand beim Aufrufer noetig - der Text liegt hier schon vor.
-    const titel = document.createElementNS(SVG_NS, 'title');
-    titel.textContent = beschriftung;
-    svg.append(titel);
+    // Dieselbe beschriftung ZUSAETZLICH als eigenes Hinweisfenster
+    // (Gestaltungsauftrag Punkt 2): aria-label allein wird von keinem
+    // Browser sichtbar angezeigt, nur von einem Screenreader vorgelesen.
+    // tabIndex macht denselben Balken auch per Tastatur erreichbar - kein
+    // Zusatzaufwand beim Aufrufer noetig, der Text liegt hier schon vor.
+    svg.tabIndex = 0;
+    hinweisfensterVerknuepfen(svg, beschriftung);
 
     if (Math.abs(wert) > 0) {
         const rect = document.createElementNS(SVG_NS, 'rect');
@@ -5145,11 +5299,12 @@ function lagepunkt(wert, minimum, maximum, beschriftung, optionen = {}) {
     wrapper.className = 'lagepunkt';
     wrapper.setAttribute('role', 'img');
     wrapper.setAttribute('aria-label', beschriftung);
-    // Dieser Wrapper ist HTML, kein <svg> (siehe Kopfkommentar oben) -
-    // hier reicht deshalb das gewoehnliche title-Attribut fuer den
-    // Mouse-over (Gestaltungsauftrag Punkt 4), dieselbe Technik wie bei
-    // schliessenKnopf.title an anderer Stelle dieser Datei.
-    wrapper.title = beschriftung;
+    // tabIndex macht den Wrapper per Tastatur erreichbar - das
+    // gewoehnliche title-Attribut (fruehere Fassung) erschien nur bei
+    // :hover, nie bei :focus (siehe Kopfkommentar bei
+    // hinweisfensterVerknuepfen() weiter oben).
+    wrapper.tabIndex = 0;
+    hinweisfensterVerknuepfen(wrapper, beschriftung);
 
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
@@ -5749,6 +5904,14 @@ function kopftafelUmschalterKnopf(wurzel, tabelleId) {
     function anwenden(eingeklappt) {
         wurzel.classList.toggle('kopftafel-eingeklappt', eingeklappt);
         knopf.setAttribute('aria-expanded', String(!eingeklappt));
+        // GESTALTUNGSAUFTRAG Punkt 2, woertlich genannter Stolperstein:
+        // "ein Fenster, das haengenbleibt ... wenn die Tafel eingeklappt
+        // wird". Einklappen entfernt die Tabelle per CSS (display:none,
+        // siehe .kopftafel-eingeklappt in style.css) UNTER einem
+        // moeglicherweise gerade offenen Hinweisfenster - ohne Mausbewegung
+        // feuert dabei kein mouseleave, das Fenster bliebe offen und
+        // zeigte auf eine jetzt unsichtbare Grafik.
+        if (eingeklappt) hinweisfensterVerstecken();
     }
     anwenden(kopftafelEingeklappt());
 
@@ -5762,6 +5925,13 @@ function kopftafelUmschalterKnopf(wurzel, tabelleId) {
 }
 
 function kopftafelWurzel() {
+    // ZWEITER Fall desselben Stolpersteins (siehe der Kommentar bei
+    // anwenden() in kopftafelUmschalterKnopf() oben): ein Reiter- oder
+    // Bereichswechsel kann eine Tafel neu aufbauen, WAEHREND der Zeiger
+    // noch auf einer Grafik der ALTEN steht - el.replaceChildren() weiter
+    // unten reisst deren Elemente aus dem DOM, wieder ohne ein
+    // mouseleave, das das Hinweisfenster von selbst schliessen wuerde.
+    hinweisfensterVerstecken();
     const wurzel = document.getElementById('arbeitsliste');
     let el = document.getElementById('kopftafel');
     if (!el) {
@@ -5902,6 +6072,30 @@ function zeigeKopftafel(kennung, tafel) {
         }
         kopfzeile.append(th);
     });
+    // ===== Fuellspalte (Gestaltungsauftrag "Loch in der Mitte") =====
+    // Jede Grafikspalte schrumpft jetzt per width:1% auf ihre Grafik
+    // (siehe .kopftafel-grafik-* in style.css - derselbe Kniff, den
+    // .kopftafel-rubrik/.kopftafel-zahl in dieser Datei schon frueher
+    // gegen Chromiums ignorierte max-width bei automatischem
+    // Tabellenlayout einsetzen mussten). Die dadurch freiwerdende Breite
+    // MUSS irgendwohin - sie GESAMMELT an EINER Stelle zu lassen, statt
+    // sie unbemerkt auf alle Spalten zu verteilen, war ausdruecklich
+    // verlangt ("nicht verteilt ... sondern gesammelt"). Diese letzte,
+    // absichtlich leere Spalte OHNE eigene Breitenangabe ist der
+    // Sammelpunkt: eine Tabellenspalte ohne width/min-width bekommt im
+    // automatischen Layout den gesamten Rest zugeteilt, den die anderen
+    // (alle mit width:1% + einer festen min-width) nicht beanspruchen -
+    // "rechts hinter der letzten Spalte" statt in der Rubrik, weil ein
+    // Zugewinn DORT wieder genau die Luecke zwischen Namen und seiner
+    // ersten Zahl aufgerissen haette, die width:1% an der Rubrik oben
+    // erst behoben hat (siehe der Kommentar bei .kopftafel-rubrik in
+    // style.css). aria-hidden, weil sie nichts traegt - fuer
+    // Bildschirmleser ist sie so, als gaebe es sie nicht.
+    const fuellzelleKopf = document.createElement('th');
+    fuellzelleKopf.setAttribute('scope', 'col');
+    fuellzelleKopf.className = 'kopftafel-fuellspalte';
+    fuellzelleKopf.setAttribute('aria-hidden', 'true');
+    kopfzeile.append(fuellzelleKopf);
     const kopfteil = document.createElement('thead');
     kopfteil.append(kopfzeile);
     tabelle.append(kopfteil);
@@ -6110,6 +6304,16 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
         }
         tr.append(zelle);
     });
+    // Fuellspalte, JEDE Zeile - siehe die ausfuehrliche Begruendung an
+    // ihrer Kopfzellen-Schwester in zeigeKopftafel() oben. Ohne sie in
+    // Daten-/Gruppen-/Summenzeile gleichermassen haette die Tabelle in
+    // manchen Zeilen eine Spalte mehr als in anderen, und ein
+    // Tabellenlayout mit wechselnder Spaltenzahl ist kein Tabellenlayout
+    // mehr.
+    const fuellzelle = document.createElement('td');
+    fuellzelle.className = 'kopftafel-fuellspalte';
+    fuellzelle.setAttribute('aria-hidden', 'true');
+    tr.append(fuellzelle);
     return tr;
 }
 

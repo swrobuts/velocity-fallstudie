@@ -921,13 +921,25 @@ button {
 
    Der Fehler war nicht die Menge des Weissraums, sondern wofuer er
    ausgegeben wurde: ein Dutzend Werte auf tausend Pixel Breite. Diese
-   Tafel kehrt das um - dieselbe Bildschirmhoehe traegt jetzt 60 bis 170
-   Werte. Deshalb hier bewusst ENGE Zeilen (20px) und kleine Grade (12px
-   Text, 10px Spaltenkopf): eine Warenwirtschaft wird acht Stunden am Tag
-   benutzt, nicht acht Sekunden (siehe Dateikopf) - Information je
-   Bildschirm zaehlt mehr als Luft. Gemessen bleibt trotzdem alles:
-   --text auf --flaeche 15.70:1, --text-leise auf --flaeche 5.95:1,
-   --marine 17.29:1 - jede weit ueber den 4,5:1 fuer Fliesstext.
+   Tafel kehrt das um - dieselbe Bildschirmhoehe traegt 60 bis 170 Werte.
+   Kleine Grade bleiben deshalb bestehen (12px Text, 10px Spaltenkopf) -
+   das ist Dichte an INFORMATION, nicht an Flaeche, und aendert sich hier
+   nicht. Gemessen bleibt trotzdem alles: --text auf --flaeche 15.70:1,
+   --text-leise auf --flaeche 5.95:1, --marine 17.29:1 - jede weit ueber
+   den 4,5:1 fuer Fliesstext.
+
+   DIE ZEILEN SELBST SIND NICHT MEHR ENG (VIERTER ANLAUF). Der Auftrag kam
+   viermal, wortgleich im Kern: "zu wenig Weissraum, zu wenig Abstaende,
+   dicht gedraengt". Die ersten drei Anlaeufe gaben jeweils ein wenig nach
+   (siehe .kopftafel-tabelle td weiter unten) und trafen jedesmal erneut
+   dieselbe Ruege - der Fehler war, vorsichtig zu bleiben, wo Grosszuegig-
+   keit verlangt war. GENAU DAS kostet inzwischen nichts mehr: die Tafel
+   ist seit dem vorigen Auftrag einklappbar und steht im Vorgabezustand
+   eingeklappt (siehe kopftafelEingeklappt() in rahmen.js) - eine hoehere
+   Tafel draengt sich niemandem mehr auf, der sie nicht ausdruecklich
+   aufklappt. Die Dichte oben (kleine Grade) bleibt, weil sie Information
+   je Bildschirm betrifft; der Freiraum UM diese Information (Zeilenluft,
+   Kopf-/Fussabstaende) wird bewusst grosszuegiger, weil er das nicht tut.
 
    .uebersichtskachel* weiter unten bleibt bestehen: der Monats-Drill-Down
    in der Detailmaske (monatsdrilldownEinfuegen() in auswertungen.js)
@@ -937,12 +949,13 @@ button {
   flex: 0 0 auto;
   /* Der Streifen hebt sich weiterhin durch Flaeche vom weissen
      Tabellenkoerper ab (der Befund "hebe das deutlich besser von den
-     unteren Tabellen ab" gilt unveraendert), aber mit deutlich weniger
-     Polster als das Kachelband: die Tafel traegt ihre Struktur selbst,
-     sie braucht keine Rahmenwirkung mehr, um nicht leer zu wirken. */
+     unteren Tabellen ab" gilt unveraendert). Aussenabstand grosszuegiger
+     als zuvor (18px/22px/16px statt 12px/16px/10px, vierter Anlauf gegen
+     "zu wenig Luft" - siehe der lange Kommentar oben) - die Tafel darf
+     dabei hoeher werden, sie ist seit dem letzten Auftrag einklappbar. */
   background: var(--grund);
-  padding: 12px 16px 10px;
-  margin-bottom: 16px;
+  padding: 18px 22px 16px;
+  margin-bottom: 24px;
   /* Eine Tafel mit fuenf Spalten kann in einem sehr schmalen Fenster
      breiter werden als der Arbeitsbereich. Sie darf dann in SICH
      scrollen - was sie nicht darf, ist die ganze Seite waagerecht
@@ -1059,7 +1072,10 @@ button {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding-bottom: 8px;
+  /* WAR 8px (vierter Anlauf gegen "zu wenig Abstaende", siehe der lange
+     Kommentar bei .kopftafel oben) - der Abstand zwischen Titel/Bezugs-
+     zeile und der ersten Tabellenzeile darunter. */
+  padding-bottom: 16px;
 }
 
 .kopftafel-kopftexte {
@@ -1100,7 +1116,11 @@ button {
    ist eine Ratefrage). vertical-align:bottom haelt die Namen aller
    Spalten auf einer Linie, auch wenn eine ueber zwei Zeilen umbricht. */
 .kopftafel-tabelle thead th {
-  padding: 0 8px 4px;
+  /* Horizontal wie die Datenzellen (14px, siehe .kopftafel-tabelle td
+     weiter unten - dieselbe Spaltenflucht), unten von 4px auf 10px
+     (vierter Anlauf gegen "zu wenig Abstaende") - oben bleibt 0, das
+     traegt vertical-align:bottom weiterhin allein. */
+  padding: 0 14px 10px;
   border-bottom: 1px solid var(--linie);
   vertical-align: bottom;
   font-weight: 600;
@@ -1136,21 +1156,21 @@ button {
   opacity: 0.85;
 }
 
-/* 5px Zeilenluft, nicht mehr - WAR 2px (Befund, woertlich: "zu wenig
-   Weissraum, zu wenig Abstaende [...] das entsteht vor allem durch die
-   geringe Zeilenhoehe"). Im Browser bei 1790px gemessen (siehe Bericht):
-   vorher 18.5px je Datenzeile, die ganze Flotte-Tafel (13 Zeilen plus
-   Kopf/Fuss, ausgeklappt) 397px hoch; mit 5px Padding 24.5px je Zeile,
-   die Tafel 475px - deutlich mehr Luft, ohne die Tafel in eine zweite
-   Liste zu verwandeln. NICHT mehr als das: die Tafel bleibt eine
-   Projektionswand, die man ZUSAMMEN liest (siehe Kopfkommentar bei
-   .kopftafel oben) - und sie ist jetzt ohnehin einklappbar (Punkt 1
-   dieses Auftrags), das nimmt einem grosszuegigeren Wert seine
-   frühere Dringlichkeit, aber nicht die Notwendigkeit, sie beim
-   Ausklappen weiterhin auf einen Blick lesbar zu halten. */
+/* VIERTER ANLAUF - siehe der lange Kommentar bei .kopftafel oben, wo er
+   ausfuehrlich begruendet ist: 2px, dann 5px waren beide "ein wenig
+   nachgegeben" und trafen beide erneut dieselbe Ruege. Diesmal WEITER als
+   das naechste kleine Zugestaendnis, weil genau das dreimal zu wenig
+   war - 11px vertikal (mehr als doppelt so viel wie zuletzt), 14px
+   horizontal (auch die Spaltenluft, nicht nur die Zeilenluft). Im
+   Browser bei 1790px gemessen (siehe Bericht): vorher 24.5px je
+   Datenzeile, die Flotte-Tafel (13 Zeilen plus Kopf/Fuss, ausgeklappt)
+   475px hoch; danach 36.5px je Zeile, die Tafel 669px - deutlich hoeher,
+   aber das kostet nichts mehr: die Tafel ist seit dem vorigen Auftrag
+   einklappbar und steht im Vorgabezustand eingeklappt (siehe
+   kopftafelEingeklappt() in rahmen.js). */
 .kopftafel-tabelle td,
 .kopftafel-tabelle th {
-  padding: 5px 8px;
+  padding: 11px 14px;
 }
 
 .kopftafel-zeile-daten {
@@ -1236,9 +1256,18 @@ button {
    gemeinsamen Skala (siehe kopftafelZeile() in rahmen.js). Eine Linie
    darueber statt einer Flaeche dahinter: eine zweite Hintergrundfarbe
    neben --grund und dem Zebra der Arbeitsliste waere ein dritter,
-   unnoetiger Grauton. */
-.kopftafel-zeile-gruppe > * {
-  padding-top: 6px;
+   unnoetiger Grauton.
+   ZWEI Klassen im Selektor (".kopftafel-tabelle .kopftafel-zeile-gruppe
+   > *"), nicht nur eine - im Browser nachgemessen: mit nur EINER Klasse
+   (die fruehere Fassung) gewinnt die allgemeine Regel
+   ".kopftafel-tabelle td, th" weiter oben (Klasse+Elementtyp, hoehere
+   Spezifitaet als Klasse+Universalselektor) den Streit um padding-top
+   IMMER, unabhaengig vom eigenen Wert hier - das eigene padding-top
+   blieb dadurch wirkungslos (computed 11px statt der hier verlangten
+   13px). Die zweite Klasse hebt die Spezifitaet ueber die der
+   allgemeinen Regel. */
+.kopftafel-tabelle .kopftafel-zeile-gruppe > * {
+  padding-top: 13px;
   font-weight: 700;
 }
 
@@ -1248,15 +1277,20 @@ button {
 
 /* Summenzeile im <tfoot>: dieselbe Auszeichnung wie eine Gruppenzeile,
    zusaetzlich eine kraeftigere Trennlinie darueber - sie schliesst die
-   Tafel ab, statt eine weitere Gliederungsebene zu eroeffnen. */
-.kopftafel-zeile-summe > * {
+   Tafel ab, statt eine weitere Gliederungsebene zu eroeffnen. Zwei
+   Klassen im Selektor aus demselben Grund wie bei .kopftafel-zeile-gruppe
+   oben. */
+.kopftafel-tabelle .kopftafel-zeile-summe > * {
   border-top: 1px solid var(--linie);
-  padding-top: 5px;
+  padding-top: 11px;
   font-weight: 700;
 }
 
+/* WAR margin-top 8px (vierter Anlauf, siehe der lange Kommentar bei
+   .kopftafel oben) - der Abstand zwischen der Summenzeile und dieser
+   Fussnote. */
 .kopftafel-fussnote {
-  margin: 8px 0 0;
+  margin: 14px 0 0;
   font-size: 11px;
   line-height: 1.45;
   color: var(--text-leise);
@@ -1433,20 +1467,63 @@ button {
      bleibt klar einem Jahr zuordenbar (im Browser nachgemessen, siehe
      Bericht) und verliert sich nicht in der Flaeche.
 
-   min-width bleibt wie zuvor die BISHERIGE feste Breite als Untergrenze
-   (dieselbe Ueberlegung wie beim ersten Anlauf) - AUSSER bei
-   profil-punkt (90px statt 96px: ein einzelner Punkt braucht keine
-   ganze Saeulenreihen-Untergrenze) und profil-reihe (140px statt 96px:
-   zwoelf Saeulen brauchen mehr als eine einzelne Punktachse, auch am
-   unteren Ende). Die width-Prozentangaben sinken gegenueber dem ersten
-   Anlauf, weil die eigentliche Grenze jetzt die feste max-width ist -
-   ein hoher Prozentanteil haette am Ergebnis nichts mehr geaendert,
-   ausser mehr toten Platz VOR Erreichen der Grenze zu verteilen. */
-.kopftafel-grafik-groesse       { width: 7%;  min-width: 76px; }
-.kopftafel-grafik-struktur      { width: 8%;  min-width: 96px; }
-.kopftafel-grafik-abweichung    { width: 12%; min-width: 84px; }
-.kopftafel-grafik-profil-reihe  { width: 24%; min-width: 140px; }
-.kopftafel-grafik-profil-punkt  { width: 6%;  min-width: 90px; }
+   DRITTER ANLAUF, das eigentliche "Loch in der Mitte": diese fuenf
+   width-Prozentsaetze (7 %/8 %/12 %/24 %/6 %) waren der uebrig gebliebene
+   Fehler des ZWEITEN Anlaufs. Eine Tabellenspalte mit width:X% bekommt
+   im automatischen Layout X % der TABELLENBREITE zugeteilt, nicht X %
+   "bis zur Obergrenze" - bei einer 1799px breiten Tafel sind 24 % immer
+   noch 432px, weit ueber der max-width von 340px oben. Die ZELLE blieb
+   also breiter als ihre GRAFIK, obwohl die Grafik selbst laengst
+   gedeckelt war - genau das im Browser nachgemessen (siehe Bericht,
+   Flotte-Tafel, 1790px): 170px Leerraum hinter dem Groessenbalken, 174px
+   hinter dem Strukturbalken, 106px hinter dem Achsenpunkt, 320px hinter
+   dem Abweichungsbalken (der LETZTEN Spalte - dort lief die Zelle bis
+   zum Tabellenrand durch). Vier Spalten, vier verschiedene Luecken -
+   "mal 8, mal 400 Pixel" (Auftrag, woertlich).
+   Behoben mit demselben Kniff, den .kopftafel-rubrik/.kopftafel-zahl
+   weiter oben aus genau demselben Grund schon benutzen: width:1% statt
+   eines Prozentsatzes der Tabellenbreite gibt der Spalte KEINEN Anteil
+   am Restplatz und laesst sie auf ihre min-width zurueckfallen -
+   Chromium ignoriert max-width an der <td> (siehe .kopftafel-rubrik),
+   width:1% umgeht das, indem es dieselbe Wirkung ueber die
+   AUTOMATISCHE Spaltenbreite statt ueber eine ignorierte Eigenschaft
+   erzwingt. min-width ist deshalb JETZT EXAKT die max-width der
+   jeweiligen Grafik (siehe oben) plus ihr eigenes Zellenpolster (2 * 14px
+   horizontal, siehe .kopftafel-tabelle td weiter oben) - keine grosszuegig
+   aufgerundete Naeherung mehr wie im ersten Anlauf, sondern die Zahl, bei
+   der Zelle und Grafik exakt gleich breit werden und die Luecke gegen
+   die naechste Spalte auf das Zellenpolster selbst schrumpft (siehe
+   .kopftafel-fuellspalte weiter unten fuer die Frage, wohin die dadurch
+   frei werdende Tabellenbreite GEHT). */
+.kopftafel-grafik-groesse       { width: 1%; min-width: 158px; }
+.kopftafel-grafik-struktur      { width: 1%; min-width: 198px; }
+.kopftafel-grafik-abweichung    { width: 1%; min-width: 228px; }
+.kopftafel-grafik-profil-reihe  { width: 1%; min-width: 368px; }
+.kopftafel-grafik-profil-punkt  { width: 1%; min-width: 178px; }
+
+/* ===== Fuellspalte (Gestaltungsauftrag "Loch in der Mitte") =====
+   Sammelpunkt fuer die Breite, die die fuenf Grafikspalten oben durch
+   width:1% nicht mehr beanspruchen (siehe deren Kommentar) - eine
+   Tabellenspalte OHNE eigene width/min-width bekommt im automatischen
+   Layout den gesamten Rest der Tabellenbreite zugeteilt, den keine
+   andere Spalte einfordert. "Rechts hinter der letzten Spalte" statt in
+   der Rubrik (die zweite, im Auftrag ausdruecklich genannte Option):
+   ein Zugewinn IN der Rubrik risse dieselbe Luecke zwischen Namen und
+   Zahl wieder auf, die width:1% an .kopftafel-rubrik oben erst behoben
+   hat (siehe dort - im Browser damals mit 746px belegt).
+   padding:0 MIT eigenem, spezifischerem Selektor (Klasse+Elementtyp
+   statt nur der Klasse): die allgemeine Regel ".kopftafel-tabelle td,
+   th" weiter oben ist sonst spezifischer als eine reine Klasse und
+   gewaenne - eine leere Spalte braucht kein Zellenpolster, sie traegt
+   ohnehin nie sichtbaren Inhalt. Die Zeilenlinien
+   (.kopftafel-zeile-daten/-gruppe/-summe, auf dem <tr> selbst gesetzt)
+   ziehen border-collapse zufolge trotzdem bis in diese Spalte durch, ganz
+   ohne einen eigenen Rand hier - eine Trennlinie, die kurz vor dem
+   rechten Tabellenrand endet, saehe wie ein Darstellungsfehler aus. */
+.kopftafel-tabelle td.kopftafel-fuellspalte,
+.kopftafel-tabelle th.kopftafel-fuellspalte {
+  padding: 0;
+}
 
 /* Die eigentlichen Grafiken auf 100 % IHRER Zelle, GEDECKELT durch
    max-width (siehe Begruendung oben) - erst DAS macht die
@@ -1500,6 +1577,48 @@ button {
    zu ihrem width:1%-Kniff zwingt. */
 .kopftafel-grafik-profil-punkt .lagepunkt {
   max-width: 150px;
+}
+
+/* ===== Hinweisfenster (hinweisfensterZeigen() in rahmen.js) =====
+   Ersetzt das native SVG-<title>/HTML-title an jeder Kopftafel-Grafik -
+   siehe der ausfuehrliche Kopfkommentar bei hinweisfensterVerknuepfen()
+   in rahmen.js, warum das native Fenster trotz seiner Existenz nicht
+   auffiel (rund eine Sekunde Verzoegerung, Darstellung des
+   Betriebssystems statt der Seite, kein :focus). position:fixed statt
+   absolute: der Anker kann in der EINGEKLAPPTEN/scrollenden Kopftafel
+   liegen (.kopftafel hat eigenes overflow-x:auto), fixed positioniert
+   gegen das Browserfenster selbst und bleibt damit unabhaengig vom
+   Scroll-Container des Ankers exakt dort, wo hinweisfensterZeigen() es
+   berechnet. z-index ueber dem bisher hoechsten Wert dieser Datei (20,
+   .mehrfachauswahl-liste) - ein Hinweisfenster darf nie hinter einem
+   geoeffneten Popup verschwinden. */
+.hinweisfenster {
+  position: fixed;
+  z-index: 30;
+  max-width: 260px;
+  padding: 6px 10px;
+  /* --marine als Flaeche, Weiss als Text - derselbe Kontrast wie --text
+     auf --flaeche (17.29:1, siehe Kopfkommentar bei .kopftafel oben):
+     das Kontrastmass ist symmetrisch, Vorder- und Hintergrundfarbe
+     lassen sich vertauschen, ohne die Zahl zu aendern. Im Browser
+     nachgerechnet (weiss auf --marine): 17.29:1, weit ueber den 4,5:1
+     fuer Fliesstext. */
+  background: var(--marine);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(6, 24, 65, 0.35);
+  /* Darf die Maus nicht selbst einfangen: das Fenster erscheint bevorzugt
+     UEBER dem Anker (siehe hinweisfensterZeigen()) und koennte sich dabei
+     zeitweise mit ihm ueberlappen - faenge es die Maus ein, risse genau
+     dort ein mouseleave auf dem Anker ab, den die Grafik darunter nie
+     wirklich verlassen hat. */
+  pointer-events: none;
+}
+
+.hinweisfenster[hidden] {
+  display: none;
 }
 
 /* ===== Kachel (baueKachel() in rahmen.js) =====
