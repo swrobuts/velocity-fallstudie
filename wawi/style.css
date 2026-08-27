@@ -79,6 +79,16 @@
      unvermessenen "hellblauen" Farbe nur fuer dieses eine Bauteil -
      dieselbe Farbe aus unserer Palette, ein zweiter Verwendungszweck. */
   --skala-rahmen: #7c8797;
+  /* Gestaltungsauftrag Stationen, Punkt 4: die Landkarte braucht eine
+     EIGENE, neue Bedeutung ("das hier ist Kundschaft, keine Station/kein
+     Rad") - keine der bestehenden Farben passt, ohne eine schon vergebene
+     Bedeutung zu ueberladen (--marine ist die Stationsmarke selbst,
+     --warnung-text eine volle Station, --schlecht/--gut Buchungsfolgen).
+     8.58:1 auf Weiss (gemessen) - weit ueber den 3:1 fuer Grafik, und ein
+     eigener Farbton (Violett), der sich von jedem bestehenden Ton der
+     Palette klar unterscheidet, damit eine Kundenmarke auf der Karte nie
+     mit einer Stationsmarke verwechselt werden kann. */
+  --kunden: #5b3a8f;
 }
 
 * {
@@ -1111,6 +1121,48 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* ===== Donut (donut() in rahmen.js, Gestaltungsauftrag Stationen,
+   Punkt 2) =====
+   Hintergrundring in --skala-rahmen statt --linie: --linie liegt bei nur
+   1.37:1 auf Weiss (siehe :root-Kommentar, "eine Linie" ist bewusst leise
+   gehalten), weit unter der fuer Grafik verlangten 3:1. --skala-rahmen
+   traegt bereits 3.64:1 (siehe Kommentar bei .saeulensparkline-saeule
+   oben) und wird hier aus demselben Grund ein drittes Mal verwendet
+   statt eines weiteren, unvermessenen Grautons. */
+.donut {
+  display: inline-block;
+  vertical-align: middle;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.donut-hintergrund {
+  fill: none;
+  stroke: var(--skala-rahmen);
+}
+
+.donut-vordergrund {
+  fill: none;
+  stroke-linecap: butt;   /* siehe Kopfkommentar bei donut() in rahmen.js */
+}
+
+.donut-text-prozent {
+  font-size: 17px;
+  font-weight: 700;
+  fill: var(--marine);
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-text-bruch {
+  font-size: 10px;
+  fill: var(--text-leise);
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ===== Säulengrafik (saeulengrafik() in rahmen.js, Drill-Down-Aufgabe) =====
    Grid statt Flex, damit die x-Achse (Zeile 2) exakt unter dem <svg>
    beginnt, unabhängig davon, wie breit die y-Achsen-Beschriftung links
@@ -2124,3 +2176,275 @@ button {
 #statuszeile.gut      { color: var(--gut); }
 #statuszeile.warnung   { color: var(--warnung-text); }
 #statuszeile.schlecht  { color: var(--schlecht); }
+
+/* ===== Detailmaske einer Station: Belegung, Räder, Verkehr
+   (stationBelegungAbschnitt()/stationRaederAbschnitt()/
+   stationVerkehrAbschnitt() in stationen.js, Gestaltungsauftrag
+   Stationen, Punkte 1-3) =====
+   Dieselbe Machart wie .monatsdrilldown weiter oben (auswertungen.js):
+   ein eigener, oben abgetrennter Abschnitt UNTER der von zeigeMaske()
+   gebauten Grundmaske, kein neuer Baustein in rahmen.js - anders als
+   donut() braucht dieses Layout keinen zweiten Verbraucher. */
+.stationbelegung,
+.stationraeder,
+.stationverkehr {
+  border-top: 1px solid var(--linie);
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.stationbelegung h3,
+.stationraeder h3,
+.stationverkehr h3 {
+  color: var(--marine);
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+
+.stationverkehr h4 {
+  color: var(--text);
+  font-size: 12px;
+  margin: 0 0 6px;
+}
+
+.stationraeder-tabelle {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stationraeder-tabelle th,
+.stationraeder-tabelle td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--linie);
+  text-align: left;
+}
+
+.stationraeder-tabelle thead th,
+.stationraeder-tabelle tr:first-child th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-leise);
+}
+
+.stationraeder-tabelle td:nth-child(4) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.stationraeder-leer,
+.stationraeder-fehler,
+.stationverkehr-leer,
+.stationverkehr-fehler {
+  color: var(--text-leise);
+  font-size: 12px;
+}
+
+.stationraeder-fehler,
+.stationverkehr-fehler {
+  color: var(--schlecht);
+}
+
+/* ===== Zu-/Abgang je Zeitfenster (zeitfensterDivergenzGrafik() in
+   stationen.js, Gestaltungsauftrag Stationen, Punkt 3) =====
+   Zwei Farben statt einer: Abgang (--marine, dieselbe "das ist die
+   Hauptreihe"-Farbe wie die aktuelle Sparkline-Säule) und Zugang
+   (--skala-rahmen, dieselbe schon gemessene neutrale Fläche wie die
+   übrigen Sparkline-Säulen) - beide bereits gemessen (17.29:1 bzw.
+   3.64:1 auf Weiß), keine dritte, unvermessene Farbe nur für diesen
+   einen Baustein. Bewusst NICHT --gut/--schlecht: ein Zugang ist nicht
+   "gut" und ein Abgang nicht "schlecht" - beide sind normaler Betrieb,
+   nur ihre schiefe Verteilung über den Tag ist die eigentliche Aussage. */
+.stationverkehr-legende {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text-leise);
+  margin-bottom: 8px;
+}
+
+.stationverkehr-legende-eintrag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stationverkehr-legende-eintrag::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+}
+
+.stationverkehr-legende-abgang::before { background: var(--marine); }
+.stationverkehr-legende-zugang::before { background: var(--skala-rahmen); }
+
+.stationverkehr-block {
+  margin-bottom: 16px;
+}
+
+.zeitfenstergrafik {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  display: block;
+}
+
+.zeitfenstergrafik-grundlinie { stroke: var(--linie); stroke-width: 1; }
+.zeitfenstergrafik-abgang     { fill: var(--marine); }
+.zeitfenstergrafik-zugang     { fill: var(--skala-rahmen); }
+.zeitfenstergrafik-achse {
+  font-size: 9px;
+  fill: var(--text-leise);
+  text-anchor: middle;
+}
+
+/* ===== Landkarte (stationenKarteZeichnen() in stationen.js,
+   Gestaltungsauftrag Stationen, Punkt 4) =====
+   Eigenes Verzeichnis statt .monatsdrilldown-Optik: die Karte lebt in
+   #arbeitsliste (eine eigene Ansicht neben der Tabelle, siehe
+   Kopfkommentar von stationenAufbauen()), nicht in #detailmaske. */
+.stationenkarte {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 28px 32px;
+}
+
+.stationenkarte-kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.stationenkarte-erklaerung {
+  color: var(--text-leise);
+  font-size: 12px;
+  max-width: 60ch;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.stationenkarte-schalter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.stationenkarte-flaeche {
+  flex: 1 1 auto;
+  display: flex;
+  justify-content: center;
+}
+
+.stationenkarte-svg {
+  /* display:block ist Pflicht, kein Stil-Detail: ein <svg> ist per
+     UA-Vorgabe inline, dasselbe Kaestchenmodell wie <img> ohne
+     display:block - inline traegt einen kleinen Nachkommastellen-
+     Leerraum UNTER der Grafik und, schwerwiegender, ließ #arbeitsliste
+     bei der Erprobung ueberlaufenden Karteninhalt NICHT als
+     scrollbaren Overflow erkennen (scrollHeight blieb gleich
+     clientHeight, obwohl die Karte sichtbar unten abgeschnitten war). */
+  display: block;
+  width: 100%;
+  max-width: 760px;
+  height: auto;
+}
+
+/* --linie statt einer "Wasser"-Farbe extra dafuer: der Main ist hier
+   ausdruecklich ANGEDEUTET, kein hydrologisch korrektes Merkmal (siehe
+   Kopfkommentar bei STATIONENKARTE_MAIN_STUETZPUNKTE in stationen.js) -
+   ein kraeftiger Blauton haette ihm mehr Gewicht gegeben, als eine grobe
+   Schema-Linie verdient. */
+.stationenkarte-fluss {
+  fill: none;
+  stroke: var(--linie);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.stationenkarte-fluss-text {
+  font-size: 10px;
+  fill: var(--text-leise);
+}
+
+.stationenkarte-station-text {
+  font-size: 10px;
+  fill: var(--text);
+  text-anchor: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+/* donut() zeichnet Prozent und Bruch IMMER (Auftrag: "ein Donut ohne
+   Zahl ist eine Schaetzaufgabe") - auf der Karte ist der Ring aber
+   zwischen 30 und 58px klein, waehrend donut() eine feste Schriftgroesse
+   fuer beide Texte mitbringt (fuer die Uebersichts-/Detailmaskenkachel
+   bemessen, dort 84-120px). Bei 30px liefe die Zahl ueber den Ring
+   hinaus, statt in ihm zu stehen. Die Zahl geht dabei NICHT verloren
+   (Auftrag weiterhin erfuellt): jede Marke traegt ihr eigenes
+   aria-label UND ein <title> fuer den Mauszeiger (siehe
+   stationenKarteZeichnen() in stationen.js) mit derselben Zahl im
+   Klartext, UND ein Klick oeffnet dieselbe Zahl noch einmal gross im
+   Belegungs-Donut der Detailmaske. */
+.stationenkarte-station .donut-text-prozent,
+.stationenkarte-station .donut-text-bruch {
+  display: none;
+}
+
+.stationenkarte-station {
+  cursor: pointer;
+}
+
+.stationenkarte-station:focus-visible {
+  outline: 2px solid var(--rot);
+  outline-offset: 2px;
+}
+
+/* stroke: --flaeche (weiss) als Halo - unabhaengig davon, was gerade
+   darunter liegt (eine Stationsmarke, der Fluss, eine andere
+   Kundenmarke), bleibt der Kreis dadurch als EIGENE Form erkennbar,
+   statt mit seiner Umgebung zu verschmelzen (siehe Bericht: --kunden
+   gegen --marine misst nur 2.01:1, gegen --skala-rahmen nur 2.36:1 -
+   beide unter der fuer Grafik verlangten 3:1, wenn zwei Flaechen ohne
+   Trennung aneinanderstossen wuerden). */
+.stationenkarte-kundenort-kreis {
+  fill: var(--kunden);
+  stroke: var(--flaeche);
+  stroke-width: 1.5;
+}
+
+.stationenkarte-kundenort-text {
+  font-size: 9px;
+  fill: var(--text-leise);
+  text-anchor: middle;
+}
+
+.stationenkarte-massstab {
+  stroke: var(--text-leise);
+  stroke-width: 1;
+}
+
+.stationenkarte-massstab-text {
+  font-size: 9px;
+  fill: var(--text-leise);
+  text-anchor: middle;
+  stroke: none;
+}
+
+.stationenkarte-nordpfeil {
+  fill: var(--text-leise);
+}
+
+.stationenkarte-nordpfeil-text {
+  font-size: 10px;
+  fill: var(--text-leise);
+  text-anchor: middle;
+  font-weight: 700;
+}

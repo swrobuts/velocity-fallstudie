@@ -940,11 +940,20 @@ revoke select on velocity.v_wawi_fahrt_km from authenticated;
 -- freigegeben wird. Technisch waere die Reihenfolge beliebig (zwei
 -- unabhaengige Sichten, kein gemeinsamer Zustand), diese Reihenfolge ist
 -- eine bewusste Lesefuehrung, keine Notwendigkeit.
+-- v_wawi_station_flotte, v_wawi_stationsverkehr_zeitfenster und
+-- v_wawi_kundenorte (Gestaltungsauftrag "Stationen ausbauen") stehen aus
+-- demselben Grund in dieser Liste wie v_wawi_modell/v_wawi_fahrten_je_tag
+-- oben: ohne GRANT sind sie fuer die Oberflaeche tot, und die
+-- Sweep-Pruefung in tools/abnahme.sh faengt das bei Sichten nicht ab.
+-- Keine der drei traegt einen kundenbezogenen Einzelbezug wie
+-- v_wawi_fahrt_km - der Grant gehoert deshalb, anders als deren
+-- Nachbarschaft weiter oben, wieder zur normalen Liste, nicht dahinter.
 grant select on
   velocity.v_wawi_flotte, velocity.v_wawi_kunde, velocity.v_wawi_station,
   velocity.v_wawi_schaden, velocity.v_wawi_auftrag,
   velocity.v_wawi_umsatz_radtyp, velocity.v_wawi_umsatz_kundengruppe,
   velocity.v_wawi_km_co2, velocity.v_wawi_stationsauslastung,
   velocity.v_wawi_modell, velocity.v_wawi_fahrten_je_tag,
-  velocity.v_wawi_fahrten_je_tag_rad
+  velocity.v_wawi_fahrten_je_tag_rad, velocity.v_wawi_station_flotte,
+  velocity.v_wawi_stationsverkehr_zeitfenster, velocity.v_wawi_kundenorte
 to authenticated;

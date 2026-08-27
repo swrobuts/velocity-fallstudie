@@ -1233,6 +1233,121 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
     return wrapper;
 }
 
+// ===== Zeichenbaustein: Donut (Gestaltungsauftrag Stationen, Punkt 2) =====
+//
+// Zwei woertliche Wuensche desselben Auftrags: "vermisse auch die
+// Auslastung der Stellplaetze als Donutchart" (in der Uebersicht ueber
+// der Liste) und "Wenn ich auf die Details einer Station klicke, will
+// ich da ein Donut-Chart fuer die Belegung sehen, 100 % ist die
+// Kapazitaet". EIN Baustein hier statt zweier eigener Zeichnungen in
+// stationen.js - "die anderen Bereiche werden ihn brauchen" (Auftrag,
+// woertlich): ein Anteilsring ist keine stationseigene Idee, derselbe
+// Fund wie bei saeulenSparkline()/zellbalken() oben.
+//
+// DIE SKALA IST FEST (Auftrag, ausdruecklich): 100 % ist maximum, wie
+// vom Aufrufer uebergeben - NICHT der groesste vorkommende Wert einer
+// Reihe (anders als saeulengrafik() weiter unten, deren Maximum bewusst
+// aus den Werten selbst kommt, weil dort keine fachliche Kapazitaetsgrenze
+// existiert). Fuer eine einzelne Station ist maximum ihre Kapazitaet,
+// fuer die Netzuebersicht die Gesamtkapazitaet ueber alle Stationen -
+// beides eine Groesse, die nur der Aufrufer kennt.
+//
+// EIN DONUT OHNE ZAHL IST EINE SCHAETZAUFGABE (Auftrag, ausdruecklich):
+// der Anteil steht deshalb ZWEIMAL da - als Flaeche UND als Text in der
+// Mitte (Prozent gross, der Bruch klein darunter, sofern optionen.bruch
+// gesetzt ist) - und beschriftung ist ein PFLICHTPARAMETER wie bei
+// saeulenSparkline() oben: eine vollstaendige, vorgelesene Zusammenfassung
+// fuer role="img"/aria-label, kein optionales Detail, das ein Aufrufer
+// vergessen koennte.
+//
+// STROKE-DASHARRAY AUF ZWEI <circle>-ELEMENTEN STATT EINES HANDGERECHNETEN
+// <path>-KREISBOGENS: fuer einen reinen Anteilsring (kein Kuchendiagramm
+// mit mehreren Segmenten) einfacher und robuster als eine SVG-Arc-Notation
+// mit grossem/kleinem Bogen-Flag - bei genau 0 % oder 100 % faellt eine
+// <path>-Loesung leicht auf denselben Anfangs-/Endpunkt zusammen und
+// verschwindet, waehrend ein Kreis mit stroke-dasharray "0 Umfang" bzw.
+// "voller Umfang, 0 Rest" unproblematisch bleibt.
+// transform="rotate(-90 ...)" verschiebt den Start von der 3-Uhr- auf die
+// 12-Uhr-Position, damit der Ring im Zeigersinn waechst - die uebliche
+// Lesart eines Anteilsrings. stroke-linecap bleibt beim Vorgabewert "butt"
+// (nicht "round"): ein rundes Ende macht einen kleinen, aber echten Anteil
+// optisch groesser, als er ist - bei einer Grafik, die LAENGE (hier:
+// Bogenlaenge) kodiert, dieselbe Verzerrung, die eine abgeschnittene
+// y-Achse bei einer Saeule waere.
+//
+// FARBEN, GEMESSEN: der Hintergrundring nutzt --skala-rahmen (3.64:1 auf
+// Weiss, wie schon bei saeulenSparkline() - dieselbe Flaeche, ein zweiter
+// Verwendungszweck statt eines dritten, unvermessenen Grautons). Die
+// Vorgabefarbe des Vordergrunds ist --marine (17.29:1). Ein Aufrufer darf
+// optionen.farbe auf --warnung-text setzen (5.32:1 auf Weiss), aber NUR
+// dort, wo der Anteil dabei bei 100 % liegt (eine volle Station):
+// --warnung-text gegen --skala-rahmen selbst hat nur 1.46:1 - weit unter
+// der fuer Grafik verlangten 3:1 -, und genau diese beiden Farben treffen
+// an der Ring-Grenze aufeinander, sobald der Hintergrundring noch sichtbar
+// bleibt. Bei einem exakt vollen Anteil (100 %) verschwindet der
+// Hintergrundring vollstaendig hinter dem Vordergrund, die Grenze existiert
+// dann nicht - siehe donatDetailAufbauen()/stationenUebersicht() in
+// stationen.js, wo --warnung-text ausschliesslich fuer frei === 0 (also
+// anteil === 1) vergeben wird.
+function donut(wert, maximum, beschriftung, optionen = {}) {
+    const { durchmesser = 88, dicke = 12, farbe = 'var(--marine)', bruch = null } = optionen;
+
+    const anteil = maximum > 0 ? Math.max(0, Math.min(1, wert / maximum)) : 0;
+    const mitte = durchmesser / 2;
+    const radius = mitte - dicke / 2;
+    const umfang = 2 * Math.PI * radius;
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${durchmesser} ${durchmesser}`);
+    svg.setAttribute('width', durchmesser);
+    svg.setAttribute('height', durchmesser);
+    svg.classList.add('donut');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', beschriftung);
+
+    const hintergrund = document.createElementNS(SVG_NS, 'circle');
+    hintergrund.setAttribute('cx', mitte);
+    hintergrund.setAttribute('cy', mitte);
+    hintergrund.setAttribute('r', radius);
+    hintergrund.setAttribute('stroke-width', dicke);
+    hintergrund.setAttribute('class', 'donut-hintergrund');
+    svg.append(hintergrund);
+
+    // anteil === 0 zeichnet keinen Vordergrundkreis: ein stroke-dasharray
+    // von "0 Umfang" waere gueltig, aber ueberfluessig - der Hintergrund
+    // allein zeigt bereits "nichts belegt".
+    if (anteil > 0) {
+        const vordergrund = document.createElementNS(SVG_NS, 'circle');
+        vordergrund.setAttribute('cx', mitte);
+        vordergrund.setAttribute('cy', mitte);
+        vordergrund.setAttribute('r', radius);
+        vordergrund.setAttribute('stroke-width', dicke);
+        vordergrund.setAttribute('stroke', farbe);
+        vordergrund.setAttribute('stroke-dasharray', `${(umfang * anteil).toFixed(2)} ${umfang.toFixed(2)}`);
+        vordergrund.setAttribute('transform', `rotate(-90 ${mitte} ${mitte})`);
+        vordergrund.setAttribute('class', 'donut-vordergrund');
+        svg.append(vordergrund);
+    }
+
+    const textProzent = document.createElementNS(SVG_NS, 'text');
+    textProzent.setAttribute('x', mitte);
+    textProzent.setAttribute('y', bruch ? mitte - 6 : mitte);
+    textProzent.setAttribute('class', 'donut-text-prozent');
+    textProzent.textContent = `${Math.round(anteil * 100)} %`;
+    svg.append(textProzent);
+
+    if (bruch) {
+        const textBruch = document.createElementNS(SVG_NS, 'text');
+        textBruch.setAttribute('x', mitte);
+        textBruch.setAttribute('y', mitte + 14);
+        textBruch.setAttribute('class', 'donut-text-bruch');
+        textBruch.textContent = bruch;
+        svg.append(textBruch);
+    }
+
+    return svg;
+}
+
 // ===== Zeichenbaustein: Säulengrafik (Drill-Down-Aufgabe) =====
 //
 // Drittes Geschwister von saeulenSparkline()/zellbalken() oben, allgemein

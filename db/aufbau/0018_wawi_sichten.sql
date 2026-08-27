@@ -12,8 +12,11 @@
 --             v_wawi_auftrag, v_wawi_umsatz_radtyp,
 --             v_wawi_umsatz_kundengruppe, v_wawi_km_co2,
 --             v_wawi_stationsauslastung, v_wawi_modell,
---             v_wawi_fahrten_je_tag, v_wawi_fahrten_je_tag_rad
--- Ruecknahme: DROP VIEW fuer dieselben Namen; DROP FUNCTION
+--             v_wawi_fahrten_je_tag, v_wawi_fahrten_je_tag_rad,
+--             v_wawi_station_flotte, v_wawi_stationsverkehr_zeitfenster,
+--             velocity.ort_koordinate, v_wawi_kundenorte
+-- Ruecknahme: DROP VIEW fuer dieselben Namen; DROP TABLE
+--             velocity.ort_koordinate; DROP FUNCTION
 --             velocity.fn_luftlinie_km(numeric,numeric,numeric,numeric);
 --
 -- Hinweis:    Diese Datei entsteht in fuenf Aufgaben. Aufgabe 10 legt die
@@ -29,7 +32,15 @@
 --             "Sichten verweben" (Gestaltungsauftrag Punkt 2b) ergaenzt
 --             v_wawi_fahrten_je_tag_rad: ein Klick auf einen Tag braucht
 --             die Raeder, die an diesem Tag gefahren sind - ohne
---             Personenbezug, siehe deren ausfuehrlicher Kommentar.
+--             Personenbezug, siehe deren ausfuehrlicher Kommentar. Der
+--             Gestaltungsauftrag "Stationen ausbauen" ergaenzt drei
+--             weitere Sichten und eine Referenztabelle ganz am Ende der
+--             Datei: v_wawi_station_flotte (welche Raeder stehen an
+--             welcher Station, Punkt 1), v_wawi_stationsverkehr_zeitfenster
+--             (Zu-/Abgang nach Zeitfenster fuer die Disposition, Punkt 3)
+--             und velocity.ort_koordinate/v_wawi_kundenorte (Koordinaten
+--             fuer die schematische Landkarte samt aggregierter
+--             Kundenorte, Punkt 4).
 -- =====================================================================
 
 -- Luftlinie nach Haversine, ohne PostGIS - dieselbe Entscheidung wie
@@ -1023,3 +1034,415 @@ comment on column velocity.v_wawi_fahrten_je_tag_rad.kilometer is
 comment on column velocity.v_wawi_fahrten_je_tag_rad.ist_geschaetzt is
   'Wahr, wenn kilometer nicht gemessen, sondern aus Dauer oder Luftlinie '
   'geschätzt wurde - gehört zu jeder Anzeige von kilometer dazu.';
+
+-- =====================================================================
+-- Gestaltungsauftrag "Stationen ausbauen", Punkt 1: v_wawi_station_flotte
+-- - welche Raeder stehen an welcher Station
+-- =====================================================================
+
+-- ---- Raeder je Station -------------------------------------------------
+-- Woertlich der Auftrag: "es wird nicht erkennbar, welche Raeder gerade
+-- an welcher Station stehen, das muss in die Details rein." v_wawi_flotte
+-- fuehrt dafuer bereits eine Spalte standort (s.name, siehe deren
+-- Kopfkommentar) - GEPRUEFT und verworfen: velocity.station.name traegt
+-- KEINE unique-Constraint (nur stationsnummer hat station_nummer_uk, siehe
+-- 0003_bereich_b_netz_und_flotte.sql), ein Filter "standort=eq.<Name>" aus
+-- der Oberflaeche waere also ein Textvergleich auf einem Feld ohne
+-- garantierte Eindeutigkeit - heute zufaellig eindeutig, aber nichts in
+-- der Datenbank verspricht das auch morgen noch. Diese Sicht traegt
+-- stattdessen station_id, den echten Fremdschluessel aus
+-- fahrrad_position, als Filterspalte - derselbe Fund wie bei
+-- v_wawi_fahrten_je_tag_rad weiter oben ("Sichten verweben"): eine
+-- vorhandene Spalte reicht nicht automatisch, wenn sie fachlich etwas
+-- anderes leistet als der neue Anwendungsfall braucht.
+--
+-- Dieselben Spalten wie v_wawi_flotte (Rahmennummer, Typ, Status,
+-- Akkustand, offene Schaeden, hoechste Schwere) - "was sonst zur
+-- Einschaetzung hilft" (Auftrag, woertlich): eine Disposition, die ein
+-- Rad umsetzen will, muss wissen, ob es fahrbereit ist, nicht nur, dass es
+-- da steht. Bewusst OHNE angeschafft_am/letzte_wartung/hersteller/modell -
+-- das sind Flottendetails, die v_wawi_flotte selbst schon zeigt (der
+-- Querverweis dorthin bleibt moeglich, siehe fahrrad_id), keine
+-- Zusatzinfo fuer "steht dieses Rad hier richtig".
+--
+-- ROLLE: disposition und leitung, wie v_wawi_station selbst - NICHT
+-- zusaetzlich werkstatt, obwohl v_wawi_flotte es zulaesst. Der
+-- Gestaltungsauftrag verlangt: "Wer die Stationsdetails sieht, muss auch
+-- die Raeder sehen duerfen" - das ist eine UNTERGRENZE (disposition UND
+-- leitung MUESSEN diese Sicht sehen, weil sie den Stationen-Bereich
+-- sehen), keine Aufforderung, sie zusaetzlich an eine dritte Rolle zu
+-- vergeben, die den Bereich gar nicht aufruft. werkstatt sieht dieselben
+-- Raeder ohnehin vollstaendig ueber v_wawi_flotte.
+create or replace view velocity.v_wawi_station_flotte as
+select fp.station_id,
+       f.fahrrad_id,
+       f.rahmennummer,
+       t.typ_code,
+       t.bezeichnung as typ,
+       f.status,
+       fp.akkustand_prozent,
+       (select count(*) from velocity.schadensmeldung sm
+         where sm.fahrrad_id = f.fahrrad_id and sm.status in ('offen','in_arbeit'))
+                        as offene_schaeden,
+       -- Identische Ueberlegung wie v_wawi_flotte.hoechste_schwere: max()
+       -- auf dem ENUM selbst, nicht auf ::text, damit fahruntauglich vor
+       -- gering und mittel gewinnt statt hinter ihnen im Alphabet zu
+       -- verschwinden.
+       (select max(sm.schwere)::text from velocity.schadensmeldung sm
+         where sm.fahrrad_id = f.fahrrad_id and sm.status in ('offen','in_arbeit'))
+                        as hoechste_schwere
+  from velocity.fahrrad_position fp
+  join velocity.fahrrad       f  on f.fahrrad_id = fp.fahrrad_id
+  join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
+  join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
+ where fp.station_id is not null
+   and (velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung'));
+
+comment on view velocity.v_wawi_station_flotte is
+  'Welche Raeder stehen an welcher Station (Gestaltungsauftrag Stationen, Punkt '
+  '1) - dieselben Spalten wie v_wawi_flotte, aber ueber station_id gefiltert '
+  'statt ueber den Namenstext v_wawi_flotte.standort, der keine unique-Constraint '
+  'traegt (siehe Kopfkommentar am create view). Nur Raeder MIT Station '
+  '(fp.station_id is not null) - ein Rad auf freier Ausleihe gehoert in keine '
+  'Stationsdetailmaske. Filtert selbst ueber velocity.hat_rolle, dieselben '
+  'Rollen wie v_wawi_station.';
+comment on column velocity.v_wawi_station_flotte.station_id is
+  'Schluessel der Station, der Filterschluessel dieser Sicht (station_id=eq.<id>).';
+comment on column velocity.v_wawi_station_flotte.fahrrad_id is
+  'Schluessel des Rades, fuer den Sprung in die Flottensicht (v_wawi_flotte).';
+comment on column velocity.v_wawi_station_flotte.rahmennummer is
+  'Am Rahmen ablesbare Nummer, der Bezug zum physischen Rad vor Ort.';
+comment on column velocity.v_wawi_station_flotte.typ_code is
+  'Fachlicher Schluessel des Fahrradtyps.';
+comment on column velocity.v_wawi_station_flotte.typ is
+  'Anzeigename des Fahrradtyps.';
+comment on column velocity.v_wawi_station_flotte.status is
+  'Aktueller Betriebsstatus des Rades - verfuegbar, ausgeliehen, wartung, defekt '
+  'oder ausgemustert. Ein Rad mit Status ausgeliehen sollte hier praktisch nicht '
+  'auftauchen (fahrrad_position wird bei der Ausleihe geraeumt); steht es '
+  'trotzdem noch da, ist das ein Hinweis auf eine unsaubere Rueckgabe, kein '
+  'Softwarefehler dieser Sicht.';
+comment on column velocity.v_wawi_station_flotte.akkustand_prozent is
+  'Ladestand des Akkus. NULL bei Raedern ohne Elektroantrieb.';
+comment on column velocity.v_wawi_station_flotte.offene_schaeden is
+  'Zahl der noch nicht abgeschlossenen Schadensmeldungen (offen oder in_arbeit).';
+comment on column velocity.v_wawi_station_flotte.hoechste_schwere is
+  'Schwerste noch offene Meldung nach der natuerlichen Rangfolge des ENUM (gering '
+  '< mittel < fahruntauglich), nicht alphabetisch. NULL, wenn keine offene '
+  'Meldung vorliegt.';
+
+-- =====================================================================
+-- Gestaltungsauftrag "Stationen ausbauen", Punkt 3:
+-- v_wawi_stationsverkehr_zeitfenster - Zu-/Abgang nach Zeitfenster
+-- =====================================================================
+
+-- ---- Verkehr je Station und Zeitfenster ---------------------------------
+-- Woertlich der Auftrag: "Dann will ich bei den Details den Abgang/Zugang
+-- nach Zeitslots als Grafik sehen." Die Kernfrage der Disposition:
+-- laeuft eine Station morgens leer und quillt abends ueber, muss
+-- umgeraeumt werden - und das sieht man nur an einer Grafik ueber die
+-- Tageszeit, nicht an v_wawi_stationsauslastung (dort steht nur die
+-- Gesamtsumme abgaenge/zugaenge ueber die GESAMTE Historie, ohne
+-- Zeitachse).
+--
+-- ZEITFENSTER: Zweistundenbloecke (12 je Tag), nicht Stunden und nicht
+-- Tageszeiten. Nachgemessen an den echten Fahrten (Referenzdatenbank,
+-- 12047 abgeschlossene Ausleihen Januar 2025 bis August 2026): eine
+-- einzelne Stunde an EINER Station hat in mehreren Kombinationen unter
+-- fuenf Fahrten ueber den GESAMTEN Zeitraum - "eine Stunde mit drei
+-- Fahrten im Jahr sagt nichts" (Auftrag, woertlich) waere bei stuendlicher
+-- Aufloesung realer Befund, nicht nur eine theoretische Warnung. Ein
+-- Zweistundenblock verdoppelt die Stichprobe je Kasten und laesst nur noch
+-- sechs von 146 belegten Kombinationen unter fuenf Fahrten (nachgemessen).
+-- Tageszeiten (z. B. vier Bloecke) waeren umgekehrt zu grob: der
+-- Morgenpeak um 7 Uhr und der Feierabendpeak um 17 Uhr - die groessten
+-- Ausschlaege im gesamten Datenbestand, siehe unten - laegen dann beide
+-- mitten in ihrem jeweiligen Block und waeren gegen die Nachbarstunden
+-- nicht mehr zu erkennen.
+--
+-- WERKTAG/WOCHENENDE GETRENNT, NICHT UEBER DEN GANZEN ZEITRAUM GEMITTELT:
+-- "ein Mittel ueber ein Jahr glaettet den Wochenrhythmus weg" (Auftrag,
+-- woertlich) ist hier kein Risiko, sondern eine nachgemessene Tatsache
+-- dieser Datenbank. Werktags haeufen sich 2032 von rund 8500 Werktags-
+-- Ausleihen allein in der Stunde 7 Uhr und 2767 in der Stunde 17 Uhr -
+-- ein klassisches Pendlermuster. Am Wochenende verteilen sich die
+-- Fahrten dagegen nahezu gleichmaessig ueber den Tag (rund 160-200 je
+-- Stunde, kein erkennbarer Peak). EIN gemeinsamer Mittelwert ueber beide
+-- wuerde einen Feierabendpeak zeigen, der am Wochenende gar nicht
+-- existiert, und die gleichmaessige Wochenendnutzung als "leicht erhoehtes
+-- Grundrauschen um den Werktagspeak" verschwinden lassen - genau die
+-- Glaettung, vor der der Auftrag warnt. Zwei Reihen (wochentyp) statt
+-- einer sind die direkte Antwort darauf.
+--
+-- GEMITTELT UEBER DEN GESAMTEN VERFUEGBAREN ZEITRAUM (Januar 2025 bis
+-- August 2026, ueber generate_series aus min/max startzeit ermittelt,
+-- kein hartcodiertes Datum): eine kuerzere Fensterung (etwa nur die
+-- letzten drei Monate) haette die ohnehin knappe Stichprobe je Kasten
+-- weiter verkleinert, ohne dass in diesem Referenzbestand ein Trend
+-- ueber die Zeit zu erwarten waere (die Referenzdaten sind synthetisch
+-- fuer das gesamte Jahr gleichmaessig erzeugt, siehe 0008/0009). "Je
+-- Tag" (abgaenge_je_tag/zugaenge_je_tag) ist deshalb eine Rate: Summe der
+-- Fahrten dieses Kastens geteilt durch die Zahl der Werktage bzw.
+-- Wochenendtage im gesamten Zeitraum (tage_erfasst) - nicht die rohe
+-- Summe, die bei 428 Werktagen gegenueber 171 Wochenendtagen sonst allein
+-- durch die unterschiedliche Tagezahl schiefe Vergleiche erzeugte.
+--
+-- KEIN JOIN AUF v_wawi_fahrt_km ODER v_wawi_fahrten_je_tag_rad: diese
+-- Sicht braucht weder Kilometer noch Kunde, nur Stationsschluessel und
+-- Uhrzeit - ein Join auf eine Sicht mit eigener, engerer Rollenschranke
+-- wuerde hier denselben Fehler wiederholen, den der Kopfkommentar von
+-- v_wawi_fahrten_je_tag_rad bereits einmal beschreibt.
+--
+-- KEIN PERSONENBEZUG: keine ausleihe_id, keine kunde_id, kein einzelner
+-- Zeitstempel - nur Station, Wochentyp (werktag/wochenende, keine
+-- Kalenderwoche und kein Datum) und ein zweistuendiges Zeitfenster, dazu
+-- aggregierte Zaehlwerte. Aus dieser Sicht laesst sich keine einzelne
+-- Fahrt und kein einzelner Kunde rekonstruieren - dieselbe Grenze wie bei
+-- v_wawi_fahrten_je_tag (siehe deren Kopfkommentar), hier zusaetzlich
+-- ohne Kalendertag, weil ein Zeitfenster fuer die Disposition nur als
+-- WIEDERKEHRENDES Muster interessant ist, nicht als Ereignis an einem
+-- bestimmten Tag.
+--
+-- RASTER STATT NUR VORKOMMENDER KOMBINATIONEN: jede der 10 Stationen
+-- traegt fuer JEDEN der 24 Wochentyp/Zeitfenster-Kaesten eine Zeile, auch
+-- wenn dort ueber den gesamten Zeitraum keine einzige Fahrt lag (dann
+-- abgaenge=zugaenge=0) - dieselbe Ueberlegung wie bei saeulengrafik() in
+-- rahmen.js ("ein fehlender Betriebstag ist null Fahrten, keine
+-- ausgelassene Kategorie"): ein fehlendes Zeitfenster in einer Grafik mit
+-- fester x-Achse saehe sonst wie eine Ladeluecke aus, nicht wie eine
+-- ruhige Nachtstunde.
+create or replace view velocity.v_wawi_stationsverkehr_zeitfenster as
+with tage as (
+  select d::date as tag,
+         case when extract(isodow from d) in (6, 7) then 'wochenende' else 'werktag' end as wochentyp
+    from generate_series(
+           (select min(startzeit) from velocity.ausleihe where status = 'abgeschlossen')::date,
+           (select max(startzeit) from velocity.ausleihe where status = 'abgeschlossen')::date,
+           interval '1 day'
+         ) as d
+),
+tage_je_typ as (
+  select wochentyp, count(*) as anzahl from tage group by 1
+),
+abgaenge as (
+  select a.start_station_id as station_id,
+         case when extract(isodow from a.startzeit) in (6, 7) then 'wochenende' else 'werktag' end as wochentyp,
+         (extract(hour from a.startzeit)::int / 2) * 2 as zeitfenster_start_stunde,
+         count(*) as anzahl
+    from velocity.ausleihe a
+   where a.status = 'abgeschlossen'
+   group by 1, 2, 3
+),
+zugaenge as (
+  select a.end_station_id as station_id,
+         case when extract(isodow from a.startzeit) in (6, 7) then 'wochenende' else 'werktag' end as wochentyp,
+         (extract(hour from a.startzeit)::int / 2) * 2 as zeitfenster_start_stunde,
+         count(*) as anzahl
+    from velocity.ausleihe a
+   where a.status = 'abgeschlossen'
+   group by 1, 2, 3
+),
+raster as (
+  select s.station_id, s.name, wt.wochentyp, blk.zeitfenster_start_stunde
+    from velocity.station s
+   cross join (values ('werktag'), ('wochenende')) as wt(wochentyp)
+   cross join (select generate_series(0, 22, 2) as zeitfenster_start_stunde) as blk
+)
+select r.station_id,
+       r.name,
+       r.wochentyp,
+       r.zeitfenster_start_stunde,
+       coalesce(ab.anzahl, 0) as abgaenge,
+       coalesce(zu.anzahl, 0) as zugaenge,
+       round(coalesce(ab.anzahl, 0)::numeric / nullif(tt.anzahl, 0), 2) as abgaenge_je_tag,
+       round(coalesce(zu.anzahl, 0)::numeric / nullif(tt.anzahl, 0), 2) as zugaenge_je_tag,
+       round((coalesce(zu.anzahl, 0) - coalesce(ab.anzahl, 0))::numeric / nullif(tt.anzahl, 0), 2) as saldo_je_tag,
+       tt.anzahl as tage_erfasst
+  from raster r
+  join tage_je_typ tt on tt.wochentyp = r.wochentyp
+  left join abgaenge ab on ab.station_id = r.station_id and ab.wochentyp = r.wochentyp
+                       and ab.zeitfenster_start_stunde = r.zeitfenster_start_stunde
+  left join zugaenge zu on zu.station_id = r.station_id and zu.wochentyp = r.wochentyp
+                       and zu.zeitfenster_start_stunde = r.zeitfenster_start_stunde
+ where velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung');
+
+comment on view velocity.v_wawi_stationsverkehr_zeitfenster is
+  'Zu- und Abgang je Station in Zweistundenbloecken, getrennt nach Werktag und '
+  'Wochenende, gemittelt ueber den gesamten verfuegbaren Zeitraum '
+  '(Gestaltungsauftrag Stationen, Punkt 3) - siehe Kopfkommentar am create view '
+  'fuer die nachgemessene Begruendung von Blockgroesse, Wochentagstrennung und '
+  'Mittelungszeitraum. Aggregat ohne Personenbezug: keine ausleihe_id, keine '
+  'kunde_id, kein Kalendertag. Filtert selbst ueber velocity.hat_rolle, '
+  'dieselben Rollen wie v_wawi_stationsauslastung.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.station_id is
+  'Schluessel der Station.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.name is
+  'Anzeigename der Station.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.wochentyp is
+  '''werktag'' (Montag bis Freitag) oder ''wochenende'' (Samstag/Sonntag) - '
+  'getrennt gehalten, weil beide nachweislich unterschiedliche Tagesrhythmen '
+  'zeigen, siehe Kopfkommentar.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.zeitfenster_start_stunde is
+  'Erste Stunde des Zweistundenblocks (0, 2, 4, ... 22) in lokaler Datenbankzeit. '
+  'Der Block umfasst diese und die folgende Stunde.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.abgaenge is
+  'Summe der abgeschlossenen Ausleihen, die in diesem Block an dieser Station '
+  'begonnen haben, ueber den GESAMTEN erfassten Zeitraum (nicht je Tag) - der '
+  'Zaehler zu abgaenge_je_tag.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.zugaenge is
+  'Summe der abgeschlossenen Ausleihen, die in diesem Block an dieser Station '
+  'geendet haben, ueber den gesamten erfassten Zeitraum - der Zaehler zu '
+  'zugaenge_je_tag.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.abgaenge_je_tag is
+  'abgaenge geteilt durch tage_erfasst - die vergleichbare Rate, weil Werktage '
+  '(428) und Wochenendtage (171) im Zeitraum unterschiedlich haeufig sind. Das '
+  'ist die Zahl fuer die Grafik, nicht die rohe Summe abgaenge.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.zugaenge_je_tag is
+  'zugaenge geteilt durch tage_erfasst, siehe abgaenge_je_tag.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.saldo_je_tag is
+  'zugaenge_je_tag minus abgaenge_je_tag. Positiv heisst, die Station sammelt in '
+  'diesem Zeitfenster im Mittel mehr Raeder an, als sie abgibt - der Hinweis, '
+  'wann nachverteilt werden muss.';
+comment on column velocity.v_wawi_stationsverkehr_zeitfenster.tage_erfasst is
+  'Zahl der Werktage bzw. Wochenendtage im gesamten erfassten Zeitraum (Nenner '
+  'von abgaenge_je_tag/zugaenge_je_tag/saldo_je_tag) - macht sichtbar, auf wie '
+  'vielen Tagen die Rate beruht, statt eine Genauigkeit vorzutaeuschen, die eine '
+  'einzelne Randstunde mit wenigen Fahrten nicht hat.';
+
+-- =====================================================================
+-- Gestaltungsauftrag "Stationen ausbauen", Punkt 4: Koordinaten je
+-- Kundenort und v_wawi_kundenorte - die Landkarte mit Kundschaft
+-- =====================================================================
+
+-- ---- Koordinaten je Ort -------------------------------------------------
+-- "Dafuer brauchst du Koordinaten je Ort - leg sie als Daten an, nicht als
+-- Konstanten im JavaScript, und pruef sie, statt sie zu raten" (Auftrag,
+-- woertlich). Eine eigene, kleine Referenztabelle statt einer erweiterten
+-- Stammtabelle: velocity.adresse fuehrt ort als Freitext ohne eigenen
+-- Schluessel, eine Koordinate gehoert fachlich zum ORT (einer von 14
+-- Werten in dieser Datenbank, siehe unten), nicht zu einer einzelnen
+-- Adresse.
+--
+-- GEPRUEFT, NICHT GERATEN: die vierzehn Orte sind genau die, die in
+-- velocity.adresse.ort ueber velocity.kunde tatsaechlich vorkommen
+-- (nachgezaehlt: Wuerzburg 573, Veitshoechheim 58, Hoechberg 56, Gerbrunn
+-- 40, Randersacker 32, Rottendorf 27, Ochsenfurt 20, Estenfeld 19, Zell am
+-- Main 16, Waldbuettelbrunn 16, Kist 14, Kitzingen 12, Karlstadt 9,
+-- Marktheidenfeld 9 - Summe 901 von 1014 Kunden, der Rest fuehrt keine
+-- Rechnungsadresse). Die Koordinaten selbst sind der jeweilige
+-- OpenStreetMap-Nominatim-Treffer fuer den Ortsnamen (Ortszentrum, kein
+-- Adresspunkt) - keine geschaetzten oder erinnerten Werte.
+create table if not exists velocity.ort_koordinate (
+  ort         text        primary key,
+  latitude    numeric(9,6) not null,
+  longitude   numeric(9,6) not null,
+  constraint ort_koordinate_lat_chk check (latitude  between  -90 and  90),
+  constraint ort_koordinate_lon_chk check (longitude between -180 and 180)
+);
+
+-- RLS an, ohne eigene Policy (default deny) - dieselbe Schranke, der jede
+-- Basistabelle in 0011_sicherheit.sql unterliegt (test_s_rls_ueberall_aktiv
+-- in t0011_sicherheit.sql sweept ueber ALLE Basistabellen und faellt sonst
+-- fuer diese neue Tabelle durch). Kein direkter Grant an authenticated
+-- noetig: v_wawi_kundenorte (Eigentuemer postgres, wie jede v_wawi_-Sicht
+-- ohne security_invoker) liest ort_koordinate mit den Rechten IHRES
+-- Eigentuemers, nicht mit denen der aufrufenden Rolle - dieselbe
+-- Eigentuemerschafts-Ueberlegung wie beim Grant von fn_luftlinie_km in
+-- 0019_wawi_logik.sql, hier nur fuer eine gelesene TABELLE statt einer
+-- aufgerufenen FUNKTION.
+alter table velocity.ort_koordinate enable row level security;
+
+comment on table velocity.ort_koordinate is
+  'Koordinaten je Ortsname, fuer die schematische Landkarte der Stationen '
+  '(Gestaltungsauftrag Stationen, Punkt 4). Enthaelt genau die Orte, die unter '
+  'velocity.adresse.ort in dieser Datenbank tatsaechlich vorkommen (siehe '
+  'Kopfkommentar). Werte aus OpenStreetMap/Nominatim (Ortszentrum), nicht '
+  'geschaetzt - "pruef sie, statt sie zu raten" (Auftrag, woertlich).';
+comment on column velocity.ort_koordinate.ort is
+  'Ortsname, wortgleich zu velocity.adresse.ort - der Join-Schluessel zu '
+  'v_wawi_kundenorte.';
+comment on column velocity.ort_koordinate.latitude is
+  'Breitengrad des Ortszentrums.';
+comment on column velocity.ort_koordinate.longitude is
+  'Laengengrad des Ortszentrums.';
+
+insert into velocity.ort_koordinate (ort, latitude, longitude) values
+  ('Würzburg',         49.778036,  9.943477),
+  ('Veitshöchheim',    49.840858,  9.888913),
+  ('Höchberg',         49.781826,  9.878684),
+  ('Gerbrunn',         49.780795,  9.994524),
+  ('Randersacker',     49.749722,  9.997718),
+  ('Rottendorf',       49.799412, 10.032107),
+  ('Ochsenfurt',       49.664355, 10.064755),
+  ('Estenfeld',        49.838868, 10.002861),
+  ('Waldbüttelbrunn',  49.786366,  9.831757),
+  ('Zell am Main',     49.811107,  9.870445),
+  ('Kist',             49.743490,  9.838752),
+  ('Kitzingen',        49.747392, 10.153831),
+  ('Karlstadt',        49.969818,  9.744140),
+  ('Marktheidenfeld',  49.858203,  9.566704)
+on conflict (ort) do update
+  set latitude = excluded.latitude, longitude = excluded.longitude;
+
+-- ---- Kundenorte fuer die Karte ------------------------------------------
+-- "... ich moechte eine neue Sicht haben, in der die Standorte auch als
+-- Landkarten visualisiert sind und sich zusaetzlich die Kunden einblenden
+-- lassen" (Auftrag, woertlich). Und, ausdruecklich als Warnung: "Kunden
+-- auf einer Karte sind Personendaten. Einzelne Wohnadressen als Punkte
+-- waeren genau das Bewegungs- und Wohnprofil, das diese Fallstudie
+-- fernhaelt."
+--
+-- BEGRUENDUNG DER AGGREGATION (der Lehrpunkt dieser Sicht, deshalb hier
+-- und nicht nur im Auftragsbericht): dieselbe Information, JE ORT
+-- gebuendelt ("Veitshoechheim, 58 Kunden"), ist zulaessig - sie ist eine
+-- Kennzahl ueber eine Gruppe von mindestens einer Handvoll Personen, aus
+-- der sich keine einzelne Adresse und kein einzelner Kunde mehr
+-- herauslesen laesst. JE PERSON verortet (ein Punkt auf der Karte je
+-- Kunde, und sei es nur grob auf Ortsebene gestreut) waere dagegen exakt
+-- das Bewegungs-/Wohnprofil aus der Warnung: schon der blosse Ort einer
+-- ansonsten anonymen Person ist ein personenbezogenes Merkmal (Art. 4
+-- Nr. 1 DSGVO), und eine Karte mit 1014 einzelnen Punkten liesse sich -
+-- anders als eine Zahl je Ort - nicht mehr von einer Kundenliste mit
+-- Wohnort unterscheiden. Der Unterschied ist nicht graduell, sondern
+-- grundsaetzlich: EINE Zahl je Ort kann niemanden individuell betreffen,
+-- egal wie klein die Gruppe ist (der kleinste Ort hier hat neun Kunden);
+-- EIN Punkt je Person kann es immer. Deshalb gibt es in dieser Sicht kein
+-- kunde_id, keinen Namen, keine Adresse - nur ort, Koordinate und eine
+-- Zaehlung.
+--
+-- ROLLE: disposition und leitung, wie v_wawi_station - diese Sicht ist
+-- fuer die Kartenansicht IM Stationen-Bereich gedacht (siehe
+-- stationen.js), nicht fuer den Kundenservice: die dortige v_wawi_kunde
+-- zeigt ohnehin schon jeden einzelnen Kunden samt Adresse fuer genau die
+-- Rolle, die sie fachlich braucht (kundenservice/leitung) - eine
+-- aggregierte Zweitsicht fuer dieselbe Rolle waere kein zusaetzlicher
+-- Schutz, hier geht es um eine ANDERE Rolle (disposition), die sonst gar
+-- keinen Kundenbezug sieht und deshalb NUR die aggregierte Form bekommt.
+create or replace view velocity.v_wawi_kundenorte as
+select a.ort,
+       ok.latitude,
+       ok.longitude,
+       count(*) as kunden
+  from velocity.kunde k
+  join velocity.adresse a on a.adresse_id = k.rechnungsadresse_id
+  left join velocity.ort_koordinate ok on ok.ort = a.ort
+ where velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung')
+ group by a.ort, ok.latitude, ok.longitude;
+
+comment on view velocity.v_wawi_kundenorte is
+  'Kundschaft je Ort, aggregiert mit Koordinate fuer die Stationskarte '
+  '(Gestaltungsauftrag Stationen, Punkt 4). Absichtlich ohne kunde_id, Name oder '
+  'Adresse - siehe der ausfuehrliche Kopfkommentar am create view fuer die '
+  'Begruendung, warum eine Zaehlung je Ort zulaessig ist, wo ein Punkt je Person '
+  'es nicht waere. Filtert selbst ueber velocity.hat_rolle.';
+comment on column velocity.v_wawi_kundenorte.ort is
+  'Ortsname laut Rechnungsadresse.';
+comment on column velocity.v_wawi_kundenorte.latitude is
+  'Breitengrad des Ortszentrums aus velocity.ort_koordinate. NULL, wenn der Ort '
+  'dort (noch) nicht gepflegt ist - die Oberflaeche zeigt einen solchen Ort dann '
+  'ohne Marke statt an einer geratenen Position.';
+comment on column velocity.v_wawi_kundenorte.longitude is
+  'Laengengrad des Ortszentrums, siehe latitude.';
+comment on column velocity.v_wawi_kundenorte.kunden is
+  'Zahl der Kunden mit diesem Ort in der Rechnungsadresse - die Kennzahl, die '
+  'die Aggregation zulaessig macht (siehe Kopfkommentar).';

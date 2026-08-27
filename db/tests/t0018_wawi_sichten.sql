@@ -646,3 +646,310 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;
+
+-- =====================================================================
+-- Gestaltungsauftrag "Stationen ausbauen", Punkt 1: v_wawi_station_flotte
+-- =====================================================================
+
+create or replace function velocity_test.test_v_station_flotte_existiert()
+returns setof text language plpgsql as $$
+begin
+  return next has_view('velocity'::name, 'v_wawi_station_flotte'::name,
+                       'v_wawi_station_flotte existiert');
+  return next has_column('velocity'::name, 'v_wawi_station_flotte'::name, 'station_id'::name,
+                         'nennt die Station');
+  return next has_column('velocity'::name, 'v_wawi_station_flotte'::name, 'fahrrad_id'::name,
+                         'nennt das Rad');
+  return next has_column('velocity'::name, 'v_wawi_station_flotte'::name, 'rahmennummer'::name,
+                         'nennt die Rahmennummer');
+  return next has_column('velocity'::name, 'v_wawi_station_flotte'::name, 'status'::name,
+                         'nennt den Betriebsstatus');
+  return next has_column('velocity'::name, 'v_wawi_station_flotte'::name, 'offene_schaeden'::name,
+                         'nennt die Zahl offener Schaeden');
+  return next has_column('velocity'::name, 'v_wawi_station_flotte'::name, 'hoechste_schwere'::name,
+                         'nennt die hoechste offene Schwere');
+end;
+$$;
+
+-- Rollenschranke: dieselben Rollen wie v_wawi_station (disposition UND
+-- leitung), NICHT werkstatt - siehe Kopfkommentar der Sicht, warum eine
+-- dritte, im Stationen-Bereich gar nicht sichtbare Rolle hier absichtlich
+-- fehlt, obwohl v_wawi_flotte sie zulaesst.
+create or replace function velocity_test.test_v_station_flotte_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('stationflotte-disposition', 'disposition');
+  select count(*) into v_n from velocity.v_wawi_station_flotte;
+  return next cmp_ok(v_n, '>', 0, 'Disposition sieht Raeder je Station');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('stationflotte-leitung', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_station_flotte;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht Raeder je Station');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('stationflotte-werkstatt', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_station_flotte;
+  return next is(v_n, 0,
+    'Werkstatt sieht v_wawi_station_flotte nicht - sie sieht dieselben Raeder vollstaendig ueber v_wawi_flotte');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Die wichtigste Zusicherung: die Zeilenzahl je Station in dieser Sicht
+-- muss v_wawi_station.belegt entsprechen - dieselbe Grundgesamtheit
+-- (fahrrad_position mit gesetzter station_id), nur einmal gezaehlt und
+-- einmal einzeln aufgelistet. Ohne diese Gegenprobe koennte ein falscher
+-- Join (z. B. ein zusaetzlicher, ungewollt vervielfachender Join auf
+-- fahrradtyp/-modell) stillschweigend zu viele oder zu wenige Zeilen je
+-- Station liefern, ohne dass die blosse Existenzpruefung oben es bemerkte.
+create or replace function velocity_test.test_v_station_flotte_stimmt_mit_belegt_ueberein()
+returns setof text language plpgsql as $$
+begin
+  perform velocity_test.fixture_mitarbeiter('stationflotte-belegt');
+
+  return next is_empty($q$
+    select 1
+      from velocity.v_wawi_station s
+      left join (select station_id, count(*) as n from velocity.v_wawi_station_flotte group by 1) f
+             on f.station_id = s.station_id
+     where s.belegt <> coalesce(f.n, 0)
+  $q$, 'Zeilenzahl je Station in v_wawi_station_flotte = v_wawi_station.belegt');
+
+  -- Gegenprobe, dass ueberhaupt Stationen mit Raedern existieren - sonst
+  -- waere die Probe oben trivial erfuellt (0 = 0 ueberall).
+  return next cmp_ok((select sum(belegt)::int from velocity.v_wawi_station), '>', 0,
+    'Es gibt ueberhaupt belegte Stellplaetze, gegen die geprueft wird');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- =====================================================================
+-- Gestaltungsauftrag "Stationen ausbauen", Punkt 3:
+-- v_wawi_stationsverkehr_zeitfenster
+-- =====================================================================
+
+create or replace function velocity_test.test_v_stationsverkehr_zeitfenster_existiert_ohne_personenbezug()
+returns setof text language plpgsql as $$
+begin
+  return next has_view('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                       'v_wawi_stationsverkehr_zeitfenster existiert');
+  return next has_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                         'station_id'::name, 'nennt die Station');
+  return next has_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                         'wochentyp'::name, 'nennt Werktag/Wochenende');
+  return next has_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                         'zeitfenster_start_stunde'::name, 'nennt das Zeitfenster');
+  return next has_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                         'abgaenge_je_tag'::name, 'nennt die Abgangsrate');
+  return next has_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                         'zugaenge_je_tag'::name, 'nennt die Zugangsrate');
+  return next has_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                         'saldo_je_tag'::name, 'nennt den Saldo');
+  return next has_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                         'tage_erfasst'::name, 'nennt die Stichprobengroesse');
+  -- Kein Personenbezug (Auftrag, Punkt 3): keine ausleihe_id, keine
+  -- kunde_id, kein einzelner Zeitstempel - dieselbe Probe wie bei
+  -- v_wawi_fahrten_je_tag_rad oben, hier zusaetzlich ohne Kalendertag
+  -- (siehe Kopfkommentar der Sicht).
+  return next hasnt_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                           'ausleihe_id'::name, 'nennt keine einzelne Fahrt');
+  return next hasnt_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                           'kunde_id'::name, 'nennt keinen Kunden');
+  return next hasnt_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                           'startzeit'::name, 'nennt keine Uhrzeit einer einzelnen Fahrt');
+  return next hasnt_column('velocity'::name, 'v_wawi_stationsverkehr_zeitfenster'::name,
+                           'tag'::name, 'nennt keinen Kalendertag - nur ein wiederkehrendes Zeitfenster');
+end;
+$$;
+
+-- Rollenschranke: dieselben Rollen wie v_wawi_stationsauslastung
+-- (disposition und leitung).
+create or replace function velocity_test.test_v_stationsverkehr_zeitfenster_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('verkehr-disposition', 'disposition');
+  select count(*) into v_n from velocity.v_wawi_stationsverkehr_zeitfenster;
+  return next cmp_ok(v_n, '>', 0, 'Disposition sieht den Stationsverkehr');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('verkehr-leitung', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_stationsverkehr_zeitfenster;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht den Stationsverkehr');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('verkehr-werkstatt', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_stationsverkehr_zeitfenster;
+  return next is(v_n, 0, 'Werkstatt sieht keinen Stationsverkehr');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Vollstaendiges Raster (Kopfkommentar der Sicht): 10 Stationen x 2
+-- Wochentypen x 12 Zweistundenbloecke = 240 Zeilen, jede Station genau
+-- 24 davon - auch fuer eine Station, an der ein einzelner Kasten ueber
+-- den gesamten Zeitraum null Fahrten sah. Ohne diese Probe koennte ein
+-- versehentlicher inner statt left join auf abgaenge/zugaenge ruhige
+-- Kaesten stillschweigend verschlucken, statt sie als 0 zu zeigen.
+create or replace function velocity_test.test_v_stationsverkehr_zeitfenster_vollstaendiges_raster()
+returns setof text language plpgsql as $$
+begin
+  perform velocity_test.fixture_mitarbeiter('verkehr-raster');
+
+  return next is((select count(*)::int from velocity.v_wawi_stationsverkehr_zeitfenster), 240,
+    '10 Stationen x 2 Wochentypen x 12 Zweistundenbloecke = 240 Zeilen');
+
+  return next is_empty($q$
+    select station_id from velocity.v_wawi_stationsverkehr_zeitfenster
+    group by station_id having count(*) <> 24
+  $q$, 'Jede Station traegt genau 24 Zeilen (2 Wochentypen x 12 Bloecke)');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Die wichtigste Zusicherung: ueber ALLE Wochentypen und Zeitfenster
+-- summiert, muss abgaenge/zugaenge je Station exakt v_wawi_stationsauslastung
+-- entsprechen - dieselben abgeschlossenen Ausleihen, hier nur nach Zeitfenster
+-- aufgeteilt statt einmalig aufsummiert. Deckt auf, was die reine
+-- Rasterprobe oben nicht kann: eine falsch gruppierte oder doppelt
+-- gezaehlte Fahrt wuerde die Summe verschieben, ohne die Zeilenzahl (240)
+-- zu aendern.
+create or replace function velocity_test.test_v_stationsverkehr_zeitfenster_summe_stimmt_mit_stationsauslastung_ueberein()
+returns setof text language plpgsql as $$
+begin
+  perform velocity_test.fixture_mitarbeiter('verkehr-summe');
+
+  return next is_empty($q$
+    select 1
+      from velocity.v_wawi_stationsauslastung s
+      join (select station_id, sum(abgaenge) as summe
+              from velocity.v_wawi_stationsverkehr_zeitfenster group by 1) v
+        using (station_id)
+     where s.abgaenge <> v.summe
+  $q$, 'Summe abgaenge ueber alle Zeitfenster = v_wawi_stationsauslastung.abgaenge je Station');
+
+  return next is_empty($q$
+    select 1
+      from velocity.v_wawi_stationsauslastung s
+      join (select station_id, sum(zugaenge) as summe
+              from velocity.v_wawi_stationsverkehr_zeitfenster group by 1) v
+        using (station_id)
+     where s.zugaenge <> v.summe
+  $q$, 'Summe zugaenge ueber alle Zeitfenster = v_wawi_stationsauslastung.zugaenge je Station');
+
+  return next cmp_ok((select sum(abgaenge)::int from velocity.v_wawi_stationsverkehr_zeitfenster), '>', 0,
+    'Es gibt ueberhaupt Abgaenge, gegen die geprueft wird');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- =====================================================================
+-- Gestaltungsauftrag "Stationen ausbauen", Punkt 4: velocity.ort_koordinate
+-- und v_wawi_kundenorte
+-- =====================================================================
+
+create or replace function velocity_test.test_v_kundenorte_existiert_ohne_personenbezug()
+returns setof text language plpgsql as $$
+begin
+  return next has_view('velocity'::name, 'v_wawi_kundenorte'::name,
+                       'v_wawi_kundenorte existiert');
+  return next has_column('velocity'::name, 'v_wawi_kundenorte'::name, 'ort'::name,
+                         'nennt den Ort');
+  return next has_column('velocity'::name, 'v_wawi_kundenorte'::name, 'latitude'::name,
+                         'nennt die Koordinate (Breite)');
+  return next has_column('velocity'::name, 'v_wawi_kundenorte'::name, 'longitude'::name,
+                         'nennt die Koordinate (Laenge)');
+  return next has_column('velocity'::name, 'v_wawi_kundenorte'::name, 'kunden'::name,
+                         'nennt die Kundenzahl je Ort');
+  -- Kein Personenbezug (Auftrag, Punkt 4: "Kunden auf einer Karte sind
+  -- Personendaten") - siehe der ausfuehrliche Kopfkommentar der Sicht,
+  -- warum eine Zaehlung je Ort zulaessig ist, ein Einzelbezug nicht.
+  return next hasnt_column('velocity'::name, 'v_wawi_kundenorte'::name, 'kunde_id'::name,
+                           'nennt keinen einzelnen Kunden');
+  return next hasnt_column('velocity'::name, 'v_wawi_kundenorte'::name, 'kundennummer'::name,
+                           'nennt keine Kundennummer');
+  return next hasnt_column('velocity'::name, 'v_wawi_kundenorte'::name, 'vorname'::name,
+                           'nennt keinen Vornamen');
+  return next hasnt_column('velocity'::name, 'v_wawi_kundenorte'::name, 'nachname'::name,
+                           'nennt keinen Nachnamen');
+  return next hasnt_column('velocity'::name, 'v_wawi_kundenorte'::name, 'strasse'::name,
+                           'nennt keine Strasse - eine Adresse je Ort waere kein Ort mehr');
+  return next hasnt_column('velocity'::name, 'v_wawi_kundenorte'::name, 'hausnummer'::name,
+                           'nennt keine Hausnummer');
+end;
+$$;
+
+-- Rollenschranke: disposition und leitung (siehe Kopfkommentar der
+-- Sicht), NICHT kundenservice - der sieht dieselben Kunden ohnehin
+-- einzeln ueber v_wawi_kunde und braucht die aggregierte Zweitsicht
+-- nicht.
+create or replace function velocity_test.test_v_kundenorte_rollentrennung_greift()
+returns setof text language plpgsql as $$
+declare v_n integer;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('kundenorte-disposition', 'disposition');
+  select count(*) into v_n from velocity.v_wawi_kundenorte;
+  return next cmp_ok(v_n, '>', 0, 'Disposition sieht die Kundenorte');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('kundenorte-leitung', 'leitung');
+  select count(*) into v_n from velocity.v_wawi_kundenorte;
+  return next cmp_ok(v_n, '>', 0, 'Leitung sieht die Kundenorte');
+  perform set_config('request.jwt.claims', '', true);
+
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('kundenorte-kundenservice', 'werkstatt');
+  select count(*) into v_n from velocity.v_wawi_kundenorte;
+  return next is(v_n, 0, 'Werkstatt sieht die Kundenorte nicht - kein Kundenbezug in dieser Rolle');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- Die wichtigste Zusicherung: die Summe der Kundenzahl ueber alle Orte
+-- muss der Zahl der Kunden MIT Rechnungsadresse entsprechen (Auftrag,
+-- woertlich als Beispiel genannt: "Veitshoechheim 58 Kunden" - hier direkt
+-- gegen die gemessene Zahl geprueft), und jeder gefuehrte Ort muss eine
+-- Koordinate aus velocity.ort_koordinate tragen - sonst zeigte die Karte
+-- einen Ort ohne Marke, ohne dass es auffiele.
+create or replace function velocity_test.test_v_kundenorte_summe_und_koordinaten_stimmen()
+returns setof text language plpgsql as $$
+declare v_summe integer; v_veitshoechheim integer; v_ohne_koordinate integer;
+begin
+  perform velocity_test.fixture_mitarbeiter('kundenorte-summe');
+
+  select sum(kunden) into v_summe from velocity.v_wawi_kundenorte;
+  return next is(v_summe,
+    (select count(*)::int from velocity.kunde where rechnungsadresse_id is not null),
+    'Summe der Kundenzahl je Ort = Zahl der Kunden mit Rechnungsadresse');
+
+  select kunden into v_veitshoechheim from velocity.v_wawi_kundenorte where ort = 'Veitshöchheim';
+  return next is(v_veitshoechheim, 58, 'Veitshoechheim: 58 Kunden (Auftrag, woertlich als Beispiel genannt)');
+
+  select count(*) into v_ohne_koordinate from velocity.v_wawi_kundenorte where latitude is null;
+  return next is(v_ohne_koordinate, 0, 'Jeder gefuehrte Ort traegt eine Koordinate aus velocity.ort_koordinate');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+create or replace function velocity_test.test_ort_koordinate_deckt_alle_kundenorte_ab()
+returns setof text language plpgsql as $$
+begin
+  -- Gegenprobe zur Koordinatenprobe oben, aus der anderen Richtung: kein
+  -- Ort aus der Kundschaft bleibt ohne Eintrag in ort_koordinate. Ohne
+  -- diese zweite Richtung koennte velocity.ort_koordinate zufaellig genug
+  -- (aber falsche) Orte enthalten und die erste Probe trotzdem bestehen.
+  return next is_empty($q$
+    select distinct a.ort
+      from velocity.kunde k join velocity.adresse a on a.adresse_id = k.rechnungsadresse_id
+     where not exists (select 1 from velocity.ort_koordinate ok where ok.ort = a.ort)
+  $q$, 'Jeder in der Kundschaft vorkommende Ort hat einen Eintrag in velocity.ort_koordinate');
+
+  return next cmp_ok((select count(*)::int from velocity.ort_koordinate), '>=', 14,
+    'Mindestens die 14 im Auftrag genannten Orte sind hinterlegt');
+end;
+$$;
