@@ -529,7 +529,6 @@ const UEBERSETZUNGEN = {
     "tile.onLoan": "Ausgeliehen",
     "tile.inMaintenance": "In Wartung",
     "tile.faulty": "Defekt",
-    "tile.ridesPerBike30d": "Fahrten je Rad (30 Tage)",
     "tile.stations": "Stationen",
     "tile.fullStations": "Volle Stationen",
     "tile.networkOccupancy": "Gesamtbelegung – alle Stationen",
@@ -629,9 +628,6 @@ const UEBERSETZUNGEN = {
     "hint.shareOnLoan": "{anteil} von {raederPhrase} · gerade unterwegs",
     "hint.shareMaintenance": "{anteil} von {raederPhrase} · in der Werkstatt",
     "hint.shareFaulty": "{anteil} von {raederPhrase} · wo es klemmt",
-    "hint.rideDistribution": "Median {median}, Mittel {mittel} je Rad",
-    "hint.noRidesAtAll": " · {n} von {raederPhrase} ohne eine einzige Fahrt",
-    "hint.allRiddenAtLeastOnce": " · jedes der {raederPhrase} mindestens einmal gefahren",
     "hint.allInOperation": "alle in Betrieb",
     "hint.decommissionedCount": "{n} davon stillgelegt",
     "hint.fullStationsShare": "{n} von {stationenPhrase}: {liste} - nimmt keine Rückgabe an",
@@ -657,6 +653,24 @@ const UEBERSETZUNGEN = {
     "hint.networkOccupancyWeighted": "{belegt} von {kapazitaet} Stellplätzen belegt · kapazitätsgewichtet, nicht der Durchschnitt der Einzelwerte ({naiv})",
     "hint.fullStationsList": "{voll} von {stationenPhrase}: {liste}",
     "hint.worstStationBalance": "Saldo {saldo} - gibt mehr Räder ab, als sie bekommt",
+    "tile.fleetAge": "Altersstruktur der Flotte",
+    "hint.fleetAgeAria": "Baujahr-Verteilung der Flotte, {vonJahr} bis {bisJahr}",
+    "hint.fleetAgeDetail": "{anteil} % der Flotte ({n} von {raederPhrase}) aus {jahr} – ältester Jahrgang im Bestand",
+    "hint.ridesPerBikeBucketsAria": "Fahrten je Rad, letzte 30 Tage, in Bereiche gruppiert",
+    "tile.tariffDistribution": "Verteilung nach Tarif",
+    "hint.tariffDistributionAria": "Kundschaft nach Tarif verteilt",
+    "hint.tariffDistributionDetail": "{anteil} % ({n} von {kundenPhrase}) ohne aktiven Tarif – größte Gruppe",
+    "hint.blockedNeverRiddenAll": "{n} von {kundenPhrase} – alle {n} noch nie gefahren, registriert {vonJahr}–{bisJahr}",
+    "hint.blockedNeverRiddenSome": "{n} von {kundenPhrase} – {nie} davon noch nie gefahren",
+    "tile.workOrdersRunning": "Laufende Aufträge",
+    "hint.workOrdersRunningShare": "{n} von {auftraegePhrase} – noch nicht abgeschlossen",
+    "hint.percentOfDamageReports": "{anteil} % der Schadensmeldungen",
+    "field.baujahr": "Baujahr",
+    "field.gewicht": "Gewicht",
+    "field.gangzahl": "Gangzahl",
+    "field.rahmenhoehe": "Rahmenhöhe",
+    "field.akkukapazitaet": "Akkukapazität",
+    "field.reichweite": "Reichweite",
   },
   en: {
     "common.cancel": "Cancel",
@@ -968,7 +982,6 @@ const UEBERSETZUNGEN = {
     "tile.onLoan": "On loan",
     "tile.inMaintenance": "In maintenance",
     "tile.faulty": "Faulty",
-    "tile.ridesPerBike30d": "Rides per bike (30 days)",
     "tile.stations": "Stations",
     "tile.fullStations": "Full stations",
     "tile.networkOccupancy": "Total occupancy – all stations",
@@ -1068,9 +1081,6 @@ const UEBERSETZUNGEN = {
     "hint.shareOnLoan": "{anteil} of {raederPhrase} · currently under way",
     "hint.shareMaintenance": "{anteil} of {raederPhrase} · in the workshop",
     "hint.shareFaulty": "{anteil} of {raederPhrase} · where it’s stuck",
-    "hint.rideDistribution": "Median {median}, mean {mittel} per bike",
-    "hint.noRidesAtAll": " · {n} of {raederPhrase} without a single ride",
-    "hint.allRiddenAtLeastOnce": " · every one of {raederPhrase} ridden at least once",
     "hint.allInOperation": "all in operation",
     "hint.decommissionedCount": "{n} of which decommissioned",
     "hint.fullStationsShare": "{n} of {stationenPhrase}: {liste} - not accepting returns",
@@ -1096,6 +1106,24 @@ const UEBERSETZUNGEN = {
     "hint.networkOccupancyWeighted": "{belegt} of {kapazitaet} docks occupied · capacity-weighted, not the average of the individual values ({naiv})",
     "hint.fullStationsList": "{voll} of {stationenPhrase}: {liste}",
     "hint.worstStationBalance": "Balance {saldo} - gives away more bikes than it receives",
+    "tile.fleetAge": "Fleet age structure",
+    "hint.fleetAgeAria": "Fleet distribution by model year, {vonJahr} to {bisJahr}",
+    "hint.fleetAgeDetail": "{anteil}% of the fleet ({n} of {raederPhrase}) is from {jahr} – oldest model year in stock",
+    "hint.ridesPerBikeBucketsAria": "Rides per bike, last 30 days, grouped into ranges",
+    "tile.tariffDistribution": "Distribution by plan",
+    "hint.tariffDistributionAria": "Customers distributed by plan",
+    "hint.tariffDistributionDetail": "{anteil}% ({n} of {kundenPhrase}) with no active plan – largest group",
+    "hint.blockedNeverRiddenAll": "{n} of {kundenPhrase} – all {n} have never ridden, registered {vonJahr}–{bisJahr}",
+    "hint.blockedNeverRiddenSome": "{n} of {kundenPhrase} – {nie} of them have never ridden",
+    "tile.workOrdersRunning": "Active work orders",
+    "hint.workOrdersRunningShare": "{n} of {auftraegePhrase} – not yet completed",
+    "hint.percentOfDamageReports": "{anteil}% of damage reports",
+    "field.baujahr": "Model year",
+    "field.gewicht": "Weight",
+    "field.gangzahl": "Gears",
+    "field.rahmenhoehe": "Frame size",
+    "field.akkukapazitaet": "Battery capacity",
+    "field.reichweite": "Range",
   },
   tr: {
     "common.cancel": "Vazgeç",
@@ -1407,7 +1435,6 @@ const UEBERSETZUNGEN = {
     "tile.onLoan": "Kirada",
     "tile.inMaintenance": "Bakımda",
     "tile.faulty": "Arızalı",
-    "tile.ridesPerBike30d": "Bisiklet başına sürüş (30 gün)",
     "tile.stations": "İstasyonlar",
     "tile.fullStations": "Dolu istasyonlar",
     "tile.networkOccupancy": "Toplam doluluk – tüm istasyonlar",
@@ -1507,9 +1534,6 @@ const UEBERSETZUNGEN = {
     "hint.shareOnLoan": "{raederPhrase} içinde {anteil} · şu anda yolda",
     "hint.shareMaintenance": "{raederPhrase} içinde {anteil} · atölyede",
     "hint.shareFaulty": "{raederPhrase} içinde {anteil} · sorunlu olanlar",
-    "hint.rideDistribution": "Medyan {median}, ortalama {mittel} (bisiklet başına)",
-    "hint.noRidesAtAll": " · {raederPhrase} içinden {n} tanesi tek bir sürüş bile yapmadı",
-    "hint.allRiddenAtLeastOnce": " · {raederPhrase} her biri en az bir kez sürüldü",
     "hint.allInOperation": "tümü işletimde",
     "hint.decommissionedCount": "bunlardan {n} tanesi kullanımdan kaldırıldı",
     "hint.fullStationsShare": "{stationenPhrase} içinden {n}: {liste} - iade kabul etmiyor",
@@ -1535,6 +1559,24 @@ const UEBERSETZUNGEN = {
     "hint.networkOccupancyWeighted": "{kapazitaet} yerden {belegt} tanesi dolu · kapasiteye göre ağırlıklandırılmıştır, tek tek değerlerin ortalaması değildir ({naiv})",
     "hint.fullStationsList": "{stationenPhrase} içinden {voll}: {liste}",
     "hint.worstStationBalance": "Bakiye {saldo} - aldığından daha fazla bisiklet veriyor",
+    "tile.fleetAge": "Filonun yaş yapısı",
+    "hint.fleetAgeAria": "Filonun model yılına göre dağılımı, {vonJahr} - {bisJahr}",
+    "hint.fleetAgeDetail": "Filonun %{anteil}'i ({raederPhrase} içinden {n}) {jahr} yılından – stoktaki en eski model yılı",
+    "hint.ridesPerBikeBucketsAria": "Bisiklet başına sürüş, son 30 gün, aralıklara gruplandırılmış",
+    "tile.tariffDistribution": "Tarifeye göre dağılım",
+    "hint.tariffDistributionAria": "Müşteriler tarifeye göre dağıtılmış",
+    "hint.tariffDistributionDetail": "%{anteil} ({kundenPhrase} içinden {n}) aktif tarifesi yok – en büyük grup",
+    "hint.blockedNeverRiddenAll": "{kundenPhrase} içinden {n} – hepsi ({n}) hiç sürüş yapmadı, {vonJahr}–{bisJahr} arasında kaydoldu",
+    "hint.blockedNeverRiddenSome": "{kundenPhrase} içinden {n} – bunlardan {nie} tanesi hiç sürüş yapmadı",
+    "tile.workOrdersRunning": "Devam eden iş emirleri",
+    "hint.workOrdersRunningShare": "{auftraegePhrase} içinden {n} – henüz tamamlanmadı",
+    "hint.percentOfDamageReports": "Hasar bildirimlerinin %{anteil}'i",
+    "field.baujahr": "Model yılı",
+    "field.gewicht": "Ağırlık",
+    "field.gangzahl": "Vites sayısı",
+    "field.rahmenhoehe": "Kadro boyu",
+    "field.akkukapazitaet": "Batarya kapasitesi",
+    "field.reichweite": "Menzil",
   },
   es: {
     "common.cancel": "Cancelar",
@@ -1846,7 +1888,6 @@ const UEBERSETZUNGEN = {
     "tile.onLoan": "Alquilada",
     "tile.inMaintenance": "En mantenimiento",
     "tile.faulty": "Averiada",
-    "tile.ridesPerBike30d": "Viajes por bicicleta (30 días)",
     "tile.stations": "Estaciones",
     "tile.fullStations": "Estaciones llenas",
     "tile.networkOccupancy": "Ocupación total – todas las estaciones",
@@ -1946,9 +1987,6 @@ const UEBERSETZUNGEN = {
     "hint.shareOnLoan": "{anteil} de {raederPhrase} · actualmente en ruta",
     "hint.shareMaintenance": "{anteil} de {raederPhrase} · en el taller",
     "hint.shareFaulty": "{anteil} de {raederPhrase} · donde hay problemas",
-    "hint.rideDistribution": "Mediana {median}, media {mittel} por bicicleta",
-    "hint.noRidesAtAll": " · {n} de {raederPhrase} sin un solo viaje",
-    "hint.allRiddenAtLeastOnce": " · cada una de {raederPhrase} se ha usado al menos una vez",
     "hint.allInOperation": "todas en funcionamiento",
     "hint.decommissionedCount": "{n} de ellas dadas de baja",
     "hint.fullStationsShare": "{n} de {stationenPhrase}: {liste} - no admite devoluciones",
@@ -1974,6 +2012,24 @@ const UEBERSETZUNGEN = {
     "hint.networkOccupancyWeighted": "{belegt} de {kapazitaet} plazas ocupadas · ponderado por capacidad, no la media de los valores individuales ({naiv})",
     "hint.fullStationsList": "{voll} de {stationenPhrase}: {liste}",
     "hint.worstStationBalance": "Saldo {saldo} - entrega más bicicletas de las que recibe",
+    "tile.fleetAge": "Estructura de antigüedad de la flota",
+    "hint.fleetAgeAria": "Distribución de la flota por año de fabricación, {vonJahr} a {bisJahr}",
+    "hint.fleetAgeDetail": "El {anteil} % de la flota ({n} de {raederPhrase}) es de {jahr} – el año más antiguo en existencia",
+    "hint.ridesPerBikeBucketsAria": "Viajes por bicicleta, últimos 30 días, agrupados en rangos",
+    "tile.tariffDistribution": "Distribución por tarifa",
+    "hint.tariffDistributionAria": "Clientela distribuida por tarifa",
+    "hint.tariffDistributionDetail": "El {anteil} % ({n} de {kundenPhrase}) sin tarifa activa – el grupo más grande",
+    "hint.blockedNeverRiddenAll": "{n} de {kundenPhrase} – los {n} nunca han viajado, registrados entre {vonJahr} y {bisJahr}",
+    "hint.blockedNeverRiddenSome": "{n} de {kundenPhrase} – {nie} de ellos nunca han viajado",
+    "tile.workOrdersRunning": "Órdenes en curso",
+    "hint.workOrdersRunningShare": "{n} de {auftraegePhrase} – aún sin completar",
+    "hint.percentOfDamageReports": "{anteil} % de los partes de avería",
+    "field.baujahr": "Año de fabricación",
+    "field.gewicht": "Peso",
+    "field.gangzahl": "Número de marchas",
+    "field.rahmenhoehe": "Altura del cuadro",
+    "field.akkukapazitaet": "Capacidad de la batería",
+    "field.reichweite": "Autonomía",
   },
   it: {
     "common.cancel": "Annulla",
@@ -2285,7 +2341,6 @@ const UEBERSETZUNGEN = {
     "tile.onLoan": "In noleggio",
     "tile.inMaintenance": "In manutenzione",
     "tile.faulty": "Guasto",
-    "tile.ridesPerBike30d": "Corse per bici (30 giorni)",
     "tile.stations": "Stazioni",
     "tile.fullStations": "Stazioni piene",
     "tile.networkOccupancy": "Occupazione totale – tutte le stazioni",
@@ -2385,9 +2440,6 @@ const UEBERSETZUNGEN = {
     "hint.shareOnLoan": "{anteil} su {raederPhrase} · attualmente in viaggio",
     "hint.shareMaintenance": "{anteil} su {raederPhrase} · in officina",
     "hint.shareFaulty": "{anteil} su {raederPhrase} · dove c’è un problema",
-    "hint.rideDistribution": "Mediana {median}, media {mittel} per bici",
-    "hint.noRidesAtAll": " · {n} su {raederPhrase} senza nemmeno una corsa",
-    "hint.allRiddenAtLeastOnce": " · ognuna delle {raederPhrase} è stata usata almeno una volta",
     "hint.allInOperation": "tutte in esercizio",
     "hint.decommissionedCount": "{n} di esse dismesse",
     "hint.fullStationsShare": "{n} su {stationenPhrase}: {liste} - non accetta restituzioni",
@@ -2413,6 +2465,24 @@ const UEBERSETZUNGEN = {
     "hint.networkOccupancyWeighted": "{belegt} stalli occupati su {kapazitaet} · ponderato per capacità, non la media dei singoli valori ({naiv})",
     "hint.fullStationsList": "{voll} su {stationenPhrase}: {liste}",
     "hint.worstStationBalance": "Saldo {saldo} - cede più bici di quante ne riceva",
+    "tile.fleetAge": "Struttura per anzianità della flotta",
+    "hint.fleetAgeAria": "Distribuzione della flotta per anno di produzione, dal {vonJahr} al {bisJahr}",
+    "hint.fleetAgeDetail": "Il {anteil}% della flotta ({n} su {raederPhrase}) è del {jahr} – l'annata più vecchia in giacenza",
+    "hint.ridesPerBikeBucketsAria": "Corse per bici, ultimi 30 giorni, raggruppate in fasce",
+    "tile.tariffDistribution": "Distribuzione per tariffa",
+    "hint.tariffDistributionAria": "Clientela distribuita per tariffa",
+    "hint.tariffDistributionDetail": "Il {anteil}% ({n} su {kundenPhrase}) senza tariffa attiva – il gruppo più numeroso",
+    "hint.blockedNeverRiddenAll": "{n} su {kundenPhrase} – tutti e {n} non hanno mai pedalato, registrati tra il {vonJahr} e il {bisJahr}",
+    "hint.blockedNeverRiddenSome": "{n} su {kundenPhrase} – {nie} di questi non hanno mai pedalato",
+    "tile.workOrdersRunning": "Ordini in corso",
+    "hint.workOrdersRunningShare": "{n} su {auftraegePhrase} – non ancora conclusi",
+    "hint.percentOfDamageReports": "{anteil}% delle segnalazioni di guasto",
+    "field.baujahr": "Anno di produzione",
+    "field.gewicht": "Peso",
+    "field.gangzahl": "Numero di marce",
+    "field.rahmenhoehe": "Altezza del telaio",
+    "field.akkukapazitaet": "Capacità della batteria",
+    "field.reichweite": "Autonomia",
   },
   pl: {
     "common.cancel": "Anuluj",
@@ -2724,7 +2794,6 @@ const UEBERSETZUNGEN = {
     "tile.onLoan": "Wypożyczony",
     "tile.inMaintenance": "W konserwacji",
     "tile.faulty": "Uszkodzony",
-    "tile.ridesPerBike30d": "Przejazdy na rower (30 dni)",
     "tile.stations": "Stacje",
     "tile.fullStations": "Pełne stacje",
     "tile.networkOccupancy": "Całkowite zapełnienie – wszystkie stacje",
@@ -2824,9 +2893,6 @@ const UEBERSETZUNGEN = {
     "hint.shareOnLoan": "{anteil} z {raederPhrase} · obecnie w trasie",
     "hint.shareMaintenance": "{anteil} z {raederPhrase} · w warsztacie",
     "hint.shareFaulty": "{anteil} z {raederPhrase} · tam, gdzie jest problem",
-    "hint.rideDistribution": "Mediana {median}, średnia {mittel} na rower",
-    "hint.noRidesAtAll": " · {n} z {raederPhrase} bez ani jednego przejazdu",
-    "hint.allRiddenAtLeastOnce": " · każdy z {raederPhrase} przejechano co najmniej raz",
     "hint.allInOperation": "wszystkie w eksploatacji",
     "hint.decommissionedCount": "{n} z nich wyłączono z eksploatacji",
     "hint.fullStationsShare": "{n} z {stationenPhrase}: {liste} - nie przyjmuje zwrotów",
@@ -2852,6 +2918,24 @@ const UEBERSETZUNGEN = {
     "hint.networkOccupancyWeighted": "{belegt} z {kapazitaet} miejsc zajętych · ważone pojemnością, nie średnia wartości pojedynczych ({naiv})",
     "hint.fullStationsList": "{voll} z {stationenPhrase}: {liste}",
     "hint.worstStationBalance": "Saldo {saldo} - oddaje więcej rowerów, niż otrzymuje",
+    "tile.fleetAge": "Struktura wieku floty",
+    "hint.fleetAgeAria": "Rozkład floty według rocznika, {vonJahr}–{bisJahr}",
+    "hint.fleetAgeDetail": "{anteil}% floty ({n} z {raederPhrase}) pochodzi z {jahr} – najstarszy rocznik w zasobie",
+    "hint.ridesPerBikeBucketsAria": "Przejazdy na rower, ostatnie 30 dni, pogrupowane w przedziały",
+    "tile.tariffDistribution": "Rozkład wg taryfy",
+    "hint.tariffDistributionAria": "Klienci rozłożeni według taryfy",
+    "hint.tariffDistributionDetail": "{anteil}% ({n} z {kundenPhrase}) bez aktywnej taryfy – największa grupa",
+    "hint.blockedNeverRiddenAll": "{n} z {kundenPhrase} – wszyscy {n} nigdy nie jeździli, zarejestrowani między {vonJahr} a {bisJahr}",
+    "hint.blockedNeverRiddenSome": "{n} z {kundenPhrase} – {nie} z nich nigdy nie jeździło",
+    "tile.workOrdersRunning": "Trwające zlecenia",
+    "hint.workOrdersRunningShare": "{n} z {auftraegePhrase} – jeszcze nieukończone",
+    "hint.percentOfDamageReports": "{anteil}% zgłoszeń usterek",
+    "field.baujahr": "Rocznik",
+    "field.gewicht": "Waga",
+    "field.gangzahl": "Liczba biegów",
+    "field.rahmenhoehe": "Wysokość ramy",
+    "field.akkukapazitaet": "Pojemność akumulatora",
+    "field.reichweite": "Zasięg",
   },
 };
 
@@ -5637,7 +5721,29 @@ function spaltenkopfGruppenknopf(spalte) {
         ? t('common.groupResetAria', { titel: spalte.titel })
         : t('common.groupByAria', { titel: spalte.titel }));
     knopf.title = aktiv ? t('common.groupResetTitle') : t('common.groupTitle');
-    knopf.innerHTML = aktiv ? SPALTENKOPF_RESET_ICON : SPALTENKOPF_GRUPPE_ICON;
+    // GESTALTUNGSAUFTRAG PUNKT 6, woertlich: "Button fuer Gruppierung
+    // sollte ein Icon bekommen" - er hatte tatsaechlich schon eines
+    // (SPALTENKOPF_GRUPPE_ICON/SPALTENKOPF_RESET_ICON wurden hier bereits
+    // vergeben), nur unsichtbar: das SVG landete zuvor per innerHTML DIREKT
+    // im <button>, ohne eigenes width/height/stroke - anders als beim
+    // Sortierknopf (siehe spaltenkopfSortknopf() oben), der sein Symbol in
+    // einen eigenen <span class="spaltenkopf-sortsymbol"> mit fester Groesse
+    // packt. Ein <svg> ganz ohne width/height-Attribut UND ohne CSS-Regel
+    // dafuer faellt auf die Ersatzgroesse des Browsers zurueck (ueblich
+    // 300x150px) - im 4px/8px-Innenabstand dieses Knopfs blieb davon nur
+    // der ohnehin schon vorhandene Rahmen sichtbar, das eigentliche Symbol
+    // lief weit ueber den sichtbaren Knopf hinaus. Im Browser nachgestellt
+    // (siehe Bericht): genau das "leere abgerundete Rechteck" aus dem
+    // Auftrag. Derselbe Wrapper wie beim Sortiersymbol behebt das - eigene
+    // CSS-Regel .spaltenkopf-gruppensymbol svg in style.css, dieselbe
+    // Groesse/Strichstaerke wie .spaltenkopf-sortsymbol svg, damit beide
+    // Knoepfe derselben Symbolfamilie angehoeren (Auftrag: "ein Symbol aus
+    // derselben Familie wie die Rubrik-Icons").
+    const gruppensymbol = document.createElement('span');
+    gruppensymbol.className = 'spaltenkopf-gruppensymbol';
+    gruppensymbol.innerHTML = aktiv ? SPALTENKOPF_RESET_ICON : SPALTENKOPF_GRUPPE_ICON;
+    gruppensymbol.setAttribute('aria-hidden', 'true');   // aria-label auf dem Knopf sagt es bereits
+    knopf.append(gruppensymbol);
     knopf.addEventListener('click', () => {
         // Immer nur EINE Gruppierung ueber die ganze Tabelle - ein Klick
         // auf eine ANDERE Spalte ersetzt die vorherige (kein
@@ -6019,6 +6125,15 @@ const DETAILMASKE_SCHLIESSEN_ICON = '<svg viewBox="0 0 24 24"><path d="M18 6L6 1
 // felder: [{ name, titel, wert, typ, nurLesen?, optionen? }]
 // knöpfe: [{ titel, art, ausführen: async () => {} }]
 // art: 'haupt' | 'neben' | 'gefährlich' | 'schaffend'
+// bild (optional, Gestaltungsauftrag Punkt 5, wörtlich: "ich will in der
+// rechten Kachel das Bild des jeweiligen Rades sehen"): ein fertiges
+// <img>-Element, VOR dem Formular eingehängt - #detailmaske IST die
+// "rechte Kachel", aus der der Auftrag spricht (siehe #detailmaske in
+// style.css, ~45% Fensterbreite rechts neben der Liste). Nur flotte.js
+// (radMaske()) übergibt heute eines; alle übrigen Aufrufer lassen den
+// Parameter weg und bekommen exakt das bisherige Verhalten - ein
+// optionaler vierter Parameter statt eines neuen Bausteins, weil eine
+// Maske MIT Bild sich sonst in nichts von einer ohne unterscheidet.
 //
 // 'schaffend' (Punkt 4 der Gestaltung, grün wie --gut) kam mit dieser
 // Bearbeitung dazu, ausdrücklich NEBEN 'haupt' statt an dessen Stelle:
@@ -6036,7 +6151,7 @@ const DETAILMASKE_SCHLIESSEN_ICON = '<svg viewBox="0 0 24 24"><path d="M18 6L6 1
 // Neuanlagen (flotte.js, kunden.js kundeAnlegenMaske, instandhaltung.js
 // Auftrag eroeffnen/Schaden melden, stationen.js) wurden auf 'schaffend'
 // umgestellt. Weiß auf --gut misst 5.36:1 (gemessen, siehe Bericht).
-function zeigeMaske(titel, felder, knoepfe) {
+function zeigeMaske(titel, felder, knoepfe, bild = null) {
     const wurzel = document.getElementById('detailmaske');
     wurzel.replaceChildren();
     hauptknopfElement = null;
@@ -6067,6 +6182,19 @@ function zeigeMaske(titel, felder, knoepfe) {
     kopf.append(schliessenKnopf);
 
     wurzel.append(kopf);
+
+    // bild direkt unter der Kopfzeile, VOR jedem Feld - "das Bild des
+    // jeweiligen Rades" (Auftrag) ist der Einstieg in diese Maske, keine
+    // Randnotiz hinter den Textfeldern. Der Rahmen um das Bild kommt aus
+    // .detailmaske-bild (style.css), das Bild selbst bringt sein eigenes
+    // alt/aria-hidden schon vom Aufrufer mit (siehe radMaske() in
+    // flotte.js).
+    if (bild) {
+        const bildRahmen = document.createElement('div');
+        bildRahmen.className = 'detailmaske-bild';
+        bildRahmen.append(bild);
+        wurzel.append(bildRahmen);
+    }
 
     const form = document.createElement('form');
     form.className = 'detailformular';

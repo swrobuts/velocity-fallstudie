@@ -71,24 +71,24 @@ async function flotteAufbauen() {
     // 275 Zeilen unnoetig, und die Uebersichtskacheln (die den GESAMTEN
     // Bestand zeigen sollen, nicht die gefilterte Teilmenge) brauchen die
     // vollstaendige Liste ohnehin.
-    // fahrtenLetzte30Tage (Punkt 5, Verteilung "Fahrten je Rad"): NUR
-    // geladen, wenn die zugrundeliegende Sicht diese Rolle ueberhaupt
-    // durchlaesst (siehe fahrtenJeRadVerteilung() weiter unten, ROLLE-
-    // Absatz) - fuer ein reines Werkstattkonto bleibt es null, nicht ein
-    // leeres [], damit die Kachel dort spaeter GAR NICHT erscheint statt
-    // faelschlich "0 Fahrten je Rad" zu zeigen. Parallel zu raeder
-    // geladen: beide Anfragen sind unabhaengig voneinander.
-    const dreissigTageZurueck = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const [raeder, fahrtenLetzte30Tage] = await Promise.all([
-        ladeListe('v_wawi_flotte',
-            'fahrrad_id, rahmennummer, typ_code, typ, hersteller, modell, status, ' +
-            'angeschafft_am, standort, akkustand_prozent, letzte_wartung, ' +
-            'offene_schaeden, hoechste_schwere',
-            (q) => q.order('rahmennummer')),
-        (darfRolle('disposition') || darfRolle('leitung'))
-            ? ladeListe('v_wawi_fahrten_je_tag_rad', 'fahrrad_id', (q) => q.gte('tag', dreissigTageZurueck))
-            : Promise.resolve(null)
-    ]);
+    // Die fruehere zweite Anfrage hier (v_wawi_fahrten_je_tag_rad, fuer
+    // eine "Fahrten je Rad (30 Tage)"-Kachel) ist erprobt wieder entfernt
+    // (siehe Bericht): mit ihr UND flotteAltersstruktur() (Punkt 3, siehe
+    // dort) trugen sechs Kacheln je EIGENER 168px-Sparkline zusammen mehr
+    // Breite, als eine Zeile bei ueblicher Fensterbreite fasst - der
+    // Streifen brach auf zwei Zeilen um und liess dabei #listenkoerper auf
+    // 0px Hoehe zusammenfallen: die 275 Raeder waren nicht mehr sichtbar,
+    // ohne das Fenster von Hand zu vergroessern (im Browser nachgestellt,
+    // siehe Bericht). Eine durchgehend erreichbare Tabelle wiegt schwerer
+    // als eine zweite Verteilungskachel - flotteAltersstruktur() bekommt
+    // die Sparkline, weil der Auftrag sie ausdruecklich als "die
+    // interessanteste" benennt (siehe dort).
+    const raeder = await ladeListe('v_wawi_flotte',
+        'fahrrad_id, rahmennummer, typ_code, typ, hersteller, modell, status, ' +
+        'angeschafft_am, standort, akkustand_prozent, letzte_wartung, ' +
+        'offene_schaeden, hoechste_schwere, baujahr, gewicht_kg, gangzahl, ' +
+        'rahmenhoehe_cm, akkukapazitaet_wh, reichweite_km',
+        (q) => q.order('rahmennummer'));
 
     const fehler = letzterLadeFehler('v_wawi_flotte');
     if (fehler) {
@@ -110,7 +110,7 @@ async function flotteAufbauen() {
     // gefilterte Teilmenge - "womit oeffnet jemand diesen Bereich" ist
     // eine Frage an den Gesamtbestand, nicht an eine gerade gewaehlte
     // Einschraenkung.
-    zeigeUebersicht(vorgang, flotteUebersicht(raeder, fahrtenLetzte30Tage));
+    zeigeUebersicht(vorgang, flotteUebersicht(raeder));
 
     const { typen, standorte } = flotteFilterOptionen(raeder);
     // Gestaltungsauftrag, woertlich: "Bei Flotte vermisse ich Produktbilder,
@@ -211,7 +211,18 @@ async function flotteAufbauen() {
         { feld: 'typ_code',       titel: t('field.typ'), filterbar: false },
         { feld: 'status',         titel: t('field.status'), klasse: statusKlasse, filterbar: false,
           formatieren: (wert) => statusAnzeige(wert) },
-        { feld: 'standort',       titel: t('field.standort'), filterbar: false },
+        // formatieren-Rueckfall auf misc.underway (Erprobung, Hinweis aus
+        // dem Bild): standort ist NULL bei einem Rad in laufender Fahrt
+        // (GR13 - unterwegs steht es nirgends, siehe der lange Kommentar
+        // bei flotteFilterStandort weiter unten) - fachlich richtig, sah
+        // in der Spalte aber wie eine leere, fehlerhafte Zelle aus, weil
+        // die Filterleiste UND die Detailmaske (radMaske() weiter unten,
+        // Feld 'standort') diesen Fall schon immer mit Text abfingen, NUR
+        // diese eine Tabellenspalte nicht - der Wert ging nicht bei der
+        // Uebersetzung verloren, sondern schlicht an dieser dritten Stelle
+        // vergessen.
+        { feld: 'standort',       titel: t('field.standort'), filterbar: false,
+          formatieren: (wert) => wert || t('misc.underway') },
         { feld: 'offene_schaeden', titel: t('field.schaeden'), formatieren: (n) => n || '', summierbar: true }
     ], radMaske, radZeilenAktionen);
 
@@ -235,7 +246,7 @@ async function flotteAufbauen() {
 // Zustand braucht ohnehin keine Aufmerksamkeit mehr - siehe
 // radHandlungen() weiter unten, das auf 'ausgemustert' selbst keine
 // Handlung mehr anbietet).
-function flotteUebersicht(raeder, fahrtenLetzte30Tage) {
+function flotteUebersicht(raeder) {
     const gesamt = raeder.length;
     const zaehler = (status) => raeder.filter((r) => r.status === status).length;
     const verfuegbar = zaehler('verfuegbar');
@@ -288,61 +299,79 @@ function flotteUebersicht(raeder, fahrtenLetzte30Tage) {
         }
     ];
 
-    // fahrtenLetzte30Tage === null: die Rolle sieht v_wawi_fahrten_je_tag_rad
-    // nicht (siehe Aufrufstelle in flotteAufbauen()) - dann faellt die
-    // Kachel ganz weg, statt eine falsche Null vorzutaeuschen.
-    if (fahrtenLetzte30Tage !== null) {
-        const verteilung = fahrtenJeRadVerteilung(raeder, fahrtenLetzte30Tage);
-        if (verteilung) kacheln.push(verteilung);
-    }
+    // GESTALTUNGSAUFTRAG PUNKT 3, woertlich: "Flotte hat auch keinen
+    // besonders analytisch interessanten Header, fehlen Verteilungen ...
+    // Die Altersstruktur ist die interessanteste - sie sagt, wann
+    // investiert werden muss." UNGATED, anders als eine fruehere, inzwischen
+    // wieder entfernte fuenfte Kachel "Fahrten je Rad" (siehe Bericht):
+    // baujahr steht in genau der Zeile, die ohnehin schon fuer jede der
+    // drei Rollen geladen wird (siehe der select in flotteAufbauen()),
+    // keine zusaetzliche, rollenbeschraenkte Sicht noetig - auch die
+    // Werkstatt sieht diese Kachel also.
+    const altersstruktur = flotteAltersstruktur(raeder);
+    if (altersstruktur) kacheln.push(altersstruktur);
 
     return kacheln;
 }
 
-// ===== Verteilung (Gestaltungsauftrag Punkt 5) =====
+// ===== Altersstruktur (Gestaltungsauftrag Punkt 3) =====
 //
-// "Wie verteilen sich die Fahrten je Rad - arbeiten alle gleich, oder
-// stehen manche still?" - woertlich eines der drei Beispiele des
-// Auftrags. v_wawi_fahrten_je_tag_rad (Drill-Down-Sicht, disposition UND
-// leitung) traegt EINE ZEILE JE FAHRT, nicht aggregiert je Rad - dieselbe
-// Sicht ungefiltert zu laden waere ueber 12.000 Zeilen fuer eine einzige
-// Kennzahl (dieselbe "keine Basis fuer eine blosse Kennzahl"-Abwaegung,
-// die kundenAufbauen() schon bei den 1014 Kunden per zaehleZeilen() trifft,
-// hier auf ein Zeitfenster statt auf eine Zaehl-Anfrage angewendet).
-// Deshalb NUR die letzten 30 Tage (.gte('tag', ...)) - genug fuer ein
-// ehrliches "wird gerade gleichmaessig gefahren", ohne 18 Monate Historie
-// laden zu muessen, um eine einzige Verteilungskachel zu befuellen.
-//
-// darfRolle-Wache (siehe Aufrufstelle in flotteAufbauen()): die Sicht
-// selbst filtert auf disposition/leitung, NICHT auf werkstatt (siehe
-// 0018_wawi_sichten.sql) - ein Werkstattkonto bekaeme dieselbe Anfrage mit
-// null Zeilen zurueck, und OHNE die Wache saehe die Kachel dann faelschlich
-// "alle 275 Raeder mit 0 Fahrten" statt schlicht zu fehlen ("was man nicht
-// darf, wird nicht angezeigt", nicht als falsche Null vorgetaeuscht).
-function fahrtenJeRadVerteilung(raeder, fahrtenLetzte30Tage) {
-    const zaehlerJeRad = new Map(raeder.map((r) => [r.fahrrad_id, 0]));
-    for (const zeile of fahrtenLetzte30Tage) {
-        zaehlerJeRad.set(zeile.fahrrad_id, (zaehlerJeRad.get(zeile.fahrrad_id) || 0) + 1);
+// Neu moeglich seit den echten Herstellerdaten (Baujahr 2021-2025 statt
+// des vorherigen Platzhalters "unbekannt", siehe Bericht zu
+// d4b66c5) - vorher gab es hier schlicht nichts zu verteilen. Gruppiert
+// nach dem tatsaechlichen Baujahr jedes Rades, NICHT nach angeschafft_am:
+// beides fiele im heutigen Bestand zwar zusammen (jedes Rad wurde im
+// Baujahr seines Modells beschafft), aber "Baujahr" ist die Angabe, die
+// der Auftrag ausdruecklich nennt und die ueber den Investitionsbedarf
+// entscheidet - ein spaeter gebraucht gekauftes Rad haette ein aelteres
+// Baujahr als sein angeschafft_am, ohne dass dieser Bestand das heute
+// zeigt.
+function flotteAltersstruktur(raeder) {
+    const gesamt = raeder.length;
+    if (gesamt === 0) return null;
+
+    const zaehlerJeJahr = new Map();
+    for (const r of raeder) {
+        if (r.baujahr == null) continue;
+        zaehlerJeJahr.set(r.baujahr, (zaehlerJeJahr.get(r.baujahr) || 0) + 1);
     }
-    const werte = [...zaehlerJeRad.values()].sort((a, b) => a - b);
-    if (werte.length === 0) return null;
+    if (zaehlerJeJahr.size === 0) return null;   // keine Rolle laedt baujahr NULL bei allen Zeilen im heutigen Bestand, aber ehrlich abgefangen
 
-    const minimum = werte[0];
-    const maximum = werte[werte.length - 1];
-    const mitteIndex = Math.floor((werte.length - 1) / 2);
-    const median = werte.length % 2 === 1
-        ? werte[mitteIndex] : (werte[mitteIndex] + werte[mitteIndex + 1]) / 2;
-    const mittel = werte.reduce((s, w) => s + w, 0) / werte.length;
-    const stillstehend = werte.filter((w) => w === 0).length;
+    const jahre = [...zaehlerJeJahr.keys()].sort((a, b) => a - b);
+    const werte = jahre.map((j) => zaehlerJeJahr.get(j));
+    const aeltestesJahr = jahre[0];
+    const aeltesteAnzahl = zaehlerJeJahr.get(aeltestesJahr);
+    const anteil = Math.round((aeltesteAnzahl / gesamt) * 100);
+    const raederPhrase = mengeFormat(gesamt, 'rad');
 
-    const raederPhrase = mengeFormat(werte.length, 'rad');
     return {
-        titel: t('tile.ridesPerBike30d'),
-        wert: `${zahlFormat(minimum)}–${zahlFormat(maximum)}`,
-        hinweis: t('hint.rideDistribution', { median: zahlFormat(median), mittel: zahlFormat(mittel, { maximumFractionDigits: 1 }) })
-            + (stillstehend
-                ? t('hint.noRidesAtAll', { n: zahlFormat(stillstehend), raederPhrase })
-                : t('hint.allRiddenAtLeastOnce', { raederPhrase }))
+        titel: t('tile.fleetAge'),
+        // Die ANZAHL des aeltesten Jahrgangs als Wert (nicht der
+        // Jahresbereich "2021-2025", wie eine erste Fassung es zeigte) -
+        // erprobt (siehe Bericht): dieselbe Kachel muss neben vier
+        // Statuskacheln in EINER Zeile Platz finden, und ein neunstelliger
+        // Bereichstext liess sie dabei ueber den sichtbaren Rand
+        // hinauslaufen. Eine reine Zahl ist ausserdem die Form, die JEDE
+        // Nachbarkachel hier schon traegt (146/110/16/3) - Zahl vorn,
+        // Anteil im Hinweis dahinter (siehe hint.fleetAgeDetail unten),
+        // "gleiche Form" (Punkt 1) gilt damit auch INNERHALB der
+        // Flotten-Uebersicht, nicht nur zwischen den Bereichen.
+        wert: zahlSkaliert(zahlFormat(aeltesteAnzahl)),
+        // GESTALTUNGSAUFTRAG PUNKT 1 (gemeinsame Form): dieselbe
+        // Saeulen-Sparkline wie jede andere Verteilung in dieser
+        // Oberflaeche (Fuellstaende in stationen.js, Umsatzreihen in
+        // auswertungen.js) - "eine Verteilung sieht in jedem Bereich
+        // gleich aus" (Auftrag, woertlich), unabhaengig davon, ob sie
+        // Raeder oder Kunden zaehlt. aktuellIndex: null wie bei jeder
+        // anderen NICHT-zeitbasierten Reihe (siehe Kopfkommentar bei
+        // saeulenSparkline() in rahmen.js) - "das juengste Baujahr" ist
+        // kein aktueller Zeitraum.
+        grafik: saeulenSparkline(werte,
+            t('hint.fleetAgeAria', { vonJahr: String(jahre[0]), bisJahr: String(jahre[jahre.length - 1]) }),
+            { aktuellIndex: null }),
+        hinweis: t('hint.fleetAgeDetail', {
+            anteil: zahlFormat(anteil), n: zahlFormat(aeltesteAnzahl), raederPhrase, jahr: String(aeltestesJahr)
+        })
     };
 }
 
@@ -672,16 +701,73 @@ function radMaske(rad) {
         });
     }
 
+    // GESTALTUNGSAUFTRAG PUNKT 5, woertlich: "ich will in der rechten
+    // Kachel das Bild des jeweiligen Rades sehen, dann auch noch die
+    // Angaben vom Hersteller." Dasselbe RADTYP_BILDER wie bei den
+    // Typ-Kacheln oben (ueber typ_code zugeordnet, aus demselben Grund -
+    // siehe dortiger Kommentar), hier aber die BEDEUTENDE Abbildung der
+    // ganzen Maske statt einer schmueckenden Wiederholung neben einem
+    // Titel - alt bleibt trotzdem leer/aria-hidden, weil "Typ:
+    // {rad.typ} ({rad.typ_code})" gleich im ersten Feld darunter steht:
+    // ein Bildname, der denselben Satz noch einmal vorliest, waere fuer
+    // einen Screenreader Laerm (derselbe Grundsatz wie bei den
+    // Typ-Kacheln). Fehlt die Datei (RADTYP_BILDER kennt den typ_code
+    // nicht, oder das 'error'-Ereignis der Datei selbst), erscheint gar
+    // kein Bildbereich statt eines kaputten Platzhalters - zeigeMaske()
+    // in rahmen.js haengt den Rahmen nur ein, wenn bild tatsaechlich
+    // etwas ist.
+    let bild = null;
+    const bildQuelle = RADTYP_BILDER[rad.typ_code];
+    if (bildQuelle) {
+        bild = document.createElement('img');
+        bild.src = bildQuelle;
+        bild.alt = '';
+        bild.setAttribute('aria-hidden', 'true');
+        bild.addEventListener('error', () => bild.remove());
+    }
+
+    // Herstellerangaben (Punkt 5) - seit eben in v_wawi_flotte, dieselben
+    // Spalten wie in v_wawi_modell (siehe Datenbank-Bericht). NULL BEI
+    // AKKU/REICHWEITE HEISST NICHT-ELEKTRISCH, NICHT "fehlt" (Auftrag,
+    // woertlich: "ein leeres Feld sieht aus wie ein Ladefehler - das hat
+    // in diesem Projekt mehrfach Zeit gekostet") - beide Felder werden
+    // deshalb bei einem nicht-elektrischen Rad GAR NICHT erst in die
+    // Feldliste aufgenommen, statt sie leer oder mit einem Gedankenstrich
+    // zu zeigen. WICHTIG, gegen die Datenbank geprueft (siehe Bericht):
+    // "elektrisch" ist NICHT gleichbedeutend mit typ_code === 'EBIKE' -
+    // fahrradtyp.hat_elektro steht auch bei CARGO auf true ("E-Cargo
+    // Loader"), nur CITY ist durchgehend nicht-elektrisch. Eine Pruefung
+    // auf den Typcode waere deshalb an dieser Stelle STUMM FALSCH
+    // gewesen (ein Cargo-Rad mit echtem Akku haette keinen gezeigt) - die
+    // Pruefung gilt deshalb dem tatsaechlichen WERT (reichweite_km !=
+    // null), nicht dem Typcode. Jedes elektrische Modell traegt in der
+    // heutigen Modellpalette immer BEIDE Werte zusammen - eine Pruefung
+    // auf reichweite_km allein reicht deshalb, keine zweite auf
+    // akkukapazitaet_wh noetig.
+    const herstellerFelder = [
+        { name: 'baujahr',       titel: t('field.baujahr'),       wert: rad.baujahr, nurLesen: true },
+        { name: 'gewicht_kg',    titel: t('field.gewicht'),       wert: rad.gewicht_kg != null ? `${zahlFormat(rad.gewicht_kg)} kg` : '—', nurLesen: true },
+        { name: 'gangzahl',      titel: t('field.gangzahl'),      wert: rad.gangzahl, nurLesen: true },
+        { name: 'rahmenhoehe_cm', titel: t('field.rahmenhoehe'),  wert: rad.rahmenhoehe_cm != null ? `${zahlFormat(rad.rahmenhoehe_cm)} cm` : '—', nurLesen: true }
+    ];
+    if (rad.reichweite_km != null) {
+        herstellerFelder.push(
+            { name: 'akkukapazitaet_wh', titel: t('field.akkukapazitaet'), wert: `${zahlFormat(rad.akkukapazitaet_wh)} Wh`, nurLesen: true },
+            { name: 'reichweite_km',     titel: t('field.reichweite'),     wert: `${zahlFormat(rad.reichweite_km)} km`, nurLesen: true }
+        );
+    }
+
     zeigeMaske(`${t('field.rad')} ${rad.rahmennummer}`, [
         { name: 'typ',            titel: t('field.typ'),              wert: `${rad.typ} (${rad.typ_code})`, nurLesen: true },
         { name: 'modell',         titel: t('field.modell'),           wert: `${rad.hersteller} ${rad.modell}`, nurLesen: true },
+        ...herstellerFelder,
         { name: 'status',         titel: t('field.status'),           wert: statusAnzeige(rad.status), nurLesen: true },
         { name: 'standort',       titel: t('field.standort'),         wert: rad.standort || t('misc.underway'), nurLesen: true },
         { name: 'angeschafft_am', titel: t('field.angeschafft'),      wert: rad.angeschafft_am, nurLesen: true },
         { name: 'letzte_wartung', titel: t('field.letzteWartung'),    wert: rad.letzte_wartung || t('misc.noneYet'), nurLesen: true },
         { name: 'offene_schaeden', titel: t('field.offeneSchaeden'),  wert: rad.offene_schaeden, nurLesen: true },
         { name: 'hoechste_schwere', titel: t('field.hoechsteSchwere'), wert: rad.hoechste_schwere ? t('schwere.' + rad.hoechste_schwere) : '—', nurLesen: true }
-    ], knoepfe);
+    ], knoepfe, bild);
 }
 
 // ===== Ein Rad anlegen =====

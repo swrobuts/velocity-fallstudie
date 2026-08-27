@@ -262,15 +262,26 @@ async function kundenAufbauen(suchtext) {
     // FOLGENDE Aufrufe derselben Quelle gedacht, nicht fuer zwei
     // ABSICHTLICH gleichzeitig unterschiedliche Projektionen derselben
     // Sicht). Sequenziell nacheinander vermeidet die Kollision vollstaendig
-    // - der Zeitverlust ist bei 1014 Zeilen mit einer einzigen Spalte
+    // - der Zeitverlust ist bei 1014 Zeilen mit vier schmalen Spalten
     // vernachlaessigbar. Ein Fehlschlag HIER wird bewusst NICHT wie oben
-    // behandelt (kein Abbruch der ganzen Kundenliste nur wegen einer
-    // Verteilungskachel) - ladeListe() liefert dann [], und
-    // umsatzKonzentration() (siehe kundenUebersicht()) laesst die Kachel
-    // schlicht weg ("lieber keine Kachel als eine falsche").
-    const alleUmsaetze = await ladeListe('v_wawi_kunde', 'umsatz_brutto');
+    // behandelt (kein Abbruch der ganzen Kundenliste nur wegen ein paar
+    // Verteilungskacheln) - ladeListe() liefert dann [], und jede der drei
+    // Verteilungsfunktionen unten laesst ihre Kachel dann schlicht weg
+    // ("lieber keine Kachel als eine falsche").
+    //
+    // GESTALTUNGSAUFTRAG PUNKT 2, woertlich: "519 von 1014 sind gesperrt.
+    // Wer sind die? Seit wann? Haben sie je gefahren?" - tarif_code UND
+    // fahrten_gesamt UND registriert_am kommen deshalb NEU in dieselbe
+    // schlanke Ladeliste dazu, die vorher nur umsatz_brutto trug (jetzt
+    // alleKennzahlen statt alleUmsaetze genannt) - EINE zusaetzliche
+    // Anfrage ueber ALLE 1014 Kunden statt vier einzelner, aus demselben
+    // Grund wie oben: eine Verteilung ueber nur die (hoechstens 200)
+    // GELADENEN Zeilen waere genau die "Luege", vor der der Auftrag beim
+    // Statusfilter schon warnt (siehe Kommentar bei kundenFilterStatus).
+    const alleKennzahlen = await ladeListe('v_wawi_kunde',
+        'status, tarif_code, umsatz_brutto, fahrten_gesamt, registriert_am');
 
-    zeigeUebersicht(vorgang, kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleUmsaetze));
+    zeigeUebersicht(vorgang, kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKennzahlen));
 
     zeigeFilterleiste(vorgang, true, [
         {
@@ -407,7 +418,7 @@ async function kundenAufbauen(suchtext) {
 // woertlich der Auftrag. Alle drei Zahlen kommen aus zaehleZeilen()
 // (daten.js), nicht aus der geladenen (hoechstens 200 Zeilen tragenden)
 // Arbeitsliste - siehe Kommentar an der Aufrufstelle in kundenAufbauen().
-function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleUmsaetze) {
+function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKennzahlen) {
     const anzeige = (n) => (n === null ? '—' : zahlFormat(n));
 
     const kacheln = [
@@ -422,10 +433,21 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleU
             titel: t('tile.blocked'),
             wert,
             grafik: gesamtAnzahl ? zellbalken(gesperrtAnzahl, gesamtAnzahl, null, { farbe: 'var(--warnung-text)' }) : undefined,
-            // Echter Bezug (Gestaltungsauftrag Punkt 1: "2 von 10 - dann
-            // ist es ein Anteil") direkt im Text.
+            // GESTALTUNGSAUFTRAG PUNKT 2, woertlich: "519 von 1014 sind
+            // gesperrt. Wer sind die? Seit wann? Haben sie je gefahren?
+            // Das ist die auffaelligste Zahl des Bereichs und steht
+            // unkommentiert da." gesperrtNieGefahren() weiter unten
+            // beantwortet genau das, unabhaengig gegen alleKennzahlen
+            // nachgerechnet (nicht gegen die separate zaehleZeilen()-Zahl
+            // gesperrtAnzahl oben - beide muessen fachlich uebereinstimmen,
+            // kommen aber aus zwei unabhaengigen Anfragen, siehe Hausregel
+            // "jede Kennzahl unabhaengig nachrechnen"). Faellt auf den
+            // alten, unkommentierten Text zurueck, wenn alleKennzahlen
+            // leer blieb (Ladefehler) oder gar keine Gesperrten darin
+            // stehen - "lieber der alte, richtige Satz als ein erfundener".
             hinweis: gesamtAnzahl
-                ? t('hint.blockedShare', { n: zahlFormat(gesperrtAnzahl), kundenPhrase: mengeFormat(gesamtAnzahl, 'kunde') })
+                ? (gesperrtNieGefahren(alleKennzahlen, gesperrtAnzahl)
+                    || t('hint.blockedShare', { n: zahlFormat(gesperrtAnzahl), kundenPhrase: mengeFormat(gesamtAnzahl, 'kunde') }))
                 : t('hint.noUnblockFunction')
         });
     }
@@ -441,11 +463,22 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleU
         });
     }
 
-    // ===== Verteilung (Gestaltungsauftrag Punkt 5) =====
+    // ===== Verteilung nach Tarif (Gestaltungsauftrag Punkt 2) =====
+    //
+    // "Was eine Kundschaft von 1014 wirklich beschreibt: wie sie sich
+    // verteilt. Nach Tarif ..." - woertlich der Auftrag. GLEICHE FORM wie
+    // jede andere Verteilung dieser Oberflaeche (Punkt 1: "eine Verteilung
+    // sieht in jedem Bereich gleich aus") - dieselbe Saeulen-Sparkline wie
+    // die Altersstruktur der Flotte (flotteAltersstruktur() in flotte.js),
+    // hier ueber Tarifgruppen statt ueber Baujahre.
+    const tarifVert = tarifVerteilung(alleKennzahlen);
+    if (tarifVert) kacheln.push(tarifVert);
+
+    // ===== Verteilung des Rechnungsvolumens (Gestaltungsauftrag Punkt 5) =====
     //
     // "Wie verteilt sich der Umsatz auf die Kundschaft - tragen wenige
     // den Großteil?" - woertlich eines der drei Beispiele des Auftrags.
-    // alleUmsaetze (siehe kundenAufbauen()) traegt umsatz_brutto ALLER
+    // alleKennzahlen (siehe kundenAufbauen()) traegt umsatz_brutto ALLER
     // 1014 Kunden, nicht nur der hoechstens 200 GELADENEN - dieselbe
     // Ueberlegung wie bei gesamtAnzahl/gesperrtAnzahl/ohneAdresseAnzahl
     // oben (per zaehleZeilen()): eine Verteilung ueber nur 200 von 1014
@@ -453,19 +486,99 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleU
     // schon warnt (siehe Kommentar bei kundenFilterStatus).
     //
     // umsatzKonzentration() selbst liefert null bei leerem/fehlgeschlagenem
-    // Laden (siehe dort) - erst das Ergebnis pruefen, NICHT alleUmsaetze
-    // (ein leeres Array [] ist truthy in JavaScript, "if (alleUmsaetze)"
+    // Laden (siehe dort) - erst das Ergebnis pruefen, NICHT alleKennzahlen
+    // (ein leeres Array [] ist truthy in JavaScript, "if (alleKennzahlen)"
     // allein haette bei einem Ladefehler ein null-Objekt in kacheln
     // geschoben und baueKachel() in rahmen.js beim Lesen von kachel.titel
     // zum Absturz gebracht).
-    const konzentration = umsatzKonzentration(alleUmsaetze);
+    const konzentration = umsatzKonzentration(alleKennzahlen);
     if (konzentration) kacheln.push(konzentration);
 
     return kacheln;
 }
 
-// alleUmsaetze: Zeilen mit genau EINEM Feld, umsatz_brutto, je Kunde
-// (siehe kundenAufbauen()) - v_wawi_kunde.umsatz_brutto ist die Summe
+// alleKennzahlen: siehe kundenAufbauen() - Zeilen mit status, tarif_code,
+// umsatz_brutto, fahrten_gesamt, registriert_am ALLER 1014 Kunden.
+//
+// GESTALTUNGSAUFTRAG PUNKT 2, woertlich die konkrete Frage: "519 von 1014
+// sind gesperrt. Wer sind die? Seit wann? Haben sie je gefahren?"
+// Nachgerechnet (siehe Bericht): JEDER der 519 gesperrten Kunden hat
+// fahrten_gesamt = 0 - eine Sperrung faellt in diesem Bestand fachlich mit
+// "hat noch nie gebucht" zusammen. Das ist ein echter, ueberpruefbarer
+// Befund dieses Datenstands, keine Vermutung - deshalb hier UNABHAENGIG
+// aus alleKennzahlen nachgerechnet statt einfach als Text behauptet
+// (Hausregel: jede neue Kennzahl gegen die Datenbank nachrechnen). Liefert
+// null, wenn alleKennzahlen leer blieb oder keine gesperrten Zeilen traegt
+// - der Aufrufer faellt dann auf den alten Text zurueck (siehe oben).
+function gesperrtNieGefahren(alleKennzahlen, gesperrtAnzahl) {
+    if (!alleKennzahlen || alleKennzahlen.length === 0) return null;
+    const gesperrte = alleKennzahlen.filter((z) => z.status === 'gesperrt');
+    if (gesperrte.length === 0) return null;
+
+    const nieGefahren = gesperrte.filter((z) => !z.fahrten_gesamt);
+    const kundenPhrase = mengeFormat(gesperrtAnzahl, 'kunde');
+
+    // Registrierungsspanne (Punkt 2: "seit wann?") - nur ueber die
+    // tatsaechlich geladenen gesperrten Zeilen, nicht ueber alle 1014.
+    const jahre = gesperrte.map((z) => new Date(z.registriert_am).getFullYear()).sort((a, b) => a - b);
+    const vonJahr = String(jahre[0]);
+    const bisJahr = String(jahre[jahre.length - 1]);
+
+    // alle vs. einige: KEIN hartkodiertes "alle", auch wenn es im
+    // heutigen Bestand fuer jede der 519 Zeilen zutrifft - kaeme morgen
+    // ein einziger gesperrter Kunde mit einer Fahrt dazu, muss der Text
+    // das selbst erkennen, nicht weiter "alle" behaupten.
+    return nieGefahren.length === gesperrte.length
+        ? t('hint.blockedNeverRiddenAll', { n: zahlFormat(gesperrte.length), kundenPhrase, vonJahr, bisJahr })
+        : t('hint.blockedNeverRiddenSome', { n: zahlFormat(gesperrte.length), kundenPhrase, nie: zahlFormat(nieGefahren.length) });
+}
+
+// GESTALTUNGSAUFTRAG PUNKT 2: "Sieh selbst nach, was da ist, und wähl
+// aus." tarif_code ist NULL bei einem Kunden ohne aktuell gueltige
+// Mitgliedschaft (v_wawi_kunde, LEFT JOIN auf mitgliedschaft/tarif) -
+// nachgerechnet die groesste der fuenf Gruppen im heutigen Bestand (604
+// von 1014, siehe Bericht), groesser als jeder einzelne echte Tarif. Die
+// Beschriftung dafuer (misc.noMembership, "ohne Mitgliedschaft") gibt es
+// bereits - dieselbe Gruppe, die auswertungenUmsatzKundengruppe() in
+// auswertungen.js unter "tile.notableNoMembership" umsatzseitig zeigt,
+// hier kopfzahlenseitig: EIN Fund, zwei Bereiche, derselbe Begriff statt
+// einer zweiten Erfindung fuer dieselbe Sache.
+function tarifVerteilung(alleKennzahlen) {
+    if (!alleKennzahlen || alleKennzahlen.length === 0) return null;
+    const gesamt = alleKennzahlen.length;
+
+    const zaehlerJeTarif = new Map();
+    for (const z of alleKennzahlen) {
+        const schluessel = z.tarif_code || null;
+        zaehlerJeTarif.set(schluessel, (zaehlerJeTarif.get(schluessel) || 0) + 1);
+    }
+
+    // Absteigend nach Anzahl - "die groesste Gruppe zuerst" ist hier die
+    // aussagekraeftigere Reihenfolge als eine alphabetische Tarifliste,
+    // weil genau DIESE Gruppe (ohne Tarif) den Hinweistext traegt.
+    const gruppen = [...zaehlerJeTarif.entries()].sort(([, a], [, b]) => b - a);
+    const [groessterSchluessel, groessteAnzahl] = gruppen[0];
+    const anteil = Math.round((groessteAnzahl / gesamt) * 100);
+    const kundenPhrase = mengeFormat(gesamt, 'kunde');
+
+    return {
+        titel: t('tile.tariffDistribution'),
+        wert: `${zahlFormat(anteil)} %`,
+        grafik: saeulenSparkline(gruppen.map(([, n]) => n), t('hint.tariffDistributionAria'), { aktuellIndex: null }),
+        hinweis: groessterSchluessel === null
+            ? t('hint.tariffDistributionDetail', { anteil: zahlFormat(anteil), n: zahlFormat(groessteAnzahl), kundenPhrase })
+            // Randfall (heute nicht der Fall, siehe Bericht): die groesste
+            // Gruppe traegt einen echten Tarif statt "ohne Mitgliedschaft" -
+            // dann reicht der generische "X % von Y"-Baustein, kein
+            // spezifischer "ohne aktiven Tarif"-Text, der hier nicht zutraefe.
+            : t('common.xOfPhrase', { x: `${zahlFormat(anteil)} %`, phrase: kundenPhrase })
+    };
+}
+
+// alleUmsaetze (Parametername unveraendert, obwohl die Zeilen inzwischen
+// mehr als nur umsatz_brutto tragen - siehe alleKennzahlen in
+// kundenAufbauen(): nur dieses eine Feld wird hier tatsaechlich gelesen):
+// v_wawi_kunde.umsatz_brutto ist die Summe
 // ALLER Rechnungsbetraege des Kunden (brutto, inkl. USt.), UNABHAENGIG
 // vom Zahlungsstatus (siehe Kommentar an der Sicht, 0018_wawi_sichten.sql).
 //

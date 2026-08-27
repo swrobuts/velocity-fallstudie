@@ -881,6 +881,19 @@ button {
 .uebersichtsstreifen {
   flex: 0 0 auto;
   display: flex;
+  /* flex-wrap NEU (Erprobung, Gestaltungsauftrag Punkt 1/3): Flotte zeigt
+     seit flotteAltersstruktur() (siehe flotte.js) fuenf Kacheln statt
+     vier, eine davon mit einer Saeulen-Sparkline, deren <svg> selbst nie
+     unter 90px schrumpft (siehe .saeulensparkline min-width weiter
+     unten). Bei einem schmaleren Fenster oder einem sechsten Tab-Reiter
+     mit noch mehr Kacheln kaeme .uebersichtskachel (min-width:0) sonst
+     irgendwann an den Punkt, an dem Zahl und Grafik derselben Kachel sich
+     ueberlagern, statt Platz fuer eine zweite Zeile zu bekommen (im
+     Browser nachgestellt, siehe Bericht - dort mit einer inzwischen
+     wieder entfernten sechsten Kachel). flex-wrap ist die Absicherung
+     dagegen; bei den ueblichen vier bis fuenf Kacheln in einem normal
+     breiten Fenster aendert es sichtbar nichts. */
+  flex-wrap: wrap;
   background: var(--grund);
   /* 28px statt vormals 20px - dritter Anlauf. */
   margin-bottom: 28px;
@@ -1065,15 +1078,19 @@ button {
   line-height: 1.4;
 }
 
-/* ===== Radtyp-Kacheln mit Produktbild (flotte.js, flotteTypkachelnAufbauen)
-   =====
+/* ===== Radtyp-Kacheln mit Produktbild (flotte.js: flotteTypkachelnZeigen();
+   instandhaltung.js: instandhaltungTypkachelnZeigen()) =====
    Gestaltungsauftrag, wörtlich: "Bei Flotte vermisse ich Produktbilder ...
-   damit ich das Produkt/Flotte auch sehe." Eigene Reihe UNTER dem
-   Uebersichtsstreifen, keine weiteren Kacheln IN ihm - Begruendung siehe
-   Kopfkommentar von flotteTypkachelnAufbauen() in flotte.js. flex-wrap,
-   nicht die feste Gleichverteilung von .uebersichtsstreifen: drei
-   Radtyp-Kacheln mit Bild sollen auch bei schmalem Fenster untereinander
-   Platz finden statt sich auf eine unlesbare Restbreite zu quetschen. */
+   damit ich das Produkt/Flotte auch sehe" UND (Instandhaltung, spaeter
+   dazugekommen) "hätte ich auch gern die schönen Bilder der Räder wie bei
+   Flotte" - EIN Bauteil fuer BEIDE Bereiche (Gestaltungsauftrag Punkt 1:
+   "gleiche Bauteile"), nicht zwei aehnliche CSS-Bloecke unter zwei
+   Klassennamen. Eigene Reihe UNTER dem Uebersichtsstreifen, keine
+   weiteren Kacheln IN ihm - Begruendung siehe Kopfkommentar von
+   flotteTypkachelnZeigen() in flotte.js. flex-wrap, nicht die feste
+   Gleichverteilung von .uebersichtsstreifen: drei Radtyp-Kacheln mit Bild
+   sollen auch bei schmalem Fenster untereinander Platz finden statt sich
+   auf eine unlesbare Restbreite zu quetschen. */
 .flotte-typkacheln {
   flex: 0 0 auto;
   display: flex;
@@ -2152,6 +2169,31 @@ button {
   color: var(--marine);
 }
 
+/* Gestaltungsauftrag Punkt 6: der Gruppierungsknopf bekam sein Symbol
+   bisher direkt per innerHTML auf den <button> selbst (siehe
+   spaltenkopfGruppenknopf() in rahmen.js) - ohne eigene Groessenregel
+   fiel das <svg> auf die Ersatzgroesse des Browsers zurueck (typischerweise
+   300x150px) und lief damit weit ueber den kleinen, gepolsterten Knopf
+   hinaus: sichtbar blieb nur dessen Rahmen, "ein leeres abgerundetes
+   Rechteck" (Auftrag, woertlich). Jetzt derselbe Wrapper wie beim
+   Sortiersymbol (.spaltenkopf-sortsymbol direkt oberhalb) - bewusst
+   dieselben Masse/Strichstaerke, damit Sortier- und Gruppierungsknopf als
+   EINE Symbolfamilie erkennbar bleiben, nicht als zwei verschiedene. */
+.spaltenkopf-gruppensymbol {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.spaltenkopf-gruppensymbol svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Ein einziges Chevron-Symbol fuer alle drei Sortierzustaende (siehe
    SPALTENKOPF_SORT_ICON in rahmen.js) - 180°-Drehung statt eines
    zweiten SVGs unterscheidet "aufsteigend" von "absteigend". */
@@ -2458,6 +2500,29 @@ button {
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* Gestaltungsauftrag Punkt 5, wörtlich: "ich will in der rechten Kachel
+   das Bild des jeweiligen Rades sehen" - #detailmaske IST diese rechte
+   Kachel (siehe dort). Derselbe Rahmen/Hintergrund wie .flotte-typkachel,
+   aber als eigener Block ueber dem Formular statt einer Zeile daneben:
+   hier ist das Bild der Aufmacher der ganzen Maske, kein kleines
+   Beiwerk neben einer Kennzahl. */
+.detailmaske-bild {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--linie);
+  background: var(--grund);
+}
+
+.detailmaske-bild img {
+  height: 120px;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
 }
 
 /* ===== Detailformular (zeigeMaske) ===== */
