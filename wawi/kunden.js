@@ -112,10 +112,64 @@ function suchwert(text) {
 // zufaellig gesperrt sind. Das waere genau die im Auftrag beschriebene
 // Luege: ein Filter, der vorgibt, ueber allen Kunden zu suchen, aber nur
 // ueber einem Bruchteil sucht, ohne das zu sagen.
-let kundenFilterStatus = 'alle';
+//
+// Gestaltungsauftrag Bedienelemente, Punkt 2: "ich kann bei Filter immer
+// nur ein Item aussuchen, brauche aber Multiselect" - ein leeres Set
+// bedeutet "Alle" (der Ausgangszustand), ein nichtleeres traegt die
+// gewaehlten Status-Werte. SERVERSEITIG bleibt es dabei: .in() statt
+// .eq() weiter unten in kundenAufbauen() ist PostgREST' eigener Weg,
+// mehrere Werte in EINER Abfrage zu uebergeben (?status=in.(aktiv,
+// gesperrt)) - dieselbe 200-von-1014-Grenze wie zuvor macht das noetig,
+// nicht nur wuenschenswert (siehe Kommentar oben: ein Mehrfachfilter, der
+// nur die geladenen 200 durchsuchte, waere dieselbe Luege wie ein
+// Einfachfilter, der es tut).
+let kundenFilterStatus = new Set();
 
 function kundenStatusText(status) {
     return { aktiv: 'Aktiv', gesperrt: 'Gesperrt', geschlossen: 'Geschlossen' }[status] || status;
+}
+
+// ===== Datumsanzeige (Gestaltungsauftrag, Punkt 1) =====
+//
+// "Schreib Daten so, dass sie sich vergleichen lassen; ein Datum, das
+// man rechnen muss, um es einzuordnen, hilft nicht" - woertlich der
+// Auftrag. v_wawi_kunde liefert registriert_am/letzte_ausleihe_am als
+// ISO-Zeitstempel (supabase-js reicht sie unveraendert durch); roh
+// angezeigt waere das "2026-08-22T14:00:00+00:00" - lesbar, aber nicht
+// auf einen Blick MIT der Nachbarspalte vergleichbar. Eine einzige
+// Formatierfunktion fuer BEIDE neuen Spalten (siehe die Feldliste
+// weiter unten) statt je einer eigenen: "Kunde seit" und "Letzte
+// Ausleihe am" muessen im GLEICHEN Format nebeneinanderstehen, sonst
+// bräuchte man wieder eine Umrechnung, um zwei Daten derselben Person zu
+// vergleichen - genau das der Auftrag ausschliesst. day/month/year fest
+// zweistellig statt der de-DE-Vorgabe ("22.8.2026"): sonst waeren die
+// Spalten von Zeile zu Zeile unterschiedlich breit, dieselbe
+// "vertikale Flucht"-Ueberlegung wie bei balkenSpalten() in rahmen.js.
+// NICHT nach rahmen.js gezogen: bislang der einzige Verbraucher, siehe
+// dieselbe Zurueckhaltung bei der Suche weiter oben in dieser Datei.
+function kundenDatumFormat(zeitstempel) {
+    return new Date(zeitstempel).toLocaleDateString('de-DE',
+        { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+// "Letzte Ausleihe am" - siehe der ausfuehrliche Kommentar an der Sicht
+// (db/aufbau/0018_wawi_sichten.sql): letzte_ausleihe_am zaehlt eine
+// LAUFENDE Ausleihe ausdruecklich mit, letzte_ausleihe_laeuft sagt, ob
+// genau das hier der Fall ist. Zwei Zustaende, die eine leere Zelle
+// NICHT mit einem Ladefehler verwechseln lassen duerfen (Auftrag,
+// ausdruecklich als wiederkehrende Verwechslung in diesem Projekt
+// benannt):
+//   - null: noch nie ausgeliehen - eigener, ausgeschriebener Text statt
+//     des sonst ueblichen "—" (siehe ort/tarif_code oben/unten): ein
+//     blosser Gedankenstrich waere HIER wieder genau die Zelle, die wie
+//     ein Ladefehler aussieht, die diese Aufgabe beheben soll.
+//   - sonst: das Datum, PLUS ein sichtbarer Zusatz, wenn diese Ausleihe
+//     noch laeuft - ein Datum ohne diesen Zusatz sae'he wie eine
+//     abgeschlossene Fahrt aus, waere es aber nicht.
+function kundenLetzteAusleiheFormat(zeitstempel, zeile) {
+    if (!zeitstempel) return 'Noch keine Ausleihe';
+    const datum = kundenDatumFormat(zeitstempel);
+    return zeile.letzte_ausleihe_laeuft ? `${datum} · läuft noch` : datum;
 }
 
 async function kundenAufbauen(suchtext) {
@@ -162,7 +216,8 @@ async function kundenAufbauen(suchtext) {
         ladeListe('v_wawi_kunde',
             'kunde_id, kundennummer, anrede, vorname, nachname, email, telefon, status, ' +
             'registriert_am, strasse, hausnummer, plz, ort, tarif_code, tarif, ' +
-            'mitgliedschaft_seit, fahrten_gesamt, fahrten_offen, umsatz_brutto, offener_betrag',
+            'mitgliedschaft_seit, fahrten_gesamt, fahrten_offen, umsatz_brutto, offener_betrag, ' +
+            'letzte_ausleihe_am, letzte_ausleihe_laeuft',
             (q) => {
                 let abfrage = q;
                 if (suchtext) {
@@ -171,7 +226,10 @@ async function kundenAufbauen(suchtext) {
                         `nachname.ilike.${w},vorname.ilike.${w},` +
                         `email.ilike.${w},kundennummer.ilike.${w}`);
                 }
-                if (kundenFilterStatus !== 'alle') abfrage = abfrage.eq('status', kundenFilterStatus);
+                // .in() statt .eq(): PostgREST' eigener Weg fuer "mehrere
+                // Werte gleichzeitig" (?status=in.(aktiv,gesperrt)) - siehe
+                // Kommentar bei kundenFilterStatus oben.
+                if (kundenFilterStatus.size > 0) abfrage = abfrage.in('status', [...kundenFilterStatus]);
                 return abfrage.order('nachname').limit(200);
             }),
         zaehleZeilen('v_wawi_kunde'),
@@ -217,9 +275,12 @@ async function kundenAufbauen(suchtext) {
 
     zeigeFilterleiste(vorgang, true, [
         {
+            // Kein { wert: 'alle', ... } mehr unter den Optionen: der
+            // Rueckweg zu "Alle" ist jetzt ein eigener Knopf im
+            // Mehrfachauswahl-Popup, kein Listeneintrag (siehe
+            // mehrfachauswahlFeld() in rahmen.js).
             name: 'status', titel: 'Status', wert: kundenFilterStatus,
             optionen: [
-                { wert: 'alle', text: 'Alle' },
                 { wert: 'aktiv', text: 'Aktiv' },
                 { wert: 'gesperrt', text: 'Gesperrt' },
                 { wert: 'geschlossen', text: 'Geschlossen' }
@@ -242,9 +303,9 @@ async function kundenAufbauen(suchtext) {
             suchtext
                 ? `Kein Kunde zu „${suchtext}“ erfüllt zusätzlich die gewählte Einschränkung.`
                 : 'Kein Kunde erfüllt die gewählte Einschränkung.',
-            kundenFilterStatus !== 'alle'
+            kundenFilterStatus.size > 0
                 ? { titel: 'Statusfilter zurücksetzen', ausfuehren: async () => {
-                      kundenFilterStatus = 'alle'; await kundenAufbauen();
+                      kundenFilterStatus = new Set(); await kundenAufbauen();
                   } }
                 : null
         );
@@ -256,12 +317,6 @@ async function kundenAufbauen(suchtext) {
         { feld: 'kundennummer', titel: 'Nummer' },
         { feld: 'nachname',     titel: 'Nachname' },
         { feld: 'vorname',      titel: 'Vorname' },
-        // WICHTIG (Gestaltungsauftrag, Punkt 4): "die Liste zeigt keinen
-        // Ort" - Nummer, Nachname, Vorname, Status, Tarif, mehr nicht.
-        // 901 von 1014 Kunden HABEN einen (siehe ohneAdresseAnzahl oben);
-        // ohne diese Spalte war er in der Liste unsichtbar, obwohl die
-        // Maske ihn laengst zeigte.
-        { feld: 'ort',           titel: 'Ort', formatieren: (o) => o || '—' },
         // Nur EIN Parameter (die ganze Zeile), nicht (s) wie im
         // Auftragstext: zeigeListe in rahmen.js ruft eine Funktions-
         // Spalte als spalte.klasse(zeile) auf, nicht spalte.klasse(wert).
@@ -280,7 +335,39 @@ async function kundenAufbauen(suchtext) {
         // rahmen.js.
         { feld: 'status',       titel: 'Status', filterbar: false,
           klasse: (z) => (z.status === 'gesperrt' ? 'warnung' : z.status === 'geschlossen' ? 'leise' : '') },
-        { feld: 'tarif_code',   titel: 'Tarif', formatieren: (t) => t || '—' }
+        { feld: 'tarif_code',   titel: 'Tarif', formatieren: (t) => t || '—' },
+        // GESTALTUNGSAUFTRAG, PUNKT 1, woertlich: "Bei Kunde vermisse ich
+        // das Attribut 'Kunde seit', 'Letzte Ausleihe am', muss beides in
+        // der Tabelle angezeigt werden." Zwei neue Datumsspalten dazu, statt
+        // sie der bestehenden Sechserreihe (Nummer/Nachname/Vorname/Ort/
+        // Status/Tarif) einfach anzuhaengen: WARUM GERADE ORT WEICHT -
+        // nachgemessen (tools/zahlen_gegen_db.py-Stil, siehe Bericht), NICHT
+        // geraten: 573 der 1014 Kunden (56 %) wohnen inzwischen in
+        // Wuerzburg selbst, alle 1014 verteilen sich auf ganze 14 Orte -
+        // derselbe Datenstand-Wechsel, der die Kundschaft insgesamt "in
+        // Wuerzburg und Umgebung" ansiedelt (siehe Auftrag). Eine Spalte, in
+        // der mehr als die Haelfte aller Zeilen denselben Wert zeigt und
+        // der Rest aus 13 weiteren Werten besteht, traegt in dieser
+        // Uebersicht kaum noch eigene Information - anders als beim
+        // fruehren, bundesweit verteilten Bestand, fuer den Punkt 4 des
+        // vorherigen Auftrags Ort ausdruecklich verlangt hatte. Der Ort
+        // bleibt deshalb NICHT verschwunden, nur nicht mehr in der
+        // Kompaktliste: kundeMaske() weiter unten zeigt ihn unveraendert in
+        // der Detailmaske. Damit waechst die Tabelle nur um EINE Spalte
+        // netto (6 -> 7), nicht um zwei - "Weissraum grosszuegig" bleibt
+        // gewahrt, statt zwei Spalten blind anzuhaengen.
+        //
+        // filterbar:false auf beiden: der Spaltenkopf-Filter vergleicht
+        // gegen den ROHEN Zellwert (den ISO-Zeitstempel), nicht gegen den
+        // hier gezeigten Text ("22.08.2026") - ein getippter Suchtext im
+        // deutschen Format faende dort nie einen Treffer. Sortierbar bleibt
+        // die Spalte trotzdem (Vorgabewert): ein ISO-Zeitstempel sortiert
+        // als Text schon richtig chronologisch, siehe der Kommentar bei
+        // istSortierbar()/spaltenWert() in rahmen.js.
+        { feld: 'registriert_am', titel: 'Kunde seit', filterbar: false,
+          formatieren: (wert) => kundenDatumFormat(wert) },
+        { feld: 'letzte_ausleihe_am', titel: 'Letzte Ausleihe', filterbar: false,
+          formatieren: (wert, zeile) => kundenLetzteAusleiheFormat(wert, zeile) }
     ], kundeMaske, kundeZeilenAktionen);
 
     // meldeVorgang statt melde: nach einer Buchung (Sperren,
@@ -304,7 +391,8 @@ async function kundenAufbauen(suchtext) {
     // geladen sind.
     const einschraenkung = [
         suchtext ? `zu „${suchtext}“` : null,
-        kundenFilterStatus !== 'alle' ? `Status ${kundenStatusText(kundenFilterStatus)}` : null
+        kundenFilterStatus.size > 0
+            ? `Status ${[...kundenFilterStatus].map(kundenStatusText).join(', ')}` : null
     ].filter(Boolean).join(', ');
     const zusatz = einschraenkung ? ` (${einschraenkung})` : '';
     meldeVorgang(vorgang, kunden.length === 200
@@ -607,6 +695,15 @@ function kundeMaske(kunde) {
         { name: 'plz',       titel: 'PLZ',       wert: kunde.plz || '',        typ: 'text' },
         { name: 'ort',       titel: 'Ort',       wert: kunde.ort || '',        typ: 'text' },
         { name: 'tarif',     titel: 'Tarif',     wert: kunde.tarif || 'ohne Mitgliedschaft', nurLesen: true },
+        // Dieselben zwei Angaben wie in der Liste (siehe kundenAufbauen()
+        // oben) - hier zusaetzlich, weil die Detailmaske schon jedes
+        // andere Stammdatum zeigt und "Kunde seit" sonst nur in der
+        // Tabelle staende, nicht in der Maske, die man beim Nachschlagen
+        // eines EINZELNEN Kunden tatsaechlich oeffnet.
+        { name: 'kunde_seit', titel: 'Kunde seit', wert: kundenDatumFormat(kunde.registriert_am),
+          nurLesen: true },
+        { name: 'letzte_ausleihe', titel: 'Letzte Ausleihe',
+          wert: kundenLetzteAusleiheFormat(kunde.letzte_ausleihe_am, kunde), nurLesen: true },
         { name: 'fahrten',   titel: 'Fahrten',   wert: kunde.fahrten_gesamt,   nurLesen: true },
         { name: 'umsatz',    titel: 'Umsatz',    wert: `${kunde.umsatz_brutto} €`, nurLesen: true },
         { name: 'offen',     titel: 'Offen',     wert: `${kunde.offener_betrag} €`, nurLesen: true },

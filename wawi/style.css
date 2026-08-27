@@ -283,7 +283,25 @@ button {
      GLEICHES Minimum (großzügig über der breiteren der beiden Seiten,
      der Wortmarke) - erst DANN sind beide Außenspalten wirklich gleich
      breit und die Suche liegt exakt in der Mitte der Kopfleiste. */
-  grid-template-columns: minmax(140px, 1fr) auto minmax(140px, 1fr);
+  /* 140px -> 260px (Gestaltungsauftrag, "Uhrzeit, Datum und Sitzungsdauer
+     neben dem Profilbild"): die rechte Spalte traegt jetzt zusaetzlich
+     #sitzungsinfo VOR dem Profilknopf (siehe .profilbereich weiter unten)
+     - gemessen rund 190px fuer die laengere der beiden Zeilen plus Knopf
+     und Zwischenraum. Beide Aussenspalten bleiben GLEICH breit (siehe
+     Kommentar oben, warum "1fr" allein nicht reicht) - 260px deckt die
+     neue rechte Spalte UND liegt komfortabel ueber der Wortmarke links.
+     Die mittlere Spalte NICHT laenger "auto" (Gestaltungsauftrag Punkt 5,
+     woertlich "Suchschlitz groesser" - im Browser gemessen der eigentliche
+     Grund fuer den abgeschnittenen Platzhalter, siehe Bericht): eine
+     "auto"-Spur bemisst sich am INTRINSISCHEN Inhaltsmass ihrer Kinder,
+     nicht an deren max-width - #feld-suche trug schon vorher max-width:
+     320px, blieb aber bei ihrer intrinsischen ~200px (dem UA-Vorgabemass
+     eines <input> ohne size-Attribut) haengen, WEIL width:100% gegenueber
+     einer "auto"-Spur als unbestimmt gilt (Kreisbezug: die Spurbreite
+     haengt vom Kind ab, das Kind will 100% der Spur). minmax(300px, 480px)
+     macht die Spur selbst zu einer BESTIMMTEN Groesse - erst dagegen greift
+     #feld-suche { width:100%; max-width:480px } tatsaechlich. */
+  grid-template-columns: minmax(260px, 1fr) minmax(300px, 480px) minmax(260px, 1fr);
   align-items: center;
   gap: 24px;
   /* 28px statt vormals 16px - der zweite, staerkere Anlauf auf "deutlich
@@ -345,7 +363,13 @@ button {
 #feld-suche {
   justify-self: center;
   width: 100%;
-  max-width: 320px;
+  /* 320px -> 480px (Gestaltungsauftrag, woertlich: "Suchschlitz
+     groesser"): bei 320px schnitt der laengste Platzhaltertext
+     ("In diesem Bereich keine Suche", siehe bereichWechseln() in
+     rahmen.js) sichtbar ab ("In diesem Bereich kein…") - gemessen
+     braucht dieser Text samt Lupe und Innenabstand rund 400px, 480px
+     laesst zusaetzlich Luft, statt ihn nur knapp passend zu machen. */
+  max-width: 480px;
   padding: 6px 10px 6px 32px;
   border: 1px solid transparent;
   border-radius: 4px;
@@ -389,6 +413,38 @@ button {
 .profilbereich {
   position: relative;
   justify-self: end;
+  /* Gestaltungsauftrag, woertlich: "neben dem Profilbild von mir bitte
+     noch Uhrzeit, Datum und Eingeloggte Zeit angeben" - #sitzungsinfo
+     (siehe unten) ruecht als zusaetzliches Kind VOR den Knopf, .profilmenue
+     bleibt trotz display:flex unbeeinflusst: es ist position:absolute und
+     damit aus dem Flussfluss heraus, genau wie zuvor. */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Drei Angaben, "wenig Platz oben rechts - knapp und ruhig, es ist
+   Beiwerk, keine Kennzahl" (Auftrag, woertlich): zwei schmale Zeilen statt
+   einer breiten, rechtsbuendig auf den Profilknopf hin ausgerichtet.
+   Helle, aber gemessen kontrastreiche Schrift auf dem marinen Grund der
+   Kopfleiste (siehe sitzungsinfoZeichnen() in rahmen.js) - dieselbe
+   Ueberlegung wie bei .wortmarke-trenner, nur fuer TEXT statt einer
+   reinen Trennlinie: 0.35 Deckkraft (wie dort) waere fuer Fliesstext zu
+   schwach, gemessen ~10:1 bei 0.78 auf --marine, WEIT ueber den
+   verlangten 4,5:1 fuer Text - deutlich mehr Spielraum als noetig, aber
+   kein Grund, naeher an die Grenze heranzugehen als der Rest dieser
+   Kopfleiste. */
+#sitzungsinfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .profilknopf {
@@ -1002,6 +1058,136 @@ button {
   color: var(--text-leise);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* ===== Mehrfachauswahl (mehrfachauswahlFeld() in rahmen.js,
+   Gestaltungsauftrag Bedienelemente Punkt 2) =====
+   Ersetzt das fruehere <select> an BEIDEN Einsatzorten: hier in der
+   Filterleiste (.filterfeld) UND weiter unten im Spaltenkopf
+   (.spaltenkopf-filterzeile) - ein Regelsatz fuer beide, dieselbe
+   Ueberlegung wie beim Baustein selbst (siehe dessen Kopfkommentar in
+   rahmen.js). border: var(--text-leise) statt var(--linie) - Letztere
+   misst nur 1,37:1 auf Weiss (siehe Kommentar bei
+   .spaltenkopf-filterzeile select weiter unten), weit unter den fuer
+   Bedienelement-Umrisse verlangten 3:1; var(--text-leise) liegt bei
+   5,95:1 und war an dieser Stelle bereits gemessen - kein neuer,
+   ungeprüfter Farbwert nur fuer dieses eine Bauteil. */
+.mehrfachauswahl {
+  position: relative;
+  min-width: 0;
+}
+
+.mehrfachauswahl-knopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-width: 120px;
+  max-width: 220px;
+  padding: 4px 8px;
+  border: 1px solid var(--text-leise);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--flaeche);
+  text-align: left;
+}
+
+.mehrfachauswahl-zusammenfassung {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Reiner CSS-Pfeil statt eines weiteren Icons: dieselbe Bauart, die diese
+   Datei schon fuer die Sortiersymbole vermeidet - hier lohnt sich nicht
+   einmal ein <svg>, ein zweifarbiges Dreieck reicht. Dreht sich beim
+   Oeffnen, damit derselbe visuelle Hinweis wie bei einem nativen <select>
+   entsteht ("das klappt auf/zu"), rein dekorativ (kein eigenes Element,
+   das ein Screenreader vorlesen koennte). */
+.mehrfachauswahl-knopf::after {
+  content: '';
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  margin-left: 2px;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--text-leise);
+  transition: transform 0.1s ease;
+}
+
+.mehrfachauswahl-knopf[aria-expanded="true"]::after {
+  transform: rotate(180deg);
+}
+
+/* "Ein greifender Filter muss anders aussehen als ein leerer" (Punkt 5
+   der vorherigen Gestaltungsrunde, hier unveraendert gueltig) - dieselbe
+   "aktiv"-Farbe wie beim Gruppierungsknopf/.spaltenkopf-filter-aktiv
+   weiter unten (#eef1f7), keine vierte Bedeutung fuer dieselbe Sache. */
+.mehrfachauswahl-aktiv {
+  background: #eef1f7;
+  border-color: var(--marine);
+  font-weight: 600;
+}
+
+.mehrfachauswahl-liste {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 180px;
+  max-width: 260px;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--flaeche);
+  border: 1px solid var(--linie);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(6, 24, 65, 0.18);
+}
+
+.mehrfachauswahl-alle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 5px 6px;
+  margin-bottom: 4px;
+  border: none;
+  border-bottom: 1px solid var(--linie);
+  border-radius: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--marine);
+}
+
+.mehrfachauswahl-alle:hover {
+  background: var(--grund);
+}
+
+.mehrfachauswahl-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mehrfachauswahl-option:hover {
+  background: var(--grund);
 }
 
 /* ===== Zeichenbausteine: Säulen-Sparkline, Zellbalken, typografische

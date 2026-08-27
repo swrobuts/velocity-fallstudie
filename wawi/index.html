@@ -72,6 +72,17 @@
            profilAufbauen() in rahmen.js) und alles Bisherige plus mehr
            im aufklappbaren Menue dahinter. -->
       <div class="profilbereich">
+        <!-- Gestaltungsauftrag, woertlich: "neben dem Profilbild von mir
+             bitte noch Uhrzeit, Datum und Eingeloggte Zeit angeben".
+             sitzungsinfoZeichnen() in rahmen.js befuellt beide Zeilen und
+             haelt sie im Minutentakt aktuell - aria-hidden, weil eine Uhr,
+             die sich jede Minute selbst aendert, fuer einen Bildschirmleser
+             stoerendes "Beiwerk" waere (Auftrag, woertlich), keine
+             Kennzahl, die vorgelesen werden muesste. -->
+        <div id="sitzungsinfo" aria-hidden="true">
+          <span id="sitzungsinfo-zeit-datum"></span>
+          <span id="sitzungsinfo-dauer"></span>
+        </div>
         <button id="knopf-profil" type="button" class="profilknopf"
                 aria-haspopup="true" aria-expanded="false" aria-controls="profilmenue"
                 aria-label="Profil und Einstellungen">

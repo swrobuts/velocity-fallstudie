@@ -34,9 +34,16 @@ bereichAnmelden({
 // veraendert (ein Bereichswechsel selbst setzt sie NICHT zurueck - wer
 // von Flotte weg- und wieder hinwechselt, soll seinen Filter wiederfinden,
 // nicht neu einstellen muessen).
-let flotteFilterStatus = 'alle';
-let flotteFilterTyp = 'alle';
-let flotteFilterStandort = 'alle';
+// Gestaltungsauftrag Bedienelemente, Punkt 2: "ich kann bei Filter immer
+// nur ein Item aussuchen, brauche aber Multiselect" - jedes der drei Sets
+// leer heisst "Alle" (der Ausgangszustand), nichtleer traegt die
+// gewaehlten Werte. Rein CLIENTSEITIG gefiltert (raederGefiltert() weiter
+// unten) wie zuvor - anders als bei Kundschaft laedt Flotte die
+// vollstaendigen 275 Raeder ohnehin auf einmal, eine Serverabfrage
+// braeuchte es dafuer nicht.
+let flotteFilterStatus = new Set();
+let flotteFilterTyp = new Set();
+let flotteFilterStandort = new Set();
 
 async function flotteAufbauen() {
     // ALLERERSTE Anweisung, vor jedem await (siehe Kommentar bei
@@ -103,9 +110,13 @@ async function flotteAufbauen() {
     const { typen, standorte } = flotteFilterOptionen(raeder);
     zeigeFilterleiste(vorgang, true, [
         {
+            // Kein { wert: 'alle', ... } mehr in den Optionen - der
+            // Rueckweg zu "Alle" ist ein eigener Knopf im
+            // Mehrfachauswahl-Popup (mehrfachauswahlFeld() in rahmen.js),
+            // Gestaltungsauftrag Bedienelemente Punkt 2: "wartung UND
+            // defekt gleichzeitig, um alles zu sehen, was nicht faehrt".
             name: 'status', titel: 'Status', wert: flotteFilterStatus,
             optionen: [
-                { wert: 'alle', text: 'Alle' },
                 { wert: 'verfuegbar', text: 'Verfügbar' },
                 { wert: 'ausgeliehen', text: 'Ausgeliehen' },
                 { wert: 'wartung', text: 'Wartung' },
@@ -120,14 +131,12 @@ async function flotteAufbauen() {
             // (CITY/EBIKE/CARGO heute) - ein vierter Radtyp braeuchte
             // sonst eine eigene Codeaenderung hier, obwohl die Flotte
             // ihn schon zeigen wuerde.
-            optionen: [{ wert: 'alle', text: 'Alle' },
-                       ...typen.map(([code, name]) => ({ wert: code, text: name }))],
+            optionen: typen.map(([code, name]) => ({ wert: code, text: name })),
             beiAenderung: (neu) => { flotteFilterTyp = neu; flotteAufbauen(); }
         },
         {
             name: 'standort', titel: 'Station', wert: flotteFilterStandort,
             optionen: [
-                { wert: 'alle', text: 'Alle' },
                 // standort ist NULL bei laufender Fahrt oder freiem
                 // Abstellort (siehe v_wawi_flotte.standort in
                 // 0018_wawi_sichten.sql) - ein eigener Auswahlpunkt statt
@@ -152,9 +161,9 @@ async function flotteAufbauen() {
             {
                 titel: 'Filter zurücksetzen',
                 ausfuehren: async () => {
-                    flotteFilterStatus = 'alle';
-                    flotteFilterTyp = 'alle';
-                    flotteFilterStandort = 'alle';
+                    flotteFilterStatus = new Set();
+                    flotteFilterTyp = new Set();
+                    flotteFilterStandort = new Set();
                     await flotteAufbauen();
                 }
             }
@@ -329,12 +338,19 @@ function flotteFilterOptionen(raeder) {
     return { typen, standorte };
 }
 
+// Set.size === 0 heisst "Alle" (siehe Kommentar bei flotteFilterStatus
+// oben). Der Standort-Sonderfall 'unterwegs' (kein Standort, r.standort
+// ist NULL) kann jetzt GEMEINSAM mit echten Stationsnamen markiert sein -
+// deshalb zwei getrennte Bedingungen statt eines einzelnen
+// Wenn-dann-sonst wie zuvor: "unterwegs ODER eine der gewaehlten
+// Stationen", nicht "entweder unterwegs oder eine Station".
 function raederGefiltert(raeder) {
     return raeder.filter((r) =>
-        (flotteFilterStatus === 'alle' || r.status === flotteFilterStatus) &&
-        (flotteFilterTyp === 'alle' || r.typ_code === flotteFilterTyp) &&
-        (flotteFilterStandort === 'alle'
-            || (flotteFilterStandort === 'unterwegs' ? !r.standort : r.standort === flotteFilterStandort)));
+        (flotteFilterStatus.size === 0 || flotteFilterStatus.has(r.status)) &&
+        (flotteFilterTyp.size === 0 || flotteFilterTyp.has(r.typ_code)) &&
+        (flotteFilterStandort.size === 0
+            || (flotteFilterStandort.has('unterwegs') && !r.standort)
+            || (r.standort && flotteFilterStandort.has(r.standort))));
 }
 
 // Farbe traegt Bedeutung, nicht Dekoration: rot ist ein defektes Rad,

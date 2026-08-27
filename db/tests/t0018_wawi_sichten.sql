@@ -189,6 +189,107 @@ begin
 end;
 $$;
 
+-- Oberflaechenauftrag "Kundschaft erweitern", Punkt 1: "Letzte Ausleihe
+-- am" fehlte ganz in v_wawi_kunde. Vier frische Testkunden statt
+-- bestehender Datensaetze - die vorhandenen 1014 Kunden haben laengst
+-- Ausleihen in beliebigen Zustaenden, ein eigener Kunde je Fall macht
+-- das erwartete Ergebnis eindeutig, statt sich auf einen zufaellig
+-- passenden Bestandskunden zu verlassen.
+create or replace function velocity_test.test_v_kunde_letzte_ausleihe()
+returns setof text language plpgsql as $$
+declare
+  v_station             bigint;
+  v_fahrrad_alt         bigint;
+  v_fahrrad_aktiv       bigint;
+  v_kunde_ohne          bigint;
+  v_kunde_abgeschlossen bigint;
+  v_kunde_aktiv         bigint;
+  v_kunde_storniert     bigint;
+  v_letzte              timestamptz;
+  v_laeuft              boolean;
+begin
+  perform velocity_test.fixture_mitarbeiter('letzte-ausleihe');
+
+  insert into velocity.kunde (email, vorname, nachname)
+    values ('test-letzte-ausleihe-ohne@example.org', 'Ohne', 'Ausleihe')
+    returning kunde_id into v_kunde_ohne;
+  insert into velocity.kunde (email, vorname, nachname)
+    values ('test-letzte-ausleihe-alt@example.org', 'Alt', 'Ausleihe')
+    returning kunde_id into v_kunde_abgeschlossen;
+  insert into velocity.kunde (email, vorname, nachname)
+    values ('test-letzte-ausleihe-aktiv@example.org', 'Aktiv', 'Ausleihe')
+    returning kunde_id into v_kunde_aktiv;
+  insert into velocity.kunde (email, vorname, nachname)
+    values ('test-letzte-ausleihe-storno@example.org', 'Storno', 'Ausleihe')
+    returning kunde_id into v_kunde_storniert;
+
+  select station_id  into v_station     from velocity.station limit 1;
+  select fahrrad_id  into v_fahrrad_alt from velocity.fahrrad  limit 1;
+  -- Ein Rad OHNE laufende Ausleihe: uq_ausleihe_aktiv_je_fahrrad erlaubt
+  -- je Rad hoechstens eine 'aktiv'-Zeile gleichzeitig.
+  select fahrrad_id into v_fahrrad_aktiv from velocity.fahrrad f
+   where not exists (select 1 from velocity.ausleihe au
+                       where au.fahrrad_id = f.fahrrad_id and au.status = 'aktiv')
+   limit 1;
+
+  -- Fall 1: keine einzige Ausleihe. NULL ist hier der fachliche Zustand
+  -- "hat noch nie ausgeliehen" - nicht "Ladefehler" (Auftrag,
+  -- ausdruecklich als wiederkehrende Verwechslung benannt).
+  select letzte_ausleihe_am, letzte_ausleihe_laeuft into v_letzte, v_laeuft
+    from velocity.v_wawi_kunde where kunde_id = v_kunde_ohne;
+  return next is(v_letzte, null, 'Ohne jede Ausleihe ist letzte_ausleihe_am NULL');
+  return next is(v_laeuft, null, 'Ohne jede Ausleihe ist letzte_ausleihe_laeuft NULL, nicht false');
+
+  -- Fall 2: eine einzelne, abgeschlossene Ausleihe vor drei Tagen.
+  insert into velocity.ausleihe
+         (kunde_id, fahrrad_id, start_station_id, startzeit, end_station_id, endzeit, status)
+  values (v_kunde_abgeschlossen, v_fahrrad_alt, v_station, now() - interval '3 days',
+          v_station, now() - interval '3 days' + interval '20 minutes', 'abgeschlossen');
+  select letzte_ausleihe_am, letzte_ausleihe_laeuft into v_letzte, v_laeuft
+    from velocity.v_wawi_kunde where kunde_id = v_kunde_abgeschlossen;
+  return next cmp_ok(v_letzte, '>', now() - interval '4 days',
+    'Eine abgeschlossene Ausleihe liefert ihre eigene startzeit als letzte_ausleihe_am');
+  return next is(v_laeuft, false, 'Eine abgeschlossene letzte Ausleihe meldet letzte_ausleihe_laeuft = false');
+
+  -- Fall 3: eine LAUFENDE Ausleihe ist juenger als eine abgeschlossene -
+  -- die laufende muss gewinnen (Auftrag: "zaehlt eine laufende Ausleihe
+  -- als letzte?" - ja, siehe der ausfuehrliche Kommentar an der Sicht:
+  -- 110 von 275 Raedern laufen gerade, ein Ausschluss zeigte fuer genau
+  -- diese Kunden ein veraltetes Datum).
+  insert into velocity.ausleihe
+         (kunde_id, fahrrad_id, start_station_id, startzeit, end_station_id, endzeit, status)
+  values (v_kunde_aktiv, v_fahrrad_alt, v_station, now() - interval '10 days',
+          v_station, now() - interval '10 days' + interval '15 minutes', 'abgeschlossen');
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit, status)
+  values (v_kunde_aktiv, v_fahrrad_aktiv, v_station, now() - interval '5 minutes', 'aktiv');
+  select letzte_ausleihe_am, letzte_ausleihe_laeuft into v_letzte, v_laeuft
+    from velocity.v_wawi_kunde where kunde_id = v_kunde_aktiv;
+  return next cmp_ok(v_letzte, '>', now() - interval '1 hour',
+    'Die laufende Ausleihe zaehlt als letzte, nicht die aeltere abgeschlossene');
+  return next is(v_laeuft, true,
+    'letzte_ausleihe_laeuft meldet true, solange die juengste Ausleihe noch faehrt');
+
+  -- Fall 4: eine STORNIERTE Ausleihe ist die juengste, zaehlt aber nicht
+  -- mit - dieselbe Ausnahme, die fahrten_gesamt/fahrten_offen weiter
+  -- oben in dieser Sicht bereits kennen: eine stornierte Ausleihe hat
+  -- nie stattgefunden.
+  insert into velocity.ausleihe
+         (kunde_id, fahrrad_id, start_station_id, startzeit, end_station_id, endzeit, status)
+  values (v_kunde_storniert, v_fahrrad_alt, v_station, now() - interval '20 days',
+          v_station, now() - interval '20 days' + interval '10 minutes', 'abgeschlossen');
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit, status)
+  values (v_kunde_storniert, v_fahrrad_alt, v_station, now() - interval '1 day', 'storniert');
+  select letzte_ausleihe_am, letzte_ausleihe_laeuft into v_letzte, v_laeuft
+    from velocity.v_wawi_kunde where kunde_id = v_kunde_storniert;
+  return next cmp_ok(v_letzte, '<', now() - interval '10 days',
+    'Eine stornierte Ausleihe zaehlt nicht als letzte, auch wenn sie die juengste waere');
+  return next is(v_laeuft, false,
+    'Nach Ausschluss der Stornierung bleibt die aeltere abgeschlossene Ausleihe die letzte');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
 create or replace function velocity_test.test_v_umsatz_nach_radtyp()
 returns setof text language plpgsql as $$
 declare v_n integer;

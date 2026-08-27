@@ -40,7 +40,11 @@
 --             (Zu-/Abgang nach Zeitfenster fuer die Disposition, Punkt 3)
 --             und velocity.ort_koordinate/v_wawi_kundenorte (Koordinaten
 --             fuer die schematische Landkarte samt aggregierter
---             Kundenorte, Punkt 4).
+--             Kundenorte, Punkt 4). Der Gestaltungsauftrag "Kundschaft
+--             erweitern" ergaenzt v_wawi_kunde um letzte_ausleihe_am/
+--             letzte_ausleihe_laeuft (Punkt 1: "Letzte Ausleihe am" fehlte
+--             ganz in der Sicht, "Kunde seit" gab es schon als
+--             registriert_am, stand nur nicht in der Kundenliste).
 -- =====================================================================
 
 -- Luftlinie nach Haversine, ohne PostGIS - dieselbe Entscheidung wie
@@ -176,7 +180,40 @@ select k.kunde_id,
        (select coalesce(sum(r.betrag_brutto), 0) from velocity.rechnung r
          where r.kunde_id = k.kunde_id)                                   as umsatz_brutto,
        (select coalesce(sum(r.betrag_brutto), 0) from velocity.rechnung r
-         where r.kunde_id = k.kunde_id and r.status = 'gestellt')         as offener_betrag
+         where r.kunde_id = k.kunde_id and r.status = 'gestellt')         as offener_betrag,
+       -- Oberflaechenauftrag, wörtlich: "Bei Kunde vermisse ich ...
+       -- 'Letzte Ausleihe am'". ZAEHLT EINE LAUFENDE AUSLEIHE ALS
+       -- "LETZTE"? JA, ausdruecklich: am Tag dieser Aenderung laufen 110
+       -- von 275 Raedern gerade (siehe fahrten_offen). Wer eine solche
+       -- Ausleihe hier ausschliesst und nur 'abgeschlossen' zaehlt, zeigt
+       -- fuer genau diese Kunden ein veraltetes Datum aus der Fahrt DAVOR,
+       -- waehrend die tatsaechlich juengste Ausleihe laengst laeuft - eine
+       -- Falschaussage, kein bloss unvollstaendiger Befund. 'storniert'
+       -- bleibt dagegen aussen vor, aus demselben Grund, aus dem
+       -- fahrten_gesamt/fahrten_offen es zwei Zeilen weiter oben schon
+       -- ausschliessen: eine stornierte Ausleihe hat nie stattgefunden.
+       -- Zwei getrennte, sonst identische Unterabfragen (Zeitpunkt UND
+       -- Status derselben Zeile) statt einer gemeinsamen, weil diese Sicht
+       -- fuer jede andere abgeleitete Spalte (siehe die vier Zeilen
+       -- darueber) ebenfalls eine eigene Unterabfrage je Spalte schreibt,
+       -- nicht ein gemeinsames LATERAL - "order by startzeit desc,
+       -- ausleihe_id desc" ist in beiden WORTGLEICH, deshalb liefern beide
+       -- garantiert dieselbe Zeile, auch bei zwei Ausleihen mit exakt
+       -- gleicher startzeit.
+       (select au.startzeit from velocity.ausleihe au
+         where au.kunde_id = k.kunde_id and au.status in ('aktiv', 'abgeschlossen')
+         order by au.startzeit desc, au.ausleihe_id desc
+         limit 1)                                                         as letzte_ausleihe_am,
+       -- Kenntlich machen (Auftrag, ausdruecklich): true, solange die
+       -- juengste Ausleihe selbst noch laeuft - kunden.js haengt daran
+       -- einen sichtbaren Zusatz an, statt ein abgeschlossenes Datum
+       -- vorzutaeuschen. NULL (nicht false), wenn es ueberhaupt keine
+       -- Ausleihe gibt - "false" behauptete faelschlich "die letzte ist
+       -- abgeschlossen", wo es gar keine letzte gibt.
+       (select au.status = 'aktiv' from velocity.ausleihe au
+         where au.kunde_id = k.kunde_id and au.status in ('aktiv', 'abgeschlossen')
+         order by au.startzeit desc, au.ausleihe_id desc
+         limit 1)                                                         as letzte_ausleihe_laeuft
   from velocity.kunde k
   left join velocity.adresse a on a.adresse_id = k.rechnungsadresse_id
   left join velocity.mitgliedschaft m
@@ -235,6 +272,14 @@ comment on column velocity.v_wawi_kunde.umsatz_brutto is
 comment on column velocity.v_wawi_kunde.offener_betrag is
   'Summe der gestellten, noch nicht bezahlten Rechnungen - der Betrag, um den '
   'es bei einer Mahnung geht.';
+comment on column velocity.v_wawi_kunde.letzte_ausleihe_am is
+  'Start der zeitlich juengsten Ausleihe (aktiv oder abgeschlossen, storniert '
+  'zaehlt nicht) - siehe letzte_ausleihe_laeuft, ob sie noch andauert. NULL '
+  'heisst: dieser Kunde hat noch nie ausgeliehen, kein Ladefehler.';
+comment on column velocity.v_wawi_kunde.letzte_ausleihe_laeuft is
+  'true, wenn die unter letzte_ausleihe_am genannte Ausleihe noch laeuft '
+  '(status aktiv); false, wenn sie abgeschlossen ist; NULL, wenn es noch '
+  'keine Ausleihe gibt.';
 
 -- ---- Stationen -------------------------------------------------------
 create or replace view velocity.v_wawi_station as

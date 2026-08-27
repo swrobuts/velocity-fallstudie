@@ -58,8 +58,10 @@ function instandhaltungZeigeSchaeden() {
 // Filterzustand (Gestaltungsauftrag, Punkt 2) - nur fuer den Schaeden-
 // Unterreiter ("nach Schwere, nach Alter der Meldung", woertlich der
 // Auftrag). instandhaltungFilterAlterStunden=0 bedeutet "alle", siehe
-// schaedenZeigen() weiter unten.
-let instandhaltungFilterSchwere = 'alle';
+// schaedenZeigen() weiter unten. instandhaltungFilterSchwere ist seit
+// der Mehrfachauswahl (Gestaltungsauftrag Bedienelemente, Punkt 2) ein
+// Set<string> - leer bedeutet "Alle".
+let instandhaltungFilterSchwere = new Set();
 let instandhaltungFilterAlterStunden = 0;
 
 async function instandhaltungAufbauen() {
@@ -220,14 +222,16 @@ async function schaedenZeigen(vorgang) {
     if (instandhaltungFilterAlterStunden > schieberMax) instandhaltungFilterAlterStunden = 0;
 
     const sichtbar = schaeden.filter((s) =>
-        (instandhaltungFilterSchwere === 'alle' || s.schwere === instandhaltungFilterSchwere)
+        (instandhaltungFilterSchwere.size === 0 || instandhaltungFilterSchwere.has(s.schwere))
         && alterInStunden(s.offen_seit) >= instandhaltungFilterAlterStunden);
 
     zeigeFilterleiste(vorgang, true, [
         {
+            // Kein { wert: 'alle', ... } mehr in den Optionen - der
+            // Rueckweg zu "Alle" ist ein eigener Knopf im
+            // Mehrfachauswahl-Popup (mehrfachauswahlFeld() in rahmen.js).
             name: 'schwere', titel: 'Schwere', wert: instandhaltungFilterSchwere,
             optionen: [
-                { wert: 'alle', text: 'Alle' },
                 { wert: 'gering', text: 'gering' },
                 { wert: 'mittel', text: 'mittel' },
                 { wert: 'fahruntauglich', text: 'fahruntauglich' }
@@ -250,7 +254,7 @@ async function schaedenZeigen(vorgang) {
             {
                 titel: 'Filter zurücksetzen',
                 ausfuehren: async () => {
-                    instandhaltungFilterSchwere = 'alle';
+                    instandhaltungFilterSchwere = new Set();
                     instandhaltungFilterAlterStunden = 0;
                     await instandhaltungAufbauen();
                 }

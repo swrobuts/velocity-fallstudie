@@ -63,6 +63,16 @@ function bereichAnmelden(bereich) {
 }
 
 async function seiteAufbauen() {
+    // ALLERERSTE Anweisung, unbedingt - nicht erst im Erfolgsfall (siehe
+    // sitzungsUhrStoppen() weiter unten): seiteAufbauen() laeuft bei jedem
+    // Benutzerwechsel neu (SIGNED_IN/SIGNED_OUT/USER_UPDATED, siehe
+    // anmeldung.js), auch beim Abmelden. Ohne dieses Stoppen HIER liefe
+    // die Minutenuhr eines fruehreren Logins nach dem Abmelden unbegrenzt
+    // weiter - "ein setInterval, das beim Abmelden weiterlaeuft, ist ein
+    // Leck" (Auftrag, woertlich). navigationAufbauen()/profilAufbauen()
+    // starten sie weiter unten bei Bedarf frisch neu.
+    sitzungsUhrStoppen();
+
     let rollen;
     try {
         rollen = await meineRollen();
@@ -217,6 +227,121 @@ function profilAufbauen(benutzer, rollen) {
         marke.textContent = rolle;
         rollenKasten.append(marke);
     }
+
+    // Gestaltungsauftrag, woertlich: "neben dem Profilbild von mir bitte
+    // noch Uhrzeit, Datum und Eingeloggte Zeit angeben" - siehe
+    // sitzungsUhrStarten() weiter unten fuer die Quelle der Sitzungsdauer
+    // und die Begruendung, warum sie NICHT sekundengenau nachgezeichnet
+    // wird.
+    sitzungsUhrStarten(benutzer);
+}
+
+// ===== Sitzungsinfo: Uhrzeit, Datum, Sitzungsdauer =====
+//
+// Gestaltungsauftrag, woertlich: "neben dem Profilbild von mir bitte noch
+// Uhrzeit, Datum und Eingeloggte Zeit angeben".
+//
+// WOHER DIE SITZUNGSDAUER KOMMT (Auftrag: "nimm eine echte Quelle, keine
+// erfundene"): benutzer.last_sign_in_at - ein Feld, das Supabase Auth bei
+// JEDER tatsaechlichen Anmeldung auf dem auth.users-Datensatz selbst
+// fortschreibt, unabhaengig von dieser Oberflaeche. Das ist eine ECHTE
+// Quelle in genau dem Sinn, den der Auftrag verlangt: der Zeitpunkt, zu
+// dem SUPABASE die Sitzung tatsaechlich begonnen hat, nicht ein Wert, den
+// dieses Skript sich selbst ausdenkt. Es aendert sich AUSSCHLIESSLICH bei
+// einem echten erneuten Login (SIGNED_IN mit neuem Passwort-Login o.ae.),
+// NICHT bei TOKEN_REFRESHED (das laeuft stuendlich waehrend derselben
+// Sitzung, siehe anmeldung.js) - genau die Abgrenzung, die "Sitzungsdauer"
+// hier bedeuten soll: seit dem tatsaechlichen Anmelden, nicht seit dem
+// letzten Auffrischen eines Tokens im Hintergrund.
+//
+// FALLS DAS FELD FEHLT (Auftrag: "wenn keine taugliche Angabe existiert,
+// ist der Zeitpunkt des Ladens der Seite eine ehrliche Naeherung - dann
+// muss die Beschriftung sagen, was sie misst"): seitenladeZeitpunkt (siehe
+// unten, EINMAL beim Laden dieser Datei gesetzt) tritt an seine Stelle,
+// UND sitzungsinfoZeichnen() beschriftet die Dauer dann sichtbar anders
+// ("seit dem Öffnen: ..." statt "... angemeldet") - keine vorgetaeuschte
+// Genauigkeit ueber einen Anmeldezeitpunkt, den diese Oberflaeche gar
+// nicht kennt.
+const seitenladeZeitpunkt = new Date();
+
+let sitzungsUhrTimeout = null;     // der einmalige Ausrichtungs-Timer bis zur naechsten vollen Minute
+let sitzungsUhrIntervall = null;   // danach: alle 60s
+
+// Von seiteAufbauen() UNBEDINGT als allererste Anweisung aufgerufen
+// (siehe dort) - das ist der einzige Ort, an dem ein Abmelden (oder ein
+// Benutzerwechsel) zuverlaessig durchlaeuft, unabhaengig davon, ob
+// hinterher ueberhaupt eine neue Uhr gestartet wird. Ohne dieses
+// bedingungslose Stoppen liefe die Minutenuhr eines fruehreren Logins
+// nach dem Abmelden unbegrenzt weiter - "ein setInterval, das beim
+// Abmelden weiterlaeuft, ist ein Leck" (Auftrag, woertlich).
+function sitzungsUhrStoppen() {
+    clearTimeout(sitzungsUhrTimeout);
+    clearInterval(sitzungsUhrIntervall);
+    sitzungsUhrTimeout = null;
+    sitzungsUhrIntervall = null;
+}
+
+// benutzer: das Supabase-User-Objekt aus profilAufbauen() oben.
+//
+// MINUTENGENAU, NICHT SEKUENDLICH (Auftrag, woertlich: "eine Uhr, die
+// jede Sekunde neu zeichnet, kostet den ganzen Tag Rechenzeit fuer
+// nichts... minutengenau reicht"): eine Sitzungsdauer oder Uhrzeit auf
+// die Sekunde genau anzuzeigen, waere fuer "knapp und ruhiges Beiwerk"
+// (Auftrag) ohnehin falsch dosierte Praezision - niemand liest hier eine
+// Stoppuhr ab.
+//
+// AUSGERICHTET AUF DIE VOLLE MINUTE (Auftrag: "der Wechsel muss zur
+// vollen Minute passen, nicht sechzig Sekunden nach dem Laden"): ein
+// schlichtes setInterval(..., 60000) ab dem Ladezeitpunkt wechselte die
+// Anzeige zu einer zufaelligen Sekunde jeder Minute (z. B. immer bei
+// :17) - sichtbar falsch, sobald man die Uhr laenger als eine Minute im
+// Blick behaelt. sitzungsUhrTimeout unten wartet deshalb EINMALIG bis
+// zur naechsten vollen Minute, erst DANACH beginnt das reguläre
+// 60-Sekunden-Intervall.
+function sitzungsUhrStarten(benutzer) {
+    sitzungsUhrStoppen();   // defensiv - siehe Kopfkommentar dort
+
+    const angemeldetSeit = benutzer.last_sign_in_at ? new Date(benutzer.last_sign_in_at) : null;
+    const beginn = angemeldetSeit || seitenladeZeitpunkt;
+    const istEchteAngabe = Boolean(angemeldetSeit);
+
+    const neuZeichnen = () => sitzungsinfoZeichnen(beginn, istEchteAngabe);
+    neuZeichnen();
+
+    const jetzt = new Date();
+    const msBisNaechsteMinute = 60000 - (jetzt.getSeconds() * 1000 + jetzt.getMilliseconds());
+    sitzungsUhrTimeout = setTimeout(() => {
+        neuZeichnen();
+        sitzungsUhrIntervall = setInterval(neuZeichnen, 60000);
+    }, msBisNaechsteMinute);
+}
+
+function sitzungsinfoZeichnen(beginn, istEchteAngabe) {
+    const jetzt = new Date();
+    const zeitDatum = document.getElementById('sitzungsinfo-zeit-datum');
+    zeitDatum.textContent =
+        `${jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} · ` +
+        jetzt.toLocaleDateString('de-DE');
+
+    const minuten = Math.max(0, Math.round((jetzt - beginn) / 60000));
+    const dauer = minuten < 1 ? 'unter 1 Min.' : sitzungsdauerFormat(minuten);
+    // Beschriftung sagt WAS gemessen wird (Auftrag: "keine Genauigkeit
+    // vortaeuschen, die es nicht gibt") - "angemeldet" nur mit einer
+    // echten Anmeldezeit (last_sign_in_at), sonst der ehrliche Hinweis,
+    // dass hier lediglich der Ladezeitpunkt dieser Seite gemessen wird.
+    document.getElementById('sitzungsinfo-dauer').textContent =
+        istEchteAngabe ? `${dauer} angemeldet` : `seit dem Öffnen: ${dauer}`;
+}
+
+// Stunden erst ab 60 Minuten (nicht schon vorher als "0 Std. 12 Min."):
+// eine dreistellige Minutenzahl waere bei einer sehr langen Sitzung sonst
+// selbst wieder unlesbar - "knapp und ruhig" gilt fuer jede Sitzungslaenge,
+// nicht nur fuer die ersten 60 Minuten.
+function sitzungsdauerFormat(minuten) {
+    if (minuten < 60) return `${minuten} Min.`;
+    const stunden = Math.floor(minuten / 60);
+    const rest = minuten % 60;
+    return rest === 0 ? `${stunden} Std.` : `${stunden} Std. ${rest} Min.`;
 }
 
 function initialenAus(vorname, nachname, email) {
@@ -262,6 +387,11 @@ async function bereichWechseln(schluessel, herkunftstext = null) {
     listenAuswahl = null;
     listenIndex = -1;
     listenZeilenElemente = [];
+    // Siehe filterleisteMehrfachOffenName weiter unten: zwei Bereiche
+    // koennen denselben Filternamen fuehren (Flotte UND Kundschaft tragen
+    // beide 'status') - ohne Rueckstellung risse ein offenes
+    // Statusfilter-Popup aus dem VORHERIGEN Bereich in den naechsten hinein.
+    filterleisteMehrfachOffenName = null;
 
     // Punkt 5 der Gestaltung: "es sagt nicht, wonach es sucht, oder ob
     // es gerade etwas einschraenkt" - das Suchfeld liegt in der
@@ -777,6 +907,255 @@ function filterleiste() {
     return el;
 }
 
+// ===== Mehrfachauswahl (Gestaltungsauftrag Bedienelemente, Punkt 2) =====
+//
+// "Ich kann bei Filter immer nur ein Item aussuchen, brauche aber
+// Multiselect" - woertlich der Auftrag, fuer BEIDE Orte, an denen ein
+// Auswahlfilter heute steht: hier in der Filterleiste (typ 'auswahl'
+// weiter unten) UND im Spaltenkopf (spaltenkopfFilterfeld() weiter
+// unten in dieser Datei). EIN Baustein fuer beide, aus demselben Grund
+// wie Werkzeugleiste/Filterleiste/Uebersichtsstreifen selbst: zwei
+// Orte, die unabhaengig voneinander denselben Umbau brauchten, sind
+// bereits der Beleg, dass er hierher gehoert, nicht in einen der beiden
+// einzeln.
+//
+// KEIN <select multiple> (Auftrag: "entscheide und begruende"): ein
+// <select multiple> zeichnet seine Optionen IMMER als eine bereits
+// aufgeklappte, mehrzeilige Liste - nie als eine geschlossene,
+// einzeilige Box. Genau die Einzeiligkeit brauchen aber BEIDE
+// Einsatzorte: die Filterleiste reiht mehrere Filter nebeneinander in
+// einer Zeile (siehe .filterleiste in style.css), der Spaltenkopf sitzt
+// in einer <th> neben Sortier-/Gruppierknopf. Eine mehrzeilige Box an
+// beiden Stellen haette die Filterleiste zu einem Rechteck aufgebrochen
+// und im Spaltenkopf die Kopfzeile gesprengt - "Weissraum grosszuegig"
+// heisst hier grosszuegiger ABSTAND, nicht ein grosser Kasten mitten in
+// einer sonst einzeiligen Leiste. Der Preis dafuer (Auftrag: "du
+// traegst die Verantwortung fuer Tastatur und aria") wird unten
+// eingeloest, aber bewusst KLEIN gehalten: die eigentliche Auswahl
+// bleibt echten <input type="checkbox">-Elementen ueberlassen, die der
+// Browser bereits selbst tastaturbedienbar (Tab, Leertaste) und
+// vorlesbar macht, mit einem per :focus-visible sichtbaren Fokusring
+// (global in style.css definiert, keine eigene Regel noetig). Nur das
+// Auf-/Zuklappen des Popups ist tatsaechlich selbst geschrieben - und
+// folgt dabei demselben, in dieser Datei bereits erprobten Muster wie
+// das Profilmenue (Knopf mit aria-expanded, Klick daneben und Escape
+// schliessen, siehe "Profilmenue" weiter unten).
+//
+// EIN WEG ZURUECK ZU "ALLE" (Auftrag, ausdruecklich: "darf nicht
+// bedeuten, jeden Haken einzeln zu entfernen"): ein eigener Knopf ganz
+// oben im Popup statt einer weiteren Checkbox-Option "Alle" - eine
+// Option waere nur EIN Haken unter vielen und muesste sich mit den
+// uebrigen exklusiv ausschliessen (ein technischer Sonderfall mehr);
+// ein Knopf daneben leert das Set stattdessen in einem einzigen Klick,
+// unabhaengig davon, wie viele Haken gerade gesetzt sind.
+//
+// SICHTBAR OHNE OEFFNEN (Auftrag: "man muss sehen, was ausgewaehlt ist,
+// ohne das Feld zu oeffnen... die Werte zu nennen ist besser, solange
+// es wenige sind"): der Knopftext selbst nennt die gewaehlten
+// Bezeichnungen (bis zu drei), erst darueber hinaus tritt "N
+// ausgewaehlt" an ihre Stelle - eine lange Kommaliste waere ab einer
+// gewissen Laenge selbst wieder unlesbar.
+//
+// OFFEN BLEIBEN UEBER EINEN NEUAUFBAU HINWEG: jeder Haken loest ueber
+// beiAenderung() einen kompletten Neuaufbau der Filterleiste bzw. der
+// Arbeitstabelle aus (dieselbe Funktion, die auch die gefilterten Zeilen
+// neu zeichnet) - ohne Gegenmassnahme klappte das Popup nach dem ERSTEN
+// Haken sofort wieder zu, weil eine frisch gebaute Mehrfachauswahl immer
+// geschlossen startet. offenVorgabe/beiOeffnen/beiSchliessen unten
+// reichen den Offen-Zustand deshalb an den JEWEILIGEN Aufrufer weiter,
+// der ihn in einer eigenen, den Neuaufbau ueberlebenden Variable haelt
+// (spaltenkopfMehrfachOffenFeld bzw. filterleisteMehrfachOffenName weiter
+// unten) und beim naechsten Aufbau als offenVorgabe zurueckgibt. Der
+// Fokus selbst haengt sich an dasselbe, bereits bestehende
+// Wiederfinden-Schema wie der Rest der Tabelle
+// (fokusMerken()/fokusWiederherstellen() bzw. das gleichartige Paar fuer
+// die Filterleiste weiter unten) - markiere() setzt dafuer NUR die
+// data-*-Attribute, die der jeweilige Aufrufer ohnehin schon fuer sein
+// eigenes Schema braucht; dieser Baustein kennt keins der beiden Schemata
+// selbst.
+//
+// optionen:    [{ wert, text }] - wie zuvor beim Einfachauswahl-<select>.
+// ausgewaehlt: Set<string> der markierten Werte. LEER bedeutet "Alle" -
+//              der Ausgangszustand selbst, keine eigene Option dafuer.
+// beiAenderung(neueMenge): bekommt das NEUE, VOLLSTAENDIGE Set (nie nur
+//              den zuletzt geaenderten Wert) - Filterleiste und
+//              Spaltenkopf setzen es unveraendert in ihren jeweiligen
+//              Zustand, siehe die beiden Aufrufstellen.
+// ariaLabel:   zugaenglicher Name des Auf-/Zuklapp-Knopfs.
+// einstellungen.knopfId: optionale id fuer den Knopf, damit ein <label
+//              for> aus dem statischen HTML (bzw. hier: aus
+//              zeigeFilterleiste()) ihn erreichen kann - Knoepfe sind
+//              wie <select>/<input> "labelable elements".
+function mehrfachauswahlFeld(optionen, ausgewaehlt, beiAenderung, ariaLabel, einstellungen = {}) {
+    const {
+        offenVorgabe = false,
+        beiOeffnen = () => {},
+        beiSchliessen = () => {},
+        markiere = () => {},
+        knopfId = null
+    } = einstellungen;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mehrfachauswahl';
+
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'mehrfachauswahl-knopf';
+    if (knopfId) knopf.id = knopfId;
+    if (ausgewaehlt.size > 0) knopf.classList.add('mehrfachauswahl-aktiv');
+    knopf.setAttribute('aria-haspopup', 'true');
+    knopf.setAttribute('aria-label', ariaLabel);
+    markiere(knopf, 'knopf');
+
+    // "Die Werte nennen, solange es wenige sind" (Auftrag) - Reihenfolge
+    // wie in optionen, nicht wie in ausgewaehlt (eine Set-Einfuegereihenfolge
+    // haette bei jedem Klick eine andere Reihenfolge ergeben, verwirrend
+    // fuer denselben Filterzustand). 3 als Schwelle: mehr Namen in einer
+    // einzeiligen Knopfbeschriftung waeren selbst nicht mehr auf einen
+    // Blick erfassbar - dann sagt eine Anzahl mehr als eine abgeschnittene
+    // Aufzaehlung.
+    const zusammenfassung = document.createElement('span');
+    zusammenfassung.className = 'mehrfachauswahl-zusammenfassung';
+    const ausgewaehlteTexte = optionen.filter((o) => ausgewaehlt.has(String(o.wert))).map((o) => o.text);
+    zusammenfassung.textContent = ausgewaehlteTexte.length === 0
+        ? 'Alle'
+        : ausgewaehlteTexte.length <= 3
+            ? ausgewaehlteTexte.join(', ')
+            : `${ausgewaehlteTexte.length} ausgewählt`;
+    knopf.append(zusammenfassung);
+
+    const popup = document.createElement('div');
+    popup.className = 'mehrfachauswahl-liste';
+    popup.setAttribute('role', 'group');
+    popup.setAttribute('aria-label', ariaLabel);
+
+    // wrapper.isConnected zuerst geprueft (Fehlerbild aus der Erprobung im
+    // Browser, siehe Bericht): ein Haken loest ueber beiAenderung() einen
+    // kompletten Neuaufbau der Filterleiste/Tabelle aus (siehe
+    // "OFFEN BLEIBEN..." oben) - filterleiste()/zeichneArbeitstabelle()
+    // ENTFERNEN dabei per replaceChildren() die ALTE Instanz dieses
+    // Popups aus dem DOM, OHNE ihr eigenes schliessen() aufzurufen. Ihr
+    // document-Klicklistener bliebe sonst fuer immer registriert (ein
+    // echtes Leck) UND schluege bei JEDEM naechsten Klick irgendwo auf der
+    // Seite fälschlich zu: e.target läge nie mehr IN der laengst
+    // entfernten alten wrapper, "ausserhalb" wäre also immer wahr - das
+    // rief beiSchliessen() der ALTEN Instanz auf und loeschte dabei den
+    // gemeinsamen Offen-Zustand (spaltenkopfMehrfachOffenFeld /
+    // filterleisteMehrfachOffenName) fuer die NEUE, gerade erst
+    // aufgebaute und tatsaechlich noch offene Instanz - im Browser
+    // nachgestellt: zwei Haken kurz hintereinander gesetzt, das Popup
+    // klappte nach dem zweiten Haken unerklaert zu. Eine bereits ersetzte
+    // Instanz raeumt sich hier deshalb NUR SELBST ab (ihren eigenen,
+    // veralteten Listener entfernen), ohne schliessen()/beiSchliessen()
+    // der - moeglicherweise ganz anderen - aktuellen Instanz anzutasten.
+    function aussenKlick(e) {
+        if (!wrapper.isConnected) {
+            document.removeEventListener('click', aussenKlick, true);
+            return;
+        }
+        if (!wrapper.contains(e.target)) schliessen();
+    }
+    function schliessen() {
+        popup.hidden = true;
+        knopf.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', aussenKlick, true);
+        beiSchliessen();
+    }
+    function oeffnen() {
+        popup.hidden = false;
+        knopf.setAttribute('aria-expanded', 'true');
+        document.addEventListener('click', aussenKlick, true);
+        beiOeffnen();
+    }
+
+    popup.hidden = !offenVorgabe;
+    knopf.setAttribute('aria-expanded', String(offenVorgabe));
+    if (offenVorgabe) document.addEventListener('click', aussenKlick, true);
+
+    knopf.addEventListener('click', () => { if (popup.hidden) oeffnen(); else schliessen(); });
+
+    // Escape schliesst NUR dieses Popup, nicht zusaetzlich eine im
+    // Hintergrund offene Detailmaske - stopPropagation haelt den globalen
+    // Escape-Handler (Tastaturbedienung weiter unten) vollstaendig heraus,
+    // derselbe Kunstgriff, den dort ein offener <dialog> bereits fuer sich
+    // beansprucht (siehe die fruehe "dialog[open]"-Ausnahme dort).
+    popup.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        e.stopPropagation();
+        schliessen();
+        knopf.focus();
+    });
+
+    const alleKnopf = document.createElement('button');
+    alleKnopf.type = 'button';
+    alleKnopf.className = 'mehrfachauswahl-alle';
+    alleKnopf.textContent = 'Alle';
+    markiere(alleKnopf, 'alle');
+    alleKnopf.addEventListener('click', () => { schliessen(); beiAenderung(new Set()); });
+    popup.append(alleKnopf);
+
+    for (const option of optionen) {
+        const wert = String(option.wert);
+        const zeile = document.createElement('label');
+        zeile.className = 'mehrfachauswahl-option';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = ausgewaehlt.has(wert);
+        markiere(checkbox, `wert:${wert}`);
+        checkbox.addEventListener('change', () => {
+            const neu = new Set(ausgewaehlt);
+            if (checkbox.checked) neu.add(wert); else neu.delete(wert);
+            beiAenderung(neu);
+        });
+        zeile.append(checkbox, document.createTextNode(option.text));
+        popup.append(zeile);
+    }
+
+    wrapper.append(knopf, popup);
+    return wrapper;
+}
+
+// Welche Mehrfachauswahl im SPALTENKOPF gerade offen ist (spalte.feld
+// oder null) - siehe "OFFEN BLEIBEN UEBER EINEN NEUAUFBAU HINWEG" oben.
+// Wie spaltenkopfSortFeld/spaltenkopfGruppe & Co. weiter unten NICHT Teil
+// der Signatur-Rueckstellung: eine neue Tabelle (anderer Bereich, anderer
+// Unterreiter) hat ohnehin ganz andere Spaltennamen, der Vergleich
+// "=== spalte.feld" faellt dort von selbst nie zufaellig positiv aus.
+let spaltenkopfMehrfachOffenFeld = null;
+
+// Dasselbe fuer die FILTERLEISTE, ueber f.name statt spalte.feld - siehe
+// dieselbe Begruendung. In bereichWechseln() zurueckgesetzt (siehe dort):
+// anders als beim Spaltenkopf koennten zwei BEREICHE zufaellig denselben
+// Filternamen 'status' fuehren (Flotte UND Kundschaft tun das tatsaechlich
+// beide) - ohne Rueckstellung risse ein offenes Statusfilter-Popup aus
+// Flotte in die Kundschaft-Filterleiste hinueber.
+let filterleisteMehrfachOffenName = null;
+
+// Fokuserhalt fuer die FILTERLEISTE, exakt nach dem Vorbild von
+// fokusMerken()/fokusWiederherstellen() weiter unten (siehe deren
+// Kopfkommentar) - dort fuer die Spaltenkopf-Tabelle, hier fuer die
+// Filterleiste, die aus demselben Grund denselben Bedarf hat: ein Haken
+// in der Mehrfachauswahl loest ueber beiAenderung() ein komplettes
+// filterleiste()/*Aufbauen() neu, das reisst ohne dieses Paar den
+// Tastaturfokus auf <body> zurueck. NUR fuer die Mehrfachauswahl gesetzt
+// (siehe markiere() an ihren beiden Aufrufstellen) - die bestehenden
+// <select>/<input>-Felder der Filterleiste (Radtyp-losgeloest gibt es
+// keine mehr, aber der Schieber in instandhaltung.js bleibt ein <input
+// type="range">) trugen diese Attribute nie und verhielten sich schon
+// vor dieser Aufgabe so (kein Fokuserhalt) - das zu aendern waere eine
+// eigene, hier nicht beauftragte Aufgabe.
+function filterleisteFokusMerken() {
+    const el = document.activeElement;
+    if (!el || !el.dataset || !el.dataset.filterName) return null;
+    return { name: el.dataset.filterName, rolle: el.dataset.filterRolle };
+}
+function filterleisteFokusWiederherstellen(merkmal) {
+    if (!merkmal) return;
+    document.querySelector(
+        `#filterleiste [data-filter-name="${merkmal.name}"][data-filter-rolle="${merkmal.rolle}"]`
+    )?.focus();
+}
+
 // kennung: dieselbe Absicherung wie bei zeigeUebersicht()/zeigeListe() -
 // ein Reiterwechsel, dessen Filterleiste erst nach einem eigenen await
 // zurueckkommt, dürfte einen inzwischen überholten Bildschirm nicht mehr
@@ -791,11 +1170,15 @@ function filterleiste() {
 // werkzeugleiste() oben fuer genau diesen Bereich schon einmal gefunden
 // hat).
 //
-// filter: [{ name, titel, typ?, optionen?, wert, beiAenderung(neuerWert),
+// filter: [{ name, titel, typ?, optionen?, wert, beiAenderung(neueMenge),
 //            min?, max?, step?, beschriftung? }]
-// - typ 'auswahl' (Vorgabe): <select> mit optionen [{wert, text}] -
-//   feuert sofort bei Auswahl, kein Zumuellen der Statuszeile moeglich
-//   (ein select aendert sich nicht waehrend des Tippens).
+// - typ 'auswahl' (Vorgabe): eine MEHRFACHAUSWAHL (Gestaltungsauftrag,
+//   Punkt 2 - siehe mehrfachauswahlFeld() weiter oben fuer die
+//   ausfuehrliche Begruendung). wert ist ein Set<string> der markierten
+//   Werte (leer = "Alle"), beiAenderung bekommt das neue, vollstaendige
+//   Set. optionen [{wert, text}] traegt KEINEN eigenen "Alle"-Eintrag
+//   mehr - der Rueckweg ist jetzt ein eigener Knopf im Popup, kein
+//   Listeneintrag (siehe dort).
 // - typ 'schieber': <input type="range"> zwischen min und max - feuert
 //   bei JEDER Mausbewegung ein 'input'-Ereignis; ohne Verzoegerung loeste
 //   das bei jedem Pixel einen kompletten Neuaufbau aus. 300ms Verzoegerung,
@@ -823,6 +1206,15 @@ function zeigeFilterleiste(kennung, sichtbar, filter) {
         document.getElementById('filterleiste')?.remove();
         return;
     }
+
+    // Fokuserhalt UM das komplette Neuzeichnen der Leiste herum (siehe
+    // filterleisteFokusMerken()/-Wiederherstellen() weiter oben): ein Haken
+    // in einer Mehrfachauswahl ruft ueber beiAenderung() in JEDEM Aufrufer
+    // (flotte.js/kunden.js/instandhaltung.js) sofort wieder *Aufbauen() auf,
+    // das wiederum diese Funktion hier von Grund auf neu aufruft - ohne
+    // diesen Merker spraenge der Tastaturfokus dabei jedesmal auf <body>
+    // zurueck.
+    const fokusMerkmal = filterleisteFokusMerken();
 
     const leiste = filterleiste();
     for (const f of filter) {
@@ -867,24 +1259,36 @@ function zeigeFilterleiste(kennung, sichtbar, filter) {
             schieberZeile.append(eingabe, anzeige);
             feld.append(schieberZeile);
         } else {
-            const eingabe = document.createElement('select');
-            eingabe.id = `filter-${f.name}`;
-            for (const option of f.optionen) {
-                const opt = document.createElement('option');
-                opt.value = option.wert;
-                opt.textContent = option.text;
-                if (option.wert === f.wert) opt.selected = true;
-                eingabe.append(opt);
-            }
-            eingabe.addEventListener('change', () => {
-                if (!istAktuellerVorgang(kennung)) return;
-                f.beiAenderung(eingabe.value);
-            });
-            feld.append(eingabe);
+            // 'auswahl' (Vorgabe) - siehe mehrfachauswahlFeld() weiter
+            // oben fuer die ausfuehrliche Begruendung des Bausteins.
+            // knopfId haengt das <label for> von oben an den eigentlichen
+            // Auf-/Zuklapp-KNOPF, nicht an den umschliessenden <div>
+            // (der nicht "labelable" waere) - <button> ist wie <select>
+            // ein zulaessiges Ziel fuer label.htmlFor.
+            const feldElement = mehrfachauswahlFeld(
+                f.optionen, f.wert,
+                (neu) => { if (!istAktuellerVorgang(kennung)) return; f.beiAenderung(neu); },
+                f.titel,
+                {
+                    knopfId: `filter-${f.name}`,
+                    offenVorgabe: filterleisteMehrfachOffenName === f.name,
+                    beiOeffnen: () => { filterleisteMehrfachOffenName = f.name; },
+                    beiSchliessen: () => {
+                        if (filterleisteMehrfachOffenName === f.name) filterleisteMehrfachOffenName = null;
+                    },
+                    markiere: (el, rolle) => {
+                        el.dataset.filterName = f.name;
+                        el.dataset.filterRolle = `mehrfach:${rolle}`;
+                    }
+                }
+            );
+            feld.append(feldElement);
         }
 
         leiste.append(feld);
     }
+
+    filterleisteFokusWiederherstellen(fokusMerkmal);
 }
 
 // ===== Übersichtsstreifen (Gestaltungsauftrag Auswertungen, Punkt 1) =====
@@ -1864,7 +2268,12 @@ function zeichneArbeitstabelle() {
         const rohwert = zeile[spalte.feld];
         const typ = spaltenFilterTyp(spalte, zeilenOriginal);
         if (typ === 'schwelle') return typeof rohwert === 'number' && rohwert >= filterwert;
-        if (typ === 'auswahl') return String(rohwert ?? '') === filterwert;
+        // Gestaltungsauftrag Punkt 2: auch der Spaltenkopf-Filter muss
+        // mehrere Werte gleichzeitig zulassen ("wartung UND defekt", um
+        // alles zu sehen, was nicht faehrt) - filterwert ist fuer 'auswahl'
+        // deshalb ein Set<string>, kein einzelner String mehr (siehe
+        // spaltenkopfFilterfeld() weiter unten).
+        if (typ === 'auswahl') return filterwert.has(String(rohwert ?? ''));
         // Erst HIER kleingeschrieben, nicht schon beim Speichern des
         // Filterworts (siehe spaltenkopfFilterfeld() weiter unten): der
         // gespeicherte Wert bleibt der Originaltext, den die Person
@@ -2263,33 +2672,29 @@ function spaltenkopfFilterzeile(spalten, aktionen) {
     return zeile;
 }
 
-// Baut das eigentliche Filter-Bedienelement - Auswahl, Schwelle oder
-// Text, siehe spaltenFilterTyp() weiter oben. Alle drei tragen
-// data-spaltenkopf-feld/-rolle="filtern" fuer den Fokuserhalt (siehe
-// fokusMerken()/fokusWiederherstellen() oben) und ein aria-label, weil
-// keines von ihnen ein <label for> aus dem statischen HTML hat (sie
-// entstehen dynamisch, wie die Felder aus zeigeMaske()).
+// Baut das eigentliche Filter-Bedienelement - Auswahl (Mehrfachauswahl,
+// siehe mehrfachauswahlFeld()), Schwelle oder Text, siehe
+// spaltenFilterTyp() weiter oben. Alle drei tragen
+// data-spaltenkopf-feld/-rolle fuer den Fokuserhalt (siehe
+// fokusMerken()/fokusWiederherstellen() oben, bei der Mehrfachauswahl mit
+// dem Zusatz "filtern-mehrfach:..." statt des schlichten "filtern" der
+// beiden anderen - sie traegt mehrere fokussierbare Elemente zugleich,
+// Knopf UND je eine Checkbox, jede braucht ihre eigene, unterscheidbare
+// Rolle) und ein aria-label, weil keines von ihnen ein <label for> aus
+// dem statischen HTML hat (sie entstehen dynamisch, wie die Felder aus
+// zeigeMaske()).
 function spaltenkopfFilterfeld(spalte) {
     const { zeilen: zeilenOriginal } = spaltenkopfListe;
     const typ = spaltenFilterTyp(spalte, zeilenOriginal);
     const aktuellerWert = spaltenkopfFilterwerte.get(spalte.feld);
 
     if (typ === 'auswahl') {
-        const auswahl = document.createElement('select');
-        auswahl.dataset.spaltenkopfFeld = spalte.feld;
-        auswahl.dataset.spaltenkopfRolle = 'filtern';
-        auswahl.setAttribute('aria-label', `${spalte.titel} filtern`);
-        // Punkt 5, woertlich: "ein greifender Filter muss anders
-        // aussehen als ein leerer" - aktuellerWert ist nur gesetzt,
-        // solange spaltenkopfFilterwerte fuer dieses Feld tatsaechlich
-        // etwas eintraegt (siehe 'change' weiter unten, das bei "Alle"
-        // wieder loescht), deshalb reicht diese eine Bedingung.
-        if (aktuellerWert !== undefined) auswahl.classList.add('spaltenkopf-filter-aktiv');
-
-        const alle = document.createElement('option');
-        alle.value = '';
-        alle.textContent = 'Alle';
-        auswahl.append(alle);
+        // Gestaltungsauftrag Punkt 2: auch hier eine Mehrfachauswahl statt
+        // eines Einfachauswahl-<select> - siehe mehrfachauswahlFeld() fuer
+        // die ausfuehrliche Begruendung. aktuellerWert ist entweder
+        // undefined (kein Filter, "Alle") oder ein Set<string>, nie mehr
+        // ein einzelner String.
+        const ausgewaehlt = aktuellerWert || new Set();
 
         const distinct = new Map();   // roher Wert (als String) -> Beispielzeile fuer die Beschriftung
         for (const zeile of zeilenOriginal) {
@@ -2300,24 +2705,29 @@ function spaltenkopfFilterfeld(spalte) {
         }
         const sortiert = [...distinct.entries()].sort(([, za], [, zb]) =>
             vergleicheWerte(spaltenWert(spalte, za), spaltenWert(spalte, zb)));
-        for (const [schluessel, beispielZeile] of sortiert) {
-            const option = document.createElement('option');
-            option.value = schluessel;
-            option.textContent = spaltenBeschriftungFuerWert(spalte, beispielZeile);
-            if (aktuellerWert === schluessel) option.selected = true;
-            auswahl.append(option);
-        }
+        const optionenListe = sortiert.map(([schluessel, beispielZeile]) =>
+            ({ wert: schluessel, text: spaltenBeschriftungFuerWert(spalte, beispielZeile) }));
 
-        // 'change' statt 'input': feuert erst beim Abschluss der Auswahl,
-        // kein Zumuellen der Tabelle waehrend des Durchblaetterns mit den
-        // Pfeiltasten - dieselbe Ueberlegung wie beim Auswahl-Typ in
-        // zeigeFilterleiste() weiter oben.
-        auswahl.addEventListener('change', () => {
-            if (auswahl.value === '') spaltenkopfFilterwerte.delete(spalte.feld);
-            else spaltenkopfFilterwerte.set(spalte.feld, auswahl.value);
-            zeichneArbeitstabelle();
-        });
-        return auswahl;
+        return mehrfachauswahlFeld(
+            optionenListe, ausgewaehlt,
+            (neu) => {
+                if (neu.size === 0) spaltenkopfFilterwerte.delete(spalte.feld);
+                else spaltenkopfFilterwerte.set(spalte.feld, neu);
+                zeichneArbeitstabelle();
+            },
+            `${spalte.titel} filtern`,
+            {
+                offenVorgabe: spaltenkopfMehrfachOffenFeld === spalte.feld,
+                beiOeffnen: () => { spaltenkopfMehrfachOffenFeld = spalte.feld; },
+                beiSchliessen: () => {
+                    if (spaltenkopfMehrfachOffenFeld === spalte.feld) spaltenkopfMehrfachOffenFeld = null;
+                },
+                markiere: (el, rolle) => {
+                    el.dataset.spaltenkopfFeld = spalte.feld;
+                    el.dataset.spaltenkopfRolle = `filtern-mehrfach:${rolle}`;
+                }
+            }
+        );
     }
 
     const eingabe = document.createElement('input');
