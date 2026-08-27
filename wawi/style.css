@@ -602,6 +602,32 @@ button {
   height: 16px;
 }
 
+/* Sprachumschaltung (Mehrsprachigkeits-Aufgabe), zweite Einstellung im
+   selben Abschnitt wie der Zebraschalter - dieselbe Zeilenform
+   (Beschriftung links, Bedienelement rechts), damit beide Einstellungen
+   wie eine Gruppe aussehen, nicht wie zwei zufaellig benachbarte. */
+.profilmenue-sprachwahl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--text);
+}
+
+.profilmenue-sprachwahl select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--grund);
+  border: 1px solid var(--linie);
+  border-radius: 4px;
+  padding: 4px 6px;
+  /* Kein max-width - Türkisch/Polnisch tragen längere Sprachnamen als
+     Deutsch (siehe Bericht, Fallstrick "Textlänge") und sollen nicht
+     abgeschnitten werden. */
+}
+
 /* Gestaltungsauftrag, Punkt 2: die fünf Rubriken sollen als solche
    erkennbar sein, nicht als fünf gleich schwere Textzeilen. padding
    oben/unten (statt der Knöpfe direkt gegeneinanderzustellen) gibt dem

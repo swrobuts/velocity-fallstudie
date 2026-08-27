@@ -13,25 +13,33 @@
 <body>
   <!-- Fuenf Zustaende, von denen immer genau einer sichtbar ist. Kein
        Seitenwechsel: die Sitzung, die Rollen und die Statuszeile
-       ueberleben jeden Bereichswechsel. -->
-  <div id="zustand-laden" class="vollbild">Einen Moment …</div>
+       ueberleben jeden Bereichswechsel.
+
+       MEHRSPRACHIGKEIT: jeder feste Text hier traegt zusaetzlich
+       data-i18n(-aria/-placeholder) mit seinem Uebersetzungsschluessel
+       (siehe UEBERSETZUNGEN in rahmen.js). Der sichtbare Text/Attribut
+       BLEIBT als deutscher Standardwert stehen (kein leeres Element) -
+       JavaScript ueberschreibt ihn beim Laden UND bei jedem Sprachwechsel
+       (statischeTexteUebersetzen() in rahmen.js). Faellt JavaScript aus,
+       zeigt die Seite wenigstens den deutschen Text, keinen leeren. -->
+  <div id="zustand-laden" class="vollbild" data-i18n="index.loading">Einen Moment …</div>
 
   <form id="zustand-anmeldung" class="vollbild anmeldung" hidden>
-    <h1>VeloCity Warenwirtschaft</h1>
-    <label for="feld-email">E-Mail</label>
+    <h1 data-i18n="index.title">VeloCity Warenwirtschaft</h1>
+    <label for="feld-email" data-i18n="index.loginEmail">E-Mail</label>
     <input id="feld-email" type="email" autocomplete="username" required>
-    <label for="feld-passwort">Passwort</label>
+    <label for="feld-passwort" data-i18n="index.loginPassword">Passwort</label>
     <input id="feld-passwort" type="password" autocomplete="current-password" required>
-    <button type="submit">Anmelden</button>
+    <button type="submit" data-i18n="index.loginSubmit">Anmelden</button>
     <p id="anmeldung-fehler" class="fehler" role="alert"></p>
   </form>
 
   <div id="zustand-kein-mitarbeiter" class="vollbild" hidden>
-    <h1>Kein Zugang</h1>
-    <p>Dieses Konto ist bei VeloCity nicht als Mitarbeitendenkonto hinterlegt.
-       Wenn Sie Kundin oder Kunde sind, finden Sie Ihren Bereich unter
+    <h1 data-i18n="index.noAccessTitle">Kein Zugang</h1>
+    <p><span data-i18n="index.noAccessText">Dieses Konto ist bei VeloCity nicht als Mitarbeitendenkonto hinterlegt.
+       Wenn Sie Kundin oder Kunde sind, finden Sie Ihren Bereich unter</span>
        <a href="https://bikes.butscher.cloud">bikes.butscher.cloud</a>.</p>
-    <button id="knopf-abmelden-fremd" type="button">Abmelden</button>
+    <button id="knopf-abmelden-fremd" type="button" data-i18n="index.logout">Abmelden</button>
   </div>
 
   <!-- Anders als "Kein Zugang": dieses Konto IST als Mitarbeitendenkonto
@@ -39,11 +47,11 @@
        deshalb zur Leitung, nicht zur Kontoverwaltung - genau das war der
        Befund aus der Pruefung. -->
   <div id="zustand-ohne-rolle" class="vollbild" hidden>
-    <h1>Noch keine Rolle zugeteilt</h1>
-    <p>Ihr Konto ist bei VeloCity als Mitarbeitendenkonto hinterlegt, aber
+    <h1 data-i18n="index.noRoleTitle">Noch keine Rolle zugeteilt</h1>
+    <p data-i18n="index.noRoleText">Ihr Konto ist bei VeloCity als Mitarbeitendenkonto hinterlegt, aber
        es wurde noch kein Aufgabenbereich zugeordnet. Wenden Sie sich an
        die Leitung, damit sie Ihnen eine Rolle zuteilt.</p>
-    <button id="knopf-abmelden-ohne-rolle" type="button">Abmelden</button>
+    <button id="knopf-abmelden-ohne-rolle" type="button" data-i18n="index.logout">Abmelden</button>
   </div>
 
   <div id="zustand-arbeit" hidden>
@@ -58,13 +66,21 @@
            ueber GEWICHT (leicht/fett, .wortmarke-firma/-produkt), getrennt
            durch eine schmale Linie statt eines Farbwechsels - ruhig und
            beruflich, wie der Auftrag es verlangt, ohne eine Bedeutung zu
-           beanspruchen, die nicht ihre ist. -->
+           beanspruchen, die nicht ihre ist.
+
+           "WaWi" bleibt in JEDER Sprache unveraendert stehen (bewusste
+           Entscheidung, siehe Bericht zur Mehrsprachigkeits-Aufgabe): eine
+           kurze Marke neben dem Firmennamen, kein ausgeschriebenes Wort -
+           "Warenwirtschaft" selbst wird dort uebersetzt, wo es tatsaechlich
+           als Wort steht (Titel, Anmeldemaske), nicht in der zwei Buchstaben
+           kurzen Wortmarke. -->
       <span class="wortmarke">
         <span class="wortmarke-firma">VeloCity</span>
         <span class="wortmarke-trenner" aria-hidden="true"></span>
         <span class="wortmarke-produkt">WaWi</span>
       </span>
-      <input id="feld-suche" type="search" placeholder="Suchen" aria-label="Suchen">
+      <input id="feld-suche" type="search" placeholder="Suchen" aria-label="Suchen"
+             data-i18n-placeholder="index.searchPlaceholder" data-i18n-aria="index.searchPlaceholder">
       <!-- Frueher stand hier "swrobuts@googlemail.com · disposition,
            werkstatt, ..." als Fliesstext direkt in der Kopfleiste - der
            Auftraggeber wollte das ausdruecklich nicht mehr lesen. Jetzt
@@ -85,7 +101,7 @@
         </div>
         <button id="knopf-profil" type="button" class="profilknopf"
                 aria-haspopup="true" aria-expanded="false" aria-controls="profilmenue"
-                aria-label="Profil und Einstellungen">
+                aria-label="Profil und Einstellungen" data-i18n-aria="index.profileAria">
           <span id="profil-initialen" class="profilknopf-avatar" aria-hidden="true"></span>
         </button>
         <div id="profilmenue" class="profilmenue" hidden>
@@ -101,9 +117,24 @@
                auch noch einzelne Einstellung: eine Ueberschrift statt
                eines Knopfs (es gibt nichts zum Auf-/Zuklappen, solange es
                nur diese eine Einstellung gibt), darunter der eigentliche
-               Schalter. -->
+               Schalter.
+
+               Sprachumschaltung (zweiter Gestaltungsauftrag dieser
+               Aufgabe) als ZWEITE Einstellung im selben Abschnitt, nicht
+               als eigener Abschnitt: beides sind reine Anzeigepraeferenzen
+               ohne fachliche Bedeutung, beide leben in localStorage (siehe
+               ZEBRA_SPEICHERSCHLUESSEL/SPRACHE_SPEICHERSCHLUESSEL in
+               rahmen.js). Ein <select> statt sechs Radioknoepfen: sechs
+               Sprachen sind fuer eine Radiogruppe in dieser schmalen Spalte
+               schon reichlich, ein <select> ist die uebliche Form fuer
+               "genau eine Wahl aus mehreren Optionen" (vgl. jede
+               Betriebssystem-Spracheinstellung). Die Sprachnamen selbst
+               (Deutsch/English/Türkçe/Español/Italiano/Polski) sind NICHT
+               uebersetzt (Auftrag, sinngemaess: ein Sprachname wird in
+               jeder Sprache gleich geschrieben) - deshalb hier fest im
+               Markup, nicht ueber data-i18n. -->
           <div class="profilmenue-abschnitt">
-            <span class="profilmenue-abschnitt-titel">Einstellungen</span>
+            <span class="profilmenue-abschnitt-titel" data-i18n="index.settingsHeading">Einstellungen</span>
             <label class="profilmenue-schalter">
               <!-- aria-label zusaetzlich zur umschliessenden <label>, obwohl
                    diese als Wrapper barrierefrei genuegen wuerde:
@@ -112,20 +143,32 @@
                    dem Feld selbst, kein umschliessendes <label> ohne for -
                    derselbe Text wie im sichtbaren <span> daneben, kein
                    zweiter Inhalt. -->
-              <input type="checkbox" id="schalter-zebra" aria-label="Zebrastreifen in Tabellen">
-              <span>Zebrastreifen in Tabellen</span>
+              <input type="checkbox" id="schalter-zebra" aria-label="Zebrastreifen in Tabellen"
+                     data-i18n-aria="index.zebraLabel">
+              <span data-i18n="index.zebraLabel">Zebrastreifen in Tabellen</span>
+            </label>
+            <label class="profilmenue-sprachwahl" for="schalter-sprache">
+              <span data-i18n="index.languageLabel">Sprache</span>
+              <select id="schalter-sprache">
+                <option value="de">Deutsch</option>
+                <option value="en">English</option>
+                <option value="tr">Türkçe</option>
+                <option value="es">Español</option>
+                <option value="it">Italiano</option>
+                <option value="pl">Polski</option>
+              </select>
             </label>
           </div>
-          <button id="knopf-abmelden" type="button" class="profilmenue-eintrag">Abmelden</button>
+          <button id="knopf-abmelden" type="button" class="profilmenue-eintrag" data-i18n="index.logout">Abmelden</button>
         </div>
       </div>
     </header>
 
-    <nav id="navigation" aria-label="Aufgabenbereiche"></nav>
+    <nav id="navigation" aria-label="Aufgabenbereiche" data-i18n-aria="index.navAria"></nav>
 
     <main id="arbeitsbereich">
-      <section id="arbeitsliste" aria-label="Arbeitsliste"></section>
-      <section id="detailmaske" aria-label="Detailmaske"></section>
+      <section id="arbeitsliste" aria-label="Arbeitsliste" data-i18n-aria="index.workListAria"></section>
+      <section id="detailmaske" aria-label="Detailmaske" data-i18n-aria="index.detailAria"></section>
     </main>
 
     <!-- aria-live: die Statuszeile ist die Rueckmeldung fuer jede

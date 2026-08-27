@@ -17,7 +17,7 @@ const ICON_FLOTTE = '<svg viewBox="0 0 24 24"><circle cx="6.5" cy="17" r="3.3"/>
 
 bereichAnmelden({
     schluessel: 'flotte',
-    titel: 'Flotte',
+    titelSchluessel: 'nav.flotte',
     icon: ICON_FLOTTE,
     // Dieselben Rollen, die auch v_wawi_flotte durchlaesst. Waeren sie
     // hier weiter gefasst, saehe ein Werkstattmitarbeiter den Menuepunkt
@@ -59,7 +59,7 @@ async function flotteAufbauen() {
     // vorhanden (siehe radMaske weiter unten fuer denselben Grundsatz).
     // Nur fuer disposition sichtbar - dieselbe Rolle, die api_rad_anlegen
     // in der Datenbank verlangt.
-    zeigeWerkzeugleiste(darfRolle('disposition'), 'Neues Rad anlegen', radAnlegenMaske);
+    zeigeWerkzeugleiste(darfRolle('disposition'), t('button.newBike'), radAnlegenMaske);
 
     // 275 Raeder sind viel fuer eine ungefilterte Liste, aber nicht zu
     // viel, um sie auf einmal zu laden - anders als bei Kunden (Punkt 2
@@ -102,7 +102,7 @@ async function flotteAufbauen() {
         // einem Ladefehler NACH einem zuvor erfolgreichen Aufbau die
         // Radtyp-Reihe eines fruehreren, jetzt ueberholten Bestands stehen.
         document.getElementById('flotte-typkacheln')?.remove();
-        meldeVorgang(vorgang, `Die Flotte liess sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.fleetLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
@@ -129,18 +129,18 @@ async function flotteAufbauen() {
             // Mehrfachauswahl-Popup (mehrfachauswahlFeld() in rahmen.js),
             // Gestaltungsauftrag Bedienelemente Punkt 2: "wartung UND
             // defekt gleichzeitig, um alles zu sehen, was nicht faehrt".
-            name: 'status', titel: 'Status', wert: flotteFilterStatus,
+            name: 'status', titel: t('field.status'), wert: flotteFilterStatus,
             optionen: [
-                { wert: 'verfuegbar', text: 'Verfügbar' },
-                { wert: 'ausgeliehen', text: 'Ausgeliehen' },
-                { wert: 'wartung', text: 'Wartung' },
-                { wert: 'defekt', text: 'Defekt' },
-                { wert: 'ausgemustert', text: 'Ausgemustert' }
+                { wert: 'verfuegbar', text: statusAnzeige('verfuegbar', true) },
+                { wert: 'ausgeliehen', text: statusAnzeige('ausgeliehen', true) },
+                { wert: 'wartung', text: statusAnzeige('wartung', true) },
+                { wert: 'defekt', text: statusAnzeige('defekt', true) },
+                { wert: 'ausgemustert', text: statusAnzeige('ausgemustert', true) }
             ],
             beiAenderung: (neu) => { flotteFilterStatus = neu; flotteAufbauen(); }
         },
         {
-            name: 'typ', titel: 'Radtyp', wert: flotteFilterTyp,
+            name: 'typ', titel: t('field.radtyp'), wert: flotteFilterTyp,
             // Aus den geladenen Zeilen gewonnen statt fest eingetragen
             // (CITY/EBIKE/CARGO heute) - ein vierter Radtyp braeuchte
             // sonst eine eigene Codeaenderung hier, obwohl die Flotte
@@ -149,13 +149,13 @@ async function flotteAufbauen() {
             beiAenderung: (neu) => { flotteFilterTyp = neu; flotteAufbauen(); }
         },
         {
-            name: 'standort', titel: 'Station', wert: flotteFilterStandort,
+            name: 'standort', titel: t('field.station'), wert: flotteFilterStandort,
             optionen: [
                 // standort ist NULL bei laufender Fahrt oder freiem
                 // Abstellort (siehe v_wawi_flotte.standort in
                 // 0018_wawi_sichten.sql) - ein eigener Auswahlpunkt statt
                 // eines stummen Ausschlusses aus der Liste.
-                { wert: 'unterwegs', text: 'unterwegs (kein Standort)' },
+                { wert: 'unterwegs', text: t('misc.underwayNoLocation') },
                 ...standorte.map((s) => ({ wert: s, text: s }))
             ],
             beiAenderung: (neu) => { flotteFilterStandort = neu; flotteAufbauen(); }
@@ -170,10 +170,10 @@ async function flotteAufbauen() {
         // nur die Tabelle weicht der Leermaske mit einem Rueckweg.
         zeigeLeermaske(
             vorgang,
-            'Keine Räder mit diesem Filter',
-            'Kein Rad in der Flotte erfüllt die gewählte Einschränkung.',
+            t('empty.noBikesFilterTitle'),
+            t('empty.noBikesFilterText'),
             {
-                titel: 'Filter zurücksetzen',
+                titel: t('common.filterResetTitle'),
                 ausfuehren: async () => {
                     flotteFilterStatus = new Set();
                     flotteFilterTyp = new Set();
@@ -182,7 +182,7 @@ async function flotteAufbauen() {
                 }
             }
         );
-        meldeVorgang(vorgang, 'Kein Rad mit diesem Filter');
+        meldeVorgang(vorgang, t('msg.noBikeWithFilter'));
         return;
     }
 
@@ -207,11 +207,12 @@ async function flotteAufbauen() {
     // Summe je Gruppe (z. B. alle Raeder mit Status "defekt") ist
     // fachlich sinnvoll.
     zeigeListe(vorgang, raederSichtbar, [
-        { feld: 'rahmennummer',   titel: 'Rahmennummer' },
-        { feld: 'typ_code',       titel: 'Typ', filterbar: false },
-        { feld: 'status',         titel: 'Status', klasse: statusKlasse, filterbar: false },
-        { feld: 'standort',       titel: 'Standort', filterbar: false },
-        { feld: 'offene_schaeden', titel: 'Schäden', formatieren: (n) => n || '', summierbar: true }
+        { feld: 'rahmennummer',   titel: t('field.rahmennummer') },
+        { feld: 'typ_code',       titel: t('field.typ'), filterbar: false },
+        { feld: 'status',         titel: t('field.status'), klasse: statusKlasse, filterbar: false,
+          formatieren: (wert) => statusAnzeige(wert) },
+        { feld: 'standort',       titel: t('field.standort'), filterbar: false },
+        { feld: 'offene_schaeden', titel: t('field.schaeden'), formatieren: (n) => n || '', summierbar: true }
     ], radMaske, radZeilenAktionen);
 
     // meldeVorgang statt melde: nach einer Buchung (Statuswechsel,
@@ -221,8 +222,8 @@ async function flotteAufbauen() {
     // zu DIESEM Vorgang gehoert. Siehe Begruendung bei meldeVorgang() in
     // rahmen.js.
     meldeVorgang(vorgang, raederSichtbar.length === raeder.length
-        ? `${raeder.length} Räder`
-        : `${raederSichtbar.length} von ${raeder.length} Rädern`);
+        ? mengeFormat(raeder.length, 'rad')
+        : t('common.xOfPhrase', { x: zahlFormat(raederSichtbar.length), phrase: mengeFormat(raeder.length, 'rad') }));
 }
 
 // ===== Uebersicht und Filter (Gestaltungsauftrag, Punkte 1 und 2) =====
@@ -259,30 +260,31 @@ function flotteUebersicht(raeder, fahrtenLetzte30Tage) {
     // gemeinsamen Skala ausgerichtet") - jede Kachel soll aber auch FUER
     // SICH ALLEIN stehen koennen, ohne dass man die drei Nachbarkacheln
     // danebenhalten muss, um den Nenner zu erschliessen.
+    const raederPhrase = mengeFormat(gesamt, 'rad');
     const kacheln = [
         {
-            titel: 'Einsatzbereit',
+            titel: t('tile.available'),
             wert: zahlSkaliert(String(verfuegbar)),
             grafik: zellbalken(verfuegbar, gesamt),
-            hinweis: `${anteil(verfuegbar)} von ${gesamt} Rädern`
+            hinweis: t('hint.shareOfBikes', { anteil: anteil(verfuegbar), raederPhrase })
         },
         {
-            titel: 'Ausgeliehen',
+            titel: t('tile.onLoan'),
             wert: zahlSkaliert(String(ausgeliehen)),
             grafik: zellbalken(ausgeliehen, gesamt),
-            hinweis: `${anteil(ausgeliehen)} von ${gesamt} Rädern · gerade unterwegs`
+            hinweis: t('hint.shareOnLoan', { anteil: anteil(ausgeliehen), raederPhrase })
         },
         {
-            titel: 'In Wartung',
+            titel: t('tile.inMaintenance'),
             wert: wertMitTon(wartung, 'ton-warnung'),
             grafik: zellbalken(wartung, gesamt, null, { farbe: 'var(--warnung-text)' }),
-            hinweis: `${anteil(wartung)} von ${gesamt} Rädern · in der Werkstatt`
+            hinweis: t('hint.shareMaintenance', { anteil: anteil(wartung), raederPhrase })
         },
         {
-            titel: 'Defekt',
+            titel: t('tile.faulty'),
             wert: wertMitTon(defekt, defekt > 0 ? 'ton-schlecht' : ''),
             grafik: zellbalken(defekt, gesamt, null, { farbe: 'var(--schlecht)' }),
-            hinweis: `${anteil(defekt)} von ${gesamt} Rädern · wo es klemmt`
+            hinweis: t('hint.shareFaulty', { anteil: anteil(defekt), raederPhrase })
         }
     ];
 
@@ -333,13 +335,14 @@ function fahrtenJeRadVerteilung(raeder, fahrtenLetzte30Tage) {
     const mittel = werte.reduce((s, w) => s + w, 0) / werte.length;
     const stillstehend = werte.filter((w) => w === 0).length;
 
+    const raederPhrase = mengeFormat(werte.length, 'rad');
     return {
-        titel: 'Fahrten je Rad (30 Tage)',
-        wert: `${minimum}–${maximum}`,
-        hinweis: `Median ${median.toLocaleString('de-DE')}, Mittel ${mittel.toLocaleString('de-DE',
-            { maximumFractionDigits: 1 })} je Rad` + (stillstehend
-            ? ` · ${stillstehend} von ${werte.length} Rädern ohne eine einzige Fahrt`
-            : ` · jedes der ${werte.length} Räder mindestens einmal gefahren`)
+        titel: t('tile.ridesPerBike30d'),
+        wert: `${zahlFormat(minimum)}–${zahlFormat(maximum)}`,
+        hinweis: t('hint.rideDistribution', { median: zahlFormat(median), mittel: zahlFormat(mittel, { maximumFractionDigits: 1 }) })
+            + (stillstehend
+                ? t('hint.noRidesAtAll', { n: zahlFormat(stillstehend), raederPhrase })
+                : t('hint.allRiddenAtLeastOnce', { raederPhrase }))
     };
 }
 
@@ -471,7 +474,7 @@ function flotteTypkachelnZeigen(kennung, raeder, typen) {
         const hinweis = document.createElement('div');
         hinweis.className = 'flotte-typkachel-hinweis';
         const anteil = gesamt ? Math.round((anzahl / gesamt) * 100) : 0;
-        hinweis.textContent = `${anteil} % der Flotte`;
+        hinweis.textContent = t('hint.percentOfFleet', { anteil: zahlFormat(anteil) });
         text.append(hinweis);
 
         kachel.append(text);
@@ -555,16 +558,16 @@ function radHandlungen(rad) {
         for (const ziel of ['verfuegbar', 'wartung', 'defekt']) {
             if (rad.status === ziel) continue;
             handlungen.push({
-                titel: `Auf ${ziel} setzen`,
+                titel: t('button.setTo', { ziel: statusWortInSatz(ziel) }),
                 ziel,
                 art: 'neben',
                 ausfuehren: async () => {
-                    const grund = await frageNachGrund(`Warum ${ziel}?`);
+                    const grund = await frageNachGrund(t('button.whyTarget', { ziel: statusWortInSatz(ziel) }));
                     if (grund === null) return;   // Abbruch: kein Aufruf ohne Grund
                     await rufeAuf('api_rad_status_setzen', {
                         p_fahrrad_id: rad.fahrrad_id, p_status: ziel, p_bemerkung: grund
                     });
-                    melde(`${rad.rahmennummer} steht jetzt auf ${ziel}.`, 'gut');
+                    melde(t('msg.bikeNowSetTo', { rahmennummer: rad.rahmennummer, ziel: statusWortInSatz(ziel) }), 'gut');
                     await flotteAufbauen();
                 }
             });
@@ -579,22 +582,20 @@ function radHandlungen(rad) {
     // klar die Absage ist, sondern ob es ueberhaupt eine ist.
     if (darfRolle('disposition') && rad.status !== 'ausgemustert' && rad.status !== 'ausgeliehen') {
         handlungen.push({
-            titel: 'Ausmustern',
+            titel: t('button.decommission'),
             ziel: 'ausmustern',
             art: 'gefaehrlich',
             ausfuehren: async () => {
                 // Ausmustern ist nicht zurueckzuholen: das Rad verliert
                 // seinen Standort und verschwindet aus jeder Liste. Die
                 // Fahrten bleiben, aber das Rad kommt nicht wieder.
-                const ok = await bestaetige(
-                    `${rad.rahmennummer} endgültig ausmustern? Das Rad verliert seinen ` +
-                    `Standort und erscheint in keiner Liste mehr. Seine Fahrten bleiben erhalten.`);
+                const ok = await bestaetige(t('msg.confirmDecommission', { rahmennummer: rad.rahmennummer }));
                 if (!ok) return;
-                const grund = await frageNachGrund('Grund der Ausmusterung');
+                const grund = await frageNachGrund(t('button.decommissionReason'));
                 if (grund === null) return;
                 await rufeAuf('api_rad_ausmustern',
                     { p_fahrrad_id: rad.fahrrad_id, p_grund: grund });
-                melde(`${rad.rahmennummer} ausgemustert.`, 'gut');
+                melde(t('msg.bikeDecommissioned', { rahmennummer: rad.rahmennummer }), 'gut');
                 await flotteAufbauen();
             }
         });
@@ -661,25 +662,25 @@ function radMaske(rad) {
     // waere kein Arbeitsweg, nur ein Umweg.
     if (darfBereich('instandhaltung') && rad.offene_schaeden > 0) {
         knoepfe.push({
-            titel: `Schadensmeldungen (${rad.offene_schaeden})`,
+            titel: mengeFormat(rad.offene_schaeden, 'schadensmeldung'),
             art: 'neben',
             ausfuehren: async () => {
                 instandhaltungZeigeSchaeden();   // siehe dortiger Kommentar - muss VOR bereichWechseln() laufen
-                await bereichSprung('instandhaltung', `Rad ${rad.rahmennummer} aus der Flotte`,
+                await bereichSprung('instandhaltung', t('nav.originBikeFromFleet', { rahmennummer: rad.rahmennummer }),
                     () => setzeSpaltenkopfFilter('rahmennummer', rad.rahmennummer));
             }
         });
     }
 
-    zeigeMaske(`Rad ${rad.rahmennummer}`, [
-        { name: 'typ',            titel: 'Typ',              wert: `${rad.typ} (${rad.typ_code})`, nurLesen: true },
-        { name: 'modell',         titel: 'Modell',           wert: `${rad.hersteller} ${rad.modell}`, nurLesen: true },
-        { name: 'status',         titel: 'Status',           wert: rad.status, nurLesen: true },
-        { name: 'standort',       titel: 'Standort',         wert: rad.standort || 'unterwegs', nurLesen: true },
-        { name: 'angeschafft_am', titel: 'Angeschafft',      wert: rad.angeschafft_am, nurLesen: true },
-        { name: 'letzte_wartung', titel: 'Letzte Wartung',   wert: rad.letzte_wartung || 'noch keine', nurLesen: true },
-        { name: 'offene_schaeden', titel: 'Offene Schäden',  wert: rad.offene_schaeden, nurLesen: true },
-        { name: 'hoechste_schwere', titel: 'Höchste Schwere', wert: rad.hoechste_schwere || '—', nurLesen: true }
+    zeigeMaske(`${t('field.rad')} ${rad.rahmennummer}`, [
+        { name: 'typ',            titel: t('field.typ'),              wert: `${rad.typ} (${rad.typ_code})`, nurLesen: true },
+        { name: 'modell',         titel: t('field.modell'),           wert: `${rad.hersteller} ${rad.modell}`, nurLesen: true },
+        { name: 'status',         titel: t('field.status'),           wert: statusAnzeige(rad.status), nurLesen: true },
+        { name: 'standort',       titel: t('field.standort'),         wert: rad.standort || t('misc.underway'), nurLesen: true },
+        { name: 'angeschafft_am', titel: t('field.angeschafft'),      wert: rad.angeschafft_am, nurLesen: true },
+        { name: 'letzte_wartung', titel: t('field.letzteWartung'),    wert: rad.letzte_wartung || t('misc.noneYet'), nurLesen: true },
+        { name: 'offene_schaeden', titel: t('field.offeneSchaeden'),  wert: rad.offene_schaeden, nurLesen: true },
+        { name: 'hoechste_schwere', titel: t('field.hoechsteSchwere'), wert: rad.hoechste_schwere ? t('schwere.' + rad.hoechste_schwere) : '—', nurLesen: true }
     ], knoepfe);
 }
 
@@ -724,21 +725,21 @@ async function radAnlegenMaske() {
     const fehlerModell = letzterLadeFehler('v_wawi_modell');
     const fehlerStation = letzterLadeFehler('v_wawi_station');
     if (fehlerModell || fehlerStation) {
-        melde(`Modelle oder Stationen liessen sich nicht laden: ${fehlerModell || fehlerStation}`, 'schlecht');
+        melde(t('msg.modelsOrStationsLoadFailed', { fehler: fehlerModell || fehlerStation }), 'schlecht');
         return;
     }
     if (!modelle.length || !stationen.length) {
-        melde('Es gibt weder Modelle noch Stationen, aus denen ein neues Rad angelegt werden koennte.', 'schlecht');
+        melde(t('msg.noModelsOrStations'), 'schlecht');
         return;
     }
 
-    zeigeMaske('Neues Rad anlegen', [
-        { name: 'rahmennummer', titel: 'Rahmennummer', wert: '' },
+    zeigeMaske(t('button.newBike'), [
+        { name: 'rahmennummer', titel: t('field.rahmennummer'), wert: '' },
         {
-            name: 'modell_id', titel: 'Modell', wert: modelle[0].modell_id,
+            name: 'modell_id', titel: t('field.modell'), wert: modelle[0].modell_id,
             optionen: modelle.map((m) => ({
                 wert: m.modell_id,
-                text: `${m.hersteller} ${m.modellbezeichnung} (${m.typ_code}, ${m.raeder_im_bestand} im Bestand)`
+                text: `${m.hersteller} ${m.modellbezeichnung} (${m.typ_code}, ${t('misc.unitsInStock', { n: zahlFormat(m.raeder_im_bestand) })})`
             }))
         },
         {
@@ -746,15 +747,15 @@ async function radAnlegenMaske() {
             // volle Station weist die Datenbank ueber GR15 ab, aber wer
             // sie trotzdem waehlen will - etwa weil gerade ein Rad
             // ausgemustert wird -, soll das weiterhin koennen.
-            name: 'station_id', titel: 'Station', wert: stationen[0].station_id,
+            name: 'station_id', titel: t('field.station'), wert: stationen[0].station_id,
             optionen: stationen.map((s) => ({
                 wert: s.station_id,
-                text: `${s.name} (${s.frei} frei)${s.in_betrieb ? '' : ' — stillgelegt'}`
+                text: `${s.name} (${t('misc.freeShort', { n: zahlFormat(s.frei) })})${s.in_betrieb ? '' : ' — ' + t('misc.decommissionedState')}`
             }))
         }
     ], [
         {
-            titel: 'Anlegen',
+            titel: t('button.create'),
             // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
             // dieser Knopf legt ein neues Rad an, siehe Begruendung bei
             // der art-Erlaeuterung von zeigeMaske() in rahmen.js.
@@ -762,7 +763,7 @@ async function radAnlegenMaske() {
             ausfuehren: async () => {
                 const rahmennummer = document.getElementById('feld-maske-rahmennummer').value.trim();
                 if (!rahmennummer) {
-                    melde('Die Rahmennummer fehlt.', 'schlecht');
+                    melde(t('msg.frameNumberMissing'), 'schlecht');
                     return;
                 }
                 // <select>.value ist immer ein String - fuer die
@@ -777,7 +778,7 @@ async function radAnlegenMaske() {
                     p_modell_id: modellId,
                     p_station_id: stationId
                 });
-                melde(`Rad ${rahmennummer} angelegt.`, 'gut');
+                melde(t('msg.bikeCreated', { rahmennummer }), 'gut');
                 await flotteAufbauen();
             }
         }

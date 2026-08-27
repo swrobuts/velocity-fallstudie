@@ -43,7 +43,7 @@ const ICON_AUSWERTUNGEN = '<svg viewBox="0 0 24 24"><path d="M6 19v-6M12 19V6M18
 
 bereichAnmelden({
     schluessel: 'auswertungen',
-    titel: 'Auswertungen',
+    titelSchluessel: 'nav.auswertungen',
     icon: ICON_AUSWERTUNGEN,
     // Nur die Leitung. v_wawi_stationsauslastung lässt zusätzlich
     // disposition durch (0018_wawi_sichten.sql, "hat_rolle('disposition')
@@ -84,10 +84,10 @@ async function auswertungenAufbauen() {
     const vorgang = neuerVorgang();
 
     zeigeUnterreiter(vorgang, [
-        { schluessel: 'umsatz_radtyp',       titel: 'Umsatz nach Radtyp' },
-        { schluessel: 'umsatz_kundengruppe', titel: 'Umsatz nach Kundengruppe' },
-        { schluessel: 'km_co2',              titel: 'Kilometer und CO₂' },
-        { schluessel: 'stationsauslastung',  titel: 'Stationsauslastung' }
+        { schluessel: 'umsatz_radtyp',       titel: t('tab.revenueByBikeType') },
+        { schluessel: 'umsatz_kundengruppe', titel: t('tab.revenueByCustomerGroup') },
+        { schluessel: 'km_co2',              titel: t('tab.kmCo2') },
+        { schluessel: 'stationsauslastung',  titel: t('tab.stationOccupancy') }
     ], auswertungenReiter, async (gewaehlt) => {
         auswertungenReiter = gewaehlt;
         // Dieselbe Begründung wie in instandhaltung.js: ohne dies
@@ -106,34 +106,35 @@ async function auswertungenAufbauen() {
     }
 }
 
-// ===== Zahlenformat =====
+// ===== Zahlenformat (Mehrsprachigkeit, Fallstrick 2) =====
 //
-// Deutsches Format (Komma als Dezimaltrennzeichen, Punkt als Tausender-
-// trennzeichen) - dasselbe Muster wie euro() in src/script.js, hier nur
-// mit Währungszeichen NACH der Zahl statt als Wort ausgeschrieben, weil
-// eine Arbeitsmaske knapper sein darf als ein Kundentext. Nur in dieser
-// Datei gebraucht, deshalb kein eigener Baustein in rahmen.js.
+// zahlFormat() selbst kommt jetzt aus rahmen.js (dort locale-aware, siehe
+// UEBERSETZUNGEN-Kopfkommentar) - eine eigene, gleichnamige Funktion HIER
+// haette die globale aus rahmen.js in DEMSELBEN, ungemodulten
+// Namensraum ueberschrieben (alle neun Skripte teilen sich einen
+// einzigen globalen Gueltigkeitsbereich, siehe Dateikopf), und zwar fuer
+// ALLE fuenf Bereiche, nicht nur fuer diese Datei - genau der
+// NAMENSRAUM-Fehler, vor dem tools/wawi_check.py warnt. Die uebrigen
+// Formatierer bleiben lokal (nur hier gebraucht), rufen aber jetzt
+// zahlFormat()/geldFormatZentral() aus rahmen.js auf statt selbst fest
+// 'de-DE' zu waehlen - fuer einen englischen Nutzer muss "35.454,47 €"
+// zu "35,454.47 €" werden (Auftrag, woertlich). Die Waehrung bleibt der
+// Euro (Auftrag: "das ist keine Sprachfrage") - nur die Formatierung
+// folgt der Sprache.
 function geldFormat(betrag) {
-    return Number(betrag).toLocaleString('de-DE',
-        { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-}
-
-function zahlFormat(zahl) {
-    return Number(zahl).toLocaleString('de-DE');
+    return geldFormatZentral(betrag);
 }
 
 function kmFormat(km) {
-    return Number(km).toLocaleString('de-DE',
-        { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + ' km';
+    return `${zahlFormat(km, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km`;
 }
 
 function kgFormat(kg) {
-    return Number(kg).toLocaleString('de-DE',
-        { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kg';
+    return `${zahlFormat(kg, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kg`;
 }
 
 function prozentFormat(anteil) {
-    return `${Math.round(anteil * 100)} %`;
+    return `${zahlFormat(Math.round(anteil * 100))} %`;
 }
 
 // Eine Nachkommastelle statt gerundeter ganzer Prozent - nur für die
@@ -145,8 +146,7 @@ function prozentFormat(anteil) {
 // Rundung leicht gleich aus. Die Tabellenspalten selbst bleiben bei der
 // gröberen prozentFormat(), die reicht dort aus.
 function prozentFormatFein(anteil) {
-    return `${(anteil * 100).toLocaleString('de-DE',
-        { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+    return `${zahlFormat(anteil * 100, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 }
 
 // Eine Nachkommastelle, ohne Einheit - fuer die drei neuen "je"-Spalten
@@ -158,8 +158,7 @@ function prozentFormatFein(anteil) {
 // denselben Zahlkern, statt eine dritte, fast identische Funktion zu
 // schreiben.
 function zahlFormatFein(zahl) {
-    return Number(zahl).toLocaleString('de-DE',
-        { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    return zahlFormat(zahl, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 }
 
 function minutenFormat(minuten) {
@@ -170,22 +169,46 @@ function minutenFormat(minuten) {
 // PostgREST herein - date_trunc('month', ...)::date in der Sicht. Eine
 // Anzeige als "Mär 2026" macht den Jahresgang und den Tarifwechsel zum
 // 1. März auf den ersten Blick lesbar, ein rohes ISO-Datum nicht.
-const MONATSNAMEN = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+//
+// MEHRSPRACHIGKEIT (Fallstrick 2, Monats-/Wochentagsnamen): Deutsch
+// behaelt die eigene, seit jeher hier gepflegte Kurzform OHNE
+// Punkte ("Okt", nicht "Okt.") - Zug 1 dieses Auftrags verlangt, dass
+// Deutsch nach dem Umbau GENAU wie vorher aussieht, und
+// Intl.DateTimeFormat('de-DE', {month:'short'}) liefert nachweislich
+// "Okt." MIT Punkt (im Browser/Node geprueft) - ein spuerbarer
+// Unterschied in einer eng bemessenen Tabellenspalte. Fuer die anderen
+// fuenf Sprachen gibt es dagegen KEINE vorbestehende Kurzform zu
+// bewahren - dort uebernimmt Intl.DateTimeFormat die vollstaendige,
+// jeweils korrekte Kurzform (Reihenfolge, Punktsetzung, Sprache), statt
+// sie von Hand nachzubauen.
+const MONATSNAMEN_DE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+const MONATSNAMEN_VOLL_DE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
+    'September', 'Oktober', 'November', 'Dezember'];
+const WOCHENTAGE_KURZ_DE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
+// jahr/monatsnummerEins (1-12) statt eines fertigen Date, weil alle
+// Aufrufer diese beiden Teile ohnehin schon aus einem ISO-Text zerlegt
+// haben (siehe monatFormat()/tagFormat() unten) - ein zweites Zerlegen
+// waere nur Wiederholung.
+function monatKurzName(jahr, monatsnummerEins) {
+    if (sprache() === 'de') return MONATSNAMEN_DE[monatsnummerEins - 1];
+    return new Intl.DateTimeFormat(localeTag(), { month: 'short' }).format(new Date(jahr, monatsnummerEins - 1, 1));
+}
+
 function monatFormat(monat) {
-    const [jahr, monatsnummer] = monat.split('-');
-    return `${MONATSNAMEN[Number(monatsnummer) - 1]} ${jahr}`;
+    const [jahr, monatsnummer] = monat.split('-').map(Number);
+    return `${monatKurzName(jahr, monatsnummer)} ${jahr}`;
 }
 
 // Ausgeschrieben, nur für den Drill-Down (monatsdrilldownEinfuegen()
 // weiter unten): der Auftrag selbst formuliert seine Referenzzahlen mit
 // dem vollen Monatsnamen ("der 4. September mit 61 Fahrten"), nicht der
 // dreibuchstabigen Kurzform, die monatFormat() für die Tabellenspalte
-// verwendet. Zwei Wortlisten für zwei unterschiedliche Zwecke, keine
-// Ableitung der einen aus der anderen - "Mär" ließe sich nicht
-// zuverlässig zu "März" verlängern, ohne selbst wieder eine Tabelle zu
-// pflegen.
-const MONATSNAMEN_VOLL = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August',
-    'September', 'Oktober', 'November', 'Dezember'];
+// verwendet.
+function monatVollName(jahr, monatsnummerEins) {
+    if (sprache() === 'de') return MONATSNAMEN_VOLL_DE[monatsnummerEins - 1];
+    return new Intl.DateTimeFormat(localeTag(), { month: 'long' }).format(new Date(jahr, monatsnummerEins - 1, 1));
+}
 
 // ===== Datumsformat der Tagestabelle (Gestaltungsauftrag Punkt 2a) =====
 //
@@ -202,22 +225,26 @@ const MONATSNAMEN_VOLL = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 
 // über new Date(jahr, monat, tag) mit LOKALEN Zeitkomponenten gebaut -
 // keine ISO-Zeitzonenkonvertierung im Spiel, getDay() liefert exakt den
 // Wochentag des gemeinten Kalendertags.
-const WOCHENTAGE_KURZ = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+function wochentagKurzName(datum) {
+    if (sprache() === 'de') return WOCHENTAGE_KURZ_DE[datum.getDay()];
+    return new Intl.DateTimeFormat(localeTag(), { weekday: 'short' }).format(datum);
+}
 
-// Kalenderkopf beginnt am Montag (deutsche Konvention, ISO 8601) - anders
-// als WOCHENTAGE_KURZ oben, das bei Index 0 = Sonntag direkt JS' eigene
-// getDay()-Reihenfolge übernimmt. Aus DEMSELBEN Array neu sortiert, nicht
-// ein zweites Mal von Hand eingetragen: zwei Wortlisten mit denselben
-// sieben Namen in unterschiedlicher Reihenfolge liefen sonst irgendwann
-// auseinander, sobald nur eine von beiden geändert wird. Verwendet von
-// monatsdrilldownEinfuegen() weiter unten für die Spaltenköpfe des
-// Monatskalenders.
-const WOCHENTAGE_MO_ZUERST = [1, 2, 3, 4, 5, 6, 0].map((i) => WOCHENTAGE_KURZ[i]);
+// Kalenderkopf beginnt am Montag (ISO 8601, in jeder der sechs Sprachen
+// gleich ueblich) - Index 0 = Montag ... 6 = Sonntag, anders als
+// getDay() (0 = Sonntag). Verwendet von monatsdrilldownEinfuegen() weiter
+// unten für die Spaltenköpfe des Monatskalenders.
+function wochentageMoZuerst() {
+    // 1. Januar 2024 war ein Montag - beliebiger, aber bewusst gewaehlter
+    // Ankerpunkt, um sieben aufeinanderfolgende Wochentagsnamen ab Montag
+    // zu gewinnen, ohne sie fuer jede Sprache von Hand einzutragen.
+    return [0, 1, 2, 3, 4, 5, 6].map((i) => wochentagKurzName(new Date(2024, 0, 1 + i)));
+}
 
 function tagFormat(tag) {
     const [jahr, monat, tagNummer] = tag.split('-').map(Number);
-    const wochentag = WOCHENTAGE_KURZ[new Date(jahr, monat - 1, tagNummer).getDay()];
-    return `${wochentag}, ${tagNummer}. ${MONATSNAMEN[monat - 1]} ${jahr}`;
+    const wochentag = wochentagKurzName(new Date(jahr, monat - 1, tagNummer));
+    return `${wochentag}, ${tagNummer}. ${monatKurzName(jahr, monat)} ${jahr}`;
 }
 
 // Rechtsbündige Zahlenspalte, optional mit einer zweiten Klasse für
@@ -307,7 +334,7 @@ function groessterSprung(zeitreiheAufsteigend, feld) {
 function veraenderungFormat(veraenderung) {
     if (veraenderung === null) return '—';
     const vorzeichen = veraenderung > 0 ? '+' : '';
-    return `${vorzeichen}${(veraenderung * 100).toLocaleString('de-DE', { maximumFractionDigits: 1 })} %`;
+    return `${vorzeichen}${zahlFormat(veraenderung * 100, { maximumFractionDigits: 1 })} %`;
 }
 
 // ===== Veränderungszeile für die Übersichtskacheln (Gestaltungsauftrag
@@ -323,7 +350,7 @@ function veraenderungFormat(veraenderung) {
 // Element zurück, sondern null - eine Kachel ohne echten Vergleich soll
 // keine leere/sinnlose Veränderungszeile zeigen, sondern gar keine (siehe
 // "ohne kachel.veraenderung ändert sich nichts", baueKachel()).
-function veraenderungZeile(veraenderung, bezugstext = 'ggü. Vormonat') {
+function veraenderungZeile(veraenderung, bezugstext = t('misc.changeVsPrevMonth')) {
     if (veraenderung === null) return null;
     const zeile = document.createElement('span');
     const pfeil = veraenderung > 0 ? '▲' : veraenderung < 0 ? '▼' : '▬';
@@ -369,7 +396,7 @@ function istAuffaellig(zeile, feld) {
 // <input readOnly>, dessen .value ausschließlich einen String annimmt -
 // ein Element wäre dort so falsch, wie es vorher in der Tabellenzelle war.
 function co2ZelleText(zeile) {
-    return `${kgFormat(zeile.co2_ersparnis_kg)} (${prozentFormat(zeile.anteil_geschaetzt)} geschätzt)`;
+    return kgFormat(zeile.co2_ersparnis_kg) + t('misc.estimatedParen', { prozent: prozentFormat(zeile.anteil_geschaetzt) });
 }
 
 function co2ZelleElement(zeile) {
@@ -377,7 +404,7 @@ function co2ZelleElement(zeile) {
     wrapper.append(zahlSkaliert(kgFormat(zeile.co2_ersparnis_kg)));
     const hinweis = document.createElement('span');
     hinweis.className = 'zahl-nebenteil';
-    hinweis.textContent = ` (${prozentFormat(zeile.anteil_geschaetzt)} geschätzt)`;
+    hinweis.textContent = t('misc.estimatedParen', { prozent: prozentFormat(zeile.anteil_geschaetzt) });
     wrapper.append(hinweis);
     return wrapper;
 }
@@ -462,14 +489,14 @@ async function monatsdrilldownEinfuegen(monat) {
     const abschnitt = document.createElement('section');
     abschnitt.className = 'monatsdrilldown';
     const ueberschrift = document.createElement('h3');
-    ueberschrift.textContent = `Fahrten je Tag — ${monatFormat(monat)} (gesamt, alle Radtypen und Tarife)`;
+    ueberschrift.textContent = t('hint.ridesPerDayHeading', { monat: monatFormat(monat) });
     abschnitt.append(ueberschrift);
 
     const fehler = letzterLadeFehler('v_wawi_fahrten_je_tag');
     if (fehler) {
         const hinweis = document.createElement('p');
         hinweis.className = 'monatsdrilldown-fehler';
-        hinweis.textContent = `Die Tageszahlen liessen sich nicht laden: ${fehler}`;
+        hinweis.textContent = t('msg.dailyFiguresLoadFailed', { fehler });
         abschnitt.append(hinweis);
         wurzel.append(abschnitt);
         return;
@@ -495,20 +522,36 @@ async function monatsdrilldownEinfuegen(monat) {
     const maxIndizes = tage.map((_, i) => i).filter((i) => werte[i] === maximum);
     const maxTage    = maxIndizes.map((i) => tage[i]);
 
-    const monatNameVoll = MONATSNAMEN_VOLL[monatsnummer - 1];
-    const tageListe = (liste) => liste.length > 1
-        ? `${liste.slice(0, -1).join('., ')}. und ${liste[liste.length - 1]}.`
-        : `${liste[0]}.`;
-    // "1 Fahrt", nicht "1 Fahrten" - ein Monat mit nur ein bis zwei
-    // Fahrten insgesamt (Januar 2025 im Referenzjahr) trifft diesen Fall
-    // wirklich, kein theoretisches Beispiel.
-    const fahrtenWort = (n) => (n === 1 ? 'Fahrt' : 'Fahrten');
+    const monatNameVoll = monatVollName(Number(jahr), monatsnummer);
+    // Deutsch behaelt die eigene Aufzaehlungsform ("4. und 7.", mit
+    // Punkt je Zahl) exakt wie vorher (Zug 1) - fuer die anderen fuenf
+    // Sprachen ein einfacher, sprachueblicher Aufzaehlungssatz mit dem
+    // jeweiligen Wort fuer "und" (common.and), ohne den deutschen
+    // Ordnungspunkt, der dort keine Entsprechung hat.
+    const tageListe = (liste) => {
+        if (sprache() === 'de') {
+            return liste.length > 1
+                ? `${liste.slice(0, -1).join('., ')}. und ${liste[liste.length - 1]}.`
+                : `${liste[0]}.`;
+        }
+        return liste.length > 1
+            ? `${liste.slice(0, -1).join(', ')} ${t('common.and')} ${liste[liste.length - 1]}`
+            : `${liste[0]}`;
+    };
+    // mengeFormat('fahrt', n) statt einer eigenen fahrtenWort()-Funktion
+    // (Fallstrick 1): "1 Fahrt", nicht "1 Fahrten" - ein Monat mit nur
+    // ein bis zwei Fahrten insgesamt (Januar 2025 im Referenzjahr) trifft
+    // diesen Fall wirklich, kein theoretisches Beispiel - und Polnisch/
+    // Tuerkisch brauchen dieselbe Zahl in eigenen Formen (siehe
+    // MENGENFORMEN in rahmen.js).
+    const maxPhrase = mengeFormat(maximum, 'fahrt');
 
     const grafik = saeulengrafik(werte, tage.map((t) => `${t}. ${monatNameVoll}`), {
-        beschriftung: `Fahrten je Tag im ${monatNameVoll} ${jahr}, gesamt über alle Radtypen und Tarife: zwischen ` +
-            `${zahlFormat(minimum)} und ${zahlFormat(maximum)} ${fahrtenWort(maximum)}, im Mittel ` +
-            `${zahlFormat(Math.round(gesamt / tage.length))}. Am meisten Fahrten am ` +
-            `${tageListe(maxTage)} ${monatNameVoll} mit je ${zahlFormat(maximum)} ${fahrtenWort(maximum)}.`,
+        beschriftung: t('hint.dailyRidesChartAria', {
+            monat: monatNameVoll, jahr: zahlFormat(Number(jahr), { useGrouping: false }),
+            min: zahlFormat(minimum), maxPhrase, mittel: zahlFormat(Math.round(gesamt / tage.length)),
+            tageListe: tageListe(maxTage)
+        }),
         markierIndizes: maxIndizes
     });
     abschnitt.append(grafik);
@@ -522,26 +565,26 @@ async function monatsdrilldownEinfuegen(monat) {
     kacheln.className = 'monatsdrilldown-kacheln';
     kacheln.append(
         baueKachel({
-            titel: 'Minimum',
+            titel: t('tile.minimum'),
             wert: zahlSkaliert(zahlFormat(minimum)),
             hinweis: `${tageListe(minTage)} ${monatNameVoll}`
         }),
         baueKachel({
-            titel: 'Maximum',
+            titel: t('tile.maximum'),
             wert: zahlSkaliert(zahlFormat(maximum)),
             hinweis: `${tageListe(maxTage)} ${monatNameVoll}`
         }),
         baueKachel({
-            titel: 'Anzahl pro Monat',
+            titel: t('tile.countPerMonth'),
             wert: zahlSkaliert(zahlFormat(gesamt)),
-            hinweis: `${monatFormat(monat)}, gesamt`
+            hinweis: t('hint.totalForMonth', { phrase: monatFormat(monat) })
         }),
         baueKachel({
-            titel: 'Tag mit den meisten Fahrten',
+            titel: t('tile.dayWithMostRides'),
             wert: `${tageListe(maxTage)} ${monatNameVoll}`,
             hinweis: maxTage.length > 1
-                ? `${maxTage.length} Tage gleichauf, je ${zahlFormat(maximum)} ${fahrtenWort(maximum)}`
-                : `${zahlFormat(maximum)} ${fahrtenWort(maximum)}`
+                ? t('hint.tiedDaysCount', { tagePhrase: mengeFormat(maxTage.length, 'tag'), phrase: maxPhrase })
+                : maxPhrase
         })
     );
     abschnitt.append(kacheln);
@@ -588,12 +631,12 @@ async function monatsdrilldownEinfuegen(monat) {
     const kalender = document.createElement('table');
     kalender.className = 'monatskalender';
     const kalenderBeschriftung = document.createElement('caption');
-    kalenderBeschriftung.textContent = `Fahrten je Tag, ${monatFormat(monat)}`;
+    kalenderBeschriftung.textContent = t('hint.calendarCaption', { monat: monatFormat(monat) });
     kalender.append(kalenderBeschriftung);
 
     const kalenderKopf = document.createElement('thead');
     const kalenderKopfzeile = document.createElement('tr');
-    WOCHENTAGE_MO_ZUERST.forEach((name, i) => {
+    wochentageMoZuerst().forEach((name, i) => {
         const th = document.createElement('th');
         th.scope = 'col';
         th.textContent = name;
@@ -671,7 +714,7 @@ async function monatsdrilldownEinfuegen(monat) {
             // nicht "4. Fahrten: 12"). tagFormat() liefert dieselbe Form
             // MIT Wochentag wie zuvor die Tagesliste (Gestaltungsauftrag
             // Punkt 2a, unverändert gültig).
-            knopf.setAttribute('aria-label', `${tagFormat(tagIso)}: ${zahlFormat(wert)} ${fahrtenWort(wert)}`);
+            knopf.setAttribute('aria-label', t('hint.dayRidesAria', { datum: tagFormat(tagIso), phrase: mengeFormat(wert, 'fahrt') }));
 
             const tagSpanne = document.createElement('span');
             tagSpanne.className = 'monatskalender-tag-nummer';
@@ -709,8 +752,7 @@ async function monatsdrilldownEinfuegen(monat) {
     legende.className = 'monatskalender-legende';
     const legendeSatz = document.createElement('p');
     legendeSatz.className = 'monatskalender-legende-satz';
-    legendeSatz.textContent = `Farbe = Fahrten dieses Tages im Verhältnis zum verkehrsreichsten Tag ` +
-        `des Monats (${zahlFormat(maximum)} ${fahrtenWort(maximum)}).`;
+    legendeSatz.textContent = t('hint.legendColorScale', { phrase: maxPhrase });
     legende.append(legendeSatz);
 
     const legendeSkala = document.createElement('div');
@@ -791,13 +833,13 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
     const kopf = document.createElement('div');
     kopf.className = 'tagdrilldown-kopf';
     const ueberschrift = document.createElement('h3');
-    ueberschrift.textContent = `Räder am ${tagFormat(tagIso)}`;
+    ueberschrift.textContent = t('misc.bikesOnDate', { datum: tagFormat(tagIso) });
     kopf.append(ueberschrift);
 
     const zurueckKnopf = document.createElement('button');
     zurueckKnopf.type = 'button';
     zurueckKnopf.className = 'knopf-neben tagdrilldown-zurueck';
-    zurueckKnopf.textContent = 'Zurück zur Tagesübersicht';
+    zurueckKnopf.textContent = t('button.backToDayOverview');
     zurueckKnopf.addEventListener('click', () => {
         document.querySelector('.monatskalender-tag-ausgewaehlt')
             ?.classList.remove('monatskalender-tag-ausgewaehlt');
@@ -811,7 +853,7 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
     if (fehler) {
         const hinweis = document.createElement('p');
         hinweis.className = 'monatsdrilldown-fehler';
-        hinweis.textContent = `Die Räder dieses Tages liessen sich nicht laden: ${fehler}`;
+        hinweis.textContent = t('msg.thisDayBikesLoadFailed', { fehler });
         abschnitt.append(hinweis);
         wurzel.append(abschnitt);
         return;
@@ -823,7 +865,7 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
         // rahmen.js) ist ein gueltiger Klickziel, keine fehlerhafte
         // Eingabe - "keine Fahrten" ist eine gueltige, erwartbare Antwort.
         const leer = document.createElement('p');
-        leer.textContent = 'An diesem Tag wurde kein Rad gefahren.';
+        leer.textContent = t('misc.noBikeRiddenThisDay');
         abschnitt.append(leer);
         wurzel.append(abschnitt);
         return;
@@ -832,12 +874,12 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
     const tabelle = document.createElement('table');
     tabelle.className = 'monatsdrilldown-tabelle';
     const beschriftung = document.createElement('caption');
-    beschriftung.textContent = `Räder am ${tagFormat(tagIso)} - kein Kundenbezug, siehe v_wawi_fahrten_je_tag_rad`;
+    beschriftung.textContent = t('misc.bikesOnDateCaption', { datum: tagFormat(tagIso) });
     tabelle.append(beschriftung);
 
     const thead = document.createElement('thead');
     const kopfzeile = document.createElement('tr');
-    for (const spaltentitel of ['Rahmennummer', 'Typ', 'Start', 'Ziel', 'Dauer', 'Strecke']) {
+    for (const spaltentitel of [t('field.rahmennummer'), t('field.typ'), t('field.start'), t('field.ziel'), t('field.dauer'), t('field.strecke')]) {
         const th = document.createElement('th');
         th.textContent = spaltentitel;
         th.scope = 'col';
@@ -880,7 +922,7 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
         // ihre eigene Unsicherheit nicht mitliefert, ist gefaehrlich").
         streckeZelle.textContent = zeile.kilometer === null
             ? '—'
-            : `${kmFormat(zeile.kilometer)}${zeile.ist_geschaetzt ? ' (geschätzt)' : ''}`;
+            : `${kmFormat(zeile.kilometer)}${zeile.ist_geschaetzt ? t('misc.estimatedSuffix') : ''}`;
 
         tr.append(kopf, typZelle, startZelle, zielZelle, dauerZelle, streckeZelle);
         tbody.append(tr);
@@ -926,7 +968,7 @@ async function umsatzRadtypZeigen(vorgang) {
     const fehler = letzterLadeFehler('v_wawi_umsatz_radtyp');
     if (fehler) {
         zeigeUebersicht(vorgang, []);
-        meldeVorgang(vorgang, `Der Umsatz nach Radtyp liess sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.revenueByBikeTypeLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
@@ -941,12 +983,10 @@ async function umsatzRadtypZeigen(vorgang) {
         zeigeUebersicht(vorgang, []);
         zeigeLeermaske(
             vorgang,
-            'Kein Umsatz nach Radtyp',
-            'Es liegt keine Monatszeile vor. Bei einem gefuellten Referenzjahr ist das ' +
-            'ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt ' +
-            'fehlender Daten.'
+            t('empty.noRevenueByBikeTypeTitle'),
+            t('empty.noRevenueByBikeTypeText')
         );
-        meldeVorgang(vorgang, 'Kein Umsatz nach Radtyp');
+        meldeVorgang(vorgang, t('empty.noRevenueByBikeTypeTitle'));
         return;
     }
 
@@ -983,15 +1023,15 @@ async function umsatzRadtypZeigen(vorgang) {
         // Zwischensumme je Gruppe kommt aus den summierbar:true-Spalten
         // unten (Fahrten, Minuten, Umsatz), nicht aus Je-Fahrt/Δ - siehe
         // der lange Kommentar bei zeigeListe() in rahmen.js.
-        { feld: 'typ',            titel: 'Radtyp' },
-        { feld: 'monat',          titel: 'Monat',        formatieren: (w) => monatFormat(w) },
+        { feld: 'typ',            titel: t('field.radtyp') },
+        { feld: 'monat',          titel: t('field.monat'),        formatieren: (w) => monatFormat(w) },
         // summierbar: Fahrten und Minuten sind echte Zaehlwerte JE MONAT
         // - anders als v_wawi_umsatz_kundengruppe.kunden (dort zaehlt
         // dieselbe Person in mehreren Monaten mehrfach, siehe dort)
         // gehoert eine Fahrt/eine gefahrene Minute zu GENAU einem Monat,
         // eine Summe ueber mehrere Monate hinweg zaehlt nichts doppelt.
-        { feld: 'fahrten',        titel: 'Fahrten',      formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
-        { feld: 'minuten',        titel: 'Minuten',      formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'fahrten',        titel: t('field.fahrten'),      formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'minuten',        titel: t('field.minuten'),      formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
         // Bissantz: Balken an einer GEMEINSAMEN Skala ausgerichtet -
         // umsatzMaximum gilt für jede Zeile der Liste, nicht neu je Zeile
         // berechnet. Balken und Betrag in ZWEI Spalten (balkenSpalten() in
@@ -1002,9 +1042,9 @@ async function umsatzRadtypZeigen(vorgang) {
         // summierbar: Umsatz ist additiv ueber Monate UND ueber Radtypen -
         // die Kontrollzahl 35.454,47 € aus der Statuszeile ist genau die
         // Summe aller Gruppen-Zwischensummen, siehe Bericht.
-        ...balkenSpalten('umsatz', 'Umsatz', umsatzMaximum, geldFormat, { summierbar: true }),
+        ...balkenSpalten('umsatz', t('field.umsatz'), umsatzMaximum, geldFormat, { summierbar: true }),
         {
-            feld: 'umsatz_je_fahrt', titel: 'Je Fahrt', klasse: zahlKlasse(),
+            feld: 'umsatz_je_fahrt', titel: t('field.jeFahrt'), klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(geldFormat(w))
         },
         // Frage, die weder "Fahrten" noch "Minuten" (beide Summen JE
@@ -1016,11 +1056,11 @@ async function umsatzRadtypZeigen(vorgang) {
         // ohnehin nicht vergleichbar waere. NICHT summierbar - ein
         // Mittelwert, derselbe Fehlertyp wie umsatz_je_fahrt.
         {
-            feld: 'minutenJeFahrt', titel: 'Minuten je Fahrt', klasse: zahlKlasse(),
+            feld: 'minutenJeFahrt', titel: t('field.minutenJeFahrt'), klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(minutenFormat(w))
         },
         {
-            feld: 'veraenderungJeFahrt', titel: 'Δ ggü. Vormonat',
+            feld: 'veraenderungJeFahrt', titel: t('field.deltaVormonat'),
             formatieren: veraenderungFormat,
             klasse: (z) => zahlKlasse(istAuffaellig(z, 'veraenderungJeFahrt') ? 'auffaellig' : '')
         }
@@ -1033,9 +1073,9 @@ async function umsatzRadtypZeigen(vorgang) {
     // ablesen können, ohne selbst zu addieren.
     const gesamtUmsatz = zeilen.reduce((s, z) => s + z.umsatz, 0);
     const gesamtFahrten = zeilen.reduce((s, z) => s + z.fahrten, 0);
-    meldeVorgang(vorgang,
-        `${zeilen.length} Monatszeilen, ${zahlFormat(gesamtFahrten)} Fahrten, ` +
-        `Umsatz gesamt ${geldFormat(gesamtUmsatz)}`);
+    meldeVorgang(vorgang, t('msg.revenueByBikeTypeSummary', {
+        monatszeilen: mengeFormat(zeilen.length, 'monatszeile'), fahrten: mengeFormat(gesamtFahrten, 'fahrt'),
+        umsatz: geldFormat(gesamtUmsatz) }));
 }
 
 // Vier Kacheln: die drei fuer die Fragen, mit denen jemand diesen Reiter
@@ -1068,32 +1108,34 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
     const hoehepunkt = extremwert(fahrtenLetztesJahr, 'wert', false);
 
     const kachelnUmsatz = {
-        titel: 'Umsatz gesamt',
+        titel: t('tile.revenueTotal'),
         veraenderung: veraenderungZeile(letzteVeraenderung(umsatzLetztesJahr)),
         wert: zahlSkaliert(geldFormat(gesamtUmsatz)),
         grafik: saeulenSparkline(umsatzLetztesJahr.map((r) => r.wert),
-            `Monatsumsatz der letzten zwölf Monate (${monatFormat(umsatzLetztesJahr[0].monat)} bis ` +
-            `${monatFormat(umsatzLetztesJahr.at(-1).monat)}), von ` +
-            `${geldFormat(Math.min(...umsatzLetztesJahr.map((r) => r.wert)))} bis ` +
-            `${geldFormat(Math.max(...umsatzLetztesJahr.map((r) => r.wert)))} - die dunkle Säule ganz rechts ` +
-            `ist der aktuelle Monat, ${monatFormat(umsatzLetztesJahr.at(-1).monat)} mit ` +
-            `${geldFormat(umsatzLetztesJahr.at(-1).wert)}`
+            t('hint.monthlyRevenueChartAria', {
+                vonMonat: monatFormat(umsatzLetztesJahr[0].monat), bisMonat: monatFormat(umsatzLetztesJahr.at(-1).monat),
+                min: geldFormat(Math.min(...umsatzLetztesJahr.map((r) => r.wert))),
+                max: geldFormat(Math.max(...umsatzLetztesJahr.map((r) => r.wert))),
+                aktuellMonat: monatFormat(umsatzLetztesJahr.at(-1).monat), aktuellWert: geldFormat(umsatzLetztesJahr.at(-1).wert)
+            })
         ),
-        hinweis: 'Verlauf der letzten 12 Monate'
+        hinweis: t('hint.last12MonthsTrend')
     };
 
     const kachelnFahrten = {
-        titel: 'Fahrten gesamt',
+        titel: t('tile.ridesTotal'),
         veraenderung: veraenderungZeile(letzteVeraenderung(fahrtenLetztesJahr)),
         wert: zahlSkaliert(zahlFormat(gesamtFahrten)),
         grafik: saeulenSparkline(fahrtenLetztesJahr.map((r) => r.wert),
-            `Fahrten je Monat, letzte zwölf Monate: ${zahlFormat(tiefpunkt.wert)} im ${monatFormat(tiefpunkt.monat)} ` +
-            `am niedrigsten, ${zahlFormat(hoehepunkt.wert)} im ${monatFormat(hoehepunkt.monat)} am höchsten - die ` +
-            `dunkle Säule ganz rechts ist der aktuelle Monat, ${monatFormat(fahrtenLetztesJahr.at(-1).monat)} mit ` +
-            `${zahlFormat(fahrtenLetztesJahr.at(-1).wert)} Fahrten`,
+            t('hint.monthlyRidesChartAria', {
+                min: zahlFormat(tiefpunkt.wert), tiefMonat: monatFormat(tiefpunkt.monat),
+                max: zahlFormat(hoehepunkt.wert), hochMonat: monatFormat(hoehepunkt.monat),
+                aktuellMonat: monatFormat(fahrtenLetztesJahr.at(-1).monat),
+                aktuellPhrase: mengeFormat(fahrtenLetztesJahr.at(-1).wert, 'fahrt')
+            }),
             { markierIndizes: [fahrtenLetztesJahr.indexOf(hoehepunkt)] }
         ),
-        hinweis: `Jahresgang: ${monatFormat(tiefpunkt.monat)} am niedrigsten, ${monatFormat(hoehepunkt.monat)} am höchsten`
+        hinweis: t('hint.yearlyPattern', { tief: monatFormat(tiefpunkt.monat), hoch: monatFormat(hoehepunkt.monat) })
     };
 
     const kacheln = [kachelnUmsatz, kachelnFahrten];
@@ -1125,10 +1167,9 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
         const jeRadJahr = gesamtUmsatzLetztesJahr / flottengroesse;
         const jeRadTag = jeRadJahr / tageBetrachtet;
         kacheln.push({
-            titel: 'Umsatz je Rad und Tag',
+            titel: t('tile.revenuePerBikeDay'),
             wert: zahlSkaliert(geldFormat(jeRadTag)),
-            hinweis: `${geldFormat(jeRadJahr)} je Jahr · bezogen auf ${zahlFormat(flottengroesse)} Räder im ` +
-                `Bestand (ohne Ausgemusterte) · letzte 12 Monate`
+            hinweis: t('hint.perBikePerDayDetail', { jeRadJahr: geldFormat(jeRadJahr), raederPhrase: mengeFormat(flottengroesse, 'rad') })
         });
     }
 
@@ -1156,19 +1197,21 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
         wertKnoten.append(pfeil, zahlSkaliert(geldFormat(sprung.wert)));
 
         kacheln.push({
-            titel: 'Auffällig: Umsatz je Fahrt City-Bike',
+            titel: t('tile.notableRevenuePerRideCityBike'),
             wert: wertKnoten,
             // aktuellIndex: null - diese Reihe zeigt einen SPRUNG
             // (Tarifwechsel), keinen "wo stehen wir heute"-Verlauf; die
             // markierte Säule ist der Sprungmonat, nicht "jetzt" (siehe
             // Kopfkommentar bei saeulenSparkline() in rahmen.js).
             grafik: saeulenSparkline(cityBetrieb.map((z) => z.umsatz_je_fahrt),
-                `Umsatz je Fahrt City-Bike, ${cityBetrieb.length} Monate ab ${monatFormat(cityBetrieb[0].monat)}: ` +
-                `Sprung von ${geldFormat(sprung.vorherigerWert)} auf ${geldFormat(sprung.wert)} ` +
-                `ab ${monatFormat(sprung.monat)}, in Rot markiert`,
+                t('hint.cityBikeJumpChartAria', {
+                    n: zahlFormat(cityBetrieb.length), vonMonat: monatFormat(cityBetrieb[0].monat),
+                    von: geldFormat(sprung.vorherigerWert), nach: geldFormat(sprung.wert),
+                    sprungMonat: monatFormat(sprung.monat)
+                }),
                 { markierIndizes: [sprung.index], aktuellIndex: null }
             ),
-            hinweis: `${veraenderungFormat(sprung.veraenderung)} ab ${monatFormat(sprung.monat)} - Tarifwechsel`
+            hinweis: t('hint.tariffChangeFrom', { veraenderung: veraenderungFormat(sprung.veraenderung), monat: monatFormat(sprung.monat) })
         });
     }
 
@@ -1182,14 +1225,14 @@ function umsatzRadtypUebersicht(zeilen, flottengroesse) {
 // ihre eigene Ladeanfrage zurück ist.
 async function umsatzRadtypMaske(zeile) {
     zeigeMaske(`${zeile.typ} · ${monatFormat(zeile.monat)}`, [
-        { name: 'typ',            titel: 'Radtyp',    wert: `${zeile.typ} (${zeile.typ_code})`, nurLesen: true },
-        { name: 'monat',          titel: 'Monat',      wert: monatFormat(zeile.monat), nurLesen: true },
-        { name: 'fahrten',        titel: 'Fahrten',    wert: zahlFormat(zeile.fahrten), nurLesen: true },
-        { name: 'minuten',        titel: 'Minuten',    wert: zahlFormat(zeile.minuten), nurLesen: true },
-        { name: 'umsatz',         titel: 'Umsatz',     wert: geldFormat(zeile.umsatz), nurLesen: true },
-        { name: 'umsatz_je_fahrt', titel: 'Je Fahrt',  wert: geldFormat(zeile.umsatz_je_fahrt), nurLesen: true },
-        { name: 'minuten_je_fahrt', titel: 'Minuten je Fahrt', wert: minutenFormat(zeile.minutenJeFahrt), nurLesen: true },
-        { name: 'veraenderung',   titel: 'Δ ggü. Vormonat', wert: veraenderungFormat(zeile.veraenderungJeFahrt), nurLesen: true }
+        { name: 'typ',            titel: t('field.radtyp'),    wert: `${zeile.typ} (${zeile.typ_code})`, nurLesen: true },
+        { name: 'monat',          titel: t('field.monat'),      wert: monatFormat(zeile.monat), nurLesen: true },
+        { name: 'fahrten',        titel: t('field.fahrten'),    wert: zahlFormat(zeile.fahrten), nurLesen: true },
+        { name: 'minuten',        titel: t('field.minuten'),    wert: zahlFormat(zeile.minuten), nurLesen: true },
+        { name: 'umsatz',         titel: t('field.umsatz'),     wert: geldFormat(zeile.umsatz), nurLesen: true },
+        { name: 'umsatz_je_fahrt', titel: t('field.jeFahrt'),  wert: geldFormat(zeile.umsatz_je_fahrt), nurLesen: true },
+        { name: 'minuten_je_fahrt', titel: t('field.minutenJeFahrt'), wert: minutenFormat(zeile.minutenJeFahrt), nurLesen: true },
+        { name: 'veraenderung',   titel: t('field.deltaVormonat'), wert: veraenderungFormat(zeile.veraenderungJeFahrt), nurLesen: true }
     ], []);
     await monatsdrilldownEinfuegen(zeile.monat);
 }
@@ -1204,7 +1247,7 @@ async function umsatzKundengruppeZeigen(vorgang) {
     const fehler = letzterLadeFehler('v_wawi_umsatz_kundengruppe');
     if (fehler) {
         zeigeUebersicht(vorgang, []);
-        meldeVorgang(vorgang, `Der Umsatz nach Kundengruppe liess sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.revenueByCustomerGroupLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
@@ -1212,12 +1255,10 @@ async function umsatzKundengruppeZeigen(vorgang) {
         zeigeUebersicht(vorgang, []);
         zeigeLeermaske(
             vorgang,
-            'Kein Umsatz nach Kundengruppe',
-            'Es liegt keine Monatszeile vor. Bei einem gefuellten Referenzjahr ist das ' +
-            'ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt ' +
-            'fehlender Daten.'
+            t('empty.noRevenueByCustomerGroupTitle'),
+            t('empty.noRevenueByBikeTypeText')
         );
-        meldeVorgang(vorgang, 'Kein Umsatz nach Kundengruppe');
+        meldeVorgang(vorgang, t('empty.noRevenueByCustomerGroupTitle'));
         return;
     }
 
@@ -1238,8 +1279,8 @@ async function umsatzKundengruppeZeigen(vorgang) {
 
     const umsatzMaximum = Math.max(...zeilen.map((z) => z.umsatz));
     zeigeListe(vorgang, zeilenMitFahrtenJeKunde, [
-        { feld: 'monat',           titel: 'Monat',      formatieren: (w) => monatFormat(w) },
-        { feld: 'tarif',           titel: 'Tarif' },
+        { feld: 'monat',           titel: t('field.monat'),      formatieren: (w) => monatFormat(w) },
+        { feld: 'tarif',           titel: t('field.tarif') },
         // 'kunden' bewusst NICHT summierbar (anders als 'fahrten'/'umsatz'
         // unten): die Spalte zaehlt Kunden JE MONAT - dieselbe Person mit
         // einer laufenden Mitgliedschaft steckt in zwoelf Monatszeilen
@@ -1249,10 +1290,10 @@ async function umsatzKundengruppeZeigen(vorgang) {
         // (53,2 % statt 40,0 %, siehe anteilGewichtet() weiter oben):
         // "man summiert Durchschnitte/Bestandszaehlungen nicht, man
         // gewichtet bzw. zaehlt sie neu" (Auftrag).
-        { feld: 'kunden',          titel: 'Kunden',     formatieren: zahlFormat, klasse: zahlKlasse() },
+        { feld: 'kunden',          titel: t('field.kunden'),     formatieren: zahlFormat, klasse: zahlKlasse() },
         // summierbar: eine Fahrt gehoert zu GENAU einem Monat, additiv
         // ueber Monate - kein Doppelzaehl-Risiko wie bei 'kunden' oben.
-        { feld: 'fahrten',         titel: 'Fahrten',    formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'fahrten',         titel: t('field.fahrten'),    formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
         // Dieselbe gemeinsame Skala wie im Radtyp-Reiter (Hichert:
         // einheitliche Notation über alle Auswertungen) - hier über die
         // Zeilen DIESER Tabelle, nicht über beide Umsatztabellen
@@ -1261,16 +1302,16 @@ async function umsatzKundengruppeZeigen(vorgang) {
         // Balken/Betrag in zwei Spalten (balkenSpalten(), siehe
         // Kommentar dort und im Radtyp-Reiter oben). summierbar: derselbe
         // additive Umsatz wie im Radtyp-Reiter.
-        ...balkenSpalten('umsatz', 'Umsatz', umsatzMaximum, geldFormat, { summierbar: true }),
+        ...balkenSpalten('umsatz', t('field.umsatz'), umsatzMaximum, geldFormat, { summierbar: true }),
         {
-            feld: 'umsatz_je_kunde', titel: 'Je Kunde', klasse: zahlKlasse(),
+            feld: 'umsatz_je_kunde', titel: t('field.jeKunde'), klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(geldFormat(w))
         },
         // Siehe Kommentar bei zeilenMitFahrtenJeKunde oben. NICHT
         // summierbar - ein Verhaeltnis, derselbe Fehlertyp wie
         // umsatz_je_kunde.
         {
-            feld: 'fahrtenJeKunde', titel: 'Fahrten je Kunde', klasse: zahlKlasse(),
+            feld: 'fahrtenJeKunde', titel: t('field.fahrtenJeKunde'), klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(zahlFormatFein(w))
         }
     ], umsatzKundengruppeMaske);
@@ -1283,7 +1324,7 @@ async function umsatzKundengruppeZeigen(vorgang) {
     // Gegenprobe, die Schritt 3 des Auftrags verlangt - stimmen sie
     // nicht überein, ist eine der beiden Gruppierungen fehlerhaft.
     const gesamtUmsatz = zeilen.reduce((s, z) => s + z.umsatz, 0);
-    meldeVorgang(vorgang, `${zeilen.length} Monatszeilen, Umsatz gesamt ${geldFormat(gesamtUmsatz)}`);
+    meldeVorgang(vorgang, t('msg.revenueByCustomerGroupSummary', { monatszeilen: mengeFormat(zeilen.length, 'monatszeile'), umsatz: geldFormat(gesamtUmsatz) }));
 }
 
 // Drei Kacheln, in derselben Reihenfolge Verlauf/Schwerpunkt/auffällig
@@ -1303,21 +1344,22 @@ function umsatzKundengruppeUebersicht(zeilen) {
 
     const kacheln = [
         {
-            titel: 'Umsatz gesamt',
+            titel: t('tile.revenueTotal'),
             veraenderung: veraenderungZeile(letzteVeraenderung(letzteZwoelf)),
             wert: zahlSkaliert(geldFormat(gesamtUmsatz)),
             grafik: saeulenSparkline(letzteZwoelf.map((r) => r.wert),
-                `Monatsumsatz der letzten zwölf Monate (${monatFormat(letzteZwoelf[0].monat)} bis ` +
-                `${monatFormat(letzteZwoelf.at(-1).monat)}), dieselbe Reihe wie im Reiter "Umsatz nach Radtyp" - ` +
-                `die dunkle Säule ganz rechts ist der aktuelle Monat, ${geldFormat(letzteZwoelf.at(-1).wert)}`
+                t('hint.crossCheckChartAria', {
+                    vonMonat: monatFormat(letzteZwoelf[0].monat), bisMonat: monatFormat(letzteZwoelf.at(-1).monat),
+                    aktuellWert: geldFormat(letzteZwoelf.at(-1).wert)
+                })
             ),
-            hinweis: 'Verlauf der letzten 12 Monate - Kontrollrechnung zum Reiter "Umsatz nach Radtyp"'
+            hinweis: t('hint.last12MonthsCrossCheck')
         },
         {
-            titel: 'Größte Kundengruppe',
+            titel: t('tile.largestCustomerGroup'),
             wert: groessteGruppe,
             grafik: zellbalken(groessterUmsatz, gesamtUmsatz),
-            hinweis: `${prozentFormatFein(groessterUmsatz / gesamtUmsatz)} des Umsatzes (${geldFormat(groessterUmsatz)})`
+            hinweis: t('hint.shareOfRevenue', { prozent: prozentFormatFein(groessterUmsatz / gesamtUmsatz), geld: geldFormat(groessterUmsatz) })
         }
     ];
 
@@ -1329,10 +1371,10 @@ function umsatzKundengruppeUebersicht(zeilen) {
     // 'OHNE')"), kein selbst erfundener Sonderfall.
     if (ohneUmsatz > 0) {
         kacheln.push({
-            titel: 'Auffällig: ohne Mitgliedschaft',
+            titel: t('tile.notableNoMembership'),
             wert: prozentFormatFein(ohneUmsatz / gesamtUmsatz),
             grafik: zellbalken(ohneUmsatz, gesamtUmsatz),
-            hinweis: `${geldFormat(ohneUmsatz)} Umsatz aus Fahrten ohne aktiven Tarif`
+            hinweis: t('hint.revenueWithoutTariff', { geld: geldFormat(ohneUmsatz) })
         });
     }
 
@@ -1342,13 +1384,13 @@ function umsatzKundengruppeUebersicht(zeilen) {
 // async wegen des Drill-Downs - siehe Kommentar bei umsatzRadtypMaske().
 async function umsatzKundengruppeMaske(zeile) {
     zeigeMaske(`${zeile.tarif} · ${monatFormat(zeile.monat)}`, [
-        { name: 'tarif',           titel: 'Tarif',    wert: `${zeile.tarif} (${zeile.tarif_code})`, nurLesen: true },
-        { name: 'monat',           titel: 'Monat',    wert: monatFormat(zeile.monat), nurLesen: true },
-        { name: 'kunden',          titel: 'Kunden',   wert: zahlFormat(zeile.kunden), nurLesen: true },
-        { name: 'fahrten',         titel: 'Fahrten',  wert: zahlFormat(zeile.fahrten), nurLesen: true },
-        { name: 'umsatz',          titel: 'Umsatz',   wert: geldFormat(zeile.umsatz), nurLesen: true },
-        { name: 'umsatz_je_kunde', titel: 'Je Kunde', wert: geldFormat(zeile.umsatz_je_kunde), nurLesen: true },
-        { name: 'fahrten_je_kunde', titel: 'Fahrten je Kunde', wert: zahlFormatFein(zeile.fahrtenJeKunde), nurLesen: true }
+        { name: 'tarif',           titel: t('field.tarif'),    wert: `${zeile.tarif} (${zeile.tarif_code})`, nurLesen: true },
+        { name: 'monat',           titel: t('field.monat'),    wert: monatFormat(zeile.monat), nurLesen: true },
+        { name: 'kunden',          titel: t('field.kunden'),   wert: zahlFormat(zeile.kunden), nurLesen: true },
+        { name: 'fahrten',         titel: t('field.fahrten'),  wert: zahlFormat(zeile.fahrten), nurLesen: true },
+        { name: 'umsatz',          titel: t('field.umsatz'),   wert: geldFormat(zeile.umsatz), nurLesen: true },
+        { name: 'umsatz_je_kunde', titel: t('field.jeKunde'), wert: geldFormat(zeile.umsatz_je_kunde), nurLesen: true },
+        { name: 'fahrten_je_kunde', titel: t('field.fahrtenJeKunde'), wert: zahlFormatFein(zeile.fahrtenJeKunde), nurLesen: true }
     ], []);
     await monatsdrilldownEinfuegen(zeile.monat);
 }
@@ -1363,7 +1405,7 @@ async function kmCo2Zeigen(vorgang) {
     const fehler = letzterLadeFehler('v_wawi_km_co2');
     if (fehler) {
         zeigeUebersicht(vorgang, []);
-        meldeVorgang(vorgang, `Kilometer und CO2 liessen sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.kmCo2LoadFailed', { fehler }), 'schlecht');
         return;
     }
 
@@ -1371,12 +1413,10 @@ async function kmCo2Zeigen(vorgang) {
         zeigeUebersicht(vorgang, []);
         zeigeLeermaske(
             vorgang,
-            'Keine Kilometer- und CO2-Zeilen',
-            'Es liegt keine Monatszeile vor. Bei einem gefuellten Referenzjahr ist das ' +
-            'ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt ' +
-            'fehlender Daten.'
+            t('empty.noKmCo2Title'),
+            t('empty.noRevenueByBikeTypeText')
         );
-        meldeVorgang(vorgang, 'Keine Kilometer- und CO2-Zeilen');
+        meldeVorgang(vorgang, t('empty.noKmCo2Title'));
         return;
     }
 
@@ -1401,19 +1441,19 @@ async function kmCo2Zeigen(vorgang) {
 
     const kilometerMaximum = Math.max(...zeilen.map((z) => z.kilometer));
     zeigeListe(vorgang, zeilenMitKmJeFahrt, [
-        { feld: 'monat',    titel: 'Monat',   formatieren: (w) => monatFormat(w) },
-        { feld: 'typ_code', titel: 'Radtyp' },
+        { feld: 'monat',    titel: t('field.monat'),   formatieren: (w) => monatFormat(w) },
+        { feld: 'typ_code', titel: t('field.radtyp') },
         // summierbar: Fahrten je Monat/Radtyp, additiv - kein
         // Doppelzaehl-Risiko (jede Fahrt gehoert zu genau einer Zeile).
-        { feld: 'fahrten',  titel: 'Fahrten', formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'fahrten',  titel: t('field.fahrten'), formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
         // Balken/Betrag in zwei Spalten (balkenSpalten() in rahmen.js) -
         // siehe Kommentar dort und im Radtyp-Reiter (Gestaltungsauftrag,
         // Punkt 5). summierbar: gefahrene Kilometer sind additiv.
-        ...balkenSpalten('kilometer', 'Kilometer', kilometerMaximum, kmFormat, { summierbar: true }),
+        ...balkenSpalten('kilometer', t('field.kilometer'), kilometerMaximum, kmFormat, { summierbar: true }),
         // Siehe Kommentar bei zeilenMitKmJeFahrt oben. NICHT summierbar -
         // ein Verhaeltnis, derselbe Fehlertyp wie umsatz_je_fahrt.
         {
-            feld: 'kilometerJeFahrt', titel: 'Kilometer je Fahrt', klasse: zahlKlasse(),
+            feld: 'kilometerJeFahrt', titel: t('field.kilometerJeFahrt'), klasse: zahlKlasse(),
             formatieren: (w) => zahlSkaliert(kmFormat(w))
         },
         {
@@ -1430,7 +1470,7 @@ async function kmCo2Zeigen(vorgang) {
             // Zwischensumme hat keine ZEILE, die co2ZelleElement()
             // bräuchte (die liest zeile.anteil_geschaetzt) - sie bekommt
             // stattdessen nur die reine kg-Zahl, ohne (falschen) Anteil.
-            feld: 'co2_ersparnis_kg', titel: 'CO₂-Ersparnis',
+            feld: 'co2_ersparnis_kg', titel: t('field.co2Ersparnis'),
             formatieren: (w, z) => co2ZelleElement(z), klasse: zahlKlasse(),
             summierbar: true, summeFormatieren: (summe) => kgFormat(summe)
         }
@@ -1443,10 +1483,10 @@ async function kmCo2Zeigen(vorgang) {
     // anteil_geschaetzt-Spalte. anteilGewichtet() siehe oben.
     const gesamtCo2 = zeilen.reduce((s, z) => s + z.co2_ersparnis_kg, 0);
     const gesamtFahrten = zeilen.reduce((s, z) => s + z.fahrten, 0);
-    meldeVorgang(vorgang,
-        `${zeilen.length} Monatszeilen, ${zahlFormat(gesamtFahrten)} Fahrten, ` +
-        `CO₂-Ersparnis gesamt ${kgFormat(gesamtCo2)}, ` +
-        `davon ${prozentFormat(anteilGewichtet(zeilen))} geschätzt (fahrtgewichtet)`);
+    meldeVorgang(vorgang, t('msg.kmCo2Summary', {
+        monatszeilen: mengeFormat(zeilen.length, 'monatszeile'), fahrten: mengeFormat(gesamtFahrten, 'fahrt'),
+        co2: kgFormat(gesamtCo2), prozent: prozentFormat(anteilGewichtet(zeilen))
+    }));
 }
 
 // Dritte Kachel ist der Kern dieses Reiters, nicht schmückendes Beiwerk:
@@ -1471,35 +1511,38 @@ function kmCo2Uebersicht(zeilen) {
 
     return [
         {
-            titel: 'CO₂-Ersparnis gesamt',
+            titel: t('tile.co2SavingsTotal'),
             veraenderung: veraenderungZeile(letzteVeraenderung(co2LetzteZwoelf)),
             wert: zahlSkaliert(kgFormat(gesamtCo2)),
             grafik: saeulenSparkline(co2LetzteZwoelf.map((r) => r.wert),
-                `CO2-Ersparnis je Monat, letzte zwölf Monate (${monatFormat(co2LetzteZwoelf[0].monat)} bis ` +
-                `${monatFormat(co2LetzteZwoelf.at(-1).monat)}), von ` +
-                `${kgFormat(Math.min(...co2LetzteZwoelf.map((r) => r.wert)))} bis ` +
-                `${kgFormat(Math.max(...co2LetzteZwoelf.map((r) => r.wert)))} - die dunkle Säule ganz rechts ` +
-                `ist der aktuelle Monat, ${kgFormat(co2LetzteZwoelf.at(-1).wert)}`
+                t('hint.monthlyCo2ChartAria', {
+                    vonMonat: monatFormat(co2LetzteZwoelf[0].monat), bisMonat: monatFormat(co2LetzteZwoelf.at(-1).monat),
+                    min: kgFormat(Math.min(...co2LetzteZwoelf.map((r) => r.wert))),
+                    max: kgFormat(Math.max(...co2LetzteZwoelf.map((r) => r.wert))),
+                    aktuellWert: kgFormat(co2LetzteZwoelf.at(-1).wert)
+                })
             ),
-            hinweis: 'Verlauf der letzten 12 Monate'
+            hinweis: t('hint.last12MonthsTrend')
         },
         {
-            titel: 'Kilometer gesamt',
+            titel: t('tile.kilometersTotal'),
             veraenderung: veraenderungZeile(letzteVeraenderung(kmLetzteZwoelf)),
             wert: zahlSkaliert(kmFormat(gesamtKm)),
             grafik: saeulenSparkline(kmLetzteZwoelf.map((r) => r.wert),
-                `Gefahrene Kilometer je Monat, letzte zwölf Monate (${monatFormat(kmLetzteZwoelf[0].monat)} bis ` +
-                `${monatFormat(kmLetzteZwoelf.at(-1).monat)}) - die dunkle Säule ganz rechts ist der aktuelle ` +
-                `Monat, ${kmFormat(kmLetzteZwoelf.at(-1).wert)}`
+                t('hint.monthlyKmChartAria', {
+                    vonMonat: monatFormat(kmLetzteZwoelf[0].monat), bisMonat: monatFormat(kmLetzteZwoelf.at(-1).monat),
+                    aktuellWert: kmFormat(kmLetzteZwoelf.at(-1).wert)
+                })
             ),
-            hinweis: 'Verlauf der letzten 12 Monate'
+            hinweis: t('hint.last12MonthsTrend')
         },
         {
-            titel: 'Davon geschätzt (fahrtgewichtet)',
+            titel: t('tile.ofWhichEstimatedWeighted'),
             wert: prozentFormatFein(anteil),
             grafik: zellbalken(gesamtGeschaetzt, gesamtFahrten),
-            hinweis: `${zahlFormat(gesamtGeschaetzt)} von ${zahlFormat(gesamtFahrten)} Fahrten geschätzt - ` +
-                `NICHT ${prozentFormatFein(naiverMittelwert)}, wie das einfache Mittel der Zeilen nahelegen würde`
+            hinweis: t('hint.estimatedShareOfRides', {
+                geschaetzt: zahlFormat(gesamtGeschaetzt), fahrtenPhrase: mengeFormat(gesamtFahrten, 'fahrt'), naiv: prozentFormatFein(naiverMittelwert)
+            })
         }
     ];
 }
@@ -1507,18 +1550,19 @@ function kmCo2Uebersicht(zeilen) {
 // async wegen des Drill-Downs - siehe Kommentar bei umsatzRadtypMaske().
 async function kmCo2Maske(zeile) {
     zeigeMaske(`${zeile.typ_code} · ${monatFormat(zeile.monat)}`, [
-        { name: 'typ_code', titel: 'Radtyp',    wert: zeile.typ_code, nurLesen: true },
-        { name: 'monat',    titel: 'Monat',      wert: monatFormat(zeile.monat), nurLesen: true },
-        { name: 'fahrten',  titel: 'Fahrten',    wert: zahlFormat(zeile.fahrten), nurLesen: true },
-        { name: 'kilometer', titel: 'Kilometer', wert: kmFormat(zeile.kilometer), nurLesen: true },
-        { name: 'kilometer_je_fahrt', titel: 'Kilometer je Fahrt', wert: kmFormat(zeile.kilometerJeFahrt), nurLesen: true },
+        { name: 'typ_code', titel: t('field.radtyp'),    wert: zeile.typ_code, nurLesen: true },
+        { name: 'monat',    titel: t('field.monat'),      wert: monatFormat(zeile.monat), nurLesen: true },
+        { name: 'fahrten',  titel: t('field.fahrten'),    wert: zahlFormat(zeile.fahrten), nurLesen: true },
+        { name: 'kilometer', titel: t('field.kilometer'), wert: kmFormat(zeile.kilometer), nurLesen: true },
+        { name: 'kilometer_je_fahrt', titel: t('field.kilometerJeFahrt'), wert: kmFormat(zeile.kilometerJeFahrt), nurLesen: true },
         {
-            name: 'fahrten_geschaetzt', titel: 'Davon geschätzt',
-            wert: `${zahlFormat(zeile.fahrten_geschaetzt)} von ${zahlFormat(zeile.fahrten)} Fahrten ` +
-                  `(${prozentFormat(zeile.anteil_geschaetzt)})`,
+            name: 'fahrten_geschaetzt', titel: t('field.davonGeschaetzt'),
+            wert: t('misc.estimatedRidesDetail', {
+                geschaetzt: zahlFormat(zeile.fahrten_geschaetzt), fahrtenPhrase: mengeFormat(zeile.fahrten, 'fahrt'),
+                prozent: prozentFormat(zeile.anteil_geschaetzt) }),
             nurLesen: true
         },
-        { name: 'co2_ersparnis_kg', titel: 'CO₂-Ersparnis', wert: co2ZelleText(zeile), nurLesen: true }
+        { name: 'co2_ersparnis_kg', titel: t('field.co2Ersparnis'), wert: co2ZelleText(zeile), nurLesen: true }
     ], []);
     await monatsdrilldownEinfuegen(zeile.monat);
 }
@@ -1543,7 +1587,7 @@ async function stationsauslastungZeigen(vorgang) {
     const fehler = letzterLadeFehler('v_wawi_stationsauslastung');
     if (fehler) {
         zeigeUebersicht(vorgang, []);
-        meldeVorgang(vorgang, `Die Stationsauslastung liess sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.stationOccupancyLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
@@ -1551,18 +1595,16 @@ async function stationsauslastungZeigen(vorgang) {
         zeigeUebersicht(vorgang, []);
         zeigeLeermaske(
             vorgang,
-            'Keine Stationsauslastung',
-            'Es liegt keine Station vor. Bei zehn angelegten Stationen ist das ' +
-            'ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt ' +
-            'fehlender Daten.'
+            t('empty.noStationOccupancyTitle'),
+            t('empty.noStationOccupancyText')
         );
-        meldeVorgang(vorgang, 'Keine Stationsauslastung');
+        meldeVorgang(vorgang, t('empty.noStationOccupancyTitle'));
         return;
     }
 
     zeigeListe(vorgang, zeilen, [
-        { feld: 'stationsnummer', titel: 'Nummer' },
-        { feld: 'name',           titel: 'Station' },
+        { feld: 'stationsnummer', titel: t('field.nummer') },
+        { feld: 'name',           titel: t('field.station') },
         // summierbar bei kapazitaet/belegt/abgaenge/zugaenge/saldo: jede
         // Zeile ist eine EIGENE Station, jeder Wert eine echte Zaehlung
         // fuer genau diese Station (kein Durchschnitt, keine Zeile, die
@@ -1572,16 +1614,16 @@ async function stationsauslastungZeigen(vorgang) {
         // 'fuellstand' bleibt bewusst NICHT summierbar: das ist ein
         // Verhaeltnis (belegt/kapazitaet), Verhaeltnisse summiert man
         // nicht - derselbe Fehlertyp wie bei umsatz_je_fahrt.
-        { feld: 'kapazitaet',     titel: 'Kapazität', formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
-        { feld: 'belegt',         titel: 'Belegt',    formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
-        { feld: 'abgaenge',       titel: 'Abgänge',   formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
-        { feld: 'zugaenge',       titel: 'Zugänge',   formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'kapazitaet',     titel: t('field.kapazitaet'), formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'belegt',         titel: t('field.belegt'),    formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'abgaenge',       titel: t('field.abgaenge'),   formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
+        { feld: 'zugaenge',       titel: t('field.zugaenge'),   formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
         {
             // Farbe trägt Bedeutung: eine Station, die dauerhaft mehr
             // Raeder abgibt als sie bekommt (Saldo negativ), blutet leer
             // und muss von Hand nachgefüllt werden - keine Dekoration,
             // sondern derselbe Signalgedanke wie "frei" in stationen.js.
-            feld: 'saldo', titel: 'Saldo', summierbar: true,
+            feld: 'saldo', titel: t('field.saldo'), summierbar: true,
             formatieren: (w) => (w > 0 ? `+${zahlFormat(w)}` : zahlFormat(w)),
             klasse: (z) => zahlKlasse(z.saldo < 0 ? 'warnung' : z.saldo > 0 ? 'gut' : '')
         },
@@ -1596,7 +1638,7 @@ async function stationsauslastungZeigen(vorgang) {
         // aus demselben Grund wie in den drei Reitern davor
         // (Gestaltungsauftrag, Punkt 5). Kein summierbar hier (Vorgabe
         // false) - fuellstand ist ein Verhaeltnis, siehe Kommentar oben.
-        ...balkenSpalten('fuellstand', 'Füllstand', 1, prozentFormat, {
+        ...balkenSpalten('fuellstand', t('field.fuellstand'), 1, prozentFormat, {
             farbe: (w) => (w >= 1 ? 'var(--warnung-text)' : 'var(--marine)'),
             klasse: (z) => zahlKlasse(z.fuellstand >= 1 ? 'warnung' : '')
         })
@@ -1605,7 +1647,7 @@ async function stationsauslastungZeigen(vorgang) {
     zeigeUebersicht(vorgang, stationsauslastungUebersicht(zeilen));
 
     const leer = zeilen.filter((z) => z.belegt === 0).length;
-    meldeVorgang(vorgang, `${zeilen.length} Stationen${leer ? `, ${leer} davon ohne Rad` : ''}`);
+    meldeVorgang(vorgang, `${mengeFormat(zeilen.length, 'station')}${leer ? t('msg.stationsWithoutBikeSuffix', { n: zahlFormat(leer) }) : ''}`);
 }
 
 // Anders als die drei Reiter davor führt diese Sicht keine Monatsspalte
@@ -1640,28 +1682,32 @@ function stationsauslastungUebersicht(zeilen) {
 
     const kacheln = [
         {
-            titel: 'Stationen',
+            titel: t('tile.stations'),
             wert: zahlFormat(zeilen.length),
             // aktuellIndex: null - eine "letzte Station nach Nummer" ist
             // kein aktueller Zeitraum, die Hervorhebung waere hier
             // sinnlos (siehe Kopfkommentar bei saeulenSparkline()).
             grafik: saeulenSparkline(zeilen.map((z) => z.fuellstand),
-                `Füllstand der ${zeilen.length} Stationen, sortiert nach Stationsnummer, zwischen ` +
-                `${prozentFormat(Math.min(...zeilen.map((z) => z.fuellstand)))} und ` +
-                `${prozentFormat(Math.max(...zeilen.map((z) => z.fuellstand)))}`,
+                t('hint.fillLevelBetween', {
+                    stationenPhrase: mengeFormat(zeilen.length, 'station'),
+                    min: prozentFormat(Math.min(...zeilen.map((z) => z.fuellstand))),
+                    max: prozentFormat(Math.max(...zeilen.map((z) => z.fuellstand)))
+                }),
                 { aktuellIndex: null }
             ),
-            hinweis: 'Füllstand je Station, sortiert nach Stationsnummer'
+            hinweis: t('hint.fillLevelPerStation')
         }
     ];
 
     if (gesamtKapazitaet > 0) {
         kacheln.push({
-            titel: 'Netzauslastung gesamt',
+            titel: t('tile.networkOccupancyTotal'),
             wert: prozentFormatFein(gesamtBelegt / gesamtKapazitaet),
             grafik: zellbalken(gesamtBelegt, gesamtKapazitaet),
-            hinweis: `${zahlFormat(gesamtBelegt)} von ${zahlFormat(gesamtKapazitaet)} Stellplätzen belegt · ` +
-                `kapazitätsgewichtet, nicht der Durchschnitt der Einzelwerte (${prozentFormatFein(naiverMittelwertFuellstand)})`
+            hinweis: t('hint.networkOccupancyWeighted', {
+                belegt: zahlFormat(gesamtBelegt), kapazitaet: zahlFormat(gesamtKapazitaet),
+                naiv: prozentFormatFein(naiverMittelwertFuellstand)
+            })
         });
     }
 
@@ -1670,26 +1716,30 @@ function stationsauslastungUebersicht(zeilen) {
         wert.className = 'ton-warnung';
         wert.textContent = zahlFormat(volle.length);
         kacheln.push({
-            titel: 'Volle Stationen',
+            titel: t('tile.fullStations'),
             wert,
             // Echter Bezug im Hinweis (Gestaltungsauftrag Punkt 1: "2 von
             // 10 - dann ist es ein Anteil"), auch ohne eigene Balkengrafik.
-            hinweis: `${zahlFormat(volle.length)} von ${zahlFormat(zeilen.length)} Stationen: ` +
-                volle.map((z) => z.name).join(', ')
+            hinweis: t('hint.fullStationsList', {
+                voll: zahlFormat(volle.length), stationenPhrase: mengeFormat(zeilen.length, 'station'),
+                liste: volle.map((z) => z.name).join(', ')
+            })
         });
     }
 
     kacheln.push({
-        titel: 'Größtes Ungleichgewicht',
+        titel: t('tile.biggestImbalance'),
         wert: schwaechsteStation.name,
         grafik: saeulenSparkline(zeilen.map((z) => z.saldo),
-            `Saldo der ${zeilen.length} Stationen, sortiert nach Stationsnummer, von ` +
-            `${zahlFormat(Math.min(...zeilen.map((z) => z.saldo)))} bis ` +
-            `${zahlFormat(Math.max(...zeilen.map((z) => z.saldo)))} - am niedrigsten (rot markiert) ` +
-            `bei ${schwaechsteStation.name}`,
+            t('hint.saldoChartAria', {
+                stationenPhrase: mengeFormat(zeilen.length, 'station'),
+                min: zahlFormat(Math.min(...zeilen.map((z) => z.saldo))),
+                max: zahlFormat(Math.max(...zeilen.map((z) => z.saldo))),
+                name: schwaechsteStation.name
+            }),
             { markierIndizes: [zeilen.indexOf(schwaechsteStation)], aktuellIndex: null }
         ),
-        hinweis: `Saldo ${zahlFormat(schwaechsteStation.saldo)} - gibt mehr Räder ab, als sie bekommt`
+        hinweis: t('hint.worstStationBalance', { saldo: zahlFormat(schwaechsteStation.saldo) })
     });
 
     return kacheln;
@@ -1697,11 +1747,11 @@ function stationsauslastungUebersicht(zeilen) {
 
 function stationsauslastungMaske(zeile) {
     zeigeMaske(`${zeile.stationsnummer} · ${zeile.name}`, [
-        { name: 'kapazitaet', titel: 'Kapazität', wert: zahlFormat(zeile.kapazitaet), nurLesen: true },
-        { name: 'belegt',     titel: 'Belegt',    wert: zahlFormat(zeile.belegt), nurLesen: true },
-        { name: 'abgaenge',   titel: 'Abgänge',   wert: zahlFormat(zeile.abgaenge), nurLesen: true },
-        { name: 'zugaenge',   titel: 'Zugänge',   wert: zahlFormat(zeile.zugaenge), nurLesen: true },
-        { name: 'saldo',      titel: 'Saldo',     wert: zahlFormat(zeile.saldo), nurLesen: true },
-        { name: 'fuellstand', titel: 'Füllstand', wert: prozentFormat(zeile.fuellstand), nurLesen: true }
+        { name: 'kapazitaet', titel: t('field.kapazitaet'), wert: zahlFormat(zeile.kapazitaet), nurLesen: true },
+        { name: 'belegt',     titel: t('field.belegt'),    wert: zahlFormat(zeile.belegt), nurLesen: true },
+        { name: 'abgaenge',   titel: t('field.abgaenge'),   wert: zahlFormat(zeile.abgaenge), nurLesen: true },
+        { name: 'zugaenge',   titel: t('field.zugaenge'),   wert: zahlFormat(zeile.zugaenge), nurLesen: true },
+        { name: 'saldo',      titel: t('field.saldo'),     wert: zahlFormat(zeile.saldo), nurLesen: true },
+        { name: 'fuellstand', titel: t('field.fuellstand'), wert: prozentFormat(zeile.fuellstand), nurLesen: true }
     ], []);
 }

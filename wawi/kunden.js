@@ -27,7 +27,7 @@ bereichAnmelden({
     // Umbenennung des SCHLUESSELS haette v_wawi_kunde, alle Aufrufer und
     // tools/wawi_check.py mitgerissen, ohne dass der Auftrag danach
     // verlangt.
-    titel: 'Kundschaft',
+    titelSchluessel: 'nav.kunden',
     icon: ICON_KUNDSCHAFT,
     // Dieselben Rollen, die auch v_wawi_kunde durchlaesst (siehe
     // db/aufbau/0018_wawi_sichten.sql) - waeren sie hier weiter gefasst,
@@ -39,7 +39,7 @@ bereichAnmelden({
     // sucht - siehe suchwert()/die .or()-Abfrage weiter unten
     // (Nachname, Vorname, E-Mail, Kundennummer) und bereichWechseln() in
     // rahmen.js, das diesen Text als Platzhalter UND aria-label setzt.
-    suchePlatzhalter: 'Kundschaft: Name, E-Mail, Kundennummer'
+    suchePlatzhalterSchluessel: 'nav.kundenSuche'
 });
 
 // ===== Suche =====
@@ -126,7 +126,7 @@ function suchwert(text) {
 let kundenFilterStatus = new Set();
 
 function kundenStatusText(status) {
-    return { aktiv: 'Aktiv', gesperrt: 'Gesperrt', geschlossen: 'Geschlossen' }[status] || status;
+    return statusAnzeige(status, true);
 }
 
 // ===== Datumsanzeige (Gestaltungsauftrag, Punkt 1) =====
@@ -148,8 +148,7 @@ function kundenStatusText(status) {
 // NICHT nach rahmen.js gezogen: bislang der einzige Verbraucher, siehe
 // dieselbe Zurueckhaltung bei der Suche weiter oben in dieser Datei.
 function kundenDatumFormat(zeitstempel) {
-    return new Date(zeitstempel).toLocaleDateString('de-DE',
-        { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return datumFormat(zeitstempel, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 // "Letzte Ausleihe am" - siehe der ausfuehrliche Kommentar an der Sicht
@@ -167,9 +166,9 @@ function kundenDatumFormat(zeitstempel) {
 //     noch laeuft - ein Datum ohne diesen Zusatz sae'he wie eine
 //     abgeschlossene Fahrt aus, waere es aber nicht.
 function kundenLetzteAusleiheFormat(zeitstempel, zeile) {
-    if (!zeitstempel) return 'Noch keine Ausleihe';
+    if (!zeitstempel) return t('misc.noRentalYet');
     const datum = kundenDatumFormat(zeitstempel);
-    return zeile.letzte_ausleihe_laeuft ? `${datum} · läuft noch` : datum;
+    return zeile.letzte_ausleihe_laeuft ? t('misc.stillRunning', { datum }) : datum;
 }
 
 async function kundenAufbauen(suchtext) {
@@ -203,7 +202,7 @@ async function kundenAufbauen(suchtext) {
     // verlangt einen selbst angelegten Testkunden, und ohne einen
     // Anlegen-Weg IN der Oberflaeche waere das keine Handprobe der
     // Oberflaeche mehr, sondern eine der Datenbank.
-    zeigeWerkzeugleiste(darfRolle('kundenservice'), 'Neuen Kunden anlegen', kundeAnlegenMaske);
+    zeigeWerkzeugleiste(darfRolle('kundenservice'), t('button.newCustomer'), kundeAnlegenMaske);
 
     // Vier Anfragen parallel: die eigentliche (Such- und filter-
     // abhaengige, auf 200 begrenzte) Arbeitsliste, UND drei reine
@@ -248,7 +247,7 @@ async function kundenAufbauen(suchtext) {
         // (siehe Kommentar bei neuerVorgang() oben und in rahmen.js)
         // meldet auch seinen eigenen Ladefehler nicht mehr.
         zeigeUebersicht(vorgang, []);
-        meldeVorgang(vorgang, `Die Kunden liessen sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.customersLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
@@ -279,11 +278,11 @@ async function kundenAufbauen(suchtext) {
             // Rueckweg zu "Alle" ist jetzt ein eigener Knopf im
             // Mehrfachauswahl-Popup, kein Listeneintrag (siehe
             // mehrfachauswahlFeld() in rahmen.js).
-            name: 'status', titel: 'Status', wert: kundenFilterStatus,
+            name: 'status', titel: t('field.status'), wert: kundenFilterStatus,
             optionen: [
-                { wert: 'aktiv', text: 'Aktiv' },
-                { wert: 'gesperrt', text: 'Gesperrt' },
-                { wert: 'geschlossen', text: 'Geschlossen' }
+                { wert: 'aktiv', text: statusAnzeige('aktiv', true) },
+                { wert: 'gesperrt', text: statusAnzeige('gesperrt', true) },
+                { wert: 'geschlossen', text: statusAnzeige('geschlossen', true) }
             ],
             beiAenderung: (neu) => { kundenFilterStatus = neu; kundenAufbauen(); }
         }
@@ -299,24 +298,24 @@ async function kundenAufbauen(suchtext) {
         // Kopfleiste, fuer denselben Effekt.
         zeigeLeermaske(
             vorgang,
-            'Keine Kunden mit diesem Filter',
+            t('empty.noCustomersFilterTitle'),
             suchtext
-                ? `Kein Kunde zu „${suchtext}“ erfüllt zusätzlich die gewählte Einschränkung.`
-                : 'Kein Kunde erfüllt die gewählte Einschränkung.',
+                ? t('empty.noCustomersFilterTextSearch', { suchtext })
+                : t('empty.noCustomersFilterText'),
             kundenFilterStatus.size > 0
-                ? { titel: 'Statusfilter zurücksetzen', ausfuehren: async () => {
+                ? { titel: t('empty.statusFilterReset'), ausfuehren: async () => {
                       kundenFilterStatus = new Set(); await kundenAufbauen();
                   } }
                 : null
         );
-        meldeVorgang(vorgang, 'Keine Kunden mit diesem Filter');
+        meldeVorgang(vorgang, t('empty.noCustomersFilterTitle'));
         return;
     }
 
     zeigeListe(vorgang, kunden, [
-        { feld: 'kundennummer', titel: 'Nummer' },
-        { feld: 'nachname',     titel: 'Nachname' },
-        { feld: 'vorname',      titel: 'Vorname' },
+        { feld: 'kundennummer', titel: t('field.nummer') },
+        { feld: 'nachname',     titel: t('field.nachname') },
+        { feld: 'vorname',      titel: t('field.vorname') },
         // Nur EIN Parameter (die ganze Zeile), nicht (s) wie im
         // Auftragstext: zeigeListe in rahmen.js ruft eine Funktions-
         // Spalte als spalte.klasse(zeile) auf, nicht spalte.klasse(wert).
@@ -333,9 +332,10 @@ async function kundenAufbauen(suchtext) {
         // "gesperrt", Spaltenkopf "aktiv" -> immer null Zeilen unter den
         // geladenen 200), siehe der lange Kommentar bei zeigeListe() in
         // rahmen.js.
-        { feld: 'status',       titel: 'Status', filterbar: false,
+        { feld: 'status',       titel: t('field.status'), filterbar: false,
+          formatieren: (wert) => statusAnzeige(wert),
           klasse: (z) => (z.status === 'gesperrt' ? 'warnung' : z.status === 'geschlossen' ? 'leise' : '') },
-        { feld: 'tarif_code',   titel: 'Tarif', formatieren: (t) => t || '—' },
+        { feld: 'tarif_code',   titel: t('field.tarif'), formatieren: (wert) => wert || '—' },
         // GESTALTUNGSAUFTRAG, PUNKT 1, woertlich: "Bei Kunde vermisse ich
         // das Attribut 'Kunde seit', 'Letzte Ausleihe am', muss beides in
         // der Tabelle angezeigt werden." Zwei neue Datumsspalten dazu, statt
@@ -364,9 +364,9 @@ async function kundenAufbauen(suchtext) {
         // die Spalte trotzdem (Vorgabewert): ein ISO-Zeitstempel sortiert
         // als Text schon richtig chronologisch, siehe der Kommentar bei
         // istSortierbar()/spaltenWert() in rahmen.js.
-        { feld: 'registriert_am', titel: 'Kunde seit', filterbar: false,
+        { feld: 'registriert_am', titel: t('field.kundeSeit'), filterbar: false,
           formatieren: (wert) => kundenDatumFormat(wert) },
-        { feld: 'letzte_ausleihe_am', titel: 'Letzte Ausleihe', filterbar: false,
+        { feld: 'letzte_ausleihe_am', titel: t('field.letzteAusleihe'), filterbar: false,
           formatieren: (wert, zeile) => kundenLetzteAusleiheFormat(wert, zeile) }
     ], kundeMaske, kundeZeilenAktionen);
 
@@ -390,14 +390,14 @@ async function kundenAufbauen(suchtext) {
     // tatsaechlich weiss: wie viele der (ggf. eingegrenzten) Treffer
     // geladen sind.
     const einschraenkung = [
-        suchtext ? `zu „${suchtext}“` : null,
+        suchtext ? t('msg.searchFor', { suchtext }) : null,
         kundenFilterStatus.size > 0
-            ? `Status ${[...kundenFilterStatus].map(kundenStatusText).join(', ')}` : null
+            ? t('msg.statusList', { liste: [...kundenFilterStatus].map(kundenStatusText).join(', ') }) : null
     ].filter(Boolean).join(', ');
     const zusatz = einschraenkung ? ` (${einschraenkung})` : '';
     meldeVorgang(vorgang, kunden.length === 200
-        ? `200 von mehr Kunden${zusatz} — bitte weiter eingrenzen`
-        : `${kunden.length} Kunden${zusatz}`);
+        ? t('msg.customersCapped', { zusatz })
+        : `${mengeFormat(kunden.length, 'kunde')}${zusatz}`);
 }
 
 // ===== Uebersicht (Gestaltungsauftrag, Punkt 1) =====
@@ -408,10 +408,10 @@ async function kundenAufbauen(suchtext) {
 // (daten.js), nicht aus der geladenen (hoechstens 200 Zeilen tragenden)
 // Arbeitsliste - siehe Kommentar an der Aufrufstelle in kundenAufbauen().
 function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleUmsaetze) {
-    const anzeige = (n) => (n === null ? '—' : n.toLocaleString('de-DE'));
+    const anzeige = (n) => (n === null ? '—' : zahlFormat(n));
 
     const kacheln = [
-        { titel: 'Kunden gesamt', wert: zahlSkaliert(anzeige(gesamtAnzahl)) }
+        { titel: t('tile.customersTotal'), wert: zahlSkaliert(anzeige(gesamtAnzahl)) }
     ];
 
     if (gesperrtAnzahl !== null) {
@@ -419,25 +419,25 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleU
         wert.className = 'ton-warnung';
         wert.append(zahlSkaliert(anzeige(gesperrtAnzahl)));
         kacheln.push({
-            titel: 'Gesperrt',
+            titel: t('tile.blocked'),
             wert,
             grafik: gesamtAnzahl ? zellbalken(gesperrtAnzahl, gesamtAnzahl, null, { farbe: 'var(--warnung-text)' }) : undefined,
             // Echter Bezug (Gestaltungsauftrag Punkt 1: "2 von 10 - dann
             // ist es ein Anteil") direkt im Text.
             hinweis: gesamtAnzahl
-                ? `${gesperrtAnzahl} von ${gesamtAnzahl} Kunden - es gibt derzeit keine Funktion, die eine Sperrung aufhebt`
-                : 'Es gibt derzeit keine Funktion, die eine Sperrung aufhebt'
+                ? t('hint.blockedShare', { n: zahlFormat(gesperrtAnzahl), kundenPhrase: mengeFormat(gesamtAnzahl, 'kunde') })
+                : t('hint.noUnblockFunction')
         });
     }
 
     if (ohneAdresseAnzahl !== null) {
         kacheln.push({
-            titel: 'Ohne Adresse',
+            titel: t('tile.noAddress'),
             wert: zahlSkaliert(anzeige(ohneAdresseAnzahl)),
             grafik: gesamtAnzahl ? zellbalken(ohneAdresseAnzahl, gesamtAnzahl) : undefined,
             hinweis: gesamtAnzahl
-                ? `${ohneAdresseAnzahl} von ${gesamtAnzahl} Kunden - lässt sich in der Maske nachtragen`
-                : 'Lässt sich in der Maske nachtragen'
+                ? t('hint.noAddressShare', { n: zahlFormat(ohneAdresseAnzahl), kundenPhrase: mengeFormat(gesamtAnzahl, 'kunde') })
+                : t('hint.addLaterInForm')
         });
     }
 
@@ -498,8 +498,7 @@ function kundenUebersicht(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleU
 function umsatzKonzentration(alleUmsaetze) {
     if (!alleUmsaetze || alleUmsaetze.length === 0) return null;
 
-    const geldFormat = (betrag) => Number(betrag).toLocaleString('de-DE',
-        { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const geldFormat = (betrag) => geldFormatZentral(betrag);
 
     const werteAbsteigend = alleUmsaetze.map((z) => Number(z.umsatz_brutto) || 0).sort((a, b) => b - a);
     const n = werteAbsteigend.length;
@@ -511,15 +510,17 @@ function umsatzKonzentration(alleUmsaetze) {
     // Werte) ist davon unabhaengig derselbe wie bei aufsteigender Sortierung.
     const median = n % 2 === 1 ? werteAbsteigend[mitteIndex] : (werteAbsteigend[mitteIndex] + werteAbsteigend[mitteIndex + 1]) / 2;
     const mittel = gesamt / n;
-    const anteilProzent = gesamt ? (top10Summe / gesamt * 100).toLocaleString('de-DE', { maximumFractionDigits: 1 }) : '0';
+    const anteilProzent = gesamt ? zahlFormat(top10Summe / gesamt * 100, { maximumFractionDigits: 1 }) : '0';
 
     return {
-        titel: 'Rechnungsvolumen: obere 10 %',
+        titel: t('tile.invoiceTop10'),
         wert: `${anteilProzent} %`,
         grafik: gesamt ? zellbalken(top10Summe, gesamt) : undefined,
-        hinweis: `${zehntel} von ${n} Kunden vereinen ${geldFormat(top10Summe)} von ${geldFormat(gesamt)} ` +
-            `Rechnungsvolumen (inkl. USt., ≠ Umsatz in Auswertungen) · Median ${geldFormat(median)}, ` +
-            `Mittel ${geldFormat(mittel)} je Kunde`
+        hinweis: t('hint.top10Detail', {
+            zehntel: zahlFormat(zehntel), kundenPhrase: mengeFormat(n, 'kunde'),
+            top10: geldFormat(top10Summe), gesamt: geldFormat(gesamt),
+            median: geldFormat(median), mittel: geldFormat(mittel)
+        })
     };
 }
 
@@ -547,7 +548,7 @@ const KUNDE_ICONS = {
 function kundeZeilenAktionen(kunde) {
     if (!darfRolle('kundenservice')) return [];
     return [{
-        titel: 'Auskunft nach Art. 15',
+        titel: t('button.disclosureArt15'),
         svg: KUNDE_ICONS.auskunft,
         ausfuehren: () => auskunftZeigen(kunde)
     }];
@@ -585,7 +586,7 @@ function kundeMaske(kunde) {
 
     if (darfRolle('kundenservice')) {
         knoepfe.push({
-            titel: 'Speichern',
+            titel: t('button.save'),
             art: 'haupt',
             ausfuehren: async () => {
                 const feld = (name) => document.getElementById(`feld-maske-${name}`).value.trim();
@@ -593,7 +594,7 @@ function kundeMaske(kunde) {
                 const vorname = feld('vorname');
                 const nachname = feld('nachname');
                 if (!vorname || !nachname) {
-                    melde('Vorname und Nachname werden benoetigt.', 'schlecht');
+                    melde(t('msg.firstLastNameRequired'), 'schlecht');
                     return;
                 }
 
@@ -617,7 +618,7 @@ function kundeMaske(kunde) {
                     p_plz: feld('plz') || null,
                     p_ort: feld('ort') || null
                 });
-                melde(`${vorname} ${nachname} gespeichert.`, 'gut');
+                melde(t('msg.customerSaved', { vorname, nachname }), 'gut');
                 await kundenAufbauen();
             }
         });
@@ -625,7 +626,7 @@ function kundeMaske(kunde) {
 
     if (darfRolle('kundenservice') && kunde.status === 'aktiv') {
         knoepfe.push({
-            titel: 'Sperren',
+            titel: t('button.block'),
             // 'gefaehrlich' statt des 'neben' aus dem Auftragstext, und
             // mit einem Bestaetigungsdialog, den der Auftragstext an
             // dieser Stelle nicht vorsieht: es gibt derzeit KEINE
@@ -638,44 +639,41 @@ function kundeMaske(kunde) {
             // (Endzustand ohne Weg zurueck).
             art: 'gefaehrlich',
             ausfuehren: async () => {
-                const ok = await bestaetige(
-                    `${kunde.vorname} ${kunde.nachname} sperren? Es gibt derzeit keine Funktion, ` +
-                    `die eine Sperrung wieder aufhebt - das ist eine bekannte Luecke dieser ` +
-                    `Warenwirtschaft, keine Bequemlichkeit dieses Dialogs.`);
+                const ok = await bestaetige(t('msg.confirmBlockCustomer', { vorname: kunde.vorname, nachname: kunde.nachname }));
                 if (!ok) return;
-                const grund = await frageNachGrund('Grund der Sperrung');
+                const grund = await frageNachGrund(t('button.blockReason'));
                 if (grund === null) return;
                 await rufeAuf('api_kunde_sperren', { p_kunde_id: kunde.kunde_id, p_grund: grund });
-                melde(`${kunde.vorname} ${kunde.nachname} gesperrt.`, 'gut');
+                melde(t('msg.customerBlocked', { vorname: kunde.vorname, nachname: kunde.nachname }), 'gut');
                 await kundenAufbauen();
             }
         });
     }
 
     if (darfRolle('kundenservice')) {
-        knoepfe.push({ titel: 'Auskunft nach Art. 15', art: 'neben', ausfuehren: () => auskunftZeigen(kunde) });
+        knoepfe.push({ titel: t('button.disclosureArt15'), art: 'neben', ausfuehren: () => auskunftZeigen(kunde) });
     }
 
     if (darfRolle('kundenservice') && kunde.status !== 'geschlossen') {
-        knoepfe.push({ titel: 'Löschung nach Art. 17', art: 'gefaehrlich',
+        knoepfe.push({ titel: t('button.deletionArt17'), art: 'gefaehrlich',
                        ausfuehren: () => anonymisieren(kunde) });
     }
 
     zeigeMaske(`${kunde.kundennummer} · ${kunde.vorname} ${kunde.nachname}`, [
-        { name: 'anrede',    titel: 'Anrede',    wert: kunde.anrede || '',    typ: 'text' },
-        { name: 'vorname',   titel: 'Vorname',   wert: kunde.vorname,          typ: 'text' },
-        { name: 'nachname',  titel: 'Nachname',  wert: kunde.nachname,         typ: 'text' },
+        { name: 'anrede',    titel: t('field.anrede'),    wert: kunde.anrede || '',    typ: 'text' },
+        { name: 'vorname',   titel: t('field.vorname'),   wert: kunde.vorname,          typ: 'text' },
+        { name: 'nachname',  titel: t('field.nachname'),  wert: kunde.nachname,         typ: 'text' },
         // WICHTIG 7: der Status hatte bisher kein eigenes Feld, nur die
         // mittelbare Zeilenfarbe in der Liste (siehe klasse-Funktion in
         // kundenAufbauen()) und die Auswahl der Knoepfe darueber. Wer
         // eine Zeile oeffnet, soll den Status direkt lesen koennen, nicht
         // aus der Abwesenheit eines Knopfes erschliessen muessen - dieselbe
         // Machart wie die uebrigen nur lesenden Feldern (typ, tarif, ...).
-        { name: 'status',    titel: 'Status',    wert: kunde.status,          nurLesen: true },
+        { name: 'status',    titel: t('field.status'),    wert: statusAnzeige(kunde.status),          nurLesen: true },
         // E-Mail nur lesend: sie ist der Anmeldename. Sie zu aendern ist
         // eine Kontoaenderung und gehoert dem Kunden, nicht uns.
-        { name: 'email',     titel: 'E-Mail',    wert: kunde.email,            nurLesen: true },
-        { name: 'telefon',   titel: 'Telefon',   wert: kunde.telefon || '',    typ: 'tel' },
+        { name: 'email',     titel: t('field.email'),    wert: kunde.email,            nurLesen: true },
+        { name: 'telefon',   titel: t('field.telefon'),   wert: kunde.telefon || '',    typ: 'tel' },
         // WARUM GIBT ES KEINE ADRESSE BEI DEN KUNDEN? (Auftraggeber-Frage,
         // Gestaltungsauftrag Punkt 4): 113 von 1014 Kunden haben tatsaechlich
         // keine hinterlegt (kundenUebersicht() zeigt die Zahl bereits im
@@ -686,27 +684,26 @@ function kundeMaske(kunde) {
         // Adresse hat, sieht seine gefuellten Felder, keine ueberfluessige
         // Erklaerung obendrueber.
         ...(!kunde.strasse ? [{
-            name: 'adresse_hinweis', titel: 'Adresse', typ: 'mehrzeilig', nurLesen: true,
-            wert: 'Für diese Person ist keine Adresse hinterlegt - das ist kein Ladefehler. ' +
-                  'Die Felder darunter lassen sich ausfüllen, um eine nachzutragen.'
+            name: 'adresse_hinweis', titel: t('field.anschrift'), typ: 'mehrzeilig', nurLesen: true,
+            wert: t('misc.noAddressOnFile')
         }] : []),
-        { name: 'strasse',   titel: 'Straße',    wert: kunde.strasse || '',    typ: 'text' },
-        { name: 'hausnummer', titel: 'Nr.',      wert: kunde.hausnummer || '', typ: 'text' },
-        { name: 'plz',       titel: 'PLZ',       wert: kunde.plz || '',        typ: 'text' },
-        { name: 'ort',       titel: 'Ort',       wert: kunde.ort || '',        typ: 'text' },
-        { name: 'tarif',     titel: 'Tarif',     wert: kunde.tarif || 'ohne Mitgliedschaft', nurLesen: true },
+        { name: 'strasse',   titel: t('field.strasse'),    wert: kunde.strasse || '',    typ: 'text' },
+        { name: 'hausnummer', titel: t('field.hausnummer'), wert: kunde.hausnummer || '', typ: 'text' },
+        { name: 'plz',       titel: t('field.plz'),       wert: kunde.plz || '',        typ: 'text' },
+        { name: 'ort',       titel: t('field.ort'),       wert: kunde.ort || '',        typ: 'text' },
+        { name: 'tarif',     titel: t('field.tarif'),     wert: kunde.tarif || t('misc.noMembership'), nurLesen: true },
         // Dieselben zwei Angaben wie in der Liste (siehe kundenAufbauen()
         // oben) - hier zusaetzlich, weil die Detailmaske schon jedes
         // andere Stammdatum zeigt und "Kunde seit" sonst nur in der
         // Tabelle staende, nicht in der Maske, die man beim Nachschlagen
         // eines EINZELNEN Kunden tatsaechlich oeffnet.
-        { name: 'kunde_seit', titel: 'Kunde seit', wert: kundenDatumFormat(kunde.registriert_am),
+        { name: 'kunde_seit', titel: t('field.kundeSeit'), wert: kundenDatumFormat(kunde.registriert_am),
           nurLesen: true },
-        { name: 'letzte_ausleihe', titel: 'Letzte Ausleihe',
+        { name: 'letzte_ausleihe', titel: t('field.letzteAusleihe'),
           wert: kundenLetzteAusleiheFormat(kunde.letzte_ausleihe_am, kunde), nurLesen: true },
-        { name: 'fahrten',   titel: 'Fahrten',   wert: kunde.fahrten_gesamt,   nurLesen: true },
-        { name: 'umsatz',    titel: 'Umsatz',    wert: `${kunde.umsatz_brutto} €`, nurLesen: true },
-        { name: 'offen',     titel: 'Offen',     wert: `${kunde.offener_betrag} €`, nurLesen: true },
+        { name: 'fahrten',   titel: t('field.fahrten'),   wert: zahlFormat(kunde.fahrten_gesamt),   nurLesen: true },
+        { name: 'umsatz',    titel: t('field.umsatz'),    wert: geldFormatZentral(kunde.umsatz_brutto), nurLesen: true },
+        { name: 'offen',     titel: t('field.offen'),     wert: geldFormatZentral(kunde.offener_betrag), nurLesen: true },
         // Schritt 3 des Auftrags verlangt, dass die Protokollierung VOR
         // dem Knopf gesagt wird, nicht danach. zeigeMaske() aus
         // rahmen.js kennt keinen eigenen Baustein fuer erklaerenden Text
@@ -717,9 +714,8 @@ function kundeMaske(kunde) {
         // statt eines neuen rahmen.js-Bausteins: es steht im selben
         // Formular oberhalb der Knopfleiste und damit zwingend vor jedem
         // Klick auf "Auskunft nach Art. 15".
-        { name: 'auskunft_hinweis', titel: 'Hinweis', typ: 'mehrzeilig', nurLesen: true,
-          wert: 'Der Abruf der Auskunft nach Art. 15 wird protokolliert (GR19): ' +
-                'wer sie einsieht, hinterlaesst eine Spur im Aenderungsprotokoll.' }
+        { name: 'auskunft_hinweis', titel: t('field.hinweis'), typ: 'mehrzeilig', nurLesen: true,
+          wert: t('misc.disclosureLoggedNote') }
     ], knoepfe);
 }
 
@@ -751,21 +747,21 @@ async function auskunftZeigen(kunde) {
     dialog.style.overflowY = 'auto';
 
     const ueberschrift = document.createElement('h2');
-    ueberschrift.textContent = `Auskunft nach Art. 15 DSGVO · ${kunde.vorname} ${kunde.nachname}`;
+    ueberschrift.textContent = t('auskunft.title', { name: `${kunde.vorname} ${kunde.nachname}` });
     dialog.append(ueberschrift);
 
     // Reihenfolge wie im Auftragstext (Schritt 3) benannt: stammdaten,
     // mitgliedschaften, fahrten (mit Koordinaten), rechnungen,
     // zahlungen, schadensmeldungen, freiminuten, protokoll.
     const abschnitte = [
-        ['Stammdaten', auskunft.stammdaten],
-        ['Mitgliedschaften', auskunft.mitgliedschaften],
-        ['Fahrten', auskunft.fahrten],
-        ['Rechnungen', auskunft.rechnungen],
-        ['Zahlungen', auskunft.zahlungen],
-        ['Schadensmeldungen', auskunft.schadensmeldungen],
-        ['Freiminuten', auskunft.freiminuten],
-        ['Protokoll', auskunft.protokoll]
+        [t('auskunft.stammdaten'), auskunft.stammdaten],
+        [t('auskunft.mitgliedschaften'), auskunft.mitgliedschaften],
+        [t('auskunft.fahrten'), auskunft.fahrten],
+        [t('auskunft.rechnungen'), auskunft.rechnungen],
+        [t('auskunft.zahlungen'), auskunft.zahlungen],
+        [t('auskunft.schadensmeldungen'), auskunft.schadensmeldungen],
+        [t('auskunft.freiminuten'), auskunft.freiminuten],
+        [t('auskunft.protokoll'), auskunft.protokoll]
     ];
     for (const [titel, inhalt] of abschnitte) {
         const h3 = document.createElement('h3');
@@ -792,7 +788,7 @@ async function auskunftZeigen(kunde) {
 
     const herunterladenKnopf = document.createElement('button');
     herunterladenKnopf.type = 'button';
-    herunterladenKnopf.textContent = 'Als JSON herunterladen';
+    herunterladenKnopf.textContent = t('button.downloadJson');
     herunterladenKnopf.className = 'knopf-neben';
     herunterladenKnopf.addEventListener('click', () => {
         const blob = new Blob([JSON.stringify(auskunft, null, 2)], { type: 'application/json' });
@@ -806,7 +802,7 @@ async function auskunftZeigen(kunde) {
 
     const schliessenKnopf = document.createElement('button');
     schliessenKnopf.type = 'button';
-    schliessenKnopf.textContent = 'Schließen';
+    schliessenKnopf.textContent = t('button.close');
     schliessenKnopf.className = 'knopf-haupt';
     schliessenKnopf.addEventListener('click', () => dialog.close());
 
@@ -828,8 +824,7 @@ async function anonymisieren(kunde) {
     // Fehlermeldung - derselbe Grundsatz wie bei "Stilllegen" in
     // stationen.js (dortige Vorabpruefung auf station.belegt).
     if (kunde.fahrten_offen > 0) {
-        melde(`${kunde.vorname} ${kunde.nachname} hat noch eine laufende Fahrt. ` +
-              `Erst die Rueckgabe abwarten.`, 'warnung');
+        melde(t('art17.runningRideBlocks', { name: `${kunde.vorname} ${kunde.nachname}` }), 'warnung');
         return;
     }
 
@@ -844,25 +839,22 @@ async function anonymisieren(kunde) {
     // Der Dialog muss das sagen. Wer hier klickt, soll wissen, was
     // bleibt - nicht nur, dass etwas verschwindet.
     const ok = await bestaetige(
-        `Löschung nach Art. 17 DSGVO für ${kunde.vorname} ${kunde.nachname}?\n\n` +
-        `WAS VERSCHWINDET: Name, E-Mail, Telefonnummer, Geburtsdatum, Anschrift, ` +
-        `Zahlungsmittel und die Verknüpfung zum Anmeldekonto. Auch im Änderungsprotokoll ` +
-        `werden die alten Werte unkenntlich gemacht.\n\n` +
-        `WAS BLEIBT: die ${kunde.fahrten_gesamt} Fahrten und alle Rechnungen, in voller Höhe. ` +
-        `Das Steuerrecht verlangt zehn Jahre Aufbewahrung, und die DSGVO nimmt genau ` +
-        `diese Pflicht von der Löschung aus.\n\n` +
-        `WAS DAS NICHT LEISTET: Die Fahrten tragen Zeiten und Orte. Wer regelmäßig zur ` +
-        `selben Zeit vom selben Punkt fährt, bleibt darüber auffindbar.\n\n` +
-        `Der Vorgang ist nicht rückgängig zu machen.`,
-        'LOESCHEN'   // muss eingetippt werden
+        [
+            t('art17.confirmHeader', { name: `${kunde.vorname} ${kunde.nachname}` }),
+            t('art17.whatDisappears'),
+            t('art17.whatRemains', { phrase: mengeFormat(kunde.fahrten_gesamt, 'fahrt') }),
+            t('art17.whatThisDoesNotAchieve'),
+            t('art17.irreversible')
+        ].join('\n\n'),
+        t('art17.confirmWord')   // muss eingetippt werden - siehe Bericht: bewusst unuebersetzt in jeder Sprache
     );
     if (!ok) return;
 
-    const grund = await frageNachGrund('Grund (etwa: Antrag der betroffenen Person vom …)');
-    if (!grund) { melde('Abgebrochen: ohne Grund keine Löschung.', 'warnung'); return; }
+    const grund = await frageNachGrund(t('art17.reasonPrompt'));
+    if (!grund) { melde(t('art17.abortedNoReason'), 'warnung'); return; }
 
     await rufeAuf('api_kunde_anonymisieren', { p_kunde_id: kunde.kunde_id, p_grund: grund });
-    melde(`Kunde ${kunde.kundennummer} anonymisiert. Rechnungen und Fahrten bleiben erhalten.`, 'gut');
+    melde(t('art17.doneMessage', { nummer: kunde.kundennummer }), 'gut');
     await kundenAufbauen();
 }
 
@@ -878,14 +870,14 @@ async function anonymisieren(kunde) {
 // es einen Weg in der Oberflaeche selbst, nicht nur in der Datenbank.
 
 function kundeAnlegenMaske() {
-    zeigeMaske('Neuen Kunden anlegen', [
-        { name: 'vorname',  titel: 'Vorname',  wert: '' },
-        { name: 'nachname', titel: 'Nachname', wert: '' },
-        { name: 'email',    titel: 'E-Mail',   wert: '', typ: 'email' },
-        { name: 'telefon',  titel: 'Telefon',  wert: '', typ: 'tel' }
+    zeigeMaske(t('button.newCustomer'), [
+        { name: 'vorname',  titel: t('field.vorname'),  wert: '' },
+        { name: 'nachname', titel: t('field.nachname'), wert: '' },
+        { name: 'email',    titel: t('field.email'),   wert: '', typ: 'email' },
+        { name: 'telefon',  titel: t('field.telefon'),  wert: '', typ: 'tel' }
     ], [
         {
-            titel: 'Anlegen',
+            titel: t('button.create'),
             // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
             // legt einen neuen Kunden an, siehe Begruendung bei der
             // art-Erlaeuterung von zeigeMaske() in rahmen.js. Das
@@ -899,7 +891,7 @@ function kundeAnlegenMaske() {
                 const nachname = feld('nachname');
                 const email = feld('email');
                 if (!vorname || !nachname || !email) {
-                    melde('Vorname, Nachname und E-Mail werden benoetigt.', 'schlecht');
+                    melde(t('msg.nameEmailRequired'), 'schlecht');
                     return;
                 }
 
@@ -909,7 +901,7 @@ function kundeAnlegenMaske() {
                     p_email: email,
                     p_telefon: feld('telefon') || null
                 });
-                melde(`Kunde ${vorname} ${nachname} angelegt.`, 'gut');
+                melde(t('msg.customerCreated', { vorname, nachname }), 'gut');
                 await kundenAufbauen();
             }
         }

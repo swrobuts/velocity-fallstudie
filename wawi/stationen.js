@@ -42,7 +42,7 @@ const ICON_STATIONEN = '<svg viewBox="0 0 24 24"><path d="M12 21c-4.2-4.6-6.5-8.
 
 bereichAnmelden({
     schluessel: 'stationen',
-    titel: 'Stationen',
+    titelSchluessel: 'nav.stationen',
     icon: ICON_STATIONEN,
     // Dieselben Rollen, die auch v_wawi_station durchlaesst (siehe
     // db/aufbau/0018_wawi_sichten.sql) - waeren sie hier weiter gefasst,
@@ -99,11 +99,11 @@ async function stationenAufbauen() {
     // wie auf der Karte derselbe sinnvolle Einstieg, keiner der beiden
     // Bloecke hat ein eigenes "Anlegen"-Gegenstueck, das kollidieren
     // koennte.
-    zeigeWerkzeugleiste(darfRolle('disposition'), 'Neue Station anlegen', stationAnlegenMaske);
+    zeigeWerkzeugleiste(darfRolle('disposition'), t('button.newStation'), stationAnlegenMaske);
 
     zeigeUnterreiter(vorgang, [
-        { schluessel: 'liste', titel: 'Liste' },
-        { schluessel: 'karte', titel: 'Landkarte' }
+        { schluessel: 'liste', titel: t('button.list') },
+        { schluessel: 'karte', titel: t('button.map') }
     ], stationenUnterbereich, async (gewaehlt) => {
         stationenUnterbereich = gewaehlt;
         maskeVerwerfen();
@@ -138,7 +138,7 @@ async function stationenAufbauen() {
         // (siehe Kommentar dort) meldet auch seinen eigenen Ladefehler
         // nicht mehr.
         zeigeUebersicht(vorgang, []);
-        meldeVorgang(vorgang, `Die Stationen liessen sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.stationsLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
@@ -167,10 +167,10 @@ async function stationenAufbauen() {
 
     if (stationenUnterbereich === 'liste') {
         zeigeListe(vorgang, stationen, [
-            { feld: 'stationsnummer', titel: 'Nummer' },
-            { feld: 'name',           titel: 'Station' },
-            { feld: 'ort',            titel: 'Ort' },
-            { feld: 'belegt',         titel: 'Belegt', formatieren: (b, z) => `${b} / ${z.kapazitaet}` },
+            { feld: 'stationsnummer', titel: t('field.nummer') },
+            { feld: 'name',           titel: t('field.station') },
+            { feld: 'ort',            titel: t('field.ort') },
+            { feld: 'belegt',         titel: t('field.belegt'), formatieren: (b, z) => `${zahlFormat(b)} / ${zahlFormat(z.kapazitaet)}` },
             // Nur EIN Parameter (die ganze Zeile), nicht (f) wie im
             // Auftragstext: zeigeListe in rahmen.js ruft eine Funktions-
             // Spalte als spalte.klasse(zeile) auf, nicht spalte.klasse(wert).
@@ -180,7 +180,7 @@ async function stationenAufbauen() {
             // statusKlasse in flotte.js (siehe dortiger Kommentar), hier nur
             // wiederholt, weil der Auftragstext den Fehler ein zweites Mal
             // enthaelt.
-            { feld: 'frei',           titel: 'Frei',   klasse: (z) => (z.frei === 0 ? 'warnung' : '') }
+            { feld: 'frei',           titel: t('field.frei'),   klasse: (z) => (z.frei === 0 ? 'warnung' : '') }
         ], stationMaske);
         // KEIN fuenfter Parameter (Zeilenicons, Punkt 3): stationMaske()
         // unten kennt genau eine Handlung, "Stilllegen" - und die ist
@@ -213,8 +213,9 @@ async function stationenAufbauen() {
 function stationenStatuszeileText(stationen) {
     const voll = stationen.filter((s) => s.frei === 0);
     return voll.length
-        ? `${stationen.length} Stationen, ${voll.length} davon voll: ${voll.map((s) => s.name).join(', ')}`
-        : `${stationen.length} Stationen`;
+        ? t('msg.stationsSummary', { stationenPhrase: mengeFormat(stationen.length, 'station'),
+              n: zahlFormat(voll.length), liste: voll.map((s) => s.name).join(', ') })
+        : mengeFormat(stationen.length, 'station');
 }
 
 // ===== Uebersicht (Gestaltungsauftrag, Punkt 1 und Punkt 2) =====
@@ -236,7 +237,7 @@ function stationenUebersicht(stationen) {
 
     const kacheln = [
         {
-            titel: 'Stationen',
+            titel: t('tile.stations'),
             wert: zahlSkaliert(String(gesamt)),
             // Small multiples (Tufte): Fuellstand jeder einzelnen
             // Station, sortiert nach Stationsnummer wie die Tabelle
@@ -247,10 +248,10 @@ function stationenUebersicht(stationen) {
             // kein aktueller Zeitraum (siehe Kopfkommentar bei
             // saeulenSparkline() in rahmen.js).
             grafik: saeulenSparkline(stationen.map((s) => (s.kapazitaet ? s.belegt / s.kapazitaet : 0)),
-                `Füllstand der ${gesamt} Stationen, sortiert nach Stationsnummer`,
+                t('hint.fillLevelPerStation'),
                 { aktuellIndex: null }
             ),
-            hinweis: stillgelegt ? `${stillgelegt} davon stillgelegt` : 'alle in Betrieb'
+            hinweis: stillgelegt ? t('hint.decommissionedCount', { n: zahlFormat(stillgelegt) }) : t('hint.allInOperation')
         }
     ];
 
@@ -259,15 +260,16 @@ function stationenUebersicht(stationen) {
         wert.className = 'ton-warnung';
         wert.textContent = String(volle.length);
         kacheln.push({
-            titel: 'Volle Stationen',
+            titel: t('tile.fullStations'),
             wert,
             grafik: zellbalken(volle.length, gesamt, null, { farbe: 'var(--warnung-text)' }),
             // Echter Bezug (Gestaltungsauftrag Punkt 1: "2 von 10 - dann
             // ist es ein Anteil und darf wie einer aussehen") direkt im
             // Text, statt sich auf die "Stationen"-Kachel davor zu
             // verlassen, um den Nenner zu erschliessen.
-            hinweis: `${volle.length} von ${gesamt} Stationen: ${volle.map((s) => s.name).join(', ')} ` +
-                `- nimmt keine Rückgabe an`
+            hinweis: t('hint.fullStationsShare',
+                { n: zahlFormat(volle.length), stationenPhrase: mengeFormat(gesamt, 'station'),
+                  liste: volle.map((s) => s.name).join(', ') })
         });
     }
 
@@ -296,18 +298,19 @@ function stationenUebersicht(stationen) {
     // JEDER einzelnen Station) tatsaechlich zwei verschiedene Aussagen
     // sind.
     const netzFuellstandProzent = gesamtKapazitaet ? Math.round((gesamtBelegt / gesamtKapazitaet) * 100) : 0;
-    const netzBeschriftung = `Netzweite Auslastung über alle ${gesamt} Stationen zusammen: ${gesamtBelegt} von ` +
-        `${gesamtKapazitaet} Stellplätzen belegt, ${netzFuellstandProzent} Prozent. 100 Prozent ist die ` +
-        `Gesamtkapazität des ganzen Stationsnetzes, nicht die einer einzelnen Station.`;
+    const netzBeschriftung = t('hint.networkOccupancyAria', {
+        stationenPhrase: mengeFormat(gesamt, 'station'), belegt: zahlFormat(gesamtBelegt),
+        kapazitaet: zahlFormat(gesamtKapazitaet), prozent: zahlFormat(netzFuellstandProzent) });
     kacheln.push({
-        titel: 'Gesamtbelegung – alle Stationen',
+        titel: t('tile.networkOccupancy'),
         wert: '',
         grafik: donut(gesamtBelegt, gesamtKapazitaet, netzBeschriftung, {
             durchmesser: 84,
             dicke: 11,
             bruch: `${gesamtBelegt} / ${gesamtKapazitaet}`
         }),
-        hinweis: `${gesamtBelegt} von ${gesamtKapazitaet} Stellplätzen belegt, über alle ${gesamt} Stationen`
+        hinweis: t('hint.networkOccupancyDetail',
+            { belegt: zahlFormat(gesamtBelegt), kapazitaet: zahlFormat(gesamtKapazitaet), stationenPhrase: mengeFormat(gesamt, 'station') })
     });
 
     // ===== Verteilung (Gestaltungsauftrag Punkt 5) =====
@@ -332,10 +335,13 @@ function stationenUebersicht(stationen) {
         : (fuellstaende[mitteIndex] + fuellstaende[mitteIndex + 1]) / 2;
     const leer = stationen.filter((s) => s.belegt === 0).length;
     kacheln.push({
-        titel: 'Füllstand-Spannweite',
-        wert: `${Math.round(minFuellstand * 100)}–${Math.round(maxFuellstand * 100)} %`,
-        hinweis: `Median ${Math.round(medianFuellstand * 100)} % · ${volle.length} von ${gesamt} randvoll` +
-            (leer ? `, ${leer} von ${gesamt} leer` : ', keine leer')
+        titel: t('tile.fillRange'),
+        wert: `${zahlFormat(Math.round(minFuellstand * 100))}–${zahlFormat(Math.round(maxFuellstand * 100))} %`,
+        hinweis: t('hint.fillRangeDetail', {
+            median: zahlFormat(Math.round(medianFuellstand * 100)), voll: zahlFormat(volle.length),
+            stationenPhrase: mengeFormat(gesamt, 'station'),
+            leerZusatz: leer ? t('hint.andEmptyCount', { n: zahlFormat(leer), stationenPhrase: mengeFormat(gesamt, 'station') }) : t('hint.noneEmpty')
+        })
     });
 
     return kacheln;
@@ -356,7 +362,7 @@ function stationMaske(station) {
     // die Statuswechsel-/Ausmustern-Knoepfe in flotte.js).
     if (darfRolle('disposition') && station.in_betrieb) {
         knoepfe.push({
-            titel: 'Stilllegen',
+            titel: t('button.decommissionStation'),
             art: 'gefaehrlich',
             ausfuehren: async () => {
                 // GR22: eine Station wird stillgelegt, nicht geloescht.
@@ -366,31 +372,28 @@ function stationMaske(station) {
                 // bekannte Luecke; die Meldung darf sie nicht als
                 // Softwarefehler erscheinen lassen.
                 if (station.belegt > 0) {
-                    melde(`An ${station.name} stehen noch ${station.belegt} Räder. ` +
-                          `Sie müssen erst woanders zurückgegeben werden.`, 'warnung');
+                    melde(t('msg.stationStillHasBikes', { name: station.name, raederPhrase: mengeFormat(station.belegt, 'rad') }), 'warnung');
                     return;
                 }
-                const ok = await bestaetige(
-                    `${station.name} zum heutigen Tag stilllegen? Die Station bleibt in ` +
-                    `allen Auswertungen sichtbar, nimmt aber keine Räder mehr auf.`);
+                const ok = await bestaetige(t('msg.confirmDecommissionStation', { name: station.name }));
                 if (!ok) return;
                 await rufeAuf('api_station_stilllegen', { p_station_id: station.station_id });
-                melde(`${station.name} stillgelegt.`, 'gut');
+                melde(t('msg.stationDecommissioned', { name: station.name }), 'gut');
                 await stationenAufbauen();
             }
         });
     }
 
     zeigeMaske(`${station.stationsnummer} · ${station.name}`, [
-        { name: 'anschrift',  titel: 'Anschrift',
+        { name: 'anschrift',  titel: t('field.anschrift'),
           wert: `${station.strasse} ${station.hausnummer}, ${station.plz} ${station.ort}`, nurLesen: true },
-        { name: 'kapazitaet', titel: 'Stellplätze', wert: station.kapazitaet, nurLesen: true },
-        { name: 'belegt',     titel: 'Belegt',      wert: station.belegt, nurLesen: true },
-        { name: 'frei',       titel: 'Frei',        wert: station.frei, nurLesen: true },
-        { name: 'lage',       titel: 'Lage',
+        { name: 'kapazitaet', titel: t('field.stellplaetze'), wert: station.kapazitaet, nurLesen: true },
+        { name: 'belegt',     titel: t('field.belegt'),      wert: station.belegt, nurLesen: true },
+        { name: 'frei',       titel: t('field.frei'),        wert: station.frei, nurLesen: true },
+        { name: 'lage',       titel: t('field.lage'),
           wert: `${station.latitude}, ${station.longitude}`, nurLesen: true },
-        { name: 'betrieb',    titel: 'Betrieb',
-          wert: station.in_betrieb ? 'in Betrieb' : 'stillgelegt', nurLesen: true }
+        { name: 'betrieb',    titel: t('field.betrieb'),
+          wert: station.in_betrieb ? t('misc.inOperation') : t('misc.decommissionedState'), nurLesen: true }
     ], knoepfe);
 
     // Drei zusaetzliche Abschnitte UNTER der von zeigeMaske() gebauten
@@ -423,14 +426,14 @@ function stationBelegungAbschnitt(station) {
     abschnitt.className = 'stationbelegung';
 
     const ueberschrift = document.createElement('h3');
-    ueberschrift.textContent = 'Belegung';
+    ueberschrift.textContent = t('tile.occupancy');
     abschnitt.append(ueberschrift);
 
     const voll = station.frei === 0;
     const prozent = station.kapazitaet ? Math.round((station.belegt / station.kapazitaet) * 100) : 0;
-    const beschriftung = `Belegung ${station.name}: ${station.belegt} von ${station.kapazitaet} ` +
-        `Stellplätzen, ${prozent} Prozent. 100 Prozent ist die Kapazität dieser einen Station.` +
-        (voll ? ' Die Station ist voll und nimmt aktuell keine Rückgabe an.' : '');
+    const beschriftung = t('hint.stationOccupancyAria', {
+        name: station.name, belegt: zahlFormat(station.belegt), kapazitaet: zahlFormat(station.kapazitaet),
+        prozent: zahlFormat(prozent), vollZusatz: voll ? t('hint.stationFullNote') : '' });
 
     // farbe nur bei EXAKT vollem Anteil auf --warnung-text umgestellt -
     // siehe die ausfuehrliche Begruendung im Kopfkommentar von donut() in
@@ -462,14 +465,14 @@ function stationRaederAbschnitt(station) {
     const raederHier = stationenRaederAlle.filter((r) => r.station_id === station.station_id);
 
     const ueberschrift = document.createElement('h3');
-    ueberschrift.textContent = `Räder an dieser Station (${raederHier.length})`;
+    ueberschrift.textContent = t('tile.bikesAtStation', { n: zahlFormat(raederHier.length) });
     abschnitt.append(ueberschrift);
 
     const fehler = letzterLadeFehler('v_wawi_station_flotte');
     if (fehler) {
         const hinweis = document.createElement('p');
         hinweis.className = 'stationraeder-fehler';
-        hinweis.textContent = `Die Räder ließen sich nicht laden: ${fehler}`;
+        hinweis.textContent = t('msg.bikesAtStationLoadFailed', { fehler });
         abschnitt.append(hinweis);
         return abschnitt;
     }
@@ -482,7 +485,7 @@ function stationRaederAbschnitt(station) {
     if (raederHier.length === 0) {
         const hinweis = document.createElement('p');
         hinweis.className = 'stationraeder-leer';
-        hinweis.textContent = 'Derzeit steht hier kein Rad - alle sind unterwegs, in der Werkstatt oder defekt.';
+        hinweis.textContent = t('tile.noBikesHere');
         abschnitt.append(hinweis);
         return abschnitt;
     }
@@ -491,7 +494,7 @@ function stationRaederAbschnitt(station) {
     tabelle.className = 'stationraeder-tabelle';
 
     const kopfzeile = document.createElement('tr');
-    for (const titel of ['Rahmennummer', 'Typ', 'Status', 'Akku', 'Schäden']) {
+    for (const titel of [t('field.rahmennummer'), t('field.typ'), t('field.status'), t('field.akku'), t('field.schaeden')]) {
         const th = document.createElement('th');
         th.textContent = titel;
         kopfzeile.append(th);
@@ -522,7 +525,7 @@ function stationRaederAbschnitt(station) {
             link.className = 'monatsdrilldown-tag-knopf';
             link.textContent = rad.rahmennummer;
             link.addEventListener('click', () => {
-                bereichSprung('flotte', `Rad ${rad.rahmennummer} von ${station.name}`,
+                bereichSprung('flotte', t('nav.originBikeFromStation', { rahmennummer: rad.rahmennummer, name: station.name }),
                     () => setzeSpaltenkopfFilter('rahmennummer', rad.rahmennummer));
             });
             zelleRahmennummer.append(link);
@@ -540,7 +543,7 @@ function stationRaederAbschnitt(station) {
         // interessante Fall dieser Liste (siehe Kommentar bei
         // v_wawi_station_flotte.status in 0018_wawi_sichten.sql).
         const zelleStatus = document.createElement('td');
-        zelleStatus.textContent = rad.status;
+        zelleStatus.textContent = statusAnzeige(rad.status);
         if (rad.status === 'defekt' || rad.hoechste_schwere === 'fahruntauglich') {
             zelleStatus.className = 'ton-schlecht';
         } else if (rad.status === 'wartung') {
@@ -549,12 +552,12 @@ function stationRaederAbschnitt(station) {
         zeile.append(zelleStatus);
 
         const zelleAkku = document.createElement('td');
-        zelleAkku.textContent = rad.akkustand_prozent == null ? '—' : `${rad.akkustand_prozent} %`;
+        zelleAkku.textContent = rad.akkustand_prozent == null ? '—' : `${zahlFormat(rad.akkustand_prozent)} %`;
         zeile.append(zelleAkku);
 
         const zelleSchaeden = document.createElement('td');
         zelleSchaeden.textContent = rad.offene_schaeden > 0
-            ? `${rad.offene_schaeden} (${rad.hoechste_schwere})`
+            ? `${zahlFormat(rad.offene_schaeden)} (${t('schwere.' + rad.hoechste_schwere)})`
             : '—';
         if (rad.hoechste_schwere === 'fahruntauglich') zelleSchaeden.className = 'ton-schlecht';
         else if (rad.offene_schaeden > 0) zelleSchaeden.className = 'ton-warnung';
@@ -581,14 +584,14 @@ function stationVerkehrAbschnitt(station) {
     abschnitt.className = 'stationverkehr';
 
     const ueberschrift = document.createElement('h3');
-    ueberschrift.textContent = 'Zu- und Abgang nach Zeitfenster';
+    ueberschrift.textContent = t('tile.trafficByTimeSlot');
     abschnitt.append(ueberschrift);
 
     const fehler = letzterLadeFehler('v_wawi_stationsverkehr_zeitfenster');
     if (fehler) {
         const hinweis = document.createElement('p');
         hinweis.className = 'stationverkehr-fehler';
-        hinweis.textContent = `Der Stationsverkehr ließ sich nicht laden: ${fehler}`;
+        hinweis.textContent = t('msg.trafficLoadFailed', { fehler });
         abschnitt.append(hinweis);
         return abschnitt;
     }
@@ -597,7 +600,7 @@ function stationVerkehrAbschnitt(station) {
     if (zeilenHier.length === 0) {
         const hinweis = document.createElement('p');
         hinweis.className = 'stationverkehr-leer';
-        hinweis.textContent = 'Für diese Station liegen keine Verkehrszahlen vor.';
+        hinweis.textContent = t('tile.noTrafficData');
         abschnitt.append(hinweis);
         return abschnitt;
     }
@@ -610,10 +613,10 @@ function stationVerkehrAbschnitt(station) {
     legende.className = 'stationverkehr-legende';
     const legendeAbgang = document.createElement('span');
     legendeAbgang.className = 'stationverkehr-legende-eintrag stationverkehr-legende-abgang';
-    legendeAbgang.textContent = 'Abgänge je Tag (oben)';
+    legendeAbgang.textContent = t('tile.legendDepartures');
     const legendeZugang = document.createElement('span');
     legendeZugang.className = 'stationverkehr-legende-eintrag stationverkehr-legende-zugang';
-    legendeZugang.textContent = 'Zugänge je Tag (unten)';
+    legendeZugang.textContent = t('tile.legendArrivals');
     legende.append(legendeAbgang, legendeZugang);
     abschnitt.append(legende);
 
@@ -634,7 +637,7 @@ function stationVerkehrAbschnitt(station) {
         const block = document.createElement('div');
         block.className = 'stationverkehr-block';
 
-        const wochentypTitel = wochentyp === 'werktag' ? 'Werktags (Mo–Fr)' : 'Wochenende (Sa/So)';
+        const wochentypTitel = wochentyp === 'werktag' ? t('tile.weekdays') : t('tile.weekend');
         const titel = document.createElement('h4');
         titel.textContent = wochentypTitel;
         block.append(titel);
@@ -644,10 +647,10 @@ function stationVerkehrAbschnitt(station) {
         const maxZugang = Math.max(...zeilenTyp.map((z) => z.zugaenge_je_tag));
         const spitzeAbgang = zeilenTyp.find((z) => z.abgaenge_je_tag === maxAbgang);
         const spitzeZugang = zeilenTyp.find((z) => z.zugaenge_je_tag === maxZugang);
-        const beschriftung = `${wochentypTitel} bei ${station.name}, gemittelt über ${tageErfasst} Tage. ` +
-            `Die meisten Abgänge liegen im Zeitfenster ${zeitfensterLabel(spitzeAbgang.zeitfenster_start_stunde)} ` +
-            `mit ${maxAbgang.toFixed(2)} je Tag, die meisten Zugänge im Zeitfenster ` +
-            `${zeitfensterLabel(spitzeZugang.zeitfenster_start_stunde)} mit ${maxZugang.toFixed(2)} je Tag.`;
+        const beschriftung = t('hint.trafficPatternAria', {
+            wochentypTitel, name: station.name, tage: zahlFormat(tageErfasst),
+            zeitfensterAb: zeitfensterLabel(spitzeAbgang.zeitfenster_start_stunde), maxAb: zahlFormat(maxAbgang, { maximumFractionDigits: 2 }),
+            zeitfensterZu: zeitfensterLabel(spitzeZugang.zeitfenster_start_stunde), maxZu: zahlFormat(maxZugang, { maximumFractionDigits: 2 }) });
 
         block.append(zeitfensterDivergenzGrafik(zeilenTyp, maximum, beschriftung));
         abschnitt.append(block);
@@ -659,7 +662,12 @@ function stationVerkehrAbschnitt(station) {
 function zeitfensterLabel(startStunde) {
     const bis = (startStunde + 2) % 24;
     const pad = (n) => String(n).padStart(2, '0');
-    return `${pad(startStunde)}–${pad(bis)} Uhr`;
+    // "Uhr" bleibt Deutsch-spezifisch (Auftrag: Zahlen-/Datumsformat folgt
+    // der Sprache, ein Zeitfenster-Etikett wie dieses ist aber kein
+    // formatiertes Datum/keine Uhrzeit im Intl-Sinn, sondern eine kurze
+    // Wortmarke - fuer die anderen fuenf Sprachen bleibt die Spanne ohne
+    // Suffix, das ist knapp genug, um weiterhin eindeutig zu sein.
+    return sprache() === 'de' ? `${pad(startStunde)}–${pad(bis)} Uhr` : `${pad(startStunde)}–${pad(bis)}`;
 }
 
 // Eigene, kleine Zeichenfunktion statt eines weiteren rahmen.js-Bausteins
@@ -718,7 +726,7 @@ function zeitfensterDivergenzGrafik(zeitfenster, maximum, beschriftung) {
         rectAb.setAttribute('height', hoeheAb.toFixed(1));
         rectAb.setAttribute('class', 'zeitfenstergrafik-abgang');
         const titelAb = document.createElementNS(SVG_NS, 'title');
-        titelAb.textContent = `${label}: ${z.abgaenge_je_tag.toFixed(2)} Abgänge je Tag`;
+        titelAb.textContent = t('hint.departuresPerDayLabel', { label, n: zahlFormat(z.abgaenge_je_tag, { maximumFractionDigits: 2 }) });
         rectAb.append(titelAb);
         svg.append(rectAb);
 
@@ -729,7 +737,7 @@ function zeitfensterDivergenzGrafik(zeitfenster, maximum, beschriftung) {
         rectZu.setAttribute('height', hoeheZu.toFixed(1));
         rectZu.setAttribute('class', 'zeitfenstergrafik-zugang');
         const titelZu = document.createElementNS(SVG_NS, 'title');
-        titelZu.textContent = `${label}: ${z.zugaenge_je_tag.toFixed(2)} Zugänge je Tag`;
+        titelZu.textContent = t('hint.arrivalsPerDayLabel', { label, n: zahlFormat(z.zugaenge_je_tag, { maximumFractionDigits: 2 }) });
         rectZu.append(titelZu);
         svg.append(rectZu);
     });
@@ -795,8 +803,7 @@ function stationenKarteZeigen(kennung, stationen) {
     // ausdruecklich, damit niemand sie fuer massstabsgetreu haelt") -
     // und die Bedeutung der Marken in Text, nicht nur in der Grafik
     // selbst.
-    erklaerung.textContent = 'Schematische Karte, keine maßstabsgetreue Landkarte: Kreisgröße zeigt die ' +
-        'Kapazität einer Station, die Füllung ihre aktuelle Belegung.';
+    erklaerung.textContent = t('map.schematicNote');
     kopf.append(erklaerung);
 
     const schalterLabel = document.createElement('label');
@@ -804,7 +811,7 @@ function stationenKarteZeigen(kennung, stationen) {
     const schalter = document.createElement('input');
     schalter.type = 'checkbox';
     schalter.checked = stationenKarteKundenSichtbar;
-    schalterLabel.append(schalter, document.createTextNode('Kundschaft je Ort einblenden'));
+    schalterLabel.append(schalter, document.createTextNode(t('button.showCustomersOnMap')));
     kopf.append(schalterLabel);
 
     rahmen.append(kopf);
@@ -882,8 +889,8 @@ function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar) {
     // Marke traegt zusaetzlich ihr EIGENES aria-label (siehe unten).
     svg.setAttribute('role', 'group');
     svg.setAttribute('aria-label', kundenSichtbar
-        ? `Kartenbereich mit ${stationen.length} Stationen und Kundenorten`
-        : `Kartenbereich mit ${stationen.length} Stationen`);
+        ? t('map.areaWithCustomers', { stationenPhrase: mengeFormat(stationen.length, 'station') })
+        : t('map.area', { stationenPhrase: mengeFormat(stationen.length, 'station') }));
 
     // Main (schematisch) - siehe Kopfkommentar bei
     // STATIONENKARTE_MAIN_STUETZPUNKTE. aria-hidden: rein orientierende
@@ -899,7 +906,7 @@ function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar) {
     flussText.setAttribute('y', (mainPunkte[0].y - 6).toFixed(1));
     flussText.setAttribute('class', 'stationenkarte-fluss-text');
     flussText.setAttribute('aria-hidden', 'true');
-    flussText.textContent = 'Main (schematisch)';
+    flussText.textContent = t('map.riverLabel');
     svg.append(flussText);
 
     // Kundenmarken ZUERST (unten in der Zeichenreihenfolge), Stations-
@@ -916,7 +923,7 @@ function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar) {
             const gruppe = document.createElementNS(SVG_NS, 'g');
             gruppe.setAttribute('class', 'stationenkarte-kundenort');
             gruppe.setAttribute('role', 'img');
-            gruppe.setAttribute('aria-label', `${ort.ort}: ${ort.kunden} Kunden`);
+            gruppe.setAttribute('aria-label', t('map.customersAtLocation', { ort: ort.ort, kundenPhrase: mengeFormat(ort.kunden, 'kunde') }));
 
             const kreis = document.createElementNS(SVG_NS, 'circle');
             kreis.setAttribute('cx', p.x.toFixed(1));
@@ -934,7 +941,7 @@ function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar) {
             beschriftung.setAttribute('y', (p.y + radius + 11).toFixed(1));
             beschriftung.setAttribute('class', 'stationenkarte-kundenort-text');
             beschriftung.setAttribute('aria-hidden', 'true');
-            beschriftung.textContent = `${ort.ort} (${ort.kunden})`;
+            beschriftung.textContent = t('map.customerLabelShort', { ort: ort.ort, n: zahlFormat(ort.kunden) });
             gruppe.append(beschriftung);
 
             svg.append(gruppe);
@@ -950,8 +957,8 @@ function stationenKarteZeichnen(stationen, kundenorte, kundenSichtbar) {
         const p = proj.projizieren(Number(station.latitude), Number(station.longitude));
         const durchmesser = stationenKarteStationsDurchmesser(station.kapazitaet, kapMin, kapMax);
         const voll = station.frei === 0;
-        const beschriftung = `${station.name}: ${station.belegt} von ${station.kapazitaet} Stellplätzen belegt` +
-            (voll ? ', voll - nimmt aktuell keine Rückgabe an' : '') + '. Details öffnen.';
+        const beschriftung = t('map.stationBelegLabel', { name: station.name, belegt: zahlFormat(station.belegt), kapazitaet: zahlFormat(station.kapazitaet) })
+            + (voll ? t('map.stationFullSuffix') : '') + t('map.openDetailsSuffix');
 
         // donut() wiederverwendet, nicht neu gezeichnet (Auftrag: "die
         // anderen Bereiche werden ihn brauchen") - "Groesse = Kapazitaet,
@@ -1182,18 +1189,18 @@ function stationenKarteNordpfeil(breite, rand) {
 // suchen.
 
 function stationAnlegenMaske() {
-    zeigeMaske('Neue Station anlegen', [
-        { name: 'name',       titel: 'Name',       wert: '' },
-        { name: 'strasse',    titel: 'Straße',     wert: '' },
-        { name: 'hausnummer', titel: 'Hausnummer', wert: '' },
-        { name: 'plz',        titel: 'PLZ',        wert: '' },
-        { name: 'ort',        titel: 'Ort',        wert: '' },
-        { name: 'latitude',   titel: 'Breite',     wert: '', typ: 'zahl' },
-        { name: 'longitude',  titel: 'Länge',      wert: '', typ: 'zahl' },
-        { name: 'kapazitaet', titel: 'Stellplätze', wert: '', typ: 'zahl' }
+    zeigeMaske(t('button.newStation'), [
+        { name: 'name',       titel: t('field.name'),         wert: '' },
+        { name: 'strasse',    titel: t('field.strasse'),      wert: '' },
+        { name: 'hausnummer', titel: t('field.hausnummerVoll'), wert: '' },
+        { name: 'plz',        titel: t('field.plz'),          wert: '' },
+        { name: 'ort',        titel: t('field.ort'),          wert: '' },
+        { name: 'latitude',   titel: t('field.breite'),       wert: '', typ: 'zahl' },
+        { name: 'longitude',  titel: t('field.laenge'),       wert: '', typ: 'zahl' },
+        { name: 'kapazitaet', titel: t('field.stellplaetze'), wert: '', typ: 'zahl' }
     ], [
         {
-            titel: 'Anlegen',
+            titel: t('button.create'),
             // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
             // legt eine neue Station an, siehe Begruendung bei der
             // art-Erlaeuterung von zeigeMaske() in rahmen.js.
@@ -1207,7 +1214,7 @@ function stationAnlegenMaske() {
                 const plz = feld('plz');
                 const ort = feld('ort');
                 if (!name || !strasse || !hausnummer || !plz || !ort) {
-                    melde('Name, Straße, Hausnummer, PLZ und Ort werden benötigt.', 'schlecht');
+                    melde(t('msg.stationFieldsRequired'), 'schlecht');
                     return;
                 }
 
@@ -1224,23 +1231,23 @@ function stationAnlegenMaske() {
                 const latitudeText = feld('latitude');
                 const longitudeText = feld('longitude');
                 if (!latitudeText || !longitudeText) {
-                    melde('Breite und Länge werden benötigt.', 'schlecht');
+                    melde(t('msg.latLonRequired'), 'schlecht');
                     return;
                 }
                 const latitude = Number(latitudeText);
                 const longitude = Number(longitudeText);
                 if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-                    melde('Die Breite muss zwischen -90 und 90 liegen.', 'schlecht');
+                    melde(t('msg.latitudeRange'), 'schlecht');
                     return;
                 }
                 if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-                    melde('Die Länge muss zwischen -180 und 180 liegen.', 'schlecht');
+                    melde(t('msg.longitudeRange'), 'schlecht');
                     return;
                 }
 
                 const kapazitaet = Number(feld('kapazitaet'));
                 if (!Number.isInteger(kapazitaet) || kapazitaet <= 0) {
-                    melde('Die Stellplatzzahl muss eine positive ganze Zahl sein.', 'schlecht');
+                    melde(t('msg.capacityPositiveInteger'), 'schlecht');
                     return;
                 }
 
@@ -1254,7 +1261,7 @@ function stationAnlegenMaske() {
                     p_longitude: longitude,
                     p_kapazitaet: kapazitaet
                 });
-                melde(`Station ${name} angelegt.`, 'gut');
+                melde(t('msg.stationCreated', { name }), 'gut');
                 await stationenAufbauen();
             }
         }

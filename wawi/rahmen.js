@@ -28,6 +28,2925 @@
 // "nicht angemeldet"/"kein Mitarbeiter" verwechselt.
 // ============================================
 
+// ===== Mehrsprachigkeit (Gestaltungsauftrag, woertlich: "eine Umstellung
+// der Oberflaeche auf englisch, tuerkisch, spanisch, italienisch und
+// polnisch. Nur das GUI.") =====
+//
+// DIE GRENZE OBERFLAECHE GEGEN DATEN (Auftrag: das ist der fachliche
+// Kern dieser Aufgabe) - uebersetzt wird, was die OBERFLAECHE selbst
+// sagt: Menuepunkte, Spaltenkoepfe, Schaltflaechen, Meldungen,
+// Dialogtexte, Feldbeschriftungen, Leermasken, Erlaeuterungen in den
+// Uebersichtskacheln. NICHT uebersetzt werden Daten aus der Datenbank:
+// Kunden-, Stations- und Ortsnamen, Beschreibungstexte von
+// Schadensmeldungen, Tarifnamen, Rahmennummern, Hersteller- und
+// Modellbezeichnungen ("City-Bike" ist ein Produktname, keine
+// Oberflaechenbeschriftung - Auftrag, woertlich als Beispiel genannt).
+//
+// DIE STATUSWERTE SIND DER ENTSCHEIDENDE GRENZFALL (Auftrag,
+// ausdruecklich zu entscheiden): 'verfuegbar', 'gesperrt',
+// 'fahruntauglich', 'in_arbeit' und aehnliche Aufzaehlungswerte SIND
+// DATEN - sie stehen unveraendert in der Datenbank, gehen unveraendert
+// in jeden rufeAuf()/api_*-Aufruf und werden nirgends aus einer
+// Uebersetzung zurueckgerechnet. STATUS_ANZEIGE weiter unten uebersetzt
+// ausschliesslich die ANZEIGE dieses Werts, niemals den Wert selbst. Fuer
+// Deutsch bleibt diese Anzeige an den Stellen, an denen bisher der rohe
+// Wert selbst stand (die Status-Spalte in Flotte, das Textfeld in
+// radMaske() u. ae.), MIT ABSICHT identisch mit dem rohen Wert
+// ("verfuegbar", nicht "Verfügbar") - Zug 1 dieses Auftrags verlangt,
+// dass Deutsch nach dem Umbau GENAU wie vorher aussieht, und genau dort
+// stand vorher der rohe Wert. Die Filterleiste zeigte an denselben
+// Stellen schon VOR diesem Auftrag eine eigene, huebsch geschriebene
+// Bezeichnung ("Verfügbar") - dieser Unterschied ist ein deutsches Erbe
+// aus der Zeit vor dieser Aufgabe und wird hier nicht eingeebnet, siehe
+// status.raw.*/status.label.* in der Uebersetzungstabelle weiter unten.
+const SPRACHEN = ['de', 'en', 'tr', 'es', 'it', 'pl'];
+
+// Eigenname jeder Sprache, so wie ihre Sprecher sie selbst schreiben
+// wuerden - fuer die Sprachauswahl im Einstellungsmenue. Nicht uebersetzt:
+// ein Sprachname wird ueblicherweise in jeder Sprache gleich benannt
+// (vgl. jede Betriebssystem-Spracheinstellung).
+const SPRACHNAMEN = { de: 'Deutsch', en: 'English', tr: 'Türkçe', es: 'Español', it: 'Italiano', pl: 'Polski' };
+
+// BCP-47-Sprachtag je Sprache - fuer Intl.NumberFormat/DateTimeFormat/
+// PluralRules UND fuer das lang-Attribut auf <html> (Auftrag: "sonst
+// liest ein Screenreader Tuerkisch mit deutscher Aussprache").
+const SPRACHE_LOCALE_TAG = { de: 'de-DE', en: 'en-US', tr: 'tr-TR', es: 'es-ES', it: 'it-IT', pl: 'pl-PL' };
+
+const SPRACHE_SPEICHERSCHLUESSEL = 'velocity-wawi-sprache';
+
+// Dieselbe Haltbarkeit wie beim Zebramuster weiter unten (localStorage
+// statt einer Datenbankspalte, siehe dortiger Kommentar) - eine reine
+// Anzeigepraeferenz, "nichts an der Datenbank aendern" (Auftrag).
+function sprache() {
+    const gespeichert = localStorage.getItem(SPRACHE_SPEICHERSCHLUESSEL);
+    return SPRACHEN.includes(gespeichert) ? gespeichert : 'de';
+}
+
+function localeTag() {
+    return SPRACHE_LOCALE_TAG[sprache()];
+}
+
+// ----- Nachschlagefunktion -----
+//
+// Schluessel bewusst englisch und punktnotiert (Bereich.Sache) - Auftrag,
+// woertlich: "die Schluessel der Uebersetzungstabelle duerfen englisch
+// sein, wenn das sauberer ist". UEBERSETZUNGEN selbst steht in
+// rahmen_i18n_daten.js (aus einer Python-Tabelle erzeugt, siehe deren
+// Kopf) - eine einzige Datenstruktur statt fuenf verstreuter Tabellen,
+// damit ein fehlender Schluessel in einer Sprache beim Erstellen sofort
+// auffiel (Validierung lief bereits gegen alle sechs Sprachen).
+function t(schluessel, platzhalter) {
+    const tabelle = UEBERSETZUNGEN[sprache()] || UEBERSETZUNGEN.de;
+    let text = tabelle[schluessel];
+    if (text === undefined) {
+        console.warn(`t(): fehlender Schluessel "${schluessel}" fuer Sprache "${sprache()}", falle auf Deutsch zurueck.`);
+        text = UEBERSETZUNGEN.de[schluessel];
+    }
+    if (text === undefined) {
+        console.warn(`t(): Schluessel "${schluessel}" existiert in keiner Sprache.`);
+        return schluessel;
+    }
+    if (platzhalter) {
+        for (const [name, wert] of Object.entries(platzhalter)) {
+            text = text.replaceAll(`{${name}}`, wert);
+        }
+    }
+    return text;
+}
+
+// ----- Mengenformen (Fallstrick 1: Mehrzahl) -----
+//
+// "zahl + ' Raeder'" (Zeichenketten zusammenkleben) geht in mindestens
+// zwei Sprachen schief (Auftrag, woertlich): Polnisch braucht DREI Formen
+// (1 / 2-4 / 5+, und die Zehner brechen die Regel erneut), Tuerkisch NULL
+// Formen (nach einer Zahl bleibt das Hauptwort immer in der Grundform,
+// "275 bisiklet" nicht "bisikletler"). Intl.PluralRules kennt diese
+// Regeln bereits (Auftrag: "benutze es, statt sie nachzubauen") -
+// MENGENFORMEN traegt deshalb nur noch die FERTIGEN FORMEN je Kategorie
+// ('one'/'few'/'many'/'other', wie PluralRules sie fuer die jeweilige
+// Sprache liefert), keine eigene Zaehllogik.
+//
+// Tuerkisch traegt 'one' UND 'other' mit demselben Text (siehe
+// rahmen_i18n_daten.js) - ausdruecklich beide gesetzt, nicht nur 'other'
+// plus Rueckfall: ein Rueckfall waere fuer zahl===1 zufaellig richtig,
+// sagt aber nicht, dass hier Absicht steckt (Tuerkisch kennt nach einem
+// Zahlwort schlicht keine Mehrzahl).
+function mengeFormat(zahl, einheit, platzhalter = {}) {
+    const formenSprache = (MENGENFORMEN[einheit] && MENGENFORMEN[einheit][sprache()])
+        || (MENGENFORMEN[einheit] && MENGENFORMEN[einheit].de);
+    if (!formenSprache) {
+        console.warn(`mengeFormat(): unbekannte Einheit "${einheit}".`);
+        return String(zahl);
+    }
+    const kategorie = new Intl.PluralRules(localeTag()).select(zahl);
+    const form = formenSprache[kategorie] || formenSprache.other;
+    let text = form.replaceAll('{n}', zahlFormat(zahl));
+    for (const [name, wert] of Object.entries(platzhalter)) {
+        text = text.replaceAll(`{${name}}`, wert);
+    }
+    return text;
+}
+
+// ----- Statuswerte: Wert bleibt Daten, nur die Anzeige folgt der Sprache -----
+//
+// code: der ROHE Wert aus der Datenbank ('verfuegbar', 'aktiv', ...) -
+// NIEMALS veraendert, nur zum Nachschlagen benutzt. huebsch=true liefert
+// die Form, die die Filterleisten schon vor diesem Auftrag zeigten
+// ("Verfügbar"); huebsch=false (Vorgabe) liefert fuer Deutsch bewusst den
+// unveraenderten Rohwert zurueck (Zug 1: "sieht genau wie vorher aus"),
+// fuer jede andere Sprache dieselbe uebersetzte Anzeige wie huebsch=true -
+// der Unterschied zwischen roh/huebsch ist ein rein deutsches Erbe aus
+// der Zeit vor diesem Auftrag (siehe Kopfkommentar oben).
+function statusAnzeige(code, huebsch = false) {
+    if (!code) return code;
+    const schluessel = `status.${huebsch ? 'label' : 'raw'}.${code}`;
+    const tabelle = UEBERSETZUNGEN[sprache()] || UEBERSETZUNGEN.de;
+    if (tabelle[schluessel] === undefined) return code;   // unbekannter Wert: unveraendert zeigen statt zu raten
+    return t(schluessel);
+}
+
+// Fuer Saetze, in die ein Statuscode als WORT eingebaut wird (z. B. "Rad
+// ... steht jetzt auf {ziel}.", flotte.js) - fuer Deutsch bleibt das der
+// rohe, kleingeschriebene Code (Zug 1: identisch mit dem Bestand vor
+// diesem Auftrag), fuer jede andere Sprache die uebersetzte, lesbare
+// Form. Nicht dasselbe wie statusAnzeige(code) mit huebsch=false: JENE
+// Funktion beschriftet ein FELD (Spalte, Detailmaske), DIESE hier einen
+// eingebetteten Fliesstextteil - beide treffen fuer Deutsch dieselbe
+// Wahl (roh), aus demselben Grund.
+function statusWortInSatz(code) {
+    return sprache() === 'de' ? code : statusAnzeige(code, true);
+}
+
+// ----- Zahlen, Geld, Datum, Zeit (Fallstrick 2) -----
+//
+// Bisher ueberall fest 'de-DE' - fuer einen englischen Nutzer muss
+// "35.454,47 €" zu "35,454.47 €" werden (Auftrag, woertlich). Die
+// Waehrung bleibt der Euro (Auftrag: "das ist keine Sprachfrage") - nur
+// die FORMATIERUNG (Trennzeichen, Stellung des Symbols) folgt der
+// gewaehlten Sprache, ueber Intl mit currency:'EUR' und dem jeweiligen
+// Sprachtag.
+function zahlFormat(zahl, optionen) {
+    return Number(zahl).toLocaleString(localeTag(), optionen);
+}
+
+function geldFormatZentral(betrag) {
+    return Number(betrag).toLocaleString(localeTag(), { style: 'currency', currency: 'EUR' });
+}
+
+function datumFormat(datum, optionen) {
+    return new Date(datum).toLocaleDateString(localeTag(), optionen);
+}
+
+function zeitFormat(datum, optionen) {
+    return new Date(datum).toLocaleTimeString(localeTag(), optionen);
+}
+
+// Trennzeichen der aktuellen Sprache, fuer zahlSkaliert() weiter unten:
+// die Funktion bekommt eine FERTIG formatierte Zahl und muss ihre
+// Gruppen erkennen, um die Tausendertrennzeichen optisch zurueckzunehmen -
+// dafuer muss sie wissen, WELCHES Zeichen in der aktuellen Sprache die
+// Gruppe trennt (Punkt in de-DE, Komma in en-US) und welches die
+// Dezimalstelle einleitet.
+function zahlTrennzeichen() {
+    const teile = new Intl.NumberFormat(localeTag()).formatToParts(1234.5);
+    return {
+        gruppe: teile.find((tl) => tl.type === 'group')?.value || '.',
+        dezimal: teile.find((tl) => tl.type === 'decimal')?.value || ','
+    };
+}
+
+function regexEscape(zeichen) {
+    return zeichen.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+const UEBERSETZUNGEN = {
+  de: {
+    "common.cancel": "Abbrechen",
+    "common.confirm": "Bestätigen",
+    "common.reason": "Grund",
+    "common.all": "Alle",
+    "common.actionsColumn": "Aktionen",
+    "common.noSearchPlaceholder": "In diesem Bereich keine Suche",
+    "common.noSearchAria": "Suche in diesem Bereich nicht verfügbar",
+    "common.confirmWordPrompt": "Zum Bestätigen \"{wort}\" eintippen:",
+    "common.sortAria": "Nach {titel} sortieren",
+    "common.sortAriaSuffix": ", aktuell {richtung}",
+    "common.ascending": "aufsteigend",
+    "common.descending": "absteigend",
+    "common.sortResetAria": "Sortierung nach {titel} zurücksetzen",
+    "common.sortResetTitle": "Sortierung zurücksetzen",
+    "common.groupByAria": "Nach {titel} gruppieren",
+    "common.groupResetAria": "Gruppierung nach {titel} aufheben",
+    "common.groupResetTitle": "Gruppierung zurücksetzen",
+    "common.groupTitle": "Gruppieren",
+    "common.filterAria": "{titel} filtern",
+    "common.filterMinAria": "Mindestwert für {titel}",
+    "common.filterSearchPlaceholder": "Suche…",
+    "common.filterResetAria": "{titel}-Filter zurücksetzen",
+    "common.filterResetTitle": "Filter zurücksetzen",
+    "common.columnFilterReset": "Spaltenfilter zurücksetzen",
+    "common.noRowsMatchFilter": "Keine Zeile erfüllt die gewählte Einschränkung am Spaltenkopf. ",
+    "common.groupedBy": "Gruppiert nach {titel}",
+    "common.ungroup": "Gruppierung aufheben",
+    "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
+    "common.closeDetailsAria": "Details schließen",
+    "common.closeDetailsTitle": "Details schließen (Esc)",
+    "common.rowsFiltered": "{angezeigt} von {zeilenPhrase} (Spaltenfilter aktiv)",
+    "common.selectedCount": "{n} ausgewählt",
+    "common.minAbbrev": "Min.",
+    "common.hourAbbrev": "Std.",
+    "common.underOneMinute": "unter 1 Min.",
+    "common.loggedInFor": "{dauer} angemeldet",
+    "common.sinceOpen": "seit dem Öffnen: {dauer}",
+    "common.loginCheckFailed": "Anmeldung konnte nicht geprüft werden: {msg}",
+    "common.loginBadCredentials": "E-Mail oder Passwort stimmen nicht.",
+    "common.rolesCheckFailed": "Die Rollen ließen sich nicht ermitteln: {msg}",
+    "common.roleCheckFailed": "Rolle {code} ließ sich nicht prüfen: {msg}",
+    "common.of": "von",
+    "common.xOfPhrase": "{x} von {phrase}",
+    "misc.estimatedParen": " ({prozent} geschätzt)",
+    "hint.ridesPerDayHeading": "Fahrten je Tag — {monat} (gesamt, alle Radtypen und Tarife)",
+    "status.label.abgebrochen": "abgebrochen",
+    "status.raw.abgebrochen": "abgebrochen",
+    "status.label.erledigt": "erledigt",
+    "status.raw.erledigt": "erledigt",
+    "status.label.verworfen": "verworfen",
+    "status.raw.verworfen": "verworfen",
+    "status.label.behoben": "behoben",
+    "status.raw.behoben": "behoben",
+    "hint.saldoChartAria": "Saldo der {stationenPhrase}, sortiert nach Stationsnummer, von {min} bis {max} - am niedrigsten (rot markiert) bei {name}",
+    "hint.fillLevelBetween": "Füllstand der {stationenPhrase}, sortiert nach Stationsnummer, zwischen {min} und {max}",
+    "msg.stationsWithoutBikeSuffix": ", {n} davon ohne Rad",
+    "empty.noStationOccupancyText": "Es liegt keine Station vor. Bei zehn angelegten Stationen ist das ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt fehlender Daten.",
+    "empty.noStationOccupancyTitle": "Keine Stationsauslastung",
+    "msg.stationOccupancyLoadFailed": "Die Stationsauslastung liess sich nicht laden: {fehler}",
+    "misc.estimatedRidesDetail": "{geschaetzt} von {fahrtenPhrase} ({prozent})",
+    "hint.monthlyKmChartAria": "Gefahrene Kilometer je Monat, letzte zwölf Monate ({vonMonat} bis {bisMonat}) - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellWert}",
+    "hint.monthlyCo2ChartAria": "CO2-Ersparnis je Monat, letzte zwölf Monate ({vonMonat} bis {bisMonat}), von {min} bis {max} - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellWert}",
+    "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, CO₂-Ersparnis gesamt {co2}, davon {prozent} geschätzt (fahrtgewichtet)",
+    "empty.noKmCo2Title": "Keine Kilometer- und CO2-Zeilen",
+    "msg.kmCo2LoadFailed": "Kilometer und CO2 liessen sich nicht laden: {fehler}",
+    "field.jeKunde": "Je Kunde",
+    "hint.crossCheckChartAria": "Monatsumsatz der letzten zwölf Monate ({vonMonat} bis {bisMonat}), dieselbe Reihe wie im Reiter \"Umsatz nach Radtyp\" - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellWert}",
+    "msg.revenueByCustomerGroupSummary": "{monatszeilen}, Umsatz gesamt {umsatz}",
+    "empty.noRevenueByCustomerGroupTitle": "Kein Umsatz nach Kundengruppe",
+    "msg.revenueByCustomerGroupLoadFailed": "Der Umsatz nach Kundengruppe liess sich nicht laden: {fehler}",
+    "hint.cityBikeJumpChartAria": "Umsatz je Fahrt City-Bike, {n} Monate ab {vonMonat}: Sprung von {von} auf {nach} ab {sprungMonat}, in Rot markiert",
+    "hint.monthlyRidesChartAria": "Fahrten je Monat, letzte zwölf Monate: {min} im {tiefMonat} am niedrigsten, {max} im {hochMonat} am höchsten - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellMonat} mit {aktuellPhrase}",
+    "hint.monthlyRevenueChartAria": "Monatsumsatz der letzten zwölf Monate ({vonMonat} bis {bisMonat}), von {min} bis {max} - die dunkle Säule ganz rechts ist der aktuelle Monat, {aktuellMonat} mit {aktuellWert}",
+    "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, Umsatz gesamt {umsatz}",
+    "msg.revenueByBikeTypeLoadFailed": "Der Umsatz nach Radtyp liess sich nicht laden: {fehler}",
+    "empty.noRevenueByBikeTypeText": "Es liegt keine Monatszeile vor. Bei einem gefuellten Referenzjahr ist das ungewoehnlich - moeglich ist ein zwischenzeitlicher Rollenverlust statt fehlender Daten.",
+    "empty.noRevenueByBikeTypeTitle": "Kein Umsatz nach Radtyp",
+    "misc.estimatedSuffix": " (geschätzt)",
+    "field.strecke": "Strecke",
+    "field.dauer": "Dauer",
+    "field.ziel": "Ziel",
+    "field.start": "Start",
+    "misc.bikesOnDateCaption": "Räder am {datum} - kein Kundenbezug, siehe v_wawi_fahrten_je_tag_rad",
+    "button.backToDayOverview": "Zurück zur Tagesübersicht",
+    "misc.bikesOnDate": "Räder am {datum}",
+    "misc.noBikeRiddenThisDay": "An diesem Tag wurde kein Rad gefahren.",
+    "msg.thisDayBikesLoadFailed": "Die Räder dieses Tages liessen sich nicht laden: {fehler}",
+    "hint.legendColorScale": "Farbe = Fahrten dieses Tages im Verhältnis zum verkehrsreichsten Tag des Monats ({phrase}).",
+    "hint.dayRidesAria": "{datum}: {phrase}",
+    "hint.calendarCaption": "Fahrten je Tag, {monat}",
+    "hint.tiedDaysCount": "{tagePhrase} gleichauf, je {phrase}",
+    "hint.totalForMonth": "{phrase}, gesamt",
+    "hint.dailyRidesChartAria": "Fahrten je Tag im {monat} {jahr}, gesamt über alle Radtypen und Tarife: zwischen {min} und {maxPhrase}, im Mittel {mittel}. Am meisten Fahrten am {tageListe} {monat} mit je {maxPhrase}.",
+    "msg.dailyFiguresLoadFailed": "Die Tageszahlen liessen sich nicht laden: {fehler}",
+    "misc.workOrderTitle": "Auftrag {auftragsnummer}",
+    "msg.activeWorkOrdersCount": "{n} laufende Wartungsaufträge",
+    "misc.reportForBike": "Meldung zu {rahmennummer}",
+    "msg.openDamageWithUnrideable": "{n}{zusatz} offene Schäden, davon {dringend} fahruntauglich",
+    "msg.openDamageCount": "{n}{zusatz} offene Schäden",
+    "misc.atLeastValue": "≥ {n} {einheit}",
+    "misc.allLowercase": "alle",
+    "field.minAge": "Mindestalter",
+    "field.offenSeit": "Offen seit",
+    "field.gemeldet": "Gemeldet",
+    "misc.stillRunning": "{datum} · läuft noch",
+    "misc.noRentalYet": "Noch keine Ausleihe",
+    "msg.stationCreated": "Station {name} angelegt.",
+    "msg.capacityPositiveInteger": "Die Stellplatzzahl muss eine positive ganze Zahl sein.",
+    "msg.longitudeRange": "Die Länge muss zwischen -180 und 180 liegen.",
+    "msg.latitudeRange": "Die Breite muss zwischen -90 und 90 liegen.",
+    "msg.latLonRequired": "Breite und Länge werden benötigt.",
+    "msg.stationFieldsRequired": "Name, Straße, Hausnummer, PLZ und Ort werden benötigt.",
+    "field.laenge": "Länge",
+    "field.breite": "Breite",
+    "field.hausnummerVoll": "Hausnummer",
+    "field.name": "Name",
+    "hint.arrivalsPerDayLabel": "{label}: {n} Zugänge je Tag",
+    "hint.departuresPerDayLabel": "{label}: {n} Abgänge je Tag",
+    "hint.trafficPatternAria": "{wochentypTitel} bei {name}, gemittelt über {tage} Tage. Die meisten Abgänge liegen im Zeitfenster {zeitfensterAb} mit {maxAb} je Tag, die meisten Zugänge im Zeitfenster {zeitfensterZu} mit {maxZu} je Tag.",
+    "hint.stationFullNote": " Die Station ist voll und nimmt aktuell keine Rückgabe an.",
+    "hint.stationOccupancyAria": "Belegung {name}: {belegt} von {kapazitaet} Stellplätzen, {prozent} Prozent. 100 Prozent ist die Kapazität dieser einen Station.{vollZusatz}",
+    "hint.networkOccupancyAria": "Netzweite Auslastung über alle {stationenPhrase} zusammen: {belegt} von {kapazitaet} Stellplätzen belegt, {prozent} Prozent. 100 Prozent ist die Gesamtkapazität des ganzen Stationsnetzes, nicht die einer einzelnen Station.",
+    "map.openDetailsSuffix": ". Details öffnen.",
+    "map.stationFullSuffix": ", voll - nimmt aktuell keine Rückgabe an",
+    "map.stationBelegLabel": "{name}: {belegt} von {kapazitaet} Stellplätzen belegt",
+    "map.customerLabelShort": "{ort} ({n})",
+    "misc.freeShort": "{n} frei",
+    "misc.unitsInStock": "{n} im Bestand",
+    "nav.originDamageReport": "Schadensmeldung zu {rahmennummer}",
+    "nav.originBikeFromStation": "Rad {rahmennummer} von {name}",
+    "nav.originBikeFromFleet": "Rad {rahmennummer} aus der Flotte",
+    "hint.percentOfFleet": "{anteil} % der Flotte",
+    "index.title": "VeloCity Warenwirtschaft",
+    "index.loading": "Einen Moment …",
+    "index.loginEmail": "E-Mail",
+    "index.loginPassword": "Passwort",
+    "index.loginSubmit": "Anmelden",
+    "index.noAccessTitle": "Kein Zugang",
+    "index.noAccessText": "Dieses Konto ist bei VeloCity nicht als Mitarbeitendenkonto hinterlegt. Wenn Sie Kundin oder Kunde sind, finden Sie Ihren Bereich unter",
+    "index.logout": "Abmelden",
+    "index.noRoleTitle": "Noch keine Rolle zugeteilt",
+    "index.noRoleText": "Ihr Konto ist bei VeloCity als Mitarbeitendenkonto hinterlegt, aber es wurde noch kein Aufgabenbereich zugeordnet. Wenden Sie sich an die Leitung, damit sie Ihnen eine Rolle zuteilt.",
+    "index.searchPlaceholder": "Suchen",
+    "index.profileAria": "Profil und Einstellungen",
+    "index.settingsHeading": "Einstellungen",
+    "index.zebraLabel": "Zebrastreifen in Tabellen",
+    "index.languageLabel": "Sprache",
+    "index.navAria": "Aufgabenbereiche",
+    "index.workListAria": "Arbeitsliste",
+    "index.detailAria": "Detailmaske",
+    "nav.flotte": "Flotte",
+    "nav.stationen": "Stationen",
+    "nav.kunden": "Kundschaft",
+    "nav.instandhaltung": "Instandhaltung",
+    "nav.auswertungen": "Auswertungen",
+    "nav.kundenSuche": "Kundschaft: Name, E-Mail, Kundennummer",
+    "field.rahmennummer": "Rahmennummer",
+    "field.typ": "Typ",
+    "field.status": "Status",
+    "field.standort": "Standort",
+    "field.schaeden": "Schäden",
+    "field.modell": "Modell",
+    "field.angeschafft": "Angeschafft",
+    "field.letzteWartung": "Letzte Wartung",
+    "field.offeneSchaeden": "Offene Schäden",
+    "field.hoechsteSchwere": "Höchste Schwere",
+    "field.radtyp": "Radtyp",
+    "field.station": "Station",
+    "field.nummer": "Nummer",
+    "field.ort": "Ort",
+    "field.belegt": "Belegt",
+    "field.frei": "Frei",
+    "field.anschrift": "Anschrift",
+    "field.stellplaetze": "Stellplätze",
+    "field.lage": "Lage",
+    "field.betrieb": "Betrieb",
+    "field.akku": "Akku",
+    "field.nachname": "Nachname",
+    "field.vorname": "Vorname",
+    "field.tarif": "Tarif",
+    "field.kundeSeit": "Kunde seit",
+    "field.letzteAusleihe": "Letzte Ausleihe",
+    "field.anrede": "Anrede",
+    "field.email": "E-Mail",
+    "field.telefon": "Telefon",
+    "field.strasse": "Straße",
+    "field.hausnummer": "Nr.",
+    "field.plz": "PLZ",
+    "field.hinweis": "Hinweis",
+    "field.fahrten": "Fahrten",
+    "field.umsatz": "Umsatz",
+    "field.offen": "Offen",
+    "field.kategorie": "Kategorie",
+    "field.gemeldetVon": "Gemeldet von",
+    "field.gemeldetAm": "Gemeldet am",
+    "field.beschreibung": "Beschreibung",
+    "field.schwere": "Schwere",
+    "field.stand": "Stand",
+    "field.bisherigeAuftraege": "Bisherige Aufträge",
+    "field.rad": "Rad",
+    "field.auftrag": "Auftrag",
+    "field.eroeffnet": "Eröffnet",
+    "field.bearbeiter": "Bearbeiter",
+    "field.arbeitszeitMinuten": "Arbeitszeit (Minuten)",
+    "field.bemerkung": "Bemerkung",
+    "field.kapazitaet": "Kapazität",
+    "field.abgaenge": "Abgänge",
+    "field.zugaenge": "Zugänge",
+    "field.saldo": "Saldo",
+    "field.fuellstand": "Füllstand",
+    "field.monat": "Monat",
+    "field.minuten": "Minuten",
+    "field.jeFahrt": "Je Fahrt",
+    "field.minutenJeFahrt": "Minuten je Fahrt",
+    "field.deltaVormonat": "Δ ggü. Vormonat",
+    "field.kunden": "Kunden",
+    "field.fahrtenJeKunde": "Fahrten je Kunde",
+    "field.kilometer": "Kilometer",
+    "field.kilometerJeFahrt": "Kilometer je Fahrt",
+    "field.co2Ersparnis": "CO₂-Ersparnis",
+    "field.davonGeschaetzt": "Davon geschätzt",
+    "status.raw.verfuegbar": "verfuegbar",
+    "status.label.verfuegbar": "Verfügbar",
+    "status.raw.ausgeliehen": "ausgeliehen",
+    "status.label.ausgeliehen": "Ausgeliehen",
+    "status.raw.wartung": "wartung",
+    "status.label.wartung": "Wartung",
+    "status.raw.defekt": "defekt",
+    "status.label.defekt": "Defekt",
+    "status.raw.ausgemustert": "ausgemustert",
+    "status.label.ausgemustert": "Ausgemustert",
+    "status.raw.aktiv": "aktiv",
+    "status.label.aktiv": "Aktiv",
+    "status.raw.gesperrt": "gesperrt",
+    "status.label.gesperrt": "Gesperrt",
+    "status.raw.geschlossen": "geschlossen",
+    "status.label.geschlossen": "Geschlossen",
+    "status.raw.offen": "offen",
+    "status.label.offen": "Offen",
+    "status.raw.in_arbeit": "in_arbeit",
+    "status.label.in_arbeit": "In Arbeit",
+    "schwere.gering": "gering",
+    "schwere.mittel": "mittel",
+    "schwere.fahruntauglich": "fahruntauglich",
+    "button.newBike": "Neues Rad anlegen",
+    "button.create": "Anlegen",
+    "button.setTo": "Auf {ziel} setzen",
+    "button.whyTarget": "Warum {ziel}?",
+    "button.decommission": "Ausmustern",
+    "button.decommissionReason": "Grund der Ausmusterung",
+    "button.newStation": "Neue Station anlegen",
+    "button.decommissionStation": "Stilllegen",
+    "button.newCustomer": "Neuen Kunden anlegen",
+    "button.save": "Speichern",
+    "button.block": "Sperren",
+    "button.blockReason": "Grund der Sperrung",
+    "button.disclosureArt15": "Auskunft nach Art. 15",
+    "button.deletionArt17": "Löschung nach Art. 17",
+    "button.downloadJson": "Als JSON herunterladen",
+    "button.close": "Schließen",
+    "button.reportDamage": "Schaden melden",
+    "button.openWorkOrder": "Auftrag eröffnen",
+    "button.bikeInFleet": "Rad in der Flotte",
+    "button.report": "Melden",
+    "button.resolve": "Erledigen",
+    "button.toOpenDamage": "Zu den offenen Schäden",
+    "button.damageInFleet": "Rad in der Flotte",
+    "button.list": "Liste",
+    "button.map": "Landkarte",
+    "button.showCustomersOnMap": "Kundschaft je Ort einblenden",
+    "empty.noBikesFilterTitle": "Keine Räder mit diesem Filter",
+    "empty.noBikesFilterText": "Kein Rad in der Flotte erfüllt die gewählte Einschränkung.",
+    "empty.noCustomersFilterTitle": "Keine Kunden mit diesem Filter",
+    "empty.noCustomersFilterTextSearch": "Kein Kunde zu „{suchtext}“ erfüllt zusätzlich die gewählte Einschränkung.",
+    "empty.noCustomersFilterText": "Kein Kunde erfüllt die gewählte Einschränkung.",
+    "empty.statusFilterReset": "Statusfilter zurücksetzen",
+    "empty.noOpenDamageTitle": "Keine offenen Schäden",
+    "empty.noOpenDamageText": "Es liegt derzeit keine Schadensmeldung vor. Das ist der Normalfall — gemeldet wird, wenn an einem Rad etwas auffällt.",
+    "empty.noDamageFilterTitle": "Keine Schäden mit diesem Filter",
+    "empty.noDamageFilterText": "Keine offene Schadensmeldung erfüllt die gewählte Einschränkung.",
+    "empty.noWorkOrdersTitle": "Keine laufenden Wartungsaufträge",
+    "empty.noWorkOrdersText": "Es liegt derzeit kein Wartungsauftrag vor. Ein Auftrag entsteht aus einer offenen Schadensmeldung — dort gibt es den Knopf „Auftrag eröffnen“.",
+    "misc.underway": "unterwegs",
+    "misc.underwayNoLocation": "unterwegs (kein Standort)",
+    "misc.noneYet": "noch keine",
+    "misc.noMembership": "ohne Mitgliedschaft",
+    "misc.notYetAssigned": "noch nicht zugeteilt",
+    "misc.justNow": "gerade eben",
+    "misc.inOperation": "in Betrieb",
+    "misc.decommissionedState": "stillgelegt",
+    "misc.noAddressOnFile": "Für diese Person ist keine Adresse hinterlegt - das ist kein Ladefehler. Die Felder darunter lassen sich ausfüllen, um eine nachzutragen.",
+    "misc.disclosureLoggedNote": "Der Abruf der Auskunft nach Art. 15 wird protokolliert (GR19): wer sie einsieht, hinterlässt eine Spur im Änderungsprotokoll.",
+    "misc.damageBlocksImmediately": "Ein fahruntauglicher Schaden sperrt das Rad sofort - außer es ist gerade in Fahrt. Dann bleibt der Status vorerst unverändert (GR13 erlaubt einem Rad unterwegs keinen anderen Status) und die Sperrung greift erst bei der Rückgabe.",
+    "misc.onlyUnrideableBlocks": "Nur eine fahruntaugliche Meldung sperrt das Rad automatisch.",
+    "misc.noMinutesNeeded": "Die Arbeitszeit in Minuten wird benötigt (0 oder mehr).",
+    "art17.confirmHeader": "Löschung nach Art. 17 DSGVO für {name}?",
+    "art17.whatDisappears": "WAS VERSCHWINDET: Name, E-Mail, Telefonnummer, Geburtsdatum, Anschrift, Zahlungsmittel und die Verknüpfung zum Anmeldekonto. Auch im Änderungsprotokoll werden die alten Werte unkenntlich gemacht.",
+    "art17.whatRemains": "WAS BLEIBT: {phrase} und alle Rechnungen, in voller Höhe. Das Steuerrecht verlangt zehn Jahre Aufbewahrung, und die DSGVO nimmt genau diese Pflicht von der Löschung aus.",
+    "art17.whatThisDoesNotAchieve": "WAS DAS NICHT LEISTET: Die Fahrten tragen Zeiten und Orte. Wer regelmäßig zur selben Zeit vom selben Punkt fährt, bleibt darüber auffindbar.",
+    "art17.irreversible": "Der Vorgang ist nicht rückgängig zu machen.",
+    "art17.reasonPrompt": "Grund (etwa: Antrag der betroffenen Person vom …)",
+    "art17.abortedNoReason": "Abgebrochen: ohne Grund keine Löschung.",
+    "art17.runningRideBlocks": "{name} hat noch eine laufende Fahrt. Erst die Rückgabe abwarten.",
+    "art17.doneMessage": "Kunde {nummer} anonymisiert. Rechnungen und Fahrten bleiben erhalten.",
+    "art17.confirmWord": "LOESCHEN",
+    "tile.available": "Einsatzbereit",
+    "tile.onLoan": "Ausgeliehen",
+    "tile.inMaintenance": "In Wartung",
+    "tile.faulty": "Defekt",
+    "tile.ridesPerBike30d": "Fahrten je Rad (30 Tage)",
+    "tile.stations": "Stationen",
+    "tile.fullStations": "Volle Stationen",
+    "tile.networkOccupancy": "Gesamtbelegung – alle Stationen",
+    "tile.fillRange": "Füllstand-Spannweite",
+    "tile.customersTotal": "Kunden gesamt",
+    "tile.blocked": "Gesperrt",
+    "tile.noAddress": "Ohne Adresse",
+    "tile.invoiceTop10": "Rechnungsvolumen: obere 10 %",
+    "tile.damageReportsTotal": "Schadensmeldungen gesamt",
+    "tile.workOrdersTotal": "Wartungsaufträge gesamt",
+    "tile.unrideableOpen": "Fahruntauglich, offen",
+    "tile.minimum": "Minimum",
+    "tile.maximum": "Maximum",
+    "tile.countPerMonth": "Anzahl pro Monat",
+    "tile.dayWithMostRides": "Tag mit den meisten Fahrten",
+    "tile.revenueTotal": "Umsatz gesamt",
+    "tile.ridesTotal": "Fahrten gesamt",
+    "tile.revenuePerBikeDay": "Umsatz je Rad und Tag",
+    "tile.notableRevenuePerRideCityBike": "Auffällig: Umsatz je Fahrt City-Bike",
+    "tile.largestCustomerGroup": "Größte Kundengruppe",
+    "tile.notableNoMembership": "Auffällig: ohne Mitgliedschaft",
+    "tile.co2SavingsTotal": "CO₂-Ersparnis gesamt",
+    "tile.kilometersTotal": "Kilometer gesamt",
+    "tile.ofWhichEstimatedWeighted": "Davon geschätzt (fahrtgewichtet)",
+    "tile.networkOccupancyTotal": "Netzauslastung gesamt",
+    "tile.biggestImbalance": "Größtes Ungleichgewicht",
+    "tile.occupancy": "Belegung",
+    "tile.trafficByTimeSlot": "Zu- und Abgang nach Zeitfenster",
+    "tile.departuresPerDayTop": "Abgänge je Tag (oben)",
+    "tile.arrivalsPerDayBottom": "Zugänge je Tag (unten)",
+    "tile.weekdays": "Werktags (Mo–Fr)",
+    "tile.weekend": "Wochenende (Sa/So)",
+    "tile.bikesAtStation": "Räder an dieser Station ({n})",
+    "tile.noBikesHere": "Derzeit steht hier kein Rad - alle sind unterwegs, in der Werkstatt oder defekt.",
+    "tile.noTrafficData": "Für diese Station liegen keine Verkehrszahlen vor.",
+    "tile.legendDepartures": "Abgänge je Tag (oben)",
+    "tile.legendArrivals": "Zugänge je Tag (unten)",
+    "tab.revenueByBikeType": "Umsatz nach Radtyp",
+    "tab.revenueByCustomerGroup": "Umsatz nach Kundengruppe",
+    "tab.kmCo2": "Kilometer und CO₂",
+    "tab.stationOccupancy": "Stationsauslastung",
+    "tab.openDamage": "Offene Schäden",
+    "tab.workOrders": "Wartungsaufträge",
+    "auskunft.title": "Auskunft nach Art. 15 DSGVO · {name}",
+    "auskunft.stammdaten": "Stammdaten",
+    "auskunft.mitgliedschaften": "Mitgliedschaften",
+    "auskunft.fahrten": "Fahrten",
+    "auskunft.rechnungen": "Rechnungen",
+    "auskunft.zahlungen": "Zahlungen",
+    "auskunft.schadensmeldungen": "Schadensmeldungen",
+    "auskunft.freiminuten": "Freiminuten",
+    "auskunft.protokoll": "Protokoll",
+    "map.schematicNote": "Schematische Karte, keine maßstabsgetreue Landkarte: Kreisgröße zeigt die Kapazität einer Station, die Füllung ihre aktuelle Belegung.",
+    "map.riverLabel": "Main (schematisch)",
+    "map.areaWithCustomers": "Kartenbereich mit {stationenPhrase} und Kundenorten",
+    "map.area": "Kartenbereich mit {stationenPhrase}",
+    "map.customersAtLocation": "{ort}: {kundenPhrase}",
+    "common.and": "und",
+    "misc.changeVsPrevMonth": "ggü. Vormonat",
+    "msg.bikeNowSetTo": "{rahmennummer} steht jetzt auf {ziel}.",
+    "msg.confirmDecommission": "{rahmennummer} endgültig ausmustern? Das Rad verliert seinen Standort und erscheint in keiner Liste mehr. Seine Fahrten bleiben erhalten.",
+    "msg.bikeDecommissioned": "{rahmennummer} ausgemustert.",
+    "msg.fleetLoadFailed": "Die Flotte ließ sich nicht laden: {fehler}",
+    "msg.noBikeWithFilter": "Kein Rad mit diesem Filter",
+    "msg.modelsOrStationsLoadFailed": "Modelle oder Stationen ließen sich nicht laden: {fehler}",
+    "msg.noModelsOrStations": "Es gibt weder Modelle noch Stationen, aus denen ein neues Rad angelegt werden könnte.",
+    "msg.frameNumberMissing": "Die Rahmennummer fehlt.",
+    "msg.bikeCreated": "Rad {rahmennummer} angelegt.",
+    "msg.stationsLoadFailed": "Die Stationen ließen sich nicht laden: {fehler}",
+    "msg.stationsSummary": "{stationenPhrase}, {n} davon voll: {liste}",
+    "msg.stationStillHasBikes": "An {name} stehen noch {raederPhrase}. Sie müssen erst woanders zurückgegeben werden.",
+    "msg.confirmDecommissionStation": "{name} zum heutigen Tag stilllegen? Die Station bleibt in allen Auswertungen sichtbar, nimmt aber keine Räder mehr auf.",
+    "msg.stationDecommissioned": "{name} stillgelegt.",
+    "msg.bikesAtStationLoadFailed": "Die Räder ließen sich nicht laden: {fehler}",
+    "msg.trafficLoadFailed": "Der Stationsverkehr ließ sich nicht laden: {fehler}",
+    "msg.customersLoadFailed": "Die Kunden ließen sich nicht laden: {fehler}",
+    "msg.firstLastNameRequired": "Vorname und Nachname werden benötigt.",
+    "msg.customerSaved": "{vorname} {nachname} gespeichert.",
+    "msg.confirmBlockCustomer": "{vorname} {nachname} sperren? Es gibt derzeit keine Funktion, die eine Sperrung wieder aufhebt - das ist eine bekannte Lücke dieser Warenwirtschaft, keine Bequemlichkeit dieses Dialogs.",
+    "msg.customerBlocked": "{vorname} {nachname} gesperrt.",
+    "msg.nameEmailRequired": "Vorname, Nachname und E-Mail werden benötigt.",
+    "msg.customerCreated": "Kunde {vorname} {nachname} angelegt.",
+    "msg.customersCapped": "200 von mehr Kunden{zusatz} — bitte weiter eingrenzen",
+    "msg.searchFor": "zu „{suchtext}“",
+    "msg.statusList": "Status {liste}",
+    "msg.damageLoadFailed": "Die Schäden ließen sich nicht laden: {fehler}",
+    "msg.noBikeForDamage": "Es gibt kein Rad, dem ein Schaden zugeordnet werden könnte.",
+    "msg.categoryDescriptionRequired": "Kategorie und Beschreibung werden benötigt.",
+    "msg.damageReportedBlocked": "Meldung {id} angelegt. Das Rad ist gesperrt — sofern es nicht gerade gefahren wird; dann wird es bei der Rückgabe gesperrt.",
+    "msg.damageReported": "Meldung {id} angelegt.",
+    "msg.workOrderOpened": "Auftrag {id} eröffnet, Rad steht auf Wartung.",
+    "msg.workOrdersLoadFailed": "Die Aufträge ließen sich nicht laden: {fehler}",
+    "msg.workOrderCompleted": "Auftrag {auftragsnummer} erledigt.",
+    "msg.unrideableShare": "{n} von {schadenPhrase} insgesamt - sperrt das Rad, sobald es nicht gerade in Fahrt ist",
+    "msg.unrideableShareNoTotal": "sperrt das Rad, sobald es nicht gerade in Fahrt ist",
+    "hint.shareOfBikes": "{anteil} von {raederPhrase}",
+    "hint.shareOnLoan": "{anteil} von {raederPhrase} · gerade unterwegs",
+    "hint.shareMaintenance": "{anteil} von {raederPhrase} · in der Werkstatt",
+    "hint.shareFaulty": "{anteil} von {raederPhrase} · wo es klemmt",
+    "hint.rideDistribution": "Median {median}, Mittel {mittel} je Rad",
+    "hint.noRidesAtAll": " · {n} von {raederPhrase} ohne eine einzige Fahrt",
+    "hint.allRiddenAtLeastOnce": " · jedes der {raederPhrase} mindestens einmal gefahren",
+    "hint.allInOperation": "alle in Betrieb",
+    "hint.decommissionedCount": "{n} davon stillgelegt",
+    "hint.fullStationsShare": "{n} von {stationenPhrase}: {liste} - nimmt keine Rückgabe an",
+    "hint.networkOccupancyDetail": "{belegt} von {kapazitaet} Stellplätzen belegt, über alle {stationenPhrase}",
+    "hint.fillRangeDetail": "Median {median} % · {voll} von {stationenPhrase} randvoll{leerZusatz}",
+    "hint.andEmptyCount": ", {n} von {stationenPhrase} leer",
+    "hint.noneEmpty": ", keine leer",
+    "hint.blockedShare": "{n} von {kundenPhrase} - es gibt derzeit keine Funktion, die eine Sperrung aufhebt",
+    "hint.noUnblockFunction": "Es gibt derzeit keine Funktion, die eine Sperrung aufhebt",
+    "hint.noAddressShare": "{n} von {kundenPhrase} - lässt sich in der Maske nachtragen",
+    "hint.addLaterInForm": "Lässt sich in der Maske nachtragen",
+    "hint.top10Detail": "{zehntel} von {kundenPhrase} vereinen {top10} von {gesamt} Rechnungsvolumen (inkl. USt., ≠ Umsatz in Auswertungen) · Median {median}, Mittel {mittel} je Kunde",
+    "hint.overallStates": "über alle Bearbeitungsstände",
+    "hint.last12MonthsTrend": "Verlauf der letzten 12 Monate",
+    "hint.last12MonthsCrossCheck": "Verlauf der letzten 12 Monate - Kontrollrechnung zum Reiter \"Umsatz nach Radtyp\"",
+    "hint.yearlyPattern": "Jahresgang: {tief} am niedrigsten, {hoch} am höchsten",
+    "hint.perBikePerDayDetail": "{jeRadJahr} je Jahr · bezogen auf {raederPhrase} im Bestand (ohne Ausgemusterte) · letzte 12 Monate",
+    "hint.tariffChangeFrom": "{veraenderung} ab {monat} - Tarifwechsel",
+    "hint.shareOfRevenue": "{prozent} des Umsatzes ({geld})",
+    "hint.revenueWithoutTariff": "{geld} Umsatz aus Fahrten ohne aktiven Tarif",
+    "hint.estimatedShareOfRides": "{geschaetzt} von {fahrtenPhrase} geschätzt - NICHT {naiv}, wie das einfache Mittel der Zeilen nahelegen würde",
+    "hint.fillLevelPerStation": "Füllstand je Station, sortiert nach Stationsnummer",
+    "hint.networkOccupancyWeighted": "{belegt} von {kapazitaet} Stellplätzen belegt · kapazitätsgewichtet, nicht der Durchschnitt der Einzelwerte ({naiv})",
+    "hint.fullStationsList": "{voll} von {stationenPhrase}: {liste}",
+    "hint.worstStationBalance": "Saldo {saldo} - gibt mehr Räder ab, als sie bekommt",
+  },
+  en: {
+    "common.cancel": "Cancel",
+    "common.confirm": "Confirm",
+    "common.reason": "Reason",
+    "common.all": "All",
+    "common.actionsColumn": "Actions",
+    "common.noSearchPlaceholder": "No search in this section",
+    "common.noSearchAria": "Search not available in this section",
+    "common.confirmWordPrompt": "Type \"{wort}\" to confirm:",
+    "common.sortAria": "Sort by {titel}",
+    "common.sortAriaSuffix": ", currently {richtung}",
+    "common.ascending": "ascending",
+    "common.descending": "descending",
+    "common.sortResetAria": "Reset sorting by {titel}",
+    "common.sortResetTitle": "Reset sorting",
+    "common.groupByAria": "Group by {titel}",
+    "common.groupResetAria": "Remove grouping by {titel}",
+    "common.groupResetTitle": "Reset grouping",
+    "common.groupTitle": "Group",
+    "common.filterAria": "Filter {titel}",
+    "common.filterMinAria": "Minimum value for {titel}",
+    "common.filterSearchPlaceholder": "Search…",
+    "common.filterResetAria": "Reset {titel} filter",
+    "common.filterResetTitle": "Reset filter",
+    "common.columnFilterReset": "Reset column filters",
+    "common.noRowsMatchFilter": "No row matches the selected column-header restriction. ",
+    "common.groupedBy": "Grouped by {titel}",
+    "common.ungroup": "Remove grouping",
+    "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
+    "common.closeDetailsAria": "Close details",
+    "common.closeDetailsTitle": "Close details (Esc)",
+    "common.rowsFiltered": "{angezeigt} of {zeilenPhrase} (column filter active)",
+    "common.selectedCount": "{n} selected",
+    "common.minAbbrev": "min",
+    "common.hourAbbrev": "h",
+    "common.underOneMinute": "under 1 min",
+    "common.loggedInFor": "logged in for {dauer}",
+    "common.sinceOpen": "since opening: {dauer}",
+    "common.loginCheckFailed": "Could not verify sign-in: {msg}",
+    "common.loginBadCredentials": "Email or password is incorrect.",
+    "common.rolesCheckFailed": "Could not determine roles: {msg}",
+    "common.roleCheckFailed": "Could not check role {code}: {msg}",
+    "common.of": "of",
+    "common.xOfPhrase": "{x} of {phrase}",
+    "misc.estimatedParen": " ({prozent} estimated)",
+    "hint.ridesPerDayHeading": "Rides per day — {monat} (total, all bike types and plans)",
+    "status.label.abgebrochen": "Cancelled",
+    "status.raw.abgebrochen": "Cancelled",
+    "status.label.erledigt": "Completed",
+    "status.raw.erledigt": "Completed",
+    "status.label.verworfen": "Dismissed",
+    "status.raw.verworfen": "Dismissed",
+    "status.label.behoben": "Fixed",
+    "status.raw.behoben": "Fixed",
+    "hint.saldoChartAria": "Balance of {stationenPhrase}, sorted by station number, from {min} to {max} - lowest (marked in red) at {name}",
+    "hint.fillLevelBetween": "Fill level of {stationenPhrase}, sorted by station number, between {min} and {max}",
+    "msg.stationsWithoutBikeSuffix": ", {n} of them without a bike",
+    "empty.noStationOccupancyText": "There is no station. With ten stations set up, that is unusual - a temporary loss of role could be the cause rather than missing data.",
+    "empty.noStationOccupancyTitle": "No station occupancy",
+    "msg.stationOccupancyLoadFailed": "Could not load station occupancy: {fehler}",
+    "misc.estimatedRidesDetail": "{geschaetzt} of {fahrtenPhrase} ({prozent})",
+    "hint.monthlyKmChartAria": "Kilometres ridden per month, last twelve months ({vonMonat} to {bisMonat}) - the dark bar on the far right is the current month, {aktuellWert}",
+    "hint.monthlyCo2ChartAria": "CO2 savings per month, last twelve months ({vonMonat} to {bisMonat}), from {min} to {max} - the dark bar on the far right is the current month, {aktuellWert}",
+    "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, total CO₂ savings {co2}, of which {prozent} estimated (ride-weighted)",
+    "empty.noKmCo2Title": "No kilometre and CO2 rows",
+    "msg.kmCo2LoadFailed": "Could not load kilometres and CO2: {fehler}",
+    "field.jeKunde": "Per customer",
+    "hint.crossCheckChartAria": "Monthly revenue for the last twelve months ({vonMonat} to {bisMonat}), the same series as in the \"Revenue by bike type\" tab - the dark bar on the far right is the current month, {aktuellWert}",
+    "msg.revenueByCustomerGroupSummary": "{monatszeilen}, total revenue {umsatz}",
+    "empty.noRevenueByCustomerGroupTitle": "No revenue by customer group",
+    "msg.revenueByCustomerGroupLoadFailed": "Could not load revenue by customer group: {fehler}",
+    "hint.cityBikeJumpChartAria": "Revenue per ride, City-Bike, {n} months from {vonMonat}: jump from {von} to {nach} starting {sprungMonat}, marked in red",
+    "hint.monthlyRidesChartAria": "Rides per month, last twelve months: lowest at {min} in {tiefMonat}, highest at {max} in {hochMonat} - the dark bar on the far right is the current month, {aktuellMonat} with {aktuellPhrase}",
+    "hint.monthlyRevenueChartAria": "Monthly revenue for the last twelve months ({vonMonat} to {bisMonat}), from {min} to {max} - the dark bar on the far right is the current month, {aktuellMonat} with {aktuellWert}",
+    "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, total revenue {umsatz}",
+    "msg.revenueByBikeTypeLoadFailed": "Could not load revenue by bike type: {fehler}",
+    "empty.noRevenueByBikeTypeText": "There is no monthly row. With a populated reference year that is unusual - a temporary loss of role could be the cause rather than missing data.",
+    "empty.noRevenueByBikeTypeTitle": "No revenue by bike type",
+    "misc.estimatedSuffix": " (estimated)",
+    "field.strecke": "Distance",
+    "field.dauer": "Duration",
+    "field.ziel": "Destination",
+    "field.start": "Start",
+    "misc.bikesOnDateCaption": "Bikes on {datum} - no customer reference, see v_wawi_fahrten_je_tag_rad",
+    "button.backToDayOverview": "Back to the daily overview",
+    "misc.bikesOnDate": "Bikes on {datum}",
+    "misc.noBikeRiddenThisDay": "No bike was ridden on this day.",
+    "msg.thisDayBikesLoadFailed": "Could not load this day’s bikes: {fehler}",
+    "hint.legendColorScale": "Colour = this day’s rides relative to the busiest day of the month ({phrase}).",
+    "hint.dayRidesAria": "{datum}: {phrase}",
+    "hint.calendarCaption": "Rides per day, {monat}",
+    "hint.tiedDaysCount": "{tagePhrase} tied, {phrase} each",
+    "hint.totalForMonth": "{phrase}, total",
+    "hint.dailyRidesChartAria": "Rides per day in {monat} {jahr}, total across all bike types and plans: between {min} and {maxPhrase}, on average {mittel}. Most rides on {tageListe} {monat} with {maxPhrase} each.",
+    "msg.dailyFiguresLoadFailed": "Could not load the daily figures: {fehler}",
+    "misc.workOrderTitle": "Work order {auftragsnummer}",
+    "msg.activeWorkOrdersCount": "{n} active work orders",
+    "misc.reportForBike": "Report for {rahmennummer}",
+    "msg.openDamageWithUnrideable": "{n}{zusatz} open damage reports, of which {dringend} unrideable",
+    "msg.openDamageCount": "{n}{zusatz} open damage reports",
+    "misc.atLeastValue": "≥ {n} {einheit}",
+    "misc.allLowercase": "all",
+    "field.minAge": "Minimum age",
+    "field.offenSeit": "Open since",
+    "field.gemeldet": "Reported",
+    "misc.stillRunning": "{datum} · still ongoing",
+    "misc.noRentalYet": "No rental yet",
+    "msg.stationCreated": "Station {name} created.",
+    "msg.capacityPositiveInteger": "The number of docks must be a positive whole number.",
+    "msg.longitudeRange": "The longitude must be between -180 and 180.",
+    "msg.latitudeRange": "The latitude must be between -90 and 90.",
+    "msg.latLonRequired": "Latitude and longitude are required.",
+    "msg.stationFieldsRequired": "Name, street, house number, postal code, and city are required.",
+    "field.laenge": "Longitude",
+    "field.breite": "Latitude",
+    "field.hausnummerVoll": "House number",
+    "field.name": "Name",
+    "hint.arrivalsPerDayLabel": "{label}: {n} arrivals per day",
+    "hint.departuresPerDayLabel": "{label}: {n} departures per day",
+    "hint.trafficPatternAria": "{wochentypTitel} at {name}, averaged over {tage} days. Most departures fall in the time slot {zeitfensterAb} with {maxAb} per day, most arrivals in the time slot {zeitfensterZu} with {maxZu} per day.",
+    "hint.stationFullNote": " The station is full and is not currently accepting returns.",
+    "hint.stationOccupancyAria": "Occupancy {name}: {belegt} of {kapazitaet} docks, {prozent} percent. 100 percent is the capacity of this one station.{vollZusatz}",
+    "hint.networkOccupancyAria": "Network-wide occupancy across all {stationenPhrase}: {belegt} of {kapazitaet} docks occupied, {prozent} percent. 100 percent is the total capacity of the whole station network, not that of a single station.",
+    "map.openDetailsSuffix": ". Open details.",
+    "map.stationFullSuffix": ", full - not currently accepting returns",
+    "map.stationBelegLabel": "{name}: {belegt} of {kapazitaet} docks occupied",
+    "map.customerLabelShort": "{ort} ({n})",
+    "misc.freeShort": "{n} free",
+    "misc.unitsInStock": "{n} in stock",
+    "nav.originDamageReport": "Damage report for {rahmennummer}",
+    "nav.originBikeFromStation": "Bike {rahmennummer} from {name}",
+    "nav.originBikeFromFleet": "Bike {rahmennummer} from the fleet",
+    "hint.percentOfFleet": "{anteil} % of the fleet",
+    "index.title": "VeloCity Inventory Management",
+    "index.loading": "One moment …",
+    "index.loginEmail": "Email",
+    "index.loginPassword": "Password",
+    "index.loginSubmit": "Sign in",
+    "index.noAccessTitle": "No access",
+    "index.noAccessText": "This account is not registered with VeloCity as a staff account. If you are a customer, you can find your area at",
+    "index.logout": "Sign out",
+    "index.noRoleTitle": "No role assigned yet",
+    "index.noRoleText": "Your account is registered with VeloCity as a staff account, but no area of responsibility has been assigned yet. Please contact management so they can assign you a role.",
+    "index.searchPlaceholder": "Search",
+    "index.profileAria": "Profile and settings",
+    "index.settingsHeading": "Settings",
+    "index.zebraLabel": "Zebra striping in tables",
+    "index.languageLabel": "Language",
+    "index.navAria": "Work areas",
+    "index.workListAria": "Work list",
+    "index.detailAria": "Detail form",
+    "nav.flotte": "Fleet",
+    "nav.stationen": "Stations",
+    "nav.kunden": "Customers",
+    "nav.instandhaltung": "Maintenance",
+    "nav.auswertungen": "Reports",
+    "nav.kundenSuche": "Customers: name, email, customer number",
+    "field.rahmennummer": "Frame number",
+    "field.typ": "Type",
+    "field.status": "Status",
+    "field.standort": "Location",
+    "field.schaeden": "Damage reports",
+    "field.modell": "Model",
+    "field.angeschafft": "Acquired",
+    "field.letzteWartung": "Last maintenance",
+    "field.offeneSchaeden": "Open damage reports",
+    "field.hoechsteSchwere": "Highest severity",
+    "field.radtyp": "Bike type",
+    "field.station": "Station",
+    "field.nummer": "Number",
+    "field.ort": "Location",
+    "field.belegt": "Occupied",
+    "field.frei": "Free",
+    "field.anschrift": "Address",
+    "field.stellplaetze": "Docks",
+    "field.lage": "Coordinates",
+    "field.betrieb": "Operation",
+    "field.akku": "Battery",
+    "field.nachname": "Last name",
+    "field.vorname": "First name",
+    "field.tarif": "Plan",
+    "field.kundeSeit": "Customer since",
+    "field.letzteAusleihe": "Last rental",
+    "field.anrede": "Salutation",
+    "field.email": "Email",
+    "field.telefon": "Phone",
+    "field.strasse": "Street",
+    "field.hausnummer": "No.",
+    "field.plz": "Postal code",
+    "field.hinweis": "Note",
+    "field.fahrten": "Rides",
+    "field.umsatz": "Revenue",
+    "field.offen": "Outstanding",
+    "field.kategorie": "Category",
+    "field.gemeldetVon": "Reported by",
+    "field.gemeldetAm": "Reported on",
+    "field.beschreibung": "Description",
+    "field.schwere": "Severity",
+    "field.stand": "Status",
+    "field.bisherigeAuftraege": "Previous work orders",
+    "field.rad": "Bike",
+    "field.auftrag": "Work order",
+    "field.eroeffnet": "Opened",
+    "field.bearbeiter": "Assigned to",
+    "field.arbeitszeitMinuten": "Labour time (minutes)",
+    "field.bemerkung": "Remark",
+    "field.kapazitaet": "Capacity",
+    "field.abgaenge": "Departures",
+    "field.zugaenge": "Arrivals",
+    "field.saldo": "Balance",
+    "field.fuellstand": "Fill level",
+    "field.monat": "Month",
+    "field.minuten": "Minutes",
+    "field.jeFahrt": "Per ride",
+    "field.minutenJeFahrt": "Minutes per ride",
+    "field.deltaVormonat": "Δ vs. previous month",
+    "field.kunden": "Customers",
+    "field.fahrtenJeKunde": "Rides per customer",
+    "field.kilometer": "Kilometres",
+    "field.kilometerJeFahrt": "Kilometres per ride",
+    "field.co2Ersparnis": "CO₂ savings",
+    "field.davonGeschaetzt": "Of which estimated",
+    "status.raw.verfuegbar": "Available",
+    "status.label.verfuegbar": "Available",
+    "status.raw.ausgeliehen": "On loan",
+    "status.label.ausgeliehen": "On loan",
+    "status.raw.wartung": "Maintenance",
+    "status.label.wartung": "Maintenance",
+    "status.raw.defekt": "Faulty",
+    "status.label.defekt": "Faulty",
+    "status.raw.ausgemustert": "Decommissioned",
+    "status.label.ausgemustert": "Decommissioned",
+    "status.raw.aktiv": "Active",
+    "status.label.aktiv": "Active",
+    "status.raw.gesperrt": "Blocked",
+    "status.label.gesperrt": "Blocked",
+    "status.raw.geschlossen": "Closed",
+    "status.label.geschlossen": "Closed",
+    "status.raw.offen": "Open",
+    "status.label.offen": "Open",
+    "status.raw.in_arbeit": "In progress",
+    "status.label.in_arbeit": "In progress",
+    "schwere.gering": "minor",
+    "schwere.mittel": "moderate",
+    "schwere.fahruntauglich": "unrideable",
+    "button.newBike": "Add new bike",
+    "button.create": "Create",
+    "button.setTo": "Set to {ziel}",
+    "button.whyTarget": "Why {ziel}?",
+    "button.decommission": "Decommission",
+    "button.decommissionReason": "Reason for decommissioning",
+    "button.newStation": "Add new station",
+    "button.decommissionStation": "Decommission",
+    "button.newCustomer": "Add new customer",
+    "button.save": "Save",
+    "button.block": "Block",
+    "button.blockReason": "Reason for blocking",
+    "button.disclosureArt15": "Disclosure under Art. 15",
+    "button.deletionArt17": "Erasure under Art. 17",
+    "button.downloadJson": "Download as JSON",
+    "button.close": "Close",
+    "button.reportDamage": "Report damage",
+    "button.openWorkOrder": "Open work order",
+    "button.bikeInFleet": "Bike in fleet",
+    "button.report": "Report",
+    "button.resolve": "Complete",
+    "button.toOpenDamage": "Go to open damage reports",
+    "button.damageInFleet": "Bike in fleet",
+    "button.list": "List",
+    "button.map": "Map",
+    "button.showCustomersOnMap": "Show customers per location",
+    "empty.noBikesFilterTitle": "No bikes match this filter",
+    "empty.noBikesFilterText": "No bike in the fleet matches the selected restriction.",
+    "empty.noCustomersFilterTitle": "No customers match this filter",
+    "empty.noCustomersFilterTextSearch": "No customer matching \"{suchtext}\" also meets the selected restriction.",
+    "empty.noCustomersFilterText": "No customer matches the selected restriction.",
+    "empty.statusFilterReset": "Reset status filter",
+    "empty.noOpenDamageTitle": "No open damage reports",
+    "empty.noOpenDamageText": "There is currently no damage report. That is the normal case — a report is made when something is noticed on a bike.",
+    "empty.noDamageFilterTitle": "No damage reports match this filter",
+    "empty.noDamageFilterText": "No open damage report matches the selected restriction.",
+    "empty.noWorkOrdersTitle": "No active work orders",
+    "empty.noWorkOrdersText": "There is currently no work order. A work order is created from an open damage report — that is where the \"Open work order\" button is.",
+    "misc.underway": "under way",
+    "misc.underwayNoLocation": "under way (no location)",
+    "misc.noneYet": "none yet",
+    "misc.noMembership": "no membership",
+    "misc.notYetAssigned": "not yet assigned",
+    "misc.justNow": "just now",
+    "misc.inOperation": "in operation",
+    "misc.decommissionedState": "decommissioned",
+    "misc.noAddressOnFile": "No address is on file for this person - this is not a loading error. The fields below can be filled in to add one.",
+    "misc.disclosureLoggedNote": "Retrieving the Art. 15 disclosure is logged (GR19): viewing it leaves a trace in the change log.",
+    "misc.damageBlocksImmediately": "An unrideable damage report blocks the bike immediately - unless it is currently in use. In that case the status stays unchanged for now (GR13 does not allow a bike under way any other status) and the block takes effect only on return.",
+    "misc.onlyUnrideableBlocks": "Only an unrideable report blocks the bike automatically.",
+    "misc.noMinutesNeeded": "The labour time in minutes is required (0 or more).",
+    "art17.confirmHeader": "Erasure under Art. 17 GDPR for {name}?",
+    "art17.whatDisappears": "WHAT DISAPPEARS: name, email, phone number, date of birth, address, payment method, and the link to the sign-in account. The old values are also made unrecognisable in the change log.",
+    "art17.whatRemains": "WHAT REMAINS: {phrase} and all invoices, in full. Tax law requires ten years of retention, and the GDPR explicitly exempts this obligation from erasure.",
+    "art17.whatThisDoesNotAchieve": "WHAT THIS DOES NOT ACHIEVE: the rides carry times and locations. Anyone who regularly rides from the same point at the same time can still be identified through them.",
+    "art17.irreversible": "This action cannot be undone.",
+    "art17.reasonPrompt": "Reason (e.g.: request by the data subject dated …)",
+    "art17.abortedNoReason": "Cancelled: no erasure without a reason.",
+    "art17.runningRideBlocks": "{name} still has a ride in progress. Please wait for the return first.",
+    "art17.doneMessage": "Customer {nummer} anonymised. Invoices and rides are retained.",
+    "art17.confirmWord": "LOESCHEN",
+    "tile.available": "Ready for use",
+    "tile.onLoan": "On loan",
+    "tile.inMaintenance": "In maintenance",
+    "tile.faulty": "Faulty",
+    "tile.ridesPerBike30d": "Rides per bike (30 days)",
+    "tile.stations": "Stations",
+    "tile.fullStations": "Full stations",
+    "tile.networkOccupancy": "Total occupancy – all stations",
+    "tile.fillRange": "Fill-level range",
+    "tile.customersTotal": "Customers total",
+    "tile.blocked": "Blocked",
+    "tile.noAddress": "Without address",
+    "tile.invoiceTop10": "Invoice volume: top 10 %",
+    "tile.damageReportsTotal": "Damage reports total",
+    "tile.workOrdersTotal": "Work orders total",
+    "tile.unrideableOpen": "Unrideable, open",
+    "tile.minimum": "Minimum",
+    "tile.maximum": "Maximum",
+    "tile.countPerMonth": "Count per month",
+    "tile.dayWithMostRides": "Day with the most rides",
+    "tile.revenueTotal": "Revenue total",
+    "tile.ridesTotal": "Rides total",
+    "tile.revenuePerBikeDay": "Revenue per bike and day",
+    "tile.notableRevenuePerRideCityBike": "Notable: revenue per ride, City-Bike",
+    "tile.largestCustomerGroup": "Largest customer group",
+    "tile.notableNoMembership": "Notable: without membership",
+    "tile.co2SavingsTotal": "CO₂ savings total",
+    "tile.kilometersTotal": "Kilometres total",
+    "tile.ofWhichEstimatedWeighted": "Of which estimated (ride-weighted)",
+    "tile.networkOccupancyTotal": "Total network occupancy",
+    "tile.biggestImbalance": "Biggest imbalance",
+    "tile.occupancy": "Occupancy",
+    "tile.trafficByTimeSlot": "Arrivals and departures by time slot",
+    "tile.departuresPerDayTop": "Departures per day (top)",
+    "tile.arrivalsPerDayBottom": "Arrivals per day (bottom)",
+    "tile.weekdays": "Weekdays (Mon–Fri)",
+    "tile.weekend": "Weekend (Sat/Sun)",
+    "tile.bikesAtStation": "Bikes at this station ({n})",
+    "tile.noBikesHere": "There is currently no bike here - all are under way, in the workshop, or faulty.",
+    "tile.noTrafficData": "No traffic figures are available for this station.",
+    "tile.legendDepartures": "Departures per day (top)",
+    "tile.legendArrivals": "Arrivals per day (bottom)",
+    "tab.revenueByBikeType": "Revenue by bike type",
+    "tab.revenueByCustomerGroup": "Revenue by customer group",
+    "tab.kmCo2": "Kilometres and CO₂",
+    "tab.stationOccupancy": "Station occupancy",
+    "tab.openDamage": "Open damage reports",
+    "tab.workOrders": "Work orders",
+    "auskunft.title": "Disclosure under Art. 15 GDPR · {name}",
+    "auskunft.stammdaten": "Master data",
+    "auskunft.mitgliedschaften": "Memberships",
+    "auskunft.fahrten": "Rides",
+    "auskunft.rechnungen": "Invoices",
+    "auskunft.zahlungen": "Payments",
+    "auskunft.schadensmeldungen": "Damage reports",
+    "auskunft.freiminuten": "Free minutes",
+    "auskunft.protokoll": "Log",
+    "map.schematicNote": "Schematic map, not to scale: circle size shows a station’s capacity, the fill shows its current occupancy.",
+    "map.riverLabel": "Main river (schematic)",
+    "map.areaWithCustomers": "Map area with {stationenPhrase} and customer locations",
+    "map.area": "Map area with {stationenPhrase}",
+    "map.customersAtLocation": "{ort}: {kundenPhrase}",
+    "common.and": "and",
+    "misc.changeVsPrevMonth": "vs. previous month",
+    "msg.bikeNowSetTo": "{rahmennummer} is now set to {ziel}.",
+    "msg.confirmDecommission": "Permanently decommission {rahmennummer}? The bike loses its location and no longer appears in any list. Its rides are retained.",
+    "msg.bikeDecommissioned": "{rahmennummer} decommissioned.",
+    "msg.fleetLoadFailed": "Could not load the fleet: {fehler}",
+    "msg.noBikeWithFilter": "No bike matches this filter",
+    "msg.modelsOrStationsLoadFailed": "Could not load models or stations: {fehler}",
+    "msg.noModelsOrStations": "There are neither models nor stations from which a new bike could be created.",
+    "msg.frameNumberMissing": "The frame number is missing.",
+    "msg.bikeCreated": "Bike {rahmennummer} created.",
+    "msg.stationsLoadFailed": "Could not load the stations: {fehler}",
+    "msg.stationsSummary": "{stationenPhrase}, {n} of them full: {liste}",
+    "msg.stationStillHasBikes": "{name} still has {raederPhrase}. They must be returned somewhere else first.",
+    "msg.confirmDecommissionStation": "Decommission {name} as of today? The station remains visible in all reports but no longer accepts bikes.",
+    "msg.stationDecommissioned": "{name} decommissioned.",
+    "msg.bikesAtStationLoadFailed": "Could not load the bikes: {fehler}",
+    "msg.trafficLoadFailed": "Could not load station traffic: {fehler}",
+    "msg.customersLoadFailed": "Could not load the customers: {fehler}",
+    "msg.firstLastNameRequired": "First and last name are required.",
+    "msg.customerSaved": "{vorname} {nachname} saved.",
+    "msg.confirmBlockCustomer": "Block {vorname} {nachname}? There is currently no function to lift a block - this is a known gap in this system, not a convenience of this dialog.",
+    "msg.customerBlocked": "{vorname} {nachname} blocked.",
+    "msg.nameEmailRequired": "First name, last name, and email are required.",
+    "msg.customerCreated": "Customer {vorname} {nachname} created.",
+    "msg.customersCapped": "200 of more customers{zusatz} — please narrow down further",
+    "msg.searchFor": "for “{suchtext}”",
+    "msg.statusList": "Status {liste}",
+    "msg.damageLoadFailed": "Could not load the damage reports: {fehler}",
+    "msg.noBikeForDamage": "There is no bike to which a damage report could be assigned.",
+    "msg.categoryDescriptionRequired": "Category and description are required.",
+    "msg.damageReportedBlocked": "Report {id} created. The bike is blocked — unless it is currently being ridden; then it will be blocked on return.",
+    "msg.damageReported": "Report {id} created.",
+    "msg.workOrderOpened": "Work order {id} opened, bike set to maintenance.",
+    "msg.workOrdersLoadFailed": "Could not load the work orders: {fehler}",
+    "msg.workOrderCompleted": "Work order {auftragsnummer} completed.",
+    "msg.unrideableShare": "{n} of {schadenPhrase} in total - blocks the bike as soon as it is not currently being ridden",
+    "msg.unrideableShareNoTotal": "blocks the bike as soon as it is not currently being ridden",
+    "hint.shareOfBikes": "{anteil} of {raederPhrase}",
+    "hint.shareOnLoan": "{anteil} of {raederPhrase} · currently under way",
+    "hint.shareMaintenance": "{anteil} of {raederPhrase} · in the workshop",
+    "hint.shareFaulty": "{anteil} of {raederPhrase} · where it’s stuck",
+    "hint.rideDistribution": "Median {median}, mean {mittel} per bike",
+    "hint.noRidesAtAll": " · {n} of {raederPhrase} without a single ride",
+    "hint.allRiddenAtLeastOnce": " · every one of {raederPhrase} ridden at least once",
+    "hint.allInOperation": "all in operation",
+    "hint.decommissionedCount": "{n} of which decommissioned",
+    "hint.fullStationsShare": "{n} of {stationenPhrase}: {liste} - not accepting returns",
+    "hint.networkOccupancyDetail": "{belegt} of {kapazitaet} docks occupied, across all {stationenPhrase}",
+    "hint.fillRangeDetail": "Median {median} % · {voll} of {stationenPhrase} completely full{leerZusatz}",
+    "hint.andEmptyCount": ", {n} of {stationenPhrase} empty",
+    "hint.noneEmpty": ", none empty",
+    "hint.blockedShare": "{n} of {kundenPhrase} - there is currently no function to lift a block",
+    "hint.noUnblockFunction": "There is currently no function to lift a block",
+    "hint.noAddressShare": "{n} of {kundenPhrase} - can be added later in the form",
+    "hint.addLaterInForm": "Can be added later in the form",
+    "hint.top10Detail": "{zehntel} of {kundenPhrase} together account for {top10} of {gesamt} invoice volume (incl. VAT, ≠ revenue in reports) · median {median}, mean {mittel} per customer",
+    "hint.overallStates": "across all processing states",
+    "hint.last12MonthsTrend": "Trend over the last 12 months",
+    "hint.last12MonthsCrossCheck": "Trend over the last 12 months - cross-check against the \"Revenue by bike type\" tab",
+    "hint.yearlyPattern": "Yearly pattern: lowest in {tief}, highest in {hoch}",
+    "hint.perBikePerDayDetail": "{jeRadJahr} per year · based on {raederPhrase} in the fleet (excluding decommissioned) · last 12 months",
+    "hint.tariffChangeFrom": "{veraenderung} from {monat} - tariff change",
+    "hint.shareOfRevenue": "{prozent} of revenue ({geld})",
+    "hint.revenueWithoutTariff": "{geld} revenue from rides without an active plan",
+    "hint.estimatedShareOfRides": "{geschaetzt} of {fahrtenPhrase} estimated - NOT {naiv}, as the simple average of the rows would suggest",
+    "hint.fillLevelPerStation": "Fill level per station, sorted by station number",
+    "hint.networkOccupancyWeighted": "{belegt} of {kapazitaet} docks occupied · capacity-weighted, not the average of the individual values ({naiv})",
+    "hint.fullStationsList": "{voll} of {stationenPhrase}: {liste}",
+    "hint.worstStationBalance": "Balance {saldo} - gives away more bikes than it receives",
+  },
+  tr: {
+    "common.cancel": "Vazgeç",
+    "common.confirm": "Onayla",
+    "common.reason": "Sebep",
+    "common.all": "Tümü",
+    "common.actionsColumn": "İşlemler",
+    "common.noSearchPlaceholder": "Bu bölümde arama yok",
+    "common.noSearchAria": "Bu bölümde arama kullanılamaz",
+    "common.confirmWordPrompt": "Onaylamak için \"{wort}\" yazın:",
+    "common.sortAria": "{titel} alanına göre sırala",
+    "common.sortAriaSuffix": ", şu an {richtung}",
+    "common.ascending": "artan",
+    "common.descending": "azalan",
+    "common.sortResetAria": "{titel} sıralamasını sıfırla",
+    "common.sortResetTitle": "Sıralamayı sıfırla",
+    "common.groupByAria": "{titel} alanına göre grupla",
+    "common.groupResetAria": "{titel} gruplamasını kaldır",
+    "common.groupResetTitle": "Gruplamayı sıfırla",
+    "common.groupTitle": "Grupla",
+    "common.filterAria": "{titel} alanını filtrele",
+    "common.filterMinAria": "{titel} için en düşük değer",
+    "common.filterSearchPlaceholder": "Ara…",
+    "common.filterResetAria": "{titel} filtresini sıfırla",
+    "common.filterResetTitle": "Filtreyi sıfırla",
+    "common.columnFilterReset": "Sütun filtrelerini sıfırla",
+    "common.noRowsMatchFilter": "Hiçbir satır sütun başlığındaki seçili kısıtlamayı karşılamıyor. ",
+    "common.groupedBy": "{titel} alanına göre gruplandı",
+    "common.ungroup": "Gruplamayı kaldır",
+    "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
+    "common.closeDetailsAria": "Ayrıntıları kapat",
+    "common.closeDetailsTitle": "Ayrıntıları kapat (Esc)",
+    "common.rowsFiltered": "{zeilenPhrase} içinden {angezeigt} (sütun filtresi etkin)",
+    "common.selectedCount": "{n} seçildi",
+    "common.minAbbrev": "dk",
+    "common.hourAbbrev": "sa",
+    "common.underOneMinute": "1 dk. altı",
+    "common.loggedInFor": "{dauer} süredir oturum açık",
+    "common.sinceOpen": "açıldığından beri: {dauer}",
+    "common.loginCheckFailed": "Oturum açma doğrulanamadı: {msg}",
+    "common.loginBadCredentials": "E-posta veya parola hatalı.",
+    "common.rolesCheckFailed": "Roller belirlenemedi: {msg}",
+    "common.roleCheckFailed": "{code} rolü kontrol edilemedi: {msg}",
+    "common.of": "/",
+    "common.xOfPhrase": "{phrase} içinden {x}",
+    "misc.estimatedParen": " ({prozent} tahmini)",
+    "hint.ridesPerDayHeading": "Güne göre sürüşler — {monat} (toplam, tüm bisiklet tipleri ve tarifeler)",
+    "status.label.abgebrochen": "İptal edildi",
+    "status.raw.abgebrochen": "İptal edildi",
+    "status.label.erledigt": "Tamamlandı",
+    "status.raw.erledigt": "Tamamlandı",
+    "status.label.verworfen": "Reddedildi",
+    "status.raw.verworfen": "Reddedildi",
+    "status.label.behoben": "Giderildi",
+    "status.raw.behoben": "Giderildi",
+    "hint.saldoChartAria": "İstasyon numarasına göre sıralı {stationenPhrase} bakiyesi, {min} ile {max} arasında - en düşük (kırmızıyla işaretli) {name}",
+    "hint.fillLevelBetween": "İstasyon numarasına göre sıralı {stationenPhrase} doluluğu, {min} ile {max} arasında",
+    "msg.stationsWithoutBikeSuffix": ", bunlardan {n} tanesi bisikletsiz",
+    "empty.noStationOccupancyText": "Herhangi bir istasyon bulunmuyor. On istasyon tanımlıyken bu olağandışıdır - eksik veri yerine geçici bir rol kaybı söz konusu olabilir.",
+    "empty.noStationOccupancyTitle": "İstasyon doluluğu yok",
+    "msg.stationOccupancyLoadFailed": "İstasyon doluluğu yüklenemedi: {fehler}",
+    "misc.estimatedRidesDetail": "{fahrtenPhrase} içinden {geschaetzt} tanesi ({prozent})",
+    "hint.monthlyKmChartAria": "Aylık kat edilen kilometre, son on iki ay ({vonMonat} - {bisMonat}) - en sağdaki koyu sütun mevcut ay, {aktuellWert}",
+    "hint.monthlyCo2ChartAria": "Aylık CO2 tasarrufu, son on iki ay ({vonMonat} - {bisMonat}), {min} ile {max} arasında - en sağdaki koyu sütun mevcut ay, {aktuellWert}",
+    "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, toplam CO₂ tasarrufu {co2}, bunun {prozent} tahmini (sürüş ağırlıklı)",
+    "empty.noKmCo2Title": "Kilometre ve CO2 satırı yok",
+    "msg.kmCo2LoadFailed": "Kilometre ve CO2 yüklenemedi: {fehler}",
+    "field.jeKunde": "Müşteri başına",
+    "hint.crossCheckChartAria": "Son on iki ayın aylık cirosu ({vonMonat} - {bisMonat}), \"Bisiklet tipine göre ciro\" sekmesindekiyle aynı seri - en sağdaki koyu sütun mevcut ay, {aktuellWert}",
+    "msg.revenueByCustomerGroupSummary": "{monatszeilen}, toplam ciro {umsatz}",
+    "empty.noRevenueByCustomerGroupTitle": "Müşteri grubuna göre ciro yok",
+    "msg.revenueByCustomerGroupLoadFailed": "Müşteri grubuna göre ciro yüklenemedi: {fehler}",
+    "hint.cityBikeJumpChartAria": "City-Bike sürüş başına ciro, {vonMonat} itibarıyla {n} ay: {sprungMonat} itibarıyla {von} değerinden {nach} değerine sıçrama, kırmızıyla işaretlendi",
+    "hint.monthlyRidesChartAria": "Aylık sürüşler, son on iki ay: en düşük {tiefMonat} ayında {min}, en yüksek {hochMonat} ayında {max} - en sağdaki koyu sütun mevcut ay olan {aktuellMonat}, {aktuellPhrase} ile",
+    "hint.monthlyRevenueChartAria": "Son on iki ayın aylık cirosu ({vonMonat} - {bisMonat}), {min} ile {max} arasında - en sağdaki koyu sütun mevcut ay olan {aktuellMonat}, {aktuellWert} ile",
+    "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, toplam ciro {umsatz}",
+    "msg.revenueByBikeTypeLoadFailed": "Bisiklet tipine göre ciro yüklenemedi: {fehler}",
+    "empty.noRevenueByBikeTypeText": "Herhangi bir aylık satır bulunmuyor. Dolu bir referans yılında bu olağandışıdır - eksik veri yerine geçici bir rol kaybı söz konusu olabilir.",
+    "empty.noRevenueByBikeTypeTitle": "Bisiklet tipine göre ciro yok",
+    "misc.estimatedSuffix": " (tahmini)",
+    "field.strecke": "Mesafe",
+    "field.dauer": "Süre",
+    "field.ziel": "Varış",
+    "field.start": "Başlangıç",
+    "misc.bikesOnDateCaption": "{datum} tarihindeki bisikletler - müşteri bilgisi yok, bkz. v_wawi_fahrten_je_tag_rad",
+    "button.backToDayOverview": "Günlük özete dön",
+    "misc.bikesOnDate": "{datum} tarihindeki bisikletler",
+    "misc.noBikeRiddenThisDay": "Bu gün hiçbir bisiklet kullanılmadı.",
+    "msg.thisDayBikesLoadFailed": "Bu güne ait bisikletler yüklenemedi: {fehler}",
+    "hint.legendColorScale": "Renk = bu günün sürüşlerinin ayın en yoğun gününe oranı ({phrase}).",
+    "hint.dayRidesAria": "{datum}: {phrase}",
+    "hint.calendarCaption": "{monat} ayında güne göre sürüşler",
+    "hint.tiedDaysCount": "{tagePhrase} berabere, her biri {phrase}",
+    "hint.totalForMonth": "{phrase}, toplam",
+    "hint.dailyRidesChartAria": "{jahr} {monat} ayında güne göre sürüşler, tüm bisiklet tipleri ve tarifeler toplamı: {min} ile {maxPhrase} arasında, ortalama {mittel}. En çok sürüş {monat} ayının {tageListe} günlerinde, her birinde {maxPhrase}.",
+    "msg.dailyFiguresLoadFailed": "Günlük rakamlar yüklenemedi: {fehler}",
+    "misc.workOrderTitle": "İş emri {auftragsnummer}",
+    "msg.activeWorkOrdersCount": "{n} devam eden iş emri",
+    "misc.reportForBike": "{rahmennummer} için bildirim",
+    "msg.openDamageWithUnrideable": "{n}{zusatz} açık hasar bildirimi, bunlardan {dringend} tanesi sürüşe uygun değil",
+    "msg.openDamageCount": "{n}{zusatz} açık hasar bildirimi",
+    "misc.atLeastValue": "≥ {n} {einheit}",
+    "misc.allLowercase": "tümü",
+    "field.minAge": "Asgari yaş",
+    "field.offenSeit": "Açık kalma süresi",
+    "field.gemeldet": "Bildirim",
+    "misc.stillRunning": "{datum} · devam ediyor",
+    "misc.noRentalYet": "Henüz kiralama yok",
+    "msg.stationCreated": "{name} istasyonu oluşturuldu.",
+    "msg.capacityPositiveInteger": "Park yeri sayısı pozitif bir tam sayı olmalıdır.",
+    "msg.longitudeRange": "Boylam -180 ile 180 arasında olmalıdır.",
+    "msg.latitudeRange": "Enlem -90 ile 90 arasında olmalıdır.",
+    "msg.latLonRequired": "Enlem ve boylam gereklidir.",
+    "msg.stationFieldsRequired": "Ad, sokak, kapı numarası, posta kodu ve şehir gereklidir.",
+    "field.laenge": "Boylam",
+    "field.breite": "Enlem",
+    "field.hausnummerVoll": "Kapı numarası",
+    "field.name": "Ad",
+    "hint.arrivalsPerDayLabel": "{label}: günde {n} giriş",
+    "hint.departuresPerDayLabel": "{label}: günde {n} çıkış",
+    "hint.trafficPatternAria": "{name}, {tage} gün ortalaması, {wochentypTitel}. En çok çıkış {zeitfensterAb} zaman diliminde, günde {maxAb}; en çok giriş {zeitfensterZu} zaman diliminde, günde {maxZu}.",
+    "hint.stationFullNote": " İstasyon dolu ve şu anda iade kabul etmiyor.",
+    "hint.stationOccupancyAria": "Doluluk {name}: {kapazitaet} yerden {belegt}, yüzde {prozent}. Yüzde 100, bu tek istasyonun kapasitesidir.{vollZusatz}",
+    "hint.networkOccupancyAria": "Tüm {stationenPhrase} genelinde ağ çapında doluluk: {kapazitaet} yerden {belegt} tanesi dolu, yüzde {prozent}. Yüzde 100, tek bir istasyonun değil, tüm istasyon ağının toplam kapasitesidir.",
+    "map.openDetailsSuffix": ". Ayrıntıları aç.",
+    "map.stationFullSuffix": ", dolu - şu anda iade kabul etmiyor",
+    "map.stationBelegLabel": "{name}: {kapazitaet} yerden {belegt} tanesi dolu",
+    "map.customerLabelShort": "{ort} ({n})",
+    "misc.freeShort": "{n} boş",
+    "misc.unitsInStock": "stokta {n}",
+    "nav.originDamageReport": "{rahmennummer} için hasar bildirimi",
+    "nav.originBikeFromStation": "{name} istasyonundan {rahmennummer} bisikleti",
+    "nav.originBikeFromFleet": "Filodan {rahmennummer} bisikleti",
+    "hint.percentOfFleet": "Filonun %{anteil}’si",
+    "index.title": "VeloCity Stok Yönetimi",
+    "index.loading": "Bir dakika …",
+    "index.loginEmail": "E-posta",
+    "index.loginPassword": "Parola",
+    "index.loginSubmit": "Giriş yap",
+    "index.noAccessTitle": "Erişim yok",
+    "index.noAccessText": "Bu hesap VeloCity’de personel hesabı olarak kayıtlı değil. Müşteriyseniz kendi alanınızı şu adreste bulabilirsiniz:",
+    "index.logout": "Çıkış yap",
+    "index.noRoleTitle": "Henüz rol atanmadı",
+    "index.noRoleText": "Hesabınız VeloCity’de personel hesabı olarak kayıtlı, ancak henüz bir görev alanı atanmadı. Size bir rol atayabilmesi için lütfen yönetimle iletişime geçin.",
+    "index.searchPlaceholder": "Ara",
+    "index.profileAria": "Profil ve ayarlar",
+    "index.settingsHeading": "Ayarlar",
+    "index.zebraLabel": "Tablolarda zebra çizgisi",
+    "index.languageLabel": "Dil",
+    "index.navAria": "Görev alanları",
+    "index.workListAria": "Çalışma listesi",
+    "index.detailAria": "Ayrıntı formu",
+    "nav.flotte": "Filo",
+    "nav.stationen": "İstasyonlar",
+    "nav.kunden": "Müşteriler",
+    "nav.instandhaltung": "Bakım",
+    "nav.auswertungen": "Raporlar",
+    "nav.kundenSuche": "Müşteriler: ad, e-posta, müşteri numarası",
+    "field.rahmennummer": "Şasi numarası",
+    "field.typ": "Tip",
+    "field.status": "Durum",
+    "field.standort": "Konum",
+    "field.schaeden": "Hasarlar",
+    "field.modell": "Model",
+    "field.angeschafft": "Alım tarihi",
+    "field.letzteWartung": "Son bakım",
+    "field.offeneSchaeden": "Açık hasarlar",
+    "field.hoechsteSchwere": "En yüksek önem derecesi",
+    "field.radtyp": "Bisiklet tipi",
+    "field.station": "İstasyon",
+    "field.nummer": "Numara",
+    "field.ort": "Konum",
+    "field.belegt": "Dolu",
+    "field.frei": "Boş",
+    "field.anschrift": "Adres",
+    "field.stellplaetze": "Park yerleri",
+    "field.lage": "Konum",
+    "field.betrieb": "İşletme durumu",
+    "field.akku": "Batarya",
+    "field.nachname": "Soyadı",
+    "field.vorname": "Adı",
+    "field.tarif": "Tarife",
+    "field.kundeSeit": "Müşteri olduğu tarih",
+    "field.letzteAusleihe": "Son kiralama",
+    "field.anrede": "Hitap",
+    "field.email": "E-posta",
+    "field.telefon": "Telefon",
+    "field.strasse": "Sokak",
+    "field.hausnummer": "No.",
+    "field.plz": "Posta kodu",
+    "field.hinweis": "Not",
+    "field.fahrten": "Sürüşler",
+    "field.umsatz": "Ciro",
+    "field.offen": "Bakiye",
+    "field.kategorie": "Kategori",
+    "field.gemeldetVon": "Bildiren",
+    "field.gemeldetAm": "Bildirim tarihi",
+    "field.beschreibung": "Açıklama",
+    "field.schwere": "Önem derecesi",
+    "field.stand": "Durum",
+    "field.bisherigeAuftraege": "Önceki iş emirleri",
+    "field.rad": "Bisiklet",
+    "field.auftrag": "İş emri",
+    "field.eroeffnet": "Açılış tarihi",
+    "field.bearbeiter": "Sorumlu",
+    "field.arbeitszeitMinuten": "Çalışma süresi (dakika)",
+    "field.bemerkung": "Not",
+    "field.kapazitaet": "Kapasite",
+    "field.abgaenge": "Çıkışlar",
+    "field.zugaenge": "Girişler",
+    "field.saldo": "Bakiye",
+    "field.fuellstand": "Doluluk oranı",
+    "field.monat": "Ay",
+    "field.minuten": "Dakika",
+    "field.jeFahrt": "Sürüş başına",
+    "field.minutenJeFahrt": "Sürüş başına dakika",
+    "field.deltaVormonat": "Δ önceki aya göre",
+    "field.kunden": "Müşteriler",
+    "field.fahrtenJeKunde": "Müşteri başına sürüş",
+    "field.kilometer": "Kilometre",
+    "field.kilometerJeFahrt": "Sürüş başına kilometre",
+    "field.co2Ersparnis": "CO₂ tasarrufu",
+    "field.davonGeschaetzt": "Bunun tahmini kısmı",
+    "status.raw.verfuegbar": "Müsait",
+    "status.label.verfuegbar": "Müsait",
+    "status.raw.ausgeliehen": "Kirada",
+    "status.label.ausgeliehen": "Kirada",
+    "status.raw.wartung": "Bakımda",
+    "status.label.wartung": "Bakımda",
+    "status.raw.defekt": "Arızalı",
+    "status.label.defekt": "Arızalı",
+    "status.raw.ausgemustert": "Hizmet dışı",
+    "status.label.ausgemustert": "Hizmet dışı",
+    "status.raw.aktiv": "Aktif",
+    "status.label.aktiv": "Aktif",
+    "status.raw.gesperrt": "Engellendi",
+    "status.label.gesperrt": "Engellendi",
+    "status.raw.geschlossen": "Kapatıldı",
+    "status.label.geschlossen": "Kapatıldı",
+    "status.raw.offen": "Açık",
+    "status.label.offen": "Açık",
+    "status.raw.in_arbeit": "İşlemde",
+    "status.label.in_arbeit": "İşlemde",
+    "schwere.gering": "düşük",
+    "schwere.mittel": "orta",
+    "schwere.fahruntauglich": "sürüşe uygun değil",
+    "button.newBike": "Yeni bisiklet ekle",
+    "button.create": "Oluştur",
+    "button.setTo": "{ziel} olarak ayarla",
+    "button.whyTarget": "Neden {ziel}?",
+    "button.decommission": "Hizmetten çıkar",
+    "button.decommissionReason": "Hizmetten çıkarma sebebi",
+    "button.newStation": "Yeni istasyon ekle",
+    "button.decommissionStation": "Kullanımdan kaldır",
+    "button.newCustomer": "Yeni müşteri ekle",
+    "button.save": "Kaydet",
+    "button.block": "Engelle",
+    "button.blockReason": "Engelleme sebebi",
+    "button.disclosureArt15": "Madde 15 uyarınca bilgi talebi",
+    "button.deletionArt17": "Madde 17 uyarınca silme",
+    "button.downloadJson": "JSON olarak indir",
+    "button.close": "Kapat",
+    "button.reportDamage": "Hasar bildir",
+    "button.openWorkOrder": "İş emri aç",
+    "button.bikeInFleet": "Filodaki bisiklet",
+    "button.report": "Bildir",
+    "button.resolve": "Tamamla",
+    "button.toOpenDamage": "Açık hasarlara git",
+    "button.damageInFleet": "Filodaki bisiklet",
+    "button.list": "Liste",
+    "button.map": "Harita",
+    "button.showCustomersOnMap": "Konuma göre müşterileri göster",
+    "empty.noBikesFilterTitle": "Bu filtreyle eşleşen bisiklet yok",
+    "empty.noBikesFilterText": "Filodaki hiçbir bisiklet seçilen kısıtlamayı karşılamıyor.",
+    "empty.noCustomersFilterTitle": "Bu filtreyle eşleşen müşteri yok",
+    "empty.noCustomersFilterTextSearch": "\"{suchtext}\" ile eşleşen hiçbir müşteri ek olarak seçilen kısıtlamayı karşılamıyor.",
+    "empty.noCustomersFilterText": "Hiçbir müşteri seçilen kısıtlamayı karşılamıyor.",
+    "empty.statusFilterReset": "Durum filtresini sıfırla",
+    "empty.noOpenDamageTitle": "Açık hasar bildirimi yok",
+    "empty.noOpenDamageText": "Şu anda herhangi bir hasar bildirimi bulunmuyor. Bu normal durumdur — bir bisiklette bir şey fark edildiğinde bildirim yapılır.",
+    "empty.noDamageFilterTitle": "Bu filtreyle eşleşen hasar bildirimi yok",
+    "empty.noDamageFilterText": "Hiçbir açık hasar bildirimi seçilen kısıtlamayı karşılamıyor.",
+    "empty.noWorkOrdersTitle": "Devam eden iş emri yok",
+    "empty.noWorkOrdersText": "Şu anda herhangi bir bakım iş emri bulunmuyor. Bir iş emri, açık bir hasar bildiriminden oluşturulur — \"İş emri aç\" düğmesi oradadır.",
+    "misc.underway": "yolda",
+    "misc.underwayNoLocation": "yolda (konum yok)",
+    "misc.noneYet": "henüz yok",
+    "misc.noMembership": "üyeliksiz",
+    "misc.notYetAssigned": "henüz atanmadı",
+    "misc.justNow": "az önce",
+    "misc.inOperation": "işletimde",
+    "misc.decommissionedState": "kullanım dışı",
+    "misc.noAddressOnFile": "Bu kişi için kayıtlı bir adres yok - bu bir yükleme hatası değildir. Aşağıdaki alanlar doldurularak adres eklenebilir.",
+    "misc.disclosureLoggedNote": "Madde 15 bilgi talebinin görüntülenmesi kayıt altına alınır (GR19): görüntüleyen kişi değişiklik günlüğünde iz bırakır.",
+    "misc.damageBlocksImmediately": "Sürüşe uygun olmadığını gösteren bir hasar bisikleti hemen kilitler - şu anda kullanımda olması dışında. Bu durumda durum şimdilik değişmeden kalır (GR13, yoldaki bir bisiklete başka bir durum vermez) ve kilitleme ancak iade sırasında devreye girer.",
+    "misc.onlyUnrideableBlocks": "Bisikleti yalnızca sürüşe uygun olmadığını belirten bir bildirim otomatik olarak kilitler.",
+    "misc.noMinutesNeeded": "Dakika cinsinden çalışma süresi gereklidir (0 veya daha fazla).",
+    "art17.confirmHeader": "{name} için GDPR Madde 17 uyarınca silme işlemi?",
+    "art17.whatDisappears": "NE KAYBOLUR: ad, e-posta, telefon numarası, doğum tarihi, adres, ödeme yöntemi ve oturum açma hesabıyla bağlantı. Eski değerler değişiklik günlüğünde de tanınmaz hale getirilir.",
+    "art17.whatRemains": "NE KALIR: {phrase} ve tüm faturalar, tam tutarlarıyla. Vergi hukuku on yıl saklama süresi öngörür ve GDPR tam olarak bu yükümlülüğü silme kapsamından hariç tutar.",
+    "art17.whatThisDoesNotAchieve": "BUNUN SAĞLAMADIĞI: Sürüşler zaman ve konum bilgisi taşır. Aynı noktadan aynı saatte düzenli olarak sürüş yapan biri bu sayede yine de tespit edilebilir.",
+    "art17.irreversible": "Bu işlem geri alınamaz.",
+    "art17.reasonPrompt": "Sebep (ör. ilgili kişinin … tarihli talebi)",
+    "art17.abortedNoReason": "İptal edildi: sebep belirtilmeden silme yapılmaz.",
+    "art17.runningRideBlocks": "{name} için devam eden bir sürüş var. Önce iadenin yapılmasını bekleyin.",
+    "art17.doneMessage": "Müşteri {nummer} anonimleştirildi. Faturalar ve sürüşler saklanmaya devam eder.",
+    "art17.confirmWord": "LOESCHEN",
+    "tile.available": "Kullanıma hazır",
+    "tile.onLoan": "Kirada",
+    "tile.inMaintenance": "Bakımda",
+    "tile.faulty": "Arızalı",
+    "tile.ridesPerBike30d": "Bisiklet başına sürüş (30 gün)",
+    "tile.stations": "İstasyonlar",
+    "tile.fullStations": "Dolu istasyonlar",
+    "tile.networkOccupancy": "Toplam doluluk – tüm istasyonlar",
+    "tile.fillRange": "Doluluk aralığı",
+    "tile.customersTotal": "Toplam müşteri",
+    "tile.blocked": "Engellendi",
+    "tile.noAddress": "Adressiz",
+    "tile.invoiceTop10": "Fatura hacmi: üst %10",
+    "tile.damageReportsTotal": "Toplam hasar bildirimi",
+    "tile.workOrdersTotal": "Toplam iş emri",
+    "tile.unrideableOpen": "Sürüşe uygun değil, açık",
+    "tile.minimum": "Minimum",
+    "tile.maximum": "Maksimum",
+    "tile.countPerMonth": "Aya göre sayı",
+    "tile.dayWithMostRides": "En çok sürüşün olduğu gün",
+    "tile.revenueTotal": "Toplam ciro",
+    "tile.ridesTotal": "Toplam sürüş",
+    "tile.revenuePerBikeDay": "Bisiklet ve gün başına ciro",
+    "tile.notableRevenuePerRideCityBike": "Dikkat çekici: City-Bike sürüş başına ciro",
+    "tile.largestCustomerGroup": "En büyük müşteri grubu",
+    "tile.notableNoMembership": "Dikkat çekici: üyeliksiz",
+    "tile.co2SavingsTotal": "Toplam CO₂ tasarrufu",
+    "tile.kilometersTotal": "Toplam kilometre",
+    "tile.ofWhichEstimatedWeighted": "Bunun tahmini kısmı (sürüş ağırlıklı)",
+    "tile.networkOccupancyTotal": "Toplam ağ doluluğu",
+    "tile.biggestImbalance": "En büyük dengesizlik",
+    "tile.occupancy": "Doluluk",
+    "tile.trafficByTimeSlot": "Zaman dilimine göre giriş ve çıkış",
+    "tile.departuresPerDayTop": "Günlük çıkış (üstte)",
+    "tile.arrivalsPerDayBottom": "Günlük giriş (altta)",
+    "tile.weekdays": "Hafta içi (Pzt–Cum)",
+    "tile.weekend": "Hafta sonu (Cmt/Paz)",
+    "tile.bikesAtStation": "Bu istasyondaki bisikletler ({n})",
+    "tile.noBikesHere": "Şu anda burada bisiklet yok - hepsi yolda, atölyede ya da arızalı.",
+    "tile.noTrafficData": "Bu istasyon için trafik verisi bulunmuyor.",
+    "tile.legendDepartures": "Günlük çıkış (üstte)",
+    "tile.legendArrivals": "Günlük giriş (altta)",
+    "tab.revenueByBikeType": "Bisiklet tipine göre ciro",
+    "tab.revenueByCustomerGroup": "Müşteri grubuna göre ciro",
+    "tab.kmCo2": "Kilometre ve CO₂",
+    "tab.stationOccupancy": "İstasyon doluluğu",
+    "tab.openDamage": "Açık hasarlar",
+    "tab.workOrders": "İş emirleri",
+    "auskunft.title": "GDPR Madde 15 uyarınca bilgi talebi · {name}",
+    "auskunft.stammdaten": "Ana veriler",
+    "auskunft.mitgliedschaften": "Üyelikler",
+    "auskunft.fahrten": "Sürüşler",
+    "auskunft.rechnungen": "Faturalar",
+    "auskunft.zahlungen": "Ödemeler",
+    "auskunft.schadensmeldungen": "Hasar bildirimleri",
+    "auskunft.freiminuten": "Ücretsiz dakikalar",
+    "auskunft.protokoll": "Günlük",
+    "map.schematicNote": "Şematik harita, ölçekli bir harita değildir: daire boyutu bir istasyonun kapasitesini, dolgu ise mevcut doluluğunu gösterir.",
+    "map.riverLabel": "Main Nehri (şematik)",
+    "map.areaWithCustomers": "{stationenPhrase} ve müşteri konumlarını içeren harita alanı",
+    "map.area": "{stationenPhrase} içeren harita alanı",
+    "map.customersAtLocation": "{ort}: {kundenPhrase}",
+    "common.and": "ve",
+    "misc.changeVsPrevMonth": "önceki aya göre",
+    "msg.bikeNowSetTo": "{rahmennummer} artık {ziel} olarak ayarlandı.",
+    "msg.confirmDecommission": "{rahmennummer} kalıcı olarak hizmetten mi çıkarılsın? Bisiklet konumunu kaybeder ve artık hiçbir listede görünmez. Sürüşleri saklanmaya devam eder.",
+    "msg.bikeDecommissioned": "{rahmennummer} hizmetten çıkarıldı.",
+    "msg.fleetLoadFailed": "Filo yüklenemedi: {fehler}",
+    "msg.noBikeWithFilter": "Bu filtreyle eşleşen bisiklet yok",
+    "msg.modelsOrStationsLoadFailed": "Modeller veya istasyonlar yüklenemedi: {fehler}",
+    "msg.noModelsOrStations": "Yeni bir bisikletin oluşturulabileceği ne model ne de istasyon bulunuyor.",
+    "msg.frameNumberMissing": "Şasi numarası eksik.",
+    "msg.bikeCreated": "{rahmennummer} bisikleti oluşturuldu.",
+    "msg.stationsLoadFailed": "İstasyonlar yüklenemedi: {fehler}",
+    "msg.stationsSummary": "{stationenPhrase}, bunlardan {n} tanesi dolu: {liste}",
+    "msg.stationStillHasBikes": "{name} istasyonunda hâlâ {raederPhrase} var. Önce başka bir yere iade edilmeleri gerekir.",
+    "msg.confirmDecommissionStation": "{name} bugün itibarıyla kullanımdan mı kaldırılsın? İstasyon tüm raporlarda görünür kalır ancak artık bisiklet kabul etmez.",
+    "msg.stationDecommissioned": "{name} kullanımdan kaldırıldı.",
+    "msg.bikesAtStationLoadFailed": "Bisikletler yüklenemedi: {fehler}",
+    "msg.trafficLoadFailed": "İstasyon trafiği yüklenemedi: {fehler}",
+    "msg.customersLoadFailed": "Müşteriler yüklenemedi: {fehler}",
+    "msg.firstLastNameRequired": "Ad ve soyadı gereklidir.",
+    "msg.customerSaved": "{vorname} {nachname} kaydedildi.",
+    "msg.confirmBlockCustomer": "{vorname} {nachname} engellensin mi? Şu anda bir engeli kaldıran bir işlev bulunmuyor - bu, bu diyalogun bir kolaylığı değil, sistemin bilinen bir eksikliğidir.",
+    "msg.customerBlocked": "{vorname} {nachname} engellendi.",
+    "msg.nameEmailRequired": "Ad, soyadı ve e-posta gereklidir.",
+    "msg.customerCreated": "{vorname} {nachname} müşterisi oluşturuldu.",
+    "msg.customersCapped": "200/daha fazla müşteri{zusatz} — lütfen daha fazla daraltın",
+    "msg.searchFor": "\"{suchtext}\" için",
+    "msg.statusList": "Durum {liste}",
+    "msg.damageLoadFailed": "Hasarlar yüklenemedi: {fehler}",
+    "msg.noBikeForDamage": "Bir hasarın atanabileceği hiçbir bisiklet yok.",
+    "msg.categoryDescriptionRequired": "Kategori ve açıklama gereklidir.",
+    "msg.damageReportedBlocked": "Bildirim {id} oluşturuldu. Bisiklet kilitlendi — şu anda sürülmüyorsa; sürülüyorsa iade sırasında kilitlenecektir.",
+    "msg.damageReported": "Bildirim {id} oluşturuldu.",
+    "msg.workOrderOpened": "İş emri {id} açıldı, bisiklet bakıma alındı.",
+    "msg.workOrdersLoadFailed": "İş emirleri yüklenemedi: {fehler}",
+    "msg.workOrderCompleted": "İş emri {auftragsnummer} tamamlandı.",
+    "msg.unrideableShare": "toplam {schadenPhrase} içinden {n} tanesi - bisiklet o an sürülmüyorsa hemen kilitlenir",
+    "msg.unrideableShareNoTotal": "bisiklet o an sürülmüyorsa hemen kilitlenir",
+    "hint.shareOfBikes": "{raederPhrase} içinde {anteil}",
+    "hint.shareOnLoan": "{raederPhrase} içinde {anteil} · şu anda yolda",
+    "hint.shareMaintenance": "{raederPhrase} içinde {anteil} · atölyede",
+    "hint.shareFaulty": "{raederPhrase} içinde {anteil} · sorunlu olanlar",
+    "hint.rideDistribution": "Medyan {median}, ortalama {mittel} (bisiklet başına)",
+    "hint.noRidesAtAll": " · {raederPhrase} içinden {n} tanesi tek bir sürüş bile yapmadı",
+    "hint.allRiddenAtLeastOnce": " · {raederPhrase} her biri en az bir kez sürüldü",
+    "hint.allInOperation": "tümü işletimde",
+    "hint.decommissionedCount": "bunlardan {n} tanesi kullanımdan kaldırıldı",
+    "hint.fullStationsShare": "{stationenPhrase} içinden {n}: {liste} - iade kabul etmiyor",
+    "hint.networkOccupancyDetail": "{stationenPhrase} genelinde {kapazitaet} yerden {belegt} tanesi dolu",
+    "hint.fillRangeDetail": "Medyan %{median} · {stationenPhrase} içinden {voll} tanesi tıklım tıklım dolu{leerZusatz}",
+    "hint.andEmptyCount": ", {stationenPhrase} içinden {n} tanesi boş",
+    "hint.noneEmpty": ", hiçbiri boş değil",
+    "hint.blockedShare": "{kundenPhrase} içinden {n} - şu anda bir engeli kaldıran işlev bulunmuyor",
+    "hint.noUnblockFunction": "Şu anda bir engeli kaldıran işlev bulunmuyor",
+    "hint.noAddressShare": "{kundenPhrase} içinden {n} - formda daha sonra eklenebilir",
+    "hint.addLaterInForm": "Formda daha sonra eklenebilir",
+    "hint.top10Detail": "{kundenPhrase} içinden {zehntel} tanesi, {gesamt} fatura hacminin {top10} tutarını oluşturuyor (KDV dahil, raporlardaki ciro ile aynı değildir) · medyan {median}, ortalama {mittel} (müşteri başına)",
+    "hint.overallStates": "tüm işlem durumları genelinde",
+    "hint.last12MonthsTrend": "Son 12 ayın seyri",
+    "hint.last12MonthsCrossCheck": "Son 12 ayın seyri - \"Bisiklet tipine göre ciro\" sekmesiyle kontrol hesaplaması",
+    "hint.yearlyPattern": "Yıllık seyir: en düşük {tief}, en yüksek {hoch}",
+    "hint.perBikePerDayDetail": "Yılda {jeRadJahr} · filodaki {raederPhrase} baz alınarak (hizmet dışı olanlar hariç) · son 12 ay",
+    "hint.tariffChangeFrom": "{monat} itibarıyla {veraenderung} - tarife değişikliği",
+    "hint.shareOfRevenue": "Cironun {prozent} ({geld})",
+    "hint.revenueWithoutTariff": "Aktif tarifesi olmayan sürüşlerden {geld} ciro",
+    "hint.estimatedShareOfRides": "{fahrtenPhrase} içinden {geschaetzt} tanesi tahmini - satırların basit ortalamasının önerdiği gibi {naiv} DEĞİL",
+    "hint.fillLevelPerStation": "İstasyon numarasına göre sıralı istasyon doluluğu",
+    "hint.networkOccupancyWeighted": "{kapazitaet} yerden {belegt} tanesi dolu · kapasiteye göre ağırlıklandırılmıştır, tek tek değerlerin ortalaması değildir ({naiv})",
+    "hint.fullStationsList": "{stationenPhrase} içinden {voll}: {liste}",
+    "hint.worstStationBalance": "Bakiye {saldo} - aldığından daha fazla bisiklet veriyor",
+  },
+  es: {
+    "common.cancel": "Cancelar",
+    "common.confirm": "Confirmar",
+    "common.reason": "Motivo",
+    "common.all": "Todos",
+    "common.actionsColumn": "Acciones",
+    "common.noSearchPlaceholder": "Sin búsqueda en esta sección",
+    "common.noSearchAria": "Búsqueda no disponible en esta sección",
+    "common.confirmWordPrompt": "Escriba \"{wort}\" para confirmar:",
+    "common.sortAria": "Ordenar por {titel}",
+    "common.sortAriaSuffix": ", actualmente {richtung}",
+    "common.ascending": "ascendente",
+    "common.descending": "descendente",
+    "common.sortResetAria": "Restablecer orden por {titel}",
+    "common.sortResetTitle": "Restablecer orden",
+    "common.groupByAria": "Agrupar por {titel}",
+    "common.groupResetAria": "Quitar agrupación por {titel}",
+    "common.groupResetTitle": "Restablecer agrupación",
+    "common.groupTitle": "Agrupar",
+    "common.filterAria": "Filtrar {titel}",
+    "common.filterMinAria": "Valor mínimo para {titel}",
+    "common.filterSearchPlaceholder": "Buscar…",
+    "common.filterResetAria": "Restablecer filtro de {titel}",
+    "common.filterResetTitle": "Restablecer filtro",
+    "common.columnFilterReset": "Restablecer filtros de columna",
+    "common.noRowsMatchFilter": "Ninguna fila cumple la restricción seleccionada en el encabezado de columna. ",
+    "common.groupedBy": "Agrupado por {titel}",
+    "common.ungroup": "Quitar agrupación",
+    "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
+    "common.closeDetailsAria": "Cerrar detalles",
+    "common.closeDetailsTitle": "Cerrar detalles (Esc)",
+    "common.rowsFiltered": "{angezeigt} de {zeilenPhrase} (filtro de columna activo)",
+    "common.selectedCount": "{n} seleccionados",
+    "common.minAbbrev": "min",
+    "common.hourAbbrev": "h",
+    "common.underOneMinute": "menos de 1 min",
+    "common.loggedInFor": "conectado desde hace {dauer}",
+    "common.sinceOpen": "desde que se abrió: {dauer}",
+    "common.loginCheckFailed": "No se pudo verificar el inicio de sesión: {msg}",
+    "common.loginBadCredentials": "El correo o la contraseña no son correctos.",
+    "common.rolesCheckFailed": "No se pudieron determinar los roles: {msg}",
+    "common.roleCheckFailed": "No se pudo comprobar el rol {code}: {msg}",
+    "common.of": "de",
+    "common.xOfPhrase": "{x} de {phrase}",
+    "misc.estimatedParen": " ({prozent} estimado)",
+    "hint.ridesPerDayHeading": "Viajes por día — {monat} (total, todos los tipos de bicicleta y tarifas)",
+    "status.label.abgebrochen": "Cancelado",
+    "status.raw.abgebrochen": "Cancelado",
+    "status.label.erledigt": "Completado",
+    "status.raw.erledigt": "Completado",
+    "status.label.verworfen": "Descartado",
+    "status.raw.verworfen": "Descartado",
+    "status.label.behoben": "Resuelto",
+    "status.raw.behoben": "Resuelto",
+    "hint.saldoChartAria": "Saldo de {stationenPhrase}, ordenado por número de estación, de {min} a {max}; el más bajo (marcado en rojo) en {name}",
+    "hint.fillLevelBetween": "Nivel de ocupación de {stationenPhrase}, ordenado por número de estación, entre {min} y {max}",
+    "msg.stationsWithoutBikeSuffix": ", {n} de ellas sin ninguna bicicleta",
+    "empty.noStationOccupancyText": "No hay ninguna estación. Con diez estaciones creadas, esto es inusual: podría deberse a una pérdida temporal de rol en lugar de datos faltantes.",
+    "empty.noStationOccupancyTitle": "Sin ocupación de estaciones",
+    "msg.stationOccupancyLoadFailed": "No se pudo cargar la ocupación de estaciones: {fehler}",
+    "misc.estimatedRidesDetail": "{geschaetzt} de {fahrtenPhrase} ({prozent})",
+    "hint.monthlyKmChartAria": "Kilómetros recorridos por mes, últimos doce meses ({vonMonat} a {bisMonat}); la barra oscura del extremo derecho es el mes actual, {aktuellWert}",
+    "hint.monthlyCo2ChartAria": "Ahorro de CO2 por mes, últimos doce meses ({vonMonat} a {bisMonat}), de {min} a {max}; la barra oscura del extremo derecho es el mes actual, {aktuellWert}",
+    "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, ahorro total de CO₂ {co2}, de los cuales {prozent} estimado (ponderado por viajes)",
+    "empty.noKmCo2Title": "Sin filas de kilómetros y CO2",
+    "msg.kmCo2LoadFailed": "No se pudieron cargar los kilómetros y el CO2: {fehler}",
+    "field.jeKunde": "Por cliente",
+    "hint.crossCheckChartAria": "Facturación mensual de los últimos doce meses ({vonMonat} a {bisMonat}), la misma serie que en la pestaña «Facturación por tipo de bicicleta»; la barra oscura del extremo derecho es el mes actual, {aktuellWert}",
+    "msg.revenueByCustomerGroupSummary": "{monatszeilen}, facturación total {umsatz}",
+    "empty.noRevenueByCustomerGroupTitle": "Sin facturación por grupo de clientes",
+    "msg.revenueByCustomerGroupLoadFailed": "No se pudo cargar la facturación por grupo de clientes: {fehler}",
+    "hint.cityBikeJumpChartAria": "Facturación por viaje, City-Bike, {n} meses desde {vonMonat}: salto de {von} a {nach} a partir de {sprungMonat}, marcado en rojo",
+    "hint.monthlyRidesChartAria": "Viajes por mes, últimos doce meses: el más bajo {min} en {tiefMonat}, el más alto {max} en {hochMonat}; la barra oscura del extremo derecho es el mes actual, {aktuellMonat} con {aktuellPhrase}",
+    "hint.monthlyRevenueChartAria": "Facturación mensual de los últimos doce meses ({vonMonat} a {bisMonat}), de {min} a {max}; la barra oscura del extremo derecho es el mes actual, {aktuellMonat} con {aktuellWert}",
+    "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, facturación total {umsatz}",
+    "msg.revenueByBikeTypeLoadFailed": "No se pudo cargar la facturación por tipo de bicicleta: {fehler}",
+    "empty.noRevenueByBikeTypeText": "No hay ninguna fila mensual. Con un año de referencia con datos, esto es inusual: podría deberse a una pérdida temporal de rol en lugar de datos faltantes.",
+    "empty.noRevenueByBikeTypeTitle": "Sin facturación por tipo de bicicleta",
+    "misc.estimatedSuffix": " (estimado)",
+    "field.strecke": "Distancia",
+    "field.dauer": "Duración",
+    "field.ziel": "Destino",
+    "field.start": "Inicio",
+    "misc.bikesOnDateCaption": "Bicicletas el {datum} - sin referencia a clientes, véase v_wawi_fahrten_je_tag_rad",
+    "button.backToDayOverview": "Volver al resumen diario",
+    "misc.bikesOnDate": "Bicicletas el {datum}",
+    "misc.noBikeRiddenThisDay": "Ese día no se usó ninguna bicicleta.",
+    "msg.thisDayBikesLoadFailed": "No se pudieron cargar las bicicletas de este día: {fehler}",
+    "hint.legendColorScale": "Color = viajes de este día en relación con el día más concurrido del mes ({phrase}).",
+    "hint.dayRidesAria": "{datum}: {phrase}",
+    "hint.calendarCaption": "Viajes por día, {monat}",
+    "hint.tiedDaysCount": "{tagePhrase} empatados, {phrase} cada uno",
+    "hint.totalForMonth": "{phrase}, total",
+    "hint.dailyRidesChartAria": "Viajes por día en {monat} de {jahr}, total en todos los tipos de bicicleta y tarifas: entre {min} y {maxPhrase}, en promedio {mittel}. La mayoría de los viajes el {tageListe} de {monat}, con {maxPhrase} cada uno.",
+    "msg.dailyFiguresLoadFailed": "No se pudieron cargar las cifras diarias: {fehler}",
+    "misc.workOrderTitle": "Orden de trabajo {auftragsnummer}",
+    "msg.activeWorkOrdersCount": "{n} órdenes de trabajo en curso",
+    "misc.reportForBike": "Notificación de {rahmennummer}",
+    "msg.openDamageWithUnrideable": "{n}{zusatz} averías abiertas, de las cuales {dringend} no aptas para circular",
+    "msg.openDamageCount": "{n}{zusatz} averías abiertas",
+    "misc.atLeastValue": "≥ {n} {einheit}",
+    "misc.allLowercase": "todas",
+    "field.minAge": "Antigüedad mínima",
+    "field.offenSeit": "Abierta desde",
+    "field.gemeldet": "Notificado",
+    "misc.stillRunning": "{datum} · en curso",
+    "misc.noRentalYet": "Todavía sin alquiler",
+    "msg.stationCreated": "Estación {name} creada.",
+    "msg.capacityPositiveInteger": "El número de plazas debe ser un número entero positivo.",
+    "msg.longitudeRange": "La longitud debe estar entre -180 y 180.",
+    "msg.latitudeRange": "La latitud debe estar entre -90 y 90.",
+    "msg.latLonRequired": "Se requieren latitud y longitud.",
+    "msg.stationFieldsRequired": "Se requieren nombre, calle, número, código postal y ciudad.",
+    "field.laenge": "Longitud",
+    "field.breite": "Latitud",
+    "field.hausnummerVoll": "Número de casa",
+    "field.name": "Nombre",
+    "hint.arrivalsPerDayLabel": "{label}: {n} llegadas al día",
+    "hint.departuresPerDayLabel": "{label}: {n} salidas al día",
+    "hint.trafficPatternAria": "{wochentypTitel} en {name}, promediado en {tage} días. La mayoría de las salidas se producen en la franja {zeitfensterAb} con {maxAb} al día, la mayoría de las llegadas en la franja {zeitfensterZu} con {maxZu} al día.",
+    "hint.stationFullNote": " La estación está llena y no admite devoluciones en este momento.",
+    "hint.stationOccupancyAria": "Ocupación {name}: {belegt} de {kapazitaet} plazas, {prozent} por ciento. El 100 % es la capacidad de esta única estación.{vollZusatz}",
+    "hint.networkOccupancyAria": "Ocupación de toda la red en {stationenPhrase}: {belegt} de {kapazitaet} plazas ocupadas, {prozent} por ciento. El 100 % es la capacidad total de toda la red de estaciones, no la de una sola estación.",
+    "map.openDetailsSuffix": ". Abrir detalles.",
+    "map.stationFullSuffix": ", llena - no admite devoluciones en este momento",
+    "map.stationBelegLabel": "{name}: {belegt} de {kapazitaet} plazas ocupadas",
+    "map.customerLabelShort": "{ort} ({n})",
+    "misc.freeShort": "{n} libres",
+    "misc.unitsInStock": "{n} en existencia",
+    "nav.originDamageReport": "Notificación de avería de {rahmennummer}",
+    "nav.originBikeFromStation": "Bicicleta {rahmennummer} de {name}",
+    "nav.originBikeFromFleet": "Bicicleta {rahmennummer} de la flota",
+    "hint.percentOfFleet": "{anteil} % de la flota",
+    "index.title": "VeloCity Gestión de Inventario",
+    "index.loading": "Un momento …",
+    "index.loginEmail": "Correo electrónico",
+    "index.loginPassword": "Contraseña",
+    "index.loginSubmit": "Iniciar sesión",
+    "index.noAccessTitle": "Sin acceso",
+    "index.noAccessText": "Esta cuenta no está registrada en VeloCity como cuenta de personal. Si es cliente, encontrará su área en",
+    "index.logout": "Cerrar sesión",
+    "index.noRoleTitle": "Aún no se ha asignado un rol",
+    "index.noRoleText": "Su cuenta está registrada en VeloCity como cuenta de personal, pero aún no se le ha asignado ningún área de responsabilidad. Póngase en contacto con la dirección para que le asigne un rol.",
+    "index.searchPlaceholder": "Buscar",
+    "index.profileAria": "Perfil y configuración",
+    "index.settingsHeading": "Configuración",
+    "index.zebraLabel": "Rayado cebra en tablas",
+    "index.languageLabel": "Idioma",
+    "index.navAria": "Áreas de trabajo",
+    "index.workListAria": "Lista de trabajo",
+    "index.detailAria": "Formulario de detalle",
+    "nav.flotte": "Flota",
+    "nav.stationen": "Estaciones",
+    "nav.kunden": "Clientela",
+    "nav.instandhaltung": "Mantenimiento",
+    "nav.auswertungen": "Informes",
+    "nav.kundenSuche": "Clientela: nombre, correo, número de cliente",
+    "field.rahmennummer": "Número de bastidor",
+    "field.typ": "Tipo",
+    "field.status": "Estado",
+    "field.standort": "Ubicación",
+    "field.schaeden": "Averías",
+    "field.modell": "Modelo",
+    "field.angeschafft": "Adquirido",
+    "field.letzteWartung": "Último mantenimiento",
+    "field.offeneSchaeden": "Averías abiertas",
+    "field.hoechsteSchwere": "Gravedad máxima",
+    "field.radtyp": "Tipo de bicicleta",
+    "field.station": "Estación",
+    "field.nummer": "Número",
+    "field.ort": "Ubicación",
+    "field.belegt": "Ocupado",
+    "field.frei": "Libre",
+    "field.anschrift": "Dirección",
+    "field.stellplaetze": "Plazas",
+    "field.lage": "Coordenadas",
+    "field.betrieb": "Funcionamiento",
+    "field.akku": "Batería",
+    "field.nachname": "Apellido",
+    "field.vorname": "Nombre",
+    "field.tarif": "Tarifa",
+    "field.kundeSeit": "Cliente desde",
+    "field.letzteAusleihe": "Último alquiler",
+    "field.anrede": "Tratamiento",
+    "field.email": "Correo electrónico",
+    "field.telefon": "Teléfono",
+    "field.strasse": "Calle",
+    "field.hausnummer": "N.º",
+    "field.plz": "Código postal",
+    "field.hinweis": "Aviso",
+    "field.fahrten": "Viajes",
+    "field.umsatz": "Facturación",
+    "field.offen": "Pendiente",
+    "field.kategorie": "Categoría",
+    "field.gemeldetVon": "Notificado por",
+    "field.gemeldetAm": "Notificado el",
+    "field.beschreibung": "Descripción",
+    "field.schwere": "Gravedad",
+    "field.stand": "Estado",
+    "field.bisherigeAuftraege": "Órdenes anteriores",
+    "field.rad": "Bicicleta",
+    "field.auftrag": "Orden de trabajo",
+    "field.eroeffnet": "Abierto",
+    "field.bearbeiter": "Responsable",
+    "field.arbeitszeitMinuten": "Tiempo de trabajo (minutos)",
+    "field.bemerkung": "Observación",
+    "field.kapazitaet": "Capacidad",
+    "field.abgaenge": "Salidas",
+    "field.zugaenge": "Llegadas",
+    "field.saldo": "Saldo",
+    "field.fuellstand": "Nivel de ocupación",
+    "field.monat": "Mes",
+    "field.minuten": "Minutos",
+    "field.jeFahrt": "Por viaje",
+    "field.minutenJeFahrt": "Minutos por viaje",
+    "field.deltaVormonat": "Δ frente al mes anterior",
+    "field.kunden": "Clientes",
+    "field.fahrtenJeKunde": "Viajes por cliente",
+    "field.kilometer": "Kilómetros",
+    "field.kilometerJeFahrt": "Kilómetros por viaje",
+    "field.co2Ersparnis": "Ahorro de CO₂",
+    "field.davonGeschaetzt": "De los cuales estimado",
+    "status.raw.verfuegbar": "Disponible",
+    "status.label.verfuegbar": "Disponible",
+    "status.raw.ausgeliehen": "Alquilada",
+    "status.label.ausgeliehen": "Alquilada",
+    "status.raw.wartung": "En mantenimiento",
+    "status.label.wartung": "En mantenimiento",
+    "status.raw.defekt": "Averiada",
+    "status.label.defekt": "Averiada",
+    "status.raw.ausgemustert": "Dada de baja",
+    "status.label.ausgemustert": "Dada de baja",
+    "status.raw.aktiv": "Activo",
+    "status.label.aktiv": "Activo",
+    "status.raw.gesperrt": "Bloqueado",
+    "status.label.gesperrt": "Bloqueado",
+    "status.raw.geschlossen": "Cerrado",
+    "status.label.geschlossen": "Cerrado",
+    "status.raw.offen": "Abierta",
+    "status.label.offen": "Abierta",
+    "status.raw.in_arbeit": "En curso",
+    "status.label.in_arbeit": "En curso",
+    "schwere.gering": "leve",
+    "schwere.mittel": "moderada",
+    "schwere.fahruntauglich": "no apta para circular",
+    "button.newBike": "Añadir nueva bicicleta",
+    "button.create": "Crear",
+    "button.setTo": "Establecer en {ziel}",
+    "button.whyTarget": "¿Por qué {ziel}?",
+    "button.decommission": "Dar de baja",
+    "button.decommissionReason": "Motivo de la baja",
+    "button.newStation": "Añadir nueva estación",
+    "button.decommissionStation": "Dar de baja",
+    "button.newCustomer": "Añadir nuevo cliente",
+    "button.save": "Guardar",
+    "button.block": "Bloquear",
+    "button.blockReason": "Motivo del bloqueo",
+    "button.disclosureArt15": "Solicitud de información conforme al art. 15",
+    "button.deletionArt17": "Supresión conforme al art. 17",
+    "button.downloadJson": "Descargar como JSON",
+    "button.close": "Cerrar",
+    "button.reportDamage": "Notificar avería",
+    "button.openWorkOrder": "Abrir orden de trabajo",
+    "button.bikeInFleet": "Bicicleta en la flota",
+    "button.report": "Notificar",
+    "button.resolve": "Completar",
+    "button.toOpenDamage": "Ir a las averías abiertas",
+    "button.damageInFleet": "Bicicleta en la flota",
+    "button.list": "Lista",
+    "button.map": "Mapa",
+    "button.showCustomersOnMap": "Mostrar clientes por ubicación",
+    "empty.noBikesFilterTitle": "No hay bicicletas con este filtro",
+    "empty.noBikesFilterText": "Ninguna bicicleta de la flota cumple la restricción seleccionada.",
+    "empty.noCustomersFilterTitle": "No hay clientes con este filtro",
+    "empty.noCustomersFilterTextSearch": "Ningún cliente que coincide con «{suchtext}» cumple además la restricción seleccionada.",
+    "empty.noCustomersFilterText": "Ningún cliente cumple la restricción seleccionada.",
+    "empty.statusFilterReset": "Restablecer filtro de estado",
+    "empty.noOpenDamageTitle": "Sin averías abiertas",
+    "empty.noOpenDamageText": "Actualmente no hay ninguna notificación de avería. Es el caso normal: se notifica cuando se detecta algo en una bicicleta.",
+    "empty.noDamageFilterTitle": "No hay averías con este filtro",
+    "empty.noDamageFilterText": "Ninguna avería abierta cumple la restricción seleccionada.",
+    "empty.noWorkOrdersTitle": "Sin órdenes de trabajo en curso",
+    "empty.noWorkOrdersText": "Actualmente no hay ninguna orden de trabajo. Una orden se crea a partir de una notificación de avería abierta, donde está el botón «Abrir orden de trabajo».",
+    "misc.underway": "en ruta",
+    "misc.underwayNoLocation": "en ruta (sin ubicación)",
+    "misc.noneYet": "todavía ninguno",
+    "misc.noMembership": "sin membresía",
+    "misc.notYetAssigned": "aún no asignado",
+    "misc.justNow": "justo ahora",
+    "misc.inOperation": "en funcionamiento",
+    "misc.decommissionedState": "dada de baja",
+    "misc.noAddressOnFile": "No hay ninguna dirección registrada para esta persona; no se trata de un error de carga. Los campos de abajo se pueden rellenar para añadir una.",
+    "misc.disclosureLoggedNote": "La consulta de la información conforme al art. 15 se registra (GR19): quien la consulta deja rastro en el registro de cambios.",
+    "misc.damageBlocksImmediately": "Una avería que hace la bicicleta no apta para circular la bloquea de inmediato, salvo que esté en uso en ese momento. En ese caso el estado permanece sin cambios por ahora (GR13 no permite otro estado a una bicicleta en ruta) y el bloqueo solo se aplica al devolverla.",
+    "misc.onlyUnrideableBlocks": "Solo una notificación de avería no apta para circular bloquea la bicicleta automáticamente.",
+    "misc.noMinutesNeeded": "Se requiere el tiempo de trabajo en minutos (0 o más).",
+    "art17.confirmHeader": "¿Supresión conforme al art. 17 del RGPD para {name}?",
+    "art17.whatDisappears": "QUÉ DESAPARECE: nombre, correo electrónico, número de teléfono, fecha de nacimiento, dirección, medio de pago y el vínculo con la cuenta de acceso. Los valores antiguos también se vuelven irreconocibles en el registro de cambios.",
+    "art17.whatRemains": "QUÉ PERMANECE: {phrase} y todas las facturas, en su totalidad. La legislación fiscal exige diez años de conservación, y el RGPD excluye expresamente esta obligación de la supresión.",
+    "art17.whatThisDoesNotAchieve": "LO QUE ESTO NO CONSIGUE: los viajes contienen horas y lugares. Quien viaja regularmente desde el mismo punto a la misma hora sigue siendo identificable a través de ellos.",
+    "art17.irreversible": "Esta acción no se puede deshacer.",
+    "art17.reasonPrompt": "Motivo (p. ej.: solicitud del interesado de fecha …)",
+    "art17.abortedNoReason": "Cancelado: sin motivo no hay supresión.",
+    "art17.runningRideBlocks": "{name} todavía tiene un viaje en curso. Espere primero a la devolución.",
+    "art17.doneMessage": "Cliente {nummer} anonimizado. Las facturas y los viajes se conservan.",
+    "art17.confirmWord": "LOESCHEN",
+    "tile.available": "Disponible",
+    "tile.onLoan": "Alquilada",
+    "tile.inMaintenance": "En mantenimiento",
+    "tile.faulty": "Averiada",
+    "tile.ridesPerBike30d": "Viajes por bicicleta (30 días)",
+    "tile.stations": "Estaciones",
+    "tile.fullStations": "Estaciones llenas",
+    "tile.networkOccupancy": "Ocupación total – todas las estaciones",
+    "tile.fillRange": "Rango de nivel de ocupación",
+    "tile.customersTotal": "Total de clientes",
+    "tile.blocked": "Bloqueados",
+    "tile.noAddress": "Sin dirección",
+    "tile.invoiceTop10": "Volumen de facturación: 10 % superior",
+    "tile.damageReportsTotal": "Total de averías",
+    "tile.workOrdersTotal": "Total de órdenes de trabajo",
+    "tile.unrideableOpen": "No apta para circular, abierta",
+    "tile.minimum": "Mínimo",
+    "tile.maximum": "Máximo",
+    "tile.countPerMonth": "Cantidad por mes",
+    "tile.dayWithMostRides": "Día con más viajes",
+    "tile.revenueTotal": "Facturación total",
+    "tile.ridesTotal": "Viajes totales",
+    "tile.revenuePerBikeDay": "Facturación por bicicleta y día",
+    "tile.notableRevenuePerRideCityBike": "Destacado: facturación por viaje City-Bike",
+    "tile.largestCustomerGroup": "Grupo de clientes más grande",
+    "tile.notableNoMembership": "Destacado: sin membresía",
+    "tile.co2SavingsTotal": "Ahorro total de CO₂",
+    "tile.kilometersTotal": "Kilómetros totales",
+    "tile.ofWhichEstimatedWeighted": "De los cuales estimado (ponderado por viajes)",
+    "tile.networkOccupancyTotal": "Ocupación total de la red",
+    "tile.biggestImbalance": "Mayor desequilibrio",
+    "tile.occupancy": "Ocupación",
+    "tile.trafficByTimeSlot": "Llegadas y salidas por franja horaria",
+    "tile.departuresPerDayTop": "Salidas por día (arriba)",
+    "tile.arrivalsPerDayBottom": "Llegadas por día (abajo)",
+    "tile.weekdays": "Días laborables (lun.–vie.)",
+    "tile.weekend": "Fin de semana (sáb./dom.)",
+    "tile.bikesAtStation": "Bicicletas en esta estación ({n})",
+    "tile.noBikesHere": "Actualmente no hay ninguna bicicleta aquí: todas están en ruta, en el taller o averiadas.",
+    "tile.noTrafficData": "No hay datos de tráfico disponibles para esta estación.",
+    "tile.legendDepartures": "Salidas por día (arriba)",
+    "tile.legendArrivals": "Llegadas por día (abajo)",
+    "tab.revenueByBikeType": "Facturación por tipo de bicicleta",
+    "tab.revenueByCustomerGroup": "Facturación por grupo de clientes",
+    "tab.kmCo2": "Kilómetros y CO₂",
+    "tab.stationOccupancy": "Ocupación de estaciones",
+    "tab.openDamage": "Averías abiertas",
+    "tab.workOrders": "Órdenes de trabajo",
+    "auskunft.title": "Información conforme al art. 15 del RGPD · {name}",
+    "auskunft.stammdaten": "Datos maestros",
+    "auskunft.mitgliedschaften": "Membresías",
+    "auskunft.fahrten": "Viajes",
+    "auskunft.rechnungen": "Facturas",
+    "auskunft.zahlungen": "Pagos",
+    "auskunft.schadensmeldungen": "Averías",
+    "auskunft.freiminuten": "Minutos gratuitos",
+    "auskunft.protokoll": "Registro",
+    "map.schematicNote": "Mapa esquemático, no a escala: el tamaño del círculo muestra la capacidad de una estación, y el relleno su ocupación actual.",
+    "map.riverLabel": "Río Meno (esquemático)",
+    "map.areaWithCustomers": "Área del mapa con {stationenPhrase} y ubicaciones de clientes",
+    "map.area": "Área del mapa con {stationenPhrase}",
+    "map.customersAtLocation": "{ort}: {kundenPhrase}",
+    "common.and": "y",
+    "misc.changeVsPrevMonth": "frente al mes anterior",
+    "msg.bikeNowSetTo": "{rahmennummer} ahora está en {ziel}.",
+    "msg.confirmDecommission": "¿Dar de baja definitivamente {rahmennummer}? La bicicleta pierde su ubicación y ya no aparece en ninguna lista. Sus viajes se conservan.",
+    "msg.bikeDecommissioned": "{rahmennummer} dada de baja.",
+    "msg.fleetLoadFailed": "No se pudo cargar la flota: {fehler}",
+    "msg.noBikeWithFilter": "Ninguna bicicleta con este filtro",
+    "msg.modelsOrStationsLoadFailed": "No se pudieron cargar los modelos o las estaciones: {fehler}",
+    "msg.noModelsOrStations": "No hay modelos ni estaciones a partir de los cuales crear una nueva bicicleta.",
+    "msg.frameNumberMissing": "Falta el número de bastidor.",
+    "msg.bikeCreated": "Bicicleta {rahmennummer} creada.",
+    "msg.stationsLoadFailed": "No se pudieron cargar las estaciones: {fehler}",
+    "msg.stationsSummary": "{stationenPhrase}, {n} de ellas llenas: {liste}",
+    "msg.stationStillHasBikes": "En {name} todavía hay {raederPhrase}. Primero deben devolverse en otro lugar.",
+    "msg.confirmDecommissionStation": "¿Dar de baja {name} a partir de hoy? La estación sigue siendo visible en todos los informes, pero ya no admite bicicletas.",
+    "msg.stationDecommissioned": "{name} dada de baja.",
+    "msg.bikesAtStationLoadFailed": "No se pudieron cargar las bicicletas: {fehler}",
+    "msg.trafficLoadFailed": "No se pudo cargar el tráfico de la estación: {fehler}",
+    "msg.customersLoadFailed": "No se pudieron cargar los clientes: {fehler}",
+    "msg.firstLastNameRequired": "Se requieren nombre y apellido.",
+    "msg.customerSaved": "{vorname} {nachname} guardado.",
+    "msg.confirmBlockCustomer": "¿Bloquear a {vorname} {nachname}? Actualmente no existe ninguna función para levantar un bloqueo; es una carencia conocida de este sistema, no una comodidad de este cuadro de diálogo.",
+    "msg.customerBlocked": "{vorname} {nachname} bloqueado.",
+    "msg.nameEmailRequired": "Se requieren nombre, apellido y correo electrónico.",
+    "msg.customerCreated": "Cliente {vorname} {nachname} creado.",
+    "msg.customersCapped": "200 de más clientes{zusatz}: por favor, siga acotando",
+    "msg.searchFor": "para «{suchtext}»",
+    "msg.statusList": "Estado {liste}",
+    "msg.damageLoadFailed": "No se pudieron cargar las averías: {fehler}",
+    "msg.noBikeForDamage": "No hay ninguna bicicleta a la que asignar una avería.",
+    "msg.categoryDescriptionRequired": "Se requieren categoría y descripción.",
+    "msg.damageReportedBlocked": "Notificación {id} creada. La bicicleta está bloqueada, salvo que se esté usando en este momento; en ese caso se bloqueará al devolverla.",
+    "msg.damageReported": "Notificación {id} creada.",
+    "msg.workOrderOpened": "Orden de trabajo {id} abierta, bicicleta en mantenimiento.",
+    "msg.workOrdersLoadFailed": "No se pudieron cargar las órdenes de trabajo: {fehler}",
+    "msg.workOrderCompleted": "Orden de trabajo {auftragsnummer} completada.",
+    "msg.unrideableShare": "{n} de {schadenPhrase} en total: bloquea la bicicleta en cuanto no está en uso",
+    "msg.unrideableShareNoTotal": "bloquea la bicicleta en cuanto no está en uso",
+    "hint.shareOfBikes": "{anteil} de {raederPhrase}",
+    "hint.shareOnLoan": "{anteil} de {raederPhrase} · actualmente en ruta",
+    "hint.shareMaintenance": "{anteil} de {raederPhrase} · en el taller",
+    "hint.shareFaulty": "{anteil} de {raederPhrase} · donde hay problemas",
+    "hint.rideDistribution": "Mediana {median}, media {mittel} por bicicleta",
+    "hint.noRidesAtAll": " · {n} de {raederPhrase} sin un solo viaje",
+    "hint.allRiddenAtLeastOnce": " · cada una de {raederPhrase} se ha usado al menos una vez",
+    "hint.allInOperation": "todas en funcionamiento",
+    "hint.decommissionedCount": "{n} de ellas dadas de baja",
+    "hint.fullStationsShare": "{n} de {stationenPhrase}: {liste} - no admite devoluciones",
+    "hint.networkOccupancyDetail": "{belegt} de {kapazitaet} plazas ocupadas, en {stationenPhrase}",
+    "hint.fillRangeDetail": "Mediana {median} % · {voll} de {stationenPhrase} completamente llenas{leerZusatz}",
+    "hint.andEmptyCount": ", {n} de {stationenPhrase} vacías",
+    "hint.noneEmpty": ", ninguna vacía",
+    "hint.blockedShare": "{n} de {kundenPhrase} - actualmente no existe ninguna función para levantar un bloqueo",
+    "hint.noUnblockFunction": "Actualmente no existe ninguna función para levantar un bloqueo",
+    "hint.noAddressShare": "{n} de {kundenPhrase} - se puede añadir después en el formulario",
+    "hint.addLaterInForm": "Se puede añadir después en el formulario",
+    "hint.top10Detail": "{zehntel} de {kundenPhrase} concentran {top10} de {gesamt} de volumen de facturación (IVA incl., ≠ facturación en informes) · mediana {median}, media {mittel} por cliente",
+    "hint.overallStates": "en todos los estados de tramitación",
+    "hint.last12MonthsTrend": "Evolución de los últimos 12 meses",
+    "hint.last12MonthsCrossCheck": "Evolución de los últimos 12 meses - cálculo de control con la pestaña «Facturación por tipo de bicicleta»",
+    "hint.yearlyPattern": "Patrón anual: mínimo en {tief}, máximo en {hoch}",
+    "hint.perBikePerDayDetail": "{jeRadJahr} al año · en relación con {raederPhrase} en la flota (sin las dadas de baja) · últimos 12 meses",
+    "hint.tariffChangeFrom": "{veraenderung} desde {monat} - cambio de tarifa",
+    "hint.shareOfRevenue": "{prozent} de la facturación ({geld})",
+    "hint.revenueWithoutTariff": "{geld} de facturación de viajes sin tarifa activa",
+    "hint.estimatedShareOfRides": "{geschaetzt} de {fahrtenPhrase} estimados - NO {naiv}, como sugeriría la media simple de las filas",
+    "hint.fillLevelPerStation": "Nivel de ocupación por estación, ordenado por número de estación",
+    "hint.networkOccupancyWeighted": "{belegt} de {kapazitaet} plazas ocupadas · ponderado por capacidad, no la media de los valores individuales ({naiv})",
+    "hint.fullStationsList": "{voll} de {stationenPhrase}: {liste}",
+    "hint.worstStationBalance": "Saldo {saldo} - entrega más bicicletas de las que recibe",
+  },
+  it: {
+    "common.cancel": "Annulla",
+    "common.confirm": "Conferma",
+    "common.reason": "Motivo",
+    "common.all": "Tutti",
+    "common.actionsColumn": "Azioni",
+    "common.noSearchPlaceholder": "Nessuna ricerca in questa sezione",
+    "common.noSearchAria": "Ricerca non disponibile in questa sezione",
+    "common.confirmWordPrompt": "Digitare \"{wort}\" per confermare:",
+    "common.sortAria": "Ordina per {titel}",
+    "common.sortAriaSuffix": ", attualmente {richtung}",
+    "common.ascending": "crescente",
+    "common.descending": "decrescente",
+    "common.sortResetAria": "Azzera ordinamento per {titel}",
+    "common.sortResetTitle": "Azzera ordinamento",
+    "common.groupByAria": "Raggruppa per {titel}",
+    "common.groupResetAria": "Rimuovi raggruppamento per {titel}",
+    "common.groupResetTitle": "Azzera raggruppamento",
+    "common.groupTitle": "Raggruppa",
+    "common.filterAria": "Filtra {titel}",
+    "common.filterMinAria": "Valore minimo per {titel}",
+    "common.filterSearchPlaceholder": "Cerca…",
+    "common.filterResetAria": "Azzera filtro {titel}",
+    "common.filterResetTitle": "Azzera filtro",
+    "common.columnFilterReset": "Azzera filtri colonna",
+    "common.noRowsMatchFilter": "Nessuna riga soddisfa il filtro selezionato nell’intestazione di colonna. ",
+    "common.groupedBy": "Raggruppato per {titel}",
+    "common.ungroup": "Rimuovi raggruppamento",
+    "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
+    "common.closeDetailsAria": "Chiudi dettagli",
+    "common.closeDetailsTitle": "Chiudi dettagli (Esc)",
+    "common.rowsFiltered": "{angezeigt} di {zeilenPhrase} (filtro colonna attivo)",
+    "common.selectedCount": "{n} selezionati",
+    "common.minAbbrev": "min",
+    "common.hourAbbrev": "h",
+    "common.underOneMinute": "meno di 1 min",
+    "common.loggedInFor": "connesso da {dauer}",
+    "common.sinceOpen": "da quando è stato aperto: {dauer}",
+    "common.loginCheckFailed": "Impossibile verificare l’accesso: {msg}",
+    "common.loginBadCredentials": "E-mail o password non corretti.",
+    "common.rolesCheckFailed": "Impossibile determinare i ruoli: {msg}",
+    "common.roleCheckFailed": "Impossibile verificare il ruolo {code}: {msg}",
+    "common.of": "su",
+    "common.xOfPhrase": "{x} su {phrase}",
+    "misc.estimatedParen": " ({prozent} stimato)",
+    "hint.ridesPerDayHeading": "Corse al giorno — {monat} (totale, tutti i tipi di bici e tariffe)",
+    "status.label.abgebrochen": "Annullato",
+    "status.raw.abgebrochen": "Annullato",
+    "status.label.erledigt": "Completato",
+    "status.raw.erledigt": "Completato",
+    "status.label.verworfen": "Respinto",
+    "status.raw.verworfen": "Respinto",
+    "status.label.behoben": "Risolto",
+    "status.raw.behoben": "Risolto",
+    "hint.saldoChartAria": "Saldo di {stationenPhrase}, ordinato per numero di stazione, da {min} a {max}; il più basso (evidenziato in rosso) a {name}",
+    "hint.fillLevelBetween": "Livello di riempimento di {stationenPhrase}, ordinato per numero di stazione, tra {min} e {max}",
+    "msg.stationsWithoutBikeSuffix": ", di cui {n} senza bici",
+    "empty.noStationOccupancyText": "Non è presente alcuna stazione. Con dieci stazioni create, ciò è insolito: potrebbe trattarsi di una perdita temporanea del ruolo anziché di dati mancanti.",
+    "empty.noStationOccupancyTitle": "Nessuna occupazione delle stazioni",
+    "msg.stationOccupancyLoadFailed": "Impossibile caricare l’occupazione delle stazioni: {fehler}",
+    "misc.estimatedRidesDetail": "{geschaetzt} su {fahrtenPhrase} ({prozent})",
+    "hint.monthlyKmChartAria": "Chilometri percorsi al mese, ultimi dodici mesi ({vonMonat} - {bisMonat}); la barra scura all’estrema destra è il mese corrente, {aktuellWert}",
+    "hint.monthlyCo2ChartAria": "Risparmio di CO2 al mese, ultimi dodici mesi ({vonMonat} - {bisMonat}), da {min} a {max}; la barra scura all’estrema destra è il mese corrente, {aktuellWert}",
+    "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, risparmio totale di CO₂ {co2}, di cui {prozent} stimato (ponderato per corsa)",
+    "empty.noKmCo2Title": "Nessuna riga di chilometri e CO2",
+    "msg.kmCo2LoadFailed": "Impossibile caricare chilometri e CO2: {fehler}",
+    "field.jeKunde": "Per cliente",
+    "hint.crossCheckChartAria": "Fatturato mensile degli ultimi dodici mesi ({vonMonat} - {bisMonat}), la stessa serie della scheda \"Fatturato per tipo di bici\"; la barra scura all’estrema destra è il mese corrente, {aktuellWert}",
+    "msg.revenueByCustomerGroupSummary": "{monatszeilen}, fatturato totale {umsatz}",
+    "empty.noRevenueByCustomerGroupTitle": "Nessun fatturato per gruppo di clienti",
+    "msg.revenueByCustomerGroupLoadFailed": "Impossibile caricare il fatturato per gruppo di clienti: {fehler}",
+    "hint.cityBikeJumpChartAria": "Fatturato per corsa, City-Bike, {n} mesi da {vonMonat}: salto da {von} a {nach} a partire da {sprungMonat}, evidenziato in rosso",
+    "hint.monthlyRidesChartAria": "Corse al mese, ultimi dodici mesi: minimo {min} a {tiefMonat}, massimo {max} a {hochMonat}; la barra scura all’estrema destra è il mese corrente, {aktuellMonat} con {aktuellPhrase}",
+    "hint.monthlyRevenueChartAria": "Fatturato mensile degli ultimi dodici mesi ({vonMonat} - {bisMonat}), da {min} a {max}; la barra scura all’estrema destra è il mese corrente, {aktuellMonat} con {aktuellWert}",
+    "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, fatturato totale {umsatz}",
+    "msg.revenueByBikeTypeLoadFailed": "Impossibile caricare il fatturato per tipo di bici: {fehler}",
+    "empty.noRevenueByBikeTypeText": "Non è presente alcuna riga mensile. Con un anno di riferimento popolato, ciò è insolito: potrebbe trattarsi di una perdita temporanea del ruolo anziché di dati mancanti.",
+    "empty.noRevenueByBikeTypeTitle": "Nessun fatturato per tipo di bici",
+    "misc.estimatedSuffix": " (stimato)",
+    "field.strecke": "Distanza",
+    "field.dauer": "Durata",
+    "field.ziel": "Destinazione",
+    "field.start": "Partenza",
+    "misc.bikesOnDateCaption": "Bici del {datum} - nessun riferimento al cliente, vedi v_wawi_fahrten_je_tag_rad",
+    "button.backToDayOverview": "Torna alla panoramica giornaliera",
+    "misc.bikesOnDate": "Bici del {datum}",
+    "misc.noBikeRiddenThisDay": "In questo giorno non è stata usata nessuna bici.",
+    "msg.thisDayBikesLoadFailed": "Impossibile caricare le bici di questo giorno: {fehler}",
+    "hint.legendColorScale": "Colore = corse di questo giorno rispetto al giorno più trafficato del mese ({phrase}).",
+    "hint.dayRidesAria": "{datum}: {phrase}",
+    "hint.calendarCaption": "Corse al giorno, {monat}",
+    "hint.tiedDaysCount": "{tagePhrase} a pari merito, {phrase} ciascuno",
+    "hint.totalForMonth": "{phrase}, totale",
+    "hint.dailyRidesChartAria": "Corse al giorno a {monat} {jahr}, totale su tutti i tipi di bici e tariffe: tra {min} e {maxPhrase}, in media {mittel}. Il massimo delle corse il {tageListe} {monat} con {maxPhrase} ciascuno.",
+    "msg.dailyFiguresLoadFailed": "Impossibile caricare i dati giornalieri: {fehler}",
+    "misc.workOrderTitle": "Ordine di lavoro {auftragsnummer}",
+    "msg.activeWorkOrdersCount": "{n} ordini di lavoro in corso",
+    "misc.reportForBike": "Segnalazione per {rahmennummer}",
+    "msg.openDamageWithUnrideable": "{n}{zusatz} guasti aperti, di cui {dringend} non idonei alla marcia",
+    "msg.openDamageCount": "{n}{zusatz} guasti aperti",
+    "misc.atLeastValue": "≥ {n} {einheit}",
+    "misc.allLowercase": "tutte",
+    "field.minAge": "Anzianità minima",
+    "field.offenSeit": "Aperto da",
+    "field.gemeldet": "Segnalato",
+    "misc.stillRunning": "{datum} · ancora in corso",
+    "misc.noRentalYet": "Ancora nessun noleggio",
+    "msg.stationCreated": "Stazione {name} creata.",
+    "msg.capacityPositiveInteger": "Il numero di stalli deve essere un numero intero positivo.",
+    "msg.longitudeRange": "La longitudine deve essere compresa tra -180 e 180.",
+    "msg.latitudeRange": "La latitudine deve essere compresa tra -90 e 90.",
+    "msg.latLonRequired": "Sono richieste latitudine e longitudine.",
+    "msg.stationFieldsRequired": "Sono richiesti nome, via, numero civico, CAP e città.",
+    "field.laenge": "Longitudine",
+    "field.breite": "Latitudine",
+    "field.hausnummerVoll": "Numero civico",
+    "field.name": "Nome",
+    "hint.arrivalsPerDayLabel": "{label}: {n} ingressi al giorno",
+    "hint.departuresPerDayLabel": "{label}: {n} uscite al giorno",
+    "hint.trafficPatternAria": "{wochentypTitel} a {name}, media su {tage} giorni. La maggior parte delle uscite si verifica nella fascia {zeitfensterAb} con {maxAb} al giorno, la maggior parte degli ingressi nella fascia {zeitfensterZu} con {maxZu} al giorno.",
+    "hint.stationFullNote": " La stazione è piena e non accetta restituzioni al momento.",
+    "hint.stationOccupancyAria": "Occupazione {name}: {belegt} stalli su {kapazitaet}, {prozent} percento. Il 100% è la capacità di questa singola stazione.{vollZusatz}",
+    "hint.networkOccupancyAria": "Occupazione a livello di rete su {stationenPhrase}: {belegt} stalli occupati su {kapazitaet}, {prozent} percento. Il 100% è la capacità totale dell’intera rete di stazioni, non quella di una singola stazione.",
+    "map.openDetailsSuffix": ". Apri dettagli.",
+    "map.stationFullSuffix": ", piena - non accetta restituzioni al momento",
+    "map.stationBelegLabel": "{name}: {belegt} stalli occupati su {kapazitaet}",
+    "map.customerLabelShort": "{ort} ({n})",
+    "misc.freeShort": "{n} liberi",
+    "misc.unitsInStock": "{n} in giacenza",
+    "nav.originDamageReport": "Segnalazione di guasto per {rahmennummer}",
+    "nav.originBikeFromStation": "Bici {rahmennummer} da {name}",
+    "nav.originBikeFromFleet": "Bici {rahmennummer} dalla flotta",
+    "hint.percentOfFleet": "{anteil} % della flotta",
+    "index.title": "VeloCity Gestione Magazzino",
+    "index.loading": "Un momento…",
+    "index.loginEmail": "E-mail",
+    "index.loginPassword": "Password",
+    "index.loginSubmit": "Accedi",
+    "index.noAccessTitle": "Nessun accesso",
+    "index.noAccessText": "Questo account non è registrato in VeloCity come account del personale. Se sei un cliente, trovi la tua area su",
+    "index.logout": "Esci",
+    "index.noRoleTitle": "Nessun ruolo ancora assegnato",
+    "index.noRoleText": "Il tuo account è registrato in VeloCity come account del personale, ma non ti è ancora stata assegnata un’area di responsabilità. Contatta la direzione affinché ti assegni un ruolo.",
+    "index.searchPlaceholder": "Cerca",
+    "index.profileAria": "Profilo e impostazioni",
+    "index.settingsHeading": "Impostazioni",
+    "index.zebraLabel": "Righe alternate nelle tabelle",
+    "index.languageLabel": "Lingua",
+    "index.navAria": "Aree di lavoro",
+    "index.workListAria": "Elenco di lavoro",
+    "index.detailAria": "Modulo dei dettagli",
+    "nav.flotte": "Flotta",
+    "nav.stationen": "Stazioni",
+    "nav.kunden": "Clientela",
+    "nav.instandhaltung": "Manutenzione",
+    "nav.auswertungen": "Report",
+    "nav.kundenSuche": "Clientela: nome, e-mail, numero cliente",
+    "field.rahmennummer": "Numero di telaio",
+    "field.typ": "Tipo",
+    "field.status": "Stato",
+    "field.standort": "Posizione",
+    "field.schaeden": "Guasti",
+    "field.modell": "Modello",
+    "field.angeschafft": "Acquisito",
+    "field.letzteWartung": "Ultima manutenzione",
+    "field.offeneSchaeden": "Guasti aperti",
+    "field.hoechsteSchwere": "Gravità massima",
+    "field.radtyp": "Tipo di bici",
+    "field.station": "Stazione",
+    "field.nummer": "Numero",
+    "field.ort": "Località",
+    "field.belegt": "Occupato",
+    "field.frei": "Libero",
+    "field.anschrift": "Indirizzo",
+    "field.stellplaetze": "Stalli",
+    "field.lage": "Coordinate",
+    "field.betrieb": "Esercizio",
+    "field.akku": "Batteria",
+    "field.nachname": "Cognome",
+    "field.vorname": "Nome",
+    "field.tarif": "Tariffa",
+    "field.kundeSeit": "Cliente da",
+    "field.letzteAusleihe": "Ultimo noleggio",
+    "field.anrede": "Titolo",
+    "field.email": "E-mail",
+    "field.telefon": "Telefono",
+    "field.strasse": "Via",
+    "field.hausnummer": "N.",
+    "field.plz": "CAP",
+    "field.hinweis": "Avviso",
+    "field.fahrten": "Corse",
+    "field.umsatz": "Fatturato",
+    "field.offen": "In sospeso",
+    "field.kategorie": "Categoria",
+    "field.gemeldetVon": "Segnalato da",
+    "field.gemeldetAm": "Segnalato il",
+    "field.beschreibung": "Descrizione",
+    "field.schwere": "Gravità",
+    "field.stand": "Stato",
+    "field.bisherigeAuftraege": "Ordini precedenti",
+    "field.rad": "Bici",
+    "field.auftrag": "Ordine di lavoro",
+    "field.eroeffnet": "Aperto",
+    "field.bearbeiter": "Incaricato",
+    "field.arbeitszeitMinuten": "Tempo di lavoro (minuti)",
+    "field.bemerkung": "Osservazione",
+    "field.kapazitaet": "Capacità",
+    "field.abgaenge": "Uscite",
+    "field.zugaenge": "Ingressi",
+    "field.saldo": "Saldo",
+    "field.fuellstand": "Livello di riempimento",
+    "field.monat": "Mese",
+    "field.minuten": "Minuti",
+    "field.jeFahrt": "Per corsa",
+    "field.minutenJeFahrt": "Minuti per corsa",
+    "field.deltaVormonat": "Δ rispetto al mese precedente",
+    "field.kunden": "Clienti",
+    "field.fahrtenJeKunde": "Corse per cliente",
+    "field.kilometer": "Chilometri",
+    "field.kilometerJeFahrt": "Chilometri per corsa",
+    "field.co2Ersparnis": "Risparmio di CO₂",
+    "field.davonGeschaetzt": "Di cui stimato",
+    "status.raw.verfuegbar": "Disponibile",
+    "status.label.verfuegbar": "Disponibile",
+    "status.raw.ausgeliehen": "In noleggio",
+    "status.label.ausgeliehen": "In noleggio",
+    "status.raw.wartung": "In manutenzione",
+    "status.label.wartung": "In manutenzione",
+    "status.raw.defekt": "Guasto",
+    "status.label.defekt": "Guasto",
+    "status.raw.ausgemustert": "Dismesso",
+    "status.label.ausgemustert": "Dismesso",
+    "status.raw.aktiv": "Attivo",
+    "status.label.aktiv": "Attivo",
+    "status.raw.gesperrt": "Bloccato",
+    "status.label.gesperrt": "Bloccato",
+    "status.raw.geschlossen": "Chiuso",
+    "status.label.geschlossen": "Chiuso",
+    "status.raw.offen": "Aperto",
+    "status.label.offen": "Aperto",
+    "status.raw.in_arbeit": "In lavorazione",
+    "status.label.in_arbeit": "In lavorazione",
+    "schwere.gering": "lieve",
+    "schwere.mittel": "moderata",
+    "schwere.fahruntauglich": "non idonea alla marcia",
+    "button.newBike": "Aggiungi nuova bici",
+    "button.create": "Crea",
+    "button.setTo": "Imposta su {ziel}",
+    "button.whyTarget": "Perché {ziel}?",
+    "button.decommission": "Dismetti",
+    "button.decommissionReason": "Motivo della dismissione",
+    "button.newStation": "Aggiungi nuova stazione",
+    "button.decommissionStation": "Dismetti",
+    "button.newCustomer": "Aggiungi nuovo cliente",
+    "button.save": "Salva",
+    "button.block": "Blocca",
+    "button.blockReason": "Motivo del blocco",
+    "button.disclosureArt15": "Richiesta di accesso ex art. 15",
+    "button.deletionArt17": "Cancellazione ex art. 17",
+    "button.downloadJson": "Scarica come JSON",
+    "button.close": "Chiudi",
+    "button.reportDamage": "Segnala guasto",
+    "button.openWorkOrder": "Apri ordine di lavoro",
+    "button.bikeInFleet": "Bici in flotta",
+    "button.report": "Segnala",
+    "button.resolve": "Completa",
+    "button.toOpenDamage": "Vai ai guasti aperti",
+    "button.damageInFleet": "Bici in flotta",
+    "button.list": "Elenco",
+    "button.map": "Mappa",
+    "button.showCustomersOnMap": "Mostra clienti per località",
+    "empty.noBikesFilterTitle": "Nessuna bici corrisponde a questo filtro",
+    "empty.noBikesFilterText": "Nessuna bici della flotta soddisfa la restrizione selezionata.",
+    "empty.noCustomersFilterTitle": "Nessun cliente corrisponde a questo filtro",
+    "empty.noCustomersFilterTextSearch": "Nessun cliente corrispondente a \"{suchtext}\" soddisfa anche la restrizione selezionata.",
+    "empty.noCustomersFilterText": "Nessun cliente soddisfa la restrizione selezionata.",
+    "empty.statusFilterReset": "Azzera filtro stato",
+    "empty.noOpenDamageTitle": "Nessun guasto aperto",
+    "empty.noOpenDamageText": "Al momento non ci sono segnalazioni di guasto. È la situazione normale: si segnala quando si nota qualcosa su una bici.",
+    "empty.noDamageFilterTitle": "Nessun guasto corrisponde a questo filtro",
+    "empty.noDamageFilterText": "Nessun guasto aperto soddisfa la restrizione selezionata.",
+    "empty.noWorkOrdersTitle": "Nessun ordine di lavoro in corso",
+    "empty.noWorkOrdersText": "Al momento non ci sono ordini di lavoro. Un ordine nasce da una segnalazione di guasto aperta, dove si trova il pulsante \"Apri ordine di lavoro\".",
+    "misc.underway": "in viaggio",
+    "misc.underwayNoLocation": "in viaggio (nessuna posizione)",
+    "misc.noneYet": "ancora nessuna",
+    "misc.noMembership": "senza abbonamento",
+    "misc.notYetAssigned": "non ancora assegnato",
+    "misc.justNow": "proprio ora",
+    "misc.inOperation": "in esercizio",
+    "misc.decommissionedState": "dismessa",
+    "misc.noAddressOnFile": "Per questa persona non è registrato alcun indirizzo: non è un errore di caricamento. I campi sottostanti possono essere compilati per aggiungerne uno.",
+    "misc.disclosureLoggedNote": "La consultazione della richiesta ex art. 15 viene registrata (GR19): chi la consulta lascia una traccia nel registro delle modifiche.",
+    "misc.damageBlocksImmediately": "Un guasto che rende la bici non idonea alla marcia la blocca immediatamente, a meno che non sia in uso in quel momento. In tal caso lo stato resta invariato per ora (GR13 non consente un altro stato a una bici in viaggio) e il blocco scatta solo alla restituzione.",
+    "misc.onlyUnrideableBlocks": "Solo una segnalazione di non idoneità alla marcia blocca automaticamente la bici.",
+    "misc.noMinutesNeeded": "È richiesto il tempo di lavoro in minuti (0 o superiore).",
+    "art17.confirmHeader": "Cancellazione ai sensi dell’art. 17 del GDPR per {name}?",
+    "art17.whatDisappears": "COSA SCOMPARE: nome, e-mail, numero di telefono, data di nascita, indirizzo, mezzo di pagamento e il collegamento all’account di accesso. Anche nel registro delle modifiche i vecchi valori vengono resi irriconoscibili.",
+    "art17.whatRemains": "COSA RIMANE: {phrase} e tutte le fatture, per intero. Il diritto tributario richiede dieci anni di conservazione e il GDPR esclude espressamente questo obbligo dalla cancellazione.",
+    "art17.whatThisDoesNotAchieve": "COSA NON RISOLVE: le corse riportano orari e luoghi. Chi viaggia regolarmente dallo stesso punto alla stessa ora resta identificabile tramite questi dati.",
+    "art17.irreversible": "L’operazione non può essere annullata.",
+    "art17.reasonPrompt": "Motivo (es.: richiesta dell’interessato del …)",
+    "art17.abortedNoReason": "Annullato: nessuna cancellazione senza motivo.",
+    "art17.runningRideBlocks": "{name} ha ancora una corsa in corso. Attendere prima la restituzione.",
+    "art17.doneMessage": "Cliente {nummer} anonimizzato. Fatture e corse vengono conservate.",
+    "art17.confirmWord": "LOESCHEN",
+    "tile.available": "Pronta all’uso",
+    "tile.onLoan": "In noleggio",
+    "tile.inMaintenance": "In manutenzione",
+    "tile.faulty": "Guasto",
+    "tile.ridesPerBike30d": "Corse per bici (30 giorni)",
+    "tile.stations": "Stazioni",
+    "tile.fullStations": "Stazioni piene",
+    "tile.networkOccupancy": "Occupazione totale – tutte le stazioni",
+    "tile.fillRange": "Intervallo del livello di riempimento",
+    "tile.customersTotal": "Totale clienti",
+    "tile.blocked": "Bloccati",
+    "tile.noAddress": "Senza indirizzo",
+    "tile.invoiceTop10": "Volume fatturato: 10 % superiore",
+    "tile.damageReportsTotal": "Totale segnalazioni di guasto",
+    "tile.workOrdersTotal": "Totale ordini di lavoro",
+    "tile.unrideableOpen": "Non idonea alla marcia, aperta",
+    "tile.minimum": "Minimo",
+    "tile.maximum": "Massimo",
+    "tile.countPerMonth": "Numero per mese",
+    "tile.dayWithMostRides": "Giorno con più corse",
+    "tile.revenueTotal": "Fatturato totale",
+    "tile.ridesTotal": "Corse totali",
+    "tile.revenuePerBikeDay": "Fatturato per bici e giorno",
+    "tile.notableRevenuePerRideCityBike": "Notevole: fatturato per corsa City-Bike",
+    "tile.largestCustomerGroup": "Gruppo di clienti più numeroso",
+    "tile.notableNoMembership": "Notevole: senza abbonamento",
+    "tile.co2SavingsTotal": "Risparmio totale di CO₂",
+    "tile.kilometersTotal": "Chilometri totali",
+    "tile.ofWhichEstimatedWeighted": "Di cui stimato (ponderato per corsa)",
+    "tile.networkOccupancyTotal": "Occupazione totale della rete",
+    "tile.biggestImbalance": "Squilibrio maggiore",
+    "tile.occupancy": "Occupazione",
+    "tile.trafficByTimeSlot": "Ingressi e uscite per fascia oraria",
+    "tile.departuresPerDayTop": "Uscite al giorno (in alto)",
+    "tile.arrivalsPerDayBottom": "Ingressi al giorno (in basso)",
+    "tile.weekdays": "Giorni feriali (lun–ven)",
+    "tile.weekend": "Fine settimana (sab/dom)",
+    "tile.bikesAtStation": "Bici in questa stazione ({n})",
+    "tile.noBikesHere": "Al momento non c’è nessuna bici qui: sono tutte in viaggio, in officina o guaste.",
+    "tile.noTrafficData": "Per questa stazione non sono disponibili dati di traffico.",
+    "tile.legendDepartures": "Uscite al giorno (in alto)",
+    "tile.legendArrivals": "Ingressi al giorno (in basso)",
+    "tab.revenueByBikeType": "Fatturato per tipo di bici",
+    "tab.revenueByCustomerGroup": "Fatturato per gruppo di clienti",
+    "tab.kmCo2": "Chilometri e CO₂",
+    "tab.stationOccupancy": "Occupazione delle stazioni",
+    "tab.openDamage": "Guasti aperti",
+    "tab.workOrders": "Ordini di lavoro",
+    "auskunft.title": "Informativa ai sensi dell’art. 15 del GDPR · {name}",
+    "auskunft.stammdaten": "Dati anagrafici",
+    "auskunft.mitgliedschaften": "Abbonamenti",
+    "auskunft.fahrten": "Corse",
+    "auskunft.rechnungen": "Fatture",
+    "auskunft.zahlungen": "Pagamenti",
+    "auskunft.schadensmeldungen": "Segnalazioni di guasto",
+    "auskunft.freiminuten": "Minuti gratuiti",
+    "auskunft.protokoll": "Registro",
+    "map.schematicNote": "Mappa schematica, non in scala: la dimensione del cerchio indica la capacità di una stazione, il riempimento la sua occupazione attuale.",
+    "map.riverLabel": "Fiume Meno (schematico)",
+    "map.areaWithCustomers": "Area della mappa con {stationenPhrase} e località dei clienti",
+    "map.area": "Area della mappa con {stationenPhrase}",
+    "map.customersAtLocation": "{ort}: {kundenPhrase}",
+    "common.and": "e",
+    "misc.changeVsPrevMonth": "rispetto al mese precedente",
+    "msg.bikeNowSetTo": "{rahmennummer} ora è impostata su {ziel}.",
+    "msg.confirmDecommission": "Dismettere definitivamente {rahmennummer}? La bici perde la sua posizione e non compare più in nessun elenco. Le sue corse vengono conservate.",
+    "msg.bikeDecommissioned": "{rahmennummer} dismessa.",
+    "msg.fleetLoadFailed": "Impossibile caricare la flotta: {fehler}",
+    "msg.noBikeWithFilter": "Nessuna bici con questo filtro",
+    "msg.modelsOrStationsLoadFailed": "Impossibile caricare modelli o stazioni: {fehler}",
+    "msg.noModelsOrStations": "Non ci sono né modelli né stazioni da cui creare una nuova bici.",
+    "msg.frameNumberMissing": "Manca il numero di telaio.",
+    "msg.bikeCreated": "Bici {rahmennummer} creata.",
+    "msg.stationsLoadFailed": "Impossibile caricare le stazioni: {fehler}",
+    "msg.stationsSummary": "{stationenPhrase}, di cui {n} piene: {liste}",
+    "msg.stationStillHasBikes": "A {name} ci sono ancora {raederPhrase}. Devono prima essere restituite altrove.",
+    "msg.confirmDecommissionStation": "Dismettere {name} da oggi? La stazione resta visibile in tutti i report, ma non accetta più bici.",
+    "msg.stationDecommissioned": "{name} dismessa.",
+    "msg.bikesAtStationLoadFailed": "Impossibile caricare le bici: {fehler}",
+    "msg.trafficLoadFailed": "Impossibile caricare il traffico della stazione: {fehler}",
+    "msg.customersLoadFailed": "Impossibile caricare i clienti: {fehler}",
+    "msg.firstLastNameRequired": "Sono richiesti nome e cognome.",
+    "msg.customerSaved": "{vorname} {nachname} salvato.",
+    "msg.confirmBlockCustomer": "Bloccare {vorname} {nachname}? Al momento non esiste alcuna funzione per rimuovere un blocco: è una lacuna nota di questo gestionale, non una comodità di questa finestra.",
+    "msg.customerBlocked": "{vorname} {nachname} bloccato.",
+    "msg.nameEmailRequired": "Sono richiesti nome, cognome ed e-mail.",
+    "msg.customerCreated": "Cliente {vorname} {nachname} creato.",
+    "msg.customersCapped": "200 di più clienti{zusatz} — restringere ulteriormente",
+    "msg.searchFor": "per \"{suchtext}\"",
+    "msg.statusList": "Stato {liste}",
+    "msg.damageLoadFailed": "Impossibile caricare i guasti: {fehler}",
+    "msg.noBikeForDamage": "Non c’è nessuna bici a cui assegnare un guasto.",
+    "msg.categoryDescriptionRequired": "Sono richieste categoria e descrizione.",
+    "msg.damageReportedBlocked": "Segnalazione {id} creata. La bici è bloccata, a meno che non sia in uso in questo momento; in tal caso verrà bloccata alla restituzione.",
+    "msg.damageReported": "Segnalazione {id} creata.",
+    "msg.workOrderOpened": "Ordine di lavoro {id} aperto, bici in manutenzione.",
+    "msg.workOrdersLoadFailed": "Impossibile caricare gli ordini di lavoro: {fehler}",
+    "msg.workOrderCompleted": "Ordine di lavoro {auftragsnummer} completato.",
+    "msg.unrideableShare": "{n} su {schadenPhrase} totali - blocca la bici non appena non è in uso",
+    "msg.unrideableShareNoTotal": "blocca la bici non appena non è in uso",
+    "hint.shareOfBikes": "{anteil} su {raederPhrase}",
+    "hint.shareOnLoan": "{anteil} su {raederPhrase} · attualmente in viaggio",
+    "hint.shareMaintenance": "{anteil} su {raederPhrase} · in officina",
+    "hint.shareFaulty": "{anteil} su {raederPhrase} · dove c’è un problema",
+    "hint.rideDistribution": "Mediana {median}, media {mittel} per bici",
+    "hint.noRidesAtAll": " · {n} su {raederPhrase} senza nemmeno una corsa",
+    "hint.allRiddenAtLeastOnce": " · ognuna delle {raederPhrase} è stata usata almeno una volta",
+    "hint.allInOperation": "tutte in esercizio",
+    "hint.decommissionedCount": "{n} di esse dismesse",
+    "hint.fullStationsShare": "{n} su {stationenPhrase}: {liste} - non accetta restituzioni",
+    "hint.networkOccupancyDetail": "{belegt} stalli occupati su {kapazitaet}, in tutte le {stationenPhrase}",
+    "hint.fillRangeDetail": "Mediana {median} % · {voll} su {stationenPhrase} completamente piene{leerZusatz}",
+    "hint.andEmptyCount": ", {n} su {stationenPhrase} vuote",
+    "hint.noneEmpty": ", nessuna vuota",
+    "hint.blockedShare": "{n} su {kundenPhrase} - al momento non esiste una funzione per rimuovere un blocco",
+    "hint.noUnblockFunction": "Al momento non esiste una funzione per rimuovere un blocco",
+    "hint.noAddressShare": "{n} su {kundenPhrase} - può essere aggiunto in seguito nel modulo",
+    "hint.addLaterInForm": "Può essere aggiunto in seguito nel modulo",
+    "hint.top10Detail": "{zehntel} su {kundenPhrase} totalizzano {top10} su {gesamt} di volume fatturato (IVA inclusa, ≠ fatturato nei report) · mediana {median}, media {mittel} per cliente",
+    "hint.overallStates": "in tutti gli stati di lavorazione",
+    "hint.last12MonthsTrend": "Andamento degli ultimi 12 mesi",
+    "hint.last12MonthsCrossCheck": "Andamento degli ultimi 12 mesi - calcolo di controllo rispetto alla scheda \"Fatturato per tipo di bici\"",
+    "hint.yearlyPattern": "Andamento annuale: minimo a {tief}, massimo a {hoch}",
+    "hint.perBikePerDayDetail": "{jeRadJahr} all’anno · riferito a {raederPhrase} in flotta (escluse le dismesse) · ultimi 12 mesi",
+    "hint.tariffChangeFrom": "{veraenderung} da {monat} - cambio tariffa",
+    "hint.shareOfRevenue": "{prozent} del fatturato ({geld})",
+    "hint.revenueWithoutTariff": "{geld} di fatturato da corse senza tariffa attiva",
+    "hint.estimatedShareOfRides": "{geschaetzt} corse stimate su {fahrtenPhrase} - NON {naiv}, come suggerirebbe la media semplice delle righe",
+    "hint.fillLevelPerStation": "Livello di riempimento per stazione, ordinato per numero di stazione",
+    "hint.networkOccupancyWeighted": "{belegt} stalli occupati su {kapazitaet} · ponderato per capacità, non la media dei singoli valori ({naiv})",
+    "hint.fullStationsList": "{voll} su {stationenPhrase}: {liste}",
+    "hint.worstStationBalance": "Saldo {saldo} - cede più bici di quante ne riceva",
+  },
+  pl: {
+    "common.cancel": "Anuluj",
+    "common.confirm": "Potwierdź",
+    "common.reason": "Powód",
+    "common.all": "Wszystkie",
+    "common.actionsColumn": "Akcje",
+    "common.noSearchPlaceholder": "Brak wyszukiwania w tej sekcji",
+    "common.noSearchAria": "Wyszukiwanie niedostępne w tej sekcji",
+    "common.confirmWordPrompt": "Wpisz \"{wort}\", aby potwierdzić:",
+    "common.sortAria": "Sortuj według {titel}",
+    "common.sortAriaSuffix": ", obecnie {richtung}",
+    "common.ascending": "rosnąco",
+    "common.descending": "malejąco",
+    "common.sortResetAria": "Zresetuj sortowanie według {titel}",
+    "common.sortResetTitle": "Zresetuj sortowanie",
+    "common.groupByAria": "Grupuj według {titel}",
+    "common.groupResetAria": "Usuń grupowanie według {titel}",
+    "common.groupResetTitle": "Zresetuj grupowanie",
+    "common.groupTitle": "Grupuj",
+    "common.filterAria": "Filtruj {titel}",
+    "common.filterMinAria": "Wartość minimalna dla {titel}",
+    "common.filterSearchPlaceholder": "Szukaj…",
+    "common.filterResetAria": "Zresetuj filtr {titel}",
+    "common.filterResetTitle": "Zresetuj filtr",
+    "common.columnFilterReset": "Zresetuj filtry kolumn",
+    "common.noRowsMatchFilter": "Żaden wiersz nie spełnia wybranego ograniczenia w nagłówku kolumny. ",
+    "common.groupedBy": "Pogrupowano według {titel}",
+    "common.ungroup": "Usuń grupowanie",
+    "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
+    "common.closeDetailsAria": "Zamknij szczegóły",
+    "common.closeDetailsTitle": "Zamknij szczegóły (Esc)",
+    "common.rowsFiltered": "{angezeigt} z {zeilenPhrase} (filtr kolumny aktywny)",
+    "common.selectedCount": "{n} wybranych",
+    "common.minAbbrev": "min",
+    "common.hourAbbrev": "godz.",
+    "common.underOneMinute": "poniżej 1 min",
+    "common.loggedInFor": "zalogowano od {dauer}",
+    "common.sinceOpen": "od otwarcia: {dauer}",
+    "common.loginCheckFailed": "Nie udało się zweryfikować logowania: {msg}",
+    "common.loginBadCredentials": "Adres e-mail lub hasło jest nieprawidłowe.",
+    "common.rolesCheckFailed": "Nie udało się ustalić ról: {msg}",
+    "common.roleCheckFailed": "Nie udało się sprawdzić roli {code}: {msg}",
+    "common.of": "z",
+    "common.xOfPhrase": "{x} z {phrase}",
+    "misc.estimatedParen": " ({prozent} szacowane)",
+    "hint.ridesPerDayHeading": "Przejazdy dziennie — {monat} (ogółem, wszystkie typy rowerów i taryfy)",
+    "status.label.abgebrochen": "Anulowano",
+    "status.raw.abgebrochen": "Anulowano",
+    "status.label.erledigt": "Zakończono",
+    "status.raw.erledigt": "Zakończono",
+    "status.label.verworfen": "Odrzucono",
+    "status.raw.verworfen": "Odrzucono",
+    "status.label.behoben": "Naprawiono",
+    "status.raw.behoben": "Naprawiono",
+    "hint.saldoChartAria": "Saldo {stationenPhrase}, posortowane według numeru stacji, od {min} do {max} - najniższe (zaznaczone na czerwono) na stacji {name}",
+    "hint.fillLevelBetween": "Poziom zapełnienia {stationenPhrase}, posortowany według numeru stacji, od {min} do {max}",
+    "msg.stationsWithoutBikeSuffix": ", w tym {n} bez roweru",
+    "empty.noStationOccupancyText": "Brak stacji. Przy dziesięciu utworzonych stacjach jest to nietypowe — możliwą przyczyną jest chwilowa utrata roli, a nie brak danych.",
+    "empty.noStationOccupancyTitle": "Brak obłożenia stacji",
+    "msg.stationOccupancyLoadFailed": "Nie udało się wczytać obłożenia stacji: {fehler}",
+    "misc.estimatedRidesDetail": "{geschaetzt} z {fahrtenPhrase} ({prozent})",
+    "hint.monthlyKmChartAria": "Przejechane kilometry miesięcznie, ostatnie dwanaście miesięcy ({vonMonat}-{bisMonat}) - ciemny słupek po prawej to bieżący miesiąc, {aktuellWert}",
+    "hint.monthlyCo2ChartAria": "Oszczędność CO2 miesięcznie, ostatnie dwanaście miesięcy ({vonMonat}-{bisMonat}), od {min} do {max} - ciemny słupek po prawej to bieżący miesiąc, {aktuellWert}",
+    "msg.kmCo2Summary": "{monatszeilen}, {fahrten}, oszczędność CO₂ ogółem {co2}, w tym {prozent} szacowane (ważone przejazdami)",
+    "empty.noKmCo2Title": "Brak wierszy kilometrów i CO2",
+    "msg.kmCo2LoadFailed": "Nie udało się wczytać kilometrów i CO2: {fehler}",
+    "field.jeKunde": "Na klienta",
+    "hint.crossCheckChartAria": "Miesięczny obrót z ostatnich dwunastu miesięcy ({vonMonat}-{bisMonat}), ta sama seria co na karcie „Obrót wg typu roweru” - ciemny słupek po prawej to bieżący miesiąc, {aktuellWert}",
+    "msg.revenueByCustomerGroupSummary": "{monatszeilen}, obrót ogółem {umsatz}",
+    "empty.noRevenueByCustomerGroupTitle": "Brak obrotu wg grupy klientów",
+    "msg.revenueByCustomerGroupLoadFailed": "Nie udało się wczytać obrotu wg grupy klientów: {fehler}",
+    "hint.cityBikeJumpChartAria": "Obrót na przejazd City-Bike, {n} miesięcy od {vonMonat}: skok z {von} do {nach} od {sprungMonat}, zaznaczone na czerwono",
+    "hint.monthlyRidesChartAria": "Przejazdy miesięcznie, ostatnie dwanaście miesięcy: najniżej {min} w {tiefMonat}, najwyżej {max} w {hochMonat} - ciemny słupek po prawej to bieżący miesiąc, {aktuellMonat} z {aktuellPhrase}",
+    "hint.monthlyRevenueChartAria": "Miesięczny obrót z ostatnich dwunastu miesięcy ({vonMonat}-{bisMonat}), od {min} do {max} - ciemny słupek po prawej to bieżący miesiąc, {aktuellMonat} z {aktuellWert}",
+    "msg.revenueByBikeTypeSummary": "{monatszeilen}, {fahrten}, obrót ogółem {umsatz}",
+    "msg.revenueByBikeTypeLoadFailed": "Nie udało się wczytać obrotu wg typu roweru: {fehler}",
+    "empty.noRevenueByBikeTypeText": "Brak wiersza miesięcznego. Przy wypełnionym roku referencyjnym jest to nietypowe — możliwą przyczyną jest chwilowa utrata roli, a nie brak danych.",
+    "empty.noRevenueByBikeTypeTitle": "Brak obrotu wg typu roweru",
+    "misc.estimatedSuffix": " (szacowane)",
+    "field.strecke": "Dystans",
+    "field.dauer": "Czas trwania",
+    "field.ziel": "Cel",
+    "field.start": "Start",
+    "misc.bikesOnDateCaption": "Rowery w dniu {datum} - bez odniesienia do klienta, patrz v_wawi_fahrten_je_tag_rad",
+    "button.backToDayOverview": "Powrót do przeglądu dziennego",
+    "misc.bikesOnDate": "Rowery w dniu {datum}",
+    "misc.noBikeRiddenThisDay": "Tego dnia nie użyto żadnego roweru.",
+    "msg.thisDayBikesLoadFailed": "Nie udało się wczytać rowerów z tego dnia: {fehler}",
+    "hint.legendColorScale": "Kolor = przejazdy tego dnia w stosunku do najbardziej ruchliwego dnia miesiąca ({phrase}).",
+    "hint.dayRidesAria": "{datum}: {phrase}",
+    "hint.calendarCaption": "Przejazdy dziennie, {monat}",
+    "hint.tiedDaysCount": "{tagePhrase} z takim samym wynikiem, po {phrase}",
+    "hint.totalForMonth": "{phrase}, łącznie",
+    "hint.dailyRidesChartAria": "Przejazdy dziennie w {monat} {jahr}, ogółem we wszystkich typach rowerów i taryfach: od {min} do {maxPhrase}, średnio {mittel}. Najwięcej przejazdów {tageListe} {monat}, po {maxPhrase} każdego dnia.",
+    "msg.dailyFiguresLoadFailed": "Nie udało się wczytać danych dziennych: {fehler}",
+    "misc.workOrderTitle": "Zlecenie {auftragsnummer}",
+    "msg.activeWorkOrdersCount": "{n} trwających zleceń",
+    "misc.reportForBike": "Zgłoszenie dla {rahmennummer}",
+    "msg.openDamageWithUnrideable": "{n}{zusatz} otwartych usterek, w tym {dringend} niezdatnych do jazdy",
+    "msg.openDamageCount": "{n}{zusatz} otwartych usterek",
+    "misc.atLeastValue": "≥ {n} {einheit}",
+    "misc.allLowercase": "wszystkie",
+    "field.minAge": "Minimalny wiek",
+    "field.offenSeit": "Otwarte od",
+    "field.gemeldet": "Zgłoszono",
+    "misc.stillRunning": "{datum} · nadal trwa",
+    "misc.noRentalYet": "Jeszcze bez wypożyczenia",
+    "msg.stationCreated": "Utworzono stację {name}.",
+    "msg.capacityPositiveInteger": "Liczba miejsc postojowych musi być dodatnią liczbą całkowitą.",
+    "msg.longitudeRange": "Długość geograficzna musi mieścić się między -180 a 180.",
+    "msg.latitudeRange": "Szerokość geograficzna musi mieścić się między -90 a 90.",
+    "msg.latLonRequired": "Wymagana jest szerokość i długość geograficzna.",
+    "msg.stationFieldsRequired": "Wymagana jest nazwa, ulica, numer domu, kod pocztowy i miejscowość.",
+    "field.laenge": "Długość geogr.",
+    "field.breite": "Szerokość geogr.",
+    "field.hausnummerVoll": "Numer domu",
+    "field.name": "Nazwa",
+    "hint.arrivalsPerDayLabel": "{label}: {n} przyjazdów dziennie",
+    "hint.departuresPerDayLabel": "{label}: {n} wyjazdów dziennie",
+    "hint.trafficPatternAria": "{wochentypTitel} na stacji {name}, uśrednione z {tage} dni. Najwięcej wyjazdów przypada na przedział {zeitfensterAb} z {maxAb} dziennie, najwięcej przyjazdów na przedział {zeitfensterZu} z {maxZu} dziennie.",
+    "hint.stationFullNote": " Stacja jest pełna i obecnie nie przyjmuje zwrotów.",
+    "hint.stationOccupancyAria": "Zapełnienie {name}: {belegt} z {kapazitaet} miejsc, {prozent} procent. 100 procent to pojemność tej jednej stacji.{vollZusatz}",
+    "hint.networkOccupancyAria": "Obłożenie sieci we wszystkich {stationenPhrase}: {belegt} z {kapazitaet} miejsc zajętych, {prozent} procent. 100 procent to całkowita pojemność całej sieci stacji, a nie jednej stacji.",
+    "map.openDetailsSuffix": ". Otwórz szczegóły.",
+    "map.stationFullSuffix": ", pełna - obecnie nie przyjmuje zwrotów",
+    "map.stationBelegLabel": "{name}: {belegt} z {kapazitaet} miejsc zajętych",
+    "map.customerLabelShort": "{ort} ({n})",
+    "misc.freeShort": "{n} wolnych",
+    "misc.unitsInStock": "{n} w magazynie",
+    "nav.originDamageReport": "Zgłoszenie usterki dla {rahmennummer}",
+    "nav.originBikeFromStation": "Rower {rahmennummer} ze stacji {name}",
+    "nav.originBikeFromFleet": "Rower {rahmennummer} z floty",
+    "hint.percentOfFleet": "{anteil}% floty",
+    "index.title": "VeloCity Gospodarka Magazynowa",
+    "index.loading": "Chwileczkę…",
+    "index.loginEmail": "E-mail",
+    "index.loginPassword": "Hasło",
+    "index.loginSubmit": "Zaloguj się",
+    "index.noAccessTitle": "Brak dostępu",
+    "index.noAccessText": "To konto nie jest zarejestrowane w VeloCity jako konto pracownika. Jeśli są Państwo klientami, swój obszar znajdą Państwo pod adresem",
+    "index.logout": "Wyloguj się",
+    "index.noRoleTitle": "Nie przypisano jeszcze roli",
+    "index.noRoleText": "Państwa konto jest zarejestrowane w VeloCity jako konto pracownika, ale nie przypisano jeszcze żadnego zakresu obowiązków. Proszę skontaktować się z kierownictwem, aby przydzieliło Państwu rolę.",
+    "index.searchPlaceholder": "Szukaj",
+    "index.profileAria": "Profil i ustawienia",
+    "index.settingsHeading": "Ustawienia",
+    "index.zebraLabel": "Pasy zebry w tabelach",
+    "index.languageLabel": "Język",
+    "index.navAria": "Obszary zadań",
+    "index.workListAria": "Lista robocza",
+    "index.detailAria": "Formularz szczegółów",
+    "nav.flotte": "Flota",
+    "nav.stationen": "Stacje",
+    "nav.kunden": "Klientela",
+    "nav.instandhaltung": "Konserwacja",
+    "nav.auswertungen": "Raporty",
+    "nav.kundenSuche": "Klientela: nazwisko, e-mail, numer klienta",
+    "field.rahmennummer": "Numer ramy",
+    "field.typ": "Typ",
+    "field.status": "Status",
+    "field.standort": "Lokalizacja",
+    "field.schaeden": "Usterki",
+    "field.modell": "Model",
+    "field.angeschafft": "Zakupiono",
+    "field.letzteWartung": "Ostatnia konserwacja",
+    "field.offeneSchaeden": "Otwarte usterki",
+    "field.hoechsteSchwere": "Najwyższa waga usterki",
+    "field.radtyp": "Typ roweru",
+    "field.station": "Stacja",
+    "field.nummer": "Numer",
+    "field.ort": "Miejscowość",
+    "field.belegt": "Zajęte",
+    "field.frei": "Wolne",
+    "field.anschrift": "Adres",
+    "field.stellplaetze": "Miejsca postojowe",
+    "field.lage": "Współrzędne",
+    "field.betrieb": "Eksploatacja",
+    "field.akku": "Bateria",
+    "field.nachname": "Nazwisko",
+    "field.vorname": "Imię",
+    "field.tarif": "Taryfa",
+    "field.kundeSeit": "Klient od",
+    "field.letzteAusleihe": "Ostatnie wypożyczenie",
+    "field.anrede": "Forma zwracania się",
+    "field.email": "E-mail",
+    "field.telefon": "Telefon",
+    "field.strasse": "Ulica",
+    "field.hausnummer": "Nr",
+    "field.plz": "Kod pocztowy",
+    "field.hinweis": "Uwaga",
+    "field.fahrten": "Przejazdy",
+    "field.umsatz": "Obrót",
+    "field.offen": "Zaległość",
+    "field.kategorie": "Kategoria",
+    "field.gemeldetVon": "Zgłoszone przez",
+    "field.gemeldetAm": "Zgłoszono dnia",
+    "field.beschreibung": "Opis",
+    "field.schwere": "Waga usterki",
+    "field.stand": "Etap",
+    "field.bisherigeAuftraege": "Poprzednie zlecenia",
+    "field.rad": "Rower",
+    "field.auftrag": "Zlecenie",
+    "field.eroeffnet": "Otwarto",
+    "field.bearbeiter": "Wykonawca",
+    "field.arbeitszeitMinuten": "Czas pracy (minuty)",
+    "field.bemerkung": "Uwaga",
+    "field.kapazitaet": "Pojemność",
+    "field.abgaenge": "Wyjazdy",
+    "field.zugaenge": "Przyjazdy",
+    "field.saldo": "Saldo",
+    "field.fuellstand": "Poziom zapełnienia",
+    "field.monat": "Miesiąc",
+    "field.minuten": "Minuty",
+    "field.jeFahrt": "Na przejazd",
+    "field.minutenJeFahrt": "Minuty na przejazd",
+    "field.deltaVormonat": "Δ względem poprzedniego miesiąca",
+    "field.kunden": "Klienci",
+    "field.fahrtenJeKunde": "Przejazdy na klienta",
+    "field.kilometer": "Kilometry",
+    "field.kilometerJeFahrt": "Kilometry na przejazd",
+    "field.co2Ersparnis": "Oszczędność CO₂",
+    "field.davonGeschaetzt": "W tym szacowane",
+    "status.raw.verfuegbar": "Dostępny",
+    "status.label.verfuegbar": "Dostępny",
+    "status.raw.ausgeliehen": "Wypożyczony",
+    "status.label.ausgeliehen": "Wypożyczony",
+    "status.raw.wartung": "W konserwacji",
+    "status.label.wartung": "W konserwacji",
+    "status.raw.defekt": "Uszkodzony",
+    "status.label.defekt": "Uszkodzony",
+    "status.raw.ausgemustert": "Wycofany",
+    "status.label.ausgemustert": "Wycofany",
+    "status.raw.aktiv": "Aktywny",
+    "status.label.aktiv": "Aktywny",
+    "status.raw.gesperrt": "Zablokowany",
+    "status.label.gesperrt": "Zablokowany",
+    "status.raw.geschlossen": "Zamknięty",
+    "status.label.geschlossen": "Zamknięty",
+    "status.raw.offen": "Otwarte",
+    "status.label.offen": "Otwarte",
+    "status.raw.in_arbeit": "W trakcie",
+    "status.label.in_arbeit": "W trakcie",
+    "schwere.gering": "niska",
+    "schwere.mittel": "średnia",
+    "schwere.fahruntauglich": "niezdatny do jazdy",
+    "button.newBike": "Dodaj nowy rower",
+    "button.create": "Utwórz",
+    "button.setTo": "Ustaw na {ziel}",
+    "button.whyTarget": "Dlaczego {ziel}?",
+    "button.decommission": "Wycofaj z eksploatacji",
+    "button.decommissionReason": "Powód wycofania z eksploatacji",
+    "button.newStation": "Dodaj nową stację",
+    "button.decommissionStation": "Wyłącz z eksploatacji",
+    "button.newCustomer": "Dodaj nowego klienta",
+    "button.save": "Zapisz",
+    "button.block": "Zablokuj",
+    "button.blockReason": "Powód zablokowania",
+    "button.disclosureArt15": "Wgląd na podstawie art. 15",
+    "button.deletionArt17": "Usunięcie na podstawie art. 17",
+    "button.downloadJson": "Pobierz jako JSON",
+    "button.close": "Zamknij",
+    "button.reportDamage": "Zgłoś usterkę",
+    "button.openWorkOrder": "Otwórz zlecenie",
+    "button.bikeInFleet": "Rower we flocie",
+    "button.report": "Zgłoś",
+    "button.resolve": "Zakończ",
+    "button.toOpenDamage": "Przejdź do otwartych usterek",
+    "button.damageInFleet": "Rower we flocie",
+    "button.list": "Lista",
+    "button.map": "Mapa",
+    "button.showCustomersOnMap": "Pokaż klientów wg lokalizacji",
+    "empty.noBikesFilterTitle": "Brak rowerów spełniających ten filtr",
+    "empty.noBikesFilterText": "Żaden rower we flocie nie spełnia wybranego ograniczenia.",
+    "empty.noCustomersFilterTitle": "Brak klientów spełniających ten filtr",
+    "empty.noCustomersFilterTextSearch": "Żaden klient pasujący do „{suchtext}” nie spełnia dodatkowo wybranego ograniczenia.",
+    "empty.noCustomersFilterText": "Żaden klient nie spełnia wybranego ograniczenia.",
+    "empty.statusFilterReset": "Zresetuj filtr statusu",
+    "empty.noOpenDamageTitle": "Brak otwartych usterek",
+    "empty.noOpenDamageText": "Obecnie nie ma żadnego zgłoszenia usterki. To normalna sytuacja — zgłoszenie powstaje, gdy coś zwróci uwagę przy rowerze.",
+    "empty.noDamageFilterTitle": "Brak usterek spełniających ten filtr",
+    "empty.noDamageFilterText": "Żadne otwarte zgłoszenie usterki nie spełnia wybranego ograniczenia.",
+    "empty.noWorkOrdersTitle": "Brak trwających zleceń",
+    "empty.noWorkOrdersText": "Obecnie nie ma żadnego zlecenia konserwacji. Zlecenie powstaje z otwartego zgłoszenia usterki — tam znajduje się przycisk „Otwórz zlecenie”.",
+    "misc.underway": "w trasie",
+    "misc.underwayNoLocation": "w trasie (brak lokalizacji)",
+    "misc.noneYet": "jeszcze żadnej",
+    "misc.noMembership": "bez członkostwa",
+    "misc.notYetAssigned": "jeszcze nie przydzielono",
+    "misc.justNow": "przed chwilą",
+    "misc.inOperation": "w eksploatacji",
+    "misc.decommissionedState": "wyłączona z eksploatacji",
+    "misc.noAddressOnFile": "Dla tej osoby nie zapisano adresu — to nie jest błąd wczytywania. Poniższe pola można wypełnić, aby go uzupełnić.",
+    "misc.disclosureLoggedNote": "Pobranie informacji na podstawie art. 15 jest rejestrowane (GR19): osoba przeglądająca pozostawia ślad w dzienniku zmian.",
+    "misc.damageBlocksImmediately": "Usterka czyniąca rower niezdatnym do jazdy blokuje go natychmiast — chyba że jest właśnie w trasie. Wtedy status pozostaje na razie niezmieniony (GR13 nie pozwala na inny status roweru w trasie), a blokada zadziała dopiero przy zwrocie.",
+    "misc.onlyUnrideableBlocks": "Tylko zgłoszenie niezdatności do jazdy blokuje rower automatycznie.",
+    "misc.noMinutesNeeded": "Wymagany jest czas pracy w minutach (0 lub więcej).",
+    "art17.confirmHeader": "Usunięcie danych {name} na podstawie art. 17 RODO?",
+    "art17.whatDisappears": "CO ZNIKA: imię i nazwisko, e-mail, numer telefonu, data urodzenia, adres, sposób płatności oraz powiązanie z kontem logowania. Także w dzienniku zmian dawne wartości zostają zanonimizowane.",
+    "art17.whatRemains": "CO POZOSTAJE: {phrase} i wszystkie faktury, w pełnej wysokości. Prawo podatkowe wymaga dziesięciu lat przechowywania, a RODO wyraźnie wyłącza ten obowiązek spod usunięcia.",
+    "art17.whatThisDoesNotAchieve": "CZEGO TO NIE ROZWIĄZUJE: przejazdy zawierają czas i miejsce. Kto regularnie wyrusza z tego samego miejsca o tej samej porze, wciąż może zostać po tym rozpoznany.",
+    "art17.irreversible": "Tej operacji nie można cofnąć.",
+    "art17.reasonPrompt": "Powód (np. wniosek osoby, której dane dotyczą, z dnia …)",
+    "art17.abortedNoReason": "Anulowano: bez podania powodu nie ma usunięcia.",
+    "art17.runningRideBlocks": "{name} ma jeszcze trwający przejazd. Najpierw poczekaj na zwrot roweru.",
+    "art17.doneMessage": "Klient {nummer} zanonimizowany. Faktury i przejazdy zostają zachowane.",
+    "art17.confirmWord": "LOESCHEN",
+    "tile.available": "Gotowy do użycia",
+    "tile.onLoan": "Wypożyczony",
+    "tile.inMaintenance": "W konserwacji",
+    "tile.faulty": "Uszkodzony",
+    "tile.ridesPerBike30d": "Przejazdy na rower (30 dni)",
+    "tile.stations": "Stacje",
+    "tile.fullStations": "Pełne stacje",
+    "tile.networkOccupancy": "Całkowite zapełnienie – wszystkie stacje",
+    "tile.fillRange": "Zakres poziomu zapełnienia",
+    "tile.customersTotal": "Klienci ogółem",
+    "tile.blocked": "Zablokowani",
+    "tile.noAddress": "Bez adresu",
+    "tile.invoiceTop10": "Wolumen faktur: górne 10%",
+    "tile.damageReportsTotal": "Zgłoszenia usterek ogółem",
+    "tile.workOrdersTotal": "Zlecenia ogółem",
+    "tile.unrideableOpen": "Niezdatny do jazdy, otwarte",
+    "tile.minimum": "Minimum",
+    "tile.maximum": "Maksimum",
+    "tile.countPerMonth": "Liczba na miesiąc",
+    "tile.dayWithMostRides": "Dzień z największą liczbą przejazdów",
+    "tile.revenueTotal": "Obrót ogółem",
+    "tile.ridesTotal": "Przejazdy ogółem",
+    "tile.revenuePerBikeDay": "Obrót na rower i dzień",
+    "tile.notableRevenuePerRideCityBike": "Zwraca uwagę: obrót na przejazd City-Bike",
+    "tile.largestCustomerGroup": "Największa grupa klientów",
+    "tile.notableNoMembership": "Zwraca uwagę: bez członkostwa",
+    "tile.co2SavingsTotal": "Oszczędność CO₂ ogółem",
+    "tile.kilometersTotal": "Kilometry ogółem",
+    "tile.ofWhichEstimatedWeighted": "W tym szacowane (ważone przejazdami)",
+    "tile.networkOccupancyTotal": "Całkowite obłożenie sieci",
+    "tile.biggestImbalance": "Największa nierównowaga",
+    "tile.occupancy": "Zapełnienie",
+    "tile.trafficByTimeSlot": "Przyjazdy i wyjazdy wg przedziału czasowego",
+    "tile.departuresPerDayTop": "Wyjazdy dziennie (u góry)",
+    "tile.arrivalsPerDayBottom": "Przyjazdy dziennie (u dołu)",
+    "tile.weekdays": "Dni robocze (pon.–pt.)",
+    "tile.weekend": "Weekend (sob./niedz.)",
+    "tile.bikesAtStation": "Rowery na tej stacji ({n})",
+    "tile.noBikesHere": "Obecnie nie ma tu żadnego roweru — wszystkie są w trasie, w warsztacie lub uszkodzone.",
+    "tile.noTrafficData": "Dla tej stacji brak danych o ruchu.",
+    "tile.legendDepartures": "Wyjazdy dziennie (u góry)",
+    "tile.legendArrivals": "Przyjazdy dziennie (u dołu)",
+    "tab.revenueByBikeType": "Obrót wg typu roweru",
+    "tab.revenueByCustomerGroup": "Obrót wg grupy klientów",
+    "tab.kmCo2": "Kilometry i CO₂",
+    "tab.stationOccupancy": "Obłożenie stacji",
+    "tab.openDamage": "Otwarte usterki",
+    "tab.workOrders": "Zlecenia",
+    "auskunft.title": "Informacja na podstawie art. 15 RODO · {name}",
+    "auskunft.stammdaten": "Dane podstawowe",
+    "auskunft.mitgliedschaften": "Członkostwa",
+    "auskunft.fahrten": "Przejazdy",
+    "auskunft.rechnungen": "Faktury",
+    "auskunft.zahlungen": "Płatności",
+    "auskunft.schadensmeldungen": "Zgłoszenia usterek",
+    "auskunft.freiminuten": "Darmowe minuty",
+    "auskunft.protokoll": "Dziennik",
+    "map.schematicNote": "Mapa schematyczna, nie w skali: wielkość koła pokazuje pojemność stacji, a wypełnienie jej bieżące zapełnienie.",
+    "map.riverLabel": "Men (schematycznie)",
+    "map.areaWithCustomers": "Obszar mapy z {stationenPhrase} i lokalizacjami klientów",
+    "map.area": "Obszar mapy z {stationenPhrase}",
+    "map.customersAtLocation": "{ort}: {kundenPhrase}",
+    "common.and": "i",
+    "misc.changeVsPrevMonth": "względem poprzedniego miesiąca",
+    "msg.bikeNowSetTo": "{rahmennummer} ma teraz status {ziel}.",
+    "msg.confirmDecommission": "Trwale wycofać {rahmennummer} z eksploatacji? Rower traci swoją lokalizację i nie pojawia się już na żadnej liście. Jego przejazdy zostają zachowane.",
+    "msg.bikeDecommissioned": "{rahmennummer} wycofano z eksploatacji.",
+    "msg.fleetLoadFailed": "Nie udało się wczytać floty: {fehler}",
+    "msg.noBikeWithFilter": "Brak roweru pasującego do tego filtra",
+    "msg.modelsOrStationsLoadFailed": "Nie udało się wczytać modeli lub stacji: {fehler}",
+    "msg.noModelsOrStations": "Nie ma ani modeli, ani stacji, z których można by utworzyć nowy rower.",
+    "msg.frameNumberMissing": "Brak numeru ramy.",
+    "msg.bikeCreated": "Utworzono rower {rahmennummer}.",
+    "msg.stationsLoadFailed": "Nie udało się wczytać stacji: {fehler}",
+    "msg.stationsSummary": "{stationenPhrase}, w tym {n} pełnych: {liste}",
+    "msg.stationStillHasBikes": "Na stacji {name} nadal jest {raederPhrase}. Muszą zostać najpierw zwrócone gdzie indziej.",
+    "msg.confirmDecommissionStation": "Wyłączyć stację {name} z eksploatacji od dziś? Stacja pozostaje widoczna we wszystkich raportach, ale nie przyjmuje już rowerów.",
+    "msg.stationDecommissioned": "Wyłączono stację {name} z eksploatacji.",
+    "msg.bikesAtStationLoadFailed": "Nie udało się wczytać rowerów: {fehler}",
+    "msg.trafficLoadFailed": "Nie udało się wczytać ruchu na stacji: {fehler}",
+    "msg.customersLoadFailed": "Nie udało się wczytać klientów: {fehler}",
+    "msg.firstLastNameRequired": "Wymagane jest imię i nazwisko.",
+    "msg.customerSaved": "Zapisano dane {vorname} {nachname}.",
+    "msg.confirmBlockCustomer": "Zablokować {vorname} {nachname}? Obecnie nie ma funkcji cofającej blokadę — to znana luka tego systemu, a nie udogodnienie tego okna.",
+    "msg.customerBlocked": "Zablokowano {vorname} {nachname}.",
+    "msg.nameEmailRequired": "Wymagane jest imię, nazwisko i e-mail.",
+    "msg.customerCreated": "Utworzono klienta {vorname} {nachname}.",
+    "msg.customersCapped": "200 z więcej klientów{zusatz} — proszę zawęzić wyszukiwanie",
+    "msg.searchFor": "dla „{suchtext}”",
+    "msg.statusList": "Status {liste}",
+    "msg.damageLoadFailed": "Nie udało się wczytać usterek: {fehler}",
+    "msg.noBikeForDamage": "Nie ma roweru, do którego można by przypisać usterkę.",
+    "msg.categoryDescriptionRequired": "Wymagana jest kategoria i opis.",
+    "msg.damageReportedBlocked": "Utworzono zgłoszenie {id}. Rower jest zablokowany — chyba że jest właśnie użytkowany; wtedy zostanie zablokowany przy zwrocie.",
+    "msg.damageReported": "Utworzono zgłoszenie {id}.",
+    "msg.workOrderOpened": "Otwarto zlecenie {id}, rower w konserwacji.",
+    "msg.workOrdersLoadFailed": "Nie udało się wczytać zleceń: {fehler}",
+    "msg.workOrderCompleted": "Zlecenie {auftragsnummer} zakończono.",
+    "msg.unrideableShare": "{n} z {schadenPhrase} ogółem — blokuje rower, gdy tylko nie jest w trasie",
+    "msg.unrideableShareNoTotal": "blokuje rower, gdy tylko nie jest w trasie",
+    "hint.shareOfBikes": "{anteil} z {raederPhrase}",
+    "hint.shareOnLoan": "{anteil} z {raederPhrase} · obecnie w trasie",
+    "hint.shareMaintenance": "{anteil} z {raederPhrase} · w warsztacie",
+    "hint.shareFaulty": "{anteil} z {raederPhrase} · tam, gdzie jest problem",
+    "hint.rideDistribution": "Mediana {median}, średnia {mittel} na rower",
+    "hint.noRidesAtAll": " · {n} z {raederPhrase} bez ani jednego przejazdu",
+    "hint.allRiddenAtLeastOnce": " · każdy z {raederPhrase} przejechano co najmniej raz",
+    "hint.allInOperation": "wszystkie w eksploatacji",
+    "hint.decommissionedCount": "{n} z nich wyłączono z eksploatacji",
+    "hint.fullStationsShare": "{n} z {stationenPhrase}: {liste} - nie przyjmuje zwrotów",
+    "hint.networkOccupancyDetail": "{belegt} z {kapazitaet} miejsc zajętych, we wszystkich {stationenPhrase}",
+    "hint.fillRangeDetail": "Mediana {median}% · {voll} z {stationenPhrase} całkowicie pełnych{leerZusatz}",
+    "hint.andEmptyCount": ", {n} z {stationenPhrase} pustych",
+    "hint.noneEmpty": ", żadna pusta",
+    "hint.blockedShare": "{n} z {kundenPhrase} - obecnie nie ma funkcji cofającej blokadę",
+    "hint.noUnblockFunction": "Obecnie nie ma funkcji cofającej blokadę",
+    "hint.noAddressShare": "{n} z {kundenPhrase} - można uzupełnić później w formularzu",
+    "hint.addLaterInForm": "Można uzupełnić później w formularzu",
+    "hint.top10Detail": "{zehntel} z {kundenPhrase} skupia {top10} z {gesamt} wolumenu faktur (z VAT, ≠ obrót w raportach) · mediana {median}, średnia {mittel} na klienta",
+    "hint.overallStates": "we wszystkich stanach przetwarzania",
+    "hint.last12MonthsTrend": "Trend z ostatnich 12 miesięcy",
+    "hint.last12MonthsCrossCheck": "Trend z ostatnich 12 miesięcy - obliczenie kontrolne względem karty „Obrót wg typu roweru”",
+    "hint.yearlyPattern": "Wzorzec roczny: najniższy w {tief}, najwyższy w {hoch}",
+    "hint.perBikePerDayDetail": "{jeRadJahr} rocznie · w odniesieniu do {raederPhrase} we flocie (bez wycofanych) · ostatnie 12 miesięcy",
+    "hint.tariffChangeFrom": "{veraenderung} od {monat} - zmiana taryfy",
+    "hint.shareOfRevenue": "{prozent} obrotu ({geld})",
+    "hint.revenueWithoutTariff": "{geld} obrotu z przejazdów bez aktywnej taryfy",
+    "hint.estimatedShareOfRides": "{geschaetzt} z {fahrtenPhrase} oszacowano - NIE {naiv}, jak sugerowałaby prosta średnia wierszy",
+    "hint.fillLevelPerStation": "Poziom zapełnienia wg stacji, posortowany według numeru stacji",
+    "hint.networkOccupancyWeighted": "{belegt} z {kapazitaet} miejsc zajętych · ważone pojemnością, nie średnia wartości pojedynczych ({naiv})",
+    "hint.fullStationsList": "{voll} z {stationenPhrase}: {liste}",
+    "hint.worstStationBalance": "Saldo {saldo} - oddaje więcej rowerów, niż otrzymuje",
+  },
+};
+
+const MENGENFORMEN = {
+  "rad": {
+    de: { "one": "{n} Rad", "other": "{n} Räder" },
+    en: { "one": "{n} bike", "other": "{n} bikes" },
+    tr: { "one": "{n} bisiklet", "other": "{n} bisiklet" },
+    es: { "one": "{n} bicicleta", "other": "{n} bicicletas" },
+    it: { "one": "{n} bici", "other": "{n} bici" },
+    pl: { "one": "{n} rower", "few": "{n} rowery", "many": "{n} rowerów", "other": "{n} roweru" },
+  },
+  "kunde": {
+    de: { "one": "{n} Kunde", "other": "{n} Kunden" },
+    en: { "one": "{n} customer", "other": "{n} customers" },
+    tr: { "one": "{n} müşteri", "other": "{n} müşteri" },
+    es: { "one": "{n} cliente", "other": "{n} clientes" },
+    it: { "one": "{n} cliente", "other": "{n} clienti" },
+    pl: { "one": "{n} klient", "few": "{n} klientów", "many": "{n} klientów", "other": "{n} klienta" },
+  },
+  "station": {
+    de: { "one": "{n} Station", "other": "{n} Stationen" },
+    en: { "one": "{n} station", "other": "{n} stations" },
+    tr: { "one": "{n} istasyon", "other": "{n} istasyon" },
+    es: { "one": "{n} estación", "other": "{n} estaciones" },
+    it: { "one": "{n} stazione", "other": "{n} stazioni" },
+    pl: { "one": "{n} stacja", "few": "{n} stacje", "many": "{n} stacji", "other": "{n} stacji" },
+  },
+  "zeile": {
+    de: { "one": "{n} Zeile", "other": "{n} Zeilen" },
+    en: { "one": "{n} row", "other": "{n} rows" },
+    tr: { "one": "{n} satır", "other": "{n} satır" },
+    es: { "one": "{n} fila", "other": "{n} filas" },
+    it: { "one": "{n} riga", "other": "{n} righe" },
+    pl: { "one": "{n} wiersz", "few": "{n} wiersze", "many": "{n} wierszy", "other": "{n} wiersza" },
+  },
+  "fahrt": {
+    de: { "one": "{n} Fahrt", "other": "{n} Fahrten" },
+    en: { "one": "{n} ride", "other": "{n} rides" },
+    tr: { "one": "{n} sürüş", "other": "{n} sürüş" },
+    es: { "one": "{n} viaje", "other": "{n} viajes" },
+    it: { "one": "{n} corsa", "other": "{n} corse" },
+    pl: { "one": "{n} przejazd", "few": "{n} przejazdy", "many": "{n} przejazdów", "other": "{n} przejazdu" },
+  },
+  "tag": {
+    de: { "one": "{n} Tag", "other": "{n} Tage" },
+    en: { "one": "{n} day", "other": "{n} days" },
+    tr: { "one": "{n} gün", "other": "{n} gün" },
+    es: { "one": "{n} día", "other": "{n} días" },
+    it: { "one": "{n} giorno", "other": "{n} giorni" },
+    pl: { "one": "{n} dzień", "few": "{n} dni", "many": "{n} dni", "other": "{n} dnia" },
+  },
+  "stunde": {
+    de: { "one": "{n} Stunde", "other": "{n} Stunden" },
+    en: { "one": "{n} hour", "other": "{n} hours" },
+    tr: { "one": "{n} saat", "other": "{n} saat" },
+    es: { "one": "{n} hora", "other": "{n} horas" },
+    it: { "one": "{n} ora", "other": "{n} ore" },
+    pl: { "one": "{n} godzina", "few": "{n} godziny", "many": "{n} godzin", "other": "{n} godziny" },
+  },
+  "minute": {
+    de: { "one": "{n} Minute", "other": "{n} Minuten" },
+    en: { "one": "{n} minute", "other": "{n} minutes" },
+    tr: { "one": "{n} dakika", "other": "{n} dakika" },
+    es: { "one": "{n} minuto", "other": "{n} minutos" },
+    it: { "one": "{n} minuto", "other": "{n} minuti" },
+    pl: { "one": "{n} minuta", "few": "{n} minuty", "many": "{n} minut", "other": "{n} minuty" },
+  },
+  "schadensmeldung": {
+    de: { "one": "{n} Schadensmeldung", "other": "{n} Schadensmeldungen" },
+    en: { "one": "{n} damage report", "other": "{n} damage reports" },
+    tr: { "one": "{n} hasar bildirimi", "other": "{n} hasar bildirimi" },
+    es: { "one": "{n} parte de avería", "other": "{n} partes de avería" },
+    it: { "one": "{n} segnalazione di guasto", "other": "{n} segnalazioni di guasto" },
+    pl: { "one": "{n} zgłoszenie usterki", "few": "{n} zgłoszenia usterki", "many": "{n} zgłoszeń usterki", "other": "{n} zgłoszenia usterki" },
+  },
+  "auftrag": {
+    de: { "one": "{n} Wartungsauftrag", "other": "{n} Wartungsaufträge" },
+    en: { "one": "{n} work order", "other": "{n} work orders" },
+    tr: { "one": "{n} iş emri", "other": "{n} iş emri" },
+    es: { "one": "{n} orden de trabajo", "other": "{n} órdenes de trabajo" },
+    it: { "one": "{n} ordine di lavoro", "other": "{n} ordini di lavoro" },
+    pl: { "one": "{n} zlecenie", "few": "{n} zlecenia", "many": "{n} zleceń", "other": "{n} zlecenia" },
+  },
+  "monatszeile": {
+    de: { one: "{n} Monatszeile", other: "{n} Monatszeilen" },
+    en: { one: "{n} month row", other: "{n} month rows" },
+    tr: { one: "{n} ay satırı", other: "{n} ay satırı" },
+    es: { one: "{n} fila mensual", other: "{n} filas mensuales" },
+    it: { one: "{n} riga mensile", other: "{n} righe mensili" },
+    pl: { one: "{n} wiersz miesięczny", few: "{n} wiersze miesięczne", many: "{n} wierszy miesięcznych", other: "{n} wiersza miesięcznego" },
+  },
+};
+
+
 const bereiche = new Map();
 let aktiverBereich = null;
 
@@ -40,10 +2959,17 @@ let aktiverBereich = null;
 let geladeneRollen = null;
 
 function bereichAnmelden(bereich) {
-    // bereich: { schluessel, titel, rollen: [...], icon, aufbauen: async (ziel) => {},
-    //            suchePlatzhalter? }
-    // suchePlatzhalter (optional, Gestaltungsauftrag Punkt 5): der
-    // Platzhalter-/aria-label-Text fuer das gemeinsame Suchfeld in der
+    // bereich: { schluessel, titelSchluessel, rollen: [...], icon, aufbauen: async (ziel) => {},
+    //            suchePlatzhalterSchluessel? }
+    // titelSchluessel/suchePlatzhalterSchluessel statt fertiger Texte
+    // (Mehrsprachigkeit, siehe UEBERSETZUNGEN weiter oben): bereichAnmelden()
+    // laeuft GENAU EINMAL beim Laden jeder Bereichsdatei - ein damals fest
+    // eingesetzter Text ueberlebte einen spaeteren Sprachwechsel nicht.
+    // navigationAufbauen()/bereichWechseln() schlagen den Schluessel des
+    // aktiven Bereichs deshalb bei JEDEM eigenen Aufbau frisch ueber t()
+    // nach, nicht nur einmal hier.
+    // suchePlatzhalterSchluessel (optional, Gestaltungsauftrag Punkt 5): der
+    // Platzhalter-/aria-label-Schluessel fuer das gemeinsame Suchfeld in der
     // Kopfleiste, GENAU dann gesetzt, wenn dieser Bereich das Feld
     // tatsaechlich auswertet (heute nur kunden.js). bereichWechseln()
     // weiter unten aktiviert/beschriftet das Feld damit, oder deaktiviert
@@ -89,7 +3015,7 @@ async function seiteAufbauen() {
         // Fehleranzeige umgewidmet.
         console.error('seiteAufbauen: Rollen konnten nicht ermittelt werden:', fehler);
         const ladeAnzeige = document.getElementById('zustand-laden');
-        ladeAnzeige.textContent = `Anmeldung konnte nicht geprueft werden: ${fehler.message}`;
+        ladeAnzeige.textContent = t('common.loginCheckFailed', { msg: fehler.message });
         ladeAnzeige.classList.add('fehler-anzeige');
         zeige('zustand-laden', true);
         zeige('zustand-anmeldung', false);
@@ -157,8 +3083,15 @@ async function navigationAufbauen(rollen) {
         iconWrapper.innerHTML = bereich.icon;
         knopf.append(iconWrapper);
 
+        // textContent aus t(bereich.titelSchluessel) statt eines einmal
+        // festgeschriebenen bereich.titel: navigationAufbauen() laeuft bei
+        // JEDEM Sprachwechsel erneut (siehe seitenspracheNeuZeichnen()
+        // weiter unten) - eine feste Zeichenkette, einmal beim Laden
+        // dieser Datei aus bereichAnmelden() uebernommen, wuerde die
+        // Umschaltung nicht mitmachen, ein Schluessel, bei JEDEM Aufbau
+        // frisch nachgeschlagen, schon.
         const beschriftung = document.createElement('span');
-        beschriftung.textContent = bereich.titel;
+        beschriftung.textContent = t(bereich.titelSchluessel);
         knopf.append(beschriftung);
 
         nav.append(knopf);
@@ -319,29 +3252,39 @@ function sitzungsUhrStarten(benutzer) {
 function sitzungsinfoZeichnen(beginn, istEchteAngabe) {
     const jetzt = new Date();
     const zeitDatum = document.getElementById('sitzungsinfo-zeit-datum');
+    // zeitFormat()/datumFormat() (Mehrsprachigkeit, Fallstrick 2): bisher
+    // fest 'de-DE' - die Uhrzeit neben dem Profil folgt jetzt derselben
+    // Sprache wie der Rest der Oberflaeche, nicht mehr immer der
+    // deutschen Schreibweise.
     zeitDatum.textContent =
-        `${jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} · ` +
-        jetzt.toLocaleDateString('de-DE');
+        `${zeitFormat(jetzt, { hour: '2-digit', minute: '2-digit' })} · ` +
+        datumFormat(jetzt);
 
     const minuten = Math.max(0, Math.round((jetzt - beginn) / 60000));
-    const dauer = minuten < 1 ? 'unter 1 Min.' : sitzungsdauerFormat(minuten);
+    const dauer = minuten < 1 ? t('common.underOneMinute') : sitzungsdauerFormat(minuten);
     // Beschriftung sagt WAS gemessen wird (Auftrag: "keine Genauigkeit
     // vortaeuschen, die es nicht gibt") - "angemeldet" nur mit einer
     // echten Anmeldezeit (last_sign_in_at), sonst der ehrliche Hinweis,
     // dass hier lediglich der Ladezeitpunkt dieser Seite gemessen wird.
-    document.getElementById('sitzungsinfo-dauer').textContent =
-        istEchteAngabe ? `${dauer} angemeldet` : `seit dem Öffnen: ${dauer}`;
+    document.getElementById('sitzungsinfo-dauer').textContent = istEchteAngabe
+        ? t('common.loggedInFor', { dauer })
+        : t('common.sinceOpen', { dauer });
 }
 
 // Stunden erst ab 60 Minuten (nicht schon vorher als "0 Std. 12 Min."):
 // eine dreistellige Minutenzahl waere bei einer sehr langen Sitzung sonst
 // selbst wieder unlesbar - "knapp und ruhig" gilt fuer jede Sitzungslaenge,
-// nicht nur fuer die ersten 60 Minuten.
+// nicht nur fuer die ersten 60 Minuten. Min./Std. bleiben feste, kurze
+// Abkuerzungen je Sprache (common.minAbbrev/common.hourAbbrev) statt einer
+// echten Mehrzahlform ueber mengeFormat(): eine Abkuerzung wie "Min."
+// aendert sich in keiner der sechs Sprachen mit der Anzahl.
 function sitzungsdauerFormat(minuten) {
-    if (minuten < 60) return `${minuten} Min.`;
+    if (minuten < 60) return `${zahlFormat(minuten)} ${t('common.minAbbrev')}`;
     const stunden = Math.floor(minuten / 60);
     const rest = minuten % 60;
-    return rest === 0 ? `${stunden} Std.` : `${stunden} Std. ${rest} Min.`;
+    return rest === 0
+        ? `${zahlFormat(stunden)} ${t('common.hourAbbrev')}`
+        : `${zahlFormat(stunden)} ${t('common.hourAbbrev')} ${zahlFormat(rest)} ${t('common.minAbbrev')}`;
 }
 
 function initialenAus(vorname, nachname, email) {
@@ -397,26 +3340,26 @@ async function bereichWechseln(schluessel, herkunftstext = null) {
     // es gerade etwas einschraenkt" - das Suchfeld liegt in der
     // gemeinsamen Kopfleiste (index.html) und damit ausserhalb jedes
     // einzelnen Bereichs, heute nutzt es aber nur Kundschaft
-    // (kunden.js). suchePlatzhalter ist deshalb ein OPTIONALES Feld am
-    // bereich-Objekt (siehe bereichAnmelden() oben): vorhanden, wird das
-    // Feld aktiviert und benannt; fehlt es, wird das Feld sichtbar
-    // deaktiviert statt weiter scheinbar bedienbar, aber folgenlos
-    // dazustehen - dieselbe "was man nicht darf/nicht kann, wird nicht
-    // angeboten"-Haltung wie bei der Navigation weiter oben. Der Wert
-    // wird zusaetzlich geleert: ein Suchtext aus dem VORHERIGEN Bereich
-    // durfte den neuen sonst ungefragt mitnehmen, obwohl er dort nie
-    // eingegeben wurde.
+    // (kunden.js). suchePlatzhalterSchluessel ist deshalb ein OPTIONALES
+    // Feld am bereich-Objekt (siehe bereichAnmelden() oben): vorhanden,
+    // wird das Feld aktiviert und benannt; fehlt es, wird das Feld
+    // sichtbar deaktiviert statt weiter scheinbar bedienbar, aber
+    // folgenlos dazustehen - dieselbe "was man nicht darf/nicht kann,
+    // wird nicht angeboten"-Haltung wie bei der Navigation weiter oben.
+    // Der Wert wird zusaetzlich geleert: ein Suchtext aus dem VORHERIGEN
+    // Bereich durfte den neuen sonst ungefragt mitnehmen, obwohl er dort
+    // nie eingegeben wurde.
     const feldSucheGlobal = document.getElementById('feld-suche');
     feldSucheGlobal.value = '';
     feldSucheGlobal.classList.remove('feld-suche-aktiv');
-    if (aktiverBereich.suchePlatzhalter) {
+    if (aktiverBereich.suchePlatzhalterSchluessel) {
         feldSucheGlobal.disabled = false;
-        feldSucheGlobal.placeholder = aktiverBereich.suchePlatzhalter;
-        feldSucheGlobal.setAttribute('aria-label', aktiverBereich.suchePlatzhalter);
+        feldSucheGlobal.placeholder = t(aktiverBereich.suchePlatzhalterSchluessel);
+        feldSucheGlobal.setAttribute('aria-label', t(aktiverBereich.suchePlatzhalterSchluessel));
     } else {
         feldSucheGlobal.disabled = true;
-        feldSucheGlobal.placeholder = 'In diesem Bereich keine Suche';
-        feldSucheGlobal.setAttribute('aria-label', 'Suche in diesem Bereich nicht verfügbar');
+        feldSucheGlobal.placeholder = t('common.noSearchPlaceholder');
+        feldSucheGlobal.setAttribute('aria-label', t('common.noSearchAria'));
     }
 
     // herkunftstext gesetzt -> als frische Bestaetigung ('gut') stehen
@@ -620,7 +3563,7 @@ function bestaetige(frage, bestaetigungswort = null) {
         let eingabe = null;
         const bestaetigenKnopf = document.createElement('button');
         bestaetigenKnopf.type = 'button';
-        bestaetigenKnopf.textContent = 'Bestaetigen';
+        bestaetigenKnopf.textContent = t('common.confirm');
         bestaetigenKnopf.className = 'knopf-gefaehrlich';
 
         if (bestaetigungswort) {
@@ -628,7 +3571,7 @@ function bestaetige(frage, bestaetigungswort = null) {
             // die Anonymisierung gedacht und für nichts sonst.
             const label = document.createElement('label');
             label.htmlFor = 'dialog-bestaetigungswort';
-            label.textContent = `Zum Bestaetigen "${bestaetigungswort}" eintippen:`;
+            label.textContent = t('common.confirmWordPrompt', { wort: bestaetigungswort });
             dialog.append(label);
 
             eingabe = document.createElement('input');
@@ -648,7 +3591,7 @@ function bestaetige(frage, bestaetigungswort = null) {
 
         const abbrechenKnopf = document.createElement('button');
         abbrechenKnopf.type = 'button';
-        abbrechenKnopf.textContent = 'Abbrechen';
+        abbrechenKnopf.textContent = t('common.cancel');
         abbrechenKnopf.className = 'knopf-neben';
         // dialog.close() löst nur 'close' aus, nicht 'cancel' - der
         // Rückgabewert entscheidet unten einheitlich über das Ergebnis,
@@ -689,7 +3632,7 @@ function frageNachGrund(titel) {
 
         const label = document.createElement('label');
         label.htmlFor = 'dialog-grund';
-        label.textContent = 'Grund';
+        label.textContent = t('common.reason');
         dialog.append(label);
 
         const eingabe = document.createElement('input');
@@ -703,13 +3646,13 @@ function frageNachGrund(titel) {
 
         const abbrechenKnopf = document.createElement('button');
         abbrechenKnopf.type = 'button';
-        abbrechenKnopf.textContent = 'Abbrechen';
+        abbrechenKnopf.textContent = t('common.cancel');
         abbrechenKnopf.className = 'knopf-neben';
         abbrechenKnopf.addEventListener('click', () => dialog.close());
 
         const bestaetigenKnopf = document.createElement('button');
         bestaetigenKnopf.type = 'button';
-        bestaetigenKnopf.textContent = 'Bestaetigen';
+        bestaetigenKnopf.textContent = t('common.confirm');
         bestaetigenKnopf.className = 'knopf-haupt';
         bestaetigenKnopf.addEventListener('click', () => {
             if (!eingabe.value.trim()) {
@@ -1018,10 +3961,10 @@ function mehrfachauswahlFeld(optionen, ausgewaehlt, beiAenderung, ariaLabel, ein
     zusammenfassung.className = 'mehrfachauswahl-zusammenfassung';
     const ausgewaehlteTexte = optionen.filter((o) => ausgewaehlt.has(String(o.wert))).map((o) => o.text);
     zusammenfassung.textContent = ausgewaehlteTexte.length === 0
-        ? 'Alle'
+        ? t('common.all')
         : ausgewaehlteTexte.length <= 3
             ? ausgewaehlteTexte.join(', ')
-            : `${ausgewaehlteTexte.length} ausgewählt`;
+            : t('common.selectedCount', { n: zahlFormat(ausgewaehlteTexte.length) });
     knopf.append(zusammenfassung);
 
     const popup = document.createElement('div');
@@ -1089,7 +4032,7 @@ function mehrfachauswahlFeld(optionen, ausgewaehlt, beiAenderung, ariaLabel, ein
     const alleKnopf = document.createElement('button');
     alleKnopf.type = 'button';
     alleKnopf.className = 'mehrfachauswahl-alle';
-    alleKnopf.textContent = 'Alle';
+    alleKnopf.textContent = t('common.all');
     markiere(alleKnopf, 'alle');
     alleKnopf.addEventListener('click', () => { schliessen(); beiAenderung(new Set()); });
     popup.append(alleKnopf);
@@ -1875,7 +4818,7 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     yAchse.className = 'saeulengrafik-y-achse';
     yAchse.setAttribute('aria-hidden', 'true');
     const yOben = document.createElement('span');
-    yOben.textContent = maximum.toLocaleString('de-DE');
+    yOben.textContent = zahlFormat(maximum);
     const yUnten = document.createElement('span');
     yUnten.textContent = '0';
     yAchse.append(yOben, yUnten);
@@ -1910,12 +4853,20 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
 // mehrstellige Zahl wird so auf einen Blick erfasst, nicht Ziffer für
 // Ziffer gelesen.
 //
-// Nimmt eine FERTIG formatierte deutsche Zahl entgegen (Punkt und Komma
-// schon gesetzt, z. B. von geldFormat()/kgFormat() in auswertungen.js) -
-// das Zerlegen des deutschen Zahlenformats gehört hierher, weil jeder
-// Bereich mit einer eigenen, ähnlichen Formatierungsfunktion dieselbe
-// Aufteilung braucht; WAS gerundet und WELCHE Einheit angehängt wird,
-// bleibt Sache des Aufrufers.
+// Nimmt eine FERTIG formatierte Zahl der AKTUELLEN Sprache entgegen
+// (Trennzeichen schon gesetzt, z. B. von geldFormat()/kgFormat() in
+// auswertungen.js) - das Zerlegen des Zahlenformats gehört hierher, weil
+// jeder Bereich mit einer eigenen, ähnlichen Formatierungsfunktion
+// dieselbe Aufteilung braucht; WAS gerundet und WELCHE Einheit
+// angehängt wird, bleibt Sache des Aufrufers.
+//
+// MEHRSPRACHIGKEIT (Fallstrick 2): frueher fest von deutschen
+// Trennzeichen ausgegangen (Punkt = Tausender, Komma = Dezimal) - fuer
+// Englisch (Komma = Tausender, Punkt = Dezimal) traf das Muster nicht
+// mehr zu, und die ganze Zahl waere unskaliert als Fliesstext
+// durchgerutscht (siehe der Kein-Treffer-Zweig unten). zahlTrennzeichen()
+// liefert die Zeichen der GERADE gewaehlten Sprache, das Muster wird
+// bei jedem Aufruf neu danach gebaut.
 //
 // Kein Treffer (ein Text, der nicht wie eine Zahl aussieht) gibt den
 // Eingabetext unverändert als einzelnen Textknoten zurück - eine
@@ -1923,7 +4874,11 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
 // der Tabelle verschwindet, nur weil sie einem erwarteten Muster nicht
 // entspricht.
 function zahlSkaliert(formatiert) {
-    const treffer = String(formatiert).match(/^(-?\d{1,3}(?:\.\d{3})*)(,\d+)?(.*)$/);
+    const { gruppe: gruppenzeichen, dezimal: dezimalzeichen } = zahlTrennzeichen();
+    const gEsc = regexEscape(gruppenzeichen);
+    const dEsc = regexEscape(dezimalzeichen);
+    const muster = new RegExp(`^(-?\\d{1,3}(?:${gEsc}\\d{3})*)(${dEsc}\\d+)?(.*)$`);
+    const treffer = String(formatiert).match(muster);
     const spanne = document.createElement('span');
     spanne.className = 'zahl-skaliert';
     if (!treffer) {
@@ -1932,14 +4887,14 @@ function zahlSkaliert(formatiert) {
     }
 
     const [, ganzzahl, dezimal, rest] = treffer;
-    // Tausenderpunkte selbst leiser, die tragenden Ziffern normal -
+    // Tausendertrennzeichen selbst leiser, die tragenden Ziffern normal -
     // deshalb die Gruppen einzeln angehängt statt die ganze Ganzzahl als
     // einen Textknoten.
-    ganzzahl.split('.').forEach((gruppe, i) => {
+    ganzzahl.split(gruppenzeichen).forEach((gruppe, i) => {
         if (i > 0) {
             const trenner = document.createElement('span');
             trenner.className = 'zahl-nebenteil';
-            trenner.textContent = '.';
+            trenner.textContent = gruppenzeichen;
             spanne.append(trenner);
         }
         spanne.append(gruppe);
@@ -2522,7 +5477,7 @@ function spaltenkopfKopfzeile(spalten, aktionen) {
         // hält die Tabelle für Screenreader trotzdem vollständig: eine
         // <th> ohne jeden Namen liesse die letzte Spalte namenlos wirken.
         const th = document.createElement('th');
-        th.setAttribute('aria-label', 'Aktionen');
+        th.setAttribute('aria-label', t('common.actionsColumn'));
         titelZeile.append(th);
     }
     kopf.append(titelZeile);
@@ -2570,8 +5525,9 @@ function spaltenkopfSortknopf(spalte) {
     symbol.setAttribute('aria-hidden', 'true');   // der Text daneben UND aria-label sagen es bereits
     knopf.append(symbol);
 
-    knopf.setAttribute('aria-label', `Nach ${spalte.titel} sortieren`
-        + (aktiv ? `, aktuell ${spaltenkopfSortRichtung === 1 ? 'aufsteigend' : 'absteigend'}` : ''));
+    knopf.setAttribute('aria-label', t('common.sortAria', { titel: spalte.titel })
+        + (aktiv ? t('common.sortAriaSuffix',
+            { richtung: spaltenkopfSortRichtung === 1 ? t('common.ascending') : t('common.descending') }) : ''));
 
     // Klick UND Tastatur: ein <button> ist beides ohne weiteren Code -
     // Enter/Leertaste loesen 'click' nativ aus (Auftrag: "mit der
@@ -2613,8 +5569,8 @@ function spaltenkopfSortknopf(spalte) {
     zuruecksetzen.className = 'spaltenkopf-sortreset';
     zuruecksetzen.dataset.spaltenkopfFeld = spalte.feld;
     zuruecksetzen.dataset.spaltenkopfRolle = 'sortreset';
-    zuruecksetzen.setAttribute('aria-label', `Sortierung nach ${spalte.titel} zurücksetzen`);
-    zuruecksetzen.title = 'Sortierung zurücksetzen';
+    zuruecksetzen.setAttribute('aria-label', t('common.sortResetAria', { titel: spalte.titel }));
+    zuruecksetzen.title = t('common.sortResetTitle');
     zuruecksetzen.innerHTML = SPALTENKOPF_RESET_ICON;
     zuruecksetzen.addEventListener('click', () => {
         spaltenkopfSortFeld = null;
@@ -2645,9 +5601,9 @@ function spaltenkopfGruppenknopf(spalte) {
     knopf.dataset.spaltenkopfRolle = 'gruppieren';
     knopf.setAttribute('aria-pressed', String(aktiv));
     knopf.setAttribute('aria-label', aktiv
-        ? `Gruppierung nach ${spalte.titel} aufheben`
-        : `Nach ${spalte.titel} gruppieren`);
-    knopf.title = aktiv ? 'Gruppierung zurücksetzen' : 'Gruppieren';
+        ? t('common.groupResetAria', { titel: spalte.titel })
+        : t('common.groupByAria', { titel: spalte.titel }));
+    knopf.title = aktiv ? t('common.groupResetTitle') : t('common.groupTitle');
     knopf.innerHTML = aktiv ? SPALTENKOPF_RESET_ICON : SPALTENKOPF_GRUPPE_ICON;
     knopf.addEventListener('click', () => {
         // Immer nur EINE Gruppierung ueber die ganze Tabelle - ein Klick
@@ -2715,7 +5671,7 @@ function spaltenkopfFilterfeld(spalte) {
                 else spaltenkopfFilterwerte.set(spalte.feld, neu);
                 zeichneArbeitstabelle();
             },
-            `${spalte.titel} filtern`,
+            t('common.filterAria', { titel: spalte.titel }),
             {
                 offenVorgabe: spaltenkopfMehrfachOffenFeld === spalte.feld,
                 beiOeffnen: () => { spaltenkopfMehrfachOffenFeld = spalte.feld; },
@@ -2734,8 +5690,8 @@ function spaltenkopfFilterfeld(spalte) {
     eingabe.type = typ === 'schwelle' ? 'number' : 'text';
     eingabe.dataset.spaltenkopfFeld = spalte.feld;
     eingabe.dataset.spaltenkopfRolle = 'filtern';
-    eingabe.setAttribute('aria-label', typ === 'schwelle' ? `Mindestwert für ${spalte.titel}` : `${spalte.titel} filtern`);
-    eingabe.placeholder = typ === 'schwelle' ? '≥' : 'Suche…';
+    eingabe.setAttribute('aria-label', typ === 'schwelle' ? t('common.filterMinAria', { titel: spalte.titel }) : t('common.filterAria', { titel: spalte.titel }));
+    eingabe.placeholder = typ === 'schwelle' ? '≥' : t('common.filterSearchPlaceholder');
     // Dieselbe Bedingung wie beim <select>-Zweig oben (siehe dortiger
     // Kommentar) - hier zusaetzlich der Grund, warum die Klasse erst
     // NACH dem Debounce (siehe setTimeout unten) wechselt: das ist
@@ -2788,8 +5744,8 @@ function spaltenkopfFilterfeld(spalte) {
     const zuruecksetzen = document.createElement('button');
     zuruecksetzen.type = 'button';
     zuruecksetzen.className = 'spaltenkopf-filterreset';
-    zuruecksetzen.setAttribute('aria-label', `${spalte.titel}-Filter zurücksetzen`);
-    zuruecksetzen.title = 'Filter zurücksetzen';
+    zuruecksetzen.setAttribute('aria-label', t('common.filterResetAria', { titel: spalte.titel }));
+    zuruecksetzen.title = t('common.filterResetTitle');
     zuruecksetzen.innerHTML = SPALTENKOPF_RESET_ICON;
     zuruecksetzen.addEventListener('click', () => {
         clearTimeout(verzoegerung);
@@ -2810,14 +5766,14 @@ function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
     if (spaltenkopfFilterwerte.size > 0) {
         const text = document.createElement('span');
         text.textContent = angezeigtAnzahl === gesamt
-            ? `${gesamt} Zeilen`
-            : `${angezeigtAnzahl} von ${gesamt} Zeilen (Spaltenfilter aktiv)`;
+            ? mengeFormat(gesamt, 'zeile')
+            : t('common.rowsFiltered', { angezeigt: zahlFormat(angezeigtAnzahl), zeilenPhrase: mengeFormat(gesamt, 'zeile') });
         zeile.append(text);
 
         const zuruecksetzen = document.createElement('button');
         zuruecksetzen.type = 'button';
         zuruecksetzen.className = 'spaltenkopf-hinweis-knopf';
-        zuruecksetzen.textContent = 'Spaltenfilter zurücksetzen';
+        zuruecksetzen.textContent = t('common.columnFilterReset');
         zuruecksetzen.addEventListener('click', () => {
             spaltenkopfFilterwerte = new Map();
             zeichneArbeitstabelle();
@@ -2827,13 +5783,13 @@ function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
 
     if (gruppenSpalte) {
         const text = document.createElement('span');
-        text.textContent = `Gruppiert nach ${gruppenSpalte.titel}`;
+        text.textContent = t('common.groupedBy', { titel: gruppenSpalte.titel });
         zeile.append(text);
 
         const aufheben = document.createElement('button');
         aufheben.type = 'button';
         aufheben.className = 'spaltenkopf-hinweis-knopf';
-        aufheben.textContent = 'Gruppierung aufheben';
+        aufheben.textContent = t('common.ungroup');
         aufheben.addEventListener('click', () => {
             spaltenkopfGruppe = null;
             zeichneArbeitstabelle();
@@ -2860,7 +5816,8 @@ function spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte) {
 
     const beschriftung = document.createElement('span');
     beschriftung.className = 'gruppenkopf-beschriftung';
-    beschriftung.textContent = `${gruppenSpalte.titel}: ${gruppe.beschriftung} (${gruppe.zeilen.length})`;
+    beschriftung.textContent = t('common.groupHeaderLabel',
+        { titel: gruppenSpalte.titel, beschriftung: gruppe.beschriftung, n: zahlFormat(gruppe.zeilen.length) });
     th.append(beschriftung);
 
     for (const spalte of spalten) {
@@ -2875,7 +5832,7 @@ function spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte) {
         // siehe der lange Kommentar bei zeigeListe() oben.
         const formatiert = spalte.summeFormatieren ? spalte.summeFormatieren(summe)
             : spalte.formatieren ? spalte.formatieren(summe)
-            : summe.toLocaleString('de-DE');
+            : zahlFormat(summe);
         teil.append(formatiert instanceof Node ? formatiert : document.createTextNode(String(formatiert)));
         th.append(teil);
     }
@@ -2939,10 +5896,10 @@ function baueLeerzeile(spalten, aktionen) {
     tr.className = 'spaltenkopf-leerzeile';
     const td = document.createElement('td');
     td.colSpan = spalten.length + (aktionen ? 1 : 0);
-    td.append(document.createTextNode('Keine Zeile erfüllt die gewählte Einschränkung am Spaltenkopf. '));
+    td.append(document.createTextNode(t('common.noRowsMatchFilter')));
     const knopf = document.createElement('button');
     knopf.type = 'button';
-    knopf.textContent = 'Spaltenfilter zurücksetzen';
+    knopf.textContent = t('common.columnFilterReset');
     knopf.addEventListener('click', () => {
         spaltenkopfFilterwerte = new Map();
         zeichneArbeitstabelle();
@@ -3068,8 +6025,8 @@ function zeigeMaske(titel, felder, knoepfe) {
     const schliessenKnopf = document.createElement('button');
     schliessenKnopf.type = 'button';
     schliessenKnopf.className = 'detailmaske-schliessen';
-    schliessenKnopf.setAttribute('aria-label', 'Details schliessen');
-    schliessenKnopf.title = 'Details schliessen (Esc)';
+    schliessenKnopf.setAttribute('aria-label', t('common.closeDetailsAria'));
+    schliessenKnopf.title = t('common.closeDetailsTitle');
     // Rohes SVG-Markup, dieselbe Machart wie SPALTENKOPF_SORT_ICON/
     // aktion.svg - eine feste Konstante dieser Datei, keine Nutzereingabe.
     schliessenKnopf.innerHTML = DETAILMASKE_SCHLIESSEN_ICON;
@@ -3458,6 +6415,95 @@ schalterZebra.addEventListener('change', () => {
     zebraAnwenden(schalterZebra.checked);
     localStorage.setItem(ZEBRA_SPEICHERSCHLUESSEL, schalterZebra.checked ? 'an' : 'aus');
 });
+
+// ===== Sprachumschaltung (Gestaltungsauftrag, woertlich: "eine
+// Umstellung der Oberflaeche auf englisch, tuerkisch, spanisch,
+// italienisch und polnisch") =====
+//
+// Im selben Abschnitt wie der Zebraschalter direkt oberhalb - dieselbe
+// Begruendung gilt unveraendert: eine reine Anzeigepraeferenz ohne
+// fachliche Bedeutung, localStorage statt einer Datenbankspalte, siehe
+// SPRACHE_SPEICHERSCHLUESSEL weiter oben. sprache()/localeTag() dort
+// lesen denselben Schluessel - dieser Block hier ist nur die BEDIENUNG
+// dazu, keine zweite Quelle der Wahrheit.
+//
+// statischeTexteUebersetzen(): alle festen HTML-Texte (index.html trägt
+// data-i18n/-aria/-placeholder auf jedem betroffenen Element, siehe
+// dortiger Kopfkommentar) - EINMAL beim Laden UND bei JEDEM Sprachwechsel
+// neu gesetzt. Kein innerHTML: ausschliesslich textContent/setAttribute,
+// dieselbe Regel wie ueberall sonst in dieser Datei.
+function statischeTexteUebersetzen() {
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+        el.setAttribute('aria-label', t(el.dataset.i18nAria));
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+        el.placeholder = t(el.dataset.i18nPlaceholder);
+    });
+    document.title = t('index.title');
+}
+
+// Sofort beim Laden dieser Datei angewendet (dieselbe Reihenfolge wie
+// zebraAnwenden() oben) - sonst zeigte die allererste Anzeige kurz die
+// hart im HTML stehenden deutschen Texte, unabhaengig von einer bereits
+// gespeicherten anderen Sprache.
+document.documentElement.lang = sprache();
+statischeTexteUebersetzen();
+
+const schalterSprache = document.getElementById('schalter-sprache');
+schalterSprache.value = sprache();
+schalterSprache.addEventListener('change', () => spracheAnwenden(schalterSprache.value));
+
+// "Die Umschaltung muss sofort greifen, ohne Neuladen" (Erprobung,
+// Auftrag) - OHNE den Nutzer dabei aus dem gerade offenen Bereich zu
+// werfen: navigationAufbauen() spraenge bei jedem eigenen Aufruf auf den
+// ERSTEN erlaubten Bereich zurueck (siehe dortiger Kopfkommentar), das
+// waere fuer eine reine Spracheinstellung eine unnoetige Nebenwirkung.
+// Stattdessen hier gezielt: Navigationsbeschriftungen und feste Texte neu
+// setzen, DANACH den aktuell sichtbaren Bereich mit seiner eigenen
+// aufbauen()-Funktion neu zeichnen - alle fuenf Bereiche bauen Kacheln,
+// Spalten und Dialoge bei JEDEM Aufruf frisch aus t()/mengeFormat() auf
+// (siehe deren jeweilige *Aufbauen()-Funktion; kein Bereich haelt fertig
+// geschriebenen Text ueber einen Aufbau hinaus fest), ein erneuter Aufruf
+// zeigt deshalb verlaesslich die neue Sprache, ohne die Navigation zu
+// verlassen.
+async function spracheAnwenden(code) {
+    localStorage.setItem(SPRACHE_SPEICHERSCHLUESSEL, code);
+    document.documentElement.lang = code;
+    statischeTexteUebersetzen();
+
+    document.querySelectorAll('#navigation button').forEach((knopf) => {
+        const bereich = bereiche.get(knopf.dataset.bereich);
+        if (!bereich) return;
+        const beschriftung = knopf.querySelector('span:last-child');
+        if (beschriftung) beschriftung.textContent = t(bereich.titelSchluessel);
+    });
+
+    if (aktiverBereich) {
+        const feldSucheGlobal = document.getElementById('feld-suche');
+        if (aktiverBereich.suchePlatzhalterSchluessel) {
+            feldSucheGlobal.placeholder = t(aktiverBereich.suchePlatzhalterSchluessel);
+            feldSucheGlobal.setAttribute('aria-label', t(aktiverBereich.suchePlatzhalterSchluessel));
+        } else {
+            feldSucheGlobal.placeholder = t('common.noSearchPlaceholder');
+            feldSucheGlobal.setAttribute('aria-label', t('common.noSearchAria'));
+        }
+    }
+
+    // Name/Rollen im Profilmenue tragen selbst keinen Uebersetzungstext
+    // (Rollencodes bleiben unveraendert, siehe Bericht), aber
+    // sitzungsinfoZeichnen() dahinter (ueber profilAufbauen()) formatiert
+    // Uhrzeit/Datum/Dauer neu in der gewaehlten Sprache - deshalb trotzdem
+    // neu aufgebaut, nicht uebersprungen.
+    if (geladeneRollen instanceof Set && geladeneRollen.size > 0) {
+        const benutzer = (await angemeldeterBenutzer()).data.user;
+        profilAufbauen(benutzer, geladeneRollen);
+    }
+
+    if (aktiverBereich) await aktiverBereich.aufbauen();
+}
 
 // ===== Tastaturbedienung =====
 //

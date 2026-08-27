@@ -29,7 +29,7 @@ const ICON_INSTANDHALTUNG = '<svg viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0
 
 bereichAnmelden({
     schluessel: 'instandhaltung',
-    titel: 'Instandhaltung',
+    titelSchluessel: 'nav.instandhaltung',
     icon: ICON_INSTANDHALTUNG,
     // Dieselben Rollen, die auch v_wawi_schaden und v_wawi_auftrag
     // durchlassen (0018_wawi_sichten.sql) - waeren sie hier weiter
@@ -87,11 +87,11 @@ async function instandhaltungAufbauen() {
     // eine bereichseigene Aktion - im Browser nachgestellt und bestaetigt
     // (siehe Bericht).
     zeigeWerkzeugleiste(unterbereich === 'schaeden' && darfRolle('werkstatt'),
-        'Schaden melden', schadenMeldenMaske);
+        t('button.reportDamage'), schadenMeldenMaske);
 
     zeigeUnterreiter(vorgang, [
-        { schluessel: 'schaeden',  titel: 'Offene Schäden' },
-        { schluessel: 'auftraege', titel: 'Wartungsaufträge' }
+        { schluessel: 'schaeden',  titel: t('tab.openDamage') },
+        { schluessel: 'auftraege', titel: t('tab.workOrders') }
     ], unterbereich, async (gewaehlt) => {
         unterbereich = gewaehlt;
         // Ohne dies bliebe die Detailmaske des VORHERIGEN Unterreiters
@@ -142,10 +142,10 @@ function instandhaltungUebersicht(gesamtSchaeden, gesamtAuftraege, gesamtFahrunt
     const anzeige = (n) => (n === null ? '—' : String(n));
 
     const kacheln = [
-        { titel: 'Schadensmeldungen gesamt', wert: zahlSkaliert(anzeige(gesamtSchaeden)),
-          hinweis: 'über alle Bearbeitungsstände' },
-        { titel: 'Wartungsaufträge gesamt', wert: zahlSkaliert(anzeige(gesamtAuftraege)),
-          hinweis: 'über alle Bearbeitungsstände' }
+        { titel: t('tile.damageReportsTotal'), wert: zahlSkaliert(anzeige(gesamtSchaeden)),
+          hinweis: t('hint.overallStates') },
+        { titel: t('tile.workOrdersTotal'), wert: zahlSkaliert(anzeige(gesamtAuftraege)),
+          hinweis: t('hint.overallStates') }
     ];
 
     if (gesamtFahruntauglichOffen !== null) {
@@ -153,7 +153,7 @@ function instandhaltungUebersicht(gesamtSchaeden, gesamtAuftraege, gesamtFahrunt
         if (gesamtFahruntauglichOffen > 0) wert.className = 'ton-schlecht';
         wert.textContent = anzeige(gesamtFahruntauglichOffen);
         kacheln.push({
-            titel: 'Fahruntauglich, offen',
+            titel: t('tile.unrideableOpen'),
             wert,
             grafik: gesamtSchaeden ? zellbalken(gesamtFahruntauglichOffen, gesamtSchaeden, null,
                 { farbe: 'var(--schlecht)' }) : undefined,
@@ -161,9 +161,8 @@ function instandhaltungUebersicht(gesamtSchaeden, gesamtAuftraege, gesamtFahrunt
             // ist es ein Anteil") - derselbe Nenner, den der Balken schon
             // als Skala traegt, jetzt auch in Text ausgeschrieben.
             hinweis: gesamtSchaeden
-                ? `${gesamtFahruntauglichOffen} von ${gesamtSchaeden} Schadensmeldungen insgesamt - ` +
-                  `sperrt das Rad, sobald es nicht gerade in Fahrt ist`
-                : 'sperrt das Rad, sobald es nicht gerade in Fahrt ist'
+                ? t('msg.unrideableShare', { n: zahlFormat(gesamtFahruntauglichOffen), schadenPhrase: mengeFormat(gesamtSchaeden, 'schadensmeldung') })
+                : t('msg.unrideableShareNoTotal')
         });
     }
 
@@ -183,7 +182,7 @@ async function schaedenZeigen(vorgang) {
         // meldeVorgang statt melde: siehe Kommentar bei meldeVorgang() in
         // rahmen.js und bei flotteAufbauen() in flotte.js.
         zeigeFilterleiste(vorgang, false, null);
-        meldeVorgang(vorgang, `Die Schäden liessen sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.damageLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
@@ -202,12 +201,11 @@ async function schaedenZeigen(vorgang) {
         zeigeFilterleiste(vorgang, false, null);
         zeigeLeermaske(
             vorgang,
-            'Keine offenen Schäden',
-            'Es liegt derzeit keine Schadensmeldung vor. Das ist der Normalfall — ' +
-            'gemeldet wird, wenn an einem Rad etwas auffällt.',
-            darfRolle('werkstatt') ? { titel: 'Schaden melden', ausfuehren: schadenMeldenMaske } : null
+            t('empty.noOpenDamageTitle'),
+            t('empty.noOpenDamageText'),
+            darfRolle('werkstatt') ? { titel: t('button.reportDamage'), ausfuehren: schadenMeldenMaske } : null
         );
-        meldeVorgang(vorgang, 'Keine offenen Schäden');
+        meldeVorgang(vorgang, t('empty.noOpenDamageTitle'));
         return;
     }
 
@@ -230,18 +228,18 @@ async function schaedenZeigen(vorgang) {
             // Kein { wert: 'alle', ... } mehr in den Optionen - der
             // Rueckweg zu "Alle" ist ein eigener Knopf im
             // Mehrfachauswahl-Popup (mehrfachauswahlFeld() in rahmen.js).
-            name: 'schwere', titel: 'Schwere', wert: instandhaltungFilterSchwere,
+            name: 'schwere', titel: t('field.schwere'), wert: instandhaltungFilterSchwere,
             optionen: [
-                { wert: 'gering', text: 'gering' },
-                { wert: 'mittel', text: 'mittel' },
-                { wert: 'fahruntauglich', text: 'fahruntauglich' }
+                { wert: 'gering', text: t('schwere.gering') },
+                { wert: 'mittel', text: t('schwere.mittel') },
+                { wert: 'fahruntauglich', text: t('schwere.fahruntauglich') }
             ],
             beiAenderung: (neu) => { instandhaltungFilterSchwere = neu; instandhaltungAufbauen(); }
         },
         {
-            name: 'alter', titel: 'Mindestalter', typ: 'schieber',
+            name: 'alter', titel: t('field.minAge'), typ: 'schieber',
             min: 0, max: schieberMax, step: 1, wert: instandhaltungFilterAlterStunden,
-            beschriftung: (stunden) => (stunden === 0 ? 'alle' : `≥ ${stunden} Std.`),
+            beschriftung: (stunden) => (stunden === 0 ? t('misc.allLowercase') : t('misc.atLeastValue', { n: zahlFormat(stunden), einheit: t('common.hourAbbrev') })),
             beiAenderung: (neu) => { instandhaltungFilterAlterStunden = neu; instandhaltungAufbauen(); }
         }
     ]);
@@ -249,10 +247,10 @@ async function schaedenZeigen(vorgang) {
     if (sichtbar.length === 0) {
         zeigeLeermaske(
             vorgang,
-            'Keine Schäden mit diesem Filter',
-            'Keine offene Schadensmeldung erfüllt die gewählte Einschränkung.',
+            t('empty.noDamageFilterTitle'),
+            t('empty.noDamageFilterText'),
             {
-                titel: 'Filter zurücksetzen',
+                titel: t('common.filterResetTitle'),
                 ausfuehren: async () => {
                     instandhaltungFilterSchwere = new Set();
                     instandhaltungFilterAlterStunden = 0;
@@ -260,15 +258,15 @@ async function schaedenZeigen(vorgang) {
                 }
             }
         );
-        meldeVorgang(vorgang, 'Keine Schäden mit diesem Filter');
+        meldeVorgang(vorgang, t('empty.noDamageFilterTitle'));
         return;
     }
 
     zeigeListe(vorgang, sichtbar, [
-        { feld: 'rahmennummer', titel: 'Rad' },
-        { feld: 'kategorie',    titel: 'Kategorie' },
+        { feld: 'rahmennummer', titel: t('field.rad') },
+        { feld: 'kategorie',    titel: t('field.kategorie') },
         {
-            feld: 'schwere', titel: 'Schwere',
+            feld: 'schwere', titel: t('field.schwere'),
             // filterbar:false (Spaltenkopf-Baustein, rahmen.js): der
             // Schwere-Filter oben (instandhaltungFilterSchwere) deckt
             // dieses Feld bereits ab - ein zweiter, unabhaengiger Filter
@@ -283,6 +281,7 @@ async function schaedenZeigen(vorgang) {
             // nach der Anzeige.
             filterbar: false,
             sortierwert: (z) => SCHWERE_RANG[z.schwere] ?? -1,
+            formatieren: (wert) => t('schwere.' + wert),
             // Nur EIN Parameter (die ganze Zeile), nicht (s) wie im
             // Auftragstext: zeigeListe in rahmen.js ruft eine
             // Funktions-Spalte als spalte.klasse(zeile) auf, nicht
@@ -292,9 +291,9 @@ async function schaedenZeigen(vorgang) {
             // hier zum vierten Mal.
             klasse: (z) => (z.schwere === 'fahruntauglich' ? 'schlecht' : z.schwere === 'mittel' ? 'warnung' : '')
         },
-        { feld: 'gemeldet_am',  titel: 'Gemeldet' },
+        { feld: 'gemeldet_am',  titel: t('field.gemeldet') },
         {
-            feld: 'offen_seit', titel: 'Offen seit', formatieren: alterKurz,
+            feld: 'offen_seit', titel: t('field.offenSeit'), formatieren: alterKurz,
             // filterbar:false: der Mindestalter-Schieber oben deckt
             // dieses Feld bereits ab, und praeziser (eine echte
             // Stundenschwelle statt einer aus den geladenen Werten
@@ -308,14 +307,14 @@ async function schaedenZeigen(vorgang) {
             filterbar: false,
             sortierwert: (z) => alterInStunden(z.offen_seit)
         },
-        { feld: 'status',       titel: 'Stand' }
+        { feld: 'status',       titel: t('field.stand'), formatieren: (wert) => statusAnzeige(wert) }
     ], schadenMaske, schadenZeilenAktionen);
 
     const dringend = sichtbar.filter((s) => s.schwere === 'fahruntauglich').length;
-    const zusatz = sichtbar.length === schaeden.length ? '' : ` von ${schaeden.length}`;
+    const zusatz = sichtbar.length === schaeden.length ? '' : ` ${t('common.of')} ${zahlFormat(schaeden.length)}`;
     meldeVorgang(vorgang, dringend
-        ? `${sichtbar.length}${zusatz} offene Schäden, davon ${dringend} fahruntauglich`
-        : `${sichtbar.length}${zusatz} offene Schäden`);
+        ? t('msg.openDamageWithUnrideable', { n: zahlFormat(sichtbar.length), zusatz, dringend: zahlFormat(dringend) })
+        : t('msg.openDamageCount', { n: zahlFormat(sichtbar.length), zusatz }));
 }
 
 // Rangfolge von schwere, fuer die sortierwert-Eigenschaft der
@@ -335,14 +334,14 @@ function alterKurz(intervall) {
     if (!intervall) return '';
     const tageMatch = intervall.match(/(\d+)\s+days?/);
     const tage = tageMatch ? Number(tageMatch[1]) : 0;
-    if (tage > 0) return `${tage} ${tage === 1 ? 'Tag' : 'Tage'}`;
+    if (tage > 0) return mengeFormat(tage, 'tag');
 
     const zeitMatch = intervall.match(/(\d+):(\d+):(\d+)/);
     const stunden = zeitMatch ? Number(zeitMatch[1]) : 0;
-    if (stunden > 0) return `${stunden} ${stunden === 1 ? 'Stunde' : 'Stunden'}`;
+    if (stunden > 0) return mengeFormat(stunden, 'stunde');
 
     const minuten = zeitMatch ? Number(zeitMatch[2]) : 0;
-    return minuten > 0 ? `${minuten} ${minuten === 1 ? 'Minute' : 'Minuten'}` : 'gerade eben';
+    return minuten > 0 ? mengeFormat(minuten, 'minute') : t('misc.justNow');
 }
 
 // Denselben Intervall-Text wie alterKurz() (siehe dort) in eine Zahl in
@@ -377,7 +376,7 @@ function schadenHandlungen(schaden) {
     // den unsinnigen Aufruf trotzdem nicht anbieten.
     if (darfRolle('werkstatt') && schaden.status === 'offen') {
         handlungen.push({
-            titel: 'Auftrag eröffnen',
+            titel: t('button.openWorkOrder'),
             // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
             // eroeffnet einen neuen Wartungsauftrag, siehe Begruendung bei
             // der art-Erlaeuterung von zeigeMaske() in rahmen.js. Das
@@ -437,22 +436,22 @@ function schadenMaske(schaden) {
     // verliert, nur weil irgendwo ein Sprung hinfuehrte.
     if (darfBereich('flotte')) {
         knoepfe.push({
-            titel: 'Rad in der Flotte',
+            titel: t('button.bikeInFleet'),
             art: 'neben',
-            ausfuehren: () => bereichSprung('flotte', `Schadensmeldung zu ${schaden.rahmennummer}`,
+            ausfuehren: () => bereichSprung('flotte', t('nav.originDamageReport', { rahmennummer: schaden.rahmennummer }),
                 () => waehleZeileMit('fahrrad_id', schaden.fahrrad_id))
         });
     }
 
-    zeigeMaske(`Meldung zu ${schaden.rahmennummer}`, [
-        { name: 'rahmennummer', titel: 'Rad',        wert: `${schaden.rahmennummer} (${schaden.typ_code})`, nurLesen: true },
-        { name: 'melderart',    titel: 'Gemeldet von', wert: schaden.melderart, nurLesen: true },
-        { name: 'gemeldet_am',  titel: 'Gemeldet am',  wert: schaden.gemeldet_am, nurLesen: true },
-        { name: 'kategorie',    titel: 'Kategorie',    wert: schaden.kategorie, nurLesen: true },
-        { name: 'beschreibung', titel: 'Beschreibung', wert: schaden.beschreibung, typ: 'mehrzeilig', nurLesen: true },
-        { name: 'schwere',      titel: 'Schwere',      wert: schaden.schwere, nurLesen: true },
-        { name: 'status',       titel: 'Stand',        wert: schaden.status, nurLesen: true },
-        { name: 'auftraege',    titel: 'Bisherige Aufträge', wert: schaden.auftraege, nurLesen: true },
+    zeigeMaske(t('misc.reportForBike', { rahmennummer: schaden.rahmennummer }), [
+        { name: 'rahmennummer', titel: t('field.rad'),        wert: `${schaden.rahmennummer} (${schaden.typ_code})`, nurLesen: true },
+        { name: 'melderart',    titel: t('field.gemeldetVon'), wert: schaden.melderart, nurLesen: true },
+        { name: 'gemeldet_am',  titel: t('field.gemeldetAm'),  wert: schaden.gemeldet_am, nurLesen: true },
+        { name: 'kategorie',    titel: t('field.kategorie'),    wert: schaden.kategorie, nurLesen: true },
+        { name: 'beschreibung', titel: t('field.beschreibung'), wert: schaden.beschreibung, typ: 'mehrzeilig', nurLesen: true },
+        { name: 'schwere',      titel: t('field.schwere'),      wert: t('schwere.' + schaden.schwere), nurLesen: true },
+        { name: 'status',       titel: t('field.stand'),        wert: statusAnzeige(schaden.status), nurLesen: true },
+        { name: 'auftraege',    titel: t('field.bisherigeAuftraege'), wert: zahlFormat(schaden.auftraege), nurLesen: true },
         // Schritt 3 des Auftrags verlangt genau diesen Hinweis, GENAU
         // HIER: ein fahruntauglicher Schaden an einem Rad IN FAHRT sperrt
         // es nicht sofort (GR13 - ein Rad unterwegs behaelt seinen
@@ -463,12 +462,10 @@ function schadenMaske(schaden) {
         // gewirkt. Am realen Rad 599 (Erprobung, siehe Bericht)
         // nachgestellt: Meldung angelegt, Radstatus blieb 'ausgeliehen'.
         {
-            name: 'hinweis_fahrt', titel: 'Hinweis', typ: 'mehrzeilig', nurLesen: true,
+            name: 'hinweis_fahrt', titel: t('field.hinweis'), typ: 'mehrzeilig', nurLesen: true,
             wert: schaden.schwere === 'fahruntauglich'
-                ? 'Ein fahruntauglicher Schaden sperrt das Rad sofort - außer es ist gerade in ' +
-                  'Fahrt. Dann bleibt der Status vorerst unverändert (GR13 erlaubt einem Rad ' +
-                  'unterwegs keinen anderen Status) und die Sperrung greift erst bei der Rückgabe.'
-                : 'Nur eine fahruntaugliche Meldung sperrt das Rad automatisch.'
+                ? t('misc.damageBlocksImmediately')
+                : t('misc.onlyUnrideableBlocks')
         }
     ], knoepfe);
 }
@@ -502,35 +499,35 @@ async function schadenMeldenMaske() {
 
     const fehler = letzterLadeFehler('v_wawi_flotte');
     if (fehler) {
-        melde(`Die Flotte liess sich nicht laden: ${fehler}`, 'schlecht');
+        melde(t('msg.fleetLoadFailed', { fehler }), 'schlecht');
         return;
     }
     if (!raeder.length) {
-        melde('Es gibt kein Rad, dem ein Schaden zugeordnet werden könnte.', 'schlecht');
+        melde(t('msg.noBikeForDamage'), 'schlecht');
         return;
     }
 
-    zeigeMaske('Schaden melden', [
+    zeigeMaske(t('button.reportDamage'), [
         {
-            name: 'fahrrad_id', titel: 'Rad', wert: raeder[0].fahrrad_id,
+            name: 'fahrrad_id', titel: t('field.rad'), wert: raeder[0].fahrrad_id,
             optionen: raeder.map((r) => ({
                 wert: r.fahrrad_id,
-                text: `${r.rahmennummer} · ${r.typ_code} · ${r.status}`
+                text: `${r.rahmennummer} · ${r.typ_code} · ${statusAnzeige(r.status)}`
             }))
         },
-        { name: 'kategorie', titel: 'Kategorie', wert: '' },
-        { name: 'beschreibung', titel: 'Beschreibung', wert: '', typ: 'mehrzeilig' },
+        { name: 'kategorie', titel: t('field.kategorie'), wert: '' },
+        { name: 'beschreibung', titel: t('field.beschreibung'), wert: '', typ: 'mehrzeilig' },
         {
-            name: 'schwere', titel: 'Schwere', wert: 'gering',
+            name: 'schwere', titel: t('field.schwere'), wert: 'gering',
             optionen: [
-                { wert: 'gering', text: 'gering' },
-                { wert: 'mittel', text: 'mittel' },
-                { wert: 'fahruntauglich', text: 'fahruntauglich' }
+                { wert: 'gering', text: t('schwere.gering') },
+                { wert: 'mittel', text: t('schwere.mittel') },
+                { wert: 'fahruntauglich', text: t('schwere.fahruntauglich') }
             ]
         }
     ], [
         {
-            titel: 'Melden',
+            titel: t('button.report'),
             // 'schaffend' statt 'haupt' (Punkt 4 der Gestaltung, gruen):
             // legt eine neue Schadensmeldung an, siehe Begruendung bei
             // der art-Erlaeuterung von zeigeMaske() in rahmen.js.
@@ -542,7 +539,7 @@ async function schadenMeldenMaske() {
                 const schwere = document.getElementById('feld-maske-schwere').value;
 
                 if (!kategorie || !beschreibung) {
-                    melde('Kategorie und Beschreibung werden benötigt.', 'schlecht');
+                    melde(t('msg.categoryDescriptionRequired'), 'schlecht');
                     return;
                 }
 
@@ -566,9 +563,8 @@ async function schadenMelden(fahrradId, kategorie, beschreibung, schwere) {
         p_beschreibung: beschreibung, p_schwere: schwere
     });
     melde(schwere === 'fahruntauglich'
-        ? `Meldung ${id} angelegt. Das Rad ist gesperrt — sofern es nicht gerade gefahren wird; ` +
-          `dann wird es bei der Rückgabe gesperrt.`
-        : `Meldung ${id} angelegt.`, 'gut');
+        ? t('msg.damageReportedBlocked', { id })
+        : t('msg.damageReported', { id }), 'gut');
     return id;
 }
 
@@ -580,7 +576,7 @@ async function auftragEroeffnen(schaden) {
         p_fahrrad_id: schaden.fahrrad_id,
         p_schadensmeldung_id: schaden.schadensmeldung_id
     });
-    melde(`Auftrag ${id} eröffnet, Rad steht auf Wartung.`, 'gut');
+    melde(t('msg.workOrderOpened', { id }), 'gut');
 }
 
 // ===== Wartungsaufträge =====
@@ -603,35 +599,34 @@ async function auftraegeZeigen(vorgang) {
 
     const fehler = letzterLadeFehler('v_wawi_auftrag');
     if (fehler) {
-        meldeVorgang(vorgang, `Die Aufträge liessen sich nicht laden: ${fehler}`, 'schlecht');
+        meldeVorgang(vorgang, t('msg.workOrdersLoadFailed', { fehler }), 'schlecht');
         return;
     }
 
     if (auftraege.length === 0) {
         zeigeLeermaske(
             vorgang,
-            'Keine laufenden Wartungsaufträge',
-            'Es liegt derzeit kein Wartungsauftrag vor. Ein Auftrag entsteht aus einer ' +
-            'offenen Schadensmeldung — dort gibt es den Knopf „Auftrag eröffnen“.',
+            t('empty.noWorkOrdersTitle'),
+            t('empty.noWorkOrdersText'),
             {
-                titel: 'Zu den offenen Schäden',
+                titel: t('button.toOpenDamage'),
                 ausfuehren: async () => { unterbereich = 'schaeden'; await instandhaltungAufbauen(); }
             }
         );
-        meldeVorgang(vorgang, 'Keine laufenden Wartungsaufträge');
+        meldeVorgang(vorgang, t('empty.noWorkOrdersTitle'));
         return;
     }
 
     zeigeListe(vorgang, auftraege, [
-        { feld: 'rahmennummer',    titel: 'Rad' },
-        { feld: 'auftragsnummer',  titel: 'Auftrag' },
-        { feld: 'status',          titel: 'Stand',
+        { feld: 'rahmennummer',    titel: t('field.rad') },
+        { feld: 'auftragsnummer',  titel: t('field.auftrag') },
+        { feld: 'status',          titel: t('field.stand'), formatieren: (wert) => statusAnzeige(wert),
           klasse: (z) => (z.status === 'offen' ? 'warnung' : '') },
-        { feld: 'eroeffnet_am',    titel: 'Eröffnet' },
-        { feld: 'bearbeiter',      titel: 'Bearbeiter', formatieren: (w) => w || '—' }
+        { feld: 'eroeffnet_am',    titel: t('field.eroeffnet') },
+        { feld: 'bearbeiter',      titel: t('field.bearbeiter'), formatieren: (w) => w || '—' }
     ], auftragMaske);
 
-    meldeVorgang(vorgang, `${auftraege.length} laufende Wartungsaufträge`);
+    meldeVorgang(vorgang, t('msg.activeWorkOrdersCount', { n: zahlFormat(auftraege.length) }));
 }
 
 function auftragMaske(auftrag) {
@@ -639,7 +634,7 @@ function auftragMaske(auftrag) {
 
     if (darfRolle('werkstatt')) {
         knoepfe.push({
-            titel: 'Erledigen',
+            titel: t('button.resolve'),
             art: 'haupt',
             ausfuehren: async () => {
                 const minutenText = document.getElementById('feld-maske-arbeitszeit_minuten').value.trim();
@@ -650,7 +645,7 @@ function auftragMaske(auftrag) {
                     // oder fehlende Arbeitszeit provoziert nur die Absage
                     // der Datenbank, ohne dass die Maske vorher etwas
                     // gewonnen haette.
-                    melde('Die Arbeitszeit in Minuten wird benötigt (0 oder mehr).', 'schlecht');
+                    melde(t('misc.noMinutesNeeded'), 'schlecht');
                     return;
                 }
                 const bemerkung = document.getElementById('feld-maske-bemerkung').value.trim();
@@ -660,11 +655,11 @@ function auftragMaske(auftrag) {
         });
     }
 
-    zeigeMaske(`Auftrag ${auftrag.auftragsnummer}`, [
-        { name: 'rahmennummer', titel: 'Rad',       wert: auftrag.rahmennummer, nurLesen: true },
-        { name: 'status',       titel: 'Stand',     wert: auftrag.status, nurLesen: true },
-        { name: 'eroeffnet_am', titel: 'Eröffnet',  wert: auftrag.eroeffnet_am, nurLesen: true },
-        { name: 'bearbeiter',   titel: 'Bearbeiter', wert: auftrag.bearbeiter || 'noch nicht zugeteilt', nurLesen: true },
+    zeigeMaske(t('misc.workOrderTitle', { auftragsnummer: auftrag.auftragsnummer }), [
+        { name: 'rahmennummer', titel: t('field.rad'),       wert: auftrag.rahmennummer, nurLesen: true },
+        { name: 'status',       titel: t('field.stand'),     wert: statusAnzeige(auftrag.status), nurLesen: true },
+        { name: 'eroeffnet_am', titel: t('field.eroeffnet'),  wert: auftrag.eroeffnet_am, nurLesen: true },
+        { name: 'bearbeiter',   titel: t('field.bearbeiter'), wert: auftrag.bearbeiter || t('misc.notYetAssigned'), nurLesen: true },
         // Editierbar: erst beim Erledigen traegt die Datenbank sie ein
         // (api_auftrag_erledigen, siehe 0019_wawi_logik.sql) - vorher
         // stehen sie leer. Nur editierbar fuer werkstatt: ohne den
@@ -672,8 +667,8 @@ function auftragMaske(auftrag) {
         // Sackgasse ohne Weg zum Speichern - dieselbe Ueberlegung wie
         // "was man nicht darf, wird nicht angezeigt", hier auf ein Feld
         // statt einen Knopf angewendet.
-        { name: 'arbeitszeit_minuten', titel: 'Arbeitszeit (Minuten)', wert: auftrag.arbeitszeit_minuten ?? '', typ: 'zahl', nurLesen: !darfRolle('werkstatt') },
-        { name: 'bemerkung', titel: 'Bemerkung', wert: auftrag.bemerkung || '', typ: 'mehrzeilig', nurLesen: !darfRolle('werkstatt') }
+        { name: 'arbeitszeit_minuten', titel: t('field.arbeitszeitMinuten'), wert: auftrag.arbeitszeit_minuten ?? '', typ: 'zahl', nurLesen: !darfRolle('werkstatt') },
+        { name: 'bemerkung', titel: t('field.bemerkung'), wert: auftrag.bemerkung || '', typ: 'mehrzeilig', nurLesen: !darfRolle('werkstatt') }
     ], knoepfe);
 }
 
@@ -685,5 +680,5 @@ async function auftragErledigen(auftrag, minuten, bemerkung) {
         p_wartungsauftrag_id: auftrag.wartungsauftrag_id,
         p_arbeitszeit_minuten: minuten, p_bemerkung: bemerkung
     });
-    melde(`Auftrag ${auftrag.auftragsnummer} erledigt.`, 'gut');
+    melde(t('msg.workOrderCompleted', { auftragsnummer: auftrag.auftragsnummer }), 'gut');
 }
