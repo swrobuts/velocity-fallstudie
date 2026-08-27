@@ -1067,7 +1067,12 @@ function stationenKarteZeigen(kennung, stationen) {
 // dazu als Eigenschaft an ihr <div class="stationenkarte-leaflet">, kein
 // zweiter, getrennt zu pflegender Verweis irgendwo im Modul.
 function stationenKarteAltEntfernen(behaelter) {
-    behaelter?.querySelector?.('.stationenkarte-leaflet')?._leafletKarte?.remove();
+    const flaeche = behaelter?.querySelector?.('.stationenkarte-leaflet');
+    // Erst den Beobachter loesen, dann die Karte: ein noch laufender
+    // Beobachter riefe sonst invalidateSize() auf einer bereits
+    // entfernten Karte auf.
+    flaeche?._leafletBeobachter?.disconnect();
+    flaeche?._leafletKarte?.remove();
 }
 
 // Kachelquelle: OpenStreetMap direkt (kein Drittanbieter-Dienst dazwischen -
@@ -1194,6 +1199,26 @@ function stationenKarteInitialisieren(flaeche, kachelhinweis, stationen, kundeno
     // Kommentar: die Karte haengt sich selbst an ihren Behaelter, kein
     // zweiter, getrennt zu pflegender Speicherort im Modul.
     flaeche._leafletKarte = karte;
+
+    // Leaflet misst die Behaeltergroesse EINMAL beim Anlegen und laedt nur
+    // fuer diese Flaeche Kacheln. Das requestAnimationFrame beim Aufrufer
+    // reicht fuer die Uebersichtskarte, NICHT fuer die Detailkarte: die
+    // sitzt in #detailmaske, deren Breite erst feststeht, wenn die Maske
+    // fertig aufgebaut ist und die Arbeitsliste von voller Breite auf 55 %
+    // zurueckgewichen ist. Leaflet mass dort rund 100 statt 420 Pixel und
+    // liess den Rest grau - genau der gemeldete Fehler "die Karte ist
+    // kaputt".
+    //
+    // Ein zweites requestAnimationFrame waere geraten: es traefe diesen
+    // Fall zufaellig, nicht den naechsten. Der Beobachter misst statt zu
+    // raten und deckt zugleich Fensteraenderung, Sprachwechsel und das
+    // Oeffnen/Schliessen der Detailmaske ab.
+    const groessenbeobachter = new ResizeObserver(() => karte.invalidateSize());
+    groessenbeobachter.observe(flaeche);
+    // Am Behaelter gemerkt wie die Karte selbst, damit
+    // stationenKarteAltEntfernen() ihn mit abraeumt - ein Beobachter auf
+    // einem entfernten Element haelt dieses sonst am Leben.
+    flaeche._leafletBeobachter = groessenbeobachter;
 
     karte.on('focus', () => karte.scrollWheelZoom.enable());
     karte.on('blur', () => karte.scrollWheelZoom.disable());
