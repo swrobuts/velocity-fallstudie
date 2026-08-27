@@ -129,6 +129,11 @@ comment on column velocity.fahrradmodell.hersteller_id     is 'Produzent des Mod
 comment on column velocity.fahrradmodell.typ_id            is 'Fachliche Klasse, der das Modell angehört.';
 comment on column velocity.fahrradmodell.modellbezeichnung is 'Modellname des Herstellers. Je Hersteller eindeutig.';
 comment on column velocity.fahrradmodell.baujahr           is 'Baujahr der Serie.';
+comment on column velocity.fahrradmodell.gewicht_kg         is 'Leergewicht des Rades in Kilogramm.';
+comment on column velocity.fahrradmodell.gangzahl           is 'Zahl der Gänge der Schaltung.';
+comment on column velocity.fahrradmodell.rahmenhoehe_cm     is 'Rahmenhöhe in Zentimetern. In einer Vermietflotte je Modell meist eine einzige Größe statt mehrerer Konfektionsgrößen.';
+comment on column velocity.fahrradmodell.akkukapazitaet_wh  is 'Kapazität des Akkus in Wattstunden. NULL bei einem Modell ohne Elektroantrieb.';
+comment on column velocity.fahrradmodell.reichweite_km      is 'Herstellerangabe zur Reichweite je Akkuladung in Kilometern. NULL bei einem Modell ohne Elektroantrieb.';
 
 comment on table velocity.fahrrad is
   'Einzelnes physisches Fahrzeug der Flotte, eindeutig über die Rahmennummer.';

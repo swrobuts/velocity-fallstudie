@@ -106,6 +106,45 @@ create table if not exists velocity.fahrradmodell (
 );
 select velocity.fn_audit_anhaengen('fahrradmodell');
 
+-- Nachtraeglich ergaenzt: die technischen Angaben, die eine Warenwirtschaft
+-- ueber ein Modell wissen muss und die bisher fehlten - Hersteller,
+-- Modellname und Baujahr allein tragen die Detailmaske eines Rades nicht.
+-- Gewicht, Gangzahl und Rahmenhoehe gelten fuer jedes Modell; Akkukapazitaet
+-- und Reichweite nur fuer Modelle eines Typs mit Elektroantrieb (siehe
+-- fahrradtyp.hat_elektro) und bleiben sonst NULL - wie akkustand_prozent in
+-- fahrrad_position schon vormacht, ohne dass dafuer ein Trigger noetig war.
+-- Ueber alter table, aus demselben Grund wie bei station.hoehe_m: create
+-- table if not exists allein wuerde die Spalten in einer bestehenden
+-- Datenbank nie anlegen.
+alter table velocity.fahrradmodell add column if not exists gewicht_kg         numeric(4,1);
+alter table velocity.fahrradmodell add column if not exists gangzahl          integer;
+alter table velocity.fahrradmodell add column if not exists rahmenhoehe_cm    integer;
+alter table velocity.fahrradmodell add column if not exists akkukapazitaet_wh integer;
+alter table velocity.fahrradmodell add column if not exists reichweite_km     integer;
+
+alter table velocity.fahrradmodell drop constraint if exists fahrradmodell_gewicht_chk;
+alter table velocity.fahrradmodell add  constraint fahrradmodell_gewicht_chk
+  check (gewicht_kg is null or gewicht_kg > 0);
+
+alter table velocity.fahrradmodell drop constraint if exists fahrradmodell_gangzahl_chk;
+alter table velocity.fahrradmodell add  constraint fahrradmodell_gangzahl_chk
+  check (gangzahl is null or gangzahl > 0);
+
+-- Spanne grosszuegig gewaehlt: von einem Kinderlaufrad bis zu einem
+-- Cargo-Rahmen mit tiefem Einstieg, nicht auf den heutigen Bestand
+-- zugeschnitten.
+alter table velocity.fahrradmodell drop constraint if exists fahrradmodell_rahmenhoehe_chk;
+alter table velocity.fahrradmodell add  constraint fahrradmodell_rahmenhoehe_chk
+  check (rahmenhoehe_cm is null or rahmenhoehe_cm between 30 and 80);
+
+alter table velocity.fahrradmodell drop constraint if exists fahrradmodell_akku_chk;
+alter table velocity.fahrradmodell add  constraint fahrradmodell_akku_chk
+  check (akkukapazitaet_wh is null or akkukapazitaet_wh > 0);
+
+alter table velocity.fahrradmodell drop constraint if exists fahrradmodell_reichweite_chk;
+alter table velocity.fahrradmodell add  constraint fahrradmodell_reichweite_chk
+  check (reichweite_km is null or reichweite_km > 0);
+
 create table if not exists velocity.fahrrad (
   fahrrad_id      bigint generated always as identity primary key,
   rahmennummer    text        not null,

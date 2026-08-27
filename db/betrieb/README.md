@@ -10,6 +10,7 @@ was hier liegt, betrifft nur die konkrete Instanz.
 | `altschema_absichern.sql` | Schließt den anonymen Zugriff im Altschema |
 | `altsystem_abloesen.sql` | Setzt `"cityBikesRental".handle_new_user()` auf Leerlauf, verhindert Fremdanmeldungen im Kundenbestand (verschoben aus `db/aufbau/0013_`, lief gegen eine leere Datenbank nicht durch) |
 | `referenzdaten_grundlage.sql` | Referenzjahr, Teil 1: Preisperioden, Tarifkonditionen, Mitgliedschaften, erster Mitarbeiter |
+| `flottenmodelle_stammdaten.sql` | Löst den Hersteller-Platzhalter `unbekannt` ab: fünf Hersteller, neun Modelle mit Baujahr/Gewicht/Gangzahl/Akku/Reichweite, alle 275 Räder umgehängt |
 
 ## Referenzdaten für das Lehrjahr
 

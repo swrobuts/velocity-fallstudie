@@ -67,6 +67,16 @@ begin
   return next has_view('velocity'::name, 'v_wawi_station'::name, 'v_wawi_station existiert');
   return next has_view('velocity'::name, 'v_wawi_schaden'::name, 'v_wawi_schaden existiert');
   return next has_view('velocity'::name, 'v_wawi_auftrag'::name, 'v_wawi_auftrag existiert');
+
+  -- Nachtraeglich ergaenzt: die Detailmaske eines Rades brauchte mehr als
+  -- Hersteller und Modellname, siehe fahrradmodell und
+  -- db/betrieb/flottenmodelle_stammdaten.sql.
+  return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'baujahr'::name,
+                         'v_wawi_flotte nennt das Baujahr');
+  return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'gewicht_kg'::name,
+                         'v_wawi_flotte nennt das Gewicht');
+  return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'akkukapazitaet_wh'::name,
+                         'v_wawi_flotte nennt die Akkukapazitaet');
 end;
 $$;
 
@@ -428,6 +438,15 @@ begin
                          'v_wawi_modell nennt den Hersteller');
   return next has_column('velocity'::name, 'v_wawi_modell'::name, 'typ_code'::name,
                          'v_wawi_modell nennt den Radtyp');
+  -- Nachtraeglich ergaenzt, zusammen mit den Stammdaten in fahrradmodell:
+  -- die Auswahlliste soll auch die technischen Angaben zeigen koennen,
+  -- nicht nur einen Namen.
+  return next has_column('velocity'::name, 'v_wawi_modell'::name, 'baujahr'::name,
+                         'v_wawi_modell nennt das Baujahr');
+  return next has_column('velocity'::name, 'v_wawi_modell'::name, 'gewicht_kg'::name,
+                         'v_wawi_modell nennt das Gewicht');
+  return next has_column('velocity'::name, 'v_wawi_modell'::name, 'akkukapazitaet_wh'::name,
+                         'v_wawi_modell nennt die Akkukapazitaet');
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;

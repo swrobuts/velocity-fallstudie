@@ -101,7 +101,15 @@ select f.fahrrad_id,
        -- schwersten Meldung, weil 'f' vor 'g' und 'm' im Alphabet liegt.
        (select max(sm.schwere)::text from velocity.schadensmeldung sm
          where sm.fahrrad_id = f.fahrrad_id and sm.status in ('offen','in_arbeit'))
-                              as hoechste_schwere
+                              as hoechste_schwere,
+       -- Nachtraeglich ans Ende angefuegt (CREATE OR REPLACE VIEW darf
+       -- bestehende Spalten weder verschieben noch umbenennen): die
+       -- Detailmaske eines Rades hatte bislang nichts zum Anzeigen ausser
+       -- Namen. Die sechs Werte kommen aus fahrradmodell und gelten je
+       -- Modell, nicht je Einzelrad.
+       mo.baujahr,
+       mo.gewicht_kg, mo.gangzahl, mo.rahmenhoehe_cm,
+       mo.akkukapazitaet_wh, mo.reichweite_km
   from velocity.fahrrad f
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
@@ -128,6 +136,18 @@ comment on column velocity.v_wawi_flotte.hersteller is
   'Name des Herstellers laut Modellstammdaten.';
 comment on column velocity.v_wawi_flotte.modell is
   'Modellbezeichnung, für die Ersatzteilsuche in der Werkstatt.';
+comment on column velocity.v_wawi_flotte.baujahr is
+  'Baujahr der Modellserie laut Stammdaten.';
+comment on column velocity.v_wawi_flotte.gewicht_kg is
+  'Leergewicht des Modells laut Stammdaten.';
+comment on column velocity.v_wawi_flotte.gangzahl is
+  'Zahl der Gänge des Modells laut Stammdaten.';
+comment on column velocity.v_wawi_flotte.rahmenhoehe_cm is
+  'Rahmenhöhe des Modells laut Stammdaten.';
+comment on column velocity.v_wawi_flotte.akkukapazitaet_wh is
+  'Akkukapazität des Modells laut Stammdaten. NULL bei einem Rad ohne Elektroantrieb.';
+comment on column velocity.v_wawi_flotte.reichweite_km is
+  'Herstellerangabe zur Reichweite des Modells laut Stammdaten. NULL bei einem Rad ohne Elektroantrieb.';
 comment on column velocity.v_wawi_flotte.status is
   'Aktueller Betriebsstatus des Rades - verfuegbar, ausgeliehen, wartung, '
   'defekt oder ausgemustert. Anders als die öffentliche '
@@ -851,7 +871,13 @@ select mo.modell_id,
        -- was ueblich ist, ohne dass jemand nachsehen muss.
        (select count(*) from velocity.fahrrad f
          where f.modell_id = mo.modell_id and f.status <> 'ausgemustert')
-                             as raeder_im_bestand
+                             as raeder_im_bestand,
+       -- Nachtraeglich ans Ende angefuegt (CREATE OR REPLACE VIEW darf
+       -- bestehende Spalten weder verschieben noch umbenennen), aus
+       -- demselben Anlass wie bei v_wawi_flotte: die Modellstammdaten
+       -- tragen inzwischen mehr als Namen.
+       mo.baujahr, mo.gewicht_kg, mo.gangzahl, mo.rahmenhoehe_cm,
+       mo.akkukapazitaet_wh, mo.reichweite_km
   from velocity.fahrradmodell mo
   join velocity.hersteller    h on h.hersteller_id = mo.hersteller_id
   join velocity.fahrradtyp    t on t.typ_id        = mo.typ_id
@@ -880,6 +906,18 @@ comment on column velocity.v_wawi_modell.hat_elektro is
 comment on column velocity.v_wawi_modell.zuladung_kg is
   'Maximale Zuladung des Fahrradtyps laut Stammdaten. NULL, wenn der Typ '
   'keine Zuladungsgrenze führt.';
+comment on column velocity.v_wawi_modell.baujahr is
+  'Baujahr der Modellserie laut Stammdaten.';
+comment on column velocity.v_wawi_modell.gewicht_kg is
+  'Leergewicht des Modells laut Stammdaten.';
+comment on column velocity.v_wawi_modell.gangzahl is
+  'Zahl der Gänge des Modells laut Stammdaten.';
+comment on column velocity.v_wawi_modell.rahmenhoehe_cm is
+  'Rahmenhöhe des Modells laut Stammdaten.';
+comment on column velocity.v_wawi_modell.akkukapazitaet_wh is
+  'Akkukapazität des Modells laut Stammdaten. NULL bei einem Modell ohne Elektroantrieb.';
+comment on column velocity.v_wawi_modell.reichweite_km is
+  'Herstellerangabe zur Reichweite des Modells laut Stammdaten. NULL bei einem Modell ohne Elektroantrieb.';
 comment on column velocity.v_wawi_modell.raeder_im_bestand is
   'Zahl der nicht ausgemusterten Räder dieses Modells im Bestand - zeigt an, '
   'was üblich ist, ohne dass jemand in der Flottensicht nachsehen muss.';

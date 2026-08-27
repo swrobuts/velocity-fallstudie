@@ -483,3 +483,92 @@ begin
     0, 'Keine aktive Station liegt ausserhalb aller Geschaeftsgebiete');
 end;
 $$;
+
+-- Nachtraeglich ergaenzt: fahrradmodell.hersteller stand als 'unbekannt'
+-- und drei Modelle hiessen 'Bestandsrad ...' ohne Baujahr - die
+-- Detailmaske eines Rades hatte nichts zum Anzeigen. Die Spalten unten
+-- tragen das nach, siehe db/betrieb/flottenmodelle_stammdaten.sql fuer
+-- die Befuellung des tatsaechlichen Bestands.
+create or replace function velocity_test.test_b_modell_technische_angaben()
+returns setof text language plpgsql as $$
+declare
+  v_typ    bigint;
+  v_herst  bigint;
+  v_modell bigint;
+begin
+  return next has_column('velocity'::name, 'fahrradmodell'::name, 'gewicht_kg'::name,
+                         'fahrradmodell traegt das Gewicht');
+  return next has_column('velocity'::name, 'fahrradmodell'::name, 'gangzahl'::name,
+                         'fahrradmodell traegt die Gangzahl');
+  return next has_column('velocity'::name, 'fahrradmodell'::name, 'rahmenhoehe_cm'::name,
+                         'fahrradmodell traegt die Rahmenhoehe');
+  return next has_column('velocity'::name, 'fahrradmodell'::name, 'akkukapazitaet_wh'::name,
+                         'fahrradmodell traegt die Akkukapazitaet');
+  return next has_column('velocity'::name, 'fahrradmodell'::name, 'reichweite_km'::name,
+                         'fahrradmodell traegt die Reichweite');
+
+  insert into velocity.fahrradtyp (typ_code, bezeichnung, hat_elektro)
+       values ('TEST-TA', 'Testrad technische Angaben', true) returning typ_id into v_typ;
+  insert into velocity.hersteller (name) values ('Testhersteller technische Angaben')
+    returning hersteller_id into v_herst;
+
+  return next lives_ok(
+    format($sql$insert into velocity.fahrradmodell
+                  (hersteller_id, typ_id, modellbezeichnung, baujahr,
+                   gewicht_kg, gangzahl, rahmenhoehe_cm, akkukapazitaet_wh, reichweite_km)
+                values (%s, %s, 'TA-1', 2024, 24.5, 7, 48, 500, 60)$sql$, v_herst, v_typ),
+    'Ein Modell mit vollstaendigen technischen Angaben laesst sich anlegen');
+
+  return next lives_ok(
+    format($sql$insert into velocity.fahrradmodell (hersteller_id, typ_id, modellbezeichnung)
+                values (%s, %s, 'TA-2')$sql$, v_herst, v_typ),
+    'Die technischen Angaben bleiben optional - ein City-Modell hat keinen Akku');
+
+  return next throws_ok(
+    format($sql$insert into velocity.fahrradmodell
+                  (hersteller_id, typ_id, modellbezeichnung, gewicht_kg)
+                values (%s, %s, 'TA-3', 0)$sql$, v_herst, v_typ),
+    '23514', null, 'Ein Gewicht von null Kilogramm wird abgewiesen');
+
+  return next throws_ok(
+    format($sql$insert into velocity.fahrradmodell
+                  (hersteller_id, typ_id, modellbezeichnung, rahmenhoehe_cm)
+                values (%s, %s, 'TA-4', 10)$sql$, v_herst, v_typ),
+    '23514', null, 'Eine Rahmenhoehe von 10 cm liegt ausserhalb der Spanne');
+
+  return next throws_ok(
+    format($sql$insert into velocity.fahrradmodell
+                  (hersteller_id, typ_id, modellbezeichnung, akkukapazitaet_wh)
+                values (%s, %s, 'TA-5', -1)$sql$, v_herst, v_typ),
+    '23514', null, 'Eine negative Akkukapazitaet wird abgewiesen');
+
+  return next throws_ok(
+    format($sql$insert into velocity.fahrradmodell
+                  (hersteller_id, typ_id, modellbezeichnung, reichweite_km)
+                values (%s, %s, 'TA-6', 0)$sql$, v_herst, v_typ),
+    '23514', null, 'Eine Reichweite von null Kilometern wird abgewiesen');
+
+  return next throws_ok(
+    format($sql$insert into velocity.fahrradmodell
+                  (hersteller_id, typ_id, modellbezeichnung, gangzahl)
+                values (%s, %s, 'TA-7', 0)$sql$, v_herst, v_typ),
+    '23514', null, 'Eine Gangzahl von null wird abgewiesen');
+end;
+$$;
+
+-- Der Anlass selbst: kein Rad im Bestand darf mehr am Platzhalter
+-- 'unbekannt' haengen, und keines der drei alten Bestandsrad-Modelle
+-- darf noch referenziert sein. db/betrieb/flottenmodelle_stammdaten.sql
+-- ordnet jedes Rad einem echten Modell zu; dieser Test haelt fest, dass
+-- das Ergebnis so bleibt.
+create or replace function velocity_test.test_b_kein_rad_ohne_hersteller()
+returns setof text language plpgsql as $$
+begin
+  return next is(
+    (select count(*)::int from velocity.fahrrad f
+       join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
+       join velocity.hersteller    h  on h.hersteller_id = mo.hersteller_id
+      where h.name = 'unbekannt'),
+    0, 'Kein Rad im Bestand haengt noch am Hersteller-Platzhalter unbekannt');
+end;
+$$;
