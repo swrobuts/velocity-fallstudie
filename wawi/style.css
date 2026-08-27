@@ -459,6 +459,44 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+/* ===== Kopfleiste bei schmalem Fenster (Nebenbefund der Kopftafel-
+   Breitenaufgabe, aus einem frueheren Bericht bekannt und hier behoben,
+   weil beim Nachmessen von 1024/820px ohnehin hier vorbeigekommen) =====
+   Im Browser bei 820px gemessen: die SEITE SELBST scrollte waagerecht
+   (document.documentElement.scrollWidth 896px bei 820px Fensterbreite),
+   nicht die Kopftafel - deren eigenes overflow-x:auto (siehe .kopftafel
+   weiter oben) griff bereits richtig. Ursache war #kopfleiste oben: ihr
+   grid-template-columns setzt fuer beide AUSSENSPALTEN ein HARTES Minimum
+   von 260px (Begruendung dort: komfortabel ueber der Wortmarke UND dem
+   Profilbereich mit #sitzungsinfo) plus 300px fuer die Suche plus
+   48px Zwischenraum plus 56px Innenabstand = 924px Mindestbreite,
+   unabhaengig vom tatsaechlichen Fensterinhalt - ein Grid-Minimum ist
+   IMMER ein hartes Mass, kein Vorschlag, der vor Erreichen automatisch
+   nachgeben wuerde.
+   Der Ausweg NICHT ueber .kopftafel: die Tafel selbst blieb in JEDER
+   Messung innerhalb ihres eigenen overflow-x, sie hat mit diesem Befund
+   nichts zu tun (siehe Bericht). Stattdessen die Kopfleiste selbst
+   verschlanken, NUR unterhalb von 900px (grosszuegig ueber den 820px, mit
+   der die Aufgabe prueft): #sitzungsinfo ist bereits aria-hidden="true"
+   (siehe index.html - "Beiwerk, keine Kennzahl", Auftragszitat oben) und
+   verschwindet hier rein visuell, ein Bildschirmleser verliert dadurch
+   nichts, was er vorher vorgelesen haette. Die Aussenspalten duerfen dann
+   auf ein kleineres, aber weiterhin komfortables Minimum sinken (130px
+   deckt die 116px breite Wortmarke UND den 32px breiten Profilknopf ohne
+   Sitzungsinfo klar ab), Zwischenraum und Innenabstand ebenfalls
+   verkleinert - macht zusammen 528px Mindestbreite, weit unter 820px. */
+@media (max-width: 900px) {
+  #sitzungsinfo {
+    display: none;
+  }
+
+  #kopfleiste {
+    grid-template-columns: minmax(130px, 1fr) minmax(220px, 1fr) minmax(130px, 1fr);
+    gap: 12px;
+    padding: 0 12px;
+  }
+}
+
 .profilknopf {
   width: 32px;
   height: 32px;
@@ -894,22 +932,28 @@ button {
   overflow-x: auto;
 }
 
-/* width:max-content, NICHT 100 %: bei geschlossener Detailmaske ist
-   #arbeitsliste ueber 1200px breit, und eine auf volle Breite gezogene
-   Tabelle schob dann mehrere hundert Pixel Leerraum zwischen den
-   Rubriknamen und seine Zahl - eine Zahlenkolonne, die man mit dem
-   Finger suchen muss (im Browser gemessen, siehe Bericht). Auf
-   Inhaltsbreite stehen Name, Zahl, Balken und Grafik dicht beieinander
-   und bleiben als Zeile lesbar; die Tafel bleibt links buendig zur
-   Tabelle darunter. max-width:100 % haelt sie bei geoeffneter
-   Detailmaske (#arbeitsliste auf 55 %) im Rahmen; reicht auch das nicht,
-   scrollt .kopftafel in sich (siehe overflow-x dort), statt Spalten
-   stillschweigend abzuschneiden. (width:auto oder fit-content taten es
-   NICHT: eine Tabelle in einem Block-Elternteil nimmt in Chrome die volle
-   verfuegbare Breite - im Browser gemessen: 1207px statt der 696px, die
-   ihr Inhalt braucht.) */
+/* WAR width:max-content (Begruendung damals: bei geschlossener
+   Detailmaske ist #arbeitsliste ueber 1200px breit, und eine auf volle
+   Breite gezogene Tabelle schob mehrere hundert Pixel Leerraum zwischen
+   den Rubriknamen und seine Zahl). Der Befund danach war der
+   gegenteilige (Auftraggeber, woertlich: "warum presst du das so in den
+   Header, gleichwohl sehr viel Platz vorhanden wäre") - max-content
+   verhinderte genau das noetige Wachstum. width:100 % gibt den Platz
+   jetzt frei; wohin er GEHT, entscheiden die Breitenangaben der
+   einzelnen Grafikspalten (.kopftafel-grafik-* weiter unten), nicht
+   diese Zeile - Rubrik und Zahl bekommen dort bewusst KEINE Angabe und
+   bleiben deshalb bei ihrer Inhaltsbreite, keine Leerraum-Zahlenkolonne
+   wie damals. table-layout bleibt auto (Vorgabewert, keine eigene
+   Regel): eine Tabelle in auto-Layout schrumpft nie unter die Summe der
+   Mindestbreiten ihrer Spalten - genau DAS haelt die Zusicherung von
+   damals ("scrollt in sich, schneidet nichts ab") in einem schmalen
+   Fenster weiterhin aufrecht, jetzt ueber min-width je Grafikspalte
+   statt ueber max-content der ganzen Tabelle (siehe dort, im Browser bei
+   1024/820px nachgemessen, siehe Bericht). max-width:100 % haelt sie
+   zusaetzlich bei geoeffneter Detailmaske (#arbeitsliste auf 55 %) im
+   Rahmen. */
 .kopftafel-tabelle {
-  width: max-content;
+  width: 100%;
   max-width: 100%;
   border-collapse: collapse;
   font-size: 12px;
@@ -1018,9 +1062,27 @@ button {
   font-weight: 400;
   text-align: left;
   color: var(--text);
-  /* Die Rubrikspalte nimmt den Rest der Breite auf: alle uebrigen Spalten
-     sind inhaltlich fest breit (Zahl, Balken, Grafik), nur der Name darf
-     mitwachsen. */
+  /* WAR ohne width ("die Rubrikspalte nimmt den Rest der Breite auf") -
+     seit die Grafikspalten selbst wachsen (.kopftafel-grafik-* weiter
+     unten), ist genau das die falsche Spalte fuer "den Rest": der
+     Auftrag will den gewonnenen Platz ausdruecklich bei Profil/
+     Abweichung sehen, nicht bei einem Namen, der "schon bequem steht".
+     Im Browser bestaetigt (siehe Bericht): Instandhaltung hat KEINE
+     Abweichungsspalte (siehe instandhaltungKopftafel() in
+     instandhaltung.js) - ohne Gegenmassnahme floss deren ganzer
+     Breitenanteil in die Rubrik (746px gemessen, bei einem Zeileninhalt
+     von unter 150px), statt den drei tatsaechlich vorhandenen
+     Grafikspalten zuzufallen. Ein max-width half NICHT (im Browser
+     gemessen: computed max-width 260px, tatsaechliche Breite trotzdem
+     746px) - Chromium ignoriert max-width bei der automatischen
+     Tabellen-Spaltenbreite. width:1% dagegen ist genau der Kniff, den
+     .kopftafel-zahl weiter unten aus demselben Grund schon benutzt
+     ("so schmal wie moeglich"): die Spalte bekommt dadurch KEINEN Anteil
+     am uebrigen Platz zugeteilt und faellt auf ihre Mindestbreite
+     zurueck (min-width, respektiert AUCH bei width:1%) bzw. auf ihren
+     tatsaechlichen Inhalt, falls der breiter ist als min-width - ein
+     laengerer Name in Produktion wird dadurch NICHT abgeschnitten. */
+  width: 1%;
   min-width: 150px;
   /* Bild und Text bleiben in EINER Zeile, damit eine Gruppenzeile mit
      Produktbild nicht hoeher wird als eine ohne - sonst huepfte das
@@ -1173,9 +1235,28 @@ button {
    Ein Wert auf einer fuer alle Zeilen identischen Achse. Zehn davon
    untereinander ergeben einen Punktschwarm, aus dem Verteilung und
    Ausreisser unmittelbar hervorgehen - die Achse selbst bleibt leise
-   (sie ist nur das Lineal), der Punkt traegt die Aussage. */
+   (sie ist nur das Lineal), der Punkt traegt die Aussage.
+
+   .lagepunkt ist seit der Kopftafel-Breitenaufgabe der WRAPPER
+   (<span>), nicht mehr das <svg> selbst - siehe der Kopfkommentar bei
+   lagepunkt() in rahmen.js: die Achse bleibt SVG (eine gestreckte
+   Gerade bleibt eine Gerade), der Punkt ist ein eigenes, in FESTEN
+   Pixeln gezeichnetes Element, damit preserveAspectRatio="none" auf der
+   Achse ihn nicht zum Oval verzieht. position:relative macht den
+   Wrapper zum Bezugsrahmen fuer die absolute links-Position der Marke. */
 .lagepunkt {
+  position: relative;
   display: block;
+  width: 100%;
+}
+
+.lagepunkt-achsengrafik {
+  display: block;
+  width: 100%;
+  /* 12px = die Vorgabe "hoehe" von lagepunkt() in rahmen.js - fest, weil
+     nur die BREITE dieser Spalte waechst (siehe .kopftafel-grafik-profil
+     weiter unten), nicht die 20px-Zeilenhoehe der ganzen Tafel. */
+  height: 12px;
 }
 
 .lagepunkt-achse {
@@ -1183,21 +1264,94 @@ button {
   stroke-width: 1;
 }
 
+/* Durchmesser 6.4px = 2 * radius (Vorgabe 3.2 in lagepunkt()) - ein
+   echter Kreis in FESTEN Pixeln (siehe Kopfkommentar bei .lagepunkt
+   oben), unabhaengig von der Spaltenbreite. left kommt von rahmen.js als
+   Prozentwert der Achse; transform zentriert die Marke auf diesem Punkt
+   statt ihn an seiner linken Kante zu verankern. */
 .lagepunkt-marke {
-  fill: var(--marine);
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 6.4px;
+  height: 6.4px;
+  border-radius: 50%;
+  background: var(--marine);
+  transform: translate(-50%, -50%);
 }
 
-/* In der Kopftafel sitzen die Saeulen-Sparklines in einer 20px hohen
-   Tabellenzeile, nicht in einer 84px hohen Kachel - die dortigen
-   Vorgaben (100 % Breite, min-width 90px, 44px Hoehe) wuerden die Zeile
-   auseinandertreiben. Die tatsaechliche Groesse steht am <svg> selbst
-   (96x16, siehe kopftafelZeile() in rahmen.js); hier wird nur die
-   Kachel-Regel zurueckgenommen. */
+/* ===== Kopftafel-Grafiken wachsen mit dem verfuegbaren Platz =====
+   Befund des Auftraggebers, woertlich: "warum presst du das so in den
+   Header, gleichwohl sehr viel Platz vorhanden wäre" - im Browser
+   gemessen (siehe Bericht): die Tafel nutzte oft nur gut 700 von 1790px
+   Arbeitsbereichsbreite, weil .kopftafel-tabelle auf width:max-content
+   stand UND jede Grafik hier zusaetzlich auf einer FESTEN Pixelbreite
+   gezeichnet war (56/76/84/96, siehe die jeweiligen Vorgabewerte in
+   rahmen.js). Beides musste zusammen geloest werden (zweiter Befund,
+   woertlich): die Tabelle allein zu dehnen haette nur breite Spalten mit
+   weiterhin kleinen Grafiken darin erzeugt.
+
+   WOHIN DER GEWONNENE PLATZ GEHT, IST EINE ENTSCHEIDUNG (Auftrag,
+   ausdruecklich): Rubrik und Zahl brauchen ihn nicht (sie stehen schon
+   bequem, siehe .kopftafel-rubrik/.kopftafel-zahl oben) und bekommen
+   deshalb HIER keine Breitenangabe - sie bleiben, was ihr Inhalt
+   verlangt. PROFIL und ABWEICHUNG tragen den groessten Anteil, weil dort
+   Unterschiede VERGLICHEN werden (ein Profilstreifen von 84px kann zwoelf
+   Monate kaum aufloesen); Groesse und Struktur wachsen nur moderat mit.
+   min-width haelt jede Grafik bei ihrer BISHERIGEN Breite als
+   Untergrenze fest - dieselbe Zahl, die vorher die feste Breite war, ist
+   jetzt die Mindestbreite. Das ist der Grund, warum die Tafel in einem
+   schmalen Fenster weiterhin in sich scrollt (.kopftafel/overflow-x
+   oben) statt eine Grafik zu quetschen: eine Tabelle in
+   auto-Spaltenlayout (table-layout bleibt auto, kein fixed) schrumpft
+   nie unter die Summe der Mindestbreiten ihrer Spalten, width:100% auf
+   .kopftafel-tabelle hin oder nicht - sie laeuft stattdessen ueber, und
+   genau das faengt overflow-x:auto ab. */
+.kopftafel-grafik-groesse    { width: 10%; min-width: 76px; }
+.kopftafel-grafik-struktur   { width: 10%; min-width: 96px; }
+.kopftafel-grafik-abweichung { width: 25%; min-width: 84px; }
+.kopftafel-grafik-profil     { width: 30%; min-width: 96px; }
+
+/* Die eigentlichen Grafiken auf 100 % IHRER Zelle - erst DAS macht die
+   Breitenangaben oben sichtbar wirksam, sonst bliebe die Zelle breiter
+   als ihr Inhalt. preserveAspectRatio="none" an der jeweiligen
+   Zeichenfunktion in rahmen.js sorgt dafuer, dass die Grafik diese
+   Breite auch wirklich ausfuellt (siehe dort) - ausser bei .lagepunkt,
+   das schon oben eigene Regeln traegt (dessen <svg> enthaelt nur noch
+   die unbedenkliche Achse). height bleibt an jeder Stelle die JEWEILIGE
+   feste Zeilenhoehe aus rahmen.js (11/12/16px) - nur die Breite waechst,
+   die 20px-Zeilenhoehe der Tafel bleibt unangetastet. */
+.kopftafel-grafik-groesse .zellbalken {
+  display: block;
+  width: 100%;
+}
+
+.kopftafel-grafik-groesse .zellbalken-grafik {
+  display: block;
+  width: 100%;
+  height: 11px;
+}
+
+.kopftafel-grafik-struktur .strukturbalken {
+  width: 100%;
+  height: 12px;
+}
+
+.kopftafel-grafik-abweichung .abweichungsbalken {
+  width: 100%;
+  height: 12px;
+}
+
+/* .saeulensparkline traegt in der Kachel (siehe die Regel weiter oben)
+   eigene Vorgaben fuer einen ganz anderen Einsatzort (84px hohe Kachel
+   statt 20px hohe Tabellenzeile) - hier wird nur width/max-width
+   zurueckgenommen, height bleibt bei den 16px, die kopftafelZeile() in
+   rahmen.js der Sparkline mitgibt (Vorgabe dort: hoehe:16). */
 .kopftafel .saeulensparkline {
-  width: auto;
+  width: 100%;
   min-width: 0;
   max-width: none;
-  height: auto;
+  height: 16px;
 }
 
 /* ===== Kachel (baueKachel() in rahmen.js) =====

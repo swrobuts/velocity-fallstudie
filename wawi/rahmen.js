@@ -4803,6 +4803,18 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
     svg.setAttribute('width', breite);
     svg.setAttribute('height', hoehe);
+    // preserveAspectRatio="none", wie schon bei saeulenSparkline()/
+    // strukturBalken() oben: die Kopftafel (rahmen.js, zeigeKopftafel())
+    // gibt diesem Balken per CSS eine Breite, die mit dem verfuegbaren
+    // Platz waechst, statt der festen breite hier. Ohne dieses Attribut
+    // wuerde das <svg> in seinem eigenen, unveraenderten Seitenverhaeltnis
+    // eingepasst und liesse links/rechts wieder genau den Leerraum
+    // entstehen, den die breitere Zelle eigentlich auffuellen soll. Die
+    // FUELLUNG bleibt dabei exakt, weil sie in VIEWBOX-EINHEITEN als
+    // Anteil an der vollen Breite gezeichnet wird (breite * anteil,
+    // siehe unten) - eine nicht-gleichfoermige Streckung dieses
+    // Verhaeltnisses aendert am kodierten Anteil nichts.
+    svg.setAttribute('preserveAspectRatio', 'none');
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.classList.add('zellbalken-grafik');
@@ -4957,6 +4969,14 @@ function abweichungsBalken(wert, maximumBetrag, beschriftung, optionen = {}) {
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
     svg.setAttribute('width', breite);
     svg.setAttribute('height', hoehe);
+    // preserveAspectRatio="none" - dieselbe Begruendung wie bei
+    // zellbalken() oben: die Kopftafel dehnt diese Spalte per CSS auf den
+    // verfuegbaren Platz. Mitte und Laenge bleiben dabei richtig, weil
+    // beide in VIEWBOX-EINHEITEN relativ zur vollen Breite berechnet
+    // werden (mitte = breite/2, laenge als Anteil von mitte-1) - eine
+    // nicht-gleichfoermige Streckung dieses Verhaeltnisses veraendert den
+    // kodierten Wert nicht, nur seine Pixelgroesse auf dem Bildschirm.
+    svg.setAttribute('preserveAspectRatio', 'none');
     svg.classList.add('abweichungsbalken');
     svg.setAttribute('role', 'img');
     svg.setAttribute('aria-label', beschriftung);
@@ -5022,18 +5042,39 @@ function abweichungText(wert, nachkommastellen = 1) {
 // lassen, waere Unsinn). Die Achse wird deshalb als sichtbare Linie MIT
 // beiden Endwerten im aria-label gezeichnet, damit klar ist, worauf der
 // Punkt sich bezieht.
+// WRAPPER STATT EINEM REINEN <svg> (Kopftafel-Breitenaufgabe): die ACHSE
+// ist eine gerade Linie und vertraegt preserveAspectRatio="none"
+// schadlos - eine nicht-gleichfoermig gestreckte Gerade bleibt eine
+// Gerade (dieselbe Rechnung wie bei zellbalken()/abweichungsBalken()
+// oben, deren Rechtecke aus demselben Grund unverzerrt bleiben). Der
+// PUNKT dagegen ist ein Kreis, ein echtes zweidimensionales Objekt -
+// dieselbe Streckung wuerde ihn zu einem Oval verformen, sobald die
+// Spalte (zeigeKopftafel() in rahmen.js gibt ihr jetzt mehr Platz als
+// die feste "breite" hier) breiter wird als ihr urspruengliches
+// Zeichenmass. Der Punkt sitzt deshalb NICHT im <svg>, sondern als
+// eigenes, in FESTEN Pixeln gezeichnetes Element (CSS border-radius,
+// siehe .lagepunkt-marke in style.css) mit einer prozentualen
+// links-Position: die Position waechst mit der Spalte, die Form nicht.
 function lagepunkt(wert, minimum, maximum, beschriftung, optionen = {}) {
     const { breite = 84, hoehe = 12, radius = 3.2 } = optionen;
     const spanne = (maximum - minimum) || 1;
     const anteil = Math.max(0, Math.min(1, (wert - minimum) / spanne));
 
+    const wrapper = document.createElement('span');
+    wrapper.className = 'lagepunkt';
+    wrapper.setAttribute('role', 'img');
+    wrapper.setAttribute('aria-label', beschriftung);
+
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
     svg.setAttribute('width', breite);
     svg.setAttribute('height', hoehe);
-    svg.classList.add('lagepunkt');
-    svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', beschriftung);
+    // preserveAspectRatio="none": siehe Kopfkommentar - hier unbedenklich,
+    // weil nur noch die Achsenlinie im <svg> steckt.
+    svg.setAttribute('preserveAspectRatio', 'none');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.classList.add('lagepunkt-achsengrafik');
 
     const achse = document.createElementNS(SVG_NS, 'line');
     achse.setAttribute('x1', radius);
@@ -5042,14 +5083,23 @@ function lagepunkt(wert, minimum, maximum, beschriftung, optionen = {}) {
     achse.setAttribute('y2', hoehe / 2);
     achse.setAttribute('class', 'lagepunkt-achse');
     svg.append(achse);
+    wrapper.append(svg);
 
-    const punkt = document.createElementNS(SVG_NS, 'circle');
-    punkt.setAttribute('cx', (radius + anteil * (breite - 2 * radius)).toFixed(2));
-    punkt.setAttribute('cy', hoehe / 2);
-    punkt.setAttribute('r', radius);
-    punkt.setAttribute('class', 'lagepunkt-marke');
-    svg.append(punkt);
-    return svg;
+    const punkt = document.createElement('span');
+    punkt.className = 'lagepunkt-marke';
+    // Anteil an der ACHSE (radius bis breite-radius), nicht an der vollen
+    // Spannweite 0-100 %: die Achse selbst beginnt/endet um radius
+    // eingerueckt (siehe x1/x2 oben), damit der Punkt bei minimum/maximum
+    // nicht ueber ihr Ende hinausragt. Ein Verhaeltnis (randAnteil,
+    // dimensionslos) statt eines Pixelmasses: als CSS-Prozentwert bleibt
+    // die Position richtig, unabhaengig davon, wie breit die Spalte
+    // tatsaechlich gerendert wird.
+    const randAnteil = radius / breite;
+    const positionAnteil = randAnteil + anteil * (1 - 2 * randAnteil);
+    punkt.style.left = `${(positionAnteil * 100).toFixed(2)}%`;
+    wrapper.append(punkt);
+
+    return wrapper;
 }
 
 // ===== Zeichenbaustein: Donut (Gestaltungsauftrag Stationen, Punkt 2) =====
