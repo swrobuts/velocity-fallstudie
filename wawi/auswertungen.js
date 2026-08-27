@@ -1265,7 +1265,15 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
                     max: geldFormat(hoechster), maxMonat: monatFormat(fenster[reihe.indexOf(hoechster)]),
                     aktuell: geldFormat(reihe[reihe.length - 1])
                 });
-            }
+            },
+            // Mouse-over JE SAEULE (Gestaltungsauftrag Punkt 4) - siehe
+            // saeulenSparkline()/kopftafelZeile() in rahmen.js. index statt
+            // erneutem Nachschlagen von fenster.length: der Aufrufer dort
+            // reicht immer denselben Index, mit dem auch die Saeule selbst
+            // gezeichnet wurde.
+            beschriftungTeil: (z, index, wert) => t('board.seriesPartPhrase', {
+                teil: monatFormat(fenster[index]), wert: geldFormat(wert)
+            })
         },
         {
             art: 'abweichung',
@@ -1434,7 +1442,11 @@ function kmCo2Kopftafel(zeilen) {
                         max: kmFormat(hoechster), maxMonat: monatFormat(fenster[reihe.indexOf(hoechster)]),
                         aktuell: kmFormat(reihe[reihe.length - 1])
                     });
-                }
+                },
+                // Siehe die Begruendung bei der Umsatz-Tafel weiter oben.
+                beschriftungTeil: (z, index, wert) => t('board.seriesPartPhrase', {
+                    teil: monatFormat(fenster[index]), wert: kmFormat(wert)
+                })
             },
             {
                 art: 'abweichung',

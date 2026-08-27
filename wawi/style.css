@@ -950,6 +950,79 @@ button {
   overflow-x: auto;
 }
 
+/* ===== Ein-/Ausklappen (kopftafelEingeklappt()/kopftafelUmschalterKnopf()
+   in rahmen.js) =====
+   Die Klasse sitzt auf .kopftafel selbst (dem <section>), nicht auf der
+   Tabelle - ein Nachfahrenselektor braucht die Tabelle dafuer nicht zu
+   kennen und funktioniert unabhaengig davon, WANN sie ins DOM eingehaengt
+   wird (zeigeKopftafel() haengt Kopf und Tabelle nacheinander ein). Kopf
+   (Titel, Bezugszeile, Bild) bleibt UNBERUEHRT - genau das soll im
+   eingeklappten Zustand stehen bleiben, siehe Kopfkommentar bei
+   kopftafelEingeklappt() in rahmen.js. */
+.kopftafel.kopftafel-eingeklappt .kopftafel-tabelle,
+.kopftafel.kopftafel-eingeklappt .kopftafel-fussnote {
+  display: none;
+}
+
+/* Eingeklappt braucht der Kopf keinen unteren Abstand zur (unsichtbaren)
+   Tabelle mehr - sonst stuende darunter ungenutzter Leerraum, der wie ein
+   Darstellungsfehler aussieht ("wo ist der Rest?"), statt wie eine
+   bewusst geschlossene Projektionswand. */
+.kopftafel.kopftafel-eingeklappt .kopftafel-kopf {
+  padding-bottom: 0;
+}
+
+/* Eigener Knopf statt eines klickbaren Kopfbereichs: .kopftafel-kopf
+   enthaelt ein <h2> (das Tabellentitel-Ziel von aria-labelledby, siehe
+   zeigeKopftafel()) - ein <button> darf laut Spezifikation keine
+   Ueberschrift enthalten. margin-left:auto schiebt ihn an den rechten
+   Rand, unabhaengig davon, ob ein Produktbild links davor steht oder
+   nicht. */
+.kopftafel-umschalter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin-left: auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-leise);
+}
+
+.kopftafel-umschalter:hover {
+  background: var(--flaeche);
+  border-color: var(--linie);
+  color: var(--marine);
+}
+
+/* Dieselbe Bildsprache wie .zeilen-aktion svg / .bereich-icon svg (1.6px
+   Strich, rund) - ein drittes, andersartiges Icon-Vokabular waere ein
+   Bruch, kein neues Zeichen. */
+.kopftafel-umschalter svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 120ms ease;
+}
+
+/* Pfeil zeigt nach UNTEN ("hier herunterklappen") solange die Tafel
+   eingeklappt ist, und dreht sich nach OBEN ("hier hochklappen"), sobald
+   sie ausgeklappt ist - dieselbe Metapher wie im Auftrag selbst
+   ("runterklappen"). aria-expanded traegt exakt denselben Zustand schon
+   fuer Screenreader; die Drehung ist die sichtbare Entsprechung fuer
+   sehende Nutzer. */
+.kopftafel-umschalter[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
 /* WAR width:max-content (Begruendung damals: bei geschlossener
    Detailmaske ist #arbeitsliste ueber 1200px breit, und eine auf volle
    Breite gezogene Tabelle schob mehrere hundert Pixel Leerraum zwischen
@@ -1063,13 +1136,21 @@ button {
   opacity: 0.85;
 }
 
-/* 2px Zeilenluft, nicht mehr: dreizehn Zeilen (Flotte) plus Kopfzeile
-   plus Fussnote muessen zusammen so viel Hoehe lassen, dass unter der
-   Tafel noch mehrere Zeilen der Arbeitsliste sichtbar bleiben - im
-   Browser gemessen, siehe Bericht. */
+/* 5px Zeilenluft, nicht mehr - WAR 2px (Befund, woertlich: "zu wenig
+   Weissraum, zu wenig Abstaende [...] das entsteht vor allem durch die
+   geringe Zeilenhoehe"). Im Browser bei 1790px gemessen (siehe Bericht):
+   vorher 18.5px je Datenzeile, die ganze Flotte-Tafel (13 Zeilen plus
+   Kopf/Fuss, ausgeklappt) 397px hoch; mit 5px Padding 24.5px je Zeile,
+   die Tafel 475px - deutlich mehr Luft, ohne die Tafel in eine zweite
+   Liste zu verwandeln. NICHT mehr als das: die Tafel bleibt eine
+   Projektionswand, die man ZUSAMMEN liest (siehe Kopfkommentar bei
+   .kopftafel oben) - und sie ist jetzt ohnehin einklappbar (Punkt 1
+   dieses Auftrags), das nimmt einem grosszuegigeren Wert seine
+   frühere Dringlichkeit, aber nicht die Notwendigkeit, sie beim
+   Ausklappen weiterhin auf einen Blick lesbar zu halten. */
 .kopftafel-tabelle td,
 .kopftafel-tabelle th {
-  padding: 2px 8px;
+  padding: 5px 8px;
 }
 
 .kopftafel-zeile-daten {
@@ -1298,50 +1379,90 @@ button {
   transform: translate(-50%, -50%);
 }
 
-/* ===== Kopftafel-Grafiken wachsen mit dem verfuegbaren Platz =====
-   Befund des Auftraggebers, woertlich: "warum presst du das so in den
-   Header, gleichwohl sehr viel Platz vorhanden wäre" - im Browser
-   gemessen (siehe Bericht): die Tafel nutzte oft nur gut 700 von 1790px
-   Arbeitsbereichsbreite, weil .kopftafel-tabelle auf width:max-content
-   stand UND jede Grafik hier zusaetzlich auf einer FESTEN Pixelbreite
-   gezeichnet war (56/76/84/96, siehe die jeweiligen Vorgabewerte in
-   rahmen.js). Beides musste zusammen geloest werden (zweiter Befund,
-   woertlich): die Tabelle allein zu dehnen haette nur breite Spalten mit
-   weiterhin kleinen Grafiken darin erzeugt.
+/* ===== Kopftafel-Grafiken: Obergrenze je Darstellungsart =====
+   ZWEITER ANLAUF. Der erste ("Kopftafel-Grafiken wachsen mit dem
+   verfuegbaren Platz", Auftrag damals woertlich: "warum presst du das
+   so in den Header, gleichwohl sehr viel Platz vorhanden wäre") liess
+   width:100% OHNE Obergrenze auf jede Grafik wirken - der Befund danach
+   war der gegenteilige (Auftrag, woertlich, dieser Bericht): "Stellen-
+   weise sind auch die Charts zu lang gezogen und die Werte kaum
+   ablesbar." Im Browser bei 1790px gemessen (siehe Bericht): der
+   Baujahr-Achsenpunkt (EIN Punkt) stand auf 513.7px Spaltenbreite, die
+   Abweichungsspalte auf 428.1px - beides weit jenseits dessen, was die
+   jeweilige Darstellung an Information trägt.
 
-   WOHIN DER GEWONNENE PLATZ GEHT, IST EINE ENTSCHEIDUNG (Auftrag,
-   ausdruecklich): Rubrik und Zahl brauchen ihn nicht (sie stehen schon
-   bequem, siehe .kopftafel-rubrik/.kopftafel-zahl oben) und bekommen
-   deshalb HIER keine Breitenangabe - sie bleiben, was ihr Inhalt
-   verlangt. PROFIL und ABWEICHUNG tragen den groessten Anteil, weil dort
-   Unterschiede VERGLICHEN werden (ein Profilstreifen von 84px kann zwoelf
-   Monate kaum aufloesen); Groesse und Struktur wachsen nur moderat mit.
-   min-width haelt jede Grafik bei ihrer BISHERIGEN Breite als
-   Untergrenze fest - dieselbe Zahl, die vorher die feste Breite war, ist
-   jetzt die Mindestbreite. Das ist der Grund, warum die Tafel in einem
-   schmalen Fenster weiterhin in sich scrollt (.kopftafel/overflow-x
-   oben) statt eine Grafik zu quetschen: eine Tabelle in
-   auto-Spaltenlayout (table-layout bleibt auto, kein fixed) schrumpft
-   nie unter die Summe der Mindestbreiten ihrer Spalten, width:100% auf
-   .kopftafel-tabelle hin oder nicht - sie laeuft stattdessen ueber, und
-   genau das faengt overflow-x:auto ab. */
-.kopftafel-grafik-groesse    { width: 10%; min-width: 76px; }
-.kopftafel-grafik-struktur   { width: 10%; min-width: 96px; }
-.kopftafel-grafik-abweichung { width: 25%; min-width: 84px; }
-.kopftafel-grafik-profil     { width: 30%; min-width: 96px; }
+   "EINE GRAFIK SOLL SO BREIT SEIN, WIE SIE INFORMATION TRAEGT - NICHT
+   SO BREIT, WIE PLATZ DA IST" (Auftrag, woertlich). Deshalb jetzt ein
+   max-width je Darstellungsart, angesetzt an der Zeichnung SELBST
+   (.zellbalken/.strukturbalken/.abweichungsbalken/.saeulensparkline/
+   .lagepunkt), NICHT an der <td> (die bleibt in auto-Tabellenlayout -
+   fuer eine <td> ignoriert Chromium max-width bei der automatischen
+   Spaltenbreite, siehe die Begruendung bei .kopftafel-rubrik weiter
+   oben; ein normales <span>/<svg> als Kind der Zelle kennt diese
+   Einschraenkung nicht). Was eine Zelle dadurch NICHT mehr an ihre
+   Grafik weiterreicht, bleibt als Weissraum stehen, statt einer
+   sechsten willkuerlichen Balkenlaenge zu dienen - "und den hat der
+   Auftraggeber ausdruecklich verlangt" (Punkt 2 desselben Berichts).
 
-/* Die eigentlichen Grafiken auf 100 % IHRER Zelle - erst DAS macht die
+   DIE FUENF OBERGRENZEN, EINZELN BEGRUENDET:
+   - Balken (Groesse, zellbalken()): 130px. EIN Wert, EIN Rechteck -
+     die Zahl daneben traegt die Praezision ohnehin schon als Text; der
+     Balken ist der Blickfang "wer ist deutlich groesser", nicht die
+     Messlatte. Ueber ~130px unterscheidet das Auge zwei Laengen nicht
+     mehr genauer, es wird nur mehr leere Flaeche gefuellt.
+   - Strukturbalken (2-4 Segmente): 170px. Genug, damit auch ein
+     10-Prozent-Segment (siehe die Mindestbreiten-Regel in
+     strukturBalken()) noch als eigene Flaeche neben den groesseren
+     erkennbar bleibt, ohne dass der Balken selbst zur Kennzahl wird.
+   - Abweichungsbalken (symmetrisch um die Null): 200px, statt zuvor
+     unbegrenzt (428px gemessen, siehe oben - "ziehen sich ueber die
+     halbe Tafel", Auftrag). Je Seite bleiben 100px fuer den
+     Abweichungsbetrag - mehr als die bisherige FESTE Breite von 84px,
+     also weiterhin ein Zugewinn, nur ein gedeckelter.
+   - Saeulenreihe (bis zu zwoelf Saeulen, "Monatssaeulen brauchen viel",
+     Auftrag woertlich): 340px - das Einzige, was WEITER waechst als
+     zuvor als Untergrenze stand (96px), weil hier tatsaechlich zwoelf
+     Einzelwerte unterscheidbar bleiben muessen. 340px / 12 ≈ 28px je
+     Saeule inklusive Abstand - im Browser abgelesen, siehe Bericht:
+     bei dieser Breite ist der Höchstwert einer Reihe von der
+     naechstkleineren Saeule klar unterscheidbar.
+   - Achsenpunkt (Lagepunkt, EIN Punkt): 150px, statt zuvor 513.7px
+     gemessen. Eine Achse mit fuenf Baujahren (2021-2025) braucht keine
+     halbe Tafelbreite, um zu zeigen, WO ein Modell liegt - bei 150px
+     bleiben zwischen zwei benachbarten Jahren rund 30px, der Punkt
+     bleibt klar einem Jahr zuordenbar (im Browser nachgemessen, siehe
+     Bericht) und verliert sich nicht in der Flaeche.
+
+   min-width bleibt wie zuvor die BISHERIGE feste Breite als Untergrenze
+   (dieselbe Ueberlegung wie beim ersten Anlauf) - AUSSER bei
+   profil-punkt (90px statt 96px: ein einzelner Punkt braucht keine
+   ganze Saeulenreihen-Untergrenze) und profil-reihe (140px statt 96px:
+   zwoelf Saeulen brauchen mehr als eine einzelne Punktachse, auch am
+   unteren Ende). Die width-Prozentangaben sinken gegenueber dem ersten
+   Anlauf, weil die eigentliche Grenze jetzt die feste max-width ist -
+   ein hoher Prozentanteil haette am Ergebnis nichts mehr geaendert,
+   ausser mehr toten Platz VOR Erreichen der Grenze zu verteilen. */
+.kopftafel-grafik-groesse       { width: 7%;  min-width: 76px; }
+.kopftafel-grafik-struktur      { width: 8%;  min-width: 96px; }
+.kopftafel-grafik-abweichung    { width: 12%; min-width: 84px; }
+.kopftafel-grafik-profil-reihe  { width: 24%; min-width: 140px; }
+.kopftafel-grafik-profil-punkt  { width: 6%;  min-width: 90px; }
+
+/* Die eigentlichen Grafiken auf 100 % IHRER Zelle, GEDECKELT durch
+   max-width (siehe Begruendung oben) - erst DAS macht die
    Breitenangaben oben sichtbar wirksam, sonst bliebe die Zelle breiter
    als ihr Inhalt. preserveAspectRatio="none" an der jeweiligen
-   Zeichenfunktion in rahmen.js sorgt dafuer, dass die Grafik diese
-   Breite auch wirklich ausfuellt (siehe dort) - ausser bei .lagepunkt,
-   das schon oben eigene Regeln traegt (dessen <svg> enthaelt nur noch
-   die unbedenkliche Achse). height bleibt an jeder Stelle die JEWEILIGE
-   feste Zeilenhoehe aus rahmen.js (11/12/16px) - nur die Breite waechst,
-   die 20px-Zeilenhoehe der Tafel bleibt unangetastet. */
+   Zeichenfunktion in rahmen.js sorgt dafuer, dass die Grafik ihre
+   tatsaechliche Breite (bis zur Grenze) auch wirklich ausfuellt (siehe
+   dort) - ausser bei .lagepunkt, das schon oben eigene Regeln traegt
+   (dessen <svg> enthaelt nur noch die unbedenkliche Achse). height
+   bleibt an jeder Stelle die JEWEILIGE feste Zeilenhoehe aus rahmen.js
+   (11/12/16px) - nur die Breite waechst, die Zeilenhoehe der Tafel
+   bleibt unangetastet. */
 .kopftafel-grafik-groesse .zellbalken {
   display: block;
   width: 100%;
+  max-width: 130px;
 }
 
 .kopftafel-grafik-groesse .zellbalken-grafik {
@@ -1352,11 +1473,13 @@ button {
 
 .kopftafel-grafik-struktur .strukturbalken {
   width: 100%;
+  max-width: 170px;
   height: 12px;
 }
 
 .kopftafel-grafik-abweichung .abweichungsbalken {
   width: 100%;
+  max-width: 200px;
   height: 12px;
 }
 
@@ -1368,8 +1491,15 @@ button {
 .kopftafel .saeulensparkline {
   width: 100%;
   min-width: 0;
-  max-width: none;
+  max-width: 340px;
   height: 16px;
+}
+
+/* Der Lagepunkt-Wrapper ist HTML (<span>), keine <td> - max-width greift
+   hier also ohne die Chromium-Einschraenkung, die .kopftafel-rubrik oben
+   zu ihrem width:1%-Kniff zwingt. */
+.kopftafel-grafik-profil-punkt .lagepunkt {
+  max-width: 150px;
 }
 
 /* ===== Kachel (baueKachel() in rahmen.js) =====

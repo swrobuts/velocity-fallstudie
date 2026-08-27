@@ -572,6 +572,8 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Lage im Netz",
     "tile.noStationLocation": "Für diese Station liegen keine Koordinaten vor.",
     "common.and": "und",
+    "board.toggleAria": "Kopftafel ein-/ausklappen",
+    "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} steht jetzt auf {ziel}.",
     "msg.confirmDecommission": "{rahmennummer} endgültig ausmustern? Das Rad verliert seinen Standort und erscheint in keiner Liste mehr. Seine Fahrten bleiben erhalten.",
     "msg.bikeDecommissioned": "{rahmennummer} ausgemustert.",
@@ -1055,6 +1057,8 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Location in the network",
     "tile.noStationLocation": "No coordinates are available for this station.",
     "common.and": "and",
+    "board.toggleAria": "Expand/collapse board",
+    "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} is now set to {ziel}.",
     "msg.confirmDecommission": "Permanently decommission {rahmennummer}? The bike loses its location and no longer appears in any list. Its rides are retained.",
     "msg.bikeDecommissioned": "{rahmennummer} decommissioned.",
@@ -1538,6 +1542,8 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Ağdaki konum",
     "tile.noStationLocation": "Bu istasyon için koordinat bulunmuyor.",
     "common.and": "ve",
+    "board.toggleAria": "Paneli genişlet/daralt",
+    "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} artık {ziel} olarak ayarlandı.",
     "msg.confirmDecommission": "{rahmennummer} kalıcı olarak hizmetten mi çıkarılsın? Bisiklet konumunu kaybeder ve artık hiçbir listede görünmez. Sürüşleri saklanmaya devam eder.",
     "msg.bikeDecommissioned": "{rahmennummer} hizmetten çıkarıldı.",
@@ -2021,6 +2027,8 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Ubicación en la red",
     "tile.noStationLocation": "No hay coordenadas disponibles para esta estación.",
     "common.and": "y",
+    "board.toggleAria": "Expandir/contraer el panel",
+    "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ahora está en {ziel}.",
     "msg.confirmDecommission": "¿Dar de baja definitivamente {rahmennummer}? La bicicleta pierde su ubicación y ya no aparece en ninguna lista. Sus viajes se conservan.",
     "msg.bikeDecommissioned": "{rahmennummer} dada de baja.",
@@ -2504,6 +2512,8 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Posizione nella rete",
     "tile.noStationLocation": "Per questa stazione non sono disponibili coordinate.",
     "common.and": "e",
+    "board.toggleAria": "Espandi/comprimi il pannello",
+    "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ora è impostata su {ziel}.",
     "msg.confirmDecommission": "Dismettere definitivamente {rahmennummer}? La bici perde la sua posizione e non compare più in nessun elenco. Le sue corse vengono conservate.",
     "msg.bikeDecommissioned": "{rahmennummer} dismessa.",
@@ -2987,6 +2997,8 @@ const UEBERSETZUNGEN = {
     "tile.stationMap": "Położenie w sieci",
     "tile.noStationLocation": "Dla tej stacji brak współrzędnych.",
     "common.and": "i",
+    "board.toggleAria": "Rozwiń/zwiń panel",
+    "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ma teraz status {ziel}.",
     "msg.confirmDecommission": "Trwale wycofać {rahmennummer} z eksploatacji? Rower traci swoją lokalizację i nie pojawia się już na żadnej liście. Jego przejazdy zostają zachowane.",
     "msg.bikeDecommissioned": "{rahmennummer} wycofano z eksploatacji.",
@@ -4718,6 +4730,25 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
     const werteBereinigt = (werte || []).map((w) => w || 0);
     if (werteBereinigt.length === 0) return svg;   // nichts zu zeichnen, aber ein gültiges <svg>
 
+    // GESTALTUNGSAUFTRAG PUNKT 4, woertlich: "eine Saeulenreihe zwoelf
+    // Saeulen" - je Teil, nicht nur eine Zusammenfassung fuer die ganze
+    // Reihe. optionen.titelJeIndex(i, wert) ist optional (siehe
+    // kopftafelZeile() in rahmen.js: nicht jeder der sieben Aufrufer
+    // liefert sie mit) - WENN sie vorliegt, haengt sie hier VOLLSTAENDIG
+    // an die aria-label an, statt nur als Hinweisfenster pro Saeule zu
+    // erscheinen: das macht die Reihe fuer einen Bildschirmleser lesbar,
+    // OHNE dass er zwoelf einzelne, gar nicht fokussierbare <rect>
+    // nacheinander anfahren muesste (ein <svg role="img"> fasst seinen
+    // gesamten Inhalt fuer Assistenztechnik zu EINEM Blatt zusammen -
+    // ein <title> je <rect> waere fuer sie unsichtbar, siehe unten). Der
+    // Mouse-over selbst kommt trotzdem zusaetzlich UEBER das <title> je
+    // Saeule (unten in der forEach-Schleife) - fuer sehende Maus-Nutzer
+    // schneller als die ganze Aufzaehlung vorzulesen.
+    if (typeof optionen.titelJeIndex === 'function') {
+        const aufzaehlung = werteBereinigt.map((w, i) => optionen.titelJeIndex(i, w)).join(', ');
+        svg.setAttribute('aria-label', `${beschriftung}. ${aufzaehlung}`);
+    }
+
     // Nulllinie ist PFLICHT (Auftrag, ausdrücklich - dieselbe Regel wie
     // bei saeulengrafik() weiter unten) - UND MUSS AUCH BEI NEGATIVEN
     // WERTEN STIMMEN: ein Saldo (stationsauslastungUebersicht() in
@@ -4781,6 +4812,11 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
         if (markierIndizes.includes(i)) klassen.push('saeulensparkline-saeule-markiert');
         else if (i === aktuellIndex) klassen.push('saeulensparkline-saeule-aktuell');
         rect.setAttribute('class', klassen.join(' '));
+        if (typeof optionen.titelJeIndex === 'function') {
+            const titel = document.createElementNS(SVG_NS, 'title');
+            titel.textContent = optionen.titelJeIndex(i, wert);
+            rect.append(titel);
+        }
         svg.append(rect);
     });
 
@@ -4820,7 +4856,7 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
 // eine Sparkline (die eine Form zeigt, die der Text allein nicht hergibt)
 // trägt er für sich keine zusätzliche Information.
 function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
-    const { breite = 56, hoehe = 12, farbe = 'var(--marine)' } = optionen;
+    const { breite = 56, hoehe = 12, farbe = 'var(--marine)', beschriftung = null } = optionen;
     const anteil = maximum > 0 ? Math.max(0, Math.min(1, wert / maximum)) : 0;
 
     const svg = document.createElementNS(SVG_NS, 'svg');
@@ -4842,6 +4878,19 @@ function zellbalken(wert, maximum, textInhalt = null, optionen = {}) {
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.classList.add('zellbalken-grafik');
+
+    // Mouse-over (Gestaltungsauftrag Punkt 4) UEBER ein <title>-Kind,
+    // nicht ueber das globale HTML-title-Attribut: bei SVG ist <title>
+    // der einzige Weg, der auch in Firefox/Safari zuverlaessig einen
+    // nativen Tooltip zeigt. aria-hidden oben aendert daran nichts - es
+    // blendet nur die Bedeutung fuer Screenreader aus (der Wert steht
+    // ohnehin schon als sichtbarer Text in der Nachbarzelle, siehe
+    // kopftafelZeile()), die Maus-Anzeige ist davon unabhaengig.
+    if (beschriftung) {
+        const titel = document.createElementNS(SVG_NS, 'title');
+        titel.textContent = beschriftung;
+        svg.append(titel);
+    }
 
     // KEINE Kontur mehr (Gestaltungsauftrag, zweiter Anlauf - siehe die
     // ausfuehrliche Begruendung bei .zellbalken-hintergrund in style.css):
@@ -5005,6 +5054,14 @@ function abweichungsBalken(wert, maximumBetrag, beschriftung, optionen = {}) {
     svg.setAttribute('role', 'img');
     svg.setAttribute('aria-label', beschriftung);
 
+    // Dieselbe beschriftung ZUSAETZLICH als <title> (Gestaltungsauftrag
+    // Punkt 4, Mouse-over): aria-label allein wird von keinem Browser als
+    // Tooltip angezeigt, nur von einem Screenreader vorgelesen. Kein
+    // Zusatzaufwand beim Aufrufer noetig - der Text liegt hier schon vor.
+    const titel = document.createElementNS(SVG_NS, 'title');
+    titel.textContent = beschriftung;
+    svg.append(titel);
+
     if (Math.abs(wert) > 0) {
         const rect = document.createElementNS(SVG_NS, 'rect');
         rect.setAttribute('x', (wert >= 0 ? mitte : mitte - laenge).toFixed(2));
@@ -5088,6 +5145,11 @@ function lagepunkt(wert, minimum, maximum, beschriftung, optionen = {}) {
     wrapper.className = 'lagepunkt';
     wrapper.setAttribute('role', 'img');
     wrapper.setAttribute('aria-label', beschriftung);
+    // Dieser Wrapper ist HTML, kein <svg> (siehe Kopfkommentar oben) -
+    // hier reicht deshalb das gewoehnliche title-Attribut fuer den
+    // Mouse-over (Gestaltungsauftrag Punkt 4), dieselbe Technik wie bei
+    // schliessenKnopf.title an anderer Stelle dieser Datei.
+    wrapper.title = beschriftung;
 
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
@@ -5605,6 +5667,100 @@ function zahlSkaliert(formatiert) {
 // derselben id machen jedes aria-labelledby mehrdeutig.
 let kopftafelZaehler = 0;
 
+// ===== Ein-/Ausklappen der Kopftafel (Gestaltungsauftrag, woertlich:
+// "Der Kopfbereich muss ein-/ausklappbar sein, sonst erschlaegt er auch
+// [...] Die Kopfzeilen muessen wie eine Art Projektionswand sein, die
+// ich runterklappen kann, wenn ich Uebersichten oder Analysen
+// brauche.") =====
+//
+// VORGABEZUSTAND: EINGEKLAPPT. Eine Projektionswand haengt normalerweise
+// OBEN und wird heruntergezogen, wenn man sie braucht - sie haengt nicht
+// im Regelfall schon unten. Diese Warenwirtschaft wird "acht Stunden am
+// Tag benutzt, nicht acht Sekunden" (siehe Kopfkommentar bei .kopftafel
+// in style.css): der haeufigste Fall ist die Person, die den ganzen Tag
+// Raeder umbucht und die LISTE braucht, nicht neun Tabellen voller
+// Kennzahlen ueber jeder Liste. Die Uebersicht bleibt einen Klick bzw.
+// einen Tastendruck entfernt, aber sie draengt sich nicht jedem aufs
+// Neue auf - genau das war der urspruengliche Befund ("erschlaegt").
+//
+// WAS EINGEKLAPPT STEHEN BLEIBT: Titel und Bezugszeile (tafel.bild
+// eingeschlossen). Eine Tafel, die spurlos verschwaende, wuerde
+// vergessen - die Kopfzeile allein beantwortet aber bereits "worueber
+// rede ich hier" ("275 Raeder * 9 Modelle von 5 Herstellern..."), ohne
+// die vollen 60 bis 170 Einzelwerte der Tabelle zu zeigen. Nur
+// .kopftafel-tabelle und .kopftafel-fussnote verschwinden (siehe
+// .kopftafel-eingeklappt in style.css) - kopf.kopftexte bleibt immer im
+// DOM.
+//
+// EIN GEMEINSAMER SCHALTER FUER ALLE NEUN TAFELN, nicht neun einzelne:
+// dieselbe Ueberlegung wie beim Zebramuster (ZEBRA_SPEICHERSCHLUESSEL
+// weiter unten) - eine reine Anzeigepraeferenz ohne fachlichen Bezug zu
+// EINEM bestimmten Bereich. Wer sich entscheidet "ich will jetzt die
+// Listen sehen, keine Uebersichten", meint das fuer die ganze Sitzung,
+// nicht nur fuer Flotte. localStorage ueberlebt dieselben drei Faelle
+// wie beim Zebramuster: Bereichswechsel und Neuaufbau leeren nur
+// #arbeitsliste (siehe bereichWechseln()), ein Neuladen der Seite den
+// Browserspeicher ohnehin nicht.
+const KOPFTAFEL_SPEICHERSCHLUESSEL = 'velocity-wawi-kopftafel-eingeklappt';
+
+// Fehlender Schluessel (erster Besuch dieses Browsers) => eingeklappt
+// (Vorgabezustand, siehe oben) - deshalb hier NICHT wie bei
+// zebraGespeichert() ein einfaches "=== 'an'" (das ergaebe bei einem
+// fehlenden Schluessel "aus"), sondern der umgekehrte Vergleich: nur ein
+// ausdruecklich gespeichertes 'aus' schaltet den Vorgabezustand ab.
+function kopftafelEingeklappt() {
+    return localStorage.getItem(KOPFTAFEL_SPEICHERSCHLUESSEL) !== 'aus';
+}
+
+// Baut NUR den Umschalter-Knopf - eingehaengt in .kopftafel-kopf, siehe
+// zeigeKopftafel(). wurzel (das <section id="kopftafel">) und tabelleId
+// werden als Referenz/Wert hereingereicht statt neu gesucht: beide
+// liegen zum Zeitpunkt dieses Aufrufs (kurz vor wurzel.append(kopf) in
+// zeigeKopftafel()) bereits vor, auch wenn die Tabelle selbst das DOM
+// erst gleich danach erreicht - ein Zugriff ueber wurzel als
+// Objektreferenz, nicht als DOM-Suche, funktioniert deshalb unabhaengig
+// von der Einhaengereihenfolge; die Klasse fuer den eingeklappten
+// Zustand sitzt ohnehin auf wurzel selbst (siehe anwenden() unten und
+// .kopftafel-eingeklappt in style.css), nicht auf der Tabelle.
+function kopftafelUmschalterKnopf(wurzel, tabelleId) {
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'kopftafel-umschalter';
+    knopf.setAttribute('aria-controls', tabelleId);
+    // EIN statischer Name statt zweier Zustandstexte (einklappen/
+    // ausklappen): dieselbe Ueberlegung wie bei knopfProfil weiter unten
+    // - aria-expanded traegt den WECHSELNDEN Zustand bereits, ein
+    // Bildschirmleser haengt "eingeklappt"/"ausgeklappt" von sich aus an
+    // den Namen an. Zwei Uebersetzungsschluessel fuer denselben Knopf
+    // waeren doppelte Pflege ohne zusaetzlichen Nutzen.
+    const beschriftung = t('board.toggleAria');
+    knopf.setAttribute('aria-label', beschriftung);
+    knopf.title = beschriftung;   // dieselbe Kurzfassung als Maus-Tooltip, wie bei schliessenKnopf.title weiter unten
+
+    const symbol = document.createElementNS(SVG_NS, 'svg');
+    symbol.setAttribute('viewBox', '0 0 18 18');
+    symbol.setAttribute('aria-hidden', 'true');
+    symbol.setAttribute('focusable', 'false');
+    const pfeil = document.createElementNS(SVG_NS, 'polyline');
+    pfeil.setAttribute('points', '4,7 9,12 14,7');
+    symbol.append(pfeil);
+    knopf.append(symbol);
+
+    function anwenden(eingeklappt) {
+        wurzel.classList.toggle('kopftafel-eingeklappt', eingeklappt);
+        knopf.setAttribute('aria-expanded', String(!eingeklappt));
+    }
+    anwenden(kopftafelEingeklappt());
+
+    knopf.addEventListener('click', () => {
+        const neu = !wurzel.classList.contains('kopftafel-eingeklappt');
+        anwenden(neu);
+        localStorage.setItem(KOPFTAFEL_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
+    });
+
+    return knopf;
+}
+
 function kopftafelWurzel() {
     const wurzel = document.getElementById('arbeitsliste');
     let el = document.getElementById('kopftafel');
@@ -5677,6 +5833,7 @@ function zeigeKopftafel(kennung, tafel) {
     kopftafelZaehler += 1;
     const titelId = `kopftafel-titel-${kopftafelZaehler}`;
     const bezugId = `kopftafel-bezug-${kopftafelZaehler}`;
+    tabelle.id = `kopftafel-tabelle-${kopftafelZaehler}`;
 
     const kopf = document.createElement('div');
     kopf.className = 'kopftafel-kopf';
@@ -5709,6 +5866,12 @@ function zeigeKopftafel(kennung, tafel) {
         kopftexte.append(bezug);
     }
     kopf.append(kopftexte);
+    // Der Umschalter steht IM Kopf, nicht daneben: er gehoert zu genau
+    // der Zeile, die eingeklappt sichtbar bleibt (siehe Kopfkommentar bei
+    // kopftafelEingeklappt() oben) - dieselbe raeumliche Naehe wie bei
+    // jedem anderen Auf-/Zuklapp-Knopf dieser Oberflaeche (z. B.
+    // knopfProfil neben dem, was er oeffnet).
+    kopf.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
     wurzel.append(kopf);
     tabelle.setAttribute('aria-labelledby', tafel.bezug ? `${titelId} ${bezugId}` : titelId);
 
@@ -5811,6 +5974,15 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
     const tr = document.createElement('tr');
     tr.className = `kopftafel-zeile kopftafel-zeile-${art}`;
 
+    // Der Rubrikname dieser Zeile, VORAB einmal ermittelt - fuer den
+    // Mouse-over-Text des Groessenbalkens weiter unten (Gestaltungs-
+    // auftrag Punkt 4: "ein Wert ohne Bezug hilft nicht"). Die
+    // Rubrikspalte kommt in JEDER Kopftafel als ERSTE Spalte (siehe die
+    // spalten-Definitionen in den fuenf Bereichen), aber .find() statt
+    // spalten[0] verlaesst sich nicht auf diese Reihenfolge.
+    const rubrikSpalte = spalten.find((s) => s.art === 'rubrik');
+    const rubrikName = rubrikSpalte ? rubrikSpalte.wert(zeile) : '';
+
     spalten.forEach((spalte, i) => {
         const skala = skalen[i];
 
@@ -5870,8 +6042,14 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
             // waere eine falsche Laenge, und Laenge ist hier die Aussage.
             if (art === 'daten' && wert !== null && wert !== undefined) {
                 grafikZelle.append(spalte.art === 'groesse'
-                    ? zellbalken(wert, skala.maximum, null,
-                        { breite: 76, hoehe: 11, farbe: spalte.farbe ? spalte.farbe(zeile) : 'var(--marine)' })
+                    ? zellbalken(wert, skala.maximum, null, {
+                        breite: 76, hoehe: 11, farbe: spalte.farbe ? spalte.farbe(zeile) : 'var(--marine)',
+                        // Mouse-over-Bezug (Gestaltungsauftrag Punkt 4):
+                        // "60" allein sagt weniger als "CityLine 1: 60
+                        // Raeder" - Rubrikname plus derselbe formatierte
+                        // Wert, der ohnehin schon links daneben steht.
+                        beschriftung: `${rubrikName}: ${spalte.format(wert)}${spalte.einheit ? ' ' + spalte.einheit : ''}`
+                    })
                     : abweichungsBalken(wert, skala.maximumBetrag, spalte.beschriftung(zeile)));
             }
             tr.append(zahlZelle, grafikZelle);
@@ -5879,7 +6057,19 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
         }
 
         const zelle = document.createElement('td');
-        zelle.className = `kopftafel-grafik kopftafel-grafik-${spalte.art}`;
+        // 'profil' bekommt eine ZWEITE, feinere Klasse zusaetzlich zur
+        // groben (kopftafel-grafik-profil bleibt als gemeinsame
+        // Grundlage bestehen, siehe style.css): eine Saeulenreihe mit
+        // zwoelf Werten und ein einzelner Achsenpunkt teilten bislang
+        // dieselbe Breitenvorgabe, obwohl sie fachlich UNTERSCHIEDLICH
+        // viel Platz brauchen (Gestaltungsauftrag Punkt 3, woertlich:
+        // "eine Grafik soll so breit sein, wie sie Information traegt").
+        // spalte.reihe/spalte.punkt schliessen sich in jeder Definition
+        // gegenseitig aus (siehe die Kommentare bei kopftafelSkala()
+        // oben), die Unterscheidung ist also eindeutig.
+        const profilUnterart = spalte.art === 'profil' ? (spalte.reihe ? 'profil-reihe' : 'profil-punkt') : null;
+        zelle.className = `kopftafel-grafik kopftafel-grafik-${spalte.art}`
+            + (profilUnterart ? ` kopftafel-grafik-${profilUnterart}` : '');
 
         if (spalte.art === 'struktur') {
             // Gruppenzeilen behalten ihren Strukturbalken: er ist auf
@@ -5898,7 +6088,17 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
                         // sie skalierte jede Zeile auf ihr eigenes
                         // Maximum, zehn Reihen saehen gleich hoch aus und
                         // "small multiples" waeren blosse Zierschriften.
-                        minimum: skala.minimum, maximum: skala.maximum
+                        minimum: skala.minimum, maximum: skala.maximum,
+                        // Mouse-over JE SAEULE (Gestaltungsauftrag Punkt 4,
+                        // woertlich: "eine Saeulenreihe zwoelf Saeulen" -
+                        // je Teil, nicht nur fuer die Reihe insgesamt).
+                        // Optional, weil nicht jeder der sieben Aufrufer
+                        // diese Funktion schon mitgibt (siehe dortige
+                        // Nachtraege) - ohne sie bleibt es beim
+                        // bisherigen Zustand (nur die Gesamt-beschriftung).
+                        titelJeIndex: spalte.beschriftungTeil
+                            ? (index, wert) => spalte.beschriftungTeil(zeile, index, wert)
+                            : null
                     }));
                 }
             } else if (spalte.punkt) {

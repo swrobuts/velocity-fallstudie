@@ -353,7 +353,19 @@ function stationenKopftafel(stationen, verkehr, auslastung) {
                     name: z.name, stunde: stundeText(spitze.index),
                     wert: zahlFormat(spitze.wert, { maximumFractionDigits: 2 })
                 });
-            }
+            },
+            // Mouse-over je Saeule (Gestaltungsauftrag Punkt 4) - siehe die
+            // gleichlautende Begruendung in auswertungen.js. stundeText()
+            // liefert dasselbe "8-10"-Zweistundenfenster, das auch die
+            // Spitzenangabe in der beschriftung oben schon benutzt. Die
+            // Einheit (spalte.einheit, "Abgaenge je Werktag") steht schon
+            // EINMAL im Spaltenkopf (Hichert/IBCS, siehe th.append(einheit)
+            // in kopftafelZeile()) - eine Wiederholung in JEDER der zwoelf
+            // Kurzbeschriftungen waere Laerm, keine zusaetzliche Aussage.
+            beschriftungTeil: (z, index, wert) => t('board.seriesPartPhrase', {
+                teil: `${stundeText(index)} ${t('common.hourAbbrev')}`,
+                wert: zahlFormat(wert, { maximumFractionDigits: 2 })
+            })
         });
     }
 

@@ -577,7 +577,15 @@ function kundenKopftafel(gesamtAnzahl, gesperrtAnzahl, ohneAdresseAnzahl, alleKe
                         max: zahlFormat(hoechster),
                         maxJahr: jahrFormat(jahresachse[reihe.indexOf(hoechster)])
                     });
-                }
+                },
+                // Mouse-over je Saeule (Gestaltungsauftrag Punkt 4) - siehe
+                // die gleichlautende Begruendung in auswertungen.js.
+                // mengeFormat statt einer nackten Zahl: "12 Kunden" ist
+                // derselbe Bezug, den die Rubrikspalte fuer jede Zeile
+                // schon traegt (Tarifgruppe + Anzahl), hier nur je Jahr.
+                beschriftungTeil: (z, index, wert) => t('board.seriesPartPhrase', {
+                    teil: jahrFormat(jahresachse[index]), wert: mengeFormat(wert, 'kunde')
+                })
             },
             {
                 art: 'abweichung',
