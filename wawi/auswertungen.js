@@ -348,7 +348,7 @@ function co2ZelleElement(zeile) {
     const wrapper = document.createElement('span');
     wrapper.append(zahlSkaliert(kgFormat(zeile.co2_ersparnis_kg)));
     const hinweis = document.createElement('span');
-    hinweis.className = 'zahl-nebenteil';
+    hinweis.className = 'zahl-zusatz';
     hinweis.textContent = t('misc.estimatedParen', { prozent: prozentFormat(zeile.anteil_geschaetzt) });
     wrapper.append(hinweis);
     return wrapper;

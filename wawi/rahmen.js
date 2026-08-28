@@ -245,13 +245,6 @@ function jahrFormat(jahr) {
     return zahlFormat(jahr, { useGrouping: false });
 }
 
-function zahlTrennzeichen() {
-    const teile = new Intl.NumberFormat(localeTag()).formatToParts(1234567.5);
-    return {
-        gruppe: teile.find((tl) => tl.type === 'group')?.value || '.',
-        dezimal: teile.find((tl) => tl.type === 'decimal')?.value || ','
-    };
-}
 const UEBERSETZUNGEN = {
   de: {
     "common.cancel": "Abbrechen",
@@ -5910,112 +5903,27 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
 // die Staerke zuruecknimmt.
 const GELTENDE_ZIFFERN = 3;
 
-// Nimmt eine FERTIG formatierte Zahl der AKTUELLEN Sprache entgegen
-// (Trennzeichen schon gesetzt, z. B. von geldFormat()/kgFormat() in
-// auswertungen.js) - das Zerlegen des Zahlenformats gehoert hierher, weil
-// jeder Bereich mit einer eigenen, aehnlichen Formatierungsfunktion
-// dieselbe Aufteilung braucht; WAS gerundet und WELCHE Einheit
-// angehaengt wird, bleibt Sache des Aufrufers.
+// ===== Zahlausgabe =====
 //
-// MEHRSPRACHIGKEIT, ZWEITER FALLSTRICK - EIN VORANGESTELLTES
-// WAEHRUNGSZEICHEN: die vorherige Fassung verlangte per regulaerem
-// Ausdruck, dass die Zahl am ANFANG der Zeichenkette steht (^-?\d...).
-// Intl liefert Euro-Betraege aber in zwei der sechs Sprachen mit dem
-// Zeichen VORNE - en-US "€35,387.17", tr-TR "€35.387,17" (im Browser
-// nachgemessen, siehe Bericht) -, und dort traf das Muster gar nicht
-// mehr zu: JEDER Geldbetrag rutschte in diesen beiden Sprachen
-// unskaliert als Fliesstext durch. Diese Fassung sucht deshalb nicht
-// mehr nach einem Muster ab Zeichenkettenanfang, sondern LIEST die
-// Zeichenkette durch und teilt sie in Vorspann / Ziffernkoerper /
-// Nachspann - das ist unabhaengig davon, auf welcher Seite die Einheit
-// steht.
+// Frueher stand hier eine Hervorhebung einzelner Ziffern: Vorkommastellen
+// kraeftig, Nachkommastellen und Trennzeichen leise - angeblich nach
+// Bissantz. Das war falsch zugeschrieben und ist auf Einwand des
+// Auftraggebers entfernt worden.
 //
-// Kein Ziffernkoerper (ein Text, der gar keine Ziffer enthaelt) gibt den
-// Eingabetext unveraendert als einzelnen Textknoten zurueck - eine
-// typografische Verzierung darf niemals dazu fuehren, dass eine Zahl aus
-// der Tabelle verschwindet, nur weil sie einem erwarteten Muster nicht
-// entspricht.
+// Bissantz'Numbers skaliert die SCHRIFTGROESSE DER GANZEN ZAHL
+// proportional zu ihrem WERT (groesserer Wert, groesser geschriebene
+// Zahl, siehe bissantz.de/news/bissantznumbers). Es zerlegt eine Zahl
+// nie in unterschiedlich betonte Teile. Wer Ziffern verschieden stark
+// setzt, erfindet etwas und beruft sich zu Unrecht auf eine fremde
+// Methode - und liest sich fuer den Betrachter schlicht als Fehler.
+//
+// Eine Zahl wird deshalb einheitlich gesetzt. Die Funktion bleibt
+// bestehen, damit die zwanzig Aufrufstellen unveraendert bleiben und
+// eine spaetere, dann RICHTIGE Groessenskalierung genau einen Ort hat.
 function zahlSkaliert(formatiert) {
-    const text = String(formatiert);
-    const { gruppe: gruppenzeichen, dezimal: dezimalzeichen } = zahlTrennzeichen();
     const spanne = document.createElement('span');
     spanne.className = 'zahl-skaliert';
-
-    const istZiffer = (z) => z >= '0' && z <= '9';
-    const istTrenner = (z) => z === gruppenzeichen || z === dezimalzeichen;
-
-    const ersteZiffer = [...text].findIndex(istZiffer);
-    if (ersteZiffer === -1) { spanne.textContent = text; return spanne; }
-
-    // Der Ziffernkoerper endet beim ersten Zeichen, das weder Ziffer noch
-    // Trennzeichen der aktuellen Sprache ist - alles danach ist Einheit
-    // (" €", " %", " kg"). Bewusst NICHT ueber alle Ziffern der ganzen
-    // Zeichenkette hinweg: bei "30-70 %" waere sonst die 70 Teil desselben
-    // Koerpers und die Zaehlung der geltenden Ziffern liefe ueber zwei
-    // getrennte Zahlen hinweg.
-    let koerperEnde = ersteZiffer;
-    while (koerperEnde < text.length && (istZiffer(text[koerperEnde]) || istTrenner(text[koerperEnde]))) koerperEnde++;
-    // Ein Trennzeichen unmittelbar VOR der Einheit gehoert nicht mehr zur
-    // Zahl (kaeme in keinem heutigen Format vor, waere aber sonst eine
-    // stumme Verschiebung um ein Zeichen).
-    while (koerperEnde > ersteZiffer && istTrenner(text[koerperEnde - 1])) koerperEnde--;
-
-    const leise = (inhalt) => {
-        if (!inhalt) return;
-        const el = document.createElement('span');
-        el.className = 'zahl-nebenteil';
-        el.textContent = inhalt;
-        spanne.append(el);
-    };
-
-    // ----- Vorspann: Vorzeichen stark, Waehrungszeichen und Leerraum leise -----
-    // Zeichenweise getrennt statt in einem Stueck, weil "-€1,234.50"
-    // (en-US, negativ) beides enthaelt und in dieser Reihenfolge.
-    // U+2212 (echtes Minuszeichen) neben dem ASCII-Bindestrich: Intl
-    // liefert je nach Sprache das eine oder das andere.
-    let stapel = '';
-    const stapelLeeren = () => { leise(stapel); stapel = ''; };
-    for (const zeichen of text.slice(0, ersteZiffer)) {
-        if (zeichen === '-' || zeichen === '−' || zeichen === '+') {
-            stapelLeeren();
-            spanne.append(zeichen);
-        } else {
-            stapel += zeichen;
-        }
-    }
-    stapelLeeren();
-
-    // ----- Ziffernkoerper -----
-    // gezaehlt wird ab der ersten Ziffer ungleich null; ist die Zahl
-    // insgesamt null ("0", "0,00"), gibt es keine geltende Ziffer - dann
-    // traegt die erste Null selbst die ganze Aussage und bleibt stark,
-    // statt dass eine Null gaenzlich verblasst.
-    const koerper = text.slice(ersteZiffer, koerperEnde);
-    const hatZifferUngleichNull = [...koerper].some((z) => istZiffer(z) && z !== '0');
-    // Bei einer glatten Null gibt es nichts zu skalieren: die EINE Null
-    // ist die Aussage, jede weitere ("0,00") nur Formatierung.
-    const geltendeGrenze = hatZifferUngleichNull ? GELTENDE_ZIFFERN : 1;
-    let geltendeGesehen = 0;
-    let ersteZifferUngleichNullGesehen = false;
-    for (const zeichen of koerper) {
-        if (!istZiffer(zeichen)) { stapel += zeichen; continue; }        // Trennzeichen: immer leise
-        if (!ersteZifferUngleichNullGesehen && zeichen === '0' && hatZifferUngleichNull) {
-            stapel += zeichen;                                            // fuehrende Null: traegt nichts
-            continue;
-        }
-        ersteZifferUngleichNullGesehen = true;
-        if (geltendeGesehen < geltendeGrenze) {
-            stapelLeeren();
-            spanne.append(zeichen);
-            geltendeGesehen++;
-        } else {
-            stapel += zeichen;                                            // jenseits der geltenden Ziffern
-        }
-    }
-    stapelLeeren();
-
-    // ----- Nachspann: Einheit -----
-    leise(text.slice(koerperEnde));
+    spanne.textContent = formatiert;
     return spanne;
 }
 

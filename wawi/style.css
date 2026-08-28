@@ -3663,12 +3663,14 @@ body.navigation-weg #navigation {
   font-size: var(--grad-3);
 }
 
-/* Bissantz: die tragenden Ziffern bleiben in voller Stärke, Tausender-
-   punkte und Nachkommastellen (samt Einheit) treten zurück. text-leise
-   misst 5.95:1 auf Weiß (siehe Bericht) - über der Untergrenze von 4.5:1
-   für Fließtext, obwohl die Schrift hier kleiner/leiser wirkt als der
-   Hauptteil. */
-.zahl-nebenteil {
+
+/* Nebenangabe NEBEN einer Zahl - etwa "(35 % geschätzt)" hinter der
+   CO2-Ersparnis. Nicht zu verwechseln mit der entfernten Ziffern-
+   hervorhebung: hier steht ein eigener, vollstaendiger Text neben der
+   Zahl, keine zerlegte Zahl. Leiser gesetzt, weil er die Zahl
+   einordnet und nicht mit ihr um Aufmerksamkeit ringen soll -
+   --text-leise misst 5,95:1 und bleibt damit ueber der Textgrenze. */
+.zahl-zusatz {
   color: var(--text-leise);
   font-weight: 400;
 }
