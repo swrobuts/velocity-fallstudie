@@ -49,7 +49,8 @@
 --            - Wird es abgelehnt: entweder GOTRUE_PASSWORD_MIN_LENGTH /
 --              PASSWORD_MIN_LENGTH in der eigenen Docker-Compose-
 --              Konfiguration der Auth-Instanz auf 4 senken, oder ein
---              laengeres Kennwort waehlen (z. B. "demodemo") und dann
+--              laengeres Kennwort waehlen - der Betreiber hat sich fuer "demodemo"
+--              entschieden, und genau das nennt die Anmeldeseite - und dann
 --              den Hinweistext auf der Anmeldeseite entsprechend
 --              anpassen (index.demoHinweis in wawi/rahmen.js, alle
 --              sechs Sprachen).
