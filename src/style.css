@@ -443,8 +443,21 @@ body {
      Seite duenn. 450 ist die kleinste Stufe, die das behebt, ohne dass
      der Text halbfett wirkt; die variable Schrift traegt 100 bis 900,
      also kostet es keine zweite Datei. */
-  font-weight: 500;
-  line-height: 1.55;
+  /* GEWICHT 560 UND EIN HAUCH LAUFWEITE (28.08.2026).
+     Der Betreiber nennt die Schrift zum zweiten Mal duenn, jetzt auch
+     "eng". Nachgemessen ist beides kein Defekt: die Gewichtsachse wirkt
+     (400 ergibt 561, 900 ergibt 669 Punkte Satzbreite), es laeuft
+     wirklich Archivo und nicht die schmale Variante - die waere 470
+     statt 571 -, und Archivo ist sogar minimal breiter als Arial.
+     Es ist also ein Urteil ueber den Schriftschnitt, kein Fehler. Zwei
+     Mal dieselbe Rueckmeldung heisst: eine Stufe weiter reicht nicht.
+     560 statt 500 gibt spuerbar Schwaerze, ohne halbfett zu werden, und
+     acht Tausendstel em oeffnen den Satz, ohne dass man sie als
+     Sperrung liest. Der Zeilenabstand geht von 1,55 auf 1,6 mit -
+     "eng" meint auch den Abstand nach unten, nicht nur zur Seite. */
+  font-weight: 560;
+  letter-spacing: .008em;
+  line-height: 1.6;
   text-rendering: optimizeLegibility;
   /* -webkit-font-smoothing: antialiased ENTFERNT (28.08.2026).
      Die Seite wirkte auf dem Bildschirm des Betreibers duenn, und der
@@ -1231,7 +1244,17 @@ footer :focus-visible, .product-tabs :focus-visible,
    das der Inhalt nicht hat. */
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  /* NACH INHALT, NICHT ZU GLEICHEN TEILEN (28.08.2026).
+     Bei vier gleich breiten Spalten brach "0 Euro" nach der
+     Vergroesserung in zwei Zeilen um - vier gleiche Spalten und eine
+     grosse Zahl schliessen sich aus, denn die laengste Angabe bestimmt,
+     was hineinpasst, und die kuerzeste verschenkt den Rest. Jede Spalte
+     nimmt jetzt, was sie braucht; der uebrige Platz verteilt sich
+     zwischen ihnen. Die Haarlinien sitzen dadurch in ungleichen
+     Abstaenden - das ist richtig so, sie trennen Angaben und teilen
+     nicht eine Flaeche auf. */
+  grid-template-columns: repeat(4, max-content);
+  justify-content: space-between;
   gap: 0;
   margin-bottom: var(--af-l);
   padding: var(--af-s) 0;
@@ -1249,6 +1272,8 @@ footer :focus-visible, .product-tabs :focus-visible,
 .stat:first-child { border-left: 0; padding-left: 0; }
 .stat b {
   color: #fff;
+  /* Bricht nie um: "0 Euro" ist EINE Angabe, keine zwei. */
+  white-space: nowrap;
   font-family: var(--schmal);
   /* Nicht --grad-zahl: auf 78 Punkten war jede der vier Angaben so laut
      wie die Abschnittsueberschrift daneben. Eine Bedingung ist keine
@@ -1257,7 +1282,10 @@ footer :focus-visible, .product-tabs :focus-visible,
      Zahl mehr Groesse, als sie frei auf dem Grund vertragen haette -
      dort haette sie mit der Abschnittsueberschrift konkurriert, hier
      hat sie ihre eigene Flaeche. */
-  font-size: clamp(28px, 2.8vw, 42px);
+  /* Weiter angehoben von 42 auf 52 Punkte: das Band steht jetzt frei
+     auf dem Marineblau statt in einem Kasten, und was frei steht, darf
+     groesser sein - es konkurriert nicht mehr mit einer Rahmung. */
+  font-size: clamp(34px, 3.4vw, 52px);
   font-weight: 800;
   line-height: 1;
   letter-spacing: var(--eng);
@@ -1268,9 +1296,10 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 .stat span {
   color: var(--auf-navy-still);
+  white-space: nowrap;
   /* Mit der Zahl mitgewachsen: ein Etikett auf 11,5 Punkten neben
-     einer 42er Zahl wirkt nicht ruhig, sondern uebersehen. */
-  font: 700 var(--grad-klein)/1.3 var(--mono);
+     einer 52er Zahl wirkt nicht ruhig, sondern uebersehen. */
+  font: 700 15px/1.3 var(--mono);
   letter-spacing: var(--weit);
   text-transform: uppercase;
 }
