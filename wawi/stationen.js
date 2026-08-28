@@ -49,8 +49,11 @@ bereichAnmelden({
     // Dieselben Rollen, die auch v_wawi_station durchlaesst (siehe
     // db/aufbau/0018_wawi_sichten.sql) - waeren sie hier weiter gefasst,
     // saehe etwa die Werkstatt den Menuepunkt und dahinter eine leere
-    // Liste, wie im Flotte-Kommentar begruendet.
-    rollen: ['disposition', 'leitung'],
+    // Liste, wie im Flotte-Kommentar begruendet. 'demo'
+    // (0020_demo_zugang.sql) dazu - auch v_wawi_kundenorte fuer die Karte
+    // ist eine reine Ortszaehlung ohne Personenbezug und laesst 'demo'
+    // seit derselben Aufgabe zu (siehe deren Kommentar).
+    rollen: ['disposition', 'leitung', 'demo'],
     aufbauen: stationenAufbauen,
     // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5) - siehe
     // spaltenkopfSuchtext in rahmen.js. Zehn Stationen sind vollstaendig

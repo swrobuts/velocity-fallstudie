@@ -42,11 +42,23 @@
   <form id="zustand-anmeldung" class="vollbild anmeldung" hidden>
     <h1 data-i18n="index.title">VeloCity Warenwirtschaft</h1>
     <label for="feld-email" data-i18n="index.loginEmail">E-Mail</label>
-    <input id="feld-email" type="email" autocomplete="username" required>
+    <!-- type="text", nicht "email": der Demozugang meldet sich woertlich
+         mit "demo" an (kennungZuEmail() in anmeldung.js bildet das erst
+         serverseitig-nah auf eine technische Adresse ab). Ein
+         <input type="email"> wuerde die Eingabe "demo" schon durch die
+         eingebaute Browser-Validierung ("required"+email-Format) vor dem
+         ersten Tastendruck auf "Anmelden" abweisen - das Feld liesse sich
+         gar nicht erst absenden. -->
+    <input id="feld-email" type="text" autocomplete="username" required>
     <label for="feld-passwort" data-i18n="index.loginPassword">Passwort</label>
     <input id="feld-passwort" type="password" autocomplete="current-password" required>
     <button type="submit" data-i18n="index.loginSubmit">Anmelden</button>
     <p id="anmeldung-fehler" class="fehler" role="alert"></p>
+    <!-- Woertlicher Auftrag: "Das sollte auf der Anmeldeseite stehen."
+         Kurz, keine Anleitung - der Demozugang selbst erklaert sich beim
+         Ausprobieren (siehe rahmen.js fuer die vollstaendige Uebersetzung
+         in allen sechs Sprachen). -->
+    <p class="anmeldung-demo-hinweis" data-i18n="index.demoHinweis">Zum Ausprobieren: Anmeldung „demo“, Kennwort „demo“ – nur Lesen, keine Änderungen.</p>
   </form>
 
   <div id="zustand-kein-mitarbeiter" class="vollbild" hidden>

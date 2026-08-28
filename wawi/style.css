@@ -868,6 +868,17 @@ a.wortmarke-link:active {
   margin: var(--raum-1) 0 0;
 }
 
+/* Demozugang-Hinweis auf der Anmeldeseite (woertlicher Auftrag: "Das
+   sollte auf der Anmeldeseite stehen"). Derselbe Rang wie eine
+   Fussnote - Beiwerk zur Anmeldemaske, kein Fehler und keine Warnung,
+   deshalb --text-leise statt --schlecht wie bei .fehler direkt darueber. */
+.anmeldung-demo-hinweis {
+  margin: var(--raum-2) 0 0;
+  font-size: var(--grad-2);
+  line-height: 1.45;
+  color: var(--text-leise);
+}
+
 /* Gemeinsames Aussehen für die Abmelden-Knöpfe der beiden
    Hinweiszustände (kein Mitarbeiter / Mitarbeiter ohne Rolle) - in
    beiden ist er der einzige Ausweg. */

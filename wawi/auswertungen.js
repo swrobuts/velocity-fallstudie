@@ -57,7 +57,16 @@ bereichAnmelden({
     // nur eine der beiden von den dahinterliegenden Funktionen
     // akzeptiert): hier ist der Bereich ENGER als die Sicht erlaubt, mit
     // Absicht und aus einem im Kommentar der Sicht selbst genannten Grund.
-    rollen: ['leitung'],
+    //
+    // 'demo' (0020_demo_zugang.sql) kommt dazu: drei der vier
+    // zugrundeliegenden Sichten lassen sie inzwischen zu. Die vierte,
+    // v_wawi_km_co2, ausdruecklich NICHT (siehe deren Kommentar in
+    // 0018_wawi_sichten.sql: sie liest FROM v_wawi_fahrt_km, deren eigene
+    // Schranke unveraendert nur 'leitung' zulaesst) - der Reiter
+    // "Kilometer und CO2" wird deshalb weiter unten in
+    // auswertungenAufbauen() eigens fuer 'demo' ausgeblendet, statt eine
+    // leere Tafel zu zeigen.
+    rollen: ['leitung', 'demo'],
     aufbauen: auswertungenAufbauen,
     // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5) - siehe
     // spaltenkopfSuchtext in rahmen.js. Alle vier Reiter laden ihre
@@ -89,12 +98,31 @@ async function auswertungenAufbauen() {
     // beschreiben.
     const vorgang = neuerVorgang();
 
-    zeigeUnterreiter(vorgang, [
+    // "Was jemand nicht darf, wird nicht angezeigt" (siehe
+    // navigationAufbauen() in rahmen.js) gilt hier auch UNTERHALB der
+    // Bereichsebene: v_wawi_km_co2 bleibt fuer 'demo' leer (siehe
+    // Kommentar bei bereichAnmelden() oben), also fehlt der Reiter
+    // "Kilometer und CO2" fuer 'demo' ganz - eine leere Tafel saehe wie
+    // ein Ladefehler aus, ein fehlender Reiter nicht.
+    const reiter = [
         { schluessel: 'umsatz_radtyp',       titel: t('tab.revenueByBikeType') },
         { schluessel: 'umsatz_kundengruppe', titel: t('tab.revenueByCustomerGroup') },
         { schluessel: 'km_co2',              titel: t('tab.kmCo2') },
         { schluessel: 'stationsauslastung',  titel: t('tab.stationOccupancy') }
-    ], auswertungenReiter, async (gewaehlt) => {
+    ].filter((r) => r.schluessel !== 'km_co2' || darfRolle('leitung'));
+
+    // Ein Konto, das gerade erst von 'leitung' auf 'demo' herabgestuft
+    // wurde (oder umgekehrt frisch eingerichtet ist), koennte
+    // auswertungenReiter noch auf 'km_co2' stehen haben, obwohl der
+    // Reiter jetzt fehlt - derselbe Fall wie ein Bereichswechsel mit
+    // veralteter Detailmaske. Faellt hier zurueck auf den ersten
+    // verbliebenen Reiter, statt eine Tafel zu einem Reiter zu zeigen,
+    // den die Kopfzeile gar nicht mehr anbietet.
+    if (!reiter.some((r) => r.schluessel === auswertungenReiter)) {
+        auswertungenReiter = reiter[0].schluessel;
+    }
+
+    zeigeUnterreiter(vorgang, reiter, auswertungenReiter, async (gewaehlt) => {
         auswertungenReiter = gewaehlt;
         // Dieselbe Begründung wie in instandhaltung.js: ohne dies
         // bliebe die Detailmaske des VORHERIGEN Reiters stehen - eine

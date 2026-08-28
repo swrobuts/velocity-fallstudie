@@ -44,7 +44,19 @@
 --             erweitern" ergaenzt v_wawi_kunde um letzte_ausleihe_am/
 --             letzte_ausleihe_laeuft (Punkt 1: "Letzte Ausleihe am" fehlte
 --             ganz in der Sicht, "Kunde seit" gab es schon als
---             registriert_am, stand nur nicht in der Kundenliste).
+--             registriert_am, stand nur nicht in der Kundenliste). Der
+--             Demozugang (0020_demo_zugang.sql) ergaenzt in JEDER WHERE-
+--             Klausel dieser Datei bis auf ZWEI ein zusaetzliches
+--             "or velocity.hat_rolle('demo')". Die erste Ausnahme ist
+--             v_wawi_kunde, siehe deren eigener Kommentar fuer die
+--             Begruendung (Personendaten hinter einem oeffentlich
+--             beworbenen Kennwort). Die zweite ist v_wawi_km_co2 - dort
+--             keine Datenschutzfrage, sondern strukturell wirkungslos,
+--             weil sie FROM v_wawi_fahrt_km liest, deren eigene
+--             WHERE-Klausel unveraendert nur 'leitung' zulaesst (siehe
+--             deren beider Kommentare). v_wawi_fahrt_km selbst bleibt
+--             unveraendert: fuer authenticated ohnehin vollstaendig
+--             gesperrt (siehe deren Kommentar weiter unten).
 -- =====================================================================
 
 -- Luftlinie nach Haversine, ohne PostGIS - dieselbe Entscheidung wie
@@ -121,12 +133,19 @@ select f.fahrrad_id,
   left join velocity.station          s  on s.station_id  = fp.station_id
  where velocity.hat_rolle('disposition')
     or velocity.hat_rolle('werkstatt')
-    or velocity.hat_rolle('leitung');
+    or velocity.hat_rolle('leitung')
+    -- Demozugang (0020_demo_zugang.sql): 'demo' ist keine Fachrolle,
+    -- sondern ein rein lesender Vorfuehrzugang, siehe dortiger
+    -- Kopfkommentar fuer die Begruendung. Kein Widerspruch zu GR16/GR17:
+    -- diese Sicht traegt keine Personendaten, nur Flottendaten.
+    or velocity.hat_rolle('demo');
 
 comment on view velocity.v_wawi_flotte is
   'Arbeitssicht der Flotte für Disposition und Werkstatt: ein Rad je Zeile mit '
   'Standort, Wartungshistorie und dem dringlichsten offenen Schaden. Filtert '
-  'selbst über velocity.hat_rolle, siehe Kopfkommentar der Datei.';
+  'selbst über velocity.hat_rolle, siehe Kopfkommentar der Datei. Seit dem '
+  'Demozugang zusätzlich für velocity.hat_rolle(''demo'') lesbar (siehe '
+  '0020_demo_zugang.sql) - keine Personendaten in dieser Sicht.';
 comment on column velocity.v_wawi_flotte.fahrrad_id is
   'Schlüssel des Rades, für Verweise in die Werkstatt- und Auftragssichten.';
 comment on column velocity.v_wawi_flotte.rahmennummer is
@@ -249,7 +268,16 @@ comment on view velocity.v_wawi_kunde is
   'Arbeitssicht des Kundenservice: Stammdaten, laufender Tarif und Kontostand '
   'je Kunde. Bewusst ohne einzelne Fahrten (Bewegungsprofil), ohne '
   'Zahlungsmittel (GR17) und ohne alles aus dem Schema auth - was niemand '
-  'braucht, wird nicht ausgeliefert. Filtert selbst über velocity.hat_rolle.';
+  'braucht, wird nicht ausgeliefert. Filtert selbst über velocity.hat_rolle. '
+  'EINZIGE der 15 fuer authenticated freigegebenen v_wawi_-Sichten OHNE '
+  'velocity.hat_rolle(''demo'') (siehe 0020_demo_zugang.sql): sie fuehrt Name, '
+  'E-Mail, Telefon und Anschrift von ueber 1000 Personen. Ein Zugang mit einem '
+  'auf der Anmeldeseite oeffentlich genannten Kennwort darf diese Liste nicht '
+  'sehen, auch wenn die Personen hier erfunden sind - dieselbe Datensparsamkeit '
+  '(Art. 5 Abs. 1 lit. c DSGVO), die v_wawi_kundenorte weiter unten schon fuer '
+  'disposition durchsetzt (Kunden nur als Zaehlung je Ort, nie als '
+  'Einzelperson). Der Kundenservice-Bereich der Oberflaeche bleibt fuer ''demo'' '
+  'deshalb ausdruecklich verborgen, nicht nur ausgegraut (wawi/kunden.js).';
 comment on column velocity.v_wawi_kunde.kunde_id is
   'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_kunde.kundennummer is
@@ -321,6 +349,7 @@ select s.station_id,
   left join velocity.fahrrad_position fp on fp.station_id = s.station_id
  where velocity.hat_rolle('disposition')
     or velocity.hat_rolle('leitung')
+    or velocity.hat_rolle('demo')
  group by s.station_id, s.stationsnummer, s.name, a.strasse, a.hausnummer,
           a.plz, a.ort, s.latitude, s.longitude, s.kapazitaet, s.betriebszeitraum;
 
@@ -328,7 +357,8 @@ comment on view velocity.v_wawi_station is
   'Arbeitssicht der Disposition: Kapazitaet und Belegung je Station, samt '
   'stillgelegter Stationen (GR22 - eine Station wird stillgelegt, nicht '
   'gelöscht, deshalb bleibt sie hier sichtbar statt zu verschwinden). '
-  'Filtert selbst über velocity.hat_rolle.';
+  'Filtert selbst über velocity.hat_rolle. Seit dem Demozugang zusätzlich für '
+  'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql).';
 comment on column velocity.v_wawi_station.station_id is
   'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_station.stationsnummer is
@@ -382,12 +412,15 @@ select sm.schadensmeldung_id,
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id = mo.typ_id
  where velocity.hat_rolle('werkstatt')
-    or velocity.hat_rolle('leitung');
+    or velocity.hat_rolle('leitung')
+    or velocity.hat_rolle('demo');
 
 comment on view velocity.v_wawi_schaden is
   'Arbeitssicht der Werkstatt: jede Schadensmeldung mit Rad, Schwere und '
   'Alter, unabhängig vom Bearbeitungsstand. Filtert selbst über '
-  'velocity.hat_rolle. Bewusst OHNE disposition (Spec 5.1 nennt nur '
+  'velocity.hat_rolle. Seit dem Demozugang zusätzlich für '
+  'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql). Bewusst OHNE '
+  'disposition (Spec 5.1 nennt nur '
   'werkstatt) - Gesamtprüfung Punkt 3: die Disposition sieht ihren Bedarf '
   'für die Flottenplanung, offene Schäden je Rad, bereits über '
   'v_wawi_flotte.offene_schaeden und .hoechste_schwere. Freitext '
@@ -440,11 +473,14 @@ select w.wartungsauftrag_id,
   join velocity.fahrrad f on f.fahrrad_id = w.fahrrad_id
   left join velocity.mitarbeiter m on m.mitarbeiter_id = w.mitarbeiter_id
  where velocity.hat_rolle('werkstatt')
-    or velocity.hat_rolle('leitung');
+    or velocity.hat_rolle('leitung')
+    or velocity.hat_rolle('demo');
 
 comment on view velocity.v_wawi_auftrag is
   'Arbeitssicht der Werkstatt: jeder Wartungsauftrag mit Rad, Bearbeiter und '
-  'Bearbeitungsstand. Filtert selbst über velocity.hat_rolle.';
+  'Bearbeitungsstand. Filtert selbst über velocity.hat_rolle. Seit dem '
+  'Demozugang zusätzlich für velocity.hat_rolle(''demo'') lesbar '
+  '(0020_demo_zugang.sql).';
 comment on column velocity.v_wawi_auftrag.wartungsauftrag_id is
   'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_auftrag.auftragsnummer is
@@ -516,7 +552,7 @@ select date_trunc('month', a.startzeit)::date              as monat,
    -- Disposition sie fuer die taegliche Arbeit, beim Umsatz nicht. Der
    -- erste Entwurf liess disposition hier zusaetzlich zu; das war ein
    -- Rechteueberschuss, keine Vereinfachung.
-   and velocity.hat_rolle('leitung')
+   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
  group by 1, 2, 3;
 
 comment on view velocity.v_wawi_umsatz_radtyp is
@@ -524,7 +560,9 @@ comment on view velocity.v_wawi_umsatz_radtyp is
   'reserviert Auswertungen für diese Rolle, disposition bekommt nur die '
   'Stationsauslastung. sum(ep.betrag) ohne zweite Multiplikation mit '
   'vorzeichen - siehe Kommentar am create view. Filtert selbst über '
-  'velocity.hat_rolle.';
+  'velocity.hat_rolle. Seit dem Demozugang zusätzlich für '
+  'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql) - eine '
+  'Monatsaggregation ohne Personenbezug.';
 comment on column velocity.v_wawi_umsatz_radtyp.monat is
   'Erster Tag des Monats der Fahrt (startzeit), Gruppierungsschlüssel für '
   'einen Zeitverlauf statt einer bedeutungslosen Jahressumme.';
@@ -563,7 +601,7 @@ select date_trunc('month', a.startzeit)::date   as monat,
   left join velocity.mitgliedschaft m on m.mitgliedschaft_id = a.mitgliedschaft_id
   left join velocity.tarif         tr on tr.tarif_id = m.tarif_id
  where a.status = 'abgeschlossen'
-   and velocity.hat_rolle('leitung')
+   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
  group by 1, 2, 3;
 
 comment on view velocity.v_wawi_umsatz_kundengruppe is
@@ -571,7 +609,9 @@ comment on view velocity.v_wawi_umsatz_kundengruppe is
   'Zeitpunkt der Fahrt (a.mitgliedschaft_id), nicht der heutige - siehe '
   'Kommentar am create view. sum(ep.betrag) ohne zweite Multiplikation mit '
   'vorzeichen, wie bei v_wawi_umsatz_radtyp. Filtert selbst über '
-  'velocity.hat_rolle.';
+  'velocity.hat_rolle. Seit dem Demozugang zusätzlich für '
+  'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql) - eine '
+  'Gruppenaggregation (Tarifgruppe je Monat), kein Einzelkunde.';
 comment on column velocity.v_wawi_umsatz_kundengruppe.monat is
   'Erster Tag des Monats der Fahrt.';
 comment on column velocity.v_wawi_umsatz_kundengruppe.tarif_code is
@@ -704,6 +744,22 @@ select date_trunc('month', k.startzeit)::date as monat,
    -- Gesamtpruefung dieselbe hat_rolle('leitung')-Schranke inzwischen
    -- selbst; die Zeile hier bleibt trotzdem stehen, statt sich darauf
    -- zu verlassen.
+   -- KEIN "or velocity.hat_rolle('demo')" hier, anders als bei den
+   -- anderen Auswertungssichten (0020_demo_zugang.sql) - nachgemessen
+   -- WIRKUNGSLOS gewesen waere es ohnehin: diese Sicht liest FROM
+   -- velocity.v_wawi_fahrt_km, und deren EIGENE WHERE-Klausel verlangt
+   -- unveraendert 'leitung' (siehe deren Kommentar). Der Filter dort
+   -- greift fuer JEDEN Aufrufer, unabhaengig davon, was hier steht -
+   -- v_wawi_km_co2 aus Sicht ihres Eigentuemers postgres liest
+   -- v_wawi_fahrt_km zwar mit dessen RECHTEN (kein "permission denied"),
+   -- aber velocity.hat_rolle() darin wertet trotzdem auth.uid() DES
+   -- AUFRUFERS aus, nicht das des Eigentuemers - ein "or hat_rolle('demo')"
+   -- an dieser Stelle haette dennoch fuer die reine demo-Rolle null
+   -- Zeilen geliefert, aber vorgetaeuscht, das laege an fehlenden Daten
+   -- statt an einer Rechteschranke. tests/t0020_demo_zugang.sql prueft
+   -- das leer sein fuer 'demo' deshalb ausdruecklich mit, und
+   -- wawi/auswertungen.js blendet den Reiter "Kilometer und CO2"
+   -- fuer 'demo' konsequent aus, statt eine leere Tafel zu zeigen.
    and velocity.hat_rolle('leitung')
  group by 1, 2;
 
@@ -716,7 +772,12 @@ comment on view velocity.v_wawi_fahrt_km is
   'ausdrücklich nur der Leitung, nicht jeder Fachrolle. Der frühere Stand '
   'begründete das Fehlen der eigenen Schranke mit demselben Satz, der hier '
   'jetzt für das Gegenteil steht: eine Sicht, die ihre Schranke von einer '
-  'anderen erbt, hat keine eigene.';
+  'anderen erbt, hat keine eigene. Traegt AUS DEMSELBEN GRUND KEIN '
+  'velocity.hat_rolle(''demo'') (0020_demo_zugang.sql) - ohnehin fuer '
+  'authenticated vollstaendig entzogen (siehe unten), aber selbst fuer den '
+  'einzigen verbleibenden Zugriffsweg ueber v_wawi_km_co2 waere ein '
+  'Bewegungsprofil das Letzte, was ein oeffentlich beworbener Zugang lesen '
+  'darf.';
 comment on column velocity.v_wawi_fahrt_km.ausleihe_id is
   'Schlüssel der Fahrt, für den Verweis aus v_wawi_km_co2 auf die einzelne '
   'Ausleihe hinter der Aggregation.';
@@ -752,7 +813,12 @@ comment on view velocity.v_wawi_km_co2 is
   'CO2-Ersparnis gegenüber dem Pkw, ausschliesslich für die Leitung - eigener '
   'Rollenfilter (hat_rolle(''leitung'')), nicht nur geerbt aus '
   'v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt gehören in jede '
-  'Darstellung dieser Zahl.';
+  'Darstellung dieser Zahl. OHNE velocity.hat_rolle(''demo'') (0020_demo_zugang.sql), '
+  'anders als die uebrigen Auswertungssichten - nicht aus Datenschutzgruenden '
+  '(die Zahlen hier sind eine Monatsaggregation ohne Personenbezug), sondern '
+  'weil es wirkungslos waere: diese Sicht liest FROM v_wawi_fahrt_km, deren '
+  'eigene WHERE-Klausel fuer JEDEN Aufrufer ''leitung'' verlangt - siehe '
+  'Kopfkommentar am create view fuer die nachgemessene Begruendung.';
 comment on column velocity.v_wawi_km_co2.monat is
   'Erster Tag des Monats der Fahrt (v_wawi_fahrt_km.startzeit).';
 comment on column velocity.v_wawi_km_co2.typ_code is
@@ -810,13 +876,15 @@ select s.station_id,
                where fp.station_id = s.station_id)::numeric
              / nullif(s.kapazitaet, 0), 3)                                       as fuellstand
   from velocity.station s
- where velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung');
+ where velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung')
+    or velocity.hat_rolle('demo');
 
 comment on view velocity.v_wawi_stationsauslastung is
   'Zu- und Abgaenge sowie aktueller Fuellstand je Station, für Disposition '
   'und Leitung. Zählt ausschliesslich abgeschlossene Ausleihen - eine '
   'laufende Fahrt hat an ihrer Endstation noch keinen Zugang. Filtert selbst '
-  'über velocity.hat_rolle.';
+  'über velocity.hat_rolle. Seit dem Demozugang zusätzlich für '
+  'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql).';
 comment on column velocity.v_wawi_stationsauslastung.station_id is
   'Schlüssel der Station.';
 comment on column velocity.v_wawi_stationsauslastung.stationsnummer is
@@ -887,10 +955,11 @@ select mo.modell_id,
   join velocity.hersteller    h on h.hersteller_id = mo.hersteller_id
   join velocity.fahrradtyp    t on t.typ_id        = mo.typ_id
  where velocity.hat_rolle('disposition')
-    or velocity.hat_rolle('leitung');
+    or velocity.hat_rolle('leitung')
+    or velocity.hat_rolle('demo');
 
 comment on view velocity.v_wawi_modell is
-  'Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_rad_anlegen eine modell_id verlangt und keine Sicht sie herausgab.';
+  'Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_rad_anlegen eine modell_id verlangt und keine Sicht sie herausgab. Seit dem Demozugang zusätzlich für velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql) - der Demozugang liest die Auswahlliste ohnehin nie schreibend weiter, siehe dort.';
 comment on column velocity.v_wawi_modell.modell_id is
   'Schlüssel des Modells, der Wert, den api_rad_anlegen als p_modell_id erwartet.';
 comment on column velocity.v_wawi_modell.hersteller is
@@ -981,7 +1050,7 @@ select date_trunc('day', a.startzeit)::date as tag,
        count(distinct a.ausleihe_id)        as fahrten
   from velocity.ausleihe a
  where a.status = 'abgeschlossen'
-   and velocity.hat_rolle('leitung')
+   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
  group by 1;
 
 comment on view velocity.v_wawi_fahrten_je_tag is
@@ -991,7 +1060,9 @@ comment on view velocity.v_wawi_fahrten_je_tag is
   'Bewegungsprofil, anders als v_wawi_fahrt_km (siehe deren Kopfkommentar). '
   'Bewusst ohne Radtyp-Spalte, siehe Kommentar am create view. Filtert selbst '
   'über velocity.hat_rolle(''leitung''), dieselbe Rolle wie die drei '
-  'Monatssichten, aus denen heraus der Drill-Down aufgerufen wird.';
+  'Monatssichten, aus denen heraus der Drill-Down aufgerufen wird. Seit dem '
+  'Demozugang zusätzlich für velocity.hat_rolle(''demo'') lesbar '
+  '(0020_demo_zugang.sql).';
 comment on column velocity.v_wawi_fahrten_je_tag.tag is
   'Kalendertag der Fahrt (startzeit), die x-Achse der Säulengrafik. Ein Tag '
   'ohne abgeschlossene Fahrt taucht hier NICHT als Zeile auf - die Oberfläche '
@@ -1098,7 +1169,8 @@ select date_trunc('day', a.startzeit)::date as tag,
          on tempo.code = 'reisegeschwindigkeit'
         and tempo.gueltigkeit @> a.startzeit::date
  where a.status = 'abgeschlossen'
-   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('disposition'));
+   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('disposition')
+     or velocity.hat_rolle('demo'));
 
 comment on view velocity.v_wawi_fahrten_je_tag_rad is
   'Dritte Ebene des Drill-Downs (Monat -> Tag -> Räder): jede an einem Tag '
@@ -1110,7 +1182,8 @@ comment on view velocity.v_wawi_fahrten_je_tag_rad is
   'hat_rolle(''leitung'')-Schranke würde disposition sonst ungewollt '
   'ausschließen) - die Kilometerformel steht deshalb ein zweites Mal hier. '
   'Filtert selbst über velocity.hat_rolle(''leitung'') oder '
-  'velocity.hat_rolle(''disposition'').';
+  'velocity.hat_rolle(''disposition''). Seit dem Demozugang zusätzlich für '
+  'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql).';
 comment on column velocity.v_wawi_fahrten_je_tag_rad.tag is
   'Kalendertag der Fahrt (startzeit) - derselbe Wert wie '
   'v_wawi_fahrten_je_tag.tag, hier je Fahrt statt aggregiert. Für die '
@@ -1201,7 +1274,8 @@ select fp.station_id,
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
  where fp.station_id is not null
-   and (velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung'));
+   and (velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung')
+     or velocity.hat_rolle('demo'));
 
 comment on view velocity.v_wawi_station_flotte is
   'Welche Raeder stehen an welcher Station (Gestaltungsauftrag Stationen, Punkt '
@@ -1210,7 +1284,8 @@ comment on view velocity.v_wawi_station_flotte is
   'traegt (siehe Kopfkommentar am create view). Nur Raeder MIT Station '
   '(fp.station_id is not null) - ein Rad auf freier Ausleihe gehoert in keine '
   'Stationsdetailmaske. Filtert selbst ueber velocity.hat_rolle, dieselben '
-  'Rollen wie v_wawi_station.';
+  'Rollen wie v_wawi_station, seit dem Demozugang zusaetzlich '
+  'velocity.hat_rolle(''demo'') (0020_demo_zugang.sql).';
 comment on column velocity.v_wawi_station_flotte.station_id is
   'Schluessel der Station, der Filterschluessel dieser Sicht (station_id=eq.<id>).';
 comment on column velocity.v_wawi_station_flotte.fahrrad_id is
@@ -1369,7 +1444,8 @@ select r.station_id,
                        and ab.zeitfenster_start_stunde = r.zeitfenster_start_stunde
   left join zugaenge zu on zu.station_id = r.station_id and zu.wochentyp = r.wochentyp
                        and zu.zeitfenster_start_stunde = r.zeitfenster_start_stunde
- where velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung');
+ where velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung')
+    or velocity.hat_rolle('demo');
 
 comment on view velocity.v_wawi_stationsverkehr_zeitfenster is
   'Zu- und Abgang je Station in Zweistundenbloecken, getrennt nach Werktag und '
@@ -1378,7 +1454,8 @@ comment on view velocity.v_wawi_stationsverkehr_zeitfenster is
   'fuer die nachgemessene Begruendung von Blockgroesse, Wochentagstrennung und '
   'Mittelungszeitraum. Aggregat ohne Personenbezug: keine ausleihe_id, keine '
   'kunde_id, kein Kalendertag. Filtert selbst ueber velocity.hat_rolle, '
-  'dieselben Rollen wie v_wawi_stationsauslastung.';
+  'dieselben Rollen wie v_wawi_stationsauslastung, seit dem Demozugang '
+  'zusaetzlich velocity.hat_rolle(''demo'') (0020_demo_zugang.sql).';
 comment on column velocity.v_wawi_stationsverkehr_zeitfenster.station_id is
   'Schluessel der Station.';
 comment on column velocity.v_wawi_stationsverkehr_zeitfenster.name is
@@ -1531,7 +1608,8 @@ select a.ort,
   from velocity.kunde k
   join velocity.adresse a on a.adresse_id = k.rechnungsadresse_id
   left join velocity.ort_koordinate ok on ok.ort = a.ort
- where velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung')
+ where (velocity.hat_rolle('disposition') or velocity.hat_rolle('leitung')
+     or velocity.hat_rolle('demo'))
  group by a.ort, ok.latitude, ok.longitude;
 
 comment on view velocity.v_wawi_kundenorte is
@@ -1539,7 +1617,10 @@ comment on view velocity.v_wawi_kundenorte is
   '(Gestaltungsauftrag Stationen, Punkt 4). Absichtlich ohne kunde_id, Name oder '
   'Adresse - siehe der ausfuehrliche Kopfkommentar am create view fuer die '
   'Begruendung, warum eine Zaehlung je Ort zulaessig ist, wo ein Punkt je Person '
-  'es nicht waere. Filtert selbst ueber velocity.hat_rolle.';
+  'es nicht waere. Filtert selbst ueber velocity.hat_rolle, seit dem Demozugang '
+  'zusaetzlich velocity.hat_rolle(''demo'') (0020_demo_zugang.sql) - dieselbe '
+  'Aggregation, die auch fuer disposition schon die Grenze zieht, gilt fuer '
+  '''demo'' identisch, deshalb KEIN Widerspruch zum Ausschluss von v_wawi_kunde.';
 comment on column velocity.v_wawi_kundenorte.ort is
   'Ortsname laut Rechnungsadresse.';
 comment on column velocity.v_wawi_kundenorte.latitude is

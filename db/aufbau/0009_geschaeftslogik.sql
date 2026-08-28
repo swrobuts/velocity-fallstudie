@@ -17,6 +17,21 @@
 -- Parameter. api_* ist eine duenne Huelle mit SECURITY DEFINER, die aus
 -- auth.uid() die kunde_id aufloest. Nur api_* wird der Anwendung
 -- freigegeben. Damit ist die Fachlogik ohne Anmeldung testbar.
+--
+-- Nachtrag (0020_demo_zugang.sql): die vier api_-Funktionen der
+-- Zugriffsschicht ganz unten in dieser Datei pruefen nur "ist ueberhaupt
+-- jemand angemeldet", keine Mitarbeiterrolle - fuer jeden gewoehnlichen
+-- Mitarbeiter richtig (er darf privat auch Kunde sein), fuer den
+-- Demozugang mit oeffentlich auf der Anmeldeseite genanntem Kennwort ein
+-- Scheunentor: api_kunde_sicherstellen() wuerde beim ersten Aufruf einen
+-- echten Kundensatz anlegen, und von da an schrieben auch die anderen
+-- drei. Alle vier tragen deshalb seither velocity.hat_rolle('demo') als
+-- ersten Wächter - siehe dort. Der Verweis auf eine Funktion aus
+-- 0017_wawi_sicherheit.sql, das nach dieser Datei laeuft, ist
+-- unschaedlich: eine plpgsql-Funktion wird beim Anlegen nicht gegen die
+-- Existenz aufgerufener Funktionen geprueft, erst beim ersten
+-- tatsaechlichen Aufruf - und der liegt immer nach einem vollstaendigen
+-- Durchlauf von db/aufbau/*.sql.
 -- =====================================================================
 
 create or replace function velocity.fn_kunde_aus_auth()
@@ -396,6 +411,17 @@ declare
   v_neu   boolean := false;
   v_vorhanden boolean;
 begin
+  -- Demozugang (0020_demo_zugang.sql), allererste Pruefung: diese
+  -- Funktion legt bei Bedarf einen KUNDENSATZ zum angemeldeten Konto an
+  -- - fuer ein oeffentlich beworbenes Kennwort ("demo"/"demo" auf der
+  -- Anmeldeseite) waere das die stille Eroeffnung eines echten
+  -- Kundenkontos durch jeden, der es auf bikes.butscher.cloud probiert.
+  -- velocity.hat_rolle prueft nur, ob DIESES auth.uid ein Mitarbeiter
+  -- mit der Rolle 'demo' ist - fuer jeden echten Kunden bleibt sie
+  -- false und diese Zeile wirkungslos.
+  if velocity.hat_rolle('demo') then
+    raise exception 'Demozugang: nur Lesen, kein Kundenkonto' using errcode = '42501';
+  end if;
   if v_uid is null then
     raise exception 'Nicht angemeldet' using errcode = '28000';
   end if;
@@ -490,6 +516,10 @@ declare
   v_kunde   bigint := velocity.fn_kunde_aus_auth();
   v_adresse bigint;
 begin
+  -- Demozugang, siehe Begruendung bei api_kunde_sicherstellen() oben.
+  if velocity.hat_rolle('demo') then
+    raise exception 'Demozugang: nur Lesen, kein Profil aenderbar' using errcode = '42501';
+  end if;
   if v_kunde is null then
     return query select 'Nicht angemeldet'::text; return;
   end if;
@@ -530,6 +560,10 @@ as $$
 declare
   v_kunde bigint := velocity.fn_kunde_aus_auth();
 begin
+  -- Demozugang, siehe Begruendung bei api_kunde_sicherstellen() oben.
+  if velocity.hat_rolle('demo') then
+    raise exception 'Demozugang: nur Lesen, keine Ausleihe' using errcode = '42501';
+  end if;
   if v_kunde is null then
     return query select null::bigint, 'Nicht angemeldet'::text; return;
   end if;
@@ -551,6 +585,10 @@ as $$
 declare
   v_kunde bigint := velocity.fn_kunde_aus_auth();
 begin
+  -- Demozugang, siehe Begruendung bei api_kunde_sicherstellen() oben.
+  if velocity.hat_rolle('demo') then
+    raise exception 'Demozugang: nur Lesen, keine Rueckgabe' using errcode = '42501';
+  end if;
   if v_kunde is null then
     return query select null::numeric, null::integer, 'Nicht angemeldet'::text; return;
   end if;

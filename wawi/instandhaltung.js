@@ -42,8 +42,10 @@ bereichAnmelden({
     // Dieselben Rollen, die auch v_wawi_schaden und v_wawi_auftrag
     // durchlassen (0018_wawi_sichten.sql) - waeren sie hier weiter
     // gefasst, saehe etwa die Disposition den Menuepunkt und dahinter
-    // eine leere Liste, wie im Flotte-Kommentar begruendet.
-    rollen: ['werkstatt', 'leitung'],
+    // eine leere Liste, wie im Flotte-Kommentar begruendet. 'demo'
+    // (0020_demo_zugang.sql) dazu, aus demselben Grund wie dort - die
+    // Meldeknoepfe bleiben ihr ueber darfRolle('werkstatt') verwehrt.
+    rollen: ['werkstatt', 'leitung', 'demo'],
     aufbauen: instandhaltungAufbauen,
     // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5) - siehe
     // spaltenkopfSuchtext in rahmen.js. Beide Unterreiter laden ihre

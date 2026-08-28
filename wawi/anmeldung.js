@@ -33,8 +33,26 @@ function beiAnmeldungsWechsel(rueckruf) {
     wechselRueckrufe.push(rueckruf);
 }
 
-async function anmelden(email, passwort) {
-    const { error } = await supabaseClient.auth.signInWithPassword({ email, password: passwort });
+// Supabase verlangt fuer die Anmeldung eine E-Mail-Adresse; "demo" allein
+// waere keine. Die Anmeldemaske (index.html) traegt das Feld deshalb als
+// einfaches Textfeld statt als <input type="email">, und GENAU der Wert
+// "demo" - nach Trimmen und Kleinschreibung, EXAKTER Vergleich, kein
+// Praefix-Test - wird hier auf die technische Adresse aus
+// WAWI_CONFIG.demoEmail abgebildet. Ein Praefix-Test (etwa
+// eingabe.startsWith('demo')) wuerde eine echte Adresse wie
+// "demo.mueller@thws.de" faelschlich auf den Demozugang umbiegen -
+// deshalb ausschliesslich Gleichheit nach der Normalisierung, nichts
+// Unschaerferes.
+function kennungZuEmail(eingabe) {
+    const bereinigt = (eingabe ?? '').trim();
+    return bereinigt.toLowerCase() === 'demo' ? WAWI_CONFIG.demoEmail : bereinigt;
+}
+
+async function anmelden(kennung, passwort) {
+    const { error } = await supabaseClient.auth.signInWithPassword({
+        email: kennungZuEmail(kennung),
+        password: passwort
+    });
     if (error) {
         throw new Error(error.message.includes('Invalid login')
             ? 'E-Mail oder Passwort stimmen nicht.'

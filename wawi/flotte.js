@@ -22,8 +22,12 @@ bereichAnmelden({
     // Dieselben Rollen, die auch v_wawi_flotte durchlaesst. Waeren sie
     // hier weiter gefasst, saehe ein Werkstattmitarbeiter den Menuepunkt
     // und dahinter eine leere Liste - der schlechteste aller Zustaende,
-    // weil er wie ein Fehler aussieht und keiner ist.
-    rollen: ['disposition', 'werkstatt', 'leitung'],
+    // weil er wie ein Fehler aussieht und keiner ist. 'demo'
+    // (0020_demo_zugang.sql) dazu: die Sicht laesst sie seit dem
+    // Demozugang zusaetzlich zu, und die schreibenden Knoepfe dieses
+    // Bereichs bleiben ihr trotzdem verwehrt - sie haengen an
+    // darfRolle('disposition')/('werkstatt'), keine davon ist 'demo'.
+    rollen: ['disposition', 'werkstatt', 'leitung', 'demo'],
     aufbauen: flotteAufbauen,
     // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5, siehe
     // spaltenkopfSuchtext in rahmen.js): das Feld in der Kopfleiste stand

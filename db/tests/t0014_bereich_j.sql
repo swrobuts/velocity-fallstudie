@@ -24,10 +24,16 @@ $$;
 create or replace function velocity_test.test_j_vier_rollen_stehen_bereit()
 returns setof text language plpgsql as $$
 begin
+  -- "where code <> 'demo'" seit 0020_demo_zugang.sql: eine fuenfte Rolle
+  -- kam dazu, ausdruecklich KEINE Fachrolle (kein Aufgabenzuschnitt, nur
+  -- ein Lese-Zugang fuer Vorfuehrungen) - deshalb bleibt die Aussage
+  -- dieses Tests unveraendert "genau die VIER fachlichen Rollen", statt
+  -- fuenf zu erwarten. Existenz und Sonderstellung von 'demo' prueft
+  -- t0020_demo_zugang.sql.
   return next results_eq(
-    $q$ select code from velocity.rolle order by code $q$,
+    $q$ select code from velocity.rolle where code <> 'demo' order by code $q$,
     $q$ values ('disposition'),('kundenservice'),('leitung'),('werkstatt') $q$,
-    'Genau die vier fachlichen Rollen sind angelegt');
+    'Genau die vier fachlichen Rollen sind angelegt (demo ausgenommen, siehe 0020_demo_zugang.sql)');
 end;
 $$;
 
