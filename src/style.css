@@ -1352,6 +1352,94 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 
 /* ---------------------------------------------------- So geht's */
 
+/* ------------------------------------------- Hoehenprofil des Netzes */
+/* Der Abschnitt behauptete zehn Stationen in Wuerzburg und zeigte
+   weder das eine noch das andere: vier Zahlen auf grauem Grund,
+   eingeklemmt zwischen einer Buehne mit Rad in voller Groesse und dem
+   dunklen Tarifband. Es gab nichts zu sehen - das war der Grund, aus
+   dem die Ansicht langweilte, nicht die Schriftgroessen, an denen ich
+   dreimal vergeblich gedreht habe.
+   Die Form kommt aus v_station: Laengengrad waagerecht, Hoehe senk-
+   recht. Sie zeigt, was nur fuer Wuerzburg gilt - ein flaches Maintal
+   und neunundneunzig Meter Anstieg ans Hubland. */
+.netzprofil {
+  margin: 0 0 var(--af-l);
+}
+.netzprofil[hidden] { display: none; }
+.netzprofil-bild {
+  display: block;
+  width: 100%; height: auto;
+  overflow: visible;
+}
+/* GLEICHMAESSIG, KEIN VERLAUF (28.08.2026).
+   Zuerst lag hier ein senkrechter Farbverlauf. Der laeuft aber ueber
+   den UMRISSKASTEN der Kurve: oben am Gipfel kraeftig, unten im Tal
+   fast null - und im Tal liegen acht der zehn Stationen. Die Flaeche
+   verschwand also genau dort, wo das meiste steht, und das Bild blieb
+   blass. Fuer diese Form ist der Verlauf das falsche Mittel; eine
+   gleichmaessige Flaeche macht das Gelaende zur Masse. */
+.netzprofil-flaeche { fill: var(--navy); opacity: .13; }
+.netzprofil-linie {
+  fill: none;
+  stroke: var(--navy);
+  stroke-width: 2.5;
+  stroke-linejoin: round; stroke-linecap: round;
+}
+.netzprofil-grund { stroke: var(--mist); stroke-width: 1; }
+/* Der Stiel gehoert zum Halt, nicht zum Massstab - deshalb durch-
+   gezogen wie die Strecke, aber blass genug, um sie nicht zu stoeren. */
+.netzprofil-stiel { stroke: var(--navy); stroke-width: 1; opacity: .28; }
+/* Gestrichelt, damit die zwei Hoehenmarken nicht mit der Strecke
+   selbst verwechselt werden. Sie sind Massstab, nicht Gelaende. */
+.netzprofil-marke { stroke: var(--mist); stroke-width: 1; stroke-dasharray: 2 5; }
+.netzprofil-punkt {
+  fill: var(--navy);
+  stroke: var(--paper);
+  stroke-width: 3;
+}
+/* Der hoechste Punkt ist ausgezeichnet, weil er etwas KODIERT: er ist
+   das Maximum, und er ist der Grund, aus dem es das E-Bike gibt. */
+.netzprofil-punkt.ist-gipfel { fill: var(--red); }
+.netzprofil-hoehe {
+  fill: var(--grau);
+  font: 700 var(--grad-etikett) var(--mono);
+  letter-spacing: var(--weit);
+  text-anchor: end;
+}
+.netzprofil-ort {
+  fill: var(--navy);
+  font-family: var(--schmal); font-weight: 800;
+  font-size: 21px;
+  letter-spacing: var(--eng);
+}
+/* Auf der schmalen Zeichenflaeche sind die Einheiten kleiner - die
+   Schriftgrade muessen mitwachsen, sonst schrumpft die Schrift auf dem
+   Telefon genau so weit, wie das Bild schmaler wird. */
+.netzprofil-bild.ist-schmal .netzprofil-ort { font-size: 26px; }
+.netzprofil-bild.ist-schmal .netzprofil-hoehe,
+.netzprofil-bild.ist-schmal .netzprofil-richtung { font-size: 15px; }
+.netzprofil-bild.ist-schmal .netzprofil-linie { stroke-width: 3; }
+.netzprofil-bild.ist-schmal .netzprofil-punkt { stroke-width: 3.5; }
+.netzprofil-richtung {
+  fill: var(--vorspann);
+  font: 700 var(--grad-etikett) var(--mono);
+  letter-spacing: var(--weit);
+  text-transform: uppercase;
+}
+.netzprofil figcaption {
+  margin-top: var(--a5);
+  padding-top: var(--a4);
+  border-top: 1px solid var(--mist);
+  color: var(--grau);
+  font-size: var(--grad-kopf-s);
+  line-height: 1.35;
+}
+.netzprofil figcaption b {
+  color: var(--navy);
+  font-family: var(--schmal); font-weight: 800;
+  letter-spacing: var(--eng);
+}
+
 /* DER ABLAUF ALS STRECKENBAND (neu gefasst 28.08.2026).
    Vorher: drei Spalten, getrennt durch senkrechte Haarlinien, jede mit
    einer roten Ziffer zu 78 Punkten obenauf. Drei Trennlinien sagen dem
@@ -1388,8 +1476,14 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
    ist, und ueberlaesst die Aussage der Ueberschrift darunter. */
 .step-number {
   margin: 0 0 var(--a3);
-  font: 700 var(--grad-klein)/1 var(--mono);
-  letter-spacing: var(--weit);
+  /* 13 Punkte Mono war zu leise - die Ziffer verschwand neben ihrer
+     eigenen Ueberschrift und der Abschnitt wirkte kraftlos. Sie steht
+     jetzt in der schmalen Schrift auf mittlerem Grad: sichtbar als
+     Ordnungszeichen, aber unter den 38 Punkten der Bedingungen und
+     weit unter den 78 der Ueberschrift. */
+  font-family: var(--schmal); font-weight: 800; line-height: 1;
+  font-size: clamp(22px, 2vw, 30px);
+  letter-spacing: var(--eng);
   color: var(--red);
   font-variant-numeric: tabular-nums;
 }
@@ -1400,7 +1494,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
    das ersetzt werden sollte. Nur beim letzten Halt endet sie. */
 .howto-marke {
   position: relative;
-  height: 13px;
+  height: 16px;
   margin-bottom: var(--a5);
 }
 .howto-marke::before {
@@ -1414,7 +1508,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .howto-punkt {
   position: absolute;
   top: 0; left: 0;
-  width: 13px; height: 13px;
+  width: 16px; height: 16px;
   border-radius: var(--pille);
   background: var(--navy);
   /* Der Hof in Papierfarbe schneidet die Linie am Halt sauber aus,
@@ -2433,13 +2527,13 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .howto-card:last-child { padding-bottom: 0; }
   .howto-marke {
     position: absolute; left: 0; top: 0; bottom: 0;
-    width: 13px; height: auto; margin: 0;
+    width: 16px; height: auto; margin: 0;
   }
   .howto-marke::before {
-    top: 0; bottom: 0; left: 6px; right: auto;
+    top: 0; bottom: 0; left: 7px; right: auto;
     width: 1px; height: auto;
   }
-  .howto-card:last-child .howto-marke::before { bottom: auto; height: 13px; }
+  .howto-card:last-child .howto-marke::before { bottom: auto; height: 16px; }
   .footer-grid { grid-template-columns: 1fr; gap: var(--a5); }
   #map { height: clamp(420px, 66vh, 600px); }
   .pop-typ { grid-template-columns: 62px 1fr auto; gap: var(--a2); padding: var(--a3) var(--a3); }

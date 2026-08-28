@@ -366,6 +366,191 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (anzeige && stationen) anzeige.textContent = stationen.wert;
     }
 
+    /* ================================================================
+       DAS HOEHENPROFIL DES NETZES
+
+       WARUM ES DAS GIBT
+       Der Abschnitt heisst "Wuerzburg faehrt flexibel" und behauptet
+       zehn Stationen. Gezeigt hat er bis hierher weder Wuerzburg noch
+       eine Station - vier abstrakte Zahlen auf grauem Grund, zwischen
+       einer Buehne mit Rad in voller Groesse und dem dunklen Tarifband.
+       Es gab dort schlicht nichts zu sehen, und kein Schriftgrad kann
+       das beheben.
+
+       WARUM AUSGERECHNET HOEHEN
+       Weil sie ueber Wuerzburg etwas sagen, das ueber keine andere
+       Stadt gilt. Acht Stationen liegen zwischen 180 und 192 Metern im
+       Maintal, das Klinikum auf 210 - und der Hubland Campus auf 279.
+       Das ist ein langes flaches Tal und ein Anstieg von neunundneunzig
+       Metern am Ende. Fuer Radfahrende ist das keine Zierde, sondern
+       der Unterschied zwischen Rollen und Schwitzen, und es begruendet
+       das E-Bike, das die Tarifkarte mit "Ideal fuers Hubland" bewirbt.
+
+       WARUM VON WEST NACH OST
+       Die Waagerechte ist der Laengengrad, nicht die Reihenfolge in der
+       Liste. Nach Hoehe sortiert waere die Kurve monoton steigend -
+       eine Treppe, die nur die Sortierung abbildet und keine Aussage
+       traegt. Geografisch aufgetragen entsteht die echte Form: Zellerau
+       am Westrand, die Senke der Altstadt, dann der Anstieg nach Osten.
+
+       Gezeichnet wird mit createElementNS und textContent, nicht ueber
+       innerHTML: Stationsnamen kommen aus der Datenbank.
+       ================================================================ */
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+
+    function svgKnoten(name, attribute) {
+        const k = document.createElementNS(SVG_NS, name);
+        for (const [a, w] of Object.entries(attribute)) k.setAttribute(a, w);
+        return k;
+    }
+
+    /* Die Stationen werden gemerkt, weil das Profil bei einem Wechsel
+       zwischen breit und schmal NEU GEZEICHNET werden muss - nicht nur
+       neu skaliert. Gemessen auf einem 390-Punkte-Telefon: mit der
+       breiten Zeichenflaeche (1200 zu 300) wurde das Bild 346 zu 87
+       Punkte gross, die Ortsnamen erschienen mit 6,1 und die Hoehen-
+       angaben mit 3,3 Punkten. Ein SVG skaliert eben alles mit, auch
+       die Schrift. Schmal braucht darum ein anderes Format. */
+    let netzprofilStationen = [];
+    let netzprofilWarSchmal = null;
+
+    function netzprofilIstSchmal() {
+        const f = document.getElementById('netzprofil');
+        return f ? f.getBoundingClientRect().width < 640 : false;
+    }
+
+    function renderNetzprofil(stationen) {
+        const figur = document.getElementById('netzprofil');
+        if (!figur) return;
+        if (stationen) netzprofilStationen = stationen;
+        stationen = netzprofilStationen;
+        const schmal = netzprofilIstSchmal();
+        netzprofilWarSchmal = schmal;
+
+        /* Nur Stationen, die beide Angaben fuehren. Eine Station ohne
+           Hoehe waegre kein Punkt auf null Metern, sondern gar kein
+           Punkt - sie auf die Grundlinie zu setzen erfaende einen Wert. */
+        const punkte = (stationen || [])
+            .filter(st => Number.isFinite(Number(st.hoehe_m)) &&
+                          Number.isFinite(Number(st.longitude)))
+            .map(st => ({ name: String(st.name ?? ''),
+                          hoehe: Number(st.hoehe_m),
+                          laenge: Number(st.longitude) }))
+            .sort((a, b) => a.laenge - b.laenge);
+
+        // Unter drei Punkten ist es keine Linie, sondern eine Behauptung.
+        if (punkte.length < 3) { figur.hidden = true; return; }
+
+        const hMin = Math.min(...punkte.map(p => p.hoehe));
+        const hMax = Math.max(...punkte.map(p => p.hoehe));
+        const lMin = Math.min(...punkte.map(p => p.laenge));
+        const lMax = Math.max(...punkte.map(p => p.laenge));
+        if (hMax === hMin || lMax === lMin) { figur.hidden = true; return; }
+
+        /* Breit ein liegendes Format, schmal ein fast quadratisches:
+           so bleibt das Bild auch auf dem Telefon hoch genug, dass die
+           Schrift darin lesbar skaliert. Die Randmasse sind kleiner,
+           weil auf 560 Einheiten 78 Punkte Rand ein Siebtel waeren. */
+        const B = schmal ? 560 : 1200;
+        const H = schmal ? 430 : 300;
+        const links  = schmal ? 62 : 78;
+        const rechts = schmal ? 18 : 30;
+        const oben   = schmal ? 52 : 46;
+        const unten  = schmal ? 58 : 64;
+        const x = p => links + (p.laenge - lMin) / (lMax - lMin) * (B - links - rechts);
+        const y = p => H - unten - (p.hoehe - hMin) / (hMax - hMin) * (H - oben - unten);
+
+        const tief = punkte.reduce((a, b) => b.hoehe < a.hoehe ? b : a);
+        const hoch = punkte.reduce((a, b) => b.hoehe > a.hoehe ? b : a);
+        const spanne = hMax - hMin;
+
+        const svg = svgKnoten('svg', {
+            viewBox: `0 0 ${B} ${H}`,
+            class: schmal ? 'netzprofil-bild ist-schmal' : 'netzprofil-bild',
+            role: 'img',
+            'aria-label': `Hoehenprofil des Netzes von West nach Ost: ` +
+                `${punkte.length} Stationen zwischen ${hMin} und ${hMax} Metern. ` +
+                `Am tiefsten ${tief.name}, am hoechsten ${hoch.name}.`
+        });
+
+        // Grundlinie und die zwei Hoehenmarken, die den Rahmen nennen.
+        const grund = H - unten;
+        svg.append(svgKnoten('line',
+            { x1: links, y1: grund, x2: B - rechts, y2: grund, class: 'netzprofil-grund' }));
+        for (const [wert, yy] of [[hMax, y(hoch)], [hMin, grund]]) {
+            svg.append(svgKnoten('line',
+                { x1: links, y1: yy, x2: B - rechts, y2: yy, class: 'netzprofil-marke' }));
+            const t = svgKnoten('text', { x: links - (schmal ? 10 : 14), y: yy + 4, class: 'netzprofil-hoehe' });
+            t.textContent = `${wert} m`;
+            svg.append(t);
+        }
+
+        const spur = punkte.map(p => `${x(p).toFixed(1)},${y(p).toFixed(1)}`);
+        svg.append(svgKnoten('path', {
+            d: `M ${links},${grund} L ${spur.join(' L ')} L ${B - rechts},${grund} Z`,
+            class: 'netzprofil-flaeche' }));
+        svg.append(svgKnoten('polyline',
+            { points: spur.join(' '), class: 'netzprofil-linie' }));
+
+        /* Eine feine Senkrechte je Halt bis zur Grundlinie. Sie macht die
+           zehn Stationen zaehlbar - und gibt dem Maintal Struktur, wo
+           acht Punkte auf zwoelf Metern sonst als gerade Linie erscheinen
+           und niemand sieht, dass es acht sind. Jede Linie steht fuer
+           genau eine Station; sie bildet ab, was das Etikett behauptet. */
+        for (const p of punkte) {
+            svg.append(svgKnoten('line', {
+                x1: x(p).toFixed(1), y1: y(p).toFixed(1),
+                x2: x(p).toFixed(1), y2: grund, class: 'netzprofil-stiel' }));
+        }
+        for (const p of punkte) {
+            const istGipfel = p === hoch;
+            svg.append(svgKnoten('circle', {
+                cx: x(p).toFixed(1), cy: y(p).toFixed(1), r: schmal ? (istGipfel ? 7 : 5) : (istGipfel ? 9 : 6),
+                class: istGipfel ? 'netzprofil-punkt ist-gipfel' : 'netzprofil-punkt' }));
+        }
+
+        /* Beschriftet werden nur die beiden Enden. Zehn Namen
+           nebeneinander waeren auf 1200 Punkten 120 je Name - "Universitaet
+           Sanderring" braucht mehr, und gedreht liest sie niemand. */
+        /* Auf der schmalen Flaeche wird NUR der Gipfel beschriftet.
+           Der Tiefpunkt steht im Maintal, und dort liegen die Nachbarn
+           bis zu zwoelf Meter hoeher - auf 560 Einheiten sind das
+           neununddreissig, also oberhalb der Grundlinie der Schrift.
+           "Juliuspromenade" lief dadurch quer durch die Punkte. Sein
+           Name steht in der Bildunterschrift, die beide Enden nennt;
+           im Bild waere er an der dichtesten Stelle Beiwerk. */
+        const beschriftet = schmal ? [[hoch, 'end']] : [[tief, 'middle'], [hoch, 'end']];
+        for (const [p, anker] of beschriftet) {
+            /* Mittig ueber dem eigenen Punkt, nicht rechts daneben: links-
+               buendig sass "Juliuspromenade" so weit neben seinem Halt,
+               dass es den naechsten zu meinen schien. Der Gipfel bleibt
+               rechtsbuendig, sonst ragte er ueber den Rand. */
+            const t = svgKnoten('text', {
+                x: x(p).toFixed(1), y: (y(p) - (schmal ? 16 : 24)).toFixed(1),
+                class: 'netzprofil-ort', 'text-anchor': anker });
+            t.textContent = p.name;
+            svg.append(t);
+        }
+
+        const himmel = [['start', 'West · Maintal'], ['end', 'Ost · Hochebene']];
+        for (const [anker, wort] of himmel) {
+            const t = svgKnoten('text', {
+                x: anker === 'start' ? links : B - rechts, y: H - (schmal ? 20 : 24),
+                class: 'netzprofil-richtung', 'text-anchor': anker });
+            t.textContent = wort;
+            svg.append(t);
+        }
+
+        const unterschrift = document.createElement('figcaption');
+        const stark = document.createElement('b');
+        stark.textContent = `${spanne} Höhenmeter`;
+        unterschrift.append(stark,
+            document.createTextNode(` zwischen ${tief.name} und ${hoch.name}. Dafür gibt es das E-Bike.`));
+
+        figur.replaceChildren(svg, unterschrift);
+        figur.hidden = false;
+    }
+
     async function renderNutzungsschritte() {
         const ziel = document.getElementById('howto-grid');
         if (!ziel) return;
@@ -389,6 +574,19 @@ document.addEventListener("DOMContentLoaded", async () => {
                 <p>${escapeHtml(schritt.beschreibung)}</p>
             </div>`).join('');
     }
+
+    /* Nur beim WECHSEL des Formats neu zeichnen, nicht bei jedem
+       Groessenereignis: das Profil neu aufzubauen kostet zehn Knoten,
+       und waehrend eines Ziehens am Fensterrand feuert resize
+       dutzendfach. */
+    let netzprofilUhr = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(netzprofilUhr);
+        netzprofilUhr = setTimeout(() => {
+            if (!netzprofilStationen.length) return;
+            if (netzprofilIstSchmal() !== netzprofilWarSchmal) renderNetzprofil();
+        }, 160);
+    });
 
     async function renderTarifkarten() {
         const ziel = document.getElementById('pricing-grid');
@@ -664,6 +862,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             db_Stations = stations;
             db_Bikes = bikes;
+
+            // Dieselben Stationen tragen das Hoehenprofil des Abschnitts
+            // "Wuerzburg faehrt flexibel" - keine zweite Abfrage dafuer.
+            renderNetzprofil(stations);
 
             // Die Zahl im Kopf der Buehne gehoert zum RAD, das dort
             // gerade steht - am E-Bike-Halt die freien E-Bikes, nicht
