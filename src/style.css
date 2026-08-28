@@ -102,49 +102,15 @@
                  U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* Die SCHMALE Rolle: alle grossen Zeilen und Zahlen. Dieselbe Datei,
-   dieselben Buchstabenformen - nur auf 79 % zusammengezogen.
-
-   Der Trick steckt im Bereich: die Angabe "79% 79%" sagt dem Browser,
-   dass diese Schriftschnittfamilie NUR diese eine Breite kennt. Jedes
-   Element, das sie benutzt, bekommt sie deshalb, ohne dass an 25
-   Stellen ein zweites Merkmal gesetzt werden muesste. Eine Schriftart
-   je Rolle, wie vorher - nur dass beide Rollen dieselbe Schrift sind. */
-@font-face {
-  /* VON 79 AUF 88 PROZENT BREITE (28.08.2026).
-     Der Betreiber nennt die Schrift der Buehne zu schmal - und das ist
-     keine Einbildung: "Archivo Schmal" ist dieselbe Datei wie Archivo,
-     nur auf der Breitenachse zusammengezogen. Auf 79 Prozent ist das
-     eine ausgesprochen enge Schrift; gemessen setzt sie denselben Satz
-     auf 470 statt 571 Punkte, verliert also ein Sechstel der Breite.
-     Fuer eine Schlagzeile, die Ruhe ausstrahlen soll, ist das zu viel
-     gespart. 88 Prozent behaelt den schmalen Charakter - die Marke lebt
-     davon -, gibt den Buchstaben aber wieder Luft.
-     Geaendert wird das Token, nicht nur die Buehne: alle Ueberschriften
-     der Seite laufen in dieser Variante, und zwei verschiedene Breiten
-     im selben Haus waeren zwei Stimmen. */
-  font-family: "Archivo Schmal";
-  font-style: normal;
-  font-weight: 100 900;
-  font-stretch: 88% 88%;
-  font-display: swap;
-  src: url("assets/schrift/archivo-latin.woff2?v=4c98b9d4") format("woff2");
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
-                 U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
-                 U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: "Archivo Schmal";
-  font-style: normal;
-  font-weight: 100 900;
-  font-stretch: 88% 88%;
-  font-display: swap;
-  src: url("assets/schrift/archivo-latin-ext.woff2?v=a75c792f") format("woff2");
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
-                 U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
-                 U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
-                 U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
+/* HIER LAGEN ZWEI FLAECHEN "Archivo Schmal" (entfernt 28.08.2026).
+   Sie waren dieselbe Datei wie Archivo, nur auf der Breitenachse
+   zusammengezogen - erst auf 79, dann auf 88 Prozent. Der Betreiber hat
+   die Schlagzeile dreimal als zu schmal bezeichnet; jetzt laeuft sie auf
+   voller Breite. Damit ist eine eigene Flaeche unter diesem Namen
+   gegenstandslos: sie waere Zeichen fuer Zeichen dieselbe Schrift.
+   Auszeichnung und Fliesstext unterscheiden sich weiterhin - durch
+   Gewicht (800 gegen 560), Grad und Laufweite. Das reicht; die Breite
+   war nie das Mittel, sondern eine Marotte. */
 
 /* Der Rückfall für die Sekunde vor dem Tausch. Die Zahlen sind an
    Archivo nachgemessen: Arial setzt denselben Fliesstext 4,7 % breiter
@@ -252,18 +218,18 @@
   --schatten-3: 0 28px 64px rgba(6, 24, 65, .24);
 
   /* ---------------------------------------------------- SCHRIFT
-     Eine Familie in zwei Rollen. Der Unterschied ist die BREITE, nicht
-     die Herkunft: --schmal ist dieselbe Schrift auf 79 % zusammen-
-     gezogen. Deshalb passen Schlagzeile und Fliesstext zusammen, ohne
-     dass man es begruenden muesste.
+     EINE Familie in zwei Rollen. Der Unterschied liegt in Gewicht, Grad
+     und Laufweite - nicht mehr in der Breite: die Auszeichnung lief
+     zusammengezogen (79, dann 88 Prozent) und wurde dreimal als zu
+     schmal beanstandet. Jetzt laufen beide Rollen auf voller Breite.
+     Der Name sagt jetzt, was die Rolle IST: Auszeichnungsschrift fuer
+     Schlagzeilen, Ueberschriften, Zahlen und Preise. "--schmal" haette
+     eine Breite behauptet, die es nicht mehr gibt.
      Der Rueckfall steht direkt hinter Archivo und ist metrisch an sie
      angeglichen (siehe @font-face oben); erst danach kommen die
      Systemschriften, damit auch ohne jedes Nachladen etwas steht. */
-  --body-schrift: "Archivo", "Archivo Rückfall", "Helvetica Neue", Arial, sans-serif;
-  /* Der Rueckfall der schmalen Rolle ist Arial Narrow - die einzige
-     enge Grotesk, die auf Windows sicher liegt. Sie greift nur in der
-     Sekunde vor dem Tausch; die Gestaltung steht nicht mehr auf ihr. */
-  --schmal:       "Archivo Schmal", "Arial Narrow", "Archivo Rückfall", Arial, sans-serif;
+  --body-schrift:  "Archivo", "Archivo Rückfall", "Helvetica Neue", Arial, sans-serif;
+  --auszeichnung:  "Archivo", "Archivo Rückfall", "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Laufweite: DREI Werte statt achtzehn.
@@ -699,7 +665,7 @@ footer :focus-visible, .product-tabs :focus-visible,
 .menue a {
   padding: var(--a4) 0;
   color: var(--navy); text-decoration: none;
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   font-size: var(--grad-kopf-s); font-weight: 800; letter-spacing: var(--eng);
   border-bottom: 1px solid var(--mist);
 }
@@ -902,7 +868,7 @@ footer :focus-visible, .product-tabs :focus-visible,
 .live-zahl b {
   position: relative;
   padding-left: .42em;
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   /* DERSELBE GRAD WIE DIE SCHLAGZEILE.
      Links "Einkauf passt rein.", rechts "18" - beide gleich gross und
      beide auf derselben Oberkante. Der frueher noetige Deckel ist weg:
@@ -948,7 +914,7 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 .claim h1 {
   margin: 0;
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   font-size: var(--hero-font);
   line-height: .99;
   letter-spacing: var(--eng);
@@ -1100,7 +1066,7 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 .final-card h2 {
   margin: 0 0 var(--a2);
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   font-size: var(--grad-kopf-l);
   line-height: .98;
   letter-spacing: var(--eng);
@@ -1286,7 +1252,7 @@ footer :focus-visible, .product-tabs :focus-visible,
   color: #fff;
   /* Bricht nie um: "0 Euro" ist EINE Angabe, keine zwei. */
   white-space: nowrap;
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   /* Nicht --grad-zahl: auf 78 Punkten war jede der vier Angaben so laut
      wie die Abschnittsueberschrift daneben. Eine Bedingung ist keine
      Schlagzeile. */
@@ -1370,7 +1336,7 @@ footer :focus-visible, .product-tabs :focus-visible,
      nachgemessen, nicht angenommen. */
   text-wrap: balance;
   color: var(--navy);
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   font-size: var(--titel-font);
   line-height: .94;
   letter-spacing: var(--eng);
@@ -1565,7 +1531,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .rad-kachel h3 {
   margin: 0;
   color: var(--navy);
-  font-family: var(--schmal); font-weight: 800;
+  font-family: var(--auszeichnung); font-weight: 800;
   font-size: var(--grad-kopf-m);
   line-height: 1.05;
   letter-spacing: var(--eng);
@@ -1600,7 +1566,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 }
 .rad-kachel-frei b {
   color: var(--navy);
-  font-family: var(--schmal); font-weight: 800;
+  font-family: var(--auszeichnung); font-weight: 800;
   /* Eine Stufe hoeher als zuvor: die Zahl ist die einzige Angabe der
      Kachel, die sich stuendlich aendert, und darf das zeigen. */
   font-size: var(--grad-kopf-m);
@@ -1627,7 +1593,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 }
 .rad-kachel-preis b {
   color: var(--navy);
-  font-family: var(--schmal); font-weight: 800;
+  font-family: var(--auszeichnung); font-weight: 800;
   font-size: var(--grad-kopf-l);
   line-height: 1;
   letter-spacing: var(--eng);
@@ -1736,7 +1702,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
    Ueberschrift darunter. */
 .step-number {
   margin: 0;
-  font-family: var(--schmal); font-weight: 800; line-height: 1;
+  font-family: var(--auszeichnung); font-weight: 800; line-height: 1;
   font-size: clamp(22px, 2vw, 30px);
   letter-spacing: var(--eng);
   color: var(--red);
@@ -1746,7 +1712,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .howto-card h3 {
   margin: 0;
   color: var(--navy);
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   font-weight: 800;
   font-size: var(--grad-kopf-s);
   line-height: 1.08;
@@ -1977,7 +1943,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .rechner-summe { justify-content: space-between; gap: var(--a2); }
 .rechner-ergebnis { display: flex; align-items: baseline; gap: var(--a2); }
 .rechner-betrag {
-  font-family: var(--schmal); font-weight: 800;
+  font-family: var(--auszeichnung); font-weight: 800;
   font-size: var(--grad-zahl-klein); line-height: 1;
   letter-spacing: var(--eng);
   font-variant-numeric: tabular-nums;
@@ -2091,7 +2057,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 }
 .pop-kopf strong {
   display: block;
-  font-family: var(--schmal); font-weight: 800;
+  font-family: var(--auszeichnung); font-weight: 800;
   font-size: var(--grad-kopf-s); line-height: 1.05; letter-spacing: var(--eng);
   color: var(--navy);
 }
@@ -2117,7 +2083,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   margin: 0;
 }
 .pop-hoehe-wert {
-  font-family: var(--schmal); font-weight: 800; font-size: var(--grad-kopf-s);
+  font-family: var(--auszeichnung); font-weight: 800; font-size: var(--grad-kopf-s);
   letter-spacing: var(--eng); color: var(--navy);
   font-variant-numeric: tabular-nums;
 }
@@ -2230,7 +2196,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 }
 .karte-leer[hidden] { display: none; }
 .karte-leer strong {
-  font-family: var(--schmal); font-size: var(--grad-kopf-m);
+  font-family: var(--auszeichnung); font-size: var(--grad-kopf-m);
   font-weight: 800; letter-spacing: var(--eng); color: var(--navy);
 }
 .karte-leer p { margin: 0; max-width: 42ch; color: var(--grau); }
@@ -2347,7 +2313,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .legende-rad.ist-cargo { border-color: var(--red);  color: var(--red); }
 .legende-hinweis { color: var(--grau); text-transform: none; letter-spacing: normal; }
 .leaflet-popup-content { font-family: var(--body-schrift); font-size: var(--body-font); }
-.leaflet-popup-content b { font-family: var(--schmal); font-size: var(--nav-font); letter-spacing: var(--eng); }
+.leaflet-popup-content b { font-family: var(--auszeichnung); font-size: var(--nav-font); letter-spacing: var(--eng); }
 
 /* ---------------------------------------------------------- FAQ */
 
@@ -2363,7 +2329,7 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .faq-grid summary {
   cursor: pointer; list-style: none; position: relative;
   padding: var(--a5) var(--a6) var(--a5) 0;
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   font-size: var(--grad-kopf-s);
   font-weight: 800;
   letter-spacing: var(--eng);
@@ -2508,7 +2474,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
 .auth-link:hover { color: var(--red); }
 .form-title {
   margin: 0 0 var(--a5);
-  font-family: var(--schmal); font-size: var(--grad-kopf-m); font-weight: 800;
+  font-family: var(--auszeichnung); font-size: var(--grad-kopf-m); font-weight: 800;
   letter-spacing: var(--eng); color: var(--navy);
 }
 .form-group { margin-bottom: var(--a4); }
@@ -2645,7 +2611,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
 
 .recht h1 {
   margin: 0;
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   font-size: var(--titel-font); font-weight: 800;
   letter-spacing: var(--eng); line-height: .98; color: var(--navy);
 }
@@ -2666,7 +2632,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
 .recht-block { max-width: 74ch; margin-bottom: var(--af-l); }
 .recht-block h2 {
   margin: 0 0 var(--a4);
-  font-family: var(--schmal);
+  font-family: var(--auszeichnung);
   font-size: var(--grad-kopf-l); font-weight: 800;
   letter-spacing: var(--eng); color: var(--navy);
 }
