@@ -2,14 +2,24 @@
 -- t0020 Demozugang (nur lesend)
 --
 -- Zwei Zusicherungen traegt der Auftrag woertlich als "der wichtigste
--- Test": der Demozugang kann JEDE Sicht lesen (bis auf die eine
--- begruendete Ausnahme v_wawi_kunde) und KEINE EINZIGE api_-Funktion
--- ausfuehren. Beide werden hier vollstaendig geprueft, nicht an einer
--- Stichprobe - siehe test_d_sichten_lesbar_fuer_demo und
+-- Test": der Demozugang kann JEDE Sicht lesen und KEINE EINZIGE
+-- api_-Funktion ausfuehren. Beide werden hier vollstaendig geprueft,
+-- nicht an einer Stichprobe - siehe test_d_sichten_lesbar_fuer_demo und
 -- test_d_keine_api_funktion_fuer_demo. Jede der beiden traegt eine
 -- eigene Gegenprobe, die zeigt, dass ein gruener Test tatsaechlich an
 -- der Rolle 'demo' haengt und nicht schlicht daran, dass irgendjemand
 -- angemeldet ist.
+--
+-- ZWEITE DEMOZUGANG-RUNDE: test_d_sichten_lesbar_fuer_demo pruefte
+-- bisher "13 von 15, zwei begruendete Ausnahmen" (v_wawi_kunde,
+-- v_wawi_km_co2) und behauptete fuer genau diese zwei ausdruecklich
+-- LEERE Ergebnisse fuer 'demo'. Der Auftraggeber hat v_wawi_kunde
+-- freigegeben (die Kundschaft sind Musterdaten), und v_wawi_km_co2
+-- wurde von v_wawi_fahrt_km entkoppelt und laesst 'demo' seither auch
+-- zu (0018_wawi_sichten.sql). Die Behauptung "leer fuer demo" ist damit
+-- fuer beide Sichten in ihr GEGENTEIL verkehrt: die Zusicherung
+-- unten prueft jetzt "alle 15, keine Ausnahme mehr", mit derselben
+-- Sweep-Bauweise wie zuvor.
 -- =====================================================================
 create schema if not exists velocity_test;
 set search_path = velocity_test, velocity, extensions, public;
@@ -51,14 +61,12 @@ returns table(proname text, aufruf text) language sql as $$
    order by p.proname;
 $$;
 
--- ---- Sichten: 13 von 15 lesbar, ZWEI begruendete Ausnahmen -------------
--- v_wawi_kunde: Personendaten hinter einem oeffentlich beworbenen
--- Kennwort (siehe deren Kommentar und 0020_demo_zugang.sql).
--- v_wawi_km_co2: keine Datenschutzfrage, sondern strukturell wirkungslos
--- - sie liest FROM v_wawi_fahrt_km, deren eigene WHERE-Klausel fuer
--- JEDEN Aufrufer 'leitung' verlangt (siehe deren Kopfkommentar in
--- 0018_wawi_sichten.sql). wawi/auswertungen.js blendet ihren Reiter
--- deshalb fuer 'demo' konsequent aus.
+-- ---- Sichten: ALLE 15 lesbar, keine Ausnahme mehr ----------------------
+-- Zweite Demozugang-Runde: v_wawi_kunde (Auftraggeber-Entscheidung,
+-- Musterdaten) und v_wawi_km_co2 (entkoppelt von v_wawi_fahrt_km) lassen
+-- 'demo' inzwischen ebenfalls zu (siehe 0018_wawi_sichten.sql). Diese
+-- Zusicherung ersetzt die fruehere "13 von 15, zwei Ausnahmen" durch
+-- "alle 15" - dieselbe Sweep-Bauweise, keine Ausnahmeliste mehr noetig.
 create or replace function velocity_test.test_d_sichten_lesbar_fuer_demo()
 returns setof text language plpgsql as $$
 declare
@@ -70,17 +78,18 @@ declare
 begin
   perform velocity_test.fixture_rollen('demo-lesen', array['demo']);
 
-  -- Dynamisch ueber pg_class statt dreizehn Namen von Hand: jede fuer
-  -- authenticated lesbare v_wawi_-Sicht ausser den beiden begruendeten
-  -- Ausnahmen. v_wawi_fahrt_km taucht hier gar nicht erst auf - ihr
-  -- Select-Recht ist authenticated bereits in 0019_wawi_logik.sql
-  -- vollstaendig entzogen (has_table_privilege liefert fuer sie false).
+  -- Dynamisch ueber pg_class statt fuenfzehn Namen von Hand: jede fuer
+  -- authenticated lesbare v_wawi_-Sicht, ohne Ausnahme. v_wawi_fahrt_km
+  -- taucht hier gar nicht erst auf - ihr Select-Recht ist authenticated
+  -- in 0019_wawi_logik.sql weiterhin vollstaendig entzogen
+  -- (has_table_privilege liefert fuer sie false, unveraendert seit der
+  -- ersten Runde: sie fuehrt kunde_id je Einzelfahrt, ein
+  -- Bewegungsprofil, das bleibt unabhaengig von 'demo' gesperrt).
   for v_sicht in
     select c.relname from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'velocity' and c.relkind = 'v'
        and c.relname like 'v\_wawi\_%'
-       and c.relname not in ('v_wawi_kunde', 'v_wawi_km_co2')
        and has_table_privilege('authenticated', 'velocity.' || c.relname, 'SELECT')
      order by 1
   loop
@@ -94,21 +103,25 @@ begin
   -- Gegen einen Sweep, der ins Leere liefe, weil das Namensmuster eines
   -- Tages auf nichts mehr passt (dieselbe Ueberlegung wie im
   -- Kopfkommentar von db/test.py).
-  return next ok(v_gezaehlt >= 13,
-    format('Mindestens 13 fuer authenticated lesbare v_wawi-Sichten (ausser v_wawi_kunde/v_wawi_km_co2) gefunden (tatsaechlich %s)', v_gezaehlt));
+  return next ok(v_gezaehlt >= 15,
+    format('Mindestens 15 fuer authenticated lesbare v_wawi-Sichten gefunden (tatsaechlich %s)', v_gezaehlt));
 
   return next ok(coalesce(array_length(v_leer, 1), 0) = 0,
-    'Jede fuer authenticated lesbare v_wawi-Sicht (ausser den beiden begruendeten Ausnahmen) liefert fuer die reine demo-Rolle mindestens eine Zeile'
+    'Jede fuer authenticated lesbare v_wawi-Sicht liefert fuer die reine demo-Rolle mindestens eine Zeile'
     || case when array_length(v_leer, 1) > 0
          then ' (leer: ' || array_to_string(v_leer, ', ') || ')' else '' end);
 
+  -- Namentlich statt nur im Sweep: die beiden Sichten, die in der ersten
+  -- Runde die begruendeten Ausnahmen waren, tragen jetzt namentlich das
+  -- Gegenteil ihrer frueheren Zusicherung (Auftrag, woertlich: "muessen
+  -- mit - und in ihr Gegenteil verkehrt werden").
   execute 'select count(*) from velocity.v_wawi_kunde' into v_n;
-  return next is(v_n, 0::bigint,
-    'v_wawi_kunde bleibt fuer die reine demo-Rolle leer - Personendaten, siehe Kommentar dort');
+  return next cmp_ok(v_n, '>', 0::bigint,
+    'v_wawi_kunde liefert fuer die reine demo-Rolle Zeilen - Auftraggeber-Entscheidung, die Kundschaft sind Musterdaten, siehe Kommentar dort');
 
   execute 'select count(*) from velocity.v_wawi_km_co2' into v_n;
-  return next is(v_n, 0::bigint,
-    'v_wawi_km_co2 bleibt fuer die reine demo-Rolle leer - strukturell durch v_wawi_fahrt_km, keine Datenschutzfrage, siehe Kommentar dort');
+  return next cmp_ok(v_n, '>', 0::bigint,
+    'v_wawi_km_co2 liefert fuer die reine demo-Rolle Zeilen - entkoppelt von v_wawi_fahrt_km, siehe Kommentar dort');
 
   perform set_config('request.jwt.claims', '', true);
 
@@ -122,7 +135,6 @@ begin
       join pg_namespace n on n.oid = c.relnamespace
      where n.nspname = 'velocity' and c.relkind = 'v'
        and c.relname like 'v\_wawi\_%'
-       and c.relname not in ('v_wawi_kunde', 'v_wawi_km_co2')
        and has_table_privilege('authenticated', 'velocity.' || c.relname, 'SELECT')
      order by 1
   loop

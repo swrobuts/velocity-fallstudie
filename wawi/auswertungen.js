@@ -58,14 +58,15 @@ bereichAnmelden({
     // akzeptiert): hier ist der Bereich ENGER als die Sicht erlaubt, mit
     // Absicht und aus einem im Kommentar der Sicht selbst genannten Grund.
     //
-    // 'demo' (0020_demo_zugang.sql) kommt dazu: drei der vier
-    // zugrundeliegenden Sichten lassen sie inzwischen zu. Die vierte,
-    // v_wawi_km_co2, ausdruecklich NICHT (siehe deren Kommentar in
-    // 0018_wawi_sichten.sql: sie liest FROM v_wawi_fahrt_km, deren eigene
-    // Schranke unveraendert nur 'leitung' zulaesst) - der Reiter
-    // "Kilometer und CO2" wird deshalb weiter unten in
-    // auswertungenAufbauen() eigens fuer 'demo' ausgeblendet, statt eine
-    // leere Tafel zu zeigen.
+    // 'demo' (0020_demo_zugang.sql) kommt dazu: alle vier zugrundeliegenden
+    // Sichten lassen sie inzwischen zu. v_wawi_km_co2 (erste Runde: NOCH
+    // NICHT, weil sie damals FROM v_wawi_fahrt_km las, deren eigene
+    // Schranke nur 'leitung' zulaesst) wurde in der zweiten Demozugang-
+    // Runde von v_wawi_fahrt_km entkoppelt und traegt seither ihre
+    // eigene, unabhaengige Schranke fuer 'leitung' UND 'demo' (siehe
+    // deren Kommentar in 0018_wawi_sichten.sql) - alle vier Reiter sind
+    // damit fuer 'demo' inzwischen gleich weit offen wie fuer 'leitung',
+    // kein Reiter muss mehr eigens ausgeblendet werden.
     rollen: ['leitung', 'demo'],
     aufbauen: auswertungenAufbauen,
     // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5) - siehe
@@ -98,26 +99,29 @@ async function auswertungenAufbauen() {
     // beschreiben.
     const vorgang = neuerVorgang();
 
-    // "Was jemand nicht darf, wird nicht angezeigt" (siehe
-    // navigationAufbauen() in rahmen.js) gilt hier auch UNTERHALB der
-    // Bereichsebene: v_wawi_km_co2 bleibt fuer 'demo' leer (siehe
-    // Kommentar bei bereichAnmelden() oben), also fehlt der Reiter
-    // "Kilometer und CO2" fuer 'demo' ganz - eine leere Tafel saehe wie
-    // ein Ladefehler aus, ein fehlender Reiter nicht.
+    // Alle vier Reiter, ohne Ausnahme: seit v_wawi_km_co2 von
+    // v_wawi_fahrt_km entkoppelt ist (zweite Demozugang-Runde), lassen
+    // alle vier zugrundeliegenden Sichten dieselben zwei Rollen zu -
+    // ['leitung', 'demo'], siehe bereichAnmelden() oben. Der fruehere
+    // Filter, der den Reiter "Kilometer und CO2" eigens fuer 'demo'
+    // ausblendete (v_wawi_km_co2 lieferte damals fuer 'demo' null
+    // Zeilen), ist damit ueberfluessig geworden und entfaellt - eine
+    // Bedingung, die nie mehr falsch werden kann, ist kein Filter mehr,
+    // nur noch totes Gewicht.
     const reiter = [
         { schluessel: 'umsatz_radtyp',       titel: t('tab.revenueByBikeType') },
         { schluessel: 'umsatz_kundengruppe', titel: t('tab.revenueByCustomerGroup') },
         { schluessel: 'km_co2',              titel: t('tab.kmCo2') },
         { schluessel: 'stationsauslastung',  titel: t('tab.stationOccupancy') }
-    ].filter((r) => r.schluessel !== 'km_co2' || darfRolle('leitung'));
+    ];
 
-    // Ein Konto, das gerade erst von 'leitung' auf 'demo' herabgestuft
-    // wurde (oder umgekehrt frisch eingerichtet ist), koennte
-    // auswertungenReiter noch auf 'km_co2' stehen haben, obwohl der
-    // Reiter jetzt fehlt - derselbe Fall wie ein Bereichswechsel mit
-    // veralteter Detailmaske. Faellt hier zurueck auf den ersten
-    // verbliebenen Reiter, statt eine Tafel zu einem Reiter zu zeigen,
-    // den die Kopfzeile gar nicht mehr anbietet.
+    // Verbleibt als reine Vorsichtsmassnahme, auch ohne den obigen
+    // Filter: sollte eine kuenftige Rollenaenderung doch wieder einen
+    // Reiter verschwinden lassen, faellt ein noch darauf stehender
+    // auswertungenReiter (etwa nach einem Bereichswechsel mit
+    // veralteter Auswahl) auf den ersten verbliebenen Reiter zurueck,
+    // statt eine Tafel zu einem Reiter zu zeigen, den die Kopfzeile gar
+    // nicht mehr anbietet.
     if (!reiter.some((r) => r.schluessel === auswertungenReiter)) {
         auswertungenReiter = reiter[0].schluessel;
     }

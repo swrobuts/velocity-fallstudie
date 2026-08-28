@@ -387,8 +387,9 @@ begin
   return next is(v_n, 0, 'Werkstatt sieht keinen Umsatz nach Kundengruppe - nur leitung ist zugeteilt');
   select count(*) into v_n from velocity.v_wawi_km_co2;
   return next is(v_n, 0,
-    'Werkstatt sieht keine CO2-Auswertung - ist_mitarbeiter() aus v_wawi_fahrt_km allein reicht nicht, '
-    'v_wawi_km_co2 braucht ihren eigenen hat_rolle(''leitung'')-Filter');
+    'Werkstatt sieht keine CO2-Auswertung - v_wawi_km_co2 traegt eine eigene '
+    '(hat_rolle(''leitung'') or hat_rolle(''demo''))-Schranke, unabhaengig davon, '
+    'dass Werkstatt anderswo Fachrolle ist');
   select count(*) into v_n from velocity.v_wawi_stationsauslastung;
   return next is(v_n, 0, 'Werkstatt sieht keine Stationsauslastung - nur disposition/leitung sind zugeteilt');
   perform set_config('request.jwt.claims', '', true);

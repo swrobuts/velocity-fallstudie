@@ -32,8 +32,17 @@ bereichAnmelden({
     // Dieselben Rollen, die auch v_wawi_kunde durchlaesst (siehe
     // db/aufbau/0018_wawi_sichten.sql) - waeren sie hier weiter gefasst,
     // saehe etwa die Werkstatt den Menuepunkt und dahinter eine leere
-    // Liste, wie im Flotte-Kommentar begruendet.
-    rollen: ['kundenservice', 'leitung'],
+    // Liste, wie im Flotte-Kommentar begruendet. 'demo' kam in der
+    // zweiten Demozugang-Runde dazu: der Auftraggeber hat die Kundschaft
+    // fuer den Demozugang ausdruecklich freigegeben ("das sind
+    // Musterdaten", siehe der Kommentar an v_wawi_kunde). Das SCHREIBEN
+    // bleibt trotzdem gesperrt, ohne dass diese Zeile das wuesste: die
+    // vier Knoepfe unten (Speichern/Sperren/Auskunft/Loeschung) pruefen
+    // ZUSAETZLICH darfRolle('kundenservice'), das 'demo' nie erfuellt
+    // (siehe KRITISCH 1 bei kundeMaske() weiter unten) - derselbe
+    // Aufbau, der dort schon 'leitung' ohne 'kundenservice' korrekt von
+    // den Knoepfen fernhaelt.
+    rollen: ['kundenservice', 'leitung', 'demo'],
     aufbauen: kundenAufbauen,
     // Gestaltungsauftrag Punkt 5: das Suchfeld soll sagen, WONACH es
     // sucht - siehe suchwert()/die .or()-Abfrage weiter unten
@@ -722,17 +731,22 @@ function kundeMaske(kunde) {
     //
     // KRITISCH 1: alle vier Knoepfe unten stehen zusaetzlich hinter
     // darfRolle('kundenservice') - der Bereich selbst ist fuer
-    // ['kundenservice', 'leitung'] angemeldet (siehe bereichAnmelden()
-    // oben), aber api_kunde_aktualisieren, api_kunde_sperren,
-    // api_kunde_auskunft UND api_kunde_anonymisieren verlangen in der
-    // Datenbank strikt 'kundenservice' (fn_rolle_verlangen('kundenservice'),
-    // 0019_wawi_logik.sql) - 'leitung' allein reicht dort NICHT. Ohne diese
-    // Pruefung saehe eine Leitung ohne kundenservice-Rolle alle vier
-    // Knoepfe, einschliesslich "Loeschung nach Art. 17": sie koennte
-    // "LOESCHEN" eintippen, einen Grund angeben und bekaeme die
-    // Rechteverweigerung erst am Ende von rufeAuf(). Dieselbe Regel wie
-    // ueberall sonst in dieser Oberflaeche: was man nicht darf, wird nicht
-    // angezeigt, nicht ausgegraut (siehe stationMaske() in stationen.js
+    // ['kundenservice', 'leitung', 'demo'] angemeldet (siehe
+    // bereichAnmelden() oben), aber api_kunde_aktualisieren,
+    // api_kunde_sperren, api_kunde_auskunft UND api_kunde_anonymisieren
+    // verlangen in der Datenbank strikt 'kundenservice'
+    // (fn_rolle_verlangen('kundenservice'), 0019_wawi_logik.sql) - weder
+    // 'leitung' noch 'demo' allein reicht dort. Ohne diese Pruefung saehe
+    // eine Leitung ohne kundenservice-Rolle alle vier Knoepfe,
+    // einschliesslich "Loeschung nach Art. 17": sie koennte "LOESCHEN"
+    // eintippen, einen Grund angeben und bekaeme die Rechteverweigerung
+    // erst am Ende von rufeAuf(). Fuer 'demo' gilt dieselbe Rechnung -
+    // die Rolle ist keine Fachrolle und erfuellt kundenservice nie (siehe
+    // db/aufbau/0020_demo_zugang.sql) - deshalb reicht diese EINE
+    // Pruefung fuer beide Faelle, ohne eine eigene demo-Abfrage. Dieselbe
+    // Regel wie ueberall sonst in dieser Oberflaeche: was man nicht darf,
+    // wird nicht angezeigt, nicht ausgegraut (siehe stationMaske() in
+    // stationen.js
     // fuer denselben Fund an derselben Stelle - Bereich fuer zwei Rollen
     // offen, Funktion nur fuer eine).
     const knoepfe = [];

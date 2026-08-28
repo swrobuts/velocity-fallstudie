@@ -13,28 +13,35 @@
 -- Loesung:    Eine fuenfte Rolle 'demo' in velocity.rolle, KEINE
 --             Fachrolle (die vier bleiben disposition/werkstatt/
 --             kundenservice/leitung, siehe 0014_bereich_j_personal.sql).
---             Sie wird in 13 der 15 fuer authenticated freigegebenen
---             v_wawi_-Sichten zusaetzlich zu deren jeweiligen
---             Fachrollen zugelassen (siehe die einzelnen "create or
---             replace view"-Anweisungen in 0018_wawi_sichten.sql, jede
---             mit einem "Seit dem Demozugang..."-Kommentar an ihrer
---             eigenen View). ZWEI begruendete Ausnahmen: v_wawi_kunde
---             fuehrt Name, E-Mail, Telefon und Anschrift von ueber 1000
---             Personen - erfunden, aber die Fallstudie lehrt
---             Datenminimierung (Art. 5 Abs. 1 lit. c DSGVO), und ein
---             Zugang mit oeffentlich genanntem Kennwort darf diese
---             Liste nicht sehen. v_wawi_km_co2 dagegen ist keine
---             Datenschutzfrage, sondern strukturell wirkungslos: sie
---             liest FROM v_wawi_fahrt_km, deren eigene WHERE-Klausel
---             UNVERAENDERT nur 'leitung' zulaesst - ein zusaetzliches
---             "or hat_rolle('demo')" an v_wawi_km_co2 selbst haette
---             nachgemessen dennoch null Zeilen geliefert (siehe deren
---             Kopfkommentar in 0018_wawi_sichten.sql), aber vorgetaeuscht,
---             das laege an fehlenden Daten statt an einer Rechteschranke.
---             wawi/auswertungen.js blendet ihren Reiter "Kilometer und
---             CO2" fuer 'demo' deshalb konsequent aus. v_wawi_fahrt_km
---             selbst bleibt unveraendert: ohnehin fuer authenticated
---             vollstaendig gesperrt.
+--             ERSTE RUNDE: sie wurde in 13 der 15 fuer authenticated
+--             freigegebenen v_wawi_-Sichten zusaetzlich zu deren
+--             jeweiligen Fachrollen zugelassen, mit zwei begruendeten
+--             Ausnahmen - v_wawi_kunde (Name, E-Mail, Telefon und
+--             Anschrift von ueber 1000 Personen, aus Vorsicht gesperrt)
+--             und v_wawi_km_co2 (strukturell wirkungslos, weil sie damals
+--             FROM v_wawi_fahrt_km las, deren eigene WHERE-Klausel
+--             unveraendert nur 'leitung' zulaesst).
+--
+--             ZWEITE RUNDE (Demozugang-Pruefung): beide Ausnahmen sind
+--             aufgehoben, ALLE 15 Sichten lassen 'demo' jetzt zu (siehe
+--             die einzelnen "create or replace view"-Anweisungen in
+--             0018_wawi_sichten.sql, jede mit einem eigenen Kommentar an
+--             ihrer View). v_wawi_kunde: der Auftraggeber hat das
+--             ausdruecklich entschieden ("Er sollte aber auch die Kunden
+--             sehen, das sind Musterdaten") - die 1014 Kundensaetze sind
+--             vollstaendig erfunden, keine echten Personen, und diese
+--             Entscheidung gehoert ihm, nicht einer vorab getroffenen
+--             Vorsichtsregel. v_wawi_km_co2: entkoppelt von
+--             v_wawi_fahrt_km (liest seither wie
+--             v_wawi_fahrten_je_tag_rad direkt aus velocity.ausleihe, mit
+--             einer eigenen, unabhaengigen Rollenschranke) - dieselbe
+--             Kennzahl bleibt eine Monatsaggregation ohne Personenbezug,
+--             nur der technische Umweg ueber die Bewegungsprofil-Sicht
+--             entfaellt. v_wawi_fahrt_km SELBST bleibt unveraendert
+--             gesperrt (weder fuer 'demo' noch ueberhaupt fuer
+--             authenticated freigegeben): sie fuehrt kunde_id und
+--             startzeit je Einzelfahrt, das bleibt ein Bewegungsprofil,
+--             unabhaengig davon, wer sonst noch 'demo' sehen darf.
 --
 --             SCHREIBEN: keine der vierzehn Mitarbeiter-api_-Funktionen
 --             in 0019_wawi_logik.sql musste fuer diese Aufgabe auch nur

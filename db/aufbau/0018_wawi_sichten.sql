@@ -45,18 +45,31 @@
 --             letzte_ausleihe_laeuft (Punkt 1: "Letzte Ausleihe am" fehlte
 --             ganz in der Sicht, "Kunde seit" gab es schon als
 --             registriert_am, stand nur nicht in der Kundenliste). Der
---             Demozugang (0020_demo_zugang.sql) ergaenzt in JEDER WHERE-
---             Klausel dieser Datei bis auf ZWEI ein zusaetzliches
---             "or velocity.hat_rolle('demo')". Die erste Ausnahme ist
---             v_wawi_kunde, siehe deren eigener Kommentar fuer die
---             Begruendung (Personendaten hinter einem oeffentlich
---             beworbenen Kennwort). Die zweite ist v_wawi_km_co2 - dort
---             keine Datenschutzfrage, sondern strukturell wirkungslos,
---             weil sie FROM v_wawi_fahrt_km liest, deren eigene
---             WHERE-Klausel unveraendert nur 'leitung' zulaesst (siehe
---             deren beider Kommentare). v_wawi_fahrt_km selbst bleibt
---             unveraendert: fuer authenticated ohnehin vollstaendig
---             gesperrt (siehe deren Kommentar weiter unten).
+--             Demozugang (0020_demo_zugang.sql), ERSTE Runde, ergaenzte in
+--             13 der 15 WHERE-Klauseln dieser Datei ein zusaetzliches
+--             "or velocity.hat_rolle('demo')" - mit zwei Ausnahmen,
+--             v_wawi_kunde (Personendaten hinter einem oeffentlich
+--             beworbenen Kennwort) und v_wawi_km_co2 (strukturell
+--             wirkungslos, weil sie damals FROM v_wawi_fahrt_km las,
+--             deren eigene WHERE-Klausel nur 'leitung' zulaesst). Die
+--             ZWEITE Runde der Demozugang-Pruefung hebt BEIDE Ausnahmen
+--             auf: v_wawi_kunde auf ausdruecklichen Wunsch des
+--             Auftraggebers (die Kundendaten sind Musterdaten, siehe deren
+--             eigener Kommentar), v_wawi_km_co2 durch Entkopplung von
+--             v_wawi_fahrt_km - sie liest seither wie
+--             v_wawi_fahrten_je_tag_rad direkt aus velocity.ausleihe (die
+--             Drei-Fall-Kilometerformel dort ein drittes Mal, statt einer
+--             leihweisen Sicht auf die Bewegungsprofil-Sicht), traegt
+--             seither ihre eigene, unabhaengige hat_rolle-Schranke und
+--             kann deshalb 'demo' zulassen, OHNE dass ein Bewegungsprofil
+--             mit kunde_id irgendwo sichtbar wuerde (siehe deren beider
+--             Kommentare weiter unten). Alle 15 fuer authenticated
+--             freigegebenen v_wawi_-Sichten lassen 'demo' damit zu, keine
+--             Ausnahme mehr. v_wawi_fahrt_km selbst bleibt unveraendert:
+--             fuer authenticated ohnehin vollstaendig gesperrt (siehe
+--             deren Kommentar weiter unten) - sie fuehrt kunde_id je
+--             Einzelfahrt, das bleibt ein Bewegungsprofil, ganz unabhaengig
+--             vom Demozugang.
 -- =====================================================================
 
 -- Luftlinie nach Haversine, ohne PostGIS - dieselbe Entscheidung wie
@@ -262,22 +275,37 @@ select k.kunde_id,
          on m.kunde_id = k.kunde_id and upper_inf(m.gueltigkeit)
   left join velocity.tarif tr on tr.tarif_id = m.tarif_id
  where velocity.hat_rolle('kundenservice')
-    or velocity.hat_rolle('leitung');
+    or velocity.hat_rolle('leitung')
+    -- Demozugang, ZWEITE Runde: der Auftraggeber hat die Sperre dieser
+    -- Sicht ausdruecklich aufgehoben ("Er sollte aber auch die Kunden
+    -- sehen, das sind Musterdaten"). Das ist seine Entscheidung zu
+    -- treffen, nicht meine, und sie ist tragfaehig: die 1014 Kundensaetze
+    -- sind vollstaendig erfunden (Namen generiert, Adressen aus einer
+    -- Ortsliste, E-Mail-Adressen konstruiert - siehe
+    -- db/betrieb/referenzdaten_grundlage.sql), keine echten
+    -- Personendaten. Die ERSTE Runde (0020_demo_zugang.sql) hatte aus
+    -- Vorsicht anders entschieden, ohne dass der Auftraggeber danach
+    -- gefragt worden war - diese Zeile korrigiert das, verkehrt aber
+    -- keine Lehre: waeren die Kunden echte Personen, bliebe die
+    -- Zurueckhaltung von damals richtig. Schreiben bleibt unveraendert
+    -- gesperrt: die vier api_kunde_*-Funktionen verlangen weiterhin
+    -- 'kundenservice' (0019_wawi_logik.sql), 'demo' erfuellt das nie -
+    -- diese Sicht ist rein lesend, unabhaengig davon, was hier steht.
+    or velocity.hat_rolle('demo');
 
 comment on view velocity.v_wawi_kunde is
   'Arbeitssicht des Kundenservice: Stammdaten, laufender Tarif und Kontostand '
   'je Kunde. Bewusst ohne einzelne Fahrten (Bewegungsprofil), ohne '
   'Zahlungsmittel (GR17) und ohne alles aus dem Schema auth - was niemand '
   'braucht, wird nicht ausgeliefert. Filtert selbst über velocity.hat_rolle. '
-  'EINZIGE der 15 fuer authenticated freigegebenen v_wawi_-Sichten OHNE '
-  'velocity.hat_rolle(''demo'') (siehe 0020_demo_zugang.sql): sie fuehrt Name, '
-  'E-Mail, Telefon und Anschrift von ueber 1000 Personen. Ein Zugang mit einem '
-  'auf der Anmeldeseite oeffentlich genannten Kennwort darf diese Liste nicht '
-  'sehen, auch wenn die Personen hier erfunden sind - dieselbe Datensparsamkeit '
-  '(Art. 5 Abs. 1 lit. c DSGVO), die v_wawi_kundenorte weiter unten schon fuer '
-  'disposition durchsetzt (Kunden nur als Zaehlung je Ort, nie als '
-  'Einzelperson). Der Kundenservice-Bereich der Oberflaeche bleibt fuer ''demo'' '
-  'deshalb ausdruecklich verborgen, nicht nur ausgegraut (wawi/kunden.js).';
+  'Seit der zweiten Demozugang-Runde zusätzlich für velocity.hat_rolle(''demo'') '
+  'lesbar (0020_demo_zugang.sql) - ausdrückliche Entscheidung des '
+  'Auftraggebers: die 1014 Kundensätze sind vollständig erfundene '
+  'Musterdaten, keine echten Personen. Schreiben bleibt gesperrt: die vier '
+  'api_kunde_*-Funktionen verlangen weiterhin ''kundenservice'' '
+  '(0019_wawi_logik.sql), unabhängig von dieser Sicht - '
+  'wawi/kunden.js zeigt deshalb Speichern/Sperren/Auskunft/Löschung für '
+  '''demo'' nicht an, obwohl der Bereich selbst jetzt sichtbar ist.';
 comment on column velocity.v_wawi_kunde.kunde_id is
   'Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil.';
 comment on column velocity.v_wawi_kunde.kundennummer is
@@ -637,11 +665,17 @@ comment on column velocity.v_wawi_umsatz_kundengruppe.umsatz_je_kunde is
 -- und fuer alles andere gefaehrlich.
 --
 -- Fix (Aufgabe 11, zweiter Durchgang): "create or replace view" darf nur
--- Spalten ANHAENGEN, nicht mittendrin einfuegen. v_wawi_km_co2 bekommt
--- unten die neue Spalte fahrten_geschaetzt zwischen kilometer und
+-- Spalten ANHAENGEN, nicht mittendrin einfuegen. v_wawi_km_co2 bekam
+-- damals die neue Spalte fahrten_geschaetzt zwischen kilometer und
 -- anteil_geschaetzt - das waere mit "create or replace" gescheitert.
--- Deshalb hier ein "drop ... cascade": es reisst v_wawi_km_co2 mit, die
--- weiter unten in derselben Datei neu angelegt wird.
+-- Deshalb hier ein "drop ... cascade". Seit der zweiten Demozugang-Runde
+-- OHNE PRAKTISCHE WIRKUNG MEHR auf v_wawi_km_co2: sie liest nicht mehr
+-- FROM dieser Sicht (siehe deren eigener Kommentar weiter unten), ein
+-- erneuter Lauf dieser Datei reisst sie also nicht mehr mit. Der Befehl
+-- bleibt trotzdem stehen - er schadet nicht (nichts haengt mehr an
+-- v_wawi_fahrt_km ab, "cascade" haette dann nichts zu tun) und eine
+-- kuenftige Spaltenumsortierung GENAU dieser Sicht braucht ihn ohnehin
+-- wieder.
 drop view if exists velocity.v_wawi_fahrt_km cascade;
 
 create or replace view velocity.v_wawi_fahrt_km as
@@ -716,9 +750,36 @@ select a.ausleihe_id,
 -- Die Ersparnis ist die Differenz zum Pkw, nicht die Emission des
 -- Rades. Beide Faktoren kommen aus rechenannahme und gelten zum
 -- Zeitpunkt der Fahrt - dieselbe Zeitscheibenlogik wie bei den Preisen.
+--
+-- ENTKOPPELT von v_wawi_fahrt_km, zweite Demozugang-Runde. Die erste
+-- Runde hatte diese Sicht bewusst OHNE eigenen Demozugang gelassen: sie
+-- las FROM v_wawi_fahrt_km, und deren eigene WHERE-Klausel verlangt fuer
+-- JEDEN Aufrufer 'leitung' - ein zusaetzliches "or hat_rolle('demo')"
+-- HIER waere nachgemessen wirkungslos gewesen (0 Zeilen fuer 'demo'),
+-- haette aber vorgetaeuscht, das laege an fehlenden Daten statt an
+-- einer Rechteschranke. Der Auftrag dieser Runde verlangt zu pruefen,
+-- ob sich der Reiter "Kilometer und CO2" freigeben laesst, OHNE die
+-- Hilfssicht v_wawi_fahrt_km selbst zu oeffnen (die bleibt zu Recht
+-- gesperrt: sie fuehrt kunde_id und startzeit je EINZELFAHRT, ein
+-- Bewegungsprofil). Antwort: ja - GENAU nach dem Muster, das
+-- v_wawi_fahrten_je_tag_rad (Gestaltungsauftrag "Sichten verweben")
+-- fuer denselben Fund schon vorgemacht hat. Diese Sicht liest deshalb
+-- nicht mehr FROM v_wawi_fahrt_km, sondern direkt FROM velocity.ausleihe
+-- und traegt die Drei-Fall-Kilometerformel ein drittes Mal (identisch zu
+-- v_wawi_fahrt_km.kilometer und v_wawi_fahrten_je_tag_rad.kilometer) -
+-- eine LATERAL-Unterabfrage rechnet sie einmal je Fahrt, damit sum()/
+-- avg()/count() filter weiter unten nicht denselben CASE-Ausdruck
+-- dreifach wiederholen muessen. Die Spaltenliste dieser Sicht fuehrt
+-- WEDER kunde_id NOCH ausleihe_id - nur Monat, Radtyp und aggregierte
+-- Kennzahlen (siehe Spaltenkommentare) - ein Bewegungsprofil entsteht
+-- hier folglich nicht, unabhaengig von der Rollenschranke. Damit traegt
+-- diese Sicht jetzt ihre EIGENE, von v_wawi_fahrt_km unabhaengige
+-- hat_rolle-Schranke (wie zuvor auch schon, siehe die Begruendung im
+-- naechsten Absatz) und kann 'demo' zulassen, ohne dass v_wawi_fahrt_km
+-- selbst dafuer angefasst werden muesste.
 create or replace view velocity.v_wawi_km_co2 as
-select date_trunc('month', k.startzeit)::date as monat,
-       k.typ_code,
+select date_trunc('month', a.startzeit)::date as monat,
+       t.typ_code,
        count(*)                                        as fahrten,
        round(sum(k.kilometer), 1)                      as kilometer,
        count(*) filter (where k.ist_geschaetzt)        as fahrten_geschaetzt,
@@ -726,41 +787,57 @@ select date_trunc('month', k.startzeit)::date as monat,
                                                        as anteil_geschaetzt,
        round(sum(k.kilometer * (pkw.wert - eigen.wert)) / 1000.0, 2)
                                                        as co2_ersparnis_kg
-  from velocity.v_wawi_fahrt_km k
+  from velocity.ausleihe a
+  join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
+  join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
+  join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
+  left join velocity.station s1 on s1.station_id = a.start_station_id
+  left join velocity.station s2 on s2.station_id = a.end_station_id
+  left join velocity.rechenannahme ra
+         on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
+  left join velocity.rechenannahme tempo
+         on tempo.code = 'reisegeschwindigkeit'
+        and tempo.gueltigkeit @> a.startzeit::date
+  -- Dieselbe Drei-Fall-Formel wie velocity.v_wawi_fahrt_km.kilometer und
+  -- velocity.v_wawi_fahrten_je_tag_rad.kilometer, hier ein drittes Mal -
+  -- siehe "KEIN JOIN" im Kopfkommentar von v_wawi_fahrten_je_tag_rad fuer
+  -- dieselbe Abwaegung (Kopieren statt eines Joins auf eine Sicht mit
+  -- einer engeren Rollenschranke). LATERAL statt eines dritten
+  -- CASE-Ausdrucks in jeder aggregierten Spalte: kilometer/ist_geschaetzt
+  -- werden hier EINMAL je Fahrt berechnet und darunter mehrfach benutzt
+  -- (sum, avg, count filter) - ein CASE je Verwendung waere dieselbe
+  -- Formel dreifach im SELECT, nicht besser lesbar als einmal hier.
+  cross join lateral (
+    select
+      case
+        when a.distanz_km is not null then a.distanz_km
+        when velocity.fn_luftlinie_km(
+               coalesce(s1.latitude,  a.start_latitude),
+               coalesce(s1.longitude, a.start_longitude),
+               coalesce(s2.latitude,  a.end_latitude),
+               coalesce(s2.longitude, a.end_longitude)) = 0
+          then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
+        else round(velocity.fn_luftlinie_km(
+                coalesce(s1.latitude,  a.start_latitude),
+                coalesce(s1.longitude, a.start_longitude),
+                coalesce(s2.latitude,  a.end_latitude),
+                coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
+      end as kilometer,
+      a.distanz_km is null as ist_geschaetzt
+  ) k
   join velocity.rechenannahme pkw
-    on pkw.code = 'co2_pkw' and pkw.gueltigkeit @> k.startzeit::date
+    on pkw.code = 'co2_pkw' and pkw.gueltigkeit @> a.startzeit::date
   join velocity.rechenannahme eigen
-    on eigen.code = case when k.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
-   and eigen.gueltigkeit @> k.startzeit::date
- where k.kilometer is not null
-   -- Der Filter gehoert AUCH hierher, nicht nur in die zugrundeliegende
-   -- Sicht. Die Spec reserviert die Auswertungen fuer die Leitung, und
-   -- eine Sicht, die ihre Schranke ausschliesslich von einer anderen
-   -- Sicht erbt, hat keine eigene. Der erste Entwurf verliess sich
-   -- allein auf ist_mitarbeiter() aus v_wawi_fahrt_km und liess damit
-   -- jede Fachrolle durch - ein kritischer Befund, siehe
-   -- .superpowers/sdd/2026-08-25-velocity-warenwirtschaft-datenbank/
-   -- aufgabe-11-fix-bericht.md. v_wawi_fahrt_km traegt seit der
-   -- Gesamtpruefung dieselbe hat_rolle('leitung')-Schranke inzwischen
-   -- selbst; die Zeile hier bleibt trotzdem stehen, statt sich darauf
-   -- zu verlassen.
-   -- KEIN "or velocity.hat_rolle('demo')" hier, anders als bei den
-   -- anderen Auswertungssichten (0020_demo_zugang.sql) - nachgemessen
-   -- WIRKUNGSLOS gewesen waere es ohnehin: diese Sicht liest FROM
-   -- velocity.v_wawi_fahrt_km, und deren EIGENE WHERE-Klausel verlangt
-   -- unveraendert 'leitung' (siehe deren Kommentar). Der Filter dort
-   -- greift fuer JEDEN Aufrufer, unabhaengig davon, was hier steht -
-   -- v_wawi_km_co2 aus Sicht ihres Eigentuemers postgres liest
-   -- v_wawi_fahrt_km zwar mit dessen RECHTEN (kein "permission denied"),
-   -- aber velocity.hat_rolle() darin wertet trotzdem auth.uid() DES
-   -- AUFRUFERS aus, nicht das des Eigentuemers - ein "or hat_rolle('demo')"
-   -- an dieser Stelle haette dennoch fuer die reine demo-Rolle null
-   -- Zeilen geliefert, aber vorgetaeuscht, das laege an fehlenden Daten
-   -- statt an einer Rechteschranke. tests/t0020_demo_zugang.sql prueft
-   -- das leer sein fuer 'demo' deshalb ausdruecklich mit, und
-   -- wawi/auswertungen.js blendet den Reiter "Kilometer und CO2"
-   -- fuer 'demo' konsequent aus, statt eine leere Tafel zu zeigen.
-   and velocity.hat_rolle('leitung')
+    on eigen.code = case when t.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
+   and eigen.gueltigkeit @> a.startzeit::date
+ where a.status = 'abgeschlossen'
+   and k.kilometer is not null
+   -- Eigene Schranke, nicht mehr von v_wawi_fahrt_km geerbt (siehe
+   -- Kopfkommentar). 'demo' zusaetzlich zu 'leitung': eine
+   -- Monatsaggregation je Radtyp ohne jeden Personenbezug - dieselbe
+   -- Einstufung wie v_wawi_umsatz_radtyp/v_wawi_umsatz_kundengruppe
+   -- weiter oben, die aus demselben Grund schon 'demo' zulassen.
+   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
  group by 1, 2;
 
 comment on view velocity.v_wawi_fahrt_km is
@@ -774,13 +851,18 @@ comment on view velocity.v_wawi_fahrt_km is
   'jetzt für das Gegenteil steht: eine Sicht, die ihre Schranke von einer '
   'anderen erbt, hat keine eigene. Traegt AUS DEMSELBEN GRUND KEIN '
   'velocity.hat_rolle(''demo'') (0020_demo_zugang.sql) - ohnehin fuer '
-  'authenticated vollstaendig entzogen (siehe unten), aber selbst fuer den '
-  'einzigen verbleibenden Zugriffsweg ueber v_wawi_km_co2 waere ein '
-  'Bewegungsprofil das Letzte, was ein oeffentlich beworbener Zugang lesen '
-  'darf.';
+  'authenticated vollstaendig entzogen (siehe unten), und ein '
+  'Bewegungsprofil bliebe das Letzte, was ein oeffentlich beworbener '
+  'Zugang lesen darf, unabhaengig davon, ueber welchen Weg. '
+  'v_wawi_km_co2 liest seit der zweiten Demozugang-Runde NICHT MEHR '
+  'FROM dieser Sicht (siehe deren eigener Kommentar) - es gibt also '
+  'seither ohnehin keinen indirekten Zugriffsweg mehr, den diese Zeile '
+  'noch offenhalten müsste.';
 comment on column velocity.v_wawi_fahrt_km.ausleihe_id is
-  'Schlüssel der Fahrt, für den Verweis aus v_wawi_km_co2 auf die einzelne '
-  'Ausleihe hinter der Aggregation.';
+  'Schlüssel der Fahrt, für einen Verweis auf die einzelne Ausleihe hinter '
+  'einer Aggregation. v_wawi_km_co2 liest diese Spalte seit ihrer Entkopplung '
+  '(zweite Demozugang-Runde) nicht mehr über diese Sicht, sondern direkt aus '
+  'velocity.ausleihe.';
 comment on column velocity.v_wawi_fahrt_km.startzeit is
   'Beginn der Fahrt, Grundlage der Monatsgruppierung und der Zeitscheibe für '
   'Umwegfaktor, Reisegeschwindigkeit und CO2-Annahmen (rechenannahme.gueltigkeit).';
@@ -788,8 +870,10 @@ comment on column velocity.v_wawi_fahrt_km.kunde_id is
   'Fahrender Kunde, für eine spätere Auswertung je Kunde ohne erneuten Join '
   'auf ausleihe.';
 comment on column velocity.v_wawi_fahrt_km.typ_code is
-  'Fahrradtyp der Fahrt, bestimmt in v_wawi_km_co2 die passende CO2-Annahme '
-  '(co2_rad für CITY, sonst co2_ebike).';
+  'Fahrradtyp der Fahrt. v_wawi_km_co2 bestimmt daraus dieselbe CO2-Annahme '
+  '(co2_rad für CITY, sonst co2_ebike) - seit ihrer Entkopplung (zweite '
+  'Demozugang-Runde) über einen eigenen Join auf fahrradtyp, nicht mehr über '
+  'diese Spalte.';
 comment on column velocity.v_wawi_fahrt_km.kilometer is
   'Drei Fälle, siehe verfahren: gemessene Strecke (ausleihe.distanz_km), wo '
   'vorhanden; sonst, bei einer Rundfahrt mit Luftlinie null (Start- und '
@@ -810,17 +894,20 @@ comment on column velocity.v_wawi_fahrt_km.verfahren is
   'Umwegfaktor) irren sich auf unterschiedliche Weise und müssen sich '
   'getrennt auswerten lassen.';
 comment on view velocity.v_wawi_km_co2 is
-  'CO2-Ersparnis gegenüber dem Pkw, ausschliesslich für die Leitung - eigener '
-  'Rollenfilter (hat_rolle(''leitung'')), nicht nur geerbt aus '
-  'v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt gehören in jede '
-  'Darstellung dieser Zahl. OHNE velocity.hat_rolle(''demo'') (0020_demo_zugang.sql), '
-  'anders als die uebrigen Auswertungssichten - nicht aus Datenschutzgruenden '
-  '(die Zahlen hier sind eine Monatsaggregation ohne Personenbezug), sondern '
-  'weil es wirkungslos waere: diese Sicht liest FROM v_wawi_fahrt_km, deren '
-  'eigene WHERE-Klausel fuer JEDEN Aufrufer ''leitung'' verlangt - siehe '
-  'Kopfkommentar am create view fuer die nachgemessene Begruendung.';
+  'CO2-Ersparnis gegenüber dem Pkw, für Leitung und - seit der zweiten '
+  'Demozugang-Runde - für ''demo''. Liest seither NICHT MEHR FROM '
+  'v_wawi_fahrt_km, sondern direkt aus velocity.ausleihe (dieselbe '
+  'Drei-Fall-Kilometerformel ein drittes Mal, siehe Kopfkommentar am create '
+  'view) und trägt dadurch eine eigene, unabhängige '
+  '(hat_rolle(''leitung'') or hat_rolle(''demo''))-Schranke, nicht mehr nur '
+  'geerbt aus v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt '
+  'gehören in jede Darstellung dieser Zahl. ''demo'' ist hier unbedenklich, '
+  'anders als bei v_wawi_fahrt_km selbst: diese Sicht führt weder kunde_id '
+  'noch ausleihe_id, nur eine Monatsaggregation je Radtyp ohne '
+  'Personenbezug - dieselbe Einstufung wie v_wawi_umsatz_radtyp/'
+  'v_wawi_umsatz_kundengruppe.';
 comment on column velocity.v_wawi_km_co2.monat is
-  'Erster Tag des Monats der Fahrt (v_wawi_fahrt_km.startzeit).';
+  'Erster Tag des Monats der Fahrt (ausleihe.startzeit).';
 comment on column velocity.v_wawi_km_co2.typ_code is
   'Fahrradtyp, bestimmt die verglichene Eigenemission (co2_rad vs. co2_ebike).';
 comment on column velocity.v_wawi_km_co2.fahrten is
