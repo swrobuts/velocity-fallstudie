@@ -3,7 +3,8 @@
 ## In einem Befehl
 
 ```bash
-cd ".../BikesRental/Web/.worktrees/velocity-datenmodell" && bash tools/abnahme.sh
+cd ~/Library/CloudStorage/OneDrive-Persönlich/Vorlesungen/"Datenbasierte Fallstudien"/velocity-fallstudie
+bash tools/abnahme.sh
 ```
 
 **31 Prüfungen** (Stand 26.08.2026, siehe „Diese Datei war stale" unten),
