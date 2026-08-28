@@ -65,8 +65,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (user) {
             const name = getUserDisplayName();
             userNavBtn.innerHTML = `<i class="fa-solid fa-circle-user"></i> ${escapeHtml(name)}`;
-            userNavBtn.classList.remove('btn-primary');
-            userNavBtn.classList.add('btn-outline');
+            /* Der Knopf traegt seine Gestalt jetzt selbst (.login im
+               Stylesheet). Bis zum 28.08.2026 schaltete er hier zwischen
+               btn-primary und btn-outline um - mit dem Ergebnis, dass er
+               ROT war, solange niemand angemeldet ist. Das lauteste
+               Element des ersten Bildschirms war damit ausgerechnet die
+               Handlung, die ein neuer Besucher nicht sucht. Angemeldet
+               heisst jetzt: gefuellt in Navy, nicht in der Signalfarbe. */
+            userNavBtn.classList.add('ist-angemeldet');
             // Der zugaengliche Name sagt, was der Knopf tut - nicht nur,
             // wer angemeldet ist.
             userNavBtn.setAttribute('aria-label', `Konto von ${name} — Menü öffnen`);
@@ -83,8 +89,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } else {
             kontoMenueSetzen(false);
             userNavBtn.innerHTML = `<i class="fa-regular fa-user"></i> Login`;
-            userNavBtn.classList.add('btn-primary');
-            userNavBtn.classList.remove('btn-outline');
+            userNavBtn.classList.remove('ist-angemeldet');
             userNavBtn.removeAttribute('aria-label');
             userNavBtn.removeAttribute('aria-expanded');
             userNavBtn.removeAttribute('aria-controls');
@@ -711,10 +716,34 @@ document.addEventListener("DOMContentLoaded", async () => {
        aus, als tue er nichts: der Zustand wechselte, die Karte nicht.
        Ein Ortswechsel ist eine Navigation, keine Vorfuehrung. */
 
-    // light_all ist fast weiss - Strassen, Gruen und Wasser verschwinden
-    // darin. Voyager bleibt hell, zeichnet die Stadt aber lesbar.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
+    /* KACHELQUELLE: OPENSTREETMAP DIREKT (seit 28.08.2026)
+       Bis dahin lagen hier die Voyager-Kacheln von CARTO. CARTO hat den
+       freien Zugang inzwischen geschlossen: die Kacheln kommen weiter,
+       tragen aber quer ueber die ganze Stadt den Schriftzug
+       "API KEY REQUIRED". Nachgemessen am 28.08.2026 an derselben
+       Kachel (z12/2148/1400): CARTO 14 686 Byte mit Wasserzeichen,
+       tile.openstreetmap.org 26 064 Byte ohne. Wer die Seite oeffnete,
+       sah zuerst einen Fehler und dann erst Wuerzburg.
+
+       OpenStreetMap direkt ist ausserdem eine Partei weniger, die
+       erfaehrt, welchen Kartenausschnitt ein Besucher anschaut - die
+       Warenwirtschaft hat dieselbe Wahl mit derselben Begruendung
+       getroffen (wawi/stationen.js, STATIONENKARTE_KACHELN).
+
+       NUTZUNGSBEDINGUNGEN
+       Die Tile Usage Policy der OSM Foundation
+       (operations.osmfoundation.org/policies/tiles) erlaubt "leichte
+       Nutzung" ausdruecklich; eine Lehr-Fallstudie dieser Groesse
+       faellt darunter. Was der Browser ohnehin mitliefert - eigener
+       User-Agent, Referer, Zwischenspeicherung - erfuellt sie von
+       selbst. Die einzige eigene Pflicht ist die sichtbare
+       Quellenangabe; Leaflet zeigt sie unten rechts.
+
+       Der Wortlaut bleibt unveraendert, so wie OpenStreetMap ihn
+       vorschlaegt - eine Quellenangabe ist kein Oberflaechentext. */
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" ' +
+                     'target="_blank" rel="noopener">OpenStreetMap</a> contributors',
         maxZoom: 19
     }).addTo(map);
 
@@ -739,7 +768,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         // deshalb alle, die die Datenbank liefert - heute eines.
         const gebiete = await fetchGeschaeftsgebiete();
         if (!gebiete.length) return;
-        const stil = { color: '#f00038', fillColor: '#f00038', fillOpacity: 0.07,
+        // Dieselbe Hausfarbe wie im Stylesheet (--red). Sie wurde am
+        // 28.08.2026 dunkler, weil Weiss auf dem alten Rot nur 4,41:1
+        // trug; die Umrandung des Gebiets folgt ihr, damit die Karte
+        // nicht als einzige Flaeche das alte Rot weiterfuehrt.
+        const stil = { color: '#d4002f', fillColor: '#d4002f', fillOpacity: 0.07,
                        weight: 2.5, dashArray: '8, 6', lineJoin: 'round' };
         gebietFlaechen = gebiete.map(g =>
             L.polygon(umrissLesen(g.umriss), stil).addTo(map).bindTooltip(

@@ -15,47 +15,268 @@
    Live-Punkt, Kicker der Produktkarte, laufende Ausleihe.
 
    SCHRIFT
-   Avenir Next für den Fließtext, Avenir Next Condensed für die
-   grossen Zeilen, eine Systemmonospace für alle Etiketten.
-   ACHTUNG: Avenir Next liegt auf macOS, nicht auf Windows. Dort
-   greift Helvetica Neue, dann Arial — das Bild bleibt ruhig, wird
-   aber breiter. Wer Verbindlichkeit über alle Rechner braucht,
-   ersetzt den Stapel durch eine eingebundene Webschrift.
+   Eine einzige Familie, Archivo, in zwei Rollen — siehe den Block
+   "DIE SCHRIFT" weiter unten. Bis zum 28.08.2026 stand hier ein
+   Stapel aus Avenir Next und Avenir Next Condensed. Beide liegen nur
+   auf macOS; auf Windows sah die Hälfte der Besucher Arial und Arial
+   Narrow, und Arial Narrow kennt kein Gewicht 800.
 
    FORM
    Schaltflächen sind Pillen (999px), Inhaltskarten haben eine harte
    Kante (2px). Linien sind Haarlinien in --mist. Grosse Zeilen
-   laufen eng (letter-spacing bis -.065em), Etiketten weit (.16em).
+   laufen eng (--eng), Etiketten weit (--weit).
    ============================================================ */
 
+/* ============================================================
+   DIE SCHRIFT
+
+   WARUM ÜBERHAUPT EINE EINGEBUNDENE
+   Bis zum 28.08.2026 lud diese Seite keine Schrift. Der Stapel nannte
+   Avenir Next und Avenir Next Condensed — beide gibt es nur auf macOS.
+   Auf Windows griff Arial und, für die 96-Punkt-Schlagzeilen, Arial
+   Narrow. Nachgemessen an "Dann nach Haus cruisen." bei 78,5 px:
+   Avenir Next Condensed 817 px, Arial Narrow 769 px, Arial 938 px —
+   drei verschiedene Bilder für denselben Entwurf. Arial Narrow führt
+   ausserdem kein Gewicht 800; die Schlagzeile wurde dort künstlich
+   fett gerechnet und verlor genau die Kraft, von der sie lebt.
+
+   WARUM SELBST AUSGELIEFERT
+   Eine Schrift von fonts.googleapis.com wäre eine Fremdanfrage aus
+   dem Browser jedes Besuchers: eine weitere Partei, die erfährt, wer
+   wann diese Seite öffnet. Die Warenwirtschaft hat dieselbe Abwägung
+   bei den Kartenkacheln getroffen und sich gegen den Zwischenhändler
+   entschieden (siehe wawi/stationen.js, STATIONENKARTE_KACHELN). Hier
+   gilt derselbe Grund, und er wiegt schwerer: Kacheln braucht nur die
+   Karte, die Schrift braucht jede Zeile. Die beiden woff2-Dateien
+   liegen deshalb in assets/schrift/ und kommen vom eigenen Server.
+
+   WELCHE
+   Archivo, Version 2.001, von Omnibus-Type. Eine variable Schrift mit
+   ZWEI Achsen: Gewicht 100–900 und Breite 62–125 %. Damit deckt EINE
+   Datei beide Rollen ab, die diese Seite braucht — die ruhige Grotesk
+   für den Fliesstext (Breite 100, Gewicht 400) und die kräftige enge
+   für die Schlagzeilen (Breite 79, Gewicht 800). Zwei Rollen aus
+   einem Skelett halten die Seite zusammen; zwei fremde Familien
+   hätten eine dritte Fuge aufgemacht.
+
+   LIZENZ
+   SIL Open Font License 1.1 — die Schrift nennt sie selbst in ihrer
+   Namenstabelle (http://scripts.sil.org/OFL). Der volle Lizenztext
+   liegt neben den Dateien in assets/schrift/OFL.txt, wie es die OFL
+   für die Weitergabe verlangt. Copyright 2020 The Archivo Project
+   Authors. Einbindung in eine Website ist ausdrücklich erlaubt, ein
+   Verkauf der Schrift für sich allein nicht — was hier niemand tut.
+
+   LADEVERHALTEN
+   font-display: swap — die Seite ist sofort lesbar und tauscht die
+   Schrift nach. Damit dabei nichts springt, steht unter Archivo kein
+   roher Systemstapel, sondern "Archivo Rückfall": dieselbe Arial mit
+   size-adjust, an Archivo nachgemessen. Der Umbruch bleibt dadurch
+   beim Tausch stehen, statt eine Zeile weiter zu wandern.
+   ============================================================ */
+
+/* Die BREITE Rolle: Fliesstext, Bedienelemente, Etiketten. */
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 100% 100%;
+  font-display: swap;
+  src: url("assets/schrift/archivo-latin.woff2?v=4c98b9d4") format("woff2");
+  /* Deutsch braucht nichts jenseits von latin. Der zweite Ausschnitt
+     wird nur geholt, wenn wirklich ein Zeichen daraus vorkommt. */
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                 U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                 U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 100% 100%;
+  font-display: swap;
+  src: url("assets/schrift/archivo-latin-ext.woff2?v=a75c792f") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+                 U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+                 U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+                 U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Die SCHMALE Rolle: alle grossen Zeilen und Zahlen. Dieselbe Datei,
+   dieselben Buchstabenformen - nur auf 79 % zusammengezogen.
+
+   Der Trick steckt im Bereich: die Angabe "79% 79%" sagt dem Browser,
+   dass diese Schriftschnittfamilie NUR diese eine Breite kennt. Jedes
+   Element, das sie benutzt, bekommt sie deshalb, ohne dass an 25
+   Stellen ein zweites Merkmal gesetzt werden muesste. Eine Schriftart
+   je Rolle, wie vorher - nur dass beide Rollen dieselbe Schrift sind. */
+@font-face {
+  font-family: "Archivo Schmal";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 79% 79%;
+  font-display: swap;
+  src: url("assets/schrift/archivo-latin.woff2?v=4c98b9d4") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                 U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                 U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo Schmal";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 79% 79%;
+  font-display: swap;
+  src: url("assets/schrift/archivo-latin-ext.woff2?v=a75c792f") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+                 U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+                 U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+                 U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Der Rückfall für die Sekunde vor dem Tausch. Die Zahlen sind an
+   Archivo nachgemessen: Arial setzt denselben Fliesstext 4,7 % breiter
+   und trägt eine höhere Oberlänge. Ohne diese Angleichung rutscht beim
+   Nachladen jede zweite Zeile um ein Wort — genau der Sprung, den
+   font-display: swap sonst mitbringt. */
+@font-face {
+  font-family: "Archivo Rückfall";
+  src: local("Arial"), local("Helvetica Neue"), local("Liberation Sans");
+  size-adjust: 95.5%;
+  ascent-override: 92%;
+  descent-override: 22%;
+  line-gap-override: 0%;
+}
+
 :root {
-  /* Farbe — aus dem Entwurf des Nutzers */
-  --navy:       #061841;
-  --navy-2:     #0b255d;
-  --red:        #f00038;
-  --red-tief:   #c8002f;
+  /* ---------------------------------------------------- FARBE
+     Gemessen, nicht geschätzt. Hinter jedem Wert steht ein Verhältnis,
+     das die Prüfschwelle hält (4,5:1 für Text, 3:1 für Bedienelemente
+     und Grafik). Wo hier nur EIN Wert steht, stand vorher mehr als
+     einer für dieselbe Rolle. */
+  --navy:       #061841;   /* Grundfarbe. Weiss darauf 17,3:1 */
+  --navy-2:     #0b255d;   /* Tarifkarte auf Navy. Weiss darauf 14,6:1 */
+  --navy-3:     var(--navy-3);   /* die hervorgehobene Tarifkarte. 12,5:1 */
+  /* DAS ROT WURDE DUNKLER (28.08.2026).
+     #f00038 trug Weiss mit 4,41:1 und lag damit unter der Schwelle -
+     und zwar auf JEDER Handlungsaufforderung der Seite: Login,
+     Leih-Knopf, Karte oeffnen, Tarifknopf, Marke der beliebtesten
+     Karte. #d4002f traegt Weiss mit 5,47:1, steht als Schrift auf
+     Papier mit 5,01:1 und bleibt auf Navy mit 3,16:1 sichtbar. Ein
+     Rot fuer alles - vorher war es hell genug fuer die Plakatzeile
+     und zu hell fuer alles andere. */
+  --red:        #d4002f;
+  --red-tief:   #a80026;   /* ueberfahren und gedrueckt. Weiss darauf 7,8:1 */
+  /* Dasselbe Rot auf dem dunklen Band. --red traegt dort nur 3,16:1 und
+     saeuft in Navy ab; dieser Ton haelt 5,93:1. Er kommt genau einmal
+     vor: in der Wortmarke der Fusszeile. */
+  --red-hell:   #ff5f80;
   --paper:      #f3f5f8;
   --ink:        #111827;
-  --mist:       #dbe2ec;
-  --mint:       #58d6a1;
+  --mist:       #dbe2ec;   /* NUR Haarlinien und Flaechen, nie eine Bedienkante */
+  --mint:       #58d6a1;   /* was gerade laeuft. Auf Navy 9,5:1 */
+  /* EIN Grau statt zweier. --grau und --grau-still lagen unter fuenf
+     Prozent auseinander, teilten sich aber die Arbeit nach keiner
+     erkennbaren Regel - und --grau-still fiel auf Papier mit 4,32:1
+     unter die Schwelle. Jetzt traegt --grau alles: 5,23:1 auf Papier,
+     5,71:1 auf Weiss. */
   --grau:       #5c677a;
-  --grau-still: #68748a;
+  /* Der Vorspann ueber Zeile und Zahl. Navy zu 72 % - hell genug, um
+     nicht mit der Ueberschrift zu konkurrieren, dunkel genug fuer
+     6,7:1 auf Papier. Vorher standen dafuer zwei Werte (.72 und .78),
+     einer je Spalte der Buehne. */
+  --vorspann:   rgba(6, 24, 65, .72);
+  /* Die beiden Statusfarben. Sie standen auf #0f9d63 und #c98a00 und
+     trugen als 4-Punkt-Balken 3,49 bzw. 2,95:1 - der gelbe unter der
+     Schwelle fuer Grafik. Diese beiden halten 5,35 und 5,81 und sind
+     damit auch als Schrift verwendbar. Ein zweites, helleres Gruen
+     (#0f9d63 neben #0f7a52) ist damit ebenfalls weg. */
+  --gruen:      #0f7a52;
+  --gelb:       #8a5c00;
+  --gruen-hauch: rgba(15, 122, 82, .10);
+  --gelb-hauch:  rgba(138, 92, 0, .10);
+  --rot-hauch:   rgba(212, 0, 47, .08);
+  /* Die Haarlinie auf hellem Grund. Sie stand in fuenf Staerken
+     (.05 .06 .10 .12 .16) fuer dieselbe Aufgabe. */
+  --linie-still: rgba(6, 24, 65, .12);
+  /* Was ueber der Buehne oder ueber der Karte schwebt und den Grund
+     durchscheinen laesst - vorher vier Werte, jetzt zwei: einer auf
+     Weiss, einer auf Papier. */
+  --glas:        rgba(255, 255, 255, .95);
+  --glas-papier: rgba(243, 245, 248, .96);
+  /* Die Kante eines BEDIENELEMENTS. --mist erreicht auf Papier 1,19:1
+     und auf Weiss 1,30:1 - als Haarlinie zwischen zwei Absaetzen in
+     Ordnung, als einzige Grenze eines Eingabefeldes nicht. Dieser Ton
+     haelt 3,38:1 auf Papier und 3,69:1 auf Weiss. */
+  --rahmen:     #7a8698;
+  /* Dieselbe Rolle auf dem dunklen Band: Weiss zu 38 % ergibt auf Navy
+     3,47:1. Darunter (,22 wie bisher an der Pille) waeren es 2,0. */
+  --rahmen-hell: var(--rahmen-hell);
 
-  /* Schrift */
-  --body-schrift: "Avenir Next", Avenir, "Helvetica Neue", Helvetica, Arial, sans-serif;
-  --schmal: "Avenir Next Condensed", "Arial Narrow", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* Weiss auf Navy in vier Stufen statt in sechzehn. Vorher standen
+     dort ,13 ,16 ,18 ,2 ,22 ,38 ,5 ,55 ,62 ,68 ,7 ,72 ,84 ,9 ,94 ,96 -
+     sechzehn Entscheidungen fuer vier Aufgaben. */
+  --auf-navy-linie: var(--auf-navy-linie);  /* Trennlinien */
+  --auf-navy-still: var(--auf-navy-still);  /* Etiketten, Vorspann */
+  --auf-navy-text:  rgba(255, 255, 255, .78);  /* Fliesstext, 11,9:1 */
+  --auf-navy-voll:  #fff;                      /* Ueberschriften, Zahlen */
+
+  /* Drei Schattenstufen statt siebzehn Einzelwerten. Sie unterscheiden
+     sich nach ABSTAND zur Flaeche, nicht nach Laune: was aufliegt, was
+     schwebt, was ueber allem steht. */
+  --schatten-1: 0 2px 8px var(--linie-still);
+  --schatten-2: 0 12px 32px var(--linie-still);
+  --schatten-3: 0 28px 64px rgba(6, 24, 65, .24);
+
+  /* ---------------------------------------------------- SCHRIFT
+     Eine Familie in zwei Rollen. Der Unterschied ist die BREITE, nicht
+     die Herkunft: --schmal ist dieselbe Schrift auf 79 % zusammen-
+     gezogen. Deshalb passen Schlagzeile und Fliesstext zusammen, ohne
+     dass man es begruenden muesste.
+     Der Rueckfall steht direkt hinter Archivo und ist metrisch an sie
+     angeglichen (siehe @font-face oben); erst danach kommen die
+     Systemschriften, damit auch ohne jedes Nachladen etwas steht. */
+  --body-schrift: "Archivo", "Archivo Rückfall", "Helvetica Neue", Arial, sans-serif;
+  /* Der Rueckfall der schmalen Rolle ist Arial Narrow - die einzige
+     enge Grotesk, die auf Windows sicher liegt. Sie greift nur in der
+     Sekunde vor dem Tausch; die Gestaltung steht nicht mehr auf ihr. */
+  --schmal:       "Archivo Schmal", "Arial Narrow", "Archivo Rückfall", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Fliessende Grade — aus dem Entwurf */
-  --nav-font:     clamp(17px, 1.12vw, 19px);
-  /* Die kleine Zeile ueber der Schlagzeile - und, spiegelbildlich, ueber
-     der Zahl. Sie stand auf 14 bis 15 Punkten und war neben einer
-     96-Punkt-Schlagzeile ein Fluestern. */
-  --meta-font:    clamp(15px, 1.02vw, 21px);
-  --hero-font:    clamp(52px, 5.45vw, 96px);
-  --control-font: clamp(15px, 1.05vw, 17px);
-  --body-font:    clamp(15px, 1.05vw, 17px);
-  --titel-font:   clamp(40px, 5vw, 78px);
+  /* Laufweite: DREI Werte statt achtzehn.
+     Grosse Zeilen laufen eng, Etiketten weit, alles andere normal.
+     Vorher gab es neun verschiedene negative Werte fuer die eine Rolle
+     "grosse Zeile" - das sieht man nicht einzeln, aber im Ganzen. */
+  --eng:  -.03em;
+  --weit: .14em;
+
+  /* Grade. Eine Leiter mit benannten Sprossen statt 44 Einzelwerten.
+     Jede Sprosse hat eine Aufgabe; wer eine neue Groesse braucht,
+     braucht zuerst eine neue Aufgabe. */
+  --grad-etikett: 11.5px;                     /* Mono-Versalien, alle Etiketten */
+  --grad-klein:   13px;                       /* Beifuegungen, Fusszeile */
+  --body-font:    clamp(15px, 1.05vw, 17px);  /* Fliesstext */
+  --control-font: var(--body-font);           /* Bedienelemente - dieselbe Groesse */
+  --nav-font:     clamp(17px, 1.12vw, 19px);  /* Kopfzeile */
+  --meta-font:    clamp(15px, 1.02vw, 21px);  /* Vorspann ueber Zeile und Zahl */
+  --grad-kopf-s:  clamp(19px, 1.6vw, 25px);   /* Kachelueberschrift, FAQ-Frage */
+  --grad-kopf-m:  clamp(24px, 2.1vw, 32px);   /* Kartenkopf, Formulartitel */
+  --grad-kopf-l:  clamp(28px, 2.8vw, 46px);   /* Abschlusskarte, Rechtsabschnitt */
+  --titel-font:   clamp(40px, 5vw, 78px);     /* Abschnittsueberschrift */
+  --hero-font:    clamp(52px, 5.45vw, 96px);  /* Schlagzeile der Buehne */
+
+  /* DIE ANZEIGEZAHLEN — EINE REGEL STATT FUENF GROESSEN.
+     Eine grosse Zahl nimmt den Grad der UEBERSCHRIFT, neben der sie
+     steht. Daraus folgt alles:
+       Buehne      Zahl neben der Schlagzeile  -> --hero-font
+       Kennzahl    Zahl unter der Abschnitts-  -> --grad-zahl
+       Schrittzif.   ueberschrift                 (= --titel-font)
+       Rechner     Zahl IN einer Kachel        -> --grad-zahl-klein
+       Tarifpreis  Zahl IN einer Kachel        -> --grad-zahl-klein
+     Gemessen standen dort vorher 78,5 / 72 / 66,2 / 51,8 / 37,4 Punkte -
+     fuenf Groessen, kein Unterschied in der Sache. */
+  --grad-zahl:        var(--titel-font);
+  --grad-zahl-klein:  clamp(30px, 2.8vw, 44px);
 
   /* Fläche */
   /* Die Spur war 1240 breit. Auf einem breiten Schirm blieben davon
@@ -90,16 +311,29 @@
   /* DIE TEXTSPALTE RECHNET IN SCHRIFTGRAD, NICHT IN PUNKTEN.
      Mit einem festen Deckel (500) wuchs die Schrift mit der
      Fensterbreite, die Spalte aber nicht - auf einem breiten Schirm
-     standen die Schlagzeilen drei- und vierzeilig. Nachgemessen braucht
-     die breiteste ("Noch entspannter | nach Hause cruisen.") 7,97 em
-     fuer zwei Zeilen; 8,2 gibt etwas Luft. Weil beides am selben
-     Schriftgrad haengt, bleibt der Umbruch bei jeder Breite gleich.
+     standen die Schlagzeilen drei- und vierzeilig. Weil beides am
+     selben Schriftgrad haengt, bleibt der Umbruch bei jeder Breite
+     gleich.
+
+     DER FAKTOR IST NEU GEMESSEN (28.08.2026).
+     Er stand auf 8,2 und war fuer einen Satz gerechnet, den es nicht
+     mehr gibt ("Noch entspannter | nach Hause cruisen."). Die heute
+     laengste Zeile ist "Dann nach Haus cruisen."; sie misst in der
+     neuen Schrift 10,09 em, und deshalb stand die City-Schlagzeile
+     bei 1440 Punkten DREIzeilig da - mit dem Umbruch "nach Haus |
+     cruisen.". Alle acht Zeilen nachgemessen (Archivo Schmal 800):
+       Dann nach Haus cruisen.  10,09      Wir liefern den     5,89
+       Entspannt shoppen.        8,19      Würzburg hat        5,44
+       Einkauf passt rein.       7,56      Rückenwind.         5,36
+                                           viele Berge.        4,83
+                                           Kind auch.          4,34
+     10,3 traegt die laengste und gibt zwei Zehntel Luft.
 
      Die Obergrenze ist die TATSAECHLICH freie Breite, nicht ein fester
      Anteil des Fensters: mit 48vw war die Spalte zwischen 520 und 900
      Punkten zu schmal, obwohl daneben nichts stand - dort wurden zwei
      der sechs Schlagzeilen wieder dreizeilig. */
-  --textspalte: min(calc(var(--hero-font) * 8.2),
+  --textspalte: min(calc(var(--hero-font) * 10.3),
                     calc(100% - 2 * var(--flucht)));
   --gasse: clamp(32px, 3.4vw, 64px);
   /* Die Linie, an der die Buehne oben beginnt. Links die Zeile, rechts
@@ -108,8 +342,11 @@
   /* Der Abstand zwischen der kleinen Zeile und dem, was darunter steht.
      Links die Schlagzeile, rechts die Zahl - beide muessen auf
      derselben Oberkante sitzen, also braucht es EINEN Wert. Mit 28
-     links und 2 rechts stand die Zahl 26 Punkte zu hoch. */
-  --kicker-abstand: 28px;
+     links und 2 rechts stand die Zahl 26 Punkte zu hoch.
+     Seit dem 28.08.2026 gilt dieser eine Wert fuer JEDE Zahl der
+     Seite: Kennzahl (stand auf 10), Schrittziffer (16) und Buehne
+     tragen denselben Abstand zu ihrer Beschriftung. */
+  --kicker-abstand: var(--a5);
   /* Wie hoch das Rad stehen soll, und das Seitenverhaeltnis des
      laengsten der drei (Lastenrad, 1622 zu 800 Punkte - siehe
      tools/raeder_weissgrund.py). Beides zusammen bestimmt den Rahmen. */
@@ -123,6 +360,40 @@
                     calc(var(--rad-hoehe) * var(--rad-verhaeltnis)));
   --rand: clamp(22px, 4vw, 70px);
   --luft: clamp(70px, 8vw, 130px);
+
+  /* ------------------------------------------------- ABSTAENDE
+     Eine Vierer-Reihe. Vorher standen im Stylesheet 59 verschiedene
+     Abstandswerte, darunter 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+     17, 18 - vierzehn Stufen auf vierzehn Punkten. Kein Auge trennt
+     die; was sie erzeugen, ist ein unruhiges Bild ohne erkennbaren
+     Takt. Wer eine Zwischenstufe braucht, braucht in Wahrheit eine
+     andere Gliederung. */
+  --a1:  4px;
+  --a2:  8px;
+  --a3: 12px;
+  --a4: 16px;
+  --a5: 24px;
+  --a6: 32px;
+  --a7: 48px;
+  /* Drei fliessende Stufen fuer das, was mit dem Fenster wachsen
+     soll - Abschnittskoepfe, Rasterluecken, Blockabstaende. Vorher
+     standen dort vierzehn verschiedene clamp-Ausdruecke, von denen
+     keine zwei gleich waren. */
+  --af-s: clamp(20px, 2.2vw, 28px);
+  --af-m: clamp(28px, 3.2vw, 48px);
+  --af-l: clamp(40px, 5vw, 72px);
+
+  /* ------------------------------------------------- FORM
+     Zwei Radien. Die Sprache der Seite kennt die Pille (Bedienelement)
+     und die harte Kante (Inhalt). 3, 4 und 14 Punkte waren Einzelfaelle
+     ohne Begruendung. */
+  --pille: 999px;
+  --kante: 2px;
+
+  /* Zwei Zeiten statt zehn: eine fuer den Zustandswechsel unter dem
+     Zeiger, eine fuer das Ein- und Austreten ganzer Flaechen. */
+  --zeit-kurz: .16s;
+  --zeit-lang: .42s;
 
   /* Zustandsgrössen der Bühne, vom Skript gesetzt */
   --progress: 0;
@@ -160,16 +431,37 @@ body {
 button, a, input { font: inherit; }
 button { cursor: pointer; }
 img { max-width: 100%; }
-:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+/* DER FOKUSRING (neu gefasst am 28.08.2026)
+   Er war rot - dieselbe Farbe wie die Flaeche der roten Knoepfe.
+   Nachgemessen am Login: Ring rgb(240,0,56), Flaeche rgb(240,0,56).
+   Ein Ring, der die Farbe dessen hat, was er umringt, zeigt nichts.
+   Jetzt Navy, das gegen jede helle Flaeche 15,8:1 traegt und gegen das
+   Rot der Knoepfe deutlich abfaellt; auf den beiden dunklen Baendern
+   (Tarife, Fusszeile) dreht sich das Verhaeltnis um, dort ist der Ring
+   weiss. Der weisse Saum dazwischen haelt ihn auch dann sichtbar,
+   wenn er direkt an einer navyfarbenen Kante liegt. */
+:focus-visible {
+  outline: 3px solid var(--navy);
+  /* Der Abstand ist der Trennsaum: dazwischen steht der Grund der Seite,
+     und der ist heller als beides. Ein box-shadow waere der bessere
+     Saum gewesen, haette aber die Eigenschatten der Knoepfe erschlagen -
+     ein Zustand darf nichts anderes kaputtmachen. */
+  outline-offset: 3px;
+}
+/* Auf den beiden dunklen Baendern dreht sich das Verhaeltnis um. */
+.pricing :focus-visible, footer :focus-visible, .product-tabs :focus-visible,
+.rental-banner :focus-visible {
+  outline-color: #fff;
+}
 
 .container { max-width: var(--spur); margin: 0 auto; padding: 0 var(--rand); }
 
 .sprungmarke {
   position: absolute; left: 12px; top: -60px; z-index: 60;
-  padding: 12px 18px;
+  padding: var(--a3) var(--a4);
   background: var(--navy); color: #fff;
-  border-radius: 999px; font-weight: 700; text-decoration: none;
-  transition: top .18s ease;
+  border-radius: var(--pille); font-weight: 700; text-decoration: none;
+  transition: top var(--zeit-kurz) ease;
 }
 .sprungmarke:focus { top: 12px; }
 
@@ -190,17 +482,17 @@ img { max-width: 100%; }
   min-height: 92px;
   padding: 0 var(--flucht);
   color: var(--navy);
-  background: rgba(247, 249, 252, .985);
-  border-bottom: 1px solid rgba(6, 24, 65, .12);
-  box-shadow: 0 10px 34px rgba(6, 24, 65, .06);
+  background: var(--glas-papier);
+  border-bottom: 1px solid var(--linie-still);
+  box-shadow: var(--schatten-1);
 }
 
 .brand {
   color: var(--navy);
   text-decoration: none;
-  font-size: clamp(30px, 2.2vw, 40px);
+  font-size: var(--grad-kopf-l);
   font-weight: 800;
-  letter-spacing: -.055em;
+  letter-spacing: var(--eng);
 }
 .brand span { color: var(--red); }
 /* Das O ist das Rad — ein Ring statt eines Buchstabens. */
@@ -213,90 +505,107 @@ img { max-width: 100%; }
   vertical-align: .04em;
 }
 
-.site-nav { display: flex; gap: clamp(22px, 2.6vw, 48px); }
+.site-nav { display: flex; gap: var(--af-m); }
 .site-nav a {
   color: inherit; text-decoration: none;
-  font-size: var(--nav-font); font-weight: 700; letter-spacing: .02em;
-  padding-bottom: 3px; border-bottom: 2px solid transparent;
+  font-size: var(--nav-font); font-weight: 700;
+  padding-bottom: var(--a1); border-bottom: 2px solid transparent;
 }
 .site-nav a:hover { color: var(--red); border-bottom-color: var(--red); }
 
+/* LOGIN IST ZWEITE STIMME (seit 28.08.2026).
+   Er war rot gefuellt und damit das lauteste Element des ersten
+   Bildschirms - fuer eine Handlung, die nur wiederkehrende Kunden
+   brauchen. Wer zum ersten Mal kommt, will ein Rad finden. Der Knopf
+   traegt jetzt einen Umriss, die Karte daneben die Fuellung. */
 .login {
   justify-self: end;
-  color: #fff;
-  background: var(--red);
+  display: inline-flex; align-items: center; gap: var(--a2);
+  color: var(--navy);
+  background: transparent;
   text-decoration: none;
-  padding: 13px 20px;
-  border: 1px solid var(--red);
-  border-radius: 999px;
+  padding: var(--a3) var(--a4);
+  border: 1px solid var(--rahmen);
+  border-radius: var(--pille);
   font-size: var(--nav-font);
   font-weight: 700;
 }
-.login:hover { background: var(--red-tief); border-color: var(--red-tief); }
+/* Angemeldet: gefuellt, aber in Navy - ein Zustand, keine Aufforderung. */
+.login.ist-angemeldet { background: var(--navy); border-color: var(--navy); color: #fff; }
+.login.ist-angemeldet:hover { background: var(--navy-2); border-color: var(--navy-2); }
+.login:hover  { background: var(--navy); border-color: var(--navy); color: #fff; }
+.login:active { background: var(--navy-2); border-color: var(--navy-2); color: #fff; }
 
 .kopf-aktionen {
   position: relative;
   justify-self: end;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: var(--a2);
 }
 
 /* Kontomenue. Es haengt an der Kopfzeile, nicht am Knopf, damit es auf
    schmalen Geraeten nicht ueber den Rand laeuft. */
 .konto-menue {
   position: absolute; z-index: 40;
-  top: calc(100% + 10px); right: 0;
+  top: calc(100% + var(--a2)); right: 0;
   min-width: 236px;
-  padding: 16px 18px 14px;
+  padding: var(--a4) var(--a4) var(--a3);
   background: #fff;
   border: 1px solid var(--mist);
-  border-radius: 2px;
-  box-shadow: 0 26px 60px rgba(6, 24, 65, .18);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-3);
 }
 .konto-menue[hidden] { display: none; }
 .konto-wer {
-  margin: 0 0 12px; padding-bottom: 12px;
+  margin: 0 0 var(--a3); padding-bottom: var(--a3);
   border-bottom: 1px solid var(--mist);
-  font-size: 14px; line-height: 1.5; color: var(--grau);
+  font-size: var(--grad-klein); line-height: 1.5; color: var(--grau);
 }
 .konto-wer strong { color: var(--navy); }
-.konto-wer span { font-family: var(--mono); font-size: 12px; color: var(--grau-still); }
+.konto-wer span { font-family: var(--mono); font-size: var(--grad-klein); color: var(--grau); }
 .konto-menue a, .konto-menue button {
   display: block; width: 100%;
-  padding: 10px 0;
+  padding: var(--a2) 0;
   text-align: left; text-decoration: none;
   color: var(--navy); background: none; border: 0;
-  font-size: 15px; font-weight: 700;
+  font-size: var(--control-font); font-weight: 700;
 }
 .konto-menue a:hover, .konto-menue button:hover { color: var(--red); }
 .konto-menue button {
-  margin-top: 6px; padding-top: 12px;
+  margin-top: var(--a1); padding-top: var(--a3);
   border-top: 1px solid var(--mist);
   color: var(--red);
 }
-/* Die Karte ist der Weg, den mobile Besucher wirklich suchen. Sie bleibt
-   deshalb sichtbar, auch wenn der Rest ins Menue wandert. */
+/* DER ERSTE HANDLUNGSAUFRUF DER SEITE.
+   Er stand bis zum 28.08.2026 nur unter 1024 Punkten und war am
+   Schreibtisch gar nicht da - dort blieb im ersten Bildschirm KEIN
+   sichtbarer Weg zur Karte, nur ein grauer Textverweis in der
+   Navigation. Jetzt steht er ueberall dort, wo die Buehne nicht selbst
+   einen roten Knopf traegt (das tut sie unter 900 Punkten). */
 .kopf-karte {
-  display: none;
-  padding: 12px 16px;
-  color: var(--navy); text-decoration: none;
-  border: 1px solid rgba(6, 24, 65, .28);
-  border-radius: 999px;
+  display: inline-flex; align-items: center;
+  padding: var(--a3) var(--a4);
+  color: #fff; text-decoration: none;
+  background: var(--red);
+  border: 1px solid var(--red);
+  border-radius: var(--pille);
   font-size: var(--nav-font); font-weight: 700;
 }
-.kopf-karte:hover { border-color: var(--navy); background: rgba(6, 24, 65, .05); }
+.kopf-karte:hover  { background: var(--red-tief); border-color: var(--red-tief); }
+.kopf-karte:active { background: var(--red-tief); border-color: var(--red-tief);
+                     transform: translateY(1px); }
 
 .menue-knopf {
   display: none;
   width: 46px; height: 46px;
-  flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-  border: 1px solid rgba(6, 24, 65, .28);
-  border-radius: 999px;
+  flex-direction: column; align-items: center; justify-content: center; gap: var(--a1);
+  border: 1px solid var(--rahmen);
+  border-radius: var(--pille);
   background: transparent;
 }
 .menue-knopf span {
   display: block; width: 18px; height: 2px;
   background: var(--navy);
-  transition: transform .2s ease, opacity .2s ease;
+  transition: transform var(--zeit-kurz) ease, opacity var(--zeit-kurz) ease;
 }
 .menue-knopf.ist-offen span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .menue-knopf.ist-offen span:nth-child(2) { opacity: 0; }
@@ -306,17 +615,17 @@ img { max-width: 100%; }
   position: fixed; z-index: 29;
   top: 74px; left: 0; right: 0;
   display: flex; flex-direction: column;
-  padding: 10px var(--rand) 22px;
-  background: rgba(247, 249, 252, .985);
-  border-bottom: 1px solid rgba(6, 24, 65, .12);
-  box-shadow: 0 18px 40px rgba(6, 24, 65, .1);
+  padding: var(--a2) var(--rand) var(--a5);
+  background: var(--glas-papier);
+  border-bottom: 1px solid var(--linie-still);
+  box-shadow: var(--schatten-2);
 }
 .menue[hidden] { display: none; }
 .menue a {
-  padding: 15px 0;
+  padding: var(--a4) 0;
   color: var(--navy); text-decoration: none;
   font-family: var(--schmal);
-  font-size: 26px; font-weight: 800; letter-spacing: -.02em;
+  font-size: var(--grad-kopf-s); font-weight: 800; letter-spacing: var(--eng);
   border-bottom: 1px solid var(--mist);
 }
 .menue a:last-child { border-bottom: 0; }
@@ -420,7 +729,7 @@ img { max-width: 100%; }
   z-index: -3;
   /* Nur noch ein Hauch Tiefe nach unten, damit die Buehne nicht
      abrupt in den naechsten Abschnitt kippt. */
-  background: linear-gradient(0deg, rgba(6,24,65,.06) 0%, transparent 18%);
+  background: linear-gradient(0deg, var(--linie-still) 0%, transparent 18%);
   pointer-events: none;
 }
 
@@ -443,7 +752,7 @@ img { max-width: 100%; }
   inset: 0;
   z-index: -6;
   background:
-    radial-gradient(120% 78% at 50% 12%, #ffffff 0%, rgba(255,255,255,0) 64%),
+    radial-gradient(120% 78% at 50% 12%, #fff 0%, rgba(255,255,255,0) 64%),
     linear-gradient(180deg, #fbfcfe 0%, #f4f7fb 54%, #e8edf5 100%);
 }
 
@@ -526,7 +835,7 @@ img { max-width: 100%; }
      steht. Er kann der Kopfleiste also nicht mehr entgegenwachsen. */
   font-size: var(--hero-font);
   font-weight: 800;
-  letter-spacing: -.03em;
+  letter-spacing: var(--eng);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -545,9 +854,9 @@ img { max-width: 100%; }
   /* Genau der Grad der Kickerzeile links (siehe .eyebrow) - die beiden
      bilden zusammen die obere Zeile der Buehne. */
   font: 750 var(--meta-font)/1.3 var(--mono);
-  letter-spacing: .18em;
+  letter-spacing: var(--weit);
   text-transform: uppercase;
-  color: rgba(6, 24, 65, .78);
+  color: var(--vorspann);
   padding-right: .1em;
 }
 
@@ -567,7 +876,7 @@ img { max-width: 100%; }
   font-family: var(--schmal);
   font-size: var(--hero-font);
   line-height: .99;
-  letter-spacing: -.026em;
+  letter-spacing: var(--eng);
   font-weight: 800;
   max-width: 100%;
   text-wrap: balance;
@@ -577,9 +886,9 @@ img { max-width: 100%; }
      Das ist der Ersatz fuer den Schleier, der frueher das halbe Rad
      ausgewaschen hat. */
   text-shadow:
-    0 0 3px rgba(247,249,252,.92),
-    0 0 12px rgba(247,249,252,.72),
-    0 0 28px rgba(247,249,252,.45);
+    0 0 3px rgba(243, 245, 248, .94),
+    0 0 12px rgba(243, 245, 248, .72),
+    0 0 28px rgba(243, 245, 248, .45);
 }
 .claim-line { display: block; }
 .headline-primary { color: var(--navy); }
@@ -596,10 +905,12 @@ img { max-width: 100%; }
    Schlagzeilen stehen jetzt im selben Grad. */
 
 .sticky-stage.is-manual .claim {
-  transition: opacity .52s cubic-bezier(.4, 0, .2, 1), transform .62s cubic-bezier(.4, 0, .2, 1);
+  transition: opacity var(--zeit-lang) cubic-bezier(.4, 0, .2, 1),
+                transform var(--zeit-lang) cubic-bezier(.4, 0, .2, 1);
 }
 .sticky-stage.is-manual .final-card {
-  transition: opacity .36s ease, transform .45s cubic-bezier(.4, 0, .2, 1);
+  transition: opacity var(--zeit-lang) ease,
+                transform var(--zeit-lang) cubic-bezier(.4, 0, .2, 1);
 }
 
 /* Rueckfall ohne inert-Unterstuetzung: was inert ist, nimmt keine Klicks.
@@ -624,7 +935,7 @@ img { max-width: 100%; }
      da. Sie traegt drei kurze Zeilen; mehr als 420 braucht sie nie. */
   grid-template-columns: auto minmax(200px, 420px);
   justify-content: start;
-  gap: 28px;
+  gap: var(--a5);
   align-items: end;
   opacity: var(--choice-opacity);
   transform: translateY(calc((1 - var(--choice-opacity)) * 30px));
@@ -633,19 +944,19 @@ img { max-width: 100%; }
 
 .product-tabs {
   display: inline-flex;
-  padding: 5px;
-  background: #071943;
-  border: 1px solid rgba(255, 255, 255, .22);
-  border-radius: 999px;
-  box-shadow: 0 12px 34px rgba(6, 24, 65, .18);
+  padding: var(--a1);
+  background: var(--navy);
+  border: 1px solid var(--auf-navy-linie);
+  border-radius: var(--pille);
+  box-shadow: var(--schatten-2);
 }
 .product-tab {
   min-height: 48px;
-  padding: 0 18px;
-  color: rgba(255, 255, 255, .7);
+  padding: 0 var(--a4);
+  color: var(--auf-navy-text);
   background: transparent;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--pille);
   font-weight: 750;
   font-size: var(--control-font);
 }
@@ -653,31 +964,31 @@ img { max-width: 100%; }
 
 .product-copy {
   min-height: 98px;
-  padding: 16px 20px 17px;
-  border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 14px;
+  padding: var(--a4) var(--a4) var(--a4);
+  border: 1px solid var(--auf-navy-linie);
+  border-radius: var(--kante);
   color: #fff;
   background: rgba(6, 24, 65, .96);
-  box-shadow: 0 18px 46px rgba(6, 24, 65, .20);
+  box-shadow: var(--schatten-2);
 }
 .product-kicker {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: var(--a2);
   color: var(--mint);
-  font: 700 12px/1.2 var(--mono);
-  letter-spacing: .16em;
+  font: 700 var(--grad-etikett)/1.2 var(--mono);
+  letter-spacing: var(--weit);
   text-transform: uppercase;
 }
 .product-copy strong {
   display: block;
-  font-size: clamp(22px, 2vw, 32px);
+  font-size: var(--grad-kopf-m);
   line-height: 1.15;
-  letter-spacing: -.03em;
+  letter-spacing: var(--eng);
 }
 .product-copy small {
   display: block;
-  margin-top: 6px;
-  color: rgba(255, 255, 255, .84);
+  margin-top: var(--a1);
+  color: var(--auf-navy-text);
   font-size: var(--body-font);
 }
 
@@ -692,11 +1003,11 @@ img { max-width: 100%; }
   /* 410 waren zu knapp: "Bereit, wenn du es bist." brach in zwei
      Zeilen, und die Karte stand hoeher als noetig neben dem Rad. */
   width: min(470px, 34vw);
-  padding: 26px 28px;
+  padding: var(--a5) var(--a5);
   color: var(--navy);
-  background: rgba(255, 255, 255, .94);
-  border-radius: 2px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, .24);
+  background: var(--glas);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-3);
   opacity: var(--cta-opacity);
   transform: translateY(calc((1 - var(--cta-opacity)) * 34px));
   /* pointer-events nimmt keine Zahl - die Zeile hier war wirkungslos.
@@ -707,24 +1018,24 @@ img { max-width: 100%; }
 }
 .final-card .label {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 28px;
-  font: 700 12px/1.3 var(--mono);
-  letter-spacing: .14em;
+  margin-bottom: var(--a5);
+  font: 700 var(--grad-etikett)/1.3 var(--mono);
+  letter-spacing: var(--weit);
   text-transform: uppercase;
 }
 .final-card h2 {
-  margin: 0 0 10px;
+  margin: 0 0 var(--a2);
   font-family: var(--schmal);
-  font-size: clamp(28px, 2.8vw, 46px);
+  font-size: var(--grad-kopf-l);
   line-height: .98;
-  letter-spacing: -.05em;
+  letter-spacing: var(--eng);
 }
-.final-card p { margin: 0 0 24px; color: #58657a; font-size: var(--body-font); line-height: 1.5; }
+.final-card p { margin: 0 0 var(--a5); color: var(--grau); font-size: var(--body-font); line-height: 1.5; }
 
 .primary-cta {
   display: flex; align-items: center; justify-content: space-between;
   width: 100%;
-  padding: 17px 18px;
+  padding: var(--a4) var(--a4);
   color: #fff;
   background: var(--red);
   border: 0;
@@ -733,7 +1044,7 @@ img { max-width: 100%; }
   font-size: var(--control-font);
 }
 .primary-cta:hover { background: var(--red-tief); }
-.primary-cta span:last-child { font-size: 22px; }
+.primary-cta span:last-child { font-size: var(--grad-kopf-s); }
 
 /* Der Scrollhinweis.
 
@@ -790,12 +1101,19 @@ img { max-width: 100%; }
   bottom: calc(24% - 54px);
   width: 34px; height: 34px;
   margin-right: -17px;
-  border-right: 6px solid #fff;
-  border-bottom: 6px solid #fff;
-  border-radius: 4px;
+  /* SIE WAREN WEISS (bis 28.08.2026).
+     Auf dem hellen Buehnengrund ergibt Weiss gegen #f4f7fb 1,03:1 -
+     die Winkel hingen allein an zwei Schlagschatten und waren im
+     Bildschirmfoto kaum zu finden. Der einzige Hinweis des ersten
+     Bildschirms darauf, was als naechstes zu tun ist, war praktisch
+     unsichtbar. Navy traegt hier 15,8:1; der helle Saum darunter haelt
+     die Winkel auch ueber dem schwarzen Reifen frei. */
+  border-right: 6px solid var(--navy);
+  border-bottom: 6px solid var(--navy);
+  border-radius: var(--kante);
   transform: rotate(45deg);
-  filter: drop-shadow(0 2px 3px rgba(6, 24, 65, .55))
-          drop-shadow(0 8px 18px rgba(6, 24, 65, .35));
+  filter: drop-shadow(0 0 3px rgba(243, 245, 248, .95))
+          drop-shadow(0 2px 10px rgba(243, 245, 248, .85));
   animation: pfeil-spur 1.9s cubic-bezier(.4, 0, .3, 1) infinite;
 }
 .scroll-hint span:nth-child(2) { animation-delay: -.28s; }
@@ -808,22 +1126,26 @@ img { max-width: 100%; }
   92%, 100% { transform: rotate(45deg) translate(14px, 14px); opacity: 0; }
 }
 
-
-
-
-
-  70%  { transform: translateY(26px); opacity: 1; }
-  100% { transform: translateY(33px); opacity: 0; }
-}
-}
-}
-}
+/* HIER STANDEN BRUCHSTUECKE (bis 28.08.2026).
+   Beim Austausch einer frueheren Animation blieben zwei Prozentzeilen
+   und VIER ueberzaehlige Klammern stehen. Der Browser wirft sie nicht
+   einfach weg - er sucht sich einen Wiedereinstieg, und der lag hinter
+   der naechsten oeffnenden Klammer. Verschluckt hat es damit die Regel
+   ".progress-rail" selbst; nur ihr ::after ueberlebte. Nachgemessen im
+   Browser: das Element stand auf position static mit 0 x 0 Punkten und
+   ohne Grund. Der Fortschrittsbalken der Buehne war tot, seit die
+   Bruchstuecke da waren, und niemand konnte es sehen - weil ein Balken,
+   den es nicht gibt, genauso aussieht wie einer, der noch bei null steht. */
 
 .progress-rail {
   position: absolute;
-  right: 0; top: 0;
-  width: 4px; height: 100%;
-  background: rgba(255, 255, 255, .1);
+  /* AUF DER FLUCHT, nicht an der Fensterkante. Bei right: 0 war er das
+     einzige Element der Buehne, das seinen eigenen Rand hatte. */
+  right: var(--flucht); top: 0;
+  width: 3px; height: 100%;
+  /* Die Spur war weiss zu 10 % - auf hellem Grund unsichtbar. Wer nur
+     die Fuellung sieht, sieht keinen Fortschritt, sondern einen Strich. */
+  background: var(--mist);
 }
 .progress-rail::after {
   content: "";
@@ -846,29 +1168,43 @@ img { max-width: 100%; }
    Wo die Farbe wechselt (Tarife, Fusszeile) bleibt es bei der vollen. */
 .facts { padding: var(--luft) 0 calc(var(--luft) * .35); background: var(--paper); }
 
+/* DERSELBE RHYTHMUS WIE BEIM ABLAUF (28.08.2026).
+   Beide Abschnitte tragen dasselbe Muster - Haarlinie links, Einzug
+   rechts davon, Zahl, Beschriftung. Sie trugen es in zwei Rhythmen:
+   die Kennzahlen ohne Rasterluecke mit 40 Punkten Einzug, der Ablauf
+   mit 45,6 Punkten Luecke und 38,4 Einzug. Das sieht man nicht neben-
+   einander, weil sie untereinander stehen - aber man liest es. */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0;
+  gap: var(--af-m);
 }
 .stat {
-  display: flex; flex-direction: column; gap: 10px;
-  padding-left: clamp(22px, 2.6vw, 40px);
+  display: flex; flex-direction: column;
+  /* DERSELBE ABSTAND WIE UEBERALL zwischen einer Zahl und ihrer
+     Beschriftung. Er stand hier auf 10, beim Schrittzaehler auf 16 und
+     in der Buehne auf 28 Punkten. */
+  gap: var(--kicker-abstand);
+  padding-left: var(--af-m);
   border-left: 1px solid var(--mist);
 }
 .stat:first-child { padding-left: 0; border-left: 0; }
 .stat b {
   color: var(--navy);
   font-family: var(--schmal);
-  font-size: clamp(44px, 5vw, 78px);
+  font-size: var(--grad-zahl);
   font-weight: 800;
   line-height: 1;
-  letter-spacing: -.06em;
+  letter-spacing: var(--eng);
+  /* Vier Zahlen nebeneinander, jede mit anderer Ziffernzahl. Ohne
+     Tabellenziffern steht "10" schmaler als "24/7" schmaler als
+     "100 %", und die Reihe wackelt. */
+  font-variant-numeric: tabular-nums;
 }
 .stat span {
-  color: var(--grau-still);
-  font: 700 11px/1.3 var(--mono);
-  letter-spacing: .14em;
+  color: var(--grau);
+  font: 700 var(--grad-etikett)/1.3 var(--mono);
+  letter-spacing: var(--weit);
   text-transform: uppercase;
 }
 
@@ -877,24 +1213,41 @@ img { max-width: 100%; }
 .eyebrow {
   display: block;
   margin: 0 0 var(--kicker-abstand);
-  color: rgba(6, 24, 65, .72);
+  color: var(--vorspann);
   font: 750 var(--meta-font)/1.3 var(--mono);
-  letter-spacing: .18em;
+  letter-spacing: var(--weit);
   text-transform: uppercase;
 }
 
-/* Der Kopf jedes Abschnitts: Vorspann und Titel links, der
-   Lesehinweis rechts auf gleicher Grundlinie. */
+/* DER KOPF JEDES ABSCHNITTS.
+   Vorspann und Titel links, der Lesehinweis rechts auf gleicher
+   Grundlinie - WENN es einen gibt.
+
+   Bis zum 28.08.2026 war die zweite Spalte immer da. Zwei der vier
+   Abschnitte tragen aber gar keinen Hinweis und hatten die Klasse
+   "ohne-hinweis" auch nicht: "So funktioniert eine Ausleihe" und
+   "Was gerade frei ist" standen deshalb auf 1,6 von 2,6 Spalten, also
+   auf 59 Prozent der Breite, waehrend "Würzburg fährt flexibel."
+   daneben die volle nahm. Nachgemessen bei 1440: 770,6 gegen 1309,8
+   Punkte fuer dieselbe Rolle. Rechts stand nichts.
+
+   Jetzt entscheidet der Inhalt: ein Kopf MIT Hinweis ist zweispaltig,
+   einer ohne ist es nicht. Die Klasse "ohne-hinweis" ist damit
+   ueberfluessig und aus dem HTML verschwunden. */
 .section-header {
   display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  grid-template-areas: "vorspann hinweis" "titel hinweis";
-  gap: 0 clamp(28px, 4vw, 72px);
-  margin-bottom: clamp(40px, 4.6vw, 66px);
-  padding-bottom: clamp(18px, 2vw, 28px);
+  grid-template-columns: 1fr;
+  grid-template-areas: "vorspann" "titel";
+  gap: 0 var(--af-l);
+  margin-bottom: var(--af-l);
+  padding-bottom: var(--af-s);
   border-bottom: 1px solid var(--mist);
 }
-.section-header .eyebrow { grid-area: vorspann; margin-bottom: 20px; }
+.section-header:has(p) {
+  grid-template-columns: 1.6fr 1fr;
+  grid-template-areas: "vorspann hinweis" "titel hinweis";
+}
+.section-header .eyebrow { grid-area: vorspann; margin-bottom: var(--a4); }
 .section-header h2 {
   grid-area: titel;
   margin: 0;
@@ -902,13 +1255,7 @@ img { max-width: 100%; }
   font-family: var(--schmal);
   font-size: var(--titel-font);
   line-height: .94;
-  letter-spacing: -.055em;
-}
-/* Ein Kopf ohne Lesehinweis braucht die zweite Spalte nicht - sonst
-   stuende die Ueberschrift auf zwei Dritteln und rechts bliebe Leere. */
-.section-header.ohne-hinweis {
-  grid-template-columns: 1fr;
-  grid-template-areas: 'vorspann' 'titel';
+  letter-spacing: var(--eng);
 }
 .section-header p {
   grid-area: hinweis;
@@ -918,35 +1265,101 @@ img { max-width: 100%; }
   line-height: 1.6;
 }
 
+/* ============================================================
+   DER LADEZUSTAND
+
+   Vier Abschnitte holen ihren Inhalt aus der Datenbank: Kennzahlen,
+   Ablauf, Tarife, Fragen. Bis die Antwort da ist, sind ihre Behaelter
+   LEER - Hoehe null. Wenn sie sich fuellen, springt alles darunter um
+   rund tausend Punkte nach unten. Wer in dieser Sekunde schon liest
+   oder zielt, verliert die Stelle.
+
+   Die Reserve steht nur, solange der Behaelter leer ist (:empty), und
+   verschwindet mit dem ersten Kind von selbst. Die Werte sind an der
+   gefuellten Seite bei 1440 Punkten gemessen; auf schmalen Geraeten
+   stapeln die Kacheln und brauchen mehr - dort bleibt ein Rest Sprung,
+   aber ein kleiner statt des ganzen.
+
+   Bewusst OHNE Text und ohne Zappeln: ein "wird geladen", das nach
+   einem Fehlschlag stehen bleibt, waere eine falsche Aussage. Bleibt
+   die Flaeche leer, ist sie leer - und der Fehler steht in der
+   Kurzmeldung. */
+#stats-grid:empty   { min-height: 111px; }
+#howto-grid:empty   { min-height: 203px; }
+#pricing-grid:empty { min-height: 413px; }
+#faq-grid:empty     { min-height: 340px; }
+
 .howto-section, .faq-section { padding: var(--luft) 0; background: var(--paper); }
 .map-wrapper { padding: var(--luft) 0; background: #fff; }
 
 .btn-primary, .btn-outline, .btn-end-rental {
-  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
-  border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--a2);
+  border-radius: var(--pille);
   font-weight: 700;
   font-size: var(--control-font);
-  padding: 14px 24px;
+  padding: var(--a3) var(--a5);
   text-decoration: none;
   border: 1px solid transparent;
-  transition: background .18s ease, color .18s ease, border-color .18s ease;
+  transition: background var(--zeit-kurz) ease, color var(--zeit-kurz) ease,
+              border-color var(--zeit-kurz) ease;
 }
 .btn-primary { background: var(--red); border-color: var(--red); color: #fff; }
 .btn-primary:hover { background: var(--red-tief); border-color: var(--red-tief); }
-.btn-outline { background: transparent; border-color: rgba(6, 24, 65, .3); color: var(--navy); }
+.btn-outline { background: transparent; border-color: var(--rahmen); color: var(--navy); }
 .btn-outline:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
 .full-width { width: 100%; }
+
+/* ============================================================
+   ZUSTAENDE
+
+   Die Seite fuehrte 23 Regeln fuer "ueberfahren", zwei fuer "Fokus"
+   und KEINE einzige fuer "gedrueckt". Ein Knopf, der auf den Druck
+   nicht antwortet, fuehlt sich kaputt an - besonders dort, wo danach
+   ein Netzaufruf laeuft und eine halbe Sekunde nichts passiert.
+
+   Ein Zustand, eine Sprache: gedrueckt heisst um einen Punkt nach
+   unten und eine Stufe dunkler. Gesperrt heisst durchscheinend und
+   ohne Zeigerwechsel. Das gilt fuer JEDES Bedienelement der Seite,
+   nicht fuer eine Auswahl davon.
+   ============================================================ */
+.btn-primary:active, .btn-outline:active, .btn-end-rental:active,
+.primary-cta:active, .pop-leihen:active, .karte-zurueck:active,
+.karte-leer button:active, .product-tab:active, .auth-tab:active,
+.rechner-typen button:active, .rechner-marken button:active,
+.recht-inhalt a:active, .passwort-zeigen:active, .menue-knopf:active,
+.stationsliste button:active, .konto-menue a:active, .konto-menue button:active {
+  transform: translateY(1px);
+}
+.btn-primary:active, .primary-cta:active, .pop-leihen:active {
+  background: var(--red-tief);
+  border-color: var(--red-tief);
+}
+.btn-outline:active, .karte-zurueck:active, .karte-leer button:active {
+  background: var(--navy-2);
+  border-color: var(--navy-2);
+  color: #fff;
+}
+
+/* Gesperrt sieht ueberall gleich aus. Der Zeiger sagt dabei, WORAN es
+   liegt: "progress", solange etwas laeuft, sonst "not-allowed". */
+button:disabled, input:disabled, select:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  transform: none;
+}
+form button[type="submit"]:disabled, .modal-content button:disabled,
+.modal-content input:disabled { cursor: progress; }
 
 /* ---------------------------------------------------- So geht's */
 
 .howto-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: clamp(26px, 3.2vw, 56px);
+  gap: var(--af-m);
 }
 .howto-card {
   display: flex; flex-direction: column;
-  padding-left: clamp(22px, 2.6vw, 40px);
+  padding-left: var(--af-m);
   border-left: 1px solid var(--mist);
 }
 .howto-card:first-child { padding-left: 0; border-left: 0; }
@@ -957,21 +1370,23 @@ img { max-width: 100%; }
    kein Messwert. Ein Sinnbild daneben stand frueher hier; auf
    Kachelgroesse blieb davon ein Fleck, der nichts erklaerte. */
 .step-number {
-  margin-bottom: 16px;
+  /* Derselbe Abstand zur Beschriftung wie bei jeder anderen Zahl. */
+  margin-bottom: var(--kicker-abstand);
   font-family: var(--schmal); font-weight: 800; line-height: 1;
-  font-size: clamp(42px, 4.6vw, 70px);
+  font-size: var(--grad-zahl);
   color: var(--red);
-  letter-spacing: -.06em;
+  letter-spacing: var(--eng);
+  font-variant-numeric: tabular-nums;
 }
 .step-number::before { content: '0'; }
 .howto-card h3 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--a3);
   color: var(--navy);
   font-family: var(--schmal);
   font-weight: 800;
-  font-size: clamp(21px, 1.8vw, 27px);
+  font-size: var(--grad-kopf-s);
   line-height: 1.08;
-  letter-spacing: -.035em;
+  letter-spacing: var(--eng);
 }
 .howto-card p { margin: 0; color: var(--grau); }
 
@@ -979,67 +1394,70 @@ img { max-width: 100%; }
 /* Das einzige dunkle Band zwischen Bühne und Fusszeile. */
 
 .pricing { padding: var(--luft) 0; background: var(--navy); color: #fff; }
-.pricing .section-header { border-bottom-color: rgba(255, 255, 255, .2); }
+.pricing .section-header { border-bottom-color: var(--auf-navy-linie); }
 .pricing .section-header h2 { color: #fff; }
-.pricing .section-header p { color: rgba(255, 255, 255, .68); }
-.pricing .eyebrow { color: rgba(255, 255, 255, .62); }
+.pricing .section-header p { color: var(--auf-navy-still); }
+.pricing .eyebrow { color: var(--auf-navy-still); }
 
 .pricing-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
-  gap: clamp(18px, 2vw, 26px);
+  gap: var(--af-s);
 }
 .price-card {
   display: flex; flex-direction: column; justify-content: space-between;
   position: relative;
   background: var(--navy-2);
-  border: 1px solid rgba(255, 255, 255, .16);
-  border-radius: 2px;
-  padding: 30px 26px 26px;
+  border: 1px solid var(--auf-navy-linie);
+  border-radius: var(--kante);
+  padding: var(--a6) var(--a5) var(--a5);
 }
 .price-card.popular {
   border-color: var(--red);
-  background: #10306f;
-  box-shadow: 0 24px 60px -28px rgba(0, 0, 0, .85);
+  background: var(--navy-3);
+  box-shadow: var(--schatten-3);
 }
 .badge-pop {
   position: absolute; top: 0; right: 0;
   background: var(--red); color: #fff;
-  font: 700 11px/1 var(--mono);
-  letter-spacing: .14em; text-transform: uppercase;
-  padding: 7px 13px;
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase;
+  padding: var(--a2) var(--a3);
 }
 .price-card .header {
   font-family: var(--schmal);
-  font-size: clamp(24px, 2vw, 32px);
+  font-size: var(--grad-kopf-m);
   font-weight: 800;
   color: #fff;
-  letter-spacing: -.04em;
-  margin-bottom: 8px;
+  letter-spacing: var(--eng);
+  margin-bottom: var(--a2);
 }
 .price-card .price {
   font-family: var(--schmal);
-  font-size: clamp(30px, 2.6vw, 44px);
+  font-size: var(--grad-zahl-klein);
   font-weight: 800;
   color: #fff;
-  letter-spacing: -.05em;
-  margin-bottom: 22px;
+  letter-spacing: var(--eng);
+  margin-bottom: var(--a5);
+  /* Drei Preise untereinander in drei Karten: 3,10 - 8,50 - 17,00.
+     Ohne Tabellenziffern beginnt jeder an einer anderen Stelle. */
+  font-variant-numeric: tabular-nums;
 }
 .price-card .price small {
-  font-family: var(--mono); font-size: 12px; font-weight: 400;
-  color: rgba(255, 255, 255, .55); letter-spacing: .06em;
+  font-family: var(--mono); font-size: var(--grad-klein); font-weight: 400;
+  color: var(--auf-navy-still); letter-spacing: var(--weit);
 }
-.features-list { list-style: none; padding: 0; margin: 0 0 26px; }
+.features-list { list-style: none; padding: 0; margin: 0 0 var(--a5); }
 .features-list li {
-  display: flex; align-items: center; gap: 11px;
-  padding: 11px 0;
-  border-top: 1px solid rgba(255, 255, 255, .13);
+  display: flex; align-items: center; gap: var(--a3);
+  padding: var(--a3) 0;
+  border-top: 1px solid var(--auf-navy-linie);
   color: rgba(255, 255, 255, .9);
   font-size: var(--body-font);
 }
 .features-list li:first-child { border-top: 0; }
-.features-list i { color: var(--mint); font-size: .8rem; }
-.pricing .btn-outline { color: #fff; border-color: rgba(255, 255, 255, .38); }
+.features-list i { color: var(--mint); font-size: var(--grad-klein); }
+.pricing .btn-outline { color: #fff; border-color: var(--rahmen-hell); }
 .pricing .btn-outline:hover { background: #fff; color: var(--navy); border-color: #fff; }
 
 /* Preisrechner — er stand frueher als schmaler Kasten links ueber den
@@ -1050,7 +1468,7 @@ img { max-width: 100%; }
 
    Er rechnet mit denselben Regeln wie die Datenbank und schluesselt die
    Posten so auf, wie velocity.entgeltposition sie speichert. */
-.tarif-zaehler { margin-bottom: clamp(26px, 3vw, 40px); }
+.tarif-zaehler { margin-bottom: var(--af-m); }
 .rechner {
   display: grid;
   grid-template-columns: minmax(272px, 1.05fr) minmax(196px, .82fr) minmax(250px, 1.1fr);
@@ -1058,28 +1476,28 @@ img { max-width: 100%; }
   color: var(--navy);
   border: 1px solid var(--mist);
   border-left: 3px solid var(--red);
-  border-radius: 0 2px 2px 0;
-  box-shadow: 0 20px 44px -30px rgba(0, 0, 0, .8);
+  border-radius: 0 var(--kante) var(--kante) 0;
+  box-shadow: var(--schatten-2);
 }
 .rechner-spalte {
   display: flex; flex-direction: column;
-  gap: 12px;
-  padding: 20px clamp(18px, 2vw, 26px);
+  gap: var(--a3);
+  padding: var(--a4) var(--af-s);
   border-left: 1px solid var(--mist);
 }
 .rechner-spalte:first-child { border-left: 0; }
 .rechner-marke {
-  font: 700 10.5px/1.3 var(--mono);
-  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+  font: 700 var(--grad-etikett)/1.3 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
-.rechner-typen { display: flex; gap: 5px; flex-wrap: wrap; }
+.rechner-typen { display: flex; gap: var(--a1); flex-wrap: wrap; }
 .rechner-typen button {
-  padding: 7px 11px;
-  font-size: 12px; font-weight: 700;
-  color: var(--grau-still);
+  padding: var(--a2) var(--a3);
+  font-size: var(--grad-klein); font-weight: 700;
+  color: var(--grau);
   background: transparent;
-  border: 1px solid var(--mist);
-  border-radius: 999px;
+  border: 1px solid var(--rahmen);
+  border-radius: var(--pille);
   white-space: nowrap;
 }
 .rechner-typen button:hover { border-color: var(--navy); color: var(--navy); }
@@ -1087,17 +1505,17 @@ img { max-width: 100%; }
   background: var(--navy); border-color: var(--navy); color: #fff;
 }
 
-.rechner-feld { display: flex; align-items: baseline; gap: 9px; }
+.rechner-feld { display: flex; align-items: baseline; gap: var(--a2); }
 .rechner-feld input {
   width: 104px;
-  padding: 9px 12px;
-  font-family: var(--mono); font-size: 19px; font-weight: 700;
+  padding: var(--a2) var(--a3);
+  font-family: var(--mono); font-size: var(--nav-font); font-weight: 700;
   color: var(--navy);
-  border: 1px solid var(--mist); border-radius: 2px;
+  border: 1px solid var(--rahmen); border-radius: var(--kante);
   font-variant-numeric: tabular-nums;
 }
 .rechner-feld input:focus { border-color: var(--navy); outline: none; }
-.rechner-feld span { font-size: 14px; color: var(--grau); }
+.rechner-feld span { font-size: var(--grad-klein); color: var(--grau); }
 .rechner-spalte input[type="range"] {
   width: 100%; margin: 0; accent-color: var(--red);
 }
@@ -1110,59 +1528,73 @@ img { max-width: 100%; }
    nicht - drei plus einer sah nach Umbruch aus, zwei mal zwei nach
    Absicht. */
 .rechner-marken {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
-  margin-top: 14px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--a1);
+  margin-top: var(--a3);
 }
 .rechner-marken button {
-  padding: 8px 10px;
+  padding: var(--a2) var(--a2);
   background: transparent; color: var(--grau);
-  border: 1px solid var(--mist); border-radius: 999px;
-  font: 700 12.5px/1 var(--body-schrift);
+  border: 1px solid var(--rahmen); border-radius: var(--pille);
+  font: 700 var(--grad-klein)/1 var(--body-schrift);
 }
 .rechner-marken button:hover { border-color: var(--navy); color: var(--navy); }
 .rechner-marken button[aria-pressed="true"] {
   background: var(--navy); border-color: var(--navy); color: #fff;
 }
 .rechner-grenze {
-  margin: 10px 0 0;
-  font: 600 12.5px/1.4 var(--body-schrift);
-  color: var(--grau-still);
+  margin: var(--a2) 0 0;
+  font: 600 var(--grad-klein)/1.4 var(--body-schrift);
+  color: var(--grau);
 }
 .rechner-grenze.ist-korrigiert { color: var(--red-tief); font-weight: 700; }
 
 /* Die Ergebnisspalte traegt den Betrag oben und die Posten darunter,
    damit die Summe auf einer Hoehe mit der Eingabe steht. */
-.rechner-summe { justify-content: space-between; gap: 10px; }
-.rechner-ergebnis { display: flex; align-items: baseline; gap: 8px; }
+.rechner-summe { justify-content: space-between; gap: var(--a2); }
+.rechner-ergebnis { display: flex; align-items: baseline; gap: var(--a2); }
 .rechner-betrag {
   font-family: var(--schmal); font-weight: 800;
-  font-size: clamp(38px, 3.6vw, 52px); line-height: 1;
-  letter-spacing: -.055em;
+  font-size: var(--grad-zahl-klein); line-height: 1;
+  letter-spacing: var(--eng);
   font-variant-numeric: tabular-nums;
 }
 .rechner-waehrung {
-  font-family: var(--mono); font-size: .95rem; font-weight: 600; color: var(--red);
+  font-family: var(--mono); font-size: var(--body-font); font-weight: 600; color: var(--red);
 }
 .rechner-posten { list-style: none; margin: 0; padding: 0; }
 .rechner-posten li {
   display: flex; align-items: baseline; justify-content: space-between;
-  gap: 14px;
-  padding: 6px 0;
+  gap: var(--a3);
+  padding: var(--a1) 0;
   border-top: 1px solid var(--mist);
-  font-family: var(--mono); font-size: 11.5px; color: var(--grau);
+  font-family: var(--mono); font-size: var(--grad-etikett); color: var(--grau);
 }
 .rechner-posten li b { color: var(--navy); font-variant-numeric: tabular-nums; }
 .rechner-posten li.ist-abzug, .rechner-posten li.ist-abzug b { color: var(--red); }
 
 /* -------------------------------------------------------- Karte */
 
-/* Die Karte nutzt jetzt die volle Fensterbreite. Vorher stand sie in
-   der Spur und liess links und rechts Platz liegen, obwohl sie das
-   Element ist, das Flaeche wirklich braucht. */
+/* DIE KARTE STEHT IN DER FLUCHT (seit 28.08.2026).
+   Sie lief randlos von Fensterkante zu Fensterkante, waehrend jede
+   Kachel daneben auf der Spur stand. Nachgemessen bei 1440 Punkten:
+   Karte 0 bis 1425, alles andere 57,6 bis 1367,4 - links und rechts
+   fehlte ihr der Rand, den die ganze uebrige Seite hat. Das war der
+   auffaelligste Bruch der Seite, weil die Karte das groesste Element
+   ist: eine Flaeche, die als einzige ihre eigene Kante erfindet.
+
+   Der Rand ist DIESELBE Rechnung wie bei .container und .site-header,
+   nicht ein zweiter Wert, der zufaellig gleich aussieht - --flucht
+   loest sich hier gegen den umgebenden Block auf, und der ist die
+   volle Seitenbreite ohne Rollbalken.
+
+   Damit ist die Karte auch ein Element wie die anderen und bekommt
+   deren Form: Rahmen rundum statt nur oben und unten, harte Kante. */
 .map-container-shadow {
   position: relative;
+  margin: 0 var(--flucht);
   overflow: hidden;
-  border-block: 1px solid var(--mist);
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
 }
 #map { height: clamp(520px, 74vh, 820px); width: 100%; }
 
@@ -1178,13 +1610,13 @@ img { max-width: 100%; }
   background: var(--navy);
   color: #fff;
   border: 2px solid #fff;
-  border-radius: 999px;
-  box-shadow: 0 6px 18px rgba(6, 24, 65, .38);
+  border-radius: var(--pille);
+  box-shadow: var(--schatten-1);
   font-family: var(--mono); font-weight: 700;
-  font-size: 13px; line-height: 1;
+  font-size: var(--grad-klein); line-height: 1;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
-  transition: transform .14s ease;
+  transition: transform var(--zeit-kurz) ease;
 }
 .leaflet-marker-icon:hover .karten-station { transform: scale(1.08); }
 
@@ -1198,70 +1630,71 @@ img { max-width: 100%; }
   width: 24px; height: 24px;
   background: #fff;
   border: 2px solid var(--navy);
-  border-radius: 999px;
+  border-radius: var(--pille);
   color: var(--navy);
-  font-size: 11px;
-  box-shadow: 0 3px 10px rgba(6, 24, 65, .28);
+  font-size: var(--grad-etikett);
+  box-shadow: var(--schatten-1);
 }
-.karten-rad.ist-ebike { border-color: var(--mint); color: #0f7a52; }
+.karten-rad.ist-ebike { border-color: var(--mint); color: var(--gruen); }
 .karten-rad.ist-cargo { border-color: var(--red);  color: var(--red); }
 
 /* ---- Popover ---- */
 .leaflet-popup-content-wrapper {
-  border-radius: 3px;
-  box-shadow: 0 22px 60px rgba(6, 24, 65, .3);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-3);
 }
 .leaflet-popup-content { margin: 0; font-family: var(--body-schrift); }
 .pop { width: 100%; }
 .pop-kopf {
-  padding: 16px 18px 14px;
+  padding: var(--a4) var(--a4) var(--a3);
   border-bottom: 1px solid var(--mist);
 }
 .pop-marke {
-  display: block; margin-bottom: 5px;
-  font: 700 10px/1 var(--mono);
-  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+  display: block; margin-bottom: var(--a1);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
 .pop-kopf strong {
   display: block;
   font-family: var(--schmal); font-weight: 800;
-  font-size: 24px; line-height: 1.05; letter-spacing: -.035em;
+  font-size: var(--grad-kopf-s); line-height: 1.05; letter-spacing: var(--eng);
   color: var(--navy);
 }
 .pop-adresse {
-  display: block; margin-top: 5px;
-  font-size: 12.5px; line-height: 1.45; color: var(--grau);
+  display: block; margin-top: var(--a1);
+  font-size: var(--grad-klein); line-height: 1.45; color: var(--grau);
 }
 .pop-frei {
-  display: block; margin-top: 7px;
-  font: 700 11px/1 var(--mono);
-  letter-spacing: .12em; text-transform: uppercase; color: var(--navy);
+  display: block; margin-top: var(--a2);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--navy);
 }
 
 /* Wie hoch liegt die Station, und wie weit ist es von dort noch
    hinauf? Stand frueher in einer eigenen Grafik unter der Karte. */
 .pop-hoehe {
-  padding: 11px 18px;
+  padding: var(--a3) var(--a4);
   border-bottom: 1px solid var(--mist);
   background: var(--paper);
 }
 .pop-hoehe-kopf {
-  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  display: flex; align-items: baseline; gap: var(--a2); flex-wrap: wrap;
   margin: 0;
 }
 .pop-hoehe-wert {
-  font-family: var(--schmal); font-weight: 800; font-size: 20px;
-  letter-spacing: -.03em; color: var(--navy);
+  font-family: var(--schmal); font-weight: 800; font-size: var(--grad-kopf-s);
+  letter-spacing: var(--eng); color: var(--navy);
+  font-variant-numeric: tabular-nums;
 }
 /* "180 m" allein liess offen, was gemeint ist. Die Beifuegung sagt es. */
 .pop-hoehe-was {
-  font: 700 10.5px/1.4 var(--mono);
-  letter-spacing: .1em; text-transform: uppercase; color: var(--grau-still);
+  font: 700 var(--grad-etikett)/1.4 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
 .pop-hoehe-rest {
-  margin: 5px 0 0;
-  font: 700 10.5px/1.5 var(--mono);
-  letter-spacing: .1em; text-transform: uppercase; color: var(--grau-still);
+  margin: var(--a1) 0 0;
+  font: 700 var(--grad-etikett)/1.5 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
 .pop-hoehe-marke { color: var(--navy); }
 
@@ -1269,8 +1702,8 @@ img { max-width: 100%; }
   display: grid;
   grid-template-columns: 74px 1fr auto;
   align-items: center;
-  gap: 13px;
-  padding: 12px 18px;
+  gap: var(--a3);
+  padding: var(--a3) var(--a4);
   border-bottom: 1px solid var(--mist);
 }
 /* Die Raeder sind freigestellt: contain statt cover, damit das ganze
@@ -1278,53 +1711,53 @@ img { max-width: 100%; }
    die Freisteller auf Weiss stehen - so faellt keine Kante auf. */
 .pop-bild {
   width: 74px; height: 48px;
-  overflow: hidden; border-radius: 2px;
+  overflow: hidden; border-radius: var(--kante);
   background: #fff;
   display: flex; align-items: center; justify-content: center;
 }
 .pop-bild img { width: 100%; height: 100%; object-fit: contain; display: block; }
-.pop-kein-bild { color: var(--grau-still); font-size: 17px; }
-.pop-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pop-kein-bild { color: var(--grau); font-size: var(--body-font); }
+.pop-text { display: flex; flex-direction: column; gap: var(--a1); min-width: 0; }
 .pop-text strong {
-  font-size: 15px; font-weight: 700; color: var(--navy); letter-spacing: -.01em;
+  font-size: var(--control-font); font-weight: 700; color: var(--navy); letter-spacing: var(--eng);
 }
 .pop-zahl {
-  font: 700 11px/1.2 var(--mono);
-  letter-spacing: .1em; text-transform: uppercase; color: var(--red);
+  font: 700 var(--grad-etikett)/1.2 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--red);
 }
-.pop-preis, .pop-akku { font-size: 12px; color: var(--grau); }
+.pop-preis, .pop-akku { font-size: var(--grad-klein); color: var(--grau); }
 .pop-akku { font-weight: 700; }
 .pop-leihen {
-  padding: 10px 16px;
+  padding: var(--a2) var(--a4);
   background: var(--red); color: #fff;
-  border: 0; border-radius: 999px;
-  font-weight: 700; font-size: 13.5px;
+  border: 0; border-radius: var(--pille);
+  font-weight: 700; font-size: var(--control-font);
   white-space: nowrap;
 }
 .pop-leihen:hover { background: var(--red-tief); }
-.pop-leer { margin: 0; padding: 16px 18px; color: var(--grau); font-size: 13px; }
+.pop-leer { margin: 0; padding: var(--a4) var(--a4); color: var(--grau); font-size: var(--grad-klein); }
 .pop-fuss {
-  margin: 0; padding: 12px 18px 14px;
-  font-size: 11.5px; line-height: 1.5; color: var(--grau-still);
+  margin: 0; padding: var(--a3) var(--a4) var(--a3);
+  font-size: var(--grad-etikett); line-height: 1.5; color: var(--grau);
   background: var(--paper);
 }
 
 .map-controls {
   position: absolute; top: 18px; left: 18px; z-index: 500;
-  padding: 14px 16px;
-  background: rgba(255, 255, 255, .96);
+  padding: var(--a3) var(--a4);
+  background: var(--glas);
   border: 1px solid var(--mist);
-  border-radius: 2px;
-  box-shadow: 0 14px 34px rgba(6, 24, 65, .14);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-2);
 }
 .control-title {
-  margin-bottom: 9px;
-  font: 700 10.5px/1 var(--mono);
-  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+  margin-bottom: var(--a2);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
 .filter-option {
-  display: flex; align-items: center; gap: 9px;
-  padding: 3px 0; font-size: 14px; cursor: pointer; color: var(--navy);
+  display: flex; align-items: center; gap: var(--a2);
+  padding: var(--a1) 0; font-size: var(--body-font); cursor: pointer; color: var(--navy);
 }
 .filter-option input { accent-color: var(--red); }
 /* Zurueck aufs Geschaeftsgebiet. Es gab hier frueher eine Schaltflaeche
@@ -1332,64 +1765,64 @@ img { max-width: 100%; }
    Attrappe. Diese hier tut etwas, das man wirklich braucht. */
 .karte-knoepfe {
   position: absolute; right: 18px; top: 18px; z-index: 500;
-  display: flex; gap: 8px;
+  display: flex; gap: var(--a2);
 }
 .karte-zurueck {
   position: relative;
-  padding: 11px 17px;
+  padding: var(--a3) var(--a4);
   background: #fff; color: var(--navy);
-  border: 1px solid var(--mist); border-radius: 999px;
-  font-weight: 700; font-size: 13.5px;
-  box-shadow: 0 14px 34px rgba(6, 24, 65, .16);
+  border: 1px solid var(--rahmen); border-radius: var(--pille);
+  font-weight: 700; font-size: var(--control-font);
+  box-shadow: var(--schatten-2);
 }
 .karte-zurueck:hover { background: var(--navy); border-color: var(--navy); color: #fff; }
 
 /* Die Filter aendern die Karte sichtbar. Diese Zeile sagt es auch denen,
    die sie nicht sehen - und den anderen schadet sie nicht. */
 .karte-stand {
-  margin: 18px auto 0;
-  font: 600 13.5px/1.5 var(--body-schrift);
-  color: var(--grau-still);
+  margin: var(--a4) auto 0;
+  font: 600 var(--grad-klein)/1.5 var(--body-schrift);
+  color: var(--grau);
 }
 
 /* Kein Typ gewaehlt: die Karte ist leer und sagt, wie es weitergeht. */
 .karte-leer {
   position: absolute; inset: 0; z-index: 600;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 12px; padding: 30px; text-align: center;
-  background: rgba(243, 245, 248, .93);
+  gap: var(--a3); padding: var(--a6); text-align: center;
+  background: var(--glas-papier);
   backdrop-filter: blur(2px);
 }
 .karte-leer[hidden] { display: none; }
 .karte-leer strong {
-  font-family: var(--schmal); font-size: clamp(26px, 3vw, 38px);
-  font-weight: 800; letter-spacing: -.03em; color: var(--navy);
+  font-family: var(--schmal); font-size: var(--grad-kopf-m);
+  font-weight: 800; letter-spacing: var(--eng); color: var(--navy);
 }
 .karte-leer p { margin: 0; max-width: 42ch; color: var(--grau); }
 .karte-leer button {
-  margin-top: 6px; padding: 13px 22px;
+  margin-top: var(--a1); padding: var(--a3) var(--a5);
   background: var(--navy); color: #fff;
-  border: 1px solid var(--navy); border-radius: 999px; font-weight: 700;
+  border: 1px solid var(--navy); border-radius: var(--pille); font-weight: 700;
 }
 .karte-leer button:hover { background: var(--red); border-color: var(--red); }
 
-.karte-ort { margin-top: 4px; color: var(--grau); }
+.karte-ort { margin-top: var(--a1); color: var(--grau); }
 
 /* Solange ein Infofenster offen ist, treten die Bedienelemente ab -
    sonst verdecken sie auf schmalen Geraeten dessen Kopf. */
 .map-container-shadow.hat-infofenster .map-controls,
 .map-container-shadow.hat-infofenster .karte-knoepfe,
 .map-container-shadow.hat-infofenster .karte-hinweis { opacity: 0; pointer-events: none; }
-.map-controls, .karte-knoepfe { transition: opacity .18s ease; }
+.map-controls, .karte-knoepfe { transition: opacity var(--zeit-kurz) ease; }
 
 /* ------------------------------------------------- Stationsliste */
 /* Der verlaessliche Weg zur richtigen Station. Auf der Karte liegen die
    Scheiben im Zentrum uebereinander; hier steht jede fuer sich. */
-.stationsliste { margin-top: 26px; }
+.stationsliste { margin-top: var(--a5); }
 .stationsliste h3 {
-  margin: 0 0 14px;
-  font: 700 11px/1 var(--mono);
-  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+  margin: 0 0 var(--a3);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
 .stationsliste ul {
   list-style: none; margin: 0; padding: 0;
@@ -1402,8 +1835,8 @@ img { max-width: 100%; }
 .stationsliste button {
   display: grid; width: 100%;
   grid-template-columns: 46px 1fr auto;
-  align-items: center; gap: 14px;
-  padding: 13px 16px;
+  align-items: center; gap: var(--a3);
+  padding: var(--a3) var(--a4);
   background: none; border: 0; text-align: left;
 }
 .stationsliste button:hover { background: var(--paper); }
@@ -1412,16 +1845,16 @@ img { max-width: 100%; }
   width: 40px; height: 40px;
   border-radius: 50%;
   background: var(--navy); color: #fff;
-  font-family: var(--mono); font-weight: 700; font-size: 15px;
+  font-family: var(--mono); font-weight: 700; font-size: var(--control-font);
   font-variant-numeric: tabular-nums;
 }
-.sl-zahl.ist-leer { background: var(--mist); color: var(--grau-still); }
-.sl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.sl-text strong { color: var(--navy); font-size: 15.5px; }
-.sl-text small { color: var(--grau-still); font-size: 12.5px; }
+.sl-zahl.ist-leer { background: var(--mist); color: var(--grau); }
+.sl-text { display: flex; flex-direction: column; gap: var(--a1); min-width: 0; }
+.sl-text strong { color: var(--navy); font-size: var(--body-font); }
+.sl-text small { color: var(--grau); font-size: var(--grad-klein); }
 .sl-frei {
-  font: 700 10.5px/1 var(--mono);
-  letter-spacing: .12em; text-transform: uppercase; color: var(--grau-still);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
 
 /* Solange das Mausrad gesperrt ist, sagt die Karte, wie man es freigibt.
@@ -1429,42 +1862,44 @@ img { max-width: 100%; }
 .karte-hinweis {
   position: absolute; left: 50%; bottom: 20px; z-index: 500;
   transform: translateX(-50%);
-  padding: 9px 16px;
-  background: rgba(6, 24, 65, .88); color: #fff;
-  border-radius: 999px;
-  font: 700 11px/1 var(--mono);
-  letter-spacing: .12em; text-transform: uppercase;
+  padding: var(--a2) var(--a4);
+  /* Deckend statt zu 88 Prozent: der Hinweis liegt ueber wechselnden
+     Kartenkacheln, und nur deckend ist sein Kontrast eine Zusage. */
+  background: var(--navy); color: #fff;
+  border-radius: var(--pille);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase;
   pointer-events: none;
-  transition: opacity .25s ease;
+  transition: opacity var(--zeit-kurz) ease;
 }
 .karte-hinweis.ist-aus { opacity: 0; }
 .map-legend {
-  display: flex; flex-wrap: wrap; gap: 22px;
-  margin-top: 20px;
-  font-family: var(--mono); font-size: 11px;
-  letter-spacing: .1em; text-transform: uppercase; color: var(--grau-still);
+  display: flex; flex-wrap: wrap; gap: var(--a5);
+  margin-top: var(--a4);
+  font-family: var(--mono); font-size: var(--grad-etikett);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
-.legend-item { display: flex; align-items: center; gap: 9px; }
+.legend-item { display: flex; align-items: center; gap: var(--a2); }
 /* Die Legende zeigt dieselben Symbole wie die Karte, nur kleiner. */
 .legende-scheibe {
   display: inline-flex; align-items: center; justify-content: center;
   width: 26px; height: 26px;
   background: var(--navy); color: #fff;
-  border: 2px solid #fff; border-radius: 999px;
-  box-shadow: 0 3px 9px rgba(6, 24, 65, .3);
-  font-family: var(--mono); font-weight: 700; font-size: 11px; letter-spacing: 0;
+  border: 2px solid #fff; border-radius: var(--pille);
+  box-shadow: var(--schatten-1);
+  font-family: var(--mono); font-weight: 700; font-size: var(--grad-etikett); letter-spacing: 0;
 }
 .legende-rad {
   display: inline-flex; align-items: center; justify-content: center;
   width: 24px; height: 24px;
-  background: #fff; border: 2px solid var(--navy); border-radius: 999px;
-  color: var(--navy); font-size: 11px;
+  background: #fff; border: 2px solid var(--navy); border-radius: var(--pille);
+  color: var(--navy); font-size: var(--grad-etikett);
 }
-.legende-rad.ist-ebike { border-color: var(--mint); color: #0f7a52; }
+.legende-rad.ist-ebike { border-color: var(--mint); color: var(--gruen); }
 .legende-rad.ist-cargo { border-color: var(--red);  color: var(--red); }
-.legende-hinweis { color: var(--grau-still); text-transform: none; letter-spacing: .02em; }
-.leaflet-popup-content { font-family: var(--body-schrift); font-size: 14px; }
-.leaflet-popup-content b { font-family: var(--schmal); font-size: 17px; letter-spacing: -.02em; }
+.legende-hinweis { color: var(--grau); text-transform: none; letter-spacing: normal; }
+.leaflet-popup-content { font-family: var(--body-schrift); font-size: var(--body-font); }
+.leaflet-popup-content b { font-family: var(--schmal); font-size: var(--nav-font); letter-spacing: var(--eng); }
 
 /* ---------------------------------------------------------- FAQ */
 
@@ -1479,68 +1914,67 @@ img { max-width: 100%; }
 .faq-content { max-width: 68ch; }
 .faq-grid summary {
   cursor: pointer; list-style: none; position: relative;
-  padding: 21px 36px 21px 0;
+  padding: var(--a5) var(--a6) var(--a5) 0;
   font-family: var(--schmal);
-  font-size: clamp(19px, 1.6vw, 25px);
+  font-size: var(--grad-kopf-s);
   font-weight: 800;
-  letter-spacing: -.03em;
+  letter-spacing: var(--eng);
   color: var(--navy);
 }
 .faq-grid summary::-webkit-details-marker { display: none; }
 .faq-grid summary::after {
-  content: '+'; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-  font-family: var(--mono); font-size: 1.4rem; color: var(--red); line-height: 1;
+  content: '+'; position: absolute; right: var(--a2); top: 50%; transform: translateY(-50%);
+  font-family: var(--mono); font-size: var(--grad-kopf-s); color: var(--red); line-height: 1;
 }
 .faq-grid details[open] summary::after { content: '–'; }
-.faq-content { padding: 0 36px 22px 0; color: var(--grau); }
+.faq-content { padding: 0 var(--a6) var(--a5) 0; color: var(--grau); }
 
 /* ----------------------------------------------------- Fusszeile */
 
 footer {
-  padding: var(--luft) 0 40px;
-  color: rgba(255, 255, 255, .72);
+  padding: var(--luft) 0 var(--a7);
+  color: var(--auf-navy-text);
   background: var(--navy);
   border-top: 4px solid var(--red);
 }
 .footer-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr 1fr;
-  gap: clamp(32px, 4vw, 70px);
+  gap: var(--af-l);
 }
-footer .logo { margin-bottom: 14px; }
+footer .logo { margin-bottom: var(--a3); }
 /* Dieselbe Marke wie im Kopf, nur auf dunklem Grund: das Rot wird
    heller, sonst verschwindet es im Navy. */
 .brand-fuss {
   display: inline-block;
   color: #fff;
-  font-size: clamp(28px, 2.2vw, 38px);
 }
-.brand-fuss span { color: #ff5f80; }
+.brand-fuss span { color: var(--red-hell); }
 /* Vorher 11 px bei 45 % Weiss - rund 4,3:1 und damit unter der Schwelle
    fuer normalen Text. Jetzt 13 px bei 72 %. */
 .wortspiel {
-  margin: 0 0 18px;
+  margin: 0 0 var(--a4);
   font: 700 13px/1.3 var(--mono);
-  letter-spacing: .2em; text-transform: uppercase;
-  color: rgba(255, 255, 255, .72);
+  letter-spacing: var(--weit); text-transform: uppercase;
+  color: var(--auf-navy-text);
 }
-.fuss-text { color: rgba(255, 255, 255, .72); line-height: 1.6; }
+.fuss-text { color: var(--auf-navy-text); line-height: 1.6; }
 footer h4 {
-  margin: 0 0 16px;
+  margin: 0 0 var(--a4);
   color: #fff;
-  font: 700 11px/1 var(--mono);
-  letter-spacing: .16em; text-transform: uppercase;
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase;
 }
 footer ul { list-style: none; padding: 0; margin: 0; }
-footer li { margin-bottom: 9px; }
-footer a { color: rgba(255, 255, 255, .72); text-decoration: none; }
+footer li { margin-bottom: var(--a2); }
+footer a { color: var(--auf-navy-text); text-decoration: none; }
 footer a:hover { color: #fff; text-decoration: underline; }
 .impressum-sub {
-  margin-top: clamp(40px, 5vw, 70px);
-  padding-top: 22px;
-  border-top: 1px solid rgba(255, 255, 255, .14);
-  font-size: 14px;
-  color: rgba(255, 255, 255, .5);
+  margin-top: var(--af-l);
+  padding-top: var(--a5);
+  border-top: 1px solid var(--auf-navy-linie);
+  font-size: var(--grad-klein);
+  color: var(--auf-navy-still);
 }
 
 /* --------------------------------------- Anmeldung und Ausleihe */
@@ -1549,7 +1983,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   display: none;
   position: fixed; inset: 0; z-index: 1000;
   align-items: center; justify-content: center;
-  padding: 24px;
+  padding: var(--a5);
   background: rgba(6, 24, 65, .55);
   backdrop-filter: blur(3px);
 }
@@ -1557,25 +1991,25 @@ footer a:hover { color: #fff; text-decoration: underline; }
 .modal-content {
   position: relative;
   width: min(460px, 100%);
-  padding: 34px 32px 32px;
+  padding: var(--a6) var(--a6) var(--a6);
   background: #fff;
-  border-radius: 2px;
-  box-shadow: 0 40px 90px rgba(0, 0, 0, .35);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-3);
 }
 .close-modal {
   position: absolute; top: 14px; right: 16px;
   border: 0; background: none;
-  font-size: 28px; line-height: 1; color: var(--grau-still);
+  font-size: var(--grad-kopf-m); line-height: 1; color: var(--grau);
 }
-.auth-tabs { display: flex; gap: 6px; margin-bottom: 22px; }
+.auth-tabs { display: flex; gap: var(--a1); margin-bottom: var(--a5); }
 .auth-tab {
   flex: 1;
-  padding: 11px 0;
+  padding: var(--a3) 0;
   text-align: center;
   border: 1px solid transparent;
-  border-radius: 999px;
-  font-weight: 700; font-size: 15px;
-  color: var(--grau-still);
+  border-radius: var(--pille);
+  font-weight: 700; font-size: var(--control-font);
+  color: var(--grau);
   background: var(--paper);
   cursor: pointer;
 }
@@ -1588,32 +2022,34 @@ footer a:hover { color: #fff; text-decoration: underline; }
    ein Toast war nach drei Sekunden weg, und genau deshalb sah eine
    erfolgreiche Registrierung wie ein Fehlschlag aus. */
 .auth-status {
-  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px;
-  margin-bottom: 20px;
-  padding: 14px 16px;
-  border-left: 4px solid var(--grau-still);
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--a2);
+  margin-bottom: var(--a4);
+  padding: var(--a3) var(--a4);
+  border-left: 4px solid var(--grau);
   background: var(--paper);
-  font-size: 14.5px; line-height: 1.5;
+  font-size: var(--grad-klein); line-height: 1.5;
 }
 .auth-status[hidden] { display: none; }
-.auth-status.ist-erfolg  { border-left-color: #0f9d63; background: rgba(15, 157, 99, .09); }
-.auth-status.ist-fehler  { border-left-color: var(--red); background: rgba(240, 0, 56, .07); }
-.auth-status.ist-hinweis { border-left-color: #c98a00; background: rgba(201, 138, 0, .09); }
+.auth-status.ist-erfolg  { border-left-color: var(--gruen); background: var(--gruen-hauch); }
+.auth-status.ist-fehler  { border-left-color: var(--red); background: var(--rot-hauch); }
+.auth-status.ist-hinweis { border-left-color: var(--gelb); background: var(--gelb-hauch); }
 
 .feld-mit-knopf { position: relative; display: flex; }
+/* Kein Rasterwert, sondern die Breite des Knopfes, der darin steht -
+   ein Abstand, der eine Sache freihaelt, gehoert nicht in die Skala. */
 .feld-mit-knopf input { padding-right: 92px; }
 .passwort-zeigen {
   position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
-  padding: 7px 11px;
-  background: var(--paper); color: var(--grau-still);
-  border: 1px solid var(--mist); border-radius: 999px;
-  font: 700 12px/1 var(--body-schrift);
+  padding: var(--a2) var(--a3);
+  background: var(--paper); color: var(--grau);
+  border: 1px solid var(--rahmen); border-radius: var(--pille);
+  font: 700 var(--grad-klein)/1 var(--body-schrift);
 }
 .passwort-zeigen:hover { color: var(--navy); border-color: var(--navy); }
 
 .auth-fuss {
-  margin: 16px 0 0;
-  font-size: 13.5px; color: var(--grau-still); text-align: center;
+  margin: var(--a4) 0 0;
+  font-size: var(--grad-klein); color: var(--grau); text-align: center;
 }
 .auth-fuss a { color: var(--navy); }
 .auth-link {
@@ -1622,23 +2058,22 @@ footer a:hover { color: #fff; text-decoration: underline; }
   text-decoration: underline; text-underline-offset: 3px;
 }
 .auth-link:hover { color: var(--red); }
-.modal-content button:disabled, .modal-content input:disabled { opacity: .55; cursor: progress; }
 .form-title {
-  margin: 0 0 22px;
-  font-family: var(--schmal); font-size: 30px; font-weight: 800;
-  letter-spacing: -.04em; color: var(--navy);
+  margin: 0 0 var(--a5);
+  font-family: var(--schmal); font-size: var(--grad-kopf-m); font-weight: 800;
+  letter-spacing: var(--eng); color: var(--navy);
 }
-.form-group { margin-bottom: 16px; }
+.form-group { margin-bottom: var(--a4); }
 .form-group label {
-  display: block; margin-bottom: 6px;
-  font: 700 10.5px/1 var(--mono);
-  letter-spacing: .14em; text-transform: uppercase; color: var(--grau-still);
+  display: block; margin-bottom: var(--a1);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
 .form-group input {
   width: 100%;
-  padding: 13px 14px;
-  border: 1px solid var(--mist);
-  border-radius: 2px;
+  padding: var(--a3) var(--a3);
+  border: 1px solid var(--rahmen);
+  border-radius: var(--kante);
   background: #fff;
   color: var(--ink);
 }
@@ -1661,65 +2096,66 @@ footer a:hover { color: #fff; text-decoration: underline; }
 
 .modal-content.rueckgabe { width: min(520px, 100%); }
 .rueckgabe-rad {
-  margin: -14px 0 22px;
-  font: 700 12.5px/1.4 var(--mono);
-  letter-spacing: .1em; text-transform: uppercase; color: var(--grau-still);
+  margin: calc(var(--a3) * -1) 0 var(--a5);
+  font: 700 var(--grad-etikett)/1.4 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
-.rueckgabe-wahl { display: grid; gap: 10px; margin-bottom: 22px; }
+.rueckgabe-wahl { display: grid; gap: var(--a2); margin-bottom: var(--a5); }
 .rueckgabe-wahl label {
-  display: grid; grid-template-columns: auto 1fr; gap: 13px; align-items: start;
-  padding: 15px 17px;
-  border: 1px solid var(--mist); border-radius: 2px;
+  display: grid; grid-template-columns: auto 1fr; gap: var(--a3); align-items: start;
+  padding: var(--a4) var(--a4);
+  border: 1px solid var(--rahmen); border-radius: var(--kante);
   cursor: pointer;
 }
 .rueckgabe-wahl label:hover { border-color: var(--navy); }
-.rueckgabe-wahl input { margin-top: 3px; accent-color: var(--red); }
+.rueckgabe-wahl input { margin-top: var(--a1); accent-color: var(--red); }
 .rueckgabe-wahl input:checked + span strong { color: var(--red); }
 .rueckgabe-wahl label:has(input:checked) { border-color: var(--navy); background: var(--paper); }
-.rueckgabe-wahl span { display: flex; flex-direction: column; gap: 3px; }
-.rueckgabe-wahl strong { color: var(--navy); font-size: 15.5px; }
-.rueckgabe-wahl small { color: var(--grau); font-size: 13.5px; line-height: 1.45; }
+.rueckgabe-wahl span { display: flex; flex-direction: column; gap: var(--a1); }
+.rueckgabe-wahl strong { color: var(--navy); font-size: var(--body-font); }
+.rueckgabe-wahl small { color: var(--grau); font-size: var(--grad-klein); line-height: 1.45; }
 
-.rueckgabe-block { margin-bottom: 20px; }
+.rueckgabe-block { margin-bottom: var(--a4); }
 .rueckgabe-block[hidden] { display: none; }
 .rueckgabe-marke {
-  display: block; margin-bottom: 7px;
-  font: 700 10.5px/1 var(--mono);
-  letter-spacing: .14em; text-transform: uppercase; color: var(--grau-still);
+  display: block; margin-bottom: var(--a2);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
 .rueckgabe-block select {
-  width: 100%; padding: 13px 14px;
-  border: 1px solid var(--mist); border-radius: 2px; background: #fff; color: var(--ink);
+  width: 100%; padding: var(--a3) var(--a3);
+  border: 1px solid var(--rahmen); border-radius: var(--kante); background: #fff; color: var(--ink);
 }
 .rueckgabe-block select:focus { border-color: var(--navy); outline: none; }
 .rueckgabe-ort {
-  margin: 0 0 12px;
-  font-family: var(--mono); font-size: 13px; color: var(--grau);
+  margin: 0 0 var(--a3);
+  font-family: var(--mono); font-size: var(--grad-klein); color: var(--grau);
 }
 .rueckgabe-status {
-  margin-bottom: 18px; padding: 13px 15px;
-  border-left: 4px solid var(--grau-still); background: var(--paper);
-  font-size: 14.5px; line-height: 1.5;
+  margin-bottom: var(--a4); padding: var(--a3) var(--a4);
+  border-left: 4px solid var(--grau); background: var(--paper);
+  font-size: var(--grad-klein); line-height: 1.5;
 }
 .rueckgabe-status[hidden] { display: none; }
-.rueckgabe-status.ist-erfolg  { border-left-color: #0f9d63; background: rgba(15, 157, 99, .09); }
-.rueckgabe-status.ist-fehler  { border-left-color: var(--red); background: rgba(240, 0, 56, .07); }
-.rueckgabe-status.ist-hinweis { border-left-color: #c98a00; background: rgba(201, 138, 0, .09); }
+.rueckgabe-status.ist-erfolg  { border-left-color: var(--gruen); background: var(--gruen-hauch); }
+.rueckgabe-status.ist-fehler  { border-left-color: var(--red); background: var(--rot-hauch); }
+.rueckgabe-status.ist-hinweis { border-left-color: var(--gelb); background: var(--gelb-hauch); }
 
 /* Der Beleg. Er bleibt stehen, bis er geschlossen wird. */
-.beleg { margin: 0 0 18px; }
+.beleg { margin: 0 0 var(--a4); }
 .beleg div {
-  display: flex; justify-content: space-between; gap: 18px;
-  padding: 11px 0; border-bottom: 1px solid var(--mist);
+  display: flex; justify-content: space-between; gap: var(--a4);
+  padding: var(--a3) 0; border-bottom: 1px solid var(--mist);
 }
-.beleg dt { margin: 0; color: var(--grau-still); font-size: 14px; }
-.beleg dd { margin: 0; color: var(--navy); font-weight: 700; text-align: right; }
-.beleg div:last-child dd { font-size: 19px; }
-.beleg-posten { list-style: none; margin: 0 0 24px; padding: 0; }
+.beleg dt { margin: 0; color: var(--grau); font-size: var(--grad-klein); }
+.beleg dd { margin: 0; color: var(--navy); font-weight: 700; text-align: right;
+            font-variant-numeric: tabular-nums; }
+.beleg div:last-child dd { font-size: var(--nav-font); }
+.beleg-posten { list-style: none; margin: 0 0 var(--a5); padding: 0; }
 .beleg-posten li {
-  display: flex; justify-content: space-between; gap: 18px;
-  padding: 7px 0;
-  font-size: 13.5px; color: var(--grau);
+  display: flex; justify-content: space-between; gap: var(--a4);
+  padding: var(--a2) 0;
+  font-size: var(--grad-klein); color: var(--grau);
 }
 .beleg-posten b { color: var(--navy); font-variant-numeric: tabular-nums; }
 
@@ -1730,16 +2166,16 @@ footer a:hover { color: #fff; text-decoration: underline; }
 
 .rental-banner {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
-  padding: 14px 0;
+  padding: var(--a3) 0;
   background: var(--navy);
   color: #fff;
   border-top: 3px solid var(--mint);
 }
 .rental-banner-content {
   display: flex; align-items: center; justify-content: space-between;
-  gap: 18px; flex-wrap: wrap;
+  gap: var(--a4); flex-wrap: wrap;
 }
-.rental-info { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; font-size: 15px; }
+.rental-info { display: flex; align-items: center; gap: var(--a4); flex-wrap: wrap; font-size: var(--body-font); }
 .rental-timer { font-family: var(--mono); font-weight: 700; font-variant-numeric: tabular-nums; }
 .btn-end-rental { background: #fff; color: var(--navy); border-color: #fff; }
 .btn-end-rental:hover { background: var(--mint); border-color: var(--mint); color: var(--navy); }
@@ -1751,60 +2187,60 @@ footer a:hover { color: #fff; text-decoration: underline; }
 .seite-recht { background: #fff; }
 .recht { padding: calc(92px + var(--luft)) 0 var(--luft); }
 .recht-warnung {
-  margin-bottom: clamp(40px, 5vw, 64px);
-  padding: 20px 24px;
+  margin-bottom: var(--af-l);
+  padding: var(--a4) var(--a5);
   border-left: 4px solid var(--red);
-  background: rgba(240, 0, 56, .06);
-  font-size: 15.5px; line-height: 1.6;
+  background: var(--rot-hauch);
+  font-size: var(--body-font); line-height: 1.6;
 }
-.recht-warnung strong { display: block; margin-bottom: 4px; color: var(--navy); }
+.recht-warnung strong { display: block; margin-bottom: var(--a1); color: var(--navy); }
 
 .recht h1 {
   margin: 0;
   font-family: var(--schmal);
   font-size: var(--titel-font); font-weight: 800;
-  letter-spacing: -.035em; line-height: .98; color: var(--navy);
+  letter-spacing: var(--eng); line-height: .98; color: var(--navy);
 }
 .recht-inhalt {
-  display: flex; flex-wrap: wrap; gap: 10px;
-  margin: 34px 0 clamp(46px, 6vw, 78px);
-  padding-bottom: 30px;
+  display: flex; flex-wrap: wrap; gap: var(--a2);
+  margin: var(--a6) 0 var(--af-l);
+  padding-bottom: var(--a6);
   border-bottom: 1px solid var(--mist);
 }
 .recht-inhalt a {
-  padding: 9px 16px;
+  padding: var(--a2) var(--a4);
   color: var(--navy); text-decoration: none;
-  border: 1px solid var(--mist); border-radius: 999px;
-  font-weight: 700; font-size: 14.5px;
+  border: 1px solid var(--rahmen); border-radius: var(--pille);
+  font-weight: 700; font-size: var(--control-font);
 }
 .recht-inhalt a:hover { border-color: var(--navy); background: var(--paper); }
 
-.recht-block { max-width: 74ch; margin-bottom: clamp(50px, 6vw, 84px); }
+.recht-block { max-width: 74ch; margin-bottom: var(--af-l); }
 .recht-block h2 {
-  margin: 0 0 20px;
+  margin: 0 0 var(--a4);
   font-family: var(--schmal);
-  font-size: clamp(30px, 3.2vw, 46px); font-weight: 800;
-  letter-spacing: -.03em; color: var(--navy);
+  font-size: var(--grad-kopf-l); font-weight: 800;
+  letter-spacing: var(--eng); color: var(--navy);
 }
 .recht-block h3 {
-  margin: 30px 0 8px;
-  font: 700 11px/1 var(--mono);
-  letter-spacing: .16em; text-transform: uppercase; color: var(--grau-still);
+  margin: var(--a6) 0 var(--a2);
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
-.recht-block p { margin: 0 0 14px; line-height: 1.65; }
-.recht-liste { margin: 0; padding-left: 20px; }
-.recht-liste li { margin-bottom: 12px; line-height: 1.6; }
-.recht-hinweis { color: var(--grau-still); font-size: 14.5px; }
-.recht-zurueck { margin-top: 20px; }
+.recht-block p { margin: 0 0 var(--a3); line-height: 1.65; }
+.recht-liste { margin: 0; padding-left: var(--a4); }
+.recht-liste li { margin-bottom: var(--a3); line-height: 1.6; }
+.recht-hinweis { color: var(--grau); font-size: var(--grad-klein); }
+.recht-zurueck { margin-top: var(--a4); }
 .recht-zurueck a { color: var(--navy); font-weight: 700; }
 
 /* ------------------------------------------------------- Umbruch */
 
 @media (max-width: 1100px) {
-  .section-header {
+  .section-header, .section-header:has(p) {
     grid-template-columns: 1fr;
     grid-template-areas: "vorspann" "titel" "hinweis";
-    gap: 14px 0;
+    gap: var(--a3) 0;
   }
   .section-header p { align-self: start; }
   .footer-grid { grid-template-columns: 1fr 1fr; }
@@ -1812,16 +2248,16 @@ footer a:hover { color: #fff; text-decoration: underline; }
 
 @media (max-width: 1023px) {
   /* Bis hierher verschwand die Navigation ersatzlos. Jetzt tritt das
-     Menue an ihre Stelle und die Karte bleibt als eigene Schaltflaeche
-     stehen - sie ist der Weg, den mobile Besucher wirklich suchen. */
+     Menue an ihre Stelle; die Karte bleibt als Schaltflaeche stehen. */
   .site-nav { display: none; }
-  .kopf-karte { display: inline-block; }
   .menue-knopf { display: flex; }
 }
 
-@media (max-width: 620px) {
-  /* Auf sehr schmalen Geraeten traegt der Kopf nur noch Marke, Login
-     und Menue; die Karte steht dann im Menue. */
+@media (max-width: 900px) {
+  /* Unter 900 traegt die Buehne selbst den roten Knopf (.hero-cta).
+     Zwei rote Pillen fuer denselben Weg waeren einer zu viel; im Kopf
+     bleiben Marke, Login und Menue, die Karte steht zusaetzlich im
+     Menue. */
   .kopf-karte { display: none; }
 }
 
@@ -1862,9 +2298,9 @@ footer a:hover { color: #fff; text-decoration: underline; }
      Zeile steht, klar, wo das Rad steht. */
   .photo-shade {
     background:
-      linear-gradient(180deg, rgba(247,249,252,.92) 0%, rgba(247,249,252,.88) 40%,
-                              rgba(247,249,252,.50) 52%, transparent 58%),
-      linear-gradient(0deg, rgba(6,24,65,.10) 0%, transparent 22%);
+      linear-gradient(180deg, rgba(243, 245, 248, .94) 0%, rgba(243, 245, 248, .88) 40%,
+                              rgba(243, 245, 248, .50) 52%, transparent 58%),
+      linear-gradient(0deg, var(--linie-still) 0%, transparent 22%);
   }
   .photo-ebike, .photo-city, .photo-cargo {
     /* Das Band steht ZWISCHEN Schlagzeile und Aufruf, nicht darunter.
@@ -1909,16 +2345,16 @@ footer a:hover { color: #fff; text-decoration: underline; }
     top: auto;
     bottom: 104px;
     z-index: 4;
-    display: inline-flex; align-items: center; gap: 12px;
-    padding: 15px 24px;
+    display: inline-flex; align-items: center; gap: var(--a3);
+    padding: var(--a4) var(--a5);
     background: var(--red); color: #fff;
-    border-radius: 999px; text-decoration: none;
-    font-weight: 800; font-size: 16px; letter-spacing: -.01em;
-    box-shadow: 0 16px 40px rgba(240, 0, 56, .32);
+    border-radius: var(--pille); text-decoration: none;
+    font-weight: 800; font-size: var(--control-font); letter-spacing: var(--eng);
+    box-shadow: var(--schatten-2);
   }
   .hero-cta:hover { background: var(--red-tief); }
   .hero-cta.ist-weg { opacity: 0; pointer-events: none; transform: translateY(10px); }
-  .hero-cta { transition: opacity .3s ease, transform .3s ease; }
+  .hero-cta { transition: opacity var(--zeit-lang) ease, transform var(--zeit-lang) ease; }
   .site-header { grid-template-columns: 1fr auto; min-height: 74px; }
   .site-nav { display: none; }
   /* Auf dem Telefon steht der Zaehler oben links fuer sich; die
@@ -1926,24 +2362,31 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .top-meta { top: 100px; transform: none; }
   /* Die Laenge regelt jetzt die clamp-Formel weiter oben - hier keine
      zweite Stufe mehr, sonst kehrt der Sprung zurueck. */
-  .claim { top: 27vh; bottom: auto; width: calc(100% - 48px); }
+  /* DIESELBE FLUCHT WIE ALLES ANDERE. Mit 48 Punkten insgesamt stand
+     die Spalte links auf 22 und rechts auf 26 - vier Punkte daneben,
+     und zwar an der Stelle mit der groessten Schrift der Seite. */
+  .claim { top: 27vh; bottom: auto; width: calc(100% - 2 * var(--flucht)); }
   .claim h1 { font-size: var(--hero-font); max-width: 100%; }
   /* Das City-Bike stand in kleinerer Schrift, weil sein Satz der laengste
    ist und in der schmalen Spalte sonst vierzeilig wurde. Mit der
    mitwachsenden Spalte braucht es den Notbehelf nicht mehr - alle drei
    Schlagzeilen stehen jetzt im selben Grad. */
-  .choice-panel { grid-template-columns: 1fr; gap: 15px; bottom: 64px; right: 24px; }
+  /* right stand auf 24 statt auf der Flucht - zwei Punkte, die man
+     einzeln nicht sieht und in der Reihe mit Karte, Kopf und Zeile
+     sehr wohl. */
+  .choice-panel { grid-template-columns: 1fr; gap: var(--a4);
+                  bottom: 64px; right: var(--flucht); }
   .product-copy { display: none; }
   .final-card { top: 128px; right: 20px; bottom: auto; width: min(360px, calc(100% - 40px)); }
   .scroll-hint { display: none; }
   /* Vier Zahlen nebeneinander werden hier zu eng: zwei mal zwei.
      Die Haarlinie sitzt dann nur noch zwischen den Spalten. */
-  .stat-grid { grid-template-columns: 1fr 1fr; row-gap: clamp(28px, 4vw, 44px); }
+  .stat-grid { grid-template-columns: 1fr 1fr; row-gap: var(--af-m); }
   .stat:nth-child(odd) { padding-left: 0; border-left: 0; }
   .howto-card { padding-left: 0; border-left: 0; }
-  .footer-grid { grid-template-columns: 1fr; gap: 28px; }
+  .footer-grid { grid-template-columns: 1fr; gap: var(--a5); }
   #map { height: clamp(420px, 66vh, 600px); }
-  .pop-typ { grid-template-columns: 62px 1fr auto; gap: 10px; padding: 11px 14px; }
+  .pop-typ { grid-template-columns: 62px 1fr auto; gap: var(--a2); padding: var(--a3) var(--a3); }
   .pop-bild { width: 62px; height: 40px; }
 }
 
@@ -1951,7 +2394,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   /* Die Scheiben werden im Skript kleiner gezeichnet, nicht hier
      skaliert - eine CSS-Skalierung verkleinert das Bild, laesst die
      Trefferflaeche aber unveraendert und macht das Problem groesser. */
-  .stationsliste button { grid-template-columns: 40px 1fr; gap: 12px; }
+  .stationsliste button { grid-template-columns: 40px 1fr; gap: var(--a3); }
   .sl-frei { display: none; }
 }
 
@@ -1971,21 +2414,21 @@ footer a:hover { color: #fff; text-decoration: underline; }
   /* Auf dem Telefon steht alles in einer Spalte - dort bleibt die
      Zahl links, sonst haette die Seite zwei Fluchten. */
   .live-zahl { flex-direction: column; align-items: flex-start;
-               justify-content: flex-start; gap: 2px; }
-  .live-zahl b { padding-left: 22px; font-size: 42px; }
+               justify-content: flex-start; gap: var(--kicker-abstand); }
+  .live-zahl b { padding-left: var(--a5); font-size: var(--hero-font); }
   .live-zahl b::before { top: .36em; }
-  .live-zahl > span { font-size: 12.5px; letter-spacing: .12em; }
+  .live-zahl > span { font-size: var(--grad-etikett); }
   /* Die Metazeile brach hier unruhig um. */
   .meta-lang { display: none; }
   .meta-kurz { display: inline; }
   .karte-knoepfe { right: 12px; top: 12px; flex-direction: column; }
-  .recht-block h2 { font-size: 30px; }
+  .recht-block h2 { font-size: var(--grad-kopf-m); }
   .claim { top: 25vh; }
   .claim-city { top: 29vh; }
   .choice-panel { bottom: 34px; }
-  .product-tab { padding: 0 14px; }
-  .stat-grid { grid-template-columns: 1fr; row-gap: 26px; }
-  .stat { padding-left: 0; border-left: 0; padding-top: 20px; border-top: 1px solid var(--mist); }
+  .product-tab { padding: 0 var(--a3); }
+  .stat-grid { grid-template-columns: 1fr; row-gap: var(--a5); }
+  .stat { padding-left: 0; border-left: 0; padding-top: var(--a4); border-top: 1px solid var(--mist); }
   .stat:first-child { padding-top: 0; border-top: 0; }
   .rechner { grid-template-columns: 1fr; }
   .rechner-spalte { border-left: 0; border-top: 1px solid var(--mist); }

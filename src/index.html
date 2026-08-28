@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=e9b1b68a">
+    <link rel="stylesheet" href="style.css?v=7a5d05f3">
 </head>
 <body>
 
@@ -205,16 +205,21 @@
 <header class="site-header" id="navbar">
   <a class="brand" href="#top" aria-label="VeloCity Startseite">VEL<i></i><span>CITY</span></a>
 
+  <!-- "Live-Karte" stand hier bis zum 28.08.2026 ein zweites Mal als
+       Textverweis - und zwar als schwaechstes Element der Seite, obwohl
+       es das Ziel ist, mit dem der Besucher gekommen ist. Es steht jetzt
+       nur noch einmal, rechts, als Schaltflaeche. -->
   <nav class="site-nav" aria-label="Hauptnavigation">
     <a href="#anleitung">So geht&rsquo;s</a>
     <a href="#tarife">Preise</a>
-    <a href="#map-section">Live-Karte</a>
   </nav>
 
   <div class="kopf-aktionen">
-    <!-- Unter 1024 px verschwand die gesamte Navigation ersatzlos. Wer
-         mobil kam, musste bis zur Karte scrollen. Die Karte bleibt
-         deshalb hier dauerhaft erreichbar; der Rest steckt im Menue. -->
+    <!-- DER WICHTIGSTE WEG DER SEITE, UND ER SIEHT JETZT AUCH SO AUS.
+         Vorher war das lauteste Element des ersten Bildschirms "Login" -
+         die Handlung, die ein neuer Besucher am wenigsten will. Der Weg
+         zur Karte lag daneben als grauer Text. Die beiden haben ihre
+         Rollen getauscht: rot ist, was Geld verdient. -->
     <a class="kopf-karte" href="#map-section">Live-Karte</a>
     <button id="user-nav-btn" class="login" type="button">Login</button>
 
@@ -372,7 +377,7 @@
      ============================================================ -->
 <section class="facts" aria-labelledby="facts-title">
   <div class="container">
-    <div class="section-header ohne-hinweis">
+    <div class="section-header">
       <!-- "Zwei" stimmte, solange es E-Bike und City-Bike gab. Seit der
            E-Cargo Loader eine eigene Station hat, sind es drei. -->
       <span class="eyebrow">Ein System. Drei Fahrgefühle.</span>
@@ -501,7 +506,7 @@
 
 <section id="faq" class="faq-section">
     <div class="container">
-        <div class="section-header ohne-hinweis"><span class="eyebrow">Fragen</span><h2>Häufige Fragen</h2></div>
+        <div class="section-header"><span class="eyebrow">Fragen</span><h2>Häufige Fragen</h2></div>
         <div class="faq-grid" id="faq-grid">
             <!-- wird aus velocity.v_faq geladen -->
         </div>
@@ -559,7 +564,7 @@
 <script src="config.js?v=a7625464"></script>
 <script src="supabase.js?v=3f4d1cd4"></script>
 <script src="auth.js?v=61b78d72"></script>
-<script src="script.js?v=ca948ec2"></script>
+<script src="script.js?v=ece4ee05"></script>
 
 </body>
 </html>

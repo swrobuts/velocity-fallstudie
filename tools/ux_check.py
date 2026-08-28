@@ -337,8 +337,21 @@ pruefe('BUEHNE', 'rad-cargo-frei' in C,
 # Deckel in Punkten wuchs die Schrift mit der Fensterbreite, die Spalte
 # aber nicht, und auf breiten Schirmen standen die Saetze drei- und
 # vierzeilig. Nachgemessen braucht die breiteste Zeile 7,97 em.
-pruefe('BUEHNE', 'var(--hero-font) * 8' in C.replace('\n', ' ').replace('  ', ' '),
-       'Die Textspalte rechnet im Schriftgrad, nicht in Punkten')
+# Der Punkt pruefte den FAKTOR woertlich ("* 8"). Der Faktor ist aber
+# eine Messung, kein Grundsatz: er gehoert zur laengsten Schlagzeile UND
+# zur Schrift, in der sie steht. Beides hat sich geaendert - die Saetze
+# wurden gekuerzt, und seit dem 28.08.2026 steht die Seite in Archivo
+# statt in einer Schrift, die nur macOS kennt. Nachgemessen braucht die
+# laengste Zeile ("Dann nach Haus cruisen.") jetzt 10,09 em; mit dem
+# alten Faktor 8,2 stand sie DREIzeilig da, und der Pruefer haette
+# genau das durchgewunken, weil die Ziffer stimmte.
+# Geprueft wird deshalb die ABSICHT: die Spalte rechnet im Schriftgrad
+# (und nicht in Punkten), und der Faktor traegt die laengste Zeile.
+spalte = re.search(r'--textspalte:\s*min\(calc\(var\(--hero-font\)\s*\*\s*([\d.]+)\)',
+                   C.replace('\n', ' '))
+pruefe('BUEHNE', spalte is not None and float(spalte.group(1)) >= 10.09,
+       f'Die Textspalte rechnet im Schriftgrad und traegt die laengste Zeile '
+       f'(Faktor {spalte.group(1) if spalte else "?"}, noetig 10,09)')
 pruefe('BUEHNE', 'var(--x-rad, 0) * 104vw' in C,
        'Die Schiene misst in Fensterbreiten')
 for name in ('ebike', 'city', 'cargo'):
