@@ -102,7 +102,21 @@
                  U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* DIE AUSZEICHNUNGSFLAECHE: DIESELBE DATEI AUF 88 PROZENT BREITE.
+/* DIE AUSZEICHNUNGSFLAECHE: DIESELBE DATEI AUF 110 PROZENT BREITE.
+
+   ENDLICH DIE RICHTIGE STELLSCHRAUBE (28.08.2026).
+   Sieben Runden lang lief die Rolle schmal - 79, 88, 100, wieder 88 -,
+   und keine traf. Der Betreiber hat es dann in vier Worten gesagt: "die
+   Buchstaben muessen breiter sein". Nicht enger, nicht anders gesetzt:
+   BREITER. Die 100 Prozent hatte er zwischendurch verworfen, aber damals
+   lag noch der kaputte Zeilenabstand darunter (0,99 plus 26 Punkte
+   Zusatzluecke) - das Urteil galt der Komposition, nicht der Breite.
+   Die Achse der Datei reicht bis 125; gemessen wurde, dass bis dorthin
+   keine Schlagzeile zusaetzlich umbricht und die unterste Kante bei 574
+   Punkten bleibt, waehrend die Auswahlleiste erst bei 730 beginnt. Es
+   gab also nie eine Platzgrenze, die schmal erzwungen haette.
+   110 gewaehlt: die Formen oeffnen sich, die Punzen atmen, und es liest
+   sich als bewusst breite Auszeichnung. Ab 120 wird es weich.
    Vorgeschichte, damit sie niemand zum vierten Mal aufrollt: die Rolle
    lief auf 79 Prozent ("zu schmal"), dann auf 88 ("zu schmal"), dann auf
    100 ("schlechter"). Drei Anlaeufe an derselben Stellschraube, und
@@ -121,7 +135,7 @@
   font-family: "Archivo Auszeichnung";
   font-style: normal;
   font-weight: 100 900;
-  font-stretch: 88% 88%;
+  font-stretch: 110% 110%;
   font-display: swap;
   src: url("assets/schrift/archivo-latin.woff2?v=4c98b9d4") format("woff2");
   /* Deutsch braucht nichts jenseits von latin. Der zweite Ausschnitt
@@ -135,7 +149,7 @@
   font-family: "Archivo Auszeichnung";
   font-style: normal;
   font-weight: 100 900;
-  font-stretch: 88% 88%;
+  font-stretch: 110% 110%;
   font-display: swap;
   src: url("assets/schrift/archivo-latin-ext.woff2?v=a75c792f") format("woff2");
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
@@ -261,7 +275,7 @@
 
   /* ---------------------------------------------------- SCHRIFT
      EINE Familie in zwei Rollen: Fliesstext auf voller Breite, die
-     Auszeichnung auf 88 Prozent. Sie unterscheiden sich zusaetzlich in
+     Auszeichnung BREITER als er, auf 110 Prozent. Sie unterscheiden sich zusaetzlich in
      Gewicht (560 gegen 800) und Laufweite. Der Name sagt, was die Rolle
      IST - Auszeichnungsschrift fuer Schlagzeilen, Ueberschriften, Zahlen
      und Preise -, nicht wie breit sie gerade laeuft: "--schmal" waere
@@ -1400,7 +1414,15 @@ footer :focus-visible, .product-tabs :focus-visible,
   border-bottom: 1px solid var(--mist);
 }
 .section-header:has(p) {
-  grid-template-columns: 1.6fr 1fr;
+  /* NEU GEWICHTET, WEIL DIE AUSZEICHNUNG BREITER LAEUFT (28.08.2026).
+     Bei 1,6fr bekam die Ueberschrift 740 Punkte und brauchte nach der
+     Verbreiterung auf 110 Prozent deren 831 - sie brach in zwei Zeilen.
+     Der Hinweis daneben verliert dabei nichts: er braucht einzeilig 519
+     Punkte, hatte aber nur 463 und stand ohnehin schon zweizeilig.
+     Nachgerechnet ueber die Breiten, bei denen dieser Kopf zweispaltig
+     ist (ab 1100 Punkten, darunter stapelt er): die Ueberschrift passt
+     jeweils mit Rand. */
+  grid-template-columns: 2.35fr 1fr;
   grid-template-areas: "vorspann hinweis" "titel hinweis";
 }
 .section-header .eyebrow { grid-area: vorspann; margin-bottom: var(--a4); }
