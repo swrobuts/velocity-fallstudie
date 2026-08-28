@@ -979,7 +979,14 @@ footer :focus-visible, .product-tabs :focus-visible,
      gestellt - 1,06 zu eng, ab 1,14 driften die beiden Zeilen
      auseinander und lesen sich wieder als zwei Aussagen statt als eine
      mit Pointe. */
-  line-height: 1.12;
+  /* AUF 1,20 (28.08.2026). Der Schritt von 1,06 auf 1,12 waren bei 76
+     Punkten 4,5 Pixel - zu wenig, um ihn zu sehen; der Betreiber hat
+     die Seite danach als "unveraendert" gemeldet, obwohl Server und
+     Browser nachweislich den neuen Stand fuehrten. Kleine Schritte
+     kosten hier mehr Zeit, als sie sparen: 1,20 sind gegenueber dem
+     Ausgangswert 0,99 sechzehn Pixel und damit sichtbar. Lieber einen
+     Schritt zu weit und zurueck als vier zu kurze. */
+  line-height: 1.20;
   letter-spacing: var(--eng);
   font-weight: 800;
   max-width: 100%;
