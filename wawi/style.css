@@ -1226,8 +1226,33 @@ body.navigation-schmal .navigation-griff {
   letter-spacing: 0.02em;
 }
 
+/* Die Marke der oeffentlichen Website, uebernommen statt nachempfunden:
+   dort steht VEL + Ring + CITY (src/style.css, .brand). Der Ring ist das
+   Rad und ersetzt das O - deshalb "VEL" und "CITY" getrennt und nicht
+   "VeloCity" am Stueck.
+   Gewicht 800 und die enge Laufweite -0.055em sind von dort uebernommen,
+   damit beide Anwendungen dieselbe Marke zeigen und nicht zwei aehnliche.
+   Die Groesse NICHT: die Website setzt 30-40px in einen Kopfbereich, der
+   der Marke gehoert; hier teilt sie sich 60px Hoehe mit Suche und Profil. */
 .wortmarke-firma {
-  font-weight: 400;
+  font-weight: 800;
+  letter-spacing: -0.055em;
+  font-size: var(--grad-5);
+}
+
+/* Das O ist das Rad - ein Ring statt eines Buchstabens, woertlich wie in
+   src/style.css. currentColor: der Ring erbt damit dieselbe Farbe wie die
+   Schrift daneben, auch im Fokus- und Ueberfahren-Zustand, und fuehrt
+   keine zweite, unvermessene Farbe ein. In em gerechnet, damit er
+   mitwaechst, wenn jemand die Schriftgroesse aendert. */
+.wortmarke-rad {
+  display: inline-block;
+  width: 0.44em;
+  height: 0.44em;
+  margin: 0 0.08em;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  vertical-align: 0.04em;
 }
 
 /* "VeloCity" ist jetzt ein Verweis nach bikes.butscher.cloud (siehe
