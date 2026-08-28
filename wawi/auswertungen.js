@@ -824,7 +824,7 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
 
     const thead = document.createElement('thead');
     const kopfzeile = document.createElement('tr');
-    for (const spaltentitel of [t('field.rahmennummer'), t('field.typ'), t('field.start'), t('field.ziel'), t('field.dauer'), t('field.strecke')]) {
+    for (const spaltentitel of [t('field.rahmennummer'), t('field.radtyp'), t('field.start'), t('field.ziel'), t('field.dauer'), t('field.strecke')]) {
         const th = document.createElement('th');
         th.textContent = spaltentitel;
         th.scope = 'col';
@@ -1175,6 +1175,19 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
             // Verhaeltnis 1,13 zu 1 gegen drei Fahrtenzahlen im
             // Verhaeltnis 8,0 zu 1).
             groesse: 'fahrten',
+            // ANGLEICHUNG AN DIE FLOTTENTAFEL (Auftrag: sie ist die
+            // optische Referenz). Dort steht das Produktbild in der
+            // Zeile seines Radtyps; hier SIND die drei Zeilen die drei
+            // Radtypen, und dieselben drei Dateien liegen bereits im
+            // Auslieferungsverzeichnis (siehe RADTYP_BILDER in
+            // rahmen.js). Es gab keinen sachlichen Grund fuer den
+            // Unterschied - nur den, dass dieser Reiter frueher gebaut
+            // wurde als die Bilder. Der Nutzen ist derselbe wie bei der
+            // Kategoriefarbe eine Zeile tiefer: Wiedererkennung ueber
+            // Bereiche hinweg, ohne die Beschriftung lesen zu muessen.
+            // Rein schmueckend (alt="", aria-hidden - siehe
+            // kopftafelZeile()): der Typname steht unmittelbar daneben.
+            bild: (g) => radtypBild(g.schluessel),
             zusatz: (g) => t('board.revenuePerRide', {
                 betrag: geldFormat(auswertungenSumme(g, fenster, 'fahrten')
                     ? auswertungenSumme(g, fenster, 'umsatz') / auswertungenSumme(g, fenster, 'fahrten') : 0)
@@ -1262,14 +1275,23 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
 //   misst die Abweichungsspalte rechts (Cargo +26,7, E-Bike +13,3, City
 //   -40,0 Prozentpunkte). Zahl und Balken nebeneinander machen sichtbar,
 //   woher dieser Ausschlag kommt.
+//
+// optionen.bild: optional, (zeile) => Bildquelle oder null. Siehe die
+// Angleichung an die Flottentafel bei umsatzRadtypKopftafel() weiter
+// oben - nur der Radtyp-Reiter reicht hier etwas herein, der
+// Tarifgruppen-Reiter laesst es weg, weil es zu einer Tarifgruppe kein
+// Bild gibt. Die Stelle bleibt dann EINHEITLICH leer (kopftafelZeile()
+// in rahmen.js haengt ohne Quelle gar kein <img> ein), sie wird nicht
+// mit einem Platzhalter gefuellt.
 function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenanteil, zusatz,
-                                   groesse = 'umsatz' }) {
+                                   groesse = 'umsatz', bild = null }) {
     const spalten = [
         {
             art: 'rubrik',
             titel: rubrikTitel,
             wert: (z) => z.name,
-            zusatz: (z) => (z.summenzeile ? null : zusatz(z))
+            zusatz: (z) => (z.summenzeile ? null : zusatz(z)),
+            bild: bild ? ((z) => (z.summenzeile ? null : bild(z))) : null
         }
     ];
 
@@ -1352,10 +1374,40 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
 }
 
 // ===== Reiter "Umsatz nach Kundengruppe" =====
+
+// Der Anzeigename einer Tarifgruppe - EINMAL, fuer Kopftafel UND Liste.
+//
+// v_wawi_umsatz_kundengruppe fuehrt die Kundschaft ohne gueltige
+// Mitgliedschaft unter tarif_code 'OHNE' mit dem Klartext "Ohne
+// Mitgliedschaft". Das ist ein Wort AUS DER DATENBANK und stand deshalb
+// in allen sechs Sprachen deutsch da - waehrend der Bereich "Kundschaft"
+// dieselbe Gruppe seit jeher ueber einen Uebersetzungsschluessel nennt
+// ("Ohne aktiven Tarif", board.customersNoTariff, siehe kundenKopftafel()
+// in kunden.js). Zwei Tafeln, dieselbe Gruppe, zwei Namen - und einer
+// davon nur auf Deutsch.
+//
+// Der Schluessel gewinnt: er ist uebersetzt, und "ohne aktiven Tarif"
+// trifft die Sache genauer (eine Mitgliedschaft kann bestehen und
+// abgelaufen sein). Die vier ECHTEN Tarife behalten ihren Klartext aus
+// der Datenbank - sie sind Produktnamen, keine Oberflaechentexte
+// (dieselbe Regel, nach der auch Stationsnamen unuebersetzt bleiben).
+//
+// EINE Funktion fuer beide Verwendungen, nicht zwei gleichlautende
+// Ausdruecke: Kopftafel und Arbeitsliste stehen in diesem Reiter
+// UNMITTELBAR uebereinander. Liefen sie auseinander, stuende der eine
+// Name zwei Zentimeter ueber dem anderen - genau der Fall, den diese
+// Aenderung beseitigen soll.
+function tarifAnzeige(zeile) {
+    return zeile.tarif_code === 'OHNE' ? t('board.customersNoTariff') : zeile.tarif;
+}
+
 function umsatzKundengruppeKopftafel(zeilen) {
     if (!zeilen || zeilen.length === 0) return null;
+    // ANGLEICHUNG AN DIE FLOTTENTAFEL bzw. an den Bereich "Kundschaft":
+    // der Anzeigename kommt aus tarifAnzeige() oben, nicht mehr roh aus
+    // der Sicht - Begruendung dort.
     const { fenster, gruppen } = auswertungenMonatsgliederung(
-        zeilen, (z) => z.tarif_code, (z) => z.tarif);
+        zeilen, (z) => z.tarif_code, tarifAnzeige);
     if (gruppen.length === 0) return null;
 
     const umsatzGesamt = gruppen.reduce((s, g) => s + auswertungenSumme(g, fenster, 'umsatz'), 0);
@@ -1393,10 +1445,24 @@ function umsatzKundengruppeKopftafel(zeilen) {
 }
 
 // ===== Reiter "Kilometer und CO2" =====
-function kmCo2Kopftafel(zeilen) {
+function kmCo2Kopftafel(zeilen, radtypNamen) {
     if (!zeilen || zeilen.length === 0) return null;
+    // ANGLEICHUNG AN DIE FLOTTENTAFEL (Auftrag: sie ist die optische
+    // Referenz aller Tafeln). Bis zu dieser Runde stand hier zweimal
+    // typ_code - die Rubrikspalte zeigte also "CITY", "EBIKE", "CARGO",
+    // waehrend die Flottentafel und der Nachbarreiter "Umsatz nach
+    // Radtyp" fuer DIESELBEN drei Zeilen "City-Bike", "E-Bike Sport" und
+    // "E-Cargo Loader" schreiben. Zwei Tafeln, dieselbe Sache, zwei
+    // Namen: genau die Uneinheitlichkeit, die der Auftrag benennt. Der
+    // Grund war nie sachlich, sondern eine fehlende Spalte in
+    // v_wawi_km_co2 - kmCo2Zeigen() reicht die Namen jetzt aus
+    // v_wawi_modell herein (siehe dort).
+    // FALLBACK AUF DEN CODE, nicht auf einen leeren Namen: faellt
+    // v_wawi_modell aus, steht wieder "CITY" da - kurz, aber wahr. Eine
+    // Zeile ohne Namen waere schlechter als eine mit dem Kuerzel.
+    const typName = (code) => (radtypNamen && radtypNamen.get(code)) || code;
     const { fenster, gruppen } = auswertungenMonatsgliederung(
-        zeilen, (z) => z.typ_code, (z) => z.typ_code);
+        zeilen, (z) => z.typ_code, (z) => typName(z.typ_code));
     if (gruppen.length === 0) return null;
 
     gruppen.sort((a, b) => auswertungenSumme(b, fenster, 'kilometer') - auswertungenSumme(a, fenster, 'kilometer'));
@@ -1460,6 +1526,11 @@ function kmCo2Kopftafel(zeilen) {
                 art: 'rubrik',
                 titel: t('col.bikeType'),
                 wert: (z) => z.name,
+                // Dasselbe Produktbild wie in der Flottentafel und im
+                // Reiter "Umsatz nach Radtyp" - siehe RADTYP_BILDER in
+                // rahmen.js. Rein schmueckend (alt="", aria-hidden):
+                // der Typname steht unmittelbar daneben.
+                bild: (z) => (z.summenzeile ? null : radtypBild(z.schluessel)),
                 zusatz: (z) => (z.summenzeile ? null
                     : t('board.co2PerRide', {
                         kg: kgFormat(auswertungenSumme(z, fenster, 'fahrten')
@@ -1699,8 +1770,17 @@ async function umsatzKundengruppeZeigen(vorgang) {
     // Datenbank nachgerechnet (Bericht): ueber den gesamten Bestand liegt
     // "OHNE" bei rund 8 Fahrten je Kunde, jede echte Mitgliedschaft bei
     // rund 20 - ein Unterschied, den umsatz_je_kunde allein nicht zeigt.
+    // tarif wird HIER schon auf den Anzeigenamen gesetzt (siehe
+    // tarifAnzeige() weiter unten), nicht erst ueber ein formatieren:
+    // in der Spaltendefinition: die Spalte ist sortier-, filter- und
+    // gruppierbar (siehe zeigeListe() in rahmen.js), und alle drei
+    // arbeiten auf dem FELDWERT. Waere nur die Anzeige uebersetzt,
+    // stuende im Filterfeld weiterhin der deutsche Rohwert - man muesste
+    // "Ohne Mitgliedschaft" eintippen, um "Sin tarifa activa" zu
+    // finden. tarif_code bleibt unveraendert daneben stehen und traegt
+    // weiterhin den Gruppierungsschluessel.
     const zeilenMitFahrtenJeKunde = zeilen.map((z) => (
-        { ...z, fahrtenJeKunde: z.kunden ? z.fahrten / z.kunden : null }
+        { ...z, tarif: tarifAnzeige(z), fahrtenJeKunde: z.kunden ? z.fahrten / z.kunden : null }
     ));
 
     const umsatzMaximum = Math.max(...zeilen.map((z) => z.umsatz));
@@ -1771,9 +1851,30 @@ async function umsatzKundengruppeMaske(zeile) {
 // ===== Kilometer und CO2 =====
 
 async function kmCo2Zeigen(vorgang) {
-    const zeilen = await ladeListe('v_wawi_km_co2',
-        'monat, typ_code, fahrten, kilometer, fahrten_geschaetzt, anteil_geschaetzt, co2_ersparnis_kg',
-        (q) => q.order('monat').order('typ_code'));
+    // ZWEITE, WINZIGE LADEANFRAGE FUER DIE AUSGESCHRIEBENEN RADTYPNAMEN -
+    // die Angleichung an die Flottentafel (Auftrag) verlangt sie, siehe
+    // die ausfuehrliche Begruendung bei kmCo2Kopftafel() weiter unten.
+    // v_wawi_km_co2 fuehrt nur typ_code; v_wawi_modell fuehrt beides und
+    // ist mit fuenf Zeilen kein Preis. Genau derselbe Weg, den
+    // instandhaltungAufbauen() in instandhaltung.js fuer dasselbe
+    // Problem schon geht - eine zweite Bauart dafuer waere eine zu viel.
+    // Promise.all: die beiden Anfragen haengen nicht voneinander ab.
+    const [zeilen, modelleFuerTypnamen] = await Promise.all([
+        ladeListe('v_wawi_km_co2',
+            'monat, typ_code, fahrten, kilometer, fahrten_geschaetzt, anteil_geschaetzt, co2_ersparnis_kg',
+            (q) => q.order('monat').order('typ_code')),
+        ladeListe('v_wawi_modell', 'typ_code, typ')
+    ]);
+    // Ein Ladefehler HIER darf die Tafel nicht verhindern - der Radtypname
+    // ist eine Beschriftung, keine Kennzahl. Faellt v_wawi_modell aus,
+    // bleibt die Karte leer, und kmCo2Kopftafel() faellt je Zeile auf den
+    // typ_code zurueck (siehe dort). Dieselbe Haltung wie bei den
+    // Stationen: "lieber eine Spalte weniger als eine erfundene" - hier
+    // sogar nur "lieber ein Kuerzel als gar keine Zeile".
+    const radtypNamen = new Map(modelleFuerTypnamen.map((m) => [m.typ_code, m.typ]));
+    // Derselbe Rueckfall wie in kmCo2Kopftafel(): faellt v_wawi_modell
+    // aus, steht wieder der typ_code da - kurz, aber wahr.
+    const typName = (code) => radtypNamen.get(code) || code;
 
     const fehler = letzterLadeFehler('v_wawi_km_co2');
     if (fehler) {
@@ -1793,12 +1894,14 @@ async function kmCo2Zeigen(vorgang) {
         return;
     }
 
-    // v_wawi_km_co2 liefert nur typ_code (CITY, EBIKE, ...), keinen
-    // Anzeigenamen wie v_wawi_umsatz_radtyp.typ - anders als dort wäre
-    // ein Zusatz-Join auf fahrradtyp für eine reine Auswertungssicht
-    // eine Erweiterung, die niemand beauftragt hat. Der Code selbst ist
-    // in dieser Tabelle so kurz und so wenig mehrdeutig (zwei bis drei
-    // Werte), dass er unübersetzt lesbar bleibt.
+    // In der LISTE bleibt der typ_code stehen, und das ist kein
+    // Widerspruch zur ausgeschriebenen Bezeichnung in der Kopftafel
+    // darueber (siehe kmCo2Kopftafel()): die Arbeitsliste der Flotte
+    // fuehrt ihre Radtypspalte ebenfalls als typ_code (siehe flotte.js) -
+    // eine Datenspalte in einer langen Tabelle darf das kurze Kuerzel
+    // tragen, eine Zeilenbeschriftung im Kopf nicht, weil sie dort die
+    // einzige Benennung der Zeile ist. Beide Gewohnheiten sind damit je
+    // fuer sich einheitlich, quer ueber alle Bereiche.
     // kilometerJeFahrt: dieselbe clientseitige Rechnung wie
     // minutenJeFahrt/fahrtenJeKunde in den beiden Reitern davor (siehe
     // dortiger Kommentar) - kilometer und fahrten sind bereits korrekt
@@ -1808,14 +1911,24 @@ async function kmCo2Zeigen(vorgang) {
     // stattfanden, und damit zwischen Radtypen mit sehr unterschiedlicher
     // Flottengroesse (Cargo: 25 Räder, City: 198, siehe Bericht)
     // tatsaechlich vergleichbar.
+    // typ wird HIER gesetzt, aus derselben Namenskarte wie die Kopftafel
+    // darueber (siehe kmCo2Zeigen()/kmCo2Kopftafel()): der Radtyp heisst
+    // in dieser Oberflaeche ueberall gleich - in der Filterleiste, in der
+    // Kopftafel, in der Liste und in der Maske. Als echtes FELD und nicht
+    // ueber ein formatieren: in der Spaltendefinition, weil Sortieren,
+    // Filtern und Gruppieren auf dem Feldwert arbeiten (siehe zeigeListe()
+    // in rahmen.js) - sonst stuende im Filterfeld weiterhin "CITY",
+    // waehrend die Zelle daneben "City-Bike" zeigt. typ_code bleibt
+    // unveraendert erhalten und traegt weiterhin jede Gruppierung im
+    // Programmtext.
     const zeilenMitKmJeFahrt = zeilen.map((z) => (
-        { ...z, kilometerJeFahrt: z.fahrten ? z.kilometer / z.fahrten : null }
+        { ...z, typ: typName(z.typ_code), kilometerJeFahrt: z.fahrten ? z.kilometer / z.fahrten : null }
     ));
 
     const kilometerMaximum = Math.max(...zeilen.map((z) => z.kilometer));
     zeigeListe(vorgang, zeilenMitKmJeFahrt, [
         { feld: 'monat',    titel: t('field.monat'),   formatieren: (w) => monatFormat(w) },
-        { feld: 'typ_code', titel: t('field.radtyp') },
+        { feld: 'typ',      titel: t('field.radtyp') },
         // summierbar: Fahrten je Monat/Radtyp, additiv - kein
         // Doppelzaehl-Risiko (jede Fahrt gehoert zu genau einer Zeile).
         { feld: 'fahrten',  titel: t('field.fahrten'), formatieren: zahlFormat, klasse: zahlKlasse(), summierbar: true },
@@ -1849,7 +1962,7 @@ async function kmCo2Zeigen(vorgang) {
         }
     ], kmCo2Maske);
 
-    zeigeKopftafel(vorgang, kmCo2Kopftafel(zeilen));
+    zeigeKopftafel(vorgang, kmCo2Kopftafel(zeilen, radtypNamen));
 
     // Die Kontrollrechnung aus Schritt 3: Gesamtersparnis UND der
     // fahrtgewichtete Gesamtanteil - NICHT der Mittelwert der
@@ -1865,8 +1978,12 @@ async function kmCo2Zeigen(vorgang) {
 
 // async wegen des Drill-Downs - siehe Kommentar bei umsatzRadtypMaske().
 async function kmCo2Maske(zeile) {
-    zeigeMaske(`${zeile.typ_code} · ${monatFormat(zeile.monat)}`, [
-        { name: 'typ_code', titel: t('field.radtyp'),    wert: zeile.typ_code, nurLesen: true },
+    // Titel und erstes Feld wie in umsatzRadtypMaske() weiter oben:
+    // Produktname vorn, Kuerzel in Klammern. zeile.typ setzt
+    // kmCo2Zeigen() beim Aufbau der Zeilen (siehe dort) - dieselbe
+    // Benennung wie in Kopftafel, Liste und Filterleiste.
+    zeigeMaske(`${zeile.typ} · ${monatFormat(zeile.monat)}`, [
+        { name: 'typ',      titel: t('field.radtyp'),    wert: `${zeile.typ} (${zeile.typ_code})`, nurLesen: true },
         { name: 'monat',    titel: t('field.monat'),      wert: monatFormat(zeile.monat), nurLesen: true },
         { name: 'fahrten',  titel: t('field.fahrten'),    wert: zahlFormat(zeile.fahrten), nurLesen: true },
         { name: 'kilometer', titel: t('field.kilometer'), wert: kmFormat(zeile.kilometer), nurLesen: true },

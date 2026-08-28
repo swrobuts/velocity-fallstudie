@@ -70,6 +70,61 @@
   </div>
 
   <div id="zustand-arbeit" hidden>
+    <!-- ===== Der Griff der Seitenleiste =====
+         Gestaltungsauftrag, woertlich: "Das Icon zum Ein-/Ausklappen der
+         linken Seitenleiste ist nicht gut platziert, es soll mittig am
+         rechten Rand der linken Seitenleiste selbst platziert werden,
+         wie ein Pfeil."
+
+         ER STEHT ALS ERSTES KIND VON #zustand-arbeit, NICHT IN
+         #navigation - und das ist genau der Haken, den diese Stelle
+         loesen muss: die Leiste verschwindet vollstaendig (Breite 0,
+         padding 0, inert, siehe navigationAnwenden() in rahmen.js). Ein
+         Griff IN der Leiste verschwaende mit ihr, und es gaebe keinen Weg
+         zurueck. Er liegt deshalb im RASTER daneben und wird per
+         position:absolute an die Stelle gelegt, wo die rechte Kante der
+         Leiste ist bzw. WAERE (siehe .navigation-griff in style.css) -
+         ausgeblendet rueckt er auf x=0 und bleibt dort vollstaendig
+         sichtbar und anklickbar.
+
+         ERSTES KIND AUCH IM DOM, nicht nur optisch: damit bleibt er der
+         erste Tabstopp der ganzen Oberflaeche - wer mit der Tastatur
+         ankommt, kann die Leiste oeffnen, BEVOR er durch sie
+         hindurchtabbt. Diese Eigenschaft hatte er schon, als er noch in
+         der Kopfleiste stand; sie darf durch den Umzug nicht verloren
+         gehen. Weil er absolut positioniert ist, belegt er keine
+         Rasterzelle - die drei Rasterbereiche (kopf/nav+arbeit/fuss)
+         bleiben unveraendert.
+
+         EIN statischer Name statt zweier Zustandstexte ("einblenden"/
+         "ausblenden"): aria-expanded traegt den wechselnden Zustand
+         bereits, ein Bildschirmleser haengt "eingeklappt"/"ausgeklappt"
+         von sich aus an den Namen an - dieselbe Ueberlegung wie beim
+         Umschalter der Kopftafel (kopftafelUmschalterKnopf() in
+         rahmen.js). Den ZUSTAND setzen navigationAnwenden()/der
+         Klick-Handler auf diesem Knopf in rahmen.js, nicht dieses
+         Markup: er kommt aus localStorage und ist beim Ausliefern der
+         Seite noch unbekannt. -->
+    <button id="knopf-navigation" type="button" class="navigation-griff"
+            aria-expanded="true" aria-controls="navigation"
+            aria-label="Navigation ein- und ausblenden"
+            data-i18n-aria="index.navToggleAria">
+      <!-- EIN PFEIL, nicht mehr das Seitenleisten-Symbol (Rechteck mit
+           abgesetzter Spalte): das Symbol beschrieb den BEREICH, den es
+           schaltet - richtig, solange der Knopf in der Kopfleiste stand
+           und nichts in seiner Naehe lag, worauf er haette zeigen
+           koennen. An der Kante der Leiste selbst ist die Richtung die
+           Aussage ("dorthin geht es"), und dafuer ist ein Pfeil das
+           genauere Zeichen. Er zeigt nach LINKS, solange die Leiste da
+           ist ("hier schiebe ich sie weg"), und dreht sich nach RECHTS,
+           sobald sie weg ist ("hier hole ich sie zurueck") - siehe
+           .navigation-griff[aria-expanded] in style.css. Strichstaerke
+           und Rundung wie bei .bereich-icon svg / .kopftafel-umschalter
+           svg, damit kein zweites Icon-Vokabular entsteht. -->
+      <svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+        <polyline points="11,4 6,9 11,14"></polyline>
+      </svg>
+    </button>
     <header id="kopfleiste">
       <!-- Frueher stand hier "VeloCity WaWi" mit dem zweiten Wort in
            --rot - reine Deko, ohne dass Rot hier irgendetwas bedeutete.
@@ -89,49 +144,15 @@
            "Warenwirtschaft" selbst wird dort uebersetzt, wo es tatsaechlich
            als Wort steht (Titel, Anmeldemaske), nicht in der zwei Buchstaben
            kurzen Wortmarke. -->
-      <!-- ZONE LINKS: Umschalter der Navigation UND Wortmarke, in EINEM
-           Rasterkind (siehe .kopfleiste-marke in style.css). Zwei
-           einzelne Kinder haetten aus dem Dreispaltenraster ein
-           Vierspaltenraster gemacht - und die Suche damit wieder aus der
-           Fenstermitte geschoben.
-
-           DER UMSCHALTER STEHT ZUERST, und zwar im DOM, nicht nur
-           optisch: er ist damit der erste Tabstopp der ganzen
-           Oberflaeche. Wer mit der Tastatur ankommt, kann die
-           Navigation oeffnen, BEVOR er durch sie hindurchtabbt - stuende
-           er hinter der Wortmarke oder gar in der Navigation selbst,
-           muesste man erst durch die ausgeblendete Leiste, um sie
-           wieder einzublenden. Das ist zugleich die Antwort auf den
-           Auftrag "eine Navigation, die ganz weg ist, muss zurueckholbar
-           sein - der Weg dorthin darf nicht selbst verschwinden": dieser
-           Knopf liegt in der Kopfleiste, einem eigenen Geschwister-
-           Element im Raster (siehe #zustand-arbeit in style.css), nicht
-           in #navigation selbst - er verschwindet deshalb nie mit ihr.
-
-           EIN statischer Name statt zweier Zustandstexte ("einblenden"/
-           "ausblenden"): aria-expanded traegt den wechselnden Zustand
-           bereits, ein Bildschirmleser haengt "eingeklappt"/"ausgeklappt"
-           von sich aus an den Namen an - dieselbe Ueberlegung wie beim
-           Umschalter der Kopftafel (kopftafelUmschalterKnopf() in
-           rahmen.js). Den ZUSTAND setzen navigationAnwenden()/der
-           Klick-Handler auf diesem Knopf in rahmen.js, nicht dieses
-           Markup: er kommt aus localStorage und ist beim Ausliefern der
-           Seite noch unbekannt. -->
+      <!-- ZONE LINKS: nur noch die Wortmarke, in EINEM Rasterkind (siehe
+           .kopfleiste-marke in style.css). Der Umschalter der Navigation
+           stand bis zu dieser Runde ebenfalls hier - er sitzt jetzt an
+           der rechten Kante der Seitenleiste selbst (siehe
+           .navigation-griff oben und in style.css). Der Wrapper bleibt
+           trotzdem bestehen: er traegt justify-self:start fuer die linke
+           Rasterzone; ohne ihn muesste dieselbe Angabe an .wortmarke
+           wandern, ohne dass sich sonst etwas aenderte. -->
       <div class="kopfleiste-marke">
-        <button id="knopf-navigation" type="button" class="navigation-umschalter"
-                aria-expanded="true" aria-controls="navigation"
-                aria-label="Navigation ein- und ausblenden"
-                data-i18n-aria="index.navToggleAria">
-          <!-- Das Seitenleisten-Symbol, nicht der "Hamburger": beide
-               stehen heute fuer eine Seitenleiste, die verschwinden kann -
-               siehe der Kommentar bei .navigation-umschalter svg in
-               style.css fuer die Begruendung, warum dieses Zeichen trotz
-               der jetzt vollstaendig verschwindenden Leiste bleibt. -->
-          <svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">
-            <rect x="2" y="3" width="14" height="12" rx="2"></rect>
-            <line x1="7" y1="3" x2="7" y2="15"></line>
-          </svg>
-        </button>
         <span class="wortmarke">
         <!-- Gestaltungsauftrag, woertlich: "ein Klick auf VeloCity im
              linken oberen Eck sollte bikes.butscher.cloud aufrufen." NUR

@@ -189,7 +189,19 @@ async function flotteAufbauen() {
     // fachlich sinnvoll.
     zeigeListe(vorgang, raederSichtbar, [
         { feld: 'rahmennummer',   titel: t('field.rahmennummer') },
-        { feld: 'typ_code',       titel: t('field.typ'), filterbar: false },
+        // EINE BENENNUNG FUER DEN RADTYP, UEBERALL (Befund der
+        // Referenzangleichung): hier stand der typ_code ("CITY"),
+        // waehrend die Filterleiste unmittelbar darueber und die
+        // Kopftafel unmittelbar darueber beide den Produktnamen
+        // ("City-Bike") fuehren - drei Stellen desselben Bildschirms,
+        // zwei Vokabulare. Das Kuerzel war nie eine Ersparnis, die
+        // jemand gefordert haette; es war das Feld, das beim Bau der
+        // Liste am naechsten lag. v_wawi_flotte liefert beide Spalten
+        // (siehe die Ladeanfrage oben), die Zeile kostet nichts.
+        // Ebenso die Ueberschrift: t('field.radtyp') statt
+        // t('field.typ') - dieselbe Spalte hiess in der Flotte "Typ",
+        // in den Auswertungen "Radtyp" und in jeder Kopftafel "Radtyp".
+        { feld: 'typ',            titel: t('field.radtyp'), filterbar: false },
         { feld: 'status',         titel: t('field.status'), klasse: statusKlasse, filterbar: false,
           formatieren: (wert) => statusAnzeige(wert) },
         // formatieren-Rueckfall auf misc.underway (Erprobung, Hinweis aus
@@ -379,7 +391,7 @@ function flotteKopftafel(raeder) {
                 // vier City-Zeilen zu wiederholen waere genau der Laerm,
                 // den der Auftrag frueher schon an einer Beschriftung
                 // geruegt hat, die ein Bild nur verdoppelt.
-                bild: (z) => (z.istGruppe ? RADTYP_BILDER[z.typCode] || null : null)
+                bild: (z) => (z.istGruppe ? radtypBild(z.typCode) : null)
             },
             {
                 art: 'groesse',
@@ -488,43 +500,16 @@ function flotteFilterOptionen(raeder) {
     return { typen, standorte };
 }
 
-// ===== Produktbilder je Radtyp (Gestaltungsauftrag, woertlich: "Bei
-// Flotte vermisse ich Produktbilder, wir haben ja die Bikes auch als
-// Bilder, warum werden die nicht miniaturisiert im Kopf angezeigt, damit
-// ich das Produkt/Flotte auch sehe") =====
-//
-// UEBER DEN TYPCODE zugeordnet, nicht ueber die Reihenfolge im
-// assets-Verzeichnis oder im Bestand (Auftrag, ausdruecklich): eine
-// Zuordnung per Position waere lautlos falsch, sobald ein Radtyp
-// umsortiert wird oder ein vierter dazukommt - "eine falsche Zuordnung
-// faellt niemandem auf, der die Raeder nicht kennt" (Auftrag). typ_code
-// traegt heute CITY/CARGO/EBIKE (siehe v_wawi_flotte, gepruefte Werte).
-// Fehlt ein Eintrag hier (ein vierter Radtyp ohne Bild), liefert der
-// Zugriff schlicht undefined - zeigeKopftafel() in rahmen.js prueft das
-// und laesst die Zelle dann ohne Bild, statt ein <img src="undefined">
-// zu erzeugen.
-//
-// Die frueher eigenstaendige Kachelreihe unter dem Kopfstreifen
-// (flotteTypkachelnZeigen(), dieselbe Bauart auch in instandhaltung.js)
-// ist mit dem Kachelband selbst entfallen: die Bilder stehen jetzt IN der
-// Kopftafel - bei Flotte in der Gruppenzeile ihres Radtyps, bei
-// Instandhaltung in der Tafelbeschriftung, wo das eine Bild den Befund
-// traegt ("alle sieben Meldungen betreffen City-Bikes"). Derselbe Wunsch,
-// dieselben Dateien, eine Bildschirmzeile weniger.
-//
-// Miniaturisiert aus src/assets/rad-*-frei.webp (freigestellt, Alphakanal
-// bereits vorhanden) auf 128px Bildhoehe - genug fuer eine scharfe
-// Darstellung auch auf einem Retina-Bildschirm, ohne die 500-600 KB
-// grosse Ausgangsdatei ungekuerzt auszuliefern (503-602 KB vorher, 15-17
-// KB nachher je Datei). NACH wawi/assets/ kopiert, nicht nach
-// src/assets/ verlinkt: wawi/ wird eigenstaendig ausgeliefert (siehe
-// tools/wawi_veroeffentlichen.sh), ein Verweis auf ../src/assets/ liefe
-// im Betrieb ins Leere.
-const RADTYP_BILDER = {
-    CITY:  'assets/rad-city-mini.webp',
-    CARGO: 'assets/rad-cargo-mini.webp',
-    EBIKE: 'assets/rad-ebike-mini.webp'
-};
+// ===== Produktbilder je Radtyp =====
+// Die Tabelle selbst ist nach rahmen.js gewandert (RADTYP_BILDER, dort
+// unmittelbar neben KATEGORIE_FARBE) - aus demselben Grund, aus dem
+// kategorieFarbe() dort steht: sie ist bereichsuebergreifend. Sie hat
+// inzwischen DREI Verbraucher (Flotte hier, Instandhaltung, und seit der
+// Referenzangleichung auch zwei Reiter der Auswertungen), und eine
+// Zuordnung, die drei Bereiche teilen, gehoert nicht in einen davon -
+// derselbe Befund, den werkzeugleiste()/kopftafelWurzel() in rahmen.js
+// schon einmal beseitigt haben. Verwendet wird sie hier unveraendert
+// weiter (siehe flotteKopftafel() oben und radMaske() unten).
 
 // Set.size === 0 heisst "Alle" (siehe Kommentar bei flotteFilterStatus
 // oben). Der Standort-Sonderfall 'unterwegs' (kein Standort, r.standort
@@ -718,21 +703,21 @@ function radMaske(rad) {
 
     // GESTALTUNGSAUFTRAG PUNKT 5, woertlich: "ich will in der rechten
     // Kachel das Bild des jeweiligen Rades sehen, dann auch noch die
-    // Angaben vom Hersteller." Dasselbe RADTYP_BILDER wie bei den
-    // Typ-Kacheln oben (ueber typ_code zugeordnet, aus demselben Grund -
-    // siehe dortiger Kommentar), hier aber die BEDEUTENDE Abbildung der
+    // Angaben vom Hersteller." Dasselbe radtypBild() wie in der
+    // Kopftafel oben (ueber typ_code zugeordnet, aus demselben Grund -
+    // siehe RADTYP_BILDER in rahmen.js), hier aber die BEDEUTENDE Abbildung der
     // ganzen Maske statt einer schmueckenden Wiederholung neben einem
     // Titel - alt bleibt trotzdem leer/aria-hidden, weil "Typ:
     // {rad.typ} ({rad.typ_code})" gleich im ersten Feld darunter steht:
     // ein Bildname, der denselben Satz noch einmal vorliest, waere fuer
     // einen Screenreader Laerm (derselbe Grundsatz wie bei den
-    // Typ-Kacheln). Fehlt die Datei (RADTYP_BILDER kennt den typ_code
+    // Typ-Kacheln). Fehlt die Datei (radtypBild() kennt den typ_code
     // nicht, oder das 'error'-Ereignis der Datei selbst), erscheint gar
     // kein Bildbereich statt eines kaputten Platzhalters - zeigeMaske()
     // in rahmen.js haengt den Rahmen nur ein, wenn bild tatsaechlich
     // etwas ist.
     let bild = null;
-    const bildQuelle = RADTYP_BILDER[rad.typ_code];
+    const bildQuelle = radtypBild(rad.typ_code);
     if (bildQuelle) {
         bild = document.createElement('img');
         bild.src = bildQuelle;
@@ -773,7 +758,7 @@ function radMaske(rad) {
     }
 
     zeigeMaske(`${t('field.rad')} ${rad.rahmennummer}`, [
-        { name: 'typ',            titel: t('field.typ'),              wert: `${rad.typ} (${rad.typ_code})`, nurLesen: true },
+        { name: 'typ',            titel: t('field.radtyp'),           wert: `${rad.typ} (${rad.typ_code})`, nurLesen: true },
         { name: 'modell',         titel: t('field.modell'),           wert: `${rad.hersteller} ${rad.modell}`, nurLesen: true },
         ...herstellerFelder,
         { name: 'status',         titel: t('field.status'),           wert: statusAnzeige(rad.status), nurLesen: true },

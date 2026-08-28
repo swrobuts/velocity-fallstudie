@@ -522,17 +522,34 @@
        ZUSAETZLICH, UND DAS IST DER ZWEITE TEIL DERSELBEN RUEGE (Auftrag,
        woertlich: "oder der Hintergrund der Tabelle ist dann leicht
        ausgegraut ... es muss so wirken, als läge der Kopfbereich im
-       ausgeklappten Zustand über der Tabelle"): derselbe Kniff, den
-       diese Datei fuer Ebene 3 laengst kennt - der <dialog> dunkelt via
-       ::backdrop ab, was er ueberlagert -, bekommt jetzt ein leichteres
-       Gegenstueck fuer Ebene 1. Waehrend die Kopftafel ausgeklappt ist,
-       tritt die Tabelle darunter auf --flaeche-rahmen zurueck (siehe
-       .kopftafel + #listenkoerper weiter unten) - derselbe Ton, den die
-       Farbordnung bereits als Anwendungsrahmen und gewaehlte Zeile
-       fuehrt, hier ein drittes Mal, aus demselben Grund: eine leichte,
-       bereits gegen alle vier Status- und alle fuenf Kategoriefarben
-       gemessene Toenung (siehe "UND DAS GRAU"/RANG 4 weiter unten), kein
-       neuer, unvermessener Grauton.
+       ausgeklappten Zustand über der Tabelle"): die Tabelle darunter
+       trat auf --flaeche-rahmen zurueck, solange die Tafel ausgeklappt
+       war. DIESER TEIL IST ZURUECKGENOMMEN - der Auftraggeber hat ihn
+       selbst wieder verworfen ("die Tabelle soll immer gleich
+       aussehen"), und er hatte recht: eine Flaeche, die ihre Farbe
+       wechselt, weil anderswo etwas aufklappt, schickt die
+       Ursachensuche an die falsche Stelle. Die ausfuehrliche
+       Begruendung steht dort, wo die Regel stand (siehe "ZURUECKGENOMMEN"
+       bei .kopftafel weiter unten).
+       FOLGE FUER DIESEN SCHATTEN, UND SIE IST DER GRUND FUER SEINE
+       JETZIGE ZWEITEILIGKEIT: er traegt die Ebene ab sofort ALLEIN,
+       zusammen nur noch mit der Kante. Ein einzelner weicher Schlag
+       (14px Weichzeichnung) liest sich ueber weisser Flaeche als
+       Dunst - man sieht, dass da etwas ist, aber nicht, WO die Tafel
+       aufhoert. Ein wirklicher Gegenstand wirft ZWEI Schatten: einen
+       kurzen, dichten unmittelbar an der Auflagekante (Kontakt) und
+       einen langen, weichen darunter (Umgebungslicht). Genau das steht
+       jetzt in --schatten-1: "0 1px 2px" bei 22 % plus unveraendert
+       "0 5px 14px" bei 30 %. Der zweite Teil ist Wort fuer Wort der
+       bisherige Wert - die Tiefe wird nicht groesser, sie bekommt nur
+       eine ablesbare Kante. Das bleibt EINE Hoehe mit EINEM Namen; die
+       Reihe hat weiterhin drei Schatten, nicht vier. Und die Rangfolge
+       gegen Ebene 2 bleibt gewahrt: der laengste Versatz dieses
+       Schattens ist unveraendert 5px gegen 6px, seine groesste
+       Weichzeichnung 14px gegen 16px.
+       Der klebende Tabellenkopf traegt denselben Namen und bekommt die
+       Kontaktkante mit - richtig so: an ihm scrollen Datenzeilen
+       vorbei, er ist genau derselbe Fall.
 
      EBENE 2 · SCHWEBEND — --schatten-2.
        Haengt an einem Bedienelement, schliesst bei einem Klick daneben,
@@ -561,7 +578,7 @@
      Ebenso die Stationsmarke auf der Landkarte (siehe dort): sie liegt
      nicht hoeher als die Karte, sie muss sich nur gegen unkontrollierte
      Kartenbilder behaupten. */
-  --schatten-1: 0 5px 14px rgba(6, 24, 65, 0.30);
+  --schatten-1: 0 1px 2px rgba(6, 24, 65, 0.22), 0 5px 14px rgba(6, 24, 65, 0.30);
   --schatten-2: 0 6px 16px rgba(6, 24, 65, 0.20);
   --schatten-3: 0 16px 40px rgba(6, 24, 65, 0.30);
   --z-ebene-2:  20;
@@ -887,6 +904,15 @@ a.wortmarke-link:active {
   grid-template-rows: var(--kopf-hoehe) 1fr var(--fuss-hoehe);
   grid-template-areas: "kopf kopf" "nav arbeit" "fuss fuss";
   height: 100vh;
+  /* Bezugsrahmen fuer den GRIFF der Seitenleiste (.navigation-griff
+     weiter unten). Der Griff ist ein Kind dieses Rasters, belegt aber
+     keine Rasterzelle: position:absolute nimmt ihn aus dem Fluss, und
+     dieses position:relative gibt ihm den Bezug, an dem er die rechte
+     Kante der Navigation und die senkrechte Mitte zwischen Kopfleiste
+     und Statuszeile ausrechnet. Genau dieser Kasten und kein anderer:
+     seine Rasterangabe ist die einzige Stelle, die die Leistenbreite
+     kennt (siehe --nav-breite unten). */
+  position: relative;
   /* EIN- UND AUSBLENDEN DER NAVIGATION (Gestaltungsauftrag, woertlich:
      "applemaessig ... die linke Seite ein-/ausblenden"). Die Breite steht
      an EINER Stelle - hier, in der Rasterangabe des ganzen
@@ -922,7 +948,13 @@ body.navigation-weg #zustand-arbeit {
 @media (prefers-reduced-motion: reduce) {
   #zustand-arbeit,
   #arbeitsliste,
-  #detailmaske {
+  #detailmaske,
+  /* Der Griff wandert mit der Kante, die er bedient (siehe
+     .navigation-griff unten) - er muss deshalb in derselben Liste
+     stehen wie das Raster, dessen Spur er begleitet. Ohne diese Zeile
+     spraenge das Raster sofort um, der Griff aber liefe noch 160ms
+     hinterher: genau der Bruch, den diese Regel verhindern soll. */
+  .navigation-griff {
     transition: none;
   }
 }
@@ -951,13 +983,23 @@ body.navigation-weg #zustand-arbeit {
         Zwischen Wortmarke und Suchfeld klafften dadurch 519px, zwischen
         Suchfeld und Profilbereich nur 433px - 86px Unterschied in einer
         Leiste, deren Aussenraender auf den Pixel stimmten. Das Auge
-        misst keine Raender, es misst Luft. Behoben nicht durch
-        Verschieben, sondern durch INHALT: der Umschalter der Navigation
-        (siehe .navigation-umschalter unten) gehoert ohnehin nach links
-        aussen - Fluent (Teams, Outlook im Web), Fiori (Shell-Bar) und
-        die Apple-Richtlinien (Seitenleisten-Knopf in der Werkzeugleiste)
-        setzen ihn alle genau dorthin. Die linke Zone traegt damit 152px
-        statt 112px.
+        misst keine Raender, es misst Luft. Der damalige Ausgleich war
+        INHALT: der Umschalter der Navigation stand seither hier links
+        aussen und brachte die linke Zone auf 152px.
+        SEIT DIESER RUNDE STEHT ER NICHT MEHR HIER (Auftrag, woertlich:
+        "es soll mittig am rechten Rand der linken Seitenleiste selbst
+        platziert werden, wie ein Pfeil" - siehe .navigation-griff weiter
+        unten), und die linke Zone faellt auf ihre 112px zurueck. Das ist
+        eine bewusst hingenommene Nebenwirkung, kein uebersehener
+        Rueckschritt, und der Grund ist eine Messung: die AEUSSEREN
+        Raender und die Lage der Suche - die beiden Groessen, die der
+        Befund tatsaechlich benannte - haengen an den Rasterspuren
+        (minmax(0,1fr) beidseits, siehe unten) und bleiben davon
+        vollstaendig unberuehrt; die Suche liegt weiterhin exakt
+        fenstermittig. Was sich aendert, ist allein die FUELLUNG der
+        linken Zone, und die gegen 40px Fuellung einzutauschen waere der
+        schlechtere Handel: ein Bedienelement gehoert an die Kante, die
+        es bewegt, nicht dorthin, wo es eine Leiste optisch auswiegt.
 
      2. DIE RAENDER WAREN NICHT UEBERALL GLEICH: unterhalb von 900px
         sprang das padding auf --raum-3 (12px), waehrend die Statuszeile
@@ -997,78 +1039,143 @@ body.navigation-weg #zustand-arbeit {
   color: var(--flaeche);
 }
 
-/* ===== Umschalter der Navigation (Gestaltungsauftrag Punkt 3) =====
-   Der Knopf steht in der KOPFLEISTE, nicht in der Navigation selbst -
-   und zwar aus drei Gruenden, die alle nichts mit Geschmack zu tun haben:
-     · WICHTIGSTER GRUND, SEIT DIE LEISTE GANZ VERSCHWINDEN KANN (Auftrag,
-       woertlich: "eine Navigation, die ganz weg ist, muss zurueckholbar
-       sein - der Weg dorthin darf nicht selbst verschwinden"): der
-       Knopf liegt in #navigation NICHT, sondern in #kopfleiste, einem
-       Geschwister-Element im Raster (siehe #zustand-arbeit). Er schrumpft
-       deshalb nie mit - egal ob die Navigation 200px breit oder 0px breit
-       ist (--nav-breite-weg in :root), der Rueckweg bleibt an derselben
-       Stelle stehen.
-     · Frueher zusaetzlich: eine eingeklappte Leiste war 56px breit, ein
-       Umschalter darin haette sich zwischen fuenf Rubriksymbole draengen
-       muessen. Mit der schmalen Zwischenform ist dieser Grund entfallen
-       (siehe --nav-breite-weg), der erste Grund oben blieb aber
-       unabhaengig davon immer schon der staerkere.
-     · Er gehoert zur Fensterordnung, nicht zum Inhalt. Genau deshalb
-       sitzt er bei Fluent, Fiori und in den Apple-Richtlinien
-       uebereinstimmend links aussen in der Kopf-/Werkzeugleiste.
-   Er steht als ERSTES Element im DOM (siehe index.html) und ist damit
-   auch der erste Tabstopp: wer mit der Tastatur ankommt, kann die
-   Leiste oeffnen, BEVOR er durch sie hindurchtabbt.
-   Farben: dieselbe Weiss-auf-Marine-Lesbarkeit wie der Rest der
-   Kopfleiste (17,29:1) - unveraendert, unabhaengig vom Farbwechsel der
-   Navigation selbst: dieser Knopf liegt auf der Kopfleiste, nicht auf
-   der Navigationsflaeche. Der Ueberfahren-Zustand hellt die FLAECHE auf
-   statt die Schrift zu aendern - eine hellere Schrift auf Marine waere
-   eine zweite, unvermessene Farbe. */
-.navigation-umschalter {
+/* ===== Der Griff der Seitenleiste =====
+   Gestaltungsauftrag, woertlich: "Das Icon zum Ein-/Ausklappen der linken
+   Seitenleiste ist nicht gut platziert, es soll mittig am rechten Rand
+   der linken Seitenleiste selbst platziert werden, wie ein Pfeil."
+
+   VORHER stand er links aussen in der Kopfleiste (.navigation-umschalter,
+   entfallen) - dort, wo Fluent, Fiori und die Apple-Richtlinien ihn
+   uebereinstimmend setzen. Das war nicht falsch, es war nur ORTLOS: ein
+   Knopf in der Kopfzeile schaltet eine Flaeche, die einen Bildschirm
+   weiter unten links beginnt, und nichts in seiner Naehe zeigte an, worauf
+   er wirkt. An der Kante selbst zeigt der Griff auf genau die Linie, die
+   er verschiebt - dieselbe Loesung, die macOS-Fenster (Trennlinie mit
+   Ziehgriff) und Notion/Linear (Pfeil an der Seitenleistenkante) waehlen.
+
+   ===== DER HAKEN, UND WIE ER GELOEST IST =====
+   Die Leiste verschwindet VOLLSTAENDIG (Spur auf 0, padding 0, inert -
+   siehe body.navigation-weg #zustand-arbeit oben und navigationAnwenden()
+   in rahmen.js). Mit ihr verschwaende ihre rechte Kante, und ein Griff IN
+   der Leiste verschwaende mit: es gaebe keinen Weg zurueck. Genau das
+   verbietet der Auftrag ("der Weg dorthin darf nicht selbst
+   verschwinden").
+   Der Griff liegt deshalb NICHT in #navigation, sondern als absolut
+   positioniertes Geschwisterkind in #zustand-arbeit (siehe index.html,
+   erstes Kind - und damit weiterhin der erste Tabstopp der Oberflaeche).
+   Seine Lage rechnet er selbst aus, aus denselben zwei Groessen, aus
+   denen das Raster daneben besteht:
+     · WAAGERECHT an --nav-breite, also genau auf der Kante. Ausgeblendet
+       waere diese Kante bei 0 - und ein zur Haelfte ueber den linken
+       Fensterrand hinausgeschobener Griff waere zur Haelfte
+       unerreichbar. Deshalb kippt in diesem Zustand nur die
+       AUSRICHTUNG: er sitzt buendig bei x=0 statt mittig auf x=0, bleibt
+       also vollstaendig sichtbar UND vollstaendig anklickbar. Er bleibt
+       damit, wo die Kante waere, ohne aus dem Fenster zu fallen.
+     · SENKRECHT in der Mitte zwischen Kopfleiste und Statuszeile - also
+       in der Mitte der Leiste selbst, nicht in der Mitte des Fensters.
+       Die Rechnung nennt beide Randhoehen ausdruecklich, statt ein
+       ungefaehres "50 %" zu setzen, das die 60px Kopfleiste und die 32px
+       Statuszeile stillschweigend mitzaehlen wuerde.
+   Beide Zustaende benutzen dieselbe Regel; nur left/transform
+   unterscheiden sich, und beide wandern in denselben 160ms wie die
+   Rasterspur (siehe transition unten und die
+   prefers-reduced-motion-Regel oben).
+
+   ===== FARBEN, ALLE BEREITS GEMESSEN =====
+   Der Griff liegt jetzt auf der Naht zwischen zwei Flaechen
+   (--flaeche-rahmen links, --flaeche rechts) statt auf --marine. Alle
+   drei Werte sind gegen BEIDE Untergruende bereits in :root gefuehrt,
+   keine neue Messung noetig:
+     · Rahmen --kontur: 3,11:1 auf --flaeche-rahmen, 3,64:1 auf
+       --flaeche - beide ueber den 3:1 aus WCAG 1.4.11 fuer ein
+       Bedienelement.
+     · Pfeil --marine auf der weissen Fuellung: 17,29:1.
+     · Fokusring --rot (globale :focus-visible-Regel): 3,76:1 auf
+       --flaeche-rahmen, 4,41:1 auf --flaeche.
+   Groesse --ziel x --ziel (32x32) - die Zielgroesse der Datei, acht
+   Pixel ueber der Untergrenze aus WCAG 2.5.8.
+   Ueberfahren wie beim Griff der Kopftafel (.kopftafel-umschalter:hover):
+   Flaeche auf --grund, Rahmen und Zeichen auf --marine. Ein zweiter
+   Griff in derselben Oberflaeche soll sich auch gleich anfuehlen.
+
+   z-index 2, nicht --z-ebene-2: der Griff SCHWEBT nicht (er hat keinen
+   Schatten und gehoert zu Ebene 0, dem Rahmen der Anwendung - siehe
+   Ebenensystem in :root), er muss nur ueber den beiden Ebene-1-Flaechen
+   liegen, die z-index 1 fuehren (ausgeklappte Kopftafel, klebender
+   Tabellenkopf). Ueber ihm bleiben unveraendert Profilmenue/
+   Mehrfachauswahl (20) und das Hinweisfenster (60). */
+.navigation-griff {
+  position: absolute;
+  left: var(--nav-breite);
+  top: calc(var(--kopf-hoehe) + (100% - var(--kopf-hoehe) - var(--fuss-hoehe)) / 2);
+  transform: translate(-50%, -50%);
+  z-index: 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
   width: var(--ziel);
   height: var(--ziel);
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--rund-1);
-  background: transparent;
-  color: var(--flaeche);
-  transition: background-color 120ms ease;
+  border: 1px solid var(--kontur);
+  border-radius: var(--rund-3);
+  background: var(--flaeche);
+  color: var(--marine);
+  transition: left 160ms ease, transform 160ms ease,
+              background-color 120ms ease, border-color 120ms ease;
 }
 
-.navigation-umschalter:hover {
-  background: rgba(255, 255, 255, 0.14);
+/* Ausgeblendet: buendig statt mittig (Begruendung oben) - dieselbe
+   Kante, nur von innen angelegt. */
+body.navigation-weg .navigation-griff {
+  left: var(--nav-breite-weg);
+  transform: translate(0, -50%);
+}
+
+.navigation-griff:hover {
+  background: var(--grund);
+  border-color: var(--marine);
 }
 
 /* Dieselbe Bildsprache wie .bereich-icon svg / .zeilen-aktion svg /
    .kopftafel-umschalter svg - ein viertes, andersartiges Icon-Vokabular
-   waere ein Bruch. Das Zeichen selbst ist das ueblich gewordene
-   Seitenleisten-Symbol (Rechteck mit abgesetzter linker Spalte) - dasselbe
-   Zeichen, das VS Code, Slack und die meisten Fluent-Oberflaechen fuer
-   "Seitenleiste ein-/ausblenden" verwenden, unabhaengig davon, ob die
-   Leiste dabei ganz verschwindet oder nur schmaler wird. Seit dieser
-   Runde (siehe --nav-breite-weg in :root) verschwindet sie tatsaechlich
-   VOLLSTAENDIG statt nur auf eine Symbolspalte zu schrumpfen - das Symbol
-   bleibt trotzdem dasselbe: es beschreibt den BEREICH, den es schaltet
-   (die Seitenleiste als Ganzes), nicht die Zwischenform, die es frueher
-   erzeugte. */
-.navigation-umschalter svg {
-  width: 18px;
-  height: 18px;
+   waere ein Bruch. Das Zeichen selbst ist neu (Pfeil statt
+   Seitenleisten-Rechteck): siehe die Begruendung im Markup, index.html. */
+.navigation-griff svg {
+  width: 16px;
+  height: 16px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.6;
+  stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+  transition: transform 160ms ease;
 }
 
-/* Umschalter und Wortmarke sind EINE Zone, nicht zwei Kinder des Rasters
-   - sonst braeuchte die Kopfleiste eine vierte Spalte, und die Suche
-   saesse wieder nicht in der Fenstermitte. */
+/* Der Pfeil zeigt LINKS, solange die Leiste da ist ("hier schiebe ich
+   sie weg"), und RECHTS, sobald sie weg ist ("hier hole ich sie
+   zurueck"). aria-expanded traegt exakt denselben Zustand schon fuer
+   Bildschirmleser; die Drehung ist die sichtbare Entsprechung - dasselbe
+   Paar wie beim Griff der Kopftafel (.kopftafel-umschalter[aria-expanded]
+   weiter unten). Das Markup zeichnet den Pfeil nach links; gedreht wird
+   deshalb im ausgeblendeten Zustand, nicht im ausgeklappten. */
+.navigation-griff[aria-expanded="false"] svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigation-griff svg {
+    transition: none;
+  }
+}
+
+/* Nur noch die Wortmarke in dieser Zone (der Umschalter sitzt seit dieser
+   Runde an der Leistenkante, siehe .navigation-griff oben) - der Wrapper
+   bleibt trotzdem: er traegt justify-self:start fuer die linke
+   Rasterzone. Ohne ihn muesste dieselbe Angabe an .wortmarke wandern,
+   ohne dass sich sonst etwas aenderte; ein Kind mehr oder weniger im
+   Dreispaltenraster darf hier nicht entstehen, sonst saesse die Suche
+   wieder nicht in der Fenstermitte. */
 .kopfleiste-marke {
   display: flex;
   align-items: center;
@@ -1086,8 +1193,7 @@ body.navigation-weg #zustand-arbeit {
    eine schmale, halbtransparente Linie statt eines Trennzeichens im
    Fliesstext - ruhig und beruflich, wie der Auftrag verlangt. */
 /* justify-self entfaellt: die Wortmarke ist kein Rasterkind mehr,
-   sondern liegt zusammen mit dem Navigations-Umschalter in
-   .kopfleiste-marke (siehe dort). */
+   sondern liegt in .kopfleiste-marke (siehe dort). */
 #kopfleiste .wortmarke {
   display: flex;
   align-items: center;
@@ -1115,6 +1221,25 @@ body.navigation-weg #zustand-arbeit {
   color: inherit;
   text-decoration: underline;
   text-underline-offset: 3px;
+  /* ZIELGROESSE, BEFUND DER PENIBLEN DURCHSICHT: im Browser gemessen war
+     die anklickbare Flaeche dieses Verweises 56x17px - 17 statt der 32,
+     die diese Datei als --ziel fuer alles ansetzt, was man anfasst
+     (siehe "DIE ZIELGROESSE" in :root), und unter der Untergrenze aus
+     WCAG 2.5.8 (24px). Solange der Navigations-Umschalter daneben stand,
+     war das nicht aufgefallen: die Zone hatte ein 32px hohes Ziel,
+     dieses hier nur nicht. Seit er an der Leistenkante sitzt (siehe
+     .navigation-griff oben), ist die Wortmarke das einzige Bedienelement
+     links - der Mangel wird sichtbar und ist ohnehin einer.
+     inline-flex + min-height statt padding: die Kopfleiste ist ein
+     Raster mit fester Hoehe (--kopf-hoehe, 60px) und align-items:center,
+     die groessere Trefferflaeche waechst also nach oben UND unten in
+     bereits vorhandenen Leerraum hinein - die Leiste wird dadurch nicht
+     hoeher, und die Grundlinie der Schrift bleibt, wo sie war (im
+     Browser nachgemessen). Sichtbar aendert sich nichts, nur die
+     Flaeche, auf der ein Klick ankommt. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--ziel);
 }
 
 /* Beide Verweise der Oberflaeche (Wortmarke in der Kopfleiste,
@@ -1894,50 +2019,39 @@ body.navigation-weg #navigation {
   border-bottom-width: 2px;
 }
 
-/* ===== Die Tabelle tritt zurueck, waehrend die Tafel aufliegt =====
-   Vorschlag des Auftraggebers, woertlich: "der Hintergrund der Tabelle
-   ist dann leicht ausgegraut ... es muss so wirken, als läge der
-   Kopfbereich im ausgeklappten Zustand über der Tabelle" - dasselbe
-   Mittel, das Fluent und Fiori fuer eine ueberlagernde Flaeche einsetzen,
-   und dieselbe Denkfigur, die diese Datei fuer Ebene 3 laengst kennt (der
-   <dialog> dunkelt ueber ::backdrop ab, was er ueberlagert). Ebene 1
-   sperrt nichts - die Tabelle bleibt bedienbar -, bekommt aber densel­ben
-   Hinweis in leichterer Form: eine Toenung statt einer Sperre.
-   #arbeitsliste als Bezugspunkt, NICHT .kopftafel selbst: .kopftafel und
-   #listenkoerper sind Geschwister (siehe kopftafelWurzel() in rahmen.js -
-   beide direkte Kinder von #arbeitsliste), ":has(> .kopftafel)" prueft
-   deshalb den GEMEINSAMEN Elternknoten. ">"vor .kopftafel, weil sonst
-   auch eine zufaellig gleich benannte Klasse tiefer im Baum träfe.
-   --flaeche-rahmen, KEIN neuer Ton (siehe Farbordnung in :root, "UND DAS
-   GRAU"): derselbe Ton, den der Anwendungsrahmen und die gewaehlte
-   Tabellenzeile bereits tragen, hier ein drittes Mal fuer denselben
-   Gedanken ("das hier ist gerade nicht die Vordergrundflaeche"). Jede
-   Farbe, die in der Tabelle vorkommt, ist gegen GENAU diesen Ton bereits
-   gemessen: alle vier Statusfarben (--text-leise 5,07:1, --gut 4,56:1,
-   --warnung-text 4,53:1, --schlecht 4,86:1) und alle fuenf Kategorie-
-   farben (mindestens 4,45:1) halten ihre 4,5:1 auch auf --flaeche-rahmen
-   weiter - nachgeschlagen, nicht neu geschaetzt, siehe die jeweiligen
-   Eintraege in der Farbordnung. --kontur (3,64:1 auf --flaeche) faellt
-   auf --flaeche-rahmen auf 3,11:1 - bereits dort dokumentiert und
-   weiterhin ueber den 3:1 fuer Grafik.
-   NEBENWIRKUNG, BEWUSST IN KAUF GENOMMEN: --zebra (#ecedf3) und
-   --flaeche-rahmen (#e9edf4) liegen mit 1,01:1 fast gleichauf (nachge-
-   rechnet) - der
-   Zebra-Rhythmus flacht waehrend der ausgeklappten Tafel sichtbar ab.
-   Das ist kein Fehler, sondern derselbe Gedanke konsequent zu Ende
-   gedacht: "hier ist gerade nicht die Vordergrundflaeche" gilt fuer eine
-   einzelne Zeile genauso wie fuer die ganze Tabelle. Sobald die Tafel
-   wieder einklappt, steht der Zebrastreifen unveraendert da.
-   Die Kopfzeile der Tabelle (thead) traegt denselben Ton mit, DAMIT die
-   ganze Tabelle - nicht nur ihr Koerper - zurueckzutreten scheint; ihr
-   eigener Schatten (--schatten-1, siehe .arbeitstabelle thead weiter
-   unten) bleibt unveraendert bestehen, beide Ebene-1-Flaechen ueberlagern
-   sich hier, ohne sich zu widersprechen. */
-#arbeitsliste:has(> .kopftafel:not(.kopftafel-eingeklappt)) #listenkoerper,
-#arbeitsliste:has(> .kopftafel:not(.kopftafel-eingeklappt)) .arbeitstabelle thead {
-  background: var(--flaeche-rahmen);
-  transition: background-color 160ms ease;
-}
+/* ===== ZURUECKGENOMMEN: die Tabelle tritt NICHT mehr zurueck =====
+   Hier stand eine Regel, die #listenkoerper und den Tabellenkopf auf
+   --flaeche-rahmen abdunkelte, solange die Kopftafel ausgeklappt war.
+   Der Auftraggeber hat sie selbst vorgeschlagen ("oder der Hintergrund
+   der Tabelle ist dann leicht ausgegraut") und sie in derselben Runde
+   selbst wieder verworfen, woertlich: "Wenn ich die Kachel ausklappe,
+   bekommt die untere Tabelle graue Zeilen und ändert sich, das stellen
+   wir ab, die Tabelle soll immer gleich aussehen."
+
+   ER HAT RECHT, UND ZWAR AUS EINEM GRUND, DER GROESSER IST ALS DIESE
+   EINE REGEL: eine Flaeche, die ihre Farbe wechselt, weil ANDERSWO
+   etwas passiert, verschiebt die Ursachensuche. Wer die Tafel aufklappt
+   und dabei die Tabelle grau werden sieht, prueft zuerst die Tabelle -
+   ist sie gesperrt, laedt sie, hat ein Filter gegriffen? Die
+   Zebra-Nebenwirkung, die die alte Fassung dieses Kommentars noch als
+   "bewusst in Kauf genommen" verbuchte (--zebra und --flaeche-rahmen
+   liegen bei 1,01:1, der Streifen verschwand also faktisch), war
+   derselbe Fehler in klein: eine EINSTELLUNG des Nutzers wurde von
+   einem unbeteiligten Schalter ausser Kraft gesetzt.
+
+   EINE EBENE ERKENNT MAN AN DEM, WAS OBEN LIEGT, NICHT DARAN, DASS
+   UNTEN ETWAS VERBLASST. Der Schwebeeindruck haengt seither
+   vollstaendig an der Tafel selbst - an ihrem Schatten, ihrer Kante und
+   ihrer Bewegung (siehe .kopftafel:not(.kopftafel-eingeklappt) direkt
+   oben und --schatten-1 in :root, dort in derselben Runde
+   zweiteilig geworden, weil er das jetzt allein tragen muss). Das ist
+   die schwerere Loesung; sie ist auch die einzige, die ohne eine
+   Nebenwirkung an einer Stelle auskommt, um die es gar nicht geht.
+
+   Die Regel steht bewusst als Kommentar hier und nicht ersatzlos
+   geloescht: sie war zweimal Gegenstand des Auftrags, und der naechste
+   Bearbeiter soll den Vorschlag samt seiner Ruecknahme finden, statt
+   ihn ein drittes Mal neu zu erfinden. */
 
 .kopftafel.kopftafel-eingeklappt .kopftafel-tabelle,
 .kopftafel.kopftafel-eingeklappt .kopftafel-fussnote {

@@ -47,18 +47,36 @@
 // 'fahruntauglich', 'in_arbeit' und aehnliche Aufzaehlungswerte SIND
 // DATEN - sie stehen unveraendert in der Datenbank, gehen unveraendert
 // in jeden rufeAuf()/api_*-Aufruf und werden nirgends aus einer
-// Uebersetzung zurueckgerechnet. STATUS_ANZEIGE weiter unten uebersetzt
-// ausschliesslich die ANZEIGE dieses Werts, niemals den Wert selbst. Fuer
-// Deutsch bleibt diese Anzeige an den Stellen, an denen bisher der rohe
-// Wert selbst stand (die Status-Spalte in Flotte, das Textfeld in
-// radMaske() u. ae.), MIT ABSICHT identisch mit dem rohen Wert
-// ("verfuegbar", nicht "Verfügbar") - Zug 1 dieses Auftrags verlangt,
-// dass Deutsch nach dem Umbau GENAU wie vorher aussieht, und genau dort
-// stand vorher der rohe Wert. Die Filterleiste zeigte an denselben
-// Stellen schon VOR diesem Auftrag eine eigene, huebsch geschriebene
-// Bezeichnung ("Verfügbar") - dieser Unterschied ist ein deutsches Erbe
-// aus der Zeit vor dieser Aufgabe und wird hier nicht eingeebnet, siehe
-// status.raw.*/status.label.* in der Uebersetzungstabelle weiter unten.
+// Uebersetzung zurueckgerechnet. statusAnzeige() weiter unten uebersetzt
+// ausschliesslich die ANZEIGE dieses Werts, niemals den Wert selbst.
+//
+// EINGEEBNET (Befund der penibel durchgegangenen Oberflaeche): fuer
+// Deutsch trug status.raw.* bis zu dieser Runde den unveraenderten
+// Datenbankwert - die Statusspalte der Flotte schrieb "verfuegbar" und
+// "in_arbeit", waehrend die Filterleiste unmittelbar darueber, die
+// Detailmaske daneben und jede Kopftafel "Verfügbar" bzw. "In Arbeit"
+// schrieben. Das war ein ausdruecklich als Erbe vermerkter Zustand
+// ("Zug 1: Deutsch sieht nach dem Umbau genau wie vorher aus"), aber
+// dreierlei spricht dagegen, ihn zu behalten:
+//   1. EINHEITLICHKEIT: derselbe Wert stand auf demselben Bildschirm in
+//      zwei Schreibweisen - genau der Befund, den diese Runde ueberall
+//      sonst behebt (Radtyp, Tarifgruppe, Stationsnummer).
+//   2. UMLAUTE IN PROSA sind Projektregel. "verfuegbar" in einer Zelle,
+//      die ein Mensch liest, ist keine Kennung, sondern Prosa - und
+//      "in_arbeit" mit Unterstrich ist ueberhaupt kein deutsches Wort.
+//   3. ALLE FUENF anderen Sprachen fuehrten status.raw.* und
+//      status.label.* laengst gleichlautend ("Disponible"/"Disponible");
+//      Deutsch war der einzige Sonderfall.
+// Die ZWEI SCHLUESSELREIHEN bleiben trotzdem bestehen (und nicht etwa
+// eine davon geloescht): sie kosten nichts, und der Unterschied bleibt
+// dort verfuegbar, wo ihn eines Tages jemand braucht - etwa fuer eine
+// Ausgabe, die bewusst den Datenbankwert zeigen soll. Nur die deutschen
+// WERTE sind angeglichen, siehe status.raw.*/status.label.* in der
+// Uebersetzungstabelle weiter unten.
+// Der WERT SELBST ist davon unberuehrt: gefiltert, sortiert und gebucht
+// wird weiterhin ueber 'verfuegbar'/'in_arbeit' (siehe
+// spaltenkopfFilterfeld() weiter unten - die Filterliste traegt den
+// rohen Wert als Schluessel und nur die BESCHRIFTUNG aus formatieren()).
 const SPRACHEN = ['de', 'en', 'tr', 'es', 'it', 'pl'];
 
 // Eigenname jeder Sprache, so wie ihre Sprecher sie selbst schreiben
@@ -150,13 +168,14 @@ function mengeFormat(zahl, einheit, platzhalter = {}) {
 // ----- Statuswerte: Wert bleibt Daten, nur die Anzeige folgt der Sprache -----
 //
 // code: der ROHE Wert aus der Datenbank ('verfuegbar', 'aktiv', ...) -
-// NIEMALS veraendert, nur zum Nachschlagen benutzt. huebsch=true liefert
-// die Form, die die Filterleisten schon vor diesem Auftrag zeigten
-// ("Verfügbar"); huebsch=false (Vorgabe) liefert fuer Deutsch bewusst den
-// unveraenderten Rohwert zurueck (Zug 1: "sieht genau wie vorher aus"),
-// fuer jede andere Sprache dieselbe uebersetzte Anzeige wie huebsch=true -
-// der Unterschied zwischen roh/huebsch ist ein rein deutsches Erbe aus
-// der Zeit vor diesem Auftrag (siehe Kopfkommentar oben).
+// NIEMALS veraendert, nur zum Nachschlagen benutzt. huebsch=true liest
+// aus status.label.*, huebsch=false (Vorgabe) aus status.raw.*.
+// SEIT DIESER RUNDE TRAGEN BEIDE REIHEN IN ALLEN SECHS SPRACHEN
+// DIESELBEN WERTE (Begruendung im Kopfkommentar dieser Datei) - die
+// beiden Schalterstellungen liefern also dasselbe. Die Unterscheidung
+// bleibt als Moeglichkeit bestehen, ist aber im heutigen Bestand ohne
+// sichtbaren Unterschied; wer eine der beiden Reihen aendert, aendert
+// damit bewusst nur die eine Stelle.
 function statusAnzeige(code, huebsch = false) {
     if (!code) return code;
     const schluessel = `status.${huebsch ? 'label' : 'raw'}.${code}`;
@@ -322,7 +341,7 @@ const UEBERSETZUNGEN = {
     "hint.dailyRidesChartAria": "Fahrten je Tag im {monat} {jahr}, gesamt über alle Radtypen und Tarife: zwischen {min} und {maxPhrase}, im Mittel {mittel}. Am meisten Fahrten am {tageListe} {monat} mit je {maxPhrase}.",
     "msg.dailyFiguresLoadFailed": "Die Tageszahlen ließen sich nicht laden: {fehler}",
     "misc.workOrderTitle": "Auftrag {auftragsnummer}",
-    "msg.activeWorkOrdersCount": "{n} laufende Wartungsaufträge",
+    "msg.activeWorkOrdersCount": "{auftraegePhrase} in Arbeit",
     "misc.reportForBike": "Meldung zu {rahmennummer}",
     "msg.openDamageWithUnrideable": "{n}{zusatz} offene Schäden, davon {dringend} fahruntauglich",
     "msg.openDamageCount": "{n}{zusatz} offene Schäden",
@@ -385,7 +404,6 @@ const UEBERSETZUNGEN = {
     "nav.auswertungen": "Auswertungen",
     "nav.kundenSuche": "Kundschaft: Name, E-Mail, Kundennummer",
     "field.rahmennummer": "Rahmennummer",
-    "field.typ": "Typ",
     "field.status": "Status",
     "field.standort": "Standort",
     "field.schaeden": "Schäden",
@@ -449,25 +467,25 @@ const UEBERSETZUNGEN = {
     "field.kilometerJeFahrt": "Kilometer je Fahrt",
     "field.co2Ersparnis": "CO₂-Ersparnis",
     "field.davonGeschaetzt": "Davon geschätzt",
-    "status.raw.verfuegbar": "verfuegbar",
+    "status.raw.verfuegbar": "Verfügbar",
     "status.label.verfuegbar": "Verfügbar",
-    "status.raw.ausgeliehen": "ausgeliehen",
+    "status.raw.ausgeliehen": "Ausgeliehen",
     "status.label.ausgeliehen": "Ausgeliehen",
-    "status.raw.wartung": "wartung",
+    "status.raw.wartung": "Wartung",
     "status.label.wartung": "Wartung",
-    "status.raw.defekt": "defekt",
+    "status.raw.defekt": "Defekt",
     "status.label.defekt": "Defekt",
-    "status.raw.ausgemustert": "ausgemustert",
+    "status.raw.ausgemustert": "Ausgemustert",
     "status.label.ausgemustert": "Ausgemustert",
-    "status.raw.aktiv": "aktiv",
+    "status.raw.aktiv": "Aktiv",
     "status.label.aktiv": "Aktiv",
-    "status.raw.gesperrt": "gesperrt",
+    "status.raw.gesperrt": "Gesperrt",
     "status.label.gesperrt": "Gesperrt",
-    "status.raw.geschlossen": "geschlossen",
+    "status.raw.geschlossen": "Geschlossen",
     "status.label.geschlossen": "Geschlossen",
-    "status.raw.offen": "offen",
+    "status.raw.offen": "Offen",
     "status.label.offen": "Offen",
-    "status.raw.in_arbeit": "in_arbeit",
+    "status.raw.in_arbeit": "In Arbeit",
     "status.label.in_arbeit": "In Arbeit",
     "schwere.gering": "gering",
     "schwere.mittel": "mittel",
@@ -801,7 +819,7 @@ const UEBERSETZUNGEN = {
     "hint.dailyRidesChartAria": "Rides per day in {monat} {jahr}, total across all bike types and plans: between {min} and {maxPhrase}, on average {mittel}. Most rides on {tageListe} {monat} with {maxPhrase} each.",
     "msg.dailyFiguresLoadFailed": "Could not load the daily figures: {fehler}",
     "misc.workOrderTitle": "Work order {auftragsnummer}",
-    "msg.activeWorkOrdersCount": "{n} active work orders",
+    "msg.activeWorkOrdersCount": "{auftraegePhrase} in progress",
     "misc.reportForBike": "Report for {rahmennummer}",
     "msg.openDamageWithUnrideable": "{n}{zusatz} open damage reports, of which {dringend} unrideable",
     "msg.openDamageCount": "{n}{zusatz} open damage reports",
@@ -864,7 +882,6 @@ const UEBERSETZUNGEN = {
     "nav.auswertungen": "Reports",
     "nav.kundenSuche": "Customers: name, email, customer number",
     "field.rahmennummer": "Frame number",
-    "field.typ": "Type",
     "field.status": "Status",
     "field.standort": "Location",
     "field.schaeden": "Damage reports",
@@ -1280,7 +1297,7 @@ const UEBERSETZUNGEN = {
     "hint.dailyRidesChartAria": "{jahr} {monat} ayında güne göre sürüşler, tüm bisiklet tipleri ve tarifeler toplamı: {min} ile {maxPhrase} arasında, ortalama {mittel}. En çok sürüş {monat} ayının {tageListe} günlerinde, her birinde {maxPhrase}.",
     "msg.dailyFiguresLoadFailed": "Günlük rakamlar yüklenemedi: {fehler}",
     "misc.workOrderTitle": "İş emri {auftragsnummer}",
-    "msg.activeWorkOrdersCount": "{n} devam eden iş emri",
+    "msg.activeWorkOrdersCount": "{auftraegePhrase} devam ediyor",
     "misc.reportForBike": "{rahmennummer} için bildirim",
     "msg.openDamageWithUnrideable": "{n}{zusatz} açık hasar bildirimi, bunlardan {dringend} tanesi sürüşe uygun değil",
     "msg.openDamageCount": "{n}{zusatz} açık hasar bildirimi",
@@ -1343,7 +1360,6 @@ const UEBERSETZUNGEN = {
     "nav.auswertungen": "Raporlar",
     "nav.kundenSuche": "Müşteriler: ad, e-posta, müşteri numarası",
     "field.rahmennummer": "Şasi numarası",
-    "field.typ": "Tip",
     "field.status": "Durum",
     "field.standort": "Konum",
     "field.schaeden": "Hasarlar",
@@ -1759,7 +1775,7 @@ const UEBERSETZUNGEN = {
     "hint.dailyRidesChartAria": "Viajes por día en {monat} de {jahr}, total en todos los tipos de bicicleta y tarifas: entre {min} y {maxPhrase}, en promedio {mittel}. La mayoría de los viajes el {tageListe} de {monat}, con {maxPhrase} cada uno.",
     "msg.dailyFiguresLoadFailed": "No se pudieron cargar las cifras diarias: {fehler}",
     "misc.workOrderTitle": "Orden de trabajo {auftragsnummer}",
-    "msg.activeWorkOrdersCount": "{n} órdenes de trabajo en curso",
+    "msg.activeWorkOrdersCount": "{auftraegePhrase} en curso",
     "misc.reportForBike": "Notificación de {rahmennummer}",
     "msg.openDamageWithUnrideable": "{n}{zusatz} averías abiertas, de las cuales {dringend} no aptas para circular",
     "msg.openDamageCount": "{n}{zusatz} averías abiertas",
@@ -1822,7 +1838,6 @@ const UEBERSETZUNGEN = {
     "nav.auswertungen": "Informes",
     "nav.kundenSuche": "Clientela: nombre, correo, número de cliente",
     "field.rahmennummer": "Número de bastidor",
-    "field.typ": "Tipo",
     "field.status": "Estado",
     "field.standort": "Ubicación",
     "field.schaeden": "Averías",
@@ -2238,7 +2253,7 @@ const UEBERSETZUNGEN = {
     "hint.dailyRidesChartAria": "Corse al giorno a {monat} {jahr}, totale su tutti i tipi di bici e tariffe: tra {min} e {maxPhrase}, in media {mittel}. Il massimo delle corse il {tageListe} {monat} con {maxPhrase} ciascuno.",
     "msg.dailyFiguresLoadFailed": "Impossibile caricare i dati giornalieri: {fehler}",
     "misc.workOrderTitle": "Ordine di lavoro {auftragsnummer}",
-    "msg.activeWorkOrdersCount": "{n} ordini di lavoro in corso",
+    "msg.activeWorkOrdersCount": "{auftraegePhrase} in corso",
     "misc.reportForBike": "Segnalazione per {rahmennummer}",
     "msg.openDamageWithUnrideable": "{n}{zusatz} guasti aperti, di cui {dringend} non idonei alla marcia",
     "msg.openDamageCount": "{n}{zusatz} guasti aperti",
@@ -2301,7 +2316,6 @@ const UEBERSETZUNGEN = {
     "nav.auswertungen": "Report",
     "nav.kundenSuche": "Clientela: nome, e-mail, numero cliente",
     "field.rahmennummer": "Numero di telaio",
-    "field.typ": "Tipo",
     "field.status": "Stato",
     "field.standort": "Posizione",
     "field.schaeden": "Guasti",
@@ -2717,7 +2731,7 @@ const UEBERSETZUNGEN = {
     "hint.dailyRidesChartAria": "Przejazdy dziennie w {monat} {jahr}, ogółem we wszystkich typach rowerów i taryfach: od {min} do {maxPhrase}, średnio {mittel}. Najwięcej przejazdów {tageListe} {monat}, po {maxPhrase} każdego dnia.",
     "msg.dailyFiguresLoadFailed": "Nie udało się wczytać danych dziennych: {fehler}",
     "misc.workOrderTitle": "Zlecenie {auftragsnummer}",
-    "msg.activeWorkOrdersCount": "{n} trwających zleceń",
+    "msg.activeWorkOrdersCount": "{auftraegePhrase} w toku",
     "misc.reportForBike": "Zgłoszenie dla {rahmennummer}",
     "msg.openDamageWithUnrideable": "{n}{zusatz} otwartych usterek, w tym {dringend} niezdatnych do jazdy",
     "msg.openDamageCount": "{n}{zusatz} otwartych usterek",
@@ -2780,7 +2794,6 @@ const UEBERSETZUNGEN = {
     "nav.auswertungen": "Raporty",
     "nav.kundenSuche": "Klientela: nazwisko, e-mail, numer klienta",
     "field.rahmennummer": "Numer ramy",
-    "field.typ": "Typ",
     "field.status": "Status",
     "field.standort": "Lokalizacja",
     "field.schaeden": "Usterki",
@@ -4838,6 +4851,67 @@ const KATEGORIE_FARBE = {
 
 function kategorieFarbe(code) {
     return KATEGORIE_FARBE[code] || null;
+}
+
+// ===== Produktbilder je Radtyp (Gestaltungsauftrag, woertlich: "Bei
+// Flotte vermisse ich Produktbilder, wir haben ja die Bikes auch als
+// Bilder, warum werden die nicht miniaturisiert im Kopf angezeigt, damit
+// ich das Produkt/Flotte auch sehe") =====
+//
+// STEHT HIER, NICHT MEHR IN flotte.js: die Tabelle hat drei Verbraucher
+// in drei Bereichen (Flotte, Instandhaltung, und seit der Angleichung an
+// die Flottentafel die Reiter "Umsatz nach Radtyp" und "Kilometer und
+// CO2" der Auswertungen). Eine Zuordnung, die drei Bereiche teilen,
+// gehoert EINMAL nach rahmen.js - derselbe Befund wie bei
+// werkzeugleiste()/kopftafelWurzel() weiter unten, und aus demselben
+// Grund unmittelbar neben KATEGORIE_FARBE oben: beide beantworten
+// dieselbe Frage ("wie sieht dieser Radtyp ueberall aus"), die eine mit
+// einer Farbe, die andere mit einem Bild, und beide muessen in JEDEM
+// Bereich dasselbe antworten. Standen sie in zwei Dateien, liefen sie
+// auseinander.
+//
+// UEBER DEN TYPCODE zugeordnet, nicht ueber die Reihenfolge im
+// assets-Verzeichnis oder im Bestand (Auftrag, ausdruecklich): eine
+// Zuordnung per Position waere lautlos falsch, sobald ein Radtyp
+// umsortiert wird oder ein vierter dazukommt - "eine falsche Zuordnung
+// faellt niemandem auf, der die Raeder nicht kennt" (Auftrag). typ_code
+// traegt heute CITY/CARGO/EBIKE (siehe v_wawi_flotte, gepruefte Werte).
+// Fehlt ein Eintrag hier (ein vierter Radtyp ohne Bild), liefert
+// radtypBild() unten null - kopftafelZeile() laesst die Zelle dann ohne
+// Bild, statt ein <img src="undefined"> zu erzeugen.
+//
+// WO DAS BILD STEHT, ENTSCHEIDET DIE TAFEL, NICHT DIESE TABELLE - nach
+// EINER Regel, die alle vier Verwender teilen: das Bild sitzt bei der
+// Zeile, ueber die es etwas aussagt. Gliedert die Tafel nach Radtyp,
+// steht es in der Zeile dieses Typs (Flotte in der Gruppenzeile, weil
+// dort der Typ die Gruppe ist; Umsatz nach Radtyp und Kilometer/CO2 in
+// der Datenzeile, weil dort der Typ die Zeile IST). Betrifft die ganze
+// Tafel genau einen Radtyp, steht es in ihrer Beschriftung
+// (Instandhaltung - "alle sieben Meldungen betreffen City-Bikes"). Beides
+// ist dieselbe Regel an verschiedenen Daten, keine zwei Gewohnheiten.
+//
+// Miniaturisiert aus src/assets/rad-*-frei.webp (freigestellt, Alphakanal
+// bereits vorhanden) auf 128px Bildhoehe - genug fuer eine scharfe
+// Darstellung auch auf einem Retina-Bildschirm, ohne die 500-600 KB
+// grosse Ausgangsdatei ungekuerzt auszuliefern (503-602 KB vorher, 15-17
+// KB nachher je Datei). NACH wawi/assets/ kopiert, nicht nach
+// src/assets/ verlinkt: wawi/ wird eigenstaendig ausgeliefert (siehe
+// tools/wawi_veroeffentlichen.sh), ein Verweis auf ../src/assets/ liefe
+// im Betrieb ins Leere.
+const RADTYP_BILDER = {
+    CITY:  'assets/rad-city-mini.webp',
+    CARGO: 'assets/rad-cargo-mini.webp',
+    EBIKE: 'assets/rad-ebike-mini.webp'
+};
+
+// Ein Bild je Radtyp, oder null. Als Funktion statt eines direkten
+// Tabellenzugriffs, aus demselben Grund wie kategorieFarbe() oben: die
+// Spaltendefinitionen der vier Tafeln sehen dadurch gleich aus
+// (bild: (z) => radtypBild(z.schluessel)), und der Fall "Radtyp ohne
+// Bild" wird an EINER Stelle zu null statt in jedem Aufrufer zu einem
+// undefined, das erst kopftafelZeile() abfaengt.
+function radtypBild(typCode) {
+    return RADTYP_BILDER[typCode] || null;
 }
 
 // GESTALTUNGSAUFTRAG, PUNKT 2, wörtlich: "Die Sparklines in dem

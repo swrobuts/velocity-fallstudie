@@ -345,7 +345,27 @@ function stationenKopftafel(stationen, auslastung) {
             art: 'rubrik',
             titel: t('col.station'),
             wert: (z) => z.name,
-            zusatz: (z) => (z.summenzeile ? null : z.ort)
+            // ANGLEICHUNG AN DIE FLOTTENTAFEL (Auftrag: sie ist die
+            // optische Referenz aller Tafeln). Dort traegt die
+            // Nebenbezeichnung den HERSTELLER - eine Angabe, die die
+            // Zeilen voneinander unterscheidet. Hier stand bis zu dieser
+            // Runde der ORT, und der lautet in ALLEN ZEHN Zeilen
+            // "Wuerzburg" (in der Datenbank nachgezaehlt: 10 von 10; nur
+            // die Postleitzahl schwankt, 97070 bis 97082). Eine
+            // Nebenbezeichnung, die nie etwas unterscheidet, ist keine
+            // Nebenbezeichnung, sondern zehnmal dasselbe Wort unter zehn
+            // verschiedenen Namen - genau die Art Wiederholung, die
+            // diese Oberflaeche an anderer Stelle schon einmal an einem
+            // Bild geruegt hat, das seine Beschriftung nur verdoppelte.
+            // Jetzt die STATIONSNUMMER: sie ist je Zeile verschieden,
+            // sie ist der fachliche Schluessel, unter dem die Station in
+            // der Liste darunter und in jedem Beleg steht - und sie ist
+            // dieselbe Nebenbezeichnung, die der Reiter
+            // "Stationsauslastung" fuer DIESELBEN zehn Stationen bereits
+            // fuehrt (siehe stationsauslastungKopftafel() in
+            // auswertungen.js). Zwei Tafeln ueber dieselben Zeilen
+            // sagten bis hierher zwei verschiedene Dinge ueber sie.
+            zusatz: (z) => (z.summenzeile ? null : z.stationsnummer)
         },
         {
             // ===== EINE SPALTE STATT ZWEIER =====
@@ -749,7 +769,7 @@ function stationRaederAbschnitt(station) {
     tabelle.className = 'stationraeder-tabelle';
 
     const kopfzeile = document.createElement('tr');
-    for (const titel of [t('field.rahmennummer'), t('field.typ'), t('field.status'), t('field.akku'), t('field.schaeden')]) {
+    for (const titel of [t('field.rahmennummer'), t('field.radtyp'), t('field.status'), t('field.akku'), t('field.schaeden')]) {
         const th = document.createElement('th');
         th.textContent = titel;
         kopfzeile.append(th);

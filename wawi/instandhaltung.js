@@ -236,8 +236,8 @@ function instandhaltungKopftafel(schaeden, auftraege, radtypNamen) {
         }),
         // NUR bei genau EINEM betroffenen Radtyp - sonst behauptete das
         // Bild eine Eindeutigkeit, die es nicht gibt (siehe Kopfkommentar).
-        bild: typCodes.length === 1 && RADTYP_BILDER[typCodes[0]]
-            ? { quelle: RADTYP_BILDER[typCodes[0]], alt: typName(typCodes[0]) }
+        bild: typCodes.length === 1 && radtypBild(typCodes[0])
+            ? { quelle: radtypBild(typCodes[0]), alt: typName(typCodes[0]) }
             : null,
         spalten: [
             {
@@ -810,7 +810,19 @@ async function auftraegeZeigen(vorgang) {
         { feld: 'bearbeiter',      titel: t('field.bearbeiter'), formatieren: (w) => w || '—' }
     ], auftragMaske);
 
-    meldeVorgang(vorgang, t('msg.activeWorkOrdersCount', { n: zahlFormat(auftraege.length) }));
+    // MEHRZAHL UEBER mengeFormat(), nicht ueber ein festes Wort im
+    // Meldungstext (Befund der penibel durchgegangenen Oberflaeche): bei
+    // genau einem laufenden Auftrag - dem heutigen Bestand - stand hier
+    // "1 laufende Wartungsaufträge". Die Einheit 'auftrag' liegt in
+    // MENGENFORMEN (rahmen.js) in allen sechs Sprachen bereits vor und
+    // wird vom Kopfbereich dieses Bereichs schon benutzt
+    // (board.maintenanceReference); nur diese eine Statuszeile hatte
+    // ihre Mehrzahl fest eingetippt. Der Meldungstext traegt jetzt die
+    // FERTIGE Mengenphrase plus den Zustand ("... in Arbeit"), wie es
+    // jede andere Meldung dieser Oberflaeche haelt.
+    meldeVorgang(vorgang, t('msg.activeWorkOrdersCount', {
+        auftraegePhrase: mengeFormat(auftraege.length, 'auftrag')
+    }));
 }
 
 function auftragMaske(auftrag) {

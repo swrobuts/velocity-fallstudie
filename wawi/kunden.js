@@ -349,7 +349,20 @@ async function kundenAufbauen(suchtext) {
         { feld: 'status',       titel: t('field.status'), filterbar: false,
           formatieren: (wert) => statusAnzeige(wert),
           klasse: (z) => (z.status === 'gesperrt' ? 'warnung' : z.status === 'geschlossen' ? 'leise' : '') },
-        { feld: 'tarif_code',   titel: t('field.tarif'), formatieren: (wert) => wert || '—' },
+        // EINE BENENNUNG FUER DIE TARIFGRUPPE, UEBERALL (Befund der
+        // Referenzangleichung, derselbe wie beim Radtyp in flotte.js):
+        // hier stand der tarif_code ("STUDENT", "OEPNV"), waehrend die
+        // Kopftafel zwei Zentimeter darueber "Studententarif" und
+        // "OEPNV-Abo" schreibt - dieselbe Spalte, zwei Vokabulare, auf
+        // demselben Bildschirm. v_wawi_kunde liefert beide Felder (siehe
+        // die Ladeanfrage oben), die Aenderung kostet keine Anfrage.
+        // '—' bei fehlender Mitgliedschaft bleibt: das ist die
+        // Leerzeichen-Regel dieser Liste (siehe der Kommentar bei
+        // kundenLetzteAusleiheFormat() oben), und sie hier zugunsten
+        // eines ausgeschriebenen "Ohne aktiven Tarif" zu brechen waere
+        // eine zweite Entscheidung, die nicht in dieser Aufgabe steckt -
+        // sie steht als Befund im Bericht.
+        { feld: 'tarif',        titel: t('field.tarif'), formatieren: (wert) => wert || '—' },
         // GESTALTUNGSAUFTRAG, PUNKT 1, woertlich: "Bei Kunde vermisse ich
         // das Attribut 'Kunde seit', 'Letzte Ausleihe am', muss beides in
         // der Tabelle angezeigt werden." Zwei neue Datumsspalten dazu, statt
