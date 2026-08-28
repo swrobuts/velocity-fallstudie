@@ -969,7 +969,12 @@ footer :focus-visible, .product-tabs :focus-visible,
   margin: 0;
   font-family: var(--auszeichnung);
   font-size: var(--hero-font);
-  line-height: .99;
+  /* VON 0,99 AUF 1,06 (28.08.2026).
+     Bei 76 Punkten sind 0,99 keine enge Fuehrung, sondern beruehrende
+     Zeilen - die Oberlaengen der zweiten Zeile stossen an die
+     Unterlaengen der ersten. Was bei kleinem Grad Dichte ist, ist hier
+     Gedraenge. */
+  line-height: 1.06;
   letter-spacing: var(--eng);
   font-weight: 800;
   max-width: 100%;
@@ -986,7 +991,19 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 .claim-line { display: block; }
 .headline-primary { color: var(--navy); }
-.headline-accent { margin-top: .34em; color: var(--red); }
+/* DER ZUSATZABSTAND IST WEG (28.08.2026).
+   Zwischen den beiden Farbbloecken standen 0,34 em - bei 76 Punkten
+   fast 26 Punkte oben drauf. Zusammen mit dem Zeilenabstand von 0,99
+   ergab das den Rhythmus "eng innen, weit aussen": innerhalb eines
+   Blocks klebten die Zeilen, zwischen den Bloecken klaffte es. Zwei
+   Kopfzeilen statt eines Satzes.
+   Aufgefallen ist es erst, als der Betreiber eine Probe aus meiner
+   Vergleichsseite als richtig bezeichnete - dieselbe Schrift, dieselbe
+   Breite, dieselbe Laufweite wie live. Der Unterschied lag allein hier:
+   die Probe setzte beide Zeilen in EINEN Block mit durchgehendem
+   Zeilenabstand. Fuenf Runden lang habe ich derweil an der Schrift
+   gedreht, die nie das Problem war. */
+.headline-accent { color: var(--red); }
 
 /* Jede Schlagzeile haengt an ihrem eigenen Rad. Sie tritt von unten
    herein und nach oben ab - dieselbe Richtung wie die Buehne darunter. */
