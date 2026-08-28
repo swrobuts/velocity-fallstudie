@@ -12,6 +12,14 @@
 --          die Hand des Betreibers, nicht in eine Datei im Repository.
 --          Anlage ueber Supabase Studio -> Authentication -> Add user.
 --
+-- OPTIONAL - im Regelbetrieb NICHT nötig. Am 28.08.2026 geprüft:
+--          swrobuts@googlemail.com ist als M-0001 angelegt und trägt bereits
+--          alle vier Fachrollen. Damit ist jede Maske erreichbar. Diese Datei
+--          bleibt als Lehrstück erhalten: sie führt vor, dass Rollen an der
+--          auth_uid hängen und nicht am Namen - dieselbe Person, zweite
+--          Anmeldung, zweiter Mitarbeitersatz. Für den Lehrbetrieb später
+--          nützlich, wenn je Konto genau eine Rolle vergeben werden soll.
+--
 -- Idempotent: laeuft beliebig oft, legt nichts doppelt an.
 --
 -- Ausfuehren: python3 db/run.py db/betrieb/mitarbeiter_pruefkonto.sql
