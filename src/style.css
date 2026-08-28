@@ -443,10 +443,18 @@ body {
      Seite duenn. 450 ist die kleinste Stufe, die das behebt, ohne dass
      der Text halbfett wirkt; die variable Schrift traegt 100 bis 900,
      also kostet es keine zweite Datei. */
-  font-weight: 450;
+  font-weight: 500;
   line-height: 1.55;
   text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
+  /* -webkit-font-smoothing: antialiased ENTFERNT (28.08.2026).
+     Die Seite wirkte auf dem Bildschirm des Betreibers duenn, und der
+     Grund war nicht die Schriftstaerke allein: die Regel schaltet auf
+     macOS von Subpixel- auf Graustufenglaettung um, was jeden Strich
+     sichtbar magerer zeichnet. Auf Windows tut sie ohnehin nichts.
+     Ein "Weichzeichner", der die Schrift duenner macht, ist keine
+     Verbesserung, sondern ein Verlust an Schwaerze. Zusammen mit
+     Gewicht 500 statt 450 steht der Text jetzt so, wie Archivo ihn
+     gezeichnet hat. */
 }
 
 button, a, input { font: inherit; }
@@ -525,6 +533,16 @@ footer :focus-visible, .product-tabs :focus-visible,
      nicht zur Schriftskala, und ein Token wuerde sie an anderer Stelle
      mitverstellen. */
   letter-spacing: -.055em;
+  /* DIESELBE SCHRIFT WIE DIE WARENWIRTSCHAFT.
+     Die Laufweite allein reichte nicht: dort erbt die Wortmarke die
+     Systemschrift, hier lief sie in Archivo - zwei verschiedene
+     Schriften ergeben zwei verschiedene Marken, so gleich die
+     Kennwerte sonst auch sein moegen. Der Betreiber hat die dortige
+     Fassung als die bessere bezeichnet und Gleichheit verlangt, also
+     folgt die Website ihr. Auf ein und demselben Geraet sind beide
+     jetzt Strich fuer Strich dasselbe Zeichen.
+     Nur die Wortmarke, nicht der Fliesstext: der bleibt Archivo. */
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 .brand span { color: var(--red); }
 /* Das O ist das Rad — ein Ring statt eines Buchstabens. */
@@ -1203,24 +1221,32 @@ footer :focus-visible, .product-tabs :focus-visible,
    dunkel statt weiss: die Bedingungen sind der Rahmen des Angebots,
    die Kacheln darunter sind das Angebot. Waeren beide weiss, staenden
    vier Zahlen und drei Raeder gleichrangig nebeneinander. */
+/* EIN BAND, KEIN KASTEN (neu gefasst 28.08.2026).
+   Zuerst stand hier ein hellblauer Kasten mit vier Feldern und
+   Trennlinien - das sah aus wie eine Tabelle ohne Kopfzeile und war
+   das Schwerste im ganzen Abschnitt, obwohl es das Beilaeufigste sagt.
+   Jetzt ist es wirklich ein Band: die Zahlen stehen unmittelbar auf
+   dem Marineblau, gehalten von je einer Haarlinie oben und unten. Kein
+   Fuellton, keine Ecke, kein Rahmen - nichts, was Gewicht behauptet,
+   das der Inhalt nicht hat. */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
-  margin-bottom: var(--af-m);
-  background: var(--navy-2);
-  border: 1px solid var(--auf-navy-linie);
-  border-radius: var(--kante);
+  margin-bottom: var(--af-l);
+  padding: var(--af-s) 0;
+  border-top: 1px solid var(--auf-navy-linie);
+  border-bottom: 1px solid var(--auf-navy-linie);
 }
 .stat {
   /* Auf EINER Grundlinie, nicht uebereinander: das bindet Zahl und
      Etikett enger aneinander, als ein Zeilenumbruch es kann. */
   display: flex; align-items: baseline;
   gap: var(--a3);
-  padding: var(--af-s) var(--af-s);
+  padding: 0 var(--af-s);
   border-left: 1px solid var(--auf-navy-linie);
 }
-.stat:first-child { border-left: 0; }
+.stat:first-child { border-left: 0; padding-left: 0; }
 .stat b {
   color: #fff;
   font-family: var(--schmal);
@@ -1587,6 +1613,18 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   display: grid; gap: var(--a2);
   margin-top: var(--a3);
 }
+/* Der Buchungsknopf traegt Rot, der Rechner steht in Kontur.
+   Rot ist auf dieser Seite die Farbe der einen Handlung, um die es
+   geht - und rechnen ist keine Handlung, sondern eine Frage. Zwei rote
+   Knoepfe untereinander haetten beide entwertet. */
+.rad-kachel-buchen {
+  background: var(--red); color: #fff; border-color: var(--red);
+}
+.rad-kachel-buchen:hover { background: var(--red-tief); border-color: var(--red-tief); }
+.rad-kachel-rechnen {
+  background: #fff; color: var(--navy); border-color: var(--rahmen);
+}
+.rad-kachel-rechnen:hover { background: var(--paper); }
 .rad-kachel-knoepfe button { width: 100%; }
 /* Die Hervorhebung traegt Kontur UND Abzeichen - Farbe allein waere
    die einzige Traegerin der Information. */
@@ -1695,22 +1733,41 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
    ueber das Rad, um dessen Preis es geht. */
 .rad-kachel-schublade {
   /* Ueber alle Spalten - dadurch faehrt sie unter der ganzen Reihe aus
-     und laesst die Nachbarkacheln in Ruhe. Geschlossen ist sie
-     display:none und belegt keine Zeile. */
+     und laesst die Nachbarkacheln in Ruhe. */
   grid-column: 1 / -1;
+  /* ECHTES AUSFAHREN, KEIN EINBLENDEN (28.08.2026).
+     Zuerst wurde nur Deckkraft und ein Versatz von zehn Punkten
+     ueberblendet - das sah aus wie ein Ding, das erscheint, nicht wie
+     eine Schublade, die herauskommt. Der Betreiber hat es zu Recht als
+     lieblos bezeichnet.
+     Eine Hoehe von auto laesst sich nicht ueberblenden; ein fester
+     Endwert waere geraten und bei jeder Textlaenge falsch. Der Weg
+     darum herum: ein Raster mit EINER Zeile, deren Anteil von 0fr auf
+     1fr waechst. Das Kind wird dabei von null auf seine natuerliche
+     Hoehe aufgezogen - gemessen, nicht geschaetzt -, und overflow
+     hidden schneidet ab, was noch nicht herausgefahren ist. */
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--zeit-lang, .3s) cubic-bezier(.22, .61, .36, 1);
+}
+.rad-kachel-schublade > * {
+  overflow: hidden;
+  min-height: 0;
+}
+.rad-kachel-schublade[hidden] { display: none; }
+.rad-kachel-schublade.ist-offen { grid-template-rows: 1fr; }
+/* Die Karte sitzt am Inhalt, nicht am Rahmen: der Rahmen ist bei
+   geschlossener Schublade null Punkte hoch, eine Kontur daran waere
+   ein Strich ueber die ganze Breite. */
+.rad-kachel-schublade .rechner {
+  margin-top: var(--a3);
   background: #fff;
   border: 1px solid var(--mist);
   border-radius: var(--kante);
   box-shadow: var(--schatten-2);
-  overflow: hidden;
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: opacity var(--zeit-kurz) ease, transform var(--zeit-kurz) ease;
 }
-.rad-kachel-schublade[hidden] { display: none; }
-.rad-kachel-schublade.ist-offen { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) {
-  .rad-kachel-schublade { transition: none; transform: none; opacity: 1; }
+  .rad-kachel-schublade { transition: none; }
 }
 /* Der Pfeil am Knopf dreht sich mit dem Zustand - dieselbe Zusage wie
    aria-expanded, nur fuer das Auge. */

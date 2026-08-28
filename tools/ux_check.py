@@ -53,14 +53,27 @@ pruefe('P1-01', '@media (max-width: 1023px)' in C and '.menue-knopf { display: f
        'Menue erscheint spaetestens unter 1024 px')
 pruefe('P1-02', 'Fahrt starten' not in H and 'Fahrt starten' not in J,
        'Kein Knopf verspricht mehr "Fahrt starten"')
-# Die Schreibweise wurde am 28.08.2026 nachgezogen, nicht die Zusage:
-# der Knopf wird seit dem Zusammenlegen von Kacheln und Tarifen ueber
-# createElement gebaut statt ueber eine innerHTML-Vorlage. Geprueft wird
-# unveraendert, DASS die Vorlesebeschriftung den vollen Radnamen traegt -
-# nur eben an der Stelle, an der sie jetzt entsteht.
-pruefe('P1-02', 'karte-mit-typ' in J and 'Auf der Karte zeigen' in J
+# ENTSCHEIDUNG DES BETREIBERS VOM 28.08.2026 - HIER FESTGEHALTEN, WEIL
+# SIE EINEN BEFUND DIESES AUDITS UEBERSTIMMT.
+# P1-02 hatte beanstandet, dass die Tarif-Knoepfe "Fahrt starten"
+# hiessen und nur zur Karte sprangen; behoben wurde das mit der
+# ehrlichen Aufschrift "Auf der Karte zeigen". Der Betreiber wuenscht
+# ausdruecklich "Rad kostenpflichtig buchen".
+# WAS DAMIT WIEDER OFFEN IST: Der Knopf bucht nichts. Er setzt den
+# Kartenfilter und springt zur Karte; gebucht wird erst dort, nach
+# Anmeldung und Wahl eines konkreten Rades an einer Station. Die
+# Aufschrift verspricht also weiterhin mehr, als der Klick einloest -
+# derselbe Sachverhalt, den P1-02 beanstandet hat, nur mit einer
+# staerkeren Formel. "Kostenpflichtig buchen" ist zudem die Wendung,
+# die § 312j Abs. 3 BGB fuer die Schaltflaeche vorsieht, die den
+# Vertrag TATSAECHLICH schliesst.
+# Geprueft wird daher weiter, DASS der Knopf eine bestimmte Aufschrift
+# und den vollen Radnamen in der Vorlesebeschriftung traegt - nicht
+# mehr, dass die Aufschrift zutrifft. Das kann keine Zeichenkette
+# pruefen; das ist eine Entscheidung, und sie steht hier.
+pruefe('P1-02', 'karte-mit-typ' in J and 'Rad kostenpflichtig buchen' in J
        and '`${k.bezeichnung} auf der Karte zeigen`' in J,
-       'Tarif-Knopf sagt kurz was er tut und traegt den vollen Namen')
+       'Tarif-Knopf traegt eine bestimmte Aufschrift und den vollen Namen')
 pruefe('P1-02', "cb.checked = (cb.value === kurz)" in J,
        'Der gewaehlte Fahrradtyp wird als Kartenfilter uebernommen')
 pruefe('P1-03', 'auth-status' in H and "statusZeigen('erfolg'" in J,
@@ -218,7 +231,9 @@ pruefe('P2-07', 'karte-leer' in H and 'karte-alle-typen' in H,
        'Der leere Filterzustand bietet einen Weg zurueck')
 
 print('\nP3 — Feinschliff')
-pruefe('P3-01', 'Auf der Karte zeigen' in J,
+# Aufschrift am 28.08.2026 auf Wunsch des Betreibers geaendert -
+# Begruendung und Vorbehalt siehe bei P1-02 weiter oben.
+pruefe('P3-01', 'Rad kostenpflichtig buchen' in J,
        'Die Tarif-Knoepfe tragen dieselbe kurze Aufschrift')
 pruefe('P3-03', 'Bikes' not in H, 'Keine englischen Produktbegriffe in der Ansprache')
 pruefe('P3-04', "querySelector('.sprungmarke')" in J,

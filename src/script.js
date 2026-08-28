@@ -495,7 +495,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             knoepfe.className = 'rad-kachel-knoepfe';
             const rechnen = document.createElement('button');
             rechnen.type = 'button';
-            rechnen.className = 'rad-kachel-rechnen btn-primary';
+            rechnen.className = 'rad-kachel-rechnen btn-outline';
             rechnen.dataset.typ = k.typ_code;
             rechnen.setAttribute('aria-expanded', 'false');
             const pfeil = document.createElement('i');
@@ -504,11 +504,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             rechnen.append(document.createTextNode('Preis berechnen'), pfeil);
             const zurKarte = document.createElement('button');
             zurKarte.type = 'button';
-            zurKarte.className = 'karte-mit-typ btn-outline';
+            zurKarte.className = 'karte-mit-typ rad-kachel-buchen';
             zurKarte.dataset.typ = k.typ_code;
-            zurKarte.textContent = 'Auf der Karte zeigen';
+            zurKarte.textContent = 'Rad kostenpflichtig buchen';
             zurKarte.setAttribute('aria-label', `${k.bezeichnung} auf der Karte zeigen`);
-            knoepfe.append(rechnen, zurKarte);
+            /* Der Buchungsknopf steht OBEN, der Rechner darunter: die
+               Handlung vor der Frage nach dem Preis. */
+            knoepfe.append(zurKarte, rechnen);
 
             text.append(titel, bschr, preis, merkmale, frei, knoepfe);
 
@@ -758,24 +760,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         const warOffen = !ziel.hidden;
         /* Immer erst alles zu. Zwei offene Schubladen gaeben zwei
            Rechner - und es gibt nur einen; der zweite waere leer. */
+        /* Erst einfahren lassen, dann ausblenden. hidden setzt display
+           auf none, und ein Element, das nicht mehr dargestellt wird,
+           ueberblendet nichts mehr - die Schublade waere schlagartig
+           verschwunden, nachdem sie langsam herausgefahren ist. */
         for (const x of radKachelSchubladen) {
-            x.schublade.hidden = true;
+            if (x.schublade.hidden) continue;
             x.schublade.classList.remove('ist-offen');
             x.knopf.setAttribute('aria-expanded', 'false');
+            const s = x.schublade;
+            const fertig = () => {
+                if (s.classList.contains('ist-offen')) return;  // zwischenzeitlich wieder geoeffnet
+                s.hidden = true;
+                document.getElementById('rechner-halter')?.append(rechner);
+            };
+            s.addEventListener('transitionend', fertig, { once: true });
+            /* Netz fuer den Fall, dass gar keine Bewegung laeuft - etwa
+               weil der Nutzer sie abbestellt hat. Dann kaeme
+               transitionend nie. */
+            setTimeout(fertig, 520);
         }
-        if (warOffen) { document.getElementById('rechner-halter')?.append(rechner); return; }
+        if (warOffen) return;
 
         if (!rechnerTarife.length) await rechnerStarten();
         const i = rechnerTarife.findIndex(t => t.typ_code === typ);
         if (i >= 0) { rechnerAktiv = i; rechnerTypenZeichnen(); rechnerZeichnen(); }
 
-        ziel.append(rechner);
         ziel.hidden = false;
+        ziel.append(rechner);
         knopf.setAttribute('aria-expanded', 'true');
-        /* Erst im naechsten Bild die Klasse setzen: im selben Bild
-           gaebe es keinen Zustandswechsel, den der Browser ueberblenden
-           koennte, und die Schublade erschiene schlagartig. */
-        requestAnimationFrame(() => ziel.classList.add('ist-offen'));
+        /* ERZWUNGENE LAYOUTBERECHNUNG, NICHT NUR EIN BILD WARTEN.
+           Zuerst stand hier ein requestAnimationFrame. Das reichte
+           nicht: das Element kam gerade aus display:none, und solange
+           der Browser seinen Ausgangszustand (0fr) nicht einmal
+           berechnet hat, gibt es keinen Wert, von dem aus er
+           ueberblenden koennte - die Schublade sprang auf volle Hoehe.
+           Nachgemessen: 275 Punkte schon nach 60 Millisekunden.
+           Das Lesen von offsetHeight zwingt zur Berechnung; erst danach
+           ist der Wechsel auf 1fr ein Uebergang. */
+        void ziel.offsetHeight;
+        ziel.classList.add('ist-offen');
     }
 
     document.addEventListener('click', (e) => {
