@@ -379,12 +379,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                      Spalte, die heute Ziffern fuehrt, kann morgen "01a"
                      fuehren. -->
                 <div class="step-number">${escapeHtml(schritt.nummer)}</div>
-                <!-- Der Halt auf der Strecke. Rein gestalterisch, ohne
-                     Text - deshalb aria-hidden: eine Vorlesekraft soll
-                     Nummer, Titel und Beschreibung lesen, nicht einen
-                     leeren Punkt ankuendigen. Die Abfolge steht fuer sie
-                     schon in der Nummer. -->
-                <div class="howto-marke" aria-hidden="true"><span class="howto-punkt"></span></div>
                 <h3>${escapeHtml(schritt.titel)}</h3>
                 <p>${escapeHtml(schritt.beschreibung)}</p>
             </div>`).join('');

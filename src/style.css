@@ -1148,41 +1148,39 @@ img { max-width: 100%; }
    Wo die Farbe wechselt (Tarife, Fusszeile) bleibt es bei der vollen. */
 .facts { padding: var(--luft) 0 calc(var(--luft) * .35); background: var(--paper); }
 
-/* BEDINGUNGEN, KEINE SCHLAGZEILEN (neu gefasst 28.08.2026).
-   Die vier Angaben standen als vier Bloecke zu 78 Punkten unterein-
-   ander mit ihrem Etikett - zusammen rund 190 Punkte Hoehe und vier
-   gleich laute Stimmen. Danach kam der Ablauf in derselben Form: Vor-
-   spann, grosse Ueberschrift, Haarlinie, Spalten mit grosser Zahl.
-   Zweimal dieselbe Schablone hintereinander, und das Auge bekam keinen
-   Grund, die beiden verschieden zu behandeln - genau das hat der
-   Betreiber als "man verliert sich" beschrieben.
-   Es sind aber zwei Arten von Inhalt: hier vier BEDINGUNGEN des
-   Angebots, dort eine ABFOLGE in der Zeit. Also bekommen sie zwei
-   Formen. Die Bedingungen werden ein dichtes Band - Zahl und Etikett
-   auf einer Grundlinie, rund 44 statt 190 Punkte. Sie rahmen das
-   Angebot; erzaehlen tut es der Ablauf darunter. */
+/* BEDINGUNGEN ALS BAND UNTER DEN KACHELN (neu gefasst 28.08.2026).
+   Die vier Angaben standen frei auf dem grauen Grund des Abschnitts,
+   nur durch Haarlinien getrennt - und wirkten dort unten nicht: ohne
+   eigene Flaeche gehoerten sie sichtbar zu nichts. Sie bekommen jetzt
+   dasselbe Material wie die Kacheln darueber - weisse Flaeche, dieselbe
+   Kontur, dieselbe Kante - und schliessen den Block nach unten ab.
+   Ein Sockel, kein viertes Ding daneben: deshalb sitzt das Band im
+   Abstand einer Rasterluecke unter den Kacheln, nicht weiter weg. */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: var(--af-m);
+  gap: 0;
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-1);
 }
 .stat {
-  /* Auf EINER Grundlinie, nicht uebereinander. Das halbiert nicht nur
-     die Hoehe - es bindet Zahl und Etikett auch enger aneinander als
-     ein Zeilenumbruch es kann. */
+  /* Auf EINER Grundlinie, nicht uebereinander: das bindet Zahl und
+     Etikett enger aneinander, als ein Zeilenumbruch es kann. */
   display: flex; align-items: baseline;
   gap: var(--a3);
-  padding-left: var(--af-m);
+  padding: var(--a5) var(--af-s);
   border-left: 1px solid var(--mist);
 }
-.stat:first-child { padding-left: 0; border-left: 0; }
+.stat:first-child { border-left: 0; }
 .stat b {
   color: var(--navy);
   font-family: var(--schmal);
-  /* NICHT MEHR --grad-zahl. Auf 78 Punkten war jede der vier Angaben
-     so laut wie die Abschnittsueberschrift daneben. Eine Bedingung ist
-     keine Schlagzeile. */
-  font-size: clamp(26px, 2.4vw, 38px);
+  /* Nicht --grad-zahl: auf 78 Punkten war jede der vier Angaben so laut
+     wie die Abschnittsueberschrift daneben. Eine Bedingung ist keine
+     Schlagzeile. */
+  font-size: clamp(24px, 2.2vw, 34px);
   font-weight: 800;
   line-height: 1;
   letter-spacing: var(--eng);
@@ -1364,7 +1362,9 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--af-m);
-  margin-bottom: var(--af-l);
+  /* Eine Rasterluecke, nicht ein Abschnittsabstand: das Band gehoert
+     zu den Kacheln und soll nicht als eigenes Ding darunter stehen. */
+  margin-bottom: var(--af-m);
 }
 .rad-kachel {
   display: flex; flex-direction: column;
@@ -1464,22 +1464,18 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 }
 .rad-kachel-frei.ist-leer .rad-kachel-ampel { background: var(--mist); }
 
-/* DER ABLAUF ALS STRECKENBAND (neu gefasst 28.08.2026).
-   Vorher: drei Spalten, getrennt durch senkrechte Haarlinien, jede mit
-   einer roten Ziffer zu 78 Punkten obenauf. Drei Trennlinien sagen dem
-   Auge "das sind drei Dinge nebeneinander". Eine Ausleihe ist aber
-   nicht drei Dinge nebeneinander, sondern EIN Weg mit drei Halten -
-   erst App, dann Schloss, dann Abstellen. Die Form widersprach dem
-   Inhalt, und weil sie ihm widersprach, fuehrte sie das Auge nicht.
-   Jetzt traegt eine durchgehende waagerechte Linie ueber die volle
-   Inhaltsbreite drei Halte. Das ist die optische Fuehrung, die gefehlt
-   hat, und sie ist nicht dekorativ: die Linie IST der Weg. Die Halte
-   sehen aus wie die Marker der Live-Karte - dieselbe Formsprache,
-   nicht eine zweite dafuer erfunden.
-   Alle drei Halte sind gleich. Es waere reizvoll, den letzten anders
-   zu faerben, aber welcher Halt "besonders" ist, liesse sich nur
-   behaupten, nicht begruenden - und eine Auszeichnung, die nichts
-   kodiert, ist Dekoration, die sich als Information ausgibt. */
+/* DER ABLAUF ALS KARTEN MIT CHEVRONS (neu gefasst 28.08.2026).
+   Vorstufe war eine durchgehende Linie mit drei Punkten. Sie war
+   richtig gedacht - eine Ausleihe ist ein Weg, keine drei Dinge
+   nebeneinander - aber viel zu leise: eine Haarlinie und drei Punkte
+   auf grauem Grund sind fast nichts.
+   Jetzt tragen die Schritte dasselbe Material wie die Radkacheln
+   darueber: weisse Flaeche, dieselbe Kontur, dieselbe Kante. Der
+   Abschnitt bekommt damit EINE Formsprache statt zweier.
+   Zwischen den Karten steht ein Chevron. Er sagt, was die Linie sagen
+   sollte - hier geht es weiter -, und er sagt es laut genug. Die Linie
+   mit den Punkten faellt dafuer weg: zwei Sinnbilder fuer denselben
+   Vorgang nebeneinander sind eines zu viel. */
 .howto-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1488,22 +1484,37 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .howto-card {
   position: relative;
   display: flex; flex-direction: column;
-  /* KEINE senkrechten Trennlinien mehr und kein Einzug: der Halt sitzt
-     genau ueber dem Text, den er ankuendigt, und die Strecke laeuft von
-     der Flucht bis zur Flucht. Senkrechte Linien wuerden die waagerechte
-     zerschneiden - zwei Ordnungen, die sich gegenseitig aufheben. */
+  gap: var(--a3);
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-1);
+  padding: var(--a5) var(--af-s) var(--af-s);
 }
-/* Die Reihenfolge ist hier echte Information — anders als bei den
+/* Der Chevron sitzt IN der Rasterluecke, nicht in der Karte - sonst
+   zeigte er auf Inhalt statt zwischen zwei Schritte. Gezeichnet aus
+   zwei Kanten eines gedrehten Quadrats: kein Zeichensatz, keine Datei,
+   nichts, was fehlen koennte. Nach dem letzten Schritt steht keiner -
+   dort geht es nicht weiter, dort ist man fertig. */
+.howto-card:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%; right: calc(var(--af-m) / -2);
+  /* Gross genug, um als Wegweiser zu wirken, und klein genug, um in
+     der Rasterluecke zu bleiben: um 45 Grad gedreht misst ein Quadrat
+     von 22 Punkten diagonal 31, die Luecke ist 45 breit. */
+  width: clamp(13px, 1.5vw, 22px);
+  height: clamp(13px, 1.5vw, 22px);
+  transform: translate(50%, -50%) rotate(45deg);
+  border-top: 3.5px solid var(--red);
+  border-right: 3.5px solid var(--red);
+}
+/* Die Reihenfolge ist hier echte Information - anders als bei den
    Abschnitten der Seite, die keine Abfolge sind. Deshalb bleibt die
-   Ziffer. Sie fuehrt den Abschnitt aber nicht mehr an: als Ordnungs-
-   zeichen in Mono neben der Strecke sagt sie, der wievielte Halt das
-   ist, und ueberlaesst die Aussage der Ueberschrift darunter. */
+   Ziffer; sie benennt die Karte und ueberlaesst die Aussage der
+   Ueberschrift darunter. */
 .step-number {
-  margin: 0 0 var(--a3);
-  /* 13 Punkte Mono war zu leise - die Ziffer verschwand neben ihrer
-     eigenen Ueberschrift. Auf 28 Punkten in der schmalen Schrift ist
-     sie ein sichtbares Ordnungszeichen und bleibt doch unter den
-     Kachelueberschriften darueber. */
+  margin: 0;
   font-family: var(--schmal); font-weight: 800; line-height: 1;
   font-size: clamp(22px, 2vw, 30px);
   letter-spacing: var(--eng);
@@ -1511,35 +1522,8 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   font-variant-numeric: tabular-nums;
 }
 .step-number::before { content: '0'; }
-
-/* Die Strecke. Sie laeuft ueber die Rasterluecke hinweg in die naechste
-   Spalte, sonst zerfiele die Linie in drei Striche - genau das Bild,
-   das ersetzt werden sollte. Nur beim letzten Halt endet sie. */
-.howto-marke {
-  position: relative;
-  height: 13px;
-  margin-bottom: var(--a5);
-}
-.howto-marke::before {
-  content: "";
-  position: absolute;
-  top: 50%; left: 0; right: calc(var(--af-m) * -1);
-  height: 1px;
-  background: var(--mist);
-}
-.howto-card:last-child .howto-marke::before { right: 0; }
-.howto-punkt {
-  position: absolute;
-  top: 0; left: 0;
-  width: 13px; height: 13px;
-  border-radius: var(--pille);
-  background: var(--navy);
-  /* Der Hof in Papierfarbe schneidet die Linie am Halt sauber aus,
-     statt sie hinter dem Punkt durchlaufen zu lassen. */
-  box-shadow: 0 0 0 4px var(--paper);
-}
 .howto-card h3 {
-  margin: 0 0 var(--a3);
+  margin: 0;
   color: var(--navy);
   font-family: var(--schmal);
   font-weight: 800;
@@ -2540,24 +2524,19 @@ footer a:hover { color: #fff; text-decoration: underline; }
   /* Vier Zahlen nebeneinander werden hier zu eng: zwei mal zwei.
      Die Haarlinie sitzt dann nur noch zwischen den Spalten. */
   .rad-kacheln { grid-template-columns: 1fr 1fr; }
-  .stat-grid { grid-template-columns: 1fr 1fr; row-gap: var(--af-m); }
-  .stat:nth-child(odd) { padding-left: 0; border-left: 0; }
-  /* GESTAPELT WIRD DIE STRECKE SENKRECHT (28.08.2026).
-     Nebeneinander laeuft der Weg waagerecht, untereinander laeuft er
-     nach unten. Die Linie einfach abzuschalten hiesse, auf dem Telefon
-     genau die Fuehrung wegzunehmen, deretwegen es sie gibt. */
-  .howto-grid { grid-template-columns: 1fr; gap: 0; }
-  .howto-card { padding-left: 34px; padding-bottom: var(--af-m); }
-  .howto-card:last-child { padding-bottom: 0; }
-  .howto-marke {
-    position: absolute; left: 0; top: 0; bottom: 0;
-    width: 13px; height: auto; margin: 0;
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .stat:nth-child(odd) { border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--mist); }
+  /* GESTAPELT ZEIGT DER CHEVRON NACH UNTEN.
+     Nebeneinander weist er nach rechts, untereinander nach unten - der
+     Weg laeuft dann eben so. Ihn wegzulassen hiesse, auf dem Telefon
+     genau das Sinnbild zu streichen, deretwegen es ihn gibt. */
+  .howto-grid { grid-template-columns: 1fr; }
+  .howto-card:not(:last-child)::after {
+    top: auto; bottom: calc(var(--af-m) / -2);
+    right: 50%;
+    transform: translate(50%, 50%) rotate(135deg);
   }
-  .howto-marke::before {
-    top: 0; bottom: 0; left: 6px; right: auto;
-    width: 1px; height: auto;
-  }
-  .howto-card:last-child .howto-marke::before { bottom: auto; height: 13px; }
   .footer-grid { grid-template-columns: 1fr; gap: var(--a5); }
   #map { height: clamp(420px, 66vh, 600px); }
   .pop-typ { grid-template-columns: 62px 1fr auto; gap: var(--a2); padding: var(--a3) var(--a3); }
@@ -2602,9 +2581,9 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .choice-panel { bottom: 34px; }
   .product-tab { padding: 0 var(--a3); }
   .rad-kacheln { grid-template-columns: 1fr; }
-  .stat-grid { grid-template-columns: 1fr; row-gap: var(--a5); }
-  .stat { padding-left: 0; border-left: 0; padding-top: var(--a4); border-top: 1px solid var(--mist); }
-  .stat:first-child { padding-top: 0; border-top: 0; }
+  .stat-grid { grid-template-columns: 1fr; }
+  .stat { border-left: 0; border-top: 1px solid var(--mist); }
+  .stat:first-child { border-top: 0; }
   .rechner { grid-template-columns: 1fr; }
   .rechner-spalte { border-left: 0; border-top: 1px solid var(--mist); }
   .rechner-spalte:first-child { border-top: 0; }
