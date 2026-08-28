@@ -973,8 +973,13 @@ footer :focus-visible, .product-tabs :focus-visible,
      Bei 76 Punkten sind 0,99 keine enge Fuehrung, sondern beruehrende
      Zeilen - die Oberlaengen der zweiten Zeile stossen an die
      Unterlaengen der ersten. Was bei kleinem Grad Dichte ist, ist hier
-     Gedraenge. */
-  line-height: 1.06;
+     Gedraenge.
+     Nachgebessert auf 1,12: bei 1,06 stiess die Unterlaenge von "passt"
+     noch fast an das K von "Kind". Vier Abstufungen nebeneinander
+     gestellt - 1,06 zu eng, ab 1,14 driften die beiden Zeilen
+     auseinander und lesen sich wieder als zwei Aussagen statt als eine
+     mit Pointe. */
+  line-height: 1.12;
   letter-spacing: var(--eng);
   font-weight: 800;
   max-width: 100%;
