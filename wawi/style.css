@@ -1319,7 +1319,21 @@ body.navigation-schmal .navigation-griff {
      einklassig, also entschied die Reihenfolge, und diese steht
      spaeter als .wortmarke-firma. Die Farbe kommt jetzt allein von
      dort (--marine), text-decoration-color ebenso. */
-  text-decoration: underline;
+  /* KEINE Unterstreichung im Ruhezustand (Auftrag: "der Unterstrich
+     beim Logo stoert, wir formatieren das als Link, aber ohne
+     Unterstrich"). Sie stand hier, um den Verweis "als solchen
+     erkennbar" zu machen - das leistet bei einer Marke oben links
+     die Gewohnheit: eine Marke an dieser Stelle fuehrt zur
+     Startseite, das ist eine der aeltesten Verabredungen im Netz.
+     Die Erkennbarkeit bleibt trotzdem nicht dem Zufall ueberlassen:
+     der Zeigefinger (cursor), die Unterstreichung beim Ueberfahren
+     (siehe :hover unten), der sichtbare Tastaturfokus und das
+     aria-label, das Ziel und neues Fenster nennt.
+     AUSDRUECKLICH none und nicht bloss die Angabe weglassen: ein <a>
+     mit href ist im Browser von Haus aus unterstrichen. Beim ersten
+     Versuch war die Angabe nur entfernt - gemessen stand der
+     Ruhezustand danach weiter auf "underline". */
+  text-decoration: none;
   text-underline-offset: 3px;
   /* ZIELGROESSE, BEFUND DER PENIBLEN DURCHSICHT: im Browser gemessen war
      die anklickbare Flaeche dieses Verweises 56x17px - 17 statt der 32,
@@ -1347,7 +1361,15 @@ body.navigation-schmal .navigation-griff {
    Ueberfahren-Zustand. Die Staerke der Unterstreichung statt ihrer
    Farbe: die Farbe traegt hier bereits die Lesbarkeit auf marinem
    Grund und darf sich nicht aendern. */
-.wortmarke-link:hover,
+/* Beim Ueberfahren ERSCHEINT die Unterstreichung an der Marke (im
+   Ruhezustand gibt es keine mehr, siehe dort); bei den Verweisen der
+   Vollbildzustaende, die weiterhin dauerhaft unterstrichen sind, wird
+   sie nur dicker. Dieselbe Regel, zwei Ausgangslagen. */
+.wortmarke-link:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
 .vollbild p a:hover {
   text-decoration-thickness: 2px;
 }
