@@ -48,14 +48,30 @@ on conflict (code) do update set bezeichnung = excluded.bezeichnung;
 
 -- ---------------------------------------------------------------------
 -- Fahrradtypen: Bezeichnungen wie auf der Website, Codes fuer die Technik.
+--
+-- EINZEILIGE BESCHREIBUNGEN (gekuerzt am 28.08.2026)
+-- Die drei Texte standen als Fliesstext und brauchten auf der Website
+-- zwei Zeilen, das Lastenrad nur eine - dadurch sassen Trennlinie und
+-- Bestandszeile in der dritten Kachel hoeher als nebenan. Der Betreiber
+-- hat entschieden, sie einzeilig zu fuehren. Sie sind jetzt gleich
+-- gebaut - erst was es ist, dann die eine Zahl, die dafuer zaehlt -,
+-- damit die drei sich als Satz lesen und nicht als drei Einfaelle.
+-- "bis 50 km" bleibt woertlich stehen: fahrradmodell.reichweite_km
+-- verweist in 0012_dokumentation.sql ausdruecklich darauf. Ebenso
+-- "75 kg", das zuladung_kg in derselben Zeile fuehrt.
+--
+-- AUS 7 GAENGEN WURDEN 8, UND ZWAR ALS FEHLERKORREKTUR.
+-- Der alte Fliesstext sagte "7-Gang Stadtrad". Das war falsch: das
+-- Werbemerkmal desselben Typs nennt eine Zeile weiter unten "8-Gang
+-- Nabenschaltung", und flottenmodelle_stammdaten.sql setzt gangzahl = 8
+-- mit ausdruecklichem Verweis auf genau dieses Merkmal. Zwei Angaben
+-- zum selben Rad auf derselben Seite, die sich widersprachen - nur fiel
+-- es im laengeren Fliesstext niemandem auf. Acht ist die belegte Zahl.
 -- ---------------------------------------------------------------------
 insert into velocity.fahrradtyp (typ_code, bezeichnung, beschreibung, hat_elektro, zuladung_kg) values
-  ('CITY',  'City-Bike',
-   '7-Gang Stadtrad mit Gepäckträger, LED-Beleuchtung und verstellbarem Sattel', false, 20),
-  ('EBIKE', 'E-Bike Sport',
-   'Pedelec mit 250 W Motor, Reichweite bis 50 km, Display mit Akkustand',        true,  20),
-  ('CARGO', 'E-Cargo Loader',
-   'E-Lastenrad mit großer Transportbox, Tragkraft bis 75 kg',                   true,  75)
+  ('CITY',  'City-Bike',      'Stadtrad, 8 Gänge, LED-Licht',   false, 20),
+  ('EBIKE', 'E-Bike Sport',   'Pedelec, Reichweite bis 50 km',  true,  20),
+  ('CARGO', 'E-Cargo Loader', 'Lastenrad, Zuladung bis 75 kg',  true,  75)
 on conflict (typ_code) do update
   set bezeichnung  = excluded.bezeichnung,
       beschreibung = excluded.beschreibung,

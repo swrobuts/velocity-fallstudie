@@ -1450,18 +1450,19 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   margin: 0;
   color: var(--grau);
   line-height: 1.5;
-  /* ZWEI ZEILEN MINDESTHOEHE, DAMIT DIE LINIE FLUCHTET.
-     Die Beschreibung des Lastenrads passt in eine Zeile, die der
-     anderen beiden brauchen zwei - dadurch sassen Trennlinie und
-     Bestandszeile in der dritten Kachel rund eine Zeile hoeher als
-     nebenan. Drei Kacheln nebeneinander lesen sich als eine Reihe;
-     springt darin eine Linie, sieht man den Sprung, noch bevor man
-     den Text liest.
+  /* EINE ZEILE MINDESTHOEHE.
+     Vorher standen hier zwei: die Beschreibungen waren Fliesstext und
+     brauchten zwei Zeilen, das Lastenrad nur eine - die Mindesthoehe
+     hielt die Trennlinien auf einer Flucht. Die Texte sind jetzt in
+     0008_referenzdaten.sql einzeilig gekuerzt, damit waeren zwei
+     Zeilen reserviertes Nichts. Ausgerichtet wird ohnehin durch
+     flex:1 am Textteil, das die Bestandszeile nach unten drueckt -
+     das haelt die Flucht auch, wenn ein Text auf schmaler Spalte doch
+     einmal umbricht.
      Die calc-Zeile ist der Rueckfall fuer Browser ohne lh: 1.5 ist
-     der Zeilenabstand darueber, zwei Zeilen also 3em. Wer lh kennt,
-     ueberschreibt sie mit dem genaueren Wert. */
-  min-height: calc(2 * 1.5em);
-  min-height: 2lh;
+     der Zeilenabstand darueber. */
+  min-height: calc(1.5em);
+  min-height: 1lh;
 }
 .rad-kachel-frei {
   display: flex; align-items: baseline; gap: var(--a2);
