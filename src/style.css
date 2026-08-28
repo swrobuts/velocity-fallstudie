@@ -115,8 +115,16 @@
    keine Schlagzeile zusaetzlich umbricht und die unterste Kante bei 574
    Punkten bleibt, waehrend die Auswahlleiste erst bei 730 beginnt. Es
    gab also nie eine Platzgrenze, die schmal erzwungen haette.
-   110 gewaehlt: die Formen oeffnen sich, die Punzen atmen, und es liest
-   sich als bewusst breite Auszeichnung. Ab 120 wird es weich.
+   110 war dann zu viel - "zu lang gezogen", und zwar zu Recht: es ist
+   eine Dehnung ueber die gezeichnete Breite hinaus.
+   Jetzt 100 Prozent: die Breite, in der die Schrift entworfen wurde.
+   Alles darueber ist Verzerrung, alles darunter Stauchung. Dass dieser
+   Wert vorher nie ueberzeugt hat, lag nicht an ihm - bis zum 28.08.2026
+   kam die Schrift gar nicht beim Betrachter an (siehe unten).
+   Die Flaeche bleibt trotzdem unter eigenem Namen bestehen, obwohl sie
+   damit dieselbe Breite fuehrt wie Archivo: sie ist der eine Ort, an
+   dem sich die Achse fuer alle Ueberschriften verstellen laesst, ohne
+   23 Regeln anzufassen.
    Vorgeschichte, damit sie niemand zum vierten Mal aufrollt: die Rolle
    lief auf 79 Prozent ("zu schmal"), dann auf 88 ("zu schmal"), dann auf
    100 ("schlechter"). Drei Anlaeufe an derselben Stellschraube, und
@@ -135,7 +143,7 @@
   font-family: "Archivo Auszeichnung";
   font-style: normal;
   font-weight: 100 900;
-  font-stretch: 110% 110%;
+  font-stretch: 100% 100%;
   font-display: swap;
   src: url("assets/schrift/archivo-latin.woff2?v=4c98b9d4") format("woff2");
   /* Deutsch braucht nichts jenseits von latin. Der zweite Ausschnitt
@@ -149,7 +157,7 @@
   font-family: "Archivo Auszeichnung";
   font-style: normal;
   font-weight: 100 900;
-  font-stretch: 110% 110%;
+  font-stretch: 100% 100%;
   font-display: swap;
   src: url("assets/schrift/archivo-latin-ext.woff2?v=a75c792f") format("woff2");
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
@@ -274,8 +282,7 @@
   --schatten-3: 0 28px 64px rgba(6, 24, 65, .24);
 
   /* ---------------------------------------------------- SCHRIFT
-     EINE Familie in zwei Rollen: Fliesstext auf voller Breite, die
-     Auszeichnung BREITER als er, auf 110 Prozent. Sie unterscheiden sich zusaetzlich in
+     EINE Familie in zwei Rollen, beide auf gezeichneter Breite. Sie unterscheiden sich zusaetzlich in
      Gewicht (560 gegen 800) und Laufweite. Der Name sagt, was die Rolle
      IST - Auszeichnungsschrift fuer Schlagzeilen, Ueberschriften, Zahlen
      und Preise -, nicht wie breit sie gerade laeuft: "--schmal" waere
