@@ -504,9 +504,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             rechnen.append(document.createTextNode('Preis berechnen'), pfeil);
             const zurKarte = document.createElement('button');
             zurKarte.type = 'button';
-            zurKarte.className = 'karte-mit-typ rad-kachel-buchen';
+            /* btn-primary, NICHT eine eigene Klasse: die gemeinsame
+               Knopfregel traegt Form, Polsterung und Rundung. Ohne sie
+               stand der rote Knopf rechteckig neben dem runden - eine
+               eigene Farbklasse hatte ich gesetzt und die Grundform
+               dabei verloren. */
+            zurKarte.className = 'karte-mit-typ btn-primary';
             zurKarte.dataset.typ = k.typ_code;
-            zurKarte.textContent = 'Rad kostenpflichtig buchen';
+            /* "Auf Karte zeigen" statt "kostenpflichtig buchen": der
+               Knopf setzt den Kartenfilter und springt zur Karte, er
+               bucht nichts. Der Betreiber hat sich nach Vorlage des
+               Befunds P1-02 aus dem UX-Audit vom 24.08.2026 fuer die
+               ehrliche Aufschrift entschieden. */
+            zurKarte.textContent = 'Auf Karte zeigen';
             zurKarte.setAttribute('aria-label', `${k.bezeichnung} auf der Karte zeigen`);
             /* Der Buchungsknopf steht OBEN, der Rechner darunter: die
                Handlung vor der Frage nach dem Preis. */
@@ -527,20 +537,21 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             kachel.append(bildfeld, text);
 
-            /* Die Schublade ist GESCHWISTER der Kachel, nicht ihr Kind.
-               In der Kachel wuerde sie nur deren Spalte breit und die
-               Reihe waechst mit - die beiden Nachbarkacheln bekaemen
-               leeren Raum. Als eigenes Rasterelement ueber alle Spalten
-               faehrt sie unter der ganzen Reihe aus. Geschlossen steht
-               sie auf display:none und belegt gar keine Zeile. */
+            /* DIE SCHUBLADE GEHOERT IN DIE KACHEL (28.08.2026).
+               Zuerst lag sie als Geschwister ueber alle Spalten - damit
+               fuhr sie unter der ganzen REIHE aus, nicht unter ihrem Rad.
+               Der Betreiber will sie so breit wie die Kachel selbst.
+               Damit die Nachbarkacheln dabei nicht mitwachsen, steht das
+               Raster auf align-items: start; jede Kachel traegt dann
+               ihre eigene Hoehe. */
             const schublade = document.createElement('div');
             schublade.className = 'rad-kachel-schublade';
-            schublade.dataset.typ = k.typ_code;
-            schublade.hidden = true;
+            schublade.inert = true;
+            kachel.append(schublade);
             radKachelSchubladen.push({ typ: k.typ_code, schublade, knopf: rechnen });
 
-            return [kachel, schublade];
-        }).flat());
+            return kachel;
+        }));
 
         radKachelnBestandSetzen();
     }
@@ -750,61 +761,145 @@ document.addEventListener("DOMContentLoaded", async () => {
        und nicht gesetzt. Findet sich der Typ nicht (etwa weil ein Rad
        keinen Minutenpreis fuehrt), bleibt die bisherige Wahl stehen:
        lieber der falsche Typ als ein leerer Rechner. */
+    /* Ein Horcher am Dokument statt einer je Knopf: die Kacheln werden
+       nachtraeglich gebaut, und ein Horcher, der vor seinem Knopf
+       eingerichtet wird, findet ihn nie. */
+    document.addEventListener('click', (e) => {
+        const knopf = e.target.closest('.rad-kachel-rechnen');
+        if (knopf) schubladeUmschalten(knopf);
+    });
+
+    /* ================================================================
+       DIE SCHUBLADE OEFFNEN UND SCHLIESSEN
+
+       Ueber die Web-Animations-Schnittstelle, nicht ueber einen
+       CSS-Uebergang. Das ist der dritte Anlauf, und die ersten beiden
+       sind daran gescheitert, dass ein Uebergang seinen AUSGANGSWERT
+       aus dem gerade gueltigen Stil ableiten muss:
+
+       - Mit grid-template-rows von 0fr auf 1fr loeste die Zeile je nach
+         umgebendem Flusskontext verschieden auf - auf dem Telefon 217
+         Punkte, auf dem Schreibtisch 53, waehrend der Inhalt 233
+         verlangte und hinter overflow: hidden verschwand.
+       - Mit height von einem gemessenen Wert auf 0 fuhr die Lade zwar
+         heraus, sprang beim Schliessen aber in einem einzigen Bild auf
+         null. Weder ein erzwungenes Layout (offsetHeight) noch eine
+         erzwungene Stilneuberechnung (getComputedStyle) haben das
+         behoben; nachgemessen ueber je dreissig Bilder.
+
+       animate() nimmt Anfangs- und Endbild ausdruecklich entgegen. Es
+       gibt nichts zu erraten, und finished ist ein Versprechen, das
+       genau einmal einloest - im Gegensatz zu transitionend, das aus
+       jedem Kind heraufblubbert.
+       ================================================================ */
+    const LADE_DAUER = 420;
+
+    /* Bewegt EINE Lade von einer gemessenen Hoehe auf eine andere.
+       Ueber animate() statt ueber einen CSS-Uebergang: ein Uebergang
+       muss seinen Ausgangswert aus dem gerade gueltigen Stil ableiten,
+       und genau daran sind zwei Anlaeufe gescheitert - erst
+       grid-template-rows (loeste je nach Umgebung verschieden auf), dann
+       height (fuhr heraus, sprang aber beim Schliessen). animate() nimmt
+       Anfang und Ende ausdruecklich entgegen; es gibt nichts zu erraten. */
+    function ladeBewegen(lade, vonPx, nachPx) {
+        const ruhig = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        lade.getAnimations().forEach(a => a.cancel());
+        const lauf = lade.animate(
+            [{ height: vonPx + 'px' }, { height: nachPx + 'px' }],
+            { duration: ruhig ? 0 : LADE_DAUER, easing: 'cubic-bezier(.22, .61, .36, 1)', fill: 'both' });
+        return lauf.finished.then(() => lauf, () => null);
+    }
+
+    /* KEIN hidden MEHR.
+       Vorher wurde die Lade nach der Bewegung auf hidden gesetzt und beim
+       Oeffnen wieder sichtbar gemacht. Das verlangte eine Zeitfolge - erst
+       einfahren, dann verstecken -, und die ging beim schnellen Wechsel
+       zwischen zwei Kacheln schief: kurzzeitig standen zwei Laden offen,
+       und der Rechner blieb in der falschen haengen.
+       Eine Lade mit Hoehe null und overflow: hidden ist ohnehin unsichtbar
+       und belegt keinen Platz. Statt sie zu verstecken, wird sie mit inert
+       stillgelegt - dann ist sie auch fuer Tastatur und Vorlesekraft nicht
+       da, was hidden ebenfalls geleistet hat. */
+    function ladeIstOffen(lade) { return lade.classList.contains('ist-offen'); }
+
     async function schubladeUmschalten(knopf) {
         const typ = knopf.dataset.typ;
         const eintrag = radKachelSchubladen.find(x => x.typ === typ);
         const rechner = document.getElementById('fare-meter');
         if (!eintrag || !rechner) return;
         const ziel = eintrag.schublade;
+        const warOffen = ladeIstOffen(ziel);
 
-        const warOffen = !ziel.hidden;
-        /* Immer erst alles zu. Zwei offene Schubladen gaeben zwei
-           Rechner - und es gibt nur einen; der zweite waere leer. */
-        /* Erst einfahren lassen, dann ausblenden. hidden setzt display
-           auf none, und ein Element, das nicht mehr dargestellt wird,
-           ueberblendet nichts mehr - die Schublade waere schlagartig
-           verschwunden, nachdem sie langsam herausgefahren ist. */
+        /* Immer erst alles zu. Zwei offene Laden gaeben zwei Rechner -
+           und es gibt nur einen; der zweite waere leer. */
         for (const x of radKachelSchubladen) {
-            if (x.schublade.hidden) continue;
-            x.schublade.classList.remove('ist-offen');
-            x.knopf.setAttribute('aria-expanded', 'false');
+            if (!ladeIstOffen(x.schublade)) continue;
             const s = x.schublade;
-            const fertig = () => {
-                if (s.classList.contains('ist-offen')) return;  // zwischenzeitlich wieder geoeffnet
-                s.hidden = true;
-                document.getElementById('rechner-halter')?.append(rechner);
-            };
-            s.addEventListener('transitionend', fertig, { once: true });
-            /* Netz fuer den Fall, dass gar keine Bewegung laeuft - etwa
-               weil der Nutzer sie abbestellt hat. Dann kaeme
-               transitionend nie. */
-            setTimeout(fertig, 520);
+            const hoch = s.getBoundingClientRect().height;
+            s.classList.remove('ist-offen');
+            s.inert = true;
+            x.knopf.setAttribute('aria-expanded', 'false');
+            ladeBewegen(s, hoch, 0).then(() => {
+                if (ladeIstOffen(s)) return;           // inzwischen wieder auf
+                s.style.height = '0px';
+                s.getAnimations().forEach(a => a.cancel());
+            });
         }
-        if (warOffen) return;
+        if (warOffen) {
+            /* Beim Zuklappen kehrt der Rechner in seinen Halter zurueck -
+               aber erst, wenn wirklich keine Lade mehr offen ist. */
+            setTimeout(() => {
+                if (!radKachelSchubladen.some(x => ladeIstOffen(x.schublade))) {
+                    document.getElementById('rechner-halter')?.append(rechner);
+                }
+            }, LADE_DAUER + 40);
+            return;
+        }
 
         if (!rechnerTarife.length) await rechnerStarten();
         const i = rechnerTarife.findIndex(t => t.typ_code === typ);
         if (i >= 0) { rechnerAktiv = i; rechnerTypenZeichnen(); rechnerZeichnen(); }
 
-        ziel.hidden = false;
-        ziel.append(rechner);
-        knopf.setAttribute('aria-expanded', 'true');
-        /* ERZWUNGENE LAYOUTBERECHNUNG, NICHT NUR EIN BILD WARTEN.
-           Zuerst stand hier ein requestAnimationFrame. Das reichte
-           nicht: das Element kam gerade aus display:none, und solange
-           der Browser seinen Ausgangszustand (0fr) nicht einmal
-           berechnet hat, gibt es keinen Wert, von dem aus er
-           ueberblenden koennte - die Schublade sprang auf volle Hoehe.
-           Nachgemessen: 275 Punkte schon nach 60 Millisekunden.
-           Das Lesen von offsetHeight zwingt zur Berechnung; erst danach
-           ist der Wechsel auf 1fr ein Uebergang. */
-        void ziel.offsetHeight;
+        ziel.inert = false;
         ziel.classList.add('ist-offen');
+        ziel.style.height = '0px';
+        ziel.append(rechner);
+        const hoch = ziel.scrollHeight;
+        await ladeBewegen(ziel, 0, hoch);
+        if (!ladeIstOffen(ziel)) return;
+        ziel.style.height = hoch + 'px';
+        ziel.getAnimations().forEach(a => a.cancel());
+
+        /* IN DEN BLICK HOLEN. Die Kacheln sind hoch, der Knopf sitzt an
+           ihrem unteren Rand, und die Lade faehrt DARUNTER aus - auf
+           einem gewoehnlichen Bildschirm also unterhalb des Fensterrands.
+           Sie ging auf und war trotzdem nicht zu sehen, was sich
+           anfuehlt, als taete der Knopf nichts. Erst NACH der Bewegung
+           messen; vorher waere die Lade null Punkte hoch. */
+        const r = ziel.getBoundingClientRect();
+        if (r.bottom > window.innerHeight) {
+            ziel.scrollIntoView({ block: 'end', behavior: 'auto' });
+        }
     }
 
-    document.addEventListener('click', (e) => {
-        const knopf = e.target.closest('.rad-kachel-rechnen');
-        if (knopf) schubladeUmschalten(knopf);
+    /* Die offene Lade traegt eine feste, gemessene Hoehe. Aendert sich
+       die Fensterbreite, bricht der Text darin anders um und der Wert
+       veraltet - dann stuende Inhalt hinter overflow: hidden. Entprellt,
+       weil resize waehrend eines Ziehens dutzendfach feuert. */
+    let ladenUhr = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(ladenUhr);
+        ladenUhr = setTimeout(() => {
+            for (const x of radKachelSchubladen) {
+                if (!ladeIstOffen(x.schublade)) continue;
+                const vorher = x.schublade.style.height;
+                x.schublade.style.height = 'auto';
+                const gemessen = x.schublade.scrollHeight + 'px';
+                x.schublade.style.height = vorher;
+                void x.schublade.offsetHeight;
+                x.schublade.style.height = gemessen;
+            }
+        }, 160);
     });
 
     async function rechnerStarten() {

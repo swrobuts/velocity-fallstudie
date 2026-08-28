@@ -1441,6 +1441,13 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--af-m);
+  /* JEDE KACHEL TRAEGT IHRE EIGENE HOEHE.
+     Voreingestellt streckt ein Raster alle Elemente einer Reihe auf
+     dieselbe Hoehe. Faehrt dann EINE Schublade aus, wachsen die beiden
+     Nachbarn stumm mit und stehen mit leerem Fuss da. Bei gleichem
+     Inhalt sind die drei ohnehin gleich hoch; nur beim Ausfahren
+     unterscheiden sie sich, und genau dann sollen sie es. */
+  align-items: start;
   /* Das Band steht jetzt darueber und traegt den Abstand selbst. */
   margin-bottom: 0;
 }
@@ -1613,18 +1620,14 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   display: grid; gap: var(--a2);
   margin-top: var(--a3);
 }
-/* Der Buchungsknopf traegt Rot, der Rechner steht in Kontur.
-   Rot ist auf dieser Seite die Farbe der einen Handlung, um die es
-   geht - und rechnen ist keine Handlung, sondern eine Frage. Zwei rote
-   Knoepfe untereinander haetten beide entwertet. */
-.rad-kachel-buchen {
-  background: var(--red); color: #fff; border-color: var(--red);
-}
-.rad-kachel-buchen:hover { background: var(--red-tief); border-color: var(--red-tief); }
-.rad-kachel-rechnen {
-  background: #fff; color: var(--navy); border-color: var(--rahmen);
-}
-.rad-kachel-rechnen:hover { background: var(--paper); }
+/* Beide Knoepfe tragen die gemeinsame Knopfregel und damit dieselbe
+   Form; nur die Farbe unterscheidet sie. Ein eigenes Regelwerk fuer den
+   roten Knopf hatte genau das kaputtgemacht - er stand rechteckig neben
+   dem runden. Rot ist auf dieser Seite die Farbe der Handlung, um die
+   es geht; rechnen ist keine Handlung, sondern eine Frage, und steht
+   deshalb in Kontur. */
+.rad-kachel-rechnen { background: #fff; }
+.rad-kachel-rechnen:hover { background: var(--paper); color: var(--navy); border-color: var(--navy); }
 .rad-kachel-knoepfe button { width: 100%; }
 /* Die Hervorhebung traegt Kontur UND Abzeichen - Farbe allein waere
    die einzige Traegerin der Information. */
@@ -1732,43 +1735,72 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
    die Kopftafel so oeffnet. Ein Dialog waere hier falsch: er legte sich
    ueber das Rad, um dessen Preis es geht. */
 .rad-kachel-schublade {
-  /* Ueber alle Spalten - dadurch faehrt sie unter der ganzen Reihe aus
-     und laesst die Nachbarkacheln in Ruhe. */
-  grid-column: 1 / -1;
-  /* ECHTES AUSFAHREN, KEIN EINBLENDEN (28.08.2026).
-     Zuerst wurde nur Deckkraft und ein Versatz von zehn Punkten
-     ueberblendet - das sah aus wie ein Ding, das erscheint, nicht wie
-     eine Schublade, die herauskommt. Der Betreiber hat es zu Recht als
-     lieblos bezeichnet.
-     Eine Hoehe von auto laesst sich nicht ueberblenden; ein fester
-     Endwert waere geraten und bei jeder Textlaenge falsch. Der Weg
-     darum herum: ein Raster mit EINER Zeile, deren Anteil von 0fr auf
-     1fr waechst. Das Kind wird dabei von null auf seine natuerliche
-     Hoehe aufgezogen - gemessen, nicht geschaetzt -, und overflow
-     hidden schneidet ab, was noch nicht herausgefahren ist. */
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows var(--zeit-lang, .3s) cubic-bezier(.22, .61, .36, 1);
-}
-.rad-kachel-schublade > * {
+  /* HOEHE AUS DER MESSUNG, NICHT AUS EINEM RASTERANTEIL.
+     Zuerst stand hier der uebliche Kniff: ein Raster mit einer Zeile,
+     deren Anteil von 0fr auf 1fr waechst. Er hat zweimal getaeuscht.
+     1fr heisst "ein Anteil des freien Platzes", und wie viel das ist,
+     haengt davon ab, was der umgebende Flusskontext hergibt - die Lade
+     ist ein Flex-Element in der Kachel. Gemessen: auf dem Telefon loeste
+     die Zeile auf 217 Punkte auf, auf dem Schreibtisch bei gleichem
+     Inhalt auf 53, waehrend scrollHeight 233 verlangte. Der Inhalt lag
+     dann hinter overflow: hidden und war unsichtbar.
+     Die Hoehe wird jetzt in script.js gemessen und gesetzt: erst 0,
+     dann der gemessene Wert, nach der Bewegung auto. Deterministisch,
+     nachpruefbar, und unabhaengig davon, wer die Lade umgibt. */
   overflow: hidden;
-  min-height: 0;
+  height: 0;
+  flex: none;
+  /* Die Bewegung macht animate() in script.js, nicht ein Uebergang. */
 }
-.rad-kachel-schublade[hidden] { display: none; }
-.rad-kachel-schublade.ist-offen { grid-template-rows: 1fr; }
-/* Die Karte sitzt am Inhalt, nicht am Rahmen: der Rahmen ist bei
-   geschlossener Schublade null Punkte hoch, eine Kontur daran waere
-   ein Strich ueber die ganze Breite. */
-.rad-kachel-schublade .rechner {
-  margin-top: var(--a3);
-  background: #fff;
-  border: 1px solid var(--mist);
-  border-radius: var(--kante);
-  box-shadow: var(--schatten-2);
-}
+/* Kein display: none und kein visibility: hidden - beide wuerden sofort
+   greifen und damit die Einfahrbewegung unsichtbar machen. Hoehe null
+   mit overflow: hidden ist ohnehin unsichtbar und belegt keinen Platz;
+   fuer Tastatur und Vorlesekraft legt inert die geschlossene Lade
+   still. */
 @media (prefers-reduced-motion: reduce) {
   .rad-kachel-schublade { transition: none; }
 }
+
+/* IN DER SCHUBLADE IST NUR NOCH REGLER UND ERGEBNIS.
+   Welches Rad gemeint ist, sagt die Kachel darueber; wie lange und was
+   es kostet, ist alles, was hier noch zu klaeren bleibt. Typwahl,
+   Sprungmarken, Grenzhinweis und Aufschluesselung sind deshalb
+   ausgeblendet - nicht entfernt: derselbe Rechner bedient auch andere
+   Stellen, und ein Bauteil, das je nach Ort andere Kinder hat, ist
+   schwerer richtig zu halten als eines, das ueberall gleich aussieht
+   und je nach Ort anderes zeigt. */
+/* SIE MUSS AUSSEHEN, ALS LAEGE SIE UNTER DER KACHEL.
+   Weiss auf Weiss las sich die Schublade als unterer Teil der Karte -
+   sie war da, aber sie kam nicht hervor. Zwei Mittel, beide aus der
+   Anschauung: eine Ablage liegt TIEFER, also traegt sie den Papierton
+   statt Weiss. Und was oben aufliegt, wirft Schatten nach unten - der
+   innere Schatten an der Oberkante ist der Schatten der Kachel, der
+   auf die herausgezogene Lade faellt. Deshalb inset und deshalb nur
+   oben: an den anderen Kanten liegt nichts darueber. */
+.rad-kachel-schublade .rechner {
+  display: block;
+  padding: var(--a5) var(--af-s) var(--af-s);
+  margin-top: 0;
+  background: var(--paper);
+  border-top: 1px solid var(--mist);
+  box-shadow: inset 0 7px 9px -7px rgba(6, 24, 65, .30);
+}
+.rad-kachel-schublade .rechner-spalte {
+  padding: var(--a4) 0 0;
+  border: 0;
+}
+.rad-kachel-schublade .rechner-spalte:first-child,
+.rad-kachel-schublade .rechner-marken,
+.rad-kachel-schublade .rechner-grenze,
+.rad-kachel-schublade .rechner-posten { display: none; }
+/* Fahrzeit und Betrag stehen untereinander - auf Kachelbreite waere
+   nebeneinander fuer beide zu eng. */
+.rad-kachel-schublade .rechner-summe { justify-content: flex-start; }
+.rad-kachel-schublade .rechner-feld { margin-bottom: var(--a2); }
+/* Auf dem Papierton braucht das Eingabefeld Weiss, sonst verschwimmt
+   es mit seiner Ablage und sieht nicht mehr nach Eingabe aus. */
+.rad-kachel-schublade .rechner-feld input { background: #fff; }
+.rad-kachel-schublade .rechner-betrag { font-size: var(--grad-kopf-l); }
 /* Der Pfeil am Knopf dreht sich mit dem Zustand - dieselbe Zusage wie
    aria-expanded, nur fuer das Auge. */
 .rad-kachel-pfeil {
