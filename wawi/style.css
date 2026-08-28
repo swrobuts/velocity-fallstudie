@@ -1599,6 +1599,25 @@ body.navigation-schmal .navigation-griff {
   color: var(--text);
 }
 
+/* Die Erklaerzeile unter "Kopfbereich immer ausklappen" (index.html,
+   aria-describedby). Nur DIESER eine Schalter hat sie, und das ist
+   Absicht: "Zebrastreifen in Tabellen" beschreibt sich selbst, "immer
+   ausklappen" nicht - dort muss dastehen, dass die Einstellung den
+   Anfangszustand je Bereich setzt und der Griff an der Tafel weiter
+   wirkt (siehe KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL in rahmen.js).
+   Eingerueckt auf die Textkante des Schalters darueber (16px Kaestchen
+   + --raum-2 Fuge = 24px = --raum-5), damit sie als Nachsatz ZU IHM
+   liest und nicht als eigener Eintrag des Menues. --grad-2/--text-leise
+   ist derselbe Rang, den die Kopftafel-Fussnote traegt: Beiwerk zu einer
+   Angabe, die darueber steht. */
+.profilmenue-schalter-hinweis {
+  margin: var(--raum-1) 0 var(--raum-2) var(--raum-5);
+  font-size: var(--grad-2);
+  line-height: 1.45;
+  color: var(--text-leise);
+  max-width: 34ch;
+}
+
 .profilmenue-schalter input[type="checkbox"] {
   /* accent-color statt eines selbst gezeichneten Schalters: eine
      Kontrollkaestchen-Optik ist fuer EINE Einstellung ausreichend
@@ -2143,8 +2162,19 @@ body.navigation-schmal #navigation button:focus-visible {
    Bearbeiter soll den Vorschlag samt seiner Ruecknahme finden, statt
    ihn ein drittes Mal neu zu erfinden. */
 
+/* .kopftafel-methode ist in dieser Aufzaehlung so unverzichtbar wie die
+   Tabelle selbst - und der Grund ist derselbe, aus dem
+   kopftafelMethodennote() in rahmen.js die Spalten prueft, statt die
+   Zeile bedingungslos anzuhaengen: die Angabe gilt "wo die Methode
+   wirkt". Eingeklappt ist die Tabelle weg, es steht also keine einzige
+   skalierte Zahl mehr da - eine Quellenangabe unter einer zugeklappten
+   Tafel naehme fuer sich in Anspruch, etwas zu erklaeren, was gerade
+   niemand sieht. (Beim ersten Anlauf fehlte sie hier und stand
+   tatsaechlich unter der zugeklappten Tafel; im Browser gesehen und
+   nachgetragen.) */
 .kopftafel.kopftafel-eingeklappt .kopftafel-tabelle,
-.kopftafel.kopftafel-eingeklappt .kopftafel-fussnote {
+.kopftafel.kopftafel-eingeklappt .kopftafel-fussnote,
+.kopftafel.kopftafel-eingeklappt .kopftafel-methode {
   display: none;
 }
 
@@ -2186,7 +2216,8 @@ body.navigation-schmal #navigation button:focus-visible {
 }
 
 .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-tabelle,
-.kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-fussnote {
+.kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-fussnote,
+.kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-methode {
   animation: kopftafel-aufklappen 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -2194,7 +2225,8 @@ body.navigation-schmal #navigation button:focus-visible {
    sofort - der Zustand ist derselbe, nur der Weg dorthin faellt weg. */
 @media (prefers-reduced-motion: reduce) {
   .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-tabelle,
-  .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-fussnote {
+  .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-fussnote,
+  .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-methode {
     animation: none;
   }
 
@@ -2643,6 +2675,28 @@ body.navigation-schmal #navigation button:focus-visible {
   color: var(--text-leise);
   /* Nicht ueber die ganze Breite laufen lassen: eine Fussnote von 200
      Zeichen in einer Zeile ist unlesbar, egal wie breit das Fenster ist. */
+  max-width: 92ch;
+}
+
+/* Die Quellenangabe zur Groessenskalierung (kopftafelMethodennote() in
+   rahmen.js - dort steht, warum sie hier und nicht im Profilmenue
+   steht). LEISER ALS DIE FUSSNOTE DARUEBER, und das ist der ganze Punkt
+   dieser eigenen Klasse: die Fussnote traegt einen BEFUND ueber die
+   Daten dieser Tafel, diese Zeile eine stehende Angabe ueber die
+   DARSTELLUNG. Beide auf --grad-2 zu setzen hiesse, sie im selben Rang
+   zu zeigen - dann faende ein Leser den Befund nicht mehr zuerst.
+   --grad-1 (10px) ist die unterste Stufe, die dieses Blatt fuer Text
+   ueberhaupt zulaesst, und genau dafuer vorgesehen: Beiwerk.
+   Kontrast: --text-leise auf --flaeche misst 6,04:1 und haelt die
+   4,5:1 auch in dieser Groesse (im Browser nachgemessen).
+   Ein kleinerer Abstand nach oben als die Fussnote nach der Tabelle
+   (--raum-2 gegen --raum-4): die beiden Zeilen gehoeren zusammen an den
+   Fuss der Tafel, sie sind nicht zwei getrennte Bloecke. */
+.kopftafel-methode {
+  margin: var(--raum-2) 0 0;
+  font-size: var(--grad-1);
+  line-height: 1.45;
+  color: var(--text-leise);
   max-width: 92ch;
 }
 
@@ -5110,11 +5164,25 @@ body.navigation-schmal #navigation button:focus-visible {
 /* Die Detailkarte wiederverwendet .stationenkarte-leaflet-huelle/
    -erklaerung (stationenKarteZeichnen() in stationen.js) unveraendert,
    sitzt hier aber in der schmaleren Detailmaske statt in der vollen
-   Arbeitsliste - eine eigene, kleinere Maximalbreite statt der 760px
-   der Uebersichtskarte, sonst liesse eine zu breit vorgegebene Karte in
-   dieser schmaleren Spalte unnoetig viel Luft rechts stehen. */
+   Arbeitsliste.
+   GETRENNT VON DER UEBERSICHTSKARTE GEPRUEFT (Auftrag) - und der Befund
+   faellt hier deutlich milder aus: gemessen war die Spalte 503px breit
+   und die Karte 420px, also 83,5 Prozent. Kein Vergleich zu den 45,9
+   Prozent der Uebersichtskarte, aber dieselbe Ursache: eine FESTE Zahl
+   in einer Spalte, deren Breite sich mit dem Fenster aendert. Die 83px
+   Luft rechts hatten keinen Grund - der frueher genannte ("sonst liesse
+   eine zu breit vorgegebene Karte unnoetig Luft rechts stehen") war
+   genau verkehrt herum: er beschreibt, was der Deckel ANRICHTETE.
+   Jetzt fuellt die Karte ihre Spalte; die Hoehe folgt der Breite ueber
+   dasselbe aspect-ratio wie oben, mit einer engeren Obergrenze, weil
+   die Detailmaske unter der Karte noch Felder zeigt. */
 .stationdetailkarte .stationenkarte-leaflet-huelle {
-  max-width: 420px;
+  max-width: 100%;
+}
+
+.stationdetailkarte .stationenkarte-leaflet {
+  min-height: 260px;
+  max-height: 420px;
 }
 
 .stationdetailkarte .stationenkarte-erklaerung {
@@ -5289,18 +5357,130 @@ body.navigation-schmal #navigation button:focus-visible {
   justify-content: center;
 }
 
+/* ===== "Landkarte zu klein" (Auftrag, woertlich) - gemessen und behoben
+   =====
+   VORHER, im Browser bei 1790px Fensterbreite gemessen: der Platz fuer
+   die Karte (.stationenkarte-flaeche) war 1655px breit, die Karte
+   selbst 760px - 45,9 Prozent. Mehr als die Haelfte der Flaeche blieb
+   leer, waehrend die Karte zehn Stationen auf Briefmarkengroesse
+   zusammendraengte.
+   Die 760px waren nicht willkuerlich: bei 1024px Fensterbreite ist die
+   Flaeche 889px breit, dort deckte der Deckel 85,5 Prozent ab und war
+   praktisch nicht spuerbar. Der Fehler war also nicht die ZAHL, sondern
+   dass es eine FESTE Zahl war - sie passte zum schmalsten Fenster und
+   liess jedes breitere ungenutzt.
+   NACHHER: keine feste Obergrenze mehr, sondern eine, die mitwaechst -
+   siehe die Hoehe unten, die den zweiten Teil des Auftrags erledigt
+   ("eine sehr breite, flache Karte ist so unbrauchbar wie eine
+   kleine"). */
 .stationenkarte-leaflet-huelle {
   width: 100%;
-  max-width: 760px;
+  /* 1400px statt 760px. Warum ueberhaupt noch ein Deckel: eine Karte,
+     die eine 2500px breite Wandanzeige voll ausfuellt, zwingt den Blick
+     ueber die ganze Tischbreite, um zehn Marken zu vergleichen, die
+     alle in Wuerzburg liegen - der Ausschnitt wird dabei nicht
+     informativer, nur weiter. 1400px ist die Breite, bei der die
+     Hoehenschranke unten (72vh) auf einem 1080er-Bildschirm gerade
+     greift; darueber hinaus wuerde die Karte nur noch flacher. */
+  max-width: 1400px;
 }
 
 /* Leaflet verlangt eine explizite Pixelhoehe seines Behaelters
    (stationenKarteZeichnen() setzt sie inline je optionen.hoehe) - eine
-   Breite dagegen regelt allein diese Klasse hier, ueber max-width je
-   nach Kontext (Uebersichtskarte 760px, Detailkarte 420px siehe oben). */
+   Breite dagegen regelt allein die Huelle oben, ueber max-width je nach
+   Kontext (Uebersichtskarte 1400px, Detailkarte volle Spaltenbreite
+   siehe oben).
+
+   DIE HOEHE WAECHST JETZT MIT DER BREITE, statt bei den inline
+   gesetzten 460px stehenzubleiben. Ohne diese Regel waere das Anheben
+   der Breite eine Verschlimmbesserung: 1655 zu 460 ist ein Verhaeltnis
+   von 3,6 zu 1, ein Briefschlitz. aspect-ratio bindet die Hoehe an die
+   Breite (16:10 - das uebliche Kartenformat, zwischen 3:2 und 16:9);
+   min-height haelt die Karte auch in einer schmalen Spalte brauchbar,
+   max-height verhindert das andere Extrem, eine Karte, die den
+   Bildschirm hinunterlaeuft und die Liste darunter aus dem Blick
+   schiebt.
+   WARUM DAS MIT LEAFLET FUNKTIONIERT, obwohl der Kommentar bei
+   stationenKarteZeichnen() eine feste Pixelhoehe verlangt: unzuverlaessig
+   ist bei Leaflet eine PROZENThoehe, deren Elternelement selbst keine
+   bestimmte Hoehe hat. aspect-ratio ist etwas anderes - es rechnet eine
+   bestimmte Hoehe AUS DER BREITE aus, die Leaflet vorfindet wie eine
+   Pixelangabe. Und jede spaetere Aenderung (Fenstergroesse,
+   Seitenleiste breit/schmal, Detailmaske auf/zu) faengt der
+   ResizeObserver ab, der in stationenKarteInitialisieren() ohnehin
+   schon karte.invalidateSize() ruft.
+   !important, und nur hier: stationenKarteZeichnen() setzt die Hoehe als
+   INLINE-Stil, der jede Klassenregel schlaegt. Die inline gesetzte Hoehe
+   bleibt absichtlich stehen - sie ist der Rueckfall fuer einen Browser
+   ohne aspect-ratio und zugleich Leaflets Startwert vor dem ersten
+   Layout. */
 .stationenkarte-leaflet {
   width: 100%;
+  aspect-ratio: 16 / 10;
+  height: auto !important;
+  min-height: 320px;
+  max-height: 72vh;
   border-radius: var(--rund-2);   /* eine FLAECHE, kein Bedienelement - siehe --rund-2 */
+}
+
+/* ===== Die Bedienelemente AUF der Karte =====
+   Alle drei Befunde der Pruefung an einer Stelle, weil sie dieselbe
+   Ursache haben: sie kommen aus Leaflets eigenem Stilblatt und kannten
+   die Hausregeln dieses Projekts nicht.
+
+   ZIELGROESSE. Gemessen: Zoomknopf 30x30px, Stationsmarke 30x30px -
+   beide unter --ziel (32px, siehe :root und "DIE ZIELGROESSE, EINMAL
+   FUER ALLE" weiter oben). Die Marke ist kein Schmuck, sie oeffnet die
+   Detailmaske ihrer Station; der Zoomknopf ist das einzige
+   Bedienelement der Karte ausser dem Ziehen. Beide muessen die Regel
+   halten wie jeder andere Knopf der Oberflaeche.
+
+   SCHRIFTGRAD. Leaflets "+"/"−" stehen auf 22px und liegen damit
+   ausserhalb der Gradreihe (10/11/12/14/16/20, siehe --grad-1..6) -
+   der einzige Schriftgrad der ganzen Anwendung, der in keiner Stufe
+   steht. --grad-6 (20px) ist die vorgesehene Stufe fuer "die eine
+   grosse Zahl" und traegt die beiden Zeichen ohne Weiteres.
+
+   SPEZIFITAET, und warum sie hier hoeher sein MUSS als sonst ueblich:
+   leaflet.css wird in index.html NACH style.css eingebunden (der <link>
+   steht am Ende des <head>, siehe dortiger Kommentar zur festen
+   Versionsverankerung). Bei gleicher Spezifitaet gewinnt deshalb
+   Leaflet. Die Regel haengt darum unter .stationenkarte-leaflet, dem
+   eigenen Behaelter dieses Projekts, UND nennt die Knopfklasse
+   ausdruecklich - drei Klassen plus Typ (0,3,1) gegen Leaflets
+   ".leaflet-touch .leaflet-bar a" (0,2,1). Nachgemessen: der Behaelter
+   allein genuegte NICHT, er ergibt ebenfalls nur (0,2,1), und bei
+   Gleichstand gewinnt das spaeter geladene Blatt - die Knoepfe blieben
+   bei 30px stehen. Kein !important: derselbe Weg, den schon
+   .leaflet-tooltip.stationenkarte-station-text weiter unten geht. */
+.stationenkarte-leaflet .leaflet-control-zoom a.leaflet-control-zoom-in,
+.stationenkarte-leaflet .leaflet-control-zoom a.leaflet-control-zoom-out {
+  width: var(--ziel);
+  height: var(--ziel);
+  line-height: var(--ziel);
+  font-size: var(--grad-6);
+}
+
+.stationenkarte-station-icon {
+  min-width: var(--ziel);
+  min-height: var(--ziel);
+}
+
+/* Der Schalter "Kundenorte einblenden" ueber der Karte. Gemessen: das
+   <input type="checkbox"> mass 13x13px, seine Zeile 19px hoch - das
+   kleinste Bedienelement der ganzen Oberflaeche, weit unter --ziel.
+   Die Trefferflaeche gehoert hier an das umschliessende <label>: es
+   traegt den Text mit, ein Klick darauf schaltet ohnehin schon, und
+   eine auf 32px aufgeblasene Checkbox saehe neben den uebrigen
+   Kaestchen der Oberflaeche falsch aus. Das Kaestchen selbst bekommt
+   die uebliche Groesse der anderen Schalter dieser Oberflaeche. */
+.stationenkarte-schalter {
+  min-height: var(--ziel);
+}
+
+.stationenkarte-schalter input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
 }
 
 /* Fehlt Leaflet selbst (Skript blockiert, kein Netz) oder bleiben die

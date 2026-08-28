@@ -388,6 +388,8 @@ const UEBERSETZUNGEN = {
     "index.navToggleAria": "Navigation ein- und ausblenden",
     "index.settingsHeading": "Einstellungen",
     "index.zebraLabel": "Zebrastreifen in Tabellen",
+    "index.boardAlwaysLabel": "Kopfbereich immer ausklappen",
+    "index.boardAlwaysHint": "Gilt beim Öffnen jedes Bereichs. Der Griff an der Tafel bleibt wirksam.",
     "index.languageLabel": "Sprache",
     "index.navAria": "Aufgabenbereiche",
     "index.workListAria": "Arbeitsliste",
@@ -586,6 +588,8 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "Für diese Station liegen keine Koordinaten vor.",
     "common.and": "und",
     "board.toggleAria": "Kopftafel ein-/ausklappen",
+    "board.toggleAlwaysHint": "Einstellung: in jedem Bereich ausgeklappt",
+    "board.scalingCredit": "Zahlengröße nach Wert: Bissantz'Numbers, ein patentiertes Verfahren der Bissantz & Company GmbH — bissantz.de/news/visual-intelligence/bissantznumbers/",
     "board.toggleLabel": "Übersicht",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} steht jetzt auf {ziel}.",
@@ -866,6 +870,8 @@ const UEBERSETZUNGEN = {
     "index.navToggleAria": "Show or hide navigation",
     "index.settingsHeading": "Settings",
     "index.zebraLabel": "Zebra striping in tables",
+    "index.boardAlwaysLabel": "Always expand the board",
+    "index.boardAlwaysHint": "Applies when opening any area. The handle on the board stays active.",
     "index.languageLabel": "Language",
     "index.navAria": "Work areas",
     "index.workListAria": "Work list",
@@ -1064,6 +1070,8 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "No coordinates are available for this station.",
     "common.and": "and",
     "board.toggleAria": "Expand/collapse board",
+    "board.toggleAlwaysHint": "Setting: expanded in every area",
+    "board.scalingCredit": "Number size by value: Bissantz'Numbers, a patented method by Bissantz & Company GmbH — bissantz.de/news/visual-intelligence/bissantznumbers/",
     "board.toggleLabel": "Overview",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} is now set to {ziel}.",
@@ -1344,6 +1352,8 @@ const UEBERSETZUNGEN = {
     "index.navToggleAria": "Gezinmeyi göster veya gizle",
     "index.settingsHeading": "Ayarlar",
     "index.zebraLabel": "Tablolarda zebra çizgisi",
+    "index.boardAlwaysLabel": "Panel her zaman açık olsun",
+    "index.boardAlwaysHint": "Her alan açılırken geçerlidir. Paneldeki kol etkin kalır.",
     "index.languageLabel": "Dil",
     "index.navAria": "Görev alanları",
     "index.workListAria": "Çalışma listesi",
@@ -1542,6 +1552,8 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "Bu istasyon için koordinat bulunmuyor.",
     "common.and": "ve",
     "board.toggleAria": "Paneli genişlet/daralt",
+    "board.toggleAlwaysHint": "Ayar: her alanda açık",
+    "board.scalingCredit": "Değere göre sayı boyutu: Bissantz'Numbers, Bissantz & Company GmbH şirketinin patentli yöntemi — bissantz.de/news/visual-intelligence/bissantznumbers/",
     "board.toggleLabel": "Özet",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} artık {ziel} olarak ayarlandı.",
@@ -1822,6 +1834,8 @@ const UEBERSETZUNGEN = {
     "index.navToggleAria": "Mostrar u ocultar la navegación",
     "index.settingsHeading": "Configuración",
     "index.zebraLabel": "Rayado cebra en tablas",
+    "index.boardAlwaysLabel": "Desplegar siempre el panel",
+    "index.boardAlwaysHint": "Se aplica al abrir cada área. El tirador del panel sigue activo.",
     "index.languageLabel": "Idioma",
     "index.navAria": "Áreas de trabajo",
     "index.workListAria": "Lista de trabajo",
@@ -2020,6 +2034,8 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "No hay coordenadas disponibles para esta estación.",
     "common.and": "y",
     "board.toggleAria": "Expandir/contraer el panel",
+    "board.toggleAlwaysHint": "Configuración: desplegado en cada área",
+    "board.scalingCredit": "Tamaño de cifra según el valor: Bissantz'Numbers, un método patentado de Bissantz & Company GmbH — bissantz.de/news/visual-intelligence/bissantznumbers/",
     "board.toggleLabel": "Resumen",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ahora está en {ziel}.",
@@ -2300,6 +2316,8 @@ const UEBERSETZUNGEN = {
     "index.navToggleAria": "Mostra o nascondi la navigazione",
     "index.settingsHeading": "Impostazioni",
     "index.zebraLabel": "Righe alternate nelle tabelle",
+    "index.boardAlwaysLabel": "Espandi sempre il pannello",
+    "index.boardAlwaysHint": "Vale all'apertura di ogni area. La maniglia del pannello resta attiva.",
     "index.languageLabel": "Lingua",
     "index.navAria": "Aree di lavoro",
     "index.workListAria": "Elenco di lavoro",
@@ -2498,6 +2516,8 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "Per questa stazione non sono disponibili coordinate.",
     "common.and": "e",
     "board.toggleAria": "Espandi/comprimi il pannello",
+    "board.toggleAlwaysHint": "Impostazione: espanso in ogni area",
+    "board.scalingCredit": "Dimensione della cifra secondo il valore: Bissantz'Numbers, un metodo brevettato di Bissantz & Company GmbH — bissantz.de/news/visual-intelligence/bissantznumbers/",
     "board.toggleLabel": "Panoramica",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ora è impostata su {ziel}.",
@@ -2778,6 +2798,8 @@ const UEBERSETZUNGEN = {
     "index.navToggleAria": "Pokaż lub ukryj nawigację",
     "index.settingsHeading": "Ustawienia",
     "index.zebraLabel": "Pasy zebry w tabelach",
+    "index.boardAlwaysLabel": "Zawsze rozwijaj panel",
+    "index.boardAlwaysHint": "Obowiązuje przy otwieraniu każdego obszaru. Uchwyt panelu pozostaje czynny.",
     "index.languageLabel": "Język",
     "index.navAria": "Obszary zadań",
     "index.workListAria": "Lista robocza",
@@ -2976,6 +2998,8 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "Dla tej stacji brak współrzędnych.",
     "common.and": "i",
     "board.toggleAria": "Rozwiń/zwiń panel",
+    "board.toggleAlwaysHint": "Ustawienie: rozwinięty w każdym obszarze",
+    "board.scalingCredit": "Wielkość liczby według wartości: Bissantz'Numbers, opatentowana metoda firmy Bissantz & Company GmbH — bissantz.de/news/visual-intelligence/bissantznumbers/",
     "board.toggleLabel": "Przegląd",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ma teraz status {ziel}.",
@@ -3375,12 +3399,18 @@ async function navigationAufbauen(rollen) {
         knopf.append(iconWrapper);
 
         // textContent aus t(bereich.titelSchluessel) statt eines einmal
-        // festgeschriebenen bereich.titel: navigationAufbauen() laeuft bei
-        // JEDEM Sprachwechsel erneut (siehe seitenspracheNeuZeichnen()
-        // weiter unten) - eine feste Zeichenkette, einmal beim Laden
-        // dieser Datei aus bereichAnmelden() uebernommen, wuerde die
-        // Umschaltung nicht mitmachen, ein Schluessel, bei JEDEM Aufbau
-        // frisch nachgeschlagen, schon.
+        // festgeschriebenen bereich.titel - eine feste Zeichenkette,
+        // einmal beim Laden dieser Datei aus bereichAnmelden()
+        // uebernommen, wuerde die Umschaltung nicht mitmachen.
+        // ACHTUNG, hier stand bis zur Pruefung eine falsche Begruendung:
+        // "navigationAufbauen() laeuft bei JEDEM Sprachwechsel erneut
+        // (siehe seitenspracheNeuZeichnen())". Das tut sie NICHT, und
+        // eine Funktion dieses Namens gibt es nicht. spracheAnwenden()
+        // taucht die vorhandenen Knoepfe nur um (siehe dort) - der
+        // Aufbau hier laeuft genau einmal je Anmeldung. Genau darum
+        // muessen sichtbarer Text UND aria-label dort drueben gemeinsam
+        // nachgezogen werden; wer das hier liest und der alten Notiz
+        // glaubt, baut den naechsten Sprachfehler ein.
         const beschriftung = document.createElement('span');
         beschriftung.className = 'bereich-text';
         beschriftung.textContent = t(bereich.titelSchluessel);
@@ -4456,9 +4486,25 @@ let filterleisteMehrfachOffenName = null;
 // fokusMerken()/fokusWiederherstellen() weiter unten (siehe deren
 // Kopfkommentar) - dort fuer die Spaltenkopf-Tabelle, hier fuer die
 // Filterleiste, die aus demselben Grund denselben Bedarf hat: ein Haken
-// in der Mehrfachauswahl loest ueber beiAenderung() ein komplettes
-// filterleiste()/*Aufbauen() neu, das reisst ohne dieses Paar den
-// Tastaturfokus auf <body> zurueck. NUR fuer die Mehrfachauswahl gesetzt
+// in der Mehrfachauswahl loest ueber beiAenderung() einen kompletten
+// Neuaufbau von filterleiste() bzw. der jeweiligen *Aufbauen()-Funktion
+// aus, und der reisst ohne dieses Paar den
+// Tastaturfokus auf <body> zurueck.
+//
+// ACHTUNG BEIM UMFORMULIEREN, das ist kein Stilhinweis: hier stand
+// "filterleiste()/*Aufbauen()". Der Schraegstrich unmittelbar vor dem
+// Stern bildet die Zeichenfolge, mit der ein BLOCKKOMMENTAR beginnt.
+// JavaScript stoert das nicht (die Zeile ist ja schon ein
+// //-Kommentar) - tools/wawi_check.py entfernt Kommentare aber per
+// Textersetzung und sah deshalb ab dieser Stelle einen Blockkommentar,
+// der erst 2918 Zeilen spaeter am naechsten echten "*/" endete. Ein
+// knappes Drittel dieser Datei war fuer den Pruefer unsichtbar,
+// darunter 33 Funktionsdefinitionen und die Zuweisung
+// el.id = 'kopftafel'. Der Pruefer meldete nichts - er sah schlicht
+// nichts. Deshalb: in einem Kommentar NIE einen Stern direkt hinter
+// einen Schraegstrich setzen. (Beim Aufraeumen dieser Runde gefunden,
+// siehe Bericht.)
+// NUR fuer die Mehrfachauswahl gesetzt
 // (siehe markiere() an ihren beiden Aufrufstellen) - die bestehenden
 // <select>/<input>-Felder der Filterleiste (Radtyp-losgeloest gibt es
 // keine mehr, aber der Schieber in instandhaltung.js bleibt ein <input
@@ -4728,14 +4774,14 @@ function hinweisfensterHolen() {
 // ein Element in einer SENKRECHTEN Reihe, deren Eintraege uebereinander
 // liegen (ein Fenster UEBER einem solchen Eintrag verdeckte den Eintrag
 // darueber, also genau das Element, das man als naechstes ansehen will).
-// Aktuell ohne Aufrufer: die Navigation, fuer die diese Lage urspruenglich
-// gebaut wurde, kennt seit "EIN SCHALTER, ZWEI ZUSTAENDE, NICHT DREI"
-// (siehe --nav-breite-weg in style.css) keine Symbolspalten-Zwischenform
-// mit eigenem Tooltip mehr. Die Lage selbst bleibt: eine generische
-// Positionierungsoption dieser gemeinsamen Funktion, keine fachliche
-// Altlast - anders als ein unbenutzter Farbwert (siehe --warnung in
-// style.css) kostet eine ungenutzte, aber weiterhin sinnvolle Option
-// eines Hilfsbausteins nichts, solange sie hier an EINER Stelle steht.
+// 'rechts' hat wieder genau EINEN Aufrufer: die Rubrikknoepfe der
+// Navigation, sobald sie schmal steht (navigationAufbauen() weiter oben,
+// hinweisfensterZeigen(..., 'rechts')). Dieser Kommentar behauptete bis
+// zur Pruefung das Gegenteil ("aktuell ohne Aufrufer") - er stammte aus
+// der Runde, in der es den Symbolstreifen nicht gab, und war seit dessen
+// Rueckkehr falsch. Im Browser nachgesehen: ein Zeigen auf einen
+// schmalen Rubrikknopf oeffnet das Fenster rechts daneben mit dem
+// Bereichsnamen.
 function hinweisfensterZeigen(text, ankerRechteck, lage = 'oben') {
     if (!text) return;
     const el = hinweisfensterHolen();
@@ -5958,12 +6004,31 @@ const GELTENDE_ZIFFERN = 3;
 
 // ===== Zahlausgabe: die Groessenskalierung =====
 //
-// HERKUNFT UND BENENNUNG. Das Verfahren stammt von der Bissantz & Company
-// GmbH und wird von ihr als "Bissantz'Numbers" bezeichnet; das
-// Unternehmen nennt es patentiert. Diese Datei setzt es nach der
-// oeffentlichen Beschreibung um (bissantz.de/news/bissantznumbers) und
-// nennt die Herkunft ausdruecklich, damit nachvollziehbar bleibt, woher
-// der Gedanke kommt und wem der Name gehoert.
+// HERKUNFT UND BENENNUNG - DIE QUELLENANGABE, mit Adresse.
+//
+// Das Verfahren stammt von der Bissantz & Company GmbH (Nuernberg) und
+// wird von ihr als "Bissantz'Numbers" bezeichnet. Die oeffentliche
+// Beschreibung, nach der diese Datei es umsetzt:
+//
+//   https://www.bissantz.de/news/visual-intelligence/bissantznumbers/
+//   (englisch: https://www.bissantz.de/en/news/knowledge/
+//    bissantznumbers-typographically-scaled-numbers/)
+//
+// Die Grundregel dort woertlich: "Je groesser der Wert, desto groesser
+// die Zahl." Und zum Zweck: "Die Zahlengroesse lenkt das Auge zu der
+// spannendsten Zahl, die man sich naeher ansehen sollte."
+//
+// SCHUTZRECHT, und warum es hier steht: Bissantz nennt das Verfahren
+// PATENTIERT. Auf der Seite zum Office-Add-in steht die Angabe woertlich
+// und genauer - "Registered Design. German, European and US-patents
+// pending." (https://www.bissantz.de/en/news/bissantznumbers-add-in/).
+// Das gehoert in die Nennung, damit ein Leser dieser Datei weiss, dass
+// er es nicht mit einer freien Gestaltungsidee zu tun hat: die Umsetzung
+// hier ist eine Nachbildung der oeffentlich beschriebenen Regel fuer ein
+// Lehrprojekt, keine Uebernahme einer geschuetzten Umsetzung und kein
+// Anspruch auf den Namen. Der Name gehoert Bissantz und wird deshalb
+// ueberall dort genannt, wo das Verfahren wirkt - auch SICHTBAR in der
+// Oberflaeche, siehe kopftafelMethodennote() weiter unten.
 //
 // WAS DAS VERFAHREN IST: die SCHRIFTGROESSE DER GANZEN ZAHL waechst mit
 // ihrem WERT - groesserer Wert, groesser geschriebene Zahl. Das Auge
@@ -5988,14 +6053,48 @@ const GELTENDE_ZIFFERN = 3;
 //    unveraendert gesetzt: eine Zahl in einer Detailmaske, in einer
 //    Fussnote oder in einer Summenzeile hat keinen Massstab, an dem eine
 //    Groesse etwas bedeuten koennte, und bekommt deshalb keine.
-//    AUSDRUECKLICH NICHT SKALIERT werden ausserdem die Spalten der Art
-//    'zahl' (Kopftafel): sie haben ihren BALKEN bereits verloren, weil
-//    ihre Werte sich zu wenig unterscheiden (Zwoelfmonatsumsatz der drei
-//    Radtypen: 11.219 bis 12.628, ein Verhaeltnis von 1,13 zu 1) oder
-//    fuenfmal exakt null sind (Arbeitszeit der Instandhaltung). Was fuer
-//    einen Laengenvergleich zu wenig Unterschied traegt, traegt fuer
-//    einen Groessenvergleich auch zu wenig - dieselbe Ehrlichkeit, nur
-//    im zweiten Kanal.
+//    EINE SPALTE DER ART 'zahl' (Kopftafel) SKALIERT NUR AUF ANSAGE -
+//    spalte.skala === true, siehe kopftafelSkala()/kopftafelZeile() weiter
+//    unten. Die frueherere Fassung dieses Absatzes sperrte sie
+//    ausnahmslos aus, mit der Begruendung: "was fuer einen
+//    Laengenvergleich zu wenig Unterschied traegt, traegt fuer einen
+//    Groessenvergleich auch zu wenig". Das gilt fuer ZWEI der drei
+//    heutigen 'zahl'-Spalten und ist dort weiterhin die Begruendung
+//    (siehe die Kommentare an den Spalten selbst) - fuer die DRITTE gilt
+//    es nachweislich nicht, und der Unterschied liegt genau im Nullpunkt:
+//
+//      Umsatz je Radtyp     11.219 / 11.540 / 12.628 - Verhaeltnis
+//                           1,13 zu 1. Groessen 17,8 / 17,9 / 18,2 px:
+//                           0,4 px Spanne. KEINE Skala - sie behauptete
+//                           einen Unterschied, den kein Auge findet, und
+//                           die Fahrtenspalte daneben traegt die Laenge
+//                           ohnehin schon (8.620 / 2.328 / 1.081).
+//      Bewegungen je Station 2.310 bis 2.488 - Verhaeltnis 1,08 zu 1.
+//                           Groessen 17,97 bis 18,2 px: 0,23 px Spanne,
+//                           unterhalb eines Bildschirmpunkts. KEINE
+//                           Skala, gleiche Begruendung; die Umschlags-
+//                           spalte daneben spreizt dieselbe Groesse
+//                           bezogen auf die Stellplaetze auf 49 bis
+//                           100 Prozent.
+//      Arbeitszeit          0 / 0 / 0 / 0 / 0 / 30 / 45 Minuten.
+//                           SKALA - und der Balken bleibt trotzdem zu
+//                           Recht weg. Ein Balken der Laenge NULL ist
+//                           unsichtbar: fuenf leere Zellen, in denen
+//                           "noch nicht bearbeitet" und "keine Angabe"
+//                           gleich aussehen. Eine ZAHL der Groesse null
+//                           gibt es nicht - die Null steht bei Faktor
+//                           0,85 mit 11,9 px lesbar da (siehe Punkt 4
+//                           unten), waehrend 30 auf 17,0 px und 45 auf
+//                           18,2 px waechst. Genau der Einwand, der den
+//                           Balken erledigt hat, trifft die Groesse also
+//                           NICHT: der zweite Kanal kann hier etwas, was
+//                           der erste nicht kann.
+//
+//    Deshalb OPT-IN und nicht automatisch: ob eine Spalte ohne Balken
+//    eine Groessenskala traegt, ist eine fachliche Entscheidung ueber die
+//    Werte dieser Spalte - sie gehoert an die Spalte, mit Begruendung,
+//    wie farbe/bezug/auchSumme auch. Ein Automatismus haette die beiden
+//    oberen Faelle stillschweigend mitskaliert.
 //
 // 2. WELCHER BEREICH? 0,85 BIS 1,30 DER GRUNDGROESSE DER ZELLE.
 //    Angegeben als Prozentsatz der GEERBTEN Schriftgroesse, nicht in
@@ -6229,12 +6328,76 @@ let kopftafelZaehler = 0;
 // Browserspeicher ohnehin nicht.
 const KOPFTAFEL_SPEICHERSCHLUESSEL = 'velocity-wawi-kopftafel-eingeklappt';
 
+// ===== EINSTELLUNG "KOPFBEREICH IMMER AUSKLAPPEN" (Auftrag, woertlich:
+// "Unter Profil eine Einstellung anlegen 'Kopfbereich immer
+// ausklappen'.") =====
+//
+// DIE WECHSELWIRKUNG MIT DEM GRIFF IST DER KERN DER SACHE, und sie
+// aufzuloesen heisst zuerst zu erkennen, dass Griff und Einstellung
+// NICHT DIESELBE FRAGE beantworten:
+//
+//   DER GRIFF   beantwortet "will ich die Tafel JETZT sehen?"
+//               - eine Aussage ueber diesen Augenblick.
+//   DIE EINSTELLUNG beantwortet "WOMIT FANGE ICH AN, jedes Mal, wenn ich
+//               einen Bereich oeffne?" - eine Aussage ueber den
+//               Anfangszustand.
+//
+// Weil es zwei verschiedene Fragen sind, ueberschreibt die eine die
+// andere nicht, und es entsteht kein Widerspruch, den man aufloesen
+// muesste: die Einstellung entscheidet, WIE EINE FRISCH GEBAUTE Tafel
+// dasteht (Bereichswechsel, Reiterwechsel, Neuladen); der Griff
+// entscheidet, wie die Tafel dasteht, die gerade DA IST.
+//
+// DAMIT SIND DIE DREI FRAGEN DES AUFTRAGS BEANTWORTET:
+//   - Ueberschreibt es den Griff?  NEIN. Es setzt den Anfangszustand,
+//     der Griff aendert den laufenden.
+//   - Ist der Griff wirkungslos oder abgeschaltet?  WEDER NOCH. Er
+//     bleibt voll bedienbar und wirkt sofort. Genau das war die
+//     Alternative, die verworfen wurde: einen Griff auszugrauen oder ihn
+//     stehen und ins Leere klicken zu lassen, waere "schlimmer als
+//     keiner" (Auftrag) - ein ausgegrautes Bedienelement ist ausserdem
+//     dieselbe "Einladung, nach dem Grund zu fragen", aus der diese
+//     Oberflaeche schon die nicht erlaubten Navigationspunkte und die
+//     Suche ohne Liste ganz weglaesst statt sie abzuschalten.
+//   - Was passiert beim Bereichswechsel?  Die neue Tafel steht wieder
+//     ausgeklappt da. Das IST die Einstellung - "immer ausklappen".
+//
+// UND DAMIT NIEMAND IN EINEN UNVERSTANDENEN ZUSTAND GERAET (Auftrag):
+// wer die Tafel bei eingeschalteter Einstellung zuklappt und im
+// naechsten Bereich wieder eine offene vorfindet, koennte den Griff fuer
+// kaputt halten. Deshalb SAGT DER GRIFF ES SELBST, solange die
+// Einstellung laeuft - kopftafelUmschalterKnopf() haengt
+// board.toggleAlwaysHint an Titel und zugaenglichen Namen ("Einstellung:
+// in jedem Bereich ausgeklappt"). Und der Schalter im Profilmenue traegt
+// dieselbe Auskunft von der anderen Seite (index.boardAlwaysHint,
+// aria-describedby - siehe index.html).
+//
+// EIGENER SCHLUESSEL, der bestehende bleibt unberuehrt: der alte
+// speichert weiter, was der Griff zuletzt wollte. Wird die Einstellung
+// abgeschaltet, gilt dieser gemerkte Wunsch wieder - ohne dass die
+// Einstellung ihn unterwegs ueberschrieben haette.
+const KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL = 'velocity-wawi-kopftafel-immer';
+
+// Vorgabe AUS: der Vorgabezustand der Tafel selbst ist eingeklappt
+// (siehe unten) - eine Einstellung, die diesen Vorgabezustand von sich
+// aus umdrehte, waere keine Einstellung, sondern eine Aenderung.
+function kopftafelImmerGespeichert() {
+    return localStorage.getItem(KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL) === 'an';
+}
+
 // Fehlender Schluessel (erster Besuch dieses Browsers) => eingeklappt
 // (Vorgabezustand, siehe oben) - deshalb hier NICHT wie bei
 // zebraGespeichert() ein einfaches "=== 'an'" (das ergaebe bei einem
 // fehlenden Schluessel "aus"), sondern der umgekehrte Vergleich: nur ein
 // ausdruecklich gespeichertes 'aus' schaltet den Vorgabezustand ab.
+//
+// Diese Funktion wird NUR beim Bau einer Tafel gefragt (siehe
+// anwenden(kopftafelEingeklappt()) in kopftafelUmschalterKnopf()) - und
+// genau deshalb darf die Einstellung hier gewinnen, ohne den Griff
+// anzuruehren: sie beantwortet die Frage "wie faengt diese neue Tafel
+// an", nicht die Frage "was tut der Griff".
 function kopftafelEingeklappt() {
+    if (kopftafelImmerGespeichert()) return false;
     return localStorage.getItem(KOPFTAFEL_SPEICHERSCHLUESSEL) !== 'aus';
 }
 
@@ -6259,7 +6422,17 @@ function kopftafelUmschalterKnopf(wurzel, tabelleId) {
     // Bildschirmleser haengt "eingeklappt"/"ausgeklappt" von sich aus an
     // den Namen an. Zwei Uebersetzungsschluessel fuer denselben Knopf
     // waeren doppelte Pflege ohne zusaetzlichen Nutzen.
-    const beschriftung = t('board.toggleAria');
+    // SOLANGE "KOPFBEREICH IMMER AUSKLAPPEN" LAEUFT, SAGT DER GRIFF ES
+    // SELBST (siehe der lange Kommentar bei
+    // KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL oben): ohne diesen Zusatz waere
+    // der Griff zwar voll wirksam, sein Ergebnis aber nach dem naechsten
+    // Bereichswechsel wieder verschwunden - und das saehe von aussen aus
+    // wie ein Griff, der nicht haelt. Der Zusatz haengt an Titel UND
+    // zugaenglichem Namen, weil beide Wege zu derselben Frage fuehren
+    // ("warum ist die wieder auf?").
+    const beschriftung = kopftafelImmerGespeichert()
+        ? `${t('board.toggleAria')} — ${t('board.toggleAlwaysHint')}`
+        : t('board.toggleAria');
     knopf.setAttribute('aria-label', beschriftung);
     knopf.title = beschriftung;   // dieselbe Kurzfassung als Maus-Tooltip, wie bei schliessenKnopf.title weiter unten
 
@@ -6522,6 +6695,14 @@ function zeigeKopftafel(kennung, tafel) {
         wurzel.append(fussnote);
     }
 
+    // Die Quellenangabe zur Groessenskalierung - siehe
+    // kopftafelMethodennote() weiter unten, dort auch die Begruendung
+    // fuer diesen Ort. Erst NACH der Fussnote: die Fussnote ist der
+    // Befund DIESER Tafel, die Methodennote eine stehende Angabe ueber
+    // das Verfahren. Der Rang muss in dieser Reihenfolge fallen.
+    const methode = kopftafelMethodennote(tafel.spalten);
+    if (methode) wurzel.append(methode);
+
     // ===== Griffleiste: der Umschalter, jetzt mittig an der Unterkante =====
     // ALS LETZTES KIND angehaengt - nach Kopf, Tabelle UND Fussnote. Das
     // ist der ganze Trick hinter "er muss in beiden Zustaenden an
@@ -6536,6 +6717,51 @@ function zeigeKopftafel(kennung, tafel) {
     griffleiste.className = 'kopftafel-griffleiste';
     griffleiste.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
     wurzel.append(griffleiste);
+}
+
+// ===== DIE QUELLENANGABE, SICHTBAR IN DER OBERFLAECHE =====
+//
+// Auftrag, woertlich: "Bissantz' Numbers zitieren, Quelle im Internet
+// finden" - und die Angabe gehoert "sichtbar in der Oberflaeche, wo die
+// Methode wirkt". Die Adresse und das Schutzrecht stehen bei
+// zahlSkaliert() weiter oben; hier steht, WO die Angabe erscheint und
+// warum ausgerechnet dort.
+//
+// SIE STEHT AM FUSS DER KOPFTAFEL, NICHT IM PROFILMENUE. Das Profilmenue
+// war der naheliegende zweite Kandidat (eine Stelle statt acht, wie es
+// sich fuer eine Angabe ueber das ganze Programm gehoert) und ist
+// verworfen: "wo die Methode wirkt" ist die Tabelle, deren Zahlen
+// tatsaechlich verschieden gross gesetzt sind - nicht ein Menue, das man
+// aufklappt, wenn man die Sprache umstellen will. Wer die
+// unterschiedlichen Zahlengroessen SIEHT und sich fragt, warum, sucht
+// die Antwort im Blickfeld, nicht drei Klicks entfernt.
+//
+// SIE STEHT NUR DORT, WO WIRKLICH SKALIERT WIRD. Genau das ist der
+// Grund, warum diese Funktion die SPALTEN prueft, statt die Zeile
+// bedingungslos anzuhaengen: die Instandhaltungstafel bekommt sie erst,
+// seit ihre Arbeitszeitspalte eine Skala traegt; eine Tafel ohne
+// skalierte Spalte behauptete sonst ein Verfahren, das in ihr nichts
+// tut. Nach dem heutigen Bestand tragen sie alle acht Kopftafeln - aber
+// weil sie es verdienen, nicht weil es pauschal drangeschrieben waere.
+//
+// SIE IST LEISER ALS DIE FUSSNOTE (--grad-2 statt --grad-3, siehe
+// .kopftafel-methode in style.css): die Fussnote traegt einen BEFUND
+// ueber die Daten, diese Zeile eine Angabe ueber die Darstellung. Ein
+// Leser, der die Tafel auswertet, soll die Fussnote zuerst finden.
+//
+// KEIN LINK, sondern die nackte Adresse als Text: ein <a> in einem
+// Kopfbereich waere ein Bedienelement mehr im Tabweg jeder der acht
+// Tafeln, fuer ein Ziel, das niemand im Arbeitsfluss anklickt. Die
+// Adresse steht vollstaendig da und laesst sich abschreiben oder
+// kopieren.
+function kopftafelMethodennote(spalten) {
+    const skaliert = spalten.some((s) => s.art === 'groesse' || s.art === 'abweichung'
+        || (s.art === 'zahl' && s.skala));
+    if (!skaliert) return null;
+    const zeile = document.createElement('p');
+    zeile.className = 'kopftafel-methode';
+    zeile.textContent = t('board.scalingCredit');
+    return zeile;
 }
 
 // Die gemeinsame Skala EINER Spalte ueber ALLE Datenzeilen - siehe der
@@ -6553,6 +6779,16 @@ function zeigeKopftafel(kennung, tafel) {
 //   Reihe eine Saeulenreihe, zieht saeulenSparkline() die Null von sich
 //   aus mit hinein, weil dort wieder Laenge kodiert.
 function kopftafelSkala(spalte, datenzeilen) {
+    // 'zahl' MIT spalte.skala: dieselbe Rechnung wie bei 'groesse' - ein
+    // Maximum ueber alle Datenzeilen, Nullpunkt bei 0. Nur der BALKEN
+    // fehlt, nicht die Skala (siehe Entscheidung 1 bei zahlSkaliert():
+    // eine Zahl der Groesse null ist lesbar, ein Balken der Laenge null
+    // nicht). spalte.bezug gibt es hier bewusst nicht: einen Rahmen, der
+    // mitskaliert werden muesste, hat eine balkenlose Spalte nicht.
+    if (spalte.art === 'zahl' && spalte.skala) {
+        const werte = datenzeilen.map((z) => Math.abs(Number(spalte.wert(z)) || 0));
+        return { maximum: Math.max(0, ...werte) };
+    }
     if (spalte.art === 'groesse') {
         const werte = datenzeilen.map((z) => Number(spalte.wert(z)) || 0);
         // Traegt die Spalte einen BEZUG (spalte.bezug, siehe zellbalken()
@@ -6667,7 +6903,16 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
             const zelle = document.createElement('td');
             zelle.className = 'kopftafel-zahl kopftafel-zahl-zahl';
             if (wert !== null && wert !== undefined) {
-                zelle.append(zahlSkaliert(spalte.format(wert)));
+                // GROESSENSKALIERUNG NUR AUF ANSAGE (spalte.skala, siehe
+                // kopftafelSkala() oben und Entscheidung 1 bei
+                // zahlSkaliert()) - und dann NUR in Datenzeilen, aus
+                // genau demselben Grund wie bei 'groesse'/'abweichung'
+                // weiter unten: eine Gruppen- oder Summenzeile steht
+                // ausserhalb der Skala, aus der sie herausgerechnet
+                // wurde. Ohne spalte.skala bleibt es beim unveraenderten
+                // Satz - der Vorgabefall.
+                zelle.append(zahlSkaliert(spalte.format(wert),
+                    spalte.skala && art === 'daten' ? { wert, maximum: skala.maximum } : null));
                 if (spalte.klasse) zelle.classList.add(spalte.klasse(zeile));
             }
             tr.append(zelle);
@@ -7861,8 +8106,25 @@ function spaltenkopfFilterknopf(spalte) {
     // Escape schliesst NUR dieses Fenster (stopPropagation) - dieselbe
     // Ueberlegung und derselbe Kunstgriff wie beim Popup der
     // Mehrfachauswahl, siehe dort.
-    fenster.addEventListener('keydown', (e) => {
+    //
+    // AM wrapper, NICHT AM fenster - und das war ein Fehler, den die
+    // Pruefung gefunden hat. Der Zuhoerer hing bis dahin am fenster
+    // allein, also nur auf dem Weg von Ereignissen, die INNERHALB des
+    // Fensters entstehen. Ein Klick auf den Filterknopf oeffnet das
+    // Fenster aber, ohne den Fokus hineinzubewegen: er bleibt auf dem
+    // KNOPF stehen (im Browser nachgemessen). Wer also filtern wollte,
+    // es sich anders ueberlegte und Escape drueckte - die uebliche
+    // Geste, die in dieser Oberflaeche sonst ueberall zumacht (Profil-
+    // menue, Maske, Mehrfachauswahl) -, bei dem passierte nichts: das
+    // Ereignis stieg vom Knopf auf und lief am Fenster vorbei.
+    // aria-expanded blieb auf "true", das Fenster offen.
+    // Der wrapper umschliesst Knopf UND Fenster; damit greift Escape aus
+    // beiden Richtungen. stopPropagation bleibt unveraendert wichtig:
+    // sonst schloesse dasselbe Escape zusaetzlich eine offene
+    // Detailmaske (siehe der globale Tastatur-Zuhoerer weiter unten).
+    wrapper.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
+        if (fenster.hidden) return;   // nichts offen: Escape gehoert jemand anderem
         e.stopPropagation();
         schliessen();
         knopf.focus();
@@ -8922,6 +9184,57 @@ schalterZebra.addEventListener('change', () => {
     localStorage.setItem(ZEBRA_SPEICHERSCHLUESSEL, schalterZebra.checked ? 'an' : 'aus');
 });
 
+// ===== Schalter "Kopfbereich immer ausklappen" =====
+// Die Entscheidung und ihre Begruendung stehen bei
+// KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL weiter oben; hier steht nur die
+// Bedienung. Anders als beim Zebramuster genuegt KEINE Klasse auf
+// <body>: die Einstellung wirkt nicht auf die Darstellung einer
+// vorhandenen Tafel, sondern auf den Zustand, in dem die NAECHSTE
+// gebaut wird - sie wird deshalb beim Bau gelesen
+// (kopftafelEingeklappt()), nicht hier angewandt.
+const schalterKopftafelImmer = document.getElementById('schalter-kopftafel-immer');
+schalterKopftafelImmer.checked = kopftafelImmerGespeichert();
+schalterKopftafelImmer.addEventListener('change', () => {
+    const an = schalterKopftafelImmer.checked;
+    // ERST MERKEN, DANN ANWENDEN - hier ausnahmsweise in dieser
+    // Reihenfolge, und der Grund ist genau der umgekehrte wie beim
+    // Navigationsgriff (siehe dortiger Kommentar): dieser Schalter hat
+    // keinen eigenen sichtbaren Zustand ausser dem Haken, den der
+    // Browser selbst schon gesetzt hat. Was danach kommt, ist bereits
+    // die FOLGE der gemerkten Einstellung - kopftafelUmschalterKnopf()
+    // und kopftafelEingeklappt() lesen den Speicher. Ein
+    // fehlgeschlagenes setItem duerfte deshalb nicht zu einer
+    // Oberflaeche fuehren, die etwas anderes zeigt, als gespeichert ist.
+    try {
+        localStorage.setItem(KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL, an ? 'an' : 'aus');
+    } catch (fehler) {
+        // Wie beim Navigationsgriff: nur in die Konsole. Die Einstellung
+        // wirkt fuer diese Sitzung trotzdem, sie ueberlebt nur das
+        // naechste Neuladen nicht.
+        console.warn('Einstellung "Kopfbereich immer ausklappen" liess sich nicht merken:', fehler);
+    }
+    // EINSCHALTEN WIRKT SOFORT, AUSSCHALTEN NICHT - und das ist kein
+    // Versehen. Wer "immer ausklappen" einschaltet und die Tafel vor
+    // sich zugeklappt stehen sieht, haelt die Einstellung fuer kaputt;
+    // sie muss also hier und jetzt aufgehen. Wer sie AUSschaltet, hat
+    // dagegen nichts ueber die Tafel gesagt, die gerade offen dasteht -
+    // sie unter der Hand zuzuklappen waere eine Aktion, um die niemand
+    // gebeten hat. Der gemerkte Griffwunsch gilt dann wieder ab der
+    // naechsten frisch gebauten Tafel.
+    const wurzel = document.getElementById('kopftafel');
+    if (an && wurzel) wurzel.classList.remove('kopftafel-eingeklappt');
+    // Der Zusatztext am Griff haengt an dieser Einstellung (siehe
+    // kopftafelUmschalterKnopf()) - er wird beim Bau gesetzt, also muss
+    // der bereits gebaute Knopf hier nachgezogen werden.
+    const griff = wurzel && wurzel.querySelector('.kopftafel-umschalter');
+    if (griff) {
+        const text = an ? `${t('board.toggleAria')} — ${t('board.toggleAlwaysHint')}` : t('board.toggleAria');
+        griff.setAttribute('aria-label', text);
+        griff.title = text;
+        if (an) griff.setAttribute('aria-expanded', 'true');
+    }
+});
+
 // ===== Sprachumschaltung (Gestaltungsauftrag, woertlich: "eine
 // Umstellung der Oberflaeche auf englisch, tuerkisch, spanisch,
 // italienisch und polnisch") =====
@@ -8980,11 +9293,30 @@ async function spracheAnwenden(code) {
     document.documentElement.lang = code;
     statischeTexteUebersetzen();
 
+    // ===== FEHLER DER PRUEFUNG: der ZUGAENGLICHE Name blieb stehen =====
+    // Hier wurde bisher nur der sichtbare Text getauscht. Das aria-label
+    // desselben Knopfes wird aber in navigationAufbauen() EINMAL beim Bau
+    // gesetzt - und die Navigation wird bei einem Sprachwechsel NICHT neu
+    // gebaut. Ergebnis, im Browser nachgemessen: nach dem Wechsel von
+    // Spanisch auf Deutsch stand in der Leiste "Flotte", waehrend der
+    // zugaengliche Name "Flota" blieb. Ein Bildschirmleser blieb damit in
+    // der zuvor gewaehlten Sprache haengen, und "Label in Name" (WCAG
+    // 2.5.3) war verletzt, weil sichtbarer Text und Name auseinanderliefen.
+    // Beides wird jetzt gemeinsam gesetzt, aus DERSELBEN Quelle - dieselbe
+    // Absicht, die der Kommentar in navigationAufbauen() fuer den
+    // sichtbaren Text schon beschreibt.
+    //
+    // .bereich-text statt span:last-child: der Knopf traegt zwei <span>
+    // (Symbolhuelle und Beschriftung), und welcher der letzte ist, haengt
+    // an der Anhaengereihenfolge dort drueben. Ein Klassenname sagt, was
+    // gemeint ist, und ueberlebt eine Umstellung.
     document.querySelectorAll('#navigation button').forEach((knopf) => {
         const bereich = bereiche.get(knopf.dataset.bereich);
         if (!bereich) return;
-        const beschriftung = knopf.querySelector('span:last-child');
-        if (beschriftung) beschriftung.textContent = t(bereich.titelSchluessel);
+        const text = t(bereich.titelSchluessel);
+        const beschriftung = knopf.querySelector('.bereich-text');
+        if (beschriftung) beschriftung.textContent = text;
+        knopf.setAttribute('aria-label', text);
     });
 
     if (aktiverBereich) sucheBeschriften(aktiverBereich);

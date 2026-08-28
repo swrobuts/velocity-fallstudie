@@ -250,6 +250,26 @@
                      data-i18n-aria="index.zebraLabel">
               <span data-i18n="index.zebraLabel">Zebrastreifen in Tabellen</span>
             </label>
+            <!-- "Kopfbereich immer ausklappen" (Auftrag, woertlich). Gleiche
+                 Machart wie der Zebraschalter darueber, aus demselben Grund:
+                 eine reine Anzeigepraeferenz, localStorage statt Datenbank.
+                 EINE ERKLAERZEILE MEHR ALS DIE NACHBARN, und die ist noetig:
+                 "Zebrastreifen" beschreibt sich selbst, "immer ausklappen"
+                 nicht - es muss dazustehen, dass die Einstellung den
+                 ANFANGSZUSTAND je Bereich setzt und der Griff an der Tafel
+                 weiter wirkt (siehe kopftafelEingeklappt() in rahmen.js).
+                 aria-describedby statt eines zweiten aria-label-Textes: der
+                 Name des Schalters bleibt kurz, die Erklaerung wird
+                 zusaetzlich vorgelesen, nicht anstelle des Namens. -->
+            <label class="profilmenue-schalter">
+              <input type="checkbox" id="schalter-kopftafel-immer"
+                     aria-label="Kopfbereich immer ausklappen"
+                     data-i18n-aria="index.boardAlwaysLabel"
+                     aria-describedby="hinweis-kopftafel-immer">
+              <span data-i18n="index.boardAlwaysLabel">Kopfbereich immer ausklappen</span>
+            </label>
+            <p id="hinweis-kopftafel-immer" class="profilmenue-schalter-hinweis"
+               data-i18n="index.boardAlwaysHint">Gilt beim Öffnen jedes Bereichs. Der Griff an der Tafel bleibt wirksam.</p>
             <label class="profilmenue-sprachwahl" for="schalter-sprache">
               <span data-i18n="index.languageLabel">Sprache</span>
               <select id="schalter-sprache">

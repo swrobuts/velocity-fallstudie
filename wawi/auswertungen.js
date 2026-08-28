@@ -1305,6 +1305,19 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
 
     if (groesse === 'fahrten') {
         spalten.push({
+            // OHNE BALKEN UND OHNE GROESSENSKALA - beide Auslassungen
+            // geprueft, beide bleiben (skala: true waere hier moeglich,
+            // siehe kopftafelSkala() in rahmen.js, und ist ausdruecklich
+            // NICHT gesetzt). Die drei Zwoelfmonatsumsaetze liegen bei
+            // 11.219 / 11.540 / 12.628 Euro, ein Verhaeltnis von 1,13 zu
+            // 1. Als Balken waeren das drei Laengen zwischen 89 und 100
+            // Prozent; als Groesse 17,8 / 17,9 / 18,2 px - vier Zehntel
+            // Pixel Spanne ueber die ganze Spalte. Eine Skala, die
+            // niemand ablesen kann, behauptet einen Vergleich, den es
+            // nicht gibt; und die Fahrtenspalte unmittelbar daneben
+            // traegt die Laenge ohnehin schon (8.620 / 2.328 / 1.081,
+            // ein Verhaeltnis von 8,0 zu 1) - genau dort wird der
+            // Unterschied zwischen den Radtypen sichtbar.
             art: 'zahl',
             titel: t('col.revenue'),
             einheit: t('unit.euroTwelveMonths'),
@@ -1653,6 +1666,18 @@ function stationsauslastungKopftafel(zeilen) {
                 zusatz: (z) => (z.summenzeile ? null : z.stationsnummer)
             },
             {
+                // OHNE BALKEN UND OHNE GROESSENSKALA, beides geprueft
+                // (skala: true waere moeglich, siehe kopftafelSkala() in
+                // rahmen.js, und ist ausdruecklich NICHT gesetzt). Die
+                // zehn Stationen liegen bei 2.310 bis 2.488 Bewegungen,
+                // ein Verhaeltnis von 1,08 zu 1: als Groesse waeren das
+                // 17,97 bis 18,20 px - 0,23 px Spanne, weniger als ein
+                // Bildschirmpunkt. Was die Tafel zu sagen hat, sagt die
+                // UMSCHLAGSPALTE daneben, die dieselbe Groesse auf die
+                // Stellplaetze bezieht und dadurch auf 49 bis 100
+                // Prozent Balkenlaenge spreizt - und die Saldospalte
+                // rechts. Genau das steht auch in der Fussnote dieser
+                // Tafel: die Bewegungen selbst unterscheiden sich kaum.
                 art: 'zahl',
                 titel: t('col.movements'),
                 einheit: t('unit.departuresPlusArrivals'),

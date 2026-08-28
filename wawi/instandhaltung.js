@@ -291,7 +291,30 @@ function instandhaltungKopftafel(schaeden, auftraege, radtypNamen) {
                 // hat die Werkstatt hier schon investiert") und weil die
                 // Summe darunter (75 Minuten) der einzige Mengenwert
                 // dieser Tafel ist.
+                //
+                // SIE TRAEGT ABER EINE GROESSENSKALA (skala: true, siehe
+                // kopftafelSkala()/kopftafelZeile() in rahmen.js) - kein
+                // Widerspruch zum fehlenden Balken, sondern die Folge
+                // desselben Befunds. Der Einwand gegen den BALKEN war,
+                // dass fuenf Balken der LAENGE NULL unsichtbar sind:
+                // "noch nicht bearbeitet" und "keine Angabe" saehen
+                // gleich aus. Eine ZAHL der Groesse null gibt es
+                // dagegen nicht - die fuenf Nullen stehen beim kleinsten
+                // Faktor 0,85 mit 11,9 px lesbar da, waehrend 30 auf
+                // 17,0 px und 45 auf 18,2 px waechst (im Browser
+                // nachgemessen). Genau der Kanal, der als Laenge
+                // versagt, traegt hier also als Groesse: die beiden
+                // bearbeiteten Faelle heben sich vom unbearbeiteten Rest
+                // ab, ohne dass eine leere Zelle etwas verschweigen
+                // muesste.
+                //
+                // Nullpunkt und gemeinsame Skala wie ueberall sonst:
+                // Maximum ueber alle sieben Datenzeilen, Null bei null
+                // Minuten. Die Summenzeile (75) bleibt draussen - sie
+                // liegt ausserhalb der Skala, aus der sie
+                // herausgerechnet wurde.
                 art: 'zahl',
+                skala: true,
                 titel: t('col.workTime'),
                 einheit: t('unit.minutes'),
                 wert: (z) => z.minuten,

@@ -153,6 +153,67 @@ Aufrufers (solange sie nicht als `security_invoker` angelegt ist).
 direkte Weg dorthin mit `permission denied` endet. Das Recht auf die
 Hilfssicht war von Anfang an überflüssig — es hat nur niemand geprüft.
 
+## Die Größenskalierung der Zahlen — fremdes Verfahren, genannte Quelle
+
+Die Zahlen in den acht Kopftafeln und in den Balkenspalten der
+Arbeitslisten sind **verschieden groß gesetzt: je größer der Wert, desto
+größer die Zahl.** Das ist keine Erfindung dieses Projekts, und darum
+gehört die Herkunft in dieses Dokument und nicht nur in einen Kommentar.
+
+**Das Verfahren heißt Bissantz'Numbers** und stammt von der Bissantz &
+Company GmbH. Die öffentliche Beschreibung, nach der `zahlSkaliert()` in
+`wawi/rahmen.js` es umsetzt, steht unter
+`www.bissantz.de/news/visual-intelligence/bissantznumbers/` (englisch
+unter `www.bissantz.de/en/news/knowledge/bissantznumbers-typographically-scaled-numbers/`).
+Die Grundregel dort wörtlich: „Je größer der Wert, desto größer die
+Zahl." Und die Begründung: „Die Zahlengröße lenkt das Auge zu der
+spannendsten Zahl, die man sich näher ansehen sollte."
+
+**Bissantz nennt das Verfahren patentiert.** Auf der Seite zum
+Office-Add-in steht die Angabe genauer — „Registered Design. German,
+European and US-patents pending."
+(`www.bissantz.de/en/news/bissantznumbers-add-in/`). Das gehört
+ausdrücklich in die Nennung: Wer diese Fallstudie liest, soll wissen,
+dass er es nicht mit einer freien Gestaltungsidee zu tun hat. Was hier
+steht, ist die Nachbildung einer **öffentlich beschriebenen Regel** für
+ein Lehrprojekt — keine Übernahme einer geschützten Umsetzung und kein
+Anspruch auf den Namen.
+
+**Die Quelle steht deshalb an drei Stellen, nicht an einer:** im
+Kommentar bei `zahlSkaliert()` in `wawi/rahmen.js` (mit beiden Adressen),
+**sichtbar in der Oberfläche** am Fuß jeder Kopftafel
+(`kopftafelMethodennote()`, Übersetzungsschlüssel `board.scalingCredit`
+in allen sechs Sprachen) — und hier.
+
+Warum die sichtbare Nennung am Fuß der Kopftafel steht und nicht im
+Profilmenü: „wo die Methode wirkt" ist die Tabelle, deren Zahlen
+tatsächlich verschieden groß gesetzt sind. Wer den Größenunterschied
+**sieht** und sich fragt, warum, sucht die Antwort im Blickfeld, nicht
+drei Klicks entfernt in einem Menü, das man zum Sprachwechsel aufklappt.
+Die Zeile erscheint deshalb auch nur dort, wo wirklich skaliert wird —
+`kopftafelMethodennote()` prüft die Spalten — und verschwindet mit der
+Tabelle, sobald die Tafel eingeklappt ist.
+
+**Wo NICHT skaliert wird, und warum das eine Aussage ist.** Skaliert wird
+ausschließlich dort, wo eine **gemeinsame Spaltenskala mit Nullpunkt**
+existiert. Gruppen- und Summenzeilen bleiben draußen: ihr Wert ist aus
+genau der Skala herausgerechnet, an der er gemessen würde. Und drei
+Spalten der Art „Zahl ohne Balken" wurden einzeln geprüft — mit
+verschiedenem Ergebnis:
+
+| Spalte | Werte | Entscheidung |
+|---|---|---|
+| Umsatz je Radtyp (12 Monate) | 11.219 / 11.540 / 12.628 € — 1,13 zu 1 | **keine Skala**: 0,4 px Spanne; die Fahrtenspalte daneben trägt die Länge (8,0 zu 1) |
+| Bewegungen je Station | 2.310 bis 2.488 — 1,08 zu 1 | **keine Skala**: 0,23 px Spanne, weniger als ein Bildschirmpunkt; die Umschlagspalte spreizt dieselbe Größe auf 49–100 % |
+| Arbeitszeit je Meldung | 0 / 0 / 0 / 0 / 0 / 30 / 45 Minuten | **Skala** — der Balken bleibt trotzdem weg |
+
+Die letzte Zeile ist der lehrreiche Fall: Ein **Balken** der Länge null
+ist unsichtbar, fünf unbearbeitete Meldungen sähen aus wie fünf fehlende
+Angaben. Eine **Zahl** der Größe null gibt es dagegen nicht — die Null
+steht beim kleinsten Faktor mit 11,9 px lesbar da, während 30 auf
+17,0 px und 45 auf 18,2 px wächst. Derselbe Wert, zwei Kanäle, zwei
+verschiedene Antworten: Länge versagt hier, Größe trägt.
+
 ## Die Landkarte der Stationen — eine Fremdanfrage gegen eine brauchbare Karte
 
 Die Stationskarte in `wawi/stationen.js` zeichnet Kartenkacheln von
