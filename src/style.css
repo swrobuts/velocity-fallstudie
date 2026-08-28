@@ -1139,9 +1139,16 @@ img { max-width: 100%; }
 
 .progress-rail {
   position: absolute;
-  /* AUF DER FLUCHT, nicht an der Fensterkante. Bei right: 0 war er das
-     einzige Element der Buehne, das seinen eigenen Rand hatte. */
-  right: var(--flucht); top: 0;
+  /* AUF DER FLUCHT, nicht an der Fensterkante - bei right: 0 war die
+     Schiene das einzige Element der Buehne mit eigenem Rand. Genau auf
+     der Flucht stiess sie aber mit der Live-Anzeige zusammen: bei
+     1920 px endeten .top-meta und .progress-rail beide bei 1367 px,
+     ohne einen Pixel dazwischen. Zwei Dinge, die sich beruehren, liest
+     das Auge als eines. Die Schiene rueckt darum um einen Betrag nach
+     rechts aus der Textspalte heraus, der mit dem Fenster mitwaechst
+     und bei 40 px endet; das max() haelt sie auch auf 901 px - der
+     schmalsten Breite, auf der es sie ueberhaupt gibt - im Bild. */
+  right: max(14px, calc(var(--flucht) - clamp(16px, 2.4vw, 40px))); top: 0;
   width: 3px; height: 100%;
   /* Die Spur war weiss zu 10 % - auf hellem Grund unsichtbar. Wer nur
      die Fuellung sieht, sieht keinen Fortschritt, sondern einen Strich. */
@@ -1251,6 +1258,16 @@ img { max-width: 100%; }
 .section-header h2 {
   grid-area: titel;
   margin: 0;
+  /* KEIN EINZELNES WORT AUF DER LETZTEN ZEILE (28.08.2026).
+     "Drei Fahrradtypen, ein einfaches Prinzip" brach bei 1920 px auf
+     917 und 197 Punkte - "Prinzip" stand allein. Einzeilig geht nicht:
+     die Zeile braucht 1042 Punkte, der ganze Kopf hat 1310, und selbst
+     ohne Spaltenluecke und mit dem knappsten Hinweis blieben 864. Also
+     nicht passend machen, sondern richtig brechen. balance teilt auf
+     527 und 587 - die zwei Satzhaelften. Die vier anderen
+     Abschnittsueberschriften sind einzeilig und bleiben unberuehrt;
+     nachgemessen, nicht angenommen. */
+  text-wrap: balance;
   color: var(--navy);
   font-family: var(--schmal);
   font-size: var(--titel-font);
@@ -1373,7 +1390,20 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   /* Derselbe Abstand zur Beschriftung wie bei jeder anderen Zahl. */
   margin-bottom: var(--kicker-abstand);
   font-family: var(--schmal); font-weight: 800; line-height: 1;
-  font-size: var(--grad-zahl);
+  /* EIN ZAEHLER IST KEINE KENNZAHL (28.08.2026).
+     Die Schrittnummer stand auf --grad-zahl - demselben Token wie die
+     Kennzahlen. Gemessen: beide 78 px, beide Schnitt 800, Unterschied
+     nur die Farbe. Dabei sind es zwei Arten von Zahl. "10 Stationen"
+     ist die Aussage selbst; "01" wiederholt nur die Reihenfolge, die
+     die Position ohnehin zeigt. Sieben Zahlen in gleicher Lautstaerke,
+     davon drei ohne Inhalt - dann findet das Auge keinen Einstieg und
+     verliert sich, was der Betreiber genau so beschrieben hat.
+     --grad-zahl-klein steht in der Skala schon bereit: die Nummer
+     bleibt lesbar als Folge, fuehrt aber nicht mehr den Abschnitt an.
+     Das tut jetzt die Schrittueberschrift, und die traegt auch die
+     Aussage. Die Kennzahlen behalten damit die einzige laute Stimme
+     der Seite. */
+  font-size: var(--grad-zahl-klein);
   color: var(--red);
   letter-spacing: var(--eng);
   font-variant-numeric: tabular-nums;
