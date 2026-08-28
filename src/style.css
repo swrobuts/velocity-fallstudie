@@ -396,7 +396,6 @@
   --zeit-lang: .42s;
 
   /* Zustandsgrössen der Bühne, vom Skript gesetzt */
-  --progress: 0;
   --ebike-exit: 0;
   --city-enter: 0;
   --choice-opacity: 0;
@@ -1126,41 +1125,15 @@ img { max-width: 100%; }
   92%, 100% { transform: rotate(45deg) translate(14px, 14px); opacity: 0; }
 }
 
-/* HIER STANDEN BRUCHSTUECKE (bis 28.08.2026).
-   Beim Austausch einer frueheren Animation blieben zwei Prozentzeilen
-   und VIER ueberzaehlige Klammern stehen. Der Browser wirft sie nicht
-   einfach weg - er sucht sich einen Wiedereinstieg, und der lag hinter
-   der naechsten oeffnenden Klammer. Verschluckt hat es damit die Regel
-   ".progress-rail" selbst; nur ihr ::after ueberlebte. Nachgemessen im
-   Browser: das Element stand auf position static mit 0 x 0 Punkten und
-   ohne Grund. Der Fortschrittsbalken der Buehne war tot, seit die
-   Bruchstuecke da waren, und niemand konnte es sehen - weil ein Balken,
-   den es nicht gibt, genauso aussieht wie einer, der noch bei null steht. */
-
-.progress-rail {
-  position: absolute;
-  /* AUF DER FLUCHT, nicht an der Fensterkante - bei right: 0 war die
-     Schiene das einzige Element der Buehne mit eigenem Rand. Genau auf
-     der Flucht stiess sie aber mit der Live-Anzeige zusammen: bei
-     1920 px endeten .top-meta und .progress-rail beide bei 1367 px,
-     ohne einen Pixel dazwischen. Zwei Dinge, die sich beruehren, liest
-     das Auge als eines. Die Schiene rueckt darum um einen Betrag nach
-     rechts aus der Textspalte heraus, der mit dem Fenster mitwaechst
-     und bei 40 px endet; das max() haelt sie auch auf 901 px - der
-     schmalsten Breite, auf der es sie ueberhaupt gibt - im Bild. */
-  right: max(14px, calc(var(--flucht) - clamp(16px, 2.4vw, 40px))); top: 0;
-  width: 3px; height: 100%;
-  /* Die Spur war weiss zu 10 % - auf hellem Grund unsichtbar. Wer nur
-     die Fuellung sieht, sieht keinen Fortschritt, sondern einen Strich. */
-  background: var(--mist);
-}
-.progress-rail::after {
-  content: "";
-  display: block;
-  width: 100%;
-  height: calc(var(--progress) * 100%);
-  background: var(--red);
-}
+/* HIER STAND DIE FORTSCHRITTSSCHIENE (entfernt 28.08.2026).
+   Ein senkrechter Balken am rechten Rand, der beim Scrollen mitlief.
+   Der Betreiber empfand ihn als stoerend, und das zu Recht: die Buehne
+   bewegt ohnehin schon Rad, Schlagzeile, Auswahl und Abschlusskarte.
+   Ein fuenfter Vorgang, der nur mitteilt, wie weit man ist, konkurriert
+   mit allen vieren und traegt nichts bei, was die Seite nicht selbst
+   zeigt. Waagerecht angebracht waere es derselbe Effekt an anderer
+   Stelle gewesen - deshalb ganz weg statt verschoben.
+   Mit ihr faellt --progress; hero.js setzt die Variable nicht mehr. */
 
 /* ---------------------------------------------------- Kennzahlen */
 /* Raster aus dem Entwurf, Werte aus velocity.v_kennzahl. */
@@ -1175,23 +1148,30 @@ img { max-width: 100%; }
    Wo die Farbe wechselt (Tarife, Fusszeile) bleibt es bei der vollen. */
 .facts { padding: var(--luft) 0 calc(var(--luft) * .35); background: var(--paper); }
 
-/* DERSELBE RHYTHMUS WIE BEIM ABLAUF (28.08.2026).
-   Beide Abschnitte tragen dasselbe Muster - Haarlinie links, Einzug
-   rechts davon, Zahl, Beschriftung. Sie trugen es in zwei Rhythmen:
-   die Kennzahlen ohne Rasterluecke mit 40 Punkten Einzug, der Ablauf
-   mit 45,6 Punkten Luecke und 38,4 Einzug. Das sieht man nicht neben-
-   einander, weil sie untereinander stehen - aber man liest es. */
+/* BEDINGUNGEN, KEINE SCHLAGZEILEN (neu gefasst 28.08.2026).
+   Die vier Angaben standen als vier Bloecke zu 78 Punkten unterein-
+   ander mit ihrem Etikett - zusammen rund 190 Punkte Hoehe und vier
+   gleich laute Stimmen. Danach kam der Ablauf in derselben Form: Vor-
+   spann, grosse Ueberschrift, Haarlinie, Spalten mit grosser Zahl.
+   Zweimal dieselbe Schablone hintereinander, und das Auge bekam keinen
+   Grund, die beiden verschieden zu behandeln - genau das hat der
+   Betreiber als "man verliert sich" beschrieben.
+   Es sind aber zwei Arten von Inhalt: hier vier BEDINGUNGEN des
+   Angebots, dort eine ABFOLGE in der Zeit. Also bekommen sie zwei
+   Formen. Die Bedingungen werden ein dichtes Band - Zahl und Etikett
+   auf einer Grundlinie, rund 44 statt 190 Punkte. Sie rahmen das
+   Angebot; erzaehlen tut es der Ablauf darunter. */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--af-m);
 }
 .stat {
-  display: flex; flex-direction: column;
-  /* DERSELBE ABSTAND WIE UEBERALL zwischen einer Zahl und ihrer
-     Beschriftung. Er stand hier auf 10, beim Schrittzaehler auf 16 und
-     in der Buehne auf 28 Punkten. */
-  gap: var(--kicker-abstand);
+  /* Auf EINER Grundlinie, nicht uebereinander. Das halbiert nicht nur
+     die Hoehe - es bindet Zahl und Etikett auch enger aneinander als
+     ein Zeilenumbruch es kann. */
+  display: flex; align-items: baseline;
+  gap: var(--a3);
   padding-left: var(--af-m);
   border-left: 1px solid var(--mist);
 }
@@ -1199,7 +1179,10 @@ img { max-width: 100%; }
 .stat b {
   color: var(--navy);
   font-family: var(--schmal);
-  font-size: var(--grad-zahl);
+  /* NICHT MEHR --grad-zahl. Auf 78 Punkten war jede der vier Angaben
+     so laut wie die Abschnittsueberschrift daneben. Eine Bedingung ist
+     keine Schlagzeile. */
+  font-size: clamp(26px, 2.4vw, 38px);
   font-weight: 800;
   line-height: 1;
   letter-spacing: var(--eng);
@@ -1369,46 +1352,75 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 
 /* ---------------------------------------------------- So geht's */
 
+/* DER ABLAUF ALS STRECKENBAND (neu gefasst 28.08.2026).
+   Vorher: drei Spalten, getrennt durch senkrechte Haarlinien, jede mit
+   einer roten Ziffer zu 78 Punkten obenauf. Drei Trennlinien sagen dem
+   Auge "das sind drei Dinge nebeneinander". Eine Ausleihe ist aber
+   nicht drei Dinge nebeneinander, sondern EIN Weg mit drei Halten -
+   erst App, dann Schloss, dann Abstellen. Die Form widersprach dem
+   Inhalt, und weil sie ihm widersprach, fuehrte sie das Auge nicht.
+   Jetzt traegt eine durchgehende waagerechte Linie ueber die volle
+   Inhaltsbreite drei Halte. Das ist die optische Fuehrung, die gefehlt
+   hat, und sie ist nicht dekorativ: die Linie IST der Weg. Die Halte
+   sehen aus wie die Marker der Live-Karte - dieselbe Formsprache,
+   nicht eine zweite dafuer erfunden.
+   Alle drei Halte sind gleich. Es waere reizvoll, den letzten anders
+   zu faerben, aber welcher Halt "besonders" ist, liesse sich nur
+   behaupten, nicht begruenden - und eine Auszeichnung, die nichts
+   kodiert, ist Dekoration, die sich als Information ausgibt. */
 .howto-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: var(--af-m);
 }
 .howto-card {
+  position: relative;
   display: flex; flex-direction: column;
-  padding-left: var(--af-m);
-  border-left: 1px solid var(--mist);
+  /* KEINE senkrechten Trennlinien mehr und kein Einzug: der Halt sitzt
+     genau ueber dem Text, den er ankuendigt, und die Strecke laeuft von
+     der Flucht bis zur Flucht. Senkrechte Linien wuerden die waagerechte
+     zerschneiden - zwei Ordnungen, die sich gegenseitig aufheben. */
 }
-.howto-card:first-child { padding-left: 0; border-left: 0; }
 /* Die Reihenfolge ist hier echte Information — anders als bei den
-   Abschnitten der Seite, die keine Abfolge sind. */
-/* Die Ziffer ist der Schrittzaehler und traegt dieselbe Schrift wie
-   die Kennzahlen - nur in Rot, weil hier eine Abfolge gemeint ist und
-   kein Messwert. Ein Sinnbild daneben stand frueher hier; auf
-   Kachelgroesse blieb davon ein Fleck, der nichts erklaerte. */
+   Abschnitten der Seite, die keine Abfolge sind. Deshalb bleibt die
+   Ziffer. Sie fuehrt den Abschnitt aber nicht mehr an: als Ordnungs-
+   zeichen in Mono neben der Strecke sagt sie, der wievielte Halt das
+   ist, und ueberlaesst die Aussage der Ueberschrift darunter. */
 .step-number {
-  /* Derselbe Abstand zur Beschriftung wie bei jeder anderen Zahl. */
-  margin-bottom: var(--kicker-abstand);
-  font-family: var(--schmal); font-weight: 800; line-height: 1;
-  /* EIN ZAEHLER IST KEINE KENNZAHL (28.08.2026).
-     Die Schrittnummer stand auf --grad-zahl - demselben Token wie die
-     Kennzahlen. Gemessen: beide 78 px, beide Schnitt 800, Unterschied
-     nur die Farbe. Dabei sind es zwei Arten von Zahl. "10 Stationen"
-     ist die Aussage selbst; "01" wiederholt nur die Reihenfolge, die
-     die Position ohnehin zeigt. Sieben Zahlen in gleicher Lautstaerke,
-     davon drei ohne Inhalt - dann findet das Auge keinen Einstieg und
-     verliert sich, was der Betreiber genau so beschrieben hat.
-     --grad-zahl-klein steht in der Skala schon bereit: die Nummer
-     bleibt lesbar als Folge, fuehrt aber nicht mehr den Abschnitt an.
-     Das tut jetzt die Schrittueberschrift, und die traegt auch die
-     Aussage. Die Kennzahlen behalten damit die einzige laute Stimme
-     der Seite. */
-  font-size: var(--grad-zahl-klein);
+  margin: 0 0 var(--a3);
+  font: 700 var(--grad-klein)/1 var(--mono);
+  letter-spacing: var(--weit);
   color: var(--red);
-  letter-spacing: var(--eng);
   font-variant-numeric: tabular-nums;
 }
 .step-number::before { content: '0'; }
+
+/* Die Strecke. Sie laeuft ueber die Rasterluecke hinweg in die naechste
+   Spalte, sonst zerfiele die Linie in drei Striche - genau das Bild,
+   das ersetzt werden sollte. Nur beim letzten Halt endet sie. */
+.howto-marke {
+  position: relative;
+  height: 13px;
+  margin-bottom: var(--a5);
+}
+.howto-marke::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 0; right: calc(var(--af-m) * -1);
+  height: 1px;
+  background: var(--mist);
+}
+.howto-card:last-child .howto-marke::before { right: 0; }
+.howto-punkt {
+  position: absolute;
+  top: 0; left: 0;
+  width: 13px; height: 13px;
+  border-radius: var(--pille);
+  background: var(--navy);
+  /* Der Hof in Papierfarbe schneidet die Linie am Halt sauber aus,
+     statt sie hinter dem Punkt durchlaufen zu lassen. */
+  box-shadow: 0 0 0 4px var(--paper);
+}
 .howto-card h3 {
   margin: 0 0 var(--a3);
   color: var(--navy);
@@ -2311,7 +2323,6 @@ footer a:hover { color: #fff; text-decoration: underline; }
 @media (max-width: 900px) {
   .scroll-story { height: 100svh; min-height: 620px; }
   .sticky-stage { position: relative; height: 100svh; min-height: 620px; }
-  .progress-rail { display: none; }
 
   /* Das Rad steht GANZ im Bild, nicht angeschnitten. Auf dem Desktop
      fuellt es den Rahmen (cover); auf einem hochkant stehenden Telefon
@@ -2413,7 +2424,22 @@ footer a:hover { color: #fff; text-decoration: underline; }
      Die Haarlinie sitzt dann nur noch zwischen den Spalten. */
   .stat-grid { grid-template-columns: 1fr 1fr; row-gap: var(--af-m); }
   .stat:nth-child(odd) { padding-left: 0; border-left: 0; }
-  .howto-card { padding-left: 0; border-left: 0; }
+  /* GESTAPELT WIRD DIE STRECKE SENKRECHT (28.08.2026).
+     Nebeneinander laeuft der Weg waagerecht, untereinander laeuft er
+     nach unten. Die Linie einfach abzuschalten hiesse, auf dem Telefon
+     genau die Fuehrung wegzunehmen, deretwegen es sie gibt. */
+  .howto-grid { grid-template-columns: 1fr; gap: 0; }
+  .howto-card { padding-left: 34px; padding-bottom: var(--af-m); }
+  .howto-card:last-child { padding-bottom: 0; }
+  .howto-marke {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 13px; height: auto; margin: 0;
+  }
+  .howto-marke::before {
+    top: 0; bottom: 0; left: 6px; right: auto;
+    width: 1px; height: auto;
+  }
+  .howto-card:last-child .howto-marke::before { bottom: auto; height: 13px; }
   .footer-grid { grid-template-columns: 1fr; gap: var(--a5); }
   #map { height: clamp(420px, 66vh, 600px); }
   .pop-typ { grid-template-columns: 62px 1fr auto; gap: var(--a2); padding: var(--a3) var(--a3); }
@@ -2475,6 +2501,6 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .claim-ebike { opacity: 1; transform: none; }
   .choice-panel { opacity: 1; transform: none; }
   .choice-panel { opacity: 1; transform: none; }
-  .progress-rail, .scroll-hint { display: none; }
+  .scroll-hint { display: none; }
   * { transition: none !important; animation: none !important; }
 }

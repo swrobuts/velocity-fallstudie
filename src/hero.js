@@ -73,7 +73,6 @@
     gezeigterZustand = neuerZustand;
 
     const teile = [
-      `--progress:${neuerZustand.progress.toFixed(4)}`,
       `--ort:${neuerZustand.ort.toFixed(4)}`,
       `--choice-opacity:${neuerZustand.choiceOpacity.toFixed(4)}`,
       `--cta-opacity:${neuerZustand.ctaOpacity.toFixed(4)}`,
