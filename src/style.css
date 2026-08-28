@@ -1352,6 +1352,118 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 
 /* ---------------------------------------------------- So geht's */
 
+/* ------------------------------------------------ Die Radkacheln */
+/* Nach einer Recherche bei Donkey Republic, nextbike und Swapfiets:
+   keiner der drei verwendet auf der Startseite eine Datengrafik. Sie
+   tragen sie mit freigestellten Produktfotos in Kacheln. Genau die
+   liegen hier seit jeher im Projekt und dienen schon der Buehne.
+   Weisse Kacheln auf dem grauen Grund des Abschnitts - der einzige
+   Ort der Seite, an dem Weiss gegen Papierfarbe steht, und deshalb
+   heben sie sich ohne kraeftige Rahmen ab. */
+.rad-kacheln {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--af-m);
+  margin-bottom: var(--af-l);
+}
+.rad-kachel {
+  display: flex; flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-1);
+  overflow: hidden;
+}
+.rad-kachel-bild {
+  /* Festes Seitenverhaeltnis, damit beim Laden nichts springt. contain
+     statt cover, weil beschneiden das Rad anschneiden wuerde.
+
+     WARUM 21 ZU 10 UND NICHT 16 ZU 10
+     Die drei Vorlagen sind massstabsgleich eingepasst: alle 800 Punkte
+     hoch, im gleichen realen Massstab. Gleicher Massstab bei der
+     Darstellung heisst deshalb: alle drei muessen an ihrer HOEHE
+     anschlagen, nicht an ihrer Breite. Bei 16 zu 10 schlug das
+     Lastenrad (1680 zu 800, also 2,1) an der Breite an und wurde auf
+     0,2146 skaliert, waehrend die anderen beiden auf 0,285 standen -
+     nachgemessen. Das laengste der drei Raeder erschien dadurch als das
+     kleinste, und genau seine Groesse ist sein Verkaufsargument.
+     Bei 21 zu 10 ist auch das breiteste Bild hoehenbegrenzt, und alle
+     drei stehen im selben Massstab. Sie werden dadurch etwas kleiner;
+     dass die drei als eine Familie lesbar sind, ist mehr wert. */
+  /* 2 zu 1 ist die groesste Hoehe, bei der das Lastenrad in einer
+     dreispaltigen Reihe noch hoehenbegrenzt bleibt - und damit die
+     groesste Darstellung, die fuer alle drei denselben Massstab
+     zulaesst. Nachgerechnet: bei 368 Punkten Innenbreite braucht 2,1
+     mal die Innenhoehe 361 Punkte; mehr Hoehe, und das Lastenrad
+     schlaegt wieder an der Breite an. */
+  aspect-ratio: 2 / 1;
+  position: relative;
+  background: linear-gradient(180deg, #fff 0%, var(--paper) 100%);
+  border-bottom: 1px solid var(--mist);
+}
+/* ABSOLUT, NICHT IM FLUSS.
+   Zuerst stand das Bild mit height: 100% in einem Grid. Ein Prozentwert
+   braucht aber eine bestimmte Bezugshoehe; hier gab es keine, also loste
+   er sich zu auto auf - und dann bestimmte das Bild die Hoehe des
+   Feldes statt umgekehrt. aspect-ratio weicht dem Inhalt, wenn der mehr
+   Platz verlangt: gemessen 392 zu 261 statt 392 zu 187, und der
+   Massstab blieb genau so ungleich wie zuvor. Absolut positioniert
+   geben die Kanten die Box vor, und das Verhaeltnis regiert. */
+.rad-kachel-bild img {
+  position: absolute;
+  top: var(--a3); left: var(--a3);
+  width: calc(100% - 2 * var(--a3));
+  height: calc(100% - 2 * var(--a3));
+  object-fit: contain;
+}
+.rad-kachel-text {
+  display: flex; flex-direction: column;
+  gap: var(--a3);
+  padding: var(--a5) var(--af-s) var(--af-s);
+}
+.rad-kachel h3 {
+  margin: 0;
+  color: var(--navy);
+  font-family: var(--schmal); font-weight: 800;
+  font-size: var(--grad-kopf-m);
+  line-height: 1.05;
+  letter-spacing: var(--eng);
+}
+.rad-kachel-beschreibung {
+  margin: 0;
+  color: var(--grau);
+  line-height: 1.5;
+}
+.rad-kachel-frei {
+  display: flex; align-items: baseline; gap: var(--a2);
+  margin: 0; margin-top: auto;
+  padding-top: var(--a3);
+  border-top: 1px solid var(--mist);
+  color: var(--grau);
+  font: 700 var(--grad-etikett) var(--mono);
+  letter-spacing: var(--weit);
+  text-transform: uppercase;
+}
+.rad-kachel-frei b {
+  color: var(--navy);
+  font-family: var(--schmal); font-weight: 800;
+  font-size: var(--grad-kopf-s);
+  letter-spacing: var(--eng);
+  font-variant-numeric: tabular-nums;
+}
+/* Die Ampel greift die Anzeige der Buehne auf, die dort schon einen
+   gruenen Punkt vor die freien Raeder setzt. Dort ist es --mint, das
+   auf dem hellen Buehnengrund sitzt; auf weisser Kachel nimmt sie das
+   dunklere --gruen, das den Kontrast traegt. Eine dritte Gruenstufe
+   waere eine Farbe ohne eigene Bedeutung. */
+.rad-kachel-ampel {
+  align-self: center;
+  width: 8px; height: 8px;
+  border-radius: var(--pille);
+  background: var(--gruen);
+}
+.rad-kachel-frei.ist-leer .rad-kachel-ampel { background: var(--mist); }
+
 /* DER ABLAUF ALS STRECKENBAND (neu gefasst 28.08.2026).
    Vorher: drei Spalten, getrennt durch senkrechte Haarlinien, jede mit
    einer roten Ziffer zu 78 Punkten obenauf. Drei Trennlinien sagen dem
@@ -1388,8 +1500,13 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
    ist, und ueberlaesst die Aussage der Ueberschrift darunter. */
 .step-number {
   margin: 0 0 var(--a3);
-  font: 700 var(--grad-klein)/1 var(--mono);
-  letter-spacing: var(--weit);
+  /* 13 Punkte Mono war zu leise - die Ziffer verschwand neben ihrer
+     eigenen Ueberschrift. Auf 28 Punkten in der schmalen Schrift ist
+     sie ein sichtbares Ordnungszeichen und bleibt doch unter den
+     Kachelueberschriften darueber. */
+  font-family: var(--schmal); font-weight: 800; line-height: 1;
+  font-size: clamp(22px, 2vw, 30px);
+  letter-spacing: var(--eng);
   color: var(--red);
   font-variant-numeric: tabular-nums;
 }
@@ -2422,6 +2539,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .scroll-hint { display: none; }
   /* Vier Zahlen nebeneinander werden hier zu eng: zwei mal zwei.
      Die Haarlinie sitzt dann nur noch zwischen den Spalten. */
+  .rad-kacheln { grid-template-columns: 1fr 1fr; }
   .stat-grid { grid-template-columns: 1fr 1fr; row-gap: var(--af-m); }
   .stat:nth-child(odd) { padding-left: 0; border-left: 0; }
   /* GESTAPELT WIRD DIE STRECKE SENKRECHT (28.08.2026).
@@ -2483,6 +2601,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .claim-city { top: 29vh; }
   .choice-panel { bottom: 34px; }
   .product-tab { padding: 0 var(--a3); }
+  .rad-kacheln { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: 1fr; row-gap: var(--a5); }
   .stat { padding-left: 0; border-left: 0; padding-top: var(--a4); border-top: 1px solid var(--mist); }
   .stat:first-child { padding-top: 0; border-top: 0; }

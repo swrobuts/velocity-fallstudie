@@ -390,6 +390,113 @@ document.addEventListener("DOMContentLoaded", async () => {
             </div>`).join('');
     }
 
+    /* ================================================================
+       DIE DREI RADKACHELN
+
+       WARUM
+       Der Abschnitt heisst "Wuerzburg faehrt flexibel", sein Vorspann
+       verspricht "Ein System. Drei Fahrgefuehle." - und darunter standen
+       vier abstrakte Zahlen auf grauem Grund. Zwischen einer Buehne mit
+       Rad in voller Groesse und dem dunklen Tarifband gab es hier nichts
+       zu sehen. Ich habe das zuerst mit einer Datengrafik beantwortet;
+       das war falsch. Ein Blick auf Donkey Republic, nextbike und
+       Swapfiets zeigt einhellig: keiner von dreien verwendet auf der
+       Startseite eine einzige Datengrafik. Getragen wird sie von
+       freigestellten Produktfotos in Kacheln und von Lifestyle-Bildern.
+       nextbike nennt seine Kennzahl ("300 Staedte") in der Ueberschrift,
+       nicht als Zahlenblock. Datenvisualisierung gehoert in die
+       Warenwirtschaft, nicht auf eine Kundenseite.
+
+       WOHER DIE INHALTE KOMMEN
+       Bezeichnung und Beschreibung aus v_tarifkarte, der freie Bestand
+       aus den ohnehin geladenen Raedern, die Fotos liegen seit jeher im
+       Projekt und dienen schon der Buehne. Erfunden ist hier nichts.
+
+       Die Bilder sind massstabsgleich eingepasst - das Lastenrad ist
+       wirklich laenger als das City-Bike. Bei gleicher Kachelhoehe
+       bleibt dieses Verhaeltnis sichtbar, und das ist richtig so.
+       ================================================================ */
+    const RAD_BILD = {
+        CITY:  'assets/rad-city-frei.webp',
+        EBIKE: 'assets/rad-ebike-frei.webp',
+        CARGO: 'assets/rad-cargo-frei.webp'
+    };
+    const RAD_BILD_MASS = {
+        CITY:  [1265, 800], EBIKE: [1269, 800], CARGO: [1680, 800]
+    };
+
+    /* Die Bestandsfelder werden GEMERKT, nicht spaeter wieder gesucht.
+       Ein Klassenname ist eine Angabe fuers Aussehen; ihn als Schluessel
+       zum Wiederfinden zu benutzen macht ihn heimlich zur Schnittstelle,
+       die niemand umbenennen darf, ohne das Skript zu zerlegen. Genau
+       darauf hat tools/frontend_check.py mich gestossen: Es verlangt,
+       dass jede per querySelector gesuchte Klasse im HTML steht. */
+    let radKachelBestandsfelder = [];
+
+    async function renderRadKacheln() {
+        const ziel = document.getElementById('rad-kacheln');
+        if (!ziel) return;
+        const karten = (await fetchTarifkarten()).filter(k => RAD_BILD[k.typ_code]);
+        radKachelBestandsfelder = [];
+        if (!karten.length) { ziel.replaceChildren(); return; }
+
+        ziel.replaceChildren(...karten.map(k => {
+            const [bw, bh] = RAD_BILD_MASS[k.typ_code];
+            const kachel = document.createElement('article');
+            kachel.className = 'rad-kachel';
+
+            const bildfeld = document.createElement('div');
+            bildfeld.className = 'rad-kachel-bild';
+            const bild = document.createElement('img');
+            bild.src = RAD_BILD[k.typ_code];
+            bild.width = bw; bild.height = bh;
+            bild.loading = 'lazy'; bild.decoding = 'async';
+            /* Leerer Alternativtext mit Absicht: Bezeichnung und
+               Beschreibung stehen unmittelbar daneben im Text. Sie hier
+               zu wiederholen laesse eine Vorlesekraft jedes Rad zweimal
+               ansagen - eine Doppelung, die nichts hinzufuegt. */
+            bild.alt = '';
+            bildfeld.append(bild);
+
+            const text = document.createElement('div');
+            text.className = 'rad-kachel-text';
+            const titel = document.createElement('h3');
+            titel.textContent = k.bezeichnung ?? '';
+            const bschr = document.createElement('p');
+            bschr.className = 'rad-kachel-beschreibung';
+            bschr.textContent = k.beschreibung ?? '';
+            const frei = document.createElement('p');
+            frei.className = 'rad-kachel-frei';
+            radKachelBestandsfelder.push({ typ: k.typ_code, feld: frei });
+            text.append(titel, bschr, frei);
+
+            kachel.append(bildfeld, text);
+            return kachel;
+        }));
+
+        radKachelnBestandSetzen();
+    }
+
+    /* Getrennt vom Aufbau, weil der Bestand spaeter eintrifft als die
+       Tarifkarten. Die Kacheln zweimal zu bauen liesse sie flackern. */
+    function radKachelnBestandSetzen() {
+        if (!bestandJeTyp) return;
+        for (const { typ, feld } of radKachelBestandsfelder) {
+            const kurz = TYP_FILTER[typ];
+            const zahl = kurz ? bestandJeTyp[kurz] : null;
+            if (!Number.isFinite(zahl)) { feld.textContent = ''; continue; }
+            feld.replaceChildren();
+            const punkt = document.createElement('i');
+            punkt.className = 'rad-kachel-ampel';
+            punkt.setAttribute('aria-hidden', 'true');
+            const wert = document.createElement('b');
+            wert.textContent = String(zahl);
+            // "frei" ist im Deutschen unveraenderlich - 1 frei, 3 frei.
+            feld.append(punkt, wert, document.createTextNode(' frei'));
+            feld.classList.toggle('ist-leer', zahl === 0);
+        }
+    }
+
     async function renderTarifkarten() {
         const ziel = document.getElementById('pricing-grid');
         if (!ziel) return;
@@ -648,6 +755,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             rechnerStarten(),
             renderKennzahlen(),
             renderNutzungsschritte(),
+            renderRadKacheln(),
             renderTarifkarten(),
             renderFaq()
         ]);
@@ -675,6 +783,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 if (kurz) bestandJeTyp[kurz] += 1;
             }
             radzahlFuerTyp(letzterHeroTyp ?? heroTypAusPille());
+            radKachelnBestandSetzen();
             // Die Stationszahl kommt aus velocity.v_kennzahl und wird von
             // renderKennzahlen gesetzt, nicht mehr hier.
 
