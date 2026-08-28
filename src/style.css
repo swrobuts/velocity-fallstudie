@@ -1170,7 +1170,7 @@ img { max-width: 100%; }
      Etikett enger aneinander, als ein Zeilenumbruch es kann. */
   display: flex; align-items: baseline;
   gap: var(--a3);
-  padding: var(--a5) var(--af-s);
+  padding: var(--af-s) var(--af-s);
   border-left: 1px solid var(--mist);
 }
 .stat:first-child { border-left: 0; }
@@ -1180,7 +1180,11 @@ img { max-width: 100%; }
   /* Nicht --grad-zahl: auf 78 Punkten war jede der vier Angaben so laut
      wie die Abschnittsueberschrift daneben. Eine Bedingung ist keine
      Schlagzeile. */
-  font-size: clamp(24px, 2.2vw, 34px);
+  /* Angehoben von 34 auf 42 Punkte: im eigenen weissen Band traegt die
+     Zahl mehr Groesse, als sie frei auf dem Grund vertragen haette -
+     dort haette sie mit der Abschnittsueberschrift konkurriert, hier
+     hat sie ihre eigene Flaeche. */
+  font-size: clamp(28px, 2.8vw, 42px);
   font-weight: 800;
   line-height: 1;
   letter-spacing: var(--eng);
@@ -1191,7 +1195,9 @@ img { max-width: 100%; }
 }
 .stat span {
   color: var(--grau);
-  font: 700 var(--grad-etikett)/1.3 var(--mono);
+  /* Mit der Zahl mitgewachsen: ein Etikett auf 11,5 Punkten neben
+     einer 42er Zahl wirkt nicht ruhig, sondern uebersehen. */
+  font: 700 var(--grad-klein)/1.3 var(--mono);
   letter-spacing: var(--weit);
   text-transform: uppercase;
 }
@@ -1420,6 +1426,17 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   display: flex; flex-direction: column;
   gap: var(--a3);
   padding: var(--a5) var(--af-s) var(--af-s);
+  /* DER TEXTTEIL FUELLT DIE KACHEL AUS.
+     Ohne das blieb die uebrige Hoehe UNTER dem Textblock stehen, und
+     das margin-top:auto der Bestandszeile hatte keinen Freiraum, den es
+     verteilen konnte - die Zeile blieb also am Text kleben, wo immer
+     der endete. Zwei Zeilen Mindesthoehe an der Beschreibung richten
+     die Kacheln nur fuer eine bestimmte Fensterbreite aus: bei 901
+     Punkten brauchte die erste Beschreibung drei Zeilen, die anderen
+     zwei, und die Linien standen wieder versetzt (gemessen 3772 gegen
+     3750). Fuellt der Textteil die Kachel, sitzt die Bestandszeile
+     immer unten - bei jeder Zeilenzahl und jeder Breite. */
+  flex: 1;
 }
 .rad-kachel h3 {
   margin: 0;
@@ -1433,6 +1450,18 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   margin: 0;
   color: var(--grau);
   line-height: 1.5;
+  /* ZWEI ZEILEN MINDESTHOEHE, DAMIT DIE LINIE FLUCHTET.
+     Die Beschreibung des Lastenrads passt in eine Zeile, die der
+     anderen beiden brauchen zwei - dadurch sassen Trennlinie und
+     Bestandszeile in der dritten Kachel rund eine Zeile hoeher als
+     nebenan. Drei Kacheln nebeneinander lesen sich als eine Reihe;
+     springt darin eine Linie, sieht man den Sprung, noch bevor man
+     den Text liest.
+     Die calc-Zeile ist der Rueckfall fuer Browser ohne lh: 1.5 ist
+     der Zeilenabstand darueber, zwei Zeilen also 3em. Wer lh kennt,
+     ueberschreibt sie mit dem genaueren Wert. */
+  min-height: calc(2 * 1.5em);
+  min-height: 2lh;
 }
 .rad-kachel-frei {
   display: flex; align-items: baseline; gap: var(--a2);
@@ -1447,7 +1476,9 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .rad-kachel-frei b {
   color: var(--navy);
   font-family: var(--schmal); font-weight: 800;
-  font-size: var(--grad-kopf-s);
+  /* Eine Stufe hoeher als zuvor: die Zahl ist die einzige Angabe der
+     Kachel, die sich stuendlich aendert, und darf das zeigen. */
+  font-size: var(--grad-kopf-m);
   letter-spacing: var(--eng);
   font-variant-numeric: tabular-nums;
 }
@@ -1614,7 +1645,21 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .tarif-zaehler { margin-bottom: var(--af-m); }
 .rechner {
   display: grid;
-  grid-template-columns: minmax(272px, 1.05fr) minmax(196px, .82fr) minmax(250px, 1.1fr);
+  /* min(...) STATT NACKTER MINDESTBREITEN (28.08.2026).
+     Die drei Mindestwerte summieren sich auf 718 Punkte. Ein Raster
+     kann seine Mindestbreiten nicht unterschreiten - bei 700 Punkten
+     Fensterbreite standen aber nur rund 586 zur Verfuegung, und die
+     Differenz lief aus dem Dokument heraus. Die ganze Seite liess sich
+     dadurch seitlich wegschieben, verursacht vom Tarifrechner - NICHT
+     von der Karte, wie ich zuerst vermutet hatte: deren Kacheln werden
+     von .leaflet-container geklippt und zaehlen gar nicht mit.
+     Mit min(x, 100%) gilt die Wunschbreite nur, solange sie hineinpasst.
+     Das ist der Sicherheitsgurt; den ordentlichen Umbruch besorgt der
+     Haltepunkt bei 900 Punkten. */
+  grid-template-columns:
+    minmax(min(272px, 100%), 1.05fr)
+    minmax(min(196px, 100%), .82fr)
+    minmax(min(250px, 100%), 1.1fr);
   background: #fff;
   color: var(--navy);
   border: 1px solid var(--mist);
@@ -2523,6 +2568,16 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .scroll-hint { display: none; }
   /* Vier Zahlen nebeneinander werden hier zu eng: zwei mal zwei.
      Die Haarlinie sitzt dann nur noch zwischen den Spalten. */
+  /* DER TARIFRECHNER BRICHT HIER UM, NICHT ERST BEI 520 (28.08.2026).
+     Er stand auf max-width 520. Seine Mindestbreiten brauchen aber 718
+     Punkte, und die Inhaltsspalte unterschreitet das schon bei rund 780
+     Fensterbreite - zwischen 520 und 780 lief die Seite also ueber,
+     mithin ueber den gesamten Tabletbereich. Nachgemessen bei 700:
+     Dokument 700 breit, scrollWidth 749. */
+  .rechner { grid-template-columns: 1fr; }
+  .rechner-spalte { border-left: 0; border-top: 1px solid var(--mist); }
+  .rechner-spalte:first-child { border-top: 0; }
+
   .rad-kacheln { grid-template-columns: 1fr 1fr; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .stat:nth-child(odd) { border-left: 0; }
@@ -2584,9 +2639,6 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .stat-grid { grid-template-columns: 1fr; }
   .stat { border-left: 0; border-top: 1px solid var(--mist); }
   .stat:first-child { border-top: 0; }
-  .rechner { grid-template-columns: 1fr; }
-  .rechner-spalte { border-left: 0; border-top: 1px solid var(--mist); }
-  .rechner-spalte:first-child { border-top: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
