@@ -89,7 +89,42 @@
            "Warenwirtschaft" selbst wird dort uebersetzt, wo es tatsaechlich
            als Wort steht (Titel, Anmeldemaske), nicht in der zwei Buchstaben
            kurzen Wortmarke. -->
-      <span class="wortmarke">
+      <!-- ZONE LINKS: Umschalter der Navigation UND Wortmarke, in EINEM
+           Rasterkind (siehe .kopfleiste-marke in style.css). Zwei
+           einzelne Kinder haetten aus dem Dreispaltenraster ein
+           Vierspaltenraster gemacht - und die Suche damit wieder aus der
+           Fenstermitte geschoben.
+
+           DER UMSCHALTER STEHT ZUERST, und zwar im DOM, nicht nur
+           optisch: er ist damit der erste Tabstopp der ganzen
+           Oberflaeche. Wer mit der Tastatur ankommt, kann die
+           Navigation oeffnen, BEVOR er durch sie hindurchtabbt - stuende
+           er hinter der Wortmarke oder gar in der Navigation selbst,
+           muesste man erst durch die eingeklappte Leiste, um sie
+           ausklappen zu koennen.
+
+           EIN statischer Name statt zweier Zustandstexte ("einklappen"/
+           "ausklappen"): aria-expanded traegt den wechselnden Zustand
+           bereits, ein Bildschirmleser haengt "eingeklappt"/"ausgeklappt"
+           von sich aus an den Namen an - dieselbe Ueberlegung wie beim
+           Umschalter der Kopftafel (kopftafelUmschalterKnopf() in
+           rahmen.js). Den ZUSTAND setzt navigationUmschalterVerdrahten()
+           in rahmen.js, nicht dieses Markup: er kommt aus localStorage
+           und ist beim Ausliefern der Seite noch unbekannt. -->
+      <div class="kopfleiste-marke">
+        <button id="knopf-navigation" type="button" class="navigation-umschalter"
+                aria-expanded="true" aria-controls="navigation"
+                aria-label="Navigation ein- und ausklappen"
+                data-i18n-aria="index.navToggleAria">
+          <!-- Das Seitenleisten-Symbol, nicht der "Hamburger": ein
+               Hamburger steht heute fuer ein Menue, das VERSCHWINDET -
+               hier bleibt die Leiste als Symbolspalte stehen. -->
+          <svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">
+            <rect x="2" y="3" width="14" height="12" rx="2"></rect>
+            <line x1="7" y1="3" x2="7" y2="15"></line>
+          </svg>
+        </button>
+        <span class="wortmarke">
         <!-- Gestaltungsauftrag, woertlich: "ein Klick auf VeloCity im
              linken oberen Eck sollte bikes.butscher.cloud aufrufen." NUR
              "VeloCity", nicht der ganze Schriftzug: "WaWi" benennt genau
@@ -116,7 +151,8 @@
            data-i18n-aria="index.brandLinkAria">VeloCity</a>
         <span class="wortmarke-trenner" aria-hidden="true"></span>
         <span class="wortmarke-produkt">WaWi</span>
-      </span>
+        </span>
+      </div>
       <input id="feld-suche" type="search" placeholder="Suchen" aria-label="Suchen"
              data-i18n-placeholder="index.searchPlaceholder" data-i18n-aria="index.searchPlaceholder">
       <!-- Frueher stand hier "swrobuts@googlemail.com · disposition,

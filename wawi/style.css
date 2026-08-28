@@ -27,9 +27,14 @@
 
    1. DREI FLAECHENRAENGE, mehr nicht - und der mittlere gilt NUR FUER
       DEN RAHMEN DER ANWENDUNG.
-      --marine          Anwendungsrahmen oben (Kopfleiste).
-      --flaeche-rahmen  Anwendungsrahmen links und unten: Navigation
-                        und Statuszeile. SONST NICHTS.
+      --marine          Anwendungsrahmen oben UND links: Kopfleiste und
+                        Navigation. Seit der Gestaltungsrunde "Tiefe,
+                        Groesse, Beweglichkeit" bilden beide EINEN
+                        durchgehenden Rahmen um das Blatt - die
+                        Begruendung steht ausfuehrlich bei #navigation.
+      --flaeche-rahmen  Anwendungsrahmen unten: die Statuszeile. Und -
+                        als einzige Ausnahme im Blatt - die gewaehlte
+                        Tabellenzeile (siehe dortiger Kommentar).
       --flaeche         das Arbeitsblatt selbst - Reiter-, Werkzeug-,
                         Filterleiste, Kopftafel, Spaltenkopf,
                         Tabellenkoerper, Maske.
@@ -51,6 +56,12 @@
       ohne Linie, keine Linie ohne Grenze. --linie (1,37:1) bleibt, wo
       sie hingehoert: fuer Trennungen INNERHALB eines Bereichs, wo das
       Auge schon weiss, dass es zusammengehoert.
+      AUSNAHME, UND SIE IST DER SINN DER REGEL: wo zwei Flaechen sich
+      SELBST schon unterscheiden - marine gegen weiss misst 17,29:1 -,
+      ist eine Linie dazwischen kein Trennmittel mehr, sondern ein
+      drittes Element. Die Unterkante der Kopfleiste hatte aus diesem
+      Grund nie eine; die rechte Kante der Navigation hat seit dieser
+      Runde aus demselben Grund keine mehr.
 
    3. ABSTAND IST KEIN TRENNMITTEL. Bereiche stossen aneinander; der
       Freiraum lebt INNERHALB eines Bereichs als Innenabstand. Die
@@ -73,9 +84,11 @@
   /* ===== FLAECHEN: drei Raenge, siehe Gliederungsregel oben ===== */
   --marine:      #061841;
   --rot:         #f00038;
-  /* Der RAHMEN der Anwendung (Navigation links, Statuszeile unten) und
-     - als einzige Ausnahme innerhalb des Blatts - die gewaehlte
-     Tabellenzeile. Das ist keine Inkonsequenz, sondern der Grund, warum
+  /* Der RAHMEN der Anwendung (Statuszeile unten) und - als einzige
+     Ausnahme innerhalb des Blatts - die gewaehlte Tabellenzeile.
+     Die Navigation trug diesen Ton bis zur Gestaltungsrunde "Tiefe,
+     Groesse, Beweglichkeit" ebenfalls; sie ist jetzt marine (siehe
+     #navigation). Das ist keine Inkonsequenz, sondern der Grund, warum
      der Ton ueberhaupt bleibt: seit das Blatt durchgehend weiss ist,
      faellt eine getoente Zeile darin ueberhaupt erst auf. Frueher trugen
      ACHT Flaechen diesen Ton gleichzeitig, und genau deshalb sagte er
@@ -265,8 +278,8 @@
      Werkzeugleiste, Kopftafel, Filterleiste, Tabellenkopf,
      Spaltenkopf-Filterzeile, Statuszeile. Ein Ton, der acht Bereiche
      gleich einfärbt, gliedert nichts - er ermüdet nur.
-     Jetzt trägt ihn NUR NOCH DER RAHMEN DER ANWENDUNG: die Navigation
-     links und die Statuszeile unten (oben schliesst --marine ab).
+     Jetzt trägt ihn nur noch die Statuszeile unten; Kopfleiste oben und
+     Navigation links schliessen den Rahmen in --marine ab.
      Alles dazwischen ist das Arbeitsblatt - weiss, gegliedert allein
      durch --kontur-Kanten. Das ist dieselbe Gliederungsregel wie im
      Dateikopf, nur richtig angewandt: die Frage ist nicht "bediene ich
@@ -329,8 +342,131 @@
      genau die Fussangel, wegen der auch --warnung entfallen ist. */
   --zeile:       40px;
   --nav-breite:  200px;
+  /* Eingeklappte Navigation: nur noch Symbole. 56px = die Zielgroesse
+     --ziel (32px) plus zweimal --raum-3 Innenabstand des Knopfs (12px) -
+     die Leiste ist damit genau so breit wie ein einzelner Rubrikknopf und
+     keinen Pixel breiter. Fluent (Teams/Outlook) faehrt 48px, Fiori 44px,
+     die Apple-Richtlinien nennen 44pt fuer eine Beruehrflaeche - 56px
+     liegt darueber und laesst dem Symbol Luft, ohne eine zweite Spalte
+     vorzutaeuschen. */
+  --nav-breite-schmal: 56px;
   --kopf-hoehe:  60px;
   --fuss-hoehe:  32px;
+
+  /* ============================================================
+     ===== DAS EBENENSYSTEM =====
+
+     Befund des Auftraggebers, woertlich: "die ausgeklappten Kopfleisten
+     heben sich ueberhaupt nicht vom Hintergrund ab, allein ein
+     Schlagschatten koennte da schon Hilfe sein". Nachgezaehlt lagen in
+     dieser Datei vorher fuenf abhebende Schatten ohne jede Ordnung:
+     .profilmenue und .mehrfachauswahl-liste trugen wortgleich
+     "0 8px 24px rgba(6,24,65,0.18)", .velocity-dialog fast dasselbe mit
+     0.25, .hinweisfenster "0 2px 8px" mit 0.35 - und die Kopftafel, die
+     ausdruecklich "heruntergezogen" aussehen soll, gar keinen. Ein
+     Schatten sagte damit nichts ueber Hoehe: zwei Bauteile mit
+     verschiedener Bedeutung sahen gleich hoch aus, das eine mit der
+     hoechsten Bedeutung sah gar nicht hoch aus.
+
+     Ab hier gibt es VIER HOEHEN und - weil die unterste die Bezugsflaeche
+     ist - DREI SCHATTEN. Jede Hoehe hat genau eine Bedeutung, jeder
+     Schatten gehoert genau einer Hoehe. Wer eine Flaeche einordnen will,
+     fragt: laeuft etwas unter mir hindurch, haenge ich an einem
+     Bedienelement, oder sperre ich den Rest?
+
+     EBENE 0 · DAS BLATT UND SEIN RAHMEN — kein Schatten.
+       Arbeitsblatt, Liste, Detailmaske, Tabellenkoerper; und ebenso
+       Kopfleiste, Navigation, Statuszeile. Der Rahmen liegt NICHT ueber
+       dem Blatt, er umschliesst es - er traegt deshalb Kante und
+       Flaeche, aber keine Hoehe. Dieselbe Frage wie in der
+       Gliederungsregel oben: "bin ich im Blatt oder an seinem Rand?"
+
+     EBENE 1 · AUFLIEGEND — --schatten-1.
+       Etwas, unter dem Inhalt hindurchlaeuft, waehrend es liegen
+       bleibt: die ausgeklappte Kopftafel (der Auftraggeber nennt sie
+       ausdruecklich - sie soll aussehen wie etwas, das man
+       heruntergezogen hat) und die klebende Kopfzeile der
+       Arbeitstabelle, an der die Datenzeilen vorbeiscrollen.
+       Kurz und dicht: 2px Versatz, 6px Weichzeichnung - eine Kante mit
+       Tiefe, kein Schwebezustand. (Erster Ansatz waren 1px/3px bei 16 %;
+       im Browser gegen die weisse Liste darunter nachgesehen war das
+       unter der Wahrnehmungsschwelle - genau der Mangel, den der
+       Auftraggeber gemeldet hat, nur mit einem Schatten davor.)
+
+     EBENE 2 · SCHWEBEND — --schatten-2.
+       Haengt an einem Bedienelement, schliesst bei einem Klick daneben,
+       laesst den Rest der Oberflaeche bedienbar: Profilmenue,
+       Mehrfachauswahl-Liste, Hinweisfenster.
+
+     EBENE 3 · UEBERLAGERND — --schatten-3.
+       Sperrt alles darunter, bis eine Entscheidung gefallen ist: der
+       <dialog> aus bestaetige()/frageNachGrund(), zusammen mit seiner
+       Abdunklung (::backdrop).
+
+     STAPELUNG ist die ZWEITE Achse und faellt bewusst nicht mit der
+     Hoehe zusammen: das Hinweisfenster hat die Hoehe von Ebene 2 (es
+     schwebt knapp ueber dem Blatt; ein Tooltip mit dem Schatten eines
+     Dialogs saehe absurd aus), braucht aber den hoechsten z-index -
+     eine Beschriftung, die hinter einem gerade geoeffneten Popup
+     verschwindet, beschriftet nichts. Der <dialog> braucht umgekehrt
+     GAR KEINEN z-index: showModal() legt ihn in die Top-Layer des
+     Browsers, ueber jeden z-index dieser Datei.
+
+     WAS KEIN SCHATTEN IST, obwohl es box-shadow benutzt:
+     ein VERDOPPELTER RAHMEN (0 0 0 1px, .mehrfachauswahl-aktiv,
+     .spaltenkopf-filter-aktiv), ein BALKEN in der Zeile (inset 3px 0 0)
+     und ein RING um eine Kalenderzelle (inset). Alle drei sind Kontur,
+     keine Hoehe - sie stehen deshalb bewusst NICHT in dieser Reihe.
+     Ebenso die Stationsmarke auf der Landkarte (siehe dort): sie liegt
+     nicht hoeher als die Karte, sie muss sich nur gegen unkontrollierte
+     Kartenbilder behaupten. */
+  --schatten-1: 0 2px 6px rgba(6, 24, 65, 0.20);
+  --schatten-2: 0 6px 16px rgba(6, 24, 65, 0.20);
+  --schatten-3: 0 16px 40px rgba(6, 24, 65, 0.30);
+  --z-ebene-2:  20;
+  --z-hinweis:  60;
+
+  /* ===== DIE ZIELGROESSE =====
+     Befund des Auftraggebers, woertlich: "Bedienelemente sind klein".
+     Im Browser nachgemessen (1790px, Bereich Flotte, siehe Bericht):
+     Ruecksetz-Symbole im Spaltenkopf 20x20, Gruppieren-Schalter 23x31,
+     Sortier-Schalter 24 hoch, Filterfelder im Spaltenkopf 24 hoch,
+     Mehrfachauswahl 24 hoch, Zeilensymbole 26x26, Kopftafel-Umschalter
+     26x26. Zwei davon (20x20 und 23 hoch) verfehlen sogar die absolute
+     Untergrenze aus WCAG 2.5.8 (24x24 CSS-Pixel); alle liegen unter dem,
+     was heutige Unternehmensoberflaechen ansetzen.
+     EIN Mass fuer alles, was man anfasst: 32px. Begruendung, in dieser
+     Reihenfolge:
+       · Fluent 2 (Microsoft) setzt fuer die dichte Variante 32px an,
+         SAP Fiori im "compact"-Modus ebenfalls 32px - genau der Fall
+         hier: eine Warenwirtschaft mit langen Tabellen, acht Stunden am
+         Tag, Maus und Tastatur, kein Finger.
+       · Die Apple-Richtlinien nennen 44pt als Ziel fuer BERUEHRUNG. Das
+         ist die richtige Zahl fuer ein Geraet, das man antippt, und die
+         falsche fuer eine Bildschirmmaske mit fuenfzehn Spalten: 44px je
+         Bedienelement kosteten allein in der Filterzeile ueber 20px
+         Hoehe, die dann den Daten fehlen. 44 bleibt Ziel fuer die
+         Beruehrflaeche, 32 ist das Mass der Zeigerbedienung.
+       · WCAG 2.5.8 (AA) verlangt 24x24 CSS-Pixel als UNTERGRENZE. 32
+         haelt acht Pixel Abstand dazu - kein Wert, der bei der naechsten
+         Aenderung versehentlich darunter rutscht.
+     --ziel gilt fuer Knoepfe, Auswahlfelder, Eingabefelder, Schalter und
+     Zeilensymbole. Ein reines Textstueck (Spaltentitel, Beschriftung)
+     ist kein Bedienelement und faellt nicht darunter. */
+  --ziel: 32px;
+
+  /* ===== RUNDUNGEN =====
+     Es waren vier Werte ohne Regel (4, 6, 8, 999px), und der mit Abstand
+     haeufigste - 4px - ist der Radius, mit dem Bildschirmoberflaechen um
+     die Jahrtausendwende ueberhaupt zum ersten Mal runde Ecken bekamen.
+     Drei Stufen, jede mit einer Aufgabe:
+       --rund-1  ein Bedienelement (Knopf, Feld, Auswahl, Symbolknopf)
+       --rund-2  eine FLAECHE, die ueber dem Blatt liegt (Popup, Dialog,
+                 Kachel) - sichtbar runder als das, was darin steht
+       --rund-3  eine Pille (Rollenmarke) */
+  --rund-1: 6px;
+  --rund-2: 10px;
+  --rund-3: 999px;
 }
 
 * {
@@ -377,6 +513,40 @@ body {
 button {
   font: inherit;
   cursor: pointer;
+}
+
+/* ===== DIE ZIELGROESSE, EINMAL FUER ALLE =====
+   Die Begruendung fuer die Zahl steht bei --ziel in :root. Hier steht,
+   WARUM sie an EINER Stelle steht und nicht an zwanzig: die gemessenen
+   Groessen vorher (20, 23, 24, 26, 28, 32, 35) waren nicht deshalb
+   uneinheitlich, weil jemand sie einzeln falsch gewaehlt haette -
+   sondern weil jedes Bauteil seine Hoehe aus seinem eigenen
+   Innenabstand ERGAB. Ein Innenabstand ist aber eine Aussage ueber Luft
+   um den Inhalt, keine ueber die Groesse der Trefferflaeche. Eine
+   Mindesthoehe an der Wurzel dreht das um: der Innenabstand darf
+   weiterhin je Bauteil verschieden sein, die Trefferflaeche nicht.
+
+   min-height statt height: ein Knopf mit zweizeiliger Beschriftung
+   (Polnisch/Tuerkisch werden regelmaessig laenger, siehe die
+   Uebersetzungstabellen in rahmen.js) muss weiter wachsen duerfen.
+
+   Kontrollkaestchen und Schieberegler sind ausgenommen und stattdessen
+   EINZELN geregelt (siehe .profilmenue-schalter und
+   .filterfeld-schieber weiter unten): bei ihnen ist die Trefferflaeche
+   nicht das Feld selbst, sondern die ganze Beschriftungszeile bzw. die
+   Bahn des Reglers - eine Mindesthoehe auf dem <input> selbst wuerde
+   dort nur das gezeichnete Kaestchen verzerren, ohne die Flaeche zu
+   vergroessern, auf die man tatsaechlich klickt.
+
+   Symbolknoepfe brauchen zusaetzlich eine BREITE: min-height allein
+   liesse aus einem 20x20-Quadrat ein 20x32-Rechteck werden. Ihre
+   Breiten stehen deshalb weiterhin bei den einzelnen Regeln - dort
+   jetzt ueberall als var(--ziel). */
+button,
+select,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea {
+  min-height: var(--ziel);
 }
 
 /* ===== DER GEDRUECKTE ZUSTAND =====
@@ -426,6 +596,36 @@ a.wortmarke-link:active {
 
 #zustand-laden {
   color: var(--text-leise);
+}
+
+/* Derselbe unbestimmte Balken wie beim Bereichswechsel (.ladehinweis
+   weiter unten, dort steht die Begruendung). Hier wiegt er sogar
+   schwerer: der Seitenstart ist die LAENGSTE Wartezeit der ganzen
+   Anwendung (Sitzung pruefen, Mitarbeiterstatus, vier Rollenabfragen),
+   und bis zu dieser Runde stand dafuer ein einzelner grauer Satz auf
+   leerer Flaeche.
+   :not(.fehler-anzeige): schlaegt der Start fehl, traegt dasselbe
+   Element die Fehlermeldung (siehe die Regel darunter) - ein weiter
+   laufender Balken behauptete dann, es ginge noch etwas voran. */
+#zustand-laden:not(.fehler-anzeige)::after {
+  content: '';
+  display: block;
+  width: 160px;
+  height: 3px;
+  margin: var(--raum-4) auto 0;
+  border-radius: var(--rund-3);
+  background: var(--linie);
+  background-image: linear-gradient(90deg, transparent 0%, var(--marine) 50%, transparent 100%);
+  background-size: 60% 100%;
+  background-repeat: no-repeat;
+  animation: ladebalken 1100ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #zustand-laden:not(.fehler-anzeige)::after {
+    animation: none;
+    background-position: 20% 0;
+  }
 }
 
 /* Wird gesetzt, wenn seiteAufbauen() den Wurf von meineRollen() fängt.
@@ -479,7 +679,7 @@ a.wortmarke-link:active {
   width: 100%;
   padding: var(--raum-2) var(--raum-2);
   border: 1px solid var(--kontur);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font: inherit;
   color: var(--text);
   background: var(--flaeche);
@@ -490,7 +690,7 @@ a.wortmarke-link:active {
   margin-top: var(--raum-3);
   padding: var(--raum-2);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   background: var(--marine);
   color: var(--flaeche);
   font-weight: 600;
@@ -522,7 +722,7 @@ a.wortmarke-link:active {
   margin-top: var(--raum-3);
   padding: var(--raum-2) var(--raum-4);
   border: 1px solid var(--kontur);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   background: var(--flaeche);
   color: var(--text);
 }
@@ -546,6 +746,37 @@ a.wortmarke-link:active {
   grid-template-rows: var(--kopf-hoehe) 1fr var(--fuss-hoehe);
   grid-template-areas: "kopf kopf" "nav arbeit" "fuss fuss";
   height: 100vh;
+  /* EIN- UND AUSKLAPPEN DER NAVIGATION (Gestaltungsauftrag Punkt 3).
+     Die Breite steht an EINER Stelle - hier, in der Rasterangabe des
+     ganzen Arbeitszustands -, nicht an #navigation selbst: der
+     Arbeitsbereich daneben ist die zweite Spur desselben Rasters
+     (minmax(0, 1fr)) und bekommt den gewonnenen Platz dadurch von
+     selbst, ohne dass irgendeine zweite Regel davon wissen muesste.
+     Der Zustand haengt an <body>, nicht an #navigation: dieselbe
+     Machart wie body.zebra-an (siehe Zebramuster weiter unten), und die
+     einzige, die auch das RASTER erreicht - #navigation ist ein KIND
+     dieses Rasters und kann seine eigene Spurbreite nicht setzen. */
+  transition: grid-template-columns 160ms ease;
+}
+
+body.navigation-schmal #zustand-arbeit {
+  grid-template-columns: var(--nav-breite-schmal) minmax(0, 1fr);
+}
+
+/* "niemals eine Bewegung, die Arbeit verzoegert" (Auftrag): wer
+   "Bewegung reduzieren" eingestellt hat, bekommt denselben Wechsel
+   sofort und ohne Uebergang - der Zustand selbst ist derselbe.
+   #arbeitsliste/#detailmaske stehen hier mit dabei: ihre
+   flex-basis-Uebergaenge (das Auf- und Zugehen der Detailmaske) stammen
+   aus einer frueheren Runde und waren als einzige Bewegung dieser
+   Oberflaeche nie abgeschaltet - beim Durchgehen der Bewegungsfrage
+   aufgefallen und hier mit erledigt. */
+@media (prefers-reduced-motion: reduce) {
+  #zustand-arbeit,
+  #arbeitsliste,
+  #detailmaske {
+    transition: none;
+  }
 }
 
 /* Drei Spalten statt eines flex-Bandes: Wortmarke, Suche, Profil. Ein
@@ -560,51 +791,126 @@ a.wortmarke-link:active {
 #kopfleiste {
   grid-area: kopf;
   display: grid;
-  /* NICHT "1fr auto 1fr": ein reines 1fr trägt ein implizites
-     Mindestmaß von auto (= Inhaltsbreite) - die Wortmarke ("VeloCity
-     WaWi", ca. 103px) ist deutlich breiter als der Profilknopf (32px),
-     also bekäme die linke Spalte allein durch ihren MINDESTBEDARF mehr
-     Platz als die rechte, obwohl beide "1fr" tragen. Das Ergebnis: die
-     mittlere (auto-)Spalte mit der Suche rutscht sichtbar nach rechts -
-     im Browser gemessen rund 97px daneben statt in der Mitte. minmax(...,
-     1fr) ersetzt das Inhalts-Minimum durch ein FESTES, für beide Seiten
-     GLEICHES Minimum (großzügig über der breiteren der beiden Seiten,
-     der Wortmarke) - erst DANN sind beide Außenspalten wirklich gleich
-     breit und die Suche liegt exakt in der Mitte der Kopfleiste. */
-  /* 140px -> 260px (Gestaltungsauftrag, "Uhrzeit, Datum und Sitzungsdauer
-     neben dem Profilbild"): die rechte Spalte traegt jetzt zusaetzlich
-     #sitzungsinfo VOR dem Profilknopf (siehe .profilbereich weiter unten)
-     - gemessen rund 190px fuer die laengere der beiden Zeilen plus Knopf
-     und Zwischenraum. Beide Aussenspalten bleiben GLEICH breit (siehe
-     Kommentar oben, warum "1fr" allein nicht reicht) - 260px deckt die
-     neue rechte Spalte UND liegt komfortabel ueber der Wortmarke links.
-     Die mittlere Spalte NICHT laenger "auto" (Gestaltungsauftrag Punkt 5,
-     woertlich "Suchschlitz groesser" - im Browser gemessen der eigentliche
-     Grund fuer den abgeschnittenen Platzhalter, siehe Bericht): eine
-     "auto"-Spur bemisst sich am INTRINSISCHEN Inhaltsmass ihrer Kinder,
-     nicht an deren max-width - #feld-suche trug schon vorher max-width:
-     320px, blieb aber bei ihrer intrinsischen ~200px (dem UA-Vorgabemass
-     eines <input> ohne size-Attribut) haengen, WEIL width:100% gegenueber
-     einer "auto"-Spur als unbestimmt gilt (Kreisbezug: die Spurbreite
-     haengt vom Kind ab, das Kind will 100% der Spur). minmax(300px, 480px)
-     macht die Spur selbst zu einer BESTIMMTEN Groesse - erst dagegen greift
-     #feld-suche { width:100%; max-width:480px } tatsaechlich. */
-  grid-template-columns: minmax(260px, 1fr) minmax(300px, 480px) minmax(260px, 1fr);
+  /* ===== DREI ZONEN, ZWEI GLEICHE RAENDER =====
+     Befund des Auftraggebers, woertlich: "die Kopfleiste hat einen
+     riesigen rechten Rand, links aber gequetscht". Nachgemessen (1790px,
+     Werte im Bericht) waren die AEUSSEREN Raender bereits gleich (24px
+     links wie rechts) und die Suche exakt fenstermittig - der Eindruck
+     kam von zwei anderen Stellen, und beide sind hier behoben:
+
+     1. DIE FUELLUNG DER ZONEN war ungleich. Links stand nur die 112px
+        breite Wortmarke, rechts 198px aus Sitzungsinfo und Profilknopf.
+        Zwischen Wortmarke und Suchfeld klafften dadurch 519px, zwischen
+        Suchfeld und Profilbereich nur 433px - 86px Unterschied in einer
+        Leiste, deren Aussenraender auf den Pixel stimmten. Das Auge
+        misst keine Raender, es misst Luft. Behoben nicht durch
+        Verschieben, sondern durch INHALT: der Umschalter der Navigation
+        (siehe .navigation-umschalter unten) gehoert ohnehin nach links
+        aussen - Fluent (Teams, Outlook im Web), Fiori (Shell-Bar) und
+        die Apple-Richtlinien (Seitenleisten-Knopf in der Werkzeugleiste)
+        setzen ihn alle genau dorthin. Die linke Zone traegt damit 152px
+        statt 112px.
+
+     2. DIE RAENDER WAREN NICHT UEBERALL GLEICH: unterhalb von 900px
+        sprang das padding auf --raum-3 (12px), waehrend die Statuszeile
+        unten bei --raum-5 blieb - ein und dieselbe Leiste mit zwei
+        verschiedenen Aussenraendern, je nach Fensterbreite. Jetzt bleibt
+        --raum-5 bei JEDER Breite stehen; nachgegeben wird stattdessen
+        dort, wo Nachgeben nichts kostet: an der Breite des Suchfeldes
+        (siehe die Medienabfragen weiter unten).
+
+     minmax(0, 1fr) statt des frueheren minmax(260px, 1fr): ein reines
+     "1fr" traegt ein implizites Mindestmass von auto (= Inhaltsbreite),
+     und weil die rechte Zone breiter ist als die linke, waeren die
+     beiden Aussenspalten dann NICHT gleich breit - die Suche rutschte
+     sichtbar aus der Fenstermitte (im Browser gemessen rund 97px). Das
+     feste 260px-Minimum von frueher loeste das, erzwang aber zugleich
+     eine Mindestbreite der ganzen Leiste von 924px und war damit die
+     Ursache dafuer, dass unterhalb von 900px ueberhaupt eine
+     Ausnahmeregel noetig wurde. minmax(0, 1fr) erreicht dasselbe Ziel
+     ohne Untergrenze: beide Aussenspuren sind immer exakt gleich breit,
+     die Suche liegt immer exakt in der Fenstermitte, und die Leiste hat
+     keine Mindestbreite mehr, die sie der Seite aufzwingt.
+
+     Die mittlere Spur bleibt eine BESTIMMTE Groesse (minmax mit festen
+     Enden statt "auto"): eine auto-Spur bemisst sich am intrinsischen
+     Inhaltsmass ihrer Kinder, nicht an deren max-width - #feld-suche
+     bliebe darin bei den ~200px haengen, die ein <input> ohne
+     size-Attribut vom Browser bekommt, weil width:100% gegenueber einer
+     auto-Spur als unbestimmt gilt. */
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 520px) minmax(0, 1fr);
   align-items: center;
-  gap: var(--raum-5);
-  /* 28px statt vormals 16px - der zweite, staerkere Anlauf auf "deutlich
-     luftiger... vor allem im Kopfbereich" (Auftrag woertlich): die
-     Kopfleiste ist selbst schon hoeher (--kopf-hoehe, siehe :root), hier
-     zusaetzlich mehr Luft links/rechts, damit Wortmarke und Profilbereich
-     nicht an der Kante kleben. */
-  /* 28px -> --raum-5: derselbe linke Rand wie in jedem anderen Bereich
-     dieser Oberflaeche. Die Statuszeile unten stand bei 16px, die
-     Kopfleiste bei 28px - zwei Baender ueber die volle Breite mit zwei
-     verschiedenen Raendern. Jetzt fluchten Wortmarke oben und
-     Statusmeldung unten. */
+  gap: var(--raum-4);
+  /* Derselbe Rand wie in jedem anderen Bereich dieser Oberflaeche, und
+     zwar bei jeder Fensterbreite: Wortmarke oben und Statusmeldung unten
+     fluchten. */
   padding: 0 var(--raum-5);
   background: var(--marine);
   color: var(--flaeche);
+}
+
+/* ===== Umschalter der Navigation (Gestaltungsauftrag Punkt 3) =====
+   Der Knopf steht in der KOPFLEISTE, nicht in der Navigation selbst -
+   und zwar aus zwei Gruenden, die beide nichts mit Geschmack zu tun
+   haben:
+     · Eine eingeklappte Leiste ist 56px breit. Ein Umschalter darin
+       muesste sich zwischen fuenf Rubriksymbole draengen und saehe wie
+       ein sechster Bereich aus.
+     · Er gehoert zur Fensterordnung, nicht zum Inhalt. Genau deshalb
+       sitzt er bei Fluent, Fiori und in den Apple-Richtlinien
+       uebereinstimmend links aussen in der Kopf-/Werkzeugleiste.
+   Er steht als ERSTES Element im DOM (siehe index.html) und ist damit
+   auch der erste Tabstopp: wer mit der Tastatur ankommt, kann die
+   Leiste oeffnen, BEVOR er durch sie hindurchtabbt.
+   Farben: dieselbe Weiss-auf-Marine-Lesbarkeit wie der Rest der
+   Kopfleiste (17,29:1). Der Ueberfahren-Zustand hellt die FLAECHE auf
+   statt die Schrift zu aendern - eine hellere Schrift auf Marine waere
+   eine zweite, unvermessene Farbe. */
+.navigation-umschalter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: var(--ziel);
+  height: var(--ziel);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--rund-1);
+  background: transparent;
+  color: var(--flaeche);
+  transition: background-color 120ms ease;
+}
+
+.navigation-umschalter:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Dieselbe Bildsprache wie .bereich-icon svg / .zeilen-aktion svg /
+   .kopftafel-umschalter svg - ein viertes, andersartiges Icon-Vokabular
+   waere ein Bruch. Das Zeichen selbst ist das ueblich gewordene
+   Seitenleisten-Symbol (Rechteck mit abgesetzter linker Spalte), nicht
+   der "Hamburger": der steht in heutigen Oberflaechen fuer ein
+   VERSTECKTES Menue, hier verschwindet aber nichts - die Leiste bleibt
+   als Symbolspalte stehen. */
+.navigation-umschalter svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Umschalter und Wortmarke sind EINE Zone, nicht zwei Kinder des Rasters
+   - sonst braeuchte die Kopfleiste eine vierte Spalte, und die Suche
+   saesse wieder nicht in der Fenstermitte. */
+.kopfleiste-marke {
+  display: flex;
+  align-items: center;
+  gap: var(--raum-3);
+  justify-self: start;
+  min-width: 0;
 }
 
 /* Wortmarke (Gestaltungsauftrag, Punkt 1): "VeloCity WaWi" trug das
@@ -615,12 +921,14 @@ a.wortmarke-link:active {
    sich jetzt ueber GEWICHT (leicht/fett) statt ueber Farbe, dazwischen
    eine schmale, halbtransparente Linie statt eines Trennzeichens im
    Fliesstext - ruhig und beruflich, wie der Auftrag verlangt. */
+/* justify-self entfaellt: die Wortmarke ist kein Rasterkind mehr,
+   sondern liegt zusammen mit dem Navigations-Umschalter in
+   .kopfleiste-marke (siehe dort). */
 #kopfleiste .wortmarke {
   display: flex;
   align-items: center;
   gap: var(--raum-2);
   letter-spacing: 0.02em;
-  justify-self: start;
 }
 
 .wortmarke-firma {
@@ -684,16 +992,18 @@ a.wortmarke-link:active {
 #feld-suche {
   justify-self: center;
   width: 100%;
-  /* 320px -> 480px (Gestaltungsauftrag, woertlich: "Suchschlitz
-     groesser"): bei 320px schnitt der laengste Platzhaltertext
-     ("In diesem Bereich keine Suche", siehe bereichWechseln() in
-     rahmen.js) sichtbar ab ("In diesem Bereich kein…") - gemessen
-     braucht dieser Text samt Lupe und Innenabstand rund 400px, 480px
-     laesst zusaetzlich Luft, statt ihn nur knapp passend zu machen. */
-  max-width: 480px;
+  /* 320px -> 480px -> 520px. Der Sprung auf 480 kam aus dem
+     Gestaltungsauftrag "Suchschlitz groesser" (bei 320px schnitt der
+     laengste Platzhaltertext "In diesem Bereich keine Suche" sichtbar
+     ab; gemessen braucht er samt Lupe und Innenabstand rund 400px). Die
+     letzten 40px sind eine reine Aufraeumung: die mittlere Rasterspur
+     der Kopfleiste ist 520px breit, das Feld blieb bei 480 - es stand
+     also zentriert in seiner eigenen Spur, mit 20px ungenutztem Rand auf
+     jeder Seite. Zwei Masse fuer dieselbe Sache sind eines zu viel. */
+  max-width: 520px;
   padding: var(--raum-2) var(--raum-2) var(--raum-2) var(--raum-6);
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font: inherit;
   color: var(--text);
   background-color: var(--flaeche);
@@ -768,47 +1078,43 @@ a.wortmarke-link:active {
   font-variant-numeric: tabular-nums;
 }
 
-/* ===== Kopfleiste bei schmalem Fenster (Nebenbefund der Kopftafel-
-   Breitenaufgabe, aus einem frueheren Bericht bekannt und hier behoben,
-   weil beim Nachmessen von 1024/820px ohnehin hier vorbeigekommen) =====
-   Im Browser bei 820px gemessen: die SEITE SELBST scrollte waagerecht
-   (document.documentElement.scrollWidth 896px bei 820px Fensterbreite),
-   nicht die Kopftafel - deren eigenes overflow-x:auto (siehe .kopftafel
-   weiter oben) griff bereits richtig. Ursache war #kopfleiste oben: ihr
-   grid-template-columns setzt fuer beide AUSSENSPALTEN ein HARTES Minimum
-   von 260px (Begruendung dort: komfortabel ueber der Wortmarke UND dem
-   Profilbereich mit #sitzungsinfo) plus 300px fuer die Suche plus
-   48px Zwischenraum plus 56px Innenabstand = 924px Mindestbreite,
-   unabhaengig vom tatsaechlichen Fensterinhalt - ein Grid-Minimum ist
-   IMMER ein hartes Mass, kein Vorschlag, der vor Erreichen automatisch
-   nachgeben wuerde.
-   Der Ausweg NICHT ueber .kopftafel: die Tafel selbst blieb in JEDER
-   Messung innerhalb ihres eigenen overflow-x, sie hat mit diesem Befund
-   nichts zu tun (siehe Bericht). Stattdessen die Kopfleiste selbst
-   verschlanken, NUR unterhalb von 900px (grosszuegig ueber den 820px, mit
-   der die Aufgabe prueft): #sitzungsinfo ist bereits aria-hidden="true"
-   (siehe index.html - "Beiwerk, keine Kennzahl", Auftragszitat oben) und
-   verschwindet hier rein visuell, ein Bildschirmleser verliert dadurch
-   nichts, was er vorher vorgelesen haette. Die Aussenspalten duerfen dann
-   auf ein kleineres, aber weiterhin komfortables Minimum sinken (130px
-   deckt die 116px breite Wortmarke UND den 32px breiten Profilknopf ohne
-   Sitzungsinfo klar ab), Zwischenraum und Innenabstand ebenfalls
-   verkleinert - macht zusammen 528px Mindestbreite, weit unter 820px. */
+/* ===== Kopfleiste bei schmalem Fenster =====
+   Frueher stand hier eine Ausnahme, die BEIDE Raender der Kopfleiste von
+   --raum-5 auf --raum-3 zog - eine Leiste mit zwei verschiedenen
+   Aussenraendern je nach Fensterbreite, waehrend die Statuszeile darunter
+   unveraendert bei --raum-5 blieb. Der Grund dafuer ist mit der neuen
+   Rasterangabe entfallen: die frueheren 260px Mindestbreite je
+   Aussenspalte erzwangen zusammen mit 300px Suche, Zwischenraum und
+   Innenabstand eine Mindestbreite von 924px fuer die ganze Leiste - im
+   Browser bei 820px gemessen schob genau das die SEITE waagerecht
+   (scrollWidth 896px bei 820px Fensterbreite). minmax(0, 1fr) hat keine
+   Untergrenze mehr; nachgegeben wird jetzt allein an der Breite des
+   Suchfelds, und die Raender bleiben, wo sie sind.
+
+   Zwei Stufen, beide gemessen (siehe Bericht):
+   · ab 1100px abwaerts wird die Suchspur schmaler - sonst bliebe der
+     rechten Zone (Sitzungsinfo plus Profilknopf, 198px) zu wenig Platz.
+   · ab 900px abwaerts verschwindet #sitzungsinfo. Es ist bereits
+     aria-hidden="true" (siehe index.html - "Beiwerk, keine Kennzahl",
+     Auftragszitat oben); ein Bildschirmleser verliert dadurch nichts,
+     was er vorher vorgelesen haette. */
+@media (max-width: 1100px) {
+  #kopfleiste {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 380px) minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 900px) {
   #sitzungsinfo {
     display: none;
   }
-
-  #kopfleiste {
-    grid-template-columns: minmax(130px, 1fr) minmax(220px, 1fr) minmax(130px, 1fr);
-    gap: var(--raum-3);
-    padding: 0 var(--raum-3);
-  }
 }
 
 .profilknopf {
-  width: 32px;
-  height: 32px;
+  /* Lag als einziger Symbolknopf schon auf der Zielgroesse - jetzt
+     nennt er sie auch beim Namen. */
+  width: var(--ziel);
+  height: var(--ziel);
   padding: 0;
   border: 2px solid transparent;
   border-radius: 50%;
@@ -862,10 +1168,12 @@ a.wortmarke-link:active {
   background: var(--flaeche);
   color: var(--text);
   border: 1px solid var(--linie);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(6, 24, 65, 0.18);
+  border-radius: var(--rund-2);
+  /* Ebene 2, schwebend: haengt am Profilknopf, schliesst beim Klick
+     daneben - siehe Ebenensystem in :root. */
+  box-shadow: var(--schatten-2);
   padding: var(--raum-3);
-  z-index: 10;
+  z-index: var(--z-ebene-2);
 }
 
 .profilmenue-kopf {
@@ -899,7 +1207,7 @@ a.wortmarke-link:active {
 
 .rollen-marke {
   padding: var(--raum-0) var(--raum-2);
-  border-radius: 999px;
+  border-radius: var(--rund-3);
   background: var(--grund);
   border: 1px solid var(--linie);
   color: var(--text-leise);
@@ -913,7 +1221,7 @@ a.wortmarke-link:active {
   text-align: left;
   padding: var(--raum-2) var(--raum-2);
   border: none;
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   background: transparent;
   color: var(--text);
   font: inherit;
@@ -945,6 +1253,10 @@ a.wortmarke-link:active {
   margin-bottom: var(--raum-2);
 }
 
+/* Die Trefferflaeche eines Kontrollkaestchens ist nicht das gezeichnete
+   Kaestchen (16px), sondern die ganze umschliessende <label>-Zeile - sie
+   traegt deshalb die Zielgroesse, nicht das <input> darin (siehe die
+   zentrale Regel weiter oben). */
 .profilmenue-schalter {
   display: flex;
   align-items: center;
@@ -983,7 +1295,7 @@ a.wortmarke-link:active {
   color: var(--text);
   background: var(--flaeche);
   border: 1px solid var(--kontur);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   padding: var(--raum-1) var(--raum-2);
   /* Kein max-width - Türkisch/Polnisch tragen längere Sprachnamen als
      Deutsch (siehe Bericht, Fallstrick "Textlänge") und sollen nicht
@@ -999,99 +1311,142 @@ a.wortmarke-link:active {
    Unterschied macht. */
 #navigation {
   grid-area: nav;
-  /* HIER SASS DER HAUPTBEFUND DES AUFTRAGGEBERS ("der linke Randbereich
-     hebt sich ueberhaupt nicht ab"). Nachgemessen: die Navigation trug
-     #ffffff, die Arbeitsliste daneben ebenfalls #ffffff - es gab
-     schlicht keine Flaechenunterscheidung, nur eine Kante von 1,37:1.
-     Jetzt Rang 1 der Gliederungsregel (hier wird BEDIENT, nicht
-     gelesen) und eine Kante, die man sieht. */
-  background: var(--flaeche-rahmen);
-  border-right: 1px solid var(--kontur);
+  /* ===== HIER SASS DER HAUPTBEFUND, ZWEIMAL =====
+     Erst: "der linke Randbereich hebt sich ueberhaupt nicht ab" -
+     Navigation und Arbeitsliste trugen beide #ffffff, dazwischen eine
+     Kante von 1,37:1. Antwort der letzten Runde war ein heller Grauton
+     (--flaeche-rahmen) plus eine sichtbare Kante.
+     Dann: "die linke Leiste ist so langweilig wie Outlook 98". Auch das
+     trifft, und es ist derselbe Befund eine Stufe hoeher: ein heller
+     Grauton neben einer weissen Flaeche IST die Bildsprache von 1997 -
+     ein Rand, der sich entschuldigt, dass er da ist.
+
+     DIE FREIHEIT DIESER RUNDE (Auftrag, woertlich: "Nimm dir bei einer
+     Sache echte Freiheit"): die Leiste bekommt die Produktfarbe. Sie ist
+     das Element, das man in dieser Oberflaeche am haeufigsten ansieht -
+     acht Stunden am Tag am Bildschirmrand, bei jedem Bereichswechsel neu
+     -, und zusammen mit der Kopfleiste bildet sie jetzt EINEN
+     durchgehenden marinen Rahmen um das weisse Arbeitsblatt. Das ist
+     dieselbe Loesung, die Teams und Outlook im Web (Fluent), das Fiori
+     Launchpad und die Seitenleisten der Apple-Programme fahren: der
+     Rahmen traegt die Marke, das Blatt traegt die Arbeit. Die Frage
+     "bin ich im Blatt oder an seinem Rand" (Gliederungsregel Punkt 1)
+     ist damit nicht mehr eine Frage von zwei Grautoenen, sondern auf den
+     ersten Blick beantwortet.
+
+     GEMESSEN: Weiss auf --marine 17,29:1 (Text braucht 4,5:1). Die
+     Grenze zum Arbeitsblatt misst als Flaeche-gegen-Flaeche ebenfalls
+     17,29:1 - weit ueber den 3:1 aus WCAG 1.4.11.
+     Deshalb steht hier KEINE border-right mehr, und das ist keine
+     Ausnahme von Gliederungsregel Punkt 2, sondern deren Sinn: die Regel
+     verlangt eine Linie, WO ZWEI FLAECHEN SICH NICHT SELBST
+     UNTERSCHEIDEN. Wo sie es mit 17:1 tun, waere die Linie kein
+     Trennmittel, sondern ein drittes Element dazwischen - genau wie an
+     der Unterkante der Kopfleiste, die aus demselben Grund nie eine
+     hatte.
+
+     DAS EINGEGANGENE RISIKO (Bericht): eine gesaettigte Flaeche von
+     200px Breite ueber die volle Hoehe ist viel Farbe. Sie traegt aber
+     keine Daten und keine Grafik, sondern fuenf Woerter - und sie ist
+     seit dieser Runde einklappbar, laesst sich also auf 56px bringen,
+     wenn sie zu laut wird. */
+  background: var(--marine);
+  color: var(--flaeche);
   overflow-y: auto;
+  overflow-x: hidden;   /* waehrend des Einklappens darf nichts herausragen */
   display: flex;
   flex-direction: column;
-  /* 8px/24px 14px statt vormals 4px/18px 10px - dritter Anlauf, deutlich
-     weiter als beim zweiten: mehr Abstand zwischen den fuenf Rubriken UND
-     mehr Rand rundum, damit die Navigation nicht dichter wirkt als der
-     jetzt luftigere Kopfbereich daneben. */
   gap: var(--raum-2);
   padding: var(--raum-5) var(--raum-3);
 }
 
+/* Eingeklappt: derselbe Innenabstand links/rechts (--raum-3), damit die
+   Symbole beim Zusammenschieben nicht wandern - 56px Leiste minus
+   zweimal 12px ergibt genau die Zielgroesse --ziel fuer den Knopf. */
+body.navigation-schmal #navigation {
+  padding: var(--raum-5) var(--raum-3);
+}
+
 /* Ein Eintrag je erlaubtem Bereich - rahmen.js erzeugt sie, hier nur
-   das Aussehen. Nicht erlaubte Bereiche stehen erst gar nicht im DOM,
-   deshalb reicht reines Styling der vorhandenen Knöpfe.
-   flex mit Icon (siehe .bereich-icon unten, Gestaltungsauftrag Punkt 3):
-   grössere Innenabstaende und ein eigener Rahmenradius machen aus der
-   Zeile eine abgegrenzte Flaeche statt eines blossen Textes - dieselbe
-   "Rubrik statt Zeile"-Absicht wie oben bei #navigation. */
+   das Aussehen. Nicht erlaubte Bereiche stehen erst gar nicht im DOM.
+   min-height: var(--ziel) kommt aus der zentralen Zielgroessen-Regel
+   weiter oben; der Innenabstand haelt den Knopf in Wahrheit bei 42px -
+   eine Rubrik darf grosszuegiger sein als ein Symbolknopf in einer
+   Tabellenzeile. */
 #navigation button {
   display: flex;
   align-items: center;
   gap: var(--raum-2);
   text-align: left;
-  /* 13px/16px statt vormals 12px/16px (Punkt 3, dritter Anlauf) - kein
-     border-left mehr (siehe Kommentar bei aria-current="page" weiter
-     unten, Punkt 6): ohne die frühere 4px-Fahne braucht dieser Ruhezustand
-     kein reserviertes transparentes Randstück mehr, das den Wechsel zum
-     aktiven Zustand layoutstabil hält. */
   padding: var(--raum-3) var(--raum-4);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--rund-1);
   background: transparent;
-  color: var(--text);
+  color: var(--flaeche);
   font-size: var(--grad-4);
+  /* Nicht "…" wachsen lassen, sondern beschneiden: waehrend des
+     Einklappens wird der Knopf schmaler als sein Text, und ein
+     umbrechender Text liesse die Leiste in diesem Augenblick zappeln. */
+  white-space: nowrap;
+  overflow: hidden;
   transition: background-color 120ms ease, color 120ms ease;
 }
 
-/* Auf einer getoenten Flaeche hebt sich ein Ueberfahren nach OBEN ab,
-   nicht nach unten: die Rubrik wird weiss wie das Arbeitsblatt daneben.
-   Dieselbe Richtung ueberall dort, wo ein Bedienelement auf
-   --flaeche-rahmen sitzt. */
+/* Auf mariner Flaeche hebt sich ein Ueberfahren durch AUFHELLEN ab. Eine
+   halbtransparente weisse Auflage statt eines zweiten Farbwerts: sie
+   funktioniert unveraendert, falls --marine sich je aendert, und sie
+   fuehrt keinen unvermessenen Ton in die Palette ein.
+   Gemessen: die entstehende Flaeche ist #243458; die Beschriftung darauf
+   haelt 12,30:1 (Text braucht 4,5:1). Die Flaeche selbst misst gegen
+   --marine nur 1,41:1 - das ist Absicht und keine Luecke in WCAG 1.4.11:
+   der Ueberfahren-Zustand ist keine Information, die man ohne Zeiger
+   erkennen muesste (der Zeiger steht ja darauf). Welche Rubrik AKTIV
+   ist, sagt nicht dieser Zustand, sondern die volle Umkehrung darunter
+   (17,29:1). */
 #navigation button:hover {
-  background: var(--flaeche);
+  background: rgba(255, 255, 255, 0.12);
 }
 
-/* GESTALTUNGSAUFTRAG PUNKT 6 ("dröge und altbacken", "nimm dir
-   Freiheit"): die Navigation ist das Element, das man in dieser
-   Oberflaeche am haeufigsten ansieht - sie steht acht Stunden am Tag am
-   Bildschirmrand, bei jedem Bereichswechsel neu wahrgenommen. Die
-   bisherige Auszeichnung (eine 4px-Fahne in --rot, ein Hauch hellerer
-   Hintergrund #eef1f7) war genau die "kaum wahrnehmbare Kontur"-Sprache,
-   die der Auftrag an anderer Stelle (Punkt 4, Spaltenkopf) schon einmal
-   als zu zurueckhaltend bemaengelt hat. Diese Fassung ersetzt sie durch
-   eine VOLLE Flaeche in --marine mit weisser Schrift - derselbe Farbton,
-   den .uebersichtskachel-wert und jede hervorgehobene Zahl in dieser
-   Warenwirtschaft ohnehin schon als "das ist die Hauptaussage" tragen:
-   der aktive Bereich bekommt damit dieselbe visuelle Sprache wie die
-   Zahlen, die er zeigt, statt eine vierte, eigens erfundene
-   Auszeichnungsart. Kontrast weiss auf --marine: 17.29:1 (gemessen, siehe
-   Bericht) - weit über der fuer Text verlangten Untergrenze von 4.5:1.
-   DAS EINGEGANGENE RISIKO (Bericht): eine volle Farbflaeche ist ein
-   groesseres visuelles Gewicht als eine duenne Fahne - bei fuenf
-   Eintraegen und ein paar Wechseln ueber den Tag verteilt bleibt das im
-   Rahmen, koennte bei einer kuenftig laengeren Liste (mehr als fuenf
-   Bereiche) aber unruhiger wirken; sollte das eintreten, ist eine
-   schmalere Markierung (z. B. nur der Icon-Kreis gefuellt) der
-   naheliegende Rueckbau. */
+/* Der aktive Bereich ist die UMKEHRUNG des Rahmens: weisse Kachel,
+   marine Schrift - dieselbe Paarung wie zuvor, nur andersherum, seit
+   die Leiste selbst marine ist. Sie sieht damit aus wie ein Stueck des
+   Arbeitsblatts, das in den Rahmen hineinreicht: genau die Aussage
+   "dieser Bereich ist der, den du gerade siehst".
+   Gemessen: --marine auf --flaeche 17,29:1. */
 #navigation button[aria-current="page"] {
-  background: var(--marine);
-  color: var(--flaeche);
+  background: var(--flaeche);
+  color: var(--marine);
   font-weight: 600;
 }
 
-/* ===== Rubrik-Icons (Gestaltungsauftrag, Punkt 3) =====
-   EIN Regelsatz fuer alle fuenf Icons statt einer Klasse je Symbol - das
-   IST die "Familie", die der Auftrag verlangt: gleiche Strichstaerke,
-   gleiches Raster, gleiche optische Groesse, unabhaengig davon, welches
-   der fuenf bereich.icon-Markups (siehe die *.js-Dateien) gerade
-   einghaengt ist. stroke: currentColor statt einer eigenen Farbe: das
-   Icon folgt damit automatisch der Textfarbe des Knopfs (Ruhezustand,
-   :hover, aria-current="page") - eine zweite Farbregel je Zustand
-   entfaellt. Dieselbe Sprache (1.6px Strich, rund) wie .zeilen-aktion
-   svg weiter unten, die einzige andere Stelle dieser Oberflaeche mit
-   selbst gezeichneten Icons - eine zweite, andersartige Bildsprache
-   waere kein zweites Vokabular, sondern ein Bruch. */
+/* Der Tastaturfokus kommt von der globalen :focus-visible-Regel in --rot.
+   Auf mariner Flaeche misst --rot 3,92:1 gegen --marine (gemessen) -
+   ueber den 3:1, die WCAG 1.4.11 fuer eine Bedienelement-Auszeichnung
+   verlangt. Ein
+   groesserer Versatz als die globale Vorgabe (1px) waere hier schaedlich:
+   der Ring liefe sonst aus der 56px schmalen Leiste heraus. */
+body.navigation-schmal #navigation button:focus-visible {
+  outline-offset: -2px;
+}
+
+/* ===== Eingeklappt: nur Symbole =====
+   Der Text verschwindet, das Symbol bleibt und rueckt in die Mitte. Der
+   NAME geht dabei nicht verloren: rahmen.js setzt auf jedem Rubrikknopf
+   ein aria-label mit demselben Text (also hoert ein Bildschirmleser
+   unveraendert "Flotte"), und beim Ueberfahren wie beim Tastaturfokus
+   erscheint das Hinweisfenster mit dem Namen - beides in
+   navigationRubrikVerdrahten() in rahmen.js. Ein Symbol allein waere
+   eine Ratefrage; genau das verlangt der Auftrag ausdruecklich nicht. */
+body.navigation-schmal #navigation button {
+  justify-content: center;
+  padding: var(--raum-3) 0;
+  gap: 0;
+}
+
+body.navigation-schmal #navigation .bereich-text {
+  display: none;
+}
+
 .bereich-icon {
   display: inline-flex;
   flex: 0 0 auto;
@@ -1304,6 +1659,20 @@ a.wortmarke-link:active {
      einen Kopfbereich lesbar zu machen. */
   padding: var(--raum-4) var(--raum-5);
   border-bottom: 1px solid var(--kontur);
+  /* EBENE 1, AUFLIEGEND (siehe Ebenensystem in :root). Der Auftraggeber,
+     woertlich: die ausgeklappte Kopftafel "soll sich abheben wie etwas,
+     das man heruntergezogen hat". Genau das leistet ein Schatten NUR
+     nach unten: die Tafel liegt auf dem Blatt, die Liste laeuft unter
+     ihr weiter. Ausdruecklich zusaetzlich zur Kante, nicht statt ihr -
+     die Kante haelt die 3:1 aus WCAG 1.4.11 auch dort, wo ein weicher
+     Schatten (16 % Deckkraft) unter der Wahrnehmungsschwelle bliebe,
+     etwa auf einem kontrastarmen Bildschirm.
+     position/z-index: ohne eine eigene Stapelposition liegt der
+     Schatten UNTER der nachfolgenden Filterleiste und dem Tabellenkopf
+     (beide tragen eine deckende weisse Flaeche) und waere unsichtbar.
+     Nicht --z-ebene-2: die Tafel schwebt nicht, sie liegt auf. */
+  position: relative;
+  z-index: 1;
   /* Eine Tafel mit fuenf Spalten kann in einem sehr schmalen Fenster
      breiter werden als der Arbeitsbereich. Sie darf dann in SICH
      scrollen - was sie nicht darf, ist die ganze Seite waagerecht
@@ -1320,9 +1689,54 @@ a.wortmarke-link:active {
    (Titel, Bezugszeile, Bild) bleibt UNBERUEHRT - genau das soll im
    eingeklappten Zustand stehen bleiben, siehe Kopfkommentar bei
    kopftafelEingeklappt() in rahmen.js. */
+.kopftafel:not(.kopftafel-eingeklappt) {
+  box-shadow: var(--schatten-1);
+}
+
 .kopftafel.kopftafel-eingeklappt .kopftafel-tabelle,
 .kopftafel.kopftafel-eingeklappt .kopftafel-fussnote {
   display: none;
+}
+
+/* EINGEKLAPPT KEIN SCHATTEN, und das ist die Probe aufs Ebenensystem:
+   eine zugeklappte Tafel ist eine Zeile im Blatt wie die Reiter- oder
+   die Werkzeugleiste - unter ihr laeuft nichts hindurch, sie ist nicht
+   heruntergezogen. Ein Schatten waere dort genau das, was in diesem
+   Projekt als Mangel gilt: Zierrat, der eine Hoehe behauptet, die es
+   nicht gibt. Deshalb steht der Schatten oben an :not(...) und nicht
+   an .kopftafel selbst.
+
+   AUFKLAPPEN BEWEGT SICH. Ein Aufklappen, das springt, laesst offen, ob
+   der Inhalt neu ist oder immer schon dastand. Die Klasse setzt
+   kopftafelUmschalterKnopf() in rahmen.js NUR beim Klick und nimmt sie
+   nach dem Lauf wieder weg - ein Bereichs- oder Reiterwechsel baut die
+   Tafel ebenfalls neu auf, und der darf nicht bei jedem Filterklick
+   mitwackeln. 140ms: kurz genug, dass niemand darauf wartet (die Tafel
+   ist waehrenddessen bereits vollstaendig da und bedienbar - die
+   Bewegung liegt in opacity/transform, nicht in der Hoehe, und
+   verzoegert deshalb keine Arbeit). */
+@keyframes kopftafel-aufklappen {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-tabelle,
+.kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-fussnote {
+  animation: kopftafel-aufklappen 140ms ease-out;
+}
+
+/* Wer "Bewegung reduzieren" eingestellt hat, bekommt denselben Inhalt
+   sofort - der Zustand ist derselbe, nur der Weg dorthin faellt weg. */
+@media (prefers-reduced-motion: reduce) {
+  .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-tabelle,
+  .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-fussnote {
+    animation: none;
+  }
+
+  .kopftafel-umschalter svg,
+  #navigation button {
+    transition: none;
+  }
 }
 
 /* Eingeklappt braucht der Kopf keinen unteren Abstand zur (unsichtbaren)
@@ -1345,11 +1759,12 @@ a.wortmarke-link:active {
   justify-content: center;
   flex: 0 0 auto;
   margin-left: auto;
-  width: 26px;
-  height: 26px;
+  /* 26x26 -> Zielgroesse (siehe --ziel in :root) */
+  width: var(--ziel);
+  height: var(--ziel);
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   background: transparent;
   color: var(--text-leise);
 }
@@ -1991,7 +2406,7 @@ a.wortmarke-link:active {
    geoeffneten Popup verschwinden. */
 .hinweisfenster {
   position: fixed;
-  z-index: 30;
+  z-index: var(--z-hinweis);
   max-width: 260px;
   padding: var(--raum-2) var(--raum-2);
   /* --marine als Flaeche, Weiss als Text - derselbe Kontrast wie --text
@@ -2004,8 +2419,11 @@ a.wortmarke-link:active {
   color: var(--flaeche);
   font-size: var(--grad-3);
   line-height: 1.4;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(6, 24, 65, 0.35);
+  border-radius: var(--rund-1);
+  /* Ebene 2 wie jedes andere Popup - ein Tooltip mit dem Schatten
+     eines Dialogs saehe absurd aus. Nur die STAPELUNG ist hoeher
+     (--z-hinweis oben), nicht die Hoehe. */
+  box-shadow: var(--schatten-2);
   /* Darf die Maus nicht selbst einfangen: das Fenster erscheint bevorzugt
      UEBER dem Anker (siehe hinweisfensterZeigen()) und koennte sich dabei
      zeitweise mit ihm ueberlappen - faenge es die Maus ein, risse genau
@@ -2117,7 +2535,7 @@ a.wortmarke-link:active {
 .filterfeld select {
   padding: var(--raum-1) var(--raum-2);
   border: 1px solid var(--kontur);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font: inherit;
   color: var(--text);
   background: var(--flaeche);
@@ -2131,6 +2549,11 @@ a.wortmarke-link:active {
 
 .filterfeld-schieber input[type="range"] {
   width: 140px;
+  /* Dieselbe Ueberlegung wie beim Kontrollkaestchen: die Trefferflaeche
+     eines Schiebereglers ist die BAHN, nicht der Griff. Eine feste Hoehe
+     auf Zielgroesse gibt der Bahn die noetige Flaeche, ohne den vom
+     Browser gezeichneten Griff zu verzerren (er zentriert sich darin). */
+  height: var(--ziel);
 }
 
 .filterfeld-wert {
@@ -2167,7 +2590,7 @@ a.wortmarke-link:active {
   max-width: 220px;
   padding: var(--raum-1) var(--raum-2);
   border: 1px solid var(--text-leise);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font: inherit;
   font-size: var(--grad-3);
   color: var(--text);
@@ -2228,7 +2651,7 @@ a.wortmarke-link:active {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  z-index: 20;
+  z-index: var(--z-ebene-2);
   display: flex;
   flex-direction: column;
   gap: var(--raum-0);
@@ -2239,8 +2662,10 @@ a.wortmarke-link:active {
   padding: var(--raum-2);
   background: var(--flaeche);
   border: 1px solid var(--linie);
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(6, 24, 65, 0.18);
+  border-radius: var(--rund-2);
+  /* Ebene 2, schwebend - dieselbe Hoehe und derselbe Schatten wie das
+     Profilmenue: beide haengen an einem Bedienelement. */
+  box-shadow: var(--schatten-2);
 }
 
 .mehrfachauswahl-alle {
@@ -2263,12 +2688,15 @@ a.wortmarke-link:active {
   background: var(--grund);
 }
 
+/* Wie .profilmenue-schalter: ein <label> mit Kontrollkaestchen - die
+   Zeile ist das Ziel, nicht das Kaestchen. */
 .mehrfachauswahl-option {
+  min-height: var(--ziel);
   display: flex;
   align-items: center;
   gap: var(--raum-2);
   padding: var(--raum-1) var(--raum-2);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font-size: var(--grad-3);
   color: var(--text);
   white-space: nowrap;
@@ -2854,6 +3282,15 @@ a.wortmarke-link:active {
   position: sticky;
   top: 0;
   background: var(--flaeche);
+  /* EBENE 1, AUFLIEGEND (siehe Ebenensystem in :root): der zweite Ort
+     dieser Oberflaeche, an dem Inhalt unter einer stehenbleibenden
+     Flaeche hindurchlaeuft. Vorher war am gescrollten Zustand nichts zu
+     sehen ausser der Kante, die auch im ungescrollten Zustand dasteht -
+     ob die Liste oben steht oder mitten drin, war der Kopfzeile nicht
+     anzusehen. z-index: ohne ihn zeichnet der Schatten unter den
+     folgenden Zeilen, die eine eigene Flaeche tragen. */
+  z-index: 1;
+  box-shadow: var(--schatten-1);
 }
 
 .arbeitstabelle th {
@@ -3035,11 +3472,14 @@ a.wortmarke-link:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  /* 26x26 -> Zielgroesse. Die Zeile wird dadurch NICHT hoeher: --zeile
+     misst 40px, der Knopf 32 plus zweimal --raum-1 Innenabstand der
+     Aktionszelle (siehe .zeilen-aktionen-zelle oben) = genau 40. */
+  width: var(--ziel);
+  height: var(--ziel);
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   background: transparent;
   color: var(--text-leise);
 }
@@ -3107,11 +3547,21 @@ a.wortmarke-link:active {
 .spaltenkopf-gruppenknopf {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  /* min-width zusaetzlich zur zentralen Mindesthoehe: der
+     Gruppieren-Schalter traegt NUR ein Symbol und mass dadurch gemessen
+     31px in der Breite - eine Trefferflaeche ist zweidimensional, eine
+     Mindesthoehe allein macht aus einem zu kleinen Knopf nur einen
+     schmalen hohen. Der Sortier-Schalter traegt einen Spaltentitel und
+     ist ohnehin breiter; er bekommt die Angabe trotzdem, damit eine
+     kuenftige Spalte mit einbuchstabigem Titel nicht wieder darunter
+     faellt. */
+  min-width: var(--ziel);
   gap: var(--raum-1);
   border: 1px solid var(--text-leise);
   background: var(--flaeche);
   padding: var(--raum-1) var(--raum-2);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   color: inherit;
   font: inherit;
   text-transform: inherit;
@@ -3213,11 +3663,19 @@ a.wortmarke-link:active {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  /* WAR 20x20 - der kleinste Knopf der ganzen Oberflaeche und der
+     einzige, der die absolute Untergrenze aus WCAG 2.5.8 (24x24)
+     unterschritt. Die frueher hier stehende Begruendung ("die
+     Spaltenkopfzeile ist schon voller Bedienelemente, ein zweiter Knopf
+     in Zeilenaktionsgroesse wuerde den Kopf hoeher machen als noetig")
+     hat sich damit erledigt: der Kopf DARF hoeher werden, ein Knopf,
+     den man nicht trifft, darf nicht kleiner bleiben. Gemessener
+     Zuwachs der Kopfzeile: 8px. */
+  width: var(--ziel);
+  height: var(--ziel);
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   background: transparent;
   color: var(--text-leise);
 }
@@ -3298,7 +3756,7 @@ a.wortmarke-link:active {
      dieser Datei bereits gemessen) und bleibt trotzdem sichtbar leiser
      als der Fliesstext selbst. */
   border: 1px solid var(--text-leise);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font: inherit;
   font-size: var(--grad-3);
   color: var(--text);
@@ -3425,13 +3883,89 @@ a.wortmarke-link:active {
   text-align: center;
 }
 
+/* "Gibt es einen Ladezustand, wo Warten entsteht?" (Auftrag). Den SATZ
+   gibt es seit der vorigen Runde (siehe bereichWechseln() in
+   rahmen.js); was fehlte, war die Auskunft, dass gerade etwas LAEUFT -
+   ein stehender Satz ist von einer haengengebliebenen Seite nicht zu
+   unterscheiden. Ein schmaler, unbestimmter Balken statt eines Kreisels:
+   er sagt "es laeuft", ohne einen Fortschritt zu behaupten, den niemand
+   kennt (die Antwortzeit der Datenbank ist nicht vorhersagbar), und er
+   ist dieselbe Form, die Fluent und Fiori dafuer benutzen.
+   Er ersetzt den Satz NICHT, er ergaenzt ihn: der Satz ist die Auskunft
+   fuer einen Bildschirmleser (ueber die Statuszeile, siehe dort), der
+   Balken die fuer das Auge. */
+.ladehinweis::after {
+  content: '';
+  display: block;
+  width: 160px;
+  height: 3px;
+  margin: var(--raum-4) auto 0;
+  border-radius: var(--rund-3);
+  background: var(--linie);
+  overflow: hidden;
+  background-image: linear-gradient(90deg, transparent 0%, var(--marine) 50%, transparent 100%);
+  background-size: 60% 100%;
+  background-repeat: no-repeat;
+  animation: ladebalken 1100ms linear infinite;
+}
+
+@keyframes ladebalken {
+  from { background-position: -60% 0; }
+  to   { background-position: 160% 0; }
+}
+
+/* Ohne Bewegung bleibt der Balken als ruhige, halb gefuellte Linie
+   stehen - er behauptet dann keinen Fortschritt, verschwindet aber auch
+   nicht, damit der Zustand derselbe bleibt. */
+@media (prefers-reduced-motion: reduce) {
+  .ladehinweis::after {
+    animation: none;
+    background-position: 20% 0;
+  }
+}
+
 /* ===== Leermaske (zeigeLeermaske) ===== */
 
+/* Der leere Zustand ist oft das ERSTE, was jemand sieht: ein neuer
+   Bestand, ein Filter, der nichts uebrig laesst, ein Bereich ohne
+   offene Vorgaenge. Bisher standen dort drei zentrierte Textzeilen auf
+   weisser Flaeche - nicht zu unterscheiden von einer Seite, die noch
+   laedt, oder von einer, die etwas nicht anzeigen konnte.
+   Jetzt eine erkennbare Flaeche mit einem Zeichen darueber: ein
+   gestrichelter Umriss sagt "hier ist Platz, der noch nicht gefuellt
+   ist" - dieselbe Aussage wie der Text, nur schneller. Gestrichelt
+   ausdruecklich statt durchgezogen: eine durchgezogene --kontur-Linie
+   ist in dieser Oberflaeche eine BEREICHSGRENZE (Gliederungsregel
+   Punkt 2), und eine Bereichsgrenze ist das hier nicht.
+   Kein Schatten: der leere Zustand liegt IM Blatt, er schwebt nicht
+   darueber (Ebene 0, siehe Ebenensystem in :root). */
 .leermaske {
   margin: auto;
-  max-width: 360px;
+  max-width: 420px;
   padding: var(--raum-6);
   text-align: center;
+  border: 1px dashed var(--kontur);
+  border-radius: var(--rund-2);
+  background: var(--grund);
+}
+
+/* Das Zeichen: ein leeres Blatt mit umgeknickter Ecke, in derselben
+   Strichsprache wie jedes andere Symbol dieser Oberflaeche (1.6px,
+   rund - siehe .bereich-icon svg). Als background-image statt als
+   eigenes Element, weil zeigeLeermaske() in rahmen.js dafuer sonst ein
+   weiteres <svg> bauen muesste, das nichts sagt, was der Text nicht
+   schon sagt - und weil ein rein dekoratives Zeichen einem
+   Bildschirmleser gar nicht erst begegnen soll. */
+.leermaske::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 40px;
+  margin: 0 auto var(--raum-4);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c8797' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z'/%3E%3Cpath d='M14 3v5h5'/%3E%3C/svg%3E");
 }
 
 .leermaske h2 {
@@ -3532,11 +4066,12 @@ a.wortmarke-link:active {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  /* 28x28 -> Zielgroesse (siehe --ziel in :root) */
+  width: var(--ziel);
+  height: var(--ziel);
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   background: transparent;
   color: var(--text-leise);   /* 5.9:1 auf --grund/--flaeche, gemessen */
 }
@@ -3601,10 +4136,36 @@ a.wortmarke-link:active {
 .formularzeile textarea {
   padding: var(--raum-2) var(--raum-2);
   border: 1px solid var(--kontur);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font: inherit;
   color: var(--text);
   background: var(--flaeche);
+}
+
+/* ===== RUECKMELDUNG AUF FELDERN =====
+   Ausgezaehlt hatte in dieser Datei KEIN EINZIGES Eingabe- oder
+   Auswahlfeld einen Ueberfahren-Zustand - Knoepfe schon (jeder von
+   ihnen), Felder nie. Ein Feld, das beim Ueberfahren nichts tut, sieht
+   aus wie ein Feld, das nicht bedient werden kann; genau diesen
+   Unterschied muss aber jedes schreibgeschuetzte Feld hier (siehe die
+   Regel direkt darunter) tragen koennen.
+   Der Rahmen wird kraeftiger, nicht die Flaeche: die Flaeche traegt in
+   dieser Oberflaeche Bedeutung (weiss = bedienbar, --grund =
+   schreibgeschuetzt), der Rahmen nicht. --marine auf --flaeche misst
+   17,29:1.
+   :not([readonly])/:not(:disabled): ein gesperrtes Feld darf nicht so
+   tun, als reagierte es - dieselbe Regel wie beim gedrueckten Zustand
+   der Knoepfe ganz oben. */
+.formularzeile input:not([readonly]):hover,
+.formularzeile select:not(:disabled):hover,
+.formularzeile textarea:not([readonly]):hover,
+.filterfeld select:hover,
+.spaltenkopf-filterzeile input:hover,
+.spaltenkopf-filterzeile select:hover,
+.profilmenue-sprachwahl select:hover,
+.velocity-dialog input:hover,
+.anmeldung input:hover {
+  border-color: var(--marine);
 }
 
 .formularzeile input[readonly],
@@ -3634,7 +4195,7 @@ a.wortmarke-link:active {
 .knopf-schaffend {
   padding: var(--raum-2) var(--raum-4);
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font: inherit;
   font-weight: 600;
 }
@@ -3720,8 +4281,12 @@ a.wortmarke-link:active {
   max-width: 420px;
   padding: var(--raum-5);
   border: none;
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(6, 24, 65, 0.25);
+  border-radius: var(--rund-2);
+  /* Ebene 3, ueberlagernd: sperrt alles darunter, bis eine
+     Entscheidung gefallen ist - der einzige Schatten dieser Datei, der
+     so weit reicht. Kein z-index: showModal() legt den Dialog in die
+     Top-Layer des Browsers (siehe Ebenensystem in :root). */
+  box-shadow: var(--schatten-3);
 }
 
 .velocity-dialog::backdrop {
@@ -3751,7 +4316,7 @@ a.wortmarke-link:active {
   width: 100%;
   padding: var(--raum-2) var(--raum-2);
   border: 1px solid var(--kontur);
-  border-radius: 4px;
+  border-radius: var(--rund-1);
   font: inherit;
   margin-bottom: var(--raum-1);
 }
@@ -4000,7 +4565,7 @@ a.wortmarke-link:active {
    nach Kontext (Uebersichtskarte 760px, Detailkarte 420px siehe oben). */
 .stationenkarte-leaflet {
   width: 100%;
-  border-radius: 4px;   /* rein optisch, kein Bedeutungstraeger */
+  border-radius: var(--rund-2);   /* eine FLAECHE, kein Bedienelement - siehe --rund-2 */
 }
 
 /* Fehlt Leaflet selbst (Skript blockiert, kein Netz) oder bleiben die

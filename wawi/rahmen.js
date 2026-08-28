@@ -371,6 +371,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Ihr Konto ist bei VeloCity als Mitarbeitendenkonto hinterlegt, aber es wurde noch kein Aufgabenbereich zugeordnet. Wenden Sie sich an die Leitung, damit sie Ihnen eine Rolle zuteilt.",
     "index.searchPlaceholder": "Suchen",
     "index.profileAria": "Profil und Einstellungen",
+    "index.navToggleAria": "Navigation ein- und ausklappen",
     "index.settingsHeading": "Einstellungen",
     "index.zebraLabel": "Zebrastreifen in Tabellen",
     "index.languageLabel": "Sprache",
@@ -848,6 +849,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Your account is registered with VeloCity as a staff account, but no area of responsibility has been assigned yet. Please contact management so they can assign you a role.",
     "index.searchPlaceholder": "Search",
     "index.profileAria": "Profile and settings",
+    "index.navToggleAria": "Collapse or expand navigation",
     "index.settingsHeading": "Settings",
     "index.zebraLabel": "Zebra striping in tables",
     "index.languageLabel": "Language",
@@ -1325,6 +1327,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Hesabınız VeloCity’de personel hesabı olarak kayıtlı, ancak henüz bir görev alanı atanmadı. Size bir rol atayabilmesi için lütfen yönetimle iletişime geçin.",
     "index.searchPlaceholder": "Ara",
     "index.profileAria": "Profil ve ayarlar",
+    "index.navToggleAria": "Gezinmeyi daralt veya genişlet",
     "index.settingsHeading": "Ayarlar",
     "index.zebraLabel": "Tablolarda zebra çizgisi",
     "index.languageLabel": "Dil",
@@ -1802,6 +1805,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Su cuenta está registrada en VeloCity como cuenta de personal, pero aún no se le ha asignado ningún área de responsabilidad. Póngase en contacto con la dirección para que le asigne un rol.",
     "index.searchPlaceholder": "Buscar",
     "index.profileAria": "Perfil y configuración",
+    "index.navToggleAria": "Contraer o expandir la navegación",
     "index.settingsHeading": "Configuración",
     "index.zebraLabel": "Rayado cebra en tablas",
     "index.languageLabel": "Idioma",
@@ -2279,6 +2283,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Il tuo account è registrato in VeloCity come account del personale, ma non ti è ancora stata assegnata un’area di responsabilità. Contatta la direzione affinché ti assegni un ruolo.",
     "index.searchPlaceholder": "Cerca",
     "index.profileAria": "Profilo e impostazioni",
+    "index.navToggleAria": "Comprimi o espandi la navigazione",
     "index.settingsHeading": "Impostazioni",
     "index.zebraLabel": "Righe alternate nelle tabelle",
     "index.languageLabel": "Lingua",
@@ -2756,6 +2761,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Państwa konto jest zarejestrowane w VeloCity jako konto pracownika, ale nie przypisano jeszcze żadnego zakresu obowiązków. Proszę skontaktować się z kierownictwem, aby przydzieliło Państwu rolę.",
     "index.searchPlaceholder": "Szukaj",
     "index.profileAria": "Profil i ustawienia",
+    "index.navToggleAria": "Zwiń lub rozwiń nawigację",
     "index.settingsHeading": "Ustawienia",
     "index.zebraLabel": "Pasy zebry w tabelach",
     "index.languageLabel": "Język",
@@ -3358,8 +3364,23 @@ async function navigationAufbauen(rollen) {
         // Umschaltung nicht mitmachen, ein Schluessel, bei JEDEM Aufbau
         // frisch nachgeschlagen, schon.
         const beschriftung = document.createElement('span');
+        beschriftung.className = 'bereich-text';
         beschriftung.textContent = t(bereich.titelSchluessel);
         knopf.append(beschriftung);
+
+        // aria-label mit DEMSELBEN Text wie die sichtbare Beschriftung -
+        // und zwar IMMER, nicht nur im eingeklappten Zustand: eingeklappt
+        // versteckt style.css .bereich-text per display:none, und ein
+        // display:none-Element ist auch aus dem Barrierebaum verschwunden.
+        // Ohne diesen Namen hiesse der Knopf dann schlicht "Schaltflaeche"
+        // - genau die "Ratefrage", die der Auftrag ausdruecklich
+        // ausschliesst. Ihn nur beim Einklappen zu setzen, hiesse zwei
+        // Stellen zu pflegen, die dasselbe sagen muessen; ein aria-label,
+        // das wortgleich mit dem sichtbaren Text ist, aendert fuer den
+        // ausgeklappten Zustand nichts (WCAG "Label in Name" ist erfuellt,
+        // weil beide Texte identisch sind).
+        knopf.setAttribute('aria-label', t(bereich.titelSchluessel));
+        navigationRubrikVerdrahten(knopf, t(bereich.titelSchluessel));
 
         nav.append(knopf);
     }
@@ -4641,7 +4662,13 @@ function hinweisfensterHolen() {
 // Zeigerposition - der Ausloeser selbst bewegt sich nicht (anders als
 // eine Drag-Operation), das Fenster darf deshalb an EINER berechneten
 // Stelle stehen bleiben, statt bei jeder Mausbewegung neu zu rechnen.
-function hinweisfensterZeigen(text, ankerRechteck) {
+// lage: 'oben' (Vorgabe, jede Grafik der Kopftafel) oder 'rechts' (die
+// Rubriken der eingeklappten Navigation, siehe
+// navigationRubrikVerdrahten() weiter unten). Eine senkrechte Leiste
+// braucht die zweite Lage zwingend: ihre Eintraege liegen uebereinander,
+// ein Fenster UEBER einer Rubrik verdeckte die Rubrik darueber - also
+// genau das Element, das man als naechstes ansehen will.
+function hinweisfensterZeigen(text, ankerRechteck, lage = 'oben') {
     if (!text) return;
     const el = hinweisfensterHolen();
     el.textContent = text;
@@ -4652,6 +4679,20 @@ function hinweisfensterZeigen(text, ankerRechteck) {
     const breite = el.offsetWidth;
     const hoehe = el.offsetHeight;
     const luft = 8;
+
+    if (lage === 'rechts') {
+        // Senkrecht auf die Mitte des Ankers, waagerecht daneben. Beide
+        // Achsen wie unten gegen das sichtbare Fenster geklemmt: eine
+        // Rubrik ganz unten in der Leiste soll ihr Fenster nicht unter
+        // die Statuszeile schieben.
+        let ox = ankerRechteck.right + luft;
+        if (ox + breite > window.innerWidth - luft) ox = ankerRechteck.left - breite - luft;
+        let oy = ankerRechteck.top + ankerRechteck.height / 2 - hoehe / 2;
+        oy = Math.max(luft, Math.min(oy, window.innerHeight - hoehe - luft));
+        el.style.left = `${Math.max(luft, ox)}px`;
+        el.style.top = `${oy}px`;
+        return;
+    }
 
     // Vorgabe: mittig UEBER dem Anker. GESTALTUNGSAUFTRAG, erster
     // Stolperstein, woertlich genannt: "ein Hinweisfenster, das am Rand
@@ -6085,6 +6126,24 @@ function kopftafelUmschalterKnopf(wurzel, tabelleId) {
         const neu = !wurzel.classList.contains('kopftafel-eingeklappt');
         anwenden(neu);
         localStorage.setItem(KOPFTAFEL_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
+        // "Etwas, das aufklappt, springt heute nicht" (Auftrag). Die
+        // Bewegung selbst steht in style.css (@keyframes
+        // kopftafel-aufklappen); hier wird nur der AUSLOESER markiert -
+        // und ausdruecklich NUR der Klick. Ein Bereichs- oder
+        // Reiterwechsel baut dieselbe Tafel ebenfalls neu auf, und die
+        // duerfte dabei nicht mitwackeln: eine Bewegung, die bei jedem
+        // Filterklick anspringt, ist Zappeln, keine Rueckmeldung.
+        // Die Klasse wird nach dem Lauf wieder entfernt, sonst bliebe sie
+        // am wiederverwendeten <section id="kopftafel"> haengen (siehe
+        // kopftafelWurzel(): das Element ueberlebt den Neuaufbau).
+        // { once: true } auf 'animationend': ohne Bewegung
+        // (prefers-reduced-motion, siehe style.css) feuert das Ereignis
+        // nie - deshalb zusaetzlich ein Zeitgeber als Rueckfall, damit
+        // die Klasse dort nicht ewig stehen bleibt.
+        wurzel.classList.add('kopftafel-bewegt');
+        const aufraeumen = () => wurzel.classList.remove('kopftafel-bewegt');
+        wurzel.addEventListener('animationend', aufraeumen, { once: true });
+        setTimeout(aufraeumen, 400);
     });
 
     return knopf;
@@ -8068,6 +8127,81 @@ document.addEventListener('click', (e) => {
 // Browserspeicher) - genau die vom Auftrag verlangte Haltbarkeit, ganz
 // ohne eigene Zwischenspeicherung hier im Skript.
 const ZEBRA_SPEICHERSCHLUESSEL = 'velocity-wawi-zebra';
+
+// ===== Ein- und Ausklappen der Navigation (Gestaltungsauftrag Punkt 3,
+// woertlich: "die linke Leiste ist so langweilig wie Outlook 98, man
+// kann sie nicht einmal ein-/ausklappen") =====
+//
+// Dieselbe Machart und dieselbe Begruendung wie beim Zebramuster direkt
+// darueber und bei der Kopftafel weiter oben: eine reine
+// Anzeigepraeferenz ohne fachliche Bedeutung, in localStorage statt in
+// der Datenbank. Sie ueberlebt damit von sich aus BEIDE vom Auftrag
+// verlangten Faelle - den Bereichswechsel (bereichWechseln() leert nur
+// #arbeitsliste/#detailmaske, nie den Browserspeicher) und das Neuladen
+// der Seite.
+//
+// VORGABE AUSGEKLAPPT, anders als bei der Kopftafel: eine Tafel voller
+// Kennzahlen ist Beiwerk, das man aufklappt, wenn man es braucht - eine
+// Navigation ist der Weg selbst. Wer die Anwendung zum ersten Mal
+// oeffnet, soll lesen koennen, welche Bereiche es gibt, nicht fuenf
+// Symbole raten muessen. Deshalb hier der einfache Vergleich auf 'an'
+// (fehlender Schluessel => ausgeklappt), nicht der umgekehrte wie bei
+// kopftafelEingeklappt().
+const NAVIGATION_SPEICHERSCHLUESSEL = 'velocity-wawi-navigation-schmal';
+
+function navigationEingeklappt() {
+    return localStorage.getItem(NAVIGATION_SPEICHERSCHLUESSEL) === 'an';
+}
+
+// Wie zebraAnwenden(): EINE Klasse auf <body>, den Rest macht das
+// Stilblatt. Die Klasse muss auf <body> sitzen und nicht auf
+// #navigation, weil sie die SPURBREITE des Rasters aendert - und die
+// steht an #zustand-arbeit, dem ELTERNELEMENT der Navigation (siehe
+// body.navigation-schmal #zustand-arbeit in style.css). Ein Kind kann
+// seine eigene Rasterspur nicht setzen.
+function navigationAnwenden(eingeklappt) {
+    document.body.classList.toggle('navigation-schmal', eingeklappt);
+    const knopf = document.getElementById('knopf-navigation');
+    // aria-expanded beschreibt die NAVIGATION (aria-controls), nicht den
+    // Knopf: ausgeklappt = true.
+    knopf.setAttribute('aria-expanded', String(!eingeklappt));
+    // Derselbe Stolperstein wie beim Einklappen der Kopftafel (siehe
+    // dort): das Hinweisfenster zeigt moeglicherweise gerade auf eine
+    // Rubrik, die sich unter ihm wegbewegt - ohne Mausbewegung feuert
+    // dabei kein mouseleave.
+    hinweisfensterVerstecken();
+}
+
+// Sofort beim Laden dieser Datei, aus demselben Grund wie
+// zebraAnwenden() weiter unten: sonst stuende die Leiste beim ersten
+// Aufbau kurz ausgeklappt da und spraenge dann zu.
+navigationAnwenden(navigationEingeklappt());
+
+document.getElementById('knopf-navigation').addEventListener('click', () => {
+    const neu = !navigationEingeklappt();
+    localStorage.setItem(NAVIGATION_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
+    navigationAnwenden(neu);
+});
+
+// Ueberfahren und Tastaturfokus auf einer Rubrik - aber NUR, solange die
+// Leiste eingeklappt ist. Ausgeklappt steht der Name sichtbar daneben;
+// ein Hinweisfenster, das ihn ein zweites Mal zeigt, waere genau das
+// Beiwerk, das in diesem Projekt als Mangel gilt.
+//
+// 'rechts' statt der Vorgabe 'oben' (siehe hinweisfensterZeigen()): eine
+// Leiste steht senkrecht, ihre Eintraege liegen uebereinander - ein
+// Fenster ueber der Rubrik verdeckte die Rubrik darueber. Rechts daneben
+// liegt das Arbeitsblatt, dort steht es frei.
+function navigationRubrikVerdrahten(knopf, titel) {
+    const zeigen = () => {
+        if (!navigationEingeklappt()) return;
+        hinweisfensterZeigen(titel, knopf.getBoundingClientRect(), 'rechts');
+    };
+    knopf.addEventListener('mouseenter', zeigen);
+    knopf.addEventListener('mouseleave', hinweisfensterVerstecken);
+    knopf.addEventListener('focus', zeigen);
+    knopf.addEventListener('blur', hinweisfensterVerstecken);
+}
 
 function zebraGespeichert() {
     return localStorage.getItem(ZEBRA_SPEICHERSCHLUESSEL) === 'an';
