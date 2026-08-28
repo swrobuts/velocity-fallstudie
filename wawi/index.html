@@ -100,25 +100,33 @@
            Oberflaeche. Wer mit der Tastatur ankommt, kann die
            Navigation oeffnen, BEVOR er durch sie hindurchtabbt - stuende
            er hinter der Wortmarke oder gar in der Navigation selbst,
-           muesste man erst durch die eingeklappte Leiste, um sie
-           ausklappen zu koennen.
+           muesste man erst durch die ausgeblendete Leiste, um sie
+           wieder einzublenden. Das ist zugleich die Antwort auf den
+           Auftrag "eine Navigation, die ganz weg ist, muss zurueckholbar
+           sein - der Weg dorthin darf nicht selbst verschwinden": dieser
+           Knopf liegt in der Kopfleiste, einem eigenen Geschwister-
+           Element im Raster (siehe #zustand-arbeit in style.css), nicht
+           in #navigation selbst - er verschwindet deshalb nie mit ihr.
 
-           EIN statischer Name statt zweier Zustandstexte ("einklappen"/
-           "ausklappen"): aria-expanded traegt den wechselnden Zustand
+           EIN statischer Name statt zweier Zustandstexte ("einblenden"/
+           "ausblenden"): aria-expanded traegt den wechselnden Zustand
            bereits, ein Bildschirmleser haengt "eingeklappt"/"ausgeklappt"
            von sich aus an den Namen an - dieselbe Ueberlegung wie beim
            Umschalter der Kopftafel (kopftafelUmschalterKnopf() in
-           rahmen.js). Den ZUSTAND setzt navigationUmschalterVerdrahten()
-           in rahmen.js, nicht dieses Markup: er kommt aus localStorage
-           und ist beim Ausliefern der Seite noch unbekannt. -->
+           rahmen.js). Den ZUSTAND setzen navigationAnwenden()/der
+           Klick-Handler auf diesem Knopf in rahmen.js, nicht dieses
+           Markup: er kommt aus localStorage und ist beim Ausliefern der
+           Seite noch unbekannt. -->
       <div class="kopfleiste-marke">
         <button id="knopf-navigation" type="button" class="navigation-umschalter"
                 aria-expanded="true" aria-controls="navigation"
-                aria-label="Navigation ein- und ausklappen"
+                aria-label="Navigation ein- und ausblenden"
                 data-i18n-aria="index.navToggleAria">
-          <!-- Das Seitenleisten-Symbol, nicht der "Hamburger": ein
-               Hamburger steht heute fuer ein Menue, das VERSCHWINDET -
-               hier bleibt die Leiste als Symbolspalte stehen. -->
+          <!-- Das Seitenleisten-Symbol, nicht der "Hamburger": beide
+               stehen heute fuer eine Seitenleiste, die verschwinden kann -
+               siehe der Kommentar bei .navigation-umschalter svg in
+               style.css fuer die Begruendung, warum dieses Zeichen trotz
+               der jetzt vollstaendig verschwindenden Leiste bleibt. -->
           <svg viewBox="0 0 18 18" aria-hidden="true" focusable="false">
             <rect x="2" y="3" width="14" height="12" rx="2"></rect>
             <line x1="7" y1="3" x2="7" y2="15"></line>

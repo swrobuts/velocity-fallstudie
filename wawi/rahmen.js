@@ -371,7 +371,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Ihr Konto ist bei VeloCity als Mitarbeitendenkonto hinterlegt, aber es wurde noch kein Aufgabenbereich zugeordnet. Wenden Sie sich an die Leitung, damit sie Ihnen eine Rolle zuteilt.",
     "index.searchPlaceholder": "Suchen",
     "index.profileAria": "Profil und Einstellungen",
-    "index.navToggleAria": "Navigation ein- und ausklappen",
+    "index.navToggleAria": "Navigation ein- und ausblenden",
     "index.settingsHeading": "Einstellungen",
     "index.zebraLabel": "Zebrastreifen in Tabellen",
     "index.languageLabel": "Sprache",
@@ -574,6 +574,7 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "Für diese Station liegen keine Koordinaten vor.",
     "common.and": "und",
     "board.toggleAria": "Kopftafel ein-/ausklappen",
+    "board.toggleLabel": "Übersicht",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} steht jetzt auf {ziel}.",
     "msg.confirmDecommission": "{rahmennummer} endgültig ausmustern? Das Rad verliert seinen Standort und erscheint in keiner Liste mehr. Seine Fahrten bleiben erhalten.",
@@ -849,7 +850,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Your account is registered with VeloCity as a staff account, but no area of responsibility has been assigned yet. Please contact management so they can assign you a role.",
     "index.searchPlaceholder": "Search",
     "index.profileAria": "Profile and settings",
-    "index.navToggleAria": "Collapse or expand navigation",
+    "index.navToggleAria": "Show or hide navigation",
     "index.settingsHeading": "Settings",
     "index.zebraLabel": "Zebra striping in tables",
     "index.languageLabel": "Language",
@@ -1052,6 +1053,7 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "No coordinates are available for this station.",
     "common.and": "and",
     "board.toggleAria": "Expand/collapse board",
+    "board.toggleLabel": "Overview",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} is now set to {ziel}.",
     "msg.confirmDecommission": "Permanently decommission {rahmennummer}? The bike loses its location and no longer appears in any list. Its rides are retained.",
@@ -1327,7 +1329,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Hesabınız VeloCity’de personel hesabı olarak kayıtlı, ancak henüz bir görev alanı atanmadı. Size bir rol atayabilmesi için lütfen yönetimle iletişime geçin.",
     "index.searchPlaceholder": "Ara",
     "index.profileAria": "Profil ve ayarlar",
-    "index.navToggleAria": "Gezinmeyi daralt veya genişlet",
+    "index.navToggleAria": "Gezinmeyi göster veya gizle",
     "index.settingsHeading": "Ayarlar",
     "index.zebraLabel": "Tablolarda zebra çizgisi",
     "index.languageLabel": "Dil",
@@ -1530,6 +1532,7 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "Bu istasyon için koordinat bulunmuyor.",
     "common.and": "ve",
     "board.toggleAria": "Paneli genişlet/daralt",
+    "board.toggleLabel": "Özet",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} artık {ziel} olarak ayarlandı.",
     "msg.confirmDecommission": "{rahmennummer} kalıcı olarak hizmetten mi çıkarılsın? Bisiklet konumunu kaybeder ve artık hiçbir listede görünmez. Sürüşleri saklanmaya devam eder.",
@@ -1805,7 +1808,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Su cuenta está registrada en VeloCity como cuenta de personal, pero aún no se le ha asignado ningún área de responsabilidad. Póngase en contacto con la dirección para que le asigne un rol.",
     "index.searchPlaceholder": "Buscar",
     "index.profileAria": "Perfil y configuración",
-    "index.navToggleAria": "Contraer o expandir la navegación",
+    "index.navToggleAria": "Mostrar u ocultar la navegación",
     "index.settingsHeading": "Configuración",
     "index.zebraLabel": "Rayado cebra en tablas",
     "index.languageLabel": "Idioma",
@@ -2008,6 +2011,7 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "No hay coordenadas disponibles para esta estación.",
     "common.and": "y",
     "board.toggleAria": "Expandir/contraer el panel",
+    "board.toggleLabel": "Resumen",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ahora está en {ziel}.",
     "msg.confirmDecommission": "¿Dar de baja definitivamente {rahmennummer}? La bicicleta pierde su ubicación y ya no aparece en ninguna lista. Sus viajes se conservan.",
@@ -2283,7 +2287,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Il tuo account è registrato in VeloCity come account del personale, ma non ti è ancora stata assegnata un’area di responsabilità. Contatta la direzione affinché ti assegni un ruolo.",
     "index.searchPlaceholder": "Cerca",
     "index.profileAria": "Profilo e impostazioni",
-    "index.navToggleAria": "Comprimi o espandi la navigazione",
+    "index.navToggleAria": "Mostra o nascondi la navigazione",
     "index.settingsHeading": "Impostazioni",
     "index.zebraLabel": "Righe alternate nelle tabelle",
     "index.languageLabel": "Lingua",
@@ -2486,6 +2490,7 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "Per questa stazione non sono disponibili coordinate.",
     "common.and": "e",
     "board.toggleAria": "Espandi/comprimi il pannello",
+    "board.toggleLabel": "Panoramica",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ora è impostata su {ziel}.",
     "msg.confirmDecommission": "Dismettere definitivamente {rahmennummer}? La bici perde la sua posizione e non compare più in nessun elenco. Le sue corse vengono conservate.",
@@ -2761,7 +2766,7 @@ const UEBERSETZUNGEN = {
     "index.noRoleText": "Państwa konto jest zarejestrowane w VeloCity jako konto pracownika, ale nie przypisano jeszcze żadnego zakresu obowiązków. Proszę skontaktować się z kierownictwem, aby przydzieliło Państwu rolę.",
     "index.searchPlaceholder": "Szukaj",
     "index.profileAria": "Profil i ustawienia",
-    "index.navToggleAria": "Zwiń lub rozwiń nawigację",
+    "index.navToggleAria": "Pokaż lub ukryj nawigację",
     "index.settingsHeading": "Ustawienia",
     "index.zebraLabel": "Pasy zebry w tabelach",
     "index.languageLabel": "Język",
@@ -2964,6 +2969,7 @@ const UEBERSETZUNGEN = {
     "tile.noStationLocation": "Dla tej stacji brak współrzędnych.",
     "common.and": "i",
     "board.toggleAria": "Rozwiń/zwiń panel",
+    "board.toggleLabel": "Przegląd",
     "board.seriesPartPhrase": "{teil}: {wert}",
     "msg.bikeNowSetTo": "{rahmennummer} ma teraz status {ziel}.",
     "msg.confirmDecommission": "Trwale wycofać {rahmennummer} z eksploatacji? Rower traci swoją lokalizację i nie pojawia się już na żadnej liście. Jego przejazdy zostają zachowane.",
@@ -3368,19 +3374,16 @@ async function navigationAufbauen(rollen) {
         beschriftung.textContent = t(bereich.titelSchluessel);
         knopf.append(beschriftung);
 
-        // aria-label mit DEMSELBEN Text wie die sichtbare Beschriftung -
-        // und zwar IMMER, nicht nur im eingeklappten Zustand: eingeklappt
-        // versteckt style.css .bereich-text per display:none, und ein
-        // display:none-Element ist auch aus dem Barrierebaum verschwunden.
-        // Ohne diesen Namen hiesse der Knopf dann schlicht "Schaltflaeche"
-        // - genau die "Ratefrage", die der Auftrag ausdruecklich
-        // ausschliesst. Ihn nur beim Einklappen zu setzen, hiesse zwei
-        // Stellen zu pflegen, die dasselbe sagen muessen; ein aria-label,
-        // das wortgleich mit dem sichtbaren Text ist, aendert fuer den
-        // ausgeklappten Zustand nichts (WCAG "Label in Name" ist erfuellt,
-        // weil beide Texte identisch sind).
+        // aria-label mit DEMSELBEN Text wie die sichtbare Beschriftung.
+        // Seit die Navigation nur noch "da" oder "ganz weg" kennt (siehe
+        // --nav-breite-weg in style.css - die fruehere Symbolspalten-
+        // Zwischenform mit ihrem eigenen Hinweisfenster-Tooltip ist
+        // entfallen), ist .bereich-text nie mehr per CSS ausgeblendet:
+        // das aria-label ist wortgleich mit dem sichtbaren Text und
+        // aendert deshalb nichts (WCAG "Label in Name" ist erfuellt),
+        // bleibt aber als zweite, gepruefte Quelle des Namens stehen
+        // (tools/wawi_check.py, Vertrag LABEL vergleichbarer Faelle).
         knopf.setAttribute('aria-label', t(bereich.titelSchluessel));
-        navigationRubrikVerdrahten(knopf, t(bereich.titelSchluessel));
 
         nav.append(knopf);
     }
@@ -4662,12 +4665,18 @@ function hinweisfensterHolen() {
 // Zeigerposition - der Ausloeser selbst bewegt sich nicht (anders als
 // eine Drag-Operation), das Fenster darf deshalb an EINER berechneten
 // Stelle stehen bleiben, statt bei jeder Mausbewegung neu zu rechnen.
-// lage: 'oben' (Vorgabe, jede Grafik der Kopftafel) oder 'rechts' (die
-// Rubriken der eingeklappten Navigation, siehe
-// navigationRubrikVerdrahten() weiter unten). Eine senkrechte Leiste
-// braucht die zweite Lage zwingend: ihre Eintraege liegen uebereinander,
-// ein Fenster UEBER einer Rubrik verdeckte die Rubrik darueber - also
-// genau das Element, das man als naechstes ansehen will.
+// lage: 'oben' (Vorgabe, jede Grafik der Kopftafel) oder 'rechts' - fuer
+// ein Element in einer SENKRECHTEN Reihe, deren Eintraege uebereinander
+// liegen (ein Fenster UEBER einem solchen Eintrag verdeckte den Eintrag
+// darueber, also genau das Element, das man als naechstes ansehen will).
+// Aktuell ohne Aufrufer: die Navigation, fuer die diese Lage urspruenglich
+// gebaut wurde, kennt seit "EIN SCHALTER, ZWEI ZUSTAENDE, NICHT DREI"
+// (siehe --nav-breite-weg in style.css) keine Symbolspalten-Zwischenform
+// mit eigenem Tooltip mehr. Die Lage selbst bleibt: eine generische
+// Positionierungsoption dieser gemeinsamen Funktion, keine fachliche
+// Altlast - anders als ein unbenutzter Farbwert (siehe --warnung in
+// style.css) kostet eine ungenutzte, aber weiterhin sinnvolle Option
+// eines Hilfsbausteins nichts, solange sie hier an EINER Stelle steht.
 function hinweisfensterZeigen(text, ankerRechteck, lage = 'oben') {
     if (!text) return;
     const el = hinweisfensterHolen();
@@ -6100,6 +6109,18 @@ function kopftafelUmschalterKnopf(wurzel, tabelleId) {
     knopf.setAttribute('aria-label', beschriftung);
     knopf.title = beschriftung;   // dieselbe Kurzfassung als Maus-Tooltip, wie bei schliessenKnopf.title weiter unten
 
+    // SICHTBARER TEXT, NICHT NUR EIN PFEIL (Auftrag, woertlich: "das ist
+    // ein zentrales Bedienelement und versteckt sich" - "es braucht einen
+    // Namen, der sagt, was passiert, nicht nur ein Zeichen"). aria-label
+    // und title erreichen nur Bildschirmleser bzw. den Maus-Tooltip, kein
+    // sehendes Auge, das noch nicht klickt. Derselbe statische Schluessel
+    // wie aria-label/title (siehe Kommentar oben) - EIN Text an drei
+    // Stellen, nicht drei einzeln zu pflegende.
+    const beschriftungSichtbar = document.createElement('span');
+    beschriftungSichtbar.className = 'kopftafel-umschalter-text';
+    beschriftungSichtbar.textContent = t('board.toggleLabel');
+    knopf.append(beschriftungSichtbar);
+
     const symbol = document.createElementNS(SVG_NS, 'svg');
     symbol.setAttribute('viewBox', '0 0 18 18');
     symbol.setAttribute('aria-hidden', 'true');
@@ -6262,12 +6283,13 @@ function zeigeKopftafel(kennung, tafel) {
         kopftexte.append(bezug);
     }
     kopf.append(kopftexte);
-    // Der Umschalter steht IM Kopf, nicht daneben: er gehoert zu genau
-    // der Zeile, die eingeklappt sichtbar bleibt (siehe Kopfkommentar bei
-    // kopftafelEingeklappt() oben) - dieselbe raeumliche Naehe wie bei
-    // jedem anderen Auf-/Zuklapp-Knopf dieser Oberflaeche (z. B.
-    // knopfProfil neben dem, was er oeffnet).
-    kopf.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
+    // Der Umschalter steht NICHT mehr im Kopf (Gestaltungsauftrag,
+    // woertlich: "Es muss mittig am unteren Ende der Kopfleiste sein,
+    // damit es wirksam wahrgenommen werden kann" - vorher stand er oben
+    // rechts, ein 32x32px-Symbol neben Titel und Bezugszeile, und genau
+    // das war der Befund: "versteckt sich"). Der Knopf wird jetzt ganz
+    // am Ende dieser Funktion gebaut und angehaengt, als eigene
+    // Griffleiste - siehe dort fuer die volle Begruendung.
     wurzel.append(kopf);
     tabelle.setAttribute('aria-labelledby', tafel.bezug ? `${titelId} ${bezugId}` : titelId);
 
@@ -6345,6 +6367,21 @@ function zeigeKopftafel(kennung, tafel) {
         fussnote.textContent = tafel.fussnote;
         wurzel.append(fussnote);
     }
+
+    // ===== Griffleiste: der Umschalter, jetzt mittig an der Unterkante =====
+    // ALS LETZTES KIND angehaengt - nach Kopf, Tabelle UND Fussnote. Das
+    // ist der ganze Trick hinter "er muss in beiden Zustaenden an
+    // derselben Stelle sein" (Auftrag): eingeklappt (.kopftafel-tabelle/
+    // .kopftafel-fussnote per CSS auf display:none, siehe dort) ist diese
+    // Griffleiste die zweite und letzte sichtbare Zeile der Tafel;
+    // ausgeklappt ist sie die letzte nach Tabelle/Fussnote. Sie liegt
+    // damit IMMER am unteren Ende der Tafel, unabhaengig davon, wie hoch
+    // die Tafel gerade ist - keine zwei Regeln fuer zwei Zustaende,
+    // sondern dieselbe Position aus derselben DOM-Reihenfolge.
+    const griffleiste = document.createElement('div');
+    griffleiste.className = 'kopftafel-griffleiste';
+    griffleiste.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
+    wurzel.append(griffleiste);
 }
 
 // Die gemeinsame Skala EINER Spalte ueber ALLE Datenzeilen - siehe der
@@ -8129,9 +8166,9 @@ document.addEventListener('click', (e) => {
 // ohne eigene Zwischenspeicherung hier im Skript.
 const ZEBRA_SPEICHERSCHLUESSEL = 'velocity-wawi-zebra';
 
-// ===== Ein- und Ausklappen der Navigation (Gestaltungsauftrag Punkt 3,
-// woertlich: "die linke Leiste ist so langweilig wie Outlook 98, man
-// kann sie nicht einmal ein-/ausklappen") =====
+// ===== Ein- und Ausblenden der Navigation (Gestaltungsauftrag Punkt 1,
+// woertlich: "ich finde das Blau links zu erdrueckend ... man sollte
+// auch - applemaessig - die linke Seite ein-/ausblenden koennen") =====
 //
 // Dieselbe Machart und dieselbe Begruendung wie beim Zebramuster direkt
 // darueber und bei der Kopftafel weiter oben: eine reine
@@ -8141,16 +8178,27 @@ const ZEBRA_SPEICHERSCHLUESSEL = 'velocity-wawi-zebra';
 // #arbeitsliste/#detailmaske, nie den Browserspeicher) und das Neuladen
 // der Seite.
 //
-// VORGABE AUSGEKLAPPT, anders als bei der Kopftafel: eine Tafel voller
+// ZWEI ZUSTAENDE, NICHT DREI: es gab hier einmal eine dritte, schmale
+// Zwischenform (nur Symbole, 56px) - entfallen, siehe "EIN SCHALTER,
+// ZWEI ZUSTAENDE, NICHT DREI" bei --nav-breite-weg in style.css. Der
+// Speicherschluessel heisst deshalb bewusst nicht mehr "...-schmal",
+// sondern "...-weg": er speichert jetzt "da oder nicht da", nicht mehr
+// "breit oder schmal". Ein bereits im Browser gespeicherter alter Wert
+// unter dem alten Namen wird dadurch schlicht nicht mehr gelesen - der
+// Vorgabezustand (ausgeklappt) greift dann einmalig neu, kein Fehler-
+// zustand, keine Migration noetig fuer eine reine Anzeigepraeferenz ohne
+// fachliche Bedeutung.
+//
+// VORGABE SICHTBAR, anders als bei der Kopftafel: eine Tafel voller
 // Kennzahlen ist Beiwerk, das man aufklappt, wenn man es braucht - eine
 // Navigation ist der Weg selbst. Wer die Anwendung zum ersten Mal
-// oeffnet, soll lesen koennen, welche Bereiche es gibt, nicht fuenf
-// Symbole raten muessen. Deshalb hier der einfache Vergleich auf 'an'
-// (fehlender Schluessel => ausgeklappt), nicht der umgekehrte wie bei
-// kopftafelEingeklappt().
-const NAVIGATION_SPEICHERSCHLUESSEL = 'velocity-wawi-navigation-schmal';
+// oeffnet, soll lesen koennen, welche Bereiche es gibt, nicht raten
+// muessen, dass links ueberhaupt etwas versteckt liegt. Deshalb hier der
+// einfache Vergleich auf 'an' (fehlender Schluessel => sichtbar), nicht
+// der umgekehrte wie bei kopftafelEingeklappt().
+const NAVIGATION_SPEICHERSCHLUESSEL = 'velocity-wawi-navigation-weg';
 
-function navigationEingeklappt() {
+function navigationVersteckt() {
     return localStorage.getItem(NAVIGATION_SPEICHERSCHLUESSEL) === 'an';
 }
 
@@ -8158,14 +8206,28 @@ function navigationEingeklappt() {
 // Stilblatt. Die Klasse muss auf <body> sitzen und nicht auf
 // #navigation, weil sie die SPURBREITE des Rasters aendert - und die
 // steht an #zustand-arbeit, dem ELTERNELEMENT der Navigation (siehe
-// body.navigation-schmal #zustand-arbeit in style.css). Ein Kind kann
-// seine eigene Rasterspur nicht setzen.
-function navigationAnwenden(eingeklappt) {
-    document.body.classList.toggle('navigation-schmal', eingeklappt);
+// body.navigation-weg #zustand-arbeit in style.css). Ein Kind kann seine
+// eigene Rasterspur nicht setzen.
+function navigationAnwenden(versteckt) {
+    document.body.classList.toggle('navigation-weg', versteckt);
     const knopf = document.getElementById('knopf-navigation');
     // aria-expanded beschreibt die NAVIGATION (aria-controls), nicht den
-    // Knopf: ausgeklappt = true.
-    knopf.setAttribute('aria-expanded', String(!eingeklappt));
+    // Knopf: sichtbar = true.
+    knopf.setAttribute('aria-expanded', String(!versteckt));
+    // INERT STATT NUR OPTIK: eine ausgeblendete Leiste (Breite 0, siehe
+    // style.css) darf keinen Tastaturfokus mehr aufnehmen und keinem
+    // Bildschirmleser mehr begegnen - eine Rasterspur von 0px verhindert
+    // das allein nicht (die Knoepfe bleiben im Bedienbaum, ein Tab
+    // koennte sie weiterhin erreichen, unsichtbar). inert (Basline seit
+    // 2023, Chrome 102+/Safari 15.5+/Firefox 112+ - dieselbe Grosszuegig-
+    // keit bei Browserunterstuetzung wie :has() an anderer Stelle dieser
+    // Datei) nimmt den ganzen Teilbaum sowohl aus der Tabreihenfolge als
+    // auch aus dem Accessibility-Baum heraus. aria-hidden zusaetzlich,
+    // nicht statt inert: ein zweites, redundantes Netz fuer den seltenen
+    // Fall eines Bildschirmlesers, der inert selbst noch nicht als
+    // "Barrierebaum-Ausschluss" wertet.
+    document.getElementById('navigation').inert = versteckt;
+    document.getElementById('navigation').setAttribute('aria-hidden', String(versteckt));
     // Derselbe Stolperstein wie beim Einklappen der Kopftafel (siehe
     // dort): das Hinweisfenster zeigt moeglicherweise gerade auf eine
     // Rubrik, die sich unter ihm wegbewegt - ohne Mausbewegung feuert
@@ -8175,34 +8237,14 @@ function navigationAnwenden(eingeklappt) {
 
 // Sofort beim Laden dieser Datei, aus demselben Grund wie
 // zebraAnwenden() weiter unten: sonst stuende die Leiste beim ersten
-// Aufbau kurz ausgeklappt da und spraenge dann zu.
-navigationAnwenden(navigationEingeklappt());
+// Aufbau kurz sichtbar da und spraenge dann weg.
+navigationAnwenden(navigationVersteckt());
 
 document.getElementById('knopf-navigation').addEventListener('click', () => {
-    const neu = !navigationEingeklappt();
+    const neu = !navigationVersteckt();
     localStorage.setItem(NAVIGATION_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
     navigationAnwenden(neu);
 });
-
-// Ueberfahren und Tastaturfokus auf einer Rubrik - aber NUR, solange die
-// Leiste eingeklappt ist. Ausgeklappt steht der Name sichtbar daneben;
-// ein Hinweisfenster, das ihn ein zweites Mal zeigt, waere genau das
-// Beiwerk, das in diesem Projekt als Mangel gilt.
-//
-// 'rechts' statt der Vorgabe 'oben' (siehe hinweisfensterZeigen()): eine
-// Leiste steht senkrecht, ihre Eintraege liegen uebereinander - ein
-// Fenster ueber der Rubrik verdeckte die Rubrik darueber. Rechts daneben
-// liegt das Arbeitsblatt, dort steht es frei.
-function navigationRubrikVerdrahten(knopf, titel) {
-    const zeigen = () => {
-        if (!navigationEingeklappt()) return;
-        hinweisfensterZeigen(titel, knopf.getBoundingClientRect(), 'rechts');
-    };
-    knopf.addEventListener('mouseenter', zeigen);
-    knopf.addEventListener('mouseleave', hinweisfensterVerstecken);
-    knopf.addEventListener('focus', zeigen);
-    knopf.addEventListener('blur', hinweisfensterVerstecken);
-}
 
 function zebraGespeichert() {
     return localStorage.getItem(ZEBRA_SPEICHERSCHLUESSEL) === 'an';

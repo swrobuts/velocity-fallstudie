@@ -32,18 +32,27 @@
                         bildet sie mit der Navigation EINEN durchgehenden
                         Rahmen um das Blatt - die Begruendung steht
                         ausfuehrlich bei #navigation.
-      --marine-nav      Anwendungsrahmen links: die Navigation. Derselbe
-                        Rahmen-Gedanke wie --marine, seit der naechsten
-                        Runde aber ein ruhigerer Ton DERSELBEN Farbfamilie
-                        (Auftrag, woertlich: "der linke blaue Seitenrand
-                        ist mit blau zu intensiv") - Begruendung und
-                        Kontrastwerte bei --marine-nav in :root.
-      --flaeche-rahmen  Anwendungsrahmen unten: die Statuszeile. Und -
-                        zwei Ausnahmen im Blatt, aus demselben Grund -
-                        die gewaehlte Tabellenzeile (siehe dortiger
-                        Kommentar) und die Tabelle, waehrend die Kopftafel
-                        darueber ausgeklappt ist (siehe .kopftafel +
-                        #listenkoerper weiter unten).
+      --flaeche-rahmen  Anwendungsrahmen unten UND links: die Statuszeile
+                        UND, DRITTER ANLAUF DIESES RAHMENS, die Navigation.
+                        Ein vierter, eigens fuer die Navigation erfundener
+                        Ton (--marine-nav, zwei Gestaltungsrunden lang die
+                        Antwort auf "der linke blaue Seitenrand ist zu
+                        intensiv") ist entfallen: der Auftrag verlangt jetzt
+                        ausdruecklich HELL statt eines ruhigeren Blaus
+                        (woertlich "ein leichtgewichtiges helles Grau
+                        eventuell") - und dafuer braucht es keinen fuenften
+                        Namen, der zweite Rang deckt die Aufgabe bereits ab.
+                        Die Navigation traegt damit denselben Ton wie die
+                        Statuszeile: beide sind Rahmen, keine Blattflaeche,
+                        derselbe Gedanke an zwei Kanten der Anwendung statt
+                        einer. Ausfuehrliche Begruendung, Kontrastwerte und
+                        die deswegen NEUE Grenzlinie bei #navigation.
+                        Zusaetzlich, wie zuvor, zwei VORUEBERGEHENDE
+                        Ausnahmen im Blatt, aus demselben Grund - die
+                        gewaehlte Tabellenzeile (siehe dortiger Kommentar)
+                        und die Tabelle, waehrend die Kopftafel darueber
+                        ausgeklappt ist (siehe .kopftafel + #listenkoerper
+                        weiter unten).
       --flaeche         das Arbeitsblatt selbst - Reiter-, Werkzeug-,
                         Filterleiste, Kopftafel, Spaltenkopf,
                         Tabellenkoerper, Maske.
@@ -68,9 +77,16 @@
       AUSNAHME, UND SIE IST DER SINN DER REGEL: wo zwei Flaechen sich
       SELBST schon unterscheiden - marine gegen weiss misst 17,29:1 -,
       ist eine Linie dazwischen kein Trennmittel mehr, sondern ein
-      drittes Element. Die Unterkante der Kopfleiste hatte aus diesem
-      Grund nie eine; die rechte Kante der Navigation hat seit dieser
-      Runde aus demselben Grund keine mehr.
+      drittes Element. Die Unterkante der Kopfleiste hat aus diesem
+      Grund weiterhin keine.
+      DIE UMGEKEHRTE PROBE, UND SIE BESTAETIGT DIE REGEL: die rechte
+      Kante der Navigation hatte genau aus diesem Grund frueher keine
+      Linie (--marine-nav gegen --flaeche mass 14,19:1) - seit die
+      Navigation den Ton wechselt (--flaeche-rahmen statt --marine-nav,
+      siehe Punkt 1 und #navigation), messen die beiden Flaechen nur noch
+      1,17:1 gegeneinander. Unter 3:1 IST die Grenze wieder unsichtbar,
+      also verlangt dieselbe Regel jetzt das Gegenteil: eine Linie muss
+      zurueck. --kontur, wie ueberall sonst.
 
    3. ABSTAND IST KEIN TRENNMITTEL. Bereiche stossen aneinander; der
       Freiraum lebt INNERHALB eines Bereichs als Innenabstand. Die
@@ -93,15 +109,20 @@
   /* ===== FLAECHEN: drei Raenge, siehe Gliederungsregel oben ===== */
   --marine:      #061841;
   --rot:         #f00038;
-  /* Der RAHMEN der Anwendung (Statuszeile unten) und - als einzige
-     Ausnahme innerhalb des Blatts - die gewaehlte Tabellenzeile.
-     Die Navigation trug diesen Ton bis zur Gestaltungsrunde "Tiefe,
-     Groesse, Beweglichkeit" ebenfalls; sie ist jetzt marine (siehe
-     #navigation). Das ist keine Inkonsequenz, sondern der Grund, warum
-     der Ton ueberhaupt bleibt: seit das Blatt durchgehend weiss ist,
-     faellt eine getoente Zeile darin ueberhaupt erst auf. Frueher trugen
-     ACHT Flaechen diesen Ton gleichzeitig, und genau deshalb sagte er
-     nichts (siehe "UND DAS GRAU" in der Farbordnung weiter unten).
+  /* Der RAHMEN der Anwendung: die Statuszeile unten UND, seit dieser
+     Runde wieder, die Navigation links (siehe "DIE HELLE
+     NAVIGATIONSFLAECHE" weiter unten - dort war dieser Ton schon einmal,
+     vor zwei Gestaltungsrunden, WEG von "grauer Wueste"; nach einem
+     Zwischenspiel in zwei verschiedenen Blautoenen soll er jetzt wieder
+     her, diesmal mit einer Begruendung, die die alte "graue Wueste"
+     nicht wiederholt - siehe dort). Dazu, als einzige Ausnahme innerhalb
+     des Blatts, die gewaehlte Tabellenzeile.
+     Seit das Blatt durchgehend weiss ist, faellt eine getoente Flaeche
+     darin ueberhaupt erst auf. Frueher trugen ACHT Flaechen diesen Ton
+     gleichzeitig, und genau deshalb sagte er nichts (siehe "UND DAS GRAU"
+     in der Farbordnung weiter unten) - hier sind es zwei STAENDIGE
+     (Statuszeile, Navigation) plus die genannten VORUEBERGEHENDEN
+     Ausnahmen, nicht acht auf einmal.
      1,17:1 gegen --flaeche - bewusst nicht dunkler:
      die Statuszeile liegt auf dieser Flaeche und faerbt ihren Text je
      nach Meldungsart. Bei #e6ebf3 faellt --warnung-text auf 4,45:1 und
@@ -202,40 +223,58 @@
      seine 4,5:1 (--marine-hell 13,64:1, --gut-dunkel 8,04:1). */
   --marine-hell: #0a2560;
   --gut-dunkel:  #155c33;
-  /* ===== DIE GEDAEMPFTE NAVIGATIONSFLAECHE =====
-     Befund des Auftraggebers, woertlich: "mir ist der linke blaue
-     Seitenrand mit blau zu intensiv". #navigation trug seit der Runde
-     "Tiefe, Groesse, Beweglichkeit" volle Flaeche in --marine - derselbe
-     Ton wie die 60px hohe Kopfleiste, aber ueber die GANZE Bildschirm-
-     hoehe. Dieselbe Saettigung (83 % HSL), die auf 60px Hoehe als
-     Markenfarbe liest, wird auf 800+ Pixeln zum Scheinwerfer.
-     DIE ENTSCHEIDUNG BLEIBT (Auftrag, woertlich: "die soll bleiben"):
-     Kopfleiste und Navigation bilden weiterhin EINEN Rahmen um das
-     weisse Blatt - deshalb bleibt --marine selbst unveraendert, und die
-     Kopfleiste traegt ihn weiterhin unveraendert (60px hoch, nie der
-     Gegenstand der Ruege). Nur die FLAECHE, die acht Stunden am
-     Bildschirmrand steht, bekommt einen ruhigeren Ton DERSELBEN Familie -
-     nicht Grau (das war die vorletzte, ausdruecklich verworfene Runde,
-     siehe "graue Wueste" in der Farbordnung unten), sondern derselbe Farb-
-     ton (HSL-Winkel unveraendert bei 222 Grad) mit zurueckgenommener
-     Saettigung (83 % -> 45 %) und etwas angehobener Helligkeit
-     (13,9 % -> 20 %): #1c2a4a statt #061841.
-     WARUM EIN EIGENER TON UND NICHT --marine SELBST GEAENDERT: --marine
-     traegt an ueber 150 Stellen dieser Datei einen mitgefuehrten,
-     nachgerechneten Kontrastwert (17,29:1 gegen Weiss, 3,92:1 fuer --rot
-     etc.) - eine globale Aenderung haette jede dieser Zahlen neu
-     hingeschrieben, fuer eine Ruege, die ausdruecklich nur die Flaeche
-     "linker Seitenrand" betraf, nicht den Ton als solchen (Knoepfe,
-     Fokusringe, Auswertungsgrafiken bleiben in --marine unveraendert
-     kraeftig - dort ist die Flaeche klein, die Ruege galt ihr nie).
-     GEMESSEN (neu, gegen #1c2a4a): Weiss (Navigationstext, aktive
-     Umkehr-Kachel-Text) 14,19:1 - weit ueber 4,5:1. --rot (Fokusring)
-     3,22:1 - ueber den 3:1 aus WCAG 1.4.11 fuer eine Bedienelement-
-     Auszeichnung. --kontur waere hier 3,90:1, wird aber nicht gebraucht:
-     Flaeche gegen Flaeche (--marine-nav gegen --flaeche) misst weiterhin
-     14,19:1, weit ueber den 3:1, die Gliederungsregel Punkt 2 fuer eine
-     Grenze ohne Linie verlangt. */
-  --marine-nav: #1c2a4a;
+  /* ===== DIE HELLE NAVIGATIONSFLAECHE (DRITTER ANLAUF) =====
+     Die Geschichte dieser einen Flaeche in drei Saetzen, weil sie fuer
+     die Entscheidung hier zaehlt: GRAU (mehrere Runden vor dieser, Teil
+     der "grauen Wueste", siehe Farbordnung unten) -> VOLLES MARINE (Runde
+     "Tiefe, Groesse, Beweglichkeit", ein durchgehender Rahmen mit der
+     Kopfleiste) -> GEDAEMPFTES MARINE, --marine-nav (naechste Runde,
+     Auftrag woertlich "der linke blaue Seitenrand ist zu intensiv") ->
+     HELL, hier (Auftrag woertlich: "ich finde das Blau links zu
+     erdrueckend, ein leichtgewichtiges helles Grau eventuell").
+     WARUM DAS KEINE RUECKKEHR ZUR GRAUEN WUESTE IST, obwohl der ALTE
+     Graustich damals ausdruecklich verworfen wurde: die graue Wueste war
+     EIN Ton auf ACHT gleichzeitig sichtbaren Flaechen ohne jede Kante
+     dazwischen - Navigation, Reiterleiste, Werkzeugleiste, Kopftafel,
+     Filterleiste, Tabellenkopf, Spaltenkopf-Filterzeile, Statuszeile sahen
+     alle gleich aus, nichts grenzte sich gegen etwas ab. Diese Flaeche
+     hier ist eine von ZWEI staendigen hellen Flaechen (Navigation,
+     Statuszeile - siehe --flaeche-rahmen oben), und sie TRAEGT eine
+     Kante gegen das Blatt (--kontur, neu, siehe #navigation) - beides
+     genau das, was der alten Fassung fehlte. Ein Ebenensystem mit drei
+     Flaechenraengen und einer durchgehaltenen Kantenregel (siehe
+     Gliederungsregel im Dateikopf) ist etwas anderes als acht identische
+     Streifen ohne Regel.
+     KEIN NEUER TON: --flaeche-rahmen existiert bereits (Anwendungsrahmen
+     unten, siehe dort) und ist bereits gegen jede Farbe gemessen, die in
+     der Navigation vorkommt (--kontur 3,11:1). Ein fuenfter Blauton
+     eigens fuer diese eine Flaeche waere nach drei Anlaeufen genau die
+     Fussangel, die --warnung schon einmal war (siehe dort): ein Wert
+     ohne wiederkehrenden Nutzen. --marine-nav ist deshalb ERSATZLOS
+     ENTFALLEN, nicht durch einen neuen Namen ersetzt.
+     KOPFLEISTE BLEIBT MARINE, UNVERAENDERT: sie war nie Gegenstand einer
+     der drei Ruegen (60px Hoehe, nicht acht Stunden am Bildschirmrand -
+     die Saettigung, die dort als Markenfarbe liest, wird erst auf 800+
+     Pixeln zum Scheinwerfer, siehe die vorherige Fassung dieses
+     Kommentars). "EIN durchgehender Rahmen" (Kopfleiste plus Navigation,
+     vorige Runde) gilt damit nicht mehr woertlich - der Rahmen ist jetzt
+     zweifarbig (dunkel oben, hell links UND unten), aber es bleibt EIN
+     RAHMEN-GEDANKE: alle drei Randstreifen grenzen sich vom weissen
+     Blatt ab, zwei davon eben hell statt dunkel. Genau das war die
+     Ausgangsfrage der Gliederungsregel ("bin ich im Blatt oder an seinem
+     Rand?") - sie beantwortet sich weiterhin ja/nein, nicht auf einmal
+     drei verschiedene Arten.
+     GEMESSEN (neu, gegen --flaeche-rahmen #e9edf4): Text/Icons in
+     --marine 14,72:1 - weit ueber 4,5:1. --rot (Fokusring) 3,76:1 - ueber
+     den 3:1 aus WCAG 1.4.11. Die aktive Rubrik (siehe
+     #navigation button[aria-current] weiter unten) bleibt eine gefuellte
+     --marine-Kachel: Weiss darauf haelt unveraendert 17,29:1, und die
+     Kachel selbst gegen die jetzt helle Navigationsflaeche 14,72:1 - weit
+     ueber den 3:1, die eine Zustandsflaeche nach WCAG 1.4.11 braucht.
+     Genau DAS war mit blossem Weiss-auf-Hellgrau nicht zu haben (nur
+     1,17:1, siehe #navigation button[aria-current] weiter unten) - der
+     Grund, warum die aktive Kachel jetzt die volle Markenfarbe traegt
+     statt der fruehren Umkehrung. */
 
   /* ============================================================
      ===== DIE FARBORDNUNG =====
@@ -321,14 +360,14 @@
      Werkzeugleiste, Kopftafel, Filterleiste, Tabellenkopf,
      Spaltenkopf-Filterzeile, Statuszeile. Ein Ton, der acht Bereiche
      gleich einfärbt, gliedert nichts - er ermüdet nur.
-     Als staendige Flaeche traegt ihn jetzt nur noch die Statuszeile
-     unten; Kopfleiste oben schliesst den Rahmen in --marine ab,
-     Navigation links in --marine-nav - derselben Familie, seit "der
-     linke blaue Seitenrand" zu kraeftig war (Begruendung bei
-     --marine-nav in :root). Die gewaehlte Tabellenzeile und die Tabelle
-     bei ausgeklappter Kopftafel tragen --flaeche-rahmen zusaetzlich,
-     aber nur VORUEBERGEHEND (siehe die jeweiligen Kommentare) - keine
-     dritte staendige Flaeche.
+     Als staendige Flaeche traegt ihn jetzt die Statuszeile unten UND,
+     seit "DIE HELLE NAVIGATIONSFLAECHE" oben, wieder die Navigation
+     links - zwei staendige Flaechen in DEMSELBEN Ton, nicht acht
+     verschiedene Bereiche in ihm. Kopfleiste oben schliesst den Rahmen
+     weiterhin in --marine ab, unveraendert. Die gewaehlte Tabellenzeile
+     und die Tabelle bei ausgeklappter Kopftafel tragen --flaeche-rahmen
+     zusaetzlich, aber nur VORUEBERGEHEND (siehe die jeweiligen
+     Kommentare) - keine dritte staendige Flaeche.
      Alles dazwischen ist das Arbeitsblatt - weiss, gegliedert allein
      durch --kontur-Kanten. Das ist dieselbe Gliederungsregel wie im
      Dateikopf, nur richtig angewandt: die Frage ist nicht "bediene ich
@@ -391,14 +430,31 @@
      genau die Fussangel, wegen der auch --warnung entfallen ist. */
   --zeile:       40px;
   --nav-breite:  200px;
-  /* Eingeklappte Navigation: nur noch Symbole. 56px = die Zielgroesse
-     --ziel (32px) plus zweimal --raum-3 Innenabstand des Knopfs (12px) -
-     die Leiste ist damit genau so breit wie ein einzelner Rubrikknopf und
-     keinen Pixel breiter. Fluent (Teams/Outlook) faehrt 48px, Fiori 44px,
-     die Apple-Richtlinien nennen 44pt fuer eine Beruehrflaeche - 56px
-     liegt darueber und laesst dem Symbol Luft, ohne eine zweite Spalte
-     vorzutaeuschen. */
-  --nav-breite-schmal: 56px;
+  /* ===== EIN SCHALTER, ZWEI ZUSTAENDE, NICHT DREI =====
+     Frueher stand hier --nav-breite-schmal (56px): die eingeklappte
+     Navigation blieb als reine Symbolspalte stehen (Zielgroesse --ziel
+     plus Innenabstand). Der Auftrag verlangt jetzt woertlich, "applemaessig
+     ... die linke Seite ein-/ausblenden" zu koennen - die Leiste soll
+     VOLLSTAENDIG verschwinden, die Arbeitsflaeche die ganze Breite
+     bekommen, nicht nur schmaler werden.
+     UEBERLEGT UND VERWORFEN: ein DRITTER Zustand (breit/schmal/weg) am
+     selben Schalter. Ein Knopf mit drei Ausprägungen muss entweder
+     durchklicken (ein Klick von "weg" fuehrt zurueck zu "schmal", nicht
+     zu "breit" - eine Ueberraschung) oder ein zweites Bedienelement
+     bekommen (ein Menue statt eines Knopfes) - beides schwerer zu
+     bedienen als der Zustand, den es ersetzt. Das Symbolspalten-Zwischen-
+     stadium hatte ausserdem seinen eigenen Grund verloren, sobald es
+     einen echten "weg"-Zustand gibt: es existierte, damit acht Stunden am
+     Bildschirmrand wenigstens die Symbole stehen bleiben, wenn die volle
+     Beschriftung zu viel Platz beansprucht - genau das leistet "weg" jetzt
+     radikaler und der Apple-Vorbild-Schalter (Mail, Notizen: ein Klick,
+     Leiste da oder weg, keine dritte Zwischenform) tut es ebenso.
+     ENTSCHEIDUNG: "schmal" ENTFAELLT, "weg" TRITT AN SEINE STELLE. Zwei
+     Zustaende bleiben es, wie zuvor - nur der zweite bedeutet jetzt
+     "nicht da" statt "nur Symbole". --nav-breite-weg ist deshalb keine
+     gemessene Groesse wie die 56px vorher, sondern schlicht 0: die
+     Spurbreite, die "es gibt nichts hier" ausdrueckt. */
+  --nav-breite-weg: 0px;
   --kopf-hoehe:  60px;
   --fuss-hoehe:  32px;
 
@@ -449,6 +505,20 @@
        weiterhin kurz und dicht (deutlich weniger Weichzeichnung als
        Ebene 2), damit "aufliegend" nicht mit "schwebend" verwechselt
        wird.
+       VIERTER ANLAUF, Auftrag woertlich: "ich brauche den
+       Schubladeneffekt nochmals deutlicher". 5px Versatz, 14px
+       Weichzeichnung, 30 % Deckkraft: eine Schublade, die man
+       herauszieht, wirft mehr Schatten als eine blosse Kante - Versatz
+       und Weichzeichnung wachsen deshalb beide, nicht nur die Deckkraft
+       (ein blosses "dunkler" ohne mehr Ausdehnung bliebe eine kraeftigere
+       Kante, keine Tiefe). Bleibt trotzdem UNTER Ebene 2 (6px/16px) in
+       Versatz und Weichzeichnung: die Rangfolge "aufliegend haengt
+       weniger hoch als schwebend" (siehe EBENE 2 unten) darf durch eine
+       staerkere Ebene 1 nicht auf den Kopf gestellt werden. Die
+       Deckkraft selbst darf das - sie sagt, wie DICHT ein Schatten ist,
+       nicht wie HOCH; eine dichte, aber kurze Schlagschattenkante ist
+       physikalisch genau das, was ein naher, nicht schwebender Gegenstand
+       wirft.
        ZUSAETZLICH, UND DAS IST DER ZWEITE TEIL DERSELBEN RUEGE (Auftrag,
        woertlich: "oder der Hintergrund der Tabelle ist dann leicht
        ausgegraut ... es muss so wirken, als läge der Kopfbereich im
@@ -491,7 +561,7 @@
      Ebenso die Stationsmarke auf der Landkarte (siehe dort): sie liegt
      nicht hoeher als die Karte, sie muss sich nur gegen unkontrollierte
      Kartenbilder behaupten. */
-  --schatten-1: 0 3px 10px rgba(6, 24, 65, 0.26);
+  --schatten-1: 0 5px 14px rgba(6, 24, 65, 0.30);
   --schatten-2: 0 6px 16px rgba(6, 24, 65, 0.20);
   --schatten-3: 0 16px 40px rgba(6, 24, 65, 0.30);
   --z-ebene-2:  20;
@@ -817,12 +887,15 @@ a.wortmarke-link:active {
   grid-template-rows: var(--kopf-hoehe) 1fr var(--fuss-hoehe);
   grid-template-areas: "kopf kopf" "nav arbeit" "fuss fuss";
   height: 100vh;
-  /* EIN- UND AUSKLAPPEN DER NAVIGATION (Gestaltungsauftrag Punkt 3).
-     Die Breite steht an EINER Stelle - hier, in der Rasterangabe des
-     ganzen Arbeitszustands -, nicht an #navigation selbst: der
-     Arbeitsbereich daneben ist die zweite Spur desselben Rasters
-     (minmax(0, 1fr)) und bekommt den gewonnenen Platz dadurch von
-     selbst, ohne dass irgendeine zweite Regel davon wissen muesste.
+  /* EIN- UND AUSBLENDEN DER NAVIGATION (Gestaltungsauftrag, woertlich:
+     "applemaessig ... die linke Seite ein-/ausblenden"). Die Breite steht
+     an EINER Stelle - hier, in der Rasterangabe des ganzen
+     Arbeitszustands -, nicht an #navigation selbst: der Arbeitsbereich
+     daneben ist die zweite Spur desselben Rasters (minmax(0, 1fr)) und
+     bekommt den gewonnenen Platz dadurch von selbst, ohne dass
+     irgendeine zweite Regel davon wissen muesste - schrumpft die erste
+     Spur auf 0 (siehe --nav-breite-weg in :root), waechst die
+     Arbeitsflaeche automatisch auf die volle Fensterbreite.
      Der Zustand haengt an <body>, nicht an #navigation: dieselbe
      Machart wie body.zebra-an (siehe Zebramuster weiter unten), und die
      einzige, die auch das RASTER erreicht - #navigation ist ein KIND
@@ -830,8 +903,12 @@ a.wortmarke-link:active {
   transition: grid-template-columns 160ms ease;
 }
 
-body.navigation-schmal #zustand-arbeit {
-  grid-template-columns: var(--nav-breite-schmal) minmax(0, 1fr);
+/* Klassenname bewusst nicht mehr "navigation-schmal": es gibt keine
+   schmale Zwischenform mehr (siehe --nav-breite-weg in :root, "EIN
+   SCHALTER, ZWEI ZUSTAENDE, NICHT DREI") - die Leiste ist entweder da
+   oder weg. */
+body.navigation-weg #zustand-arbeit {
+  grid-template-columns: var(--nav-breite-weg) minmax(0, 1fr);
 }
 
 /* "niemals eine Bewegung, die Arbeit verzoegert" (Auftrag): wer
@@ -922,11 +999,20 @@ body.navigation-schmal #zustand-arbeit {
 
 /* ===== Umschalter der Navigation (Gestaltungsauftrag Punkt 3) =====
    Der Knopf steht in der KOPFLEISTE, nicht in der Navigation selbst -
-   und zwar aus zwei Gruenden, die beide nichts mit Geschmack zu tun
-   haben:
-     · Eine eingeklappte Leiste ist 56px breit. Ein Umschalter darin
-       muesste sich zwischen fuenf Rubriksymbole draengen und saehe wie
-       ein sechster Bereich aus.
+   und zwar aus drei Gruenden, die alle nichts mit Geschmack zu tun haben:
+     · WICHTIGSTER GRUND, SEIT DIE LEISTE GANZ VERSCHWINDEN KANN (Auftrag,
+       woertlich: "eine Navigation, die ganz weg ist, muss zurueckholbar
+       sein - der Weg dorthin darf nicht selbst verschwinden"): der
+       Knopf liegt in #navigation NICHT, sondern in #kopfleiste, einem
+       Geschwister-Element im Raster (siehe #zustand-arbeit). Er schrumpft
+       deshalb nie mit - egal ob die Navigation 200px breit oder 0px breit
+       ist (--nav-breite-weg in :root), der Rueckweg bleibt an derselben
+       Stelle stehen.
+     · Frueher zusaetzlich: eine eingeklappte Leiste war 56px breit, ein
+       Umschalter darin haette sich zwischen fuenf Rubriksymbole draengen
+       muessen. Mit der schmalen Zwischenform ist dieser Grund entfallen
+       (siehe --nav-breite-weg), der erste Grund oben blieb aber
+       unabhaengig davon immer schon der staerkere.
      · Er gehoert zur Fensterordnung, nicht zum Inhalt. Genau deshalb
        sitzt er bei Fluent, Fiori und in den Apple-Richtlinien
        uebereinstimmend links aussen in der Kopf-/Werkzeugleiste.
@@ -934,7 +1020,9 @@ body.navigation-schmal #zustand-arbeit {
    auch der erste Tabstopp: wer mit der Tastatur ankommt, kann die
    Leiste oeffnen, BEVOR er durch sie hindurchtabbt.
    Farben: dieselbe Weiss-auf-Marine-Lesbarkeit wie der Rest der
-   Kopfleiste (17,29:1). Der Ueberfahren-Zustand hellt die FLAECHE auf
+   Kopfleiste (17,29:1) - unveraendert, unabhaengig vom Farbwechsel der
+   Navigation selbst: dieser Knopf liegt auf der Kopfleiste, nicht auf
+   der Navigationsflaeche. Der Ueberfahren-Zustand hellt die FLAECHE auf
    statt die Schrift zu aendern - eine hellere Schrift auf Marine waere
    eine zweite, unvermessene Farbe. */
 .navigation-umschalter {
@@ -959,10 +1047,15 @@ body.navigation-schmal #zustand-arbeit {
 /* Dieselbe Bildsprache wie .bereich-icon svg / .zeilen-aktion svg /
    .kopftafel-umschalter svg - ein viertes, andersartiges Icon-Vokabular
    waere ein Bruch. Das Zeichen selbst ist das ueblich gewordene
-   Seitenleisten-Symbol (Rechteck mit abgesetzter linker Spalte), nicht
-   der "Hamburger": der steht in heutigen Oberflaechen fuer ein
-   VERSTECKTES Menue, hier verschwindet aber nichts - die Leiste bleibt
-   als Symbolspalte stehen. */
+   Seitenleisten-Symbol (Rechteck mit abgesetzter linker Spalte) - dasselbe
+   Zeichen, das VS Code, Slack und die meisten Fluent-Oberflaechen fuer
+   "Seitenleiste ein-/ausblenden" verwenden, unabhaengig davon, ob die
+   Leiste dabei ganz verschwindet oder nur schmaler wird. Seit dieser
+   Runde (siehe --nav-breite-weg in :root) verschwindet sie tatsaechlich
+   VOLLSTAENDIG statt nur auf eine Symbolspalte zu schrumpfen - das Symbol
+   bleibt trotzdem dasselbe: es beschreibt den BEREICH, den es schaltet
+   (die Seitenleiste als Ganzes), nicht die Zwischenform, die es frueher
+   erzeugte. */
 .navigation-umschalter svg {
   width: 18px;
   height: 18px;
@@ -1382,71 +1475,73 @@ body.navigation-schmal #zustand-arbeit {
    Unterschied macht. */
 #navigation {
   grid-area: nav;
-  /* ===== HIER SASS DER HAUPTBEFUND, ZWEIMAL =====
+  /* ===== DRITTER ANLAUF AN DIESER FLAECHE =====
      Erst: "der linke Randbereich hebt sich ueberhaupt nicht ab" -
-     Navigation und Arbeitsliste trugen beide #ffffff, dazwischen eine
-     Kante von 1,37:1. Antwort der letzten Runde war ein heller Grauton
-     (--flaeche-rahmen) plus eine sichtbare Kante.
-     Dann: "die linke Leiste ist so langweilig wie Outlook 98". Auch das
-     trifft, und es ist derselbe Befund eine Stufe hoeher: ein heller
-     Grauton neben einer weissen Flaeche IST die Bildsprache von 1997 -
-     ein Rand, der sich entschuldigt, dass er da ist.
+     Navigation und Arbeitsliste trugen beide #ffffff. Antwort damals: ein
+     heller Grauton (--flaeche-rahmen) plus eine sichtbare Kante.
+     Dann: "die linke Leiste ist so langweilig wie Outlook 98" - die
+     Antwort war die volle Produktfarbe (--marine), ein durchgehender
+     marinener Rahmen mit der Kopfleiste.
+     Dann: "der linke blaue Seitenrand ist mit blau zu intensiv" - ein
+     gedaempfter Blauton (--marine-nav, entfallen, siehe :root).
+     JETZT, DRITTER ANLAUF, Auftrag woertlich: "ich finde das Blau links
+     zu erdrueckend, ein leichtgewichtiges helles Grau eventuell". Die
+     Leiste bekommt --flaeche-rahmen zurueck - denselben Ton, den sie vor
+     zwei Runden schon einmal trug, diesmal aber in einer Farbordnung mit
+     nur ZWEI staendigen hellen Flaechen (hier und die Statuszeile) statt
+     acht identischen, und mit einer Kante, die es damals nicht gab (siehe
+     unten). Ausfuehrliche Begruendung, warum das KEINE Rueckkehr zur
+     "grauen Wueste" ist, steht bei --flaeche-rahmen/"DIE HELLE
+     NAVIGATIONSFLAECHE" in :root - hier nur die praktischen Folgen:
 
-     DIE FREIHEIT DIESER RUNDE (Auftrag, woertlich: "Nimm dir bei einer
-     Sache echte Freiheit"): die Leiste bekommt die Produktfarbe. Sie ist
-     das Element, das man in dieser Oberflaeche am haeufigsten ansieht -
-     acht Stunden am Tag am Bildschirmrand, bei jedem Bereichswechsel neu
-     -, und zusammen mit der Kopfleiste bildet sie jetzt EINEN
-     durchgehenden marinen Rahmen um das weisse Arbeitsblatt. Das ist
-     dieselbe Loesung, die Teams und Outlook im Web (Fluent), das Fiori
-     Launchpad und die Seitenleisten der Apple-Programme fahren: der
-     Rahmen traegt die Marke, das Blatt traegt die Arbeit. Die Frage
-     "bin ich im Blatt oder an seinem Rand" (Gliederungsregel Punkt 1)
-     ist damit nicht mehr eine Frage von zwei Grautoenen, sondern auf den
-     ersten Blick beantwortet.
-
-     GEMESSEN: Weiss auf --marine 17,29:1 (Text braucht 4,5:1). Die
-     Grenze zum Arbeitsblatt misst als Flaeche-gegen-Flaeche ebenfalls
-     17,29:1 - weit ueber den 3:1 aus WCAG 1.4.11.
-     Deshalb steht hier KEINE border-right mehr, und das ist keine
-     Ausnahme von Gliederungsregel Punkt 2, sondern deren Sinn: die Regel
-     verlangt eine Linie, WO ZWEI FLAECHEN SICH NICHT SELBST
-     UNTERSCHEIDEN. Wo sie es mit 17:1 tun, waere die Linie kein
-     Trennmittel, sondern ein drittes Element dazwischen - genau wie an
-     der Unterkante der Kopfleiste, die aus demselben Grund nie eine
-     hatte.
-
-     DAS EINGEGANGENE RISIKO (Bericht): eine gesaettigte Flaeche von
-     200px Breite ueber die volle Hoehe ist viel Farbe. Sie traegt aber
-     keine Daten und keine Grafik, sondern fuenf Woerter - und sie ist
-     seit dieser Runde einklappbar, laesst sich also auf 56px bringen,
-     wenn sie zu laut wird.
-
-     NACHTRAG, wortlich: "mir ist der linke blaue Seitenrand mit blau zu
-     intensiv". Das oben beschriebene Risiko ist eingetreten. Die
-     FLAECHE bleibt (das Blatt-oder-Rand-Argument gilt unveraendert -
-     siehe --marine-nav-Kommentar in :root), nur der TON tritt zurueck:
-     --marine-nav statt --marine, dieselbe Farbfamilie (Hue 222°),
-     zurueckgenommene Saettigung, nicht entsaettigt zu Grau. Die
-     Kopfleiste behaelt --marine unveraendert (60px, nie der Gegenstand
-     der Ruege) - der Rahmen bleibt EIN Gedanke (dunkles Marineblau oben
-     UND links), auch wenn die beiden Flaechen nicht mehr pixelgleich
-     sind. */
-  background: var(--marine-nav);
-  color: var(--flaeche);
+     1. DIE GRENZE ZUM ARBEITSBLATT BRAUCHT JETZT EINE LINIE. Marine gegen
+        Weiss mass 17,29:1 und trug die Grenze allein als Flaechenkontrast
+        (Gliederungsregel Punkt 2: keine Linie, wo die Flaechen sich
+        selbst schon unterscheiden). --flaeche-rahmen gegen --flaeche
+        misst nur noch 1,17:1 - weit unter den 3:1 aus WCAG 1.4.11. Genau
+        dieselbe Regel verlangt hier deshalb das GEGENTEIL von vorher:
+        eine Linie muss zurueck. border-right: 1px solid var(--kontur)
+        unten - 3,11:1 auf dieser Flaeche, 3,64:1 auf der Arbeitsflaeche
+        (beide Werte bereits in :root gefuehrt, keine neue Messung noetig).
+        DAS ist die Antwort auf den Auftrag "sorg dafuer, dass man die
+        Grenze sieht": nicht die Flaeche selbst, sondern eine Kante, exakt
+        nach derselben Regel, die im ganzen uebrigen Blatt gilt.
+     2. TEXT UND SYMBOLE BRAUCHEN EINEN DUNKLEN TON. --marine haelt
+        14,72:1 auf --flaeche-rahmen (gemessen) - weit ueber 4,5:1, und
+        bleibt in der Markenfamilie statt eines dritten, unbeteiligten
+        Grautons wie --text.
+     3. DIE AKTIVE RUBRIK BRAUCHT EINE GEFUELLTE FLAECHE, KEINE UMKEHRUNG
+        MEHR. Eine weisse Kachel auf --flaeche-rahmen (die fruehere
+        Umkehr-Logik: dunkle Leiste, helle aktive Kachel) misst nur
+        1,17:1 - dieselbe Zahl wie oben, aus demselben Grund, und weit
+        unter den 3:1, die eine Zustandsflaeche nach WCAG 1.4.11 braucht.
+        Die aktive Kachel bekommt deshalb die VOLLE Markenfarbe
+        (--marine, gefuellt) statt einer Umkehrung - siehe
+        #navigation button[aria-current] weiter unten. Das ist keine neue
+        Farbe: --marine traegt an anderer Stelle dieser Datei ohnehin
+        schon Knoepfe und Fokusringe in voller Staerke ("dort ist die
+        Flaeche klein" gilt fuer eine einzelne Kachel genauso). */
+  background: var(--flaeche-rahmen);
+  color: var(--marine);
+  border-right: 1px solid var(--kontur);
   overflow-y: auto;
-  overflow-x: hidden;   /* waehrend des Einklappens darf nichts herausragen */
+  overflow-x: hidden;   /* waehrend des Ausblendens darf nichts herausragen */
   display: flex;
   flex-direction: column;
   gap: var(--raum-2);
   padding: var(--raum-5) var(--raum-3);
 }
 
-/* Eingeklappt: derselbe Innenabstand links/rechts (--raum-3), damit die
-   Symbole beim Zusammenschieben nicht wandern - 56px Leiste minus
-   zweimal 12px ergibt genau die Zielgroesse --ziel fuer den Knopf. */
-body.navigation-schmal #navigation {
-  padding: var(--raum-5) var(--raum-3);
+/* Ausgeblendet: die Spur schrumpft in style.css (siehe
+   body.navigation-weg #zustand-arbeit) auf 0, aber border-box zaehlt
+   Innenabstand zur Breite dazu - ohne diese Regel bliebe die Leiste als
+   24px breiter Streifen (zweimal --raum-3) stehen, egal wie schmal die
+   Rasterspur wird. inert (siehe rahmen.js) nimmt sie zusaetzlich aus
+   Tastaturreihenfolge und Bedienbaum heraus - eine Leiste, die man nicht
+   mehr sieht, darf auch keinen Tabstopp mehr belegen. */
+body.navigation-weg #navigation {
+  padding: 0;
+  border-right-color: transparent;
 }
 
 /* Ein Eintrag je erlaubtem Bereich - rahmen.js erzeugt sie, hier nur
@@ -1464,74 +1559,50 @@ body.navigation-schmal #navigation {
   border: none;
   border-radius: var(--rund-1);
   background: transparent;
-  color: var(--flaeche);
+  color: inherit;
   font-size: var(--grad-4);
   /* Nicht "…" wachsen lassen, sondern beschneiden: waehrend des
-     Einklappens wird der Knopf schmaler als sein Text, und ein
+     Ausblendens wird der Knopf schmaler als sein Text, und ein
      umbrechender Text liesse die Leiste in diesem Augenblick zappeln. */
   white-space: nowrap;
   overflow: hidden;
   transition: background-color 120ms ease, color 120ms ease;
 }
 
-/* Auf der Navigationsflaeche hebt sich ein Ueberfahren durch AUFHELLEN
-   ab. Eine halbtransparente weisse Auflage statt eines zweiten
-   Farbwerts: sie funktioniert unveraendert, falls --marine-nav sich je
-   aendert, und sie fuehrt keinen unvermessenen Ton in die Palette ein.
-   Gemessen (nachgerechnet fuer --marine-nav, seit der Ton dort geaendert
-   wurde): die entstehende Flaeche ist #374460; die Beschriftung darauf
-   haelt 9,73:1 (Text braucht 4,5:1). Die Flaeche selbst misst gegen
-   --marine-nav 1,46:1 - das ist Absicht und keine Luecke in WCAG 1.4.11:
-   der Ueberfahren-Zustand ist keine Information, die man ohne Zeiger
-   erkennen muesste (der Zeiger steht ja darauf). Welche Rubrik AKTIV
-   ist, sagt nicht dieser Zustand, sondern die volle Umkehrung darunter
-   (14,19:1). */
+/* Auf der jetzt hellen Navigationsflaeche hebt sich ein Ueberfahren durch
+   ABDUNKELN ab - umgekehrte Richtung als vorher (dort wurde aufgehellt),
+   dieselbe Idee: eine halbtransparente Auflage in der Markenfarbe statt
+   eines zweiten, eigens gemischten Tons. Gemessen: die entstehende
+   Flaeche ist #dde1ea (gerundet); die Beschriftung darauf haelt weiterhin
+   die 14,72:1 von --marine auf --flaeche-rahmen (eine derart schwache
+   Auflage aendert keinen Kontrast messbar). Der Ueberfahren-Zustand
+   selbst muss die 3:1 aus WCAG 1.4.11 nicht halten (er ist keine
+   Information, die man ohne Zeiger erkennen muesste) - welche Rubrik
+   AKTIV ist, sagt die gefuellte Kachel darunter. */
 #navigation button:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(6, 24, 65, 0.08);
 }
 
-/* Der aktive Bereich ist die UMKEHRUNG des Rahmens: weisse Kachel,
-   navyfarbene Schrift - dieselbe Paarung wie zuvor, nur andersherum,
-   seit die Leiste selbst dunkel ist. Sie sieht damit aus wie ein Stueck
-   des Arbeitsblatts, das in den Rahmen hineinreicht: genau die Aussage
-   "dieser Bereich ist der, den du gerade siehst". Die Textfarbe ist
-   --marine-nav (nicht das kraeftigere --marine) - dieselbe Umkehrung
-   bleibt in der FAMILIE der Flaeche, die sie umkehrt, statt einen
-   dritten, unbeteiligten Ton hereinzuholen.
-   Gemessen: --marine-nav auf --flaeche 14,19:1. */
+/* Die aktive Rubrik ist eine GEFUELLTE Kachel in der Markenfarbe, nicht
+   mehr eine Umkehrung der Leistenflaeche (Begruendung, warum eine
+   Umkehrung hier nicht mehr reicht: Punkt 3 im Kopfkommentar bei
+   #navigation oben). Weiss auf --marine haelt unveraendert 17,29:1; die
+   Kachel selbst gegen --flaeche-rahmen 14,72:1 - weit ueber die 3:1, die
+   eine Zustandsflaeche nach WCAG 1.4.11 braucht. */
 #navigation button[aria-current="page"] {
-  background: var(--flaeche);
-  color: var(--marine-nav);
+  background: var(--marine);
+  color: var(--flaeche);
   font-weight: 600;
 }
 
 /* Der Tastaturfokus kommt von der globalen :focus-visible-Regel in --rot.
-   Auf der Navigationsflaeche misst --rot 3,22:1 gegen --marine-nav
-   (gemessen) - ueber den 3:1, die WCAG 1.4.11 fuer eine Bedienelement-
-   Auszeichnung verlangt. Ein
-   groesserer Versatz als die globale Vorgabe (1px) waere hier schaedlich:
-   der Ring liefe sonst aus der 56px schmalen Leiste heraus. */
-body.navigation-schmal #navigation button:focus-visible {
-  outline-offset: -2px;
-}
-
-/* ===== Eingeklappt: nur Symbole =====
-   Der Text verschwindet, das Symbol bleibt und rueckt in die Mitte. Der
-   NAME geht dabei nicht verloren: rahmen.js setzt auf jedem Rubrikknopf
-   ein aria-label mit demselben Text (also hoert ein Bildschirmleser
-   unveraendert "Flotte"), und beim Ueberfahren wie beim Tastaturfokus
-   erscheint das Hinweisfenster mit dem Namen - beides in
-   navigationRubrikVerdrahten() in rahmen.js. Ein Symbol allein waere
-   eine Ratefrage; genau das verlangt der Auftrag ausdruecklich nicht. */
-body.navigation-schmal #navigation button {
-  justify-content: center;
-  padding: var(--raum-3) 0;
-  gap: 0;
-}
-
-body.navigation-schmal #navigation .bereich-text {
-  display: none;
-}
+   Auf der jetzt hellen Navigationsflaeche misst --rot 3,76:1 gegen
+   --flaeche-rahmen (gemessen) - ueber den 3:1, die WCAG 1.4.11 fuer eine
+   Bedienelement-Auszeichnung verlangt. Kein eigener outline-offset mehr
+   noetig: die fruehere -2px-Ausnahme galt der 56px schmalen
+   Symbolspalte, die es nicht mehr gibt (siehe --nav-breite-weg in
+   :root) - die Leiste ist jetzt entweder 200px breit oder gar nicht da,
+   in beiden Faellen reicht der globale 1px-Versatz. */
 
 .bereich-icon {
   display: inline-flex;
@@ -1782,7 +1853,7 @@ body.navigation-schmal #navigation .bereich-text {
      nach unten: die Tafel liegt auf dem Blatt, die Liste laeuft unter
      ihr weiter. Ausdruecklich zusaetzlich zur Kante, nicht statt ihr -
      die Kante haelt die 3:1 aus WCAG 1.4.11 auch dort, wo ein weicher
-     Schatten (26 % Deckkraft, dritter Anlauf - siehe --schatten-1 in
+     Schatten (30 % Deckkraft, vierter Anlauf - siehe --schatten-1 in
      :root) unter der Wahrnehmungsschwelle bliebe, etwa auf einem
      kontrastarmen Bildschirm.
      position/z-index: ohne eine eigene Stapelposition liegt der
@@ -1812,6 +1883,15 @@ body.navigation-schmal #navigation .bereich-text {
    kopftafelEingeklappt() in rahmen.js. */
 .kopftafel:not(.kopftafel-eingeklappt) {
   box-shadow: var(--schatten-1);
+  /* ZWEITES MITTEL FUER DENSELBEN EFFEKT (Auftrag: "nochmals deutlicher",
+     nicht nur ueber den Schatten). Die untere Kante der Tafel ist genau
+     die Stelle, an der sie ueber Filterleiste und Tabelle endet - dort
+     darf sie mehr Gewicht tragen als eine gewoehnliche Bereichsgrenze.
+     2px statt 1px, weiterhin --kontur (keine neue Farbe, nur mehr davon):
+     eingeklappt bleibt die Tafel bei 1px, wie jede andere Kopfbereichs-
+     Leiste (Reiter-, Werkzeugleiste) - erst das Aufliegen selbst
+     rechtfertigt die staerkere Linie. */
+  border-bottom-width: 2px;
 }
 
 /* ===== Die Tabelle tritt zurueck, waehrend die Tafel aufliegt =====
@@ -1877,18 +1957,33 @@ body.navigation-schmal #navigation .bereich-text {
    kopftafelUmschalterKnopf() in rahmen.js NUR beim Klick und nimmt sie
    nach dem Lauf wieder weg - ein Bereichs- oder Reiterwechsel baut die
    Tafel ebenfalls neu auf, und der darf nicht bei jedem Filterklick
-   mitwackeln. 140ms: kurz genug, dass niemand darauf wartet (die Tafel
-   ist waehrenddessen bereits vollstaendig da und bedienbar - die
-   Bewegung liegt in opacity/transform, nicht in der Hoehe, und
-   verzoegert deshalb keine Arbeit). */
+   mitwackeln.
+   ZWEITER ANLAUF, Auftrag woertlich: "eine Schublade, die man
+   herunterzieht, darf sich anders bewegen als eine, die aufblitzt".
+   140ms/-6px/ease-out beschleunigte praktisch sofort auf volle
+   Geschwindigkeit (die Definition von ease-out: schnell rein, weich
+   raus) - das liest sich eher wie ein Aufblitzen als wie ein Ziehen.
+   220ms/-10px/cubic-bezier(0.16, 1, 0.3, 1) ("ease-out-expo", dieselbe
+   Kurvenfamilie, die macOS fuer das Auf- und Zuschieben von Fenstern und
+   Palettenleisten verwendet): der Weg ist laenger, UND die Kurve haelt
+   die hohe Geschwindigkeit laenger, bevor sie in den letzten Millisekunden
+   sichtbar abbremst - genau die Bewegung, die etwas Angezogenes von
+   etwas Aufblitzendem unterscheidet. Bleibt kurz genug, dass niemand
+   darauf wartet (die Tafel ist waehrenddessen bereits vollstaendig da
+   und bedienbar - die Bewegung liegt in opacity/transform, nicht in der
+   Hoehe, und verzoegert deshalb keine Arbeit). Zuklappen bleibt
+   unveraendert sofort (display:none, keine eigene Animation): eine
+   Schublade, die man zurueckschiebt, darf schneller gehen als eine, die
+   man herauszieht - das Ziehen ist die Bewegung, die betont werden
+   sollte, nicht das Zuschieben. */
 @keyframes kopftafel-aufklappen {
-  from { opacity: 0; transform: translateY(-6px); }
+  from { opacity: 0; transform: translateY(-10px); }
   to   { opacity: 1; transform: none; }
 }
 
 .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-tabelle,
 .kopftafel.kopftafel-bewegt:not(.kopftafel-eingeklappt) .kopftafel-fussnote {
-  animation: kopftafel-aufklappen 140ms ease-out;
+  animation: kopftafel-aufklappen 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Wer "Bewegung reduzieren" eingestellt hat, bekommt denselben Inhalt
@@ -1913,32 +2008,75 @@ body.navigation-schmal #navigation .bereich-text {
   padding-bottom: 0;
 }
 
-/* Eigener Knopf statt eines klickbaren Kopfbereichs: .kopftafel-kopf
-   enthaelt ein <h2> (das Tabellentitel-Ziel von aria-labelledby, siehe
-   zeigeKopftafel()) - ein <button> darf laut Spezifikation keine
-   Ueberschrift enthalten. margin-left:auto schiebt ihn an den rechten
-   Rand, unabhaengig davon, ob ein Produktbild links davor steht oder
-   nicht. */
+/* ===== Die Griffleiste: der Schalter mittig an der Unterkante =====
+   Gestaltungsauftrag, woertlich: "vor allem den Button zum Ein-/Aus-
+   blenden besser sichtbar. Das ist ein zentrales Bedienelement und
+   versteckt sich. Es muss mittig am unteren Ende der Kopfleiste sein,
+   damit es wirksam wahrgenommen werden kann." Vorher sass der Knopf oben
+   rechts in .kopftafel-kopf (margin-left:auto, 32x32px) - genau die
+   Ecke, die der Blick zuletzt erreicht, nicht zuerst.
+   EIGENE ZEILE STATT position:absolute: eine absolut positionierte Ecke
+   ueber den unteren Rand von .kopftafel hinaus waere von dessen eigenem
+   overflow-x:auto mitgeclippt worden (die CSS-Spezifikation macht
+   overflow-y automatisch zu "auto", sobald overflow-x einen Wert
+   ungleich "visible" traegt, siehe .kopftafel weiter oben) - ein Griff,
+   der ueber den Rand ragt, waere unsichtbar abgeschnitten gewesen. Eine
+   echte Zeile im normalen Fluss braucht diesen Kniff nicht.
+   IMMER DA, IN BEIDEN ZUSTAENDEN AN DERSELBEN STELLE (Auftrag,
+   woertlich): rahmen.js haengt diese Zeile als LETZTES Kind der Tafel
+   ein, nach Kopf, Tabelle und Fussnote (siehe zeigeKopftafel() -
+   Begruendung dort). Eingeklappt sind Tabelle/Fussnote per
+   .kopftafel-eingeklappt weiter oben ausgeblendet, die Griffleiste
+   bleibt die zweite und letzte sichtbare Zeile; ausgeklappt ist sie die
+   letzte nach allem anderen. Beides ist "unten, mittig" - ein und
+   dieselbe Position, keine zwei Regeln fuer zwei Zustaende. */
+.kopftafel-griffleiste {
+  display: flex;
+  justify-content: center;
+  padding-top: var(--raum-2);
+}
+
+/* Ein <button> darf laut Spezifikation kein <h2> enthalten - deshalb
+   weiterhin ein eigenes Element statt eines klickbaren Kopfbereichs
+   (unveraendert gegenueber vorher), nur jetzt in der Griffleiste statt
+   im Kopf. */
 .kopftafel-umschalter {
   display: inline-flex;
   align-items: center;
+  gap: var(--raum-1);
   justify-content: center;
-  flex: 0 0 auto;
-  margin-left: auto;
-  /* 26x26 -> Zielgroesse (siehe --ziel in :root) */
-  width: var(--ziel);
-  height: var(--ziel);
-  padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--rund-1);
-  background: transparent;
+  /* Breiter als hoch (ein GRIFF, keine reine Ecke) - "hier darf es mehr
+     sein" (Auftrag zur Zielgroesse). min-height haelt --ziel als
+     Untergrenze, waechst aber mit Text UND laengeren Uebersetzungen
+     (Tuerkisch/Polnisch, siehe die Zielgroessen-Regel in :root) statt
+     ihn abzuschneiden. */
+  min-width: 64px;
+  min-height: var(--ziel);
+  padding: var(--raum-1) var(--raum-4);
+  /* --kontur statt --linie: der Griff ist ein Bedienelement, das man
+     erkennen soll, nicht eine Trennung innerhalb eines Bereichs (siehe
+     Gliederungsregel Punkt 2 im Dateikopf - dieselbe 3:1-Frage gilt fuer
+     einen Rahmen ebenso wie fuer eine Flaechengrenze). Kein eigener
+     Schatten: die drei Schatten dieser Datei sind je einer Hoehe fest
+     zugeordnet (siehe Ebenensystem in :root), und der Griff ist Teil des
+     Blatts (Ebene 0), keine schwebende oder ueberlagernde Flaeche -
+     Rahmen, Fuellung und Groesse tragen die Sichtbarkeit hier allein. */
+  border: 1px solid var(--kontur);
+  border-radius: var(--rund-3);
+  background: var(--flaeche);
   color: var(--text-leise);
+  font-size: var(--grad-3);
+  font-weight: 600;
 }
 
 .kopftafel-umschalter:hover {
-  background: var(--flaeche);
-  border-color: var(--linie);
+  background: var(--grund);
+  border-color: var(--marine);
   color: var(--marine);
+}
+
+.kopftafel-umschalter-text {
+  white-space: nowrap;
 }
 
 /* Dieselbe Bildsprache wie .zeilen-aktion svg / .bereich-icon svg (1.6px
