@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=f74ed01a">
+    <link rel="stylesheet" href="style.css?v=72b3e130">
 </head>
 <body>
 
@@ -374,20 +374,36 @@
      Raster aus dem neuen Entwurf, Werte aus velocity.v_kennzahl -
      deshalb traegt es die id stats-grid, an der renderKennzahlen haengt.
      ============================================================ -->
-<section class="facts" aria-labelledby="facts-title">
+<!-- RAEDER UND PREISE IN EINEM ABSCHNITT (zusammengelegt 28.08.2026).
+     Vorher standen die Radkacheln hier und die Tarife in einem eigenen
+     Abschnitt weiter unten - zweimal dieselben drei Raeder, einmal mit
+     Bild und einmal mit Preis. Wer wissen wollte, was ein Lastenrad
+     kostet, musste sich zweimal orientieren. Jetzt traegt eine Kachel
+     alles zu einem Rad. Sie uebernimmt die Sprungmarke "tarife", damit
+     "Preise" in der Navigation weiter dorthin fuehrt, wo die Preise
+     stehen. Der marineblaue Grund kommt vom aufgeloesten Tarifband: die
+     Seite behaelt damit ihren einen dunklen Block. -->
+<section class="facts" id="tarife" aria-labelledby="facts-title">
   <div class="container">
     <div class="section-header">
       <!-- "Zwei" stimmte, solange es E-Bike und City-Bike gab. Seit der
            E-Cargo Loader eine eigene Station hat, sind es drei. -->
       <span class="eyebrow">Ein System. Drei Fahrgefühle.</span>
       <h2 id="facts-title">Würzburg fährt flexibel.</h2>
+      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis.</p>
     </div>
+    <!-- DAS BAND STEHT OBEN, NICHT UNTEN.
+         Zehn Stationen, rund um die Uhr, Oekostrom, keine Gebuehr - das
+         sind die Bedingungen, unter denen das Angebot gilt. Sie gehoeren
+         vor die Auswahl, nicht dahinter: erst der Rahmen, dann die
+         Raeder. Unten gelesen kamen sie zu spaet. -->
+    <div class="stat-grid" id="stats-grid" aria-label="VeloCity Kennzahlen"></div>
+
     <!-- Drei Kacheln, eine je Fahrradtyp. Der Vorspann des Abschnitts
          verspricht seit jeher "Drei Fahrgefuehle" und zeigte dann vier
          abstrakte Zahlen. Bild, Bezeichnung und Beschreibung kommen aus
          v_tarifkarte, der freie Bestand aus den geladenen Raedern. -->
     <div class="rad-kacheln" id="rad-kacheln"></div>
-    <div class="stat-grid" id="stats-grid" aria-label="VeloCity Kennzahlen"></div>
   </div>
 </section>
 
@@ -401,61 +417,6 @@
             <!-- wird aus velocity.v_nutzungsschritt geladen -->
         </div>
     </div>
-</section>
-
-<section id="tarife" class="pricing">
-  <div class="container">
-    <div class="section-header">
-      <span class="eyebrow">Tarife</span>
-      <h2>Drei Fahrradtypen, ein einfaches Prinzip</h2>
-      <p>Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis.</p>
-    </div>
-
-    <!-- Der Fahrpreiszaehler stand frueher im Kopfbereich. Der ist
-         ersetzt, der Zaehler bleibt - er gehoert ohnehin zu den
-         Tarifen. Er rechnet mit denselben Regeln wie die Datenbank:
-         angefangene Minuten aufgerundet, Deckelung auf den
-         Tageshoechstpreis. Die Saetze kommen aus v_tarifkarte. -->
-    <div class="tarif-zaehler">
-    <div class="rechner" id="fare-meter">
-      <div class="rechner-spalte">
-        <span class="rechner-marke">Was kostet eine Fahrt?</span>
-        <div class="rechner-typen" id="meter-switch" role="group" aria-label="Fahrradtyp wählen"></div>
-      </div>
-      <div class="rechner-spalte">
-        <label class="rechner-marke" for="meter-minuten">Fahrzeit</label>
-        <div class="rechner-feld">
-          <input type="number" id="meter-minuten" min="1" max="1440" step="1" value="30"
-                 inputmode="numeric" autocomplete="off"
-                 aria-describedby="meter-grenze">
-          <span>Minuten</span>
-        </div>
-        <input type="range" id="meter-regler" min="1" max="1440" step="1" value="30"
-               aria-label="Fahrzeit in Minuten">
-        <!-- Feld und Regler liefen frueher auseinander: 1440 im Feld, 144 am
-             Regler. Beide tragen jetzt dieselbe Grenze. Die Sprungmarken
-             machen die langen Zeiten trotzdem in einem Griff erreichbar. -->
-        <div class="rechner-marken" role="group" aria-label="Fahrzeit vorwählen">
-          <button type="button" data-minuten="15">15 Min</button>
-          <button type="button" data-minuten="30">30 Min</button>
-          <button type="button" data-minuten="120">2 Std</button>
-          <button type="button" data-minuten="1440">1 Tag</button>
-        </div>
-        <p class="rechner-grenze" id="meter-grenze">1 bis 1440 Minuten</p>
-      </div>
-      <div class="rechner-spalte rechner-summe">
-        <div class="rechner-ergebnis">
-          <span class="rechner-betrag" id="meter-value">0,00</span><span class="rechner-waehrung">Euro</span>
-        </div>
-        <ul class="rechner-posten" id="meter-detail"></ul>
-      </div>
-    </div>
-    </div>
-
-    <div class="pricing-grid" id="pricing-grid">
-      <!-- wird aus velocity.v_tarifkarte geladen -->
-    </div>
-  </div>
 </section>
 
 <section id="map-section" class="map-wrapper">
@@ -568,7 +529,57 @@
 <script src="config.js?v=a7625464"></script>
 <script src="supabase.js?v=3f4d1cd4"></script>
 <script src="auth.js?v=61b78d72"></script>
-<script src="script.js?v=13ba1c7c"></script>
+<script src="script.js?v=da63d43c"></script>
 
+
+<!-- DER FAHRPREISRECHNER WOHNT IN EINER SCHUBLADE (28.08.2026).
+     Er stand zuerst dauerhaft im Tarifband und danach in einem Dialog.
+     Beides war nicht richtig: dauerhaft sichtbar braucht ihn nur, wer
+     rechnen will, und ein Dialog legt sich UEBER das Rad, um dessen
+     Preis es geht. Jede Radkachel faehrt ihn jetzt unter sich aus -
+     dieselbe Bedienung wie die Kopftafel der Warenwirtschaft, die sich
+     dort bewaehrt hat. Nebenbei loest das die Vorbelegung von selbst:
+     wer die Schublade des Lastenrads oeffnet, sieht den Preis des
+     Lastenrads, ohne dass ihn jemand einstellen muesste.
+
+     ES GIBT NUR EINEN RECHNER, NICHT DREI. Er wandert in die Schublade,
+     die gerade offen ist. Drei Bauteile mit denselben Kennungen waeren
+     drei Elemente mit derselben id - und getElementById faende immer
+     nur das erste. -->
+<div id="rechner-halter" hidden>
+<div class="rechner" id="fare-meter">
+    <div class="rechner-spalte">
+      <span class="rechner-marke">Fahrradtyp</span>
+      <div class="rechner-typen" id="meter-switch" role="group" aria-label="Fahrradtyp wählen"></div>
+    </div>
+    <div class="rechner-spalte">
+      <label class="rechner-marke" for="meter-minuten">Fahrzeit</label>
+      <div class="rechner-feld">
+        <input type="number" id="meter-minuten" min="1" max="1440" step="1" value="30"
+               inputmode="numeric" autocomplete="off"
+               aria-describedby="meter-grenze">
+        <span>Minuten</span>
+      </div>
+      <input type="range" id="meter-regler" min="1" max="1440" step="1" value="30"
+             aria-label="Fahrzeit in Minuten">
+      <!-- Feld und Regler liefen frueher auseinander: 1440 im Feld, 144 am
+           Regler. Beide tragen jetzt dieselbe Grenze. Die Sprungmarken
+           machen die langen Zeiten trotzdem in einem Griff erreichbar. -->
+      <div class="rechner-marken" role="group" aria-label="Fahrzeit vorwählen">
+        <button type="button" data-minuten="15">15 Min</button>
+        <button type="button" data-minuten="30">30 Min</button>
+        <button type="button" data-minuten="120">2 Std</button>
+        <button type="button" data-minuten="1440">1 Tag</button>
+      </div>
+      <p class="rechner-grenze" id="meter-grenze">1 bis 1440 Minuten</p>
+    </div>
+    <div class="rechner-spalte rechner-summe">
+      <div class="rechner-ergebnis">
+        <span class="rechner-betrag" id="meter-value">0,00</span><span class="rechner-waehrung">Euro</span>
+      </div>
+      <ul class="rechner-posten" id="meter-detail"></ul>
+    </div>
+  </div>
+</div>
 </body>
 </html>

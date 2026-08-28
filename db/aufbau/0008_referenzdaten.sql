@@ -162,7 +162,7 @@ insert into velocity.faq_eintrag (frage, antwort, sortierung) values
   ('Darf ich das Rad kurz parken?',
    'Ja. Nutze in der App den Parkmodus: die Miete läuft weiter, das Schloss verriegelt.', 2),
   ('Gibt es Rabatte für Studierende?',
-   'Registriere dich mit deiner Hochschuladresse für den Campus-Tarif.', 3),
+   'Registriere dich mit deiner Hochschuladresse für den Campus-Tarif. Studierende der THWS fahren kostenfrei.', 3),
   ('Was passiert bei einem Defekt?',
    'Melde den Schaden über die App. Wir beenden deine Miete sofort kostenfrei.', 4)
 on conflict (frage) do update

@@ -53,8 +53,13 @@ pruefe('P1-01', '@media (max-width: 1023px)' in C and '.menue-knopf { display: f
        'Menue erscheint spaetestens unter 1024 px')
 pruefe('P1-02', 'Fahrt starten' not in H and 'Fahrt starten' not in J,
        'Kein Knopf verspricht mehr "Fahrt starten"')
+# Die Schreibweise wurde am 28.08.2026 nachgezogen, nicht die Zusage:
+# der Knopf wird seit dem Zusammenlegen von Kacheln und Tarifen ueber
+# createElement gebaut statt ueber eine innerHTML-Vorlage. Geprueft wird
+# unveraendert, DASS die Vorlesebeschriftung den vollen Radnamen traegt -
+# nur eben an der Stelle, an der sie jetzt entsteht.
 pruefe('P1-02', 'karte-mit-typ' in J and 'Auf der Karte zeigen' in J
-       and 'aria-label="${escapeHtml(k.bezeichnung)} auf der Karte zeigen"' in J,
+       and '`${k.bezeichnung} auf der Karte zeigen`' in J,
        'Tarif-Knopf sagt kurz was er tut und traegt den vollen Namen')
 pruefe('P1-02', "cb.checked = (cb.value === kurz)" in J,
        'Der gewaehlte Fahrradtyp wird als Kartenfilter uebernommen')

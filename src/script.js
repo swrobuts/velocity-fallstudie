@@ -426,12 +426,19 @@ document.addEventListener("DOMContentLoaded", async () => {
        darauf hat tools/frontend_check.py mich gestossen: Es verlangt,
        dass jede per querySelector gesuchte Klasse im HTML steht. */
     let radKachelBestandsfelder = [];
+    /* Auch Schubladen und ihre Knoepfe werden gemerkt, nicht spaeter
+       ueber ihre Klasse gesucht - aus demselben Grund wie die
+       Bestandsfelder: ein Klassenname ist eine Angabe fuers Aussehen und
+       wird zur heimlichen Schnittstelle, sobald man ihn zum Wiederfinden
+       benutzt. tools/frontend_check.py besteht darauf. */
+    let radKachelSchubladen = [];
 
     async function renderRadKacheln() {
         const ziel = document.getElementById('rad-kacheln');
         if (!ziel) return;
         const karten = (await fetchTarifkarten()).filter(k => RAD_BILD[k.typ_code]);
         radKachelBestandsfelder = [];
+        radKachelSchubladen = [];
         if (!karten.length) { ziel.replaceChildren(); return; }
 
         ziel.replaceChildren(...karten.map(k => {
@@ -459,14 +466,79 @@ document.addEventListener("DOMContentLoaded", async () => {
             const bschr = document.createElement('p');
             bschr.className = 'rad-kachel-beschreibung';
             bschr.textContent = k.beschreibung ?? '';
+
+            /* Der Preis kommt aus dem aufgeloesten Tarifabschnitt. Er
+               steht in derselben Form wie dort: Betrag gross, Bezugsgroesse
+               klein daneben - eine Zahl ohne "je 30 Minuten" ist kein Preis,
+               sondern eine Behauptung. */
+            const preis = document.createElement('p');
+            preis.className = 'rad-kachel-preis';
+            const betrag = document.createElement('b');
+            betrag.textContent = euro(k.preis_30_minuten);
+            const bezug = document.createElement('small');
+            bezug.textContent = '/ 30 Min';
+            preis.append(betrag, bezug);
+
+            const merkmale = document.createElement('ul');
+            merkmale.className = 'rad-kachel-merkmale';
+            for (const m of (k.merkmale || [])) {
+                const li = document.createElement('li');
+                li.textContent = m;
+                merkmale.append(li);
+            }
+
             const frei = document.createElement('p');
             frei.className = 'rad-kachel-frei';
             radKachelBestandsfelder.push({ typ: k.typ_code, feld: frei });
-            text.append(titel, bschr, frei);
+
+            const knoepfe = document.createElement('div');
+            knoepfe.className = 'rad-kachel-knoepfe';
+            const rechnen = document.createElement('button');
+            rechnen.type = 'button';
+            rechnen.className = 'rad-kachel-rechnen btn-primary';
+            rechnen.dataset.typ = k.typ_code;
+            rechnen.setAttribute('aria-expanded', 'false');
+            const pfeil = document.createElement('i');
+            pfeil.className = 'rad-kachel-pfeil';
+            pfeil.setAttribute('aria-hidden', 'true');
+            rechnen.append(document.createTextNode('Preis berechnen'), pfeil);
+            const zurKarte = document.createElement('button');
+            zurKarte.type = 'button';
+            zurKarte.className = 'karte-mit-typ btn-outline';
+            zurKarte.dataset.typ = k.typ_code;
+            zurKarte.textContent = 'Auf der Karte zeigen';
+            zurKarte.setAttribute('aria-label', `${k.bezeichnung} auf der Karte zeigen`);
+            knoepfe.append(rechnen, zurKarte);
+
+            text.append(titel, bschr, preis, merkmale, frei, knoepfe);
+
+            /* Die Hervorhebung haengt am Fahrradtyp, nicht an der Position
+               in der Liste. An die Position gebunden wanderte sie bei jeder
+               Preisaenderung auf eine andere Karte. */
+            if (k.typ_code === 'EBIKE') {
+                kachel.classList.add('ist-beliebt');
+                const abzeichen = document.createElement('div');
+                abzeichen.className = 'rad-kachel-abzeichen';
+                abzeichen.textContent = 'Beliebteste Wahl';
+                kachel.append(abzeichen);
+            }
 
             kachel.append(bildfeld, text);
-            return kachel;
-        }));
+
+            /* Die Schublade ist GESCHWISTER der Kachel, nicht ihr Kind.
+               In der Kachel wuerde sie nur deren Spalte breit und die
+               Reihe waechst mit - die beiden Nachbarkacheln bekaemen
+               leeren Raum. Als eigenes Rasterelement ueber alle Spalten
+               faehrt sie unter der ganzen Reihe aus. Geschlossen steht
+               sie auf display:none und belegt gar keine Zeile. */
+            const schublade = document.createElement('div');
+            schublade.className = 'rad-kachel-schublade';
+            schublade.dataset.typ = k.typ_code;
+            schublade.hidden = true;
+            radKachelSchubladen.push({ typ: k.typ_code, schublade, knopf: rechnen });
+
+            return [kachel, schublade];
+        }).flat());
 
         radKachelnBestandSetzen();
     }
@@ -491,35 +563,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    async function renderTarifkarten() {
-        const ziel = document.getElementById('pricing-grid');
-        if (!ziel) return;
-        const karten = await fetchTarifkarten();
-        // Die Hervorhebung haengt am Fahrradtyp, nicht an der Position in
-        // der Liste. Sortiert wird nach typ_id; an die Position gebunden
-        // wanderte sie bei jeder Preisaenderung auf eine andere Karte -
-        // nach der Anhebung des Minutenpreises sass sie am Lastenrad.
-        ziel.innerHTML = karten.map((k) => {
-          const hervor = k.typ_code === 'EBIKE';
-          return `
-            <div class="price-card${hervor ? ' popular' : ''}">
-                ${hervor ? '<div class="badge-pop">Beliebteste Wahl</div>' : ''}
-                <div class="card-content">
-                    <div class="header">${escapeHtml(k.bezeichnung)}</div>
-                    <div class="price">${euro(k.preis_30_minuten)} <small>/ 30 Min</small></div>
-                    <ul class="features-list">
-                        ${(k.merkmale || []).map(m =>
-                            `<li><i class="fa-solid fa-check"></i> ${escapeHtml(m)}</li>`).join('')}
-                    </ul>
-                </div>
-                <button type="button" data-typ="${escapeHtml(k.typ_code)}"
-                        class="karte-mit-typ ${hervor ? 'btn-primary' : 'btn-outline'} full-width"
-                        aria-label="${escapeHtml(k.bezeichnung)} auf der Karte zeigen">
-                    Auf der Karte zeigen
-                </button>
-            </div>`;
-        }).join('');
-    }
+    /* HIER STAND renderTarifkarten (entfernt 28.08.2026).
+       Der Tarifabschnitt ist im Radkachel-Abschnitt aufgegangen: Preis,
+       Merkmale und Hervorhebung baut jetzt renderRadKacheln, weil dort
+       ohnehin schon Bild, Bezeichnung und Bestand desselben Rades
+       stehen. Zwei Karten je Rad an zwei Stellen der Seite hiessen zwei
+       Orte, an denen man dieselbe Preisaenderung nachziehen muss. */
 
     /* Der Knopf hiess auf allen drei Karten "Fahrt starten" und startete
        nichts - er sprang zur Karte und vergass dabei die Wahl, die man
@@ -694,6 +743,46 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     }
 
+    /* Den Rechner mit einem bestimmten Rad oeffnen. rechnerAktiv ist ein
+       Index in rechnerTarife, kein Typcode - deshalb wird hier gesucht
+       und nicht gesetzt. Findet sich der Typ nicht (etwa weil ein Rad
+       keinen Minutenpreis fuehrt), bleibt die bisherige Wahl stehen:
+       lieber der falsche Typ als ein leerer Rechner. */
+    async function schubladeUmschalten(knopf) {
+        const typ = knopf.dataset.typ;
+        const eintrag = radKachelSchubladen.find(x => x.typ === typ);
+        const rechner = document.getElementById('fare-meter');
+        if (!eintrag || !rechner) return;
+        const ziel = eintrag.schublade;
+
+        const warOffen = !ziel.hidden;
+        /* Immer erst alles zu. Zwei offene Schubladen gaeben zwei
+           Rechner - und es gibt nur einen; der zweite waere leer. */
+        for (const x of radKachelSchubladen) {
+            x.schublade.hidden = true;
+            x.schublade.classList.remove('ist-offen');
+            x.knopf.setAttribute('aria-expanded', 'false');
+        }
+        if (warOffen) { document.getElementById('rechner-halter')?.append(rechner); return; }
+
+        if (!rechnerTarife.length) await rechnerStarten();
+        const i = rechnerTarife.findIndex(t => t.typ_code === typ);
+        if (i >= 0) { rechnerAktiv = i; rechnerTypenZeichnen(); rechnerZeichnen(); }
+
+        ziel.append(rechner);
+        ziel.hidden = false;
+        knopf.setAttribute('aria-expanded', 'true');
+        /* Erst im naechsten Bild die Klasse setzen: im selben Bild
+           gaebe es keinen Zustandswechsel, den der Browser ueberblenden
+           koennte, und die Schublade erschiene schlagartig. */
+        requestAnimationFrame(() => ziel.classList.add('ist-offen'));
+    }
+
+    document.addEventListener('click', (e) => {
+        const knopf = e.target.closest('.rad-kachel-rechnen');
+        if (knopf) schubladeUmschalten(knopf);
+    });
+
     async function rechnerStarten() {
         if (!document.getElementById('fare-meter')) return;
         const karten = await fetchTarifkarten();
@@ -750,7 +839,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             renderKennzahlen(),
             renderNutzungsschritte(),
             renderRadKacheln(),
-            renderTarifkarten(),
             renderFaq()
         ]);
     }

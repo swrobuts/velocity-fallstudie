@@ -156,7 +156,15 @@
      einer für dieselbe Rolle. */
   --navy:       #061841;   /* Grundfarbe. Weiss darauf 17,3:1 */
   --navy-2:     #0b255d;   /* Tarifkarte auf Navy. Weiss darauf 14,6:1 */
-  --navy-3:     var(--navy-3);   /* die hervorgehobene Tarifkarte. 12,5:1 */
+  /* KAPUTT VORGEFUNDEN (behoben 28.08.2026).
+     Diese drei Token verwiesen auf sich selbst - "--navy-3: var(--navy-3)".
+     Das ist in CSS ungueltig: die Eigenschaft faellt auf unset zurueck,
+     und jede Regel, die sie benutzte, verlor still ihren Wert. Kein
+     Commit der Historie fuehrt je einen anderen Wert; sie kamen so auf
+     die Welt. Der Farbwert unten ist aus dem Kontrastverhaeltnis
+     zurueckgerechnet, das der Kommentar selbst nennt: Weiss auf #10306f
+     ergibt 12,5:1. */
+  --navy-3:     #10306f;   /* die hervorgehobene Karte. 12,5:1 */
   /* DAS ROT WURDE DUNKLER (28.08.2026).
      #f00038 trug Weiss mit 4,41:1 und lag damit unter der Schwelle -
      und zwar auf JEDER Handlungsaufforderung der Seite: Login,
@@ -211,13 +219,16 @@
   --rahmen:     #7a8698;
   /* Dieselbe Rolle auf dem dunklen Band: Weiss zu 38 % ergibt auf Navy
      3,47:1. Darunter (,22 wie bisher an der Pille) waeren es 2,0. */
-  --rahmen-hell: var(--rahmen-hell);
+  /* Ebenfalls kaputt vorgefunden (Selbstverweis). Kontur heller
+     Knoepfe auf Marineblau: 38 Prozent Weiss ergeben 3,47:1 gegen den
+     Grund und halten damit die 3:1 aus WCAG 1.4.11 fuer Bedienkanten. */
+  --rahmen-hell: rgba(255, 255, 255, .38);
 
   /* Weiss auf Navy in vier Stufen statt in sechzehn. Vorher standen
      dort ,13 ,16 ,18 ,2 ,22 ,38 ,5 ,55 ,62 ,68 ,7 ,72 ,84 ,9 ,94 ,96 -
      sechzehn Entscheidungen fuer vier Aufgaben. */
-  --auf-navy-linie: var(--auf-navy-linie);  /* Trennlinien */
-  --auf-navy-still: var(--auf-navy-still);  /* Etiketten, Vorspann */
+  --auf-navy-linie: rgba(255, 255, 255, .16);  /* Trennlinien */
+  --auf-navy-still: rgba(255, 255, 255, .62);  /* Etiketten, Vorspann. 7,1:1 */
   --auf-navy-text:  rgba(255, 255, 255, .78);  /* Fliesstext, 11,9:1 */
   --auf-navy-voll:  #fff;                      /* Ueberschriften, Zahlen */
 
@@ -255,7 +266,10 @@
      braucht zuerst eine neue Aufgabe. */
   --grad-etikett: 11.5px;                     /* Mono-Versalien, alle Etiketten */
   --grad-klein:   13px;                       /* Beifuegungen, Fusszeile */
-  --body-font:    clamp(15px, 1.05vw, 17px);  /* Fliesstext */
+  /* Angehoben von 15-17 auf 16-18,5: der Betreiber las die Seite als
+     zu kleinschriftig, und die Messung gibt ihm recht - 17 Punkte auf
+     einem 1400er Schirm sind fuer eine Kundenseite knapp. */
+  --body-font:    clamp(16px, 1.15vw, 18.5px); /* Fliesstext */
   --control-font: var(--body-font);           /* Bedienelemente - dieselbe Groesse */
   --nav-font:     clamp(17px, 1.12vw, 19px);  /* Kopfzeile */
   --meta-font:    clamp(15px, 1.02vw, 21px);  /* Vorspann ueber Zeile und Zahl */
@@ -422,6 +436,14 @@ body {
   background: var(--paper);
   font-family: var(--body-schrift);
   font-size: var(--body-font);
+  /* ARCHIVO BRAUCHT MEHR ALS 400 (28.08.2026).
+     Der Fliesstext lief auf dem Vorgabegewicht 400. Archivo ist dort
+     ein zierlicher Schnitt - auf hellem Grund und erst recht auf
+     Windows, wo keine Unterschneidung nachhilft, las sich die ganze
+     Seite duenn. 450 ist die kleinste Stufe, die das behebt, ohne dass
+     der Text halbfett wirkt; die variable Schrift traegt 100 bis 900,
+     also kostet es keine zweite Datei. */
+  font-weight: 450;
   line-height: 1.55;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -448,7 +470,7 @@ img { max-width: 100%; }
   outline-offset: 3px;
 }
 /* Auf den beiden dunklen Baendern dreht sich das Verhaeltnis um. */
-.pricing :focus-visible, footer :focus-visible, .product-tabs :focus-visible,
+footer :focus-visible, .product-tabs :focus-visible,
 .rental-banner :focus-visible {
   outline-color: #fff;
 }
@@ -491,7 +513,18 @@ img { max-width: 100%; }
   text-decoration: none;
   font-size: var(--grad-kopf-l);
   font-weight: 800;
-  letter-spacing: var(--eng);
+  /* IDENTISCH ZUR WARENWIRTSCHAFT (28.08.2026).
+     Beide Wortmarken sind dasselbe Konstrukt - Ring statt O, Schnitt
+     800, VEL in Marine und CITY in Rot. Sie unterschieden sich in genau
+     einem Wert: die Warenwirtschaft laufweitet auf -0,055em, hier stand
+     --eng mit -0,03em. Ein halber Hundertstel em klingt nach nichts,
+     macht bei sieben Versalien aber den Unterschied zwischen einer
+     geschlossenen Marke und sieben Buchstaben nebeneinander - der
+     Betreiber hat die dortige Fassung als die deutlich bessere erkannt.
+     Kein eigener Wert dafuer: die Laufweite gehoert zu DIESER Marke,
+     nicht zur Schriftskala, und ein Token wuerde sie an anderer Stelle
+     mitverstellen. */
+  letter-spacing: -.055em;
 }
 .brand span { color: var(--red); }
 /* Das O ist das Rad — ein Ring statt eines Buchstabens. */
@@ -1146,7 +1179,17 @@ img { max-width: 100%; }
 /* Unten weniger Luft: der naechste Abschnitt hat denselben Grund, die
    doppelte Luft las sich als 230 Pixel Leere statt als Abschnittswechsel.
    Wo die Farbe wechselt (Tarife, Fusszeile) bleibt es bei der vollen. */
-.facts { padding: var(--luft) 0 calc(var(--luft) * .35); background: var(--paper); }
+/* MARINEBLAU, VOM AUFGELOESTEN TARIFBAND UEBERNOMMEN.
+   Kacheln und Tarife sind ein Abschnitt geworden; der dunkle Grund war
+   das Kennzeichen des Tarifbands und wandert mit. Die Seite behaelt so
+   ihren einen dunklen Block zwischen Buehne und Fusszeile - ohne ihn
+   liefe sie von oben bis zur Fusszeile durchgehend hell. Die weissen
+   Radkacheln stehen darauf mit mehr Kontrast als auf Grau. */
+.facts { padding: var(--luft) 0; background: var(--navy); color: #fff; }
+.facts .section-header { border-bottom-color: var(--auf-navy-linie); }
+.facts .section-header h2 { color: #fff; }
+.facts .section-header p  { color: var(--auf-navy-still); }
+.facts .eyebrow { color: var(--auf-navy-still); }
 
 /* BEDINGUNGEN ALS BAND UNTER DEN KACHELN (neu gefasst 28.08.2026).
    Die vier Angaben standen frei auf dem grauen Grund des Abschnitts,
@@ -1156,14 +1199,18 @@ img { max-width: 100%; }
    Kontur, dieselbe Kante - und schliessen den Block nach unten ab.
    Ein Sockel, kein viertes Ding daneben: deshalb sitzt das Band im
    Abstand einer Rasterluecke unter den Kacheln, nicht weiter weg. */
+/* Das Band steht jetzt OBEN und auf dunklem Grund. Es bleibt bewusst
+   dunkel statt weiss: die Bedingungen sind der Rahmen des Angebots,
+   die Kacheln darunter sind das Angebot. Waeren beide weiss, staenden
+   vier Zahlen und drei Raeder gleichrangig nebeneinander. */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
-  background: #fff;
-  border: 1px solid var(--mist);
+  margin-bottom: var(--af-m);
+  background: var(--navy-2);
+  border: 1px solid var(--auf-navy-linie);
   border-radius: var(--kante);
-  box-shadow: var(--schatten-1);
 }
 .stat {
   /* Auf EINER Grundlinie, nicht uebereinander: das bindet Zahl und
@@ -1171,11 +1218,11 @@ img { max-width: 100%; }
   display: flex; align-items: baseline;
   gap: var(--a3);
   padding: var(--af-s) var(--af-s);
-  border-left: 1px solid var(--mist);
+  border-left: 1px solid var(--auf-navy-linie);
 }
 .stat:first-child { border-left: 0; }
 .stat b {
-  color: var(--navy);
+  color: #fff;
   font-family: var(--schmal);
   /* Nicht --grad-zahl: auf 78 Punkten war jede der vier Angaben so laut
      wie die Abschnittsueberschrift daneben. Eine Bedingung ist keine
@@ -1194,7 +1241,7 @@ img { max-width: 100%; }
   font-variant-numeric: tabular-nums;
 }
 .stat span {
-  color: var(--grau);
+  color: var(--auf-navy-still);
   /* Mit der Zahl mitgewachsen: ein Etikett auf 11,5 Punkten neben
      einer 42er Zahl wirkt nicht ruhig, sondern uebersehen. */
   font: 700 var(--grad-klein)/1.3 var(--mono);
@@ -1290,7 +1337,7 @@ img { max-width: 100%; }
    Kurzmeldung. */
 #stats-grid:empty   { min-height: 111px; }
 #howto-grid:empty   { min-height: 203px; }
-#pricing-grid:empty { min-height: 413px; }
+#rad-kacheln:empty  { min-height: 640px; }  /* Wert unten nachgemessen */
 #faq-grid:empty     { min-height: 340px; }
 
 .howto-section, .faq-section { padding: var(--luft) 0; background: var(--paper); }
@@ -1368,11 +1415,14 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--af-m);
-  /* Eine Rasterluecke, nicht ein Abschnittsabstand: das Band gehoert
-     zu den Kacheln und soll nicht als eigenes Ding darunter stehen. */
-  margin-bottom: var(--af-m);
+  /* Das Band steht jetzt darueber und traegt den Abstand selbst. */
+  margin-bottom: 0;
 }
 .rad-kachel {
+  /* Bezugsrahmen fuer das Abzeichen. Ohne diese Zeile bezog sich dessen
+     absolute Lage auf das Fenster, und "Beliebteste Wahl" klebte in der
+     rechten oberen Ecke der Seite statt auf seiner Kachel. */
+  position: relative;
   display: flex; flex-direction: column;
   background: #fff;
   border: 1px solid var(--mist);
@@ -1496,6 +1546,63 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 }
 .rad-kachel-frei.ist-leer .rad-kachel-ampel { background: var(--mist); }
 
+/* ---- was aus dem aufgeloesten Tarifabschnitt herueberkam ---------- */
+.rad-kachel-preis {
+  display: flex; align-items: baseline; gap: var(--a2);
+  margin: 0;
+}
+.rad-kachel-preis b {
+  color: var(--navy);
+  font-family: var(--schmal); font-weight: 800;
+  font-size: var(--grad-kopf-l);
+  line-height: 1;
+  letter-spacing: var(--eng);
+  font-variant-numeric: tabular-nums;
+}
+/* Eine Zahl ohne Bezugsgroesse ist kein Preis, sondern eine Behauptung. */
+.rad-kachel-preis small {
+  font: 700 var(--grad-klein) var(--mono);
+  color: var(--grau);
+}
+.rad-kachel-merkmale {
+  list-style: none; margin: 0; padding: 0;
+  display: flex; flex-direction: column; gap: var(--a2);
+}
+.rad-kachel-merkmale li {
+  position: relative;
+  padding-left: 1.6em;
+  color: var(--grau);
+  font-size: var(--grad-klein);
+  line-height: 1.45;
+}
+/* Haken als Zeichen, nicht als Symbolschrift: eine fehlende Schriftart
+   liesse sonst eine leere Flaeche stehen, wo eine Zusage steht. */
+.rad-kachel-merkmale li::before {
+  content: "✓";
+  position: absolute; left: 0; top: 0;
+  color: var(--gruen);
+  font-weight: 700;
+}
+.rad-kachel-knoepfe {
+  display: grid; gap: var(--a2);
+  margin-top: var(--a3);
+}
+.rad-kachel-knoepfe button { width: 100%; }
+/* Die Hervorhebung traegt Kontur UND Abzeichen - Farbe allein waere
+   die einzige Traegerin der Information. */
+.rad-kachel.ist-beliebt {
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px var(--red), var(--schatten-2);
+}
+.rad-kachel-abzeichen {
+  position: absolute; top: 0; right: 0; z-index: 2;
+  background: var(--red); color: #fff;
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase;
+  padding: var(--a2) var(--a3);
+  border-bottom-left-radius: var(--kante);
+}
+
 /* DER ABLAUF ALS KARTEN MIT CHEVRONS (neu gefasst 28.08.2026).
    Vorstufe war eine durchgehende Linie mit drei Punkten. Sie war
    richtig gedacht - eine Ausleihe ist ein Weg, keine drei Dinge
@@ -1566,74 +1673,13 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 .howto-card p { margin: 0; color: var(--grau); }
 
 /* ------------------------------------------------------- Tarife */
-/* Das einzige dunkle Band zwischen Bühne und Fusszeile. */
+/* HIER STAND DER TARIFABSCHNITT (aufgeloest 28.08.2026).
+   Er ist im Radkachel-Abschnitt aufgegangen; dessen Regeln stehen
+   weiter oben. Sein marineblauer Grund ist mit dorthin gewandert, sein
+   Fahrpreisrechner in einen Dialog. Uebrig bleiben hier nur die Regeln
+   des Rechners selbst. */
 
-.pricing { padding: var(--luft) 0; background: var(--navy); color: #fff; }
-.pricing .section-header { border-bottom-color: var(--auf-navy-linie); }
-.pricing .section-header h2 { color: #fff; }
-.pricing .section-header p { color: var(--auf-navy-still); }
-.pricing .eyebrow { color: var(--auf-navy-still); }
 
-.pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
-  gap: var(--af-s);
-}
-.price-card {
-  display: flex; flex-direction: column; justify-content: space-between;
-  position: relative;
-  background: var(--navy-2);
-  border: 1px solid var(--auf-navy-linie);
-  border-radius: var(--kante);
-  padding: var(--a6) var(--a5) var(--a5);
-}
-.price-card.popular {
-  border-color: var(--red);
-  background: var(--navy-3);
-  box-shadow: var(--schatten-3);
-}
-.badge-pop {
-  position: absolute; top: 0; right: 0;
-  background: var(--red); color: #fff;
-  font: 700 var(--grad-etikett)/1 var(--mono);
-  letter-spacing: var(--weit); text-transform: uppercase;
-  padding: var(--a2) var(--a3);
-}
-.price-card .header {
-  font-family: var(--schmal);
-  font-size: var(--grad-kopf-m);
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: var(--eng);
-  margin-bottom: var(--a2);
-}
-.price-card .price {
-  font-family: var(--schmal);
-  font-size: var(--grad-zahl-klein);
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: var(--eng);
-  margin-bottom: var(--a5);
-  /* Drei Preise untereinander in drei Karten: 3,10 - 8,50 - 17,00.
-     Ohne Tabellenziffern beginnt jeder an einer anderen Stelle. */
-  font-variant-numeric: tabular-nums;
-}
-.price-card .price small {
-  font-family: var(--mono); font-size: var(--grad-klein); font-weight: 400;
-  color: var(--auf-navy-still); letter-spacing: var(--weit);
-}
-.features-list { list-style: none; padding: 0; margin: 0 0 var(--a5); }
-.features-list li {
-  display: flex; align-items: center; gap: var(--a3);
-  padding: var(--a3) 0;
-  border-top: 1px solid var(--auf-navy-linie);
-  color: rgba(255, 255, 255, .9);
-  font-size: var(--body-font);
-}
-.features-list li:first-child { border-top: 0; }
-.features-list i { color: var(--mint); font-size: var(--grad-klein); }
-.pricing .btn-outline { color: #fff; border-color: var(--rahmen-hell); }
-.pricing .btn-outline:hover { background: #fff; color: var(--navy); border-color: #fff; }
 
 /* Preisrechner — er stand frueher als schmaler Kasten links ueber den
    drei Tarifkarten und liess zwei Drittel der Breite leer. Jetzt nimmt
@@ -1643,7 +1689,55 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 
    Er rechnet mit denselben Regeln wie die Datenbank und schluesselt die
    Posten so auf, wie velocity.entgeltposition sie speichert. */
-.tarif-zaehler { margin-bottom: var(--af-m); }
+/* --------------------------------------- Rechner in der Schublade */
+/* Der Betreiber kennt das Verhalten aus der Warenwirtschaft, wo sich
+   die Kopftafel so oeffnet. Ein Dialog waere hier falsch: er legte sich
+   ueber das Rad, um dessen Preis es geht. */
+.rad-kachel-schublade {
+  /* Ueber alle Spalten - dadurch faehrt sie unter der ganzen Reihe aus
+     und laesst die Nachbarkacheln in Ruhe. Geschlossen ist sie
+     display:none und belegt keine Zeile. */
+  grid-column: 1 / -1;
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-2);
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity var(--zeit-kurz) ease, transform var(--zeit-kurz) ease;
+}
+.rad-kachel-schublade[hidden] { display: none; }
+.rad-kachel-schublade.ist-offen { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .rad-kachel-schublade { transition: none; transform: none; opacity: 1; }
+}
+/* Der Pfeil am Knopf dreht sich mit dem Zustand - dieselbe Zusage wie
+   aria-expanded, nur fuer das Auge. */
+.rad-kachel-pfeil {
+  width: .5em; height: .5em;
+  margin-left: .1em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-.14em) rotate(45deg);
+  transition: transform var(--zeit-kurz) ease;
+}
+.rad-kachel-rechnen[aria-expanded="true"] .rad-kachel-pfeil {
+  transform: translateY(.06em) rotate(225deg);
+}
+
+/* IN DER SCHUBLADE IST DER RECHNER NUR NOCH EIN REGLER.
+   Welches Rad gemeint ist, sagt die Kachel darueber - die Spalte mit
+   der Typwahl waere dort eine Frage, die schon beantwortet ist. Sie
+   entfaellt, und damit auch die halbleere Spalte, die den Rechner
+   unharmonisch wirken liess. Uebrig bleiben die zwei Dinge, um die es
+   geht: wie lange, und was kostet das. */
+.rad-kachel-schublade .rechner-spalte:first-child { display: none; }
+.rad-kachel-schublade .rechner {
+  grid-template-columns:
+    minmax(min(260px, 100%), 1.25fr)
+    minmax(min(230px, 100%), 1fr);
+}
 .rechner {
   display: grid;
   /* min(...) STATT NACKTER MINDESTBREITEN (28.08.2026).
@@ -1657,16 +1751,21 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
      Mit min(x, 100%) gilt die Wunschbreite nur, solange sie hineinpasst.
      Das ist der Sicherheitsgurt; den ordentlichen Umbruch besorgt der
      Haltepunkt bei 900 Punkten. */
+  /* Neu gewichtet (28.08.2026): die erste Spalte trug am wenigsten -
+     ein Etikett und drei Schaltflaechen - und war mit 1,05fr die
+     breiteste. Darunter klaffte Leere, waehrend die Fahrzeitspalte mit
+     Feld, Regler und vier Sprungmarken gedraengt stand. Jetzt bekommt
+     jede so viel Breite, wie sie fuellt. */
   grid-template-columns:
-    minmax(min(272px, 100%), 1.05fr)
-    minmax(min(196px, 100%), .82fr)
-    minmax(min(250px, 100%), 1.1fr);
+    minmax(min(190px, 100%), .78fr)
+    minmax(min(240px, 100%), 1.15fr)
+    minmax(min(230px, 100%), 1.02fr);
   background: #fff;
   color: var(--navy);
-  border: 1px solid var(--mist);
-  border-left: 3px solid var(--red);
-  border-radius: 0 var(--kante) var(--kante) 0;
-  box-shadow: var(--schatten-2);
+  /* Kontur, roter Anschlag und Schatten sind entfallen: sie hoben den
+     Rechner aus dem Tarifband heraus. Im Dialog ist er ohnehin das
+     Einzige, was da ist - eine zweite Rahmung waere ein Rahmen im
+     Rahmen. */
 }
 .rechner-spalte {
   display: flex; flex-direction: column;
@@ -1676,10 +1775,16 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
 }
 .rechner-spalte:first-child { border-left: 0; }
 .rechner-marke {
-  font: 700 var(--grad-etikett)/1.3 var(--mono);
+  /* Von 11,5 auf 13 Punkte: der Betreiber las den Rechner als zu
+     kleinschriftig, und die Etiketten waren die kleinste Schrift darin. */
+  font: 700 var(--grad-klein)/1.3 var(--mono);
   letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
-.rechner-typen { display: flex; gap: var(--a1); flex-wrap: wrap; }
+/* Untereinander statt nebeneinander: nebeneinander rissen die drei
+   Namen in der schmalen Spalte in zwei Zeilen mit einem Einzelgaenger
+   darunter. Untereinander sind sie eine Liste, und eine Liste darf
+   verschieden lang sein. */
+.rechner-typen { display: grid; gap: var(--a2); }
 .rechner-typen button {
   padding: var(--a2) var(--a3);
   font-size: var(--grad-klein); font-weight: 700;
@@ -1756,9 +1861,20 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
   gap: var(--a3);
   padding: var(--a1) 0;
   border-top: 1px solid var(--mist);
-  font-family: var(--mono); font-size: var(--grad-etikett); color: var(--grau);
+  font-family: var(--mono); font-size: var(--grad-klein); color: var(--grau);
 }
-.rechner-posten li b { color: var(--navy); font-variant-numeric: tabular-nums; }
+/* Der Betrag bricht NICHT um. "15,00 Euro" stand als "15,00" mit
+   "Euro" darunter - eine Zahl, die auf zwei Zeilen zerfaellt, liest
+   sich einen Augenblick lang als zwei Zahlen. */
+.rechner-posten li b {
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rechner-posten li {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--a4);
+}
 .rechner-posten li.ist-abzug, .rechner-posten li.ist-abzug b { color: var(--red); }
 
 /* -------------------------------------------------------- Karte */
@@ -2009,18 +2125,31 @@ form button[type="submit"]:disabled, .modal-content button:disabled,
    Scheiben im Zentrum uebereinander; hier steht jede fuer sich. */
 .stationsliste { margin-top: var(--a5); }
 .stationsliste h3 {
-  margin: 0 0 var(--a3);
-  font: 700 var(--grad-etikett)/1 var(--mono);
+  margin: 0 0 var(--a4);
+  font: 700 var(--grad-klein)/1 var(--mono);
   letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
 }
+/* DIESELBE KACHELSPRACHE WIE OBEN (28.08.2026).
+   Die Stationen standen in einem Raster aus Ein-Punkt-Fugen auf grauem
+   Grund - eine Tabelle ohne Kopfzeile. Zwei Nachteile: sie sah anders
+   aus als alles andere auf der Seite, und die letzte Reihe blieb als
+   grauer Block stehen, wo die Stationen nicht mehr aufgingen. Diese
+   Leerstelle war kein Inhalt, sondern der durchscheinende Grund.
+   Als einzelne Karten mit Fuge gibt es keinen Grund, der durchscheinen
+   koennte, und das Raster liest sich als dieselbe Familie wie die
+   Radkacheln. */
 .stationsliste ul {
   list-style: none; margin: 0; padding: 0;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1px;
-  background: var(--mist);
-  border: 1px solid var(--mist);
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--a3);
 }
-.stationsliste li { background: #fff; }
+.stationsliste li {
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-1);
+  overflow: hidden;
+}
 .stationsliste button {
   display: grid; width: 100%;
   grid-template-columns: 46px 1fr auto;
@@ -2582,7 +2711,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .rad-kacheln { grid-template-columns: 1fr 1fr; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
   .stat:nth-child(odd) { border-left: 0; }
-  .stat:nth-child(n+3) { border-top: 1px solid var(--mist); }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--auf-navy-linie); }
   /* GESTAPELT ZEIGT DER CHEVRON NACH UNTEN.
      Nebeneinander weist er nach rechts, untereinander nach unten - der
      Weg laeuft dann eben so. Ihn wegzulassen hiesse, auf dem Telefon
@@ -2638,7 +2767,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .product-tab { padding: 0 var(--a3); }
   .rad-kacheln { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: 1fr; }
-  .stat { border-left: 0; border-top: 1px solid var(--mist); }
+  .stat { border-left: 0; border-top: 1px solid var(--auf-navy-linie); }
   .stat:first-child { border-top: 0; }
 }
 
