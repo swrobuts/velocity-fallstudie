@@ -168,13 +168,25 @@ insert into velocity.faq_eintrag (frage, antwort, sortierung) values
 on conflict (frage) do update
   set antwort = excluded.antwort, sortierung = excluded.sortierung;
 
+-- DREI SCHRITTE, DREI GLEICH HOHE KARTEN (gekuerzt am 28.08.2026)
+-- Die Texte standen bei 84, 99 und 129 Zeichen und ergaben zwei, drei
+-- und drei Zeilen - drei Karten nebeneinander, deren Fuellstand
+-- verschieden war. Nachgemessen im Layout, nicht geschaetzt: die Grenze
+-- liegt nicht bei einer Zeichenzahl, sondern an den Umbruchstellen. 84
+-- Zeichen ergaben in einem Fall zwei Zeilen, in einem anderen drei.
+-- Gestrichen wurde nur, was anderswo steht: "rot umrandet" erklaert die
+-- Legende der Karte an Ort und Stelle, "ohne Zuschlag" steht ebenfalls
+-- dort und in den haeufigen Fragen. Die Handlung selbst - abstellen und
+-- abschliessen - bleibt vollstaendig.
+-- "Schloss auf" und "Schloss zu, fertig" spiegeln sich mit Absicht:
+-- Oeffnen und Schliessen sind die Klammer um die Fahrt.
 insert into velocity.nutzungsschritt (nummer, titel, beschreibung) values
   (1, 'App laden und finden',
       'Registriere dich einmalig kostenlos. Danach steht dir jedes freie Rad im Netz offen.'),
   (2, 'Scannen und losfahren',
-      'Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Das Schloss öffnet sich automatisch.'),
+      'Scanne den QR-Code am Schutzblech oder gib die Rad-Nummer ein. Schloss auf.'),
   (3, 'Parken und beenden',
-      'Stelle das Rad an einer Station ab oder frei im rot umrandeten Geschäftsgebiet — beides ohne Zuschlag. Schloss schließen, fertig.')
+      'Stelle das Rad an einer Station oder frei im Geschäftsgebiet ab. Schloss zu, fertig.')
 on conflict (nummer) do update
   set titel = excluded.titel, beschreibung = excluded.beschreibung;
 

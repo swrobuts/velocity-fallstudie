@@ -111,10 +111,22 @@
    Stellen ein zweites Merkmal gesetzt werden muesste. Eine Schriftart
    je Rolle, wie vorher - nur dass beide Rollen dieselbe Schrift sind. */
 @font-face {
+  /* VON 79 AUF 88 PROZENT BREITE (28.08.2026).
+     Der Betreiber nennt die Schrift der Buehne zu schmal - und das ist
+     keine Einbildung: "Archivo Schmal" ist dieselbe Datei wie Archivo,
+     nur auf der Breitenachse zusammengezogen. Auf 79 Prozent ist das
+     eine ausgesprochen enge Schrift; gemessen setzt sie denselben Satz
+     auf 470 statt 571 Punkte, verliert also ein Sechstel der Breite.
+     Fuer eine Schlagzeile, die Ruhe ausstrahlen soll, ist das zu viel
+     gespart. 88 Prozent behaelt den schmalen Charakter - die Marke lebt
+     davon -, gibt den Buchstaben aber wieder Luft.
+     Geaendert wird das Token, nicht nur die Buehne: alle Ueberschriften
+     der Seite laufen in dieser Variante, und zwei verschiedene Breiten
+     im selben Haus waeren zwei Stimmen. */
   font-family: "Archivo Schmal";
   font-style: normal;
   font-weight: 100 900;
-  font-stretch: 79% 79%;
+  font-stretch: 88% 88%;
   font-display: swap;
   src: url("assets/schrift/archivo-latin.woff2?v=4c98b9d4") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
@@ -125,7 +137,7 @@
   font-family: "Archivo Schmal";
   font-style: normal;
   font-weight: 100 900;
-  font-stretch: 79% 79%;
+  font-stretch: 88% 88%;
   font-display: swap;
   src: url("assets/schrift/archivo-latin-ext.woff2?v=a75c792f") format("woff2");
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
