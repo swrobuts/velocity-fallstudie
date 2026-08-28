@@ -1,0 +1,35 @@
+%% Der Weg einer Anfrage. Zwei Anwendungen, eine Schnittstelle, eine
+%% Datenbank - und dieselbe Regel für beide.
+flowchart TB
+    subgraph BR["Browser — öffentlich erreichbar"]
+        direction LR
+        SITE["bikes.butscher.cloud<br/>Kundenwebsite"]
+        WAWI["wawi.butscher.cloud<br/>Warenwirtschaft"]
+    end
+
+    subgraph API["PostgREST — eine Adresse, ein öffentlicher Schlüssel"]
+        REST["/rest/v1<br/>Accept-Profile: velocity<br/>Rolle aus dem angemeldeten Konto"]
+    end
+
+    subgraph DB["PostgreSQL — Schema velocity"]
+        direction LR
+        SICHT["v_… Sichten<br/><b>nur lesen</b>"]
+        FUNK["api_… Funktionen<br/><b>nur schreiben</b>"]
+        TAB["Basistabellen<br/>für den Browser unerreichbar"]
+    end
+
+    SITE --> REST
+    WAWI --> REST
+    REST --> SICHT
+    REST --> FUNK
+    SICHT --> TAB
+    FUNK --> TAB
+
+    classDef br  fill:#F7F5EF,stroke:#003E6E,color:#0B1F44
+    classDef api fill:#E3DED1,stroke:#C9C3B4,color:#404040
+    classDef db  fill:#FFFFFF,stroke:#003E6E,color:#0B1F44
+    classDef zu  fill:#003E6E,stroke:#003E6E,color:#FFFFFF
+    class SITE,WAWI br
+    class REST api
+    class SICHT,FUNK db
+    class TAB zu

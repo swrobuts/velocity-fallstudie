@@ -1,0 +1,40 @@
+%% Das analytische Modell der Warenwirtschaft.
+%% BEWUSST ein flowchart und kein erDiagram: ein Sternschema aus Fakten
+%% und Dimensionen ist hier keine Aussage über Tabellen - die
+%% Dimensionen sind ROLLEN, die vorhandene operative Tabellen einnehmen,
+%% wenn man sie auswertet. Als erDiagram gezeichnet würde das Tabellen
+%% behaupten, die es nicht gibt, und tools/erd_check.py hätte recht,
+%% wenn es anschlüge.
+flowchart TB
+    subgraph FAKT["FAKTEN — ein Ereignis je Zeile, additive Maße"]
+        direction LR
+        AUS["<b>ausleihe</b><br/>startzeit · endzeit · dauer_minuten<br/>Maße: Fahrten, Minuten"]
+        ENT["<b>entgeltposition</b><br/>betrag je Position<br/>Maß: Umsatz"]
+    end
+
+    subgraph DIM["DIMENSIONEN — wonach die Leitung fragt"]
+        direction LR
+        ZEIT["<b>Zeit</b><br/>aus ausleihe.startzeit<br/>Monat · Tag · Zwei-Stunden-Block"]
+        RAD["<b>Fahrradtyp</b><br/>fahrrad → fahrradmodell → fahrradtyp"]
+        STA["<b>Station</b><br/>start_station_id · end_station_id"]
+        TAR["<b>Tarifgruppe</b><br/>kunde → mitgliedschaft → tarif"]
+        ORT["<b>Wohnort</b><br/>kunde → adresse"]
+    end
+
+    ZEIT --> AUS
+    RAD  --> AUS
+    STA  --> AUS
+    TAR  --> AUS
+    ORT  --> TAR
+    AUS  --> ENT
+
+    HIN["Keine dieser Dimensionen ist eine eigene Tabelle.<br/>Die Warenwirtschaft legt sie als Sichten über das operative Modell."]
+
+    ENT -.-> HIN
+
+    classDef fakt fill:#003E6E,stroke:#003E6E,color:#FFFFFF
+    classDef dim  fill:#F7F5EF,stroke:#003E6E,color:#0B1F44
+    classDef hin  fill:#E3DED1,stroke:#C9C3B4,color:#404040
+    class AUS,ENT fakt
+    class ZEIT,RAD,STA,TAR,ORT dim
+    class HIN hin

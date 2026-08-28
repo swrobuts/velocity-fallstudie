@@ -145,7 +145,7 @@ def baue() -> Presentation:
                "und 4,00 sind die beiden naheliegenden Fehler — der eine ignoriert den "
                "Tarif, der andere dreht die Reihenfolge um.")
 
-    s = folie(prs, "Orientierung", "Neun Kapitel, neun Fragen an Annas Fahrt",
+    s = folie(prs, "Orientierung", "Zwölf Kapitel, zwölf Fragen an Annas Fahrt",
               "Die Reihenfolge ist zwingend. Anforderungen vor Modell, Modell vor "
               "Relationen, Relationen vor DDL. Wer sie umdreht, bindet sich an eine "
               "Umsetzung, bevor er weiß, was umzusetzen ist.")
@@ -158,8 +158,11 @@ def baue() -> Presentation:
              ["6 Implementierung","Was kostet die Fahrt genau — und warum?"],
              ["7 Sicherheit",     "Wer außer Anna darf ihre Daten sehen?"],
              ["8 Anbindung",      "Wie kommt das alles in die Web-Anwendung?"],
-             ["9 Ausblick",       "Was fehlt noch, damit die Räder gewartet werden?"]],
-            y=182, spalten_b=[220, 683.5], zeilen_h=30)
+             ["9 Warenwirtschaft", "Wer arbeitet mit der Fahrt, wenn sie bezahlt ist?"],
+             ["10 Analytik",      "Welche Frage stellt die Leitung — und welche Zeile antwortet?"],
+             ["11 Oberflächen",   "Wie kommt Annas Rad auf zwei verschiedene Bildschirme?"],
+             ["12 Abschluss",     "Was bleibt — und was ist entworfen, aber nicht gebaut?"]],
+            y=180, spalten_b=[220, 683.5], zeilen_h=23)
     notizen(s, "Diese Tabelle ist die Landkarte. Ich komme nach jedem Kapitel kurz darauf "
                "zurück und hake ab.")
 
@@ -745,13 +748,222 @@ def baue() -> Presentation:
                "Schritte der Anleitung und die Kennzahlen. Vorher standen sie fest im HTML "
                "und mussten bei jeder Preisänderung von Hand nachgezogen werden.")
 
-    # ═══════════════════════════════════════════════════ 9 Abschluss
-    kapitel(prs, 9, "Zusammenfassung und Ausblick",
-            "Was fehlt noch, damit Annas Rad auch gewartet wird?",
-            "Sechs Sätze zum Mitnehmen — und ein Blick auf die Warenwirtschaft.")
+    # ═══════════════════════════════════════════ 9 Warenwirtschaft
+    kapitel(prs, 9, "Die Warenwirtschaft",
+            "Wer arbeitet mit Annas Fahrt, wenn sie längst bezahlt ist?",
+            "Bis hierher ging es um die Kundensicht. Jetzt kommt die zweite Anwendung "
+            "auf dieselbe Datenbank — und die stellt ganz andere Fragen an dieselben Zeilen.")
 
-    s = folie(prs, "9 · Zusammenfassung", "Sechs Sätze, die diese Einheit tragen",
-              "Wenn Sie nichts anderes mitnehmen, dann diese sechs. Zu jedem sollten Sie ein "
+    s = folie(prs, "9 · Die Warenwirtschaft", "Zweite Anwendung, dasselbe Datenmodell",
+              "Die Warenwirtschaft bekam kein eigenes Schema und keine eigene Datenbank. "
+              "Sie legt Sichten und Funktionen über genau die Tabellen, die schon da waren.")
+    kachelreihe(s, [
+        ("Kein zweites Schema",
+         ["37 Basistabellen, für beide Anwendungen dieselben",
+          "Eine Kundenadresse ist eine Kundenadresse",
+          "Keine Kopie, die veralten könnte"]),
+        ("16 Sichten, 14 Funktionen",
+         ["Gelesen wird über v_wawi_…",
+          "Geschrieben über api_…",
+          "Vier weitere api_ dienen der Website"]),
+        ("Fünf Rollen",
+         ["leitung · disposition · werkstatt",
+          "kundenservice · demo",
+          "Die Rolle steht in der Datenbank"]),
+    ], y=182, hoehe=150)
+    faden(s, "Annas Fahrt steht in genau einer Zeile — die Werkstatt und die Leitung lesen dieselbe.")
+    notizen(s, "Der wichtigste Satz dieser Folie ist der letzte der ersten Kachel. Ein "
+               "getrenntes Auswertungssystem mit eigener Kopie ist der Normalfall in der "
+               "Praxis — und die häufigste Quelle für Zahlen, die sich widersprechen. "
+               "Hier gibt es diese Möglichkeit gar nicht.")
+
+    s = folie(prs, "9 · Die Warenwirtschaft", "Fünf Rollen, fünf Ausschnitte derselben Daten",
+              "Was jemand sieht, entscheidet die Datenbank anhand seiner Rolle — nicht die "
+              "Oberfläche. Ein verstecktes Menü ist kein Schutz.")
+    ampel_matrix(s, ["Leitung", "Dispo", "Werkstatt", "Service"], [
+        ("Flotte, einzelne Räder", [True, True, True, False], "v_wawi_flotte"),
+        ("Stationen und Belegung", [True, True, False, False], "v_wawi_station"),
+        ("Kundschaft, Stammdaten", [True, False, False, True], "v_wawi_kunde, api_kunde_…"),
+        ("Schäden und Aufträge", [True, False, True, False], "v_wawi_schaden, v_wawi_auftrag"),
+        ("Umsatz und Kennzahlen", [True, False, False, False], "v_wawi_umsatz_…, v_wawi_km_co2"),
+        ("Einzelfahrten mit Ort", [False, False, False, False], "v_wawi_fahrt_km: für niemanden freigegeben"),
+    ], y=182, zeilen_h=40, luecke=6, chip_b=78, label_b=250)
+    notizen(s, "Die letzte Zeile ist die wichtigste: v_wawi_fahrt_km führt Einzelfahrten mit "
+               "Kundennummer — ein Bewegungsprofil. Die Sicht ist für keine Rolle freigegeben; "
+               "sie dient nur als Zwischenschritt innerhalb anderer Sichten. Datensparsamkeit "
+               "heißt hier: die aggregierte Sicht ist offen, die feine nicht.")
+
+    s = folie(prs, "9 · Die Warenwirtschaft", "Zwei Arten von Sicht — und woran man sie erkennt",
+              "Das Korn einer Sicht ist die Antwort auf die Frage: Wofür steht eine Zeile? "
+              "Es unterscheidet die beiden Arten — und wer es vermischt, baut Sichten, die "
+              "für beides zu langsam und für beides zu ungenau sind.")
+    code_kacheln(s,
+        ("Arbeitssicht — ein Ding je Zeile",
+         ["v_wawi_flotte      ein Rad",
+          "v_wawi_kunde       ein Kunde",
+          "v_wawi_station     eine Station",
+          "v_wawi_schaden     eine Meldung",
+          "",
+          "Korn:   das Objekt selbst",
+          "Zweck:  suchen, öffnen, ändern",
+          "Frage:  Wo steht Rad CB-00035?"], BLAU),
+        ("Auswertungssicht — eine Gruppe je Zeile",
+         ["v_wawi_umsatz_radtyp     Monat × Typ",
+          "v_wawi_fahrten_je_tag    Tag × Typ",
+          "v_wawi_km_co2            Monat × Typ",
+          "v_wawi_stationsauslastung  Station",
+          "",
+          "Korn:   die Gruppierung",
+          "Zweck:  vergleichen, entscheiden",
+          "Frage:  Welcher Typ trägt den Umsatz?"], GRUEN_D),
+        y=182, hoehe=250)
+    notizen(s, "Das Korn — die Frage „wofür steht eine Zeile?“ — ist der wichtigste Begriff "
+               "der ganzen Auswertung. Wer es nicht benennen kann, wird die Summen falsch "
+               "bilden. Ein häufiger Fehler: Umsatz über eine Sicht summieren, in der jede "
+               "Fahrt mehrfach vorkommt, weil ein Join sie vervielfacht hat.")
+
+    # ═══════════════════════════════════════ 10 Analytisches Modell
+    kapitel(prs, 10, "Das analytische Datenmodell",
+            "Welche Frage stellt die Leitung — und welche Zeile beantwortet sie?",
+            "Jetzt kommt der Perspektivwechsel: vom Schreiben zum Lesen, vom Einzelfall "
+            "zur Summe. Dasselbe Modell, eine andere Brille.")
+
+    s = folie(prs, "10 · Analytisches Modell", "Fakten sind Ereignisse, Dimensionen sind Fragen",
+              "Ein Fakt ist etwas, das passiert ist und sich zählen lässt. Eine Dimension "
+              "ist die Richtung, aus der jemand darauf schaut.")
+    oben = unter_intro(s)
+    diagramm(s, bild("analytik-stern"), y=oben, hoehe=ZONE_UNTEN - 40 - oben)
+    faden(s, "Annas Fahrt ist eine Faktenzeile — und taucht in jeder der vier Auswertungen auf.")
+    notizen(s, "Der Kasten unten rechts trägt die eigentliche Aussage: keine dieser "
+               "Dimensionen ist eine eigene Tabelle. Wir haben kein Sternschema gebaut, "
+               "sondern die Rollen benannt, die vorhandene Tabellen beim Auswerten einnehmen. "
+               "Warum das hier richtig ist, steht zwei Folien weiter.")
+
+    s = folie(prs, "10 · Analytisches Modell", "Vier Auswertungen — und was sie tatsächlich messen",
+              "Jede Kennzahl braucht drei Angaben: woraus sie entsteht, worüber sie gruppiert "
+              "und was sie NICHT sagt. Die dritte fehlt in der Praxis fast immer.")
+    tabelle(s, ["Auswertung", "Maß", "Gruppiert über", "Sagt nichts über"],
+            [["Umsatz nach Radtyp", "Σ betrag", "Monat × Fahrradtyp", "Kosten, also nicht Gewinn"],
+             ["Umsatz nach Kundengruppe", "Σ betrag", "Monat × Tarif", "Kunden ohne Tarif"],
+             ["Kilometer und CO2", "Σ kilometer", "Monat × Typ", "Strecken sind geschätzt"],
+             ["Stationsauslastung", "Zu-/Abgang", "Station", "Warum umgesetzt wurde"]],
+            y=186, spalten_b=[236, 118, 190, 359.5], zeilen_h=34)
+    sandband(s, "Die vierte Spalte gehört auf jede Kennzahlenfolie. Eine Zahl ohne ihre "
+                "Grenze wird als Antwort auf Fragen benutzt, die sie nicht beantwortet.",
+             y=372)
+    notizen(s, "Beispiel für die Tragweite: „Umsatz nach Radtyp“ zeigt das Lastenrad vorn. "
+               "Daraus folgt NICHT, dass Lastenräder sich am meisten lohnen — Anschaffung, "
+               "Wartung und Stellplatzbedarf stehen in keiner dieser Zeilen. Wer so "
+               "entscheidet, verwechselt Umsatz mit Deckungsbeitrag.")
+
+    s = folie(prs, "10 · Analytisches Modell", "Vom Monat bis zum einzelnen Rad in zwei Klicks",
+              "Drei Sichten, drei Körner. Jede Ebene beantwortet dieselbe Frage eine Stufe "
+              "genauer — und jede ist eine eigene Sicht, nicht ein Filter auf derselben.")
+    oben = unter_intro(s)
+    diagramm(s, bild("analytik-drilldown"), y=oben, hoehe=150)
+    sandkarte(s, "Warum drei Sichten und nicht eine mit Filter",
+              ["Eine Sicht hat genau ein Korn. Wer Monat, Tag und Rad in dieselbe Sicht legt, "
+               "erzeugt Zeilen, die sich ohne doppeltes Zählen nicht mehr summieren lassen."],
+              y=oben + 172)
+    faden(s, "Zwei Klicks von „E-Bike, Oktober“ bis zu dem Rad, mit dem Anna gefahren ist.")
+    notizen(s, "Drill-Down ist der Übergang von der Kennzahl zum Beleg. Er ist der Grund, "
+               "warum Auswertungen überhaupt Vertrauen verdienen: eine Zahl, die man nicht "
+               "bis zur einzelnen Zeile aufklappen kann, muss man glauben.")
+
+    s = folie(prs, "10 · Analytisches Modell", "Sichten statt Sternschema — und was das kostet",
+              "Ein eigenes Sternschema mit nächtlicher Beladung wäre der Lehrbuchweg. Für "
+              "diesen Fall ist er falsch — aber nicht immer.")
+    vorher_nachher(s,
+        ("Sternschema mit Beladung", "Eigene Fakten- und Dimensionstabellen",
+         ["+ Abfragen sind schnell, auch bei vielen Zeilen",
+          "+ Historie bleibt erhalten, auch wenn sich",
+          "   Stammdaten später ändern",
+          "- Zweite Kopie der Wahrheit",
+          "- Beladung muss gebaut und überwacht werden",
+          "- Zahlen sind so alt wie der letzte Lauf"], False),
+        ("Sichten auf dem operativen Modell", "Was die Warenwirtschaft tut",
+         ["+ Keine Kopie, keine Beladung, kein Versatz",
+          "+ Jede Zahl ist so aktuell wie die Fahrt selbst",
+          "+ Eine Wahrheit, ein Schutzkonzept",
+          "- Jede Abfrage rechnet neu",
+          "- Bei 12 269 Ausleihen unkritisch,",
+          "   bei Millionen nicht mehr"], False),
+        y=182, hoehe=248)
+    notizen(s, "Die Entscheidung hängt an zwei Zahlen: Datenmenge und geforderte Aktualität. "
+               "Hier sind es gut zwölftausend Ausleihen und die Erwartung, dass eine gerade "
+               "beendete Fahrt sofort in der Auswertung steht. Bei zehn Millionen Zeilen und "
+               "einem Tagesbericht dreht sich das Urteil um. Wichtig ist, dass Studierende "
+               "die Frage stellen — nicht, dass sie diese eine Antwort auswendig können.")
+
+    s = folie(prs, "10 · Analytisches Modell", "Die eine Stelle, an der geschätzt wird",
+              "Die Datenbank kennt Start und Ziel, aber nicht den gefahrenen Weg. Für "
+              "Kilometer und CO2 muss geschätzt werden — und genau das steht in den Daten.")
+    code_kacheln(s,
+        ("Was gemessen ist",
+         ["ausleihe.startzeit    Zeitstempel",
+          "ausleihe.endzeit      Zeitstempel",
+          "ausleihe.dauer_minuten  gerechnet",
+          "entgeltposition.betrag  gebucht",
+          "",
+          "Diese Werte sind Belege.",
+          "Sie stammen aus dem Vorgang selbst."], BLAU),
+        ("Was geschätzt ist",
+         ["v_wawi_fahrt_km",
+          "  km              Schätzwert",
+          "  ist_geschaetzt  true / false",
+          "",
+          "Luftlinie × Umwegfaktor,",
+          "wenn keine Strecke aufgezeichnet ist.",
+          "Die Spalte sagt, welcher Fall vorliegt."], ROT_A),
+        y=182, hoehe=232)
+    sandband(s, "Eine Schätzung darf in eine Auswertung — aber sie muss sich als solche zu "
+                "erkennen geben. Genau dafür ist ist_geschaetzt da.", y=428)
+    notizen(s, "Das ist der Punkt, an dem Datenmodellierung zur Redlichkeit wird. Die "
+               "CO2-Zahl ist ein Werbeargument; sie beruht auf einer Schätzung. Wer die "
+               "Schätzung nicht kennzeichnet, produziert eine Zahl, die niemand mehr "
+               "einordnen kann — und im Zweifel eine, die er selbst irgendwann glaubt.")
+
+    # ═══════════════════════════════════════════════ 11 Oberflächen
+    kapitel(prs, 11, "Zwei Oberflächen, ein Weg",
+            "Wie kommt Annas Rad auf zwei verschiedene Bildschirme?",
+            "Kundenwebsite und Warenwirtschaft sind zwei Anwendungen — aber sie gehen "
+            "denselben Weg in dieselbe Datenbank.")
+
+    s = folie(prs, "11 · Zwei Oberflächen", "Ein Weg, zwei Anwendungen, dieselbe Regel",
+              "Beide Oberflächen sprechen dieselbe Schnittstelle an. Was sie unterscheidet, "
+              "ist nicht der Weg, sondern die Rolle des angemeldeten Kontos.")
+    oben = unter_intro(s)
+    diagramm(s, bild("web-architektur"), y=oben, hoehe=ZONE_UNTEN - 40 - oben)
+    faden(s, "Anna und die Werkstatt fragen dieselbe Adresse — und bekommen verschiedene Zeilen.")
+    notizen(s, "Der öffentliche Schlüssel ist in beiden Anwendungen derselbe und steht im "
+               "Quelltext. Er ist kein Geheimnis, sondern nur die Angabe, welches Projekt "
+               "gemeint ist. Wer etwas sehen darf, entscheidet die Rolle im angemeldeten "
+               "Konto — das ist der Inhalt von Kapitel 7.")
+
+    s = folie(prs, "11 · Zwei Oberflächen", "Was die Warenwirtschaft anders macht",
+              "Dieselbe Datenbank, andere Aufgabe — und daraus folgen vier Unterschiede, "
+              "die man am Modell ablesen kann.")
+    regel_streifen(s, [
+        ("Vorgangsklammer", "Jede Änderung gehört zu einem Vorgang und ist ihm zuzuordnen",
+         "neuerVorgang()"),
+        ("Änderungsprotokoll", "Wer hat wann was geändert — die Datenbank schreibt mit",
+         "aenderungsprotokoll"),
+        ("Rolle statt Besitz", "Nicht „meine Zeilen“, sondern „Zeilen meiner Aufgabe“",
+         "hat_rolle('werkstatt')"),
+        ("Kein Löschen", "Ausgemustert ist ein Zustand, keine gelöschte Zeile",
+         "status = 'ausgemustert'"),
+    ], y=190, hoehe=54, luecke=10, chip_b=210)
+    notizen(s, "Der vierte Punkt ist der, den Studierende am häufigsten falsch machen. Ein "
+               "ausgemustertes Rad zu löschen würde jede Fahrt entwerten, die damit gemacht "
+               "wurde — und damit auch Annas Rechnung. Historie verträgt kein DELETE.")
+
+    # ═══════════════════════════════════════════════════ 12 Abschluss
+    kapitel(prs, 12, "Zusammenfassung und Ausblick",
+            "Was bleibt aus zwölf Kapiteln — und was ist entworfen, aber nicht gebaut?",
+            "Acht Sätze zum Mitnehmen — und der Rest des Modells, der auf dem Papier steht.")
+
+    s = folie(prs, "12 · Zusammenfassung", "Acht Sätze, die diese Einheit tragen",
+              "Wenn Sie nichts anderes mitnehmen, dann diese acht. Zu jedem sollten Sie ein "
               "Beispiel aus Annas Fahrt nennen können.")
     regel_streifen(s, [
         ("Reihenfolge", "Anforderungen vor Modell, Modell vor Relationen, Relationen vor DDL", ""),
@@ -760,16 +972,18 @@ def baue() -> Presentation:
         ("Constraint", "was nicht erzwungen wird, wird verletzt", ""),
         ("Schutz", "liegt in der Datenbank, nie im Browser", ""),
         ("Nachweis", "Rechte werden geprüft, nicht angenommen", ""),
-    ], y=178, hoehe=46, luecke=5, chip_b=0)
+        ("Korn", "Eine Sicht hat genau ein Korn — wer es nicht benennt, summiert falsch", ""),
+        ("Grenze", "Jede Kennzahl braucht die Angabe, was sie NICHT sagt", ""),
+    ], y=180, hoehe=34, luecke=4, chip_b=0)
     notizen(s, "Zu jedem Satz gibt es eine Folie in dieser Einheit und eine Stelle im "
                "Modell. Das eignet sich als Prüfungsvorbereitung.")
 
-    s = folie(prs, "9 · Ausblick", "Die Warenwirtschaft hängt an denselben Entitäten",
-              "Vier weitere Fachbereiche sind bereits entworfen — deshalb war es richtig, "
-              "hersteller und fahrradmodell schon jetzt einzuziehen.")
+    s = folie(prs, "12 · Ausblick", "Was entworfen ist, aber noch nicht gebaut",
+              "Die Instandhaltung steht seit Kapitel 9. Beschaffung, Lager und die Logistik "
+              "sind entworfen, aber nicht gebaut — grau hinterlegt im Diagramm.")
     oben = unter_intro(s)
     diagramm(s, bild("wawi-anschluss"), y=oben, hoehe=ZONE_UNTEN - 40 - oben)
-    faden(s, "Meldet Anna einen Defekt, entsteht daraus ein Wartungsauftrag und eine Lagerbewegung.")
+    faden(s, "Meldet Anna einen Defekt, entsteht ein Wartungsauftrag — die Lagerbewegung dazu fehlt noch.")
     notizen(s, "Der Lehrpunkt beim Lager ist derselbe wie bei den Freiminuten: Bestand "
                "gegen Bewegung. Wer den Lagerbestand als Zahl pflegt, kann ihn nicht mehr "
                "erklären.")

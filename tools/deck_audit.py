@@ -44,6 +44,9 @@ UMLAUT_OK = {
     'umsatzsteuersatz', 'dauer', 'zuerst', 'neue', 'neuen', 'neues', 'neuer',
     'unique', 'true', 'value', 'values', 'queue', 'sequence', 'due',
     'konsequenz', 'frequenz', 'sequenz', 'adaequat', 'niveau', 'museum',
+    # Steigerungsformen von "genau" - die Folge aue steht hier ueber eine
+    # Silbengrenze hinweg und ist kein transliteriertes ae.
+    'genauer', 'genaue', 'genauen', 'genauere', 'genaueren', 'genauigkeit',
 }
 
 
@@ -64,6 +67,19 @@ def bezeichner():
     for (n,) in cur.fetchall():
         namen.add(n.lower())
         namen.update(teil for teil in n.lower().split('_') if len(teil) > 2)
+
+    # AUCH DIE BEZEICHNER DES QUELLTEXTS (ergaenzt 28.08.2026).
+    # Der Katalog kennt nur Tabellen, Spalten und Funktionen der
+    # Datenbank. Das Deck zitiert aber auch Bausteine der Oberflaeche -
+    # etwa neuerVorgang(), die Klammer um jede Aenderung in der
+    # Warenwirtschaft. Ohne diese Ergaenzung meldet der Umlautpruefer
+    # solche Namen als transliterierten Umlaut ("neuerVorgang" enthaelt
+    # die Folge eue) und verlangt eine Schreibweise, die den Code
+    # zerlegen wuerde. Bezeichner bleiben ASCII - das ist die Hausregel,
+    # nicht ihre Verletzung.
+    for js in sorted(WURZEL.glob("wawi/*.js")) + sorted(WURZEL.glob("src/*.js")):
+        for m in re.finditer(r"\bfunction\s+([A-Za-z_$][\w$]*)", js.read_text(encoding="utf-8")):
+            namen.add(m.group(1).lower())
     return namen
 
 VERBOTEN = [

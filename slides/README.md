@@ -1,6 +1,6 @@
 # Foliendeck — Datenbankentwurf am Fallbeispiel VeloCity
 
-43 Folien im THWS-Design. Gebaut aus dem leeren Master des Skills `thws-slides`
+56 Folien im THWS-Design. Gebaut aus dem leeren Master des Skills `thws-slides`
 (`assets/template.pptx`), der die Layouts Frontpage_Digital, Chapter und Slide liefert.
 
 ## Das didaktische Gerüst
@@ -24,7 +24,10 @@ Folie 32 beantwortet.
 | 6 Implementierung | Was kostet die Fahrt genau — und warum? |
 | 7 Sicherheit | Wer außer Anna darf ihre Daten sehen? |
 | 8 Anbindung | Wie kommt das alles in die Web-Anwendung? |
-| 9 Ausblick | Was fehlt, damit Annas Rad auch gewartet wird? |
+| 9 Warenwirtschaft | Wer arbeitet mit Annas Fahrt, wenn sie längst bezahlt ist? |
+| 10 Analytisches Modell | Welche Frage stellt die Leitung — und welche Zeile beantwortet sie? |
+| 11 Zwei Oberflächen | Wie kommt Annas Rad auf zwei verschiedene Bildschirme? |
+| 12 Zusammenfassung | Was bleibt aus zwölf Kapiteln — und was ist entworfen, aber nicht gebaut? |
 
 ## Neu erzeugen
 
@@ -64,9 +67,9 @@ von OneDrive — dort bleibt PowerPoint beim Öffnen hängen.
 
 | # | Layout | Block | Titel |
 |---|---|---|---|
-| 1 | Frontpage_Digital |  | Datenbankentwurf am Fallbeispiel VeloCity |
-| 2 | Slide | Der Fall | Anna fährt 61 Minuten. Das ist alles, was wir wissen. |
-| 3 | Slide | Orientierung | Neun Kapitel, neun Fragen an Annas Fahrt |
+| 1 | Frontpage_Digital |  |  |
+| 2 | Slide |  | Anna fährt 61 Minuten. Das ist alles, was wir wissen. |
+| 3 | Slide |  | Zwölf Kapitel, zwölf Fragen an Annas Fahrt |
 | 4 | Chapter |  | 1 · Die Fallstudie |
 | 5 | Slide | 1 · Die Fallstudie | VeloCity vermietet Räder minutengenau |
 | 6 | Slide | 1 · Die Fallstudie | Zehn Geschäftsregeln — jede muss erzwungen werden |
@@ -90,7 +93,7 @@ von OneDrive — dort bleibt PowerPoint beim Öffnen hängen.
 | 24 | Slide | 4 · Logischer Entwurf | Jede Relation trägt zwei Schlüssel |
 | 25 | Chapter |  | 5 · Physischer Entwurf |
 | 26 | Slide | 5 · Physischer Entwurf | Datentypen sind fachliche Entscheidungen |
-| 27 | Slide | 5 · Physischer Entwurf | Sieben von zehn Regeln erzwingt die Datenbank |
+| 27 | Slide | 5 · Physischer Entwurf | Zehn von fünfzehn Regeln erzwingt die Datenbank |
 | 28 | Slide | 5 · Physischer Entwurf | EXCLUDE verhindert, was UNIQUE nicht kann |
 | 29 | Slide | 5 · Physischer Entwurf | Warum das Mindestalter kein CHECK sein darf |
 | 30 | Chapter |  | 6 · Implementierung |
@@ -104,9 +107,22 @@ von OneDrive — dort bleibt PowerPoint beim Öffnen hängen.
 | 38 | Slide | 7 · Zugriffsschutz | Nachweis statt Behauptung — auf drei Wegen |
 | 39 | Chapter |  | 8 · Anwendung anbinden |
 | 40 | Slide | 8 · Anwendung anbinden | Nur Sichten lesen, nur Funktionen schreiben |
-| 41 | Chapter |  | 9 · Zusammenfassung und Ausblick |
-| 42 | Slide | 9 · Zusammenfassung | Sechs Sätze, die diese Einheit tragen |
-| 43 | Slide | 9 · Ausblick | Die Warenwirtschaft hängt an denselben Entitäten |
+| 41 | Chapter |  | 9 · Die Warenwirtschaft |
+| 42 | Slide | 9 · Die Warenwirtschaft | Zweite Anwendung, dasselbe Datenmodell |
+| 43 | Slide | 9 · Die Warenwirtschaft | Fünf Rollen, fünf Ausschnitte derselben Daten |
+| 44 | Slide | 9 · Die Warenwirtschaft | Zwei Arten von Sicht — und woran man sie erkennt |
+| 45 | Chapter |  | 10 · Das analytische Datenmodell |
+| 46 | Slide | 10 · Analytisches Modell | Fakten sind Ereignisse, Dimensionen sind Fragen |
+| 47 | Slide | 10 · Analytisches Modell | Vier Auswertungen — und was sie tatsächlich messen |
+| 48 | Slide | 10 · Analytisches Modell | Vom Monat bis zum einzelnen Rad in zwei Klicks |
+| 49 | Slide | 10 · Analytisches Modell | Sichten statt Sternschema — und was das kostet |
+| 50 | Slide | 10 · Analytisches Modell | Die eine Stelle, an der geschätzt wird |
+| 51 | Chapter |  | 11 · Zwei Oberflächen, ein Weg |
+| 52 | Slide | 11 · Zwei Oberflächen | Ein Weg, zwei Anwendungen, dieselbe Regel |
+| 53 | Slide | 11 · Zwei Oberflächen | Was die Warenwirtschaft anders macht |
+| 54 | Chapter |  | 12 · Zusammenfassung und Ausblick |
+| 55 | Slide | 12 · Zusammenfassung | Acht Sätze, die diese Einheit tragen |
+| 56 | Slide | 12 · Ausblick | Was entworfen ist, aber noch nicht gebaut |
 
 ## Bekannte Abweichungen vom Skill
 

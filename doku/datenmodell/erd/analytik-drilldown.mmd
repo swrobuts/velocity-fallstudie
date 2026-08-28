@@ -1,0 +1,17 @@
+%% Die Drill-Down-Kette der Auswertungen. Drei Sichten, drei Körner -
+%% jede Ebene beantwortet dieselbe Frage eine Stufe genauer.
+flowchart LR
+    M["<b>Ebene 1 — Monat</b><br/>v_wawi_umsatz_radtyp<br/>Korn: Monat × Fahrradtyp<br/>Frage: Welcher Typ trägt den Umsatz?"]
+    T["<b>Ebene 2 — Tag</b><br/>v_wawi_fahrten_je_tag<br/>Korn: Tag × Fahrradtyp<br/>Frage: An welchen Tagen entstand er?"]
+    R["<b>Ebene 3 — Rad</b><br/>v_wawi_fahrten_je_tag_rad<br/>Korn: Tag × einzelnes Rad<br/>Frage: Welche Räder waren beteiligt?"]
+
+    M -- "Klick auf einen Monat" --> T
+    T -- "Klick auf einen Tag" --> R
+
+    G["Von der Kennzahl bis zum einzelnen Rad in zwei Klicks.<br/>Jede Ebene ist eine eigene Sicht mit eigenem Korn — nicht ein Filter auf derselben."]
+    R -.-> G
+
+    classDef stufe fill:#F7F5EF,stroke:#003E6E,color:#0B1F44
+    classDef merk  fill:#E3DED1,stroke:#C9C3B4,color:#404040
+    class M,T,R stufe
+    class G merk
