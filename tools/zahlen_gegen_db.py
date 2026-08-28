@@ -139,9 +139,18 @@ def pruefe_folien(soll: dict) -> None:
     for satz in offen:
         melde(False, satz)
     if not offen:
-        melde(True, f'{zahlen} freistehende Zahlen stimmen  '
-                    f'{GRAU}Zuladung {sorted(soll["zuladung"])} kg, '
-                    f'Deckel {sorted(soll["deckel"])}{AUS}')
+        # zahlen > 0 gehoert in die BEDINGUNG, nicht nur in die Meldung:
+        # bis zur vierten Pruefrunde stand hier melde(True, ...), und ein
+        # Deck ohne eine einzige der gesuchten Zahlen kam als gruenes
+        # "0 freistehende Zahlen stimmen" durch - die Pruefung konnte
+        # "alles richtig" nicht von "nichts geprueft" unterscheiden.
+        # Nachgewiesen mit einem Foliensatz ohne Zahlen. Genau die Sorte
+        # gruener Pruefung, die gefaehrlicher ist als eine rote.
+        melde(zahlen > 0,
+              f'{zahlen} freistehende Zahlen stimmen  '
+              f'{GRAU}Zuladung {sorted(soll["zuladung"])} kg, '
+              f'Deckel {sorted(soll["deckel"])}{AUS}'
+              + ('' if zahlen else '  — KEINE gefunden, es wurde nichts abgeglichen'))
 
 
 def main() -> int:

@@ -575,7 +575,7 @@ const UEBERSETZUNGEN = {
     "auskunft.schadensmeldungen": "Schadensmeldungen",
     "auskunft.freiminuten": "Freiminuten",
     "auskunft.protokoll": "Protokoll",
-    "map.mapNote": "Kreisgröße zeigt die Kapazität einer Station, die Füllung ihre aktuelle Belegung.",
+    "map.mapNote": "Kreisgröße zeigt die Kapazität einer Station, die Füllung ihre aktuelle Belegung. Die Zahl in der Mitte nennt die Räder, die dort stehen — nicht die freien Stellplätze.",
     "map.areaWithCustomers": "Kartenbereich mit {stationenPhrase} und Kundenorten",
     "map.area": "Kartenbereich mit {stationenPhrase}",
     "map.customersAtLocation": "{ort}: {kundenPhrase}",
@@ -1057,7 +1057,7 @@ const UEBERSETZUNGEN = {
     "auskunft.schadensmeldungen": "Damage reports",
     "auskunft.freiminuten": "Free minutes",
     "auskunft.protokoll": "Log",
-    "map.mapNote": "Circle size shows a station’s capacity, the fill shows its current occupancy.",
+    "map.mapNote": "Circle size shows a station’s capacity, the fill shows its current occupancy. The number in the middle is the count of bikes standing there — not the number of free docks.",
     "map.areaWithCustomers": "Map area with {stationenPhrase} and customer locations",
     "map.area": "Map area with {stationenPhrase}",
     "map.customersAtLocation": "{ort}: {kundenPhrase}",
@@ -1539,7 +1539,7 @@ const UEBERSETZUNGEN = {
     "auskunft.schadensmeldungen": "Hasar bildirimleri",
     "auskunft.freiminuten": "Ücretsiz dakikalar",
     "auskunft.protokoll": "Günlük",
-    "map.mapNote": "Daire boyutu bir istasyonun kapasitesini, dolgu ise mevcut doluluğunu gösterir.",
+    "map.mapNote": "Daire boyutu bir istasyonun kapasitesini, dolgu ise mevcut doluluğunu gösterir. Ortadaki sayı orada duran bisikletleri belirtir — boş yerleri değil.",
     "map.areaWithCustomers": "{stationenPhrase} ve müşteri konumlarını içeren harita alanı",
     "map.area": "{stationenPhrase} içeren harita alanı",
     "map.customersAtLocation": "{ort}: {kundenPhrase}",
@@ -2021,7 +2021,7 @@ const UEBERSETZUNGEN = {
     "auskunft.schadensmeldungen": "Averías",
     "auskunft.freiminuten": "Minutos gratuitos",
     "auskunft.protokoll": "Registro",
-    "map.mapNote": "El tamaño del círculo muestra la capacidad de una estación, y el relleno su ocupación actual.",
+    "map.mapNote": "El tamaño del círculo muestra la capacidad de una estación, y el relleno su ocupación actual. La cifra del centro indica las bicicletas que están allí, no las plazas libres.",
     "map.areaWithCustomers": "Área del mapa con {stationenPhrase} y ubicaciones de clientes",
     "map.area": "Área del mapa con {stationenPhrase}",
     "map.customersAtLocation": "{ort}: {kundenPhrase}",
@@ -2503,7 +2503,7 @@ const UEBERSETZUNGEN = {
     "auskunft.schadensmeldungen": "Segnalazioni di guasto",
     "auskunft.freiminuten": "Minuti gratuiti",
     "auskunft.protokoll": "Registro",
-    "map.mapNote": "La dimensione del cerchio indica la capacità di una stazione, il riempimento la sua occupazione attuale.",
+    "map.mapNote": "La dimensione del cerchio indica la capacità di una stazione, il riempimento la sua occupazione attuale. La cifra al centro indica le biciclette presenti, non gli stalli liberi.",
     "map.areaWithCustomers": "Area della mappa con {stationenPhrase} e località dei clienti",
     "map.area": "Area della mappa con {stationenPhrase}",
     "map.customersAtLocation": "{ort}: {kundenPhrase}",
@@ -2985,7 +2985,7 @@ const UEBERSETZUNGEN = {
     "auskunft.schadensmeldungen": "Zgłoszenia usterek",
     "auskunft.freiminuten": "Darmowe minuty",
     "auskunft.protokoll": "Dziennik",
-    "map.mapNote": "Wielkość koła pokazuje pojemność stacji, a wypełnienie jej bieżące zapełnienie.",
+    "map.mapNote": "Wielkość koła pokazuje pojemność stacji, a wypełnienie jej bieżące zapełnienie. Liczba pośrodku podaje rowery, które tam stoją — nie wolne miejsca.",
     "map.areaWithCustomers": "Obszar mapy z {stationenPhrase} i lokalizacjami klientów",
     "map.area": "Obszar mapy z {stationenPhrase}",
     "map.customersAtLocation": "{ort}: {kundenPhrase}",
@@ -5756,8 +5756,30 @@ function lagepunkt(wert, minimum, maximum, beschriftung, optionen = {}) {
 // dann nicht - siehe donatDetailAufbauen()/stationenUebersicht() in
 // stationen.js, wo --warnung-text ausschliesslich fuer frei === 0 (also
 // anteil === 1) vergeben wird.
+//
+// OPTIONEN.MITTETEXT - EINE ANDERE ZAHL IN DER MITTE, UND WARUM ES SIE
+// GIBT: Vorgabe ist der Prozentwert (siehe oben, "ein Donut ohne Zahl ist
+// eine Schaetzaufgabe"). Ein Aufrufer darf ihn durch einen eigenen Text
+// ersetzen. Genutzt wird das an genau einer Stelle, der Stationsmarke der
+// Landkarte (stationenKarteStationsMarke() in stationen.js) - dort steht
+// in der Mitte die ABSOLUTE Zahl der Raeder statt des Prozentwerts, aus
+// zwei Gruenden:
+//   1. KEINE VERDOPPLUNG. Den Anteil zeigt der Ring bereits als Flaeche;
+//      ihn daneben noch einmal als Text zu setzen, sagt nichts Neues. Die
+//      Marke traegt so drei Kanaele mit drei verschiedenen Auskuenften:
+//      Kreisgroesse = Kapazitaet, Fuellung = Anteil, Zahl = Bestand.
+//   2. PLATZ. "48 %" sind vier Zeichen; in das Loch der kleinsten Marke
+//      (25 px, siehe stationenKarteStationsDurchmesser()) passen zwei
+//      Ziffern, keine vier. Bis zur vierten Pruefrunde war deshalb GAR
+//      keine Zahl in der Marke zu sehen (display:none in style.css) -
+//      die Zahl fehlte also nicht aus Absicht, sondern weil die falsche
+//      dort stand.
+// Der uebergebene Text bekommt eine EIGENE Klasse (.donut-text-mitte),
+// damit die Landkarte ihn bemessen kann, ohne den Prozentwert der grossen
+// Donuts (Uebersichtskachel, Detailmaske) mitzuverstellen.
 function donut(wert, maximum, beschriftung, optionen = {}) {
-    const { durchmesser = 88, dicke = 12, farbe = 'var(--marine)', bruch = null } = optionen;
+    const { durchmesser = 88, dicke = 12, farbe = 'var(--marine)', bruch = null,
+        mitteText = null } = optionen;
 
     const anteil = maximum > 0 ? Math.max(0, Math.min(1, wert / maximum)) : 0;
     const mitte = durchmesser / 2;
@@ -5796,12 +5818,12 @@ function donut(wert, maximum, beschriftung, optionen = {}) {
         svg.append(vordergrund);
     }
 
-    const textProzent = document.createElementNS(SVG_NS, 'text');
-    textProzent.setAttribute('x', mitte);
-    textProzent.setAttribute('y', bruch ? mitte - 6 : mitte);
-    textProzent.setAttribute('class', 'donut-text-prozent');
-    textProzent.textContent = `${Math.round(anteil * 100)} %`;
-    svg.append(textProzent);
+    const textMitte = document.createElementNS(SVG_NS, 'text');
+    textMitte.setAttribute('x', mitte);
+    textMitte.setAttribute('y', bruch ? mitte - 6 : mitte);
+    textMitte.setAttribute('class', mitteText === null ? 'donut-text-prozent' : 'donut-text-mitte');
+    textMitte.textContent = mitteText === null ? `${Math.round(anteil * 100)} %` : mitteText;
+    svg.append(textMitte);
 
     if (bruch) {
         const textBruch = document.createElementNS(SVG_NS, 'text');

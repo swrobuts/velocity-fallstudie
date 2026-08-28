@@ -1402,9 +1402,15 @@ function stationenKarteInitialisieren(flaeche, kachelhinweis, stationen, kundeno
         }
     }
 
-    const kapazitaeten = stationen.map((s) => s.kapazitaet);
-    const kapMin = Math.min(...kapazitaeten);
-    const kapMax = Math.max(...kapazitaeten);
+    // Der Massstab kommt aus ALLEN geladenen Stationen, nicht aus dem
+    // gezeichneten Ausschnitt (siehe die ausfuehrliche Begruendung bei
+    // stationenKarteMasstab() unten, Punkt 2): sonst waere dieselbe
+    // Station auf der Uebersichts- und auf der Detailkarte verschieden
+    // gross, obwohl beide Karten dieselbe Legende tragen. Der Rueckfall
+    // auf "stationen" greift nur, falls jemand diese Funktion je ohne
+    // geladene Liste benutzt - eine Karte ohne Massstab waere schlimmer
+    // als eine mit einem engeren.
+    const masstab = stationenKarteMasstab(stationenAlle.length > 0 ? stationenAlle : stationen);
     for (const station of stationen) {
         if (station.latitude == null || station.longitude == null) continue;
         const latlng = [Number(station.latitude), Number(station.longitude)];
@@ -1418,12 +1424,12 @@ function stationenKarteInitialisieren(flaeche, kachelhinweis, stationen, kundeno
             // unter ihren Nachbarn nicht von einer beliebigen anderen zu
             // unterscheiden.
             L.circleMarker(latlng, {
-                radius: stationenKarteStationsDurchmesser(station.kapazitaet, kapMin, kapMax) / 2 + 5,
+                radius: stationenKarteStationsDurchmesser(station.kapazitaet, masstab) / 2 + 5,
                 className: 'stationenkarte-station-hervorhebung',
                 interactive: false
             }).addTo(karte);
         }
-        stationenKarteStationsMarke(station, kapMin, kapMax, istHervorgehoben).addTo(karte);
+        stationenKarteStationsMarke(station, masstab, istHervorgehoben).addTo(karte);
     }
 
     if (punkte.length > 0) {
@@ -1440,8 +1446,39 @@ function stationenKarteInitialisieren(flaeche, kachelhinweis, stationen, kundeno
 // Eine Stationsmarke: donut() (rahmen.js) traegt Groesse=Kapazitaet und
 // Fuellung=Belegung unveraendert weiter, jetzt als L.divIcon statt
 // direkt ins Karten-<svg> gezeichnet.
-function stationenKarteStationsMarke(station, kapMin, kapMax, istHervorgehoben) {
-    const durchmesser = stationenKarteStationsDurchmesser(station.kapazitaet, kapMin, kapMax);
+//
+// DIE ZAHL IN DER MITTE (Auftrag, woertlich: "In die Karte waere es noch
+// gut, wenn du die Zahl der verfuegbaren [Raeder] inmitten des
+// Donut-Chart schreibst"). Es steht dort station.belegt - die Raeder, die
+// AN DER STATION STEHEN. Drei Ueberlegungen dazu, in dieser Reihenfolge:
+//
+//   1. ES IST DER ZAEHLER DES RINGS. Der Ring zeigt belegt/kapazitaet;
+//      dieselbe Zahl noch einmal als Text in seiner Mitte sagt genau das,
+//      was die Fuellung zeigt, nur ablesbar. Stuende dort eine ANDERE
+//      Groesse, behauptete eine Marke zwei Dinge zugleich, und wer
+//      "Kapazitaet minus Zahl = freie Plaetze" rechnete, rechnete falsch.
+//      Der zugaengliche Name der Marke sagt ohnehin schon "28 von 40
+//      Stellplaetzen belegt" - die Zahl in der Mitte ist dessen erste
+//      Haelfte, nicht eine zweite Auskunft.
+//
+//   2. ES SIND NICHT DIE FREIEN PLAETZE. Genau diese Verwechslung nennt
+//      der Auftrag ("die Gegenfrage: wo kann ich zurueckgeben"). Deshalb
+//      benennt map.mapNote ueber der Karte die Zahl ausdruecklich UND
+//      grenzt sie ab: "Die Zahl in der Mitte nennt die Raeder, die dort
+//      stehen - nicht die freien Stellplaetze."
+//
+//   3. "VERFUEGBAR" WAERE ZU VIEL BEHAUPTET, und deshalb steht das Wort
+//      weder hier noch in der Legende. v_wawi_station.belegt zaehlt die
+//      Raeder an der Station, ohne nach ihrem Zustand zu fragen; in der
+//      Referenzdatenbank sind von den 138 abgestellten Raedern 16 in
+//      Wartung und 3 defekt, an der Residenz sogar 5 von 10 - "10
+//      verfuegbare Raeder" waere dort schlicht falsch. Welche Raeder
+//      fahrbereit sind, sagt die Detailmaske je Station mit ihrer
+//      Statusaufstellung (stationRaederAbschnitt() oben, aus
+//      v_wawi_station_flotte); die Uebersichtskarte laedt diese Sicht
+//      gar nicht und koennte die Frage folglich auch nicht beantworten.
+function stationenKarteStationsMarke(station, masstab, istHervorgehoben) {
+    const durchmesser = stationenKarteStationsDurchmesser(station.kapazitaet, masstab);
     const voll = station.frei === 0;
     const beschriftung = t('map.stationBelegLabel', { name: station.name, belegt: zahlFormat(station.belegt), kapazitaet: zahlFormat(station.kapazitaet) })
         + (voll ? t('map.stationFullSuffix') : '')
@@ -1459,7 +1496,11 @@ function stationenKarteStationsMarke(station, kapMin, kapMax, istHervorgehoben) 
     const markierung = donut(station.belegt, station.kapazitaet, beschriftung, {
         durchmesser,
         dicke: Math.max(4, durchmesser * 0.16),
-        farbe: voll ? 'var(--warnung-text)' : 'var(--marine)'
+        farbe: voll ? 'var(--warnung-text)' : 'var(--marine)',
+        // Statt des Prozentwerts (siehe optionen.mitteText bei donut() in
+        // rahmen.js) - die Begruendung fuer GENAU DIESE Zahl steht im
+        // Kopfkommentar dieser Funktion.
+        mitteText: zahlFormat(station.belegt)
     });
     // role/aria-label des Donuts hier ABSICHTLICH stummgeschaltet: der
     // Leaflet-Marker selbst traegt gleich die vollstaendige Beschriftung
@@ -1489,11 +1530,11 @@ function stationenKarteStationsMarke(station, kapMin, kapMax, istHervorgehoben) 
         icon,
         keyboard: true,
         // title setzt die native .title-Eigenschaft (Mauszeiger-Tooltip),
-        // KEIN innerHTML - noetig, weil donut() bei dieser Markengroesse
-        // (30-58px) den Prozentwert selbst ausblendet (siehe
-        // .stationenkarte-station-huelle .donut-text-prozent in
-        // style.css), eine sehende Maus-Bedienung braucht trotzdem einen
-        // Weg an die Zahl.
+        // KEIN innerHTML. Die Marke zeigt seit der vierten Pruefrunde den
+        // BESTAND als Zahl in ihrer Mitte (mitteText oben); der volle
+        // Satz "28 von 40 Stellplaetzen belegt" mit Stationsnamen und
+        // Kapazitaet steht damit weiterhin nur hier - eine sehende
+        // Maus-Bedienung braucht den Bezug, nicht nur den Zaehler.
         title: beschriftung,
         alt: beschriftung
     });
@@ -1575,15 +1616,75 @@ function stationenKarteKundenortMarke(ort, maxKunden) {
     return kreis;
 }
 
-// Kreisdurchmesser linear zwischen 30 und 58 px ueber die tatsaechliche
-// Kapazitaetsspanne der geladenen Stationen (20 bis 40 Stellplaetze in
-// der Referenzdatenbank) - "Groesse = Kapazitaet" (Auftrag), keine
-// willkuerliche feste Groesse je Station.
-function stationenKarteStationsDurchmesser(kapazitaet, kapMin, kapMax) {
-    const kleinste = 30;
-    const groesste = 58;
-    if (kapMax === kapMin) return (kleinste + groesste) / 2;
-    return kleinste + ((kapazitaet - kapMin) / (kapMax - kapMin)) * (groesste - kleinste);
+// ===== Der Massstab der Stationsmarken =====
+//
+// "Groesse = Kapazitaet" (Auftrag). Zwei Befunde der vierten Pruefrunde
+// haben festgestellt, dass die vorherige Fassung genau das NICHT tat:
+//
+// 1. SIE WAR NICHT FLAECHENPROPORTIONAL UND HATTE KEINEN NULLPUNKT.
+//    Der Durchmesser lief linear von 30 px (kleinste vorkommende
+//    Kapazitaet) bis 58 px (groesste). Damit kodierte die FLAECHE - und
+//    die liest das Auge bei einem Kreis, nicht den Durchmesser -
+//    gar nichts: Kapazitaet 20 gegen 40 (Faktor 2) erschien als
+//    Flaechenfaktor (58/30)^2 = 3,74. Die Nachbarfunktion
+//    stationenKarteKundenRadius() unmittelbar darunter begruendet seit
+//    jeher ausfuehrlich, warum flaechenproportional der kartografische
+//    Standard ist - fuer die Kundenmarken galt das, fuer die
+//    Stationsmarken nicht.
+//    Jetzt: durchmesser = groesste * wurzel(kapazitaet / kapMax). Die
+//    Flaeche ist damit proportional zur Kapazitaet, mit Nullpunkt bei
+//    null Stellplaetzen (Hausregel: Nullpunkte bleiben).
+//
+// 2. SIE WAR JE KARTE EINE ANDERE. kapMin/kapMax kamen aus den GERADE
+//    GEZEIGTEN Stationen. Die Uebersichtskarte zeigt alle zehn (20..40),
+//    die Detailkarte nur die Station und ihre vier Nachbarn - dort
+//    gemessen: kapMin 25, und derselbe Marktplatz (25 Stellplaetze) war
+//    auf der Uebersicht 37 px, in der Detailkarte 30 px gross, die
+//    Juliuspromenade 44 gegen 39 px. Unter EINER gemeinsamen Legende
+//    ("Kreisgroesse zeigt die Kapazitaet einer Station", map.mapNote,
+//    woertlich dieselbe auf beiden Karten) sind das zwei verschiedene
+//    Aussagen ueber dieselbe Station.
+//    Jetzt: der Massstab kommt aus stationenAlle - allen geladenen
+//    Stationen -, nicht aus dem Ausschnitt. Eine gemeinsame Skala.
+//    Eine untere Grenze (kapMin) gibt es nicht mehr; der Nullpunkt aus
+//    Punkt 1 macht sie ueberfluessig, und mit ihr faellt die Moeglichkeit
+//    weg, dass ein Ausschnitt das untere Ende verschiebt.
+//
+// KLEINSTE: 36 px, nicht --ziel (32). Zwei Bedingungen, die groessere
+// gewinnt: die Marke ist anklickbar (32 px Mindestzielgroesse), UND in
+// ihrer Mitte steht seit dieser Runde eine Zahl. Bei 36 px misst das
+// Loch 36 - 2*(36*0,16) = 25,0 px; eine zweistellige Zahl in --grad-4
+// (14 px, fett) ist 18,5 px breit und rund 10 px hoch, ihre Ecken liegen
+// damit 10,5 px von der Mitte - 1,7 px Luft bis zum Ring. Bei 32 px
+// waere das Loch 22,2 px und die Luft 0,6 px, bei 30 px (dem alten Wert)
+// liefe die Zahl in den Ring.
+// JE_ZIFFER: Die Kapazitaeten dieser Fallstudie sind zweistellig, die
+// Bestandszahl damit auch. Ein Netz mit dreistelligen Bestaenden gaebe
+// es aber (eine Station mit 100 Stellplaetzen), und dann braucht das
+// Loch je Ziffer rund 9,3 px mehr Breite; weil vom Durchmesser nur der
+// Anteil 1 - 2*0,16 = 0,68 im Loch ankommt, sind das 14 px Durchmesser.
+// Die Grenze gilt fuer ALLE Marken gemeinsam, nie je Marke: zwei
+// Stationen gleicher Kapazitaet muessen gleich gross sein, auch wenn an
+// der einen 9 und an der anderen 100 Raeder stehen.
+const STATIONENKARTE_MARKE_GROESSTE = 51;
+const STATIONENKARTE_MARKE_KLEINSTE = 36;
+const STATIONENKARTE_MARKE_JE_ZIFFER = 14;
+
+function stationenKarteMasstab(stationen) {
+    const kapazitaeten = stationen.map((s) => Number(s.kapazitaet) || 0);
+    const bestaende = stationen.map((s) => Number(s.belegt) || 0);
+    const ziffern = Math.max(2, String(Math.max(0, ...bestaende)).length);
+    return {
+        kapMax: Math.max(1, ...kapazitaeten),
+        kleinste: STATIONENKARTE_MARKE_KLEINSTE
+            + (ziffern - 2) * STATIONENKARTE_MARKE_JE_ZIFFER
+    };
+}
+
+function stationenKarteStationsDurchmesser(kapazitaet, masstab) {
+    const anteil = Math.max(0, Number(kapazitaet) || 0) / masstab.kapMax;
+    return Math.max(masstab.kleinste,
+        STATIONENKARTE_MARKE_GROESSTE * Math.sqrt(Math.min(1, anteil)));
 }
 
 // Flaechenproportional statt radiusproportional (kartografischer

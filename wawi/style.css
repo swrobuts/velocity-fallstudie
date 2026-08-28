@@ -1591,10 +1591,16 @@ body.navigation-schmal .navigation-griff {
    Kaestchen (16px), sondern die ganze umschliessende <label>-Zeile - sie
    traegt deshalb die Zielgroesse, nicht das <input> darin (siehe die
    zentrale Regel weiter oben). */
+/* min-height: --ziel wie bei .stationenkarte-schalter und
+   .mehrfachauswahl-option - die Zeile ist das Ziel, nicht das Kaestchen
+   (16px). Gemessen war die Zeile hier 22px hoch, waehrend die beiden
+   anderen Schalterzeilen dieser Oberflaeche die 32px laengst tragen; die
+   Regel galt also fuer zwei von drei gleichen Bauteilen. */
 .profilmenue-schalter {
   display: flex;
   align-items: center;
   gap: var(--raum-2);
+  min-height: var(--ziel);
   cursor: pointer;
   color: var(--text);
 }
@@ -1618,15 +1624,42 @@ body.navigation-schmal .navigation-griff {
   max-width: 34ch;
 }
 
-.profilmenue-schalter input[type="checkbox"] {
-  /* accent-color statt eines selbst gezeichneten Schalters: eine
-     Kontrollkaestchen-Optik ist fuer EINE Einstellung ausreichend
-     ehrlich (keine An/Aus-Illustration noetig, die einen Zustand
-     vortaeuscht, den es noch nicht gibt) und erbt automatisch Tastatur-
-     und Fokusverhalten der nativen Checkbox. */
+/* ===== ALLE Kontrollkaestchen dieser Oberflaeche, an EINER Stelle =====
+
+   accent-color statt eines selbst gezeichneten Schalters: eine
+   Kontrollkaestchen-Optik ist fuer eine Einstellung ausreichend ehrlich
+   (keine An/Aus-Illustration noetig, die einen Zustand vortaeuscht, den
+   es noch nicht gibt) und erbt automatisch Tastatur- und Fokusverhalten
+   der nativen Checkbox.
+
+   WARUM DIE DREI SELEKTOREN JETZT ZUSAMMENSTEHEN. Die vierte
+   Pruefrunde hat drei verschiedene Kontrollkaestchen in einer
+   Oberflaeche gemessen:
+     - Profilmenue          16 x 16 px, accent-color --marine
+     - Kartenschalter       16 x 16 px, accent-color AUTO
+     - Spaltenkopf-Filter   13 x 13 px, accent-color AUTO
+   "auto" heisst: die Akzentfarbe des Betriebssystems. Im Pruefbrowser
+   war das Orange - eine Farbe, die in der Farbordnung dieser Anwendung
+   (siehe :root) nicht vorkommt, nie gemessen wurde und sich von Rechner
+   zu Rechner aendert. Zehn angehakte Filterwerte in Systemblau oder
+   -orange neben einem marineblauen Zebraschalter waren nicht zwei
+   Entscheidungen, sondern eine vergessene.
+
+   flex: 0 0 auto - der eigentliche Fehler dahinter. Alle drei Kaestchen
+   sitzen in einem Flex-Behaelter; mit dem Vorgabewert flex-shrink: 1
+   gibt ein Kaestchen nach, sobald die Beschriftung daneben lang wird.
+   Gemessen am Schalter "Kopfbereich immer ausklappen": 13,55 x 16 px auf
+   Deutsch, 15,31 auf Spanisch, 15,34 auf Tuerkisch, 15,00 und 15,55 auf
+   Italienisch (dort schrumpfte auch der Zebraschalter) - quadratisch nur
+   auf Englisch und Polnisch. Ein sichtbar OVALES Kontrollkaestchen,
+   direkt neben einem runden, und nur in vier von sechs Sprachen. */
+.profilmenue-schalter input[type="checkbox"],
+.stationenkarte-schalter input[type="checkbox"],
+.mehrfachauswahl-option input[type="checkbox"] {
   accent-color: var(--marine);
   width: 16px;
   height: 16px;
+  flex: 0 0 auto;
 }
 
 /* Sprachumschaltung (Mehrsprachigkeits-Aufgabe), zweite Einstellung im
@@ -3513,6 +3546,34 @@ body.navigation-schmal #navigation button:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+/* Die frei gesetzte Zahl in der Mitte (optionen.mitteText bei donut() in
+   rahmen.js; bislang nur die Stationsmarke der Landkarte). Eigene Klasse
+   statt .donut-text-prozent, weil der Prozentwert dort --grad-5 (16px)
+   traegt - bemessen fuer die 84 bis 120px grossen Donuts der
+   Uebersichtskachel und der Detailmaske. Hier steht --grad-4 (14px), die
+   Stufe "Lesegrad: jede Datenzelle": eine Bestandszahl IST eine
+   Datenzelle, und 14px ist zugleich der groesste Grad, der zweistellig
+   in das Loch der kleinsten Marke passt (Rechnung bei
+   stationenKarteMasstab() in stationen.js).
+   EINE Groesse fuer ALLE Marken, ausdruecklich nicht mitwachsend mit der
+   Marke: In dieser Warenwirtschaft ist die Schriftgroesse ein
+   Datenkanal (Bissantz'Numbers, siehe zahlSkaliert() in rahmen.js) -
+   "je groesser der Wert, desto groesser die Zahl". Liesse man sie hier
+   der Kapazitaet folgen, stuende am Hubland Campus (40 Plaetze, 14
+   Raeder) eine GROESSERE 14 als die 23 an der Universitaet (35 Plaetze) -
+   derselbe Kanal, genau die gegenteilige Aussage.
+   fill bleibt --marine auf der weissen Scheibe der Huelle: 17,29:1. Die
+   Fuellung des Rings kann die Zahl nicht erreichen - ein Donut faerbt
+   nur den Ring zwischen Aussenrand und Loch, unabhaengig vom Anteil. */
+.donut-text-mitte {
+  font-size: var(--grad-4);
+  font-weight: 700;
+  fill: var(--marine);
+  text-anchor: middle;
+  dominant-baseline: central;
+  font-variant-numeric: tabular-nums;
+}
+
 .donut-text-bruch {
   font-size: var(--grad-1);
   fill: var(--text-leise);
@@ -4464,8 +4525,16 @@ body.navigation-schmal #navigation button:focus-visible {
    "hier hinsehen" (Rang 1 der Farbordnung, siehe :root); ein Filter, der
    gerade Zeilen ausblendet, ist genau so ein Fall - dieselbe Sprache,
    die das aktive Suchfeld in der Kopfleiste schon spricht.
-   Gemessen: --rot auf --flaeche 4,41:1 - ueber den 3:1 aus WCAG 1.4.11
-   fuer ein Bedienelement und sogar ueber den 4,5:1 fuer Text. */
+   Gemessen: --rot auf --flaeche 4,41:1 - ueber den 3:1 aus WCAG 1.4.11,
+   und mehr braucht es hier auch nicht: gefaerbt wird ein <svg>, also
+   eine Grafik, kein Text.
+   ACHTUNG, HIER STAND EINMAL DAS GEGENTEIL. Bis zur vierten Pruefrunde
+   endete dieser Satz mit "und sogar ueber den 4,5:1 fuer Text" - 4,41
+   liegt UNTER 4,5, die Zahl war richtig, der Schluss daraus falsch. Der
+   Satz hat 130 Zeilen weiter unten einen echten Kontrastfehler gedeckt
+   (--rot als Ueberfahren-Farbe zweier 12px-TEXTknoepfe, siehe dort).
+   --rot ist in dieser Oberflaeche eine Grafik- und Rahmenfarbe, keine
+   Textfarbe. */
 .spaltenkopf-filterknopf-aktiv {
   border-color: var(--rot);
   color: var(--rot);
@@ -4606,10 +4675,22 @@ body.navigation-schmal #navigation button:focus-visible {
 /* Beide Textknoepfe dieser Oberflaeche (dieser hier und der
    "Filter zuruecksetzen" in der Leerzeile) hatten keinen
    Ueberfahren-Zustand. Ein unterstrichener Text, der sich beim
-   Ueberfahren nicht ruehrt, sieht aus wie Fliesstext mit Unterstrich. */
+   Ueberfahren nicht ruehrt, sieht aus wie Fliesstext mit Unterstrich.
+
+   --schlecht statt --rot, und das war in der vierten Pruefrunde ein
+   echter Kontrastfehler, kein Geschmack: --rot misst auf --flaeche
+   4,41:1 und auf --grund 4,15:1 - beides unter den 4,5:1, die TEXT
+   verlangt (der Ueberfahren-Zustand ist davon nicht ausgenommen: die
+   Regel gilt fuer jeden Zustand, in dem Text zu sehen ist). Fuer eine
+   GRAFIK genuegen 3:1, deshalb bleibt --rot am gefuellten Trichter
+   oben richtig - dort faerbt es ein <svg>, hier 12px Text.
+   --schlecht traegt 5,71:1 und ist zugleich die Farbe, die
+   .spaltenkopf-sortreset/.spaltenkopf-filterreset - die beiden anderen
+   Zuruecksetzen-Knoepfe desselben Spaltenkopfs - beim Ueberfahren
+   ohnehin schon annehmen. Ein Rot fuer alle vier statt zweier. */
 .spaltenkopf-hinweis-knopf:hover,
 .spaltenkopf-leerzeile button:hover {
-  color: var(--rot);
+  color: var(--schlecht);
 }
 
 /* Gruppen-Ueberschriftszeile (<th scope="rowgroup">, siehe
@@ -5461,10 +5542,22 @@ body.navigation-schmal #navigation button:focus-visible {
   font-size: var(--grad-6);
 }
 
-.stationenkarte-station-icon {
-  min-width: var(--ziel);
-  min-height: var(--ziel);
-}
+/* HIER STAND min-width/min-height: var(--ziel) - entfernt, und der Grund
+   gehoert festgehalten, damit es niemand "wieder repariert".
+   Die dritte Pruefrunde hatte damit die 30px kleine Marke auf die
+   Mindestzielgroesse gebracht. Sie tat es an der falschen Stelle: der
+   Kasten des Icons wuchs auf 32px, das <svg> darin blieb 30px, und die
+   weisse Scheibe dazwischen (.stationenkarte-station-huelle, ein
+   Flex-Kind) wurde mitgezogen. Gemessen an der Zellerau auf beiden
+   Karten: Huelle 32 x 30 px - mit border-radius:50% also eine ELLIPSE,
+   2px breiter als der Donut, den sie hinterlegt, und einseitig unter
+   ihm hervorstehend.
+   Die Mindestgroesse gehoert an den Durchmesser selbst, nicht an eine
+   Untergrenze der Huelle: stationenKarteStationsDurchmesser() in
+   stationen.js gibt jetzt nie weniger als 36px zurueck (36 > --ziel,
+   und die Zahl in der Mitte braucht ohnehin mehr, siehe dort). Damit
+   bleiben Kasten, Scheibe und Donut in jeder Groesse gleich gross und
+   rund, und iconAnchor trifft weiterhin die Mitte. */
 
 /* Der Schalter "Kundenorte einblenden" ueber der Karte. Gemessen: das
    <input type="checkbox"> mass 13x13px, seine Zeile 19px hoch - das
@@ -5473,14 +5566,12 @@ body.navigation-schmal #navigation button:focus-visible {
    traegt den Text mit, ein Klick darauf schaltet ohnehin schon, und
    eine auf 32px aufgeblasene Checkbox saehe neben den uebrigen
    Kaestchen der Oberflaeche falsch aus. Das Kaestchen selbst bekommt
-   die uebliche Groesse der anderen Schalter dieser Oberflaeche. */
+   die uebliche Groesse der anderen Schalter dieser Oberflaeche - seit
+   der vierten Pruefrunde aus der GEMEINSAMEN Regel bei
+   .profilmenue-schalter input[type="checkbox"] weiter oben, statt aus
+   einer eigenen, die die Groesse mitbrachte und die Farbe vergass. */
 .stationenkarte-schalter {
   min-height: var(--ziel);
-}
-
-.stationenkarte-schalter input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
 }
 
 /* Fehlt Leaflet selbst (Skript blockiert, kein Netz) oder bleiben die
@@ -5518,18 +5609,21 @@ body.navigation-schmal #navigation button:focus-visible {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
-/* donut() zeichnet Prozent und Bruch IMMER (Auftrag: "ein Donut ohne
-   Zahl ist eine Schaetzaufgabe") - auf der Karte ist der Ring aber
-   zwischen 30 und 58px klein, waehrend donut() eine feste Schriftgroesse
-   fuer beide Texte mitbringt (fuer die Uebersichts-/Detailmaskenkachel
-   bemessen, dort 84-120px). Bei 30px liefe die Zahl ueber den Ring
-   hinaus, statt in ihm zu stehen. Die Zahl geht dabei NICHT verloren
-   (Auftrag weiterhin erfuellt): jede Marke traegt ihr eigenes
-   aria-label UND einen nativen Mauszeiger-Tooltip (title, siehe
-   stationenKarteStationsMarke() in stationen.js) mit derselben Zahl im
-   Klartext, UND ein Klick oeffnet dieselbe Zahl noch einmal gross im
-   Belegungs-Donut der Detailmaske. */
-.stationenkarte-station-huelle .donut-text-prozent,
+/* HIER STAND EINE REGEL, DIE BEIDE TEXTE DES DONUTS AUSBLENDETE - und
+   sie hatte einen richtigen Grund und einen falschen Schluss.
+   Richtig: "48 %" in --grad-5 misst rund 38px und passt in keine Marke
+   dieser Groesse. Falsch war der Schluss, deshalb GAR keine Zahl zu
+   zeigen. Der Auftraggeber hat die fehlende Zahl in der vierten Runde
+   ausdruecklich vermisst.
+   Jetzt zeichnet donut() in der Marke nicht den Prozentwert, sondern den
+   BESTAND (optionen.mitteText, siehe rahmen.js) - zwei Ziffern in
+   --grad-4 statt vier Zeichen in --grad-5, und die passen (Rechnung bei
+   stationenKarteMasstab() in stationen.js).
+   .donut-text-bruch bleibt ausgeblendet: die zweite, kleine Zeile unter
+   der Zahl ist fuer die 84-120px grossen Donuts gedacht; in einer Marke
+   von 36px gaebe es dafuer keinen Platz. Die Stationsmarke uebergibt
+   optionen.bruch ohnehin nicht - die Regel ist eine Absicherung, falls
+   das jemand spaeter tut, kein Ausblenden von etwas Vorhandenem. */
 .stationenkarte-station-huelle .donut-text-bruch {
   display: none;
 }

@@ -46,11 +46,25 @@ def main(argv: list[str]) -> int:
         conn.close()
 
     fehlschlaege = 0
+    bestanden = 0
     for zeile in zeilen:
         print(zeile)
         if zeile.startswith("not ok"):
             fehlschlaege += 1
-    print(f"\n{fehlschlaege} fehlgeschlagene Testfunktion(en).")
+        elif zeile.startswith("ok "):
+            bestanden += 1
+    print(f"\n{bestanden} bestandene, {fehlschlaege} fehlgeschlagene Testfunktion(en).")
+    # Kein einziger Test gelaufen ist ein FEHLER, kein Erfolg: passt das
+    # Namensmuster '^test_' eines Tages auf nichts mehr (umbenannte
+    # Funktionen, ein leeres Schema velocity_test, eine Aufbaudatei, die
+    # ihre Funktionen nicht anlegt), meldete dieses Programm bisher
+    # "0 fehlgeschlagene" und gab 0 zurueck - eine gruene Pruefung, die
+    # nichts geprueft hat. Vierte Pruefrunde, dieselbe Ueberlegung wie
+    # bei tools/zahlen_gegen_db.py.
+    if not fehlschlaege and not bestanden:
+        print("FEHLER: keine einzige Testfunktion ausgefuehrt "
+              "(runtests() lieferte kein 'ok'). Nichts geprueft ist nicht bestanden.")
+        return 1
     return 1 if fehlschlaege else 0
 
 

@@ -14,6 +14,12 @@ verschwinden lassen (doppeltes `let unterbereich` - ein SyntaxError ohne
 jede Fehlermeldung im Browser, siehe Pruefung NAMENSRAUM unten).
 
 Was geprueft wird:
+  ABDECKUNG  der Pruefer meldet je Datei, wieviel er nach dem Abzug der
+             Kommentare ueberhaupt noch sieht, und faellt durch, wenn
+             dabei eine oberste Deklaration verschwindet - die Antwort
+             auf den schwersten Befund der dritten Runde, bei dem ein
+             Kommentar ein Drittel von rahmen.js unsichtbar machte,
+             ohne dass es auffiel (siehe ohne_js_kommentare() unten)
   ANKER      jede id, die per getElementById gesucht wird, existiert
              (im statischen HTML oder als von einem Skript selbst
              erzeugtes Element)
@@ -54,35 +60,150 @@ def pruefe(kennung: str, bedingung: bool, klartext: str) -> None:
         fehler.append(f'{kennung}: {klartext}')
 
 
-def ohne_kommentare(text: str) -> str:
-    """HTML- und Zeilenkommentare entfernen - sonst zaehlt der Pruefer
-    die eigenen Erlaeuterungen (etwa den Dateikopf-Kommentar dieser
-    Warenwirtschaft ueber "vier Zustaende") als Befund ueber den
-    Code. Zwei getrennte Durchgaenge: ein gemeinsames re.S wuerde die
-    ganze Datei schlucken."""
-    text = re.sub(r'<!--.*?-->', '', text, flags=re.S)
-    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
-    text = re.sub(r'^\s*//.*$', '', text, flags=re.M)
-    return text
+def ohne_js_kommentare(text: str) -> str:
+    """Kommentare aus JavaScript entfernen - zeichenweise, NICHT per
+    Textersetzung.
+
+    WARUM ZEICHENWEISE, UND WAS DIE TEXTERSETZUNG GEKOSTET HAT
+    Bis zur vierten Pruefrunde stand hier re.sub(r'/\\*.*?\\*/', ...) mit
+    re.S. Diese Ersetzung kennt keine Zeichenketten und keine
+    Zeilenkommentare: schreibt jemand in einem //-Kommentar die Wortfolge
+    "filterleiste()/*Aufbauen()", so bildet der Schraegstrich vor dem
+    Stern fuer sie einen Blockkommentar-Anfang, der erst am naechsten
+    echten */ endet. Genau das ist passiert - die dritte Pruefrunde fand
+    2.918 von 9.200 Zeilen in rahmen.js (32 % der Datei, darin 33
+    Funktionsdefinitionen) fuer diesen Pruefer unsichtbar, OHNE dass er
+    etwas gemeldet haette.
+
+    Behoben wurde damals nur der eine Kommentar, nicht der Mechanismus.
+    Die vierte Runde hat den Fall kuenstlich wiederhergestellt und
+    nachgewiesen, dass der Pruefer ihn weiterhin uebersieht. Deshalb
+    jetzt ein Abtaster, der die vier Zustaende von JavaScript-Quelltext
+    unterscheidet - Code, Zeichenkette ('/"/`), Zeilenkommentar,
+    Blockkommentar. Ein /* in einer Zeichenkette oder hinter // beginnt
+    damit keinen Kommentar mehr, weil der Abtaster dort gar nicht nach
+    Kommentaranfaengen sucht.
+
+    Die verbleibende Feinheit sind regulaere Ausdruecke im Quelltext
+    (/.../): ein Schraegstrich beginnt hier nur dann einen Kommentar,
+    wenn ihm ein / oder * unmittelbar FOLGT. In einem Regexliteral
+    stuende an dieser Stelle ein maskiertes Zeichen (\\/ oder \\*), nie
+    ein blankes. Die Pruefung ABDECKUNG weiter unten misst ausserdem
+    nach, ob dabei Code verschwunden ist - sie ist die Rueckversicherung
+    gegen genau die Sorte Fehler, die diese Funktion frueher hatte."""
+    heraus = []
+    i, n = 0, len(text)
+    while i < n:
+        z = text[i]
+        if z in ('"', "'", '`'):
+            heraus.append(z)
+            i += 1
+            while i < n:
+                heraus.append(text[i])
+                if text[i] == '\\':
+                    i += 1
+                    if i < n:
+                        heraus.append(text[i])
+                        i += 1
+                    continue
+                if text[i] == z:
+                    i += 1
+                    break
+                i += 1
+            continue
+        if z == '/' and i + 1 < n and text[i + 1] == '/':
+            while i < n and text[i] != '\n':
+                i += 1
+            continue
+        if z == '/' and i + 1 < n and text[i + 1] == '*':
+            i += 2
+            while i + 1 < n and not (text[i] == '*' and text[i + 1] == '/'):
+                # Zeilenumbrueche erhalten: die Pruefungen unten arbeiten
+                # zeilenweise (^-Anker), ein verschluckter Umbruch klebte
+                # zwei Zeilen zusammen und veraenderte ihren Anfang.
+                if text[i] == '\n':
+                    heraus.append('\n')
+                i += 1
+            i += 2
+            continue
+        heraus.append(z)
+        i += 1
+    return ''.join(heraus)
+
+
+def ohne_html_kommentare(text: str) -> str:
+    """<!-- --> entfernen. Eigene Funktion, seit der JS-Abtaster oben
+    zeichenweise arbeitet: HTML ist kein JavaScript, und die frueher
+    gemeinsame Funktion lief den JS-Regeln ueber index.html hinweg."""
+    return re.sub(r'<!--.*?-->', '', text, flags=re.S)
+
+
+def ohne_css_kommentare(text: str) -> str:
+    """/* */ entfernen. In CSS gibt es weder //-Kommentare noch
+    Template-Literale; die einfache Ersetzung ist hier korrekt."""
+    return re.sub(r'/\*.*?\*/', '', text, flags=re.S)
 
 
 HTML_ROH = (WAWI / 'index.html').read_text(encoding='utf-8')
-CSS = ohne_kommentare((WAWI / 'style.css').read_text(encoding='utf-8'))
-H = ohne_kommentare(HTML_ROH)
+CSS = ohne_css_kommentare((WAWI / 'style.css').read_text(encoding='utf-8'))
+H = ohne_html_kommentare(HTML_ROH)
 
 # ---- Skripte einlesen: aus index.html, nicht aus einer gepflegten Liste ----
-SKRIPT_NAMEN = re.findall(r'<script src="([a-z_]+\.js)"', H)
+# Zeichenklasse absichtlich weit ([A-Za-z0-9_.-]): die frueher engere
+# ([a-z_]) haette ein spaeteres "bereich2.js" oder "wawi-hilfe.js"
+# STILLSCHWEIGEND uebergangen - der Pruefer haette acht von neun Dateien
+# geprueft und trotzdem gruen gemeldet. Eine Adresse mit Protokoll (die
+# beiden CDN-Skripte) kann nicht hineinfallen, weil sie : und / enthaelt.
+SKRIPT_NAMEN = re.findall(r'<script src="([A-Za-z0-9_.-]+\.js)"', H)
 if not SKRIPT_NAMEN:
     print('WARNUNG: kein einziges lokales <script> in wawi/index.html gefunden - '
           'der Pruefer haette nichts geprueft.')
     sys.exit(1)
 
-SKRIPTE = {name: ohne_kommentare((WAWI / name).read_text(encoding='utf-8'))
-           for name in SKRIPT_NAMEN}
+SKRIPTE_ROH = {name: (WAWI / name).read_text(encoding='utf-8') for name in SKRIPT_NAMEN}
+SKRIPTE = {name: ohne_js_kommentare(text) for name, text in SKRIPTE_ROH.items()}
 JS_GESAMT = '\n'.join(SKRIPTE.values())
 
 print(f'Gefundene Skripte ({len(SKRIPT_NAMEN)}, aus wawi/index.html gelesen): '
       f'{", ".join(SKRIPT_NAMEN)}\n')
+
+# =====================================================================
+# ABDECKUNG — der Pruefer misst sich selbst
+# =====================================================================
+# "Eine gruene Pruefung, die nichts prueft, ist gefaehrlicher als eine
+# rote." Der schwerste Befund der dritten Runde stand nicht in der
+# Oberflaeche, sondern hier: ein Kommentar hatte den Pruefer fuer ein
+# Drittel von rahmen.js blind gemacht, UND ER MELDETE NICHTS. Genau das
+# soll ab hier unmoeglich sein - nicht nur, weil ohne_js_kommentare()
+# oben jetzt richtig abtastet (auch ein Abtaster kann Fehler haben),
+# sondern weil der Pruefer laut sagt, wieviel er sieht, und stehen
+# bleibt, wenn ihm eine oberste Deklaration abhandenkommt.
+#
+# Verglichen werden die obersten Deklarationen VOR und NACH dem
+# Entfernen der Kommentare. Verschwindet eine, gibt es genau zwei
+# Moeglichkeiten, und beide gehoeren gemeldet: entweder hat der
+# Kommentarabtaster Code verschluckt (der Fehler von damals), oder es
+# steht auskommentierter Code in der Datei (der dort nichts zu suchen
+# hat - was nicht laeuft, gehoert geloescht, die Versionsverwaltung
+# erinnert sich auch ohne Leiche).
+print('Vertrag: der Pruefer sieht jede Datei ganz')
+OBERSTE_FUNKTION = re.compile(r'^(?:async\s+)?function\s+(\w+)\s*\(', re.M)
+OBERSTE_BINDUNG = re.compile(r'^(?:let|const)\s+(\w+)', re.M)
+abdeckung_zeichen = [0, 0]
+for name in SKRIPT_NAMEN:
+    roh, sicht = SKRIPTE_ROH[name], SKRIPTE[name]
+    abdeckung_zeichen[0] += len(roh)
+    abdeckung_zeichen[1] += len(sicht)
+    verloren = ((set(OBERSTE_FUNKTION.findall(roh)) - set(OBERSTE_FUNKTION.findall(sicht)))
+                | (set(OBERSTE_BINDUNG.findall(roh)) - set(OBERSTE_BINDUNG.findall(sicht))))
+    anteil = 100 * len(sicht) / len(roh) if roh else 0
+    pruefe('ABDECKUNG', not verloren,
+           f'{name}: {len(roh.splitlines())} Zeilen, {anteil:.0f} % Zeichen nach Kommentarabzug, '
+           f'{len(OBERSTE_FUNKTION.findall(sicht))} oberste Funktionen sichtbar'
+           + ('' if not verloren else
+              f' — VERSCHWUNDEN: {", ".join(sorted(verloren))}'))
+print(f'  ---- zusammen {abdeckung_zeichen[1]} von {abdeckung_zeichen[0]} Zeichen '
+      f'({100 * abdeckung_zeichen[1] / abdeckung_zeichen[0]:.1f} %) unter Pruefung')
 
 # =====================================================================
 # ANKER — jede id, die gesucht wird, existiert irgendwo
@@ -91,8 +212,13 @@ print('Vertrag: jede id, die per getElementById gesucht wird, existiert')
 
 statische_ids = set(re.findall(r'\bid="([^"]+)"', H))
 
-# Von einem Skript selbst erzeugte ids, literal zugewiesen (el.id = '...').
+# Von einem Skript selbst erzeugte ids, literal zugewiesen
+# (el.id = '...' oder el.id = "..."). Beide Anfuehrungszeichen, aus
+# demselben Grund wie unten bei getElementById: der Bestand schreibt
+# heute durchgehend einfache, aber ein spaeteres doppeltes waere sonst
+# unsichtbar - eine Luecke, die sich niemand meldet.
 dynamische_ids = set(re.findall(r"\.id\s*=\s*'([^']+)'", JS_GESAMT))
+dynamische_ids |= set(re.findall(r'\.id\s*=\s*"([^"]+)"', JS_GESAMT))
 
 # ... oder als Template-Literal mit einem zur Laufzeit erst feststehenden
 # Rest (zeigeMaske() in rahmen.js: `feld-maske-${feld.name}`). Geprueft
@@ -101,7 +227,8 @@ dynamische_praefixe = tuple(sorted(set(
     re.findall(r"\.id\s*=\s*`([a-z0-9_-]+)\$\{", JS_GESAMT)
 )))
 
-gesuchte_ids = sorted(set(re.findall(r"getElementById\(\s*'([^']+)'\s*\)", JS_GESAMT)))
+gesuchte_ids = sorted(set(re.findall(r"getElementById\(\s*'([^']+)'\s*\)", JS_GESAMT))
+                      | set(re.findall(r'getElementById\(\s*"([^"]+)"\s*\)', JS_GESAMT)))
 for i in gesuchte_ids:
     vorhanden = (i in statische_ids or i in dynamische_ids
                  or any(i.startswith(p) for p in dynamische_praefixe))
