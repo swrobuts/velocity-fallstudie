@@ -372,7 +372,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         const zeilen = await fetchNutzungsschritte();
         ziel.innerHTML = zeilen.map(schritt => `
             <div class="howto-card">
-                <div class="step-number">${schritt.nummer}</div>
+                <!-- escapeHtml auch hier: nummer kommt wie titel und
+                     beschreibung aus v_nutzungsschritt. Dass daneben beide
+                     geschuetzt sind und diese eine nicht, war eine
+                     Unachtsamkeit, kein Urteil ueber den Datentyp - eine
+                     Spalte, die heute Ziffern fuehrt, kann morgen "01a"
+                     fuehren. -->
+                <div class="step-number">${escapeHtml(schritt.nummer)}</div>
                 <h3>${escapeHtml(schritt.titel)}</h3>
                 <p>${escapeHtml(schritt.beschreibung)}</p>
             </div>`).join('');
