@@ -291,6 +291,36 @@
               </select>
             </label>
           </div>
+
+          <!-- Gestaltungsauftrag "Knopf unters Profil": eigener Abschnitt,
+               ausdruecklich NICHT im Abschnitt "Einstellungen" darueber.
+               Der Unterschied ist kein Formfehler: "Einstellungen" traegt
+               reine Anzeigepraeferenzen ohne fachliche Bedeutung
+               (Zebramuster, Kopftafel, Sprache) - sie leben in
+               localStorage und aendern nie einen Datensatz. Diese Funktion
+               storniert echte Ausleihezeilen und erfindet neue - sie
+               AENDERT DATEN, unwiderruflich. Ein eigener, deutlich
+               beschrifteter Abschnitt (Ueberschrift "Lehrbetrieb", nicht
+               "Einstellungen") mit einer eigenen Erklaerzeile haelt diesen
+               Unterschied auch optisch fest, statt ihn als siebten Punkt
+               unter Zebramuster/Sprache zu verstecken.
+
+               hidden per Vorgabe, per JavaScript eingeblendet (siehe
+               profilAufbauen() in rahmen.js): NUR fuer die Rolle leitung
+               sichtbar, nicht nur deaktiviert - ein ausgegrauter Knopf
+               waere eine Einladung, nach dem Grund zu fragen (derselbe
+               Grundsatz wie beim Suchfeld ohne Liste, siehe dort). Wer
+               keine Rolle leitung traegt, sieht diese Betriebsfunktion
+               gar nicht erst, so wie die Navigation ihm auch keinen nicht
+               erlaubten Arbeitsbereich zeigt. -->
+          <div id="profilmenue-lehrbetrieb" class="profilmenue-abschnitt profilmenue-lehrbetrieb" hidden>
+            <span class="profilmenue-abschnitt-titel" data-i18n="index.lehrbetriebHeading">Lehrbetrieb</span>
+            <p class="profilmenue-schalter-hinweis profilmenue-lehrbetrieb-hinweis"
+               data-i18n="index.lehrbetriebHint">Keine Funktion der Warenwirtschaft: hält für diese Fallstudie den Vorführbestand frisch. Ändert echte Daten.</p>
+            <button id="knopf-lehrbetrieb-auffrischen" type="button" class="knopf-gefaehrlich profilmenue-lehrbetrieb-knopf"
+                    data-i18n="button.lehrbetriebAuffrischen">Vorführbestand jetzt auffrischen</button>
+          </div>
+
           <button id="knopf-abmelden" type="button" class="profilmenue-eintrag" data-i18n="index.logout">Abmelden</button>
         </div>
       </div>

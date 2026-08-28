@@ -705,3 +705,192 @@ begin
   perform set_config('request.jwt.claims', '', true);
 end;
 $$;
+
+-- =====================================================================
+-- Lehrbetrieb: Vorfuehrbestand auffrischen (Gestaltungsauftrag "Knopf
+-- unters Profil")
+--
+-- Eigene, kleine Vorrichtung statt des Bestands: der Bestand traegt in
+-- einer frisch aufgebauten Datenbank keine Raeder/Kunden/Stationen (die
+-- kommen erst aus db/betrieb/, das VOR den pgTAP-Tests nicht laeuft),
+-- kann aber in einer bereits betriebenen Datenbank hunderte Zeilen
+-- tragen. Alle Zusicherungen rechnen deshalb gegen den VORHER-Zustand
+-- (gezaehlt, nicht angenommen) statt gegen feste Zahlen - dieselbe
+-- Ueberlegung wie bei "GEZAEHLT statt eingetragen" in tools/abnahme.sh.
+-- =====================================================================
+create or replace function velocity_test.fixture_lehrbetrieb(p_suffix text, p_anzahl integer)
+returns table (o_station_id bigint, o_fahrrad_ids bigint[], o_kunde_ids bigint[])
+language plpgsql as $$
+declare
+  v_adresse bigint; v_typ bigint; v_h bigint; v_m bigint; v_f bigint; v_k bigint;
+  i integer;
+begin
+  insert into velocity.adresse (strasse, hausnummer, plz, ort)
+       values ('Lehrbetriebstrasse', '1', '97070', 'Wuerzburg')
+    returning adresse_id into v_adresse;
+  insert into velocity.station (stationsnummer, name, adresse_id, kapazitaet)
+       values ('LB-' || p_suffix, 'Lehrbetrieb-Station ' || p_suffix, v_adresse, p_anzahl + 5)
+    returning station_id into o_station_id;
+
+  insert into velocity.fahrradtyp (typ_code, bezeichnung)
+       values ('LB-' || p_suffix, 'Lehrbetriebstyp ' || p_suffix) returning typ_id into v_typ;
+  insert into velocity.hersteller (name) values ('LB-Hersteller-' || p_suffix)
+    returning hersteller_id into v_h;
+  insert into velocity.fahrradmodell (hersteller_id, typ_id, modellbezeichnung)
+       values (v_h, v_typ, 'LB-Modell-' || p_suffix) returning modell_id into v_m;
+
+  o_fahrrad_ids := array[]::bigint[];
+  o_kunde_ids   := array[]::bigint[];
+  for i in 1..p_anzahl loop
+    insert into velocity.fahrrad (rahmennummer, modell_id)
+         values ('RN-LB-' || p_suffix || '-' || i, v_m) returning fahrrad_id into v_f;
+    insert into velocity.fahrrad_position (fahrrad_id, station_id) values (v_f, o_station_id);
+    o_fahrrad_ids := array_append(o_fahrrad_ids, v_f);
+
+    insert into velocity.kunde (email, vorname, nachname)
+         values ('lb-' || p_suffix || '-' || i || '@example.org', 'Lena', 'Lehrbetrieb')
+      returning kunde_id into v_k;
+    o_kunde_ids := array_append(o_kunde_ids, v_k);
+  end loop;
+  return next;
+end;
+$$;
+
+-- Gegenprobe zuerst (Reihenfolge bewusst): beweist, dass die Ablehnung
+-- OHNE die Rolle leitung wirklich nichts anfasst - nicht nur, dass sie
+-- einen Fehler wirft. Ohne dieses Gegenstueck koennte "throws_ok" allein
+-- auch eine Funktion bestehen, die zuerst schreibt und danach erst
+-- abbricht.
+create or replace function velocity_test.test_l_lehrbetrieb_ohne_leitung_kein_zugriff()
+returns setof text language plpgsql as $$
+declare
+  v_fix          record;
+  v_alte_ausleihe bigint;
+begin
+  select * into v_fix from velocity_test.fixture_lehrbetrieb('gegenprobe', 2);
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit, status)
+       values (v_fix.o_kunde_ids[1], v_fix.o_fahrrad_ids[1], v_fix.o_station_id,
+               now() - interval '2 days', 'aktiv')
+    returning ausleihe_id into v_alte_ausleihe;
+  update velocity.fahrrad set status = 'ausgeliehen' where fahrrad_id = v_fix.o_fahrrad_ids[1];
+  update velocity.fahrrad_position set station_id = null where fahrrad_id = v_fix.o_fahrrad_ids[1];
+
+  -- Alle drei Fachrollen, aber nicht leitung: eine fachlich beschaeftigte
+  -- Person soll diese Betriebsfunktion trotzdem nicht ausloesen koennen -
+  -- sie ist kein Teil ihrer Fachaufgabe (Begruendung in 0019_wawi_logik.sql).
+  perform velocity_test.fixture_rollen('lbgegenprobe',
+    array['disposition', 'werkstatt', 'kundenservice']);
+  return next throws_ok(
+    'select * from velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen()',
+    '42501', null,
+    'Ohne die Rolle leitung bleibt der Vorfuehrbestand unangetastet');
+
+  -- Die Gegenprobe selbst: die alte Ausleihe der Vorrichtung steht
+  -- unveraendert da, nichts wurde vor dem Abbruch schon geschrieben.
+  return next is(
+    (select status::text from velocity.ausleihe where ausleihe_id = v_alte_ausleihe),
+    'aktiv', 'Die abgelehnte Anfrage aendert die alte Ausleihe nicht');
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_fix.o_fahrrad_ids[1]),
+    'ausgeliehen', 'Die abgelehnte Anfrage aendert das Rad nicht');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+create or replace function velocity_test.test_l_lehrbetrieb_vorfuehrbestand_auffrischen()
+returns setof text language plpgsql as $$
+declare
+  v_fix               record;
+  v_alte_ausleihe     bigint;
+  v_vorher_gesamt     integer;
+  v_vorher_kandidaten integer;
+  v_protokoll_vorher  integer;
+  v_protokoll_nachher integer;
+  v_ergebnis          record;
+  v_ergebnis2         record;
+begin
+  select count(*) into v_vorher_gesamt from velocity.fahrrad;
+  select count(*) into v_vorher_kandidaten
+    from velocity.ausleihe a
+   where a.status = 'aktiv'
+     and (a.startzeit::date <> current_date
+          or exists (select 1 from velocity.kunde k
+                      where k.kunde_id = a.kunde_id and k.auth_uid is not null));
+  select count(*) into v_protokoll_vorher from velocity.uebernahme_protokoll;
+
+  select * into v_fix from velocity_test.fixture_lehrbetrieb('auffrischen', 6);
+
+  -- Genau der Fall, den Block A schliessen muss: eine aktive Ausleihe
+  -- mit einem Starttag vor heute, auf einem der frischen Raeder.
+  insert into velocity.ausleihe (kunde_id, fahrrad_id, start_station_id, startzeit, status)
+       values (v_fix.o_kunde_ids[1], v_fix.o_fahrrad_ids[1], v_fix.o_station_id,
+               now() - interval '2 days', 'aktiv')
+    returning ausleihe_id into v_alte_ausleihe;
+  update velocity.fahrrad set status = 'ausgeliehen' where fahrrad_id = v_fix.o_fahrrad_ids[1];
+  update velocity.fahrrad_position set station_id = null where fahrrad_id = v_fix.o_fahrrad_ids[1];
+
+  -- Zugleich eine offene fahruntaugliche Meldung auf ebendiesem Rad -
+  -- das deckt den ZWEITEN Zweig von Block A ('defekt' statt
+  -- 'verfuegbar') UND macht die folgende Zusicherung ueber seinen
+  -- Endzustand deterministisch: ein Rad ohne diese Meldung wuerde
+  -- 'verfuegbar' und stuende danach selbst wieder als Kandidat fuer
+  -- Block A auf dieselben Weise zur Wahl - mit dem festen Startwert
+  -- zwar reproduzierbar, aber abhaengig von jeder Zeile, die schon
+  -- vor diesem Testlauf in der Datenbank stand, und damit nicht ohne
+  -- Weiteres vorhersagbar. 'defekt' schliesst das Rad dagegen aus
+  -- Block B aus (siehe dortiger Filter) - sein Endzustand steht fest.
+  insert into velocity.schadensmeldung
+         (fahrrad_id, melder_kunde_id, kategorie, beschreibung, schwere)
+       values (v_fix.o_fahrrad_ids[1], v_fix.o_kunde_ids[2], 'Rahmen',
+               'Rahmen gebrochen (Testvorrichtung)', 'fahruntauglich');
+
+  perform velocity_test.fixture_rollen('lbauffrischen', array['leitung']);
+  select * into v_ergebnis from velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen();
+
+  return next is(v_ergebnis.storniert, v_vorher_kandidaten + 1,
+    'Alle veralteten aktiven Ausleihen werden storniert, einschliesslich der Vorrichtung');
+  return next is(v_ergebnis.flotte, v_vorher_gesamt + 6,
+    'Die gemeldete Flottengroesse zaehlt den gesamten Bestand, nicht nur die neuen Raeder');
+  return next is(
+    (select count(*)::integer from velocity.ausleihe where status = 'aktiv'),
+    v_ergebnis.aktiv, 'Die gemeldete aktive Zahl stimmt mit der Datenbank ueberein');
+  return next ok(v_ergebnis.aktiv >= ceil(v_ergebnis.flotte * 0.40)::integer,
+    'Die Mindestquote von 40 % ist erreicht');
+  return next is(
+    round(v_ergebnis.anteil_prozent, 1),
+    round(100.0 * v_ergebnis.aktiv / v_ergebnis.flotte, 1),
+    'Der gemeldete Anteil passt zu den gemeldeten Zahlen');
+
+  return next is(
+    (select status::text from velocity.ausleihe where ausleihe_id = v_alte_ausleihe),
+    'storniert', 'Die alte Ausleihe der Vorrichtung wird storniert, nicht abgeschlossen (Umsatz/Fahrten/CO2 bleiben unberuehrt)');
+  return next ok(
+    (select endzeit is not null and end_station_id is not null
+       from velocity.ausleihe where ausleihe_id = v_alte_ausleihe),
+    'Endzeit und Endstation werden gemeinsam gesetzt (ausleihe_endort_chk, GR13)');
+  return next is(
+    (select status::text from velocity.fahrrad where fahrrad_id = v_fix.o_fahrrad_ids[1]),
+    'defekt',
+    'Das Rad der alten Ausleihe hat eine offene fahruntaugliche Meldung und wird defekt, nicht verfuegbar');
+  return next ok(
+    (select station_id is not null from velocity.fahrrad_position
+      where fahrrad_id = v_fix.o_fahrrad_ids[1]),
+    'Trotzdem bekommt es wieder einen Standort zurueck (GR13: kein Ort nur waehrend der Fahrt)');
+
+  select count(*) into v_protokoll_nachher from velocity.uebernahme_protokoll;
+  return next is(v_protokoll_nachher, v_protokoll_vorher + 1,
+    'Der Lauf hinterlaesst genau einen Nachweis im Uebernahmeprotokoll (nicht im Aenderungsprotokoll, GR19 gilt nur fuer Stammdaten)');
+
+  -- Wiederholbarkeit (Kopfkommentar von db/betrieb/
+  -- aktive_ausleihen_mindestquote.sql): ein zweiter Lauf am selben Tag
+  -- verdoppelt nichts.
+  select * into v_ergebnis2 from velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen();
+  return next is(v_ergebnis2.storniert, 0,
+    'Ein zweiter Lauf am selben Tag storniert nichts mehr - alles traegt schon das heutige Datum');
+  return next is(v_ergebnis2.neu, 0,
+    'Ein zweiter Lauf am selben Tag legt nichts nach - die Quote steht bereits');
+  return next is(v_ergebnis2.aktiv, v_ergebnis.aktiv,
+    'Die aktive Zahl bleibt beim zweiten Lauf unveraendert');
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;

@@ -1785,6 +1785,33 @@ body.navigation-schmal .navigation-griff {
      abgeschnitten werden. */
 }
 
+/* ===== Lehrbetrieb (Gestaltungsauftrag "Knopf unters Profil") =====
+   Eigener Abschnitt, kein siebter Punkt unter "Einstellungen" - siehe
+   die ausfuehrliche Begruendung in index.html an derselben Stelle: die
+   Funktion dahinter AENDERT DATEN, "Einstellungen" tut das nie.
+   .profilmenue-abschnitt liefert bereits die trennende Linie und den
+   Grossbuchstaben-Titel (siehe dort) - hier nur, was diesen Abschnitt
+   zusaetzlich von ihr unterscheidet. */
+.profilmenue-lehrbetrieb-hinweis {
+  /* .profilmenue-schalter-hinweis rueckt normalerweise auf die Textkante
+     EINES Kontrollkaestchens ein (siehe dortige Begruendung) - hier steht
+     kein Kaestchen darueber, der Einzug waere ohne Bezug. */
+  margin-left: 0;
+  max-width: none;
+}
+
+/* Volle Breite wie .profilmenue-eintrag (der Knopf steht in derselben
+   schmalen Spalte), aber in der Farbe von .knopf-gefaehrlich: die
+   Handlung ist tatsaechlich gefaehrlich (storniert Ausleihen
+   unwiderruflich), keine Dekoration - dieselbe Regel wie dort. */
+.profilmenue-lehrbetrieb-knopf {
+  display: block;
+  width: 100%;
+  min-height: var(--ziel);
+  margin-top: var(--raum-2);
+  text-align: center;
+}
+
 /* Gestaltungsauftrag, Punkt 2: die fünf Rubriken sollen als solche
    erkennbar sein, nicht als fünf gleich schwere Textzeilen. padding
    oben/unten (statt der Knöpfe direkt gegeneinanderzustellen) gibt dem

@@ -547,6 +547,16 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} hat noch eine laufende Fahrt. Erst die Rückgabe abwarten.",
     "art17.doneMessage": "Kunde {nummer} anonymisiert. Rechnungen und Fahrten bleiben erhalten.",
     "art17.confirmWord": "LOESCHEN",
+    "index.lehrbetriebHeading": "Lehrbetrieb",
+    "index.lehrbetriebHint": "Keine Funktion der Warenwirtschaft: hält für diese Fallstudie den Vorführbestand frisch. Ändert echte Daten.",
+    "button.lehrbetriebAuffrischen": "Vorführbestand jetzt auffrischen",
+    "lehrbetrieb.confirmHeader": "Vorführbestand jetzt auffrischen?",
+    "lehrbetrieb.whatDisappears": "WAS VERSCHWINDET: Jede noch aktive Ausleihe, deren Starttag nicht heute ist, wird storniert; ihr Rad wird an eine Station zurückgebucht. Erfundene Testdaten, keine echten Kundenfahrten – siehe db/betrieb/aktive_ausleihen_mindestquote.sql.",
+    "lehrbetrieb.whatAppears": "WAS ENTSTEHT: Neue, ebenso erfundene Ausleihen, bis mindestens 40 % der Flotte als unterwegs angezeigt wird. Nicht abgerechnet, geht in keine Umsatz-, Fahrten- oder CO₂-Auswertung ein.",
+    "lehrbetrieb.irreversible": "Der Vorgang ist nicht rückgängig zu machen.",
+    "lehrbetrieb.running": "Wird ausgeführt …",
+    "lehrbetrieb.runningStatus": "Vorführbestand wird aufgefrischt – das dauert einige Sekunden.",
+    "lehrbetrieb.doneMessage": "Vorführbestand aufgefrischt: {storniert} storniert, {neu} neu gestartet – jetzt {aktiv} von {flotte} Rädern unterwegs ({anteil} %).",
     "tile.minimum": "Minimum",
     "tile.maximum": "Maximum",
     "tile.countPerMonth": "Anzahl pro Monat",
@@ -1029,6 +1039,16 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} still has a ride in progress. Please wait for the return first.",
     "art17.doneMessage": "Customer {nummer} anonymised. Invoices and rides are retained.",
     "art17.confirmWord": "LOESCHEN",
+    "index.lehrbetriebHeading": "Teaching operations",
+    "index.lehrbetriebHint": "Not a feature of the inventory system: keeps this case study's demo data fresh. Changes real data.",
+    "button.lehrbetriebAuffrischen": "Refresh demo fleet now",
+    "lehrbetrieb.confirmHeader": "Refresh the demo fleet now?",
+    "lehrbetrieb.whatDisappears": "WHAT DISAPPEARS: every active rental whose start day isn't today is cancelled; its bike is returned to a station. Invented test data, not real customer rides – see db/betrieb/aktive_ausleihen_mindestquote.sql.",
+    "lehrbetrieb.whatAppears": "WHAT APPEARS: new, equally invented rentals, until at least 40% of the fleet shows as out on a ride. Not billed, and excluded from every revenue, ride, and CO₂ report.",
+    "lehrbetrieb.irreversible": "This action cannot be undone.",
+    "lehrbetrieb.running": "Running …",
+    "lehrbetrieb.runningStatus": "Refreshing the demo fleet – this takes a few seconds.",
+    "lehrbetrieb.doneMessage": "Demo fleet refreshed: {storniert} cancelled, {neu} newly started – now {aktiv} of {flotte} bikes out ({anteil}%).",
     "tile.minimum": "Minimum",
     "tile.maximum": "Maximum",
     "tile.countPerMonth": "Count per month",
@@ -1511,6 +1531,16 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} için devam eden bir sürüş var. Önce iadenin yapılmasını bekleyin.",
     "art17.doneMessage": "Müşteri {nummer} anonimleştirildi. Faturalar ve sürüşler saklanmaya devam eder.",
     "art17.confirmWord": "LOESCHEN",
+    "index.lehrbetriebHeading": "Eğitim işletimi",
+    "index.lehrbetriebHint": "Envanter yönetiminin bir işlevi değildir: bu örnek olay incelemesi için gösterim verilerini güncel tutar. Gerçek verileri değiştirir.",
+    "button.lehrbetriebAuffrischen": "Gösterim filosunu şimdi yenile",
+    "lehrbetrieb.confirmHeader": "Gösterim filosu şimdi yenilensin mi?",
+    "lehrbetrieb.whatDisappears": "NE KAYBOLUR: Başlangıç günü bugün olmayan her aktif kiralama iptal edilir; bisikleti bir istasyona geri gönderilir. Uydurma test verileridir, gerçek müşteri sürüşleri değildir – bkz. db/betrieb/aktive_ausleihen_mindestquote.sql.",
+    "lehrbetrieb.whatAppears": "NE OLUŞUR: Filonun en az %40'ı yolda görünene kadar yeni, aynı şekilde uydurma kiralamalar. Faturalandırılmaz, hiçbir ciro, sürüş veya CO₂ raporuna dahil edilmez.",
+    "lehrbetrieb.irreversible": "Bu işlem geri alınamaz.",
+    "lehrbetrieb.running": "Çalışıyor …",
+    "lehrbetrieb.runningStatus": "Gösterim filosu yenileniyor – bu birkaç saniye sürer.",
+    "lehrbetrieb.doneMessage": "Gösterim filosu yenilendi: {storniert} iptal edildi, {neu} yeni başlatıldı – şimdi {flotte} bisikletten {aktiv} tanesi yolda (%{anteil}).",
     "tile.minimum": "Minimum",
     "tile.maximum": "Maksimum",
     "tile.countPerMonth": "Aya göre sayı",
@@ -1993,6 +2023,16 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} todavía tiene un viaje en curso. Espere primero a la devolución.",
     "art17.doneMessage": "Cliente {nummer} anonimizado. Las facturas y los viajes se conservan.",
     "art17.confirmWord": "LOESCHEN",
+    "index.lehrbetriebHeading": "Operación docente",
+    "index.lehrbetriebHint": "No es una función de la gestión de inventario: mantiene actualizados los datos de demostración de este caso de estudio. Modifica datos reales.",
+    "button.lehrbetriebAuffrischen": "Actualizar la flota de demostración ahora",
+    "lehrbetrieb.confirmHeader": "¿Actualizar la flota de demostración ahora?",
+    "lehrbetrieb.whatDisappears": "QUÉ DESAPARECE: todo alquiler activo cuyo día de inicio no sea hoy se cancela; su bicicleta se devuelve a una estación. Datos de prueba inventados, no viajes reales de clientes – véase db/betrieb/aktive_ausleihen_mindestquote.sql.",
+    "lehrbetrieb.whatAppears": "QUÉ APARECE: nuevos alquileres, igualmente inventados, hasta que al menos el 40 % de la flota aparezca en circulación. No se facturan y no entran en ningún informe de ingresos, viajes o CO₂.",
+    "lehrbetrieb.irreversible": "Esta acción no se puede deshacer.",
+    "lehrbetrieb.running": "Ejecutando…",
+    "lehrbetrieb.runningStatus": "Actualizando la flota de demostración – esto tarda unos segundos.",
+    "lehrbetrieb.doneMessage": "Flota de demostración actualizada: {storniert} cancelados, {neu} iniciados de nuevo – ahora {aktiv} de {flotte} bicicletas en circulación ({anteil} %).",
     "tile.minimum": "Mínimo",
     "tile.maximum": "Máximo",
     "tile.countPerMonth": "Cantidad por mes",
@@ -2475,6 +2515,16 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} ha ancora una corsa in corso. Attendere prima la restituzione.",
     "art17.doneMessage": "Cliente {nummer} anonimizzato. Fatture e corse vengono conservate.",
     "art17.confirmWord": "LOESCHEN",
+    "index.lehrbetriebHeading": "Attività didattica",
+    "index.lehrbetriebHint": "Non è una funzione della gestione magazzino: mantiene aggiornati i dati dimostrativi di questo caso di studio. Modifica dati reali.",
+    "button.lehrbetriebAuffrischen": "Aggiorna ora la flotta dimostrativa",
+    "lehrbetrieb.confirmHeader": "Aggiornare ora la flotta dimostrativa?",
+    "lehrbetrieb.whatDisappears": "COSA SCOMPARE: ogni noleggio attivo il cui giorno di inizio non è oggi viene annullato; la bici torna a una stazione. Dati di prova inventati, non viaggi reali di clienti – vedi db/betrieb/aktive_ausleihen_mindestquote.sql.",
+    "lehrbetrieb.whatAppears": "COSA COMPARE: nuovi noleggi, altrettanto inventati, finché almeno il 40% della flotta risulta in giro. Non fatturati, esclusi da ogni report su fatturato, corse o CO₂.",
+    "lehrbetrieb.irreversible": "L'operazione non può essere annullata.",
+    "lehrbetrieb.running": "In esecuzione…",
+    "lehrbetrieb.runningStatus": "Aggiornamento della flotta dimostrativa in corso – richiede alcuni secondi.",
+    "lehrbetrieb.doneMessage": "Flotta dimostrativa aggiornata: {storniert} annullati, {neu} avviati di nuovo – ora {aktiv} di {flotte} bici in giro ({anteil}%).",
     "tile.minimum": "Minimo",
     "tile.maximum": "Massimo",
     "tile.countPerMonth": "Numero per mese",
@@ -2957,6 +3007,16 @@ const UEBERSETZUNGEN = {
     "art17.runningRideBlocks": "{name} ma jeszcze trwający przejazd. Najpierw poczekaj na zwrot roweru.",
     "art17.doneMessage": "Klient {nummer} zanonimizowany. Faktury i przejazdy zostają zachowane.",
     "art17.confirmWord": "LOESCHEN",
+    "index.lehrbetriebHeading": "Działalność dydaktyczna",
+    "index.lehrbetriebHint": "To nie jest funkcja gospodarki magazynowej: utrzymuje świeże dane pokazowe tego studium przypadku. Zmienia rzeczywiste dane.",
+    "button.lehrbetriebAuffrischen": "Odśwież teraz flotę pokazową",
+    "lehrbetrieb.confirmHeader": "Odświeżyć teraz flotę pokazową?",
+    "lehrbetrieb.whatDisappears": "CO ZNIKA: każde aktywne wypożyczenie, którego dzień rozpoczęcia nie jest dzisiejszy, zostaje anulowane; rower wraca do stacji. Zmyślone dane testowe, a nie prawdziwe przejazdy klientów – zob. db/betrieb/aktive_ausleihen_mindestquote.sql.",
+    "lehrbetrieb.whatAppears": "CO POWSTAJE: nowe, równie zmyślone wypożyczenia, aż co najmniej 40% floty będzie wyświetlane jako w trasie. Nierozliczane, nie wchodzi do żadnego zestawienia przychodów, przejazdów ani CO₂.",
+    "lehrbetrieb.irreversible": "Tej czynności nie można cofnąć.",
+    "lehrbetrieb.running": "Trwa wykonywanie…",
+    "lehrbetrieb.runningStatus": "Odświeżanie floty pokazowej – to potrwa kilka sekund.",
+    "lehrbetrieb.doneMessage": "Flota pokazowa odświeżona: anulowano {storniert}, uruchomiono na nowo {neu} – teraz {aktiv} z {flotte} rowerów w trasie ({anteil}%).",
     "tile.minimum": "Minimum",
     "tile.maximum": "Maksimum",
     "tile.countPerMonth": "Liczba na miesiąc",
@@ -3519,6 +3579,20 @@ function profilAufbauen(benutzer, rollen) {
         marke.textContent = rolle;
         rollenKasten.append(marke);
     }
+
+    // Gestaltungsauftrag "Knopf unters Profil": der Abschnitt "Lehrbetrieb"
+    // ist NUR fuer die Rolle leitung sichtbar - dieselbe Rolle, die
+    // velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen ueber
+    // fn_rolle_verlangen('leitung') ohnehin verlangt (siehe
+    // db/aufbau/0019_wawi_logik.sql fuer die Begruendung der Rollenwahl).
+    // hidden statt disabled: wer die Rolle nicht traegt, soll die Funktion
+    // gar nicht erst sehen, kein ausgegrauter Knopf, der zum Nachfragen
+    // einlaedt (derselbe Grundsatz wie beim Suchfeld ohne Liste und bei
+    // der Navigation selbst). Bei jedem profilAufbauen()-Durchlauf neu
+    // gesetzt, nicht nur einmal - dieselbe Rolle kann sich aendern, ohne
+    // dass die Seite neu laedt (siehe navigationAufbauen() daneben, das
+    // ebenso bei jedem Durchlauf neu filtert).
+    document.getElementById('profilmenue-lehrbetrieb').hidden = !rollen.has('leitung');
 
     // Gestaltungsauftrag, woertlich: "neben dem Profilbild von mir bitte
     // noch Uhrzeit, Datum und Eingeloggte Zeit angeben" - siehe
@@ -8969,6 +9043,118 @@ document.addEventListener('click', (e) => {
     if (!profilmenueOffen()) return;
     if (knopfProfil.contains(e.target) || profilmenue.contains(e.target)) return;
     profilmenueSchliessen();
+});
+
+// ===== Lehrbetrieb: Vorfuehrbestand auffrischen (Gestaltungsauftrag
+// "Knopf unters Profil") =====
+//
+// KEINE Funktion der Warenwirtschaft, siehe der ausfuehrliche
+// Kopfkommentar bei velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen
+// in db/aufbau/0019_wawi_logik.sql, der diese Entscheidung traegt: sie
+// haelt nur den Vorfuehrbestand dieser Fallstudie frisch. Der Abschnitt
+// im Markup (index.html) ist deshalb bewusst NICHT Teil von
+// "Einstellungen" und bleibt fuer jede Rolle ausser leitung verborgen
+// (siehe profilAufbauen() oben) - dieselbe Rolle, die die aufgerufene
+// Datenbankfunktion selbst ueber fn_rolle_verlangen('leitung') verlangt.
+// Ein Klick ohne diese Rolle waere ohnehin nur ein abgewiesener
+// RPC-Aufruf; der versteckte Knopf verhindert schon den Versuch.
+//
+// Verdrahtet wie "Abmelden" daneben: einmalig hier, am Skriptende, nicht
+// in profilAufbauen() - derselbe Grund wie beim Profilmenue selbst
+// (siehe dortiger Kommentar): profilAufbauen() laeuft bei jedem
+// seiteAufbauen()-Durchlauf erneut, ein hier angehaengter Klick-Handler
+// wuerde sich sonst mit der Zeit vervielfachen.
+const knopfLehrbetrieb = document.getElementById('knopf-lehrbetrieb-auffrischen');
+
+// Eigene Sperre statt nur knopf.disabled zu lesen: knopf.disabled wird
+// zwar sofort gesetzt (siehe unten), aber ein zweiter, sehr schneller
+// Klick koennte theoretisch vor dem naechsten Tick eintreffen. Dasselbe
+// Muster wie bei zeigeWerkzeugleiste() (dort genuegt disabled, weil dort
+// nichts VOR dem ersten await passiert) - hier steht mit dem
+// Bestaetigungsdialog ein eigener await davor, waehrend dessen der
+// Knopf gar nicht disabled ist (man soll ja noch "Abbrechen" klicken
+// koennen). Die Sperre muss also schon den Dialog selbst ausschliessen,
+// nicht erst den Datenbankaufruf danach.
+let lehrbetriebLaeuft = false;
+
+knopfLehrbetrieb.addEventListener('click', async () => {
+    if (lehrbetriebLaeuft) return;
+    lehrbetriebLaeuft = true;
+    try {
+        // Rueckfrage vor dem Ausfuehren, wie beim Loeschdialog der Kunden
+        // (siehe anonymisieren() in kunden.js: bestaetige() mit mehreren
+        // Textbloecken, getrennt durch Leerzeile) - WAS VERSCHWINDET und
+        // WAS ENTSTEHT, nicht nur "sicher?". Ohne Bestaetigungswort: das
+        // ist ausdruecklich der Anonymisierung vorbehalten (siehe
+        // Kommentar bei bestaetige() weiter oben), nicht jeder
+        // gefaehrlichen Aktion.
+        const ok = await bestaetige(
+            [
+                t('lehrbetrieb.confirmHeader'),
+                t('lehrbetrieb.whatDisappears'),
+                t('lehrbetrieb.whatAppears'),
+                t('lehrbetrieb.irreversible')
+            ].join('\n\n')
+        );
+        if (!ok) return;
+
+        // Das Profilmenue wieder OEFFNEN, nicht nur offen lassen: der
+        // Klick auf "Bestaetigen" im Dialog liegt ausserhalb von
+        // knopfProfil UND profilmenue (der <dialog> haengt direkt an
+        // document.body, siehe bestaetige() weiter oben) - derselbe
+        // document-Klick-Handler, der das Menue bei jedem Klick daneben
+        // schliesst, hat es also bereits geschlossen, WAEHREND der Dialog
+        // noch offen war. Im Browser nachgestellt (Bericht): ohne dieses
+        // erneute Oeffnen blieb der gleich folgende Ladezustand (Knopf
+        // gesperrt, Beschriftung "Wird ausgefuehrt ...") fuer niemanden
+        // sichtbar, weil das Menue zu diesem Zeitpunkt laengst zu war -
+        // ein blosses "nicht mehr schliessen" (wie zunaechst versucht)
+        // genuegte NICHT, es musste aktiv wieder auf.
+        profilmenueOeffnen();
+
+        // Ladezustand: 110 Ausleihen zu starten ist keine Millisekunde
+        // (jede einzelne laeuft ueber velocity.fn_ausleihe_starten, siehe
+        // db/aufbau/0019_wawi_logik.sql). disabled verhindert den
+        // Doppelklick, der Beschriftungswechsel sagt zusaetzlich, WARUM
+        // sich nichts tut - ein einfach ausgegrauter Knopf saehe wie ein
+        // haengender Klick aus.
+        knopfLehrbetrieb.disabled = true;
+        knopfLehrbetrieb.textContent = t('lehrbetrieb.running');
+        melde(t('lehrbetrieb.runningStatus'), 'neutral');
+
+        try {
+            const ergebnis = await rufeAuf('api_lehrbetrieb_vorfuehrbestand_auffrischen');
+            // returns table(...): PostgREST liefert eine Zeile als
+            // Ein-Elemente-Array, dasselbe Muster wie bei
+            // api_ausleihe_starten (siehe startRental() in src/supabase.js).
+            const zeile = Array.isArray(ergebnis) ? ergebnis[0] : ergebnis;
+            melde(t('lehrbetrieb.doneMessage', {
+                storniert: zeile.storniert,
+                neu: zeile.neu,
+                aktiv: zeile.aktiv,
+                flotte: zeile.flotte,
+                anteil: zahlFormat(zeile.anteil_prozent,
+                    { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+            }), 'gut');
+
+            // Der gerade sichtbare Arbeitsbereich (haeufig Flotte oder
+            // Auswertungen) zeigt sonst weiter den Stand von vor dem Lauf,
+            // bis irgendein anderer Klick ihn zufaellig neu aufbaut -
+            // dasselbe Nachziehen wie beim Sprachwechsel weiter unten.
+            if (aktiverBereich) await aktiverBereich.aufbauen();
+        } catch (fehler) {
+            melde(fehler.message, 'schlecht');
+        } finally {
+            knopfLehrbetrieb.disabled = false;
+            // Frisch aus t() gelesen statt eine vor dem Lauf gemerkte
+            // Beschriftung wiederherzustellen: waehrend der Laufzeit
+            // (mehrere Sekunden) haette ein Sprachwechsel sonst die
+            // gemerkte, jetzt veraltete Sprache zurueckgebracht.
+            knopfLehrbetrieb.textContent = t('button.lehrbetriebAuffrischen');
+        }
+    } finally {
+        lehrbetriebLaeuft = false;
+    }
 });
 
 // ===== Einstellungen (Gestaltungsauftrag Punkt 3: Zebramuster als

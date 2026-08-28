@@ -100,8 +100,11 @@
 --  end_station_id setzt (siehe dort), wurde Schritt 12 wieder gruen.
 --
 --  VORBEDINGUNG: db/aufbau/ vollstaendig eingespielt (fn_ausleihe_starten,
---  die GR13-/GR15-Trigger). db/betrieb/referenzdaten_fahrten.sql muss
---  NICHT vorher laufen - diese Datei ruehrt keine Preise an.
+--  die GR13-/GR15-Trigger, seit dem Knopf-im-Profilmenue-Auftrag auch
+--  velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen aus
+--  0019_wawi_logik.sql - siehe NACHTRAG unten). db/betrieb/
+--  referenzdaten_fahrten.sql muss NICHT vorher laufen - diese Datei
+--  ruehrt keine Preise an.
 --
 --  WIEDERHOLBARKEIT: beliebig oft ausfuehrbar, auch mehrfach am selben
 --  Tag. Zweiter Lauf am selben Tag: Block A findet nichts mehr mit
@@ -121,197 +124,36 @@
 --  Zeile, zu der man zurueckwollte.
 -- =====================================================================
 
+-- NACHTRAG (Gestaltungsauftrag "Knopf unters Profil"): das Storno-und-
+-- Auffuell-Verfahren, das hier bis dahin als zwei DO-Bloecke stand, lebt
+-- jetzt in velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen
+-- (db/aufbau/0019_wawi_logik.sql) - NUR EINE UMSETZUNG, damit diese Datei
+-- und der neue Knopf im Profilmenue der Warenwirtschaft nicht zu zwei
+-- Fassungen derselben Logik auseinanderlaufen koennen. Die gesamte
+-- fachliche Begruendung oben (ANLASS, Block A/Block B, GR13/GR15, die
+-- beiden nachtraeglich gefundenen Abweichungen, Wiederholbarkeit) gilt
+-- unveraendert fort und steht bewusst weiter HIER, nicht in der
+-- Funktion: sie ist die Betriebsgeschichte dieser Datenbank, hier zuerst
+-- erarbeitet. Die Funktion traegt nur noch das ausfuehrbare Verfahren
+-- selbst, mit knapperen Verweisen auf diese Begruendung.
+--
+-- OHNE EIGENE ROLLENPRUEFUNG in der Funktion, absichtlich: diese Datei
+-- laeuft ueber db/run.py mit der vollen Verbindung aus .env, nicht ueber
+-- PostgREST - es gibt dabei keine angemeldete Sitzung und keinen
+-- auth.uid(). velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen (die
+-- duenne, fn_rolle_verlangen('leitung')-pruefende Huelle um dieselbe
+-- Funktion) ist der Weg, den NUR die Oberflaeche nimmt.
 begin;
 
--- ---- Block A: Alten Tagesstand aufraeumen ----------------------------
 do $$
-declare
-  v_alt          record;
-  v_station      bigint;
-  v_geschlossen  integer := 0;
+declare v_ergebnis record;
 begin
-  for v_alt in
-    select a.ausleihe_id, a.fahrrad_id,
-           exists (
-             select 1 from velocity.schadensmeldung sm
-              where sm.fahrrad_id = a.fahrrad_id
-                and sm.schwere = 'fahruntauglich'
-                and sm.status in ('offen', 'in_arbeit')
-           ) as fahruntauglich
-      from velocity.ausleihe a
-     where a.status = 'aktiv'
-       and (
-             a.startzeit::date <> current_date
-             -- Zweiter Grund zum Schliessen, unabhaengig vom Datum: der
-             -- Kunde hat eine echte Anmeldung (auth_uid gesetzt). Genau
-             -- das traf am 27.08.2026 beim allerersten Lauf zu - Block B
-             -- zog den Kundenpool ohne diese Ausnahme und traf zufaellig
-             -- den Kunden hinter M-0001/Robert Butscher, worauf
-             -- db/durchstich.py mit "Genau eine laufende Ausleihe"
-             -- fehlschlug (das Skript erwartet fuer SEINEN Testkunden
-             -- keine fremde aktive Fahrt). Block B schliesst diese
-             -- Kunden seither von vornherein aus (siehe dort); diese
-             -- Zeile heilt zusaetzlich einen bereits bestehenden Fall.
-             or exists (
-                  select 1 from velocity.kunde k
-                   where k.kunde_id = a.kunde_id and k.auth_uid is not null
-                )
-           )
-     order by a.ausleihe_id
-  loop
-    -- Station mit den meisten freien Plaetzen - nur eine Vorsichtsmass-
-    -- nahme, siehe Kopfkommentar. Der eigentliche Waechter ist der
-    -- aufgeschobene Constraint-Trigger, der beim commit greift.
-    select s.station_id into v_station
-      from velocity.station s
-     where s.betriebszeitraum @> current_date
-     order by s.kapazitaet
-              - (select count(*) from velocity.fahrrad_position p
-                  where p.station_id = s.station_id) desc,
-              s.station_id
-     limit 1;
-
-    -- endzeit UND end_station_id mitsetzen, nicht nur den Status: sonst
-    -- bleibt "endzeit is null" wahr, und genau das benutzt
-    -- db/durchstich.py (Schritt 12 in tools/abnahme.sh) als Merkmal fuer
-    -- "noch laufend" ("select count(*) ... where kunde_id = %s and
-    -- endzeit is null"), unabhaengig vom status-Feld. Beim allerersten
-    -- Lauf dieser Datei blieb endzeit hier leer und liess genau diese
-    -- Pruefung fuer den betroffenen Kunden dauerhaft fehlschlagen, auch
-    -- nach dem Storno. ausleihe_endort_chk verlangt end_station_id
-    -- (oder Koordinaten) GENAU DANN, wenn endzeit gesetzt ist - deshalb
-    -- beides in einer Anweisung.
-    update velocity.ausleihe
-       set status = 'storniert', endzeit = now(), end_station_id = v_station
-     where ausleihe_id = v_alt.ausleihe_id;
-
-    update velocity.fahrrad_position
-       set station_id = v_station, latitude = null, longitude = null,
-           aktualisiert_am = now()
-     where fahrrad_id = v_alt.fahrrad_id;
-
-    update velocity.fahrrad
-       set status = case when v_alt.fahruntauglich then 'defekt' else 'verfuegbar' end::velocity.fahrrad_status
-     where fahrrad_id = v_alt.fahrrad_id;
-
-    v_geschlossen := v_geschlossen + 1;
-  end loop;
-
-  raise notice 'Alte aktive Ausleihen storniert und Raeder zurueckgebucht: %', v_geschlossen;
-  perform set_config('velocity.mindestquote_storniert', v_geschlossen::text, true);
+  select * into v_ergebnis from velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen();
+  raise notice 'Alte aktive Ausleihen storniert und Raeder zurueckgebucht: %', v_ergebnis.storniert;
+  raise notice 'Neue aktive Ausleihen: % (jetzt % von % Raedern aktiv, % Prozent)',
+    v_ergebnis.neu, v_ergebnis.aktiv, v_ergebnis.flotte, v_ergebnis.anteil_prozent;
 end;
 $$;
-
--- ---- Block B: Auf die Zielquote auffuellen ----------------------------
-do $$
-declare
-  v_gesamt   integer;
-  v_ziel     integer;
-  v_aktiv    integer;
-  v_fehlt    integer;
-  v_paar     record;
-  v_ergebnis record;
-  v_neu_ids  bigint[] := array[]::bigint[];
-  v_neu      integer;
-begin
-  select count(*) into v_gesamt from velocity.fahrrad;
-  v_ziel := ceil(v_gesamt * 0.40)::integer;
-
-  select count(*) into v_aktiv from velocity.ausleihe where status = 'aktiv';
-  v_fehlt := v_ziel - v_aktiv;
-
-  if v_fehlt <= 0 then
-    raise notice 'Quote bereits erreicht: % von % Raedern aktiv (Ziel %) - nichts zu tun',
-      v_aktiv, v_gesamt, v_ziel;
-    perform set_config('velocity.mindestquote_neu', '0', true);
-    return;
-  end if;
-
-  -- Fester Startwert wie in den referenzdaten_*.sql-Dateien: derselbe
-  -- Lauf gegen denselben Bestand zieht dieselben Paare - wichtig fuer
-  -- die Erprobung in einer zurueckgerollten Transaktion (siehe Bericht).
-  perform setseed(0.4218);
-
-  for v_paar in
-    with rad as (
-      select f.fahrrad_id, row_number() over (order by random()) as rn
-        from velocity.fahrrad f
-       where f.status = 'verfuegbar'
-         and not exists (
-           select 1 from velocity.schadensmeldung sm
-            where sm.fahrrad_id = f.fahrrad_id
-              and sm.schwere = 'fahruntauglich'
-              and sm.status in ('offen', 'in_arbeit')
-         )
-    ),
-    kunde as (
-      select k.kunde_id, row_number() over (order by random()) as rn
-        from velocity.kunde k
-       where k.status = 'aktiv'
-         -- auth_uid is null: keine echte Anmeldung. Kunden MIT auth_uid
-         -- koennen sich wirklich einloggen (Website-Demo, db/durchstich.py)
-         -- und duerfen keine erfundene aktive Fahrt untergeschoben
-         -- bekommen - siehe die ausfuehrliche Begruendung in Block A.
-         and k.auth_uid is null
-         and not exists (
-           select 1 from velocity.ausleihe a
-            where a.kunde_id = k.kunde_id and a.status = 'aktiv'
-         )
-    )
-    select r.fahrrad_id, k.kunde_id
-      from rad r join kunde k on k.rn = r.rn
-     where r.rn <= v_fehlt
-     order by r.rn
-  loop
-    select * into v_ergebnis
-      from velocity.fn_ausleihe_starten(v_paar.kunde_id, v_paar.fahrrad_id);
-    if v_ergebnis.ausleihe_id is not null then
-      v_neu_ids := array_append(v_neu_ids, v_ergebnis.ausleihe_id);
-    else
-      -- Sollte bei den obigen Filtern nicht vorkommen; wenn doch, lieber
-      -- vermerken als den ganzen Lauf abbrechen zu lassen.
-      raise notice 'Nicht gestartet (Kunde %, Rad %): %',
-        v_paar.kunde_id, v_paar.fahrrad_id, v_ergebnis.meldung;
-    end if;
-  end loop;
-
-  -- Startzeiten ueber den Tag verteilen, statt alle auf "jetzt" zu
-  -- lassen - sonst liefen alle neuen Fahrten exakt gleich lang.
-  update velocity.ausleihe
-     set startzeit = current_date::timestamptz
-                    + (random() * extract(epoch from (now() - current_date::timestamptz)))
-                      * interval '1 second'
-   where ausleihe_id = any(v_neu_ids);
-
-  v_neu := coalesce(array_length(v_neu_ids, 1), 0);
-  if v_neu < v_fehlt then
-    raise notice 'Nur % von % benoetigten Raedern/Kunden verfuegbar - Quote evtl. knapp verfehlt',
-      v_neu, v_fehlt;
-  end if;
-
-  raise notice 'Neue aktive Ausleihen: % (Ziel % von %, vorher %)', v_neu, v_ziel, v_gesamt, v_aktiv;
-  perform set_config('velocity.mindestquote_neu', v_neu::text, true);
-end;
-$$;
-
--- ---- Nachweis im Uebernahmeprotokoll ---------------------------------
--- Anders als bei den referenzdaten_*.sql-Dateien KEINE Idempotenzsperre
--- ueber diesen Eintrag: diese Datei soll bei jedem Lauf erneut etwas
--- tun (oder feststellen, dass nichts zu tun ist). Der Eintrag ist reine
--- Nachvollziehbarkeit, kein Waechter.
-insert into velocity.uebernahme_protokoll
-       (lauf, quelle, ziel, gelesen, geschrieben, uebersprungen, hinweis)
-values (now(), 'Betrieb (täglich)', 'velocity.ausleihe (Mindestquote 40 %)',
-        0,
-        coalesce(current_setting('velocity.mindestquote_neu', true)::int, 0),
-        coalesce(current_setting('velocity.mindestquote_storniert', true)::int, 0),
-        format('ERFUNDENE aktive Ausleihen für den Tag %s, damit mindestens 40 %% der '
-               'Flotte als aktiv verliehen angezeigt werden. %s neue Ausleihen, %s '
-               'Ausleihen eines früheren Laufs storniert und ihre Räder zurückgebucht. '
-               'Nicht abgerechnet, geht in keine Umsatz-/CO2-Auswertung ein.',
-               current_date,
-               coalesce(current_setting('velocity.mindestquote_neu', true), '0'),
-               coalesce(current_setting('velocity.mindestquote_storniert', true), '0')));
 
 commit;
 

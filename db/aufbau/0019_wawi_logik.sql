@@ -12,6 +12,8 @@
 --             api_kunde_auskunft (Art. 15 DSGVO), api_kunde_anonymisieren
 --             (Art. 17 DSGVO statt DELETE), api_schaden_melden,
 --             api_auftrag_eroeffnen, api_auftrag_erledigen,
+--             velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen,
+--             velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen,
 --             velocity.seq_wartungsauftrag; ausserdem das Anhaengen des
 --             Aenderungsprotokolls (GR19) an mitarbeiter und station
 --             (bewusst NICHT an fahrrad, siehe Kommentar unten).
@@ -811,6 +813,293 @@ begin
 end;
 $$;
 
+-- ---- Lehrbetrieb: Vorfuehrbestand auffrischen -------------------------
+--
+-- ZUSCHNITT, und das gehoert an den Anfang, nicht in eine Fussnote: das
+-- hier ist KEINE Funktion der Warenwirtschaft. Ein echter Verleiher
+-- storniert nicht nachts alle laufenden Ausleihen und erfindet 110 neue -
+-- das modelliert kein Geschaeft, das es gibt. Es ist eine Funktion des
+-- LEHRBETRIEBS: sie haelt den Vorfuehrbestand dieser Fallstudie frisch,
+-- weil ein fester Datenbestand altert (siehe der ausfuehrliche
+-- Kopfkommentar in db/betrieb/aktive_ausleihen_mindestquote.sql, der die
+-- ganze fachliche Begruendung traegt und hier nicht wiederholt wird).
+-- Name, Kommentare und die Kennzeichnung in der Oberflaeche (siehe
+-- wawi/rahmen.js) sagen das deshalb ausdruecklich - sonst haelt ein
+-- Studierender das für ein reales Geschaeftsvorfall, und die Fallstudie
+-- lehrte etwas Falsches.
+--
+-- NUR EINE UMSETZUNG: das Storno-und-Auffuell-Verfahren stand bisher
+-- ausschliesslich in db/betrieb/aktive_ausleihen_mindestquote.sql, als
+-- zwei DO-Bloecke. Diese Funktion uebernimmt genau diese Anweisungen
+-- wortgleich - keine zweite, parallel gepflegte Fassung. Die Datei in
+-- db/betrieb/ ruft ab jetzt nur noch diese Funktion auf; die
+-- ausfuehrliche fachliche Begruendung (ANLASS, GR13/GR15, die beiden
+-- nachtraeglich gefundenen Abweichungen, Wiederholbarkeit) bleibt dort
+-- stehen, weil sie dort zuerst erarbeitet wurde und db/betrieb/ die
+-- Betriebsgeschichte dieser Datenbank festhaelt - hierher wandert nur
+-- das ausfuehrbare Verfahren.
+--
+-- ZWEI FUNKTIONEN, EIN GRUND: fn_lehrbetrieb_vorfuehrbestand_auffrischen
+-- traegt das gesamte Verfahren OHNE eigene Rollenpruefung.
+-- api_lehrbetrieb_vorfuehrbestand_auffrischen ist die duenne, sicherheits-
+-- pruefende Huelle darum, wie es das Muster in dieser Datei fuer jede
+-- api_-Funktion verlangt (fn_rolle_verlangen zuerst). Der Grund fuer die
+-- Trennung: db/betrieb/aktive_ausleihen_mindestquote.sql laeuft ueber
+-- db/run.py MIT DER VOLLEN VERBINDUNG AUS .env, nicht ueber PostgREST -
+-- es gibt dabei keine angemeldete Sitzung und keinen auth.uid(). Ein
+-- fn_rolle_verlangen-Aufruf schluege dort mit "Kein aktiver Mitarbeiter
+-- angemeldet" fehl, obwohl die Verbindung selbst laengst volles
+-- Vertrauen traegt (dieselbe Verbindung legt Tabellen an und aendert
+-- Schemata). Die Rollenpruefung gehoert deshalb nicht in das Verfahren
+-- selbst, sondern ausschliesslich in den Weg, den die Oberflaeche nimmt -
+-- fn_ ohne Praefix ist folgerichtig NICHT api_-benannt und bleibt damit,
+-- wie jede andere interne fn_-Funktion dieser Datei, fuer anon und
+-- authenticated gesperrt (test_s_keine_oeffentliche_funktion in
+-- t0011_sicherheit.sql prueft das ueber einen Sweep, nicht nur namentlich).
+--
+-- ROLLE: leitung, nicht disposition/werkstatt/kundenservice. Der Auftrag
+-- verlangt eine bewusste Entscheidung, keine naheliegende Standardwahl -
+-- hier die Begruendung. Die drei Fachrollen sind an ein Aufgabengebiet
+-- gebunden (Flotte, Werkstatt, Kundenkontakt); diese Funktion gehoert zu
+-- keinem davon, sie ist Betrieb der Anwendung selbst. leitung ist laut
+-- 0014_bereich_j_personal.sql die Rolle fuer "zusaetzlich Auswertungen
+-- und Mitarbeiterverwaltung" - schon heute die einzige Rolle ohne
+-- Bindung an ein Tagesgeschaeft, und die einzige, die in 0018 bereits
+-- Zugriff auf jede Auswertung der gesamten Flotte traegt (u. a.
+-- v_wawi_km_co2, v_wawi_umsatz_radtyp). Wer die Auswertungen der ganzen
+-- Warenwirtschaft sehen darf, ist die richtige Adresse dafuer, auch den
+-- Vorfuehrbestand hinter diesen Auswertungen aufzufrischen. Eine der drei
+-- Fachrollen (etwa disposition, die die Flotte fuehrt) waere die falsche
+-- Wahl: sie wuerde nahelegen, das Stornieren/Erfinden von Ausleihen sei
+-- eine Auspraegung IHRER Fachaufgabe - genau die Verwechslung, die dieser
+-- Abschnitt vermeiden soll.
+--
+-- GR19 (Aenderungsprotokoll): geprueft und bewusst NICHT angewandt.
+-- aenderungsprotokoll haelt laut Kopfkommentar dieser Datei und laut
+-- Abschnitt weiter unten ausschliesslich Aenderungen an STAMMDATEN fest
+-- (kunde, mitarbeiter, station) - fahrrad ist ausdruecklich ausgenommen,
+-- mit der Begruendung, dass Bewegungsdaten (jede Ausleihe aendert
+-- fahrrad.status) dort sonst die Stammdaten-Spur mit 24 000 wortgleichen
+-- Zeilen im Jahr entwerten wuerden (siehe "BEWUSST NICHT auf fahrrad"
+-- unten). Diese Funktion aendert ausschliesslich ausleihe, fahrrad und
+-- fahrrad_position - dieselben Bewegungstabellen, aus demselben Grund
+-- ausgenommen. Sie bekommt trotzdem eine Spur, nur die RICHTIGE: einen
+-- Satz im velocity.uebernahme_protokoll, demselben Protokoll, das jeder
+-- Datenuebernahme- und Referenzdaten-Lauf dieser Datenbank schon traegt
+-- (siehe db/betrieb/uebernahme_altdaten.sql und referenzdaten_*.sql) -
+-- ein Lauf-Protokoll fuer einen Lauf, kein Feld-Protokoll fuer einen
+-- Stammdatensatz.
+--
+-- RUECKGABE: nicht void. Eine Funktion, die im Verborgenen Hunderte
+-- Ausleihen storniert und erfindet, waere beunruhigend. Sie liefert
+-- deshalb eine einzelne Zeile mit genau den Zahlen, die ein Mensch nach
+-- einem Klick wissen will: wie viele storniert, wie viele neu, wie viele
+-- jetzt insgesamt unterwegs, wie gross die Flotte ist und wie hoch der
+-- Anteil - dieselben fuenf Werte, die vorher nur als RAISE NOTICE in
+-- einem Serverlog standen.
+create or replace function velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen()
+returns table (
+  storniert      integer,
+  neu            integer,
+  aktiv          integer,
+  flotte         integer,
+  anteil_prozent numeric
+)
+language plpgsql
+set search_path = velocity, pg_temp
+as $$
+declare
+  v_alt         record;
+  v_station     bigint;
+  v_geschlossen integer := 0;
+  v_gesamt      integer;
+  v_ziel        integer;
+  v_aktiv       integer;
+  v_fehlt       integer;
+  v_paar        record;
+  v_ergebnis    record;
+  v_neu_ids     bigint[] := array[]::bigint[];
+  v_neu         integer := 0;
+  v_anteil      numeric;
+begin
+  -- ---- Block A: Alten Tagesstand aufraeumen (siehe db/betrieb/
+  -- aktive_ausleihen_mindestquote.sql fuer die vollstaendige Begruendung
+  -- jeder einzelnen Zeile - ENDZEIT/END_STATION_ID gemeinsam mit dem
+  -- Status, die auth_uid-Ausnahme, 'storniert' statt 'abgeschlossen') --
+  for v_alt in
+    select a.ausleihe_id, a.fahrrad_id,
+           exists (
+             select 1 from velocity.schadensmeldung sm
+              where sm.fahrrad_id = a.fahrrad_id
+                and sm.schwere = 'fahruntauglich'
+                and sm.status in ('offen', 'in_arbeit')
+           ) as fahruntauglich
+      from velocity.ausleihe a
+     where a.status = 'aktiv'
+       and (
+             a.startzeit::date <> current_date
+             or exists (
+                  select 1 from velocity.kunde k
+                   where k.kunde_id = a.kunde_id and k.auth_uid is not null
+                )
+           )
+     order by a.ausleihe_id
+  loop
+    select s.station_id into v_station
+      from velocity.station s
+     where s.betriebszeitraum @> current_date
+     order by s.kapazitaet
+              - (select count(*) from velocity.fahrrad_position p
+                  where p.station_id = s.station_id) desc,
+              s.station_id
+     limit 1;
+
+    update velocity.ausleihe
+       set status = 'storniert', endzeit = now(), end_station_id = v_station
+     where ausleihe_id = v_alt.ausleihe_id;
+
+    update velocity.fahrrad_position
+       set station_id = v_station, latitude = null, longitude = null,
+           aktualisiert_am = now()
+     where fahrrad_id = v_alt.fahrrad_id;
+
+    update velocity.fahrrad
+       set status = case when v_alt.fahruntauglich then 'defekt' else 'verfuegbar' end::velocity.fahrrad_status
+     where fahrrad_id = v_alt.fahrrad_id;
+
+    v_geschlossen := v_geschlossen + 1;
+  end loop;
+
+  -- ---- Block B: Auf die Zielquote auffuellen (dieselbe Begruendung) ----
+  select count(*) into v_gesamt from velocity.fahrrad;
+  v_ziel := ceil(v_gesamt * 0.40)::integer;
+
+  select count(*) into v_aktiv from velocity.ausleihe where status = 'aktiv';
+  v_fehlt := v_ziel - v_aktiv;
+
+  if v_fehlt > 0 then
+    -- Fester Startwert wie in den referenzdaten_*.sql-Dateien: derselbe
+    -- Lauf gegen denselben Bestand zieht dieselben Paare - wichtig fuer
+    -- die Erprobung in einer zurueckgerollten Transaktion.
+    perform setseed(0.4218);
+
+    for v_paar in
+      with rad as (
+        select f.fahrrad_id, row_number() over (order by random()) as rn
+          from velocity.fahrrad f
+         where f.status = 'verfuegbar'
+           and not exists (
+             select 1 from velocity.schadensmeldung sm
+              where sm.fahrrad_id = f.fahrrad_id
+                and sm.schwere = 'fahruntauglich'
+                and sm.status in ('offen', 'in_arbeit')
+           )
+      ),
+      kunde as (
+        select k.kunde_id, row_number() over (order by random()) as rn
+          from velocity.kunde k
+         where k.status = 'aktiv'
+           and k.auth_uid is null
+           and not exists (
+             select 1 from velocity.ausleihe a
+              where a.kunde_id = k.kunde_id and a.status = 'aktiv'
+           )
+      )
+      select r.fahrrad_id, k.kunde_id
+        from rad r join kunde k on k.rn = r.rn
+       where r.rn <= v_fehlt
+       order by r.rn
+    loop
+      select * into v_ergebnis
+        from velocity.fn_ausleihe_starten(v_paar.kunde_id, v_paar.fahrrad_id);
+      if v_ergebnis.ausleihe_id is not null then
+        v_neu_ids := array_append(v_neu_ids, v_ergebnis.ausleihe_id);
+      else
+        raise notice 'Nicht gestartet (Kunde %, Rad %): %',
+          v_paar.kunde_id, v_paar.fahrrad_id, v_ergebnis.meldung;
+      end if;
+    end loop;
+
+    -- Startzeiten ueber den Tag verteilen, statt alle auf "jetzt" zu
+    -- lassen - sonst liefen alle neuen Fahrten exakt gleich lang.
+    update velocity.ausleihe
+       set startzeit = current_date::timestamptz
+                      + (random() * extract(epoch from (now() - current_date::timestamptz)))
+                        * interval '1 second'
+     where ausleihe_id = any(v_neu_ids);
+
+    v_neu := coalesce(array_length(v_neu_ids, 1), 0);
+    if v_neu < v_fehlt then
+      raise notice 'Nur % von % benoetigten Raedern/Kunden verfuegbar - Quote evtl. knapp verfehlt',
+        v_neu, v_fehlt;
+    end if;
+  end if;
+
+  -- ---- Nachweis im Uebernahmeprotokoll (siehe Kopfkommentar: GR19 statt-
+  -- ausleihe/fahrrad/fahrrad_position sind Bewegungsdaten, siehe oben) --
+  -- Anders als bei den referenzdaten_*.sql-Dateien KEINE Idempotenzsperre
+  -- ueber diesen Eintrag: dieser Lauf soll bei jedem Aufruf erneut etwas
+  -- tun (oder feststellen, dass nichts zu tun ist) - der Eintrag ist
+  -- reine Nachvollziehbarkeit, kein Waechter.
+  insert into velocity.uebernahme_protokoll
+         (lauf, quelle, ziel, gelesen, geschrieben, uebersprungen, hinweis)
+  values (now(), 'Betrieb (taeglich)', 'velocity.ausleihe (Mindestquote 40 %)',
+          0, v_neu, v_geschlossen,
+          format('ERFUNDENE aktive Ausleihen für den Tag %s, damit mindestens 40 %% der '
+                 'Flotte als aktiv verliehen angezeigt werden. %s neue Ausleihen, %s '
+                 'Ausleihen eines früheren Laufs storniert und ihre Räder zurückgebucht. '
+                 'Nicht abgerechnet, geht in keine Umsatz-/CO2-Auswertung ein.',
+                 current_date, v_neu, v_geschlossen));
+
+  select count(*) into v_aktiv from velocity.ausleihe where status = 'aktiv';
+  v_anteil := round(100.0 * v_aktiv / nullif(v_gesamt, 0), 1);
+
+  raise notice 'Lehrbetrieb: % storniert, % neu, % von % Raedern aktiv (% Prozent)',
+    v_geschlossen, v_neu, v_aktiv, v_gesamt, v_anteil;
+
+  return query select v_geschlossen, v_neu, v_aktiv, v_gesamt, v_anteil;
+end;
+$$;
+
+comment on function velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen() is
+  'Lehrbetrieb, keine Warenwirtschaftsfunktion: storniert veraltete aktive Ausleihen und '
+  'erfindet neue, bis mindestens 40 % der Flotte als unterwegs angezeigt wird. Ohne eigene '
+  'Rollenpruefung, damit db/betrieb/aktive_ausleihen_mindestquote.sql sie ueber db/run.py '
+  '(volle Verbindung, kein auth.uid()) weiterhin direkt aufrufen kann - die Rollenpruefung '
+  'traegt ausschliesslich api_lehrbetrieb_vorfuehrbestand_auffrischen fuer den Weg ueber '
+  'die Oberflaeche. NUR EINE UMSETZUNG: das Verfahren steht ausschliesslich hier, das '
+  'Betriebsskript ruft nur noch diese Funktion auf.';
+
+create or replace function velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen()
+returns table (
+  storniert      integer,
+  neu            integer,
+  aktiv          integer,
+  flotte         integer,
+  anteil_prozent numeric
+)
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare v_m bigint;
+begin
+  -- leitung, nicht eine der drei Fachrollen - Begruendung im
+  -- Kopfkommentar dieses Abschnitts oben.
+  v_m := velocity.fn_rolle_verlangen('leitung');
+  return query select * from velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen();
+end;
+$$;
+
+comment on function velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen() is
+  'Lehrbetrieb (Rolle leitung), keine Warenwirtschaftsfunktion: haelt den Vorfuehrbestand '
+  'dieser Fallstudie frisch, indem veraltete aktive Ausleihen storniert und neue erfunden '
+  'werden, bis mindestens 40 % der Flotte als unterwegs angezeigt wird. Storniert echte '
+  'Ausleihezeilen unwiderruflich - siehe wawi/rahmen.js fuer die Rueckfrage vor dem Aufruf. '
+  'Nicht abgerechnet, geht in keine Umsatz-/Fahrten-/CO2-Auswertung ein. Duenne '
+  'Rollenpruefung um velocity.fn_lehrbetrieb_vorfuehrbestand_auffrischen, das das '
+  'eigentliche Verfahren traegt.';
+
 -- ---- GR19 auf die uebrigen Stammdaten ausweiten ----------------------
 -- kunde traegt das Protokoll seit 0016. Diese zwei kommen dazu, sobald
 -- es Funktionen gibt, die sie aendern.
@@ -885,7 +1174,8 @@ grant execute on function
   velocity.api_kunde_anonymisieren(bigint, text),
   velocity.api_schaden_melden(bigint, text, text, text),
   velocity.api_auftrag_eroeffnen(bigint, bigint),
-  velocity.api_auftrag_erledigen(bigint, integer, text)
+  velocity.api_auftrag_erledigen(bigint, integer, text),
+  velocity.api_lehrbetrieb_vorfuehrbestand_auffrischen()
 to authenticated;
 
 -- fn_luftlinie_km gehoert dazu, obwohl sie nicht api_ heisst (W1). Sie
