@@ -75,7 +75,18 @@ ANZ_BILD=0
 while IFS= read -r b; do
   [[ -z "$b" ]] && continue
   [[ -f "src/$b" ]] || schlecht "$b wird verwendet, fehlt aber in src/"
-  cp "src/$b" "$BAU/assets/"
+  # UNTERORDNER BEHALTEN (behoben 28.08.2026).
+  # Vorher stand hier cp "src/$b" "$BAU/assets/" - flach. Aus
+  # assets/schrift/archivo-latin.woff2 wurde dadurch
+  # assets/archivo-latin.woff2, waehrend die Stildatei weiter unter
+  # schrift/ suchte. Ergebnis: 404, und die ganze Seite lief seit der
+  # Einfuehrung der Hausschrift auf dem Arial-Rueckfall - unbemerkt,
+  # weil ein Rueckfall genau dafuer da ist, nicht aufzufallen. Sichtbar
+  # wurde es erst, als der Betreiber vier Runden lang meldete, dass
+  # Aenderungen an der Schriftbreite nichts bewirken. Sie konnten es
+  # nicht: Arial hat keine Breitenachse.
+  mkdir -p "$BAU/$(dirname "$b")"
+  cp "src/$b" "$BAU/$b"
   ANZ_BILD=$((ANZ_BILD + 1))
 done < <(grep -ohE 'assets/[A-Za-z0-9_./-]+\.[A-Za-z0-9]+' \
          src/*.html src/*.css src/*.js | sed 's/?.*//' | sort -u)
@@ -143,6 +154,28 @@ HIER=$(grep -oE 'style\.css\?v=[0-9a-f]+' src/index.html | head -1)
 DORT=$(curl -s "$ADRESSE/" | grep -oE 'style\.css\?v=[0-9a-f]+' | head -1)
 [[ "$HIER" == "$DORT" ]] || schlecht "ausgeliefert wird $DORT, hier liegt $HIER"
 gut "ausgelieferter Stand stimmt ${GRAU}($HIER)${AUS}"
+
+# JEDE EINGEBUNDENE DATEI MUSS AUCH ANTWORTEN (neu am 28.08.2026).
+# Bisher wurde nur geprueft, ob die Seite selbst und ihr Stempel stimmen.
+# Beides war monatelang richtig, waehrend die Schriftdateien mit 404
+# antworteten: das Veroeffentlichungsskript hatte sie flach kopiert und
+# damit ihren Unterordner verloren. Die Seite lief seither auf dem
+# Arial-Rueckfall - und ein Rueckfall faellt nicht auf, das ist sein
+# Zweck. Vier Runden Aenderungen an der Schriftbreite blieben deshalb
+# wirkungslos, ohne dass irgendetwas Alarm geschlagen haette.
+# Jetzt wird JEDE in HTML, CSS und JS eingebundene Datei abgefragt.
+FEHLT=0
+while IFS= read -r a; do
+  [[ -z "$a" ]] && continue
+  C=$(curl -s -o /dev/null -w '%{http_code}' "$ADRESSE/$a" || true)
+  if [[ "$C" != "200" ]]; then
+    printf '   %s!%s %s antwortet mit %s\n' "$ROT" "$AUS" "$a" "$C"
+    FEHLT=$((FEHLT + 1))
+  fi
+done < <(grep -ohE 'assets/[A-Za-z0-9_./-]+\.[A-Za-z0-9]+' \
+         src/*.html src/*.css src/*.js | sed 's/?.*//' | sort -u)
+[[ "$FEHLT" -eq 0 ]] || schlecht "$FEHLT eingebundene Datei(en) fehlen auf dem Server"
+gut "alle eingebundenen Dateien antworten"
 
 WEITER=$(curl -s -o /dev/null -w '%{http_code}' "http://bikes.butscher.cloud/" || true)
 # Traefiks redirectscheme antwortet mit 302, nicht mit 301.
