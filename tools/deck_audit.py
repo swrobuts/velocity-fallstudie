@@ -47,6 +47,8 @@ UMLAUT_OK = {
     # Steigerungsformen von "genau" - die Folge aue steht hier ueber eine
     # Silbengrenze hinweg und ist kein transliteriertes ae.
     'genauer', 'genaue', 'genauen', 'genauere', 'genaueren', 'genauigkeit',
+    # Verben auf -auen: die Folge aue laeuft ebenfalls ueber eine Silbengrenze.
+    'bauen', 'gebauen', 'brauen', 'trauen', 'schauen', 'blauen', 'grauen',
 }
 
 
@@ -114,7 +116,21 @@ def zahl_im_repo():
         'Aufbaudateien':  sh("ls db/aufbau/*.sql | wc -l"),
         'Diagramme':      sh("ls doku/datenmodell/erd/*.mmd | wc -l"),
         'Abnahmepruefungen': sh("grep -c '^schritt ' tools/abnahme.sh"),
+        'Basistabellen': sh("grep -rhoiE 'create table (if not exists )?velocity\\.' "
+                            "db/aufbau/*.sql | wc -l"),
     }
+
+
+# Ausgeschriebene Zahlwoerter. Ohne sie bleibt "Zwoelf Aufbauschritte" unsichtbar,
+# weil die Zahlpruefung nur nach Ziffern sucht - genau so ist eine veraltete
+# Angabe ueber Monate im Deck stehen geblieben.
+ZAHLWORT = {
+    'zwei': '2', 'drei': '3', 'vier': '4', 'fuenf': '5', 'fünf': '5',
+    'sechs': '6', 'sieben': '7', 'acht': '8', 'neun': '9', 'zehn': '10',
+    'elf': '11', 'zwoelf': '12', 'zwölf': '12', 'dreizehn': '13',
+    'vierzehn': '14', 'fuenfzehn': '15', 'fünfzehn': '15', 'sechzehn': '16',
+    'siebzehn': '17', 'achtzehn': '18', 'neunzehn': '19', 'zwanzig': '20',
+}
 
 
 def main():
@@ -165,12 +181,14 @@ def main():
     # Zahlen gegen das Repository
     ganz = "\n".join(t for _, t in volltext)
     ist = zahl_im_repo()
+    wortzahl = '|'.join(ZAHLWORT)
     for name, wert in ist.items():
-        muster = re.compile(r'(\d+)\s+' + name[:6], re.I)
+        muster = re.compile(r'(\d+|' + wortzahl + r')\s+' + name[:6], re.I)
         for m in muster.finditer(ganz):
-            if m.group(1) != wert:
-                befunde.append((0, 'ZAHL', f'{name}: Folie sagt {m.group(1)}, '
-                                           f'im Repository sind es {wert}'))
+            gesagt = ZAHLWORT.get(m.group(1).lower(), m.group(1))
+            if gesagt != wert:
+                befunde.append((0, 'ZAHL', f'{name}: Folie sagt {m.group(1)} '
+                                           f'(= {gesagt}), im Repository sind es {wert}'))
 
     if '--text' in sys.argv:
         for nr, t in volltext:

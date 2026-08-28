@@ -97,7 +97,7 @@ von OneDrive — dort bleibt PowerPoint beim Öffnen hängen.
 | 28 | Slide | 5 · Physischer Entwurf | EXCLUDE verhindert, was UNIQUE nicht kann |
 | 29 | Slide | 5 · Physischer Entwurf | Warum das Mindestalter kein CHECK sein darf |
 | 30 | Chapter |  | 6 · Implementierung |
-| 31 | Slide | 6 · Implementierung | Zwölf Aufbauschritte, jeder für sich lauffähig |
+| 31 | Slide | 6 · Implementierung | Neunzehn Aufbauschritte, jeder für sich lauffähig |
 | 32 | Slide | 6 · Implementierung | Annas Rechnung: 4,96 Euro, Zeile für Zeile |
 | 33 | Slide | 6 · Implementierung | Dokumentation, die nicht veralten kann |
 | 34 | Chapter |  | 7 · Zugriffsschutz |
@@ -109,7 +109,7 @@ von OneDrive — dort bleibt PowerPoint beim Öffnen hängen.
 | 40 | Slide | 8 · Anwendung anbinden | Nur Sichten lesen, nur Funktionen schreiben |
 | 41 | Chapter |  | 9 · Die Warenwirtschaft |
 | 42 | Slide | 9 · Die Warenwirtschaft | Zweite Anwendung, dasselbe Datenmodell |
-| 43 | Slide | 9 · Die Warenwirtschaft | Fünf Rollen, fünf Ausschnitte derselben Daten |
+| 43 | Slide | 9 · Die Warenwirtschaft | Vier Fachrollen, vier Ausschnitte derselben Daten |
 | 44 | Slide | 9 · Die Warenwirtschaft | Zwei Arten von Sicht — und woran man sie erkennt |
 | 45 | Chapter |  | 10 · Das analytische Datenmodell |
 | 46 | Slide | 10 · Analytisches Modell | Fakten sind Ereignisse, Dimensionen sind Fragen |

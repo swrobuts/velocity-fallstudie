@@ -1,8 +1,8 @@
 %% Der Weg einer Anfrage. Zwei Anwendungen, eine Schnittstelle, eine
 %% Datenbank - und dieselbe Regel für beide.
-flowchart TB
+flowchart LR
     subgraph BR["Browser — öffentlich erreichbar"]
-        direction LR
+        direction TB
         SITE["bikes.butscher.cloud<br/>Kundenwebsite"]
         WAWI["wawi.butscher.cloud<br/>Warenwirtschaft"]
     end
@@ -12,7 +12,7 @@ flowchart TB
     end
 
     subgraph DB["PostgreSQL — Schema velocity"]
-        direction LR
+        direction TB
         SICHT["v_… Sichten<br/><b>nur lesen</b>"]
         FUNK["api_… Funktionen<br/><b>nur schreiben</b>"]
         TAB["Basistabellen<br/>für den Browser unerreichbar"]

@@ -546,19 +546,23 @@ def baue() -> Presentation:
             "Was kostet Annas Fahrt genau — und warum?",
             "Jetzt lösen wir die Frage vom Anfang auf. Jeder Cent muss begründbar sein.")
 
-    s = folie(prs, "6 · Implementierung", "Zwölf Aufbauschritte, jeder für sich lauffähig",
+    s = folie(prs, "6 · Implementierung", "Neunzehn Aufbauschritte, jeder für sich lauffähig",
               "Jede Datei ist idempotent: sie läuft zweimal hintereinander fehlerfrei. Das "
               "ist die Voraussetzung dafür, dass man einen Aufbau gefahrlos wiederholen kann.")
     schichtenstapel(s, [
         ("0001 Schema, Erweiterungen, Aufzählungstypen, Audit-Mechanik", True),
-        ("0002 bis 0007 · die sechs Fachbereiche A bis F, 25 Tabellen", False),
+        ("0002 bis 0007 · die sechs Fachbereiche A bis F, 27 Tabellen", False),
         ("0008 Referenzdaten: Entgeltarten, Preise, Tarife, Inhalte", False),
         ("0009 Geschäftslogik: fn_-Fachlogik und api_-Zugriffsschicht", True),
         ("0010 Sichten · 0011 Zugriffsschutz · 0012 Data Dictionary", True),
-    ], y=186, hoehe=48, luecke=10)
+        ("0014 bis 0020 · sieben Schritte mehr für die Warenwirtschaft", False),
+    ], y=182, hoehe=44, luecke=8)
     notizen(s, "Die Reihenfolge ist die Reihenfolge dieser Vorlesung. Wer 0004 vor 0003 "
                "ausführt, bekommt einen Fremdschlüsselfehler — die Abhängigkeiten sind im "
-               "Schema selbst dokumentiert.")
+               "Schema selbst dokumentiert. Zur Nummernlücke: 0013 gab es, sie hieß "
+               "altsystem_abloesen und zog nach db/betrieb/, weil sie gegen eine leere "
+               "Datenbank nicht durchlief. Lücken in Migrationsnummern sind normal — "
+               "Nummern werden nie neu vergeben, sonst stimmt keine Historie mehr.")
 
     s = folie(prs, "6 · Implementierung", "Annas Rechnung: 4,96 Euro, Zeile für Zeile",
               "Das Zeitentgelt wird über ALLE Minuten gebildet und die Freiminuten als "
@@ -759,7 +763,7 @@ def baue() -> Presentation:
               "Sie legt Sichten und Funktionen über genau die Tabellen, die schon da waren.")
     kachelreihe(s, [
         ("Kein zweites Schema",
-         ["37 Basistabellen, für beide Anwendungen dieselben",
+         ["36 Basistabellen legt der Aufbau an — für beide dieselben",
           "Eine Kundenadresse ist eine Kundenadresse",
           "Keine Kopie, die veralten könnte"]),
         ("16 Sichten, 14 Funktionen",
@@ -777,7 +781,7 @@ def baue() -> Presentation:
                "Praxis — und die häufigste Quelle für Zahlen, die sich widersprechen. "
                "Hier gibt es diese Möglichkeit gar nicht.")
 
-    s = folie(prs, "9 · Die Warenwirtschaft", "Fünf Rollen, fünf Ausschnitte derselben Daten",
+    s = folie(prs, "9 · Die Warenwirtschaft", "Vier Fachrollen, vier Ausschnitte derselben Daten",
               "Was jemand sieht, entscheidet die Datenbank anhand seiner Rolle — nicht die "
               "Oberfläche. Ein verstecktes Menü ist kein Schutz.")
     ampel_matrix(s, ["Leitung", "Dispo", "Werkstatt", "Service"], [
@@ -791,7 +795,12 @@ def baue() -> Presentation:
     notizen(s, "Die letzte Zeile ist die wichtigste: v_wawi_fahrt_km führt Einzelfahrten mit "
                "Kundennummer — ein Bewegungsprofil. Die Sicht ist für keine Rolle freigegeben; "
                "sie dient nur als Zwischenschritt innerhalb anderer Sichten. Datensparsamkeit "
-               "heißt hier: die aggregierte Sicht ist offen, die feine nicht.")
+               "heißt hier: die aggregierte Sicht ist offen, die feine nicht. "
+               "Zur fünften Rolle: demo steht bewusst nicht in der Matrix. Sie ist keine "
+               "Fachrolle, sondern der öffentliche Vorführzugang — sie liest dieselben "
+               "Sichten wie die Leitung, schreibt aber nichts und sieht Einzelfahrten "
+               "ebenso wenig. Wer sie als Spalte führt, suggeriert eine Aufgabe, die es "
+               "nicht gibt.")
 
     s = folie(prs, "9 · Die Warenwirtschaft", "Zwei Arten von Sicht — und woran man sie erkennt",
               "Das Korn einer Sicht ist die Antwort auf die Frage: Wofür steht eine Zeile? "
@@ -832,7 +841,13 @@ def baue() -> Presentation:
               "Ein Fakt ist etwas, das passiert ist und sich zählen lässt. Eine Dimension "
               "ist die Richtung, aus der jemand darauf schaut.")
     oben = unter_intro(s)
-    diagramm(s, bild("analytik-stern"), y=oben, hoehe=ZONE_UNTEN - 40 - oben)
+    diagramm(s, bild("analytik-stern"), y=oben, hoehe=196)
+    sandkarte(s, "Keine dieser Dimensionen ist eine eigene Tabelle",
+              ["Zeit steckt in ausleihe.startzeit · Fahrradtyp in fahrrad → fahrradmodell · "
+               "Station in start_station_id und end_station_id",
+               "Tarifgruppe in kunde → mitgliedschaft → tarif · Wohnort in kunde → adresse. "
+               "Die Warenwirtschaft benennt nur die Rollen und legt Sichten darüber."],
+              y=oben + 206)
     faden(s, "Annas Fahrt ist eine Faktenzeile — und taucht in jeder der vier Auswertungen auf.")
     notizen(s, "Der Kasten unten rechts trägt die eigentliche Aussage: keine dieser "
                "Dimensionen ist eine eigene Tabelle. Wir haben kein Sternschema gebaut, "
@@ -873,22 +888,29 @@ def baue() -> Presentation:
     s = folie(prs, "10 · Analytisches Modell", "Sichten statt Sternschema — und was das kostet",
               "Ein eigenes Sternschema mit nächtlicher Beladung wäre der Lehrbuchweg. Für "
               "diesen Fall ist er falsch — aber nicht immer.")
-    vorher_nachher(s,
-        ("Sternschema mit Beladung", "Eigene Fakten- und Dimensionstabellen",
-         ["+ Abfragen sind schnell, auch bei vielen Zeilen",
-          "+ Historie bleibt erhalten, auch wenn sich",
+    kachelreihe(s, [
+        ("Sternschema mit Beladung",
+         ["Eigene Fakten- und Dimensionstabellen",
+          "",
+          "✓ Schnell auch bei sehr vielen Zeilen",
+          "✓ Historie bleibt erhalten, wenn sich",
           "   Stammdaten später ändern",
-          "- Zweite Kopie der Wahrheit",
-          "- Beladung muss gebaut und überwacht werden",
-          "- Zahlen sind so alt wie der letzte Lauf"], False),
-        ("Sichten auf dem operativen Modell", "Was die Warenwirtschaft tut",
-         ["+ Keine Kopie, keine Beladung, kein Versatz",
-          "+ Jede Zahl ist so aktuell wie die Fahrt selbst",
-          "+ Eine Wahrheit, ein Schutzkonzept",
-          "- Jede Abfrage rechnet neu",
-          "- Bei 12 269 Ausleihen unkritisch,",
-          "   bei Millionen nicht mehr"], False),
-        y=182, hoehe=248)
+          "× Zweite Kopie der Wahrheit",
+          "× Beladung bauen und überwachen",
+          "× Zahlen so alt wie der letzte Lauf"]),
+        ("Sichten auf dem operativen Modell",
+         ["Was die Warenwirtschaft tut",
+          "",
+          "✓ Keine Kopie, keine Beladung, kein Versatz",
+          "✓ Jede Zahl so aktuell wie die Fahrt selbst",
+          "✓ Eine Wahrheit, ein Schutzkonzept",
+          "× Jede Abfrage rechnet neu",
+          "× Bei 12 269 Ausleihen unkritisch,",
+          "   bei Millionen nicht mehr"]),
+    ], y=180, hoehe=238, spalten=2)
+    sandband(s, "Keine Spalte ist die richtige. Die Wahl hängt an Datenmenge und "
+                "geforderter Aktualität — und dreht sich um, wenn eine davon sich ändert.",
+             y=424)
     notizen(s, "Die Entscheidung hängt an zwei Zahlen: Datenmenge und geforderte Aktualität. "
                "Hier sind es gut zwölftausend Ausleihen und die Erwartung, dass eine gerade "
                "beendete Fahrt sofort in der Auswertung steht. Bei zehn Millionen Zeilen und "
