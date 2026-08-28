@@ -174,16 +174,19 @@
              Link fuehrt oder dass er einen neuen Tab oeffnet (WCAG
              "Link Purpose") - beides steht deshalb explizit im
              aria-label, nicht nur im sichtbaren Wort. -->
-        <a class="wortmarke-firma wortmarke-link" href="https://bikes.butscher.cloud"
+        <a class="wortmarke-firma wortmarke-link wortmarke-platte" href="https://bikes.butscher.cloud"
            target="_blank" rel="noopener noreferrer"
            aria-label="VeloCity – öffentliche Website, öffnet in neuem Tab"
            data-i18n-aria="index.brandLinkAria"
-           ><!-- Wortmarke der oeffentlichen Website, Zeichen fuer Zeichen: VEL,
-                Rad-Ring statt O, CITY. Die Website setzt sie in src/index.html
-                genauso (.brand mit <i> als Ring). Kein Bild, weil die Marke
-                dort auch keines ist - ein SVG oder PNG wuerde eine zweite,
-                getrennt zu pflegende Fassung schaffen. -->VEL<i
-           class="wortmarke-rad" aria-hidden="true"></i>CITY</a>
+           ><!-- Die Marke der oeffentlichen Website, unveraendert: VEL in
+                --marine, Rad-Ring statt O, CITY in --rot. Die Website setzt
+                sie in src/index.html genauso (.brand mit <i> als Ring) und
+                mit denselben Farbwerten - ihr --navy IST unser --marine
+                (#061841), ihr --red unser --rot (#f00038). Kein Bild, weil
+                die Marke dort auch keines ist: ein SVG oder PNG waere eine
+                zweite, getrennt zu pflegende Fassung. -->VEL<i
+           class="wortmarke-rad" aria-hidden="true"></i><span
+           class="wortmarke-stadt">CITY</span></a>
         <span class="wortmarke-trenner" aria-hidden="true"></span>
         <span class="wortmarke-produkt">WaWi</span>
         </span>

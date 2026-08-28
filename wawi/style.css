@@ -1234,10 +1234,53 @@ body.navigation-schmal .navigation-griff {
    damit beide Anwendungen dieselbe Marke zeigen und nicht zwei aehnliche.
    Die Groesse NICHT: die Website setzt 30-40px in einen Kopfbereich, der
    der Marke gehoert; hier teilt sie sich 60px Hoehe mit Suche und Profil. */
+/* HELLE FLAECHE UNTER DER MARKE - der Grund, warum es sie gibt:
+   Die Website zeigt die Marke zweifarbig, VEL in --navy und CITY in
+   --red. Beide Werte sind hier vorhanden (--marine bzw. --rot sind
+   dieselben Farben), aber die Kopfleiste ist marineblau - VEL auf
+   Marine waere 1,0:1 und schlicht unsichtbar. Statt die Marke
+   umzufaerben und damit eine zweite Fassung zu fuehren, bekommt sie
+   ihren eigenen hellen Grund. Genau das hat der Auftraggeber angeboten:
+   "eventuell muessen wir dann an der Stelle den blauen Hintergrund
+   etwas umgestalten."
+   --flaeche (Weiss) und nicht --flaeche-rahmen: CITY misst darauf
+   4,41:1 statt 3,76:1, und Weiss ist zugleich der Grund, auf dem die
+   Marke auf der Website steht. */
+.wortmarke-platte {
+  display: inline-flex;
+  align-items: center;
+  background: var(--flaeche);
+  /* --rund-1: die Platte IST das Bedienelement (der Verweis liegt
+     darin), keine ueber dem Blatt schwebende Flaeche. */
+  border-radius: var(--rund-1);
+  padding: 0 var(--raum-3);
+  min-height: var(--ziel);
+}
+
+/* GROESSE, UND SIE IST HIER EINE BARRIEREFREIHEITSFRAGE, KEINE
+   GESCHMACKSFRAGE: --rot auf Weiss misst 4,41:1. Fuer Fliesstext
+   verlangt WCAG 1.4.3 4,5:1 - das waere verfehlt. Fuer GROSSEN Text
+   genuegen 3:1, und gross heisst ab 18,66px bei fetter Schrift. Mit
+   --grad-6 (20px) und Gewicht 800 ist die Marke grosser Text, 4,41:1
+   liegt dann deutlich ueber der Anforderung. Bei --grad-5 (16px) waere
+   sie es nicht - die Groesse traegt hier die Zulaessigkeit der Farbe.
+   Gewicht 800 und Laufweite -0.055em sind von src/style.css (.brand)
+   uebernommen, damit beide Anwendungen dieselbe Marke zeigen. */
 .wortmarke-firma {
+  color: var(--marine);
   font-weight: 800;
   letter-spacing: -0.055em;
-  font-size: var(--grad-5);
+  font-size: var(--grad-6);
+  text-decoration-color: var(--marine);
+}
+
+/* CITY in --rot, wie auf der Website. Das ist die eine Stelle, an der
+   Rot in dieser Warenwirtschaft KEINE Bedeutung traegt, sondern Teil
+   eines Namens ist - deshalb steht sie in der Farbordnung ausdruecklich
+   als Ausnahme und liegt auf einer eigenen, hellen Flaeche, raeumlich
+   getrennt von allem, wo Rot warnt. */
+.wortmarke-stadt {
+  color: var(--rot);
 }
 
 /* Das O ist das Rad - ein Ring statt eines Buchstabens, woertlich wie in
@@ -1268,7 +1311,14 @@ body.navigation-schmal .navigation-griff {
    Tastaturfokus kommt unveraendert von der globalen :focus-visible-Regel
    weiter oben (--rot), wie schon bei .profilknopf. */
 .wortmarke-link {
-  color: inherit;
+  /* KEIN color:inherit mehr. Es stammte aus der Zeit, als die Marke
+     direkt auf der marineblauen Kopfleiste stand und deren Weiss erben
+     sollte. Seit sie auf ihrer eigenen hellen Platte sitzt, faerbte es
+     VEL weiss auf Weiss - im Browser gemessen rgb(255,255,255) auf
+     rgb(255,255,255), also unsichtbar. Beide Regeln sind
+     einklassig, also entschied die Reihenfolge, und diese steht
+     spaeter als .wortmarke-firma. Die Farbe kommt jetzt allein von
+     dort (--marine), text-decoration-color ebenso. */
   text-decoration: underline;
   text-underline-offset: 3px;
   /* ZIELGROESSE, BEFUND DER PENIBLEN DURCHSICHT: im Browser gemessen war
