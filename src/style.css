@@ -277,7 +277,19 @@
      Grosse Zeilen laufen eng, Etiketten weit, alles andere normal.
      Vorher gab es neun verschiedene negative Werte fuer die eine Rolle
      "grosse Zeile" - das sieht man nicht einzeln, aber im Ganzen. */
-  --eng:  -.03em;
+  /* VON -0,03 AUF -0,01 EM (28.08.2026).
+     Der Wert galt fuer alle Auszeichnung - Ueberschriften, Zahlen,
+     Preise. Bei kleinem Grad trug er; in der Buehne, wo bis 78 Punkte
+     stehen, klebten die Buchstaben. Enge Laufweite waechst mit dem
+     Grad: was bei 25 Punkten Dichte ist, ist bei 78 Enge.
+     Vier Anlaeufe an der BREITE (79, 88, 100, wieder 88) haben das nie
+     getroffen, weil die falsche Stellschraube gedreht wurde. Aufgeloest
+     hat es ein Vergleich in echter Buehnengroesse - der erste war mit 54
+     Punkten zu klein und hat genau den Unterschied verschluckt, um den
+     es ging. Der Betreiber hat Fassung 2 gewaehlt: Breite 88, Laufweite
+     -0,01. Geaendert wird das Token, nicht nur die Buehne; eine Ausnahme
+     fuer eine Stelle waere zwei Laufweiten im selben Haus. */
+  --eng:  -.01em;
   --weit: .14em;
 
   /* Grade. Eine Leiter mit benannten Sprossen statt 44 Einzelwerten.
