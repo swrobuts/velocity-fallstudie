@@ -27,14 +27,23 @@
 
    1. DREI FLAECHENRAENGE, mehr nicht - und der mittlere gilt NUR FUER
       DEN RAHMEN DER ANWENDUNG.
-      --marine          Anwendungsrahmen oben UND links: Kopfleiste und
-                        Navigation. Seit der Gestaltungsrunde "Tiefe,
-                        Groesse, Beweglichkeit" bilden beide EINEN
-                        durchgehenden Rahmen um das Blatt - die
-                        Begruendung steht ausfuehrlich bei #navigation.
+      --marine          Anwendungsrahmen oben: die Kopfleiste. Seit der
+                        Gestaltungsrunde "Tiefe, Groesse, Beweglichkeit"
+                        bildet sie mit der Navigation EINEN durchgehenden
+                        Rahmen um das Blatt - die Begruendung steht
+                        ausfuehrlich bei #navigation.
+      --marine-nav      Anwendungsrahmen links: die Navigation. Derselbe
+                        Rahmen-Gedanke wie --marine, seit der naechsten
+                        Runde aber ein ruhigerer Ton DERSELBEN Farbfamilie
+                        (Auftrag, woertlich: "der linke blaue Seitenrand
+                        ist mit blau zu intensiv") - Begruendung und
+                        Kontrastwerte bei --marine-nav in :root.
       --flaeche-rahmen  Anwendungsrahmen unten: die Statuszeile. Und -
-                        als einzige Ausnahme im Blatt - die gewaehlte
-                        Tabellenzeile (siehe dortiger Kommentar).
+                        zwei Ausnahmen im Blatt, aus demselben Grund -
+                        die gewaehlte Tabellenzeile (siehe dortiger
+                        Kommentar) und die Tabelle, waehrend die Kopftafel
+                        darueber ausgeklappt ist (siehe .kopftafel +
+                        #listenkoerper weiter unten).
       --flaeche         das Arbeitsblatt selbst - Reiter-, Werkzeug-,
                         Filterleiste, Kopftafel, Spaltenkopf,
                         Tabellenkoerper, Maske.
@@ -193,6 +202,40 @@
      seine 4,5:1 (--marine-hell 13,64:1, --gut-dunkel 8,04:1). */
   --marine-hell: #0a2560;
   --gut-dunkel:  #155c33;
+  /* ===== DIE GEDAEMPFTE NAVIGATIONSFLAECHE =====
+     Befund des Auftraggebers, woertlich: "mir ist der linke blaue
+     Seitenrand mit blau zu intensiv". #navigation trug seit der Runde
+     "Tiefe, Groesse, Beweglichkeit" volle Flaeche in --marine - derselbe
+     Ton wie die 60px hohe Kopfleiste, aber ueber die GANZE Bildschirm-
+     hoehe. Dieselbe Saettigung (83 % HSL), die auf 60px Hoehe als
+     Markenfarbe liest, wird auf 800+ Pixeln zum Scheinwerfer.
+     DIE ENTSCHEIDUNG BLEIBT (Auftrag, woertlich: "die soll bleiben"):
+     Kopfleiste und Navigation bilden weiterhin EINEN Rahmen um das
+     weisse Blatt - deshalb bleibt --marine selbst unveraendert, und die
+     Kopfleiste traegt ihn weiterhin unveraendert (60px hoch, nie der
+     Gegenstand der Ruege). Nur die FLAECHE, die acht Stunden am
+     Bildschirmrand steht, bekommt einen ruhigeren Ton DERSELBEN Familie -
+     nicht Grau (das war die vorletzte, ausdruecklich verworfene Runde,
+     siehe "graue Wueste" in der Farbordnung unten), sondern derselbe Farb-
+     ton (HSL-Winkel unveraendert bei 222 Grad) mit zurueckgenommener
+     Saettigung (83 % -> 45 %) und etwas angehobener Helligkeit
+     (13,9 % -> 20 %): #1c2a4a statt #061841.
+     WARUM EIN EIGENER TON UND NICHT --marine SELBST GEAENDERT: --marine
+     traegt an ueber 150 Stellen dieser Datei einen mitgefuehrten,
+     nachgerechneten Kontrastwert (17,29:1 gegen Weiss, 3,92:1 fuer --rot
+     etc.) - eine globale Aenderung haette jede dieser Zahlen neu
+     hingeschrieben, fuer eine Ruege, die ausdruecklich nur die Flaeche
+     "linker Seitenrand" betraf, nicht den Ton als solchen (Knoepfe,
+     Fokusringe, Auswertungsgrafiken bleiben in --marine unveraendert
+     kraeftig - dort ist die Flaeche klein, die Ruege galt ihr nie).
+     GEMESSEN (neu, gegen #1c2a4a): Weiss (Navigationstext, aktive
+     Umkehr-Kachel-Text) 14,19:1 - weit ueber 4,5:1. --rot (Fokusring)
+     3,22:1 - ueber den 3:1 aus WCAG 1.4.11 fuer eine Bedienelement-
+     Auszeichnung. --kontur waere hier 3,90:1, wird aber nicht gebraucht:
+     Flaeche gegen Flaeche (--marine-nav gegen --flaeche) misst weiterhin
+     14,19:1, weit ueber den 3:1, die Gliederungsregel Punkt 2 fuer eine
+     Grenze ohne Linie verlangt. */
+  --marine-nav: #1c2a4a;
 
   /* ============================================================
      ===== DIE FARBORDNUNG =====
@@ -278,8 +321,14 @@
      Werkzeugleiste, Kopftafel, Filterleiste, Tabellenkopf,
      Spaltenkopf-Filterzeile, Statuszeile. Ein Ton, der acht Bereiche
      gleich einfärbt, gliedert nichts - er ermüdet nur.
-     Jetzt trägt ihn nur noch die Statuszeile unten; Kopfleiste oben und
-     Navigation links schliessen den Rahmen in --marine ab.
+     Als staendige Flaeche traegt ihn jetzt nur noch die Statuszeile
+     unten; Kopfleiste oben schliesst den Rahmen in --marine ab,
+     Navigation links in --marine-nav - derselben Familie, seit "der
+     linke blaue Seitenrand" zu kraeftig war (Begruendung bei
+     --marine-nav in :root). Die gewaehlte Tabellenzeile und die Tabelle
+     bei ausgeklappter Kopftafel tragen --flaeche-rahmen zusaetzlich,
+     aber nur VORUEBERGEHEND (siehe die jeweiligen Kommentare) - keine
+     dritte staendige Flaeche.
      Alles dazwischen ist das Arbeitsblatt - weiss, gegliedert allein
      durch --kontur-Kanten. Das ist dieselbe Gliederungsregel wie im
      Dateikopf, nur richtig angewandt: die Frage ist nicht "bediene ich
@@ -387,11 +436,33 @@
        ausdruecklich - sie soll aussehen wie etwas, das man
        heruntergezogen hat) und die klebende Kopfzeile der
        Arbeitstabelle, an der die Datenzeilen vorbeiscrollen.
-       Kurz und dicht: 2px Versatz, 6px Weichzeichnung - eine Kante mit
-       Tiefe, kein Schwebezustand. (Erster Ansatz waren 1px/3px bei 16 %;
-       im Browser gegen die weisse Liste darunter nachgesehen war das
-       unter der Wahrnehmungsschwelle - genau der Mangel, den der
-       Auftraggeber gemeldet hat, nur mit einem Schatten davor.)
+       2px/6px bei 20 % (erster Ansatz war 1px/3px bei 16 % und blieb im
+       Browser gegen die weisse Liste darunter unter der Wahrnehmungs-
+       schwelle) war selbst bei 20 % noch zu leise: der Auftraggeber,
+       nach dieser Korrektur erneut woertlich, "der Kopfbereich muss
+       staerker vom Hintergrund abgegrenzt sein" - der Schatten KAM zwar
+       an (im Browser bestaetigt: er liegt dank position:relative;
+       z-index:1 sichtbar UEBER der Filterleiste, nicht dahinter
+       verdeckt), war aber zu duenn, um als Tiefe zu lesen, nicht zu
+       schwach, um ueberhaupt gezeichnet zu werden. DRITTER ANLAUF: 3px
+       Versatz, 10px Weichzeichnung, 26 % Deckkraft - kraeftiger, aber
+       weiterhin kurz und dicht (deutlich weniger Weichzeichnung als
+       Ebene 2), damit "aufliegend" nicht mit "schwebend" verwechselt
+       wird.
+       ZUSAETZLICH, UND DAS IST DER ZWEITE TEIL DERSELBEN RUEGE (Auftrag,
+       woertlich: "oder der Hintergrund der Tabelle ist dann leicht
+       ausgegraut ... es muss so wirken, als läge der Kopfbereich im
+       ausgeklappten Zustand über der Tabelle"): derselbe Kniff, den
+       diese Datei fuer Ebene 3 laengst kennt - der <dialog> dunkelt via
+       ::backdrop ab, was er ueberlagert -, bekommt jetzt ein leichteres
+       Gegenstueck fuer Ebene 1. Waehrend die Kopftafel ausgeklappt ist,
+       tritt die Tabelle darunter auf --flaeche-rahmen zurueck (siehe
+       .kopftafel + #listenkoerper weiter unten) - derselbe Ton, den die
+       Farbordnung bereits als Anwendungsrahmen und gewaehlte Zeile
+       fuehrt, hier ein drittes Mal, aus demselben Grund: eine leichte,
+       bereits gegen alle vier Status- und alle fuenf Kategoriefarben
+       gemessene Toenung (siehe "UND DAS GRAU"/RANG 4 weiter unten), kein
+       neuer, unvermessener Grauton.
 
      EBENE 2 · SCHWEBEND — --schatten-2.
        Haengt an einem Bedienelement, schliesst bei einem Klick daneben,
@@ -420,7 +491,7 @@
      Ebenso die Stationsmarke auf der Landkarte (siehe dort): sie liegt
      nicht hoeher als die Karte, sie muss sich nur gegen unkontrollierte
      Kartenbilder behaupten. */
-  --schatten-1: 0 2px 6px rgba(6, 24, 65, 0.20);
+  --schatten-1: 0 3px 10px rgba(6, 24, 65, 0.26);
   --schatten-2: 0 6px 16px rgba(6, 24, 65, 0.20);
   --schatten-3: 0 16px 40px rgba(6, 24, 65, 0.30);
   --z-ebene-2:  20;
@@ -1349,8 +1420,19 @@ body.navigation-schmal #zustand-arbeit {
      200px Breite ueber die volle Hoehe ist viel Farbe. Sie traegt aber
      keine Daten und keine Grafik, sondern fuenf Woerter - und sie ist
      seit dieser Runde einklappbar, laesst sich also auf 56px bringen,
-     wenn sie zu laut wird. */
-  background: var(--marine);
+     wenn sie zu laut wird.
+
+     NACHTRAG, wortlich: "mir ist der linke blaue Seitenrand mit blau zu
+     intensiv". Das oben beschriebene Risiko ist eingetreten. Die
+     FLAECHE bleibt (das Blatt-oder-Rand-Argument gilt unveraendert -
+     siehe --marine-nav-Kommentar in :root), nur der TON tritt zurueck:
+     --marine-nav statt --marine, dieselbe Farbfamilie (Hue 222°),
+     zurueckgenommene Saettigung, nicht entsaettigt zu Grau. Die
+     Kopfleiste behaelt --marine unveraendert (60px, nie der Gegenstand
+     der Ruege) - der Rahmen bleibt EIN Gedanke (dunkles Marineblau oben
+     UND links), auch wenn die beiden Flaechen nicht mehr pixelgleich
+     sind. */
+  background: var(--marine-nav);
   color: var(--flaeche);
   overflow-y: auto;
   overflow-x: hidden;   /* waehrend des Einklappens darf nichts herausragen */
@@ -1392,37 +1474,41 @@ body.navigation-schmal #navigation {
   transition: background-color 120ms ease, color 120ms ease;
 }
 
-/* Auf mariner Flaeche hebt sich ein Ueberfahren durch AUFHELLEN ab. Eine
-   halbtransparente weisse Auflage statt eines zweiten Farbwerts: sie
-   funktioniert unveraendert, falls --marine sich je aendert, und sie
-   fuehrt keinen unvermessenen Ton in die Palette ein.
-   Gemessen: die entstehende Flaeche ist #243458; die Beschriftung darauf
-   haelt 12,30:1 (Text braucht 4,5:1). Die Flaeche selbst misst gegen
-   --marine nur 1,41:1 - das ist Absicht und keine Luecke in WCAG 1.4.11:
+/* Auf der Navigationsflaeche hebt sich ein Ueberfahren durch AUFHELLEN
+   ab. Eine halbtransparente weisse Auflage statt eines zweiten
+   Farbwerts: sie funktioniert unveraendert, falls --marine-nav sich je
+   aendert, und sie fuehrt keinen unvermessenen Ton in die Palette ein.
+   Gemessen (nachgerechnet fuer --marine-nav, seit der Ton dort geaendert
+   wurde): die entstehende Flaeche ist #374460; die Beschriftung darauf
+   haelt 9,73:1 (Text braucht 4,5:1). Die Flaeche selbst misst gegen
+   --marine-nav 1,46:1 - das ist Absicht und keine Luecke in WCAG 1.4.11:
    der Ueberfahren-Zustand ist keine Information, die man ohne Zeiger
    erkennen muesste (der Zeiger steht ja darauf). Welche Rubrik AKTIV
    ist, sagt nicht dieser Zustand, sondern die volle Umkehrung darunter
-   (17,29:1). */
+   (14,19:1). */
 #navigation button:hover {
   background: rgba(255, 255, 255, 0.12);
 }
 
 /* Der aktive Bereich ist die UMKEHRUNG des Rahmens: weisse Kachel,
-   marine Schrift - dieselbe Paarung wie zuvor, nur andersherum, seit
-   die Leiste selbst marine ist. Sie sieht damit aus wie ein Stueck des
-   Arbeitsblatts, das in den Rahmen hineinreicht: genau die Aussage
-   "dieser Bereich ist der, den du gerade siehst".
-   Gemessen: --marine auf --flaeche 17,29:1. */
+   navyfarbene Schrift - dieselbe Paarung wie zuvor, nur andersherum,
+   seit die Leiste selbst dunkel ist. Sie sieht damit aus wie ein Stueck
+   des Arbeitsblatts, das in den Rahmen hineinreicht: genau die Aussage
+   "dieser Bereich ist der, den du gerade siehst". Die Textfarbe ist
+   --marine-nav (nicht das kraeftigere --marine) - dieselbe Umkehrung
+   bleibt in der FAMILIE der Flaeche, die sie umkehrt, statt einen
+   dritten, unbeteiligten Ton hereinzuholen.
+   Gemessen: --marine-nav auf --flaeche 14,19:1. */
 #navigation button[aria-current="page"] {
   background: var(--flaeche);
-  color: var(--marine);
+  color: var(--marine-nav);
   font-weight: 600;
 }
 
 /* Der Tastaturfokus kommt von der globalen :focus-visible-Regel in --rot.
-   Auf mariner Flaeche misst --rot 3,92:1 gegen --marine (gemessen) -
-   ueber den 3:1, die WCAG 1.4.11 fuer eine Bedienelement-Auszeichnung
-   verlangt. Ein
+   Auf der Navigationsflaeche misst --rot 3,22:1 gegen --marine-nav
+   (gemessen) - ueber den 3:1, die WCAG 1.4.11 fuer eine Bedienelement-
+   Auszeichnung verlangt. Ein
    groesserer Versatz als die globale Vorgabe (1px) waere hier schaedlich:
    der Ring liefe sonst aus der 56px schmalen Leiste heraus. */
 body.navigation-schmal #navigation button:focus-visible {
@@ -1612,11 +1698,42 @@ body.navigation-schmal #navigation .bereich-text {
    Der Fehler war nicht die Menge des Weissraums, sondern wofuer er
    ausgegeben wurde: ein Dutzend Werte auf tausend Pixel Breite. Diese
    Tafel kehrt das um - dieselbe Bildschirmhoehe traegt 60 bis 170 Werte.
-   Kleine Grade bleiben deshalb bestehen (12px Text, 10px Spaltenkopf) -
-   das ist Dichte an INFORMATION, nicht an Flaeche, und aendert sich hier
-   nicht. Gemessen bleibt trotzdem alles: --text auf --flaeche 15.70:1,
-   --text-leise auf --flaeche 5.95:1, --marine 17.29:1 - jede weit ueber
-   den 4,5:1 fuer Fliesstext.
+   Dichte an INFORMATION bleibt das Ziel, nicht Dichte an Flaeche - das
+   aendert sich hier nicht. Gemessen bleibt trotzdem alles: --text auf
+   --flaeche 15.70:1, --text-leise auf --flaeche 5.95:1, --marine
+   17.29:1 - jede weit ueber den 4,5:1 fuer Fliesstext.
+
+   FUENFTER ANLAUF, WOERTLICH: "die Fontsize im Kopfbereich ist klein".
+   Gemeint sind Spaltenueberschriften, Zeilenbeschriftungen und Werte -
+   und nachgemessen standen alle drei tiefer, als die Schriftreihe in
+   :root fuer ihre eigene Aufgabe vorsieht: die Spaltenueberschrift
+   (.kopftafel-tabelle thead th) auf --grad-1 (10px) statt auf --grad-3,
+   obwohl --grad-3 dort ausdruecklich als "Nebentext: Tabellenkopf,
+   Kopftafelzelle, Beschriftung" gefuehrt wird; Zeilenbeschriftung und
+   Wert (.kopftafel-rubrik/.kopftafel-zahl, ohne eigene Angabe) auf der
+   von .kopftafel-tabelle geerbten --grad-3 (12px) statt auf --grad-4,
+   obwohl --grad-4 dort ausdruecklich "Lesegrad: jede Datenzelle" heisst -
+   und eine Kopftafelzeile IST eine Datenzelle, keine Nebeninformation.
+   Die Tafel folgte an diesen zwei Stellen also nicht der eigenen
+   Schriftreihe, sondern einer aelteren, enger bemessenen Gewohnheit.
+   KEIN NEUER WERT (Auftrag, woertlich: "bleib in der Reihe") - beide
+   Stellen ruecken stattdessen auf den Grad, den die Reihe fuer ihre
+   Aufgabe ohnehin schon nennt: .kopftafel-tabelle von --grad-3 auf
+   --grad-4 (12px -> 14px, traegt jetzt auch Rubrik und Zahl mit sich,
+   da beide keine eigene Angabe fuehren), .kopftafel-tabelle thead th von
+   --grad-1 auf --grad-3 (10px -> 12px). --grad-1 bleibt an der einzigen
+   Stelle bestehen, die es selbst benennt: die Einheit UNTER dem
+   Spaltennamen (.kopftafel-spalteneinheit, "Spaltenkopf") - eine
+   Fussnote am Spaltenkopf, keine zweite Ueberschrift, und deshalb zu
+   Recht der kleinste Grad der Reihe. Bezugszeile (--grad-2, "Beiwerk:
+   Bezugszeile") und Fussnote (--grad-2, "Beiwerk: Fussnote") bleiben aus
+   demselben Grund unveraendert - beide sind bereits an dem Grad, den die
+   Reihe fuer sie vorsieht.
+   Gemessen bleibt jede Zeile weiterhin (Groesse aendert einen Kontrast
+   nicht): --text 15.70:1, --text-leise 5.95:1, --marine 17.29:1. Die
+   Tafel wird dadurch hoeher - das kostet nichts, siehe "DIE TAFEL DARF
+   DADURCH HOEHER WERDEN" weiter unten: sie ist einklappbar und steht im
+   Vorgabezustand eingeklappt.
 
    DIE ZEILEN SELBST SIND NICHT MEHR ENG (VIERTER ANLAUF). Der Auftrag kam
    viermal, wortgleich im Kern: "zu wenig Weissraum, zu wenig Abstaende,
@@ -1665,11 +1782,15 @@ body.navigation-schmal #navigation .bereich-text {
      nach unten: die Tafel liegt auf dem Blatt, die Liste laeuft unter
      ihr weiter. Ausdruecklich zusaetzlich zur Kante, nicht statt ihr -
      die Kante haelt die 3:1 aus WCAG 1.4.11 auch dort, wo ein weicher
-     Schatten (16 % Deckkraft) unter der Wahrnehmungsschwelle bliebe,
-     etwa auf einem kontrastarmen Bildschirm.
+     Schatten (26 % Deckkraft, dritter Anlauf - siehe --schatten-1 in
+     :root) unter der Wahrnehmungsschwelle bliebe, etwa auf einem
+     kontrastarmen Bildschirm.
      position/z-index: ohne eine eigene Stapelposition liegt der
      Schatten UNTER der nachfolgenden Filterleiste und dem Tabellenkopf
-     (beide tragen eine deckende weisse Flaeche) und waere unsichtbar.
+     (beide tragen eine deckende weisse Flaeche) und waere unsichtbar. Im
+     Browser bestaetigt (siehe --schatten-1-Kommentar in :root): er kam
+     bereits vorher sichtbar UEBER der Filterleiste an - das eigentliche
+     Problem war die Staerke, nicht die Stapelung.
      Nicht --z-ebene-2: die Tafel schwebt nicht, sie liegt auf. */
   position: relative;
   z-index: 1;
@@ -1691,6 +1812,51 @@ body.navigation-schmal #navigation .bereich-text {
    kopftafelEingeklappt() in rahmen.js. */
 .kopftafel:not(.kopftafel-eingeklappt) {
   box-shadow: var(--schatten-1);
+}
+
+/* ===== Die Tabelle tritt zurueck, waehrend die Tafel aufliegt =====
+   Vorschlag des Auftraggebers, woertlich: "der Hintergrund der Tabelle
+   ist dann leicht ausgegraut ... es muss so wirken, als läge der
+   Kopfbereich im ausgeklappten Zustand über der Tabelle" - dasselbe
+   Mittel, das Fluent und Fiori fuer eine ueberlagernde Flaeche einsetzen,
+   und dieselbe Denkfigur, die diese Datei fuer Ebene 3 laengst kennt (der
+   <dialog> dunkelt ueber ::backdrop ab, was er ueberlagert). Ebene 1
+   sperrt nichts - die Tabelle bleibt bedienbar -, bekommt aber densel­ben
+   Hinweis in leichterer Form: eine Toenung statt einer Sperre.
+   #arbeitsliste als Bezugspunkt, NICHT .kopftafel selbst: .kopftafel und
+   #listenkoerper sind Geschwister (siehe kopftafelWurzel() in rahmen.js -
+   beide direkte Kinder von #arbeitsliste), ":has(> .kopftafel)" prueft
+   deshalb den GEMEINSAMEN Elternknoten. ">"vor .kopftafel, weil sonst
+   auch eine zufaellig gleich benannte Klasse tiefer im Baum träfe.
+   --flaeche-rahmen, KEIN neuer Ton (siehe Farbordnung in :root, "UND DAS
+   GRAU"): derselbe Ton, den der Anwendungsrahmen und die gewaehlte
+   Tabellenzeile bereits tragen, hier ein drittes Mal fuer denselben
+   Gedanken ("das hier ist gerade nicht die Vordergrundflaeche"). Jede
+   Farbe, die in der Tabelle vorkommt, ist gegen GENAU diesen Ton bereits
+   gemessen: alle vier Statusfarben (--text-leise 5,07:1, --gut 4,56:1,
+   --warnung-text 4,53:1, --schlecht 4,86:1) und alle fuenf Kategorie-
+   farben (mindestens 4,45:1) halten ihre 4,5:1 auch auf --flaeche-rahmen
+   weiter - nachgeschlagen, nicht neu geschaetzt, siehe die jeweiligen
+   Eintraege in der Farbordnung. --kontur (3,64:1 auf --flaeche) faellt
+   auf --flaeche-rahmen auf 3,11:1 - bereits dort dokumentiert und
+   weiterhin ueber den 3:1 fuer Grafik.
+   NEBENWIRKUNG, BEWUSST IN KAUF GENOMMEN: --zebra (#ecedf3) und
+   --flaeche-rahmen (#e9edf4) liegen mit 1,01:1 fast gleichauf (nachge-
+   rechnet) - der
+   Zebra-Rhythmus flacht waehrend der ausgeklappten Tafel sichtbar ab.
+   Das ist kein Fehler, sondern derselbe Gedanke konsequent zu Ende
+   gedacht: "hier ist gerade nicht die Vordergrundflaeche" gilt fuer eine
+   einzelne Zeile genauso wie fuer die ganze Tabelle. Sobald die Tafel
+   wieder einklappt, steht der Zebrastreifen unveraendert da.
+   Die Kopfzeile der Tabelle (thead) traegt denselben Ton mit, DAMIT die
+   ganze Tabelle - nicht nur ihr Koerper - zurueckzutreten scheint; ihr
+   eigener Schatten (--schatten-1, siehe .arbeitstabelle thead weiter
+   unten) bleibt unveraendert bestehen, beide Ebene-1-Flaechen ueberlagern
+   sich hier, ohne sich zu widersprechen. */
+#arbeitsliste:has(> .kopftafel:not(.kopftafel-eingeklappt)) #listenkoerper,
+#arbeitsliste:has(> .kopftafel:not(.kopftafel-eingeklappt)) .arbeitstabelle thead {
+  background: var(--flaeche-rahmen);
+  transition: background-color 160ms ease;
 }
 
 .kopftafel.kopftafel-eingeklappt .kopftafel-tabelle,
@@ -1823,7 +1989,15 @@ body.navigation-schmal #navigation .bereich-text {
   width: 100%;
   max-width: 100%;
   border-collapse: collapse;
-  font-size: var(--grad-3);
+  /* --grad-4 statt vormals --grad-3 (fuenfter Anlauf, siehe der lange
+     Kommentar bei .kopftafel oben, "die Fontsize im Kopfbereich ist
+     klein") - Rubrik und Zahl fuehren keine eigene font-size und erben
+     diesen Grad, --grad-4 ist in der Schriftreihe genau dafuer
+     vorgesehen ("Lesegrad: jede Datenzelle"). thead th weiter unten
+     setzt fuer die Spaltenueberschrift bewusst einen eigenen, kleineren
+     Grad (--grad-3) - eine Ueberschrift darf leiser bleiben als der Wert,
+     den sie benennt. */
+  font-size: var(--grad-4);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1891,7 +2065,12 @@ body.navigation-schmal #navigation .bereich-text {
   border-bottom: 1px solid var(--linie);
   vertical-align: bottom;
   font-weight: 600;
-  font-size: var(--grad-1);
+  /* --grad-3 statt vormals --grad-1 (fuenfter Anlauf, siehe der lange
+     Kommentar bei .kopftafel oben) - --grad-3 ist in der Schriftreihe
+     ausdruecklich "Nebentext: Tabellenkopf". --grad-1 blieb der Einheit
+     darunter vorbehalten (.kopftafel-spalteneinheit), die es als
+     "Spaltenkopf"/"Spalteneinheit" selbst benennt. */
+  font-size: var(--grad-3);
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--text-leise);
