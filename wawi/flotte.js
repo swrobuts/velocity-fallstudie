@@ -73,9 +73,10 @@ async function flotteAufbauen() {
     // vollstaendige Liste ohnehin.
     // KEINE ZWEITE ANFRAGE fuer den Kopf: die Kopftafel gliedert nach
     // Modell, Status und Baujahr - alle drei Angaben stehen bereits in
-    // dieser einen Zeile (v_wawi_flotte reicht sie aus fahrradmodell
-    // durch). Die neun Modellzeilen des Kopfes und die 275 Radzeilen der
-    // Liste kommen damit aus DERSELBEN Ladung, koennen also nicht
+    // dieser einen Zeile (v_wawi_flotte reicht sie aus fahrradmodell und
+    // fahrradtyp durch). Die fuenf Modellzeilen des Kopfes (ein Produkt
+    // je Typ, aber je Hersteller eine eigene Zeile) und die 275 Radzeilen
+    // der Liste kommen damit aus DERSELBEN Ladung, koennen also nicht
     // auseinanderlaufen.
     const raeder = await ladeListe('v_wawi_flotte',
         'fahrrad_id, rahmennummer, typ_code, typ, hersteller, modell, status, ' +
@@ -239,12 +240,19 @@ async function flotteAufbauen() {
 // Modell gegen die Quote der Gesamtflotte (letzte Spalte) steht in
 // keiner Zeile der Tabelle und laesst sich aus ihr auch nicht ablesen.
 //
-// ZEILEN SIND DIE NEUN MODELLE, gruppiert nach den drei Radtypen - die
+// ZEILEN SIND DIE FUENF MODELLZEILEN (ein Produkt je Radtyp, aber je
+// Hersteller eine eigene Zeile), gruppiert nach den drei Radtypen - die
 // feinste Gliederung, die noch in den Kopf passt (siehe zeigeKopftafel()
 // in rahmen.js). Drei Radtyp-Zeilen allein waeren zu grob (sie
-// verstecken, dass CityLine 1 und Urbano X beide City-Bikes sind und
-// sich um vier Baujahre unterscheiden), 275 Radzeilen waeren die Liste
-// selbst.
+// verstecken, dass das City-Bike von Nordwind Rad und das von Kvarner
+// Bike Works sich um drei Baujahre unterscheiden), 275 Radzeilen waeren
+// die Liste selbst. Der Gruppierungsschluessel unten nimmt deshalb den
+// HERSTELLER mit auf, nicht nur den Modellnamen: seit der Produktkorrektur
+// (siehe db/betrieb/flottenmodelle_stammdaten.sql) tragen alle Modellzeilen
+// eines Typs denselben Produktnamen ("City-Bike" zweimal, einmal je
+// Hersteller) - ohne den Hersteller im Schluessel fielen sie zu EINER
+// Zeile zusammen, und die Tafel waere nicht mehr von der reinen
+// Typ-Gruppierung zu unterscheiden.
 //
 // DIE PRODUKTBILDER (Gestaltungsauftrag, frueher woertlich: "Bei Flotte
 // vermisse ich Produktbilder ... damit ich das Produkt/Flotte auch
@@ -257,14 +265,20 @@ function flotteKopftafel(raeder) {
 
     const gesamt = raeder.length;
 
-    // Ein Eintrag je Modell. baujahr/hersteller kommen aus dem MODELL
-    // (v_wawi_flotte reicht sie aus fahrradmodell durch, siehe deren
-    // Definition) und sind darum innerhalb eines Modells konstant - das
-    // erste gefundene Rad genuegt, ein Mittelwert waere hier eine
-    // Rechnung ueber lauter gleiche Werte.
+    // Ein Eintrag je Modellzeile (Typ + Hersteller). baujahr/hersteller
+    // kommen aus dem MODELL (v_wawi_flotte reicht sie aus fahrradmodell
+    // durch, siehe deren Definition) und sind darum innerhalb einer
+    // Modellzeile konstant - das erste gefundene Rad genuegt, ein
+    // Mittelwert waere hier eine Rechnung ueber lauter gleiche Werte.
+    // SCHLUESSEL MIT HERSTELLER, NICHT NUR MODELLNAME: rad.modell ist seit
+    // der Produktkorrektur der Produktname des TYPS (z.B. "City-Bike" bei
+    // sowohl Nordwind Rad als auch Kvarner Bike Works) - ohne hersteller
+    // im Schluessel wuerden zwei Hersteller desselben Produkts zu einer
+    // Zeile verschmelzen und die Tafel verloere genau die
+    // Herstellergliederung, die sie zeigen soll (siehe Kopfkommentar).
     const nachModell = new Map();
     for (const rad of raeder) {
-        const schluessel = `${rad.typ_code} ${rad.modell}`;
+        const schluessel = `${rad.typ_code} ${rad.hersteller} ${rad.modell}`;
         let eintrag = nachModell.get(schluessel);
         if (!eintrag) {
             eintrag = { typCode: rad.typ_code, typ: rad.typ, modell: rad.modell,
@@ -279,9 +293,9 @@ function flotteKopftafel(raeder) {
     // VERHAELTNISZAHL AUS SUMMEN, nicht als Mittel von Einzelquotienten
     // (Hausregel des Projekts, an dieser Oberflaeche schon einmal 13
     // Prozentpunkte teuer): die Flottenquote ist "alle ausgeliehenen
-    // Raeder durch alle Raeder", NICHT der Durchschnitt der neun
-    // Modellquoten - neun Modelle mit 10 bis 60 Raedern haetten dabei
-    // dasselbe Gewicht bekommen.
+    // Raeder durch alle Raeder", NICHT der Durchschnitt der fuenf
+    // Modellquoten - fuenf Modellzeilen mit 12 bis 110 Raedern haetten
+    // dabei dasselbe Gewicht bekommen.
     const ausgeliehenGesamt = raeder.filter((r) => r.status === 'ausgeliehen').length;
     const flottenquote = ausgeliehenGesamt / gesamt;
 
@@ -374,7 +388,7 @@ function flotteKopftafel(raeder) {
                 wert: (z) => z.bestand,
                 format: (n) => zahlFormat(n),
                 // RANG 4 DER FARBORDNUNG - ZUGEHOERIGKEIT (kategorieFarbe()
-                // in rahmen.js). Die neun Modellzeilen stehen in drei
+                // in rahmen.js). Die fuenf Modellzeilen stehen in drei
                 // Radtyp-Bloecken; der Balken traegt jetzt die Farbe
                 // seines Blocks. Der Nutzen ist nicht Schmuck, sondern
                 // Wiedererkennung: dasselbe Blau steht in "Umsatz nach

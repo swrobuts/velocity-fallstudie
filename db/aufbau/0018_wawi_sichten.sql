@@ -105,11 +105,14 @@ select f.fahrrad_id,
        -- Nachtraeglich ans Ende angefuegt (CREATE OR REPLACE VIEW darf
        -- bestehende Spalten weder verschieben noch umbenennen): die
        -- Detailmaske eines Rades hatte bislang nichts zum Anzeigen ausser
-       -- Namen. Die sechs Werte kommen aus fahrradmodell und gelten je
-       -- Modell, nicht je Einzelrad.
+       -- Namen. baujahr kommt aus fahrradmodell (gilt je Hersteller-Zeile),
+       -- die fuenf technischen Werte kommen seit der Produktkorrektur (siehe
+       -- db/betrieb/flottenmodelle_stammdaten.sql) aus fahrradtyp - sie
+       -- gelten je TYP, nicht je Modellzeile, weil auch der Tarif am Typ
+       -- haengt und nicht an dem Hersteller, der ihn gerade fertigt.
        mo.baujahr,
-       mo.gewicht_kg, mo.gangzahl, mo.rahmenhoehe_cm,
-       mo.akkukapazitaet_wh, mo.reichweite_km
+       t.gewicht_kg, t.gangzahl, t.rahmenhoehe_cm,
+       t.akkukapazitaet_wh, t.reichweite_km
   from velocity.fahrrad f
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
@@ -137,17 +140,17 @@ comment on column velocity.v_wawi_flotte.hersteller is
 comment on column velocity.v_wawi_flotte.modell is
   'Modellbezeichnung, für die Ersatzteilsuche in der Werkstatt.';
 comment on column velocity.v_wawi_flotte.baujahr is
-  'Baujahr der Modellserie laut Stammdaten.';
+  'Baujahr laut Stammdaten - das Jahr, seit dem der Hersteller dieser Modellzeile den Typ beliefert.';
 comment on column velocity.v_wawi_flotte.gewicht_kg is
-  'Leergewicht des Modells laut Stammdaten.';
+  'Leergewicht des Fahrradtyps laut Stammdaten - gilt für jedes Rad dieses Typs gleich, unabhängig vom Hersteller.';
 comment on column velocity.v_wawi_flotte.gangzahl is
-  'Zahl der Gänge des Modells laut Stammdaten.';
+  'Zahl der Gänge des Fahrradtyps laut Stammdaten - gilt für jedes Rad dieses Typs gleich, unabhängig vom Hersteller.';
 comment on column velocity.v_wawi_flotte.rahmenhoehe_cm is
-  'Rahmenhöhe des Modells laut Stammdaten.';
+  'Rahmenhöhe des Fahrradtyps laut Stammdaten - eine Größe je Typ, individuelle Anpassung läuft über den Sattel-Schnellspanner.';
 comment on column velocity.v_wawi_flotte.akkukapazitaet_wh is
-  'Akkukapazität des Modells laut Stammdaten. NULL bei einem Rad ohne Elektroantrieb.';
+  'Akkukapazität des Fahrradtyps laut Stammdaten. NULL bei einem Rad ohne Elektroantrieb.';
 comment on column velocity.v_wawi_flotte.reichweite_km is
-  'Herstellerangabe zur Reichweite des Modells laut Stammdaten. NULL bei einem Rad ohne Elektroantrieb.';
+  'Herstellerangabe zur Reichweite des Fahrradtyps laut Stammdaten. NULL bei einem Rad ohne Elektroantrieb.';
 comment on column velocity.v_wawi_flotte.status is
   'Aktueller Betriebsstatus des Rades - verfuegbar, ausgeliehen, wartung, '
   'defekt oder ausgemustert. Anders als die öffentliche '
@@ -874,10 +877,12 @@ select mo.modell_id,
                              as raeder_im_bestand,
        -- Nachtraeglich ans Ende angefuegt (CREATE OR REPLACE VIEW darf
        -- bestehende Spalten weder verschieben noch umbenennen), aus
-       -- demselben Anlass wie bei v_wawi_flotte: die Modellstammdaten
-       -- tragen inzwischen mehr als Namen.
-       mo.baujahr, mo.gewicht_kg, mo.gangzahl, mo.rahmenhoehe_cm,
-       mo.akkukapazitaet_wh, mo.reichweite_km
+       -- demselben Anlass wie bei v_wawi_flotte: die Stammdaten tragen
+       -- inzwischen mehr als Namen. baujahr bleibt je Modellzeile
+       -- (Hersteller), die fuenf technischen Werte kommen seit der
+       -- Produktkorrektur aus fahrradtyp - siehe deren Spaltenkommentare.
+       mo.baujahr, t.gewicht_kg, t.gangzahl, t.rahmenhoehe_cm,
+       t.akkukapazitaet_wh, t.reichweite_km
   from velocity.fahrradmodell mo
   join velocity.hersteller    h on h.hersteller_id = mo.hersteller_id
   join velocity.fahrradtyp    t on t.typ_id        = mo.typ_id
@@ -891,8 +896,9 @@ comment on column velocity.v_wawi_modell.modell_id is
 comment on column velocity.v_wawi_modell.hersteller is
   'Name des Herstellers, für die Auswahlliste ohne Nachschlagen einer Nummer.';
 comment on column velocity.v_wawi_modell.modellbezeichnung is
-  'Modellbezeichnung laut Stammdaten, zusammen mit hersteller die lesbare '
-  'Kennung des Eintrags.';
+  'Der Produktname, identisch mit dem Anzeigenamen des Typs (Spalte typ) - '
+  'zusammen mit hersteller die lesbare Kennung des Eintrags, weil mehrere '
+  'Hersteller dasselbe Produkt zur selben Spezifikation liefern können.';
 comment on column velocity.v_wawi_modell.typ_id is
   'Schlüssel des Fahrradtyps, falls die Oberfläche danach filtert oder '
   'gruppiert.';
@@ -907,20 +913,36 @@ comment on column velocity.v_wawi_modell.zuladung_kg is
   'Maximale Zuladung des Fahrradtyps laut Stammdaten. NULL, wenn der Typ '
   'keine Zuladungsgrenze führt.';
 comment on column velocity.v_wawi_modell.baujahr is
-  'Baujahr der Modellserie laut Stammdaten.';
+  'Baujahr laut Stammdaten - das Jahr, seit dem der Hersteller dieser Modellzeile den Typ beliefert.';
 comment on column velocity.v_wawi_modell.gewicht_kg is
-  'Leergewicht des Modells laut Stammdaten.';
+  'Leergewicht des Fahrradtyps laut Stammdaten - gilt für jedes Modell dieses Typs gleich, unabhängig vom Hersteller.';
 comment on column velocity.v_wawi_modell.gangzahl is
-  'Zahl der Gänge des Modells laut Stammdaten.';
+  'Zahl der Gänge des Fahrradtyps laut Stammdaten - gilt für jedes Modell dieses Typs gleich, unabhängig vom Hersteller.';
 comment on column velocity.v_wawi_modell.rahmenhoehe_cm is
-  'Rahmenhöhe des Modells laut Stammdaten.';
+  'Rahmenhöhe des Fahrradtyps laut Stammdaten - eine Größe je Typ, individuelle Anpassung läuft über den Sattel-Schnellspanner.';
 comment on column velocity.v_wawi_modell.akkukapazitaet_wh is
-  'Akkukapazität des Modells laut Stammdaten. NULL bei einem Modell ohne Elektroantrieb.';
+  'Akkukapazität des Fahrradtyps laut Stammdaten. NULL bei einem Modell ohne Elektroantrieb.';
 comment on column velocity.v_wawi_modell.reichweite_km is
-  'Herstellerangabe zur Reichweite des Modells laut Stammdaten. NULL bei einem Modell ohne Elektroantrieb.';
+  'Herstellerangabe zur Reichweite des Fahrradtyps laut Stammdaten. NULL bei einem Modell ohne Elektroantrieb.';
 comment on column velocity.v_wawi_modell.raeder_im_bestand is
   'Zahl der nicht ausgemusterten Räder dieses Modells im Bestand - zeigt an, '
   'was üblich ist, ohne dass jemand in der Flottensicht nachsehen muss.';
+
+-- Jetzt, und nicht in 0003_bereich_b_netz_und_flotte.sql: die fuenf
+-- technischen Spalten muessen auch von fahrradmodell verschwinden, falls
+-- eine bestehende Datenbank sie dort noch aus dem ersten Anlauf traegt
+-- (siehe deren Kopfkommentar) - aber "alter table ... drop column"
+-- scheitert, solange eine Sicht von der Spalte abhaengt, und genau das
+-- taten v_wawi_flotte und v_wawi_modell bis zu den beiden CREATE OR
+-- REPLACE VIEW weiter oben in dieser Datei. Erst NACH beiden Ersetzungen
+-- ist die Abhaengigkeit weg und die Spalten koennen fallen. drop column
+-- if exists ist idempotent und nimmt die betroffenen CHECK-Constraints
+-- automatisch mit.
+alter table velocity.fahrradmodell drop column if exists gewicht_kg;
+alter table velocity.fahrradmodell drop column if exists gangzahl;
+alter table velocity.fahrradmodell drop column if exists rahmenhoehe_cm;
+alter table velocity.fahrradmodell drop column if exists akkukapazitaet_wh;
+alter table velocity.fahrradmodell drop column if exists reichweite_km;
 
 -- =====================================================================
 -- Drill-Down-Aufgabe: v_wawi_fahrten_je_tag - Tagesaggregation für die

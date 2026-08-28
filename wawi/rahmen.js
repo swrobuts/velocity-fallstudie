@@ -665,7 +665,7 @@ const UEBERSETZUNGEN = {
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, Baujahr {jahr}, auf der Skala {vonJahr} bis {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % ausgeliehen, ganze Flotte {flottenquote} %",
-    "board.fleetFootnote": "Abweichung: Anteil ausgeliehener Räder je Modell gegenüber {quote} % in der gesamten Flotte – aus Summen gerechnet, nicht als Mittel der neun Modellquoten.",
+    "board.fleetFootnote": "Abweichung: Anteil ausgeliehener Räder je Modell gegenüber {quote} % in der gesamten Flotte – aus Summen gerechnet, nicht als Mittel der fünf Modellquoten.",
     "board.fleetNoLocationFootnote": "{raederPhrase} gelten als verfügbar, tragen aber keinen Standort – in der Kartei einsatzbereit und im Netz nicht auffindbar.",
     "board.stationsTitle": "Netz nach Station",
     "board.stationsReference": "{stationenPhrase} · {belegt} von {kapazitaet} Stellplätzen belegt ({prozent} %) · Saldo über alle abgeschlossenen Fahrten",
@@ -1143,7 +1143,7 @@ const UEBERSETZUNGEN = {
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, model year {jahr}, on the scale {vonJahr} to {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % on loan, whole fleet {flottenquote} %",
-    "board.fleetFootnote": "Deviation: share of bikes on loan per model against {quote} % across the whole fleet – computed from totals, not as the average of the nine model ratios.",
+    "board.fleetFootnote": "Deviation: share of bikes on loan per model against {quote} % across the whole fleet – computed from totals, not as the average of the five model ratios.",
     "board.fleetNoLocationFootnote": "{raederPhrase} count as available but carry no location – ready in the records and untraceable in the network.",
     "board.stationsTitle": "Network by station",
     "board.stationsReference": "{stationenPhrase} · {belegt} of {kapazitaet} docking points occupied ({prozent} %) · balance over all completed rides",
@@ -1621,7 +1621,7 @@ const UEBERSETZUNGEN = {
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, model yılı {jahr}, {vonJahr}–{bisJahr} ölçeğinde",
     "board.fleetDeviationAria": "{name}: %{quote} kirada, tüm filo %{flottenquote}",
-    "board.fleetFootnote": "Sapma: model başına kirada olan bisiklet payı, tüm filodaki %{quote} ile karşılaştırılır – dokuz model oranının ortalaması değil, toplamlardan hesaplanır.",
+    "board.fleetFootnote": "Sapma: model başına kirada olan bisiklet payı, tüm filodaki %{quote} ile karşılaştırılır – beş model oranının ortalaması değil, toplamlardan hesaplanır.",
     "board.fleetNoLocationFootnote": "{raederPhrase} müsait görünüyor ama konumu yok – kayıtta hazır, ağda bulunamıyor.",
     "board.stationsTitle": "İstasyona göre ağ",
     "board.stationsReference": "{stationenPhrase} · {kapazitaet} park yerinden {belegt} dolu (%{prozent}) · tamamlanan tüm sürüşlerin dengesi",
@@ -2099,7 +2099,7 @@ const UEBERSETZUNGEN = {
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, año {jahr}, en la escala de {vonJahr} a {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % en préstamo, flota completa {flottenquote} %",
-    "board.fleetFootnote": "Desviación: proporción de bicicletas en préstamo por modelo frente al {quote} % de toda la flota, calculada a partir de sumas y no como media de las nueve proporciones.",
+    "board.fleetFootnote": "Desviación: proporción de bicicletas en préstamo por modelo frente al {quote} % de toda la flota, calculada a partir de sumas y no como media de las cinco proporciones.",
     "board.fleetNoLocationFootnote": "{raederPhrase} figuran como disponibles pero no tienen ubicación: listas en el registro e imposibles de localizar en la red.",
     "board.stationsTitle": "Red por estación",
     "board.stationsReference": "{stationenPhrase} · {belegt} de {kapazitaet} plazas ocupadas ({prozent} %) · saldo de todos los viajes finalizados",
@@ -2577,7 +2577,7 @@ const UEBERSETZUNGEN = {
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, anno {jahr}, sulla scala da {vonJahr} a {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % in prestito, intera flotta {flottenquote} %",
-    "board.fleetFootnote": "Scostamento: quota di bici in prestito per modello rispetto al {quote} % dell'intera flotta, calcolata dalle somme e non come media delle nove quote.",
+    "board.fleetFootnote": "Scostamento: quota di bici in prestito per modello rispetto al {quote} % dell'intera flotta, calcolata dalle somme e non come media delle cinque quote.",
     "board.fleetNoLocationFootnote": "{raederPhrase} risultano disponibili ma senza posizione: pronte in archivio e introvabili in rete.",
     "board.stationsTitle": "Rete per stazione",
     "board.stationsReference": "{stationenPhrase} · {belegt} di {kapazitaet} stalli occupati ({prozent} %) · saldo su tutte le corse concluse",
@@ -3055,7 +3055,7 @@ const UEBERSETZUNGEN = {
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, rocznik {jahr}, na skali od {vonJahr} do {bisJahr}",
     "board.fleetDeviationAria": "{name}: {quote} % wypożyczonych, cała flota {flottenquote} %",
-    "board.fleetFootnote": "Odchylenie: udział wypożyczonych rowerów na model wobec {quote} % całej floty – liczone z sum, a nie jako średnia dziewięciu udziałów.",
+    "board.fleetFootnote": "Odchylenie: udział wypożyczonych rowerów na model wobec {quote} % całej floty – liczone z sum, a nie jako średnia pięciu udziałów.",
     "board.fleetNoLocationFootnote": "{raederPhrase} figurują jako dostępne, lecz nie mają lokalizacji – gotowe w kartotece i nie do odnalezienia w sieci.",
     "board.stationsTitle": "Sieć według stacji",
     "board.stationsReference": "{stationenPhrase} · {belegt} z {kapazitaet} miejsc zajętych ({prozent} %) · saldo ze wszystkich zakończonych przejazdów",
@@ -5957,8 +5957,9 @@ function zahlSkaliert(formatiert) {
 // Die Kopftafel dreht die Anordnung um: statt WENIGER KACHELN
 // NEBENEINANDER stehen VIELE ZEILEN UNTEREINANDER, und jede Zeile ist
 // GLEICH GEBAUT. Die Zeilen sind die natuerliche Gliederung des
-// Bestands, ueber den die Liste darunter Auskunft gibt (die neun Modelle,
-// die zehn Stationen, die fuenf Tarifgruppen, die drei Radtypen) - und
+// Bestands, ueber den die Liste darunter Auskunft gibt (die fuenf
+// Modellzeilen, die zehn Stationen, die fuenf Tarifgruppen, die drei
+// Radtypen) - und
 // wo der Bestand klein genug ist, um jeden Fall selbst zu zeigen, SIND
 // die Zeilen die Faelle (Instandhaltung, sieben Meldungen). Das ist die
 // eine Regel, aus der alles Uebrige folgt: DIE ZEILE IST DIE FEINSTE
@@ -6048,7 +6049,7 @@ let kopftafelZaehler = 0;
 // WAS EINGEKLAPPT STEHEN BLEIBT: Titel und Bezugszeile (tafel.bild
 // eingeschlossen). Eine Tafel, die spurlos verschwaende, wuerde
 // vergessen - die Kopfzeile allein beantwortet aber bereits "worueber
-// rede ich hier" ("275 Raeder * 9 Modelle von 5 Herstellern..."), ohne
+// rede ich hier" ("275 Raeder in 5 Modellzeilen von 5 Herstellern..."), ohne
 // die vollen 60 bis 170 Einzelwerte der Tabelle zu zeigen. Nur
 // .kopftafel-tabelle und .kopftafel-fussnote verschwinden (siehe
 // .kopftafel-eingeklappt in style.css) - kopf.kopftexte bleibt immer im

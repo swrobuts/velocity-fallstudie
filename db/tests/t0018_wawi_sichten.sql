@@ -428,8 +428,9 @@ begin
 
   perform velocity_test.fixture_mitarbeiter('modell');
   select count(*) into v_n from velocity.v_wawi_modell;
-  -- Ohne Zeilen kann die Maske kein Rad anlegen. Der Bestand fuehrt drei
-  -- Modelle; die Zahl selbst ist nicht der Punkt, die Bewohnbarkeit schon.
+  -- Ohne Zeilen kann die Maske kein Rad anlegen. Der Bestand fuehrt fuenf
+  -- Modellzeilen (ein Produkt je Typ, mehrere Hersteller); die Zahl selbst
+  -- ist nicht der Punkt, die Bewohnbarkeit schon.
   return next cmp_ok(v_n, '>', 0, 'Die Auswahlliste ist nicht leer');
 
   -- Die Sicht ist fuer eine EINGABEmaske da. Wer ein Rad anlegt, muss

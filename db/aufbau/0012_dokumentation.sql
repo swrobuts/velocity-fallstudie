@@ -103,13 +103,23 @@ comment on column velocity.station.kapazitaet       is 'Anzahl der Stellplätze,
 comment on column velocity.station.betriebszeitraum is 'Zeitraum, in dem die Station betrieben wird. Halboffen; nach oben offen bedeutet: weiterhin in Betrieb.';
 
 comment on table velocity.fahrradtyp is
-  'Fachliche Klasse eines Rades (City, E-Bike, Cargo). Trägt bewusst keine Preise - die stehen zeitabhängig in nutzungspreis.';
+  'Fachliche Klasse eines Rades (City, E-Bike, Cargo) - zugleich das einzige Produkt dieser Klasse. Trägt bewusst keine Preise - die stehen zeitabhängig in nutzungspreis.';
 comment on column velocity.fahrradtyp.typ_id       is 'Surrogatschlüssel.';
 comment on column velocity.fahrradtyp.typ_code     is 'Fachlicher Schlüssel für die Anwendung: CITY, EBIKE, CARGO.';
-comment on column velocity.fahrradtyp.bezeichnung  is 'Name auf der Website, etwa E-Cargo Loader.';
+comment on column velocity.fahrradtyp.bezeichnung  is 'Name auf der Website, etwa E-Cargo Loader. Zugleich der Produktname, den jede Modellzeile in fahrradmodell für diesen Typ trägt - ein Verleiher bietet ein City-Bike an, keine Modellpalette.';
 comment on column velocity.fahrradtyp.beschreibung is 'Fließtext für die Tarifkarte.';
 comment on column velocity.fahrradtyp.hat_elektro  is 'Wahr bei Pedelec und E-Lastenrad. Steuert die Akkuanzeige auf der Karte.';
 comment on column velocity.fahrradtyp.zuladung_kg  is 'Zulässige Zuladung in Kilogramm.';
+comment on column velocity.fahrradtyp.gewicht_kg is
+  'Leergewicht in Kilogramm, für jedes Rad dieses Typs gleich - Hersteller fertigen zu dieser Vorgabe, sie handeln sie nicht aus. Ursprünglich an fahrradmodell, auf Kundeneinwand hierher verschoben: unterschiedliche Werte je Modell hätten unterschiedliche Preise verlangt, aber der Tarif hängt am Typ, nicht am Modell.';
+comment on column velocity.fahrradtyp.gangzahl is
+  'Zahl der Gänge der Schaltung, für jedes Rad dieses Typs gleich. Siehe gewicht_kg zur Begründung, warum das hier steht und nicht an fahrradmodell.';
+comment on column velocity.fahrradtyp.rahmenhoehe_cm is
+  'Rahmenhöhe in Zentimetern, für jedes Rad dieses Typs dieselbe eine Größe - kein L/XL-Sortiment: ein Leihrad hat eine Rahmengröße, die individuelle Anpassung an die fahrende Person läuft über den Sattel-Schnellspanner, nicht über eine Modellwahl. Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell.';
+comment on column velocity.fahrradtyp.akkukapazitaet_wh is
+  'Kapazität des Akkus in Wattstunden, für jedes Rad dieses Typs gleich. NULL bei einem Typ ohne Elektroantrieb (hat_elektro = falsch). Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell.';
+comment on column velocity.fahrradtyp.reichweite_km is
+  'Herstellerangabe zur Reichweite je Akkuladung in Kilometern, für jedes Rad dieses Typs gleich - beim E-Bike Sport identisch mit der auf der Tarifkarte beworbenen Reichweite bis 50 km (siehe fahrradtyp.beschreibung). NULL bei einem Typ ohne Elektroantrieb. Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell.';
 
 comment on table velocity.fahrradtyp_merkmal is
   'Werbliche Einzelmerkmale eines Fahrradtyps für die Tarifkarte der Website. Früher fest in index.html kodiert.';
@@ -120,20 +130,15 @@ comment on column velocity.fahrradtyp_merkmal.merkmal    is 'Der Text des Aufzä
 
 comment on table velocity.hersteller is 'Produzent eines Fahrradmodells.';
 comment on column velocity.hersteller.hersteller_id is 'Surrogatschlüssel.';
-comment on column velocity.hersteller.name          is 'Firmenname, eindeutig. Der Wert unbekannt kennzeichnet Sätze aus der Datenübernahme ohne Herstellerangabe.';
+comment on column velocity.hersteller.name          is 'Firmenname, eindeutig. Bis zur Bereinigung in db/betrieb/flottenmodelle_stammdaten.sql kennzeichnete der Wert unbekannt Sätze aus der Datenübernahme ohne Herstellerangabe - dieser Platzhalter kommt im heutigen Bestand nicht mehr vor.';
 
 comment on table velocity.fahrradmodell is
-  'Bauart eines Rades. Bindeglied zur Warenwirtschaft: Ersatzteile hängen am Modell, nicht am Einzelrad.';
+  'Welcher Hersteller das EINE Produkt eines Typs fertigt, und seit welchem Baujahr. Bindeglied zur Warenwirtschaft: Ersatzteile hängen am Modell, nicht am Einzelrad. Mehrere Zeilen je Typ sind normal und gewollt - ein Verleiher schreibt eine Spezifikation aus und bezieht sie von mehreren Herstellern, verkauft aber ein einziges Produkt (siehe fahrradtyp.bezeichnung, das jede Zeile hier unverändert übernimmt). Technische Angaben stehen deshalb NICHT hier, sondern an fahrradtyp - sie gelten je Spezifikation, nicht je Hersteller.';
 comment on column velocity.fahrradmodell.modell_id         is 'Surrogatschlüssel.';
-comment on column velocity.fahrradmodell.hersteller_id     is 'Produzent des Modells.';
-comment on column velocity.fahrradmodell.typ_id            is 'Fachliche Klasse, der das Modell angehört.';
-comment on column velocity.fahrradmodell.modellbezeichnung is 'Modellname des Herstellers. Je Hersteller eindeutig.';
-comment on column velocity.fahrradmodell.baujahr           is 'Baujahr der Serie.';
-comment on column velocity.fahrradmodell.gewicht_kg         is 'Leergewicht des Rades in Kilogramm.';
-comment on column velocity.fahrradmodell.gangzahl           is 'Zahl der Gänge der Schaltung.';
-comment on column velocity.fahrradmodell.rahmenhoehe_cm     is 'Rahmenhöhe in Zentimetern. In einer Vermietflotte je Modell meist eine einzige Größe statt mehrerer Konfektionsgrößen.';
-comment on column velocity.fahrradmodell.akkukapazitaet_wh  is 'Kapazität des Akkus in Wattstunden. NULL bei einem Modell ohne Elektroantrieb.';
-comment on column velocity.fahrradmodell.reichweite_km      is 'Herstellerangabe zur Reichweite je Akkuladung in Kilometern. NULL bei einem Modell ohne Elektroantrieb.';
+comment on column velocity.fahrradmodell.hersteller_id     is 'Produzent, der zur Spezifikation des Typs fertigt.';
+comment on column velocity.fahrradmodell.typ_id            is 'Fachliche Klasse (das Produkt), zu der dieser Hersteller liefert.';
+comment on column velocity.fahrradmodell.modellbezeichnung is 'Der Produktname - identisch mit fahrradtyp.bezeichnung des zugehörigen Typs, unabhängig vom Hersteller. Kein eigener Modellname je Hersteller: Kundschaft mietet ein City-Bike, keine Marke.';
+comment on column velocity.fahrradmodell.baujahr           is 'Jahr, seit dem dieser Hersteller den Typ beliefert - nicht das Baujahr eines einzelnen Rades, das über mehrere Beschaffungschargen desselben Herstellers variieren kann.';
 
 comment on table velocity.fahrrad is
   'Einzelnes physisches Fahrzeug der Flotte, eindeutig über die Rahmennummer.';

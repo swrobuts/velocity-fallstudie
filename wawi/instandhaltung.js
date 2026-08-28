@@ -155,7 +155,7 @@ async function instandhaltungAufbauen() {
 // HIER IST DIE ZEILE DER FALL SELBST - und das ist keine Ausnahme vom
 // Muster, sondern seine Regel: "die Zeile ist die feinste Gliederung,
 // die noch in den Kopf passt" (siehe zeigeKopftafel() in rahmen.js).
-// Bei 275 Raedern sind das neun Modelle, bei 1014 Kunden fuenf
+// Bei 275 Raedern sind das fuenf Modellzeilen, bei 1014 Kunden fuenf
 // Tarifgruppen - bei SIEBEN Schadensmeldungen sind es die sieben
 // Meldungen. Eine Gliederung waere hier nicht feiner als die Sache
 // selbst, sondern groeber.

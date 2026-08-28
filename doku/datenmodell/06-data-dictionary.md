@@ -29,6 +29,24 @@ Postanschrift. Eigenständige Entität, weil sie von Kunde, Station, Lieferant u
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
+## `aenderungsprotokoll` (Tabelle)
+
+Feldweise Spur jeder Änderung an protokollierten Tabellen (Art. 5 Abs. 2 DSGVO). Eine Zeile je geändertem Feld, nicht je Anweisung, damit sich die Historie eines einzelnen Feldes ohne Werkzeug herausfiltern lässt. tabelle/datensatz_id sind eine Spur, keine geprüfte Beziehung - wie beleg_tabelle/beleg_id bei fahrrad_ereignis.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `protokoll_id` | `bigint` | nein |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `zeitpunkt` | `timestamp with time zone` | nein | `now()` | Zeitpunkt der protokollierten Änderung, unabhängig vom technischen erstellt_am dieser Zeile. |
+| `mitarbeiter_id` | `bigint` | ja |  | Wer die Änderung ausgelöst hat. NULL, wenn kein angemeldeter Mitarbeiter ermittelbar war, etwa bei einem Wartungsskript - ein erfundener Verursacher wäre schlechter als keiner. |
+| `tabelle` | `text` | nein |  | Name der veränderten Tabelle, aus tg_table_name des auslösenden Triggers. Bewusst ohne Fremdschlüssel: der Trigger und diese Tabelle sind für beliebige Zieltabellen gebaut, ein FK könnte nur auf eine einzige davon zeigen. |
+| `datensatz_id` | `bigint` | nein |  | Primärschlüsselwert des veränderten Datensatzes in seiner Tabelle. Bewusst ohne Fremdschlüssel, siehe Kommentar an tabelle und an der Tabelle selbst. |
+| `aktion` | `text` | nein |  | Art der Änderung: INSERT, UPDATE oder DELETE, siehe aenderungsprotokoll_aktion_chk. |
+| `feld` | `text` | nein |  | Name des veränderten Feldes. Eine Zeile je Feld statt ein JSON-Klumpen, damit "wer hat je die E-Mail geändert" ohne Werkzeug beantwortbar bleibt (GR19). |
+| `wert_alt` | `text` | ja |  | Wert des Feldes vor der Änderung, als Text. NULL bei INSERT. Text statt Originaltyp, weil ein und derselbe Trigger auf jede Tabelle und jede Spalte passen muss - ein typisierter Wert bräuchte eine eigene Spalte je Datentyp. |
+| `wert_neu` | `text` | ja |  | Wert des Feldes nach der Änderung, als Text. NULL bei DELETE. Gleicher Grund wie wert_alt: generischer Typ für einen tabellenunabhängigen Trigger. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
 ## `ausleihe` (Tabelle)
 
 Zentraler Geschäftsvorfall: ein Kunde nutzt ein Rad von einem Zeitpunkt bis zu einem anderen.
@@ -51,6 +69,7 @@ Zentraler Geschäftsvorfall: ein Kunde nutzt ein Rad von einem Zeitpunkt bis zu 
 | `dauer_minuten` | `integer` | ja | `(ceil((EXTRACT(epoch FROM (endzeit - startzeit)) / 60.0)))::integer` | Berechnete Spalte: angefangene Minuten, aufgerundet. Nicht beschreibbar - abgeleitete Werte werden abgeleitet, nicht gepflegt. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+| `distanz_km` | `numeric(8,2)` | ja |  | Gefahrene Strecke in Kilometern. null bedeutet nicht gemessen, nicht null Kilometer. |
 
 ## `entgeltart` (Tabelle)
 
@@ -97,6 +116,23 @@ Einzelnes physisches Fahrzeug der Flotte, eindeutig über die Rahmennummer.
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
+## `fahrrad_ereignis` (Tabelle)
+
+Lebenslaufakte eines Rades. beleg_tabelle/beleg_id sind eine Spur, keine geprüfte Beziehung.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `ereignis_id` | `bigint` | nein |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `fahrrad_id` | `bigint` | nein |  | Das betroffene Rad. on delete cascade, weil ein Ereignis ohne sein Rad keine eigene Bedeutung hat. |
+| `zeitpunkt` | `timestamp with time zone` | nein | `now()` | Zeitpunkt des Ereignisses, für die chronologische Lebenslaufakte. |
+| `ereignisart` | `velocity.fahrrad_ereignisart` | nein |  | Art des Ereignisses (GR21), etwa Statuswechsel oder Ausmusterung. |
+| `mitarbeiter_id` | `bigint` | ja |  | Mitarbeiter, unter dessen Anmeldung das Ereignis entstand. NULL, wenn der Trigger ausläuft, ohne eine passende auth.uid() zu finden - etwa bei einem Lauf als postgres. |
+| `bemerkung` | `text` | ja |  | Freitext zum Ereignis, beim Statuswechsel automatisch mit alt -> neu befüllt. |
+| `beleg_tabelle` | `text` | ja |  | Name der Tabelle des auslösenden Vorgangs, etwa fahrrad. Bewusst ungeprüft, siehe Kommentar an der Tabelle. |
+| `beleg_id` | `bigint` | ja |  | Zeigt auf den auslösenden Vorgang. Bewusst ungeprüft, siehe Kommentar an der Tabelle. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
 ## `fahrrad_position` (Tabelle)
 
 Aktueller Standort eines Rades. Als 1:1-Satellit geführt, damit die ständig änderlichen Bewegungsdaten die Stammdaten nicht berühren.
@@ -114,32 +150,37 @@ Aktueller Standort eines Rades. Als 1:1-Satellit geführt, damit die ständig ä
 
 ## `fahrradmodell` (Tabelle)
 
-Bauart eines Rades. Bindeglied zur Warenwirtschaft: Ersatzteile hängen am Modell, nicht am Einzelrad.
+Welcher Hersteller das EINE Produkt eines Typs fertigt, und seit welchem Baujahr. Bindeglied zur Warenwirtschaft: Ersatzteile hängen am Modell, nicht am Einzelrad. Mehrere Zeilen je Typ sind normal und gewollt - ein Verleiher schreibt eine Spezifikation aus und bezieht sie von mehreren Herstellern, verkauft aber ein einziges Produkt (siehe fahrradtyp.bezeichnung, das jede Zeile hier unverändert übernimmt). Technische Angaben stehen deshalb NICHT hier, sondern an fahrradtyp - sie gelten je Spezifikation, nicht je Hersteller.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
 | `modell_id` | `bigint` | nein |  | Surrogatschlüssel. |
-| `hersteller_id` | `bigint` | nein |  | Produzent des Modells. |
-| `typ_id` | `bigint` | nein |  | Fachliche Klasse, der das Modell angehört. |
-| `modellbezeichnung` | `text` | nein |  | Modellname des Herstellers. Je Hersteller eindeutig. |
-| `baujahr` | `integer` | ja |  | Baujahr der Serie. |
+| `hersteller_id` | `bigint` | nein |  | Produzent, der zur Spezifikation des Typs fertigt. |
+| `typ_id` | `bigint` | nein |  | Fachliche Klasse (das Produkt), zu der dieser Hersteller liefert. |
+| `modellbezeichnung` | `text` | nein |  | Der Produktname - identisch mit fahrradtyp.bezeichnung des zugehörigen Typs, unabhängig vom Hersteller. Kein eigener Modellname je Hersteller: Kundschaft mietet ein City-Bike, keine Marke. |
+| `baujahr` | `integer` | ja |  | Jahr, seit dem dieser Hersteller den Typ beliefert - nicht das Baujahr eines einzelnen Rades, das über mehrere Beschaffungschargen desselben Herstellers variieren kann. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
 ## `fahrradtyp` (Tabelle)
 
-Fachliche Klasse eines Rades (City, E-Bike, Cargo). Trägt bewusst keine Preise - die stehen zeitabhängig in nutzungspreis.
+Fachliche Klasse eines Rades (City, E-Bike, Cargo) - zugleich das einzige Produkt dieser Klasse. Trägt bewusst keine Preise - die stehen zeitabhängig in nutzungspreis.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
 | `typ_id` | `bigint` | nein |  | Surrogatschlüssel. |
 | `typ_code` | `text` | nein |  | Fachlicher Schlüssel für die Anwendung: CITY, EBIKE, CARGO. |
-| `bezeichnung` | `text` | nein |  | Name auf der Website, etwa E-Cargo Loader. |
+| `bezeichnung` | `text` | nein |  | Name auf der Website, etwa E-Cargo Loader. Zugleich der Produktname, den jede Modellzeile in fahrradmodell für diesen Typ trägt - ein Verleiher bietet ein City-Bike an, keine Modellpalette. |
 | `beschreibung` | `text` | ja |  | Fließtext für die Tarifkarte. |
 | `hat_elektro` | `boolean` | nein | `false` | Wahr bei Pedelec und E-Lastenrad. Steuert die Akkuanzeige auf der Karte. |
 | `zuladung_kg` | `integer` | ja |  | Zulässige Zuladung in Kilogramm. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+| `gewicht_kg` | `numeric(4,1)` | ja |  | Leergewicht in Kilogramm, für jedes Rad dieses Typs gleich - Hersteller fertigen zu dieser Vorgabe, sie handeln sie nicht aus. Ursprünglich an fahrradmodell, auf Kundeneinwand hierher verschoben: unterschiedliche Werte je Modell hätten unterschiedliche Preise verlangt, aber der Tarif hängt am Typ, nicht am Modell. |
+| `gangzahl` | `integer` | ja |  | Zahl der Gänge der Schaltung, für jedes Rad dieses Typs gleich. Siehe gewicht_kg zur Begründung, warum das hier steht und nicht an fahrradmodell. |
+| `rahmenhoehe_cm` | `integer` | ja |  | Rahmenhöhe in Zentimetern, für jedes Rad dieses Typs dieselbe eine Größe - kein L/XL-Sortiment: ein Leihrad hat eine Rahmengröße, die individuelle Anpassung an die fahrende Person läuft über den Sattel-Schnellspanner, nicht über eine Modellwahl. Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell. |
+| `akkukapazitaet_wh` | `integer` | ja |  | Kapazität des Akkus in Wattstunden, für jedes Rad dieses Typs gleich. NULL bei einem Typ ohne Elektroantrieb (hat_elektro = falsch). Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell. |
+| `reichweite_km` | `integer` | ja |  | Herstellerangabe zur Reichweite je Akkuladung in Kilometern, für jedes Rad dieses Typs gleich - beim E-Bike Sport identisch mit der auf der Tarifkarte beworbenen Reichweite bis 50 km (siehe fahrradtyp.beschreibung). NULL bei einem Typ ohne Elektroantrieb. Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell. |
 
 ## `fahrradtyp_merkmal` (Tabelle)
 
@@ -185,7 +226,7 @@ Monatliches Freiminutenkontingent und dessen Verbrauch. Ersetzt einen mutierende
 
 ## `geschaeftsgebiet` (Tabelle)
 
-Flaeche, innerhalb derer ein Rad ueberall abgestellt werden darf. Stand frueher fest im JavaScript der Karte - eine Regel ohne Durchsetzung.
+Fläche, innerhalb derer ein Rad überall abgestellt werden darf. Stand früher fest im JavaScript der Karte - eine Regel ohne Durchsetzung.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -203,13 +244,13 @@ Produzent eines Fahrradmodells.
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
 | `hersteller_id` | `bigint` | nein |  | Surrogatschlüssel. |
-| `name` | `text` | nein |  | Firmenname, eindeutig. Der Wert unbekannt kennzeichnet Sätze aus der Datenübernahme ohne Herstellerangabe. |
+| `name` | `text` | nein |  | Firmenname, eindeutig. Bis zur Bereinigung in db/betrieb/flottenmodelle_stammdaten.sql kennzeichnete der Wert unbekannt Sätze aus der Datenübernahme ohne Herstellerangabe - dieser Platzhalter kommt im heutigen Bestand nicht mehr vor. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
 ## `hoehenmarke` (Tabelle)
 
-Markante Hoehen rund um Wuerzburg als Bezugspunkte der Hoehengrafik. Keine Stationen, aber Redaktionsinhalt - deshalb in der Datenbank und nicht im Frontend.
+Markante Höhen rund um Würzburg als Bezugspunkte der Höhengrafik. Keine Stationen, aber Redaktionsinhalt - deshalb in der Datenbank und nicht im Frontend.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -259,6 +300,35 @@ Geschäftspartner auf der Nachfrageseite. Die Anmeldung liegt bei Supabase Auth,
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
+## `mitarbeiter` (Tabelle)
+
+Person, die die Warenwirtschaft bedient. Anders als kunde keine Vertragsbeziehung, sondern eine oder mehrere Rollen über mitarbeiter_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `mitarbeiter_id` | `bigint` | nein |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `personalnummer` | `text` | nein |  | Fachlicher Schlüssel der Personalverwaltung, unabhängig vom Anmeldekonto. |
+| `auth_uid` | `uuid` | ja |  | Verknüpfung zur Anmeldung. Leer, solange sich die Person nie angemeldet hat. |
+| `vorname` | `text` | nein |  | Vorname laut Personalakte. |
+| `nachname` | `text` | nein |  | Nachname laut Personalakte. |
+| `email` | `text` | nein |  | Dienstliche Kontaktadresse, zugleich eindeutiges Merkmal für die Anmeldung. |
+| `eingetreten_am` | `date` | nein | `CURRENT_DATE` | Datum des Diensteintritts. Bezugspunkt von mitarbeiter_austritt_chk, das ein Austrittsdatum davor abweist. |
+| `ausgetreten_am` | `date` | ja |  | Datum des Ausscheidens. NULL, solange die Person aktiv oder beurlaubt ist; Pflicht sobald status = ausgeschieden (GR16, siehe mitarbeiter_ausgeschieden_chk). |
+| `status` | `velocity.mitarbeiter_status` | nein | `'aktiv'::velocity.mitarbeiter_status` | aktiv, beurlaubt oder ausgeschieden. Erst der Status entscheidet über den Zugriff, das Austrittsdatum allein würde nicht reichen (GR16). |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
+## `mitarbeiter_rolle` (Tabelle)
+
+Zuordnung m:n. Abweichung vom Entwurf aus Phase 1, begründet mit Datenminimierung.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `mitarbeiter_id` | `bigint` | nein |  | Hälfte des zusammengesetzten Schlüssels: welcher Mitarbeiter die Rolle hat. |
+| `rolle_id` | `bigint` | nein |  | Hälfte des zusammengesetzten Schlüssels: welche Rolle zugeordnet ist. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
 ## `mitgliedschaft` (Tabelle)
 
 Einschreibung eines Kunden in einen Tarif für einen Zeitraum. Je Kunde nie zwei gleichzeitig.
@@ -300,6 +370,32 @@ Ein Schritt der Anleitung "So einfach geht es" auf der Website.
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
+## `ort_koordinate` (Tabelle)
+
+Koordinaten je Ortsname, fuer die schematische Landkarte der Stationen (Gestaltungsauftrag Stationen, Punkt 4). Enthaelt genau die Orte, die unter velocity.adresse.ort in dieser Datenbank tatsaechlich vorkommen (siehe Kopfkommentar). Werte aus OpenStreetMap/Nominatim (Ortszentrum), nicht geschaetzt - "pruef sie, statt sie zu raten" (Auftrag, woertlich).
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `ort` | `text` | nein |  | Ortsname, wortgleich zu velocity.adresse.ort - der Join-Schluessel zu v_wawi_kundenorte. |
+| `latitude` | `numeric(9,6)` | nein |  | Breitengrad des Ortszentrums. |
+| `longitude` | `numeric(9,6)` | nein |  | Laengengrad des Ortszentrums. |
+
+## `rechenannahme` (Tabelle)
+
+Zahlen, die eine Auswertung annimmt statt sie zu messen. Jede nennt ihre Quelle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `annahme_id` | `bigint` | nein |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `code` | `text` | nein |  | Fachlicher Bezeichner der Annahme, etwa co2_pkw oder umwegfaktor. Auswertungen suchen darüber, nicht über den Surrogatschlüssel. |
+| `wert` | `numeric(12,4)` | nein |  | Der angenommene Zahlenwert in der angegebenen Einheit. |
+| `einheit` | `text` | nein |  | Einheit von wert, etwa g CO2e/Pkm, damit der Wert ohne Rückfrage einzuordnen ist. |
+| `gueltigkeit` | `daterange` | nein |  | Zeitraum, für den dieser Wert gilt. Überschneidungsfrei je code erzwungen durch rechenannahme_zeitraum_ex, damit eine Auswertung zu jedem Tag genau einen Wert findet. |
+| `quelle` | `text` | nein |  | Pflichtangabe. Eine Annahme ohne Herkunft ist eine Behauptung. |
+| `erlaeuterung` | `text` | ja |  | Freitext, was der Wert genau umfasst, etwa ob eine Vorkette eingerechnet ist. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
 ## `rechnung` (Tabelle)
 
 Monatlicher Beleg je Kunde über die Ausleihen einer Abrechnungsperiode.
@@ -335,6 +431,37 @@ Einzelposten einer Rechnung, in der Regel genau eine Ausleihe.
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
+## `rolle` (Tabelle)
+
+Fachliche Klassifikation von Aufgabenbereichen. Tabelle statt ENUM, weil ihr später Rechte angehängt werden - siehe Kommentar am create table.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `rolle_id` | `bigint` | nein |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `code` | `text` | nein |  | Fachlicher Schlüssel, in Code und Policies referenzierbar - anders als bezeichnung, die sich ändern darf, ohne dass etwas bricht. |
+| `bezeichnung` | `text` | nein |  | Anzeigename der Rolle in der Oberfläche. |
+| `beschreibung` | `text` | ja |  | Erläutert den Aufgabenzuschnitt der Rolle. Optional, weil nicht jede künftige Rolle Erklärungsbedarf hat. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
+## `schadensmeldung` (Tabelle)
+
+Meldung eines Schadens an einem Rad, Ausgangspunkt der Instandhaltung. Genau ein Melder je Meldung, siehe schadensmeldung_melder_chk.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `schadensmeldung_id` | `bigint` | nein |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `fahrrad_id` | `bigint` | nein |  | Das gemeldete Rad. |
+| `gemeldet_am` | `timestamp with time zone` | nein | `now()` | Zeitpunkt der Meldung, unabhängig vom technischen erstellt_am. |
+| `melder_kunde_id` | `bigint` | ja |  | Meldender Kunde. Gesetzt oder melder_mitarbeiter_id, nie beide (schadensmeldung_melder_chk) - sonst wüsste niemand, wen man zur Nachfrage anspricht. |
+| `melder_mitarbeiter_id` | `bigint` | ja |  | Meldender Mitarbeiter, etwa nach einer Sichtprüfung in der Werkstatt. Gesetzt oder melder_kunde_id, nie beide. |
+| `kategorie` | `text` | nein |  | Freitextliche Grobeinordnung des Schadens, etwa Bremse oder Licht. Keine feste Liste, weil sich Schadensbilder nicht sauber vorab abschliessen lassen. |
+| `beschreibung` | `text` | nein |  | Freitext des Melders, was am Rad auffiel. |
+| `schwere` | `velocity.schaden_schwere` | nein |  | Einordnung der Dringlichkeit; fahruntauglich sperrt das Rad faktisch für die Werkstattplanung, ohne dass diese Tabelle den Fahrradstatus selbst setzt. |
+| `status` | `velocity.schaden_status` | nein | `'offen'::velocity.schaden_status` | Bearbeitungsstand der Meldung, unabhängig vom Status des zugehörigen Wartungsauftrags. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
 ## `station` (Tabelle)
 
 Fester Standort mit Stellplätzen, an dem Räder entliehen und abgestellt werden.
@@ -351,7 +478,7 @@ Fester Standort mit Stellplätzen, an dem Räder entliehen und abgestellt werden
 | `betriebszeitraum` | `daterange` | nein | `daterange(CURRENT_DATE, NULL::date, '[)'::text)` | Zeitraum, in dem die Station betrieben wird. Halboffen; nach oben offen bedeutet: weiterhin in Betrieb. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
-| `hoehe_m` | `integer` | ja |  | Hoehenlage in Metern, aus den Koordinaten gegen zwei unabhaengige Gelaendemodelle bestimmt (Copernicus GLO-30 und EU-DEM v1.1) und gemittelt. Beides sind Oberflaechenmodelle: in bebautem Gebiet liegen sie rund zehn Meter zu hoch. Belastbar sind deshalb die Unterschiede, nicht die absoluten Werte - und genau die Unterschiede traegt die Anwendung vor. Gesetzt in db/betrieb/stationslage_korrigieren.sql. |
+| `hoehe_m` | `integer` | ja |  | Höhenlage in Metern, aus den Koordinaten gegen zwei unabhängige Geländemodelle bestimmt (Copernicus GLO-30 und EU-DEM v1.1) und gemittelt. Beides sind Oberflächenmodelle: in bebautem Gebiet liegen sie rund zehn Meter zu hoch. Belastbar sind deshalb die Unterschiede, nicht die absoluten Werte - und genau die Unterschiede trägt die Anwendung vor. Gesetzt in db/betrieb/stationslage_korrigieren.sql. |
 
 ## `tarif` (Tabelle)
 
@@ -389,13 +516,32 @@ Protokoll der einmaligen Übernahme aus dem Altschema cityBikesRental.
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
 | `protokoll_id` | `bigint` | nein |  | Surrogatschlüssel. |
-| `lauf` | `timestamp with time zone` | nein | `now()` | Zeitstempel des Uebernahmelaufs. Gleicher Wert für alle Zeilen eines Laufs. |
+| `lauf` | `timestamp with time zone` | nein | `now()` | Zeitstempel des Übernahmelaufs. Gleicher Wert für alle Zeilen eines Laufs. |
 | `quelle` | `text` | nein |  | Gelesene Tabelle im Altschema. |
 | `ziel` | `text` | nein |  | Beschriebene Tabelle im Schema velocity. |
 | `gelesen` | `integer` | nein | `0` | Anzahl der Sätze in der Quelle. |
 | `geschrieben` | `integer` | nein | `0` | Anzahl der tatsächlich neu angelegten Sätze. |
 | `uebersprungen` | `integer` | nein | `0` | Anzahl der bewusst ausgelassenen Sätze. |
 | `hinweis` | `text` | ja |  | Begründung für Abweichungen und getroffene Annahmen. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+
+## `wartungsauftrag` (Tabelle)
+
+Arbeitsauftrag der Werkstatt: eine Reparatur nach Schadensmeldung oder eine geplante Inspektion ohne Anlass.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `wartungsauftrag_id` | `bigint` | nein |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `auftragsnummer` | `text` | nein |  | Fachlicher, in der Werkstatt gesprochener Schlüssel - eindeutig über wartungsauftrag_nummer_uk, damit ein Zuruf wie "Auftrag WA-..." keine Verwechslung zulässt. |
+| `fahrrad_id` | `bigint` | nein |  | Das Rad, an dem gearbeitet wird. |
+| `schadensmeldung_id` | `bigint` | ja |  | Auslösende Meldung. NULL bei einer geplanten Inspektion ohne konkreten Schaden. |
+| `mitarbeiter_id` | `bigint` | ja |  | Zuständiger Werkstattmitarbeiter. NULL, solange der Auftrag noch niemandem zugeteilt ist. |
+| `eroeffnet_am` | `timestamp with time zone` | nein | `now()` | Zeitpunkt der Auftragseröffnung. Bezugspunkt von wartungsauftrag_zeitfolge_chk. |
+| `erledigt_am` | `timestamp with time zone` | ja |  | Zeitpunkt des Abschlusses. Pflicht sobald status = erledigt (wartungsauftrag_erledigt_chk), sonst liesse sich die Durchlaufzeit nicht auswerten. |
+| `status` | `velocity.auftrag_status` | nein | `'offen'::velocity.auftrag_status` | Bearbeitungsstand des Auftrags. |
+| `arbeitszeit_minuten` | `integer` | ja |  | Aufgewendete Werkstattzeit in Minuten, für die Nachkalkulation. Optional, solange der Auftrag läuft. |
+| `bemerkung` | `text` | ja |  | Freitext der Werkstatt zum Auftrag, etwa verbaute Ersatzteile ohne eigenen Lagerbezug. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
@@ -540,6 +686,7 @@ Ausleihen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begrenz
 | `start_station` | `text` | ja |  | Name der Entnahmestation, NULL bei freiem Abstellort. |
 | `end_station` | `text` | ja |  | Name der Rückgabestation, NULL bei freiem Abstellen. |
 | `gesamtbetrag` | `numeric(10,2)` | ja |  | Summe aller Entgeltpositionen dieser Ausleihe. |
+| `positionen` | `jsonb` | ja |  | Die gebuchten Entgeltpositionen als jsonb-Feld: Bezeichnung, Code und Betrag je Zeile. Der Beleg zeigt damit, was abgerechnet wurde, ohne die Preisregeln im Frontend nachzubauen. |
 
 ## `v_meine_rechnung` (Sicht)
 
@@ -583,7 +730,7 @@ Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begren
 | `ort` | `text` | ja |  | Ort der Station. |
 | `latitude` | `numeric(9,6)` | ja |  | Breitengrad für den Kartenmarker. |
 | `longitude` | `numeric(9,6)` | ja |  | Längengrad für den Kartenmarker. |
-| `hoehe_m` | `integer` | ja |  | Hoehenlage der Station. Siehe station.hoehe_m zur Herkunft und zur Genauigkeit. |
+| `hoehe_m` | `integer` | ja |  | Höhenlage der Station. Siehe station.hoehe_m zur Herkunft und zur Genauigkeit. |
 | `kapazitaet` | `integer` | ja |  | Anzahl der Stellplätze. |
 | `verfuegbare_raeder` | `integer` | ja |  | Zahl der aktuell entleihbaren Räder an dieser Station. |
 | `freie_stellplaetze` | `integer` | ja |  | Kapazität abzüglich der abgestellten Räder, nie negativ. |
@@ -640,3 +787,282 @@ Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begren
 | `startgebuehr` | `numeric(10,2)` | ja |  | Heute geltende Startgebühr. |
 | `preis_pro_minute` | `numeric(10,2)` | ja |  | Heute geltendes Minutenentgelt. |
 | `tageshoechstpreis` | `numeric(10,2)` | ja |  | Heute geltende Obergrenze je Ausleihe. |
+
+## `v_wawi_auftrag` (Sicht)
+
+Arbeitssicht der Werkstatt: jeder Wartungsauftrag mit Rad, Bearbeiter und Bearbeitungsstand. Filtert selbst über velocity.hat_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `wartungsauftrag_id` | `bigint` | ja |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `auftragsnummer` | `text` | ja |  | Fachlicher, in der Werkstatt gesprochener Schlüssel des Auftrags. |
+| `fahrrad_id` | `bigint` | ja |  | Das Rad, an dem gearbeitet wird. |
+| `rahmennummer` | `text` | ja |  | Am Rahmen ablesbare Nummer des Rades, für den Werkstattzuruf ohne Nachschlagen. |
+| `schadensmeldung_id` | `bigint` | ja |  | Auslösende Meldung. NULL bei einer geplanten Inspektion ohne konkreten Schaden. |
+| `eroeffnet_am` | `timestamp with time zone` | ja |  | Zeitpunkt der Auftragseröffnung. |
+| `erledigt_am` | `timestamp with time zone` | ja |  | Zeitpunkt des Abschlusses. NULL, solange der Auftrag läuft. |
+| `status` | `velocity.auftrag_status` | ja |  | Bearbeitungsstand des Auftrags: offen, in_arbeit, erledigt oder abgebrochen. |
+| `arbeitszeit_minuten` | `integer` | ja |  | Aufgewendete Werkstattzeit in Minuten. NULL, solange der Auftrag läuft. |
+| `bemerkung` | `text` | ja |  | Freitext der Werkstatt zum Auftrag, etwa verbaute Ersatzteile ohne eigenen Lagerbezug. |
+| `bearbeiter` | `text` | ja |  | Voller Name des zuständigen Werkstattmitarbeiters. NULL, solange der Auftrag noch niemandem zugeteilt ist. |
+
+## `v_wawi_fahrt_km` (Sicht)
+
+Einzige Stelle, an der Strecken geschätzt werden. ist_geschaetzt sagt, ob; verfahren sagt, WOMIT. Trägt seit der Gesamtprüfung vom 25.08.2026 eine eigene velocity.hat_rolle('leitung')-Schranke statt nur velocity.ist_mitarbeiter(): die Zeilen führen ausleihe_id, kunde_id und startzeit je Einzelfahrt, also ein Bewegungsprofil - Spec 4.2 gibt das ausdrücklich nur der Leitung, nicht jeder Fachrolle. Der frühere Stand begründete das Fehlen der eigenen Schranke mit demselben Satz, der hier jetzt für das Gegenteil steht: eine Sicht, die ihre Schranke von einer anderen erbt, hat keine eigene.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `ausleihe_id` | `bigint` | ja |  | Schlüssel der Fahrt, für den Verweis aus v_wawi_km_co2 auf die einzelne Ausleihe hinter der Aggregation. |
+| `startzeit` | `timestamp with time zone` | ja |  | Beginn der Fahrt, Grundlage der Monatsgruppierung und der Zeitscheibe für Umwegfaktor, Reisegeschwindigkeit und CO2-Annahmen (rechenannahme.gueltigkeit). |
+| `kunde_id` | `bigint` | ja |  | Fahrender Kunde, für eine spätere Auswertung je Kunde ohne erneuten Join auf ausleihe. |
+| `typ_code` | `text` | ja |  | Fahrradtyp der Fahrt, bestimmt in v_wawi_km_co2 die passende CO2-Annahme (co2_rad für CITY, sonst co2_ebike). |
+| `kilometer` | `numeric` | ja |  | Drei Fälle, siehe verfahren: gemessene Strecke (ausleihe.distanz_km), wo vorhanden; sonst, bei einer Rundfahrt mit Luftlinie null (Start- und Endpunkt gleich), aus der Dauer geschätzt (rechenannahme reisegeschwindigkeit); sonst aus der Luftlinie zwischen Start- und Endpunkt mal Umwegfaktor (rechenannahme). NULL, wenn weder Distanz noch beide Koordinatenpaare vorliegen - eine erfundene Zahl aus einem halben Koordinatenpaar wäre schlimmer als keine. |
+| `ist_geschaetzt` | `boolean` | ja |  | Wahr, wenn kilometer nicht gemessen wurde (verfahren aus_dauer oder aus_luftlinie). Gehört zu jeder Verwendung von kilometer dazu, siehe Kopfkommentar der Sicht. |
+| `verfahren` | `text` | ja |  | gemessen, aus_dauer oder aus_luftlinie - WOMIT kilometer ermittelt wurde. Nötig, weil ist_geschaetzt allein zwei verschiedene Schätzverfahren in einen Topf würfe: aus_dauer (Rundfahrten, Luftlinie strukturell null, Reisegeschwindigkeit als Grundlage) und aus_luftlinie (Luftlinie mal Umwegfaktor) irren sich auf unterschiedliche Weise und müssen sich getrennt auswerten lassen. |
+
+## `v_wawi_fahrten_je_tag` (Sicht)
+
+Tagesaggregation der abgeschlossenen Fahrten für den Drill-Down aus einer angeklickten Monatszeile der Auswertungen. Absichtlich ohne Personenbezug: keine ausleihe_id, keine kunde_id, keine Uhrzeit - eine Tagessumme ist kein Bewegungsprofil, anders als v_wawi_fahrt_km (siehe deren Kopfkommentar). Bewusst ohne Radtyp-Spalte, siehe Kommentar am create view. Filtert selbst über velocity.hat_rolle('leitung'), dieselbe Rolle wie die drei Monatssichten, aus denen heraus der Drill-Down aufgerufen wird.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `tag` | `date` | ja |  | Kalendertag der Fahrt (startzeit), die x-Achse der Säulengrafik. Ein Tag ohne abgeschlossene Fahrt taucht hier NICHT als Zeile auf - die Oberfläche muss ihn selbst als null Fahrten ergänzen, sonst sieht eine echte Lücke im Betrieb wie ein Ladefehler aus (siehe monatsdrilldownEinfuegen() in auswertungen.js). |
+| `fahrten` | `bigint` | ja |  | Zahl der an diesem Tag abgeschlossenen Ausleihen, dieselbe Zählweise (count(distinct ausleihe_id) where status = 'abgeschlossen') wie in v_wawi_umsatz_radtyp/v_wawi_umsatz_kundengruppe/v_wawi_km_co2 - die Summe dieser Spalte über einen Monat muss deshalb die fahrten-Summe der passenden Zeilen jeder der drei Monatssichten ergeben. Genau das prüft test_v_fahrten_je_tag_stimmt_mit_monatssichten_ueberein in t0018_wawi_sichten.sql als wichtigste Zusicherung dieser Sicht. |
+
+## `v_wawi_fahrten_je_tag_rad` (Sicht)
+
+Dritte Ebene des Drill-Downs (Monat -> Tag -> Räder): jede an einem Tag abgeschlossene Fahrt, vom RAD her gesehen statt vom Kunden - Flottenbetrieb, kein Bewegungsprofil. Bewusst OHNE ausleihe_id, kunde_id, kundennummer oder Name: dieselben Fahrten wie v_wawi_fahrten_je_tag, nach Rad statt nach Kunde geschnitten - siehe ausführlicher Kopfkommentar am create view für die Begründung dieser Grenze. Kein Join auf v_wawi_fahrt_km (deren eigene hat_rolle('leitung')-Schranke würde disposition sonst ungewollt ausschließen) - die Kilometerformel steht deshalb ein zweites Mal hier. Filtert selbst über velocity.hat_rolle('leitung') oder velocity.hat_rolle('disposition').
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `tag` | `date` | ja |  | Kalendertag der Fahrt (startzeit) - derselbe Wert wie v_wawi_fahrten_je_tag.tag, hier je Fahrt statt aggregiert. Für die Oberfläche der PostgREST-Filterschlüssel dieser Sicht (tag=eq.JJJJ-MM-TT). |
+| `fahrrad_id` | `bigint` | ja |  | Schlüssel des Rades, für den Sprung von dieser Zeile in die Flottensicht (v_wawi_flotte) - der Querverweis aus dem Gestaltungsauftrag Punkt 3. |
+| `rahmennummer` | `text` | ja |  | Am Rahmen ablesbare Nummer, der Bezug zum physischen Rad vor Ort. |
+| `typ_code` | `text` | ja |  | Fachlicher Schlüssel des Fahrradtyps. |
+| `typ` | `text` | ja |  | Anzeigename des Fahrradtyps. |
+| `start_station` | `text` | ja |  | Name der Station, an der die Fahrt begann. NULL bei freiem Abstellort als Startpunkt. |
+| `ziel_station` | `text` | ja |  | Name der Station, an der die Fahrt endete. NULL bei freiem Abstellort als Zielpunkt. |
+| `dauer_minuten` | `integer` | ja |  | Dauer der Fahrt in Minuten. |
+| `kilometer` | `numeric` | ja |  | Gefahrene Strecke - gemessen oder geschätzt, siehe ist_geschaetzt und die Drei-Fall-Formel im Kopfkommentar (identisch zu v_wawi_fahrt_km.kilometer). NULL, wenn weder Distanz noch beide Koordinatenpaare vorliegen. |
+| `ist_geschaetzt` | `boolean` | ja |  | Wahr, wenn kilometer nicht gemessen, sondern aus Dauer oder Luftlinie geschätzt wurde - gehört zu jeder Anzeige von kilometer dazu. |
+
+## `v_wawi_flotte` (Sicht)
+
+Arbeitssicht der Flotte für Disposition und Werkstatt: ein Rad je Zeile mit Standort, Wartungshistorie und dem dringlichsten offenen Schaden. Filtert selbst über velocity.hat_rolle, siehe Kopfkommentar der Datei.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `fahrrad_id` | `bigint` | ja |  | Schlüssel des Rades, für Verweise in die Werkstatt- und Auftragssichten. |
+| `rahmennummer` | `text` | ja |  | Am Rahmen ablesbare Nummer, der Bezug zum physischen Rad vor Ort. |
+| `typ_code` | `text` | ja |  | Fachlicher Schlüssel des Fahrradtyps, für Filter in der Oberfläche. |
+| `typ` | `text` | ja |  | Anzeigename des Fahrradtyps. |
+| `hersteller` | `text` | ja |  | Name des Herstellers laut Modellstammdaten. |
+| `modell` | `text` | ja |  | Modellbezeichnung, für die Ersatzteilsuche in der Werkstatt. |
+| `status` | `velocity.fahrrad_status` | ja |  | Aktueller Betriebsstatus des Rades - verfuegbar, ausgeliehen, wartung, defekt oder ausgemustert. Anders als die öffentliche v_verfuegbares_fahrrad zeigt diese Sicht gerade auch die NICHT verfügbaren Räder: die Disposition muss wissen, welches Rad in der Wartung hängt, nicht nur, welches gerade fahrbereit ist. |
+| `angeschafft_am` | `date` | ja |  | Anschaffungsdatum, Grundlage für Abschreibung und Alterseinschätzung. |
+| `standort` | `text` | ja |  | Name der Station, an der das Rad steht. NULL bei freiem Abstellort oder laufender Fahrt. |
+| `latitude` | `numeric(9,6)` | ja |  | Breitengrad der zuletzt gemeldeten Position, unabhängig von einer Station. |
+| `longitude` | `numeric(9,6)` | ja |  | Längengrad der zuletzt gemeldeten Position, unabhängig von einer Station. |
+| `akkustand_prozent` | `smallint` | ja |  | Ladestand des Akkus. NULL bei Rädern ohne Elektroantrieb. |
+| `letzte_wartung` | `timestamp with time zone` | ja |  | Abschlusszeitpunkt des zuletzt erledigten Wartungsauftrags. NULL, wenn das Rad noch nie in der Werkstatt war. |
+| `offene_schaeden` | `bigint` | ja |  | Zahl der noch nicht abgeschlossenen Schadensmeldungen (offen oder in_arbeit). |
+| `hoechste_schwere` | `text` | ja |  | Schwerste noch offene Meldung nach der natürlichen Rangfolge des ENUM (gering < mittel < fahruntauglich), nicht alphabetisch. NULL, wenn keine offene Meldung vorliegt - entscheidet, ob das Rad überhaupt eingeplant werden darf. |
+| `baujahr` | `integer` | ja |  | Baujahr laut Stammdaten - das Jahr, seit dem der Hersteller dieser Modellzeile den Typ beliefert. |
+| `gewicht_kg` | `numeric(4,1)` | ja |  | Leergewicht des Fahrradtyps laut Stammdaten - gilt für jedes Rad dieses Typs gleich, unabhängig vom Hersteller. |
+| `gangzahl` | `integer` | ja |  | Zahl der Gänge des Fahrradtyps laut Stammdaten - gilt für jedes Rad dieses Typs gleich, unabhängig vom Hersteller. |
+| `rahmenhoehe_cm` | `integer` | ja |  | Rahmenhöhe des Fahrradtyps laut Stammdaten - eine Größe je Typ, individuelle Anpassung läuft über den Sattel-Schnellspanner. |
+| `akkukapazitaet_wh` | `integer` | ja |  | Akkukapazität des Fahrradtyps laut Stammdaten. NULL bei einem Rad ohne Elektroantrieb. |
+| `reichweite_km` | `integer` | ja |  | Herstellerangabe zur Reichweite des Fahrradtyps laut Stammdaten. NULL bei einem Rad ohne Elektroantrieb. |
+
+## `v_wawi_km_co2` (Sicht)
+
+CO2-Ersparnis gegenüber dem Pkw, ausschliesslich für die Leitung - eigener Rollenfilter (hat_rolle('leitung')), nicht nur geerbt aus v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt gehören in jede Darstellung dieser Zahl.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `monat` | `date` | ja |  | Erster Tag des Monats der Fahrt (v_wawi_fahrt_km.startzeit). |
+| `typ_code` | `text` | ja |  | Fahrradtyp, bestimmt die verglichene Eigenemission (co2_rad vs. co2_ebike). |
+| `fahrten` | `bigint` | ja |  | Zahl der Fahrten mit bekannter oder geschätzter Kilometerzahl in diesem Monat und Typ. Nenner für anteil_geschaetzt. |
+| `kilometer` | `numeric` | ja |  | Summe der gefahrenen Kilometer, gemessen und geschätzt gemeinsam - anteil_geschaetzt und fahrten_geschaetzt sagen, wie viel davon Schätzung ist. |
+| `fahrten_geschaetzt` | `bigint` | ja |  | Zähler zu anteil_geschaetzt: Anzahl der Fahrten dieser Zeile mit geschätzter statt gemessener Kilometerzahl. Nötig, weil ein einfaches Mittel von anteil_geschaetzt über mehrere Zeilen NICHT den fahrtgewichteten Gesamtanteil ergibt, sobald die Zeilen unterschiedlich gross sind (hier: 1 bis über 1000 Fahrten je Monat/Typ) - wer richtig gewichten will, summiert fahrten_geschaetzt und fahrten getrennt und teilt erst danach. |
+| `anteil_geschaetzt` | `numeric` | ja |  | Anteil der Fahrten DIESER ZEILE, deren Kilometer geschätzt statt gemessen wurden (0 bis 1) - keine über Zeilen gemittelte Kennzahl. Ein arithmetisches Mittel dieser Spalte über mehrere Monate/Typen ist NICHT der Gesamtanteil, weil die Zeilen sehr unterschiedlich viele Fahrten tragen (1 bis über 1000); dafür fahrten_geschaetzt verwenden. Ohne diese Spalte wäre kilometer eine Zahl ohne Herkunftsangabe - sie ist die Unsicherheit von kilometer und co2_ersparnis_kg, kein optionales Detail. |
+| `co2_ersparnis_kg` | `numeric` | ja |  | Differenz zwischen der CO2-Last eines vergleichbaren Pkw und der des tatsächlich genutzten Fahrzeugs (rechenannahme co2_pkw minus co2_rad bzw. co2_ebike, beide in g CO2e/Pkm, daher /1000 für kg) für die gefahrenen Kilometer dieser Zeile. Basiert teilweise auf geschätzten Kilometern - siehe anteil_geschaetzt und fahrten_geschaetzt, ohne die diese Zahl unbelegt wäre. |
+
+## `v_wawi_kunde` (Sicht)
+
+Arbeitssicht des Kundenservice: Stammdaten, laufender Tarif und Kontostand je Kunde. Bewusst ohne einzelne Fahrten (Bewegungsprofil), ohne Zahlungsmittel (GR17) und ohne alles aus dem Schema auth - was niemand braucht, wird nicht ausgeliefert. Filtert selbst über velocity.hat_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `kunde_id` | `bigint` | ja |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `kundennummer` | `text` | ja |  | Fachlicher, am Telefon nennbarer Schlüssel des Kunden. |
+| `anrede` | `text` | ja |  | Anrede für die Korrespondenz. |
+| `vorname` | `text` | ja |  | Vorname des Kunden. |
+| `nachname` | `text` | ja |  | Nachname des Kunden. |
+| `email` | `text` | ja |  | Kontaktadresse, zugleich eindeutiges Merkmal für die Anmeldung. |
+| `telefon` | `text` | ja |  | Telefonische Kontaktmöglichkeit, optional. |
+| `status` | `velocity.kunde_status` | ja |  | aktiv, gesperrt oder geschlossen - der Kundenservice muss ihn sehen, um eine Sperre überhaupt erklären zu können. |
+| `registriert_am` | `timestamp with time zone` | ja |  | Zeitpunkt der Registrierung, unabhängig vom technischen erstellt_am. |
+| `strasse` | `text` | ja |  | Strasse der Rechnungsadresse. NULL, solange keine hinterlegt ist. |
+| `hausnummer` | `text` | ja |  | Hausnummer der Rechnungsadresse. |
+| `plz` | `text` | ja |  | Postleitzahl der Rechnungsadresse. |
+| `ort` | `text` | ja |  | Ort der Rechnungsadresse. |
+| `tarif_code` | `text` | ja |  | Fachlicher Schlüssel des aktuell laufenden Tarifs. NULL ohne aktive Mitgliedschaft. |
+| `tarif` | `text` | ja |  | Anzeigename des aktuell laufenden Tarifs. |
+| `mitgliedschaft_seit` | `date` | ja |  | Beginn der aktuell laufenden Mitgliedschaft (die mit offenem Ende, siehe upper_inf in der Sicht). NULL ohne aktive Mitgliedschaft. |
+| `fahrten_gesamt` | `bigint` | ja |  | Anzahl abgeschlossener Ausleihen. Eine Summe statt einer Liste - siehe Kommentar am create view. |
+| `fahrten_offen` | `bigint` | ja |  | Anzahl aktuell laufender Ausleihen, typischerweise null oder eins. |
+| `umsatz_brutto` | `numeric` | ja |  | Summe aller Rechnungsbeträge des Kunden, unabhängig vom Zahlungsstatus. |
+| `offener_betrag` | `numeric` | ja |  | Summe der gestellten, noch nicht bezahlten Rechnungen - der Betrag, um den es bei einer Mahnung geht. |
+| `letzte_ausleihe_am` | `timestamp with time zone` | ja |  | Start der zeitlich juengsten Ausleihe (aktiv oder abgeschlossen, storniert zaehlt nicht) - siehe letzte_ausleihe_laeuft, ob sie noch andauert. NULL heisst: dieser Kunde hat noch nie ausgeliehen, kein Ladefehler. |
+| `letzte_ausleihe_laeuft` | `boolean` | ja |  | true, wenn die unter letzte_ausleihe_am genannte Ausleihe noch laeuft (status aktiv); false, wenn sie abgeschlossen ist; NULL, wenn es noch keine Ausleihe gibt. |
+
+## `v_wawi_kundenorte` (Sicht)
+
+Kundschaft je Ort, aggregiert mit Koordinate fuer die Stationskarte (Gestaltungsauftrag Stationen, Punkt 4). Absichtlich ohne kunde_id, Name oder Adresse - siehe der ausfuehrliche Kopfkommentar am create view fuer die Begruendung, warum eine Zaehlung je Ort zulaessig ist, wo ein Punkt je Person es nicht waere. Filtert selbst ueber velocity.hat_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `ort` | `text` | ja |  | Ortsname laut Rechnungsadresse. |
+| `latitude` | `numeric(9,6)` | ja |  | Breitengrad des Ortszentrums aus velocity.ort_koordinate. NULL, wenn der Ort dort (noch) nicht gepflegt ist - die Oberflaeche zeigt einen solchen Ort dann ohne Marke statt an einer geratenen Position. |
+| `longitude` | `numeric(9,6)` | ja |  | Laengengrad des Ortszentrums, siehe latitude. |
+| `kunden` | `bigint` | ja |  | Zahl der Kunden mit diesem Ort in der Rechnungsadresse - die Kennzahl, die die Aggregation zulaessig macht (siehe Kopfkommentar). |
+
+## `v_wawi_modell` (Sicht)
+
+Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_rad_anlegen eine modell_id verlangt und keine Sicht sie herausgab.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `modell_id` | `bigint` | ja |  | Schlüssel des Modells, der Wert, den api_rad_anlegen als p_modell_id erwartet. |
+| `hersteller` | `text` | ja |  | Name des Herstellers, für die Auswahlliste ohne Nachschlagen einer Nummer. |
+| `modellbezeichnung` | `text` | ja |  | Der Produktname, identisch mit dem Anzeigenamen des Typs (Spalte typ) - zusammen mit hersteller die lesbare Kennung des Eintrags, weil mehrere Hersteller dasselbe Produkt zur selben Spezifikation liefern können. |
+| `typ_id` | `bigint` | ja |  | Schlüssel des Fahrradtyps, falls die Oberfläche danach filtert oder gruppiert. |
+| `typ_code` | `text` | ja |  | Fachlicher Schlüssel des Fahrradtyps. |
+| `typ` | `text` | ja |  | Anzeigename des Fahrradtyps. |
+| `hat_elektro` | `boolean` | ja |  | Wahr bei einem Modell mit Elektroantrieb - hilft der Auswahlliste, City- von E-Bike-Modellen zu unterscheiden, ohne den Typnamen zu parsen. |
+| `zuladung_kg` | `integer` | ja |  | Maximale Zuladung des Fahrradtyps laut Stammdaten. NULL, wenn der Typ keine Zuladungsgrenze führt. |
+| `raeder_im_bestand` | `bigint` | ja |  | Zahl der nicht ausgemusterten Räder dieses Modells im Bestand - zeigt an, was üblich ist, ohne dass jemand in der Flottensicht nachsehen muss. |
+| `baujahr` | `integer` | ja |  | Baujahr laut Stammdaten - das Jahr, seit dem der Hersteller dieser Modellzeile den Typ beliefert. |
+| `gewicht_kg` | `numeric(4,1)` | ja |  | Leergewicht des Fahrradtyps laut Stammdaten - gilt für jedes Modell dieses Typs gleich, unabhängig vom Hersteller. |
+| `gangzahl` | `integer` | ja |  | Zahl der Gänge des Fahrradtyps laut Stammdaten - gilt für jedes Modell dieses Typs gleich, unabhängig vom Hersteller. |
+| `rahmenhoehe_cm` | `integer` | ja |  | Rahmenhöhe des Fahrradtyps laut Stammdaten - eine Größe je Typ, individuelle Anpassung läuft über den Sattel-Schnellspanner. |
+| `akkukapazitaet_wh` | `integer` | ja |  | Akkukapazität des Fahrradtyps laut Stammdaten. NULL bei einem Modell ohne Elektroantrieb. |
+| `reichweite_km` | `integer` | ja |  | Herstellerangabe zur Reichweite des Fahrradtyps laut Stammdaten. NULL bei einem Modell ohne Elektroantrieb. |
+
+## `v_wawi_schaden` (Sicht)
+
+Arbeitssicht der Werkstatt: jede Schadensmeldung mit Rad, Schwere und Alter, unabhängig vom Bearbeitungsstand. Filtert selbst über velocity.hat_rolle. Bewusst OHNE disposition (Spec 5.1 nennt nur werkstatt) - Gesamtprüfung Punkt 3: die Disposition sieht ihren Bedarf für die Flottenplanung, offene Schäden je Rad, bereits über v_wawi_flotte.offene_schaeden und .hoechste_schwere. Freitext (kategorie, beschreibung) und melderart braucht sie dafür nicht - "was niemand braucht, wird nicht ausgeliefert" (Spec 4.2). Ein früherer Entwurf liess disposition hier zusätzlich zu; das war derselbe Rechteüberschuss, der bei v_wawi_umsatz_radtyp weiter unten schon einmal zurückgenommen wurde.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `schadensmeldung_id` | `bigint` | ja |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `fahrrad_id` | `bigint` | ja |  | Das gemeldete Rad. |
+| `rahmennummer` | `text` | ja |  | Am Rahmen ablesbare Nummer des gemeldeten Rades. |
+| `typ_code` | `text` | ja |  | Fahrradtyp des gemeldeten Rades, für Filter in der Werkstattliste. |
+| `gemeldet_am` | `timestamp with time zone` | ja |  | Zeitpunkt der Meldung. |
+| `melderart` | `text` | ja |  | "Kunde" oder "Mitarbeiter" - wer gemeldet hat, nicht wer genau. Für die Werkstatt zählt nur die Herkunft der Meldung, eine Rückfrage läuft über den Kundenservice bzw. die Personalliste, nicht über diese Sicht. |
+| `kategorie` | `text` | ja |  | Freitextliche Grobeinordnung des Schadens, etwa Bremse oder Licht. |
+| `beschreibung` | `text` | ja |  | Freitext des Melders, was am Rad auffiel. |
+| `schwere` | `velocity.schaden_schwere` | ja |  | Einordnung der Dringlichkeit; fahruntauglich sperrt das Rad faktisch für die Werkstattplanung. |
+| `status` | `velocity.schaden_status` | ja |  | Bearbeitungsstand der Meldung: offen, in_arbeit, behoben oder verworfen. |
+| `offen_seit` | `interval` | ja |  | Zeitspanne seit der Meldung bis jetzt - die Wartezeit, nicht ein fester Zeitpunkt, damit sie beim nächsten Aufruf automatisch weiterläuft. |
+| `auftraege` | `bigint` | ja |  | Zahl der Wartungsaufträge, die aus dieser Meldung entstanden sind. Mehr als einer zeigt einen wiederholten oder nachgebesserten Fall an. |
+
+## `v_wawi_station` (Sicht)
+
+Arbeitssicht der Disposition: Kapazitaet und Belegung je Station, samt stillgelegter Stationen (GR22 - eine Station wird stillgelegt, nicht gelöscht, deshalb bleibt sie hier sichtbar statt zu verschwinden). Filtert selbst über velocity.hat_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `station_id` | `bigint` | ja |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `stationsnummer` | `text` | ja |  | Fachlicher Schlüssel der Station. |
+| `name` | `text` | ja |  | Anzeigename der Station. |
+| `strasse` | `text` | ja |  | Strasse des Stationsstandorts. |
+| `hausnummer` | `text` | ja |  | Hausnummer des Stationsstandorts. |
+| `plz` | `text` | ja |  | Postleitzahl des Stationsstandorts. |
+| `ort` | `text` | ja |  | Ort des Stationsstandorts. |
+| `latitude` | `numeric(9,6)` | ja |  | Breitengrad für den Kartenmarker. |
+| `longitude` | `numeric(9,6)` | ja |  | Längengrad für den Kartenmarker. |
+| `kapazitaet` | `integer` | ja |  | Zahl der Stellplätze laut Stammdaten. |
+| `belegt` | `bigint` | ja |  | Zahl der Räder, die aktuell an dieser Station stehen. |
+| `frei` | `bigint` | ja |  | Kapazitaet abzüglich belegt. Anders als die öffentliche v_station ohne greatest(..., 0): GR15 verhindert Überfüllung bereits beim Abstellen, ein negativer Wert wäre hier also ein Alarmsignal und keine Zahl, die kaschiert werden sollte. |
+| `betriebszeitraum` | `daterange` | ja |  | Zeitraum, in dem die Station betrieben wird oder wurde. Offenes Ende bedeutet weiterhin in Betrieb. |
+| `in_betrieb` | `boolean` | ja |  | Wahr, solange betriebszeitraum kein Ende trägt. Kurzform für die Oberfläche, ohne dass sie den Bereichstyp selbst auswerten muss. |
+
+## `v_wawi_station_flotte` (Sicht)
+
+Welche Raeder stehen an welcher Station (Gestaltungsauftrag Stationen, Punkt 1) - dieselben Spalten wie v_wawi_flotte, aber ueber station_id gefiltert statt ueber den Namenstext v_wawi_flotte.standort, der keine unique-Constraint traegt (siehe Kopfkommentar am create view). Nur Raeder MIT Station (fp.station_id is not null) - ein Rad auf freier Ausleihe gehoert in keine Stationsdetailmaske. Filtert selbst ueber velocity.hat_rolle, dieselben Rollen wie v_wawi_station.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `station_id` | `bigint` | ja |  | Schluessel der Station, der Filterschluessel dieser Sicht (station_id=eq.<id>). |
+| `fahrrad_id` | `bigint` | ja |  | Schluessel des Rades, fuer den Sprung in die Flottensicht (v_wawi_flotte). |
+| `rahmennummer` | `text` | ja |  | Am Rahmen ablesbare Nummer, der Bezug zum physischen Rad vor Ort. |
+| `typ_code` | `text` | ja |  | Fachlicher Schluessel des Fahrradtyps. |
+| `typ` | `text` | ja |  | Anzeigename des Fahrradtyps. |
+| `status` | `velocity.fahrrad_status` | ja |  | Aktueller Betriebsstatus des Rades - verfuegbar, ausgeliehen, wartung, defekt oder ausgemustert. Ein Rad mit Status ausgeliehen sollte hier praktisch nicht auftauchen (fahrrad_position wird bei der Ausleihe geraeumt); steht es trotzdem noch da, ist das ein Hinweis auf eine unsaubere Rueckgabe, kein Softwarefehler dieser Sicht. |
+| `akkustand_prozent` | `smallint` | ja |  | Ladestand des Akkus. NULL bei Raedern ohne Elektroantrieb. |
+| `offene_schaeden` | `bigint` | ja |  | Zahl der noch nicht abgeschlossenen Schadensmeldungen (offen oder in_arbeit). |
+| `hoechste_schwere` | `text` | ja |  | Schwerste noch offene Meldung nach der natuerlichen Rangfolge des ENUM (gering < mittel < fahruntauglich), nicht alphabetisch. NULL, wenn keine offene Meldung vorliegt. |
+
+## `v_wawi_stationsauslastung` (Sicht)
+
+Zu- und Abgaenge sowie aktueller Fuellstand je Station, für Disposition und Leitung. Zählt ausschliesslich abgeschlossene Ausleihen - eine laufende Fahrt hat an ihrer Endstation noch keinen Zugang. Filtert selbst über velocity.hat_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `station_id` | `bigint` | ja |  | Schlüssel der Station. |
+| `stationsnummer` | `text` | ja |  | Fachlicher Schlüssel der Station. |
+| `name` | `text` | ja |  | Anzeigename der Station. |
+| `kapazitaet` | `integer` | ja |  | Zahl der Stellplätze laut Stammdaten, Nenner von fuellstand. |
+| `abgaenge` | `bigint` | ja |  | Zahl der abgeschlossenen Ausleihen, die an dieser Station begonnen haben - wie oft ein Rad hier abgeholt wurde. |
+| `zugaenge` | `bigint` | ja |  | Zahl der abgeschlossenen Ausleihen, die an dieser Station geendet haben - wie oft ein Rad hier abgestellt wurde. |
+| `saldo` | `bigint` | ja |  | zugaenge minus abgaenge. Positiv heisst, die Station sammelt über die Zeit mehr Räder an, als sie abgibt - ein Hinweis für die Disposition, wo nachverteilt werden muss. |
+| `belegt` | `bigint` | ja |  | Zahl der Räder, die aktuell laut fahrrad_position an dieser Station stehen - der Momentanwert, anders als abgaenge/zugaenge, die über die gesamte Historie zählen. |
+| `fuellstand` | `numeric` | ja |  | belegt geteilt durch kapazitaet, gerundet auf drei Nachkommastellen. NULL bei einer Station ohne Stellplätze (kapazitaet = 0), was laut station_kapazitaet_chk nicht vorkommen sollte, aber nullif schützt vor einer Division durch null statt einem Fehler ohne Kontext. |
+
+## `v_wawi_stationsverkehr_zeitfenster` (Sicht)
+
+Zu- und Abgang je Station in Zweistundenbloecken, getrennt nach Werktag und Wochenende, gemittelt ueber den gesamten verfuegbaren Zeitraum (Gestaltungsauftrag Stationen, Punkt 3) - siehe Kopfkommentar am create view fuer die nachgemessene Begruendung von Blockgroesse, Wochentagstrennung und Mittelungszeitraum. Aggregat ohne Personenbezug: keine ausleihe_id, keine kunde_id, kein Kalendertag. Filtert selbst ueber velocity.hat_rolle, dieselben Rollen wie v_wawi_stationsauslastung.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `station_id` | `bigint` | ja |  | Schluessel der Station. |
+| `name` | `text` | ja |  | Anzeigename der Station. |
+| `wochentyp` | `text` | ja |  | 'werktag' (Montag bis Freitag) oder 'wochenende' (Samstag/Sonntag) - getrennt gehalten, weil beide nachweislich unterschiedliche Tagesrhythmen zeigen, siehe Kopfkommentar. |
+| `zeitfenster_start_stunde` | `integer` | ja |  | Erste Stunde des Zweistundenblocks (0, 2, 4, ... 22) in lokaler Datenbankzeit. Der Block umfasst diese und die folgende Stunde. |
+| `abgaenge` | `bigint` | ja |  | Summe der abgeschlossenen Ausleihen, die in diesem Block an dieser Station begonnen haben, ueber den GESAMTEN erfassten Zeitraum (nicht je Tag) - der Zaehler zu abgaenge_je_tag. |
+| `zugaenge` | `bigint` | ja |  | Summe der abgeschlossenen Ausleihen, die in diesem Block an dieser Station geendet haben, ueber den gesamten erfassten Zeitraum - der Zaehler zu zugaenge_je_tag. |
+| `abgaenge_je_tag` | `numeric` | ja |  | abgaenge geteilt durch tage_erfasst - die vergleichbare Rate, weil Werktage (428) und Wochenendtage (171) im Zeitraum unterschiedlich haeufig sind. Das ist die Zahl fuer die Grafik, nicht die rohe Summe abgaenge. |
+| `zugaenge_je_tag` | `numeric` | ja |  | zugaenge geteilt durch tage_erfasst, siehe abgaenge_je_tag. |
+| `saldo_je_tag` | `numeric` | ja |  | zugaenge_je_tag minus abgaenge_je_tag. Positiv heisst, die Station sammelt in diesem Zeitfenster im Mittel mehr Raeder an, als sie abgibt - der Hinweis, wann nachverteilt werden muss. |
+| `tage_erfasst` | `bigint` | ja |  | Zahl der Werktage bzw. Wochenendtage im gesamten erfassten Zeitraum (Nenner von abgaenge_je_tag/zugaenge_je_tag/saldo_je_tag) - macht sichtbar, auf wie vielen Tagen die Rate beruht, statt eine Genauigkeit vorzutaeuschen, die eine einzelne Randstunde mit wenigen Fahrten nicht hat. |
+
+## `v_wawi_umsatz_kundengruppe` (Sicht)
+
+Monatsumsatz je Tarifgruppe für die Leitung. Die Gruppe ist der Tarif zum Zeitpunkt der Fahrt (a.mitgliedschaft_id), nicht der heutige - siehe Kommentar am create view. sum(ep.betrag) ohne zweite Multiplikation mit vorzeichen, wie bei v_wawi_umsatz_radtyp. Filtert selbst über velocity.hat_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `monat` | `date` | ja |  | Erster Tag des Monats der Fahrt. |
+| `tarif_code` | `text` | ja |  | Fachlicher Schlüssel des Tarifs zum Fahrtzeitpunkt, oder OHNE ohne zugeordnete Mitgliedschaft (etwa Einzelfahrten ohne Vertrag). |
+| `tarif` | `text` | ja |  | Anzeigename des Tarifs, oder "Ohne Mitgliedschaft" als Sammelgruppe. |
+| `kunden` | `bigint` | ja |  | Zahl der verschiedenen Kunden dieser Gruppe im Monat. |
+| `fahrten` | `bigint` | ja |  | Zahl der abgeschlossenen Ausleihen dieser Gruppe im Monat. |
+| `umsatz` | `numeric` | ja |  | Summe der Entgeltpositionen (ep.betrag), bereits vorzeichenbehaftet - siehe Kopfkommentar von v_wawi_umsatz_radtyp. |
+| `umsatz_je_kunde` | `numeric` | ja |  | umsatz geteilt durch kunden, die Kennzahl für den Vergleich zwischen Tarifgruppen unabhängig von deren Kundenzahl. |
+
+## `v_wawi_umsatz_radtyp` (Sicht)
+
+Monatsumsatz je Fahrradtyp, ausschliesslich für die Leitung - die Spec reserviert Auswertungen für diese Rolle, disposition bekommt nur die Stationsauslastung. sum(ep.betrag) ohne zweite Multiplikation mit vorzeichen - siehe Kommentar am create view. Filtert selbst über velocity.hat_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `monat` | `date` | ja |  | Erster Tag des Monats der Fahrt (startzeit), Gruppierungsschlüssel für einen Zeitverlauf statt einer bedeutungslosen Jahressumme. |
+| `typ_code` | `text` | ja |  | Fachlicher Schlüssel des Fahrradtyps. |
+| `typ` | `text` | ja |  | Anzeigename des Fahrradtyps. |
+| `fahrten` | `bigint` | ja |  | Zahl der abgeschlossenen Ausleihen dieses Typs im Monat. |
+| `minuten` | `bigint` | ja |  | Summe der Fahrtdauer in Minuten, die Auslastungsseite neben dem Umsatz. |
+| `umsatz` | `numeric` | ja |  | Summe der Entgeltpositionen (ep.betrag), bereits vorzeichenbehaftet aus fn_position_anlegen. Keine zweite Multiplikation mit vorzeichen - das würde Rabatte und Kappungen zu Einnahmen machen, siehe Kopfkommentar. |
+| `umsatz_je_fahrt` | `numeric` | ja |  | umsatz geteilt durch fahrten, die Kennzahl für den Vergleich zwischen Radtypen unabhängig von deren Flottengrösse. |
