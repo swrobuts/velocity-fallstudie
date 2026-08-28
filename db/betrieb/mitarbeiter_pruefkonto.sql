@@ -31,15 +31,21 @@ select 'M-0002', u.id, 'Robert', 'Butscher', u.email, current_date
    and not exists (select 1 from velocity.mitarbeiter m
                     where m.personalnummer = 'M-0002');
 
--- ---- 2: Alle vier Rollen --------------------------------------------
--- Ein Pruefkonto mit allen Rollen sieht jede Maske. Fuer den Lehrbetrieb
--- wird das spaeter aufgeteilt - eine Rolle je Konto ist die einzige Art,
--- die Rollentrennung von aussen zu pruefen. Vorerst geht es darum,
--- ueberhaupt anmelden zu koennen.
+-- ---- 2: Alle vier Fachrollen ----------------------------------------
+-- Ein Prüfkonto mit allen Fachrollen sieht jede Maske. Für den Lehrbetrieb
+-- wird das später aufgeteilt - eine Rolle je Konto ist die einzige Art,
+-- die Rollentrennung von außen zu prüfen. Vorerst geht es darum,
+-- überhaupt anmelden zu können.
+--
+-- 'demo' bleibt ausdrücklich ausgenommen. Sie ist die öffentliche
+-- Vorführrolle der Anmeldeseite und schränkt ein, statt zu berechtigen;
+-- an einem Leitungskonto hätte sie nichts verloren. Ohne diesen Ausschluss
+-- vergibt der cross join fünf Rollen und der Nachweis unten schlägt fehl.
 insert into velocity.mitarbeiter_rolle (mitarbeiter_id, rolle_id)
 select m.mitarbeiter_id, r.rolle_id
   from velocity.mitarbeiter m cross join velocity.rolle r
  where m.personalnummer = 'M-0002'
+   and r.code <> 'demo'
 on conflict (mitarbeiter_id, rolle_id) do nothing;
 
 -- ---- 3: Nachweis ----------------------------------------------------
