@@ -102,6 +102,48 @@
                  U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
+/* DIE AUSZEICHNUNGSFLAECHE: DIESELBE DATEI AUF 88 PROZENT BREITE.
+   Vorgeschichte, damit sie niemand zum vierten Mal aufrollt: die Rolle
+   lief auf 79 Prozent ("zu schmal"), dann auf 88 ("zu schmal"), dann auf
+   100 ("schlechter"). Drei Anlaeufe an derselben Stellschraube, und
+   keiner traf - weil die zweite Groesse uebersehen wurde: die
+   Ueberschriften stehen zusaetzlich auf -0,03 em Laufweite. Eine
+   schmale Schrift, die obendrein zusammengezogen wird, wirkt doppelt
+   eng; auf voller Breite bleibt die Enge zwischen den Buchstaben,
+   waehrend der Charakter verlorengeht.
+   Aufgeloest hat es ein Vergleich: sechs Fassungen nebeneinander, Breite
+   gegen Laufweite. Der Betreiber hat sich fuer 88 Prozent bei -0,03 em
+   entschieden - dieselbe Fassung, die er einzeln betrachtet noch
+   abgelehnt hatte. Nebeneinander sieht man eben anderes als allein.
+   Der Name sagt jetzt die Rolle, nicht die Breite: "Schmal" war eine
+   Beschreibung, die bei jeder Aenderung wieder falsch geworden waere. */
+@font-face {
+  font-family: "Archivo Auszeichnung";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 88% 88%;
+  font-display: swap;
+  src: url("assets/schrift/archivo-latin.woff2?v=4c98b9d4") format("woff2");
+  /* Deutsch braucht nichts jenseits von latin. Der zweite Ausschnitt
+     wird nur geholt, wenn wirklich ein Zeichen daraus vorkommt. */
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+                 U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F,
+                 U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Archivo Auszeichnung";
+  font-style: normal;
+  font-weight: 100 900;
+  font-stretch: 88% 88%;
+  font-display: swap;
+  src: url("assets/schrift/archivo-latin-ext.woff2?v=a75c792f") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7,
+                 U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF,
+                 U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+                 U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 /* HIER LAGEN ZWEI FLAECHEN "Archivo Schmal" (entfernt 28.08.2026).
    Sie waren dieselbe Datei wie Archivo, nur auf der Breitenachse
    zusammengezogen - erst auf 79, dann auf 88 Prozent. Der Betreiber hat
@@ -218,18 +260,17 @@
   --schatten-3: 0 28px 64px rgba(6, 24, 65, .24);
 
   /* ---------------------------------------------------- SCHRIFT
-     EINE Familie in zwei Rollen. Der Unterschied liegt in Gewicht, Grad
-     und Laufweite - nicht mehr in der Breite: die Auszeichnung lief
-     zusammengezogen (79, dann 88 Prozent) und wurde dreimal als zu
-     schmal beanstandet. Jetzt laufen beide Rollen auf voller Breite.
-     Der Name sagt jetzt, was die Rolle IST: Auszeichnungsschrift fuer
-     Schlagzeilen, Ueberschriften, Zahlen und Preise. "--schmal" haette
-     eine Breite behauptet, die es nicht mehr gibt.
+     EINE Familie in zwei Rollen: Fliesstext auf voller Breite, die
+     Auszeichnung auf 88 Prozent. Sie unterscheiden sich zusaetzlich in
+     Gewicht (560 gegen 800) und Laufweite. Der Name sagt, was die Rolle
+     IST - Auszeichnungsschrift fuer Schlagzeilen, Ueberschriften, Zahlen
+     und Preise -, nicht wie breit sie gerade laeuft: "--schmal" waere
+     bei jeder Aenderung wieder zur Falschaussage geworden.
      Der Rueckfall steht direkt hinter Archivo und ist metrisch an sie
      angeglichen (siehe @font-face oben); erst danach kommen die
      Systemschriften, damit auch ohne jedes Nachladen etwas steht. */
   --body-schrift:  "Archivo", "Archivo Rückfall", "Helvetica Neue", Arial, sans-serif;
-  --auszeichnung:  "Archivo", "Archivo Rückfall", "Helvetica Neue", Arial, sans-serif;
+  --auszeichnung:  "Archivo Auszeichnung", "Archivo Rückfall", "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Laufweite: DREI Werte statt achtzehn.
