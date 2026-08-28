@@ -44,7 +44,11 @@ bereichAnmelden({
     // gefasst, saehe etwa die Disposition den Menuepunkt und dahinter
     // eine leere Liste, wie im Flotte-Kommentar begruendet.
     rollen: ['werkstatt', 'leitung'],
-    aufbauen: instandhaltungAufbauen
+    aufbauen: instandhaltungAufbauen,
+    // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5) - siehe
+    // spaltenkopfSuchtext in rahmen.js. Beide Unterreiter laden ihre
+    // Zeilen vollstaendig, der Tabellenbaustein sucht darueber.
+    suchePlatzhalterSchluessel: 'nav.instandhaltungSuche'
 });
 
 let unterbereich = 'schaeden';   // 'schaeden' | 'auftraege'
@@ -63,14 +67,38 @@ function instandhaltungZeigeSchaeden() {
     unterbereich = 'schaeden';
 }
 
-// Filterzustand (Gestaltungsauftrag, Punkt 2) - nur fuer den Schaeden-
-// Unterreiter ("nach Schwere, nach Alter der Meldung", woertlich der
-// Auftrag). instandhaltungFilterAlterStunden=0 bedeutet "alle", siehe
-// schaedenZeigen() weiter unten. instandhaltungFilterSchwere ist seit
-// der Mehrfachauswahl (Gestaltungsauftrag Bedienelemente, Punkt 2) ein
-// Set<string> - leer bedeutet "Alle".
-let instandhaltungFilterSchwere = new Set();
-let instandhaltungFilterAlterStunden = 0;
+// ===== HIER STAND DER EIGENE FILTERZUSTAND DER INSTANDHALTUNG =====
+//
+// Zwei modulweite Werte (Schwere als Set, Mindestalter in Stunden) und
+// eine eigene Filterleiste ueber der Liste. Mit Punkt 5 des
+// Gestaltungsauftrags sind beide entfallen - die Filter selbst nicht,
+// nur ihr Ort: sie sitzen jetzt in den Spaltenkoepfen "Schwere" und
+// "Offen seit" (siehe schaedenZeigen() weiter unten und
+// spaltenkopfFilterknopf() in rahmen.js). Dieselbe Begruendung wie bei
+// der Flotte, ausfuehrlich dort: beide filterten clientseitig ueber
+// Spalten, die in derselben Tabelle stehen, und beide zwangen genau
+// diese Spalten zu filterbar:false, damit sich nicht zwei Bedienelemente
+// auf demselben Feld widersprechen.
+//
+// DER MINDESTALTER-SCHIEBER, und was aus ihm geworden ist: er war das
+// einzige Bedienelement dieser Oberflaeche, das man nicht ohne Weiteres
+// in einen Spaltenkopf umziehen konnte, aus zwei Gruenden - und beide
+// sind geloest, nicht umgangen:
+//   1. offen_seit ist ein Postgres-Intervalltext ("2 days 03:05:00").
+//      Eine Schwelle darauf waere ein Textvergleich gewesen. Der
+//      Spaltenfilter vergleicht seit dem Umbau ueber spaltenWert() -
+//      also ueber dasselbe sortierwert(), nach dem die Spalte schon
+//      immer SORTIERT hat (alterInStunden). Filtern und Sortieren
+//      folgen damit derselben Regel "nach Wert, nicht nach Anzeige".
+//   2. Der Schieber zeigte neben sich "≥ 3 Std." statt einer nackten
+//      Zahl. Genau dafuer gibt es jetzt filterBeschriftung an der Spalte
+//      (siehe unten) - die Angabe bleibt lesbar, im selben Wortlaut.
+// Was tatsaechlich wegfaellt, ist die BEDIENFORM: ein Zahlenfeld statt
+// eines Schiebers. Bewusst so - ein Schieber braucht eine Obergrenze,
+// und die musste bisher aus den geladenen Meldungen GERATEN werden
+// (Math.max ueber alle Alter); bei sieben Meldungen ergab das eine
+// Skala, die sich mit jeder neuen Meldung verschob. Eine getippte
+// Stundenzahl hat dieses Problem nicht.
 
 async function instandhaltungAufbauen() {
     // ALLERERSTE Anweisung, vor jedem await (siehe Kommentar bei
@@ -352,7 +380,6 @@ async function schaedenZeigen(vorgang) {
     if (fehler) {
         // meldeVorgang statt melde: siehe Kommentar bei meldeVorgang() in
         // rahmen.js und bei flotteAufbauen() in flotte.js.
-        zeigeFilterleiste(vorgang, false, null);
         meldeVorgang(vorgang, t('msg.damageLoadFailed', { fehler }), 'schlecht');
         return;
     }
@@ -364,12 +391,13 @@ async function schaedenZeigen(vorgang) {
         // die Software kaputt ist - das ist der eigentliche Lehrpunkt
         // dieser Aufgabe (siehe Dateikopf).
         //
-        // KEIN Filter bei einer wirklich leeren Liste - ein Filter ohne
-        // eine einzige Zeile darunter waere Zierrat (siehe Kommentar bei
-        // zeigeFilterleiste() in rahmen.js). Der Grenzfall "gefiltert
-        // leer" (mindestens eine Meldung, aber keine passt) wird weiter
-        // unten separat behandelt, MIT sichtbarem Filter.
-        zeigeFilterleiste(vorgang, false, null);
+        // Der Grenzfall "gefiltert leer" (mindestens eine Meldung, aber
+        // keine passt) braucht hier keine eigene Behandlung mehr: seit
+        // die Filter im Spaltenkopf sitzen, faengt ihn der
+        // Tabellenbaustein selbst mit einer Leerzeile INNERHALB der
+        // Tabelle ab (baueLeerzeile() in rahmen.js) - Kopf und Filter
+        // bleiben dabei bedienbar. Diese Leermaske gilt nur noch dem
+        // ECHTEN Nichts: keine einzige offene Meldung im Bestand.
         zeigeLeermaske(
             vorgang,
             t('empty.noOpenDamageTitle'),
@@ -380,69 +408,15 @@ async function schaedenZeigen(vorgang) {
         return;
     }
 
-    // Slider-Obergrenze aus den tatsaechlich geladenen Meldungen
-    // gewonnen, nicht fest eingetragen - im heutigen Bestand liegen alle
-    // fuenf offenen Meldungen um die zwoelf Stunden auseinander (siehe
-    // Bericht), eine fest eingetragene Obergrenze (etwa 30 Tage) liesse
-    // den Schieber ueber weite Strecken wirkungslos. Math.max(1, ...):
-    // ein <input type="range"> mit min=max=0 liesse sich nicht bedienen,
-    // waeren alle Meldungen taufrisch.
-    const schieberMax = Math.max(1, Math.ceil(Math.max(...schaeden.map((s) => alterInStunden(s.offen_seit)))));
-    if (instandhaltungFilterAlterStunden > schieberMax) instandhaltungFilterAlterStunden = 0;
-
-    const sichtbar = schaeden.filter((s) =>
-        (instandhaltungFilterSchwere.size === 0 || instandhaltungFilterSchwere.has(s.schwere))
-        && alterInStunden(s.offen_seit) >= instandhaltungFilterAlterStunden);
-
-    zeigeFilterleiste(vorgang, true, [
-        {
-            // Kein { wert: 'alle', ... } mehr in den Optionen - der
-            // Rueckweg zu "Alle" ist ein eigener Knopf im
-            // Mehrfachauswahl-Popup (mehrfachauswahlFeld() in rahmen.js).
-            name: 'schwere', titel: t('field.schwere'), wert: instandhaltungFilterSchwere,
-            optionen: [
-                { wert: 'gering', text: t('schwere.gering') },
-                { wert: 'mittel', text: t('schwere.mittel') },
-                { wert: 'fahruntauglich', text: t('schwere.fahruntauglich') }
-            ],
-            beiAenderung: (neu) => { instandhaltungFilterSchwere = neu; instandhaltungAufbauen(); }
-        },
-        {
-            name: 'alter', titel: t('field.minAge'), typ: 'schieber',
-            min: 0, max: schieberMax, step: 1, wert: instandhaltungFilterAlterStunden,
-            beschriftung: (stunden) => (stunden === 0 ? t('misc.allLowercase') : t('misc.atLeastValue', { n: zahlFormat(stunden), einheit: t('common.hourAbbrev') })),
-            beiAenderung: (neu) => { instandhaltungFilterAlterStunden = neu; instandhaltungAufbauen(); }
-        }
-    ]);
-
-    if (sichtbar.length === 0) {
-        zeigeLeermaske(
-            vorgang,
-            t('empty.noDamageFilterTitle'),
-            t('empty.noDamageFilterText'),
-            {
-                titel: t('common.filterResetTitle'),
-                ausfuehren: async () => {
-                    instandhaltungFilterSchwere = new Set();
-                    instandhaltungFilterAlterStunden = 0;
-                    await instandhaltungAufbauen();
-                }
-            }
-        );
-        meldeVorgang(vorgang, t('empty.noDamageFilterTitle'));
-        return;
-    }
-
-    zeigeListe(vorgang, sichtbar, [
+    zeigeListe(vorgang, schaeden, [
         { feld: 'rahmennummer', titel: t('field.rad') },
         { feld: 'kategorie',    titel: t('field.kategorie') },
         {
             feld: 'schwere', titel: t('field.schwere'),
-            // filterbar:false (Spaltenkopf-Baustein, rahmen.js): der
-            // Schwere-Filter oben (instandhaltungFilterSchwere) deckt
-            // dieses Feld bereits ab - ein zweiter, unabhaengiger Filter
-            // koennte sich damit widersprechen, siehe der lange
-            // Kommentar bei zeigeListe() in rahmen.js.
+            // filterbar:false ist entfallen (Gestaltungsauftrag Punkt 5):
+            // der Schwere-Filter der frueheren Filterleiste sitzt jetzt
+            // HIER, in seinem eigenen Spaltenkopf - EIN Feld, EIN
+            // Bedienelement.
             // sortierwert: 'gering'/'mittel'/'fahruntauglich' alphabetisch
             // sortiert wuerde 'fahruntauglich' vor 'gering' zeigen - der
             // Fehler, der in diesem Projekt schon einmal ein
@@ -450,7 +424,6 @@ async function schaedenZeigen(vorgang) {
             // (siehe Auftrag). SCHWERE_RANG (siehe unten) traegt die
             // tatsaechliche Rangfolge, sortiert wird nach dem Wert, nicht
             // nach der Anzeige.
-            filterbar: false,
             sortierwert: (z) => SCHWERE_RANG[z.schwere] ?? -1,
             formatieren: (wert) => t('schwere.' + wert),
             // Nur EIN Parameter (die ganze Zeile), nicht (s) wie im
@@ -477,27 +450,41 @@ async function schaedenZeigen(vorgang) {
           formatieren: (wert) => (wert ? datumFormat(wert, ZEITSTEMPEL_FORMAT) : '') },
         {
             feld: 'offen_seit', titel: t('field.offenSeit'), formatieren: alterKurz,
-            // filterbar:false: der Mindestalter-Schieber oben deckt
-            // dieses Feld bereits ab, und praeziser (eine echte
-            // Stundenschwelle statt einer aus den geladenen Werten
-            // geratenen) - ein zweiter Filter waere hier nicht nur
-            // ueberfluessig, sondern schwaecher als der vorhandene.
             // sortierwert: offen_seit ist ein Postgres-Intervalltext
             // ("2 days 03:05:00") - als Text sortiert laege "10 Tage" vor
             // "2 Tage" (die Ziffer '1' < '2'). alterInStunden() (siehe
-            // unten, fuer den Schieber ohnehin schon vorhanden) liefert
-            // die tatsaechlich vergleichbare Zahl.
-            filterbar: false,
-            sortierwert: (z) => alterInStunden(z.offen_seit)
+            // unten) liefert die tatsaechlich vergleichbare Zahl.
+            sortierwert: (z) => alterInStunden(z.offen_seit),
+            // DER FRUEHERE MINDESTALTER-SCHIEBER, jetzt hier (siehe der
+            // lange Kommentar oben, wo der Filterzustand stand).
+            // filterTyp ausdruecklich 'schwelle' statt geraten: der ROHE
+            // Zellwert ist ein Text, spaltenFilterTyp() haette daraus
+            // 'text' geschlossen und ein Suchfeld angeboten, in dem
+            // "2 days 03:05:00" zu tippen waere. Gefiltert wird gegen
+            // sortierwert() (siehe zeichneArbeitstabelle() in rahmen.js),
+            // also gegen Stunden - deshalb passt die Schwelle.
+            filterTyp: 'schwelle',
+            // Damit aus der Zahl wieder eine Angabe wird: "≥ 3 Std.",
+            // derselbe Wortlaut, den der Schieber daneben schrieb.
+            filterBeschriftung: (stunden) => t('misc.atLeastValue',
+                { n: zahlFormat(stunden), einheit: t('common.hourAbbrev') })
         },
         { feld: 'status',       titel: t('field.stand'), formatieren: (wert) => statusAnzeige(wert) }
     ], schadenMaske, schadenZeilenAktionen);
 
-    const dringend = sichtbar.filter((s) => s.schwere === 'fahruntauglich').length;
-    const zusatz = sichtbar.length === schaeden.length ? '' : ` ${t('common.of')} ${zahlFormat(schaeden.length)}`;
+    // Immer ueber ALLE offenen Meldungen gemeldet, nicht mehr ueber eine
+    // gefilterte Teilmenge: wie viele Zeilen ein Spaltenfilter gerade
+    // uebriglaesst, sagt der Tabellenbaustein unmittelbar ueber der
+    // Tabelle (spaltenkopfHinweis() in rahmen.js) - dieselbe Auskunft ein
+    // zweites Mal in der Statuszeile waere eine zweite Quelle, die
+    // auseinanderlaufen kann. Die Zahl der FAHRUNTAUGLICHEN bleibt
+    // dagegen genau richtig hier: sie ist keine Auskunft ueber die
+    // Ansicht, sondern ueber den Bestand - "zwei Raeder fahren nicht"
+    // gilt, ob man sie gerade sieht oder nicht.
+    const dringend = schaeden.filter((s) => s.schwere === 'fahruntauglich').length;
     meldeVorgang(vorgang, dringend
-        ? t('msg.openDamageWithUnrideable', { n: zahlFormat(sichtbar.length), zusatz, dringend: zahlFormat(dringend) })
-        : t('msg.openDamageCount', { n: zahlFormat(sichtbar.length), zusatz }));
+        ? t('msg.openDamageWithUnrideable', { n: zahlFormat(schaeden.length), zusatz: '', dringend: zahlFormat(dringend) })
+        : t('msg.openDamageCount', { n: zahlFormat(schaeden.length), zusatz: '' }));
 }
 
 // Rangfolge von schwere, fuer die sortierwert-Eigenschaft der
@@ -505,8 +492,9 @@ async function schaedenZeigen(vorgang) {
 // rahmen.js) - alphabetisch stuende 'fahruntauglich' vor 'gering',
 // genau der Fehler, der in diesem Projekt schon einmal ein
 // fahruntaugliches Rad als "gering" hat erscheinen lassen (siehe
-// Auftrag). Dieselben drei Werte wie im Schwere-Filter oben
-// (instandhaltungFilterSchwere).
+// Auftrag). Er traegt jetzt zusaetzlich den Spaltenkopf-FILTER dieser
+// Spalte: gefiltert wird ueber spaltenWert() und damit ueber genau
+// diesen Rang (siehe zeichneArbeitstabelle() in rahmen.js).
 const SCHWERE_RANG = { gering: 0, mittel: 1, fahruntauglich: 2 };
 
 // offen_seit kommt als Postgres-Intervall-Text (IntervalStyle 'postgres')
@@ -765,16 +753,6 @@ async function auftragEroeffnen(schaden) {
 // ===== Wartungsaufträge =====
 
 async function auftraegeZeigen(vorgang) {
-    // Kein Filter in diesem Unterreiter (Gestaltungsauftrag, Punkt 2:
-    // "nach Schwere, nach Alter DER MELDUNG" - beides Eigenschaften einer
-    // Schadensmeldung, nicht eines Auftrags) - und deshalb ausdruecklich
-    // ABGERAEUMT: die Filterleiste ist ein find-or-create-Element wie die
-    // Werkzeugleiste (siehe deren Kommentar in rahmen.js) und ueberlebt
-    // sonst unveraendert einen Unterreiterwechsel weg von "Offene
-    // Schäden" - dieselbe Karteileichen-Falle, die die Werkzeugleiste
-    // hier schon einmal hatte.
-    zeigeFilterleiste(vorgang, false, null);
-
     const auftraege = await ladeListe('v_wawi_auftrag',
         'wartungsauftrag_id, auftragsnummer, fahrrad_id, rahmennummer, schadensmeldung_id, ' +
         'eroeffnet_am, erledigt_am, status, arbeitszeit_minuten, bemerkung, bearbeiter',

@@ -51,7 +51,14 @@ bereichAnmelden({
     // saehe etwa die Werkstatt den Menuepunkt und dahinter eine leere
     // Liste, wie im Flotte-Kommentar begruendet.
     rollen: ['disposition', 'leitung'],
-    aufbauen: stationenAufbauen
+    aufbauen: stationenAufbauen,
+    // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5) - siehe
+    // spaltenkopfSuchtext in rahmen.js. Zehn Stationen sind vollstaendig
+    // geladen; der Tabellenbaustein sucht darueber. Im Unterreiter
+    // "Landkarte" steht keine Tabelle - das Feld bleibt dort bedienbar,
+    // greift aber erst wieder, sobald die Liste zu sehen ist (der
+    // Baustein zeichnet nur, wenn es eine Tabelle gibt, siehe dort).
+    suchePlatzhalterSchluessel: 'nav.stationenSuche'
 });
 
 // 'liste' | 'karte' - EIN eigener Blick statt zweier Bereiche
@@ -119,6 +126,16 @@ async function stationenAufbauen() {
         maskeVerwerfen();
         await stationenAufbauen();
     });
+
+    // EINE SUCHE, ABER NUR WO ES ETWAS ZU DURCHSUCHEN GIBT
+    // (Gestaltungsauftrag Punkt 5, siehe sucheAnbieten() in rahmen.js):
+    // die Landkarte zeigt dieselben zehn Stationen als Marken, aber keine
+    // Liste - das gemeinsame Suchfeld haette dort nichts, worauf es
+    // wirken koennte. Es wird deshalb ausgeblendet statt abgeschaltet;
+    // ein Wechsel zurueck auf "Liste" (oder in einen anderen Bereich)
+    // holt es ueber bereichWechseln()/diese Zeile hier von selbst
+    // zurueck.
+    sucheAnbieten(stationenUnterbereich === 'liste');
 
     // Alle vier Sichten in EINEM Promise.all - dieselbe Ueberlegung wie
     // bei radAnlegenMaske() in flotte.js (Promise.all ueber Modelle und

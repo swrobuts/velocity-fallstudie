@@ -58,7 +58,13 @@ bereichAnmelden({
     // akzeptiert): hier ist der Bereich ENGER als die Sicht erlaubt, mit
     // Absicht und aus einem im Kommentar der Sicht selbst genannten Grund.
     rollen: ['leitung'],
-    aufbauen: auswertungenAufbauen
+    aufbauen: auswertungenAufbauen,
+    // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5) - siehe
+    // spaltenkopfSuchtext in rahmen.js. Alle vier Reiter laden ihre
+    // Zeilen vollstaendig; gesucht wird ueber den ANGEZEIGTEN Text
+    // mit ("Sep 2025", "2.011,20 €"), nicht nur ueber den rohen Wert -
+    // sonst faende man in dieser Tabelle nichts, was man liest.
+    suchePlatzhalterSchluessel: 'nav.auswertungenSuche'
 });
 
 // NICHT "unterbereich" genannt, obwohl es fachlich dasselbe wäre:

@@ -24,26 +24,53 @@ bereichAnmelden({
     // und dahinter eine leere Liste - der schlechteste aller Zustaende,
     // weil er wie ein Fehler aussieht und keiner ist.
     rollen: ['disposition', 'werkstatt', 'leitung'],
-    aufbauen: flotteAufbauen
+    aufbauen: flotteAufbauen,
+    // EINE SUCHE, IN JEDEM BEREICH (Gestaltungsauftrag Punkt 5, siehe
+    // spaltenkopfSuchtext in rahmen.js): das Feld in der Kopfleiste stand
+    // hier bis zu diesem Umbau abgeschaltet da ("In diesem Bereich keine
+    // Suche"). Die Flotte laedt alle 275 Raeder auf einmal - der
+    // Tabellenbaustein kann darueber suchen, ohne dass etwas
+    // nachgeladen werden muesste; kein sucheSelbst noetig.
+    suchePlatzhalterSchluessel: 'nav.flotteSuche'
 });
 
-// Filterzustand (Gestaltungsauftrag, Punkt 2) - modulweit wie
-// auswertungenReiter/unterbereich in den Nachbardateien, ueberlebt also
-// einen Neuaufbau (Buchung, Reiterwechsel gibt es hier nicht) und wird
-// erst durch "Filter zuruecksetzen" oder einen Bereichswechsel wieder
-// veraendert (ein Bereichswechsel selbst setzt sie NICHT zurueck - wer
-// von Flotte weg- und wieder hinwechselt, soll seinen Filter wiederfinden,
-// nicht neu einstellen muessen).
-// Gestaltungsauftrag Bedienelemente, Punkt 2: "ich kann bei Filter immer
-// nur ein Item aussuchen, brauche aber Multiselect" - jedes der drei Sets
-// leer heisst "Alle" (der Ausgangszustand), nichtleer traegt die
-// gewaehlten Werte. Rein CLIENTSEITIG gefiltert (raederGefiltert() weiter
-// unten) wie zuvor - anders als bei Kundschaft laedt Flotte die
-// vollstaendigen 275 Raeder ohnehin auf einmal, eine Serverabfrage
-// braeuchte es dafuer nicht.
-let flotteFilterStatus = new Set();
-let flotteFilterTyp = new Set();
-let flotteFilterStandort = new Set();
+// ===== HIER STAND DER EIGENE FILTERZUSTAND DER FLOTTE =====
+//
+// Drei modulweite Sets (Status, Radtyp, Standort) und eine eigene
+// Filterleiste ueber der Liste. Beide sind mit Punkt 5 des
+// Gestaltungsauftrags entfallen - NICHT die Filter selbst, nur ihr Ort:
+// sie sitzen jetzt in den Spaltenkoepfen Status, Radtyp und Standort,
+// wo die Werte ohnehin stehen (siehe spaltenkopfFilterknopf() in
+// rahmen.js).
+//
+// WARUM DAS DER RICHTIGE ORT IST, und nicht bloss ein anderer: alle drei
+// filterten CLIENTSEITIG ueber genau die Spalten, die zwei Zentimeter
+// darunter in der Tabelle stehen. Sie waren damit ein ZWEITES
+// Bedienelement fuer dasselbe Feld - und genau deshalb mussten dieselben
+// drei Spalten bisher filterbar:false tragen, damit sich die beiden nicht
+// widersprechen konnten. Ein Filter, der einen anderen abschalten muss,
+// um nicht zu luegen, steht am falschen Platz. Jetzt gibt es je Feld
+// genau EIN Bedienelement, und es sitzt an seiner Spalte.
+//
+// WAS DABEI NICHT VERLOREN GEHT:
+//   · Mehrfachauswahl - der Spaltenkopf-Filter ist fuer Auswahlspalten
+//     dieselbe Mehrfachauswahl (mehrfachauswahlEintraege() in rahmen.js,
+//     aus dem gemeinsamen Baustein herausgeloest).
+//   · Der Sonderfall "unterwegs, kein Standort" - v_wawi_flotte liefert
+//     standort NULL, solange ein Rad faehrt. Er war der einzige echte
+//     Grund, den Standortfilter von Hand zu bauen; der Baustein bietet
+//     leere Werte jetzt selbst als eigenen Auswahlpunkt an und
+//     beschriftet ihn ueber formatieren(null) - also mit genau dem Wort,
+//     das auch in der Tabellenzelle steht (siehe die Spalte 'standort'
+//     weiter unten und t('common.filterEmpty') in rahmen.js).
+//   · Das Wiederfinden ueber einen Neuaufbau hinweg - der Baustein haelt
+//     Sortierung, Gruppierung und Filter an derselben Spaltensignatur
+//     fest (siehe zeigeListe() in rahmen.js).
+//
+// WAS SICH AENDERT: ein BEREICHSWECHSEL setzt die Filter jetzt zurueck
+// (andere Spaltensignatur), waehrend die eigenen Sets ihn ueberlebten.
+// Bewusst in Kauf genommen: dieselbe Regel gilt damit fuer alle fuenf
+// Bereiche, statt fuer die Flotte eine eigene.
 
 async function flotteAufbauen() {
     // ALLERERSTE Anweisung, vor jedem await (siehe Kommentar bei
@@ -102,70 +129,16 @@ async function flotteAufbauen() {
     // Einschraenkung.
     zeigeKopftafel(vorgang, flotteKopftafel(raeder));
 
-    const { typen, standorte } = flotteFilterOptionen(raeder);
-    zeigeFilterleiste(vorgang, true, [
-        {
-            // Kein { wert: 'alle', ... } mehr in den Optionen - der
-            // Rueckweg zu "Alle" ist ein eigener Knopf im
-            // Mehrfachauswahl-Popup (mehrfachauswahlFeld() in rahmen.js),
-            // Gestaltungsauftrag Bedienelemente Punkt 2: "wartung UND
-            // defekt gleichzeitig, um alles zu sehen, was nicht faehrt".
-            name: 'status', titel: t('field.status'), wert: flotteFilterStatus,
-            optionen: [
-                { wert: 'verfuegbar', text: statusAnzeige('verfuegbar', true) },
-                { wert: 'ausgeliehen', text: statusAnzeige('ausgeliehen', true) },
-                { wert: 'wartung', text: statusAnzeige('wartung', true) },
-                { wert: 'defekt', text: statusAnzeige('defekt', true) },
-                { wert: 'ausgemustert', text: statusAnzeige('ausgemustert', true) }
-            ],
-            beiAenderung: (neu) => { flotteFilterStatus = neu; flotteAufbauen(); }
-        },
-        {
-            name: 'typ', titel: t('field.radtyp'), wert: flotteFilterTyp,
-            // Aus den geladenen Zeilen gewonnen statt fest eingetragen
-            // (CITY/EBIKE/CARGO heute) - ein vierter Radtyp braeuchte
-            // sonst eine eigene Codeaenderung hier, obwohl die Flotte
-            // ihn schon zeigen wuerde.
-            optionen: typen.map(([code, name]) => ({ wert: code, text: name })),
-            beiAenderung: (neu) => { flotteFilterTyp = neu; flotteAufbauen(); }
-        },
-        {
-            name: 'standort', titel: t('field.station'), wert: flotteFilterStandort,
-            optionen: [
-                // standort ist NULL bei laufender Fahrt oder freiem
-                // Abstellort (siehe v_wawi_flotte.standort in
-                // 0018_wawi_sichten.sql) - ein eigener Auswahlpunkt statt
-                // eines stummen Ausschlusses aus der Liste.
-                { wert: 'unterwegs', text: t('misc.underwayNoLocation') },
-                ...standorte.map((s) => ({ wert: s, text: s }))
-            ],
-            beiAenderung: (neu) => { flotteFilterStandort = neu; flotteAufbauen(); }
-        }
-    ]);
-
-    const raederSichtbar = raederGefiltert(raeder);
-
-    if (raeder.length > 0 && raederSichtbar.length === 0) {
-        // Der Grenzfall "kein Treffer" (Erprobung, Auftrag): der Filter
-        // bleibt sichtbar und bedienbar (siehe zeigeFilterleiste() oben),
-        // nur die Tabelle weicht der Leermaske mit einem Rueckweg.
-        zeigeLeermaske(
-            vorgang,
-            t('empty.noBikesFilterTitle'),
-            t('empty.noBikesFilterText'),
-            {
-                titel: t('common.filterResetTitle'),
-                ausfuehren: async () => {
-                    flotteFilterStatus = new Set();
-                    flotteFilterTyp = new Set();
-                    flotteFilterStandort = new Set();
-                    await flotteAufbauen();
-                }
-            }
-        );
-        meldeVorgang(vorgang, t('msg.noBikeWithFilter'));
-        return;
-    }
+    // KEINE eigene Leermaske mehr fuer "kein Treffer": den Fall behandelt
+    // seit dem Umzug der Filter in den Spaltenkopf der Tabellenbaustein
+    // selbst (baueLeerzeile() in rahmen.js) - und er behandelt ihn
+    // BESSER. zeigeLeermaske() ersetzte den kompletten Inhalt der
+    // Arbeitsliste; das war richtig, solange der Filter in einer eigenen
+    // Leiste DARUEBER sass und stehenblieb. Jetzt steckt er IM
+    // Tabellenkopf - ihn mit wegzuraeumen hiesse, dass niemand den zu
+    // engen Filter mehr feinjustieren, sondern ihn nur noch komplett
+    // zuruecksetzen koennte. Die schlanke Leerzeile INNERHALB der Tabelle
+    // laesst Kopf und Filter unangetastet und bietet denselben Rueckweg.
 
     // Fuenfter Parameter radZeilenAktionen (Punkt 5 der Gestaltung, Beleg
     // fuer den neuen Baustein in rahmen.js): dieselben Handlungen wie in
@@ -173,21 +146,20 @@ async function flotteAufbauen() {
     // Maske - wer nur den Status setzen oder ausmustern will, muss die
     // Zeile dafuer nicht erst oeffnen. Siehe radHandlungen() weiter
     // unten fuer die gemeinsame Grundlage beider Darstellungen.
-    // filterbar:false bei status/typ_code/standort (Spaltenkopf-Baustein,
-    // rahmen.js): fuer alle drei gibt es bereits die Filterleiste oben
-    // (flotteFilterStatus/-Typ/-Standort) - ein zweiter, unabhaengiger
-    // Filter auf demselben Feld koennte sich mit dem ersten widersprechen
-    // (Filterleiste "verfuegbar", Spaltenkopf "defekt" -> immer null
-    // Zeilen), siehe der lange Kommentar bei zeigeListe() in rahmen.js.
-    // Gruppieren bleibt fuer alle drei an - das ist eine neue Faehigkeit,
-    // die es vorher gar nicht gab, und widerspricht der Filterleiste
-    // nicht (Anzeige, keine Einschraenkung).
+    // filterbar:false ist bei status/typ/standort ERSATZLOS ENTFALLEN
+    // (Gestaltungsauftrag Punkt 5): es stand dort nur, weil dieselben drei
+    // Felder eine zweite, eigene Filterleiste hatten und sich zwei
+    // unabhaengige Filter auf demselben Feld widersprochen haetten. Die
+    // Leiste ist weg, der Filter sitzt jetzt hier im Spaltenkopf - EIN
+    // Feld, EIN Bedienelement, wie es die Regel immer schon verlangte.
+    // Siehe den langen Kommentar an der Stelle, wo der Filterzustand
+    // stand (oben in dieser Datei).
     // offene_schaeden: summierbar - eine echte Anzahl je Rad (kein
     // Durchschnitt, keine Ueberzaehlung ueber Zeitraeume wie bei
     // v_wawi_umsatz_kundengruppe.kunden, siehe auswertungen.js), die
     // Summe je Gruppe (z. B. alle Raeder mit Status "defekt") ist
     // fachlich sinnvoll.
-    zeigeListe(vorgang, raederSichtbar, [
+    zeigeListe(vorgang, raeder, [
         { feld: 'rahmennummer',   titel: t('field.rahmennummer') },
         // EINE BENENNUNG FUER DEN RADTYP, UEBERALL (Befund der
         // Referenzangleichung): hier stand der typ_code ("CITY"),
@@ -201,20 +173,22 @@ async function flotteAufbauen() {
         // Ebenso die Ueberschrift: t('field.radtyp') statt
         // t('field.typ') - dieselbe Spalte hiess in der Flotte "Typ",
         // in den Auswertungen "Radtyp" und in jeder Kopftafel "Radtyp".
-        { feld: 'typ',            titel: t('field.radtyp'), filterbar: false },
-        { feld: 'status',         titel: t('field.status'), klasse: statusKlasse, filterbar: false,
+        { feld: 'typ',            titel: t('field.radtyp') },
+        { feld: 'status',         titel: t('field.status'), klasse: statusKlasse,
           formatieren: (wert) => statusAnzeige(wert) },
         // formatieren-Rueckfall auf misc.underway (Erprobung, Hinweis aus
         // dem Bild): standort ist NULL bei einem Rad in laufender Fahrt
-        // (GR13 - unterwegs steht es nirgends, siehe der lange Kommentar
-        // bei flotteFilterStandort weiter unten) - fachlich richtig, sah
-        // in der Spalte aber wie eine leere, fehlerhafte Zelle aus, weil
-        // die Filterleiste UND die Detailmaske (radMaske() weiter unten,
-        // Feld 'standort') diesen Fall schon immer mit Text abfingen, NUR
-        // diese eine Tabellenspalte nicht - der Wert ging nicht bei der
-        // Uebersetzung verloren, sondern schlicht an dieser dritten Stelle
-        // vergessen.
-        { feld: 'standort',       titel: t('field.standort'), filterbar: false,
+        // (GR13 - unterwegs steht es nirgends) - fachlich richtig, sah in
+        // der Spalte aber wie eine leere, fehlerhafte Zelle aus, weil die
+        // Detailmaske (radMaske() weiter unten, Feld 'standort') diesen
+        // Fall schon immer mit Text abfing, NUR diese eine
+        // Tabellenspalte nicht.
+        // formatieren(null) liefert "unterwegs" - dasselbe Wort steht
+        // deshalb ohne weiteres Zutun als eigener Auswahlpunkt im
+        // Filterfenster dieser Spalte (siehe spaltenkopfFilterInhalt() in
+        // rahmen.js): der Sonderfall, den die alte Filterleiste von Hand
+        // nachbauen musste, faellt hier von selbst richtig aus.
+        { feld: 'standort',       titel: t('field.standort'),
           formatieren: (wert) => wert || t('misc.underway') },
         // klasse:'zahl' (Vorgabe der Arbeitstabelle, siehe
         // .arbeitstabelle td.zahl in style.css): eine Anzahl ist eine
@@ -233,9 +207,14 @@ async function flotteAufbauen() {
     // gerade gezeigte Bestaetigung, bevor sie jemand liest, wenn er noch
     // zu DIESEM Vorgang gehoert. Siehe Begruendung bei meldeVorgang() in
     // rahmen.js.
-    meldeVorgang(vorgang, raederSichtbar.length === raeder.length
-        ? mengeFormat(raeder.length, 'rad')
-        : t('common.xOfPhrase', { x: zahlFormat(raederSichtbar.length), phrase: mengeFormat(raeder.length, 'rad') }));
+    // Immer die GANZE Flotte gemeldet, nicht mehr eine gefilterte
+    // Teilmenge: seit die Filter im Spaltenkopf sitzen, sagt der
+    // Tabellenbaustein selbst, wie viele Zeilen von wie vielen gerade zu
+    // sehen sind (spaltenkopfHinweis() in rahmen.js, unmittelbar ueber
+    // der Tabelle). Dieselbe Zahl zusaetzlich in der Statuszeile am
+    // unteren Fensterrand zu wiederholen, waere eine zweite Quelle fuer
+    // dieselbe Auskunft - und die beiden koennten auseinanderlaufen.
+    meldeVorgang(vorgang, mengeFormat(raeder.length, 'rad'));
 }
 
 // ===== Kopftafel der Flotte =====
@@ -491,15 +470,6 @@ const FLOTTE_STATUS_SEGMENT = {
     ausgemustert: 'seg-ruhend'
 };
 
-// Optionen aus den bereits geladenen Zeilen gewonnen, nicht fest
-// eingetragen - siehe Kommentar am Aufrufort in flotteAufbauen().
-function flotteFilterOptionen(raeder) {
-    const typen = [...new Map(raeder.map((r) => [r.typ_code, r.typ])).entries()]
-        .sort(([a], [b]) => a.localeCompare(b));
-    const standorte = [...new Set(raeder.map((r) => r.standort).filter(Boolean))].sort();
-    return { typen, standorte };
-}
-
 // ===== Produktbilder je Radtyp =====
 // Die Tabelle selbst ist nach rahmen.js gewandert (RADTYP_BILDER, dort
 // unmittelbar neben KATEGORIE_FARBE) - aus demselben Grund, aus dem
@@ -510,21 +480,6 @@ function flotteFilterOptionen(raeder) {
 // derselbe Befund, den werkzeugleiste()/kopftafelWurzel() in rahmen.js
 // schon einmal beseitigt haben. Verwendet wird sie hier unveraendert
 // weiter (siehe flotteKopftafel() oben und radMaske() unten).
-
-// Set.size === 0 heisst "Alle" (siehe Kommentar bei flotteFilterStatus
-// oben). Der Standort-Sonderfall 'unterwegs' (kein Standort, r.standort
-// ist NULL) kann jetzt GEMEINSAM mit echten Stationsnamen markiert sein -
-// deshalb zwei getrennte Bedingungen statt eines einzelnen
-// Wenn-dann-sonst wie zuvor: "unterwegs ODER eine der gewaehlten
-// Stationen", nicht "entweder unterwegs oder eine Station".
-function raederGefiltert(raeder) {
-    return raeder.filter((r) =>
-        (flotteFilterStatus.size === 0 || flotteFilterStatus.has(r.status)) &&
-        (flotteFilterTyp.size === 0 || flotteFilterTyp.has(r.typ_code)) &&
-        (flotteFilterStandort.size === 0
-            || (flotteFilterStandort.has('unterwegs') && !r.standort)
-            || (r.standort && flotteFilterStandort.has(r.standort))));
-}
 
 // Farbe traegt Bedeutung, nicht Dekoration: rot ist ein defektes Rad,
 // nicht ein Knopf.

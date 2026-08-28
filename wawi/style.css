@@ -154,7 +154,7 @@
   --warnung-text: #8a6508;
   --schlecht:    #c0301c;
   /* Leiser als --linie (1.38:1 auf Weiss, siehe Kommentar bei
-     .spaltenkopf-filterzeile weiter unten) - eigens fuer die
+     .spaltenkopf-filtereingabe weiter unten) - eigens fuer die
      Tabellenzeilen selbst (Punkt 2: Tufte, "so wenig Linien wie moeglich,
      so viel Ruhe wie noetig" - die Struktur soll aus dem jetzt
      grosszuegigeren Zeilenabstand kommen, nicht aus einer kraeftigen
@@ -430,31 +430,35 @@
      genau die Fussangel, wegen der auch --warnung entfallen ist. */
   --zeile:       40px;
   --nav-breite:  200px;
-  /* ===== EIN SCHALTER, ZWEI ZUSTAENDE, NICHT DREI =====
-     Frueher stand hier --nav-breite-schmal (56px): die eingeklappte
-     Navigation blieb als reine Symbolspalte stehen (Zielgroesse --ziel
-     plus Innenabstand). Der Auftrag verlangt jetzt woertlich, "applemaessig
-     ... die linke Seite ein-/ausblenden" zu koennen - die Leiste soll
-     VOLLSTAENDIG verschwinden, die Arbeitsflaeche die ganze Breite
-     bekommen, nicht nur schmaler werden.
-     UEBERLEGT UND VERWORFEN: ein DRITTER Zustand (breit/schmal/weg) am
-     selben Schalter. Ein Knopf mit drei Ausprägungen muss entweder
-     durchklicken (ein Klick von "weg" fuehrt zurueck zu "schmal", nicht
-     zu "breit" - eine Ueberraschung) oder ein zweites Bedienelement
-     bekommen (ein Menue statt eines Knopfes) - beides schwerer zu
-     bedienen als der Zustand, den es ersetzt. Das Symbolspalten-Zwischen-
-     stadium hatte ausserdem seinen eigenen Grund verloren, sobald es
-     einen echten "weg"-Zustand gibt: es existierte, damit acht Stunden am
-     Bildschirmrand wenigstens die Symbole stehen bleiben, wenn die volle
-     Beschriftung zu viel Platz beansprucht - genau das leistet "weg" jetzt
-     radikaler und der Apple-Vorbild-Schalter (Mail, Notizen: ein Klick,
-     Leiste da oder weg, keine dritte Zwischenform) tut es ebenso.
-     ENTSCHEIDUNG: "schmal" ENTFAELLT, "weg" TRITT AN SEINE STELLE. Zwei
-     Zustaende bleiben es, wie zuvor - nur der zweite bedeutet jetzt
-     "nicht da" statt "nur Symbole". --nav-breite-weg ist deshalb keine
-     gemessene Groesse wie die 56px vorher, sondern schlicht 0: die
-     Spurbreite, die "es gibt nichts hier" ausdrueckt. */
-  --nav-breite-weg: 0px;
+  /* ===== ZWEI ZUSTAENDE - UND DER ZWEITE IST WIEDER DER STREIFEN =====
+     Die Geschichte dieser einen Zahl in drei Schritten, weil sie die
+     Entscheidung traegt:
+       1. --nav-breite-schmal: 56px - die eingeklappte Navigation blieb
+          als reine Symbolspalte stehen (Zielgroesse --ziel plus
+          Innenabstand).
+       2. --nav-breite-weg: 0px - auf den Wunsch "applemaessig ... die
+          linke Seite ein-/ausblenden" verschwand die Leiste vollstaendig.
+       3. JETZT, Auftrag woertlich: "die eingeklappte linke Seite
+          verkuerzt sich nicht zu einem Strip, wo nur die Icons zu sehen
+          sind" - der Streifen ist ausdruecklich zurueckgefordert.
+     ES BLEIBEN ZWEI ZUSTAENDE, nicht drei: breit (Symbol und Text) oder
+     schmal (nur Symbole). Ein dritter Zustand am selben Schalter muesste
+     entweder durchklicken (von "weg" zurueck zu "schmal" statt zu "breit"
+     - eine Ueberraschung) oder ein zweites Bedienelement bekommen; beides
+     ist schwerer zu bedienen als das, was es ersetzt. Der Streifen ist
+     ausserdem der bessere zweite Zustand: er nimmt der Arbeitsflaeche nur
+     56 statt 200 Pixel und laesst trotzdem JEDEN Bereich mit einem
+     einzigen Klick erreichbar - "weg" kostete dafuer erst einen Klick auf
+     den Griff und dann einen zweiten auf die Rubrik.
+     WORAUS DIE 56px KOMMEN: --ziel (32px, die Zielgroesse dieser Datei)
+     plus zweimal --raum-3 (12px) Innenabstand der Leiste. Der Knopf
+     darin bekommt allerdings nur zweimal --raum-2, weil die 1px-Kante
+     zur Arbeitsflaeche von derselben Breite abgeht - sonst bliebe er
+     einen Pixel unter der Zielgroesse (nachgemessen, siehe
+     body.navigation-schmal #navigation weiter unten). Ein Rubrikknopf
+     ist im schmalen Zustand damit genauso gut zu treffen wie jeder
+     andere Symbolknopf der Oberflaeche. */
+  --nav-breite-schmal: 56px;
   --kopf-hoehe:  60px;
   --fuss-hoehe:  32px;
 
@@ -572,7 +576,7 @@
 
      WAS KEIN SCHATTEN IST, obwohl es box-shadow benutzt:
      ein VERDOPPELTER RAHMEN (0 0 0 1px, .mehrfachauswahl-aktiv,
-     .spaltenkopf-filter-aktiv), ein BALKEN in der Zeile (inset 3px 0 0)
+     .spaltenkopf-filterknopf-aktiv), ein BALKEN in der Zeile (inset 3px 0 0)
      und ein RING um eine Kalenderzelle (inset). Alle drei sind Kontur,
      keine Hoehe - sie stehen deshalb bewusst NICHT in dieser Reihe.
      Ebenso die Stationsmarke auf der Landkarte (siehe dort): sie liegt
@@ -920,8 +924,8 @@ a.wortmarke-link:active {
      daneben ist die zweite Spur desselben Rasters (minmax(0, 1fr)) und
      bekommt den gewonnenen Platz dadurch von selbst, ohne dass
      irgendeine zweite Regel davon wissen muesste - schrumpft die erste
-     Spur auf 0 (siehe --nav-breite-weg in :root), waechst die
-     Arbeitsflaeche automatisch auf die volle Fensterbreite.
+     Spur auf --nav-breite-schmal (siehe :root), waechst die
+     Arbeitsflaeche automatisch um genau denselben Betrag.
      Der Zustand haengt an <body>, nicht an #navigation: dieselbe
      Machart wie body.zebra-an (siehe Zebramuster weiter unten), und die
      einzige, die auch das RASTER erreicht - #navigation ist ein KIND
@@ -929,12 +933,12 @@ a.wortmarke-link:active {
   transition: grid-template-columns 160ms ease;
 }
 
-/* Klassenname bewusst nicht mehr "navigation-schmal": es gibt keine
-   schmale Zwischenform mehr (siehe --nav-breite-weg in :root, "EIN
-   SCHALTER, ZWEI ZUSTAENDE, NICHT DREI") - die Leiste ist entweder da
-   oder weg. */
-body.navigation-weg #zustand-arbeit {
-  grid-template-columns: var(--nav-breite-weg) minmax(0, 1fr);
+/* Der Klassenname sagt wieder, was der zweite Zustand IST: schmal, nicht
+   weg (siehe --nav-breite-schmal in :root). Nur die erste Spur aendert
+   sich; die zweite (minmax(0, 1fr)) bekommt die 144px Unterschied von
+   selbst, ohne dass eine zweite Regel davon wissen muss. */
+body.navigation-schmal #zustand-arbeit {
+  grid-template-columns: var(--nav-breite-schmal) minmax(0, 1fr);
 }
 
 /* "niemals eine Bewegung, die Arbeit verzoegert" (Auftrag): wer
@@ -1053,25 +1057,27 @@ body.navigation-weg #zustand-arbeit {
    er verschiebt - dieselbe Loesung, die macOS-Fenster (Trennlinie mit
    Ziehgriff) und Notion/Linear (Pfeil an der Seitenleistenkante) waehlen.
 
-   ===== DER HAKEN, UND WIE ER GELOEST IST =====
-   Die Leiste verschwindet VOLLSTAENDIG (Spur auf 0, padding 0, inert -
-   siehe body.navigation-weg #zustand-arbeit oben und navigationAnwenden()
-   in rahmen.js). Mit ihr verschwaende ihre rechte Kante, und ein Griff IN
-   der Leiste verschwaende mit: es gaebe keinen Weg zurueck. Genau das
-   verbietet der Auftrag ("der Weg dorthin darf nicht selbst
-   verschwinden").
-   Der Griff liegt deshalb NICHT in #navigation, sondern als absolut
-   positioniertes Geschwisterkind in #zustand-arbeit (siehe index.html,
-   erstes Kind - und damit weiterhin der erste Tabstopp der Oberflaeche).
+   ===== EIN HAKEN, DER MIT DEM SYMBOLSTREIFEN ENTFAELLT =====
+   Solange der zweite Zustand "Leiste weg" hiess (Spur auf 0), lag die
+   Kante, an der dieser Griff sitzt, bei x=0 - ein dort MITTIG
+   ausgerichteter Griff waere zur Haelfte aus dem Fenster gefallen, und
+   es brauchte eine Sonderregel, die ihn buendig statt mittig setzte.
+   Seit der zweite Zustand der 56px breite Symbolstreifen ist (siehe
+   --nav-breite-schmal in :root), gibt es diesen Sonderfall NICHT MEHR:
+   die Kante liegt bei 56px, der 32px breite Griff reicht von 40 bis 72
+   und steht in BEIDEN Zustaenden vollstaendig im Fenster. EINE Regel,
+   zwei Zustaende, nur left unterscheidet sich - die frueher noetige
+   zweite transform-Angabe ist ersatzlos entfallen.
+   Der Griff liegt trotzdem weiterhin NICHT in #navigation, sondern als
+   absolut positioniertes Geschwisterkind in #zustand-arbeit (siehe
+   index.html, erstes Kind - und damit weiterhin der erste Tabstopp der
+   Oberflaeche): er gehoert zur KANTE, nicht zum Inhalt dahinter, und
+   eine Leiste, die in sich scrollt (overflow-y:auto), duerfte ihren
+   eigenen Umschalter nicht mit wegscrollen.
    Seine Lage rechnet er selbst aus, aus denselben zwei Groessen, aus
    denen das Raster daneben besteht:
-     · WAAGERECHT an --nav-breite, also genau auf der Kante. Ausgeblendet
-       waere diese Kante bei 0 - und ein zur Haelfte ueber den linken
-       Fensterrand hinausgeschobener Griff waere zur Haelfte
-       unerreichbar. Deshalb kippt in diesem Zustand nur die
-       AUSRICHTUNG: er sitzt buendig bei x=0 statt mittig auf x=0, bleibt
-       also vollstaendig sichtbar UND vollstaendig anklickbar. Er bleibt
-       damit, wo die Kante waere, ohne aus dem Fenster zu fallen.
+     · WAAGERECHT an --nav-breite bzw. --nav-breite-schmal, also genau
+       auf der jeweiligen Kante, in beiden Zustaenden mittig darauf.
      · SENKRECHT in der Mitte zwischen Kopfleiste und Statuszeile - also
        in der Mitte der Leiste selbst, nicht in der Mitte des Fensters.
        Die Rechnung nennt beide Randhoehen ausdruecklich, statt ein
@@ -1117,24 +1123,43 @@ body.navigation-weg #zustand-arbeit {
   width: var(--ziel);
   height: var(--ziel);
   padding: 0;
-  border: 1px solid var(--kontur);
+  /* --marine statt --kontur, dieselbe Aenderung und dieselbe Begruendung
+     wie beim Griff der Kopftafel (.kopftafel-umschalter weiter unten):
+     ein Griff, den man suchen muss, ist ein halber Griff. --kontur hielt
+     mit 3,64:1 auf --flaeche zwar die 3:1 aus WCAG 1.4.11 ein, aber in
+     einer Oberflaeche, die JEDE Trennlinie in --kontur zeichnet, war er
+     damit nur eine Linie unter vielen. --marine misst 17,29:1 auf
+     --flaeche und 14,72:1 auf --flaeche-rahmen (beide gemessen) - der
+     Griff liegt auf der Naht zwischen genau diesen beiden Flaechen und
+     hebt sich jetzt von BEIDEN ab.
+     Fuellung bleibt --flaeche (weiss): der Griff sitzt auf der Naht, und
+     eine Fuellung in --flaeche-rahmen verschwaende auf der linken, in
+     eben diesem Ton gehaltenen Haelfte. Beim Umschalter der Kopftafel
+     liegt der Fall anders herum, siehe dort. */
+  border: 1px solid var(--marine);
   border-radius: var(--rund-3);
   background: var(--flaeche);
   color: var(--marine);
-  transition: left 160ms ease, transform 160ms ease,
+  /* Kein transform mehr in der Liste: seit der zweite Zustand der
+     Symbolstreifen ist, aendert sich ausschliesslich left (siehe die
+     Begruendung im Kopfkommentar oben). */
+  transition: left 160ms ease,
               background-color 120ms ease, border-color 120ms ease;
 }
 
-/* Ausgeblendet: buendig statt mittig (Begruendung oben) - dieselbe
-   Kante, nur von innen angelegt. */
-body.navigation-weg .navigation-griff {
-  left: var(--nav-breite-weg);
-  transform: translate(0, -50%);
+/* Schmal: dieselbe Regel, nur die andere Kante. Kein eigenes transform
+   mehr noetig (Begruendung oben) - der Griff bleibt auch bei 56px
+   vollstaendig im Fenster. */
+body.navigation-schmal .navigation-griff {
+  left: var(--nav-breite-schmal);
 }
 
+/* Umgekehrt statt aufgehellt: gefuellt --marine, Zeichen weiss (17,29:1,
+   gemessen). Dieselbe Zustandsform wie beim Umschalter der Kopftafel -
+   ein zweiter Griff in derselben Oberflaeche soll sich gleich anfuehlen. */
 .navigation-griff:hover {
-  background: var(--grund);
-  border-color: var(--marine);
+  background: var(--marine);
+  color: var(--flaeche);
 }
 
 /* Dieselbe Bildsprache wie .bereich-icon svg / .zeilen-aktion svg /
@@ -1276,7 +1301,7 @@ body.navigation-weg .navigation-griff {
       sichtbar deaktiviert statt weiter untaetig dazustehen.
    3. .feld-suche-aktiv (von kunden.js gesetzt, sobald das Feld nicht
       leer ist) hebt den Rahmen farblich hervor - dieselbe "greift gerade
-      ein"-Auskunft wie .spaltenkopf-filter-aktiv weiter unten, nur fuer
+      ein"-Auskunft wie .spaltenkopf-filterknopf-aktiv weiter unten, nur fuer
       dieses eine, bereichsuebergreifende Feld. */
 #feld-suche {
   justify-self: center;
@@ -1306,17 +1331,37 @@ body.navigation-weg .navigation-griff {
   color: var(--text-leise);
 }
 
-/* Nicht bloss ausgegraut: der Platzhaltertext selbst ("In diesem Bereich
-   keine Suche", siehe bereichWechseln()) sagt bereits, WARUM - disabled
-   verhindert zusaetzlich, dass hier scheinbar folgenlos getippt werden
-   kann. */
-#feld-suche:disabled {
-  background-color: rgba(255, 255, 255, 0.55);
-  cursor: not-allowed;
+/* ===== HIER STAND DIE ABGESCHALTETE SUCHE =====
+   #feld-suche:disabled - eine halbdurchsichtige Fuellung und ein
+   "verboten"-Zeiger, dazu der Platzhalter "In diesem Bereich keine
+   Suche". Der Auftraggeber, woertlich: "zum einen ist sie zu visuell
+   dominant und zum anderen gibt es im oberen Bereich (blau) auch eine
+   (deaktivierte) Suche. Wir sollten das abgleichen." Es gibt sie jetzt in
+   jedem Bereich, und sie sucht (siehe spaltenkopfSuchtext in rahmen.js) -
+   die Regel fuer den abgeschalteten Zustand hat damit keinen Fall mehr.
+
+   Wo eine Ansicht wirklich nichts zu durchsuchen hat (der Unterreiter
+   "Landkarte" der Stationen: zehn Marken, keine Liste), wird das Feld
+   UNSICHTBAR statt ausgegraut - siehe sucheAnbieten() in rahmen.js fuer
+   die Begruendung.
+   EIGENE KLASSE UND NICHT DAS hidden-ATTRIBUT: #kopfleiste ist ein
+   Dreispaltenraster, und dieses Feld ist die mittlere Spur. Ein per
+   display:none entferntes Kind liesse den Profilbereich in die Mitte
+   rutschen - genau der Fehler, vor dem der Kommentar bei
+   .kopfleiste-marke in index.html warnt (im Browser nachgestellt: der
+   Profilknopf sprang von x=1416 auf x=980). Das hidden-Attribut kam
+   dafuer nicht in Frage: diese Datei setzt [hidden] weiter oben
+   ausdruecklich auf display:none !important, damit die vier
+   Seitenzustaende sich nicht ueberlagern - eine Ausnahme davon nur fuer
+   dieses eine Feld waere eine Fussangel fuer den naechsten Bearbeiter.
+   visibility:hidden haelt die Rasterzelle besetzt und nimmt das Feld
+   trotzdem aus Bild, Tabreihenfolge UND Bedienbaum. */
+.feld-suche-ohne-liste {
+  visibility: hidden;
 }
 
 /* "Ob es gerade etwas einschraenkt" (Auftrag) - derselbe Rahmenton wie
-   bei einem greifenden Spaltenfilter (.spaltenkopf-filter-aktiv weiter
+   bei einem greifenden Spaltenfilter (.spaltenkopf-filterknopf-aktiv weiter
    unten), hier gegen den dunklen Kopfleisten-Hintergrund als kraeftiger
    Rahmen statt einer Flaechenfarbe, sonst verschwaende der Hinweis vor
    der marinen Umgebung. */
@@ -1657,16 +1702,59 @@ body.navigation-weg .navigation-griff {
   padding: var(--raum-5) var(--raum-3);
 }
 
-/* Ausgeblendet: die Spur schrumpft in style.css (siehe
-   body.navigation-weg #zustand-arbeit) auf 0, aber border-box zaehlt
-   Innenabstand zur Breite dazu - ohne diese Regel bliebe die Leiste als
-   24px breiter Streifen (zweimal --raum-3) stehen, egal wie schmal die
-   Rasterspur wird. inert (siehe rahmen.js) nimmt sie zusaetzlich aus
-   Tastaturreihenfolge und Bedienbaum heraus - eine Leiste, die man nicht
-   mehr sieht, darf auch keinen Tabstopp mehr belegen. */
-body.navigation-weg #navigation {
-  padding: 0;
-  border-right-color: transparent;
+/* ===== DER SYMBOLSTREIFEN (Gestaltungsauftrag Punkt 3) =====
+   Auftrag woertlich: "die eingeklappte linke Seite verkuerzt sich nicht
+   zu einem Strip, wo nur die Icons zu sehen sind."
+   Was sich aendert, ist AUSSCHLIESSLICH die Beschriftung und die
+   Ausrichtung - Flaeche, Kante, aktive Rubrik und Zielgroesse bleiben
+   exakt dieselben wie im breiten Zustand. Der Streifen ist damit
+   dieselbe Navigation, nur ohne Worte, nicht ein zweites Bauteil mit
+   eigenem Aussehen.
+   KEIN inert, KEIN aria-hidden mehr (siehe navigationAnwenden() in
+   rahmen.js): die Leiste ist sichtbar und voll bedienbar, sie ist nur
+   schmal. Der Name jeder Rubrik steht weiterhin im aria-label des
+   Knopfes und erscheint beim Ueberfahren und bei Tastaturfokus im
+   Hinweisfenster (Lage 'rechts', siehe navigationAufbauen()). */
+body.navigation-schmal #navigation {
+  /* Waagerecht --raum-2 statt --raum-3, und das ist NACHGEMESSEN, nicht
+     geschaetzt: die Spur ist 56px breit, davon gehen 1px fuer die Kante
+     zur Arbeitsflaeche ab (border-right, siehe #navigation oben, plus
+     box-sizing:border-box). Mit zweimal --raum-3 blieben dem Knopf
+     56 − 1 − 24 = 31px - einen Pixel UNTER der Zielgroesse --ziel dieser
+     Datei. Mit zweimal --raum-2 sind es 39px, sicher darueber (im
+     Browser nachgemessen: 39 x 34px).
+     Senkrecht bleibt --raum-5 wie im breiten Zustand - der Abstand zur
+     Kopfleiste ist derselbe, die Leiste rutscht beim Umschalten nicht. */
+  padding: var(--raum-5) var(--raum-2);
+}
+
+/* Das Symbol allein, mittig - und in der Zielgroesse --ziel, damit ein
+   Rubrikknopf hier genauso gross zu treffen ist wie jeder andere
+   Symbolknopf der Oberflaeche. Nicht "width: 100 %": die Knoepfe sind
+   Flex-Kinder einer Spalte und werden ohnehin auf die Leistenbreite
+   gestreckt; padding auf 0 waagerecht haelt das Symbol dabei genau in
+   der Mitte. */
+body.navigation-schmal #navigation button {
+  justify-content: center;
+  padding: var(--raum-2) 0;
+  min-height: var(--ziel);
+}
+
+/* Der Text geht weg, nicht nur die Sicht auf ihn: display:none statt
+   visibility/opacity. Ein per visibility verborgener Text belegte
+   weiterhin seine Breite und zwaenge den Knopf ueber die 56px hinaus -
+   #navigation traegt zwar overflow-x:hidden (siehe oben) und wuerde ihn
+   abschneiden, aber der Knopf saesse dann nicht mehr mittig, weil die
+   unsichtbare Textbreite die Zentrierung verschoebe. */
+body.navigation-schmal .bereich-text {
+  display: none;
+}
+
+/* Fokusring nach INNEN (siehe die Begruendung bei #navigation button
+   [aria-current] oben): 56px Spur, 1px Ring nach aussen - die aeussere
+   Haelfte laege auf bzw. hinter der Kante der Leiste. */
+body.navigation-schmal #navigation button:focus-visible {
+  outline-offset: -2px;
 }
 
 /* Ein Eintrag je erlaubtem Bereich - rahmen.js erzeugt sie, hier nur
@@ -1723,11 +1811,13 @@ body.navigation-weg #navigation {
 /* Der Tastaturfokus kommt von der globalen :focus-visible-Regel in --rot.
    Auf der jetzt hellen Navigationsflaeche misst --rot 3,76:1 gegen
    --flaeche-rahmen (gemessen) - ueber den 3:1, die WCAG 1.4.11 fuer eine
-   Bedienelement-Auszeichnung verlangt. Kein eigener outline-offset mehr
-   noetig: die fruehere -2px-Ausnahme galt der 56px schmalen
-   Symbolspalte, die es nicht mehr gibt (siehe --nav-breite-weg in
-   :root) - die Leiste ist jetzt entweder 200px breit oder gar nicht da,
-   in beiden Faellen reicht der globale 1px-Versatz. */
+   Bedienelement-Auszeichnung verlangt. DER FOKUSRING IM SCHMALEN
+   ZUSTAND: der Symbolstreifen ist zurueck (siehe --nav-breite-schmal in
+   :root), und mit ihm der Grund fuer die fruehere -2px-Ausnahme - ein
+   nach aussen gesetzter Ring wuerde in einer 56px schmalen Spur an der
+   Kante beschnitten. Er laeuft dort deshalb nach INNEN (siehe
+   body.navigation-schmal #navigation button weiter unten); breit bleibt
+   es beim globalen 1px nach aussen. */
 
 .bereich-icon {
   display: inline-flex;
@@ -2167,26 +2257,82 @@ body.navigation-weg #navigation {
   min-width: 64px;
   min-height: var(--ziel);
   padding: var(--raum-1) var(--raum-4);
-  /* --kontur statt --linie: der Griff ist ein Bedienelement, das man
-     erkennen soll, nicht eine Trennung innerhalb eines Bereichs (siehe
-     Gliederungsregel Punkt 2 im Dateikopf - dieselbe 3:1-Frage gilt fuer
-     einen Rahmen ebenso wie fuer eine Flaechengrenze). Kein eigener
-     Schatten: die drei Schatten dieser Datei sind je einer Hoehe fest
-     zugeordnet (siehe Ebenensystem in :root), und der Griff ist Teil des
-     Blatts (Ebene 0), keine schwebende oder ueberlagernde Flaeche -
-     Rahmen, Fuellung und Groesse tragen die Sichtbarkeit hier allein. */
-  border: 1px solid var(--kontur);
+  /* ===== DRITTER ANLAUF AN DIESER PILLE, UND WARUM =====
+     Auftrag woertlich: "Die Pille zum Ausklappen der Kopfleiste ist sehr
+     schlecht zu sehen, sie sollte umrandet sein oder farblich, damit sie
+     ins Auge sticht."
+     Der Befund stimmt, und die Ursache war nicht die LAGE (mittig an der
+     Unterkante, siehe oben - die bleibt), sondern die Farbwahl: eine
+     weisse Fuellung (--flaeche) mit einem Rahmen in --kontur, mitten auf
+     einer ebenfalls weissen Tafel. Gemessen war das nicht falsch -
+     --kontur haelt 3,64:1 auf --flaeche und damit die 3:1 aus WCAG
+     1.4.11 -, aber gemessen ist nicht dasselbe wie AUFFAELLIG: dieselbe
+     Linienfarbe zeichnet in dieser Datei jede Tabellenkante, jede
+     Spaltentrennung und jeden Kasten. Ein Bedienelement, das aussieht wie
+     eine Trennlinie, wird als Trennlinie gelesen. Und die Fuellung war
+     nicht von der Tafel zu unterscheiden (1,00:1), es blieb also nur
+     eine Linie ohne Flaeche.
+
+     WELCHER RANG DER FARBORDNUNG (siehe :root), und warum:
+       Rang 1 ALARM (--rot/--schlecht) - NEIN. Rot ist reserviert und
+         wird nicht verwaessert; ein Umschalter ist weder ein Schaden
+         noch eine unumkehrbare Handlung.
+       Rang 2 SCHWELLE (--warnung-text/--gut) - NEIN. Es ist keine
+         fachliche Grenze ueberschritten; hier ist gar nichts geschehen.
+       Rang 3 VORZEICHEN - NEIN. Auf/zu ist kein Plus und kein Minus.
+       Rang 4 ZUGEHOERIGKEIT (--kat-1..5) - NEIN, gleich zweimal: die
+         fuenf Toene sind ausdruecklich FLAECHENfarben fuer Kategorien
+         der Fachdaten und werden nie als Textfarbe vergeben; eine Pille
+         ist keine Kategorie.
+       Rang 5 NEUTRAL - JA. "Alles, was keine der vier Bedeutungen
+         traegt", und --marine ist der dort gefuehrte Ton. Er traegt in
+         dieser Datei ohnehin schon Knoepfe und Fokusringe in voller
+         Staerke; die Pille beansprucht damit keine neue Bedeutung,
+         sondern die Hausfarbe fuer ein Bedienelement ohne Fachaussage.
+
+     DREI SCHRITTE, GEMESSEN, in aufsteigender Lautstaerke:
+       1. RAHMEN --marine auf --flaeche: 17,29:1 (gemessen). Das ist der
+          Schritt, der "sie sticht ins Auge" leistet - eine dunkle,
+          geschlossene Kontur, die mit keiner Trennlinie der Oberflaeche
+          zu verwechseln ist.
+       2. FUELLUNG --flaeche-rahmen: nur 1,17:1 gegen die Tafel und damit
+          fuer sich ALLEIN zu wenig - sie traegt die Sichtbarkeit auch
+          nicht, das tut der Rahmen. Sie gibt der Pille einen KOERPER,
+          damit sie als Flaeche gelesen wird und nicht als Umriss. Es ist
+          ausserdem genau der Ton, den diese Datei schon fuehrt fuer
+          "hier wird bedient" (siehe .profilknopf:hover
+          .profilknopf-avatar), also keine sechste Flaeche.
+       3. SCHRIFT UND ZEICHEN --marine auf --flaeche-rahmen: 14,72:1
+          (gemessen), weit ueber den 4,5:1 fuer Text. Vorher stand hier
+          --text-leise (5,07:1 auf demselben Grund) - ausreichend, aber
+          "leise" ist genau das, was ein zentrales Bedienelement nicht
+          sein soll.
+
+     UND WARUM NICHT GEFUELLT --marine IM RUHEZUSTAND: das waere die
+     lauteste Flaeche des Bildschirms geworden und haette dem einen
+     Hauptknopf jedes Bereichs ("Neues Rad anlegen", --gut, gefuellt) den
+     Rang abgelaufen - der Auftrag verlangt sichtbar, nicht dominant. Die
+     gefuellte Form bleibt deshalb dem Ueberfahren vorbehalten (unten).
+
+     Kein eigener Schatten: die drei Schatten dieser Datei sind je einer
+     Hoehe fest zugeordnet (siehe Ebenensystem in :root), und die Pille
+     ist Teil des Blatts (Ebene 0), keine schwebende Flaeche. */
+  border: 1px solid var(--marine);
   border-radius: var(--rund-3);
-  background: var(--flaeche);
-  color: var(--text-leise);
+  background: var(--flaeche-rahmen);
+  color: var(--marine);
   font-size: var(--grad-3);
   font-weight: 600;
 }
 
+/* Ueberfahren: umgekehrt, gefuellt --marine mit weisser Schrift
+   (17,29:1, gemessen) - der lauteste Zustand dieser Pille, aber nur
+   solange der Zeiger darauf steht. Dieselbe Zustandsform wie beim Griff
+   der Seitenleiste (.navigation-griff:hover oben): ein zweiter Griff in
+   derselben Oberflaeche soll sich gleich anfuehlen. */
 .kopftafel-umschalter:hover {
-  background: var(--grund);
-  border-color: var(--marine);
-  color: var(--marine);
+  background: var(--marine);
+  color: var(--flaeche);
 }
 
 .kopftafel-umschalter-text {
@@ -2996,13 +3142,15 @@ body.navigation-weg #navigation {
 
 /* ===== Mehrfachauswahl (mehrfachauswahlFeld() in rahmen.js,
    Gestaltungsauftrag Bedienelemente Punkt 2) =====
-   Ersetzt das fruehere <select> an BEIDEN Einsatzorten: hier in der
-   Filterleiste (.filterfeld) UND weiter unten im Spaltenkopf
-   (.spaltenkopf-filterzeile) - ein Regelsatz fuer beide, dieselbe
-   Ueberlegung wie beim Baustein selbst (siehe dessen Kopfkommentar in
-   rahmen.js). border: var(--text-leise) statt var(--kontur) - Letztere
+   Der KNOPF und sein Popup gehoeren seit dem Umzug des Spaltenfilters in
+   den Spaltenkopf nur noch der Filterleiste (.filterfeld); die
+   EINTRAEGE darin (Alle-Knopf und Checkboxen, siehe
+   mehrfachauswahlEintraege() in rahmen.js) teilt sie sich weiterhin mit
+   dem Filterfenster des Spaltenkopfs - die Regeln
+   .mehrfachauswahl-alle/-option weiter unten gelten deshalb fuer beide.
+   border: var(--text-leise) statt var(--kontur) - Letztere
    misst nur 1,37:1 auf Weiss (siehe Kommentar bei
-   .spaltenkopf-filterzeile select weiter unten), weit unter den fuer
+   .spaltenkopf-filtereingabe weiter unten), weit unter den fuer
    Bedienelement-Umrisse verlangten 3:1; var(--text-leise) liegt bei
    5,95:1 und war an dieser Stelle bereits gemessen - kein neuer,
    ungeprüfter Farbwert nur fuer dieses eine Bauteil. */
@@ -3664,6 +3812,71 @@ body.navigation-weg #navigation {
 }
 
 
+/* ===== DIE GROESSENSKALIERTE ZAHL =====
+   Das Verfahren, seine Herkunft und die vier Entscheidungen dahinter
+   stehen ausfuehrlich bei zahlSkaliert() in rahmen.js - hier nur, was
+   das Stilblatt beizutragen hat. Die Groesse selbst kommt als
+   Inline-Prozentwert aus rahmen.js (sie haengt am WERT der Zeile und
+   kann deshalb nicht in einer Regel stehen); diese Klasse sorgt allein
+   dafuer, dass sie die Zeile nicht bewegt.
+
+   display:inline-block mit line-height:1: eine groessere Schrift in
+   einem normalen Inline-Kasten zoege ihre eigene Durchschusshoehe mit
+   und machte die Zeile hoeher - genau das Springen, das die Zeile nicht
+   tun darf. Mit line-height:1 ist der Kasten so hoch wie die Schrift und
+   nicht hoeher, und die Zeilenhoehe der ZELLE (unten) deckelt ihn.
+
+   vertical-align:middle statt der Vorgabe baseline - und DAS ist die
+   Angabe, an der die ruhige Zeile haengt. Ein Inline-Block sitzt bei
+   baseline mit der Grundlinie SEINES Textes auf der Grundlinie der
+   Zeile; wie weit sein Kasten dabei nach oben und unten reicht, haengt
+   damit an SEINER Schriftgroesse - und die ist hier je Zeile eine
+   andere. Genau so wandert die Zeilenkastenhoehe mit dem Wert (im
+   Browser nachgemessen: fuenf Modellzeilen der Flottentafel wurden
+   45,2 / 45,2 / 45,7 / 45,2 / 45,2 px hoch). Bei middle wird der Kasten
+   dagegen auf einer Achse ausgerichtet, die allein aus der Schrift der
+   ZELLE folgt (Grundlinie plus halbe x-Hoehe) - seine eigene Groesse
+   verschiebt ihn nicht mehr, sie waechst nur symmetrisch um diese Achse.
+   Zusammen mit der festen Zeilenhoehe der Zelle (unten) ist der
+   Zeilenkasten dadurch in jeder Zeile exakt gleich hoch. */
+.zahl-skaliert {
+  display: inline-block;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+/* DIE FESTE ZEILENHOEHE DER ZAHLENZELLE - der zweite Teil derselben
+   Zusicherung. 22px, und die Zahl ist gerechnet, nicht geschaetzt:
+   die Zelle steht auf --grad-4 (14px); die groesste skalierte Zahl misst
+   das 1,30fache davon, also 18,2px (siehe ZAHL_GROESSTE in rahmen.js).
+   Ihr um die Mittelachse zentrierter Kasten reicht damit 9,1px nach oben
+   und unten, die Achse selbst liegt rund 3,6px ueber der Grundlinie -
+   der Kasten braucht also 12,7px ueber und 5,5px unter der Grundlinie.
+   Die Zeile der Zelle selbst haelt bei einer Zeilenhoehe L rund
+   (L-14)/2 + 11,2 ueber und (L-14)/2 + 2,8 unter der Grundlinie bereit;
+   beide Bedingungen sind ab L = 19,4px erfuellt. 22px gibt darueber
+   hinaus Luft fuer eine Schriftart mit laengeren Unterlaengen, ohne dass
+   die Zeile deswegen ausfranst.
+   Der Zeilenkasten misst damit IMMER 22px - unabhaengig davon, welche
+   Zahl in der Zeile steht, und auch dann noch, wenn ein Filter die
+   groesste Zeile entfernt und sich die Skala neu setzt. */
+.kopftafel-zahl,
+.arbeitstabelle td.zahl {
+  line-height: 22px;
+}
+
+/* ... und damit die Arbeitstabelle dabei ihre Zeilenhoehe behaelt: 22px
+   Zeilenkasten plus zweimal --raum-3 (12px) waeren 46px und wuerden die
+   40px aus --zeile (siehe .arbeitstabelle td) ueberschreiten - jede
+   Zeile der Liste wuerde um fuenf Pixel wachsen. Mit --raum-2 sind es
+   38px und die Zeile bleibt bei 40. Sichtbar aendert das nichts: eine
+   Tabellenzelle richtet ihren Inhalt senkrecht mittig aus, der
+   Innenabstand ist hier reiner Leerraum. */
+.arbeitstabelle td.zahl {
+  padding-top: var(--raum-2);
+  padding-bottom: var(--raum-2);
+}
+
 /* Nebenangabe NEBEN einer Zahl - etwa "(35 % geschätzt)" hinter der
    CO2-Ersparnis. Nicht zu verwechseln mit der entfernten Ziffern-
    hervorhebung: hier steht ein eigener, vollstaendiger Text neben der
@@ -3954,10 +4167,10 @@ body.navigation-weg #navigation {
 /* ===== Spaltenkopf: Sortieren, Filtern, Gruppieren (zeigeListe() in
    rahmen.js, Baustein fuer ALLE Tabellen statt eines Anbaus je Bereich -
    siehe der lange Kommentar dort) =====
-   Beide Zeilen (Titel/Sortieren/Gruppieren, darunter die Filterzeile)
-   bleiben normale Kinder des ohnehin schon "position: sticky" gesetzten
-   .arbeitstabelle thead weiter oben - keine eigene Positionierung noetig,
-   beide kleben gemeinsam am oberen Rand. */
+   Es ist seit dem Umzug des Filters in den Kopf (Gestaltungsauftrag
+   Punkt 5) wieder EINE Kopfzeile statt zweier - sie klebt als Kind des
+   ohnehin schon "position: sticky" gesetzten .arbeitstabelle thead
+   weiter oben am oberen Rand, ohne eigene Positionierung. */
 .spaltenkopf {
   display: flex;
   align-items: center;
@@ -3972,9 +4185,9 @@ body.navigation-weg #navigation {
    einzige Hover-Hinweis war ein Farbwechsel der Schrift, derselbe
    "Versalien mit einem winzigen Zeichen daneben"-Eindruck, den der
    Auftrag bemaengelt. Ein echter Rahmen (--text-leise, dieselbe
-   Randfarbe wie die Filterfelder direkt darunter, siehe
-   .spaltenkopf-filterzeile weiter unten - 5.95:1 auf Weiss statt der zu
-   schwachen --linie mit 1.37:1) macht aus beiden von Anfang an
+   Randfarbe wie das Filterfeld im Filterfenster, siehe
+   .spaltenkopf-filtereingabe weiter unten - 5.95:1 auf Weiss statt der
+   zu schwachen --linie mit 1.37:1) macht aus beiden von Anfang an
    erkennbare Bedienelemente, nicht erst beim Ueberfahren. */
 .spaltenkopf-sortknopf,
 .spaltenkopf-gruppenknopf {
@@ -4130,89 +4343,179 @@ body.navigation-weg #navigation {
   stroke-linecap: round;
 }
 
-/* Umschließt Eingabefeld UND Rücksetz-Icon (siehe spaltenkopfFilterfeld()
-   in rahmen.js) - width:100% wandert von .spaltenkopf-filterzeile input
-   (weiter unten) auf DIESEN Wrapper, sonst würde das Eingabefeld selbst
-   die volle Zellenbreite beanspruchen und das Icon aus der Zelle
-   herausdrücken. */
-.spaltenkopf-filterfeld-wrapper {
-  display: flex;
+/* ===== DER FILTER IM SPALTENKOPF =====
+   Gestaltungsauftrag Punkt 5, woertlich: "Problematisch finde ich
+   nochmals eine Suchleiste in der zweiten Kopfzeile, gilt auch fuer die
+   Filter, das wirkt unharmonisch und stoerend, damit wird auch der Bezug
+   der Tabellenkoepfe zu den Daten zerstoert und die Intuitivitaet sinkt."
+
+   HIER STAND DIE ZWEITE KOPFZEILE (.spaltenkopf-filterzeile) mit ihrem
+   eigenen Innenabstand, ihrem eigenen Grundton und einem Eingabefeld je
+   Spalte. Sie ist ersatzlos entfallen; die ausfuehrliche Begruendung
+   steht bei spaltenkopfKopfzeile() in rahmen.js. Kurz: ein Spaltenkopf
+   ist die Ueberschrift SEINER Daten, und was diese Beziehung traegt, ist
+   die Naehe - eine Zeile Eingabefelder dazwischen zerschneidet sie.
+
+   Was an ihre Stelle tritt, ist DREIMAL kleiner und nur dann laut, wenn
+   es etwas zu sagen hat: ein Trichter je Spaltenkopf, neben Sortieren
+   und Gruppieren, in derselben Groesse und derselben Strichfamilie. */
+
+/* Bezugsrahmen fuer das Filterfenster. An der <th>, nicht am
+   .spaltenkopf-Kasten darin: das Fenster soll UNTER dem Kopf haengen und
+   ueber die Daten reichen, nicht innerhalb der Kopfzeile eingesperrt
+   sein. */
+.spaltenkopf-zelle {
+  position: relative;
+}
+
+.spaltenkopf-filter {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+/* Dieselbe Form wie .spaltenkopf-gruppenknopf daneben (siehe dort):
+   Zielgroesse --ziel in BEIDEN Richtungen, sichtbarer Rahmen von Anfang
+   an, nicht erst beim Ueberfahren. Ein drittes Bedienelement in dieser
+   Reihe soll wie die beiden anderen aussehen - der Kopf traegt dann
+   Sortieren, Gruppieren und Filtern in einer erkennbaren Gruppe, statt
+   den Filter als Fremdkoerper anzuhaengen. */
+.spaltenkopf-filterknopf {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: var(--ziel);
+  min-height: var(--ziel);
+  padding: var(--raum-1) var(--raum-2);
+  border: 1px solid var(--text-leise);
+  border-radius: var(--rund-1);
+  background: var(--flaeche);
+  color: var(--text-leise);
+}
+
+.spaltenkopf-filterknopf:hover {
+  border-color: var(--marine);
+  color: var(--marine);
+}
+
+/* "Ein greifender Filter muss anders aussehen als ein leerer" (Punkt 5,
+   woertlich) - und das ist jetzt WICHTIGER als vorher, nicht weniger
+   wichtig: solange in jeder Spalte ein Eingabefeld stand, sah man seinen
+   Inhalt. Ein zugeklapptes Fenster zeigt nichts; das Zeichen davor muss
+   die Auskunft allein tragen.
+   Es tut es doppelt, damit Farbe nicht die einzige Traegerin ist
+   (WCAG 1.4.1): der Trichter wird GEFUELLT statt nur umrissen - eine
+   Formaenderung, die auch ohne Farbwahrnehmung erkennbar ist -, und er
+   wechselt zusaetzlich auf --rot. Rot heisst in dieser Warenwirtschaft
+   "hier hinsehen" (Rang 1 der Farbordnung, siehe :root); ein Filter, der
+   gerade Zeilen ausblendet, ist genau so ein Fall - dieselbe Sprache,
+   die das aktive Suchfeld in der Kopfleiste schon spricht.
+   Gemessen: --rot auf --flaeche 4,41:1 - ueber den 3:1 aus WCAG 1.4.11
+   fuer ein Bedienelement und sogar ueber den 4,5:1 fuer Text. */
+.spaltenkopf-filterknopf-aktiv {
+  border-color: var(--rot);
+  color: var(--rot);
+}
+
+.spaltenkopf-filterknopf-aktiv:hover {
+  border-color: var(--rot);
+  color: var(--rot);
+  background: var(--grund);
+}
+
+/* Dieselbe Bildsprache und Groesse wie .spaltenkopf-sortsymbol /
+   .spaltenkopf-gruppensymbol - EIN Vokabular. fill:none im Ruhezustand
+   (ein Umriss), currentColor sobald der Filter greift (gefuellt): das
+   ist die formseitige Haelfte der Zustandsanzeige, siehe oben. */
+.spaltenkopf-filtersymbol {
+  display: inline-flex;
+}
+
+.spaltenkopf-filtersymbol svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.spaltenkopf-filterknopf-aktiv .spaltenkopf-filtersymbol svg {
+  fill: currentColor;
+}
+
+/* Das Filterfenster. EBENE 2, SCHWEBEND (siehe Ebenensystem in :root) -
+   es haengt an seinem Knopf und schliesst beim Klick daneben, genau wie
+   das Profilmenue und die Mehrfachauswahl; es traegt deshalb denselben
+   Schatten und dieselbe Stapelposition wie die beiden.
+   --z-ebene-2 (20) und nicht der z-index 1 des klebenden Tabellenkopfs:
+   das Fenster muss ueber den Datenzeilen liegen, die unter dem Kopf
+   hindurchlaufen.
+   left:0 und nicht rechtsbuendig: der Trichter steht am RECHTEN Ende
+   seines Spaltenkopfs, das Fenster aber soll unter der SPALTE haengen,
+   zu der es gehoert - man liest von links.
+   max-height mit overflow-y: eine Auswahlspalte kann viele verschiedene
+   Werte fuehren (zehn Stationen, fuenf Status) - das Fenster darf dabei
+   nicht ueber den unteren Fensterrand hinauswachsen. */
+.spaltenkopf-filterfenster {
+  /* fixed, NICHT absolute - siehe die ausfuehrliche Begruendung bei
+     ausrichten() in spaltenkopfFilterknopf() (rahmen.js): #listenkoerper
+     und #arbeitsliste tragen overflow:auto und wuerden ein absolut
+     positioniertes Fenster am unteren Rand abschneiden. left/top setzt
+     deshalb rahmen.js, nicht diese Regel. */
+  position: fixed;
+  z-index: var(--z-ebene-2);
+  display: flex;
+  flex-direction: column;
   gap: var(--raum-1);
-  width: 100%;
-}
-
-.spaltenkopf-filterfeld-wrapper input {
-  width: auto;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-/* Punkt 5, woertlich: "die Filterzeile sitzt heute unmittelbar unter den
-   Spaltenkoepfen, ohne Absetzung". Ein eigener, leiser Grundton
-   (--grund) setzt die Filterzeile jetzt sichtbar von der Titel/Sortier-
-   Zeile darueber (var(--flaeche), weiss) ab, statt dass nur die duenne
-   Trennlinie beide Zeilen unterscheidet - dieselbe Trennung, die
-   .kopftafel fuer sich schon gegenueber der Tabelle nutzt. */
-/* Gestaltungsauftrag, dritter Anlauf, wörtlich: "Spaltenköpfe mit
-   Schaltern, direkt darunter eine zweite Zeile Eingabefelder, direkt
-   darunter die Daten - drei dichte Zeilen ohne Atempause." Ein <tr> im
-   <thead> kennt kein margin (border-collapse:collapse) - die einzige Luft,
-   die eine Tabellenzeile bekommen kann, ist ihr eigenes padding. 12px/14px
-   statt vormals 6px/8px, mehr als verdoppelt: gemessen (siehe Bericht)
-   stiessen Titel-, Filter- und erste Datenzeile vorher mit exakt 0px
-   Zwischenraum aneinander (jede endete exakt dort, wo die naechste
-   begann) - keine der drei Zeilen hatte fuer sich betrachtet zu wenig
-   Land, aber zusammengenommen ergab sich ein einziger dichter Block. */
-.spaltenkopf-filterzeile th {
-  padding: var(--raum-3) var(--raum-4);
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--raum-3);
+  border: 1px solid var(--linie);
+  border-radius: var(--rund-2);
+  background: var(--flaeche);
+  box-shadow: var(--schatten-2);
+  /* Der Tabellenkopf setzt Versalien und Sperrung (siehe .arbeitstabelle
+     th) - im Fenster stehen aber Optionsnamen und getippter Text, kein
+     Kopftext. Beides deshalb hier ausdruecklich zurueckgenommen, sonst
+     erschiene "City-Bike" als "C I T Y - B I K E". */
   text-transform: none;
   letter-spacing: normal;
-  /* WAR --flaeche-rahmen (siehe "UND DAS GRAU" in der Farbordnung).
-     Die Filterfelder selbst tragen einen Umriss von 5,95:1 und stehen
-     dadurch auch auf weissem Grund als Felder da - die Toenung
-     ringsherum war nie das, was sie lesbar machte. */
-  background: var(--flaeche);
-  border-bottom: 1px solid var(--linie);
+  font-weight: 400;
+  color: var(--text);
 }
 
-.spaltenkopf-filterzeile select,
-.spaltenkopf-filterzeile input {
+/* Das Eingabefeld im Fenster - Text- oder Schwellenfilter. Derselbe
+   Umriss (--text-leise, 5,95:1 auf Weiss) wie zuvor in der Filterzeile:
+   --linie misst dort nur 1,37:1 und bliebe unter den 3:1 fuer ein
+   Bedienelement. */
+.spaltenkopf-filtereingabe {
   width: 100%;
-  min-width: 56px;
   padding: var(--raum-1) var(--raum-2);
-  /* --text-leise statt --linie (anders als .filterfeld select oben,
-     unveraendert gelassen - das ist die bestehende Filterleiste, nicht
-     Teil dieses Bausteins): gemessen liegt --linie auf Weiss bei nur
-     1.37:1, weit unter den fuer Bedienelement-Umrisse verlangten 3:1
-     (siehe Bericht). --text-leise misst 5.95:1 (an anderer Stelle in
-     dieser Datei bereits gemessen) und bleibt trotzdem sichtbar leiser
-     als der Fliesstext selbst. */
   border: 1px solid var(--text-leise);
   border-radius: var(--rund-1);
   font: inherit;
-  font-size: var(--grad-3);
+  font-size: var(--grad-4);
   color: var(--text);
   background: var(--flaeche);
 }
 
-/* "Ein greifender Filter muss anders aussehen als ein leerer" (Punkt 5,
-   woertlich): spaltenkopfFilterfeld() in rahmen.js setzt diese Klasse
-   GENAU dann, wenn spaltenkopfFilterwerte fuer diese Spalte einen Wert
-   traegt - unabhaengig davon, ob es ein <select> oder ein <input> ist.
-   DIESELBE Sprache wie beim globalen Suchfeld (#feld-suche.
-   feld-suche-aktiv in der Kopfleiste): ein roter Rahmen. In dieser
-   Warenwirtschaft heisst Rot "hier hinsehen" - das gilt fuer ein Feld,
-   das den Bestand gerade beschneidet, ebenso wie fuer das Suchfeld
-   oben. Der Rahmen wird ueber einen Schlagschatten VERDOPPELT statt
-   ueber eine zweite Randbreite: 2px border verschoebe das Feld um einen
-   Pixel, sobald der Filter greift, und liesse die ganze Zeile zucken.
-   Kein Flaechenwechsel mehr - der frueher hier stehende Ton war von der
-   Auswahlfarbe der Tabellenzeile nicht zu unterscheiden. */
-.spaltenkopf-filterzeile .spaltenkopf-filter-aktiv {
-  border-color: var(--rot);
-  box-shadow: 0 0 0 1px var(--rot);
-  font-weight: 600;
+/* Die mitlaufende Beschriftung einer Schwelle ("≥ 3 Std.") - der
+   frueheren Schieber-Anzeige nachempfunden, siehe filterBeschriftung bei
+   der Spalte offen_seit in instandhaltung.js. --grad-3/--text-leise:
+   sie ordnet die getippte Zahl ein, sie ist nicht selbst die Angabe. */
+.spaltenkopf-filterwert {
+  font-size: var(--grad-3);
+  color: var(--text-leise);
+}
+
+/* Der Ruecksetz-Knopf steht im Fenster jetzt in einer eigenen Zeile
+   (Flex-Spalte) statt neben dem Feld - er bekommt dadurch seine volle
+   Zielgroesse, ohne dem Eingabefeld Breite wegzunehmen. */
+.spaltenkopf-filterfenster .spaltenkopf-filterreset {
+  align-self: flex-end;
 }
 
 /* Sichtbarer Zustand UND ein Weg zurueck (Auftrag) - nur eingeblendet,
@@ -4593,8 +4896,7 @@ body.navigation-weg #navigation {
 .formularzeile select:not(:disabled):hover,
 .formularzeile textarea:not([readonly]):hover,
 .filterfeld select:hover,
-.spaltenkopf-filterzeile input:hover,
-.spaltenkopf-filterzeile select:hover,
+.spaltenkopf-filtereingabe:hover,
 .profilmenue-sprachwahl select:hover,
 .velocity-dialog input:hover,
 .anmeldung input:hover {

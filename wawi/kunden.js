@@ -39,20 +39,25 @@ bereichAnmelden({
     // sucht - siehe suchwert()/die .or()-Abfrage weiter unten
     // (Nachname, Vorname, E-Mail, Kundennummer) und bereichWechseln() in
     // rahmen.js, das diesen Text als Platzhalter UND aria-label setzt.
-    suchePlatzhalterSchluessel: 'nav.kundenSuche'
+    suchePlatzhalterSchluessel: 'nav.kundenSuche',
+    // DIESER Bereich sucht SELBST, und als einziger (siehe
+    // spaltenkopfSuchtext in rahmen.js): v_wawi_kunde traegt 1014 Zeilen,
+    // geladen sind hoechstens 200 (.limit(200) weiter unten). Eine Suche
+    // ueber die geladenen Zeilen faende hier nur, was zufaellig unter den
+    // ersten 200 Nachnamen steht - genau die Luege, die schon der
+    // Statusfilter unten vermeidet. Der Suchtext geht deshalb an die
+    // Datenbank, nicht an den Tabellenbaustein.
+    sucheSelbst: true
 });
 
-// ===== Suche =====
+// ===== Suche, SERVERSEITIG =====
 //
-// Das Suchfeld liegt in der gemeinsamen Kopfleiste (index.html) und
-// gehoert damit allen fuenf Arbeitsbereichen - aber Kunden ist der
-// erste, der es braucht (275 Raeder und 10 Stationen kommen bei
-// Aufgabe 4/5 noch ohne Suche aus, siehe dortige Kommentare). Die
-// Verdrahtung steht deshalb hier statt in rahmen.js: anders als die
-// Werkzeugleiste (die zwei Bereiche unabhaengig voneinander erfunden
-// hatten, siehe Kommentar dort) gibt es bisher nur diesen einen
-// Verbraucher. Braucht ein zweiter Bereich sie kuenftig auch, gehoert
-// sie dann - und erst dann - nach rahmen.js gezogen.
+// Der SICHTBARE Zustand des Feldes (Klasse feld-suche-aktiv) und seine
+// Beschriftung liegen seit dem Umbau von Punkt 5 in rahmen.js - dort, wo
+// das Feld auch steht und wo alle fuenf Bereiche es benutzen. HIER bleibt
+// nur, was allein diesen Bereich angeht: der Suchtext geht als
+// PostgREST-Filter an die Datenbank, nicht an die geladenen Zeilen
+// (siehe sucheSelbst bei bereichAnmelden() oben).
 const feldSuche = document.getElementById('feld-suche');
 let sucheVerzoegerung = null;
 feldSuche.addEventListener('input', () => {
@@ -62,15 +67,11 @@ feldSuche.addEventListener('input', () => {
     // kundenAufbauen() ausloest und deren Liste unter der Hand
     // ueberschreibt.
     if (aktiverBereich?.schluessel !== 'kunden') return;
-    // Punkt 5: "ob es gerade etwas einschraenkt" - sofort beim Tippen,
-    // nicht erst nach der 300ms-Verzoegerung unten, sonst wirkte das
-    // Feld fuer einen kurzen Moment weiter "leer", obwohl schon etwas
-    // darinsteht.
-    feldSuche.classList.toggle('feld-suche-aktiv', feldSuche.value.trim() !== '');
     clearTimeout(sucheVerzoegerung);
     // 300ms: reaktionsschnell genug, um sich sofort anzufuehlen, lang
     // genug, dass ein normaler Tippfluss nicht bei jedem Buchstaben eine
-    // eigene Anfrage an die Datenbank schickt.
+    // eigene Anfrage an die Datenbank schickt - dieselbe Zeitspanne wie
+    // beim Spaltenfilter und beim Baustein-Sucher in rahmen.js.
     sucheVerzoegerung = setTimeout(() => kundenAufbauen(feldSuche.value.trim()), 300);
 });
 

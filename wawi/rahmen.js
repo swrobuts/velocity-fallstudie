@@ -75,7 +75,7 @@
 // Uebersetzungstabelle weiter unten.
 // Der WERT SELBST ist davon unberuehrt: gefiltert, sortiert und gebucht
 // wird weiterhin ueber 'verfuegbar'/'in_arbeit' (siehe
-// spaltenkopfFilterfeld() weiter unten - die Filterliste traegt den
+// spaltenkopfFilterInhalt() weiter unten - die Filterliste traegt den
 // rohen Wert als Schluessel und nur die BESCHRIFTUNG aus formatieren()).
 const SPRACHEN = ['de', 'en', 'tr', 'es', 'it', 'pl'];
 
@@ -252,8 +252,7 @@ const UEBERSETZUNGEN = {
     "common.reason": "Grund",
     "common.all": "Alle",
     "common.actionsColumn": "Aktionen",
-    "common.noSearchPlaceholder": "In diesem Bereich keine Suche",
-    "common.noSearchAria": "Suche in diesem Bereich nicht verfügbar",
+    "common.searchPlaceholder": "In dieser Liste suchen",
     "common.confirmWordPrompt": "Zum Bestätigen \"{wort}\" eintippen:",
     "common.sortAria": "Nach {titel} sortieren",
     "common.sortAriaSuffix": ", aktuell {richtung}",
@@ -270,14 +269,21 @@ const UEBERSETZUNGEN = {
     "common.filterSearchPlaceholder": "Suche…",
     "common.filterResetAria": "{titel}-Filter zurücksetzen",
     "common.filterResetTitle": "Filter zurücksetzen",
-    "common.columnFilterReset": "Spaltenfilter zurücksetzen",
-    "common.noRowsMatchFilter": "Keine Zeile erfüllt die gewählte Einschränkung am Spaltenkopf. ",
+    "common.filterTitle": "Filtern",
+    "common.filterActiveAria": "{titel} filtern, Filter ist aktiv",
+    "common.filterActiveTitle": "Filter ist aktiv",
+    "common.filterEmpty": "ohne Angabe",
+    "common.columnFilterReset": "Einschränkung aufheben",
+    "common.noRowsMatchFilter": "Keine Zeile passt zu Suche und Filter. ",
     "common.groupedBy": "Gruppiert nach {titel}",
     "common.ungroup": "Gruppierung aufheben",
     "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
     "common.closeDetailsAria": "Details schließen",
     "common.closeDetailsTitle": "Details schließen (Esc)",
-    "common.rowsFiltered": "{angezeigt} von {zeilenPhrase} (Spaltenfilter aktiv)",
+    "common.rowsFiltered": "{angezeigt} von {zeilenPhrase} ({grund})",
+    "common.reasonSearch": "Suche",
+    "common.reasonColumnFilter": "Spaltenfilter",
+    "common.reasonBoth": "Suche und Spaltenfilter",
     "common.selectedCount": "{n} ausgewählt",
     "common.minAbbrev": "Min.",
     "common.hourAbbrev": "Std.",
@@ -288,8 +294,6 @@ const UEBERSETZUNGEN = {
     "common.loginBadCredentials": "E-Mail oder Passwort stimmen nicht.",
     "common.rolesCheckFailed": "Die Rollen ließen sich nicht ermitteln: {msg}",
     "common.roleCheckFailed": "Rolle {code} ließ sich nicht prüfen: {msg}",
-    "common.of": "von",
-    "common.xOfPhrase": "{x} von {phrase}",
     "misc.estimatedParen": " ({prozent} geschätzt)",
     "hint.ridesPerDayHeading": "Fahrten je Tag — {monat} (gesamt, alle Radtypen und Tarife)",
     "status.label.abgebrochen": "abgebrochen",
@@ -339,8 +343,6 @@ const UEBERSETZUNGEN = {
     "msg.openDamageWithUnrideable": "{n}{zusatz} offene Schäden, davon {dringend} fahruntauglich",
     "msg.openDamageCount": "{n}{zusatz} offene Schäden",
     "misc.atLeastValue": "≥ {n} {einheit}",
-    "misc.allLowercase": "alle",
-    "field.minAge": "Mindestalter",
     "field.offenSeit": "Offen seit",
     "field.gemeldet": "Gemeldet",
     "misc.stillRunning": "{datum} · läuft noch",
@@ -396,6 +398,10 @@ const UEBERSETZUNGEN = {
     "nav.instandhaltung": "Instandhaltung",
     "nav.auswertungen": "Auswertungen",
     "nav.kundenSuche": "Kundschaft: Name, E-Mail, Kundennummer",
+    "nav.flotteSuche": "Flotte: Rahmennummer, Radtyp, Status, Standort",
+    "nav.stationenSuche": "Stationen: Name, Nummer, Ort",
+    "nav.instandhaltungSuche": "Instandhaltung: Rad, Kategorie, Schwere, Stand",
+    "nav.auswertungenSuche": "Auswertungen: Rubrik, Monat, Wert",
     "field.rahmennummer": "Rahmennummer",
     "field.status": "Status",
     "field.standort": "Standort",
@@ -509,20 +515,15 @@ const UEBERSETZUNGEN = {
     "button.list": "Liste",
     "button.map": "Landkarte",
     "button.showCustomersOnMap": "Kundschaft je Ort einblenden",
-    "empty.noBikesFilterTitle": "Keine Räder mit diesem Filter",
-    "empty.noBikesFilterText": "Kein Rad in der Flotte erfüllt die gewählte Einschränkung.",
     "empty.noCustomersFilterTitle": "Keine Kunden mit diesem Filter",
     "empty.noCustomersFilterTextSearch": "Kein Kunde zu „{suchtext}“ erfüllt zusätzlich die gewählte Einschränkung.",
     "empty.noCustomersFilterText": "Kein Kunde erfüllt die gewählte Einschränkung.",
     "empty.statusFilterReset": "Statusfilter zurücksetzen",
     "empty.noOpenDamageTitle": "Keine offenen Schäden",
     "empty.noOpenDamageText": "Es liegt derzeit keine Schadensmeldung vor. Das ist der Normalfall — gemeldet wird, wenn an einem Rad etwas auffällt.",
-    "empty.noDamageFilterTitle": "Keine Schäden mit diesem Filter",
-    "empty.noDamageFilterText": "Keine offene Schadensmeldung erfüllt die gewählte Einschränkung.",
     "empty.noWorkOrdersTitle": "Keine laufenden Wartungsaufträge",
     "empty.noWorkOrdersText": "Es liegt derzeit kein Wartungsauftrag vor. Ein Auftrag entsteht aus einer offenen Schadensmeldung — dort gibt es den Knopf „Auftrag eröffnen“.",
     "misc.underway": "unterwegs",
-    "misc.underwayNoLocation": "unterwegs (kein Standort)",
     "misc.noneYet": "noch keine",
     "misc.noMembership": "ohne Mitgliedschaft",
     "misc.notYetAssigned": "noch nicht zugeteilt",
@@ -591,7 +592,6 @@ const UEBERSETZUNGEN = {
     "msg.confirmDecommission": "{rahmennummer} endgültig ausmustern? Das Rad verliert seinen Standort und erscheint in keiner Liste mehr. Seine Fahrten bleiben erhalten.",
     "msg.bikeDecommissioned": "{rahmennummer} ausgemustert.",
     "msg.fleetLoadFailed": "Die Flotte ließ sich nicht laden: {fehler}",
-    "msg.noBikeWithFilter": "Kein Rad mit diesem Filter",
     "msg.modelsOrStationsLoadFailed": "Modelle oder Stationen ließen sich nicht laden: {fehler}",
     "msg.noModelsOrStations": "Es gibt weder Modelle noch Stationen, aus denen ein neues Rad angelegt werden könnte.",
     "msg.frameNumberMissing": "Die Rahmennummer fehlt.",
@@ -730,8 +730,7 @@ const UEBERSETZUNGEN = {
     "common.reason": "Reason",
     "common.all": "All",
     "common.actionsColumn": "Actions",
-    "common.noSearchPlaceholder": "No search in this section",
-    "common.noSearchAria": "Search not available in this section",
+    "common.searchPlaceholder": "Search this list",
     "common.confirmWordPrompt": "Type \"{wort}\" to confirm:",
     "common.sortAria": "Sort by {titel}",
     "common.sortAriaSuffix": ", currently {richtung}",
@@ -748,14 +747,21 @@ const UEBERSETZUNGEN = {
     "common.filterSearchPlaceholder": "Search…",
     "common.filterResetAria": "Reset {titel} filter",
     "common.filterResetTitle": "Reset filter",
-    "common.columnFilterReset": "Reset column filters",
-    "common.noRowsMatchFilter": "No row matches the selected column-header restriction. ",
+    "common.filterTitle": "Filter",
+    "common.filterActiveAria": "Filter {titel}, filter is active",
+    "common.filterActiveTitle": "Filter is active",
+    "common.filterEmpty": "not specified",
+    "common.columnFilterReset": "Clear restriction",
+    "common.noRowsMatchFilter": "No row matches the search and filters. ",
     "common.groupedBy": "Grouped by {titel}",
     "common.ungroup": "Remove grouping",
     "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
     "common.closeDetailsAria": "Close details",
     "common.closeDetailsTitle": "Close details (Esc)",
-    "common.rowsFiltered": "{angezeigt} of {zeilenPhrase} (column filter active)",
+    "common.rowsFiltered": "{angezeigt} of {zeilenPhrase} ({grund})",
+    "common.reasonSearch": "search",
+    "common.reasonColumnFilter": "column filter",
+    "common.reasonBoth": "search and column filter",
     "common.selectedCount": "{n} selected",
     "common.minAbbrev": "min",
     "common.hourAbbrev": "h",
@@ -766,8 +772,6 @@ const UEBERSETZUNGEN = {
     "common.loginBadCredentials": "Email or password is incorrect.",
     "common.rolesCheckFailed": "Could not determine roles: {msg}",
     "common.roleCheckFailed": "Could not check role {code}: {msg}",
-    "common.of": "of",
-    "common.xOfPhrase": "{x} of {phrase}",
     "misc.estimatedParen": " ({prozent} estimated)",
     "hint.ridesPerDayHeading": "Rides per day — {monat} (total, all bike types and plans)",
     "status.label.abgebrochen": "Cancelled",
@@ -817,8 +821,6 @@ const UEBERSETZUNGEN = {
     "msg.openDamageWithUnrideable": "{n}{zusatz} open damage reports, of which {dringend} unrideable",
     "msg.openDamageCount": "{n}{zusatz} open damage reports",
     "misc.atLeastValue": "≥ {n} {einheit}",
-    "misc.allLowercase": "all",
-    "field.minAge": "Minimum age",
     "field.offenSeit": "Open since",
     "field.gemeldet": "Reported",
     "misc.stillRunning": "{datum} · still ongoing",
@@ -874,6 +876,10 @@ const UEBERSETZUNGEN = {
     "nav.instandhaltung": "Maintenance",
     "nav.auswertungen": "Reports",
     "nav.kundenSuche": "Customers: name, email, customer number",
+    "nav.flotteSuche": "Fleet: frame number, bike type, status, location",
+    "nav.stationenSuche": "Stations: name, number, place",
+    "nav.instandhaltungSuche": "Maintenance: bike, category, severity, state",
+    "nav.auswertungenSuche": "Reports: category, month, value",
     "field.rahmennummer": "Frame number",
     "field.status": "Status",
     "field.standort": "Location",
@@ -987,20 +993,15 @@ const UEBERSETZUNGEN = {
     "button.list": "List",
     "button.map": "Map",
     "button.showCustomersOnMap": "Show customers per location",
-    "empty.noBikesFilterTitle": "No bikes match this filter",
-    "empty.noBikesFilterText": "No bike in the fleet matches the selected restriction.",
     "empty.noCustomersFilterTitle": "No customers match this filter",
     "empty.noCustomersFilterTextSearch": "No customer matching \"{suchtext}\" also meets the selected restriction.",
     "empty.noCustomersFilterText": "No customer matches the selected restriction.",
     "empty.statusFilterReset": "Reset status filter",
     "empty.noOpenDamageTitle": "No open damage reports",
     "empty.noOpenDamageText": "There is currently no damage report. That is the normal case — a report is made when something is noticed on a bike.",
-    "empty.noDamageFilterTitle": "No damage reports match this filter",
-    "empty.noDamageFilterText": "No open damage report matches the selected restriction.",
     "empty.noWorkOrdersTitle": "No active work orders",
     "empty.noWorkOrdersText": "There is currently no work order. A work order is created from an open damage report — that is where the \"Open work order\" button is.",
     "misc.underway": "under way",
-    "misc.underwayNoLocation": "under way (no location)",
     "misc.noneYet": "none yet",
     "misc.noMembership": "no membership",
     "misc.notYetAssigned": "not yet assigned",
@@ -1069,7 +1070,6 @@ const UEBERSETZUNGEN = {
     "msg.confirmDecommission": "Permanently decommission {rahmennummer}? The bike loses its location and no longer appears in any list. Its rides are retained.",
     "msg.bikeDecommissioned": "{rahmennummer} decommissioned.",
     "msg.fleetLoadFailed": "Could not load the fleet: {fehler}",
-    "msg.noBikeWithFilter": "No bike matches this filter",
     "msg.modelsOrStationsLoadFailed": "Could not load models or stations: {fehler}",
     "msg.noModelsOrStations": "There are neither models nor stations from which a new bike could be created.",
     "msg.frameNumberMissing": "The frame number is missing.",
@@ -1208,8 +1208,7 @@ const UEBERSETZUNGEN = {
     "common.reason": "Sebep",
     "common.all": "Tümü",
     "common.actionsColumn": "İşlemler",
-    "common.noSearchPlaceholder": "Bu bölümde arama yok",
-    "common.noSearchAria": "Bu bölümde arama kullanılamaz",
+    "common.searchPlaceholder": "Bu listede ara",
     "common.confirmWordPrompt": "Onaylamak için \"{wort}\" yazın:",
     "common.sortAria": "{titel} alanına göre sırala",
     "common.sortAriaSuffix": ", şu an {richtung}",
@@ -1226,14 +1225,21 @@ const UEBERSETZUNGEN = {
     "common.filterSearchPlaceholder": "Ara…",
     "common.filterResetAria": "{titel} filtresini sıfırla",
     "common.filterResetTitle": "Filtreyi sıfırla",
-    "common.columnFilterReset": "Sütun filtrelerini sıfırla",
-    "common.noRowsMatchFilter": "Hiçbir satır sütun başlığındaki seçili kısıtlamayı karşılamıyor. ",
+    "common.filterTitle": "Filtrele",
+    "common.filterActiveAria": "{titel} alanını filtrele, filtre etkin",
+    "common.filterActiveTitle": "Filtre etkin",
+    "common.filterEmpty": "belirtilmemiş",
+    "common.columnFilterReset": "Kısıtlamayı kaldır",
+    "common.noRowsMatchFilter": "Arama ve filtrelerle eşleşen satır yok. ",
     "common.groupedBy": "{titel} alanına göre gruplandı",
     "common.ungroup": "Gruplamayı kaldır",
     "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
     "common.closeDetailsAria": "Ayrıntıları kapat",
     "common.closeDetailsTitle": "Ayrıntıları kapat (Esc)",
-    "common.rowsFiltered": "{zeilenPhrase} içinden {angezeigt} (sütun filtresi etkin)",
+    "common.rowsFiltered": "{zeilenPhrase} içinden {angezeigt} ({grund})",
+    "common.reasonSearch": "arama",
+    "common.reasonColumnFilter": "sütun filtresi",
+    "common.reasonBoth": "arama ve sütun filtresi",
     "common.selectedCount": "{n} seçildi",
     "common.minAbbrev": "dk",
     "common.hourAbbrev": "sa",
@@ -1244,8 +1250,6 @@ const UEBERSETZUNGEN = {
     "common.loginBadCredentials": "E-posta veya parola hatalı.",
     "common.rolesCheckFailed": "Roller belirlenemedi: {msg}",
     "common.roleCheckFailed": "{code} rolü kontrol edilemedi: {msg}",
-    "common.of": "/",
-    "common.xOfPhrase": "{phrase} içinden {x}",
     "misc.estimatedParen": " ({prozent} tahmini)",
     "hint.ridesPerDayHeading": "Güne göre sürüşler — {monat} (toplam, tüm bisiklet tipleri ve tarifeler)",
     "status.label.abgebrochen": "İptal edildi",
@@ -1295,8 +1299,6 @@ const UEBERSETZUNGEN = {
     "msg.openDamageWithUnrideable": "{n}{zusatz} açık hasar bildirimi, bunlardan {dringend} tanesi sürüşe uygun değil",
     "msg.openDamageCount": "{n}{zusatz} açık hasar bildirimi",
     "misc.atLeastValue": "≥ {n} {einheit}",
-    "misc.allLowercase": "tümü",
-    "field.minAge": "Asgari yaş",
     "field.offenSeit": "Açık kalma süresi",
     "field.gemeldet": "Bildirim",
     "misc.stillRunning": "{datum} · devam ediyor",
@@ -1352,6 +1354,10 @@ const UEBERSETZUNGEN = {
     "nav.instandhaltung": "Bakım",
     "nav.auswertungen": "Raporlar",
     "nav.kundenSuche": "Müşteriler: ad, e-posta, müşteri numarası",
+    "nav.flotteSuche": "Filo: kadro numarası, bisiklet tipi, durum, konum",
+    "nav.stationenSuche": "İstasyonlar: ad, numara, yer",
+    "nav.instandhaltungSuche": "Bakım: bisiklet, kategori, ağırlık, durum",
+    "nav.auswertungenSuche": "Raporlar: başlık, ay, değer",
     "field.rahmennummer": "Şasi numarası",
     "field.status": "Durum",
     "field.standort": "Konum",
@@ -1465,20 +1471,15 @@ const UEBERSETZUNGEN = {
     "button.list": "Liste",
     "button.map": "Harita",
     "button.showCustomersOnMap": "Konuma göre müşterileri göster",
-    "empty.noBikesFilterTitle": "Bu filtreyle eşleşen bisiklet yok",
-    "empty.noBikesFilterText": "Filodaki hiçbir bisiklet seçilen kısıtlamayı karşılamıyor.",
     "empty.noCustomersFilterTitle": "Bu filtreyle eşleşen müşteri yok",
     "empty.noCustomersFilterTextSearch": "\"{suchtext}\" ile eşleşen hiçbir müşteri ek olarak seçilen kısıtlamayı karşılamıyor.",
     "empty.noCustomersFilterText": "Hiçbir müşteri seçilen kısıtlamayı karşılamıyor.",
     "empty.statusFilterReset": "Durum filtresini sıfırla",
     "empty.noOpenDamageTitle": "Açık hasar bildirimi yok",
     "empty.noOpenDamageText": "Şu anda herhangi bir hasar bildirimi bulunmuyor. Bu normal durumdur — bir bisiklette bir şey fark edildiğinde bildirim yapılır.",
-    "empty.noDamageFilterTitle": "Bu filtreyle eşleşen hasar bildirimi yok",
-    "empty.noDamageFilterText": "Hiçbir açık hasar bildirimi seçilen kısıtlamayı karşılamıyor.",
     "empty.noWorkOrdersTitle": "Devam eden iş emri yok",
     "empty.noWorkOrdersText": "Şu anda herhangi bir bakım iş emri bulunmuyor. Bir iş emri, açık bir hasar bildiriminden oluşturulur — \"İş emri aç\" düğmesi oradadır.",
     "misc.underway": "yolda",
-    "misc.underwayNoLocation": "yolda (konum yok)",
     "misc.noneYet": "henüz yok",
     "misc.noMembership": "üyeliksiz",
     "misc.notYetAssigned": "henüz atanmadı",
@@ -1547,7 +1548,6 @@ const UEBERSETZUNGEN = {
     "msg.confirmDecommission": "{rahmennummer} kalıcı olarak hizmetten mi çıkarılsın? Bisiklet konumunu kaybeder ve artık hiçbir listede görünmez. Sürüşleri saklanmaya devam eder.",
     "msg.bikeDecommissioned": "{rahmennummer} hizmetten çıkarıldı.",
     "msg.fleetLoadFailed": "Filo yüklenemedi: {fehler}",
-    "msg.noBikeWithFilter": "Bu filtreyle eşleşen bisiklet yok",
     "msg.modelsOrStationsLoadFailed": "Modeller veya istasyonlar yüklenemedi: {fehler}",
     "msg.noModelsOrStations": "Yeni bir bisikletin oluşturulabileceği ne model ne de istasyon bulunuyor.",
     "msg.frameNumberMissing": "Şasi numarası eksik.",
@@ -1686,8 +1686,7 @@ const UEBERSETZUNGEN = {
     "common.reason": "Motivo",
     "common.all": "Todos",
     "common.actionsColumn": "Acciones",
-    "common.noSearchPlaceholder": "Sin búsqueda en esta sección",
-    "common.noSearchAria": "Búsqueda no disponible en esta sección",
+    "common.searchPlaceholder": "Buscar en esta lista",
     "common.confirmWordPrompt": "Escriba \"{wort}\" para confirmar:",
     "common.sortAria": "Ordenar por {titel}",
     "common.sortAriaSuffix": ", actualmente {richtung}",
@@ -1704,14 +1703,21 @@ const UEBERSETZUNGEN = {
     "common.filterSearchPlaceholder": "Buscar…",
     "common.filterResetAria": "Restablecer filtro de {titel}",
     "common.filterResetTitle": "Restablecer filtro",
-    "common.columnFilterReset": "Restablecer filtros de columna",
-    "common.noRowsMatchFilter": "Ninguna fila cumple la restricción seleccionada en el encabezado de columna. ",
+    "common.filterTitle": "Filtrar",
+    "common.filterActiveAria": "Filtrar {titel}, el filtro está activo",
+    "common.filterActiveTitle": "El filtro está activo",
+    "common.filterEmpty": "sin indicar",
+    "common.columnFilterReset": "Quitar la restricción",
+    "common.noRowsMatchFilter": "Ninguna fila coincide con la búsqueda y los filtros. ",
     "common.groupedBy": "Agrupado por {titel}",
     "common.ungroup": "Quitar agrupación",
     "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
     "common.closeDetailsAria": "Cerrar detalles",
     "common.closeDetailsTitle": "Cerrar detalles (Esc)",
-    "common.rowsFiltered": "{angezeigt} de {zeilenPhrase} (filtro de columna activo)",
+    "common.rowsFiltered": "{angezeigt} de {zeilenPhrase} ({grund})",
+    "common.reasonSearch": "búsqueda",
+    "common.reasonColumnFilter": "filtro de columna",
+    "common.reasonBoth": "búsqueda y filtro de columna",
     "common.selectedCount": "{n} seleccionados",
     "common.minAbbrev": "min",
     "common.hourAbbrev": "h",
@@ -1722,8 +1728,6 @@ const UEBERSETZUNGEN = {
     "common.loginBadCredentials": "El correo o la contraseña no son correctos.",
     "common.rolesCheckFailed": "No se pudieron determinar los roles: {msg}",
     "common.roleCheckFailed": "No se pudo comprobar el rol {code}: {msg}",
-    "common.of": "de",
-    "common.xOfPhrase": "{x} de {phrase}",
     "misc.estimatedParen": " ({prozent} estimado)",
     "hint.ridesPerDayHeading": "Viajes por día — {monat} (total, todos los tipos de bicicleta y tarifas)",
     "status.label.abgebrochen": "Cancelado",
@@ -1773,8 +1777,6 @@ const UEBERSETZUNGEN = {
     "msg.openDamageWithUnrideable": "{n}{zusatz} averías abiertas, de las cuales {dringend} no aptas para circular",
     "msg.openDamageCount": "{n}{zusatz} averías abiertas",
     "misc.atLeastValue": "≥ {n} {einheit}",
-    "misc.allLowercase": "todas",
-    "field.minAge": "Antigüedad mínima",
     "field.offenSeit": "Abierta desde",
     "field.gemeldet": "Notificado",
     "misc.stillRunning": "{datum} · en curso",
@@ -1830,6 +1832,10 @@ const UEBERSETZUNGEN = {
     "nav.instandhaltung": "Mantenimiento",
     "nav.auswertungen": "Informes",
     "nav.kundenSuche": "Clientela: nombre, correo, número de cliente",
+    "nav.flotteSuche": "Flota: número de cuadro, tipo de bici, estado, ubicación",
+    "nav.stationenSuche": "Estaciones: nombre, número, lugar",
+    "nav.instandhaltungSuche": "Mantenimiento: bici, categoría, gravedad, estado",
+    "nav.auswertungenSuche": "Informes: categoría, mes, valor",
     "field.rahmennummer": "Número de bastidor",
     "field.status": "Estado",
     "field.standort": "Ubicación",
@@ -1943,20 +1949,15 @@ const UEBERSETZUNGEN = {
     "button.list": "Lista",
     "button.map": "Mapa",
     "button.showCustomersOnMap": "Mostrar clientes por ubicación",
-    "empty.noBikesFilterTitle": "No hay bicicletas con este filtro",
-    "empty.noBikesFilterText": "Ninguna bicicleta de la flota cumple la restricción seleccionada.",
     "empty.noCustomersFilterTitle": "No hay clientes con este filtro",
     "empty.noCustomersFilterTextSearch": "Ningún cliente que coincide con «{suchtext}» cumple además la restricción seleccionada.",
     "empty.noCustomersFilterText": "Ningún cliente cumple la restricción seleccionada.",
     "empty.statusFilterReset": "Restablecer filtro de estado",
     "empty.noOpenDamageTitle": "Sin averías abiertas",
     "empty.noOpenDamageText": "Actualmente no hay ninguna notificación de avería. Es el caso normal: se notifica cuando se detecta algo en una bicicleta.",
-    "empty.noDamageFilterTitle": "No hay averías con este filtro",
-    "empty.noDamageFilterText": "Ninguna avería abierta cumple la restricción seleccionada.",
     "empty.noWorkOrdersTitle": "Sin órdenes de trabajo en curso",
     "empty.noWorkOrdersText": "Actualmente no hay ninguna orden de trabajo. Una orden se crea a partir de una notificación de avería abierta, donde está el botón «Abrir orden de trabajo».",
     "misc.underway": "en ruta",
-    "misc.underwayNoLocation": "en ruta (sin ubicación)",
     "misc.noneYet": "todavía ninguno",
     "misc.noMembership": "sin membresía",
     "misc.notYetAssigned": "aún no asignado",
@@ -2025,7 +2026,6 @@ const UEBERSETZUNGEN = {
     "msg.confirmDecommission": "¿Dar de baja definitivamente {rahmennummer}? La bicicleta pierde su ubicación y ya no aparece en ninguna lista. Sus viajes se conservan.",
     "msg.bikeDecommissioned": "{rahmennummer} dada de baja.",
     "msg.fleetLoadFailed": "No se pudo cargar la flota: {fehler}",
-    "msg.noBikeWithFilter": "Ninguna bicicleta con este filtro",
     "msg.modelsOrStationsLoadFailed": "No se pudieron cargar los modelos o las estaciones: {fehler}",
     "msg.noModelsOrStations": "No hay modelos ni estaciones a partir de los cuales crear una nueva bicicleta.",
     "msg.frameNumberMissing": "Falta el número de bastidor.",
@@ -2164,8 +2164,7 @@ const UEBERSETZUNGEN = {
     "common.reason": "Motivo",
     "common.all": "Tutti",
     "common.actionsColumn": "Azioni",
-    "common.noSearchPlaceholder": "Nessuna ricerca in questa sezione",
-    "common.noSearchAria": "Ricerca non disponibile in questa sezione",
+    "common.searchPlaceholder": "Cerca in questo elenco",
     "common.confirmWordPrompt": "Digitare \"{wort}\" per confermare:",
     "common.sortAria": "Ordina per {titel}",
     "common.sortAriaSuffix": ", attualmente {richtung}",
@@ -2182,14 +2181,21 @@ const UEBERSETZUNGEN = {
     "common.filterSearchPlaceholder": "Cerca…",
     "common.filterResetAria": "Azzera filtro {titel}",
     "common.filterResetTitle": "Azzera filtro",
-    "common.columnFilterReset": "Azzera filtri colonna",
-    "common.noRowsMatchFilter": "Nessuna riga soddisfa il filtro selezionato nell’intestazione di colonna. ",
+    "common.filterTitle": "Filtra",
+    "common.filterActiveAria": "Filtra {titel}, filtro attivo",
+    "common.filterActiveTitle": "Filtro attivo",
+    "common.filterEmpty": "non indicato",
+    "common.columnFilterReset": "Rimuovi la restrizione",
+    "common.noRowsMatchFilter": "Nessuna riga corrisponde alla ricerca e ai filtri. ",
     "common.groupedBy": "Raggruppato per {titel}",
     "common.ungroup": "Rimuovi raggruppamento",
     "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
     "common.closeDetailsAria": "Chiudi dettagli",
     "common.closeDetailsTitle": "Chiudi dettagli (Esc)",
-    "common.rowsFiltered": "{angezeigt} di {zeilenPhrase} (filtro colonna attivo)",
+    "common.rowsFiltered": "{angezeigt} di {zeilenPhrase} ({grund})",
+    "common.reasonSearch": "ricerca",
+    "common.reasonColumnFilter": "filtro colonna",
+    "common.reasonBoth": "ricerca e filtro colonna",
     "common.selectedCount": "{n} selezionati",
     "common.minAbbrev": "min",
     "common.hourAbbrev": "h",
@@ -2200,8 +2206,6 @@ const UEBERSETZUNGEN = {
     "common.loginBadCredentials": "E-mail o password non corretti.",
     "common.rolesCheckFailed": "Impossibile determinare i ruoli: {msg}",
     "common.roleCheckFailed": "Impossibile verificare il ruolo {code}: {msg}",
-    "common.of": "su",
-    "common.xOfPhrase": "{x} su {phrase}",
     "misc.estimatedParen": " ({prozent} stimato)",
     "hint.ridesPerDayHeading": "Corse al giorno — {monat} (totale, tutti i tipi di bici e tariffe)",
     "status.label.abgebrochen": "Annullato",
@@ -2251,8 +2255,6 @@ const UEBERSETZUNGEN = {
     "msg.openDamageWithUnrideable": "{n}{zusatz} guasti aperti, di cui {dringend} non idonei alla marcia",
     "msg.openDamageCount": "{n}{zusatz} guasti aperti",
     "misc.atLeastValue": "≥ {n} {einheit}",
-    "misc.allLowercase": "tutte",
-    "field.minAge": "Anzianità minima",
     "field.offenSeit": "Aperto da",
     "field.gemeldet": "Segnalato",
     "misc.stillRunning": "{datum} · ancora in corso",
@@ -2308,6 +2310,10 @@ const UEBERSETZUNGEN = {
     "nav.instandhaltung": "Manutenzione",
     "nav.auswertungen": "Report",
     "nav.kundenSuche": "Clientela: nome, e-mail, numero cliente",
+    "nav.flotteSuche": "Flotta: numero di telaio, tipo di bici, stato, posizione",
+    "nav.stationenSuche": "Stazioni: nome, numero, luogo",
+    "nav.instandhaltungSuche": "Manutenzione: bici, categoria, gravità, stato",
+    "nav.auswertungenSuche": "Analisi: categoria, mese, valore",
     "field.rahmennummer": "Numero di telaio",
     "field.status": "Stato",
     "field.standort": "Posizione",
@@ -2421,20 +2427,15 @@ const UEBERSETZUNGEN = {
     "button.list": "Elenco",
     "button.map": "Mappa",
     "button.showCustomersOnMap": "Mostra clienti per località",
-    "empty.noBikesFilterTitle": "Nessuna bici corrisponde a questo filtro",
-    "empty.noBikesFilterText": "Nessuna bici della flotta soddisfa la restrizione selezionata.",
     "empty.noCustomersFilterTitle": "Nessun cliente corrisponde a questo filtro",
     "empty.noCustomersFilterTextSearch": "Nessun cliente corrispondente a \"{suchtext}\" soddisfa anche la restrizione selezionata.",
     "empty.noCustomersFilterText": "Nessun cliente soddisfa la restrizione selezionata.",
     "empty.statusFilterReset": "Azzera filtro stato",
     "empty.noOpenDamageTitle": "Nessun guasto aperto",
     "empty.noOpenDamageText": "Al momento non ci sono segnalazioni di guasto. È la situazione normale: si segnala quando si nota qualcosa su una bici.",
-    "empty.noDamageFilterTitle": "Nessun guasto corrisponde a questo filtro",
-    "empty.noDamageFilterText": "Nessun guasto aperto soddisfa la restrizione selezionata.",
     "empty.noWorkOrdersTitle": "Nessun ordine di lavoro in corso",
     "empty.noWorkOrdersText": "Al momento non ci sono ordini di lavoro. Un ordine nasce da una segnalazione di guasto aperta, dove si trova il pulsante \"Apri ordine di lavoro\".",
     "misc.underway": "in viaggio",
-    "misc.underwayNoLocation": "in viaggio (nessuna posizione)",
     "misc.noneYet": "ancora nessuna",
     "misc.noMembership": "senza abbonamento",
     "misc.notYetAssigned": "non ancora assegnato",
@@ -2503,7 +2504,6 @@ const UEBERSETZUNGEN = {
     "msg.confirmDecommission": "Dismettere definitivamente {rahmennummer}? La bici perde la sua posizione e non compare più in nessun elenco. Le sue corse vengono conservate.",
     "msg.bikeDecommissioned": "{rahmennummer} dismessa.",
     "msg.fleetLoadFailed": "Impossibile caricare la flotta: {fehler}",
-    "msg.noBikeWithFilter": "Nessuna bici con questo filtro",
     "msg.modelsOrStationsLoadFailed": "Impossibile caricare modelli o stazioni: {fehler}",
     "msg.noModelsOrStations": "Non ci sono né modelli né stazioni da cui creare una nuova bici.",
     "msg.frameNumberMissing": "Manca il numero di telaio.",
@@ -2642,8 +2642,7 @@ const UEBERSETZUNGEN = {
     "common.reason": "Powód",
     "common.all": "Wszystkie",
     "common.actionsColumn": "Akcje",
-    "common.noSearchPlaceholder": "Brak wyszukiwania w tej sekcji",
-    "common.noSearchAria": "Wyszukiwanie niedostępne w tej sekcji",
+    "common.searchPlaceholder": "Szukaj na tej liście",
     "common.confirmWordPrompt": "Wpisz \"{wort}\", aby potwierdzić:",
     "common.sortAria": "Sortuj według {titel}",
     "common.sortAriaSuffix": ", obecnie {richtung}",
@@ -2660,14 +2659,21 @@ const UEBERSETZUNGEN = {
     "common.filterSearchPlaceholder": "Szukaj…",
     "common.filterResetAria": "Zresetuj filtr {titel}",
     "common.filterResetTitle": "Zresetuj filtr",
-    "common.columnFilterReset": "Zresetuj filtry kolumn",
-    "common.noRowsMatchFilter": "Żaden wiersz nie spełnia wybranego ograniczenia w nagłówku kolumny. ",
+    "common.filterTitle": "Filtruj",
+    "common.filterActiveAria": "Filtruj {titel}, filtr jest aktywny",
+    "common.filterActiveTitle": "Filtr jest aktywny",
+    "common.filterEmpty": "brak danych",
+    "common.columnFilterReset": "Usuń ograniczenie",
+    "common.noRowsMatchFilter": "Żaden wiersz nie pasuje do wyszukiwania i filtrów. ",
     "common.groupedBy": "Pogrupowano według {titel}",
     "common.ungroup": "Usuń grupowanie",
     "common.groupHeaderLabel": "{titel}: {beschriftung} ({n})",
     "common.closeDetailsAria": "Zamknij szczegóły",
     "common.closeDetailsTitle": "Zamknij szczegóły (Esc)",
-    "common.rowsFiltered": "{angezeigt} z {zeilenPhrase} (filtr kolumny aktywny)",
+    "common.rowsFiltered": "{angezeigt} z {zeilenPhrase} ({grund})",
+    "common.reasonSearch": "wyszukiwanie",
+    "common.reasonColumnFilter": "filtr kolumny",
+    "common.reasonBoth": "wyszukiwanie i filtr kolumny",
     "common.selectedCount": "{n} wybranych",
     "common.minAbbrev": "min",
     "common.hourAbbrev": "godz.",
@@ -2678,8 +2684,6 @@ const UEBERSETZUNGEN = {
     "common.loginBadCredentials": "Adres e-mail lub hasło jest nieprawidłowe.",
     "common.rolesCheckFailed": "Nie udało się ustalić ról: {msg}",
     "common.roleCheckFailed": "Nie udało się sprawdzić roli {code}: {msg}",
-    "common.of": "z",
-    "common.xOfPhrase": "{x} z {phrase}",
     "misc.estimatedParen": " ({prozent} szacowane)",
     "hint.ridesPerDayHeading": "Przejazdy dziennie — {monat} (ogółem, wszystkie typy rowerów i taryfy)",
     "status.label.abgebrochen": "Anulowano",
@@ -2729,8 +2733,6 @@ const UEBERSETZUNGEN = {
     "msg.openDamageWithUnrideable": "{n}{zusatz} otwartych usterek, w tym {dringend} niezdatnych do jazdy",
     "msg.openDamageCount": "{n}{zusatz} otwartych usterek",
     "misc.atLeastValue": "≥ {n} {einheit}",
-    "misc.allLowercase": "wszystkie",
-    "field.minAge": "Minimalny wiek",
     "field.offenSeit": "Otwarte od",
     "field.gemeldet": "Zgłoszono",
     "misc.stillRunning": "{datum} · nadal trwa",
@@ -2786,6 +2788,10 @@ const UEBERSETZUNGEN = {
     "nav.instandhaltung": "Konserwacja",
     "nav.auswertungen": "Raporty",
     "nav.kundenSuche": "Klientela: nazwisko, e-mail, numer klienta",
+    "nav.flotteSuche": "Flota: numer ramy, typ roweru, status, lokalizacja",
+    "nav.stationenSuche": "Stacje: nazwa, numer, miejsce",
+    "nav.instandhaltungSuche": "Serwis: rower, kategoria, waga, stan",
+    "nav.auswertungenSuche": "Analizy: kategoria, miesiąc, wartość",
     "field.rahmennummer": "Numer ramy",
     "field.status": "Status",
     "field.standort": "Lokalizacja",
@@ -2899,20 +2905,15 @@ const UEBERSETZUNGEN = {
     "button.list": "Lista",
     "button.map": "Mapa",
     "button.showCustomersOnMap": "Pokaż klientów wg lokalizacji",
-    "empty.noBikesFilterTitle": "Brak rowerów spełniających ten filtr",
-    "empty.noBikesFilterText": "Żaden rower we flocie nie spełnia wybranego ograniczenia.",
     "empty.noCustomersFilterTitle": "Brak klientów spełniających ten filtr",
     "empty.noCustomersFilterTextSearch": "Żaden klient pasujący do „{suchtext}” nie spełnia dodatkowo wybranego ograniczenia.",
     "empty.noCustomersFilterText": "Żaden klient nie spełnia wybranego ograniczenia.",
     "empty.statusFilterReset": "Zresetuj filtr statusu",
     "empty.noOpenDamageTitle": "Brak otwartych usterek",
     "empty.noOpenDamageText": "Obecnie nie ma żadnego zgłoszenia usterki. To normalna sytuacja — zgłoszenie powstaje, gdy coś zwróci uwagę przy rowerze.",
-    "empty.noDamageFilterTitle": "Brak usterek spełniających ten filtr",
-    "empty.noDamageFilterText": "Żadne otwarte zgłoszenie usterki nie spełnia wybranego ograniczenia.",
     "empty.noWorkOrdersTitle": "Brak trwających zleceń",
     "empty.noWorkOrdersText": "Obecnie nie ma żadnego zlecenia konserwacji. Zlecenie powstaje z otwartego zgłoszenia usterki — tam znajduje się przycisk „Otwórz zlecenie”.",
     "misc.underway": "w trasie",
-    "misc.underwayNoLocation": "w trasie (brak lokalizacji)",
     "misc.noneYet": "jeszcze żadnej",
     "misc.noMembership": "bez członkostwa",
     "misc.notYetAssigned": "jeszcze nie przydzielono",
@@ -2981,7 +2982,6 @@ const UEBERSETZUNGEN = {
     "msg.confirmDecommission": "Trwale wycofać {rahmennummer} z eksploatacji? Rower traci swoją lokalizację i nie pojawia się już na żadnej liście. Jego przejazdy zostają zachowane.",
     "msg.bikeDecommissioned": "{rahmennummer} wycofano z eksploatacji.",
     "msg.fleetLoadFailed": "Nie udało się wczytać floty: {fehler}",
-    "msg.noBikeWithFilter": "Brak roweru pasującego do tego filtra",
     "msg.modelsOrStationsLoadFailed": "Nie udało się wczytać modeli lub stacji: {fehler}",
     "msg.noModelsOrStations": "Nie ma ani modeli, ani stacji, z których można by utworzyć nowy rower.",
     "msg.frameNumberMissing": "Brak numeru ramy.",
@@ -3253,13 +3253,19 @@ function bereichAnmelden(bereich) {
     // navigationAufbauen()/bereichWechseln() schlagen den Schluessel des
     // aktiven Bereichs deshalb bei JEDEM eigenen Aufbau frisch ueber t()
     // nach, nicht nur einmal hier.
-    // suchePlatzhalterSchluessel (optional, Gestaltungsauftrag Punkt 5): der
-    // Platzhalter-/aria-label-Schluessel fuer das gemeinsame Suchfeld in der
-    // Kopfleiste, GENAU dann gesetzt, wenn dieser Bereich das Feld
-    // tatsaechlich auswertet (heute nur kunden.js). bereichWechseln()
-    // weiter unten aktiviert/beschriftet das Feld damit, oder deaktiviert
-    // es sichtbar, statt es fuer jeden Bereich gleichermassen (und fuer
-    // die meisten wirkungslos) anzubieten - siehe dortiger Kommentar.
+    // suchePlatzhalterSchluessel (Gestaltungsauftrag Punkt 5): der
+    // Platzhalter-/aria-label-Schluessel fuer das gemeinsame Suchfeld in
+    // der Kopfleiste - er sagt, WONACH dieser Bereich sucht ("Name,
+    // E-Mail, Kundennummer"). JEDER Bereich setzt ihn jetzt: das Feld ist
+    // seit dem Umbau in allen fuenf Bereichen aktiv (siehe
+    // spaltenkopfSuchtext weiter unten). Fehlt er trotzdem, faellt
+    // bereichWechseln() auf einen allgemeinen Text zurueck, statt das
+    // Feld abzuschalten - "keine Suche" gibt es nicht mehr.
+    // sucheSelbst (optional): true, wenn der Bereich das Suchfeld SELBST
+    // auswertet, statt den gemeinsamen Baustein suchen zu lassen. Genau
+    // ein Bereich tut das (kunden.js, serverseitig wegen der
+    // 200-von-1014-Grenze). Ohne die Angabe uebernimmt der Baustein die
+    // Suche ueber die bereits geladenen Zeilen - siehe suchtextTrifft().
     // icon: rohes '<svg viewBox="0 0 24 24">...</svg>'-Markup, EIN MAL je
     // Bereich als Konstante geschrieben - derselbe Aufbau wie aktion.svg
     // in zeigeListe()/zeilenAktionenZelle() weiter unten (kein Icon-Font,
@@ -3381,15 +3387,41 @@ async function navigationAufbauen(rollen) {
         knopf.append(beschriftung);
 
         // aria-label mit DEMSELBEN Text wie die sichtbare Beschriftung.
-        // Seit die Navigation nur noch "da" oder "ganz weg" kennt (siehe
-        // --nav-breite-weg in style.css - die fruehere Symbolspalten-
-        // Zwischenform mit ihrem eigenen Hinweisfenster-Tooltip ist
-        // entfallen), ist .bereich-text nie mehr per CSS ausgeblendet:
-        // das aria-label ist wortgleich mit dem sichtbaren Text und
-        // aendert deshalb nichts (WCAG "Label in Name" ist erfuellt),
-        // bleibt aber als zweite, gepruefte Quelle des Namens stehen
-        // (tools/wawi_check.py, Vertrag LABEL vergleichbarer Faelle).
+        // Seit der Symbolstreifen zurueck ist (Gestaltungsauftrag Punkt 3,
+        // siehe NAVIGATION_SPEICHERSCHLUESSEL weiter unten), ist
+        // .bereich-text im schmalen Zustand per CSS ausgeblendet - und
+        // GENAU DANN traegt dieses aria-label den zugaenglichen Namen
+        // allein. Im breiten Zustand ist es wortgleich mit dem sichtbaren
+        // Text und aendert nichts (WCAG "Label in Name" bleibt erfuellt).
+        // Ein Bildschirmleser hoert dadurch in BEIDEN Zustaenden
+        // denselben Namen - der Streifen kostet ihn nichts.
         knopf.setAttribute('aria-label', t(bereich.titelSchluessel));
+
+        // ... und fuer das sehende Auge dasselbe beim Ueberfahren und bei
+        // Tastaturfokus, aber NUR im schmalen Zustand: breit stuende der
+        // Name ohnehin daneben, und ein Fenster, das einen bereits
+        // lesbaren Text wiederholt, ist Zierrat (derselbe Massstab wie
+        // bei der Filterleiste und der Hinweiszeile der Tabelle).
+        // hinweisfensterVerknuepfen() waere hier falsch: es zeigt
+        // BEDINGUNGSLOS. Die vier Ereignisse deshalb von Hand, mit
+        // derselben Lage 'rechts', die hinweisfensterZeigen() seit dem
+        // ERSTEN Symbolstreifen dafuer bereithaelt.
+        // Der Name wird BEI JEDEM ANZEIGEN frisch nachgeschlagen, nicht
+        // einmal hier festgehalten: spracheAnwenden() baut die Navigation
+        // NICHT neu auf (es tauscht nur die Beschriftungstexte aus, siehe
+        // dort) - ein hier eingefrorener Text bliebe nach einem
+        // Sprachwechsel in der alten Sprache stehen, waehrend der
+        // sichtbare Text daneben schon gewechselt haette. Im Browser
+        // genau so gesehen: die Leiste zeigte "Flotte", das Fenster
+        // daneben "Flota".
+        const zeigen = () => {
+            if (!document.body.classList.contains('navigation-schmal')) return;
+            hinweisfensterZeigen(t(bereich.titelSchluessel), knopf.getBoundingClientRect(), 'rechts');
+        };
+        knopf.addEventListener('mouseenter', zeigen);
+        knopf.addEventListener('focus', zeigen);
+        knopf.addEventListener('mouseleave', hinweisfensterVerstecken);
+        knopf.addEventListener('blur', hinweisfensterVerstecken);
 
         nav.append(knopf);
     }
@@ -3633,31 +3665,24 @@ async function bereichWechseln(schluessel, herkunftstext = null) {
     // Statusfilter-Popup aus dem VORHERIGEN Bereich in den naechsten hinein.
     filterleisteMehrfachOffenName = null;
 
-    // Punkt 5 der Gestaltung: "es sagt nicht, wonach es sucht, oder ob
-    // es gerade etwas einschraenkt" - das Suchfeld liegt in der
-    // gemeinsamen Kopfleiste (index.html) und damit ausserhalb jedes
-    // einzelnen Bereichs, heute nutzt es aber nur Kundschaft
-    // (kunden.js). suchePlatzhalterSchluessel ist deshalb ein OPTIONALES
-    // Feld am bereich-Objekt (siehe bereichAnmelden() oben): vorhanden,
-    // wird das Feld aktiviert und benannt; fehlt es, wird das Feld
-    // sichtbar deaktiviert statt weiter scheinbar bedienbar, aber
-    // folgenlos dazustehen - dieselbe "was man nicht darf/nicht kann,
-    // wird nicht angeboten"-Haltung wie bei der Navigation weiter oben.
-    // Der Wert wird zusaetzlich geleert: ein Suchtext aus dem VORHERIGEN
-    // Bereich durfte den neuen sonst ungefragt mitnehmen, obwohl er dort
-    // nie eingegeben wurde.
+    // EINE SUCHE, IN JEDEM BEREICH AKTIV (Gestaltungsauftrag Punkt 5 -
+    // die ausfuehrliche Begruendung steht bei spaltenkopfSuchtext in
+    // dieser Datei). Bis zu diesem Umbau war das Feld in vier von fuenf
+    // Bereichen abgeschaltet und trug den Satz "In diesem Bereich keine
+    // Suche" - ein Bedienelement, das dasteht und nicht kann, ist
+    // schlechter als keines. Es ist jetzt ueberall bedienbar; wo der
+    // Bereich die Suche nicht selbst uebernimmt (sucheSelbst), sucht der
+    // gemeinsame Tabellenbaustein ueber die geladenen Zeilen.
+    // Der Wert wird geleert und der Suchzustand der Tabelle mit ihm: ein
+    // Suchtext aus dem VORHERIGEN Bereich duerfte den neuen sonst
+    // ungefragt mitnehmen, obwohl er dort nie eingegeben wurde.
     const feldSucheGlobal = document.getElementById('feld-suche');
     feldSucheGlobal.value = '';
     feldSucheGlobal.classList.remove('feld-suche-aktiv');
-    if (aktiverBereich.suchePlatzhalterSchluessel) {
-        feldSucheGlobal.disabled = false;
-        feldSucheGlobal.placeholder = t(aktiverBereich.suchePlatzhalterSchluessel);
-        feldSucheGlobal.setAttribute('aria-label', t(aktiverBereich.suchePlatzhalterSchluessel));
-    } else {
-        feldSucheGlobal.disabled = true;
-        feldSucheGlobal.placeholder = t('common.noSearchPlaceholder');
-        feldSucheGlobal.setAttribute('aria-label', t('common.noSearchAria'));
-    }
+    feldSucheGlobal.disabled = false;
+    spaltenkopfSuchtext = '';
+    sucheAnbieten(true);
+    sucheBeschriften(aktiverBereich);
 
     // herkunftstext gesetzt -> als frische Bestaetigung ('gut') stehen
     // lassen, GENAU wie eine Buchung: der direkt folgende Aufruf von
@@ -4180,7 +4205,7 @@ function filterleiste() {
 // "Ich kann bei Filter immer nur ein Item aussuchen, brauche aber
 // Multiselect" - woertlich der Auftrag, fuer BEIDE Orte, an denen ein
 // Auswahlfilter heute steht: hier in der Filterleiste (typ 'auswahl'
-// weiter unten) UND im Spaltenkopf (spaltenkopfFilterfeld() weiter
+// weiter unten) UND im Spaltenkopf (spaltenkopfFilterInhalt() weiter
 // unten in dieser Datei). EIN Baustein fuer beide, aus demselben Grund
 // wie Werkzeugleiste/Filterleiste/Uebersichtsstreifen selbst: zwei
 // Orte, die unabhaengig voneinander denselben Umbau brauchten, sind
@@ -4232,7 +4257,7 @@ function filterleiste() {
 // geschlossen startet. offenVorgabe/beiOeffnen/beiSchliessen unten
 // reichen den Offen-Zustand deshalb an den JEWEILIGEN Aufrufer weiter,
 // der ihn in einer eigenen, den Neuaufbau ueberlebenden Variable haelt
-// (spaltenkopfMehrfachOffenFeld bzw. filterleisteMehrfachOffenName weiter
+// (spaltenkopfFilterOffenFeld bzw. filterleisteMehrfachOffenName weiter
 // unten) und beim naechsten Aufbau als offenVorgabe zurueckgibt. Der
 // Fokus selbst haengt sich an dasselbe, bereits bestehende
 // Wiederfinden-Schema wie der Rest der Tabelle
@@ -4308,8 +4333,8 @@ function mehrfachauswahlFeld(optionen, ausgewaehlt, beiAenderung, ariaLabel, ein
     // Seite fälschlich zu: e.target läge nie mehr IN der laengst
     // entfernten alten wrapper, "ausserhalb" wäre also immer wahr - das
     // rief beiSchliessen() der ALTEN Instanz auf und loeschte dabei den
-    // gemeinsamen Offen-Zustand (spaltenkopfMehrfachOffenFeld /
-    // filterleisteMehrfachOffenName) fuer die NEUE, gerade erst
+    // gemeinsamen Offen-Zustand (filterleisteMehrfachOffenName) fuer die
+    // NEUE, gerade erst
     // aufgebaute und tatsaechlich noch offene Instanz - im Browser
     // nachgestellt: zwei Haken kurz hintereinander gesetzt, das Popup
     // klappte nach dem zweiten Haken unerklaert zu. Eine bereits ersetzte
@@ -4354,13 +4379,37 @@ function mehrfachauswahlFeld(optionen, ausgewaehlt, beiAenderung, ariaLabel, ein
         knopf.focus();
     });
 
+    popup.append(...mehrfachauswahlEintraege(optionen, ausgewaehlt, beiAenderung, markiere, schliessen));
+
+    wrapper.append(knopf, popup);
+    return wrapper;
+}
+
+// Der INHALT einer Mehrfachauswahl - "Alle"-Knopf plus je Option eine
+// Checkbox -, getrennt vom Popup, das ihn traegt. Herausgeloest, als der
+// Spaltenkopf-Filter in den Spaltenkopf selbst gezogen ist
+// (Gestaltungsauftrag Punkt 5): dort sitzt derselbe Inhalt in einem
+// Fenster, das der SPALTENKOPF aufklappt - ein zweites Popup INNERHALB
+// dieses Fensters waere ein Fenster im Fenster, zwei Klicks statt eines
+// und zwei Escape-Stufen statt einer. Beide Aufrufer teilen sich damit
+// dieselben Checkboxen, dieselbe "Alle"-Rueckstellung und dieselbe
+// markiere()-Verdrahtung fuer den Fokuserhalt - dieselbe Ueberlegung wie
+// bei jedem anderen Baustein dieser Datei: zwei Orte, die denselben
+// Aufbau brauchen, sind der Beleg, dass er EINMAL dastehen muss.
+//
+// beiAbschluss(): was nach einem Klick auf "Alle" ausserdem geschehen
+// soll - die Filterleiste schliesst dabei ihr Popup, der Spaltenkopf
+// seines. Der Baustein selbst weiss von keinem der beiden.
+function mehrfachauswahlEintraege(optionen, ausgewaehlt, beiAenderung, markiere, beiAbschluss = () => {}) {
+    const teile = [];
+
     const alleKnopf = document.createElement('button');
     alleKnopf.type = 'button';
     alleKnopf.className = 'mehrfachauswahl-alle';
     alleKnopf.textContent = t('common.all');
     markiere(alleKnopf, 'alle');
-    alleKnopf.addEventListener('click', () => { schliessen(); beiAenderung(new Set()); });
-    popup.append(alleKnopf);
+    alleKnopf.addEventListener('click', () => { beiAbschluss(); beiAenderung(new Set()); });
+    teile.push(alleKnopf);
 
     for (const option of optionen) {
         const wert = String(option.wert);
@@ -4376,20 +4425,24 @@ function mehrfachauswahlFeld(optionen, ausgewaehlt, beiAenderung, ariaLabel, ein
             beiAenderung(neu);
         });
         zeile.append(checkbox, document.createTextNode(option.text));
-        popup.append(zeile);
+        teile.push(zeile);
     }
 
-    wrapper.append(knopf, popup);
-    return wrapper;
+    return teile;
 }
 
-// Welche Mehrfachauswahl im SPALTENKOPF gerade offen ist (spalte.feld
-// oder null) - siehe "OFFEN BLEIBEN UEBER EINEN NEUAUFBAU HINWEG" oben.
+// Welches FILTERFENSTER im Spaltenkopf gerade offen ist (spalte.feld oder
+// null) - siehe "OFFEN BLEIBEN UEBER EINEN NEUAUFBAU HINWEG" bei
+// spaltenkopfFilterknopf() weiter unten. Hiess bis zum Umzug des Filters
+// in den Spaltenkopf spaltenkopfMehrfachOffenFeld und merkte sich dort
+// das offene Popup der EINGEBETTETEN Mehrfachauswahl; seit es nur noch
+// EIN Fenster je Spaltenkopf gibt (Auswahl, Schwelle und Text stehen
+// gleichermassen darin), merkt es sich dieses.
 // Wie spaltenkopfSortFeld/spaltenkopfGruppe & Co. weiter unten NICHT Teil
 // der Signatur-Rueckstellung: eine neue Tabelle (anderer Bereich, anderer
 // Unterreiter) hat ohnehin ganz andere Spaltennamen, der Vergleich
 // "=== spalte.feld" faellt dort von selbst nie zufaellig positiv aus.
-let spaltenkopfMehrfachOffenFeld = null;
+let spaltenkopfFilterOffenFeld = null;
 
 // Dasselbe fuer die FILTERLEISTE, ueber f.name statt spalte.feld - siehe
 // dieselbe Begruendung. In bereichWechseln() zurueckgesetzt (siehe dort):
@@ -5903,27 +5956,146 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
 // die Staerke zuruecknimmt.
 const GELTENDE_ZIFFERN = 3;
 
-// ===== Zahlausgabe =====
+// ===== Zahlausgabe: die Groessenskalierung =====
 //
-// Frueher stand hier eine Hervorhebung einzelner Ziffern: Vorkommastellen
-// kraeftig, Nachkommastellen und Trennzeichen leise - angeblich nach
-// Bissantz. Das war falsch zugeschrieben und ist auf Einwand des
-// Auftraggebers entfernt worden.
+// HERKUNFT UND BENENNUNG. Das Verfahren stammt von der Bissantz & Company
+// GmbH und wird von ihr als "Bissantz'Numbers" bezeichnet; das
+// Unternehmen nennt es patentiert. Diese Datei setzt es nach der
+// oeffentlichen Beschreibung um (bissantz.de/news/bissantznumbers) und
+// nennt die Herkunft ausdruecklich, damit nachvollziehbar bleibt, woher
+// der Gedanke kommt und wem der Name gehoert.
 //
-// Bissantz'Numbers skaliert die SCHRIFTGROESSE DER GANZEN ZAHL
-// proportional zu ihrem WERT (groesserer Wert, groesser geschriebene
-// Zahl, siehe bissantz.de/news/bissantznumbers). Es zerlegt eine Zahl
-// nie in unterschiedlich betonte Teile. Wer Ziffern verschieden stark
-// setzt, erfindet etwas und beruft sich zu Unrecht auf eine fremde
-// Methode - und liest sich fuer den Betrachter schlicht als Fehler.
+// WAS DAS VERFAHREN IST: die SCHRIFTGROESSE DER GANZEN ZAHL waechst mit
+// ihrem WERT - groesserer Wert, groesser geschriebene Zahl. Das Auge
+// wird dadurch zur wichtigsten Zahl einer Spalte gefuehrt, ohne dass
+// eine zweite Grafik danebenstehen muesste.
 //
-// Eine Zahl wird deshalb einheitlich gesetzt. Die Funktion bleibt
-// bestehen, damit die zwanzig Aufrufstellen unveraendert bleiben und
-// eine spaetere, dann RICHTIGE Groessenskalierung genau einen Ort hat.
-function zahlSkaliert(formatiert) {
+// WAS ES NICHT IST: eine Zahl wird NIE in unterschiedlich betonte Teile
+// zerlegt. Genau das stand hier frueher (Vorkommastellen kraeftig,
+// Nachkommastellen und Trennzeichen leise) und war eine eigene Erfindung
+// unter fremdem Namen - auf Einwand des Auftraggebers entfernt.
+//
+// ===== DIE VIER ENTSCHEIDUNGEN =====
+//
+// 1. WORAN WIRD SKALIERT? AN DER SPALTE - UND NUR DA.
+//    Eine Zahl fuer sich hat keine Groesse; sie braucht Vergleichswerte.
+//    In einer Tabelle sind das die uebrigen Zellen DERSELBEN Spalte, und
+//    fuer die gibt es die gemeinsame Skala bereits: dieselbe, auf der der
+//    Balken daneben seine Laenge misst (kopftafelSkala() weiter unten,
+//    balkenSpalten() maximum). Skaliert wird deshalb GENAU DORT, wo diese
+//    Skala schon existiert - und nirgends sonst. Ohne zweiten Parameter
+//    (der Vorgabefall aller uebrigen Aufrufstellen) bleibt die Zahl
+//    unveraendert gesetzt: eine Zahl in einer Detailmaske, in einer
+//    Fussnote oder in einer Summenzeile hat keinen Massstab, an dem eine
+//    Groesse etwas bedeuten koennte, und bekommt deshalb keine.
+//    AUSDRUECKLICH NICHT SKALIERT werden ausserdem die Spalten der Art
+//    'zahl' (Kopftafel): sie haben ihren BALKEN bereits verloren, weil
+//    ihre Werte sich zu wenig unterscheiden (Zwoelfmonatsumsatz der drei
+//    Radtypen: 11.219 bis 12.628, ein Verhaeltnis von 1,13 zu 1) oder
+//    fuenfmal exakt null sind (Arbeitszeit der Instandhaltung). Was fuer
+//    einen Laengenvergleich zu wenig Unterschied traegt, traegt fuer
+//    einen Groessenvergleich auch zu wenig - dieselbe Ehrlichkeit, nur
+//    im zweiten Kanal.
+//
+// 2. WELCHER BEREICH? 0,85 BIS 1,30 DER GRUNDGROESSE DER ZELLE.
+//    Angegeben als Prozentsatz der GEERBTEN Schriftgroesse, nicht in
+//    Pixeln: die Funktion muss dadurch nicht wissen, wo sie gerade steht,
+//    und eine spaetere Aenderung der Grundgroesse einer Zelle nimmt die
+//    Skalierung von selbst mit. Beide heutigen Einsatzorte - die
+//    Zahlenzelle der Kopftafel und die Zahlenspalte der Arbeitstabelle -
+//    stehen auf --grad-4 (14px, im Browser nachgemessen).
+//    WARUM NICHT DIE SCHRIFTGRADREIHE (--grad-1..6): geprueft und
+//    verworfen, aus zwei Gruenden. Erstens ist sie eine ROLLEN-Reihe -
+//    --grad-1 heisst "Beschriftung IN einer Grafik", --grad-6 "die eine
+//    grosse Zahl"; eine Datenzelle, die zufaellig klein ist, wuerde in
+//    der Groesse einer Grafikbeschriftung erscheinen und damit eine Rolle
+//    beanspruchen, die ihr nicht zusteht. Zweitens sind es sechs Stufen:
+//    eine Spalte mit zehn Stationen faende darin Nachbarn mit fast
+//    gleichem Wert auf VERSCHIEDENEN Stufen wieder - eine sichtbare
+//    Trennung, wo in den Daten keine ist. Die Skalierung ist deshalb
+//    STUFENLOS und laesst die Gradreihe unangetastet: sie bestimmt
+//    weiterhin die Grundgroesse der Zelle, auf die dieser Faktor wirkt.
+//    WARUM NICHT MEHR SPREIZUNG: 0,85 bis 1,30 ist ein Verhaeltnis von
+//    1,53 zu 1 zwischen kleinster und groesster Zahl einer Spalte - genug,
+//    dass der Blick die groesste findet, ohne dass die Zeile zerreisst.
+//
+// 3. WELCHE KENNLINIE? DIE WURZEL.
+//    Nicht linear: bei 12.628 gegen 249 (Auswertungen, Umsatz je Monat
+//    und Radtyp) laege die kleine Zahl bei 2 % des Bereichs - alles unter
+//    einem Fuenftel des Maximums saehe gleich klein aus, und eine
+//    Skalierung, in der neun von zehn Zeilen gleich aussehen, fuehrt das
+//    Auge nirgendwohin.
+//    Nicht logarithmisch: der Logarithmus hat bei null keinen Wert und
+//    braeuchte einen frei gewaehlten Versatz - genau die Art Willkuer,
+//    die diese Datei bei Skalen sonst vermeidet ("Nullpunkte bleiben").
+//    Er wuerde ausserdem kleine Unterschiede am unteren Ende
+//    UEBERTREIBEN: 249 gegen 300 saehe weiter auseinander aus als 11.219
+//    gegen 12.628, was die Daten falsch darstellte.
+//    Die Wurzel loest beides - und sie hat einen sachlichen Grund, nicht
+//    nur einen aesthetischen: die FLAECHE, die eine Ziffer auf dem Papier
+//    einnimmt, waechst mit dem QUADRAT ihrer Schriftgroesse. Wer die
+//    wahrgenommene Menge Tinte proportional zum Wert haben will, muss die
+//    Groesse also mit der Wurzel des Wertes wachsen lassen - dieselbe
+//    Ueberlegung, aus der Kartografie ihre Symbolkreise nach der Wurzel
+//    der Menge bemisst und nicht linear. Der BALKEN daneben bleibt
+//    dagegen zu Recht linear: er ist eindimensional, seine Laenge IST die
+//    Menge.
+//    Und der Nullpunkt bleibt derselbe wie beim Balken: Wurzel von 0 ist
+//    0, eine Zeile mit dem Wert null steht also genau am unteren Ende des
+//    Bereichs - so wie ihr Balken die Laenge null hat.
+//
+// 4. DIE UNTERGRENZE IST LESBARKEIT.
+//    0,85 auf die Grundgroesse 14px ergibt 11,9px - das ist die
+//    KLEINSTE Groesse, die ueberhaupt vorkommen kann, und sie tritt nur
+//    bei einer Zeile mit dem Wert NULL auf. Sie liegt ueber --grad-2
+//    (11px, "Beiwerk: Bezugszeile, Fussnote") und damit deutlich ueber
+//    --grad-1 (10px), der untersten Stufe, die diese Datei fuer Text
+//    ueberhaupt zulaesst - eine skalierte Zahl wird also nie kleiner
+//    gesetzt als das kleinste Beiwerk der Oberflaeche.
+//    Die groesste Zahl misst 1,30 x 14px = 18,2px und liegt damit
+//    zwischen --grad-5 (16px) und --grad-6 (20px, "die eine grosse
+//    Zahl") - gross genug, um den Blick zu holen, nicht so gross, dass
+//    sie den Rang eines Seitentitels beansprucht.
+//    Im Browser nachgemessen (Flottentafel, Spalte BESTAND, Maximum 110):
+//    110 -> 18,2px, 88 -> 17,5px, 40 -> 15,7px, 12 -> 14,0px.
+//
+// DIE ZEILENHOEHE DARF NICHT SPRINGEN. Eine Zeile, deren Hoehe davon
+// abhaengt, wie gross ihre groesste Zahl gerade ausfaellt, waere eine
+// unruhige Tabelle - und beim Filtern wuerde sie sich unter der Hand neu
+// setzen. Die Zellen bekommen deshalb eine feste Zeilenhoehe, gerechnet
+// aus dem GROESSTEN moeglichen Faktor (siehe .zahl-skaliert und
+// .kopftafel-zahl/.arbeitstabelle td in style.css): der Zeilenkasten ist
+// damit in jeder Zeile gleich hoch, unabhaengig vom Wert.
+const ZAHL_KLEINSTE = 0.85;   // Faktor der kleinsten skalierten Zahl
+const ZAHL_GROESSTE = 1.30;   // Faktor der groessten skalierten Zahl
+
+// formatiert: der fertige Anzeigetext (geldFormat, zahlFormat, ...).
+// bezug (optional): { wert, maximum } - der ROHE Zahlwert dieser Zelle
+// und das Maximum DERSELBEN Spalte, also genau die gemeinsame Skala, auf
+// der auch der Balken daneben misst. Fehlt der Bezug (oder ist das
+// Maximum 0), wird NICHT skaliert - siehe Entscheidung 1 oben.
+function zahlSkaliert(formatiert, bezug = null) {
     const spanne = document.createElement('span');
     spanne.className = 'zahl-skaliert';
     spanne.textContent = formatiert;
+
+    if (bezug && Number.isFinite(bezug.maximum) && bezug.maximum > 0
+        && Number.isFinite(Number(bezug.wert))) {
+        // Betrag: bei der Abweichungsspalte traegt das VORZEICHEN bereits
+        // Farbe und Seite der Nulllinie (Rang 3 der Farbordnung, siehe
+        // style.css) - die Groesse zeigt hier wie ueberall den BETRAG.
+        // Geklemmt auf [0,1], damit ein Wert ausserhalb der Skala (eine
+        // Zwischensumme, die versehentlich hier landete) die Zeile nicht
+        // sprengt.
+        const anteil = Math.min(1, Math.abs(Number(bezug.wert)) / bezug.maximum);
+        const faktor = ZAHL_KLEINSTE + (ZAHL_GROESSTE - ZAHL_KLEINSTE) * Math.sqrt(anteil);
+        // Prozent statt px: relativ zur geerbten Grundgroesse der Zelle
+        // (siehe Entscheidung 2 oben). Eine Nachkommastelle genuegt -
+        // feiner unterscheidet kein Auge, und der Wert landet als
+        // Inline-Stil im DOM.
+        spanne.style.fontSize = `${(faktor * 100).toFixed(1)}%`;
+    }
+
     return spanne;
 }
 
@@ -6509,7 +6681,20 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
             if (wert === null || wert === undefined) {
                 zahlZelle.textContent = '';
             } else {
-                zahlZelle.append(zahlSkaliert(spalte.format(wert)));
+                // GROESSENSKALIERUNG (siehe zahlSkaliert() in rahmen.js):
+                // der Bezug ist dieselbe gemeinsame Spaltenskala, auf der
+                // auch der Balken weiter unten seine Laenge misst -
+                // skala.maximum bei 'groesse', skala.maximumBetrag bei
+                // 'abweichung' (dort um die Null zentriert, deshalb der
+                // Betrag). NUR in Datenzeilen, aus GENAU demselben Grund,
+                // aus dem eine Gruppen- oder Summenzeile keinen Balken
+                // bekommt (siehe unten): ihr Wert steht ausserhalb der
+                // Skala, aus der er herausgerechnet wurde - eine Groesse
+                // dafuer waere entweder uebergross oder gekappt, und
+                // beides waere eine falsche Aussage.
+                const skalenMaximum = spalte.art === 'groesse' ? skala.maximum : skala.maximumBetrag;
+                zahlZelle.append(zahlSkaliert(spalte.format(wert),
+                    art === 'daten' ? { wert, maximum: skalenMaximum } : null));
                 if (spalte.klasse) zahlZelle.classList.add(spalte.klasse(zeile));
             }
             const grafikZelle = document.createElement('td');
@@ -6692,7 +6877,19 @@ function balkenSpalten(feld, titel, maximum, formatText, optionen = {}) {
             titel,
             klasse,
             summierbar,
-            formatieren: (wert) => zahlSkaliert(formatText(wert))
+            // GROESSENSKALIERUNG (siehe zahlSkaliert() in rahmen.js): das
+            // maximum dieses Bausteins IST die gemeinsame Spaltenskala -
+            // dieselbe, die die Balkenspalte darueber schon benutzt.
+            // Der zweite Parameter zeile unterscheidet die beiden
+            // Aufrufer: baueDatenzeile() ruft formatieren(wert, zeile) mit
+            // der Zeile, spaltenkopfGruppenzeile() ruft formatieren(summe)
+            // OHNE sie (eine Zwischensumme hat keine Zeile, siehe dortiger
+            // Kommentar). Genau daran haengt hier die richtige
+            // Entscheidung: eine Zwischensumme liegt ausserhalb der
+            // gemeinsamen Skala und bekommt deshalb keine Groesse - wie
+            // eine Gruppenzeile der Kopftafel keinen Balken bekommt.
+            formatieren: (wert, zeile) => zahlSkaliert(formatText(wert),
+                zeile ? { wert, maximum } : null)
         }
     ];
 }
@@ -6823,6 +7020,78 @@ let spaltenkopfSortFeld = null;            // spalte.feld, das aktuell sortiert,
 let spaltenkopfSortRichtung = 0;           // 0 = Ausgangsordnung, 1 = aufsteigend, -1 = absteigend
 let spaltenkopfGruppe = null;              // spalte.feld, nach dem gruppiert wird, oder null
 let spaltenkopfFilterwerte = new Map();    // spalte.feld -> Filterwert
+let spaltenkopfSuchtext = '';              // Suchwort der Kopfleiste, '' = keine Suche
+
+// ===== EINE SUCHE, UND SIE SUCHT UEBERALL (Gestaltungsauftrag Punkt 5) =====
+//
+// Auftrag woertlich: "zum einen ist sie zu visuell dominant und zum
+// anderen gibt es im oberen Bereich (blau) auch eine (deaktivierte)
+// Suche. Wir sollten das abgleichen."
+//
+// Es gab zwei Suchen. Die eine steht in der blauen Kopfleiste und wurde
+// von genau EINEM Bereich benutzt (Kundschaft, serverseitig wegen der
+// 200-von-1014-Grenze); in den vier uebrigen stand sie ABGESCHALTET da
+// und sagte "In diesem Bereich keine Suche". Die andere war das
+// Textfeld, das in fast jeder Spalte der zweiten Kopfzeile steckte -
+// zwanzigmal dasselbe Wort "Suche…" ueber einer einzigen Tabelle.
+//
+// ENTSCHEIDUNG: EINE Suche, und zwar die in der Kopfleiste - sie ist der
+// eine Ort, an dem eine Anwendung so etwas erwartet wird, sie liegt
+// ausserhalb der Tabelle und zerstoert deshalb keinen Kopf-Daten-Bezug,
+// und sie war schon da. Sie ist jetzt in JEDEM Bereich aktiv. Der Satz
+// "In diesem Bereich keine Suche" entfaellt ersatzlos - eine
+// abgeschaltete Suche, die trotzdem dasteht, ist schlechter als keine.
+//
+// ZWEI WEGE, EINE BEDEUTUNG: Kundschaft sucht weiterhin SERVERSEITIG
+// (kunden.js reicht den Text an PostgREST weiter, siehe dort - anders
+// waere es eine Luege, weil nur 200 von 1014 Zeilen geladen sind). Die
+// uebrigen vier Bereiche haben ihre Zeilen vollstaendig geladen; dort
+// sucht diese Funktion hier ueber genau diese Zeilen. Fuer den
+// Bedienenden ist es beides Mal dasselbe: "finde mir den Datensatz".
+// Welcher der beiden Wege gilt, entscheidet der Bereich ueber
+// bereich.sucheSelbst (siehe bereichAnmelden() weiter oben) - der
+// Baustein hier greift nur, wo der Bereich es NICHT selbst tut.
+//
+// WORUEBER GESUCHT WIRD: ueber alle Spalten mit sichtbarem Titel, und
+// zwar sowohl ueber den ROHEN Wert als auch ueber den ANGEZEIGTEN Text.
+// Beides ist noetig und keines allein reicht: wer "City-Bike" sucht,
+// meint den angezeigten Namen, waehrend in der Zelle 'CITY' stehen kann;
+// wer "CB-00094" sucht, meint den rohen Wert. Eine Suche, die nur eines
+// von beiden faende, waere unberechenbar - man saehe den Text auf dem
+// Bildschirm und faende ihn nicht.
+//
+// EIN ZWISCHENSPEICHER JE ZEILE, und warum er noetig ist: der Suchtext
+// wird bei jedem Tastendruck (mit 300ms Verzoegerung) neu angewandt,
+// waehrend die ZEILEN dieselben bleiben. Ohne Speicher liefe fuer jeden
+// Tastendruck formatieren() ueber jede Zelle jeder Zeile - bei 275
+// Raedern mal sechs Spalten sind das 1650 Aufrufe, von denen einige ein
+// ganzes Element aufbauen (zahlSkaliert, zellbalken). Eine WeakMap
+// haelt den einmal gebauten Suchtext je Zeilenobjekt fest und gibt ihn
+// frei, sobald der Bereich die Zeilen wegwirft - kein eigenes Aufraeumen
+// noetig, keine Gefahr, dass veraltete Zeilen im Speicher haengenbleiben.
+const suchtextSpeicher = new WeakMap();
+
+function suchtextTrifft(zeile, spalten, suchwort) {
+    let text = suchtextSpeicher.get(zeile);
+    if (text === undefined) {
+        const teile = [];
+        for (const spalte of spalten) {
+            if (!spalte.titel) continue;   // Balken- und Aktionenspalte tragen keinen Text
+            const roh = zeile[spalte.feld];
+            if (roh !== null && roh !== undefined && roh !== '') teile.push(String(roh));
+            if (spalte.formatieren) {
+                // spaltenBeschriftungFuerWert() macht aus einem Element
+                // (zahlSkaliert & Co.) bereits seinen textContent - genau
+                // das, was auf dem Bildschirm steht.
+                const angezeigt = spaltenBeschriftungFuerWert(spalte, zeile);
+                if (angezeigt) teile.push(angezeigt);
+            }
+        }
+        text = teile.join(' ').toLocaleLowerCase('de');
+        suchtextSpeicher.set(zeile, text);
+    }
+    return text.includes(suchwort.toLocaleLowerCase('de'));
+}
 
 // Feather-Stil, dieselbe Familie wie RAD_ICONS/SCHADEN_ICONS/KUNDE_ICONS
 // in den Bereichen (24x24, currentColor per CSS, siehe .bereich-icon in
@@ -6854,11 +7123,24 @@ const SPALTENKOPF_GRUPPE_ICON = '<svg viewBox="0 0 24 24"><path d="M12 4l9 5-9 5
 // bereits einen gleichwertigen, immer sichtbaren Weg zurueck - dafuer
 // braucht es kein zweites Bedienelement. Deshalb bekommen HIER die
 // Sortierung (spaltenkopfSortknopf) und die Text-/Schwellenfilterfelder
-// (spaltenkopfFilterfeld) je ein eigenes, nur im aktiven Zustand
+// (spaltenkopfFilterInhalt) je ein eigenes, nur im aktiven Zustand
 // sichtbares Rücksetz-Icon dazu - dieselbe Icon-Konstante, derselbe
 // Grundsatz ("sichtbar nur, wenn es etwas zurückzusetzen gibt") wie hier
 // bei der Gruppierung.
 const SPALTENKOPF_RESET_ICON = '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+
+// Trichter - "nach dieser Spalte filtern" (Gestaltungsauftrag Punkt 5,
+// der Umzug des Filters in den Spaltenkopf). Dieselbe Strichfamilie wie
+// SPALTENKOPF_SORT_ICON/-GRUPPE_ICON und die Rubrik-Icons der Bereiche:
+// EIN Vokabular fuer die ganze Oberflaeche. Der Trichter ist das Zeichen,
+// das jede Tabellenanwendung fuer diesen Zweck fuehrt - hier gibt es
+// nichts zu erfinden, und ein eigenes Zeichen muesste erst gelernt werden.
+// EIN Pfad, nicht zwei: gefuellt oder nur umrissen unterscheidet den
+// aktiven vom ruhenden Zustand per CSS (fill, siehe
+// .spaltenkopf-filterknopf-aktiv in style.css), kein Austausch des
+// Markups bei jedem Klick.
+const SPALTENKOPF_FILTER_ICON = '<svg viewBox="0 0 24 24">'
+    + '<path d="M4 5h16l-6.2 7.3v5.4L10.2 20v-7.7L4 5z"/></svg>';
 
 // kennung: von neuerVorgang() geliefert, siehe Kommentar dort. Ein
 // veralteter Vorgang zeichnet die Liste nicht mehr - sonst überschriebe
@@ -6910,6 +7192,13 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
         spaltenkopfSortRichtung = 0;
         spaltenkopfGruppe = null;
         spaltenkopfFilterwerte = new Map();
+        // Der Suchtext NICHT hier zurueckgesetzt: er gehoert dem Feld in
+        // der Kopfleiste, nicht der Tabelle, und bereichWechseln() leert
+        // beide gemeinsam (siehe dort). Ein Unterreiter-Wechsel INNERHALB
+        // eines Bereichs (Instandhaltung, Auswertungen) aendert zwar die
+        // Signatur, das Suchfeld daneben behaelt aber sichtbar seinen
+        // Text - ihn hier still unwirksam zu machen hiesse, ein
+        // Bedienelement zu zeigen, das nicht mehr das tut, was es sagt.
     }
 
     spaltenkopfListe = { kennung, zeilen, spalten, beiAuswahl, aktionen };
@@ -6928,22 +7217,44 @@ function zeichneArbeitstabelle() {
 
     const fokusMerkmal = fokusMerken();
 
+    // ----- Suchen (Gestaltungsauftrag Punkt 5: EINE Suche) -----
+    // Vor dem Filtern, weil die Suche die groebere Einschraenkung ist:
+    // erst den Datensatz finden, dann in den gefundenen weiter eingrenzen.
+    // Siehe suchtextTrifft() weiter unten fuer die Begruendung, WORUEBER
+    // gesucht wird.
+    const gesucht = spaltenkopfSuchtext
+        ? zeilenOriginal.filter((zeile) => suchtextTrifft(zeile, spalten, spaltenkopfSuchtext))
+        : zeilenOriginal;
+
     // ----- Filtern -----
-    const gefiltert = zeilenOriginal.filter((zeile) => spalten.every((spalte) => {
+    const gefiltert = gesucht.filter((zeile) => spalten.every((spalte) => {
         if (!istFilterbar(spalte)) return true;
         const filterwert = spaltenkopfFilterwerte.get(spalte.feld);
         if (filterwert === undefined) return true;
         const rohwert = zeile[spalte.feld];
         const typ = spaltenFilterTyp(spalte, zeilenOriginal);
-        if (typ === 'schwelle') return typeof rohwert === 'number' && rohwert >= filterwert;
+        // NACH WERT, NICHT NACH ANZEIGE - dieselbe Regel, nach der diese
+        // Tabelle schon immer SORTIERT (siehe spaltenWert() weiter unten).
+        // Fuer die meisten Spalten ist spaltenWert() ohnehin der rohe
+        // Feldwert; wo eine Spalte ein eigenes sortierwert() mitbringt,
+        // ist GENAU DAS die vergleichbare Zahl. Das ist keine Feinheit:
+        // offen_seit (Instandhaltung) ist ein Postgres-Intervalltext
+        // ("2 days 03:05:00") - eine Schwelle darauf waere ohne diese
+        // Zeile ein Textvergleich und damit sinnlos. Erst dadurch kann der
+        // frueher eigenstaendige Mindestalter-Schieber in diesen
+        // Spaltenkopf einziehen, ohne etwas zu verlieren.
+        if (typ === 'schwelle') {
+            const vergleichswert = spaltenWert(spalte, zeile);
+            return typeof vergleichswert === 'number' && vergleichswert >= filterwert;
+        }
         // Gestaltungsauftrag Punkt 2: auch der Spaltenkopf-Filter muss
         // mehrere Werte gleichzeitig zulassen ("wartung UND defekt", um
         // alles zu sehen, was nicht faehrt) - filterwert ist fuer 'auswahl'
         // deshalb ein Set<string>, kein einzelner String mehr (siehe
-        // spaltenkopfFilterfeld() weiter unten).
+        // spaltenkopfFilterInhalt() weiter unten).
         if (typ === 'auswahl') return filterwert.has(String(rohwert ?? ''));
         // Erst HIER kleingeschrieben, nicht schon beim Speichern des
-        // Filterworts (siehe spaltenkopfFilterfeld() weiter unten): der
+        // Filterworts (siehe spaltenkopfFilterInhalt() weiter unten): der
         // gespeicherte Wert bleibt der Originaltext, den die Person
         // getippt hat - sonst zeigte das Eingabefeld nach dem naechsten
         // Neuzeichnen "chang" statt des getippten "Chang" (im Browser
@@ -7002,7 +7313,7 @@ function zeichneArbeitstabelle() {
     // die Zahl der bereits geladenen (hoechstens 200) Zeilen, NICHT die
     // 1014 insgesamt - konsistent mit der Statuszeile in kunden.js, die
     // genau das schon offenlegt.
-    if (spaltenkopfFilterwerte.size > 0 || gruppenSpalte) {
+    if (spaltenkopfFilterwerte.size > 0 || gruppenSpalte || spaltenkopfSuchtext) {
         wurzel.append(spaltenkopfHinweis(zeilenOriginal.length, angezeigt.length, gruppenSpalte));
     }
 
@@ -7011,6 +7322,8 @@ function zeichneArbeitstabelle() {
     tabelle.append(spaltenkopfKopfzeile(spalten, aktionen));
 
     const koerper = document.createElement('tbody');
+    // "Kein Treffer": eine schlanke Zeile INNERHALB der Tabelle, damit
+    // Kopfzeile und Filter bedienbar bleiben (siehe baueLeerzeile()).
     if (angezeigt.length === 0 && zeilenOriginal.length > 0) {
         koerper.append(baueLeerzeile(spalten, aktionen));
     } else if (gruppen) {
@@ -7173,11 +7486,22 @@ function spaltenkopfKopfzeile(spalten, aktionen) {
             th.setAttribute('aria-sort', aktiv ? (spaltenkopfSortRichtung === 1 ? 'ascending' : 'descending') : 'none');
         }
 
-        if (hatTitel && (sortierbar || gruppierbar)) {
+        const filterbar = istFilterbar(spalte);
+        if (hatTitel && (sortierbar || gruppierbar || filterbar)) {
             const wrapper = document.createElement('div');
             wrapper.className = 'spaltenkopf';
             wrapper.append(sortierbar ? spaltenkopfSortknopf(spalte) : spaltenkopfTitelOhneSortierung(spalte));
             if (gruppierbar) wrapper.append(spaltenkopfGruppenknopf(spalte));
+            // Der Filter sitzt jetzt HIER, im Kopf neben Sortieren und
+            // Gruppieren - nicht mehr in einer zweiten Kopfzeile darunter
+            // (siehe die ausfuehrliche Begruendung bei
+            // spaltenkopfFilterknopf() weiter unten).
+            if (filterbar) wrapper.append(spaltenkopfFilterknopf(spalte));
+            // position:relative fuer das Filterfenster, das aus diesem
+            // Kopf aufklappt (siehe .spaltenkopf-filter in style.css) -
+            // die Angabe gehoert an die <th>, weil das Fenster ueber die
+            // Kopfzeile hinausragen soll, nicht in ihr eingesperrt sein.
+            th.classList.add('spaltenkopf-zelle');
             th.append(wrapper);
         } else {
             th.textContent = spalte.titel || '';
@@ -7195,18 +7519,38 @@ function spaltenkopfKopfzeile(spalten, aktionen) {
     }
     kopf.append(titelZeile);
 
-    // Filterzeile nur, wenn mindestens eine Spalte tatsaechlich filterbar
-    // ist - sonst waere eine zweite, komplett leere Kopfzeile Zierrat
-    // (derselbe Massstab wie bei zeigeFilterleiste() weiter oben: "ein
-    // Bedienelement, das nichts filtert, ist Zierrat"). Beide <tr>
-    // bleiben Kinder DESSELBEN <thead> - .arbeitstabelle thead ist
-    // "position: sticky", das gilt fuer das ganze Element, nicht Zeile
-    // fuer Zeile: beide kleben zusammen am oberen Rand, unveraendert
-    // gegenueber vorher.
-    if (spalten.some((s) => istFilterbar(s))) {
-        kopf.append(spaltenkopfFilterzeile(spalten, aktionen));
-    }
-
+    // ===== HIER STAND EINE ZWEITE KOPFZEILE - UND SIE IST DER GRUND
+    // FUER DIESEN UMBAU =====
+    //
+    // Auftrag woertlich: "Problematisch finde ich nochmals eine Suchleiste
+    // in der zweiten Kopfzeile, gilt auch fuer die Filter, das wirkt
+    // unharmonisch und stoerend, damit wird auch der Bezug der
+    // Tabellenkoepfe zu den Daten zerstoert und die Intuitivitaet sinkt."
+    //
+    // Der Befund trifft genau den Kern, und er ist keine Geschmacksfrage:
+    // ein Spaltenkopf ist die UEBERSCHRIFT SEINER DATEN. Was diese
+    // Beziehung traegt, ist die Naehe - "Umsatz" steht ueber den
+    // Umsatzzahlen. Schiebt man eine ganze Zeile Eingabefelder dazwischen,
+    // steht ueber der ersten Datenzeile nicht mehr die Ueberschrift,
+    // sondern ein Formular; die Ueberschrift ist eine Zeile weiter
+    // weggerueckt und muss vom Auge wieder zugeordnet werden. Bei elf
+    // Spalten (Auswertungen) ist das elfmal dieselbe Zuordnungsarbeit,
+    // jedes Mal beim Hinsehen neu.
+    //
+    // Dazu kam die Lautstaerke: elf Eingabefelder mit Rahmen und
+    // Platzhaltertext, staendig sichtbar, obwohl sie in der ueberwaeltigenden
+    // Mehrheit der Faelle LEER sind. Ein Bedienelement, das meistens
+    // nichts tut, darf nicht dauerhaft so viel Aufmerksamkeit binden wie
+    // die Daten selbst.
+    //
+    // DIE LOESUNG IST NICHT, DEN FILTER WEGZUNEHMEN, sondern ihn dorthin
+    // zu setzen, wohin er gehoert: IN den Spaltenkopf, als kleines
+    // Zeichen neben Sortieren und Gruppieren, das ein Fenster oeffnet
+    // (siehe spaltenkopfFilterknopf() weiter unten). Der Kopf steht damit
+    // wieder unmittelbar ueber seinen Daten, der Filter ist da, wenn man
+    // ihn braucht, und das Zeichen selbst sagt, ob er gerade greift.
+    // Die Machart war ohnehin schon da - Sortieren und Gruppieren sitzen
+    // seit ihrer Einfuehrung genau so im Kopf.
     return kopf;
 }
 
@@ -7351,46 +7695,215 @@ function spaltenkopfGruppenknopf(spalte) {
     return knopf;
 }
 
-function spaltenkopfFilterzeile(spalten, aktionen) {
-    const zeile = document.createElement('tr');
-    zeile.className = 'spaltenkopf-filterzeile';
-    for (const spalte of spalten) {
-        const th = document.createElement('th');
-        if (istFilterbar(spalte)) th.append(spaltenkopfFilterfeld(spalte));
-        zeile.append(th);
+// ===== Der Filter IM Spaltenkopf =====
+//
+// Ein Trichter neben Titel und Gruppierungssymbol, der ein Fenster mit
+// dem eigentlichen Filterfeld oeffnet - siehe die ausfuehrliche
+// Begruendung bei spaltenkopfKopfzeile() oben.
+//
+// EIN FENSTER, NICHT ZWEI: fuer eine Auswahlspalte stand hier bisher
+// mehrfachauswahlFeld(), das SELBST ein Popup aufklappt. In einem
+// Spaltenkopf-Fenster waere das ein Fenster im Fenster gewesen - zwei
+// Klicks bis zum ersten Haken, zwei Escape-Stufen zurueck. Die Checkboxen
+// stehen deshalb DIREKT in diesem Fenster (mehrfachauswahlEintraege()
+// weiter oben, aus mehrfachauswahlFeld() herausgeloest, damit die
+// Filterleiste und der Spaltenkopf sich denselben Inhalt teilen).
+//
+// DER ZUSTAND STEHT AM ZEICHEN: greift der Filter, ist der Trichter
+// gefuellt statt umrissen und traegt --rot (siehe
+// .spaltenkopf-filterknopf-aktiv in style.css) - dieselbe Sprache, die
+// diese Oberflaeche an den beiden anderen einschraenkenden Stellen schon
+// spricht (aktives Suchfeld, aktive Mehrfachauswahl). Man sieht damit
+// AM KOPF, ob eine Spalte gerade etwas ausblendet, ohne ein Fenster zu
+// oeffnen - was die dauerhaft sichtbare Eingabezeile vorher nur um den
+// Preis ihrer staendigen Anwesenheit leistete.
+//
+// OFFEN BLEIBEN UEBER EINEN NEUAUFBAU HINWEG: jede Aenderung im Fenster
+// zeichnet die ganze Tabelle neu (dieselbe volle Neuerstellung wie
+// bisher) - ohne Gegenmassnahme klappte das Fenster nach dem ersten
+// Haken sofort zu. spaltenkopfFilterOffenFeld haelt deshalb fest, WELCHE
+// Spalte gerade offen ist, genau wie filterleisteMehrfachOffenName es fuer
+// die alte, eingebettete Mehrfachauswahl tat.
+function spaltenkopfFilterknopf(spalte) {
+    const aktiv = spaltenkopfFilterwerte.has(spalte.feld);
+    const offen = spaltenkopfFilterOffenFeld === spalte.feld;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'spaltenkopf-filter';
+
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'spaltenkopf-filterknopf' + (aktiv ? ' spaltenkopf-filterknopf-aktiv' : '');
+    knopf.dataset.spaltenkopfFeld = spalte.feld;
+    knopf.dataset.spaltenkopfRolle = 'filterknopf';
+    knopf.setAttribute('aria-haspopup', 'true');
+    knopf.setAttribute('aria-expanded', String(offen));
+    // Der zugaengliche Name nennt die SPALTE und den ZUSTAND: ein
+    // Bildschirmleser soll "Marke filtern, aktiv" hoeren, nicht nur
+    // "Filter" - dieselbe Ueberlegung wie beim Sortierknopf, der seine
+    // Richtung ebenfalls in den Namen nimmt.
+    knopf.setAttribute('aria-label', aktiv
+        ? t('common.filterActiveAria', { titel: spalte.titel })
+        : t('common.filterAria', { titel: spalte.titel }));
+    knopf.title = aktiv ? t('common.filterActiveTitle') : t('common.filterTitle');
+    const symbol = document.createElement('span');
+    symbol.className = 'spaltenkopf-filtersymbol';
+    // Konstantes Markup, keine Nutzereingabe - derselbe Ausnahmefall wie
+    // bei SPALTENKOPF_SORT_ICON/-GRUPPE_ICON oben.
+    symbol.innerHTML = SPALTENKOPF_FILTER_ICON;
+    symbol.setAttribute('aria-hidden', 'true');
+    knopf.append(symbol);
+
+    const fenster = document.createElement('div');
+    fenster.className = 'spaltenkopf-filterfenster';
+    fenster.setAttribute('role', 'group');
+    fenster.setAttribute('aria-label', t('common.filterAria', { titel: spalte.titel }));
+    fenster.hidden = !offen;
+
+    // Dieselbe Aufraeum-Absicherung wie bei mehrfachauswahlFeld() oben,
+    // aus demselben Grund und mit derselben Begruendung: eine bereits per
+    // replaceChildren() ersetzte Instanz raeumt NUR ihren eigenen,
+    // veralteten Listener ab und ruft nicht schliessen() fuer die neue.
+    function aussenKlick(e) {
+        if (!wrapper.isConnected) {
+            document.removeEventListener('click', aussenKlick, true);
+            return;
+        }
+        if (!wrapper.contains(e.target)) schliessen();
     }
-    if (aktionen) zeile.append(document.createElement('th'));
-    return zeile;
+    // ===== WARUM DIESES FENSTER AM BILDSCHIRM HAENGT, NICHT AM KOPF =====
+    // Im Browser nachgestellt (siehe Bericht): als absolut positioniertes
+    // Kind der <th> wurde das Fenster ABGESCHNITTEN, sobald es ueber den
+    // unteren Rand der Arbeitsliste hinausreichte - #listenkoerper und
+    // #arbeitsliste tragen beide overflow:auto (sie muessen: eine breite
+    // Tabelle soll in sich scrollen, nicht die Seite schieben), und ein
+    // overflow-Kasten beschneidet auch absolut positionierte Nachfahren.
+    // Mit ausgeklappter Kopftafel steht die Kopfzeile weit unten im
+    // Fenster; von einer Liste mit fuenf Status waren dann zwei zu sehen.
+    // Genau derselbe Mangel steckte uebrigens schon in der alten,
+    // eingebetteten Mehrfachauswahl - er fiel nur weniger auf, solange
+    // daneben noch eine ganze Zeile Eingabefelder stand.
+    // position:fixed loest ihn: ein fixierter Kasten bezieht sich auf das
+    // Sichtfenster und wird von KEINEM overflow-Vorfahren beschnitten.
+    // Die Lage rechnet ausrichten() aus - dieselbe Machart wie
+    // hinweisfensterZeigen() weiter oben, samt Klemmen an beide Raender
+    // und Umklappen nach oben, wenn unten kein Platz mehr ist.
+    // NACHGEFUEHRT statt geschlossen: scrollt jemand die Tabelle,
+    // waehrend das Fenster offen ist, wandert der Knopf darunter weg. Das
+    // Hinweisfenster verschwindet in diesem Fall (es ist Beiwerk); ein
+    // Filterfenster, in dem man gerade Haken setzt, darf das nicht -
+    // es wird deshalb neu ausgerichtet.
+    function ausrichten() {
+        const luft = 8;
+        const k = knopf.getBoundingClientRect();
+        const b = fenster.offsetWidth;
+        const h = fenster.offsetHeight;
+        // Linksbuendig unter dem Knopf; laeuft es rechts hinaus,
+        // rechtsbuendig - man liest von links, aber nicht aus dem Bild.
+        let x = k.left;
+        if (x + b > window.innerWidth - luft) x = k.right - b;
+        // Unter den Knopf; passt es dort nicht mehr, darueber.
+        let y = k.bottom + 4;
+        if (y + h > window.innerHeight - luft) y = k.top - h - 4;
+        // ZUM SCHLUSS IN BEIDEN ACHSEN INS FENSTER GEKLEMMT, und zwar
+        // NACH dem Umklappen, nicht statt seiner: das Umklappen sucht die
+        // schoenere Seite, das Klemmen garantiert die erreichbare. Ohne
+        // das Klemmen stand das Fenster einer ganz rechts liegenden
+        // Spalte bei 1024px Fensterbreite auf x=1037 - vollstaendig
+        // ausserhalb des Bildes (im Browser nachgemessen, siehe Bericht):
+        // die Tabelle scrollt dort in sich, ihre letzten Spaltenkoepfe
+        // liegen also rechts vom sichtbaren Bereich, und ein Fenster, das
+        // seinem Knopf blind folgt, folgt ihm auch dorthin.
+        // Math.max ZULETZT, damit bei einem Fenster, das breiter oder
+        // hoeher als das Sichtfenster waere, die obere linke Ecke sichtbar
+        // bleibt statt der unteren rechten.
+        x = Math.max(luft, Math.min(x, window.innerWidth - b - luft));
+        y = Math.max(luft, Math.min(y, window.innerHeight - h - luft));
+        fenster.style.left = `${x}px`;
+        fenster.style.top = `${y}px`;
+    }
+
+    function schliessen() {
+        fenster.hidden = true;
+        knopf.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', aussenKlick, true);
+        window.removeEventListener('scroll', ausrichten, true);
+        window.removeEventListener('resize', ausrichten);
+        if (spaltenkopfFilterOffenFeld === spalte.feld) spaltenkopfFilterOffenFeld = null;
+    }
+    function oeffnen() {
+        fenster.hidden = false;
+        knopf.setAttribute('aria-expanded', 'true');
+        // ERST NACH dem Einblenden ausrichten - offsetWidth/-Height sind
+        // an einem hidden-Element immer 0 (derselbe Stolperstein wie bei
+        // hinweisfensterZeigen(), dort ebenso vermerkt).
+        ausrichten();
+        document.addEventListener('click', aussenKlick, true);
+        // capture:true, damit auch das eigene overflow:auto von
+        // #listenkoerper/#arbeitsliste erfasst wird - ein Scroll dort
+        // blast kein Ereignis bis zum Fenster hoch.
+        window.addEventListener('scroll', ausrichten, true);
+        window.addEventListener('resize', ausrichten);
+        spaltenkopfFilterOffenFeld = spalte.feld;
+    }
+    if (offen) {
+        document.addEventListener('click', aussenKlick, true);
+        window.addEventListener('scroll', ausrichten, true);
+        window.addEventListener('resize', ausrichten);
+        // Nach einem Neuaufbau steht das Fenster schon offen im DOM (siehe
+        // "OFFEN BLEIBEN..." oben) - ausgerichtet werden kann es aber erst,
+        // wenn es tatsaechlich im Dokument haengt und eine Groesse hat.
+        // requestAnimationFrame ist genau dieser Zeitpunkt.
+        requestAnimationFrame(() => { if (fenster.isConnected) ausrichten(); });
+    }
+    knopf.addEventListener('click', () => { if (fenster.hidden) oeffnen(); else schliessen(); });
+
+    // Escape schliesst NUR dieses Fenster (stopPropagation) - dieselbe
+    // Ueberlegung und derselbe Kunstgriff wie beim Popup der
+    // Mehrfachauswahl, siehe dort.
+    fenster.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        e.stopPropagation();
+        schliessen();
+        knopf.focus();
+    });
+
+    fenster.append(...spaltenkopfFilterInhalt(spalte, schliessen));
+    wrapper.append(knopf, fenster);
+    return wrapper;
 }
 
-// Baut das eigentliche Filter-Bedienelement - Auswahl (Mehrfachauswahl,
-// siehe mehrfachauswahlFeld()), Schwelle oder Text, siehe
-// spaltenFilterTyp() weiter oben. Alle drei tragen
-// data-spaltenkopf-feld/-rolle fuer den Fokuserhalt (siehe
-// fokusMerken()/fokusWiederherstellen() oben, bei der Mehrfachauswahl mit
-// dem Zusatz "filtern-mehrfach:..." statt des schlichten "filtern" der
-// beiden anderen - sie traegt mehrere fokussierbare Elemente zugleich,
-// Knopf UND je eine Checkbox, jede braucht ihre eigene, unterscheidbare
-// Rolle) und ein aria-label, weil keines von ihnen ein <label for> aus
-// dem statischen HTML hat (sie entstehen dynamisch, wie die Felder aus
-// zeigeMaske()).
-function spaltenkopfFilterfeld(spalte) {
+// Baut den INHALT des Filterfensters - Auswahl (Mehrfachauswahl),
+// Schwelle oder Text, siehe spaltenFilterTyp() weiter oben. Alle drei
+// tragen data-spaltenkopf-feld/-rolle fuer den Fokuserhalt (siehe
+// fokusMerken()/fokusWiederherstellen() oben) und ein aria-label, weil
+// keines von ihnen ein <label for> aus dem statischen HTML hat (sie
+// entstehen dynamisch, wie die Felder aus zeigeMaske()).
+//
+// Liefert ein ARRAY von Elementen, kein einzelnes: die Mehrfachauswahl
+// besteht aus dem "Alle"-Knopf und je Option einer Zeile, die alle
+// unmittelbar im Fenster stehen sollen - ein zusaetzlicher Wrapper waere
+// eine Schachtel ohne Aufgabe.
+//
+// schliessen(): vom Aufrufer hereingereicht, damit ein "Alle" das Fenster
+// gleich mit zumacht - wer alles wieder zulaesst, will das Fenster nicht
+// mehr.
+function spaltenkopfFilterInhalt(spalte, schliessen) {
     const { zeilen: zeilenOriginal } = spaltenkopfListe;
     const typ = spaltenFilterTyp(spalte, zeilenOriginal);
     const aktuellerWert = spaltenkopfFilterwerte.get(spalte.feld);
 
     if (typ === 'auswahl') {
-        // Gestaltungsauftrag Punkt 2: auch hier eine Mehrfachauswahl statt
-        // eines Einfachauswahl-<select> - siehe mehrfachauswahlFeld() fuer
-        // die ausfuehrliche Begruendung. aktuellerWert ist entweder
-        // undefined (kein Filter, "Alle") oder ein Set<string>, nie mehr
-        // ein einzelner String.
+        // Gestaltungsauftrag Punkt 2: Mehrfachauswahl statt Einfachauswahl.
+        // aktuellerWert ist entweder undefined (kein Filter, "Alle") oder
+        // ein Set<string>, nie ein einzelner String.
         const ausgewaehlt = aktuellerWert || new Set();
 
         const distinct = new Map();   // roher Wert (als String) -> Beispielzeile fuer die Beschriftung
+        let hatLeere = false;
         for (const zeile of zeilenOriginal) {
             const roh = zeile[spalte.feld];
-            if (roh === null || roh === undefined || roh === '') continue;
+            if (roh === null || roh === undefined || roh === '') { hatLeere = true; continue; }
             const schluessel = String(roh);
             if (!distinct.has(schluessel)) distinct.set(schluessel, zeile);
         }
@@ -7399,52 +7912,78 @@ function spaltenkopfFilterfeld(spalte) {
         const optionenListe = sortiert.map(([schluessel, beispielZeile]) =>
             ({ wert: schluessel, text: spaltenBeschriftungFuerWert(spalte, beispielZeile) }));
 
-        return mehrfachauswahlFeld(
+        // EIN EIGENER PUNKT FUER DIE LEEREN WERTE (neu mit dem Umzug in
+        // den Spaltenkopf). Vorher fielen Zeilen ohne Wert stillschweigend
+        // aus der Auswahlliste heraus - man konnte nach jedem Standort
+        // filtern, aber nicht nach "hat keinen". Genau diesen Fall hat die
+        // Flotte bisher in ihrer eigenen Filterleiste von Hand nachgebaut
+        // ("unterwegs, kein Standort"); damit der Umzug in den Spaltenkopf
+        // nichts verliert, kann es der Baustein jetzt selbst. Der leere
+        // Schluessel '' passt ohne weiteres Zutun zur Filterbedingung
+        // weiter oben, die bereits String(rohwert ?? '') vergleicht.
+        // Die Beschriftung kommt aus formatieren(null) - genau der Text,
+        // den die Spalte fuer eine leere Zelle ohnehin schon anzeigt
+        // ("unterwegs") -, und faellt sonst auf ein allgemeines
+        // "ohne Angabe" zurueck.
+        if (hatLeere) {
+            const beschriftung = spalte.formatieren
+                ? String(spalte.formatieren(null, null) ?? '').trim() : '';
+            optionenListe.push({ wert: '', text: beschriftung || t('common.filterEmpty') });
+        }
+
+        return mehrfachauswahlEintraege(
             optionenListe, ausgewaehlt,
             (neu) => {
                 if (neu.size === 0) spaltenkopfFilterwerte.delete(spalte.feld);
                 else spaltenkopfFilterwerte.set(spalte.feld, neu);
                 zeichneArbeitstabelle();
             },
-            t('common.filterAria', { titel: spalte.titel }),
-            {
-                offenVorgabe: spaltenkopfMehrfachOffenFeld === spalte.feld,
-                beiOeffnen: () => { spaltenkopfMehrfachOffenFeld = spalte.feld; },
-                beiSchliessen: () => {
-                    if (spaltenkopfMehrfachOffenFeld === spalte.feld) spaltenkopfMehrfachOffenFeld = null;
-                },
-                markiere: (el, rolle) => {
-                    el.dataset.spaltenkopfFeld = spalte.feld;
-                    el.dataset.spaltenkopfRolle = `filtern-mehrfach:${rolle}`;
-                }
-            }
+            (el, rolle) => {
+                el.dataset.spaltenkopfFeld = spalte.feld;
+                el.dataset.spaltenkopfRolle = `filtern-mehrfach:${rolle}`;
+            },
+            schliessen
         );
     }
 
     const eingabe = document.createElement('input');
     eingabe.type = typ === 'schwelle' ? 'number' : 'text';
+    eingabe.className = 'spaltenkopf-filtereingabe';
     eingabe.dataset.spaltenkopfFeld = spalte.feld;
     eingabe.dataset.spaltenkopfRolle = 'filtern';
-    eingabe.setAttribute('aria-label', typ === 'schwelle' ? t('common.filterMinAria', { titel: spalte.titel }) : t('common.filterAria', { titel: spalte.titel }));
+    eingabe.setAttribute('aria-label', typ === 'schwelle'
+        ? t('common.filterMinAria', { titel: spalte.titel })
+        : t('common.filterAria', { titel: spalte.titel }));
     eingabe.placeholder = typ === 'schwelle' ? '≥' : t('common.filterSearchPlaceholder');
-    // Dieselbe Bedingung wie beim <select>-Zweig oben (siehe dortiger
-    // Kommentar) - hier zusaetzlich der Grund, warum die Klasse erst
-    // NACH dem Debounce (siehe setTimeout unten) wechselt: das ist
-    // derselbe Zeitpunkt, zu dem die Tabelle selbst tatsaechlich neu
-    // gefiltert wird - "aktiv" soll nicht frueher aufleuchten, als der
-    // Filter wirklich zu greifen beginnt.
     if (aktuellerWert !== undefined) {
         eingabe.value = typ === 'schwelle' ? String(aktuellerWert) : aktuellerWert;
-        eingabe.classList.add('spaltenkopf-filter-aktiv');
     }
 
+    // Die MITLAUFENDE BESCHRIFTUNG einer Schwelle (neu mit dem Umzug in
+    // den Spaltenkopf): der Alters-Schieber der Instandhaltung zeigte
+    // neben sich "≥ 3 Std." statt der nackten Zahl, und dieser Filter
+    // erbt seine Aufgabe (siehe filterBeschriftung bei der Spalte
+    // offen_seit in instandhaltung.js). Ohne sie waere aus einer
+    // verstaendlichen Angabe eine Zahl ohne Einheit geworden - genau die
+    // Art stiller Verschlechterung, die ein Umbau nicht verursachen darf.
+    const beschriftungFeld = document.createElement('span');
+    beschriftungFeld.className = 'spaltenkopf-filterwert';
+    const beschriften = () => {
+        if (typ !== 'schwelle' || !spalte.filterBeschriftung) return;
+        const zahl = Number(String(eingabe.value).replace(',', '.'));
+        beschriftungFeld.textContent = eingabe.value.trim() === '' || !Number.isFinite(zahl)
+            ? '' : spalte.filterBeschriftung(zahl);
+    };
+    beschriften();
+
     // 300ms Verzoegerung wie bei der Kundensuche (kunden.js) und dem
-    // Alters-Schieber (instandhaltung.js): ohne sie loeste jeder
-    // Tastendruck einen kompletten Tabellen-Neuaufbau aus UND risse dabei
-    // - siehe fokusMerken()/fokusWiederherstellen() oben - genau das
-    // Eingabefeld weg, in das gerade getippt wird.
+    // frueheren Alters-Schieber: ohne sie loeste jeder Tastendruck einen
+    // kompletten Tabellen-Neuaufbau aus UND risse dabei - siehe
+    // fokusMerken()/fokusWiederherstellen() oben - genau das Eingabefeld
+    // weg, in das gerade getippt wird.
     let verzoegerung = null;
     eingabe.addEventListener('input', () => {
+        beschriften();
         clearTimeout(verzoegerung);
         verzoegerung = setTimeout(() => {
             const text = eingabe.value.trim();
@@ -7464,18 +8003,13 @@ function spaltenkopfFilterfeld(spalte) {
         }, 300);
     });
 
-    // Rücksetz-Icon (siehe SPALTENKOPF_RESET_ICON weiter oben, und der
-    // Kommentar dort zu "Sortierung und Filter... dasselbe Problem"): ein
-    // Auswahl-Filter (Zweig oben) hat mit der Option "Alle" schon einen
-    // eigenen, immer sichtbaren Weg zurueck - ein Text-/Schwellenfeld
-    // dagegen liess sich bisher nur durch manuelles Leeren zuruecksetzen.
-    // Nur sichtbar, solange ein Wert steht (derselbe Massstab wie bei
-    // spaltenkopf-filter-aktiv oben) - ein Feld ohne Inhalt hat nichts
-    // zurueckzusetzen.
-    if (aktuellerWert === undefined) return eingabe;
-    const wrapper = document.createElement('span');
-    wrapper.className = 'spaltenkopf-filterfeld-wrapper';
-    wrapper.append(eingabe);
+    const teile = [eingabe];
+    if (typ === 'schwelle' && spalte.filterBeschriftung) teile.push(beschriftungFeld);
+
+    // Ein Weg zurueck, sichtbar nur, solange es etwas zurueckzusetzen gibt
+    // (derselbe Massstab wie ueberall sonst in dieser Datei). Ein
+    // Auswahlfilter hat ihn im "Alle"-Knopf des Fensters bereits.
+    if (aktuellerWert === undefined) return teile;
     const zuruecksetzen = document.createElement('button');
     zuruecksetzen.type = 'button';
     zuruecksetzen.className = 'spaltenkopf-filterreset';
@@ -7485,34 +8019,58 @@ function spaltenkopfFilterfeld(spalte) {
     zuruecksetzen.addEventListener('click', () => {
         clearTimeout(verzoegerung);
         spaltenkopfFilterwerte.delete(spalte.feld);
+        schliessen();
         zeichneArbeitstabelle();
     });
-    wrapper.append(zuruecksetzen);
-    return wrapper;
+    teile.push(zuruecksetzen);
+    return teile;
 }
 
 // Hinweiszeile ueber der Tabelle - sichtbarer Zustand UND ein Weg zurueck
 // (Auftrag), siehe der lange Kommentar bei zeigeListe() oben. Nur
 // eingeblendet, wenn tatsaechlich gefiltert oder gruppiert wird.
+// EIN Weg zurueck fuer BEIDE Einschraenkungen der Tabelle - Suche und
+// Spaltenfilter. Sie wirken gemeinsam auf dieselbe Liste (siehe
+// zeichneArbeitstabelle()), also muss ein "Filter zuruecksetzen" auch
+// beides loesen: eine Rueckstellung, die die Tabelle sichtbar leer laesst,
+// weil noch ein Suchwort steht, waere keine.
+// Das FELD in der Kopfleiste wird dabei mitgeleert, nicht nur der
+// Zustand: ein Suchfeld, in dem ein Wort steht, das nicht mehr wirkt,
+// waere dieselbe Luege wie die frueher abgeschaltete Suche.
+function spaltenkopfEinschraenkungenAufheben() {
+    spaltenkopfFilterwerte = new Map();
+    spaltenkopfSuchtext = '';
+    const feld = document.getElementById('feld-suche');
+    feld.value = '';
+    feld.classList.remove('feld-suche-aktiv');
+    zeichneArbeitstabelle();
+}
+
 function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
     const zeile = document.createElement('div');
     zeile.className = 'spaltenkopf-hinweis';
 
-    if (spaltenkopfFilterwerte.size > 0) {
+    if (spaltenkopfFilterwerte.size > 0 || spaltenkopfSuchtext) {
+        // Die Zeile NENNT, WORAN es liegt: Suche, Spaltenfilter oder
+        // beides. Solange nur der Spaltenfilter einschraenken konnte, war
+        // "(Spaltenfilter aktiv)" eindeutig; seit die Suche daneben auf
+        // dieselben Zeilen wirkt, waere derselbe Satz bei einem blossen
+        // Suchwort schlicht falsch - und wer die Ursache nicht kennt,
+        // sucht sie am falschen Bedienelement.
+        const grund = spaltenkopfSuchtext && spaltenkopfFilterwerte.size > 0
+            ? t('common.reasonBoth')
+            : spaltenkopfSuchtext ? t('common.reasonSearch') : t('common.reasonColumnFilter');
         const text = document.createElement('span');
         text.textContent = angezeigtAnzahl === gesamt
             ? mengeFormat(gesamt, 'zeile')
-            : t('common.rowsFiltered', { angezeigt: zahlFormat(angezeigtAnzahl), zeilenPhrase: mengeFormat(gesamt, 'zeile') });
+            : t('common.rowsFiltered', { angezeigt: zahlFormat(angezeigtAnzahl), zeilenPhrase: mengeFormat(gesamt, 'zeile'), grund });
         zeile.append(text);
 
         const zuruecksetzen = document.createElement('button');
         zuruecksetzen.type = 'button';
         zuruecksetzen.className = 'spaltenkopf-hinweis-knopf';
         zuruecksetzen.textContent = t('common.columnFilterReset');
-        zuruecksetzen.addEventListener('click', () => {
-            spaltenkopfFilterwerte = new Map();
-            zeichneArbeitstabelle();
-        });
+        zuruecksetzen.addEventListener('click', spaltenkopfEinschraenkungenAufheben);
         zeile.append(zuruecksetzen);
     }
 
@@ -7635,10 +8193,7 @@ function baueLeerzeile(spalten, aktionen) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.textContent = t('common.columnFilterReset');
-    knopf.addEventListener('click', () => {
-        spaltenkopfFilterwerte = new Map();
-        zeichneArbeitstabelle();
-    });
+    knopf.addEventListener('click', spaltenkopfEinschraenkungenAufheben);
     td.append(knopf);
     tr.append(td);
     return tr;
@@ -8148,39 +8703,53 @@ document.addEventListener('click', (e) => {
 // ohne eigene Zwischenspeicherung hier im Skript.
 const ZEBRA_SPEICHERSCHLUESSEL = 'velocity-wawi-zebra';
 
-// ===== Ein- und Ausblenden der Navigation (Gestaltungsauftrag Punkt 1,
-// woertlich: "ich finde das Blau links zu erdrueckend ... man sollte
-// auch - applemaessig - die linke Seite ein-/ausblenden koennen") =====
+// ===== Breite und schmale Navigation (Gestaltungsauftrag Punkt 3,
+// woertlich: "die eingeklappte linke Seite verkuerzt sich nicht zu einem
+// Strip, wo nur die Icons zu sehen sind") =====
 //
-// Dieselbe Machart und dieselbe Begruendung wie beim Zebramuster direkt
-// darueber und bei der Kopftafel weiter oben: eine reine
-// Anzeigepraeferenz ohne fachliche Bedeutung, in localStorage statt in
-// der Datenbank. Sie ueberlebt damit von sich aus BEIDE vom Auftrag
-// verlangten Faelle - den Bereichswechsel (bereichWechseln() leert nur
-// #arbeitsliste/#detailmaske, nie den Browserspeicher) und das Neuladen
-// der Seite.
+// KURSKORREKTUR, und die Geschichte gehoert hierher, weil sie die
+// Entscheidung traegt: es gab diesen Symbolstreifen schon einmal (56px,
+// nur Icons). Er wich auf Wunsch ("applemaessig ein-/ausblenden") dem
+// vollstaendigen Verschwinden der Leiste. Jetzt ist der Streifen
+// ausdruecklich zurueckgefordert. Zwei Zustaende bleiben es damit
+// weiterhin - nur heissen sie nicht mehr "da oder weg", sondern
+// BREIT (Symbol und Text) oder SCHMAL (nur Symbole).
 //
-// ZWEI ZUSTAENDE, NICHT DREI: es gab hier einmal eine dritte, schmale
-// Zwischenform (nur Symbole, 56px) - entfallen, siehe "EIN SCHALTER,
-// ZWEI ZUSTAENDE, NICHT DREI" bei --nav-breite-weg in style.css. Der
-// Speicherschluessel heisst deshalb bewusst nicht mehr "...-schmal",
-// sondern "...-weg": er speichert jetzt "da oder nicht da", nicht mehr
-// "breit oder schmal". Ein bereits im Browser gespeicherter alter Wert
-// unter dem alten Namen wird dadurch schlicht nicht mehr gelesen - der
-// Vorgabezustand (ausgeklappt) greift dann einmalig neu, kein Fehler-
-// zustand, keine Migration noetig fuer eine reine Anzeigepraeferenz ohne
-// fachliche Bedeutung.
+// WAS DER UNTERSCHIED PRAKTISCH BEDEUTET, und warum er mehr ist als eine
+// andere Zahl: eine Leiste der Breite 0 war WEG - sie musste deshalb
+// inert und aria-hidden gesetzt werden, damit ihre Knoepfe nicht
+// unsichtbar im Tabweg und im Bedienbaum stehenblieben. Ein
+// Symbolstreifen ist das Gegenteil davon: er ist DA und voll bedienbar,
+// nur schmal. inert/aria-hidden faellt hier deshalb ersatzlos weg - sie
+// zu setzen hiesse, eine sichtbare Navigation vor Tastatur und
+// Bildschirmleser zu verstecken.
 //
-// VORGABE SICHTBAR, anders als bei der Kopftafel: eine Tafel voller
+// DER NAME BEIM UEBERFAHREN: schmal traegt jeder Punkt nur noch sein
+// Symbol. Der zugaengliche Name steht unveraendert im aria-label des
+// Knopfs (siehe navigationAufbauen() oben) - ein Bildschirmleser
+// verliert also nichts. Ein sehendes Auge dagegen schon, und dafuer gibt
+// es das Hinweisfenster dieser Datei (hinweisfensterZeigen(..., 'rechts')
+// - die Lage 'rechts' stammt aus genau diesem frueheren Symbolstreifen
+// und ist seither ungenutzt stehengeblieben).
+//
+// Speicherort wie beim Zebramuster und bei der Kopftafel: eine reine
+// Anzeigepraeferenz ohne fachliche Bedeutung gehoert in localStorage,
+// nicht in die Datenbank. Sie ueberlebt damit Bereichswechsel
+// (bereichWechseln() leert nur #arbeitsliste/#detailmaske) und Neuladen.
+//
+// VORGABE BREIT, anders als bei der Kopftafel: eine Tafel voller
 // Kennzahlen ist Beiwerk, das man aufklappt, wenn man es braucht - eine
 // Navigation ist der Weg selbst. Wer die Anwendung zum ersten Mal
-// oeffnet, soll lesen koennen, welche Bereiche es gibt, nicht raten
-// muessen, dass links ueberhaupt etwas versteckt liegt. Deshalb hier der
-// einfache Vergleich auf 'an' (fehlender Schluessel => sichtbar), nicht
-// der umgekehrte wie bei kopftafelEingeklappt().
-const NAVIGATION_SPEICHERSCHLUESSEL = 'velocity-wawi-navigation-weg';
+// oeffnet, soll lesen koennen, welche Bereiche es gibt.
+//
+// NEUER SCHLUESSELNAME, wie schon beim letzten Bedeutungswechsel: der
+// Schluessel speicherte zuletzt "da oder nicht da" ("...-weg"), jetzt
+// "breit oder schmal". Ein alter Wert unter dem alten Namen wird schlicht
+// nicht mehr gelesen - der Vorgabezustand greift dann einmalig neu, keine
+// Migration noetig fuer eine Anzeigepraeferenz ohne fachliche Bedeutung.
+const NAVIGATION_SPEICHERSCHLUESSEL = 'velocity-wawi-navigation-schmal';
 
-function navigationVersteckt() {
+function navigationSchmalGespeichert() {
     return localStorage.getItem(NAVIGATION_SPEICHERSCHLUESSEL) === 'an';
 }
 
@@ -8188,28 +8757,16 @@ function navigationVersteckt() {
 // Stilblatt. Die Klasse muss auf <body> sitzen und nicht auf
 // #navigation, weil sie die SPURBREITE des Rasters aendert - und die
 // steht an #zustand-arbeit, dem ELTERNELEMENT der Navigation (siehe
-// body.navigation-weg #zustand-arbeit in style.css). Ein Kind kann seine
-// eigene Rasterspur nicht setzen.
-function navigationAnwenden(versteckt) {
-    document.body.classList.toggle('navigation-weg', versteckt);
+// body.navigation-schmal #zustand-arbeit in style.css). Ein Kind kann
+// seine eigene Rasterspur nicht setzen.
+function navigationAnwenden(schmal) {
+    document.body.classList.toggle('navigation-schmal', schmal);
     const knopf = document.getElementById('knopf-navigation');
     // aria-expanded beschreibt die NAVIGATION (aria-controls), nicht den
-    // Knopf: sichtbar = true.
-    knopf.setAttribute('aria-expanded', String(!versteckt));
-    // INERT STATT NUR OPTIK: eine ausgeblendete Leiste (Breite 0, siehe
-    // style.css) darf keinen Tastaturfokus mehr aufnehmen und keinem
-    // Bildschirmleser mehr begegnen - eine Rasterspur von 0px verhindert
-    // das allein nicht (die Knoepfe bleiben im Bedienbaum, ein Tab
-    // koennte sie weiterhin erreichen, unsichtbar). inert (Basline seit
-    // 2023, Chrome 102+/Safari 15.5+/Firefox 112+ - dieselbe Grosszuegig-
-    // keit bei Browserunterstuetzung wie :has() an anderer Stelle dieser
-    // Datei) nimmt den ganzen Teilbaum sowohl aus der Tabreihenfolge als
-    // auch aus dem Accessibility-Baum heraus. aria-hidden zusaetzlich,
-    // nicht statt inert: ein zweites, redundantes Netz fuer den seltenen
-    // Fall eines Bildschirmlesers, der inert selbst noch nicht als
-    // "Barrierebaum-Ausschluss" wertet.
-    document.getElementById('navigation').inert = versteckt;
-    document.getElementById('navigation').setAttribute('aria-hidden', String(versteckt));
+    // Knopf: breit (Symbol UND Text) = true, schmal (nur Symbole) = false.
+    knopf.setAttribute('aria-expanded', String(!schmal));
+    // KEIN inert, KEIN aria-hidden mehr (siehe Kopfkommentar): der
+    // Streifen ist sichtbar und bedienbar, er ist nur schmal.
     // Derselbe Stolperstein wie beim Einklappen der Kopftafel (siehe
     // dort): das Hinweisfenster zeigt moeglicherweise gerade auf eine
     // Rubrik, die sich unter ihm wegbewegt - ohne Mausbewegung feuert
@@ -8219,13 +8776,125 @@ function navigationAnwenden(versteckt) {
 
 // Sofort beim Laden dieser Datei, aus demselben Grund wie
 // zebraAnwenden() weiter unten: sonst stuende die Leiste beim ersten
-// Aufbau kurz sichtbar da und spraenge dann weg.
-navigationAnwenden(navigationVersteckt());
+// Aufbau kurz breit da und spraenge dann zusammen.
+navigationAnwenden(navigationSchmalGespeichert());
 
+// ===== FEHLER, GEMELDET ALS "das Icon zum Einklappen funktioniert
+// nicht" - Ursache und Behebung =====
+//
+// Hier stand:
+//
+//     const neu = !navigationVersteckt();                 // aus localStorage
+//     localStorage.setItem(SCHLUESSEL, neu ? 'an' : 'aus');
+//     navigationAnwenden(neu);
+//
+// Zwei Fehler in drei Zeilen, beide im Browser nachgestellt (siehe
+// Bericht), beide mit demselben sichtbaren Ergebnis: der Klick kommt an,
+// der Knopf hat Fokus, das Ereignis feuert - und auf dem Bildschirm
+// passiert nichts.
+//
+//   1. DER ZUSTAND WURDE AUS DEM SPEICHER GELESEN, NICHT VOM BILDSCHIRM.
+//      "Was zeigt die Oberflaeche gerade" steht im DOM, nicht in
+//      localStorage. Weichen beide voneinander ab, schaltet dieser Klick
+//      den SPEICHER um und wendet einen Zustand an, der ohnehin schon
+//      dasteht - der erste Klick ist tot, erst der zweite wirkt.
+//      Abweichen koennen sie ganz gewoehnlich: ein ZWEITES offenes Tab
+//      derselben Anwendung schreibt denselben Schluessel (localStorage
+//      ist je Herkunft gemeinsam, nicht je Tab), und schon zeigt dieses
+//      Tab breit, waehrend der Speicher "schmal" sagt.
+//   2. GESPEICHERT WURDE VOR DEM ANWENDEN. Wirft setItem - privater
+//      Modus, volles Speicherkontingent, abgeschaltete Website-Daten -,
+//      bricht der Rueckruf ab, BEVOR navigationAnwenden() laeuft: der
+//      Griff ist dann dauerhaft tot, obwohl an der Darstellung selbst
+//      nichts fehlt.
+//
+// Beides ist genau die Reihenfolge, die der Umschalter der Kopftafel und
+// der Zebraschalter in dieser Datei schon immer richtig hatten: erst den
+// sichtbaren Zustand aus dem DOM ableiten und anwenden, dann - und nur
+// als Beiwerk - merken. Ein fehlgeschlagenes Merken kostet die
+// Einstellung fuer die naechste Sitzung, nie die Bedienung jetzt.
 document.getElementById('knopf-navigation').addEventListener('click', () => {
-    const neu = !navigationVersteckt();
-    localStorage.setItem(NAVIGATION_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
+    // Quelle der Wahrheit: was der Bildschirm zeigt.
+    const neu = !document.body.classList.contains('navigation-schmal');
     navigationAnwenden(neu);
+    try {
+        localStorage.setItem(NAVIGATION_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
+    } catch (fehler) {
+        // Absichtlich nur in die Konsole: die Umschaltung IST erfolgt,
+        // sie ueberlebt nur das naechste Neuladen nicht. Eine Meldung in
+        // der Statuszeile waere lauter als der Verlust.
+        console.warn('Navigationsbreite liess sich nicht merken:', fehler);
+    }
+});
+
+// ===== Das gemeinsame Suchfeld der Kopfleiste =====
+//
+// Die Verdrahtung stand bis zu diesem Umbau in kunden.js, mit der
+// ausdruecklichen Notiz: "Braucht ein zweiter Bereich sie kuenftig auch,
+// gehoert sie dann - und erst dann - nach rahmen.js gezogen." Genau
+// dieser Fall ist eingetreten: seit Punkt 5 des Gestaltungsauftrags
+// suchen ALLE fuenf Bereiche ueber dieses eine Feld. Sie steht deshalb
+// jetzt hier, wie Werkzeugleiste, Filterleiste und Spaltenkopf vor ihr.
+//
+// ZWEI WEGE, EINE BEDEUTUNG (siehe spaltenkopfSuchtext weiter oben):
+// traegt der Bereich sucheSelbst, macht dieser Handler nichts ausser dem
+// sichtbaren Zustand - der Bereich hoert selbst zu (kunden.js sucht
+// serverseitig). Sonst filtert der Tabellenbaustein die bereits
+// geladenen Zeilen.
+// Eine Ansicht OHNE Liste kann nicht durchsucht werden - und darf das
+// Feld dann auch nicht anbieten. Genau EINE gibt es heute: der
+// Unterreiter "Landkarte" der Stationen (stationen.js ruft dies dort
+// auf). Das Feld wird VERSTECKT, nicht deaktiviert: ein ausgegrautes
+// Bedienelement ist eine Einladung, nach dem Grund zu fragen - dieselbe
+// Haltung, mit der die Navigation nicht erlaubte Bereiche gar nicht erst
+// zeigt, und genau der Punkt des Auftrags ("eine abgeschaltete Suche,
+// die trotzdem dasteht, ist schlechter als keine"). bereichWechseln()
+// blendet es bei jedem Wechsel wieder ein, ein Bereich muss das
+// Zuruecknehmen also nicht selbst besorgen.
+function sucheAnbieten(sichtbar) {
+    const feld = document.getElementById('feld-suche');
+    // Eigene Klasse statt des hidden-Attributs - siehe
+    // .feld-suche-ohne-liste in style.css fuer die Begruendung (das
+    // Dreispaltenraster der Kopfleiste darf seine mittlere Spur nicht
+    // verlieren).
+    feld.classList.toggle('feld-suche-ohne-liste', !sichtbar);
+    if (!sichtbar) {
+        feld.value = '';
+        feld.classList.remove('feld-suche-aktiv');
+        spaltenkopfSuchtext = '';
+    }
+}
+
+function sucheBeschriften(bereich) {
+    const feld = document.getElementById('feld-suche');
+    const text = bereich.suchePlatzhalterSchluessel
+        ? t(bereich.suchePlatzhalterSchluessel) : t('common.searchPlaceholder');
+    feld.placeholder = text;
+    feld.setAttribute('aria-label', text);
+}
+
+const feldSucheKopf = document.getElementById('feld-suche');
+let sucheVerzoegerungKopf = null;
+feldSucheKopf.addEventListener('input', () => {
+    // "ob es gerade etwas einschraenkt" (Auftrag) - sofort beim Tippen,
+    // nicht erst nach der Verzoegerung, sonst wirkte das Feld fuer einen
+    // Moment weiter leer, obwohl schon etwas darinsteht.
+    feldSucheKopf.classList.toggle('feld-suche-aktiv', feldSucheKopf.value.trim() !== '');
+    // Der Bereich sucht selbst (serverseitig) - dann haelt er auch seinen
+    // eigenen Zeitgeber, und dieser Baustein haelt sich vollstaendig
+    // heraus. Zwei Sucher auf denselben Zeilen waeren genau der Zustand,
+    // den dieser Umbau beseitigt.
+    if (aktiverBereich?.sucheSelbst) return;
+    clearTimeout(sucheVerzoegerungKopf);
+    // 300ms, dieselbe Zeitspanne wie bei jedem anderen Eingabefeld dieser
+    // Oberflaeche (Spaltenfilter, frueher der Alters-Schieber).
+    sucheVerzoegerungKopf = setTimeout(() => {
+        spaltenkopfSuchtext = feldSucheKopf.value.trim();
+        // Nur zeichnen, wenn ueberhaupt eine Tabelle dasteht: ein Bereich
+        // kann gerade eine Leermaske zeigen (kein Rad im Bestand), dann
+        // gibt es nichts zu durchsuchen.
+        if (spaltenkopfListe) zeichneArbeitstabelle();
+    }, 300);
 });
 
 function zebraGespeichert() {
@@ -8318,16 +8987,7 @@ async function spracheAnwenden(code) {
         if (beschriftung) beschriftung.textContent = t(bereich.titelSchluessel);
     });
 
-    if (aktiverBereich) {
-        const feldSucheGlobal = document.getElementById('feld-suche');
-        if (aktiverBereich.suchePlatzhalterSchluessel) {
-            feldSucheGlobal.placeholder = t(aktiverBereich.suchePlatzhalterSchluessel);
-            feldSucheGlobal.setAttribute('aria-label', t(aktiverBereich.suchePlatzhalterSchluessel));
-        } else {
-            feldSucheGlobal.placeholder = t('common.noSearchPlaceholder');
-            feldSucheGlobal.setAttribute('aria-label', t('common.noSearchAria'));
-        }
-    }
+    if (aktiverBereich) sucheBeschriften(aktiverBereich);
 
     // Name/Rollen im Profilmenue tragen selbst keinen Uebersetzungstext
     // (Rollencodes bleiben unveraendert, siehe Bericht), aber
