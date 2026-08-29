@@ -1184,6 +1184,10 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
 
     return {
         titel: t('board.revenueTypeTitle'),
+        zeit: t('board.periodRange', {
+            von: monatFormat(fenster[0]),
+            bis: monatFormat(fenster[fenster.length - 1])
+        }),
         // "Umsatz je Rad und Tag" - die Kennzahl, die "analytischer" von
         // "mehr Zahlen" unterscheidet: der Gesamtumsatz ist ein Fakt,
         // "traegt sich die Flotte damit" ist eine Frage, die erst ein
@@ -1471,6 +1475,14 @@ function umsatzKundengruppeKopftafel(zeilen) {
 
     return {
         titel: t('board.revenueGroupTitle'),
+        // Der Zeitraum steht jetzt in der eigenen Zeitzeile der Tafel
+        // (siehe zeigeKopftafel() in rahmen.js) statt mitten im
+        // Bezugssatz - damit steht er auf JEDER Tafel an derselben
+        // Stelle, auch auf denen ohne Periode.
+        zeit: t('board.periodRange', {
+            von: monatFormat(fenster[0]),
+            bis: monatFormat(fenster[fenster.length - 1])
+        }),
         bezug: t('board.revenueReference', {
             umsatz: geldFormat(umsatzGesamt), fahrtenPhrase: mengeFormat(fahrtenGesamt, 'fahrt'),
             vonMonat: monatFormat(fenster[0]), bisMonat: monatFormat(fenster[fenster.length - 1])
@@ -1553,6 +1565,14 @@ function kmCo2Kopftafel(zeilen, radtypNamen) {
 
     return {
         titel: t('board.kmTitle'),
+        // Der Zeitraum steht jetzt in der eigenen Zeitzeile der Tafel
+        // (siehe zeigeKopftafel() in rahmen.js) statt mitten im
+        // Bezugssatz - damit steht er auf JEDER Tafel an derselben
+        // Stelle, auch auf denen ohne Periode.
+        zeit: t('board.periodRange', {
+            von: monatFormat(fenster[0]),
+            bis: monatFormat(fenster[fenster.length - 1])
+        }),
         // ===== DIE SPALTE "DATENGUETE" IST GESTRICHEN, UND WARUM =====
         // Hier stand ein 100-%-Strukturbalken "gemessen / geschaetzt".
         // Nachgerechnet ueber das Zwoelfmonatsfenster liegt der
@@ -1686,6 +1706,14 @@ function stationsauslastungKopftafel(zeilen) {
 
     return {
         titel: t('board.stationLoadTitle'),
+        // Diese Tafel mischt zwei Zeitbezuege, und das muss sie sagen:
+        // belegt/fuellstand kommen aus fahrrad_position und gelten JETZT,
+        // abgaenge/zugaenge zaehlen JEDE abgeschlossene Ausleihe seit
+        // Betriebsbeginn (siehe v_wawi_stationsauslastung in
+        // 0018_wawi_sichten.sql - dort steht keine Zeitgrenze). Ein
+        // einzelner Zeitraum waere hier falsch, ein einzelner
+        // Zeitstempel ebenso.
+        zeit: t('board.stationLoadTime'),
         bezug: t('board.stationLoadReference', {
             stationenPhrase: mengeFormat(zeilen.length, 'station'),
             fahrten: zahlFormat(zeilen.reduce((s, z) => s + (Number(z.abgaenge) || 0), 0))

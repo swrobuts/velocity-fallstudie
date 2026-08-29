@@ -2719,6 +2719,30 @@ body.navigation-schmal #navigation button:focus-visible {
   line-height: 1.4;
 }
 
+/* ===== DIE ZEITZEILE (29.08.2026) =====
+   Auftrag, woertlich: "bei allen Kopfleisten fehlt mir der Zeitbezug, ich
+   sehe nicht auf welche Periode sich die Werte beziehen".
+
+   Sie steht UNTER dem Bezug und ist noch eine Spur leiser: der Bezug sagt,
+   WORAUF sich die Zahlen beziehen (Grundgesamtheit), die Zeitzeile WANN.
+   Beides gehoert zusammen, keines ist der Titel.
+
+   Mono und weiter gesperrt wie die uebrigen Zeitangaben dieser Oberflaeche
+   (Kopfleiste rechts oben, Sitzungsdauer): eine Zeitangabe soll man als
+   solche erkennen, ohne sie zu lesen. */
+.kopftafel-zeit {
+  margin: var(--raum-1) 0 0;
+  /* --grad-2 wie die Bezugszeile und die Sitzungsinfo: dieselbe Rangstufe,
+     denn beides ist Beiwerk zur Tafel. Kein eigener Schriftschnitt - die
+     Datei fuehrt keine Monovariable, und eine dafuer zu erfinden hiesse,
+     eine Rangordnung mit einem Werkzeug zu bauen, das es hier nicht gibt.
+     Die weitere Sperrung genuegt, um die Zeitangabe auf einen Blick von
+     der Bezugszeile darueber zu unterscheiden. */
+  font-size: var(--grad-2);
+  letter-spacing: 0.05em;
+  color: var(--text-leise);
+}
+
 /* Spaltenkopf: klein, leise, mit der Einheit als zweiter Zeile darunter
    (Hichert/IBCS - eine Zahlenspalte, die nicht sagt, WORIN sie misst,
    ist eine Ratefrage). vertical-align:bottom haelt die Namen aller

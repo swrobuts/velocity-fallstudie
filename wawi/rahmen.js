@@ -278,6 +278,54 @@ function zeitFormat(datum, optionen) {
     return new Date(datum).toLocaleTimeString(localeTag(), optionen);
 }
 
+// ===== ZEITBEZUG EINER KOPFTAFEL (29.08.2026) =====
+//
+// Befund, woertlich: "bei allen Kopfleisten fehlt mir der Zeitbezug, ich
+// sehe nicht auf welche Periode sich die Werte beziehen".
+//
+// Nachgesehen, welche Zeitspalte die Sichten hinter den sechs Tafeln
+// ueberhaupt fuehren - das Ergebnis trennt sie in zwei Arten, und das
+// entscheidet, WAS dort stehen darf:
+//
+//   MOMENTAUFNAHME - Flotte, Stationen, Kundschaft, Instandhaltung.
+//   "277 Raeder", "40 % gerade ausgeliehen". v_wawi_station und
+//   v_wawi_stationsauslastung fuehren gar keine Zeitspalte;
+//   angeschafft_am in v_wawi_flotte ist eine Eigenschaft DES RADES, kein
+//   Erhebungszeitraum. Diese Zahlen gelten JETZT. Ihre ehrliche Angabe
+//   ist ein Zeitstempel, kein Zeitraum - und ein Zeitraum-Waehler waere
+//   dort eine Zusage, welche die Daten nicht einloesen koennen.
+//
+//   PERIODE - die vier Auswertungen. v_wawi_umsatz_radtyp,
+//   v_wawi_umsatz_kundengruppe und v_wawi_km_co2 gruppieren nach monat,
+//   v_wawi_fahrten_je_tag nach tag. Hier IST ein Zeitraum da; er wurde
+//   nur nie genannt. Diese Tafeln liefern ihn selbst (tafel.zeit).
+//
+// Die Vorgabe ist der Zeitstempel, weil sie fuer vier der sechs Tafeln
+// stimmt - und weil eine vergessene Angabe damit falsch aussieht statt
+// zu fehlen.
+function standJetzt() {
+    const jetzt = new Date();
+    return t('board.asOf', {
+        datum: datumFormat(jetzt, { day: '2-digit', month: '2-digit', year: 'numeric' }),
+        zeit: zeitFormat(jetzt, { hour: '2-digit', minute: '2-digit' })
+    });
+}
+
+// Aus den Zeilen einer Periodentafel den tatsaechlich enthaltenen
+// Zeitraum ablesen - nicht aus einer Voreinstellung, sondern aus dem, was
+// wirklich geladen wurde. Eine Tafel soll sagen, was sie zeigt, nicht was
+// sie zeigen sollte.
+function zeitraumAusZeilen(zeilen, feld, optionen) {
+    const werte = (zeilen || [])
+        .map((z) => z && z[feld])
+        .filter(Boolean)
+        .sort();
+    if (werte.length === 0) return null;
+    const von = datumFormat(werte[0], optionen);
+    const bis = datumFormat(werte[werte.length - 1], optionen);
+    return von === bis ? von : t('board.periodRange', { von, bis });
+}
+
 // Trennzeichen der aktuellen Sprache, fuer zahlSkaliert() weiter unten:
 // die Funktion bekommt eine FERTIG formatierte Zahl und muss ihre
 // Gruppen erkennen, um die Tausendertrennzeichen optisch zurueckzunehmen -
@@ -747,6 +795,9 @@ const UEBERSETZUNGEN = {
     "unit.departuresPlusArrivals": "Abgänge und Zugänge",
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Bestand nach Modell",
+    "board.asOf": "Stand {datum}, {zeit} Uhr",
+    "board.stationLoadTime": "Belegung jetzt · Zu- und Abgänge seit Betriebsbeginn",
+    "board.periodRange": "{von} bis {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} von {herstellerPhrase} · Baujahre {vonJahr}–{bisJahr} · {quote} % gerade ausgeliehen",
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, Baujahr {jahr}, auf der Skala {vonJahr} bis {bisJahr}",
@@ -780,15 +831,15 @@ const UEBERSETZUNGEN = {
     "board.maintenanceFootnote": "Keine Abweichungsspalte und keine Mittelwerte: {schadenPhrase}, davon {offen} unerledigt, {minuten} Minuten erfasste Arbeitszeit – jede Kennzahl wäre hier eine Statistik über sich selbst.",
     "board.revenueTypeTitle": "Zwölf Monate nach Radtyp",
     "board.revenueGroupTitle": "Zwölf Monate nach Tarifgruppe",
-    "board.revenueReference": "{umsatz} und {fahrtenPhrase}, {vonMonat} bis {bisMonat}",
-    "board.revenueReferenceWithFleet": "{umsatz} und {fahrtenPhrase}, {vonMonat} bis {bisMonat} · {jeRadTag} je Rad und Tag ({raederPhrase})",
+    "board.revenueReference": "{umsatz} und {fahrtenPhrase}",
+    "board.revenueReferenceWithFleet": "{umsatz} und {fahrtenPhrase} · {jeRadTag} je Rad und Tag ({raederPhrase})",
     "board.revenuePerRide": "{betrag} je Fahrt",
     "board.monthlyCourseAria": "{name}: Verlauf {vonMonat} bis {bisMonat}, Höchstwert {max} im {maxMonat}, zuletzt {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % des Umsatzes bei {fahrtenanteil} % der Fahrten",
     "board.revenueTypeFootnote": "Umsatz je Fahrt beim City-Bike: {von} auf {nach} ({veraenderung}) ab {monat} – der einzige Tarifwechsel im Zeitraum.",
     "board.revenueGroupFootnote": "Kundenzahlen einzelner Monate lassen sich nicht addieren – dieselben Personen fahren in mehreren Monaten. Die Rubrik nennt deshalb den stärksten Monat, keine Summe.",
     "board.kmTitle": "Wegstrecke nach Radtyp",
-    "board.kmReference": "{km} auf {fahrtenPhrase}, {vonMonat} bis {bisMonat} · {anteil} der Fahrten geschätzt",
+    "board.kmReference": "{km} auf {fahrtenPhrase} · {anteil} der Fahrten geschätzt",
     "board.co2PerRide": "{kg} CO₂ je Fahrt",
     "board.kmPerRideAria": "{name}: {je} je Fahrt, Schnitt {schnitt}",
     "board.kmFootnote": "Der Schätzanteil ({anteil}) ist fahrtgewichtet gerechnet, nicht als Mittel der Monatsanteile: das ergäbe im gezeigten Zeitraum {ungewichtet} und über alle {monatszeilen} sogar {alleUngewichtet} statt {alleGewichtet} – schwach besetzte Monate wiegen in einem Mittel genauso schwer wie starke.",
@@ -1241,6 +1292,9 @@ const UEBERSETZUNGEN = {
     "unit.departuresPlusArrivals": "departures and arrivals",
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Stock by model",
+    "board.asOf": "As of {datum}, {zeit}",
+    "board.stationLoadTime": "Occupancy now · arrivals and departures since launch",
+    "board.periodRange": "{von} to {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} from {herstellerPhrase} · model years {vonJahr}–{bisJahr} · {quote} % on loan right now",
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, model year {jahr}, on the scale {vonJahr} to {bisJahr}",
@@ -1274,15 +1328,15 @@ const UEBERSETZUNGEN = {
     "board.maintenanceFootnote": "No deviation column and no averages: {schadenPhrase}, {offen} of them unresolved, {minuten} minutes of recorded work – any ratio here would be a statistic about itself.",
     "board.revenueTypeTitle": "Twelve months by bike type",
     "board.revenueGroupTitle": "Twelve months by tariff group",
-    "board.revenueReference": "{umsatz} and {fahrtenPhrase}, {vonMonat} to {bisMonat}",
-    "board.revenueReferenceWithFleet": "{umsatz} and {fahrtenPhrase}, {vonMonat} to {bisMonat} · {jeRadTag} per bike per day ({raederPhrase})",
+    "board.revenueReference": "{umsatz} and {fahrtenPhrase}",
+    "board.revenueReferenceWithFleet": "{umsatz} and {fahrtenPhrase} · {jeRadTag} per bike per day ({raederPhrase})",
     "board.revenuePerRide": "{betrag} per ride",
     "board.monthlyCourseAria": "{name}: course {vonMonat} to {bisMonat}, peak {max} in {maxMonat}, latest {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % of revenue with {fahrtenanteil} % of rides",
     "board.revenueTypeFootnote": "Revenue per ride for the City-Bike: {von} to {nach} ({veraenderung}) from {monat} – the only tariff change in the period.",
     "board.revenueGroupFootnote": "Monthly customer counts cannot be added up – the same people ride in several months. The row label therefore names the strongest month, not a total.",
     "board.kmTitle": "Distance by bike type",
-    "board.kmReference": "{km} over {fahrtenPhrase}, {vonMonat} to {bisMonat} · {anteil} of rides estimated",
+    "board.kmReference": "{km} over {fahrtenPhrase} · {anteil} of rides estimated",
     "board.co2PerRide": "{kg} CO₂ per ride",
     "board.kmPerRideAria": "{name}: {je} per ride, average {schnitt}",
     "board.kmFootnote": "The estimated share ({anteil}) is weighted by rides, not averaged over monthly shares: that would give {ungewichtet} for the period shown and even {alleUngewichtet} instead of {alleGewichtet} across all {monatszeilen} – in a plain average, thinly populated months weigh as much as busy ones.",
@@ -1735,6 +1789,9 @@ const UEBERSETZUNGEN = {
     "unit.departuresPlusArrivals": "çıkış ve giriş",
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Modele göre mevcut",
+    "board.asOf": "Durum: {datum}, {zeit}",
+    "board.stationLoadTime": "Doluluk şimdi · başlangıçtan bu yana giriş ve çıkışlar",
+    "board.periodRange": "{von} – {bis}",
     "board.fleetReference": "{raederPhrase} · {herstellerPhrase} üreticiden {modellePhrase} · model yılları {vonJahr}–{bisJahr} · şu anda %{quote} kirada",
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, model yılı {jahr}, {vonJahr}–{bisJahr} ölçeğinde",
@@ -1768,15 +1825,15 @@ const UEBERSETZUNGEN = {
     "board.maintenanceFootnote": "Sapma sütunu ve ortalama yok: {schadenPhrase}, bunlardan {offen} tanesi açık, kayıtlı {minuten} dakika çalışma – buradaki her oran kendi kendisinin istatistiği olurdu.",
     "board.revenueTypeTitle": "Bisiklet tipine göre on iki ay",
     "board.revenueGroupTitle": "Tarife grubuna göre on iki ay",
-    "board.revenueReference": "{umsatz} ve {fahrtenPhrase}, {vonMonat}–{bisMonat}",
-    "board.revenueReferenceWithFleet": "{umsatz} ve {fahrtenPhrase}, {vonMonat}–{bisMonat} · bisiklet başına günde {jeRadTag} ({raederPhrase})",
+    "board.revenueReference": "{umsatz} ve {fahrtenPhrase}",
+    "board.revenueReferenceWithFleet": "{umsatz} ve {fahrtenPhrase} · bisiklet başına günde {jeRadTag} ({raederPhrase})",
     "board.revenuePerRide": "sürüş başına {betrag}",
     "board.monthlyCourseAria": "{name}: {vonMonat}–{bisMonat} seyri, en yüksek {max} ({maxMonat}), son {aktuell}",
     "board.revenueVsRidesAria": "{name}: sürüşlerin %{fahrtenanteil} kadarıyla cironun %{umsatzanteil} kadarı",
     "board.revenueTypeFootnote": "City-Bike'ta sürüş başına ciro: {monat} itibarıyla {von} yerine {nach} ({veraenderung}) – dönemdeki tek tarife değişikliği.",
     "board.revenueGroupFootnote": "Aylık müşteri sayıları toplanamaz; aynı kişiler birden çok ayda sürüş yapar. Bu nedenle satır etiketi toplamı değil, en güçlü ayı gösterir.",
     "board.kmTitle": "Bisiklet tipine göre mesafe",
-    "board.kmReference": "{fahrtenPhrase} üzerinde {km}, {vonMonat}–{bisMonat} · sürüşlerin {anteil} kadarı tahmini",
+    "board.kmReference": "{fahrtenPhrase} üzerinde {km} · sürüşlerin {anteil} kadarı tahmini",
     "board.co2PerRide": "sürüş başına {kg} CO₂",
     "board.kmPerRideAria": "{name}: sürüş başına {je}, ortalama {schnitt}",
     "board.kmFootnote": "Tahmin payı ({anteil}) sürüşe göre ağırlıklı hesaplanır, aylık payların ortalaması değildir: gösterilen dönemde bu {ungewichtet}, tüm {monatszeilen} genelinde ise {alleGewichtet} yerine {alleUngewichtet} verirdi – düz ortalamada az sürüşlü aylar yoğun aylarla aynı ağırlığa sahiptir.",
@@ -2229,6 +2286,9 @@ const UEBERSETZUNGEN = {
     "unit.departuresPlusArrivals": "salidas y llegadas",
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Existencias por modelo",
+    "board.asOf": "A {datum}, {zeit}",
+    "board.stationLoadTime": "Ocupación ahora · entradas y salidas desde el inicio",
+    "board.periodRange": "{von} a {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} de {herstellerPhrase} · años {vonJahr}–{bisJahr} · {quote} % en préstamo ahora",
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, año {jahr}, en la escala de {vonJahr} a {bisJahr}",
@@ -2262,15 +2322,15 @@ const UEBERSETZUNGEN = {
     "board.maintenanceFootnote": "Sin columna de desviación ni promedios: {schadenPhrase}, {offen} sin resolver, {minuten} minutos de trabajo registrados; cualquier ratio sería aquí una estadística sobre sí misma.",
     "board.revenueTypeTitle": "Doce meses por tipo de bicicleta",
     "board.revenueGroupTitle": "Doce meses por grupo tarifario",
-    "board.revenueReference": "{umsatz} y {fahrtenPhrase}, de {vonMonat} a {bisMonat}",
-    "board.revenueReferenceWithFleet": "{umsatz} y {fahrtenPhrase}, de {vonMonat} a {bisMonat} · {jeRadTag} por bicicleta y día ({raederPhrase})",
+    "board.revenueReference": "{umsatz} y {fahrtenPhrase}",
+    "board.revenueReferenceWithFleet": "{umsatz} y {fahrtenPhrase} · {jeRadTag} por bicicleta y día ({raederPhrase})",
     "board.revenuePerRide": "{betrag} por viaje",
     "board.monthlyCourseAria": "{name}: curva de {vonMonat} a {bisMonat}, máximo {max} en {maxMonat}, último {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % de los ingresos con {fahrtenanteil} % de los viajes",
     "board.revenueTypeFootnote": "Ingresos por viaje de la City-Bike: de {von} a {nach} ({veraenderung}) desde {monat}, el único cambio de tarifa del periodo.",
     "board.revenueGroupFootnote": "Las cifras mensuales de clientes no se pueden sumar: las mismas personas viajan en varios meses. Por eso la fila indica el mes más fuerte y no una suma.",
     "board.kmTitle": "Distancia por tipo de bicicleta",
-    "board.kmReference": "{km} en {fahrtenPhrase}, de {vonMonat} a {bisMonat} · {anteil} de los viajes estimados",
+    "board.kmReference": "{km} en {fahrtenPhrase} · {anteil} de los viajes estimados",
     "board.co2PerRide": "{kg} de CO₂ por viaje",
     "board.kmPerRideAria": "{name}: {je} por viaje, media {schnitt}",
     "board.kmFootnote": "La proporción estimada ({anteil}) se pondera por viajes y no se promedia sobre las proporciones mensuales: eso daría {ungewichtet} en el periodo mostrado e incluso {alleUngewichtet} en lugar de {alleGewichtet} sobre {monatszeilen}; en una media simple, los meses poco poblados pesan tanto como los fuertes.",
@@ -2723,6 +2783,9 @@ const UEBERSETZUNGEN = {
     "unit.departuresPlusArrivals": "partenze e arrivi",
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Consistenza per modello",
+    "board.asOf": "Al {datum}, {zeit}",
+    "board.stationLoadTime": "Occupazione ora · entrate e uscite dall'avvio",
+    "board.periodRange": "{von} – {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} di {herstellerPhrase} · anni {vonJahr}–{bisJahr} · {quote} % attualmente in prestito",
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, anno {jahr}, sulla scala da {vonJahr} a {bisJahr}",
@@ -2756,15 +2819,15 @@ const UEBERSETZUNGEN = {
     "board.maintenanceFootnote": "Nessuna colonna di scostamento e nessuna media: {schadenPhrase}, di cui {offen} non risolti, {minuten} minuti di lavoro registrati – qui ogni indice sarebbe una statistica su sé stessa.",
     "board.revenueTypeTitle": "Dodici mesi per tipo di bici",
     "board.revenueGroupTitle": "Dodici mesi per gruppo tariffario",
-    "board.revenueReference": "{umsatz} e {fahrtenPhrase}, da {vonMonat} a {bisMonat}",
-    "board.revenueReferenceWithFleet": "{umsatz} e {fahrtenPhrase}, da {vonMonat} a {bisMonat} · {jeRadTag} per bici al giorno ({raederPhrase})",
+    "board.revenueReference": "{umsatz} e {fahrtenPhrase}",
+    "board.revenueReferenceWithFleet": "{umsatz} e {fahrtenPhrase} · {jeRadTag} per bici al giorno ({raederPhrase})",
     "board.revenuePerRide": "{betrag} per corsa",
     "board.monthlyCourseAria": "{name}: andamento da {vonMonat} a {bisMonat}, massimo {max} in {maxMonat}, ultimo {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % dei ricavi con {fahrtenanteil} % delle corse",
     "board.revenueTypeFootnote": "Ricavi per corsa della City-Bike: da {von} a {nach} ({veraenderung}) da {monat} – l'unico cambio di tariffa del periodo.",
     "board.revenueGroupFootnote": "I conteggi mensili dei clienti non si sommano: le stesse persone viaggiano in più mesi. La riga indica quindi il mese più forte, non un totale.",
     "board.kmTitle": "Percorrenza per tipo di bici",
-    "board.kmReference": "{km} su {fahrtenPhrase}, da {vonMonat} a {bisMonat} · {anteil} delle corse stimate",
+    "board.kmReference": "{km} su {fahrtenPhrase} · {anteil} delle corse stimate",
     "board.co2PerRide": "{kg} di CO₂ per corsa",
     "board.kmPerRideAria": "{name}: {je} per corsa, media {schnitt}",
     "board.kmFootnote": "La quota stimata ({anteil}) è ponderata per corse e non è la media delle quote mensili: quella darebbe {ungewichtet} nel periodo mostrato e addirittura {alleUngewichtet} invece di {alleGewichtet} su {monatszeilen} – in una media semplice i mesi poco popolati pesano quanto quelli forti.",
@@ -3217,6 +3280,9 @@ const UEBERSETZUNGEN = {
     "unit.departuresPlusArrivals": "wyjazdy i przyjazdy",
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Stan według modelu",
+    "board.asOf": "Stan na {datum}, {zeit}",
+    "board.stationLoadTime": "Zajętość teraz · przyjazdy i odjazdy od uruchomienia",
+    "board.periodRange": "{von} – {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} od {herstellerPhrase} · roczniki {vonJahr}–{bisJahr} · {quote} % obecnie wypożyczonych",
     "board.fleetStatusAria": "{name}: {aufteilung}",
     "board.fleetYearAria": "{name}, rocznik {jahr}, na skali od {vonJahr} do {bisJahr}",
@@ -3250,15 +3316,15 @@ const UEBERSETZUNGEN = {
     "board.maintenanceFootnote": "Bez kolumny odchylenia i bez średnich: {schadenPhrase}, w tym {offen} nierozwiązanych, {minuten} minut zapisanej pracy – każdy wskaźnik byłby tu statystyką o sobie samym.",
     "board.revenueTypeTitle": "Dwanaście miesięcy według typu roweru",
     "board.revenueGroupTitle": "Dwanaście miesięcy według grupy taryfowej",
-    "board.revenueReference": "{umsatz} i {fahrtenPhrase}, od {vonMonat} do {bisMonat}",
-    "board.revenueReferenceWithFleet": "{umsatz} i {fahrtenPhrase}, od {vonMonat} do {bisMonat} · {jeRadTag} na rower dziennie ({raederPhrase})",
+    "board.revenueReference": "{umsatz} i {fahrtenPhrase}",
+    "board.revenueReferenceWithFleet": "{umsatz} i {fahrtenPhrase} · {jeRadTag} na rower dziennie ({raederPhrase})",
     "board.revenuePerRide": "{betrag} na przejazd",
     "board.monthlyCourseAria": "{name}: przebieg od {vonMonat} do {bisMonat}, maksimum {max} w {maxMonat}, ostatnio {aktuell}",
     "board.revenueVsRidesAria": "{name}: {umsatzanteil} % przychodu przy {fahrtenanteil} % przejazdów",
     "board.revenueTypeFootnote": "Przychód na przejazd dla City-Bike: z {von} na {nach} ({veraenderung}) od {monat} – jedyna zmiana taryfy w okresie.",
     "board.revenueGroupFootnote": "Miesięcznych liczb klientów nie można sumować – te same osoby jeżdżą w wielu miesiącach. Wiersz podaje więc najsilniejszy miesiąc, nie sumę.",
     "board.kmTitle": "Dystans według typu roweru",
-    "board.kmReference": "{km} na {fahrtenPhrase}, od {vonMonat} do {bisMonat} · {anteil} przejazdów szacowanych",
+    "board.kmReference": "{km} na {fahrtenPhrase} · {anteil} przejazdów szacowanych",
     "board.co2PerRide": "{kg} CO₂ na przejazd",
     "board.kmPerRideAria": "{name}: {je} na przejazd, średnia {schnitt}",
     "board.kmFootnote": "Udział szacowany ({anteil}) liczony jest z wagą przejazdów, a nie jako średnia udziałów miesięcznych: ta dałaby {ungewichtet} w pokazanym okresie, a na {monatszeilen} nawet {alleUngewichtet} zamiast {alleGewichtet} – w zwykłej średniej słabo obsadzone miesiące ważą tyle samo co silne.",
@@ -6773,6 +6839,10 @@ function kopftafelWurzel() {
 //   titel:     was die Tafel gliedert ("Bestand nach Modell")
 //   bezug:     EINE Zeile Grundgesamtheit und Bezugsraum - die Angabe,
 //              ohne die keine Zahl darunter einzuordnen waere
+//   zeit:      der Zeitbezug. Fehlt er, setzt zeigeKopftafel() den
+//              Zeitstempel ein (siehe standJetzt()) - richtig fuer jede
+//              Momentaufnahme. Periodentafeln geben ihren tatsaechlich
+//              geladenen Zeitraum an (siehe zeitraumAusZeilen()).
 //   bild:      { quelle, alt } optional - ein Produktbild, das eine
 //              Aussage TRAEGT (siehe instandhaltung.js), nicht schmueckt
 //   spalten:   siehe kopftafelSpalte() unten
@@ -6849,6 +6919,13 @@ function zeigeKopftafel(kennung, tafel) {
         bezug.textContent = tafel.bezug;
         kopftexte.append(bezug);
     }
+    // IMMER, nicht nur wenn eine Tafel daran denkt: ohne Zeitangabe ist
+    // keine Zahl einzuordnen. Fehlt tafel.zeit, gilt der Zeitstempel -
+    // richtig fuer jede Momentaufnahme, siehe standJetzt() oben.
+    const zeitzeile = document.createElement('p');
+    zeitzeile.className = 'kopftafel-zeit';
+    zeitzeile.textContent = tafel.zeit || standJetzt();
+    kopftexte.append(zeitzeile);
     kopf.append(kopftexte);
     // Der Umschalter steht NICHT mehr im Kopf (Gestaltungsauftrag,
     // woertlich: "Es muss mittig am unteren Ende der Kopfleiste sein,
