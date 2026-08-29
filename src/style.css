@@ -3220,6 +3220,22 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      ohnehin die richtige Stelle dafür. */
   .stat { padding-inline: 0; }
   .stat-grid { column-gap: var(--af-s); }
+
+  /* WENIGER LINIEN, MEHR LUFT (29.08.2026)
+     Gemessen waren es sechs Haarlinien auf 220 Punkten Höhe: die
+     Unterkante der Abschnittsüberschrift, Ober- und Unterkante des
+     Bandes und drei zwischen den Zeilen. Dazu Zeilen von 34 Punkten
+     ganz ohne vertikales Polster.
+
+     Die Oberkante des Bandes fällt weg - sie steht vierzig Punkte
+     unter der Überschriftslinie und sagt dasselbe. Die Linien ZWISCHEN
+     den Zeilen fallen ebenfalls weg: sie trennen, was ohnehin
+     untereinander steht. Übrig bleiben zwei Linien, die den Block
+     einfassen, und Zeilen, die atmen. */
+  .stat-grid { border-top: 0; }
+  /* nth-child(n+3) aus dem 620er-Zweig schlaegt eine schlichte
+     .stat-Regel in der Spezifitaet - deshalb hier dieselbe Form. */
+  .stat, .stat:nth-child(n+3) { border-top: 0; padding-block: var(--a3); }
 }
 
 /* --------------------------------------------------------------------
@@ -3346,15 +3362,35 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
 
   .sticky-stage {
     /* Text links, Rad rechts. Der Text bekommt etwas mehr, weil er
-       umbricht; das Rad ist skalierbar und nimmt, was bleibt. */
+       umbricht; das Rad ist skalierbar und nimmt, was bleibt.
+
+       Die Leerzeile steht jetzt UNTEN, nicht zwischen Schlagzeile und
+       Aufruf. Vorher stand der Knopf am unteren Rand, mit einem
+       Loch darüber: die Spalte zerfiel in zwei Hälften, und die Fläche
+       zwischen Werbetext und Rad blieb ungenutzt. Jetzt bilden Zähler,
+       Schlagzeile und Aufruf einen zusammenhängenden Block. */
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    grid-template-rows: auto auto 1fr auto;
+    grid-template-rows: auto auto auto 1fr;
     column-gap: var(--a4);
+    /* Mehr Luft nach oben: der Zähler klebte unter dem Kopf. */
+    padding-top: 96px;
   }
 
   .top-meta { grid-area: 1 / 1; }
   .claim    { grid-area: 2 / 1; }
-  .hero-cta { grid-area: 4 / 1; align-self: end; }
+
+  /* Der Aufruf steht jetzt unmittelbar unter der Schlagzeile - dort,
+     wo man nach dem Lesen hinsieht - und trägt mehr Gewicht: höher,
+     größere Schrift, mehr Abstand nach oben. Er ist das Einzige auf
+     dieser Bühne, das etwas auslöst. */
+  .hero-cta {
+    grid-area: 3 / 1;
+    justify-self: start;
+    margin-top: var(--a4);
+    min-height: 60px;
+    padding-inline: var(--af-s);
+    font-size: var(--grad-kopf-s);
+  }
 
   /* Der Zähler richtete sich nach rechts aus - eine Regel vom
      Schreibtisch, wo er in der zweiten Spalte steht. Hier steht er über
