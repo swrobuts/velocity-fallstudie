@@ -51,6 +51,34 @@
 //
 // Eine vergessene Einstellung ist ein Schoenheitsfehler. Eine Anwendung,
 // die sich nicht bedienen laesst, ist keiner.
+// ===== DER KLAPPSCHALTER WIRD GANZ FRUEH VERDRAHTET =====
+//
+// Er hing bisher am Dateiende: getElementById('knopf-navigation')
+// .addEventListener(...). Das ist die verwundbarste Stelle der ganzen
+// Datei - alles, was davor auf Modulebene wirft, verhindert die
+// Verdrahtung, und der Knopf ist dann hoverbar und tot. Genau dieses
+// Bild hat der Nutzer gemeldet und ein Video davon geschickt: Hover
+// faerbt, aria-expanded kippt nie, die Leiste bleibt stehen. In der
+// Konsole stand kein Fehler - was nichts beweist, denn die
+// Entwicklerwerkzeuge zeichnen erst ab dem Oeffnen auf.
+//
+// Zwei Aenderungen, beide gegen dieselbe Klasse von Ausfall:
+//   1. GANZ OBEN, vor allem anderen. Was hier steht, laeuft, solange
+//      die Datei ueberhaupt geladen wird.
+//   2. DELEGIERT auf document statt direkt am Knopf. Der Zuhoerer
+//      braucht das Element beim Verdrahten nicht zu kennen; er findet
+//      es beim Klick. Damit ueberlebt er auch jedes Ersetzen des
+//      Knopfes - und die Reihenfolge von Skript und Markup wird egal.
+//
+// navigationAnwenden() steht weiter unten als Funktionsdeklaration und
+// ist damit hochgezogen; beim KLICK ist sie in jedem Fall vorhanden.
+document.addEventListener('click', (e) => {
+    if (!e.target.closest || !e.target.closest('#knopf-navigation')) return;
+    const neu = !document.body.classList.contains('navigation-schmal');
+    navigationAnwenden(neu);
+    merke(NAVIGATION_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
+});
+
 function gemerkt(schluessel) {
     try {
         return localStorage.getItem(schluessel);
@@ -9407,19 +9435,9 @@ navigationAnwenden(navigationSchmalGespeichert());
 // sichtbaren Zustand aus dem DOM ableiten und anwenden, dann - und nur
 // als Beiwerk - merken. Ein fehlgeschlagenes Merken kostet die
 // Einstellung fuer die naechste Sitzung, nie die Bedienung jetzt.
-document.getElementById('knopf-navigation').addEventListener('click', () => {
-    // Quelle der Wahrheit: was der Bildschirm zeigt.
-    const neu = !document.body.classList.contains('navigation-schmal');
-    navigationAnwenden(neu);
-    try {
-        merke(NAVIGATION_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
-    } catch (fehler) {
-        // Absichtlich nur in die Konsole: die Umschaltung IST erfolgt,
-        // sie ueberlebt nur das naechste Neuladen nicht. Eine Meldung in
-        // der Statuszeile waere lauter als der Verlust.
-        console.warn('Navigationsbreite liess sich nicht merken:', fehler);
-    }
-});
+// Die Verdrahtung dieses Knopfes steht GANZ OBEN in dieser Datei -
+// siehe die Begruendung dort. Hier bleibt nur der Hinweis, damit
+// niemand sie an dieser Stelle sucht.
 
 // ===== Das gemeinsame Suchfeld der Kopfleiste =====
 //
