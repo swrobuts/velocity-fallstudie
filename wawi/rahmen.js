@@ -833,8 +833,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "Wartungsauftrag vorhanden",
     "board.maintenanceNoOrder": "kein Wartungsauftrag",
     "board.maintenanceFootnote": "Keine Abweichungsspalte und keine Mittelwerte: {schadenPhrase}, davon {offen} unerledigt, {minuten} Minuten erfasste Arbeitszeit – jede Kennzahl wäre hier eine Statistik über sich selbst.",
-    "board.revenueTypeTitle": "Zwölf Monate nach Radtyp",
-    "board.revenueGroupTitle": "Zwölf Monate nach Tarifgruppe",
+    "board.revenueTypeTitle": "Umsatz nach Radtyp",
+    "board.revenueGroupTitle": "Umsatz nach Tarifgruppe",
     "board.revenueReference": "{umsatz} und {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} und {fahrtenPhrase} · {jeRadTag} je Rad und Tag ({raederPhrase})",
     "board.revenuePerRide": "{betrag} je Fahrt",
@@ -1334,8 +1334,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "work order exists",
     "board.maintenanceNoOrder": "no work order",
     "board.maintenanceFootnote": "No deviation column and no averages: {schadenPhrase}, {offen} of them unresolved, {minuten} minutes of recorded work – any ratio here would be a statistic about itself.",
-    "board.revenueTypeTitle": "Twelve months by bike type",
-    "board.revenueGroupTitle": "Twelve months by tariff group",
+    "board.revenueTypeTitle": "Revenue by bike type",
+    "board.revenueGroupTitle": "Revenue by tariff group",
     "board.revenueReference": "{umsatz} and {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} and {fahrtenPhrase} · {jeRadTag} per bike per day ({raederPhrase})",
     "board.revenuePerRide": "{betrag} per ride",
@@ -1835,8 +1835,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "iş emri var",
     "board.maintenanceNoOrder": "iş emri yok",
     "board.maintenanceFootnote": "Sapma sütunu ve ortalama yok: {schadenPhrase}, bunlardan {offen} tanesi açık, kayıtlı {minuten} dakika çalışma – buradaki her oran kendi kendisinin istatistiği olurdu.",
-    "board.revenueTypeTitle": "Bisiklet tipine göre on iki ay",
-    "board.revenueGroupTitle": "Tarife grubuna göre on iki ay",
+    "board.revenueTypeTitle": "Bisiklet tipine göre ciro",
+    "board.revenueGroupTitle": "Tarife grubuna göre ciro",
     "board.revenueReference": "{umsatz} ve {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} ve {fahrtenPhrase} · bisiklet başına günde {jeRadTag} ({raederPhrase})",
     "board.revenuePerRide": "sürüş başına {betrag}",
@@ -2336,8 +2336,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "existe orden de trabajo",
     "board.maintenanceNoOrder": "sin orden de trabajo",
     "board.maintenanceFootnote": "Sin columna de desviación ni promedios: {schadenPhrase}, {offen} sin resolver, {minuten} minutos de trabajo registrados; cualquier ratio sería aquí una estadística sobre sí misma.",
-    "board.revenueTypeTitle": "Doce meses por tipo de bicicleta",
-    "board.revenueGroupTitle": "Doce meses por grupo tarifario",
+    "board.revenueTypeTitle": "Facturación por tipo de bicicleta",
+    "board.revenueGroupTitle": "Facturación por grupo tarifario",
     "board.revenueReference": "{umsatz} y {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} y {fahrtenPhrase} · {jeRadTag} por bicicleta y día ({raederPhrase})",
     "board.revenuePerRide": "{betrag} por viaje",
@@ -2837,8 +2837,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "ordine di lavoro presente",
     "board.maintenanceNoOrder": "nessun ordine di lavoro",
     "board.maintenanceFootnote": "Nessuna colonna di scostamento e nessuna media: {schadenPhrase}, di cui {offen} non risolti, {minuten} minuti di lavoro registrati – qui ogni indice sarebbe una statistica su sé stessa.",
-    "board.revenueTypeTitle": "Dodici mesi per tipo di bici",
-    "board.revenueGroupTitle": "Dodici mesi per gruppo tariffario",
+    "board.revenueTypeTitle": "Fatturato per tipo di bici",
+    "board.revenueGroupTitle": "Fatturato per gruppo tariffario",
     "board.revenueReference": "{umsatz} e {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} e {fahrtenPhrase} · {jeRadTag} per bici al giorno ({raederPhrase})",
     "board.revenuePerRide": "{betrag} per corsa",
@@ -3338,8 +3338,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "istnieje zlecenie",
     "board.maintenanceNoOrder": "brak zlecenia",
     "board.maintenanceFootnote": "Bez kolumny odchylenia i bez średnich: {schadenPhrase}, w tym {offen} nierozwiązanych, {minuten} minut zapisanej pracy – każdy wskaźnik byłby tu statystyką o sobie samym.",
-    "board.revenueTypeTitle": "Dwanaście miesięcy według typu roweru",
-    "board.revenueGroupTitle": "Dwanaście miesięcy według grupy taryfowej",
+    "board.revenueTypeTitle": "Obrót wg typu roweru",
+    "board.revenueGroupTitle": "Obrót wg grupy taryfowej",
     "board.revenueReference": "{umsatz} i {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} i {fahrtenPhrase} · {jeRadTag} na rower dziennie ({raederPhrase})",
     "board.revenuePerRide": "{betrag} na przejazd",
@@ -5415,6 +5415,25 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
     const werteBereinigt = (werte || []).map((w) => w || 0);
     if (werteBereinigt.length === 0) return svg;   // nichts zu zeichnen, aber ein gültiges <svg>
 
+    // FESTE SAEULENTEILUNG (29.08.2026), optionen.saeulenAbstand in Bildpunkten.
+    // Ohne sie fuellt das <svg> per CSS (width:100%) IMMER dieselbe Breite,
+    // egal wie viele Werte es traegt - bei sechs Monaten wurden dieselben
+    // 340px auf sechs Saeulen verteilt, jede also mehr als doppelt so breit
+    // wie bei zwoelf. Der Auftrag dazu woertlich: "es soll nicht gestreckt
+    // werden, sondern die Position der Sparklines staerker nach links".
+    // Inline-style schlaegt die Klassenregel, das CSS-max-width deckelt
+    // trotzdem weiter (eine lange Reihe rueckt also enger zusammen, statt
+    // aus der Spalte zu laufen). Die Zelle behaelt ihre min-width: eine
+    // mitwandernde Spaltenbreite liesse beim Umschalten des Zeitraums die
+    // ganze Tabelle rechts davon springen. Der frei bleibende Platz liegt
+    // damit RECHTS - die Reihe steht links an der Spaltenkante, genau so
+    // gewollt. Das ist zugleich der Grundsatz, den die Spaltenbreiten in
+    // style.css schon tragen: eine Grafik ist so breit, wie sie Information
+    // traegt.
+    if (optionen.saeulenAbstand) {
+        svg.style.width = `${werteBereinigt.length * optionen.saeulenAbstand}px`;
+    }
+
     // GESTALTUNGSAUFTRAG PUNKT 4, woertlich: "eine Saeulenreihe zwoelf
     // Saeulen" - je Teil, nicht nur eine Zusammenfassung fuer die ganze
     // Reihe. optionen.titelJeIndex(i, wert) ist optional (siehe
@@ -7403,6 +7422,13 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
                 if (reihe.length > 0) {
                     zelle.append(saeulenSparkline(reihe, spalte.beschriftung(zeile), {
                         breite: 96, hoehe: 16, aktuellIndex: spalte.aktuellIndex ?? null,
+                        // Feste Teilung statt Streckung (siehe saeulenSparkline()):
+                        // 17px sind die 340px Hoechstbreite der Spalte geteilt
+                        // durch die zwanzig Monate, die "Alles" derzeit umfasst -
+                        // der laengste Regelfall fuellt die Spalte also gerade
+                        // aus, jeder kuerzere Zeitraum wird schmaler statt
+                        // breiter gezogen.
+                        saeulenAbstand: 17,
                         // DIE GEMEINSAME SKALE, hier durchgereicht: ohne
                         // sie skalierte jede Zeile auf ihr eigenes
                         // Maximum, zehn Reihen saehen gleich hoch aus und
