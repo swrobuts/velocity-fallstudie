@@ -457,7 +457,10 @@ async function monatsdrilldownEinfuegen(monat) {
     // möglich, die hier eine falsche Tageszahl einschmuggeln könnte.
     const tageImMonat = new Date(Number(jahr), monatsnummer, 0).getDate();
 
-    const zeilen = await ladeListe('v_wawi_fahrten_je_tag', 'tag, fahrten, umsatz',
+    // Je Tag UND Radtyp (0018_wawi_sichten.sql). Ueber alle Typen summiert
+    // ergibt das exakt v_wawi_fahrten_je_tag - in t0018 geprueft -, nur
+    // laesst sich hier nach Radtyp einschraenken, ohne noch einmal zu laden.
+    const zeilen = await ladeListe('v_wawi_fahrten_je_tag_typ', 'tag, typ_code, typ, fahrten, umsatz',
         (q) => q.gte('tag', `${monat}`).lt('tag', naechsterMonat).order('tag'));
 
     // Bereich/Reiter gewechselt ODER eine neuere Zeile ausgewählt,
@@ -475,7 +478,7 @@ async function monatsdrilldownEinfuegen(monat) {
     ueberschrift.textContent = t('hint.ridesPerDayHeading', { monat: monatFormat(monat) });
     abschnitt.append(ueberschrift);
 
-    const fehler = letzterLadeFehler('v_wawi_fahrten_je_tag');
+    const fehler = letzterLadeFehler('v_wawi_fahrten_je_tag_typ');
     if (fehler) {
         const hinweis = document.createElement('p');
         hinweis.className = 'monatsdrilldown-fehler';
@@ -490,8 +493,61 @@ async function monatsdrilldownEinfuegen(monat) {
     // Kommentar in 0018_wawi_sichten.sql), ist aber null Fahrten, keine
     // fehlende Säule. Eine ausgelassene Kategorie sähe in der Grafik wie
     // ein Ladefehler aus (Auftrag, ausdrücklich benannt).
+    // ===== RADTYPFILTER UND REIHENFOLGE (30.08.2026) =====
+    // Auftrag: "Können wir vor die Kalenderanzeige im oberen Bereich einen
+    // Filter nach Radtyp (Multiselect) anbringen" und "Das Säulendiagramm
+    // mit der Matrix zusammen stellen wir ans Ende, also nach dem Kalender."
+    //
+    // Die Radtypen kommen aus den GELADENEN Zeilen, nicht aus einer zweiten
+    // Abfrage: angeboten werden genau die Typen, die in diesem Monat auch
+    // vorkommen. Ein Typ ohne eine einzige Fahrt waere ein Schalter, der
+    // nichts bewirkt.
+    const radtypen = [...new Map(zeilen.map((z) => [String(z.typ_code), z.typ])).entries()]
+        .map(([wert, text]) => ({ wert, text }))
+        .sort((a, b) => a.text.localeCompare(b.text, sprache()));
+    // Leere Auswahl heisst ALLE - dieselbe Regel wie bei den Spaltenfiltern
+    // der Arbeitsliste, und mehrfachauswahlFeld() beschriftet sich dann von
+    // selbst mit "Alle". Ohne sie waere "nichts gewaehlt" ein Kalender
+    // voller Nullen, den niemand absichtlich herstellt.
+    let gewaehlteTypen = new Set();
+
+    const filterZeile = document.createElement('div');
+    filterZeile.className = 'monatsdrilldown-filter';
+    const filterBeschriftung = document.createElement('span');
+    filterBeschriftung.className = 'monatsdrilldown-filter-titel';
+    filterBeschriftung.textContent = t('field.radtyp');
+    filterZeile.append(filterBeschriftung);
+
+    const kalenderPlatz = document.createElement('div');
+    const grafikPlatz = document.createElement('div');
+    const kachelPlatz = document.createElement('div');
+    // Reihenfolge: Filter, Kalender, dann Diagramm und Matrix. Der Kalender
+    // ist die Ansicht, in der gearbeitet wird (ein Tag wird angeklickt);
+    // Diagramm und Matrix fassen zusammen, was darin steht - und eine
+    // Zusammenfassung VOR ihrem Gegenstand verwirrt.
+    abschnitt.append(filterZeile, kalenderPlatz, grafikPlatz, kachelPlatz);
+
+    function zeichneMonat() {
+    // DIE UEBERSCHRIFT FOLGT DEM FILTER. Sie behauptete "gesamt, alle
+    // Radtypen und Tarife" - mit gesetztem Filter waere das schlicht
+    // falsch, und zwar an der auffaelligsten Stelle der Ansicht. Bei
+    // leerer Auswahl bleibt der alte Wortlaut, der dann ja stimmt.
+    ueberschrift.textContent = gewaehlteTypen.size === 0
+        ? t('hint.ridesPerDayHeading', { monat: monatFormat(monat) })
+        : t('hint.ridesPerDayHeadingFiltered', {
+            monat: monatFormat(monat),
+            typen: radtypen.filter((r) => gewaehlteTypen.has(r.wert)).map((r) => r.text).join(', ')
+        });
+
     const tage = Array.from({ length: tageImMonat }, (_, i) => i + 1);
-    const fahrtenNachTag = new Map(zeilen.map((z) => [Number(z.tag.slice(8, 10)), z.fahrten]));
+    // Je Tag ueber die gewaehlten Radtypen aufsummiert.
+    const sichtbar = gewaehlteTypen.size === 0
+        ? zeilen : zeilen.filter((z) => gewaehlteTypen.has(String(z.typ_code)));
+    const fahrtenNachTag = new Map();
+    for (const z of sichtbar) {
+        const tag = Number(z.tag.slice(8, 10));
+        fahrtenNachTag.set(tag, (fahrtenNachTag.get(tag) ?? 0) + z.fahrten);
+    }
     const werte = tage.map((tag) => fahrtenNachTag.get(tag) ?? 0);
     // Tagesumsatz parallel zu den Fahrten (30.08.2026, Auftrag: "Ich zeige
     // auf einen Tag, es wird der Tagesgesamtumsatz gezeigt; auch bei dem
@@ -502,9 +558,12 @@ async function monatsdrilldownEinfuegen(monat) {
     // undefined statt 0 fuer einen Tag ohne Zeile: er hatte keinen
     // Betrieb, sein Umsatz ist nicht "null Euro", sondern gar keiner -
     // die Beschriftung laesst ihn dann weg.
-    const umsatzNachTag = new Map(zeilen
-        .filter((z) => z.umsatz !== null && z.umsatz !== undefined)
-        .map((z) => [Number(z.tag.slice(8, 10)), Number(z.umsatz)]));
+    const umsatzNachTag = new Map();
+    for (const z of sichtbar) {
+        if (z.umsatz === null || z.umsatz === undefined) continue;
+        const tag = Number(z.tag.slice(8, 10));
+        umsatzNachTag.set(tag, (umsatzNachTag.get(tag) ?? 0) + Number(z.umsatz));
+    }
     const umsaetze = tage.map((tag) => umsatzNachTag.get(tag));
 
     // Ein Text fuer beide Orte - Kalenderkachel und Saeule zeigen denselben
@@ -564,7 +623,7 @@ async function monatsdrilldownEinfuegen(monat) {
         // Wortlaut wie auf der Kalenderkachel darunter.
         titelJeIndex: (i) => tagHinweis(i)
     });
-    abschnitt.append(grafik);
+    grafikPlatz.replaceChildren(grafik);
 
     // ===== Zusammenfassung (Auftrag, wörtlich: Min, Max, Anzahl pro
     // Monat, Tag mit den meisten Fahrten) - dieselben Kacheln wie im
@@ -611,7 +670,7 @@ async function monatsdrilldownEinfuegen(monat) {
             hinweis: t('hint.totalForMonth', { phrase: monatFormat(monat) })
         })
     );
-    abschnitt.append(kacheln);
+    kachelPlatz.replaceChildren(kacheln);
 
     // ===== Kalender statt Tagesliste (Gestaltungsauftrag, wörtlich: "wir
     // bauen statt der Tagesliste eine Kalendersicht und wenn ich auf eine
@@ -775,7 +834,7 @@ async function monatsdrilldownEinfuegen(monat) {
         kalenderKoerper.append(zeile);
     }
     kalender.append(kalenderKoerper);
-    abschnitt.append(kalender);
+    kalenderPlatz.replaceChildren(kalender);
 
     // ===== Legende (Gestaltungsauftrag, wörtlich: "eine Einfärbung ohne
     // Skala ist eine Behauptung") - dieselben vier Grenzen wie
@@ -809,8 +868,40 @@ async function monatsdrilldownEinfuegen(monat) {
         legendeSkala.append(eintrag);
     });
     legende.append(legendeSkala);
-    abschnitt.append(legende);
+    kalenderPlatz.append(legende);
+    }
 
+    // Erst JETZT verdrahten: mehrfachauswahlFeld() kann beiAenderung
+    // synchron rufen, und zeichneMonat() muss dann definiert sein.
+    //
+    // DAS FELD WIRD BEI JEDER AENDERUNG NEU GEBAUT. mehrfachauswahlFeld()
+    // liest die Auswahl EINMAL, beim Erzeugen - eine neu zugewiesene Menge
+    // erreicht das bereits gebaute Feld nicht mehr. Ohne den Neuaufbau
+    // ersetzte der zweite Haken den ersten, statt ihn zu ergaenzen, und die
+    // Knopfbeschriftung blieb auf "Alle" stehen (im Browser gemessen:
+    // Cargo, dann Sport ergab 55 Fahrten statt 92). Dieselbe Machart wie
+    // bei den Spaltenfiltern der Arbeitsliste, die dafuer die ganze Tabelle
+    // neu zeichnen.
+    //
+    // filterOffen traegt den Aufklappzustand ueber den Neuaufbau: sonst
+    // fiele das Fenster nach jedem Haken zu, und eine Mehrfachauswahl
+    // braeuchte fuer jeden Typ einen eigenen Klick zum Oeffnen.
+    let filterOffen = false;
+    function zeichneFilter() {
+        const feld = mehrfachauswahlFeld(radtypen, gewaehlteTypen, (neu) => {
+            gewaehlteTypen = neu;
+            zeichneFilter();
+            zeichneMonat();
+        }, t('common.filterAria', { titel: t('field.radtyp') }), {
+            offenVorgabe: filterOffen,
+            beiOeffnen: () => { filterOffen = true; },
+            beiSchliessen: () => { filterOffen = false; }
+        });
+        filterZeile.replaceChildren(filterBeschriftung, feld);
+    }
+
+    zeichneFilter();
+    zeichneMonat();
     wurzel.append(abschnitt);
 }
 

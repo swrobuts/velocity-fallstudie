@@ -4010,6 +4010,25 @@ body.maske-wird-gezogen #detailmaske {
    die Regel naehme auch der vierten ihre untere Linie, mitten im Raster.
    Ein 1px-Abstand auf gefaerbtem Grund braucht diese Rechnung gar nicht
    erst: er trifft jede Fuge und keinen Aussenrand, bei jeder Anzahl. */
+/* Der Radtypfilter über dem Kalender. Beschriftung und Auswahlfeld in
+   einer Zeile: der Filter gehört zur Kalenderansicht darunter, nicht zur
+   Überschrift darüber - deshalb der grössere Abstand nach oben als nach
+   unten. */
+.monatsdrilldown-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--raum-2);
+  margin: var(--raum-4) 0 var(--raum-3);
+}
+
+.monatsdrilldown-filter-titel {
+  font-size: var(--grad-2);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
 .monatsdrilldown-kacheln {
   display: grid;
   grid-template-columns: 1fr 1fr;

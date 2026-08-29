@@ -687,6 +687,37 @@ begin
 end;
 $$;
 
+-- DIE FEINERE TAGESSICHT MUSS ZUR GROEBEREN PASSEN (30.08.2026)
+-- v_wawi_fahrten_je_tag_typ schneidet dieselben Fahrten nach Radtyp.
+-- Wenn beide Sichten je fuer sich gepflegt werden, koennen sie
+-- auseinanderlaufen - etwa weil eine spaeter einen Status mehr zulaesst.
+-- Dieser Test rechnet die feinere auf die groebere hoch und vergleicht
+-- Tag fuer Tag; er faellt aus, sobald sich eine von beiden bewegt.
+create or replace function velocity_test.test_v_fahrten_je_tag_typ_passt_zur_tagessicht()
+returns setof text language plpgsql as $$
+declare v_abweichungen bigint; v_typen bigint;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('leitung-tagtyp', 'leitung');
+
+  select count(*) into v_abweichungen
+    from (select tag, sum(fahrten) as fahrten, round(sum(umsatz), 2) as umsatz
+            from velocity.v_wawi_fahrten_je_tag_typ group by tag) fein
+    full join velocity.v_wawi_fahrten_je_tag grob using (tag)
+   where fein.fahrten is distinct from grob.fahrten
+      or fein.umsatz  is distinct from grob.umsatz;
+  return next is(v_abweichungen, 0::bigint,
+                 'ueber alle Radtypen summiert ergibt die feine Tagessicht exakt die grobe');
+
+  -- Gegenprobe: die feine Sicht schneidet wirklich, es gibt mehr als
+  -- einen Radtyp. Sonst waere die Zusicherung oben trivial erfuellt.
+  select count(distinct typ_code) into v_typen from velocity.v_wawi_fahrten_je_tag_typ;
+  return next cmp_ok(v_typen, '>', 1::bigint,
+                     'die feine Tagessicht kennt mehr als einen Radtyp');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
 -- KORNPROBE ZUR TAGESSICHT (30.08.2026)
 -- Dieselbe Gefahr wie eine Ebene tiefer: entgeltposition traegt mehrere
 -- Zeilen je Ausleihe. Waere der Tagesumsatz per gewoehnlichem join
