@@ -457,7 +457,7 @@ async function monatsdrilldownEinfuegen(monat) {
     // möglich, die hier eine falsche Tageszahl einschmuggeln könnte.
     const tageImMonat = new Date(Number(jahr), monatsnummer, 0).getDate();
 
-    const zeilen = await ladeListe('v_wawi_fahrten_je_tag', 'tag, fahrten',
+    const zeilen = await ladeListe('v_wawi_fahrten_je_tag', 'tag, fahrten, umsatz',
         (q) => q.gte('tag', `${monat}`).lt('tag', naechsterMonat).order('tag'));
 
     // Bereich/Reiter gewechselt ODER eine neuere Zeile ausgewählt,
@@ -493,6 +493,30 @@ async function monatsdrilldownEinfuegen(monat) {
     const tage = Array.from({ length: tageImMonat }, (_, i) => i + 1);
     const fahrtenNachTag = new Map(zeilen.map((z) => [Number(z.tag.slice(8, 10)), z.fahrten]));
     const werte = tage.map((tag) => fahrtenNachTag.get(tag) ?? 0);
+    // Tagesumsatz parallel zu den Fahrten (30.08.2026, Auftrag: "Ich zeige
+    // auf einen Tag, es wird der Tagesgesamtumsatz gezeigt; auch bei dem
+    // Säulendiagramm"). NICHT in werte[] hineingerechnet: die Säulenhöhe
+    // und die Farbstufe des Kalenders bleiben die FAHRTEN - zwei Größen in
+    // einer Fläche wären nicht mehr ablesbar. Der Umsatz kommt nur im
+    // Hinweisfenster dazu.
+    // undefined statt 0 fuer einen Tag ohne Zeile: er hatte keinen
+    // Betrieb, sein Umsatz ist nicht "null Euro", sondern gar keiner -
+    // die Beschriftung laesst ihn dann weg.
+    const umsatzNachTag = new Map(zeilen
+        .filter((z) => z.umsatz !== null && z.umsatz !== undefined)
+        .map((z) => [Number(z.tag.slice(8, 10)), Number(z.umsatz)]));
+    const umsaetze = tage.map((tag) => umsatzNachTag.get(tag));
+
+    // Ein Text fuer beide Orte - Kalenderkachel und Saeule zeigen denselben
+    // Tag, also darf sich ihre Auskunft nicht unterscheiden.
+    function tagHinweis(index) {
+        const datum = `${tage[index]}. ${monatNameVoll}`;
+        const fahrtenText = mengeFormat(werte[index], 'fahrt');
+        const umsatz = umsaetze[index];
+        return umsatz === undefined
+            ? `${datum}: ${fahrtenText}`
+            : t('hint.dayRidesRevenue', { datum, phrase: fahrtenText, umsatz: geldFormat(umsatz) });
+    }
 
     const gesamt = werte.reduce((s, w) => s + w, 0);
     const minimum = Math.min(...werte);
@@ -535,7 +559,10 @@ async function monatsdrilldownEinfuegen(monat) {
             min: zahlFormat(minimum), maxPhrase, mittel: zahlFormat(Math.round(gesamt / tage.length)),
             tageListe: tageListe(maxTage)
         }),
-        markierIndizes: maxIndizes
+        markierIndizes: maxIndizes,
+        // Hinweis JE SAEULE statt des Vorgabetexts "Tag: Zahl" - derselbe
+        // Wortlaut wie auf der Kalenderkachel darunter.
+        titelJeIndex: (i) => tagHinweis(i)
     });
     abschnitt.append(grafik);
 
@@ -697,7 +724,16 @@ async function monatsdrilldownEinfuegen(monat) {
             // nicht "4. Fahrten: 12"). tagFormat() liefert dieselbe Form
             // MIT Wochentag wie zuvor die Tagesliste (Gestaltungsauftrag
             // Punkt 2a, unverändert gültig).
-            knopf.setAttribute('aria-label', t('hint.dayRidesAria', { datum: tagFormat(tagIso), phrase: mengeFormat(wert, 'fahrt') }));
+            knopf.setAttribute('aria-label', umsaetze[i] === undefined
+                ? t('hint.dayRidesAria', { datum: tagFormat(tagIso), phrase: mengeFormat(wert, 'fahrt') })
+                : t('hint.dayRidesRevenueAria', {
+                    datum: tagFormat(tagIso), phrase: mengeFormat(wert, 'fahrt'),
+                    umsatz: geldFormat(umsaetze[i])
+                }));
+            // Hinweisfenster beim Zeigen UND beim Tastaturfokus (siehe
+            // hinweisfensterVerknuepfen() in rahmen.js) - derselbe Text wie
+            // an der zugehoerigen Saeule im Diagramm darueber.
+            hinweisfensterVerknuepfen(knopf, tagHinweis(i));
 
             const tagSpanne = document.createElement('span');
             tagSpanne.className = 'monatskalender-tag-nummer';
@@ -864,14 +900,27 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
     // Die Rahmennummer bleibt Text ohne Querverweis - siehe die
     // Begruendung, die schon die frueher handgebaute Fassung trug: ein
     // Sprung von hier aus wechselte den ganzen Arbeitsbereich.
-    // Die Herkunftszeile stand bisher als <caption> IN der Tabelle. Die
-    // zeichnet zeigeDetailtabelle() nicht mit - sie steht deshalb jetzt als
-    // Absatz davor, mit demselben Wortlaut. Weglassen waere das Falsche:
-    // sie nennt die Sicht, aus der die Zeilen stammen, UND den Vorbehalt
-    // (kein Kundenbezug) - beides gehoert zu den Zahlen, nicht zur Zierde.
+    // Die Zeile ueber der Tabelle. Sie nannte bis hierher die Sicht, aus der
+    // die Zeilen stammen; der Auftrag wirft diesen Namen heraus und setzt
+    // den Tagesumsatz an seine Stelle. Der Vorbehalt "kein Kundenbezug"
+    // bleibt: er ist eine Aussage ueber die Daten, kein Verweis auf ihre
+    // Herkunft.
+    //
+    // DIE SUMME KOMMT AUS DEN GELADENEN ZEILEN, nicht aus
+    // v_wawi_fahrten_je_tag. Zwei Gruende: die Zahl stimmt damit IMMER mit
+    // der Tabelle darunter ueberein (dieselben Zeilen, dieselbe Summe),
+    // und die beiden Sichten tragen verschiedene Rollenschranken -
+    // v_wawi_fahrten_je_tag liest nur leitung/demo, diese hier auch
+    // disposition. Ein Dispositionskonto saehe die Tabelle, aber keine
+    // Tagessumme, und muesste hier einen leeren Wert erklaeren.
+    // null-Umsaetze (nicht abgerechnet) fallen aus der Summe heraus,
+    // statt als Null mitzuzaehlen.
+    const tagesumsatz = zeilen.reduce((summe, z) => summe + (Number(z.umsatz) || 0), 0);
     const herkunft = document.createElement('p');
     herkunft.className = 'monatsdrilldown-herkunft';
-    herkunft.textContent = t('misc.bikesOnDateCaption', { datum: tagFormat(tagIso) });
+    herkunft.textContent = t('misc.bikesOnDateCaption', {
+        datum: tagFormat(tagIso), umsatz: geldFormat(tagesumsatz)
+    });
     abschnitt.append(herkunft);
 
     const tabellenplatz = document.createElement('div');

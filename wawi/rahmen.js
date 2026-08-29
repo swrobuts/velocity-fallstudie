@@ -438,13 +438,15 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Dauer",
     "field.ziel": "Ziel",
     "field.start": "Start",
-    "misc.bikesOnDateCaption": "Räder am {datum} - kein Kundenbezug, siehe v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Räder am {datum} - kein Kundenbezug · Tagesumsatz {umsatz}",
     "button.backToDayOverview": "Zurück zur Tagesübersicht",
     "misc.bikesOnDate": "Räder am {datum}",
     "misc.noBikeRiddenThisDay": "An diesem Tag wurde kein Rad gefahren.",
     "msg.thisDayBikesLoadFailed": "Die Räder dieses Tages ließen sich nicht laden: {fehler}",
     "hint.legendColorScale": "Farbe = Fahrten dieses Tages im Verhältnis zum verkehrsreichsten Tag des Monats ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, Umsatz {umsatz}",
     "hint.calendarCaption": "Fahrten je Tag, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} gleichauf, je {phrase}",
     "hint.totalForMonth": "{phrase}, gesamt",
@@ -946,13 +948,15 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Duration",
     "field.ziel": "Destination",
     "field.start": "Start",
-    "misc.bikesOnDateCaption": "Bikes on {datum} - no customer reference, see v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Bikes on {datum} - no customer reference · revenue that day {umsatz}",
     "button.backToDayOverview": "Back to the daily overview",
     "misc.bikesOnDate": "Bikes on {datum}",
     "misc.noBikeRiddenThisDay": "No bike was ridden on this day.",
     "msg.thisDayBikesLoadFailed": "Could not load this day’s bikes: {fehler}",
     "hint.legendColorScale": "Colour = this day’s rides relative to the busiest day of the month ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, revenue {umsatz}",
     "hint.calendarCaption": "Rides per day, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} tied, {phrase} each",
     "hint.totalForMonth": "{phrase}, total",
@@ -1454,13 +1458,15 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Süre",
     "field.ziel": "Varış",
     "field.start": "Başlangıç",
-    "misc.bikesOnDateCaption": "{datum} tarihindeki bisikletler - müşteri bilgisi yok, bkz. v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "{datum} tarihindeki bisikletler - müşteri bilgisi yok · günlük ciro {umsatz}",
     "button.backToDayOverview": "Günlük özete dön",
     "misc.bikesOnDate": "{datum} tarihindeki bisikletler",
     "misc.noBikeRiddenThisDay": "Bu gün hiçbir bisiklet kullanılmadı.",
     "msg.thisDayBikesLoadFailed": "Bu güne ait bisikletler yüklenemedi: {fehler}",
     "hint.legendColorScale": "Renk = bu günün sürüşlerinin ayın en yoğun gününe oranı ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, ciro {umsatz}",
     "hint.calendarCaption": "{monat} ayında güne göre sürüşler",
     "hint.tiedDaysCount": "{tagePhrase} berabere, her biri {phrase}",
     "hint.totalForMonth": "{phrase}, toplam",
@@ -1962,13 +1968,15 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Duración",
     "field.ziel": "Destino",
     "field.start": "Inicio",
-    "misc.bikesOnDateCaption": "Bicicletas el {datum} - sin referencia a clientes, véase v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Bicicletas el {datum} - sin referencia a clientes · facturación del día {umsatz}",
     "button.backToDayOverview": "Volver al resumen diario",
     "misc.bikesOnDate": "Bicicletas el {datum}",
     "misc.noBikeRiddenThisDay": "Ese día no se usó ninguna bicicleta.",
     "msg.thisDayBikesLoadFailed": "No se pudieron cargar las bicicletas de este día: {fehler}",
     "hint.legendColorScale": "Color = viajes de este día en relación con el día más concurrido del mes ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, facturación {umsatz}",
     "hint.calendarCaption": "Viajes por día, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} empatados, {phrase} cada uno",
     "hint.totalForMonth": "{phrase}, total",
@@ -2470,13 +2478,15 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Durata",
     "field.ziel": "Destinazione",
     "field.start": "Partenza",
-    "misc.bikesOnDateCaption": "Bici del {datum} - nessun riferimento al cliente, vedi v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Bici del {datum} - nessun riferimento al cliente · fatturato del giorno {umsatz}",
     "button.backToDayOverview": "Torna alla panoramica giornaliera",
     "misc.bikesOnDate": "Bici del {datum}",
     "misc.noBikeRiddenThisDay": "In questo giorno non è stata usata nessuna bici.",
     "msg.thisDayBikesLoadFailed": "Impossibile caricare le bici di questo giorno: {fehler}",
     "hint.legendColorScale": "Colore = corse di questo giorno rispetto al giorno più trafficato del mese ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, fatturato {umsatz}",
     "hint.calendarCaption": "Corse al giorno, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} a pari merito, {phrase} ciascuno",
     "hint.totalForMonth": "{phrase}, totale",
@@ -2978,13 +2988,15 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Czas trwania",
     "field.ziel": "Cel",
     "field.start": "Start",
-    "misc.bikesOnDateCaption": "Rowery w dniu {datum} - bez odniesienia do klienta, patrz v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Rowery w dniu {datum} - bez odniesienia do klienta · obrót dnia {umsatz}",
     "button.backToDayOverview": "Powrót do przeglądu dziennego",
     "misc.bikesOnDate": "Rowery w dniu {datum}",
     "misc.noBikeRiddenThisDay": "Tego dnia nie użyto żadnego roweru.",
     "msg.thisDayBikesLoadFailed": "Nie udało się wczytać rowerów z tego dnia: {fehler}",
     "hint.legendColorScale": "Kolor = przejazdy tego dnia w stosunku do najbardziej ruchliwego dnia miesiąca ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, obrót {umsatz}",
     "hint.calendarCaption": "Przejazdy dziennie, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} z takim samym wynikiem, po {phrase}",
     "hint.totalForMonth": "{phrase}, łącznie",
@@ -6277,7 +6289,14 @@ function donut(wert, maximum, beschriftung, optionen = {}) {
 // zwei Tage können denselben Höchstwert tragen (Auftrag, ausdrücklich als
 // Fallstrick benannt), dann sind es zwei Spitzentage, nicht einer.
 function saeulengrafik(werte, beschriftungenX, optionen = {}) {
-    const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [] } = optionen;
+    // titelJeIndex(i, wert): vollstaendiger Text fuer das Hinweisfenster
+    // EINER Saeule, dieselbe Option wie bei saeulenSparkline() oben. Ohne
+    // sie bleibt es beim Vorgabetext "Beschriftung: Wert" - der genuegt,
+    // solange eine Saeule nur eine Groesse traegt. Sobald zwei Zahlen
+    // zusammengehoeren (Fahrten UND Umsatz eines Tages), muss der Aufrufer
+    // den Satz bilden: nur er weiss, wie beide zueinander stehen.
+    const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [],
+            titelJeIndex = null } = optionen;
 
     const block = document.createElement('div');
     block.className = 'saeulengrafik-block';
@@ -6336,7 +6355,8 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
                 // Hovern EINER Saeule, ohne die Grafik als Ganzes stumm
                 // zu machen (svg traegt aria-label bereits fuer sich).
                 const titel = document.createElementNS(SVG_NS, 'title');
-                titel.textContent = `${beschriftungenX[i]}: ${wert}`;
+                titel.textContent = typeof titelJeIndex === 'function'
+                    ? titelJeIndex(i, wert) : `${beschriftungenX[i]}: ${wert}`;
                 rect.append(titel);
             }
             svg.append(rect);

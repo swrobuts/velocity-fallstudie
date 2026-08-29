@@ -514,6 +514,8 @@ begin
                          'v_wawi_fahrten_je_tag nennt den Tag');
   return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'fahrten'::name,
                          'v_wawi_fahrten_je_tag nennt die Zahl der Fahrten');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'umsatz'::name,
+                         'v_wawi_fahrten_je_tag nennt den Tagesumsatz');
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'ausleihe_id'::name,
                            'v_wawi_fahrten_je_tag nennt keine einzelne Fahrt');
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'kunde_id'::name,
@@ -682,6 +684,35 @@ begin
                            'nennt keinen Nachnamen');
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'startzeit'::name,
                            'nennt keine Uhrzeit - nur den Tag, der schon aus dem Klickkontext bekannt ist');
+end;
+$$;
+
+-- KORNPROBE ZUR TAGESSICHT (30.08.2026)
+-- Dieselbe Gefahr wie eine Ebene tiefer: entgeltposition traegt mehrere
+-- Zeilen je Ausleihe. Waere der Tagesumsatz per gewoehnlichem join
+-- angehaengt, zaehlte 'fahrten' zwar dank count(distinct) noch richtig -
+-- jede kuenftige Kennzahl ohne distinct aber nicht mehr. Der Test haelt
+-- deshalb BEIDES fest: die Fahrtenzahl und die Umsatzsumme.
+create or replace function velocity_test.test_v_fahrten_je_tag_umsatz_ohne_vervielfachung()
+returns setof text language plpgsql as $$
+declare v_fahrten bigint; v_erwartet bigint; v_umsatz numeric; v_umsatz_erwartet numeric;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('leitung-tagesumsatz', 'leitung');
+
+  select sum(fahrten) into v_fahrten from velocity.v_wawi_fahrten_je_tag;
+  select count(*) into v_erwartet from velocity.ausleihe where status = 'abgeschlossen';
+  return next is(v_fahrten, v_erwartet,
+                 'die Tagessicht zaehlt jede abgeschlossene Fahrt genau einmal');
+
+  select round(sum(umsatz), 2) into v_umsatz from velocity.v_wawi_fahrten_je_tag;
+  select round(sum(ep.betrag), 2) into v_umsatz_erwartet
+    from velocity.entgeltposition ep
+    join velocity.ausleihe a using (ausleihe_id)
+   where a.status = 'abgeschlossen';
+  return next is(v_umsatz, v_umsatz_erwartet,
+                 'die Tagesumsaetze summieren sich auf die Entgeltpositionen der abgeschlossenen Fahrten');
+
+  perform set_config('request.jwt.claims', '', true);
 end;
 $$;
 

@@ -1134,11 +1134,39 @@ alter table velocity.fahrradmodell drop column if exists reichweite_km;
 -- Sicht, nicht nur eine.
 create or replace view velocity.v_wawi_fahrten_je_tag as
 select date_trunc('day', a.startzeit)::date as tag,
-       count(distinct a.ausleihe_id)        as fahrten
+       count(distinct a.ausleihe_id)        as fahrten,
+       -- TAGESUMSATZ (30.08.2026). Die Kalenderkacheln und das
+       -- Saeulendiagramm im Monats-Drill-Down zeigten bis hierher nur die
+       -- Fahrtenzahl; der Umsatz desselben Tages stand nirgends, obwohl
+       -- er die naheliegende zweite Frage ist.
+       --
+       -- LEFT JOIN LATERAL, nicht join auf entgeltposition: die Tabelle
+       -- traegt mehrere Zeilen je Ausleihe. Ein gewoehnlicher Join
+       -- vervielfachte die Zeilen, und count(distinct a.ausleihe_id)
+       -- faenge das zwar ab - jede kuenftige Kennzahl ohne distinct aber
+       -- nicht. Die Unterabfrage liefert genau eine Zeile je Fahrt und
+       -- laesst das Korn der Gruppierung unangetastet; ein pgTAP-Test in
+       -- t0018 haelt das fest.
+       --
+       -- Kein coalesce auf 0: ein Tag ohne jede abgerechnete Fahrt
+       -- erscheint gar nicht erst in dieser Sicht (group by ueber
+       -- vorhandene Ausleihen), und null hiesse hier "keine der Fahrten
+       -- dieses Tages ist abgerechnet" - eine Aussage, die die
+       -- Oberflaeche als Gedankenstrich zeigen soll, nicht als 0,00 Euro.
+       round(sum(entgelt.summe), 2)         as umsatz
   from velocity.ausleihe a
+  left join lateral (select sum(ep.betrag) as summe
+                       from velocity.entgeltposition ep
+                      where ep.ausleihe_id = a.ausleihe_id) entgelt on true
  where a.status = 'abgeschlossen'
    and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
  group by 1;
+
+comment on column velocity.v_wawi_fahrten_je_tag.umsatz is
+  'Summe der Entgeltpositionen aller an diesem Tag abgeschlossenen Fahrten, in Euro. '
+  'Korrekturpositionen mit negativem Betrag zaehlen mit (wie in v_wawi_umsatz_radtyp). '
+  'null, wenn keine der Fahrten des Tages abgerechnet ist - die Oberflaeche zeigt dann '
+  'einen Gedankenstrich, nicht 0,00 Euro.';
 
 comment on view velocity.v_wawi_fahrten_je_tag is
   'Tagesaggregation der abgeschlossenen Fahrten für den Drill-Down aus einer '
