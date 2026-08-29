@@ -477,7 +477,7 @@ html { scroll-behavior: auto; }
    Sprungziel darunter und die Ueberschrift des Abschnitts ist verdeckt. */
 section[id], main[id] { scroll-margin-top: 108px; }
 section[id] h1, section[id] h2 { scroll-margin-top: 118px; }
-@media (max-width: 900px) { section[id] { scroll-margin-top: 88px; } }
+@media (max-width: 900px), (max-aspect-ratio: 6/5) { section[id] { scroll-margin-top: 88px; } }
 
 /* Der Hintergrund darf nicht mitscrollen, solange der Dialog offen ist. */
 body.dialog-offen { overflow: hidden; }
@@ -2614,7 +2614,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
    Die Meldungen ruecken deshalb unter die Kopfzeile. !important ist
    noetig, weil Toastify die Lage inline setzt. */
 .toastify { top: 108px !important; }
-@media (max-width: 900px) { .toastify { top: 88px !important; } }
+@media (max-width: 900px), (max-aspect-ratio: 6/5) { .toastify { top: 88px !important; } }
 .toastify.toastify-bottom { top: auto !important; }
 
 /* ------------------------------------------------------ Rueckgabe */
@@ -2778,7 +2778,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .menue-knopf { display: flex; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (max-aspect-ratio: 6/5) {
   /* Unter 900 traegt die Buehne selbst den roten Knopf (.hero-cta).
      Zwei rote Pillen fuer denselben Weg waeren einer zu viel; im Kopf
      bleiben Marke, Login und Menue, die Karte steht zusaetzlich im
@@ -2803,7 +2803,29 @@ footer a:hover { color: #fff; text-decoration: underline; }
    nur der Scrollfortschritt erreicht sie nicht mehr, weil die Buehne
    nicht mehr laenger ist als der Bildschirm.
    ------------------------------------------------------------------ */
-@media (max-width: 900px) {
+/* ====================================================================
+   EINE SPALTE: SCHMAL ODER HOCHFORMAT (29.08.2026)
+
+   Die Umschaltung kannte bisher nur die Breite. Ein aufgeklapptes
+   Foldable ist aber breit UND hoch: bei 950x1100 griff das
+   Schreibtischlayout, das für breit-und-flach entworfen ist. Ergebnis
+   waren 222 Punkte totes Feld zwischen Schlagzeile und Rad, das Rad an
+   den unteren Rand gedrückt und die Auswahlpillen darauf. Genau das
+   sah "verloren" aus.
+
+   Entscheidend ist nicht die Breite, sondern die FORM des Schirms. Wer
+   hochkant steht, braucht eine Spalte - ob das Gerät 375 oder 950 Punkte
+   misst. Wer quer steht, hat Platz für zwei.
+
+   6/5 als Grenze: 1024x768 (1,33) und alles Breitere bleiben unberührt,
+   also jeder übliche Schreibtisch. Darunter liegen Telefone, Tablets im
+   Hochformat, aufgeklappte Foldables und schmale Fenster neben einem
+   anderen - alle mit demselben Bedarf.
+
+   Das Rad steht im Raster auf 1fr und wächst dadurch mit: auf 950x1100
+   nimmt es rund 520 Punkte Höhe statt 409 und steht nicht mehr am Rand.
+   ==================================================================== */
+@media (max-width: 900px), (max-aspect-ratio: 6/5) {
   /* 560 statt 620: die Bühne trägt hier vier Zeilen (siehe Raster ganz
      unten), und auf einem flachen Telefon soll sie schrumpfen dürfen,
      statt ihren Inhalt übereinanderzuschieben. */
@@ -3038,7 +3060,7 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   .leaflet-marker-icon:hover .karten-station { transform: none; }
 }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (max-aspect-ratio: 6/5) {
   /* Fußzeile: die Rechtslinks lagen bei 18 px Höhe direkt nebeneinander.
      Wer Impressum treffen will, trifft Datenschutz. */
   footer a, .impressum-sub a {
@@ -3139,7 +3161,7 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
    gewählten Typ im aria-pressed, und heroTypAusPille() in script.js
    liest ihn dort ab, damit der Zähler "E-Bikes frei" meldet.
    ==================================================================== */
-@media (max-width: 900px) {
+@media (max-width: 900px), (max-aspect-ratio: 6/5) {
   /* Höhe und Untergrenze stehen weiter oben, wo sie hingehören - hier
      nur die Anordnung. Eine zweite Höhenangabe wäre eine zweite Stelle,
      an der jemand suchen muss. */
