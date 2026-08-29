@@ -411,9 +411,14 @@ document.addEventListener("DOMContentLoaded", async () => {
        bleibt dieses Verhaeltnis sichtbar, und das ist richtig so.
        ================================================================ */
     const RAD_BILD = {
-        CITY:  'assets/rad-city-frei.webp',
-        EBIKE: 'assets/rad-ebike-frei.webp',
-        CARGO: 'assets/rad-cargo-frei.webp'
+        CITY:  'assets/rad-city-frei.webp?v=ac9e0122',
+        EBIKE: 'assets/rad-ebike-frei.webp?v=f5ca0df0',
+        CARGO: 'assets/rad-cargo-frei.webp?v=de7c0a16'
+    };
+    const RAD_BILD_KLEIN = {
+        CITY:  'assets/rad-city-frei-640.webp?v=3d46b51c',
+        EBIKE: 'assets/rad-ebike-frei-640.webp?v=322227b0',
+        CARGO: 'assets/rad-cargo-frei-640.webp?v=8134c6e8'
     };
     const RAD_BILD_MASS = {
         CITY:  [1265, 800], EBIKE: [1269, 800], CARGO: [1680, 800]
@@ -450,6 +455,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             bildfeld.className = 'rad-kachel-bild';
             const bild = document.createElement('img');
             bild.src = RAD_BILD[k.typ_code];
+            /* Zwei Fassungen zur Wahl. Die Kachel zeigt das Rad 305 px
+               breit; ein Telefon mit doppelter Punktdichte braucht also
+               610, nicht 1265. Ohne srcset laedt es 500 KB, um 100 KB
+               anzuzeigen - auf Mobilfunk der teuerste Fehler der Seite.
+               Die Breitenangaben sind die WIRKLICHEN Bildbreiten, sonst
+               waehlt der Browser falsch. */
+            bild.srcset = RAD_BILD_KLEIN[k.typ_code] + ' 640w, '
+                        + RAD_BILD[k.typ_code] + ' ' + bw + 'w';
+            bild.sizes = '(max-width: 900px) 82vw, 420px';
             bild.width = bw; bild.height = bh;
             bild.loading = 'lazy'; bild.decoding = 'async';
             /* Leerer Alternativtext mit Absicht: Bezeichnung und
@@ -1132,9 +1146,9 @@ document.addEventListener("DOMContentLoaded", async () => {
        eigenen Marker - sie stehen ja wirklich einzeln.
        ================================================================= */
     const TYP_BILD = {
-        CITY:  'assets/rad-city.jpg',
-        EBIKE: 'assets/rad-ebike.jpg',
-        CARGO: 'assets/rad-cargo.jpg'   // vom Nutzer geliefert
+        CITY:  'assets/rad-city.jpg?v=fd2fc18f',
+        EBIKE: 'assets/rad-ebike.jpg?v=7286ff0c',
+        CARGO: 'assets/rad-cargo.jpg?v=53c7f1d1'   // vom Nutzer geliefert
     };
     // Die Filterwerte im HTML sind kurz, der Fachschluessel ist lang.
     const TYP_FILTER = { CITY: 'city', EBIKE: 'ebike', CARGO: 'cargo' };

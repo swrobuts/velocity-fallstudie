@@ -2807,6 +2807,13 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .scroll-story { height: 100svh; min-height: 620px; }
   .sticky-stage { position: relative; height: 100svh; min-height: 620px; }
 
+  /* Die Buehne zeigt das Rad hier hoechstens 375 px breit. Die grosse
+     Fassung waere 1265 px - dreimal zu viel, und sie liegt im
+     kritischen Pfad, weil sie das Erste ist, was man sieht. */
+  .photo-ebike { background-image: url("assets/rad-ebike-frei-640.webp?v=322227b0"); }
+  .photo-city  { background-image: url("assets/rad-city-frei-640.webp?v=3d46b51c"); }
+  .photo-cargo { background-image: url("assets/rad-cargo-frei-640.webp?v=8134c6e8"); }
+
   /* Das Rad steht GANZ im Bild, nicht angeschnitten. Auf dem Desktop
      fuellt es den Rahmen (cover); auf einem hochkant stehenden Telefon
      bliebe davon ein zufaelliger Ausschnitt - Lenker und Kiste, kein
@@ -2889,7 +2896,13 @@ footer a:hover { color: #fff; text-decoration: underline; }
   /* DIESELBE FLUCHT WIE ALLES ANDERE. Mit 48 Punkten insgesamt stand
      die Spalte links auf 22 und rechts auf 26 - vier Punkte daneben,
      und zwar an der Stelle mit der groessten Schrift der Seite. */
-  .claim { top: 27vh; bottom: auto; width: calc(100% - 2 * var(--flucht)); }
+  /* Untergrenze statt reiner Prozentrechnung. Die Zaehlerspalte steht
+     fest bei top:100px und ist 80px hoch, endet also bei 180. 27vh
+     unterschreitet das, sobald der Bildschirm niedriger als 667px ist -
+     dann liegt die Schlagzeile auf der Zahl. Am 28.08.2026 bei 375x600
+     gemessen: 18px Ueberdeckung, beide voll sichtbar. Betroffen war
+     jedes Telefon mit eingeblendeter Adressleiste. */
+  .claim { top: max(27vh, 196px); bottom: auto; width: calc(100% - 2 * var(--flucht)); }
   .claim h1 { font-size: var(--hero-font); max-width: 100%; }
   /* Das City-Bike stand in kleinerer Schrift, weil sein Satz der laengste
    ist und in der schmalen Spalte sonst vierzeilig wurde. Mit der
@@ -2968,8 +2981,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .meta-kurz { display: inline; }
   .karte-knoepfe { right: 12px; top: 12px; flex-direction: column; }
   .recht-block h2 { font-size: var(--grad-kopf-m); }
-  .claim { top: 25vh; }
-  .claim-city { top: 29vh; }
+  .claim { top: max(25vh, 196px); }
+  .claim-city { top: max(29vh, 208px); }
   .choice-panel { bottom: 34px; }
   .product-tab { padding: 0 var(--a3); }
   .rad-kacheln { grid-template-columns: 1fr; }
@@ -2990,4 +3003,113 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .choice-panel { opacity: 1; transform: none; }
   .scroll-hint { display: none; }
   * { transition: none !important; animation: none !important; }
+}
+
+/* ====================================================================
+   TOUCHGERÄTE (28.08.2026)
+   Gemessen an einem 375-px-Fenster: fünfzehn Bedienelemente lagen unter
+   44 px, sechsundzwanzig Textstellen unter 14 px. Beides ist auf einem
+   Zeigegerät belanglos und auf einem Daumen nicht.
+
+   44 px ist keine gegriffene Zahl: WCAG 2.5.5 nennt sie als Zielgröße,
+   Apple und Google nennen dasselbe. Wer darunter bleibt, zwingt zum
+   Zoomen - und wer zoomt, verliert den Überblick über die Seite.
+   ==================================================================== */
+
+/* Kein grauer Blitz beim Antippen. Der Standardwert stammt aus einer
+   Zeit, in der Seiten keine eigenen Zustände zeigten; unsere zeigen sie. */
+a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transparent; }
+
+@media (hover: none) {
+  /* Ein Finger kann nicht schweben. Der :hover-Zustand bleibt nach dem
+     Tippen kleben, bis irgendwo anders getippt wird - die Schaltfläche
+     sieht dann dauerhaft gedrückt aus. Auf Touchgeräten gilt daher der
+     Ruhezustand, und die Rückmeldung übernimmt :active. */
+  .btn-primary:hover        { background: var(--red); border-color: var(--red); }
+  .primary-cta:hover        { background: var(--red); }
+  .rad-kachel-rechnen:hover { background: transparent; }
+  .stationsliste button:hover { background: transparent; }
+  .karte-zurueck:hover      { background: transparent; }
+  .site-nav a:hover, .menue a:hover, .auth-link:hover { color: inherit; }
+  footer a:hover            { color: inherit; text-decoration: none; }
+  .leaflet-marker-icon:hover .karten-station { transform: none; }
+}
+
+@media (max-width: 900px) {
+  /* Fußzeile: die Rechtslinks lagen bei 18 px Höhe direkt nebeneinander.
+     Wer Impressum treffen will, trifft Datenschutz. */
+  footer a, .impressum-sub a {
+    display: inline-block;
+    min-height: 44px;
+    padding-block: 13px;
+  }
+
+  /* Die Zoomknöpfe der Karte kommen aus Leaflet und messen 30 px.
+     Auf einer Karte, die man mit dem Daumen bedient, ist das zu wenig. */
+  .leaflet-control-zoom-in,
+  .leaflet-control-zoom-out {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+    font-size: 20px !important;
+  }
+
+  /* Beschriftungen und Hinweise standen bei 11,5 und 13 px. Unter 14 px
+     wird auf einem Telefon aus Lesen ein Entziffern.
+
+     Angehoben werden die GRADE, nicht einzelne Regeln. Der Versuch,
+     `label { font-size: 14px }` zu setzen, lief ins Leere: die
+     Formularetiketten benutzen die font-Kurzform, und die schlaegt jede
+     spaetere font-size. Wer an der Variablen dreht, braucht diesen
+     Spezifitaetskrieg nicht zu fuehren - und erreicht alle 52 Stellen,
+     die diese beiden Grade verwenden, statt der acht, die man kennt. */
+  :root {
+    --grad-etikett: 14px;
+    --grad-klein:   14px;
+  }
+
+  /* Die Auswahlfelder der Rueckgabe messen 13 px. Ein Daumen trifft das
+     nicht; das umgebende label faengt den Tipp zwar ab, aber wer genau
+     auf den Punkt zielt, verfehlt ihn. */
+  .rueckgabe-wahl input[type="radio"],
+  .rueckgabe-wahl input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Die Filter ueber der Karte: das Kaestchen misst 13 px, das
+     umgebende label 34 - beides zu wenig. Gemessen wird das label,
+     denn es faengt den Tipp ab; das Kaestchen waechst mit, damit
+     sichtbar bleibt, wohin man zielt. */
+  .filter-option {
+    min-height: 44px;
+    align-items: center;
+  }
+  .filter-option input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+  }
+}
+
+/* --------------------------------------------------------------------
+   NIEDRIGE TELEFONE (28.08.2026)
+   Ein Telefon mit eingeblendeter Adressleiste hat oft nur 600 bis 660
+   Punkte Höhe. Die Bühne behält ihre 620 Punkte Mindesthöhe, aber die
+   Schlagzeile braucht davon 224 - sie reicht damit bis 59 Prozent in
+   das Bildband hinein, und genau dort hörte der Schleier auf (58 %).
+   Die rote Zeile stand also auf dem blanken Hinterrad.
+
+   Der Schleier verblasst hier später. Das Rad wird oben blasser, bleibt
+   unten klar - dieselbe Absicht wie auf dem großen Schirm, nur an die
+   kürzere Strecke angepasst. Verschieben ließe sich das Band nicht:
+   zwischen Schlagzeile und Aufruf liegen keine 40 Punkte.
+   -------------------------------------------------------------------- */
+@media (max-width: 900px) and (max-height: 700px) {
+  .photo-shade {
+    background:
+      linear-gradient(180deg, rgba(243, 245, 248, .95) 0%, rgba(243, 245, 248, .92) 55%,
+                              rgba(243, 245, 248, .62) 68%, transparent 78%),
+      linear-gradient(0deg, var(--linie-still) 0%, transparent 22%);
+  }
 }
