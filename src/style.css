@@ -3093,71 +3093,79 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
 }
 
 /* ====================================================================
-   BÜHNE AUF DEM TELEFON: NEBENEINANDER STATT ÜBEREINANDER (29.08.2026)
+   BÜHNE AUF DEM TELEFON: EINE AUSSAGE, EIN RAD, EIN KNOPF (29.08.2026)
 
-   Auf einem Honor Magic V3 fotografiert: das Rad stand als Schemen
-   hinter der Schlagzeile und wurde unten vom roten Knopf abgeschnitten.
+   Zwei Fotos vom Honor Magic V3 haben zwei Fehler gezeigt. Erst stand
+   das Rad als Schemen hinter der Schlagzeile; dann stand es zwar klar,
+   aber die Auswahlpillen wurden von der Browserleiste abgeschnitten.
 
-   Die Ursache war nicht zu wenig Platz, sondern die Anordnung. Alle
-   Teile der Bühne waren absolut positioniert und teilten sich dieselbe
-   Fläche - auf dem Schreibtisch richtig, weil dort Schlagzeile und Rad
-   nebeneinander stehen. Hochkant stapeln sie sich, und wer die Zahlen
-   für ein Gerät stimmt, verschiebt den Fehler nur zum nächsten.
+   Die Ursache lag beide Male in der Anordnung. Auf dem Schreibtisch
+   stehen Schlagzeile und Rad NEBENEINANDER, deshalb liegen alle Teile
+   absolut positioniert übereinander. Hochkant stapeln sie sich, und in
+   eine bildschirmfüllende Bühne passen Zähler, vierzeilige Schlagzeile,
+   Rad, Aufruf UND Pillen nicht hinein.
 
-   Deshalb hier ein Raster mit fünf Zeilen. Was sich überblendet - die
-   drei Räder, die drei Schlagzeilen - behält je eine gemeinsame Zelle
-   und bleibt damit überblendbar. Was sich nicht überblenden soll,
-   bekommt eine eigene Zeile. Das Rad nimmt, was übrig bleibt, und steht
-   ganz im Bild statt hinter dem Text.
+   Auf einem Telefon zählt Bedieneffizienz mehr als Inszenierung. Die
+   Überblendung der drei Räder ist dort ein Effekt, der Höhe kostet und
+   nichts erklärt - die drei Typen stehen ohnehin weiter unten in den
+   Kacheln, mit Preis, Bestand und Rechner. Also zeigt die Bühne hier
+   EIN Rad, EINE Aussage, EINEN Knopf.
 
-   Ein Schleier ist nun überflüssig: nichts liegt mehr auf dem Rad. Die
-   Fußlinie bleibt, weil sie den Übergang zum nächsten Abschnitt trägt.
+   Damit wird das Raster berechenbar: vier Zeilen, drei davon so hoch
+   wie ihr Inhalt, und das Rad nimmt exakt den Rest. Die Bühne füllt den
+   Schirm dadurch genau - auf einem hohen Telefon wird das Rad größer,
+   auf einem flachen kleiner, und der rote Knopf steht immer vollständig
+   im Bild. Kein Zahlenwert ist auf ein Gerät gestimmt.
+
+   Die Pillen bleiben im Dokument, nur unsichtbar: sie tragen den
+   gewählten Typ im aria-pressed, und heroTypAusPille() in script.js
+   liest ihn dort ab, damit der Zähler "E-Bikes frei" meldet.
    ==================================================================== */
 @media (max-width: 900px) {
-  /* Die Bühne WÄCHST hier mit ihrem Inhalt, statt ihn in eine feste
-     Höhe zu pressen. Auf dem Schreibtisch ist eine bildschirmfüllende
-     Bühne richtig; auf dem Telefon war sie die eigentliche Ursache:
-     Zähler, Schlagzeile, Rad, Aufruf und Pillen brauchen zusammen mehr
-     als 700 Punkte, und was nicht hineinpasst, legte sich übereinander.
-     Ein Telefon zu scrollen ist die selbstverständlichste Geste, die es
-     gibt - Text und Rad ineinanderzuschieben ist es nicht.
-
-     Die Überblendung beim Scrollen hängt nicht daran: sie ist auf dem
-     Telefon ohnehin abgeschaltet, dort wechseln die Pillen das Rad. */
-  .scroll-story  { height: auto; min-height: 100svh; }
+  /* 560 als Untergrenze: darunter wird gescrollt statt gestapelt. */
+  .scroll-story { height: 100svh; min-height: 560px; }
   .sticky-stage {
-    height: auto;
-    min-height: 100svh;
+    height: 100svh;
+    min-height: 560px;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    /* Zähler · Schlagzeile · Rad · Aufruf · Pillen.
-       Das Rad bekommt eine feste Zeile statt eines Restanteils: bei
-       wachsender Bühne gäbe es keinen Rest zu verteilen, und ein
-       Hintergrundbild ohne Inhalt wäre null Punkte hoch. 52vw ist die
-       Höhe, bei der das breiteste der drei Räder die Spalte gerade
-       ausfüllt. */
-    grid-template-rows: auto auto clamp(130px, 40vw, 200px) auto auto;
+    /* Zähler · Schlagzeile · Rad · Aufruf.
+       Das Rad steht auf 1fr und schluckt damit jede Abweichung der
+       Gerätehöhe. Die Untergrenze verhindert, dass es auf sehr flachen
+       Schirmen zu einem Streifen zusammenfällt. */
+    grid-template-rows: auto auto minmax(120px, 1fr) auto;
     row-gap: 12px;
-    /* 78 statt 100: der feste Kopf misst 74 Punkte, mehr Abstand ist
-       auf dem Telefon verschenkte Höhe - und die fehlt unten dem Aufruf. */
+    /* 78 statt 100: der feste Kopf misst 74 Punkte. */
     padding: 78px var(--flucht) 18px;
   }
 
-  /* Der Zähler stand im Schriftgrad der Schlagzeile. Auf dem
-     Schreibtisch trägt das die zweite Spalte; hochkant kostet es
-     fünfzehn Punkte, die weiter unten dem roten Knopf fehlen. Die
-     Rangfolge bleibt erkennbar - die Zahl ist immer noch das Größte
-     über der Schlagzeile. */
-  .live-zahl b { font-size: clamp(28px, 8vw, 38px); }
+  /* Kein Wechsel, keine Pillen: ein E-Bike, fest und deckend. */
+  .photo-city, .photo-cargo,
+  .claim-city, .claim-cargo,
+  .choice-panel { display: none; }
+  .photo-ebike { opacity: 1; transform: none; }
+  .claim-ebike { opacity: 1; transform: none; }
 
-  /* Grund und Schleier bleiben absolut und decken die ganze Bühne; als
-     absolut positionierte Kinder nehmen sie am Raster nicht teil. */
+  /* Nichts liegt mehr auf dem Rad - der Schleier entfällt. Seine
+     Fußlinie bleibt, weil sie den Übergang zum nächsten Abschnitt
+     trägt. */
   .photo-shade { background: linear-gradient(0deg, var(--linie-still) 0%, transparent 22%); }
 
-  .top-meta     { position: static; inset: auto; transform: none; grid-area: 1 / 1; }
-  .claim        { position: static; inset: auto; width: auto; grid-area: 2 / 1; }
-  .photo-layer  { position: static; inset: auto; width: auto; height: auto; grid-area: 3 / 1;
-                  background-size: contain; background-position: center bottom; }
-  .hero-cta     { position: static; inset: auto; grid-area: 4 / 1; justify-self: start; }
-  .choice-panel { position: static; inset: auto; grid-area: 5 / 1; }
+  .top-meta    { position: static; inset: auto; transform: none; grid-area: 1 / 1; }
+  .claim       { position: static; inset: auto; width: auto; grid-area: 2 / 1; }
+  /* aspect-ratio muss hier weichen. Auf dem Schreibtisch leitet sie die
+     Höhe des Bandes aus seiner Breite ab; im Raster überschreibt sie
+     damit die Zeilenhöhe und schiebt das Rad über den Knopf - gemessen:
+     170 Punkte in einer 143 Punkte hohen Zeile. Die Proportion des Rades
+     wahrt ohnehin background-size: contain. */
+  .photo-layer { position: static; inset: auto; width: auto; height: auto;
+                 aspect-ratio: auto; grid-area: 3 / 1;
+                 background-size: contain; background-position: center bottom; }
+  .hero-cta    { position: static; inset: auto; grid-area: 4 / 1; justify-self: start; }
+
+  /* Der Zähler stand im Schriftgrad der Schlagzeile. Auf dem
+     Schreibtisch trägt das die zweite Spalte; hochkant nimmt es dem
+     Rad die Höhe. Die Rangfolge bleibt: die Zahl ist das Größte über
+     der Schlagzeile. */
+  .live-zahl b { font-size: clamp(28px, 8vw, 38px); }
 }
