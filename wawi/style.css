@@ -739,9 +739,32 @@ textarea {
    deshalb keine Zeile verschieben, die daneben steht.
    :not(:disabled) - ein gesperrter Knopf darf nicht so tun, als
    reagierte er. */
+/* ===== translate STATT transform (29.08.2026) =====
+   Der Nutzer meldete, der Klappgriff reagiere nicht - "wenn ich den
+   Button etwas laenger druecke, dann funktioniert es, wenn zwar auch
+   stoerrisch" - und der Knopf springe dabei. Beides zusammen ergibt
+   genau einen Mechanismus, und er lag hier:
+
+   .navigation-griff zentriert sich mit transform: translate(-50%,-50%).
+   transform ist EINE Eigenschaft, nicht additiv - diese Regel hat die
+   Zentrierung beim Druecken ERSETZT. Der Griff sprang dadurch im Moment
+   des Drueckens sechzehn Punkte nach rechts und unten. Ein click
+   entsteht aber nur, wenn Druecken UND Loslassen dasselbe Element
+   treffen: der Zeiger stand danach neben dem Knopf, das Loslassen ging
+   ins Leere, kein Klick. Bei langem Druecken trifft man ihn zufaellig
+   doch - "stoerrisch" beschreibt das genau.
+
+   Warum ausgerechnet dieser Knopf: mit (0,2,1) schlaegt
+   button:active:not(:disabled) die Klasse .navigation-griff (0,1,0).
+
+   translate ist eine EIGENSTAENDIGE Eigenschaft und wird mit transform
+   zusammengesetzt statt es zu ersetzen. Damit ist der Fehler nicht nur
+   hier behoben, sondern kann an keinem kuenftigen Knopf mit eigenem
+   transform wieder entstehen - eine Fallgrube weniger statt einer
+   Ausnahmeregel mehr. */
 button:active:not(:disabled),
 a.wortmarke-link:active {
-  transform: translateY(1px);
+  translate: 0 1px;
 }
 
 /* Wer "Bewegung reduzieren" eingestellt hat, bekommt denselben Zustand
@@ -749,7 +772,11 @@ a.wortmarke-link:active {
 @media (prefers-reduced-motion: reduce) {
   button:active:not(:disabled),
   a.wortmarke-link:active {
-    transform: none;
+    /* translate statt transform - aus demselben Grund wie oben. Mit
+       transform:none haette diese Regel die Zentrierung des Griffs
+       geloescht, und wer "Bewegung reduzieren" eingestellt hat, haette
+       denselben unklickbaren Knopf bekommen. */
+    translate: none;
     border-color: var(--marine);
   }
 }
