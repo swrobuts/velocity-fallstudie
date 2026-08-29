@@ -38,6 +38,19 @@ STYLESHEETS = ['style.css']
 # Browser haelt sie fuer verschiedene Dateien und laedt beide. Am
 # 28.08.2026 gemessen: 1,6 MB Fotos wurden doppelt geholt.
 SKRIPTE = ['script.js']
+# ===== AUCH DIE WARENWIRTSCHAFT (29.08.2026) =====
+# Sie war als einzige nie einbezogen. Begruendet hatte ich das damit, dass
+# der Server 'cache-control: no-cache' schickt und der Browser deshalb
+# ohnehin bei jedem Aufruf nachfragt. Die Beweislage sagt etwas anderes:
+# der Nutzer meldete nach JEDER Auslieferung "unveraendert" - fuer den
+# Uebergang, die Variable, das Tippziel, die Verdrahtung. Vier Aenderungen,
+# vier Mal keine Wirkung. Das ist kein Zufallsmuster.
+#
+# Ein Stempel macht die Frage gegenstandslos: aendert sich die Datei,
+# aendert sich ihre ADRESSE - und keine Zwischenstelle (Browser, Proxy,
+# Netz) kann etwas Altes unter einer Adresse liefern, die es nie gab.
+WAWI = WURZEL / 'wawi'
+WAWI_SEITEN = ['index.html']
 
 
 def fingerabdruck(pfad: Path) -> str:
@@ -51,7 +64,7 @@ def stempeln(seite: Path, nur_pruefen: bool) -> list[str]:
 
     def ersetzen(treffer: re.Match) -> str:
         attribut, datei, alt = treffer.group(1), treffer.group(2), treffer.group(3)
-        ziel = SRC / datei
+        ziel = seite.parent / datei   # gegen das Verzeichnis DER SEITE
         if not ziel.exists():
             abweichungen.append(f'{seite.name}: {datei} fehlt')
             return treffer.group(0)
@@ -138,6 +151,10 @@ def main() -> int:
             alle += bilder_in_skript_stempeln(datei, nur_pruefen)
     for name in SEITEN:
         seite = SRC / name
+        if seite.exists():
+            alle += stempeln(seite, nur_pruefen)
+    for name in WAWI_SEITEN:
+        seite = WAWI / name
         if seite.exists():
             alle += stempeln(seite, nur_pruefen)
 

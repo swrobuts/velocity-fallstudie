@@ -154,7 +154,12 @@ H = ohne_html_kommentare(HTML_ROH)
 # STILLSCHWEIGEND uebergangen - der Pruefer haette acht von neun Dateien
 # geprueft und trotzdem gruen gemeldet. Eine Adresse mit Protokoll (die
 # beiden CDN-Skripte) kann nicht hineinfallen, weil sie : und / enthaelt.
-SKRIPT_NAMEN = re.findall(r'<script src="([A-Za-z0-9_.-]+\.js)"', H)
+# (?:\?v=[0-9a-f]+)? seit dem 29.08.2026: die Warenwirtschaft traegt jetzt
+# Versionsstempel wie die Kundenwebsite (siehe tools/versionieren.py).
+# Ohne diesen Zusatz fand das Muster kein einziges Skript mehr - der
+# Pruefer haette stumm nichts geprueft und Vollzug gemeldet. Er hat es
+# selbst bemerkt und gewarnt; genau dafuer steht die Warnung unten.
+SKRIPT_NAMEN = re.findall(r'<script src="([A-Za-z0-9_.-]+\.js)(?:\?v=[0-9a-f]+)?"', H)
 if not SKRIPT_NAMEN:
     print('WARNUNG: kein einziges lokales <script> in wawi/index.html gefunden - '
           'der Pruefer haette nichts geprueft.')
