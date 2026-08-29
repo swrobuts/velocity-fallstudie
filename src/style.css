@@ -3207,6 +3207,19 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      Rad die Höhe. Die Rangfolge bleibt: die Zahl ist das Größte über
      der Schlagzeile. */
   .live-zahl b { font-size: clamp(28px, 8vw, 38px); }
+
+  /* KENNZAHLEN OHNE TREPPE (29.08.2026)
+     Das seitliche Polster trennt auf dem Schreibtisch die vier Spalten
+     voneinander - dort sitzt zwischen ihnen eine Haarlinie. Sobald sie
+     untereinander stehen, wird daraus eine Einrückung: die erste Zeile
+     bündig, die darunter zwanzig Punkte weiter rechts. Gemessen bei 375
+     (einspaltig) und bei 736 (zweispaltig, dort in der linken Spalte).
+
+     Hier fängt jede Angabe auf derselben Kante an. Den Abstand zwischen
+     zwei nebeneinanderstehenden Spalten übernimmt column-gap - das ist
+     ohnehin die richtige Stelle dafür. */
+  .stat { padding-inline: 0; }
+  .stat-grid { column-gap: var(--af-s); }
 }
 
 /* --------------------------------------------------------------------
@@ -3367,6 +3380,15 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      Anordnung, die dieselbe Fläche hätte. */
   .photo-layer {
     grid-area: 1 / 2 / -1 / 3;
+    /* Das Rad war von der BREITE begrenzt, nicht von der Höhe: 308 mal
+       195 in einem 308 mal 464 hohen Kasten, also 135 Punkte leer
+       darunter. Mehr Höhe hätte nichts geändert - es braucht Breite.
+
+       Deshalb läuft es hier bis an den Rand der Bühne, über das seitliche
+       Polster hinweg. Das gibt ihm die Breite zurück und liest sich als
+       Absicht: das Rad fährt aus dem Bild, statt in der Spalte zu
+       schweben. */
+    margin-right: calc(-1 * var(--flucht));
     background-position: center center;
   }
 }
