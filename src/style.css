@@ -3012,8 +3012,13 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .product-tab { padding: 0 var(--a3); }
   .rad-kacheln { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: 1fr; }
-  .stat { border-left: 0; border-top: 1px solid var(--auf-navy-linie); }
-  .stat:first-child { border-top: 0; }
+  /* Untereinander trennt jede Linie zwei Angaben - hier gehoeren alle
+     drei hin. Die Form mit + statt :first-child haelt der Spezifitaet
+     von nth-child(n+3) stand, das im Zweispalter gilt. */
+  .stat { border-left: 0; }
+  .stat + .stat, .stat:nth-child(n+3) {
+    border-top: 1px solid var(--auf-navy-linie);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3232,10 +3237,15 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      den Zeilen fallen ebenfalls weg: sie trennen, was ohnehin
      untereinander steht. Übrig bleiben zwei Linien, die den Block
      einfassen, und Zeilen, die atmen. */
+  /* Die Oberkante des Bandes faellt weg - sie steht vierzig Punkte unter
+     der Ueberschriftslinie und sagt dasselbe. Die Linien ZWISCHEN den
+     Zeilen bleiben: sie tragen die Gliederung. Was drueckte, war nicht
+     ihre Zahl allein, sondern die Enge - 34 Punkte hohe Zeilen ganz ohne
+     vertikales Polster. Mit 58 Punkten atmen dieselben Linien. */
   .stat-grid { border-top: 0; }
-  /* nth-child(n+3) aus dem 620er-Zweig schlaegt eine schlichte
-     .stat-Regel in der Spezifitaet - deshalb hier dieselbe Form. */
-  .stat, .stat:nth-child(n+3) { border-top: 0; padding-block: var(--a3); }
+  .stat { border-top: 0; padding-block: var(--a3); }
+  /* Zwei Spalten: EINE Linie ueber der zweiten Zeile, nicht zwei. */
+  .stat:nth-child(n+3) { border-top: 1px solid var(--auf-navy-linie); }
 }
 
 /* --------------------------------------------------------------------
