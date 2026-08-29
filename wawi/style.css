@@ -4002,26 +4002,34 @@ body.maske-wird-gezogen #detailmaske {
   margin: 0 0 var(--raum-2);
 }
 
+/* Die Trennlinien entstehen als LUECKE, durch die der Grund des
+   Behaelters scheint - nicht als Rand je Kachel (30.08.2026).
+   Mit vier Kacheln war die alte Rechnerei richtig: nth-child(2n) ist die
+   rechte Spalte, nth-last-child(-n+2) die letzte Zeile. Mit fuenf stimmt
+   der zweite Teil nicht mehr - die letzte Zeile ist dann EINE Kachel, und
+   die Regel naehme auch der vierten ihre untere Linie, mitten im Raster.
+   Ein 1px-Abstand auf gefaerbtem Grund braucht diese Rechnung gar nicht
+   erst: er trifft jede Fuge und keinen Aussenrand, bei jeder Anzahl. */
 .monatsdrilldown-kacheln {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 1px;
   border: 1px solid var(--linie);
-  background: var(--grund);
+  background: var(--linie);
   margin-bottom: var(--raum-4);
 }
 
 .monatsdrilldown-kacheln .uebersichtskachel {
-  border-right: 1px solid var(--linie);
-  border-bottom: 1px solid var(--linie);
+  /* Eigene Flaeche, damit die 1px-Luecke daneben als Linie sichtbar wird. */
+  background: var(--grund);
   padding: var(--raum-3) var(--raum-4);
 }
 
-.monatsdrilldown-kacheln .uebersichtskachel:nth-child(2n) {
-  border-right: none;
-}
-
-.monatsdrilldown-kacheln .uebersichtskachel:nth-last-child(-n+2) {
-  border-bottom: none;
+/* Eine letzte Kachel, die in der linken Spalte allein bliebe (ungerade
+   Anzahl), laeuft ueber beide - sonst stuende eine leere Zelle daneben,
+   die wie eine fehlende Kennzahl aussaehe. */
+.monatsdrilldown-kacheln .uebersichtskachel:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .monatsdrilldown-fehler {

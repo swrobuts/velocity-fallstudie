@@ -595,6 +595,20 @@ async function monatsdrilldownEinfuegen(monat) {
             hinweis: maxTage.length > 1
                 ? t('hint.tiedDaysCount', { tagePhrase: mengeFormat(maxTage.length, 'tag'), phrase: maxPhrase })
                 : maxPhrase
+        }),
+        // MONATSUMSATZ (30.08.2026). Summe der Tageswerte, die der Kalender
+        // ohnehin geladen hat - dieselbe Quelle wie die Hinweisfenster auf
+        // den Kacheln und an den Saeulen, also kann die Matrix hier keine
+        // andere Zahl nennen als der Kalender darunter.
+        // Fuenfte Kachel in einem Zweispaltenraster: sie steht allein in
+        // der letzten Zeile und laeuft ueber beide Spalten (siehe
+        // .monatsdrilldown-kacheln in style.css) - als Summe des ganzen
+        // Monats ist das die passende Stelle, nicht eine halbe Zeile mit
+        // einem Loch daneben.
+        baueKachel({
+            titel: t('tile.revenuePerMonth'),
+            wert: zahlSkaliert(geldFormat(umsaetze.reduce((summe, u) => summe + (u ?? 0), 0))),
+            hinweis: t('hint.totalForMonth', { phrase: monatFormat(monat) })
         })
     );
     abschnitt.append(kacheln);
