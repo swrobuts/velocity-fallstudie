@@ -596,6 +596,12 @@
   --schatten-1: 0 1px 2px rgba(6, 24, 65, 0.22), 0 5px 14px rgba(6, 24, 65, 0.30);
   --schatten-2: 0 6px 16px rgba(6, 24, 65, 0.20);
   --schatten-3: 0 16px 40px rgba(6, 24, 65, 0.30);
+  /* Seitlich statt nach unten geworfen: die Detailmaske liegt NEBEN der
+     Liste, nicht darueber - ein Schatten nach unten sagt das Falsche.
+     Dieselbe Farbe und Weichheit wie --schatten-2, nur nach links
+     gerichtet und mit negativer Streuung, damit er nicht oben und unten
+     aus der Spalte herauslaeuft. */
+  --schatten-seite: -6px 0 18px -6px rgba(6, 24, 65, 0.20);
   --z-ebene-2:  20;
   --z-hinweis:  60;
 
@@ -2143,8 +2149,14 @@ body.navigation-schmal #navigation button:focus-visible {
   overflow-x: auto;
   /* Bereichskante zur Detailmaske - dieselbe --kontur wie jede andere
      Bereichskante. Sie ist die EINZIGE Linie zwischen den beiden
-     Spalten; die Maske traegt links bewusst keine zweite. */
-  border-right: 1px solid var(--kontur);
+     Spalten; die Maske traegt links bewusst keine zweite.
+     SEIT DEM ZIEHGRIFF (30.08.2026) traegt die Naht der Griff, nicht mehr
+     dieser Rand: er sitzt genau dort, wo die Linie lag, und ist das
+     Element, das man anfassen soll. Eine sichtbare Linie NEBEN dem Griff
+     laedt zum Zielen auf die falsche Stelle ein. Der Rand bleibt
+     durchsichtig stehen, damit die Spaltenbreite sich beim Ein- und
+     Ausblenden der Maske nicht um ein Pixel verschiebt. */
+  border-right: 1px solid transparent;
   background: var(--flaeche);
   display: flex;
   flex-direction: column;
@@ -2177,8 +2189,13 @@ body.navigation-schmal #navigation button:focus-visible {
   align-self: stretch;
   position: relative;
   cursor: col-resize;
-  background: transparent;
+  /* Sichtbar statt durchsichtig: der Griff IST die Naht zwischen den
+     Bereichen (siehe #arbeitsliste). --linie statt --kontur, weil er als
+     3px breite Flaeche mehr Gewicht traegt als die 1px-Linie zuvor und
+     in deren Farbe zu laut wuerde. */
+  background: var(--linie);
   touch-action: none;
+  z-index: 2;
 }
 
 #maskengriff::after {
@@ -5110,14 +5127,11 @@ body.maske-wird-gezogen #detailmaske {
 .arbeitstabelle-kompakt thead th {
   text-transform: none;
   letter-spacing: normal;
-  /* ALLE MENÜKNÖPFE AUF EINER FLUCHT. Ohne das entscheidet jede Spalte
-     für sich, ob ihr Titel neben oder über dem Knopf Platz hat - der
-     Knopf sitzt dann mal auf Höhe des Titels, mal darunter, und die
-     Kopfzeile wirkt zerfallen. vertical-align:bottom setzt den Inhalt
-     jeder Kopfzelle auf die Grundlinie der Zeile; ob eine Spalte
-     umgebrochen hat oder nicht, der Knopf steht danach überall gleich
-     tief. */
-  vertical-align: bottom;
+  /* ALLE MENÜKNÖPFE AUF EINER FLUCHT. Der Knopf steht jetzt ZUERST in
+     der Kopfzelle (siehe .spaltenkopf-kompakt unten), also richtet sich
+     die Flucht nach OBEN aus - bei vertical-align:bottom stünden die
+     Knöpfe verschieden hoch, sobald ein Titel zwei Zeilen braucht. */
+  vertical-align: top;
 }
 
 /* Umbruch erlaubt: ohne ihn ist die Spalte mindestens so breit wie Titel
@@ -5127,8 +5141,21 @@ body.maske-wird-gezogen #detailmaske {
    Spalte braucht dann nur noch das Breitere von beiden, die Kopfzeile
    wird dafür eine Zeile höher. Das ist der bessere Tausch: Höhe hat die
    Maske, Breite nicht. */
+/* KNOPF UEBER TITEL, IMMER (30.08.2026).
+   Drei Anforderungen treffen hier zusammen, und nur diese Anordnung
+   erfuellt alle drei:
+     - Der Knopf gehoert sichtbar zu SEINER Spalte (Auftrag: "das Control
+       immer vor der dazugehoerenden Beschriftung").
+     - Alle Knoepfe stehen auf einer Flucht (frueherer Auftrag).
+     - Die Spalte bleibt schmal genug fuer den Detailbereich.
+   Nebeneinander waere die Spalte so breit wie Knopf UND Titel zusammen;
+   ein Umbruch NUR bei Enge liess den Knopf mal neben, mal ueber dem Titel
+   stehen - dann steht er eben nicht mehr auf einer Flucht. Fest
+   uebereinander loest beides: die Kopfzeile wird eine Zeile hoeher, und
+   Hoehe hat die Maske, Breite nicht. */
 .arbeitstabelle-kompakt .spaltenkopf-kompakt {
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   row-gap: var(--raum-1);
 }
 
@@ -5387,6 +5414,24 @@ body.maske-wird-gezogen #detailmaske {
   background: var(--flaeche);
   padding: var(--raum-5);
   transition: flex-basis 160ms ease, padding 160ms ease;
+  /* ===== DIE MASKE LIEGT OBEN (30.08.2026) =====
+     Auftrag: "dass der Detailbereich visuell über dem Hauptbereich liegt."
+     Sie VERSCHIEBT die Liste weiterhin, statt sie zu verdecken:
+     .arbeitstabelle trägt width:100 % mit automatischem Layout, fliesst
+     also in ihre Spalte hinein. Als Overlay lägen die rechten Spalten
+     nicht enger, sondern unerreichbar hinter der Maske - und die
+     Arbeitsschleife hier ist gerade "Zeile wählen, Detail lesen, nächste
+     Zeile wählen".
+     Was bleibt, ist der RANG: z-index und ein seitlicher Schatten lassen
+     die Liste sichtbar unter der Kante durchlaufen. position:relative ist
+     dafür Pflicht - ohne eigene Stapelposition greift z-index nicht.
+     KEIN abgesenkter Grund für die Liste daneben: die Gliederungsregel
+     dieser Oberfläche gibt Datenflächen Weiss. Den Rang über eine zweite
+     Grundfarbe zu erzählen hiesse, diese Regel für einen rein optischen
+     Gewinn zu brechen. */
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--schatten-seite);
 }
 
 /* Leer -> auf 0 kollabieren, statt als 45% breiter, komplett unbenutzter
@@ -5399,6 +5444,9 @@ body.maske-wird-gezogen #detailmaske {
   flex-basis: 0;
   padding: 0;
   overflow: hidden;
+  /* Sonst bliebe der Schatten als Streifen am rechten Rand stehen, ohne
+     dass etwas da waere, das ihn wirft. */
+  box-shadow: none;
 }
 
 /* Titel UND Schliessen-Schaltflaeche nebeneinander (Gestaltungsauftrag

@@ -8287,8 +8287,21 @@ function spaltenkopfKopfzeile(tab, spalten, aktionen) {
             // niemand vermutet.
             if (tab.kompakt) {
                 wrapper.classList.add('spaltenkopf-kompakt');
-                wrapper.append(spaltenkopfTitelOhneSortierung(spalte));
+                // KNOPF VOR DEN TITEL (30.08.2026). Auftrag, woertlich:
+                // "die Position der Controls ist verwirrend, denn sie
+                // liegen hier hinter der zugehoerigen Beschriftung. In
+                // meinen Augen sollte das Control immer vor der dazu
+                // gehoerenden Beschriftung/Attribut liegen."
+                // Genau so ist es: hinter dem Titel steht der Knopf
+                // unmittelbar VOR dem Titel der naechsten Spalte und
+                // klebt optisch an dieser - "Rahmennummer ⋯ Radtyp" liest
+                // sich als "⋯ gehoert zu Radtyp". Der Abstand zwischen
+                // zwei Spalten ist immer groesser als der innerhalb einer,
+                // also bindet die Naehe den Knopf an das, was RECHTS von
+                // ihm steht. Voranstellen loest das ohne jede zusaetzliche
+                // Linie oder Farbe.
                 wrapper.append(spaltenkopfMenueknopf(tab, spalte));
+                wrapper.append(spaltenkopfTitelOhneSortierung(spalte));
                 th.classList.add('spaltenkopf-zelle');
                 th.append(wrapper);
                 titelZeile.append(th);
@@ -9999,8 +10012,34 @@ if (maskengriff) {
         maskengriff.setPointerCapture(e.pointerId);
         document.body.classList.add('maske-wird-gezogen');
 
+        // ===== DIE LISTE HAELT WAEHREND DES ZUGS STILL (30.08.2026) =====
+        // Auftrag: "im Gegenzug verschiebt sich der linke Bereich der
+        // Hauptflaeche" - was dabei wirklich stoert, ist nicht die
+        // wandernde Kante, sondern dass die Tabelle daneben bei JEDEM
+        // Pixel ihre Spalten neu ausrechnet und Zellen anders umbricht.
+        // .arbeitstabelle traegt width:100 % mit automatischem Layout,
+        // fliesst also mit.
+        //
+        // Deshalb: die aktuelle Breite jeder Tabelle in der Liste fuer die
+        // Dauer des Zugs festnageln. Sie behaelt ihr Layout, die Spalte
+        // schiebt sich darueber - genau der ruhige Eindruck, den ein
+        // ueberlagerndes Fenster machen wuerde, ohne dass etwas
+        // unerreichbar wird. Beim Loslassen faellt die Klammer weg, und
+        // die Tabelle setzt sich EINMAL neu.
+        const festgenagelt = Array.from(
+            document.querySelectorAll('#arbeitsliste table')
+        ).map((tabelle) => {
+            const vorher = tabelle.style.width;
+            tabelle.style.width = `${tabelle.getBoundingClientRect().width}px`;
+            return { tabelle, vorher };
+        });
+        function loesen() {
+            for (const { tabelle, vorher } of festgenagelt) tabelle.style.width = vorher;
+        }
+
         function bewegen(ev) { maskenAnteilSetzen(maskenAnteilAusZeiger(ev.clientX), false); }
         function loslassen(ev) {
+            loesen();
             maskengriff.removeEventListener('pointermove', bewegen);
             maskengriff.removeEventListener('pointerup', loslassen);
             maskengriff.removeEventListener('pointercancel', loslassen);
