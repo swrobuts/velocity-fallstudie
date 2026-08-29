@@ -410,6 +410,15 @@ document.addEventListener("DOMContentLoaded", async () => {
        wirklich laenger als das City-Bike. Bei gleicher Kachelhoehe
        bleibt dieses Verhaeltnis sichtbar, und das ist richtig so.
        ================================================================ */
+    /* Leaflet bemisst das Popover in Pixeln, die es beim Binden erhaelt.
+       300 als Mindestbreite war fuer den Schreibtisch gedacht; auf einem
+       375 Punkte breiten Telefon ragte das Popover damit 13 Punkte aus
+       dem FENSTER heraus - nicht nur aus der Karte. Die Untergrenze faellt
+       deshalb auf 220; die wirkliche Begrenzung uebernimmt das
+       Stylesheet mit einer Angabe in Fensterbreiten, weil die sich beim
+       Drehen und Aufklappen von selbst mitaendert. */
+    const POPOVER_MASSE = { maxWidth: 340, minWidth: 220 };
+
     const RAD_BILD = {
         CITY:  'assets/rad-city-frei.webp?v=ac9e0122',
         EBIKE: 'assets/rad-ebike-frei.webp?v=f5ca0df0',
@@ -1544,7 +1553,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 title: name,
                 alt: name
             }).addTo(stationLayer)
-              .bindPopup(stationsPopover(station, hier), { maxWidth: 340, minWidth: 300 });
+              .bindPopup(stationsPopover(station, hier), POPOVER_MASSE);
             markerBenennen(marker, name);
             // Der wahre Ort bleibt erhalten, auch wenn der Marker gleich
             // beiseitegeschoben wird - siehe markerEntflechten.
@@ -1567,7 +1576,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     // Ziel, nach dem gesucht wird.
                     zIndexOffset: -500
                 }).addTo(bikeLayer)
-                  .bindPopup(freiesRadPopover(rad), { maxWidth: 340, minWidth: 300 });
+                  .bindPopup(freiesRadPopover(rad), POPOVER_MASSE);
                 markerBenennen(marker, name);
             }
         }

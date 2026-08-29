@@ -3241,3 +3241,61 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
 @media (hover: none) {
   .karte-hinweis { display: none; }
 }
+
+/* ====================================================================
+   KARTEN-POPOVER AUF DEM TELEFON (29.08.2026)
+
+   Gemessen bei 375x812, Karte 329 Punkte breit:
+     Popover                343 breit, 589 hoch
+     ragte links aus dem FENSTER    13 Punkte
+     ragte über die Karte hinaus   318 Punkte nach oben
+     "Leihen"                84 x 37   - unter 44
+     Schließen-Kreuz         24 x 24   - weit darunter
+
+   Es deckte damit die Überschrift über der Karte zu. Ursache war eine
+   Mindestbreite von 300 Pixeln aus Leaflets Bindeaufruf, dazu eine Höhe,
+   die dem Inhalt folgte, ohne die Karte zu kennen.
+
+   Hier begrenzen Fensterbreite und -höhe, nicht feste Pixel: das gilt
+   auch nach dem Drehen und Aufklappen. Was nicht hineinpasst, wird
+   gerollt - abschneiden wäre schlimmer, denn die Höhenangaben und die
+   Rückgaberegel stehen unten.
+   ==================================================================== */
+@media (max-width: 900px), (max-aspect-ratio: 6/5) {
+  /* Leaflet schreibt die Breite in das Element - deshalb !important. */
+  .leaflet-popup-content {
+    /* auto allein liess das Popover auf 188 Punkte zusammenfallen - es
+       schrumpfte auf den Inhalt. Deshalb eine Breite, die rechnet:
+       so breit wie das Fenster erlaubt, hoechstens 340. */
+    /* 92 statt 56 abgezogen: die Karte steht selbst schon 23 Punkte je
+       Seite eingerueckt. Bei 56 war das Popover 321 breit auf einer 329
+       breiten Karte - acht Punkte Spielraum, zu wenig fuer Leaflet, um
+       es an einer randnahen Nadel einzupassen. Es stand dann zwei Punkte
+       ausserhalb des Fensters. */
+    width: min(calc(100vw - 92px), 340px) !important;
+    /* 40 statt 58 Prozent der Fensterhoehe. Bei 58 war das Popover fast
+       so hoch wie die Karte selbst (471 zu 536); es haengt aber an einer
+       Nadel, nicht in der Mitte, und ragte deshalb 204 Punkte darueber
+       hinaus - genau ueber die Ueberschrift. Kuerzer heisst hier nicht
+       weniger: was nicht hineinpasst, wird gerollt. */
+    max-height: min(40vh, 360px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Der Knopf, um den es geht: leihen. Er trug 37 Punkte. */
+  .pop-leihen {
+    min-height: 44px;
+    padding-inline: var(--a4);
+  }
+
+  /* Das Kreuz muss man treffen können, ohne die Karte zu verschieben.
+     Der Kopf bekommt rechts Platz, damit es nicht auf dem Namen liegt. */
+  .leaflet-popup-close-button {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 22px !important;
+    line-height: 40px !important;
+  }
+  .pop-kopf { padding-right: 44px; }
+}
