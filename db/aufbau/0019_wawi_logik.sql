@@ -1244,6 +1244,7 @@ grant select on
   velocity.v_wawi_umsatz_radtyp, velocity.v_wawi_umsatz_kundengruppe,
   velocity.v_wawi_km_co2, velocity.v_wawi_stationsauslastung,
   velocity.v_wawi_modell, velocity.v_wawi_fahrten_je_tag,
+  velocity.v_wawi_fahrten_je_tag_typ,
   velocity.v_wawi_fahrten_je_tag_rad, velocity.v_wawi_station_flotte,
   velocity.v_wawi_stationsverkehr_zeitfenster, velocity.v_wawi_kundenorte
 to authenticated;

@@ -612,18 +612,48 @@ async function monatsdrilldownEinfuegen(monat) {
     // MENGENFORMEN in rahmen.js).
     const maxPhrase = mengeFormat(maximum, 'fahrt');
 
-    const grafik = saeulengrafik(werte, tage.map((t) => `${t}. ${monatNameVoll}`), {
-        beschriftung: t('hint.dailyRidesChartAria', {
+    // ===== DAS DIAGRAMM ZEIGT DEN UMSATZ (30.08.2026) =====
+    // Es zeigte bis hierher dieselben Fahrtenzahlen wie der Kalender
+    // darueber - dieselben 28 Zahlen zweimal. Jetzt traegt der Kalender die
+    // Fahrten und das Diagramm den Umsatz: zwei Fragen statt einer
+    // zweimal. Gerade bei diesen Daten lohnt das, weil beide Groessen
+    // auseinanderlaufen (Februar 2026: City-Bike 192 Fahrten / 180,92 EUR,
+    // E-Cargo Loader 37 Fahrten / 398,40 EUR) - der umsatzstaerkste Tag ist
+    // eben nicht der fahrtenstaerkste.
+    //
+    // undefined (kein Betrieb an dem Tag) wird hier zu 0: eine Saeule der
+    // Hoehe null ist die richtige Darstellung fuer "an diesem Tag kam
+    // nichts herein". Das Hinweisfenster laesst den Umsatz trotzdem weg
+    // (siehe tagHinweis) - dort waere "0,00 EUR" eine Behauptung ueber eine
+    // Abrechnung, die es nicht gibt.
+    const umsatzWerte = umsaetze.map((u) => u ?? 0);
+    const umsatzMax = Math.max(...umsatzWerte);
+    const umsatzMin = Math.min(...umsatzWerte);
+    const umsatzGesamt = umsatzWerte.reduce((s, u) => s + u, 0);
+    // Die rote Marke zeigt den umsatzstaerksten Tag - nicht mehr den
+    // fahrtenstaerksten: sie gehoert zu der Reihe, die gezeichnet wird.
+    const umsatzMaxIndizes = tage.map((_, i) => i).filter((i) => umsatzWerte[i] === umsatzMax);
+
+    const grafikTitel = document.createElement('h4');
+    grafikTitel.className = 'monatsdrilldown-grafik-titel';
+    grafikTitel.textContent = t('hint.dailyRevenueChartHeading', { monat: monatFormat(monat) });
+
+    const grafik = saeulengrafik(umsatzWerte, tage.map((t) => `${t}. ${monatNameVoll}`), {
+        beschriftung: t('hint.dailyRevenueChartAria', {
             monat: monatNameVoll, jahr: zahlFormat(Number(jahr), { useGrouping: false }),
-            min: zahlFormat(minimum), maxPhrase, mittel: zahlFormat(Math.round(gesamt / tage.length)),
-            tageListe: tageListe(maxTage)
+            min: geldFormat(umsatzMin), max: geldFormat(umsatzMax),
+            mittel: geldFormat(umsatzGesamt / tage.length),
+            tageListe: tageListe(umsatzMaxIndizes.map((i) => tage[i]))
         }),
-        markierIndizes: maxIndizes,
-        // Hinweis JE SAEULE statt des Vorgabetexts "Tag: Zahl" - derselbe
-        // Wortlaut wie auf der Kalenderkachel darunter.
+        markierIndizes: umsatzMaxIndizes,
+        // Euro an der Achse, nicht eine blanke Zahl - die laese sich wie
+        // eine Anzahl.
+        achseFormat: (n) => geldFormat(n),
+        // Hinweis JE SAEULE: derselbe Wortlaut wie auf der Kalenderkachel,
+        // er nennt Fahrten UND Umsatz des Tages.
         titelJeIndex: (i) => tagHinweis(i)
     });
-    grafikPlatz.replaceChildren(grafik);
+    grafikPlatz.replaceChildren(grafikTitel, grafik);
 
     // ===== Zusammenfassung (Auftrag, wörtlich: Min, Max, Anzahl pro
     // Monat, Tag mit den meisten Fahrten) - dieselben Kacheln wie im

@@ -4014,6 +4014,25 @@ body.maske-wird-gezogen #detailmaske {
    einer Zeile: der Filter gehört zur Kalenderansicht darunter, nicht zur
    Überschrift darüber - deshalb der grössere Abstand nach oben als nach
    unten. */
+/* Luft zwischen Kalender und Umsatzdiagramm (Auftrag: "achte auch
+   genügend Weißabstand zwischen den beiden Grafiken"). Zwei Grafiken, die
+   dicht aufeinander sitzen, liest das Auge als eine — und hier zeigen sie
+   ausdrücklich VERSCHIEDENE Größen: der Kalender die Fahrten, das
+   Diagramm den Umsatz. Der Abstand ist die Ansage, dass hier etwas
+   Neues beginnt; --raum-6 ist der grösste Wert der Skala und die einzige
+   Stufe, die gegen die Legende darüber noch als Trennung wirkt. */
+.monatsdrilldown-grafik-titel {
+  margin: var(--raum-6) 0 var(--raum-2);
+  /* Gleiche Stufe und gleicher Ton wie die Beschriftung des Kalenders
+     (.monatskalender caption): die beiden sind Geschwister und sollen sich
+     nicht gegenseitig überstimmen. Nur der Schriftschnitt ist kräftiger -
+     das Diagramm hat, anders als der Kalender, keine Überschrift über sich,
+     die sein Thema schon nennt. */
+  font-size: var(--grad-2);
+  font-weight: 600;
+  color: var(--text-leise);
+}
+
 .monatsdrilldown-filter {
   display: flex;
   align-items: center;

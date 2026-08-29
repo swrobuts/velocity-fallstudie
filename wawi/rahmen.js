@@ -452,6 +452,8 @@ const UEBERSETZUNGEN = {
     "hint.tiedDaysCount": "{tagePhrase} gleichauf, je {phrase}",
     "hint.totalForMonth": "{phrase}, gesamt",
     "hint.dailyRidesChartAria": "Fahrten je Tag im {monat} {jahr}, gesamt über alle Radtypen und Tarife: zwischen {min} und {maxPhrase}, im Mittel {mittel}. Am meisten Fahrten am {tageListe} {monat} mit je {maxPhrase}.",
+      "hint.dailyRevenueChartHeading": "Umsatz je Tag, {monat}",
+      "hint.dailyRevenueChartAria": "Umsatz je Tag im {monat} {jahr}: zwischen {min} und {max}, im Mittel {mittel}. Höchster Umsatz am {tageListe} {monat} mit {max}.",
     "msg.dailyFiguresLoadFailed": "Die Tageszahlen ließen sich nicht laden: {fehler}",
     "misc.workOrderTitle": "Auftrag {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} in Arbeit",
@@ -964,6 +966,8 @@ const UEBERSETZUNGEN = {
     "hint.tiedDaysCount": "{tagePhrase} tied, {phrase} each",
     "hint.totalForMonth": "{phrase}, total",
     "hint.dailyRidesChartAria": "Rides per day in {monat} {jahr}, total across all bike types and plans: between {min} and {maxPhrase}, on average {mittel}. Most rides on {tageListe} {monat} with {maxPhrase} each.",
+      "hint.dailyRevenueChartHeading": "Revenue per day, {monat}",
+      "hint.dailyRevenueChartAria": "Revenue per day in {monat} {jahr}: between {min} and {max}, on average {mittel}. Highest revenue on {tageListe} {monat} with {max}.",
     "msg.dailyFiguresLoadFailed": "Could not load the daily figures: {fehler}",
     "misc.workOrderTitle": "Work order {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} in progress",
@@ -1476,6 +1480,8 @@ const UEBERSETZUNGEN = {
     "hint.tiedDaysCount": "{tagePhrase} berabere, her biri {phrase}",
     "hint.totalForMonth": "{phrase}, toplam",
     "hint.dailyRidesChartAria": "{jahr} {monat} ayında güne göre sürüşler, tüm bisiklet tipleri ve tarifeler toplamı: {min} ile {maxPhrase} arasında, ortalama {mittel}. En çok sürüş {monat} ayının {tageListe} günlerinde, her birinde {maxPhrase}.",
+      "hint.dailyRevenueChartHeading": "Güne göre ciro, {monat}",
+      "hint.dailyRevenueChartAria": "{monat} {jahr} güne göre ciro: {min} ile {max} arasında, ortalama {mittel}. En yüksek ciro {tageListe} {monat}, {max}.",
     "msg.dailyFiguresLoadFailed": "Günlük rakamlar yüklenemedi: {fehler}",
     "misc.workOrderTitle": "İş emri {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} devam ediyor",
@@ -1988,6 +1994,8 @@ const UEBERSETZUNGEN = {
     "hint.tiedDaysCount": "{tagePhrase} empatados, {phrase} cada uno",
     "hint.totalForMonth": "{phrase}, total",
     "hint.dailyRidesChartAria": "Viajes por día en {monat} de {jahr}, total en todos los tipos de bicicleta y tarifas: entre {min} y {maxPhrase}, en promedio {mittel}. La mayoría de los viajes el {tageListe} de {monat}, con {maxPhrase} cada uno.",
+      "hint.dailyRevenueChartHeading": "Facturación por día, {monat}",
+      "hint.dailyRevenueChartAria": "Facturación por día en {monat} {jahr}: entre {min} y {max}, en promedio {mittel}. Facturación más alta el {tageListe} {monat} con {max}.",
     "msg.dailyFiguresLoadFailed": "No se pudieron cargar las cifras diarias: {fehler}",
     "misc.workOrderTitle": "Orden de trabajo {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} en curso",
@@ -2500,6 +2508,8 @@ const UEBERSETZUNGEN = {
     "hint.tiedDaysCount": "{tagePhrase} a pari merito, {phrase} ciascuno",
     "hint.totalForMonth": "{phrase}, totale",
     "hint.dailyRidesChartAria": "Corse al giorno a {monat} {jahr}, totale su tutti i tipi di bici e tariffe: tra {min} e {maxPhrase}, in media {mittel}. Il massimo delle corse il {tageListe} {monat} con {maxPhrase} ciascuno.",
+      "hint.dailyRevenueChartHeading": "Fatturato al giorno, {monat}",
+      "hint.dailyRevenueChartAria": "Fatturato al giorno in {monat} {jahr}: tra {min} e {max}, in media {mittel}. Fatturato più alto il {tageListe} {monat} con {max}.",
     "msg.dailyFiguresLoadFailed": "Impossibile caricare i dati giornalieri: {fehler}",
     "misc.workOrderTitle": "Ordine di lavoro {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} in corso",
@@ -3012,6 +3022,8 @@ const UEBERSETZUNGEN = {
     "hint.tiedDaysCount": "{tagePhrase} z takim samym wynikiem, po {phrase}",
     "hint.totalForMonth": "{phrase}, łącznie",
     "hint.dailyRidesChartAria": "Przejazdy dziennie w {monat} {jahr}, ogółem we wszystkich typach rowerów i taryfach: od {min} do {maxPhrase}, średnio {mittel}. Najwięcej przejazdów {tageListe} {monat}, po {maxPhrase} każdego dnia.",
+      "hint.dailyRevenueChartHeading": "Obrót dziennie, {monat}",
+      "hint.dailyRevenueChartAria": "Obrót dzienny w {monat} {jahr}: między {min} a {max}, średnio {mittel}. Najwyższy obrót {tageListe} {monat}: {max}.",
     "msg.dailyFiguresLoadFailed": "Nie udało się wczytać danych dziennych: {fehler}",
     "misc.workOrderTitle": "Zlecenie {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} w toku",
@@ -6307,8 +6319,12 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     // solange eine Saeule nur eine Groesse traegt. Sobald zwei Zahlen
     // zusammengehoeren (Fahrten UND Umsatz eines Tages), muss der Aufrufer
     // den Satz bilden: nur er weiss, wie beide zueinander stehen.
+    // achseFormat: wie die Obergrenze an der Y-Achse geschrieben wird.
+    // Vorgabe ist eine blanke Zahl (Stueckzahlen); eine Reihe in Euro
+    // braucht dort geldFormat, sonst stuende ueber einer Umsatzgrafik eine
+    // Zahl ohne Einheit - und die liest sich wie eine Anzahl.
     const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [],
-            titelJeIndex = null } = optionen;
+            titelJeIndex = null, achseFormat = null } = optionen;
 
     const block = document.createElement('div');
     block.className = 'saeulengrafik-block';
@@ -6384,7 +6400,7 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     yAchse.className = 'saeulengrafik-y-achse';
     yAchse.setAttribute('aria-hidden', 'true');
     const yOben = document.createElement('span');
-    yOben.textContent = zahlFormat(maximum);
+    yOben.textContent = typeof achseFormat === 'function' ? achseFormat(maximum) : zahlFormat(maximum);
     const yUnten = document.createElement('span');
     yUnten.textContent = '0';
     yAchse.append(yOben, yUnten);
