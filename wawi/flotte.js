@@ -770,11 +770,11 @@ async function radAnlegenMaske() {
     const fehlerModell = letzterLadeFehler('v_wawi_modell');
     const fehlerStation = letzterLadeFehler('v_wawi_station');
     if (fehlerModell || fehlerStation) {
-        melde(t('msg.modelsOrStationsLoadFailed', { fehler: fehlerModell || fehlerStation }), 'schlecht');
+        meldeFehler(t('msg.modelsOrStationsLoadFailed', { fehler: fehlerModell || fehlerStation }));
         return;
     }
     if (!modelle.length || !stationen.length) {
-        melde(t('msg.noModelsOrStations'), 'schlecht');
+        meldeFehler(t('msg.noModelsOrStations'));
         return;
     }
 
@@ -808,7 +808,7 @@ async function radAnlegenMaske() {
             ausfuehren: async () => {
                 const rahmennummer = document.getElementById('feld-maske-rahmennummer').value.trim();
                 if (!rahmennummer) {
-                    melde(t('msg.frameNumberMissing'), 'schlecht');
+                    meldeFehler(t('msg.frameNumberMissing'));
                     return;
                 }
                 // <select>.value ist immer ein String - fuer die

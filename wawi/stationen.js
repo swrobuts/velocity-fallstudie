@@ -1740,7 +1740,7 @@ function stationAnlegenMaske() {
                 const plz = feld('plz');
                 const ort = feld('ort');
                 if (!name || !strasse || !hausnummer || !plz || !ort) {
-                    melde(t('msg.stationFieldsRequired'), 'schlecht');
+                    meldeFehler(t('msg.stationFieldsRequired'));
                     return;
                 }
 
@@ -1757,23 +1757,23 @@ function stationAnlegenMaske() {
                 const latitudeText = feld('latitude');
                 const longitudeText = feld('longitude');
                 if (!latitudeText || !longitudeText) {
-                    melde(t('msg.latLonRequired'), 'schlecht');
+                    meldeFehler(t('msg.latLonRequired'));
                     return;
                 }
                 const latitude = Number(latitudeText);
                 const longitude = Number(longitudeText);
                 if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-                    melde(t('msg.latitudeRange'), 'schlecht');
+                    meldeFehler(t('msg.latitudeRange'));
                     return;
                 }
                 if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-                    melde(t('msg.longitudeRange'), 'schlecht');
+                    meldeFehler(t('msg.longitudeRange'));
                     return;
                 }
 
                 const kapazitaet = Number(feld('kapazitaet'));
                 if (!Number.isInteger(kapazitaet) || kapazitaet <= 0) {
-                    melde(t('msg.capacityPositiveInteger'), 'schlecht');
+                    meldeFehler(t('msg.capacityPositiveInteger'));
                     return;
                 }
 

@@ -4135,6 +4135,29 @@ function quittung(text) {
     });
 }
 
+// ===== FEHLER NACH EINEM KNOPFDRUCK =====
+//
+// Befund, woertlich: "wenn ich versuche, eine Nummer anzulegen, die es
+// bereits gibt, erscheint in der Statusleiste dieser Hinweis. Da sollte
+// auch ein Dialog kommen."
+//
+// Dieselbe Ueberlegung wie bei quittung(): die Statuszeile ist 32 Punkte
+// hoch und steht am unteren Rand, der Blick liegt in der Maske. Ein
+// Fehlschlag ist noch weniger zu uebersehen erlaubt als ein Erfolg - er
+// bedeutet, dass die Arbeit NICHT getan ist.
+//
+// ABSICHTLICH NICHT FUER LADEFEHLER: die *LoadFailed-Meldungen laufen
+// ueber meldeVorgang() und feuern von selbst, wenn eine Liste nicht
+// kommt - unter Umstaenden mehrfach hintereinander und ohne dass jemand
+// etwas angefasst haette. Ein Dialog waere dort eine Plage. Dieser hier
+// gilt nur, wo ein Mensch gerade einen Knopf gedrueckt hat.
+function meldeFehler(text) {
+    melde(text, 'schlecht');
+    // Kein await: der Aufrufer soll nicht warten muessen. Der Dialog
+    // steht, bis er weggeklickt wird.
+    quittung(text);
+}
+
 // Ein einzeiliger Eingabedialog. Liefert null bei Abbruch - und der
 // Aufrufer muss das pruefen: eine Buchung ohne Grund ist eine Buchung,
 // die später niemand erklären kann.
@@ -4326,7 +4349,7 @@ function zeigeWerkzeugleiste(sichtbar, titel, ausfuehren) {
         try {
             await ausfuehren();
         } catch (fehler) {
-            melde(fehler.message, 'schlecht');
+            meldeFehler(fehler.message);
         } finally {
             knopf.disabled = false;
         }
@@ -8658,7 +8681,7 @@ function zeilenAktionenZelle(liste) {
             try {
                 await aktion.ausfuehren();
             } catch (fehler) {
-                melde(fehler.message, 'schlecht');
+                meldeFehler(fehler.message);
             } finally {
                 knopf.disabled = false;
             }
@@ -8848,7 +8871,7 @@ function zeigeMaske(titel, felder, knoepfe, bild = null) {
             try {
                 await def.ausfuehren();
             } catch (fehler) {
-                melde(fehler.message, 'schlecht');
+                meldeFehler(fehler.message);
             } finally {
                 knopf.disabled = false;
             }
@@ -8925,7 +8948,7 @@ function zeigeLeermaske(kennung, titel, erklaerung, angebot = null) {
             try {
                 await angebot.ausfuehren();
             } catch (fehler) {
-                melde(fehler.message, 'schlecht');
+                meldeFehler(fehler.message);
             } finally {
                 knopf.disabled = false;
             }
@@ -9206,7 +9229,7 @@ knopfLehrbetrieb.addEventListener('click', async () => {
             // dasselbe Nachziehen wie beim Sprachwechsel weiter unten.
             if (aktiverBereich) await aktiverBereich.aufbauen();
         } catch (fehler) {
-            melde(fehler.message, 'schlecht');
+            meldeFehler(fehler.message);
         } finally {
             knopfLehrbetrieb.disabled = false;
             // Frisch aus t() gelesen statt eine vor dem Lauf gemerkte

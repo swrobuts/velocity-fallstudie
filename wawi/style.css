@@ -459,6 +459,17 @@
      ist im schmalen Zustand damit genauso gut zu treffen wie jeder
      andere Symbolknopf der Oberflaeche. */
   --nav-breite-schmal: 56px;
+  /* ===== EIN ZUSTAND, EINE ZAHL (29.08.2026) =====
+     Bis hierher lasen ZWEI Regeln denselben Zustand getrennt aus:
+     body.navigation-schmal #zustand-arbeit fuer die Rasterspur und
+     body.navigation-schmal .navigation-griff fuer den Griff. Genau so
+     kam der Fehler beim Nutzer an - "der Button verschiebt sich und es
+     passiert nichts": der Griff folgte, die Spur nicht. Wo zwei Regeln
+     denselben Zustand beschreiben, kann er halb ankommen.
+
+     Jetzt traegt EINE Variable die geltende Breite, und beide lesen sie.
+     Halb geht damit nicht mehr. */
+  --nav-ist: var(--nav-breite);
   --kopf-hoehe:  60px;
   --fuss-hoehe:  32px;
 
@@ -915,7 +926,7 @@ a.wortmarke-link:active {
    eigenen Breite, keines zwingt mehr die Spalte selbst zum Wachsen. */
 #zustand-arbeit {
   display: grid;
-  grid-template-columns: var(--nav-breite) minmax(0, 1fr);
+  grid-template-columns: var(--nav-ist) minmax(0, 1fr);
   grid-template-rows: var(--kopf-hoehe) 1fr var(--fuss-hoehe);
   grid-template-areas: "kopf kopf" "nav arbeit" "fuss fuss";
   height: 100vh;
@@ -975,8 +986,8 @@ a.wortmarke-link:active {
    weg (siehe --nav-breite-schmal in :root). Nur die erste Spur aendert
    sich; die zweite (minmax(0, 1fr)) bekommt die 144px Unterschied von
    selbst, ohne dass eine zweite Regel davon wissen muss. */
-body.navigation-schmal #zustand-arbeit {
-  grid-template-columns: var(--nav-breite-schmal) minmax(0, 1fr);
+body.navigation-schmal {
+  --nav-ist: var(--nav-breite-schmal);
 }
 
 /* "niemals eine Bewegung, die Arbeit verzoegert" (Auftrag): wer
@@ -1151,7 +1162,7 @@ body.navigation-schmal #zustand-arbeit {
    Mehrfachauswahl (20) und das Hinweisfenster (60). */
 .navigation-griff {
   position: absolute;
-  left: var(--nav-breite);
+  left: var(--nav-ist);
   top: calc(var(--kopf-hoehe) + (100% - var(--kopf-hoehe) - var(--fuss-hoehe)) / 2);
   transform: translate(-50%, -50%);
   z-index: 2;
@@ -1193,9 +1204,8 @@ body.navigation-schmal #zustand-arbeit {
 /* Schmal: dieselbe Regel, nur die andere Kante. Kein eigenes transform
    mehr noetig (Begruendung oben) - der Griff bleibt auch bei 56px
    vollstaendig im Fenster. */
-body.navigation-schmal .navigation-griff {
-  left: var(--nav-breite-schmal);
-}
+/* Der Griff braucht keine eigene Zustandsregel mehr: er liest dieselbe
+   Variable wie die Rasterspur (siehe --nav-ist in :root). */
 
 /* Umgekehrt statt aufgehellt: gefuellt --marine, Zeichen weiss (17,29:1,
    gemessen). Dieselbe Zustandsform wie beim Umschalter der Kopftafel -

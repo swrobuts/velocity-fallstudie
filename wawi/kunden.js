@@ -761,7 +761,7 @@ function kundeMaske(kunde) {
                 const vorname = feld('vorname');
                 const nachname = feld('nachname');
                 if (!vorname || !nachname) {
-                    melde(t('msg.firstLastNameRequired'), 'schlecht');
+                    meldeFehler(t('msg.firstLastNameRequired'));
                     return;
                 }
 
@@ -1058,7 +1058,7 @@ function kundeAnlegenMaske() {
                 const nachname = feld('nachname');
                 const email = feld('email');
                 if (!vorname || !nachname || !email) {
-                    melde(t('msg.nameEmailRequired'), 'schlecht');
+                    meldeFehler(t('msg.nameEmailRequired'));
                     return;
                 }
 

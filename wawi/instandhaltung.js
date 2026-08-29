@@ -695,11 +695,11 @@ async function schadenMeldenMaske() {
 
     const fehler = letzterLadeFehler('v_wawi_flotte');
     if (fehler) {
-        melde(t('msg.fleetLoadFailed', { fehler }), 'schlecht');
+        meldeFehler(t('msg.fleetLoadFailed', { fehler }));
         return;
     }
     if (!raeder.length) {
-        melde(t('msg.noBikeForDamage'), 'schlecht');
+        meldeFehler(t('msg.noBikeForDamage'));
         return;
     }
 
@@ -735,7 +735,7 @@ async function schadenMeldenMaske() {
                 const schwere = document.getElementById('feld-maske-schwere').value;
 
                 if (!kategorie || !beschreibung) {
-                    melde(t('msg.categoryDescriptionRequired'), 'schlecht');
+                    meldeFehler(t('msg.categoryDescriptionRequired'));
                     return;
                 }
 
@@ -844,7 +844,7 @@ function auftragMaske(auftrag) {
                     // oder fehlende Arbeitszeit provoziert nur die Absage
                     // der Datenbank, ohne dass die Maske vorher etwas
                     // gewonnen haette.
-                    melde(t('misc.noMinutesNeeded'), 'schlecht');
+                    meldeFehler(t('misc.noMinutesNeeded'));
                     return;
                 }
                 const bemerkung = document.getElementById('feld-maske-bemerkung').value.trim();
