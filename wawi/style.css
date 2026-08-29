@@ -941,7 +941,7 @@ a.wortmarke-link:active {
      Machart wie body.zebra-an (siehe Zebramuster weiter unten), und die
      einzige, die auch das RASTER erreicht - #navigation ist ein KIND
      dieses Rasters und kann seine eigene Spurbreite nicht setzen. */
-  transition: grid-template-columns 160ms ease;
+    transition: grid-template-columns 160ms ease;
 }
 
 /* Der Klassenname sagt wieder, was der zweite Zustand IST: schmal, nicht
@@ -5830,4 +5830,41 @@ body.navigation-schmal #navigation button:focus-visible {
   color: var(--text-leise);
   font-size: var(--grad-1);
   text-shadow: 0 0 3px var(--flaeche), 0 0 3px var(--flaeche), 0 0 3px var(--flaeche);
+}
+
+/* ====================================================================
+   KLEINE SCHIRME UND FINGER (29.08.2026)
+
+   Auftrag: "das WaWi wird keiner auf dem Handy bedienen, aber auf dem
+   ausgeklappten Foldable haette ich es gern besser." Gemessen bei
+   736 x 560 - der Groesse eines aufgeklappten Honor Magic V3:
+
+     Kopfzeile   Rasterspur 138 Punkte, Wortmarke braucht 169.
+                 Das Suchfeld ueberlappte sie um 15 Punkte; im Bild des
+                 Nutzers stand "VELOCITY | W" und darauf das Feld.
+     Griff       32 x 32 Punkte, gemeldet als "funktioniert nicht".
+                 Er funktioniert - Raster 200 auf 56, aria-expanded
+                 kippt, nichts verdeckt ihn. Er ist nur zu klein: ein
+                 Kreis auf der Naht zwischen Leiste und Liste, zwoelf
+                 Punkte daneben trifft man die Navigation oder die Liste.
+   ==================================================================== */
+@media (max-width: 900px) {
+  /* Das Suchfeld gibt hundert Punkte ab, damit die Wortmarke in ihre
+     Spur passt. Es bleibt mit 300 Punkten weit brauchbar. */
+  #kopfleiste {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 300px) minmax(0, 1fr);
+  }
+}
+
+@media (hover: none) {
+  /* Der Griff behaelt seine 32 Punkte im BILD - er sitzt auf einer Naht
+     und wuerde als 44er Kreis plump wirken. Vergroessert wird nur seine
+     TREFFERFLAECHE: unsichtbare acht Punkte ringsum ergeben 48 x 48 und
+     damit mehr als die 44, die WCAG 2.5.5 nennt. Wer mit der Maus zielt,
+     merkt davon nichts. */
+  .navigation-griff::after {
+    content: "";
+    position: absolute;
+    inset: -8px;
+  }
 }

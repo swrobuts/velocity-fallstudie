@@ -9226,7 +9226,15 @@ const ZEBRA_SPEICHERSCHLUESSEL = 'velocity-wawi-zebra';
 const NAVIGATION_SPEICHERSCHLUESSEL = 'velocity-wawi-navigation-schmal';
 
 function navigationSchmalGespeichert() {
-    return localStorage.getItem(NAVIGATION_SPEICHERSCHLUESSEL) === 'an';
+    const gemerkt = localStorage.getItem(NAVIGATION_SPEICHERSCHLUESSEL);
+    // Eine getroffene Wahl gilt immer - auf jedem Geraet, in jeder Groesse.
+    if (gemerkt !== null) return gemerkt === 'an';
+    // Ohne Wahl entscheidet der Platz. Auf einem aufgeklappten Foldable
+    // (rund 736 Punkte breit) nimmt die breite Leiste 200 davon, also
+    // siebenundzwanzig Prozent der Flaeche - fuer Text, den die Symbole
+    // schon sagen. Der Streifen laesst der Arbeitsflaeche 680 statt 536.
+    // Auf dem Schreibtisch bleibt es bei der breiten Leiste.
+    return window.matchMedia('(max-width: 900px)').matches;
 }
 
 // Wie zebraAnwenden(): EINE Klasse auf <body>, den Rest macht das
