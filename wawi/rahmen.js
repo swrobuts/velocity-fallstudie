@@ -38,6 +38,36 @@
 // Dialogtexte, Feldbeschriftungen, Leermasken, Erlaeuterungen in den
 // Uebersichtskacheln. NICHT uebersetzt werden Daten aus der Datenbank:
 // Kunden-, Stations- und Ortsnamen, Beschreibungstexte von
+// ===== SPEICHER LESEN, OHNE DIE ANWENDUNG ZU RISKIEREN =====
+// localStorage.getItem WIRFT, wenn der Browser Website-Daten sperrt -
+// derselbe Fall, den der Kommentar beim Klappschalter weiter unten fuer
+// setItem bereits nennt (privater Modus, volles Kontingent, abgeschaltete
+// Website-Daten). Beim SCHREIBEN ist das abgefangen, beim LESEN war es
+// das nirgends: acht ungesicherte Zugriffe, der erste davon hier auf
+// Modulebene. Wirft er, bricht rahmen.js an dieser Stelle ab - und alles
+// Weitere wird nie ausgefuehrt, einschliesslich saemtlicher
+// Ereignisverdrahtung am Ende der Datei. Die Oberflaeche steht dann da
+// und reagiert auf nichts.
+//
+// Eine vergessene Einstellung ist ein Schoenheitsfehler. Eine Anwendung,
+// die sich nicht bedienen laesst, ist keiner.
+function gemerkt(schluessel) {
+    try {
+        return localStorage.getItem(schluessel);
+    } catch (fehler) {
+        console.warn('Speicher nicht lesbar:', fehler.message);
+        return null;
+    }
+}
+
+function merke(schluessel, wert) {
+    try {
+        localStorage.setItem(schluessel, wert);
+    } catch (fehler) {
+        console.warn('Speicher nicht schreibbar:', fehler.message);
+    }
+}
+
 // Schadensmeldungen, Tarifnamen, Rahmennummern, Hersteller- und
 // Modellbezeichnungen ("City-Bike" ist ein Produktname, keine
 // Oberflaechenbeschriftung - Auftrag, woertlich als Beispiel genannt).
@@ -96,7 +126,7 @@ const SPRACHE_SPEICHERSCHLUESSEL = 'velocity-wawi-sprache';
 // statt einer Datenbankspalte, siehe dortiger Kommentar) - eine reine
 // Anzeigepraeferenz, "nichts an der Datenbank aendern" (Auftrag).
 function sprache() {
-    const gespeichert = localStorage.getItem(SPRACHE_SPEICHERSCHLUESSEL);
+    const gespeichert = gemerkt(SPRACHE_SPEICHERSCHLUESSEL);
     return SPRACHEN.includes(gespeichert) ? gespeichert : 'de';
 }
 
@@ -6564,7 +6594,7 @@ const KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL = 'velocity-wawi-kopftafel-immer';
 // (siehe unten) - eine Einstellung, die diesen Vorgabezustand von sich
 // aus umdrehte, waere keine Einstellung, sondern eine Aenderung.
 function kopftafelImmerGespeichert() {
-    return localStorage.getItem(KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL) === 'an';
+    return gemerkt(KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL) === 'an';
 }
 
 // Fehlender Schluessel (erster Besuch dieses Browsers) => eingeklappt
@@ -6580,7 +6610,7 @@ function kopftafelImmerGespeichert() {
 // an", nicht die Frage "was tut der Griff".
 function kopftafelEingeklappt() {
     if (kopftafelImmerGespeichert()) return false;
-    return localStorage.getItem(KOPFTAFEL_SPEICHERSCHLUESSEL) !== 'aus';
+    return gemerkt(KOPFTAFEL_SPEICHERSCHLUESSEL) !== 'aus';
 }
 
 // Baut NUR den Umschalter-Knopf - eingehaengt in .kopftafel-kopf, siehe
@@ -6656,7 +6686,7 @@ function kopftafelUmschalterKnopf(wurzel, tabelleId) {
     knopf.addEventListener('click', () => {
         const neu = !wurzel.classList.contains('kopftafel-eingeklappt');
         anwenden(neu);
-        localStorage.setItem(KOPFTAFEL_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
+        merke(KOPFTAFEL_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
         // "Etwas, das aufklappt, springt heute nicht" (Auftrag). Die
         // Bewegung selbst steht in style.css (@keyframes
         // kopftafel-aufklappen); hier wird nur der AUSLOESER markiert -
@@ -9306,9 +9336,9 @@ const ZEBRA_SPEICHERSCHLUESSEL = 'velocity-wawi-zebra';
 const NAVIGATION_SPEICHERSCHLUESSEL = 'velocity-wawi-navigation-schmal';
 
 function navigationSchmalGespeichert() {
-    const gemerkt = localStorage.getItem(NAVIGATION_SPEICHERSCHLUESSEL);
+    const wahl = gemerkt(NAVIGATION_SPEICHERSCHLUESSEL);
     // Eine getroffene Wahl gilt immer - auf jedem Geraet, in jeder Groesse.
-    if (gemerkt !== null) return gemerkt === 'an';
+    if (wahl !== null) return wahl === 'an';
     // Ohne Wahl entscheidet der Platz. Auf einem aufgeklappten Foldable
     // (rund 736 Punkte breit) nimmt die breite Leiste 200 davon, also
     // siebenundzwanzig Prozent der Flaeche - fuer Text, den die Symbole
@@ -9349,7 +9379,7 @@ navigationAnwenden(navigationSchmalGespeichert());
 // Hier stand:
 //
 //     const neu = !navigationVersteckt();                 // aus localStorage
-//     localStorage.setItem(SCHLUESSEL, neu ? 'an' : 'aus');
+//     merke(SCHLUESSEL, neu ? 'an' : 'aus');
 //     navigationAnwenden(neu);
 //
 // Zwei Fehler in drei Zeilen, beide im Browser nachgestellt (siehe
@@ -9382,7 +9412,7 @@ document.getElementById('knopf-navigation').addEventListener('click', () => {
     const neu = !document.body.classList.contains('navigation-schmal');
     navigationAnwenden(neu);
     try {
-        localStorage.setItem(NAVIGATION_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
+        merke(NAVIGATION_SPEICHERSCHLUESSEL, neu ? 'an' : 'aus');
     } catch (fehler) {
         // Absichtlich nur in die Konsole: die Umschaltung IST erfolgt,
         // sie ueberlebt nur das naechste Neuladen nicht. Eine Meldung in
@@ -9462,7 +9492,7 @@ feldSucheKopf.addEventListener('input', () => {
 });
 
 function zebraGespeichert() {
-    return localStorage.getItem(ZEBRA_SPEICHERSCHLUESSEL) === 'an';
+    return gemerkt(ZEBRA_SPEICHERSCHLUESSEL) === 'an';
 }
 
 // Reines CSS-Zebra (siehe body.zebra-an in style.css): eine Klasse auf
@@ -9483,7 +9513,7 @@ const schalterZebra = document.getElementById('schalter-zebra');
 schalterZebra.checked = zebraGespeichert();
 schalterZebra.addEventListener('change', () => {
     zebraAnwenden(schalterZebra.checked);
-    localStorage.setItem(ZEBRA_SPEICHERSCHLUESSEL, schalterZebra.checked ? 'an' : 'aus');
+    merke(ZEBRA_SPEICHERSCHLUESSEL, schalterZebra.checked ? 'an' : 'aus');
 });
 
 // ===== Schalter "Kopfbereich immer ausklappen" =====
@@ -9508,7 +9538,7 @@ schalterKopftafelImmer.addEventListener('change', () => {
     // fehlgeschlagenes setItem duerfte deshalb nicht zu einer
     // Oberflaeche fuehren, die etwas anderes zeigt, als gespeichert ist.
     try {
-        localStorage.setItem(KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL, an ? 'an' : 'aus');
+        merke(KOPFTAFEL_IMMER_SPEICHERSCHLUESSEL, an ? 'an' : 'aus');
     } catch (fehler) {
         // Wie beim Navigationsgriff: nur in die Konsole. Die Einstellung
         // wirkt fuer diese Sitzung trotzdem, sie ueberlebt nur das
@@ -9591,7 +9621,7 @@ schalterSprache.addEventListener('change', () => spracheAnwenden(schalterSprache
 // zeigt deshalb verlaesslich die neue Sprache, ohne die Navigation zu
 // verlassen.
 async function spracheAnwenden(code) {
-    localStorage.setItem(SPRACHE_SPEICHERSCHLUESSEL, code);
+    merke(SPRACHE_SPEICHERSCHLUESSEL, code);
     document.documentElement.lang = code;
     statischeTexteUebersetzen();
 
