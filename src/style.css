@@ -2804,8 +2804,11 @@ footer a:hover { color: #fff; text-decoration: underline; }
    nicht mehr laenger ist als der Bildschirm.
    ------------------------------------------------------------------ */
 @media (max-width: 900px) {
-  .scroll-story { height: 100svh; min-height: 620px; }
-  .sticky-stage { position: relative; height: 100svh; min-height: 620px; }
+  /* 560 statt 620: die Bühne trägt hier vier Zeilen (siehe Raster ganz
+     unten), und auf einem flachen Telefon soll sie schrumpfen dürfen,
+     statt ihren Inhalt übereinanderzuschieben. */
+  .scroll-story { height: 100svh; min-height: 560px; }
+  .sticky-stage { position: relative; height: 100svh; min-height: 560px; }
 
   /* Die Buehne zeigt das Rad hier hoechstens 375 px breit. Die grosse
      Fassung waere 1265 px - dreimal zu viel, und sie liegt im
@@ -3045,14 +3048,29 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   }
 
   /* Die Zoomknöpfe der Karte kommen aus Leaflet und messen 30 px.
-     Auf einer Karte, die man mit dem Daumen bedient, ist das zu wenig. */
+     Auf 44 vergrößert wirkten sie auf einer 314 Punkte breiten Karte
+     wie ein Fremdkörper - der Nutzer nannte es "explodiert", und das
+     trifft es. Deshalb 38: deutlich über den 24 Punkten, die WCAG 2.5.8
+     als Mindestmaß nennt, und kein Ersatz für die eigentliche Geste.
+     Gezoomt wird auf einem Telefon mit zwei Fingern; diese Knöpfe sind
+     die Zugabe. Ein Bedienelement, das die Karte verdeckt, die es
+     bedienen soll, schadet mehr als seine Größe nützt. */
   .leaflet-control-zoom-in,
   .leaflet-control-zoom-out {
-    width: 44px !important;
-    height: 44px !important;
-    line-height: 44px !important;
-    font-size: 20px !important;
+    width: 38px !important;
+    height: 38px !important;
+    line-height: 38px !important;
+    font-size: 17px !important;
+    color: var(--navy) !important;
   }
+
+  /* Filterfeld und "Ganzes Netz zeigen" standen beide oben - links das
+     Feld mit 186 Punkten, rechts der Knopf mit 184, auf einer 314 Punkte
+     breiten Karte. Sie überlappten sich um 86 Punkte. Der Knopf wandert
+     nach unten links: Zoom sitzt unten rechts, der Hinweis entfällt hier
+     (siehe unten), damit ist die Ecke frei. 34 Punkte Abstand halten ihn
+     über der Leaflet-Herkunftszeile. */
+  .karte-knoepfe { top: auto; bottom: 34px; left: 18px; right: auto; }
 
   /* Beschriftungen und Hinweise standen bei 11,5 und 13 px. Unter 14 px
      wird auf einem Telefon aus Lesen ein Entziffern.
@@ -3122,11 +3140,10 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
    liest ihn dort ab, damit der Zähler "E-Bikes frei" meldet.
    ==================================================================== */
 @media (max-width: 900px) {
-  /* 560 als Untergrenze: darunter wird gescrollt statt gestapelt. */
-  .scroll-story { height: 100svh; min-height: 560px; }
+  /* Höhe und Untergrenze stehen weiter oben, wo sie hingehören - hier
+     nur die Anordnung. Eine zweite Höhenangabe wäre eine zweite Stelle,
+     an der jemand suchen muss. */
   .sticky-stage {
-    height: 100svh;
-    min-height: 560px;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     /* Zähler · Schlagzeile · Rad · Aufruf.
@@ -3168,4 +3185,37 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      Rad die Höhe. Die Rangfolge bleibt: die Zahl ist das Größte über
      der Schlagzeile. */
   .live-zahl b { font-size: clamp(28px, 8vw, 38px); }
+}
+
+/* --------------------------------------------------------------------
+   PFEIL AUF DEN AUFRUFEN (29.08.2026)
+   Vorher stand dort das Zeichen ↗ (U+2197). Es trägt keine
+   Darstellungsangabe, und iOS zeigt solche Zeichen im Zweifel als
+   farbiges Emoji - auf dem iPhone erschien ein blau hinterlegter Pfeil
+   mitten im roten Knopf, auf Android ein schlichter Strich. Dasselbe
+   Dokument, zwei Bilder.
+
+   Ein Variantenselektor (U+FE0E) würde das erzwingen, überlässt die
+   Form aber weiter einer Systemschrift, die niemand kennt. Gezeichnet
+   ist sie überall dieselbe, erbt die Farbe vom Knopf und wächst mit
+   dem Schriftgrad, weil sie in em misst.
+   -------------------------------------------------------------------- */
+.cta-pfeil {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+/* --------------------------------------------------------------------
+   ZOOMHINWEIS NUR DORT, WO ES EIN MAUSRAD GIBT (29.08.2026)
+   "Zum Zoomen in die Karte klicken" erklärt, warum das Rad die Karte
+   nicht sofort zoomt (scrollWheelZoom: false in script.js) - sonst
+   fängt die Karte den Seitenlauf ab, sobald man an ihr vorbeiscrollt.
+
+   Auf einem Telefon gibt es kein Rad. Dort erklärt der Hinweis nichts,
+   belegt aber die untere Mitte der Karte, brach vierzeilig um und stand
+   dem Knopf im Weg. Gezoomt wird mit zwei Fingern, ohne Anleitung.
+   -------------------------------------------------------------------- */
+@media (hover: none) {
+  .karte-hinweis { display: none; }
 }
