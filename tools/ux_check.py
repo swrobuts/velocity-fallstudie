@@ -208,8 +208,13 @@ pruefe('P2-03', '.inert = choiceAus' in HERO and '.inert = ctaAus' in HERO,
 # heute bei 900 px steht, ist ein anderer - dort endet die Erzaehlung
 # ueberhaupt, und das ist gewollt. Geprueft wird, dass die Buehne genau
 # EINE Laengenformel hat und die feste Hoehe nur im Telefonzweig steht.
+# (?<!min-) haelt Untergrenzen heraus. Am 29.08.2026 bekam die Buehne
+# auf sehr flachen Schirmen ein min-height:0 - dort soll sie genau so
+# hoch sein wie das Fenster, statt auf 560 Punkte gezwungen zu werden.
+# Das ist eine AUFHEBUNG, keine vierte Laenge; ohne den Ausschluss haette
+# der Punkt gemeldet, was er gar nicht meint.
 laengen = [x.strip() for x in
-           re.findall(r'\.scroll-story\s*{[^}]*?height:\s*([^;]+);', C)]
+           re.findall(r'\.scroll-story\s*{[^}]*?(?<!min-)height:\s*([^;]+);', C)]
 # Drei Hoehen, jede mit einem eigenen Grund: die Erzaehlung selbst, das
 # Telefon (dort steht sie still) und die abgeschaltete Bewegung.
 pruefe('P2-05', laengen == [laengen[0], '100svh', '100vh']
