@@ -1068,8 +1068,10 @@ function kundeAnlegenMaske() {
                     p_email: email,
                     p_telefon: feld('telefon') || null
                 });
-                melde(t('msg.customerCreated', { vorname, nachname }), 'gut');
+                const quittungstext = t('msg.customerCreated', { vorname, nachname });
+                melde(quittungstext, 'gut');
                 await kundenAufbauen();
+                await quittung(quittungstext);
             }
         }
     ]);

@@ -249,6 +249,7 @@ const UEBERSETZUNGEN = {
   de: {
     "common.cancel": "Abbrechen",
     "common.confirm": "Bestätigen",
+    "common.acknowledge": "Weiter",
     "common.reason": "Grund",
     "common.all": "Alle",
     "common.actionsColumn": "Aktionen",
@@ -742,6 +743,7 @@ const UEBERSETZUNGEN = {
   en: {
     "common.cancel": "Cancel",
     "common.confirm": "Confirm",
+    "common.acknowledge": "Continue",
     "common.reason": "Reason",
     "common.all": "All",
     "common.actionsColumn": "Actions",
@@ -1235,6 +1237,7 @@ const UEBERSETZUNGEN = {
   tr: {
     "common.cancel": "Vazgeç",
     "common.confirm": "Onayla",
+    "common.acknowledge": "Devam",
     "common.reason": "Sebep",
     "common.all": "Tümü",
     "common.actionsColumn": "İşlemler",
@@ -1728,6 +1731,7 @@ const UEBERSETZUNGEN = {
   es: {
     "common.cancel": "Cancelar",
     "common.confirm": "Confirmar",
+    "common.acknowledge": "Continuar",
     "common.reason": "Motivo",
     "common.all": "Todos",
     "common.actionsColumn": "Acciones",
@@ -2221,6 +2225,7 @@ const UEBERSETZUNGEN = {
   it: {
     "common.cancel": "Annulla",
     "common.confirm": "Conferma",
+    "common.acknowledge": "Continua",
     "common.reason": "Motivo",
     "common.all": "Tutti",
     "common.actionsColumn": "Azioni",
@@ -2714,6 +2719,7 @@ const UEBERSETZUNGEN = {
   pl: {
     "common.cancel": "Anuluj",
     "common.confirm": "Potwierdź",
+    "common.acknowledge": "Dalej",
     "common.reason": "Powód",
     "common.all": "Wszystkie",
     "common.actionsColumn": "Akcje",
@@ -4075,6 +4081,57 @@ function bestaetige(frage, bestaetigungswort = null) {
         // Aktion nicht bestätigen. Mit Wort fällt er auf das Feld, weil
         // dort ohnehin zuerst getippt werden muss.
         (eingabe || abbrechenKnopf).focus();
+    });
+}
+
+// ===== QUITTUNG: die Rueckmeldung, die man nicht uebersehen kann =====
+//
+// Befund des Auftraggebers, woertlich: "Wenn ich ein neues Objekt (z.B.
+// Rad) anlege, moechte ich einen Bestaetigungsdialog bekommen, derzeit
+// bekomme ich kein Feedback auf die Nutzerinteraktion."
+//
+// Rueckmeldung GAB es - melde(..., 'gut') schreibt in die Statuszeile.
+// Nur ist die 32 Punkte hoch und steht am unteren Rand, waehrend der
+// Blick nach dem Absenden in der Maskenmitte liegt. Auf einem
+// aufgeklappten Foldable (rund 560 Punkte hoch) ist das ausserhalb des
+// Aufmerksamkeitsfelds. Eine Meldung, die niemand liest, ist keine.
+//
+// Die Statuszeile BLEIBT - sie ist das aria-live-Gebiet und meldet
+// weiterhin an Vorlesekraefte. Die Quittung tritt daneben: derselbe
+// <dialog>, dieselben Klassen wie bestaetige(), aber nur EIN Knopf.
+// Sie fragt nichts, sie quittiert - deshalb kein "Abbrechen", und der
+// Fokus darf hier auf dem einzigen Knopf liegen.
+//
+// Bewusst NUR beim Anlegen: ein Dialog nach jeder Statusaenderung waere
+// eine Bestaetigungspflicht fuer Arbeit, die im Minutentakt anfaellt.
+// Anlegen ist selten und erzeugt etwas, das vorher nicht da war.
+function quittung(text) {
+    return new Promise((fertig) => {
+        const dialog = document.createElement('dialog');
+        dialog.className = 'velocity-dialog';
+
+        // Dieselbe Blockaufteilung wie bestaetige(): ein <p> je Absatz,
+        // durchgehend ueber textContent - nie innerHTML, hier stehen
+        // Namen und Nummern aus der Datenbank drin.
+        for (const block of String(text).split('\n\n')) {
+            const absatz = document.createElement('p');
+            absatz.textContent = block;
+            dialog.append(absatz);
+        }
+
+        const knopfleiste = document.createElement('div');
+        knopfleiste.className = 'knopfleiste';
+        const weiter = document.createElement('button');
+        weiter.type = 'button';
+        weiter.textContent = t('common.acknowledge');
+        weiter.addEventListener('click', () => dialog.close());
+        knopfleiste.append(weiter);
+        dialog.append(knopfleiste);
+        document.body.append(dialog);
+
+        dialog.addEventListener('close', () => { dialog.remove(); fertig(); });
+        dialog.showModal();
+        weiter.focus();
     });
 }
 

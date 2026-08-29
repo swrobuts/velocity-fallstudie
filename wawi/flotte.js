@@ -823,8 +823,13 @@ async function radAnlegenMaske() {
                     p_modell_id: modellId,
                     p_station_id: stationId
                 });
-                melde(t('msg.bikeCreated', { rahmennummer }), 'gut');
+                const quittungstext = t('msg.bikeCreated', { rahmennummer });
+                melde(quittungstext, 'gut');
                 await flotteAufbauen();
+                // NACH dem Neuaufbau: die Liste zeigt das neue Rad dann
+                // bereits, wenn der Dialog weggeht - sonst quittiert er
+                // etwas, das man hinter ihm noch nicht sieht.
+                await quittung(quittungstext);
             }
         }
     ]);

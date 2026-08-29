@@ -1787,8 +1787,10 @@ function stationAnlegenMaske() {
                     p_longitude: longitude,
                     p_kapazitaet: kapazitaet
                 });
-                melde(t('msg.stationCreated', { name }), 'gut');
+                const quittungstext = t('msg.stationCreated', { name });
+                melde(quittungstext, 'gut');
                 await stationenAufbauen();
+                await quittung(quittungstext);
             }
         }
     ]);

@@ -941,7 +941,34 @@ a.wortmarke-link:active {
      Machart wie body.zebra-an (siehe Zebramuster weiter unten), und die
      einzige, die auch das RASTER erreicht - #navigation ist ein KIND
      dieses Rasters und kann seine eigene Spurbreite nicht setzen. */
-    transition: grid-template-columns 160ms ease;
+    /* KEIN Uebergang auf grid-template-columns (29.08.2026).
+
+       Gemeldet als "der linke Button zum Ein-/Ausklappen funktioniert
+       nicht", praezisiert als "der Button verschiebt sich und es
+       passiert nichts". Genau diese Praezisierung loest den Fall:
+
+         Der Griff FAEHRT  -> sein left-Uebergang laeuft, es gibt also
+                              Einzelbilder auf dem Geraet.
+         Die Spur BLEIBT   -> der Uebergang auf grid-template-columns
+                              schaltet trotzdem nicht.
+
+       Im Browser gegengeprueft, derselbe Klick zweimal:
+
+         mit Uebergang     200px 1240px   (unveraendert, auch nach 1,5 s)
+         ohne Uebergang     56px 1384px   (sofort)
+
+       Die Spurliste enthaelt minmax(0, 1fr). Zwei solche Listen laufen
+       nicht zuverlaessig ineinander, und was nicht interpoliert, bleibt
+       am Anfangswert stehen - die Klasse kippt, aria-expanded kippt,
+       sichtbar passiert nichts.
+
+       ZUR VORSICHT VERMERKT: dieselbe Messung im Vorschaufenster war
+       einmal irrefuehrend, weil dort kein Einzelbild laeuft und JEDER
+       Uebergang stillsteht. Entschieden hat die Beobachtung auf dem
+       Geraet, nicht die Messung im Werkzeug.
+
+       Der Verzicht kostet nichts: der Grundsatz dieser Oberflaeche
+       lautet "niemals eine Bewegung, die Arbeit verzoegert". */
 }
 
 /* Der Klassenname sagt wieder, was der zweite Zustand IST: schmal, nicht
@@ -1154,8 +1181,13 @@ body.navigation-schmal #zustand-arbeit {
   /* Kein transform mehr in der Liste: seit der zweite Zustand der
      Symbolstreifen ist, aendert sich ausschliesslich left (siehe die
      Begruendung im Kopfkommentar oben). */
-  transition: left 160ms ease,
-              background-color 120ms ease, border-color 120ms ease;
+  /* left faehrt NICHT mehr weich: die Leiste daneben springt jetzt
+     (siehe #zustand-arbeit oben), und ein Griff, der ihr in 160 ms
+     hinterhergleitet, sieht aus wie genau der Fehler, der eben behoben
+     wurde - "der Button verschiebt sich und es passiert nichts". Beide
+     bewegen sich zusammen oder gar nicht. Farbe und Rahmen duerfen weiter
+     weich wechseln: sie zeigen den Zeigezustand und verschieben nichts. */
+  transition: background-color 120ms ease, border-color 120ms ease;
 }
 
 /* Schmal: dieselbe Regel, nur die andere Kante. Kein eigenes transform
@@ -5866,5 +5898,16 @@ body.navigation-schmal #navigation button:focus-visible {
     content: "";
     position: absolute;
     inset: -8px;
+  }
+
+  /* Dieselbe Ueberlegung fuer die Dialogknoepfe: 58 x 32 gemessen, und
+     ein Dialog ist der Moment, in dem eine Fehlbedienung am meisten
+     kostet - er steht ueber allem und blockiert die Arbeit, bis er
+     beantwortet ist. Hier waechst der Knopf wirklich, nicht nur seine
+     Trefferflaeche: in einem Dialog ist Platz dafuer, an der Naht der
+     Seitenleiste war keiner. */
+  .velocity-dialog .knopfleiste button {
+    min-height: 44px;
+    padding-inline: var(--raum-4, 16px);
   }
 }
