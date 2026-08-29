@@ -2730,6 +2730,45 @@ body.navigation-schmal #navigation button:focus-visible {
    Mono und weiter gesperrt wie die uebrigen Zeitangaben dieser Oberflaeche
    (Kopfleiste rechts oben, Sitzungsdauer): eine Zeitangabe soll man als
    solche erkennen, ohne sie zu lesen. */
+/* ===== ZEITRAUM-WAEHLER (29.08.2026) =====
+   Auftrag: "bei den Auswertungen sollte der User den Zeitraum aendern
+   koennen". Er steht unmittelbar unter der Zeitzeile - neben der Angabe,
+   die er aendert.
+
+   Bewusst KEINE Reiteroptik: Reiter fuehren woandershin, diese Knoepfe
+   stellen ein und laden dieselbe Tafel neu. Deshalb flach, in der
+   Rangstufe des Beiwerks, und der gewaehlte Zustand wird nicht ueber
+   Farbe angezeigt (die traegt in dieser Oberflaeche ueberall Bedeutung),
+   sondern ueber Fuellung und Schriftstaerke. */
+.kopftafel-zeitwahl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--raum-1);
+  margin-top: var(--raum-2);
+}
+
+.kopftafel-zeitwahl button {
+  min-height: var(--ziel);
+  padding: 0 var(--raum-3);
+  font-size: var(--grad-2);
+  color: var(--text-leise);
+  background: transparent;
+  border: 1px solid var(--kontur);
+  border-radius: var(--rund-2);
+}
+
+.kopftafel-zeitwahl button:hover {
+  border-color: var(--marine);
+  color: var(--marine);
+}
+
+.kopftafel-zeitwahl button.ist-gewaehlt {
+  background: var(--flaeche-rahmen);
+  border-color: var(--marine);
+  color: var(--marine);
+  font-weight: 600;
+}
+
 .kopftafel-zeit {
   margin: var(--raum-1) 0 0;
   /* --grad-2 wie die Bezugszeile und die Sitzungsinfo: dieselbe Rangstufe,
@@ -5967,7 +6006,8 @@ body.navigation-schmal #navigation button:focus-visible {
      beantwortet ist. Hier waechst der Knopf wirklich, nicht nur seine
      Trefferflaeche: in einem Dialog ist Platz dafuer, an der Naht der
      Seitenleiste war keiner. */
-  .velocity-dialog .knopfleiste button {
+  .velocity-dialog .knopfleiste button,
+  .kopftafel-zeitwahl button {
     min-height: 44px;
     padding-inline: var(--raum-4, 16px);
   }

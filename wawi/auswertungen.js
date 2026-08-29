@@ -1087,9 +1087,53 @@ async function umsatzRadtypZeigen(vorgang) {
 // noetig waere. Die Tabelle darunter zeigt unveraendert ALLE geladenen
 // Monate; die Bezugszeile der Tafel sagt deshalb ausdruecklich, welches
 // Fenster sie meint.
+// ===== DER GEWAEHLTE ZEITRAUM (29.08.2026) =====
+// Auftrag: "bei den Auswertungen sollte der User den Zeitraum aendern
+// koennen". Bis hierher waren zwoelf Monate fest verdrahtet.
+//
+// Der Wert steht an EINER Stelle, weil das Fenster an einer Stelle
+// geschnitten wird (auswertungenMonatsgliederung() unten). Alle drei
+// Monatstafeln - Umsatz nach Radtyp, Umsatz nach Kundengruppe,
+// Kilometer und CO2 - lesen ihn dadurch von selbst.
+//
+// 0 heisst "alles Geladene". Nicht null oder 'alle': slice(-0) waere das
+// LEERE Ende des Feldes, ein stiller Totalausfall - deshalb wird die
+// Null unten ausdruecklich abgefangen, nicht gerechnet.
+const AUSWERTUNGEN_FENSTER_SCHLUESSEL = 'velocity-wawi-auswertungen-fenster';
+const AUSWERTUNGEN_FENSTER_WAHL = [3, 6, 12, 24, 0];
+
+function auswertungenFensterGemerkt() {
+    const wert = Number(gemerkt(AUSWERTUNGEN_FENSTER_SCHLUESSEL));
+    return AUSWERTUNGEN_FENSTER_WAHL.includes(wert) ? wert : 12;
+}
+
+let auswertungenFenster = auswertungenFensterGemerkt();
+
+// Die Wahl fuer eine Kopftafel: der Baustein in rahmen.js macht daraus
+// eine Reihe Knoepfe neben der Zeitzeile (siehe zeigeKopftafel()).
+function auswertungenZeitWahl() {
+    return {
+        aktuell: auswertungenFenster,
+        optionen: AUSWERTUNGEN_FENSTER_WAHL.map((n) => ({
+            wert: n,
+            text: n === 0 ? t('board.periodAll') : t('board.periodMonths', { n })
+        })),
+        beiWechsel: async (wert) => {
+            auswertungenFenster = wert;
+            merke(AUSWERTUNGEN_FENSTER_SCHLUESSEL, String(wert));
+            // Dieselbe Begruendung wie beim Reiterwechsel weiter oben: eine
+            // offene Detailmaske zeigt eine Zeile aus dem ALTEN Fenster.
+            maskeVerwerfen();
+            await auswertungenAufbauen();
+        }
+    };
+}
+
 function auswertungenMonatsgliederung(zeilen, schluesselVon, nameVon) {
     const alleMonate = [...new Set(zeilen.map((z) => z.monat))].sort();
-    const fenster = alleMonate.slice(-12);
+    const fenster = auswertungenFenster === 0
+        ? alleMonate
+        : alleMonate.slice(-auswertungenFenster);
     const imFenster = new Set(fenster);
 
     const gruppen = new Map();
@@ -1184,6 +1228,7 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
 
     return {
         titel: t('board.revenueTypeTitle'),
+        zeitWahl: auswertungenZeitWahl(),
         zeit: t('board.periodRange', {
             von: monatFormat(fenster[0]),
             bis: monatFormat(fenster[fenster.length - 1])
@@ -1475,6 +1520,7 @@ function umsatzKundengruppeKopftafel(zeilen) {
 
     return {
         titel: t('board.revenueGroupTitle'),
+        zeitWahl: auswertungenZeitWahl(),
         // Der Zeitraum steht jetzt in der eigenen Zeitzeile der Tafel
         // (siehe zeigeKopftafel() in rahmen.js) statt mitten im
         // Bezugssatz - damit steht er auf JEDER Tafel an derselben
@@ -1565,6 +1611,7 @@ function kmCo2Kopftafel(zeilen, radtypNamen) {
 
     return {
         titel: t('board.kmTitle'),
+        zeitWahl: auswertungenZeitWahl(),
         // Der Zeitraum steht jetzt in der eigenen Zeitzeile der Tafel
         // (siehe zeigeKopftafel() in rahmen.js) statt mitten im
         // Bezugssatz - damit steht er auf JEDER Tafel an derselben

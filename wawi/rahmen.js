@@ -796,6 +796,9 @@ const UEBERSETZUNGEN = {
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Bestand nach Modell",
     "board.asOf": "Stand {datum}, {zeit} Uhr",
+    "board.periodMonths": "{n} Monate",
+    "board.periodAll": "Alles",
+    "board.periodChoiceAria": "Zeitraum wählen",
     "board.stationLoadTime": "Belegung jetzt · Zu- und Abgänge seit Betriebsbeginn",
     "board.periodRange": "{von} bis {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} von {herstellerPhrase} · Baujahre {vonJahr}–{bisJahr} · {quote} % gerade ausgeliehen",
@@ -1293,6 +1296,9 @@ const UEBERSETZUNGEN = {
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Stock by model",
     "board.asOf": "As of {datum}, {zeit}",
+    "board.periodMonths": "{n} months",
+    "board.periodAll": "All",
+    "board.periodChoiceAria": "Choose period",
     "board.stationLoadTime": "Occupancy now · arrivals and departures since launch",
     "board.periodRange": "{von} to {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} from {herstellerPhrase} · model years {vonJahr}–{bisJahr} · {quote} % on loan right now",
@@ -1790,6 +1796,9 @@ const UEBERSETZUNGEN = {
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Modele göre mevcut",
     "board.asOf": "Durum: {datum}, {zeit}",
+    "board.periodMonths": "{n} ay",
+    "board.periodAll": "Tümü",
+    "board.periodChoiceAria": "Dönem seç",
     "board.stationLoadTime": "Doluluk şimdi · başlangıçtan bu yana giriş ve çıkışlar",
     "board.periodRange": "{von} – {bis}",
     "board.fleetReference": "{raederPhrase} · {herstellerPhrase} üreticiden {modellePhrase} · model yılları {vonJahr}–{bisJahr} · şu anda %{quote} kirada",
@@ -2287,6 +2296,9 @@ const UEBERSETZUNGEN = {
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Existencias por modelo",
     "board.asOf": "A {datum}, {zeit}",
+    "board.periodMonths": "{n} meses",
+    "board.periodAll": "Todo",
+    "board.periodChoiceAria": "Elegir periodo",
     "board.stationLoadTime": "Ocupación ahora · entradas y salidas desde el inicio",
     "board.periodRange": "{von} a {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} de {herstellerPhrase} · años {vonJahr}–{bisJahr} · {quote} % en préstamo ahora",
@@ -2784,6 +2796,9 @@ const UEBERSETZUNGEN = {
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Consistenza per modello",
     "board.asOf": "Al {datum}, {zeit}",
+    "board.periodMonths": "{n} mesi",
+    "board.periodAll": "Tutto",
+    "board.periodChoiceAria": "Scegli periodo",
     "board.stationLoadTime": "Occupazione ora · entrate e uscite dall'avvio",
     "board.periodRange": "{von} – {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} di {herstellerPhrase} · anni {vonJahr}–{bisJahr} · {quote} % attualmente in prestito",
@@ -3281,6 +3296,9 @@ const UEBERSETZUNGEN = {
     "unit.zeroToHundred": "0–100 %",
     "board.fleetTitle": "Stan według modelu",
     "board.asOf": "Stan na {datum}, {zeit}",
+    "board.periodMonths": "{n} mies.",
+    "board.periodAll": "Wszystko",
+    "board.periodChoiceAria": "Wybierz okres",
     "board.stationLoadTime": "Zajętość teraz · przyjazdy i odjazdy od uruchomienia",
     "board.periodRange": "{von} – {bis}",
     "board.fleetReference": "{raederPhrase} · {modellePhrase} od {herstellerPhrase} · roczniki {vonJahr}–{bisJahr} · {quote} % obecnie wypożyczonych",
@@ -6926,6 +6944,34 @@ function zeigeKopftafel(kennung, tafel) {
     zeitzeile.className = 'kopftafel-zeit';
     zeitzeile.textContent = tafel.zeit || standJetzt();
     kopftexte.append(zeitzeile);
+    // Der Waehler steht NEBEN der Angabe, die er aendert - nicht in einer
+    // eigenen Werkzeugleiste am anderen Ende der Tafel. Wer den Zeitraum
+    // liest und ihn anders haben will, findet den Knopf, ohne zu suchen.
+    // Nur Tafeln mit echter Periode geben zeitWahl mit; eine
+    // Momentaufnahme bekommt hier nichts, weil sie nichts zu waehlen hat.
+    if (tafel.zeitWahl) {
+        const wahl = document.createElement('div');
+        wahl.className = 'kopftafel-zeitwahl';
+        wahl.setAttribute('role', 'group');
+        wahl.setAttribute('aria-label', t('board.periodChoiceAria'));
+        for (const option of tafel.zeitWahl.optionen) {
+            const knopf = document.createElement('button');
+            knopf.type = 'button';
+            knopf.textContent = option.text;
+            const gewaehlt = option.wert === tafel.zeitWahl.aktuell;
+            // aria-pressed statt aria-selected: das hier ist eine Gruppe
+            // von Schaltern, kein Reitersatz - es fuehrt nirgendwohin,
+            // es stellt ein.
+            knopf.setAttribute('aria-pressed', String(gewaehlt));
+            if (gewaehlt) knopf.classList.add('ist-gewaehlt');
+            knopf.addEventListener('click', () => {
+                if (gewaehlt) return;
+                tafel.zeitWahl.beiWechsel(option.wert);
+            });
+            wahl.append(knopf);
+        }
+        kopftexte.append(wahl);
+    }
     kopf.append(kopftexte);
     // Der Umschalter steht NICHT mehr im Kopf (Gestaltungsauftrag,
     // woertlich: "Es muss mittig am unteren Ende der Kopfleiste sein,
@@ -7987,7 +8033,28 @@ function spaltenFilterTyp(spalte, zeilenOriginal) {
     if (werte.length === 0) return 'text';
     if (werte.every((w) => typeof w === 'number')) return 'schwelle';
     const verschiedene = new Set(werte.map(String));
-    return verschiedene.size <= 10 ? 'auswahl' : 'text';
+    // ===== WARUM 30 UND NICHT 10 (29.08.2026) =====
+    // Befund: "die Suche beim Filter bei Monat, das muss ein
+    // Multiselect-Filter und keine Suche". Die Ursache war diese Schwelle
+    // - ein Zwoelf-Monats-Fenster hat zwoelf verschiedene Werte, zwoelf
+    // ist mehr als zehn, und damit fiel ausgerechnet die Monatsspalte in
+    // die Freitextsuche.
+    //
+    // Zehn war zu knapp an dem Fall, den diese Anwendung am haeufigsten
+    // erzeugt. 31 ist nicht weniger gegriffen, aber begruendet: die Liste
+    // rollt bei 240px Hoehe (.mehrfachauswahl-liste in style.css), etwa
+    // acht Zeilen sichtbar; bis dreissig Eintraege bleibt Rollen
+    // schneller als Tippen. Und 31 deckt die beiden geschlossenen Mengen
+    // ab, die hier wirklich vorkommen: die Tage eines Monats (31, nicht
+    // 30 - beim Nachmessen aufgefallen, die erste Fassung stand auf 30
+    // und haette einen langen Monat wieder in die Suche fallen lassen)
+    // und zwei Jahre Monate (24).
+    //
+    // Darueber bleibt es bei der Suche - bei Rahmennummern oder einem
+    // grossen Stationsnetz waere eine Liste zum Durchblaettern schlechter
+    // als ein Suchfeld. Eine Spalte, die es besser weiss, setzt weiterhin
+    // spalte.filterTyp und uebergeht diese Zaehlung ganz (siehe oben).
+    return verschiedene.size <= 31 ? 'auswahl' : 'text';
 }
 
 // Anzeigetext fuer EINEN Wert - fuer Auswahloptionen und
