@@ -9018,7 +9018,11 @@ function spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte) {
         // keine ZEILE, die ein formatieren(wert, zeile) mit zeile-Zugriff
         // (z. B. co2ZelleElement() in auswertungen.js) brauchen wuerde -
         // siehe der lange Kommentar bei zeigeListe() oben.
-        const formatiert = spalte.summeFormatieren ? spalte.summeFormatieren(summe)
+        // gruppe.zeilen als zweites Argument: eine Summe muss den Vorbehalt
+        // ihrer Bestandteile mittragen (Strecke: gemessen oder geschaetzt).
+        // Zweites Argument statt eines neuen Feldes - bestehende Aufrufer
+        // ignorieren es einfach.
+        const formatiert = spalte.summeFormatieren ? spalte.summeFormatieren(summe, gruppe.zeilen)
             : spalte.formatieren ? spalte.formatieren(summe)
             : zahlFormat(summe);
         teil.append(formatiert instanceof Node ? formatiert : document.createTextNode(String(formatiert)));
@@ -9044,6 +9048,19 @@ function baueDatenzeile(tab, zeile, spalten, aktionen, index) {
     tr.tabIndex = -1;
     for (const spalte of spalten) {
         const td = document.createElement('td');
+        // GRUPPIERTE SPALTE BLEIBT LEER (30.08.2026). Ihr Wert steht bereits
+        // im Gruppenkopf darueber und ist fuer alle Zeilen der Gruppe
+        // derselbe - ihn je Zeile zu wiederholen sagt nichts und laesst die
+        // Tabelle voller aussehen, als sie ist.
+        // Fuer Bildschirmleser geht dabei nichts verloren: der Gruppenkopf
+        // traegt scope="rowgroup" (siehe spaltenkopfGruppenzeile()), ist
+        // also genau dafuer mit seinen Zeilen verknuepft.
+        if (tab.gruppe && spalte.feld === tab.gruppe) {
+            const klasseLeer = typeof spalte.klasse === 'function' ? spalte.klasse(zeile) : spalte.klasse;
+            if (klasseLeer) td.className = klasseLeer;
+            tr.append(td);
+            continue;
+        }
         const wert = zeile[spalte.feld];
         const inhalt = spalte.formatieren ? spalte.formatieren(wert, zeile) : (wert ?? '');
         // formatieren darf statt eines Strings auch ein einzelnes

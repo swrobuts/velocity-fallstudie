@@ -823,7 +823,13 @@ function stationRaederAbschnitt(station) {
           } },
         { feld: 'akkustand_prozent', titel: t('field.akku'), klasse: 'zahl',
           formatieren: (wert) => (wert == null ? '\u2014' : `${zahlFormat(wert)} %`) },
-        { feld: 'offene_schaeden', titel: t('field.schaeden'),
+        // summierbar: eine echte Anzahl je Rad, ueber Raeder additiv -
+        // dieselbe Pruefung wie bei 'offene_schaeden' in der Flotte.
+        // 'akkustand_prozent' daneben bleibt bewusst NICHT summierbar: ein
+        // Fuellstand ist ein Zustand, keine Menge - addierte Prozente
+        // ergaeben eine Zahl, die nichts bezeichnet (dieselbe Ausnahme wie
+        // 'fuellstand' in der Stationsauslastung).
+        { feld: 'offene_schaeden', titel: t('field.schaeden'), summierbar: true,
           formatieren: (wert, rad) => (wert > 0
               ? `${zahlFormat(wert)} (${t('schwere.' + rad.hoechste_schwere)})`
               : '\u2014'),

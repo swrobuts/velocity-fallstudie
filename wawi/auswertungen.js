@@ -884,8 +884,11 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
           formatieren: (w) => w || '—' },
         { feld: 'ziel_station',  titel: t('field.ziel'),
           formatieren: (w) => w || '—' },
+        // summierbar: eine Fahrtdauer gehoert zu GENAU einer Fahrt, die
+        // Summe ueber eine Gruppe ist also die tatsaechlich gefahrene Zeit -
+        // dieselbe Pruefung wie bei 'fahrten'/'minuten' im Radtyp-Reiter.
         { feld: 'dauer_minuten', titel: t('field.dauer'), klasse: 'zahl',
-          formatieren: (w) => minutenFormat(w) },
+          formatieren: (w) => minutenFormat(w), summierbar: true },
         // ist_geschaetzt gehoert IMMER neben die Zahl (dieselbe Regel wie
         // bei v_wawi_km_co2: "eine Kennzahl, die ihre eigene Unsicherheit
         // nicht mitliefert, ist gefaehrlich"). sortierwert traegt die
@@ -894,7 +897,21 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
         { feld: 'kilometer', titel: t('field.strecke'), klasse: 'zahl',
           sortierwert: (z) => z.kilometer,
           formatieren: (w, z) => (w === null ? '—'
-              : `${kmFormat(w)}${z.ist_geschaetzt ? t('misc.estimatedSuffix') : ''}`) }
+              : `${kmFormat(w)}${z.ist_geschaetzt ? t('misc.estimatedSuffix') : ''}`),
+          // summierbar: gefahrene Kilometer sind additiv (dieselbe
+          // Begruendung wie im Reiter "Kilometer und CO2").
+          summierbar: true,
+          // EIGENES summeFormatieren, aus zwei Gruenden. Erstens ruft die
+          // Gruppenzeile formatieren() sonst OHNE Zeile auf, und die
+          // Vorgabe oben greift dann auf z.ist_geschaetzt einer
+          // undefinierten Zeile zu. Zweitens - der fachliche Grund - muss
+          // die Summe den Vorbehalt ihrer Bestandteile mittragen: enthaelt
+          // die Gruppe auch nur eine geschaetzte Strecke, ist die Summe
+          // geschaetzt. Eine Kennzahl, die ihre eigene Unsicherheit nicht
+          // mitliefert, ist gefaehrlich (dieselbe Regel wie bei
+          // v_wawi_km_co2).
+          summeFormatieren: (summe, gruppenzeilen) => `${kmFormat(summe)}`
+              + (gruppenzeilen.some((z) => z.ist_geschaetzt) ? t('misc.estimatedSuffix') : '') }
     ]);
 
     wurzel.append(abschnitt);
