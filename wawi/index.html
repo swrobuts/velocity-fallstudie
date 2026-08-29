@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VeloCity Warenwirtschaft</title>
-  <link rel="stylesheet" href="style.css?v=4ee0a2ff">
+  <link rel="stylesheet" href="style.css?v=2714d109">
   <!-- Eigene Kopie, kein Verweis nach ../src: die Warenwirtschaft wird
        als eigenes Verzeichnis ausgeliefert und hat oberhalb ihrer Wurzel
        nichts. Der Verweis lieferte schon lokal einen 404. -->
@@ -342,6 +342,13 @@
 
     <main id="arbeitsbereich">
       <section id="arbeitsliste" aria-label="Arbeitsliste" data-i18n-aria="index.workListAria"></section>
+      <!-- Ziehgriff zwischen Liste und Maske. role="separator" mit tabindex ist
+           die einzige Rolle, die ARIA fuer einen verschiebbaren Trenner kennt;
+           sie bringt Pfeiltasten-Bedienung mit, die rahmen.js verdrahtet. Der
+           Griff verschwindet mit der Maske (siehe :has(#detailmaske:empty)). -->
+      <div id="maskengriff" role="separator" aria-orientation="vertical" tabindex="0"
+           aria-label="Breite der Detailmaske" data-i18n-aria="index.maskResizeAria"
+           aria-valuemin="25" aria-valuemax="75" aria-valuenow="45"></div>
       <section id="detailmaske" aria-label="Detailmaske" data-i18n-aria="index.detailAria"></section>
     </main>
 
@@ -360,13 +367,13 @@
   <script src="config.js?v=b49dda72"></script>
   <script src="daten.js?v=a2cce377"></script>
   <script src="anmeldung.js?v=1c9d2ab0"></script>
-  <script src="rahmen.js?v=492f7142"></script>
+  <script src="rahmen.js?v=529af321"></script>
   <!-- Nach rahmen.js: jeder Arbeitsbereich meldet sich beim Laden ueber
        bereichAnmelden() an, das muss also schon existieren. -->
   <script src="flotte.js?v=eb8d6ad7"></script>
   <script src="stationen.js?v=2943a215"></script>
   <script src="kunden.js?v=10fd055b"></script>
   <script src="instandhaltung.js?v=9d6c20d3"></script>
-  <script src="auswertungen.js?v=2f142faa"></script>
+  <script src="auswertungen.js?v=db6c65ed"></script>
 </body>
 </html>

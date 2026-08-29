@@ -508,6 +508,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Aufgabenbereiche",
     "index.workListAria": "Arbeitsliste",
     "index.detailAria": "Detailmaske",
+      "index.maskResizeAria": "Breite der Detailmaske",
     "nav.flotte": "Flotte",
     "nav.stationen": "Stationen",
     "nav.kunden": "Kundschaft",
@@ -1015,6 +1016,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Work areas",
     "index.workListAria": "Work list",
     "index.detailAria": "Detail form",
+      "index.maskResizeAria": "Width of the detail pane",
     "nav.flotte": "Fleet",
     "nav.stationen": "Stations",
     "nav.kunden": "Customers",
@@ -1522,6 +1524,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Görev alanları",
     "index.workListAria": "Çalışma listesi",
     "index.detailAria": "Ayrıntı formu",
+      "index.maskResizeAria": "Detay bölmesinin genişliği",
     "nav.flotte": "Filo",
     "nav.stationen": "İstasyonlar",
     "nav.kunden": "Müşteriler",
@@ -2029,6 +2032,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Áreas de trabajo",
     "index.workListAria": "Lista de trabajo",
     "index.detailAria": "Formulario de detalle",
+      "index.maskResizeAria": "Ancho del panel de detalle",
     "nav.flotte": "Flota",
     "nav.stationen": "Estaciones",
     "nav.kunden": "Clientela",
@@ -2536,6 +2540,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Aree di lavoro",
     "index.workListAria": "Elenco di lavoro",
     "index.detailAria": "Modulo dei dettagli",
+      "index.maskResizeAria": "Larghezza del pannello dei dettagli",
     "nav.flotte": "Flotta",
     "nav.stationen": "Stazioni",
     "nav.kunden": "Clientela",
@@ -3043,6 +3048,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Obszary zadań",
     "index.workListAria": "Lista robocza",
     "index.detailAria": "Formularz szczegółów",
+      "index.maskResizeAria": "Szerokość panelu szczegółów",
     "nav.flotte": "Flota",
     "nav.stationen": "Stacje",
     "nav.kunden": "Klientela",
@@ -9941,6 +9947,95 @@ function zebraAnwenden(aktiv) {
 // ungestreift, bis irgendein spaeterer Codepfad die Einstellung zum
 // ersten Mal anwendet.
 zebraAnwenden(zebraGespeichert());
+
+// ===== BREITE DER DETAILMASKE (30.08.2026) =====
+// Auftrag: "wäre es noch gut der User kann die Liste für die Detailliste
+// in der Breite verändern, durch Ziehen am linken Rand."
+//
+// Eine einzige Zahl steuert beides: --masken-anteil, der Anteil der Maske
+// an der Arbeitsfläche in Prozent. #arbeitsliste rechnet sich daraus ihren
+// eigenen Anteil (siehe style.css) - so kann keine Aufteilung entstehen,
+// die sich nicht zu 100 % ergänzt.
+//
+// PROZENT, NICHT PIXEL: die gemerkte Breite soll auch dann noch sinnvoll
+// sein, wenn dasselbe Konto das nächste Mal an einem anderen Bildschirm
+// sitzt. 320px sind auf dem Notebook die halbe Fläche und am grossen
+// Monitor ein Streifen.
+const maskengriff = document.getElementById('maskengriff');
+const MASKEN_ANTEIL_SCHLUESSEL = 'velocity-wawi-masken-anteil';
+const MASKEN_ANTEIL_VORGABE = 45;
+// Grenzen: unter 25 % taugt die Maske nichts mehr, über 75 % die Liste
+// daneben nicht. Beide Bereiche bleiben so immer benutzbar - ein Griff,
+// mit dem man sich die Oberfläche zerstören kann, ist kein Bedienelement,
+// sondern eine Falle.
+const MASKEN_ANTEIL_MIN = 25;
+const MASKEN_ANTEIL_MAX = 75;
+
+function maskenAnteilSetzen(prozent, merken = true) {
+    const wert = Math.min(MASKEN_ANTEIL_MAX, Math.max(MASKEN_ANTEIL_MIN, prozent));
+    const gerundet = Math.round(wert * 10) / 10;
+    document.documentElement.style.setProperty('--masken-anteil', `${gerundet}%`);
+    if (maskengriff) maskengriff.setAttribute('aria-valuenow', String(Math.round(gerundet)));
+    if (merken) merke(MASKEN_ANTEIL_SCHLUESSEL, String(gerundet));
+    return gerundet;
+}
+
+function maskenAnteilAusZeiger(x) {
+    const bereich = document.getElementById('arbeitsbereich');
+    const kasten = bereich.getBoundingClientRect();
+    if (kasten.width === 0) return MASKEN_ANTEIL_VORGABE;
+    return ((kasten.right - x) / kasten.width) * 100;
+}
+
+if (maskengriff) {
+    const gemerkterAnteil = Number(gemerkt(MASKEN_ANTEIL_SCHLUESSEL));
+    maskenAnteilSetzen(Number.isFinite(gemerkterAnteil) && gemerkterAnteil > 0
+        ? gemerkterAnteil : MASKEN_ANTEIL_VORGABE, false);
+
+    maskengriff.addEventListener('pointerdown', (e) => {
+        // preventDefault gegen die Textauswahl, die ein Zug sonst im
+        // Bereich daneben aufzieht.
+        e.preventDefault();
+        maskengriff.setPointerCapture(e.pointerId);
+        document.body.classList.add('maske-wird-gezogen');
+
+        function bewegen(ev) { maskenAnteilSetzen(maskenAnteilAusZeiger(ev.clientX), false); }
+        function loslassen(ev) {
+            maskengriff.removeEventListener('pointermove', bewegen);
+            maskengriff.removeEventListener('pointerup', loslassen);
+            maskengriff.removeEventListener('pointercancel', loslassen);
+            document.body.classList.remove('maske-wird-gezogen');
+            // Erst JETZT merken, nicht bei jeder Zwischenposition: sonst
+            // schriebe ein einziger Zug hundert Werte in den Speicher.
+            maskenAnteilSetzen(maskenAnteilAusZeiger(ev.clientX));
+        }
+        maskengriff.addEventListener('pointermove', bewegen);
+        maskengriff.addEventListener('pointerup', loslassen);
+        // pointercancel ebenfalls: ein abgebrochener Zug (Systemgeste,
+        // Fenster verliert den Fokus) darf den Griff nicht im gedrückten
+        // Zustand zurücklassen.
+        maskengriff.addEventListener('pointercancel', loslassen);
+    });
+
+    // Tastaturbedienung, die role="separator" verspricht. Ohne sie wäre
+    // die Breite nur mit der Maus einstellbar - und der Griff trüge eine
+    // Rolle, die er nicht einlöst.
+    maskengriff.addEventListener('keydown', (e) => {
+        const jetzt = Number.parseFloat(maskengriff.getAttribute('aria-valuenow')) || MASKEN_ANTEIL_VORGABE;
+        // Links vergrössert die Maske: der Griff wandert nach links, die
+        // Maske rechts davon wird breiter - die Taste zeigt in die
+        // Richtung, in die sich die Kante bewegt.
+        if (e.key === 'ArrowLeft')       maskenAnteilSetzen(jetzt + 2);
+        else if (e.key === 'ArrowRight') maskenAnteilSetzen(jetzt - 2);
+        else if (e.key === 'Home')       maskenAnteilSetzen(MASKEN_ANTEIL_VORGABE);
+        else return;
+        e.preventDefault();
+    });
+
+    // Doppelklick stellt die Vorgabe wieder her - der übliche Weg zurück
+    // bei einem Trenner, und billiger zu finden als ein eigener Knopf.
+    maskengriff.addEventListener('dblclick', () => maskenAnteilSetzen(MASKEN_ANTEIL_VORGABE));
+}
 
 const schalterZebra = document.getElementById('schalter-zebra');
 schalterZebra.checked = zebraGespeichert();

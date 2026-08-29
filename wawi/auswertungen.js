@@ -791,7 +791,7 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
     document.getElementById('tagdrilldown')?.remove();
 
     const zeilen = await ladeListe('v_wawi_fahrten_je_tag_rad',
-        'fahrrad_id, rahmennummer, typ_code, typ, start_station, ziel_station, dauer_minuten, kilometer, ist_geschaetzt',
+        'fahrrad_id, rahmennummer, typ_code, typ, start_station, ziel_station, dauer_minuten, kilometer, ist_geschaetzt, umsatz',
         (q) => q.eq('tag', tagIso).order('rahmennummer'));
 
     // Vier unabhaengige Gruende, warum dieses Ergebnis nicht mehr gilt:
@@ -911,7 +911,20 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
           // mitliefert, ist gefaehrlich (dieselbe Regel wie bei
           // v_wawi_km_co2).
           summeFormatieren: (summe, gruppenzeilen) => `${kmFormat(summe)}`
-              + (gruppenzeilen.some((z) => z.ist_geschaetzt) ? t('misc.estimatedSuffix') : '') }
+              + (gruppenzeilen.some((z) => z.ist_geschaetzt) ? t('misc.estimatedSuffix') : '') },
+        // UMSATZ JE FAHRT. Kommt seit 0018_wawi_sichten.sql aus der Sicht
+        // selbst (left join lateral auf entgeltposition, Korn bleibt die
+        // Fahrt - siehe die Kornprobe in t0018).
+        // null heisst NICHT ABGERECHNET, nicht "null Euro": in der
+        // Datenbank nachgezaehlt traegt derzeit jede der 12 049
+        // abgeschlossenen Fahrten Entgeltpositionen, der Fall tritt also
+        // heute nicht auf - er waere aber der einzige, in dem ein
+        // Gedankenstrich richtig ist, und deshalb steht er hier.
+        // summierbar: Entgelte sind ueber Fahrten additiv, dieselbe
+        // Pruefung wie bei 'umsatz' in den Monatstafeln.
+        { feld: 'umsatz', titel: t('field.umsatz'), klasse: 'zahl',
+          formatieren: (w) => (w === null || w === undefined ? '—' : geldFormat(w)),
+          summierbar: true, summeFormatieren: (summe) => geldFormat(summe) }
     ]);
 
     wurzel.append(abschnitt);

@@ -1243,13 +1243,36 @@ select date_trunc('day', a.startzeit)::date as tag,
                  coalesce(s2.latitude,  a.end_latitude),
                  coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
        end                  as kilometer,
-       a.distanz_km is null as ist_geschaetzt
+       a.distanz_km is null as ist_geschaetzt,
+       -- UMSATZ JE FAHRT (30.08.2026). Die Tagesliste zeigte bis hierher
+       -- Dauer und Strecke, aber nicht, was die Fahrt eingebracht hat -
+       -- die Frage, die im Drill-Down von der Umsatztafel herunter am
+       -- naechsten liegt.
+       --
+       -- LEFT JOIN LATERAL, nicht join+group by: die Sicht hat das Korn
+       -- "eine Zeile je Fahrt". Ein Join auf entgeltposition (mehrere
+       -- Zeilen je Ausleihe) vervielfachte die Zeilen und damit auch
+       -- dauer_minuten und kilometer - genau der Fehler, den die
+       -- Monatssichten weiter oben mit count(distinct ausleihe_id)
+       -- umgehen muessen. Die Unterabfrage bleibt beim Korn.
+       --
+       -- LEFT statt INNER, obwohl in der Datenbank nachgezaehlt aktuell
+       -- JEDE abgeschlossene Fahrt Entgeltpositionen traegt (12 049 von
+       -- 12 049): ein INNER JOIN liesse eine kuenftige unabgerechnete
+       -- Fahrt lautlos aus der Tagesliste verschwinden, obwohl sie
+       -- stattgefunden hat. So bleibt sie stehen und traegt null - die
+       -- Oberflaeche zeigt dafuer "—", nicht "0,00 €". Kein coalesce auf
+       -- 0: nicht abgerechnet ist etwas anderes als nichts eingebracht.
+       round(entgelt.summe, 2) as umsatz
   from velocity.ausleihe a
   join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
   left join velocity.station s1 on s1.station_id = a.start_station_id
   left join velocity.station s2 on s2.station_id = a.end_station_id
+  left join lateral (select sum(ep.betrag) as summe
+                       from velocity.entgeltposition ep
+                      where ep.ausleihe_id = a.ausleihe_id) entgelt on true
   left join velocity.rechenannahme ra
          on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
   left join velocity.rechenannahme tempo
@@ -1271,6 +1294,14 @@ comment on view velocity.v_wawi_fahrten_je_tag_rad is
   'Filtert selbst über velocity.hat_rolle(''leitung'') oder '
   'velocity.hat_rolle(''disposition''). Seit dem Demozugang zusätzlich für '
   'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql).';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.umsatz is
+  'Summe der Entgeltpositionen dieser einen Fahrt, in Euro. Netto in dem Sinn, '
+  'dass Korrekturpositionen mit negativem Betrag mitzaehlen (siehe '
+  'v_wawi_umsatz_radtyp weiter oben). null, wenn die Fahrt keine '
+  'Entgeltposition traegt - dann ist sie NICHT abgerechnet, was etwas anderes '
+  'ist als 0,00 Euro; die Oberflaeche zeigt dafuer einen Gedankenstrich. '
+  'Additiv ueber Fahrten, deshalb in der Warenwirtschaft als summierbare '
+  'Spalte gefuehrt.';
 comment on column velocity.v_wawi_fahrten_je_tag_rad.tag is
   'Kalendertag der Fahrt (startzeit) - derselbe Wert wie '
   'v_wawi_fahrten_je_tag.tag, hier je Fahrt statt aggregiert. Für die '

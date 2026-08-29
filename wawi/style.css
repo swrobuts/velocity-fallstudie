@@ -2135,7 +2135,10 @@ body.navigation-schmal #navigation button:focus-visible {
    zeigt UND gleichzeitig eine Detailmaske offen ist, kollabierte
    #detailmaske auf 0px Breite, obwohl sie sichtbaren Inhalt hatte. */
 #arbeitsliste {
-  flex: 1 1 55%;
+  /* --masken-anteil ist die einzige Quelle der Aufteilung: der Ziehgriff
+     setzt sie, beide Bereiche lesen sie. Vorgabe 45 % - genau die
+     Aufteilung, die vorher fest verdrahtet war. */
+  flex: 1 1 calc(100% - var(--masken-anteil, 45%));
   overflow-y: auto;
   overflow-x: auto;
   /* Bereichskante zur Detailmaske - dieselbe --kontur wie jede andere
@@ -2153,6 +2156,61 @@ body.navigation-schmal #navigation button:focus-visible {
    unten) - nur flex-basis ändert sich, das allein reicht, damit der
    gesamte Restplatz der Liste zufällt, sobald die Maske nichts mehr
    beansprucht. */
+/* ===== ZIEHGRIFF ZWISCHEN LISTE UND MASKE (30.08.2026) =====
+   Auftrag: "wäre es noch gut der User kann die Liste für die Detailliste
+   in der Breite verändern, durch Ziehen am linken Rand."
+
+   Sichtbar schmal, greifbar breit: 3px Linie, aber ::after zieht die
+   Trefferfläche auf 13px auf - dieselbe Machart wie beim Klappgriff der
+   Navigation. Ein 3px breites Ziel wäre mit der Maus eine Zumutung und
+   mit dem Finger unmöglich.
+
+   touch-action:none, damit ein Zug auf dem Griff nicht als Bildlauf des
+   Bereichs darunter gedeutet wird.
+
+   KEIN :active-Versatz. Ein Druckzustand, der das Element unter dem
+   Zeiger verschiebt, hat an dieser Oberfläche schon einmal einen Knopf
+   unbedienbar gemacht (siehe den translate-Kommentar weiter unten) - an
+   einem Griff, den man gedrückt HÄLT, wäre er noch schlimmer. */
+#maskengriff {
+  flex: 0 0 3px;
+  align-self: stretch;
+  position: relative;
+  cursor: col-resize;
+  background: transparent;
+  touch-action: none;
+}
+
+#maskengriff::after {
+  content: "";
+  position: absolute;
+  inset: 0 -5px;
+}
+
+#maskengriff:hover,
+#maskengriff:focus-visible {
+  background: var(--marine);
+}
+
+/* Während des Ziehens: keine Textauswahl, kein Nachlaufen. Die
+   flex-basis-Überblendung der beiden Bereiche (160ms) ist für das
+   Auf- und Zuklappen der Maske gedacht; beim Ziehen liefe die Kante der
+   Maus sichtbar hinterher. */
+body.maske-wird-gezogen {
+  cursor: col-resize;
+  user-select: none;
+}
+
+body.maske-wird-gezogen #arbeitsliste,
+body.maske-wird-gezogen #detailmaske {
+  transition: none;
+}
+
+/* Keine Maske offen, kein Griff - er hätte nichts zu verschieben. */
+#arbeitsbereich:has(#detailmaske:empty) #maskengriff {
+  display: none;
+}
+
 #arbeitsbereich:has(#detailmaske:empty) #arbeitsliste {
   flex-basis: 100%;
   border-right-color: transparent;
@@ -5052,6 +5110,14 @@ body.navigation-schmal #navigation button:focus-visible {
 .arbeitstabelle-kompakt thead th {
   text-transform: none;
   letter-spacing: normal;
+  /* ALLE MENÜKNÖPFE AUF EINER FLUCHT. Ohne das entscheidet jede Spalte
+     für sich, ob ihr Titel neben oder über dem Knopf Platz hat - der
+     Knopf sitzt dann mal auf Höhe des Titels, mal darunter, und die
+     Kopfzeile wirkt zerfallen. vertical-align:bottom setzt den Inhalt
+     jeder Kopfzelle auf die Grundlinie der Zeile; ob eine Spalte
+     umgebrochen hat oder nicht, der Knopf steht danach überall gleich
+     tief. */
+  vertical-align: bottom;
 }
 
 /* Umbruch erlaubt: ohne ihn ist die Spalte mindestens so breit wie Titel
@@ -5307,7 +5373,7 @@ body.navigation-schmal #navigation button:focus-visible {
    das die ganze Seite seitlich auf, jetzt scrollt nur die Tabelle
    innerhalb der Maske. */
 #detailmaske {
-  flex: 1 1 45%;
+  flex: 1 1 var(--masken-anteil, 45%);
   overflow-y: auto;
   overflow-x: auto;
   /* Rang 2 der Gliederungsregel: hier stehen Daten, also weiss wie die

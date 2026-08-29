@@ -667,6 +667,8 @@ begin
                          'nennt die Strecke');
   return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'ist_geschaetzt'::name,
                          'kennzeichnet eine geschaetzte Strecke');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'umsatz'::name,
+                         'nennt den Umsatz der einzelnen Fahrt');
 
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'ausleihe_id'::name,
                            'nennt keine Fahrt-Kennung (liesse sich ueber v_wawi_fahrt_km zurueckverfolgen)');
@@ -680,6 +682,36 @@ begin
                            'nennt keinen Nachnamen');
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'startzeit'::name,
                            'nennt keine Uhrzeit - nur den Tag, der schon aus dem Klickkontext bekannt ist');
+end;
+$$;
+
+-- KORNPROBE ZUM UMSATZ-JOIN (30.08.2026)
+-- entgeltposition traegt MEHRERE Zeilen je Ausleihe. Waere der Umsatz per
+-- gewoehnlichem join statt per left join lateral angehaengt, haette die Sicht
+-- ploetzlich mehr Zeilen als Fahrten - und dauer_minuten wie kilometer waeren
+-- beim Summieren zu hoch, ohne dass es irgendwo auffiele. Genau diese
+-- Vervielfachung prueft dieser Test.
+create or replace function velocity_test.test_v_fahrten_je_tag_rad_korn_bleibt_die_fahrt()
+returns setof text language plpgsql as $$
+declare v_zeilen bigint; v_fahrten bigint; v_mehrfach bigint;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('leitung-korn', 'leitung');
+
+  select count(*) into v_zeilen from velocity.v_wawi_fahrten_je_tag_rad;
+  select count(*) into v_fahrten from velocity.ausleihe where status = 'abgeschlossen';
+  return next is(v_zeilen, v_fahrten,
+                 'eine Zeile je abgeschlossener Fahrt - der Umsatz-Join vervielfacht nichts');
+
+  -- Gegenprobe am konkreten Fall: es GIBT Fahrten mit mehr als einer
+  -- Entgeltposition. Ohne sie liefe der Test oben ins Leere, weil er gar
+  -- nichts zu vervielfachen haette.
+  select count(*) into v_mehrfach
+    from (select ausleihe_id from velocity.entgeltposition
+           group by ausleihe_id having count(*) > 1) mehr;
+  return next cmp_ok(v_mehrfach, '>', 0::bigint,
+                     'es gibt Fahrten mit mehreren Entgeltpositionen (sonst pruefte der Korntest nichts)');
+
+  perform set_config('request.jwt.claims', '', true);
 end;
 $$;
 
