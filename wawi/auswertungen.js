@@ -1109,6 +1109,20 @@ function auswertungenFensterGemerkt() {
 
 let auswertungenFenster = auswertungenFensterGemerkt();
 
+// Der gewaehlte Zeitraum als EINHEITENZUSATZ ("Euro, 12 Monate"). Bis zum
+// Zeitwaehler stand diese Zahl fest in den Sprachdateien - die Werte selbst
+// folgten dem Fenster (auswertungenSumme(z, fenster, ...)), die Beschriftung
+// aber nicht: bei "Alles" behaupteten die Spalten weiter "12 Monate" ueber
+// Zahlen, die zwanzig Monate summierten. Eine Einheit, die den Bezug falsch
+// angibt, ist schlimmer als gar keine - sie wird geglaubt.
+// Eigener Wortlaut fuer 0 statt des Knopftextes "Alles": auf dem Knopf steht
+// die WAHL ("Alles"), unter der Spalte der BEZUG - "Euro, Alles" waere in
+// keiner der sechs Sprachen ein Satz.
+function auswertungenFensterWort() {
+    return auswertungenFenster === 0
+        ? t('board.periodAllLabel') : t('board.periodMonths', { n: auswertungenFenster });
+}
+
 // Die Wahl fuer eine Kopftafel: der Baustein in rahmen.js macht daraus
 // eine Reihe Knoepfe neben der Zeitzeile (siehe zeigeKopftafel()).
 function auswertungenZeitWahl() {
@@ -1401,14 +1415,14 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
             // Unterschied zwischen den Radtypen sichtbar.
             art: 'zahl',
             titel: t('col.revenue'),
-            einheit: t('unit.euroTwelveMonths'),
+            einheit: t('unit.euroPeriod', { zeitraum: auswertungenFensterWort() }),
             wert: umsatzWert,
             format: (n) => geldFormat(n)
         });
         spalten.push({
             art: 'groesse',
             titel: t('col.rides'),
-            einheit: t('unit.ridesTwelveMonths'),
+            einheit: t('unit.ridesPeriod', { zeitraum: auswertungenFensterWort() }),
             wert: (z) => (z.summenzeile ? z.summeFahrten : auswertungenSumme(z, fenster, 'fahrten')),
             format: (n) => zahlFormat(n),
             // RANG 4 DER FARBORDNUNG - derselbe Ton, den dieser Radtyp in
@@ -1420,7 +1434,7 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
         spalten.push({
             art: 'groesse',
             titel: t('col.revenue'),
-            einheit: t('unit.euroTwelveMonths'),
+            einheit: t('unit.euroPeriod', { zeitraum: auswertungenFensterWort() }),
             wert: umsatzWert,
             format: (n) => geldFormat(n),
             farbe: (z) => kategorieFarbe(z.schluessel) || 'var(--marine)'
@@ -1435,7 +1449,7 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
         // aktuellIndex: die LETZTE Saeule ist der juengste Monat -
         // hier gibt es, anders als bei einer Reihe ueber Stationen
         // oder Baujahre, tatsaechlich einen "aktuellen" Zeitraum.
-        aktuellIndex: 11,
+        aktuellIndex: fenster.length - 1,
         beschriftung: (z) => {
             const reihe = auswertungenReihe(z, fenster, 'umsatz');
             const hoechster = Math.max(...reihe);
@@ -1658,7 +1672,7 @@ function kmCo2Kopftafel(zeilen, radtypNamen) {
             {
                 art: 'groesse',
                 titel: t('col.kilometres'),
-                einheit: t('unit.kmTwelveMonths'),
+                einheit: t('unit.kmPeriod', { zeitraum: auswertungenFensterWort() }),
                 wert: (z) => (z.summenzeile ? z.summeKm : auswertungenSumme(z, fenster, 'kilometer')),
                 format: (n) => kmFormat(n),
                 // RANG 4 DER FARBORDNUNG - dieselben drei Toene wie in
@@ -1672,7 +1686,7 @@ function kmCo2Kopftafel(zeilen, radtypNamen) {
                 titel: t('col.monthlyCourse'),
                 einheit: `${monatFormat(fenster[0])} - ${monatFormat(fenster[fenster.length - 1])}`,
                 reihe: (z) => (z.summenzeile ? null : auswertungenReihe(z, fenster, 'kilometer')),
-                aktuellIndex: 11,
+                aktuellIndex: fenster.length - 1,
                 beschriftung: (z) => {
                     const reihe = auswertungenReihe(z, fenster, 'kilometer');
                     const hoechster = Math.max(...reihe);

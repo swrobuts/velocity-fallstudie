@@ -785,12 +785,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "Minuten",
     "unit.threeSteps": "3 Stufen",
     "unit.reportedToFixed": "gemeldet bis behoben",
-    "unit.euroTwelveMonths": "Euro, 12 Monate",
+    "unit.euroPeriod": "Euro, {zeitraum}",
     "unit.bikesOfCapacity": "Räder, Rahmen = Stellplätze",
     "unit.movementsPerDock": "Bewegungen je Stellplatz",
     "unit.euroPerRide": "Euro",
-    "unit.ridesTwelveMonths": "Fahrten, 12 Monate",
-    "unit.kmTwelveMonths": "Summe, 12 Monate",
+    "unit.ridesPeriod": "Fahrten, {zeitraum}",
+    "unit.kmPeriod": "Summe, {zeitraum}",
     "unit.kmPerRide": "Kilometer je Fahrt",
     "unit.departuresPlusArrivals": "Abgänge und Zugänge",
     "unit.zeroToHundred": "0–100 %",
@@ -798,6 +798,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "Stand {datum}, {zeit} Uhr",
     "board.periodMonths": "{n} Monate",
     "board.periodAll": "Alles",
+    "board.periodAllLabel": "gesamter Zeitraum",
     "board.periodChoiceAria": "Zeitraum wählen",
     "board.stationLoadTime": "Belegung jetzt · Zu- und Abgänge seit Betriebsbeginn",
     "board.periodRange": "{von} bis {bis}",
@@ -1285,12 +1286,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "minutes",
     "unit.threeSteps": "3 steps",
     "unit.reportedToFixed": "reported to fixed",
-    "unit.euroTwelveMonths": "euro, 12 months",
+    "unit.euroPeriod": "euro, {zeitraum}",
     "unit.bikesOfCapacity": "bikes, frame = docking points",
     "unit.movementsPerDock": "movements per docking point",
     "unit.euroPerRide": "euro",
-    "unit.ridesTwelveMonths": "rides, 12 months",
-    "unit.kmTwelveMonths": "total, 12 months",
+    "unit.ridesPeriod": "rides, {zeitraum}",
+    "unit.kmPeriod": "total, {zeitraum}",
     "unit.kmPerRide": "kilometres per ride",
     "unit.departuresPlusArrivals": "departures and arrivals",
     "unit.zeroToHundred": "0–100 %",
@@ -1298,6 +1299,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "As of {datum}, {zeit}",
     "board.periodMonths": "{n} months",
     "board.periodAll": "All",
+    "board.periodAllLabel": "all time",
     "board.periodChoiceAria": "Choose period",
     "board.stationLoadTime": "Occupancy now · arrivals and departures since launch",
     "board.periodRange": "{von} to {bis}",
@@ -1785,12 +1787,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "dakika",
     "unit.threeSteps": "3 kademe",
     "unit.reportedToFixed": "bildirimden giderilmeye",
-    "unit.euroTwelveMonths": "avro, 12 ay",
+    "unit.euroPeriod": "avro, {zeitraum}",
     "unit.bikesOfCapacity": "bisiklet, çerçeve = park yeri",
     "unit.movementsPerDock": "park yeri başına hareket",
     "unit.euroPerRide": "avro",
-    "unit.ridesTwelveMonths": "sefer, 12 ay",
-    "unit.kmTwelveMonths": "toplam, 12 ay",
+    "unit.ridesPeriod": "sefer, {zeitraum}",
+    "unit.kmPeriod": "toplam, {zeitraum}",
     "unit.kmPerRide": "sürüş başına kilometre",
     "unit.departuresPlusArrivals": "çıkış ve giriş",
     "unit.zeroToHundred": "0–100 %",
@@ -1798,6 +1800,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "Durum: {datum}, {zeit}",
     "board.periodMonths": "{n} ay",
     "board.periodAll": "Tümü",
+    "board.periodAllLabel": "tüm dönem",
     "board.periodChoiceAria": "Dönem seç",
     "board.stationLoadTime": "Doluluk şimdi · başlangıçtan bu yana giriş ve çıkışlar",
     "board.periodRange": "{von} – {bis}",
@@ -2285,12 +2288,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "minutos",
     "unit.threeSteps": "3 niveles",
     "unit.reportedToFixed": "de notificado a resuelto",
-    "unit.euroTwelveMonths": "euros, 12 meses",
+    "unit.euroPeriod": "euros, {zeitraum}",
     "unit.bikesOfCapacity": "bicicletas, marco = plazas",
     "unit.movementsPerDock": "movimientos por plaza",
     "unit.euroPerRide": "euros",
-    "unit.ridesTwelveMonths": "viajes, 12 meses",
-    "unit.kmTwelveMonths": "total, 12 meses",
+    "unit.ridesPeriod": "viajes, {zeitraum}",
+    "unit.kmPeriod": "total, {zeitraum}",
     "unit.kmPerRide": "kilómetros por viaje",
     "unit.departuresPlusArrivals": "salidas y llegadas",
     "unit.zeroToHundred": "0–100 %",
@@ -2298,6 +2301,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "A {datum}, {zeit}",
     "board.periodMonths": "{n} meses",
     "board.periodAll": "Todo",
+    "board.periodAllLabel": "todo el periodo",
     "board.periodChoiceAria": "Elegir periodo",
     "board.stationLoadTime": "Ocupación ahora · entradas y salidas desde el inicio",
     "board.periodRange": "{von} a {bis}",
@@ -2785,12 +2789,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "minuti",
     "unit.threeSteps": "3 livelli",
     "unit.reportedToFixed": "da segnalato a risolto",
-    "unit.euroTwelveMonths": "euro, 12 mesi",
+    "unit.euroPeriod": "euro, {zeitraum}",
     "unit.bikesOfCapacity": "bici, cornice = stalli",
     "unit.movementsPerDock": "movimenti per stallo",
     "unit.euroPerRide": "euro",
-    "unit.ridesTwelveMonths": "corse, 12 mesi",
-    "unit.kmTwelveMonths": "totale, 12 mesi",
+    "unit.ridesPeriod": "corse, {zeitraum}",
+    "unit.kmPeriod": "totale, {zeitraum}",
     "unit.kmPerRide": "chilometri per corsa",
     "unit.departuresPlusArrivals": "partenze e arrivi",
     "unit.zeroToHundred": "0–100 %",
@@ -2798,6 +2802,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "Al {datum}, {zeit}",
     "board.periodMonths": "{n} mesi",
     "board.periodAll": "Tutto",
+    "board.periodAllLabel": "intero periodo",
     "board.periodChoiceAria": "Scegli periodo",
     "board.stationLoadTime": "Occupazione ora · entrate e uscite dall'avvio",
     "board.periodRange": "{von} – {bis}",
@@ -3285,12 +3290,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "minuty",
     "unit.threeSteps": "3 stopnie",
     "unit.reportedToFixed": "od zgłoszenia do usunięcia",
-    "unit.euroTwelveMonths": "euro, 12 miesięcy",
+    "unit.euroPeriod": "euro, {zeitraum}",
     "unit.bikesOfCapacity": "rowery, ramka = miejsca postojowe",
     "unit.movementsPerDock": "ruchy na miejsce postojowe",
     "unit.euroPerRide": "euro",
-    "unit.ridesTwelveMonths": "przejazdy, 12 miesięcy",
-    "unit.kmTwelveMonths": "suma, 12 miesięcy",
+    "unit.ridesPeriod": "przejazdy, {zeitraum}",
+    "unit.kmPeriod": "suma, {zeitraum}",
     "unit.kmPerRide": "kilometry na przejazd",
     "unit.departuresPlusArrivals": "wyjazdy i przyjazdy",
     "unit.zeroToHundred": "0–100 %",
@@ -3298,6 +3303,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "Stan na {datum}, {zeit}",
     "board.periodMonths": "{n} mies.",
     "board.periodAll": "Wszystko",
+    "board.periodAllLabel": "cały okres",
     "board.periodChoiceAria": "Wybierz okres",
     "board.stationLoadTime": "Zajętość teraz · przyjazdy i odjazdy od uruchomienia",
     "board.periodRange": "{von} – {bis}",
@@ -5486,13 +5492,35 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
         svg.append(grundlinie);
     }
 
+    // MINDESTHOEHE FUER WERTE UNGLEICH NULL (29.08.2026). Bis hierher war
+    // die Hoehe schlicht |wertY - nullY|: ein Monat mit einem Prozent des
+    // Reihenmaximums bekam 0,14px und verschwand. Ueber mehrere fruehe
+    // Monate hintereinander sah die Reihe dadurch aus, als BEGAENNE sie
+    // erst spaeter - eine Luecke, wo in Wahrheit kleine Werte stehen. Genau
+    // das ist beim waehlbaren Zeitraum aufgefallen: "Alles" nimmt die
+    // Anlaufmonate mit hinein, in denen der Umsatz noch klein war.
+    // Ein Boden von einem Bildpunkt (viewBox-Einheit = Bildpunkt, denn
+    // hoehe und CSS-height sind in beiden Einsatzorten gleich) rundet den
+    // Wert nach oben - er UEBERTREIBT also minimal. Das ist die richtige
+    // Richtung: die Alternative rundet auf null ab und macht aus "wenig"
+    // ein "nichts", und der Unterschied zwischen keinem Umsatz und wenig
+    // Umsatz ist der groessere der beiden. Bei wert === 0 greift der Boden
+    // ausdruecklich NICHT - eine echte Null bleibt eine leere Stelle.
+    const MINDESTHOEHE = 1;
     werteBereinigt.forEach((wert, i) => {
         const wertY = yVon(wert);
+        const rohHoehe = Math.abs(wertY - nullY);
+        const saeulenhoehe = wert === 0 ? rohHoehe : Math.max(MINDESTHOEHE, rohHoehe);
+        // Positive Saeulen stehen AUF der Nulllinie und wachsen nach oben,
+        // negative haengen daran und wachsen nach unten - der Boden darf
+        // die Linie nicht ueberschreiten (sonst reichte eine winzige
+        // positive Saeule sichtbar unter die Null).
+        const obenY = wert < 0 ? nullY : nullY - saeulenhoehe;
         const rect = document.createElementNS(SVG_NS, 'rect');
         rect.setAttribute('x', (i * abstand).toFixed(1));
-        rect.setAttribute('y', Math.min(nullY, wertY).toFixed(1));
+        rect.setAttribute('y', obenY.toFixed(1));
         rect.setAttribute('width', saeulenbreite.toFixed(1));
-        rect.setAttribute('height', Math.abs(wertY - nullY).toFixed(1));
+        rect.setAttribute('height', saeulenhoehe.toFixed(1));
         const klassen = ['saeulensparkline-saeule'];
         if (markierIndizes.includes(i)) klassen.push('saeulensparkline-saeule-markiert');
         else if (i === aktuellIndex) klassen.push('saeulensparkline-saeule-aktuell');
