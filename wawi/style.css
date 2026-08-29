@@ -4912,6 +4912,181 @@ body.navigation-schmal #navigation button:focus-visible {
    wenn tatsaechlich ein Spaltenfilter oder eine Gruppierung aktiv ist
    (siehe spaltenkopfHinweis() in rahmen.js), sonst waere die Zeile
    Zierrat. */
+/* ===== DAS KOMPAKTE SPALTENMENÜ (30.08.2026) =====
+   Auftrag, wörtlich: "können wir bei der Tabelle mit den Einzelübersichten
+   auch die gleiche Funktionalität einbauen wie bei der linken Haupttabelle.
+   Also auch Sortieren, Gruppieren, Filtern."
+
+   Warum ein Menü statt derselben Leiste: die drei Knöpfe der Arbeitsliste
+   brauchen mit Titel rund 137px je Spalte. Die Detailtabellen stehen in der
+   Maske und tragen sechs Spalten - das passt dort nicht nebeneinander. Ein
+   Knopf je Spalte passt immer, unabhängig davon, wie breit der Bereich
+   gerade ist.
+
+   Das Fenster selbst ist dasselbe (.spaltenkopf-filterfenster, siehe oben):
+   gleiche Ausrichtung am Rand, gleicher Schatten, gleiches Zurücknehmen der
+   Versalien. Nur der Inhalt ist länger. */
+.spaltenkopf-kompakt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--raum-1);
+}
+
+.spaltenkopf-menueknopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--ziel);
+  min-height: var(--ziel);
+  padding: var(--raum-1) var(--raum-2);
+  border: 1px solid var(--text-leise);
+  border-radius: var(--rund-1);
+  background: var(--flaeche);
+  color: var(--text-leise);
+}
+
+.spaltenkopf-menueknopf:hover {
+  background: var(--flaeche-rahmen);
+  border-color: var(--marine);
+  color: var(--marine);
+}
+
+/* Derselbe Hinweis wie beim aktiven Filterknopf: der Knopf verrät, DASS
+   diese Spalte etwas einschränkt, ohne dass man ihn öffnen muss. Er gilt
+   hier für alle drei Fähigkeiten zusammen - Sortierung, Gruppierung und
+   Filter stecken ja im selben Menü. */
+.spaltenkopf-menueknopf-aktiv {
+  border-color: var(--rot);
+  color: var(--rot);
+}
+
+.spaltenkopf-menuesymbol {
+  font-size: var(--grad-4);
+  line-height: 1;
+}
+
+/* Abschnittsüberschrift im Menü ("Sortieren", "Gruppieren", "Filtern").
+   Leiser als die Einträge darunter und mit Abstand nach oben - sie ordnet,
+   sie ist kein Bedienelement. Der erste Abschnitt bekommt keinen Abstand,
+   sonst klaffte oben im Fenster eine Lücke. */
+.spaltenkopf-menue-titel {
+  margin: var(--raum-2) 0 0;
+  font-size: var(--grad-2);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+.spaltenkopf-menue-titel:first-child {
+  margin-top: 0;
+}
+
+.spaltenkopf-menue-eintrag {
+  display: block;
+  width: 100%;
+  min-height: var(--ziel);
+  padding: var(--raum-1) var(--raum-2);
+  border: 1px solid transparent;
+  border-radius: var(--rund-1);
+  background: none;
+  text-align: left;
+  color: var(--text);
+}
+
+.spaltenkopf-menue-eintrag:hover {
+  background: var(--flaeche-rahmen);
+}
+
+.spaltenkopf-menue-eintrag-aktiv {
+  border-color: var(--marine);
+  background: var(--flaeche-rahmen);
+  color: var(--marine);
+  font-weight: 600;
+}
+
+/* Die Herkunftszeile über der Rädertabelle - früher deren <caption>.
+   Leise wie die übrigen Methodennoten dieser Oberfläche: sie erklärt die
+   Zahlen, sie ist keine Überschrift. */
+.monatsdrilldown-herkunft {
+  margin: 0 0 var(--raum-2);
+  font-size: var(--grad-2);
+  color: var(--text-leise);
+}
+
+/* Die Detailtabelle trägt dieselben sechs Spalten wie die Arbeitsliste,
+   aber in einem deutlich schmaleren Bereich. Im Browser nachgemessen: mit
+   den Kopfmaßen der Arbeitsliste wird sie 839px breit und läuft über.
+   Drei Ursachen, alle drei hier zurückgenommen - und zwar NUR im
+   Kompaktmodus, die Arbeitsliste bleibt unberührt:
+
+   1. Versalien mit Sperrung machen "Rahmennummer" rund ein Drittel breiter,
+      ohne ein Wort mehr zu sagen.
+   2. Das Zellenpolster ist auf Zeilenhöhe ausgelegt, nicht auf Enge.
+   3. Der Menüknopf hält 44px Mindestmaß (WCAG 2.5.5). Das bleibt als
+      TREFFERFLÄCHE erhalten - über ::after, dieselbe Machart wie beim
+      Klappgriff der Navigation -, nur die sichtbare Fläche schrumpft. Eine
+      Trefferfläche zu verkleinern wäre der falsche Weg; sie unsichtbar
+      über den Rand hinauswachsen zu lassen kostet keine Spaltenbreite. */
+.arbeitstabelle-kompakt th,
+.arbeitstabelle-kompakt td {
+  padding: var(--raum-2);
+}
+
+/* Auch das Randpolster der ersten und letzten Spalte (--raum-5): in der
+   Arbeitsliste richtet es die Tabelle an der Bereichskante aus, in der
+   verschachtelten Detailtabelle addiert es sich nur zum Innenabstand der
+   Maske, die ohnehin schon --raum-5 trägt. Zwei Selektoren tief wie das
+   Vorbild, sonst gewinnt dessen höhere Spezifität. */
+.arbeitstabelle-kompakt th:first-child,
+.arbeitstabelle-kompakt td:first-child {
+  padding-left: var(--raum-2);
+}
+
+.arbeitstabelle-kompakt th:last-child,
+.arbeitstabelle-kompakt td:last-child {
+  padding-right: var(--raum-2);
+}
+
+.arbeitstabelle-kompakt thead th {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Umbruch erlaubt: ohne ihn ist die Spalte mindestens so breit wie Titel
+   UND Knopf nebeneinander - im Browser gemessen 661px für die sechs
+   Spalten, gegenüber 612px, mit denen die frühere handgebaute Tabelle
+   auskam. Mit Umbruch rutscht der Knopf bei Enge unter den Titel; die
+   Spalte braucht dann nur noch das Breitere von beiden, die Kopfzeile
+   wird dafür eine Zeile höher. Das ist der bessere Tausch: Höhe hat die
+   Maske, Breite nicht. */
+.arbeitstabelle-kompakt .spaltenkopf-kompakt {
+  flex-wrap: wrap;
+  row-gap: var(--raum-1);
+}
+
+.arbeitstabelle-kompakt .spaltenkopf-menueknopf {
+  position: relative;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0 var(--raum-1);
+}
+
+.arbeitstabelle-kompakt .spaltenkopf-menueknopf::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+}
+
+/* Letzte Rettungsleine, kein Entwurfsziel: sollte eine Detailtabelle doch
+   einmal mehr Spalten tragen, als der Bereich fasst, scrollt SIE - nicht
+   die ganze Maske. Ohne das schöbe eine zu breite Tabelle das Layout
+   auseinander. */
+.arbeitstabelle-kompakt-behaelter {
+  overflow-x: auto;
+}
+
 .spaltenkopf-hinweis {
   flex: 0 0 auto;
   display: flex;

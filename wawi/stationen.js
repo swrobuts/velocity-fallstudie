@@ -785,83 +785,54 @@ function stationRaederAbschnitt(station) {
         return abschnitt;
     }
 
-    const tabelle = document.createElement('table');
-    tabelle.className = 'stationraeder-tabelle';
-
-    const kopfzeile = document.createElement('tr');
-    for (const titel of [t('field.rahmennummer'), t('field.radtyp'), t('field.status'), t('field.akku'), t('field.schaeden')]) {
-        const th = document.createElement('th');
-        th.textContent = titel;
-        kopfzeile.append(th);
-    }
-    tabelle.append(kopfzeile);
-
-    for (const rad of raederHier) {
-        const zeile = document.createElement('tr');
-
-        // Querverweis (Gestaltungsauftrag "Sichten verweben", dasselbe
-        // Prinzip wie "Rad in der Flotte -> seine Schadensmeldungen" in
-        // flotte.js radMaske(), hier in der Gegenrichtung: "Rad an der
-        // Station -> seine Flottendetails"). darfBereich() zuerst
-        // (Auftrag: "wird nicht angeboten") - unnoetig hier, weil
-        // disposition/leitung (die einzigen Rollen dieses Bereichs)
-        // Flotte ohnehin sehen, aber defensiv wie jeder andere Sprung in
-        // dieser Oberflaeche.
-        const zelleRahmennummer = document.createElement('td');
-        if (darfBereich('flotte')) {
-            const link = document.createElement('button');
-            link.type = 'button';
-            // Dieselbe Klasse wie der Datum-Knopf im Monats-Drill-Down
-            // (auswertungen.js): sieht wie ein Link aus, sonst nichts -
-            // ein zweiter, wortgleicher Klassenname fuer denselben
-            // visuellen Zweck waere dieselbe Wiederholung, die
-            // werkzeugleiste()/uebersichtsstreifen() in rahmen.js schon
-            // einmal beseitigt haben.
-            link.className = 'monatsdrilldown-tag-knopf';
-            link.textContent = rad.rahmennummer;
-            link.addEventListener('click', () => {
-                bereichSprung('flotte', t('nav.originBikeFromStation', { rahmennummer: rad.rahmennummer, name: station.name }),
-                    () => setzeSpaltenkopfFilter('rahmennummer', rad.rahmennummer));
-            });
-            zelleRahmennummer.append(link);
-        } else {
-            zelleRahmennummer.textContent = rad.rahmennummer;
-        }
-        zeile.append(zelleRahmennummer);
-
-        const zelleTyp = document.createElement('td');
-        zelleTyp.textContent = rad.typ;
-        zeile.append(zelleTyp);
-
-        // Farbe traegt Bedeutung: ein Rad, das noch an einer Station
-        // steht, aber nicht 'verfuegbar' ist, ist der eigentlich
-        // interessante Fall dieser Liste (siehe Kommentar bei
-        // v_wawi_station_flotte.status in 0018_wawi_sichten.sql).
-        const zelleStatus = document.createElement('td');
-        zelleStatus.textContent = statusAnzeige(rad.status);
-        if (rad.status === 'defekt' || rad.hoechste_schwere === 'fahruntauglich') {
-            zelleStatus.className = 'ton-schlecht';
-        } else if (rad.status === 'wartung') {
-            zelleStatus.className = 'ton-warnung';
-        }
-        zeile.append(zelleStatus);
-
-        const zelleAkku = document.createElement('td');
-        zelleAkku.textContent = rad.akkustand_prozent == null ? '—' : `${zahlFormat(rad.akkustand_prozent)} %`;
-        zeile.append(zelleAkku);
-
-        const zelleSchaeden = document.createElement('td');
-        zelleSchaeden.textContent = rad.offene_schaeden > 0
-            ? `${zahlFormat(rad.offene_schaeden)} (${t('schwere.' + rad.hoechste_schwere)})`
-            : '—';
-        if (rad.hoechste_schwere === 'fahruntauglich') zelleSchaeden.className = 'ton-schlecht';
-        else if (rad.offene_schaeden > 0) zelleSchaeden.className = 'ton-warnung';
-        zeile.append(zelleSchaeden);
-
-        tabelle.append(zeile);
-    }
-
-    abschnitt.append(tabelle);
+    // ===== DIESELBE TABELLE WIE IN DER ARBEITSLISTE (30.08.2026) =====
+    // Auftrag: "auch Sortieren, Gruppieren, Filtern" fuer die
+    // Detailtabellen. zeigeDetailtabelle() (rahmen.js) zeichnet mit
+    // demselben Code wie die Liste links, nur mit eigenem Zustand und
+    // kompaktem Spaltenmenue. An einer vollen Station ist "gruppiert nach
+    // Status" die Frage, wegen der man ueberhaupt hineinsieht.
+    const tabellenplatz = document.createElement('div');
+    tabellenplatz.className = 'arbeitstabelle-kompakt-behaelter';
+    abschnitt.append(tabellenplatz);
+    zeigeDetailtabelle('station-raeder', tabellenplatz, raederHier, [
+        // Der Querverweis in die Flotte bleibt erhalten: formatieren() darf
+        // einen Knoten zurueckgeben (siehe baueDatenzeile() in rahmen.js),
+        // der Knopf steht also weiter in der Zelle. Sortiert und gefiltert
+        // wird trotzdem ueber die blanke Rahmennummer - der Vorgabewert
+        // zeile[feld], nicht der Knopf.
+        { feld: 'rahmennummer', titel: t('field.rahmennummer'),
+          formatieren: (wert, rad) => {
+              if (!darfBereich('flotte')) return wert;
+              const link = document.createElement('button');
+              link.type = 'button';
+              link.className = 'monatsdrilldown-tag-knopf';
+              link.textContent = rad.rahmennummer;
+              link.addEventListener('click', () => {
+                  bereichSprung('flotte', t('nav.originBikeFromStation', { rahmennummer: rad.rahmennummer, name: station.name }),
+                      () => setzeSpaltenkopfFilter('rahmennummer', rad.rahmennummer));
+              });
+              return link;
+          } },
+        { feld: 'typ', titel: t('field.radtyp') },
+        { feld: 'status', titel: t('field.status'),
+          formatieren: (wert) => statusAnzeige(wert),
+          klasse: (rad) => {
+              if (rad.status === 'defekt' || rad.hoechste_schwere === 'fahruntauglich') return 'ton-schlecht';
+              if (rad.status === 'wartung') return 'ton-warnung';
+              return '';
+          } },
+        { feld: 'akkustand_prozent', titel: t('field.akku'), klasse: 'zahl',
+          formatieren: (wert) => (wert == null ? '\u2014' : `${zahlFormat(wert)} %`) },
+        { feld: 'offene_schaeden', titel: t('field.schaeden'),
+          formatieren: (wert, rad) => (wert > 0
+              ? `${zahlFormat(wert)} (${t('schwere.' + rad.hoechste_schwere)})`
+              : '\u2014'),
+          klasse: (rad) => {
+              if (rad.hoechste_schwere === 'fahruntauglich') return 'ton-schlecht';
+              if (rad.offene_schaeden > 0) return 'ton-warnung';
+              return '';
+          } }
+    ]);
     return abschnitt;
 }
 

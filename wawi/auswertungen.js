@@ -854,64 +854,48 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
         return;
     }
 
-    const tabelle = document.createElement('table');
-    tabelle.className = 'monatsdrilldown-tabelle';
-    const beschriftung = document.createElement('caption');
-    beschriftung.textContent = t('misc.bikesOnDateCaption', { datum: tagFormat(tagIso) });
-    tabelle.append(beschriftung);
+    // ===== DIESELBE TABELLE WIE LINKS (30.08.2026) =====
+    // Auftrag: "auch Sortieren, Gruppieren, Filtern". Statt der bis hierher
+    // handgebauten <table> zeichnet jetzt zeigeDetailtabelle() (rahmen.js)
+    // - derselbe Code wie die Arbeitsliste, nur mit eigenem Zustand und
+    // kompaktem Spaltenmenue. Gruppieren nach Radtyp oder nach Startstation
+    // beantwortet hier die Frage, fuer die man den Tag ueberhaupt aufmacht.
+    //
+    // Die Rahmennummer bleibt Text ohne Querverweis - siehe die
+    // Begruendung, die schon die frueher handgebaute Fassung trug: ein
+    // Sprung von hier aus wechselte den ganzen Arbeitsbereich.
+    // Die Herkunftszeile stand bisher als <caption> IN der Tabelle. Die
+    // zeichnet zeigeDetailtabelle() nicht mit - sie steht deshalb jetzt als
+    // Absatz davor, mit demselben Wortlaut. Weglassen waere das Falsche:
+    // sie nennt die Sicht, aus der die Zeilen stammen, UND den Vorbehalt
+    // (kein Kundenbezug) - beides gehoert zu den Zahlen, nicht zur Zierde.
+    const herkunft = document.createElement('p');
+    herkunft.className = 'monatsdrilldown-herkunft';
+    herkunft.textContent = t('misc.bikesOnDateCaption', { datum: tagFormat(tagIso) });
+    abschnitt.append(herkunft);
 
-    const thead = document.createElement('thead');
-    const kopfzeile = document.createElement('tr');
-    for (const spaltentitel of [t('field.rahmennummer'), t('field.radtyp'), t('field.start'), t('field.ziel'), t('field.dauer'), t('field.strecke')]) {
-        const th = document.createElement('th');
-        th.textContent = spaltentitel;
-        th.scope = 'col';
-        kopfzeile.append(th);
-    }
-    thead.append(kopfzeile);
-    tabelle.append(thead);
-
-    const tbody = document.createElement('tbody');
-    for (const zeile of zeilen) {
-        const tr = document.createElement('tr');
-
-        // Rahmennummer bleibt Text, kein Querverweis-Sprung in DIESER
-        // Tabelle: bereichSprung() (rahmen.js, Punkt 3) wechselt den
-        // ganzen Arbeitsbereich - von einer dritten Ebene innerhalb der
-        // Auswertungen aus waere das ein Sprung "quer durch zwei
-        // Bereiche gleichzeitig" (Auswertungen -> Flotte) ohne jede
-        // Zwischenstation, und diese Zeile hat keine radAnlegenMaske-
-        // aehnliche Zielansicht, in der ein einzelnes Rad ausgewaehlt
-        // werden koennte (flotteAufbauen() zeigt IMMER die volle Liste).
-        // Der Querverweis aus Punkt 3 sitzt deshalb dort, wo er ein
-        // bestehendes Ziel trifft: Flotte -> Schadensmeldungen und
-        // Schadensmeldung -> Rad (siehe rahmen.js, bereichSprung()).
-        const kopf = document.createElement('th');
-        kopf.scope = 'row';
-        kopf.textContent = zeile.rahmennummer;
-        const typZelle = document.createElement('td');
-        typZelle.textContent = zeile.typ;
-        const startZelle = document.createElement('td');
-        startZelle.textContent = zeile.start_station || '—';
-        const zielZelle = document.createElement('td');
-        zielZelle.textContent = zeile.ziel_station || '—';
-        const dauerZelle = document.createElement('td');
-        dauerZelle.className = 'zahl';
-        dauerZelle.textContent = minutenFormat(zeile.dauer_minuten);
-        const streckeZelle = document.createElement('td');
-        streckeZelle.className = 'zahl';
-        // ist_geschaetzt gehoert IMMER neben die Zahl, nicht nur bei
-        // v_wawi_km_co2 - dieselbe Regel wie dort ("eine Kennzahl, die
-        // ihre eigene Unsicherheit nicht mitliefert, ist gefaehrlich").
-        streckeZelle.textContent = zeile.kilometer === null
-            ? '—'
-            : `${kmFormat(zeile.kilometer)}${zeile.ist_geschaetzt ? t('misc.estimatedSuffix') : ''}`;
-
-        tr.append(kopf, typZelle, startZelle, zielZelle, dauerZelle, streckeZelle);
-        tbody.append(tr);
-    }
-    tabelle.append(tbody);
-    abschnitt.append(tabelle);
+    const tabellenplatz = document.createElement('div');
+    tabellenplatz.className = 'arbeitstabelle-kompakt-behaelter';
+    abschnitt.append(tabellenplatz);
+    zeigeDetailtabelle('monatsdrilldown-raeder', tabellenplatz, zeilen, [
+        { feld: 'rahmennummer', titel: t('field.rahmennummer') },
+        { feld: 'typ',          titel: t('field.radtyp') },
+        { feld: 'start_station', titel: t('field.start'),
+          formatieren: (w) => w || '—' },
+        { feld: 'ziel_station',  titel: t('field.ziel'),
+          formatieren: (w) => w || '—' },
+        { feld: 'dauer_minuten', titel: t('field.dauer'), klasse: 'zahl',
+          formatieren: (w) => minutenFormat(w) },
+        // ist_geschaetzt gehoert IMMER neben die Zahl (dieselbe Regel wie
+        // bei v_wawi_km_co2: "eine Kennzahl, die ihre eigene Unsicherheit
+        // nicht mitliefert, ist gefaehrlich"). sortierwert traegt die
+        // blanke Zahl, damit nach Strecke und nicht nach dem Text mit dem
+        // angehaengten Zusatz sortiert wird.
+        { feld: 'kilometer', titel: t('field.strecke'), klasse: 'zahl',
+          sortierwert: (z) => z.kilometer,
+          formatieren: (w, z) => (w === null ? '—'
+              : `${kmFormat(w)}${z.ist_geschaetzt ? t('misc.estimatedSuffix') : ''}`) }
+    ]);
 
     wurzel.append(abschnitt);
 }

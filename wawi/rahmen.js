@@ -371,6 +371,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Gruppierung nach {titel} aufheben",
     "common.groupResetTitle": "Gruppierung zurücksetzen",
     "common.groupTitle": "Gruppieren",
+      "common.sortTitle": "Sortieren",
+      "common.sortAscendingAction": "Aufsteigend",
+      "common.sortDescendingAction": "Absteigend",
+      "common.groupByThis": "Nach dieser Spalte gruppieren",
+      "common.columnMenuAria": "Menü für Spalte {titel}",
+      "common.columnMenuTitle": "Sortieren, gruppieren, filtern",
     "common.filterAria": "{titel} filtern",
     "common.filterMinAria": "Mindestwert für {titel}",
     "common.filterSearchPlaceholder": "Suche…",
@@ -872,6 +878,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Remove grouping by {titel}",
     "common.groupResetTitle": "Reset grouping",
     "common.groupTitle": "Group",
+      "common.sortTitle": "Sort",
+      "common.sortAscendingAction": "Ascending",
+      "common.sortDescendingAction": "Descending",
+      "common.groupByThis": "Group by this column",
+      "common.columnMenuAria": "Menu for column {titel}",
+      "common.columnMenuTitle": "Sort, group, filter",
     "common.filterAria": "Filter {titel}",
     "common.filterMinAria": "Minimum value for {titel}",
     "common.filterSearchPlaceholder": "Search…",
@@ -1373,6 +1385,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "{titel} gruplamasını kaldır",
     "common.groupResetTitle": "Gruplamayı sıfırla",
     "common.groupTitle": "Grupla",
+      "common.sortTitle": "Sırala",
+      "common.sortAscendingAction": "Artan",
+      "common.sortDescendingAction": "Azalan",
+      "common.groupByThis": "Bu sütuna göre grupla",
+      "common.columnMenuAria": "{titel} sütunu menüsü",
+      "common.columnMenuTitle": "Sırala, grupla, filtrele",
     "common.filterAria": "{titel} alanını filtrele",
     "common.filterMinAria": "{titel} için en düşük değer",
     "common.filterSearchPlaceholder": "Ara…",
@@ -1874,6 +1892,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Quitar agrupación por {titel}",
     "common.groupResetTitle": "Restablecer agrupación",
     "common.groupTitle": "Agrupar",
+      "common.sortTitle": "Ordenar",
+      "common.sortAscendingAction": "Ascendente",
+      "common.sortDescendingAction": "Descendente",
+      "common.groupByThis": "Agrupar por esta columna",
+      "common.columnMenuAria": "Menú de la columna {titel}",
+      "common.columnMenuTitle": "Ordenar, agrupar, filtrar",
     "common.filterAria": "Filtrar {titel}",
     "common.filterMinAria": "Valor mínimo para {titel}",
     "common.filterSearchPlaceholder": "Buscar…",
@@ -2375,6 +2399,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Rimuovi raggruppamento per {titel}",
     "common.groupResetTitle": "Azzera raggruppamento",
     "common.groupTitle": "Raggruppa",
+      "common.sortTitle": "Ordina",
+      "common.sortAscendingAction": "Crescente",
+      "common.sortDescendingAction": "Decrescente",
+      "common.groupByThis": "Raggruppa per questa colonna",
+      "common.columnMenuAria": "Menu della colonna {titel}",
+      "common.columnMenuTitle": "Ordina, raggruppa, filtra",
     "common.filterAria": "Filtra {titel}",
     "common.filterMinAria": "Valore minimo per {titel}",
     "common.filterSearchPlaceholder": "Cerca…",
@@ -2876,6 +2906,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Usuń grupowanie według {titel}",
     "common.groupResetTitle": "Zresetuj grupowanie",
     "common.groupTitle": "Grupuj",
+      "common.sortTitle": "Sortuj",
+      "common.sortAscendingAction": "Rosnąco",
+      "common.sortDescendingAction": "Malejąco",
+      "common.groupByThis": "Grupuj według tej kolumny",
+      "common.columnMenuAria": "Menu kolumny {titel}",
+      "common.columnMenuTitle": "Sortuj, grupuj, filtruj",
     "common.filterAria": "Filtruj {titel}",
     "common.filterMinAria": "Wartość minimalna dla {titel}",
     "common.filterSearchPlaceholder": "Szukaj…",
@@ -4780,7 +4816,8 @@ function mehrfachauswahlEintraege(optionen, ausgewaehlt, beiAenderung, markiere,
 // der Signatur-Rueckstellung: eine neue Tabelle (anderer Bereich, anderer
 // Unterreiter) hat ohnehin ganz andere Spaltennamen, der Vergleich
 // "=== spalte.feld" faellt dort von selbst nie zufaellig positiv aus.
-let spaltenkopfFilterOffenFeld = null;
+// spaltenkopfFilterOffenFeld steckt jetzt in neueTabelle() (siehe unten):
+// welches Filterfenster offen steht, ist Sache DER Tabelle, nicht des Moduls.
 
 // Dasselbe fuer die FILTERLEISTE, ueber f.name statt spalte.feld - siehe
 // dieselbe Begruendung. In bereichWechseln() zurueckgesetzt (siehe dort):
@@ -7676,12 +7713,56 @@ function balkenSpalten(feld, titel, maximum, formatText, optionen = {}) {
 // baueLeerzeile() weiter unten) haelt Kopf- und Filterzeile stattdessen
 // unangetastet - dieselbe Garantie wie bei den Bereichs-eigenen
 // Filtern, nur eine Ebene tiefer.
-let spaltenkopfListe = null;               // { kennung, zeilen, spalten, beiAuswahl, aktionen }
-let spaltenkopfSignatur = null;            // Fingerabdruck der Spaltenliste, siehe zeigeListe()
-let spaltenkopfSortFeld = null;            // spalte.feld, das aktuell sortiert, oder null
-let spaltenkopfSortRichtung = 0;           // 0 = Ausgangsordnung, 1 = aufsteigend, -1 = absteigend
-let spaltenkopfGruppe = null;              // spalte.feld, nach dem gruppiert wird, oder null
-let spaltenkopfFilterwerte = new Map();    // spalte.feld -> Filterwert
+// ===== EIN ZUSTAND JE TABELLE (30.08.2026) =====
+// Bis hierher lagen Sortierung, Gruppierung und Filter in sechs
+// Modulvariablen - also gab es sie genau EINMAL, fuer genau eine Tabelle.
+// Der Auftrag ("bei der Tabelle mit den Einzeluebersichten auch Sortieren,
+// Gruppieren, Filtern") verlangt eine zweite und dritte Tabelle mit
+// denselben Faehigkeiten; ein zweiter Satz Variablen daneben waere
+// derselbe Code ein zweites Mal. Stattdessen traegt jede Tabelle ihren
+// eigenen Zustand, und die Zeichenfunktionen bekommen ihn als erstes
+// Argument gereicht.
+//
+// NICHT im Zustand: spaltenkopfSuchtext (weiter unten). Das Suchwort
+// gehoert dem FELD in der Kopfleiste, nicht einer Tabelle - es gibt genau
+// ein solches Feld, und es meint immer die Arbeitsliste. tab.sucheGilt
+// entscheidet, ob eine Tabelle darauf hoert; die Detailtabellen tun es
+// nicht, sie haben kein Suchfeld ueber sich.
+function neueTabelle(id, optionen = {}) {
+    return {
+        id,
+        // Kompaktes Spaltenmenue statt drei nebeneinanderliegender Knoepfe:
+        // im schmalen Detailbereich braeuchte die volle Leiste rund 137px
+        // je Spalte, bei sechs Spalten also mehr, als der Bereich hat.
+        kompakt: optionen.kompakt === true,
+        sucheGilt: optionen.sucheGilt !== false,
+        // Nur die Arbeitsliste besetzt die Pfeiltasten-Navigation
+        // (listenZeilen/listenIndex weiter oben) - zwei Tabellen, die sich
+        // um denselben Tastaturfokus streiten, waeren unbedienbar.
+        tastatur: optionen.tastatur !== false,
+        wurzel: optionen.wurzel || null,
+        liste: null,          // { kennung, zeilen, spalten, beiAuswahl, aktionen }
+        signatur: null,       // Fingerabdruck der Spaltenliste, siehe zeigeListe()
+        sortFeld: null,       // spalte.feld, das aktuell sortiert, oder null
+        sortRichtung: 0,      // 0 = Ausgangsordnung, 1 = aufsteigend, -1 = absteigend
+        gruppe: null,         // spalte.feld, nach dem gruppiert wird, oder null
+        filterwerte: new Map(),   // spalte.feld -> Filterwert
+        offenesFenster: null      // "feld|rolle" des offenen Klappfensters
+    };
+}
+
+const TABELLEN = new Map();
+const TABELLE_ARBEIT = 'arbeitsliste';
+
+function tabellenzustand(id, optionen) {
+    if (!TABELLEN.has(id)) TABELLEN.set(id, neueTabelle(id, optionen));
+    return TABELLEN.get(id);
+}
+
+// Die Arbeitsliste links - die Tabelle, die es vor diesem Umbau als
+// einzige gab. Alles ausserhalb der Zeichenfunktionen (Bereichswechsel,
+// Suchfeld, setzeSpaltenkopfFilter()) meint immer genau sie.
+function haupttabelle() { return tabellenzustand(TABELLE_ARBEIT); }
 let spaltenkopfSuchtext = '';              // Suchwort der Kopfleiste, '' = keine Suche
 
 // ===== EINE SUCHE, UND SIE SUCHT UEBERALL (Gestaltungsauftrag Punkt 5) =====
@@ -7835,6 +7916,7 @@ const SPALTENKOPF_FILTER_ICON = '<svg viewBox="0 0 24 24">'
 // keine zusätzliche Spalte, keine Zeile muss etwas davon wissen.
 function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     if (!istAktuellerVorgang(kennung)) return;
+    const tab = haupttabelle();
 
     // Fingerabdruck der Spaltenliste: dieselbe Tabelle (Bereich,
     // Unterreiter) behaelt Sortierung/Filter/Gruppierung ueber einen
@@ -7848,12 +7930,12 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     // der Flotte einen Wechsel zu Stationen, obwohl "Nummer" dort etwas
     // ganz anderes waere.
     const signatur = spalten.map((s) => `${s.feld}|${s.titel || ''}`).join(',') + (aktionen ? '|+' : '');
-    if (signatur !== spaltenkopfSignatur) {
-        spaltenkopfSignatur = signatur;
-        spaltenkopfSortFeld = null;
-        spaltenkopfSortRichtung = 0;
-        spaltenkopfGruppe = null;
-        spaltenkopfFilterwerte = new Map();
+    if (signatur !== tab.signatur) {
+        tab.signatur = signatur;
+        tab.sortFeld = null;
+        tab.sortRichtung = 0;
+        tab.gruppe = null;
+        tab.filterwerte = new Map();
         // Der Suchtext NICHT hier zurueckgesetzt: er gehoert dem Feld in
         // der Kopfleiste, nicht der Tabelle, und bereichWechseln() leert
         // beide gemeinsam (siehe dort). Ein Unterreiter-Wechsel INNERHALB
@@ -7863,8 +7945,8 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
         // Bedienelement zu zeigen, das nicht mehr das tut, was es sagt.
     }
 
-    spaltenkopfListe = { kennung, zeilen, spalten, beiAuswahl, aktionen };
-    zeichneArbeitstabelle();
+    tab.liste = { kennung, zeilen, spalten, beiAuswahl, aktionen };
+    zeichneArbeitstabelle(tab);
 }
 
 // Der eigentliche Zeichenvorgang - getrennt von zeigeListe(), weil jeder
@@ -7873,9 +7955,14 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
 // ausschliesslich aus dem Modulzustand oben; zeigeListe() selbst ist nur
 // noch die Stelle, an der dieser Zustand mit frischen Zeilen/Spalten
 // befuellt wird.
-function zeichneArbeitstabelle() {
-    const { kennung, zeilen: zeilenOriginal, spalten, beiAuswahl, aktionen } = spaltenkopfListe;
-    if (!istAktuellerVorgang(kennung)) return;
+function zeichneArbeitstabelle(tab) {
+    const { kennung, zeilen: zeilenOriginal, spalten, beiAuswahl, aktionen } = tab.liste;
+    // kennung === null: eine Detailtabelle. Die Wache verwirft veraltete
+    // Ergebnisse eines Ladevorgangs; ein Klick auf einen Spaltenkopf ist
+    // aber kein Ladevorgang, und die Maske haengt an keinem eigenen. Mit
+    // Wache bliebe jedes Sortieren wirkungslos, sobald irgendwo sonst ein
+    // neuer Vorgang begonnen hat.
+    if (kennung !== null && !istAktuellerVorgang(kennung)) return;
 
     const fokusMerkmal = fokusMerken();
 
@@ -7884,14 +7971,19 @@ function zeichneArbeitstabelle() {
     // erst den Datensatz finden, dann in den gefundenen weiter eingrenzen.
     // Siehe suchtextTrifft() weiter unten fuer die Begruendung, WORUEBER
     // gesucht wird.
-    const gesucht = spaltenkopfSuchtext
-        ? zeilenOriginal.filter((zeile) => suchtextTrifft(zeile, spalten, spaltenkopfSuchtext))
+    // tab.sucheGilt: nur die Arbeitsliste hat das Suchfeld der Kopfleiste
+    // ueber sich. Eine Detailtabelle, die stillschweigend auf dasselbe Wort
+    // hoerte, wuerde Zeilen ausblenden, ohne dass irgendein sichtbares
+    // Bedienelement das erklaerte.
+    const suchwort = tab.sucheGilt ? spaltenkopfSuchtext : '';
+    const gesucht = suchwort
+        ? zeilenOriginal.filter((zeile) => suchtextTrifft(zeile, spalten, suchwort))
         : zeilenOriginal;
 
     // ----- Filtern -----
     const gefiltert = gesucht.filter((zeile) => spalten.every((spalte) => {
         if (!istFilterbar(spalte)) return true;
-        const filterwert = spaltenkopfFilterwerte.get(spalte.feld);
+        const filterwert = tab.filterwerte.get(spalte.feld);
         if (filterwert === undefined) return true;
         const rohwert = zeile[spalte.feld];
         const typ = spaltenFilterTyp(spalte, zeilenOriginal);
@@ -7933,9 +8025,9 @@ function zeichneArbeitstabelle() {
     // unten aus, und die Reihenfolge ist wieder GENAU diese
     // Ausgangsordnung, nicht irgendeine neu berechnete.
     let indiziert = gefiltert.map((zeile, index) => ({ zeile, index }));
-    const sortSpalte = spaltenkopfSortFeld
-        ? spalten.find((s) => s.feld === spaltenkopfSortFeld && istSortierbar(s)) : null;
-    if (sortSpalte && spaltenkopfSortRichtung !== 0) {
+    const sortSpalte = tab.sortFeld
+        ? spalten.find((s) => s.feld === tab.sortFeld && istSortierbar(s)) : null;
+    if (sortSpalte && tab.sortRichtung !== 0) {
         indiziert = [...indiziert].sort((a, b) => {
             const wa = spaltenWert(sortSpalte, a.zeile);
             const wb = spaltenWert(sortSpalte, b.zeile);
@@ -7948,23 +8040,31 @@ function zeichneArbeitstabelle() {
             if (aLeer && bLeer) return a.index - b.index;
             if (aLeer) return 1;
             if (bLeer) return -1;
-            const vergleich = vergleicheWerte(wa, wb) * spaltenkopfSortRichtung;
+            const vergleich = vergleicheWerte(wa, wb) * tab.sortRichtung;
             return vergleich !== 0 ? vergleich : a.index - b.index;   // stabil bei Gleichstand
         });
     }
     const angezeigt = indiziert.map((e) => e.zeile);
 
     // ----- Gruppieren -----
-    const gruppenSpalte = spaltenkopfGruppe
-        ? spalten.find((s) => s.feld === spaltenkopfGruppe && istGruppierbar(s)) : null;
+    const gruppenSpalte = tab.gruppe
+        ? spalten.find((s) => s.feld === tab.gruppe && istGruppierbar(s)) : null;
     const gruppen = gruppenSpalte ? gruppiere(angezeigt, gruppenSpalte) : null;
 
-    listenZeilen = angezeigt;
-    listenAuswahl = beiAuswahl;
-    listenIndex = -1;
-    listenZeilenElemente = [];
+    // Nur die Arbeitsliste besetzt die Pfeiltasten-Navigation: zwei
+    // Tabellen, die sich um listenIndex streiten, waeren unbedienbar - die
+    // Pfeiltaste bewegte mal die eine, mal die andere Liste, je nachdem,
+    // welche zuletzt gezeichnet wurde.
+    if (tab.tastatur) {
+        listenZeilen = angezeigt;
+        listenAuswahl = beiAuswahl;
+        listenIndex = -1;
+        listenZeilenElemente = [];
+    }
 
-    const wurzel = listenKoerper();
+    // tab.wurzel: die Detailtabellen zeichnen in ihren eigenen Behaelter in
+    // der Maske, nicht in den Listenkoerper des Arbeitsbereichs.
+    const wurzel = tab.wurzel || listenKoerper();
     wurzel.replaceChildren();
 
     // Hinweiszeile (Auftrag: "der Zustand muss sichtbar sein... und ein
@@ -7975,35 +8075,35 @@ function zeichneArbeitstabelle() {
     // die Zahl der bereits geladenen (hoechstens 200) Zeilen, NICHT die
     // 1014 insgesamt - konsistent mit der Statuszeile in kunden.js, die
     // genau das schon offenlegt.
-    if (spaltenkopfFilterwerte.size > 0 || gruppenSpalte || spaltenkopfSuchtext) {
-        wurzel.append(spaltenkopfHinweis(zeilenOriginal.length, angezeigt.length, gruppenSpalte));
+    if (tab.filterwerte.size > 0 || gruppenSpalte || suchwort) {
+        wurzel.append(spaltenkopfHinweis(tab, zeilenOriginal.length, angezeigt.length, gruppenSpalte));
     }
 
     const tabelle = document.createElement('table');
-    tabelle.className = 'arbeitstabelle';
-    tabelle.append(spaltenkopfKopfzeile(spalten, aktionen));
+    tabelle.className = tab.tabellenklasse || 'arbeitstabelle';
+    tabelle.append(spaltenkopfKopfzeile(tab, spalten, aktionen));
 
     const koerper = document.createElement('tbody');
     // "Kein Treffer": eine schlanke Zeile INNERHALB der Tabelle, damit
     // Kopfzeile und Filter bedienbar bleiben (siehe baueLeerzeile()).
     if (angezeigt.length === 0 && zeilenOriginal.length > 0) {
-        koerper.append(baueLeerzeile(spalten, aktionen));
+        koerper.append(baueLeerzeile(tab, spalten, aktionen));
     } else if (gruppen) {
         let laufIndex = 0;
         for (const gruppe of gruppen) {
             koerper.append(spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte));
             for (const zeile of gruppe.zeilen) {
-                koerper.append(baueDatenzeile(zeile, spalten, aktionen, laufIndex));
+                koerper.append(baueDatenzeile(tab, zeile, spalten, aktionen, laufIndex));
                 laufIndex += 1;
             }
         }
     } else {
-        angezeigt.forEach((zeile, index) => koerper.append(baueDatenzeile(zeile, spalten, aktionen, index)));
+        angezeigt.forEach((zeile, index) => koerper.append(baueDatenzeile(tab, zeile, spalten, aktionen, index)));
     }
     tabelle.append(koerper);
     wurzel.append(tabelle);
 
-    fokusWiederherstellen(fokusMerkmal);
+    fokusWiederherstellen(fokusMerkmal, wurzel);
 }
 
 // ----- Fokuserhalt ueber einen vollstaendigen Neuaufbau der Tabelle -----
@@ -8026,9 +8126,9 @@ function fokusMerken() {
     };
 }
 
-function fokusWiederherstellen(merkmal) {
+function fokusWiederherstellen(merkmal, wurzel = null) {
     if (!merkmal) return;
-    const ziel = listenKoerper().querySelector(
+    const ziel = (wurzel || listenKoerper()).querySelector(
         `[data-spaltenkopf-feld="${merkmal.feld}"][data-spaltenkopf-rolle="${merkmal.rolle}"]`);
     if (!ziel) return;
     ziel.focus();
@@ -8147,7 +8247,7 @@ function gruppiere(zeilenListe, spalte) {
 }
 
 // ----- Kopfzeile(n): Titel/Sortieren/Gruppieren, darunter die Filterzeile -----
-function spaltenkopfKopfzeile(spalten, aktionen) {
+function spaltenkopfKopfzeile(tab, spalten, aktionen) {
     const kopf = document.createElement('thead');
 
     const titelZeile = document.createElement('tr');
@@ -8165,21 +8265,36 @@ function spaltenkopfKopfzeile(spalten, aktionen) {
         const sortierbar = istSortierbar(spalte);
         const gruppierbar = istGruppierbar(spalte);
         if (sortierbar) {
-            const aktiv = spaltenkopfSortFeld === spalte.feld && spaltenkopfSortRichtung !== 0;
-            th.setAttribute('aria-sort', aktiv ? (spaltenkopfSortRichtung === 1 ? 'ascending' : 'descending') : 'none');
+            const aktiv = tab.sortFeld === spalte.feld && tab.sortRichtung !== 0;
+            th.setAttribute('aria-sort', aktiv ? (tab.sortRichtung === 1 ? 'ascending' : 'descending') : 'none');
         }
 
         const filterbar = istFilterbar(spalte);
         if (hatTitel && (sortierbar || gruppierbar || filterbar)) {
             const wrapper = document.createElement('div');
             wrapper.className = 'spaltenkopf';
-            wrapper.append(sortierbar ? spaltenkopfSortknopf(spalte) : spaltenkopfTitelOhneSortierung(spalte));
-            if (gruppierbar) wrapper.append(spaltenkopfGruppenknopf(spalte));
+            // KOMPAKTMODUS (Detailtabellen in der Maske): ein Knopf statt
+            // dreier. Die volle Leiste braucht rund 137px je Spalte; bei
+            // sechs Spalten passt sie im schmalen Detailbereich nicht
+            // nebeneinander, und eine waagerecht scrollende Tabelle
+            // versteckte die Haelfte der Spalten hinter einer Geste, die
+            // niemand vermutet.
+            if (tab.kompakt) {
+                wrapper.classList.add('spaltenkopf-kompakt');
+                wrapper.append(spaltenkopfTitelOhneSortierung(spalte));
+                wrapper.append(spaltenkopfMenueknopf(tab, spalte));
+                th.classList.add('spaltenkopf-zelle');
+                th.append(wrapper);
+                titelZeile.append(th);
+                continue;
+            }
+            wrapper.append(sortierbar ? spaltenkopfSortknopf(tab, spalte) : spaltenkopfTitelOhneSortierung(spalte));
+            if (gruppierbar) wrapper.append(spaltenkopfGruppenknopf(tab, spalte));
             // Der Filter sitzt jetzt HIER, im Kopf neben Sortieren und
             // Gruppieren - nicht mehr in einer zweiten Kopfzeile darunter
             // (siehe die ausfuehrliche Begruendung bei
             // spaltenkopfFilterknopf() weiter unten).
-            if (filterbar) wrapper.append(spaltenkopfFilterknopf(spalte));
+            if (filterbar) wrapper.append(spaltenkopfFilterknopf(tab, spalte));
             // position:relative fuer das Filterfenster, das aus diesem
             // Kopf aufklappt (siehe .spaltenkopf-filter in style.css) -
             // die Angabe gehoert an die <th>, weil das Fenster ueber die
@@ -8243,7 +8358,7 @@ function spaltenkopfTitelOhneSortierung(spalte) {
     return spanne;
 }
 
-function spaltenkopfSortknopf(spalte) {
+function spaltenkopfSortknopf(tab, spalte) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.className = 'spaltenkopf-sortknopf';
@@ -8254,11 +8369,11 @@ function spaltenkopfSortknopf(spalte) {
     titelSpanne.textContent = spalte.titel;
     knopf.append(titelSpanne);
 
-    const aktiv = spaltenkopfSortFeld === spalte.feld && spaltenkopfSortRichtung !== 0;
+    const aktiv = tab.sortFeld === spalte.feld && tab.sortRichtung !== 0;
     const symbol = document.createElement('span');
     symbol.className = 'spaltenkopf-sortsymbol'
         + (aktiv ? ' spaltenkopf-sortsymbol-aktiv' : '')
-        + (aktiv && spaltenkopfSortRichtung === 1 ? ' spaltenkopf-sortsymbol-auf' : '');
+        + (aktiv && tab.sortRichtung === 1 ? ' spaltenkopf-sortsymbol-auf' : '');
     // Konstantes Markup, keine Nutzereingabe - derselbe Ausnahmefall wie
     // RAD_ICONS/SCHADEN_ICONS in den Bereichen (siehe dortiger Kommentar).
     symbol.innerHTML = SPALTENKOPF_SORT_ICON;
@@ -8267,26 +8382,26 @@ function spaltenkopfSortknopf(spalte) {
 
     knopf.setAttribute('aria-label', t('common.sortAria', { titel: spalte.titel })
         + (aktiv ? t('common.sortAriaSuffix',
-            { richtung: spaltenkopfSortRichtung === 1 ? t('common.ascending') : t('common.descending') }) : ''));
+            { richtung: tab.sortRichtung === 1 ? t('common.ascending') : t('common.descending') }) : ''));
 
     // Klick UND Tastatur: ein <button> ist beides ohne weiteren Code -
     // Enter/Leertaste loesen 'click' nativ aus (Auftrag: "mit der
     // Tastatur erreichbar UND bedienbar", kein Nachbau eines
     // Tastatur-Handlers fuer etwas, das der Browser schon kann).
     knopf.addEventListener('click', () => {
-        if (spaltenkopfSortFeld !== spalte.feld) {
-            spaltenkopfSortFeld = spalte.feld;
-            spaltenkopfSortRichtung = 1;
-        } else if (spaltenkopfSortRichtung === 1) {
-            spaltenkopfSortRichtung = -1;
-        } else if (spaltenkopfSortRichtung === -1) {
+        if (tab.sortFeld !== spalte.feld) {
+            tab.sortFeld = spalte.feld;
+            tab.sortRichtung = 1;
+        } else if (tab.sortRichtung === 1) {
+            tab.sortRichtung = -1;
+        } else if (tab.sortRichtung === -1) {
             // Dritter Klick: zurueck zur Ausgangsordnung (Auftrag).
-            spaltenkopfSortFeld = null;
-            spaltenkopfSortRichtung = 0;
+            tab.sortFeld = null;
+            tab.sortRichtung = 0;
         } else {
-            spaltenkopfSortRichtung = 1;
+            tab.sortRichtung = 1;
         }
-        zeichneArbeitstabelle();
+        zeichneArbeitstabelle(tab);
     });
 
     // Rücksetz-Icon (siehe SPALTENKOPF_RESET_ICON weiter oben): EIN
@@ -8313,9 +8428,9 @@ function spaltenkopfSortknopf(spalte) {
     zuruecksetzen.title = t('common.sortResetTitle');
     zuruecksetzen.innerHTML = SPALTENKOPF_RESET_ICON;
     zuruecksetzen.addEventListener('click', () => {
-        spaltenkopfSortFeld = null;
-        spaltenkopfSortRichtung = 0;
-        zeichneArbeitstabelle();
+        tab.sortFeld = null;
+        tab.sortRichtung = 0;
+        zeichneArbeitstabelle(tab);
     });
     fragment.append(zuruecksetzen);
     return fragment;
@@ -8330,10 +8445,10 @@ function spaltenkopfSortknopf(spalte) {
 // auf DIESEN Knopf immer schon die Gruppierung rückgängig - das
 // Rücksetz-Icon ersetzt hier deshalb einfach das Symbol DESSELBEN
 // Knopfs, statt einen zusätzlichen zu brauchen.
-function spaltenkopfGruppenknopf(spalte) {
+function spaltenkopfGruppenknopf(tab, spalte) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
-    const aktiv = spaltenkopfGruppe === spalte.feld;
+    const aktiv = tab.gruppe === spalte.feld;
     // Der aktive Zustand wird bereits über [aria-pressed="true"] gestylt
     // (siehe style.css) - keine zweite, eigene Klasse dafuer noetig.
     knopf.className = 'spaltenkopf-gruppenknopf';
@@ -8372,8 +8487,8 @@ function spaltenkopfGruppenknopf(spalte) {
         // auf eine ANDERE Spalte ersetzt die vorherige (kein
         // verschachteltes Gruppieren, das der Auftrag nicht verlangt),
         // ein Klick auf dieselbe hebt sie wieder auf.
-        spaltenkopfGruppe = aktiv ? null : spalte.feld;
-        zeichneArbeitstabelle();
+        tab.gruppe = aktiv ? null : spalte.feld;
+        zeichneArbeitstabelle(tab);
     });
     return knopf;
 }
@@ -8407,46 +8522,185 @@ function spaltenkopfGruppenknopf(spalte) {
 // Haken sofort zu. spaltenkopfFilterOffenFeld haelt deshalb fest, WELCHE
 // Spalte gerade offen ist, genau wie filterleisteMehrfachOffenName es fuer
 // die alte, eingebettete Mehrfachauswahl tat.
-function spaltenkopfFilterknopf(spalte) {
-    const aktiv = spaltenkopfFilterwerte.has(spalte.feld);
-    const offen = spaltenkopfFilterOffenFeld === spalte.feld;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'spaltenkopf-filter';
-
+function spaltenkopfFilterknopf(tab, spalte) {
+    const aktiv = tab.filterwerte.has(spalte.feld);
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.className = 'spaltenkopf-filterknopf' + (aktiv ? ' spaltenkopf-filterknopf-aktiv' : '');
-    knopf.dataset.spaltenkopfFeld = spalte.feld;
-    knopf.dataset.spaltenkopfRolle = 'filterknopf';
-    knopf.setAttribute('aria-haspopup', 'true');
-    knopf.setAttribute('aria-expanded', String(offen));
-    // Der zugaengliche Name nennt die SPALTE und den ZUSTAND: ein
-    // Bildschirmleser soll "Marke filtern, aktiv" hoeren, nicht nur
-    // "Filter" - dieselbe Ueberlegung wie beim Sortierknopf, der seine
-    // Richtung ebenfalls in den Namen nimmt.
     knopf.setAttribute('aria-label', aktiv
         ? t('common.filterActiveAria', { titel: spalte.titel })
         : t('common.filterAria', { titel: spalte.titel }));
     knopf.title = aktiv ? t('common.filterActiveTitle') : t('common.filterTitle');
     const symbol = document.createElement('span');
     symbol.className = 'spaltenkopf-filtersymbol';
-    // Konstantes Markup, keine Nutzereingabe - derselbe Ausnahmefall wie
-    // bei SPALTENKOPF_SORT_ICON/-GRUPPE_ICON oben.
     symbol.innerHTML = SPALTENKOPF_FILTER_ICON;
     symbol.setAttribute('aria-hidden', 'true');
     knopf.append(symbol);
+    return spaltenkopfAufklapper(tab, spalte, 'filterknopf', knopf,
+        t('common.filterAria', { titel: spalte.titel }),
+        (schliessen) => spaltenkopfFilterInhalt(tab, spalte, schliessen));
+}
+
+// ===== DETAILTABELLEN MIT DENSELBEN FAEHIGKEITEN (30.08.2026) =====
+// Auftrag, woertlich: "koennen wir bei der Tabelle mit den
+// Einzeluebersichten (rechte Seite, Details) auch bei der Tabelle die
+// gleiche Funktionaitaet einbauen wie bei der linken Haupttabelle. Also
+// auch Sortieren, Gruppieren, Filtern."
+//
+// "Dieselbe" heisst hier woertlich derselbe Code: zeichneArbeitstabelle()
+// mit einem eigenen Zustand, nicht eine zweite Tabelle daneben. Was die
+// Arbeitsliste kann, koennen die Detailtabellen damit automatisch mit -
+// auch alles, was spaeter dazukommt.
+//
+// id: je Detailtabelle EINE feste Kennung. Daran haengt ihr Zustand; die
+// Maske wird bei jedem Klick neu aufgebaut, und ohne feste Kennung waere
+// eine gesetzte Sortierung nach dem naechsten Neuaufbau wieder weg.
+function zeigeDetailtabelle(id, wurzel, zeilen, spalten, optionen = {}) {
+    const tab = tabellenzustand(id, {
+        kompakt: true,
+        sucheGilt: false,   // kein Suchfeld ueber dieser Tabelle
+        tastatur: false     // die Pfeiltasten gehoeren der Arbeitsliste
+    });
+    // Der Behaelter ist bei jedem Neuaufbau der Maske ein anderer.
+    tab.wurzel = wurzel;
+    tab.tabellenklasse = optionen.tabellenklasse || 'arbeitstabelle arbeitstabelle-kompakt';
+
+    // Dieselbe Signaturpruefung wie in zeigeListe(): ein anderer Tag, eine
+    // andere Station - dieselben Spalten. Sortierung und Filter sollen
+    // ueber den Wechsel HINWEG stehen bleiben (man vergleicht ja gerade),
+    // eine andere Spaltenliste faengt dagegen sauber bei null an.
+    const signatur = spalten.map((sp) => `${sp.feld}|${sp.titel || ''}`).join(',');
+    if (signatur !== tab.signatur) {
+        tab.signatur = signatur;
+        tab.sortFeld = null;
+        tab.sortRichtung = 0;
+        tab.gruppe = null;
+        tab.filterwerte = new Map();
+        tab.offenesFenster = null;
+    }
+
+    tab.liste = { kennung: null, zeilen, spalten, beiAuswahl: null, aktionen: null };
+    zeichneArbeitstabelle(tab);
+}
+
+// ===== DAS KOMPAKTE SPALTENMENUE (30.08.2026) =====
+// Traegt dieselben drei Faehigkeiten wie die Leiste der Arbeitsliste -
+// Sortieren, Gruppieren, Filtern -, aber untereinander in einem
+// Klappfenster statt nebeneinander in der Kopfzeile.
+//
+// Der Filterteil ist NICHT nachgebaut, sondern derselbe:
+// spaltenkopfFilterInhalt() liefert seine Elemente als Liste, und die
+// haengen hier einfach unter einer Ueberschrift. Ein zweiter Filter mit
+// eigener Logik wuerde beim naechsten Filtertyp auseinanderlaufen.
+function spaltenkopfMenueknopf(tab, spalte) {
+    const eingeschraenkt = tab.filterwerte.has(spalte.feld)
+        || tab.sortFeld === spalte.feld && tab.sortRichtung !== 0
+        || tab.gruppe === spalte.feld;
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'spaltenkopf-menueknopf' + (eingeschraenkt ? ' spaltenkopf-menueknopf-aktiv' : '');
+    knopf.setAttribute('aria-label', t('common.columnMenuAria', { titel: spalte.titel }));
+    knopf.title = t('common.columnMenuTitle');
+    const symbol = document.createElement('span');
+    symbol.className = 'spaltenkopf-menuesymbol';
+    symbol.textContent = '\u22EF';   // MIDLINE HORIZONTAL ELLIPSIS
+    symbol.setAttribute('aria-hidden', 'true');
+    knopf.append(symbol);
+    return spaltenkopfAufklapper(tab, spalte, 'menueknopf', knopf,
+        t('common.columnMenuAria', { titel: spalte.titel }),
+        (schliessen) => spaltenkopfMenueInhalt(tab, spalte, schliessen));
+}
+
+function spaltenkopfMenueInhalt(tab, spalte, schliessen) {
+    const teile = [];
+
+    function ueberschrift(text) {
+        const el = document.createElement('p');
+        el.className = 'spaltenkopf-menue-titel';
+        el.textContent = text;
+        return el;
+    }
+
+    // Neu zeichnen wirft das Fenster samt Knopf weg; deshalb ERST
+    // schliessen (sonst bliebe tab.offenesFenster stehen und das Menue
+    // klappte nach jeder Aktion von selbst wieder auf), dann zeichnen.
+    function tun(aenderung) {
+        aenderung();
+        schliessen();
+        zeichneArbeitstabelle(tab);
+    }
+
+    function eintrag(text, aktiv, aenderung) {
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'spaltenkopf-menue-eintrag' + (aktiv ? ' spaltenkopf-menue-eintrag-aktiv' : '');
+        knopf.setAttribute('aria-pressed', String(aktiv));
+        knopf.textContent = text;
+        knopf.addEventListener('click', () => tun(aenderung));
+        return knopf;
+    }
+
+    if (istSortierbar(spalte)) {
+        const auf = tab.sortFeld === spalte.feld && tab.sortRichtung === 1;
+        const ab = tab.sortFeld === spalte.feld && tab.sortRichtung === -1;
+        teile.push(ueberschrift(t('common.sortTitle')));
+        teile.push(eintrag(t('common.sortAscendingAction'), auf, () => {
+            tab.sortFeld = spalte.feld; tab.sortRichtung = 1;
+        }));
+        teile.push(eintrag(t('common.sortDescendingAction'), ab, () => {
+            tab.sortFeld = spalte.feld; tab.sortRichtung = -1;
+        }));
+        if (auf || ab) {
+            teile.push(eintrag(t('common.sortResetTitle'), false, () => {
+                tab.sortFeld = null; tab.sortRichtung = 0;
+            }));
+        }
+    }
+
+    if (istGruppierbar(spalte)) {
+        const gruppiert = tab.gruppe === spalte.feld;
+        teile.push(ueberschrift(t('common.groupTitle')));
+        teile.push(eintrag(gruppiert ? t('common.ungroup') : t('common.groupByThis'), gruppiert, () => {
+            tab.gruppe = gruppiert ? null : spalte.feld;
+        }));
+    }
+
+    if (istFilterbar(spalte)) {
+        teile.push(ueberschrift(t('common.filterTitle')));
+        teile.push(...spaltenkopfFilterInhalt(tab, spalte, schliessen));
+    }
+
+    return teile;
+}
+
+// ===== EIN KLAPPFENSTER, ZWEI NUTZER (30.08.2026) =====
+// Diese Mechanik - Aussenklick, Ausrichten am Rand, Escape, Wiederaufbau
+// nach dem Neuzeichnen - stand bis hierher IM Filterknopf. Das Kompaktmenue
+// der Detailtabellen braucht sie unveraendert; sie ein zweites Mal
+// hinzuschreiben hiesse, zwei Fassungen zu pflegen, von denen die zweite
+// beim naechsten Fehler vergessen wird.
+//
+// tab.offenesFenster haelt "feld|rolle" statt nur des Feldes: an derselben
+// Spalte koennen jetzt ZWEI Fenster haengen (Filter und Menue), und nach
+// einem Neuzeichnen muss genau das wieder aufgehen, das offen war.
+function spaltenkopfAufklapper(tab, spalte, rolle, knopf, fensterName, inhaltBauen) {
+    const schluessel = `${spalte.feld}|${rolle}`;
+    const offen = tab.offenesFenster === schluessel;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'spaltenkopf-filter';
+
+    knopf.dataset.spaltenkopfFeld = spalte.feld;
+    knopf.dataset.spaltenkopfRolle = rolle;
+    knopf.setAttribute('aria-haspopup', 'true');
+    knopf.setAttribute('aria-expanded', String(offen));
 
     const fenster = document.createElement('div');
     fenster.className = 'spaltenkopf-filterfenster';
     fenster.setAttribute('role', 'group');
-    fenster.setAttribute('aria-label', t('common.filterAria', { titel: spalte.titel }));
+    fenster.setAttribute('aria-label', fensterName);
     fenster.hidden = !offen;
 
-    // Dieselbe Aufraeum-Absicherung wie bei mehrfachauswahlFeld() oben,
-    // aus demselben Grund und mit derselben Begruendung: eine bereits per
-    // replaceChildren() ersetzte Instanz raeumt NUR ihren eigenen,
-    // veralteten Listener ab und ruft nicht schliessen() fuer die neue.
     function aussenKlick(e) {
         if (!wrapper.isConnected) {
             document.removeEventListener('click', aussenKlick, true);
@@ -8454,52 +8708,16 @@ function spaltenkopfFilterknopf(spalte) {
         }
         if (!wrapper.contains(e.target)) schliessen();
     }
-    // ===== WARUM DIESES FENSTER AM BILDSCHIRM HAENGT, NICHT AM KOPF =====
-    // Im Browser nachgestellt (siehe Bericht): als absolut positioniertes
-    // Kind der <th> wurde das Fenster ABGESCHNITTEN, sobald es ueber den
-    // unteren Rand der Arbeitsliste hinausreichte - #listenkoerper und
-    // #arbeitsliste tragen beide overflow:auto (sie muessen: eine breite
-    // Tabelle soll in sich scrollen, nicht die Seite schieben), und ein
-    // overflow-Kasten beschneidet auch absolut positionierte Nachfahren.
-    // Mit ausgeklappter Kopftafel steht die Kopfzeile weit unten im
-    // Fenster; von einer Liste mit fuenf Status waren dann zwei zu sehen.
-    // Genau derselbe Mangel steckte uebrigens schon in der alten,
-    // eingebetteten Mehrfachauswahl - er fiel nur weniger auf, solange
-    // daneben noch eine ganze Zeile Eingabefelder stand.
-    // position:fixed loest ihn: ein fixierter Kasten bezieht sich auf das
-    // Sichtfenster und wird von KEINEM overflow-Vorfahren beschnitten.
-    // Die Lage rechnet ausrichten() aus - dieselbe Machart wie
-    // hinweisfensterZeigen() weiter oben, samt Klemmen an beide Raender
-    // und Umklappen nach oben, wenn unten kein Platz mehr ist.
-    // NACHGEFUEHRT statt geschlossen: scrollt jemand die Tabelle,
-    // waehrend das Fenster offen ist, wandert der Knopf darunter weg. Das
-    // Hinweisfenster verschwindet in diesem Fall (es ist Beiwerk); ein
-    // Filterfenster, in dem man gerade Haken setzt, darf das nicht -
-    // es wird deshalb neu ausgerichtet.
+
     function ausrichten() {
         const luft = 8;
         const k = knopf.getBoundingClientRect();
         const b = fenster.offsetWidth;
         const h = fenster.offsetHeight;
-        // Linksbuendig unter dem Knopf; laeuft es rechts hinaus,
-        // rechtsbuendig - man liest von links, aber nicht aus dem Bild.
         let x = k.left;
         if (x + b > window.innerWidth - luft) x = k.right - b;
-        // Unter den Knopf; passt es dort nicht mehr, darueber.
         let y = k.bottom + 4;
         if (y + h > window.innerHeight - luft) y = k.top - h - 4;
-        // ZUM SCHLUSS IN BEIDEN ACHSEN INS FENSTER GEKLEMMT, und zwar
-        // NACH dem Umklappen, nicht statt seiner: das Umklappen sucht die
-        // schoenere Seite, das Klemmen garantiert die erreichbare. Ohne
-        // das Klemmen stand das Fenster einer ganz rechts liegenden
-        // Spalte bei 1024px Fensterbreite auf x=1037 - vollstaendig
-        // ausserhalb des Bildes (im Browser nachgemessen, siehe Bericht):
-        // die Tabelle scrollt dort in sich, ihre letzten Spaltenkoepfe
-        // liegen also rechts vom sichtbaren Bereich, und ein Fenster, das
-        // seinem Knopf blind folgt, folgt ihm auch dorthin.
-        // Math.max ZULETZT, damit bei einem Fenster, das breiter oder
-        // hoeher als das Sichtfenster waere, die obere linke Ecke sichtbar
-        // bleibt statt der unteren rechten.
         x = Math.max(luft, Math.min(x, window.innerWidth - b - luft));
         y = Math.max(luft, Math.min(y, window.innerHeight - h - luft));
         fenster.style.left = `${x}px`;
@@ -8512,54 +8730,27 @@ function spaltenkopfFilterknopf(spalte) {
         document.removeEventListener('click', aussenKlick, true);
         window.removeEventListener('scroll', ausrichten, true);
         window.removeEventListener('resize', ausrichten);
-        if (spaltenkopfFilterOffenFeld === spalte.feld) spaltenkopfFilterOffenFeld = null;
+        if (tab.offenesFenster === schluessel) tab.offenesFenster = null;
     }
+
     function oeffnen() {
         fenster.hidden = false;
         knopf.setAttribute('aria-expanded', 'true');
-        // ERST NACH dem Einblenden ausrichten - offsetWidth/-Height sind
-        // an einem hidden-Element immer 0 (derselbe Stolperstein wie bei
-        // hinweisfensterZeigen(), dort ebenso vermerkt).
         ausrichten();
         document.addEventListener('click', aussenKlick, true);
-        // capture:true, damit auch das eigene overflow:auto von
-        // #listenkoerper/#arbeitsliste erfasst wird - ein Scroll dort
-        // blast kein Ereignis bis zum Fenster hoch.
         window.addEventListener('scroll', ausrichten, true);
         window.addEventListener('resize', ausrichten);
-        spaltenkopfFilterOffenFeld = spalte.feld;
+        tab.offenesFenster = schluessel;
     }
+
     if (offen) {
         document.addEventListener('click', aussenKlick, true);
         window.addEventListener('scroll', ausrichten, true);
         window.addEventListener('resize', ausrichten);
-        // Nach einem Neuaufbau steht das Fenster schon offen im DOM (siehe
-        // "OFFEN BLEIBEN..." oben) - ausgerichtet werden kann es aber erst,
-        // wenn es tatsaechlich im Dokument haengt und eine Groesse hat.
-        // requestAnimationFrame ist genau dieser Zeitpunkt.
         requestAnimationFrame(() => { if (fenster.isConnected) ausrichten(); });
     }
-    knopf.addEventListener('click', () => { if (fenster.hidden) oeffnen(); else schliessen(); });
 
-    // Escape schliesst NUR dieses Fenster (stopPropagation) - dieselbe
-    // Ueberlegung und derselbe Kunstgriff wie beim Popup der
-    // Mehrfachauswahl, siehe dort.
-    //
-    // AM wrapper, NICHT AM fenster - und das war ein Fehler, den die
-    // Pruefung gefunden hat. Der Zuhoerer hing bis dahin am fenster
-    // allein, also nur auf dem Weg von Ereignissen, die INNERHALB des
-    // Fensters entstehen. Ein Klick auf den Filterknopf oeffnet das
-    // Fenster aber, ohne den Fokus hineinzubewegen: er bleibt auf dem
-    // KNOPF stehen (im Browser nachgemessen). Wer also filtern wollte,
-    // es sich anders ueberlegte und Escape drueckte - die uebliche
-    // Geste, die in dieser Oberflaeche sonst ueberall zumacht (Profil-
-    // menue, Maske, Mehrfachauswahl) -, bei dem passierte nichts: das
-    // Ereignis stieg vom Knopf auf und lief am Fenster vorbei.
-    // aria-expanded blieb auf "true", das Fenster offen.
-    // Der wrapper umschliesst Knopf UND Fenster; damit greift Escape aus
-    // beiden Richtungen. stopPropagation bleibt unveraendert wichtig:
-    // sonst schloesse dasselbe Escape zusaetzlich eine offene
-    // Detailmaske (siehe der globale Tastatur-Zuhoerer weiter unten).
+    knopf.addEventListener('click', () => { if (fenster.hidden) oeffnen(); else schliessen(); });
     wrapper.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         if (fenster.hidden) return;   // nichts offen: Escape gehoert jemand anderem
@@ -8568,7 +8759,7 @@ function spaltenkopfFilterknopf(spalte) {
         knopf.focus();
     });
 
-    fenster.append(...spaltenkopfFilterInhalt(spalte, schliessen));
+    fenster.append(...inhaltBauen(schliessen));
     wrapper.append(knopf, fenster);
     return wrapper;
 }
@@ -8588,10 +8779,10 @@ function spaltenkopfFilterknopf(spalte) {
 // schliessen(): vom Aufrufer hereingereicht, damit ein "Alle" das Fenster
 // gleich mit zumacht - wer alles wieder zulaesst, will das Fenster nicht
 // mehr.
-function spaltenkopfFilterInhalt(spalte, schliessen) {
-    const { zeilen: zeilenOriginal } = spaltenkopfListe;
+function spaltenkopfFilterInhalt(tab, spalte, schliessen) {
+    const { zeilen: zeilenOriginal } = tab.liste;
     const typ = spaltenFilterTyp(spalte, zeilenOriginal);
-    const aktuellerWert = spaltenkopfFilterwerte.get(spalte.feld);
+    const aktuellerWert = tab.filterwerte.get(spalte.feld);
 
     if (typ === 'auswahl') {
         // Gestaltungsauftrag Punkt 2: Mehrfachauswahl statt Einfachauswahl.
@@ -8634,9 +8825,9 @@ function spaltenkopfFilterInhalt(spalte, schliessen) {
         return mehrfachauswahlEintraege(
             optionenListe, ausgewaehlt,
             (neu) => {
-                if (neu.size === 0) spaltenkopfFilterwerte.delete(spalte.feld);
-                else spaltenkopfFilterwerte.set(spalte.feld, neu);
-                zeichneArbeitstabelle();
+                if (neu.size === 0) tab.filterwerte.delete(spalte.feld);
+                else tab.filterwerte.set(spalte.feld, neu);
+                zeichneArbeitstabelle(tab);
             },
             (el, rolle) => {
                 el.dataset.spaltenkopfFeld = spalte.feld;
@@ -8688,18 +8879,18 @@ function spaltenkopfFilterInhalt(spalte, schliessen) {
         verzoegerung = setTimeout(() => {
             const text = eingabe.value.trim();
             if (text === '') {
-                spaltenkopfFilterwerte.delete(spalte.feld);
+                tab.filterwerte.delete(spalte.feld);
             } else if (typ === 'schwelle') {
                 const zahl = Number(text.replace(',', '.'));
-                if (Number.isFinite(zahl)) spaltenkopfFilterwerte.set(spalte.feld, zahl);
-                else spaltenkopfFilterwerte.delete(spalte.feld);
+                if (Number.isFinite(zahl)) tab.filterwerte.set(spalte.feld, zahl);
+                else tab.filterwerte.delete(spalte.feld);
             } else {
                 // Unveraendert gespeichert (nicht kleingeschrieben) - das
                 // Feld zeigt nach dem Neuzeichnen sonst nicht mehr das,
                 // was getippt wurde (siehe Kommentar beim Filtern oben).
-                spaltenkopfFilterwerte.set(spalte.feld, text);
+                tab.filterwerte.set(spalte.feld, text);
             }
-            zeichneArbeitstabelle();
+            zeichneArbeitstabelle(tab);
         }, 300);
     });
 
@@ -8718,9 +8909,9 @@ function spaltenkopfFilterInhalt(spalte, schliessen) {
     zuruecksetzen.innerHTML = SPALTENKOPF_RESET_ICON;
     zuruecksetzen.addEventListener('click', () => {
         clearTimeout(verzoegerung);
-        spaltenkopfFilterwerte.delete(spalte.feld);
+        tab.filterwerte.delete(spalte.feld);
         schliessen();
-        zeichneArbeitstabelle();
+        zeichneArbeitstabelle(tab);
     });
     teile.push(zuruecksetzen);
     return teile;
@@ -8737,27 +8928,31 @@ function spaltenkopfFilterInhalt(spalte, schliessen) {
 // Das FELD in der Kopfleiste wird dabei mitgeleert, nicht nur der
 // Zustand: ein Suchfeld, in dem ein Wort steht, das nicht mehr wirkt,
 // waere dieselbe Luege wie die frueher abgeschaltete Suche.
-function spaltenkopfEinschraenkungenAufheben() {
-    spaltenkopfFilterwerte = new Map();
-    spaltenkopfSuchtext = '';
-    const feld = document.getElementById('feld-suche');
-    feld.value = '';
-    feld.classList.remove('feld-suche-aktiv');
-    zeichneArbeitstabelle();
+function spaltenkopfEinschraenkungenAufheben(tab) {
+    tab.filterwerte = new Map();
+    // Das Suchfeld gehoert der Arbeitsliste; eine Detailtabelle darf es
+    // nicht mitleeren - sie hat es nie gefuellt.
+    if (tab.sucheGilt) {
+        spaltenkopfSuchtext = '';
+        const feld = document.getElementById('feld-suche');
+        feld.value = '';
+        feld.classList.remove('feld-suche-aktiv');
+    }
+    zeichneArbeitstabelle(tab);
 }
 
-function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
+function spaltenkopfHinweis(tab, gesamt, angezeigtAnzahl, gruppenSpalte) {
     const zeile = document.createElement('div');
     zeile.className = 'spaltenkopf-hinweis';
 
-    if (spaltenkopfFilterwerte.size > 0 || spaltenkopfSuchtext) {
+    if (tab.filterwerte.size > 0 || spaltenkopfSuchtext) {
         // Die Zeile NENNT, WORAN es liegt: Suche, Spaltenfilter oder
         // beides. Solange nur der Spaltenfilter einschraenken konnte, war
         // "(Spaltenfilter aktiv)" eindeutig; seit die Suche daneben auf
         // dieselben Zeilen wirkt, waere derselbe Satz bei einem blossen
         // Suchwort schlicht falsch - und wer die Ursache nicht kennt,
         // sucht sie am falschen Bedienelement.
-        const grund = spaltenkopfSuchtext && spaltenkopfFilterwerte.size > 0
+        const grund = spaltenkopfSuchtext && tab.filterwerte.size > 0
             ? t('common.reasonBoth')
             : spaltenkopfSuchtext ? t('common.reasonSearch') : t('common.reasonColumnFilter');
         const text = document.createElement('span');
@@ -8770,7 +8965,7 @@ function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
         zuruecksetzen.type = 'button';
         zuruecksetzen.className = 'spaltenkopf-hinweis-knopf';
         zuruecksetzen.textContent = t('common.columnFilterReset');
-        zuruecksetzen.addEventListener('click', spaltenkopfEinschraenkungenAufheben);
+        zuruecksetzen.addEventListener('click', () => spaltenkopfEinschraenkungenAufheben(tab));
         zeile.append(zuruecksetzen);
     }
 
@@ -8784,8 +8979,8 @@ function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
         aufheben.className = 'spaltenkopf-hinweis-knopf';
         aufheben.textContent = t('common.ungroup');
         aufheben.addEventListener('click', () => {
-            spaltenkopfGruppe = null;
-            zeichneArbeitstabelle();
+            tab.gruppe = null;
+            zeichneArbeitstabelle(tab);
         });
         zeile.append(aufheben);
     }
@@ -8844,7 +9039,7 @@ function spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte) {
 // Einfuegereihenfolge) reiht die Zeilen dabei exakt wieder in ihrer
 // urspruenglichen Reihenfolge auf, sodass dieser Zaehler und die flache
 // Liste "angezeigt" immer dieselbe Zeile meinen.
-function baueDatenzeile(zeile, spalten, aktionen, index) {
+function baueDatenzeile(tab, zeile, spalten, aktionen, index) {
     const tr = document.createElement('tr');
     tr.tabIndex = -1;
     for (const spalte of spalten) {
@@ -8871,8 +9066,13 @@ function baueDatenzeile(zeile, spalten, aktionen, index) {
         tr.append(td);
     }
     if (aktionen) tr.append(zeilenAktionenZelle(aktionen(zeile) || []));
-    tr.addEventListener('click', () => zeileWaehlen(index));
-    listenZeilenElemente.push(tr);
+    // Auswahl und Pfeiltasten gehoeren der Arbeitsliste. Eine Detailtabelle,
+    // die sich in listenZeilenElemente eintruege, verschoebe den Index der
+    // Liste links, ohne dass dort etwas sichtbar geschieht.
+    if (tab.tastatur) {
+        tr.addEventListener('click', () => zeileWaehlen(index));
+        listenZeilenElemente.push(tr);
+    }
     return tr;
 }
 
@@ -8884,7 +9084,7 @@ function baueDatenzeile(zeile, spalten, aktionen, index) {
 // zeichneArbeitstabelle() oben) - der globale Pfeiltasten-Handler prueft
 // das bereits ("if (listenZeilen.length === 0) return"), es gibt hier
 // nichts zusaetzlich abzusichern.
-function baueLeerzeile(spalten, aktionen) {
+function baueLeerzeile(tab, spalten, aktionen) {
     const tr = document.createElement('tr');
     tr.className = 'spaltenkopf-leerzeile';
     const td = document.createElement('td');
@@ -8893,7 +9093,7 @@ function baueLeerzeile(spalten, aktionen) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.textContent = t('common.columnFilterReset');
-    knopf.addEventListener('click', spaltenkopfEinschraenkungenAufheben);
+    knopf.addEventListener('click', () => spaltenkopfEinschraenkungenAufheben(tab));
     td.append(knopf);
     tr.append(td);
     return tr;
@@ -9323,8 +9523,8 @@ async function bereichSprung(zielSchluessel, herkunftstext, einrichten = null) {
 // Filterfeld auch ausloesen wuerde - kein zweiter Ladevorgang noetig,
 // der Zielbereich hat seine Zeilen (spaltenkopfListe) bereits.
 function setzeSpaltenkopfFilter(feld, wert) {
-    spaltenkopfFilterwerte.set(feld, wert);
-    if (spaltenkopfListe) zeichneArbeitstabelle();
+    haupttabelle().filterwerte.set(feld, wert);
+    if (haupttabelle().liste) zeichneArbeitstabelle(haupttabelle());
 }
 
 // "... oder AUSWAEHLEN" (Auftrag) - waehlt von AUSSEN die Zeile aus,
@@ -9703,7 +9903,7 @@ feldSucheKopf.addEventListener('input', () => {
         // Nur zeichnen, wenn ueberhaupt eine Tabelle dasteht: ein Bereich
         // kann gerade eine Leermaske zeigen (kein Rad im Bestand), dann
         // gibt es nichts zu durchsuchen.
-        if (spaltenkopfListe) zeichneArbeitstabelle();
+        if (haupttabelle().liste) zeichneArbeitstabelle(haupttabelle());
     }, 300);
 });
 
