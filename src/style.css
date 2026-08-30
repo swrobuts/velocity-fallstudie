@@ -3220,10 +3220,13 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   .sticky-stage {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    /* Zähler · Schlagzeile · Rad · Aufruf.
-       Das Rad steht auf 1fr und schluckt damit jede Abweichung der
-       Gerätehöhe. Die Untergrenze verhindert, dass es auf sehr flachen
-       Schirmen zu einem Streifen zusammenfällt. */
+    /* Zähler · Schlagzeile · Freiraum · Aufruf.
+       Die dritte Zeile ist seit dem Anschnitt (30.08.2026) leer: das Rad
+       liegt darunter als Schicht und nimmt am Raster nicht mehr teil.
+       Die Zeile bleibt trotzdem stehen - sie schluckt auf 1fr jede
+       Abweichung der Gerätehöhe und hält den roten Knopf unten. Die
+       Untergrenze verhindert, dass Schlagzeile und Knopf auf sehr
+       flachen Schirmen zusammenstossen. */
     grid-template-rows: auto auto minmax(120px, 1fr) auto;
     row-gap: 12px;
     /* Vier Punkte Luft unter dem festen Kopf. Der Wert stand hier als
@@ -3239,10 +3242,28 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   .photo-ebike { opacity: 1; transform: none; }
   .claim-ebike { opacity: 1; transform: none; }
 
-  /* Nichts liegt mehr auf dem Rad - der Schleier entfällt. Seine
-     Fußlinie bleibt, weil sie den Übergang zum nächsten Abschnitt
-     trägt. */
-  .photo-shade { background: linear-gradient(0deg, var(--linie-still) 0%, transparent 22%); }
+  /* DER SCHLEIER ÜBER DER TEXTZONE (30.08.2026).
+     Seit dem Anschnitt reicht das Rad bis unter die Schlagzeile; ohne
+     Schleier läuft "viele Berge." über den schwarzen Sattel.
+
+     Entscheidend ist, woran der Verlauf hängt. Am Rad gemessen bleicht
+     er dessen obere Kante immer - auch auf einem hohen Telefon, wo das
+     Rad die Schrift gar nicht erreicht (gemessen bei 430x932:
+     Radoberkante 614, Schlagzeile endet bei 430). An der Bühne gemessen
+     deckt er genau die Textzone: undurchsichtig bis 36 Prozent, klar ab
+     66 Prozent - also bis kurz unter die letzte Zeile. Wo das Rad
+     tiefer liegt, rührt ihn nichts an.
+
+     Er liegt über dem Rad, ohne dass daran etwas zu stellen wäre:
+     .photo-shade steht auf z-index -3, das Rad auf -5.
+
+     Die Fusslinie bleibt darunter stehen - sie trägt den Übergang zum
+     nächsten Abschnitt. */
+  .photo-shade {
+    background:
+      linear-gradient(180deg, var(--paper) 0%, var(--paper) 36%, transparent 66%),
+      linear-gradient(0deg, var(--linie-still) 0%, transparent 22%);
+  }
 
   .top-meta    { position: static; inset: auto; transform: none; grid-area: 1 / 1; }
   .claim       { position: static; inset: auto; width: auto; grid-area: 2 / 1; }
@@ -3251,21 +3272,43 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      damit die Zeilenhöhe und schiebt das Rad über den Knopf - gemessen:
      170 Punkte in einer 143 Punkte hohen Zeile. Die Proportion des Rades
      wahrt ohnehin background-size: contain. */
-  /* DAS RAD AN DIE KANTE (30.08.2026).
-     Es stand mittig in seinem Band, mit Luft nach beiden Seiten - ein
-     freistehendes Objekt zwischen zwei Textblöcken, das der Auftraggeber
-     zu Recht als "verloren, nicht gut integriert" beschrieb. Auf dem
-     Schreibtisch läuft es über den rechten Rand hinaus und wirkt dadurch
-     verankert; hochkant fehlte genau das.
-     Jetzt bricht es aus der Flucht aus und sitzt rechtsbündig auf der
-     Fusslinie seines Bandes: die Schrift links, das Rad rechts an der
-     Kante, der rote Knopf darunter wieder links - eine Diagonale statt
-     dreier getrennter Streifen. background-size bleibt contain, das Rad
-     wird also nicht angeschnitten. */
-  .photo-layer { position: static; inset: auto; width: auto; height: auto;
-                 aspect-ratio: auto; grid-area: 3 / 1;
-                 margin-right: calc(-1 * var(--flucht));
-                 background-size: contain; background-position: right bottom; }
+  /* DAS ANGESCHNITTENE RAD (30.08.2026).
+     Das Rad stand mittig in seinem Rasterband, mit Luft nach beiden
+     Seiten - ein freistehendes Objekt zwischen zwei Textblöcken, das der
+     Auftraggeber zu Recht als "verloren, nicht gut integriert"
+     beschrieb.
+
+     In seinem Band war das nicht zu heilen. Gemessen bei 713x775: das
+     Band ist 3,07:1, das Bild 1,59:1. background-size: cover schneidet
+     dort nicht seitlich, sondern oben und unten - 208 von 430 Punkten,
+     also 48 Prozent der Bildhöhe. Sattel, Lenker und der halbe Rahmen
+     waren weg. Ein Rad kann erst seitlich auslaufen, wenn es HÖHER wird
+     als sein Band; es muss sich die Höhe also mit der Schrift teilen.
+
+     Deshalb verlässt es das Raster und liegt als Schicht auf der Bühne:
+     unten und an beiden Seiten bündig, die Höhe treibt die Grösse, die
+     Breite folgt der Proportion. Wird das Bild breiter als der Schirm,
+     läuft das Hinterrad links aus dem Bild.
+
+     grid-area muss dabei ausdrücklich auf auto. Ein absolut gesetztes
+     Rasterkind mit fester Rasterzelle bezieht seine Prozente auf DIESE
+     ZELLE, nicht auf den Behälter - gemessen: 62 Prozent ergaben 192
+     statt 481 Punkte, und das Rad blieb klein.
+
+     Zur Höhe: 62 Prozent der Bühne ist der Wert, bei dem das Rad die
+     Fläche füllt und die Schlagzeile noch über ihm steht (bei 72 Prozent
+     verschwand "Rückenwind." im roten Rahmen). Die zweite Schranke gilt
+     schmalen, hohen Telefonen: dort wären 62 Prozent so hoch, dass mehr
+     als die Hälfte des Rades links wegfiele. 74vw begrenzt den Anschnitt
+     auf rund ein Fünftel der Bildbreite. Auf flachen Schirmen greift
+     keine der beiden - dort steht das Rad ungeschnitten rechts unten. */
+  .photo-layer { position: absolute; grid-area: auto; margin: 0;
+                 left: 0; right: 0; top: auto; bottom: 0;
+                 width: auto; height: min(62%, 74vw); aspect-ratio: auto;
+                 background-size: auto 100%;
+                 background-position: right bottom;
+                 background-repeat: no-repeat; }
+
   .hero-cta    { position: static; inset: auto; grid-area: 4 / 1; justify-self: start; }
 
   /* Der Zähler stand im Schriftgrad der Schlagzeile. Auf dem
@@ -3482,11 +3525,26 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   .meta-lang { display: none; }
   .meta-kurz { display: inline; }
 
+  /* Ebenfalls zurückgenommen: der Schleier über der Textzone. Er deckt
+     die Schlagzeile dort, wo sie über dem Rad liegt. Hier liegt sie
+     daneben, und der Schleier würde nur die obere Hälfte des Rades
+     ausbleichen. Es bleibt die Fusslinie. */
+  .photo-shade { background: linear-gradient(0deg, var(--linie-still) 0%, transparent 22%); }
+
   /* Das Rad steht in der rechten Spalte über die volle Höhe und wird
      mittig eingepasst - so ist es hier größer als in jeder gestapelten
      Anordnung, die dieselbe Fläche hätte. */
   .photo-layer {
     grid-area: 1 / 2 / -1 / 3;
+    /* ZURÜCKGENOMMEN (30.08.2026): Der Anschnitt weiter oben setzt das
+       Rad absolut auf die Bühne und lässt seine Höhe die Größe treiben.
+       Das gilt für das Hochformat, wo das Rad UNTER der Schrift liegt.
+       Hier steht es NEBEN ihr, in einer eigenen Spalte - da braucht es
+       weder absolute Lage noch Anschnitt. Ohne diese Zeilen wäre es
+       hier absolut gesetzt, 277 statt 464 Punkte hoch, und säße in der
+       Ecke seiner Zelle. */
+    position: static; inset: auto; width: auto; height: auto;
+    background-size: contain;
     /* Das Rad war von der BREITE begrenzt, nicht von der Höhe: 308 mal
        195 in einem 308 mal 464 hohen Kasten, also 135 Punkte leer
        darunter. Mehr Höhe hätte nichts geändert - es braucht Breite.
