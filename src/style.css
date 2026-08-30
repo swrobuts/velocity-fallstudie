@@ -573,7 +573,14 @@ footer :focus-visible, .product-tabs :focus-visible,
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  min-height: 92px;
+  /* 92px -> 72px (30.08.2026). Auftrag, wörtlich: "ich finde den Kopfteil
+     zu mächtig ... der nimmt zu viel Raum ein und erdrückt damit die
+     Aufteilung." Im Browser nachgemessen waren es auf einem 1280x840-Tablet
+     92px, also 11 % der Fensterhöhe, für eine Wortmarke und drei
+     Bedienelemente. Die Höhe kam nicht vom Polster, sondern von der 57px
+     hohen Wortmarke (siehe .brand unten) - dort sitzt die eigentliche
+     Änderung, dieser Wert folgt ihr nur. */
+  min-height: 72px;
   padding: 0 var(--flucht);
   color: var(--navy);
   background: var(--glas-papier);
@@ -584,7 +591,13 @@ footer :focus-visible, .product-tabs :focus-visible,
 .brand {
   color: var(--navy);
   text-decoration: none;
-  font-size: var(--grad-kopf-l);
+  /* EIGENER GRAD statt --grad-kopf-l (30.08.2026): der Token trägt an fünf
+     weiteren Stellen die grossen Zahlen der Abschlusskarte und des
+     Rechtsabschnitts - ihn zu verkleinern hätte dort Schaden angerichtet.
+     Gemessen ergab er hier 35,84px Schrift und damit 57px Markenhöhe, die
+     einzige Ursache der 92px-Leiste. Die Marke bleibt die grösste Schrift
+     im Kopf, nur nicht mehr die grösste des ganzen Auftritts. */
+  font-size: clamp(23px, 2vw, 32px);
   font-weight: 800;
   /* IDENTISCH ZUR WARENWIRTSCHAFT (28.08.2026).
      Beide Wortmarken sind dasselbe Konstrukt - Ring statt O, Schnitt
@@ -619,6 +632,15 @@ footer :focus-visible, .product-tabs :focus-visible,
   border-radius: 50%;
   vertical-align: .04em;
 }
+
+/* Die beiden Knöpfe rechts im Kopf massen 53px und waren damit die
+   höchsten Bedienelemente der Leiste - sie, nicht das Polster, hielten sie
+   auseinander. 9px Innenabstand lassen rund 47px: weiterhin über den 44px
+   aus WCAG 2.5.5, aber ohne der Leiste eine Höhe aufzuzwingen.
+   Eine Regel für beide (Klasse + Kind) statt zwei einzelner: .kopf-karte
+   und der Login-Knopf setzen ihr Polster getrennt, und die nächste
+   Schaltfläche dort würde sonst wieder ausscheren. */
+.site-header .kopf-aktionen > * { padding-block: 9px; }
 
 .site-nav { display: flex; gap: var(--af-m); }
 .site-nav a {
@@ -2911,7 +2933,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .hero-cta:hover { background: var(--red-tief); }
   .hero-cta.ist-weg { opacity: 0; pointer-events: none; transform: translateY(10px); }
   .hero-cta { transition: opacity var(--zeit-lang) ease, transform var(--zeit-lang) ease; }
-  .site-header { grid-template-columns: 1fr auto; min-height: 74px; }
+  .site-header { grid-template-columns: 1fr auto; min-height: 62px; }
   .site-nav { display: none; }
   /* Auf dem Telefon steht der Zaehler oben links fuer sich; die
      Kopplung an die Schlagzeile gilt dort nicht. */
@@ -3460,7 +3482,7 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   /* Der Kopf misst auch quer 74 Punkte - ein Fünftel eines 375 Punkte
      hohen Schirms, nur für Logo und zwei Knöpfe. Hier 56; damit steht
      der Zähler wieder unter ihm statt darunter zu verschwinden. */
-  .site-header { min-height: 56px; }
+  .site-header { min-height: 52px; }
 
   .scroll-story { min-height: 0; }
   .sticky-stage {

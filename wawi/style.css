@@ -470,7 +470,14 @@
      Jetzt traegt EINE Variable die geltende Breite, und beide lesen sie.
      Halb geht damit nicht mehr. */
   --nav-ist: var(--nav-breite);
-  --kopf-hoehe:  60px;
+  /* 60px -> 52px (30.08.2026), Auftrag: der Kopfbereich nimmt zu viel Raum
+     ein. Die Leiste traegt Wortmarke, Suchfeld und Profilknopf - alle drei
+     bleiben mit 44px Trefferflaeche (WCAG 2.5.5) darin unter, und 52px sind
+     dieselbe Stufe, auf der die Kundenwebsite bei knappem Platz landet.
+     Die Leiste war allerdings nie der groesste Posten: bis zur ersten
+     Datenzeile lagen auf dem Tablet 387px, davon 189px im Tafelkopf und
+     nur 60px hier. */
+  --kopf-hoehe:  52px;
   --fuss-hoehe:  32px;
 
   /* ============================================================
