@@ -453,7 +453,6 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, gesamt",
     "hint.dailyRidesChartAria": "Fahrten je Tag im {monat} {jahr}, gesamt über alle Radtypen und Tarife: zwischen {min} und {maxPhrase}, im Mittel {mittel}. Am meisten Fahrten am {tageListe} {monat} mit je {maxPhrase}.",
       "hint.dailyRevenueChartHeading": "Umsatz je Tag, {monat}",
-      "hint.chartScale": "{von} bis {bis}",
       "hint.dailyRevenueChartAria": "Umsatz je Tag im {monat} {jahr}: zwischen {min} und {max}, im Mittel {mittel}. Höchster Umsatz am {tageListe} {monat} mit {max}.",
     "msg.dailyFiguresLoadFailed": "Die Tageszahlen ließen sich nicht laden: {fehler}",
     "misc.workOrderTitle": "Auftrag {auftragsnummer}",
@@ -968,7 +967,6 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, total",
     "hint.dailyRidesChartAria": "Rides per day in {monat} {jahr}, total across all bike types and plans: between {min} and {maxPhrase}, on average {mittel}. Most rides on {tageListe} {monat} with {maxPhrase} each.",
       "hint.dailyRevenueChartHeading": "Revenue per day, {monat}",
-      "hint.chartScale": "{von} to {bis}",
       "hint.dailyRevenueChartAria": "Revenue per day in {monat} {jahr}: between {min} and {max}, on average {mittel}. Highest revenue on {tageListe} {monat} with {max}.",
     "msg.dailyFiguresLoadFailed": "Could not load the daily figures: {fehler}",
     "misc.workOrderTitle": "Work order {auftragsnummer}",
@@ -1483,7 +1481,6 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, toplam",
     "hint.dailyRidesChartAria": "{jahr} {monat} ayında güne göre sürüşler, tüm bisiklet tipleri ve tarifeler toplamı: {min} ile {maxPhrase} arasında, ortalama {mittel}. En çok sürüş {monat} ayının {tageListe} günlerinde, her birinde {maxPhrase}.",
       "hint.dailyRevenueChartHeading": "Güne göre ciro, {monat}",
-      "hint.chartScale": "{von} – {bis}",
       "hint.dailyRevenueChartAria": "{monat} {jahr} güne göre ciro: {min} ile {max} arasında, ortalama {mittel}. En yüksek ciro {tageListe} {monat}, {max}.",
     "msg.dailyFiguresLoadFailed": "Günlük rakamlar yüklenemedi: {fehler}",
     "misc.workOrderTitle": "İş emri {auftragsnummer}",
@@ -1998,7 +1995,6 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, total",
     "hint.dailyRidesChartAria": "Viajes por día en {monat} de {jahr}, total en todos los tipos de bicicleta y tarifas: entre {min} y {maxPhrase}, en promedio {mittel}. La mayoría de los viajes el {tageListe} de {monat}, con {maxPhrase} cada uno.",
       "hint.dailyRevenueChartHeading": "Facturación por día, {monat}",
-      "hint.chartScale": "{von} a {bis}",
       "hint.dailyRevenueChartAria": "Facturación por día en {monat} {jahr}: entre {min} y {max}, en promedio {mittel}. Facturación más alta el {tageListe} {monat} con {max}.",
     "msg.dailyFiguresLoadFailed": "No se pudieron cargar las cifras diarias: {fehler}",
     "misc.workOrderTitle": "Orden de trabajo {auftragsnummer}",
@@ -2513,7 +2509,6 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, totale",
     "hint.dailyRidesChartAria": "Corse al giorno a {monat} {jahr}, totale su tutti i tipi di bici e tariffe: tra {min} e {maxPhrase}, in media {mittel}. Il massimo delle corse il {tageListe} {monat} con {maxPhrase} ciascuno.",
       "hint.dailyRevenueChartHeading": "Fatturato al giorno, {monat}",
-      "hint.chartScale": "{von} a {bis}",
       "hint.dailyRevenueChartAria": "Fatturato al giorno in {monat} {jahr}: tra {min} e {max}, in media {mittel}. Fatturato più alto il {tageListe} {monat} con {max}.",
     "msg.dailyFiguresLoadFailed": "Impossibile caricare i dati giornalieri: {fehler}",
     "misc.workOrderTitle": "Ordine di lavoro {auftragsnummer}",
@@ -3028,7 +3023,6 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, łącznie",
     "hint.dailyRidesChartAria": "Przejazdy dziennie w {monat} {jahr}, ogółem we wszystkich typach rowerów i taryfach: od {min} do {maxPhrase}, średnio {mittel}. Najwięcej przejazdów {tageListe} {monat}, po {maxPhrase} każdego dnia.",
       "hint.dailyRevenueChartHeading": "Obrót dziennie, {monat}",
-      "hint.chartScale": "{von} – {bis}",
       "hint.dailyRevenueChartAria": "Obrót dzienny w {monat} {jahr}: między {min} a {max}, średnio {mittel}. Najwyższy obrót {tageListe} {monat}: {max}.",
     "msg.dailyFiguresLoadFailed": "Nie udało się wczytać danych dziennych: {fehler}",
     "misc.workOrderTitle": "Zlecenie {auftragsnummer}",
@@ -6331,7 +6325,7 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     // Zahl ohne Einheit - und die liest sich wie eine Anzahl.
     const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [],
             titelJeIndex = null, achseFormat = null, achseVerbergen = false,
-            stufeJeIndex = null } = optionen;
+            stufeJeIndex = null, marken = [] } = optionen;
 
     const block = document.createElement('div');
     block.className = 'saeulengrafik-block';
@@ -6367,6 +6361,18 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     // durchgehend 0 Fahrten nicht durch 0 teilt, nicht als versteckte
     // Untergrenze der Achse.
     const maximum = Math.max(1, ...werteBereinigt);
+
+    // ===== BESCHRIFTETE SAEULEN (30.08.2026) =====
+    // marken: [{ index, text }] - eine Beschriftung unmittelbar ueber der
+    // genannten Saeule. Gedacht fuer die beiden Enden der Reihe; alle
+    // achtundzwanzig zu beschriften waere eine Tabelle, keine Grafik.
+    //
+    // ALS HTML, NICHT ALS <text> IM SVG. Das <svg> traegt
+    // preserveAspectRatio="none" (siehe oben) und wird waagerecht
+    // gestreckt - Text darin wuerde exakt mitgestreckt und stuende je nach
+    // Bereichsbreite verschieden breit da. Eine Schicht aus HTML darueber
+    // wird in Prozent positioniert und bleibt unverzerrt.
+    let markenSchicht = null;
 
     if (werteBereinigt.length > 0) {
         const anzahl = werteBereinigt.length;
@@ -6429,6 +6435,32 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
             }
             svg.append(rect);
         });
+
+        if (marken.length > 0) {
+            markenSchicht = document.createElement('div');
+            markenSchicht.className = 'saeulengrafik-marken';
+            // aria-hidden: die Werte stehen bereits in der Gesamtbeschriftung
+            // des <svg> und im Hinweisfenster je Saeule - ein Bildschirmleser
+            // bekaeme sie hier ein drittes Mal.
+            markenSchicht.setAttribute('aria-hidden', 'true');
+            for (const { index, text } of marken) {
+                if (!Number.isInteger(index) || index < 0 || index >= anzahl) continue;
+                const marke = document.createElement('span');
+                marke.className = 'saeulengrafik-marke';
+                marke.textContent = text;
+                // Mitte DER Saeule, nicht des Rasterfachs - die beiden
+                // liegen um einen halben Punkt auseinander, und die Marke
+                // soll ueber ihrer Saeule stehen.
+                marke.style.left = `${((index * abstand + saeulenbreite / 2) / breite) * 100}%`;
+                marke.style.bottom = `${((werteBereinigt[index] / maximum) * (hoehe - 2) / hoehe) * 100}%`;
+                // An den Enden nicht ueber die Flaeche hinauslaufen: dort
+                // wird die Marke an ihrer eigenen Kante ausgerichtet statt
+                // mittig ueber der Saeule.
+                if (index === 0) marke.classList.add('saeulengrafik-marke-links');
+                else if (index === anzahl - 1) marke.classList.add('saeulengrafik-marke-rechts');
+                markenSchicht.append(marke);
+            }
+        }
     }
 
     // y-Achse: nur 0 und das Maximum, keine Zwischenwerte - die
@@ -6458,6 +6490,7 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     } else {
         block.append(yAchse, svg);
     }
+    if (markenSchicht) block.append(markenSchicht);
 
     if (beschriftungenX && beschriftungenX.length > 0) {
         const xAchse = document.createElement('div');

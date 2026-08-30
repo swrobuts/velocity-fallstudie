@@ -519,13 +519,17 @@ async function monatsdrilldownEinfuegen(monat) {
     filterZeile.append(filterBeschriftung);
 
     const kalenderPlatz = document.createElement('div');
+    kalenderPlatz.className = 'monatsdrilldown-kalenderplatz';
     const grafikPlatz = document.createElement('div');
     const kachelPlatz = document.createElement('div');
-    // Reihenfolge: Filter, Kalender, dann Diagramm und Matrix. Der Kalender
-    // ist die Ansicht, in der gearbeitet wird (ein Tag wird angeklickt);
-    // Diagramm und Matrix fassen zusammen, was darin steht - und eine
-    // Zusammenfassung VOR ihrem Gegenstand verwirrt.
-    abschnitt.append(filterZeile, kalenderPlatz, grafikPlatz, kachelPlatz);
+    // REIHENFOLGE: Filter, Diagramm, Matrix, Kalender - und der Kalender
+    // ZULETZT aus einem harten Grund, nicht aus Geschmack: ein Klick auf
+    // einen Tag haengt die Tagesansicht ans ENDE der Maske
+    // (tagdrilldownEinfuegen bekommt #detailmaske als Wurzel). Stuenden
+    // Diagramm und Matrix dazwischen, laege das Ergebnis des Klicks weit
+    // unterhalb der Kachel, die man angeklickt hat.
+    // Der Filter bleibt oben: er gilt fuer alles darunter.
+    abschnitt.append(filterZeile, grafikPlatz, kachelPlatz, kalenderPlatz);
 
     function zeichneMonat() {
     // DIE UEBERSCHRIFT FOLGT DEM FILTER. Sie behauptete "gesamt, alle
@@ -634,21 +638,13 @@ async function monatsdrilldownEinfuegen(monat) {
     // fahrtenstaerksten: sie gehoert zu der Reihe, die gezeichnet wird.
     const umsatzMaxIndizes = tage.map((_, i) => i).filter((i) => umsatzWerte[i] === umsatzMax);
 
-    // Titelzeile: links das Thema, rechts die Skala. Die Skala stand bis
-    // hierher in einer eigenen Spalte LINKS der Grafik und schob deren
-    // Saeulen um ihre Breite nach rechts - neben dem Kalender, der an der
-    // Bereichskante beginnt, ein Einzug ohne Grund. Hier oben nennt sie
-    // beide Enden der Achse ("0 bis ..."), die Grafik selbst laeuft dafuer
-    // ueber die volle Breite.
-    const grafikTitel = document.createElement('div');
+    // Nur das Thema. Eine Zeile mit der Skala ("0,00 EUR bis 71,66 EUR")
+    // stand hier bis zum 30.08.2026 - sie ist entfallen, seit die beiden
+    // Enden der Reihe ihren Wert an der Saeule tragen: dieselbe Auskunft
+    // ein zweites Mal, und die obere Marke stiess an sie an.
+    const grafikTitel = document.createElement('h4');
     grafikTitel.className = 'monatsdrilldown-grafik-titel';
-    const grafikThema = document.createElement('h4');
-    grafikThema.className = 'monatsdrilldown-grafik-thema';
-    grafikThema.textContent = t('hint.dailyRevenueChartHeading', { monat: monatFormat(monat) });
-    const grafikSkala = document.createElement('span');
-    grafikSkala.className = 'monatsdrilldown-grafik-skala';
-    grafikSkala.textContent = t('hint.chartScale', { von: geldFormat(0), bis: geldFormat(umsatzMax) });
-    grafikTitel.append(grafikThema, grafikSkala);
+    grafikTitel.textContent = t('hint.dailyRevenueChartHeading', { monat: monatFormat(monat) });
 
     const grafik = saeulengrafik(umsatzWerte, tage.map((t) => `${t}. ${monatNameVoll}`), {
         beschriftung: t('hint.dailyRevenueChartAria', {
@@ -657,7 +653,17 @@ async function monatsdrilldownEinfuegen(monat) {
             mittel: geldFormat(umsatzGesamt / tage.length),
             tageListe: tageListe(umsatzMaxIndizes.map((i) => tage[i]))
         }),
-        markierIndizes: umsatzMaxIndizes,
+        // Statt einer Hervorhebung ohne Erklaerung: die beiden Enden der
+        // Reihe tragen ihren Wert. Das nennt zugleich, WARUM diese Saeulen
+        // gemeint sind - eine rote Kontur sagte nur "diese hier".
+        // Je EIN Index, nicht alle gleichauf liegenden: die Marke ist eine
+        // Aussage ueber IHRE Saeule ("hier stehen 71,66 EUR"), nicht die
+        // Behauptung, keine andere erreiche denselben Wert. Zwei gleiche
+        // Marken nebeneinander waeren blosse Wiederholung.
+        marken: umsatzMax === umsatzMin ? [] : [
+            { index: umsatzWerte.indexOf(umsatzMax), text: geldFormat(umsatzMax) },
+            { index: umsatzWerte.indexOf(umsatzMin), text: geldFormat(umsatzMin) }
+        ],
         // Euro an der Achse, nicht eine blanke Zahl - die laese sich wie
         // eine Anzahl.
         // Die Skala steht in der Titelzeile darueber, nicht in einer
