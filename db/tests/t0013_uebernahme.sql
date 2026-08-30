@@ -39,10 +39,17 @@ begin
                  'Ein erneuter Lauf schreibt nichts nach (Idempotenz)');
 
   -- Bestand gegen die Regel, nicht gegen eine gemerkte Zahl.
-  return next is(
-    (select count(*)::int from velocity.station),
+  -- MINDESTENS, aus demselben Grund wie bei den Raedern weiter unten
+  -- (30.08.2026): eine ueber die Warenwirtschaft angelegte Station ist
+  -- bestimmungsgemaesser Betrieb, kein Fehler der Uebernahme. Bei den
+  -- Raedern hat die Gleichheit bereits einen Fehlalarm ausgeloest; hier
+  -- vorsorglich, bevor dasselbe beim ersten neu angelegten Standort
+  -- passiert. Der Fall, der die Zusicherung rechtfertigt - eine
+  -- Uebernahme, die Stationen VERLIERT - wird weiterhin gefangen.
+  return next cmp_ok(
+    (select count(*)::int from velocity.station), '>=',
     (select count(*)::int from "cityBikesRental".station where ort <> 'Schweinfurt'),
-    'So viele Stationen wie im Altbestand ausserhalb von Schweinfurt');
+    'Mindestens so viele Stationen wie im Altbestand ausserhalb von Schweinfurt');
 
   -- MINDESTENS, nicht GENAU (30.08.2026). Die Gleichheit hielt nur so
   -- lange, wie niemand ueber die Warenwirtschaft ein Rad anlegte - genau
