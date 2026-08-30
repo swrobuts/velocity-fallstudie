@@ -3499,6 +3499,32 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
    Beleg, dass die Zahl echt ist, und ohne ihn wäre die Bühne eine
    Behauptung.
    -------------------------------------------------------------------- */
+/* ====================================================================
+   AUF DIE FUSSLINIE, NICHT IN DIE MITTE (30.08.2026)
+
+   Im zweispaltigen Aufbau ist das Rad von der BREITE begrenzt, nicht von
+   der Höhe. Auf einem fast quadratischen Schirm fällt das auseinander:
+   gemessen bei 713 mal 700 ist die Radspalte 326 breit und 586 hoch, das
+   Rad darin 326 mal 205 - mittig eingepasst blieben oben wie unten 190
+   Punkte leer. Das Rad schwebte, und der Auftraggeber las es als
+   "verloren, nicht gut integriert".
+
+   Größer wird es hier nur auf Kosten der Schlagzeilenbreite; das wollte
+   er nicht. Also die Lage statt der Grösse: unten bündig steht das Rad
+   auf derselben Linie wie Schlagzeile und Knopf, und die 381 Punkte Luft
+   liegen am Stück darüber statt in zwei Hälften um das Bild herum.
+
+   Warum nur bis 4/3: Auf einem flachen Tablet (880 mal 500, Verhältnis
+   1,76) gibt es das Problem nicht - dort füllt das Rad 447 von 560
+   Punkten. Schlimmer noch, die Bühne ist dort wegen min-height 560 höher
+   als das Fenster, und unten bündig heisst dann: die Räder liegen unter
+   der Bildkante. Gemessen: Unterkante 542 bei 500 Punkten Fensterhöhe.
+   ==================================================================== */
+@media (max-width: 900px) and (min-width: 560px) and (max-height: 720px)
+       and (max-aspect-ratio: 4/3) {
+  .photo-layer { background-position: center bottom; }
+}
+
 @media (max-width: 900px) and (max-height: 430px) {
   :root { --hero-font: min(30px, calc((100vw - 2 * var(--rand)) / 14)); }
 
