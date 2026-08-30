@@ -7184,6 +7184,17 @@ function zeigeKopftafel(kennung, tafel) {
     // liest und ihn anders haben will, findet den Knopf, ohne zu suchen.
     // Nur Tafeln mit echter Periode geben zeitWahl mit; eine
     // Momentaufnahme bekommt hier nichts, weil sie nichts zu waehlen hat.
+    // ===== BEDIENELEMENTE NACH RECHTS IN DIE TITELZEILE (30.08.2026) =====
+    // Auftrag: der Kopfbereich nimmt zu viel Raum ein, "weil der Button
+    // Übersicht ungünstig platziert ist". Er stand mittig auf einer eigenen
+    // Zeile, die Zeitwahl auf einer weiteren - zwei volle Zeilen für zwei
+    // Bedienelemente, während rechts neben Titel und Bezugszeile Platz
+    // ungenutzt blieb. Auf dem Tablet gemessen: 189px Tafelkopf, während
+    // die Kopfleiste darüber nur 60px belegte.
+    // Texte links, Bedienelemente rechts - und beides in EINER Zeile.
+    const steuerung = document.createElement('div');
+    steuerung.className = 'kopftafel-steuerung';
+
     if (tafel.zeitWahl) {
         const wahl = document.createElement('div');
         wahl.className = 'kopftafel-zeitwahl';
@@ -7205,9 +7216,13 @@ function zeigeKopftafel(kennung, tafel) {
             });
             wahl.append(knopf);
         }
-        kopftexte.append(wahl);
+        // In die Steuerung, nicht in die Texte: die Zeitknoepfe sind
+        // Bedienelemente und gehoeren zu ihresgleichen, nicht unter die
+        // Bezugszeile.
+        steuerung.append(wahl);
     }
     kopf.append(kopftexte);
+    kopf.append(steuerung);
     // Der Umschalter steht NICHT mehr im Kopf (Gestaltungsauftrag,
     // woertlich: "Es muss mittig am unteren Ende der Kopfleiste sein,
     // damit es wirksam wahrgenommen werden kann" - vorher stand er oben
@@ -7311,10 +7326,12 @@ function zeigeKopftafel(kennung, tafel) {
     // damit IMMER am unteren Ende der Tafel, unabhaengig davon, wie hoch
     // die Tafel gerade ist - keine zwei Regeln fuer zwei Zustaende,
     // sondern dieselbe Position aus derselben DOM-Reihenfolge.
-    const griffleiste = document.createElement('div');
-    griffleiste.className = 'kopftafel-griffleiste';
-    griffleiste.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
-    wurzel.append(griffleiste);
+    // Der Umschalter sass bis hierher in einer eigenen, mittig gesetzten
+    // Zeile UNTER der ganzen Tafel (.kopftafel-griffleiste). Jetzt steht er
+    // rechts in der Titelzeile, neben der Zeitwahl. Er wird erst hier
+    // gebaut, weil er die fertige Tabelle kennen muss (aria-controls) -
+    // eingehaengt wird er aber oben, in die bereits bestehende Kopfzeile.
+    steuerung.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
 }
 
 // ===== DIE QUELLENANGABE, SICHTBAR IN DER OBERFLAECHE =====

@@ -2585,10 +2585,32 @@ body.maske-wird-gezogen #detailmaske {
    bleibt die zweite und letzte sichtbare Zeile; ausgeklappt ist sie die
    letzte nach allem anderen. Beides ist "unten, mittig" - ein und
    dieselbe Position, keine zwei Regeln fuer zwei Zustaende. */
-.kopftafel-griffleiste {
+/* .kopftafel-griffleiste ist am 30.08.2026 entfallen: eine eigene, mittig
+   gesetzte Zeile für einen einzigen Knopf. Er sitzt jetzt in dieser Gruppe
+   rechts in der Titelzeile.
+   margin-left:auto schiebt sie an den rechten Rand, ohne dass die Texte
+   links dafür eine Breite bekommen müssten - ein space-between hätte bei
+   fehlender Steuerung (Tafeln ohne Zeitwahl gibt es) nichts zu verteilen
+   und den Titel trotzdem gestreckt. */
+.kopftafel-steuerung {
   display: flex;
-  justify-content: center;
-  padding-top: var(--raum-2);
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--raum-2);
+  margin-left: auto;
+}
+
+/* Schmaler Bereich: die Gruppe nimmt die ganze Zeile und richtet sich
+   links aus. Mit margin-left:auto blieb sie auch nach dem Umbruch
+   rechtsbündig und damit schmal - die fünf Zeitknöpfe brachen dann
+   einzeln um, und der Kopf wuchs auf 275px (bei 430px Breite gemessen),
+   also über den Zustand VOR diesem Umbau hinaus. Über die volle Zeile
+   verteilt passen sie in zwei Reihen. */
+@media (max-width: 720px) {
+  .kopftafel-steuerung {
+    margin-left: 0;
+    flex: 1 0 100%;
+  }
 }
 
 /* Ein <button> darf laut Spezifikation kein <h2> enthalten - deshalb
@@ -2758,6 +2780,14 @@ body.maske-wird-gezogen #detailmaske {
   display: flex;
   align-items: center;
   gap: var(--raum-4);
+  /* Bedienelemente nach rechts (30.08.2026). Sie standen auf zwei eigenen
+     Zeilen - der Umschalter sogar mittig unter der ganzen Tafel -, während
+     rechts neben Titel und Bezugszeile Platz ungenutzt blieb.
+     flex-wrap: bei schmalem Bereich rutscht die Steuerung wieder unter die
+     Texte, statt sie zusammenzuquetschen. align-items:center bleibt: eine
+     Zeile mit einem hohen Titel links und Knöpfen rechts liest sich auf
+     gemeinsamer Mittelachse ruhiger als auf gemeinsamer Grundlinie. */
+  flex-wrap: wrap;
   /* WAR 8px (vierter Anlauf gegen "zu wenig Abstaende", siehe der lange
      Kommentar bei .kopftafel oben) - der Abstand zwischen Titel/Bezugs-
      zeile und der ersten Tabellenzeile darunter. */
