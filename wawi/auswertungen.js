@@ -235,6 +235,36 @@ function monatKurzName(jahr, monatsnummerEins) {
     return new Intl.DateTimeFormat(localeTag(), { month: 'short' }).format(new Date(jahr, monatsnummerEins - 1, 1));
 }
 
+// ===== TAGE IM GEWÄHLTEN FENSTER (30.08.2026) =====
+// Die Kennzahl "Umsatz je Rad und Tag" teilte durch feste 365, begründet
+// mit "das Zwölf-Monats-Fenster ist genau ein Jahr". Das galt, solange es
+// nur dieses eine Fenster gab. Seit der Zeitwahl (3, 6, 12, 24 Monate,
+// Alles) stimmt es in vier von fünf Fällen nicht mehr: bei "Alles"
+// reichen die Daten vom Januar 2025 bis in den laufenden Monat, also über
+// 607 statt 365 Tage - der angezeigte Wert war damit um zwei Drittel zu
+// hoch.
+//
+// Der Nenner folgt jetzt dem Fenster: vom Ersten des ersten Monats bis
+// zum letzten Tag des letzten, höchstens aber bis heute. Die Obergrenze
+// ist nötig, weil der letzte Monat der laufende ist - ein voller August
+// im Nenner, aber nur dreissig Tage Umsatz im Zähler, hiesse die Flotte
+// schlechter rechnen, als sie ist.
+function tageImFenster(fenster) {
+    if (!fenster || fenster.length === 0) return 1;
+    const [vonJahr, vonMonat] = fenster[0].split('-').map(Number);
+    const [bisJahr, bisMonat] = fenster[fenster.length - 1].split('-').map(Number);
+    const beginn = new Date(vonJahr, vonMonat - 1, 1);
+    // Tag 0 des Folgemonats ist der letzte Tag des Monats - so muss
+    // niemand Schaltjahre von Hand kennen.
+    const monatsende = new Date(bisJahr, bisMonat, 0);
+    const heute = new Date();
+    heute.setHours(0, 0, 0, 0);
+    const ende = monatsende > heute ? heute : monatsende;
+    // Auf Tage runden statt abzuschneiden: die Zeitumstellung macht einen
+    // Tag im Jahr 23 und einen 25 Stunden lang.
+    return Math.max(1, Math.round((ende - beginn) / 86400000) + 1);
+}
+
 function monatFormat(monat) {
     const [jahr, monatsnummer] = monat.split('-').map(Number);
     return `${monatKurzName(jahr, monatsnummer)} ${jahr}`;
@@ -1524,13 +1554,13 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
         // ausgemusterte Raeder (siehe die Zaehl-Anfrage in
         // umsatzRadtypZeigen()) - ein abgeschriebenes Rad erwirtschaftet
         // nichts mehr und wuerde den Nenner nur kuenstlich vergroessern.
-        // 365 Tage: das Zwoelf-Monats-Fenster ist im heutigen Bestand
-        // genau ein Jahr ohne Schalttag.
+        // Der Nenner ist die Zahl der Tage im GEWAEHLTEN Fenster, nicht
+        // mehr fest 365 - siehe tageImFenster() oben.
         bezug: flottengroesse
             ? t('board.revenueReferenceWithFleet', {
                 umsatz: geldFormat(umsatzGesamt), fahrtenPhrase: mengeFormat(fahrtenGesamt, 'fahrt'),
                 vonMonat: monatFormat(fenster[0]), bisMonat: monatFormat(fenster[fenster.length - 1]),
-                jeRadTag: geldFormat(umsatzGesamt / flottengroesse / 365),
+                jeRadTag: geldFormat(umsatzGesamt / flottengroesse / tageImFenster(fenster)),
                 raederPhrase: mengeFormat(flottengroesse, 'rad')
             })
             : t('board.revenueReference', {
