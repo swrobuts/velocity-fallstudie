@@ -3541,11 +3541,27 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      Damit bleiben drei Zeilen statt vier: Schlagzeile und Zähler
      nebeneinander, darunter links der Knopf und rechts das Rad, das den
      Rest der Höhe nimmt. Keine Fläche ohne Aufgabe. */
-  .sticky-stage { grid-template-rows: auto auto 1fr; }
+  /* Und der Knopf wandert nach rechts in die Mitte (30.08.2026).
+     Vorschlag des Auftraggebers, nachdem drei Anläufe an der Größe des
+     Rades gescheitert waren: "wir könnten jetzt das Rad unter den
+     Herotext platzieren und stattdessen den roten Button in dem rechten,
+     mittleren Bereich. Weil sonst bekommen wir das nie zusammen."
+
+     Er trifft den Kern. Das Rad war in seiner schmalen Spalte von der
+     BREITE begrenzt; unter der Schlagzeile bekommt es deren Spaltenmass
+     und wird von der Höhe begrenzt, was hier mehr hergibt: gemessen bei
+     707 mal 604 sind das 355 mal 223 statt 323 mal 203 Punkte. Der Knopf
+     hinterlässt links keine Lücke, weil er die Fläche füllt, die vorher
+     ohne Aufgabe war.
+
+     Zwei Zeilen also: oben Schlagzeile und Zähler, unten Rad und Knopf.
+     Vier Felder, vier Bewohner. */
+  .sticky-stage { grid-template-rows: auto 1fr; }
   .claim       { grid-area: 1 / 1; }
-  .hero-cta    { grid-area: 2 / 1; }
   .top-meta    { grid-area: 1 / 2; justify-self: end; }
-  .photo-layer { grid-area: 2 / 2 / -1 / 3; }
+  .photo-layer { grid-area: 2 / 1; }
+  .hero-cta    { grid-area: 2 / 2; align-self: center; justify-self: center;
+                 margin-top: 0; }
   .live-zahl   { align-items: flex-end; }
 }
 
