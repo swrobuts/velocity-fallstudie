@@ -453,6 +453,7 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, gesamt",
     "hint.dailyRidesChartAria": "Fahrten je Tag im {monat} {jahr}, gesamt über alle Radtypen und Tarife: zwischen {min} und {maxPhrase}, im Mittel {mittel}. Am meisten Fahrten am {tageListe} {monat} mit je {maxPhrase}.",
       "hint.dailyRevenueChartHeading": "Umsatz je Tag, {monat}",
+      "hint.chartScale": "{von} bis {bis}",
       "hint.dailyRevenueChartAria": "Umsatz je Tag im {monat} {jahr}: zwischen {min} und {max}, im Mittel {mittel}. Höchster Umsatz am {tageListe} {monat} mit {max}.",
     "msg.dailyFiguresLoadFailed": "Die Tageszahlen ließen sich nicht laden: {fehler}",
     "misc.workOrderTitle": "Auftrag {auftragsnummer}",
@@ -967,6 +968,7 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, total",
     "hint.dailyRidesChartAria": "Rides per day in {monat} {jahr}, total across all bike types and plans: between {min} and {maxPhrase}, on average {mittel}. Most rides on {tageListe} {monat} with {maxPhrase} each.",
       "hint.dailyRevenueChartHeading": "Revenue per day, {monat}",
+      "hint.chartScale": "{von} to {bis}",
       "hint.dailyRevenueChartAria": "Revenue per day in {monat} {jahr}: between {min} and {max}, on average {mittel}. Highest revenue on {tageListe} {monat} with {max}.",
     "msg.dailyFiguresLoadFailed": "Could not load the daily figures: {fehler}",
     "misc.workOrderTitle": "Work order {auftragsnummer}",
@@ -1481,6 +1483,7 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, toplam",
     "hint.dailyRidesChartAria": "{jahr} {monat} ayında güne göre sürüşler, tüm bisiklet tipleri ve tarifeler toplamı: {min} ile {maxPhrase} arasında, ortalama {mittel}. En çok sürüş {monat} ayının {tageListe} günlerinde, her birinde {maxPhrase}.",
       "hint.dailyRevenueChartHeading": "Güne göre ciro, {monat}",
+      "hint.chartScale": "{von} – {bis}",
       "hint.dailyRevenueChartAria": "{monat} {jahr} güne göre ciro: {min} ile {max} arasında, ortalama {mittel}. En yüksek ciro {tageListe} {monat}, {max}.",
     "msg.dailyFiguresLoadFailed": "Günlük rakamlar yüklenemedi: {fehler}",
     "misc.workOrderTitle": "İş emri {auftragsnummer}",
@@ -1995,6 +1998,7 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, total",
     "hint.dailyRidesChartAria": "Viajes por día en {monat} de {jahr}, total en todos los tipos de bicicleta y tarifas: entre {min} y {maxPhrase}, en promedio {mittel}. La mayoría de los viajes el {tageListe} de {monat}, con {maxPhrase} cada uno.",
       "hint.dailyRevenueChartHeading": "Facturación por día, {monat}",
+      "hint.chartScale": "{von} a {bis}",
       "hint.dailyRevenueChartAria": "Facturación por día en {monat} {jahr}: entre {min} y {max}, en promedio {mittel}. Facturación más alta el {tageListe} {monat} con {max}.",
     "msg.dailyFiguresLoadFailed": "No se pudieron cargar las cifras diarias: {fehler}",
     "misc.workOrderTitle": "Orden de trabajo {auftragsnummer}",
@@ -2509,6 +2513,7 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, totale",
     "hint.dailyRidesChartAria": "Corse al giorno a {monat} {jahr}, totale su tutti i tipi di bici e tariffe: tra {min} e {maxPhrase}, in media {mittel}. Il massimo delle corse il {tageListe} {monat} con {maxPhrase} ciascuno.",
       "hint.dailyRevenueChartHeading": "Fatturato al giorno, {monat}",
+      "hint.chartScale": "{von} a {bis}",
       "hint.dailyRevenueChartAria": "Fatturato al giorno in {monat} {jahr}: tra {min} e {max}, in media {mittel}. Fatturato più alto il {tageListe} {monat} con {max}.",
     "msg.dailyFiguresLoadFailed": "Impossibile caricare i dati giornalieri: {fehler}",
     "misc.workOrderTitle": "Ordine di lavoro {auftragsnummer}",
@@ -3023,6 +3028,7 @@ const UEBERSETZUNGEN = {
     "hint.totalForMonth": "{phrase}, łącznie",
     "hint.dailyRidesChartAria": "Przejazdy dziennie w {monat} {jahr}, ogółem we wszystkich typach rowerów i taryfach: od {min} do {maxPhrase}, średnio {mittel}. Najwięcej przejazdów {tageListe} {monat}, po {maxPhrase} każdego dnia.",
       "hint.dailyRevenueChartHeading": "Obrót dziennie, {monat}",
+      "hint.chartScale": "{von} – {bis}",
       "hint.dailyRevenueChartAria": "Obrót dzienny w {monat} {jahr}: między {min} a {max}, średnio {mittel}. Najwyższy obrót {tageListe} {monat}: {max}.",
     "msg.dailyFiguresLoadFailed": "Nie udało się wczytać danych dziennych: {fehler}",
     "misc.workOrderTitle": "Zlecenie {auftragsnummer}",
@@ -6324,13 +6330,26 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     // braucht dort geldFormat, sonst stuende ueber einer Umsatzgrafik eine
     // Zahl ohne Einheit - und die liest sich wie eine Anzahl.
     const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [],
-            titelJeIndex = null, achseFormat = null } = optionen;
+            titelJeIndex = null, achseFormat = null, achseVerbergen = false,
+            stufeJeIndex = null } = optionen;
 
     const block = document.createElement('div');
     block.className = 'saeulengrafik-block';
 
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    // preserveAspectRatio="none" (30.08.2026), wie bei saeulenSparkline()
+    // oben. OHNE diese Zeile gilt der Vorgabewert "xMidYMid meet": der
+    // 420 breite Inhalt wird unter Wahrung des Seitenverhaeltnisses in die
+    // per CSS zugewiesene Flaeche EINGEPASST und mittig gesetzt - die
+    // Saeulen standen dadurch als schmaler Block in der Mitte, waehrend
+    // die Achsenbeschriftung darunter (reines HTML, kein SVG) schon ueber
+    // die volle Breite lief. Genau der gepresste Eindruck, den der Auftrag
+    // ruegt. "none" streckt auf die zugewiesene Flaeche; an einer Grafik
+    // aus lauter senkrechten Rechtecken verzerrt das nichts an der
+    // Wertaussage - jede Saeule bleibt exakt so hoch wie ihr Anteil, nur
+    // die Spaltenbreite waechst mit.
+    svg.setAttribute('preserveAspectRatio', 'none');
     svg.classList.add('saeulengrafik');
 
     if (beschriftung) {
@@ -6375,17 +6394,38 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
             rect.setAttribute('y', (hoehe - saeulenhoehe).toFixed(2));
             rect.setAttribute('width', saeulenbreite.toFixed(2));
             rect.setAttribute('height', Math.max(0, saeulenhoehe).toFixed(2));
-            rect.setAttribute('class', markierIndizes.includes(i)
-                ? 'saeulengrafik-saeule saeulengrafik-saeule-markiert'
-                : 'saeulengrafik-saeule');
+            // stufeJeIndex: DIESELBE Farbtreppe wie der Kalender (0 bis 4,
+            // Anteil am Monatshoechstwert). Ohne sie traegt jede Saeule
+            // denselben Ton, und die Oberflaeche benutzte zwei Sprachen
+            // fuer dieselbe Aussage: im Kalender bedeutet dunkler "mehr",
+            // in der Grafik bedeutete es nichts. Zwei Kodierungen, die
+            // sich widersprechen, sind schlimmer als eine fehlende.
+            const klassen = ['saeulengrafik-saeule'];
+            if (typeof stufeJeIndex === 'function') {
+                klassen.push(`saeulengrafik-saeule-stufe-${stufeJeIndex(i, wert)}`);
+            }
+            if (markierIndizes.includes(i)) klassen.push('saeulengrafik-saeule-markiert');
+            rect.setAttribute('class', klassen.join(' '));
             if (beschriftungenX && beschriftungenX[i] !== undefined) {
                 // <title> auf dem einzelnen <rect>: ein Tooltip beim
                 // Hovern EINER Saeule, ohne die Grafik als Ganzes stumm
                 // zu machen (svg traegt aria-label bereits fuer sich).
-                const titel = document.createElementNS(SVG_NS, 'title');
-                titel.textContent = typeof titelJeIndex === 'function'
-                    ? titelJeIndex(i, wert) : `${beschriftungenX[i]}: ${wert}`;
-                rect.append(titel);
+                // MIT titelJeIndex das Hinweisfenster DIESER Oberflaeche
+                // (hinweisfensterTeilVerknuepfen, wie bei saeulenSparkline
+                // und beim Strukturbalken), nicht das <title> des Browsers:
+                // das erscheint erst nach etwa einer Sekunde Verharren, in
+                // der Schrift des Betriebssystems und ohne jeden Bezug zur
+                // uebrigen Gestaltung. Beim Zeigen auf eine Saeule soll die
+                // Auskunft sofort da sein.
+                // OHNE titelJeIndex bleibt es beim <title> - so verhalten
+                // sich die uebrigen Aufrufer unveraendert.
+                if (typeof titelJeIndex === 'function') {
+                    hinweisfensterTeilVerknuepfen(rect, titelJeIndex(i, wert));
+                } else {
+                    const titel = document.createElementNS(SVG_NS, 'title');
+                    titel.textContent = `${beschriftungenX[i]}: ${wert}`;
+                    rect.append(titel);
+                }
             }
             svg.append(rect);
         });
@@ -6396,6 +6436,13 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     // exakt, diese beiden Eckwerte dienen nur der groben Einordnung
     // "wie hoch ist hoch". aria-hidden: rein visuelle Orientierung,
     // redundant zu optionen.beschriftung und zur Tabelle.
+    // achseVerbergen: die Skala steht dann in der Titelzeile ueber der
+    // Grafik, nicht in einer eigenen Spalte links. Diese Spalte rueckte die
+    // Saeulen um ihre Breite nach rechts - neben einem Kalender, der an der
+    // Bereichskante beginnt, sah das aus wie ein Einzug ohne Grund
+    // (Auftrag: "das Diagramm sollte links-/rechtsbuendig mit dem Kalender
+    // abschliessen"). Die Skala geht dabei NICHT verloren, sie wandert nur:
+    // "eine Einfaerbung ohne Skala ist eine Behauptung" gilt unveraendert.
     const yAchse = document.createElement('div');
     yAchse.className = 'saeulengrafik-y-achse';
     yAchse.setAttribute('aria-hidden', 'true');
@@ -6405,7 +6452,12 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     yUnten.textContent = '0';
     yAchse.append(yOben, yUnten);
 
-    block.append(yAchse, svg);
+    if (achseVerbergen) {
+        block.classList.add('saeulengrafik-block-ohne-achse');
+        block.append(svg);
+    } else {
+        block.append(yAchse, svg);
+    }
 
     if (beschriftungenX && beschriftungenX.length > 0) {
         const xAchse = document.createElement('div');

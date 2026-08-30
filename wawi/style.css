@@ -3951,7 +3951,39 @@ body.maske-wird-gezogen #detailmaske {
 
 /* --rot: derselbe Akzent wie die Sparkline-Markierung und die aktive
    Navigation - "hier hinsehen" (der Spitzentag), nicht "schlecht". */
-.saeulengrafik-saeule-markiert {
+/* ===== DIESELBE FARBTREPPE WIE DER KALENDER (30.08.2026) =====
+   Auftrag, wörtlich: "die Farblogik des Kalenders sollten wir auch für die
+   Grafik übernehmen, also die Sättigung, denn sonst widerspricht sich die
+   Semantik." Genau dieselben fünf Werte wie .monatskalender-stufe-*, damit
+   dunkler in der ganzen Ansicht dasselbe heisst: ein höherer Anteil am
+   Monatshöchstwert. Bewusst dieselben Zahlen und nicht "ungefähr die
+   gleichen" - zwei Treppen, die sich um einen Ton unterscheiden, sähen wie
+   ein Fehler aus.
+   Stufe 0 ist im Kalender die leere Fläche; als Säule wäre sie unsichtbar,
+   deshalb hier der hellste Ton der Treppe - eine Säule der Höhe null ist
+   ohnehin schon nichts, sie braucht keine zweite Verneinung. */
+.saeulengrafik-saeule-stufe-0 { fill: #8c95a8; }
+.saeulengrafik-saeule-stufe-1 { fill: #8c95a8; }
+.saeulengrafik-saeule-stufe-2 { fill: #657089; }
+.saeulengrafik-saeule-stufe-3 { fill: #3d4b6b; }
+.saeulengrafik-saeule-stufe-4 { fill: var(--marine); }
+
+/* Der Höchstwert bleibt hervorgehoben, aber nicht mehr durch eine eigene
+   FÜLLUNG: rot neben einer Sättigungstreppe wäre eine zweite Farbaussage
+   über dieselbe Größe. Eine Kontur ist ein Zeiger, kein Wert - dieselbe
+   Sprache, mit der der Kalender den ausgewählten Tag umrandet. Die Säule
+   behält damit ihren Ton aus der Treppe. */
+[class*="saeulengrafik-saeule-stufe-"].saeulengrafik-saeule-markiert {
+  stroke: var(--rot);
+  stroke-width: 2px;
+}
+
+/* Die rote FUELLUNG gilt nur noch fuer Saeulen OHNE Stufenklasse - also
+   fuer Aufrufer, die keine Farbtreppe mitgeben. Ohne dieses :not() gewinnt
+   sie ueber die Treppe (sie steht spaeter und ist gleich spezifisch), und
+   die hoechste Saeule verloere genau den Ton, der sie als hoechste
+   ausweist. Im Browser gemessen: fill war rgb(240, 0, 56) statt --marine. */
+.saeulengrafik-saeule-markiert:not([class*="saeulengrafik-saeule-stufe-"]) {
   fill: var(--rot);
 }
 
@@ -3971,6 +4003,18 @@ body.maske-wird-gezogen #detailmaske {
   color: var(--text-leise);
   font-variant-numeric: tabular-nums;
   padding: var(--raum-0) 0;
+}
+
+/* Ohne linke Achsenspalte laeuft die Grafik ueber die volle Breite und
+   schliesst bündig mit dem Kalender darüber ab. Die Skala steht dann in
+   der Titelzeile (siehe .monatsdrilldown-grafik-skala). */
+.saeulengrafik-block-ohne-achse {
+  grid-template-columns: 1fr;
+}
+
+.saeulengrafik-block-ohne-achse .saeulengrafik,
+.saeulengrafik-block-ohne-achse .saeulengrafik-x-achse {
+  grid-column: 1;
 }
 
 .saeulengrafik-x-achse {
@@ -4021,8 +4065,29 @@ body.maske-wird-gezogen #detailmaske {
    Diagramm den Umsatz. Der Abstand ist die Ansage, dass hier etwas
    Neues beginnt; --raum-6 ist der grösste Wert der Skala und die einzige
    Stufe, die gegen die Legende darüber noch als Trennung wirkt. */
+.monatsdrilldown-grafik-thema {
+  margin: 0;
+  font: inherit;
+}
+
+/* Die Skala rechts in derselben Zeile: sie gehoert zur Grafik, ist aber
+   Beiwerk zum Thema links - deshalb leiser und mit Ziffern gleicher
+   Breite, damit sie beim Umschalten des Monats nicht springt. */
+.monatsdrilldown-grafik-skala {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
 .monatsdrilldown-grafik-titel {
-  margin: var(--raum-6) 0 var(--raum-2);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--raum-3);
+  /* --raum-6 war zu knapp (im Browser 32px gemessen): der Kalender endet
+     mit seiner Legende, und das Umsatzdiagramm begann so dicht darunter,
+     dass beide als ein Block gelesen wurden. Das Doppelte trennt sie
+     sichtbar, ohne dass die Ansicht auseinanderfaellt. */
+  margin: calc(var(--raum-6) * 2) 0 var(--raum-2);
   /* Gleiche Stufe und gleicher Ton wie die Beschriftung des Kalenders
      (.monatskalender caption): die beiden sind Geschwister und sollen sich
      nicht gegenseitig überstimmen. Nur der Schriftschnitt ist kräftiger -

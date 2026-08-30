@@ -634,9 +634,21 @@ async function monatsdrilldownEinfuegen(monat) {
     // fahrtenstaerksten: sie gehoert zu der Reihe, die gezeichnet wird.
     const umsatzMaxIndizes = tage.map((_, i) => i).filter((i) => umsatzWerte[i] === umsatzMax);
 
-    const grafikTitel = document.createElement('h4');
+    // Titelzeile: links das Thema, rechts die Skala. Die Skala stand bis
+    // hierher in einer eigenen Spalte LINKS der Grafik und schob deren
+    // Saeulen um ihre Breite nach rechts - neben dem Kalender, der an der
+    // Bereichskante beginnt, ein Einzug ohne Grund. Hier oben nennt sie
+    // beide Enden der Achse ("0 bis ..."), die Grafik selbst laeuft dafuer
+    // ueber die volle Breite.
+    const grafikTitel = document.createElement('div');
     grafikTitel.className = 'monatsdrilldown-grafik-titel';
-    grafikTitel.textContent = t('hint.dailyRevenueChartHeading', { monat: monatFormat(monat) });
+    const grafikThema = document.createElement('h4');
+    grafikThema.className = 'monatsdrilldown-grafik-thema';
+    grafikThema.textContent = t('hint.dailyRevenueChartHeading', { monat: monatFormat(monat) });
+    const grafikSkala = document.createElement('span');
+    grafikSkala.className = 'monatsdrilldown-grafik-skala';
+    grafikSkala.textContent = t('hint.chartScale', { von: geldFormat(0), bis: geldFormat(umsatzMax) });
+    grafikTitel.append(grafikThema, grafikSkala);
 
     const grafik = saeulengrafik(umsatzWerte, tage.map((t) => `${t}. ${monatNameVoll}`), {
         beschriftung: t('hint.dailyRevenueChartAria', {
@@ -648,7 +660,17 @@ async function monatsdrilldownEinfuegen(monat) {
         markierIndizes: umsatzMaxIndizes,
         // Euro an der Achse, nicht eine blanke Zahl - die laese sich wie
         // eine Anzahl.
-        achseFormat: (n) => geldFormat(n),
+        // Die Skala steht in der Titelzeile darueber, nicht in einer
+        // eigenen Spalte links - so beginnt die Grafik an derselben Kante
+        // wie der Kalender.
+        achseVerbergen: true,
+        // DIESELBE FARBTREPPE WIE DER KALENDER, mit derselben Formel wie
+        // stufeVonWert() weiter unten - nur bezogen auf den Umsatzhoechst-
+        // wert statt auf den Fahrtenhoechstwert. "Dunkler heisst mehr" gilt
+        // damit in der ganzen Ansicht, jeweils fuer die Groesse, die die
+        // Darstellung selbst zeigt.
+        stufeJeIndex: (i) => (umsatzWerte[i] === 0
+            ? 0 : Math.min(4, Math.ceil((umsatzWerte[i] / (umsatzMax || 1)) * 4))),
         // Hinweis JE SAEULE: derselbe Wortlaut wie auf der Kalenderkachel,
         // er nennt Fahrten UND Umsatz des Tages.
         titelJeIndex: (i) => tagHinweis(i)
