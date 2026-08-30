@@ -691,18 +691,24 @@ async function monatsdrilldownEinfuegen(monat) {
     const kacheln = document.createElement('div');
     kacheln.className = 'monatsdrilldown-kacheln';
     kacheln.append(
+        // {groesse} in den drei Titeln: "Minimum" allein sagt nicht, WOVON.
+        // Seit das Diagramm daneben den Umsatz zeigt und der Kalender die
+        // Fahrten, ist das keine Spitzfindigkeit mehr - dieselbe Kachel
+        // koennte beides meinen. Als Platzhalter statt fest im Text, damit
+        // dieselben drei Titel spaeter auch eine andere Groesse tragen
+        // koennen, ohne dass sechs Sprachdateien angefasst werden muessen.
         baueKachel({
-            titel: t('tile.minimum'),
+            titel: t('tile.minimum', { groesse: t('field.fahrten') }),
             wert: zahlSkaliert(zahlFormat(minimum)),
             hinweis: `${tageListe(minTage)} ${monatNameVoll}`
         }),
         baueKachel({
-            titel: t('tile.maximum'),
+            titel: t('tile.maximum', { groesse: t('field.fahrten') }),
             wert: zahlSkaliert(zahlFormat(maximum)),
             hinweis: `${tageListe(maxTage)} ${monatNameVoll}`
         }),
         baueKachel({
-            titel: t('tile.countPerMonth'),
+            titel: t('tile.countPerMonth', { groesse: t('field.fahrten') }),
             wert: zahlSkaliert(zahlFormat(gesamt)),
             hinweis: t('hint.totalForMonth', { phrase: monatFormat(monat) })
         }),
