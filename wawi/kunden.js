@@ -51,7 +51,8 @@ bereichAnmelden({
     suchePlatzhalterSchluessel: 'nav.kundenSuche',
     // DIESER Bereich sucht SELBST, und als einziger (siehe
     // spaltenkopfSuchtext in rahmen.js): v_wawi_kunde traegt 1014 Zeilen,
-    // geladen sind hoechstens 200 (.limit(200) weiter unten). Eine Suche
+    // geladen sind hoechstens KUNDEN_HOECHSTZAHL Zeilen (siehe die
+    // Konstante weiter unten). Eine Suche
     // ueber die geladenen Zeilen faende hier nur, was zufaellig unter den
     // ersten 200 Nachnamen steht - genau die Luege, die schon der
     // Statusfilter unten vermeidet. Der Suchtext geht deshalb an die
@@ -115,7 +116,7 @@ function suchwert(text) {
 // begreifbar" - woertlich der Auftrag. SERVERSEITIG per .eq() in der
 // Ladeliste unten, aus demselben Grund wie die Suche direkt darueber:
 // v_wawi_kunde traegt 1014 Zeilen, die Arbeitsliste begrenzt sie per
-// .limit(200) auf die ersten 200 nach Nachname - ein Filter, der nur in
+// .limit(KUNDEN_HOECHSTZAHL) auf die ersten Zeilen nach Nachname - ein Filter, der nur in
 // diesen bereits geladenen 200 suchte, zeigte bei "gesperrt" (519 von
 // 1014) einen willkuerlichen Ausschnitt statt der tatsaechlich
 // gesperrten Kunden, abhaengig davon, wie viele "A...-K..."-Nachnamen
@@ -181,6 +182,13 @@ function kundenLetzteAusleiheFormat(zeitstempel, zeile) {
     return zeile.letzte_ausleihe_laeuft ? t('misc.stillRunning', { datum }) : datum;
 }
 
+// Wie viele Kundenzeilen die Liste höchstens lädt. Die Zahl stand bis zum
+// 30.08.2026 an drei Stellen: im .limit(), in zwei Kommentaren und -
+// ausgeschrieben - in sechs Sprachfassungen von msg.customersCapped. Wer
+// sie geändert hätte, hätte die Meldung stillschweigend zur Lüge gemacht.
+// Jetzt gibt es eine Quelle, und die Meldung bekommt den Wert übergeben.
+const KUNDEN_HOECHSTZAHL = 200;
+
 async function kundenAufbauen(suchtext) {
     // ALLERERSTE Anweisung, vor jedem await - siehe Kommentar bei
     // neuerVorgang() in rahmen.js und bei flotteAufbauen() in flotte.js.
@@ -238,7 +246,7 @@ async function kundenAufbauen(suchtext) {
                 // Werte gleichzeitig" (?status=in.(aktiv,gesperrt)) - siehe
                 // Kommentar bei kundenFilterStatus oben.
                 if (kundenFilterStatus.size > 0) abfrage = abfrage.in('status', [...kundenFilterStatus]);
-                return abfrage.order('nachname').limit(200);
+                return abfrage.order('nachname').limit(KUNDEN_HOECHSTZAHL);
             }),
         zaehleZeilen('v_wawi_kunde'),
         zaehleZeilen('v_wawi_kunde', (q) => q.eq('status', 'gesperrt')),
@@ -434,7 +442,7 @@ async function kundenAufbauen(suchtext) {
     ].filter(Boolean).join(', ');
     const zusatz = einschraenkung ? ` (${einschraenkung})` : '';
     meldeVorgang(vorgang, kunden.length === 200
-        ? t('msg.customersCapped', { zusatz })
+        ? t('msg.customersCapped', { zusatz, grenze: zahlFormat(KUNDEN_HOECHSTZAHL) })
         : `${mengeFormat(kunden.length, 'kunde')}${zusatz}`);
 }
 

@@ -202,7 +202,7 @@ async function stationenAufbauen() {
     stationenKundenorteAlle = kundenorte;
     stationenAlle = stationen;
 
-    zeigeKopftafel(vorgang, stationenKopftafel(stationen, auslastung));
+    zeigeKopftafel(vorgang, stationenKopftafel(stationen, auslastung, verkehr));
 
     // KEIN Filter hier (Gestaltungsauftrag, Punkt 2, woertlich): "bei
     // zehn Zeilen braucht es keinen Filter. Bau keinen. Ein
@@ -333,7 +333,42 @@ function stationenStatuszeileText(stationen) {
 // AN IHRER STELLE STEHT JETZT, WAS DIE ZEILEN WIRKLICH UNTERSCHEIDET:
 // die Bewegungen je Stellplatz (siehe unten, Spanne 57,8 bis 117,1,
 // Verhaeltnis 2,0 zu 1) - und weiterhin der Saldo, von -65 bis +122.
-function stationenKopftafel(stationen, auslastung) {
+// Die beiden Zweistundenblöcke, über die der Tagesgang berichtet. Sie
+// stehen hier EINMAL und gehen sowohl in die Rechnung als auch in den
+// Satz - vorher war die Uhrzeit im Übersetzungstext ausgeschrieben und
+// hätte still von der Rechnung abweichen können.
+const TAGESGANG_MORGEN_STUNDE = 6;
+const TAGESGANG_NACHMITTAG_STUNDE = 16;
+const TAGESGANG_BLOCK_STUNDEN = 2;
+
+// Anteil der Werktagsabgänge, der je Station in einen Zweistundenblock
+// fällt - als Spanne über alle Stationen. abgaenge_je_tag statt abgaenge:
+// beide Zähler teilen durch dieselbe Zahl erfasster Tage, der Anteil ist
+// derselbe, und je_tag ist die Größe, die die Sicht ohnehin liefert.
+function tagesgangSpannen(verkehr) {
+    if (!verkehr || verkehr.length === 0) return null;
+    const jeStation = new Map();
+    for (const z of verkehr) {
+        if (z.wochentyp !== 'werktag') continue;
+        let st = jeStation.get(z.station_id);
+        if (!st) { st = { gesamt: 0, morgen: 0, nachmittag: 0 }; jeStation.set(z.station_id, st); }
+        const wert = Number(z.abgaenge_je_tag) || 0;
+        st.gesamt += wert;
+        if (z.zeitfenster_start_stunde === TAGESGANG_MORGEN_STUNDE) st.morgen += wert;
+        if (z.zeitfenster_start_stunde === TAGESGANG_NACHMITTAG_STUNDE) st.nachmittag += wert;
+    }
+    const mitVerkehr = [...jeStation.values()].filter((st) => st.gesamt > 0);
+    if (mitVerkehr.length === 0) return null;
+    const anteil = (feld) => mitVerkehr.map((st) => Math.round((st[feld] / st.gesamt) * 100));
+    const morgen = anteil('morgen');
+    const nachmittag = anteil('nachmittag');
+    return {
+        morgenMin: Math.min(...morgen), morgenMax: Math.max(...morgen),
+        nachmittagMin: Math.min(...nachmittag), nachmittagMax: Math.max(...nachmittag)
+    };
+}
+
+function stationenKopftafel(stationen, auslastung, verkehr) {
     if (!stationen || stationen.length === 0) return null;
 
     const gesamtKapazitaet = stationen.reduce((s, z) => s + z.kapazitaet, 0);
@@ -509,23 +544,39 @@ function stationenKopftafel(stationen, auslastung) {
         // ZWEITENS: der Tagesgang. Er ist als Spalte gestrichen (siehe
         // Kopfkommentar) und steht jetzt als das da, was er ist - eine
         // Eigenschaft des NETZES, in einem Satz, mit den Zahlen, die ihn
-        // belegen. Die Anteile sind fest eingetragen und nicht gerechnet:
-        // sie kaemen aus v_wawi_stationsverkehr_zeitfenster, die diese
-        // Tafel seit dem Wegfall der Spalte nicht mehr laedt - eine
-        // zusaetzliche Ladeanfrage fuer EINEN Fussnotensatz waere teurer
-        // als die Aussage wert ist. Nachgemessen am 28.08.2026 (siehe
-        // Bericht); die Werte gehoeren zum Referenzdatenbestand dieses
-        // Lehrprojekts und aendern sich nicht von selbst.
+        // belegen.
+        //
+        // GERECHNET STATT EINGETRAGEN (30.08.2026). Bis heute standen
+        // hier vier feste Zahlen (21/24/33/38), nachgemessen am
+        // 28.08.2026, mit der Begruendung, eine zusaetzliche Ladeanfrage
+        // fuer einen Fussnotensatz sei teurer als die Aussage wert. Die
+        // Begruendung war schon damals hinfaellig: diese Tafel laedt
+        // v_wawi_stationsverkehr_zeitfenster ohnehin (siehe das
+        // Promise.all in stationenAufbauen()) - die Werte waren also
+        // ohne jede Mehrbelastung zu rechnen.
+        //
+        // Und die Aussage haelt nicht von selbst: der Auftraggeber legt
+        // ueber die Oberflaeche Stationen an und laesst im Lehrbetrieb
+        // Ausleihen entstehen. Ein Satz, der Gemessenes behauptet, muss
+        // mitwandern. Faellt die Sicht aus, entfaellt der Satz, statt
+        // eine alte Messung als heutige auszugeben.
         fussnote: [
             abgaengeAlle.length > 0
                 ? t('board.stationsFootnote', {
                     min: zahlFormat(Math.min(...abgaengeAlle)), max: zahlFormat(Math.max(...abgaengeAlle))
                 })
                 : null,
-            t('board.stationsRhythmFootnote', {
-                morgenMin: zahlFormat(21), morgenMax: zahlFormat(24),
-                nachmittagMin: zahlFormat(33), nachmittagMax: zahlFormat(38)
-            })
+            (() => {
+                const spannen = tagesgangSpannen(verkehr);
+                return spannen ? t('board.stationsRhythmFootnote', {
+                    morgenMin: zahlFormat(spannen.morgenMin), morgenMax: zahlFormat(spannen.morgenMax),
+                    nachmittagMin: zahlFormat(spannen.nachmittagMin), nachmittagMax: zahlFormat(spannen.nachmittagMax),
+                    morgenVon: zahlFormat(TAGESGANG_MORGEN_STUNDE),
+                    morgenBis: zahlFormat(TAGESGANG_MORGEN_STUNDE + TAGESGANG_BLOCK_STUNDEN),
+                    nachmittagVon: zahlFormat(TAGESGANG_NACHMITTAG_STUNDE),
+                    nachmittagBis: zahlFormat(TAGESGANG_NACHMITTAG_STUNDE + TAGESGANG_BLOCK_STUNDEN)
+                }) : null;
+            })()
         ].filter(Boolean).join(' ')
     };
 }
