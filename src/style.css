@@ -3226,8 +3226,10 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
        Schirmen zu einem Streifen zusammenfällt. */
     grid-template-rows: auto auto minmax(120px, 1fr) auto;
     row-gap: 12px;
-    /* 78 statt 100: der feste Kopf misst 74 Punkte. */
-    padding: 78px var(--flucht) 18px;
+    /* Vier Punkte Luft unter dem festen Kopf. Der Wert stand hier als
+       blanke Zahl ("78 statt 100: der feste Kopf misst 74 Punkte") und
+       blieb beim Verkleinern der Leiste am 30.08.2026 stehen. */
+    padding: calc(var(--kopf-hoehe-kompakt) + 4px) var(--flucht) 18px;
   }
 
   /* Kein Wechsel, keine Pillen: ein E-Bike, fest und deckend. */
@@ -3249,9 +3251,21 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      damit die Zeilenhöhe und schiebt das Rad über den Knopf - gemessen:
      170 Punkte in einer 143 Punkte hohen Zeile. Die Proportion des Rades
      wahrt ohnehin background-size: contain. */
+  /* DAS RAD AN DIE KANTE (30.08.2026).
+     Es stand mittig in seinem Band, mit Luft nach beiden Seiten - ein
+     freistehendes Objekt zwischen zwei Textblöcken, das der Auftraggeber
+     zu Recht als "verloren, nicht gut integriert" beschrieb. Auf dem
+     Schreibtisch läuft es über den rechten Rand hinaus und wirkt dadurch
+     verankert; hochkant fehlte genau das.
+     Jetzt bricht es aus der Flucht aus und sitzt rechtsbündig auf der
+     Fusslinie seines Bandes: die Schrift links, das Rad rechts an der
+     Kante, der rote Knopf darunter wieder links - eine Diagonale statt
+     dreier getrennter Streifen. background-size bleibt contain, das Rad
+     wird also nicht angeschnitten. */
   .photo-layer { position: static; inset: auto; width: auto; height: auto;
                  aspect-ratio: auto; grid-area: 3 / 1;
-                 background-size: contain; background-position: center bottom; }
+                 margin-right: calc(-1 * var(--flucht));
+                 background-size: contain; background-position: right bottom; }
   .hero-cta    { position: static; inset: auto; grid-area: 4 / 1; justify-self: start; }
 
   /* Der Zähler stand im Schriftgrad der Schlagzeile. Auf dem
