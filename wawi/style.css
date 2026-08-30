@@ -2592,6 +2592,33 @@ body.maske-wird-gezogen #detailmaske {
    links dafür eine Breite bekommen müssten - ein space-between hätte bei
    fehlender Steuerung (Tafeln ohne Zeitwahl gibt es) nichts zu verteilen
    und den Titel trotzdem gestreckt. */
+/* Titel und sein Umschalter in einer Zeile. Der Knopf klappt GENAU diese
+   Tafel ein - am rechten Rand der Kopfzeile stand er auf einem breiten
+   Bildschirm fast 1900px von seiner Überschrift entfernt und wurde
+   übersehen. Nähe ist hier die ganze Erklärung: was nebeneinander steht,
+   gehört zusammen. */
+.kopftafel-titelzeile {
+  display: flex;
+  align-items: center;
+  gap: var(--raum-3);
+}
+
+/* Bei Enge bricht der TITEL um, nicht der Knopf auf eine eigene Zeile.
+   Mit flex-wrap an der Zeile rutschte der Umschalter bei 430px unter die
+   Überschrift und der Kopf wuchs auf 294px - mehr als vor dem Umbau.
+   min-width:0 hebt das voreingestellte Mindestmass auto des Flex-Elements
+   auf; erst dann darf der Titel schmaler werden als sein längstes Wort
+   verlangt und stattdessen umbrechen. Der Knopf behält seine Breite
+   (flex-shrink:0) - ein zusammengedrücktes Bedienelement wäre der
+   schlechtere Tausch. */
+.kopftafel-titelzeile .kopftafel-titel {
+  min-width: 0;
+}
+
+.kopftafel-titelzeile .kopftafel-umschalter {
+  flex: 0 0 auto;
+}
+
 .kopftafel-steuerung {
   display: flex;
   align-items: center;

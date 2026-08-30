@@ -7160,11 +7160,20 @@ function zeigeKopftafel(kennung, tafel) {
     }
     const kopftexte = document.createElement('div');
     kopftexte.className = 'kopftafel-kopftexte';
+    // Der Titel bekommt eine eigene Zeile, weil der Umschalter dazu gehoert:
+    // er klappt GENAU diese Tafel ein. Am rechten Rand der Kopfzeile stand
+    // er zwischenzeitlich fast 1900px von seiner Ueberschrift entfernt -
+    // "man nimmt ihn nicht mehr wahr" (Auftrag). Ein Bedienelement gehoert
+    // neben das, worauf es wirkt; dieselbe Ueberlegung, die den Klappgriff
+    // der Navigation an ihre Kante gesetzt hat.
+    const titelzeile = document.createElement('div');
+    titelzeile.className = 'kopftafel-titelzeile';
     const titel = document.createElement('h2');
     titel.className = 'kopftafel-titel';
     titel.id = titelId;
     titel.textContent = tafel.titel;
-    kopftexte.append(titel);
+    titelzeile.append(titel);
+    kopftexte.append(titelzeile);
     if (tafel.bezug) {
         const bezug = document.createElement('p');
         bezug.className = 'kopftafel-bezug';
@@ -7222,7 +7231,9 @@ function zeigeKopftafel(kennung, tafel) {
         steuerung.append(wahl);
     }
     kopf.append(kopftexte);
-    kopf.append(steuerung);
+    // Nur wenn sie etwas traegt: ohne Zeitwahl waere es ein leeres Element
+    // mit margin-left:auto, das nichts tut und nichts zeigt.
+    if (tafel.zeitWahl) kopf.append(steuerung);
     // Der Umschalter steht NICHT mehr im Kopf (Gestaltungsauftrag,
     // woertlich: "Es muss mittig am unteren Ende der Kopfleiste sein,
     // damit es wirksam wahrgenommen werden kann" - vorher stand er oben
@@ -7331,7 +7342,7 @@ function zeigeKopftafel(kennung, tafel) {
     // rechts in der Titelzeile, neben der Zeitwahl. Er wird erst hier
     // gebaut, weil er die fertige Tabelle kennen muss (aria-controls) -
     // eingehaengt wird er aber oben, in die bereits bestehende Kopfzeile.
-    steuerung.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
+    titelzeile.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
 }
 
 // ===== DIE QUELLENANGABE, SICHTBAR IN DER OBERFLAECHE =====
