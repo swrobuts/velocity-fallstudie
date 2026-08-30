@@ -532,6 +532,12 @@ async function monatsdrilldownEinfuegen(monat) {
     abschnitt.append(filterZeile, grafikPlatz, kachelPlatz, kalenderPlatz);
 
     function zeichneMonat() {
+    // Eine offene Tagesansicht gehoert zum ALTEN Filter: sie haengt am Ende
+    // der Maske und wird von den Behaeltern hier nicht mit ersetzt. Bliebe
+    // sie stehen, zeigte sie Zeilen eines Radtyps, den der Kalender darueber
+    // gerade nicht mehr zaehlt - dieselbe Sorte Widerspruch, die dieser
+    // Durchgang beseitigt.
+    document.getElementById('tagdrilldown')?.remove();
     // DIE UEBERSCHRIFT FOLGT DEM FILTER. Sie behauptete "gesamt, alle
     // Radtypen und Tarife" - mit gesetztem Filter waere das schlicht
     // falsch, und zwar an der auffaelligsten Stelle der Ansicht. Bei
@@ -889,7 +895,11 @@ async function monatsdrilldownEinfuegen(monat) {
                 tagKnopfAusgewaehlt?.classList.remove('monatskalender-tag-ausgewaehlt');
                 knopf.classList.add('monatskalender-tag-ausgewaehlt');
                 tagKnopfAusgewaehlt = knopf;
-                tagdrilldownEinfuegen(tagIso, wurzel, knopf);
+                // Die aktuelle Auswahl mitgeben - sonst zeigte die
+                // Tagesansicht alle Radtypen, waehrend die Kachel darueber
+                // gefiltert zaehlt.
+                tagdrilldownEinfuegen(tagIso, wurzel, knopf,
+                    radtypen.filter((r) => gewaehlteTypen.has(r.wert)));
             });
 
             td.append(knopf);
@@ -985,7 +995,15 @@ let tagdrilldownZaehler = 0;
 // herkunftsKnopf: der Datum-Knopf, aus dem dieser Aufruf kam - fuer den
 // "Weg zurueck" unten (Fokus zurueck zur Zeile, dieselbe Idee wie
 // maskeSchliessen() in rahmen.js fuer die Detailmaske insgesamt).
-async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
+// typen: die im Radtypfilter gewaehlten Radtypen als [{ wert, text }],
+// leere Liste = alle. Beides wird gebraucht - der Schluessel fuer die
+// Abfrage, der Name fuer die Beschriftung; sie hier gemeinsam
+// durchzureichen erspart der Tagesansicht eine zweite Nachschlagetabelle.
+// Ohne sie zeigte die Tagesansicht IMMER alle Radtypen - die
+// Kalenderkachel nannte dann gefiltert neun Fahrten und die Liste
+// darunter fuenfzehn Zeilen. Zwei Zahlen ueber denselben Tag, die
+// einander widersprechen.
+async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf, typen = []) {
     const vorgang = laufenderVorgang();
     const eigenerMonatsZaehler = drilldownZaehler;   // siehe Kommentar oben
     const eigenerTagZaehler = ++tagdrilldownZaehler;
@@ -997,7 +1015,14 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
 
     const zeilen = await ladeListe('v_wawi_fahrten_je_tag_rad',
         'fahrrad_id, rahmennummer, typ_code, typ, start_station, ziel_station, dauer_minuten, kilometer, ist_geschaetzt, umsatz',
-        (q) => q.eq('tag', tagIso).order('rahmennummer'));
+        (q) => {
+            // In der ABFRAGE einschraenken, nicht erst in der Anzeige: die
+            // Zeilen, die der Filter ohnehin verwirft, muessen gar nicht
+            // erst ueber die Leitung.
+            const abfrage = q.eq('tag', tagIso);
+            return (typen.length > 0 ? abfrage.in('typ_code', typen.map((x) => x.wert)) : abfrage)
+                .order('rahmennummer');
+        });
 
     // Vier unabhaengige Gruende, warum dieses Ergebnis nicht mehr gilt:
     // Bereich/Reiter gewechselt (istAktuellerVorgang), eine andere
@@ -1053,7 +1078,11 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
         // rahmen.js) ist ein gueltiger Klickziel, keine fehlerhafte
         // Eingabe - "keine Fahrten" ist eine gueltige, erwartbare Antwort.
         const leer = document.createElement('p');
-        leer.textContent = t('misc.noBikeRiddenThisDay');
+        // Mit Filter ist "kein Rad gefahren" die falsche Auskunft: gefahren
+        // wurde vielleicht reichlich, nur nicht mit DIESEN Typen.
+        leer.textContent = typen.length > 0
+            ? t('misc.noBikeOfTypeThisDay', { typen: typen.map((x) => x.text).join(', ') })
+            : t('misc.noBikeRiddenThisDay');
         abschnitt.append(leer);
         wurzel.append(abschnitt);
         return;
@@ -1087,9 +1116,18 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
     const tagesumsatz = zeilen.reduce((summe, z) => summe + (Number(z.umsatz) || 0), 0);
     const herkunft = document.createElement('p');
     herkunft.className = 'monatsdrilldown-herkunft';
-    herkunft.textContent = t('misc.bikesOnDateCaption', {
-        datum: tagFormat(tagIso), umsatz: geldFormat(tagesumsatz)
-    });
+    // Mit Filter MUSS die Zeile ihn nennen. Die Tagesansicht haengt am Ende
+    // der Maske, weit unter dem Filterschalter - eine Tabelle, die
+    // stillschweigend nur einen Radtyp zeigt, waere dieselbe Luecke, die
+    // die Arbeitsliste mit ihrer Hinweiszeile ("4 von 8 Zeilen") vermeidet.
+    herkunft.textContent = typen.length > 0
+        ? t('misc.bikesOnDateCaptionFiltered', {
+            datum: tagFormat(tagIso), umsatz: geldFormat(tagesumsatz),
+            typen: typen.map((x) => x.text).join(', ')
+        })
+        : t('misc.bikesOnDateCaption', {
+            datum: tagFormat(tagIso), umsatz: geldFormat(tagesumsatz)
+        });
     abschnitt.append(herkunft);
 
     const tabellenplatz = document.createElement('div');
