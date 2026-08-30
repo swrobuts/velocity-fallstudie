@@ -3220,13 +3220,10 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   .sticky-stage {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    /* Zähler · Schlagzeile · Freiraum · Aufruf.
-       Die dritte Zeile ist seit dem Anschnitt (30.08.2026) leer: das Rad
-       liegt darunter als Schicht und nimmt am Raster nicht mehr teil.
-       Die Zeile bleibt trotzdem stehen - sie schluckt auf 1fr jede
-       Abweichung der Gerätehöhe und hält den roten Knopf unten. Die
-       Untergrenze verhindert, dass Schlagzeile und Knopf auf sehr
-       flachen Schirmen zusammenstossen. */
+    /* Zähler · Schlagzeile · Rad · Aufruf.
+       Das Rad steht auf 1fr und schluckt damit jede Abweichung der
+       Gerätehöhe. Die Untergrenze verhindert, dass es auf sehr flachen
+       Schirmen zu einem Streifen zusammenfällt. */
     grid-template-rows: auto auto minmax(120px, 1fr) auto;
     row-gap: 12px;
     /* Vier Punkte Luft unter dem festen Kopf. Der Wert stand hier als
@@ -3242,9 +3239,9 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   .photo-ebike { opacity: 1; transform: none; }
   .claim-ebike { opacity: 1; transform: none; }
 
-  /* Nichts liegt hier auf dem Rad - es bleibt die Fusslinie, die den
-     Übergang zum nächsten Abschnitt trägt. Wo das Rad angeschnitten
-     wird, kommt ein Schleier dazu; siehe den Block darunter. */
+  /* Nichts liegt mehr auf dem Rad - der Schleier entfällt. Seine
+     Fußlinie bleibt, weil sie den Übergang zum nächsten Abschnitt
+     trägt. */
   .photo-shade { background: linear-gradient(0deg, var(--linie-still) 0%, transparent 22%); }
 
   .top-meta    { position: static; inset: auto; transform: none; grid-area: 1 / 1; }
@@ -3254,20 +3251,9 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      damit die Zeilenhöhe und schiebt das Rad über den Knopf - gemessen:
      170 Punkte in einer 143 Punkte hohen Zeile. Die Proportion des Rades
      wahrt ohnehin background-size: contain. */
-  /* Das Rad steht mittig auf der Fusslinie seines Bandes.
-     Am 30.08.2026 stand es hier kurz rechtsbündig und über die Flucht
-     hinaus - das war für das Foldable gedacht, traf aber auch die
-     Mobilansicht, und dort ist die mittige Lage die bessere: auf einer
-     schmalen Spalte liest sich das Rad als eigenes Bild unter der
-     Schlagzeile, nicht als angeschnittener Rand. Zurückgestellt auf
-     Zuruf des Auftraggebers.
-
-     Der Anschnitt für breitere Schirme steht in einem eigenen Block
-     darunter und lässt diese Regel unangetastet. */
   .photo-layer { position: static; inset: auto; width: auto; height: auto;
                  aspect-ratio: auto; grid-area: 3 / 1;
                  background-size: contain; background-position: center bottom; }
-
   .hero-cta    { position: static; inset: auto; grid-area: 4 / 1; justify-self: start; }
 
   /* Der Zähler stand im Schriftgrad der Schlagzeile. Auf dem
@@ -3426,83 +3412,7 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
    Hochformat bleibt gestapelt. Auch ein quer gedrehtes Telefon fällt
    hierher, und das ist richtig: es hat dasselbe Problem.
    ==================================================================== */
-/* ====================================================================
-   TEXT LINKS, RAD RECHTS - ABER NUR AUF WIRKLICH FLACHEN SCHIRMEN
-
-   min-aspect-ratio kam am 30.08.2026 dazu. Vorher genügte "höchstens
-   720 Punkte hoch", und das traf auch fast quadratische Fenster - ein
-   aufgeklapptes Foldable hochkant misst rund 713 mal 700. Dort zerfällt
-   die Bühne in eine 342 Punkte breite Textspalte und eine 326 Punkte
-   breite Radspalte, die 586 Punkte hoch ist. Das Rad ist von der Breite
-   begrenzt und füllt davon 205: 381 Punkte leer, das Rad schwebt mittig
-   darin. Der Auftraggeber beschrieb es als "verloren, nicht gut
-   integriert", und meine ersten beiden Anläufe gingen daneben, weil ich
-   sie in den gestapelten Block schrieb - den sein Gerät gar nicht
-   erreicht.
-
-   Zwei Spalten lohnen erst, wenn die Breite die Höhe deutlich übersteigt.
-   5/4 trennt die Fälle sauber: ein Tablet quer (880 mal 500, Verhältnis
-   1,76) bleibt zweispaltig und unverändert; ein Foldable hochkant (713
-   mal 700, Verhältnis 1,02) fällt in den gestapelten Aufbau mit dem
-   angeschnittenen Rad, wo es 434 statt 205 Punkte hoch steht.
-   ==================================================================== */
-/* ====================================================================
-   DAS ANGESCHNITTENE RAD - ERST AB TABLETBREITE (30.08.2026)
-
-   Der Anschnitt stand zuerst im kompakten Block darüber. Der gilt aber
-   auch für Telefone, und dort war er falsch: bei 430 Punkten Breite lief
-   das Rad links UND rechts aus dem Bild und der rote Knopf lag mitten
-   darauf. Der Auftraggeber sah es auf seinem Gerät sofort - "du hast die
-   Mobilansicht beschnitten". Deshalb dieselbe Untergrenze wie beim
-   zweispaltigen Aufbau: 560 Punkte. Darunter bleibt es bei contain.
-
-   Die Bedingung ist doppelt geschrieben, weil die Abfrage darüber ein
-   ODER ist (schmal ODER flach) und sich ein und nicht über ein Komma
-   hinweg anhängen lässt.
-
-   Warum nicht einfach background-size: cover - gemessen bei 713x775 ist
-   das Rasterband 3,07:1, das Bild 1,59:1. cover schneidet dort nicht
-   seitlich, sondern oben und unten: 208 von 430 Punkten, also 48 Prozent
-   der Bildhöhe. Sattel, Lenker und der halbe Rahmen waren weg. Ein Rad
-   kann erst seitlich auslaufen, wenn es HÖHER wird als sein Band; es muss
-   sich die Höhe also mit der Schrift teilen. Deshalb verlässt es das
-   Raster und liegt als Schicht auf der Bühne.
-
-   grid-area muss dabei ausdrücklich auf auto. Ein absolut gesetztes
-   Rasterkind mit fester Rasterzelle bezieht seine Prozente auf DIESE
-   ZELLE, nicht auf den Behälter - gemessen: 62 Prozent ergaben 192 statt
-   481 Punkte, und das Rad blieb klein.
-
-   Zur Höhe: 62 Prozent der Bühne füllt die Fläche und lässt die
-   Schlagzeile noch über dem Rad stehen; bei 72 Prozent verschwand
-   "Rückenwind." im roten Rahmen. 74vw ist die zweite Schranke für hohe,
-   schmale Fenster und begrenzt den Anschnitt auf rund ein Fünftel der
-   Bildbreite.
-   ==================================================================== */
-@media (min-width: 560px) and (max-width: 900px),
-       (min-width: 560px) and (max-aspect-ratio: 6/5) {
-  .photo-layer { position: absolute; grid-area: auto; margin: 0;
-                 left: 0; right: 0; top: auto; bottom: 0;
-                 width: auto; height: min(62%, 74vw); aspect-ratio: auto;
-                 background-size: auto 100%;
-                 background-position: right bottom;
-                 background-repeat: no-repeat; }
-
-  /* Der Schleier hängt an der Bühne, nicht am Rad. Am Rad gemessen
-     bleicht er dessen obere Kante immer - auch dort, wo das Rad die
-     Schrift gar nicht erreicht. An der Bühne gemessen deckt er genau die
-     Textzone: undurchsichtig bis 36 Prozent, klar ab 66 Prozent. Er
-     liegt ohne Zutun über dem Rad, denn .photo-shade steht auf z-index
-     -3 und das Rad auf -5. Die Fusslinie bleibt darunter stehen. */
-  .photo-shade {
-    background:
-      linear-gradient(180deg, var(--paper) 0%, var(--paper) 36%, transparent 66%),
-      linear-gradient(0deg, var(--linie-still) 0%, transparent 22%);
-  }
-}
-
-@media (max-width: 900px) and (min-width: 560px) and (max-height: 720px)
-       and (min-aspect-ratio: 5/4) {
+@media (max-width: 900px) and (min-width: 560px) and (max-height: 720px) {
   /* Die Schlagzeile stand auf dem Mindestwert 52 px, weil der
      vw-Anteil bei dieser Breite darunter liegt. Für eine halbe Spalte
      ist das zu groß - 44 lässt dieselben vier Zeilen zu, spart aber
@@ -3560,26 +3470,11 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   .meta-lang { display: none; }
   .meta-kurz { display: inline; }
 
-  /* Ebenfalls zurückgenommen: der Schleier über der Textzone. Er deckt
-     die Schlagzeile dort, wo sie über dem Rad liegt. Hier liegt sie
-     daneben, und der Schleier würde nur die obere Hälfte des Rades
-     ausbleichen. Es bleibt die Fusslinie. */
-  .photo-shade { background: linear-gradient(0deg, var(--linie-still) 0%, transparent 22%); }
-
   /* Das Rad steht in der rechten Spalte über die volle Höhe und wird
      mittig eingepasst - so ist es hier größer als in jeder gestapelten
      Anordnung, die dieselbe Fläche hätte. */
   .photo-layer {
     grid-area: 1 / 2 / -1 / 3;
-    /* ZURÜCKGENOMMEN (30.08.2026): Der Anschnitt weiter oben setzt das
-       Rad absolut auf die Bühne und lässt seine Höhe die Größe treiben.
-       Das gilt für das Hochformat, wo das Rad UNTER der Schrift liegt.
-       Hier steht es NEBEN ihr, in einer eigenen Spalte - da braucht es
-       weder absolute Lage noch Anschnitt. Ohne diese Zeilen wäre es
-       hier absolut gesetzt, 277 statt 464 Punkte hoch, und säße in der
-       Ecke seiner Zelle. */
-    position: static; inset: auto; width: auto; height: auto;
-    background-size: contain;
     /* Das Rad war von der BREITE begrenzt, nicht von der Höhe: 308 mal
        195 in einem 308 mal 464 hohen Kasten, also 135 Punkte leer
        darunter. Mehr Höhe hätte nichts geändert - es braucht Breite.
