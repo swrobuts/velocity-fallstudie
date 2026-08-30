@@ -3541,27 +3541,43 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      Damit bleiben drei Zeilen statt vier: Schlagzeile und Zähler
      nebeneinander, darunter links der Knopf und rechts das Rad, das den
      Rest der Höhe nimmt. Keine Fläche ohne Aufgabe. */
-  /* Und der Knopf wandert nach rechts in die Mitte (30.08.2026).
-     Vorschlag des Auftraggebers, nachdem drei Anläufe an der Größe des
-     Rades gescheitert waren: "wir könnten jetzt das Rad unter den
-     Herotext platzieren und stattdessen den roten Button in dem rechten,
-     mittleren Bereich. Weil sonst bekommen wir das nie zusammen."
+  /* DER KNOPF NEBEN DEN HERO, DAS RAD ÜBER DIE VOLLE BREITE (30.08.2026).
+     Vorgabe des Auftraggebers: "das Rad unten passt, es muss aber
+     breiter skaliert werden; der rote Button sollte nicht direkt rechts
+     neben dem Rad stehen, sondern neben dem Hero, also auch oberhalb
+     des Rades."
 
-     Er trifft den Kern. Das Rad war in seiner schmalen Spalte von der
-     BREITE begrenzt; unter der Schlagzeile bekommt es deren Spaltenmass
-     und wird von der Höhe begrenzt, was hier mehr hergibt: gemessen bei
-     707 mal 604 sind das 355 mal 223 statt 323 mal 203 Punkte. Der Knopf
-     hinterlässt links keine Lücke, weil er die Fläche füllt, die vorher
-     ohne Aufgabe war.
+     Zwei Spalten oben, eine Fläche unten: links die Schlagzeile, rechts
+     Zähler und Knopf übereinander, darunter über die volle Breite das
+     Rad.
 
-     Zwei Zeilen also: oben Schlagzeile und Zähler, unten Rad und Knopf.
-     Vier Felder, vier Bewohner. */
-  .sticky-stage { grid-template-rows: auto 1fr; }
-  .claim       { grid-area: 1 / 1; }
-  .top-meta    { grid-area: 1 / 2; justify-self: end; }
-  .photo-layer { grid-area: 2 / 1; }
-  .hero-cta    { grid-area: 2 / 2; align-self: center; justify-self: center;
-                 margin-top: 0; }
+     Der Haken beim Breiterskalieren: Das Rad ist hier nicht mehr von der
+     Breite begrenzt, sondern von der HÖHE. Sein Kasten ist 679 Punkte
+     breit, das Bild darin war nur 355 - alles Weitere muss also aus der
+     Höhe kommen, und die hat nur zwei Quellen: das Polster und den
+     Schriftgrad. Durchgemessen bei 707 mal 604 (Polster oben/unten,
+     Schriftgrad -> Radbreite):
+
+       96/18, 44 -> 355     70/18, 40 -> 427     66/18, 36 -> 464
+       66/18, 32 -> 494     80/18, 38 -> 426     96/18, 34 -> 431
+       80/4,  38 -> 449     84/4,  36 -> 457
+
+     Gewählt ist 80/4 bei 38 Punkten: ein Viertel mehr Radbreite als
+     vorher, und die Schlagzeile behält ihre Wucht. Die 494 Punkte bei
+     Schriftgrad 32 wären mehr Rad, aber der Blickfang lebt vom Satz -
+     dafür ist der Preis zu hoch. Unten bleiben vier Punkte, damit das
+     Rad auf der Abschnittskante aufsetzt statt darüber zu schweben.
+
+     Das obere Polster stand auf 96, weil der Zähler sonst unter dem Kopf
+     klebte. Er steht jetzt rechts; links bleibt nur die Kopfzeile, und
+     der genügen 80. */
+  :root { --hero-font: min(38px, calc((100vw - 2 * var(--rand)) / 11)); }
+  .sticky-stage { grid-template-rows: auto auto 1fr;
+                  padding-top: 80px; padding-bottom: 4px; }
+  .claim       { grid-area: 1 / 1 / 3 / 2; }
+  .top-meta    { grid-area: 1 / 2; justify-self: end; align-self: start; }
+  .hero-cta    { grid-area: 2 / 2; justify-self: end; align-self: start; }
+  .photo-layer { grid-area: 3 / 1 / -1 / -1; }
   .live-zahl   { align-items: flex-end; }
 }
 
