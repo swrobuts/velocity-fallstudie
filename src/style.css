@@ -3254,17 +3254,19 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      damit die Zeilenhöhe und schiebt das Rad über den Knopf - gemessen:
      170 Punkte in einer 143 Punkte hohen Zeile. Die Proportion des Rades
      wahrt ohnehin background-size: contain. */
-  /* DAS RAD AN DER KANTE (30.08.2026).
-     Es stand mittig in seinem Band, mit Luft nach beiden Seiten - ein
-     freistehendes Objekt zwischen zwei Textblöcken. Jetzt bricht es aus
-     der Flucht aus und sitzt rechtsbündig auf der Fusslinie: Schrift
-     links, Rad rechts an der Kante, roter Knopf darunter wieder links.
-     Es bleibt bei contain, das Rad wird hier also nicht angeschnitten -
-     der Anschnitt gilt erst ab Tabletbreite, siehe den Block darunter. */
+  /* Das Rad steht mittig auf der Fusslinie seines Bandes.
+     Am 30.08.2026 stand es hier kurz rechtsbündig und über die Flucht
+     hinaus - das war für das Foldable gedacht, traf aber auch die
+     Mobilansicht, und dort ist die mittige Lage die bessere: auf einer
+     schmalen Spalte liest sich das Rad als eigenes Bild unter der
+     Schlagzeile, nicht als angeschnittener Rand. Zurückgestellt auf
+     Zuruf des Auftraggebers.
+
+     Der Anschnitt für breitere Schirme steht in einem eigenen Block
+     darunter und lässt diese Regel unangetastet. */
   .photo-layer { position: static; inset: auto; width: auto; height: auto;
                  aspect-ratio: auto; grid-area: 3 / 1;
-                 margin-right: calc(-1 * var(--flucht));
-                 background-size: contain; background-position: right bottom; }
+                 background-size: contain; background-position: center bottom; }
 
   .hero-cta    { position: static; inset: auto; grid-area: 4 / 1; justify-self: start; }
 
