@@ -3001,9 +3001,10 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .rechner-spalte:first-child { border-top: 0; }
 
   .rad-kacheln { grid-template-columns: 1fr 1fr; }
+  /* Zwei Spalten statt vier - und ohne senkrechte Linie. Warum sie hier
+     entfaellt, steht beim Linienblock weiter unten. */
   .stat-grid { grid-template-columns: 1fr 1fr; }
-  .stat:nth-child(odd) { border-left: 0; }
-  .stat:nth-child(n+3) { border-top: 1px solid var(--auf-navy-linie); }
+  .stat { border-left: 0; }
   /* GESTAPELT ZEIGT DER CHEVRON NACH UNTEN.
      Nebeneinander weist er nach rechts, untereinander nach unten - der
      Weg laeuft dann eben so. Ihn wegzulassen hiesse, auf dem Telefon
@@ -3273,7 +3274,13 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      zwei nebeneinanderstehenden Spalten übernimmt column-gap - das ist
      ohnehin die richtige Stelle dafür. */
   .stat { padding-inline: 0; }
-  .stat-grid { column-gap: var(--af-s); }
+  /* Der Abstand zwischen den Spalten sitzt jetzt IM rechten Feld, nicht
+     als column-gap: die Luecke zwischen den Spalten wuerde sonst die
+     Grundfarbe des Rasters zeigen - und genau die traegt unten die
+     waagerechte Linie. Ein Spaltenabstand haette daraus eine senkrechte
+     Linie gemacht, also das, was hier weg soll. */
+  .stat-grid { column-gap: 0; }
+  .stat:nth-child(even) { padding-left: var(--af-s); }
 
   /* WENIGER LINIEN, MEHR LUFT (29.08.2026)
      Gemessen waren es sechs Haarlinien auf 220 Punkten Höhe: die
@@ -3293,8 +3300,26 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      vertikales Polster. Mit 58 Punkten atmen dieselben Linien. */
   .stat-grid { border-top: 0; }
   .stat { border-top: 0; padding-block: var(--a3); }
-  /* Zwei Spalten: EINE Linie ueber der zweiten Zeile, nicht zwei. */
-  .stat:nth-child(n+3) { border-top: 1px solid var(--auf-navy-linie); }
+
+  /* NUR WAAGERECHTE LINIEN (30.08.2026).
+     Auf dem Schreibtisch stehen die vier Kennzahlen in EINER Reihe; dort
+     trennt die senkrechte Haarlinie Angabe von Angabe und ist die einzige
+     Linie, die es braucht. Sobald daraus zwei Zeilen zu zwei Spalten
+     werden, trennt sie nichts mehr, sondern zerteilt eine Flaeche: die
+     waagerechte Linie zwischen den Zeilen brach an ihr auf, und das Bild
+     zerfiel in vier Kaestchen. Der Auftraggeber am Foldable: "hier
+     genuegen die horizontalen Linien, vertikale stoeren eher".
+
+     Die Linie zwischen den Zeilen sass bisher an den Zellen
+     (border-top auf der zweiten Zeile) und riss deshalb an der
+     Spaltenluecke ab. Jetzt ist sie eine Rasterluecke von einem Punkt
+     ueber der Grundfarbe des Rasters; die Zellen decken alles Uebrige
+     mit dem Abschnittsgrund ab. Dadurch laeuft sie ueber beide Spalten
+     durch. Das Polster am Raster muss dafuer weichen - es liegt
+     ausserhalb der Zellen und haette die Grundfarbe als Band gezeigt;
+     die Luft steht ohnehin schon als padding-block an den Zellen. */
+  .stat-grid { row-gap: 1px; padding-block: 0; background: var(--auf-navy-linie); }
+  .stat { background: var(--navy); }
 }
 
 /* --------------------------------------------------------------------
