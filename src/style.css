@@ -404,7 +404,7 @@
   --gasse: clamp(32px, 3.4vw, 64px);
   /* Die Linie, an der die Buehne oben beginnt. Links die Zeile, rechts
      die Zahl - beide fangen hier an. */
-  --kopflinie: clamp(132px, 16vh, 220px);
+  --kopflinie: clamp(132px, 16svh, 220px);
   /* Der Abstand zwischen der kleinen Zeile und dem, was darunter steht.
      Links die Schlagzeile, rechts die Zahl - beide muessen auf
      derselben Oberkante sitzen, also braucht es EINEN Wert. Mit 28
@@ -416,7 +416,17 @@
   /* Wie hoch das Rad stehen soll, und das Seitenverhaeltnis des
      laengsten der drei (Lastenrad, 1622 zu 800 Punkte - siehe
      tools/raeder_weissgrund.py). Beides zusammen bestimmt den Rahmen. */
-  --rad-hoehe: 86vh;
+  /* svh aus demselben Grund wie bei .sticky-stage weiter unten: der
+     Rahmen des Rades wird aus dieser Höhe berechnet, und mit vh war er
+     höher als der sichtbare Bereich. */
+  /* EINE QUELLE FÜR DIE KOPFHÖHE. Sie stand an drei Stellen als blanke
+     Zahl (Leiste, Menü darunter, Rechtsseite) und lief beim Verkleinern
+     auseinander. --kopf-hoehe-kompakt ist der Wert unterhalb von 900px
+     bzw. bei flachem Seitenverhältnis; die Medienabfragen weiter unten
+     setzen beide gemeinsam. */
+  --kopf-hoehe: 72px;
+  --kopf-hoehe-kompakt: 62px;
+  --rad-hoehe: 86svh;
   --rad-verhaeltnis: 2.1;
   /* Die Breite des Rahmens - auch der Scrollhinweis rechnet damit, um
      unter dem Motor zu stehen. Das Prozent loest sich gegen den
@@ -580,7 +590,7 @@ footer :focus-visible, .product-tabs :focus-visible,
      Bedienelemente. Die Höhe kam nicht vom Polster, sondern von der 57px
      hohen Wortmarke (siehe .brand unten) - dort sitzt die eigentliche
      Änderung, dieser Wert folgt ihr nur. */
-  min-height: 72px;
+  min-height: var(--kopf-hoehe);
   padding: 0 var(--flucht);
   color: var(--navy);
   background: var(--glas-papier);
@@ -750,7 +760,11 @@ footer :focus-visible, .product-tabs :focus-visible,
 
 .menue {
   position: fixed; z-index: 29;
-  top: 74px; left: 0; right: 0;
+  /* Folgt der Kopfhöhe des kompakten Zustands (30.08.2026: 74 -> 62). Der
+     Wert stand hier als blanke Zahl und blieb beim Verkleinern der Leiste
+     stehen - das Menü hing danach 12px unter ihr in der Luft. Genau die
+     Sorte Doppelung, die eine Variable verhindert. */
+  top: var(--kopf-hoehe-kompakt); left: 0; right: 0;
   display: flex; flex-direction: column;
   padding: var(--a2) var(--rand) var(--a5);
   background: var(--glas-papier);
@@ -798,7 +812,14 @@ footer :focus-visible, .product-tabs :focus-visible,
 .sticky-stage {
   position: sticky;
   top: 0;
-  height: 100vh;
+  /* svh, nicht vh (30.08.2026). vh meint die GROSSE Ansichtshöhe - die
+     ohne Browserleisten. Auf einem Tablet mit sichtbarer Adressleiste ist
+     der tatsächlich sichtbare Bereich kleiner; die Bühne wurde damit für
+     eine Höhe berechnet, die es nicht gibt, und lief unten heraus. Das
+     Rad wurde angeschnitten und der Scrollhinweis darunter lag unter der
+     Kante - der Auftraggeber musste erst blind nach unten scrollen, um zu
+     merken, dass es dort weitergeht. */
+  height: 100svh;
   min-height: 650px;
   overflow: hidden;
   isolation: isolate;
@@ -1093,7 +1114,7 @@ footer :focus-visible, .product-tabs :focus-visible,
      die Auswahlkarte vierunddreissig Punkte unter sie - zwei Auflagen,
      die einander ueberdecken, und keine davon absichtlich. */
   right: calc(var(--flucht) + min(410px, 32vw) + clamp(24px, 2.2vw, 44px));
-  bottom: clamp(72px, 9vh, 120px);
+  bottom: clamp(72px, 9svh, 120px);
   z-index: 4;
   display: grid;
   /* Die zweite Spalte waechst NICHT mit: auf breiten Schirmen zog sich
@@ -1164,7 +1185,7 @@ footer :focus-visible, .product-tabs :focus-visible,
   /* Dieselbe Unterkante wie Pille und Auswahlkarte. Vorher standen die
      drei Auflagen auf drei verschiedenen Linien - neun, elf und keine
      Punkte auseinander. Das sieht man nicht einzeln, aber zusammen. */
-  bottom: clamp(72px, 9vh, 120px);
+  bottom: clamp(72px, 9svh, 120px);
   z-index: 6;
   /* 410 waren zu knapp: "Bereit, wenn du es bist." brach in zwei
      Zeilen, und die Karte stand hoeher als noetig neben dem Rad. */
@@ -2732,7 +2753,10 @@ footer a:hover { color: #fff; text-decoration: underline; }
    Standortdaten und Zahlung ist das kein Schoenheitsfehler. */
 
 .seite-recht { background: #fff; }
-.recht { padding: calc(92px + var(--luft)) 0 var(--luft); }
+/* Der Abstand hält die Rechtsseite unter der festen Kopfleiste frei und
+   trug deren alte Höhe als blanke Zahl. Jetzt über die Variable - sonst
+   klafft hier bei jeder Änderung der Leiste wieder eine Lücke. */
+.recht { padding: calc(var(--kopf-hoehe) + var(--luft)) 0 var(--luft); }
 .recht-warnung {
   margin-bottom: var(--af-l);
   padding: var(--a4) var(--a5);
@@ -2933,7 +2957,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .hero-cta:hover { background: var(--red-tief); }
   .hero-cta.ist-weg { opacity: 0; pointer-events: none; transform: translateY(10px); }
   .hero-cta { transition: opacity var(--zeit-lang) ease, transform var(--zeit-lang) ease; }
-  .site-header { grid-template-columns: 1fr auto; min-height: 62px; }
+  .site-header { grid-template-columns: 1fr auto; min-height: var(--kopf-hoehe-kompakt); }
+  :root { --kopf-hoehe: var(--kopf-hoehe-kompakt); }
   .site-nav { display: none; }
   /* Auf dem Telefon steht der Zaehler oben links fuer sich; die
      Kopplung an die Schlagzeile gilt dort nicht. */
@@ -2949,7 +2974,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
      dann liegt die Schlagzeile auf der Zahl. Am 28.08.2026 bei 375x600
      gemessen: 18px Ueberdeckung, beide voll sichtbar. Betroffen war
      jedes Telefon mit eingeblendeter Adressleiste. */
-  .claim { top: max(27vh, 196px); bottom: auto; width: calc(100% - 2 * var(--flucht)); }
+  .claim { top: max(27svh, 196px); bottom: auto; width: calc(100% - 2 * var(--flucht)); }
   .claim h1 { font-size: var(--hero-font); max-width: 100%; }
   /* Das City-Bike stand in kleinerer Schrift, weil sein Satz der laengste
    ist und in der schmalen Spalte sonst vierzeilig wurde. Mit der
@@ -3028,8 +3053,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .meta-kurz { display: inline; }
   .karte-knoepfe { right: 12px; top: 12px; flex-direction: column; }
   .recht-block h2 { font-size: var(--grad-kopf-m); }
-  .claim { top: max(25vh, 196px); }
-  .claim-city { top: max(29vh, 208px); }
+  .claim { top: max(25svh, 196px); }
+  .claim-city { top: max(29svh, 208px); }
   .choice-panel { bottom: 34px; }
   .product-tab { padding: 0 var(--a3); }
   .rad-kacheln { grid-template-columns: 1fr; }
@@ -3045,7 +3070,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .scroll-story { height: 100vh; min-height: 720px; }
+  .scroll-story { height: 100svh; min-height: 720px; }
   .photo-city, .photo-cargo, .claim-city, .claim-cargo, .final-card { display: none; }
   .photo-ebike { opacity: 1; transform: none; }
   .scroll-hint span { animation: none; transform: rotate(45deg); }
@@ -3483,6 +3508,7 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      hohen Schirms, nur für Logo und zwei Knöpfe. Hier 56; damit steht
      der Zähler wieder unter ihm statt darunter zu verschwinden. */
   .site-header { min-height: 52px; }
+  :root { --kopf-hoehe: 52px; --kopf-hoehe-kompakt: 52px; }
 
   .scroll-story { min-height: 0; }
   .sticky-stage {
