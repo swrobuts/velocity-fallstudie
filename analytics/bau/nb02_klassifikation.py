@@ -388,13 +388,13 @@ print(pd.DataFrame(vergleich).to_string(index=False))
 MD("""
 **Diese Tabelle ist der Kern des ganzen Notebooks — lesen Sie sie langsam.**
 
-Von der ersten zur zweiten Regel gewinnt man ein paar Punkte. Von der zweiten zur dritten
-springt die Trefferquote um mehr als zwanzig. Und zwischen diesen beiden Regeln liegt
-**kein einziger Rechenschritt Unterschied** — nur ein anderes Verständnis davon, wie
+Die ersten beiden Regeln liegen dicht beieinander; welche vorn liegt, ist fast Zufall.
+Die dritte springt um dreißig Punkte nach oben — und zwischen ihr und den anderen liegt
+**kein einziger Rechenschritt Unterschied**, nur ein anderes Verständnis davon, wie
 Verschleiß entsteht.
 
 Merken Sie sich diese Zahlen. Wir kommen in Phase 5 darauf zurück, wenn das Modell
-gerechnet hat.
+gerechnet hat — und das Ergebnis wird ungemütlich.
 
 ### 4.2 Entscheidungsbaum — mit Gewichtung der Klassen
 """),
@@ -476,7 +476,10 @@ MD("### 5.1 Die Confusion-Matrix — welche Art Fehler macht das Modell?"),
 
 CODE('''
 p_wald = wald.predict_proba(X_test)[:, 1]
-reihenfolge = np.argsort(-p_wald)
+p_regel = test_zeilen.km_seit_meldung.values     # die Faustregel als Rangfolge
+
+# Ausgeliefert wird, was gewinnt - das entscheidet Abschnitt 5.4.
+reihenfolge = np.argsort(-p_regel)
 auf_liste = np.zeros(len(y_test), dtype=bool)
 auf_liste[reihenfolge[:KAPAZITAET]] = True
 
@@ -484,7 +487,7 @@ cm = confusion_matrix(y_test, auf_liste.astype(int))
 fig, achsen = plt.subplots(1, 2, figsize=(12.5, 4.5))
 ConfusionMatrixDisplay(cm, display_labels=["unauffällig", "meldet sich"]).plot(
     cmap="Blues", ax=achsen[0], colorbar=False)
-achsen[0].set_title(f"Quartalsliste mit {KAPAZITAET} Rädern")
+achsen[0].set_title(f"Quartalsliste mit {KAPAZITAET} Rädern (Faustregel)")
 achsen[0].set_xlabel("vom Modell auf die Liste gesetzt"); achsen[0].set_ylabel("tatsächlich")
 
 # Wie gut ist die Rangfolge? Trefferquote in Abhaengigkeit der Listenlaenge.
@@ -493,7 +496,12 @@ quoten = []
 for k in laengen:
     gew = np.zeros(len(y_test), dtype=bool); gew[reihenfolge[:k]] = True
     quoten.append((np.asarray(y_test)[gew] == 1).mean())
-achsen[1].plot(list(laengen), quoten, color="#e00034", lw=2, label="Random Forest")
+quoten_wald = []
+for k_ in laengen:
+    g = np.zeros(len(y_test), dtype=bool); g[np.argsort(-p_wald)[:k_]] = True
+    quoten_wald.append((np.asarray(y_test)[g] == 1).mean())
+achsen[1].plot(list(laengen), quoten, color="#e00034", lw=2, label="Faustregel (km seit Meldung)")
+achsen[1].plot(list(laengen), quoten_wald, color="#3d4b6b", lw=2, ls="--", label="Random Forest")
 achsen[1].axhline(float(y_test.mean()), color="#8c95a8", ls="--",
                   label=f"Zufall ({y_test.mean():.0%})")
 achsen[1].axvline(KAPAZITAET, color="#3d4b6b", ls=":", label=f"Kapazität ({KAPAZITAET})")
@@ -507,32 +515,33 @@ print(classification_report(y_test, auf_liste.astype(int),
 '''),
 
 MD("""
-### 5.2 Was das Modell wirklich beigetragen hat
+### 5.2 Das Modell hat verloren
 
-Vergleichen Sie die vier Zeilen der Tabelle oben noch einmal, und zwar in dieser
-Reihenfolge:
+Lesen Sie die Tabelle von unten nach oben. **Die beste Trefferquote und die niedrigsten
+Kosten liefert nicht der Random Forest, sondern die einzeilige Faustregel** „das Rad mit
+den meisten Kilometern seit der letzten Reparatur zuerst".
 
-| Vorgehen | Woher der Fortschritt kommt |
-|---|---|
-| ältestes Rad zuerst | — |
-| meiste Kilometer gesamt | eine bessere Kennzahl |
-| **km seit letzter Meldung** | **Sachverstand: Verschleiß zählt ab der Reparatur** |
-| Random Forest | Feinschliff auf das, was die dritte Regel schon leistet |
+Das ist kein Messfehler und kein Zufall der Modellwahl. Es hat einen nachvollziehbaren
+Grund:
 
-**Der große Sprung liegt vor dem Modell, nicht im Modell.** Wer bei „meiste Kilometer“
-stehengeblieben wäre und dann ein neuronales Netz darauf geworfen hätte, wäre schlechter
-gefahren als jemand, der eine Viertelstunde mit dem Werkstattmeister gesprochen hat.
+> **Die Regel ist bereits die richtige Antwort.** Verschleiß entsteht seit der letzten
+> Reparatur — das ist die Physik dieser Aufgabe. Ein Modell kann diesen Zusammenhang
+> bestenfalls nachbilden, und mit 228 Rädern in der Testmenge hat es kaum Gelegenheit,
+> darüber hinaus etwas zu lernen. Was es zusätzlich findet, sind zu einem guten Teil
+> Eigenheiten der Trainingsdaten.
 
-Das ist keine Kritik am maschinellen Lernen. Es ist die Erklärung, warum CRISP-DM mit
-**Business Understanding** anfängt und nicht mit *Modeling* — und warum in dieser Phase
-die Fachleute im Raum sitzen müssen.
+**Das ist keine Kritik am maschinellen Lernen**, sondern die Erklärung, warum CRISP-DM mit
+*Business Understanding* anfängt und nicht mit *Modeling*: Eine Viertelstunde mit dem
+Werkstattmeister war hier mehr wert als jedes Verfahren.
 
-Der Random Forest verdient trotzdem seinen Platz: Er hat die dritte Regel nicht bekommen,
-er hat sie **gefunden** — sehen Sie sich noch einmal an, welches Merkmal in der
-Bedeutungsgrafik oben ganz oben steht. Bei einer Aufgabe, bei der niemand die richtige
-Regel kennt, ist genau das sein Wert.
+Und der Random Forest hat trotzdem etwas geleistet — sehen Sie sich die Bedeutungsgrafik
+oben noch einmal an: **Er hat dasselbe Merkmal gefunden, das der Werkstattmeister
+vorgeschlagen hätte.** Wo niemand die richtige Regel kennt, ist genau das sein Wert. Hier
+kannten wir sie.
 
 ### 5.3 Wie gut ist die Liste, die die Werkstatt bekommt?
+
+
 
 Das rechte Bild beantwortet die Frage, die die Werkstattleitung wirklich stellt.
 
@@ -545,19 +554,32 @@ enthält — und der Abstand zur grauen Zufallslinie ist der Wert des Modells.
 """),
 
 CODE('''
-trefferquote = float((np.asarray(y_test)[auf_liste] == 1).mean())
-kosten_modell = float(tabelle.loc[tabelle.Vorgehen == "Modell: Random Forest", "Kosten (EUR)"].iloc[0])
-kosten_faustregel = float(tabelle.loc[tabelle.Vorgehen.str.contains("ältestes"), "Kosten (EUR)"].iloc[0])
+kosten_heute = float(tabelle.loc[tabelle.Vorgehen.str.contains("ältestes"), "Kosten (EUR)"].iloc[0])
 
-print("Erfolgskriterien aus Phase 1:\\n")
-k1 = trefferquote >= 0.70
-print(f"  1. Trefferquote der Liste >= 70 %          {trefferquote:.1%}   "
-      f"{'ERFÜLLT' if k1 else 'GERISSEN'}")
-k2 = kosten_modell < kosten_faustregel
-zahlen = f"{kosten_modell:,.0f} gegen {kosten_faustregel:,.0f}".replace(",", ".")
-print(f"  2. günstiger als 'ältestes Rad zuerst'      {zahlen} EUR   "
-      f"{'ERFÜLLT' if k2 else 'GERISSEN'}")
-print(f"\\n  Gesamturteil: {'FREIGABE' if (k1 and k2) else 'RÜCKSPRUNG'}")
+print("Erfolgskriterien aus Phase 1, für beide Kandidaten:")
+print()
+print(f"{'':32s}{'Treffer':>9s}{'Kosten':>12s}{'K1 >=70%':>12s}{'K2 günstiger':>15s}")
+print("-" * 80)
+
+urteile = {}
+for name, rangfolge in [("Faustregel: km seit Meldung", p_regel),
+                        ("Modell: Random Forest", p_wald)]:
+    e = liste_bewerten(name, rangfolge, y_test)
+    k1 = e["Trefferquote"] >= 0.70
+    k2 = e["Kosten (EUR)"] < kosten_heute
+    urteile[name] = (e, k1, k2)
+    betrag = f"{e['Kosten (EUR)']:,.0f}".replace(",", ".")
+    print(f"{name:32s}{e['Trefferquote']:>8.1%}{betrag:>10s} €"
+          f"{'ERFÜLLT' if k1 else 'GERISSEN':>12s}{'ERFÜLLT' if k2 else 'GERISSEN':>15s}")
+
+beide = [n for n in urteile if urteile[n][1] and urteile[n][2]]
+sieger = min(urteile, key=lambda n: urteile[n][0]["Kosten (EUR)"])
+trefferquote = urteile[sieger][0]["Trefferquote"]
+print()
+print(f"  Beide Kriterien erfüllt von: {', '.join(beide) if beide else 'keinem'}")
+print(f"  Günstigstes Vorgehen:        {sieger}")
+print()
+print(f"  Entscheidung: {sieger.upper()} GEHT IN BETRIEB")
 '''),
 
 MD("""
@@ -570,7 +592,7 @@ Analyse kann sagen, ob sich eine Verhandlung lohnt.
 CODE('''
 zeilen = []
 for k in [20, 40, 60, 80, 100, 120]:
-    e = liste_bewerten(f"Kapazität {k}", p_wald, y_test, kapazitaet=k)
+    e = liste_bewerten(f"Kapazität {k}", p_regel, y_test, kapazitaet=k)
     e["Kapazität"] = k
     zeilen.append(e)
 kapazitaeten = pd.DataFrame(zeilen).set_index("Kapazität")
@@ -605,33 +627,68 @@ CODE('''
 import joblib, datetime
 
 liste = test_zeilen.copy()
-liste["risiko"] = p_wald
-liste = liste.sort_values("risiko", ascending=False).head(KAPAZITAET)
+liste["rangwert"] = p_regel                       # das ausgelieferte Verfahren
+liste["risiko"] = p_wald                          # zum Vergleich, nicht zur Sortierung
+liste = liste.sort_values("rangwert", ascending=False).head(KAPAZITAET)
 liste["rang"] = range(1, len(liste) + 1)
 
-ausgabe = liste[["rang", "rahmennummer", "typ_code", "risiko", "km_180", "fahrten_180",
-                 "meldungen_bisher", "tage_seit_meldung"]].copy()
-ausgabe["risiko"] = (ausgabe.risiko * 100).round(0).astype(int).astype(str) + " %"
+ausgabe = liste[["rang", "rahmennummer", "typ_code", "rangwert", "km_180",
+                 "meldungen_bisher", "tage_seit_meldung", "risiko"]].copy()
+ausgabe["rangwert"] = ausgabe.rangwert.round(0)
 ausgabe["km_180"] = ausgabe.km_180.round(0)
+ausgabe["risiko"] = (ausgabe.risiko * 100).round(0).astype(int).astype(str) + " %"
 ausgabe = ausgabe.rename(columns={
-    "rahmennummer": "Rahmennummer", "typ_code": "Typ", "risiko": "Risiko",
-    "km_180": "km (180 Tage)", "fahrten_180": "Fahrten (180 Tage)",
-    "meldungen_bisher": "Meldungen bisher", "tage_seit_meldung": "Tage seit letzter Meldung"})
+    "rahmennummer": "Rahmennummer", "typ_code": "Typ",
+    "rangwert": "km seit letzter Reparatur", "km_180": "km (180 Tage)",
+    "meldungen_bisher": "Meldungen bisher", "tage_seit_meldung": "Tage seit Meldung",
+    "risiko": "Modell (nur Vergleich)"})
 
 print(f"WARTUNGSLISTE  Quartal ab {letzter.date()}   ({KAPAZITAET} Räder)\\n")
 print(ausgabe.head(15).to_string(index=False))
 print(f"\\n... und {len(ausgabe) - 15} weitere.")
 
 ausgabe.to_csv("wartungsliste.csv", index=False)
-joblib.dump({"modell": wald, "merkmalsspalten": list(X_alle.columns),
-             "horizont_tage": HORIZONT_TAGE, "rueckblick_tage": RUECKBLICK_TAGE,
-             "kapazitaet": KAPAZITAET, "trainiert_am": datetime.date.today().isoformat(),
-             "trefferquote_test": round(trefferquote, 3)}, "wartungsmodell.joblib")
-print("\\ngeschrieben: wartungsliste.csv, wartungsmodell.joblib")
+# Ausgeliefert wird die REGEL. Das Modell wandert trotzdem mit ins Paket -
+# als Kandidat fuer die naechste Runde, wenn mehr Daten vorliegen. Was
+# ausgeliefert ist und was nicht, steht ausdruecklich darin.
+joblib.dump({
+    "ausgeliefert": "Regel: Räder nach Kilometern seit der letzten Meldung, absteigend",
+    "regel_spalte": "km_seit_meldung",
+    "trefferquote_test": round(float(urteile["Faustregel: km seit Meldung"][0]["Trefferquote"]), 3),
+    "kandidat_modell": wald,
+    "kandidat_merkmalsspalten": list(X_alle.columns),
+    "kandidat_trefferquote": round(float(urteile["Modell: Random Forest"][0]["Trefferquote"]), 3),
+    "horizont_tage": HORIZONT_TAGE, "rueckblick_tage": RUECKBLICK_TAGE,
+    "kapazitaet": KAPAZITAET, "erstellt_am": datetime.date.today().isoformat(),
+}, "wartungsmodell.joblib")
+print()
+print("geschrieben: wartungsliste.csv, wartungsmodell.joblib")
 '''),
 
 MD("""
-### 6.1 Diese Liste ist das eigentliche Produkt
+### 6.1 Ausgeliefert wird die Regel, nicht das Modell
+
+Das ist die ungewöhnlichste Entscheidung dieses Notebooks, und sie hat gute Gründe — über
+die Trefferquote hinaus:
+
+| | Regel | Modell |
+|---|---|---|
+| Trefferquote | **73,3 %** | 68,3 % |
+| Kosten je Quartal | **9.220 €** | 9.835 € |
+| Erklärbar | „das Rad ist seit 288 km nicht in der Werkstatt gewesen“ | nur über Umwege |
+| Wartungsaufwand | keiner | vierteljährlich nachtrainieren |
+| Bricht bei neuen Radtypen | nein | ja |
+| Abhängigkeiten im Betrieb | keine | scikit-learn, joblib, Versionsstände |
+
+**Ein Modell muss seinen Unterhalt verdienen.** Es kostet Pflege, Überwachung und
+Vertrauen. Wenn eine Regel dasselbe leistet, ist die Regel die bessere Lösung — und der
+Projektbericht sollte das so schreiben, statt das Modell auszuliefern, weil man es nun
+einmal gebaut hat.
+
+Das Modell bleibt trotzdem im Paket: als **Kandidat für die nächste Runde**. Mit mehr
+Daten kann sich das Bild drehen.
+
+### 6.2 Die Liste ist das eigentliche Produkt
 
 Nicht das Modell, nicht die Confusion-Matrix — **diese Tabelle**. Sie ist so gebaut, dass
 die Werkstatt sie ohne Nacharbeit übernehmen kann: Rahmennummer statt Datenbank-ID,
@@ -642,7 +699,7 @@ das Modell stützt, und kann widersprechen.
 In der VeloCity-Warenwirtschaft (`wawi.butscher.cloud`) gehört diese Liste in den Bereich
 **Instandhaltung**, als eigene Ansicht neben den gemeldeten Schäden.
 
-### 6.2 Überwachung
+### 6.3 Überwachung
 
 | Wache | Schwelle | Reaktion |
 |---|---|---|
@@ -655,7 +712,7 @@ In der VeloCity-Warenwirtschaft (`wawi.butscher.cloud`) gehört diese Liste in d
 Modell nützt nichts, wenn die Prüfung den Defekt nicht findet. Dann ist nicht die
 Vorhersage falsch, sondern die Maßnahme — und kein Nachtrainieren der Welt hilft.
 
-### 6.3 Die Rückkopplung, die dieses Modell besonders schwierig macht
+### 6.4 Die Rückkopplung, die dieses Verfahren besonders schwierig macht
 
 Hier steckt eine Falle, die es in Notebook 1 nicht gab:
 
@@ -683,8 +740,8 @@ MD("""
 | 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r ≈ 0,7), aber nicht deterministisch. 47 % der Räder melden sich je Quartal, die Werkstatt schafft 26 % |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung: Merkmale aus 180 Tagen davor, Label aus 90 Tagen danach, acht Stichtage, Testmenge ist der jüngste |
 | 4 Modeling | Zuerst zwei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | **Der Sachverstand schlug das Verfahren:** „km seit letzter Meldung“ bringt 80 % Treffer, der Random Forest 81,7 %. Der große Sprung lag vor dem Modell. Beide Erfolgskriterien erfüllt, Freigabe |
-| 6 Deployment | Eine Wartungsliste mit Rahmennummern und Begründung, Überwachung, und die Rückkopplungsfalle |
+| 5 Evaluation | **Der Sachverstand schlug das Verfahren:** die Regel „km seit letzter Meldung“ trifft 73,3 %, der Random Forest 68,3 %. Nur die Regel erfüllt beide Kriterien |
+| 6 Deployment | **Ausgeliefert wird die Regel, nicht das Modell** — mit Begründung, warum ein Modell seinen Unterhalt verdienen muss. Dazu Wartungsliste, Überwachung und die Rückkopplungsfalle |
 
 **Was eine zweite Runde anders machen würde**
 

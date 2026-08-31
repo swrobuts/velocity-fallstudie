@@ -527,12 +527,12 @@ MD("""
 ### 5.3 Das Urteil
 
 **Und hier zeigt sich, warum Phase 1 vor Phase 5 kommt.** Über alle Radtypen gemittelt
-liegt der Preisfehler bei rund 0,93 € — das Kriterium wäre klar gerissen, das Projekt
+liegt der Preisfehler bei rund 0,91 € — das Kriterium wäre klar gerissen, das Projekt
 gescheitert. Nach Radtyp getrennt sieht es anders aus:
 
-- Beim **CITY-Rad** hält das Modell das Kriterium (0,49 € gegen 0,50 € Schwelle). Bei
+- Beim **CITY-Rad** hält das Modell das Kriterium (0,488 € gegen 0,50 € Schwelle). Bei
   0,10 €/Minute darf man sich knapp fünf Minuten irren — und genau so gut ist das Modell.
-- Beim **EBIKE** (1,05 €) und erst recht beim **CARGO-Rad** (2,90 €) reißt es das
+- Beim **EBIKE** (1,03 €) und erst recht beim **CARGO-Rad** (2,85 €) reißt es das
   Kriterium deutlich. Der Grund ist keine Schwäche des Modells: Der Schätzfehler in
   Minuten ist dort sogar **kleiner** als beim CITY-Rad. Er schlägt nur zweieinhalb- bis
   fünfmal so stark auf den Preis durch, weil die Minute mehr kostet.
@@ -590,9 +590,9 @@ CRISP-DM verlangt an dieser Stelle eine **ausdrückliche Entscheidung**. Unsere 
 
 | Radtyp | Entscheidung | Begründung |
 |---|---|---|
-| **CITY** | **Freigabe** | Kriterium erfüllt (0,49 € < 0,50 €). Betrifft rund 55 % aller Fahrten — der Nutzen ist real. |
-| **EBIKE** | **Rücksprung** | 1,05 € — mehr als doppelt so hoch wie erlaubt |
-| **CARGO** | **Rücksprung** | 2,90 € — die Punktschätzung ist hier die falsche Zusage |
+| **CITY** | **Freigabe** | Kriterium erfüllt (0,488 € < 0,50 €). Betrifft rund 54 % aller Fahrten — der Nutzen ist real. |
+| **EBIKE** | **Rücksprung** | 1,03 € — mehr als doppelt so hoch wie erlaubt |
+| **CARGO** | **Rücksprung** | 2,85 € — die Punktschätzung ist hier die falsche Zusage |
 
 Eine **Teilfreigabe** ist ein völlig normales Projektergebnis und in CRISP-DM
 ausdrücklich vorgesehen. Was sie erfordert, ist Disziplin bei der Auslieferung: Das
@@ -770,8 +770,8 @@ Vergleichen Sie zwei Zahlen aus diesem Notebook:
 
 | | mittlerer Preisfehler CITY |
 |---|---|
-| Testmenge (Phase 5) | **0,494 €** — Kriterium erfüllt |
-| Schattenbetrieb, letzte 30 Tage | **0,502 €** — Kriterium knapp gerissen |
+| Testmenge (Phase 5) | **0,488 €** — Kriterium erfüllt |
+| Schattenbetrieb, letzte 30 Tage | **0,506 €** — Kriterium knapp gerissen |
 
 Der Unterschied ist klein, aber er zeigt in eine Richtung, die man kennen muss: **Die
 Testmenge ist fast immer optimistischer als der Betrieb.** Gründe dafür gibt es mehrere,
@@ -805,7 +805,7 @@ MD("""
 | 2 Data Understanding | Die Daten tragen die Frage: Station, Stunde und Tagesart trennen deutlich. Zwei Qualitätsbefunde: 42 % ohne Distanz, 2,7 % keine echten Fahrten |
 | 3 Data Preparation | Leakage vermieden (Endzeit, Distanz, Zielstation gesperrt), drei begründete Filter, Wetter und Kalender angejoint, Zeilenzahl nach jedem Schritt geprüft |
 | 4 Modeling | Nullmodell als Maßstab, dann linear, Baum, Random Forest |
-| 5 Evaluation | Über alle Räder gemittelt **gerissen** (0,93 €) — nach Radtyp getrennt besteht CITY (0,49 €), EBIKE und CARGO fallen durch. Lange Fahrten werden systematisch unterschätzt |
+| 5 Evaluation | Über alle Räder gemittelt **gerissen** (0,91 €) — nach Radtyp getrennt besteht CITY (0,488 €), EBIKE und CARGO fallen durch. Lange Fahrten werden systematisch unterschätzt |
 | 6 Deployment | Modell mit Merkmalsliste gespeichert, Schätzfunktion gebaut, Schattenbetrieb gerechnet, Überwachung und Nachtraining festgelegt |
 
 **Was eine zweite Runde anders machen würde**

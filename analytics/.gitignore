@@ -1,0 +1,8 @@
+# Was die Notebooks beim Ausfuehren schreiben - Ergebnisse, keine Quellen.
+# Sie entstehen bei jedem Lauf neu und haben im Repo nichts verloren; die
+# Modelldateien sind dazu mehrere Megabyte gross.
+*.joblib
+wartungsliste.csv
+tagesliste_beispiel.csv
+umlaufplan_werktag.csv
+stationstypen.csv

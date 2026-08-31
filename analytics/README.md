@@ -18,8 +18,8 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 | `station.csv` | erfunden | 10 Stationen an realen Würzburger Orten, Anzahl/Lage/Kapazität nicht erhoben |
 | `fahrrad.csv` | erfunden | 240 Räder, Typen CITY/EBIKE/CARGO wie im echten Schema, mit Ausmusterungen |
 | `kunde.csv` | erfunden | 3.200 Kundinnen und Kunden mit Anmeldedatum, Geburtsjahr, Stadtteil, Tarif |
-| `ausleihe.csv` | erfunden | knapp 60.000 Fahrten über drei Jahre, mit Entgelt nach echtem Preismodell |
-| `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | an die kumulierte Nutzung gekoppelt |
+| `ausleihe.csv` | erfunden | 60.124 Fahrten über drei Jahre, mit Entgelt nach echtem Preismodell |
+| `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | 735 Meldungen; der Verschleiß wächst mit den Kilometern **seit der letzten Reparatur** und fällt danach zurück |
 | `stationsstoerung.csv` | erfunden | 26 Ausfälle an 107 Tagen |
 
 **Die erfundenen Daten sind für die Lehre bewusst verstärkt.** Die Muster, die die
@@ -43,11 +43,11 @@ aus. Wer den Generator ändert, sieht sofort, ob die Zusage noch hält.
 
 **Nachfrage**
 
-- Temperatur ↔ Tagesfahrten **r = +0,75**, Niederschlag ↔ Tagesfahrten **r = −0,37**
-- Werktag ⌀ 57,4 gegen freier Tag ⌀ 49,8 Fahrten
-- Veranstaltungstage ⌀ 78,2 gegen sonst ⌀ 50,6 — **Faktor 1,55**
-- Schulferien: roh ⌀ 53,6 gegen 58,0 — **bei vergleichbarer Temperatur (15–22 °C) aber
-  70,6 gegen 93,3, also Faktor 0,76.** Der rohe Vergleich täuscht, weil Ferien
+- Temperatur ↔ Tagesfahrten **r = +0,76**, Niederschlag ↔ Tagesfahrten **r = −0,37**
+- Werktag ⌀ 57,7 gegen freier Tag ⌀ 50,0 Fahrten
+- Veranstaltungstage ⌀ 78,1 gegen sonst ⌀ 51,0 — **Faktor 1,53**
+- Schulferien: roh ⌀ 53,7 gegen 58,3 — **bei vergleichbarer Temperatur (15–22 °C) aber
+  71,4 gegen 93,7, also Faktor 0,76.** Der rohe Vergleich täuscht, weil Ferien
   überwiegend im Sommer liegen. Eine Scheinkorrelation zum Anfassen — sie soll in der
   Data-Understanding-Phase auffliegen.
 
@@ -55,6 +55,9 @@ aus. Wer den Generator ändert, sieht sofort, ob die Zusage noch hält.
 
 - Pendlerstationen (Hauptbahnhof, Zellerau, Grombühl) haben ihre Spitze werktags um
   7–8 Uhr, Wochenendanteil 11–13 %
+- **Die Zielwahl hängt an Tageszeit und Stationstyp**, nicht nur am Start: morgens fließt
+  es vom Bahnhof zu Campus und Klinik, abends zurück. Daraus entstehen die Regeln für
+  Notebook 5 (Hauptbahnhof → Hubland, Konfidenz 36 %, Lift 1,66)
 - Uni-Stationen (Sanderring, Hubland) zeigen eine Doppelspitze um 10 und 14 Uhr mit
   Mittagsdelle, nur in der Vorlesungszeit, Wochenendanteil 11 %
 - Freizeitstationen (Residenz, Alte Mainbrücke, Ringpark, Käppele) liegen nachmittags,
@@ -66,32 +69,36 @@ aus. Wer den Generator ändert, sieht sofort, ob die Zusage noch hält.
 
 | Profil | Anzahl | ⌀ Fahrten | ⌀ Umsatz |
 |---|---:|---:|---:|
-| Vielfahrer | 240 | 68,0 | 53,75 € |
-| Pendler | 469 | 34,6 | 39,92 € |
-| Studium | 690 | 17,6 | 19,70 € |
-| Freizeit | 870 | 15,4 | 56,06 € |
-| Gelegenheit | 931 | 1,9 | 8,13 € |
+| Vielfahrer | 240 | 68,8 | 54,57 € |
+| Pendler | 469 | 35,4 | 34,59 € |
+| Studium | 690 | 17,3 | 18,41 € |
+| Freizeit | 870 | 15,4 | 87,25 € |
+| Gelegenheit | 931 | 1,8 | 11,43 € |
 
 Freizeitnutzer fahren seltener als Pendler, geben aber **mehr** aus: lange Touren,
 seltener ein Tarif mit Freiminuten. Genau solche Umkehrungen machen eine
 RFM-Segmentierung interessant.
 
-- Ohne Fahrt in den letzten 90 Tagen: **40,0 %** — das Label für die
+- Ohne Fahrt in den letzten 90 Tagen: **40,7 %** — das Label für die
   Abwanderungsklassifikation, aus den Fahrten abgeleitet, nicht vorgegeben
 
 **Instandhaltung (für die Klassifikation)**
 
-- Kilometer je Rad ↔ Anzahl Meldungen **r = +0,61** — spürbar, aber bewusst nicht
-  perfekt, sonst hätte ein Entscheidungsbaum nichts zu lernen
-- 42,5 % der Räder haben mindestens eine Meldung — unausgeglichen, aber beide Klassen
-  gut besetzt
+- Kilometer je Rad ↔ Anzahl Meldungen **r = +0,80**
+- Entscheidend ist aber nicht die Lebenszeit-Nutzung, sondern die **Nutzung seit der
+  letzten Reparatur**: In einem 90-Tage-Fenster melden sich rund 45 % der Räder, und die
+  Faustregel „meiste Kilometer seit der letzten Meldung“ trifft davon **73 %** —
+  besser als ein Random Forest auf denselben Daten (68 %)
 
 **Datenqualität (für die Data-Preparation-Phase)**
 
-- **41,6 % der Fahrten haben keine gemessene Distanz** — kein Fehler, sondern ein
+- **41,7 % der Fahrten haben keine gemessene Distanz** — kein Fehler, sondern ein
   Sensorthema, das zu behandeln ist
 - 2,7 % der Fahrten sind abgebrochen oder storniert
-- 38 Ausleihen dauern über acht Stunden — der Anker für die Anomalieerkennung
+- 52 Ausleihen dauern über acht Stunden — der Anker für die Anomalieerkennung
+- **1.088 Stationstage ohne jede Fahrt, aber nur 107 davon sind dokumentierte
+  Störungen.** Notebook 6 zeigt daran, warum sich Stationsausfälle mit diesen Daten
+  *nicht* erkennen lassen — ein bewusst stehengelassenes negatives Ergebnis
 - Die Startgebühr fällt auch dann an, wenn Freiminuten die ganze Fahrt decken; ein
   Entgelt über null bei null berechneten Minuten ist die Regel, nicht der Fehler
 
