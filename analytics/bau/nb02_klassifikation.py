@@ -33,7 +33,7 @@ eine Schadensmeldung auslösen — ja oder nein? Zwei Klassen, also Klassifikati
 
 > *„Bei der Klassifikation geht es darum, Elemente anhand ihrer Merkmale automatisiert in
 > Klassen einzuteilen. Die Klassen sind vorgegeben, die Klassenzugehörigkeit eines
-> Elements ist nicht bekannt."*
+> Elements ist nicht bekannt.“*
 > — Provost/Fawcett, *Data Science für Unternehmen*, S. 45 f.
 
 ### Die beiden Fehlerarten sind unterschiedlich teuer
@@ -42,8 +42,8 @@ Das ist der Kern dieser Phase, und er entscheidet später über das ganze Modell
 
 | Fehler | Was passiert | Kosten |
 |---|---|---|
-| **Falsch negativ** — Modell sagt „unauffällig", das Rad fällt aber aus | Kunde bleibt liegen, Bergungsfahrt, Ersatz, Beschwerde | **180 €** |
-| **Falsch positiv** — Modell sagt „prüfen", das Rad war in Ordnung | 35 Minuten Werkstattzeit umsonst | **25 €** |
+| **Falsch negativ** — Modell sagt „unauffällig“, das Rad fällt aber aus | Kunde bleibt liegen, Bergungsfahrt, Ersatz, Beschwerde | **180 €** |
+| **Falsch positiv** — Modell sagt „prüfen“, das Rad war in Ordnung | 35 Minuten Werkstattzeit umsonst | **25 €** |
 
 **Ein verpasster Ausfall kostet gut sieben Mal so viel wie eine unnötige Prüfung.**
 Ein Modell, das beide Fehler gleich behandelt, optimiert deshalb das Falsche. Wir werden
@@ -54,7 +54,7 @@ das in Phase 4 ausdrücklich einstellen müssen.
 | | Kriterium | Schwelle |
 |---|---|---|
 | **fachlich** | Von den 60 Rädern auf der Quartalsliste müssen mindestens 70 % tatsächlich auffällig werden | sonst verliert die Werkstatt das Vertrauen in die Liste |
-| **wirtschaftlich** | Die erwarteten Kosten je Quartal müssen **unter** denen der heutigen Faustregel liegen | die Faustregel lautet: „das älteste Rad zuerst" |
+| **wirtschaftlich** | Die erwarteten Kosten je Quartal müssen **unter** denen der heutigen Faustregel liegen | die Faustregel lautet: „das älteste Rad zuerst“ |
 | **Betrieb** | Die Liste muss ohne Nacharbeit in die Instandhaltungsansicht der Warenwirtschaft übernehmbar sein | |
 
 Das zweite Kriterium ist das wichtigere und wird gerne vergessen: **Ein Modell muss
@@ -164,7 +164,7 @@ sind, nicht nur welche überhaupt auffällig werden. Darauf kommen wir in Phase 
 
 # =====================================================================
 PHASE(3, "Wir bauen eine Tabelle, in der jede Zeile eine **Frage zu einem Zeitpunkt** ist: "
-         "„Rad 47, Stand 1. April — meldet es sich bis zum 30. Juni?\""),
+         "„Rad 47, Stand 1. April — meldet es sich bis zum 30. Juni?\“"),
 
 MD("""
 ### 3.1 Der häufigste Fehler bei Wartungsvorhersagen
@@ -174,7 +174,7 @@ es je eine Meldung gehabt? Das ergibt eine schöne Tabelle — und ein wertloses
 
 **Warum:** Die Kilometer eines Rades, das im Januar ausfiel, enthalten auch die
 Kilometer *nach* dem Januar. Das Modell lernt aus der Zukunft. Und die Frage „hat es je
-gemeldet?" hilft der Werkstatt nicht, denn sie plant *das nächste Quartal*.
+gemeldet?“ hilft der Werkstatt nicht, denn sie plant *das nächste Quartal*.
 
 **Richtig ist ein Schnitt in der Zeit:**
 
@@ -337,9 +337,9 @@ MD("""
 Bevor ein Modell antritt, muss klar sein, wogegen. Drei Regeln, die eine Werkstatt ohne
 jedes Modell anwenden könnte:
 
-1. **„Das älteste Rad zuerst"** — die heutige Praxis
-2. **„Das meistgefahrene Rad zuerst"** — die naheliegende Verbesserung
-3. **„Das Rad mit den meisten Kilometern seit der letzten Reparatur zuerst"** — die
+1. **„Das älteste Rad zuerst“** — die heutige Praxis
+2. **„Das meistgefahrene Rad zuerst“** — die naheliegende Verbesserung
+3. **„Das Rad mit den meisten Kilometern seit der letzten Reparatur zuerst“** — die
    Regel, die ein Werkstattmeister vorschlagen würde
 
 Die dritte ist nicht raffinierter als die zweite, sondern **sachkundiger**. Sie steckt
@@ -447,7 +447,7 @@ print(wichtigkeit.round(3).to_string())
 '''),
 
 MD("""
-> **Vorsicht bei der Deutung.** „Bedeutung des Merkmals" heißt hier: wie oft und wie
+> **Vorsicht bei der Deutung.** „Bedeutung des Merkmals“ heißt hier: wie oft und wie
 > wirksam der Wald an diesem Merkmal aufgeteilt hat. Das ist **keine Ursache-Wirkung**.
 > Dass `tage_seit_meldung` weit oben steht, heißt nicht, dass langes Schweigen einen
 > Defekt verursacht — es heißt, dass dieses Merkmal die Räder gut trennt.
@@ -519,7 +519,7 @@ Reihenfolge:
 | **km seit letzter Meldung** | **Sachverstand: Verschleiß zählt ab der Reparatur** |
 | Random Forest | Feinschliff auf das, was die dritte Regel schon leistet |
 
-**Der große Sprung liegt vor dem Modell, nicht im Modell.** Wer bei „meiste Kilometer"
+**Der große Sprung liegt vor dem Modell, nicht im Modell.** Wer bei „meiste Kilometer“
 stehengeblieben wäre und dann ein neuronales Netz darauf geworfen hätte, wäre schlechter
 gefahren als jemand, der eine Viertelstunde mit dem Werkstattmeister gesprochen hat.
 
@@ -593,7 +593,7 @@ print(f"Mit {guenstigste} statt {KAPAZITAET} Prüfungen liessen sich je Quartal 
 
 MD("""
 **Das ist der Punkt, an dem aus einer Analyse eine Entscheidungsvorlage wird.** Die Frage
-„sollen wir eine halbe Stelle in der Werkstatt aufbauen?" lässt sich jetzt mit einer Zahl
+„sollen wir eine halbe Stelle in der Werkstatt aufbauen?“ lässt sich jetzt mit einer Zahl
 beantworten statt mit einem Gefühl — und zwar mit einer, die aus denselben Kosten
 abgeleitet ist, die in Phase 1 festgelegt wurden.
 """),
@@ -662,13 +662,13 @@ Hier steckt eine Falle, die es in Notebook 1 nicht gab:
 > **Sobald die Liste benutzt wird, verändert sie die Daten, aus denen sie lernt.**
 
 Ein Rad, das vorsorglich geprüft und instandgesetzt wurde, meldet sich anschließend
-*nicht*. Im nächsten Trainingslauf erscheint es damit als „unauffällig" — obwohl es
+*nicht*. Im nächsten Trainingslauf erscheint es damit als „unauffällig“ — obwohl es
 gerade deshalb unauffällig war, weil das Modell es erkannt hatte. Das Modell lernt
 gegen sich selbst.
 
 **Gegenmittel:** Die durchgeführten Prüfungen mitprotokollieren und beim Nachtrainieren
 als Merkmal führen (`wurde_vorsorglich_geprueft`). Nur dann kann das Modell zwischen
-„war nie gefährdet" und „wurde rechtzeitig gerettet" unterscheiden.
+„war nie gefährdet“ und „wurde rechtzeitig gerettet“ unterscheiden.
 """),
 
 # =====================================================================
@@ -679,11 +679,11 @@ MD("""
 
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | Aus „vorausschauend warten" wurde eine Kostenmatrix: 180 € je verpasstem Ausfall gegen 25 € je unnötiger Prüfung — Verhältnis rund 7 : 1. Zwei Erfolgskriterien, eines davon der Vergleich mit der heutigen Faustregel |
+| 1 Business Understanding | Aus „vorausschauend warten“ wurde eine Kostenmatrix: 180 € je verpasstem Ausfall gegen 25 € je unnötiger Prüfung — Verhältnis rund 7 : 1. Zwei Erfolgskriterien, eines davon der Vergleich mit der heutigen Faustregel |
 | 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r ≈ 0,7), aber nicht deterministisch. 47 % der Räder melden sich je Quartal, die Werkstatt schafft 26 % |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung: Merkmale aus 180 Tagen davor, Label aus 90 Tagen danach, acht Stichtage, Testmenge ist der jüngste |
 | 4 Modeling | Zuerst zwei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | **Der Sachverstand schlug das Verfahren:** „km seit letzter Meldung" bringt 80 % Treffer, der Random Forest 81,7 %. Der große Sprung lag vor dem Modell. Beide Erfolgskriterien erfüllt, Freigabe |
+| 5 Evaluation | **Der Sachverstand schlug das Verfahren:** „km seit letzter Meldung“ bringt 80 % Treffer, der Random Forest 81,7 %. Der große Sprung lag vor dem Modell. Beide Erfolgskriterien erfüllt, Freigabe |
 | 6 Deployment | Eine Wartungsliste mit Rahmennummern und Begründung, Überwachung, und die Rückkopplungsfalle |
 
 **Was eine zweite Runde anders machen würde**
@@ -700,7 +700,7 @@ MD("""
 4. **Die Jahreszeit ernst nehmen.** Der Anteil auffälliger Räder schwankt zwischen 9 %
    im November und 55 % im Mai. Eine feste Kapazität von 60 Prüfungen je Quartal ist
    dafür das falsche Werkzeug — sinnvoller wäre eine Schwelle auf der Risikozahl
-   („alles über 60 % kommt in die Werkstatt"), die im Winter von selbst kürzere Listen
+   („alles über 60 % kommt in die Werkstatt“), die im Winter von selbst kürzere Listen
    erzeugt. Das ändert die Auslieferung, nicht das Modell.
 
 **Weiter geht es mit Notebook 3 — Clustering und Segmentierung:** Dort gibt es zum ersten

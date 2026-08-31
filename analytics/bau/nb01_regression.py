@@ -21,7 +21,7 @@ MD("""
 Bei VeloCity zahlt man eine Startgebühr plus einen Minutenpreis, gedeckelt auf einen
 Tageshöchstpreis. Der Kunde erfährt den Betrag heute erst **nach** der Fahrt. Der
 Kundenservice meldet, dass das die häufigste Beschwerde ist: *„Ich wusste nicht, worauf
-ich mich einlasse."*
+ich mich einlasse.“*
 
 Das Produktmanagement möchte deshalb im Entsperr-Dialog eine Schätzung anzeigen:
 
@@ -39,13 +39,13 @@ Der Preis ergibt sich mechanisch aus der Dauer (Startgebühr + Minuten × Minute
 Zu schätzen ist also die **Fahrtdauer in Minuten** — eine Zahl. Damit ist das Verfahren
 festgelegt: **Regression.**
 
-Hätten wir gefragt „wird das eine kurze oder eine lange Fahrt?", wäre es eine
+Hätten wir gefragt „wird das eine kurze oder eine lange Fahrt?“, wäre es eine
 Klassifikation gewesen. Die Frage bestimmt das Verfahren, nicht umgekehrt.
 
 ### Die Erfolgskriterien — vor dem ersten Blick in die Daten
 
 Das ist die Phase, in der man sie festlegt. **Danach ist es zu spät:** Wer erst das
-Ergebnis ansieht und dann entscheidet, was „gut genug" heißt, findet immer eine Zahl,
+Ergebnis ansieht und dann entscheidet, was „gut genug“ heißt, findet immer eine Zahl,
 mit der er zufrieden sein kann.
 
 | | Kriterium | Schwelle |
@@ -435,7 +435,7 @@ print(pd.concat([koeffizienten.head(5), koeffizienten.tail(5)]).round(2).to_stri
 
 MD("""
 Die Koeffizienten sind der große Vorteil dieses Verfahrens: **man kann sie vorlesen.**
-„Eine Fahrt ab Käppele dauert im Mittel *x* Minuten länger als eine sonst gleiche Fahrt."
+„Eine Fahrt ab Käppele dauert im Mittel *x* Minuten länger als eine sonst gleiche Fahrt.“
 Das versteht auch, wer nie etwas von Regression gehört hat — und genau das braucht man,
 um ein Modell in einer Fachabteilung durchzusetzen.
 
@@ -462,7 +462,7 @@ print(tabelle.to_string(index=False))
 '''),
 
 MD("""
-> **Warum drei Modelle statt gleich des besten?** Weil „das beste" erst im Vergleich
+> **Warum drei Modelle statt gleich des besten?** Weil „das beste“ erst im Vergleich
 > entsteht. Ein Random Forest allein sagt nichts darüber, ob die Aufgabe schwer war oder
 > das Modell gut ist. Der Abstand zum Nullmodell zeigt, wieviel überhaupt lernbar war;
 > der Abstand zwischen linear und Forest zeigt, wieviel davon nichtlinear ist.
@@ -787,7 +787,7 @@ und alle treffen hier zu:
 **Deshalb steht die Ampel auf Gelb und nicht auf Grün.** Ein Modell, das im Test genau
 auf der Schwelle liegt, ist im Betrieb darunter. Die richtige Reaktion ist nicht,
 die Schwelle zu senken, sondern weiter im Schattenbetrieb zu messen — und in der
-Zwischenzeit an Punkt 1 der Liste „was eine zweite Runde anders machen würde" zu
+Zwischenzeit an Punkt 1 der Liste „was eine zweite Runde anders machen würde“ zu
 arbeiten.
 """),
 
@@ -801,7 +801,7 @@ MD("""
 
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | Aus „Preis vorher anzeigen" wurde ein messbares Kriterium: Preisfehler unter 50 Cent — und daraus je Radtyp eine erlaubte Minuten-Toleranz |
+| 1 Business Understanding | Aus „Preis vorher anzeigen“ wurde ein messbares Kriterium: Preisfehler unter 50 Cent — und daraus je Radtyp eine erlaubte Minuten-Toleranz |
 | 2 Data Understanding | Die Daten tragen die Frage: Station, Stunde und Tagesart trennen deutlich. Zwei Qualitätsbefunde: 42 % ohne Distanz, 2,7 % keine echten Fahrten |
 | 3 Data Preparation | Leakage vermieden (Endzeit, Distanz, Zielstation gesperrt), drei begründete Filter, Wetter und Kalender angejoint, Zeilenzahl nach jedem Schritt geprüft |
 | 4 Modeling | Nullmodell als Maßstab, dann linear, Baum, Random Forest |
@@ -814,12 +814,12 @@ Das ist die Frage, mit der CRISP-DM steht und fällt — und die in Lehrbeispiel
 immer fehlt:
 
 1. **Zurück zu Phase 1:** Für EBIKE und CARGO ist die Punktschätzung die falsche
-   Zusage. Eine **Spanne** („zwischen 4 und 9 €") wäre ehrlicher und erfüllbar. Das
+   Zusage. Eine **Spanne** („zwischen 4 und 9 €“) wäre ehrlicher und erfüllbar. Das
    ändert die Geschäftsfrage — und damit das Verfahren: gefragt wären dann Quantile,
    nicht Mittelwerte.
 2. **Zurück zu Phase 2:** Was eine Fahrt lang macht, steht nicht in den Daten. Ein
-   Merkmal „Wetterumschwung während der Fahrt" oder „Steigungsprofil zwischen den
-   Stationen" könnte den Ausläufer erklären. Beides müsste erst beschafft werden.
+   Merkmal „Wetterumschwung während der Fahrt“ oder „Steigungsprofil zwischen den
+   Stationen“ könnte den Ausläufer erklären. Beides müsste erst beschafft werden.
 3. **Zurück zu Phase 3:** Die Zielgröße ist rechtsschief. Ein Modell auf dem
    **Logarithmus** der Dauer trifft solche Verteilungen oft besser — eine Änderung von
    einer Zeile mit möglicherweise großer Wirkung.
