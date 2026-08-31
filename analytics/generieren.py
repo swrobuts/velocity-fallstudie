@@ -301,22 +301,32 @@ schreibe("veranstaltungen.csv", ["von", "bis", "bezeichnung", "genauigkeit"],
 # wird die Fallstudie in sich unstimmig. Deshalb gibt es hier KEINEN
 # Monatspreis und keine Spalte dafuer. Die vier Tarife unterscheiden sich
 # allein durch Freiminuten und Rabatt; sie sind Vorteilstarife, die man
-# ueber einen Nachweis bekommt (Studierendenausweis, Nahverkehrsabo), nicht
-# durch Zahlung.
+# ueber einen Nachweis bekommt, nicht durch Zahlung.
 #
-# Der Widerspruch in den Referenzdaten selbst bleibt bestehen und ist dem
-# Auftraggeber gemeldet - er gehoert dort geklaert, nicht hier verdeckt.
+# NACHGEZOGEN AM 31.08.2026: Der Widerspruch stand urspruenglich in den
+# Referenzdaten selbst. Er ist dort inzwischen behoben - Premium hat kein
+# Monatsentgelt mehr, die Voraussetzung lautet "Rahmenvertrag ueber den
+# Arbeitgeber" statt "Kostenpflichtiges Abo", und ein pgTAP-Test haelt fest,
+# dass kein Tarif ein Monatsentgelt erhebt. Datenbank und Lehrdatensatz
+# sagen damit dasselbe.
 # =====================================================================
+# Bezeichnungen und Voraussetzungen WOERTLICH aus der Datenbank
+# (db/aufbau/0008_referenzdaten.sql). Ich hatte hier zwischenzeitlich eigene
+# Namen erfunden ("Nahverkehrstarif", "Vielfahrertarif") - das war eine neue
+# Abweichung, wo gerade eine beseitigt werden sollte. "OEPNV-Abo" meint das
+# Nahverkehrsabo des KUNDEN als Nachweis, nicht ein Abo bei VeloCity; die
+# Spalte voraussetzung macht das jetzt sichtbar.
 TARIFE = [
-    ("BASIS",   "Basistarif",        0,  0.0),
-    ("STUDENT", "Studententarif",  300,  0.0),
-    ("OEPNV",   "Nahverkehrstarif", 600,  0.0),
-    ("PREMIUM", "Vielfahrertarif", 1000, 20.0),
+    ("BASIS",   "Basistarif",     "",                                   0,  0.0),
+    ("STUDENT", "Studententarif", "Gültiger Studierendenausweis",     300,  0.0),
+    ("OEPNV",   "OEPNV-Abo",      "VGN-Abo oder Deutschlandticket",   600,  0.0),
+    ("PREMIUM", "Premium",        "Rahmenvertrag über den Arbeitgeber", 1000, 20.0),
 ]
 schreibe("tarif.csv",
-         ["tarif_code", "bezeichnung", "freiminuten_pro_monat", "rabatt_prozent"],
+         ["tarif_code", "bezeichnung", "voraussetzung",
+          "freiminuten_pro_monat", "rabatt_prozent"],
          [list(t) for t in TARIFE])
-TARIF_INFO = {t[0]: {"frei": t[2], "rabatt": t[3]} for t in TARIFE}
+TARIF_INFO = {t[0]: {"frei": t[3], "rabatt": t[4]} for t in TARIFE}
 
 PREISE = [("CITY", 0.10, 0.10, 50.00), ("EBIKE", 1.00, 0.25, 75.00), ("CARGO", 2.00, 0.50, 110.00)]
 schreibe("nutzungspreis.csv",

@@ -172,7 +172,7 @@ comment on table velocity.tarif_kondition is
 comment on column velocity.tarif_kondition.kondition_id          is 'Surrogatschlüssel.';
 comment on column velocity.tarif_kondition.tarif_id              is 'Tarif, für den die Kondition gilt.';
 comment on column velocity.tarif_kondition.gueltigkeit           is 'Halboffener Zeitraum. Je Tarif überschneidungsfrei: eine Preisänderung legt einen neuen Zeitraum an, statt den alten zu überschreiben.';
-comment on column velocity.tarif_kondition.monatspreis           is 'Monatliches Entgelt in Euro. Null bei kostenlosen Tarifen.';
+comment on column velocity.tarif_kondition.monatspreis           is 'Monatliches Entgelt in Euro. Bei VeloCity ist es in allen Tarifen null: die Startseite wirbt mit "0 Euro Anmeldegebühr", die Vorteilstarife bekommt man über einen Nachweis. Die Spalte bleibt, weil das Datenmodell den Fall tragen können soll.';
 comment on column velocity.tarif_kondition.freiminuten_pro_monat is 'Monatliches Kontingent, das in freiminuten_periode gutgeschrieben wird.';
 comment on column velocity.tarif_kondition.rabatt_prozent        is 'Nachlass auf die Zwischensumme einer Ausleihe. Wirkt VOR der Kappung auf den Tageshöchstpreis.';
 

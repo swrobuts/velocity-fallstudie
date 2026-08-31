@@ -476,9 +476,14 @@ im Jahr — und keine zehn Euro Entgelt. Das Segment mit halb so vielen Fahrten 
 **Fünf- bis Sechsfache**.
 
 Ein Blick auf die Tarifverteilung erklärt es: Die Vielfahrer sitzen fast alle im
-**Nahverkehrs-** oder **Vielfahrertarif** — mit 600 bzw. 1.000 Freiminuten im Monat. Sie
+**OEPNV-Abo** oder im **Premium**-Tarif — mit 600 bzw. 1.000 Freiminuten im Monat. Sie
 fahren viel und zahlen für die einzelne Fahrt fast nichts. Die Umsatzträger sind dagegen
 zu 98 % **Basistarif**: keine Freiminuten, jede Minute wird berechnet.
+
+> **„OEPNV-Abo“ meint das Abo des Kunden, nicht eines bei VeloCity.** Alle vier Tarife
+> sind beitragsfrei; die drei Vorteilstarife bekommt man über einen Nachweis —
+> Studierendenausweis, Nahverkehrsabo oder Rahmenvertrag über den Arbeitgeber. Die Spalte
+> `voraussetzung` in `tarif.csv` nennt sie.
 
 ### 5.B.2 Das ist kein Messfehler — das ist ein Preisproblem
 

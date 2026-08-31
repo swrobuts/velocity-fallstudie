@@ -1,5 +1,5 @@
-tarif_code,bezeichnung,freiminuten_pro_monat,rabatt_prozent
-BASIS,Basistarif,0,0.0
-STUDENT,Studententarif,300,0.0
-OEPNV,Nahverkehrstarif,600,0.0
-PREMIUM,Vielfahrertarif,1000,20.0
+tarif_code,bezeichnung,voraussetzung,freiminuten_pro_monat,rabatt_prozent
+BASIS,Basistarif,,0,0.0
+STUDENT,Studententarif,Gültiger Studierendenausweis,300,0.0
+OEPNV,OEPNV-Abo,VGN-Abo oder Deutschlandticket,600,0.0
+PREMIUM,Premium,Rahmenvertrag über den Arbeitgeber,1000,20.0

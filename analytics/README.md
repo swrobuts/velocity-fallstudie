@@ -15,7 +15,7 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 | `semesterzeiten.csv` | **echt, Termine typisiert** | Vorlesungszeiten der JMU Würzburg, ebenso typisiert |
 | `veranstaltungen.csv` | **echt, Termine typisiert** | Neun real wiederkehrende Würzburger Veranstaltungsreihen (Kiliani, Africa Festival, Weindorf, Stramu, Hafensommer, Weinparade, Weihnachtsmarkt, Frühlingsfest, Herbstfest) |
 | `nutzungspreis.csv` | **echt** | Startgebühr, Minutenpreis und Tagesdeckel je Radtyp aus dem VeloCity-Preismodell (`db/aufbau/0008_referenzdaten.sql`) — deckt sich mit den Tarifkarten der Website: 30 Minuten kosten 3,10 € (City) bzw. 8,50 € (E-Bike) |
-| `tarif.csv` | **echt, eine Abweichung** | Vier Tarife mit Freiminuten und Rabatt. **Ohne Monatspreis** — siehe unten |
+| `tarif.csv` | **echt** | Vier Tarife mit Freiminuten, Rabatt und Voraussetzung — Bezeichnungen wörtlich aus der Datenbank. Kein Monatsentgelt, in keinem Tarif |
 | `geschaeftsgebiet.csv` | **echt** | Das Polygon aus `db/aufbau/0008_referenzdaten.sql` — die Fläche, in der frei abgestellt werden darf |
 | `fahrradtyp.csv` | **echt** | Bezeichnungen und Merkmale der drei Radtypen, dieselben wie in den Tarifkarten der Website |
 | `station.csv` | erfunden | 10 Stationen an realen Würzburger Orten, Anzahl/Lage/Kapazität nicht erhoben |
@@ -57,16 +57,20 @@ VeloCity erhebt **keinen monatlichen Beitrag**. Die Startseite führt „0 Euro
 Anmeldegebühr" als eine ihrer vier Kennzahlen, und die Preisauskunft nennt ausschließlich
 *Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis*.
 
-Die Referenzdaten der Datenbank sehen für den Tarif `PREMIUM` dagegen **9,90 € im Monat**
-vor, mit der Voraussetzung „Kostenpflichtiges Abo" (`db/aufbau/0008_referenzdaten.sql`,
-Zeile 148). **Das widerspricht dem Kundenversprechen** — nicht erst in diesem Datensatz,
-sondern schon dort.
+Die Referenzdaten der Datenbank sahen für den Tarif `PREMIUM` lange **9,90 € im Monat**
+vor, mit der Voraussetzung „Kostenpflichtiges Abo". Das widersprach dem Kundenversprechen
+— und zwar in derselben Datei, die auch die Kennzahl „0 Euro Anmeldegebühr" setzt.
 
-Dieser Datensatz folgt dem Versprechen: Es gibt keine Spalte `monatspreis`, und die vier
-Tarife unterscheiden sich allein durch Freiminuten und Rabatt. Ein Lehrdatensatz, der der
-eigenen Fallstudie widerspricht, macht die Gesamtgeschichte unstimmig.
+**Beides ist am 31.08.2026 nachgezogen worden, in der Datenbank wie hier:**
 
-**Der Widerspruch in den Referenzdaten bleibt bestehen und gehört dort geklärt.**
+- `PREMIUM` hat kein Monatsentgelt mehr; die Voraussetzung lautet „Rahmenvertrag über den
+  Arbeitgeber". Alle drei Vorteilstarife bekommt man damit einheitlich über einen
+  **Nachweis**, nicht über Zahlung.
+- Ein **pgTAP-Test** hält fest, dass kein Tarif ein Monatsentgelt erhebt. Vorher prüfte
+  niemand diese Zahl — deshalb fiel sie jahrelang nicht auf.
+- Die Bezeichnungen in `tarif.csv` stehen wörtlich so in der Datenbank. „OEPNV-Abo" meint
+  das Nahverkehrsabo des **Kunden** als Nachweis, nicht ein Abo bei VeloCity; die neue
+  Spalte `voraussetzung` macht das sichtbar.
 
 Notebook 3 greift das Thema auf — aber als *Befund*, nicht als erfundene Zahl: Es rechnet
 aus, was die Freiminuten tatsächlich kosten (44.212 € Listenwert im letzten Jahr, 52 % des

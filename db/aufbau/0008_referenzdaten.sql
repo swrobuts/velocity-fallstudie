@@ -127,12 +127,24 @@ select t.typ_id, daterange(current_date, null, '[)'), p.start, p.minute, p.hoech
 
 -- ---------------------------------------------------------------------
 -- Tarife und ihre Konditionen
+--
+-- KEIN MONATSENTGELT, IN KEINEM TARIF (31.08.2026).
+-- Premium stand hier mit 9,90 Euro im Monat und der Voraussetzung
+-- 'Kostenpflichtiges Abo'. Das widersprach zwei Zusagen der Kundenwebsite,
+-- die aus eben dieser Datei stammen: der Kennzahl 'anmeldegebuehr' mit dem
+-- Anzeigewert '0 Euro' weiter unten, und dem FAQ-Eintrag zum Preismodell,
+-- der ausschliesslich Startgebuehr, Minutenpreis und Tageshoechstpreis
+-- nennt.
+--
+-- Die drei Vorteilstarife bekommt man jetzt einheitlich ueber einen
+-- Nachweis, nicht ueber Zahlung - Studierendenausweis, Nahverkehrsabo oder
+-- Rahmenvertrag. Die Freiminuten und der Rabatt bleiben unveraendert.
 -- ---------------------------------------------------------------------
 insert into velocity.tarif (tarif_code, bezeichnung, art, voraussetzung) values
   ('BASIS',   'Basistarif',     'standard', null),
   ('STUDENT', 'Studententarif', 'vorteil',  'Gültiger Studierendenausweis'),
   ('OEPNV',   'OEPNV-Abo',      'vorteil',  'VGN-Abo oder Deutschlandticket'),
-  ('PREMIUM', 'Premium',        'vorteil',  'Kostenpflichtiges Abo')
+  ('PREMIUM', 'Premium',        'vorteil',  'Rahmenvertrag über den Arbeitgeber')
 on conflict (tarif_code) do update
   set bezeichnung   = excluded.bezeichnung,
       art           = excluded.art,
@@ -145,13 +157,26 @@ select t.tarif_id, daterange(current_date, null, '[)'), k.monat, k.frei, k.rabat
     ('BASIS',   0.00,    0,  0.00),
     ('STUDENT', 0.00,  300,  0.00),
     ('OEPNV',   0.00,  600,  0.00),
-    ('PREMIUM', 9.90, 1000, 20.00)
+    ('PREMIUM', 0.00, 1000, 20.00)
   ) as k(tarif_code, monat, frei, rabatt)
   join velocity.tarif t on t.tarif_code = k.tarif_code
  where not exists (
    select 1 from velocity.tarif_kondition tk
     where tk.tarif_id = t.tarif_id and upper_inf(tk.gueltigkeit)
  );
+
+-- Der insert oben legt eine Kondition nur an, wenn noch keine offene
+-- existiert. Eine bereits laufende Datenbank bekaeme die Korrektur des
+-- Monatsentgelts also nicht - deshalb hier ausdruecklich. Wie beim
+-- entfernten Gebiet Schweinfurt weiter unten: die Datei richtet nicht nur
+-- ein, sie zieht Bestehendes nach.
+update velocity.tarif_kondition k
+   set monatspreis  = 0.00,
+       geaendert_am = now()
+  from velocity.tarif t
+ where t.tarif_id = k.tarif_id
+   and upper_inf(k.gueltigkeit)
+   and k.monatspreis <> 0.00;
 
 -- ---------------------------------------------------------------------
 -- Redaktionsinhalte, wortgleich aus src/index.html uebernommen
