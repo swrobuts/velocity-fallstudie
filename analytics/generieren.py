@@ -592,11 +592,40 @@ while d <= BIS:
         rad = random.choice(verfuegbare_raeder)
 
         # ---- Dauer
+        # ERWEITERT AM 31.08.2026. Vorher hing die Dauer NUR vom Stationstyp
+        # und vom Zufall ab. Fuer die Regressionsuebung war das zu wenig:
+        # gemessen erreichten lineare Regression, Entscheidungsbaum und Random
+        # Forest allesamt R² = 0,35 und einen MAE von 6,95 bis 6,98 Minuten -
+        # ununterscheidbar. Ein Notebook, das drei Verfahren vergleicht, braucht
+        # aber etwas zu vergleichen, und ein Random Forest rechtfertigt sich nur
+        # ueber Wechselwirkungen, die es zu finden gibt.
+        #
+        # Jetzt wirken sechs Groessen auf die Dauer, alle fachlich begruendbar:
         basis_dauer = {"pendler": 11, "uni": 9, "freizeit": 22, "misch": 14}[typ]
-        x = random.random()
-        dauer = max(4, round(basis_dauer * 0.5 + basis_dauer * 1.5 * x * x))
+        # Regen kuerzt (man beeilt sich), Waerme verlaengert (man bummelt).
+        f_wetter = (1 - 0.022 * min(regen, 9)) * (1 + 0.013 * (temp - 12))
+        # Pendlerstunden sind zweckgerichtet, der Nachmittag ist es nicht.
+        f_stunde = 0.78 if stunde in (7, 8, 17, 18) else (1.22 if 13 <= stunde <= 18 else 1.0)
+        f_frei = 1.28 if frei else 1.0
+        # E-Bikes sind schneller, Lastenraeder langsamer - bei gleichem Weg.
+        f_typ = {"CITY": 1.0, "EBIKE": 0.84, "CARGO": 1.20}[rad["typ"]]
+        # Wer wie faehrt: das Profil steht in keiner CSV, wirkt aber. Ueber den
+        # Tarif ist es teilweise erschliessbar - eine realistische Lage, in der
+        # das Modell nur einen Teil der Wahrheit sehen kann.
+        f_profil = {"pendler": 0.74, "studium": 0.86, "freizeit": 1.34,
+                    "gelegenheit": 1.24, "vielfahrer": 0.80}[kunde["profil"]]
+        mittel = basis_dauer * f_wetter * f_stunde * f_frei * f_typ * f_profil
         if end_station == start_station:
-            dauer = round(dauer * 1.4)
+            mittel *= 1.4
+        # Lognormal statt quadratischem Zufall: haelt die Rechtsschiefe, laesst
+        # aber einen lernbaren Erwartungswert stehen. Die Streuung ist auf 0,21
+        # gesetzt, damit das guenstigste Rad (CITY, 0,10 EUR/Min) die
+        # 50-Cent-Schwelle aus der Business-Understanding-Phase erreichen KANN,
+        # die teureren aber nicht. Das ist eine bewusste Entscheidung fuer den
+        # Lehrdatensatz: sie erzeugt ein DIFFERENZIERTES Ergebnis - Teilfreigabe
+        # fuer einen Radtyp, Ruecksprung fuer die anderen - statt eines
+        # langweiligen "alles gut" oder "alles schlecht".
+        dauer = max(3, round(random.lognormvariate(math.log(max(mittel, 2.0)), 0.21)))
 
         # ---- Status
         r_status = random.random()
