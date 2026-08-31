@@ -1,0 +1,4 @@
+typ_code,bezeichnung,beschreibung,hat_elektro,zuladung_kg
+CITY,City-Bike,"Stadtrad, 8 Gänge, LED-Licht",nein,20
+EBIKE,E-Bike Sport,"Pedelec, Reichweite bis 50 km",ja,20
+CARGO,E-Cargo Loader,"Lastenrad, Zuladung bis 75 kg",ja,75

@@ -85,6 +85,47 @@ schreibe("station.csv",
 STATION_TYP = {s[0]: s[6] for s in STATIONEN}
 STATION_IDS = [s[0] for s in STATIONEN]
 STATION_NAME = {s[0]: s[2] for s in STATIONEN}
+STATION_ORT = {s[0]: (s[4], s[3]) for s in STATIONEN}   # (longitude, latitude)
+
+# =====================================================================
+# GESCHAEFTSGEBIET
+# Echt: das Polygon aus db/aufbau/0008_referenzdaten.sql. Innerhalb dieser
+# Flaeche darf ein Rad ueberall abgestellt werden - die Kundenwebsite wirbt
+# ausdruecklich damit ("Frei im Geschaeftsgebiet, ohne Zuschlag").
+# =====================================================================
+GEBIET = [(9.9100, 49.8100), (9.9400, 49.8150), (9.9850, 49.7850),
+          (9.9600, 49.7750), (9.9300, 49.7700), (9.9000, 49.7850)]
+schreibe("geschaeftsgebiet.csv", ["ecke", "longitude", "latitude"],
+         [[i + 1, lon, lat] for i, (lon, lat) in enumerate(GEBIET)])
+
+
+def im_gebiet(lon, lat):
+    """Strahlverfahren: liegt der Punkt innerhalb des Polygons?"""
+    drin = False
+    n = len(GEBIET)
+    for i in range(n):
+        x1, y1 = GEBIET[i]
+        x2, y2 = GEBIET[(i + 1) % n]
+        if (y1 > lat) != (y2 > lat):
+            schnitt = x1 + (lat - y1) * (x2 - x1) / (y2 - y1)
+            if lon < schnitt:
+                drin = not drin
+    return drin
+
+
+# =====================================================================
+# FAHRRADTYPEN
+# Echt: Bezeichnungen und Merkmale aus db/aufbau/0008_referenzdaten.sql -
+# dieselben, die auf der Kundenwebsite in den Tarifkarten stehen.
+# =====================================================================
+FAHRRADTYPEN = [
+    ("CITY",  "City-Bike",      "Stadtrad, 8 Gänge, LED-Licht",  "nein", 20),
+    ("EBIKE", "E-Bike Sport",   "Pedelec, Reichweite bis 50 km", "ja",   20),
+    ("CARGO", "E-Cargo Loader", "Lastenrad, Zuladung bis 75 kg", "ja",   75),
+]
+schreibe("fahrradtyp.csv",
+         ["typ_code", "bezeichnung", "beschreibung", "hat_elektro", "zuladung_kg"],
+         [list(t) for t in FAHRRADTYPEN])
 
 # =====================================================================
 # FLOTTE
@@ -572,7 +613,12 @@ def entgelt_berechnen(kunde, typ_code, dauer_min, d):
     genutzt = min(rest, dauer_min)
     kunde["freiminuten_rest"][monat] = rest - genutzt
     berechnete_minuten = dauer_min - genutzt
-    betrag = min(p["start"] + berechnete_minuten * p["minute"], p["deckel"])
+    # Der Deckel gilt JE TAG ("gedeckelt auf einen Tageshoechstpreis", so steht
+    # es in der Preisauskunft der Website). Eine Ausleihe ueber 30 Stunden ist
+    # damit nicht so teuer wie eine ueber 20, aber auch nicht gleich teuer -
+    # sie beruehrt zwei Tage.
+    tage = max(1, math.ceil(dauer_min / (24 * 60)))
+    betrag = min(p["start"] + berechnete_minuten * p["minute"], p["deckel"] * tage)
     betrag *= (1 - TARIF_INFO[kunde["tarif"]]["rabatt"] / 100.0)
     return round(betrag, 2), berechnete_minuten
 
@@ -713,16 +759,45 @@ while d <= BIS:
         # langweiligen "alles gut" oder "alles schlecht".
         dauer = max(3, round(random.lognormvariate(math.log(max(mittel, 2.0)), 0.21)))
 
+        # ---- Frei abstellen statt andocken
+        # Die Kundenwebsite bewirbt es als Merkmal: "Frei im Geschaeftsgebiet -
+        # ueberall in der roten Umrandung, ohne Zuschlag." Das Datenmodell sieht
+        # es ebenfalls vor (end_station_id ist nullable, daneben stehen
+        # Koordinatenspalten). Bis zum 31.08.2026 endete hier jede Fahrt an einer
+        # Station - ein Datensatz, der dem eigenen Produktversprechen widerspricht.
+        #
+        # Freizeitfahrten enden haeufiger frei als Pendelfahrten: wer zum Kaeppele
+        # hochfaehrt, stellt oben ab, wo er ist.
+        p_frei = 0.30 if STATION_TYP[end_station] == "freizeit" else 0.16
+        frei_abgestellt = random.random() < p_frei
+        end_lon = end_lat = ""
+        if frei_abgestellt:
+            # In der Naehe der angesteuerten Station, aber im Gebiet - sonst
+            # waere die Fahrt laut Website gar nicht beendbar.
+            basis_lon, basis_lat = STATION_ORT[end_station]
+            for _ in range(20):
+                lon = basis_lon + random.gauss(0, 0.0045)
+                lat = basis_lat + random.gauss(0, 0.0032)
+                if im_gebiet(lon, lat):
+                    end_lon, end_lat = round(lon, 6), round(lat, 6)
+                    break
+            else:
+                frei_abgestellt = False     # kein Platz gefunden: doch andocken
+
         # ---- Status
         r_status = random.random()
         if r_status < 0.022:
             status = "abgebrochen"      # am Terminal abgebrochen, Rad nie wirklich weg
             dauer = random.randint(1, 3)
             end_station = start_station
+            frei_abgestellt = False
+            end_lon = end_lat = ""
         elif r_status < 0.027:
             status = "storniert"
             dauer = random.randint(1, 2)
             end_station = start_station
+            frei_abgestellt = False
+            end_lon = end_lat = ""
         else:
             status = "abgeschlossen"
             # Vergessene Rueckgaben: seltene, sehr lange Ausleihen. Sie sind der
@@ -761,8 +836,8 @@ while d <= BIS:
         ausleihe_id += 1
         ausleihe_rows.append([
             ausleihe_id, kunde_id, rad["id"], start_station, startzeit.isoformat(sep=" "),
-            end_station, endzeit.isoformat(sep=" "), status, distanz,
-            f"{betrag:.2f}", berechnete,
+            "" if frei_abgestellt else end_station, endzeit.isoformat(sep=" "),
+            status, distanz, f"{betrag:.2f}", berechnete, end_lat, end_lon,
         ])
 
     d += timedelta(days=1)
@@ -770,7 +845,7 @@ while d <= BIS:
 schreibe("ausleihe.csv",
          ["ausleihe_id", "kunde_id", "fahrrad_id", "start_station_id", "startzeit",
           "end_station_id", "endzeit", "status", "distanz_km", "entgelt_eur",
-          "berechnete_minuten"],
+          "berechnete_minuten", "end_latitude", "end_longitude"],
          ausleihe_rows)
 
 print("Instandhaltung ...")

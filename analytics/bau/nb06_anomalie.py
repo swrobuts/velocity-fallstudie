@@ -189,8 +189,8 @@ print(X.describe().round(2).to_string())
 '''),
 
 MD("""
-> **Warum `distanz_km` nicht dabei ist.** Sie fehlt bei 42 % der Fahrten. Ein
-> Anomalieverfahren würde dann entweder diese 42 % gar nicht bewerten oder — schlimmer —
+> **Warum `distanz_km` nicht dabei ist.** Sie fehlt bei 41 % der Fahrten. Ein
+> Anomalieverfahren würde dann entweder diese 41 % gar nicht bewerten oder — schlimmer —
 > das Fehlen selbst als Auffälligkeit werten. Beides wäre falsch: Ein ausgefallener Sensor
 > ist kein auffälliger Vorgang.
 """),
@@ -360,7 +360,7 @@ MD("""
 **Zwei Dinge stehen in dieser Tabelle.**
 
 **Erstens der Wert der Korrektur aus Phase 4.5.** Bei einer Liste von 50 Vorgängen findet
-der erste Versuch **einen** von 52 Rückgabeproblemen, die normierte Fassung **neunzehn**.
+der erste Versuch **drei** von 48 Rückgabeproblemen, die normierte Fassung **zwanzig**.
 Das ist kein besseres Verfahren — es ist dasselbe Verfahren mit besseren Merkmalen.
 
 **Zweitens die übliche Spannung:** Die Trefferquote sinkt mit der Listenlänge, der Anteil
@@ -477,7 +477,7 @@ MD("""
 **Und da steht das Problem, in zwei Zahlen.**
 
 Jede Störung führt zu einem Tag ohne Fahrt — das Signal ist also da. Aber es gibt **rund
-tausend Stationstage ohne Fahrt**, und nur etwa jeder zehnte davon ist eine Störung. Alle
+tausend Stationstage ohne Fahrt**, und nur etwa jeder elfte davon ist eine Störung. Alle
 anderen sind schlicht ruhige Tage: eine kleine Station im Januar bei Regen.
 
 Rechnen wir aus, was das für jedes noch so gute Verfahren bedeutet.
@@ -531,7 +531,7 @@ Die Wand ist eine **Frage der Grundraten**:
    Terminalmeldungen verfügbar sind.
 
 Ein Projektbericht, der das so schreibt, ist mehr wert als einer, der eine Trefferquote
-von 15 % als Erfolg verkauft.
+von 9,5 % als Erfolg verkauft.
 """),
 
 # =====================================================================
@@ -616,7 +616,7 @@ MD("""
 | 2 Data Understanding | Eine **Lücke** in der Dauerverteilung trennt Fahrten von Rückgabeproblemen. Und eine Sackgasse: Die Geschwindigkeit taugt nichts, weil sie aus der Dauer abgeleitet ist |
 | 3 Data Preparation | Sechs Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor kein auffälliger Vorgang ist |
 | 4 Modeling | Interquartilsregel (über 2.000 Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert |
-| 5 Evaluation | Die Korrektur hebt die Trefferquote von 2 % auf 38 %. Aufgabe A besteht das Kriterium, **Aufgabe B scheitert** — an den Grundraten, nicht am Verfahren |
+| 5 Evaluation | Die Korrektur hebt die Trefferquote von 6 % auf 40 %. Aufgabe A besteht das Kriterium, **Aufgabe B scheitert** — an den Grundraten, nicht am Verfahren |
 | 6 Deployment | Tagesliste mit Begründung je Vorgang; Aufgabe B ausdrücklich nicht freigegeben |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**

@@ -16,16 +16,40 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 | `veranstaltungen.csv` | **echt, Termine typisiert** | Neun real wiederkehrende Würzburger Veranstaltungsreihen (Kiliani, Africa Festival, Weindorf, Stramu, Hafensommer, Weinparade, Weihnachtsmarkt, Frühlingsfest, Herbstfest) |
 | `nutzungspreis.csv` | **echt** | Startgebühr, Minutenpreis und Tagesdeckel je Radtyp aus dem VeloCity-Preismodell (`db/aufbau/0008_referenzdaten.sql`) — deckt sich mit den Tarifkarten der Website: 30 Minuten kosten 3,10 € (City) bzw. 8,50 € (E-Bike) |
 | `tarif.csv` | **echt, eine Abweichung** | Vier Tarife mit Freiminuten und Rabatt. **Ohne Monatspreis** — siehe unten |
+| `geschaeftsgebiet.csv` | **echt** | Das Polygon aus `db/aufbau/0008_referenzdaten.sql` — die Fläche, in der frei abgestellt werden darf |
+| `fahrradtyp.csv` | **echt** | Bezeichnungen und Merkmale der drei Radtypen, dieselben wie in den Tarifkarten der Website |
 | `station.csv` | erfunden | 10 Stationen an realen Würzburger Orten, Anzahl/Lage/Kapazität nicht erhoben |
 | `fahrrad.csv` | erfunden | 240 Räder, Typen CITY/EBIKE/CARGO wie im echten Schema, mit Ausmusterungen |
 | `kunde.csv` | erfunden | 3.200 Kundinnen und Kunden mit Anmeldedatum, Geburtsjahr, Stadtteil, Tarif |
-| `ausleihe.csv` | erfunden | 60.124 Fahrten über drei Jahre, mit Entgelt nach echtem Preismodell |
+| `ausleihe.csv` | erfunden | rund 60.000 Fahrten über drei Jahre, mit Entgelt nach echtem Preismodell. Knapp ein Viertel endet **frei im Geschäftsgebiet** statt an einer Station |
 | `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | 735 Meldungen; der Verschleiß wächst mit den Kilometern **seit der letzten Reparatur** und fällt danach zurück |
 | `stationsstoerung.csv` | erfunden | 26 Ausfälle an 107 Tagen |
 
 **Die erfundenen Daten sind für die Lehre bewusst verstärkt.** Die Muster, die die
 sechs Verfahren finden sollen, sind absichtlich eingebaut. Das gehört in der
 Veranstaltung offen gesagt — es ist ein Lehrdatensatz, keine Wirklichkeitsbeschreibung.
+
+## Abgleich mit dem, was die Kundenwebsite verspricht
+
+Der Datensatz wurde Aussage für Aussage gegen `bikes.butscher.cloud` geprüft. Ein
+Lehrdatensatz, der der eigenen Fallstudie widerspricht, macht die Gesamtgeschichte
+unstimmig.
+
+| Aussage der Website | im Datensatz |
+|---|---|
+| „Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis" | `nutzungspreis.csv`; 30 Minuten kosten 3,10 € (City) und 8,50 € (E-Bike) — genau wie in den Tarifkarten. Der Deckel gilt **je angefangenem Tag** |
+| „0 Euro Anmeldegebühr" | kein Monatspreis, keine Anmeldegebühr — siehe unten |
+| „Frei im Geschäftsgebiet: überall in der roten Umrandung, ohne Zuschlag" | 23 % der Fahrten enden ohne Station, mit Koordinaten. **Alle** liegen nachweislich im Polygon |
+| „Außerhalb endet keine Fahrt" | geprüft: null Endpunkte außerhalb des Geschäftsgebiets |
+| City-Bike / E-Bike Sport / E-Cargo Loader | `fahrradtyp.csv` mit denselben Bezeichnungen und Merkmalen |
+| „Unterstützung bis 25 km/h" | die angesetzten Durchschnittsgeschwindigkeiten liegen bei 11 bis 18 km/h |
+| 10 Stationen | 10 Stationen |
+| „24/7 Verfügbarkeit" | zwischen 23 und 5 Uhr gibt es keine Fahrten — eine Aussage über die **Nachfrage**, nicht über die Verfügbarkeit; im Notebook ausdrücklich so benannt |
+
+**Nicht modelliert und offen benannt:** Der Standort eines Rades zwischen zwei Fahrten
+wird nicht verfolgt. Ein Rad kann in diesem Datensatz um 8:00 am Hauptbahnhof und um 8:30
+am Käppele starten. Für alle sechs Verfahren ist das ohne Belang; wer Umlaufwege
+untersuchen wollte, bräuchte eine andere Erzeugung.
 
 ## Keine Grundgebühr — und warum das hier ausdrücklich steht
 

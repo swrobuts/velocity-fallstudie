@@ -156,7 +156,7 @@ print(f"\\nWerkstattkapazität {KAPAZITAET} von {len(im_bestand)} Rädern "
 '''),
 
 MD("""
-Rund **47 % der Räder** melden sich in einem Quartal — die Klassen sind also gut besetzt.
+Rund **44 % der Räder** melden sich in einem Quartal — die Klassen sind also gut besetzt.
 Aber die Werkstatt kann nur **26 % der Flotte** prüfen. Das Modell muss also nicht nur
 richtig liegen, sondern **priorisieren**: Es muss sagen, welche Räder am dringendsten
 sind, nicht nur welche überhaupt auffällig werden. Darauf kommen wir in Phase 5 zurück.
@@ -279,7 +279,7 @@ print(panel.groupby(panel.stichtag.dt.date).meldet_sich.agg(["size", "mean"]).ro
 
 MD("""
 > **Sehen Sie sich die Spalte `mean` genau an.** Der Anteil auffälliger Räder schwankt
-> zwischen rund **9 % im November und 55 % im Mai** — um den Faktor sechs. Das ist kein
+> zwischen rund **9 % im November und 44 % im Mai** — um fast das Fünffache. Das ist kein
 > Fehler in den Daten, sondern die Jahreszeit: Im Winter wird kaum gefahren, also
 > verschleißt kaum etwas, also meldet sich kaum ein Rad.
 >
@@ -389,7 +389,7 @@ MD("""
 **Diese Tabelle ist der Kern des ganzen Notebooks — lesen Sie sie langsam.**
 
 Die ersten beiden Regeln liegen dicht beieinander; welche vorn liegt, ist fast Zufall.
-Die dritte springt um dreißig Punkte nach oben — und zwischen ihr und den anderen liegt
+Die dritte springt um achtzehn Punkte nach oben — und zwischen ihr und den anderen liegt
 **kein einziger Rechenschritt Unterschied**, nur ein anderes Verständnis davon, wie
 Verschleiß entsteht.
 
@@ -515,11 +515,12 @@ print(classification_report(y_test, auf_liste.astype(int),
 '''),
 
 MD("""
-### 5.2 Das Modell hat verloren
+### 5.2 Das Modell hat nichts hinzugefügt
 
-Lesen Sie die Tabelle von unten nach oben. **Die beste Trefferquote und die niedrigsten
-Kosten liefert nicht der Random Forest, sondern die einzeilige Faustregel** „das Rad mit
-den meisten Kilometern seit der letzten Reparatur zuerst".
+Lesen Sie die letzten beiden Zeilen der Tabelle nebeneinander. **Der Random Forest trifft
+exakt so gut wie die einzeilige Faustregel** — 42 von 60, dieselben Kosten. Nach vier
+Verfahren, Klassengewichten und dreihundert Bäumen steht er genau dort, wo eine Sortierung
+nach einer einzigen Spalte auch schon war.
 
 Das ist kein Messfehler und kein Zufall der Modellwahl. Es hat einen nachvollziehbaren
 Grund:
@@ -529,15 +530,21 @@ Grund:
 > bestenfalls nachbilden, und mit 228 Rädern in der Testmenge hat es kaum Gelegenheit,
 > darüber hinaus etwas zu lernen. Was es zusätzlich findet, sind zu einem guten Teil
 > Eigenheiten der Trainingsdaten.
+>
+> Sehen Sie sich zur Bestätigung die Bedeutungsgrafik oben noch einmal an:
+> `km_seit_meldung` steht ganz vorn. Der Wald hat die Regel **gefunden** — und ist dann
+> bei ihr geblieben.
 
 **Das ist keine Kritik am maschinellen Lernen**, sondern die Erklärung, warum CRISP-DM mit
 *Business Understanding* anfängt und nicht mit *Modeling*: Eine Viertelstunde mit dem
-Werkstattmeister war hier mehr wert als jedes Verfahren.
+Werkstattmeister war hier mehr wert als jedes Verfahren. Wo niemand die richtige Regel
+kennt, ist der Wald unverzichtbar — er findet sie. Hier kannten wir sie schon.
 
-Und der Random Forest hat trotzdem etwas geleistet — sehen Sie sich die Bedeutungsgrafik
-oben noch einmal an: **Er hat dasselbe Merkmal gefunden, das der Werkstattmeister
-vorgeschlagen hätte.** Wo niemand die richtige Regel kennt, ist genau das sein Wert. Hier
-kannten wir sie.
+> **Und noch etwas ist an der Tabelle bemerkenswert:** Die beiden ersten Faustregeln —
+> ältestes Rad und meiste Kilometer — treffen mit je 51,7 % **exakt gleich gut**. Wer
+> zwischen ihnen wählt, wählt zwischen zwei gleich mittelmäßigen Antworten. Der Gewinn
+> steckt nicht darin, eine bessere Kennzahl zu suchen, sondern die richtige.
+
 
 ### 5.3 Wie gut ist die Liste, die die Werkstatt bekommt?
 
@@ -673,12 +680,15 @@ die Trefferquote hinaus:
 
 | | Regel | Modell |
 |---|---|---|
-| Trefferquote | **73,3 %** | 68,3 % |
-| Kosten je Quartal | **9.220 €** | 9.835 € |
+| Trefferquote | 70,0 % | 70,0 % — **gleichauf** |
+| Kosten je Quartal | 10.890 € | 10.890 € — **gleichauf** |
 | Erklärbar | „das Rad ist seit 288 km nicht in der Werkstatt gewesen“ | nur über Umwege |
 | Wartungsaufwand | keiner | vierteljährlich nachtrainieren |
 | Bricht bei neuen Radtypen | nein | ja |
 | Abhängigkeiten im Betrieb | keine | scikit-learn, joblib, Versionsstände |
+
+**Bei Gleichstand in der Leistung entscheiden die übrigen Zeilen** — und dort gewinnt die
+Regel jede einzelne.
 
 **Ein Modell muss seinen Unterhalt verdienen.** Es kostet Pflege, Überwachung und
 Vertrauen. Wenn eine Regel dasselbe leistet, ist die Regel die bessere Lösung — und der
@@ -737,10 +747,10 @@ MD("""
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | Aus „vorausschauend warten“ wurde eine Kostenmatrix: 180 € je verpasstem Ausfall gegen 25 € je unnötiger Prüfung — Verhältnis rund 7 : 1. Zwei Erfolgskriterien, eines davon der Vergleich mit der heutigen Faustregel |
-| 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r ≈ 0,7), aber nicht deterministisch. 47 % der Räder melden sich je Quartal, die Werkstatt schafft 26 % |
+| 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r ≈ 0,7), aber nicht deterministisch. 44 % der Räder melden sich je Quartal, die Werkstatt schafft 26 % |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung: Merkmale aus 180 Tagen davor, Label aus 90 Tagen danach, acht Stichtage, Testmenge ist der jüngste |
 | 4 Modeling | Zuerst zwei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | **Der Sachverstand schlug das Verfahren:** die Regel „km seit letzter Meldung“ trifft 73,3 %, der Random Forest 68,3 %. Nur die Regel erfüllt beide Kriterien |
+| 5 Evaluation | **Der Sachverstand schlug das Verfahren:** Regel und Random Forest treffen **gleich gut** (je 70,0 %, je 10.890 €). Bei Gleichstand gewinnt die einfachere Lösung |
 | 6 Deployment | **Ausgeliefert wird die Regel, nicht das Modell** — mit Begründung, warum ein Modell seinen Unterhalt verdienen muss. Dazu Wartungsliste, Überwachung und die Rückkopplungsfalle |
 
 **Was eine zweite Runde anders machen würde**
@@ -755,7 +765,7 @@ MD("""
 3. **Zurück zu Phase 3:** Der Rückblick von 180 Tagen war gesetzt, nicht geprüft.
    Vielleicht sagen 60 Tage mehr über den nächsten Defekt aus als ein halbes Jahr.
 4. **Die Jahreszeit ernst nehmen.** Der Anteil auffälliger Räder schwankt zwischen 9 %
-   im November und 55 % im Mai. Eine feste Kapazität von 60 Prüfungen je Quartal ist
+   im November und 44 % im Mai. Eine feste Kapazität von 60 Prüfungen je Quartal ist
    dafür das falsche Werkzeug — sinnvoller wäre eine Schwelle auf der Risikozahl
    („alles über 60 % kommt in die Werkstatt“), die im Winter von selbst kürzere Listen
    erzeugt. Das ändert die Auslieferung, nicht das Modell.

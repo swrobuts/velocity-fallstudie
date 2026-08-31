@@ -107,7 +107,13 @@ feiertage = set(pd.read_csv(BASIS + "feiertage.csv").datum)
 k = fahrten[fahrten.status == "abgeschlossen"].copy()
 namen = stationen.set_index("station_id").name
 k["start"] = k.start_station_id.map(namen)
-k["ziel"] = k.end_station_id.map(namen)
+# FREI ABGESTELLT IST EIN ZIEL, KEIN FEHLENDER WERT.
+# Rund ein Viertel der Fahrten endet nicht an einer Station, sondern irgendwo
+# im Geschaeftsgebiet - die Kundenwebsite wirbt damit ("ueberall in der roten
+# Umrandung, ohne Zuschlag"). Wer diese Zeilen als fehlende Werte behandelt,
+# wirft ein Viertel der Daten weg, ohne es zu merken, und alle Regeln
+# verlieren ein Viertel ihrer Belege.
+k["ziel"] = k.end_station_id.map(namen).fillna("frei abgestellt")
 k["stunde"] = k.startzeit.dt.hour
 k["ist_frei"] = ((k.startzeit.dt.dayofweek >= 5)
                  | k.startzeit.dt.strftime("%Y-%m-%d").isin(feiertage))
@@ -121,25 +127,43 @@ print((basis_ziel * 100).round(1).to_string())
 
 MD("""
 **Diese Tabelle ist wichtiger, als sie aussieht.** Sie ist der Maßstab, gegen den der
-Lift rechnet. Die Zielanteile liegen alle zwischen etwa 9 und 11 % — die zehn Stationen
-sind also ähnlich beliebt. Genau deshalb wird eine Konfidenz von 30 % gleich als
-auffällig zu erkennen sein: Sie ist dreimal so hoch wie der Zufall hergäbe.
+Lift rechnet. Zwei Dinge fallen auf. **„Frei abgestellt“ ist mit Abstand das häufigste Ziel** — fast
+jede vierte Fahrt endet so. Und die zehn Stationen liegen eng beieinander, zwischen rund
+6 und 9 %; sie sind also ähnlich beliebt. Genau deshalb wird eine Konfidenz von 30 %
+gleich als auffällig zu erkennen sein: Sie ist mehr als dreimal so hoch, wie der Zufall
+hergäbe.
 
 ### 2.1 Der triviale Zusammenhang, den man zuerst finden muss
 """),
 
 CODE('''
-rundtour = (k.start == k.ziel).mean()
-print(f"Anteil Rundtouren (Start = Ziel): {rundtour:.1%}")
-print("\\nRundtouren je Startstation:")
-je_station = k.assign(ist_rundtour=(k.start == k.ziel)).groupby("start").ist_rundtour.mean()
+print(f"Anteil der Fahrten, die frei abgestellt enden: {(k.ziel == 'frei abgestellt').mean():.1%}")
+print()
+print("Wo endet es frei? (Anteil je Startstation)")
+je_start = k.assign(f=(k.ziel == "frei abgestellt")).groupby("start").f.mean()
+print((je_start.sort_values(ascending=False) * 100).round(1).to_string())
+
+angedockt = k[k.ziel != "frei abgestellt"]
+rundtour = (angedockt.start == angedockt.ziel).mean()
+print()
+print(f"Anteil Rundtouren unter den angedockten Fahrten: {rundtour:.1%}")
+je_station = angedockt.assign(r=(angedockt.start == angedockt.ziel)).groupby("start").r.mean()
 print((je_station.sort_values(ascending=False) * 100).round(1).to_string())
 '''),
 
 MD("""
-**Ein Fünftel aller Fahrten endet dort, wo es begann** — und bei den Ausflugsstationen
-ist es ein Drittel. Das ist der stärkste „Zusammenhang“ im ganzen Datensatz, und er wird
-jede Regelliste anführen, wenn man ihn nicht ausschließt.
+**Zwei Befunde stehen hier, und beide sind wichtig.**
+
+**Erstens:** Rund ein Viertel der Fahrten endet **nicht an einer Station**. Das ist kein
+Datenmangel, sondern ein beworbenes Merkmal — man darf das Rad überall im Geschäftsgebiet
+abstellen. Ein Analyst, der `end_station_id` als Pflichtfeld behandelt und die Zeilen
+verwirft, verliert ein Viertel seiner Belege und merkt es nicht. **Wir behandeln „frei
+abgestellt“ deshalb als eigenes Ziel.** Bei den Ausflugsstationen ist der Anteil am
+höchsten — wer aufs Käppele fährt, stellt oben ab, wo er ist.
+
+**Zweitens:** Knapp ein Fünftel der angedockten Fahrten endet dort, wo es begann. Das ist der
+stärkste „Zusammenhang“ im ganzen Datensatz, und er wird jede Regelliste anführen, wenn
+man ihn nicht ausschließt.
 
 **Nützlich ist er trotzdem nicht.** Eine Rundtour verschiebt kein einziges Rad; für die
 Disposition ist sie ein Nullsummenvorgang. Wir schließen Rundtouren deshalb aus der
@@ -165,7 +189,9 @@ k["fenster"] = pd.cut(k.stunde, GRENZEN, labels=BEZEICHNUNGEN, right=False)
 ##ENDE
 k["tagesart"] = np.where(k.ist_frei, "frei", "Werktag")
 
-koerbe = k[k.start != k.ziel].copy()      # Rundtouren ausgeschlossen, siehe Phase 2
+# Rundtouren ausgeschlossen (siehe Phase 2). Die frei abgestellten Fahrten
+# bleiben drin - sie sind ein Ziel wie jedes andere.
+koerbe = k[k.start != k.ziel].copy()
 print(f"Warenkörbe für die Regelsuche: {len(koerbe):,d}".replace(",", "."))
 print("\\nVerteilung über die Zeitfenster:")
 print(pd.crosstab(koerbe.fenster, koerbe.tagesart, margins=True).to_string())
@@ -343,10 +369,18 @@ ernst nehmen will: **nachfassen, nicht glauben.**
 PHASE(6, "Aus Regeln wird ein Umlaufplan für den Transporter."),
 
 CODE('''
-# Netto-Wanderung je Station und Zeitfenster: Zugaenge minus Abgaenge.
-# Genau das muss der Transporter ausgleichen.
-ab = koerbe.groupby(["tagesart", "fenster", "start"], observed=True).size().rename("ab")
-zu = koerbe.groupby(["tagesart", "fenster", "ziel"], observed=True).size().rename("zu")
+# ZWEI VERSCHIEDENE AUFGABEN, GETRENNT GERECHNET
+#
+# (1) UMVERTEILEN zwischen Stationen: dafuer zaehlen nur Fahrten, die an
+#     einer Station enden - nur sie verschieben Raeder von A nach B.
+# (2) EINSAMMELN der frei abgestellten Raeder: sie verlassen ihre Station und
+#     kommen an keiner anderen an. Wuerde man beides in eine Tabelle werfen,
+#     stuende ueberall "auffuellen" - und die Zeile "abholen bei: frei
+#     abgestellt" waere als Anweisung sinnlos.
+angedockte_koerbe = koerbe[koerbe.ziel != "frei abgestellt"]
+
+ab = angedockte_koerbe.groupby(["tagesart", "fenster", "start"], observed=True).size().rename("ab")
+zu = angedockte_koerbe.groupby(["tagesart", "fenster", "ziel"], observed=True).size().rename("zu")
 saldo = pd.concat([ab, zu], axis=1).fillna(0)
 saldo.index.names = ["tagesart", "fenster", "station"]
 saldo["netto"] = saldo.zu - saldo.ab
@@ -355,16 +389,25 @@ werktag = saldo.loc["Werktag"].reset_index()
 tabelle = werktag.pivot(index="station", columns="fenster", values="netto").fillna(0)
 tabelle = tabelle.round(0).astype(int)
 
+# (2) Wieviele Raeder bleiben je Startstation frei im Gebiet zurueck?
+frei_werktag = (koerbe[(koerbe.tagesart == "Werktag") & (koerbe.ziel == "frei abgestellt")]
+                .groupby(["fenster", "start"], observed=True).size()
+                .unstack(fill_value=0).T.reindex(tabelle.index).fillna(0).astype(int))
+
 plt.figure(figsize=(10, 5))
 plt.imshow(tabelle.values, cmap="RdBu_r", aspect="auto",
            vmin=-abs(tabelle.values).max(), vmax=abs(tabelle.values).max())
 plt.colorbar(label="Netto-Zugang (blau) / Netto-Abgang (rot)")
 plt.xticks(range(len(tabelle.columns)), tabelle.columns, rotation=20)
 plt.yticks(range(len(tabelle.index)), tabelle.index)
-plt.title("Werktags: wo laufen Räder auf, wo fehlen sie?")
+plt.title("Werktags, nur angedockte Fahrten: wo laufen Räder auf, wo fehlen sie?")
 plt.tight_layout(); plt.show()
 
+print("(1) Umverteilen zwischen Stationen — nur angedockte Fahrten:")
 print(tabelle.to_string())
+print()
+print("(2) Einsammeln — frei abgestellte Räder je Startstation und Zeitfenster:")
+print(frei_werktag.to_string())
 '''),
 
 CODE('''
@@ -382,8 +425,17 @@ for fenster in [b for b in BEZEICHNUNGEN if b in tabelle.columns]:
         print(f"    auffüllen bei {station:<20s} ({wert} Räder fehlen)")
     print()
 
+gesamt_frei = int(frei_werktag.values.sum())
+print(f"Einsammelrunde: werktags bleiben rund {gesamt_frei // 260} Räder je Tag frei im")
+print(f"Gebiet zurück ({gesamt_frei} über den ganzen Zeitraum). Schwerpunkt:")
+spitzen = frei_werktag.sum(axis=1).sort_values(ascending=False).head(3)
+for station, wert in spitzen.items():
+    print(f"    rund um {station:<20s} {wert}")
+
 tabelle.to_csv("umlaufplan_werktag.csv")
-print("geschrieben: umlaufplan_werktag.csv")
+frei_werktag.to_csv("einsammelplan_werktag.csv")
+print()
+print("geschrieben: umlaufplan_werktag.csv, einsammelplan_werktag.csv")
 '''),
 
 MD("""
@@ -391,6 +443,18 @@ MD("""
 
 Er sagt, **wo** und **wann** umzuverteilen ist. Er sagt nicht, **wie viele** Räder — das
 war Notebook 4, und beide gehören im Betrieb zusammen.
+
+Und er besteht aus **zwei Teilen**, die man nicht vermengen darf:
+
+| | Aufgabe | Datengrundlage |
+|---|---|---|
+| **Umverteilen** | Räder von vollen zu leeren Stationen fahren | nur Fahrten, die an einer Station enden |
+| **Einsammeln** | frei abgestellte Räder aufnehmen | die frei endenden Fahrten |
+
+Rechnet man beides in einer Tabelle, steht bei **jeder** Station „auffüllen" — denn ein
+Viertel aller Räder verlässt das Stationsnetz und kommt nirgends an. Die Zeile „abholen
+bei: frei abgestellt" wäre als Anweisung sinnlos: Der Fahrer weiß dann, dass irgendwo
+Räder stehen, aber nicht wo.
 
 ### 6.2 Überwachung
 
@@ -424,11 +488,11 @@ MD("""
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. Drei Erfolgskriterien: Support ≥ 1 %, Lift ≥ 1,3, und die Regel muss eine Transporterfahrt begründen |
-| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Der stärkste Zusammenhang im Datensatz sind die Rundtouren (rund 20 %) — wahr und nutzlos, deshalb ausgeschlossen |
+| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Der stärkste Zusammenhang im Datensatz sind die Rundtouren (knapp 20 % der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
-| 5 Evaluation | Hoher Lift und hoher Support schließen einander fast aus. Die brauchbaren Regeln bilden den Pendelstrom ab — morgens hin, abends zurück — und die Deutung wurde über die `kunde_id` gegengeprüft |
-| 6 Deployment | Umlaufplan je Zeitfenster als CSV, mit Datenschutzvorbehalt |
+| 5 Evaluation | Hoher Lift und hoher Support schließen einander fast aus: von 42 Regeln erfüllen 10 das Lift-, 2 das Support- und nur **eine** beide Kriterien. Die Deutung des Pendelstroms wurde über die `kunde_id` gegengeprüft |
+| 6 Deployment | **Zwei** Pläne — Umverteilen zwischen Stationen und Einsammeln der frei abgestellten Räder —, mit Datenschutzvorbehalt |
 
 **Was eine zweite Runde anders machen würde**
 
