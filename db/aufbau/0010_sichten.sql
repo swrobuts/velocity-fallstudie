@@ -88,7 +88,7 @@ select t.typ_id, t.typ_code, t.bezeichnung, t.beschreibung, t.hat_elektro,
 drop view if exists velocity.v_tarif;
 create view velocity.v_tarif as
 select t.tarif_id, t.tarif_code, t.bezeichnung, t.art::text as art, t.voraussetzung,
-       k.monatspreis, k.freiminuten_pro_monat, k.rabatt_prozent
+       k.freiminuten_pro_monat, k.rabatt_prozent
   from velocity.tarif t
   left join velocity.tarif_kondition k on k.tarif_id = t.tarif_id
                                       and k.gueltigkeit @> current_date;

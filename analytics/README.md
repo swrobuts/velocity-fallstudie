@@ -15,7 +15,7 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 | `semesterzeiten.csv` | **echt, Termine typisiert** | Vorlesungszeiten der JMU Würzburg, ebenso typisiert |
 | `veranstaltungen.csv` | **echt, Termine typisiert** | Neun real wiederkehrende Würzburger Veranstaltungsreihen (Kiliani, Africa Festival, Weindorf, Stramu, Hafensommer, Weinparade, Weihnachtsmarkt, Frühlingsfest, Herbstfest) |
 | `nutzungspreis.csv` | **echt** | Startgebühr, Minutenpreis und Tagesdeckel je Radtyp aus dem VeloCity-Preismodell (`db/aufbau/0008_referenzdaten.sql`) — deckt sich mit den Tarifkarten der Website: 30 Minuten kosten 3,10 € (City) bzw. 8,50 € (E-Bike) |
-| `tarif.csv` | **echt** | Vier Tarife mit Freiminuten, Rabatt und Voraussetzung — Bezeichnungen wörtlich aus der Datenbank. Kein Monatsentgelt, in keinem Tarif |
+| `tarif.csv` | **echt** | Vier Tarife mit Freiminuten, Rabatt und Voraussetzung — Bezeichnungen wörtlich aus der Datenbank. Ein Monatsentgelt gibt es nicht, in keinem Tarif und auch nicht als Feld |
 | `geschaeftsgebiet.csv` | **echt** | Das Polygon aus `db/aufbau/0008_referenzdaten.sql` — die Fläche, in der frei abgestellt werden darf |
 | `fahrradtyp.csv` | **echt** | Bezeichnungen und Merkmale der drei Radtypen, dieselben wie in den Tarifkarten der Website |
 | `station.csv` | erfunden | 10 Stationen an realen Würzburger Orten, Anzahl/Lage/Kapazität nicht erhoben |
@@ -66,8 +66,10 @@ vor, mit der Voraussetzung „Kostenpflichtiges Abo". Das widersprach dem Kunden
 - `PREMIUM` hat kein Monatsentgelt mehr; die Voraussetzung lautet „Rahmenvertrag über den
   Arbeitgeber". Alle drei Vorteilstarife bekommt man damit einheitlich über einen
   **Nachweis**, nicht über Zahlung.
-- Ein **pgTAP-Test** hält fest, dass kein Tarif ein Monatsentgelt erhebt. Vorher prüfte
-  niemand diese Zahl — deshalb fiel sie jahrelang nicht auf.
+- Die Spalte `monatspreis` ist ganz entfallen. Sie stand überall auf null, aber ihre bloße
+  Existenz hatte gereicht: Die 9,90 € kamen hinein, weil das Feld sie aufnehmen konnte.
+- Ein **pgTAP-Test** prüft jetzt die Struktur statt der Werte — dass es die Spalte nicht
+  gibt. Ein Wert lässt sich wieder setzen, eine fehlende Spalte nicht.
 - Die Bezeichnungen in `tarif.csv` stehen wörtlich so in der Datenbank. „OEPNV-Abo" meint
   das Nahverkehrsabo des **Kunden** als Nachweis, nicht ein Abo bei VeloCity; die neue
   Spalte `voraussetzung` macht das sichtbar.

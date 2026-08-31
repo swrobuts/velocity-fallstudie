@@ -425,7 +425,7 @@ Einzelposten einer Rechnung, in der Regel genau eine Ausleihe.
 | `rechnungsposition_id` | `bigint` | nein |  | Surrogatschlüssel. |
 | `rechnung_id` | `bigint` | nein |  | Rechnungskopf. |
 | `position_nr` | `integer` | nein |  | Laufende Nummer auf dem Beleg. Je Rechnung eindeutig. |
-| `ausleihe_id` | `bigint` | ja |  | Abgerechnete Ausleihe. NULL bei Positionen ohne Nutzungsbezug, etwa einem Monatsbeitrag. |
+| `ausleihe_id` | `bigint` | ja |  | Abgerechnete Ausleihe. NULL bei Positionen ohne Nutzungsbezug, etwa einer Gutschrift nach einer Beschwerde. |
 | `beschreibung` | `text` | nein |  | Text auf dem Beleg. |
 | `betrag` | `numeric(10,2)` | nein |  | Betrag der Position. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
@@ -503,7 +503,6 @@ Zeitabhängige Konditionen eines Tarifs. Überschneidungsfrei durch EXCLUDE-Cons
 | `kondition_id` | `bigint` | nein |  | Surrogatschlüssel. |
 | `tarif_id` | `bigint` | nein |  | Tarif, für den die Kondition gilt. |
 | `gueltigkeit` | `daterange` | nein |  | Halboffener Zeitraum. Je Tarif überschneidungsfrei: eine Preisänderung legt einen neuen Zeitraum an, statt den alten zu überschreiben. |
-| `monatspreis` | `numeric(10,2)` | nein | `0` | Monatliches Entgelt in Euro. Null bei kostenlosen Tarifen. |
 | `freiminuten_pro_monat` | `integer` | nein | `0` | Monatliches Kontingent, das in freiminuten_periode gutgeschrieben wird. |
 | `rabatt_prozent` | `numeric(5,2)` | nein | `0` | Nachlass auf die Zwischensumme einer Ausleihe. Wirkt VOR der Kappung auf den Tageshöchstpreis. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
@@ -746,7 +745,6 @@ Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begren
 | `bezeichnung` | `text` | ja |  | Name des Tarifs. |
 | `art` | `text` | ja |  | standard oder vorteil. |
 | `voraussetzung` | `text` | ja |  | Zu erbringender Nachweis. |
-| `monatspreis` | `numeric(10,2)` | ja |  | Heute geltendes Monatsentgelt. |
 | `freiminuten_pro_monat` | `integer` | ja |  | Heute geltendes Monatskontingent. |
 | `rabatt_prozent` | `numeric(5,2)` | ja |  | Heute geltender Nachlass auf Ausleihen. |
 

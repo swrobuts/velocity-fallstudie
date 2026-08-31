@@ -172,7 +172,6 @@ comment on table velocity.tarif_kondition is
 comment on column velocity.tarif_kondition.kondition_id          is 'Surrogatschlüssel.';
 comment on column velocity.tarif_kondition.tarif_id              is 'Tarif, für den die Kondition gilt.';
 comment on column velocity.tarif_kondition.gueltigkeit           is 'Halboffener Zeitraum. Je Tarif überschneidungsfrei: eine Preisänderung legt einen neuen Zeitraum an, statt den alten zu überschreiben.';
-comment on column velocity.tarif_kondition.monatspreis           is 'Monatliches Entgelt in Euro. Bei VeloCity ist es in allen Tarifen null: die Startseite wirbt mit "0 Euro Anmeldegebühr", die Vorteilstarife bekommt man über einen Nachweis. Die Spalte bleibt, weil das Datenmodell den Fall tragen können soll.';
 comment on column velocity.tarif_kondition.freiminuten_pro_monat is 'Monatliches Kontingent, das in freiminuten_periode gutgeschrieben wird.';
 comment on column velocity.tarif_kondition.rabatt_prozent        is 'Nachlass auf die Zwischensumme einer Ausleihe. Wirkt VOR der Kappung auf den Tageshöchstpreis.';
 
@@ -274,7 +273,7 @@ comment on table velocity.rechnungsposition is
 comment on column velocity.rechnungsposition.rechnungsposition_id is 'Surrogatschlüssel.';
 comment on column velocity.rechnungsposition.rechnung_id          is 'Rechnungskopf.';
 comment on column velocity.rechnungsposition.position_nr          is 'Laufende Nummer auf dem Beleg. Je Rechnung eindeutig.';
-comment on column velocity.rechnungsposition.ausleihe_id          is 'Abgerechnete Ausleihe. NULL bei Positionen ohne Nutzungsbezug, etwa einem Monatsbeitrag.';
+comment on column velocity.rechnungsposition.ausleihe_id          is 'Abgerechnete Ausleihe. NULL bei Positionen ohne Nutzungsbezug, etwa einer Gutschrift nach einer Beschwerde.';
 comment on column velocity.rechnungsposition.beschreibung         is 'Text auf dem Beleg.';
 comment on column velocity.rechnungsposition.betrag               is 'Betrag der Position.';
 
@@ -364,7 +363,6 @@ comment on column velocity.v_tarif.tarif_code            is 'Fachlicher Schlüss
 comment on column velocity.v_tarif.bezeichnung           is 'Name des Tarifs.';
 comment on column velocity.v_tarif.art                   is 'standard oder vorteil.';
 comment on column velocity.v_tarif.voraussetzung         is 'Zu erbringender Nachweis.';
-comment on column velocity.v_tarif.monatspreis           is 'Heute geltendes Monatsentgelt.';
 comment on column velocity.v_tarif.freiminuten_pro_monat is 'Heute geltendes Monatskontingent.';
 comment on column velocity.v_tarif.rabatt_prozent        is 'Heute geltender Nachlass auf Ausleihen.';
 

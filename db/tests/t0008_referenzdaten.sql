@@ -72,13 +72,16 @@ begin
     20.00::numeric(5,2), 'Premium gewaehrt 20 Prozent Rabatt');
   -- Die Startseite fuehrt '0 Euro Anmeldegebuehr' als Kennzahl, und die
   -- Preisauskunft nennt ausschliesslich Startgebuehr, Minutenpreis und
-  -- Tageshoechstpreis. Ein Tarif mit Monatsentgelt widerspraeche beidem.
-  -- Bis zum 31.08.2026 stand Premium mit 9,90 Euro in den Referenzdaten,
-  -- ohne dass ein Test das bemerkt haette.
-  return next is(
-    (select count(*)::int from velocity.tarif_kondition
-      where upper_inf(gueltigkeit) and monatspreis <> 0), 0,
-    'Kein Tarif erhebt ein Monatsentgelt - siehe Kennzahl "0 Euro Anmeldegebuehr"');
+  -- Tageshoechstpreis. Ein Monatsentgelt widerspraeche beidem. Bis zum
+  -- 31.08.2026 stand Premium mit 9,90 Euro in den Referenzdaten, ohne dass
+  -- ein Test das bemerkt haette.
+  --
+  -- Geprueft wird jetzt die Struktur statt der Werte: die Spalte gibt es
+  -- nicht mehr. Das ist die staerkere Zusicherung - ein Wert kann wieder
+  -- gesetzt werden, eine fehlende Spalte nicht.
+  return next hasnt_column('velocity'::name, 'tarif_kondition'::name,
+    'monatspreis'::name,
+    'Kein Monatsentgelt - die Spalte existiert nicht');
   return next is((select count(*)::int from velocity.faq_eintrag where aktiv), 4,
                  'Vier aktive FAQ-Eintraege');
   return next is((select count(*)::int from velocity.nutzungsschritt), 3, 'Drei Nutzungsschritte');

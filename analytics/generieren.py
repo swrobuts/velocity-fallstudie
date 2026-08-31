@@ -306,9 +306,12 @@ schreibe("veranstaltungen.csv", ["von", "bis", "bezeichnung", "genauigkeit"],
 # NACHGEZOGEN AM 31.08.2026: Der Widerspruch stand urspruenglich in den
 # Referenzdaten selbst. Er ist dort inzwischen behoben - Premium hat kein
 # Monatsentgelt mehr, die Voraussetzung lautet "Rahmenvertrag ueber den
-# Arbeitgeber" statt "Kostenpflichtiges Abo", und ein pgTAP-Test haelt fest,
-# dass kein Tarif ein Monatsentgelt erhebt. Datenbank und Lehrdatensatz
-# sagen damit dasselbe.
+# Arbeitgeber" statt "Kostenpflichtiges Abo". Und die Spalte monatspreis ist
+# ganz entfallen: Sie stand ueberall auf null, aber ihre blosse Existenz
+# hatte gereicht, damit die 9,90 Euro hineingerieten. Ein pgTAP-Test prueft
+# jetzt, dass es die Spalte nicht gibt - eine Zahl laesst sich wieder
+# setzen, eine fehlende Spalte nicht. Datenbank und Lehrdatensatz sagen
+# damit dasselbe, und der Lehrdatensatz hatte von Anfang an recht.
 # =====================================================================
 # Bezeichnungen und Voraussetzungen WOERTLICH aus der Datenbank
 # (db/aufbau/0008_referenzdaten.sql). Ich hatte hier zwischenzeitlich eigene

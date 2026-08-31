@@ -34,12 +34,10 @@ create table if not exists velocity.tarif_kondition (
   kondition_id          bigint generated always as identity primary key,
   tarif_id              bigint      not null,
   gueltigkeit           daterange   not null,
-  monatspreis           numeric(10,2) not null default 0,
   freiminuten_pro_monat integer     not null default 0,
   rabatt_prozent        numeric(5,2) not null default 0,
   erstellt_am           timestamptz not null default now(),
   geaendert_am          timestamptz not null default now(),
-  constraint tarif_kondition_monatspreis_chk check (monatspreis >= 0),
   constraint tarif_kondition_freiminuten_chk check (freiminuten_pro_monat >= 0),
   constraint tarif_kondition_rabatt_chk      check (rabatt_prozent between 0 and 100),
   constraint tarif_kondition_zeitraum_chk    check (not isempty(gueltigkeit)),
@@ -51,6 +49,26 @@ create table if not exists velocity.tarif_kondition (
     exclude using gist (tarif_id with =, gueltigkeit with &&)
 );
 select velocity.fn_audit_anhaengen('tarif_kondition');
+
+-- KEIN MONATSENTGELT - AUCH NICHT ALS MOEGLICHKEIT (31.08.2026).
+--
+-- Die Kondition trug bis hierher eine Spalte monatspreis. Sie stand in
+-- allen Tarifen auf null, aber ihre blosse Existenz hat einmal gereicht:
+-- Premium kam mit 9,90 Euro in die Referenzdaten und blieb dort, weil
+-- kein Test danach fragte. VeloCity wirbt mit '0 Euro Anmeldegebuehr'
+-- und nennt als Preismodell ausschliesslich Startgebuehr, Minutenpreis
+-- und Tageshoechstpreis. Ein Monatsentgelt gibt es nicht - deshalb gibt
+-- es die Spalte nicht mehr.
+--
+-- Ein Feld, das eine Zusage brechen kann, ist keine Vorsorge, sondern
+-- eine offene Tuer. Der Tarifvorteil steckt in freiminuten_pro_monat und
+-- rabatt_prozent; beide bleiben.
+-- v_tarif liest die Spalte und haelt sie damit fest; ohne dieses drop
+-- scheitert das alter darunter. Kein cascade: das wuerde alles Abhaengige
+-- mitreissen, ohne es zu benennen. 0010_sichten.sql legt die Sicht in
+-- ihrer neuen Fassung wieder an - die Aufbaudateien laufen der Reihe nach.
+drop view if exists velocity.v_tarif;
+alter table velocity.tarif_kondition drop column if exists monatspreis;
 
 create table if not exists velocity.mitgliedschaft (
   mitgliedschaft_id bigint generated always as identity primary key,

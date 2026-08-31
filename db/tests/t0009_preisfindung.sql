@@ -45,8 +45,8 @@ begin
     insert into velocity.tarif (tarif_code, bezeichnung, art)
          values ('P-' || p_suffix, 'Tarif ' || p_suffix, 'vorteil') returning tarif_id into v_tarif;
     insert into velocity.tarif_kondition
-           (tarif_id, gueltigkeit, monatspreis, freiminuten_pro_monat, rabatt_prozent)
-         values (v_tarif, daterange(current_date - 365, null, '[)'), 0, p_freiminuten, p_rabatt);
+           (tarif_id, gueltigkeit, freiminuten_pro_monat, rabatt_prozent)
+         values (v_tarif, daterange(current_date - 365, null, '[)'), p_freiminuten, p_rabatt);
     insert into velocity.mitgliedschaft (kunde_id, tarif_id, gueltigkeit)
          values (o_kunde_id, v_tarif, daterange(current_date - 365, null, '[)'))
       returning mitgliedschaft_id into v_mgl;

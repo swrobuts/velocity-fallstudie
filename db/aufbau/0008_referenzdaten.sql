@@ -134,7 +134,8 @@ select t.typ_id, daterange(current_date, null, '[)'), p.start, p.minute, p.hoech
 -- die aus eben dieser Datei stammen: der Kennzahl 'anmeldegebuehr' mit dem
 -- Anzeigewert '0 Euro' weiter unten, und dem FAQ-Eintrag zum Preismodell,
 -- der ausschliesslich Startgebuehr, Minutenpreis und Tageshoechstpreis
--- nennt.
+-- nennt. Die Spalte monatspreis ist inzwischen ganz entfallen - siehe
+-- 0004. Hier steht deshalb kein Monatswert mehr.
 --
 -- Die drei Vorteilstarife bekommt man jetzt einheitlich ueber einen
 -- Nachweis, nicht ueber Zahlung - Studierendenausweis, Nahverkehrsabo oder
@@ -151,32 +152,19 @@ on conflict (tarif_code) do update
       voraussetzung = excluded.voraussetzung;
 
 insert into velocity.tarif_kondition
-  (tarif_id, gueltigkeit, monatspreis, freiminuten_pro_monat, rabatt_prozent)
-select t.tarif_id, daterange(current_date, null, '[)'), k.monat, k.frei, k.rabatt
+  (tarif_id, gueltigkeit, freiminuten_pro_monat, rabatt_prozent)
+select t.tarif_id, daterange(current_date, null, '[)'), k.frei, k.rabatt
   from (values
-    ('BASIS',   0.00,    0,  0.00),
-    ('STUDENT', 0.00,  300,  0.00),
-    ('OEPNV',   0.00,  600,  0.00),
-    ('PREMIUM', 0.00, 1000, 20.00)
-  ) as k(tarif_code, monat, frei, rabatt)
+    ('BASIS',      0,  0.00),
+    ('STUDENT',  300,  0.00),
+    ('OEPNV',    600,  0.00),
+    ('PREMIUM', 1000, 20.00)
+  ) as k(tarif_code, frei, rabatt)
   join velocity.tarif t on t.tarif_code = k.tarif_code
  where not exists (
    select 1 from velocity.tarif_kondition tk
     where tk.tarif_id = t.tarif_id and upper_inf(tk.gueltigkeit)
  );
-
--- Der insert oben legt eine Kondition nur an, wenn noch keine offene
--- existiert. Eine bereits laufende Datenbank bekaeme die Korrektur des
--- Monatsentgelts also nicht - deshalb hier ausdruecklich. Wie beim
--- entfernten Gebiet Schweinfurt weiter unten: die Datei richtet nicht nur
--- ein, sie zieht Bestehendes nach.
-update velocity.tarif_kondition k
-   set monatspreis  = 0.00,
-       geaendert_am = now()
-  from velocity.tarif t
- where t.tarif_id = k.tarif_id
-   and upper_inf(k.gueltigkeit)
-   and k.monatspreis <> 0.00;
 
 -- ---------------------------------------------------------------------
 -- Redaktionsinhalte, wortgleich aus src/index.html uebernommen
@@ -205,7 +193,7 @@ insert into velocity.faq_eintrag (frage, antwort, sortierung) values
   ('Darf ich das Rad kurz parken?',
    'Ja. Nutze in der App den Parkmodus: die Miete läuft weiter, das Schloss verriegelt.', 2),
   ('Gibt es einen Tarif für Studierende?',
-   'Mit gültigem Studierendenausweis fährst du im Studententarif: 300 Freiminuten pro Monat, ohne Monatsbeitrag. Die Startgebühr je Fahrt bleibt.', 3),
+   'Ja. Mit gültigem Studierendenausweis bekommst du den Studententarif: 300 Freiminuten im Monat. Die Startgebühr je Fahrt fällt weiterhin an.', 3),
   ('Was passiert bei einem Defekt?',
    'Melde den Schaden über die App. Wir beenden deine Miete sofort kostenfrei.', 4)
 on conflict (frage) do update

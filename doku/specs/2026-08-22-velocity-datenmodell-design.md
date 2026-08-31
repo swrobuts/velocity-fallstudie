@@ -183,7 +183,7 @@ Vertikale Trennung: selten änderliche Stammdaten gegen ständig
 `art tarifart` · `voraussetzung text`.
 
 **`tarif_kondition`** — `kondition_id` PK · `tarif_id` FK ·
-`gueltigkeit daterange` · `monatspreis numeric(10,2)` ·
+`gueltigkeit daterange` ·
 `freiminuten_pro_monat int` · `rabatt_prozent numeric(5,2) CHECK (0..100)` ·
 `EXCLUDE USING gist (tarif_id WITH =, gueltigkeit WITH &&)`.
 

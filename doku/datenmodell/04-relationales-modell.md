@@ -71,7 +71,7 @@ FAHRRAD_POSITION(__fahrrad_id__ → FAHRRAD, station_id → STATION,
 TARIF(__tarif_id__, tarif_code [UK], bezeichnung [UK], art, voraussetzung)
 
 TARIF_KONDITION(__kondition_id__, tarif_id → TARIF, gueltigkeit,
-                monatspreis, freiminuten_pro_monat, rabatt_prozent)
+                freiminuten_pro_monat, rabatt_prozent)
                 überschneidungsfrei je tarif_id
 
 MITGLIEDSCHAFT(__mitgliedschaft_id__, kunde_id → KUNDE,
