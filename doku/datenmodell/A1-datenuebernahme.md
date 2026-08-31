@@ -92,8 +92,13 @@ Struktur und alle 1015 Kundensätze bleiben unverändert vorführbar.
 Nachweis: dieselbe Abfrage, die zuvor die vollständigen Kundendaten
 lieferte, gibt jetzt HTTP 401.
 
-**Folge:** die Warenwirtschafts-Oberfläche unter `erp/` spricht dieses
-Schema und funktionierte nur über den offenen anon-Zugriff. Sie ist außer
-Betrieb, bis Phase 2 sie auf `velocity` umstellt. Das ist beabsichtigt:
-eine Oberfläche, die ihre Rechte aus einem öffentlich ausgelieferten
-Schlüssel bezieht, darf nicht weiterlaufen.
+**Folge:** die Warenwirtschafts-Oberfläche unter `erp/` sprach dieses
+Schema und funktionierte nur über den offenen anon-Zugriff. Sie wurde
+damit außer Betrieb gesetzt — beabsichtigt: eine Oberfläche, die ihre
+Rechte aus einem öffentlich ausgelieferten Schlüssel bezieht, darf nicht
+weiterlaufen.
+
+**Umgestellt wurde sie nie.** Phase 2 hat sie ersetzt statt umgebaut: Die
+heutige Warenwirtschaft unter `wawi/` liest ausschließlich `v_wawi_*`
+und schreibt über `api_*`-Funktionen. Der Ordner `erp/` ist am 01.09.2026
+entfernt worden — `git log -- erp/` führt zum letzten Stand.

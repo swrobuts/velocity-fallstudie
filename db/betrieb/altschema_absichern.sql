@@ -9,12 +9,13 @@
 --             geprueft; Abgleichsbericht der Uebernahme ohne unerklaerte
 --             Abweichung.
 --
--- FOLGE: Die Warenwirtschafts-Oberflaeche unter erp/ spricht dieses
---        Schema und funktionierte bisher nur ueber den offenen
---        anon-Zugriff. Sie ist nach diesem Schritt ausser Betrieb, bis
---        Phase 2 sie auf velocity umstellt. Das ist beabsichtigt: eine
+-- FOLGE: Die Warenwirtschafts-Oberflaeche unter erp/ sprach dieses
+--        Schema und funktionierte nur ueber den offenen anon-Zugriff.
+--        Sie war nach diesem Schritt ausser Betrieb - beabsichtigt: eine
 --        Oberflaeche, die ihre Rechte aus einem oeffentlich
 --        ausgelieferten Schluessel bezieht, darf so nicht weiterlaufen.
+--        Umgestellt wurde sie nie; Phase 2 hat sie durch wawi/ ersetzt,
+--        und der Ordner erp/ ist am 01.09.2026 entfallen.
 --
 -- Ruecknahme: Aus der Sicherung wiederherstellen. Die entfernten
 --             Policies werden bewusst NICHT wieder angelegt.
