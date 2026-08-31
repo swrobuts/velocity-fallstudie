@@ -112,7 +112,7 @@ for i in range(1, N_RAEDER + 1):
         if ausgemustert_am > BIS:
             ausgemustert_am = None
     raeder.append({"id": i, "typ": typ, "angeschafft": ang, "ausgemustert_am": ausgemustert_am,
-                   "km_kumuliert": 0.0, "fahrten": 0})
+                   "km_kumuliert": 0.0, "fahrten": 0, "verlauf": []})
     fahrrad_rows.append([i, f"WUE-{i:04d}", typ, ang.isoformat(),
                          "ausgemustert" if ausgemustert_am else "verfuegbar",
                          ausgemustert_am.isoformat() if ausgemustert_am else ""])
@@ -657,6 +657,12 @@ while d <= BIS:
         elif status == "abgeschlossen":
             rad["km_kumuliert"] += (dauer / 60.0) * 13.0 * 0.9
         rad["fahrten"] += 1
+        # Fuer das Verschleissmodell weiter unten: WANN wurde wieviel gefahren.
+        # Der Sensor meldet nur 60 Prozent der Distanzen - verschlissen wird
+        # trotzdem, deshalb hier die geschaetzte Strecke, nicht die gemessene.
+        if status == "abgeschlossen":
+            geschw = {"CITY": 13.0, "EBIKE": 18.0, "CARGO": 11.0}[rad["typ"]]
+            rad["verlauf"].append((d, (dauer / 60.0) * geschw))
 
         # ---- Entgelt
         if status == "abgeschlossen":
@@ -696,30 +702,58 @@ KATEGORIEN_EBIKE = KATEGORIEN + ["Akku", "Motor/Unterstuetzung"]
 schaden_rows, auftrag_rows = [], []
 schaden_id = auftrag_id = 0
 
+# VERSCHLEISS ENTSTEHT ENTLANG DER ZEIT (31.08.2026)
+#
+# Die erste Fassung zog die ANZAHL Meldungen aus der Lebenszeit-Nutzung und
+# verteilte sie dann zufaellig ueber das Radleben. Fuer die Klassifikation war
+# das toedlich: WANN eine Meldung kommt, hing von nichts ab, was man vorher
+# haette wissen koennen. Gemessen schlug die Faustregel "meiste Kilometer"
+# (46,7 % Treffer) den Random Forest (41,7 %) - voellig zu Recht, denn mehr als
+# die Lebenszeit-Nutzung steckte gar nicht in den Daten.
+#
+# Jetzt laeuft das Modell die Fahrten jedes Rades der Reihe nach ab. Die
+# Gefaehrdung waechst mit den Kilometern SEIT DER LETZTEN REPARATUR und faellt
+# danach auf null zurueck. Das ist physikalisch das Naheliegende - ein Bremsbelag
+# weiss nicht, wieviel das Rad in seinem ganzen Leben gefahren ist, sondern nur,
+# wieviel seit seinem Einbau - und es macht die juengere Nutzung zu einem
+# Merkmal, das etwas vorhersagt.
+KATEGORIEN = ["Bremse", "Reifen/Platten", "Schaltung", "Licht", "Rahmen/Lenker", "Sattel/Sitzhaltung"]
+KATEGORIEN_EBIKE = KATEGORIEN + ["Akku", "Motor/Unterstuetzung"]
+
+# Kilometer, ab denen es ernst wird - je Radtyp verschieden, weil Lastenraeder
+# schwerer und E-Bikes schneller sind.
+VERSCHLEISS_SCHWELLE = {"CITY": 300.0, "EBIKE": 260.0, "CARGO": 210.0}
+
+schaden_rows, auftrag_rows = [], []
+schaden_id = auftrag_id = 0
+
 for rad in raeder:
-    km, fahrten = rad["km_kumuliert"], rad["fahrten"]
-    ende = rad["ausgemustert_am"] or BIS
-    aktiv_tage = max(1, (ende - rad["angeschafft"]).days)
-
-    erwartung = max(0.0, -0.3 + km / 2800.0 + fahrten / 650.0)
-    streuung = max(erwartung, 0.3) * 0.35
-    n_meldungen = max(0, round(random.gauss(erwartung, streuung)))
-
+    schwelle = VERSCHLEISS_SCHWELLE[rad["typ"]]
+    km_seit_wartung = random.uniform(0, schwelle * 0.6)   # Vorgeschichte
     pool = KATEGORIEN_EBIKE if rad["typ"] in ("EBIKE", "CARGO") else KATEGORIEN
-    for _ in range(n_meldungen):
-        anteil = random.betavariate(2.2, 1.3)
-        gemeldet = rad["angeschafft"] + timedelta(days=int(anteil * aktiv_tage))
-        if gemeldet > ende:
-            gemeldet = ende
-        schwere = random.choices(["leicht", "mittel", "fahruntauglich"],
-                                 weights=[max(0.05, 0.6 - anteil), 0.3, max(0.05, anteil - 0.1)], k=1)[0]
+    ende_rad = rad["ausgemustert_am"] or BIS
+
+    for tag, km in rad["verlauf"]:
+        km_seit_wartung += km
+        # Gefaehrdung je Fahrt: waechst ueberproportional mit der Strecke seit
+        # der letzten Reparatur. Der Exponent 2,2 sorgt dafuer, dass ein frisch
+        # gewartetes Rad praktisch sicher ist und ein lange gefahrenes deutlich
+        # auffaellig wird - ein Verlauf, den ein Baum gut abbilden kann.
+        gefaehrdung = 0.012 * (km_seit_wartung / schwelle) ** 2.2
+        if random.random() >= min(gefaehrdung, 0.35):
+            continue
+
+        anteil = min(1.0, km_seit_wartung / (schwelle * 1.8))
+        schwere = random.choices(
+            ["leicht", "mittel", "fahruntauglich"],
+            weights=[max(0.08, 0.55 - anteil * 0.4), 0.32, max(0.08, anteil * 0.5)], k=1)[0]
 
         schaden_id += 1
-        gemeldet_dt = datetime(gemeldet.year, gemeldet.month, gemeldet.day,
+        gemeldet_dt = datetime(tag.year, tag.month, tag.day,
                                random.randint(7, 19), random.randint(0, 59))
         schaden_rows.append([schaden_id, rad["id"], gemeldet_dt.isoformat(sep=" "),
                              random.choice(pool), schwere,
-                             "erledigt" if gemeldet < BIS - timedelta(days=10) else "offen"])
+                             "erledigt" if tag < BIS - timedelta(days=10) else "offen"])
 
         auftrag_id += 1
         eroeffnet = gemeldet_dt + timedelta(hours=random.randint(2, 60))
@@ -733,6 +767,10 @@ for rad in raeder:
                              erledigt.isoformat(sep=" ") if ist_erledigt else "",
                              "erledigt" if ist_erledigt else "in_arbeit",
                              arbeitszeit if ist_erledigt else ""])
+
+        # Nach der Reparatur beginnt der Verschleiss von vorn - nicht ganz bei
+        # null, denn repariert wird das Defekte, nicht das ganze Rad.
+        km_seit_wartung *= random.uniform(0.05, 0.25)
 
 schreibe("schadensmeldung.csv",
          ["schadensmeldung_id", "fahrrad_id", "gemeldet_am", "kategorie", "schwere", "status"],
