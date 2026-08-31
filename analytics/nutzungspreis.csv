@@ -1,0 +1,4 @@
+typ_code,startgebuehr_eur,preis_pro_minute_eur,tageshoechstpreis_eur
+CITY,0.1,0.1,50.0
+EBIKE,1.0,0.25,75.0
+CARGO,2.0,0.5,110.0
