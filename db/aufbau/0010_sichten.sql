@@ -9,6 +9,23 @@
 --             v_meine_ausleihe, v_meine_rechnung, v_mein_profil
 -- Ruecknahme: DROP VIEW fuer dieselben Namen.
 --
+-- ACHTUNG, EINZELN AUSGEFUEHRT MACHT DIESE DATEI BEIDE WEBSITES LEER.
+--
+-- Jede Sicht wird hier neu angelegt, und eine neu angelegte Sicht hat
+-- KEINE Rechte mehr - grants haengen am Objekt, nicht am Namen. Danach
+-- darf anon nichts mehr lesen, und die Kundenseite zeigt leere
+-- Abschnitte. 0011_sicherheit.sql muss also immer hinterher.
+--
+-- Und 0011 allein genuegt nicht: Es beginnt mit einem pauschalen
+-- "revoke all on all tables ... from anon, authenticated" und vergibt
+-- danach nur die Kundensichten neu. Die WaWi-Rechte stehen in 0017 und
+-- 0019. Wer die auslaesst, nimmt der Warenwirtschaft den Zugriff auf
+-- alle v_wawi-Sichten.
+--
+-- Kurz: nach einer Aenderung an dieser Datei die ganze Kette laufen
+-- lassen - python3 db/run.py db/aufbau/*.sql - nicht eine Auswahl.
+-- Am 31.08.2026 genau so passiert, beide Oberflaechen waren kurz leer.
+--
 -- Oeffentliche Sichten laufen mit den Rechten ihres Eigentuemers
 -- (Standard) und enthalten deshalb ausschliesslich Daten ohne
 -- Personenbezug. Persoenliche Sichten begrenzen die Zeilen entweder
