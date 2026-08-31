@@ -10,7 +10,7 @@ begin
   -- Sechs, nicht sieben: der Zuschlag fuers freie Abstellen wurde
   -- gestrichen, weil er nie erhoben wird.
   return next is((select count(*)::int from velocity.entgeltart), 6,
-                 'Es gibt sieben Entgeltarten');
+                 'Es gibt sechs Entgeltarten');
   return next is((select vorzeichen from velocity.entgeltart where code = 'ZEITENTGELT'),
                  1::smallint, 'Zeitentgelt belastet');
   return next is((select vorzeichen from velocity.entgeltart where code = 'FREIMINUTEN'),

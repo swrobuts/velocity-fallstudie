@@ -62,10 +62,6 @@ async function fetchTarifkarten() {
     return ladeListe('v_tarifkarte', '*', (q) => q.order('typ_id'));
 }
 
-async function fetchTarife() {
-    return ladeListe('v_tarif', '*', (q) => q.order('monatspreis'));
-}
-
 async function fetchFaq() {
     return ladeListe('v_faq', '*', (q) => q.order('sortierung'));
 }
