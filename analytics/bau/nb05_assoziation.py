@@ -1,0 +1,450 @@
+# -*- coding: utf-8 -*-
+"""Notebook 5 - Assoziationsanalyse: Welche Wege gehoeren zusammen?"""
+from bauwerk import CODE, MD, PHASE, kopf
+
+NAME = "05_Assoziation_Wege_im_Netz"
+
+ZELLEN = [
+
+kopf("Assoziationsanalyse: Welche Wege gehören zusammen?",
+     "Assoziationsanalyse (unüberwacht — das Ergebnis sind Regeln, keine Zahlen und keine Gruppen)",
+     "Zwischen welchen Stationen gibt es systematische Ströme, und wann?",
+     NAME),
+
+MD("""
+## Das dritte Gesicht des maschinellen Lernens
+
+| Notebook | Ergebnis des Verfahrens |
+|---|---|
+| 1 und 2 | eine **Vorhersage** je Objekt (Dauer, Ausfallrisiko) |
+| 3 | eine **Gruppe** je Objekt (Stationstyp, Kundensegment) |
+| **5** | **Regeln über Zusammenhänge** — keine Vorhersage, keine Gruppe |
+
+Die Assoziationsanalyse stammt aus dem Handel und heißt dort **Warenkorbanalyse**: Welche
+Artikel liegen zusammen im Einkaufswagen? Das berühmte (und wahrscheinlich erfundene)
+Beispiel ist *Windeln und Bier*.
+
+Übertragen auf VeloCity: **Eine Fahrt ist ein Warenkorb.** Darin liegen die Startstation,
+die Zielstation, die Tageszeit, der Wochentag, der Radtyp. Die Frage lautet: Was liegt
+regelmäßig zusammen im selben Korb?
+
+> **Warum wir das ohne Bibliothek rechnen.** Für Assoziationsregeln gibt es fertige
+> Pakete (`mlxtend`, `apyori`). Wir rechnen die drei Kennzahlen hier von Hand — sie
+> bestehen aus je einer Division, und wer sie einmal selbst gerechnet hat, fällt später
+> nicht auf eine Regel herein, die nur nach etwas aussieht.
+"""),
+
+# =====================================================================
+PHASE(1, "Die Disposition weiß, dass sie morgens umverteilen muss. Sie weiß nicht, "
+         "**wohin**."),
+
+MD("""
+### Die Ausgangslage
+
+Aus Notebook 3 wissen wir, welche **Typen** von Stationen es gibt. Was wir nicht wissen:
+**welche Station sich zugunsten welcher anderen leert.** Der Transporter fährt morgens
+los und verteilt nach Gefühl um.
+
+Die Frage ist also nicht mehr „wie viele Räder“ (das war Notebook 4), sondern
+**„von wo nach wo“**.
+
+### Warum Assoziationsanalyse und nicht einfach eine Kreuztabelle?
+
+Eine Kreuztabelle Start × Ziel könnte man auch bauen. Sie hätte aber ein Problem: Sie
+zeigt **absolute Häufigkeiten**, und die größten Zahlen stehen dort, wo einfach am
+meisten los ist. Der Hauptbahnhof taucht überall oben auf — nicht weil er besondere
+Beziehungen hat, sondern weil er groß ist.
+
+Die Assoziationsanalyse rechnet das heraus. Ihre dritte Kennzahl, der **Lift**, fragt
+genau das: *Kommt diese Kombination häufiger vor, als man bei Unabhängigkeit erwarten
+würde?*
+
+### Die drei Kennzahlen — an einem Beispiel aus dem Handel
+
+Regel: **{Brot} → {Butter}**
+
+| Kennzahl | Frage | Rechnung |
+|---|---|---|
+| **Support** | Wie oft kommt die Kombination überhaupt vor? | Körbe mit Brot *und* Butter ÷ alle Körbe |
+| **Konfidenz** | Wenn Brot drin ist — wie oft dann auch Butter? | Körbe mit beidem ÷ Körbe mit Brot |
+| **Lift** | Ist das mehr, als der Zufall hergäbe? | Konfidenz ÷ Anteil aller Körbe mit Butter |
+
+**Lift = 1** heißt: kein Zusammenhang. **Lift = 2**: doppelt so häufig wie erwartet.
+**Lift < 1**: die beiden meiden einander.
+
+### Die Erfolgskriterien
+
+Eine Regel ist für die Disposition **nur dann brauchbar**, wenn alle drei zutreffen:
+
+| | Kriterium | Schwelle | Warum |
+|---|---|---|---|
+| 1 | **Support** | mindestens 1 % aller Fahrten | Für eine Regel, die zwanzig Fahrten im Jahr betrifft, fährt kein Transporter |
+| 2 | **Lift** | mindestens 1,3 | Darunter ist es Zufall oder schlicht Größe |
+| 3 | **Handlungsfähig** | die Regel muss eine Fahrt des Transporters begründen | „Käppele → Käppele“ ist wahr und nutzlos |
+
+**Kriterium 1 ist das, das am meisten Regeln aussortiert** — und zwar gerade die mit den
+spektakulärsten Lift-Werten. Wir werden das gleich sehen.
+"""),
+
+# =====================================================================
+PHASE(2, "Was liegt in unseren Warenkörben, und wie häufig ist jedes Ding für sich?"),
+
+CODE('''
+import os
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+BASIS = os.environ.get("VELO_BASIS",
+    "https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/main/analytics/")
+pd.set_option("display.width", 160)
+
+fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit"])
+stationen = pd.read_csv(BASIS + "station.csv")
+raeder = pd.read_csv(BASIS + "fahrrad.csv")
+feiertage = set(pd.read_csv(BASIS + "feiertage.csv").datum)
+
+k = fahrten[fahrten.status == "abgeschlossen"].copy()
+namen = stationen.set_index("station_id").name
+k["start"] = k.start_station_id.map(namen)
+k["ziel"] = k.end_station_id.map(namen)
+k["stunde"] = k.startzeit.dt.hour
+k["ist_frei"] = ((k.startzeit.dt.dayofweek >= 5)
+                 | k.startzeit.dt.strftime("%Y-%m-%d").isin(feiertage))
+k = k.merge(raeder[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
+
+print(f"{len(k):,d} Fahrten als 'Warenkörbe'".replace(",", "."))
+print("\\nWie häufig ist jede Station als ZIEL? (das sind die Basisraten für den Lift)")
+basis_ziel = k.ziel.value_counts(normalize=True)
+print((basis_ziel * 100).round(1).to_string())
+'''),
+
+MD("""
+**Diese Tabelle ist wichtiger, als sie aussieht.** Sie ist der Maßstab, gegen den der
+Lift rechnet. Die Zielanteile liegen alle zwischen etwa 9 und 11 % — die zehn Stationen
+sind also ähnlich beliebt. Genau deshalb wird eine Konfidenz von 30 % gleich als
+auffällig zu erkennen sein: Sie ist dreimal so hoch wie der Zufall hergäbe.
+
+### 2.1 Der triviale Zusammenhang, den man zuerst finden muss
+"""),
+
+CODE('''
+rundtour = (k.start == k.ziel).mean()
+print(f"Anteil Rundtouren (Start = Ziel): {rundtour:.1%}")
+print("\\nRundtouren je Startstation:")
+je_station = k.assign(ist_rundtour=(k.start == k.ziel)).groupby("start").ist_rundtour.mean()
+print((je_station.sort_values(ascending=False) * 100).round(1).to_string())
+'''),
+
+MD("""
+**Ein Fünftel aller Fahrten endet dort, wo es begann** — und bei den Ausflugsstationen
+ist es ein Drittel. Das ist der stärkste „Zusammenhang“ im ganzen Datensatz, und er wird
+jede Regelliste anführen, wenn man ihn nicht ausschließt.
+
+**Nützlich ist er trotzdem nicht.** Eine Rundtour verschiebt kein einziges Rad; für die
+Disposition ist sie ein Nullsummenvorgang. Wir schließen Rundtouren deshalb aus der
+Regelsuche aus — **ausdrücklich und begründet**, nicht heimlich.
+
+> Das ist ein wiederkehrendes Muster bei Assoziationsanalysen: **Die stärkste Regel ist
+> fast immer die, die man schon kannte.** Im Supermarkt ist es „wer Milch kauft, kauft
+> Milch derselben Marke“. Der Wert des Verfahrens beginnt erst darunter.
+"""),
+
+# =====================================================================
+PHASE(3, "Aus jeder Fahrt wird ein Warenkorb mit Zeitfenster und Tagesart."),
+
+CODE('''
+# Zeitfenster statt Stunden: 24 Stunden ergaeben 24 mal so viele Regeln mit je
+# einem Vierundzwanzigstel der Belege. Vier Fenster halten die Regeln belegbar
+# und entsprechen dem, wonach die Disposition ohnehin plant.
+GRENZEN = [0, 10, 15, 20, 24]
+BEZEICHNUNGEN = ["früh (5-10)", "mittag (10-15)", "abend (15-20)", "spät (20-24)"]
+
+##LUECKE Bilden Sie die Spalte 'fenster' mit pd.cut über die Stunde, Grenzen GRENZEN, Namen BEZEICHNUNGEN.
+k["fenster"] = pd.cut(k.stunde, GRENZEN, labels=BEZEICHNUNGEN, right=False)
+##ENDE
+k["tagesart"] = np.where(k.ist_frei, "frei", "Werktag")
+
+koerbe = k[k.start != k.ziel].copy()      # Rundtouren ausgeschlossen, siehe Phase 2
+print(f"Warenkörbe für die Regelsuche: {len(koerbe):,d}".replace(",", "."))
+print("\\nVerteilung über die Zeitfenster:")
+print(pd.crosstab(koerbe.fenster, koerbe.tagesart, margins=True).to_string())
+'''),
+
+# =====================================================================
+PHASE(4, "Support, Konfidenz und Lift — drei Divisionen, von Hand gerechnet."),
+
+CODE('''
+def regeln_finden(koerbe, kontextspalten, mindest_support=0.005):
+    """Findet Regeln {Start, Kontext} -> {Ziel} und rechnet die drei Kennzahlen.
+
+    Bewusst ohne Bibliothek: jede Zeile hier entspricht einer Zeile in der
+    Definition aus Phase 1.
+    """
+    n = len(koerbe)
+    zeilen = []
+    for kontext, teil in koerbe.groupby(kontextspalten, observed=True):
+        if not isinstance(kontext, tuple):
+            kontext = (kontext,)
+        # Basisrate des Ziels IM SELBEN KONTEXT - sonst vergliche man
+        # Aepfel mit Birnen (Werktagsziele gegen Wochenendziele).
+        basis = teil.ziel.value_counts(normalize=True)
+        n_kontext = len(teil)
+        for start, gruppe in teil.groupby("start", observed=True):
+            n_start = len(gruppe)
+            for ziel, n_beide in gruppe.ziel.value_counts().items():
+                support = n_beide / n
+                if support < mindest_support:
+                    continue
+                konfidenz = n_beide / n_start
+                lift = konfidenz / basis[ziel]
+                zeilen.append({
+                    "Kontext": " · ".join(map(str, kontext)),
+                    "wenn Start": start, "dann Ziel": ziel,
+                    "Fahrten": n_beide,
+                    "Support": round(support, 4),
+                    "Konfidenz": round(konfidenz, 3),
+                    "Lift": round(lift, 2),
+                })
+    return pd.DataFrame(zeilen)
+
+regeln = regeln_finden(koerbe, ["tagesart", "fenster"])
+print(f"{len(regeln)} Regeln mit mindestens 0,5 % Support gefunden.\\n")
+print("Die zehn Regeln mit dem höchsten Lift:")
+print(regeln.nlargest(10, "Lift").to_string(index=False))
+'''),
+
+MD("""
+### Die Zahlen einer einzelnen Regel nachrechnen
+
+Damit klar ist, dass hier keine Magie stattfindet, rechnen wir eine Regel von Hand nach.
+"""),
+
+CODE('''
+beispiel = regeln.nlargest(1, "Lift").iloc[0]
+teil = koerbe[(koerbe.tagesart == beispiel.Kontext.split(" · ")[0])
+              & (koerbe.fenster == beispiel.Kontext.split(" · ")[1])]
+n_gesamt = len(koerbe)
+n_start = int((teil.start == beispiel["wenn Start"]).sum())
+n_beide = int(((teil.start == beispiel["wenn Start"]) & (teil.ziel == beispiel["dann Ziel"])).sum())
+basisrate = (teil.ziel == beispiel["dann Ziel"]).mean()
+
+print(f"Regel:  WENN Start = {beispiel['wenn Start']}  ({beispiel.Kontext})")
+print(f"        DANN Ziel  = {beispiel['dann Ziel']}\\n")
+def zeile(text, zahl):
+    print(f"  {text:<46s}{f'{zahl:,d}'.replace(',', '.'):>9s}")
+
+zeile("Fahrten insgesamt (alle Kontexte)", n_gesamt)
+zeile(f"Fahrten ab {beispiel['wenn Start']} in diesem Kontext", n_start)
+zeile(f"davon nach {beispiel['dann Ziel']}", n_beide)
+print()
+print(f"  Support    = {n_beide} / {n_gesamt}   = {n_beide/n_gesamt:.4f}  ({n_beide/n_gesamt:.2%})")
+print(f"  Konfidenz  = {n_beide} / {n_start}      = {n_beide/n_start:.3f}   ({n_beide/n_start:.1%})")
+print(f"  Basisrate  = Anteil aller Fahrten in diesem Kontext nach "
+      f"{beispiel['dann Ziel']} = {basisrate:.3f}")
+print(f"  Lift       = {n_beide/n_start:.3f} / {basisrate:.3f} = {(n_beide/n_start)/basisrate:.2f}")
+'''),
+
+# =====================================================================
+PHASE(5, "Die Regeln mit dem höchsten Lift sind nicht die nützlichsten. "
+         "Jetzt kommen die Kriterien aus Phase 1 zum Einsatz."),
+
+CODE('''
+plt.figure(figsize=(9.5, 5.5))
+plt.scatter(regeln.Support * 100, regeln.Lift, s=regeln.Konfidenz * 220,
+            alpha=.55, color="#3d4b6b", edgecolor="none")
+plt.axvline(1.0, color="#e00034", ls="--", label="Kriterium 1: Support ≥ 1 %")
+plt.axhline(1.3, color="#8AB833", ls="--", label="Kriterium 2: Lift ≥ 1,3")
+brauchbar = regeln[(regeln.Support >= 0.01) & (regeln.Lift >= 1.3)]
+plt.scatter(brauchbar.Support * 100, brauchbar.Lift, s=brauchbar.Konfidenz * 220,
+            alpha=.9, color="#e00034", edgecolor="none", label="erfüllt beide")
+plt.xlabel("Support (% aller Fahrten)"); plt.ylabel("Lift")
+plt.title("Jede Blase ist eine Regel — die Größe zeigt die Konfidenz")
+plt.legend(); plt.grid(alpha=.3)
+plt.tight_layout(); plt.show()
+
+print(f"Regeln insgesamt:            {len(regeln)}")
+print(f"davon mit Lift ≥ 1,3:        {(regeln.Lift >= 1.3).sum()}")
+print(f"davon mit Support ≥ 1 %:     {(regeln.Support >= 0.01).sum()}")
+print(f"davon mit BEIDEM:            {len(brauchbar)}")
+'''),
+
+MD("""
+### 5.1 Das Bild erzählt die ganze Geschichte
+
+Die Punktwolke fällt nach rechts ab, und das ist kein Zufall, sondern fast ein
+Naturgesetz dieser Methode:
+
+> **Je spezieller eine Regel, desto größer ihr Lift und desto kleiner ihr Support.**
+
+Ganz links oben stehen die spektakulären Regeln — hoher Lift, aber ein Support von
+Bruchteilen eines Prozents. Sie beschreiben eine Handvoll Fahrten. Für die Disposition
+sind sie wertlos, und schlimmer noch: Bei so wenigen Fällen ist der hohe Lift oft
+schlicht Zufall.
+
+**Wer eine Regelliste nach Lift sortiert und die ersten zehn vorträgt, trägt zehn
+Zufälle vor.** Das ist der häufigste Fehler bei Assoziationsanalysen.
+
+### 5.2 Die brauchbaren Regeln
+"""),
+
+CODE('''
+ergebnis = brauchbar.sort_values(["Kontext", "Lift"], ascending=[True, False])
+print(ergebnis.to_string(index=False))
+'''),
+
+MD("""
+### 5.3 Kriterium 3: Was davon begründet eine Fahrt des Transporters?
+
+Jetzt kommt der Teil, den keine Kennzahl abnimmt. Lesen Sie die Regeln und fragen Sie bei
+jeder: **Was würde die Disposition anders machen?**
+
+Zwei Muster stechen heraus, und sie gehören zusammen:
+
+- **morgens** fließt es von den Pendlerstationen zu den Uni-Stationen
+- **abends** fließt dasselbe zurück
+
+Das ist der klassische Pendelstrom — und für den Transporter bedeutet er: Die
+Uni-Stationen laufen im Lauf des Vormittags voll und sind abends leer, die
+Pendlerstationen umgekehrt. **Wer morgens um 6 Uhr am Hubland auffüllt, hat den Tag
+falsch verstanden.**
+
+> **Ein Wort zur Vorsicht.** Wir haben hier keine Ursache nachgewiesen. Wir haben
+> gezeigt, dass zwei Dinge häufiger zusammen auftreten als erwartet — mehr nicht. Dass
+> es dieselben Menschen sind, die morgens hin- und abends zurückfahren, ist eine
+> *plausible Deutung*, keine Messung. Prüfen ließe sie sich über die `kunde_id`; das wäre
+> eine eigene Analyse.
+"""),
+
+CODE('''
+# Die Gegenprobe zur Deutung: fahren morgens und abends dieselben Leute?
+morgens = koerbe[(koerbe.tagesart == "Werktag") & (koerbe.fenster == "früh (5-10)")
+                 & (koerbe.start == "Hauptbahnhof") & (koerbe.ziel == "Hubland")]
+abends = koerbe[(koerbe.tagesart == "Werktag") & (koerbe.fenster == "abend (15-20)")
+                & (koerbe.start == "Hubland") & (koerbe.ziel == "Hauptbahnhof")]
+gemeinsam = set(morgens.kunde_id) & set(abends.kunde_id)
+
+print(f"Kundschaft mit Fahrt Hauptbahnhof -> Hubland  (morgens): {morgens.kunde_id.nunique():>5d}")
+print(f"Kundschaft mit Fahrt Hubland -> Hauptbahnhof  (abends):  {abends.kunde_id.nunique():>5d}")
+print(f"Personen, die BEIDES getan haben:                       {len(gemeinsam):>5d}")
+print(f"\\nAnteil an der Morgengruppe: {len(gemeinsam)/max(morgens.kunde_id.nunique(),1):.1%}")
+'''),
+
+MD("""
+**Die Deutung hält stand — teilweise.** Knapp ein Viertel derer, die morgens vom Bahnhof
+zum Campus fahren, fährt abends dieselbe Strecke zurück. Das ist deutlich mehr, als
+Zufall hergäbe, aber es sind eben auch drei Viertel, die es **nicht** tun: Sie fahren
+anders zurück, zu anderer Zeit, oder gar nicht. Damit ist aus der Assoziationsregel eine belegte
+Aussage über Personen geworden — und genau so geht man mit einer Regel um, die man
+ernst nehmen will: **nachfassen, nicht glauben.**
+"""),
+
+# =====================================================================
+PHASE(6, "Aus Regeln wird ein Umlaufplan für den Transporter."),
+
+CODE('''
+# Netto-Wanderung je Station und Zeitfenster: Zugaenge minus Abgaenge.
+# Genau das muss der Transporter ausgleichen.
+ab = koerbe.groupby(["tagesart", "fenster", "start"], observed=True).size().rename("ab")
+zu = koerbe.groupby(["tagesart", "fenster", "ziel"], observed=True).size().rename("zu")
+saldo = pd.concat([ab, zu], axis=1).fillna(0)
+saldo.index.names = ["tagesart", "fenster", "station"]
+saldo["netto"] = saldo.zu - saldo.ab
+
+werktag = saldo.loc["Werktag"].reset_index()
+tabelle = werktag.pivot(index="station", columns="fenster", values="netto").fillna(0)
+tabelle = tabelle.round(0).astype(int)
+
+plt.figure(figsize=(10, 5))
+plt.imshow(tabelle.values, cmap="RdBu_r", aspect="auto",
+           vmin=-abs(tabelle.values).max(), vmax=abs(tabelle.values).max())
+plt.colorbar(label="Netto-Zugang (blau) / Netto-Abgang (rot)")
+plt.xticks(range(len(tabelle.columns)), tabelle.columns, rotation=20)
+plt.yticks(range(len(tabelle.index)), tabelle.index)
+plt.title("Werktags: wo laufen Räder auf, wo fehlen sie?")
+plt.tight_layout(); plt.show()
+
+print(tabelle.to_string())
+'''),
+
+CODE('''
+print("UMLAUFPLAN WERKTAG — abgeleitet aus den Salden oben\\n")
+for fenster in [b for b in BEZEICHNUNGEN if b in tabelle.columns]:
+    spalte = tabelle[fenster].sort_values()
+    quellen = spalte[spalte < -spalte.abs().max() * 0.25]
+    senken = spalte[spalte > spalte.abs().max() * 0.25]
+    if quellen.empty and senken.empty:
+        continue
+    print(f"{fenster}")
+    for station, wert in senken.items():
+        print(f"    abholen bei   {station:<20s} (+{wert} Räder laufen auf)")
+    for station, wert in quellen.items():
+        print(f"    auffüllen bei {station:<20s} ({wert} Räder fehlen)")
+    print()
+
+tabelle.to_csv("umlaufplan_werktag.csv")
+print("geschrieben: umlaufplan_werktag.csv")
+'''),
+
+MD("""
+### 6.1 Was dieser Plan ist — und was nicht
+
+Er sagt, **wo** und **wann** umzuverteilen ist. Er sagt nicht, **wie viele** Räder — das
+war Notebook 4, und beide gehören im Betrieb zusammen.
+
+### 6.2 Überwachung
+
+| Wache | Schwelle | Reaktion |
+|---|---|---|
+| Lift der Leitregeln | fällt unter 1,3 | die Ströme haben sich verschoben |
+| Support der Leitregeln | fällt unter 1 % | die Regel betrifft zu wenige Fahrten |
+| neue Station im Netz | taucht auf | **alle Basisraten verschieben sich** — komplett neu rechnen |
+| Baustelle oder Sperrung | gemeldet | Regeln für die betroffenen Wege aussetzen, nicht anpassen |
+
+**Die dritte Zeile ist die unangenehmste.** Der Lift misst gegen die Basisrate aller
+Ziele. Kommt eine elfte Station dazu, ändert sich diese Basisrate für **jede** Regel —
+auch für solche, die mit der neuen Station nichts zu tun haben. Assoziationsregeln sind
+nicht fortschreibbar; sie müssen neu gerechnet werden.
+
+### 6.3 Ein Hinweis, der nicht fehlen darf
+
+Diese Analyse arbeitet mit **Bewegungsdaten von Personen**. Für den Umlaufplan brauchen
+wir sie nur aggregiert — und genau so sollte er auch entstehen. Die Gegenprobe in Phase 5,
+die auf `kunde_id` zurückgreift, ist etwas anderes: Sie stellt fest, dass identifizierbare
+Personen morgens und abends dieselbe Strecke fahren. Das ist ein Bewegungsprofil, und
+dafür braucht es mehr als technische Machbarkeit.
+"""),
+
+# =====================================================================
+MD("""
+---
+
+# Der Kreislauf schließt sich
+
+| Phase | Ergebnis |
+|---|---|
+| 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. Drei Erfolgskriterien: Support ≥ 1 %, Lift ≥ 1,3, und die Regel muss eine Transporterfahrt begründen |
+| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Der stärkste Zusammenhang im Datensatz sind die Rundtouren (rund 20 %) — wahr und nutzlos, deshalb ausgeschlossen |
+| 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
+| 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
+| 5 Evaluation | Hoher Lift und hoher Support schließen einander fast aus. Die brauchbaren Regeln bilden den Pendelstrom ab — morgens hin, abends zurück — und die Deutung wurde über die `kunde_id` gegengeprüft |
+| 6 Deployment | Umlaufplan je Zeitfenster als CSV, mit Datenschutzvorbehalt |
+
+**Was eine zweite Runde anders machen würde**
+
+1. **Zurück zu Phase 1:** Wir haben nur Regeln der Form „ein Start → ein Ziel“ gesucht.
+   Interessanter wären Regeln mit mehreren Bedingungen — „Regen **und** Werktag **und**
+   Bahnhof“. Dafür ist der Apriori-Algorithmus gemacht, der Kombinationen systematisch
+   durchsucht, statt sie vorzugeben.
+2. **Zurück zu Phase 3:** Die vier Zeitfenster sind gesetzt, nicht gefunden. Eine
+   Aufteilung nach den tatsächlichen Spitzen (aus Notebook 3!) könnte schärfere Regeln
+   liefern.
+3. **Die Richtung prüfen.** Assoziation ist symmetrisch — sie kennt kein *weil*. Ob der
+   Strom morgens vom Bahnhof kommt oder zum Campus geht, ist für den Transporter derselbe
+   Weg, für eine Werbekampagne aber nicht.
+
+**Weiter geht es mit Notebook 6 — Anomalieerkennung:** Dort suchen wir nicht das Muster,
+sondern seine Ausnahmen. Und wir werden feststellen, dass die schwierigste Frage nicht
+lautet „was ist auffällig?“, sondern „**was davon ist ein Problem?**“
+"""),
+]

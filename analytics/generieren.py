@@ -425,6 +425,56 @@ def station_gewicht(typ, frei, vorlesung, event):
     if event and typ == "freizeit":
         g *= 1.8
     return g
+# ---------------------------------------------------------------- Wege im Netz
+# Wohin faehrt jemand, der hier und jetzt startet? Gewichte je Kombination
+# aus Start- und Zieltyp, Tageszeit und Tagesart. Die Zahlen sind gesetzt,
+# nicht gemessen - sie bilden nach, was jede Stadt kennt: morgens vom Bahnhof
+# in die Arbeits- und Studienviertel, abends zurueck, am Wochenende an den
+# Fluss und auf die Huegel.
+def zielgewicht(start_typ, ziel_typ, fenster, frei):
+    if frei:
+        tabelle = {
+            ("freizeit", "freizeit"): 3.0, ("freizeit", "misch"): 1.6,
+            ("misch", "freizeit"): 2.6, ("pendler", "freizeit"): 2.4,
+            ("uni", "freizeit"): 2.2,
+        }
+        return tabelle.get((start_typ, ziel_typ), 0.7)
+    if fenster == "frueh":
+        tabelle = {
+            ("pendler", "uni"): 3.2, ("pendler", "misch"): 2.0, ("pendler", "pendler"): 1.4,
+            ("uni", "uni"): 1.6, ("uni", "misch"): 1.0,
+            ("misch", "uni"): 1.8, ("misch", "pendler"): 1.2,
+            ("freizeit", "pendler"): 1.6, ("freizeit", "misch"): 1.2,
+        }
+        return tabelle.get((start_typ, ziel_typ), 0.5)
+    if fenster == "abend":
+        tabelle = {
+            ("uni", "pendler"): 3.2, ("uni", "misch"): 1.8, ("uni", "freizeit"): 1.4,
+            ("pendler", "pendler"): 2.0, ("pendler", "freizeit"): 1.5,
+            ("misch", "pendler"): 2.2, ("misch", "freizeit"): 1.6,
+            ("freizeit", "freizeit"): 1.8, ("freizeit", "pendler"): 1.4,
+        }
+        return tabelle.get((start_typ, ziel_typ), 0.6)
+    # mittags und spaetabends bleibt es durchmischt
+    return {"freizeit": 1.4, "misch": 1.2}.get(ziel_typ, 1.0)
+
+
+# Benannte Verbindungen, die es in Wuerzburg so oder aehnlich gibt.
+# Schluessel: (start_id, ziel_id, Zeitfenster, ist_freier_Tag) -> Verstaerkung
+STARKE_WEGE = {
+    (1, 5, "frueh", False): 2.6,    # Hauptbahnhof -> Hubland (Campus)
+    (1, 4, "frueh", False): 2.0,    # Hauptbahnhof -> Sanderring
+    (1, 10, "frueh", False): 2.2,   # Hauptbahnhof -> Klinikum
+    (5, 1, "abend", False): 2.8,    # Hubland -> Hauptbahnhof
+    (4, 1, "abend", False): 2.1,    # Sanderring -> Hauptbahnhof
+    (10, 1, "abend", False): 2.0,   # Klinikum -> Hauptbahnhof
+    (7, 6, "frueh", False): 1.8,    # Zellerau -> Marktplatz
+    (2, 3, "frueh", True): 2.4,     # Residenz -> Alte Mainbruecke (Wochenende)
+    (3, 9, "mittag", True): 2.6,    # Alte Mainbruecke -> Kaeppele
+    (9, 3, "abend", True): 2.2,     # Kaeppele -> Alte Mainbruecke
+    (2, 8, "mittag", True): 1.9,    # Residenz -> Ringpark
+}
+
 PROFIL_CODES = [p[0] for p in PROFILE]
 
 _pool_cache = {}
@@ -581,13 +631,33 @@ while d <= BIS:
         kunde = kunden[kunde_id]
 
         # ---- Ziel
+        # ERWEITERT AM 31.08.2026. Vorher hing die Zielwahl nur davon ab, ob
+        # der Zieltyp vom Starttyp abwich. Folge: ausser den Rundtouren war
+        # jedes Ziel gleich wahrscheinlich - gemessen rund 10 Prozent je Ziel
+        # bei einer Basisrate von 10 Prozent, also Lift 1,0 auf ganzer Linie.
+        # Fuer eine Assoziationsanalyse gab es damit nichts zu finden.
+        #
+        # Jetzt haengt die Zielwahl von Startstationstyp UND Tageszeit ab, wie
+        # es echte Pendlerstroeme tun: morgens vom Bahnhof zur Uni und in die
+        # Klinik, abends zurueck, am Wochenende die Ausflugsrunde.
+        fenster = ("frueh" if stunde < 10 else
+                   "mittag" if stunde < 15 else
+                   "abend" if stunde < 20 else "spaet")
         p_rueckkehr = 0.28 if typ == "freizeit" else 0.10
         if random.random() < p_rueckkehr:
             end_station = start_station
         else:
-            end_kandidaten = offene_stationen
-            end_gew = [1.3 if STATION_TYP[s] != typ else 0.7 for s in end_kandidaten]
-            end_station = random.choices(end_kandidaten, weights=end_gew, k=1)[0]
+            end_gew = []
+            for sid in offene_stationen:
+                ziel_typ = STATION_TYP[sid]
+                g = zielgewicht(typ, ziel_typ, fenster, frei)
+                # Einzelne benannte Verbindungen zusaetzlich verstaerken. Sie
+                # geben der Assoziationsanalyse Regeln, die man zitieren kann.
+                g *= STARKE_WEGE.get((start_station, sid, fenster, frei), 1.0)
+                if sid == start_station:
+                    g *= 0.25
+                end_gew.append(g)
+            end_station = random.choices(offene_stationen, weights=end_gew, k=1)[0]
 
         rad = random.choice(verfuegbare_raeder)
 
