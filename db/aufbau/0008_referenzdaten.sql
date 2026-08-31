@@ -181,13 +181,31 @@ update velocity.tarif_kondition k
 -- ---------------------------------------------------------------------
 -- Redaktionsinhalte, wortgleich aus src/index.html uebernommen
 -- ---------------------------------------------------------------------
+-- Der Studierenden-Eintrag versprach kostenfreies Fahren im
+-- 'Campus-Tarif', erreichbar ueber eine 'Hochschuladresse'. Keines der
+-- drei Stuecke deckte sich mit den Tarifdaten: der Tarif heisst
+-- Studententarif, setzt einen gueltigen Studierendenausweis voraus und
+-- gibt 300 Freiminuten im Monat. Kostenfrei ist damit keine Fahrt - die
+-- Startgebuehr wird in fn_ausleihe_abrechnen vor dem Freiminuten-Block
+-- erhoben, und Freiminuten entlasten nur das Zeitentgelt.
+--
+-- Der Fachschluessel des on-conflict ist die FRAGE. Die neue Frage
+-- stuende sonst als fuenfter Eintrag neben der alten, statt sie zu
+-- ersetzen - und t0008 zaehlt vier. Umbenannt statt geloescht und neu
+-- angelegt: so behaelt der Eintrag seine faq_id, und das insert darunter
+-- traegt Antwort und Sortierung ueber sein on-conflict nach. Auf einer
+-- frischen Datenbank findet das update nichts und das insert legt an.
+update velocity.faq_eintrag
+   set frage = 'Gibt es einen Tarif für Studierende?'
+ where frage = 'Gibt es Rabatte für Studierende?';
+
 insert into velocity.faq_eintrag (frage, antwort, sortierung) values
   ('Wie kann ich bezahlen?',
    'Wir akzeptieren PayPal, Kreditkarte und SEPA-Lastschrift. Die Abrechnung erfolgt automatisch.', 1),
   ('Darf ich das Rad kurz parken?',
    'Ja. Nutze in der App den Parkmodus: die Miete läuft weiter, das Schloss verriegelt.', 2),
-  ('Gibt es Rabatte für Studierende?',
-   'Registriere dich mit deiner Hochschuladresse für den Campus-Tarif. Studierende der THWS fahren kostenfrei.', 3),
+  ('Gibt es einen Tarif für Studierende?',
+   'Mit gültigem Studierendenausweis fährst du im Studententarif: 300 Freiminuten pro Monat, ohne Monatsbeitrag. Die Startgebühr je Fahrt bleibt.', 3),
   ('Was passiert bei einem Defekt?',
    'Melde den Schaden über die App. Wir beenden deine Miete sofort kostenfrei.', 4)
 on conflict (frage) do update
