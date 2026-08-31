@@ -189,8 +189,8 @@ print(X.describe().round(2).to_string())
 '''),
 
 MD("""
-> **Warum `distanz_km` nicht dabei ist.** Sie fehlt bei 41 % der Fahrten. Ein
-> Anomalieverfahren würde dann entweder diese 41 % gar nicht bewerten oder — schlimmer —
+> **Warum `distanz_km` nicht dabei ist.** Sie fehlt bei 40 % der hier betrachteten Fahrten. Ein
+> Anomalieverfahren würde dann entweder diese 40 % gar nicht bewerten oder — schlimmer —
 > das Fehlen selbst als Auffälligkeit werten. Beides wäre falsch: Ein ausgefallener Sensor
 > ist kein auffälliger Vorgang.
 """),
