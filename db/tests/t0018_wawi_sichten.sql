@@ -514,6 +514,8 @@ begin
                          'v_wawi_fahrten_je_tag nennt den Tag');
   return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'fahrten'::name,
                          'v_wawi_fahrten_je_tag nennt die Zahl der Fahrten');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'umsatz'::name,
+                         'v_wawi_fahrten_je_tag nennt den Tagesumsatz');
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'ausleihe_id'::name,
                            'v_wawi_fahrten_je_tag nennt keine einzelne Fahrt');
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag'::name, 'kunde_id'::name,
@@ -667,6 +669,8 @@ begin
                          'nennt die Strecke');
   return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'ist_geschaetzt'::name,
                          'kennzeichnet eine geschaetzte Strecke');
+  return next has_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'umsatz'::name,
+                         'nennt den Umsatz der einzelnen Fahrt');
 
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'ausleihe_id'::name,
                            'nennt keine Fahrt-Kennung (liesse sich ueber v_wawi_fahrt_km zurueckverfolgen)');
@@ -680,6 +684,96 @@ begin
                            'nennt keinen Nachnamen');
   return next hasnt_column('velocity'::name, 'v_wawi_fahrten_je_tag_rad'::name, 'startzeit'::name,
                            'nennt keine Uhrzeit - nur den Tag, der schon aus dem Klickkontext bekannt ist');
+end;
+$$;
+
+-- DIE FEINERE TAGESSICHT MUSS ZUR GROEBEREN PASSEN (30.08.2026)
+-- v_wawi_fahrten_je_tag_typ schneidet dieselben Fahrten nach Radtyp.
+-- Wenn beide Sichten je fuer sich gepflegt werden, koennen sie
+-- auseinanderlaufen - etwa weil eine spaeter einen Status mehr zulaesst.
+-- Dieser Test rechnet die feinere auf die groebere hoch und vergleicht
+-- Tag fuer Tag; er faellt aus, sobald sich eine von beiden bewegt.
+create or replace function velocity_test.test_v_fahrten_je_tag_typ_passt_zur_tagessicht()
+returns setof text language plpgsql as $$
+declare v_abweichungen bigint; v_typen bigint;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('leitung-tagtyp', 'leitung');
+
+  select count(*) into v_abweichungen
+    from (select tag, sum(fahrten) as fahrten, round(sum(umsatz), 2) as umsatz
+            from velocity.v_wawi_fahrten_je_tag_typ group by tag) fein
+    full join velocity.v_wawi_fahrten_je_tag grob using (tag)
+   where fein.fahrten is distinct from grob.fahrten
+      or fein.umsatz  is distinct from grob.umsatz;
+  return next is(v_abweichungen, 0::bigint,
+                 'ueber alle Radtypen summiert ergibt die feine Tagessicht exakt die grobe');
+
+  -- Gegenprobe: die feine Sicht schneidet wirklich, es gibt mehr als
+  -- einen Radtyp. Sonst waere die Zusicherung oben trivial erfuellt.
+  select count(distinct typ_code) into v_typen from velocity.v_wawi_fahrten_je_tag_typ;
+  return next cmp_ok(v_typen, '>', 1::bigint,
+                     'die feine Tagessicht kennt mehr als einen Radtyp');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- KORNPROBE ZUR TAGESSICHT (30.08.2026)
+-- Dieselbe Gefahr wie eine Ebene tiefer: entgeltposition traegt mehrere
+-- Zeilen je Ausleihe. Waere der Tagesumsatz per gewoehnlichem join
+-- angehaengt, zaehlte 'fahrten' zwar dank count(distinct) noch richtig -
+-- jede kuenftige Kennzahl ohne distinct aber nicht mehr. Der Test haelt
+-- deshalb BEIDES fest: die Fahrtenzahl und die Umsatzsumme.
+create or replace function velocity_test.test_v_fahrten_je_tag_umsatz_ohne_vervielfachung()
+returns setof text language plpgsql as $$
+declare v_fahrten bigint; v_erwartet bigint; v_umsatz numeric; v_umsatz_erwartet numeric;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('leitung-tagesumsatz', 'leitung');
+
+  select sum(fahrten) into v_fahrten from velocity.v_wawi_fahrten_je_tag;
+  select count(*) into v_erwartet from velocity.ausleihe where status = 'abgeschlossen';
+  return next is(v_fahrten, v_erwartet,
+                 'die Tagessicht zaehlt jede abgeschlossene Fahrt genau einmal');
+
+  select round(sum(umsatz), 2) into v_umsatz from velocity.v_wawi_fahrten_je_tag;
+  select round(sum(ep.betrag), 2) into v_umsatz_erwartet
+    from velocity.entgeltposition ep
+    join velocity.ausleihe a using (ausleihe_id)
+   where a.status = 'abgeschlossen';
+  return next is(v_umsatz, v_umsatz_erwartet,
+                 'die Tagesumsaetze summieren sich auf die Entgeltpositionen der abgeschlossenen Fahrten');
+
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;
+
+-- KORNPROBE ZUM UMSATZ-JOIN (30.08.2026)
+-- entgeltposition traegt MEHRERE Zeilen je Ausleihe. Waere der Umsatz per
+-- gewoehnlichem join statt per left join lateral angehaengt, haette die Sicht
+-- ploetzlich mehr Zeilen als Fahrten - und dauer_minuten wie kilometer waeren
+-- beim Summieren zu hoch, ohne dass es irgendwo auffiele. Genau diese
+-- Vervielfachung prueft dieser Test.
+create or replace function velocity_test.test_v_fahrten_je_tag_rad_korn_bleibt_die_fahrt()
+returns setof text language plpgsql as $$
+declare v_zeilen bigint; v_fahrten bigint; v_mehrfach bigint;
+begin
+  perform velocity_test.fixture_mitarbeiter_mit_rolle('leitung-korn', 'leitung');
+
+  select count(*) into v_zeilen from velocity.v_wawi_fahrten_je_tag_rad;
+  select count(*) into v_fahrten from velocity.ausleihe where status = 'abgeschlossen';
+  return next is(v_zeilen, v_fahrten,
+                 'eine Zeile je abgeschlossener Fahrt - der Umsatz-Join vervielfacht nichts');
+
+  -- Gegenprobe am konkreten Fall: es GIBT Fahrten mit mehr als einer
+  -- Entgeltposition. Ohne sie liefe der Test oben ins Leere, weil er gar
+  -- nichts zu vervielfachen haette.
+  select count(*) into v_mehrfach
+    from (select ausleihe_id from velocity.entgeltposition
+           group by ausleihe_id having count(*) > 1) mehr;
+  return next cmp_ok(v_mehrfach, '>', 0::bigint,
+                     'es gibt Fahrten mit mehreren Entgeltpositionen (sonst pruefte der Korntest nichts)');
+
+  perform set_config('request.jwt.claims', '', true);
 end;
 $$;
 

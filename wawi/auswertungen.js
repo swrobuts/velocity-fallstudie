@@ -235,6 +235,36 @@ function monatKurzName(jahr, monatsnummerEins) {
     return new Intl.DateTimeFormat(localeTag(), { month: 'short' }).format(new Date(jahr, monatsnummerEins - 1, 1));
 }
 
+// ===== TAGE IM GEWÄHLTEN FENSTER (30.08.2026) =====
+// Die Kennzahl "Umsatz je Rad und Tag" teilte durch feste 365, begründet
+// mit "das Zwölf-Monats-Fenster ist genau ein Jahr". Das galt, solange es
+// nur dieses eine Fenster gab. Seit der Zeitwahl (3, 6, 12, 24 Monate,
+// Alles) stimmt es in vier von fünf Fällen nicht mehr: bei "Alles"
+// reichen die Daten vom Januar 2025 bis in den laufenden Monat, also über
+// 607 statt 365 Tage - der angezeigte Wert war damit um zwei Drittel zu
+// hoch.
+//
+// Der Nenner folgt jetzt dem Fenster: vom Ersten des ersten Monats bis
+// zum letzten Tag des letzten, höchstens aber bis heute. Die Obergrenze
+// ist nötig, weil der letzte Monat der laufende ist - ein voller August
+// im Nenner, aber nur dreissig Tage Umsatz im Zähler, hiesse die Flotte
+// schlechter rechnen, als sie ist.
+function tageImFenster(fenster) {
+    if (!fenster || fenster.length === 0) return 1;
+    const [vonJahr, vonMonat] = fenster[0].split('-').map(Number);
+    const [bisJahr, bisMonat] = fenster[fenster.length - 1].split('-').map(Number);
+    const beginn = new Date(vonJahr, vonMonat - 1, 1);
+    // Tag 0 des Folgemonats ist der letzte Tag des Monats - so muss
+    // niemand Schaltjahre von Hand kennen.
+    const monatsende = new Date(bisJahr, bisMonat, 0);
+    const heute = new Date();
+    heute.setHours(0, 0, 0, 0);
+    const ende = monatsende > heute ? heute : monatsende;
+    // Auf Tage runden statt abzuschneiden: die Zeitumstellung macht einen
+    // Tag im Jahr 23 und einen 25 Stunden lang.
+    return Math.max(1, Math.round((ende - beginn) / 86400000) + 1);
+}
+
 function monatFormat(monat) {
     const [jahr, monatsnummer] = monat.split('-').map(Number);
     return `${monatKurzName(jahr, monatsnummer)} ${jahr}`;
@@ -457,7 +487,10 @@ async function monatsdrilldownEinfuegen(monat) {
     // möglich, die hier eine falsche Tageszahl einschmuggeln könnte.
     const tageImMonat = new Date(Number(jahr), monatsnummer, 0).getDate();
 
-    const zeilen = await ladeListe('v_wawi_fahrten_je_tag', 'tag, fahrten',
+    // Je Tag UND Radtyp (0018_wawi_sichten.sql). Ueber alle Typen summiert
+    // ergibt das exakt v_wawi_fahrten_je_tag - in t0018 geprueft -, nur
+    // laesst sich hier nach Radtyp einschraenken, ohne noch einmal zu laden.
+    const zeilen = await ladeListe('v_wawi_fahrten_je_tag_typ', 'tag, typ_code, typ, fahrten, umsatz',
         (q) => q.gte('tag', `${monat}`).lt('tag', naechsterMonat).order('tag'));
 
     // Bereich/Reiter gewechselt ODER eine neuere Zeile ausgewählt,
@@ -475,7 +508,7 @@ async function monatsdrilldownEinfuegen(monat) {
     ueberschrift.textContent = t('hint.ridesPerDayHeading', { monat: monatFormat(monat) });
     abschnitt.append(ueberschrift);
 
-    const fehler = letzterLadeFehler('v_wawi_fahrten_je_tag');
+    const fehler = letzterLadeFehler('v_wawi_fahrten_je_tag_typ');
     if (fehler) {
         const hinweis = document.createElement('p');
         hinweis.className = 'monatsdrilldown-fehler';
@@ -490,9 +523,99 @@ async function monatsdrilldownEinfuegen(monat) {
     // Kommentar in 0018_wawi_sichten.sql), ist aber null Fahrten, keine
     // fehlende Säule. Eine ausgelassene Kategorie sähe in der Grafik wie
     // ein Ladefehler aus (Auftrag, ausdrücklich benannt).
+    // ===== RADTYPFILTER UND REIHENFOLGE (30.08.2026) =====
+    // Auftrag: "Können wir vor die Kalenderanzeige im oberen Bereich einen
+    // Filter nach Radtyp (Multiselect) anbringen" und "Das Säulendiagramm
+    // mit der Matrix zusammen stellen wir ans Ende, also nach dem Kalender."
+    //
+    // Die Radtypen kommen aus den GELADENEN Zeilen, nicht aus einer zweiten
+    // Abfrage: angeboten werden genau die Typen, die in diesem Monat auch
+    // vorkommen. Ein Typ ohne eine einzige Fahrt waere ein Schalter, der
+    // nichts bewirkt.
+    const radtypen = [...new Map(zeilen.map((z) => [String(z.typ_code), z.typ])).entries()]
+        .map(([wert, text]) => ({ wert, text }))
+        .sort((a, b) => a.text.localeCompare(b.text, sprache()));
+    // Leere Auswahl heisst ALLE - dieselbe Regel wie bei den Spaltenfiltern
+    // der Arbeitsliste, und mehrfachauswahlFeld() beschriftet sich dann von
+    // selbst mit "Alle". Ohne sie waere "nichts gewaehlt" ein Kalender
+    // voller Nullen, den niemand absichtlich herstellt.
+    let gewaehlteTypen = new Set();
+
+    const filterZeile = document.createElement('div');
+    filterZeile.className = 'monatsdrilldown-filter';
+    const filterBeschriftung = document.createElement('span');
+    filterBeschriftung.className = 'monatsdrilldown-filter-titel';
+    filterBeschriftung.textContent = t('field.radtyp');
+    filterZeile.append(filterBeschriftung);
+
+    const kalenderPlatz = document.createElement('div');
+    kalenderPlatz.className = 'monatsdrilldown-kalenderplatz';
+    const grafikPlatz = document.createElement('div');
+    const kachelPlatz = document.createElement('div');
+    // REIHENFOLGE: Filter, Diagramm, Matrix, Kalender - und der Kalender
+    // ZULETZT aus einem harten Grund, nicht aus Geschmack: ein Klick auf
+    // einen Tag haengt die Tagesansicht ans ENDE der Maske
+    // (tagdrilldownEinfuegen bekommt #detailmaske als Wurzel). Stuenden
+    // Diagramm und Matrix dazwischen, laege das Ergebnis des Klicks weit
+    // unterhalb der Kachel, die man angeklickt hat.
+    // Der Filter bleibt oben: er gilt fuer alles darunter.
+    abschnitt.append(filterZeile, grafikPlatz, kachelPlatz, kalenderPlatz);
+
+    function zeichneMonat() {
+    // Eine offene Tagesansicht gehoert zum ALTEN Filter: sie haengt am Ende
+    // der Maske und wird von den Behaeltern hier nicht mit ersetzt. Bliebe
+    // sie stehen, zeigte sie Zeilen eines Radtyps, den der Kalender darueber
+    // gerade nicht mehr zaehlt - dieselbe Sorte Widerspruch, die dieser
+    // Durchgang beseitigt.
+    document.getElementById('tagdrilldown')?.remove();
+    // DIE UEBERSCHRIFT FOLGT DEM FILTER. Sie behauptete "gesamt, alle
+    // Radtypen und Tarife" - mit gesetztem Filter waere das schlicht
+    // falsch, und zwar an der auffaelligsten Stelle der Ansicht. Bei
+    // leerer Auswahl bleibt der alte Wortlaut, der dann ja stimmt.
+    ueberschrift.textContent = gewaehlteTypen.size === 0
+        ? t('hint.ridesPerDayHeading', { monat: monatFormat(monat) })
+        : t('hint.ridesPerDayHeadingFiltered', {
+            monat: monatFormat(monat),
+            typen: radtypen.filter((r) => gewaehlteTypen.has(r.wert)).map((r) => r.text).join(', ')
+        });
+
     const tage = Array.from({ length: tageImMonat }, (_, i) => i + 1);
-    const fahrtenNachTag = new Map(zeilen.map((z) => [Number(z.tag.slice(8, 10)), z.fahrten]));
+    // Je Tag ueber die gewaehlten Radtypen aufsummiert.
+    const sichtbar = gewaehlteTypen.size === 0
+        ? zeilen : zeilen.filter((z) => gewaehlteTypen.has(String(z.typ_code)));
+    const fahrtenNachTag = new Map();
+    for (const z of sichtbar) {
+        const tag = Number(z.tag.slice(8, 10));
+        fahrtenNachTag.set(tag, (fahrtenNachTag.get(tag) ?? 0) + z.fahrten);
+    }
     const werte = tage.map((tag) => fahrtenNachTag.get(tag) ?? 0);
+    // Tagesumsatz parallel zu den Fahrten (30.08.2026, Auftrag: "Ich zeige
+    // auf einen Tag, es wird der Tagesgesamtumsatz gezeigt; auch bei dem
+    // Säulendiagramm"). NICHT in werte[] hineingerechnet: die Säulenhöhe
+    // und die Farbstufe des Kalenders bleiben die FAHRTEN - zwei Größen in
+    // einer Fläche wären nicht mehr ablesbar. Der Umsatz kommt nur im
+    // Hinweisfenster dazu.
+    // undefined statt 0 fuer einen Tag ohne Zeile: er hatte keinen
+    // Betrieb, sein Umsatz ist nicht "null Euro", sondern gar keiner -
+    // die Beschriftung laesst ihn dann weg.
+    const umsatzNachTag = new Map();
+    for (const z of sichtbar) {
+        if (z.umsatz === null || z.umsatz === undefined) continue;
+        const tag = Number(z.tag.slice(8, 10));
+        umsatzNachTag.set(tag, (umsatzNachTag.get(tag) ?? 0) + Number(z.umsatz));
+    }
+    const umsaetze = tage.map((tag) => umsatzNachTag.get(tag));
+
+    // Ein Text fuer beide Orte - Kalenderkachel und Saeule zeigen denselben
+    // Tag, also darf sich ihre Auskunft nicht unterscheiden.
+    function tagHinweis(index) {
+        const datum = `${tage[index]}. ${monatNameVoll}`;
+        const fahrtenText = mengeFormat(werte[index], 'fahrt');
+        const umsatz = umsaetze[index];
+        return umsatz === undefined
+            ? `${datum}: ${fahrtenText}`
+            : t('hint.dayRidesRevenue', { datum, phrase: fahrtenText, umsatz: geldFormat(umsatz) });
+    }
 
     const gesamt = werte.reduce((s, w) => s + w, 0);
     const minimum = Math.min(...werte);
@@ -529,15 +652,72 @@ async function monatsdrilldownEinfuegen(monat) {
     // MENGENFORMEN in rahmen.js).
     const maxPhrase = mengeFormat(maximum, 'fahrt');
 
-    const grafik = saeulengrafik(werte, tage.map((t) => `${t}. ${monatNameVoll}`), {
-        beschriftung: t('hint.dailyRidesChartAria', {
+    // ===== DAS DIAGRAMM ZEIGT DEN UMSATZ (30.08.2026) =====
+    // Es zeigte bis hierher dieselben Fahrtenzahlen wie der Kalender
+    // darueber - dieselben 28 Zahlen zweimal. Jetzt traegt der Kalender die
+    // Fahrten und das Diagramm den Umsatz: zwei Fragen statt einer
+    // zweimal. Gerade bei diesen Daten lohnt das, weil beide Groessen
+    // auseinanderlaufen (Februar 2026: City-Bike 192 Fahrten / 180,92 EUR,
+    // E-Cargo Loader 37 Fahrten / 398,40 EUR) - der umsatzstaerkste Tag ist
+    // eben nicht der fahrtenstaerkste.
+    //
+    // undefined (kein Betrieb an dem Tag) wird hier zu 0: eine Saeule der
+    // Hoehe null ist die richtige Darstellung fuer "an diesem Tag kam
+    // nichts herein". Das Hinweisfenster laesst den Umsatz trotzdem weg
+    // (siehe tagHinweis) - dort waere "0,00 EUR" eine Behauptung ueber eine
+    // Abrechnung, die es nicht gibt.
+    const umsatzWerte = umsaetze.map((u) => u ?? 0);
+    const umsatzMax = Math.max(...umsatzWerte);
+    const umsatzMin = Math.min(...umsatzWerte);
+    const umsatzGesamt = umsatzWerte.reduce((s, u) => s + u, 0);
+    // Die rote Marke zeigt den umsatzstaerksten Tag - nicht mehr den
+    // fahrtenstaerksten: sie gehoert zu der Reihe, die gezeichnet wird.
+    const umsatzMaxIndizes = tage.map((_, i) => i).filter((i) => umsatzWerte[i] === umsatzMax);
+
+    // Nur das Thema. Eine Zeile mit der Skala ("0,00 EUR bis 71,66 EUR")
+    // stand hier bis zum 30.08.2026 - sie ist entfallen, seit die beiden
+    // Enden der Reihe ihren Wert an der Saeule tragen: dieselbe Auskunft
+    // ein zweites Mal, und die obere Marke stiess an sie an.
+    const grafikTitel = document.createElement('h4');
+    grafikTitel.className = 'monatsdrilldown-grafik-titel';
+    grafikTitel.textContent = t('hint.dailyRevenueChartHeading', { monat: monatFormat(monat) });
+
+    const grafik = saeulengrafik(umsatzWerte, tage.map((t) => `${t}. ${monatNameVoll}`), {
+        beschriftung: t('hint.dailyRevenueChartAria', {
             monat: monatNameVoll, jahr: zahlFormat(Number(jahr), { useGrouping: false }),
-            min: zahlFormat(minimum), maxPhrase, mittel: zahlFormat(Math.round(gesamt / tage.length)),
-            tageListe: tageListe(maxTage)
+            min: geldFormat(umsatzMin), max: geldFormat(umsatzMax),
+            mittel: geldFormat(umsatzGesamt / tage.length),
+            tageListe: tageListe(umsatzMaxIndizes.map((i) => tage[i]))
         }),
-        markierIndizes: maxIndizes
+        // Statt einer Hervorhebung ohne Erklaerung: die beiden Enden der
+        // Reihe tragen ihren Wert. Das nennt zugleich, WARUM diese Saeulen
+        // gemeint sind - eine rote Kontur sagte nur "diese hier".
+        // Je EIN Index, nicht alle gleichauf liegenden: die Marke ist eine
+        // Aussage ueber IHRE Saeule ("hier stehen 71,66 EUR"), nicht die
+        // Behauptung, keine andere erreiche denselben Wert. Zwei gleiche
+        // Marken nebeneinander waeren blosse Wiederholung.
+        marken: umsatzMax === umsatzMin ? [] : [
+            { index: umsatzWerte.indexOf(umsatzMax), text: geldFormat(umsatzMax) },
+            { index: umsatzWerte.indexOf(umsatzMin), text: geldFormat(umsatzMin) }
+        ],
+        // Euro an der Achse, nicht eine blanke Zahl - die laese sich wie
+        // eine Anzahl.
+        // Die Skala steht in der Titelzeile darueber, nicht in einer
+        // eigenen Spalte links - so beginnt die Grafik an derselben Kante
+        // wie der Kalender.
+        achseVerbergen: true,
+        // DIESELBE FARBTREPPE WIE DER KALENDER, mit derselben Formel wie
+        // stufeVonWert() weiter unten - nur bezogen auf den Umsatzhoechst-
+        // wert statt auf den Fahrtenhoechstwert. "Dunkler heisst mehr" gilt
+        // damit in der ganzen Ansicht, jeweils fuer die Groesse, die die
+        // Darstellung selbst zeigt.
+        stufeJeIndex: (i) => (umsatzWerte[i] === 0
+            ? 0 : Math.min(4, Math.ceil((umsatzWerte[i] / (umsatzMax || 1)) * 4))),
+        // Hinweis JE SAEULE: derselbe Wortlaut wie auf der Kalenderkachel,
+        // er nennt Fahrten UND Umsatz des Tages.
+        titelJeIndex: (i) => tagHinweis(i)
     });
-    abschnitt.append(grafik);
+    grafikPlatz.replaceChildren(grafikTitel, grafik);
 
     // ===== Zusammenfassung (Auftrag, wörtlich: Min, Max, Anzahl pro
     // Monat, Tag mit den meisten Fahrten) - dieselben Kacheln wie im
@@ -547,18 +727,24 @@ async function monatsdrilldownEinfuegen(monat) {
     const kacheln = document.createElement('div');
     kacheln.className = 'monatsdrilldown-kacheln';
     kacheln.append(
+        // {groesse} in den drei Titeln: "Minimum" allein sagt nicht, WOVON.
+        // Seit das Diagramm daneben den Umsatz zeigt und der Kalender die
+        // Fahrten, ist das keine Spitzfindigkeit mehr - dieselbe Kachel
+        // koennte beides meinen. Als Platzhalter statt fest im Text, damit
+        // dieselben drei Titel spaeter auch eine andere Groesse tragen
+        // koennen, ohne dass sechs Sprachdateien angefasst werden muessen.
         baueKachel({
-            titel: t('tile.minimum'),
+            titel: t('tile.minimum', { groesse: t('field.fahrten') }),
             wert: zahlSkaliert(zahlFormat(minimum)),
             hinweis: `${tageListe(minTage)} ${monatNameVoll}`
         }),
         baueKachel({
-            titel: t('tile.maximum'),
+            titel: t('tile.maximum', { groesse: t('field.fahrten') }),
             wert: zahlSkaliert(zahlFormat(maximum)),
             hinweis: `${tageListe(maxTage)} ${monatNameVoll}`
         }),
         baueKachel({
-            titel: t('tile.countPerMonth'),
+            titel: t('tile.countPerMonth', { groesse: t('field.fahrten') }),
             wert: zahlSkaliert(zahlFormat(gesamt)),
             hinweis: t('hint.totalForMonth', { phrase: monatFormat(monat) })
         }),
@@ -568,9 +754,23 @@ async function monatsdrilldownEinfuegen(monat) {
             hinweis: maxTage.length > 1
                 ? t('hint.tiedDaysCount', { tagePhrase: mengeFormat(maxTage.length, 'tag'), phrase: maxPhrase })
                 : maxPhrase
+        }),
+        // MONATSUMSATZ (30.08.2026). Summe der Tageswerte, die der Kalender
+        // ohnehin geladen hat - dieselbe Quelle wie die Hinweisfenster auf
+        // den Kacheln und an den Saeulen, also kann die Matrix hier keine
+        // andere Zahl nennen als der Kalender darunter.
+        // Fuenfte Kachel in einem Zweispaltenraster: sie steht allein in
+        // der letzten Zeile und laeuft ueber beide Spalten (siehe
+        // .monatsdrilldown-kacheln in style.css) - als Summe des ganzen
+        // Monats ist das die passende Stelle, nicht eine halbe Zeile mit
+        // einem Loch daneben.
+        baueKachel({
+            titel: t('tile.revenuePerMonth'),
+            wert: zahlSkaliert(geldFormat(umsaetze.reduce((summe, u) => summe + (u ?? 0), 0))),
+            hinweis: t('hint.totalForMonth', { phrase: monatFormat(monat) })
         })
     );
-    abschnitt.append(kacheln);
+    kachelPlatz.replaceChildren(kacheln);
 
     // ===== Kalender statt Tagesliste (Gestaltungsauftrag, wörtlich: "wir
     // bauen statt der Tagesliste eine Kalendersicht und wenn ich auf eine
@@ -697,7 +897,16 @@ async function monatsdrilldownEinfuegen(monat) {
             // nicht "4. Fahrten: 12"). tagFormat() liefert dieselbe Form
             // MIT Wochentag wie zuvor die Tagesliste (Gestaltungsauftrag
             // Punkt 2a, unverändert gültig).
-            knopf.setAttribute('aria-label', t('hint.dayRidesAria', { datum: tagFormat(tagIso), phrase: mengeFormat(wert, 'fahrt') }));
+            knopf.setAttribute('aria-label', umsaetze[i] === undefined
+                ? t('hint.dayRidesAria', { datum: tagFormat(tagIso), phrase: mengeFormat(wert, 'fahrt') })
+                : t('hint.dayRidesRevenueAria', {
+                    datum: tagFormat(tagIso), phrase: mengeFormat(wert, 'fahrt'),
+                    umsatz: geldFormat(umsaetze[i])
+                }));
+            // Hinweisfenster beim Zeigen UND beim Tastaturfokus (siehe
+            // hinweisfensterVerknuepfen() in rahmen.js) - derselbe Text wie
+            // an der zugehoerigen Saeule im Diagramm darueber.
+            hinweisfensterVerknuepfen(knopf, tagHinweis(i));
 
             const tagSpanne = document.createElement('span');
             tagSpanne.className = 'monatskalender-tag-nummer';
@@ -716,7 +925,11 @@ async function monatsdrilldownEinfuegen(monat) {
                 tagKnopfAusgewaehlt?.classList.remove('monatskalender-tag-ausgewaehlt');
                 knopf.classList.add('monatskalender-tag-ausgewaehlt');
                 tagKnopfAusgewaehlt = knopf;
-                tagdrilldownEinfuegen(tagIso, wurzel, knopf);
+                // Die aktuelle Auswahl mitgeben - sonst zeigte die
+                // Tagesansicht alle Radtypen, waehrend die Kachel darueber
+                // gefiltert zaehlt.
+                tagdrilldownEinfuegen(tagIso, wurzel, knopf,
+                    radtypen.filter((r) => gewaehlteTypen.has(r.wert)));
             });
 
             td.append(knopf);
@@ -725,7 +938,7 @@ async function monatsdrilldownEinfuegen(monat) {
         kalenderKoerper.append(zeile);
     }
     kalender.append(kalenderKoerper);
-    abschnitt.append(kalender);
+    kalenderPlatz.replaceChildren(kalender);
 
     // ===== Legende (Gestaltungsauftrag, wörtlich: "eine Einfärbung ohne
     // Skala ist eine Behauptung") - dieselben vier Grenzen wie
@@ -759,8 +972,40 @@ async function monatsdrilldownEinfuegen(monat) {
         legendeSkala.append(eintrag);
     });
     legende.append(legendeSkala);
-    abschnitt.append(legende);
+    kalenderPlatz.append(legende);
+    }
 
+    // Erst JETZT verdrahten: mehrfachauswahlFeld() kann beiAenderung
+    // synchron rufen, und zeichneMonat() muss dann definiert sein.
+    //
+    // DAS FELD WIRD BEI JEDER AENDERUNG NEU GEBAUT. mehrfachauswahlFeld()
+    // liest die Auswahl EINMAL, beim Erzeugen - eine neu zugewiesene Menge
+    // erreicht das bereits gebaute Feld nicht mehr. Ohne den Neuaufbau
+    // ersetzte der zweite Haken den ersten, statt ihn zu ergaenzen, und die
+    // Knopfbeschriftung blieb auf "Alle" stehen (im Browser gemessen:
+    // Cargo, dann Sport ergab 55 Fahrten statt 92). Dieselbe Machart wie
+    // bei den Spaltenfiltern der Arbeitsliste, die dafuer die ganze Tabelle
+    // neu zeichnen.
+    //
+    // filterOffen traegt den Aufklappzustand ueber den Neuaufbau: sonst
+    // fiele das Fenster nach jedem Haken zu, und eine Mehrfachauswahl
+    // braeuchte fuer jeden Typ einen eigenen Klick zum Oeffnen.
+    let filterOffen = false;
+    function zeichneFilter() {
+        const feld = mehrfachauswahlFeld(radtypen, gewaehlteTypen, (neu) => {
+            gewaehlteTypen = neu;
+            zeichneFilter();
+            zeichneMonat();
+        }, t('common.filterAria', { titel: t('field.radtyp') }), {
+            offenVorgabe: filterOffen,
+            beiOeffnen: () => { filterOffen = true; },
+            beiSchliessen: () => { filterOffen = false; }
+        });
+        filterZeile.replaceChildren(filterBeschriftung, feld);
+    }
+
+    zeichneFilter();
+    zeichneMonat();
     wurzel.append(abschnitt);
 }
 
@@ -780,7 +1025,15 @@ let tagdrilldownZaehler = 0;
 // herkunftsKnopf: der Datum-Knopf, aus dem dieser Aufruf kam - fuer den
 // "Weg zurueck" unten (Fokus zurueck zur Zeile, dieselbe Idee wie
 // maskeSchliessen() in rahmen.js fuer die Detailmaske insgesamt).
-async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
+// typen: die im Radtypfilter gewaehlten Radtypen als [{ wert, text }],
+// leere Liste = alle. Beides wird gebraucht - der Schluessel fuer die
+// Abfrage, der Name fuer die Beschriftung; sie hier gemeinsam
+// durchzureichen erspart der Tagesansicht eine zweite Nachschlagetabelle.
+// Ohne sie zeigte die Tagesansicht IMMER alle Radtypen - die
+// Kalenderkachel nannte dann gefiltert neun Fahrten und die Liste
+// darunter fuenfzehn Zeilen. Zwei Zahlen ueber denselben Tag, die
+// einander widersprechen.
+async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf, typen = []) {
     const vorgang = laufenderVorgang();
     const eigenerMonatsZaehler = drilldownZaehler;   // siehe Kommentar oben
     const eigenerTagZaehler = ++tagdrilldownZaehler;
@@ -791,8 +1044,15 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
     document.getElementById('tagdrilldown')?.remove();
 
     const zeilen = await ladeListe('v_wawi_fahrten_je_tag_rad',
-        'fahrrad_id, rahmennummer, typ_code, typ, start_station, ziel_station, dauer_minuten, kilometer, ist_geschaetzt',
-        (q) => q.eq('tag', tagIso).order('rahmennummer'));
+        'fahrrad_id, rahmennummer, typ_code, typ, start_station, ziel_station, dauer_minuten, kilometer, ist_geschaetzt, umsatz',
+        (q) => {
+            // In der ABFRAGE einschraenken, nicht erst in der Anzeige: die
+            // Zeilen, die der Filter ohnehin verwirft, muessen gar nicht
+            // erst ueber die Leitung.
+            const abfrage = q.eq('tag', tagIso);
+            return (typen.length > 0 ? abfrage.in('typ_code', typen.map((x) => x.wert)) : abfrage)
+                .order('rahmennummer');
+        });
 
     // Vier unabhaengige Gruende, warum dieses Ergebnis nicht mehr gilt:
     // Bereich/Reiter gewechselt (istAktuellerVorgang), eine andere
@@ -848,70 +1108,110 @@ async function tagdrilldownEinfuegen(tagIso, wurzel, herkunftsKnopf) {
         // rahmen.js) ist ein gueltiger Klickziel, keine fehlerhafte
         // Eingabe - "keine Fahrten" ist eine gueltige, erwartbare Antwort.
         const leer = document.createElement('p');
-        leer.textContent = t('misc.noBikeRiddenThisDay');
+        // Mit Filter ist "kein Rad gefahren" die falsche Auskunft: gefahren
+        // wurde vielleicht reichlich, nur nicht mit DIESEN Typen.
+        leer.textContent = typen.length > 0
+            ? t('misc.noBikeOfTypeThisDay', { typen: typen.map((x) => x.text).join(', ') })
+            : t('misc.noBikeRiddenThisDay');
         abschnitt.append(leer);
         wurzel.append(abschnitt);
         return;
     }
 
-    const tabelle = document.createElement('table');
-    tabelle.className = 'monatsdrilldown-tabelle';
-    const beschriftung = document.createElement('caption');
-    beschriftung.textContent = t('misc.bikesOnDateCaption', { datum: tagFormat(tagIso) });
-    tabelle.append(beschriftung);
+    // ===== DIESELBE TABELLE WIE LINKS (30.08.2026) =====
+    // Auftrag: "auch Sortieren, Gruppieren, Filtern". Statt der bis hierher
+    // handgebauten <table> zeichnet jetzt zeigeDetailtabelle() (rahmen.js)
+    // - derselbe Code wie die Arbeitsliste, nur mit eigenem Zustand und
+    // kompaktem Spaltenmenue. Gruppieren nach Radtyp oder nach Startstation
+    // beantwortet hier die Frage, fuer die man den Tag ueberhaupt aufmacht.
+    //
+    // Die Rahmennummer bleibt Text ohne Querverweis - siehe die
+    // Begruendung, die schon die frueher handgebaute Fassung trug: ein
+    // Sprung von hier aus wechselte den ganzen Arbeitsbereich.
+    // Die Zeile ueber der Tabelle. Sie nannte bis hierher die Sicht, aus der
+    // die Zeilen stammen; der Auftrag wirft diesen Namen heraus und setzt
+    // den Tagesumsatz an seine Stelle. Der Vorbehalt "kein Kundenbezug"
+    // bleibt: er ist eine Aussage ueber die Daten, kein Verweis auf ihre
+    // Herkunft.
+    //
+    // DIE SUMME KOMMT AUS DEN GELADENEN ZEILEN, nicht aus
+    // v_wawi_fahrten_je_tag. Zwei Gruende: die Zahl stimmt damit IMMER mit
+    // der Tabelle darunter ueberein (dieselben Zeilen, dieselbe Summe),
+    // und die beiden Sichten tragen verschiedene Rollenschranken -
+    // v_wawi_fahrten_je_tag liest nur leitung/demo, diese hier auch
+    // disposition. Ein Dispositionskonto saehe die Tabelle, aber keine
+    // Tagessumme, und muesste hier einen leeren Wert erklaeren.
+    // null-Umsaetze (nicht abgerechnet) fallen aus der Summe heraus,
+    // statt als Null mitzuzaehlen.
+    const tagesumsatz = zeilen.reduce((summe, z) => summe + (Number(z.umsatz) || 0), 0);
+    const herkunft = document.createElement('p');
+    herkunft.className = 'monatsdrilldown-herkunft';
+    // Mit Filter MUSS die Zeile ihn nennen. Die Tagesansicht haengt am Ende
+    // der Maske, weit unter dem Filterschalter - eine Tabelle, die
+    // stillschweigend nur einen Radtyp zeigt, waere dieselbe Luecke, die
+    // die Arbeitsliste mit ihrer Hinweiszeile ("4 von 8 Zeilen") vermeidet.
+    herkunft.textContent = typen.length > 0
+        ? t('misc.bikesOnDateCaptionFiltered', {
+            datum: tagFormat(tagIso), umsatz: geldFormat(tagesumsatz),
+            typen: typen.map((x) => x.text).join(', ')
+        })
+        : t('misc.bikesOnDateCaption', {
+            datum: tagFormat(tagIso), umsatz: geldFormat(tagesumsatz)
+        });
+    abschnitt.append(herkunft);
 
-    const thead = document.createElement('thead');
-    const kopfzeile = document.createElement('tr');
-    for (const spaltentitel of [t('field.rahmennummer'), t('field.radtyp'), t('field.start'), t('field.ziel'), t('field.dauer'), t('field.strecke')]) {
-        const th = document.createElement('th');
-        th.textContent = spaltentitel;
-        th.scope = 'col';
-        kopfzeile.append(th);
-    }
-    thead.append(kopfzeile);
-    tabelle.append(thead);
-
-    const tbody = document.createElement('tbody');
-    for (const zeile of zeilen) {
-        const tr = document.createElement('tr');
-
-        // Rahmennummer bleibt Text, kein Querverweis-Sprung in DIESER
-        // Tabelle: bereichSprung() (rahmen.js, Punkt 3) wechselt den
-        // ganzen Arbeitsbereich - von einer dritten Ebene innerhalb der
-        // Auswertungen aus waere das ein Sprung "quer durch zwei
-        // Bereiche gleichzeitig" (Auswertungen -> Flotte) ohne jede
-        // Zwischenstation, und diese Zeile hat keine radAnlegenMaske-
-        // aehnliche Zielansicht, in der ein einzelnes Rad ausgewaehlt
-        // werden koennte (flotteAufbauen() zeigt IMMER die volle Liste).
-        // Der Querverweis aus Punkt 3 sitzt deshalb dort, wo er ein
-        // bestehendes Ziel trifft: Flotte -> Schadensmeldungen und
-        // Schadensmeldung -> Rad (siehe rahmen.js, bereichSprung()).
-        const kopf = document.createElement('th');
-        kopf.scope = 'row';
-        kopf.textContent = zeile.rahmennummer;
-        const typZelle = document.createElement('td');
-        typZelle.textContent = zeile.typ;
-        const startZelle = document.createElement('td');
-        startZelle.textContent = zeile.start_station || '—';
-        const zielZelle = document.createElement('td');
-        zielZelle.textContent = zeile.ziel_station || '—';
-        const dauerZelle = document.createElement('td');
-        dauerZelle.className = 'zahl';
-        dauerZelle.textContent = minutenFormat(zeile.dauer_minuten);
-        const streckeZelle = document.createElement('td');
-        streckeZelle.className = 'zahl';
-        // ist_geschaetzt gehoert IMMER neben die Zahl, nicht nur bei
-        // v_wawi_km_co2 - dieselbe Regel wie dort ("eine Kennzahl, die
-        // ihre eigene Unsicherheit nicht mitliefert, ist gefaehrlich").
-        streckeZelle.textContent = zeile.kilometer === null
-            ? '—'
-            : `${kmFormat(zeile.kilometer)}${zeile.ist_geschaetzt ? t('misc.estimatedSuffix') : ''}`;
-
-        tr.append(kopf, typZelle, startZelle, zielZelle, dauerZelle, streckeZelle);
-        tbody.append(tr);
-    }
-    tabelle.append(tbody);
-    abschnitt.append(tabelle);
+    const tabellenplatz = document.createElement('div');
+    tabellenplatz.className = 'arbeitstabelle-kompakt-behaelter';
+    abschnitt.append(tabellenplatz);
+    zeigeDetailtabelle('monatsdrilldown-raeder', tabellenplatz, zeilen, [
+        { feld: 'rahmennummer', titel: t('field.rahmennummer') },
+        { feld: 'typ',          titel: t('field.radtyp') },
+        { feld: 'start_station', titel: t('field.start'),
+          formatieren: (w) => w || '—' },
+        { feld: 'ziel_station',  titel: t('field.ziel'),
+          formatieren: (w) => w || '—' },
+        // summierbar: eine Fahrtdauer gehoert zu GENAU einer Fahrt, die
+        // Summe ueber eine Gruppe ist also die tatsaechlich gefahrene Zeit -
+        // dieselbe Pruefung wie bei 'fahrten'/'minuten' im Radtyp-Reiter.
+        { feld: 'dauer_minuten', titel: t('field.dauer'), klasse: 'zahl',
+          formatieren: (w) => minutenFormat(w), summierbar: true },
+        // ist_geschaetzt gehoert IMMER neben die Zahl (dieselbe Regel wie
+        // bei v_wawi_km_co2: "eine Kennzahl, die ihre eigene Unsicherheit
+        // nicht mitliefert, ist gefaehrlich"). sortierwert traegt die
+        // blanke Zahl, damit nach Strecke und nicht nach dem Text mit dem
+        // angehaengten Zusatz sortiert wird.
+        { feld: 'kilometer', titel: t('field.strecke'), klasse: 'zahl',
+          sortierwert: (z) => z.kilometer,
+          formatieren: (w, z) => (w === null ? '—'
+              : `${kmFormat(w)}${z.ist_geschaetzt ? t('misc.estimatedSuffix') : ''}`),
+          // summierbar: gefahrene Kilometer sind additiv (dieselbe
+          // Begruendung wie im Reiter "Kilometer und CO2").
+          summierbar: true,
+          // EIGENES summeFormatieren, aus zwei Gruenden. Erstens ruft die
+          // Gruppenzeile formatieren() sonst OHNE Zeile auf, und die
+          // Vorgabe oben greift dann auf z.ist_geschaetzt einer
+          // undefinierten Zeile zu. Zweitens - der fachliche Grund - muss
+          // die Summe den Vorbehalt ihrer Bestandteile mittragen: enthaelt
+          // die Gruppe auch nur eine geschaetzte Strecke, ist die Summe
+          // geschaetzt. Eine Kennzahl, die ihre eigene Unsicherheit nicht
+          // mitliefert, ist gefaehrlich (dieselbe Regel wie bei
+          // v_wawi_km_co2).
+          summeFormatieren: (summe, gruppenzeilen) => `${kmFormat(summe)}`
+              + (gruppenzeilen.some((z) => z.ist_geschaetzt) ? t('misc.estimatedSuffix') : '') },
+        // UMSATZ JE FAHRT. Kommt seit 0018_wawi_sichten.sql aus der Sicht
+        // selbst (left join lateral auf entgeltposition, Korn bleibt die
+        // Fahrt - siehe die Kornprobe in t0018).
+        // null heisst NICHT ABGERECHNET, nicht "null Euro": in der
+        // Datenbank nachgezaehlt traegt derzeit jede der 12 049
+        // abgeschlossenen Fahrten Entgeltpositionen, der Fall tritt also
+        // heute nicht auf - er waere aber der einzige, in dem ein
+        // Gedankenstrich richtig ist, und deshalb steht er hier.
+        // summierbar: Entgelte sind ueber Fahrten additiv, dieselbe
+        // Pruefung wie bei 'umsatz' in den Monatstafeln.
+        { feld: 'umsatz', titel: t('field.umsatz'), klasse: 'zahl',
+          formatieren: (w) => (w === null || w === undefined ? '—' : geldFormat(w)),
+          summierbar: true, summeFormatieren: (summe) => geldFormat(summe) }
+    ]);
 
     wurzel.append(abschnitt);
 }
@@ -1109,6 +1409,20 @@ function auswertungenFensterGemerkt() {
 
 let auswertungenFenster = auswertungenFensterGemerkt();
 
+// Der gewaehlte Zeitraum als EINHEITENZUSATZ ("Euro, 12 Monate"). Bis zum
+// Zeitwaehler stand diese Zahl fest in den Sprachdateien - die Werte selbst
+// folgten dem Fenster (auswertungenSumme(z, fenster, ...)), die Beschriftung
+// aber nicht: bei "Alles" behaupteten die Spalten weiter "12 Monate" ueber
+// Zahlen, die zwanzig Monate summierten. Eine Einheit, die den Bezug falsch
+// angibt, ist schlimmer als gar keine - sie wird geglaubt.
+// Eigener Wortlaut fuer 0 statt des Knopftextes "Alles": auf dem Knopf steht
+// die WAHL ("Alles"), unter der Spalte der BEZUG - "Euro, Alles" waere in
+// keiner der sechs Sprachen ein Satz.
+function auswertungenFensterWort() {
+    return auswertungenFenster === 0
+        ? t('board.periodAllLabel') : t('board.periodMonths', { n: auswertungenFenster });
+}
+
 // Die Wahl fuer eine Kopftafel: der Baustein in rahmen.js macht daraus
 // eine Reihe Knoepfe neben der Zeitzeile (siehe zeigeKopftafel()).
 function auswertungenZeitWahl() {
@@ -1240,13 +1554,13 @@ function umsatzRadtypKopftafel(zeilen, flottengroesse) {
         // ausgemusterte Raeder (siehe die Zaehl-Anfrage in
         // umsatzRadtypZeigen()) - ein abgeschriebenes Rad erwirtschaftet
         // nichts mehr und wuerde den Nenner nur kuenstlich vergroessern.
-        // 365 Tage: das Zwoelf-Monats-Fenster ist im heutigen Bestand
-        // genau ein Jahr ohne Schalttag.
+        // Der Nenner ist die Zahl der Tage im GEWAEHLTEN Fenster, nicht
+        // mehr fest 365 - siehe tageImFenster() oben.
         bezug: flottengroesse
             ? t('board.revenueReferenceWithFleet', {
                 umsatz: geldFormat(umsatzGesamt), fahrtenPhrase: mengeFormat(fahrtenGesamt, 'fahrt'),
                 vonMonat: monatFormat(fenster[0]), bisMonat: monatFormat(fenster[fenster.length - 1]),
-                jeRadTag: geldFormat(umsatzGesamt / flottengroesse / 365),
+                jeRadTag: geldFormat(umsatzGesamt / flottengroesse / tageImFenster(fenster)),
                 raederPhrase: mengeFormat(flottengroesse, 'rad')
             })
             : t('board.revenueReference', {
@@ -1401,14 +1715,14 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
             // Unterschied zwischen den Radtypen sichtbar.
             art: 'zahl',
             titel: t('col.revenue'),
-            einheit: t('unit.euroTwelveMonths'),
+            einheit: t('unit.euroPeriod', { zeitraum: auswertungenFensterWort() }),
             wert: umsatzWert,
             format: (n) => geldFormat(n)
         });
         spalten.push({
             art: 'groesse',
             titel: t('col.rides'),
-            einheit: t('unit.ridesTwelveMonths'),
+            einheit: t('unit.ridesPeriod', { zeitraum: auswertungenFensterWort() }),
             wert: (z) => (z.summenzeile ? z.summeFahrten : auswertungenSumme(z, fenster, 'fahrten')),
             format: (n) => zahlFormat(n),
             // RANG 4 DER FARBORDNUNG - derselbe Ton, den dieser Radtyp in
@@ -1420,7 +1734,7 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
         spalten.push({
             art: 'groesse',
             titel: t('col.revenue'),
-            einheit: t('unit.euroTwelveMonths'),
+            einheit: t('unit.euroPeriod', { zeitraum: auswertungenFensterWort() }),
             wert: umsatzWert,
             format: (n) => geldFormat(n),
             farbe: (z) => kategorieFarbe(z.schluessel) || 'var(--marine)'
@@ -1435,7 +1749,7 @@ function auswertungenGeldSpalten({ rubrikTitel, fenster, umsatzanteil, fahrtenan
         // aktuellIndex: die LETZTE Saeule ist der juengste Monat -
         // hier gibt es, anders als bei einer Reihe ueber Stationen
         // oder Baujahre, tatsaechlich einen "aktuellen" Zeitraum.
-        aktuellIndex: 11,
+        aktuellIndex: fenster.length - 1,
         beschriftung: (z) => {
             const reihe = auswertungenReihe(z, fenster, 'umsatz');
             const hoechster = Math.max(...reihe);
@@ -1658,7 +1972,7 @@ function kmCo2Kopftafel(zeilen, radtypNamen) {
             {
                 art: 'groesse',
                 titel: t('col.kilometres'),
-                einheit: t('unit.kmTwelveMonths'),
+                einheit: t('unit.kmPeriod', { zeitraum: auswertungenFensterWort() }),
                 wert: (z) => (z.summenzeile ? z.summeKm : auswertungenSumme(z, fenster, 'kilometer')),
                 format: (n) => kmFormat(n),
                 // RANG 4 DER FARBORDNUNG - dieselben drei Toene wie in
@@ -1672,7 +1986,7 @@ function kmCo2Kopftafel(zeilen, radtypNamen) {
                 titel: t('col.monthlyCourse'),
                 einheit: `${monatFormat(fenster[0])} - ${monatFormat(fenster[fenster.length - 1])}`,
                 reihe: (z) => (z.summenzeile ? null : auswertungenReihe(z, fenster, 'kilometer')),
-                aktuellIndex: 11,
+                aktuellIndex: fenster.length - 1,
                 beschriftung: (z) => {
                     const reihe = auswertungenReihe(z, fenster, 'kilometer');
                     const hoechster = Math.max(...reihe);

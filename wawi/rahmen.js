@@ -371,6 +371,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Gruppierung nach {titel} aufheben",
     "common.groupResetTitle": "Gruppierung zurücksetzen",
     "common.groupTitle": "Gruppieren",
+      "common.sortTitle": "Sortieren",
+      "common.sortAscendingAction": "Aufsteigend",
+      "common.sortDescendingAction": "Absteigend",
+      "common.groupByThis": "Nach dieser Spalte gruppieren",
+      "common.columnMenuAria": "Menü für Spalte {titel}",
+      "common.columnMenuTitle": "Sortieren, gruppieren, filtern",
     "common.filterAria": "{titel} filtern",
     "common.filterMinAria": "Mindestwert für {titel}",
     "common.filterSearchPlaceholder": "Suche…",
@@ -403,6 +409,7 @@ const UEBERSETZUNGEN = {
     "common.roleCheckFailed": "Rolle {code} ließ sich nicht prüfen: {msg}",
     "misc.estimatedParen": " ({prozent} geschätzt)",
     "hint.ridesPerDayHeading": "Fahrten je Tag — {monat} (gesamt, alle Radtypen und Tarife)",
+      "hint.ridesPerDayHeadingFiltered": "Fahrten je Tag — {monat} ({typen}, alle Tarife)",
     "status.label.abgebrochen": "abgebrochen",
     "status.raw.abgebrochen": "abgebrochen",
     "status.label.erledigt": "erledigt",
@@ -432,17 +439,23 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Dauer",
     "field.ziel": "Ziel",
     "field.start": "Start",
-    "misc.bikesOnDateCaption": "Räder am {datum} - kein Kundenbezug, siehe v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Räder am {datum} - kein Kundenbezug · Tagesumsatz {umsatz}",
+    "misc.bikesOnDateCaptionFiltered": "Räder am {datum} ({typen}) - kein Kundenbezug · Tagesumsatz {umsatz}",
+    "misc.noBikeOfTypeThisDay": "An diesem Tag wurde kein Rad dieses Typs gefahren ({typen}).",
     "button.backToDayOverview": "Zurück zur Tagesübersicht",
     "misc.bikesOnDate": "Räder am {datum}",
     "misc.noBikeRiddenThisDay": "An diesem Tag wurde kein Rad gefahren.",
     "msg.thisDayBikesLoadFailed": "Die Räder dieses Tages ließen sich nicht laden: {fehler}",
     "hint.legendColorScale": "Farbe = Fahrten dieses Tages im Verhältnis zum verkehrsreichsten Tag des Monats ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, Umsatz {umsatz}",
     "hint.calendarCaption": "Fahrten je Tag, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} gleichauf, je {phrase}",
     "hint.totalForMonth": "{phrase}, gesamt",
     "hint.dailyRidesChartAria": "Fahrten je Tag im {monat} {jahr}, gesamt über alle Radtypen und Tarife: zwischen {min} und {maxPhrase}, im Mittel {mittel}. Am meisten Fahrten am {tageListe} {monat} mit je {maxPhrase}.",
+      "hint.dailyRevenueChartHeading": "Umsatz je Tag, {monat}",
+      "hint.dailyRevenueChartAria": "Umsatz je Tag im {monat} {jahr}: zwischen {min} und {max}, im Mittel {mittel}. Höchster Umsatz am {tageListe} {monat} mit {max}.",
     "msg.dailyFiguresLoadFailed": "Die Tageszahlen ließen sich nicht laden: {fehler}",
     "misc.workOrderTitle": "Auftrag {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} in Arbeit",
@@ -502,6 +515,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Aufgabenbereiche",
     "index.workListAria": "Arbeitsliste",
     "index.detailAria": "Detailmaske",
+      "index.maskResizeAria": "Breite der Detailmaske",
     "nav.flotte": "Flotte",
     "nav.stationen": "Stationen",
     "nav.kunden": "Kundschaft",
@@ -665,9 +679,10 @@ const UEBERSETZUNGEN = {
     "lehrbetrieb.running": "Wird ausgeführt …",
     "lehrbetrieb.runningStatus": "Vorführbestand wird aufgefrischt – das dauert einige Sekunden.",
     "lehrbetrieb.doneMessage": "Vorführbestand aufgefrischt: {storniert} storniert, {neu} neu gestartet – jetzt {aktiv} von {flotte} Rädern unterwegs ({anteil} %).",
-    "tile.minimum": "Minimum",
-    "tile.maximum": "Maximum",
-    "tile.countPerMonth": "Anzahl pro Monat",
+    "tile.minimum": "Minimum ({groesse})",
+    "tile.maximum": "Maximum ({groesse})",
+    "tile.countPerMonth": "Anzahl pro Monat ({groesse})",
+      "tile.revenuePerMonth": "Umsatz pro Monat",
     "tile.dayWithMostRides": "Tag mit den meisten Fahrten",
     "tile.occupancy": "Belegung",
     "tile.trafficByTimeSlot": "Zu- und Abgang nach Zeitfenster",
@@ -732,7 +747,7 @@ const UEBERSETZUNGEN = {
     "msg.customerBlocked": "{vorname} {nachname} gesperrt.",
     "msg.nameEmailRequired": "Vorname, Nachname und E-Mail werden benötigt.",
     "msg.customerCreated": "Kunde {vorname} {nachname} angelegt.",
-    "msg.customersCapped": "200 von mehr Kunden{zusatz} — bitte weiter eingrenzen",
+    "msg.customersCapped": "{grenze} von mehr Kunden{zusatz} — bitte weiter eingrenzen",
     "msg.searchFor": "zu „{suchtext}“",
     "msg.statusList": "Status {liste}",
     "msg.damageLoadFailed": "Die Schäden ließen sich nicht laden: {fehler}",
@@ -785,12 +800,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "Minuten",
     "unit.threeSteps": "3 Stufen",
     "unit.reportedToFixed": "gemeldet bis behoben",
-    "unit.euroTwelveMonths": "Euro, 12 Monate",
+    "unit.euroPeriod": "Euro, {zeitraum}",
     "unit.bikesOfCapacity": "Räder, Rahmen = Stellplätze",
     "unit.movementsPerDock": "Bewegungen je Stellplatz",
     "unit.euroPerRide": "Euro",
-    "unit.ridesTwelveMonths": "Fahrten, 12 Monate",
-    "unit.kmTwelveMonths": "Summe, 12 Monate",
+    "unit.ridesPeriod": "Fahrten, {zeitraum}",
+    "unit.kmPeriod": "Summe, {zeitraum}",
     "unit.kmPerRide": "Kilometer je Fahrt",
     "unit.departuresPlusArrivals": "Abgänge und Zugänge",
     "unit.zeroToHundred": "0–100 %",
@@ -798,6 +813,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "Stand {datum}, {zeit} Uhr",
     "board.periodMonths": "{n} Monate",
     "board.periodAll": "Alles",
+    "board.periodAllLabel": "gesamter Zeitraum",
     "board.periodChoiceAria": "Zeitraum wählen",
     "board.stationLoadTime": "Belegung jetzt · Zu- und Abgänge seit Betriebsbeginn",
     "board.periodRange": "{von} bis {bis}",
@@ -813,7 +829,7 @@ const UEBERSETZUNGEN = {
     "board.stationBalanceAria": "{name}: {zugaenge} Zugänge, {abgaenge} Abgänge, Saldo {saldo}",
     "board.stationsFootnote": "Die Abgänge liegen bei allen Stationen zwischen {min} und {max} – die Nachfrage ist gleichmäßig verteilt, die Unterschiede stecken allein im Saldo.",
     "board.stationTurnoverAria": "{name}: {wert} Bewegungen je Stellplatz bei {kapazitaet} Stellplätzen",
-    "board.stationsRhythmFootnote": "Der Tagesgang ist an allen Stationen derselbe: {morgenMin} bis {morgenMax} % der Werktagsabgänge fallen auf 6 bis 8 Uhr, {nachmittagMin} bis {nachmittagMax} % auf 16 bis 18 Uhr. Er beschreibt das Netz, nicht die einzelne Station – deshalb steht er hier und nicht als Spalte.",
+    "board.stationsRhythmFootnote": "Der Tagesgang ist an allen Stationen derselbe: {morgenMin} bis {morgenMax} % der Werktagsabgänge fallen auf {morgenVon} bis {morgenBis} Uhr, {nachmittagMin} bis {nachmittagMax} % auf {nachmittagVon} bis {nachmittagBis} Uhr. Er beschreibt das Netz, nicht die einzelne Station – deshalb steht er hier und nicht als Spalte.",
     "board.customersTitle": "Kartei nach Tarifgruppe",
     "board.customersReference": "{kundenPhrase} · {gesperrt} gesperrt · {volumen} Rechnungsvolumen · {imOrt} in {ort}, verteilt über {ortePhrase}",
     "board.customersNoTariff": "Ohne aktiven Tarif",
@@ -832,8 +848,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "Wartungsauftrag vorhanden",
     "board.maintenanceNoOrder": "kein Wartungsauftrag",
     "board.maintenanceFootnote": "Keine Abweichungsspalte und keine Mittelwerte: {schadenPhrase}, davon {offen} unerledigt, {minuten} Minuten erfasste Arbeitszeit – jede Kennzahl wäre hier eine Statistik über sich selbst.",
-    "board.revenueTypeTitle": "Zwölf Monate nach Radtyp",
-    "board.revenueGroupTitle": "Zwölf Monate nach Tarifgruppe",
+    "board.revenueTypeTitle": "Umsatz nach Radtyp",
+    "board.revenueGroupTitle": "Umsatz nach Tarifgruppe",
     "board.revenueReference": "{umsatz} und {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} und {fahrtenPhrase} · {jeRadTag} je Rad und Tag ({raederPhrase})",
     "board.revenuePerRide": "{betrag} je Fahrt",
@@ -871,6 +887,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Remove grouping by {titel}",
     "common.groupResetTitle": "Reset grouping",
     "common.groupTitle": "Group",
+      "common.sortTitle": "Sort",
+      "common.sortAscendingAction": "Ascending",
+      "common.sortDescendingAction": "Descending",
+      "common.groupByThis": "Group by this column",
+      "common.columnMenuAria": "Menu for column {titel}",
+      "common.columnMenuTitle": "Sort, group, filter",
     "common.filterAria": "Filter {titel}",
     "common.filterMinAria": "Minimum value for {titel}",
     "common.filterSearchPlaceholder": "Search…",
@@ -903,6 +925,7 @@ const UEBERSETZUNGEN = {
     "common.roleCheckFailed": "Could not check role {code}: {msg}",
     "misc.estimatedParen": " ({prozent} estimated)",
     "hint.ridesPerDayHeading": "Rides per day — {monat} (total, all bike types and plans)",
+      "hint.ridesPerDayHeadingFiltered": "Rides per day — {monat} ({typen}, all plans)",
     "status.label.abgebrochen": "Cancelled",
     "status.raw.abgebrochen": "Cancelled",
     "status.label.erledigt": "Completed",
@@ -932,17 +955,23 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Duration",
     "field.ziel": "Destination",
     "field.start": "Start",
-    "misc.bikesOnDateCaption": "Bikes on {datum} - no customer reference, see v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Bikes on {datum} - no customer reference · revenue that day {umsatz}",
+    "misc.bikesOnDateCaptionFiltered": "Bikes on {datum} ({typen}) - no customer reference · revenue that day {umsatz}",
+    "misc.noBikeOfTypeThisDay": "No bike of this type was ridden on this day ({typen}).",
     "button.backToDayOverview": "Back to the daily overview",
     "misc.bikesOnDate": "Bikes on {datum}",
     "misc.noBikeRiddenThisDay": "No bike was ridden on this day.",
     "msg.thisDayBikesLoadFailed": "Could not load this day’s bikes: {fehler}",
     "hint.legendColorScale": "Colour = this day’s rides relative to the busiest day of the month ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, revenue {umsatz}",
     "hint.calendarCaption": "Rides per day, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} tied, {phrase} each",
     "hint.totalForMonth": "{phrase}, total",
     "hint.dailyRidesChartAria": "Rides per day in {monat} {jahr}, total across all bike types and plans: between {min} and {maxPhrase}, on average {mittel}. Most rides on {tageListe} {monat} with {maxPhrase} each.",
+      "hint.dailyRevenueChartHeading": "Revenue per day, {monat}",
+      "hint.dailyRevenueChartAria": "Revenue per day in {monat} {jahr}: between {min} and {max}, on average {mittel}. Highest revenue on {tageListe} {monat} with {max}.",
     "msg.dailyFiguresLoadFailed": "Could not load the daily figures: {fehler}",
     "misc.workOrderTitle": "Work order {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} in progress",
@@ -1002,6 +1031,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Work areas",
     "index.workListAria": "Work list",
     "index.detailAria": "Detail form",
+      "index.maskResizeAria": "Width of the detail pane",
     "nav.flotte": "Fleet",
     "nav.stationen": "Stations",
     "nav.kunden": "Customers",
@@ -1165,9 +1195,10 @@ const UEBERSETZUNGEN = {
     "lehrbetrieb.running": "Running …",
     "lehrbetrieb.runningStatus": "Refreshing the demo fleet – this takes a few seconds.",
     "lehrbetrieb.doneMessage": "Demo fleet refreshed: {storniert} cancelled, {neu} newly started – now {aktiv} of {flotte} bikes out ({anteil}%).",
-    "tile.minimum": "Minimum",
-    "tile.maximum": "Maximum",
-    "tile.countPerMonth": "Count per month",
+    "tile.minimum": "Minimum ({groesse})",
+    "tile.maximum": "Maximum ({groesse})",
+    "tile.countPerMonth": "Count per month ({groesse})",
+      "tile.revenuePerMonth": "Revenue per month",
     "tile.dayWithMostRides": "Day with the most rides",
     "tile.occupancy": "Occupancy",
     "tile.trafficByTimeSlot": "Arrivals and departures by time slot",
@@ -1232,7 +1263,7 @@ const UEBERSETZUNGEN = {
     "msg.customerBlocked": "{vorname} {nachname} blocked.",
     "msg.nameEmailRequired": "First name, last name, and email are required.",
     "msg.customerCreated": "Customer {vorname} {nachname} created.",
-    "msg.customersCapped": "200 of more customers{zusatz} — please narrow down further",
+    "msg.customersCapped": "{grenze} of more customers{zusatz} — please narrow down further",
     "msg.searchFor": "for “{suchtext}”",
     "msg.statusList": "Status {liste}",
     "msg.damageLoadFailed": "Could not load the damage reports: {fehler}",
@@ -1285,12 +1316,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "minutes",
     "unit.threeSteps": "3 steps",
     "unit.reportedToFixed": "reported to fixed",
-    "unit.euroTwelveMonths": "euro, 12 months",
+    "unit.euroPeriod": "euro, {zeitraum}",
     "unit.bikesOfCapacity": "bikes, frame = docking points",
     "unit.movementsPerDock": "movements per docking point",
     "unit.euroPerRide": "euro",
-    "unit.ridesTwelveMonths": "rides, 12 months",
-    "unit.kmTwelveMonths": "total, 12 months",
+    "unit.ridesPeriod": "rides, {zeitraum}",
+    "unit.kmPeriod": "total, {zeitraum}",
     "unit.kmPerRide": "kilometres per ride",
     "unit.departuresPlusArrivals": "departures and arrivals",
     "unit.zeroToHundred": "0–100 %",
@@ -1298,6 +1329,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "As of {datum}, {zeit}",
     "board.periodMonths": "{n} months",
     "board.periodAll": "All",
+    "board.periodAllLabel": "all time",
     "board.periodChoiceAria": "Choose period",
     "board.stationLoadTime": "Occupancy now · arrivals and departures since launch",
     "board.periodRange": "{von} to {bis}",
@@ -1313,7 +1345,7 @@ const UEBERSETZUNGEN = {
     "board.stationBalanceAria": "{name}: {zugaenge} arrivals, {abgaenge} departures, balance {saldo}",
     "board.stationsFootnote": "Departures range from {min} to {max} across all stations – demand is evenly spread, the differences lie solely in the balance.",
     "board.stationTurnoverAria": "{name}: {wert} movements per docking point across {kapazitaet} docking points",
-    "board.stationsRhythmFootnote": "The daily pattern is the same at every station: {morgenMin} to {morgenMax} % of weekday departures fall between 6 and 8 h, {nachmittagMin} to {nachmittagMax} % between 16 and 18 h. It describes the network, not the individual station – which is why it stands here and not as a column.",
+    "board.stationsRhythmFootnote": "The daily pattern is the same at every station: {morgenMin} to {morgenMax} % of weekday departures fall between {morgenVon} and {morgenBis} h, {nachmittagMin} to {nachmittagMax} % between {nachmittagVon} and {nachmittagBis} h. It describes the network, not the individual station – which is why it stands here and not as a column.",
     "board.customersTitle": "Records by tariff group",
     "board.customersReference": "{kundenPhrase} · {gesperrt} blocked · {volumen} invoiced · {imOrt} in {ort}, spread over {ortePhrase}",
     "board.customersNoTariff": "No active tariff",
@@ -1332,8 +1364,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "work order exists",
     "board.maintenanceNoOrder": "no work order",
     "board.maintenanceFootnote": "No deviation column and no averages: {schadenPhrase}, {offen} of them unresolved, {minuten} minutes of recorded work – any ratio here would be a statistic about itself.",
-    "board.revenueTypeTitle": "Twelve months by bike type",
-    "board.revenueGroupTitle": "Twelve months by tariff group",
+    "board.revenueTypeTitle": "Revenue by bike type",
+    "board.revenueGroupTitle": "Revenue by tariff group",
     "board.revenueReference": "{umsatz} and {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} and {fahrtenPhrase} · {jeRadTag} per bike per day ({raederPhrase})",
     "board.revenuePerRide": "{betrag} per ride",
@@ -1371,6 +1403,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "{titel} gruplamasını kaldır",
     "common.groupResetTitle": "Gruplamayı sıfırla",
     "common.groupTitle": "Grupla",
+      "common.sortTitle": "Sırala",
+      "common.sortAscendingAction": "Artan",
+      "common.sortDescendingAction": "Azalan",
+      "common.groupByThis": "Bu sütuna göre grupla",
+      "common.columnMenuAria": "{titel} sütunu menüsü",
+      "common.columnMenuTitle": "Sırala, grupla, filtrele",
     "common.filterAria": "{titel} alanını filtrele",
     "common.filterMinAria": "{titel} için en düşük değer",
     "common.filterSearchPlaceholder": "Ara…",
@@ -1403,6 +1441,7 @@ const UEBERSETZUNGEN = {
     "common.roleCheckFailed": "{code} rolü kontrol edilemedi: {msg}",
     "misc.estimatedParen": " ({prozent} tahmini)",
     "hint.ridesPerDayHeading": "Güne göre sürüşler — {monat} (toplam, tüm bisiklet tipleri ve tarifeler)",
+      "hint.ridesPerDayHeadingFiltered": "Güne göre sürüşler — {monat} ({typen}, tüm tarifeler)",
     "status.label.abgebrochen": "İptal edildi",
     "status.raw.abgebrochen": "İptal edildi",
     "status.label.erledigt": "Tamamlandı",
@@ -1432,17 +1471,23 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Süre",
     "field.ziel": "Varış",
     "field.start": "Başlangıç",
-    "misc.bikesOnDateCaption": "{datum} tarihindeki bisikletler - müşteri bilgisi yok, bkz. v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "{datum} tarihindeki bisikletler - müşteri bilgisi yok · günlük ciro {umsatz}",
+    "misc.bikesOnDateCaptionFiltered": "{datum} tarihindeki bisikletler ({typen}) - müşteri bilgisi yok · günlük ciro {umsatz}",
+    "misc.noBikeOfTypeThisDay": "Bu gün bu tipte bisiklet kullanılmadı ({typen}).",
     "button.backToDayOverview": "Günlük özete dön",
     "misc.bikesOnDate": "{datum} tarihindeki bisikletler",
     "misc.noBikeRiddenThisDay": "Bu gün hiçbir bisiklet kullanılmadı.",
     "msg.thisDayBikesLoadFailed": "Bu güne ait bisikletler yüklenemedi: {fehler}",
     "hint.legendColorScale": "Renk = bu günün sürüşlerinin ayın en yoğun gününe oranı ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, ciro {umsatz}",
     "hint.calendarCaption": "{monat} ayında güne göre sürüşler",
     "hint.tiedDaysCount": "{tagePhrase} berabere, her biri {phrase}",
     "hint.totalForMonth": "{phrase}, toplam",
     "hint.dailyRidesChartAria": "{jahr} {monat} ayında güne göre sürüşler, tüm bisiklet tipleri ve tarifeler toplamı: {min} ile {maxPhrase} arasında, ortalama {mittel}. En çok sürüş {monat} ayının {tageListe} günlerinde, her birinde {maxPhrase}.",
+      "hint.dailyRevenueChartHeading": "Güne göre ciro, {monat}",
+      "hint.dailyRevenueChartAria": "{monat} {jahr} güne göre ciro: {min} ile {max} arasında, ortalama {mittel}. En yüksek ciro {tageListe} {monat}, {max}.",
     "msg.dailyFiguresLoadFailed": "Günlük rakamlar yüklenemedi: {fehler}",
     "misc.workOrderTitle": "İş emri {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} devam ediyor",
@@ -1502,6 +1547,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Görev alanları",
     "index.workListAria": "Çalışma listesi",
     "index.detailAria": "Ayrıntı formu",
+      "index.maskResizeAria": "Detay bölmesinin genişliği",
     "nav.flotte": "Filo",
     "nav.stationen": "İstasyonlar",
     "nav.kunden": "Müşteriler",
@@ -1665,9 +1711,10 @@ const UEBERSETZUNGEN = {
     "lehrbetrieb.running": "Çalışıyor …",
     "lehrbetrieb.runningStatus": "Gösterim filosu yenileniyor – bu birkaç saniye sürer.",
     "lehrbetrieb.doneMessage": "Gösterim filosu yenilendi: {storniert} iptal edildi, {neu} yeni başlatıldı – şimdi {flotte} bisikletten {aktiv} tanesi yolda (%{anteil}).",
-    "tile.minimum": "Minimum",
-    "tile.maximum": "Maksimum",
-    "tile.countPerMonth": "Aya göre sayı",
+    "tile.minimum": "Minimum ({groesse})",
+    "tile.maximum": "Maksimum ({groesse})",
+    "tile.countPerMonth": "Aya göre sayı ({groesse})",
+      "tile.revenuePerMonth": "Aylık ciro",
     "tile.dayWithMostRides": "En çok sürüşün olduğu gün",
     "tile.occupancy": "Doluluk",
     "tile.trafficByTimeSlot": "Zaman dilimine göre giriş ve çıkış",
@@ -1732,7 +1779,7 @@ const UEBERSETZUNGEN = {
     "msg.customerBlocked": "{vorname} {nachname} engellendi.",
     "msg.nameEmailRequired": "Ad, soyadı ve e-posta gereklidir.",
     "msg.customerCreated": "{vorname} {nachname} müşterisi oluşturuldu.",
-    "msg.customersCapped": "200/daha fazla müşteri{zusatz} — lütfen daha fazla daraltın",
+    "msg.customersCapped": "{grenze}/daha fazla müşteri{zusatz} — lütfen daha fazla daraltın",
     "msg.searchFor": "\"{suchtext}\" için",
     "msg.statusList": "Durum {liste}",
     "msg.damageLoadFailed": "Hasarlar yüklenemedi: {fehler}",
@@ -1785,12 +1832,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "dakika",
     "unit.threeSteps": "3 kademe",
     "unit.reportedToFixed": "bildirimden giderilmeye",
-    "unit.euroTwelveMonths": "avro, 12 ay",
+    "unit.euroPeriod": "avro, {zeitraum}",
     "unit.bikesOfCapacity": "bisiklet, çerçeve = park yeri",
     "unit.movementsPerDock": "park yeri başına hareket",
     "unit.euroPerRide": "avro",
-    "unit.ridesTwelveMonths": "sefer, 12 ay",
-    "unit.kmTwelveMonths": "toplam, 12 ay",
+    "unit.ridesPeriod": "sefer, {zeitraum}",
+    "unit.kmPeriod": "toplam, {zeitraum}",
     "unit.kmPerRide": "sürüş başına kilometre",
     "unit.departuresPlusArrivals": "çıkış ve giriş",
     "unit.zeroToHundred": "0–100 %",
@@ -1798,6 +1845,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "Durum: {datum}, {zeit}",
     "board.periodMonths": "{n} ay",
     "board.periodAll": "Tümü",
+    "board.periodAllLabel": "tüm dönem",
     "board.periodChoiceAria": "Dönem seç",
     "board.stationLoadTime": "Doluluk şimdi · başlangıçtan bu yana giriş ve çıkışlar",
     "board.periodRange": "{von} – {bis}",
@@ -1813,7 +1861,7 @@ const UEBERSETZUNGEN = {
     "board.stationBalanceAria": "{name}: {zugaenge} giriş, {abgaenge} çıkış, denge {saldo}",
     "board.stationsFootnote": "Çıkışlar tüm istasyonlarda {min} ile {max} arasında – talep eşit dağılmış, farklar yalnızca dengede.",
     "board.stationTurnoverAria": "{name}: {kapazitaet} park yerinde park yeri başına {wert} hareket",
-    "board.stationsRhythmFootnote": "Günlük seyir bütün istasyonlarda aynı: hafta içi çıkışların % {morgenMin} ila {morgenMax} kadarı 6-8 arasında, % {nachmittagMin} ila {nachmittagMax} kadarı 16-18 arasında gerçekleşir. Tek bir istasyonu değil ağı tanımlar – bu yüzden sütun olarak değil burada yer alır.",
+    "board.stationsRhythmFootnote": "Günlük seyir bütün istasyonlarda aynı: hafta içi çıkışların % {morgenMin} ila {morgenMax} kadarı {morgenVon}-{morgenBis} arasında, % {nachmittagMin} ila {nachmittagMax} kadarı {nachmittagVon}-{nachmittagBis} arasında gerçekleşir. Tek bir istasyonu değil ağı tanımlar – bu yüzden sütun olarak değil burada yer alır.",
     "board.customersTitle": "Tarife grubuna göre kayıtlar",
     "board.customersReference": "{kundenPhrase} · {gesperrt} engellenmiş · {volumen} fatura hacmi · {ort} içinde {imOrt}, {ortePhrase} arasında dağılmış",
     "board.customersNoTariff": "Aktif tarife yok",
@@ -1832,8 +1880,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "iş emri var",
     "board.maintenanceNoOrder": "iş emri yok",
     "board.maintenanceFootnote": "Sapma sütunu ve ortalama yok: {schadenPhrase}, bunlardan {offen} tanesi açık, kayıtlı {minuten} dakika çalışma – buradaki her oran kendi kendisinin istatistiği olurdu.",
-    "board.revenueTypeTitle": "Bisiklet tipine göre on iki ay",
-    "board.revenueGroupTitle": "Tarife grubuna göre on iki ay",
+    "board.revenueTypeTitle": "Bisiklet tipine göre ciro",
+    "board.revenueGroupTitle": "Tarife grubuna göre ciro",
     "board.revenueReference": "{umsatz} ve {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} ve {fahrtenPhrase} · bisiklet başına günde {jeRadTag} ({raederPhrase})",
     "board.revenuePerRide": "sürüş başına {betrag}",
@@ -1871,6 +1919,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Quitar agrupación por {titel}",
     "common.groupResetTitle": "Restablecer agrupación",
     "common.groupTitle": "Agrupar",
+      "common.sortTitle": "Ordenar",
+      "common.sortAscendingAction": "Ascendente",
+      "common.sortDescendingAction": "Descendente",
+      "common.groupByThis": "Agrupar por esta columna",
+      "common.columnMenuAria": "Menú de la columna {titel}",
+      "common.columnMenuTitle": "Ordenar, agrupar, filtrar",
     "common.filterAria": "Filtrar {titel}",
     "common.filterMinAria": "Valor mínimo para {titel}",
     "common.filterSearchPlaceholder": "Buscar…",
@@ -1903,6 +1957,7 @@ const UEBERSETZUNGEN = {
     "common.roleCheckFailed": "No se pudo comprobar el rol {code}: {msg}",
     "misc.estimatedParen": " ({prozent} estimado)",
     "hint.ridesPerDayHeading": "Viajes por día — {monat} (total, todos los tipos de bicicleta y tarifas)",
+      "hint.ridesPerDayHeadingFiltered": "Viajes por día — {monat} ({typen}, todas las tarifas)",
     "status.label.abgebrochen": "Cancelado",
     "status.raw.abgebrochen": "Cancelado",
     "status.label.erledigt": "Completado",
@@ -1932,17 +1987,23 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Duración",
     "field.ziel": "Destino",
     "field.start": "Inicio",
-    "misc.bikesOnDateCaption": "Bicicletas el {datum} - sin referencia a clientes, véase v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Bicicletas el {datum} - sin referencia a clientes · facturación del día {umsatz}",
+    "misc.bikesOnDateCaptionFiltered": "Bicicletas el {datum} ({typen}) - sin referencia a clientes · facturación del día {umsatz}",
+    "misc.noBikeOfTypeThisDay": "Ese día no se usó ninguna bicicleta de este tipo ({typen}).",
     "button.backToDayOverview": "Volver al resumen diario",
     "misc.bikesOnDate": "Bicicletas el {datum}",
     "misc.noBikeRiddenThisDay": "Ese día no se usó ninguna bicicleta.",
     "msg.thisDayBikesLoadFailed": "No se pudieron cargar las bicicletas de este día: {fehler}",
     "hint.legendColorScale": "Color = viajes de este día en relación con el día más concurrido del mes ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, facturación {umsatz}",
     "hint.calendarCaption": "Viajes por día, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} empatados, {phrase} cada uno",
     "hint.totalForMonth": "{phrase}, total",
     "hint.dailyRidesChartAria": "Viajes por día en {monat} de {jahr}, total en todos los tipos de bicicleta y tarifas: entre {min} y {maxPhrase}, en promedio {mittel}. La mayoría de los viajes el {tageListe} de {monat}, con {maxPhrase} cada uno.",
+      "hint.dailyRevenueChartHeading": "Facturación por día, {monat}",
+      "hint.dailyRevenueChartAria": "Facturación por día en {monat} {jahr}: entre {min} y {max}, en promedio {mittel}. Facturación más alta el {tageListe} {monat} con {max}.",
     "msg.dailyFiguresLoadFailed": "No se pudieron cargar las cifras diarias: {fehler}",
     "misc.workOrderTitle": "Orden de trabajo {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} en curso",
@@ -2002,6 +2063,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Áreas de trabajo",
     "index.workListAria": "Lista de trabajo",
     "index.detailAria": "Formulario de detalle",
+      "index.maskResizeAria": "Ancho del panel de detalle",
     "nav.flotte": "Flota",
     "nav.stationen": "Estaciones",
     "nav.kunden": "Clientela",
@@ -2165,9 +2227,10 @@ const UEBERSETZUNGEN = {
     "lehrbetrieb.running": "Ejecutando…",
     "lehrbetrieb.runningStatus": "Actualizando la flota de demostración – esto tarda unos segundos.",
     "lehrbetrieb.doneMessage": "Flota de demostración actualizada: {storniert} cancelados, {neu} iniciados de nuevo – ahora {aktiv} de {flotte} bicicletas en circulación ({anteil} %).",
-    "tile.minimum": "Mínimo",
-    "tile.maximum": "Máximo",
-    "tile.countPerMonth": "Cantidad por mes",
+    "tile.minimum": "Mínimo ({groesse})",
+    "tile.maximum": "Máximo ({groesse})",
+    "tile.countPerMonth": "Cantidad por mes ({groesse})",
+      "tile.revenuePerMonth": "Facturación por mes",
     "tile.dayWithMostRides": "Día con más viajes",
     "tile.occupancy": "Ocupación",
     "tile.trafficByTimeSlot": "Llegadas y salidas por franja horaria",
@@ -2232,7 +2295,7 @@ const UEBERSETZUNGEN = {
     "msg.customerBlocked": "{vorname} {nachname} bloqueado.",
     "msg.nameEmailRequired": "Se requieren nombre, apellido y correo electrónico.",
     "msg.customerCreated": "Cliente {vorname} {nachname} creado.",
-    "msg.customersCapped": "200 de más clientes{zusatz}: por favor, siga acotando",
+    "msg.customersCapped": "{grenze} de más clientes{zusatz}: por favor, siga acotando",
     "msg.searchFor": "para «{suchtext}»",
     "msg.statusList": "Estado {liste}",
     "msg.damageLoadFailed": "No se pudieron cargar las averías: {fehler}",
@@ -2285,12 +2348,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "minutos",
     "unit.threeSteps": "3 niveles",
     "unit.reportedToFixed": "de notificado a resuelto",
-    "unit.euroTwelveMonths": "euros, 12 meses",
+    "unit.euroPeriod": "euros, {zeitraum}",
     "unit.bikesOfCapacity": "bicicletas, marco = plazas",
     "unit.movementsPerDock": "movimientos por plaza",
     "unit.euroPerRide": "euros",
-    "unit.ridesTwelveMonths": "viajes, 12 meses",
-    "unit.kmTwelveMonths": "total, 12 meses",
+    "unit.ridesPeriod": "viajes, {zeitraum}",
+    "unit.kmPeriod": "total, {zeitraum}",
     "unit.kmPerRide": "kilómetros por viaje",
     "unit.departuresPlusArrivals": "salidas y llegadas",
     "unit.zeroToHundred": "0–100 %",
@@ -2298,6 +2361,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "A {datum}, {zeit}",
     "board.periodMonths": "{n} meses",
     "board.periodAll": "Todo",
+    "board.periodAllLabel": "todo el periodo",
     "board.periodChoiceAria": "Elegir periodo",
     "board.stationLoadTime": "Ocupación ahora · entradas y salidas desde el inicio",
     "board.periodRange": "{von} a {bis}",
@@ -2313,7 +2377,7 @@ const UEBERSETZUNGEN = {
     "board.stationBalanceAria": "{name}: {zugaenge} llegadas, {abgaenge} salidas, saldo {saldo}",
     "board.stationsFootnote": "Las salidas oscilan entre {min} y {max} en todas las estaciones: la demanda está repartida por igual y las diferencias solo aparecen en el saldo.",
     "board.stationTurnoverAria": "{name}: {wert} movimientos por plaza con {kapazitaet} plazas",
-    "board.stationsRhythmFootnote": "El ritmo diario es el mismo en todas las estaciones: entre el {morgenMin} y el {morgenMax} % de las salidas de días laborables se producen de 6 a 8 h y entre el {nachmittagMin} y el {nachmittagMax} % de 16 a 18 h. Describe la red y no la estación concreta, y por eso figura aquí y no como columna.",
+    "board.stationsRhythmFootnote": "El ritmo diario es el mismo en todas las estaciones: entre el {morgenMin} y el {morgenMax} % de las salidas de días laborables se producen de {morgenVon} a {morgenBis} h y entre el {nachmittagMin} y el {nachmittagMax} % de {nachmittagVon} a {nachmittagBis} h. Describe la red y no la estación concreta, y por eso figura aquí y no como columna.",
     "board.customersTitle": "Fichero por grupo tarifario",
     "board.customersReference": "{kundenPhrase} · {gesperrt} bloqueados · {volumen} facturados · {imOrt} en {ort}, repartidos en {ortePhrase}",
     "board.customersNoTariff": "Sin tarifa activa",
@@ -2332,8 +2396,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "existe orden de trabajo",
     "board.maintenanceNoOrder": "sin orden de trabajo",
     "board.maintenanceFootnote": "Sin columna de desviación ni promedios: {schadenPhrase}, {offen} sin resolver, {minuten} minutos de trabajo registrados; cualquier ratio sería aquí una estadística sobre sí misma.",
-    "board.revenueTypeTitle": "Doce meses por tipo de bicicleta",
-    "board.revenueGroupTitle": "Doce meses por grupo tarifario",
+    "board.revenueTypeTitle": "Facturación por tipo de bicicleta",
+    "board.revenueGroupTitle": "Facturación por grupo tarifario",
     "board.revenueReference": "{umsatz} y {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} y {fahrtenPhrase} · {jeRadTag} por bicicleta y día ({raederPhrase})",
     "board.revenuePerRide": "{betrag} por viaje",
@@ -2371,6 +2435,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Rimuovi raggruppamento per {titel}",
     "common.groupResetTitle": "Azzera raggruppamento",
     "common.groupTitle": "Raggruppa",
+      "common.sortTitle": "Ordina",
+      "common.sortAscendingAction": "Crescente",
+      "common.sortDescendingAction": "Decrescente",
+      "common.groupByThis": "Raggruppa per questa colonna",
+      "common.columnMenuAria": "Menu della colonna {titel}",
+      "common.columnMenuTitle": "Ordina, raggruppa, filtra",
     "common.filterAria": "Filtra {titel}",
     "common.filterMinAria": "Valore minimo per {titel}",
     "common.filterSearchPlaceholder": "Cerca…",
@@ -2403,6 +2473,7 @@ const UEBERSETZUNGEN = {
     "common.roleCheckFailed": "Impossibile verificare il ruolo {code}: {msg}",
     "misc.estimatedParen": " ({prozent} stimato)",
     "hint.ridesPerDayHeading": "Corse al giorno — {monat} (totale, tutti i tipi di bici e tariffe)",
+      "hint.ridesPerDayHeadingFiltered": "Corse al giorno — {monat} ({typen}, tutte le tariffe)",
     "status.label.abgebrochen": "Annullato",
     "status.raw.abgebrochen": "Annullato",
     "status.label.erledigt": "Completato",
@@ -2432,17 +2503,23 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Durata",
     "field.ziel": "Destinazione",
     "field.start": "Partenza",
-    "misc.bikesOnDateCaption": "Bici del {datum} - nessun riferimento al cliente, vedi v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Bici del {datum} - nessun riferimento al cliente · fatturato del giorno {umsatz}",
+    "misc.bikesOnDateCaptionFiltered": "Bici del {datum} ({typen}) - nessun riferimento al cliente · fatturato del giorno {umsatz}",
+    "misc.noBikeOfTypeThisDay": "Quel giorno non è stata usata nessuna bici di questo tipo ({typen}).",
     "button.backToDayOverview": "Torna alla panoramica giornaliera",
     "misc.bikesOnDate": "Bici del {datum}",
     "misc.noBikeRiddenThisDay": "In questo giorno non è stata usata nessuna bici.",
     "msg.thisDayBikesLoadFailed": "Impossibile caricare le bici di questo giorno: {fehler}",
     "hint.legendColorScale": "Colore = corse di questo giorno rispetto al giorno più trafficato del mese ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, fatturato {umsatz}",
     "hint.calendarCaption": "Corse al giorno, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} a pari merito, {phrase} ciascuno",
     "hint.totalForMonth": "{phrase}, totale",
     "hint.dailyRidesChartAria": "Corse al giorno a {monat} {jahr}, totale su tutti i tipi di bici e tariffe: tra {min} e {maxPhrase}, in media {mittel}. Il massimo delle corse il {tageListe} {monat} con {maxPhrase} ciascuno.",
+      "hint.dailyRevenueChartHeading": "Fatturato al giorno, {monat}",
+      "hint.dailyRevenueChartAria": "Fatturato al giorno in {monat} {jahr}: tra {min} e {max}, in media {mittel}. Fatturato più alto il {tageListe} {monat} con {max}.",
     "msg.dailyFiguresLoadFailed": "Impossibile caricare i dati giornalieri: {fehler}",
     "misc.workOrderTitle": "Ordine di lavoro {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} in corso",
@@ -2502,6 +2579,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Aree di lavoro",
     "index.workListAria": "Elenco di lavoro",
     "index.detailAria": "Modulo dei dettagli",
+      "index.maskResizeAria": "Larghezza del pannello dei dettagli",
     "nav.flotte": "Flotta",
     "nav.stationen": "Stazioni",
     "nav.kunden": "Clientela",
@@ -2665,9 +2743,10 @@ const UEBERSETZUNGEN = {
     "lehrbetrieb.running": "In esecuzione…",
     "lehrbetrieb.runningStatus": "Aggiornamento della flotta dimostrativa in corso – richiede alcuni secondi.",
     "lehrbetrieb.doneMessage": "Flotta dimostrativa aggiornata: {storniert} annullati, {neu} avviati di nuovo – ora {aktiv} di {flotte} bici in giro ({anteil}%).",
-    "tile.minimum": "Minimo",
-    "tile.maximum": "Massimo",
-    "tile.countPerMonth": "Numero per mese",
+    "tile.minimum": "Minimo ({groesse})",
+    "tile.maximum": "Massimo ({groesse})",
+    "tile.countPerMonth": "Numero per mese ({groesse})",
+      "tile.revenuePerMonth": "Fatturato al mese",
     "tile.dayWithMostRides": "Giorno con più corse",
     "tile.occupancy": "Occupazione",
     "tile.trafficByTimeSlot": "Ingressi e uscite per fascia oraria",
@@ -2732,7 +2811,7 @@ const UEBERSETZUNGEN = {
     "msg.customerBlocked": "{vorname} {nachname} bloccato.",
     "msg.nameEmailRequired": "Sono richiesti nome, cognome ed e-mail.",
     "msg.customerCreated": "Cliente {vorname} {nachname} creato.",
-    "msg.customersCapped": "200 di più clienti{zusatz} — restringere ulteriormente",
+    "msg.customersCapped": "{grenze} di più clienti{zusatz} — restringere ulteriormente",
     "msg.searchFor": "per \"{suchtext}\"",
     "msg.statusList": "Stato {liste}",
     "msg.damageLoadFailed": "Impossibile caricare i guasti: {fehler}",
@@ -2785,12 +2864,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "minuti",
     "unit.threeSteps": "3 livelli",
     "unit.reportedToFixed": "da segnalato a risolto",
-    "unit.euroTwelveMonths": "euro, 12 mesi",
+    "unit.euroPeriod": "euro, {zeitraum}",
     "unit.bikesOfCapacity": "bici, cornice = stalli",
     "unit.movementsPerDock": "movimenti per stallo",
     "unit.euroPerRide": "euro",
-    "unit.ridesTwelveMonths": "corse, 12 mesi",
-    "unit.kmTwelveMonths": "totale, 12 mesi",
+    "unit.ridesPeriod": "corse, {zeitraum}",
+    "unit.kmPeriod": "totale, {zeitraum}",
     "unit.kmPerRide": "chilometri per corsa",
     "unit.departuresPlusArrivals": "partenze e arrivi",
     "unit.zeroToHundred": "0–100 %",
@@ -2798,6 +2877,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "Al {datum}, {zeit}",
     "board.periodMonths": "{n} mesi",
     "board.periodAll": "Tutto",
+    "board.periodAllLabel": "intero periodo",
     "board.periodChoiceAria": "Scegli periodo",
     "board.stationLoadTime": "Occupazione ora · entrate e uscite dall'avvio",
     "board.periodRange": "{von} – {bis}",
@@ -2813,7 +2893,7 @@ const UEBERSETZUNGEN = {
     "board.stationBalanceAria": "{name}: {zugaenge} arrivi, {abgaenge} partenze, saldo {saldo}",
     "board.stationsFootnote": "Le partenze vanno da {min} a {max} in tutte le stazioni: la domanda è distribuita uniformemente, le differenze stanno solo nel saldo.",
     "board.stationTurnoverAria": "{name}: {wert} movimenti per stallo su {kapazitaet} stalli",
-    "board.stationsRhythmFootnote": "L'andamento giornaliero è identico in tutte le stazioni: dal {morgenMin} al {morgenMax} % delle partenze feriali cade tra le 6 e le 8, dal {nachmittagMin} al {nachmittagMax} % tra le 16 e le 18. Descrive la rete e non la singola stazione: per questo sta qui e non in una colonna.",
+    "board.stationsRhythmFootnote": "L'andamento giornaliero è identico in tutte le stazioni: dal {morgenMin} al {morgenMax} % delle partenze feriali cade tra le {morgenVon} e le {morgenBis}, dal {nachmittagMin} al {nachmittagMax} % tra le {nachmittagVon} e le {nachmittagBis}. Descrive la rete e non la singola stazione: per questo sta qui e non in una colonna.",
     "board.customersTitle": "Anagrafica per gruppo tariffario",
     "board.customersReference": "{kundenPhrase} · {gesperrt} bloccati · {volumen} fatturati · {imOrt} a {ort}, distribuiti su {ortePhrase}",
     "board.customersNoTariff": "Senza tariffa attiva",
@@ -2832,8 +2912,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "ordine di lavoro presente",
     "board.maintenanceNoOrder": "nessun ordine di lavoro",
     "board.maintenanceFootnote": "Nessuna colonna di scostamento e nessuna media: {schadenPhrase}, di cui {offen} non risolti, {minuten} minuti di lavoro registrati – qui ogni indice sarebbe una statistica su sé stessa.",
-    "board.revenueTypeTitle": "Dodici mesi per tipo di bici",
-    "board.revenueGroupTitle": "Dodici mesi per gruppo tariffario",
+    "board.revenueTypeTitle": "Fatturato per tipo di bici",
+    "board.revenueGroupTitle": "Fatturato per gruppo tariffario",
     "board.revenueReference": "{umsatz} e {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} e {fahrtenPhrase} · {jeRadTag} per bici al giorno ({raederPhrase})",
     "board.revenuePerRide": "{betrag} per corsa",
@@ -2871,6 +2951,12 @@ const UEBERSETZUNGEN = {
     "common.groupResetAria": "Usuń grupowanie według {titel}",
     "common.groupResetTitle": "Zresetuj grupowanie",
     "common.groupTitle": "Grupuj",
+      "common.sortTitle": "Sortuj",
+      "common.sortAscendingAction": "Rosnąco",
+      "common.sortDescendingAction": "Malejąco",
+      "common.groupByThis": "Grupuj według tej kolumny",
+      "common.columnMenuAria": "Menu kolumny {titel}",
+      "common.columnMenuTitle": "Sortuj, grupuj, filtruj",
     "common.filterAria": "Filtruj {titel}",
     "common.filterMinAria": "Wartość minimalna dla {titel}",
     "common.filterSearchPlaceholder": "Szukaj…",
@@ -2903,6 +2989,7 @@ const UEBERSETZUNGEN = {
     "common.roleCheckFailed": "Nie udało się sprawdzić roli {code}: {msg}",
     "misc.estimatedParen": " ({prozent} szacowane)",
     "hint.ridesPerDayHeading": "Przejazdy dziennie — {monat} (ogółem, wszystkie typy rowerów i taryfy)",
+      "hint.ridesPerDayHeadingFiltered": "Przejazdy dziennie — {monat} ({typen}, wszystkie taryfy)",
     "status.label.abgebrochen": "Anulowano",
     "status.raw.abgebrochen": "Anulowano",
     "status.label.erledigt": "Zakończono",
@@ -2932,17 +3019,23 @@ const UEBERSETZUNGEN = {
     "field.dauer": "Czas trwania",
     "field.ziel": "Cel",
     "field.start": "Start",
-    "misc.bikesOnDateCaption": "Rowery w dniu {datum} - bez odniesienia do klienta, patrz v_wawi_fahrten_je_tag_rad",
+    "misc.bikesOnDateCaption": "Rowery w dniu {datum} - bez odniesienia do klienta · obrót dnia {umsatz}",
+    "misc.bikesOnDateCaptionFiltered": "Rowery w dniu {datum} ({typen}) - bez odniesienia do klienta · obrót dnia {umsatz}",
+    "misc.noBikeOfTypeThisDay": "Tego dnia nie jeżdżono rowerem tego typu ({typen}).",
     "button.backToDayOverview": "Powrót do przeglądu dziennego",
     "misc.bikesOnDate": "Rowery w dniu {datum}",
     "misc.noBikeRiddenThisDay": "Tego dnia nie użyto żadnego roweru.",
     "msg.thisDayBikesLoadFailed": "Nie udało się wczytać rowerów z tego dnia: {fehler}",
     "hint.legendColorScale": "Kolor = przejazdy tego dnia w stosunku do najbardziej ruchliwego dnia miesiąca ({phrase}).",
     "hint.dayRidesAria": "{datum}: {phrase}",
+      "hint.dayRidesRevenue": "{datum}: {phrase}, {umsatz}",
+      "hint.dayRidesRevenueAria": "{datum}: {phrase}, obrót {umsatz}",
     "hint.calendarCaption": "Przejazdy dziennie, {monat}",
     "hint.tiedDaysCount": "{tagePhrase} z takim samym wynikiem, po {phrase}",
     "hint.totalForMonth": "{phrase}, łącznie",
     "hint.dailyRidesChartAria": "Przejazdy dziennie w {monat} {jahr}, ogółem we wszystkich typach rowerów i taryfach: od {min} do {maxPhrase}, średnio {mittel}. Najwięcej przejazdów {tageListe} {monat}, po {maxPhrase} każdego dnia.",
+      "hint.dailyRevenueChartHeading": "Obrót dziennie, {monat}",
+      "hint.dailyRevenueChartAria": "Obrót dzienny w {monat} {jahr}: między {min} a {max}, średnio {mittel}. Najwyższy obrót {tageListe} {monat}: {max}.",
     "msg.dailyFiguresLoadFailed": "Nie udało się wczytać danych dziennych: {fehler}",
     "misc.workOrderTitle": "Zlecenie {auftragsnummer}",
     "msg.activeWorkOrdersCount": "{auftraegePhrase} w toku",
@@ -3002,6 +3095,7 @@ const UEBERSETZUNGEN = {
     "index.navAria": "Obszary zadań",
     "index.workListAria": "Lista robocza",
     "index.detailAria": "Formularz szczegółów",
+      "index.maskResizeAria": "Szerokość panelu szczegółów",
     "nav.flotte": "Flota",
     "nav.stationen": "Stacje",
     "nav.kunden": "Klientela",
@@ -3165,9 +3259,10 @@ const UEBERSETZUNGEN = {
     "lehrbetrieb.running": "Trwa wykonywanie…",
     "lehrbetrieb.runningStatus": "Odświeżanie floty pokazowej – to potrwa kilka sekund.",
     "lehrbetrieb.doneMessage": "Flota pokazowa odświeżona: anulowano {storniert}, uruchomiono na nowo {neu} – teraz {aktiv} z {flotte} rowerów w trasie ({anteil}%).",
-    "tile.minimum": "Minimum",
-    "tile.maximum": "Maksimum",
-    "tile.countPerMonth": "Liczba na miesiąc",
+    "tile.minimum": "Minimum ({groesse})",
+    "tile.maximum": "Maksimum ({groesse})",
+    "tile.countPerMonth": "Liczba na miesiąc ({groesse})",
+      "tile.revenuePerMonth": "Obrót miesięczny",
     "tile.dayWithMostRides": "Dzień z największą liczbą przejazdów",
     "tile.occupancy": "Zapełnienie",
     "tile.trafficByTimeSlot": "Przyjazdy i wyjazdy wg przedziału czasowego",
@@ -3232,7 +3327,7 @@ const UEBERSETZUNGEN = {
     "msg.customerBlocked": "Zablokowano {vorname} {nachname}.",
     "msg.nameEmailRequired": "Wymagane jest imię, nazwisko i e-mail.",
     "msg.customerCreated": "Utworzono klienta {vorname} {nachname}.",
-    "msg.customersCapped": "200 z więcej klientów{zusatz} — proszę zawęzić wyszukiwanie",
+    "msg.customersCapped": "{grenze} z więcej klientów{zusatz} — proszę zawęzić wyszukiwanie",
     "msg.searchFor": "dla „{suchtext}”",
     "msg.statusList": "Status {liste}",
     "msg.damageLoadFailed": "Nie udało się wczytać usterek: {fehler}",
@@ -3285,12 +3380,12 @@ const UEBERSETZUNGEN = {
     "unit.minutes": "minuty",
     "unit.threeSteps": "3 stopnie",
     "unit.reportedToFixed": "od zgłoszenia do usunięcia",
-    "unit.euroTwelveMonths": "euro, 12 miesięcy",
+    "unit.euroPeriod": "euro, {zeitraum}",
     "unit.bikesOfCapacity": "rowery, ramka = miejsca postojowe",
     "unit.movementsPerDock": "ruchy na miejsce postojowe",
     "unit.euroPerRide": "euro",
-    "unit.ridesTwelveMonths": "przejazdy, 12 miesięcy",
-    "unit.kmTwelveMonths": "suma, 12 miesięcy",
+    "unit.ridesPeriod": "przejazdy, {zeitraum}",
+    "unit.kmPeriod": "suma, {zeitraum}",
     "unit.kmPerRide": "kilometry na przejazd",
     "unit.departuresPlusArrivals": "wyjazdy i przyjazdy",
     "unit.zeroToHundred": "0–100 %",
@@ -3298,6 +3393,7 @@ const UEBERSETZUNGEN = {
     "board.asOf": "Stan na {datum}, {zeit}",
     "board.periodMonths": "{n} mies.",
     "board.periodAll": "Wszystko",
+    "board.periodAllLabel": "cały okres",
     "board.periodChoiceAria": "Wybierz okres",
     "board.stationLoadTime": "Zajętość teraz · przyjazdy i odjazdy od uruchomienia",
     "board.periodRange": "{von} – {bis}",
@@ -3313,7 +3409,7 @@ const UEBERSETZUNGEN = {
     "board.stationBalanceAria": "{name}: {zugaenge} przyjazdów, {abgaenge} wyjazdów, saldo {saldo}",
     "board.stationsFootnote": "Wyjazdy mieszczą się we wszystkich stacjach między {min} a {max} – popyt jest równomierny, różnice tkwią wyłącznie w saldzie.",
     "board.stationTurnoverAria": "{name}: {wert} ruchów na miejsce postojowe przy {kapazitaet} miejscach",
-    "board.stationsRhythmFootnote": "Rozkład dobowy jest taki sam na wszystkich stacjach: od {morgenMin} do {morgenMax} % wyjazdów w dni robocze przypada na godziny 6–8, a od {nachmittagMin} do {nachmittagMax} % na 16–18. Opisuje sieć, a nie pojedynczą stację – dlatego stoi tutaj, a nie w kolumnie.",
+    "board.stationsRhythmFootnote": "Rozkład dobowy jest taki sam na wszystkich stacjach: od {morgenMin} do {morgenMax} % wyjazdów w dni robocze przypada na godziny {morgenVon}–{morgenBis}, a od {nachmittagMin} do {nachmittagMax} % na {nachmittagVon}–{nachmittagBis}. Opisuje sieć, a nie pojedynczą stację – dlatego stoi tutaj, a nie w kolumnie.",
     "board.customersTitle": "Kartoteka według grupy taryfowej",
     "board.customersReference": "{kundenPhrase} · {gesperrt} zablokowanych · {volumen} obrotu · {imOrt} w {ort}, rozłożone na {ortePhrase}",
     "board.customersNoTariff": "Bez aktywnej taryfy",
@@ -3332,8 +3428,8 @@ const UEBERSETZUNGEN = {
     "board.maintenanceHasOrder": "istnieje zlecenie",
     "board.maintenanceNoOrder": "brak zlecenia",
     "board.maintenanceFootnote": "Bez kolumny odchylenia i bez średnich: {schadenPhrase}, w tym {offen} nierozwiązanych, {minuten} minut zapisanej pracy – każdy wskaźnik byłby tu statystyką o sobie samym.",
-    "board.revenueTypeTitle": "Dwanaście miesięcy według typu roweru",
-    "board.revenueGroupTitle": "Dwanaście miesięcy według grupy taryfowej",
+    "board.revenueTypeTitle": "Obrót wg typu roweru",
+    "board.revenueGroupTitle": "Obrót wg grupy taryfowej",
     "board.revenueReference": "{umsatz} i {fahrtenPhrase}",
     "board.revenueReferenceWithFleet": "{umsatz} i {fahrtenPhrase} · {jeRadTag} na rower dziennie ({raederPhrase})",
     "board.revenuePerRide": "{betrag} na przejazd",
@@ -4774,7 +4870,8 @@ function mehrfachauswahlEintraege(optionen, ausgewaehlt, beiAenderung, markiere,
 // der Signatur-Rueckstellung: eine neue Tabelle (anderer Bereich, anderer
 // Unterreiter) hat ohnehin ganz andere Spaltennamen, der Vergleich
 // "=== spalte.feld" faellt dort von selbst nie zufaellig positiv aus.
-let spaltenkopfFilterOffenFeld = null;
+// spaltenkopfFilterOffenFeld steckt jetzt in neueTabelle() (siehe unten):
+// welches Filterfenster offen steht, ist Sache DER Tabelle, nicht des Moduls.
 
 // Dasselbe fuer die FILTERLEISTE, ueber f.name statt spalte.feld - siehe
 // dieselbe Begruendung. In bereichWechseln() zurueckgesetzt (siehe dort):
@@ -5409,6 +5506,25 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
     const werteBereinigt = (werte || []).map((w) => w || 0);
     if (werteBereinigt.length === 0) return svg;   // nichts zu zeichnen, aber ein gültiges <svg>
 
+    // FESTE SAEULENTEILUNG (29.08.2026), optionen.saeulenAbstand in Bildpunkten.
+    // Ohne sie fuellt das <svg> per CSS (width:100%) IMMER dieselbe Breite,
+    // egal wie viele Werte es traegt - bei sechs Monaten wurden dieselben
+    // 340px auf sechs Saeulen verteilt, jede also mehr als doppelt so breit
+    // wie bei zwoelf. Der Auftrag dazu woertlich: "es soll nicht gestreckt
+    // werden, sondern die Position der Sparklines staerker nach links".
+    // Inline-style schlaegt die Klassenregel, das CSS-max-width deckelt
+    // trotzdem weiter (eine lange Reihe rueckt also enger zusammen, statt
+    // aus der Spalte zu laufen). Die Zelle behaelt ihre min-width: eine
+    // mitwandernde Spaltenbreite liesse beim Umschalten des Zeitraums die
+    // ganze Tabelle rechts davon springen. Der frei bleibende Platz liegt
+    // damit RECHTS - die Reihe steht links an der Spaltenkante, genau so
+    // gewollt. Das ist zugleich der Grundsatz, den die Spaltenbreiten in
+    // style.css schon tragen: eine Grafik ist so breit, wie sie Information
+    // traegt.
+    if (optionen.saeulenAbstand) {
+        svg.style.width = `${werteBereinigt.length * optionen.saeulenAbstand}px`;
+    }
+
     // GESTALTUNGSAUFTRAG PUNKT 4, woertlich: "eine Saeulenreihe zwoelf
     // Saeulen" - je Teil, nicht nur eine Zusammenfassung fuer die ganze
     // Reihe. optionen.titelJeIndex(i, wert) ist optional (siehe
@@ -5486,13 +5602,35 @@ function saeulenSparkline(werte, beschriftung, optionen = {}) {
         svg.append(grundlinie);
     }
 
+    // MINDESTHOEHE FUER WERTE UNGLEICH NULL (29.08.2026). Bis hierher war
+    // die Hoehe schlicht |wertY - nullY|: ein Monat mit einem Prozent des
+    // Reihenmaximums bekam 0,14px und verschwand. Ueber mehrere fruehe
+    // Monate hintereinander sah die Reihe dadurch aus, als BEGAENNE sie
+    // erst spaeter - eine Luecke, wo in Wahrheit kleine Werte stehen. Genau
+    // das ist beim waehlbaren Zeitraum aufgefallen: "Alles" nimmt die
+    // Anlaufmonate mit hinein, in denen der Umsatz noch klein war.
+    // Ein Boden von einem Bildpunkt (viewBox-Einheit = Bildpunkt, denn
+    // hoehe und CSS-height sind in beiden Einsatzorten gleich) rundet den
+    // Wert nach oben - er UEBERTREIBT also minimal. Das ist die richtige
+    // Richtung: die Alternative rundet auf null ab und macht aus "wenig"
+    // ein "nichts", und der Unterschied zwischen keinem Umsatz und wenig
+    // Umsatz ist der groessere der beiden. Bei wert === 0 greift der Boden
+    // ausdruecklich NICHT - eine echte Null bleibt eine leere Stelle.
+    const MINDESTHOEHE = 1;
     werteBereinigt.forEach((wert, i) => {
         const wertY = yVon(wert);
+        const rohHoehe = Math.abs(wertY - nullY);
+        const saeulenhoehe = wert === 0 ? rohHoehe : Math.max(MINDESTHOEHE, rohHoehe);
+        // Positive Saeulen stehen AUF der Nulllinie und wachsen nach oben,
+        // negative haengen daran und wachsen nach unten - der Boden darf
+        // die Linie nicht ueberschreiten (sonst reichte eine winzige
+        // positive Saeule sichtbar unter die Null).
+        const obenY = wert < 0 ? nullY : nullY - saeulenhoehe;
         const rect = document.createElementNS(SVG_NS, 'rect');
         rect.setAttribute('x', (i * abstand).toFixed(1));
-        rect.setAttribute('y', Math.min(nullY, wertY).toFixed(1));
+        rect.setAttribute('y', obenY.toFixed(1));
         rect.setAttribute('width', saeulenbreite.toFixed(1));
-        rect.setAttribute('height', Math.abs(wertY - nullY).toFixed(1));
+        rect.setAttribute('height', saeulenhoehe.toFixed(1));
         const klassen = ['saeulensparkline-saeule'];
         if (markierIndizes.includes(i)) klassen.push('saeulensparkline-saeule-markiert');
         else if (i === aktuellIndex) klassen.push('saeulensparkline-saeule-aktuell');
@@ -6187,13 +6325,37 @@ function donut(wert, maximum, beschriftung, optionen = {}) {
 // zwei Tage können denselben Höchstwert tragen (Auftrag, ausdrücklich als
 // Fallstrick benannt), dann sind es zwei Spitzentage, nicht einer.
 function saeulengrafik(werte, beschriftungenX, optionen = {}) {
-    const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [] } = optionen;
+    // titelJeIndex(i, wert): vollstaendiger Text fuer das Hinweisfenster
+    // EINER Saeule, dieselbe Option wie bei saeulenSparkline() oben. Ohne
+    // sie bleibt es beim Vorgabetext "Beschriftung: Wert" - der genuegt,
+    // solange eine Saeule nur eine Groesse traegt. Sobald zwei Zahlen
+    // zusammengehoeren (Fahrten UND Umsatz eines Tages), muss der Aufrufer
+    // den Satz bilden: nur er weiss, wie beide zueinander stehen.
+    // achseFormat: wie die Obergrenze an der Y-Achse geschrieben wird.
+    // Vorgabe ist eine blanke Zahl (Stueckzahlen); eine Reihe in Euro
+    // braucht dort geldFormat, sonst stuende ueber einer Umsatzgrafik eine
+    // Zahl ohne Einheit - und die liest sich wie eine Anzahl.
+    const { breite = 420, hoehe = 120, beschriftung = null, markierIndizes = [],
+            titelJeIndex = null, achseFormat = null, achseVerbergen = false,
+            stufeJeIndex = null, marken = [] } = optionen;
 
     const block = document.createElement('div');
     block.className = 'saeulengrafik-block';
 
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('viewBox', `0 0 ${breite} ${hoehe}`);
+    // preserveAspectRatio="none" (30.08.2026), wie bei saeulenSparkline()
+    // oben. OHNE diese Zeile gilt der Vorgabewert "xMidYMid meet": der
+    // 420 breite Inhalt wird unter Wahrung des Seitenverhaeltnisses in die
+    // per CSS zugewiesene Flaeche EINGEPASST und mittig gesetzt - die
+    // Saeulen standen dadurch als schmaler Block in der Mitte, waehrend
+    // die Achsenbeschriftung darunter (reines HTML, kein SVG) schon ueber
+    // die volle Breite lief. Genau der gepresste Eindruck, den der Auftrag
+    // ruegt. "none" streckt auf die zugewiesene Flaeche; an einer Grafik
+    // aus lauter senkrechten Rechtecken verzerrt das nichts an der
+    // Wertaussage - jede Saeule bleibt exakt so hoch wie ihr Anteil, nur
+    // die Spaltenbreite waechst mit.
+    svg.setAttribute('preserveAspectRatio', 'none');
     svg.classList.add('saeulengrafik');
 
     if (beschriftung) {
@@ -6211,6 +6373,18 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     // durchgehend 0 Fahrten nicht durch 0 teilt, nicht als versteckte
     // Untergrenze der Achse.
     const maximum = Math.max(1, ...werteBereinigt);
+
+    // ===== BESCHRIFTETE SAEULEN (30.08.2026) =====
+    // marken: [{ index, text }] - eine Beschriftung unmittelbar ueber der
+    // genannten Saeule. Gedacht fuer die beiden Enden der Reihe; alle
+    // achtundzwanzig zu beschriften waere eine Tabelle, keine Grafik.
+    //
+    // ALS HTML, NICHT ALS <text> IM SVG. Das <svg> traegt
+    // preserveAspectRatio="none" (siehe oben) und wird waagerecht
+    // gestreckt - Text darin wuerde exakt mitgestreckt und stuende je nach
+    // Bereichsbreite verschieden breit da. Eine Schicht aus HTML darueber
+    // wird in Prozent positioniert und bleibt unverzerrt.
+    let markenSchicht = null;
 
     if (werteBereinigt.length > 0) {
         const anzahl = werteBereinigt.length;
@@ -6238,19 +6412,67 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
             rect.setAttribute('y', (hoehe - saeulenhoehe).toFixed(2));
             rect.setAttribute('width', saeulenbreite.toFixed(2));
             rect.setAttribute('height', Math.max(0, saeulenhoehe).toFixed(2));
-            rect.setAttribute('class', markierIndizes.includes(i)
-                ? 'saeulengrafik-saeule saeulengrafik-saeule-markiert'
-                : 'saeulengrafik-saeule');
+            // stufeJeIndex: DIESELBE Farbtreppe wie der Kalender (0 bis 4,
+            // Anteil am Monatshoechstwert). Ohne sie traegt jede Saeule
+            // denselben Ton, und die Oberflaeche benutzte zwei Sprachen
+            // fuer dieselbe Aussage: im Kalender bedeutet dunkler "mehr",
+            // in der Grafik bedeutete es nichts. Zwei Kodierungen, die
+            // sich widersprechen, sind schlimmer als eine fehlende.
+            const klassen = ['saeulengrafik-saeule'];
+            if (typeof stufeJeIndex === 'function') {
+                klassen.push(`saeulengrafik-saeule-stufe-${stufeJeIndex(i, wert)}`);
+            }
+            if (markierIndizes.includes(i)) klassen.push('saeulengrafik-saeule-markiert');
+            rect.setAttribute('class', klassen.join(' '));
             if (beschriftungenX && beschriftungenX[i] !== undefined) {
                 // <title> auf dem einzelnen <rect>: ein Tooltip beim
                 // Hovern EINER Saeule, ohne die Grafik als Ganzes stumm
                 // zu machen (svg traegt aria-label bereits fuer sich).
-                const titel = document.createElementNS(SVG_NS, 'title');
-                titel.textContent = `${beschriftungenX[i]}: ${wert}`;
-                rect.append(titel);
+                // MIT titelJeIndex das Hinweisfenster DIESER Oberflaeche
+                // (hinweisfensterTeilVerknuepfen, wie bei saeulenSparkline
+                // und beim Strukturbalken), nicht das <title> des Browsers:
+                // das erscheint erst nach etwa einer Sekunde Verharren, in
+                // der Schrift des Betriebssystems und ohne jeden Bezug zur
+                // uebrigen Gestaltung. Beim Zeigen auf eine Saeule soll die
+                // Auskunft sofort da sein.
+                // OHNE titelJeIndex bleibt es beim <title> - so verhalten
+                // sich die uebrigen Aufrufer unveraendert.
+                if (typeof titelJeIndex === 'function') {
+                    hinweisfensterTeilVerknuepfen(rect, titelJeIndex(i, wert));
+                } else {
+                    const titel = document.createElementNS(SVG_NS, 'title');
+                    titel.textContent = `${beschriftungenX[i]}: ${wert}`;
+                    rect.append(titel);
+                }
             }
             svg.append(rect);
         });
+
+        if (marken.length > 0) {
+            markenSchicht = document.createElement('div');
+            markenSchicht.className = 'saeulengrafik-marken';
+            // aria-hidden: die Werte stehen bereits in der Gesamtbeschriftung
+            // des <svg> und im Hinweisfenster je Saeule - ein Bildschirmleser
+            // bekaeme sie hier ein drittes Mal.
+            markenSchicht.setAttribute('aria-hidden', 'true');
+            for (const { index, text } of marken) {
+                if (!Number.isInteger(index) || index < 0 || index >= anzahl) continue;
+                const marke = document.createElement('span');
+                marke.className = 'saeulengrafik-marke';
+                marke.textContent = text;
+                // Mitte DER Saeule, nicht des Rasterfachs - die beiden
+                // liegen um einen halben Punkt auseinander, und die Marke
+                // soll ueber ihrer Saeule stehen.
+                marke.style.left = `${((index * abstand + saeulenbreite / 2) / breite) * 100}%`;
+                marke.style.bottom = `${((werteBereinigt[index] / maximum) * (hoehe - 2) / hoehe) * 100}%`;
+                // An den Enden nicht ueber die Flaeche hinauslaufen: dort
+                // wird die Marke an ihrer eigenen Kante ausgerichtet statt
+                // mittig ueber der Saeule.
+                if (index === 0) marke.classList.add('saeulengrafik-marke-links');
+                else if (index === anzahl - 1) marke.classList.add('saeulengrafik-marke-rechts');
+                markenSchicht.append(marke);
+            }
+        }
     }
 
     // y-Achse: nur 0 und das Maximum, keine Zwischenwerte - die
@@ -6258,16 +6480,29 @@ function saeulengrafik(werte, beschriftungenX, optionen = {}) {
     // exakt, diese beiden Eckwerte dienen nur der groben Einordnung
     // "wie hoch ist hoch". aria-hidden: rein visuelle Orientierung,
     // redundant zu optionen.beschriftung und zur Tabelle.
+    // achseVerbergen: die Skala steht dann in der Titelzeile ueber der
+    // Grafik, nicht in einer eigenen Spalte links. Diese Spalte rueckte die
+    // Saeulen um ihre Breite nach rechts - neben einem Kalender, der an der
+    // Bereichskante beginnt, sah das aus wie ein Einzug ohne Grund
+    // (Auftrag: "das Diagramm sollte links-/rechtsbuendig mit dem Kalender
+    // abschliessen"). Die Skala geht dabei NICHT verloren, sie wandert nur:
+    // "eine Einfaerbung ohne Skala ist eine Behauptung" gilt unveraendert.
     const yAchse = document.createElement('div');
     yAchse.className = 'saeulengrafik-y-achse';
     yAchse.setAttribute('aria-hidden', 'true');
     const yOben = document.createElement('span');
-    yOben.textContent = zahlFormat(maximum);
+    yOben.textContent = typeof achseFormat === 'function' ? achseFormat(maximum) : zahlFormat(maximum);
     const yUnten = document.createElement('span');
     yUnten.textContent = '0';
     yAchse.append(yOben, yUnten);
 
-    block.append(yAchse, svg);
+    if (achseVerbergen) {
+        block.classList.add('saeulengrafik-block-ohne-achse');
+        block.append(svg);
+    } else {
+        block.append(yAchse, svg);
+    }
+    if (markenSchicht) block.append(markenSchicht);
 
     if (beschriftungenX && beschriftungenX.length > 0) {
         const xAchse = document.createElement('div');
@@ -6925,11 +7160,20 @@ function zeigeKopftafel(kennung, tafel) {
     }
     const kopftexte = document.createElement('div');
     kopftexte.className = 'kopftafel-kopftexte';
+    // Der Titel bekommt eine eigene Zeile, weil der Umschalter dazu gehoert:
+    // er klappt GENAU diese Tafel ein. Am rechten Rand der Kopfzeile stand
+    // er zwischenzeitlich fast 1900px von seiner Ueberschrift entfernt -
+    // "man nimmt ihn nicht mehr wahr" (Auftrag). Ein Bedienelement gehoert
+    // neben das, worauf es wirkt; dieselbe Ueberlegung, die den Klappgriff
+    // der Navigation an ihre Kante gesetzt hat.
+    const titelzeile = document.createElement('div');
+    titelzeile.className = 'kopftafel-titelzeile';
     const titel = document.createElement('h2');
     titel.className = 'kopftafel-titel';
     titel.id = titelId;
     titel.textContent = tafel.titel;
-    kopftexte.append(titel);
+    titelzeile.append(titel);
+    kopftexte.append(titelzeile);
     if (tafel.bezug) {
         const bezug = document.createElement('p');
         bezug.className = 'kopftafel-bezug';
@@ -6949,6 +7193,17 @@ function zeigeKopftafel(kennung, tafel) {
     // liest und ihn anders haben will, findet den Knopf, ohne zu suchen.
     // Nur Tafeln mit echter Periode geben zeitWahl mit; eine
     // Momentaufnahme bekommt hier nichts, weil sie nichts zu waehlen hat.
+    // ===== BEDIENELEMENTE NACH RECHTS IN DIE TITELZEILE (30.08.2026) =====
+    // Auftrag: der Kopfbereich nimmt zu viel Raum ein, "weil der Button
+    // Übersicht ungünstig platziert ist". Er stand mittig auf einer eigenen
+    // Zeile, die Zeitwahl auf einer weiteren - zwei volle Zeilen für zwei
+    // Bedienelemente, während rechts neben Titel und Bezugszeile Platz
+    // ungenutzt blieb. Auf dem Tablet gemessen: 189px Tafelkopf, während
+    // die Kopfleiste darüber nur 60px belegte.
+    // Texte links, Bedienelemente rechts - und beides in EINER Zeile.
+    const steuerung = document.createElement('div');
+    steuerung.className = 'kopftafel-steuerung';
+
     if (tafel.zeitWahl) {
         const wahl = document.createElement('div');
         wahl.className = 'kopftafel-zeitwahl';
@@ -6970,9 +7225,15 @@ function zeigeKopftafel(kennung, tafel) {
             });
             wahl.append(knopf);
         }
-        kopftexte.append(wahl);
+        // In die Steuerung, nicht in die Texte: die Zeitknoepfe sind
+        // Bedienelemente und gehoeren zu ihresgleichen, nicht unter die
+        // Bezugszeile.
+        steuerung.append(wahl);
     }
     kopf.append(kopftexte);
+    // Nur wenn sie etwas traegt: ohne Zeitwahl waere es ein leeres Element
+    // mit margin-left:auto, das nichts tut und nichts zeigt.
+    if (tafel.zeitWahl) kopf.append(steuerung);
     // Der Umschalter steht NICHT mehr im Kopf (Gestaltungsauftrag,
     // woertlich: "Es muss mittig am unteren Ende der Kopfleiste sein,
     // damit es wirksam wahrgenommen werden kann" - vorher stand er oben
@@ -7076,10 +7337,12 @@ function zeigeKopftafel(kennung, tafel) {
     // damit IMMER am unteren Ende der Tafel, unabhaengig davon, wie hoch
     // die Tafel gerade ist - keine zwei Regeln fuer zwei Zustaende,
     // sondern dieselbe Position aus derselben DOM-Reihenfolge.
-    const griffleiste = document.createElement('div');
-    griffleiste.className = 'kopftafel-griffleiste';
-    griffleiste.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
-    wurzel.append(griffleiste);
+    // Der Umschalter sass bis hierher in einer eigenen, mittig gesetzten
+    // Zeile UNTER der ganzen Tafel (.kopftafel-griffleiste). Jetzt steht er
+    // rechts in der Titelzeile, neben der Zeitwahl. Er wird erst hier
+    // gebaut, weil er die fertige Tabelle kennen muss (aria-controls) -
+    // eingehaengt wird er aber oben, in die bereits bestehende Kopfzeile.
+    titelzeile.append(kopftafelUmschalterKnopf(wurzel, tabelle.id));
 }
 
 // ===== DIE QUELLENANGABE, SICHTBAR IN DER OBERFLAECHE =====
@@ -7375,6 +7638,13 @@ function kopftafelZeile(zeile, spalten, skalen, art) {
                 if (reihe.length > 0) {
                     zelle.append(saeulenSparkline(reihe, spalte.beschriftung(zeile), {
                         breite: 96, hoehe: 16, aktuellIndex: spalte.aktuellIndex ?? null,
+                        // Feste Teilung statt Streckung (siehe saeulenSparkline()):
+                        // 17px sind die 340px Hoechstbreite der Spalte geteilt
+                        // durch die zwanzig Monate, die "Alles" derzeit umfasst -
+                        // der laengste Regelfall fuellt die Spalte also gerade
+                        // aus, jeder kuerzere Zeitraum wird schmaler statt
+                        // breiter gezogen.
+                        saeulenAbstand: 17,
                         // DIE GEMEINSAME SKALE, hier durchgereicht: ohne
                         // sie skalierte jede Zeile auf ihr eigenes
                         // Maximum, zehn Reihen saehen gleich hoch aus und
@@ -7622,12 +7892,56 @@ function balkenSpalten(feld, titel, maximum, formatText, optionen = {}) {
 // baueLeerzeile() weiter unten) haelt Kopf- und Filterzeile stattdessen
 // unangetastet - dieselbe Garantie wie bei den Bereichs-eigenen
 // Filtern, nur eine Ebene tiefer.
-let spaltenkopfListe = null;               // { kennung, zeilen, spalten, beiAuswahl, aktionen }
-let spaltenkopfSignatur = null;            // Fingerabdruck der Spaltenliste, siehe zeigeListe()
-let spaltenkopfSortFeld = null;            // spalte.feld, das aktuell sortiert, oder null
-let spaltenkopfSortRichtung = 0;           // 0 = Ausgangsordnung, 1 = aufsteigend, -1 = absteigend
-let spaltenkopfGruppe = null;              // spalte.feld, nach dem gruppiert wird, oder null
-let spaltenkopfFilterwerte = new Map();    // spalte.feld -> Filterwert
+// ===== EIN ZUSTAND JE TABELLE (30.08.2026) =====
+// Bis hierher lagen Sortierung, Gruppierung und Filter in sechs
+// Modulvariablen - also gab es sie genau EINMAL, fuer genau eine Tabelle.
+// Der Auftrag ("bei der Tabelle mit den Einzeluebersichten auch Sortieren,
+// Gruppieren, Filtern") verlangt eine zweite und dritte Tabelle mit
+// denselben Faehigkeiten; ein zweiter Satz Variablen daneben waere
+// derselbe Code ein zweites Mal. Stattdessen traegt jede Tabelle ihren
+// eigenen Zustand, und die Zeichenfunktionen bekommen ihn als erstes
+// Argument gereicht.
+//
+// NICHT im Zustand: spaltenkopfSuchtext (weiter unten). Das Suchwort
+// gehoert dem FELD in der Kopfleiste, nicht einer Tabelle - es gibt genau
+// ein solches Feld, und es meint immer die Arbeitsliste. tab.sucheGilt
+// entscheidet, ob eine Tabelle darauf hoert; die Detailtabellen tun es
+// nicht, sie haben kein Suchfeld ueber sich.
+function neueTabelle(id, optionen = {}) {
+    return {
+        id,
+        // Kompaktes Spaltenmenue statt drei nebeneinanderliegender Knoepfe:
+        // im schmalen Detailbereich braeuchte die volle Leiste rund 137px
+        // je Spalte, bei sechs Spalten also mehr, als der Bereich hat.
+        kompakt: optionen.kompakt === true,
+        sucheGilt: optionen.sucheGilt !== false,
+        // Nur die Arbeitsliste besetzt die Pfeiltasten-Navigation
+        // (listenZeilen/listenIndex weiter oben) - zwei Tabellen, die sich
+        // um denselben Tastaturfokus streiten, waeren unbedienbar.
+        tastatur: optionen.tastatur !== false,
+        wurzel: optionen.wurzel || null,
+        liste: null,          // { kennung, zeilen, spalten, beiAuswahl, aktionen }
+        signatur: null,       // Fingerabdruck der Spaltenliste, siehe zeigeListe()
+        sortFeld: null,       // spalte.feld, das aktuell sortiert, oder null
+        sortRichtung: 0,      // 0 = Ausgangsordnung, 1 = aufsteigend, -1 = absteigend
+        gruppe: null,         // spalte.feld, nach dem gruppiert wird, oder null
+        filterwerte: new Map(),   // spalte.feld -> Filterwert
+        offenesFenster: null      // "feld|rolle" des offenen Klappfensters
+    };
+}
+
+const TABELLEN = new Map();
+const TABELLE_ARBEIT = 'arbeitsliste';
+
+function tabellenzustand(id, optionen) {
+    if (!TABELLEN.has(id)) TABELLEN.set(id, neueTabelle(id, optionen));
+    return TABELLEN.get(id);
+}
+
+// Die Arbeitsliste links - die Tabelle, die es vor diesem Umbau als
+// einzige gab. Alles ausserhalb der Zeichenfunktionen (Bereichswechsel,
+// Suchfeld, setzeSpaltenkopfFilter()) meint immer genau sie.
+function haupttabelle() { return tabellenzustand(TABELLE_ARBEIT); }
 let spaltenkopfSuchtext = '';              // Suchwort der Kopfleiste, '' = keine Suche
 
 // ===== EINE SUCHE, UND SIE SUCHT UEBERALL (Gestaltungsauftrag Punkt 5) =====
@@ -7781,6 +8095,7 @@ const SPALTENKOPF_FILTER_ICON = '<svg viewBox="0 0 24 24">'
 // keine zusätzliche Spalte, keine Zeile muss etwas davon wissen.
 function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     if (!istAktuellerVorgang(kennung)) return;
+    const tab = haupttabelle();
 
     // Fingerabdruck der Spaltenliste: dieselbe Tabelle (Bereich,
     // Unterreiter) behaelt Sortierung/Filter/Gruppierung ueber einen
@@ -7794,12 +8109,12 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
     // der Flotte einen Wechsel zu Stationen, obwohl "Nummer" dort etwas
     // ganz anderes waere.
     const signatur = spalten.map((s) => `${s.feld}|${s.titel || ''}`).join(',') + (aktionen ? '|+' : '');
-    if (signatur !== spaltenkopfSignatur) {
-        spaltenkopfSignatur = signatur;
-        spaltenkopfSortFeld = null;
-        spaltenkopfSortRichtung = 0;
-        spaltenkopfGruppe = null;
-        spaltenkopfFilterwerte = new Map();
+    if (signatur !== tab.signatur) {
+        tab.signatur = signatur;
+        tab.sortFeld = null;
+        tab.sortRichtung = 0;
+        tab.gruppe = null;
+        tab.filterwerte = new Map();
         // Der Suchtext NICHT hier zurueckgesetzt: er gehoert dem Feld in
         // der Kopfleiste, nicht der Tabelle, und bereichWechseln() leert
         // beide gemeinsam (siehe dort). Ein Unterreiter-Wechsel INNERHALB
@@ -7809,8 +8124,8 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
         // Bedienelement zu zeigen, das nicht mehr das tut, was es sagt.
     }
 
-    spaltenkopfListe = { kennung, zeilen, spalten, beiAuswahl, aktionen };
-    zeichneArbeitstabelle();
+    tab.liste = { kennung, zeilen, spalten, beiAuswahl, aktionen };
+    zeichneArbeitstabelle(tab);
 }
 
 // Der eigentliche Zeichenvorgang - getrennt von zeigeListe(), weil jeder
@@ -7819,9 +8134,14 @@ function zeigeListe(kennung, zeilen, spalten, beiAuswahl, aktionen = null) {
 // ausschliesslich aus dem Modulzustand oben; zeigeListe() selbst ist nur
 // noch die Stelle, an der dieser Zustand mit frischen Zeilen/Spalten
 // befuellt wird.
-function zeichneArbeitstabelle() {
-    const { kennung, zeilen: zeilenOriginal, spalten, beiAuswahl, aktionen } = spaltenkopfListe;
-    if (!istAktuellerVorgang(kennung)) return;
+function zeichneArbeitstabelle(tab) {
+    const { kennung, zeilen: zeilenOriginal, spalten, beiAuswahl, aktionen } = tab.liste;
+    // kennung === null: eine Detailtabelle. Die Wache verwirft veraltete
+    // Ergebnisse eines Ladevorgangs; ein Klick auf einen Spaltenkopf ist
+    // aber kein Ladevorgang, und die Maske haengt an keinem eigenen. Mit
+    // Wache bliebe jedes Sortieren wirkungslos, sobald irgendwo sonst ein
+    // neuer Vorgang begonnen hat.
+    if (kennung !== null && !istAktuellerVorgang(kennung)) return;
 
     const fokusMerkmal = fokusMerken();
 
@@ -7830,14 +8150,19 @@ function zeichneArbeitstabelle() {
     // erst den Datensatz finden, dann in den gefundenen weiter eingrenzen.
     // Siehe suchtextTrifft() weiter unten fuer die Begruendung, WORUEBER
     // gesucht wird.
-    const gesucht = spaltenkopfSuchtext
-        ? zeilenOriginal.filter((zeile) => suchtextTrifft(zeile, spalten, spaltenkopfSuchtext))
+    // tab.sucheGilt: nur die Arbeitsliste hat das Suchfeld der Kopfleiste
+    // ueber sich. Eine Detailtabelle, die stillschweigend auf dasselbe Wort
+    // hoerte, wuerde Zeilen ausblenden, ohne dass irgendein sichtbares
+    // Bedienelement das erklaerte.
+    const suchwort = tab.sucheGilt ? spaltenkopfSuchtext : '';
+    const gesucht = suchwort
+        ? zeilenOriginal.filter((zeile) => suchtextTrifft(zeile, spalten, suchwort))
         : zeilenOriginal;
 
     // ----- Filtern -----
     const gefiltert = gesucht.filter((zeile) => spalten.every((spalte) => {
         if (!istFilterbar(spalte)) return true;
-        const filterwert = spaltenkopfFilterwerte.get(spalte.feld);
+        const filterwert = tab.filterwerte.get(spalte.feld);
         if (filterwert === undefined) return true;
         const rohwert = zeile[spalte.feld];
         const typ = spaltenFilterTyp(spalte, zeilenOriginal);
@@ -7879,9 +8204,9 @@ function zeichneArbeitstabelle() {
     // unten aus, und die Reihenfolge ist wieder GENAU diese
     // Ausgangsordnung, nicht irgendeine neu berechnete.
     let indiziert = gefiltert.map((zeile, index) => ({ zeile, index }));
-    const sortSpalte = spaltenkopfSortFeld
-        ? spalten.find((s) => s.feld === spaltenkopfSortFeld && istSortierbar(s)) : null;
-    if (sortSpalte && spaltenkopfSortRichtung !== 0) {
+    const sortSpalte = tab.sortFeld
+        ? spalten.find((s) => s.feld === tab.sortFeld && istSortierbar(s)) : null;
+    if (sortSpalte && tab.sortRichtung !== 0) {
         indiziert = [...indiziert].sort((a, b) => {
             const wa = spaltenWert(sortSpalte, a.zeile);
             const wb = spaltenWert(sortSpalte, b.zeile);
@@ -7894,23 +8219,31 @@ function zeichneArbeitstabelle() {
             if (aLeer && bLeer) return a.index - b.index;
             if (aLeer) return 1;
             if (bLeer) return -1;
-            const vergleich = vergleicheWerte(wa, wb) * spaltenkopfSortRichtung;
+            const vergleich = vergleicheWerte(wa, wb) * tab.sortRichtung;
             return vergleich !== 0 ? vergleich : a.index - b.index;   // stabil bei Gleichstand
         });
     }
     const angezeigt = indiziert.map((e) => e.zeile);
 
     // ----- Gruppieren -----
-    const gruppenSpalte = spaltenkopfGruppe
-        ? spalten.find((s) => s.feld === spaltenkopfGruppe && istGruppierbar(s)) : null;
+    const gruppenSpalte = tab.gruppe
+        ? spalten.find((s) => s.feld === tab.gruppe && istGruppierbar(s)) : null;
     const gruppen = gruppenSpalte ? gruppiere(angezeigt, gruppenSpalte) : null;
 
-    listenZeilen = angezeigt;
-    listenAuswahl = beiAuswahl;
-    listenIndex = -1;
-    listenZeilenElemente = [];
+    // Nur die Arbeitsliste besetzt die Pfeiltasten-Navigation: zwei
+    // Tabellen, die sich um listenIndex streiten, waeren unbedienbar - die
+    // Pfeiltaste bewegte mal die eine, mal die andere Liste, je nachdem,
+    // welche zuletzt gezeichnet wurde.
+    if (tab.tastatur) {
+        listenZeilen = angezeigt;
+        listenAuswahl = beiAuswahl;
+        listenIndex = -1;
+        listenZeilenElemente = [];
+    }
 
-    const wurzel = listenKoerper();
+    // tab.wurzel: die Detailtabellen zeichnen in ihren eigenen Behaelter in
+    // der Maske, nicht in den Listenkoerper des Arbeitsbereichs.
+    const wurzel = tab.wurzel || listenKoerper();
     wurzel.replaceChildren();
 
     // Hinweiszeile (Auftrag: "der Zustand muss sichtbar sein... und ein
@@ -7921,35 +8254,35 @@ function zeichneArbeitstabelle() {
     // die Zahl der bereits geladenen (hoechstens 200) Zeilen, NICHT die
     // 1014 insgesamt - konsistent mit der Statuszeile in kunden.js, die
     // genau das schon offenlegt.
-    if (spaltenkopfFilterwerte.size > 0 || gruppenSpalte || spaltenkopfSuchtext) {
-        wurzel.append(spaltenkopfHinweis(zeilenOriginal.length, angezeigt.length, gruppenSpalte));
+    if (tab.filterwerte.size > 0 || gruppenSpalte || suchwort) {
+        wurzel.append(spaltenkopfHinweis(tab, zeilenOriginal.length, angezeigt.length, gruppenSpalte));
     }
 
     const tabelle = document.createElement('table');
-    tabelle.className = 'arbeitstabelle';
-    tabelle.append(spaltenkopfKopfzeile(spalten, aktionen));
+    tabelle.className = tab.tabellenklasse || 'arbeitstabelle';
+    tabelle.append(spaltenkopfKopfzeile(tab, spalten, aktionen));
 
     const koerper = document.createElement('tbody');
     // "Kein Treffer": eine schlanke Zeile INNERHALB der Tabelle, damit
     // Kopfzeile und Filter bedienbar bleiben (siehe baueLeerzeile()).
     if (angezeigt.length === 0 && zeilenOriginal.length > 0) {
-        koerper.append(baueLeerzeile(spalten, aktionen));
+        koerper.append(baueLeerzeile(tab, spalten, aktionen));
     } else if (gruppen) {
         let laufIndex = 0;
         for (const gruppe of gruppen) {
             koerper.append(spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte));
             for (const zeile of gruppe.zeilen) {
-                koerper.append(baueDatenzeile(zeile, spalten, aktionen, laufIndex));
+                koerper.append(baueDatenzeile(tab, zeile, spalten, aktionen, laufIndex));
                 laufIndex += 1;
             }
         }
     } else {
-        angezeigt.forEach((zeile, index) => koerper.append(baueDatenzeile(zeile, spalten, aktionen, index)));
+        angezeigt.forEach((zeile, index) => koerper.append(baueDatenzeile(tab, zeile, spalten, aktionen, index)));
     }
     tabelle.append(koerper);
     wurzel.append(tabelle);
 
-    fokusWiederherstellen(fokusMerkmal);
+    fokusWiederherstellen(fokusMerkmal, wurzel);
 }
 
 // ----- Fokuserhalt ueber einen vollstaendigen Neuaufbau der Tabelle -----
@@ -7972,9 +8305,9 @@ function fokusMerken() {
     };
 }
 
-function fokusWiederherstellen(merkmal) {
+function fokusWiederherstellen(merkmal, wurzel = null) {
     if (!merkmal) return;
-    const ziel = listenKoerper().querySelector(
+    const ziel = (wurzel || listenKoerper()).querySelector(
         `[data-spaltenkopf-feld="${merkmal.feld}"][data-spaltenkopf-rolle="${merkmal.rolle}"]`);
     if (!ziel) return;
     ziel.focus();
@@ -8093,7 +8426,7 @@ function gruppiere(zeilenListe, spalte) {
 }
 
 // ----- Kopfzeile(n): Titel/Sortieren/Gruppieren, darunter die Filterzeile -----
-function spaltenkopfKopfzeile(spalten, aktionen) {
+function spaltenkopfKopfzeile(tab, spalten, aktionen) {
     const kopf = document.createElement('thead');
 
     const titelZeile = document.createElement('tr');
@@ -8111,21 +8444,49 @@ function spaltenkopfKopfzeile(spalten, aktionen) {
         const sortierbar = istSortierbar(spalte);
         const gruppierbar = istGruppierbar(spalte);
         if (sortierbar) {
-            const aktiv = spaltenkopfSortFeld === spalte.feld && spaltenkopfSortRichtung !== 0;
-            th.setAttribute('aria-sort', aktiv ? (spaltenkopfSortRichtung === 1 ? 'ascending' : 'descending') : 'none');
+            const aktiv = tab.sortFeld === spalte.feld && tab.sortRichtung !== 0;
+            th.setAttribute('aria-sort', aktiv ? (tab.sortRichtung === 1 ? 'ascending' : 'descending') : 'none');
         }
 
         const filterbar = istFilterbar(spalte);
         if (hatTitel && (sortierbar || gruppierbar || filterbar)) {
             const wrapper = document.createElement('div');
             wrapper.className = 'spaltenkopf';
-            wrapper.append(sortierbar ? spaltenkopfSortknopf(spalte) : spaltenkopfTitelOhneSortierung(spalte));
-            if (gruppierbar) wrapper.append(spaltenkopfGruppenknopf(spalte));
+            // KOMPAKTMODUS (Detailtabellen in der Maske): ein Knopf statt
+            // dreier. Die volle Leiste braucht rund 137px je Spalte; bei
+            // sechs Spalten passt sie im schmalen Detailbereich nicht
+            // nebeneinander, und eine waagerecht scrollende Tabelle
+            // versteckte die Haelfte der Spalten hinter einer Geste, die
+            // niemand vermutet.
+            if (tab.kompakt) {
+                wrapper.classList.add('spaltenkopf-kompakt');
+                // KNOPF VOR DEN TITEL (30.08.2026). Auftrag, woertlich:
+                // "die Position der Controls ist verwirrend, denn sie
+                // liegen hier hinter der zugehoerigen Beschriftung. In
+                // meinen Augen sollte das Control immer vor der dazu
+                // gehoerenden Beschriftung/Attribut liegen."
+                // Genau so ist es: hinter dem Titel steht der Knopf
+                // unmittelbar VOR dem Titel der naechsten Spalte und
+                // klebt optisch an dieser - "Rahmennummer ⋯ Radtyp" liest
+                // sich als "⋯ gehoert zu Radtyp". Der Abstand zwischen
+                // zwei Spalten ist immer groesser als der innerhalb einer,
+                // also bindet die Naehe den Knopf an das, was RECHTS von
+                // ihm steht. Voranstellen loest das ohne jede zusaetzliche
+                // Linie oder Farbe.
+                wrapper.append(spaltenkopfMenueknopf(tab, spalte));
+                wrapper.append(spaltenkopfTitelOhneSortierung(spalte));
+                th.classList.add('spaltenkopf-zelle');
+                th.append(wrapper);
+                titelZeile.append(th);
+                continue;
+            }
+            wrapper.append(sortierbar ? spaltenkopfSortknopf(tab, spalte) : spaltenkopfTitelOhneSortierung(spalte));
+            if (gruppierbar) wrapper.append(spaltenkopfGruppenknopf(tab, spalte));
             // Der Filter sitzt jetzt HIER, im Kopf neben Sortieren und
             // Gruppieren - nicht mehr in einer zweiten Kopfzeile darunter
             // (siehe die ausfuehrliche Begruendung bei
             // spaltenkopfFilterknopf() weiter unten).
-            if (filterbar) wrapper.append(spaltenkopfFilterknopf(spalte));
+            if (filterbar) wrapper.append(spaltenkopfFilterknopf(tab, spalte));
             // position:relative fuer das Filterfenster, das aus diesem
             // Kopf aufklappt (siehe .spaltenkopf-filter in style.css) -
             // die Angabe gehoert an die <th>, weil das Fenster ueber die
@@ -8189,7 +8550,7 @@ function spaltenkopfTitelOhneSortierung(spalte) {
     return spanne;
 }
 
-function spaltenkopfSortknopf(spalte) {
+function spaltenkopfSortknopf(tab, spalte) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.className = 'spaltenkopf-sortknopf';
@@ -8200,11 +8561,11 @@ function spaltenkopfSortknopf(spalte) {
     titelSpanne.textContent = spalte.titel;
     knopf.append(titelSpanne);
 
-    const aktiv = spaltenkopfSortFeld === spalte.feld && spaltenkopfSortRichtung !== 0;
+    const aktiv = tab.sortFeld === spalte.feld && tab.sortRichtung !== 0;
     const symbol = document.createElement('span');
     symbol.className = 'spaltenkopf-sortsymbol'
         + (aktiv ? ' spaltenkopf-sortsymbol-aktiv' : '')
-        + (aktiv && spaltenkopfSortRichtung === 1 ? ' spaltenkopf-sortsymbol-auf' : '');
+        + (aktiv && tab.sortRichtung === 1 ? ' spaltenkopf-sortsymbol-auf' : '');
     // Konstantes Markup, keine Nutzereingabe - derselbe Ausnahmefall wie
     // RAD_ICONS/SCHADEN_ICONS in den Bereichen (siehe dortiger Kommentar).
     symbol.innerHTML = SPALTENKOPF_SORT_ICON;
@@ -8213,26 +8574,26 @@ function spaltenkopfSortknopf(spalte) {
 
     knopf.setAttribute('aria-label', t('common.sortAria', { titel: spalte.titel })
         + (aktiv ? t('common.sortAriaSuffix',
-            { richtung: spaltenkopfSortRichtung === 1 ? t('common.ascending') : t('common.descending') }) : ''));
+            { richtung: tab.sortRichtung === 1 ? t('common.ascending') : t('common.descending') }) : ''));
 
     // Klick UND Tastatur: ein <button> ist beides ohne weiteren Code -
     // Enter/Leertaste loesen 'click' nativ aus (Auftrag: "mit der
     // Tastatur erreichbar UND bedienbar", kein Nachbau eines
     // Tastatur-Handlers fuer etwas, das der Browser schon kann).
     knopf.addEventListener('click', () => {
-        if (spaltenkopfSortFeld !== spalte.feld) {
-            spaltenkopfSortFeld = spalte.feld;
-            spaltenkopfSortRichtung = 1;
-        } else if (spaltenkopfSortRichtung === 1) {
-            spaltenkopfSortRichtung = -1;
-        } else if (spaltenkopfSortRichtung === -1) {
+        if (tab.sortFeld !== spalte.feld) {
+            tab.sortFeld = spalte.feld;
+            tab.sortRichtung = 1;
+        } else if (tab.sortRichtung === 1) {
+            tab.sortRichtung = -1;
+        } else if (tab.sortRichtung === -1) {
             // Dritter Klick: zurueck zur Ausgangsordnung (Auftrag).
-            spaltenkopfSortFeld = null;
-            spaltenkopfSortRichtung = 0;
+            tab.sortFeld = null;
+            tab.sortRichtung = 0;
         } else {
-            spaltenkopfSortRichtung = 1;
+            tab.sortRichtung = 1;
         }
-        zeichneArbeitstabelle();
+        zeichneArbeitstabelle(tab);
     });
 
     // Rücksetz-Icon (siehe SPALTENKOPF_RESET_ICON weiter oben): EIN
@@ -8259,9 +8620,9 @@ function spaltenkopfSortknopf(spalte) {
     zuruecksetzen.title = t('common.sortResetTitle');
     zuruecksetzen.innerHTML = SPALTENKOPF_RESET_ICON;
     zuruecksetzen.addEventListener('click', () => {
-        spaltenkopfSortFeld = null;
-        spaltenkopfSortRichtung = 0;
-        zeichneArbeitstabelle();
+        tab.sortFeld = null;
+        tab.sortRichtung = 0;
+        zeichneArbeitstabelle(tab);
     });
     fragment.append(zuruecksetzen);
     return fragment;
@@ -8276,10 +8637,10 @@ function spaltenkopfSortknopf(spalte) {
 // auf DIESEN Knopf immer schon die Gruppierung rückgängig - das
 // Rücksetz-Icon ersetzt hier deshalb einfach das Symbol DESSELBEN
 // Knopfs, statt einen zusätzlichen zu brauchen.
-function spaltenkopfGruppenknopf(spalte) {
+function spaltenkopfGruppenknopf(tab, spalte) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
-    const aktiv = spaltenkopfGruppe === spalte.feld;
+    const aktiv = tab.gruppe === spalte.feld;
     // Der aktive Zustand wird bereits über [aria-pressed="true"] gestylt
     // (siehe style.css) - keine zweite, eigene Klasse dafuer noetig.
     knopf.className = 'spaltenkopf-gruppenknopf';
@@ -8318,8 +8679,8 @@ function spaltenkopfGruppenknopf(spalte) {
         // auf eine ANDERE Spalte ersetzt die vorherige (kein
         // verschachteltes Gruppieren, das der Auftrag nicht verlangt),
         // ein Klick auf dieselbe hebt sie wieder auf.
-        spaltenkopfGruppe = aktiv ? null : spalte.feld;
-        zeichneArbeitstabelle();
+        tab.gruppe = aktiv ? null : spalte.feld;
+        zeichneArbeitstabelle(tab);
     });
     return knopf;
 }
@@ -8353,46 +8714,185 @@ function spaltenkopfGruppenknopf(spalte) {
 // Haken sofort zu. spaltenkopfFilterOffenFeld haelt deshalb fest, WELCHE
 // Spalte gerade offen ist, genau wie filterleisteMehrfachOffenName es fuer
 // die alte, eingebettete Mehrfachauswahl tat.
-function spaltenkopfFilterknopf(spalte) {
-    const aktiv = spaltenkopfFilterwerte.has(spalte.feld);
-    const offen = spaltenkopfFilterOffenFeld === spalte.feld;
-
-    const wrapper = document.createElement('div');
-    wrapper.className = 'spaltenkopf-filter';
-
+function spaltenkopfFilterknopf(tab, spalte) {
+    const aktiv = tab.filterwerte.has(spalte.feld);
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.className = 'spaltenkopf-filterknopf' + (aktiv ? ' spaltenkopf-filterknopf-aktiv' : '');
-    knopf.dataset.spaltenkopfFeld = spalte.feld;
-    knopf.dataset.spaltenkopfRolle = 'filterknopf';
-    knopf.setAttribute('aria-haspopup', 'true');
-    knopf.setAttribute('aria-expanded', String(offen));
-    // Der zugaengliche Name nennt die SPALTE und den ZUSTAND: ein
-    // Bildschirmleser soll "Marke filtern, aktiv" hoeren, nicht nur
-    // "Filter" - dieselbe Ueberlegung wie beim Sortierknopf, der seine
-    // Richtung ebenfalls in den Namen nimmt.
     knopf.setAttribute('aria-label', aktiv
         ? t('common.filterActiveAria', { titel: spalte.titel })
         : t('common.filterAria', { titel: spalte.titel }));
     knopf.title = aktiv ? t('common.filterActiveTitle') : t('common.filterTitle');
     const symbol = document.createElement('span');
     symbol.className = 'spaltenkopf-filtersymbol';
-    // Konstantes Markup, keine Nutzereingabe - derselbe Ausnahmefall wie
-    // bei SPALTENKOPF_SORT_ICON/-GRUPPE_ICON oben.
     symbol.innerHTML = SPALTENKOPF_FILTER_ICON;
     symbol.setAttribute('aria-hidden', 'true');
     knopf.append(symbol);
+    return spaltenkopfAufklapper(tab, spalte, 'filterknopf', knopf,
+        t('common.filterAria', { titel: spalte.titel }),
+        (schliessen) => spaltenkopfFilterInhalt(tab, spalte, schliessen));
+}
+
+// ===== DETAILTABELLEN MIT DENSELBEN FAEHIGKEITEN (30.08.2026) =====
+// Auftrag, woertlich: "koennen wir bei der Tabelle mit den
+// Einzeluebersichten (rechte Seite, Details) auch bei der Tabelle die
+// gleiche Funktionaitaet einbauen wie bei der linken Haupttabelle. Also
+// auch Sortieren, Gruppieren, Filtern."
+//
+// "Dieselbe" heisst hier woertlich derselbe Code: zeichneArbeitstabelle()
+// mit einem eigenen Zustand, nicht eine zweite Tabelle daneben. Was die
+// Arbeitsliste kann, koennen die Detailtabellen damit automatisch mit -
+// auch alles, was spaeter dazukommt.
+//
+// id: je Detailtabelle EINE feste Kennung. Daran haengt ihr Zustand; die
+// Maske wird bei jedem Klick neu aufgebaut, und ohne feste Kennung waere
+// eine gesetzte Sortierung nach dem naechsten Neuaufbau wieder weg.
+function zeigeDetailtabelle(id, wurzel, zeilen, spalten, optionen = {}) {
+    const tab = tabellenzustand(id, {
+        kompakt: true,
+        sucheGilt: false,   // kein Suchfeld ueber dieser Tabelle
+        tastatur: false     // die Pfeiltasten gehoeren der Arbeitsliste
+    });
+    // Der Behaelter ist bei jedem Neuaufbau der Maske ein anderer.
+    tab.wurzel = wurzel;
+    tab.tabellenklasse = optionen.tabellenklasse || 'arbeitstabelle arbeitstabelle-kompakt';
+
+    // Dieselbe Signaturpruefung wie in zeigeListe(): ein anderer Tag, eine
+    // andere Station - dieselben Spalten. Sortierung und Filter sollen
+    // ueber den Wechsel HINWEG stehen bleiben (man vergleicht ja gerade),
+    // eine andere Spaltenliste faengt dagegen sauber bei null an.
+    const signatur = spalten.map((sp) => `${sp.feld}|${sp.titel || ''}`).join(',');
+    if (signatur !== tab.signatur) {
+        tab.signatur = signatur;
+        tab.sortFeld = null;
+        tab.sortRichtung = 0;
+        tab.gruppe = null;
+        tab.filterwerte = new Map();
+        tab.offenesFenster = null;
+    }
+
+    tab.liste = { kennung: null, zeilen, spalten, beiAuswahl: null, aktionen: null };
+    zeichneArbeitstabelle(tab);
+}
+
+// ===== DAS KOMPAKTE SPALTENMENUE (30.08.2026) =====
+// Traegt dieselben drei Faehigkeiten wie die Leiste der Arbeitsliste -
+// Sortieren, Gruppieren, Filtern -, aber untereinander in einem
+// Klappfenster statt nebeneinander in der Kopfzeile.
+//
+// Der Filterteil ist NICHT nachgebaut, sondern derselbe:
+// spaltenkopfFilterInhalt() liefert seine Elemente als Liste, und die
+// haengen hier einfach unter einer Ueberschrift. Ein zweiter Filter mit
+// eigener Logik wuerde beim naechsten Filtertyp auseinanderlaufen.
+function spaltenkopfMenueknopf(tab, spalte) {
+    const eingeschraenkt = tab.filterwerte.has(spalte.feld)
+        || tab.sortFeld === spalte.feld && tab.sortRichtung !== 0
+        || tab.gruppe === spalte.feld;
+    const knopf = document.createElement('button');
+    knopf.type = 'button';
+    knopf.className = 'spaltenkopf-menueknopf' + (eingeschraenkt ? ' spaltenkopf-menueknopf-aktiv' : '');
+    knopf.setAttribute('aria-label', t('common.columnMenuAria', { titel: spalte.titel }));
+    knopf.title = t('common.columnMenuTitle');
+    const symbol = document.createElement('span');
+    symbol.className = 'spaltenkopf-menuesymbol';
+    symbol.textContent = '\u22EF';   // MIDLINE HORIZONTAL ELLIPSIS
+    symbol.setAttribute('aria-hidden', 'true');
+    knopf.append(symbol);
+    return spaltenkopfAufklapper(tab, spalte, 'menueknopf', knopf,
+        t('common.columnMenuAria', { titel: spalte.titel }),
+        (schliessen) => spaltenkopfMenueInhalt(tab, spalte, schliessen));
+}
+
+function spaltenkopfMenueInhalt(tab, spalte, schliessen) {
+    const teile = [];
+
+    function ueberschrift(text) {
+        const el = document.createElement('p');
+        el.className = 'spaltenkopf-menue-titel';
+        el.textContent = text;
+        return el;
+    }
+
+    // Neu zeichnen wirft das Fenster samt Knopf weg; deshalb ERST
+    // schliessen (sonst bliebe tab.offenesFenster stehen und das Menue
+    // klappte nach jeder Aktion von selbst wieder auf), dann zeichnen.
+    function tun(aenderung) {
+        aenderung();
+        schliessen();
+        zeichneArbeitstabelle(tab);
+    }
+
+    function eintrag(text, aktiv, aenderung) {
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'spaltenkopf-menue-eintrag' + (aktiv ? ' spaltenkopf-menue-eintrag-aktiv' : '');
+        knopf.setAttribute('aria-pressed', String(aktiv));
+        knopf.textContent = text;
+        knopf.addEventListener('click', () => tun(aenderung));
+        return knopf;
+    }
+
+    if (istSortierbar(spalte)) {
+        const auf = tab.sortFeld === spalte.feld && tab.sortRichtung === 1;
+        const ab = tab.sortFeld === spalte.feld && tab.sortRichtung === -1;
+        teile.push(ueberschrift(t('common.sortTitle')));
+        teile.push(eintrag(t('common.sortAscendingAction'), auf, () => {
+            tab.sortFeld = spalte.feld; tab.sortRichtung = 1;
+        }));
+        teile.push(eintrag(t('common.sortDescendingAction'), ab, () => {
+            tab.sortFeld = spalte.feld; tab.sortRichtung = -1;
+        }));
+        if (auf || ab) {
+            teile.push(eintrag(t('common.sortResetTitle'), false, () => {
+                tab.sortFeld = null; tab.sortRichtung = 0;
+            }));
+        }
+    }
+
+    if (istGruppierbar(spalte)) {
+        const gruppiert = tab.gruppe === spalte.feld;
+        teile.push(ueberschrift(t('common.groupTitle')));
+        teile.push(eintrag(gruppiert ? t('common.ungroup') : t('common.groupByThis'), gruppiert, () => {
+            tab.gruppe = gruppiert ? null : spalte.feld;
+        }));
+    }
+
+    if (istFilterbar(spalte)) {
+        teile.push(ueberschrift(t('common.filterTitle')));
+        teile.push(...spaltenkopfFilterInhalt(tab, spalte, schliessen));
+    }
+
+    return teile;
+}
+
+// ===== EIN KLAPPFENSTER, ZWEI NUTZER (30.08.2026) =====
+// Diese Mechanik - Aussenklick, Ausrichten am Rand, Escape, Wiederaufbau
+// nach dem Neuzeichnen - stand bis hierher IM Filterknopf. Das Kompaktmenue
+// der Detailtabellen braucht sie unveraendert; sie ein zweites Mal
+// hinzuschreiben hiesse, zwei Fassungen zu pflegen, von denen die zweite
+// beim naechsten Fehler vergessen wird.
+//
+// tab.offenesFenster haelt "feld|rolle" statt nur des Feldes: an derselben
+// Spalte koennen jetzt ZWEI Fenster haengen (Filter und Menue), und nach
+// einem Neuzeichnen muss genau das wieder aufgehen, das offen war.
+function spaltenkopfAufklapper(tab, spalte, rolle, knopf, fensterName, inhaltBauen) {
+    const schluessel = `${spalte.feld}|${rolle}`;
+    const offen = tab.offenesFenster === schluessel;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'spaltenkopf-filter';
+
+    knopf.dataset.spaltenkopfFeld = spalte.feld;
+    knopf.dataset.spaltenkopfRolle = rolle;
+    knopf.setAttribute('aria-haspopup', 'true');
+    knopf.setAttribute('aria-expanded', String(offen));
 
     const fenster = document.createElement('div');
     fenster.className = 'spaltenkopf-filterfenster';
     fenster.setAttribute('role', 'group');
-    fenster.setAttribute('aria-label', t('common.filterAria', { titel: spalte.titel }));
+    fenster.setAttribute('aria-label', fensterName);
     fenster.hidden = !offen;
 
-    // Dieselbe Aufraeum-Absicherung wie bei mehrfachauswahlFeld() oben,
-    // aus demselben Grund und mit derselben Begruendung: eine bereits per
-    // replaceChildren() ersetzte Instanz raeumt NUR ihren eigenen,
-    // veralteten Listener ab und ruft nicht schliessen() fuer die neue.
     function aussenKlick(e) {
         if (!wrapper.isConnected) {
             document.removeEventListener('click', aussenKlick, true);
@@ -8400,52 +8900,16 @@ function spaltenkopfFilterknopf(spalte) {
         }
         if (!wrapper.contains(e.target)) schliessen();
     }
-    // ===== WARUM DIESES FENSTER AM BILDSCHIRM HAENGT, NICHT AM KOPF =====
-    // Im Browser nachgestellt (siehe Bericht): als absolut positioniertes
-    // Kind der <th> wurde das Fenster ABGESCHNITTEN, sobald es ueber den
-    // unteren Rand der Arbeitsliste hinausreichte - #listenkoerper und
-    // #arbeitsliste tragen beide overflow:auto (sie muessen: eine breite
-    // Tabelle soll in sich scrollen, nicht die Seite schieben), und ein
-    // overflow-Kasten beschneidet auch absolut positionierte Nachfahren.
-    // Mit ausgeklappter Kopftafel steht die Kopfzeile weit unten im
-    // Fenster; von einer Liste mit fuenf Status waren dann zwei zu sehen.
-    // Genau derselbe Mangel steckte uebrigens schon in der alten,
-    // eingebetteten Mehrfachauswahl - er fiel nur weniger auf, solange
-    // daneben noch eine ganze Zeile Eingabefelder stand.
-    // position:fixed loest ihn: ein fixierter Kasten bezieht sich auf das
-    // Sichtfenster und wird von KEINEM overflow-Vorfahren beschnitten.
-    // Die Lage rechnet ausrichten() aus - dieselbe Machart wie
-    // hinweisfensterZeigen() weiter oben, samt Klemmen an beide Raender
-    // und Umklappen nach oben, wenn unten kein Platz mehr ist.
-    // NACHGEFUEHRT statt geschlossen: scrollt jemand die Tabelle,
-    // waehrend das Fenster offen ist, wandert der Knopf darunter weg. Das
-    // Hinweisfenster verschwindet in diesem Fall (es ist Beiwerk); ein
-    // Filterfenster, in dem man gerade Haken setzt, darf das nicht -
-    // es wird deshalb neu ausgerichtet.
+
     function ausrichten() {
         const luft = 8;
         const k = knopf.getBoundingClientRect();
         const b = fenster.offsetWidth;
         const h = fenster.offsetHeight;
-        // Linksbuendig unter dem Knopf; laeuft es rechts hinaus,
-        // rechtsbuendig - man liest von links, aber nicht aus dem Bild.
         let x = k.left;
         if (x + b > window.innerWidth - luft) x = k.right - b;
-        // Unter den Knopf; passt es dort nicht mehr, darueber.
         let y = k.bottom + 4;
         if (y + h > window.innerHeight - luft) y = k.top - h - 4;
-        // ZUM SCHLUSS IN BEIDEN ACHSEN INS FENSTER GEKLEMMT, und zwar
-        // NACH dem Umklappen, nicht statt seiner: das Umklappen sucht die
-        // schoenere Seite, das Klemmen garantiert die erreichbare. Ohne
-        // das Klemmen stand das Fenster einer ganz rechts liegenden
-        // Spalte bei 1024px Fensterbreite auf x=1037 - vollstaendig
-        // ausserhalb des Bildes (im Browser nachgemessen, siehe Bericht):
-        // die Tabelle scrollt dort in sich, ihre letzten Spaltenkoepfe
-        // liegen also rechts vom sichtbaren Bereich, und ein Fenster, das
-        // seinem Knopf blind folgt, folgt ihm auch dorthin.
-        // Math.max ZULETZT, damit bei einem Fenster, das breiter oder
-        // hoeher als das Sichtfenster waere, die obere linke Ecke sichtbar
-        // bleibt statt der unteren rechten.
         x = Math.max(luft, Math.min(x, window.innerWidth - b - luft));
         y = Math.max(luft, Math.min(y, window.innerHeight - h - luft));
         fenster.style.left = `${x}px`;
@@ -8458,54 +8922,27 @@ function spaltenkopfFilterknopf(spalte) {
         document.removeEventListener('click', aussenKlick, true);
         window.removeEventListener('scroll', ausrichten, true);
         window.removeEventListener('resize', ausrichten);
-        if (spaltenkopfFilterOffenFeld === spalte.feld) spaltenkopfFilterOffenFeld = null;
+        if (tab.offenesFenster === schluessel) tab.offenesFenster = null;
     }
+
     function oeffnen() {
         fenster.hidden = false;
         knopf.setAttribute('aria-expanded', 'true');
-        // ERST NACH dem Einblenden ausrichten - offsetWidth/-Height sind
-        // an einem hidden-Element immer 0 (derselbe Stolperstein wie bei
-        // hinweisfensterZeigen(), dort ebenso vermerkt).
         ausrichten();
         document.addEventListener('click', aussenKlick, true);
-        // capture:true, damit auch das eigene overflow:auto von
-        // #listenkoerper/#arbeitsliste erfasst wird - ein Scroll dort
-        // blast kein Ereignis bis zum Fenster hoch.
         window.addEventListener('scroll', ausrichten, true);
         window.addEventListener('resize', ausrichten);
-        spaltenkopfFilterOffenFeld = spalte.feld;
+        tab.offenesFenster = schluessel;
     }
+
     if (offen) {
         document.addEventListener('click', aussenKlick, true);
         window.addEventListener('scroll', ausrichten, true);
         window.addEventListener('resize', ausrichten);
-        // Nach einem Neuaufbau steht das Fenster schon offen im DOM (siehe
-        // "OFFEN BLEIBEN..." oben) - ausgerichtet werden kann es aber erst,
-        // wenn es tatsaechlich im Dokument haengt und eine Groesse hat.
-        // requestAnimationFrame ist genau dieser Zeitpunkt.
         requestAnimationFrame(() => { if (fenster.isConnected) ausrichten(); });
     }
-    knopf.addEventListener('click', () => { if (fenster.hidden) oeffnen(); else schliessen(); });
 
-    // Escape schliesst NUR dieses Fenster (stopPropagation) - dieselbe
-    // Ueberlegung und derselbe Kunstgriff wie beim Popup der
-    // Mehrfachauswahl, siehe dort.
-    //
-    // AM wrapper, NICHT AM fenster - und das war ein Fehler, den die
-    // Pruefung gefunden hat. Der Zuhoerer hing bis dahin am fenster
-    // allein, also nur auf dem Weg von Ereignissen, die INNERHALB des
-    // Fensters entstehen. Ein Klick auf den Filterknopf oeffnet das
-    // Fenster aber, ohne den Fokus hineinzubewegen: er bleibt auf dem
-    // KNOPF stehen (im Browser nachgemessen). Wer also filtern wollte,
-    // es sich anders ueberlegte und Escape drueckte - die uebliche
-    // Geste, die in dieser Oberflaeche sonst ueberall zumacht (Profil-
-    // menue, Maske, Mehrfachauswahl) -, bei dem passierte nichts: das
-    // Ereignis stieg vom Knopf auf und lief am Fenster vorbei.
-    // aria-expanded blieb auf "true", das Fenster offen.
-    // Der wrapper umschliesst Knopf UND Fenster; damit greift Escape aus
-    // beiden Richtungen. stopPropagation bleibt unveraendert wichtig:
-    // sonst schloesse dasselbe Escape zusaetzlich eine offene
-    // Detailmaske (siehe der globale Tastatur-Zuhoerer weiter unten).
+    knopf.addEventListener('click', () => { if (fenster.hidden) oeffnen(); else schliessen(); });
     wrapper.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         if (fenster.hidden) return;   // nichts offen: Escape gehoert jemand anderem
@@ -8514,7 +8951,7 @@ function spaltenkopfFilterknopf(spalte) {
         knopf.focus();
     });
 
-    fenster.append(...spaltenkopfFilterInhalt(spalte, schliessen));
+    fenster.append(...inhaltBauen(schliessen));
     wrapper.append(knopf, fenster);
     return wrapper;
 }
@@ -8534,10 +8971,10 @@ function spaltenkopfFilterknopf(spalte) {
 // schliessen(): vom Aufrufer hereingereicht, damit ein "Alle" das Fenster
 // gleich mit zumacht - wer alles wieder zulaesst, will das Fenster nicht
 // mehr.
-function spaltenkopfFilterInhalt(spalte, schliessen) {
-    const { zeilen: zeilenOriginal } = spaltenkopfListe;
+function spaltenkopfFilterInhalt(tab, spalte, schliessen) {
+    const { zeilen: zeilenOriginal } = tab.liste;
     const typ = spaltenFilterTyp(spalte, zeilenOriginal);
-    const aktuellerWert = spaltenkopfFilterwerte.get(spalte.feld);
+    const aktuellerWert = tab.filterwerte.get(spalte.feld);
 
     if (typ === 'auswahl') {
         // Gestaltungsauftrag Punkt 2: Mehrfachauswahl statt Einfachauswahl.
@@ -8580,9 +9017,9 @@ function spaltenkopfFilterInhalt(spalte, schliessen) {
         return mehrfachauswahlEintraege(
             optionenListe, ausgewaehlt,
             (neu) => {
-                if (neu.size === 0) spaltenkopfFilterwerte.delete(spalte.feld);
-                else spaltenkopfFilterwerte.set(spalte.feld, neu);
-                zeichneArbeitstabelle();
+                if (neu.size === 0) tab.filterwerte.delete(spalte.feld);
+                else tab.filterwerte.set(spalte.feld, neu);
+                zeichneArbeitstabelle(tab);
             },
             (el, rolle) => {
                 el.dataset.spaltenkopfFeld = spalte.feld;
@@ -8634,18 +9071,18 @@ function spaltenkopfFilterInhalt(spalte, schliessen) {
         verzoegerung = setTimeout(() => {
             const text = eingabe.value.trim();
             if (text === '') {
-                spaltenkopfFilterwerte.delete(spalte.feld);
+                tab.filterwerte.delete(spalte.feld);
             } else if (typ === 'schwelle') {
                 const zahl = Number(text.replace(',', '.'));
-                if (Number.isFinite(zahl)) spaltenkopfFilterwerte.set(spalte.feld, zahl);
-                else spaltenkopfFilterwerte.delete(spalte.feld);
+                if (Number.isFinite(zahl)) tab.filterwerte.set(spalte.feld, zahl);
+                else tab.filterwerte.delete(spalte.feld);
             } else {
                 // Unveraendert gespeichert (nicht kleingeschrieben) - das
                 // Feld zeigt nach dem Neuzeichnen sonst nicht mehr das,
                 // was getippt wurde (siehe Kommentar beim Filtern oben).
-                spaltenkopfFilterwerte.set(spalte.feld, text);
+                tab.filterwerte.set(spalte.feld, text);
             }
-            zeichneArbeitstabelle();
+            zeichneArbeitstabelle(tab);
         }, 300);
     });
 
@@ -8664,9 +9101,9 @@ function spaltenkopfFilterInhalt(spalte, schliessen) {
     zuruecksetzen.innerHTML = SPALTENKOPF_RESET_ICON;
     zuruecksetzen.addEventListener('click', () => {
         clearTimeout(verzoegerung);
-        spaltenkopfFilterwerte.delete(spalte.feld);
+        tab.filterwerte.delete(spalte.feld);
         schliessen();
-        zeichneArbeitstabelle();
+        zeichneArbeitstabelle(tab);
     });
     teile.push(zuruecksetzen);
     return teile;
@@ -8683,27 +9120,31 @@ function spaltenkopfFilterInhalt(spalte, schliessen) {
 // Das FELD in der Kopfleiste wird dabei mitgeleert, nicht nur der
 // Zustand: ein Suchfeld, in dem ein Wort steht, das nicht mehr wirkt,
 // waere dieselbe Luege wie die frueher abgeschaltete Suche.
-function spaltenkopfEinschraenkungenAufheben() {
-    spaltenkopfFilterwerte = new Map();
-    spaltenkopfSuchtext = '';
-    const feld = document.getElementById('feld-suche');
-    feld.value = '';
-    feld.classList.remove('feld-suche-aktiv');
-    zeichneArbeitstabelle();
+function spaltenkopfEinschraenkungenAufheben(tab) {
+    tab.filterwerte = new Map();
+    // Das Suchfeld gehoert der Arbeitsliste; eine Detailtabelle darf es
+    // nicht mitleeren - sie hat es nie gefuellt.
+    if (tab.sucheGilt) {
+        spaltenkopfSuchtext = '';
+        const feld = document.getElementById('feld-suche');
+        feld.value = '';
+        feld.classList.remove('feld-suche-aktiv');
+    }
+    zeichneArbeitstabelle(tab);
 }
 
-function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
+function spaltenkopfHinweis(tab, gesamt, angezeigtAnzahl, gruppenSpalte) {
     const zeile = document.createElement('div');
     zeile.className = 'spaltenkopf-hinweis';
 
-    if (spaltenkopfFilterwerte.size > 0 || spaltenkopfSuchtext) {
+    if (tab.filterwerte.size > 0 || spaltenkopfSuchtext) {
         // Die Zeile NENNT, WORAN es liegt: Suche, Spaltenfilter oder
         // beides. Solange nur der Spaltenfilter einschraenken konnte, war
         // "(Spaltenfilter aktiv)" eindeutig; seit die Suche daneben auf
         // dieselben Zeilen wirkt, waere derselbe Satz bei einem blossen
         // Suchwort schlicht falsch - und wer die Ursache nicht kennt,
         // sucht sie am falschen Bedienelement.
-        const grund = spaltenkopfSuchtext && spaltenkopfFilterwerte.size > 0
+        const grund = spaltenkopfSuchtext && tab.filterwerte.size > 0
             ? t('common.reasonBoth')
             : spaltenkopfSuchtext ? t('common.reasonSearch') : t('common.reasonColumnFilter');
         const text = document.createElement('span');
@@ -8716,7 +9157,7 @@ function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
         zuruecksetzen.type = 'button';
         zuruecksetzen.className = 'spaltenkopf-hinweis-knopf';
         zuruecksetzen.textContent = t('common.columnFilterReset');
-        zuruecksetzen.addEventListener('click', spaltenkopfEinschraenkungenAufheben);
+        zuruecksetzen.addEventListener('click', () => spaltenkopfEinschraenkungenAufheben(tab));
         zeile.append(zuruecksetzen);
     }
 
@@ -8730,8 +9171,8 @@ function spaltenkopfHinweis(gesamt, angezeigtAnzahl, gruppenSpalte) {
         aufheben.className = 'spaltenkopf-hinweis-knopf';
         aufheben.textContent = t('common.ungroup');
         aufheben.addEventListener('click', () => {
-            spaltenkopfGruppe = null;
-            zeichneArbeitstabelle();
+            tab.gruppe = null;
+            zeichneArbeitstabelle(tab);
         });
         zeile.append(aufheben);
     }
@@ -8769,7 +9210,11 @@ function spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte) {
         // keine ZEILE, die ein formatieren(wert, zeile) mit zeile-Zugriff
         // (z. B. co2ZelleElement() in auswertungen.js) brauchen wuerde -
         // siehe der lange Kommentar bei zeigeListe() oben.
-        const formatiert = spalte.summeFormatieren ? spalte.summeFormatieren(summe)
+        // gruppe.zeilen als zweites Argument: eine Summe muss den Vorbehalt
+        // ihrer Bestandteile mittragen (Strecke: gemessen oder geschaetzt).
+        // Zweites Argument statt eines neuen Feldes - bestehende Aufrufer
+        // ignorieren es einfach.
+        const formatiert = spalte.summeFormatieren ? spalte.summeFormatieren(summe, gruppe.zeilen)
             : spalte.formatieren ? spalte.formatieren(summe)
             : zahlFormat(summe);
         teil.append(formatiert instanceof Node ? formatiert : document.createTextNode(String(formatiert)));
@@ -8790,11 +9235,24 @@ function spaltenkopfGruppenzeile(gruppe, spalten, aktionen, gruppenSpalte) {
 // Einfuegereihenfolge) reiht die Zeilen dabei exakt wieder in ihrer
 // urspruenglichen Reihenfolge auf, sodass dieser Zaehler und die flache
 // Liste "angezeigt" immer dieselbe Zeile meinen.
-function baueDatenzeile(zeile, spalten, aktionen, index) {
+function baueDatenzeile(tab, zeile, spalten, aktionen, index) {
     const tr = document.createElement('tr');
     tr.tabIndex = -1;
     for (const spalte of spalten) {
         const td = document.createElement('td');
+        // GRUPPIERTE SPALTE BLEIBT LEER (30.08.2026). Ihr Wert steht bereits
+        // im Gruppenkopf darueber und ist fuer alle Zeilen der Gruppe
+        // derselbe - ihn je Zeile zu wiederholen sagt nichts und laesst die
+        // Tabelle voller aussehen, als sie ist.
+        // Fuer Bildschirmleser geht dabei nichts verloren: der Gruppenkopf
+        // traegt scope="rowgroup" (siehe spaltenkopfGruppenzeile()), ist
+        // also genau dafuer mit seinen Zeilen verknuepft.
+        if (tab.gruppe && spalte.feld === tab.gruppe) {
+            const klasseLeer = typeof spalte.klasse === 'function' ? spalte.klasse(zeile) : spalte.klasse;
+            if (klasseLeer) td.className = klasseLeer;
+            tr.append(td);
+            continue;
+        }
         const wert = zeile[spalte.feld];
         const inhalt = spalte.formatieren ? spalte.formatieren(wert, zeile) : (wert ?? '');
         // formatieren darf statt eines Strings auch ein einzelnes
@@ -8817,8 +9275,13 @@ function baueDatenzeile(zeile, spalten, aktionen, index) {
         tr.append(td);
     }
     if (aktionen) tr.append(zeilenAktionenZelle(aktionen(zeile) || []));
-    tr.addEventListener('click', () => zeileWaehlen(index));
-    listenZeilenElemente.push(tr);
+    // Auswahl und Pfeiltasten gehoeren der Arbeitsliste. Eine Detailtabelle,
+    // die sich in listenZeilenElemente eintruege, verschoebe den Index der
+    // Liste links, ohne dass dort etwas sichtbar geschieht.
+    if (tab.tastatur) {
+        tr.addEventListener('click', () => zeileWaehlen(index));
+        listenZeilenElemente.push(tr);
+    }
     return tr;
 }
 
@@ -8830,7 +9293,7 @@ function baueDatenzeile(zeile, spalten, aktionen, index) {
 // zeichneArbeitstabelle() oben) - der globale Pfeiltasten-Handler prueft
 // das bereits ("if (listenZeilen.length === 0) return"), es gibt hier
 // nichts zusaetzlich abzusichern.
-function baueLeerzeile(spalten, aktionen) {
+function baueLeerzeile(tab, spalten, aktionen) {
     const tr = document.createElement('tr');
     tr.className = 'spaltenkopf-leerzeile';
     const td = document.createElement('td');
@@ -8839,7 +9302,7 @@ function baueLeerzeile(spalten, aktionen) {
     const knopf = document.createElement('button');
     knopf.type = 'button';
     knopf.textContent = t('common.columnFilterReset');
-    knopf.addEventListener('click', spaltenkopfEinschraenkungenAufheben);
+    knopf.addEventListener('click', () => spaltenkopfEinschraenkungenAufheben(tab));
     td.append(knopf);
     tr.append(td);
     return tr;
@@ -9269,8 +9732,8 @@ async function bereichSprung(zielSchluessel, herkunftstext, einrichten = null) {
 // Filterfeld auch ausloesen wuerde - kein zweiter Ladevorgang noetig,
 // der Zielbereich hat seine Zeilen (spaltenkopfListe) bereits.
 function setzeSpaltenkopfFilter(feld, wert) {
-    spaltenkopfFilterwerte.set(feld, wert);
-    if (spaltenkopfListe) zeichneArbeitstabelle();
+    haupttabelle().filterwerte.set(feld, wert);
+    if (haupttabelle().liste) zeichneArbeitstabelle(haupttabelle());
 }
 
 // "... oder AUSWAEHLEN" (Auftrag) - waehlt von AUSSEN die Zeile aus,
@@ -9649,7 +10112,7 @@ feldSucheKopf.addEventListener('input', () => {
         // Nur zeichnen, wenn ueberhaupt eine Tabelle dasteht: ein Bereich
         // kann gerade eine Leermaske zeigen (kein Rad im Bestand), dann
         // gibt es nichts zu durchsuchen.
-        if (spaltenkopfListe) zeichneArbeitstabelle();
+        if (haupttabelle().liste) zeichneArbeitstabelle(haupttabelle());
     }, 300);
 });
 
@@ -9670,6 +10133,121 @@ function zebraAnwenden(aktiv) {
 // ungestreift, bis irgendein spaeterer Codepfad die Einstellung zum
 // ersten Mal anwendet.
 zebraAnwenden(zebraGespeichert());
+
+// ===== BREITE DER DETAILMASKE (30.08.2026) =====
+// Auftrag: "wäre es noch gut der User kann die Liste für die Detailliste
+// in der Breite verändern, durch Ziehen am linken Rand."
+//
+// Eine einzige Zahl steuert beides: --masken-anteil, der Anteil der Maske
+// an der Arbeitsfläche in Prozent. #arbeitsliste rechnet sich daraus ihren
+// eigenen Anteil (siehe style.css) - so kann keine Aufteilung entstehen,
+// die sich nicht zu 100 % ergänzt.
+//
+// PROZENT, NICHT PIXEL: die gemerkte Breite soll auch dann noch sinnvoll
+// sein, wenn dasselbe Konto das nächste Mal an einem anderen Bildschirm
+// sitzt. 320px sind auf dem Notebook die halbe Fläche und am grossen
+// Monitor ein Streifen.
+const maskengriff = document.getElementById('maskengriff');
+const MASKEN_ANTEIL_SCHLUESSEL = 'velocity-wawi-masken-anteil';
+const MASKEN_ANTEIL_VORGABE = 45;
+// Grenzen: unter 25 % taugt die Maske nichts mehr, über 75 % die Liste
+// daneben nicht. Beide Bereiche bleiben so immer benutzbar - ein Griff,
+// mit dem man sich die Oberfläche zerstören kann, ist kein Bedienelement,
+// sondern eine Falle.
+const MASKEN_ANTEIL_MIN = 25;
+const MASKEN_ANTEIL_MAX = 75;
+
+function maskenAnteilSetzen(prozent, merken = true) {
+    const wert = Math.min(MASKEN_ANTEIL_MAX, Math.max(MASKEN_ANTEIL_MIN, prozent));
+    const gerundet = Math.round(wert * 10) / 10;
+    document.documentElement.style.setProperty('--masken-anteil', `${gerundet}%`);
+    if (maskengriff) maskengriff.setAttribute('aria-valuenow', String(Math.round(gerundet)));
+    if (merken) merke(MASKEN_ANTEIL_SCHLUESSEL, String(gerundet));
+    return gerundet;
+}
+
+function maskenAnteilAusZeiger(x) {
+    const bereich = document.getElementById('arbeitsbereich');
+    const kasten = bereich.getBoundingClientRect();
+    if (kasten.width === 0) return MASKEN_ANTEIL_VORGABE;
+    return ((kasten.right - x) / kasten.width) * 100;
+}
+
+if (maskengriff) {
+    const gemerkterAnteil = Number(gemerkt(MASKEN_ANTEIL_SCHLUESSEL));
+    maskenAnteilSetzen(Number.isFinite(gemerkterAnteil) && gemerkterAnteil > 0
+        ? gemerkterAnteil : MASKEN_ANTEIL_VORGABE, false);
+
+    maskengriff.addEventListener('pointerdown', (e) => {
+        // preventDefault gegen die Textauswahl, die ein Zug sonst im
+        // Bereich daneben aufzieht.
+        e.preventDefault();
+        maskengriff.setPointerCapture(e.pointerId);
+        document.body.classList.add('maske-wird-gezogen');
+
+        // ===== DIE LISTE HAELT WAEHREND DES ZUGS STILL (30.08.2026) =====
+        // Auftrag: "im Gegenzug verschiebt sich der linke Bereich der
+        // Hauptflaeche" - was dabei wirklich stoert, ist nicht die
+        // wandernde Kante, sondern dass die Tabelle daneben bei JEDEM
+        // Pixel ihre Spalten neu ausrechnet und Zellen anders umbricht.
+        // .arbeitstabelle traegt width:100 % mit automatischem Layout,
+        // fliesst also mit.
+        //
+        // Deshalb: die aktuelle Breite jeder Tabelle in der Liste fuer die
+        // Dauer des Zugs festnageln. Sie behaelt ihr Layout, die Spalte
+        // schiebt sich darueber - genau der ruhige Eindruck, den ein
+        // ueberlagerndes Fenster machen wuerde, ohne dass etwas
+        // unerreichbar wird. Beim Loslassen faellt die Klammer weg, und
+        // die Tabelle setzt sich EINMAL neu.
+        const festgenagelt = Array.from(
+            document.querySelectorAll('#arbeitsliste table')
+        ).map((tabelle) => {
+            const vorher = tabelle.style.width;
+            tabelle.style.width = `${tabelle.getBoundingClientRect().width}px`;
+            return { tabelle, vorher };
+        });
+        function loesen() {
+            for (const { tabelle, vorher } of festgenagelt) tabelle.style.width = vorher;
+        }
+
+        function bewegen(ev) { maskenAnteilSetzen(maskenAnteilAusZeiger(ev.clientX), false); }
+        function loslassen(ev) {
+            loesen();
+            maskengriff.removeEventListener('pointermove', bewegen);
+            maskengriff.removeEventListener('pointerup', loslassen);
+            maskengriff.removeEventListener('pointercancel', loslassen);
+            document.body.classList.remove('maske-wird-gezogen');
+            // Erst JETZT merken, nicht bei jeder Zwischenposition: sonst
+            // schriebe ein einziger Zug hundert Werte in den Speicher.
+            maskenAnteilSetzen(maskenAnteilAusZeiger(ev.clientX));
+        }
+        maskengriff.addEventListener('pointermove', bewegen);
+        maskengriff.addEventListener('pointerup', loslassen);
+        // pointercancel ebenfalls: ein abgebrochener Zug (Systemgeste,
+        // Fenster verliert den Fokus) darf den Griff nicht im gedrückten
+        // Zustand zurücklassen.
+        maskengriff.addEventListener('pointercancel', loslassen);
+    });
+
+    // Tastaturbedienung, die role="separator" verspricht. Ohne sie wäre
+    // die Breite nur mit der Maus einstellbar - und der Griff trüge eine
+    // Rolle, die er nicht einlöst.
+    maskengriff.addEventListener('keydown', (e) => {
+        const jetzt = Number.parseFloat(maskengriff.getAttribute('aria-valuenow')) || MASKEN_ANTEIL_VORGABE;
+        // Links vergrössert die Maske: der Griff wandert nach links, die
+        // Maske rechts davon wird breiter - die Taste zeigt in die
+        // Richtung, in die sich die Kante bewegt.
+        if (e.key === 'ArrowLeft')       maskenAnteilSetzen(jetzt + 2);
+        else if (e.key === 'ArrowRight') maskenAnteilSetzen(jetzt - 2);
+        else if (e.key === 'Home')       maskenAnteilSetzen(MASKEN_ANTEIL_VORGABE);
+        else return;
+        e.preventDefault();
+    });
+
+    // Doppelklick stellt die Vorgabe wieder her - der übliche Weg zurück
+    // bei einem Trenner, und billiger zu finden als ein eigener Knopf.
+    maskengriff.addEventListener('dblclick', () => maskenAnteilSetzen(MASKEN_ANTEIL_VORGABE));
+}
 
 const schalterZebra = document.getElementById('schalter-zebra');
 schalterZebra.checked = zebraGespeichert();

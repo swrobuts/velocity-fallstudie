@@ -1134,11 +1134,99 @@ alter table velocity.fahrradmodell drop column if exists reichweite_km;
 -- Sicht, nicht nur eine.
 create or replace view velocity.v_wawi_fahrten_je_tag as
 select date_trunc('day', a.startzeit)::date as tag,
-       count(distinct a.ausleihe_id)        as fahrten
+       count(distinct a.ausleihe_id)        as fahrten,
+       -- TAGESUMSATZ (30.08.2026). Die Kalenderkacheln und das
+       -- Saeulendiagramm im Monats-Drill-Down zeigten bis hierher nur die
+       -- Fahrtenzahl; der Umsatz desselben Tages stand nirgends, obwohl
+       -- er die naheliegende zweite Frage ist.
+       --
+       -- LEFT JOIN LATERAL, nicht join auf entgeltposition: die Tabelle
+       -- traegt mehrere Zeilen je Ausleihe. Ein gewoehnlicher Join
+       -- vervielfachte die Zeilen, und count(distinct a.ausleihe_id)
+       -- faenge das zwar ab - jede kuenftige Kennzahl ohne distinct aber
+       -- nicht. Die Unterabfrage liefert genau eine Zeile je Fahrt und
+       -- laesst das Korn der Gruppierung unangetastet; ein pgTAP-Test in
+       -- t0018 haelt das fest.
+       --
+       -- Kein coalesce auf 0: ein Tag ohne jede abgerechnete Fahrt
+       -- erscheint gar nicht erst in dieser Sicht (group by ueber
+       -- vorhandene Ausleihen), und null hiesse hier "keine der Fahrten
+       -- dieses Tages ist abgerechnet" - eine Aussage, die die
+       -- Oberflaeche als Gedankenstrich zeigen soll, nicht als 0,00 Euro.
+       round(sum(entgelt.summe), 2)         as umsatz
   from velocity.ausleihe a
+  left join lateral (select sum(ep.betrag) as summe
+                       from velocity.entgeltposition ep
+                      where ep.ausleihe_id = a.ausleihe_id) entgelt on true
  where a.status = 'abgeschlossen'
    and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
  group by 1;
+
+-- ---- Fahrten je Tag UND Radtyp -------------------------------------
+-- Dieselben Fahrten wie v_wawi_fahrten_je_tag, nur eine Ebene feiner
+-- geschnitten: eine Zeile je Tag UND Radtyp. Der Kalender im Monats-
+-- Drill-Down laesst sich damit auf einzelne Radtypen einschraenken
+-- (Auftrag: "einen Filter nach Radtyp (Multiselect), damit sich alle
+-- Werte im Kalender nach Radtyp darstellen lassen").
+--
+-- EIGENE SICHT statt einer Spalte in v_wawi_fahrten_je_tag: deren Korn
+-- IST der Tag. Haenge ich typ_code dort an, hat sie ploetzlich mehrere
+-- Zeilen je Tag, und jeder bestehende Leser - der Kalender, das
+-- Saeulendiagramm, die Kennzahlenmatrix - zaehlte den Monat mehrfach.
+-- Zwei Koerner, zwei Sichten; die groebere bleibt, wie sie ist.
+--
+-- Die Summe ueber alle Radtypen eines Tages ergibt exakt die Zeile aus
+-- v_wawi_fahrten_je_tag - ein pgTAP-Test in t0018 haelt das fest, sonst
+-- koennten die beiden Sichten unbemerkt auseinanderlaufen.
+--
+-- Rollenschranke wie beim groeberen Geschwister (leitung/demo, NICHT
+-- disposition): dieselben Zahlen, nur feiner - eine feinere Sicht darf
+-- nicht mehr Leuten offenstehen als die grobe, sonst waere die Schranke
+-- der groben umgehbar.
+create or replace view velocity.v_wawi_fahrten_je_tag_typ as
+select date_trunc('day', a.startzeit)::date as tag,
+       t.typ_code,
+       t.bezeichnung                        as typ,
+       count(distinct a.ausleihe_id)        as fahrten,
+       round(sum(entgelt.summe), 2)         as umsatz
+  from velocity.ausleihe a
+  join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
+  join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
+  join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
+  left join lateral (select sum(ep.betrag) as summe
+                       from velocity.entgeltposition ep
+                      where ep.ausleihe_id = a.ausleihe_id) entgelt on true
+ where a.status = 'abgeschlossen'
+   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
+ group by 1, 2, 3;
+
+comment on view velocity.v_wawi_fahrten_je_tag_typ is
+  'Fahrten und Umsatz je Kalendertag UND Radtyp - die nach Radtyp filterbare Fassung '
+  'von v_wawi_fahrten_je_tag. Die Summe ueber alle Radtypen eines Tages ergibt exakt '
+  'dessen Zeile dort (in t0018 geprueft). Kein Kundenbezug. Filtert selbst ueber '
+  'velocity.hat_rolle(''leitung'') oder velocity.hat_rolle(''demo'') - dieselbe '
+  'Schranke wie die groebere Sicht.';
+comment on column velocity.v_wawi_fahrten_je_tag_typ.tag is
+  'Kalendertag der Fahrt (startzeit) - derselbe Wert wie in v_wawi_fahrten_je_tag, '
+  'nur je Radtyp noch einmal aufgeteilt.';
+comment on column velocity.v_wawi_fahrten_je_tag_typ.typ_code is
+  'Fachlicher Schluessel des Radtyps (fahrradtyp.typ_code) - der Wert, ueber den die '
+  'Oberflaeche filtert; die Anzeige nimmt bezeichnung aus der Spalte typ daneben.';
+comment on column velocity.v_wawi_fahrten_je_tag_typ.typ is
+  'Bezeichnung des Radtyps zum Anzeigen (fahrradtyp.bezeichnung), z. B. "City-Bike".';
+comment on column velocity.v_wawi_fahrten_je_tag_typ.fahrten is
+  'Zahl der an diesem Tag abgeschlossenen Fahrten MIT DIESEM RADTYP. Ueber alle '
+  'Radtypen summiert ergibt sie die Fahrtenzahl in v_wawi_fahrten_je_tag.';
+comment on column velocity.v_wawi_fahrten_je_tag_typ.umsatz is
+  'Summe der Entgeltpositionen der Fahrten dieses Tages MIT DIESEM RADTYP, in Euro. '
+  'null, wenn keine davon abgerechnet ist - nicht abgerechnet ist etwas anderes als '
+  'null Euro.';
+
+comment on column velocity.v_wawi_fahrten_je_tag.umsatz is
+  'Summe der Entgeltpositionen aller an diesem Tag abgeschlossenen Fahrten, in Euro. '
+  'Korrekturpositionen mit negativem Betrag zaehlen mit (wie in v_wawi_umsatz_radtyp). '
+  'null, wenn keine der Fahrten des Tages abgerechnet ist - die Oberflaeche zeigt dann '
+  'einen Gedankenstrich, nicht 0,00 Euro.';
 
 comment on view velocity.v_wawi_fahrten_je_tag is
   'Tagesaggregation der abgeschlossenen Fahrten für den Drill-Down aus einer '
@@ -1243,13 +1331,36 @@ select date_trunc('day', a.startzeit)::date as tag,
                  coalesce(s2.latitude,  a.end_latitude),
                  coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
        end                  as kilometer,
-       a.distanz_km is null as ist_geschaetzt
+       a.distanz_km is null as ist_geschaetzt,
+       -- UMSATZ JE FAHRT (30.08.2026). Die Tagesliste zeigte bis hierher
+       -- Dauer und Strecke, aber nicht, was die Fahrt eingebracht hat -
+       -- die Frage, die im Drill-Down von der Umsatztafel herunter am
+       -- naechsten liegt.
+       --
+       -- LEFT JOIN LATERAL, nicht join+group by: die Sicht hat das Korn
+       -- "eine Zeile je Fahrt". Ein Join auf entgeltposition (mehrere
+       -- Zeilen je Ausleihe) vervielfachte die Zeilen und damit auch
+       -- dauer_minuten und kilometer - genau der Fehler, den die
+       -- Monatssichten weiter oben mit count(distinct ausleihe_id)
+       -- umgehen muessen. Die Unterabfrage bleibt beim Korn.
+       --
+       -- LEFT statt INNER, obwohl in der Datenbank nachgezaehlt aktuell
+       -- JEDE abgeschlossene Fahrt Entgeltpositionen traegt (12 049 von
+       -- 12 049): ein INNER JOIN liesse eine kuenftige unabgerechnete
+       -- Fahrt lautlos aus der Tagesliste verschwinden, obwohl sie
+       -- stattgefunden hat. So bleibt sie stehen und traegt null - die
+       -- Oberflaeche zeigt dafuer "—", nicht "0,00 €". Kein coalesce auf
+       -- 0: nicht abgerechnet ist etwas anderes als nichts eingebracht.
+       round(entgelt.summe, 2) as umsatz
   from velocity.ausleihe a
   join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
   left join velocity.station s1 on s1.station_id = a.start_station_id
   left join velocity.station s2 on s2.station_id = a.end_station_id
+  left join lateral (select sum(ep.betrag) as summe
+                       from velocity.entgeltposition ep
+                      where ep.ausleihe_id = a.ausleihe_id) entgelt on true
   left join velocity.rechenannahme ra
          on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
   left join velocity.rechenannahme tempo
@@ -1271,6 +1382,14 @@ comment on view velocity.v_wawi_fahrten_je_tag_rad is
   'Filtert selbst über velocity.hat_rolle(''leitung'') oder '
   'velocity.hat_rolle(''disposition''). Seit dem Demozugang zusätzlich für '
   'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql).';
+comment on column velocity.v_wawi_fahrten_je_tag_rad.umsatz is
+  'Summe der Entgeltpositionen dieser einen Fahrt, in Euro. Netto in dem Sinn, '
+  'dass Korrekturpositionen mit negativem Betrag mitzaehlen (siehe '
+  'v_wawi_umsatz_radtyp weiter oben). null, wenn die Fahrt keine '
+  'Entgeltposition traegt - dann ist sie NICHT abgerechnet, was etwas anderes '
+  'ist als 0,00 Euro; die Oberflaeche zeigt dafuer einen Gedankenstrich. '
+  'Additiv ueber Fahrten, deshalb in der Warenwirtschaft als summierbare '
+  'Spalte gefuehrt.';
 comment on column velocity.v_wawi_fahrten_je_tag_rad.tag is
   'Kalendertag der Fahrt (startzeit) - derselbe Wert wie '
   'v_wawi_fahrten_je_tag.tag, hier je Fahrt statt aggregiert. Für die '

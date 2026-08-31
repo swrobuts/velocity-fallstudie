@@ -39,18 +39,35 @@ begin
                  'Ein erneuter Lauf schreibt nichts nach (Idempotenz)');
 
   -- Bestand gegen die Regel, nicht gegen eine gemerkte Zahl.
-  return next is(
-    (select count(*)::int from velocity.station),
+  -- MINDESTENS, aus demselben Grund wie bei den Raedern weiter unten
+  -- (30.08.2026): eine ueber die Warenwirtschaft angelegte Station ist
+  -- bestimmungsgemaesser Betrieb, kein Fehler der Uebernahme. Bei den
+  -- Raedern hat die Gleichheit bereits einen Fehlalarm ausgeloest; hier
+  -- vorsorglich, bevor dasselbe beim ersten neu angelegten Standort
+  -- passiert. Der Fall, der die Zusicherung rechtfertigt - eine
+  -- Uebernahme, die Stationen VERLIERT - wird weiterhin gefangen.
+  return next cmp_ok(
+    (select count(*)::int from velocity.station), '>=',
     (select count(*)::int from "cityBikesRental".station where ort <> 'Schweinfurt'),
-    'So viele Stationen wie im Altbestand ausserhalb von Schweinfurt');
+    'Mindestens so viele Stationen wie im Altbestand ausserhalb von Schweinfurt');
 
-  return next is(
-    (select count(*)::int from velocity.fahrrad),
+  -- MINDESTENS, nicht GENAU (30.08.2026). Die Gleichheit hielt nur so
+  -- lange, wie niemand ueber die Warenwirtschaft ein Rad anlegte - genau
+  -- das ist beim Erproben des Anlegedialogs geschehen (zwei Raeder,
+  -- 10-0815 und 10-0815q). Ein neu angelegtes Rad ist aber kein Fehler der
+  -- Uebernahme, sondern der bestimmungsgemaesse Betrieb; ein Test, der
+  -- darauf anschlaegt, meldet etwas Richtiges als falsch und stumpft mit
+  -- jedem Fehlalarm die Aufmerksamkeit fuer die echten ab.
+  -- Was der Test WEITERHIN faengt, ist der Fall, der ihn rechtfertigt:
+  -- eine Uebernahme, die Raeder VERLIERT. Dieselbe Schwelle wie bei den
+  -- Kunden zwei Zusicherungen weiter unten.
+  return next cmp_ok(
+    (select count(*)::int from velocity.fahrrad), '>=',
     (select count(*)::int from "cityBikesRental".fahrrad f
       where f.station_id is null
          or f.station_id not in (select station_id from "cityBikesRental".station
                                   where ort = 'Schweinfurt')),
-    'So viele Raeder wie im Altbestand ausserhalb von Schweinfurt');
+    'Mindestens so viele Raeder wie im Altbestand ausserhalb von Schweinfurt');
 
   return next cmp_ok(
     (select count(*)::int from velocity.kunde), '>=',

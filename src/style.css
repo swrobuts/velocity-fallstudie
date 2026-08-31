@@ -404,7 +404,7 @@
   --gasse: clamp(32px, 3.4vw, 64px);
   /* Die Linie, an der die Buehne oben beginnt. Links die Zeile, rechts
      die Zahl - beide fangen hier an. */
-  --kopflinie: clamp(132px, 16vh, 220px);
+  --kopflinie: clamp(132px, 16svh, 220px);
   /* Der Abstand zwischen der kleinen Zeile und dem, was darunter steht.
      Links die Schlagzeile, rechts die Zahl - beide muessen auf
      derselben Oberkante sitzen, also braucht es EINEN Wert. Mit 28
@@ -416,7 +416,17 @@
   /* Wie hoch das Rad stehen soll, und das Seitenverhaeltnis des
      laengsten der drei (Lastenrad, 1622 zu 800 Punkte - siehe
      tools/raeder_weissgrund.py). Beides zusammen bestimmt den Rahmen. */
-  --rad-hoehe: 86vh;
+  /* svh aus demselben Grund wie bei .sticky-stage weiter unten: der
+     Rahmen des Rades wird aus dieser Höhe berechnet, und mit vh war er
+     höher als der sichtbare Bereich. */
+  /* EINE QUELLE FÜR DIE KOPFHÖHE. Sie stand an drei Stellen als blanke
+     Zahl (Leiste, Menü darunter, Rechtsseite) und lief beim Verkleinern
+     auseinander. --kopf-hoehe-kompakt ist der Wert unterhalb von 900px
+     bzw. bei flachem Seitenverhältnis; die Medienabfragen weiter unten
+     setzen beide gemeinsam. */
+  --kopf-hoehe: 72px;
+  --kopf-hoehe-kompakt: 62px;
+  --rad-hoehe: 86svh;
   --rad-verhaeltnis: 2.1;
   /* Die Breite des Rahmens - auch der Scrollhinweis rechnet damit, um
      unter dem Motor zu stehen. Das Prozent loest sich gegen den
@@ -573,7 +583,14 @@ footer :focus-visible, .product-tabs :focus-visible,
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  min-height: 92px;
+  /* 92px -> 72px (30.08.2026). Auftrag, wörtlich: "ich finde den Kopfteil
+     zu mächtig ... der nimmt zu viel Raum ein und erdrückt damit die
+     Aufteilung." Im Browser nachgemessen waren es auf einem 1280x840-Tablet
+     92px, also 11 % der Fensterhöhe, für eine Wortmarke und drei
+     Bedienelemente. Die Höhe kam nicht vom Polster, sondern von der 57px
+     hohen Wortmarke (siehe .brand unten) - dort sitzt die eigentliche
+     Änderung, dieser Wert folgt ihr nur. */
+  min-height: var(--kopf-hoehe);
   padding: 0 var(--flucht);
   color: var(--navy);
   background: var(--glas-papier);
@@ -584,7 +601,13 @@ footer :focus-visible, .product-tabs :focus-visible,
 .brand {
   color: var(--navy);
   text-decoration: none;
-  font-size: var(--grad-kopf-l);
+  /* EIGENER GRAD statt --grad-kopf-l (30.08.2026): der Token trägt an fünf
+     weiteren Stellen die grossen Zahlen der Abschlusskarte und des
+     Rechtsabschnitts - ihn zu verkleinern hätte dort Schaden angerichtet.
+     Gemessen ergab er hier 35,84px Schrift und damit 57px Markenhöhe, die
+     einzige Ursache der 92px-Leiste. Die Marke bleibt die grösste Schrift
+     im Kopf, nur nicht mehr die grösste des ganzen Auftritts. */
+  font-size: clamp(23px, 2vw, 32px);
   font-weight: 800;
   /* IDENTISCH ZUR WARENWIRTSCHAFT (28.08.2026).
      Beide Wortmarken sind dasselbe Konstrukt - Ring statt O, Schnitt
@@ -619,6 +642,15 @@ footer :focus-visible, .product-tabs :focus-visible,
   border-radius: 50%;
   vertical-align: .04em;
 }
+
+/* Die beiden Knöpfe rechts im Kopf massen 53px und waren damit die
+   höchsten Bedienelemente der Leiste - sie, nicht das Polster, hielten sie
+   auseinander. 9px Innenabstand lassen rund 47px: weiterhin über den 44px
+   aus WCAG 2.5.5, aber ohne der Leiste eine Höhe aufzuzwingen.
+   Eine Regel für beide (Klasse + Kind) statt zwei einzelner: .kopf-karte
+   und der Login-Knopf setzen ihr Polster getrennt, und die nächste
+   Schaltfläche dort würde sonst wieder ausscheren. */
+.site-header .kopf-aktionen > * { padding-block: 9px; }
 
 .site-nav { display: flex; gap: var(--af-m); }
 .site-nav a {
@@ -728,7 +760,11 @@ footer :focus-visible, .product-tabs :focus-visible,
 
 .menue {
   position: fixed; z-index: 29;
-  top: 74px; left: 0; right: 0;
+  /* Folgt der Kopfhöhe des kompakten Zustands (30.08.2026: 74 -> 62). Der
+     Wert stand hier als blanke Zahl und blieb beim Verkleinern der Leiste
+     stehen - das Menü hing danach 12px unter ihr in der Luft. Genau die
+     Sorte Doppelung, die eine Variable verhindert. */
+  top: var(--kopf-hoehe-kompakt); left: 0; right: 0;
   display: flex; flex-direction: column;
   padding: var(--a2) var(--rand) var(--a5);
   background: var(--glas-papier);
@@ -776,7 +812,14 @@ footer :focus-visible, .product-tabs :focus-visible,
 .sticky-stage {
   position: sticky;
   top: 0;
-  height: 100vh;
+  /* svh, nicht vh (30.08.2026). vh meint die GROSSE Ansichtshöhe - die
+     ohne Browserleisten. Auf einem Tablet mit sichtbarer Adressleiste ist
+     der tatsächlich sichtbare Bereich kleiner; die Bühne wurde damit für
+     eine Höhe berechnet, die es nicht gibt, und lief unten heraus. Das
+     Rad wurde angeschnitten und der Scrollhinweis darunter lag unter der
+     Kante - der Auftraggeber musste erst blind nach unten scrollen, um zu
+     merken, dass es dort weitergeht. */
+  height: 100svh;
   min-height: 650px;
   overflow: hidden;
   isolation: isolate;
@@ -1071,7 +1114,7 @@ footer :focus-visible, .product-tabs :focus-visible,
      die Auswahlkarte vierunddreissig Punkte unter sie - zwei Auflagen,
      die einander ueberdecken, und keine davon absichtlich. */
   right: calc(var(--flucht) + min(410px, 32vw) + clamp(24px, 2.2vw, 44px));
-  bottom: clamp(72px, 9vh, 120px);
+  bottom: clamp(72px, 9svh, 120px);
   z-index: 4;
   display: grid;
   /* Die zweite Spalte waechst NICHT mit: auf breiten Schirmen zog sich
@@ -1142,7 +1185,7 @@ footer :focus-visible, .product-tabs :focus-visible,
   /* Dieselbe Unterkante wie Pille und Auswahlkarte. Vorher standen die
      drei Auflagen auf drei verschiedenen Linien - neun, elf und keine
      Punkte auseinander. Das sieht man nicht einzeln, aber zusammen. */
-  bottom: clamp(72px, 9vh, 120px);
+  bottom: clamp(72px, 9svh, 120px);
   z-index: 6;
   /* 410 waren zu knapp: "Bereit, wenn du es bist." brach in zwei
      Zeilen, und die Karte stand hoeher als noetig neben dem Rad. */
@@ -2710,7 +2753,10 @@ footer a:hover { color: #fff; text-decoration: underline; }
    Standortdaten und Zahlung ist das kein Schoenheitsfehler. */
 
 .seite-recht { background: #fff; }
-.recht { padding: calc(92px + var(--luft)) 0 var(--luft); }
+/* Der Abstand hält die Rechtsseite unter der festen Kopfleiste frei und
+   trug deren alte Höhe als blanke Zahl. Jetzt über die Variable - sonst
+   klafft hier bei jeder Änderung der Leiste wieder eine Lücke. */
+.recht { padding: calc(var(--kopf-hoehe) + var(--luft)) 0 var(--luft); }
 .recht-warnung {
   margin-bottom: var(--af-l);
   padding: var(--a4) var(--a5);
@@ -2911,7 +2957,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .hero-cta:hover { background: var(--red-tief); }
   .hero-cta.ist-weg { opacity: 0; pointer-events: none; transform: translateY(10px); }
   .hero-cta { transition: opacity var(--zeit-lang) ease, transform var(--zeit-lang) ease; }
-  .site-header { grid-template-columns: 1fr auto; min-height: 74px; }
+  .site-header { grid-template-columns: 1fr auto; min-height: var(--kopf-hoehe-kompakt); }
+  :root { --kopf-hoehe: var(--kopf-hoehe-kompakt); }
   .site-nav { display: none; }
   /* Auf dem Telefon steht der Zaehler oben links fuer sich; die
      Kopplung an die Schlagzeile gilt dort nicht. */
@@ -2927,7 +2974,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
      dann liegt die Schlagzeile auf der Zahl. Am 28.08.2026 bei 375x600
      gemessen: 18px Ueberdeckung, beide voll sichtbar. Betroffen war
      jedes Telefon mit eingeblendeter Adressleiste. */
-  .claim { top: max(27vh, 196px); bottom: auto; width: calc(100% - 2 * var(--flucht)); }
+  .claim { top: max(27svh, 196px); bottom: auto; width: calc(100% - 2 * var(--flucht)); }
   .claim h1 { font-size: var(--hero-font); max-width: 100%; }
   /* Das City-Bike stand in kleinerer Schrift, weil sein Satz der laengste
    ist und in der schmalen Spalte sonst vierzeilig wurde. Mit der
@@ -2954,9 +3001,10 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .rechner-spalte:first-child { border-top: 0; }
 
   .rad-kacheln { grid-template-columns: 1fr 1fr; }
+  /* Zwei Spalten statt vier - und ohne senkrechte Linie. Warum sie hier
+     entfaellt, steht beim Linienblock weiter unten. */
   .stat-grid { grid-template-columns: 1fr 1fr; }
-  .stat:nth-child(odd) { border-left: 0; }
-  .stat:nth-child(n+3) { border-top: 1px solid var(--auf-navy-linie); }
+  .stat { border-left: 0; }
   /* GESTAPELT ZEIGT DER CHEVRON NACH UNTEN.
      Nebeneinander weist er nach rechts, untereinander nach unten - der
      Weg laeuft dann eben so. Ihn wegzulassen hiesse, auf dem Telefon
@@ -3006,8 +3054,8 @@ footer a:hover { color: #fff; text-decoration: underline; }
   .meta-kurz { display: inline; }
   .karte-knoepfe { right: 12px; top: 12px; flex-direction: column; }
   .recht-block h2 { font-size: var(--grad-kopf-m); }
-  .claim { top: max(25vh, 196px); }
-  .claim-city { top: max(29vh, 208px); }
+  .claim { top: max(25svh, 196px); }
+  .claim-city { top: max(29svh, 208px); }
   .choice-panel { bottom: 34px; }
   .product-tab { padding: 0 var(--a3); }
   .rad-kacheln { grid-template-columns: 1fr; }
@@ -3023,7 +3071,7 @@ footer a:hover { color: #fff; text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .scroll-story { height: 100vh; min-height: 720px; }
+  .scroll-story { height: 100svh; min-height: 720px; }
   .photo-city, .photo-cargo, .claim-city, .claim-cargo, .final-card { display: none; }
   .photo-ebike { opacity: 1; transform: none; }
   .scroll-hint span { animation: none; transform: rotate(45deg); }
@@ -3179,8 +3227,10 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
        Schirmen zu einem Streifen zusammenfällt. */
     grid-template-rows: auto auto minmax(120px, 1fr) auto;
     row-gap: 12px;
-    /* 78 statt 100: der feste Kopf misst 74 Punkte. */
-    padding: 78px var(--flucht) 18px;
+    /* Vier Punkte Luft unter dem festen Kopf. Der Wert stand hier als
+       blanke Zahl ("78 statt 100: der feste Kopf misst 74 Punkte") und
+       blieb beim Verkleinern der Leiste am 30.08.2026 stehen. */
+    padding: calc(var(--kopf-hoehe-kompakt) + 4px) var(--flucht) 18px;
   }
 
   /* Kein Wechsel, keine Pillen: ein E-Bike, fest und deckend. */
@@ -3224,7 +3274,13 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      zwei nebeneinanderstehenden Spalten übernimmt column-gap - das ist
      ohnehin die richtige Stelle dafür. */
   .stat { padding-inline: 0; }
-  .stat-grid { column-gap: var(--af-s); }
+  /* Der Abstand zwischen den Spalten sitzt jetzt IM rechten Feld, nicht
+     als column-gap: die Luecke zwischen den Spalten wuerde sonst die
+     Grundfarbe des Rasters zeigen - und genau die traegt unten die
+     waagerechte Linie. Ein Spaltenabstand haette daraus eine senkrechte
+     Linie gemacht, also das, was hier weg soll. */
+  .stat-grid { column-gap: 0; }
+  .stat:nth-child(even) { padding-left: var(--af-s); }
 
   /* WENIGER LINIEN, MEHR LUFT (29.08.2026)
      Gemessen waren es sechs Haarlinien auf 220 Punkten Höhe: die
@@ -3244,8 +3300,26 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
      vertikales Polster. Mit 58 Punkten atmen dieselben Linien. */
   .stat-grid { border-top: 0; }
   .stat { border-top: 0; padding-block: var(--a3); }
-  /* Zwei Spalten: EINE Linie ueber der zweiten Zeile, nicht zwei. */
-  .stat:nth-child(n+3) { border-top: 1px solid var(--auf-navy-linie); }
+
+  /* NUR WAAGERECHTE LINIEN (30.08.2026).
+     Auf dem Schreibtisch stehen die vier Kennzahlen in EINER Reihe; dort
+     trennt die senkrechte Haarlinie Angabe von Angabe und ist die einzige
+     Linie, die es braucht. Sobald daraus zwei Zeilen zu zwei Spalten
+     werden, trennt sie nichts mehr, sondern zerteilt eine Flaeche: die
+     waagerechte Linie zwischen den Zeilen brach an ihr auf, und das Bild
+     zerfiel in vier Kaestchen. Der Auftraggeber am Foldable: "hier
+     genuegen die horizontalen Linien, vertikale stoeren eher".
+
+     Die Linie zwischen den Zeilen sass bisher an den Zellen
+     (border-top auf der zweiten Zeile) und riss deshalb an der
+     Spaltenluecke ab. Jetzt ist sie eine Rasterluecke von einem Punkt
+     ueber der Grundfarbe des Rasters; die Zellen decken alles Uebrige
+     mit dem Abschnittsgrund ab. Dadurch laeuft sie ueber beide Spalten
+     durch. Das Polster am Raster muss dafuer weichen - es liegt
+     ausserhalb der Zellen und haette die Grundfarbe als Band gezeigt;
+     die Luft steht ohnehin schon als padding-block an den Zellen. */
+  .stat-grid { row-gap: 1px; padding-block: 0; background: var(--auf-navy-linie); }
+  .stat { background: var(--navy); }
 }
 
 /* --------------------------------------------------------------------
@@ -3450,6 +3524,88 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
    Beleg, dass die Zahl echt ist, und ohne ihn wäre die Bühne eine
    Behauptung.
    -------------------------------------------------------------------- */
+/* ====================================================================
+   AUF DIE FUSSLINIE, NICHT IN DIE MITTE (30.08.2026)
+
+   Im zweispaltigen Aufbau ist das Rad von der BREITE begrenzt, nicht von
+   der Höhe. Auf einem fast quadratischen Schirm fällt das auseinander:
+   gemessen bei 713 mal 700 ist die Radspalte 326 breit und 586 hoch, das
+   Rad darin 326 mal 205 - mittig eingepasst blieben oben wie unten 190
+   Punkte leer. Das Rad schwebte, und der Auftraggeber las es als
+   "verloren, nicht gut integriert".
+
+   Größer wird es hier nur auf Kosten der Schlagzeilenbreite; das wollte
+   er nicht. Also die Lage statt der Grösse: unten bündig steht das Rad
+   auf derselben Linie wie Schlagzeile und Knopf, und die 381 Punkte Luft
+   liegen am Stück darüber statt in zwei Hälften um das Bild herum.
+
+   Warum nur bis 4/3: Auf einem flachen Tablet (880 mal 500, Verhältnis
+   1,76) gibt es das Problem nicht - dort füllt das Rad 447 von 560
+   Punkten. Schlimmer noch, die Bühne ist dort wegen min-height 560 höher
+   als das Fenster, und unten bündig heisst dann: die Räder liegen unter
+   der Bildkante. Gemessen: Unterkante 542 bei 500 Punkten Fensterhöhe.
+   ==================================================================== */
+@media (max-width: 900px) and (min-width: 560px) and (max-height: 720px)
+       and (max-aspect-ratio: 4/3) {
+  .photo-layer { background-position: center bottom; }
+
+  /* DER ZÄHLER FÜLLT DAS OBERE RECHTE VIERTEL.
+     Auch unten bündig blieb das Bild sonderbar: gemessen bei 707 mal 604
+     steht das Rad mit 323 mal 203 Punkten in einer 490 Punkte hohen
+     Zelle - 287 Punkte darüber ohne Aufgabe. Der Auftraggeber: "sieht
+     etwas komisch und verloren aus". Das Rad lässt sich hier nicht
+     vergrössern, ohne der Schlagzeile Breite zu nehmen; die Leere hat
+     aber einen natürlichen Bewohner.
+
+     Auf dem Schreibtisch steht der Zähler in der zweiten Spalte. Für den
+     gestapelten Aufbau war er nach links gewandert, weil er dort über
+     der Schlagzeile steht und deren Flucht halten muss. Zweispaltig gilt
+     das nicht: er zieht zurück nach oben rechts, über das Rad, und
+     richtet sich wieder rechts aus.
+
+     Damit bleiben drei Zeilen statt vier: Schlagzeile und Zähler
+     nebeneinander, darunter links der Knopf und rechts das Rad, das den
+     Rest der Höhe nimmt. Keine Fläche ohne Aufgabe. */
+  /* DER KNOPF NEBEN DEN HERO, DAS RAD ÜBER DIE VOLLE BREITE (30.08.2026).
+     Vorgabe des Auftraggebers: "das Rad unten passt, es muss aber
+     breiter skaliert werden; der rote Button sollte nicht direkt rechts
+     neben dem Rad stehen, sondern neben dem Hero, also auch oberhalb
+     des Rades."
+
+     Zwei Spalten oben, eine Fläche unten: links die Schlagzeile, rechts
+     Zähler und Knopf übereinander, darunter über die volle Breite das
+     Rad.
+
+     Der Haken beim Breiterskalieren: Das Rad ist hier nicht mehr von der
+     Breite begrenzt, sondern von der HÖHE. Sein Kasten ist 679 Punkte
+     breit, das Bild darin war nur 355 - alles Weitere muss also aus der
+     Höhe kommen, und die hat nur zwei Quellen: das Polster und den
+     Schriftgrad. Durchgemessen bei 707 mal 604 (Polster oben/unten,
+     Schriftgrad -> Radbreite):
+
+       96/18, 44 -> 355     70/18, 40 -> 427     66/18, 36 -> 464
+       66/18, 32 -> 494     80/18, 38 -> 426     96/18, 34 -> 431
+       80/4,  38 -> 449     84/4,  36 -> 457
+
+     Gewählt ist 80/4 bei 38 Punkten: ein Viertel mehr Radbreite als
+     vorher, und die Schlagzeile behält ihre Wucht. Die 494 Punkte bei
+     Schriftgrad 32 wären mehr Rad, aber der Blickfang lebt vom Satz -
+     dafür ist der Preis zu hoch. Unten bleiben vier Punkte, damit das
+     Rad auf der Abschnittskante aufsetzt statt darüber zu schweben.
+
+     Das obere Polster stand auf 96, weil der Zähler sonst unter dem Kopf
+     klebte. Er steht jetzt rechts; links bleibt nur die Kopfzeile, und
+     der genügen 80. */
+  :root { --hero-font: min(38px, calc((100vw - 2 * var(--rand)) / 11)); }
+  .sticky-stage { grid-template-rows: auto auto 1fr;
+                  padding-top: 80px; padding-bottom: 4px; }
+  .claim       { grid-area: 1 / 1 / 3 / 2; }
+  .top-meta    { grid-area: 1 / 2; justify-self: end; align-self: start; }
+  .hero-cta    { grid-area: 2 / 2; justify-self: end; align-self: start; }
+  .photo-layer { grid-area: 3 / 1 / -1 / -1; }
+  .live-zahl   { align-items: flex-end; }
+}
+
 @media (max-width: 900px) and (max-height: 430px) {
   :root { --hero-font: min(30px, calc((100vw - 2 * var(--rand)) / 14)); }
 
@@ -3460,7 +3616,8 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   /* Der Kopf misst auch quer 74 Punkte - ein Fünftel eines 375 Punkte
      hohen Schirms, nur für Logo und zwei Knöpfe. Hier 56; damit steht
      der Zähler wieder unter ihm statt darunter zu verschwinden. */
-  .site-header { min-height: 56px; }
+  .site-header { min-height: 52px; }
+  :root { --kopf-hoehe: 52px; --kopf-hoehe-kompakt: 52px; }
 
   .scroll-story { min-height: 0; }
   .sticky-stage {

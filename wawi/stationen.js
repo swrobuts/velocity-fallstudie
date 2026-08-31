@@ -202,7 +202,7 @@ async function stationenAufbauen() {
     stationenKundenorteAlle = kundenorte;
     stationenAlle = stationen;
 
-    zeigeKopftafel(vorgang, stationenKopftafel(stationen, auslastung));
+    zeigeKopftafel(vorgang, stationenKopftafel(stationen, auslastung, verkehr));
 
     // KEIN Filter hier (Gestaltungsauftrag, Punkt 2, woertlich): "bei
     // zehn Zeilen braucht es keinen Filter. Bau keinen. Ein
@@ -333,7 +333,42 @@ function stationenStatuszeileText(stationen) {
 // AN IHRER STELLE STEHT JETZT, WAS DIE ZEILEN WIRKLICH UNTERSCHEIDET:
 // die Bewegungen je Stellplatz (siehe unten, Spanne 57,8 bis 117,1,
 // Verhaeltnis 2,0 zu 1) - und weiterhin der Saldo, von -65 bis +122.
-function stationenKopftafel(stationen, auslastung) {
+// Die beiden Zweistundenblöcke, über die der Tagesgang berichtet. Sie
+// stehen hier EINMAL und gehen sowohl in die Rechnung als auch in den
+// Satz - vorher war die Uhrzeit im Übersetzungstext ausgeschrieben und
+// hätte still von der Rechnung abweichen können.
+const TAGESGANG_MORGEN_STUNDE = 6;
+const TAGESGANG_NACHMITTAG_STUNDE = 16;
+const TAGESGANG_BLOCK_STUNDEN = 2;
+
+// Anteil der Werktagsabgänge, der je Station in einen Zweistundenblock
+// fällt - als Spanne über alle Stationen. abgaenge_je_tag statt abgaenge:
+// beide Zähler teilen durch dieselbe Zahl erfasster Tage, der Anteil ist
+// derselbe, und je_tag ist die Größe, die die Sicht ohnehin liefert.
+function tagesgangSpannen(verkehr) {
+    if (!verkehr || verkehr.length === 0) return null;
+    const jeStation = new Map();
+    for (const z of verkehr) {
+        if (z.wochentyp !== 'werktag') continue;
+        let st = jeStation.get(z.station_id);
+        if (!st) { st = { gesamt: 0, morgen: 0, nachmittag: 0 }; jeStation.set(z.station_id, st); }
+        const wert = Number(z.abgaenge_je_tag) || 0;
+        st.gesamt += wert;
+        if (z.zeitfenster_start_stunde === TAGESGANG_MORGEN_STUNDE) st.morgen += wert;
+        if (z.zeitfenster_start_stunde === TAGESGANG_NACHMITTAG_STUNDE) st.nachmittag += wert;
+    }
+    const mitVerkehr = [...jeStation.values()].filter((st) => st.gesamt > 0);
+    if (mitVerkehr.length === 0) return null;
+    const anteil = (feld) => mitVerkehr.map((st) => Math.round((st[feld] / st.gesamt) * 100));
+    const morgen = anteil('morgen');
+    const nachmittag = anteil('nachmittag');
+    return {
+        morgenMin: Math.min(...morgen), morgenMax: Math.max(...morgen),
+        nachmittagMin: Math.min(...nachmittag), nachmittagMax: Math.max(...nachmittag)
+    };
+}
+
+function stationenKopftafel(stationen, auslastung, verkehr) {
     if (!stationen || stationen.length === 0) return null;
 
     const gesamtKapazitaet = stationen.reduce((s, z) => s + z.kapazitaet, 0);
@@ -509,23 +544,39 @@ function stationenKopftafel(stationen, auslastung) {
         // ZWEITENS: der Tagesgang. Er ist als Spalte gestrichen (siehe
         // Kopfkommentar) und steht jetzt als das da, was er ist - eine
         // Eigenschaft des NETZES, in einem Satz, mit den Zahlen, die ihn
-        // belegen. Die Anteile sind fest eingetragen und nicht gerechnet:
-        // sie kaemen aus v_wawi_stationsverkehr_zeitfenster, die diese
-        // Tafel seit dem Wegfall der Spalte nicht mehr laedt - eine
-        // zusaetzliche Ladeanfrage fuer EINEN Fussnotensatz waere teurer
-        // als die Aussage wert ist. Nachgemessen am 28.08.2026 (siehe
-        // Bericht); die Werte gehoeren zum Referenzdatenbestand dieses
-        // Lehrprojekts und aendern sich nicht von selbst.
+        // belegen.
+        //
+        // GERECHNET STATT EINGETRAGEN (30.08.2026). Bis heute standen
+        // hier vier feste Zahlen (21/24/33/38), nachgemessen am
+        // 28.08.2026, mit der Begruendung, eine zusaetzliche Ladeanfrage
+        // fuer einen Fussnotensatz sei teurer als die Aussage wert. Die
+        // Begruendung war schon damals hinfaellig: diese Tafel laedt
+        // v_wawi_stationsverkehr_zeitfenster ohnehin (siehe das
+        // Promise.all in stationenAufbauen()) - die Werte waren also
+        // ohne jede Mehrbelastung zu rechnen.
+        //
+        // Und die Aussage haelt nicht von selbst: der Auftraggeber legt
+        // ueber die Oberflaeche Stationen an und laesst im Lehrbetrieb
+        // Ausleihen entstehen. Ein Satz, der Gemessenes behauptet, muss
+        // mitwandern. Faellt die Sicht aus, entfaellt der Satz, statt
+        // eine alte Messung als heutige auszugeben.
         fussnote: [
             abgaengeAlle.length > 0
                 ? t('board.stationsFootnote', {
                     min: zahlFormat(Math.min(...abgaengeAlle)), max: zahlFormat(Math.max(...abgaengeAlle))
                 })
                 : null,
-            t('board.stationsRhythmFootnote', {
-                morgenMin: zahlFormat(21), morgenMax: zahlFormat(24),
-                nachmittagMin: zahlFormat(33), nachmittagMax: zahlFormat(38)
-            })
+            (() => {
+                const spannen = tagesgangSpannen(verkehr);
+                return spannen ? t('board.stationsRhythmFootnote', {
+                    morgenMin: zahlFormat(spannen.morgenMin), morgenMax: zahlFormat(spannen.morgenMax),
+                    nachmittagMin: zahlFormat(spannen.nachmittagMin), nachmittagMax: zahlFormat(spannen.nachmittagMax),
+                    morgenVon: zahlFormat(TAGESGANG_MORGEN_STUNDE),
+                    morgenBis: zahlFormat(TAGESGANG_MORGEN_STUNDE + TAGESGANG_BLOCK_STUNDEN),
+                    nachmittagVon: zahlFormat(TAGESGANG_NACHMITTAG_STUNDE),
+                    nachmittagBis: zahlFormat(TAGESGANG_NACHMITTAG_STUNDE + TAGESGANG_BLOCK_STUNDEN)
+                }) : null;
+            })()
         ].filter(Boolean).join(' ')
     };
 }
@@ -785,83 +836,60 @@ function stationRaederAbschnitt(station) {
         return abschnitt;
     }
 
-    const tabelle = document.createElement('table');
-    tabelle.className = 'stationraeder-tabelle';
-
-    const kopfzeile = document.createElement('tr');
-    for (const titel of [t('field.rahmennummer'), t('field.radtyp'), t('field.status'), t('field.akku'), t('field.schaeden')]) {
-        const th = document.createElement('th');
-        th.textContent = titel;
-        kopfzeile.append(th);
-    }
-    tabelle.append(kopfzeile);
-
-    for (const rad of raederHier) {
-        const zeile = document.createElement('tr');
-
-        // Querverweis (Gestaltungsauftrag "Sichten verweben", dasselbe
-        // Prinzip wie "Rad in der Flotte -> seine Schadensmeldungen" in
-        // flotte.js radMaske(), hier in der Gegenrichtung: "Rad an der
-        // Station -> seine Flottendetails"). darfBereich() zuerst
-        // (Auftrag: "wird nicht angeboten") - unnoetig hier, weil
-        // disposition/leitung (die einzigen Rollen dieses Bereichs)
-        // Flotte ohnehin sehen, aber defensiv wie jeder andere Sprung in
-        // dieser Oberflaeche.
-        const zelleRahmennummer = document.createElement('td');
-        if (darfBereich('flotte')) {
-            const link = document.createElement('button');
-            link.type = 'button';
-            // Dieselbe Klasse wie der Datum-Knopf im Monats-Drill-Down
-            // (auswertungen.js): sieht wie ein Link aus, sonst nichts -
-            // ein zweiter, wortgleicher Klassenname fuer denselben
-            // visuellen Zweck waere dieselbe Wiederholung, die
-            // werkzeugleiste()/uebersichtsstreifen() in rahmen.js schon
-            // einmal beseitigt haben.
-            link.className = 'monatsdrilldown-tag-knopf';
-            link.textContent = rad.rahmennummer;
-            link.addEventListener('click', () => {
-                bereichSprung('flotte', t('nav.originBikeFromStation', { rahmennummer: rad.rahmennummer, name: station.name }),
-                    () => setzeSpaltenkopfFilter('rahmennummer', rad.rahmennummer));
-            });
-            zelleRahmennummer.append(link);
-        } else {
-            zelleRahmennummer.textContent = rad.rahmennummer;
-        }
-        zeile.append(zelleRahmennummer);
-
-        const zelleTyp = document.createElement('td');
-        zelleTyp.textContent = rad.typ;
-        zeile.append(zelleTyp);
-
-        // Farbe traegt Bedeutung: ein Rad, das noch an einer Station
-        // steht, aber nicht 'verfuegbar' ist, ist der eigentlich
-        // interessante Fall dieser Liste (siehe Kommentar bei
-        // v_wawi_station_flotte.status in 0018_wawi_sichten.sql).
-        const zelleStatus = document.createElement('td');
-        zelleStatus.textContent = statusAnzeige(rad.status);
-        if (rad.status === 'defekt' || rad.hoechste_schwere === 'fahruntauglich') {
-            zelleStatus.className = 'ton-schlecht';
-        } else if (rad.status === 'wartung') {
-            zelleStatus.className = 'ton-warnung';
-        }
-        zeile.append(zelleStatus);
-
-        const zelleAkku = document.createElement('td');
-        zelleAkku.textContent = rad.akkustand_prozent == null ? '—' : `${zahlFormat(rad.akkustand_prozent)} %`;
-        zeile.append(zelleAkku);
-
-        const zelleSchaeden = document.createElement('td');
-        zelleSchaeden.textContent = rad.offene_schaeden > 0
-            ? `${zahlFormat(rad.offene_schaeden)} (${t('schwere.' + rad.hoechste_schwere)})`
-            : '—';
-        if (rad.hoechste_schwere === 'fahruntauglich') zelleSchaeden.className = 'ton-schlecht';
-        else if (rad.offene_schaeden > 0) zelleSchaeden.className = 'ton-warnung';
-        zeile.append(zelleSchaeden);
-
-        tabelle.append(zeile);
-    }
-
-    abschnitt.append(tabelle);
+    // ===== DIESELBE TABELLE WIE IN DER ARBEITSLISTE (30.08.2026) =====
+    // Auftrag: "auch Sortieren, Gruppieren, Filtern" fuer die
+    // Detailtabellen. zeigeDetailtabelle() (rahmen.js) zeichnet mit
+    // demselben Code wie die Liste links, nur mit eigenem Zustand und
+    // kompaktem Spaltenmenue. An einer vollen Station ist "gruppiert nach
+    // Status" die Frage, wegen der man ueberhaupt hineinsieht.
+    const tabellenplatz = document.createElement('div');
+    tabellenplatz.className = 'arbeitstabelle-kompakt-behaelter';
+    abschnitt.append(tabellenplatz);
+    zeigeDetailtabelle('station-raeder', tabellenplatz, raederHier, [
+        // Der Querverweis in die Flotte bleibt erhalten: formatieren() darf
+        // einen Knoten zurueckgeben (siehe baueDatenzeile() in rahmen.js),
+        // der Knopf steht also weiter in der Zelle. Sortiert und gefiltert
+        // wird trotzdem ueber die blanke Rahmennummer - der Vorgabewert
+        // zeile[feld], nicht der Knopf.
+        { feld: 'rahmennummer', titel: t('field.rahmennummer'),
+          formatieren: (wert, rad) => {
+              if (!darfBereich('flotte')) return wert;
+              const link = document.createElement('button');
+              link.type = 'button';
+              link.className = 'monatsdrilldown-tag-knopf';
+              link.textContent = rad.rahmennummer;
+              link.addEventListener('click', () => {
+                  bereichSprung('flotte', t('nav.originBikeFromStation', { rahmennummer: rad.rahmennummer, name: station.name }),
+                      () => setzeSpaltenkopfFilter('rahmennummer', rad.rahmennummer));
+              });
+              return link;
+          } },
+        { feld: 'typ', titel: t('field.radtyp') },
+        { feld: 'status', titel: t('field.status'),
+          formatieren: (wert) => statusAnzeige(wert),
+          klasse: (rad) => {
+              if (rad.status === 'defekt' || rad.hoechste_schwere === 'fahruntauglich') return 'ton-schlecht';
+              if (rad.status === 'wartung') return 'ton-warnung';
+              return '';
+          } },
+        { feld: 'akkustand_prozent', titel: t('field.akku'), klasse: 'zahl',
+          formatieren: (wert) => (wert == null ? '\u2014' : `${zahlFormat(wert)} %`) },
+        // summierbar: eine echte Anzahl je Rad, ueber Raeder additiv -
+        // dieselbe Pruefung wie bei 'offene_schaeden' in der Flotte.
+        // 'akkustand_prozent' daneben bleibt bewusst NICHT summierbar: ein
+        // Fuellstand ist ein Zustand, keine Menge - addierte Prozente
+        // ergaeben eine Zahl, die nichts bezeichnet (dieselbe Ausnahme wie
+        // 'fuellstand' in der Stationsauslastung).
+        { feld: 'offene_schaeden', titel: t('field.schaeden'), summierbar: true,
+          formatieren: (wert, rad) => (wert > 0
+              ? `${zahlFormat(wert)} (${t('schwere.' + rad.hoechste_schwere)})`
+              : '\u2014'),
+          klasse: (rad) => {
+              if (rad.hoechste_schwere === 'fahruntauglich') return 'ton-schlecht';
+              if (rad.offene_schaeden > 0) return 'ton-warnung';
+              return '';
+          } }
+    ]);
     return abschnitt;
 }
 

@@ -470,7 +470,14 @@
      Jetzt traegt EINE Variable die geltende Breite, und beide lesen sie.
      Halb geht damit nicht mehr. */
   --nav-ist: var(--nav-breite);
-  --kopf-hoehe:  60px;
+  /* 60px -> 52px (30.08.2026), Auftrag: der Kopfbereich nimmt zu viel Raum
+     ein. Die Leiste traegt Wortmarke, Suchfeld und Profilknopf - alle drei
+     bleiben mit 44px Trefferflaeche (WCAG 2.5.5) darin unter, und 52px sind
+     dieselbe Stufe, auf der die Kundenwebsite bei knappem Platz landet.
+     Die Leiste war allerdings nie der groesste Posten: bis zur ersten
+     Datenzeile lagen auf dem Tablet 387px, davon 189px im Tafelkopf und
+     nur 60px hier. */
+  --kopf-hoehe:  52px;
   --fuss-hoehe:  32px;
 
   /* ============================================================
@@ -596,6 +603,12 @@
   --schatten-1: 0 1px 2px rgba(6, 24, 65, 0.22), 0 5px 14px rgba(6, 24, 65, 0.30);
   --schatten-2: 0 6px 16px rgba(6, 24, 65, 0.20);
   --schatten-3: 0 16px 40px rgba(6, 24, 65, 0.30);
+  /* Seitlich statt nach unten geworfen: die Detailmaske liegt NEBEN der
+     Liste, nicht darueber - ein Schatten nach unten sagt das Falsche.
+     Dieselbe Farbe und Weichheit wie --schatten-2, nur nach links
+     gerichtet und mit negativer Streuung, damit er nicht oben und unten
+     aus der Spalte herauslaeuft. */
+  --schatten-seite: -6px 0 18px -6px rgba(6, 24, 65, 0.20);
   --z-ebene-2:  20;
   --z-hinweis:  60;
 
@@ -2135,13 +2148,22 @@ body.navigation-schmal #navigation button:focus-visible {
    zeigt UND gleichzeitig eine Detailmaske offen ist, kollabierte
    #detailmaske auf 0px Breite, obwohl sie sichtbaren Inhalt hatte. */
 #arbeitsliste {
-  flex: 1 1 55%;
+  /* --masken-anteil ist die einzige Quelle der Aufteilung: der Ziehgriff
+     setzt sie, beide Bereiche lesen sie. Vorgabe 45 % - genau die
+     Aufteilung, die vorher fest verdrahtet war. */
+  flex: 1 1 calc(100% - var(--masken-anteil, 45%));
   overflow-y: auto;
   overflow-x: auto;
   /* Bereichskante zur Detailmaske - dieselbe --kontur wie jede andere
      Bereichskante. Sie ist die EINZIGE Linie zwischen den beiden
-     Spalten; die Maske traegt links bewusst keine zweite. */
-  border-right: 1px solid var(--kontur);
+     Spalten; die Maske traegt links bewusst keine zweite.
+     SEIT DEM ZIEHGRIFF (30.08.2026) traegt die Naht der Griff, nicht mehr
+     dieser Rand: er sitzt genau dort, wo die Linie lag, und ist das
+     Element, das man anfassen soll. Eine sichtbare Linie NEBEN dem Griff
+     laedt zum Zielen auf die falsche Stelle ein. Der Rand bleibt
+     durchsichtig stehen, damit die Spaltenbreite sich beim Ein- und
+     Ausblenden der Maske nicht um ein Pixel verschiebt. */
+  border-right: 1px solid transparent;
   background: var(--flaeche);
   display: flex;
   flex-direction: column;
@@ -2153,6 +2175,66 @@ body.navigation-schmal #navigation button:focus-visible {
    unten) - nur flex-basis ändert sich, das allein reicht, damit der
    gesamte Restplatz der Liste zufällt, sobald die Maske nichts mehr
    beansprucht. */
+/* ===== ZIEHGRIFF ZWISCHEN LISTE UND MASKE (30.08.2026) =====
+   Auftrag: "wäre es noch gut der User kann die Liste für die Detailliste
+   in der Breite verändern, durch Ziehen am linken Rand."
+
+   Sichtbar schmal, greifbar breit: 3px Linie, aber ::after zieht die
+   Trefferfläche auf 13px auf - dieselbe Machart wie beim Klappgriff der
+   Navigation. Ein 3px breites Ziel wäre mit der Maus eine Zumutung und
+   mit dem Finger unmöglich.
+
+   touch-action:none, damit ein Zug auf dem Griff nicht als Bildlauf des
+   Bereichs darunter gedeutet wird.
+
+   KEIN :active-Versatz. Ein Druckzustand, der das Element unter dem
+   Zeiger verschiebt, hat an dieser Oberfläche schon einmal einen Knopf
+   unbedienbar gemacht (siehe den translate-Kommentar weiter unten) - an
+   einem Griff, den man gedrückt HÄLT, wäre er noch schlimmer. */
+#maskengriff {
+  flex: 0 0 3px;
+  align-self: stretch;
+  position: relative;
+  cursor: col-resize;
+  /* Sichtbar statt durchsichtig: der Griff IST die Naht zwischen den
+     Bereichen (siehe #arbeitsliste). --linie statt --kontur, weil er als
+     3px breite Flaeche mehr Gewicht traegt als die 1px-Linie zuvor und
+     in deren Farbe zu laut wuerde. */
+  background: var(--linie);
+  touch-action: none;
+  z-index: 2;
+}
+
+#maskengriff::after {
+  content: "";
+  position: absolute;
+  inset: 0 -5px;
+}
+
+#maskengriff:hover,
+#maskengriff:focus-visible {
+  background: var(--marine);
+}
+
+/* Während des Ziehens: keine Textauswahl, kein Nachlaufen. Die
+   flex-basis-Überblendung der beiden Bereiche (160ms) ist für das
+   Auf- und Zuklappen der Maske gedacht; beim Ziehen liefe die Kante der
+   Maus sichtbar hinterher. */
+body.maske-wird-gezogen {
+  cursor: col-resize;
+  user-select: none;
+}
+
+body.maske-wird-gezogen #arbeitsliste,
+body.maske-wird-gezogen #detailmaske {
+  transition: none;
+}
+
+/* Keine Maske offen, kein Griff - er hätte nichts zu verschieben. */
+#arbeitsbereich:has(#detailmaske:empty) #maskengriff {
+  display: none;
+}
+
 #arbeitsbereich:has(#detailmaske:empty) #arbeitsliste {
   flex-basis: 100%;
   border-right-color: transparent;
@@ -2503,10 +2585,59 @@ body.navigation-schmal #navigation button:focus-visible {
    bleibt die zweite und letzte sichtbare Zeile; ausgeklappt ist sie die
    letzte nach allem anderen. Beides ist "unten, mittig" - ein und
    dieselbe Position, keine zwei Regeln fuer zwei Zustaende. */
-.kopftafel-griffleiste {
+/* .kopftafel-griffleiste ist am 30.08.2026 entfallen: eine eigene, mittig
+   gesetzte Zeile für einen einzigen Knopf. Er sitzt jetzt in dieser Gruppe
+   rechts in der Titelzeile.
+   margin-left:auto schiebt sie an den rechten Rand, ohne dass die Texte
+   links dafür eine Breite bekommen müssten - ein space-between hätte bei
+   fehlender Steuerung (Tafeln ohne Zeitwahl gibt es) nichts zu verteilen
+   und den Titel trotzdem gestreckt. */
+/* Titel und sein Umschalter in einer Zeile. Der Knopf klappt GENAU diese
+   Tafel ein - am rechten Rand der Kopfzeile stand er auf einem breiten
+   Bildschirm fast 1900px von seiner Überschrift entfernt und wurde
+   übersehen. Nähe ist hier die ganze Erklärung: was nebeneinander steht,
+   gehört zusammen. */
+.kopftafel-titelzeile {
   display: flex;
-  justify-content: center;
-  padding-top: var(--raum-2);
+  align-items: center;
+  gap: var(--raum-3);
+}
+
+/* Bei Enge bricht der TITEL um, nicht der Knopf auf eine eigene Zeile.
+   Mit flex-wrap an der Zeile rutschte der Umschalter bei 430px unter die
+   Überschrift und der Kopf wuchs auf 294px - mehr als vor dem Umbau.
+   min-width:0 hebt das voreingestellte Mindestmass auto des Flex-Elements
+   auf; erst dann darf der Titel schmaler werden als sein längstes Wort
+   verlangt und stattdessen umbrechen. Der Knopf behält seine Breite
+   (flex-shrink:0) - ein zusammengedrücktes Bedienelement wäre der
+   schlechtere Tausch. */
+.kopftafel-titelzeile .kopftafel-titel {
+  min-width: 0;
+}
+
+.kopftafel-titelzeile .kopftafel-umschalter {
+  flex: 0 0 auto;
+}
+
+.kopftafel-steuerung {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--raum-2);
+  margin-left: auto;
+}
+
+/* Schmaler Bereich: die Gruppe nimmt die ganze Zeile und richtet sich
+   links aus. Mit margin-left:auto blieb sie auch nach dem Umbruch
+   rechtsbündig und damit schmal - die fünf Zeitknöpfe brachen dann
+   einzeln um, und der Kopf wuchs auf 275px (bei 430px Breite gemessen),
+   also über den Zustand VOR diesem Umbau hinaus. Über die volle Zeile
+   verteilt passen sie in zwei Reihen. */
+@media (max-width: 720px) {
+  .kopftafel-steuerung {
+    margin-left: 0;
+    flex: 1 0 100%;
+  }
 }
 
 /* Ein <button> darf laut Spezifikation kein <h2> enthalten - deshalb
@@ -2676,6 +2807,14 @@ body.navigation-schmal #navigation button:focus-visible {
   display: flex;
   align-items: center;
   gap: var(--raum-4);
+  /* Bedienelemente nach rechts (30.08.2026). Sie standen auf zwei eigenen
+     Zeilen - der Umschalter sogar mittig unter der ganzen Tafel -, während
+     rechts neben Titel und Bezugszeile Platz ungenutzt blieb.
+     flex-wrap: bei schmalem Bereich rutscht die Steuerung wieder unter die
+     Texte, statt sie zusammenzuquetschen. align-items:center bleibt: eine
+     Zeile mit einem hohen Titel links und Knöpfen rechts liest sich auf
+     gemeinsamer Mittelachse ruhiger als auf gemeinsamer Grundlinie. */
+  flex-wrap: wrap;
   /* WAR 8px (vierter Anlauf gegen "zu wenig Abstaende", siehe der lange
      Kommentar bei .kopftafel oben) - der Abstand zwischen Titel/Bezugs-
      zeile und der ersten Tabellenzeile darunter. */
@@ -3859,6 +3998,10 @@ body.navigation-schmal #navigation button:focus-visible {
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: var(--raum-2);
+  /* Kopfraum für die Beschriftung der höchsten Säule: sie sitzt auf deren
+     Spitze und ragt um ihre eigene Höhe darüber hinaus. Ohne diesen
+     Abstand stiesse sie in die Titelzeile - im Browser gesehen. */
+  padding-top: var(--raum-4);
   margin: var(--raum-1) 0 var(--raum-4);
 }
 
@@ -3876,7 +4019,78 @@ body.navigation-schmal #navigation button:focus-visible {
 
 /* --rot: derselbe Akzent wie die Sparkline-Markierung und die aktive
    Navigation - "hier hinsehen" (der Spitzentag), nicht "schlecht". */
-.saeulengrafik-saeule-markiert {
+/* ===== DIESELBE FARBTREPPE WIE DER KALENDER (30.08.2026) =====
+   Auftrag, wörtlich: "die Farblogik des Kalenders sollten wir auch für die
+   Grafik übernehmen, also die Sättigung, denn sonst widerspricht sich die
+   Semantik." Genau dieselben fünf Werte wie .monatskalender-stufe-*, damit
+   dunkler in der ganzen Ansicht dasselbe heisst: ein höherer Anteil am
+   Monatshöchstwert. Bewusst dieselben Zahlen und nicht "ungefähr die
+   gleichen" - zwei Treppen, die sich um einen Ton unterscheiden, sähen wie
+   ein Fehler aus.
+   Stufe 0 ist im Kalender die leere Fläche; als Säule wäre sie unsichtbar,
+   deshalb hier der hellste Ton der Treppe - eine Säule der Höhe null ist
+   ohnehin schon nichts, sie braucht keine zweite Verneinung. */
+.saeulengrafik-saeule-stufe-0 { fill: #8c95a8; }
+.saeulengrafik-saeule-stufe-1 { fill: #8c95a8; }
+.saeulengrafik-saeule-stufe-2 { fill: #657089; }
+.saeulengrafik-saeule-stufe-3 { fill: #3d4b6b; }
+.saeulengrafik-saeule-stufe-4 { fill: var(--marine); }
+
+/* Die rote Kontur um den Höchstwert ist am 30.08.2026 wieder entfallen:
+   sie hob eine Säule hervor, ohne zu sagen WARUM, und störte neben der
+   ruhigen Sättigungstreppe. An ihre Stelle sind Beschriftungen an den
+   beiden Enden der Reihe getreten (.saeulengrafik-marke weiter oben) -
+   die nennen ihren Wert und erklären sich damit selbst.
+
+   Die Beschriftungsschicht liegt im selben Rasterfach wie das <svg> und
+   ist in Prozent positioniert; sie skaliert also mit, ohne wie SVG-Text
+   von preserveAspectRatio="none" waagerecht verzerrt zu werden.
+   pointer-events:none, damit sie das Hinweisfenster der Säule darunter
+   nicht abfängt: wer auf eine beschriftete Säule zeigt, will dieselbe
+   Auskunft wie überall. */
+.saeulengrafik-marken {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  pointer-events: none;
+}
+
+.saeulengrafik-block-ohne-achse .saeulengrafik-marken {
+  grid-column: 1;
+}
+
+/* margin-bottom hebt die Marke von der Säulenspitze ab; ohne ihn säße sie
+   auf der Kante. Ziffern gleicher Breite, damit zwei Marken nicht
+   gegeneinander zittern. */
+.saeulengrafik-marke {
+  position: absolute;
+  transform: translateX(-50%);
+  margin-bottom: var(--raum-1);
+  white-space: nowrap;
+  font-size: var(--grad-1);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-leise);
+  /* Eigene Fläche unter der Schrift. Die Marke am MINIMUM sitzt tief - und
+     dort stehen ringsum die hohen, dunklen Säulen. Ohne Unterlegung stünde
+     graue Schrift auf --marine und wäre unlesbar (im Browser gesehen).
+     Die Fläche ist dieselbe wie der Grund der Maske, die Marke wirkt
+     dadurch wie ein Fenster in die Grafik, nicht wie ein Aufkleber. */
+  background: var(--flaeche);
+  padding: 0 var(--raum-0);
+  border-radius: var(--rund-1);
+}
+
+/* An den Enden der Reihe an der eigenen Kante ausrichten statt mittig -
+   sonst liefe die Marke über den Rand der Grafik hinaus. */
+.saeulengrafik-marke-links  { transform: translateX(0); }
+.saeulengrafik-marke-rechts { transform: translateX(-100%); }
+
+/* Die rote FUELLUNG gilt nur noch fuer Saeulen OHNE Stufenklasse - also
+   fuer Aufrufer, die keine Farbtreppe mitgeben. Ohne dieses :not() gewinnt
+   sie ueber die Treppe (sie steht spaeter und ist gleich spezifisch), und
+   die hoechste Saeule verloere genau den Ton, der sie als hoechste
+   ausweist. Im Browser gemessen: fill war rgb(240, 0, 56) statt --marine. */
+.saeulengrafik-saeule-markiert:not([class*="saeulengrafik-saeule-stufe-"]) {
   fill: var(--rot);
 }
 
@@ -3896,6 +4110,18 @@ body.navigation-schmal #navigation button:focus-visible {
   color: var(--text-leise);
   font-variant-numeric: tabular-nums;
   padding: var(--raum-0) 0;
+}
+
+/* Ohne linke Achsenspalte laeuft die Grafik ueber die volle Breite und
+   schliesst bündig mit dem Kalender darüber ab. Die Skala steht dann in
+   der Titelzeile (siehe .monatsdrilldown-grafik-skala). */
+.saeulengrafik-block-ohne-achse {
+  grid-template-columns: 1fr;
+}
+
+.saeulengrafik-block-ohne-achse .saeulengrafik,
+.saeulengrafik-block-ohne-achse .saeulengrafik-x-achse {
+  grid-column: 1;
 }
 
 .saeulengrafik-x-achse {
@@ -3927,26 +4153,85 @@ body.navigation-schmal #navigation button:focus-visible {
   margin: 0 0 var(--raum-2);
 }
 
+/* Die Trennlinien entstehen als LUECKE, durch die der Grund des
+   Behaelters scheint - nicht als Rand je Kachel (30.08.2026).
+   Mit vier Kacheln war die alte Rechnerei richtig: nth-child(2n) ist die
+   rechte Spalte, nth-last-child(-n+2) die letzte Zeile. Mit fuenf stimmt
+   der zweite Teil nicht mehr - die letzte Zeile ist dann EINE Kachel, und
+   die Regel naehme auch der vierten ihre untere Linie, mitten im Raster.
+   Ein 1px-Abstand auf gefaerbtem Grund braucht diese Rechnung gar nicht
+   erst: er trifft jede Fuge und keinen Aussenrand, bei jeder Anzahl. */
+/* Der Radtypfilter über dem Kalender. Beschriftung und Auswahlfeld in
+   einer Zeile: der Filter gehört zur Kalenderansicht darunter, nicht zur
+   Überschrift darüber - deshalb der grössere Abstand nach oben als nach
+   unten. */
+/* Luft zwischen Kalender und Umsatzdiagramm (Auftrag: "achte auch
+   genügend Weißabstand zwischen den beiden Grafiken"). Zwei Grafiken, die
+   dicht aufeinander sitzen, liest das Auge als eine — und hier zeigen sie
+   ausdrücklich VERSCHIEDENE Größen: der Kalender die Fahrten, das
+   Diagramm den Umsatz. Der Abstand ist die Ansage, dass hier etwas
+   Neues beginnt; --raum-6 ist der grösste Wert der Skala und die einzige
+   Stufe, die gegen die Legende darüber noch als Trennung wirkt. */
+.monatsdrilldown-grafik-titel {
+  /* Das Diagramm folgt jetzt unmittelbar auf den Radtypfilter, nicht mehr
+     auf den Kalender - hier oben genuegt der normale Abstand. Die grosse
+     Luecke, die die beiden Grafiken trennt, sitzt seit dem 30.08.2026 an
+     .monatsdrilldown-kalenderplatz weiter unten. */
+  margin: var(--raum-4) 0 var(--raum-2);
+  /* Gleiche Stufe und gleicher Ton wie die Beschriftung des Kalenders
+     (.monatskalender caption): die beiden sind Geschwister und sollen sich
+     nicht gegenseitig überstimmen. Nur der Schriftschnitt ist kräftiger -
+     das Diagramm hat, anders als der Kalender, keine Überschrift über sich,
+     die sein Thema schon nennt. */
+  font-size: var(--grad-2);
+  font-weight: 600;
+  color: var(--text-leise);
+}
+
+/* Der Kalender steht als LETZTES, weil die Tagesansicht ans Ende der
+   Maske gehängt wird (siehe monatsdrilldownEinfuegen in auswertungen.js).
+   Zwischen der Kennzahlenmatrix darüber und ihm liegt der grosse Abstand,
+   der vorher das Diagramm vom Kalender trennte: zwei Darstellungen
+   verschiedener Grössen dicht aufeinander liest das Auge als eine. */
+.monatsdrilldown-kalenderplatz {
+  margin-top: calc(var(--raum-6) * 2);
+}
+
+.monatsdrilldown-filter {
+  display: flex;
+  align-items: center;
+  gap: var(--raum-2);
+  margin: var(--raum-4) 0 var(--raum-3);
+}
+
+.monatsdrilldown-filter-titel {
+  font-size: var(--grad-2);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
 .monatsdrilldown-kacheln {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 1px;
   border: 1px solid var(--linie);
-  background: var(--grund);
+  background: var(--linie);
   margin-bottom: var(--raum-4);
 }
 
 .monatsdrilldown-kacheln .uebersichtskachel {
-  border-right: 1px solid var(--linie);
-  border-bottom: 1px solid var(--linie);
+  /* Eigene Flaeche, damit die 1px-Luecke daneben als Linie sichtbar wird. */
+  background: var(--grund);
   padding: var(--raum-3) var(--raum-4);
 }
 
-.monatsdrilldown-kacheln .uebersichtskachel:nth-child(2n) {
-  border-right: none;
-}
-
-.monatsdrilldown-kacheln .uebersichtskachel:nth-last-child(-n+2) {
-  border-bottom: none;
+/* Eine letzte Kachel, die in der linken Spalte allein bliebe (ungerade
+   Anzahl), laeuft ueber beide - sonst stuende eine leere Zelle daneben,
+   die wie eine fehlende Kennzahl aussaehe. */
+.monatsdrilldown-kacheln .uebersichtskachel:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 .monatsdrilldown-fehler {
@@ -4912,6 +5197,199 @@ body.navigation-schmal #navigation button:focus-visible {
    wenn tatsaechlich ein Spaltenfilter oder eine Gruppierung aktiv ist
    (siehe spaltenkopfHinweis() in rahmen.js), sonst waere die Zeile
    Zierrat. */
+/* ===== DAS KOMPAKTE SPALTENMENÜ (30.08.2026) =====
+   Auftrag, wörtlich: "können wir bei der Tabelle mit den Einzelübersichten
+   auch die gleiche Funktionalität einbauen wie bei der linken Haupttabelle.
+   Also auch Sortieren, Gruppieren, Filtern."
+
+   Warum ein Menü statt derselben Leiste: die drei Knöpfe der Arbeitsliste
+   brauchen mit Titel rund 137px je Spalte. Die Detailtabellen stehen in der
+   Maske und tragen sechs Spalten - das passt dort nicht nebeneinander. Ein
+   Knopf je Spalte passt immer, unabhängig davon, wie breit der Bereich
+   gerade ist.
+
+   Das Fenster selbst ist dasselbe (.spaltenkopf-filterfenster, siehe oben):
+   gleiche Ausrichtung am Rand, gleicher Schatten, gleiches Zurücknehmen der
+   Versalien. Nur der Inhalt ist länger. */
+.spaltenkopf-kompakt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--raum-1);
+}
+
+.spaltenkopf-menueknopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--ziel);
+  min-height: var(--ziel);
+  padding: var(--raum-1) var(--raum-2);
+  border: 1px solid var(--text-leise);
+  border-radius: var(--rund-1);
+  background: var(--flaeche);
+  color: var(--text-leise);
+}
+
+.spaltenkopf-menueknopf:hover {
+  background: var(--flaeche-rahmen);
+  border-color: var(--marine);
+  color: var(--marine);
+}
+
+/* Derselbe Hinweis wie beim aktiven Filterknopf: der Knopf verrät, DASS
+   diese Spalte etwas einschränkt, ohne dass man ihn öffnen muss. Er gilt
+   hier für alle drei Fähigkeiten zusammen - Sortierung, Gruppierung und
+   Filter stecken ja im selben Menü. */
+.spaltenkopf-menueknopf-aktiv {
+  border-color: var(--rot);
+  color: var(--rot);
+}
+
+.spaltenkopf-menuesymbol {
+  font-size: var(--grad-4);
+  line-height: 1;
+}
+
+/* Abschnittsüberschrift im Menü ("Sortieren", "Gruppieren", "Filtern").
+   Leiser als die Einträge darunter und mit Abstand nach oben - sie ordnet,
+   sie ist kein Bedienelement. Der erste Abschnitt bekommt keinen Abstand,
+   sonst klaffte oben im Fenster eine Lücke. */
+.spaltenkopf-menue-titel {
+  margin: var(--raum-2) 0 0;
+  font-size: var(--grad-2);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-leise);
+}
+
+.spaltenkopf-menue-titel:first-child {
+  margin-top: 0;
+}
+
+.spaltenkopf-menue-eintrag {
+  display: block;
+  width: 100%;
+  min-height: var(--ziel);
+  padding: var(--raum-1) var(--raum-2);
+  border: 1px solid transparent;
+  border-radius: var(--rund-1);
+  background: none;
+  text-align: left;
+  color: var(--text);
+}
+
+.spaltenkopf-menue-eintrag:hover {
+  background: var(--flaeche-rahmen);
+}
+
+.spaltenkopf-menue-eintrag-aktiv {
+  border-color: var(--marine);
+  background: var(--flaeche-rahmen);
+  color: var(--marine);
+  font-weight: 600;
+}
+
+/* Die Herkunftszeile über der Rädertabelle - früher deren <caption>.
+   Leise wie die übrigen Methodennoten dieser Oberfläche: sie erklärt die
+   Zahlen, sie ist keine Überschrift. */
+.monatsdrilldown-herkunft {
+  margin: 0 0 var(--raum-2);
+  font-size: var(--grad-2);
+  color: var(--text-leise);
+}
+
+/* Die Detailtabelle trägt dieselben sechs Spalten wie die Arbeitsliste,
+   aber in einem deutlich schmaleren Bereich. Im Browser nachgemessen: mit
+   den Kopfmaßen der Arbeitsliste wird sie 839px breit und läuft über.
+   Drei Ursachen, alle drei hier zurückgenommen - und zwar NUR im
+   Kompaktmodus, die Arbeitsliste bleibt unberührt:
+
+   1. Versalien mit Sperrung machen "Rahmennummer" rund ein Drittel breiter,
+      ohne ein Wort mehr zu sagen.
+   2. Das Zellenpolster ist auf Zeilenhöhe ausgelegt, nicht auf Enge.
+   3. Der Menüknopf hält 44px Mindestmaß (WCAG 2.5.5). Das bleibt als
+      TREFFERFLÄCHE erhalten - über ::after, dieselbe Machart wie beim
+      Klappgriff der Navigation -, nur die sichtbare Fläche schrumpft. Eine
+      Trefferfläche zu verkleinern wäre der falsche Weg; sie unsichtbar
+      über den Rand hinauswachsen zu lassen kostet keine Spaltenbreite. */
+.arbeitstabelle-kompakt th,
+.arbeitstabelle-kompakt td {
+  padding: var(--raum-2);
+}
+
+/* Auch das Randpolster der ersten und letzten Spalte (--raum-5): in der
+   Arbeitsliste richtet es die Tabelle an der Bereichskante aus, in der
+   verschachtelten Detailtabelle addiert es sich nur zum Innenabstand der
+   Maske, die ohnehin schon --raum-5 trägt. Zwei Selektoren tief wie das
+   Vorbild, sonst gewinnt dessen höhere Spezifität. */
+.arbeitstabelle-kompakt th:first-child,
+.arbeitstabelle-kompakt td:first-child {
+  padding-left: var(--raum-2);
+}
+
+.arbeitstabelle-kompakt th:last-child,
+.arbeitstabelle-kompakt td:last-child {
+  padding-right: var(--raum-2);
+}
+
+.arbeitstabelle-kompakt thead th {
+  text-transform: none;
+  letter-spacing: normal;
+  /* ALLE MENÜKNÖPFE AUF EINER FLUCHT. Der Knopf steht jetzt ZUERST in
+     der Kopfzelle (siehe .spaltenkopf-kompakt unten), also richtet sich
+     die Flucht nach OBEN aus - bei vertical-align:bottom stünden die
+     Knöpfe verschieden hoch, sobald ein Titel zwei Zeilen braucht. */
+  vertical-align: top;
+}
+
+/* Umbruch erlaubt: ohne ihn ist die Spalte mindestens so breit wie Titel
+   UND Knopf nebeneinander - im Browser gemessen 661px für die sechs
+   Spalten, gegenüber 612px, mit denen die frühere handgebaute Tabelle
+   auskam. Mit Umbruch rutscht der Knopf bei Enge unter den Titel; die
+   Spalte braucht dann nur noch das Breitere von beiden, die Kopfzeile
+   wird dafür eine Zeile höher. Das ist der bessere Tausch: Höhe hat die
+   Maske, Breite nicht. */
+/* KNOPF UEBER TITEL, IMMER (30.08.2026).
+   Drei Anforderungen treffen hier zusammen, und nur diese Anordnung
+   erfuellt alle drei:
+     - Der Knopf gehoert sichtbar zu SEINER Spalte (Auftrag: "das Control
+       immer vor der dazugehoerenden Beschriftung").
+     - Alle Knoepfe stehen auf einer Flucht (frueherer Auftrag).
+     - Die Spalte bleibt schmal genug fuer den Detailbereich.
+   Nebeneinander waere die Spalte so breit wie Knopf UND Titel zusammen;
+   ein Umbruch NUR bei Enge liess den Knopf mal neben, mal ueber dem Titel
+   stehen - dann steht er eben nicht mehr auf einer Flucht. Fest
+   uebereinander loest beides: die Kopfzeile wird eine Zeile hoeher, und
+   Hoehe hat die Maske, Breite nicht. */
+.arbeitstabelle-kompakt .spaltenkopf-kompakt {
+  flex-direction: column;
+  align-items: flex-start;
+  row-gap: var(--raum-1);
+}
+
+.arbeitstabelle-kompakt .spaltenkopf-menueknopf {
+  position: relative;
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0 var(--raum-1);
+}
+
+.arbeitstabelle-kompakt .spaltenkopf-menueknopf::after {
+  content: "";
+  position: absolute;
+  inset: -9px;
+}
+
+/* Letzte Rettungsleine, kein Entwurfsziel: sollte eine Detailtabelle doch
+   einmal mehr Spalten tragen, als der Bereich fasst, scrollt SIE - nicht
+   die ganze Maske. Ohne das schöbe eine zu breite Tabelle das Layout
+   auseinander. */
+.arbeitstabelle-kompakt-behaelter {
+  overflow-x: auto;
+}
+
 .spaltenkopf-hinweis {
   flex: 0 0 auto;
   display: flex;
@@ -5132,7 +5610,7 @@ body.navigation-schmal #navigation button:focus-visible {
    das die ganze Seite seitlich auf, jetzt scrollt nur die Tabelle
    innerhalb der Maske. */
 #detailmaske {
-  flex: 1 1 45%;
+  flex: 1 1 var(--masken-anteil, 45%);
   overflow-y: auto;
   overflow-x: auto;
   /* Rang 2 der Gliederungsregel: hier stehen Daten, also weiss wie die
@@ -5146,6 +5624,24 @@ body.navigation-schmal #navigation button:focus-visible {
   background: var(--flaeche);
   padding: var(--raum-5);
   transition: flex-basis 160ms ease, padding 160ms ease;
+  /* ===== DIE MASKE LIEGT OBEN (30.08.2026) =====
+     Auftrag: "dass der Detailbereich visuell über dem Hauptbereich liegt."
+     Sie VERSCHIEBT die Liste weiterhin, statt sie zu verdecken:
+     .arbeitstabelle trägt width:100 % mit automatischem Layout, fliesst
+     also in ihre Spalte hinein. Als Overlay lägen die rechten Spalten
+     nicht enger, sondern unerreichbar hinter der Maske - und die
+     Arbeitsschleife hier ist gerade "Zeile wählen, Detail lesen, nächste
+     Zeile wählen".
+     Was bleibt, ist der RANG: z-index und ein seitlicher Schatten lassen
+     die Liste sichtbar unter der Kante durchlaufen. position:relative ist
+     dafür Pflicht - ohne eigene Stapelposition greift z-index nicht.
+     KEIN abgesenkter Grund für die Liste daneben: die Gliederungsregel
+     dieser Oberfläche gibt Datenflächen Weiss. Den Rang über eine zweite
+     Grundfarbe zu erzählen hiesse, diese Regel für einen rein optischen
+     Gewinn zu brechen. */
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--schatten-seite);
 }
 
 /* Leer -> auf 0 kollabieren, statt als 45% breiter, komplett unbenutzter
@@ -5158,6 +5654,9 @@ body.navigation-schmal #navigation button:focus-visible {
   flex-basis: 0;
   padding: 0;
   overflow: hidden;
+  /* Sonst bliebe der Schatten als Streifen am rechten Rand stehen, ohne
+     dass etwas da waere, das ihn wirft. */
+  box-shadow: none;
 }
 
 /* Titel UND Schliessen-Schaltflaeche nebeneinander (Gestaltungsauftrag
