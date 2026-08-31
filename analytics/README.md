@@ -14,7 +14,8 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 | `schulferien.csv` | **echt, Termine typisiert** | Bayerische Schulferien; die Tagesgrenzen schwanken jährlich, hier stehen die typischen Zeiträume (Spalte `genauigkeit`) |
 | `semesterzeiten.csv` | **echt, Termine typisiert** | Vorlesungszeiten der JMU Würzburg, ebenso typisiert |
 | `veranstaltungen.csv` | **echt, Termine typisiert** | Neun real wiederkehrende Würzburger Veranstaltungsreihen (Kiliani, Africa Festival, Weindorf, Stramu, Hafensommer, Weinparade, Weihnachtsmarkt, Frühlingsfest, Herbstfest) |
-| `tarif.csv`, `nutzungspreis.csv` | **echt** | Struktur *und* Werte aus dem VeloCity-Preismodell übernommen (`db/aufbau/0008_referenzdaten.sql`) |
+| `nutzungspreis.csv` | **echt** | Startgebühr, Minutenpreis und Tagesdeckel je Radtyp aus dem VeloCity-Preismodell (`db/aufbau/0008_referenzdaten.sql`) — deckt sich mit den Tarifkarten der Website: 30 Minuten kosten 3,10 € (City) bzw. 8,50 € (E-Bike) |
+| `tarif.csv` | **echt, eine Abweichung** | Vier Tarife mit Freiminuten und Rabatt. **Ohne Monatspreis** — siehe unten |
 | `station.csv` | erfunden | 10 Stationen an realen Würzburger Orten, Anzahl/Lage/Kapazität nicht erhoben |
 | `fahrrad.csv` | erfunden | 240 Räder, Typen CITY/EBIKE/CARGO wie im echten Schema, mit Ausmusterungen |
 | `kunde.csv` | erfunden | 3.200 Kundinnen und Kunden mit Anmeldedatum, Geburtsjahr, Stadtteil, Tarif |
@@ -25,6 +26,28 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 **Die erfundenen Daten sind für die Lehre bewusst verstärkt.** Die Muster, die die
 sechs Verfahren finden sollen, sind absichtlich eingebaut. Das gehört in der
 Veranstaltung offen gesagt — es ist ein Lehrdatensatz, keine Wirklichkeitsbeschreibung.
+
+## Keine Grundgebühr — und warum das hier ausdrücklich steht
+
+VeloCity erhebt **keinen monatlichen Beitrag**. Die Startseite führt „0 Euro
+Anmeldegebühr" als eine ihrer vier Kennzahlen, und die Preisauskunft nennt ausschließlich
+*Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis*.
+
+Die Referenzdaten der Datenbank sehen für den Tarif `PREMIUM` dagegen **9,90 € im Monat**
+vor, mit der Voraussetzung „Kostenpflichtiges Abo" (`db/aufbau/0008_referenzdaten.sql`,
+Zeile 148). **Das widerspricht dem Kundenversprechen** — nicht erst in diesem Datensatz,
+sondern schon dort.
+
+Dieser Datensatz folgt dem Versprechen: Es gibt keine Spalte `monatspreis`, und die vier
+Tarife unterscheiden sich allein durch Freiminuten und Rabatt. Ein Lehrdatensatz, der der
+eigenen Fallstudie widerspricht, macht die Gesamtgeschichte unstimmig.
+
+**Der Widerspruch in den Referenzdaten bleibt bestehen und gehört dort geklärt.**
+
+Notebook 3 greift das Thema auf — aber als *Befund*, nicht als erfundene Zahl: Es rechnet
+aus, was die Freiminuten tatsächlich kosten (44.212 € Listenwert im letzten Jahr, 52 % des
+sonst fälligen Betrags) und stellt einen ausgleichenden Beitrag ausdrücklich als
+**Hypothese** daneben, nicht als Datenlage.
 
 ## Was NICHT in den Daten steht, obwohl es sie erzeugt hat
 

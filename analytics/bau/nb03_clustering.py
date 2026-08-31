@@ -131,9 +131,12 @@ CODE('''
 werktags = echte[~echte.ist_frei]
 tagesgang = werktags.pivot_table(index="start_station_id", columns="stunde",
                                  values="ausleihe_id", aggfunc="count").fillna(0)
-# Nachts wird nicht gefahren - die Stunden fehlen deshalb ganz. Wir fuellen sie
-# ausdruecklich mit Null auf: ein Merkmalsvektor muss fuer jede Station dieselbe
-# Laenge haben, und "keine Fahrten um 3 Uhr" ist eine Information, kein Loch.
+# Zwischen 23 und 5 Uhr gibt es in den Daten keine Fahrt, die Stunden fehlen
+# deshalb ganz. Das ist eine Aussage ueber die NACHFRAGE, nicht ueber die
+# Verfuegbarkeit - ausleihen kann man rund um die Uhr, es tut nur niemand.
+# Wir fuellen die Stunden ausdruecklich mit Null auf: ein Merkmalsvektor muss
+# fuer jede Station dieselbe Laenge haben, und "keine Fahrten um 3 Uhr" ist
+# eine Information, kein Loch.
 tagesgang = tagesgang.reindex(columns=range(24), fill_value=0)
 tagesgang = tagesgang.div(tagesgang.sum(axis=1), axis=0)      # je Station auf 1 normiert
 print(f"Stunden mit Fahrten: {int((tagesgang.sum() > 0).sum())} von 24")
@@ -472,62 +475,118 @@ Sehen Sie sich die Spalten `fahrten_jahr` und `umsatz_jahr` nebeneinander an:
 im Jahr — und keine zehn Euro Entgelt. Das Segment mit halb so vielen Fahrten bringt das
 **Fünf- bis Sechsfache**.
 
-Ein Blick auf die Tarifverteilung erklärt es: Die Vielfahrer sitzen fast alle in **OEPNV**
-oder **PREMIUM** — Tarifen mit 600 bzw. 1.000 Freiminuten im Monat. Sie fahren viel und
-zahlen für die einzelne Fahrt fast nichts. Die Umsatzträger sind dagegen zu 98 %
-**BASIS**-Kunden: kein Abo, keine Freiminuten, jede Minute wird berechnet.
+Ein Blick auf die Tarifverteilung erklärt es: Die Vielfahrer sitzen fast alle im
+**Nahverkehrs-** oder **Vielfahrertarif** — mit 600 bzw. 1.000 Freiminuten im Monat. Sie
+fahren viel und zahlen für die einzelne Fahrt fast nichts. Die Umsatzträger sind dagegen
+zu 98 % **Basistarif**: keine Freiminuten, jede Minute wird berechnet.
 
-### 5.B.2 Warum unsere Monetary-Größe unvollständig ist
+### 5.B.2 Das ist kein Messfehler — das ist ein Preisproblem
 
-Und damit stehen wir vor einem Fehler in **unserer eigenen Merkmalsdefinition** — der
-erst hier auffällt, in der Evaluation:
+An dieser Stelle liegt die Versuchung nahe, nach einer fehlenden Umsatzkomponente zu
+suchen: Zahlen die Vielfahrer nicht vielleicht einen Monatsbeitrag, den wir übersehen
+haben?
 
-> Wir haben als „Monetary“ das **Nutzungsentgelt** genommen. Bei einem Abo-Modell ist das
-> nur die halbe Miete: Ein PREMIUM-Kunde zahlt 9,90 € im Monat, ob er fährt oder nicht.
+**Nein.** VeloCity erhebt **keine Grundgebühr** — das ist Teil des Produktversprechens und
+steht so auf der Startseite („0 Euro Anmeldegebühr“); die Preisauskunft nennt
+ausschließlich *Startgebühr plus Minutenpreis, gedeckelt auf einen Tageshöchstpreis*. Das
+Nutzungsentgelt **ist** der gesamte Umsatz.
 
-Rechnen wir das nach.
+Damit ist der Befund kein Fehler in unserer Merkmalsdefinition, sondern eine Aussage über
+das Geschäft:
+
+> **Die aktivsten Kundinnen und Kunden bringen am wenigsten ein — und niemand gleicht das
+> aus.**
+
+Rechnen wir aus, um wieviel es geht. In den Daten steht neben dem gezahlten Entgelt auch,
+wie viele Minuten **berechnet** wurden. Die Differenz zur Fahrtdauer sind die verbrauchten
+Freiminuten — und die haben einen Listenwert.
 """),
 
-CODE('''
-monatspreis = tarife.set_index("tarif_code").monatspreis_eur
-rfm["grundgebuehr_jahr"] = rfm.tarif_code.map(monatspreis) * 12
-rfm["umsatz_gesamt"] = rfm.umsatz + rfm.grundgebuehr_jahr
+CODE("""
+raeder = pd.read_csv(BASIS + "fahrrad.csv")
+preise = pd.read_csv(BASIS + "nutzungspreis.csv").set_index("typ_code")
+
+fenster2 = fenster.merge(raeder[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
+fenster2["dauer_min"] = (fenster2.endzeit - fenster2.startzeit).dt.total_seconds() / 60
+fenster2["freiminuten"] = (fenster2.dauer_min - fenster2.berechnete_minuten).clip(lower=0)
+fenster2["verschenkt_eur"] = (fenster2.freiminuten
+                              * fenster2.typ_code.map(preise.preis_pro_minute_eur))
+
+je_kunde = fenster2.groupby("kunde_id").verschenkt_eur.sum()
+rfm["verschenkt"] = je_kunde.reindex(rfm.index).fillna(0)
 
 vergleich = rfm.groupby("cluster").agg(
     kunden=("umsatz", "size"),
     fahrten_jahr=("frequenz", "mean"),
-    nutzungsentgelt=("umsatz", "mean"),
-    grundgebuehr=("grundgebuehr_jahr", "mean"),
-    umsatz_gesamt=("umsatz_gesamt", "mean"),
+    gezahlt=("umsatz", "mean"),
+    verschenkt=("verschenkt", "mean"),
 ).round(2)
-vergleich["Rang nach Entgelt"] = vergleich.nutzungsentgelt.rank(ascending=False).astype(int)
-vergleich["Rang nach Gesamt"] = vergleich.umsatz_gesamt.rank(ascending=False).astype(int)
+vergleich["waere_gewesen"] = (vergleich.gezahlt + vergleich.verschenkt).round(2)
+vergleich["Anteil verschenkt"] = (vergleich.verschenkt / vergleich.waere_gewesen).round(3)
 print(vergleich.to_string())
+
+gesamt_verschenkt = rfm.verschenkt.sum()
+gesamt_gezahlt = rfm.umsatz.sum()
+betrag = f"{gesamt_verschenkt:,.0f}".replace(",", ".")
+anteil = gesamt_verschenkt / (gesamt_gezahlt + gesamt_verschenkt)
+print()
+print(f"Im letzten Jahr über Freiminuten abgegeben: {betrag} EUR Listenwert")
+print(f"Das sind {anteil:.0%} dessen, was ohne Freiminuten fällig gewesen wäre.")
 
 plt.figure(figsize=(9, 4))
 x = np.arange(len(vergleich))
-plt.bar(x - 0.2, vergleich.nutzungsentgelt, 0.4, label="Nutzungsentgelt", color="#8c95a8")
-plt.bar(x + 0.2, vergleich.grundgebuehr, 0.4, label="Grundgebühr", color="#e00034")
+plt.bar(x - 0.2, vergleich.gezahlt, 0.4, label="tatsächlich gezahlt", color="#3d4b6b")
+plt.bar(x + 0.2, vergleich.verschenkt, 0.4, label="über Freiminuten abgegeben", color="#e00034")
 plt.xticks(x, [f"Cluster {c}" for c in vergleich.index])
 plt.ylabel("EUR je Kunde und Jahr"); plt.legend()
-plt.title("Woher der Umsatz je Segment wirklich kommt")
+plt.title("Was jedes Segment zahlt — und was es geschenkt bekommt")
 plt.tight_layout(); plt.show()
-'''),
+"""),
 
 MD("""
-**Die Rangfolge dreht sich um.** Wer nur das Nutzungsentgelt betrachtet, hält die
-Abo-Kunden für die unwichtigsten — und würde sie im Zweifel abwerben lassen. Mit der
-Grundgebühr sind sie die wertvollsten.
+**Jetzt ist das Bild vollständig, ohne dass wir eine Zahl erfinden mussten.** Das Segment
+mit den meisten Fahrten zahlt am wenigsten *und* bekommt am meisten geschenkt. Beides
+zusammen erklärt den Befund vollständig.
 
-Das ist keine Spitzfindigkeit, sondern ein **teurer Fehler in Serie**: Genau so entstehen
-Kampagnen, die die besten Kunden vergraulen.
+> **Für CRISP-DM ist dieser Moment lehrbuchreif** — allerdings anders, als man zunächst
+> vermutet. Die Evaluation deckt **keinen** Fehler im Modell und keinen in der
+> Merkmalsdefinition auf. Sie deckt eine **Geschäftsfrage** auf, die vor der Analyse
+> niemand gestellt hatte: *Sind die Freiminuten dort richtig eingesetzt, wo sie liegen?*
+>
+> Der Pfeil führt trotzdem zurück nach Phase 1 — nicht um einen Fehler zu beheben,
+> sondern weil die Analyse eine bessere Frage hervorgebracht hat als die, mit der sie
+> begonnen hat. Das ist der häufigere und wertvollere Fall.
 
-> **Für CRISP-DM ist dieser Moment lehrbuchreif.** Die Evaluation deckt keinen Fehler im
-> *Modell* auf, sondern in der **Merkmalsdefinition** aus Phase 3 — und deren Ursache
-> liegt in Phase 1, wo „Umsatz“ nicht sauber definiert wurde. Der Pfeil führt also nicht
-> nur zurück, sondern gleich zwei Phasen weit.
+### 5.B.3 Eine Idee für die Geschäftsführung — ausdrücklich als Vorschlag
 
-### 5.B.3 Und die 930 Kundinnen und Kunden ohne jede Fahrt?
+Die folgende Rechnung ist **kein Befund aus den Daten**, sondern ein Was-wäre-wenn. Sie
+gehört in eine Entscheidungsvorlage, nicht in einen Analysebericht — und muss als
+Vorschlag gekennzeichnet sein, sonst liest sie jemand als Tatsache.
+"""),
+
+CODE("""
+# ACHTUNG: hypothetisch. VeloCity hat KEINE Grundgebühr, und das ist Teil
+# des Kundenversprechens. Die Rechnung zeigt nur, welche Groessenordnung ein
+# Beitrag haette, der die abgegebenen Minuten ausgleicht.
+mit_freiminuten = rfm[rfm.verschenkt > 0]
+je_monat = mit_freiminuten.verschenkt.mean() / 12
+
+print("HYPOTHESE, kein Befund:")
+print(f"  Kundschaft mit Freiminuten:            {len(mit_freiminuten):>6d}")
+print(f"  im Mittel abgegeben, je Jahr:          {mit_freiminuten.verschenkt.mean():>6.2f} EUR")
+print(f"  ein ausgleichender Beitrag laege bei:  {je_monat:>6.2f} EUR im Monat")
+print()
+print("  Zu bedenken, bevor daraus ein Vorschlag wird:")
+print("   - die Startseite wirbt ausdrücklich mit '0 Euro Anmeldegebühr'")
+print("   - Freiminuten binden Kundschaft; ihr Wert steckt nicht nur im Umsatz")
+print("   - ein Beitrag würde die günstigsten Segmente am härtesten treffen")
+print()
+print("  Die billigere Alternative: die Freiminuten dort kürzen, wo sie am")
+print("  wenigsten binden - das lässt sich mit denselben Daten prüfen.")
+"""),
+
+MD("""
+### 5.B.4 Und die 930 Kundinnen und Kunden ohne jede Fahrt?
 """),
 
 CODE('''
@@ -586,15 +645,15 @@ def segment_benennen(zeile):
     if zeile.recency_tage > 150:
         return "Eingeschlafen"
     if zeile.fahrten_jahr > 12:
-        return "Abo-Vielfahrer"
+        return "Vielfahrer mit Freiminuten"
     if zeile.umsatz_jahr > 30:
-        return "Umsatzträger ohne Abo"
+        return "Umsatzträger im Basistarif"
     return "Gelegenheitsnutzer"
 
 profil["segment"] = profil.apply(segment_benennen, axis=1)
 massnahmen = {
-    "Abo-Vielfahrer":        "Bindung: Abo verlängern, Service-Vorrang, kein Rabatt nötig",
-    "Umsatzträger ohne Abo": "Abo anbieten — rechnet sich für beide Seiten",
+    "Vielfahrer mit Freiminuten":  "Bindung halten — aber prüfen, ob 1.000 Freiminuten nötig sind",
+    "Umsatzträger im Basistarif":  "nicht anfassen: sie tragen den Umsatz und kosten nichts",
     "Gelegenheitsnutzer":    "Anlass schaffen: Wetter-/Veranstaltungshinweis",
     "Eingeschlafen":         "Rückgewinnung: einmalig Freiminuten",
 }
@@ -649,24 +708,28 @@ MD("""
 | 2 Data Understanding | Stammdaten enthalten keinen Typ — das Muster steckt im Verhalten | Kein Segment in der Kundentabelle |
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
-| 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: 100 % | Vier Segmente — und zwei Befunde, die weh tun |
+| 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: 100 % | Vier Segmente — und zwei Befunde, die weh tun; dazu eine hypothetische Rechnung, ausdrücklich als Vorschlag gekennzeichnet |
 | 6 Deployment | Dispositionsplan als CSV | Kampagnenplan, mit Datenschutzvorbehalt |
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**
 
 1. **Die Vielfahrer bringen den geringsten Umsatz** — weil ihre Tarife Freiminuten
-   enthalten. Wer nur das Nutzungsentgelt als „Monetary“ nimmt, hält die wertvollsten
-   Kunden für die unwichtigsten. Der Fehler steckt nicht im Modell, sondern in der
-   Merkmalsdefinition aus Phase 3 — und seine Ursache in einer unscharfen Frage aus
-   Phase 1.
+   enthalten. Und weil VeloCity **keine Grundgebühr** erhebt, gibt es nichts, was das
+   ausgliche: Das Nutzungsentgelt ist der gesamte Umsatz. Das ist kein Messfehler,
+   sondern ein Preisproblem, das die Segmentierung sichtbar gemacht hat. Nachgerechnet
+   ist auch, um wieviel es geht — der Listenwert der abgegebenen Freiminuten steht in
+   den Daten.
 2. **Knapp 30 % der Kundschaft taucht in der Segmentierung überhaupt nicht auf**, weil
    sie im letzten Jahr nicht gefahren ist. RFM sieht nur, wer kauft. Wer aufgehört hat,
    fällt aus der Tabelle — und aus dem Blick.
 
 **Was eine zweite Runde anders machen würde**
 
-1. **Zurück zu Phase 1:** „Umsatz“ sauber definieren — Deckungsbeitrag statt Entgelt,
-   inklusive Grundgebühr und abzüglich der Kosten, die ein Vielfahrer verursacht.
+1. **Zurück zu Phase 1, mit einer besseren Frage.** Nicht „welche Segmente gibt es?“,
+   sondern „sind die Freiminuten dort richtig eingesetzt, wo sie liegen?“ — die Analyse
+   hat eine Frage hervorgebracht, die vorher niemand gestellt hatte. Sauber wäre dafür
+   ein **Deckungsbeitrag** statt des Entgelts: abzüglich der Kosten, die eine Fahrt
+   verursacht (Umverteilung, Verschleiß, Strom).
 2. **Zurück zu Phase 3:** Die Nichtfahrer als eigenes Segment mitführen, statt sie
    herausfallen zu lassen. RFM braucht dafür eine Erweiterung, oft „RFM + Status“ genannt.
 3. **Ein anderes Verfahren erwägen:** k-Means unterstellt kugelförmige, gleich große

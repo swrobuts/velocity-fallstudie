@@ -246,20 +246,36 @@ schreibe("veranstaltungen.csv", ["von", "bis", "bezeichnung", "genauigkeit"],
 
 # =====================================================================
 # TARIFE UND NUTZUNGSPREISE
-# Werte aus dem echten Modell uebernommen (db/aufbau/0008_referenzdaten.sql):
-# Startgebuehr plus Minutenpreis, gedeckelt auf einen Tageshoechstpreis, dazu
-# vier Tarife mit Freiminuten und Rabatt.
+#
+# KEINE GRUNDGEBUEHR (korrigiert am 31.08.2026).
+# Das Preismodell aus db/aufbau/0008_referenzdaten.sql sieht fuer den Tarif
+# PREMIUM einen Monatspreis von 9,90 EUR vor, mit der Voraussetzung
+# "Kostenpflichtiges Abo". Das widerspricht dem, was die Kundenwebsite
+# verspricht: Ihre Kennzahl lautet "0 Euro Anmeldegebuehr", und die FAQ nennt
+# als Preismodell ausschliesslich "Startgebuehr plus Minutenpreis, gedeckelt
+# auf einen Tageshoechstpreis" - von einem monatlichen Beitrag steht dort
+# nichts.
+#
+# Ein Lehrdatensatz darf dem Produktversprechen nicht widersprechen, sonst
+# wird die Fallstudie in sich unstimmig. Deshalb gibt es hier KEINEN
+# Monatspreis und keine Spalte dafuer. Die vier Tarife unterscheiden sich
+# allein durch Freiminuten und Rabatt; sie sind Vorteilstarife, die man
+# ueber einen Nachweis bekommt (Studierendenausweis, Nahverkehrsabo), nicht
+# durch Zahlung.
+#
+# Der Widerspruch in den Referenzdaten selbst bleibt bestehen und ist dem
+# Auftraggeber gemeldet - er gehoert dort geklaert, nicht hier verdeckt.
 # =====================================================================
 TARIFE = [
-    ("BASIS",   "Basistarif",     0.00,    0,  0.0),
-    ("STUDENT", "Studententarif", 0.00,  300,  0.0),
-    ("OEPNV",   "OEPNV-Abo",      0.00,  600,  0.0),
-    ("PREMIUM", "Premium",        9.90, 1000, 20.0),
+    ("BASIS",   "Basistarif",        0,  0.0),
+    ("STUDENT", "Studententarif",  300,  0.0),
+    ("OEPNV",   "Nahverkehrstarif", 600,  0.0),
+    ("PREMIUM", "Vielfahrertarif", 1000, 20.0),
 ]
 schreibe("tarif.csv",
-         ["tarif_code", "bezeichnung", "monatspreis_eur", "freiminuten_pro_monat", "rabatt_prozent"],
+         ["tarif_code", "bezeichnung", "freiminuten_pro_monat", "rabatt_prozent"],
          [list(t) for t in TARIFE])
-TARIF_INFO = {t[0]: {"monat": t[2], "frei": t[3], "rabatt": t[4]} for t in TARIFE}
+TARIF_INFO = {t[0]: {"frei": t[2], "rabatt": t[3]} for t in TARIFE}
 
 PREISE = [("CITY", 0.10, 0.10, 50.00), ("EBIKE", 1.00, 0.25, 75.00), ("CARGO", 2.00, 0.50, 110.00)]
 schreibe("nutzungspreis.csv",
