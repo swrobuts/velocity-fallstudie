@@ -1,0 +1,5 @@
+tarif_code,bezeichnung,monatspreis_eur,freiminuten_pro_monat,rabatt_prozent
+BASIS,Basistarif,0.0,0,0.0
+STUDENT,Studententarif,0.0,300,0.0
+OEPNV,OEPNV-Abo,0.0,600,0.0
+PREMIUM,Premium,9.9,1000,20.0
