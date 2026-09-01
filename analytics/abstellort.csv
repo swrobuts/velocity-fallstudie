@@ -1,0 +1,36 @@
+ort_id,name,art,lat,lon,hoehe_m
+1,Hauptbahnhof,station,49.8019,9.9358,183.0
+2,Marktplatz,station,49.7944,9.9295,181.0
+3,Universität Sanderring,station,49.788,9.9353,187.0
+4,Residenz,station,49.793,9.939,191.0
+5,Juliuspromenade,station,49.796,9.928,181.0
+6,Dom,station,49.7938,9.9322,186.0
+7,Sanderau,station,49.7818,9.9412,192.0
+8,Hubland Campus,station,49.781,9.972,276.0
+9,Grombühl Klinikum,station,49.8046,9.9424,208.0
+10,Zellerau,station,49.7965,9.9142,188.0
+P-0001,Nähe Sterngasse,abstellort,49.79247,9.93021,180.0
+P-0002,Rottendorfer Straße 59,abstellort,49.7909,9.96406,256.0
+P-0003,Kapuzinerstraße,abstellort,49.79615,9.94066,183.0
+P-0004,Frankfurter Straße,abstellort,49.79464,9.91205,189.0
+P-0005,Turmgasse,abstellort,49.79806,9.92619,178.0
+P-0006,Ingolstadter Hof 1 und Hofstraße 7 und Hofstraße 9,abstellort,49.79372,9.93532,186.0
+P-0007,Stephanstraße,abstellort,49.78989,9.93373,182.0
+P-0008,Hans-Löffler-Straße,abstellort,49.77487,9.95723,269.0
+P-0009,Kaiserstraße,abstellort,49.80017,9.93498,181.0
+P-0010,Wagnerplatz,abstellort,49.80212,9.94507,196.0
+P-0011,Konradstraße,abstellort,49.79313,9.94921,205.0
+P-0012,Rottendorfer Straße,abstellort,49.78998,9.97239,267.0
+P-0013,Am Pleidenturm,abstellort,49.78883,9.9281,176.0
+P-0014,Talavera 1,abstellort,49.79816,9.9204,179.0
+P-0015,Sanderring,abstellort,49.78662,9.93218,177.0
+P-0016,Langgasse 1 und Beim Grafeneckart 1 und Rückermainstraße 2 und Beim Grafeneckart 2,abstellort,49.79386,9.92787,178.0
+P-0017,Sonnenstraße,abstellort,49.78163,9.93485,181.0
+P-0018,Mittlerer Ring,abstellort,49.78727,9.94259,198.0
+P-0019,Frankfurter Straße,abstellort,49.7942,9.90468,185.0
+P-0020,Theaterstraße,abstellort,49.79635,9.93445,183.0
+P-0021,Zeller Straße und Platz der Fischerzunft,abstellort,49.79331,9.92401,174.0
+P-0022,Semmelstraße,abstellort,49.79773,9.93852,183.0
+P-0023,Am Exerzierplatz,abstellort,49.78607,9.93451,181.0
+P-0024,Nähe Veitshöchheimer Straße,abstellort,49.80093,9.92326,176.0
+P-0025,Ulmer Hof,abstellort,49.79597,9.92892,180.0

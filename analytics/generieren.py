@@ -47,8 +47,17 @@ from datetime import date, datetime, timedelta
 random.seed(20260901)
 
 OUT = os.environ.get("VELO_OUT") or os.path.dirname(os.path.abspath(__file__))
-VON = date(2023, 9, 1)
-BIS = date(2026, 8, 24)
+VON = date(2021, 8, 24)         # Betriebsaufnahme, genau fuenf Jahre
+BIS = date(2026, 8, 24)         # Datenstand
+# Die ersten Monate sind ein Markthochlauf: Bekanntheit und Flotte wachsen,
+# die Nachfrage erreicht erst nach ANLAUF_TAGE ihr volles Niveau.
+ANLAUF_TAGE = 540
+ANLAUF_START = 0.42
+# E-Bikes kommen erst im dritten Betriebsjahr in die Flotte. Der Zulauf
+# verteilt sich ueber ein Quartal und hebt das Nachfrageniveau dauerhaft.
+EBIKE_AB = date(2023, 9, 1)
+EBIKE_RAMPE_TAGE = 90
+EBIKE_HUB = 0.16
 
 
 def schreibe(dateiname, kopf, zeilen):
@@ -67,12 +76,9 @@ print("Stammdaten ...")
 # =====================================================================
 # NAMEN, NUMMERN UND KOORDINATEN STAMMEN AUS velocity.station (01.09.2026).
 #
-# Vorher stand hier eine eigene Liste mit eigenen Orten - Kaeppele,
-# Ringpark Nord, Alte Mainbruecke. Solange der Lehrdatensatz fuer sich
-# stand, war das gleichgueltig. Seit Notebook 1 seine Preisspannen an die
-# Kundenwebsite liefert, ist es das nicht mehr: Die App haette Stationen
-# angeboten, die es im Netz gar nicht gibt, und die echten verschwiegen.
-# Sechs von zehn Namen stimmten nicht ueberein.
+# Die Namen muessen mit der Betriebsdatenbank uebereinstimmen: Notebook 1
+# liefert seine Preisspannen an die Kundenwebsite, die dieselben Stationen
+# anzeigt.
 #
 # Die Spalte typ steuert die Erzeugung und wird NICHT exportiert. Sie ist
 # nach dem tatsaechlichen Ort vergeben: Bahnhof, Klinikum, Sanderau und
@@ -98,7 +104,6 @@ schreibe("station.csv",
 STATION_TYP = {s[0]: s[6] for s in STATIONEN}
 STATION_IDS = [s[0] for s in STATIONEN]
 STATION_NAME = {s[0]: s[2] for s in STATIONEN}
-STATION_ORT = {s[0]: (s[4], s[3]) for s in STATIONEN}   # (longitude, latitude)
 
 # =====================================================================
 # GESCHAEFTSGEBIET
@@ -142,34 +147,81 @@ schreibe("fahrradtyp.csv",
 
 # =====================================================================
 # FLOTTE
-# Neu gegenueber der ersten Fassung: ein Teil der Raeder wird im Zeitverlauf
-# ausgemustert. Vorher hatte jedes Rad den Status 'verfuegbar' - eine Spalte
-# ohne jede Streuung, aus der kein Verfahren etwas lernen kann.
+# Die Flotte laeuft ueber fuenf Jahre einmal um: Raeder werden beschafft,
+# fahren vier bis fuenfeinhalb Jahre und werden dann ausgemustert. Daraus
+# entsteht eine Altersstruktur - ohne sie waeren alle Raeder gleich alt und
+# die Verschleissvorhersage haette nichts zu unterscheiden.
+#
+# E-Bikes kommen erst zum dritten Betriebsjahr dazu (EBIKE_AB).
 # =====================================================================
-N_RAEDER = 240
+LEBENSDAUER_TAGE = (1460, 2010)          # vier bis fuenfeinhalb Jahre
+BESCHAFFUNG_TRANCHE_TAGE = 180           # die Startflotte kommt in Lieferungen
+
+# Sollstaerke je Radtyp zu Beginn und am Datenstand. Dazwischen wird linear
+# interpoliert, E-Bikes erst ab ihrem Einfuehrungsdatum.
+SOLLFLOTTE = {"CITY": (105, 138), "CARGO": (25, 27), "EBIKE": (0, 88)}
+
+
+def sollstaerke(typ_code, tag):
+    """Wie viele Raeder dieses Typs sollen an diesem Tag im Bestand sein?"""
+    von_wert, bis_wert = SOLLFLOTTE[typ_code]
+    if typ_code == "EBIKE":
+        if tag < EBIKE_AB:
+            return 0
+        anteil = min(1.0, (tag - EBIKE_AB).days / EBIKE_RAMPE_TAGE)
+        # Nach der Rampe waechst der Bestand noch langsam weiter.
+        rest = max(0.0, (tag - EBIKE_AB).days - EBIKE_RAMPE_TAGE) / max(
+            1, (BIS - EBIKE_AB).days - EBIKE_RAMPE_TAGE)
+        return round(bis_wert * (0.72 * anteil + 0.28 * min(1.0, rest)))
+    anteil = min(1.0, max(0.0, (tag - VON).days / max(1, (BIS - VON).days)))
+    return round(von_wert + (bis_wert - von_wert) * anteil)
+
+
 raeder = []
 fahrrad_rows = []
-for i in range(1, N_RAEDER + 1):
-    r = random.random()
-    typ = "CITY" if r < 0.55 else ("EBIKE" if r < 0.90 else "CARGO")
-    r2 = random.random()
-    if r2 < 0.65:
-        ang = VON - timedelta(days=random.randint(0, 200))
-    elif r2 < 0.88:
-        ang = VON + timedelta(days=random.randint(200, 500))
-    else:
-        ang = VON + timedelta(days=random.randint(500, 900))
-    # Ausmusterung: nur alte Raeder, und nur ein kleiner Teil.
-    ausgemustert_am = None
-    if ang < VON and random.random() < 0.09:
-        ausgemustert_am = VON + timedelta(days=random.randint(400, 1050))
-        if ausgemustert_am > BIS:
-            ausgemustert_am = None
-    raeder.append({"id": i, "typ": typ, "angeschafft": ang, "ausgemustert_am": ausgemustert_am,
-                   "km_kumuliert": 0.0, "fahrten": 0, "verlauf": []})
-    fahrrad_rows.append([i, f"WUE-{i:04d}", typ, ang.isoformat(),
-                         "ausgemustert" if ausgemustert_am else "verfuegbar",
-                         ausgemustert_am.isoformat() if ausgemustert_am else ""])
+naechste_id = 1
+
+
+def rad_anschaffen(typ_code, tag):
+    """Legt ein Rad an und wuerfelt seine Lebensdauer aus."""
+    global naechste_id
+    lebensdauer = random.randint(*LEBENSDAUER_TAGE)
+    ende_tag = tag + timedelta(days=lebensdauer)
+    ausgemustert = ende_tag if ende_tag <= BIS else None
+    rad = {"id": naechste_id, "typ": typ_code, "angeschafft": tag,
+           "ausgemustert_am": ausgemustert, "km_kumuliert": 0.0,
+           "hoehenmeter": 0.0, "fahrten": 0, "verlauf": []}
+    raeder.append(rad)
+    naechste_id += 1
+    return rad
+
+
+# Startflotte: ueber das erste halbe Jahr in Tranchen geliefert.
+for typ_code in ("CITY", "CARGO"):
+    for _ in range(SOLLFLOTTE[typ_code][0]):
+        rad_anschaffen(typ_code, VON + timedelta(
+            days=random.randint(0, BESCHAFFUNG_TRANCHE_TAGE)))
+
+# Danach monatlich auffuellen: Ersatz fuer Ausmusterungen und Wachstum.
+tag = VON + timedelta(days=30)
+while tag <= BIS:
+    for typ_code in SOLLFLOTTE:
+        vorhanden = sum(1 for r in raeder
+                        if r["typ"] == typ_code
+                        and r["angeschafft"] <= tag
+                        and (r["ausgemustert_am"] is None or r["ausgemustert_am"] > tag))
+        for _ in range(max(0, sollstaerke(typ_code, tag) - vorhanden)):
+            rad_anschaffen(typ_code, tag - timedelta(days=random.randint(0, 25)))
+    tag += timedelta(days=30)
+
+raeder.sort(key=lambda r: r["id"])
+for rad in raeder:
+    fahrrad_rows.append([rad["id"], f"WUE-{rad['id']:04d}", rad["typ"],
+                         rad["angeschafft"].isoformat(),
+                         "ausgemustert" if rad["ausgemustert_am"] else "verfuegbar",
+                         rad["ausgemustert_am"].isoformat() if rad["ausgemustert_am"] else ""])
+N_RAEDER = len(raeder)
+
 schreibe("fahrrad.csv",
          ["fahrrad_id", "rahmennummer", "typ_code", "angeschafft_am", "status", "ausgemustert_am"],
          fahrrad_rows)
@@ -193,7 +245,8 @@ _FEST = [(1, 1, "Neujahr"), (1, 6, "Heilige Drei Koenige"), (5, 1, "Tag der Arbe
          (8, 15, "Mariae Himmelfahrt"), (10, 3, "Tag der Deutschen Einheit"),
          (11, 1, "Allerheiligen"), (12, 25, "1. Weihnachtsfeiertag"),
          (12, 26, "2. Weihnachtsfeiertag")]
-_OSTERN = {2023: date(2023, 4, 9), 2024: date(2024, 3, 31),
+_OSTERN = {2021: date(2021, 4, 4),  2022: date(2022, 4, 17),
+           2023: date(2023, 4, 9),  2024: date(2024, 3, 31),
            2025: date(2025, 4, 20), 2026: date(2026, 4, 5)}
 for jahr in (2023, 2024, 2025, 2026):
     for m, t, name in _FEST:
@@ -210,16 +263,31 @@ schreibe("feiertage.csv", ["datum", "bezeichnung"],
 
 # =====================================================================
 # SCHULFERIEN BAYERN
-# Real wiederkehrende Ferienabschnitte. Die Tagesgrenzen schwanken jaehrlich;
-# hier stehen die typischen Zeitraeume - dieselbe Ehrlichkeit wie bei den
-# Veranstaltungen, ausgewiesen in der Spalte 'genauigkeit'.
+# Amtliche Ferientermine, abgerufen von ferien-api.de. Anders als der
+# Veranstaltungskalender sind das keine typisierten Zeitraeume, sondern die
+# tatsaechlichen Daten - ausgewiesen in der Spalte 'genauigkeit'.
 # =====================================================================
 FERIEN = [
+    (date(2021,  3, 29), date(2021,  4, 10), "Osterferien"),
+    (date(2021,  5, 25), date(2021,  6,  4), "Pfingstferien"),
+    (date(2021,  7, 30), date(2021,  9, 13), "Sommerferien"),
+    (date(2021, 11,  2), date(2021, 11,  5), "Herbstferien"),
+    (date(2021, 12, 24), date(2022,  1,  8), "Weihnachtsferien"),
+    (date(2022,  2, 28), date(2022,  3,  4), "Fruehjahrsferien"),
+    (date(2022,  4, 11), date(2022,  4, 23), "Osterferien"),
+    (date(2022,  6,  7), date(2022,  6, 18), "Pfingstferien"),
+    (date(2022,  8,  1), date(2022,  9, 12), "Sommerferien"),
+    (date(2022, 10, 31), date(2022, 11,  4), "Herbstferien"),
+    (date(2022, 12, 24), date(2023,  1,  7), "Weihnachtsferien"),
+    (date(2023,  2, 20), date(2023,  2, 24), "Fruehjahrsferien"),
+    (date(2023,  4,  3), date(2023,  4, 15), "Osterferien"),
+    (date(2023,  5, 30), date(2023,  6,  9), "Pfingstferien"),
+    (date(2023,  7, 31), date(2023,  9, 11), "Sommerferien"),
     (date(2023, 10, 30), date(2023, 11,  3), "Herbstferien"),
-    (date(2023, 12, 27), date(2024,  1,  5), "Weihnachtsferien"),
+    (date(2023, 12, 23), date(2024,  1,  5), "Weihnachtsferien"),
     (date(2024,  2, 12), date(2024,  2, 16), "Fruehjahrsferien"),
     (date(2024,  3, 25), date(2024,  4,  6), "Osterferien"),
-    (date(2024,  5, 21), date(2024,  5, 31), "Pfingstferien"),
+    (date(2024,  5, 21), date(2024,  6,  1), "Pfingstferien"),
     (date(2024,  7, 29), date(2024,  9,  9), "Sommerferien"),
     (date(2024, 10, 28), date(2024, 10, 31), "Herbstferien"),
     (date(2024, 12, 23), date(2025,  1,  3), "Weihnachtsferien"),
@@ -229,10 +297,11 @@ FERIEN = [
     (date(2025,  8,  1), date(2025,  9, 15), "Sommerferien"),
     (date(2025, 11,  3), date(2025, 11,  7), "Herbstferien"),
     (date(2025, 12, 22), date(2026,  1,  5), "Weihnachtsferien"),
-    (date(2026,  2, 16), date(2026,  2, 20), "Fruehjahrsferien"),
-    (date(2026,  3, 30), date(2026,  4, 10), "Osterferien"),
-    (date(2026,  5, 26), date(2026,  6,  5), "Pfingstferien"),
-    (date(2026,  8,  3), date(2026,  9, 14), "Sommerferien"),
+    (date(2026,  2, 16), date(2026,  2, 21), "Frühjahrsferien"),
+    (date(2026,  3, 30), date(2026,  4, 11), "Osterferien"),
+    (date(2026,  5, 26), date(2026,  6,  6), "Pfingstferien"),
+    (date(2026,  8,  3), date(2026,  9, 15), "Sommerferien"),
+    (date(2026, 11,  2), date(2026, 11,  7), "Herbstferien"),
 ]
 FERIENTAGE = set()
 for von, bis, name in FERIEN:
@@ -241,17 +310,16 @@ for von, bis, name in FERIEN:
         FERIENTAGE.add(d)
         d += timedelta(days=1)
 schreibe("schulferien.csv", ["von", "bis", "bezeichnung", "genauigkeit"],
-         [[v.isoformat(), b.isoformat(), n, "typischer Zeitraum"]
-          for v, b, n in FERIEN if v <= BIS])
+         [[v.isoformat(), b.isoformat(), n, "amtlicher Termin"]
+          for v, b, n in FERIEN if VON <= b and v <= BIS])
 
 # =====================================================================
 # SEMESTERZEITEN (JMU Wuerzburg, typisiert)
-# Bisher steckte diese Information nur in einer Funktion im Generator. Als
-# eigene Datei koennen die Studierenden sie als Merkmal joinen - genau die
+# Als eigene Datei koennen die Studierenden sie als Merkmal joinen - genau die
 # Arbeit, um die es in der Data-Preparation-Phase geht.
 # =====================================================================
 SEMESTER = []
-for jahr in (2023, 2024, 2025, 2026):
+for jahr in range(2021, 2027):
     SEMESTER.append((date(jahr, 4, 14), date(jahr, 7, 15), f"Sommersemester {jahr}", "Vorlesungszeit"))
     SEMESTER.append((date(jahr, 10, 14), date(jahr + 1, 2, 14),
                      f"Wintersemester {jahr}/{str(jahr + 1)[2:]}", "Vorlesungszeit"))
@@ -354,14 +422,8 @@ print("Kundschaft ...")
 
 # =====================================================================
 # KUNDSCHAFT
-# DIE ZENTRALE AENDERUNG GEGENUEBER DER ERSTEN FASSUNG.
 #
-# Vorher: kunde_id = random.choice(1..3199) - gleichverteilt. Jeder Kunde
-# bekam dadurch rund achtzehn Fahrten, und zwar quer durch alle Tageszeiten
-# und Stationen. Eine RFM-Segmentierung darauf findet nichts, weil es nichts
-# zu finden gibt: alle Kunden sind gleich.
-#
-# Jetzt bekommt jeder Kunde ein PROFIL, das steuert, wie oft, wann und wo er
+# Jeder Kunde bekommt ein PROFIL, das steuert, wie oft, wann und wo er
 # faehrt und wie lange er ueberhaupt dabei bleibt. Das Profil steht in KEINER
 # CSV - die Segmentierung muss es aus Recency, Frequency und Monetary
 # zurueckgewinnen.
@@ -384,11 +446,15 @@ for kid in range(1, N_KUNDEN + 1):
     profil = random.choices([p[0] for p in PROFILE], weights=[p[1] for p in PROFILE], k=1)[0]
     p = next(x for x in PROFILE if x[0] == profil)
 
-    # Anmeldung: die Haelfte war zu Beginn dabei, der Rest kommt laufend dazu.
-    if random.random() < 0.45:
-        registriert = VON - timedelta(days=random.randint(0, 400))
+    # Anmeldung: ein kleiner Grundstock zur Betriebsaufnahme, danach
+    # laufender Zulauf. Er folgt dem Markthochlauf, ist also in den ersten
+    # Monaten duenner als spaeter.
+    if random.random() < 0.12:
+        registriert = VON + timedelta(days=random.randint(0, 30))
     else:
-        registriert = VON + timedelta(days=random.randint(0, (BIS - VON).days - 30))
+        spanne = (BIS - VON).days - 30
+        # Wurzelverteilung: mehr Anmeldungen in den spaeteren Jahren.
+        registriert = VON + timedelta(days=int(spanne * random.random() ** 0.72))
 
     # Bleibt der Kunde bis zum Schluss dabei? Wenn nicht, endet seine Aktivitaet
     # irgendwann - daraus entsteht spaeter das Abwanderungslabel, abgeleitet aus
@@ -450,6 +516,86 @@ schreibe("stationsstoerung.csv", ["station_id", "von", "bis", "grund"],
           for s in sorted(stoerungen, key=lambda x: (x["von"], x["station_id"]))])
 
 # =====================================================================
+# ROUTENMATRIX UND FAHRZEITMODELL
+#
+# Strecken und Hoehen stammen aus analytics/radrouten_matrix.csv: echte
+# Radrouten aus dem OSRM-Fahrradprofil, Hoehen aus SRTM. Die Datei wird mit
+# tools/radrouten_abrufen.py erzeugt und ist eingecheckt, damit die
+# Datenerzeugung ohne Netzzugang reproduzierbar bleibt.
+#
+# Die Fahrzeit folgt daraus, nicht umgekehrt:
+#   gefahrene Strecke = kuerzeste Route x Umwegbereitschaft des Fahrers
+#   Tempo             = Grundtempo des Radtyps x Steigung x Wetter x Anlass
+#   Dauer             = Strecke / Tempo + Halte + Streuung
+# =====================================================================
+ROUTEN = {}
+ORTE = {}
+with open(os.path.join(OUT, "radrouten_matrix.csv"), encoding="utf-8") as f:
+    zeilen = [z for z in f if not z.startswith("#")]
+for row in csv.DictReader(zeilen):
+    ROUTEN[(row["von_id"], row["nach_id"])] = (
+        float(row["strecke_m"]) / 1000.0, float(row["steigung_promille"]))
+    ORTE[row["von_id"]] = row["von_art"]
+ABSTELLORTE = sorted(o for o, art in ORTE.items() if art == "abstellort")
+ABSTELLORT_KOORD = {}
+with open(os.path.join(OUT, "abstellort.csv"), encoding="utf-8") as f:
+    for row in csv.DictReader(f):
+        if row["art"] == "abstellort":
+            ABSTELLORT_KOORD[row["ort_id"]] = (float(row["lat"]), float(row["lon"]))
+
+# Grundtempo in km/h bei ebener Strecke.
+GRUNDTEMPO = {"CITY": 13.2, "EBIKE": 17.0, "CARGO": 11.0}
+# Wirkung der mittleren Steigung je Promille. Der Motor des E-Bikes faengt den
+# Anstieg weitgehend ab, das Lastenrad leidet am staerksten. Bergab bringt nur
+# etwa die Haelfte dessen, was bergauf kostet - man bremst.
+STEIGUNG_BERGAUF = {"CITY": 0.0140, "EBIKE": 0.0040, "CARGO": 0.0180}
+STEIGUNG_BERGAB = {"CITY": 0.0070, "EBIKE": 0.0030, "CARGO": 0.0080}
+TEMPO_GRENZEN = (6.0, 28.0)
+TEMPO_HOECHSTWERT = 29.0        # Obergrenze auch nach der Streuung
+# Wie weit faehrt wer ueber die kuerzeste Route hinaus?
+UMWEG_PROFIL = {"pendler": 1.03, "studium": 1.08, "freizeit": 1.42,
+                "gelegenheit": 1.28, "vielfahrer": 1.02}
+HALT_GRUND_MIN = 1.2            # Losfahren, Anschliessen
+HALT_JE_KM_MIN = 0.45           # Ampeln und Kreuzungen
+DAUER_STREUUNG = 0.17           # Streubreite der Lognormalverteilung
+RUNDTOUR_KM = (2.5, 9.0)        # Fahrten, die dort enden, wo sie begannen
+FREI_ABSTELLEN_KM = 1.1         # so weit vom Ziel darf frei abgestellt werden
+
+
+def strecke_und_steigung(von_ort, nach_ort):
+    """Kuerzeste Radroute in km und mittlere Steigung in Promille.
+
+    Ortskennungen sind Zeichenketten: Stationen tragen ihre Nummer, freie
+    Abstellorte ein P-Kuerzel. Eine Fahrt, die dort endet, wo sie begann,
+    hat keine Relation in der Matrix - sie bekommt eine Rundtourstrecke.
+    """
+    von, nach = str(von_ort), str(nach_ort)
+    if von == nach:
+        return random.uniform(*RUNDTOUR_KM), 0.0
+    return ROUTEN[(von, nach)]
+
+
+def fahrtempo(typ_code, steigung_promille, temp_c, regen_mm, stunde, profil):
+    """Tempo in km/h aus Radtyp, Steigung, Wetter, Tageszeit und Anlass."""
+    if steigung_promille >= 0:
+        faktor = 1 - STEIGUNG_BERGAUF[typ_code] * steigung_promille
+    else:
+        faktor = 1 - STEIGUNG_BERGAB[typ_code] * steigung_promille
+    tempo = GRUNDTEMPO[typ_code] * faktor
+    # Regen treibt an, Hitze bremst.
+    tempo *= 1 + 0.012 * min(regen_mm, 8)
+    tempo *= 1 - 0.004 * max(0.0, temp_c - 22)
+    # Wer zur Arbeit faehrt, faehrt zuegiger als der Nachmittagsausflug.
+    if stunde in (7, 8, 17, 18):
+        tempo *= 1.06
+    elif 13 <= stunde <= 18:
+        tempo *= 0.95
+    tempo *= {"pendler": 1.08, "studium": 1.02, "freizeit": 0.88,
+              "gelegenheit": 0.92, "vielfahrer": 1.10}[profil]
+    return min(max(tempo, TEMPO_GRENZEN[0]), TEMPO_GRENZEN[1])
+
+
+# =====================================================================
 # HILFSFUNKTIONEN FUER DIE FAHRTENERZEUGUNG
 # =====================================================================
 def stunden_gewicht(typ, stunde, frei, vorlesung):
@@ -468,10 +614,8 @@ def stunden_gewicht(typ, stunde, frei, vorlesung):
         if frei or not vorlesung:
             return 0.015
         # Doppelspitze zu den Vorlesungsblöcken, mit Delle in der Mittagspause.
-        # Vorher lag hier ein flacher Wert ueber 9 bis 16 Uhr - damit war die
-        # Spitzenstunde reiner Zufall (gemessen: 16 Uhr statt Vormittag), und
-        # das Clustering haette die Uni-Stationen nur an ihrer Breite erkannt,
-        # nicht an einer Form.
+        # Die Form des Tagesgangs unterscheidet die Uni-Stationen, nicht ihre
+        # Hoehe - darauf setzt das Clustering auf.
         if stunde in (10, 14):
             return 0.13
         if stunde in (9, 11, 13, 15):
@@ -493,11 +637,9 @@ def stunden_gewicht(typ, stunde, frei, vorlesung):
 def station_gewicht(typ, frei, vorlesung, event):
     """Wie stark zieht eine Station an diesem Tag Fahrten an?
 
-    Bis zum 31.08.2026 stand hier EIN Satz Gewichte fuer alle Tage. Folge:
-    jede Station hatte denselben Wochenendanteil (gemessen 28 bis 31 Prozent
-    quer durch alle zehn) - ein Merkmal, das nichts unterschied, obwohl es das
-    unterscheidendste sein sollte. Eine Freizeitstation lebt am Wochenende,
-    eine Pendlerstation ist dann leer. Jetzt haengen die Gewichte am Tagestyp.
+    Die Gewichte haengen am Tagestyp: eine Freizeitstation lebt am Wochenende,
+    eine Pendlerstation ist dann leer. Der Wochenendanteil wird damit zum
+    trennschaerfsten Merkmal des Stationsclusterings.
     """
     if frei:
         g = {"pendler": 0.55, "uni": 0.40, "freizeit": 1.85, "misch": 1.00}[typ]
@@ -681,7 +823,17 @@ while d <= BIS:
     # die Zeitreihe ohne die neue schulferien.csv nicht erklaeren koennte.
     ferien_faktor = 0.80 if (ferien and not frei) else 1.0
 
-    basis = 96 * saison * regen_faktor * temp_faktor * tagesart * event_staerke * ferien_faktor
+    # Markthochlauf: die ersten Monate liegen unter dem spaeteren Niveau.
+    anlauf = ANLAUF_START + (1 - ANLAUF_START) * min(
+        1.0, (d - VON).days / ANLAUF_TAGE)
+    # E-Bikes heben die Nachfrage dauerhaft: sie erschliessen das Hubland
+    # und die Steigungen, die mit dem Citybike muehsam sind.
+    if d < EBIKE_AB:
+        ebike_hub = 1.0
+    else:
+        ebike_hub = 1 + EBIKE_HUB * min(1.0, (d - EBIKE_AB).days / EBIKE_RAMPE_TAGE)
+    basis = (104 * saison * regen_faktor * temp_faktor * tagesart
+             * event_staerke * ferien_faktor * anlauf * ebike_hub)
     anzahl = max(8, round(basis * random.uniform(0.85, 1.15)))
 
     pools = monatspool(d)
@@ -719,15 +871,20 @@ while d <= BIS:
             break
         profil = random.choices(codes, weights=scores, k=1)[0]
         ids, gew, _ = pools[profil]
-        kunde_id = random.choices(ids, weights=gew, k=1)[0]
-        kunde = kunden[kunde_id]
+        # Der Pool wird je Monat gebildet, der Anmeldetag liegt darin: wer sich
+        # erst spaeter im Monat anmeldet, kann heute noch nicht fahren.
+        for _versuch in range(6):
+            kunde_id = random.choices(ids, weights=gew, k=1)[0]
+            kunde = kunden[kunde_id]
+            if kunde["registriert"] <= d:
+                break
+        else:
+            continue
 
         # ---- Ziel
-        # ERWEITERT AM 31.08.2026. Vorher hing die Zielwahl nur davon ab, ob
-        # der Zieltyp vom Starttyp abwich. Folge: ausser den Rundtouren war
-        # jedes Ziel gleich wahrscheinlich - gemessen rund 10 Prozent je Ziel
-        # bei einer Basisrate von 10 Prozent, also Lift 1,0 auf ganzer Linie.
-        # Fuer eine Assoziationsanalyse gab es damit nichts zu finden.
+        # Die Zielwahl haengt an Tageszeit, Wochentag und Stationstyp. Erst
+        # dadurch entstehen Verbindungen, die deutlich ueber der Basisrate
+        # liegen - die Regeln, die die Assoziationsanalyse findet.
         #
         # Jetzt haengt die Zielwahl von Startstationstyp UND Tageszeit ab, wie
         # es echte Pendlerstroeme tun: morgens vom Bahnhof zur Uni und in die
@@ -753,107 +910,82 @@ while d <= BIS:
 
         rad = random.choice(verfuegbare_raeder)
 
-        # ---- Dauer
-        # ERWEITERT AM 31.08.2026. Vorher hing die Dauer NUR vom Stationstyp
-        # und vom Zufall ab. Fuer die Regressionsuebung war das zu wenig:
-        # gemessen erreichten lineare Regression, Entscheidungsbaum und Random
-        # Forest allesamt R² = 0,35 und einen MAE von 6,95 bis 6,98 Minuten -
-        # ununterscheidbar. Ein Notebook, das drei Verfahren vergleicht, braucht
-        # aber etwas zu vergleichen, und ein Random Forest rechtfertigt sich nur
-        # ueber Wechselwirkungen, die es zu finden gibt.
-        #
-        # Jetzt wirken sechs Groessen auf die Dauer, alle fachlich begruendbar:
-        basis_dauer = {"pendler": 11, "uni": 9, "freizeit": 22, "misch": 14}[typ]
-        # Regen kuerzt (man beeilt sich), Waerme verlaengert (man bummelt).
-        f_wetter = (1 - 0.022 * min(regen, 9)) * (1 + 0.013 * (temp - 12))
-        # Pendlerstunden sind zweckgerichtet, der Nachmittag ist es nicht.
-        f_stunde = 0.78 if stunde in (7, 8, 17, 18) else (1.22 if 13 <= stunde <= 18 else 1.0)
-        f_frei = 1.28 if frei else 1.0
-        # E-Bikes sind schneller, Lastenraeder langsamer - bei gleichem Weg.
-        f_typ = {"CITY": 1.0, "EBIKE": 0.84, "CARGO": 1.20}[rad["typ"]]
-        # Wer wie faehrt: das Profil steht in keiner CSV, wirkt aber. Ueber den
-        # Tarif ist es teilweise erschliessbar - eine realistische Lage, in der
-        # das Modell nur einen Teil der Wahrheit sehen kann.
-        f_profil = {"pendler": 0.74, "studium": 0.86, "freizeit": 1.34,
-                    "gelegenheit": 1.24, "vielfahrer": 0.80}[kunde["profil"]]
-        mittel = basis_dauer * f_wetter * f_stunde * f_frei * f_typ * f_profil
-        if end_station == start_station:
-            mittel *= 1.4
-        # Lognormal statt quadratischem Zufall: haelt die Rechtsschiefe, laesst
-        # aber einen lernbaren Erwartungswert stehen. Die Streuung ist auf 0,21
-        # gesetzt, damit das guenstigste Rad (CITY, 0,10 EUR/Min) die
-        # 50-Cent-Schwelle aus der Business-Understanding-Phase erreichen KANN,
-        # die teureren aber nicht. Das ist eine bewusste Entscheidung fuer den
-        # Lehrdatensatz: sie erzeugt ein DIFFERENZIERTES Ergebnis - Teilfreigabe
-        # fuer einen Radtyp, Ruecksprung fuer die anderen - statt eines
-        # langweiligen "alles gut" oder "alles schlecht".
-        dauer = max(3, round(random.lognormvariate(math.log(max(mittel, 2.0)), 0.21)))
-
-        # ---- Frei abstellen statt andocken
-        # Die Kundenwebsite bewirbt es als Merkmal: "Frei im Geschaeftsgebiet -
-        # ueberall in der roten Umrandung, ohne Zuschlag." Das Datenmodell sieht
-        # es ebenfalls vor (end_station_id ist nullable, daneben stehen
-        # Koordinatenspalten). Bis zum 31.08.2026 endete hier jede Fahrt an einer
-        # Station - ein Datensatz, der dem eigenen Produktversprechen widerspricht.
-        #
-        # Freizeitfahrten enden haeufiger frei als Pendelfahrten: wer zum Kaeppele
-        # hochfaehrt, stellt oben ab, wo er ist.
+        # ---- Endpunkt: Station oder freier Abstellort
+        # Die Website wirbt mit "Frei im Geschaeftsgebiet - ueberall in der
+        # roten Umrandung, ohne Zuschlag". Freizeitfahrten enden haeufiger frei
+        # als Pendelfahrten. Der Abstellort ist einer der oeffentlichen
+        # Fahrradstellplaetze der Stadt in der Naehe des angesteuerten Ziels.
         p_frei = 0.30 if STATION_TYP[end_station] == "freizeit" else 0.16
         frei_abgestellt = random.random() < p_frei
         end_lon = end_lat = ""
+        ziel_ort = str(end_station)
         if frei_abgestellt:
-            # In der Naehe der angesteuerten Station, aber im Gebiet - sonst
-            # waere die Fahrt laut Website gar nicht beendbar.
-            basis_lon, basis_lat = STATION_ORT[end_station]
-            for _ in range(20):
-                lon = basis_lon + random.gauss(0, 0.0045)
-                lat = basis_lat + random.gauss(0, 0.0032)
-                if im_gebiet(lon, lat):
-                    end_lon, end_lat = round(lon, 6), round(lat, 6)
-                    break
+            nahe = [o for o in ABSTELLORTE
+                    if ROUTEN[(str(end_station), o)][0] <= FREI_ABSTELLEN_KM]
+            if nahe:
+                ziel_ort = random.choice(nahe)
+                lat, lon = ABSTELLORT_KOORD[ziel_ort]
+                end_lat, end_lon = round(lat, 6), round(lon, 6)
             else:
-                frei_abgestellt = False     # kein Platz gefunden: doch andocken
+                frei_abgestellt = False
+
+        # ---- Strecke und Dauer
+        # Die kuerzeste Route steht in der Matrix. Wer nicht zweckgerichtet
+        # faehrt, faehrt weiter als noetig - das ist die Umwegbereitschaft.
+        kurz_km, steigung = strecke_und_steigung(start_station, ziel_ort)
+        umweg = UMWEG_PROFIL[kunde["profil"]] * (1.12 if frei else 1.0)
+        if STATION_TYP[end_station] == "freizeit":
+            umweg *= 1.10
+        strecke_km = kurz_km * umweg * random.uniform(0.94, 1.14)
+        tempo = fahrtempo(rad["typ"], steigung, temp, regen, stunde, kunde["profil"])
+        reine_fahrzeit = strecke_km / tempo * 60
+        mittel = reine_fahrzeit + HALT_GRUND_MIN + HALT_JE_KM_MIN * strecke_km
+        dauer = max(2, round(random.lognormvariate(
+            math.log(max(mittel, 2.0)), DAUER_STREUUNG)))
+        # Die Streuung darf die Fahrt nicht schneller machen, als ein Rad faehrt.
+        dauer = max(dauer, math.ceil(strecke_km / TEMPO_HOECHSTWERT * 60))
+        hoehenmeter = max(0.0, steigung / 1000.0 * strecke_km * 1000.0)
 
         # ---- Status
         r_status = random.random()
         if r_status < 0.022:
-            status = "abgebrochen"      # am Terminal abgebrochen, Rad nie wirklich weg
+            # Am Terminal abgebrochen: das Rad war nie wirklich unterwegs.
+            status = "abgebrochen"
             dauer = random.randint(1, 3)
-            end_station = start_station
+            end_station, ziel_ort = start_station, str(start_station)
             frei_abgestellt = False
             end_lon = end_lat = ""
+            strecke_km, hoehenmeter = 0.0, 0.0
         elif r_status < 0.027:
             status = "storniert"
             dauer = random.randint(1, 2)
-            end_station = start_station
+            end_station, ziel_ort = start_station, str(start_station)
             frei_abgestellt = False
             end_lon = end_lat = ""
+            strecke_km, hoehenmeter = 0.0, 0.0
         else:
             status = "abgeschlossen"
-            # Vergessene Rueckgaben: seltene, sehr lange Ausleihen. Sie sind der
-            # Anker fuer die Anomalieerkennung - selten genug, um nicht ins
-            # Mittel zu rutschen, haeufig genug, um sie zu finden.
+            # Vergessene Rueckgabe: die Strecke bleibt normal, nur die Ausleihe
+            # laeuft weiter. Eine Regel auf die Dauer allein wuerde auch echte
+            # Tagesausfluege treffen - erst Dauer UND Strecke zusammen verraten
+            # den Fall.
             if random.random() < 0.0007:
                 dauer = random.randint(8 * 60, 30 * 60)
                 langzeit_gesetzt += 1
 
         endzeit = startzeit + timedelta(minutes=int(dauer))
 
-        # ---- Distanz: weiterhin nur zu 60 Prozent gemessen (Datenqualitaet!)
+        # ---- Distanz: der Sensor meldet nur einen Teil der Fahrten
         distanz = ""
-        if status == "abgeschlossen" and random.random() < 0.60:
-            geschw = {"CITY": 13.0, "EBIKE": 18.0, "CARGO": 11.0}[rad["typ"]]
-            distanz = round((dauer / 60.0) * geschw * random.uniform(0.80, 1.20), 2)
-            rad["km_kumuliert"] += float(distanz)
-        elif status == "abgeschlossen":
-            rad["km_kumuliert"] += (dauer / 60.0) * 13.0 * 0.9
-        rad["fahrten"] += 1
-        # Fuer das Verschleissmodell weiter unten: WANN wurde wieviel gefahren.
-        # Der Sensor meldet nur 60 Prozent der Distanzen - verschlissen wird
-        # trotzdem, deshalb hier die geschaetzte Strecke, nicht die gemessene.
         if status == "abgeschlossen":
-            geschw = {"CITY": 13.0, "EBIKE": 18.0, "CARGO": 11.0}[rad["typ"]]
-            rad["verlauf"].append((d, (dauer / 60.0) * geschw))
+            if random.random() < 0.60:
+                distanz = round(strecke_km, 2)
+            rad["km_kumuliert"] += strecke_km
+            rad["hoehenmeter"] += hoehenmeter
+            # Fuer das Verschleissmodell: wann wurde wieviel gefahren und
+            # wieviel davon bergauf.
+            rad["verlauf"].append((d, strecke_km, hoehenmeter))
+        rad["fahrten"] += 1
 
         # ---- Entgelt
         if status == "abgeschlossen":
@@ -893,16 +1025,9 @@ KATEGORIEN_EBIKE = KATEGORIEN + ["Akku", "Motor/Unterstuetzung"]
 schaden_rows, auftrag_rows = [], []
 schaden_id = auftrag_id = 0
 
-# VERSCHLEISS ENTSTEHT ENTLANG DER ZEIT (31.08.2026)
+# VERSCHLEISS ENTSTEHT ENTLANG DER ZEIT
 #
-# Die erste Fassung zog die ANZAHL Meldungen aus der Lebenszeit-Nutzung und
-# verteilte sie dann zufaellig ueber das Radleben. Fuer die Klassifikation war
-# das toedlich: WANN eine Meldung kommt, hing von nichts ab, was man vorher
-# haette wissen koennen. Gemessen schlug die Faustregel "meiste Kilometer"
-# (46,7 % Treffer) den Random Forest (41,7 %) - voellig zu Recht, denn mehr als
-# die Lebenszeit-Nutzung steckte gar nicht in den Daten.
-#
-# Jetzt laeuft das Modell die Fahrten jedes Rades der Reihe nach ab. Die
+# Das Modell laeuft die Fahrten jedes Rades der Reihe nach ab. Die
 # Gefaehrdung waechst mit den Kilometern SEIT DER LETZTEN REPARATUR und faellt
 # danach auf null zurueck. Das ist physikalisch das Naheliegende - ein Bremsbelag
 # weiss nicht, wieviel das Rad in seinem ganzen Leben gefahren ist, sondern nur,
@@ -924,8 +1049,11 @@ for rad in raeder:
     pool = KATEGORIEN_EBIKE if rad["typ"] in ("EBIKE", "CARGO") else KATEGORIEN
     ende_rad = rad["ausgemustert_am"] or BIS
 
-    for tag, km in rad["verlauf"]:
-        km_seit_wartung += km
+    for tag, km, hm in rad["verlauf"]:
+        # Hoehenmeter verschleissen ueberproportional: bergauf den
+        # Antrieb, bergab die Bremsen. Zehn Hoehenmeter zaehlen wie ein
+        # zusaetzlicher Kilometer.
+        km_seit_wartung += km + hm / 10.0
         # Gefaehrdung je Fahrt: waechst ueberproportional mit der Strecke seit
         # der letzten Reparatur. Der Exponent 2,2 sorgt dafuer, dass ein frisch
         # gewartetes Rad praktisch sicher ist und ein lange gefahrenes deutlich

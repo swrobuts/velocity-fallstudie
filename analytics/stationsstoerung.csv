@@ -1,27 +1,27 @@
 station_id,von,bis,grund
-2,2023-12-31,2023-12-31,Stromausfall Ladepunkt
-6,2024-01-04,2024-01-06,Bauarbeiten
-5,2024-03-14,2024-03-14,Vandalismus
-10,2024-07-19,2024-07-20,Softwarefehler Terminal
-4,2024-08-10,2024-08-12,Stromausfall Ladepunkt
-4,2024-11-10,2024-11-11,Softwarefehler Terminal
-3,2024-12-12,2024-12-20,Stromausfall Ladepunkt
-7,2025-01-06,2025-01-06,Stromausfall Ladepunkt
-6,2025-01-18,2025-01-26,Vandalismus
-1,2025-03-27,2025-03-28,Hochwasser Mainufer
-2,2025-05-10,2025-05-11,Softwarefehler Terminal
-6,2025-05-14,2025-05-14,Stromausfall Ladepunkt
-1,2025-06-17,2025-06-18,Hochwasser Mainufer
-4,2025-07-20,2025-08-04,Softwarefehler Terminal
-9,2025-08-25,2025-08-26,Hochwasser Mainufer
-1,2025-09-10,2025-09-10,Vandalismus
-2,2025-10-16,2025-10-17,Hochwasser Mainufer
-7,2025-11-28,2025-12-06,Bauarbeiten
-1,2026-02-04,2026-02-12,Stromausfall Ladepunkt
-4,2026-03-30,2026-04-14,Bauarbeiten
-10,2026-05-06,2026-05-08,Hochwasser Mainufer
-10,2026-05-13,2026-05-13,Bauarbeiten
-4,2026-06-15,2026-06-17,Hochwasser Mainufer
-10,2026-06-18,2026-06-20,Hochwasser Mainufer
-3,2026-07-06,2026-07-08,Softwarefehler Terminal
-8,2026-08-07,2026-08-07,Bauarbeiten
+10,2021-10-11,2021-10-11,Stromausfall Ladepunkt
+6,2021-10-18,2021-10-20,Hochwasser Mainufer
+6,2022-01-03,2022-01-04,Bauarbeiten
+1,2022-03-28,2022-03-29,Vandalismus
+1,2022-05-24,2022-05-24,Stromausfall Ladepunkt
+3,2022-06-22,2022-06-24,Vandalismus
+1,2022-06-25,2022-06-26,Hochwasser Mainufer
+7,2022-06-27,2022-06-29,Softwarefehler Terminal
+9,2022-08-14,2022-08-16,Bauarbeiten
+7,2022-12-23,2022-12-23,Vandalismus
+6,2023-02-21,2023-02-21,Vandalismus
+9,2023-03-06,2023-03-21,Bauarbeiten
+4,2023-05-13,2023-05-15,Hochwasser Mainufer
+8,2023-08-01,2023-08-03,Softwarefehler Terminal
+7,2023-10-25,2023-11-02,Stromausfall Ladepunkt
+5,2024-01-05,2024-01-05,Stromausfall Ladepunkt
+10,2024-01-09,2024-01-13,Bauarbeiten
+3,2024-04-29,2024-04-30,Stromausfall Ladepunkt
+4,2024-08-06,2024-08-07,Bauarbeiten
+3,2025-02-11,2025-02-13,Bauarbeiten
+6,2025-05-26,2025-06-10,Hochwasser Mainufer
+10,2025-07-09,2025-07-09,Hochwasser Mainufer
+3,2025-08-29,2025-08-30,Vandalismus
+3,2025-10-21,2025-10-23,Softwarefehler Terminal
+2,2026-03-19,2026-03-20,Softwarefehler Terminal
+9,2026-06-05,2026-06-07,Hochwasser Mainufer
