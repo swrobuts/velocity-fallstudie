@@ -94,7 +94,7 @@ python3 slides/check_deck.py slides/velocity-crispdm.pptx
 
 Der Lauf muss `0 Befund(e)` melden. Geprüft werden Inhaltszone (y = 176 bis 494),
 Mindestschriftgröße 13 pt, überlappende Formen, geschätzte Textüberläufe und fehlende
-Vortragsnotizen. Alle 90 Folien tragen eine Vortragsnotiz.
+Vortragsnotizen. Alle 110 Folien tragen eine Vortragsnotiz.
 
 ## Zwei neue Motive in `thws.py`
 
