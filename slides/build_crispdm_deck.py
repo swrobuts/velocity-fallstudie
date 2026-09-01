@@ -1840,6 +1840,41 @@ def fall3(prs):
                "Fußnote. Studierende bauen später Segmentierungen in Unternehmen — "
                "und die Frage nach der Rechtsgrundlage kommt dort garantiert.")
 
+    s = folie(prs, "Fall 3 · Phase 5",
+              "Ein Kriterium, das man behauptet, ist keines",
+              "Kriterium 4 aus Phase 1 lautete: „Ein zweiter Lauf mit anderem "
+              "Zufallsstart muss dieselben Gruppen liefern.“ Belegt wurde es zunächst "
+              "mit `n_init=25` — und das prüft etwas anderes.")
+    vorher_nachher(s,
+                   ("Was behauptet wurde", "n_init=25 als Beleg", [
+                       "„25 Zufallsstarts, der beste",
+                       "wird genommen.“",
+                       "",
+                       "Das ist Qualitätssicherung",
+                       "INNERHALB eines Laufs — nicht",
+                       "die Frage, ob ein anderer",
+                       "Start dasselbe Ergebnis",
+                       "liefert.",
+                   ], False),
+                   ("Was gemessen wurde", "Adjustierter Rand-Index", [
+                       "Fünf Startwerte, jeder gegen",
+                       "den Grundlauf verglichen.",
+                       "",
+                       "Stationen:   1,000 bis 1,000",
+                       "Kundschaft:  0,895 bis 0,993",
+                       "",
+                       "Die Stationen sind stabil,",
+                       "die Segmente nur annähernd.",
+                   ], False),
+                   y=unter_intro(s), hoehe=206)
+    phasenleiste(s, 5)
+    notizen(s, "Das Ergebnis ist gut — aber es war vorher nicht belegt, sondern "
+               "behauptet. Der Unterschied zählt: Hätte die Messung eine Instabilität "
+               "gezeigt, wäre sie unbemerkt in die Auslieferung gewandert. Für den "
+               "Kampagnenplan hat der Befund eine praktische Folge: Er wird nicht über "
+               "Cluster-Nummern ausgeliefert, sondern über nachvollziehbare Schwellen "
+               "— die sind reproduzierbar, die Nummern nicht.")
+
     s = folie(prs, "Fall 3 · Abschluss", "Der Kreislauf schließt sich",
               "Zwei Fragen, ein Verfahren — und ein Ergebnis, das die "
               "Ausgangsfrage übertroffen hat.")
@@ -1979,13 +2014,14 @@ def fall4(prs):
             "Fünffache einer zu hohen.",
         ]),
         ("Mit Aufschlag", [
-            "Rund 16 % werden auf die",
-            "Prognose aufgeschlagen.",
+            "Rund 12 % werden auf die",
+            "Prognose aufgeschlagen —",
+            "gewählt auf der Validierung,",
+            "nicht auf dem Test.",
             "",
             "Der mittlere Fehler steigt.",
-            "Die Kosten sinken.",
-            "",
-            "Beides gleichzeitig.",
+            "Die Kosten sinken. Beides",
+            "gleichzeitig.",
         ]),
         ("Was man lernt", [
             "Die Kennzahl, die man",
@@ -2026,15 +2062,16 @@ def fall4(prs):
                "korrekt gerechnet. Er beantwortet nur nicht die Frage, die im Betrieb "
                "gestellt wird. Dasselbe Muster wie der Schattenbetrieb in Fall 1.")
 
-    zellfolie(prs, 4, "6.1", "Phase 6 · im Notebook",
+    zellfolie(prs, 4, "5.2", "Phase 5 · im Notebook",
               "Zwei Fehlerwerte — und nur einer zählt",
               "nb4-ehrlich",
-              "MAE 12,50 mit dem tatsächlichen Wetter, 17,13 mit einer simulierten "
-              "Vorhersage. Die zweite Zahl ist die ehrliche.",
-              "Die Zeile sagt es selbst: „unrealistisch“ und „realistisch“. Wer in "
-              "einem Bericht nur die erste Zahl zeigt, hat nicht gelogen und trotzdem "
-              "getäuscht. Das Notebook nimmt einem die Entscheidung ab, indem es beide "
-              "nebeneinander stellt.")
+              "MAE 12,25 mit dem tatsächlichen Wetter, 16,90 mit einer simulierten "
+              "Vorhersage. Geurteilt wird auf der zweiten Zahl — davor, nicht danach.",
+              "Diese Zelle stand in einer früheren Fassung in Phase 6, also NACH der "
+              "Freigabe. Die Freigabe fiel damit auf einer Zahl, die das ausgelieferte "
+              "Produkt nie erreicht — mit Ist-Wetter 1.727 €, im Betrieb 3.523 €. "
+              "Jetzt steht die Zelle vor dem Urteil. Wer in einem Bericht nur die "
+              "erste Zahl zeigt, hat nicht gelogen und trotzdem getäuscht.")
 
     s = folie(prs, "Fall 4 · Abschluss", "Der Kreislauf schließt sich")
     tabelle(s, ["Phase", "Was dabei herauskam"], [

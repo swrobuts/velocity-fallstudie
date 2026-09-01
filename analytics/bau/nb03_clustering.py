@@ -394,19 +394,75 @@ MD("""
 Jetzt kommt der Schritt, den kein Algorithmus abnimmt. Die Zahlen liefern Gruppen; **die
 Namen liefert der Verstand.** Lesen Sie die vier Kurven und die Zeile darunter:
 
-- eine Gruppe mit **scharfer Doppelspitze um 7–8 und 17–18 Uhr** und einem
-  Wochenendanteil um 12 % — das sind Wege zur Arbeit: **Pendlerstationen**
-- eine Gruppe mit **breitem Vormittags- und Nachmittagsberg**, Delle um die Mittagszeit,
-  Wochenende ebenfalls niedrig — das folgt dem Vorlesungsbetrieb: **Uni-Stationen**
-- eine Gruppe mit **flachem Nachmittagsverlauf** und einem Wochenendanteil um **48 %** —
-  das ist Freizeit: **Ausflugsstationen**
-- eine Station, die **zwischen allem** liegt: der Marktplatz — **Mischtyp**
+- vier Stationen mit **Spitze um 7 Uhr** und einem Wochenendanteil von **16 %** — das
+  sind Wege zur Arbeit: **Pendlerstationen**
+- zwei Stationen mit **Spitze um 14 Uhr**, Wochenende noch niedriger bei **14 %** — das
+  folgt dem Vorlesungsbetrieb: **Uni-Stationen**
+- zwei Stationen mit **Spitze um 16 Uhr**, Wochenendanteil **56 %** und mit 29 Minuten
+  der doppelten Fahrtdauer — das ist Freizeit: **Ausflugsstationen**
+- zwei Stationen, die **zwischen allem** liegen: Marktplatz und Juliuspromenade, Spitze
+  um 18 Uhr, Wochenendanteil 34 % — **Innenstadtstationen**
 
-**Alle vier Kriterien aus Phase 1 sind erfüllt:** benennbar, unterschiedlich zu behandeln,
-groß genug, und stabil (`n_init=25` prüft 25 Zufallsstarts und nimmt den besten).
+Die Zahlen stehen in der Tabelle darüber; lesen Sie sie nach, statt der Aufzählung zu
+glauben.
 
-> **Hier stimmen Kennzahl und Fachlichkeit überein** — der Silhouettenwert ist bei k = 4
-> am höchsten, und die vier Gruppen lassen sich benennen. Das ist der angenehme Fall.
+**Kriterien 1 bis 3 aus Phase 1 sind damit erfüllt:** Jede Gruppe ist benennbar, jede
+bekommt in Phase 6 eine eigene Regel, und keine ist zu klein. Kriterium 2 wird dort
+außerdem maschinell geprüft — **vier Gruppen müssen vier verschiedene Maßnahmen
+ergeben.** Eine frühere Fassung dieses Notebooks hat genau daran gescheitert, ohne dass
+es auffiel.
+
+### Kriterium 4: Stabilität — gemessen, nicht behauptet
+
+`n_init=25` ist **keine** Stabilitätsprüfung. Es rechnet 25 Startpunkte durch und nimmt
+den mit der geringsten Streuung — das ist Qualitätssicherung innerhalb eines Laufs, nicht
+die Frage, ob ein anderer Zufallsstart dieselben Gruppen liefert.
+
+Die Frage lässt sich beantworten: Man clustert mehrfach mit verschiedenen Startwerten und
+vergleicht die Einteilungen mit dem **adjustierten Rand-Index**. Er ist 1,0 bei
+identischer Gruppierung und 0 bei zufälliger Übereinstimmung.
+"""),
+
+CODE('''
+from sklearn.metrics import adjusted_rand_score
+
+def stabilitaet(daten, k, name):
+    """Liefern andere Zufallsstarts dieselbe Einteilung?"""
+    grund = KMeans(n_clusters=k, n_init=25, random_state=42).fit_predict(daten)
+    werte = []
+    for seed in (0, 1, 7, 99, 2024):
+        andere = KMeans(n_clusters=k, n_init=25, random_state=seed).fit_predict(daten)
+        werte.append(adjusted_rand_score(grund, andere))
+    print(f"{name:14s} ARI über fünf Startwerte: "
+          f"{min(werte):.3f} bis {max(werte):.3f}   "
+          f"{'stabil' if min(werte) > 0.99 else 'nur annähernd stabil'}")
+    return min(werte)
+
+s_stab = stabilitaet(S_skaliert, K_STATIONEN, "Stationen")
+k_stab = stabilitaet(R_skaliert, K_KUNDEN, "Kundschaft")
+'''),
+
+MD("""
+**Die Stationen sind stabil, die Kundensegmente nur annähernd.** Bei den zehn Stationen
+liefert jeder Startwert dieselbe Einteilung. Bei 2.202 Kundinnen und Kunden wandern je
+nach Startwert einzelne Personen zwischen den Gruppen — der ARI bleibt hoch, erreicht
+aber nicht 1,0.
+
+Für die Auslieferung heißt das: Der Dispositionsplan ist eine feste Zuordnung, der
+Kampagnenplan ist es nicht. Wer nächstes Quartal neu clustert, bekommt bei einzelnen
+Kunden ein anderes Segment. **Deshalb wird der Kampagnenplan in Phase 6 nicht über
+Cluster-Nummern ausgeliefert, sondern über nachvollziehbare Schwellen** — die sind
+reproduzierbar.
+
+> **Und noch eine Zahl, die man nicht überlesen sollte:** Der Silhouettenwert der
+> Kundensegmente liegt bei 0,405, der der Stationen bei 0,759. Werte um 0,4 heißen:
+> Es *gibt* eine Struktur, aber die Gruppen gehen ineinander über. Das ist bei
+> Kundendaten der Normalfall und kein Fehler — es ist aber ein Grund, die Segmente als
+> Arbeitshilfe zu behandeln und nicht als Naturkonstante.
+
+> **Bei den Stationen stimmen Kennzahl und Fachlichkeit überein** — der Silhouettenwert
+> ist bei k = 4 am höchsten, und die vier Gruppen lassen sich benennen. Das ist der
+> angenehme Fall.
 >
 > **Verlassen kann man sich darauf nicht.** Bei der Kundensegmentierung weiter unten liegen
 > die Silhouettenwerte für k = 2, k = 4 und k = 5 dicht beieinander; dort entscheidet die
@@ -592,7 +648,7 @@ print("  wenigsten binden - das lässt sich mit denselben Daten prüfen.")
 """),
 
 MD("""
-### 5.B.4 Und die 930 Kundinnen und Kunden ohne jede Fahrt?
+### 5.B.4 Und die Kundschaft ganz ohne Fahrt?
 """),
 
 CODE('''
@@ -623,26 +679,49 @@ PHASE(6, "Aus vier Stationstypen wird ein Umverteilungsplan, aus fünf Kundengru
 
 CODE('''
 # --- A) Der Dispositionsplan
-namen_cluster = {}
+#
+# Die Zuordnung folgt zwei Merkmalen: dem Wochenendanteil und der Uhrzeit
+# der Spitze. Beide stehen in der Tabelle aus Phase 5 - hier wird nichts
+# geraten, sondern abgelesen.
+namen_cluster, regeln = {}, {}
 for c in sorted(S.cluster.unique()):
     g = S[S.cluster == c]
     spitze = int(g[stundenspalten].mean().values.argmax())
     we = g.wochenendanteil.mean()
-    if we > 0.40:
+    if we > 0.45:
         bez, regel = "Ausflugsstation", "erst gegen 11 Uhr auffüllen, Schwerpunkt Sa/So"
     elif spitze <= 9:
         bez, regel = "Pendlerstation", "bis 6:30 Uhr voll, nachmittags Abfluss einplanen"
-    elif len(g) == 1:
-        bez, regel = "Mischstation", "gleichmäßig, keine Sonderregel"
+    elif we > 0.25:
+        bez, regel = "Innenstadtstation", "abends nachlegen, am Wochenende halb so viel"
     else:
         bez, regel = "Uni-Station", "vorlesungsfreie Zeit: halbe Bestückung"
-    namen_cluster[c] = bez
+    namen_cluster[c], regeln[c] = bez, regel
     for name in g.index:
         print(f"{name:<22s} {bez:<18s} {regel}")
 
+# ─── KRITERIUM 2 AUS PHASE 1, MASCHINELL GEPRUEFT ───────────────────
+# "Fuer jede Gruppe muss es eine ANDERE Massnahme geben. Zwei Gruppen mit
+# derselben Massnahme sind eine Gruppe."
+#
+# Diese Zeile ist aus Schaden entstanden: Eine frühere Fassung hatte einen
+# Zweig zu wenig, und der Mischtyp fiel auf "Uni-Station" durch. Im
+# ausgelieferten CSV standen dann vier Uni-Stationen statt zwei - und
+# Marktplatz und Juliuspromenade bekamen die Anweisung "vorlesungsfreie
+# Zeit: halbe Bestueckung", die fuer sie falsch ist. Aufgefallen ist es
+# niemandem, weil der Text daneben etwas anderes behauptete.
+assert len(set(namen_cluster.values())) == len(namen_cluster), (
+    f"Kriterium 2 verletzt: {len(namen_cluster)} Gruppen, aber nur "
+    f"{len(set(namen_cluster.values()))} verschiedene Bezeichnungen - "
+    f"{namen_cluster}")
+assert len(set(regeln.values())) == len(regeln), (
+    f"Kriterium 2 verletzt: zwei Gruppen bekommen dieselbe Regel - {regeln}")
+print(f"\\nKriterium 2 geprüft: {len(namen_cluster)} Gruppen, "
+      f"{len(set(regeln.values()))} verschiedene Maßnahmen.")
+
 S["stationstyp"] = S.cluster.map(namen_cluster)
 S[["stationstyp", "wochenendanteil", "dauer_median", "fahrten_gesamt"]].to_csv("stationstypen.csv")
-print("\\ngeschrieben: stationstypen.csv")
+print("geschrieben: stationstypen.csv")
 '''),
 
 CODE('''
@@ -714,7 +793,7 @@ MD("""
 | 2 Data Understanding | Stammdaten enthalten keinen Typ — das Muster steckt im Verhalten | Kein Segment in der Kundentabelle |
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
-| 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: 100 % | Vier Segmente — und zwei Befunde, die weh tun; dazu eine hypothetische Rechnung, ausdrücklich als Vorschlag gekennzeichnet |
+| 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: 100 %. Stabilität gemessen, nicht behauptet | Vier Segmente, nur annähernd stabil und mit schwächerer Trennung — dazu zwei Befunde, die weh tun, und eine hypothetische Rechnung |
 | 6 Deployment | Dispositionsplan als CSV | Kampagnenplan, mit Datenschutzvorbehalt |
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**
@@ -725,7 +804,7 @@ MD("""
    sondern ein Preisproblem, das die Segmentierung sichtbar gemacht hat. Nachgerechnet
    ist auch, um wieviel es geht — der Listenwert der abgegebenen Freiminuten steht in
    den Daten.
-2. **Knapp 30 % der Kundschaft taucht in der Segmentierung überhaupt nicht auf**, weil
+2. **Knapp ein Drittel der Kundschaft taucht in der Segmentierung überhaupt nicht auf**, weil
    sie im letzten Jahr nicht gefahren ist. RFM sieht nur, wer kauft. Wer aufgehört hat,
    fällt aus der Tabelle — und aus dem Blick.
 

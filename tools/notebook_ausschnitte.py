@@ -96,9 +96,9 @@ AUSSCHNITTE = {
     # ── Notebook 4: Zeit, Stoergroesse und Kosten
     "nb4-stoergroesse": ("04_Zeitreihe_Nachfrageprognose", "BEI 15-22 GRAD", 0, 1180),
     "nb4-aufschlag": ("04_Zeitreihe_Nachfrageprognose",
-                      "Kosten der reinen Prognose über 90 Tage", 0, 1180, "ausgabe"),
+                      "Auf der VALIDIERUNG gewählt", 0, 1180, "ausgabe"),
     "nb4-ehrlich": ("04_Zeitreihe_Nachfrageprognose",
-                    "mit simulierter Wettervorhersage", 0, 1180),
+                    "Ab hier zählt nur noch die zweite Zeile", 0, 1180),
 
     # ── Notebook 5: die Huerden sieben
     "nb5-regel": ("05_Assoziation_Wege_im_Netz",

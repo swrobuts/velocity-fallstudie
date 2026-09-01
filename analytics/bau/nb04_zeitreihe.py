@@ -61,7 +61,8 @@ absichtlich etwas zu hoch. Wir rechnen das in Phase 5 aus.
 
 Das dritte Kriterium ist kein Nebensatz: Es bestimmt, **welche Merkmale erlaubt sind.**
 Um 18 Uhr des Vortages kennen wir die Wettervorhersage, aber nicht das tatsächliche
-Wetter. Darauf kommen wir in Phase 6 zurück — dort wird es unangenehm.
+Wetter. Deshalb wird in Phase 5 mit einer **simulierten Vorhersage** gerechnet, bevor
+geurteilt wird — nicht danach.
 """),
 
 # =====================================================================
@@ -226,29 +227,42 @@ merkmale = ["temp_mittel_c", "temp_max_c", "niederschlag_mm", "wind_max_kmh",
             "ist_ferien", "ist_vorlesungszeit", "ist_veranstaltung"]
 
 TESTTAGE = 90
+VALIDIERUNGSTAGE = 90
 schnitt = d.index.max() - pd.Timedelta(days=TESTTAGE)
+schnitt_val = schnitt - pd.Timedelta(days=VALIDIERUNGSTAGE)
 
-##LUECKE Teilen Sie zeitlich: alles bis zum Schnitt ins Training, alles danach in den Test.
-train = d[d.index <= schnitt]
+##LUECKE Teilen Sie zeitlich in DREI Abschnitte: Training, Validierung, Test.
+train = d[d.index <= schnitt_val]
+val = d[(d.index > schnitt_val) & (d.index <= schnitt)]
 test = d[d.index > schnitt]
 ##ENDE
 
 X_train, y_train = train[merkmale], train.fahrten
+X_val, y_val = val[merkmale], val.fahrten
 X_test, y_test = test[merkmale], test.fahrten
 
-print(f"Training: {len(train):>4d} Tage  {train.index.min().date()} bis {train.index.max().date()}")
-print(f"Test:     {len(test):>4d} Tage  {test.index.min().date()} bis {test.index.max().date()}")
-print(f"\\nMittlere Fahrten  Training {y_train.mean():.1f} | Test {y_test.mean():.1f}")
+for name, teil in (("Training", train), ("Validierung", val), ("Test", test)):
+    print(f"{name:<12s}{len(teil):>5d} Tage  {teil.index.min().date()} "
+          f"bis {teil.index.max().date()}   Mittel {teil.fahrten.mean():5.1f} Fahrten")
 '''),
 
 MD("""
-> **Die Testmenge ist ein Sommer.** Das Training enthält alle Jahreszeiten, der Test nur
-> den Hochsommer — und der liegt deutlich über dem Trainingsmittel. Das ist keine
-> Nachlässigkeit, sondern genau die Lage im Betrieb: Man trainiert auf der Vergangenheit
-> und prognostiziert den kommenden Zeitraum, was immer er bringt.
+> **Warum drei Abschnitte und nicht zwei?** Weil in Phase 5 nicht nur ein Modell gewählt
+> wird, sondern auch ein **Sicherheitsaufschlag**. Beides sind Entscheidungen, und
+> Entscheidungen gehören nicht auf die Testmenge — sonst prüft man am Ende, wie gut man
+> geraten hat.
 >
-> Wir müssen es aber bei der Bewertung wissen. Ein Modell, das die Sommerlage nicht
-> trifft, fällt hier auf — und das soll es auch.
+> Die Validierung trägt die Wahl, der Test misst sie einmal. Das ist derselbe Aufbau wie
+> in Notebook 1, nur mit Tagen statt Fahrten.
+
+> **Und die Testmenge ist ein Sommer.** Sie liegt deutlich über dem Trainingsmittel —
+> lesen Sie die drei Zahlen oben nebeneinander. Das ist keine Nachlässigkeit, sondern
+> genau die Lage im Betrieb: Man trainiert auf der Vergangenheit und prognostiziert den
+> kommenden Zeitraum, was immer er bringt.
+>
+> Es hat aber eine Folge, die am Ende in den Bericht gehört: **Ein Sommerfenster trägt
+> keine Jahresaussage.** Wie das Modell im November arbeitet, weiß dieses Notebook
+> nicht.
 """),
 
 # =====================================================================
@@ -265,24 +279,27 @@ def bewerten(name, y_wahr, y_prognose):
             "RMSE": round(float(np.sqrt(mean_squared_error(y_wahr, y_prognose))), 2),
             "R²": round(r2_score(y_wahr, y_prognose), 3)}
 
+# Gewaehlt wird auf der VALIDIERUNG. Die Testmenge bleibt bis Phase 5
+# unberuehrt - sonst waere sie kein Test, sondern eine Auswahlhilfe.
 ergebnisse = []
-ergebnisse.append(bewerten("Nullmodell (Mittel des Trainings)", y_test,
-                           np.full(len(y_test), y_train.mean())))
+ergebnisse.append(bewerten("Nullmodell (Mittel des Trainings)", y_val,
+                           np.full(len(y_val), y_train.mean())))
 
 # Die Faustregel der Disposition: so viel wie am gleichen Wochentag der Vorwoche.
-vorwoche = d.fahrten.shift(7).loc[test.index]
-ergebnisse.append(bewerten("Faustregel: wie letzte Woche", y_test, vorwoche))
+vorwoche_val = d.fahrten.shift(7).loc[val.index]
+ergebnisse.append(bewerten("Faustregel: wie letzte Woche", y_val, vorwoche_val))
 
 linear = LinearRegression().fit(X_train, y_train)
-ergebnisse.append(bewerten("Lineare Regression", y_test, linear.predict(X_test)))
+ergebnisse.append(bewerten("Lineare Regression", y_val, linear.predict(X_val)))
 
 ##LUECKE Trainieren Sie einen HistGradientBoostingRegressor mit max_iter=400, random_state=42.
 boosting = HistGradientBoostingRegressor(max_iter=400, random_state=42).fit(X_train, y_train)
 ##ENDE
-prognose = boosting.predict(X_test)
-ergebnisse.append(bewerten("Gradient Boosting", y_test, prognose))
+prognose_val = boosting.predict(X_val)
+ergebnisse.append(bewerten("Gradient Boosting", y_val, prognose_val))
 
 tabelle = pd.DataFrame(ergebnisse)
+print("Alle Zahlen auf der VALIDIERUNG - die Testmenge ist noch unberührt.\\n")
 print(tabelle.to_string(index=False))
 '''),
 
@@ -314,25 +331,7 @@ Messlatte aus Phase 1 — und sie zeigt, wieviel hier zu holen ist.
 PHASE(5, "Wie gut ist die Prognose — und was ist die *richtige* Prognose, wenn die "
          "beiden Fehlerrichtungen unterschiedlich teuer sind?"),
 
-CODE('''
-fig, achsen = plt.subplots(2, 1, figsize=(14, 7))
-achsen[0].plot(test.index, y_test, lw=1.6, color="#3d4b6b", label="tatsächlich")
-achsen[0].plot(test.index, prognose, lw=1.6, color="#e00034", label="Gradient Boosting")
-achsen[0].plot(test.index, vorwoche, lw=1, color="#8c95a8", ls="--", label="Faustregel")
-achsen[0].set_title("Prognose gegen Wirklichkeit, 90 Testtage"); achsen[0].legend(); achsen[0].grid(alpha=.3)
-
-rest = y_test.values - prognose
-achsen[1].bar(test.index, rest, color=np.where(rest > 0, "#e00034", "#3d4b6b"), width=1.0)
-achsen[1].axhline(0, color="black", lw=.8)
-achsen[1].set_title("Abweichung (rot = zu wenig Räder bereitgestellt)"); achsen[1].grid(alpha=.3)
-plt.tight_layout(); plt.show()
-
-print(f"Mittlere Abweichung: {rest.mean():+.1f} Fahrten "
-      f"({'Modell schätzt im Schnitt zu niedrig' if rest.mean() > 0 else 'zu hoch'})")
-print(f"Tage mit Unterdeckung: {(rest > 0).sum()} von {len(rest)}")
-'''),
-
-MD("### 5.1 Die Kostenrechnung — und warum die genaueste Prognose nicht die beste ist"),
+MD("### 5.1 Die Kostenrechnung — und der Aufschlag, der auf die Validierung gehört"),
 
 CODE('''
 KOSTEN_UNTER = 4.00
@@ -347,25 +346,97 @@ def kosten(y_wahr, y_prognose):
     ueber = np.clip(-fehl, 0, None).sum() * KOSTEN_UEBER
     return unter + ueber
 
-grund = kosten(y_test, prognose)
-print(f"Kosten der reinen Prognose über {len(y_test)} Tage: {grund:,.0f} EUR".replace(",", "."))
-
-# Was passiert, wenn wir bewusst etwas zu hoch planen?
+# DER AUFSCHLAG WIRD AUF DER VALIDIERUNG GEWAEHLT.
+#
+# Ihn auf der Testmenge zu suchen waere derselbe Fehler wie eine
+# Modellwahl auf dem Test: Man findet den Wert, der genau dort am besten
+# passt, und berichtet ihn als Ergebnis. In einer frueheren Fassung
+# dieses Notebooks stand genau das - und der so gefundene Aufschlag ging
+# anschliessend in das Freigabekriterium ein.
+grund_val = kosten(y_val, prognose_val)
 aufschlaege = np.arange(0, 0.31, 0.02)
-kostenreihe = [kosten(y_test, prognose * (1 + a)) for a in aufschlaege]
+kostenreihe = [kosten(y_val, prognose_val * (1 + a)) for a in aufschlaege]
 bester = aufschlaege[int(np.argmin(kostenreihe))]
 
 plt.figure(figsize=(9, 4))
 plt.plot(aufschlaege * 100, kostenreihe, marker="o", color="#e00034")
 plt.axvline(bester * 100, color="#3d4b6b", ls="--",
             label=f"günstigster Aufschlag: {bester:.0%}")
-plt.xlabel("Sicherheitsaufschlag auf die Prognose (%)"); plt.ylabel("Kosten über 90 Tage (EUR)")
+plt.xlabel("Sicherheitsaufschlag auf die Prognose (%)")
+plt.ylabel("Kosten über die 90 Validierungstage (EUR)")
 plt.title("Unterdeckung kostet fünfmal so viel wie Überdeckung"); plt.legend(); plt.grid(alpha=.3)
 plt.tight_layout(); plt.show()
 
-print(f"Ohne Aufschlag:  {grund:8,.0f} EUR".replace(",", "."))
-print(f"Mit {bester:.0%} Aufschlag: {min(kostenreihe):8,.0f} EUR".replace(",", "."))
-print(f"Ersparnis:       {grund - min(kostenreihe):8,.0f} EUR über 90 Tage".replace(",", "."))
+print(f"Auf der VALIDIERUNG gewählt:")
+print(f"  ohne Aufschlag:  {grund_val:8,.0f} EUR".replace(",", "."))
+print(f"  mit {bester:.0%} Aufschlag: {min(kostenreihe):8,.0f} EUR".replace(",", "."))
+print(f"  Ersparnis:       {grund_val - min(kostenreihe):8,.0f} EUR über 90 Tage".replace(",", "."))
+print(f"\\nDieser Aufschlag von {bester:.0%} wird jetzt UNVERAENDERT auf den Test angewendet.")
+'''),
+
+MD("""
+### 5.2 Der einmalige Testlauf
+
+Jetzt wird die Testmenge **einmal** angefasst — mit dem Modell aus Phase 4 und dem
+Aufschlag aus 5.1, beide vorher festgelegt. Und gleich richtig:
+
+Bis hierher hat das Modell mit dem **tatsächlichen** Wetter gerechnet. Am Vorabend um
+18 Uhr gibt es das nicht; es gibt nur eine **Vorhersage**. Kriterium 3 aus Phase 1 hat
+das schon angekündigt: Die Prognose muss um 18 Uhr stehen, und das entscheidet, welche
+Merkmale erlaubt sind.
+
+Eine Temperaturvorhersage für den nächsten Tag liegt typischerweise um etwa 1,5 °C
+daneben, eine Niederschlagsvorhersage deutlich mehr. **Wir simulieren das, bevor wir
+urteilen** — nicht danach.
+"""),
+
+CODE('''
+# Die Faustregel auf dem Test
+vorwoche = d.fahrten.shift(7).loc[test.index]
+
+# (a) Mit dem tatsaechlichen Wetter - die Zahl, die man gerne berichtet
+prognose = boosting.predict(X_test)
+
+# (b) Mit simulierter Vorhersage - die Zahl, die im Betrieb gilt
+zufall = np.random.default_rng(42)
+X_prognosewetter = X_test.copy()
+X_prognosewetter["temp_mittel_c"] += zufall.normal(0, 1.5, len(X_test))
+X_prognosewetter["temp_max_c"] += zufall.normal(0, 1.8, len(X_test))
+X_prognosewetter["niederschlag_mm"] = np.clip(
+    X_test.niederschlag_mm.values + zufall.normal(0, 2.0, len(X_test)), 0, None)
+mit_vorhersage = boosting.predict(X_prognosewetter)
+
+print(f"{'mit tatsächlichem Wetter (unrealistisch)':<46s} "
+      f"MAE {mean_absolute_error(y_test, prognose):6.2f}")
+print(f"{'mit simulierter Wettervorhersage (im Betrieb)':<46s} "
+      f"MAE {mean_absolute_error(y_test, mit_vorhersage):6.2f}")
+verlust = mean_absolute_error(y_test, mit_vorhersage) / mean_absolute_error(y_test, prognose) - 1
+print(f"\\nDer Fehler steigt um {verlust:.0%}. Ab hier zählt nur noch die zweite Zeile.")
+'''),
+
+MD("""
+**Die zweite Zahl ist die, gegen die geurteilt wird.** Ein Modell, das mit Daten rechnet,
+die es im Betrieb nicht geben wird, ist im Betrieb schlechter als im Test — immer. Wer
+die erste Zahl in den Bericht schreibt, berichtet ein Produkt, das niemand bekommt.
+"""),
+
+CODE('''
+fig, achsen = plt.subplots(2, 1, figsize=(14, 7))
+achsen[0].plot(test.index, y_test, lw=1.6, color="#3d4b6b", label="tatsächlich")
+achsen[0].plot(test.index, mit_vorhersage, lw=1.6, color="#e00034",
+               label="Gradient Boosting (mit Wettervorhersage)")
+achsen[0].plot(test.index, vorwoche, lw=1, color="#8c95a8", ls="--", label="Faustregel")
+achsen[0].set_title("Prognose gegen Wirklichkeit, 90 Testtage"); achsen[0].legend(); achsen[0].grid(alpha=.3)
+
+rest = y_test.values - mit_vorhersage
+achsen[1].bar(test.index, rest, color=np.where(rest > 0, "#e00034", "#3d4b6b"), width=1.0)
+achsen[1].axhline(0, color="black", lw=.8)
+achsen[1].set_title("Abweichung (rot = zu wenig Räder bereitgestellt)"); achsen[1].grid(alpha=.3)
+plt.tight_layout(); plt.show()
+
+print(f"Mittlere Abweichung: {rest.mean():+.1f} Fahrten "
+      f"({'Modell schätzt im Schnitt zu niedrig' if rest.mean() > 0 else 'zu hoch'})")
+print(f"Tage mit Unterdeckung: {(rest > 0).sum()} von {len(rest)}")
 '''),
 
 MD("""
@@ -378,15 +449,20 @@ teuer ist, lohnt es sich, planmäßig etwas zu hoch zu planen.
 > ist die Rechnung des armen Mannes, aber er zeigt dasselbe Prinzip und lässt sich in
 > einer Zeile erklären.
 
-### 5.2 Die Erfolgskriterien aus Phase 1
+### 5.3 Die Erfolgskriterien aus Phase 1
 """),
 
 CODE('''
-mae_modell = mean_absolute_error(y_test, prognose)
+# ALLE Kriterienzahlen aus dem BETRIEBSFALL: Wettervorhersage statt
+# Ist-Wetter, und der Aufschlag aus der Validierung, nicht aus dem Test.
+mae_modell = mean_absolute_error(y_test, mit_vorhersage)
 mae_faustregel = mean_absolute_error(y_test, vorwoche)
 verbesserung = 1 - mae_modell / mae_faustregel
 kosten_faustregel = kosten(y_test, vorwoche)
-kosten_modell = min(kostenreihe)
+kosten_modell = kosten(y_test, mit_vorhersage * (1 + bester))
+
+# Zum Vergleich, ausdruecklich NICHT entscheidungsrelevant:
+kosten_schoen = kosten(y_test, prognose * (1 + bester))
 
 print("Erfolgskriterien aus Phase 1:\\n")
 k1 = verbesserung >= 0.30
@@ -397,9 +473,12 @@ werte = f"{kosten_modell:,.0f} gegen {kosten_faustregel:,.0f}".replace(",", ".")
 print(f"  2. günstiger als die Faustregel                       {werte} EUR   "
       f"{'ERFÜLLT' if k2 else 'GERISSEN'}")
 print(f"\\n  Gesamturteil: {'FREIGABE' if (k1 and k2) else 'RÜCKSPRUNG'}")
+print(f"\\n  Zum Vergleich - mit Ist-Wetter gerechnet waeren es "
+      f"{kosten_schoen:,.0f} EUR gewesen.".replace(",", "."))
+print("  Diese Zahl steht hier nur, damit man den Unterschied sieht.")
 '''),
 
-MD("### 5.3 Wo irrt das Modell? Die schlechtesten Tage ansehen"),
+MD("### 5.4 Wo irrt das Modell? Die schlechtesten Tage ansehen"),
 
 CODE('''
 schlechteste = pd.DataFrame({
@@ -419,43 +498,21 @@ PHASE(6, "Die Prognose muss jeden Abend um 18 Uhr auf dem Tisch liegen — mit e
          "Zutat, die wir bisher geschummelt haben."),
 
 MD("""
-### 6.1 Das ehrliche Eingeständnis
+### 6.1 Was die simulierte Wettervorhersage nicht abbildet
 
-Unser Modell hat mit dem **tatsächlichen** Wetter gerechnet. Am Vorabend um 18 Uhr gibt
-es das nicht — es gibt nur eine **Vorhersage**.
+Die Freigabe in Phase 5 steht schon auf der Betriebszahl — das war die wichtigste
+Korrektur an diesem Notebook. Zwei Dinge bleiben trotzdem offen, und sie gehören genannt:
 
-Das ist kein Schönheitsfehler, sondern eine echte Einschränkung, und sie gehört
-ausgerechnet. Eine Temperaturvorhersage für den nächsten Tag liegt typischerweise um
-etwa 1,5 °C daneben, eine Niederschlagsvorhersage deutlich mehr. Simulieren wir das.
-"""),
+**Erstens ist die Wetterunsicherheit simuliert, nicht gemessen.** Wir haben normalverteiltes
+Rauschen auf Temperatur und Niederschlag gelegt — 1,5 °C und 2 mm, aus der Literatur
+gegriffen. Eine echte Vorhersage irrt anders: Sie irrt **systematisch**, sie irrt bei
+Extremwetter stärker als im Mittel, und sie irrt bei Niederschlag anders als bei
+Temperatur. Wer die Zahl belastbar haben will, braucht **archivierte Vorhersagen** —
+also das, was am Vorabend tatsächlich auf dem Bildschirm stand.
 
-CODE('''
-zufall = np.random.default_rng(42)
-X_prognosewetter = X_test.copy()
-# Typische Unsicherheit einer 24-Stunden-Vorhersage
-X_prognosewetter["temp_mittel_c"] += zufall.normal(0, 1.5, len(X_test))
-X_prognosewetter["temp_max_c"] += zufall.normal(0, 1.8, len(X_test))
-X_prognosewetter["niederschlag_mm"] = np.clip(
-    X_test.niederschlag_mm.values + zufall.normal(0, 2.0, len(X_test)), 0, None)
-
-mit_vorhersage = boosting.predict(X_prognosewetter)
-
-print(f"{'mit tatsächlichem Wetter (unrealistisch)':<45s} MAE {mean_absolute_error(y_test, prognose):6.2f}")
-print(f"{'mit simulierter Wettervorhersage (realistisch)':<45s} MAE {mean_absolute_error(y_test, mit_vorhersage):6.2f}")
-verlust = mean_absolute_error(y_test, mit_vorhersage) / mean_absolute_error(y_test, prognose) - 1
-print(f"\\nDer Fehler steigt um {verlust:.0%}.")
-print(f"Kosten mit Vorhersagewetter: {kosten(y_test, mit_vorhersage * (1 + bester)):,.0f} EUR"
-      .replace(",", "."))
-print(f"Kosten der Faustregel:       {kosten_faustregel:,.0f} EUR".replace(",", "."))
-'''),
-
-MD("""
-**Das ist die Zahl, die in den Projektbericht gehört** — nicht die schönere von vorhin.
-Ein Modell, das mit Daten rechnet, die es im Betrieb nicht geben wird, ist im Betrieb
-schlechter als im Test. Immer.
-
-Erfreulich: Auch mit dieser Einschränkung bleibt die Prognose deutlich besser als die
-Faustregel. Die Freigabe hält.
+**Zweitens ist der Testzeitraum ein Sommer.** Das Trainingsmittel liegt weit unter dem
+Testmittel; wie das Modell im November arbeitet, weiß dieses Notebook nicht. Eine
+Jahresfreigabe bräuchte mindestens vier Testfenster, eines je Jahreszeit.
 
 ### 6.2 Die Prognosefunktion
 """),
@@ -538,10 +595,10 @@ MD("""
 |---|---|
 | 1 Business Understanding | Zwei Entscheidungen (Räder, Frühdienst), zwei ungleich teure Fehlerrichtungen (4,00 € gegen 0,80 €) und ein Betriebskriterium — die Prognose muss um 18 Uhr stehen |
 | 2 Data Understanding | Jahresgang und Wochenrhythmus liegen übereinander. Und eine **Störgröße**: Der rohe Ferieneffekt ist irreführend, weil Ferien im Sommer liegen |
-| 3 Data Preparation | Schnitt entlang der Zeit statt zufällig — die Testmenge ist der Sommer 2026 |
+| 3 Data Preparation | Schnitt entlang der Zeit in **drei** Abschnitte: Training, Validierung, Test. Die Testmenge ist der Sommer 2026 und liegt weit über dem Trainingsmittel |
 | 4 Modeling | Nullmodell, dann die echte Faustregel der Disposition, dann linear und Gradient Boosting |
-| 5 Evaluation | Klar besser als die Faustregel. Und: Die genaueste Prognose ist **nicht** die günstigste — ein Sicherheitsaufschlag senkt die Kosten |
-| 6 Deployment | Das Modell rechnete mit dem tatsächlichen Wetter; mit einer simulierten Vorhersage steigt der Fehler spürbar. Die ehrliche Zahl gehört in den Bericht |
+| 5 Evaluation | Aufschlag auf der Validierung gewählt, Test einmal angefasst — und zwar gleich mit simulierter Wettervorhersage. Auch so klar besser als die Faustregel. Und: Die genaueste Prognose ist **nicht** die günstigste |
+| 6 Deployment | Prognosefunktion, Modellpaket und Überwachung. Offen bleibt, dass die Wetterunsicherheit simuliert und nicht gemessen ist — und dass ein Sommerfenster keine Jahresaussage trägt |
 
 **Was eine zweite Runde anders machen würde**
 
@@ -556,6 +613,20 @@ MD("""
 3. **Ein Verfahren, das Unsicherheit mitliefert.** Statt einer Zahl eine Spanne
    („zwischen 95 und 130 Fahrten“) — dann kann die Disposition selbst entscheiden, wie
    vorsichtig sie plant, statt sich auf unseren Aufschlag zu verlassen.
+
+**Was offen bleibt — ausdrücklich**
+
+1. **Die Wetterunsicherheit ist simuliert, nicht gemessen.** Normalverteiltes Rauschen
+   auf Temperatur und Niederschlag. Eine echte Vorhersage irrt systematisch und bei
+   Extremwetter stärker. Belastbar wird die Zahl erst mit **archivierten Vorhersagen**.
+2. **Ein Sommerfenster trägt keine Jahresaussage.** Das Testmittel liegt weit über dem
+   Trainingsmittel. Wie das Modell im November arbeitet, weiß dieses Notebook nicht.
+3. **Ein einziges Testfenster.** Für eine Freigabe bräuchte es mehrere, am besten je
+   Jahreszeit eines.
+4. **Der Aufschlag ist eine Krücke.** Fachlich sauber wäre eine Quantilsregression, die
+   die Kostenasymmetrie im Modell selbst abbildet statt in einem Faktor danach.
+5. **Erfundene Daten.** Alle Euro-Beträge sind Szenariorechnungen unter gesetzten
+   Annahmen — die Fehlerkosten von 4,00 € und 0,80 € stammen aus keiner Messung.
 
 **Weiter geht es mit Notebook 5 — Assoziationsanalyse:** Dort gibt es weder eine
 Zielgröße noch Gruppen, sondern **Regeln**: Was hängt mit was zusammen? Und wir werden

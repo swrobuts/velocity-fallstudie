@@ -63,8 +63,8 @@ Diese hier enthalten ausdrücklich:
 - **Notebook 2:** Der Random Forest holt gegen eine einzeilige Faustregel **nichts
   heraus** — und sein scheinbarer Vorsprung in einer früheren Fassung war ein Fehler im
   Merkmal, gegen das er antrat
-- **Notebook 3:** Die Umsatzgröße war falsch definiert, und 29 % der Kundschaft fallen
-  aus der Segmentierung heraus
+- **Notebook 3:** Knapp ein Drittel der Kundschaft fällt aus der Segmentierung heraus —
+  RFM sieht nur, wer kauft
 - **Notebook 4:** Ein roher Mittelwertvergleich behauptet das Gegenteil des Richtigen
 - **Notebook 5:** Die Regel mit dem höchsten Lift ist wertlos
 - **Notebook 6:** Der erste Modellversuch findet die Preisklasse statt der Anomalien —
