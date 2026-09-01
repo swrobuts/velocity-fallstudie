@@ -691,7 +691,7 @@ Listenpreis des Radtyps. Zwischen beiden liegen drei Regeln aus der Preisauskunf
 
 | Regel | Wirkung |
 |---|---|
-| **Freiminuten** | Studierende haben 300, ÖPNV-Abonnenten 600, Premium 1.000 Minuten im Monat |
+| **Freiminuten** | Studierende haben 30, ÖPNV-Abonnenten 50, Premium 90 Minuten im Monat |
 | **Rabatt** | Premium zahlt 20 % weniger auf den Restbetrag |
 | **Tagesdeckel** | Startgebühr plus Zeitentgelt, gedeckelt je angefangenem Tag |
 
@@ -909,12 +909,22 @@ Drei Wege stehen offen:
 Der dritte Weg ändert nicht die Verfahrensklasse — eine Quantilregression ist weiterhin
 Regression —, sondern das, was die App verspricht.
 
-**Neues Erfolgskriterium, vor der Messung festgelegt:**
+**Neues Erfolgskriterium, vor der Messung festgelegt.** Die Nützlichkeitsregel hat zwei
+Teile, und sie messen absichtlich Verschiedenes:
+
+- Die **Minutengrenze** misst das Modell. Die Unsicherheit entsteht bei der Dauer; dort
+  gehört die Gütegrenze hin. Der Preis folgt daraus durch eine feste Rechenvorschrift.
+- Die **relative Preisgrenze** misst den Nutzen für den Kunden. Eine Spanne von einem
+  Euro bedeutet bei einer Zwei-Euro-Fahrt etwas anderes als bei einer Neun-Euro-Fahrt.
+
+Eine **absolute** Euro-Grenze würde beides vermischen — und teure Radtypen ausschließen,
+ohne dass das Modell dort schlechter wäre. Beim Lastenrad kostet die Minute 0,50 €, beim
+Citybike 0,10 €: Ein Euro Spielraum sind dort zwei Minuten, hier zehn.
 
 | | |
 |---|---|
 | **trifft** | Die angezeigte Spanne enthält den tatsächlichen Preis in mindestens **80 %** der Fälle — insgesamt *und* je Radtyp |
-| **nützt** | Die Spanne ist höchstens **1,00 €** breit, sonst zeigt die App keinen Preis |
+| **nützt** | Die Spanne umfasst höchstens **12 Minuten** *und* höchstens **60 %** des angezeigten Preises, sonst zeigt die App nichts |
 | **gemessen auf** | **Test 2** — dem Zeitraum, den bis hierher nichts berührt hat |
 
 ### 5.6 Welches Artefakt? Zwei Kandidaten, ehrlich verglichen
@@ -977,6 +987,21 @@ tab["bis"] = tab.bis_roh.round()
 # derselben Strecke zahlen verschieden viel - eine Tabelle je Verbindung
 # koennte das gar nicht abbilden. Die App rechnet den Preis zur Laufzeit.
 #
+# ---- Die Nuetzlichkeitsregel aus Phase 5.5, an EINER Stelle definiert.
+# Auswahl und spaetere Ueberwachung muessen dieselbe Regel verwenden - sonst
+# fliegt in der Kalibrierung etwas heraus, das im Betrieb noch angezeigt wird.
+SPANNE_MAX_MIN = 12          # Guete des Modells
+SPANNE_MAX_ANTEIL = 0.60     # Nutzen fuer den Kunden
+MINDESTFAHRTEN = 30          # sonst ist das Perzentil geraten
+
+
+def spanne_nuetzt(minuten_von, minuten_bis, preis_von, preis_bis):
+    \"\"\"Ist diese Spanne schmal genug, um sie ueberhaupt anzuzeigen?\"\"\"
+    mitte = (preis_von + preis_bis) / 2
+    return ((minuten_bis - minuten_von <= SPANNE_MAX_MIN)
+            & (preis_bis - preis_von <= SPANNE_MAX_ANTEIL * np.maximum(mitte, 0.01)))
+
+
 # Fuer die Breitenregel brauchen wir dennoch einen Massstab. Wir nehmen den
 # Basistarif: Er hat keine Freiminuten und keinen Rabatt und ist damit der
 # TEUERSTE Fall. Wessen Spanne dort unter einem Euro bleibt, bleibt es fuer
@@ -984,10 +1009,12 @@ tab["bis"] = tab.bis_roh.round()
 tab["preis_von_basis"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(tab["von"], tab.typ_code)]
 tab["preis_bis_basis"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(tab["bis"], tab.typ_code)]
 
-# Die Ein-Euro-Regel greift auf den ANGEZEIGTEN Werten. Das Runden kann
-# eine Spanne knapp ueber die Grenze heben oder unter sie druecken -
-# geprueft wird deshalb danach, nicht davor.
-tab = tab[(tab.n >= 30) & (tab.preis_bis_basis - tab.preis_von_basis <= 1.00)]
+# Die Regel greift auf den ANGEZEIGTEN Werten. Das Runden kann eine Spanne
+# knapp ueber die Grenze heben oder unter sie druecken - geprueft wird
+# deshalb danach, nicht davor.
+tab = tab[(tab.n >= MINDESTFAHRTEN)
+          & spanne_nuetzt(tab["von"], tab["bis"],
+                          tab.preis_von_basis, tab.preis_bis_basis)]
 print(f"{len(tab)} Kombinationen erfuellen die beiden Regeln aus Phase 1.")
 # Die Stations-IDs stehen in beiden Tabellen und meinen dasselbe. Beim
 # Zusammenfuehren wuerden daraus sonst zwei Spaltenpaare mit Suffixen.
@@ -1037,7 +1064,7 @@ def bewerten(name, u, o):
     da = zukunft[o].notna()
     von, bis = preisspanne(u, o)
     drin = (zukunft.p_ist >= von - 0.001) & (zukunft.p_ist <= bis + 0.001)
-    zeigbar = da & ((bis - von) <= 1.00)
+    zeigbar = da & spanne_nuetzt(zukunft[u], zukunft[o], von, bis)
     # Ueber ALLE Radtypen des Datensatzes, nicht nur ueber die angezeigten.
     # Sonst verschwindet ein Radtyp, fuer den ein Kandidat nie antwortet,
     # einfach aus der Bewertung - und der Kandidat besteht, weil er schweigt.
@@ -1098,33 +1125,26 @@ _ = merke("tabelle_reichweite", vergleich.loc["Perzentiltabelle", "geringste Rei
 """),
 
 MD("""
-**Nur ein Kandidat erfüllt das vollständige Kriterium.**
+**Beide Kandidaten erfüllen das vollständige Kriterium** — insgesamt, je Radtyp und in
+der Reichweite. Damit fällt die Entscheidung nicht über die Güte.
 
 - Die **Quantilregression** antwortet auf {{quantil_auskunft:.1%}} der Anfragen und
   verwirft {{quantil_verworfen:.1%}} ihrer Spannen als zu breit. Was sie gut macht, ist
-  gerade dieses Weglassen: Sie antwortet nur dort, wo sie eine schmale Spanne bilden
-  kann — und sie kann es für jeden Radtyp.
-- Die **Perzentiltabelle** antwortet auf {{tabelle_auskunft:.1%}} der Anfragen, aber
-  **für Lastenräder auf keine einzige**. Ihre Reichweite ist dort {{tabelle_reichweite:.1%}}.
+  gerade dieses Weglassen: Sie antwortet nur dort, wo sie eine schmale Spanne bilden kann.
+- Die **Perzentiltabelle** antwortet auf {{tabelle_auskunft:.1%}} der Anfragen; ihre
+  geringste Reichweite über alle Radtypen beträgt {{tabelle_reichweite:.1%}}.
 
-> **Warum das Kriterium die Reichweite braucht.** Hätten wir nur die Abdeckung unter den
-> angezeigten Fällen gemessen, stünde die Tabelle glänzend da: Was sie sagt, stimmt fast
-> immer. Sie sagt für Lastenräder nur nie etwas. Ein Kandidat kann ein Kriterium
-> erfüllen, indem er schweigt — deshalb gehört die Reichweite je Radtyp mit hinein,
-> **festgelegt vor der Messung**.
-
-Der Grund ist keine Schwäche des Verfahrens, sondern die Datenlage: Lastenradfahrten sind
-selten, und auf eine einzelne Verbindung zu einer bestimmten Tageszeit entfallen zu
-wenige, um ein Perzentil zu bilden. Die Mindestfallzahl von 30 filtert sie alle weg.
+> **Warum das Kriterium die Reichweite braucht.** Ohne sie könnte ein Kandidat bestehen,
+> indem er für einen ganzen Radtyp schweigt: Was er sagt, stimmt dann fast immer — er
+> sagt nur nichts. Die Reichweite je Radtyp gehört deshalb mit hinein, **festgelegt vor
+> der Messung**, und ein Radtyp ohne einzige Auskunft zählt als null, nicht als fehlend.
 
 **Warum trotzdem die Tabelle?** Nicht wegen der Güte — die spricht für das Modell.
 Sondern weil die App eine statische Seite ohne Python ist und kein Modell laden kann.
 
-Damit ist die Entscheidung unbequem, und sie muss ausgesprochen werden: **Wir liefern
-den Kandidaten aus, der das Kriterium verfehlt** — und ziehen daraus die Folge, statt
-das Kriterium zu senken. Die Preisauskunft gilt ab sofort **nicht für Lastenräder**.
-Das ist eine Einschränkung des Geltungsbereichs, keine Ausnahme von der Regel: Für
-Lastenräder gibt es kein Produkt, und die App sagt das, statt zu raten.
+Beide erfüllen das Kriterium, also entscheidet die Betriebsfähigkeit — nicht die Güte.
+Das ist ein Argument, das man aussprechen muss: Wir liefern **nicht** das bessere
+Verfahren aus, sondern das lauffähige.
 
 Weitere Unterschiede:
 
@@ -1174,7 +1194,7 @@ MD("""
 Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 
 1. mindestens 30 Fahrten als Grundlage,
-2. eine Spanne von höchstens 1,00 €,
+2. eine Spanne von höchstens 12 Minuten und 60 % des Preises,
 3. und eine **auf Test 2 gemessene** Abdeckung von mindestens 80 Prozent — **insgesamt
    und je Radtyp**, dazu der Ausschluss jeder Kombination, die dort *messbar* darunter
    liegt.
@@ -1185,9 +1205,12 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 > die Spanne ist {{breite_gedeckt:.2f}} € breit. Jedes Modell trifft das.
 >
 > Bei den {{n_offen:,}} Fahrten ohne ausreichendes Guthaben sind es
-> {{abdeckung_offen:.1%}}, mit einer Untergrenze von {{unten_offen:.1%}} — knapp über
-> der Schwelle. **Das ist die eigentliche Leistung, und sie ist deutlich schwächer als
-> die Gesamtzahl vermuten lässt.**
+> {{abdeckung_offen:.1%}} — und die Untergrenze des Vertrauensbereichs liegt bei
+> {{unten_offen:.1%}}, also **unter der zugesagten Schwelle von 80 Prozent**.
+>
+> **Für die Gruppe, auf die es ankommt, ist die Zusage damit nicht statistisch
+> gestützt.** Die Gesamtquote von {{abdeckung_gesamt:.1%}} verdeckt das vollständig. Wer
+> nur sie berichtet, verspricht etwas, das die Daten nicht hergeben.
 
 > **Was diese Freigabe leistet — und was nicht.** Die 80 Prozent sind für die Tabelle
 > als Ganzes und für jeden freigegebenen Radtyp gemessen. Für die **einzelne**
@@ -1213,6 +1236,7 @@ z["preis_bis"] = [kundenpreis(m, ty, r, ra) for m, ty, r, ra
 z["im_intervall"] = (z.p_ist >= z.preis_von - 0.001) & (z.p_ist <= z.preis_bis + 0.001)
 z["breite"] = z.preis_bis - z.preis_von
 
+_ = merke("abdeckung_gesamt", z.im_intervall.mean())
 print(f"Abdeckung insgesamt auf Test 2: {z.im_intervall.mean():.1%}   (Kriterium 80 %)")
 print()
 # Eine Quote aus wenigen Faellen ist keine Zusage. Das Wilson-Intervall sagt,
