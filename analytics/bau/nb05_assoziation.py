@@ -113,10 +113,16 @@ Eine Regel ist für die Disposition **nur dann brauchbar**, wenn alle drei zutre
 |---|---|---|---|
 | 1 | **Support** | mindestens 1 % aller Fahrten | Für eine Regel, die zwanzig Fahrten im Jahr betrifft, fährt kein Transporter |
 | 2 | **kontextbedingter Lift** | mindestens 1,3 | Darunter ist es Zufall oder schlicht Größe |
-| 3 | **Handlungsfähig** | Start ≠ Ziel, und das Ziel ist eine Station | eine Rundtour verschiebt kein Rad; „frei abgestellt“ ist kein Ort, den man anfahren kann |
+| 3 | **Ziel ist eine konkrete Station** | Start ≠ Ziel, und das Ziel ist keine freie Abstellung | eine Rundtour verschiebt kein Rad; „frei abgestellt“ ist kein Ort, den man anfahren kann |
 
 **Kriterium 3 wird in Phase 5 als Code geprüft**, nicht als Absichtserklärung. Ein
 Kriterium, das nur im Text steht, ist keines.
+
+> **Und es heißt bewusst nicht „handlungsfähig".** Geprüft wird ausschließlich, ob das
+> Ziel eine anfahrbare Station ist — **technische Adressierbarkeit**. Ob Menge, Bestand,
+> Kapazität und Kosten eine Transporterfahrt rechtfertigen, sagt dieses Kriterium nicht
+> und kann es nicht sagen. Eine frühere Fassung nannte es „handlungsfähig" und
+> versprach damit mehr, als sie prüfte.
 
 **Kriterium 1 ist das, das am meisten Regeln aussortiert** — und zwar gerade die mit den
 spektakulärsten Lift-Werten. Wir werden das gleich sehen. Ob es dabei das Richtige misst,
@@ -471,15 +477,29 @@ Datensatz **falsch**. Die Ausgabe oben hat ihn geprüft.
 
 Für jede Regel steht eine Vierfeldertafel zur Verfügung: Fahrten ab dieser Station in
 diesem Fenster zu diesem Ziel, gegen alles andere. Fishers exakter Test beantwortet damit
-die Frage, ob eine solche Häufung bei Unabhängigkeit noch plausibel wäre. Weil wir nicht
-eine Regel testen, sondern alle 32, multiplizieren wir jeden p-Wert mit 32
-(**Bonferroni-Korrektur**) — die einfachste und strengste Art, sich das mehrfache
-Hinsehen anzurechnen.
+die Frage, ob eine solche Häufung bei Unabhängigkeit noch plausibel wäre.
 
-**Alle zehn bestehen den Test**, der schwächste noch mit einem korrigierten p-Wert unter
-0,001. Diese Regeln sind real; sie sind nur **klein**.
+**Womit wird korrigiert?** Nicht mit 32. Die 32 Regeln sind das, was den Supportfilter
+überlebt hat — und dieser Filter ist **datenabhängig**, er hat also schon ausgewählt. Wer
+danach korrigiert, korrigiert nur den Rest und rechnet sich die Familie klein. Durchsucht
+wurden **800** Kombinationen aus Tagesart, Fenster, Start und Ziel; mit 800 wird
+multipliziert (**Bonferroni-Korrektur**).
 
-> **Das ist eine wichtige Unterscheidung.** „Statistisch gesichert" und „betrieblich
+**Alle zehn bestehen auch diesen strengeren Test**, der schwächste mit einem korrigierten
+p-Wert von **0,00230**.
+
+> **Was daraus folgt — und was nicht.** Die beobachteten Häufungen sind unter dem
+> gewählten Unabhängigkeitsmodell auch nach konservativer Korrektur statistisch auffällig.
+> **Das heißt nicht, dass die Regeln „real" sind.** Fishers Test behandelt jede Fahrt als
+> unabhängige Beobachtung; tatsächlich fahren dieselben Personen wiederholt, und Fahrten
+> desselben Tages hängen zusammen. Ein Bootstrap über Tage oder Kundennummern wäre
+> ehrlicher und fiele vermutlich schwächer aus.
+>
+> Was wir sagen können: **Die Häufungen sind nicht mit reinem Zufall zu erklären, und sie
+> halten in einem späteren Zeitraum** (Phase 5.5). Beides zusammen ist ein Stabilitätsindiz
+> — kein Signifikanznachweis und erst recht kein Beleg betrieblicher Relevanz.
+
+> **Eine wichtige Unterscheidung bleibt.** „Statistisch auffällig" und „betrieblich
 > relevant" sind zwei verschiedene Dinge, und die Assoziationsanalyse liefert nur das
 > erste. Der übliche Merksatz — hoher Lift heißt Zufall — verwechselt beides. Hier
 > scheitern die Regeln nicht an der Signifikanz, sondern an der Größe.
@@ -708,7 +728,7 @@ weg.
 | **Regeln gefunden** (ab 0,5 % Support) | 32 |
 | K1 — Support ≥ 1 % | 0 |
 | K2 — kontextbedingter Lift ≥ 1,3 | 9 |
-| K3 — handlungsfähig | 16 |
+| K3 — Ziel ist eine konkrete Station | 16 |
 | **alle drei zusammen** | **0** |
 | **freigegeben** | **keine** |
 
@@ -850,7 +870,8 @@ print(f"    Zum Vergleich: die Stationen fassen {stationen.kapazitaet.min()} "
 print("\\n    Gelesen als Betriebsanweisung heisst das: nichts zu tun.")
 
 print("\\n" + "=" * 66)
-print("(B) DER TAGESBEDARF — wieviele Räder müssen an einem Werktag bewegt werden?\\n")
+print("(B) DAS THEORETISCHE NETTO-UNGLEICHGEWICHT JE WERKTAG")
+print("    (wieviele Räder waeren zu bewegen, WENN vollstaendig ausgeglichen wird)\\n")
 print(bedarf.groupby("fenster", observed=True).agg(
     Mittel="mean", Median="median",
     P90=lambda x: x.quantile(0.9), Maximum="max").round(1).to_string())
@@ -864,9 +885,17 @@ print(f"        Mittel {rest_tag.mean():.2f}   Median {rest_tag.median():.0f}   
 print("\\n    Die Aggregationsregel allein aendert den Wert um rund die Haelfte.")
 print("    Welche gilt, entscheidet der Eingriffszeitpunkt - nicht die Statistik.")
 
-# Ein einzelnes Beispiel macht den Unterschied greifbar.
-bsp = je_tag.xs("Hubland Campus", level="station").xs("früh (0-10)", level="fenster").netto
-print(f"\\n    Beispiel Hubland Campus, früh:")
+# NULLTAGE GEHOEREN DAZU.
+#
+# je_tag enthaelt nur Tage, an denen eine Station ueberhaupt vorkam. Fuer
+# Hubland Campus frueh sind das 647 der 741 Werktage. Mittelt man nur
+# darueber, kommt +1,86 heraus - waehrend Tabelle (A) daneben +1,63 zeigt.
+# Zwei Zahlen fuer dieselbe Groesse im selben Notebook, und der Unterschied
+# sind allein die fehlenden Nullen.
+ALLE_WERKTAGE = sorted(ang_werktag.datum.unique())
+bsp = (je_tag.netto.xs("Hubland Campus", level="station")
+       .xs("früh (0-10)", level="fenster").reindex(ALLE_WERKTAGE, fill_value=0))
+print(f"\\n    Beispiel Hubland Campus, früh (alle {len(bsp)} Werktage):")
 print(f"      Langfristmittel {bsp.mean():+.2f} Räder — Spanne der einzelnen Tage "
       f"{bsp.min():+.0f} bis {bsp.max():+.0f}")
 print(f"      An {(bsp.abs() >= 5).mean():.0%} der Werktage weicht der Tagessaldo um "
@@ -890,7 +919,9 @@ kennzahl = netto_voll.groupby(["fenster", "station"], observed=True).agg(
     Tage_plus=lambda x: (x > 0).mean(),
     Tage_ab_5=lambda x: (x.abs() >= 5).mean())
 
-print("UMLAUFPLAN WERKTAG — aus den TAGESSALDEN, nicht aus dem Mittelwert\\n")
+print("EXPLORATIVE STATIONSSALDEN NACH ZEITFENSTER\\n")
+print("Aus den Tagessalden, nicht aus dem Mittelwert. Kein Einsatzplan:")
+print("es fehlen Datum, Bestand, Kapazitaet und Entscheidungskriterium.\\n")
 for fenster in BEZEICHNUNGEN:
     teil = kennzahl.loc[fenster].sort_values("Median", ascending=False)
     auffaellig = teil[(teil.P90 >= 3) | (teil.P10 <= -3)]
@@ -902,9 +933,10 @@ for fenster in BEZEICHNUNGEN:
         #
         # Eine fruehere Fassung schrieb  richtung = "abholen" if Median >= 0.
         # Damit wurde jeder Median von genau 0 zu "abholen" - auch dort, wo
-        # an mehr als der Haelfte der Tage Raeder FEHLTEN. Am Hubland Campus
-        # mittags waren 53 % der Tage negativ und nur 32 % positiv; die
-        # Ausgabe lautete trotzdem "abholen".
+        # an deutlich mehr Tagen Raeder FEHLTEN als uebrig waren. Am Hubland
+        # Campus mittags sind 43 % der Tage negativ und 26 % positiv; die
+        # Ausgabe lautete trotzdem "abholen" - obwohl im vollstaendigen
+        # Raster 43 % der Tage negativ und nur 26 % positiv sind.
         #
         # Die Richtung folgt jetzt aus den Tagen, nicht aus dem Median, und
         # sie darf auch offen bleiben.
@@ -920,8 +952,10 @@ for fenster in BEZEICHNUNGEN:
               f"an {z.Tage_ab_5:.0%} der Tage ≥ 5 Räder")
     print()
 
-print(f"Gesamtbedarf: im Mittel {bedarf_tag.mean():.0f} Räder je Werktag, "
-      f"an jedem zehnten Werktag {bedarf_tag.quantile(0.9):.0f} oder mehr.")
+print(f"Theoretisches Netto-Ungleichgewicht: im Mittel {bedarf_tag.mean():.0f} Räder "
+      f"je Werktag,")
+print(f"an jedem zehnten Werktag {bedarf_tag.quantile(0.9):.0f} oder mehr - bei "
+      f"Ausgleich nach jedem Fenster.")
 
 # =====================================================================
 # (2) EINSAMMELN - UND ZWAR DA, WO DIE RAEDER STEHEN.
@@ -974,8 +1008,11 @@ print(f"   Anteil, bei dem die nächste Station NICHT die Startstation ist: "
 # unterwegs sein. Der gleichzeitig offene Bestand zu einem Einsatzzeitpunkt
 # steht in diesen Daten NICHT.
 frei["datum"] = frei.startzeit.dt.normalize()
-ereignisse_tag = frei.groupby("datum").size()
-raeder_tag = frei.groupby("datum").fahrrad_id.nunique()
+# Auch hier: die Tage OHNE freies Ende gehoeren in den Nenner. Es sind 11
+# von 741; wer sie weglaesst, rechnet 10,84 statt 10,68.
+ereignisse_tag = frei.groupby("datum").size().reindex(ALLE_WERKTAGE, fill_value=0)
+raeder_tag = (frei.groupby("datum").fahrrad_id.nunique()
+              .reindex(ALLE_WERKTAGE, fill_value=0))
 print(f"\\nJe Werktag: {ereignisse_tag.mean():.2f} frei endende FAHRTEN, aber nur "
       f"{raeder_tag.mean():.2f} verschiedene RAEDER.")
 print(f"An {int((ereignisse_tag > raeder_tag).sum())} Tagen kommt mindestens ein Rad "
@@ -989,7 +1026,10 @@ nach_start = (frei.groupby(["start", "fenster"], observed=True).size()
               .unstack(fill_value=0).reindex(columns=BEZEICHNUNGEN, fill_value=0)
               / WERKTAGE).round(2)
 
-print(f"\\nEINSAMMELPLAN WERKTAG — Räder je Werktag, nach NÄCHSTER Station:")
+print(f"\\nHISTORISCHE ABSTELL-HOTSPOTS — frei endende Fahrten je Werktag,")
+print("gruppiert nach der jeweils nächsten Station. Das zeigt räumlich-zeitliche")
+print("Häufungen der Vergangenheit; eine Route und ein Einsatzzeitpunkt folgen")
+print("daraus nicht.")
 print(einsammeln.to_string())
 print(f"\\ninsgesamt {len(frei) / WERKTAGE:.1f} Räder je Werktag")
 
@@ -1064,8 +1104,18 @@ Tag zu bewegen wären:
 > Ausgleich nach jedem Zeitfenster*.
 
 **Zwischen „1,75“ und „19,8“ liegt kein neuer Datensatz, sondern eine andere
-Aggregation.** Das Beispiel Hubland Campus macht es greifbar: Langfristmittel **+1,86**,
+Aggregation.** Das Beispiel Hubland Campus macht es greifbar: Langfristmittel **+1,63**,
 aber die einzelnen Werktage reichen von **−3 bis +14**.
+
+> **Auch dieses Beispiel hatte einen Nennerfehler**, und er ist typisch. Die Tagestabelle
+> enthält nur Tage, an denen eine Station überhaupt vorkam — für Hubland früh sind das 647
+> der 741 Werktage. Gemittelt über diese 647 kommt **+1,86** heraus, über alle 741
+> dagegen **+1,63**. Die fehlenden 94 Tage sind keine fehlenden Daten, sondern Tage mit
+> Saldo null.
+>
+> **Zwei Zahlen für dieselbe Größe standen dadurch im selben Notebook**: 1,86 im Text,
+> 1,63 in der Tabelle direkt darüber. Wer Nullen weglässt, weil sie nicht in den Daten
+> stehen, mittelt über die falsche Grundgesamtheit.
 
 > **Die Regel dahinter gilt weit über dieses Notebook hinaus.** Wenn eine Kennzahl über
 > Zeit gemittelt wird und dabei positive und negative Werte enthält, **misst der
@@ -1123,7 +1173,8 @@ bräuchte Datum, Bestand, Menge und ein Entscheidungskriterium.
 
 ### 6.3 Das Einsammeln — und wo die Räder wirklich stehen
 
-Werktäglich bleiben **10,7 Räder** frei im Gebiet zurück. Diese Runde braucht keine
+Werktäglich enden **10,7 Fahrten** frei im Gebiet — von **10,3 verschiedenen Rädern**,
+denn manche werden am selben Tag mehrfach frei abgestellt. Diese Runde braucht keine
 einzige Assoziationsregel; sie folgt direkt aus der Auszählung.
 
 Nur muss man dafür wissen, **wo** die Räder stehen. Eine frühere Fassung dieses Notebooks
@@ -1153,8 +1204,16 @@ Regeln aus.
 
 ### 6.4 Was diese Auswertung ist — und was nicht
 
-Er sagt, **wo** und **wann** einzusammeln ist. Er sagt nicht, **wie viele** Räder an eine
-Station gehören — das war Notebook 4, und beide gehören im Betrieb zusammen.
+Sie zeigt, **wo sich frei abgestellte Räder in der Vergangenheit gehäuft haben** und in
+welchen Zeitfenstern. Sie sagt nicht, wo heute Abend welche stehen — dafür bräuchte es
+Live-Positionen. Und sie sagt erst recht nicht, **wie viele** Räder an eine Station
+gehören; das war Notebook 4, und beide gehören im Betrieb zusammen.
+
+> **Der Unterschied zwischen „wo es sich häuft" und „wo einzusammeln ist" ist der
+> Unterschied zwischen einer Karte und einer Route.** Für die Route fehlen der aktuelle
+> Bestand, die Fahrzeugkapazität, das Zeitfenster und die Fahrtkosten. Eine frühere
+> Fassung schrieb hier „Er sagt, wo und wann einzusammeln ist" — das war eine Karte, die
+> sich als Route ausgab.
 
 Und er besteht aus **zwei Teilen**, die man nicht vermengen darf:
 
@@ -1183,15 +1242,20 @@ laufende Überwachung. Die Schwellen sind plausible Diskussionswerte, nicht kali
 | frei endende Fahrten je Werktag | weichen zwei Wochen lang um mehr als ein Drittel ab | Nutzungsverhalten hat sich geändert — neu auszählen |
 | Schwerpunkt-Station wechselt | zwei Monate in Folge | Route anpassen |
 | Anteil frei abgestellter Fahrten | steigt über 25 % oder fällt unter 15 % | Geschäftsgebiet oder Preismodell wurde geändert |
-| Tagesbedarf beim Umverteilen (Tabelle B) | P90 überschreitet 40 Räder | Umverteilung neu bewerten — dann lohnt sie womöglich |
+| theoretisches Netto-Ungleichgewicht (Tabelle B) | P90 überschreitet 40 Räder | Umverteilung neu bewerten — dann lohnt sie womöglich |
 | neue Station im Netz | taucht auf | **alles neu rechnen** — siehe unten |
 | Baustelle oder Sperrung | gemeldet | betroffene Wege aussetzen, nicht nachjustieren |
 
 **Die vorletzte Zeile gilt auch für die Regeln, falls sie je zum Einsatz kämen.** Der Lift
 misst gegen die Basisrate der Ziele im Kontext. Kommt eine elfte Station dazu, verschiebt
 sich diese Basisrate für **jede** Regel — auch für solche, die mit der neuen Station
-nichts zu tun haben. Assoziationsregeln sind nicht fortschreibbar; sie müssen neu
-gerechnet werden.
+nichts zu tun haben.
+
+**Fortschreiben lassen sich Assoziationsregeln deshalb nicht stückweise.** Neue Fahrten
+und neue Stationen einzurechnen ist selbstverständlich möglich — aber nur als
+**vollständige Neuberechnung**, die anschließend neu validiert und als neue Regelversion
+freigegeben wird. Einzelne Regeln nachzujustieren, während die Basisraten sich verschoben
+haben, ergibt Kennzahlen, die zu nichts mehr gehören.
 
 ### 6.6 Ein Hinweis, der nicht fehlen darf
 
@@ -1219,7 +1283,7 @@ MD("""
 | 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren (16,5 % der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
-| 5 Evaluation | Von 32 Regeln nehmen 9 die Lift-, 16 die Handlungs-, aber **keine** die Support-Hürde. Die stärkste verfehlt sie um fünf Fahrten in drei Jahren — und die Hürde wird trotzdem nicht gesenkt, obwohl sich zeigt, dass sie auf der falschen Skala liegt. Die Deutung des Pendelstroms wurde von der tagesgenauen Gegenprobe **widerlegt**: null Hin- und Rückfahrten am selben Tag |
+| 5 Evaluation | Von 32 Regeln nehmen 9 die Lift-Hürde, 16 haben eine Station als Ziel, aber **keine** nimmt die Support-Hürde. Die stärkste verfehlt sie um fünf Fahrten in drei Jahren — und die Hürde wird trotzdem nicht gesenkt, obwohl sich zeigt, dass sie auf der falschen Skala liegt. Die Deutung des Pendelstroms wurde von der tagesgenauen Gegenprobe **widerlegt**: null Hin- und Rückfahrten am selben Tag |
 | 6 Deployment | **Keine Freigabe** — Phase 6 ist eine eigene explorative Auswertung, die mit keiner Regel rechnet. Der Langfristmittelwert zeigte 1,75 Räder je Werktag; je Tag gerechnet sind es 19,8 bei Ausgleich nach jedem Fenster und 11,1 am Tagesende. Beides sind Ungleichgewichte, kein Bedarf. Die Abstell-Hotspots sind über die **End**koordinaten verortet — bei 87 % ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**

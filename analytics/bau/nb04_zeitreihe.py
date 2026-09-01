@@ -622,6 +622,8 @@ k2 = kosten_modell < kosten_faustregel
 werte = f"{kosten_modell:,.0f} gegen {kosten_faustregel:,.0f}".replace(",", ".")
 print(f"  2. günstiger als die Faustregel                       {werte} EUR   "
       f"{'ERFÜLLT' if k2 else 'GERISSEN'}")
+print(f"     dieselbe Zahl je Tag: {kosten_modell/len(y_test):.2f} gegen "
+      f"{kosten_faustregel/len(y_test):.2f} EUR ueber {len(y_test)} Testtage")
 # HAELT DAS URTEIL, ODER HAENGT ES AN EINER ZUFALLSZIEHUNG?
 #
 # Der Test oben benutzt EINE simulierte Wettervorhersage (Startwert 7).
@@ -917,8 +919,13 @@ except ValueError as fehler:
     print(f"\\nGegenprobe 15.12.2026:\\n  {fehler}")
 
 joblib.dump({"modell": gewaehlt, "merkmale": merkmale, "aufschlag": bester,
-             "mae_test": round(float(mean_absolute_error(y_test, prognose)), 2),
-             "mae_mit_wettervorhersage": round(float(mean_absolute_error(y_test, mit_vorhersage)), 2),
+             # Die BETRIEBSKENNZAHL steht zuerst und heisst so, wie sie
+             # gemeint ist. "mae_test" war zweideutig - wer das Paket liest,
+             # haelt die Ist-Wetter-Diagnose sonst fuer das Ergebnis.
+             "mae_test_prognosewetter": round(
+                 float(mean_absolute_error(y_test, mit_vorhersage)), 2),
+             "mae_test_istwetter_nur_diagnose": round(
+                 float(mean_absolute_error(y_test, prognose)), 2),
              "trainiert_bis": str(X_train.index.max().date()),
              "gewaehlt_auf": "Validierung unter simuliertem Prognosewetter",
              "gewaehltes_verfahren": gewaehlt_name,
