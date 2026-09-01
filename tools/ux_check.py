@@ -217,7 +217,16 @@ laengen = [x.strip() for x in
            re.findall(r'\.scroll-story\s*{[^}]*?(?<!min-)height:\s*([^;]+);', C)]
 # Drei Hoehen, jede mit einem eigenen Grund: die Erzaehlung selbst, das
 # Telefon (dort steht sie still) und die abgeschaltete Bewegung.
-pruefe('P2-05', laengen == [laengen[0], '100svh', '100vh']
+#
+# Die dritte stand bis zum 30.08.2026 auf 100vh und rechnet seither mit
+# 100svh - siehe "Hero rechnet mit svh statt vh, Rad und Scrollhinweis
+# waren abgeschnitten". vh zaehlt die Browserleiste mit, auch wenn sie
+# ausgefahren ist; auf dem Telefon ragte die Buehne deshalb unten heraus.
+# Der Grund gilt bei abgeschalteter Bewegung genauso wie sonst, also
+# stehen jetzt zwei gleiche Werte da. Gleicher Wert, verschiedener Grund:
+# geprueft wird weiterhin, dass es genau drei Angaben sind und die erste
+# ein clamp ist.
+pruefe('P2-05', laengen == [laengen[0], '100svh', '100svh']
        and laengen[0].startswith('clamp('),
        f'Die Buehne hat genau drei Hoehen mit je einem Grund — gefunden: {laengen}')
 pruefe('P2-06', 'stationsliste' in H and 'stationslisteZeichnen' in J,
