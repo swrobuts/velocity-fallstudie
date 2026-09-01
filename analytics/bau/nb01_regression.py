@@ -214,6 +214,17 @@ _ = merke("anteil_rundtour", d.ist_rundtour.mean())
 print(f"\\nRundtouren sind {d.ist_rundtour.mean():.1%} der Fahrten mit Ziel.")
 print("Bei ihnen ist das Ziel gleich dem Start - es trägt per Definition")
 print("keine Information über die Dauer bei, und sie streuen doppelt so stark.")
+
+# HIER greift der Geltungsbereich aus Phase 1, nicht erst beim Ausliefern.
+# Sonst lernt und misst das Notebook an einem anderen Produkt, als es
+# anbietet - und die zentrale Guetezahl waere durch Faelle verzerrt, die
+# die App nie bedient.
+rundtouren = d[d.ist_rundtour == 1].copy()   # bleibt als Kontrast erhalten
+d = d[d.ist_rundtour == 0].copy()
+print()
+print(f"Ab hier rechnen wir nur noch mit den {len(d):,} echten Wegen.")
+print(f"Die {len(rundtouren):,} Rundtouren bleiben als Vergleichsgruppe erhalten -")
+print("bewertet wird an ihnen nichts, denn angeboten wird ihnen nichts.")
 """),
 
 MD("""
@@ -338,13 +349,12 @@ schluessel = list(zip(d.start_station_id.astype("Int64").astype(str),
                       d.end_station_id.astype("Int64").astype(str)))
 d["strecke_km"] = [matrix.strecke_m.get(s, np.nan) / 1000 for s in schluessel]
 d["steigung_promille"] = [matrix.steigung_promille.get(s, np.nan) for s in schluessel]
-# Rundtouren haben keine Relation in der Matrix: Start und Ziel sind derselbe
-# Ort. Wie weit dazwischen gefahren wurde, steht nirgends - das Merkmal
-# ist_rundtour sagt dem Modell, dass die Strecke hier nichts bedeutet.
+# Rundtouren waeren hier ein Problem - Start und Ziel sind derselbe Ort, eine
+# Relation gibt es nicht. Sie sind aber schon in 2.3 ausgeschieden.
 #
-# Jede ANDERE fehlende Strecke waere dagegen ein Datenfehler. Sie stillschweigend
+# Jede fehlende Strecke ist deshalb jetzt ein Datenfehler. Sie stillschweigend
 # auf null zu setzen wuerde ihn verstecken, deshalb hier eine Zusicherung.
-fehlt = d.strecke_km.isna() & (d.ist_rundtour == 0)
+fehlt = d.strecke_km.isna()
 assert not fehlt.any(), (
     f"{fehlt.sum()} echte Verbindungen fehlen in der Routenmatrix: "
     f"{sorted(set(zip(d[fehlt].start_station_id, d[fehlt].end_station_id)))[:5]}")
@@ -395,7 +405,7 @@ d = d.merge(alle[["ausleihe_id", "tarif_code", "freiminuten_pro_monat",
                   "rabatt_prozent", "freiminuten_rest"]],
             on="ausleihe_id", how="left")
 
-echt = d[d.ist_rundtour == 0]
+echt = d
 print(f"{len(d):,} Fahrten, {d.route.nunique()} Verbindungen")
 print(f"Tarife: " + ", ".join(f"{t} {n:,}" for t, n in
                               d.tarif_code.value_counts().items()))
@@ -429,7 +439,7 @@ belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 | **Test 2** (12,5 %) | die zweite Runde wird darauf **kalibriert und freigegeben** | kein Training — aber Auswahl und Filterung |
 
 > **Test 2 ist kein finaler Test, sondern ein Kalibrierungszeitraum.** Auf ihm wird das
-> Artefakt ausgewählt, ein Radtyp ausgeschlossen und über einzelne Kombinationen
+> Artefakt ausgewählt, über Radtypen entschieden und über einzelne Kombinationen
 > entschieden. Wer daraufhin Kennzahlen berichtet, berichtet die Güte einer Auswahl, die
 > auf ebendiesen Daten getroffen wurde — sie fällt zu günstig aus.
 >
@@ -462,7 +472,8 @@ for name, teil in (("Training", training), ("Validierung", validierung),
     print(f"{name:16} {len(teil):>7,} Fahrten   "
           f"{teil.startzeit.min():%d.%m.%Y} bis {teil.startzeit.max():%d.%m.%Y}")
 print()
-print("Test 1 ist Winter und Frühjahr, Test 2 ist Sommer. Dass die beiden")
+print(f"Test 1 reicht von {test1.startzeit.min():%m/%Y} bis {test1.startzeit.max():%m/%Y}, Test 2 ist Sommer.")
+print("Dass die beiden")
 print("Zeiträume verschiedene Jahreszeiten sind, ist kein Zufall der Aufteilung,")
 print("sondern eine Eigenschaft der Daten - und sie wird uns beschäftigen.")
 print()
@@ -524,7 +535,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import DecisionTreeRegressor
 
 KATEGORIAL = ["start_name", "ziel_name", "route", "typ_code"]
-NUMERISCH  = ["strecke_km", "steigung_promille", "ist_rundtour",
+NUMERISCH  = ["strecke_km", "steigung_promille",
               "stunde_sin", "stunde_cos", "wochentag_sin", "wochentag_cos",
               "monat_sin", "monat_cos", "ist_wochenende",
               "ist_feiertag", "ist_ferien"]
@@ -565,8 +576,7 @@ print(f"Baseline D lag bei {tabelle[3][1]:.2f} Min - das Modell ist "
 MD("""
 > **Zur linearen Regression:** `drop="first"` beseitigt die Dummy-Falle innerhalb eines
 > Merkmals, aber nicht die Abhängigkeiten zwischen ihnen — die Route bestimmt Start und
-> Ziel, `ist_rundtour` folgt aus der Route, Strecke und Steigung sind je Route
-> konstant. Die
+> Ziel, Strecke und Steigung sind je Route konstant. Die
 > Vorhersagen sind brauchbar, die **Koeffizienten aber nicht eindeutig interpretierbar**.
 > Wer sie lesen will, braucht eine redundanzfreie Merkmalsmenge oder eine regularisierte
 > Regression.
@@ -580,7 +590,7 @@ ist es, **dasselbe Modell** einmal mit und einmal ohne die Zielmerkmale zu rechn
 CODE("""
 OHNE_ZIEL_KAT = ["start_name", "typ_code"]
 OHNE_ZIEL_NUM = [s for s in NUMERISCH
-                 if s not in ("strecke_km", "steigung_promille", "ist_rundtour")]
+                 if s not in ("strecke_km", "steigung_promille")]
 
 ohne = Pipeline([
     ("aufbereiten", ColumnTransformer([
@@ -624,7 +634,7 @@ kostet diese Steigung an Tempo — und kostet sie jedes Rad dasselbe?
 """),
 
 CODE("""
-echt_v = validierung[validierung.ist_rundtour == 0].copy()
+echt_v = validierung.copy()
 echt_v["kmh"] = echt_v.strecke_km / (echt_v.dauer_min / 60)
 klassen = pd.cut(echt_v.steigung_promille, [-100, -8, -3, 3, 8, 100],
                  labels=["stark bergab", "bergab", "eben", "bergauf", "stark bergauf"])
@@ -869,15 +879,8 @@ Für CARGO gibt es dagegen bisher kein Produkt.
 """),
 
 CODE("""
-print("Rundtouren gegen echte Wege:")
-for name, g in (("Rundtour", pruef[pruef.ist_rundtour == 1]),
-                ("echter Weg", pruef[pruef.ist_rundtour == 0])):
-    print(f"   {name:12} n={len(g):>6,}  "
-          f"MAE {mean_absolute_error(g.dauer_min, g.dauer_geschaetzt):5.2f} Min   "
-          f"Abweichung {g.preisfehler.mean():5.2f} €")
-
-print("\\nDie treffsichersten und die schwierigsten Verbindungen (CITY, echte Wege):")
-c = pruef[(pruef.typ_code == "CITY") & (pruef.ist_rundtour == 0)]
+print("\\nDie treffsichersten und die schwierigsten Verbindungen (CITY):")
+c = pruef[pruef.typ_code == "CITY"]
 je_route = c.groupby("route").agg(
     n=("dauer_min", "size"), median_ist=("dauer_min", "median"),
     q1=("dauer_min", lambda s: s.quantile(.25)),
@@ -925,7 +928,7 @@ Drei Wege stehen offen:
    vorhandenen Spalten holt, haben wir nicht ausgeschöpft — verglichen wurden drei
    Verfahren in je einer Einstellung. Was sicher fehlt, ist der Anlass der einzelnen
    Fahrt, und der steht in keiner Spalte.
-3. **Die Zusage ändern.** Statt einer Zahl, die für ein Viertel der Fahrten zu genau
+3. **Die Zusage ändern.** Statt einer Zahl, die für einen Teil der Fahrten zu genau
    klingt, eine **Spanne**, die die tatsächliche Streuung zeigt.
 
 Der dritte Weg ändert nicht die Verfahrensklasse — eine Quantilregression ist weiterhin
@@ -963,8 +966,8 @@ from sklearn.ensemble import GradientBoostingRegressor
 # Alles, was VOR Test 2 liegt, darf jetzt in die Lernmenge - Test 2 ist
 # der unberuehrte Zeitraum dieser zweiten Runde.
 basis = pd.concat([training, validierung, test1])
-basis = basis[basis.ist_rundtour == 0]
-zukunft = test2[test2.ist_rundtour == 0].copy()
+# Rundtouren sind schon in Phase 2.3 ausgeschieden - hier bleibt nichts zu filtern.
+zukunft = test2.copy()
 
 FENSTER = [(5, 10, "frueh"), (10, 15, "vormittag"),
            (15, 20, "nachmittag"), (20, 24, "abend")]
@@ -1544,8 +1547,7 @@ mit_auskunft = len(z)          # nur freigegebene Radtypen und Kombinationen
 
 print("Von allen Fahrten des Zeitraums Test 2:")
 print(f"   {alle_t2:>6,}  Fahrten insgesamt (schon gefiltert: abgeschlossen, mit Ziel)")
-print(f"   {mit_ziel_ohne_rund:>6,}  davon echte Wege, keine Rundtouren   "
-      f"({mit_ziel_ohne_rund/alle_t2:.0%})")
+print(f"   (Rundtouren sind schon in Phase 2.3 ausgeschieden)")
 print(f"   {mit_auskunft:>6,}  davon mit einer freigegebenen Spanne  "
       f"({mit_auskunft/alle_t2:.0%} aller Fahrten)")
 print()
@@ -1851,14 +1853,15 @@ MD("""
 | 1 Business Understanding | Der Prozess wurde geändert, nicht das Verfahren. Kriterium: Preisfehler unter 50 Cent. Geltungsbereich ausdrücklich eingeschränkt |
 | 2 Data Understanding | Abbrüche und Stornierungen sind keine Fahrten. {{anteil_frei:.1%}} enden frei im Gebiet, {{anteil_rundtour:.1%}} sind Rundtouren |
 | 3 Data Preparation | Zielstation erlaubt — als Stellvertreter. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale |
-| 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, wie wenig das Ziel beiträgt |
-| 5 Evaluation | CITY hält die Grenze auf Test 1 und in allen vier Fenstern der rollierenden Prüfung. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet und zwei Radtypen kein Produkt haben |
-| 6 Deployment | Ausgeliefert wird die Tabelle, nicht das Modell — für CITY, ohne die messbar durchgefallenen Kombinationen. Kalibriert und freigegeben auf Test 2 |
+| 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, dass die Zielangabe {{ablation_anteil:.0%}} des Fehlers erklärt |
+| 5 Evaluation | {{typen_halten}} halten die Grenze auf Test 1, {{typen_reissen}} nicht. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet |
+| 6 Deployment | Ausgeliefert wird die Tabelle, nicht das Modell — für {{typen_freigegeben}}, ohne die messbar durchgefallenen Kombinationen. Kalibriert und freigegeben auf Test 2 |
 
 **Der Rücksprung, den man hier mitverfolgen konnte**
 
-Er kommt nicht, weil das Modell versagt hätte. Für CITY hält die 50-Cent-Grenze auf Test 1
-und in allen vier Fenstern der rollierenden Prüfung. Er kommt aus zwei anderen Gründen:
+Er kommt nicht, weil das Modell versagt hätte. Für {{typen_halten}} hält die
+50-Cent-Grenze auf Test 1 und in allen vier Fenstern der rollierenden Prüfung. Er kommt
+aus zwei anderen Gründen:
 
 > **Ein Mittelwert ist keine Erfahrung.** Nur {{city_unter_50:.0%}} der CITY-Fahrten
 > bleiben innerhalb der 50 Cent — über die übrigen sagt der Durchschnitt nichts.
@@ -1875,8 +1878,9 @@ eine in der Reichweite: Für {{reichweite:.0%}} der Fahrten kann die App etwas s
 
 > Ob ein Merkmal verwendet werden darf, entscheidet der Prozess, nicht der Spaltenname.
 
-> Das Modell ist genau, wo gefahren wird, um anzukommen, und ungenau, wo gefahren wird,
-> um zu fahren.
+> Das Modell ist genau auf Verbindungen mit enger Dauerverteilung und ungenau auf
+> solchen mit weiter. Woran das liegt, sagen die Daten nicht — der Fahrtzweck steht in
+> keiner Spalte.
 
 > Ein Rücksprung ist eine neue Runde — und eine neue Runde braucht einen eigenen
 > Zeitraum. Ob der auch unberührt bleibt, muss man ehrlich sagen: Test 2 trägt hier die
@@ -1894,7 +1898,8 @@ eine in der Reichweite: Für {{reichweite:.0%}} der Fahrten kann die App etwas s
    Prüfmenge zu klein für eine Einzelaussage.
 4. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
 5. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
-6. **Kein Produkt für E-Bike und Lastenrad.** Weder als Zahl noch als Spanne.
+6. **Die Punktschätzung trägt {{typen_reissen}} nicht.** Für diesen Radtyp gibt es
+   nur die Spanne, keine Zahl — der Minutenpreis lässt keine engere Zusage zu.
 7. **Der bessere Kandidat wird nicht ausgeliefert.** Die Quantilregression erfüllt das
    Kriterium und antwortet häufiger; ausgeliefert wird die Tabelle, weil die App statisch
    ist. Ihre Vorhersagen vorab zu tabellieren wäre der nächste Schritt.
