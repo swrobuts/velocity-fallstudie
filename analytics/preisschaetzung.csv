@@ -1,137 +1,230 @@
 start_station_id,ziel_station_id,startstation,zielstation,typ_code,zeitfenster,minuten_von,minuten_bis,preis_von,preis_bis,fahrten_grundlage
-9,6,Grombühl Klinikum,Dom,CITY,nachmittag,5,12,0.6,1.3,78
-9,6,Grombühl Klinikum,Dom,CITY,vormittag,6,15,0.7,1.6,51
-9,1,Grombühl Klinikum,Hauptbahnhof,CITY,frueh,5,10,0.6,1.1,70
-9,1,Grombühl Klinikum,Hauptbahnhof,CITY,nachmittag,5,12,0.6,1.3,192
-9,1,Grombühl Klinikum,Hauptbahnhof,CITY,vormittag,7,14,0.8,1.5,42
-9,8,Grombühl Klinikum,Hubland Campus,CITY,frueh,5,10,0.6,1.1,153
-9,8,Grombühl Klinikum,Hubland Campus,CITY,nachmittag,5,12,0.6,1.3,38
-9,8,Grombühl Klinikum,Hubland Campus,CITY,vormittag,7,15,0.8,1.6,40
-9,5,Grombühl Klinikum,Juliuspromenade,CITY,frueh,5,11,0.6,1.2,109
-9,5,Grombühl Klinikum,Juliuspromenade,CITY,nachmittag,5,15,0.6,1.6,42
-9,2,Grombühl Klinikum,Marktplatz,CITY,frueh,5,10,0.6,1.1,90
-9,4,Grombühl Klinikum,Residenz,CITY,frueh,5,15,0.6,1.6,50
-9,4,Grombühl Klinikum,Residenz,CITY,nachmittag,5,13,0.6,1.4,90
-9,7,Grombühl Klinikum,Sanderau,CITY,frueh,5,10,0.6,1.1,65
-9,7,Grombühl Klinikum,Sanderau,CITY,nachmittag,5,13,0.6,1.4,106
-9,3,Grombühl Klinikum,Universität Sanderring,CITY,frueh,5,9,0.6,1.0,161
-9,3,Grombühl Klinikum,Universität Sanderring,CITY,nachmittag,5,12,0.6,1.3,47
-9,3,Grombühl Klinikum,Universität Sanderring,CITY,vormittag,8,14,0.9,1.5,38
-9,10,Grombühl Klinikum,Zellerau,CITY,frueh,5,10,0.6,1.1,66
-9,10,Grombühl Klinikum,Zellerau,CITY,nachmittag,5,11,0.6,1.2,105
-9,10,Grombühl Klinikum,Zellerau,CITY,vormittag,6,16,0.7,1.7,58
-1,6,Hauptbahnhof,Dom,CITY,nachmittag,5,11,0.6,1.2,77
-1,9,Hauptbahnhof,Grombühl Klinikum,CITY,frueh,5,10,0.6,1.1,84
-1,9,Hauptbahnhof,Grombühl Klinikum,CITY,vormittag,7,14,0.8,1.5,44
-1,8,Hauptbahnhof,Hubland Campus,CITY,frueh,5,11,0.6,1.2,243
-1,8,Hauptbahnhof,Hubland Campus,CITY,nachmittag,5,13,0.6,1.4,47
-1,8,Hauptbahnhof,Hubland Campus,CITY,vormittag,8,15,0.9,1.6,47
-1,5,Hauptbahnhof,Juliuspromenade,CITY,frueh,5,11,0.6,1.2,72
-1,5,Hauptbahnhof,Juliuspromenade,CITY,nachmittag,5,11,0.6,1.2,42
-1,2,Hauptbahnhof,Marktplatz,CITY,frueh,5,9,0.6,1.0,57
-1,2,Hauptbahnhof,Marktplatz,CITY,nachmittag,6,13,0.7,1.4,37
-1,2,Hauptbahnhof,Marktplatz,CITY,vormittag,7,14,0.8,1.5,42
-1,4,Hauptbahnhof,Residenz,CITY,nachmittag,5,12,0.6,1.3,80
-1,7,Hauptbahnhof,Sanderau,CITY,frueh,6,11,0.7,1.2,35
-1,7,Hauptbahnhof,Sanderau,CITY,nachmittag,5,11,0.6,1.2,105
-1,7,Hauptbahnhof,Sanderau,CITY,vormittag,8,15,0.9,1.6,36
-1,3,Hauptbahnhof,Universität Sanderring,CITY,nachmittag,5,14,0.6,1.5,38
-1,3,Hauptbahnhof,Universität Sanderring,CITY,vormittag,7,15,0.8,1.6,41
-1,10,Hauptbahnhof,Zellerau,CITY,frueh,4,12,0.5,1.3,45
-1,10,Hauptbahnhof,Zellerau,CITY,nachmittag,5,12,0.6,1.3,121
-8,6,Hubland Campus,Dom,CITY,frueh,5,10,0.6,1.1,30
-8,6,Hubland Campus,Dom,CITY,vormittag,6,13,0.7,1.4,81
-8,9,Hubland Campus,Grombühl Klinikum,CITY,nachmittag,5,13,0.6,1.4,39
-8,9,Hubland Campus,Grombühl Klinikum,CITY,vormittag,6,13,0.7,1.4,65
-8,1,Hubland Campus,Hauptbahnhof,CITY,nachmittag,5,12,0.6,1.3,115
-8,1,Hubland Campus,Hauptbahnhof,CITY,vormittag,6,12,0.7,1.3,57
-8,5,Hubland Campus,Juliuspromenade,CITY,frueh,5,12,0.6,1.3,46
-8,5,Hubland Campus,Juliuspromenade,CITY,vormittag,6,13,0.7,1.4,65
-8,2,Hubland Campus,Marktplatz,CITY,frueh,5,12,0.6,1.3,49
-8,2,Hubland Campus,Marktplatz,CITY,vormittag,6,14,0.7,1.5,62
-8,4,Hubland Campus,Residenz,CITY,nachmittag,5,15,0.6,1.6,42
-8,4,Hubland Campus,Residenz,CITY,vormittag,6,12,0.7,1.3,67
-8,7,Hubland Campus,Sanderau,CITY,nachmittag,5,10,0.6,1.1,37
-8,7,Hubland Campus,Sanderau,CITY,vormittag,7,12,0.8,1.3,47
-8,3,Hubland Campus,Universität Sanderring,CITY,frueh,5,11,0.6,1.2,62
-8,3,Hubland Campus,Universität Sanderring,CITY,vormittag,6,13,0.7,1.4,61
-8,10,Hubland Campus,Zellerau,CITY,frueh,5,10,0.6,1.1,31
-8,10,Hubland Campus,Zellerau,CITY,nachmittag,5,12,0.6,1.3,47
-8,10,Hubland Campus,Zellerau,CITY,vormittag,6,13,0.7,1.4,60
-5,9,Juliuspromenade,Grombühl Klinikum,CITY,frueh,7,16,0.8,1.7,45
-5,8,Juliuspromenade,Hubland Campus,CITY,frueh,7,15,0.8,1.6,54
-5,7,Juliuspromenade,Sanderau,CITY,frueh,8,17,0.9,1.8,49
-5,7,Juliuspromenade,Sanderau,CITY,nachmittag,8,18,0.9,1.9,77
-5,3,Juliuspromenade,Universität Sanderring,CITY,frueh,8,18,0.9,1.9,61
-2,3,Marktplatz,Universität Sanderring,CITY,frueh,7,16,0.8,1.7,57
-2,3,Marktplatz,Universität Sanderring,CITY,vormittag,10,20,1.1,2.1,42
-2,10,Marktplatz,Zellerau,CITY,frueh,8,16,0.9,1.7,41
-7,6,Sanderau,Dom,CITY,abend,7,16,0.8,1.7,30
-7,6,Sanderau,Dom,CITY,frueh,6,15,0.7,1.6,38
-7,6,Sanderau,Dom,CITY,nachmittag,5,13,0.6,1.4,81
-7,6,Sanderau,Dom,CITY,vormittag,7,14,0.8,1.5,60
-7,9,Sanderau,Grombühl Klinikum,CITY,frueh,4,13,0.5,1.4,71
-7,9,Sanderau,Grombühl Klinikum,CITY,nachmittag,5,12,0.6,1.3,153
-7,1,Sanderau,Hauptbahnhof,CITY,frueh,6,12,0.7,1.3,56
-7,1,Sanderau,Hauptbahnhof,CITY,nachmittag,6,10,0.7,1.1,105
-7,1,Sanderau,Hauptbahnhof,CITY,vormittag,7,16,0.8,1.7,40
-7,8,Sanderau,Hubland Campus,CITY,frueh,5,10,0.6,1.1,128
-7,8,Sanderau,Hubland Campus,CITY,nachmittag,6,11,0.7,1.2,35
-7,8,Sanderau,Hubland Campus,CITY,vormittag,8,14,0.9,1.5,39
-7,5,Sanderau,Juliuspromenade,CITY,frueh,5,11,0.6,1.2,85
-7,5,Sanderau,Juliuspromenade,CITY,nachmittag,5,13,0.6,1.4,47
-7,5,Sanderau,Juliuspromenade,CITY,vormittag,7,13,0.8,1.4,62
-7,2,Sanderau,Marktplatz,CITY,frueh,5,10,0.6,1.1,89
-7,2,Sanderau,Marktplatz,CITY,nachmittag,5,10,0.6,1.1,36
-7,2,Sanderau,Marktplatz,CITY,vormittag,7,15,0.8,1.6,46
-7,4,Sanderau,Residenz,CITY,nachmittag,5,14,0.6,1.5,83
-7,4,Sanderau,Residenz,CITY,vormittag,8,17,0.9,1.8,61
-7,3,Sanderau,Universität Sanderring,CITY,frueh,5,10,0.6,1.1,240
-7,3,Sanderau,Universität Sanderring,CITY,nachmittag,5,11,0.6,1.2,53
-7,10,Sanderau,Zellerau,CITY,frueh,5,10,0.6,1.1,67
-7,10,Sanderau,Zellerau,CITY,nachmittag,5,12,0.6,1.3,136
-7,10,Sanderau,Zellerau,CITY,vormittag,7,13,0.8,1.4,44
-3,6,Universität Sanderring,Dom,CITY,vormittag,6,13,0.7,1.4,71
-3,9,Universität Sanderring,Grombühl Klinikum,CITY,nachmittag,6,16,0.7,1.7,46
-3,9,Universität Sanderring,Grombühl Klinikum,CITY,vormittag,6,13,0.7,1.4,60
-3,1,Universität Sanderring,Hauptbahnhof,CITY,nachmittag,5,12,0.6,1.3,75
-3,1,Universität Sanderring,Hauptbahnhof,CITY,vormittag,6,11,0.7,1.2,45
-3,8,Universität Sanderring,Hubland Campus,CITY,frueh,5,10,0.6,1.1,73
-3,8,Universität Sanderring,Hubland Campus,CITY,vormittag,6,12,0.7,1.3,60
-3,5,Universität Sanderring,Juliuspromenade,CITY,frueh,5,11,0.6,1.2,46
-3,5,Universität Sanderring,Juliuspromenade,CITY,nachmittag,5,14,0.6,1.5,31
-3,5,Universität Sanderring,Juliuspromenade,CITY,vormittag,6,13,0.7,1.4,55
-3,2,Universität Sanderring,Marktplatz,CITY,frueh,5,10,0.6,1.1,37
-3,2,Universität Sanderring,Marktplatz,CITY,vormittag,6,12,0.7,1.3,68
-3,4,Universität Sanderring,Residenz,CITY,frueh,5,12,0.6,1.3,34
-3,4,Universität Sanderring,Residenz,CITY,vormittag,6,14,0.7,1.5,72
-3,7,Universität Sanderring,Sanderau,CITY,nachmittag,5,12,0.6,1.3,38
-3,7,Universität Sanderring,Sanderau,CITY,vormittag,6,13,0.7,1.4,50
-3,10,Universität Sanderring,Zellerau,CITY,nachmittag,5,11,0.6,1.2,52
-3,10,Universität Sanderring,Zellerau,CITY,vormittag,6,12,0.7,1.3,56
-10,6,Zellerau,Dom,CITY,frueh,7,14,0.8,1.5,34
-10,6,Zellerau,Dom,CITY,nachmittag,5,13,0.6,1.4,91
-10,6,Zellerau,Dom,CITY,vormittag,7,16,0.8,1.7,61
-10,9,Zellerau,Grombühl Klinikum,CITY,frueh,5,9,0.6,1.0,78
-10,9,Zellerau,Grombühl Klinikum,CITY,nachmittag,5,11,0.6,1.2,126
-10,9,Zellerau,Grombühl Klinikum,CITY,vormittag,7,15,0.8,1.6,40
-10,1,Zellerau,Hauptbahnhof,CITY,frueh,5,11,0.6,1.2,58
-10,1,Zellerau,Hauptbahnhof,CITY,nachmittag,5,12,0.6,1.3,106
-10,1,Zellerau,Hauptbahnhof,CITY,vormittag,7,14,0.8,1.5,46
-10,8,Zellerau,Hubland Campus,CITY,nachmittag,5,14,0.6,1.5,46
-10,8,Zellerau,Hubland Campus,CITY,vormittag,8,16,0.9,1.7,46
-10,5,Zellerau,Juliuspromenade,CITY,frueh,5,11,0.6,1.2,95
-10,5,Zellerau,Juliuspromenade,CITY,nachmittag,5,13,0.6,1.4,34
-10,5,Zellerau,Juliuspromenade,CITY,vormittag,8,14,0.9,1.5,47
-10,2,Zellerau,Marktplatz,CITY,frueh,5,11,0.6,1.2,142
-10,2,Zellerau,Marktplatz,CITY,nachmittag,5,14,0.6,1.5,32
-10,2,Zellerau,Marktplatz,CITY,vormittag,7,15,0.8,1.6,62
-10,4,Zellerau,Residenz,CITY,frueh,6,14,0.7,1.5,40
-10,4,Zellerau,Residenz,CITY,nachmittag,5,13,0.6,1.4,89
-10,4,Zellerau,Residenz,CITY,vormittag,7,15,0.8,1.6,52
-10,7,Zellerau,Sanderau,CITY,frueh,5,10,0.6,1.1,73
-10,7,Zellerau,Sanderau,CITY,nachmittag,5,10,0.6,1.1,139
-10,7,Zellerau,Sanderau,CITY,vormittag,7,15,0.8,1.6,45
-10,3,Zellerau,Universität Sanderring,CITY,frueh,5,12,0.6,1.3,133
-10,3,Zellerau,Universität Sanderring,CITY,nachmittag,5,10,0.6,1.1,34
-10,3,Zellerau,Universität Sanderring,CITY,vormittag,9,14,1.0,1.5,34
+6,1,Dom,Hauptbahnhof,CITY,frueh,10,20,1.1,2.1,82
+6,5,Dom,Juliuspromenade,CITY,abend,3,7,0.4,0.8,51
+6,5,Dom,Juliuspromenade,CITY,frueh,4,7,0.5,0.8,89
+6,5,Dom,Juliuspromenade,CITY,nachmittag,4,8,0.5,0.9,187
+6,5,Dom,Juliuspromenade,CITY,vormittag,4,8,0.5,0.9,373
+6,5,Dom,Juliuspromenade,EBIKE,nachmittag,4,6,2.0,2.5,39
+6,5,Dom,Juliuspromenade,EBIKE,vormittag,4,7,2.0,2.75,96
+6,2,Dom,Marktplatz,CARGO,nachmittag,3,5,3.5,4.5,37
+6,2,Dom,Marktplatz,CARGO,vormittag,3,5,3.5,4.5,61
+6,2,Dom,Marktplatz,CITY,abend,3,5,0.4,0.6,42
+6,2,Dom,Marktplatz,CITY,frueh,3,5,0.4,0.6,83
+6,2,Dom,Marktplatz,CITY,vormittag,3,5,0.4,0.6,214
+6,2,Dom,Marktplatz,EBIKE,nachmittag,3,5,1.75,2.25,43
+6,2,Dom,Marktplatz,EBIKE,vormittag,2,5,1.5,2.25,30
+6,4,Dom,Residenz,CITY,abend,4,8,0.5,0.9,58
+6,4,Dom,Residenz,CITY,frueh,4,9,0.5,1.0,82
+6,4,Dom,Residenz,CITY,nachmittag,4,9,0.5,1.0,320
+6,4,Dom,Residenz,CITY,vormittag,4,9,0.5,1.0,258
+6,4,Dom,Residenz,EBIKE,nachmittag,3,6,1.75,2.5,79
+6,4,Dom,Residenz,EBIKE,vormittag,4,7,2.0,2.75,60
+6,3,Dom,Universität Sanderring,CITY,abend,6,11,0.7,1.2,33
+6,3,Dom,Universität Sanderring,CITY,frueh,7,12,0.8,1.3,35
+6,3,Dom,Universität Sanderring,CITY,nachmittag,6,12,0.7,1.3,111
+6,3,Dom,Universität Sanderring,CITY,vormittag,6,12,0.7,1.3,140
+9,6,Grombühl Klinikum,Dom,CITY,abend,9,19,1.0,2.0,50
+9,6,Grombühl Klinikum,Dom,CITY,frueh,9,17,1.0,1.8,101
+9,6,Grombühl Klinikum,Dom,CITY,nachmittag,9,15,1.0,1.6,192
+9,6,Grombühl Klinikum,Dom,CITY,vormittag,9,15,1.0,1.6,127
+9,6,Grombühl Klinikum,Dom,EBIKE,nachmittag,8,12,3.0,4.0,40
+9,1,Grombühl Klinikum,Hauptbahnhof,CITY,frueh,6,11,0.7,1.2,172
+9,1,Grombühl Klinikum,Hauptbahnhof,CITY,nachmittag,6,10,0.7,1.1,479
+9,1,Grombühl Klinikum,Hauptbahnhof,CITY,vormittag,6,11,0.7,1.2,97
+9,1,Grombühl Klinikum,Hauptbahnhof,EBIKE,frueh,6,9,2.5,3.25,33
+9,1,Grombühl Klinikum,Hauptbahnhof,EBIKE,nachmittag,5,9,2.25,3.25,115
+9,5,Grombühl Klinikum,Juliuspromenade,CITY,frueh,10,17,1.1,1.8,242
+9,5,Grombühl Klinikum,Juliuspromenade,CITY,nachmittag,11,19,1.2,2.0,93
+9,5,Grombühl Klinikum,Juliuspromenade,CITY,vormittag,12,19,1.3,2.0,124
+9,2,Grombühl Klinikum,Marktplatz,CITY,abend,12,22,1.3,2.3,35
+9,2,Grombühl Klinikum,Marktplatz,CITY,frueh,11,18,1.2,1.9,207
+9,2,Grombühl Klinikum,Marktplatz,CITY,nachmittag,12,20,1.3,2.1,100
+9,2,Grombühl Klinikum,Marktplatz,CITY,vormittag,12,21,1.3,2.2,118
+9,4,Grombühl Klinikum,Residenz,CITY,abend,9,16,1.0,1.7,53
+9,4,Grombühl Klinikum,Residenz,CITY,frueh,9,15,1.0,1.6,94
+9,4,Grombühl Klinikum,Residenz,CITY,nachmittag,8,14,0.9,1.5,189
+9,4,Grombühl Klinikum,Residenz,CITY,vormittag,9,16,1.0,1.7,145
+9,7,Grombühl Klinikum,Sanderau,CITY,abend,14,23,1.5,2.4,33
+9,7,Grombühl Klinikum,Sanderau,CITY,frueh,13,21,1.4,2.2,197
+9,7,Grombühl Klinikum,Sanderau,CITY,nachmittag,13,22,1.4,2.3,295
+9,3,Grombühl Klinikum,Universität Sanderring,CITY,abend,9,17,1.0,1.8,30
+9,3,Grombühl Klinikum,Universität Sanderring,CITY,frueh,9,15,1.0,1.6,365
+9,3,Grombühl Klinikum,Universität Sanderring,CITY,nachmittag,10,16,1.1,1.7,91
+9,3,Grombühl Klinikum,Universität Sanderring,CITY,vormittag,10,20,1.1,2.1,94
+9,3,Grombühl Klinikum,Universität Sanderring,EBIKE,frueh,8,12,3.0,4.0,83
+9,10,Grombühl Klinikum,Zellerau,CITY,frueh,12,21,1.3,2.2,160
+1,6,Hauptbahnhof,Dom,CITY,abend,9,18,1.0,1.9,48
+1,6,Hauptbahnhof,Dom,CITY,frueh,9,18,1.0,1.9,83
+1,6,Hauptbahnhof,Dom,CITY,nachmittag,8,15,0.9,1.6,223
+1,6,Hauptbahnhof,Dom,CITY,vormittag,9,17,1.0,1.8,135
+1,9,Hauptbahnhof,Grombühl Klinikum,CITY,abend,9,15,1.0,1.6,31
+1,9,Hauptbahnhof,Grombühl Klinikum,CITY,frueh,8,13,0.9,1.4,218
+1,9,Hauptbahnhof,Grombühl Klinikum,CITY,nachmittag,8,13,0.9,1.4,323
+1,9,Hauptbahnhof,Grombühl Klinikum,CITY,vormittag,9,16,1.0,1.7,83
+1,9,Hauptbahnhof,Grombühl Klinikum,EBIKE,frueh,5,9,2.25,3.25,57
+1,9,Hauptbahnhof,Grombühl Klinikum,EBIKE,nachmittag,5,9,2.25,3.25,74
+1,5,Hauptbahnhof,Juliuspromenade,CITY,abend,7,12,0.8,1.3,36
+1,5,Hauptbahnhof,Juliuspromenade,CITY,frueh,7,11,0.8,1.2,142
+1,5,Hauptbahnhof,Juliuspromenade,CITY,nachmittag,7,11,0.8,1.2,96
+1,5,Hauptbahnhof,Juliuspromenade,CITY,vormittag,7,12,0.8,1.3,112
+1,5,Hauptbahnhof,Juliuspromenade,EBIKE,frueh,5,9,2.25,3.25,34
+1,2,Hauptbahnhof,Marktplatz,CITY,abend,8,16,0.9,1.7,35
+1,2,Hauptbahnhof,Marktplatz,CITY,frueh,8,13,0.9,1.4,139
+1,2,Hauptbahnhof,Marktplatz,CITY,nachmittag,8,13,0.9,1.4,84
+1,2,Hauptbahnhof,Marktplatz,CITY,vormittag,8,15,0.9,1.6,95
+1,4,Hauptbahnhof,Residenz,CITY,frueh,9,15,1.0,1.6,71
+1,4,Hauptbahnhof,Residenz,CITY,vormittag,10,18,1.1,1.9,165
+1,7,Hauptbahnhof,Sanderau,CITY,abend,15,24,1.6,2.5,40
+1,7,Hauptbahnhof,Sanderau,CITY,frueh,13,21,1.4,2.2,132
+1,7,Hauptbahnhof,Sanderau,CITY,nachmittag,13,22,1.4,2.3,371
+1,3,Hauptbahnhof,Universität Sanderring,CITY,frueh,9,15,1.0,1.6,443
+1,3,Hauptbahnhof,Universität Sanderring,CITY,nachmittag,10,17,1.1,1.8,105
+1,3,Hauptbahnhof,Universität Sanderring,CITY,vormittag,11,18,1.2,1.9,87
+1,10,Hauptbahnhof,Zellerau,CITY,abend,10,16,1.1,1.7,33
+1,10,Hauptbahnhof,Zellerau,CITY,frueh,9,14,1.0,1.5,97
+1,10,Hauptbahnhof,Zellerau,CITY,nachmittag,8,14,0.9,1.5,283
+1,10,Hauptbahnhof,Zellerau,CITY,vormittag,9,15,1.0,1.6,96
+1,10,Hauptbahnhof,Zellerau,EBIKE,frueh,7,11,2.75,3.75,34
+8,7,Hubland Campus,Sanderau,CITY,vormittag,16,26,1.7,2.7,186
+5,6,Juliuspromenade,Dom,CITY,abend,4,9,0.5,1.0,68
+5,6,Juliuspromenade,Dom,CITY,frueh,4,9,0.5,1.0,85
+5,6,Juliuspromenade,Dom,CITY,nachmittag,4,8,0.5,0.9,328
+5,6,Juliuspromenade,Dom,CITY,vormittag,4,8,0.5,0.9,226
+5,6,Juliuspromenade,Dom,EBIKE,nachmittag,3,6,1.75,2.5,61
+5,6,Juliuspromenade,Dom,EBIKE,vormittag,4,7,2.0,2.75,56
+5,1,Juliuspromenade,Hauptbahnhof,CITY,frueh,6,12,0.7,1.3,91
+5,1,Juliuspromenade,Hauptbahnhof,CITY,nachmittag,7,14,0.8,1.5,191
+5,1,Juliuspromenade,Hauptbahnhof,CITY,vormittag,7,15,0.8,1.6,129
+5,1,Juliuspromenade,Hauptbahnhof,EBIKE,nachmittag,5,9,2.25,3.25,43
+5,2,Juliuspromenade,Marktplatz,CARGO,vormittag,2,4,3.0,4.0,43
+5,2,Juliuspromenade,Marktplatz,CITY,abend,2,4,0.3,0.5,56
+5,2,Juliuspromenade,Marktplatz,CITY,frueh,2,4,0.3,0.5,41
+5,2,Juliuspromenade,Marktplatz,CITY,nachmittag,2,4,0.3,0.5,82
+5,2,Juliuspromenade,Marktplatz,CITY,vormittag,2,4,0.3,0.5,160
+5,2,Juliuspromenade,Marktplatz,EBIKE,vormittag,2,4,1.5,2.0,36
+5,4,Juliuspromenade,Residenz,CITY,abend,8,16,0.9,1.7,46
+5,4,Juliuspromenade,Residenz,CITY,frueh,7,14,0.8,1.5,73
+5,4,Juliuspromenade,Residenz,CITY,nachmittag,7,15,0.8,1.6,171
+5,4,Juliuspromenade,Residenz,CITY,vormittag,7,14,0.8,1.5,248
+5,3,Juliuspromenade,Universität Sanderring,CITY,abend,8,16,0.9,1.7,35
+5,3,Juliuspromenade,Universität Sanderring,CITY,frueh,9,17,1.0,1.8,134
+5,3,Juliuspromenade,Universität Sanderring,CITY,nachmittag,9,19,1.0,2.0,70
+5,3,Juliuspromenade,Universität Sanderring,CITY,vormittag,9,17,1.0,1.8,126
+5,10,Juliuspromenade,Zellerau,CITY,abend,8,16,0.9,1.7,32
+5,10,Juliuspromenade,Zellerau,CITY,frueh,7,13,0.8,1.4,93
+5,10,Juliuspromenade,Zellerau,CITY,nachmittag,8,14,0.9,1.5,199
+5,10,Juliuspromenade,Zellerau,CITY,vormittag,8,17,0.9,1.8,141
+5,10,Juliuspromenade,Zellerau,EBIKE,nachmittag,7,10,2.75,3.5,51
+2,6,Marktplatz,Dom,CARGO,nachmittag,4,6,4.0,5.0,62
+2,6,Marktplatz,Dom,CITY,abend,3,5,0.4,0.6,53
+2,6,Marktplatz,Dom,CITY,frueh,3,6,0.4,0.7,52
+2,6,Marktplatz,Dom,CITY,nachmittag,3,6,0.4,0.7,222
+2,6,Marktplatz,Dom,CITY,vormittag,3,6,0.4,0.7,243
+2,6,Marktplatz,Dom,EBIKE,nachmittag,3,5,1.75,2.25,48
+2,6,Marktplatz,Dom,EBIKE,vormittag,3,4,1.75,2.0,43
+2,1,Marktplatz,Hauptbahnhof,CITY,abend,8,15,0.9,1.6,36
+2,1,Marktplatz,Hauptbahnhof,CITY,frueh,8,15,0.9,1.6,90
+2,1,Marktplatz,Hauptbahnhof,CITY,nachmittag,8,15,0.9,1.6,221
+2,1,Marktplatz,Hauptbahnhof,CITY,vormittag,8,17,0.9,1.8,116
+2,1,Marktplatz,Hauptbahnhof,EBIKE,nachmittag,6,10,2.5,3.5,36
+2,5,Marktplatz,Juliuspromenade,CARGO,vormittag,3,5,3.5,4.5,33
+2,5,Marktplatz,Juliuspromenade,CITY,abend,2,4,0.3,0.5,43
+2,5,Marktplatz,Juliuspromenade,CITY,frueh,2,3,0.3,0.4,39
+2,5,Marktplatz,Juliuspromenade,CITY,nachmittag,2,4,0.3,0.5,78
+2,5,Marktplatz,Juliuspromenade,CITY,vormittag,2,4,0.3,0.5,151
+2,5,Marktplatz,Juliuspromenade,EBIKE,vormittag,2,3,1.5,1.75,35
+2,4,Marktplatz,Residenz,CITY,abend,6,12,0.7,1.3,57
+2,4,Marktplatz,Residenz,CITY,frueh,6,11,0.7,1.2,77
+2,4,Marktplatz,Residenz,CITY,nachmittag,6,12,0.7,1.3,199
+2,4,Marktplatz,Residenz,EBIKE,nachmittag,5,9,2.25,3.25,47
+2,7,Marktplatz,Sanderau,CITY,abend,10,20,1.1,2.1,51
+2,7,Marktplatz,Sanderau,CITY,frueh,10,19,1.1,2.0,114
+2,7,Marktplatz,Sanderau,CITY,nachmittag,11,20,1.2,2.1,230
+2,3,Marktplatz,Universität Sanderring,CITY,abend,7,14,0.8,1.5,33
+2,3,Marktplatz,Universität Sanderring,CITY,frueh,6,11,0.7,1.2,151
+2,3,Marktplatz,Universität Sanderring,CITY,nachmittag,7,14,0.8,1.5,90
+2,3,Marktplatz,Universität Sanderring,CITY,vormittag,7,14,0.8,1.5,143
+2,10,Marktplatz,Zellerau,CITY,abend,9,19,1.0,2.0,31
+2,10,Marktplatz,Zellerau,CITY,frueh,9,15,1.0,1.6,85
+2,10,Marktplatz,Zellerau,CITY,nachmittag,9,16,1.0,1.7,209
+2,10,Marktplatz,Zellerau,CITY,vormittag,9,18,1.0,1.9,132
+4,6,Residenz,Dom,CITY,abend,4,7,0.5,0.8,61
+4,6,Residenz,Dom,CITY,frueh,4,7,0.5,0.8,116
+4,6,Residenz,Dom,CITY,nachmittag,4,8,0.5,0.9,326
+4,6,Residenz,Dom,EBIKE,frueh,4,6,2.0,2.5,31
+4,6,Residenz,Dom,EBIKE,nachmittag,3,7,1.75,2.75,64
+4,6,Residenz,Dom,EBIKE,vormittag,3,7,1.75,2.75,70
+4,9,Residenz,Grombühl Klinikum,CITY,frueh,10,20,1.1,2.1,60
+4,1,Residenz,Hauptbahnhof,CITY,frueh,8,18,0.9,1.9,75
+4,1,Residenz,Hauptbahnhof,CITY,vormittag,10,20,1.1,2.1,144
+4,5,Residenz,Juliuspromenade,CITY,abend,6,12,0.7,1.3,57
+4,5,Residenz,Juliuspromenade,CITY,frueh,5,11,0.6,1.2,53
+4,5,Residenz,Juliuspromenade,CITY,nachmittag,6,12,0.7,1.3,200
+4,5,Residenz,Juliuspromenade,CITY,vormittag,6,13,0.7,1.4,345
+4,2,Residenz,Marktplatz,CITY,abend,4,9,0.5,1.0,58
+4,2,Residenz,Marktplatz,CITY,frueh,4,9,0.5,1.0,84
+4,2,Residenz,Marktplatz,CITY,nachmittag,5,10,0.6,1.1,186
+4,2,Residenz,Marktplatz,CITY,vormittag,5,10,0.6,1.1,245
+4,2,Residenz,Marktplatz,EBIKE,nachmittag,4,8,2.0,3.0,32
+4,2,Residenz,Marktplatz,EBIKE,vormittag,4,7,2.0,2.75,38
+4,7,Residenz,Sanderau,CITY,abend,9,18,1.0,1.9,37
+4,7,Residenz,Sanderau,CITY,frueh,9,18,1.0,1.9,74
+4,3,Residenz,Universität Sanderring,CITY,abend,5,10,0.6,1.1,32
+4,3,Residenz,Universität Sanderring,CITY,nachmittag,5,11,0.6,1.2,100
+4,3,Residenz,Universität Sanderring,CITY,vormittag,5,10,0.6,1.1,130
+7,5,Sanderau,Juliuspromenade,CITY,frueh,13,22,1.4,2.3,193
+7,2,Sanderau,Marktplatz,CITY,abend,13,21,1.4,2.2,37
+7,2,Sanderau,Marktplatz,CITY,frueh,12,20,1.3,2.1,205
+7,2,Sanderau,Marktplatz,CITY,nachmittag,12,19,1.3,2.0,89
+7,2,Sanderau,Marktplatz,CITY,vormittag,13,22,1.4,2.3,121
+7,4,Sanderau,Residenz,CITY,nachmittag,13,22,1.4,2.3,234
+7,3,Sanderau,Universität Sanderring,CITY,abend,10,15,1.1,1.6,41
+7,3,Sanderau,Universität Sanderring,CITY,nachmittag,9,14,1.0,1.5,107
+7,3,Sanderau,Universität Sanderring,CITY,vormittag,10,16,1.1,1.7,94
+3,6,Universität Sanderring,Dom,CITY,abend,6,11,0.7,1.2,39
+3,6,Universität Sanderring,Dom,CITY,frueh,5,10,0.6,1.1,55
+3,6,Universität Sanderring,Dom,CITY,nachmittag,6,11,0.7,1.2,67
+3,6,Universität Sanderring,Dom,CITY,vormittag,6,10,0.7,1.1,179
+3,6,Universität Sanderring,Dom,EBIKE,vormittag,4,8,2.0,3.0,44
+3,9,Universität Sanderring,Grombühl Klinikum,CITY,abend,12,21,1.3,2.2,30
+3,9,Universität Sanderring,Grombühl Klinikum,CITY,frueh,12,21,1.3,2.2,57
+3,9,Universität Sanderring,Grombühl Klinikum,CITY,nachmittag,12,21,1.3,2.2,98
+3,1,Universität Sanderring,Hauptbahnhof,CITY,abend,11,19,1.2,2.0,30
+3,1,Universität Sanderring,Hauptbahnhof,CITY,frueh,11,20,1.2,2.1,67
+3,1,Universität Sanderring,Hauptbahnhof,CITY,vormittag,12,19,1.3,2.0,150
+3,5,Universität Sanderring,Juliuspromenade,CITY,abend,7,12,0.8,1.3,36
+3,5,Universität Sanderring,Juliuspromenade,CITY,frueh,7,11,0.8,1.2,122
+3,5,Universität Sanderring,Juliuspromenade,CITY,nachmittag,6,10,0.7,1.1,63
+3,5,Universität Sanderring,Juliuspromenade,CITY,vormittag,7,12,0.8,1.3,173
+3,5,Universität Sanderring,Juliuspromenade,EBIKE,vormittag,6,10,2.5,3.5,36
+3,2,Universität Sanderring,Marktplatz,CITY,abend,6,11,0.7,1.2,46
+3,2,Universität Sanderring,Marktplatz,CITY,frueh,6,11,0.7,1.2,87
+3,2,Universität Sanderring,Marktplatz,CITY,nachmittag,6,11,0.7,1.2,55
+3,2,Universität Sanderring,Marktplatz,CITY,vormittag,6,11,0.7,1.2,182
+3,2,Universität Sanderring,Marktplatz,EBIKE,vormittag,6,9,2.5,3.25,40
+3,4,Universität Sanderring,Residenz,CITY,abend,6,9,0.7,1.0,51
+3,4,Universität Sanderring,Residenz,CITY,frueh,6,9,0.7,1.0,66
+3,4,Universität Sanderring,Residenz,CITY,nachmittag,6,10,0.7,1.1,62
+3,4,Universität Sanderring,Residenz,CITY,vormittag,5,10,0.6,1.1,190
+3,4,Universität Sanderring,Residenz,EBIKE,vormittag,4,7,2.0,2.75,39
+3,7,Universität Sanderring,Sanderau,CITY,abend,6,12,0.7,1.3,41
+3,7,Universität Sanderring,Sanderau,CITY,frueh,6,11,0.7,1.2,63
+3,7,Universität Sanderring,Sanderau,CITY,nachmittag,6,10,0.7,1.1,123
+3,7,Universität Sanderring,Sanderau,CITY,vormittag,6,11,0.7,1.2,177
+3,7,Universität Sanderring,Sanderau,EBIKE,vormittag,6,8,2.5,3.0,36
+10,9,Zellerau,Grombühl Klinikum,CITY,frueh,13,22,1.4,2.3,144
+10,1,Zellerau,Hauptbahnhof,CITY,abend,9,15,1.0,1.6,32
+10,1,Zellerau,Hauptbahnhof,CITY,frueh,8,13,0.9,1.4,174
+10,1,Zellerau,Hauptbahnhof,CITY,nachmittag,8,14,0.9,1.5,313
+10,1,Zellerau,Hauptbahnhof,CITY,vormittag,8,16,0.9,1.7,99
+10,5,Zellerau,Juliuspromenade,CITY,abend,6,10,0.7,1.1,30
+10,5,Zellerau,Juliuspromenade,CITY,frueh,6,10,0.7,1.1,218
+10,5,Zellerau,Juliuspromenade,CITY,nachmittag,6,10,0.7,1.1,109
+10,5,Zellerau,Juliuspromenade,CITY,vormittag,7,11,0.8,1.2,99
+10,5,Zellerau,Juliuspromenade,EBIKE,frueh,5,8,2.25,3.0,42
+10,5,Zellerau,Juliuspromenade,EBIKE,nachmittag,5,8,2.25,3.0,34
+10,2,Zellerau,Marktplatz,CITY,abend,7,14,0.8,1.5,45
+10,2,Zellerau,Marktplatz,CITY,nachmittag,7,12,0.8,1.3,108
+10,2,Zellerau,Marktplatz,CITY,vormittag,7,13,0.8,1.4,126
+10,3,Zellerau,Universität Sanderring,CITY,frueh,15,25,1.6,2.6,321
+10,3,Zellerau,Universität Sanderring,CITY,nachmittag,15,25,1.6,2.6,94

@@ -46,8 +46,19 @@ def lade() -> dict:
     with open(DATEN / "radrouten_matrix.csv", encoding="utf-8") as datei:
         zeilen = [z for z in datei if not z.startswith("#")]
     m = pd.read_csv(pd.io.common.StringIO("".join(zeilen)))
+    fa = pd.read_csv(DATEN / "fehlanfrage.csv", parse_dates=["zeitpunkt"])
+    u = pd.read_csv(DATEN / "umsetzfahrt.csv", parse_dates=["zeitpunkt"])
+    # Frei abgestellte Raeder stehen an einem der oeffentlichen Stellplaetze.
+    # Die Ausleihtabelle haelt nur die Koordinaten fest - fuer die Ortskette
+    # wird daraus die Kennung des Abstellorts zurueckgewonnen.
+    orte = pd.read_csv(DATEN / "abstellort.csv")
+    orte = orte[orte.art == "abstellort"]
+    schluessel = {(round(r.lat, 6), round(r.lon, 6)): r.ort_id for r in orte.itertuples()}
+    a["endort"] = [schluessel.get((la, lo)) if pd.notna(la) else None
+                   for la, lo in zip(a.end_latitude, a.end_longitude)]
     a["dauer_min"] = (a.endzeit - a.startzeit).dt.total_seconds() / 60
-    return {"ausleihe": a, "fahrrad": f, "kunde": k, "wetter": w, "matrix": m}
+    return {"ausleihe": a, "fahrrad": f, "kunde": k, "wetter": w, "matrix": m,
+            "fehlanfrage": fa, "umsetzfahrt": u}
 
 
 def physik(d: dict) -> None:
@@ -179,15 +190,86 @@ def struktur(d: dict) -> None:
            f"{len(lang)} Fahrten ueber vier Stunden ({anteil:.3%})")
 
 
+
+def bestand(d: dict) -> None:
+    """Kann jedes Rad zu jeder Zeit dort sein, wo die Daten es behaupten?"""
+    a, u = d["ausleihe"], d["umsetzfahrt"]
+
+    # Kein Rad faehrt zwei Fahrten gleichzeitig.
+    s = a.sort_values(["fahrrad_id", "startzeit"])
+    ueberlappt = ((s.fahrrad_id == s.fahrrad_id.shift())
+                  & (s.startzeit < s.endzeit.shift())).sum()
+    pruefe(ueberlappt == 0, "Kein Rad ist an zwei Orten zugleich",
+           f"{ueberlappt} ueberlappende Fahrten desselben Rades")
+
+    # Die Ortskette jedes Rades muss geschlossen sein: Wo eine Fahrt endet,
+    # beginnt die naechste - es sei denn, der Betreiber hat umgesetzt.
+    fahrt = pd.DataFrame({
+        "fahrrad_id": a.fahrrad_id, "zeit": a.startzeit,
+        "von": a.start_station_id.astype("Int64").astype(str),
+        "ende": a.endzeit,
+        "nach": np.where(a.end_station_id.notna(),
+                         a.end_station_id.astype("Int64").astype(str),
+                         a.endort.astype("object").where(a.endort.notna(), ""))})
+    setzen = pd.DataFrame({
+        "fahrrad_id": u.fahrrad_id, "zeit": u.zeitpunkt,
+        "von": u.von_ort.astype(str), "ende": u.zeitpunkt,
+        "nach": u.nach_station_id.astype(str)})
+    kette = pd.concat([fahrt, setzen]).sort_values(["fahrrad_id", "zeit"])
+    bruch = ((kette.fahrrad_id == kette.fahrrad_id.shift())
+             & (kette.von != kette.nach.shift())).sum()
+    pruefe(bruch == 0, "Die Ortskette jedes Rades ist geschlossen",
+           f"{bruch} von {len(kette):,} Uebergaengen ohne erklaerenden Vorgang")
+
+
+def betrieb(d: dict) -> None:
+    """Sind Engpaesse, Stammstrecken und Verhaltenswandel vorhanden?"""
+    a, fa, u = d["ausleihe"], d["fehlanfrage"], d["umsetzfahrt"]
+
+    quote = len(fa) / (len(a) + len(fa))
+    pruefe(0.004 <= quote <= 0.06, "Engpaesse kommen vor, aber selten",
+           f"{len(fa):,} gescheiterte Anfragen = {quote:.1%} der Nachfrage")
+    gruende = set(fa.grund.unique())
+    pruefe(gruende >= {"kein Rad verfuegbar", "kein Platz frei"},
+           "Beide Engpassarten treten auf", f"vorhanden: {', '.join(sorted(gruende))}")
+    je_tag = len(u) / a.startzeit.dt.normalize().nunique()
+    pruefe(4 <= je_tag <= 60, "Der Betreiber setzt taeglich um",
+           f"{len(u):,} Radbewegungen = {je_tag:.1f} je Tag")
+
+    # Stammstrecken: wer viel faehrt, faehrt meist dieselbe Verbindung.
+    mit = a[a.end_station_id.notna()].copy()
+    mit["rel"] = (mit.start_station_id.astype("Int64").astype(str) + ">"
+                  + mit.end_station_id.astype("Int64").astype(str))
+    zahl = mit.groupby("kunde_id").size()
+    viel = zahl[zahl >= 30].index
+    anteil = (mit[mit.kunde_id.isin(viel)].groupby("kunde_id").rel
+              .apply(lambda x: x.value_counts().iloc[0] / len(x)))
+    pruefe(anteil.median() >= 0.18, "Vielfahrer haben eine Stammstrecke",
+           f"haeufigste Verbindung macht im Median {anteil.median():.1%} "
+           f"ihrer Fahrten aus (Zufall waere rund 1 %)")
+
+    # Verhaltenswandel: die Nutzungsintensitaet einzelner Kunden verschiebt sich.
+    erst = a[a.startzeit < a.startzeit.min() + pd.Timedelta(days=730)]
+    spaet = a[a.startzeit >= a.startzeit.max() - pd.Timedelta(days=730)]
+    e, s = erst.groupby("kunde_id").size(), spaet.groupby("kunde_id").size()
+    beide = e.index.intersection(s.index)
+    gewandelt = (((s[beide] / e[beide]) > 2) | ((s[beide] / e[beide]) < 0.5)).mean()
+    pruefe(gewandelt >= 0.25, "Kundschaft veraendert ihr Verhalten",
+           f"{gewandelt:.0%} der durchgehend aktiven Kunden haben ihre "
+           f"Fahrtenzahl mehr als verdoppelt oder halbiert")
+
+
 def main() -> int:
     fehlend = [n for n in ("ausleihe.csv", "fahrrad.csv", "kunde.csv",
-                           "radrouten_matrix.csv") if not (DATEN / n).exists()]
+                           "radrouten_matrix.csv", "fehlanfrage.csv",
+                           "umsetzfahrt.csv") if not (DATEN / n).exists()]
     if fehlend:
         print(f"Fehlende Dateien: {', '.join(fehlend)}")
         return 2
     daten = lade()
     for abschnitt, name in ((physik, "Physik"), (umfang, "Umfang"),
-                            (konsistenz, "Konsistenz"), (struktur, "Struktur")):
+                            (konsistenz, "Konsistenz"), (bestand, "Bestand"),
+                            (betrieb, "Betrieb"), (struktur, "Struktur")):
         vorher = len(ergebnisse)
         try:
             abschnitt(daten)

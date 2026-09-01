@@ -38,6 +38,7 @@ wetter.csv muss im Zielordner bereits liegen - es sind echte Messdaten und
 wird von diesem Skript nur gelesen, nie erzeugt.
 """
 import csv
+import heapq
 import math
 import os
 import random
@@ -86,16 +87,16 @@ print("Stammdaten ...")
 # Vorlesungsrhythmus, Dom und Residenz den Ausflugsverkehr.
 STATIONEN = [
     # id, nummer, name, lat, lon, kapazitaet, typ
-    (1,  "S-0001", "Hauptbahnhof",           49.8019, 9.9358, 40, "pendler"),
-    (2,  "S-0002", "Marktplatz",             49.7944, 9.9295, 25, "misch"),
-    (3,  "S-0003", "Universität Sanderring", 49.7880, 9.9353, 35, "uni"),
-    (4,  "S-0004", "Residenz",               49.7930, 9.9390, 25, "freizeit"),
-    (5,  "S-0005", "Juliuspromenade",        49.7960, 9.9280, 30, "misch"),
-    (6,  "S-0006", "Dom",                    49.7938, 9.9322, 25, "freizeit"),
-    (7,  "S-0007", "Sanderau",               49.7818, 9.9412, 30, "pendler"),
-    (8,  "S-0008", "Hubland Campus",         49.7810, 9.9720, 40, "uni"),
-    (9,  "S-0009", "Grombühl Klinikum",      49.8046, 9.9424, 25, "pendler"),
-    (10, "S-0010", "Zellerau",               49.7965, 9.9142, 20, "pendler"),
+    (1,  "S-0001", "Hauptbahnhof",           49.8019, 9.9358, 60, "pendler"),
+    (2,  "S-0002", "Marktplatz",             49.7944, 9.9295, 40, "misch"),
+    (3,  "S-0003", "Universität Sanderring", 49.7880, 9.9353, 55, "uni"),
+    (4,  "S-0004", "Residenz",               49.7930, 9.9390, 35, "freizeit"),
+    (5,  "S-0005", "Juliuspromenade",        49.7960, 9.9280, 45, "misch"),
+    (6,  "S-0006", "Dom",                    49.7938, 9.9322, 35, "freizeit"),
+    (7,  "S-0007", "Sanderau",               49.7818, 9.9412, 50, "pendler"),
+    (8,  "S-0008", "Hubland Campus",         49.7810, 9.9720, 65, "uni"),
+    (9,  "S-0009", "Grombühl Klinikum",      49.8046, 9.9424, 45, "pendler"),
+    (10, "S-0010", "Zellerau",               49.7965, 9.9142, 35, "pendler"),
 ]
 schreibe("station.csv",
          ["station_id", "stationsnummer", "name", "latitude", "longitude", "kapazitaet"],
@@ -198,9 +199,13 @@ def rad_anschaffen(typ_code, tag):
 
 # Startflotte: ueber das erste halbe Jahr in Tranchen geliefert.
 for typ_code in ("CITY", "CARGO"):
-    for _ in range(SOLLFLOTTE[typ_code][0]):
-        rad_anschaffen(typ_code, VON + timedelta(
-            days=random.randint(0, BESCHAFFUNG_TRANCHE_TAGE)))
+    for nummer in range(SOLLFLOTTE[typ_code][0]):
+        # Die Haelfte steht zur Betriebsaufnahme bereit, der Rest kommt in
+        # Tranchen nach. Ohne diese erste Lieferung gaebe es am Eroeffnungstag
+        # kein einziges Rad - und keine Fahrt.
+        tage = 0 if nummer < SOLLFLOTTE[typ_code][0] // 2 else random.randint(
+            10, BESCHAFFUNG_TRANCHE_TAGE)
+        rad_anschaffen(typ_code, VON + timedelta(days=tage))
 
 # Danach monatlich auffuellen: Ersatz fuer Ausmusterungen und Wachstum.
 tag = VON + timedelta(days=30)
@@ -440,6 +445,32 @@ STADTTEILE = ["Altstadt", "Sanderau", "Grombuehl", "Zellerau", "Frauenland",
               "Heidingsfeld", "Lengfeld", "Versbach", "Umland"]
 N_KUNDEN = 3200
 
+# ---- Stammstrecken
+# Wer pendelt, faehrt fast immer dieselbe Strecke: morgens von zu Hause zur
+# Arbeit, abends zurueck. Ohne diese Gewohnheit wuerfelt jede Fahrt neu, und
+# eine Assoziationsanalyse findet nur Stationstypen statt Verhaltensmuster.
+#
+# WOHNSTATIONEN sind die Wohngebiete im Netz, ZIELSTATIONEN die Arbeits- und
+# Studienorte. Die Achse jedes Kunden wird daraus gezogen.
+WOHNSTATIONEN = [7, 9, 10, 2, 5]          # Sanderau, Grombuehl, Zellerau, Markt, Julius
+ZIELSTATIONEN = [1, 3, 8, 9]              # Hauptbahnhof, Sanderring, Hubland, Klinikum
+# Anteil der Fahrten, die auf der eigenen Stammachse laufen.
+STAMMANTEIL = {"pendler": 0.88, "studium": 0.74, "vielfahrer": 0.70,
+               "freizeit": 0.22, "gelegenheit": 0.10}
+
+# ---- Profilwandel
+# Aus dem Studenten wird ein Pendler, aus dem Vielfahrer ein Gelegenheitsnutzer,
+# bevor er ganz aufhoert. Ueber fuenf Jahre ist das die Regel, nicht die
+# Ausnahme - und fuer die Segmentierung der interessantere Befund als die
+# Segmente selbst. Angaben als Wahrscheinlichkeit je Jahr.
+PROFILWECHSEL = {
+    "studium":     {"pendler": 0.17, "freizeit": 0.05},
+    "gelegenheit": {"freizeit": 0.08},
+    "freizeit":    {"pendler": 0.04, "gelegenheit": 0.09},
+    "pendler":     {"freizeit": 0.04, "vielfahrer": 0.03},
+    "vielfahrer":  {"pendler": 0.06},
+}
+
 kunden = {}
 kunde_rows = []
 for kid in range(1, N_KUNDEN + 1):
@@ -478,8 +509,32 @@ for kid in range(1, N_KUNDEN + 1):
         geburtsjahr = random.randint(1955, 2005)
 
     intensitaet = p[2] * random.uniform(0.55, 1.6)
-    kunden[kid] = {"profil": profil, "registriert": registriert, "aktiv_bis": aktiv_bis,
+
+    # Stammachse: wo der Kunde wohnt und wohin er regelmaessig faehrt.
+    heimat = random.choice(WOHNSTATIONEN)
+    ziel_regel = random.choice([s for s in ZIELSTATIONEN if s != heimat])
+
+    # Profilverlauf ueber die Jahre. Der Eintrag gilt ab dem genannten Datum.
+    verlauf = [(registriert, profil)]
+    jetziges, jahr_ab = profil, registriert
+    while True:
+        jahr_ab = jahr_ab + timedelta(days=365)
+        if jahr_ab > min(aktiv_bis, BIS):
+            break
+        uebergaenge = PROFILWECHSEL.get(jetziges, {})
+        wurf = random.random()
+        summe = 0.0
+        for neues, wahrscheinlichkeit in uebergaenge.items():
+            summe += wahrscheinlichkeit
+            if wurf < summe:
+                jetziges = neues
+                verlauf.append((jahr_ab, jetziges))
+                break
+
+    kunden[kid] = {"profil": profil, "profil_verlauf": verlauf,
+                   "registriert": registriert, "aktiv_bis": aktiv_bis,
                    "tarif": tarif, "intensitaet": intensitaet,
+                   "heimat": heimat, "ziel_regel": ziel_regel,
                    "freiminuten_rest": {}, "fahrten": 0, "umsatz": 0.0}
     kunde_rows.append([kid, f"K-{kid:06d}", registriert.isoformat(), geburtsjahr,
                        random.choice(STADTTEILE), tarif,
@@ -709,6 +764,17 @@ PROFIL_CODES = [p[0] for p in PROFILE]
 _pool_cache = {}
 
 
+def profil_am(kunde, tag):
+    """Welches Profil hatte dieser Kunde an diesem Tag?"""
+    jetziges = kunde["profil_verlauf"][0][1]
+    for ab, code in kunde["profil_verlauf"]:
+        if ab <= tag:
+            jetziges = code
+        else:
+            break
+    return jetziges
+
+
 def monatspool(d):
     """Je Monat und Profil: welche Kundschaft ist aktiv, mit welchem Gewicht.
 
@@ -724,7 +790,9 @@ def monatspool(d):
     for code in PROFIL_CODES:
         ids, gew = [], []
         for kid, k in kunden.items():
-            if k["profil"] != code:
+            # Das Profil kann sich ueber die Jahre aendern - massgeblich ist,
+            # welches der Kunde in DIESEM Monat hat.
+            if profil_am(k, monatsbeginn) != code:
                 continue
             if k["registriert"] > monatsende or k["aktiv_bis"] < monatsbeginn:
                 continue
@@ -800,6 +868,80 @@ print("Fahrten ...")
 # =====================================================================
 # FAHRTEN
 # =====================================================================
+# ---------------------------------------------------------------- Bestand
+# Jedes Rad steht an einem Ort oder ist unterwegs. Ohne diese Buchfuehrung
+# entstehen Raeder aus dem Nichts: Am Hubland sammelten sich rechnerisch
+# tausende Raeder auf vierzig Plaetzen, in der Zellerau verschwanden sie.
+#
+# Daraus folgen zwei Ereignisse, die es vorher nicht gab und die den Betrieb
+# erst realistisch machen: eine Anfrage an einer leeren Station scheitert, und
+# eine volle Zielstation zwingt zum freien Abstellen. Beides wird protokolliert.
+KAPAZITAET = {s[0]: s[5] for s in STATIONEN}
+VOLL_AB = 0.97                  # ab diesem Fuellgrad gilt eine Station als voll
+UMSETZEN_UEBER = 0.66           # daraus raeumt der Betreiber nachts ab
+UMSETZEN_UNTER = 0.38           # dorthin bringt er die Raeder
+EINSAMMELN_P = 0.65             # Anteil der frei stehenden Raeder je Nacht
+
+an_ort = {sid: [] for sid in STATION_IDS}
+for _ort in ABSTELLORTE:
+    an_ort[_ort] = []
+rad_ort = {}
+rad_nach_id = {}
+ausser_dienst = set()
+unterwegs = []                  # Halde aus (endzeit, lfd, rad_id, zielort)
+# Eine Stationsnummer ist eine Zahl, ein Abstellort eine Zeichenkette. Ohne
+# eigene Ordnungszahl wuerde die Halde die beiden bei Gleichstand
+# miteinander vergleichen.
+rueckgabe_lfd = 0
+fehlanfrage_rows = []
+umsetzfahrt_rows = []
+
+def ausgleichen(zeitpunkt, einsammeln):
+    """Raeumt ueberfuellte Stationen ab und fuellt leere auf.
+
+    Laeuft zweimal taeglich: mittags nur zwischen den Stationen, nachts
+    zusaetzlich mit dem Einsammeln der frei abgestellten Raeder. Ohne diesen
+    Betriebsaufwand liefe das Netz binnen Wochen einseitig voll.
+    """
+    eingesammelt = 0
+    if einsammeln:
+        for ort in ABSTELLORTE:
+            stehen = an_ort[ort]
+            for rid in [r for r in stehen if random.random() < EINSAMMELN_P]:
+                # Der Transporter faehrt ohnehin durch die Stadt: Er bringt das
+                # Rad nicht zur naechsten, sondern zur leersten Station. Zur
+                # naechstgelegenen zu fahren wuerde die Innenstadtstationen
+                # ueberfuellen, weil dort die meisten Stellplaetze liegen.
+                ziel = min(STATION_IDS,
+                           key=lambda s: (len(an_ort[s]) / KAPAZITAET[s],
+                                          ROUTEN[(ort, str(s))][0]))
+                stehen.remove(rid)
+                an_ort[ziel].append(rid)
+                rad_ort[rid] = ziel
+                eingesammelt += 1
+                umsetzfahrt_rows.append(
+                    [zeitpunkt.isoformat(sep=" "), rid, ort, ziel, "eingesammelt"])
+
+    verschoben = 0
+    for quelle in sorted(STATION_IDS,
+                         key=lambda s: -len(an_ort[s]) / KAPAZITAET[s]):
+        while len(an_ort[quelle]) > KAPAZITAET[quelle] * UMSETZEN_UEBER:
+            # Auf die relativ leerste Station - auch wenn keine wirklich leer
+            # ist. Sonst bliebe eine ueberfuellte Station ueberfuellt, nur weil
+            # nirgends ein Engpass herrscht. Das Hubland lief so ueber.
+            ziel = min((s for s in STATION_IDS if s != quelle),
+                       key=lambda s: len(an_ort[s]) / KAPAZITAET[s])
+            if len(an_ort[ziel]) >= KAPAZITAET[ziel] * UMSETZEN_UEBER:
+                break                      # nirgends mehr Platz
+            rid = an_ort[quelle].pop()
+            an_ort[ziel].append(rid)
+            rad_ort[rid] = ziel
+            verschoben += 1
+            umsetzfahrt_rows.append(
+                [zeitpunkt.isoformat(sep=" "), rid, quelle, ziel, "umgesetzt"])
+    return eingesammelt, verschoben
+
+
 ausleihe_rows = []
 ausleihe_id = 0
 langzeit_gesetzt = 0
@@ -846,6 +988,27 @@ while d <= BIS:
 
     offene_stationen = [s for s in STATION_IDS if s not in gestoert] or STATION_IDS
 
+    # Neu angeschaffte Raeder einstellen, ausgemusterte abziehen.
+    for r in verfuegbare_raeder:
+        # rad_nach_id kennt jedes je eingestellte Rad. rad_ort dagegen nur die,
+        # die gerade irgendwo stehen - wer unterwegs ist, fehlt dort und wuerde
+        # sonst ein zweites Mal eingestellt.
+        if r["id"] not in rad_nach_id:
+            platz = random.choices(STATION_IDS,
+                                   weights=[KAPAZITAET[s] for s in STATION_IDS], k=1)[0]
+            an_ort[platz].append(r["id"])
+            rad_ort[r["id"]] = platz
+            rad_nach_id[r["id"]] = r
+    for r in raeder:
+        if r["ausgemustert_am"] is not None and r["ausgemustert_am"] <= d:
+            ausser_dienst.add(r["id"])
+            ort = rad_ort.pop(r["id"], None)
+            if ort is not None and r["id"] in an_ort[ort]:
+                an_ort[ort].remove(r["id"])
+
+    # Erst planen, dann chronologisch abarbeiten: nur in der richtigen
+    # Reihenfolge laesst sich sagen, ob an einer Station gerade ein Rad steht.
+    plaene = []
     for _ in range(anzahl):
         gewichte = [station_gewicht(STATION_TYP[sid], frei, vorlesung, event_staerke > 1.0)
                     for sid in offene_stationen]
@@ -880,6 +1043,31 @@ while d <= BIS:
                 break
         else:
             continue
+        kundenprofil = profil_am(kunde, d)
+
+        # ---- Stammachse
+        # Wer regelmaessig faehrt, faehrt fast immer dieselbe Strecke: morgens
+        # von zu Hause zum Arbeits- oder Studienort, nachmittags zurueck. Diese
+        # Gewohnheit ueberschreibt die Stationsgewichte - sonst wuerfelte jede
+        # Fahrt neu, und im Netz waeren keine Wege wiederzuerkennen.
+        # Wo der Kunde gerade ist, entscheidet ueber die Richtung: von zu Hause
+        # geht es hin, vom Arbeitsort zurueck. Ohne diese Buchfuehrung koennte
+        # jemand zweimal hintereinander hinfahren - und an der Zielstation
+        # wuerden sich Raeder auftuermen, die niemand zurueckbringt.
+        hier = kunde.get("standort", kunde["heimat"])
+        passt_zur_zeit = (stunde < 13) == (hier == kunde["heimat"])
+        auf_achse = (random.random() < STAMMANTEIL[kundenprofil]
+                     and kunde["heimat"] in offene_stationen
+                     and kunde["ziel_regel"] in offene_stationen
+                     and passt_zur_zeit
+                     and not frei)
+        achse_ziel = None
+        if auf_achse:
+            achse_ziel = (kunde["ziel_regel"] if hier == kunde["heimat"]
+                          else kunde["heimat"])
+            start_station = hier
+            kunde["standort"] = achse_ziel
+            typ = STATION_TYP[start_station]
 
         # ---- Ziel
         # Die Zielwahl haengt an Tageszeit, Wochentag und Stationstyp. Erst
@@ -893,7 +1081,9 @@ while d <= BIS:
                    "mittag" if stunde < 15 else
                    "abend" if stunde < 20 else "spaet")
         p_rueckkehr = 0.28 if typ == "freizeit" else 0.10
-        if random.random() < p_rueckkehr:
+        if achse_ziel is not None:
+            end_station = achse_ziel
+        elif random.random() < p_rueckkehr:
             end_station = start_station
         else:
             end_gew = []
@@ -908,7 +1098,39 @@ while d <= BIS:
                 end_gew.append(g)
             end_station = random.choices(offene_stationen, weights=end_gew, k=1)[0]
 
-        rad = random.choice(verfuegbare_raeder)
+        plaene.append((startzeit, kunde_id, start_station, end_station,
+                       typ, stunde, kundenprofil))
+
+    plaene.sort(key=lambda x: x[0])
+    tages_ausgleich = [0, 0]
+    mittag_erledigt = False
+    for startzeit, kunde_id, start_station, end_station, typ, stunde, kundenprofil in plaene:
+        kunde = kunden[kunde_id]
+        # Mittags faehrt das Team einmal durch, bevor die Nachmittagsspitze kommt.
+        if not mittag_erledigt and startzeit.hour >= 13:
+            tages_ausgleich = list(ausgleichen(
+                datetime(d.year, d.month, d.day, 12, 55), einsammeln=False))
+            mittag_erledigt = True
+
+        # Alles, was bis jetzt zurueckgegeben wurde, steht wieder bereit.
+        while unterwegs and unterwegs[0][0] <= startzeit:
+            _, _, zurueck_id, zurueck_ort = heapq.heappop(unterwegs)
+            if zurueck_id in ausser_dienst:
+                continue
+            an_ort[zurueck_ort].append(zurueck_id)
+            rad_ort[zurueck_id] = zurueck_ort
+
+        bereit = an_ort[start_station]
+        if not bereit:
+            # Kein Rad an der Station: die Anfrage scheitert. Die Nachfrage war
+            # da, bedient wurde sie nicht - genau diese Faelle fehlen einer
+            # Prognose, die nur die abgeschlossenen Fahrten zaehlt.
+            fehlanfrage_rows.append([startzeit.isoformat(sep=" "), start_station,
+                                     "kein Rad verfuegbar"])
+            continue
+        rad_id = random.choice(bereit)
+        bereit.remove(rad_id)
+        rad = rad_nach_id[rad_id]
 
         # ---- Endpunkt: Station oder freier Abstellort
         # Die Website wirbt mit "Frei im Geschaeftsgebiet - ueberall in der
@@ -917,6 +1139,14 @@ while d <= BIS:
         # Fahrradstellplaetze der Stadt in der Naehe des angesteuerten Ziels.
         p_frei = 0.30 if STATION_TYP[end_station] == "freizeit" else 0.16
         frei_abgestellt = random.random() < p_frei
+        # Ist die Zielstation voll, bleibt nur das freie Abstellen. Geprueft
+        # wird der Stand bei Fahrtbeginn - in zwanzig Minuten aendert er sich
+        # kaum, und die Ankunftszeit steht hier noch nicht fest.
+        if not frei_abgestellt and (len(an_ort[end_station])
+                                    >= KAPAZITAET[end_station] * VOLL_AB):
+            fehlanfrage_rows.append([startzeit.isoformat(sep=" "), end_station,
+                                     "kein Platz frei"])
+            frei_abgestellt = True
         end_lon = end_lat = ""
         ziel_ort = str(end_station)
         if frei_abgestellt:
@@ -933,11 +1163,11 @@ while d <= BIS:
         # Die kuerzeste Route steht in der Matrix. Wer nicht zweckgerichtet
         # faehrt, faehrt weiter als noetig - das ist die Umwegbereitschaft.
         kurz_km, steigung = strecke_und_steigung(start_station, ziel_ort)
-        umweg = UMWEG_PROFIL[kunde["profil"]] * (1.12 if frei else 1.0)
+        umweg = UMWEG_PROFIL[kundenprofil] * (1.12 if frei else 1.0)
         if STATION_TYP[end_station] == "freizeit":
             umweg *= 1.10
         strecke_km = kurz_km * umweg * random.uniform(0.94, 1.14)
-        tempo = fahrtempo(rad["typ"], steigung, temp, regen, stunde, kunde["profil"])
+        tempo = fahrtempo(rad["typ"], steigung, temp, regen, stunde, kundenprofil)
         reine_fahrzeit = strecke_km / tempo * 60
         mittel = reine_fahrzeit + HALT_GRUND_MIN + HALT_JE_KM_MIN * strecke_km
         dauer = max(2, round(random.lognormvariate(
@@ -974,6 +1204,12 @@ while d <= BIS:
                 langzeit_gesetzt += 1
 
         endzeit = startzeit + timedelta(minutes=int(dauer))
+        # Das Rad steht ab der Rueckgabe wieder zur Verfuegung - am Zielort,
+        # nicht dort, wo es gebraucht wuerde.
+        rueckgabe_ort = ziel_ort if frei_abgestellt else end_station
+        rueckgabe_lfd += 1
+        heapq.heappush(unterwegs, (endzeit, rueckgabe_lfd, rad["id"], rueckgabe_ort))
+        rad_ort.pop(rad["id"], None)
 
         # ---- Distanz: der Sensor meldet nur einen Teil der Fahrten
         distanz = ""
@@ -1002,8 +1238,32 @@ while d <= BIS:
             status, distanz, f"{betrag:.2f}", berechnete, end_lat, end_lon,
         ])
 
+    # ---- Nachtschicht des Betreibers
+    # Was bis Mitternacht zurueckkommt, wird eingebucht; danach raeumt der
+    # Betreiber auf: frei stehende Raeder werden eingesammelt, ueberfuellte
+    # Stationen entlastet, leere aufgefuellt. Ohne diese Umsetzfahrten liefe
+    # das Netz binnen Wochen leer - genau das ist der betriebliche Aufwand,
+    # den eine Standortplanung senken soll.
+    mitternacht = datetime(d.year, d.month, d.day, 23, 59)
+    while unterwegs and unterwegs[0][0] <= mitternacht:
+        _, _, zurueck_id, zurueck_ort = heapq.heappop(unterwegs)
+        if zurueck_id in ausser_dienst:
+            continue
+        an_ort[zurueck_ort].append(zurueck_id)
+        rad_ort[zurueck_id] = zurueck_ort
+
+    # Ueber Nacht kehrt jeder heim - mit dem Rad, zu Fuss oder mit dem Bus.
+    for _k in kunden.values():
+        _k["standort"] = _k["heimat"]
+    eingesammelt, verschoben = ausgleichen(mitternacht, einsammeln=True)
+
+
     d += timedelta(days=1)
 
+schreibe("fehlanfrage.csv", ["zeitpunkt", "station_id", "grund"], fehlanfrage_rows)
+schreibe("umsetzfahrt.csv",
+         ["zeitpunkt", "fahrrad_id", "von_ort", "nach_station_id", "art"],
+         umsetzfahrt_rows)
 schreibe("ausleihe.csv",
          ["ausleihe_id", "kunde_id", "fahrrad_id", "start_station_id", "startzeit",
           "end_station_id", "endzeit", "status", "distanz_km", "entgelt_eur",
