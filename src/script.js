@@ -44,6 +44,57 @@ document.addEventListener("DOMContentLoaded", async () => {
             .catch(err => Toastify({ text: err.message, backgroundColor: '#EF4444' }).showToast());
     }
 
+    /* =================================================================
+       DER PREISSCHAETZER, ABSCHALTBAR (01.09.2026)
+
+       Er ist eine Analytics-Funktion und kein Kernbestandteil des
+       Produkts. Wer ihn ausschaltet, sieht die Seite so, wie sie ohne
+       Modell aussieht - dieser Vergleich ist der Zweck des Schalters.
+
+       Der Zustand haengt am Konto: kunde.zeigt_preisschaetzer. Nicht an
+       localStorage, denn dann haette derselbe Mensch auf dem Telefon
+       eine andere Seite als am Rechner.
+       ================================================================= */
+    let preisschaetzerAn = false;
+    const schalter = document.getElementById('schalter-preisschaetzer');
+
+    /* Die Liste steht HIER und nicht bei den uebrigen Kachelfeldern
+       weiter unten: preisschaetzerLaden() laeuft direkt nach der
+       Anmeldung und damit frueher als jene Deklaration. Mit let stand
+       sie dann noch in der zeitlichen Totzone, und der erste Aufruf
+       brach ab - sichtbar nur in der Konsole, die Seite blieb stumm. */
+    let radKachelSchaetzknoepfe = [];
+
+    /* Ein- und ausblenden statt neu bauen: Die Kacheln enthalten Bilder,
+       und ein Neuaufbau liesse sie flackern. */
+    function radKachelSchaetzknoepfeSetzen() {
+        for (const knopf of radKachelSchaetzknoepfe) knopf.hidden = !preisschaetzerAn;
+    }
+
+    async function preisschaetzerLaden() {
+        const profil = await fetchProfil();
+        preisschaetzerAn = Boolean(profil?.zeigt_preisschaetzer);
+        if (schalter) schalter.checked = preisschaetzerAn;
+        radKachelSchaetzknoepfeSetzen();
+    }
+
+    schalter?.addEventListener('change', async () => {
+        const gewuenscht = schalter.checked;
+        /* Sofort umschalten, damit der Schalter nicht klemmt - und bei
+           einem Fehler zuruecknehmen. Ein Schalter, der eine halbe
+           Sekunde lang nichts tut, wird ein zweites Mal gedrueckt. */
+        preisschaetzerAn = gewuenscht;
+        radKachelSchaetzknoepfeSetzen();
+        const antwort = await setzePreisschaetzer(gewuenscht);
+        if (!antwort) {
+            preisschaetzerAn = !gewuenscht;
+            schalter.checked = preisschaetzerAn;
+            radKachelSchaetzknoepfeSetzen();
+            Toastify({ text: 'Einstellung konnte nicht gespeichert werden.',
+                       backgroundColor: '#EF4444' }).showToast();
+        }
+    });
+
     document.getElementById('konto-abmelden')?.addEventListener('click', abmelden);
     kontoMenue?.querySelectorAll('a').forEach(a =>
         a.addEventListener('click', () => kontoMenueSetzen(false)));
@@ -86,6 +137,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 kontoMenueSetzen(kontoMenue.hidden);
             };
             checkActiveRentals();
+            preisschaetzerLaden();
         } else {
             kontoMenueSetzen(false);
             userNavBtn.innerHTML = `<i class="fa-regular fa-user"></i> Login`;
@@ -95,6 +147,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             userNavBtn.removeAttribute('aria-controls');
             userNavBtn.onclick = (e) => { e.preventDefault(); openModal(); };
             hideRentalBanner();
+            /* Abgemeldet gibt es keinen Schaetzer: Die Einstellung
+               gehoert zu einem Konto, und ohne Konto gibt es keine. */
+            preisschaetzerAn = false;
+            if (schalter) schalter.checked = false;
+            radKachelSchaetzknoepfeSetzen();
         }
     }
 
@@ -453,6 +510,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const karten = (await fetchTarifkarten()).filter(k => RAD_BILD[k.typ_code]);
         radKachelBestandsfelder = [];
         radKachelSchubladen = [];
+        radKachelSchaetzknoepfe = [];
         if (!karten.length) { ziel.replaceChildren(); return; }
 
         ziel.replaceChildren(...karten.map(k => {
@@ -541,9 +599,30 @@ document.addEventListener("DOMContentLoaded", async () => {
                ehrliche Aufschrift entschieden. */
             zurKarte.textContent = 'Auf Karte zeigen';
             zurKarte.setAttribute('aria-label', `${k.bezeichnung} auf der Karte zeigen`);
-            /* Der Buchungsknopf steht OBEN, der Rechner darunter: die
-               Handlung vor der Frage nach dem Preis. */
-            knoepfe.append(zurKarte, rechnen);
+            /* DER SCHAETZKNOPF (01.09.2026).
+               Klein und neben dem Rechner, nicht statt seiner: Der
+               Rechner beantwortet "was kostet eine Minute", der Schaetzer
+               "was kostet mein Weg". Zwei verschiedene Fragen.
+               Er entsteht immer und wird nur ein- und ausgeblendet -
+               so muss die Kachel beim Umschalten nicht neu gebaut
+               werden, und offene Schubladen bleiben offen. */
+            const schaetzen = document.createElement('button');
+            schaetzen.type = 'button';
+            schaetzen.className = 'rad-kachel-schaetzen btn-outline';
+            schaetzen.dataset.typ = k.typ_code;
+            schaetzen.dataset.lade = 'schaetzer';
+            schaetzen.setAttribute('aria-expanded', 'false');
+            schaetzen.setAttribute('aria-label',
+                `Preis für eine Fahrt mit dem ${k.bezeichnung} schätzen`);
+            const symbol = document.createElement('i');
+            symbol.className = 'fa-solid fa-route';
+            symbol.setAttribute('aria-hidden', 'true');
+            schaetzen.append(symbol, document.createTextNode('Preis schätzen'));
+            radKachelSchaetzknoepfe.push(schaetzen);
+
+            /* Der Buchungsknopf steht OBEN, die zwei Preisfragen darunter:
+               die Handlung vor der Frage nach dem Preis. */
+            knoepfe.append(zurKarte, rechnen, schaetzen);
 
             text.append(titel, bschr, preis, merkmale, frei, knoepfe);
 
@@ -577,6 +656,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }));
 
         radKachelnBestandSetzen();
+        radKachelSchaetzknoepfeSetzen();
     }
 
     /* Getrennt vom Aufbau, weil der Bestand spaeter eintrifft als die
@@ -788,7 +868,7 @@ document.addEventListener("DOMContentLoaded", async () => {
        nachtraeglich gebaut, und ein Horcher, der vor seinem Knopf
        eingerichtet wird, findet ihn nie. */
     document.addEventListener('click', (e) => {
-        const knopf = e.target.closest('.rad-kachel-rechnen');
+        const knopf = e.target.closest('.rad-kachel-rechnen, .rad-kachel-schaetzen');
         if (knopf) schubladeUmschalten(knopf);
     });
 
@@ -845,16 +925,156 @@ document.addEventListener("DOMContentLoaded", async () => {
        da, was hidden ebenfalls geleistet hat. */
     function ladeIstOffen(lade) { return lade.classList.contains('ist-offen'); }
 
+    /* =================================================================
+       DIE PREISSCHAETZUNG
+
+       Sie rechnet nichts. Das Rechnen ist in Phase 6 von Notebook 1
+       passiert; hier wird eine Zeile nachgeschlagen. Genau deshalb kann
+       eine statische Website das anzeigen - sie laedt kein Modell,
+       sondern liest eine Sicht.
+
+       DIE AUSWAHLLISTE ZEIGT NUR, WAS BEANTWORTBAR IST. Fuer Rundfahrten
+       und Verbindungen mit zu breiter Streuung gibt es keine Zeile; sie
+       stehen deshalb gar nicht erst in der Liste. Eine Liste, deren
+       Eintraege zur Haelfte "keine Schaetzung" melden, waere eine
+       Zumutung.
+       ================================================================= */
+    const SCHAETZER_FENSTER = [[5, 10, 'frueh'], [10, 15, 'vormittag'],
+                               [15, 20, 'nachmittag'], [20, 24, 'abend']];
+
+    function schaetzerFenster(stunde) {
+        for (const [a, b, name] of SCHAETZER_FENSTER) {
+            if (stunde >= a && stunde < b) return name;
+        }
+        return null;                       // zwischen 0 und 5 Uhr: keine Fahrten
+    }
+
+    let schaetzerTyp = null;
+
+    async function schaetzerVorbereiten(typCode) {
+        schaetzerTyp = typCode;
+        const start = document.getElementById('schaetzer-start');
+        const ziel  = document.getElementById('schaetzer-ziel');
+        const ergebnis = document.getElementById('schaetzer-ergebnis');
+        if (!start || !ziel || !ergebnis) return;
+
+        ergebnis.replaceChildren(schaetzerZeile('Einen Moment …', ''));
+        const starts = await fetchSchaetzbareStarts(typCode);
+        if (!starts.length) {
+            ergebnis.replaceChildren(schaetzerZeile(
+                'Für dieses Rad liegt keine Schätzung vor.',
+                'Das Modell gibt nur Auskunft, wo es genug vergleichbare Fahrten gibt.'));
+            start.replaceChildren(); ziel.replaceChildren();
+            return;
+        }
+        start.replaceChildren(...starts.map(s => neueOption(s, s)));
+        await schaetzerZieleLaden();
+    }
+
+    function neueOption(wert, beschriftung) {
+        const o = document.createElement('option');
+        o.value = wert; o.textContent = beschriftung;
+        return o;
+    }
+
+    function schaetzerZeile(titel, unterzeile) {
+        const box = document.createElement('div');
+        box.className = 'schaetzer-meldung';
+        const h = document.createElement('p');
+        h.className = 'schaetzer-meldung-titel';
+        h.textContent = titel;
+        box.append(h);
+        if (unterzeile) {
+            const u = document.createElement('p');
+            u.className = 'schaetzer-meldung-text';
+            u.textContent = unterzeile;
+            box.append(u);
+        }
+        return box;
+    }
+
+    async function schaetzerZieleLaden() {
+        const start = document.getElementById('schaetzer-start');
+        const ziel  = document.getElementById('schaetzer-ziel');
+        if (!start || !ziel || !schaetzerTyp) return;
+        const ziele = await fetchSchaetzbareZiele(start.value, schaetzerTyp);
+        ziel.replaceChildren(neueOption('', 'Ziel wählen …'),
+                             ...ziele.map(z => neueOption(z, z)));
+        schaetzerZeigen();
+    }
+
+    async function schaetzerZeigen() {
+        const start = document.getElementById('schaetzer-start');
+        const ziel  = document.getElementById('schaetzer-ziel');
+        const ergebnis = document.getElementById('schaetzer-ergebnis');
+        if (!start || !ziel || !ergebnis || !schaetzerTyp) return;
+
+        if (!ziel.value) {
+            ergebnis.replaceChildren(schaetzerZeile('Wähle ein Ziel, dann rechnen wir.', ''));
+            return;
+        }
+        const fenster = schaetzerFenster(new Date().getHours());
+        if (!fenster) {
+            ergebnis.replaceChildren(schaetzerZeile(
+                'Zwischen 0 und 5 Uhr schätzen wir nicht.',
+                'In diesen Stunden gibt es zu wenige vergangene Fahrten.'));
+            return;
+        }
+        const z = await fetchPreisspanne(start.value, ziel.value, schaetzerTyp, fenster);
+        if (!z) {
+            ergebnis.replaceChildren(schaetzerZeile(
+                'Für diese Verbindung schätzen wir nicht.',
+                'Die vergangenen Fahrten streuen hier zu stark — jede Zahl wäre '
+                + 'genauer, als wir es wissen können.'));
+            return;
+        }
+        const box = document.createElement('div');
+        box.className = 'schaetzer-treffer';
+        const preis = document.createElement('p');
+        preis.className = 'schaetzer-preis';
+        const b = document.createElement('b');
+        /* Die Einheit steht EINMAL am Ende, nicht an jeder Zahl:
+           "0,80 Euro bis 1,70 Euro" liest sich wie zwei Preise, nicht
+           wie eine Spanne. */
+        const zahl = (w) => Number(w).toLocaleString('de-DE',
+            { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        b.textContent = `${zahl(z.preis_von)} bis ${euro(z.preis_bis)}`;
+        preis.append(b);
+        const dauer = document.createElement('p');
+        dauer.className = 'schaetzer-dauer';
+        dauer.textContent = `meist ${z.minuten_von} bis ${z.minuten_bis} Minuten`;
+        const grund = document.createElement('p');
+        grund.className = 'schaetzer-grundlage';
+        grund.textContent = `aus ${z.fahrten_grundlage} vergleichbaren Fahrten`;
+        box.append(preis, dauer, grund);
+        ergebnis.replaceChildren(box);
+    }
+
+    document.getElementById('schaetzer-start')?.addEventListener('change', schaetzerZieleLaden);
+    document.getElementById('schaetzer-ziel')?.addEventListener('change', schaetzerZeigen);
+
     async function schubladeUmschalten(knopf) {
         const typ = knopf.dataset.typ;
         const eintrag = radKachelSchubladen.find(x => x.typ === typ);
-        const rechner = document.getElementById('fare-meter');
-        if (!eintrag || !rechner) return;
+        /* Zwei Tafeln teilen sich eine Lade. Welche gezeigt wird, sagt
+           der Knopf - der Rechner beantwortet "was kostet eine Minute",
+           der Schaetzer "was kostet mein Weg". */
+        const istSchaetzer = knopf.dataset.lade === 'schaetzer';
+        const tafel = document.getElementById(istSchaetzer ? 'preis-schaetzer' : 'fare-meter');
+        const halter = istSchaetzer ? 'schaetzer-halter' : 'rechner-halter';
+        if (!eintrag || !tafel) return;
         const ziel = eintrag.schublade;
-        const warOffen = ladeIstOffen(ziel);
+        /* Offen ist nicht gleich offen: Steht die Lade auf, zeigt aber
+           die ANDERE Tafel, wird umgeschaltet statt zugeklappt. */
+        const warOffen = ladeIstOffen(ziel) && ziel.contains(tafel);
 
         /* Immer erst alles zu. Zwei offene Laden gaeben zwei Rechner -
-           und es gibt nur einen; der zweite waere leer. */
+           und es gibt nur einen; der zweite waere leer.
+           Die Schaetzknoepfe werden ueber die gefuehrte Liste
+           zurueckgesetzt und nicht ueber einen querySelector: Die Klasse
+           entsteht im Skript und steht nie im HTML - frontend_check.py
+           haette das zu Recht gemeldet. */
+        for (const b of radKachelSchaetzknoepfe) b.setAttribute('aria-expanded', 'false');
         for (const x of radKachelSchubladen) {
             if (!ladeIstOffen(x.schublade)) continue;
             const s = x.schublade;
@@ -873,20 +1093,37 @@ document.addEventListener("DOMContentLoaded", async () => {
                aber erst, wenn wirklich keine Lade mehr offen ist. */
             setTimeout(() => {
                 if (!radKachelSchubladen.some(x => ladeIstOffen(x.schublade))) {
-                    document.getElementById('rechner-halter')?.append(rechner);
+                    document.getElementById(halter)?.append(tafel);
                 }
             }, LADE_DAUER + 40);
             return;
         }
 
-        if (!rechnerTarife.length) await rechnerStarten();
-        const i = rechnerTarife.findIndex(t => t.typ_code === typ);
-        if (i >= 0) { rechnerAktiv = i; rechnerTypenZeichnen(); rechnerZeichnen(); }
+        if (istSchaetzer) {
+            await schaetzerVorbereiten(typ);
+        } else {
+            if (!rechnerTarife.length) await rechnerStarten();
+            const i = rechnerTarife.findIndex(t => t.typ_code === typ);
+            if (i >= 0) { rechnerAktiv = i; rechnerTypenZeichnen(); rechnerZeichnen(); }
+        }
+        /* Die andere Tafel muss aus der Lade heraus, bevor diese hinein
+           kann - sonst stehen beide darin, wenn man zwischen ihnen
+           umschaltet. */
+        const andere = document.getElementById(istSchaetzer ? 'fare-meter' : 'preis-schaetzer');
+        if (andere && ziel.contains(andere)) {
+            document.getElementById(istSchaetzer ? 'rechner-halter' : 'schaetzer-halter')
+                    ?.append(andere);
+        }
 
         ziel.inert = false;
         ziel.classList.add('ist-offen');
+        /* Der Knopf sagt jetzt auch, dass seine Lade offen ist. Bis zum
+           01.09.2026 stand hier nichts: Beim Zuklappen wurde
+           aria-expanded auf false gesetzt, beim Aufklappen nie auf true.
+           Fuer eine Vorlesekraft war die Lade damit immer zu. */
+        knopf.setAttribute('aria-expanded', 'true');
         ziel.style.height = '0px';
-        ziel.append(rechner);
+        ziel.append(tafel);
         const hoch = ziel.scrollHeight;
         await ladeBewegen(ziel, 0, hoch);
         if (!ladeIstOffen(ziel)) return;

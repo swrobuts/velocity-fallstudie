@@ -763,7 +763,7 @@ def baue() -> Presentation:
               "Sie legt Sichten und Funktionen über genau die Tabellen, die schon da waren.")
     kachelreihe(s, [
         ("Kein zweites Schema",
-         ["36 Basistabellen legt der Aufbau an — für beide dieselben",
+         ["37 Basistabellen legt der Aufbau an — für beide dieselben",
           "Eine Kundenadresse ist eine Kundenadresse",
           "Keine Kopie, die veralten könnte"]),
         ("16 Sichten, 14 Funktionen",

@@ -3636,3 +3636,139 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
   }
   .live-zahl b { font-size: clamp(22px, 4vw, 28px); padding-left: var(--a4); }
 }
+
+/* =====================================================================
+   PREISSCHAETZER (01.09.2026)
+
+   Zwei Teile: der Schalter im Kontomenue und die Tafel in der
+   Kachelschublade. Beide folgen dem, was die Seite schon hat - keine
+   neue Formsprache fuer eine Funktion, die man auch abschalten kann.
+   ===================================================================== */
+
+/* --- Der Schalter im Kontomenue --- */
+.konto-schalter {
+  padding: var(--a2) var(--a3);
+  border-top: 1px solid var(--rahmen);
+}
+.schalter {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer;
+  /* 44 px Trefferflaeche nach WCAG 2.5.5 - die Bahn selbst ist kleiner,
+     der Griff darf es nicht sein. */
+  min-height: 44px;
+}
+.schalter input {
+  /* Nicht display:none: dann verschwaende das Feld aus der Tastaturfolge
+     und die Vorlesekraft faende keinen Schalter mehr. */
+  position: absolute; opacity: 0; width: 0; height: 0;
+}
+.schalter-bahn {
+  flex: 0 0 auto; position: relative;
+  width: 42px; height: 24px; border-radius: 12px;
+  background: var(--rahmen); transition: background .18s ease;
+}
+.schalter-bahn::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+  transition: transform .18s ease;
+}
+.schalter input:checked + .schalter-bahn { background: var(--navy); }
+.schalter input:checked + .schalter-bahn::after { transform: translateX(18px); }
+.schalter input:focus-visible + .schalter-bahn {
+  outline: 2px solid var(--navy); outline-offset: 2px;
+}
+.schalter-text { font-size: .95rem; color: var(--navy); font-weight: 600; }
+.konto-hinweis {
+  margin: 4px 0 0; font-size: .82rem; line-height: 1.35;
+  color: var(--grau);
+}
+@media (prefers-reduced-motion: reduce) {
+  .schalter-bahn, .schalter-bahn::after { transition: none; }
+}
+
+/* --- Der Knopf auf der Radkachel --- */
+.rad-kachel-schaetzen {
+  background: #fff;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+}
+.rad-kachel-schaetzen[hidden] { display: none; }
+.rad-kachel-schaetzen:hover {
+  background: var(--paper); color: var(--navy); border-color: var(--navy);
+}
+.rad-kachel-schaetzen i { font-size: .9em; }
+
+/* --- Die Tafel in der Schublade --- */
+.schaetzer {
+  display: grid; gap: var(--a3);
+  padding: var(--a3);
+  /* DIE TAFEL FRAGT IHREN BEHAELTER, NICHT DAS FENSTER.
+     Sie sitzt in einer Radkachel, und die ist bei 768 px Fensterbreite
+     nur rund 180 px breit - eine Fensterabfrage haette dort zwei Felder
+     nebeneinander gestellt, in denen kein Stationsname Platz hat. Genau
+     das ist beim ersten Versuch passiert. */
+  container-type: inline-size;
+}
+/* Auf dem Telefon untereinander, ab 560 px nebeneinander mit dem Pfeil
+   dazwischen. Der Pfeil verschwindet im gestapelten Zustand: Er zeigte
+   dort nach rechts, wo es nach unten weitergeht. */
+.schaetzer-eingabe {
+  display: grid; gap: var(--a2);
+  grid-template-columns: 1fr;
+  align-items: end;
+}
+.schaetzer-feld { display: grid; gap: 4px; }
+.schaetzer-marke {
+  font-size: .78rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--grau); font-weight: 700;
+}
+.schaetzer-feld select {
+  width: 100%; min-height: 44px;
+  padding: 8px 12px; font: inherit; font-size: .95rem;
+  color: var(--navy); background: #fff;
+  border: 1px solid var(--rahmen); border-radius: 8px;
+}
+.schaetzer-feld select:focus-visible {
+  outline: 2px solid var(--navy); outline-offset: 1px;
+}
+
+.schaetzer-ergebnis {
+  min-height: 96px;
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--a3);
+  background: var(--paper); border-radius: 10px;
+  text-align: center;
+}
+.schaetzer-platzhalter, .schaetzer-meldung-text {
+  margin: 0; color: var(--grau); font-size: .9rem; line-height: 1.4;
+}
+.schaetzer-meldung-titel {
+  margin: 0 0 4px; color: var(--navy); font-weight: 700;
+}
+.schaetzer-preis { margin: 0; }
+.schaetzer-preis b {
+  /* Nach der Behaeltergroesse, nicht nach der Fensterbreite: In einer
+     schmalen Kachel waere 5vw viel zu gross. */
+  font-size: clamp(1.35rem, 9cqi, 2.1rem); color: var(--navy);
+  font-variant-numeric: tabular-nums;
+  text-wrap: balance;
+}
+.schaetzer-dauer { margin: 2px 0 0; color: var(--navy); font-size: .95rem; }
+.schaetzer-grundlage {
+  margin: 6px 0 0; color: var(--grau); font-size: .82rem;
+}
+/* Die Fussnote ist keine Zierde: Ohne sie liest sich eine Spanne wie
+   eine Zusage. */
+.schaetzer-fussnote {
+  margin: 0; font-size: .78rem; line-height: 1.4; color: var(--grau);
+}
+
+/* EINSPALTIG, IMMER - und das ist gemessen, nicht aufgegeben.
+   Zuerst stand hier ein zweispaltiger Zweig ab 420 px Behaelterbreite.
+   Nachgemessen mit der tatsaechlichen Schriftart: "Grombuehl/Klinikum"
+   braucht 144 px Text, mit Polsterung und Aufklapppfeil 190 px je Feld,
+   also 429 px fuer zwei Felder mit Pfeil dazwischen. Die Tafel sitzt in
+   der Radkachel und ist auch bei 1440 px Fensterbreite nur 404 px breit.
+   Der Zweig haette also nie gegriffen - ausser er haette die
+   Stationsnamen abgeschnitten.
+   Wer die Kacheln spaeter breiter macht: ab 429 px lohnt der Versuch. */

@@ -90,6 +90,42 @@ async function fetchProfil() {
     return zeilen[0] || null;
 }
 
+/* Die Preisspannen aus dem Analytics-Notebook. Gefiltert wird auf dem
+   Server, nicht im Browser: Die Sicht hat gut hundert Zeilen, aber der
+   Grundsatz ist derselbe wie ueberall - es kommt nur, was gebraucht wird.
+
+   Findet sich keine Zeile, gibt es fuer diese Verbindung KEINE Schaetzung.
+   Das ist der Normalfall und kein Fehler: Rundfahrten und Verbindungen
+   mit zu breiter Streuung stehen absichtlich nicht in der Tabelle. */
+async function fetchPreisspanne(startstation, zielstation, typCode, zeitfenster) {
+    const zeilen = await ladeListe('v_preisschaetzung', '*', (q) => q
+        .eq('startstation', startstation)
+        .eq('zielstation', zielstation)
+        .eq('typ_code', typCode)
+        .eq('zeitfenster', zeitfenster));
+    return zeilen[0] || null;
+}
+
+/* Alle Zielstationen, fuer die es von dieser Startstation aus ueberhaupt
+   eine Schaetzung gibt. Die Auswahlliste zeigt nur, was auch beantwortet
+   werden kann - eine Liste voller Eintraege, die dann "keine Schaetzung"
+   melden, waere eine Zumutung. */
+async function fetchSchaetzbareZiele(startstation, typCode) {
+    const zeilen = await ladeListe('v_preisschaetzung', 'zielstation', (q) => q
+        .eq('startstation', startstation)
+        .eq('typ_code', typCode)
+        .order('zielstation'));
+    return [...new Set(zeilen.map(z => z.zielstation))];
+}
+
+/* Startstationen, von denen aus es Schaetzungen gibt. */
+async function fetchSchaetzbareStarts(typCode) {
+    const zeilen = await ladeListe('v_preisschaetzung', 'startstation', (q) => q
+        .eq('typ_code', typCode)
+        .order('startstation'));
+    return [...new Set(zeilen.map(z => z.startstation))];
+}
+
 // ===== SCHREIBENDE VORGAENGE =====
 
 // Legt bei Bedarf den Kundensatz zum angemeldeten Konto an. Idempotent,
@@ -99,6 +135,20 @@ async function ensureKunde() {
     const { data, error } = await supabaseClient.rpc('api_kunde_sicherstellen');
     if (error) {
         console.error('Kundensatz konnte nicht sichergestellt werden:', error.message);
+        return null;
+    }
+    return Array.isArray(data) ? data[0] : data;
+}
+
+/* Den Preisschaetzer ein- oder ausschalten. Die Einstellung haengt am
+   Konto, nicht am Geraet - deshalb eine api-Funktion und kein
+   localStorage. */
+async function setzePreisschaetzer(an) {
+    const { data, error } = await supabaseClient.rpc('api_preisschaetzer_umschalten', {
+        p_an: an
+    });
+    if (error) {
+        console.error('Preisschätzer konnte nicht umgeschaltet werden:', error.message);
         return null;
     }
     return Array.isArray(data) ? data[0] : data;
