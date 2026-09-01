@@ -781,10 +781,22 @@ zukunft["modell_bis"] = oben.predict(zukunft[MERKMALE])
 # kommen ueberhaupt in Frage. Alles andere zu messen und danach
 # wegzuwerfen haette die Abdeckung geschoenigt.
 gruppen = basis.groupby(["route", "typ_code", "fenster"]).dauer_min
-tab = pd.DataFrame({"von": gruppen.quantile(.10), "bis": gruppen.quantile(.90),
+tab = pd.DataFrame({"von_roh": gruppen.quantile(.10), "bis_roh": gruppen.quantile(.90),
                     "n": gruppen.size()}).reset_index()
+
+# ERST RUNDEN, DANN RECHNEN. Die App zeigt ganze Minuten an; wuerde man
+# den Preis aus den ungerundeten Quantilen bilden, stuenden nebeneinander
+# "5 bis 12 Minuten" und "0,60 bis 1,33 Euro" - und 12 Minuten kosten
+# beim City-Bike 1,30. Zwei Angaben, die sich widersprechen, obwohl beide
+# fuer sich richtig gerechnet sind.
+tab["von"] = tab.von_roh.round()
+tab["bis"] = tab.bis_roh.round()
 tab["preis_von"] = [fahrpreis(m, t) for m, t in zip(tab["von"], tab.typ_code)]
 tab["preis_bis"] = [fahrpreis(m, t) for m, t in zip(tab["bis"], tab.typ_code)]
+
+# Die Ein-Euro-Regel greift auf den ANGEZEIGTEN Werten. Das Runden kann
+# eine Spanne knapp ueber die Grenze heben oder unter sie druecken -
+# geprueft wird deshalb danach, nicht davor.
 tab = tab[(tab.n >= 30) & (tab.preis_bis - tab.preis_von <= 1.00)]
 print(f"{len(tab)} Kombinationen erfuellen die beiden Regeln aus Phase 1.")
 zukunft = zukunft.merge(tab, on=["route", "typ_code", "fenster"], how="left")
@@ -799,9 +811,13 @@ zukunft["p_ist"] = [fahrpreis(m, t) for m, t in zip(zukunft.dauer_min, zukunft.t
 # daraus die Frage, ob der tatsaechliche Preis darin liegt.
 ##LUECKE Zwei Preisgrenzen je Fahrt, dann der Vergleich.
 def preisspanne(u, o):
-    von = [fahrpreis(m, t) for m, t in zip(zukunft[u], zukunft.typ_code)]
-    bis = [fahrpreis(m, t) for m, t in zip(zukunft[o], zukunft.typ_code)]
-    return pd.Series(von, index=zukunft.index), pd.Series(bis, index=zukunft.index)
+    # Auch hier aus den GERUNDETEN Minuten - bewertet wird, was angezeigt
+    # wuerde, nicht ein Zwischenwert, den nie jemand zu sehen bekommt.
+    def euro(spalte):
+        return pd.Series([fahrpreis(round(m), ty) if pd.notna(m) else np.nan
+                          for m, ty in zip(zukunft[spalte], zukunft.typ_code)],
+                         index=zukunft.index)
+    return euro(u), euro(o)
 ##ENDE
 
 def bewerten(name, u, o):
@@ -838,27 +854,27 @@ for name, s in vergleich.iterrows():
 """),
 
 MD("""
-**Keiner der beiden Kandidaten erfüllt das vollständige Kriterium.** Das ist das
-ehrliche Ergebnis, und es fällt bei jedem aus einem anderen Grund aus:
+Das Ergebnis ist eindeutig, und es fällt anders aus, als die Reihenfolge der Kapitel
+vermuten lässt:
 
-- Die **Quantilregression** rechnet für jede Anfrage eine Spanne — aber deutlich mehr als
-  die Hälfte davon ist breiter als ein Euro und dürfte gar nicht angezeigt werden. Übrig
-  bleiben gut vier von zehn Anfragen. Auf denen trifft sie knapp die 80 Prozent, beim
-  schlechtesten Radtyp bleibt sie darunter.
-- Die **Perzentiltabelle** hält die Breitenregel per Konstruktion und trifft insgesamt
-  besser — aber sie schweigt bei mehr als zwei von drei Anfragen, und beim EBIKE reißt
-  sie das Kriterium deutlich.
+- Die **Quantilregression** verwirft gut die Hälfte ihrer Spannen als zu breit. Auf dem
+  Rest — knapp der Hälfte aller Anfragen — **erfüllt sie das vollständige Kriterium**,
+  insgesamt wie für jeden Radtyp.
+- Die **Perzentiltabelle** hält die Breitenregel per Konstruktion und antwortet seltener.
+  Sie **verfehlt das Kriterium**, weil sie beim EBIKE deutlich unter 80 Prozent bleibt.
 
-Bemerkenswert ist die Zeile *verworfen, zu breit*: Die Quantilregression sieht nur so
-lange nach dem besseren Produkt aus, wie man ihre unbrauchbar breiten Spannen mitzählt.
+> **Gemessen am eigenen Kriterium ist damit die Quantilregression der bessere Kandidat.**
+> Das gehört so gesagt, auch wenn die Entscheidung gleich anders ausfällt.
+
+Bemerkenswert ist die Zeile *verworfen, zu breit*: Über die Hälfte ihrer Spannen wäre für
+den Kunden wertlos. Was sie gut macht, ist gerade das Weglassen — sie antwortet nur dort,
+wo sie eine schmale Spanne bilden kann.
 
 Hätte man nur die Dauerabdeckung gemessen, sähen beide gut aus. Erst die vollständige
 Prüfung — Preis, je Radtyp, Breite — zeigt, dass so noch kein Produkt daraus wird.
 
-**Der Unterschied liegt darin, was sich reparieren lässt.** Die Tabelle kann man auf den
-Bereich einschränken, in dem sie hält: auf den Radtyp, der die Marke erreicht, und auf
-Kombinationen, die nicht messbar durchfallen. Bei der Quantilregression ginge das nicht —
-ihre Spannen wären auch dann noch zu breit.
+**Warum trotzdem die Tabelle?** Nicht wegen der Güte — die spricht für das Modell.
+Sondern weil die App eine statische Seite ohne Python ist und kein Modell laden kann.
 
 Weitere Unterschiede:
 
@@ -870,16 +886,24 @@ Weitere Unterschiede:
 | berücksichtigt Wochentag und Saison | ja | nein |
 
 **Wir liefern die Tabelle aus** — eingeschränkt auf den Bereich, in dem sie das
-Kriterium hält, und mit dem Schweigen als Preis. Drei Gründe:
+Kriterium hält, und mit dem Schweigen als Preis. Zwei Gründe:
 
 1. Die App ist statisch und kann kein Modell laden.
 2. Eine Auskunft, der jemand mit Ortskenntnis widersprechen kann, ist im Betrieb mehr
    wert als eine, die man glauben muss.
-3. Eine Anzeige, die in einem von fünf Fällen danebenliegt, beschädigt das Vertrauen
-   stärker, als eine fehlende Anzeige es tut.
 
-Punkt 3 ist eine Produktentscheidung, keine analytische. Sie gehört dem Auftraggeber und
-ist hier ausdrücklich als seine vermerkt.
+> **Und der Preis dafür steht in den Zahlen:** Die Tabelle antwortet seltener als das
+> Modell und am Ende nur für CITY. Wir liefern den schwächeren Kandidaten aus, weil der
+> stärkere nicht dorthin passt, wo er laufen müsste.
+
+**Es gäbe einen dritten Weg, und er ist die nächste Runde:** die Vorhersagen des Modells
+für jede Kombination aus Verbindung, Radtyp und Tageszeit **vorab ausrechnen und
+tabellieren**. Dann liefe im Betrieb wieder nur eine Tabelle, gefüllt aber aus dem
+besseren Verfahren. Der Preis wäre, dass die Zeilen nicht mehr für sich sprechen — man
+kann eine Modellvorhersage nicht mehr nachrechnen, indem man in die Historie sieht.
+
+Diese Abwägung — nachvollziehbar gegen treffsicher — gehört dem Auftraggeber, nicht der
+Analyse. Sie ist hier ausdrücklich als offen vermerkt.
 
 Und damit ist auch die Behauptung vom Tisch, das Modell werde wegen seiner
 Verallgemeinerung auf neue Stationen gebraucht: Die Tabelle kann das nicht, und sie
@@ -1029,7 +1053,7 @@ for _, g in tab.iterrows():
                        ziel_station_id=int(id_je_name[ziel]),
                        startstation=start, zielstation=ziel, typ_code=g.typ_code,
                        zeitfenster=g.fenster,
-                       minuten_von=round(g["von"]), minuten_bis=round(g["bis"]),
+                       minuten_von=int(g["von"]), minuten_bis=int(g["bis"]),
                        preis_von=round(g.preis_von, 2), preis_bis=round(g.preis_bis, 2),
                        fahrten_grundlage=int(g.n)))
 
@@ -1115,19 +1139,29 @@ worden. Die Grenzen sind jetzt aneinander ausgerichtet.
 
 | Auslöser | Schwelle | Handlung |
 |---|---|---|
-| Abdeckung je Kombination, gleitend über 8 Wochen | ≥ 80 % | anzeigen |
-| | untere Vertrauensgrenze unter 80 % | anzeigen, aber Warnung und Neuberechnung |
-| | Schätzwert selbst unter 80 % | **Kombination abschalten** |
+| Abdeckung je Kombination, gleitend über 8 Wochen | **untere** Vertrauensgrenze ≥ 80 % | anzeigen |
+| | Intervall überlappt 80 % | anzeigen, aber Warnung und Neuberechnung |
+| | **obere** Vertrauensgrenze < 80 % | **Kombination abschalten** |
 | Fallzahl je Kombination | < 20 im Fenster | keine Aussage möglich, Vorwoche weiterverwenden |
 | neue Station | — | keine Zeile, also keine Anzeige |
 | **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |
 | Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
 
-Die mittlere Zeile ist keine aufgeweichte Grenze, sondern eine **Unsicherheitszone** — und
-sie wird gerechnet, nicht gesetzt: Maßgeblich ist die untere Grenze eines
-Wilson-Intervalls zum Niveau 95 %. Bei 200 Fahrten und 78 % gemessener Abdeckung reicht
-dieses Intervall noch über die 80 hinaus; sofort abzuschalten hieße, auf Rauschen zu
-reagieren. Fällt der Schätzwert selbst unter 80 %, wird abgeschaltet.
+Die drei Fälle schließen einander aus und decken alles ab — daran war die vorige Fassung
+gescheitert: Bei 78 % gemessener Abdeckung trafen „Warnung" und „Abschalten" gleichzeitig
+zu, und es stand nirgends, welche Regel gewinnt.
+
+Maßgeblich ist jetzt das **Wilson-Intervall zum Niveau 95 %**, nicht der Schätzwert:
+
+- Liegt schon die untere Grenze bei 80 % oder darüber, ist die Kombination belegt.
+- Überlappt das Intervall die 80 %, wissen wir es nicht — dann wird angezeigt und
+  gewarnt. Bei 200 Fahrten und 78 % gemessener Abdeckung ist das der Fall.
+- Liegt die **obere** Grenze unter 80 %, ist die Kombination widerlegt und wird
+  abgeschaltet.
+
+So entscheidet nicht eine gesetzte Ersatzschwelle, sondern die Frage, ob die Daten für
+eine Aussage überhaupt reichen. Wer schneller abschalten will, braucht mehr Fahrten je
+Fenster, keine andere Zahl.
 ### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
 
 Was dieses Notebook „Test 2“ nennt, ist ein **rückblickender Test auf vergangenen
@@ -1196,6 +1230,9 @@ offen.
 4. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
 5. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
 6. **Kein Produkt für E-Bike und Lastenrad.** Weder als Zahl noch als Spanne.
+7. **Der bessere Kandidat wird nicht ausgeliefert.** Die Quantilregression erfüllt das
+   Kriterium und antwortet häufiger; ausgeliefert wird die Tabelle, weil die App statisch
+   ist. Ihre Vorhersagen vorab zu tabellieren wäre der nächste Schritt.
 
 **Weiter geht es mit Notebook 2 — Klassifikation:** Dort ist die Zielgröße keine Zahl
 mehr, sondern eine Entscheidung, und die beiden Fehlerarten sind unterschiedlich teuer.
