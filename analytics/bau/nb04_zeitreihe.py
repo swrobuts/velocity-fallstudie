@@ -8,7 +8,7 @@ ZELLEN = [
 
 kopf("Zeitreihe: Wie viele Fahrten kommen morgen?",
      "Zeitreihenprognose (überwacht — mit der Zeit als zusätzlicher Fessel)",
-     "Wie viele Räder müssen morgen früh einsatzbereit sein, und wie viele Leute braucht der Frühdienst?",
+     "Wie viele Fahrten kommen morgen — und wie plant man mit einer Zahl, die man nicht sicher weiß?",
      NAME),
 
 MD("""
@@ -27,25 +27,61 @@ wüsste dann bereits, wie der Sommer 2026 verlaufen ist.
 """),
 
 # =====================================================================
+MD("""
+> ### ⚠ Woher die Daten kommen — bitte zuerst lesen
+>
+> **Die Nachfrage in diesem Notebook ist erzeugt.** `ausleihe.csv` stammt aus einem
+> Generator, der Wochenrhythmus, Jahresgang, Wetter- und Veranstaltungseffekte
+> **absichtlich verstärkt** eingebaut hat. Deshalb sind die Gütewerte hier besser, als
+> sie in einem echten Netz wären.
+>
+> | | |
+> |---|---|
+> | **Fahrten und Nachfrage** | synthetisch, Muster didaktisch verstärkt |
+> | **Wetter** | historische Werte für Würzburg |
+> | **Kalender** | Feiertage echt, Ferien und Veranstaltungen typisiert |
+> | **Wettervorhersage** | **simuliert** — es gibt keine archivierten Prognosen |
+> | **Alle Euro-Beträge** | Szenariorechnungen unter gesetzten Annahmen |
+>
+> Was sich überträgt, ist das Vorgehen: der zeitliche Schnitt, die Frage nach dem
+> Informationsstand um 18 Uhr, die asymmetrischen Kosten und die Einsicht, dass die
+> genaueste Prognose nicht die günstigste ist. Die Zahlen übertragen sich nicht.
+"""),
+
 PHASE(1, "Die Disposition plant abends für den nächsten Tag. Sie braucht eine Zahl."),
 
 MD("""
 ### Die Ausgangslage
 
-Jeden Abend entscheidet die Disposition zwei Dinge:
-
-1. **Wie viele Räder** müssen über Nacht geladen, geprüft und verteilt werden?
-2. **Wie viele Leute** kommen morgen in den Frühdienst?
-
-Heute geschieht das nach der Faustregel *„so viel wie letzte Woche“*. An
+Jeden Abend plant die Disposition den nächsten Tag: Räder laden, prüfen, verteilen,
+Frühdienst besetzen. Grundlage ist heute die Faustregel *„so viel wie letzte Woche"*. An
 Veranstaltungstagen und bei Wetterumschwüngen geht das regelmäßig daneben.
 
-### Die beiden Fehlerarten — wieder unterschiedlich teuer
+> ### ⚠ Was dieses Notebook liefert — und was nicht
+>
+> Prognostiziert wird die **Zahl der Fahrten** eines Tages. Das ist **nicht** dasselbe wie
+> die Zahl bereitzustellender Räder und erst recht nicht der Personalbedarf:
+>
+> | | |
+> |---|---|
+> | **ein Rad bedient mehrere Fahrten** | 120 Fahrten heißen nicht 120 Räder |
+> | **die Verteilung zählt** | Eine Station kann leer sein, während anderswo Räder stehen |
+> | **Ladezustand, Werkstatt, Kapazität** | bestimmen mit, was überhaupt verfügbar ist |
+> | **Personalbedarf** | folgt aus Arbeitsmengen, Schichten und Touren, nicht aus Fahrten |
+>
+> Die Übersetzung von Fahrten zu Rädern und Schichten ist eine **eigene Analyse**, die
+> dieses Notebook nicht leistet. Was es leistet, ist die Zahl, auf der sie aufsetzen
+> müsste — und die Frage, wie man mit ihrer Unsicherheit umgeht.
+
+### Die beiden Fehlerarten — ungleich teuer
+
+Die Kosten sind **je Fahrt** angesetzt, nicht je Rad — das ist die Einheit, die dieses
+Notebook prognostiziert.
 
 | Fehler | Was passiert | Kosten je Fahrt |
 |---|---|---|
-| **Unterdeckung** — zu wenige Räder bereit | Kunde findet nichts, fährt nicht, ärgert sich | **4,00 €** (entgangenes Entgelt plus Unzufriedenheit) |
-| **Überdeckung** — zu viele Räder bereit | unnötiges Laden, Prüfen, Verteilen | **0,80 €** |
+| **Unterdeckung** — die Nachfrage war höher als geplant | Kunde findet nichts, fährt nicht, ärgert sich | **4,00 €** (entgangenes Entgelt plus Unzufriedenheit) |
+| **Überdeckung** — die Nachfrage war niedriger | unnötiges Laden, Prüfen, Verteilen | **0,80 €** |
 
 **Unterdeckung ist fünfmal so teuer wie Überdeckung.** Das hat eine Folge, die vielen
 zunächst widerstrebt: *Die beste Prognose ist dann nicht die genaueste.* Sie ist
@@ -201,7 +237,8 @@ print(f"Mittlere Temperatur an sonstigen Werktagen: {werktags.loc[werktags.ist_f
 
 MD("""
 **Der rohe Vergleich sagt: Ferien machen kaum einen Unterschied.** Der kontrollierte
-Vergleich sagt: Ferien senken die Nachfrage um rund ein Viertel.
+Vergleich sagt: In den Ferien liegt die Nachfrage um rund ein Viertel niedriger — bei
+vergleichbarer Temperatur.
 
 Beide Rechnungen sind korrekt ausgeführt. Der Unterschied liegt in einer dritten Größe:
 **Schulferien liegen überwiegend im Sommer**, und im Sommer ist es warm, und bei Wärme
@@ -241,6 +278,29 @@ X_train, y_train = train[merkmale], train.fahrten
 X_val, y_val = val[merkmale], val.fahrten
 X_test, y_test = test[merkmale], test.fahrten
 
+# ─── DER INFORMATIONSSTAND VON 18 UHR ────────────────────────────────
+#
+# Kriterium 3 aus Phase 1 sagt: Die Prognose muss am Vorabend stehen.
+# Dann gibt es kein Ist-Wetter, sondern nur eine Vorhersage. Wir
+# simulieren sie mit der typischen Unsicherheit einer 24-Stunden-
+# Vorhersage - und zwar AB HIER, nicht erst im Test.
+#
+# Eine fruehere Fassung waehlte Modell und Aufschlag unter Ist-Wetter
+# und stoerte erst im Test. Das ist zweierlei Informationsstand in
+# einem Verfahren: Man waehlt fuer eine Welt und liefert in eine andere.
+def prognosewetter(X, startwert):
+    """Was am Vorabend auf dem Bildschirm stuende - statt der Messung."""
+    zufall = np.random.default_rng(startwert)
+    Z = X.copy()
+    Z["temp_mittel_c"] = X.temp_mittel_c + zufall.normal(0, 1.5, len(X))
+    Z["temp_max_c"] = X.temp_max_c + zufall.normal(0, 1.8, len(X))
+    Z["niederschlag_mm"] = np.clip(
+        X.niederschlag_mm.values + zufall.normal(0, 2.0, len(X)), 0, None)
+    return Z
+
+Xv_prognose = prognosewetter(X_val, 42)     # fuer Auswahl und Aufschlag
+Xt_prognose = prognosewetter(X_test, 7)     # fuer den einmaligen Test
+
 for name, teil in (("Training", train), ("Validierung", val), ("Test", test)):
     print(f"{name:<12s}{len(teil):>5d} Tage  {teil.index.min().date()} "
           f"bis {teil.index.max().date()}   Mittel {teil.fahrten.mean():5.1f} Fahrten")
@@ -279,52 +339,79 @@ def bewerten(name, y_wahr, y_prognose):
             "RMSE": round(float(np.sqrt(mean_squared_error(y_wahr, y_prognose))), 2),
             "R²": round(r2_score(y_wahr, y_prognose), 3)}
 
-# Gewaehlt wird auf der VALIDIERUNG. Die Testmenge bleibt bis Phase 5
-# unberuehrt - sonst waere sie kein Test, sondern eine Auswahlhilfe.
-ergebnisse = []
-ergebnisse.append(bewerten("Nullmodell (Mittel des Trainings)", y_val,
-                           np.full(len(y_val), y_train.mean())))
-
-# Die Faustregel der Disposition: so viel wie am gleichen Wochentag der Vorwoche.
-vorwoche_val = d.fahrten.shift(7).loc[val.index]
-ergebnisse.append(bewerten("Faustregel: wie letzte Woche", y_val, vorwoche_val))
-
+# Gewaehlt wird auf der VALIDIERUNG, und zwar unter PROGNOSEWETTER.
+# Die Testmenge bleibt bis Phase 5 unberuehrt.
 linear = LinearRegression().fit(X_train, y_train)
-ergebnisse.append(bewerten("Lineare Regression", y_val, linear.predict(X_val)))
-
 ##LUECKE Trainieren Sie einen HistGradientBoostingRegressor mit max_iter=400, random_state=42.
 boosting = HistGradientBoostingRegressor(max_iter=400, random_state=42).fit(X_train, y_train)
 ##ENDE
-prognose_val = boosting.predict(X_val)
-ergebnisse.append(bewerten("Gradient Boosting", y_val, prognose_val))
+
+vorwoche_val = d.fahrten.shift(7).loc[val.index]
+
+ergebnisse = []
+ergebnisse.append(bewerten("Nullmodell (Mittel des Trainings)", y_val,
+                           np.full(len(y_val), y_train.mean())))
+ergebnisse.append(bewerten("Faustregel: wie letzte Woche", y_val, vorwoche_val))
+for name, modell in (("Lineare Regression", linear), ("Gradient Boosting", boosting)):
+    e = bewerten(name, y_val, modell.predict(Xv_prognose))
+    e["MAE mit Ist-Wetter"] = round(mean_absolute_error(y_val, modell.predict(X_val)), 2)
+    ergebnisse.append(e)
 
 tabelle = pd.DataFrame(ergebnisse)
-print("Alle Zahlen auf der VALIDIERUNG - die Testmenge ist noch unberührt.\\n")
+print("VALIDIERUNG unter Prognosewetter - so, wie es um 18 Uhr aussähe.\\n")
 print(tabelle.to_string(index=False))
+print("\\nDie letzte Spalte zeigt, was mit dem TATSAECHLICHEN Wetter herauskäme.")
+print("Sie steht nur zum Vergleich da - entschieden wird auf der Spalte davor.")
+
+# ─── DIE WAHL ────────────────────────────────────────────────────────
+# Abgeleitet, nicht getippt: das Modell mit dem kleinsten MAE unter
+# Prognosewetter. Unter Ist-Wetter faele sie anders aus - genau das ist
+# der Punkt.
+kandidaten = {"Lineare Regression": linear, "Gradient Boosting": boosting}
+nur_modelle = tabelle[tabelle.Verfahren.isin(kandidaten)]
+gewaehlt_name = nur_modelle.loc[nur_modelle["MAE (Fahrten)"].idxmin(), "Verfahren"]
+gewaehlt = kandidaten[gewaehlt_name]
+prognose_val = gewaehlt.predict(Xv_prognose)
+
+print(f"\\nGEWÄHLT: {gewaehlt_name}")
+umgekehrt = nur_modelle.loc[nur_modelle["MAE mit Ist-Wetter"].idxmin(), "Verfahren"]
+if umgekehrt != gewaehlt_name:
+    print(f"Unter Ist-Wetter hätte {umgekehrt} gewonnen. Die Wahl hängt also")
+    print("nicht nur am Verfahren, sondern am Informationsstand, unter dem")
+    print("man wählt.")
 '''),
 
 MD("""
-### Zwei Beobachtungen, die man leicht überliest
+### Drei Beobachtungen, die man leicht überliest
 
-**1. Zwei Verfahren haben ein negatives R².** Das sieht nach einem Rechenfehler aus, ist
-aber korrekt — und lehrreich.
+**1. Die Faustregel ist schlechter als das Nullmodell.** 24,24 gegen 21,17 Fahrten MAE —
+und beide haben ein negatives R², sind also schlechter als der Mittelwert des
+Validierungszeitraums selbst.
 
-R² misst, wieviel besser ein Verfahren ist als der Mittelwert **der Testmenge**. Ein
-negativer Wert heißt: schlechter als dieser Mittelwert.
+Das ist kein Rechenfehler. R² misst, wieviel besser ein Verfahren ist als der Mittelwert
+**des bewerteten Zeitraums**. Das Nullmodell sagt den Mittelwert des *Trainings* voraus
+(50,2 Fahrten), die Validierung liegt bei 53,9 — schon das reicht für ein leicht negatives
+R². Die Vorwochenregel ist noch schlechter, weil sie jeden Ausreißer der Vorwoche eine
+Woche später wiederholt; die quadratische Rechnung bestraft das doppelt.
 
-- Beim **Nullmodell** (−1,26) liegt es daran, dass es den Mittelwert des *Trainings*
-  vorhersagt — und der Test ist ein Hochsommer, der deutlich darüber liegt. Das Nullmodell
-  ist also systematisch zu niedrig. Genau davor hatten wir in Phase 3 gewarnt.
-- Bei der **Faustregel** (−0,25) liegt es an der Streuung: Sie trifft im Mittel näher als
-  das Nullmodell (kleinerer MAE), verschätzt sich aber gelegentlich stark, und die
-  quadratische Rechnung bestraft große Fehler überproportional.
+> **Eine schwache Faustregel ist trotzdem der richtige Maßstab** — weil sie das ist, was
+> die Disposition heute tut. Ob sie gut ist, entscheidet nicht die Statistik, sondern die
+> Praxis. Und wenn ein Modell sie nicht schlägt, hilft auch keine bessere Faustregel.
 
-> **Deshalb steht hier mehr als eine Kennzahl.** MAE und R² beantworten verschiedene
-> Fragen — „wie weit daneben im Schnitt?" gegen „wie viel besser als raten?". Wer nur
-> eine von beiden berichtet, kann sich die passende aussuchen.
+**2. MAE und R² sagen Verschiedenes.** „Wie weit daneben im Schnitt?" gegen „wieviel besser
+als der Durchschnitt?". Wer nur eine von beiden berichtet, kann sich die passende
+aussuchen — deshalb stehen hier beide.
 
-**2. Genau diese Faustregel wird heute benutzt.** Das ist kein Strohmann, sondern die
-Messlatte aus Phase 1 — und sie zeigt, wieviel hier zu holen ist.
+**3. Unter Prognosewetter dreht sich die Reihenfolge der Modelle.** Mit dem tatsächlichen
+Wetter liegt das Boosting vorn (5,81 gegen 6,33), mit der simulierten Vorhersage die
+lineare Regression (8,55 gegen 11,25).
+
+> **Das ist der wichtigste Befund dieses Abschnitts.** Das Boosting nutzt feine
+> Wetterunterschiede besser aus — solange das Wetter stimmt. Sobald es verrauscht ist,
+> verstärkt es das Rauschen mit. Die lineare Regression ist gröber und deshalb
+> robuster.
+>
+> **Wer unter Ist-Wetter wählt, wählt für eine Welt, in der er nicht liefert.**
 """),
 
 # =====================================================================
@@ -336,9 +423,12 @@ MD("### 5.1 Die Kostenrechnung — und der Aufschlag, der auf die Validierung ge
 CODE('''
 KOSTEN_UNTER = 4.00
 KOSTEN_UEBER = 0.80
-print(f"Fehlerkosten aus Phase 1: Unterdeckung {KOSTEN_UNTER:.2f} EUR je Rad, "
-      f"Überdeckung {KOSTEN_UEBER:.2f} EUR je Rad "
+print(f"Fehlerkosten aus Phase 1: Unterdeckung {KOSTEN_UNTER:.2f} EUR je Fahrt, "
+      f"Überdeckung {KOSTEN_UEBER:.2f} EUR je Fahrt "
       f"(Verhältnis {KOSTEN_UNTER/KOSTEN_UEBER:.0f} zu 1).")
+print(f"Kostenoptimal waere damit das "
+      f"{KOSTEN_UNTER/(KOSTEN_UNTER+KOSTEN_UEBER):.1%}-Quantil der Nachfrage -")
+print("also eine Quantilsregression. Der Aufschlag unten ist die Naeherung dafuer.")
 
 def kosten(y_wahr, y_prognose):
     fehl = np.asarray(y_wahr) - np.asarray(y_prognose)
@@ -371,7 +461,8 @@ print(f"Auf der VALIDIERUNG gewählt:")
 print(f"  ohne Aufschlag:  {grund_val:8,.0f} EUR".replace(",", "."))
 print(f"  mit {bester:.0%} Aufschlag: {min(kostenreihe):8,.0f} EUR".replace(",", "."))
 print(f"  Ersparnis:       {grund_val - min(kostenreihe):8,.0f} EUR über 90 Tage".replace(",", "."))
-print(f"\\nDieser Aufschlag von {bester:.0%} wird jetzt UNVERAENDERT auf den Test angewendet.")
+print(f"\\nDieser Aufschlag von {bester:.0%} wird jetzt UNVERAENDERT auf den Test angewendet -")
+print(f"zusammen mit dem auf der Validierung gewählten Modell ({gewaehlt_name}).")
 '''),
 
 MD("""
@@ -395,23 +486,21 @@ CODE('''
 vorwoche = d.fahrten.shift(7).loc[test.index]
 
 # (a) Mit dem tatsaechlichen Wetter - die Zahl, die man gerne berichtet
-prognose = boosting.predict(X_test)
+prognose = gewaehlt.predict(X_test)
 
-# (b) Mit simulierter Vorhersage - die Zahl, die im Betrieb gilt
-zufall = np.random.default_rng(42)
-X_prognosewetter = X_test.copy()
-X_prognosewetter["temp_mittel_c"] += zufall.normal(0, 1.5, len(X_test))
-X_prognosewetter["temp_max_c"] += zufall.normal(0, 1.8, len(X_test))
-X_prognosewetter["niederschlag_mm"] = np.clip(
-    X_test.niederschlag_mm.values + zufall.normal(0, 2.0, len(X_test)), 0, None)
-mit_vorhersage = boosting.predict(X_prognosewetter)
+# (b) Mit simulierter Vorhersage - die Zahl, die im Betrieb gilt.
+#     Dasselbe Verfahren wie auf der Validierung, anderer Startwert.
+mit_vorhersage = gewaehlt.predict(Xt_prognose)
 
 print(f"{'mit tatsächlichem Wetter (unrealistisch)':<46s} "
       f"MAE {mean_absolute_error(y_test, prognose):6.2f}")
 print(f"{'mit simulierter Wettervorhersage (im Betrieb)':<46s} "
       f"MAE {mean_absolute_error(y_test, mit_vorhersage):6.2f}")
 verlust = mean_absolute_error(y_test, mit_vorhersage) / mean_absolute_error(y_test, prognose) - 1
-print(f"\\nDer Fehler steigt um {verlust:.0%}. Ab hier zählt nur noch die zweite Zeile.")
+print(f"\\nUnterschied: {verlust:+.0%}. Ab hier zählt nur noch die zweite Zeile.")
+print("Dass er hier so klein ausfällt, ist eine Eigenschaft des gewählten Modells:")
+print("Die lineare Regression reagiert kaum auf feine Wetterunterschiede - und")
+print("deshalb auch kaum auf deren Fehler.")
 '''),
 
 MD("""
@@ -424,14 +513,14 @@ CODE('''
 fig, achsen = plt.subplots(2, 1, figsize=(14, 7))
 achsen[0].plot(test.index, y_test, lw=1.6, color="#3d4b6b", label="tatsächlich")
 achsen[0].plot(test.index, mit_vorhersage, lw=1.6, color="#e00034",
-               label="Gradient Boosting (mit Wettervorhersage)")
+               label=f"{gewaehlt_name} (mit Wettervorhersage)")
 achsen[0].plot(test.index, vorwoche, lw=1, color="#8c95a8", ls="--", label="Faustregel")
 achsen[0].set_title("Prognose gegen Wirklichkeit, 90 Testtage"); achsen[0].legend(); achsen[0].grid(alpha=.3)
 
 rest = y_test.values - mit_vorhersage
 achsen[1].bar(test.index, rest, color=np.where(rest > 0, "#e00034", "#3d4b6b"), width=1.0)
 achsen[1].axhline(0, color="black", lw=.8)
-achsen[1].set_title("Abweichung (rot = zu wenig Räder bereitgestellt)"); achsen[1].grid(alpha=.3)
+achsen[1].set_title("Abweichung (rot = mehr Fahrten als prognostiziert)"); achsen[1].grid(alpha=.3)
 plt.tight_layout(); plt.show()
 
 print(f"Mittlere Abweichung: {rest.mean():+.1f} Fahrten "
@@ -445,7 +534,8 @@ besten ist, ist betriebswirtschaftlich *nicht* die beste. Weil Unterdeckung fün
 teuer ist, lohnt es sich, planmäßig etwas zu hoch zu planen.
 
 > **Fachlich sauber wäre statt des Aufschlags eine Quantilsregression** — ein Modell, das
-> nicht den Mittelwert schätzt, sondern zum Beispiel das 80-%-Quantil. Der Aufschlag hier
+> nicht den Mittelwert schätzt, sondern das kostenoptimale Quantil. Bei 4,00 € gegen
+> 0,80 € liegt es bei 4,00 / (4,00 + 0,80) = **83,3 %**. Der Aufschlag hier
 > ist die Rechnung des armen Mannes, aber er zeigt dasselbe Prinzip und lässt sich in
 > einer Zeile erklären.
 
@@ -472,22 +562,63 @@ k2 = kosten_modell < kosten_faustregel
 werte = f"{kosten_modell:,.0f} gegen {kosten_faustregel:,.0f}".replace(",", ".")
 print(f"  2. günstiger als die Faustregel                       {werte} EUR   "
       f"{'ERFÜLLT' if k2 else 'GERISSEN'}")
-print(f"\\n  Gesamturteil: {'FREIGABE' if (k1 and k2) else 'RÜCKSPRUNG'}")
+urteil = ("MACHBARKEIT NACHGEWIESEN" if (k1 and k2) else "RÜCKSPRUNG")
+print(f"\\n  Gesamturteil: {urteil}")
+print("  Ausdrücklich KEINE Betriebsfreigabe: Die Wetterunsicherheit ist simuliert,")
+print("  es gibt nur ein Validierungs- und ein Testfenster, und die Übersetzung von")
+print("  Fahrten zu Rädern und Schichten steht aus.")
 print(f"\\n  Zum Vergleich - mit Ist-Wetter gerechnet waeren es "
       f"{kosten_schoen:,.0f} EUR gewesen.".replace(",", "."))
 print("  Diese Zahl steht hier nur, damit man den Unterschied sieht.")
+
+# ─── DIE UNBEQUEME GEGENPROBE ────────────────────────────────────────
+# Was haette das ANDERE Modell auf dem Test gebracht? Diese Zahl darf die
+# Entscheidung nicht mehr aendern - sie wurde nach der Wahl berechnet.
+# Sie steht hier, weil sie etwas ueber das Verfahren sagt.
+verworfen = {n: m for n, m in kandidaten.items() if n != gewaehlt_name}
+for name, modell in verworfen.items():
+    p_test = modell.predict(Xt_prognose)
+    print(f"\\n  Und was haette {name} auf dem Test gebracht?")
+    print(f"     MAE {mean_absolute_error(y_test, p_test):.2f} gegen "
+          f"{mean_absolute_error(y_test, mit_vorhersage):.2f}, Kosten "
+          f"{kosten(y_test, p_test * (1 + bester)):,.0f} gegen {kosten_modell:,.0f} EUR"
+          .replace(",", "."))
 '''),
 
-MD("### 5.4 Wo irrt das Modell? Die schlechtesten Tage ansehen"),
+MD("""
+> ### Die Wahl war richtig getroffen — und trotzdem die schlechtere
+>
+> Auf dem Testfenster wäre das Gradient Boosting besser gewesen. Die Validierung hat
+> trotzdem korrekt entschieden: Sie hatte nur das Frühjahrsfenster, und dort war die
+> lineare Regression überlegen. Das Testfenster ist ein Hochsommer mit fast doppelter
+> Nachfrage — eine andere Lage, in der die feinere Anpassung des Boostings zahlt.
+>
+> **Wir wechseln jetzt nicht.** Nach dem Test das Modell zu tauschen hieße, auf dem Test
+> zu wählen — und dann wäre er keiner mehr. Das Ergebnis bleibt stehen, und was es zeigt,
+> ist keine Schwäche des Verfahrens, sondern der Preis **eines einzigen
+> Validierungsfensters**:
+>
+> **Ein Fenster wählt für ein Fenster.** Was hier fehlt, sind rollierende
+> Validierungsfenster über mehrere Jahreszeiten — dieselbe Lehre wie in Notebook 2, wo
+> ein einzelnes günstiges Quartal beinahe ein Modell in Betrieb gebracht hätte. Es steht
+> als erster Punkt in den offenen Fragen.
+
+### 5.4 Wo irrt das Modell? Die schlechtesten Tage ansehen
+"""),
 
 CODE('''
+# EINE Prognoseserie, und zwar die BETRIEBLICHE. Eine fruehere Fassung
+# zeigte hier die Prognose mit Ist-Wetter und daneben die Abweichung der
+# Prognose mit Vorhersagewetter - tatsaechlich minus Prognose ergab dann
+# nicht die angezeigte Abweichung. Die Tabelle war intern falsch.
 schlechteste = pd.DataFrame({
-    "tatsächlich": y_test.values, "Prognose": prognose.round(0),
+    "tatsächlich": y_test.values, "Prognose": mit_vorhersage.round(0),
     "Abweichung": rest.round(0), "Temp": test.temp_mittel_c.values,
     "Regen": test.niederschlag_mm.values, "Wochenende": test.ist_wochenende.values,
     "Feiertag": test.ist_feiertag.values, "Veranstaltung": test.ist_veranstaltung.values,
 }, index=test.index)
-print("Die fünf Tage mit der größten Unterdeckung:\\n")
+print("Die fünf Tage mit der größten Unterdeckung "
+      "(Prognose mit Wettervorhersage, wie im Betrieb):\\n")
 print(schlechteste.nlargest(5, "Abweichung").to_string())
 print("\\nDie fünf Tage mit der größten Überdeckung:\\n")
 print(schlechteste.nsmallest(5, "Abweichung").to_string())
@@ -520,12 +651,26 @@ Jahresfreigabe bräuchte mindestens vier Testfenster, eines je Jahreszeit.
 CODE('''
 import joblib, datetime
 
+# WIE WEIT REICHEN DIE KALENDER? Ein Datum ausserhalb ihrer Abdeckung
+# wuerde stillschweigend als "kein Feiertag, keine Ferien, keine
+# Veranstaltung" gelesen - also als Normaltag. Das waere keine Prognose,
+# sondern eine Annahme mit unbekanntem Vorzeichen.
+KALENDER_BIS = min(max(feiertage), max(ferien), max(vorlesung), max(veranstaltungen))
+print(f"Die Kalender reichen bis {KALENDER_BIS.date()}.")
+print("Danach ist 'kein Feiertag' nicht bekannt, sondern nur nicht eingetragen.\\n")
+
 def nachfrage_prognostizieren(datum, temp_vorhersage, regen_vorhersage,
                               wind_vorhersage=15.0, aufschlag=None):
     """Die Zahl, die abends um 18 Uhr in der Disposition steht."""
     if aufschlag is None:
         aufschlag = bester
     tag = pd.Timestamp(datum)
+    if tag > KALENDER_BIS:
+        raise ValueError(
+            f"{tag.date()} liegt hinter dem Ende der Kalender ({KALENDER_BIS.date()}). "
+            "Feiertage, Ferien, Vorlesungszeit und Veranstaltungen sind dort unbekannt - "
+            "sie als 'findet nicht statt' zu lesen waere eine Erfindung. "
+            "Erst die Kalender pflegen, dann prognostizieren.")
     zeile = pd.DataFrame([{
         "temp_mittel_c": temp_vorhersage, "temp_max_c": temp_vorhersage + 5,
         "niederschlag_mm": regen_vorhersage, "wind_max_kmh": wind_vorhersage,
@@ -535,24 +680,36 @@ def nachfrage_prognostizieren(datum, temp_vorhersage, regen_vorhersage,
         "ist_vorlesungszeit": int(tag in vorlesung),
         "ist_veranstaltung": int(tag in veranstaltungen),
     }])[merkmale]
-    roh = float(boosting.predict(zeile)[0])
+    roh = max(0.0, float(gewaehlt.predict(zeile)[0]))     # nie negativ
     return int(round(roh)), int(round(roh * (1 + aufschlag)))
 
-print(f"{'Tag':<17s}{'Wetterlage':<26s}{'Prognose':>10s}{'bereitstellen':>15s}")
-print("-" * 68)
+print(f"{'Tag':<17s}{'Wetterlage':<26s}{'Fahrten':>9s}{'mit Aufschlag':>15s}")
+print("-" * 67)
 for datum, temp, regen, beschreibung in [
-        ("2026-09-15", 21.0, 0.0, "mild und trocken"),
-        ("2026-09-16", 21.0, 8.0, "mild, kräftiger Regen"),
-        ("2026-09-19", 24.0, 0.0, "Samstag, warm"),
-        ("2026-12-15", 3.0, 1.0, "Winter, nasskalt")]:
+        ("2026-07-07", 21.0, 0.0, "mild und trocken"),
+        ("2026-07-08", 21.0, 8.0, "mild, kräftiger Regen"),
+        ("2026-07-11", 24.0, 0.0, "Samstag, warm"),
+        ("2026-07-13", 12.0, 3.0, "kühl und nass")]:
     roh, geplant = nachfrage_prognostizieren(datum, temp, regen)
     tag = pd.Timestamp(datum)
-    print(f"{tag.strftime('%a %d.%m.%y'):<17s}{beschreibung:<26s}{roh:>10d}{geplant:>15d}")
+    print(f"{tag.strftime('%a %d.%m.%y'):<17s}{beschreibung:<26s}{roh:>9d}{geplant:>15d}")
 
-joblib.dump({"modell": boosting, "merkmale": merkmale, "aufschlag": bester,
+# Und die Gegenprobe: ein Datum hinter dem Kalenderende bricht ab.
+try:
+    nachfrage_prognostizieren("2026-12-15", 3.0, 1.0)
+except ValueError as fehler:
+    print(f"\\nGegenprobe 15.12.2026:\\n  {fehler}")
+
+joblib.dump({"modell": gewaehlt, "merkmale": merkmale, "aufschlag": bester,
              "mae_test": round(float(mean_absolute_error(y_test, prognose)), 2),
              "mae_mit_wettervorhersage": round(float(mean_absolute_error(y_test, mit_vorhersage)), 2),
-             "trainiert_bis": str(schnitt.date()),
+             "trainiert_bis": str(X_train.index.max().date()),
+             "gewaehlt_auf": "Validierung unter simuliertem Prognosewetter",
+             "gewaehltes_verfahren": gewaehlt_name,
+             "validierung_bis": str(X_val.index.max().date()),
+             "test_bis": str(X_test.index.max().date()),
+             "datenherkunft": "ERFUNDENE LEHRDATEN - Nachfrage synthetisch erzeugt",
+             "freigabestatus": "Machbarkeitsnachweis, keine Betriebsfreigabe",
              "trainiert_am": datetime.date.today().isoformat()}, "nachfragemodell.joblib")
 print("\\ngespeichert: nachfragemodell.joblib")
 '''),
@@ -593,11 +750,11 @@ MD("""
 
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | Zwei Entscheidungen (Räder, Frühdienst), zwei ungleich teure Fehlerrichtungen (4,00 € gegen 0,80 €) und ein Betriebskriterium — die Prognose muss um 18 Uhr stehen |
+| 1 Business Understanding | Prognostiziert werden **Fahrten**, nicht Räder oder Schichten — die Übersetzung ist eine eigene Analyse. Zwei ungleich teure Fehlerrichtungen (4,00 € gegen 0,80 € je Fahrt) und ein Betriebskriterium: Die Prognose muss um 18 Uhr stehen |
 | 2 Data Understanding | Jahresgang und Wochenrhythmus liegen übereinander. Und eine **Störgröße**: Der rohe Ferieneffekt ist irreführend, weil Ferien im Sommer liegen |
 | 3 Data Preparation | Schnitt entlang der Zeit in **drei** Abschnitte: Training, Validierung, Test. Die Testmenge ist der Sommer 2026 und liegt weit über dem Trainingsmittel |
-| 4 Modeling | Nullmodell, dann die echte Faustregel der Disposition, dann linear und Gradient Boosting |
-| 5 Evaluation | Aufschlag auf der Validierung gewählt, Test einmal angefasst — und zwar gleich mit simulierter Wettervorhersage. Auch so klar besser als die Faustregel. Und: Die genaueste Prognose ist **nicht** die günstigste |
+| 4 Modeling | Nullmodell, echte Faustregel, linear und Gradient Boosting — verglichen unter **Prognosewetter**, nicht unter Ist-Wetter. Unter Ist-Wetter hätte das Boosting gewonnen, unter Prognosewetter gewinnt die lineare Regression |
+| 5 Evaluation | Modell UND Aufschlag auf der Validierung gewählt, beides unter Prognosewetter. Test einmal angefasst. Klar besser als die Faustregel — aber auf dem Test wäre das verworfene Modell besser gewesen, und wir wechseln trotzdem nicht |
 | 6 Deployment | Prognosefunktion, Modellpaket und Überwachung. Offen bleibt, dass die Wetterunsicherheit simuliert und nicht gemessen ist — und dass ein Sommerfenster keine Jahresaussage trägt |
 
 **Was eine zweite Runde anders machen würde**
@@ -616,17 +773,31 @@ MD("""
 
 **Was offen bleibt — ausdrücklich**
 
-1. **Die Wetterunsicherheit ist simuliert, nicht gemessen.** Normalverteiltes Rauschen
+1. **Ein Validierungsfenster wählt für ein Fenster.** Die Validierung entschied sich für
+   die lineare Regression, auf dem Testfenster wäre das Boosting besser gewesen. Was
+   fehlt, sind rollierende Fenster über mehrere Jahreszeiten — dann entschiede nicht das
+   Frühjahr allein.
+2. **Die Wetterunsicherheit ist simuliert, nicht gemessen.** Normalverteiltes Rauschen
    auf Temperatur und Niederschlag. Eine echte Vorhersage irrt systematisch und bei
    Extremwetter stärker. Belastbar wird die Zahl erst mit **archivierten Vorhersagen**.
-2. **Ein Sommerfenster trägt keine Jahresaussage.** Das Testmittel liegt weit über dem
+3. **Ein Sommerfenster trägt keine Jahresaussage.** Das Testmittel liegt weit über dem
    Trainingsmittel. Wie das Modell im November arbeitet, weiß dieses Notebook nicht.
-3. **Ein einziges Testfenster.** Für eine Freigabe bräuchte es mehrere, am besten je
+4. **Ein einziges Testfenster.** Für eine Freigabe bräuchte es mehrere, am besten je
    Jahreszeit eines.
-4. **Der Aufschlag ist eine Krücke.** Fachlich sauber wäre eine Quantilsregression, die
+5. **Der Aufschlag ist eine Krücke.** Fachlich sauber wäre eine Quantilsregression, die
    die Kostenasymmetrie im Modell selbst abbildet statt in einem Faktor danach.
-5. **Erfundene Daten.** Alle Euro-Beträge sind Szenariorechnungen unter gesetzten
+6. **Erfundene Daten.** Alle Euro-Beträge sind Szenariorechnungen unter gesetzten
    Annahmen — die Fehlerkosten von 4,00 € und 0,80 € stammen aus keiner Messung.
+7. **Fahrten sind keine Räder und kein Personal.** Die Übersetzung braucht Bestand,
+   Ladezustand, Stationskapazität und Schichtregeln — eine eigene Analyse, die dieses
+   Notebook nicht leistet.
+8. **Die Kalender enden mitten im Prognosehorizont.** Die Prognosefunktion bricht dort
+   jetzt ab, statt stillschweigend „kein Feiertag“ anzunehmen. Gepflegt sind sie damit
+   aber nicht.
+9. **Die lineare Regression wird durch die Kodierung benachteiligt.** `wochentag` und
+   `monat` gehen als fortlaufende Zahlen ein; Dezember und Januar liegen dadurch weit
+   auseinander. Dass sie unter Prognosewetter trotzdem gewinnt, macht den Befund
+   stärker — für einen fairen Vergleich bräuchte es zyklische Merkmale.
 
 **Weiter geht es mit Notebook 5 — Assoziationsanalyse:** Dort gibt es weder eine
 Zielgröße noch Gruppen, sondern **Regeln**: Was hängt mit was zusammen? Und wir werden

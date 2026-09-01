@@ -468,7 +468,8 @@ def teil_karte(prs):
         ["2", "Klassifikation", "Phase 6", "Ein Modell muss seinen Unterhalt verdienen — "
                                            "hier verdient es ihn nicht"],
         ["3", "Clustering", "Phase 1", "Erfolgskriterien auch ohne Zielgröße"],
-        ["4", "Zeitreihe", "Phase 3", "Die genaueste Prognose ist nicht die günstigste"],
+        ["4", "Zeitreihe", "Phase 3", "Unter welchem Informationsstand man wählt, "
+                                      "entscheidet mit, was man wählt"],
         ["5", "Assoziation", "Phase 5", "Keine Regel nimmt beide Hürden — und die "
                                         "Hürde bleibt trotzdem stehen"],
         ["6", "Anomalie", "Rücksprung", "Ein Verfahren, das schlechter ist als eine "
@@ -1911,8 +1912,8 @@ def fall4(prs):
 
     s = folie(prs, "Fall 4", "Der Fall auf einen Blick")
     steckbrief(s, [
-        ("Geschäftsfrage", "Wie viele Räder müssen morgen früh bereitstehen, und "
-                           "braucht es einen Frühdienst?"),
+        ("Geschäftsfrage", "Wie viele Fahrten kommen morgen? Räder und Schichten "
+                           "daraus abzuleiten ist eine eigene Analyse"),
         ("Analytisches Ziel", "Zahl der Fahrten am Folgetag"),
         ("Fehlerkosten", "4,00 € je fehlendem Rad gegen 0,80 € je überzähligem — "
                          "die Richtungen sind ungleich teuer"),
@@ -1920,7 +1921,8 @@ def fall4(prs):
                               "wertlos, egal wie genau"),
         ("Verfahren", "Nullmodell, die echte Faustregel der Disposition, linear, "
                       "Gradient Boosting"),
-        ("Urteil", "Klar besser als die Faustregel — und die genaueste Prognose ist "
+        ("Urteil", "Machbarkeit nachgewiesen, keine Betriebsfreigabe — und die "
+                   "genaueste Prognose ist "
                    "nicht die günstigste"),
     ], y=unter_intro(s))
     notizen(s, "Zeile 4 ist ungewöhnlich und wichtig: ein Erfolgskriterium, das nichts "
@@ -2006,8 +2008,30 @@ def fall4(prs):
                "deutlich. Wer sie nicht mitrechnet, hält sein Modell für besser, als "
                "es ist.")
 
+    s = folie(prs, "Fall 4 · Phase 4",
+              "Unter welchem Wetter wählt man das Modell?",
+              "Um 18 Uhr gibt es kein Ist-Wetter, sondern eine Vorhersage. Wer unter "
+              "Ist-Wetter vergleicht, wählt für eine Welt, in der er nicht liefert.")
+    tabelle(s, ["Verfahren", "MAE mit Ist-Wetter", "MAE mit Vorhersage"], [
+        ["Nullmodell", "21,17", "21,17"],
+        ["Faustregel: wie letzte Woche", "24,24", "24,24"],
+        ["Lineare Regression", "6,33", "8,55"],
+        ["Gradient Boosting", "5,81", "11,25"],
+    ], y=(y := unter_intro(s)), spalten_b=[400, 250, 253.5], zeilen_h=40)
+    sandband(s, "Unter Ist-Wetter gewinnt das Boosting, unter Prognosewetter die lineare "
+                "Regression. Dasselbe Verfahren, dieselben Daten — nur ein anderer "
+                "Informationsstand.", y=darunter(y, h_tabelle(4, 40)))
+    phasenleiste(s, 4)
+    notizen(s, "Das Boosting nutzt feine Wetterunterschiede besser aus, solange das "
+               "Wetter stimmt. Sobald es verrauscht ist, verstärkt es das Rauschen "
+               "mit; die lineare Regression ist gröber und deshalb robuster. Eine "
+               "frühere Fassung dieses Notebooks verglich unter Ist-Wetter und störte "
+               "das Wetter erst im Test — sie wählte also für einen anderen "
+               "Informationsstand als den, in dem geliefert wird. Fragen Sie die "
+               "Studierenden, welche Spalte sie berichtet hätten.")
+
     s = folie(prs, "Fall 4 · Phase 5", "Die genaueste Prognose ist nicht die günstigste",
-              "Weil ein fehlendes Rad 4,00 € kostet und ein überzähliges 0,80 €, "
+              "Weil eine fehlende Fahrt 4,00 € kostet und eine überzählige 0,80 €, "
               "verschiebt sich das Optimum — weg vom kleinsten Fehler.")
     kachelreihe(s, [
         ("Ohne Aufschlag", [
@@ -2020,7 +2044,7 @@ def fall4(prs):
             "Fünffache einer zu hohen.",
         ]),
         ("Mit Aufschlag", [
-            "Rund 12 % werden auf die",
+            "Rund 24 % werden auf die",
             "Prognose aufgeschlagen —",
             "gewählt auf der Validierung,",
             "nicht auf dem Test.",
@@ -2071,13 +2095,14 @@ def fall4(prs):
     zellfolie(prs, 4, "5.2", "Phase 5 · im Notebook",
               "Zwei Fehlerwerte — und nur einer zählt",
               "nb4-ehrlich",
-              "MAE 12,25 mit dem tatsächlichen Wetter, 16,90 mit einer simulierten "
-              "Vorhersage. Geurteilt wird auf der zweiten Zahl — davor, nicht danach.",
-              "Diese Zelle stand in einer früheren Fassung in Phase 6, also NACH der "
-              "Freigabe. Die Freigabe fiel damit auf einer Zahl, die das ausgelieferte "
-              "Produkt nie erreicht — mit Ist-Wetter 1.727 €, im Betrieb 3.523 €. "
-              "Jetzt steht die Zelle vor dem Urteil. Wer in einem Bericht nur die "
-              "erste Zahl zeigt, hat nicht gelogen und trotzdem getäuscht.")
+              "MAE 19,92 mit dem tatsächlichen Wetter, 19,64 mit der simulierten "
+              "Vorhersage. Dass der Unterschied klein ist, ist eine Eigenschaft des "
+              "gewählten Modells — nicht ein Beleg dafür, dass Wetterfehler egal wären.",
+              "Die lineare Regression reagiert kaum auf feine Wetterunterschiede und "
+              "deshalb auch kaum auf deren Fehler. Beim Gradient Boosting war der "
+              "Abstand groß — und genau deshalb hat die Validierung unter "
+              "Prognosewetter die lineare Regression gewählt. Wer unter Ist-Wetter "
+              "wählt, wählt für eine Welt, in der er nicht liefert.")
 
     s = folie(prs, "Fall 4 · Abschluss", "Der Kreislauf schließt sich")
     tabelle(s, ["Phase", "Was dabei herauskam"], [
@@ -2087,7 +2112,8 @@ def fall4(prs):
         ["2 Data Understanding", "Jahresgang und Wochenrhythmus übereinander — und "
                                  "eine Störgröße: Ferien liegen im Sommer"],
         ["3 Data Preparation", "Schnitt entlang der Zeit, Testmenge ist der Sommer 2026"],
-        ["4 Modeling", "Nullmodell, echte Faustregel, linear, Gradient Boosting"],
+        ["4 Modeling", "Nullmodell, echte Faustregel, linear und Boosting — "
+                       "verglichen unter Prognosewetter, nicht unter Ist-Wetter"],
         ["5 Evaluation", "Klar besser als die Faustregel — und ein Sicherheitsaufschlag "
                          "senkt die Kosten"],
         ["6 Deployment", "Mit simulierter Vorhersage steigt der Fehler. Die ehrliche "
@@ -2565,8 +2591,8 @@ def teil_synthese(prs):
                                         "Defekt im Merkmal, gegen das er antrat"],
         ["3 Clustering", "Phase 1", "Erfolgskriterien ohne Zielgröße — und eine bessere "
                                     "Frage als die, mit der wir anfingen"],
-        ["4 Zeitreihe", "Phase 3", "Der Schnitt folgt der Zeit. Und die genaueste "
-                                   "Prognose ist nicht die günstigste"],
+        ["4 Zeitreihe", "Phase 3", "Der Schnitt folgt der Zeit — und der "
+                                   "Informationsstand der Auswahl dem des Betriebs"],
         ["5 Assoziation", "Phase 5", "Keine der 32 Regeln überlebt — die stärkste "
                                      "scheitert um 0,01 Prozentpunkte"],
         ["6 Anomalie", "Rücksprung", "Zweimal schlägt eine Zeile Fachwissen das "
