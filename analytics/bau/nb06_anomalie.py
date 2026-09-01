@@ -8,7 +8,9 @@ ZELLEN = [
 
 kopf("Anomalieerkennung: Was ist gestern schiefgelaufen?",
      "Anomalieerkennung (unüberwacht — gesucht wird die Ausnahme, nicht die Regel)",
-     "Welche zehn Vorgänge soll sich der Betrieb heute früh ansehen?",
+     "Drei Fragen, drei Zeitpunkte: Welches Rad ist JETZT überfällig, "
+     "welche abgeschlossenen Vorgänge verdienen heute früh einen Blick, "
+     "und welche Station stand gestern still?",
      NAME),
 
 MD("""
@@ -203,14 +205,35 @@ print(echte.dauer_min.quantile([.5, .9, .99, .999, 1.0]).round(1).to_string())
 #
 # Deshalb: die ersten zwei Drittel sind Referenz, das letzte Drittel wird
 # nur bewertet - nie gelernt.
+# DER SCHNITT IST EIN ZEITSTEMPEL, KEIN DATUM - UND ER LIEGT AUF EINEM
+# LAUFZEITPUNKT.
+#
+# Eine fruehere Fassung rechnete den Schnitt aus normalisierten Startagen
+# und bekam dabei 2025-08-26 08:00 heraus - gedruckt wurde aber nur das
+# Datum. Zwei Folgen:
+#   1. 74 Fahrten galten als Referenz, endeten aber nach dem Schnitt. Das
+#      Modell sah sie beim Anpassen UND spaeter in der Auswertung.
+#   2. Ein Vorgang fiel zwischen die Stuehle: gestartet im Pruefzeitraum,
+#      beendet vor dem ersten Lauf - er wurde nie verarbeitet.
+#
+# Beides verschwindet, wenn man nach dem ABSCHLUSS trennt und den Schnitt
+# auf einen Laufzeitpunkt legt. Das ist auch fachlich richtig: Ein
+# periodischer Lauf sieht Vorgaenge, wenn sie ABGESCHLOSSEN sind.
+MORGENSTUNDE_TD = pd.Timedelta(hours=MORGENSTUNDE)
 tage_alle = echte.startzeit.dt.normalize()
-REFERENZ_BIS = tage_alle.min() + (tage_alle.max() - tage_alle.min()) * 2 // 3
-referenz = echte[tage_alle <= REFERENZ_BIS].copy()
-pruefzeit = echte[tage_alle > REFERENZ_BIS].copy()
-print(f"\\nReferenzzeitraum bis {REFERENZ_BIS.date()}: {len(referenz):,d} Fahrten"
+A2_SCHNITT = ((tage_alle.min() + (tage_alle.max() - tage_alle.min()) * 2 // 3)
+              .normalize() + pd.Timedelta(days=1) + MORGENSTUNDE_TD)
+REFERENZ_BIS = A2_SCHNITT      # ein Name, ein Wert, ein Zeitstempel
+
+referenz = echte[echte.endzeit < A2_SCHNITT].copy()
+pruefzeit = echte[echte.endzeit >= A2_SCHNITT].copy()
+print(f"\\nSchnitt am Laufzeitpunkt {A2_SCHNITT:%d.%m.%Y %H:%M} Uhr - getrennt wird")
+print("nach dem ABSCHLUSS eines Vorgangs, nicht nach seinem Start.")
+print(f"   Referenz (vorher abgeschlossen):  {len(referenz):,d} Fahrten"
       .replace(",", "."))
-print(f"Pruefzeitraum danach:              {len(pruefzeit):,d} Fahrten"
+print(f"   Pruefung (danach abgeschlossen):  {len(pruefzeit):,d} Fahrten"
       .replace(",", "."))
+assert len(referenz) + len(pruefzeit) == len(echte), "Fahrten gehen verloren"
 '''),
 
 MD("### 2.1 Die Verteilung und ihr Ausläufer"),
@@ -276,8 +299,8 @@ PHASE(3, "Merkmale je Fahrt — und die Entscheidung, welche davon überhaupt ta
 
 CODE('''
 merkmalstabelle = echte.copy()
-merkmalstabelle["ist_referenz"] = (merkmalstabelle.startzeit.dt.normalize()
-                                   <= REFERENZ_BIS)
+# Dieselbe Grenze wie oben - nach Abschluss, nicht nach Start.
+merkmalstabelle["ist_referenz"] = merkmalstabelle.endzeit < A2_SCHNITT
 merkmalstabelle["stunde"] = merkmalstabelle.startzeit.dt.hour
 merkmalstabelle["wochentag"] = merkmalstabelle.startzeit.dt.dayofweek
 merkmalstabelle["ist_rundtour"] = (merkmalstabelle.start_station_id
@@ -611,25 +634,35 @@ CODE('''
 # ENTSCHEIDEND IST DAS ABSCHLUSSFENSTER, NICHT DER STARTTAG.
 #
 # Eine fruehere Fassung nahm "Fahrten mit Starttag t, beendet vor t+1
-# um 8 Uhr". Das klingt richtig und laesst systematisch Vorgaenge aus:
-# Eine Fahrt, die am 3. um 22 Uhr beginnt und am 4. um 3 Uhr endet, ist
-# am Morgen des 4. abgeschlossen und bekannt - sie taucht aber in der
-# Liste des 4. nicht auf, weil ihr Starttag der 3. war, und in der Liste
-# des 3. auch nicht, weil die am Morgen des 4. erzeugt wird und sie
-# dort... doch auftaucht. Wer es nachrechnet, findet Luecken.
+# um 8 Uhr". Das laesst zwei Sorten von Vorgaengen aus:
+#   - solche, die beim ersten Morgenlauf nach ihrem Start noch liefen -
+#     sie sind dort unbekannt und tauchen spaeter in keiner Liste mehr
+#     auf, weil ihr Starttag da schon vorbei ist;
+#   - solche am Rand des Zeitraums, deren Starttag keinen zugehoerigen
+#     Lauf hatte.
+# Gemessen war es genau einer von 19.527 - aber "genau einer" faellt nur
+# auf, wenn man die Mengen vergleicht statt nur auf Doppelungen zu pruefen.
 #
 # Ein periodischer Lauf verarbeitet, was SEIT DEM LETZTEN LAUF neu
 # abgeschlossen wurde - jeden Vorgang genau einmal, unabhaengig davon,
 # wann er begonnen hat.
 merkmalstabelle["starttag"] = merkmalstabelle.startzeit.dt.normalize()
 pruef = merkmalstabelle[~merkmalstabelle.ist_referenz]
-laeufe = sorted(pruef.starttag.unique())
+
+# LUECKENLOSE LAUFACHSE - nicht die vorhandenen Starttage.
+#
+# Wer die Laufzeitpunkte aus den Starttagen ableitet, bekommt genau die
+# Tage, an denen etwas begann - und verliert die Raender. Die Achse wird
+# deshalb erzeugt, nicht gefunden, und sie deckt den Pruefzeitraum
+# vollstaendig ab.
+letzter_lauf = (pruef.endzeit.max().normalize() + pd.Timedelta(days=1)
+                + MORGENSTUNDE_TD)
+laeufe = pd.date_range(A2_SCHNITT + pd.Timedelta(days=1), letzter_lauf, freq="D")
 
 listen, verarbeitet = [], []
-for t in laeufe:
-    bis = pd.Timestamp(t) + pd.Timedelta(days=1, hours=MORGENSTUNDE)
+for bis in laeufe:
     von = bis - pd.Timedelta(days=1)
-    # neu abgeschlossen seit dem letzten Lauf
+    # alles, was seit dem letzten Lauf neu abgeschlossen wurde: [von, bis)
     neu = pruef[(pruef.endzeit >= von) & (pruef.endzeit < bis)]
     verarbeitet.append(neu)
     ueber_schwelle = neu[neu.auffaelligkeit >= SCORE_SCHWELLE]
@@ -637,9 +670,16 @@ for t in laeufe:
         min(LISTENLAENGE, len(ueber_schwelle)), "auffaelligkeit"))
 tagesliste_pruef = pd.concat(listen) if listen else pruef.head(0)
 
-# Gegenprobe: wird jeder Vorgang genau einmal angefasst?
+# ZWEI ZUSICHERUNGEN, NICHT EINE.
+#
+# is_unique allein prueft nur, dass nichts DOPPELT verarbeitet wurde - es
+# haette auffallen muessen, dass ein Vorgang GAR NICHT verarbeitet wird.
+# Genau das war der Fall: einer von 19.527.
 alle_verarbeitet = pd.concat(verarbeitet)
 assert alle_verarbeitet.ausleihe_id.is_unique, "ein Vorgang mehrfach verarbeitet"
+assert set(alle_verarbeitet.ausleihe_id) == set(pruef.ausleihe_id), (
+    f"{len(set(pruef.ausleihe_id) - set(alle_verarbeitet.ausleihe_id))} Vorgaenge "
+    "wurden von keinem Lauf erfasst")
 
 tage = len(laeufe)
 eintraege = len(tagesliste_pruef)
@@ -1178,7 +1218,7 @@ Notebook 4, das Stationsvolumen aus Notebook 3, die Nachbarstationen. Eine Nullt
 """),
 
 # =====================================================================
-PHASE(6, "Eine Regel geht in Betrieb, ein Modell in den Schattenbetrieb, "
+PHASE(6, "Eine Regel ist spezifiziert, ein Modell geht in den Schattenbetrieb, "
          "und eines wird nicht freigegeben."),
 
 CODE('''
@@ -1252,14 +1292,32 @@ liste.to_csv("tagesliste_beispiel.csv", index=False)
 # aus der Datenbank hat sie nicht - er hat Zeiten, Stationen, ein Entgelt
 # und einen Radtyp. Ohne die Funktion dazwischen ist das Paket kein
 # Produkt, sondern ein Modellartefakt.
-PFLICHTFELDER = ["startzeit", "endzeit", "start_station_id", "end_station_id",
-                 "entgelt_eur", "typ_code"]
+# ACHTUNG BEI end_station_id: SIE DARF FEHLEN.
+#
+# Eine fruehere Fassung verlangte sie als Pflichtfeld. Damit haette der
+# Produktionspfad 11.649 Fahrten abgelehnt - 19,8 % aller abgeschlossenen
+# Vorgaenge -, naemlich genau die frei abgestellten. Das ist kein
+# Datenfehler, sondern ein beworbenes Merkmal (siehe Notebook 5).
+#
+# Im Training fielen sie nicht auf, weil start == end bei einem fehlenden
+# Wert schlicht False ergibt. Der Trainingspfad war grosszuegig, der
+# Produktionspfad streng - und beide sollen dasselbe tun.
+PFLICHTFELDER = ["startzeit", "endzeit", "start_station_id",
+                 "entgelt_eur", "typ_code", "status"]
+OPTIONALE_FELDER = ["end_station_id"]   # fehlt = frei abgestellt
 
 def vorgang_bewerten(roh):
     """Rohvorgang -> Merkmale -> Auffaelligkeitswert und Begruendung."""
     fehlt = [f for f in PFLICHTFELDER if f not in roh or pd.isna(roh[f])]
     if fehlt:
         raise ValueError(f"Pflichtfelder fehlen: {', '.join(fehlt)}")
+    if roh["status"] != "abgeschlossen":
+        raise ValueError(
+            f"Status '{roh['status']}' - bewertet werden nur abgeschlossene "
+            "Vorgaenge. Abbrueche und Stornierungen sind eine eigene Auswertung.")
+    if float(roh["entgelt_eur"]) < 0:
+        raise ValueError(f"Negatives Entgelt {roh['entgelt_eur']} - Gutschrift "
+                         "oder Datenfehler, in beiden Faellen kein Fahrtvorgang.")
     typ = roh["typ_code"]
     if typ not in mittel_je_typ.index:
         raise ValueError(
@@ -1273,7 +1331,10 @@ def vorgang_bewerten(roh):
     zeile = pd.DataFrame([{
         "dauer_min": dauer,
         "stunde": start.hour,
-        "ist_rundtour": int(roh["start_station_id"] == roh["end_station_id"]),
+        # Fehlendes Ziel = frei abgestellt = keine Rundtour. Genau so
+        # rechnet auch der Trainingspfad.
+        "ist_rundtour": int(pd.notna(roh.get("end_station_id"))
+                            and roh["start_station_id"] == roh["end_station_id"]),
         "entgelt_eur": float(roh["entgelt_eur"]),
         "entgelt_je_minute": float(roh["entgelt_eur"]) / max(dauer, 1),
         "typ_code": typ,
@@ -1296,11 +1357,27 @@ print(f"Tabellenweg:    {probe.auffaelligkeit:.6f}")
 assert abs(wert_roh - probe.auffaelligkeit) < 1e-9, "Die beiden Wege weichen ab"
 print("Beide Wege stimmen ueberein - der Vertrag haelt.\\n")
 
-# Gegenprobe 2: ein unbekannter Radtyp wird gemeldet, nicht geraten.
+# Gegenprobe 2: eine FREI ABGESTELLTE Fahrt muss durchgehen.
+frei_probe = merkmalstabelle[merkmalstabelle.end_station_id.isna()].iloc[0]
+wert_frei, _, _ = vorgang_bewerten(frei_probe)
+assert abs(wert_frei - frei_probe.auffaelligkeit) < 1e-9
+anteil_frei = merkmalstabelle.end_station_id.isna().mean()
+print(f"Frei abgestellte Fahrt (Vorgang {int(frei_probe.ausleihe_id)}): "
+      f"{wert_frei:.6f} - angenommen.")
+print(f"Solche Faelle sind {anteil_frei:.1%} der Population; ein Pflichtfeld")
+print("end_station_id haette sie alle abgelehnt.\\n")
+
+# Gegenprobe 3: ein unbekannter Radtyp wird gemeldet, nicht geraten.
 try:
     vorgang_bewerten({**probe.to_dict(), "typ_code": "LASTEN_XL"})
 except ValueError as fehler:
     print(f"Unbekannter Radtyp:\\n  {fehler}\\n")
+
+# Gegenprobe 4: ein abgebrochener Vorgang wird abgewiesen.
+try:
+    vorgang_bewerten({**probe.to_dict(), "status": "abgebrochen"})
+except ValueError as fehler:
+    print(f"Falscher Status:\\n  {fehler}\\n")
 
 # DAS MODELLPAKET - vollstaendig genug, um einen neuen Vorgang zu bewerten.
 #
@@ -1312,6 +1389,7 @@ joblib.dump({
     "merkmale": MERKMALE,
     "rohspalten_begruendung": ROHSPALTEN,
     "pflichtfelder_roh": PFLICHTFELDER,
+    "optionale_felder_roh": OPTIONALE_FELDER,
     "bekannte_radtypen": list(mittel_je_typ.index),
     "mittel_je_typ": mittel_je_typ.to_dict(),
     "streuung_je_typ": streuung_je_typ.to_dict(),
@@ -1415,7 +1493,7 @@ weitermachen, sobald Rückmeldungen da sind.
 |---|---|---|
 | Anteil bestätigter Vorgänge | Rückmeldung bleibt aus | **die Liste wird ignoriert** — organisatorisches Problem, und das Ende jeder Bewertbarkeit |
 | Trefferquote im Schattenbetrieb | sobald genug Urteile vorliegen | **erst dann** lässt sich überhaupt eine Schwelle festlegen |
-| Anteil leerer Listen | weicht deutlich von den heute gemessenen 89 % ab | der Referenzzustand passt nicht mehr — Schwelle neu bestimmen |
+| Anteil leerer Listen | weicht deutlich von den heute gemessenen 88 % ab | der Referenzzustand passt nicht mehr — Schwelle neu bestimmen |
 | Verteilung der Fahrtdauer | verschiebt sich | „normal“ hat sich geändert, Referenzzeitraum neu wählen |
 | Alter des Referenzzeitraums | älter als ein Jahr | neu anlernen, bevor „normal“ von gestern ist |
 
@@ -1436,7 +1514,7 @@ MD("""
 | 3 Data Preparation | Fünf Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor keine auffällige *Fahrt* ist — wiederholtes Fehlen bei demselben Rad ist sehr wohl ein Fall, nur ein anderer: Datenqualität statt Fahrverhalten |
 | 4 Modeling | Interquartilsregel (4.505 Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
 | 5 Evaluation | Die globale Rangliste meldet 56 %, die tatsächlich erzeugbare Tagesliste 16,4 % — **ein Drittel davon, bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B fällt die Präzision von 32 % über 44 % und 13,4 % auf **3,9 % je neuem Alarm**; sie findet zwar **alle 11 Episoden am ersten Tag**, reißt aber beide Wirtschaftlichkeitshürden |
-| 6 Deployment | A1 als Echtzeitregel in Betrieb, A2 nur im Schattenbetrieb, B **nicht freigegeben**. Der Status steht im Modellpaket, nicht im Fließtext |
+| 6 Deployment | **Keines der drei Produkte ist betrieblich freigegeben.** A1 ist als Regel und Funktion spezifiziert und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen. A2 läuft nur im Schattenbetrieb. B ist nicht freigegeben. Der verbindliche Status steht im Modellpaket; die Tabelle in 6.1 ist von Hand geschrieben |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
 
@@ -1503,7 +1581,7 @@ keine Schätzung.
 | 3 | Clustering | keine | Vier Stationstypen, vier Kundensegmente — und eine falsch definierte Umsatzgröße |
 | 4 | Zeitreihe | eine Zahl, in der Zeit | Nachfrageprognose — mit ehrlichem Abschlag für die Wettervorhersage |
 | 5 | Assoziation | keine | **Keine Regel freigegeben** — und eine getrennte explorative Folgeanalyse zu Stationssalden und Abstell-Hotspots |
-| 6 | Anomalie | keine | Eine Echtzeitregel in Betrieb, eine Tagesliste im Schattenbetrieb, eine Aufgabe nicht freigegeben |
+| 6 | Anomalie | keine | Eine Regel spezifiziert, eine Tagesliste im Schattenbetrieb, eine Aufgabe nicht freigegeben — **nichts davon im Betrieb** |
 
 **Einmal Teilfreigabe, einmal Machbarkeitsindiz, dreimal Rücksprung, einmal
 Schattenbetrieb — und keine einzige uneingeschränkte Betriebsfreigabe.**
