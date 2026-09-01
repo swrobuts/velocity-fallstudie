@@ -1108,7 +1108,16 @@ document.addEventListener("DOMContentLoaded", async () => {
            zurueckgesetzt und nicht ueber einen querySelector: Die Klasse
            entsteht im Skript und steht nie im HTML - frontend_check.py
            haette das zu Recht gemeldet. */
-        for (const b of radKachelSchaetzknoepfe) b.setAttribute('aria-expanded', 'false');
+        /* Seit dem 01.09.2026 enthaelt die Liste Objekte {knopf, text} und
+           nicht mehr die Knoepfe selbst - hier stand danach noch
+           b.setAttribute() auf dem Objekt. Das warf beim ersten Klick
+           einen TypeError, und weil die Zeile im Klickpfad liegt, ging
+           die Lade gar nicht mehr auf: Der Knopf sah aktiv aus und tat
+           nichts. Eine Strukturaenderung ist erst fertig, wenn JEDE
+           Verwendung nachgezogen ist. */
+        for (const { knopf } of radKachelSchaetzknoepfe) {
+            knopf.setAttribute('aria-expanded', 'false');
+        }
         for (const x of radKachelSchubladen) {
             if (!ladeIstOffen(x.schublade)) continue;
             const s = x.schublade;
