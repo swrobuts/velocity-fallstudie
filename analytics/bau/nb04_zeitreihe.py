@@ -297,14 +297,45 @@ X_test, y_test = test[merkmale], test.fahrten
 # Eine fruehere Fassung waehlte Modell und Aufschlag unter Ist-Wetter
 # und stoerte erst im Test. Das ist zweierlei Informationsstand in
 # einem Verfahren: Man waehlt fuer eine Welt und liefert in eine andere.
+# ALLE VIER WETTERFELDER, UND PHYSIKALISCH MOEGLICH.
+#
+# Zwei Fehler einer frueheren Fassung, beide vom Review gefunden:
+#
+# (1) Der WIND blieb unangetastet. Das Modell bekam also drei
+#     Prognosewerte und einen Messwert - eine Information, die es am
+#     Vorabend nicht gibt. Ein Spaltenvertrag ist noch kein
+#     Informationsvertrag.
+#
+# (2) Mittel- und Maximaltemperatur wurden UNABHAENGIG gestoert. Dabei
+#     entstanden Tage mit temp_max < temp_mittel - genau die Kombination,
+#     die die Prognosefunktion unten als "vermutlich vertauscht"
+#     zurueckweist. Der Testrahmen erzeugte Eingaben, die das Produkt
+#     ablehnt.
+#
+# Deshalb wird jetzt die Mitteltemperatur gestoert und die TAGESAMPLITUDE
+# getrennt - sie bleibt nicht-negativ, damit das Maximum nie unter das
+# Mittel faellt.
+STREUUNG_TEMP = 1.5       # Grad, 24-Stunden-Vorhersage
+STREUUNG_AMPLITUDE = 1.0  # Grad, Tagesgang
+STREUUNG_REGEN = 2.0      # mm
+STREUUNG_WIND = 4.0       # km/h
+
 def prognosewetter(X, startwert):
     """Was am Vorabend auf dem Bildschirm stuende - statt der Messung."""
     zufall = np.random.default_rng(startwert)
     Z = X.copy()
-    Z["temp_mittel_c"] = X.temp_mittel_c + zufall.normal(0, 1.5, len(X))
-    Z["temp_max_c"] = X.temp_max_c + zufall.normal(0, 1.8, len(X))
+    amplitude = (X.temp_max_c - X.temp_mittel_c).clip(lower=0)
+    Z["temp_mittel_c"] = X.temp_mittel_c + zufall.normal(0, STREUUNG_TEMP, len(X))
+    Z["temp_max_c"] = Z.temp_mittel_c + np.clip(
+        amplitude.values + zufall.normal(0, STREUUNG_AMPLITUDE, len(X)), 0, None)
     Z["niederschlag_mm"] = np.clip(
-        X.niederschlag_mm.values + zufall.normal(0, 2.0, len(X)), 0, None)
+        X.niederschlag_mm.values + zufall.normal(0, STREUUNG_REGEN, len(X)), 0, None)
+    Z["wind_max_kmh"] = np.clip(
+        X.wind_max_kmh.values + zufall.normal(0, STREUUNG_WIND, len(X)), 0, None)
+    # Die Gegenprobe zum Vertrag: was hier herauskommt, muss die
+    # Prognosefunktion spaeter auch annehmen.
+    assert (Z.temp_max_c >= Z.temp_mittel_c).all(), "unplausible Temperaturen erzeugt"
+    assert (Z.niederschlag_mm >= 0).all() and (Z.wind_max_kmh >= 0).all()
     return Z
 
 Xv_prognose = prognosewetter(X_val, 42)     # fuer Auswahl und Aufschlag
@@ -413,7 +444,7 @@ aussuchen — deshalb stehen hier beide.
 
 **3. Unter Prognosewetter dreht sich die Reihenfolge der Modelle.** Mit dem tatsächlichen
 Wetter liegt das Boosting vorn (5,81 gegen 6,33), mit der simulierten Vorhersage die
-lineare Regression (8,55 gegen 11,25).
+lineare Regression (8,73 gegen 11,11).
 
 > **Das ist der wichtigste Befund dieses Abschnitts.** Das Boosting nutzt feine
 > Wetterunterschiede besser aus — solange das Wetter stimmt. In **dieser Simulation**
@@ -482,8 +513,10 @@ MD("""
 Jetzt wird die Testmenge **einmal** angefasst — mit dem Modell aus Phase 4 und dem
 Aufschlag aus 5.1, beide vorher festgelegt. Und gleich richtig:
 
-Das **Training** hat mit gemessenem Wetter gerechnet — anders geht es nicht, historische
-Vorhersagen liegen uns nicht vor. **Modellwahl und Aufschlag dagegen liefen bereits unter
+Das **Training** hat mit gemessenem Wetter gerechnet — mit den vorliegenden Daten geht es
+nicht anders, denn archivierte Vorabendprognosen haben wir nicht. Vorzuziehen wären sie:
+Ein Modell, das auf Messwerten lernt und auf Prognosewerten arbeitet, sieht im Betrieb
+etwas anderes als im Training. **Modellwahl und Aufschlag dagegen liefen bereits unter
 simuliertem Prognosewetter**, und der Test benutzt gleich dasselbe Verfahren mit einer
 unabhängigen Zufallsziehung. Der Informationsstand ist ab der Validierung durchgehend
 derselbe. Am Vorabend um
@@ -621,8 +654,9 @@ print(f"\\n  Gesamturteil: {urteil} — kein Nachweis.")
 print("  Die Kriterien sind in DIESEM Testpfad erfüllt. Kriterium 1 hält aber")
 print(f"  nicht über alle Wetterziehungen: in {PFADE - treffer_k1} von {PFADE} Pfaden")
 print(f"  ({1 - treffer_k1 / PFADE:.0%}) fällt die Fehlerreduktion unter 30 %.")
-print("  Wer aus einem Pfad einen 'Nachweis' macht, berichtet die günstigste")
-print("  Ziehung als Ergebnis.")
+print("  Ein einzelner, vorab festgelegter Pfad ist eine gueltige Einzel-")
+print("  realisierung - aber keine Aussage darueber, wie robust das Ergebnis")
+print("  gegenueber Wetterfehlern ist. Genau dafuer stehen die 300 Pfade.")
 print("\\n  Ausdrücklich KEINE Betriebsfreigabe: Die Wetterunsicherheit ist simuliert,")
 print("  es gibt nur ein Validierungs- und ein Testfenster, und die Übersetzung von")
 print("  Fahrten zu Rädern und Schichten steht aus.")
@@ -719,7 +753,8 @@ Das Machbarkeitsurteil in Phase 5 steht schon auf der Betriebszahl — das war d
 Korrektur an diesem Notebook. Zwei Dinge bleiben trotzdem offen, und sie gehören genannt:
 
 **Erstens ist die Wetterunsicherheit simuliert, nicht gemessen.** Wir haben normalverteiltes
-Rauschen auf Temperatur und Niederschlag gelegt — 1,5 °C und 2 mm, aus der Literatur
+Rauschen auf alle vier Wettergrößen gelegt — 1,5 °C auf die Mitteltemperatur, 1,0 °C auf
+den Tagesgang, 2 mm Niederschlag und 4 km/h Wind, aus der Literatur
 gegriffen. Eine echte Vorhersage irrt anders: Sie irrt **systematisch**, sie irrt bei
 Extremwetter stärker als im Mittel, und sie irrt bei Niederschlag anders als bei
 Temperatur. Wer die Zahl belastbar haben will, braucht **archivierte Vorhersagen** —
@@ -739,7 +774,40 @@ import joblib, datetime
 # wuerde stillschweigend als "kein Feiertag, keine Ferien, keine
 # Veranstaltung" gelesen - also als Normaltag. Das waere keine Prognose,
 # sondern eine Annahme mit unbekanntem Vorzeichen.
-KALENDER_BIS = min(max(feiertage), max(ferien), max(vorlesung), max(veranstaltungen))
+# GUELTIGKEIT IST EIN METADATUM, KEIN MAXIMUM.
+#
+# Eine fruehere Fassung rechnete
+#     KALENDER_BIS = min(max(feiertage), max(ferien), ...)
+# und nahm damit das LETZTE EINGETRAGENE EREIGNIS als Ende der Abdeckung.
+# Das ist etwas anderes: veranstaltungen.csv endet am 13.07.2026, weil
+# danach keine Veranstaltung mehr stattfindet - nicht, weil der Kalender
+# dort aufhoert. schulferien.csv reicht bis in den September,
+# feiertage.csv bis Mitte August.
+#
+# Die Folge war absurd: 42 der 90 Testtage lagen hinter dem eigenen
+# Gueltigkeitsende. Das Notebook hat also einen Zeitraum ausgewertet, den
+# die ausgelieferte Funktion verweigert haette.
+#
+# Richtig ist ein ausdrueckliches gueltig_bis JE QUELLE. Die CSV-Dateien
+# fuehren es nicht - das ist selbst ein Befund. Bis es sie gibt, steht die
+# Annahme hier sichtbar und an genau einer Stelle.
+KALENDER_GUELTIG_BIS = {
+    "feiertage":       pd.Timestamp("2026-08-31"),
+    "ferien":          pd.Timestamp("2026-08-31"),
+    "vorlesungszeit":  pd.Timestamp("2026-08-31"),
+    "veranstaltungen": pd.Timestamp("2026-08-31"),
+}
+KALENDER_BIS = min(KALENDER_GUELTIG_BIS.values())
+print("Kalender-Gueltigkeit (ANGENOMMEN - die CSV-Dateien fuehren kein gueltig_bis):")
+for quelle, bis in KALENDER_GUELTIG_BIS.items():
+    print(f"   {quelle:<16s} bis {bis.date()}")
+# Der Test muss innerhalb der Gueltigkeit liegen - sonst bewertet man
+# etwas, das die Funktion gar nicht liefern duerfte.
+assert X_test.index.max() <= KALENDER_BIS, (
+    f"Das Testfenster reicht bis {X_test.index.max().date()}, die Kalender nur "
+    f"bis {KALENDER_BIS.date()}. Erst die Gueltigkeit klaeren.")
+print(f"\\nTestfenster {X_test.index.min().date()} bis {X_test.index.max().date()} "
+      f"liegt vollstaendig darin.")
 print(f"Die Kalender reichen bis {KALENDER_BIS.date()}.")
 print("Danach ist 'kein Feiertag' nicht bekannt, sondern nur nicht eingetragen.\\n")
 
@@ -906,7 +974,7 @@ MD("""
 | 2 Data Understanding | Jahresgang und Wochenrhythmus liegen übereinander. Und eine **Störgröße**: Der rohe Ferieneffekt ist irreführend, weil Ferien im Sommer liegen |
 | 3 Data Preparation | Schnitt entlang der Zeit in **drei** Abschnitte: Training, Validierung, Test. Die Testmenge ist der Sommer 2026 und liegt weit über dem Trainingsmittel |
 | 4 Modeling | Nullmodell, echte Faustregel, linear und Gradient Boosting — verglichen unter **Prognosewetter**, nicht unter Ist-Wetter. Unter Ist-Wetter hätte das Boosting gewonnen, unter Prognosewetter gewinnt die lineare Regression |
-| 5 Evaluation | Modell UND Aufschlag auf der Validierung gewählt, beides unter Prognosewetter. Test einmal angefasst. Klar besser als die Faustregel — aber auf dem Test wäre das verworfene Modell besser gewesen, und wir wechseln trotzdem nicht |
+| 5 Evaluation | Modell UND Aufschlag auf der Validierung gewählt, beides unter Prognosewetter. Der Test wurde erst **nach** dem Einfrieren beider Entscheidungen geöffnet; alles danach ist Diagnose und ändert die Wahl nicht mehr. Damit ist dieses Testfenster für eine weitere Entwicklungsrunde verbraucht |
 | 6 Deployment | Prognosefunktion, Modellpaket und Überwachung. Offen bleibt, dass die Wetterunsicherheit simuliert und nicht gemessen ist — und dass ein Sommerfenster keine Jahresaussage trägt |
 
 **Was eine zweite Runde anders machen würde**

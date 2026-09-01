@@ -96,8 +96,8 @@ abends. Wir rechnen deshalb gegen die Basisrate **im selben Kontext**:
 In beiden Fällen ist der Zähler derselbe: die Konfidenz, also der Anteil der Fahrten ab
 dieser Startstation in diesem Kontext, die an diesem Ziel enden.
 
-Der Unterschied ist nicht klein. Für die stärkste Regel dieses Notebooks — werktags früh
-vom Hauptbahnhof zum Hubland Campus — liegt der klassische Lift bei **3,58**, der
+Der Unterschied ist nicht klein. Für die **supportstärkste** Regel dieses Notebooks —
+werktags früh vom Hauptbahnhof zum Hubland Campus — liegt der klassische Lift bei **3,58**, der
 kontextbedingte bei **1,70**. Mehr als die Hälfte des klassischen Werts kommt also gar
 nicht von der Verbindung, sondern daher, dass der Campus morgens ohnehin gefragt ist.
 
@@ -141,7 +141,6 @@ pd.set_option("display.width", 160)
 
 fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit"])
 stationen = pd.read_csv(BASIS + "station.csv")
-raeder = pd.read_csv(BASIS + "fahrrad.csv")
 feiertage = set(pd.read_csv(BASIS + "feiertage.csv").datum)
 
 k = fahrten[fahrten.status == "abgeschlossen"].copy()
@@ -157,7 +156,6 @@ k["ziel"] = k.end_station_id.map(namen).fillna("frei abgestellt")
 k["stunde"] = k.startzeit.dt.hour
 k["ist_frei"] = ((k.startzeit.dt.dayofweek >= 5)
                  | k.startzeit.dt.strftime("%Y-%m-%d").isin(feiertage))
-k = k.merge(raeder[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
 
 print(f"{len(k):,d} Fahrten als 'Warenkörbe'".replace(",", "."))
 print("\\nWie häufig ist jede Station als ZIEL? (das sind die Basisraten für den Lift)")
@@ -206,8 +204,8 @@ abgestellt“ deshalb als eigenes Ziel.** Die Tabelle darüber zeigt, dass der A
 Startstation schwankt — er ist ein Merkmal der Gegend, nicht des Zufalls.
 
 **Zweitens:** 16,5 % der angedockten Fahrten enden dort, wo sie begannen — rund jede
-sechste. Das ist der stärkste „Zusammenhang“ im ganzen Datensatz, und er wird jede
-Regelliste anführen, wenn man ihn nicht ausschließt.
+sechste. Das ist die **häufigste triviale Start-Ziel-Gleichheit**, und sie wird jede
+Regelliste anführen, wenn man sie nicht ausschließt.
 
 **Nützlich ist er trotzdem nicht.** Eine Rundtour verschiebt kein einziges Rad; für die
 Disposition ist sie ein Nullsummenvorgang. Wir schließen Rundtouren deshalb aus der
@@ -222,9 +220,16 @@ Regelsuche aus — **ausdrücklich und begründet**, nicht heimlich.
 PHASE(3, "Aus jeder Fahrt wird ein Warenkorb mit Zeitfenster und Tagesart."),
 
 CODE('''
-# Zeitfenster statt Stunden: 24 Stunden ergaeben 24 mal so viele Regeln mit je
-# einem Vierundzwanzigstel der Belege. Vier Fenster halten die Regeln belegbar
-# und entsprechen dem, wonach die Disposition ohnehin plant.
+# Zeitfenster statt Stunden: Mit 24 Kontexten statt 4 verteilen sich dieselben
+# Fahrten auf sechsmal so viele Kombinationen - jede einzelne hat dann
+# entsprechend weniger Belege. (Wie viel genau, haengt davon ab, wie
+# ungleich die Fahrten ueber die Stunden liegen; gleichmaessig sind sie
+# nicht.) Vier Fenster halten die Regeln belegbar und entsprechen dem,
+# wonach die Disposition ohnehin plant.
+#
+# Diese vier Grenzen sind GESETZT, nicht gefunden. Ob andere Grenzen
+# stabilere Regeln ergaeben, ist nicht geprueft - das steht in den offenen
+# Fragen.
 # Die Grenzen muessen die 24 Stunden LUECKENLOS abdecken - sonst faellt die
 # Nachtstunde stillschweigend aus der Analyse. Das erste Fenster beginnt
 # deshalb bei 0 Uhr und heisst auch so; ein Etikett "5-10" ueber einem
@@ -297,13 +302,19 @@ def regeln_finden(koerbe, kontextspalten, mindest_support=0.005):
 
 regeln = regeln_finden(koerbe, ["tagesart", "fenster"])
 
-# KRITERIUM 3 ALS CODE, NICHT ALS ABSICHTSERKLAERUNG.
-# Handlungsfaehig heisst: die Regel muss eine Transporterfahrt begruenden
-# koennen. "-> frei abgestellt" kann das nicht - "frei abgestellt" ist kein
-# Ort, den man anfaehrt. Rundtouren sind schon in Phase 3 ausgeschlossen.
-regeln["handlungsfähig"] = regeln["dann Ziel"] != "frei abgestellt"
+# KRITERIUM 3 ALS CODE - UND EHRLICH BENANNT.
+#
+# Geprueft wird genau eines: ob das Ziel eine Station ist. "-> frei
+# abgestellt" ist kein Ort, den ein Transporter anfaehrt. Rundtouren sind
+# schon in Phase 3 ausgeschlossen.
+#
+# Die Spalte hiess frueher "handlungsfaehig". Das war zu viel versprochen:
+# Ob eine Regel eine Transporterfahrt RECHTFERTIGT, haengt an Menge,
+# Bestand, Kapazitaet und Kosten - nichts davon steht hier. Der Name sagt
+# jetzt, was die Zeile prueft.
+regeln["ziel_ist_station"] = regeln["dann Ziel"] != "frei abgestellt"
 print(f"{len(regeln)} Regeln mit mindestens 0,5 % Support gefunden, davon "
-      f"{int(regeln['handlungsfähig'].sum())} handlungsfähig (Kriterium 3).\\n")
+      f"{int(regeln['ziel_ist_station'].sum())} mit einer Station als Ziel.\\n")
 
 anzeige = ["Kontext", "wenn Start", "dann Ziel", "Fahrten", "Support",
            "Konfidenz", "Lift (Kontext)", "Lift (klassisch)"]
@@ -373,7 +384,7 @@ plt.scatter(regeln.Support * 100, regeln[LIFT], s=regeln.Konfidenz * 220,
 plt.axvline(1.0, color="#e00034", ls="--", label="Kriterium 1: Support ≥ 1 %")
 plt.axhline(1.3, color="#8AB833", ls="--", label="Kriterium 2: Lift ≥ 1,3")
 brauchbar = regeln[(regeln.Support >= 0.01) & (regeln[LIFT] >= 1.3)
-                   & regeln["handlungsfähig"]]
+                   & regeln["ziel_ist_station"]]
 plt.scatter(brauchbar.Support * 100, brauchbar[LIFT], s=brauchbar.Konfidenz * 220,
             alpha=.9, color="#e00034", edgecolor="none", label="erfüllt alle drei")
 plt.xlabel("Support (% aller Fahrten)"); plt.ylabel("kontextbedingter Lift")
@@ -384,18 +395,36 @@ plt.tight_layout(); plt.show()
 print(f"Regeln insgesamt:                 {len(regeln)}")
 print(f"K1  Support ≥ 1 %:                {(regeln.Support >= 0.01).sum()}")
 print(f"K2  Lift (Kontext) ≥ 1,3:         {(regeln[LIFT] >= 1.3).sum()}")
-print(f"K3  handlungsfähig:               {int(regeln['handlungsfähig'].sum())}")
+print(f"K3  Ziel ist eine Station:        {int(regeln['ziel_ist_station'].sum())}")
 print(f"alle drei zusammen:               {len(brauchbar)}")
 
-# SIND DIE STARKEN REGELN ZUFALL? Das laesst sich pruefen, statt es zu
-# behaupten. 32 Regeln wurden getestet, also korrigieren wir nach Bonferroni:
-# jede einzelne p-Wert wird mit der Zahl der Tests multipliziert.
-regeln["p_korrigiert"] = (regeln.p * len(regeln)).clip(upper=1.0)
+# SIND DIE STARKEN REGELN ZUFALL? Pruefen statt behaupten.
+#
+# ACHTUNG BEI DER TESTFAMILIE. Eine fruehere Fassung korrigierte mit 32 -
+# der Zahl der Regeln, die den Supportfilter ueberlebt haben. Das ist zu
+# klein: Der Filter ist DATENABHAENGIG, er hat also selbst schon
+# ausgewaehlt. Wer nach einer Vorauswahl korrigiert, korrigiert nur den
+# Rest und rechnet sich die Familie klein.
+#
+# Durchsucht wurden alle Kombinationen aus Tagesart, Fenster, Start und
+# Ziel - ohne die Rundtouren, die in Phase 3 ausgeschlossen wurden.
+FAMILIE = (koerbe.tagesart.nunique() * koerbe.fenster.nunique()
+           * koerbe.start.nunique() * (koerbe.ziel.nunique() - 1))
+regeln["p_korrigiert"] = (regeln.p * FAMILIE).clip(upper=1.0)
 top10 = regeln.nlargest(10, LIFT)
+print(f"\\nTestfamilie: {koerbe.tagesart.nunique()} Tagesarten x "
+      f"{koerbe.fenster.nunique()} Fenster x {koerbe.start.nunique()} Startstationen")
+print(f"x {koerbe.ziel.nunique() - 1} moegliche Ziele = {FAMILIE} Kombinationen,")
+print(f"nicht die {len(regeln)} Regeln, die den Supportfilter ueberlebt haben.")
 print(f"\\nVon den zehn Regeln mit dem hoechsten Lift halten "
       f"{int((top10.p_korrigiert < 0.05).sum())} von 10 einem Test auf")
-print(f"Unabhaengigkeit stand (Fisher, Bonferroni-korrigiert auf {len(regeln)} Tests).")
-print(f"Groesster korrigierter p-Wert unter diesen zehn: {top10.p_korrigiert.max():.2e}")
+print(f"Unabhaengigkeit stand (Fisher, Bonferroni-korrigiert auf {FAMILIE} Tests).")
+print(f"Groesster korrigierter p-Wert unter diesen zehn: {top10.p_korrigiert.max():.5f}")
+print()
+print("Was dieser Test NICHT zeigt: Er behandelt jede Fahrt als unabhaengige")
+print("Beobachtung. Dieselben Personen fahren aber wiederholt, und Fahrten")
+print("desselben Tages haengen zusammen. Ein Bootstrap ueber Tage oder")
+print("Kundennummern waere ehrlicher - und faellt vermutlich schwaecher aus.")
 
 # Wie knapp scheitert die STAERKSTE Regel? Und vor allem: was verlangt die
 # Huerde eigentlich, wenn man sie in Fahrten je Werktag uebersetzt?
@@ -422,7 +451,13 @@ MD("""
 Die Punktwolke fällt nach rechts ab, und das ist kein Zufall, sondern fast ein
 Naturgesetz dieser Methode:
 
-> **Je spezieller eine Regel, desto größer ihr Lift und desto kleiner ihr Support.**
+> **Je spezieller eine Regel, desto kleiner ihr Support** — das gilt immer. Beim Lift
+> gilt kein solcher Zusammenhang: Er kann steigen, fallen oder gleich bleiben.
+
+Im Bild sieht es trotzdem so aus, als hingen beide zusammen, und das hat einen banalen
+Grund: Ganz links, bei kleinem Support, liegen die Regeln mit wenigen Belegen — und dort
+streut der Lift einfach stärker. **Was wie ein Zusammenhang aussieht, ist der Rand einer
+Verteilung.**
 
 Ganz links oben stehen die spektakulären Regeln — hoher Lift, aber ein Support von
 Bruchteilen eines Prozents. Sie beschreiben wenige Fahrten und sind für die Disposition
@@ -466,8 +501,14 @@ print(ergebnis[anzeige].to_string(index=False) if len(ergebnis)
 MD("""
 Die Tabelle ist leer. **Keine einzige Regel erfüllt beide Schwellen aus Phase 1.**
 
-Und sie scheitert knapp: Die stärkste Regel — werktags früh vom Hauptbahnhof zum Hubland
-Campus — erreicht einen Support von 0,99 %. Zur Hürde von 1,00 % fehlt ihr **ein
+Und sie scheitert knapp: Die **supportstärkste** Regel — werktags früh vom Hauptbahnhof
+zum Hubland Campus — erreicht einen Support von 0,99 %.
+
+> **„Stärkste Regel" ist zweideutig, und die Zweideutigkeit ist hier folgenreich.** Den
+> größten **Lift** hat eine ganz andere: Dom → Juliuspromenade, mittags an freien Tagen,
+> mit 1,91 gegenüber 1,69. Den größten **Support** hat die Bahnhofsregel. Welche „stärker"
+> ist, hängt allein daran, welche Hürde man betrachtet — und an der Support-Hürde
+> scheitern beide. Zur Hürde von 1,00 % fehlt ihr **ein
 Hundertstel Prozentpunkt**, also rund fünf Fahrten in drei Jahren.
 
 ### Die Hürde misst nicht, was sie messen sollte
@@ -480,7 +521,7 @@ Fahrten im Jahr betrifft, fährt kein Transporter."* Das ist eine Aussage über
 Warenkörben über drei Jahre**. Das sind zwei verschiedene Maßstäbe, und die Ausgabe oben
 rechnet sie ineinander um:
 
-- Die stärkste Regel umfasst 505 Fahrten — das sind **0,68 Fahrten je Werktag**.
+- Die supportstärkste Regel umfasst 505 Fahrten — das sind **0,68 Fahrten je Werktag**.
 - Die Ein-Prozent-Hürde verlangt **0,69 Fahrten je Werktag**.
 - Der Abstand zwischen beiden beträgt **fünf Fahrten in drei Jahren**.
 
@@ -512,6 +553,61 @@ protokolliert statt repariert. Für eine zweite Runde gehört das Kriterium neu 
 Dass wir diese Zahl heute nicht nennen können, ist selbst ein Befund: **Die Kosten einer
 Transporterfahrt standen nie in den Projektunterlagen.** Ohne sie ist jede Hürde geraten.
 
+### 5.5 Entdeckung und Bestätigung trennen
+
+Alles bisher Gerechnete hat **denselben Datensatz zum Suchen und zum Bewerten** benutzt.
+Das ist bei einer Regelsuche besonders heikel: Wir haben 800 Kombinationen durchgesehen
+und die auffälligsten behalten. Ob sie auch in einem Zeitraum auffällig sind, den die
+Suche nie gesehen hat, ist damit nicht beantwortet.
+
+Die einfachste Gegenprobe: Regeln in den ersten zwei Dritteln **suchen**, im letzten
+Drittel **nachsehen**.
+"""),
+
+CODE('''
+# ENTDECKEN UND BESTAETIGEN AUF VERSCHIEDENEN ZEITRAEUMEN.
+spanne = koerbe.startzeit.max() - koerbe.startzeit.min()
+GRENZE = koerbe.startzeit.min() + spanne * 2 // 3
+entdeckung = koerbe[koerbe.startzeit <= GRENZE]
+bestaetigung = koerbe[koerbe.startzeit > GRENZE]
+print(f"Entdeckung:   bis {GRENZE.date()}   {len(entdeckung):,d} Fahrten".replace(",", "."))
+print(f"Bestaetigung: danach            {len(bestaetigung):,d} Fahrten\\n".replace(",", "."))
+
+r_ent = regeln_finden(entdeckung, ["tagesart", "fenster"])
+gewaehlt_ent = r_ent[(r_ent.Support >= 0.005) & (r_ent[LIFT] >= 1.3)]
+
+# Im Bestaetigungszeitraum OHNE Supportfilter nachrechnen - wir wollen die
+# ausgewaehlten Regeln wiederfinden, nicht neu suchen.
+r_best = regeln_finden(bestaetigung, ["tagesart", "fenster"], mindest_support=0.0)
+schluessel = ["Kontext", "wenn Start", "dann Ziel"]
+zusammen = gewaehlt_ent[schluessel + [LIFT, "Support"]].merge(
+    r_best[schluessel + [LIFT, "Support"]], on=schluessel,
+    how="left", suffixes=(" entdeckt", " bestätigt"))
+
+print(f"Im Entdeckungszeitraum ausgewaehlt (Support ≥ 0,5 %, Lift ≥ 1,3): "
+      f"{len(gewaehlt_ent)} Regeln")
+haelt_13 = int((zusammen[f"{LIFT} bestätigt"] >= 1.3).sum())
+haelt_1 = int((zusammen[f"{LIFT} bestätigt"] > 1.0).sum())
+print(f"   davon spaeter weiterhin Lift ≥ 1,3:  {haelt_13} von {len(zusammen)}")
+print(f"   davon spaeter weiterhin Lift > 1:    {haelt_1} von {len(zusammen)}\\n")
+print(zusammen.round(3).to_string(index=False))
+'''),
+
+MD("""
+**Das ist ein gutes Stabilitätsindiz** — und es ist mehr wert als jeder p-Wert oben, weil
+es einen Zeitraum benutzt, den die Suche nicht gesehen hat.
+
+Drei Einschränkungen gehören dazu:
+
+1. **Der Bestätigungszeitraum ist damit verbraucht.** Wer ihn jetzt benutzt, um Schwellen
+   nachzujustieren, hat wieder auf denselben Daten gesucht und bewertet.
+2. **Ein einziger Schnitt ist keine Zeitreihenvalidierung.** 2023 und 2026 sind
+   Teiljahre; rollierende Fenster wären sauberer.
+3. **Stabilität ist nicht Relevanz.** Eine Regel kann drei Jahre stabil und trotzdem zu
+   klein für eine Maßnahme sein — genau das ist hier der Fall.
+"""),
+
+MD("""
 ### 5.3 Was die durchgefallenen Regeln trotzdem zeigen — als Hypothese
 
 Die neun Regeln, die wenigstens die Lift-Hürde nehmen, dürfen den Umlaufplan nicht
@@ -519,8 +615,8 @@ begründen. Ansehen darf man sie trotzdem — sie sind eine **Hypothese**, kein 
 sie werden gleich unabhängig überprüft.
 
 Ein Muster sticht heraus: **morgens** fließt es von den Pendlerstationen zu den
-Uni-Stationen. Werktags früh vom Hauptbahnhof zum Hubland Campus ist die stärkste Regel
-der Liste.
+Uni-Stationen. Werktags früh vom Hauptbahnhof zum Hubland Campus ist die
+supportstärkste Regel der Liste.
 
 **Die naheliegende Fortsetzung lautet: abends fließt dasselbe zurück.** Diesen Satz haben
 frühere Fassungen dieses Notebooks an dieser Stelle geschrieben. Er hat nur einen Fehler:
@@ -538,8 +634,10 @@ aussortiert, bevor irgendein Kriterium sie zu sehen bekam.
 > Regelliste redet, muss diese Untergrenze mitnennen, sonst redet er über eine Auswahl,
 > deren Rand er nicht kennt.
 
-Für den Transporter bleibt die Deutung dennoch plausibel: Die Uni-Stationen laufen im Lauf
-des Vormittags voll, die Pendlerstationen leeren sich. **Aber sie ist eine Deutung.** Ob
+Für den Transporter bleibt die Deutung dennoch plausibel: Die Uni-Stationen haben
+vormittags einen **positiven Nettozufluss**, die Pendlerstationen einen negativen. (Ob sie
+dabei tatsächlich „voll laufen", sagen die Fahrtdaten nicht — dafür bräuchte es
+Bestände.) **Aber sie ist eine Deutung.** Ob
 tatsächlich dieselben Menschen morgens hin- und abends zurückfahren, hat die
 Assoziationsanalyse nicht gemessen und kann sie nicht messen — sie zählt Fahrten, nicht
 Personen. Die nächste Zelle sieht deshalb in den `kunde_id` nach.
@@ -630,7 +728,9 @@ Was folgt daraus? Drei Wege, und nur einer ist gangbar:
 > Rechenregel: Wer die Bedingung „und es regnet“ hinzufügt, schließt alle trockenen Tage
 > aus. Genau darauf beruht der Apriori-Algorithmus: Er muss Kombinationen mit zu geringem
 > Support gar nicht erst prüfen, weil ihre Erweiterungen zwangsläufig noch seltener sind.
-> **Spezialisieren erhöht den Lift und senkt den Support** — und knapp ist hier der
+> **Spezialisieren senkt den Support** — sicher und immer. Was es mit dem Lift macht, ist
+> offen: Wenn die Zusatzbedingung mit der Regel zusammenhängt, steigt er; wenn nicht,
+> bleibt er ungefähr gleich; wirkt sie gegenläufig, sinkt er. Und knapp ist hier der
 > Support.
 
 > **Der Ertrag dieses Notebooks steckt nicht in den Regeln.** Er steckt in Phase 6, die
@@ -640,7 +740,23 @@ Was folgt daraus? Drei Wege, und nur einer ist gangbar:
 """),
 
 # =====================================================================
-PHASE(6, "Aus Regeln wird ein Umlaufplan für den Transporter."),
+PHASE(6, "Operative Folgeanalyse: Welche Fragen bleiben, obwohl keine Regel "
+         "freigegeben wurde?"),
+
+MD("""
+> **Achtung, hier wechselt die Analyse.** Was jetzt kommt, folgt **nicht** aus den Regeln.
+> Es wurde keine freigegeben, und was unten steht, ist mit keiner einzigen davon gerechnet.
+>
+> Eine frühere Fassung überschrieb diese Phase mit *„Aus Regeln wird ein Umlaufplan für
+> den Transporter"*. Das war schlicht falsch: Der Umlauf- und Einsammelteil ist eine
+> **eigene, explorative Auswertung** der Nettoflüsse und der Endkoordinaten. Sie braucht
+> eine eigene Geschäftsfrage, eigene Erfolgskriterien und eine eigene Validierung — alles
+> drei hat sie nicht.
+>
+> **Was hier entsteht, ist Planungsinput, keine Freigabe.** Der Unterschied ist nicht
+> sprachlich: Eine freigegebene Analyse hat vorab gesetzte Kriterien erfüllt. Diese hier
+> hatte nie welche.
+"""),
 
 CODE('''
 # ZWEI VERSCHIEDENE AUFGABEN, GETRENNT GERECHNET
@@ -698,6 +814,22 @@ bedarf = je_tag.groupby(["datum", "fenster"], observed=True).netto.apply(
     lambda x: x[x > 0].sum())
 bedarf_tag = bedarf.groupby("datum").sum()
 
+# WAS DIESE SUMME IST - UND WAS SIE NICHT IST.
+#
+# bedarf_tag addiert vier Fensterwerte. Das entspricht der Annahme, dass
+# nach JEDEM Fenster vollstaendig ausgeglichen wird. Wer nur einmal am Tag
+# faehrt, gleicht weniger aus: Bewegungen am Nachmittag heben Salden vom
+# Vormittag teilweise wieder auf.
+#
+# Beide Zahlen sind richtig gerechnet und beantworten verschiedene Fragen.
+# Keine von beiden ist ein Transportbedarf - dazu fehlen Anfangsbestand,
+# Kapazitaet und Eingriffszeitpunkt.
+ab_t2 = ang_werktag.groupby(["datum", "start"], observed=True).size().rename("ab")
+zu_t2 = ang_werktag.groupby(["datum", "ziel"], observed=True).size().rename("zu")
+tagesende = pd.concat([ab_t2, zu_t2], axis=1).fillna(0)
+tagesende["netto"] = tagesende.zu - tagesende.ab
+rest_tag = tagesende.groupby(level=0).netto.apply(lambda x: x[x > 0].sum())
+
 frei_werktag = None  # wird in der naechsten Zelle geografisch gebildet
 
 plt.figure(figsize=(10, 5))
@@ -722,9 +854,15 @@ print("(B) DER TAGESBEDARF — wieviele Räder müssen an einem Werktag bewegt w
 print(bedarf.groupby("fenster", observed=True).agg(
     Mittel="mean", Median="median",
     P90=lambda x: x.quantile(0.9), Maximum="max").round(1).to_string())
-print(f"\\n    Über alle vier Fenster zusammen, je Werktag:")
-print(f"      Mittel {bedarf_tag.mean():.1f}   Median {bedarf_tag.median():.0f}   "
+print("\\n    ZWEI AGGREGATIONEN, ZWEI FRAGEN:\\n")
+print(f"    (a) Summe der vier Fenster - Ausgleich NACH JEDEM Fenster:")
+print(f"        Mittel {bedarf_tag.mean():.2f}   Median {bedarf_tag.median():.0f}   "
       f"P90 {bedarf_tag.quantile(0.9):.0f}   Maximum {bedarf_tag.max():.0f}")
+print(f"    (b) nur das Ungleichgewicht am TAGESENDE - Ausgleich einmal taeglich:")
+print(f"        Mittel {rest_tag.mean():.2f}   Median {rest_tag.median():.0f}   "
+      f"P90 {rest_tag.quantile(0.9):.0f}   Maximum {rest_tag.max():.0f}")
+print("\\n    Die Aggregationsregel allein aendert den Wert um rund die Haelfte.")
+print("    Welche gilt, entscheidet der Eingriffszeitpunkt - nicht die Statistik.")
 
 # Ein einzelnes Beispiel macht den Unterschied greifbar.
 bsp = je_tag.xs("Hubland Campus", level="station").xs("früh (0-10)", level="fenster").netto
@@ -748,6 +886,8 @@ kennzahl = netto_voll.groupby(["fenster", "station"], observed=True).agg(
     Median="median",
     P10=lambda x: x.quantile(0.10),
     P90=lambda x: x.quantile(0.90),
+    Tage_minus=lambda x: (x < 0).mean(),
+    Tage_plus=lambda x: (x > 0).mean(),
     Tage_ab_5=lambda x: (x.abs() >= 5).mean())
 
 print("UMLAUFPLAN WERKTAG — aus den TAGESSALDEN, nicht aus dem Mittelwert\\n")
@@ -758,8 +898,24 @@ for fenster in BEZEICHNUNGEN:
         continue
     print(f"{fenster}")
     for station, z in auffaellig.iterrows():
-        richtung = "abholen bei  " if z.Median >= 0 else "auffüllen bei"
-        print(f"    {richtung} {station:<24s} Median {z.Median:+.0f}   "
+        # KEINE RICHTUNG AUS EINEM MEDIAN VON NULL.
+        #
+        # Eine fruehere Fassung schrieb  richtung = "abholen" if Median >= 0.
+        # Damit wurde jeder Median von genau 0 zu "abholen" - auch dort, wo
+        # an mehr als der Haelfte der Tage Raeder FEHLTEN. Am Hubland Campus
+        # mittags waren 53 % der Tage negativ und nur 32 % positiv; die
+        # Ausgabe lautete trotzdem "abholen".
+        #
+        # Die Richtung folgt jetzt aus den Tagen, nicht aus dem Median, und
+        # sie darf auch offen bleiben.
+        if z.Tage_minus >= 1.5 * z.Tage_plus:
+            richtung = "auffüllen bei        "
+        elif z.Tage_plus >= 1.5 * z.Tage_minus:
+            richtung = "abholen bei          "
+        else:
+            richtung = "keine stabile Richtung"
+        print(f"    {richtung} {station:<24s} "
+              f"Tage mit Minus {z.Tage_minus:>4.0%} / mit Plus {z.Tage_plus:>4.0%}   "
               f"typische Spanne {z.P10:+.0f} bis {z.P90:+.0f}   "
               f"an {z.Tage_ab_5:.0%} der Tage ≥ 5 Räder")
     print()
@@ -810,6 +966,22 @@ print(f"   ... von der Startstation:      Median {np.median(abstand_start):.2f} 
 print(f"   Anteil, bei dem die nächste Station NICHT die Startstation ist: "
       f"{(frei['nächste_station'] != frei.start).mean():.1%}")
 
+# FAHRTEREIGNIS IST NICHT GLEICH RAD.
+#
+# Was hier gezaehlt wird, sind FAHRTEN, die frei enden - nicht Raeder, die
+# frei stehen. Dasselbe Rad kann an einem Tag mehrfach frei abgestellt
+# werden, und ein Rad, das morgens frei endet, kann mittags laengst wieder
+# unterwegs sein. Der gleichzeitig offene Bestand zu einem Einsatzzeitpunkt
+# steht in diesen Daten NICHT.
+frei["datum"] = frei.startzeit.dt.normalize()
+ereignisse_tag = frei.groupby("datum").size()
+raeder_tag = frei.groupby("datum").fahrrad_id.nunique()
+print(f"\\nJe Werktag: {ereignisse_tag.mean():.2f} frei endende FAHRTEN, aber nur "
+      f"{raeder_tag.mean():.2f} verschiedene RAEDER.")
+print(f"An {int((ereignisse_tag > raeder_tag).sum())} Tagen kommt mindestens ein Rad "
+      f"mehrfach vor.")
+print("Der Unterschied ist hier klein - die Einheit bleibt trotzdem wichtig.")
+
 einsammeln = (frei.groupby(["nächste_station", "fenster"], observed=True).size()
               .unstack(fill_value=0).reindex(columns=BEZEICHNUNGEN, fill_value=0)
               / WERKTAGE).round(2)
@@ -825,13 +997,33 @@ print(f"\\nZum Vergleich die alte, falsche Gruppierung nach Startstation:")
 print(nach_start.sum(axis=1).sort_values(ascending=False).head(3).round(2).to_string())
 print("gegen die richtige nach Abstellort:")
 print(einsammeln.sum(axis=1).sort_values(ascending=False).head(3).round(2).to_string())
-print("Die drei Schwerpunkte sind andere. Der Fahrer wäre falsch gefahren.")
+print("Die drei Schwerpunkte sind andere - die historischen Haeufungen waeren")
+print("also an den falschen Stellen verortet worden.")
 
-kennzahl.round(2).to_csv("umlaufplan_werktag.csv")
-einsammeln.to_csv("einsammelplan_werktag.csv")
+# EXPORTE MIT KOPFZEILEN - Zeitraum, Einheit, Status.
+#
+# Eine CSV-Datei ohne diese Angaben wird frueher oder spaeter als
+# Betriebsanweisung gelesen. "umlaufplan" heisst das erste hier bewusst
+# NICHT mehr: Ein Plan braucht Datum, Menge, Quelle, Ziel und ein
+# Entscheidungskriterium - nichts davon steht drin.
+kopf = [
+    f"# Analysezeitraum: {koerbe.startzeit.min().date()} bis "
+    f"{koerbe.startzeit.max().date()} ({WERKTAGE} Werktage)",
+    "# Einheit: Raeder je Werktag (Mittelwerte bzw. Quantile ueber alle Werktage)",
+    "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
+    "# Status: EXPLORATIV - nicht freigegeben, kein Einsatzplan",
+    "# Gueltigkeit: keine - historische Auswertung ohne Einsatzdatum",
+]
+for datei, tabelle in [("stationssalden_werktag.csv", kennzahl.round(2)),
+                       ("abstell_hotspots_werktag.csv", einsammeln)]:
+    with open(datei, "w", encoding="utf-8") as f:
+        f.write("\\n".join(kopf) + "\\n")
+        tabelle.to_csv(f)
 print()
-print("geschrieben: umlaufplan_werktag.csv, einsammelplan_werktag.csv")
-print("Beide Dateien enthalten Räder JE WERKTAG, keine Dreijahressummen.")
+print("geschrieben: stationssalden_werktag.csv, abstell_hotspots_werktag.csv")
+print("Beide mit Kopfzeilen: Zeitraum, Einheit, Herkunft, Status.")
+print("Die Dateien heissen bewusst nicht 'Plan' - ein Plan braucht Datum,")
+print("Bestand, Menge und ein Entscheidungskriterium.")
 '''),
 
 MD("""
@@ -860,6 +1052,17 @@ Tag zu bewegen wären:
 | an jedem zehnten Werktag mindestens | 32 |
 | Maximum | **56** |
 
+> **Was diese Zahl genau ist — und was nicht.** Sie addiert die vier Zeitfenster und
+> unterstellt damit, dass **nach jedem Fenster** vollständig ausgeglichen wird. Wer nur
+> einmal am Tag fährt, gleicht weniger aus, weil Bewegungen am Nachmittag Salden vom
+> Vormittag teilweise wieder aufheben. Rechnet man nur das Ungleichgewicht am **Tagesende**,
+> sind es **11,1** statt 19,8.
+>
+> Beide Zahlen sind richtig gerechnet. Welche gilt, entscheidet der **Eingriffszeitpunkt** —
+> und der ist eine betriebliche Festlegung, keine statistische. Der korrekte Name für die
+> 19,8 lautet deshalb: *theoretische Summe der Netto-Ungleichgewichte bei vollständigem
+> Ausgleich nach jedem Zeitfenster*.
+
 **Zwischen „1,75“ und „19,8“ liegt kein neuer Datensatz, sondern eine andere
 Aggregation.** Das Beispiel Hubland Campus macht es greifbar: Langfristmittel **+1,86**,
 aber die einzelnen Werktage reichen von **−3 bis +14**.
@@ -871,11 +1074,19 @@ aber die einzelnen Werktage reichen von **−3 bis +14**.
 > Tageswerte, nicht ihren Schwerpunkt.
 
 **Trägt der Plan denn nun?** Diese Frage beantwortet das Notebook **nicht**, und das ist
-kein Versäumnis, sondern eine Grenze. 19,8 Räder je Werktag sind ein realer
-Transportbedarf. Ob er eine Transporterfahrt rechtfertigt, hängt an zwei Größen, die uns
-fehlen: **was eine Fahrt kostet** und **was ein leerer Stationsplatz kostet**. Dieselben
-zwei Zahlen fehlten schon der Ein-Prozent-Hürde in Phase 5. Das ist kein Zufall — es ist
-dieselbe Lücke, die an zwei Stellen auftaucht.
+kein Versäumnis, sondern eine Grenze. Weder 19,8 noch 11,1 sind ein *Transportbedarf* —
+beides sind Ungleichgewichte, die aus Fahrten gerechnet wurden. Zu einem Bedarf fehlen
+drei Dinge:
+
+| fehlt | warum es entscheidet |
+|---|---|
+| **Anfangsbestand** je Station | Ein Überschuss von +6 ist an einer halbvollen Station belanglos und an einer vollen ein Problem |
+| **Kapazität** | Über der Kapazität geht nichts mehr hinein, darunter ist Luft |
+| **Eingriffszeitpunkt** | Er entscheidet, welche der beiden Aggregationen überhaupt gilt |
+
+Dazu kommen die zwei Kostengrößen, die schon der Ein-Prozent-Hürde in Phase 5 fehlten:
+**was eine Fahrt kostet** und **was ein leerer Stationsplatz kostet**. Das ist kein
+Zufall — es ist dieselbe Lücke, die an zwei Stellen auftaucht.
 
 > **Eine frühere Fassung druckte hier „+1205 Räder laufen auf“.** Das war die Summe über
 > 741 Werktage, gedruckt wie eine Anweisung an den Fahrer. Die Korrektur — durch die
@@ -883,20 +1094,32 @@ dieselbe Lücke, die an zwei Stellen auftaucht.
 > Zahl ohne Zeitbezug wurde eine zu kleine Zahl mit falscher Aggregation. **Erst der
 > Tagessaldo beantwortet die Frage, die gestellt war.**
 
-### 6.2 Der Umlaufplan: Richtung ja, Menge nur als Spanne
+### 6.2 Die Stationssalden: Richtung manchmal, Menge nie
 
-Was Tabelle (B) und der Umlaufplan hergeben, ist die **Richtung**: Morgens laufen Hubland
-Campus und Universität Sanderring auf, während Hauptbahnhof, Sanderau, Zellerau und
-Grombühl sich leeren. Das ist stabil und über die Tage hinweg verlässlich.
+Was Tabelle (B) hergibt, ist die **Richtung** — und auch die nicht überall. Morgens
+gewinnen Hubland Campus und Universität Sanderring Räder hinzu, während Hauptbahnhof,
+Sanderau, Zellerau und Grombühl sie verlieren. Das ist über die Tage hinweg stabil: Die
+Uni-Stationen gewinnen an 68 bis 70 % der Werktage hinzu, die Pendlerstationen verlieren
+an 58 bis 61 %.
+
+> **Mittags ist es anders, und eine frühere Fassung hat es falsch ausgegeben.** Dort stand
+> „abholen bei Hubland Campus", weil der Median genau null war und die Regel lautete
+> `abholen, wenn Median >= 0`. Tatsächlich fehlten mittags an **43 %** der Tage Räder und
+> nur an 26 % waren welche übrig — die Anweisung zeigte in die falsche Richtung.
+>
+> **Ein Median von null ist keine Richtung, sondern die Abwesenheit einer.** Die Ausgabe
+> leitet die Richtung jetzt aus dem Verhältnis der Plus- und Minustage ab und darf auch
+> „keine stabile Richtung" sagen.
 
 Was sie **nicht** hergeben, ist die Stückzahl für einen bestimmten Morgen. Der Median liegt
 bei ±1 Rad, die typische Spanne bei −4 bis +4, und an rund jedem zehnten Werktag sind es
-fünf oder mehr. **Ein Umlaufplan aus historischen Daten kann deshalb nur sagen, wo der
-Transporter hinfahren soll — wie viele Räder er lädt, muss er vor Ort entscheiden.**
+fünf oder mehr. **Eine historische Auswertung kann deshalb nur sagen, welche Stationen
+dazu neigen, sich zu leeren oder zu füllen — wie viele Räder an einem bestimmten Morgen zu
+bewegen sind, sagt sie nicht.**
 
-Deshalb steht im exportierten Plan auch nicht eine Zahl je Station, sondern Median und
-Spanne. Eine einzelne Zahl würde eine Genauigkeit vortäuschen, die in den Daten nicht
-steckt.
+Deshalb steht in der exportierten Datei auch nicht eine Zahl je Station, sondern die
+Verteilung. Und sie heißt `stationssalden_werktag.csv`, nicht `umlaufplan` — ein Plan
+bräuchte Datum, Bestand, Menge und ein Entscheidungskriterium.
 
 ### 6.3 Das Einsammeln — und wo die Räder wirklich stehen
 
@@ -928,7 +1151,7 @@ Zellerau gewesen.
 **Der Ertrag dieses Notebooks ist damit Plan B, nicht Plan A** — und Plan B kommt ohne
 Regeln aus.
 
-### 6.4 Was dieser Plan ist — und was nicht
+### 6.4 Was diese Auswertung ist — und was nicht
 
 Er sagt, **wo** und **wann** einzusammeln ist. Er sagt nicht, **wie viele** Räder an eine
 Station gehören — das war Notebook 4, und beide gehören im Betrieb zusammen.
@@ -951,11 +1174,13 @@ Eine frühere Fassung überwachte hier „Lift und Support der Leitregeln“. Da
 unmöglich: **Es wurde keine einzige Regel freigegeben.** Man kann nicht überwachen, was
 nicht im Einsatz ist.
 
-Im Einsatz ist der Einsammelplan aus 6.3. Also wird der überwacht:
+Im Einsatz ist gar nichts — auch die Hotspot-Übersicht aus 6.3 ist explorativ. Was folgt,
+ist deshalb eine **Vorlage** für den Fall, dass daraus einmal ein Einsatz wird, keine
+laufende Überwachung. Die Schwellen sind plausible Diskussionswerte, nicht kalibriert:
 
 | Wache | Schwelle | Reaktion |
 |---|---|---|
-| Räder je Werktag im Einsammelplan | weicht zwei Wochen lang um mehr als ein Drittel ab | Nutzungsverhalten hat sich geändert — neu auszählen |
+| frei endende Fahrten je Werktag | weichen zwei Wochen lang um mehr als ein Drittel ab | Nutzungsverhalten hat sich geändert — neu auszählen |
 | Schwerpunkt-Station wechselt | zwei Monate in Folge | Route anpassen |
 | Anteil frei abgestellter Fahrten | steigt über 25 % oder fällt unter 15 % | Geschäftsgebiet oder Preismodell wurde geändert |
 | Tagesbedarf beim Umverteilen (Tabelle B) | P90 überschreitet 40 Räder | Umverteilung neu bewerten — dann lohnt sie womöglich |
@@ -971,13 +1196,15 @@ gerechnet werden.
 ### 6.6 Ein Hinweis, der nicht fehlen darf
 
 Diese Analyse arbeitet mit **Bewegungsdaten von Personen**. Für den Einsammel- und den
-Umlaufplan brauchen wir sie nur aggregiert — und genau so sollten beide auch entstehen.
+Salden und Hotspots brauchen wir sie nur aggregiert — und genau so sollten beide auch
+entstehen.
 
 Die Gegenprobe in Phase 5 ist etwas anderes: Sie greift auf `kunde_id` und Datum zurück
 und fragt, wer an welchem Tag welchen Weg gefahren ist. **Das ist ein Bewegungsprofil.**
 Dass es hier zur Widerlegung einer eigenen Behauptung diente, macht es nicht harmloser.
-Für eine solche Auswertung braucht es eine Rechtsgrundlage und einen Zweck, der über
-„wir wollten es genau wissen“ hinausgeht — und im Regelbetrieb hat sie nichts zu suchen.
+Bevor so etwas im Regelbetrieb läuft, gehört es rechtlich geprüft — Zweckbindung,
+Rechtsgrundlage, Speicherdauer. Das ist hier ausdrücklich ein **Prüfbedarf**, keine
+abschließende Rechtsbewertung; die kann dieses Notebook nicht leisten.
 """),
 
 # =====================================================================
@@ -989,11 +1216,11 @@ MD("""
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. Drei Erfolgskriterien: Support ≥ 1 %, Lift ≥ 1,3, und die Regel muss eine Transporterfahrt begründen |
-| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Der stärkste Zusammenhang im Datensatz sind die Rundtouren (knapp 20 % der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
+| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren (16,5 % der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
 | 5 Evaluation | Von 32 Regeln nehmen 9 die Lift-, 16 die Handlungs-, aber **keine** die Support-Hürde. Die stärkste verfehlt sie um fünf Fahrten in drei Jahren — und die Hürde wird trotzdem nicht gesenkt, obwohl sich zeigt, dass sie auf der falschen Skala liegt. Die Deutung des Pendelstroms wurde von der tagesgenauen Gegenprobe **widerlegt**: null Hin- und Rückfahrten am selben Tag |
-| 6 Deployment | Der Langfristmittelwert zeigte 1,75 Räder je Werktag und damit keinen Bedarf; der **Tagessaldo** zeigt 19,8, im Maximum 56. Freigegeben wird die Einsammelrunde: 10,7 Räder je Werktag, verortet über die **End**koordinaten — bei 87 % von ihnen ist die nächste Station eine andere als die Startstation |
+| 6 Deployment | **Keine Freigabe** — Phase 6 ist eine eigene explorative Auswertung, die mit keiner Regel rechnet. Der Langfristmittelwert zeigte 1,75 Räder je Werktag; je Tag gerechnet sind es 19,8 bei Ausgleich nach jedem Fenster und 11,1 am Tagesende. Beides sind Ungleichgewichte, kein Bedarf. Die Abstell-Hotspots sind über die **End**koordinaten verortet — bei 87 % ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
 
@@ -1021,12 +1248,20 @@ MD("""
    liefern. Die Untergrenze von 0,5 % Support gehört dabei mit auf den Prüfstand — sie
    hat die zweitstärkste Verbindung des Datensatzes aussortiert, bevor sie jemand
    gesehen hat.
-4. **Die Richtung im Blick behalten.** Support und Lift sind symmetrisch: Vertauscht man
-   Start und Ziel, bleiben beide gleich. Die **Konfidenz** ist es nicht — sie teilt durch
-   die Fahrten ab dem Start und ändert sich, wenn man die Richtung dreht. Und keine der
-   drei Kennzahlen kennt ein *weil*: Dass morgens Räder zum Campus fahren, sagt nichts
-   darüber, ob die Vorlesung der Grund ist. Für den Transporter ist die Fahrtrichtung
-   dasselbe Stück Straße, für eine Werbekampagne nicht.
+4. **Die Richtung ernst nehmen.** In der klassischen Warenkorbanalyse sind Support und
+   Lift symmetrisch: *{Brot, Butter}* ist derselbe Korb wie *{Butter, Brot}*.
+
+   **Bei uns gilt das nicht**, und das ist eine der wichtigsten Eigenheiten dieses
+   Datensatzes: Eine Fahrt vom Hauptbahnhof zum Campus und eine Fahrt vom Campus zum
+   Hauptbahnhof sind **zwei verschiedene Ereignisse**, keine zwei Lesarten desselben. Sie
+   haben verschiedene Häufigkeiten, verschiedene Zeitfenster und verschiedenen Lift — die
+   Rückrichtung Hubland → Hauptbahnhof kam mit 217 Fahrten nicht einmal über die
+   Suchgrenze, während die Hinrichtung 505 hatte.
+
+   Wer die Symmetrieregel aus dem Lehrbuch auf gerichtete Wege überträgt, rechnet mit
+   einer Eigenschaft, die diese Daten nicht haben. Und keine der drei Kennzahlen kennt
+   ein *weil*: Dass morgens Räder zum Campus fahren, sagt nichts darüber, ob die Vorlesung
+   der Grund ist.
 
 **Weiter geht es mit Notebook 6 — Anomalieerkennung:** Dort suchen wir nicht das Muster,
 sondern seine Ausnahmen. Und wir werden feststellen, dass die schwierigste Frage nicht
