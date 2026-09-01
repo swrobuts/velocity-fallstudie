@@ -362,8 +362,15 @@ def k_suchen(X, titel, ks=range(2, 8)):
     achsen[1].set_xlabel("k"); achsen[1].set_ylabel("Silhouettenwert")
     achsen[1].set_title(f"{titel}: Silhouette (größer ist besser)"); achsen[1].grid(alpha=.3)
     plt.tight_layout(); plt.show()
-    return pd.DataFrame({"k": list(ks), "Inertia": np.round(inertia, 1),
-                         "Silhouette": np.round(silhouette, 3)})
+    tafel = pd.DataFrame({"k": list(ks), "Inertia": np.round(inertia, 1),
+                          "Silhouette": np.round(silhouette, 3)})
+    # Die Kennzahlen wandern in den Fliesstext, statt dort getippt zu werden.
+    kurz = "stationen" if titel.startswith("A") else "kunden"
+    best = tafel.loc[tafel.Silhouette.idxmax()]
+    merke(f"sil_{kurz}_bestes_k", int(best.k))
+    merke(f"sil_{kurz}_bestwert", float(best.Silhouette))
+    merke(f"sil_{kurz}_k4", float(tafel.loc[tafel.k == 4, "Silhouette"].iloc[0]))
+    return tafel
 
 print(k_suchen(S_skaliert, "A) Stationen").to_string(index=False))
 '''),
@@ -449,19 +456,31 @@ MD("""
 ### Die Gruppen benennen — Kriterium 1 aus Phase 1
 
 Jetzt kommt der Schritt, den kein Algorithmus abnimmt. Die Zahlen liefern Gruppen; **die
-Namen liefert der Verstand.** Lesen Sie die vier Kurven und die Zeile darunter:
+Namen liefert der Verstand.**
 
-- vier Stationen mit **Spitze um 7 Uhr** und einem Wochenendanteil von **16 %** — das
-  sind Wege zur Arbeit: **Pendlerstationen**
-- zwei Stationen mit **Spitze um 14 Uhr**, Wochenende noch niedriger bei **14 %** — das
-  folgt dem Vorlesungsbetrieb: **Uni-Stationen**
-- zwei Stationen mit **Spitze um 16 Uhr**, Wochenendanteil **56 %** und mit 29 Minuten
-  der doppelten Fahrtdauer — das ist Freizeit: **Ausflugsstationen**
-- zwei Stationen, die **zwischen allem** liegen: Marktplatz und Juliuspromenade, Spitze
-  um 18 Uhr, Wochenendanteil 34 % — **Innenstadtstationen**
+Die Zeile über jedem Cluster nennt drei Größen, und jede beantwortet eine andere Frage:
 
-Die Zahlen stehen in der Tabelle darüber; lesen Sie sie nach, statt der Aufzählung zu
-glauben.
+| Größe | Frage | Was ein hoher Wert bedeutet |
+|---|---|---|
+| **Spitzenstunde** | Wann wird abgefahren? | früh = von zuhause weg, spät = zurück oder Ankunft |
+| **Wochenendanteil** | Ist es Pflicht oder Freizeit? | hoch = Ausflug, niedrig = Arbeit oder Studium |
+| **Mediandauer** | Wie weit? | lang = Weg über die Stadt, kurz = innerstädtischer Sprung |
+
+Erst die **Kombination** trägt einen Namen. Eine frühe Spitze allein sagt nichts: Sie
+steht am Wohnort für den Weg zur Arbeit und am Bahnhof für den Anschluss an den Zug. Mit
+niedrigem Wochenendanteil und langer Dauer wird daraus eine **Wohnstation**; mit hohem
+Wochenendanteil und kurzer Dauer eine Freizeitlage.
+
+**Lesen Sie die gedruckte Zeile, nicht diesen Absatz.** Die Namen, die das Notebook
+vergibt, stehen in der Tabelle der nächsten Zelle — sie werden aus genau diesen drei
+Größen abgeleitet und ändern sich mit ihnen. Ein Fließtext, der die Gruppen aufzählt,
+wäre nach der nächsten Datenlieferung falsch, ohne dass es jemand merkt.
+
+> **Eine Gruppe ist auffällig klein.** Bei zehn Stationen und k = 4 besteht ein Cluster
+> nur aus einer einzigen Station. Das ist kein Typ, sondern ein Sonderfall — und
+> Sonderfälle behandelt man einzeln. Rechnen Sie damit, dass diese Gruppe bei der
+> nächsten Datenlieferung anders aussieht; zehn Beobachtungen tragen keine Typologie,
+> sie tragen eine Arbeitshypothese.
 
 **Kriterien 1 bis 3 aus Phase 1 sind damit erfüllt:** Jede Gruppe ist benennbar, jede
 bekommt in Phase 6 eine eigene Regel, und keine ist zu klein. Kriterium 2 wird dort
@@ -495,8 +514,8 @@ def stabilitaet(daten, k, name):
           f"{'stabil' if min(werte) > 0.99 else 'nur annähernd stabil'}")
     return min(werte)
 
-s_stab = stabilitaet(S_skaliert, K_STATIONEN, "Stationen")
-k_stab = stabilitaet(R_skaliert, K_KUNDEN, "Kundschaft")
+s_stab = merke("ari_stationen", stabilitaet(S_skaliert, K_STATIONEN, "Stationen"))
+k_stab = merke("ari_kunden", stabilitaet(R_skaliert, K_KUNDEN, "Kundschaft"))
 '''),
 
 MD("""
@@ -606,6 +625,7 @@ print(f"    ARI zwischen den beiden Stichtagen: "
 
 print("(1a) DIE VIER RFM-REGELN - feste Schwellen, beide Stichtage\\n")
 print(f"     In beiden Fenstern aktiv: {len(gemeinsam)} Kundinnen und Kunden")
+merke("gate_rfm", wechselquote)
 print(f"     Segmentwechsel binnen 90 Tagen: {wechselquote:.1%}")
 
 # ---------------------------------------------------------------------
@@ -746,6 +766,9 @@ hoch["umsatz"] = hoch.umsatz * faktor
 anders = (hoch.apply(segment_benennen, axis=1) != segment_roh.loc[jung])
 
 print("\\n(3) UNGLEICHE BEOBACHTUNGSDAUER\\n")
+merke("kurze_historie", len(jung))
+merke("kurze_historie_wechsel", int(anders.sum()))
+merke("kurze_historie_anteil", anders.mean())
 print(f"    RFM-Kundschaft mit weniger als {FENSTER_TAGE} Tagen Historie: {len(jung)}")
 print(f"    Median der beobachteten Tage bei ihnen: "
       f"{beobachtet.loc[jung].median():.0f}")
@@ -763,9 +786,9 @@ MD("""
 >
 > | Kennzahl | Wert | Was sie misst |
 > |---|---:|---|
-> | **Kampagnen-Arbeitsliste** | **25,68 %** | die Menschen, die eine Ansprache bekämen — **hieran hängt das Gate** |
-> | alle Lebenszykluszustände | 24,75 % | Diagnose der Bestandsdynamik |
-> | die vier RFM-Regeln allein | 24,89 % | ein Ausschnitt davon |
+> | **Kampagnen-Arbeitsliste** | **{{gate_eng:.2%}}** | die Menschen, die eine Ansprache bekämen — **hieran hängt das Gate** |
+> | alle Lebenszykluszustände | {{gate_weit:.2%}} | Diagnose der Bestandsdynamik |
+> | die vier RFM-Regeln allein | {{gate_rfm:.2%}} | ein Ausschnitt davon |
 > | k-Means, jeweils neu gerechnet | nur Modelldiagnose | ein Modell, das **nicht** ausgeliefert wird |
 >
 > **Der Nenner muss trotzdem vorher feststehen.** Nimmt man alle
@@ -806,10 +829,15 @@ um 90 Tage verschobenen Fenstern beträgt 1,000; die Zuordnung ändert sich nich
 mehr, als die Startwertprüfung allein zeigen konnte, und es gilt für diesen synthetischen
 Datensatz mit seinen vier bewusst erzeugten Typen.
 
-**Die Kundensegmente sind es nur annähernd.** Bei den zehn Stationen
-liefert jeder Startwert dieselbe Einteilung. Bei mehreren tausend Kundinnen und Kunden
-können je nach Startwert einzelne Personen zwischen den Gruppen wandern — der ARI bleibt
-hoch, muss aber nicht 1,0 erreichen.
+**Auch die Kundensegmente sind über die Startwerte reproduzierbar** — der niedrigste
+gemessene ARI beträgt {{ari_kunden:.3f}} bei den Kunden und {{ari_stationen:.3f}} bei den
+Stationen.
+
+Das ist ein günstiger Befund, kein garantierter. Bei mehreren tausend Kundinnen und Kunden
+liegen viele nahe an einer Gruppengrenze; ein anderer Startwert oder ein um wenige Tage
+verschobenes Fenster kann sie auf die andere Seite bringen. **Startwertstabilität misst
+die Rechnung, nicht die Sache** — dass dasselbe Verfahren zweimal dasselbe ergibt, sagt
+nichts darüber, ob die Gruppen morgen noch dieselben sind.
 
 Für die Auslieferung heißt das: Die Stationszuordnung ist **am aktuellen Datenstand und
 über die getesteten Startwerte** reproduzierbar — nicht „fest" im Sinne von dauerhaft. Der
@@ -819,16 +847,28 @@ Cluster-Nummern ausgeliefert, sondern über nachvollziehbare Schwellen** — die
 reproduzierbar.
 
 > **Und noch eine Zahl, die man nicht überlesen sollte:** Der Silhouettenwert der
-> Kundensegmente liegt bei 0,409, der der Stationen bei 0,759. Werte um 0,4 heißen:
+> Kundensegmente liegt bei k = 4 bei {{sil_kunden_k4:.3f}}, der der Stationen bei
+> {{sil_stationen_k4:.3f}}. Werte um 0,4 heißen:
 > Es *gibt* eine Struktur, aber die Gruppen gehen ineinander über. Das ist bei
 > Kundendaten der Normalfall und kein Fehler — es ist aber ein Grund, die Segmente als
 > Arbeitshilfe zu behandeln und nicht als Naturkonstante.
 
-> **Bei den Stationen stimmen Kennzahl und Fachlichkeit überein** — der Silhouettenwert
-> ist bei k = 4 am höchsten, und die vier Gruppen lassen sich benennen. Das ist der
-> angenehme Fall.
+> **Bei den Stationen zeigt die Kennzahl woanders hin als die Fachlichkeit.** Den
+> höchsten Silhouettenwert hat **k = {{sil_stationen_bestes_k:.0f}}**
+> ({{sil_stationen_bestwert:.3f}}), nicht das gewählte k = 4
+> ({{sil_stationen_k4:.3f}}). Gewählt wurde k = 4 trotzdem — aber dann muss man sagen,
+> warum, und darf sich nicht hinter der Kennzahl verstecken.
 >
-> **Verlassen kann man sich darauf nicht.** Bei der Kundensegmentierung weiter unten liegen
+> Der Grund ist Kriterium 2: Bei zehn Stationen erzeugt jedes weitere k Gruppen von ein
+> bis zwei Stationen, für die es keine eigene Maßnahme gibt. Schon bei k = 4 besteht eine
+> Gruppe nur aus dem Hauptbahnhof. **Ein Cluster, das eine einzige Station enthält, ist
+> kein Typ, sondern ein Sonderfall** — und Sonderfälle behandelt man einzeln, nicht mit
+> einem Verfahren.
+>
+> Genau das ist die Lehre: Eine Kennzahl, die einen Zielkonflikt nicht kennt, kann ihn
+> auch nicht entscheiden. Die Silhouette misst Trennschärfe, nicht Handhabbarkeit.
+>
+> **Verlassen kann man sich auf sie ohnehin nicht.** Bei der Kundensegmentierung liegen
 > die Silhouettenwerte für k = 2, k = 4 und k = 5 dicht beieinander; dort entscheidet die
 > Kennzahl gar nichts, und die vier Kriterien aus Phase 1 sind das Einzige, was bleibt.
 > Wer nur auf die Kennzahl schaut, hat kein Verfahren für den Fall, dass sie schweigt.
@@ -857,8 +897,23 @@ pruefung = pd.DataFrame({"gefunden": S.cluster,
                          "erzeugt_als": [ERZEUGT_ALS[n] for n in S.index]})
 kreuz = pd.crosstab(pruefung.gefunden, pruefung.erzeugt_als)
 print(kreuz.to_string())
-treffer = kreuz.max(axis=1).sum() / kreuz.values.sum()
-print(f"\\nÜbereinstimmung: {treffer:.0%} — jede gefundene Gruppe entspricht genau einem erzeugten Typ.")
+treffer = merke("generator_treffer", kreuz.max(axis=1).sum() / kreuz.values.sum())
+# Die Mehrheitszuordnung schmeichelt: Sie darf jede gefundene Gruppe ihrem
+# haeufigsten erzeugten Typ zuschlagen. Der Adjusted Rand Index vergleicht
+# die beiden Einteilungen als Ganzes und ist gegen die Benennung unempfindlich.
+_ari_gen = merke("generator_ari",
+                 adjusted_rand_score(pruefung.erzeugt_als, pruefung.gefunden))
+_daneben = len(pruefung) - int(kreuz.max(axis=1).sum())
+
+print(f"\\nMehrheitszuordnung: {treffer:.0%}")
+print(f"Adjusted Rand Index: {_ari_gen:.3f}")
+if treffer >= 0.999:
+    print("Jede gefundene Gruppe entspricht genau einem erzeugten Typ.")
+else:
+    print(f"\\nAlso NICHT deckungsgleich: {_daneben} von {len(pruefung)} Stationen liegen")
+    print("in einer Gruppe, deren Mehrheit ein anderer erzeugter Typ ist.")
+    print("Die beiden Zahlen sagen Verschiedenes - die erste darf jede Gruppe")
+    print("guenstig benennen, die zweite nicht. Berichtet gehoert die zweite.")
 '''),
 
 MD("""
@@ -876,27 +931,65 @@ tarifverteilung = (rfm.groupby("cluster").tarif_code.value_counts(normalize=True
 uebersicht = profil.join(tarifverteilung)
 print(uebersicht.to_string())
 
-# Der Befund, um den es gleich geht: Wer am haeufigsten faehrt, bringt je
-# Fahrt am wenigsten. Die Zahlen kommen von hier, nicht aus dem Fliesstext -
-# und die Cluster werden ueber ihre Eigenschaften angesprochen, nicht ueber
-# ihre Nummer, die k-Means beliebig vergibt.
-_je_fahrt = (profil.umsatz_fenster / profil.fahrten_fenster).round(2)
+# Der Preisbefund wird an den REGELSEGMENTEN gerechnet, nicht an den
+# Clustern - denn ausgeliefert werden die Regeln. Das ist keine Feinheit:
+# Auf diesem Datenstand faellt bei k-Means das fahrtenstaerkste und das
+# umsatzstaerkste Cluster ZUSAMMEN. Wer den Befund am Cluster festmacht,
+# vergleicht dieselbe Gruppe mit sich selbst.
+_je_fahrt_cl = (profil.umsatz_fenster / profil.fahrten_fenster).round(2)
 _haeufigste = profil.fahrten_fenster.idxmax()
 _umsatzstaerkste = profil.umsatz_fenster.idxmax()
-merke("viel_fahrten", profil.fahrten_fenster[_haeufigste])
-merke("viel_umsatz", profil.umsatz_fenster[_haeufigste])
-merke("viel_je_fahrt", _je_fahrt[_haeufigste])
-merke("stark_fahrten", profil.fahrten_fenster[_umsatzstaerkste])
-merke("stark_umsatz", profil.umsatz_fenster[_umsatzstaerkste])
-merke("stark_je_fahrt", _je_fahrt[_umsatzstaerkste])
-_ = merke("faktor_je_fahrt", _je_fahrt[_umsatzstaerkste] / max(_je_fahrt[_haeufigste], 0.01))
+merke("cluster_haeufigste", int(_haeufigste))
+merke("cluster_umsatzstaerkste", int(_umsatzstaerkste))
+merke("cluster_faellt_zusammen", int(_haeufigste == _umsatzstaerkste))
+
+seg_profil = rfm.assign(segment=rfm.apply(segment_benennen, axis=1)).groupby("segment").agg(
+    kunden=("frequenz", "size"),
+    fahrten_fenster=("frequenz", "mean"),
+    umsatz_fenster=("umsatz", "mean")).round(1)
+_je_fahrt = (seg_profil.umsatz_fenster / seg_profil.fahrten_fenster).round(2)
+_viel = seg_profil.fahrten_fenster.idxmax()
+_stark = seg_profil.umsatz_fenster.idxmax()
+merke("viel_segment", _viel); merke("stark_segment", _stark)
+merke("viel_fahrten", seg_profil.fahrten_fenster[_viel])
+merke("viel_umsatz", seg_profil.umsatz_fenster[_viel])
+merke("viel_je_fahrt", _je_fahrt[_viel])
+merke("stark_fahrten", seg_profil.fahrten_fenster[_stark])
+merke("stark_umsatz", seg_profil.umsatz_fenster[_stark])
+merke("stark_je_fahrt", _je_fahrt[_stark])
+merke("faktor_je_fahrt", _je_fahrt[_stark] / max(_je_fahrt[_viel], 0.01))
+
 print()
-print(f"Am haeufigsten faehrt Cluster {_haeufigste}: "
-      f"{profil.fahrten_fenster[_haeufigste]:.1f} Fahrten, "
-      f"{_je_fahrt[_haeufigste]:.2f} EUR je Fahrt")
-print(f"Am meisten Umsatz bringt Cluster {_umsatzstaerkste}: "
-      f"{profil.fahrten_fenster[_umsatzstaerkste]:.1f} Fahrten, "
-      f"{_je_fahrt[_umsatzstaerkste]:.2f} EUR je Fahrt")
+print("k-MEANS-CLUSTER - Umsatz je Fahrt:")
+print((profil[["fahrten_fenster", "umsatz_fenster"]]
+       .assign(**{"EUR je Fahrt": _je_fahrt_cl}).round(2).to_string()))
+if _haeufigste == _umsatzstaerkste:
+    print(f"\\nHinweis: Cluster {_haeufigste} ist ZUGLEICH das fahrtenstaerkste und das")
+    print("umsatzstaerkste. Der Preisbefund laesst sich an den Clustern also nicht")
+    print("zeigen - dafuer braucht es die Regelsegmente unten.")
+else:
+    print(f"\\nAm haeufigsten faehrt Cluster {_haeufigste} "
+          f"({_je_fahrt_cl[_haeufigste]:.2f} EUR je Fahrt), am meisten Umsatz bringt "
+          f"Cluster {_umsatzstaerkste} ({_je_fahrt_cl[_umsatzstaerkste]:.2f} EUR).")
+
+_seg = rfm.assign(segment=rfm.apply(segment_benennen, axis=1))
+_seg_tarif = (_seg.groupby("segment").tarif_code.value_counts(normalize=True)
+              .unstack().fillna(0) * 100).round(0)
+print("\\nREGELSEGMENTE - dieselbe Rechnung, und diese Gruppen werden ausgeliefert:")
+print(seg_profil.assign(**{"EUR je Fahrt": _je_fahrt}).join(_seg_tarif).to_string())
+
+# Die Erklaerung des Befundes ist eine Behauptung ueber Tarife - also wird
+# sie gemessen, nicht geglaubt.
+_frei = [t for t in ("OEPNV", "PREMIUM", "STUDENT") if t in _seg_tarif.columns]
+merke("viel_anteil_freiminuten", _seg_tarif.loc[_viel, _frei].sum() / 100)
+merke("stark_anteil_basis", _seg_tarif.loc[_stark, "BASIS"] / 100)
+print(f"\\nAm haeufigsten faehrt '{_viel}': {seg_profil.fahrten_fenster[_viel]:.1f} "
+      f"Fahrten, {_je_fahrt[_viel]:.2f} EUR je Fahrt")
+print(f"Am meisten Umsatz bringt '{_stark}': {seg_profil.fahrten_fenster[_stark]:.1f} "
+      f"Fahrten, {_je_fahrt[_stark]:.2f} EUR je Fahrt")
+assert _viel != _stark, ("Auch bei den Regelsegmenten fallen fahrten- und "
+                         "umsatzstaerkste Gruppe zusammen - der Text unten "
+                         "behauptet dann einen Gegensatz, den es nicht gibt.")
 
 fig, achsen = plt.subplots(1, 3, figsize=(15, 4))
 for spalte, achse, titel in zip(["recency", "frequenz", "umsatz"], achsen,
@@ -914,12 +1007,23 @@ MD("""
 
 Sehen Sie sich die Spalten `fahrten_fenster` und `umsatz_fenster` nebeneinander an. Sie
 heißen so und nicht `..._jahr`, weil ein Teil der Kundschaft **kein volles Jahr** beobachtet
-wurde — für 406 von ihnen wäre „je Jahr“ schlicht falsch:
+wurde — für {{kurze_historie:.0f}} von ihnen wäre „je Jahr“ schlicht falsch:
 
 **Das Segment mit den meisten Fahrten bringt am wenigsten Umsatz JE FAHRT.** Und diese
 Einschränkung ist wichtig — lesen Sie die Tabelle genau:
 
-Die Zelle darüber stellt die beiden Randgruppen nebeneinander:
+**Wichtig ist, worüber hier gerechnet wird.** Die Zelle darüber zeigt zwei Tabellen: die
+k-Means-Cluster und die **Regelsegmente**. Der Befund steht bei den Regelsegmenten — und
+nur dort. Bei den Clustern fällt auf diesem Datenstand die fahrtenstärkste mit der
+umsatzstärksten Gruppe zusammen; ein Gegensatz ließe sich dort gar nicht zeigen.
+
+Das ist kein Schönheitsfehler, sondern der Grund, warum das Notebook Regeln ausliefert
+und keine Clusternummern: **Die Regeln sind die Gruppen, auf die später jemand eine
+Maßnahme anwendet.** Eine Geschichte über Gruppen, die niemand ausliefert, wäre für die
+Geschäftsführung wertlos.
+
+Die beiden Randgruppen der Regelsegmente — „{{viel_segment}}" und „{{stark_segment}}" —
+nebeneinander:
 
 Die Gruppe mit den **meisten Fahrten** kommt auf {{viel_fahrten:.1f}} Fahrten und
 {{viel_umsatz:.2f}} € im Fenster — das sind **{{viel_je_fahrt:.2f}} € je Fahrt**. Die
@@ -937,10 +1041,12 @@ Gruppe mit dem **höchsten Umsatz** fährt nur {{stark_fahrten:.1f}} mal, bringt
 > sich auf einen Zufall.** Deshalb spricht auch dieser Text die Gruppen über ihre
 > Eigenschaften an, und Phase 6 liefert Schwellen aus statt Nummern.
 
-Ein Blick auf die Tarifverteilung erklärt es: Die Vielfahrer sitzen überwiegend im
-**OEPNV-Abo** oder im **Premium**-Tarif — mit 600 bzw. 1.000 Freiminuten im Monat. Sie
-fahren viel und zahlen für die einzelne Fahrt fast nichts. Die Umsatzträger sind dagegen
-fast vollständig im **Basistarif**: keine Freiminuten, jede Minute wird berechnet.
+Ein Blick auf die Tarifspalten derselben Tabelle erklärt es:
+{{viel_anteil_freiminuten:.0%}} der Gruppe „{{viel_segment}}" sitzen in einem Tarif **mit**
+Freiminuten — OEPNV-Abo, Premium oder Student. Sie fahren viel und zahlen für die einzelne
+Fahrt fast nichts. In der Gruppe „{{stark_segment}}" sind dagegen
+{{stark_anteil_basis:.0%}} im **Basistarif**: keine Freiminuten, jede Minute wird
+berechnet.
 
 > **„OEPNV-Abo“ meint das Abo des Kunden, nicht eines bei VeloCity.** Alle vier Tarife
 > sind beitragsfrei; die drei Vorteilstarife bekommt man über einen Nachweis —
@@ -1095,7 +1201,7 @@ CODE("""
 mit_freiminuten = rfm[rfm.verschenkt > 0]
 # NICHT PAUSCHAL DURCH ZWOELF.
 #
-# 406 Personen waren kuerzer als ein Jahr dabei. Ihr Fensterwert durch 12
+# Ein Teil der Kundschaft war kuerzer als ein Jahr dabei. Ihr Fensterwert durch 12
 # geteilt ergaebe einen zu niedrigen Monatswert. Geteilt wird deshalb
 # durch die TATSAECHLICH beobachteten Kundenmonate.
 monate_beobachtet = (beobachtet.reindex(mit_freiminuten.index)
@@ -1452,8 +1558,13 @@ print(f"\\n{len(export)} aktive Konten in der Liste, "
 print("geschrieben: kampagnenliste.csv")
 if not KUNDENSEGMENTE_STABIL:
     print()
+    # Gemeldet wird die Zahl, die das Gate ENTSCHEIDET (liste_wechsel), nicht
+    # die des RFM-Ausschnitts. Drei Nenner liefern drei Zahlen; wer hier die
+    # falsche druckt, begruendet die Sperre mit einer Groesse, die sie nicht
+    # ausgeloest hat.
     print("Zusaetzlich ist das Stabilitaetsgate gerissen "
-          f"({wechselquote:.1%} > {GATE_WECHSEL:.0%}).")'''),
+          f"({liste_wechsel:.2%} > {GATE_WECHSEL:.0%}, gemessen auf der "
+          "Kampagnen-Arbeitsliste).")'''),
 MD("""
 ### 6.4 Was bei diesen beiden Auslieferungen zu beachten ist
 
@@ -1499,7 +1610,7 @@ MD("""
 | 2 Data Understanding | Stammdaten enthalten keinen Typ — das Muster steckt im Verhalten | Kein Segment in der Kundentabelle |
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
-| 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: 100 %. Stabilität gemessen, nicht behauptet | Vier Segmente, nur annähernd stabil und mit schwächerer Trennung — dazu zwei Befunde, die weh tun, und eine hypothetische Rechnung |
+| 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: {{generator_treffer:.0%}} Mehrheitszuordnung, ARI {{generator_ari:.3f}}. Stabilität gemessen, nicht behauptet | Vier Segmente, über die Startwerte reproduzierbar (ARI {{ari_kunden:.3f}}), aber mit schwächerer Trennung (Silhouette {{sil_kunden_k4:.3f}}) — dazu zwei Befunde, die weh tun, und eine hypothetische Rechnung |
 | 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Gesperrter analytischer Arbeitsstand**: **alle sechs** Freigabe-Gates offen. Auch das Stabilitätsgate reißt, sobald man es am richtigen Nenner misst — an denen, die eine Ansprache bekämen |
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**

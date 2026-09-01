@@ -317,6 +317,56 @@ URTEIL_WORT = re.compile(
 KRITERIUM = re.compile(r"\bK\d[ab]?\b")
 
 
+VERGLEICH = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:bool\()?\s*"
+    r"([a-z_][a-z0-9_]*)\s*(?:<=|>=|<|>|==|!=)\s*([A-Za-z_][A-Za-z0-9_]*)", re.M)
+
+
+def pruefe_gate_mit_fremder_zahl(code: list[str]) -> list[str]:
+    """Findet Gates, die mit einer anderen Zahl begruendet werden als der,
+    die sie entscheidet.
+
+    In Notebook 3 haengt die Kampagnensperre an `liste_wechsel` (Wechselquote
+    der Arbeitsliste), gemeldet wurde beim Reissen aber `wechselquote` - der
+    RFM-Ausschnitt. Beide Zahlen sind richtig, beide liegen nah beieinander,
+    und genau deshalb faellt es niemandem auf: Die Sperre wird mit einer
+    Groesse begruendet, die sie nicht ausgeloest hat. Drei Nenner, drei
+    Zahlen - wer den falschen druckt, macht das Gate unpruefbar.
+
+    Erkannt wird das Muster `FLAG = a <= b` gefolgt von `if not FLAG:` mit
+    einem print, dessen f-String weder a noch b nennt.
+    """
+    befunde = []
+    for nr, quelltext in enumerate(code, 1):
+        herkunft = {flag: {links, rechts}
+                    for flag, links, rechts in VERGLEICH.findall(quelltext)}
+        if not herkunft:
+            continue
+        zeilen = quelltext.split("\n")
+        for i, zeile in enumerate(zeilen):
+            treffer = re.match(r"\s*if\s+(?:not\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:", zeile)
+            if not treffer or treffer.group(1) not in herkunft:
+                continue
+            flag = treffer.group(1)
+            tiefe = len(zeile) - len(zeile.lstrip())
+            block = []
+            for folge in zeilen[i + 1:]:
+                if folge.strip() and (len(folge) - len(folge.lstrip())) <= tiefe:
+                    break
+                block.append(folge)
+            gedruckt = "\n".join(z for z in block if "print(" in z or z.strip().startswith("f\""))
+            if "{" not in gedruckt:          # kein Wert im Block - nichts zu pruefen
+                continue
+            genannt = set(re.findall(r"\{([a-z_][a-z0-9_]*)", gedruckt))
+            if genannt and not (genannt & herkunft[flag]):
+                befunde.append(
+                    f"Zelle {nr}: '{flag}' entscheidet ueber "
+                    f"{' / '.join(sorted(herkunft[flag]))}, gemeldet wird aber "
+                    f"{' / '.join(sorted(genannt))} - das Gate wird mit einer "
+                    f"anderen Zahl begruendet als der, die es ausloest")
+    return befunde
+
+
 def pruefe_urteil_im_text(markdown: list[str]) -> list[str]:
     """Findet Urteile ueber Erfolgskriterien, die im Fliesstext festgeschrieben sind.
 
@@ -390,7 +440,8 @@ def main() -> int:
                   + pruefe_harte_ergebnisnamen(bauskript)
                   + pruefe_gate_ohne_sperre(bauskript)
                   + pruefe_platzhalterrest(markdown, bauskript)
-                  + pruefe_urteil_im_text(markdown))
+                  + pruefe_urteil_im_text(markdown)
+                  + pruefe_gate_mit_fremder_zahl(code))
         hinweise = (pruefe_nullfuellung(code) + pruefe_freie_schwellen(code)
                     + pruefe_urteil_ohne_zahl(ausgaben))
         if fehler:
