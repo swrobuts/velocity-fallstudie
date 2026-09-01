@@ -295,12 +295,12 @@ def zeile_bauen(stichtag):
 
     # KILOMETER SEIT DER LETZTEN ERLEDIGTEN REPARATUR.
     #
-    # Nicht seit der MELDUNG: Zwischen Meldung und Reparatur vergehen im
-    # Mittel 2,8 Tage, und in dieser Zeit wird weitergefahren - bei 508 der
-    # 640 Meldungen, insgesamt 1.031 Fahrten. Diese Kilometer gehen auf das
-    # ALTE Bauteil. Wer bei der Meldung zurücksetzt, schreibt sie dem neuen
-    # gut und macht das wichtigste Merkmal des Notebooks systematisch zu
-    # klein - ausgerechnet bei den Rädern, die gerade auffällig waren.
+    # Nicht seit der MELDUNG: Zwischen beidem wird weitergefahren - die
+    # Zahlen dazu stehen oben, gerechnet statt behauptet. Diese Kilometer
+    # gehen auf das ALTE Bauteil. Wer bei der Meldung zuruecksetzt,
+    # schreibt sie dem neuen gut und macht das wichtigste Merkmal des
+    # Notebooks systematisch zu klein - ausgerechnet bei den Raedern, die
+    # gerade auffaellig waren.
     erledigt = schaeden.merge(
         auftraege[["schadensmeldung_id", "erledigt_am"]], on="schadensmeldung_id", how="left")
     fertig = erledigt[erledigt.erledigt_am.notna() & (erledigt.erledigt_am <= stichtag)]
@@ -571,7 +571,8 @@ fig, achsen = plt.subplots(1, 2, figsize=(12.5, 4.5))
 ConfusionMatrixDisplay(cm, display_labels=["unauffällig", "meldet sich"]).plot(
     cmap="Blues", ax=achsen[0], colorbar=False)
 achsen[0].set_title(f"Quartalsliste mit {KAPAZITAET} Rädern — Faustregel")
-achsen[0].set_xlabel("vom Modell auf die Liste gesetzt"); achsen[0].set_ylabel("tatsächlich")
+achsen[0].set_xlabel("durch das Verfahren auf die Liste gesetzt")
+achsen[0].set_ylabel("tatsächlich")
 
 # Wie gut ist die Rangfolge? Trefferquote in Abhaengigkeit der Listenlaenge.
 laengen = range(10, len(y_test) + 1, 5)
@@ -656,6 +657,11 @@ def rollierend(bis_stichtag):
 
 # Die VALIDIERUNG: alle Stichtage ausser dem ersten (zu wenig Trainingsdaten)
 # und dem letzten (der bleibt unangetastet fuer den Test).
+# Der letzte Stichtag bleibt aussen vor. Ein Wort zur Ehrlichkeit: Er ist
+# der letzte HISTORISCHE Holdout, kein unangetasteter Test - seine Zahlen
+# wurden in einer frueheren Fassung dieses Notebooks bereits angesehen,
+# und danach wurden Distanzlogik, Ausreisser und Reparaturzeitpunkt
+# geaendert. Ein wirklich unangetasteter Test braucht eine Zukunftsperiode.
 validierung = stichtage[2:-1]
 zeilen = []
 for tag in validierung:
@@ -759,29 +765,44 @@ Abdeckung erhöhen will, muss über Kapazität reden, nicht über Modelle.
 Jetzt kommen die beiden Kriterien aus Phase 1 zum Einsatz — und ein drittes, das die
 rollierende Validierung erzwingt: **Ein Modell wird nur ausgeliefert, wenn es die
 Faustregel über mehrere Quartale schlägt.** Ein einzelnes gutes Quartal genügt nicht.
+
+Das erste Kriterium steht in zwei Spalten, und der Unterschied ist der Kern von 5.4:
+
+- **K1a** fragt, ob der *beobachtete* Wert die 70 Prozent erreicht. Das ist die Lesart,
+  die in Projektberichten üblich ist.
+- **K1b** fragt, ob die Hürde auch *statistisch getragen* wird — dafür müsste die untere
+  Grenze des Wilson-Intervalls darüber liegen.
+
+Die Entscheidung unten folgt K1a. **Das ist eine Lehrentscheidung, keine Freigabe:** Für
+einen realen Einsatz wäre K1b das richtige Kriterium, und es ist von keinem der beiden
+Verfahren erfüllt.
 """),
 
 CODE('''
 kosten_heute = float(tabelle.loc[tabelle.Vorgehen.str.contains("ältestes"), "Kosten (EUR)"].iloc[0])
 vorteil_roll = roll["Vorteil Wald (EUR)"].sum()
 
-print(f"{'':32s}{'Treffer':>9s}{'Kosten':>11s}{'K1 >=70%':>11s}"
-      f"{'K2 günstiger':>14s}{'K3 stabil':>12s}")
-print("-" * 90)
+print(f"{'':30s}{'Treffer':>8s}{'Kosten':>10s}{'K1a beob.':>11s}"
+      f"{'K1b belegt':>12s}{'K2 günst.':>11s}{'K3 stabil':>11s}")
+print("-" * 94)
 
 urteile = {}
 for name, score in [("Faustregel: km seit Reparatur", p_regel),
                     ("Modell: Random Forest", p_wald)]:
     e = liste_bewerten(name, score, y_test)
-    k1 = e["Trefferquote"] >= 0.70
+    # K1a ist deskriptiv: der beobachtete Punktschaetzer.
+    # K1b ist die Frage, ob die Huerde auch statistisch getragen wird -
+    # dafuer muesste die UNTERE Grenze des Intervalls darueber liegen.
+    k1a = e["Trefferquote"] >= 0.70
+    k1b = wilson(e["Treffer"], KAPAZITAET)[0] >= 0.70
     k2 = e["Kosten (EUR)"] < kosten_heute
     # K3 gilt fuer die Regel per Definition - sie IST der Massstab.
     k3 = True if "Faustregel" in name else vorteil_roll > 0
-    urteile[name] = (e, k1, k2, k3)
+    urteile[name] = (e, k1a, k2, k3)
     betrag = f"{e['Kosten (EUR)']:,.0f}".replace(",", ".")
-    print(f"{name:32s}{e['Trefferquote']:>8.1%}{betrag:>9s} €"
-          f"{'ERFÜLLT' if k1 else 'GERISSEN':>11s}{'ERFÜLLT' if k2 else 'GERISSEN':>14s}"
-          f"{'ERFÜLLT' if k3 else 'GERISSEN':>12s}")
+    ja = lambda b: "ERFÜLLT" if b else "GERISSEN"
+    print(f"{name:30s}{e['Trefferquote']:>7.1%}{betrag:>8s} €"
+          f"{ja(k1a):>11s}{ja(k1b):>12s}{ja(k2):>11s}{ja(k3):>11s}")
 
 alle_drei = [n for n in urteile if all(urteile[n][1:])]
 
@@ -807,10 +828,21 @@ Verfahren, sondern ein Zufall.
 Ausgeliefert wird deshalb die Faustregel. Sie kostet eine Zeile SQL, jede Werkstattkraft
 versteht sie, und sie trifft genauso gut.
 
-> **Das Modell war trotzdem nicht umsonst.** Ohne es wüssten wir nicht, dass die Regel
-> ausgereizt ist. Ein Wald mit 300 Bäumen auf denselben Merkmalen findet nichts, was über
-> „Kilometer seit der Reparatur" hinausgeht — das ist eine Aussage über die Daten, und
-> zwar eine wertvolle: **Mehr Modell hilft hier nicht, mehr Merkmale vielleicht schon.**
+> **Das Modell war trotzdem nicht umsonst.** Ohne es stünde hier eine Trefferquote und
+> niemand könnte sagen, ob sie gut ist. Was gezeigt wurde, ist präzise dies: **Mit dieser
+> Merkmalsmenge, dieser Waldkonfiguration und diesen fünf Perioden ist kein stabiler
+> Zusatznutzen gegenüber der Faustregel nachgewiesen.**
+>
+> Das ist etwas anderes als „der Wald lernt nichts dazu". Die beiden Listen unterscheiden
+> sich bei 17 von 60 Rädern — er sortiert durchaus anders, nur nicht besser. Und geprüft
+> wurden ein Baum und eine Waldkonfiguration, nicht der Modellraum.
+
+> **Ein Wort zum Klassengewicht 7,2.** Es stammt aus dem Kostenverhältnis, ist aber
+> **keine direkte Übersetzung der Geschäftsentscheidung**: Bei einer festen Liste von 60
+> Rädern entscheidet kein Schwellenwert, sondern der Rang. Das Gewicht verändert, was
+> der Wald lernt, und kann die Rangfolge verbessern oder verschlechtern. Ob 7,2 der
+> richtige Wert ist, müsste auf den Validierungsquartalen gegen Precision@60 geprüft
+> werden — hier ist es gesetzt, nicht gefunden.
 
 ### 5.7 Und was, wenn die Werkstatt mehr Kapazität bekäme?
 
@@ -873,14 +905,26 @@ Grundrate von 45 Prozent ist das bis zum letzten Rad der Fall.
 **Deshalb bleibt die Kapazität hier eine harte Vorgabe und wird nicht optimiert.** Die
 Formel taugt, um zwei Verfahren bei *gleicher* Listenlänge zu vergleichen — dafür ist sie
 in diesem Notebook auch benutzt worden. Sie taugt nicht, um die Listenlänge selbst zu
-wählen. Wer sie dafür verwendet, bekommt eine Antwort, die niemand umsetzen würde.
+wählen.
+
+> **Auch beim Verfahrensvergleich bleibt sie ein Szenario.** Sie unterstellt, dass jeder
+> Treffer den Schaden vollständig verhindert, dass jeder verpasste Ausfall genau 180 €
+> kostet und dass ein leichter Defekt so teuer ist wie ein fahruntauglicher. Von den
+> auffälligen Rädern des Testquartals ist nur ein Drittel fahruntauglich — zwei Listen
+> mit gleich vielen Treffern können wirtschaftlich sehr verschieden sein. Wo im Folgenden
+> Euro stehen, stehen **Szenariokosten**.
 """),
 
 MD("""
-**Das ist der Punkt, an dem aus einer Analyse eine Entscheidungsvorlage wird.** Die Frage
-„sollen wir eine halbe Stelle in der Werkstatt aufbauen?“ lässt sich jetzt mit einer Zahl
-beantworten statt mit einem Gefühl — und zwar mit einer, die aus denselben Kosten
-abgeleitet ist, die in Phase 1 festgelegt wurden.
+**Und das ist der Punkt, an dem eine Analyse ehrlich sein muss.** Die Frage „sollen wir
+eine halbe Stelle in der Werkstatt aufbauen?“ lässt sich mit dieser Kostenformel **gerade
+nicht** beantworten. Dafür fehlen die Prüf- und Reparaturkosten der Treffer und die
+empirische Wahrscheinlichkeit, dass eine Prüfung einen Schaden überhaupt erkennt und
+verhindert.
+
+Eine Analyse, die hier eine Zahl nennt, nennt eine erfundene. Der richtige nächste
+Schritt ist kein weiteres Modell, sondern ein Gespräch mit Werkstatt und Controlling
+über die tatsächlichen Kosten je Prüfung, Reparatur und Ausfall.
 """),
 
 # =====================================================================
@@ -891,7 +935,13 @@ import joblib, datetime
 
 liste = test_zeilen.copy()
 liste["rangwert"] = ausgelieferter_score          # KEIN zweiter Wert, kein Umweg
-liste["modellscore"] = p_wald                     # nur zum Vergleich, nicht zur Sortierung
+# Wie weit ist der Modellscore von einer Wahrscheinlichkeit entfernt?
+# Gemessen, nicht behauptet - und getrennt von der Liste ausgegeben.
+print(f"Modellscore im Mittel {p_wald.mean():.1%}, "
+      f"tatsächliche Grundrate {float(y_test.mean()):.1%} - "
+      f"Abstand {abs(p_wald.mean() - float(y_test.mean())) * 100:.1f} Prozentpunkte.")
+print("Als Rangfolge brauchbar, als Wahrscheinlichkeit nicht. Deshalb steht")
+print("der Score im Analysebericht, nicht in der Werkstattliste.\\n")
 liste = liste.sort_values("rangwert", ascending=False).head(KAPAZITAET)
 liste["rang"] = range(1, len(liste) + 1)
 
@@ -906,20 +956,19 @@ assert set(liste.fahrrad_id) == soll, (
     f"Die exportierte Liste passt nicht zu '{ausgeliefertes_verfahren}'")
 print(f"Selbstprüfung bestanden: Liste = Top {KAPAZITAET} von '{ausgeliefertes_verfahren}'\\n")
 
+# Der Modellscore steht NICHT in der ausgelieferten Liste. Er stammt aus
+# einem Verfahren, das ausdruecklich nicht freigegeben ist; neben einem
+# Rang, den die Regel bestimmt, erzeugt er in der Werkstatt ein zweites,
+# widersprechendes Signal. Er gehoert in den Analysebericht, nicht auf
+# den Werkstatttisch.
 ausgabe = liste[["rang", "rahmennummer", "typ_code", "rangwert", "km_180",
-                 "meldungen_bisher", "tage_seit_reparatur", "modellscore"]].copy()
+                 "meldungen_bisher", "tage_seit_reparatur"]].copy()
 ausgabe["rangwert"] = ausgabe.rangwert.round(0)
 ausgabe["km_180"] = ausgabe.km_180.round(0)
-# "Modellscore", nicht "Risiko": Die Werte des Waldes sind mit starken
-# Klassengewichten trainiert und nicht kalibriert. Ihr Mittel liegt bei
-# 55 Prozent, die tatsächliche Grundrate bei 45. Als Rangfolge taugen
-# sie, als Wahrscheinlichkeit nicht.
-ausgabe["modellscore"] = ausgabe.modellscore.round(2)
 ausgabe = ausgabe.rename(columns={
     "rahmennummer": "Rahmennummer", "typ_code": "Typ",
     "rangwert": "km seit letzter Reparatur", "km_180": "km (180 Tage)",
-    "meldungen_bisher": "Meldungen bisher", "tage_seit_reparatur": "Tage seit Reparatur",
-    "modellscore": "Modellscore (nur Vergleich)"})
+    "meldungen_bisher": "Meldungen bisher", "tage_seit_reparatur": "Tage seit Reparatur"})
 
 print(f"WARTUNGSLISTE  Quartal ab {letzter.date()}   ({KAPAZITAET} Räder)\\n")
 print(ausgabe.head(15).to_string(index=False))
@@ -963,13 +1012,29 @@ Rechnung über die Lebensdauer:
 |---|---|---|
 | Trefferquote auf dem Test | gleich | gleich |
 | über die Validierungsquartale | leicht vorn | leicht hinten |
-| erklärbar | „das Rad ist seit 288 km nicht in der Werkstatt gewesen" | nur über Umwege |
-| Wartungsaufwand | keiner | vierteljährlich nachtrainieren |
-| bricht bei neuen Radtypen | nein | ja |
-| Abhängigkeiten im Betrieb | keine | scikit-learn, joblib, Versionsstände |
+| erklärbar | „das Rad ist seit 592 km nicht in der Werkstatt gewesen" | nur über Umwege |
+| Wartungsaufwand | geringer — die Regel selbst ändert sich nicht | vierteljährlich nachtrainieren |
+| Abhängigkeiten im Betrieb | Fahrten-, Distanz-, Typ- und Wartungsdaten | dieselben, **zusätzlich** scikit-learn, joblib, Versionsstände |
 
-Die unteren vier Zeilen sind der Preis eines Modells. Er wäre zu zahlen, wenn die oberen
+Die unteren drei Zeilen sind der Preis eines Modells. Er wäre zu zahlen, wenn die oberen
 beiden dafür sprächen. Sie tun es nicht.
+
+> ### ⚠ „Eine Zeile SQL" wäre zu schön
+>
+> Der Sortierausdruck ist eine Zeile. Das Merkmal darunter ist es nicht. `km_seit_reparatur`
+> setzt voraus:
+>
+> 1. Langfahrten über acht Stunden ausschließen,
+> 2. gemessene Distanzen verwenden und nur die fehlenden schätzen,
+> 3. die Schätzung braucht **je Radtyp** eine Geschwindigkeit — ein unbekannter Typ
+>    erzeugt `NaN` und damit ein Rad ganz unten in der Liste,
+> 4. die Verknüpfung mit **erledigten** Wartungsaufträgen,
+> 5. den Ausschluss offener Schäden,
+> 6. eine Stichtagslogik und eine Regel für neue Räder.
+>
+> **Ausgeliefert wird also nicht eine Regel, sondern eine Regel plus ihre
+> Merkmalslogik** — und die gehört genauso versioniert und getestet wie ein Modell. Was
+> gegenüber dem Wald entfällt, ist das Nachtrainieren, nicht die Sorgfalt.
 
 > **Ein Modell muss seinen Unterhalt verdienen.** Hier verdient es ihn nicht — und der
 > Projektbericht muss das so schreiben, statt das Modell auszuliefern, weil man es nun
@@ -979,10 +1044,11 @@ beiden dafür sprächen. Sie tun es nicht.
 geprüft wurde und nicht aus Bequemlichkeit gewählt ist. Und es ist der Ausgangspunkt der
 nächsten Runde — wenn neue Merkmale dazukommen, wird der Vergleich wiederholt.
 
-> **Der eigentliche Ertrag des Modells steht nicht in der Trefferquote.** Er steht darin,
-> dass ein Wald mit 300 Bäumen auf diesen Merkmalen nichts findet, was über „Kilometer
-> seit der Reparatur" hinausgeht. Das ist eine belastbare Aussage über die Daten: **Mehr
-> Rechenleistung hilft hier nicht. Mehr Information vielleicht schon.**
+> **Der eigentliche Ertrag des Modells steht nicht in der Trefferquote.** Er steht in
+> dem, was der Vergleich ausschließt: Auf dieser Merkmalsmenge und über diese fünf
+> Perioden ist **kein stabiler Zusatznutzen nachweisbar**. Das ist eine belastbare
+> Aussage darüber, wo als Nächstes zu investieren wäre — **nicht in Rechenleistung,
+> sondern in Merkmale**, die es heute nicht gibt.
 
 ### 6.2 Die Liste ist das eigentliche Produkt
 
@@ -991,28 +1057,43 @@ die Werkstatt sie ohne Nacharbeit übernehmen kann: Rahmennummer statt Datenbank
 daneben die Zahlen, die die Reihenfolge begründen. Ein Meister, der ein Rad für
 unbedenklich hält, sieht sofort, worauf sich die Liste stützt, und kann widersprechen.
 
-> **Die letzte Spalte heißt „Modellscore" und nicht „Risiko".** Der Wald wurde mit
-> starken Klassengewichten trainiert; seine Ausgabewerte sind eine brauchbare
-> **Rangfolge**, aber keine Wahrscheinlichkeiten. Ihr Mittelwert liegt bei 55 Prozent,
-> die tatsächliche Grundrate bei 45. Wer sie als „Ausfallrisiko in Prozent" anzeigt,
-> behauptet eine Genauigkeit, die nicht da ist. Sie stehen in der Liste nur, damit man
-> sieht, wo die beiden Verfahren voneinander abweichen.
+> **In der Liste steht kein Modellscore.** Der Wald wurde mit starken Klassengewichten
+> trainiert; seine Ausgabewerte sind eine brauchbare **Rangfolge**, aber keine
+> Wahrscheinlichkeiten — der Abstand zwischen mittlerem Score und tatsächlicher
+> Grundrate steht oben gerechnet.
+>
+> Wichtiger noch: Er stammt aus einem Verfahren, das **ausdrücklich nicht freigegeben
+> ist**. Neben einem Rang, den die Regel bestimmt, erzeugt eine zweite Zahl in der
+> Werkstatt nur ein widersprechendes Signal. Wer beide sehen will, findet sie im
+> Analysebericht.
 
 In der VeloCity-Warenwirtschaft (`wawi.butscher.cloud`) gehört diese Liste in den Bereich
 **Instandhaltung**, als eigene Ansicht neben den gemeldeten Schäden.
 
-### 6.3 Überwachung
+### 6.3 Überwachung — für die Regel, nicht für das Modell
+
+Eine Regel kann man nicht nachtrainieren. Was bei ihr überwacht wird, sind die **Daten,
+aus denen ihr Merkmal entsteht** — und die Frage, ob die Liste im Betrieb noch trifft.
 
 | Wache | Schwelle | Reaktion |
 |---|---|---|
-| Trefferquote der letzten Quartalsliste | unter 60 % | nachtrainieren |
-| Anteil positiver Fälle in der Flotte | weicht um mehr als 10 Punkte vom Trainingsstand ab | Modell passt nicht mehr zur Lage |
-| Räder, die trotz Prüfung ausfallen | steigt | die Prüfung selbst greift zu kurz — kein Modellproblem |
-| Neue Radtypen im Bestand | tauchen auf | Modell kennt sie nicht |
+| Fahrten ohne gemessene Distanz | Anteil steigt deutlich über 40 % | Die Schätzung trägt mehr als geplant — Sensorlage prüfen |
+| Unbekannter Radtyp | taucht auf | **Sofort:** Die Geschwindigkeitstabelle kennt ihn nicht, die Kilometer werden zu `NaN` |
+| Ausgeschlossene Langfahrten | Zahl steigt | Rückgabeprozess oder Datenerfassung hat sich geändert |
+| Wartungsaufträge ohne `erledigt_am` | Anteil steigt | Der Reset des Merkmals greift nicht mehr |
+| Räder mit offenem Schaden | Zahl steigt stark | Die Werkstatt kommt nicht nach — die Vorsorgeliste ist dann das falsche Werkzeug |
+| Treffsicherheit der Quartalsliste | fällt unter die Grundrate | Die Regel sortiert nicht mehr besser als der Zufall — Daten, Ziel und Regel neu prüfen |
+| Räder, die trotz Prüfung ausfallen | steigt | Die Prüfung selbst greift zu kurz — kein Datenproblem |
 
-**Die dritte Zeile ist die wichtigste und wird fast immer vergessen.** Ein perfektes
-Modell nützt nichts, wenn die Prüfung den Defekt nicht findet. Dann ist nicht die
-Vorhersage falsch, sondern die Maßnahme — und kein Nachtrainieren der Welt hilft.
+**Die letzte Zeile ist die wichtigste und wird fast immer vergessen.** Eine perfekte
+Rangfolge nützt nichts, wenn die Prüfung den Defekt nicht findet. Dann ist nicht die
+Vorhersage falsch, sondern die Maßnahme.
+
+**Und die zweite Zeile ist die unangenehmste:** Sie zeigt, dass die „einfache Regel" gar
+nicht so einfach ist — dazu gleich mehr.
+
+Der Random Forest bleibt im Paket, wird aber **nicht** überwacht. Er läuft nicht; für ihn
+gilt nur, dass der Vergleich zu wiederholen ist, wenn neue Merkmale dazukommen.
 
 ### 6.4 Die Rückkopplung, die dieses Verfahren besonders schwierig macht
 
