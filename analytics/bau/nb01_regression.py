@@ -1652,6 +1652,11 @@ if gesperrt.any():
               f"   Status {r.freigabestatus}, {anzahl} Prüffahrten")
 freigabe_tabelle = freigabe_tabelle[~gesperrt].copy()
 assert freigabe_tabelle.freigabestatus.isin(AUSLIEFERBAR).all()
+_verteilung = freigabe_tabelle.freigabestatus.value_counts()
+merke("n_zeilen", len(freigabe_tabelle))
+merke("n_gestuetzt", int(_verteilung.get("gestuetzt", 0)))
+merke("n_unbestimmt", int(_verteilung.get("unbestimmt", 0)))
+_ = merke("n_unzureichend", int(_verteilung.get("unzureichend", 0)))
 freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
 
 # DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
@@ -1701,10 +1706,11 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     Anzeige einem nicht angemeldeten Besucher zeigen darf.
     \"\"\"
     if start_id == ziel_id:
-        return {"anzeige": None, "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
+        return {"anzeige": None, "grund": "rundfahrt", "status": None,
+                "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
     schluessel = (start_id, ziel_id, typ_code, fenster_von(stunde))
     if schluessel not in NACHSCHLAGE.index:
-        return {"anzeige": None,
+        return {"anzeige": None, "grund": "keine_zeile", "status": None,
                 "hinweis": "Für diese Verbindung liegt keine belastbare Schätzung vor."}
     z = NACHSCHLAGE.loc[schluessel]
     von = kundenpreis(z.minuten_von, typ_code, freiminuten_rest, rabatt_prozent)
@@ -1715,9 +1721,14 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     # Guthaben die kurze Fahrt und die lange nicht mehr, steht der Startgebuehr
     # ein voller Minutenpreis gegenueber - die Spanne ist dann relativ breiter.
     if not spanne_nuetzt(z.minuten_von, z.minuten_bis, von, bis):
-        return {"anzeige": None,
+        return {"anzeige": None, "grund": "spanne_zu_breit", "status": z.freigabestatus,
                 "hinweis": "Für Ihren Tarif wäre die Spanne zu breit, um zu nützen."}
+    # Der Status wandert MIT der Antwort zurueck. Die Anzeige ist fuer alle
+    # ausgelieferten Klassen gleich - die Zusage gilt aggregiert je Radtyp -,
+    # aber Ueberwachung und Support muessen wissen, worauf die Zeile beruht.
     return {"anzeige": f"{von:.2f} bis {bis:.2f} €",
+            "grund": None, "status": z.freigabestatus,
+            "belege": (None if pd.isna(z.test2_fahrten) else int(z.test2_fahrten)),
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
             "grundlage": f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"}
 
@@ -1818,6 +1829,31 @@ print("Beide Wege stimmen ueberein - die gemessene Abdeckung ist die des Produkt
 """),
 
 MD("""
+### 6.4b Worauf sich die Zusage bezieht — und worauf nicht
+
+Von den {{n_zeilen:,}} ausgelieferten Kombinationen sind nur {{n_gestuetzt:,}}
+**verbindungsbezogen** belegt: Nur bei ihnen liegt die untere Vertrauensgrenze aus
+Test 2 über 80 Prozent. Bei {{n_unzureichend:,}} Zeilen ist die Prüfmenge für eine
+eigene Aussage zu klein, {{n_unbestimmt:,}} sind statistisch unentschieden.
+
+**Die Produktentscheidung lautet: Wir liefern alle drei Klassen aus, und die Zusage
+gilt aggregiert.** Sie ist damit ausdrücklich eine Aussage über den Radtyp, nicht über
+die einzelne Verbindung:
+
+> Über alle Anfragen eines Radtyps hinweg enthält die angezeigte Spanne den
+> tatsächlichen Preis in mindestens 80 Prozent der Fälle. Für eine **einzelne**
+> Verbindung ist das nicht zugesichert.
+
+Die Alternative wäre gewesen, nur die {{n_gestuetzt:,}} belegten Zeilen auszuliefern.
+Das hätte die Reichweite von {{reichweite:.0%}} auf einen Bruchteil gedrückt — für ein
+Produkt, das ohnehin nur bei jeder zweiten Anfrage antwortet, ist das kein Gewinn.
+
+**Damit die Entscheidung nicht im Verborgenen bleibt, wandert der Status mit:** Die
+App-Funktion gibt zu jeder Antwort `status` und die Zahl der Prüffahrten zurück.
+Überwachung und Support sehen so, worauf eine Anzeige beruht, ohne dass der Kunde mit
+einer Statistik behelligt wird. Was die Oberfläche zeigt, ist für alle Klassen gleich —
+was das Unternehmen darüber weiß, nicht.
+
 ### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
 
 Die Handlungsschwellen sind am Erfolgskriterium ausgerichtet: Wer bei 80 Prozent
@@ -1829,7 +1865,7 @@ gescheiterte Kombination weiter in der App.
 | Abdeckung je Kombination, gleitend über 8 Wochen | **untere** Vertrauensgrenze ≥ 80 % | anzeigen |
 | | Intervall überlappt 80 % | anzeigen, aber Warnung und Neuberechnung |
 | | **obere** Vertrauensgrenze < 80 % | **Kombination abschalten** |
-| Fallzahl je Kombination | < 20 im Fenster | keine Aussage möglich, Vorwoche weiterverwenden |
+| Fallzahl je Kombination | < 20 im Fenster | keine eigene Aussage; es gilt die aggregierte Zusage je Radtyp |
 | neue Station | — | keine Zeile, also keine Anzeige |
 | **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |
 | Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
