@@ -405,11 +405,18 @@ schreibe("veranstaltungen.csv", ["von", "bis", "bezeichnung", "genauigkeit"],
 # Abweichung, wo gerade eine beseitigt werden sollte. "OEPNV-Abo" meint das
 # Nahverkehrsabo des KUNDEN als Nachweis, nicht ein Abo bei VeloCity; die
 # Spalte voraussetzung macht das jetzt sichtbar.
+# Die Freiminutenkontingente sind knapp bemessen: Bei einer mittleren
+# Fahrtdauer von rund einer Viertelstunde entsprechen sie zwei bis sechs
+# Freifahrten im Monat. Grosszuegigere Kontingente - etwa die zehnfache
+# Menge - wuerden praktisch jede Nutzung decken; der Fahrpreis haenge dann
+# fuer fast alle Kunden nur noch an der Startgebuehr und gar nicht mehr an
+# der Fahrtdauer. Mit diesen Werten zahlt rund die Haelfte aller Fahrten
+# nach Minuten.
 TARIFE = [
-    ("BASIS",   "Basistarif",     "",                                   0,  0.0),
-    ("STUDENT", "Studententarif", "Gültiger Studierendenausweis",     300,  0.0),
-    ("OEPNV",   "OEPNV-Abo",      "VGN-Abo oder Deutschlandticket",   600,  0.0),
-    ("PREMIUM", "Premium",        "Rahmenvertrag über den Arbeitgeber", 1000, 20.0),
+    ("BASIS",   "Basistarif",     "",                                  0,  0.0),
+    ("STUDENT", "Studententarif", "Gültiger Studierendenausweis",     30,  0.0),
+    ("OEPNV",   "OEPNV-Abo",      "VGN-Abo oder Deutschlandticket",   50,  0.0),
+    ("PREMIUM", "Premium",        "Rahmenvertrag über den Arbeitgeber", 90, 20.0),
 ]
 schreibe("tarif.csv",
          ["tarif_code", "bezeichnung", "voraussetzung",

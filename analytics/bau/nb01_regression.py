@@ -68,8 +68,10 @@ MD("""
 > **Wir behandeln das tatsächliche Ziel deshalb als unvalidierten Stellvertreter für das
 > geplante Ziel.** Wie gut dieser Stellvertreter ist, kann dieses Notebook nicht
 > beantworten — dafür müsste die App das geplante Ziel erst einmal speichern. Bis dahin
-> ist jede Zahl in diesem Notebook eine Obergrenze für das, was im Betrieb erreichbar
-> ist.
+> sind die Zahlen in diesem Notebook eine **optimistische Näherung** für das, was im
+> Betrieb erreichbar ist: Das tatsächliche Ziel ist bereits erreicht, das geplante
+> könnte davon abweichen. Eine bewiesene Obergrenze ist das nicht — dafür müsste man
+> wissen, wie oft und wie stark beide auseinanderfallen.
 """),
 
 PHASE(1, "Aus „der Kunde soll den Preis vorher kennen“ wird eine Zahl mit einer Grenze."),
@@ -96,6 +98,7 @@ Tarifblatt, und das ist exakt bekannt.
 | | |
 |---|---|
 | **fachlich** | Der angezeigte Preis liegt im Mittel weniger als **50 Cent** neben dem tatsächlichen |
+| **welcher Preis** | Der Betrag, den **dieser Kunde** zahlt — nach Freiminuten, Rabatt und Deckel, nicht der Listenpreis des Radtyps |
 | **Herkunft** | Grenze aus dem Produktmanagement |
 | **gemessen auf** | einem Zeitraum, den das Modell beim Training nie gesehen hat |
 
@@ -104,10 +107,14 @@ Tarifblatt, und das ist exakt bekannt.
 1. **Nur abgeschlossene Fahrten.** Abbrüche und Stornierungen sind keine Fahrten.
 2. **Nur Fahrten von Station zu Station.** Wer frei im Geschäftsgebiet abstellt, hat kein
    Ziel gewählt.
-3. **Nur reguläre Fahrten bis acht Stunden.** Darüber liegt eine vergessene Rückgabe —
+3. **Nur Fahrten mit verschiedenem Start und Ziel.** Bei einer Rundfahrt trägt das Ziel
+   per Definition keine Information — die App wird für sie keinen Preis nennen. Wir
+   nehmen sie trotzdem in die Analyse auf, um zu **zeigen**, wie weit ihre Dauer streut;
+   ausgeliefert wird für sie nichts.
+4. **Nur reguläre Fahrten bis acht Stunden.** Darüber liegt eine vergessene Rückgabe —
    ein eigener Geschäftsfall.
 
-Punkt 3 ist eine Setzung, keine Messung: Wir haben keine Statusangabe, die „vergessen“
+Punkt 4 ist eine Setzung, keine Messung: Wir haben keine Statusangabe, die „vergessen“
 von „sehr lange unterwegs“ trennt. Sie gehört fachlich abgesichert.
 """),
 
@@ -185,6 +192,7 @@ schritte.append(("endet an einer Station (Geltungsbereich)", len(d)))
 for name, n in schritte:
     print(f"   {name:42} {n:>7,}")
 print(f"\\n   Verbleiben {len(d)/n0:.1%} der Rohdaten.")
+_ = merke("anteil_frei", 1 - len(d) / n_vor_ziel)
 print(f"   Frei abgestellt und damit ohne Ziel: {1 - len(d)/n_vor_ziel:.1%}")
 print("   Das ist kein Datenfehler, sondern ein beworbenes Produktmerkmal.")
 """),
@@ -202,6 +210,7 @@ for name, g in (("Rundtour (Start = Ziel)", d[d.ist_rundtour == 1]),
     q1, q3 = g.dauer_min.quantile([.25, .75])
     print(f"{name:24} n = {len(g):>6,}   Median {g.dauer_min.median():5.1f} Min"
           f"   mittlere Hälfte {q1:4.0f} bis {q3:4.0f} Min")
+_ = merke("anteil_rundtour", d.ist_rundtour.mean())
 print(f"\\nRundtouren sind {d.ist_rundtour.mean():.1%} der Fahrten mit Ziel.")
 print("Bei ihnen ist das Ziel gleich dem Start - es trägt per Definition")
 print("keine Information über die Dauer bei, und sie streuen doppelt so stark.")
@@ -234,10 +243,11 @@ print(f"\\n{d.route.nunique()} Verbindungen, im Median "
 """),
 
 MD("""
-Der Sprung liegt zwischen „nichts wissen“ und „die Startstation kennen“. Das Ziel legt
-nur wenige Zehntelminuten drauf. Ob das auch für ein richtiges Modell gilt, prüfen wir in
-Phase 4 mit einer Ablation — der Vergleich zweier Nachschlagetabellen ist dafür kein
-Beweis.
+Die Startstation allein verbessert wenig. Der große Sprung entsteht erst mit der
+**Zielstation** — also mit der vollständigen Verbindung. Genau darauf setzt die neue
+App-Logik: erst fragen, wohin es geht, dann schätzen. Ob das auch für ein richtiges
+Modell gilt, prüfen wir in Phase 4 mit einer Ablation — der Vergleich zweier
+Nachschlagetabellen ist dafür kein Beweis.
 """),
 
 CODE("""
@@ -623,7 +633,7 @@ tempo = echt_v.groupby([klassen, "typ_code"], observed=True).kmh.mean().unstack(
 print("Mittleres Tempo in km/h je Steigung und Radtyp:")
 print(tempo.round(1).to_string())
 print()
-print("Was der Anstieg kostet (eben gegen stark bergauf):")
+print("Mittleres Tempo eben gegen stark ansteigend:")
 for typ in tempo.columns:
     eben, berg = tempo.loc["eben", typ], tempo.loc["stark bergauf", typ]
     verlust = 1 - berg / eben
@@ -632,9 +642,11 @@ for typ in tempo.columns:
 """),
 
 MD("""
-Das Citybike verliert am Anstieg {{anstieg_city:.0%}} seines Tempos, das E-Bike nur
-{{anstieg_ebike:.0%}} — der Motor fängt die Steigung ab. Das Lastenrad trifft es mit
-{{anstieg_cargo:.0%}} am härtesten.
+Auf stark ansteigenden Verbindungen liegt das mittlere Tempo des Citybikes
+{{anstieg_city:.0%}} unter dem auf ebenen, beim E-Bike nur {{anstieg_ebike:.0%}}, beim
+Lastenrad {{anstieg_cargo:.0%}}. Die naheliegende Erklärung ist der Motor, der die
+Hangabtriebskraft abfängt — beweisen lässt sich das hier nicht, denn ansteigende
+Verbindungen unterscheiden sich auch in Streckenführung, Verkehr und Anlass.
 
 **Genau das ist eine Wechselwirkung:** Die Wirkung der Steigung hängt vom Radtyp ab. Eine
 lineare Regression addiert einen festen Steigungskoeffizienten und einen festen
@@ -780,8 +792,9 @@ Quartal aussieht. Der Fehler ist im Sommer erkennbar größer als im Winter — 
 das nur in einer Jahreszeit hält, ist keine Zusage.
 
 Wir prüfen das **innerhalb** von Training und Validierung: Test 1 ist verbraucht, und
-Test 2 ist bis hierher nicht angefasst — er wird ab Phase 5.6 für die zweite Runde
-gebraucht.
+Test 2 wurde bis hierher weder zum Anpassen noch zum Auswählen verwendet. Völlig blind
+ist er trotzdem nicht — die Erkundung in Phase 2 hat den gesamten Datensatz gesehen.
+Er wird ab Phase 5.6 für die zweite Runde gebraucht.
 """),
 
 CODE("""
@@ -858,12 +871,13 @@ for r, z in pd.concat([je_route.head(4), je_route.tail(4)]).iterrows():
 MD("""
 Das Muster ist kein statistisches, sondern ein menschliches:
 
-> **Das Modell ist genau, wo gefahren wird, um anzukommen — und ungenau, wo gefahren
-> wird, um zu fahren.**
+> **Das Modell ist auf Verbindungen mit enger Dauerverteilung genau und auf solchen
+> mit stark streuender Dauer ungenau.**
 
-Auf den Pendelverbindungen liegt die Anzeige um wenige Cent daneben. Auf den Verbindungen
-zu Dom und Residenz liegt sie deutlich daneben, weil die Leute dort je nach
-Anlass zwanzig oder vierzig Minuten unterwegs sind.
+Auf den Pendelverbindungen liegt die Anzeige um wenige Cent daneben, auf den
+Verbindungen zu Dom und Residenz deutlich weiter. Dass dort der Fahrtzweck streut —
+Besorgung, Spaziergang, Ausflug — ist eine plausible, aber ungeprüfte Erklärung:
+Der Zweck steht in keiner Spalte.
 
 **Die derzeit verfügbaren Merkmale reichen nicht aus, um individuelle Stopps und den
 Fahrtzweck abzubilden.** Ob überhaupt keine Merkmale das könnten, wissen wir nicht —
@@ -943,7 +957,11 @@ zukunft["modell_bis"] = oben.predict(zukunft[MERKMALE])
 # Kombinationen mit genug Fahrten und einer nuetzlich schmalen Spanne
 # kommen ueberhaupt in Frage. Alles andere zu messen und danach
 # wegzuwerfen haette die Abdeckung geschoenigt.
-gruppen = basis.groupby(["route", "typ_code", "fenster"]).dauer_min
+# Gruppiert wird ueber die Stations-IDs. Der Routenname bleibt als
+# Anzeigewert dabei, wird aber nie wieder auseinandergenommen: Ein Name kann
+# sich aendern, eine ID nicht.
+gruppen = basis.groupby(["start_station_id", "end_station_id", "route",
+                         "typ_code", "fenster"]).dauer_min
 tab = pd.DataFrame({"von_roh": gruppen.quantile(.10), "bis_roh": gruppen.quantile(.90),
                     "n": gruppen.size()}).reset_index()
 
@@ -971,7 +989,11 @@ tab["preis_bis_basis"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(tab["bis"], 
 # geprueft wird deshalb danach, nicht davor.
 tab = tab[(tab.n >= 30) & (tab.preis_bis_basis - tab.preis_von_basis <= 1.00)]
 print(f"{len(tab)} Kombinationen erfuellen die beiden Regeln aus Phase 1.")
-zukunft = zukunft.merge(tab, on=["route", "typ_code", "fenster"], how="left")
+# Die Stations-IDs stehen in beiden Tabellen und meinen dasselbe. Beim
+# Zusammenfuehren wuerden daraus sonst zwei Spaltenpaare mit Suffixen.
+zukunft = zukunft.merge(
+    tab.drop(columns=["start_station_id", "end_station_id"]),
+    on=["route", "typ_code", "fenster"], how="left")
 
 # Gemessen wird gegen das VOLLSTAENDIGE Kriterium aus Phase 5.5, nicht
 # nur gegen die Dauerabdeckung: Preisabdeckung insgesamt UND je Radtyp,
@@ -998,6 +1020,12 @@ def preisspanne(u, o):
     return euro(u), euro(o)
 ##ENDE
 
+# Zwei getrennt geschaetzte Quantile koennen sich theoretisch kreuzen: das
+# untere ueber dem oberen. Dann waere die Spanne leer und die Anzeige unsinnig.
+for _u, _o in (("modell_von", "modell_bis"), ("von", "bis")):
+    _kreuzt = (zukunft[_u] > zukunft[_o]).sum()
+    assert _kreuzt == 0, f"{_kreuzt} gekreuzte Spannen in {_u}/{_o}"
+
 def bewerten(name, u, o):
     \"\"\"Bewertet nur, was die App tatsaechlich ANZEIGEN wuerde.
 
@@ -1010,15 +1038,30 @@ def bewerten(name, u, o):
     von, bis = preisspanne(u, o)
     drin = (zukunft.p_ist >= von - 0.001) & (zukunft.p_ist <= bis + 0.001)
     zeigbar = da & ((bis - von) <= 1.00)
-    je_typ = {ty: drin[zeigbar & (zukunft.typ_code == ty)].mean()
-              for ty in sorted(zukunft[zeigbar].typ_code.unique())}
+    # Ueber ALLE Radtypen des Datensatzes, nicht nur ueber die angezeigten.
+    # Sonst verschwindet ein Radtyp, fuer den ein Kandidat nie antwortet,
+    # einfach aus der Bewertung - und der Kandidat besteht, weil er schweigt.
+    alle_typen = sorted(zukunft.typ_code.unique())
+    je_typ, reichweite_typ = {}, {}
+    for ty in alle_typen:
+        maske = zukunft.typ_code == ty
+        gezeigt = zeigbar & maske
+        je_typ[ty] = drin[gezeigt].mean() if gezeigt.any() else 0.0
+        reichweite_typ[ty] = gezeigt.sum() / max(1, maske.sum())
     return {
         "Auskunft (angezeigt)": zeigbar.mean(),
         "Abdeckung (angezeigt)": drin[zeigbar].mean(),
         "schlechtester Radtyp": min(je_typ.values()) if je_typ else float("nan"),
+        "geringste Reichweite": min(reichweite_typ.values()),
         "Breite (Median)": (bis - von)[zeigbar].median(),
         "verworfen, zu breit": (da & ~zeigbar).mean(),
     }
+
+# Vor der Messung festgelegt: Fuer jeden Radtyp muss die App in mindestens
+# einem Zehntel der Anfragen ueberhaupt etwas sagen koennen. Ein Produkt, das
+# fuer Lastenraeder in neunundneunzig von hundert Faellen schweigt, ist fuer
+# Lastenraeder kein Produkt.
+MINDESTREICHWEITE = 0.10
 
 vergleich = pd.DataFrame({
     "Quantilregression": bewerten("Modell", "modell_von", "modell_bis"),
@@ -1036,7 +1079,11 @@ for spalte in anzeige.columns:
 print(anzeige.to_string())
 print()
 for name, s in vergleich.iterrows():
-    haelt = s["Abdeckung (angezeigt)"] >= 0.80 and s["schlechtester Radtyp"] >= 0.80
+    # Drei Bedingungen, nicht zwei: Wer fuer einen Radtyp fast nie antwortet,
+    # erfuellt das Kriterium nicht, auch wenn die wenigen Antworten stimmen.
+    haelt = (s["Abdeckung (angezeigt)"] >= 0.80
+             and s["schlechtester Radtyp"] >= 0.80
+             and s["geringste Reichweite"] >= MINDESTREICHWEITE)
     # Die Fallzahl gehoert neben das Urteil. Eine Quote aus dreissig Faellen
     # traegt keine Freigabe, auch wenn sie ueber der Schwelle liegt.
     n_angezeigt = int(round(s["Auskunft (angezeigt)"] * len(zukunft)))
@@ -1046,37 +1093,44 @@ for name, s in vergleich.iterrows():
 merke("quantil_auskunft", vergleich.loc["Quantilregression", "Auskunft (angezeigt)"])
 merke("quantil_verworfen", vergleich.loc["Quantilregression", "verworfen, zu breit"])
 merke("tabelle_auskunft", vergleich.loc["Perzentiltabelle", "Auskunft (angezeigt)"])
-_ = merke("tabelle_schlechtester", vergleich.loc["Perzentiltabelle", "schlechtester Radtyp"])  # Wert nur festhalten, nicht anzeigen
+_ = merke("tabelle_schlechtester", vergleich.loc["Perzentiltabelle", "schlechtester Radtyp"])
+_ = merke("tabelle_reichweite", vergleich.loc["Perzentiltabelle", "geringste Reichweite"])  # Wert nur festhalten, nicht anzeigen
 """),
 
 MD("""
-**Beide Kandidaten erfüllen das vollständige Kriterium** — insgesamt und für jeden
-Radtyp. Damit fällt die Entscheidung nicht über die Güte.
+**Nur ein Kandidat erfüllt das vollständige Kriterium.**
 
-- Die **Quantilregression** verwirft {{quantil_verworfen:.1%}} ihrer Spannen als zu
-  breit. Was sie gut macht, ist gerade dieses Weglassen: Sie antwortet nur dort, wo sie
-  eine schmale Spanne bilden kann, und beantwortet dafür {{quantil_auskunft:.1%}} der
-  Anfragen.
-- Die **Perzentiltabelle** hält die Breitenregel per Konstruktion, antwortet mit
-  {{tabelle_auskunft:.1%}} etwas seltener und liegt beim schwächsten Radtyp bei
-  {{tabelle_schlechtester:.1%}} — knapp über der Grenze.
+- Die **Quantilregression** antwortet auf {{quantil_auskunft:.1%}} der Anfragen und
+  verwirft {{quantil_verworfen:.1%}} ihrer Spannen als zu breit. Was sie gut macht, ist
+  gerade dieses Weglassen: Sie antwortet nur dort, wo sie eine schmale Spanne bilden
+  kann — und sie kann es für jeden Radtyp.
+- Die **Perzentiltabelle** antwortet auf {{tabelle_auskunft:.1%}} der Anfragen, aber
+  **für Lastenräder auf keine einzige**. Ihre Reichweite ist dort {{tabelle_reichweite:.1%}}.
 
-> Der knappe Abstand der Tabelle beim schwächsten Radtyp ist kein Nebensatz. Er gehört
-> in die Überwachung aus 6.5: Was mit weniger als einem Prozentpunkt Abstand freigegeben
-> wird, kann beim nächsten Datenstand darunter liegen.
+> **Warum das Kriterium die Reichweite braucht.** Hätten wir nur die Abdeckung unter den
+> angezeigten Fällen gemessen, stünde die Tabelle glänzend da: Was sie sagt, stimmt fast
+> immer. Sie sagt für Lastenräder nur nie etwas. Ein Kandidat kann ein Kriterium
+> erfüllen, indem er schweigt — deshalb gehört die Reichweite je Radtyp mit hinein,
+> **festgelegt vor der Messung**.
 
-Hätte man nur die Dauerabdeckung gemessen, sähen beide besser aus, als sie sind. Erst die
-vollständige Prüfung — Preis, je Radtyp, Breite — trennt die beiden Kandidaten
-überhaupt sichtbar.
+Der Grund ist keine Schwäche des Verfahrens, sondern die Datenlage: Lastenradfahrten sind
+selten, und auf eine einzelne Verbindung zu einer bestimmten Tageszeit entfallen zu
+wenige, um ein Perzentil zu bilden. Die Mindestfallzahl von 30 filtert sie alle weg.
 
 **Warum trotzdem die Tabelle?** Nicht wegen der Güte — die spricht für das Modell.
 Sondern weil die App eine statische Seite ohne Python ist und kein Modell laden kann.
+
+Damit ist die Entscheidung unbequem, und sie muss ausgesprochen werden: **Wir liefern
+den Kandidaten aus, der das Kriterium verfehlt** — und ziehen daraus die Folge, statt
+das Kriterium zu senken. Die Preisauskunft gilt ab sofort **nicht für Lastenräder**.
+Das ist eine Einschränkung des Geltungsbereichs, keine Ausnahme von der Regel: Für
+Lastenräder gibt es kein Produkt, und die App sagt das, statt zu raten.
 
 Weitere Unterschiede:
 
 | | Quantilregression | Perzentiltabelle |
 |---|---|---|
-| kann eine **neue** Verbindung einschätzen | ja, über Strecke, Steigung und Radtyp | nein |
+| kann eine **neue** Verbindung einschätzen | technisch ja, solange Routendaten vorliegen — für ungesehene Stationen aber nicht validiert | nein |
 | ist ohne Python lauffähig | nein | ja |
 | ist von Hand prüfbar | nein | ja |
 | berücksichtigt Wochentag und Saison | ja | nein |
@@ -1203,6 +1257,24 @@ for gedeckt, g in z.groupby("guthaben_deckt"):
     if not gedeckt:
         merke("unten_offen", unten)
 
+# Was 6.5 zur Ueberwachung braucht, muss das Artefakt mitbringen: je Zeile die
+# Zahl der Pruefungen, die gemessene Abdeckung und die Unsicherheit. Ohne diese
+# Spalten laesst sich spaeter nicht sagen, ob ein Ruecklauf ein echtes Problem
+# ist oder das Rauschen von zwoelf Faellen.
+belege = z.groupby(["start_station_id", "end_station_id", "typ_code", "fenster"]).agg(
+    test2_fahrten=("im_intervall", "size"),
+    test2_abdeckung=("im_intervall", "mean")).reset_index()
+belege[["test2_untergrenze", "test2_obergrenze"]] = [
+    wilson(round(a * n_), n_) for a, n_
+    in zip(belege.test2_abdeckung, belege.test2_fahrten)]
+belege["freigabestatus"] = np.where(
+    belege.test2_untergrenze >= 0.80, "gestuetzt",
+    np.where(belege.test2_obergrenze < 0.80, "widerlegt", "unbestimmt"))
+print(f"\\nBelege je Kombination: {len(belege)} Zeilen, davon "
+      f"{(belege.freigabestatus == 'gestuetzt').sum()} statistisch gestuetzt, "
+      f"{(belege.freigabestatus == 'unbestimmt').sum()} unbestimmt, "
+      f"{(belege.freigabestatus == 'widerlegt').sum()} widerlegt")
+
 je_komb = z.groupby(["route", "typ_code", "fenster"]).agg(
     abdeckung=("im_intervall", "mean"), n=("im_intervall", "size"),
     breite=("breite", "median"))
@@ -1299,13 +1371,18 @@ CODE("""
 # bricht bei jeder Umbenennung. Die Namen bleiben mit drin, aber fuer die
 # Anzeige, nicht als Schluessel.
 id_je_name = station.set_index("name").station_id
+name_je_id = station.set_index("station_id").name
 
 zeilen = []
 for _, g in tab.iterrows():
-    start, ziel = g.route.split(" → ")
-    zeilen.append(dict(start_station_id=int(id_je_name[start]),
-                       ziel_station_id=int(id_je_name[ziel]),
-                       startstation=start, zielstation=ziel, typ_code=g.typ_code,
+    # Die IDs stehen in der Tabelle, seit sie durch die Gruppierung mitgefuehrt
+    # werden. Sie aus dem Anzeigenamen zurueckzuspalten waere von einem
+    # Trennzeichen abhaengig, das in keinem Stationsnamen vorkommen darf.
+    start, ziel = g.start_station_id, g.end_station_id
+    zeilen.append(dict(start_station_id=int(start),
+                       ziel_station_id=int(ziel),
+                       startstation=name_je_id[start], zielstation=name_je_id[ziel],
+                       typ_code=g.typ_code,
                        zeitfenster=g.fenster,
                        minuten_von=int(g["von"]), minuten_bis=int(g["bis"]),
                        # Der Basistarif ist der teuerste Fall: keine
@@ -1318,6 +1395,18 @@ for _, g in tab.iterrows():
                        tarifversion=str(preise.preis_pro_minute_eur.sum())))
 
 freigabe_tabelle = pd.DataFrame(zeilen)
+# Die Belege aus Test 2 wandern in dieselbe Datei: Wer die Tabelle betreibt,
+# sieht je Zeile, worauf ihre Freigabe beruht.
+freigabe_tabelle = freigabe_tabelle.merge(
+    belege.rename(columns={"end_station_id": "ziel_station_id",
+                           "fenster": "zeitfenster"}),
+    on=["start_station_id", "ziel_station_id", "typ_code", "zeitfenster"],
+    how="left")
+freigabe_tabelle[["test2_abdeckung", "test2_untergrenze", "test2_obergrenze"]] = (
+    freigabe_tabelle[["test2_abdeckung", "test2_untergrenze",
+                      "test2_obergrenze"]].round(4))
+freigabe_tabelle["freigabestatus"] = freigabe_tabelle.freigabestatus.fillna(
+    "ungeprueft")
 freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
 
 # DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
@@ -1380,20 +1469,32 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
             "grundlage": f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"}
 
 STUNDE_JE_FENSTER = {"frueh": 8, "vormittag": 12, "nachmittag": 17, "abend": 21}
-name_je_id = station.set_index("station_id").name
 erste = freigabe_tabelle.iloc[0] if len(freigabe_tabelle) else None
 proben = ([(int(erste.start_station_id), int(erste.ziel_station_id), erste.typ_code,
             STUNDE_JE_FENSTER[erste.zeitfenster])] if erste is not None else [])
-proben += [(1, 1, "CITY", 8),        # Rundfahrt
-           (6, 4, "CITY", 14),       # Verbindung ohne Freigabe
-           (1, 999, "CITY", 8)]      # Station, die es nicht gibt
+# Der Negativfall wird GESUCHT, nicht behauptet: eine Kombination, die
+# tatsaechlich nicht in der Tabelle steht. Ein fest eingetragenes Beispiel
+# waere beim naechsten Datenstand vielleicht doch freigegeben - und der
+# Kommentar wuerde etwas anderes sagen als die Ausgabe.
+vorhanden = set(NACHSCHLAGE.index)
+ohne_freigabe = next(
+    ((a, b, "CITY", 14) for a in station.station_id for b in station.station_id
+     if a != b and (a, b, "CITY", "nachmittag") not in vorhanden), None)
+assert ohne_freigabe is not None, "Keine unfreigegebene Verbindung zum Vorfuehren gefunden"
 
-for probe in proben:
+proben += [(1, 1, "CITY", 8), ohne_freigabe, (1, 999, "CITY", 8)]
+beschriftung = ["freigegebene Verbindung", "Rundfahrt", "Verbindung ohne Freigabe",
+                "Station, die es nicht gibt"][-len(proben):]
+
+for probe, was in zip(proben, beschriftung):
     e = preis_schaetzen(*probe)
+    # Die drei Verweigerungsfaelle muessen auch wirklich verweigern.
+    if was != "freigegebene Verbindung":
+        assert e["anzeige"] is None, f"{was} liefert wider Erwarten eine Anzeige"
     # Namen NUR fuer die Ausgabe - so herum ist es richtig.
     n1 = name_je_id.get(probe[0], f"Station {probe[0]}")
     n2 = name_je_id.get(probe[1], f"Station {probe[1]}")
-    print(f"{n1} → {n2} ({probe[2]}, {probe[3]} Uhr)")
+    print(f"{n1} → {n2} ({probe[2]}, {probe[3]} Uhr) - {was}")
     if e["anzeige"]:
         print(f"   {e['anzeige']}   {e['minuten']}   Grundlage: {e['grundlage']}")
     else:
@@ -1455,7 +1556,7 @@ MD("""
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | Der Prozess wurde geändert, nicht das Verfahren. Kriterium: Preisfehler unter 50 Cent. Geltungsbereich ausdrücklich eingeschränkt |
-| 2 Data Understanding | Abbrüche und Stornierungen sind keine Fahrten. Ein Fünftel endet frei im Gebiet, ein weiteres Fünftel sind Rundtouren |
+| 2 Data Understanding | Abbrüche und Stornierungen sind keine Fahrten. {{anteil_frei:.1%}} enden frei im Gebiet, {{anteil_rundtour:.1%}} sind Rundtouren |
 | 3 Data Preparation | Zielstation erlaubt — als Stellvertreter. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, wie wenig das Ziel beiträgt |
 | 5 Evaluation | CITY hält die Grenze auf Test 1 und in allen vier Fenstern der rollierenden Prüfung. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet und zwei Radtypen kein Produkt haben |
@@ -1491,7 +1592,7 @@ offen.
 
 **Was offen bleibt — ausdrücklich**
 
-1. **Das geplante Ziel wird nicht erfasst.** Alle Zahlen sind Obergrenzen.
+1. **Das geplante Ziel wird nicht erfasst.** Alle Zahlen sind optimistische Näherungen, keine bewiesenen Obergrenzen.
 2. **Kein echter Schattenbetrieb.** Test 2 hat das Artefakt kalibriert und freigegeben —
    die unabhängige Prüfung des fertigen Artefakts steht damit noch aus.
 3. **Keine Zusage je Verbindung.** Die 80 Prozent gelten insgesamt und je Radtyp.

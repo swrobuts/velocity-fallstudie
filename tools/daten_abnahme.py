@@ -26,10 +26,13 @@ TEMPO_UNTERGRENZE_KMH = 3.5     # darunter schiebt man
 MINDESTJAHRE = 5.0
 MINDESTFAHRTEN = 100_000
 MINDESTKORRELATION = 0.75       # Strecke gegen Dauer
-# Je abgeschlossener Fahrt, nach Freiminuten. Der Datenstand vor der
-# Umstellung lag bei 1,82 EUR - die Preise bleiben unveraendert, also
-# muss der Wert in derselben Groessenordnung bleiben.
-UMSATZ_SPANNE_EUR = (1.50, 2.30)
+# Je abgeschlossener Fahrt, nach Freiminuten. Die Minutenpreise sind
+# unveraendert; die Freiminutenkontingente wurden bewusst verkleinert,
+# damit der Fahrpreis wieder an der Fahrtdauer haengt. Seither zahlt rund
+# die Haelfte aller Fahrten nach Minuten statt nur die Startgebuehr.
+UMSATZ_SPANNE_EUR = (2.10, 2.80)
+# Anteil der Fahrten, bei denen die Dauer den Preis ueberhaupt beeinflusst.
+MINUTENENTGELT_SPANNE = (0.40, 0.60)
 
 ergebnisse: list[tuple[bool, str, str]] = []
 
@@ -127,6 +130,10 @@ def konsistenz(d: dict) -> None:
            f"{(a.endzeit <= a.startzeit).sum()} Faelle")
     fertig = a[a.status == "abgeschlossen"]
     umsatz = fertig.entgelt_eur.mean()
+    zahlt = (fertig.berechnete_minuten > 0).mean()
+    pruefe(MINUTENENTGELT_SPANNE[0] <= zahlt <= MINUTENENTGELT_SPANNE[1],
+           "Der Fahrpreis haengt bei rund der Haelfte der Fahrten an der Dauer",
+           f"{zahlt:.1%} zahlen nach Minuten, der Rest nur die Startgebuehr")
     pruefe(UMSATZ_SPANNE_EUR[0] <= umsatz <= UMSATZ_SPANNE_EUR[1],
            "Erloese bleiben in der bisherigen Groessenordnung",
            f"{umsatz:.2f} EUR je Fahrt (erwartet "
