@@ -126,9 +126,12 @@ print(f"\\nLücken in der Reihe: {int((reihe.index.to_series().diff().dt.days > 
 '''),
 
 MD("""
-> **Der letzte Wert ist wichtiger, als er aussieht.** Eine Zeitreihe mit Lücken ist keine
-> Zeitreihe — jedes Verfahren, das mit Verschiebungen arbeitet (`shift`, gleitende
-> Mittel), rechnet dann still über Löcher hinweg. Hier gibt es keine.
+> **Der letzte Wert ist wichtiger, als er aussieht.** Zeitreihen dürfen Lücken haben —
+> aber sie müssen **bekannt, erklärt und ausdrücklich behandelt** sein. Jedes Verfahren,
+> das mit Verschiebungen arbeitet (`shift`, gleitende Mittel), rechnet sonst still über
+> die Löcher hinweg: `shift(7)` greift dann auf den siebtletzten *vorhandenen* Wert zu,
+> nicht auf den Tag vor einer Woche. Hier gibt es keine Lücken — geprüft, nicht
+> angenommen.
 
 ### 2.1 Die Reihe ansehen
 """),
@@ -239,6 +242,12 @@ MD("""
 **Der rohe Vergleich sagt: Ferien machen kaum einen Unterschied.** Der kontrollierte
 Vergleich sagt: In den Ferien liegt die Nachfrage um rund ein Viertel niedriger — bei
 vergleichbarer Temperatur.
+
+> **Was hier gezeigt wird, ist ein Zusammenhang, keine Ursache.** Das Temperaturband
+> 15–22 °C hält die Temperatur ungefähr fest, sonst nichts: Monat, Wochentag,
+> Vorlesungszeit, Feiertage und Veranstaltungen laufen weiter mit. „In den Ferien wird
+> bei gleicher Temperatur weniger gefahren“ ist damit belegt — „**weil** Ferien sind“
+> nicht. Für die Prognose genügt der Zusammenhang; für eine Maßnahme genügte er nicht.
 
 Beide Rechnungen sind korrekt ausgeführt. Der Unterschied liegt in einer dritten Größe:
 **Schulferien liegen überwiegend im Sommer**, und im Sommer ist es warm, und bei Wärme
@@ -407,9 +416,11 @@ Wetter liegt das Boosting vorn (5,81 gegen 6,33), mit der simulierten Vorhersage
 lineare Regression (8,55 gegen 11,25).
 
 > **Das ist der wichtigste Befund dieses Abschnitts.** Das Boosting nutzt feine
-> Wetterunterschiede besser aus — solange das Wetter stimmt. Sobald es verrauscht ist,
-> verstärkt es das Rauschen mit. Die lineare Regression ist gröber und deshalb
-> robuster.
+> Wetterunterschiede besser aus — solange das Wetter stimmt. In **dieser Simulation**
+> schlägt es die Fehler der Vorhersage mit derselben Feinheit auf die Prognose durch,
+> während die gröbere lineare Regression sie glättet. Ob das allgemein für Boosting gilt,
+> ist damit nicht gezeigt: Wir haben ein Verfahren, eine Fehlerverteilung und ein Fenster
+> beobachtet, nicht eine Gesetzmäßigkeit gemessen.
 >
 > **Wer unter Ist-Wetter wählt, wählt für eine Welt, in der er nicht liefert.**
 """),
@@ -471,7 +482,11 @@ MD("""
 Jetzt wird die Testmenge **einmal** angefasst — mit dem Modell aus Phase 4 und dem
 Aufschlag aus 5.1, beide vorher festgelegt. Und gleich richtig:
 
-Bis hierher hat das Modell mit dem **tatsächlichen** Wetter gerechnet. Am Vorabend um
+Das **Training** hat mit gemessenem Wetter gerechnet — anders geht es nicht, historische
+Vorhersagen liegen uns nicht vor. **Modellwahl und Aufschlag dagegen liefen bereits unter
+simuliertem Prognosewetter**, und der Test benutzt gleich dasselbe Verfahren mit einer
+unabhängigen Zufallsziehung. Der Informationsstand ist ab der Validierung durchgehend
+derselbe. Am Vorabend um
 18 Uhr gibt es das nicht; es gibt nur eine **Vorhersage**. Kriterium 3 aus Phase 1 hat
 das schon angekündigt: Die Prognose muss um 18 Uhr stehen, und das entscheidet, welche
 Merkmale erlaubt sind.
@@ -504,9 +519,21 @@ print("deshalb auch kaum auf deren Fehler.")
 '''),
 
 MD("""
-**Die zweite Zahl ist die, gegen die geurteilt wird.** Ein Modell, das mit Daten rechnet,
-die es im Betrieb nicht geben wird, ist im Betrieb schlechter als im Test — immer. Wer
-die erste Zahl in den Bericht schreibt, berichtet ein Produkt, das niemand bekommt.
+**Die zweite Zahl ist die, gegen die geurteilt wird** — und zwar unabhängig davon, wie
+sie ausfällt.
+
+Hier fällt sie sogar etwas **besser** aus als die erste. Das ist kein Widerspruch, sondern
+Zufall: Eine einzelne Ziehung von Vorhersagefehlern kann die Prognose zufällig näher an
+die Wirklichkeit rücken. Über viele Ziehungen hinweg ist das nicht so — aber „über viele
+Ziehungen" ist eben eine Verteilung, kein einzelner Wert.
+
+> **Der Grund, die erste Zahl nicht zu berichten, ist deshalb nicht, dass sie zu gut
+> wäre.** Der Grund ist, dass sie **ein anderes Produkt bewertet** als das, was ausgeliefert
+> wird. Ein Test mit Wetterdaten, die um 18 Uhr niemand hat, misst ein Werkzeug, das es
+> nicht gibt. Ob das Ergebnis dabei schmeichelhaft ausfällt oder nicht, ist gleichgültig.
+
+Eine frühere Fassung schrieb hier: *„ist im Betrieb schlechter als im Test — immer."* Der
+Satz klingt streng und ist falsch; die Zahlen direkt darüber widerlegen ihn.
 """),
 
 CODE('''
@@ -562,9 +589,41 @@ k2 = kosten_modell < kosten_faustregel
 werte = f"{kosten_modell:,.0f} gegen {kosten_faustregel:,.0f}".replace(",", ".")
 print(f"  2. günstiger als die Faustregel                       {werte} EUR   "
       f"{'ERFÜLLT' if k2 else 'GERISSEN'}")
-urteil = ("MACHBARKEIT NACHGEWIESEN" if (k1 and k2) else "RÜCKSPRUNG")
-print(f"\\n  Gesamturteil: {urteil}")
-print("  Ausdrücklich KEINE Betriebsfreigabe: Die Wetterunsicherheit ist simuliert,")
+# HAELT DAS URTEIL, ODER HAENGT ES AN EINER ZUFALLSZIEHUNG?
+#
+# Der Test oben benutzt EINE simulierte Wettervorhersage (Startwert 7).
+# Ein Kriterium, das nur fuer diese eine Ziehung erfuellt ist, ist kein
+# Ergebnis, sondern ein Zufall. Wir ziehen deshalb 300 unabhaengige
+# Vorhersagefehler-Pfade auf DEMSELBEN Testfenster und sehen nach, wie
+# oft die Kriterien halten. Das Modell und der Aufschlag bleiben fest -
+# variiert wird nur die Wetterunsicherheit.
+PFADE = 300
+treffer_k1, treffer_k2, verbesserungen = 0, 0, []
+for i in range(PFADE):
+    p_pfad = gewaehlt.predict(prognosewetter(X_test, 1000 + i))
+    v = 1 - mean_absolute_error(y_test, p_pfad) / mae_faustregel
+    verbesserungen.append(v)
+    treffer_k1 += v >= 0.30
+    treffer_k2 += kosten(y_test, p_pfad * (1 + bester)) < kosten_faustregel
+v_arr = np.array(verbesserungen)
+
+print(f"\\n  Und über {PFADE} unabhängige Wettervorhersage-Pfade?")
+print(f"     Fehlerreduktion: {np.percentile(v_arr, 5):.0%} / "
+      f"{np.percentile(v_arr, 50):.0%} / {np.percentile(v_arr, 95):.0%}   "
+      f"(5. / 50. / 95. Perzentil)")
+print(f"     Kriterium 1 (≥ 30 %) erfüllt in {treffer_k1} von {PFADE} Pfaden "
+      f"= {treffer_k1 / PFADE:.0%}")
+print(f"     Kriterium 2 (günstiger) erfüllt in {treffer_k2} von {PFADE} Pfaden "
+      f"= {treffer_k2 / PFADE:.0%}")
+
+urteil = ("MACHBARKEITSINDIZ" if (k1 and k2) else "RÜCKSPRUNG")
+print(f"\\n  Gesamturteil: {urteil} — kein Nachweis.")
+print("  Die Kriterien sind in DIESEM Testpfad erfüllt. Kriterium 1 hält aber")
+print(f"  nicht über alle Wetterziehungen: in {PFADE - treffer_k1} von {PFADE} Pfaden")
+print(f"  ({1 - treffer_k1 / PFADE:.0%}) fällt die Fehlerreduktion unter 30 %.")
+print("  Wer aus einem Pfad einen 'Nachweis' macht, berichtet die günstigste")
+print("  Ziehung als Ergebnis.")
+print("\\n  Ausdrücklich KEINE Betriebsfreigabe: Die Wetterunsicherheit ist simuliert,")
 print("  es gibt nur ein Validierungs- und ein Testfenster, und die Übersetzung von")
 print("  Fahrten zu Rädern und Schichten steht aus.")
 print(f"\\n  Zum Vergleich - mit Ist-Wetter gerechnet waeren es "
@@ -575,14 +634,39 @@ print("  Diese Zahl steht hier nur, damit man den Unterschied sieht.")
 # Was haette das ANDERE Modell auf dem Test gebracht? Diese Zahl darf die
 # Entscheidung nicht mehr aendern - sie wurde nach der Wahl berechnet.
 # Sie steht hier, weil sie etwas ueber das Verfahren sagt.
+# JEDES MODELL MIT SEINEM EIGENEN, AUF DER VALIDIERUNG BESTIMMTEN
+# AUFSCHLAG. Den Aufschlag der linearen Regression auf das Boosting zu
+# legen waere ein unfairer Vergleich: Man haette das Modell des einen mit
+# der Entscheidungsregel des anderen kombiniert - ein Paar, das nie
+# jemand gewaehlt hat.
+def eur(betrag):
+    """Tausenderpunkt - und zwar NUR auf der Zahl, nicht auf dem Satz drumherum.
+    Ein .replace(',', '.') ueber den ganzen f-String macht aus 'dort, wo'
+    ein 'dort. wo'."""
+    return f"{betrag:,.0f}".replace(",", ".")
+
+def bester_aufschlag(modell):
+    """Der kostenguenstigste Aufschlag AUF DER VALIDIERUNG, je Modell."""
+    p_val = modell.predict(Xv_prognose)
+    return aufschlaege[int(np.argmin(
+        [kosten(y_val, p_val * (1 + a)) for a in aufschlaege]))]
+
 verworfen = {n: m for n, m in kandidaten.items() if n != gewaehlt_name}
 for name, modell in verworfen.items():
     p_test = modell.predict(Xt_prognose)
+    eigener = bester_aufschlag(modell)
     print(f"\\n  Und was haette {name} auf dem Test gebracht?")
+    print(f"     eigener Aufschlag aus der Validierung: {eigener:.0%} "
+          f"(gewähltes Modell: {bester:.0%})")
     print(f"     MAE {mean_absolute_error(y_test, p_test):.2f} gegen "
           f"{mean_absolute_error(y_test, mit_vorhersage):.2f}, Kosten "
-          f"{kosten(y_test, p_test * (1 + bester)):,.0f} gegen {kosten_modell:,.0f} EUR"
-          .replace(",", "."))
+          f"{eur(kosten(y_test, p_test * (1 + eigener)))} gegen "
+          f"{eur(kosten_modell)} EUR")
+    v_paar = kosten(y_val, modell.predict(Xv_prognose) * (1 + eigener))
+    v_gew = kosten(y_val, gewaehlt.predict(Xv_prognose) * (1 + bester))
+    print(f"     Auf der VALIDIERUNG - dort, wo entschieden wurde - kostete dieses "
+          f"Paar {eur(v_paar)} EUR")
+    print(f"     gegen {eur(v_gew)} EUR des gewählten Paares.")
 '''),
 
 MD("""
@@ -631,7 +715,7 @@ PHASE(6, "Die Prognose muss jeden Abend um 18 Uhr auf dem Tisch liegen — mit e
 MD("""
 ### 6.1 Was die simulierte Wettervorhersage nicht abbildet
 
-Die Freigabe in Phase 5 steht schon auf der Betriebszahl — das war die wichtigste
+Das Machbarkeitsurteil in Phase 5 steht schon auf der Betriebszahl — das war die wichtigste
 Korrektur an diesem Notebook. Zwei Dinge bleiben trotzdem offen, und sie gehören genannt:
 
 **Erstens ist die Wetterunsicherheit simuliert, nicht gemessen.** Wir haben normalverteiltes
@@ -659,9 +743,64 @@ KALENDER_BIS = min(max(feiertage), max(ferien), max(vorlesung), max(veranstaltun
 print(f"Die Kalender reichen bis {KALENDER_BIS.date()}.")
 print("Danach ist 'kein Feiertag' nicht bekannt, sondern nur nicht eingetragen.\\n")
 
-def nachfrage_prognostizieren(datum, temp_vorhersage, regen_vorhersage,
-                              wind_vorhersage=15.0, aufschlag=None):
-    """Die Zahl, die abends um 18 Uhr in der Disposition steht."""
+# DER MERKMALSVERTRAG: EINE FUNKTION FUER ALLE DREI ORTE.
+#
+# Validierung, Test und Prognose muessen dieselben Rohfelder in derselben
+# Bedeutung verwenden. Eine fruehere Fassung verlangte hier nur EINE
+# Temperatur und leitete daraus ab:
+#
+#     temp_max_c   = temp_vorhersage + 5      # geraten
+#     wind_max_kmh = 15.0                     # stiller Vorgabewert
+#
+# Beides ist im Test nie geprueft worden, denn dort standen die echten
+# Werte. Der Aufschlag "+5" liegt an 36,7 % der Tage um mehr als zwei Grad
+# daneben (die Spanne im Datensatz reicht von 0,3 bis 9,8 Grad), und der
+# Wind schwankt zwischen 7,8 und 28,7 km/h. Wer so etwas still ergaenzt,
+# liefert ein anderes Modell aus als das, das getestet wurde.
+#
+# Deshalb: alle vier Wetterfelder sind PFLICHT, und es gibt keine
+# Vorgabewerte, die einen fehlenden Wert unsichtbar machen.
+WETTERFELDER = ["temp_mittel_c", "temp_max_c", "niederschlag_mm", "wind_max_kmh"]
+GRENZEN_PLAUSIBEL = {"temp_mittel_c": (-25, 45), "temp_max_c": (-20, 50),
+                     "niederschlag_mm": (0, 150), "wind_max_kmh": (0, 200)}
+
+def merkmalszeile(datum, wetter):
+    """Baut die Merkmalszeile - dieselbe Logik wie fuer Training und Test."""
+    tag = pd.Timestamp(datum)
+    fehlt = [f for f in WETTERFELDER if f not in wetter or wetter[f] is None]
+    if fehlt:
+        raise ValueError(
+            f"Diese Wetterfelder fehlen: {', '.join(fehlt)}. Sie werden nicht "
+            "geschaetzt - das Modell wurde mit gemessenen Werten trainiert und "
+            "unter Prognosewerten geprueft, nicht unter erfundenen.")
+    for feld, (unten, oben) in GRENZEN_PLAUSIBEL.items():
+        if not unten <= float(wetter[feld]) <= oben:
+            raise ValueError(f"{feld} = {wetter[feld]} liegt ausserhalb von "
+                             f"{unten} bis {oben}. Einheit oder Quelle pruefen.")
+    if float(wetter["temp_max_c"]) < float(wetter["temp_mittel_c"]):
+        raise ValueError("temp_max_c ist kleiner als temp_mittel_c - die beiden "
+                         "Felder sind vermutlich vertauscht.")
+    zeile = pd.DataFrame([{
+        **{f: float(wetter[f]) for f in WETTERFELDER},
+        "wochentag": tag.dayofweek, "monat": tag.month,
+        "ist_wochenende": int(tag.dayofweek >= 5),
+        "ist_feiertag": int(tag in feiertage), "ist_ferien": int(tag in ferien),
+        "ist_vorlesungszeit": int(tag in vorlesung),
+        "ist_veranstaltung": int(tag in veranstaltungen),
+    }])
+    fehlend = set(merkmale) - set(zeile.columns)
+    ueberzaehlig = set(zeile.columns) - set(merkmale)
+    if fehlend or ueberzaehlig:
+        raise AssertionError(f"Merkmalsvertrag verletzt - fehlend: {fehlend}, "
+                             f"ueberzaehlig: {ueberzaehlig}")
+    return zeile[merkmale]
+
+def nachfrage_prognostizieren(datum, wetter, aufschlag=None):
+    """Die Zahl, die abends um 18 Uhr in der Disposition steht.
+
+    wetter: dict mit allen vier Feldern aus WETTERFELDER - so, wie sie
+            der Wetterdienst liefert. Keine Vorgabewerte, keine Ableitungen.
+    """
     if aufschlag is None:
         aufschlag = bester
     tag = pd.Timestamp(datum)
@@ -671,32 +810,41 @@ def nachfrage_prognostizieren(datum, temp_vorhersage, regen_vorhersage,
             "Feiertage, Ferien, Vorlesungszeit und Veranstaltungen sind dort unbekannt - "
             "sie als 'findet nicht statt' zu lesen waere eine Erfindung. "
             "Erst die Kalender pflegen, dann prognostizieren.")
-    zeile = pd.DataFrame([{
-        "temp_mittel_c": temp_vorhersage, "temp_max_c": temp_vorhersage + 5,
-        "niederschlag_mm": regen_vorhersage, "wind_max_kmh": wind_vorhersage,
-        "wochentag": tag.dayofweek, "monat": tag.month,
-        "ist_wochenende": int(tag.dayofweek >= 5),
-        "ist_feiertag": int(tag in feiertage), "ist_ferien": int(tag in ferien),
-        "ist_vorlesungszeit": int(tag in vorlesung),
-        "ist_veranstaltung": int(tag in veranstaltungen),
-    }])[merkmale]
-    roh = max(0.0, float(gewaehlt.predict(zeile)[0]))     # nie negativ
+    roh = max(0.0, float(gewaehlt.predict(merkmalszeile(tag, wetter))[0]))
     return int(round(roh)), int(round(roh * (1 + aufschlag)))
+
+# Gegenprobe des Vertrags: die Spalten der Prognosezeile muessen exakt
+# denen entsprechen, mit denen trainiert und getestet wurde.
+probe = merkmalszeile("2026-07-07", {"temp_mittel_c": 21.0, "temp_max_c": 26.0,
+                                     "niederschlag_mm": 0.0, "wind_max_kmh": 14.0})
+assert list(probe.columns) == list(X_test.columns), "Spaltenreihenfolge weicht ab"
+print(f"Merkmalsvertrag geprüft: {len(merkmale)} Felder, identisch zu Training und Test.\\n")
 
 print(f"{'Tag':<17s}{'Wetterlage':<26s}{'Fahrten':>9s}{'mit Aufschlag':>15s}")
 print("-" * 67)
-for datum, temp, regen, beschreibung in [
-        ("2026-07-07", 21.0, 0.0, "mild und trocken"),
-        ("2026-07-08", 21.0, 8.0, "mild, kräftiger Regen"),
-        ("2026-07-11", 24.0, 0.0, "Samstag, warm"),
-        ("2026-07-13", 12.0, 3.0, "kühl und nass")]:
-    roh, geplant = nachfrage_prognostizieren(datum, temp, regen)
+for datum, wetter, beschreibung in [
+        ("2026-07-07", {"temp_mittel_c": 21.0, "temp_max_c": 26.0,
+                        "niederschlag_mm": 0.0, "wind_max_kmh": 14.0}, "mild und trocken"),
+        ("2026-07-08", {"temp_mittel_c": 21.0, "temp_max_c": 25.0,
+                        "niederschlag_mm": 8.0, "wind_max_kmh": 22.0}, "mild, kräftiger Regen"),
+        ("2026-07-11", {"temp_mittel_c": 24.0, "temp_max_c": 30.0,
+                        "niederschlag_mm": 0.0, "wind_max_kmh": 11.0}, "Samstag, warm"),
+        ("2026-07-13", {"temp_mittel_c": 12.0, "temp_max_c": 16.0,
+                        "niederschlag_mm": 3.0, "wind_max_kmh": 25.0}, "kühl und nass")]:
+    roh, geplant = nachfrage_prognostizieren(datum, wetter)
     tag = pd.Timestamp(datum)
     print(f"{tag.strftime('%a %d.%m.%y'):<17s}{beschreibung:<26s}{roh:>9d}{geplant:>15d}")
 
-# Und die Gegenprobe: ein Datum hinter dem Kalenderende bricht ab.
+# Gegenprobe 1: ein fehlendes Wetterfeld wird nicht ergaenzt, sondern gemeldet.
 try:
-    nachfrage_prognostizieren("2026-12-15", 3.0, 1.0)
+    nachfrage_prognostizieren("2026-07-07", {"temp_mittel_c": 21.0, "niederschlag_mm": 0.0})
+except ValueError as fehler:
+    print(f"\\nGegenprobe unvollständiges Wetter:\\n  {fehler}")
+
+# Gegenprobe 2: ein Datum hinter dem Kalenderende bricht ab.
+try:
+    nachfrage_prognostizieren("2026-12-15", {"temp_mittel_c": 3.0, "temp_max_c": 6.0,
+                                             "niederschlag_mm": 1.0, "wind_max_kmh": 18.0})
 except ValueError as fehler:
     print(f"\\nGegenprobe 15.12.2026:\\n  {fehler}")
 
@@ -709,7 +857,10 @@ joblib.dump({"modell": gewaehlt, "merkmale": merkmale, "aufschlag": bester,
              "validierung_bis": str(X_val.index.max().date()),
              "test_bis": str(X_test.index.max().date()),
              "datenherkunft": "ERFUNDENE LEHRDATEN - Nachfrage synthetisch erzeugt",
-             "freigabestatus": "Machbarkeitsnachweis, keine Betriebsfreigabe",
+             "freigabestatus": "Machbarkeitsindiz auf synthetischen Daten, "
+                               "keine Betriebsfreigabe",
+             "kostenbasis": "Szenarioproxy aus angenommenen Fehlerkosten je Fahrt, "
+                            "keine gemessenen Betriebskosten",
              "trainiert_am": datetime.date.today().isoformat()}, "nachfragemodell.joblib")
 print("\\ngespeichert: nachfragemodell.joblib")
 '''),
@@ -721,7 +872,7 @@ MD("""
 |---|---|---|
 | MAE der letzten 28 Tage | über 20 % schlechter als im Test | Ursache suchen |
 | Anteil Tage mit Unterdeckung | über 60 % | Aufschlag erhöhen |
-| Güte der Wettervorhersage | Abweichung steigt | nicht das Modell ist schuld — die Quelle |
+| Güte der Wettervorhersage | Abweichung steigt | Fehler in der Wetterquelle, aber ein Fehler **des Systems** — Reaktion: auf die Faustregel zurückfallen, bis die Quelle wieder liefert |
 | Veranstaltungskalender | ein Termin fehlt | **das Modell weiß nichts davon und wird den Tag verfehlen** |
 
 **Die letzte Zeile ist die gefährlichste.** Das Modell kennt Veranstaltungen nur, weil sie
@@ -735,7 +886,8 @@ wird die Prognose an diesem Tag deutlich zu niedrig sein — und niemand wird wi
    17:45   Wettervorhersage abrufen
    17:50   Kalender prüfen: Feiertag, Ferien, Vorlesungszeit, Veranstaltung
    17:55   Prognose rechnen, Sicherheitsaufschlag aufschlagen
-   18:00   Zahl an die Disposition und die Schichtplanung
+   18:00   Prognose an die nachgelagerte Dispositions- und Personalplanung
+           (dort wird daraus eine Schicht - hier nicht)
    ------  am Folgetag
    23:00   tatsächliche Fahrten gegen die Prognose stellen, Abweichung protokollieren
    monatl. MAE der letzten 28 Tage prüfen, vierteljährlich nachtrainieren
