@@ -1082,7 +1082,8 @@ for untergrenze, obergrenze in ((30, 49), (50, 99), (100, 10 ** 6)):
 # ---- Und was kostet eine strengere Mindestfallzahl an Reichweite?
 print()
 print("Was eine strengere Mindestfallzahl kostet:")
-print(f"   {'Mindestens':>10}  {'Kombinationen':>14}  {'bediente Test-2-Fahrten':>24}")
+print(f"   {'Mindestens':>10}  {'Kombinationen':>14}  "
+      f"{'tatsaechlich angezeigt':>24}")
 for schwelle in (30, 50, 100):
     probe = pd.DataFrame({"von_roh": gruppen.quantile(.10), "bis_roh": gruppen.quantile(.90),
                           "n": gruppen.size()}).reset_index()
@@ -1091,8 +1092,22 @@ for schwelle in (30, 50, 100):
     probe["pb"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(probe["bis"], probe.typ_code)]
     probe = probe[(probe.n >= schwelle)
                   & spanne_nuetzt(probe["von"], probe["bis"], probe.pv, probe.pb)]
-    bedient = zukunft.merge(probe[["route", "typ_code", "fenster"]],
-                            on=["route", "typ_code", "fenster"], how="inner")
+    bedient = zukunft.merge(
+        probe[["route", "typ_code", "fenster", "von", "bis"]],
+        on=["route", "typ_code", "fenster"], how="inner")
+    # DIESELBE Laufzeitlogik wie das Produkt: Ohne die kundenbezogene
+    # Breitenpruefung zaehlt diese Tabelle Faelle mit, die die App nie zeigt -
+    # und ueberschaetzt damit den Preis der Strenge.
+    if len(bedient):
+        _pv = [kundenpreis(m, ty, r, ra) for m, ty, r, ra
+               in zip(bedient["von"], bedient.typ_code,
+                      bedient.freiminuten_rest, bedient.rabatt_prozent)]
+        _pb = [kundenpreis(m, ty, r, ra) for m, ty, r, ra
+               in zip(bedient["bis"], bedient.typ_code,
+                      bedient.freiminuten_rest, bedient.rabatt_prozent)]
+        bedient = bedient[spanne_nuetzt(bedient["von"], bedient["bis"],
+                                        pd.Series(_pv, index=bedient.index),
+                                        pd.Series(_pb, index=bedient.index))]
     marke = "  <- gewaehlt" if schwelle == MINDESTFAHRTEN else ""
     print(f"   {schwelle:>10}  {len(probe):>14}  {len(bedient):>17,} "
           f"({len(bedient)/len(zukunft):.0%}){marke}")
@@ -1212,9 +1227,10 @@ liegt dann rechnerisch auf der siebenundzwanzigsten Beobachtung — es hängt an
 drei Werten. Der Bootstrap zeigt, wie weit es dadurch wandert, wenn man dieselbe Gruppe
 immer wieder mit Zurücklegen zieht.
 
-Bei 30 bis 49 Fahrten schwankt die obere Grenze um {{bootstrap_breite_30:.0f}} Minuten.
-Das ist mehr, als unsere Nützlichkeitsregel der ganzen Spanne zugesteht — die Grenze
-selbst ist also unschärfer als das, was wir mit ihr zusagen.
+Bei Gruppen mit 30 bis 49 Fahrten umfasst der mediane 95-Prozent-Bereich des oberen
+Randes {{bootstrap_breite_30:.0f}} Minuten. Gemessen an der Nützlichkeitsregel, die der
+**ganzen** Spanne höchstens zwölf Minuten zugesteht, ist das erheblich: Der Rand allein
+ist fast halb so unsicher wie die Spanne breit sein darf.
 
 **Warum wir trotzdem bei 30 bleiben:** Die Tabelle darunter zeigt den Preis der Strenge.
 Bei 50 verlieren wir ein Fünftel der bedienten Anfragen, bei 100 fast die Hälfte. Das ist
@@ -1265,9 +1281,11 @@ Kriterium hält, und mit dem Schweigen als Preis. Zwei Gründe:
 2. Eine Auskunft, der jemand mit Ortskenntnis widersprechen kann, ist im Betrieb mehr
    wert als eine, die man glauben muss.
 
-> **Und der Preis dafür steht in den Zahlen:** Die Tabelle antwortet seltener als das
-> Modell und am Ende nur für CITY. Wir liefern den schwächeren Kandidaten aus, weil der
-> stärkere nicht dorthin passt, wo er laufen müsste.
+> **Und der Preis dafür steht in den Zahlen:** Die Tabelle antwortet auf
+> {{tabelle_auskunft:.1%}} der Anfragen, die Quantilregression auf
+> {{quantil_auskunft:.1%}} — beide für jeden Radtyp, die Tabelle nur seltener. Wir
+> liefern den schwächeren Kandidaten aus, weil der stärkere nicht dorthin passt, wo er
+> laufen müsste.
 
 **Es gäbe einen dritten Weg, und er ist die nächste Runde:** die Vorhersagen des Modells
 für jede Kombination aus Verbindung, Radtyp und Tageszeit **vorab ausrechnen und
@@ -1313,8 +1331,10 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 > | Grenzfall | {{n_grenz:,}} | {{abdeckung_grenz:.1%}} | {{unten_grenz:.1%}} | {{breite_grenz:.2f}} € |
 > | Rest deckt die **untere** Grenze nicht | {{n_offen:,}} | {{abdeckung_offen:.1%}} | **{{unten_offen:.1%}}** | {{breite_offen:.2f}} € |
 >
-> In der ersten Gruppe ist der Preis die Startgebühr, unabhängig von der Dauer — jedes
-> Modell trifft das. Die dritte Gruppe, {{anteil_preisabhaengig:.0%}} der Anfragen, zahlt
+> In der ersten Gruppe deckt das Guthaben die **angezeigte obere Grenze**. Innerhalb
+> der Spanne ist der Preis damit die Startgebühr, unabhängig von der Dauer. Wer diese
+> Grenze überfährt, zahlt trotzdem Minuten — deshalb stehen dort
+> {{abdeckung_gedeckt:.1%}} und nicht hundert Prozent. Die dritte Gruppe, {{anteil_preisabhaengig:.0%}} der Anfragen, zahlt
 > nach Minuten: **Nur dort leistet die Schätzung überhaupt etwas.** Und dort liegt die
 > Untergrenze des Vertrauensbereichs **unter der zugesagten Schwelle von 80 Prozent**.
 >
@@ -1430,12 +1450,22 @@ for lage in ("vorab gedeckt", "Grenzfall", "vorab preisabhaengig"):
 
 # Die vorab preisabhaengige Gruppe ist die Evaluationsgruppe, die vor der
 # Messung festzulegen war: An ihr entscheidet sich, ob das Produkt taugt.
+# DAS PRIMAERGATE. Es steht vor der Messung fest und entscheidet ueber die
+# Freigabe - nicht die Gesamtquote, die von den gedeckten Fahrten getragen
+# wird und ueber die Dauerprognose fast nichts aussagt.
+GATE_PREISABHAENGIG = 0.80
+
 offen = z[z.guthabenlage == "vorab preisabhaengig"]
-if len(offen):
-    unten_o, _ = wilson(offen.im_intervall.sum(), len(offen))
-    print(f"\\nDie vorab preisabhaengige Gruppe haelt die 80 Prozent "
-          f"{'' if unten_o >= 0.80 else 'NICHT '}mit ihrer Untergrenze "
-          f"({unten_o:.1%}).")
+unten_o, _ = wilson(offen.im_intervall.sum(), len(offen)) if len(offen) else (0.0, 0.0)
+PRIMAERGATE_BESTANDEN = bool(unten_o >= GATE_PREISABHAENGIG)
+merke("gate_untergrenze", unten_o)
+merke("gate_urteil", "bestanden" if PRIMAERGATE_BESTANDEN else "nicht bestanden")
+merke("gate_luecke", max(0.0, (GATE_PREISABHAENGIG - unten_o) * 100))
+_ = merke("n_gesamt", len(z))
+print(f"\\nPRIMAERGATE - vorab preisabhaengige Gruppe:")
+print(f"   Untergrenze {unten_o:.1%} gegen geforderte "
+      f"{GATE_PREISABHAENGIG:.0%}  ->  "
+      f"{'BESTANDEN' if PRIMAERGATE_BESTANDEN else 'NICHT BESTANDEN'}")
 
 # Was 6.5 zur Ueberwachung braucht, muss das Artefakt mitbringen: je Zeile die
 # Zahl der Pruefungen, die gemessene Abdeckung und die Unsicherheit. Ohne diese
@@ -1516,12 +1546,20 @@ je_typ_n = z.groupby("typ_code").im_intervall.size()
 freigegebene_typen = sorted(
     ty for ty in je_typ.index
     if wilson(int(round(je_typ[ty] * je_typ_n[ty])), int(je_typ_n[ty]))[0] >= 0.80)
+
+# Die Radtypfreigabe ist notwendig, aber nicht hinreichend. Ueber das PRODUKT
+# entscheidet das Primaergate: Halten die Fahrten, bei denen die Schaetzung
+# ueberhaupt in den Preis eingeht, die zugesagten 80 Prozent? Wenn nicht, wird
+# die Tabelle gebaut - aber nicht freigegeben.
+PRODUKT_FREIGEGEBEN = bool(PRIMAERGATE_BESTANDEN and len(freigegebene_typen) == 3)
+_ = merke("produkt_freigegeben", "ja" if PRODUKT_FREIGEGEBEN else "nein")
 merke("typen_freigegeben", aufzaehlung(freigegebene_typen))
 _ = merke("anzahl_typen_freigegeben", len(freigegebene_typen))
 print()
 for x in sorted(je_typ.index):
     print(f"   {x:8} {je_typ[x]:.1%}  "
-          f"{'freigegeben' if x in freigegebene_typen else 'NICHT freigegeben'}")
+          f"{'Radtypgate erfuellt' if x in freigegebene_typen else 'Radtypgate gerissen'}"
+          f"{'' if PRODUKT_FREIGEGEBEN else '  (Produkt gesperrt: Primaergate)'}")
 tab = tab[tab.typ_code.isin(freigegebene_typen)]
 z = z[z.typ_code.isin(freigegebene_typen)]
 
@@ -1623,6 +1661,8 @@ for _, g in tab.iterrows():
                        # Die Perzentile stammen aus training + validierung +
                        # test1, nicht nur aus dem Training. Ein Feld namens
                        # "trainingsende" haette darueber getaeuscht.
+                       produktfreigabe=("frei" if PRODUKT_FREIGEGEBEN
+                                        else "gesperrt_primaergate"),
                        lernbasis_bis=str(basis.startzeit.max().date()),
                        kalibrierung_bis=str(test2.startzeit.max().date())))
 
@@ -1656,13 +1696,23 @@ _verteilung = freigabe_tabelle.freigabestatus.value_counts()
 merke("n_zeilen", len(freigabe_tabelle))
 merke("n_gestuetzt", int(_verteilung.get("gestuetzt", 0)))
 merke("n_unbestimmt", int(_verteilung.get("unbestimmt", 0)))
-_ = merke("n_unzureichend", int(_verteilung.get("unzureichend", 0)))
+merke("n_unzureichend", int(_verteilung.get("unzureichend", 0)))
+# Was die strenge Alternative gekostet haette: nur verbindungsbezogen belegte
+# Zeilen ausliefern. Gemessen mit derselben Laufzeitlogik wie das Produkt.
+_streng = freigabe_tabelle[freigabe_tabelle.freigabestatus == "gestuetzt"]
+_bedient_streng = z.merge(
+    _streng.rename(columns={"ziel_station_id": "end_station_id",
+                            "zeitfenster": "fenster"})[
+        ["start_station_id", "end_station_id", "typ_code", "fenster"]],
+    on=["start_station_id", "end_station_id", "typ_code", "fenster"], how="inner")
+_ = merke("reichweite_streng", len(_bedient_streng) / len(zukunft))
 freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
 
 # DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
 # Filtern. Die Werte weiter oben galten der ungefilterten Tabelle; wer
 # nur die liest, berichtet etwas anderes, als er ausliefert.
-print("Das ausgelieferte Artefakt:")
+print("Das erzeugte Artefakt:"
+      if not PRODUKT_FREIGEGEBEN else "Das ausgelieferte Artefakt:")
 print(f"   Radtypen                {sorted(freigabe_tabelle.typ_code.unique())}")
 print(f"   Kombinationen           {len(freigabe_tabelle)}")
 print(f"   Verbindungen            "
@@ -1696,7 +1746,8 @@ else:
     NACHSCHLAGE = pd.DataFrame().set_index(pd.MultiIndex.from_arrays([[], [], [], []]))
 
 def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
-                    freiminuten_rest=0, rabatt_prozent=0.0):
+                    freiminuten_rest=0, rabatt_prozent=0.0,
+                    ohne_produktsperre=False):
     \"\"\"Gibt die Preisspanne zurueck - oder sagt, dass sie es nicht kann.
 
     Angesprochen wird ueber Stations-IDs. Namen sind Anzeigewerte.
@@ -1704,7 +1755,17 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     Freiminutenstand und Rabatt kommen aus dem Konto des angemeldeten Kunden.
     Ohne Angabe wird der Basistarif gerechnet - der teuerste Fall, den die
     Anzeige einem nicht angemeldeten Besucher zeigen darf.
+
+    ohne_produktsperre dient allein der Pruefung: Damit laesst sich die
+    Filterlogik gegen die Offlinebewertung halten, auch wenn das Produkt als
+    Ganzes gesperrt ist. Im Betrieb wird der Schalter nie gesetzt.
     \"\"\"
+    # Die erste Pruefung gilt dem PRODUKT, nicht der Anfrage: Solange das
+    # Primaergate nicht haelt, zeigt die App gar nichts an - auch nicht dort,
+    # wo die einzelne Kombination gut belegt waere.
+    if not PRODUKT_FREIGEGEBEN and not ohne_produktsperre:
+        return {"anzeige": None, "grund": "produkt_nicht_freigegeben", "status": None,
+                "hinweis": "Die Preisauskunft ist noch nicht freigegeben."}
     if start_id == ziel_id:
         return {"anzeige": None, "grund": "rundfahrt", "status": None,
                 "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
@@ -1768,8 +1829,12 @@ if zu_breit:
     proben.append(zu_breit[:4] + (zu_breit[4],))
     beschriftung.append("Spanne fuer diesen Tarif zu breit")
 
+# Die Einzelfaelle werden OHNE die Produktsperre vorgefuehrt - sonst zeigten
+# sie alle dieselbe Ablehnung, und man saehe nicht mehr, wie die Funktion die
+# einzelnen Faelle unterscheidet. Die Sperre selbst kommt danach.
 for probe, was in zip(proben, beschriftung):
-    e = preis_schaetzen(*probe[:4], freiminuten_rest=probe[4] if len(probe) > 4 else 0)
+    e = preis_schaetzen(*probe[:4], freiminuten_rest=probe[4] if len(probe) > 4 else 0,
+                        ohne_produktsperre=True)
     # Die drei Verweigerungsfaelle muessen auch wirklich verweigern.
     if was != "freigegebene Verbindung":
         assert e["anzeige"] is None, f"{was} liefert wider Erwarten eine Anzeige"
@@ -1781,6 +1846,12 @@ for probe, was in zip(proben, beschriftung):
         print(f"   {e['anzeige']}   {e['minuten']}   Grundlage: {e['grundlage']}")
     else:
         print(f"   keine Anzeige - {e['hinweis']}")
+
+if not PRODUKT_FREIGEGEBEN:
+    print()
+    print("So weit die Faelle. Im Betrieb kaeme keiner davon zum Tragen:")
+    erste_probe = preis_schaetzen(*proben[0][:4])
+    print(f"   {erste_probe['hinweis']}  (Grund: {erste_probe['grund']})")
 """),
 
 MD("""
@@ -1803,7 +1874,8 @@ for r in stichprobe.itertuples():
     antwort = preis_schaetzen(int(r.start_station_id), int(r.end_station_id),
                               r.typ_code, r.startzeit.hour,
                               freiminuten_rest=r.freiminuten_rest,
-                              rabatt_prozent=r.rabatt_prozent)
+                              rabatt_prozent=r.rabatt_prozent,
+                              ohne_produktsperre=True)
     aus_der_app.append(antwort["anzeige"] is not None)
 stichprobe["app_zeigt"] = aus_der_app
 
@@ -1825,10 +1897,59 @@ assert nur_app == 0 and nur_messung == 0, (
     f"Bewertung und Auslieferung sind nicht deckungsgleich: "
     f"{nur_app} Faelle zeigt nur die App, {nur_messung} zaehlt nur die Messung.")
 print()
-print("Beide Wege stimmen ueberein - die gemessene Abdeckung ist die des Produkts.")
+print("Die Filterlogik beider Wege stimmt ueberein.")
+
+# Zweite Aussage, getrennt geprueft: Solange das Produkt gesperrt ist, zeigt
+# die App gar nichts - unabhaengig davon, wie gut die einzelne Zeile belegt ist.
+probe = zukunft.iloc[0]
+gesperrt = preis_schaetzen(int(probe.start_station_id), int(probe.end_station_id),
+                           probe.typ_code, probe.startzeit.hour)
+if PRODUKT_FREIGEGEBEN:
+    print("Das Produkt ist freigegeben - die App zeigt an, was hier gemessen wurde.")
+else:
+    assert gesperrt["anzeige"] is None and gesperrt["grund"] == "produkt_nicht_freigegeben"
+    print("Das Produkt ist NICHT freigegeben: Die App verweigert jede Auskunft,")
+    print("auch fuer Kombinationen, die fuer sich genommen belegt waeren.")
 """),
 
 MD("""
+### 6.4c Das Primärgate — und warum es nicht hält
+
+In 6.1 haben wir die **vorab preisabhängige Gruppe** zur entscheidenden
+Evaluationsgruppe erklärt: die Anfragen, bei denen das Freiminutenguthaben die obere
+Intervallgrenze *nicht* deckt und der Preis deshalb überhaupt an der Dauerschätzung
+hängt. Wer das sagt, muss es auch messen lassen.
+
+| | |
+|---|---|
+| **Gate** | Untergrenze des 95-%-Intervalls in der preisabhängigen Gruppe ≥ 80 % |
+| **gemessen** | {{gate_untergrenze:.1%}} |
+| **Urteil** | **{{gate_urteil}}** |
+
+Das Gate hält nicht. Es fehlen {{gate_luecke:.1f}} Prozentpunkte.
+
+**Die Folge ist unbequem und wird trotzdem gezogen: Das Produkt wird nicht freigegeben.**
+Die Tabelle ist gebaut, das Artefakt geschrieben, die Spalte `produktfreigabe` trägt
+`gesperrt_primaergate` — und `preis_schaetzen()` verweigert jede Auskunft, auch für
+Verbindungen, die für sich genommen gut belegt sind.
+
+> **Warum die Gesamtquote hier nicht zählt.** {{abdeckung_gesamt:.1%}} über alle
+> Anfragen klingt komfortabel. Aber {{n_gedeckt:,}} der {{n_gesamt:,}} gemessenen
+> Fahrten liegen in der Gruppe, deren Guthaben die Fahrt deckt — dort ist der Preis die
+> Startgebühr, und **jede** Schätzung trifft. Diese Fälle tragen die Gesamtquote, ohne
+> etwas über die Dauerprognose auszusagen. Ein Gate, das sie mitzählt, misst die
+> Tarifstruktur, nicht das Modell.
+
+**Was jetzt zu tun wäre** — in dieser Reihenfolge, und keiner der Schritte ist eine
+Notebook-Übung:
+
+1. Den Schattenbetrieb aus 6.6 aufsetzen und das Gate auf unabhängigen Daten messen.
+   Möglich, dass es dort hält — {{gate_untergrenze:.1%}} sind knapp, nicht deutlich.
+2. Hält es auch dort nicht: die Spanne verbreitern, bis es hält, und den Preis dafür
+   in Reichweite ausweisen. Das ist eine Produktentscheidung, keine statistische.
+3. Oder die Zusage senken — dann aber ausdrücklich und mit neuer Zahl, nicht durch
+   Wegsehen.
+
 ### 6.4b Worauf sich die Zusage bezieht — und worauf nicht
 
 Von den {{n_zeilen:,}} ausgelieferten Kombinationen sind nur {{n_gestuetzt:,}}
@@ -1845,8 +1966,9 @@ die einzelne Verbindung:
 > Verbindung ist das nicht zugesichert.
 
 Die Alternative wäre gewesen, nur die {{n_gestuetzt:,}} belegten Zeilen auszuliefern.
-Das hätte die Reichweite von {{reichweite:.0%}} auf einen Bruchteil gedrückt — für ein
-Produkt, das ohnehin nur bei jeder zweiten Anfrage antwortet, ist das kein Gewinn.
+Das hätte die Reichweite von {{reichweite:.0%}} auf **{{reichweite_streng:.1%}}**
+gedrückt — für ein Produkt, das ohnehin nur bei jeder zweiten Anfrage antwortet, ist das
+kein Gewinn.
 
 **Damit die Entscheidung nicht im Verborgenen bleibt, wandert der Status mit:** Die
 App-Funktion gibt zu jeder Antwort `status` und die Zahl der Prüffahrten zurück.
@@ -1912,7 +2034,7 @@ MD("""
 | 3 Data Preparation | Zielstation erlaubt — als Stellvertreter. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, dass die Zielangabe {{ablation_anteil:.0%}} des Fehlers erklärt |
 | 5 Evaluation | {{typen_halten}} halten die Grenze auf Test 1, {{typen_reissen}} nicht. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet |
-| 6 Deployment | Ausgeliefert wird die Tabelle, nicht das Modell — für {{typen_freigegeben}}, ohne die messbar durchgefallenen Kombinationen. Kalibriert und freigegeben auf Test 2 |
+| 6 Deployment | Gebaut wird die Tabelle, nicht das Modell — für {{typen_freigegeben}}. **Freigegeben wird sie nicht:** Das Primärgate der preisabhängigen Gruppe hält mit {{gate_untergrenze:.1%}} die zugesagten 80 Prozent nicht |
 
 **Der Rücksprung, den man hier mitverfolgen konnte**
 
@@ -1948,16 +2070,19 @@ eine in der Reichweite: Für {{reichweite:.0%}} der Fahrten kann die App etwas s
 **Was offen bleibt — ausdrücklich**
 
 1. **Das geplante Ziel wird nicht erfasst.** Alle Zahlen sind optimistische Näherungen, keine bewiesenen Obergrenzen.
-2. **Kein echter Schattenbetrieb.** Test 2 hat das Artefakt kalibriert und freigegeben —
-   die unabhängige Prüfung des fertigen Artefakts steht damit noch aus.
-3. **Keine Zusage je Verbindung.** Die 80 Prozent gelten insgesamt und je Radtyp.
+2. **Das Primärgate hält nicht.** {{gate_untergrenze:.1%}} statt 80 Prozent in der
+   preisabhängigen Gruppe. Das Produkt bleibt gesperrt, bis der Schattenbetrieb zeigt,
+   ob die Lücke von {{gate_luecke:.1f}} Punkten Zufall war oder Substanz hat.
+3. **Kein echter Schattenbetrieb.** Test 2 hat das Artefakt kalibriert — die
+   unabhängige Prüfung des fertigen Artefakts steht damit noch aus.
+4. **Keine Zusage je Verbindung.** Die 80 Prozent gelten insgesamt und je Radtyp.
    Ausgeschlossen ist, was messbar durchfällt; für die Mehrzahl der Kombinationen ist die
    Prüfmenge zu klein für eine Einzelaussage.
-4. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
-5. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
-6. **Die Punktschätzung trägt {{typen_reissen}} nicht.** Für diesen Radtyp gibt es
+5. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
+6. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
+7. **Die Punktschätzung trägt {{typen_reissen}} nicht.** Für diesen Radtyp gibt es
    nur die Spanne, keine Zahl — der Minutenpreis lässt keine engere Zusage zu.
-7. **Der bessere Kandidat wird nicht ausgeliefert.** Die Quantilregression erfüllt das
+8. **Der bessere Kandidat wird nicht ausgeliefert.** Die Quantilregression erfüllt das
    Kriterium und antwortet häufiger; ausgeliefert wird die Tabelle, weil die App statisch
    ist. Ihre Vorhersagen vorab zu tabellieren wäre der nächste Schritt.
 
