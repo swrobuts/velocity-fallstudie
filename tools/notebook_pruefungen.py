@@ -3,6 +3,8 @@
 Jede Pruefung hier geht auf einen Fehler zurueck, der in einem Review
 gefunden wurde. Sie soll ihn beim naechsten Mal vor dem Review finden.
 
+  Hartes Ergebnis   Radtypnamen im Fliesstext statt aus einem Platzhalter
+  Gate ohne Sperre  ein Kriterium, das der Text entscheidend nennt, aber nichts sperrt
   Harte Quelle      Datenzugriff auf einen beweglichen Zweig statt einen Commit
   Toter Status      ein Freigabestatus, der berechnet, aber nie gepruft wird
   Nullfuellung      .fillna(0) verdeckt fehlende Werte, statt sie zu melden
@@ -44,16 +46,18 @@ URTEILSWORTE = ("erfüllt", "erfuellt", "gerissen", "freigegeben", "bestanden",
                 "ERFUELLT", "NICHT ERFUELLT")
 
 
-def zellen(pfad: Path) -> tuple[list, list]:
+def zellen(pfad: Path) -> tuple[list, list, list]:
     nb = json.loads(pfad.read_text(encoding="utf-8"))
-    code, ausgaben = [], []
+    code, ausgaben, markdown = [], [], []
     for z in nb["cells"]:
         text = "".join(z["source"])
         if z["cell_type"] == "code":
             code.append(text)
             ausgaben.append("".join(
                 "".join(a.get("text", "")) for a in z.get("outputs", [])))
-    return code, ausgaben
+        else:
+            markdown.append(text)
+    return code, ausgaben, markdown
 
 
 def pruefe_nullfuellung(code: list[str]) -> list[str]:
@@ -173,6 +177,61 @@ def pruefe_status_ohne_wirkung(code: list[str]) -> list[str]:
     return funde
 
 
+
+# Werte, die im Fliesstext stehen duerfen, weil sie Vorgaben sind und keine
+# Messergebnisse: Radtypen als Begriff, nicht als Aufzaehlung eines Ergebnisses.
+ERGEBNISNAMEN = ("CITY", "EBIKE", "CARGO")
+
+
+def pruefe_harte_ergebnisnamen(bauskript: str) -> list[str]:
+    """Radtypnamen im Fliesstext veralten, sobald sich die Freigabe aendert.
+
+    Geprueft wird das BAUSKRIPT, nicht das Notebook: Dort steht noch
+    {{typen_halten}}, waehrend im fertigen Notebook laengst "CITY und EBIKE"
+    steht - und beides waere nicht mehr zu unterscheiden.
+
+    In einer Aufzaehlung ("nur fuer CITY", "CITY und EBIKE") ist der Name ein
+    ERGEBNIS und gehoert in einen Platzhalter. In einer Tabellenzeile oder als
+    Spaltenwert ist er ein Bezeichner und darf stehen bleiben.
+    """
+    verdaechtig = re.compile(
+        r"(?:nur (?:für|fuer)|ausschliesslich|lediglich)\s+\*{0,2}(" + "|".join(ERGEBNISNAMEN) + r")\b"
+        r"|\b(" + "|".join(ERGEBNISNAMEN) + r")\s+und\s+(" + "|".join(ERGEBNISNAMEN) + r")\b")
+    funde = []
+    # Nur MD-Bloecke betrachten - in Codezeilen sind die Namen Bezeichner.
+    for block in re.findall(r'MD\("""(.*?)"""\)', bauskript, re.S):
+        for zeile in block.split("\n"):
+            if zeile.lstrip().startswith("|") or zeile.lstrip().startswith("#"):
+                continue                      # Tabelle oder Ueberschrift
+            if verdaechtig.search(zeile):
+                funde.append(
+                    f"\"{zeile.strip()[:70]}\" - Radtypen als Ergebnis "
+                    f"ausgeschrieben; ein Platzhalter veraltet nicht")
+    return funde
+
+
+def pruefe_gate_ohne_sperre(bauskript: str) -> list[str]:
+    """Ein Kriterium, das der Text als entscheidend bezeichnet, muss im Code
+    ueber die Freigabe mitentscheiden - sonst steht die Zusage nur da."""
+    ganzer_code = "\n".join(re.findall(r'CODE\("""(.*?)"""\)', bauskript, re.S))
+    ganzer_text = "\n".join(re.findall(r'MD\("""(.*?)"""\)', bauskript, re.S))
+    funde = []
+    # Saetze, die etwas zum Gate erklaeren
+    for satz in re.findall(
+            r"[^.\n]*\b(?:Primärgate|Primaergate|entscheidet sich, ob das Produkt|"
+            r"vorab festgelegte Evaluationsgruppe|entscheidende[rs]? Gate)\b[^.]*\.",
+            ganzer_text):
+        # Kommt in der Freigabelogik ueberhaupt eine Sperre vor, die daran haengt?
+        if not re.search(r"(?:gate|primaergate|evaluationsgruppe)\w*\s*=|"
+                         r"assert[^\n]*(?:gate|preisabhaeng)", ganzer_code, re.I):
+            funde.append(
+                f"Der Text erklaert etwas zum Gate (\"{satz.strip()[:70]}...\"), "
+                f"aber im Code entscheidet nichts darueber - die Freigabe "
+                f"beruecksichtigt es nicht")
+            break
+    return funde
+
+
 def main() -> int:
     dateien = sorted(NOTEBOOKS.glob("*.ipynb"))
     if not dateien:
@@ -180,11 +239,18 @@ def main() -> int:
         return 2
     gesamt = gesamt_hinweise = 0
     for pfad in dateien:
-        code, ausgaben = zellen(pfad)
+        code, ausgaben, _ = zellen(pfad)
+        # Zum Notebook gehoert sein Bauskript - dort stehen die Platzhalter noch.
+        skripte = sorted((BASIS / "analytics" / "bau").glob("nb0*.py"))
+        passend = [s for s in skripte
+                   if pfad.stem.split("_")[0].lstrip("0") in s.name.split("_")[0]]
+        bauskript = passend[0].read_text(encoding="utf-8") if passend else ""
         fehler = (pruefe_blinder_abgleich(code, ausgaben)
                   + pruefe_sichtbarer_rest(code)
                   + pruefe_harte_quelle(code)
-                  + pruefe_status_ohne_wirkung(code))
+                  + pruefe_status_ohne_wirkung(code)
+                  + pruefe_harte_ergebnisnamen(bauskript)
+                  + pruefe_gate_ohne_sperre(bauskript))
         hinweise = (pruefe_nullfuellung(code) + pruefe_freie_schwellen(code)
                     + pruefe_urteil_ohne_zahl(ausgaben))
         if fehler:
