@@ -56,10 +56,13 @@ ANALYTICS = os.path.dirname(HIER)
 ZIEL = os.path.join(ANALYTICS, "notebooks")
 ZIEL_UEBUNG = os.path.join(ZIEL, "uebung")
 
-# Die Daten haengen an einem festen Tag, nicht an main: so bekommen alle
-# Studierenden denselben Stand, auch wenn die Fallstudie weitergepflegt
-# wird. Der Tag wird verschoben, wenn sich die Musterdaten aendern.
-DATENSTAND = "daten-v2"
+# Die Daten haengen an einem festen COMMIT, nicht an main und nicht an einem
+# Tag: main bewegt sich mit jedem Push, und ein Tag laesst sich verschieben -
+# beides ist schon passiert. Nur die Commit-Kennung ist unveraenderlich.
+#
+# Beim Erneuern der Musterdaten wird dieser Wert bewusst nachgezogen. Das ist
+# der Sinn: Wer die Daten aendert, aendert sichtbar auch den Datenstand.
+DATENSTAND = "316b3db6532966693909430503b3ba597077754f"
 ROHBASIS = ("https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/"
             f"{DATENSTAND}/analytics/")
 COLAB = "https://colab.research.google.com/github/swrobuts/velocity-fallstudie/blob/main/analytics/notebooks/"

@@ -15,7 +15,7 @@ Runde 2, nach dem zweiten methodischen Review (01.09.2026). Umgesetzt:
   * Rollierende Pruefung, Ziel-Ablation, ehrliche Produktreichweite,
     Abdeckung je Segment, harmonisierte Ueberwachungsgrenzen.
 """
-from bauwerk import CODE, MD, PHASE, kopf
+from bauwerk import CODE, MD, PHASE, ROHBASIS, kopf
 
 NAME = "01_Regression_Fahrtdauer"
 
@@ -126,7 +126,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 BASIS = os.environ.get("VELO_BASIS",
-    "https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/main/analytics/")
+    """ + '"' + ROHBASIS + '"' + """)
 
 ausleihe  = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
 station   = pd.read_csv(BASIS + "station.csv")
@@ -757,11 +757,13 @@ for t, g in pruef.groupby("typ_code"):
           f"{'erfüllt' if pf < 0.50 else 'gerissen':>12}")
     if t == "CITY":
         merke("preisfehler_city", pf)
-        _ = merke("city_unter_50", (g.preisfehler < 0.50).mean())  # Wert nur festhalten, nicht anzeigen
+        _ = merke("city_unter_50", (g.preisfehler < 0.50).mean())
+    if t == "CARGO":
+        _ = merke("preisfehler_cargo", pf)
 """),
 
 MD("""
-Für **CITY ist die Grenze eingehalten**, für EBIKE und CARGO nicht.
+Für **CITY und EBIKE ist die Grenze eingehalten**, für CARGO nicht.
 
 Bevor daraus eine Freigabe wird, zwei Fragen, die man sich in dieser Lage immer stellen
 sollte.
@@ -788,8 +790,8 @@ MD("""
 ### 5.3 Wie belastbar ist dieses Ergebnis?
 
 Eine einzelne Zahl auf einem einzelnen Zeitraum sagt nichts darüber, wie sie im nächsten
-Quartal aussieht. Der Fehler ist im Sommer erkennbar größer als im Winter — ein Kriterium,
-das nur in einer Jahreszeit hält, ist keine Zusage.
+Quartal aussieht. Ein Kriterium, das nur in einer Jahreszeit hält, wäre keine Zusage —
+also prüfen wir es über mehrere.
 
 Wir prüfen das **innerhalb** von Training und Validierung: Test 1 ist verbraucht, und
 Test 2 wurde bis hierher weder zum Anpassen noch zum Auswählen verwendet. Völlig blind
@@ -839,11 +841,12 @@ else:
 """),
 
 MD("""
-Der saisonale Unterschied ist deutlich sichtbar — im Sommer, wenn mehr Ausflugsfahrten
-stattfinden, steigt der Fehler —, aber er bleibt in allen vier Fenstern unter der Grenze.
-**Für CITY ist die Punktschätzung damit belastbar**, nicht nur einmalig gelungen.
+Der Fehler schwankt über die vier Fenster nur um wenige Cent und bleibt überall deutlich
+unter der Grenze. **Für CITY ist die Punktschätzung damit belastbar**, nicht nur einmalig
+gelungen. Eine Saisonabhängigkeit, die man erwarten könnte, zeigt sich in diesen vier
+Fenstern nicht — was sie über längere Zeiträume tut, sagen sie nicht.
 
-Für EBIKE und CARGO gibt es dagegen bisher überhaupt kein Produkt.
+Für CARGO gibt es dagegen bisher kein Produkt.
 
 ### 5.4 Woran es liegt
 """),
@@ -893,16 +896,18 @@ Gründen, die nichts mit einem gerissenen Kriterium zu tun haben.
 {{city_unter_50:.0%}} der CITY-Fahrten bleiben innerhalb der 50 Cent — bei den übrigen
 liegt die Anzeige darüber. Ein Kunde erlebt keinen Mittelwert, er erlebt seine Fahrt.
 
-**Zweitens haben zwei von drei Radtypen gar kein Produkt.** Eine Lösung, die nur für das
-billigste Rad funktioniert, ist keine Antwort auf die Geschäftsfrage.
+**Zweitens hat das Lastenrad kein Produkt.** Mit {{preisfehler_cargo:.2f}} € mittlerer
+Abweichung reißt es die Grenze um ein Vielfaches. Eine Lösung, die den teuersten Radtyp
+ausspart, ist keine vollständige Antwort auf die Geschäftsfrage.
 
 Drei Wege stehen offen:
 
 1. **Grenze lockern.** Verboten — und hier auch unnötig.
 2. **Besseres Modell suchen.** Die Ablation in 4.3 zeigt, dass die Verbindung bereits
-   {{ablation_anteil:.0%}} des Fehlers erklärt — das Verfahren schöpft die vorhandene
-   Information also aus. Was fehlt, ist der Anlass der einzelnen Fahrt, und der steht
-   in keiner Spalte.
+   {{ablation_anteil:.0%}} des Fehlers erklärt. Ob ein anderes Verfahren mehr aus den
+   vorhandenen Spalten holt, haben wir nicht ausgeschöpft — verglichen wurden drei
+   Verfahren in je einer Einstellung. Was sicher fehlt, ist der Anlass der einzelnen
+   Fahrt, und der steht in keiner Spalte.
 3. **Die Zusage ändern.** Statt einer Zahl, die für ein Viertel der Fahrten zu genau
    klingt, eine **Spanne**, die die tatsächliche Streuung zeigt.
 
@@ -1015,7 +1020,7 @@ tab["preis_bis_basis"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(tab["bis"], 
 tab = tab[(tab.n >= MINDESTFAHRTEN)
           & spanne_nuetzt(tab["von"], tab["bis"],
                           tab.preis_von_basis, tab.preis_bis_basis)]
-print(f"{len(tab)} Kombinationen erfuellen die beiden Regeln aus Phase 1.")
+print(f"{len(tab)} Kombinationen erfuellen Mindestfallzahl und Nuetzlichkeitsregel aus Phase 5.5.")
 # Die Stations-IDs stehen in beiden Tabellen und meinen dasselbe. Beim
 # Zusammenfuehren wuerden daraus sonst zwei Spaltenpaare mit Suffixen.
 zukunft = zukunft.merge(
@@ -1233,6 +1238,22 @@ z["preis_von"] = [kundenpreis(m, ty, r, ra) for m, ty, r, ra
                   in zip(z["von"], z.typ_code, z.freiminuten_rest, z.rabatt_prozent)]
 z["preis_bis"] = [kundenpreis(m, ty, r, ra) for m, ty, r, ra
                   in zip(z["bis"], z.typ_code, z.freiminuten_rest, z.rabatt_prozent)]
+
+# GEMESSEN WIRD NUR, WAS DIE APP AUCH ZEIGEN WUERDE. Der Vorabfilter der
+# Tabelle rechnet mit dem Basistarif. Das ist fuer die absolute Breite der
+# teuerste Fall, aber NICHT fuer die relative: Deckt das Guthaben die kurze
+# Fahrt und die lange nicht mehr, steht der blossen Startgebuehr ein voller
+# Minutenpreis gegenueber - die Spanne ist dann relativ breiter als im
+# Basistarif. Ohne diese zweite Pruefung wuerde die App Faelle anzeigen, die
+# diese Messung nie gesehen hat.
+zeigt_die_app = spanne_nuetzt(z["von"], z["bis"], z.preis_von, z.preis_bis)
+verworfen = int((~zeigt_die_app).sum())
+print(f"{verworfen:,} von {len(z):,} Faellen sind fuer den jeweiligen Tarif zu breit "
+      f"({verworfen / max(1, len(z)):.2%}) - sie zeigt die App nicht,")
+print("also gehen sie auch nicht in Abdeckung und Reichweite ein.")
+_ = merke("kundenspezifisch_verworfen", verworfen / max(1, len(z)))
+z = z[zeigt_die_app].copy()
+
 z["im_intervall"] = (z.p_ist >= z.preis_von - 0.001) & (z.p_ist <= z.preis_bis + 0.001)
 z["breite"] = z.preis_bis - z.preis_von
 
@@ -1291,13 +1312,35 @@ belege = z.groupby(["start_station_id", "end_station_id", "typ_code", "fenster"]
 belege[["test2_untergrenze", "test2_obergrenze"]] = [
     wilson(round(a * n_), n_) for a, n_
     in zip(belege.test2_abdeckung, belege.test2_fahrten)]
-belege["freigabestatus"] = np.where(
-    belege.test2_untergrenze >= 0.80, "gestuetzt",
-    np.where(belege.test2_obergrenze < 0.80, "widerlegt", "unbestimmt"))
-print(f"\\nBelege je Kombination: {len(belege)} Zeilen, davon "
-      f"{(belege.freigabestatus == 'gestuetzt').sum()} statistisch gestuetzt, "
-      f"{(belege.freigabestatus == 'unbestimmt').sum()} unbestimmt, "
-      f"{(belege.freigabestatus == 'widerlegt').sum()} widerlegt")
+# Eine einzige Stelle entscheidet ueber den Status - und dieselbe Funktion
+# entscheidet spaeter, ob die App antworten darf. Ein Status, der nur in einer
+# Spalte steht und nirgends sperrt, ist keine Freigabelogik, sondern Zierrat.
+MINDESTFAHRTEN_FREIGABE = 20
+# Nur "widerlegt" wird gesperrt. Was zu duenn ist, um beurteilt zu werden,
+# faellt unter die aggregierte Zusage je Radtyp - das ist eine
+# Produktentscheidung, und sie steht im Text, nicht nur im Code.
+AUSLIEFERBAR = ("gestuetzt", "unbestimmt", "unzureichend")
+
+
+def freigabestatus(treffer, anzahl):
+    \"\"\"Was laesst sich ueber DIESE Kombination sagen?\"\"\"
+    if anzahl < MINDESTFAHRTEN_FREIGABE:
+        return "unzureichend"          # zu duenn fuer eine eigene Aussage
+    unten, oben = wilson(treffer, anzahl)
+    if unten >= 0.80:
+        return "gestuetzt"
+    if oben < 0.80:
+        return "widerlegt"             # gesperrt
+    return "unbestimmt"
+
+
+belege["freigabestatus"] = [
+    freigabestatus(round(a * n_), n_)
+    for a, n_ in zip(belege.test2_abdeckung, belege.test2_fahrten)]
+print(f"\\nBelege je Kombination: {len(belege)} Zeilen")
+for status, anzahl in belege.freigabestatus.value_counts().items():
+    print(f"   {status:14} {anzahl:4d}"
+          + ("   -> wird gesperrt" if status not in AUSLIEFERBAR else ""))
 
 je_komb = z.groupby(["route", "typ_code", "fenster"]).agg(
     abdeckung=("im_intervall", "mean"), n=("im_intervall", "size"),
@@ -1332,7 +1375,12 @@ print(f"\\nSpannenbreite im Median: {z.breite.median():.2f} €")
 # HIER und nicht erst beim Schreiben der Datei, damit die Reichweite in
 # 6.2 die des ausgelieferten Artefakts ist und nicht die eines groesseren.
 je_typ = z.groupby("typ_code").im_intervall.mean()
-freigegebene_typen = sorted(je_typ[je_typ >= 0.80].index)
+je_typ_n = z.groupby("typ_code").im_intervall.size()
+# Auch hier die Untergrenze, nicht der Punktschaetzer: Ein Radtyp mit 81 %
+# aus vierzig Fahrten ist nicht freigegeben, sondern unsicher.
+freigegebene_typen = sorted(
+    ty for ty in je_typ.index
+    if wilson(int(round(je_typ[ty] * je_typ_n[ty])), int(je_typ_n[ty]))[0] >= 0.80)
 print()
 for x in sorted(je_typ.index):
     print(f"   {x:8} {je_typ[x]:.1%}  "
@@ -1397,6 +1445,24 @@ CODE("""
 id_je_name = station.set_index("name").station_id
 name_je_id = station.set_index("station_id").name
 
+# Versionskennungen, die sich aendern, wenn sich etwas aendert. Die Summe der
+# Minutenpreise taugt dafuer nicht: Sie ignoriert Startgebuehr und Deckel und
+# bliebe gleich, wenn zwei Preise gegenlaeufig angepasst wuerden.
+import hashlib
+
+def kennung(rahmen, laenge=12):
+    roh = rahmen.sort_index(axis=1).to_csv(index=False).encode("utf-8")
+    return hashlib.sha256(roh).hexdigest()[:laenge]
+
+TARIFVERSION = kennung(pd.concat([preise, tarife], axis=0, ignore_index=True))
+# Bewusst OHNE den Ladepfad: Ob lokal gebaut oder von GitHub geladen, dieselben
+# Daten muessen dieselbe Kennung ergeben.
+DATENVERSION = kennung(pd.DataFrame({
+    "fahrten": [len(ausleihe)],
+    "bis": [str(ausleihe.startzeit.max())],
+    "entgelt": [round(ausleihe.entgelt_eur.sum(), 2)]}))
+print(f"Tarifversion {TARIFVERSION}   Datenversion {DATENVERSION}")
+
 zeilen = []
 for _, g in tab.iterrows():
     # Die IDs stehen in der Tabelle, seit sie durch die Gruppierung mitgefuehrt
@@ -1416,7 +1482,10 @@ for _, g in tab.iterrows():
                        preis_bis_basis=round(g.preis_bis_basis, 2),
                        fahrten_grundlage=int(g.n),
                        datenstand=str(d.startzeit.max().date()),
-                       tarifversion=str(preise.preis_pro_minute_eur.sum())))
+                       tarifversion=TARIFVERSION,
+                       datenversion=DATENVERSION,
+                       trainingsende=str(training.startzeit.max().date()),
+                       kalibrierung_bis=str(test2.startzeit.max().date())))
 
 freigabe_tabelle = pd.DataFrame(zeilen)
 # Die Belege aus Test 2 wandern in dieselbe Datei: Wer die Tabelle betreibt,
@@ -1431,6 +1500,19 @@ freigabe_tabelle[["test2_abdeckung", "test2_untergrenze", "test2_obergrenze"]] =
                       "test2_obergrenze"]].round(4))
 freigabe_tabelle["freigabestatus"] = freigabe_tabelle.freigabestatus.fillna(
     "ungeprueft")
+# Was der Status sperrt, wird nicht ausgeliefert. Sonst waere er eine Spalte
+# ohne Wirkung - und die App wuerde Kombinationen bedienen, die die eigene
+# Messung verworfen hat.
+gesperrt = ~freigabe_tabelle.freigabestatus.isin(AUSLIEFERBAR)
+if gesperrt.any():
+    print(f"{gesperrt.sum()} Kombination(en) gesperrt:")
+    for _, r in freigabe_tabelle[gesperrt].iterrows():
+        anzahl = ("keine" if pd.isna(r.test2_fahrten)
+                  else f"{r.test2_fahrten:.0f}")
+        print(f"   {r.startstation} → {r.zielstation}, {r.typ_code}, {r.zeitfenster}"
+              f"   Status {r.freigabestatus}, {anzahl} Prüffahrten")
+freigabe_tabelle = freigabe_tabelle[~gesperrt].copy()
+assert freigabe_tabelle.freigabestatus.isin(AUSLIEFERBAR).all()
 freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
 
 # DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
@@ -1488,6 +1570,14 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     z = NACHSCHLAGE.loc[schluessel]
     von = kundenpreis(z.minuten_von, typ_code, freiminuten_rest, rabatt_prozent)
     bis = kundenpreis(z.minuten_bis, typ_code, freiminuten_rest, rabatt_prozent)
+    # DIESELBE Regel wie in der Bewertung, jetzt mit dem Guthaben DIESES Kunden.
+    # Der Vorabfilter der Tabelle rechnet mit dem Basistarif; der ist fuer die
+    # absolute Breite der teuerste Fall, aber nicht fuer die relative: Deckt das
+    # Guthaben die kurze Fahrt und die lange nicht mehr, steht der Startgebuehr
+    # ein voller Minutenpreis gegenueber - die Spanne ist dann relativ breiter.
+    if not spanne_nuetzt(z.minuten_von, z.minuten_bis, von, bis):
+        return {"anzeige": None,
+                "hinweis": "Für Ihren Tarif wäre die Spanne zu breit, um zu nützen."}
     return {"anzeige": f"{von:.2f} bis {bis:.2f} €",
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
             "grundlage": f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"}
@@ -1591,15 +1681,16 @@ MD("""
 Er kommt nicht, weil das Modell versagt hätte. Für CITY hält die 50-Cent-Grenze auf Test 1
 und in allen vier Fenstern der rollierenden Prüfung. Er kommt aus zwei anderen Gründen:
 
-> **Ein Mittelwert ist keine Erfahrung.** Bei rund jeder vierten CITY-Fahrt läge die
-> angezeigte Zahl um mehr als 50 Cent daneben — der Durchschnitt sagt darüber nichts.
+> **Ein Mittelwert ist keine Erfahrung.** Nur {{city_unter_50:.0%}} der CITY-Fahrten
+> bleiben innerhalb der 50 Cent — über die übrigen sagt der Durchschnitt nichts.
 
-> **Und für zwei von drei Radtypen gäbe es überhaupt kein Produkt.** Eine Lösung nur für
-> das billigste Rad beantwortet die Geschäftsfrage nicht.
+> **Und das Lastenrad hätte überhaupt kein Produkt.** Eine Lösung, die den teuersten
+> Radtyp ausspart, beantwortet die Geschäftsfrage nicht.
 
-Die Spanne löst den ersten Punkt. **Den zweiten löst sie nicht:** Auch das
-Intervallprodukt umfasst am Ende nur CITY. Für E-Bike und Lastenrad bleibt die Frage
-offen.
+Die Spanne löst **beide** Punkte: Sie zeigt die Streuung, statt sie zu verschweigen, und
+sie trägt für **alle drei Radtypen** — weil die Nützlichkeitsregel aus 5.5 die Güte des
+Modells von der Preisstruktur trennt. Was bleibt, ist keine Lücke im Sortiment, sondern
+eine in der Reichweite: Für {{reichweite:.0%}} der Fahrten kann die App etwas sagen.
 
 **Vier Sätze, die aus diesem Notebook bleiben sollten**
 

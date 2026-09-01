@@ -3,6 +3,8 @@
 Jede Pruefung hier geht auf einen Fehler zurueck, der in einem Review
 gefunden wurde. Sie soll ihn beim naechsten Mal vor dem Review finden.
 
+  Harte Quelle      Datenzugriff auf einen beweglichen Zweig statt einen Commit
+  Toter Status      ein Freigabestatus, der berechnet, aber nie gepruft wird
   Nullfuellung      .fillna(0) verdeckt fehlende Werte, statt sie zu melden
   Freie Schwelle    dieselbe Grenze mehrfach als Zahl statt als Konstante
   Sichtbarer Rest   merke() als letzte Zeile druckt seinen Rueckgabewert
@@ -139,6 +141,38 @@ def pruefe_blinder_abgleich(code: list[str], ausgaben: list[str]) -> list[str]:
     return funde
 
 
+
+def pruefe_harte_quelle(code: list[str]) -> list[str]:
+    """Eine Datenquelle, die im Notebook ausgeschrieben steht, laesst sich
+    nicht zentral umstellen - und zeigt dann auf einen veraenderlichen Zweig."""
+    funde = []
+    for nummer, quelle in enumerate(code):
+        for treffer in re.finditer(
+                r'raw\.githubusercontent\.com/[^"\s]*?/(main|master|HEAD)/', quelle):
+            funde.append(
+                f"Zelle {nummer}: Datenquelle zeigt auf '{treffer.group(1)}' - "
+                f"ein Zweig bewegt sich, das Notebook rechnet dann mit anderen "
+                f"Zahlen als sein Text")
+    return funde
+
+
+def pruefe_status_ohne_wirkung(code: list[str]) -> list[str]:
+    """Ein Freigabe- oder Statuswert, der berechnet und exportiert, aber nie
+    zum Filtern verwendet wird, sperrt nichts - er sieht nur so aus."""
+    ganzer = "\n".join(code)
+    funde = []
+    for name in set(re.findall(r'\[["\'](\w*(?:status|freigabe)\w*)["\']\]\s*=', ganzer, re.I)):
+        # Wird der Wert irgendwo zum Auswaehlen benutzt?
+        wirkt = re.search(
+            rf'(?:isin|==|!=|\.eq|\.ne|query|~|assert)[^\n]*{name}'
+            rf'|{name}[^\n]*(?:isin|==|!=|\.eq|\.ne)', ganzer, re.I)
+        if not wirkt:
+            funde.append(
+                f"'{name}' wird gesetzt, aber nirgends zum Filtern oder Sperren "
+                f"verwendet - ein Status ohne Wirkung ist kein Status")
+    return funde
+
+
 def main() -> int:
     dateien = sorted(NOTEBOOKS.glob("*.ipynb"))
     if not dateien:
@@ -148,7 +182,9 @@ def main() -> int:
     for pfad in dateien:
         code, ausgaben = zellen(pfad)
         fehler = (pruefe_blinder_abgleich(code, ausgaben)
-                  + pruefe_sichtbarer_rest(code))
+                  + pruefe_sichtbarer_rest(code)
+                  + pruefe_harte_quelle(code)
+                  + pruefe_status_ohne_wirkung(code))
         hinweise = (pruefe_nullfuellung(code) + pruefe_freie_schwellen(code)
                     + pruefe_urteil_ohne_zahl(ausgaben))
         if fehler:

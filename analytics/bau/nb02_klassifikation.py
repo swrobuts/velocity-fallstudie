@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Notebook 2 - Klassifikation: Welche Raeder muessen naechstes Quartal in die Werkstatt?"""
-from bauwerk import CODE, MD, PHASE, kopf
+from bauwerk import CODE, MD, PHASE, ROHBASIS, kopf
 
 NAME = "02_Klassifikation_Wartungsrisiko"
 
@@ -89,7 +89,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 BASIS = os.environ.get("VELO_BASIS",
-    "https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/main/analytics/")
+    """ + '"' + ROHBASIS + '"' + """)
 pd.set_option("display.width", 150)
 
 KOSTEN_VERPASST = 180.0     # falsch negativ: Ausfall auf der Strasse
