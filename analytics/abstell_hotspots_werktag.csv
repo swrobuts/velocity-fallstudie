@@ -1,16 +1,15 @@
-# Analysezeitraum: 2023-09-01 bis 2026-08-24 (741 Werktage)
-# Einheit: frei endende FAHRTEREIGNISSE je Werktag; historische Mittelwerte ueber alle 741 Werktage
+# Analysezeitraum: 2021-08-24 bis 2026-08-24 (1261 Werktage)
+# Einheit: frei endende FAHRTEREIGNISSE je Werktag; historische Mittelwerte ueber alle 1261 Werktage
 # Datenherkunft: SYNTHETISCHE LEHRDATEN
 # Status: EXPLORATIV - nicht freigegeben, kein Einsatzplan
 # Gueltigkeit: keine - historische Auswertung ohne Einsatzdatum
 nächste_station,früh (0-10),mittag (10-15),abend (15-20),spät (20-24)
-Dom,0.26,0.41,0.39,0.09
-Grombühl Klinikum,0.22,0.22,0.43,0.08
-Hauptbahnhof,0.28,0.29,0.55,0.08
-Hubland Campus,0.47,0.26,0.14,0.08
-Juliuspromenade,0.28,0.31,0.31,0.07
-Marktplatz,0.19,0.27,0.22,0.07
-Residenz,0.26,0.59,0.63,0.14
-Sanderau,0.24,0.24,0.4,0.06
-Universität Sanderring,0.44,0.37,0.34,0.09
-Zellerau,0.21,0.21,0.41,0.05
+Dom,0.35,0.55,0.71,0.16
+Grombühl Klinikum,0.54,0.41,0.44,0.05
+Hauptbahnhof,0.36,0.42,0.59,0.11
+Juliuspromenade,0.23,0.29,0.39,0.11
+Marktplatz,0.05,0.2,0.3,0.06
+Residenz,0.02,0.16,0.21,0.05
+Sanderau,0.08,0.04,0.02,0.01
+Universität Sanderring,0.43,0.42,0.38,0.11
+Zellerau,0.05,0.13,0.37,0.05

@@ -97,9 +97,10 @@ In beiden Fällen ist der Zähler derselbe: die Konfidenz, also der Anteil der F
 dieser Startstation in diesem Kontext, die an diesem Ziel enden.
 
 Der Unterschied ist nicht klein. Für die **supportstärkste** Regel dieses Notebooks —
-werktags früh vom Hauptbahnhof zum Hubland Campus — liegt der klassische Lift bei **3,58**, der
-kontextbedingte bei **1,70**. Mehr als die Hälfte des klassischen Werts kommt also gar
-nicht von der Verbindung, sondern daher, dass der Campus morgens ohnehin gefragt ist.
+{{top_kontext}} von „{{top_start}}" nach „{{top_ziel}}" — liegt der klassische Lift bei
+**{{top_lift_klassisch:.2f}}**, der kontextbedingte bei **{{top_lift_kontext:.2f}}**. Ein
+guter Teil des klassischen Werts kommt also gar nicht von der Verbindung, sondern daher,
+dass das Ziel in diesem Zeitfenster ohnehin gefragt ist.
 
 **Wir weisen ab hier ausschließlich den kontextbedingten Lift aus**, und die Schwelle in
 den Erfolgskriterien bezieht sich auf ihn. Beide Werte stehen in Phase 4 nebeneinander,
@@ -167,18 +168,34 @@ print(f"{len(k):,d} Fahrten als 'Warenkörbe'".replace(",", "."))
 print("\\nWie häufig ist jede Station als ZIEL? (das sind die Basisraten für den Lift)")
 basis_ziel = k.ziel.value_counts(normalize=True)
 print((basis_ziel * 100).round(1).to_string())
+
+# Die Zahlen des Fliesstextes stammen von hier.
+_nur_stationen = basis_ziel.drop("frei abgestellt", errors="ignore")
+merke("anteil_frei", basis_ziel.get("frei abgestellt", 0))
+merke("station_min", _nur_stationen.min()); merke("station_max", _nur_stationen.max())
+# Dieselbe Station, zwei Nenner: ueber alle Fahrten und im Kontext.
+_kontext = k[(~k.ist_frei) & (k.stunde < 10)]
+_beispiel = _nur_stationen.idxmax()
+merke("beispiel_station", _beispiel)
+merke("beispiel_gesamt", _nur_stationen[_beispiel])
+merke("beispiel_kontext", (_kontext.ziel == _beispiel).mean())
+print(f"\\nDerselbe Ort, zwei Nenner - '{_beispiel}':")
+print(f"   ueber alle Fahrten          {_nur_stationen[_beispiel]:.1%}")
+print(f"   werktags frueh (0-10 Uhr)   {(_kontext.ziel == _beispiel).mean():.1%}")
 '''),
 
 MD("""
 **Diese Tabelle zeigt den Maßstab — aber nicht den, gegen den wir rechnen werden.** Zwei
-Dinge fallen auf. **„Frei abgestellt“ ist mit Abstand das häufigste Ziel**: rund jede
-fünfte Fahrt endet so (19,8 %). Und die zehn Stationen liegen eng beieinander, zwischen
-7,1 und 10,1 %; sie sind also ähnlich beliebt.
+Dinge fallen auf. **„Frei abgestellt“ ist mit Abstand das häufigste Ziel** —
+{{anteil_frei:.1%}} der Fahrten enden so. Und die zehn Stationen liegen eng
+beieinander, zwischen {{station_min:.1%}} und {{station_max:.1%}}; sie sind also
+ähnlich beliebt.
 
 > **Wichtig für später:** Das sind die Anteile über **alle** Fahrten. Der Lift, den wir ab
 > Phase 4 ausweisen, rechnet gegen die Basisrate **im jeweiligen Kontext** — und die
-> weicht davon deutlich ab. Werktags früh ist der Hubland Campus nicht in 7,6 % der
-> Fahrten das Ziel, sondern in 16,1 %. Wer die Tabelle hier für die Lift-Grundlage hält,
+> weicht davon deutlich ab. Werktags früh ist „{{beispiel_station}}" nicht in
+> {{beispiel_gesamt:.1%}} der Fahrten das Ziel, sondern in {{beispiel_kontext:.1%}}. Wer
+> die Tabelle hier für die Lift-Grundlage hält,
 > rechnet mit den falschen Nennern.
 
 ### 2.1 Der triviale Zusammenhang, den man zuerst finden muss
@@ -194,6 +211,7 @@ print((je_start.sort_values(ascending=False) * 100).round(1).to_string())
 angedockt = k[k.ziel != "frei abgestellt"]
 rundtour = (angedockt.start == angedockt.ziel).mean()
 print()
+merke("anteil_rundtouren", rundtour)
 print(f"Anteil Rundtouren unter den angedockten Fahrten: {rundtour:.1%}")
 je_station = angedockt.assign(r=(angedockt.start == angedockt.ziel)).groupby("start").r.mean()
 print((je_station.sort_values(ascending=False) * 100).round(1).to_string())
@@ -209,8 +227,8 @@ verwirft, verliert ein Fünftel seiner Belege und merkt es nicht. **Wir behandel
 abgestellt“ deshalb als eigenes Ziel.** Die Tabelle darüber zeigt, dass der Anteil je nach
 Startstation schwankt — er ist ein Merkmal der Gegend, nicht des Zufalls.
 
-**Zweitens:** 16,5 % der angedockten Fahrten enden dort, wo sie begannen — rund jede
-sechste. Das ist die **häufigste triviale Start-Ziel-Gleichheit**, und sie wird jede
+**Zweitens:** {{anteil_rundtouren:.1%}} der angedockten Fahrten enden dort, wo sie
+begannen. Das ist die **häufigste triviale Start-Ziel-Gleichheit**, und sie wird jede
 Regelliste anführen, wenn man sie nicht ausschließt.
 
 **Nützlich ist er trotzdem nicht.** Eine Rundtour verschiebt kein einziges Rad; für die
@@ -262,7 +280,12 @@ PHASE(4, "Support, Konfidenz und Lift — drei Divisionen, von Hand gerechnet.")
 CODE('''
 from scipy.stats import fisher_exact
 
-def regeln_finden(koerbe, kontextspalten, mindest_support=0.005):
+# Die Suchgrenze steht EINMAL - sie ist ein Filter vor jedem Kriterium und
+# entscheidet mit, was ueberhaupt sichtbar wird.
+MINDEST_SUPPORT = 0.005
+
+
+def regeln_finden(koerbe, kontextspalten, mindest_support=MINDEST_SUPPORT):
     """Findet Regeln {Start, Kontext} -> {Ziel} und rechnet die Kennzahlen.
 
     Bewusst ohne Bibliothek: jede Zeile hier entspricht einer Zeile in der
@@ -436,6 +459,39 @@ print("Kundennummern waere ehrlicher - und faellt vermutlich schwaecher aus.")
 # Huerde eigentlich, wenn man sie in Fahrten je Werktag uebersetzt?
 beste = regeln.loc[regeln.Support.idxmax()]
 werktage = koerbe[koerbe.tagesart == "Werktag"].startzeit.dt.date.nunique()
+# Diese Regel wird im Fliesstext mehrfach als Beispiel genannt. Ihr Name
+# steht deshalb nicht dort, sondern hier.
+merke("top_start", beste["wenn Start"]); merke("top_ziel", beste["dann Ziel"])
+merke("top_kontext", beste.Kontext)
+merke("top_lift_kontext", beste[LIFT]); merke("top_lift_klassisch", beste["Lift (klassisch)"])
+merke("top_fahrten", int(beste.Fahrten))
+merke("mindest_support", MINDEST_SUPPORT)
+
+# Die RUECKRICHTUNG derselben Verbindung - im spiegelbildlichen Zeitfenster.
+# Sie steht meist NICHT in der Regelliste, und der Fliesstext unten macht
+# daraus eine Lehre. Damit die Lehre stimmt, wird hier nachgesehen statt
+# behauptet.
+_ruecktag = beste.Kontext.split(" · ")[0]
+_rueckfenster = "abend (15-20)" if "früh" in beste.Kontext else "früh (0-10)"
+_rueckraum = koerbe[(koerbe.tagesart == _ruecktag) & (koerbe.fenster == _rueckfenster)]
+_ab = _rueckraum[_rueckraum.start == beste["dann Ziel"]]
+_hin = _ab[_ab.ziel == beste["wenn Start"]]
+_r_support = len(_hin) / max(len(koerbe), 1)
+_r_basis = (_rueckraum.ziel == beste["wenn Start"]).mean()
+merke("rueck_fenster", _rueckfenster)
+merke("rueck_fahrten", len(_hin))
+merke("rueck_support", _r_support)
+merke("rueck_lift", (len(_hin) / max(len(_ab), 1)) / max(_r_basis, 1e-9))
+merke("rueck_in_liste", int(_r_support >= MINDEST_SUPPORT))
+print(f"\\n   Rueckrichtung {beste['dann Ziel']} -> {beste['wenn Start']} "
+      f"({_ruecktag} · {_rueckfenster}):")
+print(f"   {len(_hin)} Fahrten, Support {_r_support:.4f}, "
+      f"Lift (Kontext) {(len(_hin) / max(len(_ab), 1)) / max(_r_basis, 1e-9):.2f}")
+if _r_support < MINDEST_SUPPORT:
+    print(f"   -> unter der Suchgrenze von {MINDEST_SUPPORT:.1%}: taucht in KEINER")
+    print("      Auswertung auf, auch nicht als 'durchgefallen'.")
+else:
+    print(f"   -> ueber der Suchgrenze von {MINDEST_SUPPORT:.1%}: sie steht in der Liste.")
 print(f"\\nDie Regel mit dem groessten Support:")
 print(f"   {beste['wenn Start']} -> {beste['dann Ziel']}  ({beste.Kontext})")
 print(f"   Support {beste.Support:.4f} = {beste.Support * 100:.2f} %"
@@ -636,19 +692,20 @@ Die neun Regeln, die wenigstens die Lift-Hürde nehmen, dürfen den Umlaufplan n
 begründen. Ansehen darf man sie trotzdem — sie sind eine **Hypothese**, kein Befund, und
 sie werden gleich unabhängig überprüft.
 
-Ein Muster sticht heraus: **morgens** fließt es von den Pendlerstationen zu den
-Uni-Stationen. Werktags früh vom Hauptbahnhof zum Hubland Campus ist die
-supportstärkste Regel der Liste.
+Ein Muster sticht heraus: **morgens** fließt es aus den Wohnlagen in Richtung Arbeit und
+Studium. Die supportstärkste Regel der Liste ist {{top_kontext}} von „{{top_start}}" nach
+„{{top_ziel}}" mit {{top_fahrten:,}} Fahrten.
 
 **Die naheliegende Fortsetzung lautet: abends fließt dasselbe zurück.** Diesen Satz haben
 frühere Fassungen dieses Notebooks an dieser Stelle geschrieben. Er hat nur einen Fehler:
 **Die Rückrichtung steht gar nicht in der Regelliste.**
 
-Sehen Sie oben nach. Hubland Campus → Hauptbahnhof, abends, ist nicht dabei. Die
-Verbindung existiert — 217 Fahrten, kontextbedingter Lift 2,03, der zweithöchste des
-ganzen Datensatzes — aber ihr Support liegt bei 0,43 % und damit **unter der
-Untergrenze von 0,5 %, mit der die Suche überhaupt erst begonnen hat.** Sie wurde
-aussortiert, bevor irgendein Kriterium sie zu sehen bekam.
+Sehen Sie in der Ausgabe oben nach: Die Rückrichtung „{{top_ziel}}" → „{{top_start}}"
+im Fenster {{rueck_fenster}} kommt auf {{rueck_fahrten:.0f}} Fahrten, einen Support von
+{{rueck_support:.2%}} und einen kontextbedingten Lift von {{rueck_lift:.2f}}. Die
+Verbindung existiert also — die Frage ist, ob sie die Suchgrenze von
+{{mindest_support:.1%}} überhaupt erreicht, mit der die Regelsuche begonnen hat. Was
+darunter liegt, wurde aussortiert, bevor irgendein Erfolgskriterium es zu sehen bekam.
 
 > **Das ist ein Fallstrick, der leicht zu übersehen ist.** Der `mindest_support` in der
 > Suchfunktion ist kein Erfolgskriterium, sondern ein Filter *davor*. Was er entfernt,
@@ -971,6 +1028,7 @@ print(f"an jedem zehnten Werktag {bedarf_tag.quantile(0.9):.0f} oder mehr - bei 
 # =====================================================================
 frei = koerbe[(koerbe.tagesart == "Werktag") & (koerbe.ziel == "frei abgestellt")].copy()
 fehlend = frei[["end_latitude", "end_longitude"]].isna().any(axis=1).sum()
+merke("frei_werktags", len(frei)); merke("frei_ohne_koordinate", int(fehlend))
 print(f"\\nFrei abgestellte Fahrten werktags: {len(frei)}, "
       f"davon ohne Endkoordinate: {fehlend}")
 
@@ -999,6 +1057,7 @@ print(f"   ... von der nächsten Station:  Median {np.median(frei.abstand_km):.2
       f"P90 {np.quantile(frei.abstand_km, .9):.2f} km")
 print(f"   ... von der Startstation:      Median {np.median(abstand_start):.2f} km, "
       f"P90 {np.quantile(abstand_start, .9):.2f} km")
+merke("andere_station", (frei['nächste_station'] != frei.start).mean())
 print(f"   Anteil, bei dem die nächste Station NICHT die Startstation ist: "
       f"{(frei['nächste_station'] != frei.start).mean():.1%}")
 
@@ -1205,14 +1264,15 @@ Herkunftsangabe:
 
 **Bei 87,1 % der frei abgestellten Räder ist die nächstgelegene Station eine andere als
 die, an der die Fahrt begann.** Die Gruppierung nach Startstation war also nicht ungenau —
-sie war in fast neun von zehn Fällen die falsche Station. Die drei Schwerpunkte
+sie war in {{andere_station:.0%}} der Fälle die falsche Station. Die drei Schwerpunkte
 verschieben sich entsprechend: Nach Abstellort sind es **Residenz, Universität
 Sanderring und Hauptbahnhof**, nach Startstation wären es Grombühl, Sanderau und
 Zellerau gewesen.
 
 > **Der Fehler war nicht, die Endkoordinaten falsch zu benutzen — sondern sie gar nicht
 > zu benutzen.** `end_latitude` und `end_longitude` sind für **jede** frei abgestellte
-> Fahrt gefüllt, alle 7 914. Wer eine Frage nach dem Ort mit einer Spalte beantwortet, in
+> Fahrt gefüllt — alle {{frei_werktags:,}} werktäglichen, keine einzige ohne
+> ({{frei_ohne_koordinate:.0f}} fehlend). Wer eine Frage nach dem Ort mit einer Spalte beantwortet, in
 > der keine Orte stehen, bekommt eine plausible Tabelle und einen falsch fahrenden
 > Transporter.
 
@@ -1297,7 +1357,7 @@ MD("""
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. Drei Erfolgskriterien: Support ≥ 1 %, kontextbedingter Lift ≥ 1,3 und **Ziel ist eine konkrete Station**. K3 prüft nur technische Adressierbarkeit — nicht Wirtschaftlichkeit und nicht, ob sich eine Transporterfahrt lohnt |
-| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren (16,5 % der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
+| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren ({{anteil_rundtouren:.1%}} der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
 | 5 Evaluation | Von 32 Regeln nehmen 9 die Lift-Hürde, 16 haben eine Station als Ziel, aber **keine** nimmt die Support-Hürde. Die stärkste verfehlt sie um fünf Fahrten in drei Jahren — und die Hürde wird trotzdem nicht gesenkt, obwohl sich zeigt, dass sie auf der falschen Skala liegt. Die Deutung des Pendelstroms wurde von der tagesgenauen Gegenprobe **widerlegt**: null Hin- und Rückfahrten am selben Tag |

@@ -1,46 +1,46 @@
-# Analysezeitraum: 2023-09-01 bis 2026-08-24 (741 Werktage)
-# Einheit: Netto-Radbewegungen je Werktag; Verteilungskennzahlen ueber alle 741 Werktage
+# Analysezeitraum: 2021-08-24 bis 2026-08-24 (1261 Werktage)
+# Einheit: Netto-Radbewegungen je Werktag; Verteilungskennzahlen ueber alle 1261 Werktage
 # Datenherkunft: SYNTHETISCHE LEHRDATEN
 # Status: EXPLORATIV - nicht freigegeben, kein Einsatzplan
 # Gueltigkeit: keine - historische Auswertung ohne Einsatzdatum
 fenster,station,Median,P10,P90,Tage_minus,Tage_plus,Tage_ab_5
-abend (15-20),Dom,0.0,-1.0,2.0,0.26,0.4,0.01
-abend (15-20),Grombühl Klinikum,0.0,-2.0,2.0,0.36,0.38,0.04
-abend (15-20),Hauptbahnhof,0.0,-2.0,3.0,0.28,0.45,0.05
-abend (15-20),Hubland Campus,0.0,-2.0,1.0,0.35,0.23,0.0
-abend (15-20),Juliuspromenade,0.0,-2.0,1.0,0.39,0.2,0.01
-abend (15-20),Marktplatz,0.0,-2.0,1.0,0.44,0.18,0.02
-abend (15-20),Residenz,0.0,-1.0,2.0,0.21,0.4,0.02
-abend (15-20),Sanderau,0.0,-2.0,2.0,0.35,0.36,0.04
-abend (15-20),Universität Sanderring,0.0,-2.0,1.0,0.3,0.25,0.0
-abend (15-20),Zellerau,0.0,-2.0,2.0,0.37,0.36,0.03
-früh (0-10),Dom,0.0,-1.0,1.0,0.21,0.22,0.0
-früh (0-10),Grombühl Klinikum,-1.0,-3.0,1.0,0.58,0.16,0.04
-früh (0-10),Hauptbahnhof,-1.0,-4.0,1.0,0.59,0.14,0.05
-früh (0-10),Hubland Campus,1.0,-1.0,4.0,0.1,0.68,0.08
-früh (0-10),Juliuspromenade,0.0,-1.0,2.0,0.23,0.42,0.01
-früh (0-10),Marktplatz,0.0,-1.0,2.0,0.18,0.49,0.02
-früh (0-10),Residenz,0.0,-1.0,1.0,0.2,0.21,0.0
-früh (0-10),Sanderau,-1.0,-3.0,1.0,0.61,0.14,0.05
-früh (0-10),Universität Sanderring,1.0,0.0,4.0,0.08,0.7,0.1
-früh (0-10),Zellerau,-1.0,-4.0,1.0,0.61,0.12,0.04
-mittag (10-15),Dom,0.0,-1.0,2.0,0.2,0.4,0.01
-mittag (10-15),Grombühl Klinikum,0.0,-2.0,2.0,0.3,0.32,0.01
-mittag (10-15),Hauptbahnhof,0.0,-2.0,2.0,0.29,0.32,0.01
-mittag (10-15),Hubland Campus,0.0,-3.0,1.0,0.43,0.26,0.04
-mittag (10-15),Juliuspromenade,0.0,-2.0,2.0,0.29,0.37,0.02
-mittag (10-15),Marktplatz,0.0,-2.0,2.0,0.31,0.36,0.01
-mittag (10-15),Residenz,0.0,-1.0,2.0,0.25,0.38,0.01
-mittag (10-15),Sanderau,0.0,-2.0,2.0,0.31,0.32,0.01
-mittag (10-15),Universität Sanderring,0.0,-3.0,1.0,0.41,0.22,0.02
-mittag (10-15),Zellerau,0.0,-2.0,2.0,0.29,0.33,0.01
-spät (20-24),Dom,0.0,-1.0,1.0,0.15,0.18,0.0
-spät (20-24),Grombühl Klinikum,0.0,-1.0,1.0,0.13,0.17,0.0
+abend (15-20),Dom,0.0,-1.0,2.0,0.22,0.41,0.02
+abend (15-20),Grombühl Klinikum,0.0,-3.0,2.0,0.4,0.35,0.05
+abend (15-20),Hauptbahnhof,0.0,-2.0,3.0,0.31,0.46,0.07
+abend (15-20),Hubland Campus,0.0,-2.0,1.0,0.34,0.22,0.01
+abend (15-20),Juliuspromenade,0.0,-2.0,1.0,0.41,0.23,0.01
+abend (15-20),Marktplatz,0.0,-2.0,1.0,0.42,0.2,0.01
+abend (15-20),Residenz,0.0,-1.0,2.0,0.24,0.39,0.02
+abend (15-20),Sanderau,0.0,-2.0,3.0,0.3,0.44,0.05
+abend (15-20),Universität Sanderring,0.0,-2.0,1.0,0.37,0.21,0.01
+abend (15-20),Zellerau,0.0,-2.0,2.0,0.38,0.37,0.04
+früh (0-10),Dom,0.0,-1.0,0.0,0.15,0.07,0.0
+früh (0-10),Grombühl Klinikum,0.0,-2.0,3.0,0.34,0.43,0.07
+früh (0-10),Hauptbahnhof,2.0,0.0,6.0,0.03,0.8,0.23
+früh (0-10),Hubland Campus,3.0,0.0,9.0,0.01,0.89,0.36
+früh (0-10),Juliuspromenade,-2.0,-6.0,0.0,0.78,0.02,0.19
+früh (0-10),Marktplatz,-2.0,-5.0,0.0,0.75,0.04,0.14
+früh (0-10),Residenz,0.0,-1.0,0.0,0.16,0.06,0.0
+früh (0-10),Sanderau,-2.0,-6.0,0.0,0.77,0.03,0.17
+früh (0-10),Universität Sanderring,2.0,0.0,7.0,0.02,0.79,0.22
+früh (0-10),Zellerau,-2.0,-6.0,0.0,0.78,0.01,0.2
+mittag (10-15),Dom,0.0,-1.0,1.0,0.27,0.29,0.01
+mittag (10-15),Grombühl Klinikum,0.0,-2.0,3.0,0.32,0.39,0.03
+mittag (10-15),Hauptbahnhof,1.0,0.0,4.0,0.09,0.65,0.08
+mittag (10-15),Hubland Campus,1.0,-1.0,4.0,0.14,0.62,0.09
+mittag (10-15),Juliuspromenade,-1.0,-3.0,1.0,0.59,0.13,0.04
+mittag (10-15),Marktplatz,-1.0,-3.0,1.0,0.55,0.15,0.04
+mittag (10-15),Residenz,0.0,-1.0,1.0,0.27,0.27,0.0
+mittag (10-15),Sanderau,-1.0,-3.0,1.0,0.52,0.17,0.03
+mittag (10-15),Universität Sanderring,1.0,-1.0,3.0,0.19,0.51,0.04
+mittag (10-15),Zellerau,-1.0,-3.0,1.0,0.53,0.13,0.03
+spät (20-24),Dom,0.0,-1.0,1.0,0.15,0.2,0.0
+spät (20-24),Grombühl Klinikum,0.0,-1.0,1.0,0.17,0.17,0.0
 spät (20-24),Hauptbahnhof,0.0,-1.0,1.0,0.16,0.16,0.0
-spät (20-24),Hubland Campus,0.0,-1.0,1.0,0.23,0.17,0.0
-spät (20-24),Juliuspromenade,0.0,-1.0,1.0,0.17,0.19,0.0
-spät (20-24),Marktplatz,0.0,-1.0,1.0,0.21,0.19,0.0
-spät (20-24),Residenz,0.0,-1.0,1.0,0.15,0.19,0.0
-spät (20-24),Sanderau,0.0,-1.0,1.0,0.15,0.15,0.0
-spät (20-24),Universität Sanderring,0.0,-1.0,1.0,0.21,0.16,0.0
-spät (20-24),Zellerau,0.0,-1.0,1.0,0.16,0.17,0.0
+spät (20-24),Hubland Campus,0.0,-1.0,1.0,0.23,0.15,0.0
+spät (20-24),Juliuspromenade,0.0,-1.0,1.0,0.17,0.2,0.0
+spät (20-24),Marktplatz,0.0,-1.0,1.0,0.18,0.19,0.0
+spät (20-24),Residenz,0.0,-1.0,1.0,0.15,0.18,0.0
+spät (20-24),Sanderau,0.0,-1.0,1.0,0.14,0.2,0.0
+spät (20-24),Universität Sanderring,0.0,-1.0,1.0,0.22,0.14,0.0
+spät (20-24),Zellerau,0.0,-1.0,1.0,0.17,0.16,0.0
