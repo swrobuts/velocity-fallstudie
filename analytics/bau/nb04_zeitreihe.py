@@ -413,6 +413,20 @@ gewaehlt_name = nur_modelle.loc[nur_modelle["MAE (Fahrten)"].idxmin(), "Verfahre
 gewaehlt = kandidaten[gewaehlt_name]
 prognose_val = gewaehlt.predict(Xv_prognose)
 
+# Die Zahlen des Fliesstextes stammen ab hier aus dieser Tabelle, nicht
+# aus dem Gedaechtnis: was gedruckt wird, wird auch geschrieben.
+_mae = dict(zip(tabelle.Verfahren, tabelle["MAE (Fahrten)"]))
+_ist = dict(zip(tabelle.Verfahren, tabelle["MAE mit Ist-Wetter"]))
+merke("mae_null", _mae["Nullmodell (Mittel des Trainings)"])
+merke("mae_faustregel", _mae["Faustregel: wie letzte Woche"])
+merke("mae_linear", _mae["Lineare Regression"])
+merke("mae_boosting", _mae["Gradient Boosting"])
+merke("ist_linear", _ist["Lineare Regression"])
+merke("ist_boosting", _ist["Gradient Boosting"])
+merke("mittel_training", y_train.mean())
+merke("mittel_validierung", y_val.mean())
+merke("gewaehlt_name", gewaehlt_name)
+
 print(f"\\nGEWÄHLT: {gewaehlt_name}")
 umgekehrt = nur_modelle.loc[nur_modelle["MAE mit Ist-Wetter"].idxmin(), "Verfahren"]
 if umgekehrt != gewaehlt_name:
@@ -424,14 +438,14 @@ if umgekehrt != gewaehlt_name:
 MD("""
 ### Drei Beobachtungen, die man leicht überliest
 
-**1. Die Faustregel ist schlechter als das Nullmodell.** 24,24 gegen 21,17 Fahrten MAE —
-und beide haben ein negatives R², sind also schlechter als der Mittelwert des
-Validierungszeitraums selbst.
+**1. Die Faustregel ist schlechter als das Nullmodell.**
+{{mae_faustregel:.2f}} gegen {{mae_null:.2f}} Fahrten MAE — und beide haben ein negatives
+R², sind also schlechter als der Mittelwert des Validierungszeitraums selbst.
 
 Das ist kein Rechenfehler. R² misst, wieviel besser ein Verfahren ist als der Mittelwert
 **des bewerteten Zeitraums**. Das Nullmodell sagt den Mittelwert des *Trainings* voraus
-(50,2 Fahrten), die Validierung liegt bei 53,9 — schon das reicht für ein leicht negatives
-R². Die Vorwochenregel ist noch schlechter, weil sie jeden Ausreißer der Vorwoche eine
+({{mittel_training:.1f}} Fahrten), die Validierung liegt bei
+{{mittel_validierung:.1f}} — schon das reicht für ein negatives R². Die Vorwochenregel ist noch schlechter, weil sie jeden Ausreißer der Vorwoche eine
 Woche später wiederholt; die quadratische Rechnung bestraft das doppelt.
 
 > **Eine schwache Faustregel ist trotzdem der richtige Maßstab** — weil sie das ist, was
@@ -443,8 +457,9 @@ als der Durchschnitt?". Wer nur eine von beiden berichtet, kann sich die passend
 aussuchen — deshalb stehen hier beide.
 
 **3. Unter Prognosewetter dreht sich die Reihenfolge der Modelle.** Mit dem tatsächlichen
-Wetter liegt das Boosting vorn (5,81 gegen 6,33), mit der simulierten Vorhersage die
-lineare Regression (8,73 gegen 11,11).
+Wetter liegt das Boosting vorn ({{ist_boosting:.2f}} gegen {{ist_linear:.2f}} Fahrten
+MAE), mit der simulierten Vorhersage die lineare Regression
+({{mae_linear:.2f}} gegen {{mae_boosting:.2f}}).
 
 > **Das ist der wichtigste Befund dieses Abschnitts.** Das Boosting nutzt feine
 > Wetterunterschiede besser aus — solange das Wetter stimmt. In **dieser Simulation**
@@ -614,10 +629,14 @@ kosten_modell = kosten(y_test, mit_vorhersage * (1 + bester))
 # Zum Vergleich, ausdruecklich NICHT entscheidungsrelevant:
 kosten_schoen = kosten(y_test, prognose * (1 + bester))
 
+# Die Huerde steht EINMAL. Dreimal getippt hiesse: zweimal falsch,
+# sobald sie sich aendert.
+K1_HUERDE = merke("k1_huerde", 0.30)
+
 print("Erfolgskriterien aus Phase 1:\\n")
-k1 = verbesserung >= 0.30
-print(f"  1. mindestens 30 % weniger Fehler als die Faustregel   {verbesserung:.0%}   "
-      f"{'ERFÜLLT' if k1 else 'GERISSEN'}")
+k1 = verbesserung >= K1_HUERDE
+print(f"  1. mindestens {K1_HUERDE:.0%} weniger Fehler als die Faustregel   "
+      f"{verbesserung:.0%}   {'ERFÜLLT' if k1 else 'GERISSEN'}")
 k2 = kosten_modell < kosten_faustregel
 werte = f"{kosten_modell:,.0f} gegen {kosten_faustregel:,.0f}".replace(",", ".")
 print(f"  2. günstiger als die Faustregel                       {werte} EUR   "
@@ -638,7 +657,7 @@ for i in range(PFADE):
     p_pfad = gewaehlt.predict(prognosewetter(X_test, 1000 + i))
     v = 1 - mean_absolute_error(y_test, p_pfad) / mae_faustregel
     verbesserungen.append(v)
-    treffer_k1 += v >= 0.30
+    treffer_k1 += v >= K1_HUERDE
     treffer_k2 += kosten(y_test, p_pfad * (1 + bester)) < kosten_faustregel
 v_arr = np.array(verbesserungen)
 
@@ -646,19 +665,37 @@ print(f"\\n  Und über {PFADE} unabhängige Wettervorhersage-Pfade?")
 print(f"     Fehlerreduktion: {np.percentile(v_arr, 5):.0%} / "
       f"{np.percentile(v_arr, 50):.0%} / {np.percentile(v_arr, 95):.0%}   "
       f"(5. / 50. / 95. Perzentil)")
-print(f"     Kriterium 1 (≥ 30 %) erfüllt in {treffer_k1} von {PFADE} Pfaden "
+print(f"     Kriterium 1 (≥ {K1_HUERDE:.0%}) erfüllt in {treffer_k1} von {PFADE} Pfaden "
       f"= {treffer_k1 / PFADE:.0%}")
 print(f"     Kriterium 2 (günstiger) erfüllt in {treffer_k2} von {PFADE} Pfaden "
       f"= {treffer_k2 / PFADE:.0%}")
 
 urteil = ("MACHBARKEITSINDIZ" if (k1 and k2) else "RÜCKSPRUNG")
 print(f"\\n  Gesamturteil: {urteil} — kein Nachweis.")
-print("  Die Kriterien sind in DIESEM Testpfad erfüllt. Kriterium 1 hält aber")
-print(f"  nicht über alle Wetterziehungen: in {PFADE - treffer_k1} von {PFADE} Pfaden")
-print(f"  ({1 - treffer_k1 / PFADE:.0%}) fällt die Fehlerreduktion unter 30 %.")
+
+# Jeder Satz hier folgt aus k1, k2 und treffer_k1. Eine gedruckte
+# Schlussfolgerung, die unabhaengig von den Zahlen dasteht, ueberlebt
+# deren Aenderung - und widerspricht dann der Tabelle darueber.
+_erfuellt = [n for n, gilt in (("1", k1), ("2", k2)) if gilt]
+if len(_erfuellt) == 2:
+    print("  Beide Kriterien sind in DIESEM Testpfad erfüllt.")
+elif _erfuellt:
+    print(f"  In DIESEM Testpfad ist nur Kriterium {_erfuellt[0]} erfüllt.")
+else:
+    print("  In DIESEM Testpfad ist keines der beiden Kriterien erfüllt.")
+
+_fehl = PFADE - treffer_k1
+if _fehl:
+    print(f"  Kriterium 1 hält aber nicht über alle Wetterziehungen: in {_fehl}")
+    print(f"  von {PFADE} Pfaden ({_fehl / PFADE:.0%}) fällt die Fehlerreduktion")
+    print(f"  unter {K1_HUERDE:.0%}.")
+else:
+    print(f"  Kriterium 1 hält über alle {PFADE} Wetterziehungen. Das ist ein")
+    print("  starkes Indiz - ein Nachweis wird es dadurch nicht.")
 print("  Ein einzelner, vorab festgelegter Pfad ist eine gueltige Einzel-")
 print("  realisierung - aber keine Aussage darueber, wie robust das Ergebnis")
-print("  gegenueber Wetterfehlern ist. Genau dafuer stehen die 300 Pfade.")
+print(f"  gegenueber Wetterfehlern ist. Genau dafuer stehen die {PFADE} Pfade.")
+merke("pfade", PFADE); merke("pfade_k1", treffer_k1); merke("pfade_k1_fehl", _fehl)
 print("\\n  Ausdrücklich KEINE Betriebsfreigabe: Die Wetterunsicherheit ist simuliert,")
 print("  es gibt nur ein Validierungs- und ein Testfenster, und die Übersetzung von")
 print("  Fahrten zu Rädern und Schichten steht aus.")

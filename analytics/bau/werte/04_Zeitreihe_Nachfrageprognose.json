@@ -1,0 +1,15 @@
+{
+ "mae_null": 25.8,
+ "mae_faustregel": 29.73,
+ "mae_linear": 13.9,
+ "mae_boosting": 14.34,
+ "ist_linear": 11.14,
+ "ist_boosting": 11.09,
+ "mittel_training": 53.68306010928962,
+ "mittel_validierung": 65.78888888888889,
+ "gewaehlt_name": "Lineare Regression",
+ "k1_huerde": 0.3,
+ "pfade": 300,
+ "pfade_k1": 290,
+ "pfade_k1_fehl": 10
+}
