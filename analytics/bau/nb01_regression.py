@@ -1,11 +1,19 @@
 # -*- coding: utf-8 -*-
 """Notebook 1 - Regression: Was kostet die Fahrt zu diesem Ziel?
 
-Vollstaendig neu gefasst am 01.09.2026. Der fruehere Ansatz - beim
-Entsperren die Dauer schaetzen, ohne das Ziel zu kennen - ist ersatzlos
-entfallen. Der Grund steht im Notebook selbst und traegt den ganzen Fall:
-Ein Modell, das die Fahrtdauer ohne Ziel schaetzt, sagt etwas voraus, das
-der Nutzer besser weiss.
+Runde 2, nach dem zweiten methodischen Review (01.09.2026). Umgesetzt:
+
+  * Statusfilter - 1.605 abgebrochene und stornierte Vorgaenge waren in
+    den Modelldaten (3,4 %, Mediandauer 2 Minuten).
+  * VIER Zeitraeume statt drei: Der Ruecksprung zur Spanne ist eine neue
+    Modellierungsrunde und braucht seinen eigenen unberuehrten Test.
+  * Kein Wetter mehr: Tagesmittel und Tagesniederschlag stehen bei der
+    Anfrage noch nicht fest.
+  * Zyklische Zeitmerkmale.
+  * Die Proxy-Annahme hinter end_station_id wird benannt, nicht kaschiert.
+  * Ausgeliefert wird die TABELLE - und das Notebook sagt das auch.
+  * Rollierende Pruefung, Ziel-Ablation, ehrliche Produktreichweite,
+    Abdeckung je Segment, harmonisierte Ueberwachungsgrenzen.
 """
 from bauwerk import CODE, MD, PHASE, kopf
 
@@ -29,35 +37,44 @@ Diese Idee hat einen Fehler, und zwar keinen technischen.
 > **Der Nutzer weiß besser als jedes Modell, wie lange er fahren wird.** Er kennt sein
 > Ziel, er weiß, ob er es eilig hat, und er weiß, ob er unterwegs anhält.
 
-Ein Modell, das beim Entsperren nur Startstation, Uhrzeit und Wetter kennt, kann zwei
+Ein Modell, das beim Entsperren nur Startstation, Uhrzeit und Wochentag kennt, kann zwei
 Fahrten nicht unterscheiden, die gleich beginnen und völlig verschieden verlaufen: acht
-Minuten zum Bahnhof gegen neunzig Minuten die Mainpromenade entlang. Es sagt für beide
-dasselbe.
+Minuten zum Bahnhof gegen neunzig Minuten die Mainpromenade entlang.
 
-Das ist kein Problem des Verfahrens, sondern ein Informationsproblem: Was vorhergesagt
-werden soll, steckt nicht in den Merkmalen.
+Das ist kein Problem des Verfahrens, sondern ein Informationsproblem. **Also ändern wir
+nicht das Verfahren, sondern den Prozess:** Der Nutzer wählt in der App sein Ziel, und
+*erst danach* rechnet das Modell.
 
-**Also ändern wir nicht das Verfahren, sondern den Prozess.** Der Nutzer wählt in der App
-sein Ziel, und *erst danach* rechnet das Modell. Jetzt weiß es, worüber es spricht — und
-sagt etwas, das der Nutzer tatsächlich nicht weiß: wie lange diese Verbindung unter
-diesen Umständen erfahrungsgemäß dauert.
-
-Diese Verschiebung hat eine Folge, die uns in Phase 3 wieder begegnet:
+Daraus folgt die Einsicht, die dieses Notebook trägt:
 
 > Ob ein Merkmal verwendet werden darf, entscheidet nicht sein Spaltenname, sondern der
 > **Zeitpunkt, zu dem es im Prozess entsteht**. Ändert man den Prozess, ändert sich die
 > Antwort.
+
+Und daraus folgt sofort die erste Einschränkung, die wir offen benennen müssen.
+"""),
+
+MD("""
+> ### ⚠ Die Annahme, auf der alles Weitere ruht
+>
+> Wir trainieren auf `end_station_id` — der Station, an der die Fahrt **tatsächlich
+> geendet hat**. Im künftigen Betrieb bekommt das Modell die Station, die der Kunde
+> **vorher gewählt** hat. Das ist nicht dasselbe.
+>
+> Beide fallen auseinander, wenn jemand unterwegs umplant, die Zielstation voll ist oder
+> die Fahrt anders endet als gedacht. Ein Prozess, den wir künftig ändern, macht eine
+> historische Ergebnisspalte nicht rückwirkend zu einer Eingabe.
+>
+> **Wir behandeln das tatsächliche Ziel deshalb als unvalidierten Stellvertreter für das
+> geplante Ziel.** Wie gut dieser Stellvertreter ist, kann dieses Notebook nicht
+> beantworten — dafür müsste die App das geplante Ziel erst einmal speichern. Bis dahin
+> ist jede Zahl in diesem Notebook eine Obergrenze für das, was im Betrieb erreichbar
+> ist.
 """),
 
 PHASE(1, "Aus „der Kunde soll den Preis vorher kennen“ wird eine Zahl mit einer Grenze."),
 
 MD("""
-### Die Ausgangslage
-
-VeloCity zeigt vor der Fahrt keinen Preis. Der Tarif steht auf der Website — Startgebühr,
-Minutenpreis, Tageshöchstpreis —, aber was die konkrete Fahrt kostet, sieht man erst auf
-der Rechnung. Der Kundenservice meldet das als häufigste Rückfrage.
-
 ### Der Geschäftsprozess, den wir voraussetzen
 
 ```text
@@ -67,16 +84,12 @@ Kunde tippt auf „Preis schätzen“         →  Modell rechnet
 App zeigt den erwarteten Preis           →  Kunde entscheidet
 ```
 
-Der dritte Schritt ist der Kern: Das Modell wird **nicht** beim Öffnen der App aufgerufen,
-sondern erst, wenn die geplante Fahrt bekannt ist.
-
 ### Das analytische Ziel
 
 Geschätzt wird die **Dauer in Minuten**, nicht der Preis. Der Preis folgt daraus über das
 Tarifblatt, und das ist exakt bekannt.
 
-> **Man schätzt nie, was man ausrechnen kann.** Ein Modell auf den Preis anzusetzen hieße,
-> Unsicherheit dort zu erzeugen, wo Gewissheit herrscht.
+> **Man schätzt nie, was man ausrechnen kann.**
 
 ### Das Erfolgskriterium — festgelegt, bevor wir die Daten ansehen
 
@@ -86,17 +99,16 @@ Tarifblatt, und das ist exakt bekannt.
 | **Herkunft** | Grenze aus dem Produktmanagement |
 | **gemessen auf** | einem Zeitraum, den das Modell beim Training nie gesehen hat |
 
-Diese Grenze wird nicht verhandelt, nachdem das Ergebnis vorliegt. Reißt sie, ist das ein
-Ergebnis — kein Anlass, sie zu lockern.
-
 ### Der Geltungsbereich
 
-Zwei Einschränkungen gehören hierher, nicht in eine Fußnote am Ende:
+1. **Nur abgeschlossene Fahrten.** Abbrüche und Stornierungen sind keine Fahrten.
+2. **Nur Fahrten von Station zu Station.** Wer frei im Geschäftsgebiet abstellt, hat kein
+   Ziel gewählt.
+3. **Nur reguläre Fahrten bis acht Stunden.** Darüber liegt eine vergessene Rückgabe —
+   ein eigener Geschäftsfall.
 
-1. **Nur Fahrten von Station zu Station.** Wer sein Rad frei im Geschäftsgebiet abstellt,
-   hat kein Ziel gewählt. Wie groß dieser Anteil ist, sehen wir gleich.
-2. **Nur reguläre Fahrten bis acht Stunden.** Alles darüber ist keine Fahrt, sondern eine
-   vergessene Rückgabe — ein eigener Geschäftsfall, kein Ausreißer zum Wegwerfen.
+Punkt 3 ist eine Setzung, keine Messung: Wir haben keine Statusangabe, die „vergessen“
+von „sehr lange unterwegs“ trennt. Sie gehört fachlich abgesichert.
 """),
 
 CODE("""
@@ -108,13 +120,12 @@ import matplotlib.pyplot as plt
 BASIS = os.environ.get("VELO_BASIS",
     "https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/main/analytics/")
 
-ausleihe = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
-station  = pd.read_csv(BASIS + "station.csv")
-fahrrad  = pd.read_csv(BASIS + "fahrrad.csv")
-wetter   = pd.read_csv(BASIS + "wetter.csv", parse_dates=["datum"])
-feiertag = pd.read_csv(BASIS + "feiertage.csv", parse_dates=["datum"])
+ausleihe  = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
+station   = pd.read_csv(BASIS + "station.csv")
+fahrrad   = pd.read_csv(BASIS + "fahrrad.csv")
+feiertag  = pd.read_csv(BASIS + "feiertage.csv", parse_dates=["datum"])
 schulfrei = pd.read_csv(BASIS + "schulferien.csv", parse_dates=["von", "bis"])
-preise   = pd.read_csv(BASIS + "nutzungspreis.csv")
+preise    = pd.read_csv(BASIS + "nutzungspreis.csv")
 
 print(f"{len(ausleihe):,} Fahrten, {len(station)} Stationen, {len(fahrrad)} Räder")
 print()
@@ -122,105 +133,115 @@ print("Das Tarifblatt - exakt bekannt, nichts daran wird geschätzt:")
 print(preise.to_string(index=False))
 """),
 
-PHASE(2, "Für wie viele Fahrten gilt die neue Frage überhaupt — und was erklärt die Verbindung?"),
+PHASE(2, "Für wie viele Fahrten gilt die Frage — und was steckt sonst noch in den Daten?"),
 
 MD("""
-### 2.1 Für wie viele Fahrten gibt es ein Ziel?
+### 2.1 Nicht jeder Vorgang ist eine Fahrt
 
-Die erste Frage an die Daten ist keine statistische, sondern eine des Geltungsbereichs.
-Die Website wirbt damit, dass man das Rad überall im Geschäftsgebiet abstellen darf.
-Genau diese Fahrten haben keine Zielstation.
+Bevor irgendetwas gefiltert wird, ein Blick auf die Statusspalte. Sie wurde in der ersten
+Runde dieses Notebooks übersehen — mit Folgen, die wir gleich sehen.
 """),
 
 CODE("""
 ausleihe["dauer_min"] = (ausleihe.endzeit - ausleihe.startzeit).dt.total_seconds() / 60
-regulaer = ausleihe[(ausleihe.dauer_min >= 1) & (ausleihe.dauer_min <= 8 * 60)]
 
-mit_ziel  = int(regulaer.end_station_id.notna().sum())
-ohne_ziel = int(regulaer.end_station_id.isna().sum())
-
-print(f"reguläre Fahrten (1 Min bis 8 Std): {len(regulaer):,}")
-print(f"   endet an einer Station:          {mit_ziel:,}  ({mit_ziel/len(regulaer):.1%})")
-print(f"   endet frei im Geschäftsgebiet:   {ohne_ziel:,}  ({ohne_ziel/len(regulaer):.1%})")
+print("Vorgänge nach Status, mit ihrer typischen Dauer:")
+for s, g in ausleihe.groupby("status"):
+    print(f"   {s:16} n = {len(g):>6,}   Mediandauer {g.dauer_min.median():5.1f} Min")
 print()
-print("Die zweite Gruppe ist kein Datenfehler, sondern ein beworbenes")
-print("Produktmerkmal. Für sie gilt die neue Geschäftsfrage nicht.")
+print("Abbrüche und Stornierungen dauern zwei Minuten. Das sind keine Fahrten,")
+print("sondern Vorgänge, die nie eine geworden sind - und sie verzerren")
+print("besonders die kurzen Strecken, um die es hier geht.")
 """),
 
 MD("""
-Gut ein Fünftel aller Fahrten fällt aus dem Geltungsbereich. Das gehört offen gesagt: Die
-Preisschätzung wird von vornherein nicht für alle Kunden funktionieren.
+### 2.2 Für wie viele Fahrten gibt es ein Ziel?
 
-### 2.2 Rundtouren — dieselbe Verbindung, jede Dauer
-
-Unter den Fahrten mit Ziel gibt es eine Gruppe, bei der die Zielstation nichts erklärt:
-Fahrten, die dort enden, wo sie begonnen haben.
+Die Website wirbt damit, dass man das Rad überall im Geschäftsgebiet abstellen darf.
+Genau diese Fahrten haben keine Zielstation und fallen aus dem Geltungsbereich.
 """),
 
 CODE("""
-mz = regulaer[regulaer.end_station_id.notna()].copy()
-mz["end_station_id"] = mz.end_station_id.astype(int)
-mz["ist_rundtour"] = (mz.start_station_id == mz.end_station_id).astype(int)
+n0 = len(ausleihe)
+schritte = [("Rohdaten", n0)]
 
-for name, gruppe in (("Rundtour (Start = Ziel)", mz[mz.ist_rundtour == 1]),
-                     ("echter Weg", mz[mz.ist_rundtour == 0])):
-    q1, q3 = gruppe.dauer_min.quantile([.25, .75])
-    print(f"{name:24} n = {len(gruppe):>6,}   Median {gruppe.dauer_min.median():5.1f} Min"
-          f"   mittlere Hälfte {q1:4.0f} bis {q3:4.0f} Min")
+d = ausleihe[ausleihe.status == "abgeschlossen"]
+schritte.append(("nur abgeschlossene Vorgänge", len(d)))
+d = d[d.dauer_min >= 1]
+schritte.append(("mindestens 1 Minute", len(d)))
+d = d[d.dauer_min <= 8 * 60]
+schritte.append(("höchstens 8 Stunden (Geltungsbereich)", len(d)))
+n_vor_ziel = len(d)
+d = d[d.end_station_id.notna()].copy()
+schritte.append(("endet an einer Station (Geltungsbereich)", len(d)))
 
-print(f"\\nRundtouren sind {mz.ist_rundtour.mean():.1%} der Fahrten mit Ziel.")
-print("Bei ihnen ist das Ziel gleich dem Start - es trägt per Definition")
-print("keine Information über die Dauer bei. Und sie streuen doppelt so stark.")
+for name, n in schritte:
+    print(f"   {name:42} {n:>7,}")
+print(f"\\n   Verbleiben {len(d)/n0:.1%} der Rohdaten.")
+print(f"   Frei abgestellt und damit ohne Ziel: {1 - len(d)/n_vor_ziel:.1%}")
+print("   Das ist kein Datenfehler, sondern ein beworbenes Produktmerkmal.")
 """),
 
 MD("""
-Merken Sie sich diese Gruppe. Sie wird in Phase 5 zur entscheidenden Größe.
+### 2.3 Rundtouren — dieselbe Verbindung, jede Dauer
+"""),
 
-### 2.3 Was die Verbindung erklärt — ein erster Blick
+CODE("""
+d["end_station_id"] = d.end_station_id.astype(int)
+d["ist_rundtour"] = (d.start_station_id == d.end_station_id).astype(int)
 
-Bevor wir modellieren, eine einfache Frage: Wie viel sagt allein das Wissen, *welche
-Verbindung* gefahren wird, über die Dauer? Drei Nachschlagetabellen, je eine Zeile Code.
+for name, g in (("Rundtour (Start = Ziel)", d[d.ist_rundtour == 1]),
+                ("echter Weg", d[d.ist_rundtour == 0])):
+    q1, q3 = g.dauer_min.quantile([.25, .75])
+    print(f"{name:24} n = {len(g):>6,}   Median {g.dauer_min.median():5.1f} Min"
+          f"   mittlere Hälfte {q1:4.0f} bis {q3:4.0f} Min")
+print(f"\\nRundtouren sind {d.ist_rundtour.mean():.1%} der Fahrten mit Ziel.")
+print("Bei ihnen ist das Ziel gleich dem Start - es trägt per Definition")
+print("keine Information über die Dauer bei, und sie streuen doppelt so stark.")
+"""),
+
+MD("""
+### 2.4 Was die Verbindung erklärt — ein erster Blick
+
+Drei Nachschlagetabellen, je eine Zeile Code. Sie werden uns in Phase 4 als Maßstab
+wiederbegegnen.
 """),
 
 CODE("""
 namen = station.set_index("station_id").name
-mz["start_name"] = mz.start_station_id.map(namen)
-mz["ziel_name"]  = mz.end_station_id.map(namen)
-mz["route"]      = mz.start_name + " → " + mz.ziel_name
+d["start_name"] = d.start_station_id.map(namen)
+d["ziel_name"]  = d.end_station_id.map(namen)
+d["route"]      = d.start_name + " → " + d.ziel_name
 
 def mittlerer_fehler(vorhersage):
-    return (mz.dauer_min - vorhersage).abs().mean()
+    return (d.dauer_min - vorhersage).abs().mean()
 
 print("Mittlerer absoluter Fehler, wenn man nur den Median nimmt:")
-print(f"   ... aller Fahrten:      {mittlerer_fehler(mz.dauer_min.median()):5.2f} Min")
+print(f"   ... aller Fahrten:      {mittlerer_fehler(d.dauer_min.median()):5.2f} Min")
 print(f"   ... je Startstation:    "
-      f"{mittlerer_fehler(mz.groupby('start_name').dauer_min.transform('median')):5.2f} Min")
+      f"{mittlerer_fehler(d.groupby('start_name').dauer_min.transform('median')):5.2f} Min")
 print(f"   ... je Verbindung:      "
-      f"{mittlerer_fehler(mz.groupby('route').dauer_min.transform('median')):5.2f} Min")
-print(f"\\n{mz.route.nunique()} verschiedene Verbindungen, im Median "
-      f"{mz.route.value_counts().median():.0f} Fahrten je Verbindung")
+      f"{mittlerer_fehler(d.groupby('route').dauer_min.transform('median')):5.2f} Min")
+print(f"\\n{d.route.nunique()} Verbindungen, im Median "
+      f"{d.route.value_counts().median():.0f} Fahrten je Verbindung")
 """),
 
 MD("""
-Ein wichtiger Befund, und er fällt bescheidener aus als erwartet: Die Zielstation
-verbessert die Schätzung gegenüber der Startstation allein nur um etwa eine Fünftel
-Minute. Der große Sprung liegt zwischen „nichts wissen“ und „die Startstation kennen“ —
-nicht zwischen Start und Ziel.
-
-Das ist kein Grund aufzuhören, aber ein Grund, in Phase 4 eine **Verbindungs-Baseline**
-mitlaufen zu lassen, gegen die sich jedes Modell behaupten muss.
+Der Sprung liegt zwischen „nichts wissen“ und „die Startstation kennen“. Das Ziel legt
+nur wenige Zehntelminuten drauf. Ob das auch für ein richtiges Modell gilt, prüfen wir in
+Phase 4 mit einer Ablation — der Vergleich zweier Nachschlagetabellen ist dafür kein
+Beweis.
 """),
 
 CODE("""
 fig, achsen = plt.subplots(1, 2, figsize=(13, 4.2))
-
-achsen[0].hist(mz.dauer_min, bins=80, range=(0, 120), color="#003E6E")
-achsen[0].axvline(mz.dauer_min.median(), color="#BE2344", lw=2,
-                  label=f"Median {mz.dauer_min.median():.0f} Min")
+achsen[0].hist(d.dauer_min, bins=80, range=(0, 120), color="#003E6E")
+achsen[0].axvline(d.dauer_min.median(), color="#BE2344", lw=2,
+                  label=f"Median {d.dauer_min.median():.0f} Min")
 achsen[0].set_title("Fahrtdauer — rechtsschief, langer Ausläufer")
 achsen[0].set_xlabel("Minuten"); achsen[0].set_ylabel("Fahrten"); achsen[0].legend()
 
-oben = mz.groupby("route").dauer_min.agg(["median", "count"])
+oben = d.groupby("route").dauer_min.agg(["median", "count"])
 oben = oben[oben["count"] >= 200].sort_values("median").tail(12)
 achsen[1].barh(range(len(oben)), oben["median"], color="#4AB5C4")
 achsen[1].set_yticks(range(len(oben)))
@@ -231,122 +252,90 @@ plt.tight_layout(); plt.show()
 """),
 
 MD("""
-Links die Zielgröße: stark rechtsschief. Deshalb nehmen wir gleich den **Median** als
-Nullmodell und nicht den Mittelwert — für den mittleren absoluten Fehler ist der Median
-die beste konstante Vorhersage.
-
-Rechts das Muster, das dieses Notebook trägt: Die langen Verbindungen führen zum Käppele
-und in den Ringpark — Ausflugsziele. Die kurzen verbinden Bahnhof, Klinikum und Campus —
-Pendelwege.
+Links: stark rechtsschief — deshalb ist der **Median** das richtige Nullmodell, nicht der
+Mittelwert. Rechts das Muster, das dieses Notebook trägt: Die langen Verbindungen führen
+zum Käppele und in den Ringpark, die kurzen verbinden Bahnhof, Klinikum und Campus.
 """),
 
-PHASE(3, "Welche Merkmale sind zum Zeitpunkt der Anzeige verfügbar — und welche nicht?"),
+PHASE(3, "Welche Merkmale sind zum Zeitpunkt der Anfrage verfügbar — und welche nicht?"),
 
 MD("""
-### 3.1 Der Leakage-Test, neu beantwortet
+### 3.1 Der Leakage-Test
 
-Leakage heißt: ein Merkmal verwenden, das es zum Vorhersagezeitpunkt noch gar nicht gibt.
-Das Modell wird großartig und im Betrieb unbrauchbar.
-
-Der Test ist keine Statistik, sondern eine Frage an den Prozess: **Was steht in dem
-Moment zur Verfügung, in dem die Anzeige erscheinen soll?**
+Die Frage ist nicht statistisch, sondern zeitlich: **Was steht in dem Moment zur
+Verfügung, in dem die Anzeige erscheinen soll?**
 
 | Spalte | verfügbar? | warum |
 |---|---|---|
 | `start_station_id` | ja | der Kunde steht dort |
-| `end_station_id` | **ja** | **der Kunde hat sein Ziel gewählt — das ist der ganze Punkt** |
+| `end_station_id` | **ja, mit Vorbehalt** | der Kunde hat gewählt — historisch steht hier aber das *tatsächliche* Ziel (siehe Kasten oben) |
 | `startzeit` | ja | jetzt |
-| Wetter, Kalender | ja | bekannt |
+| Feiertag, Ferien | ja | stehen im Kalender |
 | `typ_code` | ja | das Rad steht vor ihm |
-| `endzeit` | nein | entsteht erst am Ende der Fahrt |
-| `dauer_min` | nein | das ist die Zielgröße |
-| `distanz_km` | nein | wird während der Fahrt gemessen |
-| `entgelt_eur` | nein | wird nach der Fahrt berechnet |
+| **Tageswetter** | **nein** | Tagesmittel und Tagesniederschlag stehen erst am Abend fest |
+| `endzeit`, `dauer_min` | nein | entstehen am Ende der Fahrt |
+| `distanz_km`, `entgelt_eur` | nein | werden während und nach der Fahrt gebildet |
 
-Die zweite Zeile ist die interessante. Im ursprünglichen Prozess — Anzeige beim Entsperren,
-ohne Zielauswahl — wäre die Zielstation Leakage gewesen. Im neuen Prozess ist sie eine
-Eingabe des Kunden.
+Die Wetterzeile ist neu und war in der ersten Runde falsch. Ein Modell, das mit dem
+*Tagesmittel* rechnet, benutzt Wissen von heute Abend für eine Anfrage von heute früh —
+und ein zeitlicher Schnitt heilt das nicht, weil auch im Testzeitraum das nachträglich
+bekannte Tageswetter eingesetzt würde.
 
-> **Dieselbe Spalte, dieselben Daten, gegenteiliges Urteil.** Was den Unterschied macht,
-> ist allein der Prozess, in dem das Modell läuft.
+Brauchbar wäre archiviertes Prognosewetter mit seinem Erstellungszeitpunkt. Das haben wir
+nicht. **Also fällt das Wetter aus dem Modell** — und wir sagen dazu, dass es ein Verlust
+ist, kein Gewinn.
 """),
 
 CODE("""
-# AUFGABE: Tragen Sie die Spalten ein, die NICHT ins Modell dürfen.
-# Prüfen Sie jede Spalte mit der Frage: Existiert dieser Wert schon,
-# wenn der Kunde auf "Preis schätzen" tippt?
-##LUECKE Welche vier Spalten entstehen erst während oder nach der Fahrt?
-gesperrt = ["endzeit", "dauer_min", "distanz_km", "entgelt_eur"]
+# AUFGABE: Welche Spalten dürfen NICHT ins Modell? Prüfen Sie jede mit der
+# Frage: Existiert dieser Wert schon, wenn der Kunde auf "Preis schätzen"
+# tippt?
+##LUECKE Fünf Spalten entstehen erst während, nach oder am Ende des Tages.
+gesperrt = ["endzeit", "dauer_min", "distanz_km", "entgelt_eur",
+            "temp_mittel_c"]
 ##ENDE
 
-print("Gesperrt, weil zum Vorhersagezeitpunkt nicht vorhanden:")
+print("Gesperrt, weil zum Anfragezeitpunkt nicht vorhanden:")
 for s in gesperrt:
     print(f"   {s}")
 print()
-print("Ausdrücklich ERLAUBT, obwohl es nach 'Ende' klingt: end_station_id.")
-print("Der Kunde hat sie ausgewählt, bevor gerechnet wird.")
+print("Erlaubt, obwohl es nach 'Ende' klingt: end_station_id -")
+print("der Kunde hat sie gewählt. Mit dem Vorbehalt aus dem Kasten oben.")
 """),
 
 MD("""
-### 3.2 Filtern, mit Zeilenzahl davor und danach
+### 3.2 Merkmale der geplanten Fahrt
 
-Jeder Filter wird gezählt. Ein Filter ohne Zeilenzahl ist eine Behauptung.
+Drei Gruppen: die Verbindung, der Zeitpunkt, das Rad. Die Zeitmerkmale werden **zyklisch**
+kodiert — 23 Uhr und 0 Uhr sind Nachbarn, als Zahlen aber maximal weit auseinander.
 """),
 
 CODE("""
-n0 = len(ausleihe)
-schritte = [("Rohdaten", n0)]
-
-d = ausleihe[ausleihe.dauer_min >= 1]
-schritte.append(("mindestens 1 Minute (Fehlentsperrungen raus)", len(d)))
-
-d = d[d.dauer_min <= 8 * 60]
-schritte.append(("höchstens 8 Stunden (vergessene Rückgaben raus)", len(d)))
-
-d = d[d.end_station_id.notna()].copy()
-schritte.append(("endet an einer Station (Geltungsbereich)", len(d)))
-
-for name, n in schritte:
-    print(f"   {name:48} {n:>7,}")
-print(f"\\n   Verbleiben {len(d)/n0:.1%} der Rohdaten.")
-print(f"   Der größte Einzelschritt ist der Geltungsbereich, nicht die Bereinigung.")
-"""),
-
-MD("""
-### 3.3 Merkmale der geplanten Fahrt bauen
-
-Drei Gruppen: die Verbindung, der Zeitpunkt, das Wetter. Dazu ein Merkmal, das sich aus
-den Stationskoordinaten ergibt und auch für **neue** Verbindungen funktioniert.
-"""),
-
-CODE("""
-d["end_station_id"] = d.end_station_id.astype(int)
 d = d.merge(fahrrad[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
 
 koord = station.set_index("station_id")
 for rolle, spalte in (("start", "start_station_id"), ("ziel", "end_station_id")):
-    d[f"{rolle}_lat"]  = d[spalte].map(koord.latitude)
-    d[f"{rolle}_lon"]  = d[spalte].map(koord.longitude)
-    d[f"{rolle}_name"] = d[spalte].map(koord.name)
+    d[f"{rolle}_lat"] = d[spalte].map(koord.latitude)
+    d[f"{rolle}_lon"] = d[spalte].map(koord.longitude)
 
-# Luftlinie nach Haversine. Anders als ein Routen-Kürzel funktioniert sie
-# auch für eine Verbindung, die im Training nie vorkam - wichtig, sobald
-# eine neue Station ans Netz geht.
+# Luftlinie nach Haversine - anders als ein Routen-Kürzel auch für eine
+# Verbindung berechenbar, die im Training nie vorkam.
 R = 6371.0
 p1, p2 = np.radians(d.start_lat), np.radians(d.ziel_lat)
 dl = np.radians(d.ziel_lon - d.start_lon)
 h = np.sin((p2 - p1) / 2) ** 2 + np.cos(p1) * np.cos(p2) * np.sin(dl / 2) ** 2
 d["luftlinie_km"] = 2 * R * np.arcsin(np.sqrt(h))
 
-d["route"] = d.start_name + " → " + d.ziel_name
-d["ist_rundtour"] = (d.start_station_id == d.end_station_id).astype(int)
-
 d["datum"]  = d.startzeit.dt.normalize()
 d["stunde"] = d.startzeit.dt.hour
 d["wochentag"] = d.startzeit.dt.dayofweek
 d["ist_wochenende"] = (d.wochentag >= 5).astype(int)
 d["monat"] = d.startzeit.dt.month
-d = d.merge(wetter[["datum", "temp_mittel_c", "niederschlag_mm"]], on="datum", how="left")
+# Zyklisch: der Dezember liegt neben dem Januar, 23 Uhr neben 0 Uhr.
+d["stunde_sin"] = np.sin(2 * np.pi * d.stunde / 24)
+d["stunde_cos"] = np.cos(2 * np.pi * d.stunde / 24)
+d["monat_sin"]  = np.sin(2 * np.pi * d.monat / 12)
+d["monat_cos"]  = np.cos(2 * np.pi * d.monat / 12)
 d["ist_feiertag"] = d.datum.isin(feiertag.datum).astype(int)
 in_ferien = pd.Series(False, index=d.index)
 for _, z in schulfrei.iterrows():
@@ -354,47 +343,47 @@ for _, z in schulfrei.iterrows():
 d["ist_ferien"] = in_ferien.astype(int)
 
 print(f"{len(d):,} Fahrten, {d.route.nunique()} Verbindungen")
-print(f"Luftlinie: {d.luftlinie_km.min():.2f} bis {d.luftlinie_km.max():.2f} km")
-print(f"   (0,00 km sind die Rundtouren - Start und Ziel fallen zusammen)")
+print(f"Luftlinie {d.luftlinie_km.min():.2f} bis {d.luftlinie_km.max():.2f} km "
+      f"(0,00 km sind die Rundtouren)")
 """),
 
 MD("""
-### 3.4 Aufteilen — entlang der Zeit, in drei Teile
+### 3.3 Aufteilen — entlang der Zeit, in VIER Abschnitte
 
-Hier liegt der wichtigste methodische Unterschied zu einem Lehrbuchbeispiel. Wir teilen
-**dreifach**:
+Hier liegt die zweite große Korrektur dieser Runde.
 
-| Teil | wofür | Regel |
+Die erste Fassung teilte dreifach: Training, Validierung, Holdout. Danach stellte sich in
+der Evaluation heraus, dass die Punktschätzung nicht trägt — und es wurde eine Spanne
+entwickelt und **auf demselben Holdout** geprüft. Damit war der Holdout keine unberührte
+Prüfmenge mehr, sondern Entwicklungsinformation.
+
+Ein Rücksprung ist eine **neue Modellierungsrunde**. Sie braucht ihren eigenen Test.
+
+| Abschnitt | wofür | Regel |
 |---|---|---|
-| **Training** | das Modell lernt | die ältesten Fahrten |
-| **Validierung** | wir *wählen* Verfahren und Einstellungen | mittlerer Zeitraum |
-| **Holdout** | wir *messen* das Ergebnis — genau einmal | die jüngsten Fahrten |
-
-Warum drei statt zwei? Wer mehrere Modelle auf derselben Menge vergleicht und dann das
-beste auf ebendieser Menge bewertet, hat sie zur Auswahl benutzt. Die Zahl, die dabei
-herauskommt, ist zu optimistisch — man hat sich das beste Ergebnis ausgesucht.
-
-Und warum entlang der Zeit statt zufällig? Weil der Betrieb so aussieht: Aus der
-Vergangenheit werden künftige Fahrten prognostiziert. Ein zufälliger Schnitt ließe das
-Modell aus Wochen lernen, die zum Zeitpunkt der Vorhersage noch gar nicht stattgefunden
-haben.
+| **Training** (60 %) | das Modell lernt | die ältesten Fahrten |
+| **Validierung** (15 %) | wir *wählen* Verfahren und Einstellungen | mittlerer Zeitraum |
+| **Test 1** (12,5 %) | die Punktschätzung wird *einmal* gemessen | danach verbraucht |
+| **Test 2** (12,5 %) | die Spanne wird *einmal* gemessen | bis Phase 5.6 unberührt |
 """),
 
 CODE("""
 d = d.sort_values("startzeit").reset_index(drop=True)
-g_val  = d.startzeit.quantile(0.70)
-g_hold = d.startzeit.quantile(0.85)
+g1, g2, g3 = d.startzeit.quantile([0.60, 0.75, 0.875])
 
-training    = d[d.startzeit <  g_val]
-validierung = d[(d.startzeit >= g_val) & (d.startzeit < g_hold)]
-holdout     = d[d.startzeit >= g_hold]
+training    = d[d.startzeit <  g1]
+validierung = d[(d.startzeit >= g1) & (d.startzeit < g2)]
+test1       = d[(d.startzeit >= g2) & (d.startzeit < g3)]
+test2       = d[d.startzeit >= g3]
 
 for name, teil in (("Training", training), ("Validierung", validierung),
-                   ("Holdout", holdout)):
-    print(f"{name:12} {len(teil):>7,} Fahrten   "
+                   ("Test 1 (Punkt)", test1), ("Test 2 (Spanne)", test2)):
+    print(f"{name:16} {len(teil):>7,} Fahrten   "
           f"{teil.startzeit.min():%d.%m.%Y} bis {teil.startzeit.max():%d.%m.%Y}")
 print()
-print("Der Holdout wird ab jetzt NICHT mehr angefasst - bis Phase 5.")
+print("Test 1 ist Winter und Frühjahr, Test 2 ist Sommer. Dass die beiden")
+print("Zeiträume verschiedene Jahreszeiten sind, ist kein Zufall der Aufteilung,")
+print("sondern eine Eigenschaft der Daten - und sie wird uns beschäftigen.")
 """),
 
 PHASE(4, "Verdient ein Modell seinen Unterhalt gegenüber einer Nachschlagetabelle?"),
@@ -402,19 +391,8 @@ PHASE(4, "Verdient ein Modell seinen Unterhalt gegenüber einer Nachschlagetabel
 MD("""
 ### 4.1 Vier Baselines, bevor ein Modell gerechnet wird
 
-Ein Modell ist nur dann gerechtfertigt, wenn es etwas schlägt, das ohne Modell zu haben
-wäre. Vier Kandidaten, aufsteigend nach dem, was sie wissen:
-
-| | weiß | Aufwand |
-|---|---|---|
-| A | nichts — der Median aller Fahrten | eine Zeile |
-| B | den Radtyp | eine Zeile |
-| C | die Startstation | eine Zeile |
-| D | **die Verbindung** | eine Zeile |
-
-Baseline D ist der eigentliche Gegner: Sie verkörpert die Aussage *„Für Hauptbahnhof →
-Hubland brauchen die Leute normalerweise acht Minuten.“* Wenn ein Random Forest das kaum
-schlägt, ist das ein Ergebnis — und kein gutes für den Random Forest.
+Baseline D ist der eigentliche Gegner: *„Für Hauptbahnhof → Hubland brauchen die Leute
+normalerweise acht Minuten.“*
 """),
 
 CODE("""
@@ -425,8 +403,8 @@ tabelle = [("A  Median aller Fahrten",
             mean_absolute_error(validierung.dauer_min,
                                 np.full(len(validierung), median_gesamt)))]
 
-# AUFGABE: Bauen Sie die Baselines B, C und D. Der Median wird IMMER auf
-# dem Training gebildet und auf die Validierung angewandt - nie umgekehrt.
+# AUFGABE: Baselines B, C und D. Der Median wird IMMER auf dem Training
+# gebildet und auf die Validierung angewandt - nie umgekehrt.
 ##LUECKE Ergänzen Sie die drei Gruppierungsspalten.
 for beschriftung, spalte in (("B  Median je Radtyp", "typ_code"),
                              ("C  Median je Startstation", "start_name"),
@@ -444,17 +422,7 @@ print(f"Von der Startstation zum Ziel:    {tabelle[2][1] - tabelle[3][1]:.2f} Mi
 """),
 
 MD("""
-Der zweite Satz ist die Zahl, um die es geht. Das Ziel — die neue Produktidee, der ganze
-Umbau — bringt gegenüber der Startstation allein wenige Zehntelminuten.
-
-Wir bauen das Modell trotzdem, aber jetzt mit einer klaren Messlatte: Es muss Baseline D
-deutlich schlagen, sonst liefern wir die Nachschlagetabelle aus.
-
 ### 4.2 Eine Pipeline, damit im Betrieb nichts auseinanderfällt
-
-Die Kodierung der Kategorien gehört **in** das Modell, nicht daneben. Sonst passiert im
-Betrieb genau das, was am teuersten ist: Eine unbekannte Station erzeugt lauter Nullen,
-das Modell rechnet klaglos weiter und liefert Unsinn.
 """),
 
 CODE("""
@@ -467,15 +435,16 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import DecisionTreeRegressor
 
 KATEGORIAL = ["start_name", "ziel_name", "route", "typ_code"]
-NUMERISCH  = ["luftlinie_km", "ist_rundtour", "stunde", "wochentag",
-              "ist_wochenende", "monat", "temp_mittel_c", "niederschlag_mm",
+NUMERISCH  = ["luftlinie_km", "ist_rundtour", "stunde_sin", "stunde_cos",
+              "monat_sin", "monat_cos", "wochentag", "ist_wochenende",
               "ist_feiertag", "ist_ferien"]
 MERKMALE = KATEGORIAL + NUMERISCH
 
 def pipeline(modell, drop=None):
-    # handle_unknown="ignore": eine unbekannte Station wirft keinen Fehler.
-    # drop="first": eine Referenzkategorie je Merkmal entfällt, sonst sind
-    # die Koeffizienten des linearen Modells nicht eindeutig.
+    # handle_unknown="ignore" verhindert einen Absturz bei einer neuen
+    # Station. Es macht die Vorhersage aber nicht gültig - die unbekannte
+    # Kategorie wird zum Nullvektor. Deshalb verweigert die Auslieferung
+    # in Phase 6 unbekannte Kombinationen ausdrücklich.
     return Pipeline([
         ("aufbereiten", ColumnTransformer([
             ("kategorial", OneHotEncoder(handle_unknown="ignore", drop=drop), KATEGORIAL),
@@ -494,33 +463,57 @@ guete = {}
 for name, mp in modelle.items():
     mp.fit(training[MERKMALE], training.dauer_min)
     v = mp.predict(validierung[MERKMALE])
-    guete[name] = (mean_absolute_error(validierung.dauer_min, v),
-                   median_absolute_error(validierung.dauer_min, v))
-    print(f"{name:28} MAE {guete[name][0]:5.2f} Min   Median-Fehler {guete[name][1]:5.2f} Min")
+    guete[name] = mean_absolute_error(validierung.dauer_min, v)
+    print(f"{name:28} MAE {guete[name]:5.2f} Min")
 
-bestes = min(guete, key=lambda k: guete[k][0])
+bestes = min(guete, key=guete.get)
 print(f"\\nAuf der VALIDIERUNG gewählt: {bestes}")
 print(f"Baseline D lag bei {tabelle[3][1]:.2f} Min - das Modell ist "
-      f"{1 - guete[bestes][0]/tabelle[3][1]:.0%} besser.")
+      f"{1 - guete[bestes]/tabelle[3][1]:.0%} besser.")
 """),
 
 MD("""
-Das Modell schlägt die Verbindungs-Baseline deutlich. Es hat also etwas gelernt, das über
-„typische Dauer dieser Strecke“ hinausgeht — vermutlich das Zusammenspiel von Uhrzeit,
-Wochentag und Verbindung.
+> **Zur linearen Regression:** `drop="first"` beseitigt die Dummy-Falle innerhalb eines
+> Merkmals, aber nicht die Abhängigkeiten zwischen ihnen — die Route bestimmt Start und
+> Ziel, `ist_rundtour` folgt aus der Route, die Luftlinie ist je Route konstant. Die
+> Vorhersagen sind brauchbar, die **Koeffizienten aber nicht eindeutig interpretierbar**.
+> Wer sie lesen will, braucht eine redundanzfreie Merkmalsmenge oder eine regularisierte
+> Regression.
 
-**Die Wahl ist damit gefallen.** Sie ist auf der Validierung gefallen, nicht auf dem
-Holdout. Was jetzt kommt, ist eine Messung, keine Auswahl mehr.
+### 4.3 Bringt das Ziel wirklich etwas? Eine Ablation
+
+Der Vergleich zweier Nachschlagetabellen in Phase 2 war ein Hinweis, kein Beweis. Sauber
+ist es, **dasselbe Modell** einmal mit und einmal ohne die Zielmerkmale zu rechnen.
 """),
 
-PHASE(5, "Reicht das für die Preisanzeige? Gemessen auf einem Zeitraum, den niemand gesehen hat."),
+CODE("""
+OHNE_ZIEL_KAT = ["start_name", "typ_code"]
+OHNE_ZIEL_NUM = [s for s in NUMERISCH if s not in ("luftlinie_km", "ist_rundtour")]
+
+ohne = Pipeline([
+    ("aufbereiten", ColumnTransformer([
+        ("kategorial", OneHotEncoder(handle_unknown="ignore"), OHNE_ZIEL_KAT),
+        ("numerisch", "passthrough", OHNE_ZIEL_NUM)])),
+    ("modell", RandomForestRegressor(n_estimators=200, min_samples_leaf=5,
+                                     random_state=42, n_jobs=-1))])
+ohne.fit(training[OHNE_ZIEL_KAT + OHNE_ZIEL_NUM], training.dauer_min)
+mae_ohne = mean_absolute_error(validierung.dauer_min,
+                               ohne.predict(validierung[OHNE_ZIEL_KAT + OHNE_ZIEL_NUM]))
+
+print(f"Random Forest OHNE Zielmerkmale: MAE {mae_ohne:5.2f} Min")
+print(f"Random Forest MIT Zielmerkmalen: MAE {guete[bestes]:5.2f} Min")
+print(f"Beitrag des Ziels:               {mae_ohne - guete[bestes]:5.2f} Min "
+      f"({1 - guete[bestes]/mae_ohne:.0%})")
+print()
+print("Die neue Geschäftslogik ist richtig - aber der messbare Zusatznutzen")
+print("der Zielinformation ist in diesem Datensatz bescheiden. Das gehört")
+print("in den Bericht, nicht in eine Fußnote.")
+"""),
+
+PHASE(5, "Reicht das für die Preisanzeige? Und wenn nicht — was dann?"),
 
 MD("""
-### 5.1 Der Holdout, einmal
-
-Das gewählte Verfahren wird auf Training **und** Validierung neu trainiert — beide liegen
-in der Vergangenheit des Holdouts, also ist das zulässig — und einmal auf dem Holdout
-gemessen.
+### 5.1 Test 1, einmal
 """),
 
 CODE("""
@@ -528,33 +521,24 @@ lernmenge = pd.concat([training, validierung])
 final = modelle[bestes]
 final.fit(lernmenge[MERKMALE], lernmenge.dauer_min)
 
-pruef = holdout.copy()
-pruef["dauer_geschaetzt"] = np.maximum(1.0, final.predict(holdout[MERKMALE]))
+pruef = test1.copy()
+pruef["dauer_geschaetzt"] = np.maximum(1.0, final.predict(test1[MERKMALE]))
+mae_t1 = mean_absolute_error(pruef.dauer_min, pruef.dauer_geschaetzt)
 
-mae_holdout = mean_absolute_error(pruef.dauer_min, pruef.dauer_geschaetzt)
 med_route = lernmenge.groupby("route").dauer_min.median()
 basis_d = pruef.route.map(med_route).fillna(median_gesamt)
 
-print(f"Random Forest auf dem Holdout : MAE {mae_holdout:5.2f} Min")
-print(f"Baseline D auf dem Holdout    : MAE "
-      f"{mean_absolute_error(pruef.dauer_min, basis_d):5.2f} Min")
-print(f"auf der Validierung waren es  : MAE {guete[bestes][0]:5.2f} Min")
-print()
-print(f"Der ehrliche Wert ist {mae_holdout/guete[bestes][0] - 1:.0%} schlechter als der,")
-print("mit dem wir das Modell ausgewählt haben. Genau dafür gibt es den Holdout.")
+print(f"Random Forest auf Test 1 : MAE {mae_t1:5.2f} Min")
+print(f"Baseline D auf Test 1    : MAE {mean_absolute_error(pruef.dauer_min, basis_d):5.2f} Min")
+print(f"auf der Validierung      : MAE {guete[bestes]:5.2f} Min")
 """),
 
 MD("""
-Dieser Sprung ist der wichtigste Satz der Phase. Ein zufälliger Schnitt hätte ihn
-verdeckt: Er hätte Fahrten aus demselben Sommer ins Training gelegt, aus dem er dann
-prüft.
-
 ### 5.2 Von Minuten zu Euro — mit der vollen Tariflogik
 
-Jetzt wird die Zahl in die Währung aus Phase 1 übersetzt. Und zwar richtig: Der Preis ist
-nicht Minuten mal Minutenpreis. Er ist Startgebühr **plus** Minutenpreis, **gedeckelt**
-auf den Tageshöchstpreis. Ist- und Schätzpreis werden je Fahrt getrennt gerechnet und
-dann verglichen.
+Der Preis ist nicht Minuten mal Minutenpreis. Er ist Startgebühr **plus** Minutenpreis,
+**gedeckelt** auf den Tageshöchstpreis. Ist- und Schätzpreis werden je Fahrt getrennt
+gerechnet.
 """),
 
 CODE("""
@@ -565,9 +549,9 @@ def fahrpreis(minuten, typ):
     roh = z.startgebuehr_eur + np.maximum(0.0, minuten) * z.preis_pro_minute_eur
     return float(min(roh, z.tageshoechstpreis_eur))
 
-# AUFGABE: Berechnen Sie Ist- und Schätzpreis je Fahrt und daraus den
-# Betrag der Abweichung. Achtung: NICHT die Minutendifferenz mal Preis -
-# wegen des Tagesdeckels ist der Zusammenhang nicht überall linear.
+# AUFGABE: Ist- und Schätzpreis je Fahrt, daraus der Betrag der Abweichung.
+# NICHT die Minutendifferenz mal Preis - wegen des Deckels ist der
+# Zusammenhang nicht überall linear.
 ##LUECKE Drei Zeilen: p_ist, p_geschaetzt, preisfehler.
 pruef["p_ist"] = [fahrpreis(m, t) for m, t in zip(pruef.dauer_min, pruef.typ_code)]
 pruef["p_geschaetzt"] = [fahrpreis(m, t) for m, t in zip(pruef.dauer_geschaetzt, pruef.typ_code)]
@@ -575,23 +559,18 @@ pruef["preisfehler"] = (pruef.p_geschaetzt - pruef.p_ist).abs()
 ##ENDE
 
 print(f"{'Radtyp':8} {'n':>6} {'Fahrt kostet':>13} {'Abweichung':>12} "
-      f"{'davon unter':>13} {'Kriterium':>12}")
-print(f"{'':8} {'':>6} {'im Schnitt':>13} {'im Schnitt':>12} {'0,50 €':>13} {'':>12}")
+      f"{'unter 0,50 €':>13} {'Kriterium':>12}")
 for t, g in pruef.groupby("typ_code"):
     pf = g.preisfehler.mean()
     print(f"{t:8} {len(g):>6,} {g.p_ist.mean():>12.2f} € {pf:>11.2f} € "
           f"{(g.preisfehler < 0.50).mean():>12.0%} "
           f"{'erfüllt' if pf < 0.50 else 'gerissen':>12}")
-print(f"\\ninsgesamt: {pruef.preisfehler.mean():.2f} € - die Grenze lag bei 0,50 €.")
 """),
 
 MD("""
-### 5.3 Das Urteil
+Für CITY ist die Grenze **eingehalten** — knapp. Für EBIKE und CARGO nicht.
 
-Die Grenze aus Phase 1 ist für **jeden** Radtyp gerissen. Das ist ein klares Ergebnis, und
-es wird nicht dadurch besser, dass man die Grenze nachträglich anhebt.
-
-Bevor wir daraus etwas folgern, zwei Fragen, die man sich in dieser Lage immer stellen
+Bevor daraus eine Freigabe wird, zwei Fragen, die man sich in dieser Lage immer stellen
 sollte.
 """),
 
@@ -602,29 +581,63 @@ print("Frage 1: Schätzen wir systematisch zu hoch oder zu niedrig?")
 for t, g in pruef.groupby("typ_code"):
     print(f"   {t:8} mittlere Abweichung {g.abweichung.mean():+6.2f} €   "
           f"zu hoch bei {(g.abweichung > 0).mean():.0%} der Fahrten")
-print("   -> Nein. Über- und Unterschätzung heben sich fast auf.")
-print("      Es gibt keinen Aufschlag, den man herausrechnen könnte.")
+print("   -> Nein. Über- und Unterschätzung heben sich weitgehend auf.")
 
 print("\\nFrage 2: Ist das Modell für teure Räder schlechter?")
 for t, g in pruef.groupby("typ_code"):
     print(f"   {t:8} Abweichung {g.preisfehler.mean():5.2f} € bei einem Fahrpreis von "
           f"{g.p_ist.mean():6.2f} €  =  {g.preisfehler.mean()/g.p_ist.mean():.0%}")
-print("   -> Nein. Relativ zum Fahrpreis ist die Abweichung überall ähnlich.")
+print("   -> Nein. Relativ zum Fahrpreis ist die Abweichung ähnlich.")
 print("      Was sich unterscheidet, ist die Strenge einer festen 50-Cent-Grenze.")
 """),
 
 MD("""
-Beide Antworten sind wichtig für die Deutung:
+### 5.3 Wie belastbar sind diese 0,47 €?
 
-- Die Schätzung ist **nicht verzerrt**. Sie liegt mal darüber, mal darunter.
-- Das Modell ist für alle Radtypen **relativ gleich gut**. Beim Lastenrad wirkt es nur
-  deshalb schlechter, weil 50 Cent bei einem Fahrpreis von 15 Euro eine sehr viel engere
-  Vorgabe sind als bei zwei Euro.
+CITY liegt drei Cent unter der Grenze. Eine einzelne Zahl auf einem einzelnen Zeitraum
+sagt aber nichts darüber, wie sie im nächsten Quartal aussieht. Wir prüfen das
+**innerhalb** von Training und Validierung — Test 1 ist verbraucht, Test 2 bleibt
+unberührt.
+"""),
 
-Was die Grenze reißt, ist also nicht ein Fehler in eine Richtung, sondern die **Streuung
-der einzelnen Fahrt**. Die Frage ist damit: Woher kommt diese Streuung?
+CODE("""
+lernbasis = pd.concat([training, validierung]).sort_values("startzeit")
+grenzen = lernbasis.startzeit.quantile([0.5, 0.6, 0.7, 0.8, 0.9]).tolist()
 
-### 5.4 Fehleranalyse — wo genau irrt das Modell?
+print(f"{'Fenster':22}{'n':>7}{'MAE':>8}{'CITY Preisfehler':>19}")
+schwankung = []
+for i in range(len(grenzen) - 1):
+    lern_i  = lernbasis[lernbasis.startzeit < grenzen[i]]
+    pruef_i = lernbasis[(lernbasis.startzeit >= grenzen[i])
+                        & (lernbasis.startzeit < grenzen[i + 1])]
+    if len(pruef_i) < 200:
+        continue
+    m = pipeline(RandomForestRegressor(n_estimators=200, min_samples_leaf=5,
+                                       random_state=42, n_jobs=-1))
+    m.fit(lern_i[MERKMALE], lern_i.dauer_min)
+    v = np.maximum(1.0, m.predict(pruef_i[MERKMALE]))
+    c = pruef_i[pruef_i.typ_code == "CITY"]
+    vc = np.maximum(1.0, m.predict(c[MERKMALE]))
+    pf = np.mean(np.abs([fahrpreis(x, "CITY") for x in vc]
+                        - np.array([fahrpreis(x, "CITY") for x in c.dauer_min])))
+    schwankung.append(pf)
+    print(f"{pruef_i.startzeit.min():%m/%Y} bis {pruef_i.startzeit.max():%m/%Y}   "
+          f"{len(pruef_i):>6,}{mean_absolute_error(pruef_i.dauer_min, v):>8.2f}"
+          f"{pf:>18.2f} €")
+
+print(f"\\nDer CITY-Preisfehler schwankt zwischen {min(schwankung):.2f} € "
+      f"und {max(schwankung):.2f} €.")
+print("Die Grenze von 0,50 € liegt INNERHALB dieser Schwankung.")
+"""),
+
+MD("""
+Das ist der entscheidende Befund dieser Phase.
+
+Die 0,47 € aus Test 1 sind kein Fehler — aber sie sind auch keine belastbare Freigabe. Im
+Sommer, wenn mehr Ausflugsfahrten stattfinden, liegt derselbe Aufbau bei 0,56 €. Eine
+Zusage, die je nach Jahreszeit hält oder nicht hält, ist keine Zusage.
+
+### 5.4 Woran es liegt
 """),
 
 CODE("""
@@ -635,218 +648,260 @@ for name, g in (("Rundtour", pruef[pruef.ist_rundtour == 1]),
           f"MAE {mean_absolute_error(g.dauer_min, g.dauer_geschaetzt):5.2f} Min   "
           f"Abweichung {g.preisfehler.mean():5.2f} €")
 
-print("\\nDie fünf treffsichersten und die fünf schwierigsten Verbindungen (CITY):")
+print("\\nDie treffsichersten und die schwierigsten Verbindungen (CITY, echte Wege):")
 c = pruef[(pruef.typ_code == "CITY") & (pruef.ist_rundtour == 0)]
 je_route = c.groupby("route").agg(
     n=("dauer_min", "size"), median_ist=("dauer_min", "median"),
     q1=("dauer_min", lambda s: s.quantile(.25)),
     q3=("dauer_min", lambda s: s.quantile(.75)),
     fehler=("preisfehler", "median")).query("n >= 40").sort_values("fehler")
-for r, z in pd.concat([je_route.head(5), je_route.tail(5)]).iterrows():
+for r, z in pd.concat([je_route.head(4), je_route.tail(4)]).iterrows():
     print(f"   {r[:38]:38} {z.median_ist:4.0f} Min "
           f"(mittlere Hälfte {z.q1:3.0f}-{z.q3:3.0f})  Abweichung {z.fehler:5.2f} €")
 """),
 
 MD("""
-Damit ist das Muster klar, und es ist kein statistisches, sondern ein menschliches:
+Das Muster ist kein statistisches, sondern ein menschliches:
 
 > **Das Modell ist genau, wo gefahren wird, um anzukommen — und ungenau, wo gefahren
 > wird, um zu fahren.**
 
-Auf den Pendelverbindungen liegt die Anzeige um wenige Cent daneben, und die tatsächlichen
-Fahrten streuen nur um zwei, drei Minuten. Auf den Verbindungen zum Käppele und in den
-Ringpark liegt sie um mehr als einen halben Euro daneben, weil die Leute dort zwischen
-zwanzig und vierzig Minuten unterwegs sind — je nachdem, ob sie eine Pause machen.
+Auf den Pendelverbindungen liegt die Anzeige um wenige Cent daneben. Auf den Verbindungen
+zum Käppele und in den Ringpark liegt sie deutlich daneben, weil die Leute dort je nach
+Anlass zwanzig oder vierzig Minuten unterwegs sind.
 
-Kein Merkmal der Welt kann diesen Unterschied auflösen. Ob jemand am Aussichtspunkt
-anhält, steht in keiner Tabelle.
+**Die derzeit verfügbaren Merkmale reichen nicht aus, um individuelle Stopps und den
+Fahrtzweck abzubilden.** Ob überhaupt keine Merkmale das könnten, wissen wir nicht —
+Nutzerabsicht, Höhenprofil oder Stationsauslastung sind ungeprüfte Kandidaten.
 
 ### 5.5 Der Rücksprung — zurück nach Phase 1
 
-Wir haben drei Möglichkeiten:
+Drei Möglichkeiten:
 
-1. **Grenze lockern.** Verboten. Sie kam aus dem Produktmanagement, nicht aus den Daten.
-2. **Besseres Modell suchen.** Aussichtslos. Die Information fehlt in den Daten, nicht im
-   Verfahren.
-3. **Die Zusage ändern.** Statt einer Zahl, die Genauigkeit vortäuscht, eine **Spanne**,
-   die die tatsächliche Streuung abbildet.
+1. **Grenze lockern.** Verboten. Sie kam aus dem Produktmanagement.
+2. **Besseres Modell suchen.** Die Ablation in 4.3 zeigt, wie wenig selbst das Ziel
+   beiträgt; die Information fehlt in den Daten.
+3. **Die Zusage ändern.** Statt einer Zahl, die Genauigkeit vortäuscht, eine **Spanne**.
 
-Der dritte Weg ist der ehrliche. Er ändert nicht das Verfahren — eine Quantilregression
-ist weiterhin Regression —, sondern das, was die App verspricht.
+Der dritte Weg ist der ehrliche. Er ändert nicht die Verfahrensklasse — eine
+Quantilregression ist weiterhin Regression —, sondern das, was die App verspricht.
 
-**Neues Erfolgskriterium, wieder vor der Messung festgelegt:**
+**Neues Erfolgskriterium, vor der Messung festgelegt:**
 
 | | |
 |---|---|
-| **trifft** | Die angezeigte Spanne enthält den tatsächlichen Preis in mindestens **80 %** der Fälle |
-| **nützt** | Die Spanne ist höchstens **1,00 €** breit — sonst zeigt die App keinen Preis, sondern einen Hinweis |
+| **trifft** | Die angezeigte Spanne enthält den tatsächlichen Preis in mindestens **80 %** der Fälle — insgesamt *und* je Radtyp |
+| **nützt** | Die Spanne ist höchstens **1,00 €** breit, sonst zeigt die App keinen Preis |
+| **gemessen auf** | **Test 2** — dem Zeitraum, den bis hierher nichts berührt hat |
 
-Der zweite Punkt ist der eigentliche Fortschritt. Er macht aus einer Ja-Nein-Entscheidung
-über das ganze Produkt eine Entscheidung **je Verbindung**.
+### 5.6 Welches Artefakt? Zwei Kandidaten, ehrlich verglichen
+
+In der ersten Fassung stand hier ein Widerspruch: Der Text sagte, die Quantilregression
+werde ausgeliefert — gebaut wurde dann eine Tabelle aus historischen Perzentilen. Das
+sind zwei verschiedene Produkte, und man muss sich entscheiden.
 """),
 
 CODE("""
 from sklearn.ensemble import GradientBoostingRegressor
 
-echte_wege = lernmenge[lernmenge.ist_rundtour == 0]
-hold_wege  = pruef[pruef.ist_rundtour == 0].copy()
+# Alles, was VOR Test 2 liegt, darf jetzt in die Lernmenge - Test 2 ist
+# der unberuehrte Zeitraum dieser zweiten Runde.
+basis = pd.concat([training, validierung, test1])
+basis = basis[basis.ist_rundtour == 0]
+zukunft = test2[test2.ist_rundtour == 0].copy()
 
-unten = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.10, random_state=42))
-oben  = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.90, random_state=42))
-unten.fit(echte_wege[MERKMALE], echte_wege.dauer_min)
-oben.fit(echte_wege[MERKMALE], echte_wege.dauer_min)
-
-hold_wege["min_min"] = np.maximum(1.0, unten.predict(hold_wege[MERKMALE]))
-hold_wege["max_min"] = oben.predict(hold_wege[MERKMALE])
-
-# Die Nachschlagetabelle als Gegner - diesmal für Spannen.
-p10 = echte_wege.groupby("route").dauer_min.quantile(.10)
-p90 = echte_wege.groupby("route").dauer_min.quantile(.90)
-hold_wege["basis_min"] = hold_wege.route.map(p10)
-hold_wege["basis_max"] = hold_wege.route.map(p90)
-
-# AUFGABE: Wie oft liegt die tatsächliche Dauer INNERHALB der Spanne?
-##LUECKE Berechnen Sie die Abdeckung für beide Verfahren.
-def abdeckung(u, o):
-    return ((hold_wege.dauer_min >= hold_wege[u]) & (hold_wege.dauer_min <= hold_wege[o])).mean()
-##ENDE
-
-print(f"{'Verfahren':32} {'Abdeckung':>10} {'Breite (Median)':>17}")
-for name, u, o in (("Quantilregression", "min_min", "max_min"),
-                   ("Perzentile der Verbindung", "basis_min", "basis_max")):
-    print(f"{name:32} {abdeckung(u, o):>9.1%} "
-          f"{(hold_wege[o] - hold_wege[u]).median():>13.1f} Min")
-print("\\nZiel waren 80 % Abdeckung - beide erreichen das.")
-print("Und wieder hält die Nachschlagetabelle mit dem Verfahren mit.")
-"""),
-
-MD("""
-Zum zweiten Mal in diesem Notebook liegt eine Tabelle aus der Historie gleichauf mit einem
-Verfahren. Das ist kein Zufall und keine Schwäche der Implementierung: Wenn die Streuung
-einer Verbindung im Wesentlichen davon abhängt, *welche* Verbindung es ist, dann steckt
-die Antwort schon in der Verteilung dieser Verbindung.
-
-Wir liefern trotzdem die Quantilregression aus, aber aus einem Grund, der nichts mit
-Genauigkeit zu tun hat: Sie kann für eine **neue** Verbindung über Luftlinie und Radtyp
-eine Spanne bilden. Die Nachschlagetabelle kann das nicht — sie hätte für eine neue
-Station keine Zeile.
-"""),
-
-CODE("""
-def preis_spanne(zeile):
-    return (fahrpreis(zeile.min_min, zeile.typ_code),
-            fahrpreis(zeile.max_min, zeile.typ_code))
-
-spannen = hold_wege.apply(preis_spanne, axis=1, result_type="expand")
-hold_wege["preis_von"], hold_wege["preis_bis"] = spannen[0], spannen[1]
-hold_wege["breite_eur"] = hold_wege.preis_bis - hold_wege.preis_von
-
-city = hold_wege[hold_wege.typ_code == "CITY"]
-je_verbindung = city.groupby("route").agg(
-    n=("breite_eur", "size"), von=("preis_von", "median"),
-    bis=("preis_bis", "median"), breite=("breite_eur", "median")).query("n >= 40")
-je_verbindung = je_verbindung.sort_values("breite")
-
-print("Die schmalsten Spannen - hier ist eine Preisangabe nützlich:")
-for r, z in je_verbindung.head(4).iterrows():
-    print(f"   {r[:40]:40} {z.von:4.2f} bis {z.bis:4.2f} €   (Breite {z.breite:4.2f} €)")
-print("\\nDie breitesten - hier wäre eine Preisangabe eine Zumutung:")
-for r, z in je_verbindung.tail(3).iterrows():
-    print(f"   {r[:40]:40} {z.von:4.2f} bis {z.bis:4.2f} €   (Breite {z.breite:4.2f} €)")
-
-freigabe = (je_verbindung.breite <= 1.00)
-print(f"\\nVerbindungen mit einer Spanne bis 1,00 €: "
-      f"{freigabe.sum()} von {len(je_verbindung)}")
-print(f"Anteil der Fahrten, die davon profitieren: "
-      f"{city.breite_eur.le(1.00).mean():.0%}")
-"""),
-
-MD("""
-Das ist das Ergebnis, mit dem wir in die Auslieferung gehen. Es ist kein glattes „besteht“,
-sondern eine differenzierte Aussage:
-
-- Die Spanne **trifft** — in vier von fünf Fällen liegt der tatsächliche Preis darin.
-- Sie ist **auf etwa der Hälfte der Verbindungen nützlich schmal**.
-- Auf den übrigen ist sie ehrlich, aber zu breit, um damit zu planen.
-
-Damit wird die Freigabe nicht mehr je Radtyp entschieden, sondern **je Verbindung**. Nicht
-das Rad macht eine Fahrt unvorhersehbar, sondern der Anlass.
-"""),
-
-PHASE(6, "Wie kommt das in die App — und wie verhindert man, dass es dort Unsinn anzeigt?"),
-
-MD("""
-### 6.1 Was ausgeliefert wird
-
-Nicht das Modellobjekt, sondern eine **Tabelle**: je Verbindung, Radtyp und Tageszeit eine
-Spanne. Das hat drei Gründe.
-
-1. Die Website ist eine statische Anwendung ohne Python. Sie kann kein sklearn-Modell
-   laden.
-2. Die Merkmale, die das Modell braucht, ändern sich innerhalb eines Tages kaum — eine
-   Spanne je Tageszeit reicht.
-3. Eine Tabelle ist prüfbar. Man kann sie lesen, und jemand mit Ortskenntnis kann
-   widersprechen.
-
-Die Freigabe steckt **in** der Tabelle: Verbindungen mit zu breiter Spanne bekommen keine
-Zeile. Was nicht drinsteht, wird nicht angezeigt.
-"""),
-
-CODE("""
 FENSTER = [(5, 10, "frueh"), (10, 15, "vormittag"),
            (15, 20, "nachmittag"), (20, 24, "abend")]
-
 def fenster_von(stunde):
     for a, b, name in FENSTER:
         if a <= stunde < b:
             return name
     return "nacht"
+for teil in (basis, zukunft):
+    teil["fenster"] = teil.stunde.map(fenster_von)
 
-basis = pd.concat([lernmenge, pruef])
-basis = basis[basis.ist_rundtour == 0].copy()
-basis["fenster"] = basis.stunde.map(fenster_von)
+# Kandidat 1: Quantilregression
+unten = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.10, random_state=42))
+oben  = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.90, random_state=42))
+unten.fit(basis[MERKMALE], basis.dauer_min)
+oben.fit(basis[MERKMALE], basis.dauer_min)
+zukunft["modell_von"] = np.maximum(1.0, unten.predict(zukunft[MERKMALE]))
+zukunft["modell_bis"] = oben.predict(zukunft[MERKMALE])
 
-zeilen = []
-for (route, typ, fenster), g in basis.groupby(["route", "typ_code", "fenster"]):
-    if len(g) < 30:                      # zu duenn fuer eine belastbare Spanne
-        continue
-    u, o = g.dauer_min.quantile(.10), g.dauer_min.quantile(.90)
-    pv, pb = fahrpreis(u, typ), fahrpreis(o, typ)
-    if pb - pv > 1.00:                   # zu breit, um nuetzlich zu sein
-        continue
-    start, ziel = route.split(" → ")
-    zeilen.append(dict(startstation=start, zielstation=ziel, typ_code=typ,
-                       zeitfenster=fenster, minuten_von=round(u), minuten_bis=round(o),
-                       preis_von=round(pv, 2), preis_bis=round(pb, 2),
-                       fahrten_grundlage=len(g)))
+# Kandidat 2: Perzentile je Verbindung, Radtyp und Tageszeit.
+# Die Freigaberegeln gelten SOFORT und nicht erst nach der Messung: nur
+# Kombinationen mit genug Fahrten und einer nuetzlich schmalen Spanne
+# kommen ueberhaupt in Frage. Alles andere zu messen und danach
+# wegzuwerfen haette die Abdeckung geschoenigt.
+gruppen = basis.groupby(["route", "typ_code", "fenster"]).dauer_min
+tab = pd.DataFrame({"von": gruppen.quantile(.10), "bis": gruppen.quantile(.90),
+                    "n": gruppen.size()}).reset_index()
+tab["preis_von"] = [fahrpreis(m, t) for m, t in zip(tab["von"], tab.typ_code)]
+tab["preis_bis"] = [fahrpreis(m, t) for m, t in zip(tab["bis"], tab.typ_code)]
+tab = tab[(tab.n >= 30) & (tab.preis_bis - tab.preis_von <= 1.00)]
+print(f"{len(tab)} Kombinationen erfuellen die beiden Regeln aus Phase 1.")
+zukunft = zukunft.merge(tab, on=["route", "typ_code", "fenster"], how="left")
 
-freigabe_tabelle = pd.DataFrame(zeilen)
-print(f"{len(freigabe_tabelle)} freigegebene Kombinationen aus "
-      f"Verbindung, Radtyp und Tageszeit")
-print(f"   Verbindungen:  {freigabe_tabelle.startstation.nunique()} Start- x "
-      f"{freigabe_tabelle.zielstation.nunique()} Zielstationen")
-print(f"   Radtypen:      {sorted(freigabe_tabelle.typ_code.unique())}")
+# AUFGABE: Wie oft liegt die tatsächliche Dauer INNERHALB der Spanne?
+##LUECKE Abdeckung für beide Kandidaten, nur wo eine Spanne vorliegt.
+def abdeckung(u, o):
+    da = zukunft[o].notna()
+    return ((zukunft[da].dauer_min >= zukunft[da][u])
+            & (zukunft[da].dauer_min <= zukunft[da][o])).mean()
+##ENDE
+
+print(f"{'Kandidat':30}{'Abdeckung':>11}{'Breite (Median)':>18}{'Auskunft für':>15}")
+for name, u, o in (("Quantilregression", "modell_von", "modell_bis"),
+                   ("Perzentile je Verbindung", "von", "bis")):
+    da = zukunft[o].notna()
+    print(f"{name:30}{abdeckung(u, o):>10.1%}"
+          f"{(zukunft[da][o] - zukunft[da][u]).median():>14.1f} Min"
+          f"{da.mean():>14.0%}")
 print()
-print(freigabe_tabelle.head(8).to_string(index=False))
+print("Die Quantilregression antwortet immer, die Tabelle nur dort, wo sie")
+print("freigegeben ist. Verglichen werden muessen deshalb nicht nur die")
+print("Abdeckungen, sondern auch die Reichweiten - siehe Phase 6.2.")
 """),
 
 MD("""
-### 6.2 Die Funktion, die die App aufruft
+Beide halten die 80 Prozent. Die Tabelle trifft sogar etwas besser und ist schmaler —
+**aber sie schweigt bei drei von vier Anfragen.** Die Quantilregression antwortet immer.
 
-Sie tut drei Dinge, und das dritte ist das wichtigste: Sie **verweigert** die Auskunft,
-wenn die Kombination nicht freigegeben ist. Eine fachliche Einschränkung, die nur im
-Bericht steht, ist keine Einschränkung.
+Das ist der eigentliche Zielkonflikt, und er lässt sich nicht wegrechnen: Wer immer
+antwortet, antwortet auch dort, wo er es nicht sollte. Wer nur dort antwortet, wo die
+Daten es hergeben, lässt die meisten Anfragen unbeantwortet.
+
+Weitere Unterschiede:
+
+| | Quantilregression | Perzentiltabelle |
+|---|---|---|
+| kann eine **neue** Verbindung einschätzen | ja, über Luftlinie und Radtyp | nein |
+| ist ohne Python lauffähig | nein | ja |
+| ist von Hand prüfbar | nein | ja |
+| berücksichtigt Wochentag und Saison | ja | nein |
+
+**Wir liefern die Tabelle aus** — und nehmen das Schweigen in Kauf. Drei Gründe:
+
+1. Die App ist statisch und kann kein Modell laden.
+2. Eine Auskunft, der jemand mit Ortskenntnis widersprechen kann, ist im Betrieb mehr
+   wert als eine, die man glauben muss.
+3. Eine Anzeige, die in einem von fünf Fällen danebenliegt, beschädigt das Vertrauen
+   stärker, als eine fehlende Anzeige es tut.
+
+Punkt 3 ist eine Produktentscheidung, keine analytische. Sie gehört dem Auftraggeber und
+ist hier ausdrücklich als seine vermerkt.
+
+Und damit ist auch die Behauptung vom Tisch, das Modell werde wegen seiner
+Verallgemeinerung auf neue Stationen gebraucht: Die Tabelle kann das nicht, und sie
+verweigert die Auskunft in genau diesem Fall — was ehrlicher ist als eine Vorhersage aus
+einem Nullvektor.
+
+> **Das ist kein analytisches Scheitern.** Der Nachweis, dass eine durchschaubare Tabelle
+> für den konkreten Zweck genügt, ist ein Ergebnis. Zum zweiten Mal in dieser Fallstudie
+> hält eine Nachschlagetabelle mit einem Verfahren mit — in Notebook 2 wird es zum dritten
+> Mal passieren.
+"""),
+
+PHASE(6, "Wie kommt das in die App — und was ist dabei noch offen?"),
+
+MD("""
+### 6.1 Die Freigabe steckt in der Tabelle
+
+Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt: genug Fahrten
+als Grundlage, eine nützlich schmale Spanne — und eine **auf Test 2 gemessene** Abdeckung
+von mindestens 80 Prozent. Die dritte Bedingung fehlte in der ersten Fassung; damit war
+die Freigabe eine Behauptung über die Vergangenheit, nicht über die Zukunft.
 """),
 
 CODE("""
-NACHSCHLAGE = freigabe_tabelle.set_index(
-    ["startstation", "zielstation", "typ_code", "zeitfenster"])
+zukunft["p_ist"] = [fahrpreis(m, t) for m, t in zip(zukunft.dauer_min, zukunft.typ_code)]
+hat_spanne = zukunft["bis"].notna()
+z = zukunft[hat_spanne].copy()
+z["im_intervall"] = (z.p_ist >= z.preis_von - 0.001) & (z.p_ist <= z.preis_bis + 0.001)
+z["breite"] = z.preis_bis - z.preis_von
+
+print(f"Abdeckung insgesamt auf Test 2: {z.im_intervall.mean():.1%}   (Kriterium 80 %)")
+print(f"\\n{'Radtyp':8}{'n':>7}{'Abdeckung':>12}{'Urteil':>12}")
+for t, g in z.groupby("typ_code"):
+    print(f"{t:8}{len(g):>7,}{g.im_intervall.mean():>11.1%}"
+          f"{'erfüllt' if g.im_intervall.mean() >= 0.80 else 'darunter':>12}")
+
+je_komb = z.groupby(["route", "typ_code", "fenster"]).agg(
+    abdeckung=("im_intervall", "mean"), n=("im_intervall", "size"),
+    breite=("breite", "median"))
+gross = je_komb[je_komb.n >= 20]
+print(f"\\nJe Kombination mit mindestens 20 Prüffahrten: {len(gross)} geprüft, "
+      f"{(gross.abdeckung >= 0.80).sum()} erfüllen 80 %, "
+      f"{(gross.abdeckung < 0.80).sum()} nicht")
+print(f"   schlechteste {gross.abdeckung.min():.0%}, beste {gross.abdeckung.max():.0%}")
+print(f"\\nSpannenbreite im Median: {z.breite.median():.2f} €")
+"""),
+
+MD("""
+### 6.2 Die ehrliche Produktreichweite
+
+Eine Zahl, die in der ersten Fassung fehlte und die man nicht verschweigen darf: Für wie
+viele Anfragen kann die App überhaupt etwas sagen?
+"""),
+
+CODE("""
+alle_t2 = len(test2)
+mit_ziel_ohne_rund = len(zukunft)
+mit_auskunft = int(hat_spanne.sum())
+
+print("Von allen Fahrten des Zeitraums Test 2:")
+print(f"   {alle_t2:>6,}  Fahrten insgesamt (schon gefiltert: abgeschlossen, mit Ziel)")
+print(f"   {mit_ziel_ohne_rund:>6,}  davon echte Wege, keine Rundtouren   "
+      f"({mit_ziel_ohne_rund/alle_t2:.0%})")
+print(f"   {mit_auskunft:>6,}  davon mit einer freigegebenen Spanne  "
+      f"({mit_auskunft/alle_t2:.0%} aller Fahrten)")
+print()
+print(f"Die App kann also für {mit_auskunft/alle_t2:.0%} der Fahrten einen Preis nennen.")
+print("Für den Rest sagt sie ehrlich, dass sie es nicht kann - und das ist")
+print("besser als eine Zahl, die nicht trägt.")
+"""),
+
+MD("""
+### 6.3 Die Tabelle bauen und ausliefern
+"""),
+
+CODE("""
+# Die Tabelle steht bereits - sie hat ihre Regeln in 5.6 mitbekommen.
+# Hier wird nur noch in die Form gebracht, die die Datenbank erwartet.
+zeilen = []
+for _, g in tab.iterrows():
+    start, ziel = g.route.split(" → ")
+    zeilen.append(dict(startstation=start, zielstation=ziel, typ_code=g.typ_code,
+                       zeitfenster=g.fenster,
+                       minuten_von=round(g["von"]), minuten_bis=round(g["bis"]),
+                       preis_von=round(g.preis_von, 2), preis_bis=round(g.preis_bis, 2),
+                       fahrten_grundlage=int(g.n)))
+
+freigabe_tabelle = pd.DataFrame(zeilen)
+freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
+print(f"{len(freigabe_tabelle)} freigegebene Kombinationen geschrieben.")
+if len(freigabe_tabelle):
+    print(freigabe_tabelle.head(8).to_string(index=False))
+"""),
+
+MD("""
+### 6.4 Die Funktion, die die App aufruft
+
+Sie verweigert die Auskunft, wenn die Kombination nicht freigegeben ist. Eine fachliche
+Einschränkung, die nur im Bericht steht, ist keine.
+"""),
+
+CODE("""
+if len(freigabe_tabelle):
+    NACHSCHLAGE = freigabe_tabelle.set_index(
+        ["startstation", "zielstation", "typ_code", "zeitfenster"])
+else:
+    NACHSCHLAGE = pd.DataFrame().set_index(pd.MultiIndex.from_arrays([[], [], [], []]))
 
 def preis_schaetzen(start, ziel, typ_code, stunde):
     \"\"\"Gibt die Preisspanne zurueck - oder sagt, dass sie es nicht kann.\"\"\"
     if start == ziel:
-        return {"anzeige": None,
-                "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
+        return {"anzeige": None, "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
     schluessel = (start, ziel, typ_code, fenster_von(stunde))
     if schluessel not in NACHSCHLAGE.index:
         return {"anzeige": None,
@@ -856,109 +911,105 @@ def preis_schaetzen(start, ziel, typ_code, stunde):
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
             "grundlage": f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"}
 
-for probe in [("Hauptbahnhof", "Hubland", "CITY", 8),
-              ("Hauptbahnhof", "Hauptbahnhof", "CITY", 8),
-              ("Residenz", "Käppele", "CITY", 14),
-              ("Hauptbahnhof", "Neue Station", "CITY", 8)]:
-    ergebnis = preis_schaetzen(*probe)
+# Die Stationsnamen stehen hier GENAU so wie in den Daten. In der ersten
+# Fassung stand hier "Käppele", in den Daten steht "Kaeppele" - die
+# Auskunft wurde also wegen der Schreibweise verweigert und nicht wegen
+# einer zu breiten Spanne. Produktiv gehoeren unveraenderliche IDs an
+# diese Stelle, Namen nur in die Anzeige.
+STUNDE_JE_FENSTER = {"frueh": 8, "vormittag": 12, "nachmittag": 17, "abend": 21}
+erste = freigabe_tabelle.iloc[0] if len(freigabe_tabelle) else None
+proben = ([(erste.startstation, erste.zielstation, erste.typ_code,
+            STUNDE_JE_FENSTER[erste.zeitfenster])] if erste is not None else [])
+proben += [("Hauptbahnhof", "Hauptbahnhof", "CITY", 8),
+           ("Alte Mainbruecke", "Kaeppele", "CITY", 14),
+           ("Hauptbahnhof", "Neue Station", "CITY", 8)]
+
+for probe in proben:
+    e = preis_schaetzen(*probe)
     print(f"{probe[0]} → {probe[1]} ({probe[2]}, {probe[3]} Uhr)")
-    if ergebnis["anzeige"]:
-        print(f"   {ergebnis['anzeige']}   {ergebnis['minuten']}   "
-              f"Grundlage: {ergebnis['grundlage']}")
+    if e["anzeige"]:
+        print(f"   {e['anzeige']}   {e['minuten']}   Grundlage: {e['grundlage']}")
     else:
-        print(f"   keine Anzeige - {ergebnis['hinweis']}")
+        print(f"   keine Anzeige - {e['hinweis']}")
 """),
 
 MD("""
-Die vier Proben zeigen alle Fälle, die im Betrieb vorkommen: eine freigegebene Verbindung,
-eine Rundfahrt, eine Verbindung mit zu breiter Streuung und eine Station, die es im
-Training nicht gab. In drei von vier Fällen sagt die Funktion ehrlich, dass sie nichts zu
-sagen hat.
+### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
 
-### 6.3 Die Tabelle für die Datenbank
-"""),
-
-CODE("""
-freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
-print(f"preisschaetzung.csv geschrieben: {len(freigabe_tabelle)} Zeilen")
-print()
-print("In der Datenbank wird daraus velocity.preisschaetzung, gelesen über")
-print("die Sicht v_preisschaetzung. Die Website ruft ausschliesslich die Sicht auf -")
-print("dieselbe Regel wie fuer alle anderen Daten der Anwendung.")
-"""),
-
-MD("""
-### 6.4 Was danach passieren muss
+In der ersten Fassung stand als Erfolgskriterium 80 Prozent, als Handlungsschwelle aber
+erst 75 und 60 Prozent. Eine bereits gescheiterte Kombination wäre damit weiter angezeigt
+worden. Die Grenzen sind jetzt aneinander ausgerichtet.
 
 | Auslöser | Schwelle | Handlung |
 |---|---|---|
-| laufende Messung je Verbindung | Abdeckung unter 75 % | Spanne neu berechnen |
-| | Abdeckung unter 60 % | Verbindung aus der Tabelle nehmen |
-| neue Station geht ans Netz | — | keine Zeile, also keine Anzeige, bis genug Fahrten vorliegen |
-| Tarif ändert sich | Minutenpreis neu | **gesamte Tabelle neu rechnen** — die Euro-Spannen hängen daran |
-| Jahreszeit | Quartalswechsel | Tabelle neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
+| Abdeckung je Kombination, gleitend über 8 Wochen | ≥ 80 % | anzeigen |
+| | 75 bis 80 % | Warnung, Neuberechnung anstoßen |
+| | < 75 % | **Kombination abschalten** — das Kriterium ist verfehlt |
+| Fallzahl je Kombination | < 20 im Fenster | keine Aussage möglich, Vorwoche weiterverwenden |
+| neue Station | — | keine Zeile, also keine Anzeige |
+| **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |
+| Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
 
-Die vierte Zeile ist die unauffälligste und die gefährlichste. Die Tabelle enthält Euro,
-nicht Minuten. Ändert VeloCity den Minutenpreis, sind alle Spannen falsch, ohne dass sich
-an den Daten oder am Modell irgendetwas geändert hätte.
+### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
 
-### 6.5 Die Rückkopplung
+Was dieses Notebook „Test 2“ nennt, ist ein **rückblickender Test auf vergangenen
+Daten**. Ein Schattenbetrieb ist etwas anderes:
 
-Anders als bei der vorausschauenden Wartung in Notebook 2 arbeitet die Rückkopplung hier
-**für** uns: Jede angezeigte Schätzung wird von einer tatsächlichen Fahrt gefolgt, deren
-Dauer wir messen. Die Anzeige beeinflusst das Verhalten kaum — niemand fährt langsamer,
-weil eine Spanne breiter war.
+1. Tabelle zu einem Stichtag einfrieren.
+2. In der App das **geplante** Ziel vor dem Entsperren speichern.
+3. Schätzung berechnen, aber nicht anzeigen.
+4. Nach der Fahrt tatsächliches Ziel, Dauer und Preis ergänzen.
+5. Geplantes gegen tatsächliches Ziel vergleichen — das ist der Test der Annahme aus dem
+   Kasten ganz oben.
+6. Abdeckung, Breite, Reichweite und Ablehnungsgründe je Verbindung auswerten.
+7. Erst danach sichtbar schalten.
 
-Eine Einschränkung bleibt: Wenn die Anzeige jemanden vom Fahren abhält, fehlt uns genau
-diese Fahrt in den Daten. Bei einem Preisrahmen von ein bis zwei Euro ist der Effekt
-vermutlich klein, aber er gehört benannt.
+Punkt 2 und 5 sind der Kern. Ohne sie bleibt die Grundannahme dieses Notebooks ungeprüft.
 """),
 
 MD("""
 # Der Kreislauf schließt sich
 
-**Was dieses Notebook gezeigt hat**
-
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | Der Prozess wurde geändert, nicht das Verfahren: Der Kunde wählt sein Ziel, dann wird gerechnet. Erfolgskriterium: Preisfehler unter 50 Cent |
-| 2 Data Understanding | Gut ein Fünftel der Fahrten endet frei im Gebiet und fällt aus dem Geltungsbereich. Ein weiteres Fünftel sind Rundtouren. Die Verbindung erklärt weniger, als die Produktidee nahelegt |
-| 3 Data Preparation | Die Zielstation ist erlaubt, **weil der Prozess sie liefert**. Dreiteiliger Schnitt entlang der Zeit, Pipeline mit `handle_unknown` |
-| 4 Modeling | Vier Baselines vor dem ersten Modell. Der Random Forest schlägt die Verbindungs-Baseline deutlich — die Wahl fällt auf der Validierung |
-| 5 Evaluation | Auf dem Holdout deutlich schlechter als auf der Validierung. Mit der vollen Tariflogik reißt **jeder** Radtyp die 50-Cent-Grenze. Die Fehleranalyse zeigt: Pendeln ist vorhersagbar, Ausflüge sind es nicht |
-| 6 Deployment | Rücksprung zur Spanne. Freigabe je Verbindung, als Tabelle, technisch erzwungen |
+| 1 Business Understanding | Der Prozess wurde geändert, nicht das Verfahren. Kriterium: Preisfehler unter 50 Cent. Geltungsbereich ausdrücklich eingeschränkt |
+| 2 Data Understanding | Abbrüche und Stornierungen sind keine Fahrten. Ein Fünftel endet frei im Gebiet, ein weiteres Fünftel sind Rundtouren |
+| 3 Data Preparation | Zielstation erlaubt — als Stellvertreter. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale |
+| 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, wie wenig das Ziel beiträgt |
+| 5 Evaluation | CITY hält die Grenze auf Test 1 knapp — die rollierende Prüfung zeigt, dass die Grenze innerhalb der Saisonschwankung liegt. Rücksprung zur Spanne |
+| 6 Deployment | Ausgeliefert wird die Tabelle, nicht das Modell. Freigabe je Kombination, gegen Test 2 gemessen |
 
 **Der Rücksprung, den man hier mitverfolgen konnte**
 
-Zwischen 5.4 und 5.5 steht ein echter Rückschritt. Nicht weil das Modell schlecht
-gerechnet hätte, sondern weil die **Zusage** falsch war. Eine Punktschätzung behauptet
-eine Genauigkeit, die es bei einer Ausflugsfahrt nicht gibt.
+Er kommt nicht, weil das Modell versagt hätte — CITY hielt die Grenze. Er kommt, weil die
+Prüfung über mehrere Zeiträume zeigt, dass dieses Halten Zufall der Jahreszeit ist.
 
-> Wenn ein Modell an einem Kriterium scheitert, gibt es drei Antworten: das Kriterium
-> senken, das Verfahren wechseln, oder die Zusage ändern. Nur die dritte ist hier
-> ehrlich — und sie ist keine Niederlage, sondern ein besseres Produkt.
+> Ein Kriterium, das mal erfüllt und mal gerissen wird, ist keine Zusage. Wer nur einmal
+> misst, erfährt das nicht.
 
-**Zwei Sätze, die aus diesem Notebook bleiben sollten**
+**Vier Sätze, die aus diesem Notebook bleiben sollten**
 
 > Ob ein Merkmal verwendet werden darf, entscheidet der Prozess, nicht der Spaltenname.
 
 > Das Modell ist genau, wo gefahren wird, um anzukommen, und ungenau, wo gefahren wird,
 > um zu fahren.
 
-**Was eine zweite Runde anders machen würde**
+> Ein Rücksprung ist eine neue Runde — und eine neue Runde braucht einen neuen,
+> unberührten Test.
 
-1. **Zurück zu Phase 2:** Höhenmeter zwischen den Stationen. Würzburg ist nicht flach, und
-   das Käppele liegt auf einem Berg. Die Daten dazu haben wir nicht — sie müssten
-   beschafft werden.
-2. **Zurück zu Phase 1:** Für Rundtouren und frei abgestellte Fahrten gibt es bisher gar
-   kein Angebot. Eine Spanne „für eine Stunde Ausflug rechnen Sie mit ...“ wäre ein
-   eigenes, einfacheres Produkt.
-3. **Zurück zu Phase 3:** Die Zeitfenster sind gesetzt, nicht gefunden. Die tatsächlichen
-   Spitzen aus Notebook 3 könnten schärfere Spannen ergeben.
+> Ausgeliefert wird, was gemessen wurde. Nicht das, was im Text steht.
+
+**Was offen bleibt — ausdrücklich**
+
+1. **Das geplante Ziel wird nicht erfasst.** Alle Zahlen sind Obergrenzen.
+2. **Kein echter Schattenbetrieb.** Test 2 ist ein Rückblick.
+3. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
+4. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
+5. **Die Stationsnamen des Lehrdatensatzes stimmen nicht mit denen der Produktivdatenbank
+   überein.** Solange das so ist, kann die Tabelle nicht an die echte App angeschlossen
+   werden — sie nennt Stationen, die es dort nicht gibt.
 
 **Weiter geht es mit Notebook 2 — Klassifikation:** Dort ist die Zielgröße keine Zahl
-mehr, sondern eine Entscheidung: *Braucht dieses Rad bald Wartung, ja oder nein?* Und dort
-werden die beiden Fehlerarten — Fehlalarm gegen verpassten Alarm — unterschiedlich teuer
-sein.
+mehr, sondern eine Entscheidung, und die beiden Fehlerarten sind unterschiedlich teuer.
 """),
 ]

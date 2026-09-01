@@ -1,132 +1,125 @@
 startstation,zielstation,typ_code,zeitfenster,minuten_von,minuten_bis,preis_von,preis_bis,fahrten_grundlage
-Grombuehl/Klinikum,Alte Mainbruecke,CITY,frueh,6,13,0.7,1.4,49
-Grombuehl/Klinikum,Alte Mainbruecke,CITY,nachmittag,5,12,0.6,1.3,71
-Grombuehl/Klinikum,Alte Mainbruecke,CITY,vormittag,8,16,0.9,1.7,46
-Grombuehl/Klinikum,Hauptbahnhof,CITY,frueh,5,10,0.6,1.1,102
-Grombuehl/Klinikum,Hauptbahnhof,CITY,nachmittag,5,11,0.6,1.19,262
-Grombuehl/Klinikum,Hauptbahnhof,CITY,vormittag,7,14,0.8,1.5,41
-Grombuehl/Klinikum,Hauptbahnhof,EBIKE,frueh,4,8,2.0,3.0,62
-Grombuehl/Klinikum,Hubland,CITY,frueh,5,10,0.6,1.1,198
-Grombuehl/Klinikum,Hubland,CITY,nachmittag,5,12,0.63,1.3,34
-Grombuehl/Klinikum,Hubland,CITY,vormittag,7,16,0.8,1.7,41
-Grombuehl/Klinikum,Hubland,EBIKE,frueh,4,8,2.0,3.0,122
-Grombuehl/Klinikum,Kaeppele,CITY,frueh,6,14,0.65,1.5,46
-Grombuehl/Klinikum,Kaeppele,CITY,nachmittag,5,12,0.6,1.35,86
-Grombuehl/Klinikum,Marktplatz,CITY,frueh,5,10,0.6,1.1,153
-Grombuehl/Klinikum,Marktplatz,CITY,nachmittag,5,12,0.6,1.26,45
-Grombuehl/Klinikum,Marktplatz,CITY,vormittag,7,13,0.8,1.4,64
-Grombuehl/Klinikum,Residenz,CITY,frueh,5,12,0.6,1.3,35
-Grombuehl/Klinikum,Residenz,CITY,nachmittag,5,12,0.6,1.3,91
-Grombuehl/Klinikum,Residenz,CITY,vormittag,7,17,0.82,1.78,47
-Grombuehl/Klinikum,Ringpark Nord,CITY,frueh,5,13,0.6,1.42,40
-Grombuehl/Klinikum,Ringpark Nord,CITY,nachmittag,5,12,0.6,1.3,94
-Grombuehl/Klinikum,Ringpark Nord,CITY,vormittag,7,14,0.8,1.5,58
-Grombuehl/Klinikum,Sanderring,CITY,frueh,5,10,0.6,1.1,220
-Grombuehl/Klinikum,Sanderring,CITY,nachmittag,5,13,0.6,1.44,49
-Grombuehl/Klinikum,Sanderring,CITY,vormittag,7,14,0.8,1.46,45
-Grombuehl/Klinikum,Zellerau,CITY,frueh,5,9,0.6,1.01,100
-Grombuehl/Klinikum,Zellerau,CITY,nachmittag,5,11,0.6,1.2,119
-Grombuehl/Klinikum,Zellerau,CITY,vormittag,6,13,0.7,1.4,42
-Hauptbahnhof,Alte Mainbruecke,CITY,nachmittag,6,15,0.7,1.6,100
-Hauptbahnhof,Grombuehl/Klinikum,CITY,frueh,5,10,0.6,1.1,115
-Hauptbahnhof,Grombuehl/Klinikum,CITY,nachmittag,5,11,0.6,1.2,141
-Hauptbahnhof,Grombuehl/Klinikum,CITY,vormittag,7,14,0.8,1.54,37
-Hauptbahnhof,Grombuehl/Klinikum,EBIKE,frueh,5,9,2.25,3.25,102
-Hauptbahnhof,Hubland,CITY,frueh,5,10,0.6,1.1,316
-Hauptbahnhof,Hubland,CITY,nachmittag,5,12,0.6,1.3,46
-Hauptbahnhof,Hubland,CITY,vormittag,6,14,0.7,1.5,41
-Hauptbahnhof,Hubland,EBIKE,frueh,4,8,2.0,3.0,210
-Hauptbahnhof,Kaeppele,CITY,nachmittag,5,12,0.6,1.3,83
-Hauptbahnhof,Kaeppele,CITY,vormittag,7,16,0.8,1.7,56
-Hauptbahnhof,Marktplatz,CITY,frueh,5,10,0.6,1.1,89
-Hauptbahnhof,Marktplatz,CITY,nachmittag,5,15,0.6,1.56,55
-Hauptbahnhof,Marktplatz,CITY,vormittag,8,14,0.9,1.5,67
-Hauptbahnhof,Residenz,CITY,nachmittag,5,12,0.6,1.3,94
-Hauptbahnhof,Residenz,CITY,vormittag,7,16,0.8,1.72,47
-Hauptbahnhof,Ringpark Nord,CITY,nachmittag,6,12,0.7,1.3,97
-Hauptbahnhof,Ringpark Nord,CITY,vormittag,9,18,0.97,1.86,58
-Hauptbahnhof,Sanderring,CITY,frueh,5,10,0.6,1.1,222
-Hauptbahnhof,Sanderring,CITY,nachmittag,5,11,0.6,1.21,40
-Hauptbahnhof,Sanderring,CITY,vormittag,7,13,0.8,1.4,45
-Hauptbahnhof,Sanderring,EBIKE,frueh,4,8,2.0,3.0,163
-Hauptbahnhof,Sanderring,EBIKE,nachmittag,5,8,2.17,3.08,38
-Hauptbahnhof,Sanderring,EBIKE,vormittag,7,10,2.75,3.5,38
-Hauptbahnhof,Zellerau,CITY,frueh,5,10,0.6,1.1,53
-Hauptbahnhof,Zellerau,CITY,nachmittag,5,13,0.6,1.39,162
-Hauptbahnhof,Zellerau,CITY,vormittag,8,14,0.9,1.5,42
-Hauptbahnhof,Zellerau,EBIKE,frueh,5,7,2.25,2.75,33
-Hubland,Alte Mainbruecke,CITY,frueh,5,10,0.6,1.1,31
-Hubland,Alte Mainbruecke,CITY,vormittag,6,13,0.7,1.4,77
-Hubland,Grombuehl/Klinikum,CITY,frueh,5,11,0.6,1.2,37
-Hubland,Grombuehl/Klinikum,CITY,nachmittag,5,13,0.64,1.4,55
-Hubland,Grombuehl/Klinikum,CITY,vormittag,7,13,0.8,1.4,61
-Hubland,Hauptbahnhof,CITY,nachmittag,5,15,0.6,1.6,137
-Hubland,Hauptbahnhof,CITY,vormittag,6,11,0.7,1.2,71
-Hubland,Kaeppele,CITY,frueh,5,11,0.6,1.2,31
-Hubland,Kaeppele,CITY,vormittag,6,13,0.7,1.4,76
-Hubland,Marktplatz,CITY,frueh,5,12,0.6,1.3,48
-Hubland,Marktplatz,CITY,nachmittag,6,14,0.7,1.46,35
-Hubland,Marktplatz,CITY,vormittag,6,12,0.7,1.3,80
-Hubland,Marktplatz,EBIKE,frueh,4,8,2.0,3.0,45
-Hubland,Residenz,CITY,vormittag,6,12,0.7,1.3,74
-Hubland,Ringpark Nord,CITY,frueh,6,13,0.7,1.4,32
-Hubland,Ringpark Nord,CITY,nachmittag,5,13,0.6,1.4,30
-Hubland,Ringpark Nord,CITY,vormittag,6,14,0.7,1.5,71
-Hubland,Ringpark Nord,EBIKE,vormittag,5,9,2.25,3.25,46
-Hubland,Sanderring,CITY,frueh,5,12,0.6,1.3,97
-Hubland,Sanderring,CITY,vormittag,6,12,0.7,1.33,58
-Hubland,Sanderring,EBIKE,vormittag,6,9,2.4,3.35,37
-Hubland,Zellerau,CITY,frueh,5,11,0.6,1.21,30
-Hubland,Zellerau,CITY,nachmittag,6,13,0.68,1.4,59
-Hubland,Zellerau,CITY,vormittag,6,11,0.7,1.2,59
-Marktplatz,Hauptbahnhof,CITY,frueh,6,16,0.73,1.67,44
-Marktplatz,Kaeppele,CITY,vormittag,10,20,1.1,2.1,94
-Marktplatz,Zellerau,CITY,frueh,8,17,0.9,1.82,55
-Sanderring,Alte Mainbruecke,CITY,frueh,6,12,0.7,1.27,34
-Sanderring,Alte Mainbruecke,CITY,vormittag,6,13,0.7,1.4,86
-Sanderring,Grombuehl/Klinikum,CITY,frueh,5,12,0.6,1.34,33
-Sanderring,Grombuehl/Klinikum,CITY,nachmittag,5,13,0.6,1.4,66
-Sanderring,Grombuehl/Klinikum,CITY,vormittag,6,12,0.7,1.27,74
-Sanderring,Hauptbahnhof,CITY,nachmittag,5,12,0.6,1.3,105
-Sanderring,Hauptbahnhof,CITY,vormittag,6,12,0.7,1.3,61
-Sanderring,Hubland,CITY,frueh,5,11,0.59,1.2,80
-Sanderring,Hubland,CITY,vormittag,6,12,0.7,1.3,62
-Sanderring,Kaeppele,CITY,frueh,6,11,0.7,1.2,42
-Sanderring,Kaeppele,CITY,vormittag,6,14,0.7,1.5,86
-Sanderring,Marktplatz,CITY,frueh,5,9,0.6,1.0,56
-Sanderring,Marktplatz,CITY,vormittag,6,14,0.7,1.5,79
-Sanderring,Residenz,CITY,frueh,5,13,0.6,1.4,32
-Sanderring,Residenz,CITY,vormittag,6,14,0.7,1.54,77
-Sanderring,Ringpark Nord,CITY,frueh,5,12,0.6,1.31,30
-Sanderring,Ringpark Nord,CITY,nachmittag,5,12,0.6,1.34,37
-Sanderring,Ringpark Nord,CITY,vormittag,6,12,0.7,1.31,80
-Sanderring,Zellerau,CITY,vormittag,6,14,0.7,1.54,69
-Zellerau,Alte Mainbruecke,CITY,frueh,6,12,0.7,1.3,37
-Zellerau,Alte Mainbruecke,CITY,nachmittag,5,13,0.6,1.4,87
-Zellerau,Alte Mainbruecke,CITY,vormittag,7,15,0.8,1.62,59
-Zellerau,Grombuehl/Klinikum,CITY,frueh,5,10,0.6,1.1,85
-Zellerau,Grombuehl/Klinikum,CITY,nachmittag,5,13,0.6,1.4,151
-Zellerau,Grombuehl/Klinikum,CITY,vormittag,7,13,0.8,1.4,45
-Zellerau,Grombuehl/Klinikum,EBIKE,frueh,4,8,2.0,3.0,55
-Zellerau,Hauptbahnhof,CITY,frueh,5,11,0.6,1.2,92
-Zellerau,Hauptbahnhof,CITY,nachmittag,5,11,0.6,1.2,141
-Zellerau,Hauptbahnhof,CITY,vormittag,7,16,0.8,1.74,37
-Zellerau,Hubland,CITY,frueh,5,10,0.6,1.1,196
-Zellerau,Hubland,CITY,nachmittag,5,13,0.6,1.44,67
-Zellerau,Hubland,CITY,vormittag,6,15,0.7,1.64,44
-Zellerau,Kaeppele,CITY,frueh,6,14,0.68,1.5,39
-Zellerau,Kaeppele,CITY,nachmittag,5,14,0.6,1.53,128
-Zellerau,Kaeppele,CITY,vormittag,7,15,0.8,1.61,60
-Zellerau,Marktplatz,CITY,frueh,5,10,0.6,1.1,214
-Zellerau,Marktplatz,CITY,nachmittag,5,11,0.6,1.2,41
-Zellerau,Marktplatz,CITY,vormittag,6,14,0.73,1.5,54
-Zellerau,Marktplatz,EBIKE,frueh,4,8,2.0,3.0,143
-Zellerau,Residenz,CITY,frueh,5,12,0.6,1.26,35
-Zellerau,Residenz,CITY,nachmittag,5,13,0.6,1.43,108
-Zellerau,Ringpark Nord,CITY,frueh,4,10,0.5,1.1,34
-Zellerau,Ringpark Nord,CITY,nachmittag,6,14,0.66,1.5,87
-Zellerau,Ringpark Nord,CITY,vormittag,7,16,0.8,1.65,66
-Zellerau,Sanderring,CITY,frueh,5,10,0.6,1.1,160
-Zellerau,Sanderring,CITY,nachmittag,5,13,0.6,1.4,61
-Zellerau,Sanderring,CITY,vormittag,8,14,0.9,1.5,40
-Zellerau,Sanderring,EBIKE,frueh,4,8,2.0,3.0,125
+Grombuehl/Klinikum,Alte Mainbruecke,CITY,frueh,6,12,0.7,1.3,45
+Grombuehl/Klinikum,Alte Mainbruecke,CITY,nachmittag,5,13,0.6,1.37,64
+Grombuehl/Klinikum,Alte Mainbruecke,CITY,vormittag,8,15,0.9,1.62,40
+Grombuehl/Klinikum,Hauptbahnhof,CITY,frueh,5,10,0.6,1.1,86
+Grombuehl/Klinikum,Hauptbahnhof,CITY,nachmittag,5,11,0.6,1.2,235
+Grombuehl/Klinikum,Hauptbahnhof,CITY,vormittag,7,14,0.8,1.52,39
+Grombuehl/Klinikum,Hauptbahnhof,EBIKE,frueh,4,8,2.0,3.0,55
+Grombuehl/Klinikum,Hubland,CITY,frueh,5,10,0.6,1.1,172
+Grombuehl/Klinikum,Hubland,CITY,vormittag,7,16,0.8,1.74,39
+Grombuehl/Klinikum,Hubland,EBIKE,frueh,4,8,2.0,3.0,102
+Grombuehl/Klinikum,Kaeppele,CITY,frueh,6,15,0.69,1.62,40
+Grombuehl/Klinikum,Kaeppele,CITY,nachmittag,5,12,0.6,1.3,78
+Grombuehl/Klinikum,Marktplatz,CITY,frueh,5,10,0.6,1.1,130
+Grombuehl/Klinikum,Marktplatz,CITY,nachmittag,5,11,0.6,1.19,42
+Grombuehl/Klinikum,Marktplatz,CITY,vormittag,7,13,0.8,1.4,58
+Grombuehl/Klinikum,Marktplatz,EBIKE,frueh,4,8,2.0,3.0,89
+Grombuehl/Klinikum,Residenz,CITY,frueh,5,12,0.6,1.29,32
+Grombuehl/Klinikum,Residenz,CITY,nachmittag,5,12,0.6,1.3,81
+Grombuehl/Klinikum,Ringpark Nord,CITY,frueh,5,14,0.64,1.52,35
+Grombuehl/Klinikum,Ringpark Nord,CITY,nachmittag,5,12,0.6,1.3,88
+Grombuehl/Klinikum,Ringpark Nord,CITY,vormittag,8,14,0.87,1.5,48
+Grombuehl/Klinikum,Sanderring,CITY,frueh,5,10,0.6,1.1,177
+Grombuehl/Klinikum,Sanderring,CITY,nachmittag,5,14,0.6,1.52,45
+Grombuehl/Klinikum,Sanderring,CITY,vormittag,7,13,0.8,1.4,41
+Grombuehl/Klinikum,Zellerau,CITY,frueh,5,9,0.6,1.0,86
+Grombuehl/Klinikum,Zellerau,CITY,nachmittag,5,11,0.6,1.2,105
+Grombuehl/Klinikum,Zellerau,CITY,vormittag,6,13,0.7,1.41,40
+Grombuehl/Klinikum,Zellerau,EBIKE,frueh,4,8,2.0,3.0,55
+Hauptbahnhof,Alte Mainbruecke,CITY,nachmittag,6,15,0.7,1.6,86
+Hauptbahnhof,Grombuehl/Klinikum,CITY,frueh,4,10,0.55,1.1,96
+Hauptbahnhof,Grombuehl/Klinikum,CITY,nachmittag,5,12,0.6,1.3,122
+Hauptbahnhof,Grombuehl/Klinikum,CITY,vormittag,7,14,0.8,1.55,36
+Hauptbahnhof,Hubland,CITY,frueh,5,10,0.6,1.1,270
+Hauptbahnhof,Hubland,CITY,nachmittag,5,12,0.6,1.27,44
+Hauptbahnhof,Hubland,CITY,vormittag,6,14,0.7,1.5,36
+Hauptbahnhof,Hubland,EBIKE,frueh,4,8,2.0,3.0,175
+Hauptbahnhof,Kaeppele,CITY,nachmittag,5,12,0.6,1.3,73
+Hauptbahnhof,Marktplatz,CITY,frueh,5,10,0.6,1.1,80
+Hauptbahnhof,Marktplatz,CITY,nachmittag,5,15,0.6,1.59,42
+Hauptbahnhof,Marktplatz,CITY,vormittag,8,14,0.9,1.5,61
+Hauptbahnhof,Marktplatz,EBIKE,frueh,4,8,2.0,3.0,41
+Hauptbahnhof,Residenz,CITY,nachmittag,5,12,0.6,1.3,82
+Hauptbahnhof,Residenz,CITY,vormittag,7,15,0.8,1.6,35
+Hauptbahnhof,Ringpark Nord,CITY,nachmittag,6,12,0.7,1.28,83
+Hauptbahnhof,Ringpark Nord,CITY,vormittag,9,18,1.0,1.94,54
+Hauptbahnhof,Sanderring,CITY,frueh,5,10,0.6,1.1,192
+Hauptbahnhof,Sanderring,CITY,nachmittag,5,11,0.62,1.18,33
+Hauptbahnhof,Sanderring,CITY,vormittag,7,12,0.8,1.3,37
+Hauptbahnhof,Sanderring,EBIKE,frueh,4,8,2.0,3.0,141
+Hauptbahnhof,Sanderring,EBIKE,vormittag,7,10,2.75,3.5,35
+Hauptbahnhof,Zellerau,CITY,frueh,5,10,0.6,1.1,49
+Hauptbahnhof,Zellerau,CITY,nachmittag,5,13,0.6,1.4,148
+Hauptbahnhof,Zellerau,CITY,vormittag,8,14,0.9,1.5,38
+Hauptbahnhof,Zellerau,EBIKE,frueh,5,7,2.23,2.78,30
+Hubland,Alte Mainbruecke,CITY,vormittag,6,13,0.7,1.4,66
+Hubland,Grombuehl/Klinikum,CITY,frueh,5,11,0.6,1.2,32
+Hubland,Grombuehl/Klinikum,CITY,nachmittag,5,13,0.6,1.4,49
+Hubland,Grombuehl/Klinikum,CITY,vormittag,7,13,0.8,1.38,52
+Hubland,Hauptbahnhof,CITY,nachmittag,5,14,0.6,1.51,120
+Hubland,Hauptbahnhof,CITY,vormittag,6,12,0.7,1.28,63
+Hubland,Kaeppele,CITY,vormittag,6,13,0.7,1.4,64
+Hubland,Marktplatz,CITY,frueh,5,12,0.6,1.3,40
+Hubland,Marktplatz,CITY,vormittag,6,12,0.7,1.3,66
+Hubland,Residenz,CITY,vormittag,6,11,0.7,1.2,71
+Hubland,Ringpark Nord,CITY,frueh,6,13,0.69,1.41,30
+Hubland,Ringpark Nord,CITY,vormittag,6,13,0.7,1.4,62
+Hubland,Sanderring,CITY,frueh,5,12,0.6,1.27,84
+Hubland,Sanderring,CITY,vormittag,6,11,0.7,1.2,48
+Hubland,Zellerau,CITY,nachmittag,6,13,0.68,1.4,49
+Hubland,Zellerau,CITY,vormittag,6,11,0.7,1.2,50
+Hubland,Zellerau,EBIKE,vormittag,5,9,2.25,3.2,33
+Marktplatz,Grombuehl/Klinikum,CITY,vormittag,10,19,1.1,2.0,52
+Marktplatz,Hauptbahnhof,CITY,frueh,6,16,0.75,1.65,36
+Marktplatz,Kaeppele,CITY,abend,9,19,1.0,2.0,31
+Marktplatz,Kaeppele,CITY,vormittag,10,20,1.1,2.1,79
+Sanderring,Alte Mainbruecke,CITY,frueh,6,12,0.7,1.3,31
+Sanderring,Alte Mainbruecke,CITY,vormittag,6,13,0.7,1.4,76
+Sanderring,Grombuehl/Klinikum,CITY,nachmittag,5,12,0.6,1.35,56
+Sanderring,Grombuehl/Klinikum,CITY,vormittag,6,11,0.7,1.24,67
+Sanderring,Hauptbahnhof,CITY,nachmittag,5,12,0.6,1.3,91
+Sanderring,Hauptbahnhof,CITY,vormittag,6,12,0.7,1.3,49
+Sanderring,Hubland,CITY,frueh,5,11,0.59,1.2,70
+Sanderring,Hubland,CITY,vormittag,5,12,0.63,1.3,54
+Sanderring,Kaeppele,CITY,frueh,6,10,0.65,1.15,36
+Sanderring,Kaeppele,CITY,vormittag,6,14,0.7,1.5,74
+Sanderring,Marktplatz,CITY,frueh,5,9,0.6,1.0,53
+Sanderring,Marktplatz,CITY,vormittag,6,14,0.7,1.5,71
+Sanderring,Residenz,CITY,frueh,5,13,0.6,1.4,31
+Sanderring,Residenz,CITY,vormittag,6,14,0.7,1.52,69
+Sanderring,Ringpark Nord,CITY,vormittag,6,13,0.7,1.4,68
+Sanderring,Zellerau,CITY,nachmittag,4,14,0.5,1.45,46
+Sanderring,Zellerau,CITY,vormittag,6,16,0.7,1.7,57
+Sanderring,Zellerau,EBIKE,nachmittag,5,9,2.25,3.25,30
+Zellerau,Alte Mainbruecke,CITY,frueh,6,12,0.7,1.3,30
+Zellerau,Alte Mainbruecke,CITY,nachmittag,5,13,0.6,1.4,80
+Zellerau,Alte Mainbruecke,CITY,vormittag,7,16,0.8,1.66,55
+Zellerau,Grombuehl/Klinikum,CITY,frueh,5,10,0.6,1.1,77
+Zellerau,Grombuehl/Klinikum,CITY,nachmittag,5,13,0.6,1.4,137
+Zellerau,Grombuehl/Klinikum,CITY,vormittag,7,13,0.8,1.42,39
+Zellerau,Grombuehl/Klinikum,EBIKE,frueh,4,8,2.0,3.0,52
+Zellerau,Hauptbahnhof,CITY,frueh,5,11,0.6,1.2,80
+Zellerau,Hauptbahnhof,CITY,nachmittag,5,11,0.6,1.2,124
+Zellerau,Hauptbahnhof,CITY,vormittag,7,17,0.8,1.77,34
+Zellerau,Hubland,CITY,frueh,5,10,0.6,1.1,177
+Zellerau,Hubland,CITY,nachmittag,5,14,0.61,1.49,62
+Zellerau,Hubland,CITY,vormittag,6,13,0.7,1.44,40
+Zellerau,Hubland,EBIKE,frueh,4,8,2.0,3.0,122
+Zellerau,Kaeppele,CITY,frueh,6,14,0.67,1.5,38
+Zellerau,Kaeppele,CITY,nachmittag,5,14,0.6,1.5,111
+Zellerau,Kaeppele,CITY,vormittag,7,15,0.8,1.6,52
+Zellerau,Marktplatz,CITY,frueh,5,10,0.6,1.05,186
+Zellerau,Marktplatz,CITY,nachmittag,5,10,0.6,1.15,36
+Zellerau,Marktplatz,CITY,vormittag,6,14,0.7,1.5,45
+Zellerau,Marktplatz,EBIKE,frueh,4,8,2.0,3.0,123
+Zellerau,Marktplatz,EBIKE,nachmittag,5,9,2.25,3.25,32
+Zellerau,Residenz,CITY,frueh,5,12,0.6,1.28,33
+Zellerau,Residenz,CITY,nachmittag,5,14,0.6,1.47,94
+Zellerau,Residenz,CITY,vormittag,7,17,0.8,1.79,38
+Zellerau,Ringpark Nord,CITY,frueh,4,10,0.5,1.1,30
+Zellerau,Ringpark Nord,CITY,nachmittag,6,14,0.69,1.5,80
+Zellerau,Ringpark Nord,CITY,vormittag,7,16,0.8,1.7,58
+Zellerau,Sanderring,CITY,frueh,5,10,0.6,1.1,137
+Zellerau,Sanderring,CITY,nachmittag,5,11,0.6,1.19,52
+Zellerau,Sanderring,CITY,vormittag,8,14,0.9,1.5,37
