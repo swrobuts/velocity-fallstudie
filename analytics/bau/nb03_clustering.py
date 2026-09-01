@@ -516,13 +516,23 @@ SCHWELLE_RECENCY = 150
 SCHWELLE_FREQUENZ = 12
 SCHWELLE_UMSATZ = 30
 
+# DIE NAMEN DUERFEN NUR SAGEN, WAS DIE REGEL PRUEFT.
+#
+# Die Schwellen kennen Recency, Frequenz und Umsatz - den Tarif nicht.
+# Frueher hiessen zwei Segmente "Vielfahrer mit Freiminuten" und
+# "Umsatztraeger im Basistarif". Gemessen: 82 der 520 Vielfahrer (15,8 %)
+# haben BASIS, also gar keine Freiminuten. Der Name behauptete etwas, das
+# die Regel nicht geprueft hat - und fuer jeden sechsten war er falsch.
+#
+# Der Tarif steht als eigene Spalte im Export. Massnahmen gehoeren aus der
+# KOMBINATION Segment x Tarif abgeleitet, nicht aus einem Namen.
 def segment_benennen(zeile):
     if zeile.recency > SCHWELLE_RECENCY:
         return "Eingeschlafen"
     if zeile.frequenz > SCHWELLE_FREQUENZ:
-        return "Vielfahrer mit Freiminuten"
+        return "Vielfahrer"
     if zeile.umsatz > SCHWELLE_UMSATZ:
-        return "Umsatzträger im Basistarif"
+        return "Umsatzträger"
     return "Gelegenheitsnutzer"
 
 def rfm_zum_cutoff(cut):
@@ -567,6 +577,29 @@ regel_vor = regel_segmente_zum(VORQUARTAL)
 gemeinsam = regel_heute.index.intersection(regel_vor.index)
 wechselquote = float((regel_heute[gemeinsam] != regel_vor[gemeinsam]).mean())
 
+# ---------------------------------------------------------------------
+# (0) UND DIE STATIONEN? Auch dort war "stabil" bisher nur eine Aussage
+#     ueber Zufallsstartwerte - also ueber die Rechnung, nicht ueber die
+#     Zeit. Dieselbe Frage, dieselbe Methode.
+# ---------------------------------------------------------------------
+def stationstypen_zum(cut):
+    f = echte[(echte.startzeit > cut - pd.Timedelta(days=FENSTER_TAGE))
+              & (echte.startzeit < cut)].copy()
+    f["stunde"] = f.startzeit.dt.hour
+    g = (f.groupby(["start_station_id", "stunde"]).size()
+         .unstack(fill_value=0).reindex(columns=range(24), fill_value=0))
+    g = g.div(g.sum(axis=1).clip(lower=1), axis=0)
+    return pd.Series(
+        KMeans(n_clusters=K_STATIONEN, n_init=25, random_state=42)
+        .fit_predict(StandardScaler().fit_transform(g)), index=g.index)
+
+st_heute = stationstypen_zum(CUTOFF)
+st_vor = stationstypen_zum(CUTOFF - pd.Timedelta(days=90))
+st_gem = st_heute.index.intersection(st_vor.index)
+print("(0) STATIONEN ueber die ZEIT (nicht nur ueber Startwerte)\\n")
+print(f"    ARI zwischen den beiden Stichtagen: "
+      f"{adjusted_rand_score(st_vor[st_gem], st_heute[st_gem]):.3f}\\n")
+
 print("(1a) DIE VIER RFM-REGELN - feste Schwellen, beide Stichtage\\n")
 print(f"     In beiden Fenstern aktiv: {len(gemeinsam)} Kundinnen und Kunden")
 print(f"     Segmentwechsel binnen 90 Tagen: {wechselquote:.1%}")
@@ -607,10 +640,39 @@ lz_vor = lebenszyklus_zum(VORQUARTAL)
 lz_gemeinsam = lz_heute.index.intersection(lz_vor.index)
 lz_wechsel = float((lz_heute[lz_gemeinsam] != lz_vor[lz_gemeinsam]).mean())
 
-print("\\n(1b) DIE VOLLSTAENDIGE AUSLIEFERUNG - sieben Lebenszyklussegmente\\n")
+print("\\n(1b) ALLE LEBENSZYKLUSZUSTAENDE - der weite Nenner\\n")
 print(f"     An beiden Stichtagen registriert: {len(lz_gemeinsam)} Kundinnen und Kunden")
 print(f"     Segmentwechsel binnen 90 Tagen: {lz_wechsel:.2%}")
-print("\\n     DIESE Zahl bindet das Gate - sie misst, was ausgeliefert wird.")
+
+# ---------------------------------------------------------------------
+# (1c) DIE KAMPAGNEN-ARBEITSLISTE - der Nenner, der wirklich zaehlt.
+#
+# In (1b) stecken Menschen, die nie in einer Kampagne landen: der Zustand
+# "Nie aktiviert" wird ausdruecklich ausgeschlossen. Solche Zustaende sind
+# per Definition stabil - sie druecken die Wechselquote nach unten, ohne
+# dass irgendetwas an der Auslieferung stabiler waere.
+#
+# Ein Gate, das den weiten Nenner nimmt, misst sich selbst schoen.
+# ---------------------------------------------------------------------
+NICHT_IN_KAMPAGNE = {"Nie aktiviert"}
+in_liste = [k for k in lz_gemeinsam
+            if lz_heute[k] not in NICHT_IN_KAMPAGNE
+            and lz_vor[k] not in NICHT_IN_KAMPAGNE]
+liste_wechsel = float((lz_heute[in_liste] != lz_vor[in_liste]).mean())
+
+print("\\n(1c) NUR DIE KAMPAGNEN-ARBEITSLISTE - der enge Nenner\\n")
+print(f"     Zu beiden Zeitpunkten in der Arbeitsliste: {len(in_liste)}")
+print(f"     Segmentwechsel binnen 90 Tagen: {liste_wechsel:.2%}")
+print(f"\\n     Differenz zum weiten Nenner: "
+      f"{(liste_wechsel - lz_wechsel) * 100:+.2f} Prozentpunkte.")
+print("     Die stabilen Nicht-Zielpersonen fehlen hier - und mit ihnen die")
+print("     Beschoenigung. DIESE Zahl bindet das Gate.")
+print()
+print("     Was hier NICHT drinsteckt: historische Kontosperren und")
+print("     Marketing-Einwilligungen. Beides ist in den Daten nicht")
+print("     zeitpunktbezogen erfasst, also nicht rekonstruierbar. Der")
+print("     ehrliche Name lautet deshalb 'Stabilitaet der analytischen")
+print("     Segment- und Auswahlregeln', nicht 'Auslieferungsstabilitaet'.")
 
 # ---------------------------------------------------------------------
 # (2) DIE MODELLDIAGNOSE: wie stabil waere das Clustering gewesen?
@@ -636,13 +698,19 @@ print("    vertreten. Gebunden wird das Gate an (1).")
 # entscheidet weiter unten darueber, ob die Kampagnenliste als freigegeben
 # oder als gesperrt exportiert wird.
 GATE_WECHSEL = 0.25
-# Gebunden wird die VOLLSTAENDIGE Logik, nicht der RFM-Ausschnitt.
-KUNDENSEGMENTE_STABIL = bool(lz_wechsel <= GATE_WECHSEL)
+# Gebunden wird der ENGE Nenner - die Menschen, die tatsaechlich eine
+# Ansprache bekaemen. Der weite Nenner steht daneben, als Diagnose.
+KUNDENSEGMENTE_STABIL = bool(liste_wechsel <= GATE_WECHSEL)
 
-print(f"\\nDie Überwachung in Phase 6 nennt {GATE_WECHSEL:.0%} je Quartal als Alarmschwelle.")
-print(f"Gemessen an der vollstaendigen Lebenszykluslogik: {lz_wechsel:.2%}")
-print(f"(die vier RFM-Regeln allein kaemen auf {wechselquote:.1%} - ein Ausschnitt)")
-print(f"-> Sie ist {'gehalten' if KUNDENSEGMENTE_STABIL else 'GERISSEN'}.")
+print(f"\\nDie Überwachung in Phase 6 nennt {GATE_WECHSEL:.0%} je Quartal als Alarmschwelle.\\n")
+print(f"   Kampagnen-Arbeitsliste (bindend):  {liste_wechsel:>6.2%}   "
+      f"{'gehalten' if KUNDENSEGMENTE_STABIL else 'GERISSEN'}")
+print(f"   alle Lebenszykluszustaende:        {lz_wechsel:>6.2%}   (Diagnose)")
+print(f"   nur die vier RFM-Regeln:           {wechselquote:>6.2%}   (Ausschnitt)")
+print()
+print("Drei Nenner, drei Zahlen. Waehlt man den weitesten, besteht das Gate;")
+print("waehlt man den, der zur Auslieferung passt, reisst es. Der Nenner ist")
+print("hier keine Formalie - er entscheidet.")
 print("\\nDiese Variable bindet den Export in Phase 6 - sie ist keine Randnotiz.")
 print("Und sie bindet ihn an das, was tatsaechlich ausgeliefert wird.")
 
@@ -686,9 +754,19 @@ MD("""
 >
 > | Kennzahl | Wert | Was sie misst |
 > |---|---:|---|
-> | Lebenszyklusregeln, sieben Segmente | **24,75 %** | das **ausgelieferte** Verfahren — hieran hängt das Gate |
-> | die vier RFM-Regeln allein | 24,9 % | ein Ausschnitt davon |
+> | **Kampagnen-Arbeitsliste** | **25,68 %** | die Menschen, die eine Ansprache bekämen — **hieran hängt das Gate** |
+> | alle Lebenszykluszustände | 24,75 % | Diagnose der Bestandsdynamik |
+> | die vier RFM-Regeln allein | 24,89 % | ein Ausschnitt davon |
 > | k-Means, jeweils neu gerechnet | 26,5 % (ARI 0,442) | ein Modell, das **nicht** ausgeliefert wird |
+>
+> **Der Nenner entscheidet, und zwar hier über das Ergebnis.** Nimmt man alle 3.111
+> registrierten Personen, sind es 24,75 % und das Gate hält. Nimmt man die 2.878, die
+> tatsächlich in einer Arbeitsliste stünden, sind es **25,68 % — und es reißt.**
+>
+> Der Unterschied sind die dauerhaft stabilen Nicht-Zielpersonen (Zustand „Nie
+> aktiviert"), die nie angeschrieben werden. Sie im Nenner zu behalten macht die Quote
+> besser, ohne dass an der Auslieferung irgendetwas stabiler wäre. **Eine frühere Fassung
+> band das Gate an den weiten Nenner — und bestand es damit knapp.**
 >
 > Der ARI sagt also **nicht dasselbe**: Er beschreibt das separat neu berechnete
 > Clustering. Eine frühere Fassung stellte ihn neben die Regelquote, als wären es zwei
@@ -709,12 +787,18 @@ nachrechnen kann — und die bei jedem neuen Stichtag dieselbe Bedeutung haben.
 Was das kostet, rechnen wir in Phase 6 ebenfalls aus. Es ist nicht umsonst.""" ),
 
 MD("""
-**Die Stationen sind stabil, die Kundensegmente nur annähernd.** Bei den zehn Stationen
+**Die Stationen sind stabil — über Startwerte *und* über die Zeit.** Der ARI zwischen zwei
+um 90 Tage verschobenen Fenstern beträgt 1,000; die Zuordnung ändert sich nicht. Das ist
+mehr, als die Startwertprüfung allein zeigen konnte, und es gilt für diesen synthetischen
+Datensatz mit seinen vier bewusst erzeugten Typen.
+
+**Die Kundensegmente sind es nur annähernd.** Bei den zehn Stationen
 liefert jeder Startwert dieselbe Einteilung. Bei 2.199 Kundinnen und Kunden wandern je
 nach Startwert einzelne Personen zwischen den Gruppen — der ARI bleibt hoch, erreicht
 aber nicht 1,0.
 
-Für die Auslieferung heißt das: Die Stationsprofile sind eine feste Zuordnung, der
+Für die Auslieferung heißt das: Die Stationszuordnung ist **am aktuellen Datenstand und
+über die getesteten Startwerte** reproduzierbar — nicht „fest" im Sinne von dauerhaft. Der
 Kampagnenplan ist es nicht. Wer nächstes Quartal neu clustert, bekommt bei einzelnen
 Kunden ein anderes Segment. **Deshalb wird der Kampagnenplan in Phase 6 nicht über
 Cluster-Nummern ausgeliefert, sondern über nachvollziehbare Schwellen** — die sind
@@ -906,7 +990,7 @@ x = np.arange(len(vergleich))
 plt.bar(x - 0.2, vergleich.gezahlt, 0.4, label="tatsächlich gezahlt", color="#3d4b6b")
 plt.bar(x + 0.2, vergleich.verschenkt, 0.4, label="über Freiminuten abgegeben", color="#e00034")
 plt.xticks(x, [f"Cluster {c}" for c in vergleich.index])
-plt.ylabel("EUR je Kunde und Jahr"); plt.legend()
+plt.ylabel(f"EUR je Kunde im {FENSTER_TAGE}-Tage-Fenster"); plt.legend()
 plt.title("Was jedes Segment zahlt — und was es geschenkt bekommt")
 plt.tight_layout(); plt.show()
 """),
@@ -938,7 +1022,14 @@ CODE("""
 # des Kundenversprechens. Die Rechnung zeigt nur, welche Groessenordnung ein
 # Beitrag haette, der die abgegebenen Minuten ausgleicht.
 mit_freiminuten = rfm[rfm.verschenkt > 0]
-je_monat = mit_freiminuten.verschenkt.mean() / 12
+# NICHT PAUSCHAL DURCH ZWOELF.
+#
+# 406 Personen waren kuerzer als ein Jahr dabei. Ihr Fensterwert durch 12
+# geteilt ergaebe einen zu niedrigen Monatswert. Geteilt wird deshalb
+# durch die TATSAECHLICH beobachteten Kundenmonate.
+monate_beobachtet = (beobachtet.reindex(mit_freiminuten.index)
+                     .fillna(FENSTER_TAGE) / 30.44)
+je_monat = (mit_freiminuten.verschenkt.sum() / monate_beobachtet.sum())
 
 print("HYPOTHESE, kein Befund:")
 print(f"  Kundschaft mit Freiminuten:            {len(mit_freiminuten):>6d}")
@@ -982,8 +1073,7 @@ entweder verloren oder zurückzugewinnen.
 
 # =====================================================================
 PHASE(6, "Aus vier Stationstypen werden Dispositions-HYPOTHESEN, aus sieben "
-         "Lebenszyklusgruppen ein analytischer Kampagnen-Arbeitsstand"
-         "ein Kampagnenplan."),
+         "Lebenszyklusgruppen ein analytischer Kampagnen-Arbeitsstand."),
 
 CODE('''
 # --- A) Die Stationsprofile
@@ -1042,7 +1132,7 @@ assert len(set(namen_cluster.values())) == len(namen_cluster), (
 assert len(set(regeln.values())) == len(regeln), (
     f"Kriterium 2 verletzt: zwei Gruppen bekommen dieselbe Regel - {regeln}")
 print(f"\\nKriterium 2 geprüft: {len(namen_cluster)} Gruppen, "
-      f"{len(set(regeln.values()))} verschiedene Maßnahmen.")
+      f"{len(set(regeln.values()))} verschiedene Prüfungshypothesen.")
 
 S["stationstyp"] = S.cluster.map(namen_cluster)
 S["regel"] = S.cluster.map(regeln)
@@ -1172,8 +1262,8 @@ braucht eine Willkommensansprache, „Früher aktiv, jetzt inaktiv" eine Rückge
 
 CODE('''
 massnahmen = {
-    "Vielfahrer mit Freiminuten":  "Bindung halten — und je Tarif prüfen, ob das Freiminutenvolumen nötig ist",
-    "Umsatzträger im Basistarif":  "nicht anfassen: sie tragen den Umsatz",
+    "Vielfahrer":  "Bindung halten — und je Tarif prüfen, ob das Freiminutenvolumen nötig ist",
+    "Umsatzträger":  "nicht anfassen: sie tragen den Umsatz",
     "Gelegenheitsnutzer":          "Anlass schaffen: Wetter-/Veranstaltungshinweis",
     "Eingeschlafen":               "Rückgewinnung: einmalig Freiminuten",
     "Früher aktiv, jetzt inaktiv": "Rückgewinnung: was hat gefehlt?",
@@ -1221,9 +1311,9 @@ GATES = {
     "reale statt synthetischer Daten":                      False,
 }
 KAMPAGNENFREIGABE = all(GATES.values())
-freigabe = ("LEHR-GATE BESTANDEN - KEINE KAMPAGNENFREIGABE"
+freigabe = ("STABILITAETSGATE GEHALTEN - KEINE KAMPAGNENFREIGABE"
             if KUNDENSEGMENTE_STABIL else
-            "LEHR-GATE GERISSEN - KEINE KAMPAGNENFREIGABE")
+            "STABILITAETSGATE GERISSEN - KEINE KAMPAGNENFREIGABE")
 
 print("FREIGABEPRUEFUNG\\n")
 for name, erfuellt in GATES.items():
@@ -1234,9 +1324,11 @@ kopf = [
     f"# Stichtag: {stichtag.date()}, gueltig bis "
     f"{(stichtag + pd.Timedelta(days=90)).date()}",
     "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
-    f"# Segmentstabilitaet je Quartal: {lz_wechsel:.2%} Wechsel "
-    f"(Schwelle {GATE_WECHSEL:.0%}), gemessen an der vollstaendigen "
-    f"Lebenszykluslogik",
+    f"# Segmentstabilitaet je Quartal: {liste_wechsel:.2%} Wechsel "
+    f"(Schwelle {GATE_WECHSEL:.0%}), gemessen an der Kampagnen-Arbeitsliste; "
+    f"ueber alle Lebenszykluszustaende waeren es {lz_wechsel:.2%}",
+    "# Historische Kontosperren und Marketing-Einwilligungen sind nicht "
+    "rekonstruierbar - dies ist die Stabilitaet der ANALYTISCHEN Regeln.",
     f"# STATUS: {freigabe}",
     "# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN.",
 ]
@@ -1250,9 +1342,9 @@ with open("kampagnenliste.csv", "w", encoding="utf-8") as f:
 
 print(f"KAMPAGNENLISTE  Stichtag {stichtag.date()}, gültig 90 Tage")
 print(f"STATUS: {freigabe}\\n")
-print("Auch bei bestandenem Stabilitaetsgate geht diese Datei an kein")
-print("Kampagnensystem: Fuenf der sechs Gates sind offen, darunter die")
-print("Rechtsgrundlage. Ein analytischer Arbeitsstand, mehr nicht.\\n")
+print(f"Diese Datei geht an kein Kampagnensystem: {len(GATES) - sum(GATES.values())}")
+print(f"der {len(GATES)} Gates sind offen, darunter die Rechtsgrundlage.")
+print("Ein analytischer Arbeitsstand, mehr nicht.\\n")
 print(export.head(8).to_string())
 print(f"\\n{len(export)} aktive Konten in der Liste, "
       f"{export.segment.nunique()} Segmente")
@@ -1307,13 +1399,15 @@ MD("""
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
 | 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: 100 %. Stabilität gemessen, nicht behauptet | Vier Segmente, nur annähernd stabil und mit schwächerer Trennung — dazu zwei Befunde, die weh tun, und eine hypothetische Rechnung |
-| 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Gesperrter analytischer Arbeitsstand**: fünf von sechs Freigabe-Gates offen, darunter die Rechtsgrundlage |
+| 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Gesperrter analytischer Arbeitsstand**: **alle sechs** Freigabe-Gates offen. Auch das Stabilitätsgate reißt, sobald man es am richtigen Nenner misst — an denen, die eine Ansprache bekämen |
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**
 
 1. **Die Vielfahrer bringen den geringsten Umsatz je Fahrt** — 74 Cent gegen 6,38 € —
    weil ihre Tarife Freiminuten
-   enthalten. Und weil VeloCity **keine Grundgebühr** erhebt, gibt es nichts, was das
+   enthalten. Und weil in den vorliegenden Daten **keine Grundgebühr und keine andere
+   Kompensation** erfasst ist — Partnerzahlungen oder Rahmenverträge sind nicht
+   modelliert —, gibt es hier nichts, was das
    ausgliche: Das Nutzungsentgelt ist der gesamte Umsatz. Das ist kein Messfehler,
    sondern ein Preisproblem, das die Segmentierung sichtbar gemacht hat. Nachgerechnet
    ist auch, um wieviel es geht — der Listenwert der abgegebenen Freiminuten steht in
