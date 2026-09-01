@@ -760,10 +760,27 @@ for t, g in pruef.groupby("typ_code"):
         _ = merke("city_unter_50", (g.preisfehler < 0.50).mean())
     if t == "CARGO":
         _ = merke("preisfehler_cargo", pf)
+
+# Welche Radtypen die Grenze halten, entscheidet die Messung - nicht der
+# Verfasser des Textes. Der Fliesstext holt sich die Namen von hier; damit
+# kann keine Aufzaehlung mehr veralten, wenn sich die Zahlen aendern.
+def aufzaehlung(namen):
+    \"\"\"A, B und C - statt A und B und C.\"\"\"
+    namen = list(namen)
+    if len(namen) <= 1:
+        return namen[0] if namen else "keiner"
+    return ", ".join(namen[:-1]) + " und " + namen[-1]
+
+
+_halten = sorted(t for t, g in pruef.groupby("typ_code")
+                 if g.preisfehler.mean() < 0.50)
+_reissen = sorted(set(pruef.typ_code.unique()) - set(_halten))
+merke("typen_halten", aufzaehlung(_halten))
+_ = merke("typen_reissen", aufzaehlung(_reissen))
 """),
 
 MD("""
-Für **CITY und EBIKE ist die Grenze eingehalten**, für CARGO nicht.
+Für **{{typen_halten}} ist die Grenze eingehalten**, für {{typen_reissen}} nicht.
 
 Bevor daraus eine Freigabe wird, zwei Fragen, die man sich in dieser Lage immer stellen
 sollte.
@@ -1496,6 +1513,8 @@ je_typ_n = z.groupby("typ_code").im_intervall.size()
 freigegebene_typen = sorted(
     ty for ty in je_typ.index
     if wilson(int(round(je_typ[ty] * je_typ_n[ty])), int(je_typ_n[ty]))[0] >= 0.80)
+merke("typen_freigegeben", aufzaehlung(freigegebene_typen))
+_ = merke("anzahl_typen_freigegeben", len(freigegebene_typen))
 print()
 for x in sorted(je_typ.index):
     print(f"   {x:8} {je_typ[x]:.1%}  "
@@ -1731,6 +1750,51 @@ for probe, was in zip(proben, beschriftung):
 """),
 
 MD("""
+### 6.4a Zeigt die App genau das, was wir gemessen haben?
+
+Zwischen der Bewertung in Phase 5.6 und der ausgelieferten Funktion liegen mehrere
+Schritte: Filter auf der Tabelle, Radtypfreigabe, Statussperre, die kundenbezogene
+Breitenregel. Jeder davon kann in der einen Logik stehen und in der anderen fehlen —
+und dann verspricht das Notebook etwas, das die App nicht hält.
+
+Statt das zu behaupten, prüfen wir es: **Jede Fahrt aus Test 2 einmal durch beide Wege.**
+Wo die Bewertung eine Spanne zählt, muss die App eine anzeigen — und umgekehrt.
+"""),
+
+CODE("""
+# Der Vergleich laeuft ueber ALLE Testfahrten, nicht ueber eine Auswahl.
+stichprobe = zukunft.copy()
+aus_der_app = []
+for r in stichprobe.itertuples():
+    antwort = preis_schaetzen(int(r.start_station_id), int(r.end_station_id),
+                              r.typ_code, r.startzeit.hour,
+                              freiminuten_rest=r.freiminuten_rest,
+                              rabatt_prozent=r.rabatt_prozent)
+    aus_der_app.append(antwort["anzeige"] is not None)
+stichprobe["app_zeigt"] = aus_der_app
+
+# Die Bewertung: was in z gelandet ist, hat die Messung als anzeigbar gezaehlt.
+gezaehlt = set(z.ausleihe_id)
+stichprobe["messung_zaehlt"] = stichprobe.ausleihe_id.isin(gezaehlt)
+
+nur_app = int((stichprobe.app_zeigt & ~stichprobe.messung_zaehlt).sum())
+nur_messung = int((~stichprobe.app_zeigt & stichprobe.messung_zaehlt).sum())
+print(f"Testfahrten geprueft:            {len(stichprobe):>7,}")
+print(f"App zeigt, Messung zaehlt nicht: {nur_app:>7,}")
+print(f"Messung zaehlt, App zeigt nicht: {nur_messung:>7,}")
+merke("konsistenz_nur_app", nur_app)
+merke("konsistenz_nur_messung", nur_messung)
+
+# Kein Hinweis, sondern eine Bedingung: Weichen die beiden Wege voneinander ab,
+# ist die gemessene Guete nicht die des Produkts - und das Notebook bricht ab.
+assert nur_app == 0 and nur_messung == 0, (
+    f"Bewertung und Auslieferung sind nicht deckungsgleich: "
+    f"{nur_app} Faelle zeigt nur die App, {nur_messung} zaehlt nur die Messung.")
+print()
+print("Beide Wege stimmen ueberein - die gemessene Abdeckung ist die des Produkts.")
+"""),
+
+MD("""
 ### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
 
 Die Handlungsschwellen sind am Erfolgskriterium ausgerichtet: Wer bei 80 Prozent
@@ -1803,7 +1867,7 @@ und in allen vier Fenstern der rollierenden Prüfung. Er kommt aus zwei anderen 
 > Radtyp ausspart, beantwortet die Geschäftsfrage nicht.
 
 Die Spanne löst **beide** Punkte: Sie zeigt die Streuung, statt sie zu verschweigen, und
-sie trägt für **alle drei Radtypen** — weil die Nützlichkeitsregel aus 5.5 die Güte des
+sie trägt für **{{typen_freigegeben}}** — weil die Nützlichkeitsregel aus 5.5 die Güte des
 Modells von der Preisstruktur trennt. Was bleibt, ist keine Lücke im Sortiment, sondern
 eine in der Reichweite: Für {{reichweite:.0%}} der Fahrten kann die App etwas sagen.
 

@@ -1,6 +1,7 @@
 """Baut alle CRISP-DM-Notebooks: Vorfuehrfassung (ausgefuehrt) und Uebungsfassung."""
 import importlib
 import os
+import re
 import sys
 import time
 
@@ -9,6 +10,63 @@ from bauwerk import bauen
 
 MODULE = ["nb01_regression", "nb02_klassifikation", "nb03_clustering",
           "nb04_zeitreihe", "nb05_assoziation", "nb06_anomalie"]
+
+# Die Pruefer sind ein Tor, keine Beigabe. Wer ein Notebook baut, ohne sie
+# laufen zu lassen, liefert ungeprueft aus - und genau so sind mehrere Fehler
+# bis in ein externes Gutachten durchgerutscht.
+PRUEFER = [
+    ("tools/notebook_pruefungen.py", "Bekannte Fehlerbilder"),
+    ("tools/notebooktexte_pruefen.py", "Zahlen im Text gegen die Ausgaben"),
+    ("tools/tote_schwellen_pruefen.py", "Kriterien ohne Wirkung im Code"),
+]
+
+
+def pruefen(gebaute):
+    """Laesst die Pruefer laufen und bricht ab, wenn einer Fehler meldet."""
+    import subprocess
+
+    wurzel = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))))
+    print("\nPruefe ...")
+    gescheitert = []
+    for skript, zweck in PRUEFER:
+        lauf = subprocess.run([sys.executable, skript], cwd=wurzel,
+                              capture_output=True, text=True)
+        if lauf.returncode == 0:
+            print(f"  ok      {zweck}")
+            continue
+        # Nur Funde in den GERADE gebauten Notebooks halten den Bau auf.
+        # Was in anderen Notebooks steht, gehoert zu deren Umbau.
+        # Kopfzeilen werden am ZEILENANFANG erkannt, nicht per Teilstring:
+        # "ok " steckt sonst mitten in "Notebook rechnet" und macht aus einer
+        # Detailzeile eine neue Ueberschrift.
+        farblos = re.compile(r"\x1b\[[0-9;]*m")
+        zeilen = [(farblos.sub("", z), z) for z in lauf.stdout.split("\n")]
+        kopf = re.compile(r"^(ok|FEHLER|Hinweis|PRUEFEN)\b")
+        eigene, sammelt = [], False
+        for nackt, roh in zeilen:
+            if kopf.match(nackt):
+                sammelt = any(n in nackt for n in gebaute)
+                if sammelt and not nackt.startswith("ok"):
+                    eigene.append(nackt)
+            elif sammelt and nackt.strip():
+                eigene.append(nackt)
+        betroffen = bool(eigene)
+        fremde = sum(1 for nackt, _ in zeilen
+                     if kopf.match(nackt) and not nackt.startswith("ok")
+                     and not any(n in nackt for n in gebaute))
+        nachsatz = f"   ({fremde} Fund(e) in anderen Notebooks)" if fremde else ""
+        print(f"  {'FEHLER ' if betroffen else 'ok     '} {zweck}{nachsatz}")
+        for zeile in eigene:
+            print(f"     {zeile.strip()}")
+        if betroffen:
+            gescheitert.append(zweck)
+    if gescheitert:
+        print(f"\nAbgebrochen: {', '.join(gescheitert)}. "
+              f"Das Notebook ist gebaut, aber nicht abgenommen.")
+        raise SystemExit(1)
+    print("Alle Pruefungen bestanden.")
+
 
 def stelle_finden(modul_name):
     """Sucht die letzte Zeile, bis zu der das Bauskript noch parst.
@@ -36,6 +94,7 @@ def stelle_finden(modul_name):
 
 if __name__ == "__main__":
     gewuenscht = sys.argv[1:] or MODULE
+    gebaut = []
     print("Baue Notebooks ...")
     for name in gewuenscht:
         if not any(name in m for m in MODULE):
@@ -58,3 +117,7 @@ if __name__ == "__main__":
         start = time.time()
         bauen(modul.NAME, modul.ZELLEN)
         print(f"     ... {time.time() - start:.0f} s")
+        gebaut.append(modul.NAME)
+
+    if gebaut:
+        pruefen(gebaut)

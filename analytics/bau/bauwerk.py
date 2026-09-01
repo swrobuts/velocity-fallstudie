@@ -115,6 +115,14 @@ def _einsetzen(text, werte, herkunft):
                 f"    Bekannt sind: {', '.join(sorted(werte)) or '(keine)'}")
         wert = werte[schluessel]
         if form is None:
+            # Die deutsche Schreibweise gilt fuer ZAHLEN. Auf einen Text
+            # angewandt macht sie aus "CARGO, CITY und EBIKE" ein
+            # "CARGO. CITY und EBIKE" - der Tausch von Punkt und Komma
+            # kennt den Unterschied nicht, also fragen wir vorher.
+            try:
+                float(str(wert).replace(",", "."))
+            except (TypeError, ValueError):
+                return str(wert)
             return _deutsch(str(wert))
         try:
             zahl = float(wert)
