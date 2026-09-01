@@ -1620,7 +1620,10 @@ for _, g in tab.iterrows():
                        datenstand=str(d.startzeit.max().date()),
                        tarifversion=TARIFVERSION,
                        datenversion=DATENVERSION,
-                       trainingsende=str(training.startzeit.max().date()),
+                       # Die Perzentile stammen aus training + validierung +
+                       # test1, nicht nur aus dem Training. Ein Feld namens
+                       # "trainingsende" haette darueber getaeuscht.
+                       lernbasis_bis=str(basis.startzeit.max().date()),
                        kalibrierung_bis=str(test2.startzeit.max().date())))
 
 freigabe_tabelle = pd.DataFrame(zeilen)
@@ -1732,12 +1735,30 @@ ohne_freigabe = next(
      if a != b and (a, b, "CITY", "nachmittag") not in vorhanden), None)
 assert ohne_freigabe is not None, "Keine unfreigegebene Verbindung zum Vorfuehren gefunden"
 
+# Auch der Zweig "fuer diesen Tarif zu breit" braucht einen Fall. Wir suchen
+# eine Kombination, deren Spanne im Basistarif haelt, bei einem Kunden mit
+# teilweisem Guthaben aber relativ zu breit wird.
+zu_breit = None
+for _, zeile in freigabe_tabelle.iterrows():
+    for _rest in (0, 5, 10, 15, 20):
+        _v = kundenpreis(zeile.minuten_von, zeile.typ_code, _rest, 0.0)
+        _b = kundenpreis(zeile.minuten_bis, zeile.typ_code, _rest, 0.0)
+        if not spanne_nuetzt(zeile.minuten_von, zeile.minuten_bis, _v, _b):
+            zu_breit = (int(zeile.start_station_id), int(zeile.ziel_station_id),
+                        zeile.typ_code, STUNDE_JE_FENSTER[zeile.zeitfenster], _rest)
+            break
+    if zu_breit:
+        break
+
 proben += [(1, 1, "CITY", 8), ohne_freigabe, (1, 999, "CITY", 8)]
 beschriftung = ["freigegebene Verbindung", "Rundfahrt", "Verbindung ohne Freigabe",
                 "Station, die es nicht gibt"][-len(proben):]
+if zu_breit:
+    proben.append(zu_breit[:4] + (zu_breit[4],))
+    beschriftung.append("Spanne fuer diesen Tarif zu breit")
 
 for probe, was in zip(proben, beschriftung):
-    e = preis_schaetzen(*probe)
+    e = preis_schaetzen(*probe[:4], freiminuten_rest=probe[4] if len(probe) > 4 else 0)
     # Die drei Verweigerungsfaelle muessen auch wirklich verweigern.
     if was != "freigegebene Verbindung":
         assert e["anzeige"] is None, f"{was} liefert wider Erwarten eine Anzeige"
