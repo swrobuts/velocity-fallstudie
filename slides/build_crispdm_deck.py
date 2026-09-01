@@ -28,7 +28,7 @@ Deshalb vier Teile:
                          Fall 2 -> Phase 6  das Modell verdient seinen Unterhalt nicht
                          Fall 3 -> Phase 1  Kriterien ohne Zielgroesse
                          Fall 4 -> Phase 3  Schnitt entlang der Zeit
-                         Fall 5 -> Phase 5  von 32 Regeln bleibt keine
+                         Fall 5 -> Phase 5  keine Regel, und der Plan traegt nicht
                          Fall 6 -> Ruecksprung 4 nach 3
   D Synthese           Die sechs Faelle zurueck auf den Kreislauf.
 
@@ -471,8 +471,9 @@ def teil_karte(prs):
         ["4", "Zeitreihe", "Phase 3", "Die genaueste Prognose ist nicht die günstigste"],
         ["5", "Assoziation", "Phase 5", "Keine Regel nimmt beide Hürden — und die "
                                         "Hürde bleibt trotzdem stehen"],
-        ["6", "Anomalie", "Rücksprung", "Kein Verfahren erzeugt Information, die in den "
-                                        "Daten nicht steckt"],
+        ["6", "Anomalie", "Rücksprung", "Ein Verfahren, das schlechter ist als eine "
+                                        "Zeile Fachwissen, ist an der Aufgabenstellung "
+                                        "gescheitert"],
     ], y=unter_intro(s), spalten_b=[50, 130, 110, 613.5], zeilen_h=42)
     phasenleiste(s, 0)
     notizen(s, "Diese Tabelle ist der Fahrplan für den Rest des Decks. Sie taucht in "
@@ -2288,34 +2289,41 @@ def fall5(prs):
               "Phase 1 begründet darüber reden — wer ihn nicht kennt, senkt die "
               "Hürde aus dem Bauch heraus.")
 
-    s = folie(prs, "Fall 5 · Phase 6", "Zwei Pläne — ganz ohne freigegebene Regel",
-              "Der Umlaufplan entsteht aus den Salden je Station und Zeitfenster, "
-              "nicht aus den Regeln. Deshalb trägt er, obwohl keine Regel freikam.")
+    s = folie(prs, "Fall 5 · Phase 6", "Von zwei Plänen trägt einer",
+              "Beide entstehen aus den Salden je Station und Zeitfenster, nicht aus "
+              "den Regeln. Nur einer von beiden ergibt eine Anweisung, die jemand "
+              "ausführen kann.")
     vorher_nachher(s,
-                   ("Plan A", "Umverteilen zwischen Stationen", [
-                       "Der Pendelstrom morgens",
-                       "leert eine Station und füllt",
-                       "eine andere.",
+                   ("Plan A — trägt nicht", "Umverteilen zwischen Stationen", [
+                       "Größter Überschuss:",
+                       "1,8 Räder je Werktag.",
+                       "Größter Fehlbestand: 1,1.",
                        "",
-                       "Gegenprobe über die kunde_id:",
-                       "nur 13,8 % fahren abends",
-                       "zurück — die Richtung stimmt,",
-                       "die Personen nicht.",
+                       "Die Stationen fassen 20 bis 40.",
+                       "",
+                       "Für 1,8 Räder fährt kein",
+                       "Transporter durch Würzburg.",
                    ], False),
-                   ("Plan B", "Frei abgestellte Räder einsammeln", [
-                       "„Frei abgestellt“ wurde ein",
-                       "eigenes Ziel — sonst wären",
-                       "19,8 % der Fahrten unsichtbar",
-                       "geblieben.",
+                   ("Plan B — trägt", "Frei abgestellte Räder einsammeln", [
+                       "Rund elf Räder je Werktag",
+                       "bleiben frei im Gebiet.",
+                       "",
+                       "Das ist eine Runde, die sich",
+                       "lohnt — und sie braucht keine",
+                       "einzige Assoziationsregel.",
                        "",
                        "Vorbehalt: Wegeketten sind",
                        "personenbezogene Daten.",
                    ], False),
-                   y=unter_intro(s), hoehe=210)
+                   y=unter_intro(s), hoehe=214)
     phasenleiste(s, 6)
-    notizen(s, "Der Hinweis rechts unten ist kein Beiwerk. Aus Start-Ziel-Paaren mit "
-               "Zeitstempel lassen sich Bewegungsprofile bilden. Wer damit arbeitet, "
-               "braucht eine Rechtsgrundlage.")
+    notizen(s, "Eine frühere Fassung dieses Notebooks druckte hier „+1205 Räder laufen "
+               "auf“ — die Summe über 741 Werktage, gedruckt wie eine Anweisung an den "
+               "Fahrer. Die Zahl war richtig, die Einheit fehlte, und mit ihr die "
+               "Einsicht, dass der Plan nichts trägt. Merksatz: Eine Zahl ohne "
+               "Zeitbezug ist keine Betriebsanweisung. Der Hinweis rechts unten ist "
+               "ebenfalls kein Beiwerk — aus Start-Ziel-Paaren mit Zeitstempel lassen "
+               "sich Bewegungsprofile bilden.")
 
     s = folie(prs, "Fall 5 · Abschluss", "Der Kreislauf schließt sich")
     tabelle(s, ["Phase", "Was dabei herauskam"], [
@@ -2329,7 +2337,8 @@ def fall5(prs):
                        "Zeile nachgerechnet"],
         ["5 Evaluation", "32 Regeln, 9 mit Lift, keine mit Support — die stärkste "
                          "verfehlt die Hürde um 0,01 Prozentpunkte"],
-        ["6 Deployment", "Zwei Pläne, mit Datenschutzvorbehalt"],
+        ["6 Deployment", "Der Umverteilungsplan trägt nicht — 1,8 Räder je "
+                         "Werktag. Was trägt, ist die Einsammelrunde"],
     ], y=unter_intro(s), spalten_b=[230, 673.5], zeilen_h=42)
     notizen(s, "Merksatz: Die auffälligste Regel ist meistens die uninteressanteste. "
                "Erst die vorab gesetzten Hürden trennen Fund von Rauschen.")
@@ -2353,9 +2362,8 @@ def fall6(prs):
         ("Verfahren", "Interquartilsregel als Maßstab, dann Isolation Forest"),
         ("Der Rücksprung", "Phase 4 zurück nach Phase 3 — das Modell fand die "
                            "Preisklasse statt der Anomalien"),
-        ("Urteil", "Aufgabe A erfüllt das Kriterium mit 36 % · Aufgabe B verfehlt "
-                   "es mit höchstens 14 % und "
-                   "wird nicht freigegeben"),
+        ("Urteil", "Beide Aufgaben lösbar — aber je einmal gewinnt eine Regel gegen "
+                   "das Modell"),
     ], y=unter_intro(s))
     notizen(s, "Die 5 Prozent in Zeile 3 überraschen. Sie kommen aus einer "
                "Kosten-Nutzen-Rechnung: Ein gefundener Vorgang spart mehr, als neun "
@@ -2457,67 +2465,55 @@ def fall6(prs):
               "Daten, ein normiertes Merkmal — und ein völlig anderes Bild. Der "
               "Hebel lag in Phase 3, nicht im Verfahren.")
 
-    s = folie(prs, "Fall 6 · Phase 5", "Aufgabe B scheitert — und das ist ein Ergebnis",
-              "Stationsausfälle sollten aus dem Fahrtaufkommen erkennbar sein. Sie "
-              "sind es nicht. Der Grund liegt nicht am Verfahren.")
-    kachelreihe(s, [
-        ("Der Befund", [
-            "Beste Trefferquote 14 %,",
-            "bei einer Liste von 100.",
-            "",
-            "Bei 50 Plätzen — der Länge,",
-            "die das Betriebsbüro schafft —",
-            "sind es 0 %.",
-            "",
-            "Das Kriterium von 20 % wird",
-            "deutlich verfehlt.",
-        ]),
-        ("Warum", [
-            "Rund fünf Fahrten je Station",
-            "und Tag.",
-            "",
-            "Ein Störungstag sieht bei",
-            "dieser Grundrate genauso aus",
-            "wie ein verregneter",
-            "Januarsonntag.",
-        ]),
-        ("Die Lösung", [
-            "Keine bessere Mathematik,",
-            "sondern eine bessere",
-            "Datenquelle:",
-            "",
-            "die Statusmeldungen der",
-            "Terminals, die ohnehin",
-            "anfallen.",
-        ]),
-    ], y=unter_intro(s), hoehe=200)
+    s = folie(prs, "Fall 6 · Phase 5",
+              "Das Modell scheitert — die Aufgabe nicht",
+              "Stationsausfälle sollten aus dem Fahrtaufkommen erkennbar sein. Der "
+              "Isolation Forest findet sie nicht. Eine Zeile Fachwissen schon.")
+    tabelle(s, ["Vorgehen", "Trefferquote", "Kriterium 20 %"], [
+        ["Isolation Forest über alle 10.890 Stationstage", "14 %", "gerissen"],
+        ["Regel: nur die 1.041 Tage ohne Fahrt, nach Einbruch sortiert",
+         "32 %", "erfüllt"],
+    ], y=(y := unter_intro(s)), spalten_b=[520, 200, 183.5], zeilen_h=52)
+    sandkarte(s, "Warum die Regel gewinnt",
+              ["Alle 107 Störungen liegen an Tagen ohne jede Fahrt. Diese Eingrenzung "
+               "ist Fachwissen, keine Statistik.",
+               "Ein Verfahren, das über alle 10.890 Tage sucht, verbringt seine Kraft "
+               "damit, die Eingrenzung nachzuerfinden — und schafft es schlechter, als "
+               "ein Satz sie vorgibt."],
+              y=darunter(y, h_tabelle(2, 52)))
     phasenleiste(s, 5)
-    notizen(s, "Der Satz, der bleiben soll: Kein Verfahren kann Information erzeugen, "
-               "die in den Daten nicht steckt. Ein negatives Ergebnis, sauber "
-               "begründet, ist ein vollwertiges Projektergebnis — es verhindert, dass "
-               "jemand anderes dieselbe Sackgasse noch einmal ausprobiert.")
+    notizen(s, "Diese Folie ist das Gegenstück zu Fall 2. Dort ließ eine schlecht "
+               "gebaute Baseline ein Modell zu gut aussehen. Hier ließ eine FEHLENDE "
+               "Baseline eine Aufgabe unlösbar aussehen — eine frühere Fassung des "
+               "Notebooks schrieb, Aufgabe B sei mit diesen Daten nicht lösbar. Beide "
+               "Male hilft dasselbe: erst die einfachste Lösung bauen, dann das "
+               "Verfahren daran messen.")
 
     zellfolie(prs, 6, "5.4", "Phase 5 · im Notebook",
-              "Aufgabe B, ausgerechnet und verworfen",
+              "Modell gegen Regel, Zeile für Zeile",
               "nb6-aufgabeB",
-              "Null gefundene Störungen bei einer Listenlänge von 50. Das Notebook "
-              "rechnet das Scheitern aus, statt es zu verschweigen.",
-              "Ein negatives Ergebnis, das ausgerechnet und dokumentiert ist, hat "
-              "einen echten Wert: Es verhindert, dass jemand anderes dieselbe "
-              "Sackgasse noch einmal ausprobiert.")
+              "Bei jeder Listenlänge liegt die Regel vorn. Bei 50 Plätzen findet das "
+              "Modell keine einzige Störung, die Regel jede dritte.",
+              "Lassen Sie die Studierenden die erste Spalte lesen, bevor Sie die "
+              "zweite aufdecken. Ein Modell, das bei fünfzig Plätzen null Treffer "
+              "hat, sieht nach einem unlösbaren Problem aus — bis jemand die Regel "
+              "danebenstellt.")
 
-    s = folie(prs, "Fall 6 · Phase 6", "Ausgeliefert wird nur, was besteht",
-              "Zwei Aufgaben, ein Ergebnis. Aufgabe B wird ausdrücklich nicht "
-              "freigegeben — und das steht im Bericht.")
+    s = folie(prs, "Fall 6 · Phase 6", "Drei Sorten Auffälligkeit, drei Antworten",
+              "Die Auswertung hat die Aufgabe geteilt. Nur eine der drei Sorten "
+              "rechtfertigt ein Modell.")
     streifen(s, [
-        ("Aufgabe A", "Tagesliste mit zehn Plätzen, je Vorgang mit Begründung, WARUM "
-                      "er auffällt — sonst kann die Disposition nichts damit anfangen"),
-        ("Aufgabe B", "Nicht freigegeben. Die Empfehlung lautet: Terminalmeldungen "
-                      "anbinden, statt aus dem Fahrtaufkommen zu schließen"),
+        ("Vergessene Rückgaben", "Eine Zeile SQL: dauer_min > 480. Vollständig, "
+                                 "nachprüfbar, kein Modell nötig"),
+        ("Auffällige Stationstage", "Die Regel aus 5.5 — nur Nulltage, nach Einbruch "
+                                    "sortiert. Schlägt das Modell und erfüllt das Kriterium"),
+        ("Alles andere", "Die Tagesliste des Isolation Forest. Dafür gibt es keine "
+                         "Regel — und keine Trefferquote, weil niemand vorher weiß, "
+                         "wonach er sucht"),
         ("Rückkopplungsvorteil", "Anders als in Fall 2 verbessert die Nutzung hier "
                                  "die Datenlage: Jede geprüfte Meldung ist ein Label "
                                  "für die nächste Runde"),
-    ], y=unter_intro(s), hoehe=76, luecke=10, chip_b=0)
+    ], y=unter_intro(s), hoehe=62, luecke=8, chip_b=0)
     phasenleiste(s, 6)
     notizen(s, "Der dritte Punkt ist der Gegensatz zu Fall 2: Dort zerstörte die "
                "Nutzung die Lerngrundlage, hier schafft sie eine. Es lohnt sich, bei "
@@ -2534,10 +2530,10 @@ def fall6(prs):
                                "fehlender Sensor kein auffälliger Vorgang ist"],
         ["4 Modeling", "Interquartilsregel unbrauchbar (über 2.000 Treffer), dann "
                        "Isolation Forest — der die Preisklasse fand"],
-        ["5 Evaluation", "Nach der Korrektur 2 % → 36 %. Aufgabe A erfüllt das "
-                         "Kriterium, B verfehlt es an den Grundraten"],
-        ["6 Deployment", "Tagesliste mit Begründung; Aufgabe B ausdrücklich nicht "
-                         "freigegeben"],
+        ["5 Evaluation", "Bei beiden Aufgaben schlägt eine Regel das Modell: 90 % "
+                         "gegen 28 % und 32 % gegen 14 %"],
+        ["6 Deployment", "Zwei Regeln und eine Tagesliste — jede für die Sorte "
+                         "Auffälligkeit, für die sie taugt"],
     ], y=unter_intro(s), spalten_b=[230, 673.5], zeilen_h=42)
     notizen(s, "Zwei Sätze aus diesem Notebook gehören an die Tafel: „Sehen Sie sich "
                "immer die Extremfälle an, die ein Modell meldet.“ Und: „Kein Verfahren "
@@ -2568,8 +2564,8 @@ def teil_synthese(prs):
                                    "Prognose ist nicht die günstigste"],
         ["5 Assoziation", "Phase 5", "Keine der 32 Regeln überlebt — die stärkste "
                                      "scheitert um 0,01 Prozentpunkte"],
-        ["6 Anomalie", "Rücksprung", "Kein Verfahren erzeugt Information, die in den "
-                                     "Daten nicht steckt"],
+        ["6 Anomalie", "Rücksprung", "Zweimal schlägt eine Zeile Fachwissen das "
+                                     "Verfahren — weil vorher keine Baseline stand"],
     ], y=unter_intro(s), spalten_b=[170, 110, 623.5], zeilen_h=42)
     notizen(s, "Gehen Sie die sechs Zeilen einzeln durch und lassen Sie die "
                "Studierenden sagen, an welcher Stelle im jeweiligen Notebook das "

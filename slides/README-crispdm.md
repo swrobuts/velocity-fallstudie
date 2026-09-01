@@ -25,8 +25,8 @@ Phase.** Das ist der Grund, warum sich die Fälle nicht gleich behandeln lassen.
 | 2 | Klassifikation | **Phase 6** | Ein Modell kann gegen eine Baseline gewinnen, weil die Baseline schlecht gebaut ist |
 | 3 | Clustering | **Phase 1** | Erfolgskriterien ohne Zielgröße — und eine bessere Frage als die, mit der wir anfingen |
 | 4 | Zeitreihe | **Phase 3** | Der Schnitt folgt der Zeit. Und die genaueste Prognose ist nicht die günstigste |
-| 5 | Assoziation | **Phase 5** | Keine Regel nimmt beide Hürden — und die Hürde bleibt trotzdem stehen |
-| 6 | Anomalie | **der Rücksprung** | Kein Verfahren erzeugt Information, die in den Daten nicht steckt |
+| 5 | Assoziation | **Phase 5** | Keine Regel nimmt beide Hürden — und der Umverteilungsplan trägt 1,8 Räder je Werktag |
+| 6 | Anomalie | **der Rücksprung** | Ein Verfahren, das schlechter ist als eine Zeile Fachwissen, ist an der Aufgabenstellung gescheitert |
 
 Die Fälle 1, 2 und 5 sind bewusst als **Gegenstücke** aufgebaut: In Fall 1 hält eine
 schlichte Nachschlagetabelle mit einer Quantilregression mit und wird ausgeliefert. In

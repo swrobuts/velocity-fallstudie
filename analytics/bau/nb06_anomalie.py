@@ -332,7 +332,15 @@ merkmalstabelle["entgelt_z"] = z_je_typ(merkmalstabelle.entgelt_eur, merkmalstab
 merkmalstabelle["entgelt_je_minute_z"] = z_je_typ(merkmalstabelle.entgelt_je_minute,
                                                   merkmalstabelle.typ_code)
 
-MERKMALE = ["dauer_z", "stunde", "wochentag", "ist_rundtour",
+# WOCHENTAG IST RAUS.
+#
+# Das Produkt ist eine TAGESliste. Innerhalb eines Tages ist der Wochentag
+# konstant - er kann dort nichts unterscheiden, hebt aber alle Vorgaenge
+# des Tages gleichmaessig an. In einer frueheren Fassung fuehrte das dazu,
+# dass sechs von zehn Eintraegen der Tagesliste mit "wochentag = 0.0
+# (ungewoehnlich niedrig)" begruendet wurden - einer Eigenschaft, die alle
+# 45 Vorgaenge dieses Tages teilten.
+MERKMALE = ["dauer_z", "stunde", "ist_rundtour",
             "entgelt_z", "entgelt_je_minute_z"]
 X2 = merkmalstabelle[MERKMALE]
 X2_skaliert = StandardScaler().fit_transform(X2)
@@ -369,42 +377,62 @@ print(f"Bekannte Rückgabeprobleme im Datensatz: {gesamt_probleme}\\n")
 
 zeilen = []
 for k in (50, 100, 300, 1000):
-    for name, spalte in [("erster Versuch", "auffaelligkeit_erst"),
-                         ("je Radtyp normiert", "auffaelligkeit")]:
+    # Die BASELINE zuerst: eine Zeile, sortiere nach Dauer.
+    for name, spalte in [("Regel: nach Dauer sortiert", "dauer_min"),
+                         ("Modell: erster Versuch", "auffaelligkeit_erst"),
+                         ("Modell: je Radtyp normiert", "auffaelligkeit")]:
         top = merkmalstabelle.nlargest(k, spalte)
         treffer = int(top.ist_rueckgabeproblem.sum())
-        zeilen.append({"Listenlänge": k, "Merkmale": name, "gefundene Probleme": treffer,
+        zeilen.append({"Listenlänge": k, "Vorgehen": name, "gefundene Probleme": treffer,
                        "Trefferquote": round(treffer / k, 3),
                        "Anteil aller Probleme": round(treffer / gesamt_probleme, 3)})
 print(pd.DataFrame(zeilen).to_string(index=False))
 '''),
 
 MD("""
-**Zwei Dinge stehen in dieser Tabelle.**
+**Die erste Zeile ist die unangenehmste — und sie muss dort stehen.**
 
-**Erstens der Wert der Korrektur aus Phase 4.5.** Bei einer Liste von 50 Vorgängen findet
-der erste Versuch **drei** von 48 Rückgabeproblemen, die normierte Fassung **zwanzig**.
-Das ist kein besseres Verfahren — es ist dasselbe Verfahren mit besseren Merkmalen.
+Die Regel „sortiere nach Dauer“ schlägt beide Modellfassungen um Längen. Das ist kein
+Zufall, sondern **Konstruktion**: Wir haben die Teilwahrheit als `dauer_min > 480`
+definiert, und `dauer_min` ist eines der Merkmale des Modells. Die Regel *ist* die
+Definition. Sie kann gar nicht verlieren.
 
-**Zweitens die übliche Spannung:** Die Trefferquote sinkt mit der Listenlänge, der Anteil
-der insgesamt gefundenen Probleme steigt. Dieselbe Kurve wie bei der Wartungsliste in
-Notebook 2, hier nur schärfer, weil die Fälle seltener sind.
+> **Eine Prüfgröße, die aus einem Modellmerkmal gebaut ist, prüft nichts.** Sie belohnt
+> das Wiederfinden dessen, was man schon weiß.
 
-> **Wichtig für die Deutung:** Die Fahrten über acht Stunden sind nur **eine** Sorte
-> Auffälligkeit. Alles, was das Verfahren sonst noch findet, gilt in dieser Rechnung als
-> „Fehlalarm“ — obwohl darunter durchaus Interessantes sein kann. Eine Teilwahrheit
-> **unterschätzt** ein Anomalieverfahren immer. Das muss man sagen, sonst wird aus einer
-> Hilfsgröße ein Urteil.
+Das hat drei Folgen, und alle drei gehören in den Bericht:
+
+1. **Für „vergessene Rückgaben“ braucht es kein Modell.** `dauer_min > 480` ist die
+   Antwort, sie kostet eine Zeile SQL, und sie ist vollständig. Wer diese eine Sorte
+   Auffälligkeit sucht, ist hier fertig.
+2. **Das Erfolgskriterium aus Phase 1 misst das Falsche.** „Mindestens 20 % Treffer
+   gegen die Teilwahrheit“ belohnt Ähnlichkeit zur Dauerregel — nicht die Fähigkeit,
+   *anderes* zu finden.
+3. **Der Wert des Verfahrens liegt genau dort, wo die Teilwahrheit blind ist:** bei den
+   CARGO-Rundtouren, den Fahrten zu 0,50 € je Minute, den Ausleihen um 22 Uhr. Für die
+   gibt es **kein Label** — und damit auch keine Trefferquote. Ob sie etwas taugen,
+   entscheidet nur, wer sie ansieht.
+
+**Der Wert der Korrektur aus Phase 4.5 bleibt trotzdem ablesbar:** Bei einer Liste von
+50 Vorgängen findet der erste Versuch fast nichts, die normierte Fassung deutlich mehr.
+Dasselbe Verfahren, bessere Merkmale.
 
 ### 5.2 Was findet das Verfahren sonst noch?
 """),
 
 CODE('''
 trefferquote_a = float(merkmalstabelle.nlargest(50, "auffaelligkeit").ist_rueckgabeproblem.mean())
-erfuellt_a = trefferquote_a >= 0.20
+regelquote_a = float(merkmalstabelle.nlargest(50, "dauer_min").ist_rueckgabeproblem.mean())
 print("Erfolgskriterium aus Phase 1 für Aufgabe A: mindestens 20 % Treffer")
-print(f"erreicht (Top 50): {trefferquote_a:.1%}   ->  "
-      f"{'ERFÜLLT — Aufgabe A geht in Betrieb' if erfuellt_a else 'GERISSEN'}")
+print(f"  Regel 'nach Dauer sortiert'  {regelquote_a:>6.1%}   "
+      f"{'ERFÜLLT' if regelquote_a >= 0.20 else 'GERISSEN'}")
+print(f"  Modell                       {trefferquote_a:>6.1%}   "
+      f"{'ERFÜLLT' if trefferquote_a >= 0.20 else 'GERISSEN'}")
+print()
+print("Beide erfüllen das Kriterium - und die Regel deutlich besser. Fuer")
+print("VERGESSENE RUECKGABEN geht deshalb die Regel in Betrieb, nicht das Modell.")
+print("Das Modell bleibt fuer das, was die Regel nicht sieht - und dafuer gibt")
+print("es kein Label und keine Trefferquote.")
 print()
 
 top10 = merkmalstabelle.nlargest(10, "auffaelligkeit")
@@ -431,7 +459,9 @@ CODE('''
 # Die Begruendung vergleicht gegen den Mittelwert DESSELBEN RADTYPS - aus
 # demselben Grund, aus dem die Merkmale normiert wurden. "40 Euro, ueblich sind
 # 2,20" waere fuer ein CARGO-Rad eine irrefuehrende Auskunft.
-ROHSPALTEN = ["dauer_min", "stunde", "wochentag", "ist_rundtour",
+# Dieselben Merkmale wie im Modell - ohne wochentag. Was nicht in die
+# Rangfolge eingeht, darf auch nicht als Begruendung erscheinen.
+ROHSPALTEN = ["dauer_min", "stunde", "ist_rundtour",
               "entgelt_eur", "entgelt_je_minute"]
 mittel_je_typ = merkmalstabelle.groupby("typ_code")[ROHSPALTEN].mean()
 streuung_je_typ = merkmalstabelle.groupby("typ_code")[ROHSPALTEN].std().replace(0, 1)
@@ -461,7 +491,7 @@ entscheiden, ob es sich lohnt hinzusehen — und das ist der ganze Zweck der Lis
 
 ---
 
-### 5.4 Aufgabe B — und warum sie scheitert
+### 5.4 Aufgabe B — und die Regel, die man zuerst hätte bauen müssen
 
 Nun zur zweiten Aufgabe aus Phase 1: **auffällige Stationstage**. Hier liegt der Fall
 besonders günstig, denn es gibt eine **dokumentierte Wahrheit**: 26 Stationsstörungen
@@ -477,9 +507,15 @@ gitter = pd.MultiIndex.from_product([tage, stationen.station_id],
 je_tag = (echte.groupby(["datum", "start_station_id"]).size().rename("fahrten")
           .reindex(gitter, fill_value=0).reset_index().sort_values(["start_station_id", "datum"]))
 
-# Erwartung: was diese Station in dieser Jahreszeit ueblicherweise leistet
+# Erwartung: was diese Station zuletzt ueblicherweise geleistet hat.
+#
+# NUR VERGANGENHEIT. Eine fruehere Fassung nutzte ein ZENTRIERTES Fenster
+# (center=True) - das schaut vierzehn Tage in die Zukunft. Fuer eine Liste,
+# die morgens ueber den Vortag entscheidet, gibt es diese Tage nicht. Der
+# shift(1) sorgt dafuer, dass der zu bewertende Tag nicht in seine eigene
+# Erwartung eingeht.
 je_tag["erwartet"] = (je_tag.groupby("start_station_id").fahrten
-                      .transform(lambda x: x.rolling(29, center=True, min_periods=7).median()))
+                      .transform(lambda x: x.shift(1).rolling(28, min_periods=7).median()))
 je_tag["abweichung"] = je_tag.fahrten - je_tag.erwartet
 
 # Die dokumentierte Wahrheit
@@ -510,55 +546,81 @@ CODE('''
 kandidaten = je_tag.dropna(subset=["erwartet"]).copy()
 kandidaten["auffaelligkeit_tag"] = -(kandidaten.abweichung / kandidaten.erwartet.clip(lower=1))
 
-zeilen = []
-for k in (50, 100, 200, 500):
-    top = kandidaten.nlargest(k, "auffaelligkeit_tag")
-    treffer = int(top.ist_stoerung.sum())
-    zeilen.append({"Listenlänge": k, "gefundene Störungen": treffer,
-                   "Trefferquote": round(treffer / k, 3),
-                   "Anteil aller Störungen": round(treffer / kandidaten.ist_stoerung.sum(), 3)})
-ergebnis_b = pd.DataFrame(zeilen)
-print(ergebnis_b.to_string(index=False))
+# ZUERST DIE EINFACHSTE REGEL, DIE ES GIBT - wie in Notebook 2.
+# "Sieh dir nur die Stationstage ohne jede Fahrt an, und darunter die
+# mit dem groessten Einbruch gegenueber dem eigenen Mittel."
+nulltage = kandidaten[kandidaten.fahrten == 0]
 
-k1 = ergebnis_b.Trefferquote.max() >= 0.20
+def bewerten_b(name, menge, spalte=None):
+    zeilen = []
+    for k in (50, 100, 200, 500):
+        top = menge.nlargest(k, spalte) if spalte else menge.head(k)
+        treffer = int(top.ist_stoerung.sum())
+        zeilen.append({"Vorgehen": name, "Listenlänge": k,
+                       "gefundene Störungen": treffer,
+                       "Trefferquote": round(treffer / min(k, len(menge)), 3)})
+    return zeilen
+
+vergleich_b = pd.DataFrame(
+    bewerten_b("Modell: alle Stationstage", kandidaten, "auffaelligkeit_tag")
+    + bewerten_b("Regel: nur Nulltage, nach Einbruch", nulltage, "abweichung"))
+print(vergleich_b.pivot(index="Listenlänge", columns="Vorgehen",
+                        values="Trefferquote").to_string())
+print()
+print(f"Alle {int(kandidaten.ist_stoerung.sum())} Störungen liegen an Nulltagen -")
+print(f"die Regel erreicht also 100 % Abdeckung bei {len(nulltage)} Kandidaten.")
+
+bestes_modell = max(z["Trefferquote"] for z in
+                    bewerten_b("m", kandidaten, "auffaelligkeit_tag"))
+beste_regel = max(z["Trefferquote"] for z in
+                  bewerten_b("r", nulltage, "abweichung"))
 print(f"\\nErfolgskriterium aus Phase 1: mindestens 20 % Trefferquote")
-print(f"erreicht: {ergebnis_b.Trefferquote.max():.1%}   ->  {'ERFÜLLT' if k1 else 'GERISSEN'}")
+for name, wert in [("Modell", bestes_modell), ("Regel", beste_regel)]:
+    print(f"  {name:<8s} {wert:.1%}   ->  {'ERFÜLLT' if wert >= 0.20 else 'GERISSEN'}")
 '''),
 
 MD("""
-### 5.5 Das negative Ergebnis — und was es wert ist
+### 5.5 Das Modell scheitert — die Aufgabe nicht
 
-**Aufgabe B ist mit diesen Daten nicht lösbar.** Das ist keine Frage des Verfahrens: Ein
-Isolation Forest, ein neuronales Netz oder ein noch so raffiniertes Zeitreihenmodell
-scheitern an derselben Wand.
+**Lesen Sie die beiden Spalten nebeneinander.** Der Isolation Forest über alle
+Stationstage erreicht 14 Prozent und reißt das Kriterium. Die Regel „sieh dir nur die
+Tage ohne jede Fahrt an, und darunter die mit dem größten Einbruch" erreicht **32
+Prozent** und erfüllt es.
 
-Die Wand ist eine **Frage der Grundraten**:
+> **Aufgabe B ist lösbar. Nur nicht mit einem Anomalieverfahren.**
 
-- Eine Station hat im Mittel rund **5 Fahrten am Tag**.
-- Ein Tag ohne Fahrt ist deshalb völlig normal — er kommt tausendmal vor.
-- Nur jeder zehnte Nulltag ist eine Störung.
+Woran das liegt, steht in den Zahlen darüber: **Alle Störungen liegen an Nulltagen.** Die
+gesuchte Menge ist also von vornherein auf 1.041 der 10.890 Stationstage eingegrenzt —
+und diese Eingrenzung ist Fachwissen, keine Statistik. Ein Verfahren, das über alle
+10.890 Tage sucht, verbringt seine Kraft damit, diese Eingrenzung nachzuerfinden. Es
+schafft das schlechter, als ein Satz Fachwissen es vorgibt.
 
-> **Kein Verfahren kann Information erzeugen, die in den Daten nicht steckt.** Ein Nulltag
-> sieht bei einer Störung genauso aus wie an einem verregneten Januarsonntag. Die
-> Unterscheidung ist in diesen Daten schlicht nicht enthalten.
+**Das ist die Lehre dieses Notebooks, und sie ist unbequem:**
 
-**Was daraus folgt — und das ist der eigentliche Projektbeitrag:**
+> Ein Verfahren, das schlechter ist als eine Zeile Fachwissen, ist nicht am Problem
+> gescheitert, sondern an der Aufgabenstellung. Wer keine Baseline baut, hält das eine
+> für das andere.
 
-1. **Nicht ein besseres Modell**, sondern eine **bessere Datenquelle**. Die Terminals
-   melden ihren Status ohnehin; diese Meldungen müssten nur gespeichert werden. Dann ist
-   die Frage kein Analyseproblem mehr, sondern eine Datenbankabfrage.
-2. **Oder mehr Verkehr.** Bei 50 Fahrten je Station und Tag wäre ein Nulltag ein
-   Ereignis. Diese Analyse taugt also für ein größeres Netz — nur heute noch nicht.
-3. **Der Rücksprung in Phase 1** lautet damit: Die Frage war richtig, die Datenlage ist
-   es nicht. Aufgabe A geht in Betrieb, Aufgabe B wird zurückgestellt, bis die
-   Terminalmeldungen verfügbar sind.
+**In einer früheren Fassung stand hier, Aufgabe B sei „mit diesen Daten nicht lösbar".**
+Das war falsch, und es war aus demselben Grund falsch wie der umgekehrte Fehler in
+Notebook 2: Dort ließ eine schlecht gebaute Baseline ein Modell zu gut aussehen — hier
+ließ eine **fehlende** Baseline eine Aufgabe unlösbar aussehen. Beide Male hilft dasselbe:
+**erst die einfachste Lösung bauen, dann das Verfahren daran messen.**
 
-Ein Projektbericht, der das so schreibt, ist mehr wert als einer, der eine Trefferquote
-von 14 % als Erfolg verkauft.
+**Was trotzdem gilt — die Grenzen der Regel:**
+
+1. **Die Trefferquote bleibt bescheiden.** Von hundert vorgelegten Stationstagen sind
+   knapp zwei Drittel Fehlalarme. Bei einem Prüfaufwand von wenigen Minuten je Fall geht
+   das auf; bei einem Technikereinsatz nicht.
+2. **Die eigentliche Lösung ist keine Analyse.** Die Terminals melden ihren Status
+   ohnehin; würden diese Meldungen gespeichert, wäre die Frage eine Datenbankabfrage und
+   keine Schätzung. Das bleibt die Empfehlung an den Betrieb.
+3. **Ein größeres Netz würde beides erleichtern.** Bei 50 Fahrten je Station und Tag wäre
+   ein Nulltag ein Ereignis und kein Alltag.
 """),
 
 # =====================================================================
-PHASE(6, "Aufgabe A geht in Betrieb — Aufgabe B nicht."),
+PHASE(6, "Aufgabe A geht in Betrieb — Aufgabe B als Regel, nicht als Modell."),
 
 CODE('''
 import joblib, datetime
@@ -597,7 +659,27 @@ print("\\ngeschrieben: tagesliste_beispiel.csv, anomaliemodell.joblib")
 '''),
 
 MD("""
-### 6.1 Der Rückkopplungsvorteil, den dieses Modell hat
+### 6.1 Was ausgeliefert wird — zwei Dinge, nicht eines
+
+Die Auswertung in Phase 5 hat die Aufgabe geteilt, und die Auslieferung folgt dieser
+Teilung:
+
+| Sorte Auffälligkeit | Was ausgeliefert wird | Warum |
+|---|---|---|
+| **Vergessene Rückgaben** (über 8 Stunden) | eine Zeile SQL: `dauer_min > 480` | vollständig, nachprüfbar, kein Modell nötig |
+| **Auffällige Stationstage** | die Regel aus 5.5: nur Nulltage, nach Einbruch sortiert | schlägt das Modell und erfüllt das Kriterium |
+| **Alles andere** — Rundtouren zu 47 €, Ausleihen um 22 Uhr, 0,50 € je Minute | die Tagesliste des Isolation Forest | dafür gibt es keine Regel, weil niemand vorher weiß, wonach er sucht |
+
+> **Nur die dritte Zeile rechtfertigt ein Modell.** Die ersten beiden hätte man auch ohne
+> Analyse gefunden — man hätte nur vorher fragen müssen. Genau das ist der Grund, warum
+> in diesem Notebook zuerst die Regeln gebaut wurden und dann das Verfahren.
+
+Für die dritte Zeile gibt es **keine Trefferquote**, und das ist keine Lücke, sondern die
+Sache selbst: Wer eine Kennzahl für „unbekannte Auffälligkeiten“ hätte, wüsste ja schon,
+wonach er sucht. Beurteilen kann sie nur, wer die Liste ansieht — und genau dafür steht
+in jeder Zeile eine Begründung.
+
+### 6.2 Der Rückkopplungsvorteil, den dieses Modell hat
 
 In Notebook 2 war die Rückkopplung ein Problem: Wer die Wartungsliste befolgt, verhindert
 die Ausfälle, die er vorhersagen wollte, und verdirbt sich damit die Trainingsdaten.
@@ -614,7 +696,7 @@ weitermachen, sobald Rückmeldungen da sind.
 > ausdruckt und abhakt, hat nach einem Jahr nichts. Wer sie in einer Maske mit zwei
 > Knöpfen bestätigt, hat einen Trainingsdatensatz.
 
-### 6.2 Überwachung
+### 6.3 Überwachung
 
 | Wache | Schwelle | Reaktion |
 |---|---|---|
@@ -639,8 +721,8 @@ MD("""
 | 2 Data Understanding | Eine **Lücke** in der Dauerverteilung trennt Fahrten von Rückgabeproblemen. Und eine Sackgasse: Die Geschwindigkeit taugt nichts, weil sie aus der Dauer abgeleitet ist |
 | 3 Data Preparation | Sechs Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor kein auffälliger Vorgang ist |
 | 4 Modeling | Interquartilsregel (über 2.000 Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert |
-| 5 Evaluation | Die Korrektur hebt die Trefferquote von 2 % auf 36 %. Aufgabe A erfüllt das Kriterium, **Aufgabe B verfehlt es** mit höchstens 14 % — an den Grundraten, nicht am Verfahren |
-| 6 Deployment | Tagesliste mit Begründung je Vorgang; Aufgabe B ausdrücklich nicht freigegeben |
+| 5 Evaluation | Die Korrektur hebt Aufgabe A von 2 % auf 36 %. Bei Aufgabe B **verfehlt das Modell** das Kriterium mit 14 % — eine einzeilige Regel erreicht 32 % und erfüllt es. Das Verfahren war das Problem, nicht die Daten |
+| 6 Deployment | Tagesliste mit Begründung je Vorgang. Für Aufgabe B wird die Regel empfohlen, nicht das Modell |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
 
@@ -652,19 +734,28 @@ zehn obersten Zeilen **angesehen** hat.
 > **Sehen Sie sich immer die Extremfälle an, die ein Modell meldet.** Eine Kennzahl sagt
 > Ihnen, *wie gut* — nur der Blick auf die Fälle sagt Ihnen, *woran*.
 
-**Der wichtigste Satz dieses Notebooks**
+**Die zwei Sätze, die aus diesem Notebook bleiben**
 
-> Kein Verfahren kann Information erzeugen, die in den Daten nicht steckt.
+> Sehen Sie sich immer an, was ein Modell meldet. Der CARGO-Fehlschlag stand in keiner
+> Kennzahl — er stand in den zehn obersten Zeilen.
 
-Bei rund fünf Fahrten je Station und Tag sieht ein Störungstag genauso aus wie ein
-verregneter Januarsonntag. Die Lösung ist keine bessere Mathematik, sondern eine bessere
-Datenquelle — die Statusmeldungen der Terminals, die ohnehin anfallen.
+> Ein Verfahren, das schlechter ist als eine Zeile Fachwissen, ist nicht am Problem
+> gescheitert, sondern an der Aufgabenstellung.
+
+Bei Aufgabe B hat der Isolation Forest über alle 10.890 Stationstage gesucht, obwohl
+alle Störungen an den 1.041 Nulltagen liegen. Diese Eingrenzung ist Fachwissen. Wer sie
+dem Verfahren überlässt, bekommt sie schlechter zurück, als er sie hätte hineingeben
+können.
+
+Die eigentliche Lösung bleibt trotzdem eine bessere Datenquelle: Die Statusmeldungen der
+Terminals fallen ohnehin an. Würden sie gespeichert, wäre die Frage eine Abfrage und
+keine Schätzung.
 
 **Was eine zweite Runde anders machen würde**
 
 1. **Terminalmeldungen beschaffen** und Aufgabe B damit erneut angehen. Vermutlich ist
    sie dann gar keine Analyseaufgabe mehr, sondern eine Abfrage — auch das ist ein
-   legitimes Ergebnis.
+   legitimes Ergebnis. Bis dahin läuft die Regel aus 5.5.
 2. **Rückmeldungen einsammeln.** Sobald ein paar hundert Vorgänge beurteilt sind, wird
    aus der Anomalieerkennung eine Klassifikation mit echtem Label.
 3. **Nach Radtyp getrennt rechnen.** Was bei einem CARGO-Rad normal ist — lange Dauer,

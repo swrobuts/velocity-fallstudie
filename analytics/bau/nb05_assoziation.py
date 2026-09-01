@@ -335,6 +335,17 @@ Und sie scheitert knapp: Die stärkste Regel — werktags früh vom Hauptbahnhof
 Campus — erreicht einen Support von 0,99 %. Zur Hürde von 1,00 % fehlt ihr **ein
 Hundertstel Prozentpunkt**, also rund fünf Fahrten in drei Jahren.
 
+**Was verlangt diese Hürde eigentlich?** Der Support misst gegen *alle* 50.983
+Warenkörbe. Die größte Ausgangsmenge — eine Station in einem Zeitfenster — umfasst
+3,7 % davon. Ein Prozent Support heißt also: **Eine einzige Verbindung muss über ein
+Viertel des gesamten Abflusses dieser Station in diesem Fenster auf sich ziehen** — bei
+elf möglichen Zielen, wo die Gleichverteilung 10 % ergäbe.
+
+Das ist eine anspruchsvolle, aber keine unmögliche Forderung. Sie ist auch nicht willkürlich:
+Eine Regel, die weniger als ein Prozent aller Fahrten betrifft, bewegt im Betrieb nichts.
+**Die Hürde ist streng, weil die Maßnahme teuer ist** — ein Transporter fährt nicht für
+Ausnahmen.
+
 > **Genau hier entscheidet sich, ob ein Erfolgskriterium etwas wert ist.** Die Hürde auf
 > 0,9 % zu senken wäre die Arbeit von zehn Sekunden, und niemand würde es je bemerken.
 > Es wäre aber dasselbe, wie sie gar nicht erst aufgestellt zu haben: Ein Kriterium, das
@@ -437,9 +448,19 @@ saldo = pd.concat([ab, zu], axis=1).fillna(0)
 saldo.index.names = ["tagesart", "fenster", "station"]
 saldo["netto"] = saldo.zu - saldo.ab
 
+# JE WERKTAG, NICHT ueber drei Jahre summiert.
+#
+# Eine frühere Fassung druckte hier die Rohsummen - "+1205 Raeder laufen
+# auf" am Hubland. Das liest sich wie eine Anweisung an den Transporter
+# und ist in Wirklichkeit die Summe ueber alle Werktage des Datensatzes.
+# Wer eine Zahl als Betriebsanweisung ausgibt, muss sie auf den Zeitraum
+# beziehen, fuer den die Anweisung gilt.
+WERKTAGE = koerbe[koerbe.tagesart == "Werktag"].startzeit.dt.date.nunique()
+print(f"Der Datensatz enthält {WERKTAGE} verschiedene Werktage.\\n")
+
 werktag = saldo.loc["Werktag"].reset_index()
-tabelle = werktag.pivot(index="station", columns="fenster", values="netto").fillna(0)
-tabelle = tabelle.round(0).astype(int)
+tabelle_gesamt = werktag.pivot(index="station", columns="fenster", values="netto").fillna(0)
+tabelle = (tabelle_gesamt / WERKTAGE).round(2)
 
 # (2) Wieviele Raeder bleiben je Startstation frei im Gebiet zurueck?
 frei_werktag = (koerbe[(koerbe.tagesart == "Werktag") & (koerbe.ziel == "frei abgestellt")]
@@ -455,15 +476,19 @@ plt.yticks(range(len(tabelle.index)), tabelle.index)
 plt.title("Werktags, nur angedockte Fahrten: wo laufen Räder auf, wo fehlen sie?")
 plt.tight_layout(); plt.show()
 
-print("(1) Umverteilen zwischen Stationen — nur angedockte Fahrten:")
+print("(1) Umverteilen zwischen Stationen — Netto-Saldo JE WERKTAG:")
 print(tabelle.to_string())
+print(f"\\nGrößter Überschuss: {tabelle.values.max():.1f} Räder je Werktag")
+print(f"Größter Fehlbestand: {tabelle.values.min():.1f} Räder je Werktag")
+print(f"Zum Vergleich: die Stationen fassen {stationen.kapazitaet.min()} "
+      f"bis {stationen.kapazitaet.max()} Räder.")
 print()
 print("(2) Einsammeln — frei abgestellte Räder je Startstation und Zeitfenster:")
 print(frei_werktag.to_string())
 '''),
 
 CODE('''
-print("UMLAUFPLAN WERKTAG — abgeleitet aus den Salden oben\\n")
+print("UMLAUFPLAN WERKTAG — abgeleitet aus den Salden oben, je Werktag\\n")
 for fenster in [b for b in BEZEICHNUNGEN if b in tabelle.columns]:
     spalte = tabelle[fenster].sort_values()
     quellen = spalte[spalte < -spalte.abs().max() * 0.25]
@@ -472,17 +497,17 @@ for fenster in [b for b in BEZEICHNUNGEN if b in tabelle.columns]:
         continue
     print(f"{fenster}")
     for station, wert in senken.items():
-        print(f"    abholen bei   {station:<20s} (+{wert} Räder laufen auf)")
+        print(f"    abholen bei   {station:<24s} (+{wert:.1f} Räder je Werktag)")
     for station, wert in quellen.items():
-        print(f"    auffüllen bei {station:<20s} ({wert} Räder fehlen)")
+        print(f"    auffüllen bei {station:<24s} ({wert:.1f} Räder je Werktag)")
     print()
 
 gesamt_frei = int(frei_werktag.values.sum())
-print(f"Einsammelrunde: werktags bleiben rund {gesamt_frei // 260} Räder je Tag frei im")
-print(f"Gebiet zurück ({gesamt_frei} über den ganzen Zeitraum). Schwerpunkt:")
-spitzen = frei_werktag.sum(axis=1).sort_values(ascending=False).head(3)
+print(f"Einsammelrunde: werktags bleiben rund {gesamt_frei / WERKTAGE:.0f} Räder je Tag")
+print(f"frei im Gebiet zurück ({gesamt_frei} über {WERKTAGE} Werktage). Schwerpunkt:")
+spitzen = (frei_werktag.sum(axis=1) / WERKTAGE).sort_values(ascending=False).head(3)
 for station, wert in spitzen.items():
-    print(f"    rund um {station:<20s} {wert}")
+    print(f"    rund um {station:<24s} {wert:.1f} je Werktag")
 
 tabelle.to_csv("umlaufplan_werktag.csv")
 frei_werktag.to_csv("einsammelplan_werktag.csv")
@@ -491,10 +516,40 @@ print("geschrieben: umlaufplan_werktag.csv, einsammelplan_werktag.csv")
 '''),
 
 MD("""
-### 6.1 Was dieser Plan ist — und was nicht
+### 6.1 Der Plan trägt nicht — und das ist das Ergebnis
 
-Er sagt, **wo** und **wann** umzuverteilen ist. Er sagt nicht, **wie viele** Räder — das
-war Notebook 4, und beide gehören im Betrieb zusammen.
+Lesen Sie die Zahlen im Umlaufplan noch einmal. Der größte Überschuss beträgt **1,8 Räder
+je Werktag**, der größte Fehlbestand **1,1** — bei Stationen, die 20 bis 40 Räder fassen.
+
+> **Für 1,8 Räder fährt kein Transporter durch Würzburg.** Der Umverteilungsplan ist
+> rechnerisch korrekt und betrieblich bedeutungslos.
+
+Das ist kein Rechenfehler, sondern ein Befund über das Netz: **Die zehn Stationen
+Würzburgs sind im Tagesmittel nahezu ausgeglichen.** Was morgens vom Hauptbahnhof zum
+Hubland fließt, fließt abends zurück — und was übrig bleibt, liegt im Bereich einer
+einzigen Fahrt je Tag.
+
+**Das passt zum Befund aus Phase 5, und zwar nicht zufällig.** Dort nahm keine Regel die
+Ein-Prozent-Hürde; hier ist der Saldo zu klein für eine Maßnahme. Beides misst dasselbe:
+Die Ströme in diesem Netz sind real, aber schwach.
+
+> **Eine frühere Fassung dieses Notebooks druckte hier „+1205 Räder laufen auf".** Das
+> war die Summe über 741 Werktage, gedruckt wie eine Anweisung an den Fahrer. Die Zahl
+> war richtig, die Einheit fehlte — und mit ihr die Einsicht, dass der Plan nichts trägt.
+> **Eine Betriebsanweisung ohne Zeitbezug ist keine Betriebsanweisung.**
+
+### 6.2 Was trotzdem trägt: das Einsammeln
+
+Die zweite Zahl sieht anders aus. Werktäglich bleiben rund elf Räder frei im Gebiet
+zurück — das ist eine Runde, die sich lohnt, und sie braucht keine einzige
+Assoziationsregel. Sie folgt direkt aus der Auszählung.
+
+**Der Ertrag dieses Notebooks ist damit Plan B, nicht Plan A.**
+
+### 6.3 Was dieser Plan ist — und was nicht
+
+Er sagt, **wo** und **wann** einzusammeln ist. Er sagt nicht, **wie viele** Räder an eine
+Station gehören — das war Notebook 4, und beide gehören im Betrieb zusammen.
 
 Und er besteht aus **zwei Teilen**, die man nicht vermengen darf:
 
@@ -508,7 +563,7 @@ Fünftel aller Räder verlässt das Stationsnetz und kommt nirgends an. Die Zeil
 bei: frei abgestellt" wäre als Anweisung sinnlos: Der Fahrer weiß dann, dass irgendwo
 Räder stehen, aber nicht wo.
 
-### 6.2 Überwachung
+### 6.4 Überwachung
 
 | Wache | Schwelle | Reaktion |
 |---|---|---|
@@ -522,7 +577,7 @@ Ziele. Kommt eine elfte Station dazu, ändert sich diese Basisrate für **jede**
 auch für solche, die mit der neuen Station nichts zu tun haben. Assoziationsregeln sind
 nicht fortschreibbar; sie müssen neu gerechnet werden.
 
-### 6.3 Ein Hinweis, der nicht fehlen darf
+### 6.5 Ein Hinweis, der nicht fehlen darf
 
 Diese Analyse arbeitet mit **Bewegungsdaten von Personen**. Für den Umlaufplan brauchen
 wir sie nur aggregiert — und genau so sollte er auch entstehen. Die Gegenprobe in Phase 5,
@@ -544,7 +599,12 @@ MD("""
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
 | 5 Evaluation | Hoher Lift und hoher Support schließen einander fast aus: von 32 Regeln nehmen 9 die Lift-, aber **keine** die Support-Hürde. Die stärkste verfehlt sie um ein Hundertstel Prozentpunkt — und die Hürde wird trotzdem nicht gesenkt. Die Deutung des Pendelstroms hielt der Gegenprobe über die `kunde_id` nur teilweise stand (13,8 %) |
-| 6 Deployment | **Zwei** Pläne — Umverteilen zwischen Stationen und Einsammeln der frei abgestellten Räder —, mit Datenschutzvorbehalt |
+| 6 Deployment | Der Umverteilungsplan **trägt nicht**: Der größte Saldo beträgt 1,8 Räder je Werktag bei Stationen für 20 bis 40. Was trägt, ist die Einsammelrunde — rund elf frei abgestellte Räder je Werktag, und dafür braucht es keine einzige Regel |
+
+**Der Satz, der aus diesem Notebook bleibt**
+
+> Eine Zahl ohne Zeitbezug ist keine Betriebsanweisung. „+1205 Räder laufen auf“ klingt
+> nach Handlungsbedarf und heißt in Wirklichkeit: 1,6 Räder am Tag.
 
 **Was eine zweite Runde anders machen würde**
 

@@ -66,9 +66,10 @@ Diese hier enthalten ausdrücklich:
 - **Notebook 3:** Knapp ein Drittel der Kundschaft fällt aus der Segmentierung heraus —
   RFM sieht nur, wer kauft
 - **Notebook 4:** Ein roher Mittelwertvergleich behauptet das Gegenteil des Richtigen
-- **Notebook 5:** Die Regel mit dem höchsten Lift ist wertlos
+- **Notebook 5:** Keine Regel nimmt beide Hürden — und der Umverteilungsplan bewegt
+  1,8 Räder je Werktag bei Stationen für 20 bis 40
 - **Notebook 6:** Der erste Modellversuch findet die Preisklasse statt der Anomalien —
-  und eine der beiden Aufgaben ist mit diesen Daten grundsätzlich nicht lösbar
+  und bei beiden Aufgaben schlägt am Ende eine Zeile Fachwissen das Verfahren
 
 ## Notebooks neu bauen
 
