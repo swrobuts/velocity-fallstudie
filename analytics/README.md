@@ -22,7 +22,7 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 | `fahrrad.csv` | erfunden | 350 Räder, Typen CITY/EBIKE/CARGO wie im echten Schema, mit Ausmusterungen |
 | `kunde.csv` | erfunden | 3.200 Kundinnen und Kunden mit Anmeldedatum, Geburtsjahr, Stadtteil, Tarif |
 | `ausleihe.csv` | erfunden | 107.297 Fahrten über fünf Jahre, mit Entgelt nach echtem Preismodell. Rund ein Fünftel endet **frei im Geschäftsgebiet** statt an einer Station |
-| `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | 1.425 Meldungen mit zugehörigen Aufträgen; der Verschleiß wächst mit den Kilometern **seit der letzten erledigten Reparatur** und fällt danach zurück. Zwischen Meldung und Reparatur liegen im Mittel knapp drei Tage — in denen weitergefahren wird |
+| `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | 1.432 Meldungen mit zugehörigen Aufträgen; der Verschleiß wächst mit den Kilometern **seit der letzten erledigten Reparatur** und fällt erst mit deren Abschluss zurück — zwischen Meldung und Reparatur wird weitergefahren, und diese Kilometer gehen weiter auf das defekte Bauteil. Zwischen Meldung und Reparatur liegen im Mittel knapp drei Tage — in denen weitergefahren wird |
 | `stationsstoerung.csv` | erfunden | 26 Ausfälle an 107 Tagen |
 
 **Die erfundenen Daten sind für die Lehre bewusst verstärkt.** Die Muster, die die
@@ -139,7 +139,7 @@ RFM-Segmentierung interessant.
 
 **Instandhaltung (für die Klassifikation)**
 
-- Kilometer je Rad ↔ Anzahl Meldungen **r = +0,914** (für echte Flottendaten
+- Kilometer je Rad ↔ Anzahl Meldungen **r = +0,916** (für echte Flottendaten
   auffällig stark — der Generator leitet Schäden im Wesentlichen aus der Fahrleistung ab)
 - Entscheidend ist aber nicht die Lebenszeit-Nutzung, sondern die **Nutzung seit der
   letzten erledigten Reparatur**: In einem 90-Tage-Fenster im Mai melden sich rund 53 %

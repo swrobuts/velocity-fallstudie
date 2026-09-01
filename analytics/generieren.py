@@ -1315,8 +1315,19 @@ for rad in raeder:
     km_seit_wartung = random.uniform(0, schwelle * 0.6)   # Vorgeschichte
     pool = KATEGORIEN_EBIKE if rad["typ"] in ("EBIKE", "CARGO") else KATEGORIEN
     ende_rad = rad["ausgemustert_am"] or BIS
+    offene_reparaturen = []   # (erledigt_datum, restfaktor)
 
     for tag, km, hm in rad["verlauf"]:
+        # Der Verschleiss faellt erst, wenn die Reparatur FERTIG ist - nicht
+        # schon bei der Meldung. Zwischen beidem wird weitergefahren, und
+        # diese Kilometer gehen weiter auf das defekte Bauteil. Genau darauf
+        # beruht die Lehrgeschichte in Notebook 2: Ein Merkmal, das bei der
+        # Meldung zurueckspringt, schreibt sie dem frisch reparierten Rad gut.
+        # Setzte der Generator hier schon zurueck, waere seine eigene Wahrheit
+        # eine andere als die, die das Notebook erklaert.
+        while offene_reparaturen and offene_reparaturen[0][0] <= tag:
+            _, faktor = offene_reparaturen.pop(0)
+            km_seit_wartung *= faktor
         # Hoehenmeter verschleissen ueberproportional: bergauf den
         # Antrieb, bergab die Bremsen. Zehn Hoehenmeter zaehlen wie ein
         # zusaetzlicher Kilometer.
@@ -1355,8 +1366,10 @@ for rad in raeder:
                              arbeitszeit if ist_erledigt else ""])
 
         # Nach der Reparatur beginnt der Verschleiss von vorn - nicht ganz bei
-        # null, denn repariert wird das Defekte, nicht das ganze Rad.
-        km_seit_wartung *= random.uniform(0.05, 0.25)
+        # null, denn repariert wird das Defekte, nicht das ganze Rad. Wirksam
+        # wird das am Tag des Abschlusses, oben in der Schleife.
+        offene_reparaturen.append((erledigt.date(), random.uniform(0.05, 0.25)))
+        offene_reparaturen.sort(key=lambda e: e[0])
 
 schreibe("schadensmeldung.csv",
          ["schadensmeldung_id", "fahrrad_id", "gemeldet_am", "kategorie", "schwere", "status"],

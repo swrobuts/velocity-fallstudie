@@ -66,6 +66,11 @@ HARMLOS = {
 }
 
 MIT_EINHEIT = re.compile(r"(\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})?)\s?(%|€|Cent)")
+# Blanke ganze Zahlen. Sie waren die groesste Luecke dieses Werkzeugs: Bis
+# hierher sah es nur Zahlen mit Einheit oder Dezimalkomma - "102 auffaellige
+# Raeder", "63 fahruntauglich", "seit 592 km", "17 von 60", "228 Zeilen"
+# liefen alle daran vorbei. Ein Gutachten fand genau diese fuenf.
+GANZZAHL = re.compile(r"(?<![\d,.%-])(\d{2,6})(?![\d,.%])")
 OHNE_EINHEIT = re.compile(r"\b\d{1,3}(?:[.\s]\d{3})+(?:,\d{1,2})?\b|\b\d+,\d{1,2}\b")
 
 
@@ -189,6 +194,10 @@ def pruefe(datei: pathlib.Path) -> list[tuple[str, str]]:
             befunde.append((f"{zahl} {einheit}", zeile_um(text, zahl)))
         for zahl in OHNE_EINHEIT.findall(text):
             if belegt(zahl, raum, gesetzt, erlaubt):
+                continue
+            befunde.append((zahl, zeile_um(text, zahl)))
+        for zahl in GANZZAHL.findall(text):
+            if zahl in HARMLOS or belegt(zahl, raum, gesetzt, erlaubt):
                 continue
             befunde.append((zahl, zeile_um(text, zahl)))
     # Dubletten zusammenfassen

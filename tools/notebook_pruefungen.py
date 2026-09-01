@@ -327,7 +327,13 @@ URTEIL_WORT = re.compile(
     r"(?:erf[üu]llt|nicht erf[üu]llt|gerissen|verfehlt|bestanden|belegt)"
     r"|von (?:kein|beid|allen|einem)\w*\s+(?:der\s+)?(?:\w+\s+){0,2}"
     r"Verfahren\s+(?:\w+\s+){0,2}erf[üu]llt")
-KRITERIUM = re.compile(r"\bK\d[ab]?\b")
+# Ein Urteil kann sich auf ein benanntes Kriterium (K1b) ODER auf die
+# Schwelle selbst berufen ("die 70-Prozent-Huerde ist nicht belegt"). Die
+# zweite Form stand in Notebook 2 und widersprach der Tabelle darueber -
+# erkannt wurde sie nicht, weil das Muster nur nach "K1b" suchte.
+KRITERIUM = re.compile(r"\bK\d[ab]?\b|\d+\s?(?:-|\s)?(?:%|Prozent)"
+                       r"(?:-|\s)?(?:H[üu]rde|Schwelle|Grenze|Marke)"
+                       r"|\b(?:H[üu]rde|Schwelle) von \d+")
 
 
 VERGLEICH = re.compile(
