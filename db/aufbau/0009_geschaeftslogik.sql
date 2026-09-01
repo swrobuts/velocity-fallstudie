@@ -551,6 +551,39 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------
+-- Den Preisschaetzer ein- oder ausschalten
+--
+-- Bewusst eine EIGENE Funktion und keine Erweiterung von
+-- api_profil_aktualisieren: Der Schalter wird einzeln umgelegt und soll
+-- nicht verlangen, dass gleichzeitig Vorname, Adresse und Telefonnummer
+-- mitgeschickt werden. Ausserdem bliebe die Signatur der Profilfunktion
+-- sonst nicht stabil, und ihr Ausfuehrungsrecht haengt daran.
+create or replace function velocity.api_preisschaetzer_umschalten(p_an boolean)
+returns table (meldung text)
+language plpgsql
+security definer
+set search_path = velocity, pg_temp
+as $$
+declare
+  v_kunde bigint := velocity.fn_kunde_aus_auth();
+begin
+  if velocity.hat_rolle('demo') then
+    raise exception 'Demozugang: nur Lesen' using errcode = '42501';
+  end if;
+  if v_kunde is null then
+    return query select 'Nicht angemeldet'::text; return;
+  end if;
+  update velocity.kunde
+     set zeigt_preisschaetzer = coalesce(p_an, false),
+         geaendert_am = now()
+   where kunde_id = v_kunde;
+  return query select case when coalesce(p_an, false)
+                           then 'Preisschaetzer eingeschaltet'
+                           else 'Preisschaetzer ausgeschaltet' end::text;
+end;
+$$;
+
 create or replace function velocity.api_ausleihe_starten(p_fahrrad_id bigint)
 returns table (ausleihe_id bigint, meldung text)
 language plpgsql

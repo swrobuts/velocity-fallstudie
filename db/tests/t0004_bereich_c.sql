@@ -102,3 +102,95 @@ begin
     '23505', null, 'Je Mitgliedschaft und Monat gibt es genau eine Periode');
 end;
 $$;
+
+-- =====================================================================
+-- Preisschaetzung: die Freigabe steckt in der Tabelle
+--
+-- Geprueft wird nicht, ob Zeilen da sind - das haengt am Ladelauf -,
+-- sondern dass die Tabelle KEINE Zeile aufnehmen kann, die in der App
+-- nichts zu suchen haette. Eine fachliche Regel, die nur im Bericht
+-- steht, ist keine Regel.
+-- =====================================================================
+create or replace function velocity_test.test_c_preisschaetzung_grenzen()
+returns setof text language plpgsql as $$
+begin
+  return next has_table('velocity'::name, 'preisschaetzung'::name,
+                        'Tabelle preisschaetzung existiert');
+
+  return next throws_ok($q$
+    insert into velocity.preisschaetzung
+      (startstation, zielstation, typ_code, zeitfenster, minuten_von,
+       minuten_bis, preis_von, preis_bis, fahrten_grundlage)
+    values ('Hauptbahnhof', 'Hauptbahnhof', 'CITY', 'frueh', 5, 10, 0.60, 1.10, 100) $q$,
+    '23514', null, 'Eine Rundfahrt wird abgewiesen - fuer sie gibt es keine Schaetzung');
+
+  return next throws_ok($q$
+    insert into velocity.preisschaetzung
+      (startstation, zielstation, typ_code, zeitfenster, minuten_von,
+       minuten_bis, preis_von, preis_bis, fahrten_grundlage)
+    values ('Hauptbahnhof', 'Kaeppele', 'CITY', 'nachmittag', 17, 47, 1.83, 4.79, 200) $q$,
+    '23514', null, 'Eine Spanne breiter als 1,00 Euro wird abgewiesen');
+
+  return next throws_ok($q$
+    insert into velocity.preisschaetzung
+      (startstation, zielstation, typ_code, zeitfenster, minuten_von,
+       minuten_bis, preis_von, preis_bis, fahrten_grundlage)
+    values ('Hauptbahnhof', 'Hubland', 'CITY', 'frueh', 5, 10, 0.60, 1.10, 12) $q$,
+    '23514', null, 'Weniger als 30 Fahrten als Grundlage werden abgewiesen');
+
+  return next throws_ok($q$
+    insert into velocity.preisschaetzung
+      (startstation, zielstation, typ_code, zeitfenster, minuten_von,
+       minuten_bis, preis_von, preis_bis, fahrten_grundlage)
+    values ('Hauptbahnhof', 'Hubland', 'CITY', 'mittags', 5, 10, 0.60, 1.10, 100) $q$,
+    '23514', null, 'Ein unbekanntes Zeitfenster wird abgewiesen');
+
+  -- Erfundene Stationsnamen: 'Hauptbahnhof -> Hubland' steht nach dem
+  -- Ladelauf bereits in der Tabelle und liefe in den Eindeutigkeitsschutz.
+  return next lives_ok($q$
+    insert into velocity.preisschaetzung
+      (startstation, zielstation, typ_code, zeitfenster, minuten_von,
+       minuten_bis, preis_von, preis_bis, fahrten_grundlage)
+    values ('Pruefstelle A', 'Pruefstelle B', 'CITY', 'frueh', 5, 10, 0.60, 1.10, 316) $q$,
+    'Eine freigegebene Kombination wird angenommen');
+end;
+$$;
+
+create or replace function velocity_test.test_c_preisschaetzer_schalter()
+returns setof text language plpgsql as $$
+declare v_k bigint; v_uid uuid;
+begin
+  return next has_column('velocity'::name, 'kunde'::name,
+                         'zeigt_preisschaetzer'::name,
+                         'Die Einstellung haengt am Konto, nicht am Geraet');
+
+  -- Ein Kunde OHNE auth_uid: velocity.kunde hat einen Fremdschluessel auf
+  -- auth.users, und dieses Schema gehoert supabase_auth_admin - die
+  -- Fallstudie legt dort nichts an, auch nicht in einem Test.
+  insert into velocity.kunde (email, vorname, nachname)
+       values ('schalter@example.org', 'Sara', 'Test')
+    returning kunde_id into v_k;
+  return next is((select zeigt_preisschaetzer from velocity.kunde where kunde_id = v_k),
+                 false,
+                 'Voreinstellung aus - eine Schaetzung, die niemand bestellt hat, '
+                 'gehoert nicht auf den Schirm');
+
+  -- Fuer den Schalter selbst brauchen wir eine echte Anmeldung. Wir
+  -- nehmen einen vorhandenen Kunden mit auth_uid; gibt es keinen, bleibt
+  -- der Teil ungeprueft und sagt das auch.
+  select kunde_id, auth_uid into v_k, v_uid
+    from velocity.kunde where auth_uid is not null limit 1;
+  if v_uid is null then
+    return next skip('Kein Kunde mit Anmeldung vorhanden - Schalter ungeprueft', 2);
+    return;
+  end if;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', v_uid)::text, true);
+  perform velocity.api_preisschaetzer_umschalten(true);
+  return next is((select zeigt_preisschaetzer from velocity.kunde where kunde_id = v_k),
+                 true, 'Einschalten wirkt');
+  perform velocity.api_preisschaetzer_umschalten(false);
+  return next is((select zeigt_preisschaetzer from velocity.kunde where kunde_id = v_k),
+                 false, 'Ausschalten wirkt');
+end;
+$$;

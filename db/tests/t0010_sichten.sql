@@ -11,6 +11,8 @@ begin
   return next has_view('velocity'::name, 'v_verfuegbares_fahrrad'::name,'Sicht v_verfuegbares_fahrrad existiert');
   return next has_view('velocity'::name, 'v_tarifkarte'::name,          'Sicht v_tarifkarte existiert');
   return next has_view('velocity'::name, 'v_tarif'::name,               'Sicht v_tarif existiert');
+  return next has_view('velocity'::name, 'v_preisschaetzung'::name,
+                       'Sicht v_preisschaetzung existiert');
   return next has_view('velocity'::name, 'v_faq'::name,                 'Sicht v_faq existiert');
   return next has_view('velocity'::name, 'v_nutzungsschritt'::name,     'Sicht v_nutzungsschritt existiert');
   return next has_view('velocity'::name, 'v_kennzahl'::name,            'Sicht v_kennzahl existiert');
@@ -31,7 +33,8 @@ begin
     from information_schema.columns
    where table_schema = 'velocity'
      and table_name in ('v_station','v_verfuegbares_fahrrad','v_tarifkarte',
-                        'v_tarif','v_faq','v_nutzungsschritt','v_kennzahl')
+                        'v_tarif','v_faq','v_nutzungsschritt','v_kennzahl',
+                        'v_preisschaetzung')
      and column_name in ('email','vorname','nachname','geburtsdatum','telefon',
                          'auth_uid','kunde_id','kundennummer','referenz_token');
 

@@ -63,12 +63,75 @@ select velocity.fn_audit_anhaengen('tarif_kondition');
 -- Ein Feld, das eine Zusage brechen kann, ist keine Vorsorge, sondern
 -- eine offene Tuer. Der Tarifvorteil steckt in freiminuten_pro_monat und
 -- rabatt_prozent; beide bleiben.
--- v_tarif liest die Spalte und haelt sie damit fest; ohne dieses drop
+-- v_tarif liest die Spalte und haelt sie damit fest; ohne das drop
 -- scheitert das alter darunter. Kein cascade: das wuerde alles Abhaengige
--- mitreissen, ohne es zu benennen. 0010_sichten.sql legt die Sicht in
--- ihrer neuen Fassung wieder an - die Aufbaudateien laufen der Reihe nach.
-drop view if exists velocity.v_tarif;
-alter table velocity.tarif_kondition drop column if exists monatspreis;
+-- mitreissen, ohne es zu benennen. 0010_sichten.sql legt die Sicht wieder
+-- an - die Aufbaudateien laufen der Reihe nach.
+--
+-- BEIDES NUR, SOLANGE DIE SPALTE NOCH DA IST. Eine fruehere Fassung hat
+-- die Sicht bedingungslos entfernt. Wer dann 0004 einzeln laufen liess -
+-- etwa um eine andere Aenderung nachzuziehen -, stand ohne v_tarif da,
+-- und die Kundenwebsite zeigte keine Tarife mehr. Genau so ist es am
+-- 01.09.2026 passiert.
+do $$
+begin
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'velocity'
+                and table_name   = 'tarif_kondition'
+                and column_name  = 'monatspreis') then
+    drop view if exists velocity.v_tarif;
+    alter table velocity.tarif_kondition drop column monatspreis;
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------
+-- Preisschaetzung je Verbindung
+--
+-- Ergebnis von analytics/notebooks/01_Regression_Fahrtdauer.ipynb, nicht
+-- des laufenden Betriebs: eine Quantilregression schaetzt je Verbindung,
+-- Radtyp und Tageszeit eine Spanne, und nur die Kombinationen, deren
+-- Spanne schmaler als ein Euro ist, landen hier.
+--
+-- DIE FREIGABE STECKT IN DER TABELLE. Was nicht drinsteht, wird nicht
+-- angezeigt - eine fachliche Einschraenkung, die nur im Bericht steht,
+-- ist keine. Rundfahrten und zu breit streuende Verbindungen fehlen
+-- deshalb absichtlich.
+--
+-- Die Spannen stehen in EURO. Aendert sich das Tarifblatt, ist die ganze
+-- Tabelle falsch, ohne dass sich an Modell oder Daten etwas geaendert
+-- haette. Neu laden mit db/betrieb/preisschaetzung_laden.py.
+create table if not exists velocity.preisschaetzung (
+  schaetzung_id     bigint generated always as identity primary key,
+  startstation      text        not null,
+  zielstation       text        not null,
+  typ_code          text        not null,
+  zeitfenster       text        not null,
+  minuten_von       integer     not null,
+  minuten_bis       integer     not null,
+  preis_von         numeric(6,2) not null,
+  preis_bis         numeric(6,2) not null,
+  fahrten_grundlage integer     not null,
+  stand             date        not null default current_date,
+  erstellt_am       timestamptz not null default now(),
+  geaendert_am      timestamptz not null default now(),
+  constraint preisschaetzung_uk unique (startstation, zielstation, typ_code, zeitfenster),
+  constraint preisschaetzung_reihenfolge_chk check (minuten_von <= minuten_bis
+                                               and preis_von   <= preis_bis),
+  constraint preisschaetzung_keine_rundfahrt_chk check (startstation <> zielstation),
+  -- Genau die Grenze aus Phase 1 des Notebooks, hier erzwungen: eine
+  -- Spanne breiter als ein Euro ist ehrlich, aber unbrauchbar.
+  constraint preisschaetzung_breite_chk check (preis_bis - preis_von <= 1.00),
+  constraint preisschaetzung_grundlage_chk check (fahrten_grundlage >= 30),
+  constraint preisschaetzung_fenster_chk
+    check (zeitfenster in ('frueh', 'vormittag', 'nachmittag', 'abend'))
+);
+-- Der Audit-Ausloeser setzt beide Zeitstempel und verlangt sie deshalb.
+-- Fuer eine Tabelle, die schon ohne sie angelegt wurde:
+alter table velocity.preisschaetzung
+  add column if not exists erstellt_am  timestamptz not null default now(),
+  add column if not exists geaendert_am timestamptz not null default now();
+
+select velocity.fn_audit_anhaengen('preisschaetzung');
 
 create table if not exists velocity.mitgliedschaft (
   mitgliedschaft_id bigint generated always as identity primary key,

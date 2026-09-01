@@ -69,6 +69,11 @@ create table if not exists velocity.kunde (
   rechnungsadresse_id bigint,
   status              velocity.kunde_status not null default 'aktiv',
   registriert_am      timestamptz not null default now(),
+  -- Der Preisschaetzer ist eine Analytics-Funktion, die man ein- und
+  -- ausschalten koennen soll: In der Lehre ist der Vergleich mit und ohne
+  -- Modell der eigentliche Erkenntnisgewinn. Voreinstellung aus - eine
+  -- Schaetzung, die niemand bestellt hat, gehoert nicht auf den Schirm.
+  zeigt_preisschaetzer boolean not null default false,
   erstellt_am         timestamptz not null default now(),
   geaendert_am        timestamptz not null default now(),
   constraint kunde_kundennummer_uk unique (kundennummer),
@@ -86,6 +91,11 @@ create table if not exists velocity.kunde (
     foreign key (auth_uid) references auth.users (id)
     on update cascade on delete set null
 );
+
+-- Laufende Datenbanken bekommen die Spalte nachtraeglich. Ohne diese
+-- Zeile haette nur eine Neuinstallation den Preisschaetzer.
+alter table velocity.kunde
+  add column if not exists zeigt_preisschaetzer boolean not null default false;
 
 select velocity.fn_audit_anhaengen('kunde');
 

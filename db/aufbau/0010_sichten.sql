@@ -110,6 +110,13 @@ select t.tarif_id, t.tarif_code, t.bezeichnung, t.art::text as art, t.voraussetz
   left join velocity.tarif_kondition k on k.tarif_id = t.tarif_id
                                       and k.gueltigkeit @> current_date;
 
+drop view if exists velocity.v_preisschaetzung;
+create view velocity.v_preisschaetzung as
+select startstation, zielstation, typ_code, zeitfenster,
+       minuten_von, minuten_bis, preis_von, preis_bis,
+       fahrten_grundlage, stand
+  from velocity.preisschaetzung;
+
 drop view if exists velocity.v_faq;
 create view velocity.v_faq as
 select faq_id, frage, antwort, sortierung
@@ -185,6 +192,7 @@ drop view if exists velocity.v_mein_profil;
 create view velocity.v_mein_profil as
 select k.kunde_id, k.kundennummer, k.email, k.vorname, k.nachname,
        k.telefon, k.geburtsdatum, k.status::text as status, k.registriert_am,
+       k.zeigt_preisschaetzer,
        a.strasse, a.hausnummer, a.plz, a.ort
   from velocity.kunde k
   left join velocity.adresse a on a.adresse_id = k.rechnungsadresse_id

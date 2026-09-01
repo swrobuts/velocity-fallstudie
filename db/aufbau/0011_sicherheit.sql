@@ -185,7 +185,12 @@ grant select on velocity.v_station,
                 velocity.v_nutzungsschritt,
                 velocity.v_kennzahl,
                 velocity.v_hoehenmarke,
-                velocity.v_geschaeftsgebiet
+                velocity.v_geschaeftsgebiet,
+                -- Aggregierte Spannen je Verbindung, kein Personenbezug.
+                -- Oeffentlich, weil die Radkacheln es auch sind - wer den
+                -- Schaetzer einschaltet, ist ohnehin angemeldet, aber die
+                -- Sicht selbst gibt nichts preis.
+                velocity.v_preisschaetzung
   to anon, authenticated;
 
 grant select on velocity.v_meine_ausleihe,
@@ -199,5 +204,6 @@ grant select on velocity.v_meine_ausleihe,
 -- ---------------------------------------------------------------------
 grant execute on function velocity.api_kunde_sicherstellen()                           to authenticated;
 grant execute on function velocity.api_profil_aktualisieren(text,text,text,date,text,text,text,text) to authenticated;
+grant execute on function velocity.api_preisschaetzer_umschalten(boolean)              to authenticated;
 grant execute on function velocity.api_ausleihe_starten(bigint)                        to authenticated;
 grant execute on function velocity.api_ausleihe_beenden(bigint,bigint,numeric,numeric) to authenticated;
