@@ -731,6 +731,20 @@ else
   sed -n '1,20p' /tmp/abnahme-nbtext.log | sed 's/^/     /'
 fi
 
+if python3 tools/daten_abnahme.py >/tmp/abnahme-daten.log 2>&1; then
+  ergebnis 0 "Die Musterdaten halten alle Invarianten aus Physik, Bestand und Struktur"
+else
+  ergebnis 1 "Eine Dateninvariante ist verletzt"
+  grep FEHL /tmp/abnahme-daten.log | sed -n '1,12p' | sed 's/^/     /'
+fi
+
+if python3 tools/notebook_pruefungen.py >/tmp/abnahme-nbpruef.log 2>&1; then
+  ergebnis 0 "Kein Notebook rechnet an einer gespeicherten Groesse vorbei"
+else
+  ergebnis 1 "Ein Notebook baut eine Logik nach, ohne sie gegen die Daten zu halten"
+  grep -A1 FEHLER /tmp/abnahme-nbpruef.log | sed -n '1,12p' | sed 's/^/     /'
+fi
+
 if python3 tools/grants_pruefen.py >/tmp/abnahme-grants.log 2>&1; then
   ergebnis 0 "Jedes Recht aus 0011_sicherheit.sql ist in der Datenbank gesetzt"
 else
