@@ -1767,14 +1767,15 @@ def fall3(prs):
               "Herausgekommen ist eine Frage an die Preisgestaltung.")
     kachelreihe(s, [
         ("Befund 1", [
-            "Die Vielfahrer bringen den",
-            "GERINGSTEN Umsatz.",
+            "Die Vielfahrer fahren 2,4-mal",
+            "so oft wie die Umsatzträger",
+            "und bringen ein Viertel des",
+            "Jahresumsatzes.",
             "",
-            "Ihre Tarife enthalten",
-            "Freiminuten — und weil es",
-            "keine Grundgebühr gibt, ist",
-            "das Nutzungsentgelt der",
-            "gesamte Umsatz.",
+            "Je Fahrt: 0,59 € gegen 5,49 €.",
+            "",
+            "Nicht der geringste Umsatz —",
+            "der geringste JE FAHRT.",
         ]),
         ("Befund 2", [
             "Knapp ein Drittel der",
@@ -1826,14 +1827,16 @@ def fall3(prs):
                        "Ändert sich das Netz, muss",
                        "neu gruppiert werden.",
                    ], False),
-                   ("B — Marketing", "Kampagnenplan je Segment", [
-                       "Vier Segmente, vier Ansprachen.",
+                   ("B — Marketing", "Kampagnenliste je Kunde", [
+                       "NICHT die Cluster-Nummer, sondern",
+                       "die Schwellen dahinter — weil",
+                       "binnen eines Quartals jeder",
+                       "vierte Kunde das Cluster",
+                       "wechselt.",
                        "",
                        "Vorbehalt: Datenschutz. Eine",
-                       "Segmentierung ist eine",
-                       "Profilbildung — sie braucht",
-                       "eine Rechtsgrundlage, keine",
-                       "gute Absicht.",
+                       "Segmentierung ist Profilbildung",
+                       "und braucht eine Rechtsgrundlage.",
                    ], False),
                    y=unter_intro(s), hoehe=210)
     phasenleiste(s, 6)
@@ -1886,7 +1889,9 @@ def fall3(prs):
         ["4 Modeling", "k-Means, Ellenbogen + Silhouette", "dasselbe Verfahren"],
         ["5 Evaluation", "vier Typen, 100 % Übereinstimmung", "vier Segmente, zwei "
                                                               "Befunde"],
-        ["6 Deployment", "Dispositionsplan", "Kampagnenplan, mit Vorbehalt"],
+        ["6 Deployment", "Dispositionstypen je Station",
+                         "Kampagnenliste je Kunde — über Schwellen, nicht über "
+                         "Cluster-Nummern"],
     ], y=unter_intro(s), spalten_b=[160, 340, 403.5], zeilen_h=40)
     notizen(s, "Die 100 Prozent in Zeile 5 sind eine Besonderheit dieses Lehrdatensatzes: "
                "Die Stationstypen sind beim Erzeugen bewusst eingebaut worden, deshalb "

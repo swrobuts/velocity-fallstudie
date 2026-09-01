@@ -75,9 +75,11 @@ vor, mit der Voraussetzung „Kostenpflichtiges Abo". Das widersprach dem Kunden
   Spalte `voraussetzung` macht das sichtbar.
 
 Notebook 3 greift das Thema auf — aber als *Befund*, nicht als erfundene Zahl: Es rechnet
-aus, was die Freiminuten tatsächlich kosten (44.212 € Listenwert im letzten Jahr, 52 % des
-sonst fälligen Betrags) und stellt einen ausgleichenden Beitrag ausdrücklich als
-**Hypothese** daneben, nicht als Datenlage.
+aus, welchen **Listenwert** die Freiminuten haben (38.813 € im letzten Jahr, 54 % des
+Listenwerts der gefahrenen Minuten). Ausdrücklich benannt ist dort auch, dass dieser
+Listenwert eine **Obergrenze** ist und kein entgangener Umsatz: Ohne Freiminuten griffen
+Premiumrabatt und Tageshöchstpreis, und die Kundschaft führe vermutlich weniger. Ein
+ausgleichender Monatsbeitrag steht daneben als **Hypothese**, nicht als Datenlage.
 
 ## Was NICHT in den Daten steht, obwohl es sie erzeugt hat
 

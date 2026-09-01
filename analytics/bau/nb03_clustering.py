@@ -38,6 +38,22 @@ Es gibt keine Wahrheit zum Vergleichen, keine Trefferquote, keine Confusion-Matr
 > ein **fachliches Urteil**, kein rein rechnerisches.
 """),
 
+MD("""
+> ### ⚠ Woher die Daten kommen — bitte zuerst lesen
+>
+> **VeloCity ist ein erfundener Fahrradverleih, und alle Daten dieses Notebooks sind
+> erzeugt.** Für dieses Notebook ist das besonders wichtig: Die zehn Stationen wurden mit
+> **genau vier absichtlich verstärkten Typen** angelegt — Pendler, Uni, Freizeit, Misch.
+>
+> Wenn das Clustering diese vier Typen wiederfindet, ist das ein **erfolgreicher Test des
+> Verfahrens gegen den Generator**, keine Entdeckung über Würzburg. In echten Daten sind
+> Gruppen unschärfer, überlappen sich und haben selten so klare Tagesgänge.
+>
+> Was sich überträgt, ist das Vorgehen: wie man Erfolgskriterien ohne Zielgröße
+> formuliert, wie man k wählt, wie man Stabilität prüft und woran man merkt, dass eine
+> Kennzahl schweigt. Die Zahlen übertragen sich nicht.
+"""),
+
 # =====================================================================
 PHASE(1, "Zwei Geschäftsfragen, für die es keine Zielgröße gibt — und trotzdem "
          "Erfolgskriterien geben muss."),
@@ -241,6 +257,14 @@ rfm["recency"] = (stichtag - rfm.letzte_fahrt).dt.days.clip(lower=0)
 rfm = rfm.join(kunden.set_index("kunde_id")[["tarif_code", "geburtsjahr", "registriert_am"]])
 
 print(f"Stichtag: {stichtag.date()}, Fenster: letzte 365 Tage")
+
+# UNTERSCHIEDLICHE BEOBACHTUNGSDAUER
+# "Fahrten je Jahr" heisst nur dann dasselbe, wenn alle ein Jahr lang
+# beobachtet wurden. Wer sich vor drei Monaten angemeldet hat, kann gar
+# kein volles Jahr voll bekommen - und landet zwangslaeufig weiter unten.
+neu_dabei = kunden.set_index("kunde_id").registriert_am > stichtag - pd.Timedelta(days=365)
+print(f"Davon erst im Fenster angemeldet: {int(neu_dabei.reindex(rfm.index).fillna(False).sum())} "
+      f"- fuer sie ist 'je Jahr' eine Untertreibung.")
 print(f"Kundschaft mit mindestens einer Fahrt darin: {len(rfm)} von {len(kunden)}")
 print(f"ohne jede Fahrt im Fenster: {len(kunden) - len(rfm)} — die betrachten wir gleich gesondert\\n")
 print(rfm[["recency", "frequenz", "umsatz"]].describe().round(1).to_string())
@@ -356,6 +380,10 @@ profil = rfm.groupby("cluster").agg(
     fahrten_jahr=("frequenz", "mean"),
     umsatz_jahr=("umsatz", "mean"),
 ).round(1)
+# Umsatz JE FAHRT - die Groesse, um die es gleich geht. Ohne sie liest man
+# die Tabelle falsch: Das fahrtstaerkste Segment hat nicht den geringsten
+# Jahresumsatz, sondern den geringsten Umsatz je Fahrt.
+profil["umsatz_je_fahrt"] = (profil.umsatz_jahr / profil.fahrten_jahr).round(2)
 profil["anteil"] = (profil.kunden / profil.kunden.sum() * 100).round(1)
 print(profil.to_string())
 '''),
@@ -443,6 +471,68 @@ k_stab = stabilitaet(R_skaliert, K_KUNDEN, "Kundschaft")
 '''),
 
 MD("""
+Der Startwert ist aber nicht die Frage, die im Betrieb zählt. Dort wird **nicht mit einem
+anderen Zufallsstart** neu gerechnet, sondern **ein Quartal später mit neuen Daten**. Ob
+ein Kunde dann noch im selben Segment liegt, entscheidet darüber, ob man ihm überhaupt
+eine Kampagne schicken kann.
+
+Das lässt sich messen: dieselbe Rechnung, verschoben um 90 Tage.
+"""),
+
+CODE('''
+from scipy.optimize import linear_sum_assignment
+
+def segmente_zum_stichtag(tag):
+    """Dieselbe RFM-Rechnung, nur zu einem anderen Zeitpunkt."""
+    f = echte[(echte.startzeit > tag - pd.Timedelta(days=365)) & (echte.startzeit <= tag)]
+    r = f.groupby("kunde_id").agg(
+        recency=("startzeit", lambda s: (tag - s.max()).days),
+        frequenz=("ausleihe_id", "size"), umsatz=("entgelt_eur", "sum"))
+    R = r.copy()
+    R["frequenz"] = np.log1p(R.frequenz)
+    R["umsatz"] = np.log1p(R.umsatz)
+    labels = KMeans(n_clusters=K_KUNDEN, n_init=25, random_state=42).fit_predict(
+        StandardScaler().fit_transform(R))
+    return pd.Series(labels, index=r.index)
+
+heute = segmente_zum_stichtag(stichtag)
+vorquartal = segmente_zum_stichtag(stichtag - pd.Timedelta(days=90))
+gemeinsam = heute.index.intersection(vorquartal.index)
+
+# Cluster-Nummern sind willkuerlich - erst die beste Zuordnung macht sie
+# vergleichbar. Ohne diesen Schritt zaehlt man Umbenennungen als Wechsel.
+kreuz = pd.crosstab(vorquartal[gemeinsam], heute[gemeinsam]).values
+zeile, spalte = linear_sum_assignment(-kreuz)
+wechselquote = 1 - kreuz[zeile, spalte].sum() / len(gemeinsam)
+
+print(f"In beiden Quartalen aktiv: {len(gemeinsam)} Kundinnen und Kunden")
+print(f"ARI zwischen den beiden Zeitpunkten: "
+      f"{adjusted_rand_score(vorquartal[gemeinsam], heute[gemeinsam]):.3f}")
+print(f"Segmentwechsel nach bester Zuordnung: {wechselquote:.1%}")
+print(f"\\nDie Überwachung in Phase 6 nennt 25 % je Quartal als Alarmschwelle.")
+print(f"-> Sie ist {'GERISSEN' if wechselquote > 0.25 else 'gehalten'}.")
+'''),
+
+MD("""
+> **Jeder vierte Kunde wechselt binnen eines Quartals das Segment** — und das bei
+> unveränderter Methode und unveränderten Schwellen. Der ARI von 0,467 sagt dasselbe: Die
+> Einteilung ist zwischen zwei Zeitpunkten nur zur Hälfte dieselbe.
+>
+> Das ist kein Fehler des Verfahrens. RFM misst Verhalten in einem gleitenden Fenster,
+> und Verhalten ändert sich. Aber es hat eine **harte Folge für die Auslieferung**:
+
+**Cluster-Nummern kann man nicht ausliefern.** Wer im Januar „Cluster 3" ist, ist es im
+April vielleicht nicht mehr — und niemand kann nachvollziehen, warum. Die Nummer ist eine
+Rechenposition, kein Merkmal des Kunden.
+
+**Deshalb wird in Phase 6 nicht das Clustering ausgeliefert, sondern eine Regel.** Das
+Clustering hat seine Arbeit getan: Es hat gezeigt, *dass* es vier Gruppen gibt und *wo*
+sie ungefähr liegen. Die Auslieferung übernehmen nachvollziehbare Schwellen, die jeder
+nachrechnen kann — und die bei jedem neuen Stichtag dieselbe Bedeutung haben.
+
+Was das kostet, rechnen wir in Phase 6 ebenfalls aus. Es ist nicht umsonst.""" ),
+
+MD("""
 **Die Stationen sind stabil, die Kundensegmente nur annähernd.** Bei den zehn Stationen
 liefert jeder Startwert dieselbe Einteilung. Bei 2.202 Kundinnen und Kunden wandern je
 nach Startwert einzelne Personen zwischen den Gruppen — der ARI bleibt hoch, erreicht
@@ -528,14 +618,28 @@ MD("""
 
 Sehen Sie sich die Spalten `fahrten_jahr` und `umsatz_jahr` nebeneinander an:
 
-**Das Segment mit den meisten Fahrten hat den geringsten Umsatz.** Rund sechzehn Fahrten
-im Jahr — und keine zehn Euro Entgelt. Das Segment mit halb so vielen Fahrten bringt das
-**Fünf- bis Sechsfache**.
+**Das Segment mit den meisten Fahrten bringt am wenigsten Umsatz JE FAHRT.** Und diese
+Einschränkung ist wichtig — lesen Sie die Tabelle genau:
 
-Ein Blick auf die Tarifverteilung erklärt es: Die Vielfahrer sitzen fast alle im
+| Cluster | Fahrten je Jahr | Umsatz je Jahr | Umsatz je Fahrt |
+|---|---:|---:|---:|
+| 0 — Umsatzträger | 7,5 | **41,20 €** | 5,49 € |
+| 1 — Gelegenheit | 4,2 | 3,80 € | 0,90 € |
+| 2 — Eingeschlafen | 1,6 | 5,30 € | 3,31 € |
+| 3 — Vielfahrer | **18,1** | 10,70 € | **0,59 €** |
+
+Die Vielfahrer bringen **nicht** den geringsten Jahresumsatz — das tun die
+Gelegenheitsnutzer mit 3,80 €. Die Vielfahrer bringen den geringsten Umsatz **je Fahrt**:
+59 Cent, während ein Umsatzträger 5,49 € je Fahrt bringt, also fast das Zehnfache.
+
+> **Der Vergleich, auf den es ankommt:** Cluster 3 fährt **2,4-mal so oft** wie Cluster 0
+> und bringt dabei **ein Viertel** des Jahresumsatzes. Wer beide Zahlen nebeneinanderlegt,
+> sieht das Problem; wer nur eine nimmt, sieht es nicht.
+
+Ein Blick auf die Tarifverteilung erklärt es: Die Vielfahrer sitzen überwiegend im
 **OEPNV-Abo** oder im **Premium**-Tarif — mit 600 bzw. 1.000 Freiminuten im Monat. Sie
 fahren viel und zahlen für die einzelne Fahrt fast nichts. Die Umsatzträger sind dagegen
-zu 98 % **Basistarif**: keine Freiminuten, jede Minute wird berechnet.
+fast vollständig im **Basistarif**: keine Freiminuten, jede Minute wird berechnet.
 
 > **„OEPNV-Abo“ meint das Abo des Kunden, nicht eines bei VeloCity.** Alle vier Tarife
 > sind beitragsfrei; die drei Vorteilstarife bekommt man über einen Nachweis —
@@ -562,6 +666,12 @@ das Geschäft:
 Rechnen wir aus, um wieviel es geht. In den Daten steht neben dem gezahlten Entgelt auch,
 wie viele Minuten **berechnet** wurden. Die Differenz zur Fahrtdauer sind die verbrauchten
 Freiminuten — und die haben einen Listenwert.
+
+> **Listenwert ist nicht entgangener Umsatz.** Die Rechnung multipliziert jede Freiminute
+> mit dem vollen Minutenpreis. Ohne Freiminuten griffen aber zwei Regeln, die den Betrag
+> drücken: der **Premiumrabatt** von 20 % und der **Tageshöchstpreis**. Und Kundschaft,
+> die zahlen müsste, führe vermutlich weniger. Der Listenwert ist eine **Obergrenze** —
+> die Zelle unten zeigt an den Langfahrten, wie weit sie danebenliegen kann.
 """),
 
 CODE("""
@@ -592,8 +702,20 @@ gesamt_gezahlt = rfm.umsatz.sum()
 betrag = f"{gesamt_verschenkt:,.0f}".replace(",", ".")
 anteil = gesamt_verschenkt / (gesamt_gezahlt + gesamt_verschenkt)
 print()
-print(f"Im letzten Jahr über Freiminuten abgegeben: {betrag} EUR Listenwert")
-print(f"Das sind {anteil:.0%} dessen, was ohne Freiminuten fällig gewesen wäre.")
+print(f"Im letzten Jahr über Freiminuten abgegeben: {betrag} EUR LISTENWERT")
+print(f"Das sind {anteil:.0%} des Listenwerts der gefahrenen Minuten.")
+
+# WAS DER LISTENWERT NICHT IST: entgangener Umsatz.
+# Er rechnet jede Freiminute zum vollen Minutenpreis. Ohne Freiminuten
+# griffen aber zwei Regeln, die den Betrag druecken - der Premiumrabatt
+# und der Tageshoechstpreis. Und die laengsten Fahrten treiben den
+# Listenwert, obwohl gerade sie am Deckel haengen.
+lang = fenster2[fenster2.dauer_min > 480]
+print()
+print(f"Zur Einordnung: {len(lang)} Fahrten über acht Stunden verursachen allein "
+      f"{lang.verschenkt_eur.sum():,.0f} EUR".replace(",", ".") + " des Listenwerts -")
+print(f"und genau diese Fahrten liefen ohne Freiminuten in den Tageshöchstpreis.")
+print(f"Der Listenwert ist damit eine OBERGRENZE, kein entgangener Umsatz.")
 
 plt.figure(figsize=(9, 4))
 x = np.arange(len(vergleich))
@@ -720,39 +842,141 @@ print(f"\\nKriterium 2 geprüft: {len(namen_cluster)} Gruppen, "
       f"{len(set(regeln.values()))} verschiedene Maßnahmen.")
 
 S["stationstyp"] = S.cluster.map(namen_cluster)
-S[["stationstyp", "wochenendanteil", "dauer_median", "fahrten_gesamt"]].to_csv("stationstypen.csv")
+S["regel"] = S.cluster.map(regeln)
+
+# STABILE SCHLUESSEL IN DEN EXPORT. Der Stationsname ist eine Anzeige, kein
+# Schluessel - er kann sich aendern, station_id nicht.
+ausgabe_stationen = (S.reset_index()
+                     .rename(columns={"index": "name"})
+                     .merge(stationen[["station_id", "stationsnummer", "name"]],
+                            on="name", how="left")
+                     [["station_id", "stationsnummer", "name", "stationstyp", "regel",
+                       "wochenendanteil", "dauer_median", "fahrten_gesamt"]])
+ausgabe_stationen["stichtag"] = stichtag.date()
+ausgabe_stationen.to_csv("stationstypen.csv", index=False)
 print("geschrieben: stationstypen.csv")
 '''),
 
 CODE('''
-# --- B) Der Kampagnenplan
+# --- B) Der Kampagnenplan: Schwellen JE KUNDE, nicht je Cluster
+#
+# Die Schwellen sind an den Clusterprofilen abgelesen - das Clustering war
+# die Erkundung. Angewendet werden sie aber auf jede einzelne Zeile: nur
+# so ist die Zuordnung reproduzierbar und nachrechenbar. Eine fruehere
+# Fassung wendete sie auf die vier Cluster-MITTELWERTE an und vergab den
+# Namen dann an alle Mitglieder - das ist etwas anderes.
 def segment_benennen(zeile):
-    if zeile.recency_tage > 150:
+    if zeile.recency > 150:
         return "Eingeschlafen"
-    if zeile.fahrten_jahr > 12:
+    if zeile.frequenz > 12:
         return "Vielfahrer mit Freiminuten"
-    if zeile.umsatz_jahr > 30:
+    if zeile.umsatz > 30:
         return "Umsatzträger im Basistarif"
     return "Gelegenheitsnutzer"
 
-profil["segment"] = profil.apply(segment_benennen, axis=1)
-massnahmen = {
-    "Vielfahrer mit Freiminuten":  "Bindung halten — aber prüfen, ob 1.000 Freiminuten nötig sind",
-    "Umsatzträger im Basistarif":  "nicht anfassen: sie tragen den Umsatz und kosten nichts",
-    "Gelegenheitsnutzer":    "Anlass schaffen: Wetter-/Veranstaltungshinweis",
-    "Eingeschlafen":         "Rückgewinnung: einmalig Freiminuten",
-}
-plan = profil.copy()
-plan["maßnahme"] = plan.segment.map(massnahmen)
-print(plan[["segment", "kunden", "anteil", "recency_tage", "fahrten_jahr",
-            "umsatz_jahr", "maßnahme"]].to_string(index=False))
+rfm["segment"] = rfm.apply(segment_benennen, axis=1)
 
-print(f"\\n{'Nie gefahren (nicht im RFM)':<24s} {len(ohne_fahrt):>5d} Kunden   "
-      f"Maßnahme: Ansprache zur Erstfahrt, sonst Karteileiche")
+# WAS KOSTET DER WECHSEL VON CLUSTERN AUF SCHWELLEN?
+ueber_cluster = rfm.cluster.map(
+    rfm.groupby("cluster").segment.agg(lambda s: s.value_counts().index[0]))
+abweichung = (rfm.segment != ueber_cluster).mean()
+print(f"Schwellen gegen Clusterzuordnung: {abweichung:.1%} der Kundschaft "
+      f"bekommt ein anderes Segment.\\n")
+print(pd.DataFrame({"über Cluster": ueber_cluster.value_counts(),
+                    "über Schwellen": rfm.segment.value_counts()}).to_string())
+print("\\nDas ist der Preis der Nachvollziehbarkeit - und er gehört benannt.")
 '''),
 
 MD("""
-### 6.1 Was bei diesen beiden Auslieferungen zu beachten ist
+### 6.2 Die Population — wer überhaupt angeschrieben werden darf
+
+Bis hierher war von 2.202 RFM-Kunden die Rede. Ein Kampagnenplan braucht aber die
+**ganze** Kundschaft und einen **einzigen Nenner** — sonst summieren sich die Anteile auf
+100 % einer Teilmenge, und daneben stehen weitere Kunden, die nirgends auftauchen.
+
+Zwei Dinge fehlten bisher:
+
+1. **Gesperrte Konten.** Sie stehen in der Segmentierung und im Plan, obwohl man sie
+   nicht anschreiben darf.
+2. **„Nie gefahren" stimmte nicht.** Wer im letzten Jahr nicht gefahren ist, ist nicht
+   automatisch nie gefahren — und die drei Fälle brauchen drei verschiedene Maßnahmen.
+"""),
+
+CODE('''
+# Wer ist ueberhaupt je gefahren? (ueber den GESAMTEN Zeitraum, nicht nur das Jahr)
+je_gefahren = set(echte.kunde_id)
+
+alle = kunden.set_index("kunde_id").copy()
+alle["tage_dabei"] = (stichtag - alle.registriert_am).dt.days
+alle["segment"] = rfm.segment          # nur fuer die RFM-Kundschaft gefuellt
+
+def lebenszyklus(kid, zeile):
+    if pd.notna(zeile.segment):
+        return zeile.segment
+    if kid in je_gefahren:
+        return "Früher aktiv, jetzt inaktiv"
+    if zeile.tage_dabei <= 365:
+        return "Neu, noch keine Erstfahrt"
+    return "Nie aktiviert"
+
+alle["segment"] = [lebenszyklus(k, z) for k, z in alle.iterrows()]
+alle["ansprechbar"] = alle.status == "aktiv"
+
+print(f"Kundschaft insgesamt: {len(alle)}")
+print(f"davon gesperrt und damit NICHT ansprechbar: {(~alle.ansprechbar).sum()}\\n")
+
+uebersicht = (alle.groupby("segment")
+              .agg(kunden=("status", "size"), ansprechbar=("ansprechbar", "sum")))
+uebersicht["Anteil gesamt"] = (uebersicht.kunden / len(alle) * 100).round(1)
+print("EIN Nenner: alle Kundinnen und Kunden\\n")
+print(uebersicht.sort_values("kunden", ascending=False).to_string())
+print(f"\\nSumme der Anteile: {uebersicht['Anteil gesamt'].sum():.1f} % "
+      f"(Rundung auf eine Stelle)")
+'''),
+
+MD("""
+**Jetzt summieren sich die Anteile auf hundert Prozent derselben Grundgesamtheit** — und
+die drei früher zusammengeworfenen Gruppen sind getrennt. „Neu, noch keine Erstfahrt"
+braucht eine Willkommensansprache, „Früher aktiv, jetzt inaktiv" eine Rückgewinnung, und
+„Nie aktiviert" nach über einem Jahr ist eine Karteileiche. Drei Zustände, drei Maßnahmen
+— genau das verlangt Kriterium 2 aus Phase 1.
+
+### 6.3 Der Export, den ein Kampagnensystem lesen kann
+"""),
+
+CODE('''
+massnahmen = {
+    "Vielfahrer mit Freiminuten":  "Bindung halten — und je Tarif prüfen, ob das Freiminutenvolumen nötig ist",
+    "Umsatzträger im Basistarif":  "nicht anfassen: sie tragen den Umsatz",
+    "Gelegenheitsnutzer":          "Anlass schaffen: Wetter-/Veranstaltungshinweis",
+    "Eingeschlafen":               "Rückgewinnung: einmalig Freiminuten",
+    "Früher aktiv, jetzt inaktiv": "Rückgewinnung: was hat gefehlt?",
+    "Neu, noch keine Erstfahrt":   "Willkommensansprache zur Erstfahrt",
+    "Nie aktiviert":               "keine Kampagne — Karteileiche",
+}
+
+export = alle[alle.ansprechbar].copy()
+export["maßnahme"] = export.segment.map(massnahmen)
+export["stichtag"] = stichtag.date()
+export["gilt_bis"] = (stichtag + pd.Timedelta(days=90)).date()
+export["auswahlgrund"] = export.apply(
+    lambda z: (f"recency {rfm.recency.get(z.name, float('nan')):.0f} d, "
+               f"{rfm.frequenz.get(z.name, 0):.0f} Fahrten, "
+               f"{rfm.umsatz.get(z.name, 0):.2f} EUR")
+    if z.name in rfm.index else f"seit {z.tage_dabei:.0f} Tagen angemeldet, keine Fahrt",
+    axis=1)
+
+spalten = ["kundennummer", "segment", "maßnahme", "auswahlgrund",
+           "stichtag", "gilt_bis", "tarif_code"]
+export = export[export.segment != "Nie aktiviert"][spalten]
+export.to_csv("kampagnenliste.csv")
+print(f"KAMPAGNENLISTE  Stichtag {stichtag.date()}, gültig 90 Tage\\n")
+print(export.head(8).to_string())
+print(f"\\n{len(export)} ansprechbare Kundinnen und Kunden, "
+      f"{export.segment.nunique()} Segmente")
+print("geschrieben: kampagnenliste.csv")'''),
+MD("""
+### 6.4 Was bei diesen beiden Auslieferungen zu beachten ist
 
 **Der Dispositionsplan** ist unkritisch: vier Regeln, die ein Mensch liest und befolgt.
 Er muss aber **nachgerechnet werden**, wenn eine Station dazukommt — und dann kann sich
@@ -789,7 +1013,7 @@ MD("""
 | Phase | A) Stationen | B) Kundschaft |
 |---|---|---|
 | 1 Business Understanding | Umverteilung nach Regeln statt nach Gefühl | Newsletter nach Segmenten statt an alle |
-| | \\multicolumn — gemeinsame Erfolgskriterien: benennbar, unterschiedlich behandelbar, groß genug, stabil | |
+| *gemeinsame Erfolgskriterien* | benennbar · unterschiedlich behandelbar · groß genug · stabil | dieselben vier für beide Teile |
 | 2 Data Understanding | Stammdaten enthalten keinen Typ — das Muster steckt im Verhalten | Kein Segment in der Kundentabelle |
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
@@ -798,7 +1022,8 @@ MD("""
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**
 
-1. **Die Vielfahrer bringen den geringsten Umsatz** — weil ihre Tarife Freiminuten
+1. **Die Vielfahrer bringen den geringsten Umsatz je Fahrt** — 59 Cent gegen 5,49 € —
+   weil ihre Tarife Freiminuten
    enthalten. Und weil VeloCity **keine Grundgebühr** erhebt, gibt es nichts, was das
    ausgliche: Das Nutzungsentgelt ist der gesamte Umsatz. Das ist kein Messfehler,
    sondern ein Preisproblem, das die Segmentierung sichtbar gemacht hat. Nachgerechnet
