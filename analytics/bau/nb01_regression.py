@@ -1021,6 +1021,61 @@ tab = tab[(tab.n >= MINDESTFAHRTEN)
           & spanne_nuetzt(tab["von"], tab["bis"],
                           tab.preis_von_basis, tab.preis_bis_basis)]
 print(f"{len(tab)} Kombinationen erfuellen Mindestfallzahl und Nuetzlichkeitsregel aus Phase 5.5.")
+
+# ---- Wie sicher ist ein Perzentil aus so wenigen Fahrten?
+# Bei dreissig Beobachtungen liegt das 90-Prozent-Perzentil rechnerisch auf der
+# siebenundzwanzigsten - es haengt also an den letzten drei Werten. Wie weit es
+# dadurch schwanken kann, zeigt ein Bootstrap: dieselbe Gruppe immer wieder mit
+# Zuruecklegen ziehen und sehen, wie das Perzentil dabei wandert.
+zufall = np.random.default_rng(42)
+
+
+def perzentil_streuung(werte, anteil=0.90, ziehungen=400):
+    \"\"\"Wie weit wandert das Perzentil, wenn man dieselbe Gruppe neu zieht?\"\"\"
+    stichproben = zufall.choice(werte, size=(ziehungen, len(werte)), replace=True)
+    schaetzungen = np.quantile(stichproben, anteil, axis=1)
+    return np.percentile(schaetzungen, 2.5), np.percentile(schaetzungen, 97.5)
+
+
+print()
+print("Unsicherheit des 90-Prozent-Perzentils, je nach Gruppengroesse:")
+print(f"   {'n':>7}  {'Gruppen':>8}  {'Perzentil':>10}  {'95-%-Bereich':>14}  {'Breite':>7}")
+for untergrenze, obergrenze in ((30, 49), (50, 99), (100, 10 ** 6)):
+    passende = [g for _, g in basis.groupby(["route", "typ_code", "fenster"],
+                                            observed=True).dauer_min
+                if untergrenze <= len(g) <= obergrenze]
+    if not passende:
+        continue
+    # Median und Streuung ueber DIESELBE Auswahl - sonst kann der Median
+    # ausserhalb des Bereichs liegen, der ihn erklaeren soll.
+    stichprobe = passende[:40]
+    spannen = [perzentil_streuung(g.values) for g in stichprobe]
+    mitte = float(np.median([np.quantile(g.values, 0.90) for g in stichprobe]))
+    unten = float(np.median([s[0] for s in spannen]))
+    oben = float(np.median([s[1] for s in spannen]))
+    schild = f"{untergrenze}-{obergrenze}" if obergrenze < 10 ** 6 else f"ab {untergrenze}"
+    print(f"   {schild:>7}  {len(passende):>8}  {mitte:>7.0f} min  "
+          f"{unten:>6.0f}-{oben:<3.0f} min  {oben - unten:>4.0f} min")
+    if untergrenze == 30:
+        _ = merke("bootstrap_breite_30", oben - unten)
+
+# ---- Und was kostet eine strengere Mindestfallzahl an Reichweite?
+print()
+print("Was eine strengere Mindestfallzahl kostet:")
+print(f"   {'Mindestens':>10}  {'Kombinationen':>14}  {'bediente Test-2-Fahrten':>24}")
+for schwelle in (30, 50, 100):
+    probe = pd.DataFrame({"von_roh": gruppen.quantile(.10), "bis_roh": gruppen.quantile(.90),
+                          "n": gruppen.size()}).reset_index()
+    probe["von"], probe["bis"] = probe.von_roh.round(), probe.bis_roh.round()
+    probe["pv"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(probe["von"], probe.typ_code)]
+    probe["pb"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(probe["bis"], probe.typ_code)]
+    probe = probe[(probe.n >= schwelle)
+                  & spanne_nuetzt(probe["von"], probe["bis"], probe.pv, probe.pb)]
+    bedient = zukunft.merge(probe[["route", "typ_code", "fenster"]],
+                            on=["route", "typ_code", "fenster"], how="inner")
+    marke = "  <- gewaehlt" if schwelle == MINDESTFAHRTEN else ""
+    print(f"   {schwelle:>10}  {len(probe):>14}  {len(bedient):>17,} "
+          f"({len(bedient)/len(zukunft):.0%}){marke}")
 # Die Stations-IDs stehen in beiden Tabellen und meinen dasselbe. Beim
 # Zusammenfuehren wuerden daraus sonst zwei Spaltenpaare mit Suffixen.
 zukunft = zukunft.merge(
@@ -1130,6 +1185,29 @@ _ = merke("tabelle_reichweite", vergleich.loc["Perzentiltabelle", "geringste Rei
 """),
 
 MD("""
+### Wie sicher ist ein Perzentil aus dreißig Fahrten?
+
+Die Mindestfallzahl von 30 ist eine Setzung, und sie ist knapp: Das 90-Prozent-Perzentil
+liegt dann rechnerisch auf der siebenundzwanzigsten Beobachtung — es hängt an den letzten
+drei Werten. Der Bootstrap zeigt, wie weit es dadurch wandert, wenn man dieselbe Gruppe
+immer wieder mit Zurücklegen zieht.
+
+Bei 30 bis 49 Fahrten schwankt die obere Grenze um {{bootstrap_breite_30:.0f}} Minuten.
+Das ist mehr, als unsere Nützlichkeitsregel der ganzen Spanne zugesteht — die Grenze
+selbst ist also unschärfer als das, was wir mit ihr zusagen.
+
+**Warum wir trotzdem bei 30 bleiben:** Die Tabelle darunter zeigt den Preis der Strenge.
+Bei 50 verlieren wir ein Fünftel der bedienten Anfragen, bei 100 fast die Hälfte. Das ist
+eine Abwägung zwischen Schärfe und Reichweite, keine statistische Wahrheit — und sie
+gehört zusammen mit der Unsicherheit in den Bericht, nicht in eine Fußnote.
+
+> Für eine Produktfreigabe wäre der saubere Weg ein anderer: die Spanne nicht aus dem
+> empirischen Perzentil zu bilden, sondern aus einem Verfahren, das seine eigene
+> Unsicherheit kennt — etwa eine zeitlich kalibrierte Conformal Prediction. Das ist der
+> nächste Schritt, nicht dieser.
+"""),
+
+MD("""
 **Beide Kandidaten erfüllen das vollständige Kriterium** — insgesamt, je Radtyp und in
 der Reichweite. Damit fällt die Entscheidung nicht über die Güte.
 
@@ -1205,17 +1283,29 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
    liegt.
 
 > **Die Gesamtquote verdeckt die Gruppe, auf die es ankommt.**
-> {{abdeckung_gedeckt:.1%}} Abdeckung bei den {{n_gedeckt:,}} Fahrten, deren Freiminuten
-> die Fahrt decken — dort ist der Preis die Startgebühr, unabhängig von der Dauer, und
-> die Spanne ist {{breite_gedeckt:.2f}} € breit. Jedes Modell trifft das.
 >
-> Bei den {{n_offen:,}} Fahrten ohne ausreichendes Guthaben sind es
-> {{abdeckung_offen:.1%}} — und die Untergrenze des Vertrauensbereichs liegt bei
-> {{unten_offen:.1%}}, also **unter der zugesagten Schwelle von 80 Prozent**.
+> Die Einteilung steht **vor** der Fahrt fest — die App kennt den Freiminutenstand und
+> die geschätzte Spanne, mehr braucht sie nicht:
+>
+> | Lage bei der Anfrage | Fahrten | Abdeckung | Untergrenze | Spanne |
+> |---|---:|---:|---:|---:|
+> | Rest deckt die **obere** Grenze | {{n_gedeckt:,}} | {{abdeckung_gedeckt:.1%}} | {{unten_gedeckt:.1%}} | {{breite_gedeckt:.2f}} € |
+> | Grenzfall | {{n_grenz:,}} | {{abdeckung_grenz:.1%}} | {{unten_grenz:.1%}} | {{breite_grenz:.2f}} € |
+> | Rest deckt die **untere** Grenze nicht | {{n_offen:,}} | {{abdeckung_offen:.1%}} | **{{unten_offen:.1%}}** | {{breite_offen:.2f}} € |
+>
+> In der ersten Gruppe ist der Preis die Startgebühr, unabhängig von der Dauer — jedes
+> Modell trifft das. Die dritte Gruppe, {{anteil_preisabhaengig:.0%}} der Anfragen, zahlt
+> nach Minuten: **Nur dort leistet die Schätzung überhaupt etwas.** Und dort liegt die
+> Untergrenze des Vertrauensbereichs **unter der zugesagten Schwelle von 80 Prozent**.
 >
 > **Für die Gruppe, auf die es ankommt, ist die Zusage damit nicht statistisch
 > gestützt.** Die Gesamtquote von {{abdeckung_gesamt:.1%}} verdeckt das vollständig. Wer
 > nur sie berichtet, verspricht etwas, das die Daten nicht hergeben.
+>
+> Diese Gruppe ist die **vorab festgelegte Evaluationsgruppe**: An ihr, nicht am
+> Gesamtmittel, entscheidet sich, ob das Produkt trägt. Sie nachträglich über die
+> tatsächliche Dauer abzugrenzen wäre bequemer und wertlos — die App kennt die
+> tatsächliche Dauer nicht.
 
 > **Was diese Freigabe leistet — und was nicht.** Die 80 Prozent sind für die Tabelle
 > als Ganzes und für jeden freigegebenen Radtyp gemessen. Für die **einzelne**
@@ -1284,23 +1374,48 @@ for t, g in z.groupby("typ_code"):
     merke(f"unten_{t.lower()}", unten)
     merke(f"n_{t.lower()}", len(g))
 
-# Die zweite Aufteilung ist die wichtigere. Wessen Freiminuten die Fahrt decken,
-# zahlt nur die Startgebuehr - unabhaengig davon, wie lange er faehrt. Fuer ihn
-# ist der Preis exakt bekannt, und jedes Modell trifft ihn. Erst wer sein
-# Kontingent aufgebraucht hat, zahlt nach Minuten. Eine Gesamtquote mischt
-# beide Gruppen und sieht deshalb besser aus, als das Produkt ist.
-z["guthaben_deckt"] = z.freiminuten_rest >= z.dauer_min
-print(f"\\n{'Guthabenlage':22}{'n':>7}{'Abdeckung':>12}{'95 %-Intervall':>18}{'Breite':>9}")
-for gedeckt, g in z.groupby("guthaben_deckt"):
-    name = "deckt die Fahrt" if gedeckt else "reicht nicht"
+# Die zweite Aufteilung ist die wichtigere - und sie muss VORAB moeglich sein.
+# Ob die Freiminuten gereicht haben, weiss man erst nach der Fahrt; das taugt
+# fuer eine Nachbetrachtung, nicht fuer eine betriebliche Zusage. Die App kennt
+# zum Anfragezeitpunkt nur zwei Dinge: den Restbestand und die geschaetzte
+# Dauerspanne. Daraus laesst sich schon vorher entscheiden:
+#
+#   Rest >= obere Grenze  -> selbst die laengste erwartete Fahrt ist gedeckt.
+#                            Der Preis ist die Startgebuehr, die Dauer geht gar
+#                            nicht ein - jede Schaetzung trifft.
+#   Rest <  untere Grenze -> selbst die kuerzeste kostet Minuten. Hier haengt
+#                            der Preis voll an der Schaetzung.
+#   dazwischen            -> Grenzfall: ob Minuten anfallen, entscheidet sich
+#                            erst waehrend der Fahrt.
+z["guthabenlage"] = np.where(
+    z.freiminuten_rest >= z["bis"], "vorab gedeckt",
+    np.where(z.freiminuten_rest < z["von"], "vorab preisabhaengig", "Grenzfall"))
+merke("anteil_preisabhaengig", (z.guthabenlage == "vorab preisabhaengig").mean())
+
+print(f"\\n{'Guthabenlage (vorab)':24}{'n':>7}{'Abdeckung':>12}"
+      f"{'95 %-Intervall':>18}{'Breite':>9}")
+for lage in ("vorab gedeckt", "Grenzfall", "vorab preisabhaengig"):
+    g = z[z.guthabenlage == lage]
+    if not len(g):
+        continue
     unten, oben = wilson(g.im_intervall.sum(), len(g))
-    print(f"{name:22}{len(g):>7,}{g.im_intervall.mean():>11.1%}"
+    print(f"{lage:24}{len(g):>7,}{g.im_intervall.mean():>11.1%}"
           f"{unten:>10.1%}–{oben:.1%}{g.breite.median():>8.2f}€")
-    merke("abdeckung_gedeckt" if gedeckt else "abdeckung_offen", g.im_intervall.mean())
-    merke("n_gedeckt" if gedeckt else "n_offen", len(g))
-    merke("breite_gedeckt" if gedeckt else "breite_offen", g.breite.median())
-    if not gedeckt:
-        merke("unten_offen", unten)
+    kurz = {"vorab gedeckt": "gedeckt", "Grenzfall": "grenz",
+            "vorab preisabhaengig": "offen"}[lage]
+    merke(f"abdeckung_{kurz}", g.im_intervall.mean())
+    merke(f"n_{kurz}", len(g))
+    merke(f"breite_{kurz}", g.breite.median())
+    _ = merke(f"unten_{kurz}", unten)
+
+# Die vorab preisabhaengige Gruppe ist die Evaluationsgruppe, die vor der
+# Messung festzulegen war: An ihr entscheidet sich, ob das Produkt taugt.
+offen = z[z.guthabenlage == "vorab preisabhaengig"]
+if len(offen):
+    unten_o, _ = wilson(offen.im_intervall.sum(), len(offen))
+    print(f"\\nDie vorab preisabhaengige Gruppe haelt die 80 Prozent "
+          f"{'' if unten_o >= 0.80 else 'NICHT '}mit ihrer Untergrenze "
+          f"({unten_o:.1%}).")
 
 # Was 6.5 zur Ueberwachung braucht, muss das Artefakt mitbringen: je Zeile die
 # Zahl der Pruefungen, die gemessene Abdeckung und die Unsicherheit. Ohne diese
