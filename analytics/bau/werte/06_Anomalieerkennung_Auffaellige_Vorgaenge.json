@@ -1,0 +1,21 @@
+{
+ "n_abgebrochen": 2326,
+ "n_storniert": 570,
+ "iqr_treffer": 4699,
+ "untertyp": "CITY",
+ "untertyp_liste": 0.58,
+ "untertyp_flotte": 0.7185693412108507,
+ "tagesquote": 0.12371134020618557,
+ "globale_quote": 0.36,
+ "quote_verhaeltnis": 2.9099999999999997,
+ "laenge_mittel": 0.3185550082101806,
+ "laeufe_leer": 0.7701149425287356,
+ "listenlaenge": 6,
+ "stat_falsch_50": 0.02,
+ "stat_richtig_50": 0.22,
+ "stat_je_tag": 0.096579476861167,
+ "stat_je_alarm": 0.030303030303030304,
+ "episoden_gesamt": 11,
+ "episoden_roh": 11,
+ "episoden_neu": 11
+}

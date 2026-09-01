@@ -177,8 +177,8 @@ print(f"Gefordert werden fuer Aufgabe B trotzdem {KRITERIUM_TREFFER:.0%}: Eine L
       f"voller Fehlalarme wird nicht benutzt.")
 print(f"\\nListenlaenge = {ZEITBUDGET_MIN:.0f} min Zeitbudget / {PRUEFDAUER_MIN:.0f} min "
       f"je Pruefung = {LISTENLAENGE} Plaetze.")
-print("Diese Zahl wird nirgends von Hand ueberschrieben - sonst behauptet der")
-print("Text eine Kapazitaet, die der Code nicht einhaelt.")
+# Diese Zahl wird nirgends von Hand ueberschrieben - sonst behauptet der
+# Text eine Kapazitaet, die der Code nicht einhaelt.
 
 fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
 raeder = pd.read_csv(BASIS + "fahrrad.csv")
@@ -190,6 +190,11 @@ fahrten["dauer_min"] = (fahrten.endzeit - fahrten.startzeit).dt.total_seconds() 
 
 print("Status aller Vorgänge:")
 print(fahrten.status.value_counts().to_string())
+_status = fahrten.status.value_counts()
+merke("n_abgebrochen", int(_status.get("abgebrochen", 0)))
+merke("n_storniert", int(_status.get("storniert", 0)))
+print(f"\\n{_status.get('abgebrochen', 0)} Abbrueche, {_status.get('storniert', 0)} "
+      f"Stornierungen - beide bleiben in diesem Notebook aussen vor.")
 
 echte = fahrten[fahrten.status == "abgeschlossen"].copy()
 print(f"\\nFahrtdauer in Minuten — die Quantile sagen mehr als der Mittelwert:")
@@ -354,6 +359,7 @@ q1, q3 = echte.dauer_min.quantile([.25, .75])
 iqr = q3 - q1
 grenze = q3 + 1.5 * iqr
 print(f"Unteres Quartil {q1:.0f}, oberes {q3:.0f}, Quartilsabstand {iqr:.0f}")
+merke("iqr_treffer", int((echte.dauer_min > grenze).sum()))
 print(f"Ausreißergrenze: {grenze:.0f} Minuten")
 print(f"Fahrten darüber: {int((echte.dauer_min > grenze).sum()):,d} "
       f"({(echte.dauer_min > grenze).mean():.1%} aller Fahrten)".replace(",", "."))
@@ -527,6 +533,18 @@ print((referenz_tab.nlargest(50, "auffaelligkeit").typ_code
        .value_counts(normalize=True) * 100).round(0).to_string())
 print("\\nZum Vergleich, Anteil aller Referenzfahrten:")
 print((referenz_tab.typ_code.value_counts(normalize=True) * 100).round(0).to_string())
+
+# Der Fliesstext unten vergleicht einen Typ in Liste und Flotte. Welcher
+# Typ das ist und wie stark er abweicht, entscheidet die Rechnung.
+_liste = referenz_tab.nlargest(50, "auffaelligkeit").typ_code.value_counts(normalize=True)
+_flotte = referenz_tab.typ_code.value_counts(normalize=True)
+_diff = (_liste.reindex(_flotte.index).fillna(0) - _flotte)
+_unter = _diff.idxmin()
+merke("untertyp", _unter)
+merke("untertyp_liste", _liste.get(_unter, 0.0))
+merke("untertyp_flotte", _flotte[_unter])
+print(f"\\nAm staerksten untervertreten: {_unter} "
+      f"({_liste.get(_unter, 0.0):.0%} in der Liste, {_flotte[_unter]:.0%} der Flotte)")
 '''),
 
 MD("""
@@ -540,10 +558,13 @@ Flottenanteil von 10 %. Das ist immer noch mehr als das Doppelte.
 > Beseitigung. Wer den Rest auch noch will, muss weiter: robustere Maße als Mittelwert und
 > Streuung (Median und mittlere absolute Abweichung), oder je Radtyp ein eigenes Modell.
 
-> **Und noch etwas steht in der Tabelle:** EBIKE ist mit 20 % gegenüber 37 % Flottenanteil
-> jetzt deutlich **unter**vertreten. Eine Normierung, die einen Typ hebt, senkt zwangsläufig einen
-> anderen. Ob das richtig ist, kann keine Kennzahl beantworten — nur jemand, der weiß, ob
-> E-Bike-Fahrten seltener Probleme machen.
+> **Und noch etwas steht in der Tabelle:** {{untertyp}} ist mit
+> {{untertyp_liste:.0%}} gegenüber {{untertyp_flotte:.0%}} Flottenanteil jetzt
+> **unter**vertreten. Eine Normierung, die einen Typ hebt, senkt zwangsläufig einen
+> anderen — die Liste hat schließlich nur fünfzig Plätze. Ob die neue Verteilung richtig
+> ist, kann keine Kennzahl beantworten: Dafür müsste jemand wissen, ob Fahrten dieses
+> Typs tatsächlich seltener Probleme machen. Die Normierung hat den Preis aus der Liste
+> genommen, nicht die Wahrheit hineingelegt.
 
 Ob die Korrektur auch inhaltlich etwas gebracht hat, misst Phase 5.
 """),
@@ -693,7 +714,12 @@ print(f"  durchschnittliche Listenlänge:     {eintraege / tage:>6.2f}  (Kapazit
 print(f"  Läufe mit LEERER Liste:            {sum(len(l) == 0 for l in listen):>6d}")
 print(f"  bekannte Rückgabeprobleme darin:   {treffer:>6d}")
 print(f"  Trefferquote gegen die Teilwahrheit: {treffer / max(eintraege, 1):>6.2%}")
-tagesquote_a2 = treffer / max(eintraege, 1)
+tagesquote_a2 = merke("tagesquote", treffer / max(eintraege, 1))
+merke("globale_quote", global_top50)
+merke("quote_verhaeltnis", global_top50 / max(tagesquote_a2, 1e-9))
+merke("laenge_mittel", eintraege / tage)
+merke("laeufe_leer", sum(len(l) == 0 for l in listen) / tage)
+merke("listenlaenge", LISTENLAENGE)
 print()
 print(f"  Zum Vergleich, globale Top 50 über drei Jahre: {global_top50:>6.1%}")
 print(f"  Verhältnis: die globale Rangliste sieht {global_top50 / max(tagesquote_a2, 1e-9):.0f}-mal")
@@ -729,21 +755,21 @@ print("     Formel - eine falsch gezogene Kohorte.")
 MD("""
 ### 5.3 Was diese Zahlen bedeuten — und was sie nicht bedeuten
 
-Die globale Rangliste meldet **56 %**, die tatsächlich erzeugbare Tagesliste **16,4 %** —
-ein Drittel davon, bei demselben Modell und denselben Daten.
+Die globale Rangliste meldet **{{globale_quote:.1%}}**, die tatsächlich erzeugbare
+Tagesliste **{{tagesquote:.1%}}** — bei demselben Modell und denselben Daten.
 
-**Die 16,4 % sind aber nicht die „wahre Trefferquote".** Sie messen nur, wie oft ein
+**Die {{tagesquote:.1%}} sind aber nicht die „wahre Trefferquote".** Sie messen nur, wie oft ein
 Listeneintrag eine *bekannte* Langfahrt ist — und Langfahrten sind nicht das, wofür diese
 Liste gedacht ist. Die richtige Lesart ist:
 
 | Zahl | Was sie belegt |
 |---|---|
-| 56 % (global, drei Jahre) | **nichts über das Produkt** — die Liste ist am Morgen nicht erzeugbar |
-| 16,4 % (Tagesliste) | wie oft ein Eintrag zufällig eine Langfahrt ist — nicht, wie oft er nützlich ist |
+| {{globale_quote:.1%}} (global, drei Jahre) | **nichts über das Produkt** — die Liste ist am Morgen nicht erzeugbar |
+| {{tagesquote:.1%}} (Tagesliste) | wie oft ein Eintrag zufällig eine Langfahrt ist — nicht, wie oft er nützlich ist |
 | die wahre Trefferquote | **unbekannt** — dafür fehlen die Labels |
 
 Der Befund lautet also nicht „das Modell ist schlecht", sondern: **Die Güte der
-Tagesliste ist unbekannt, und die 56 % haben sie nie belegt.**
+Tagesliste ist unbekannt, und die {{globale_quote:.1%}} haben sie nie belegt.**
 
 > **Und noch eine Korrektur, die man leicht übersieht.** Eine frühere Fassung bildete die
 > Morgenliste aus den Fahrten mit **Starttag t**. Ein Lauf um 8 Uhr verarbeitet aber, was
@@ -757,8 +783,8 @@ Tagesliste ist unbekannt, und die 56 % haben sie nie belegt.**
 > überdurchschnittlich viele.
 
 > **Eine dritte Zahl steht ebenfalls in der Ausgabe und ist die interessanteste:** Die
-> Liste ist an **88 % der Tage leer**. Im Mittel enthält sie 0,20 Einträge, bei einer
-> Kapazität von sechs. Die Meldeschwelle aus dem Referenzzeitraum ist also der bindende
+> Liste ist an **{{laeufe_leer:.0%}} der Tage leer**. Im Mittel enthält sie
+> {{laenge_mittel:.2f}} Einträge, bei einer Kapazität von {{listenlaenge:.0f}}. Die Meldeschwelle aus dem Referenzzeitraum ist also der bindende
 > Faktor, nicht das Zeitbudget des Betriebsbüros.
 >
 > Das ist keine Fehlfunktion — es ist die ehrliche Folge davon, die Schwelle **vor** der
@@ -769,7 +795,8 @@ jemand die Liste eine Zeit lang durchsehen und jede Zeile beurteilen. Das ist de
 Schattenbetrieb aus Phase 1, und daran führt kein Weg vorbei.
 
 > **Warum eine falsche Auswertung schlimmer ist als gar keine.** Ohne Zahl hätte niemand
-> behauptet, das Produkt sei geprüft. Mit den 28 % im Bericht steht eine Freigabe im Raum,
+> behauptet, das Produkt sei geprüft. Mit den {{globale_quote:.1%}} im Bericht steht eine
+> Freigabe im Raum,
 > die auf einer Rechnung beruht, die den Entscheidungszeitpunkt ignoriert. **Eine Kennzahl
 > muss zu dem Produkt gehören, das ausgeliefert wird — sonst prüft sie ein anderes.**
 
@@ -1044,7 +1071,10 @@ for k in (10, 50, 100, 200):
     zeilen.append({"Listenlänge": k,
                    "nlargest (kleinster Einbruch)": round(falsch, 3),
                    "nsmallest (größter Einbruch)": round(richtig, 3)})
-print(pd.DataFrame(zeilen).to_string(index=False))
+_sortier = pd.DataFrame(zeilen).set_index("Listenlänge")
+print(_sortier.to_string())
+merke("stat_falsch_50", _sortier.loc[50, "nlargest (kleinster Einbruch)"])
+merke("stat_richtig_50", _sortier.loc[50, "nsmallest (größter Einbruch)"])
 print("\\n  Bei zehn Eintraegen faellt der Fehler nicht auf - beide Spalten sind")
 print("  gleich. Ab fuenfzig trennen sie sich deutlich. Ein Fehler, den die")
 print("  kleinste Ausgabe verdeckt, ist trotzdem ein Fehler.")
@@ -1104,8 +1134,8 @@ print(f"  davon Wiederholungen einer schon")
 print(f"  gemeldeten laufenden Störung:      {wiederholungen:>6d}")
 print(f"  neue Alarme:                       {len(neue_alarme):>6d}")
 print()
-tagesquote = gemeldet_tage.ist_stoerung.mean()
-alarmquote = neue_alarme.ist_stoerung.mean()
+tagesquote = merke("stat_je_tag", gemeldet_tage.ist_stoerung.mean())
+alarmquote = merke("stat_je_alarm", neue_alarme.ist_stoerung.mean())
 print(f"  Trefferquote je gemeldetem TAG:    {tagesquote:>6.1%}")
 print(f"  Trefferquote je NEUEM ALARM:       {alarmquote:>6.1%}")
 print()
@@ -1136,6 +1166,8 @@ roh_menge = set(zip(gemeldet_tage.datum, gemeldet_tage.start_station_id))
 neu_menge = set(zip(neue_alarme.datum, neue_alarme.start_station_id))
 erkannt_roh, verzug_roh = episoden_recall(roh_menge)
 erkannt_neu, verzug_neu = episoden_recall(neu_menge)
+merke("episoden_gesamt", len(episoden_pz))
+merke("episoden_roh", erkannt_roh); merke("episoden_neu", erkannt_neu)
 
 print()
 print(f"  Störungsepisoden im Prüfzeitraum:  {len(episoden_pz):>6d}\\n")
@@ -1147,10 +1179,21 @@ print(f"    je neuem Alarm ({len(neue_alarme)} Stück):")
 print(f"       Precision {alarmquote:>6.1%}   Episoden erkannt {erkannt_neu}/"
       f"{len(episoden_pz)}   Verzug max {max(verzug_neu) if verzug_neu else 0} Tage")
 print()
-print("  Die fehlende Episode begann INNERHALB einer schon laufenden")
-print("  Nullserie, die als Fehlalarm eroeffnet worden war. Ohne Ticket-")
-print("  zustand kann das System nicht unterscheiden, ob daraus ein neuer")
-print("  Fund oder ein weiterlaufender Fehlalarm wird.")
+# Ob eine Episode fehlt, entscheidet die Rechnung - nicht dieser Absatz.
+# Er stand hier frueher unbedingt und behauptete eine Luecke, die es
+# in diesem Datenstand nicht gibt.
+_fehlend = len(episoden_pz) - erkannt_neu
+if _fehlend > 0:
+    print(f"  {_fehlend} Episode(n) fehlen in der Alarmsicht. Solche Faelle beginnen")
+    print("  INNERHALB einer schon laufenden Nullserie, die als Fehlalarm")
+    print("  eroeffnet worden war. Ohne Ticketzustand kann das System nicht")
+    print("  unterscheiden, ob daraus ein neuer Fund oder ein weiterlaufender")
+    print("  Fehlalarm wird.")
+else:
+    print("  Beide Sichten erkennen alle Episoden. Das ist kein Verdienst der")
+    print("  Regel, sondern eine Frage der Lage: Solange keine neue Stoerung")
+    print("  INNERHALB einer laufenden Nullserie beginnt, faellt die fehlende")
+    print("  Ticketzustandslogik nicht auf. Sie fehlt trotzdem.")
 
 # EIGENE WIRTSCHAFTLICHKEIT FUER B - nicht die von A2.
 #
@@ -1184,14 +1227,15 @@ MD("""
 
 **Die täglich ausführbare Regel reißt das Kriterium.** Nicht knapp.
 
-Der Weg dorthin ist lehrreich, weil an jeder Station eine Zahl größer wurde:
+Der Weg dorthin ist lehrreich, weil jede Zeile eine andere Frage beantwortet — und nur
+die letzte die richtige:
 
 | Auswertung | Trefferquote | Was daran nicht stimmt |
 |---|---|---|
-| globale Top 50, `nlargest` | **32 %** | falsche Sortierrichtung **und** globale Rangliste |
-| globale Top 50, richtig sortiert | 44 % | immer noch eine globale Rangliste |
-| täglich, je gemeldetem **Tag** | 13,4 % | zählt jeden Folgetag derselben Störung als eigenen Erfolg |
-| täglich, je **neuem Alarm** | **3,9 %** | — das ist die Zahl, die zählt |
+| globale Top 50, `nlargest` | **{{stat_falsch_50:.1%}}** | falsche Sortierrichtung **und** globale Rangliste |
+| globale Top 50, richtig sortiert | {{stat_richtig_50:.1%}} | immer noch eine globale Rangliste |
+| täglich, je gemeldetem **Tag** | {{stat_je_tag:.1%}} | zählt jeden Folgetag derselben Störung als eigenen Erfolg |
+| täglich, je **neuem Alarm** | **{{stat_je_alarm:.1%}}** | — das ist die Zahl, die zählt |
 
 **Und die andere Hälfte der Wahrheit — auf zwei Ebenen, weil es zwei sind:**
 
@@ -1565,7 +1609,7 @@ weitermachen, sobald Rückmeldungen da sind.
 |---|---|---|
 | Anteil bestätigter Vorgänge | Rückmeldung bleibt aus | **die Liste wird ignoriert** — organisatorisches Problem, und das Ende jeder Bewertbarkeit |
 | Trefferquote im Schattenbetrieb | sobald genug Urteile vorliegen | **erst dann** lässt sich überhaupt eine Schwelle festlegen |
-| Anteil leerer Listen | weicht deutlich von den heute gemessenen 88 % ab | der Referenzzustand passt nicht mehr — Schwelle neu bestimmen |
+| Anteil leerer Listen | weicht deutlich von den heute gemessenen {{laeufe_leer:.0%}} ab | der Referenzzustand passt nicht mehr — Schwelle neu bestimmen |
 | Verteilung der Fahrtdauer | verschiebt sich | „normal“ hat sich geändert, Referenzzeitraum neu wählen |
 | Alter des Referenzzeitraums | älter als ein Jahr | neu anlernen, bevor „normal“ von gestern ist |
 
@@ -1584,8 +1628,8 @@ MD("""
 | 1 Business Understanding | **Drei** Produkte mit drei Entscheidungszeitpunkten, nicht eine Liste. Listenlänge aus Zeitbudget und Prüfdauer abgeleitet: sechs Plätze. Rentabilitätsschwelle 4,8 %, Kriterium für B bewusst bei 20 % — und für A2 bewusst **keines**, weil das Label fehlt |
 | 2 Data Understanding | Eine **Lücke** in der Dauerverteilung trennt Fahrten von Rückgabeproblemen. Und eine Sackgasse: Die Geschwindigkeit taugt nichts, weil sie aus der Dauer abgeleitet ist |
 | 3 Data Preparation | Fünf Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor keine auffällige *Fahrt* ist — wiederholtes Fehlen bei demselben Rad ist sehr wohl ein Fall, nur ein anderer: Datenqualität statt Fahrverhalten |
-| 4 Modeling | Interquartilsregel (4.505 Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
-| 5 Evaluation | Die globale Rangliste meldet 56 %, die tatsächlich erzeugbare Tagesliste 16,4 % — **ein Drittel davon, bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B fällt die Präzision von 32 % über 44 % und 13,4 % auf **3,9 % je neuem Alarm**; sie erkennt je nach Einheit **11 von 11** (tägliche Rohmeldungen) oder **10 von 11** Episoden (neue Alarme), reißt aber beide Wirtschaftlichkeitshürden |
+| 4 Modeling | Interquartilsregel ({{iqr_treffer:,}} Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
+| 5 Evaluation | Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste {{tagesquote:.1%}} — **bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B fällt die Präzision von {{stat_falsch_50:.1%}} über {{stat_richtig_50:.1%}} und {{stat_je_tag:.1%}} auf **{{stat_je_alarm:.1%}} je neuem Alarm**; sie erkennt **{{episoden_roh:.0f}} von {{episoden_gesamt:.0f}}** Episoden je täglicher Rohmeldung und **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** je neuem Alarm, reißt aber beide Wirtschaftlichkeitshürden |
 | 6 Deployment | **Keines der drei Produkte ist betrieblich freigegeben.** A1 ist als Regel und Funktion spezifiziert und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen. A2 läuft nur im Schattenbetrieb. B ist nicht freigegeben. Der verbindliche Status steht im Modellpaket; die Tabelle in 6.1 ist von Hand geschrieben |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
@@ -1638,7 +1682,7 @@ keine Schätzung.
 4. **Eine Nulltags-Wahrscheinlichkeit statt einer Nulltags-Regel.** Wetter und Kalender
    aus Notebook 4, Stationsvolumen aus Notebook 3, Nachbarstationen. Erst wenn erklärt
    ist, warum eine Station gestern still war, lässt sich „ruhig“ von „gestört“ trennen.
-5. **Abgebrochene und stornierte Vorgänge ansehen.** 1.364 Abbrüche und 324 Stornierungen
+5. **Abgebrochene und stornierte Vorgänge ansehen.** {{n_abgebrochen:,}} Abbrüche und {{n_storniert:,}} Stornierungen
    wurden hier vor der Analyse entfernt. Häufungen davon können auf App-, Zahlungs- oder
    Schlossprobleme hinweisen — als eigene Zeitreihe, nicht vermischt mit den Fahrten.
 

@@ -276,6 +276,11 @@ def pruefe_hartes_urteil(code: list[str]) -> list[str]:
     Ein print, das ein Ergebnis behauptet, ohne eine berechnete Groesse zu
     verwenden und ohne in einem bedingten Zweig zu stehen, bleibt stehen, wenn
     sich die Zahlen aendern - und widerspricht dann der Zelle darueber.
+
+    Eine unmittelbar davorstehende `assert` gilt als Bedingung. Sie ist sogar
+    die schaerfere Form: Ein if-Zweig laesst den falschen Fall zu und schweigt
+    darueber, eine Assertion bricht ab. Wer sein Urteil so absichert, hat genau
+    das getan, was diese Pruefung verlangt.
     """
     funde = []
     for nummer, quelle in enumerate(code):
@@ -301,7 +306,15 @@ def pruefe_hartes_urteil(code: list[str]) -> list[str]:
                     break
                 if d_tiefe < tiefe:
                     break
-            if not hat_wert and not bedingt:
+            # Eine Assertion unmittelbar davor erzwingt die Aussage bereits.
+            gesichert = False
+            for davor in reversed(zeilen[max(0, i - 3):i]):
+                if davor.strip().startswith("assert "):
+                    gesichert = True
+                    break
+                if davor.strip() and not davor.strip().startswith(("print(", "#")):
+                    break
+            if not hat_wert and not bedingt and not gesichert:
                 funde.append(
                     f"Zelle {nummer}: {nackt[:76]} - ein Urteil ohne gerechneten "
                     f"Wert und ohne Bedingung; es bleibt stehen, wenn sich die "
