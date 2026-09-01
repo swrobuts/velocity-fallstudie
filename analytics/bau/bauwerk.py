@@ -42,6 +42,7 @@ Damit das ohne Netz geht, lesen die Notebooks ihre Daten ueber
 Beim Bauen zeigt VELO_BASIS auf den lokalen Ordner, in Colab ist die
 Variable nicht gesetzt und es wird von GitHub geladen.
 """
+import json
 import os
 import re
 import sys
@@ -57,6 +58,82 @@ ZIEL_UEBUNG = os.path.join(ZIEL, "uebung")
 
 ROHBASIS = "https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/main/analytics/"
 COLAB = "https://colab.research.google.com/github/swrobuts/velocity-fallstudie/blob/main/analytics/notebooks/"
+
+
+# ---------------------------------------------------------------- Platzhalter
+#
+# Ergebniszahlen gehoeren nicht in den Fliesstext. Sonst zeigt der Text nach
+# jeder Datenaenderung auf Werte, die das Notebook gar nicht mehr rechnet.
+#
+# Der Code registriert seine Ergebnisse mit merke("schluessel", wert), der
+# Markdown-Text verweist mit {{schluessel}} oder {{schluessel:.2f}} darauf.
+# Nach dem Ausfuehren ersetzt der Bauvorgang die Platzhalter durch die
+# tatsaechlich gerechneten Werte - in deutscher Schreibweise.
+#
+# Vorgaben bleiben hart im Text: eine Gueteschwelle, die vor dem Ergebnis
+# feststeht, ist eine Entscheidung und kein Messwert.
+
+MERKZETTEL_ANFANG = '''
+_MERKZETTEL = {}
+
+
+def merke(schluessel, wert):
+    """Haelt ein Ergebnis fuer den Fliesstext fest und gibt es zurueck."""
+    _MERKZETTEL[schluessel] = wert
+    return wert
+'''
+
+_MERKZETTEL_MARKE = "##MERKZETTEL##"
+MERKZETTEL_ENDE = (
+    "import json as _json\n"
+    f'print("{_MERKZETTEL_MARKE}" + _json.dumps(_MERKZETTEL, default=str))')
+
+_PLATZHALTER = re.compile(r"\{\{([a-z0-9_]+)(?::([^}]+))?\}\}")
+
+
+def _deutsch(text):
+    """Englische Zahlschreibweise in deutsche umsetzen: 1,234.5 -> 1.234,5."""
+    return text.replace(",", "\x00").replace(".", ",").replace("\x00", ".")
+
+
+def _einsetzen(text, werte, herkunft):
+    """Ersetzt {{schluessel}} und {{schluessel:format}} durch die Messwerte."""
+    def ersatz(treffer):
+        schluessel, form = treffer.group(1), treffer.group(2)
+        if schluessel not in werte:
+            raise SystemExit(
+                f"ABBRUCH: {herkunft} verweist auf {{{{{schluessel}}}}}, aber der Code "
+                f"hat diesen Wert nicht mit merke() festgehalten.\n"
+                f"    Bekannt sind: {', '.join(sorted(werte)) or '(keine)'}")
+        wert = werte[schluessel]
+        if form is None:
+            return _deutsch(str(wert))
+        try:
+            zahl = float(wert)
+            # Ganze Zahlen ohne Nachkommastelle setzen: 108.781, nicht 108.781,0.
+            if zahl.is_integer() and not any(z in form for z in "fe%g"):
+                gesetzt = format(int(zahl), form)
+            else:
+                gesetzt = format(zahl, form)
+        except (TypeError, ValueError):
+            gesetzt = format(wert, form)
+        # Im Deutschen steht vor dem Prozentzeichen ein Leerzeichen.
+        return _deutsch(gesetzt).replace("%", " %") if gesetzt.endswith("%") \
+            else _deutsch(gesetzt)
+    return _PLATZHALTER.sub(ersatz, text)
+
+
+def _werte_einsammeln(notebook):
+    """Liest den Merkzettel aus der Ausgabe der letzten Codezelle."""
+    for zelle in reversed(notebook.cells):
+        if zelle.get("cell_type") != "code":
+            continue
+        for ausgabe in zelle.get("outputs", []):
+            text = ausgabe.get("text", "")
+            if _MERKZETTEL_MARKE in text:
+                return json.loads(text.split(_MERKZETTEL_MARKE, 1)[1].strip())
+    return {}
+
 
 # ---------------------------------------------------------------- Bausteine
 
@@ -189,36 +266,58 @@ def _notebook(zellen, wandler):
 
 
 def bauen(name, zellen, ausfuehren=True):
-    """Schreibt Vorfuehr- und Uebungsfassung. Gibt die Zahl der Luecken zurueck."""
+    """Schreibt Vorfuehr- und Uebungsfassung. Gibt die Zahl der Luecken zurueck.
+
+    Vor dem Ausfuehren wird der Merkzettel angelegt, danach ausgelesen: alle
+    {{platzhalter}} im Fliesstext werden durch die tatsaechlich gerechneten
+    Werte ersetzt. Ein Platzhalter ohne passendes merke() bricht den Bau ab.
+    """
     os.makedirs(ZIEL, exist_ok=True)
     os.makedirs(ZIEL_UEBUNG, exist_ok=True)
 
-    vor = _notebook(zellen, _vorfuehrung)
+    braucht_werte = any(art == "md" and _PLATZHALTER.search(inhalt)
+                        for art, inhalt in zellen)
+    if braucht_werte and not ausfuehren:
+        raise SystemExit(f"ABBRUCH: {name} enthaelt Platzhalter, wird aber nicht "
+                         f"ausgefuehrt - die Werte koennten nicht eingesetzt werden.")
+
+    arbeit = list(zellen)
+    if braucht_werte:
+        arbeit = [CODE(MERKZETTEL_ANFANG)] + arbeit + [CODE(MERKZETTEL_ENDE)]
+
+    vor = _notebook(arbeit, _vorfuehrung)
     if ausfuehren:
-        umgebung = dict(os.environ)
-        umgebung["VELO_BASIS"] = ANALYTICS + os.sep
         alt = dict(os.environ)
-        os.environ.update(umgebung)
+        os.environ["VELO_BASIS"] = ANALYTICS + os.sep
         try:
-            client = NotebookClient(vor, timeout=900, kernel_name="python3",
+            client = NotebookClient(vor, timeout=1800, kernel_name="python3",
                                     resources={"metadata": {"path": ANALYTICS}})
             client.execute()
         finally:
             os.environ.clear()
             os.environ.update(alt)
 
-    pfad_vor = os.path.join(ZIEL, f"{name}.ipynb")
-    nbformat.write(vor, pfad_vor)
+    werte = _werte_einsammeln(vor) if braucht_werte else {}
+    if braucht_werte:
+        # Die Ausgabezelle hat ihren Zweck erfuellt und verlaesst das Notebook.
+        vor.cells = vor.cells[:-1]
+        for zelle in vor.cells:
+            if zelle.cell_type == "markdown":
+                zelle.source = _einsetzen(zelle.source, werte, f"{name} (Vorfuehrung)")
+        zellen = [(art, _einsetzen(inhalt, werte, f"{name} (Uebung)")
+                   if art == "md" else inhalt) for art, inhalt in zellen]
+        zellen = [("code", MERKZETTEL_ANFANG)] + zellen
 
+    nbformat.write(vor, os.path.join(ZIEL, f"{name}.ipynb"))
     ueb = _notebook(zellen, _uebung)
-    pfad_ueb = os.path.join(ZIEL_UEBUNG, f"{name}.ipynb")
-    nbformat.write(ueb, pfad_ueb)
+    nbformat.write(ueb, os.path.join(ZIEL_UEBUNG, f"{name}.ipynb"))
 
-    n_luecken = sum(len([t for t in _teile(q) if t[0] == "luecke"])
-                    for art, q in zellen if art == "code")
-    groesse = os.path.getsize(pfad_vor) / 1024
-    print(f"  {name:38s} {len(zellen):>3d} Zellen  {n_luecken:>2d} Lücken  "
-          f"{groesse:>6.0f} kB  {'ausgeführt' if ausfuehren else 'ohne Lauf'}")
+    n_luecken = sum(len([t for t in _teile(quelltext) if t[0] == "luecke"])
+                    for art, quelltext in zellen if art == "code")
+    groesse = os.path.getsize(os.path.join(ZIEL, f"{name}.ipynb")) / 1024
+    print(f"  {name:38s} {len(vor.cells):>3d} Zellen  {n_luecken:>2d} Lücken  "
+          f"{len(werte):>2d} Werte  {groesse:>6.0f} kB  "
+          f"{'ausgeführt' if ausfuehren else 'ohne Lauf'}")
     return n_luecken
 
 
