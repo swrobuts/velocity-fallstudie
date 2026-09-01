@@ -122,7 +122,7 @@ selten und die Funde wertvoll sind.
 
 | Produkt | Kriterium | Schwelle | Prüfbar? |
 |---|---|---|---|
-| **A1** offene Rückgaben | jeder offene Vorgang über der Schwelle wird gemeldet, **bevor** er endet | Vollständigkeit | ja, an den bekannten Langfahrten |
+| **A1** offene Rückgaben | jeder offene Vorgang über der Schwelle wird gemeldet, **bevor** er endet | Vollständigkeit | **nur logisch** — Label und Regel benutzen dieselbe 8-Stunden-Grenze; betrieblich nicht prüfbar |
 | **A2** auffällige Fahrten | Liste ≤ Kapazität, jede Zeile mit Begründung | Kapazität und Nachvollziehbarkeit | ja |
 | **A2** auffällige Fahrten | Trefferquote | **nicht festlegbar** | **nein** — siehe unten |
 | **B** Stationstage | mindestens jede fünfte gemeldete **Störungsepisode** ist echt | 20 % | ja, gegen `stationsstoerung.csv` |
@@ -703,10 +703,18 @@ print("  allein die Auswahlregel.")
 print()
 # Was die alte Starttag-Kohorte uebersehen haette - dieselben Daten,
 # nur eine andere Auswahlregel.
+# ACHTUNG, EIGENE ZEITACHSE.
+#
+# laeufe enthaelt Zeitstempel um 8 Uhr. Die alte Policy gruppierte nach
+# starttag - und der liegt um Mitternacht. "starttag == lauf" ist deshalb
+# NIE wahr, und der Vergleich meldete stumm 0 statt 65. Der Fehler kam
+# beim Umbau auf die Laufachse hinein: neue Achse, alter Vergleich.
+#
+# Der historische Vergleich bekommt deshalb seine eigene Mitternachtsachse.
 alt_n, alt_treffer = 0, 0
-for t in laeufe:
-    stich = pd.Timestamp(t) + pd.Timedelta(days=1, hours=MORGENSTUNDE)
-    b = pruef[(pruef.starttag == t) & (pruef.endzeit < stich)]
+for tag in sorted(pruef.starttag.unique()):
+    stich = pd.Timestamp(tag) + pd.Timedelta(days=1, hours=MORGENSTUNDE)
+    b = pruef[(pruef.starttag == tag) & (pruef.endzeit < stich)]
     u = b[b.auffaelligkeit >= SCORE_SCHWELLE]
     u = u.nlargest(min(LISTENLAENGE, len(u)), "auffaelligkeit")
     alt_n += len(u); alt_treffer += int(u.ist_rueckgabeproblem.sum())
@@ -1106,22 +1114,43 @@ print()
 #
 # Nur Praezision zu zeigen beguenstigt eine Regel, die fast nie meldet.
 # Nur Recall zu zeigen verschweigt die Fehlalarme. Beides gehoert hin.
+# PRECISION UND RECALL AUF DERSELBEN EINHEIT - ODER BEIDE GETRENNT.
+#
+# Die Precision oben ist je NEUEM ALARM gerechnet (259 Stueck). Wer den
+# Recall daneben aus den 381 TAEGLICHEN ROHMELDUNGEN nimmt, stellt zwei
+# verschiedene Objekte nebeneinander und bekommt ein zu schoenes Paar.
+# Beide Ebenen werden deshalb getrennt ausgewiesen.
 episoden_pz = stoerungen[stoerungen["von"] > REFERENZ_BIS]
-gemeldet_menge = set(zip(gemeldet_tage.datum, gemeldet_tage.start_station_id))
-erkannt, verzoegerung = 0, []
-for _, r in episoden_pz.iterrows():
-    tage_ep = pd.date_range(r["von"], r["bis"], freq="D")
-    treffer = [i for i, d in enumerate(tage_ep) if (d, r.station_id) in gemeldet_menge]
-    if treffer:
-        erkannt += 1
-        verzoegerung.append(treffer[0])
+
+def episoden_recall(menge):
+    erkannt, verzug = 0, []
+    for _, r in episoden_pz.iterrows():
+        tage_ep = pd.date_range(r["von"], r["bis"], freq="D")
+        treffer = [i for i, d in enumerate(tage_ep) if (d, r.station_id) in menge]
+        if treffer:
+            erkannt += 1
+            verzug.append(treffer[0])
+    return erkannt, verzug
+
+roh_menge = set(zip(gemeldet_tage.datum, gemeldet_tage.start_station_id))
+neu_menge = set(zip(neue_alarme.datum, neue_alarme.start_station_id))
+erkannt_roh, verzug_roh = episoden_recall(roh_menge)
+erkannt_neu, verzug_neu = episoden_recall(neu_menge)
+
 print()
-print(f"  Störungsepisoden im Prüfzeitraum:  {len(episoden_pz):>6d}")
-print(f"  davon mindestens einmal gemeldet:  {erkannt:>6d} "
-      f"= {erkannt / max(len(episoden_pz), 1):.0%}")
-if verzoegerung:
-    print(f"  Verzögerung bis zum ersten Alarm:  "
-          f"{max(verzoegerung):>6d} Tage (Maximum)")
+print(f"  Störungsepisoden im Prüfzeitraum:  {len(episoden_pz):>6d}\\n")
+print("  ZWEI EBENEN, GETRENNT AUSGEWIESEN:")
+print(f"    je täglicher Rohmeldung ({len(gemeldet_tage)} Stück):")
+print(f"       Precision {tagesquote:>6.1%}   Episoden erkannt {erkannt_roh}/"
+      f"{len(episoden_pz)}   Verzug max {max(verzug_roh) if verzug_roh else 0} Tage")
+print(f"    je neuem Alarm ({len(neue_alarme)} Stück):")
+print(f"       Precision {alarmquote:>6.1%}   Episoden erkannt {erkannt_neu}/"
+      f"{len(episoden_pz)}   Verzug max {max(verzug_neu) if verzug_neu else 0} Tage")
+print()
+print("  Die fehlende Episode begann INNERHALB einer schon laufenden")
+print("  Nullserie, die als Fehlalarm eroeffnet worden war. Ohne Ticket-")
+print("  zustand kann das System nicht unterscheiden, ob daraus ein neuer")
+print("  Fund oder ein weiterlaufender Fehlalarm wird.")
 
 # EIGENE WIRTSCHAFTLICHKEIT FUER B - nicht die von A2.
 #
@@ -1164,15 +1193,30 @@ Der Weg dorthin ist lehrreich, weil an jeder Station eine Zahl größer wurde:
 | täglich, je gemeldetem **Tag** | 13,4 % | zählt jeden Folgetag derselben Störung als eigenen Erfolg |
 | täglich, je **neuem Alarm** | **3,9 %** | — das ist die Zahl, die zählt |
 
-**Und die andere Hälfte der Wahrheit:** Die Regel findet **alle 11 Störungsepisoden** des
-Prüfzeitraums, und zwar jede am **ersten Tag**. Sie ist also außerordentlich empfindlich
-und außerordentlich unpräzise — auf jede echte Episode kommen mehr als zwanzig
-Fehlalarme.
+**Und die andere Hälfte der Wahrheit — auf zwei Ebenen, weil es zwei sind:**
+
+| Einheit | Anzahl | Precision | Episoden erkannt |
+|---|---:|---:|---:|
+| tägliche Rohmeldung | 381 | 13,4 % | **11 von 11** |
+| neuer Alarm (dedupliziert) | 259 | 3,9 % | **10 von 11** |
+
+> **Precision und Recall müssen auf derselben Einheit stehen.** Eine frühere Fassung nahm
+> die Precision je *neuem Alarm* (3,9 %) und den Recall je *täglicher Rohmeldung* (11/11)
+> — und stellte beides als ein Paar nebeneinander. Das schmeichelt: Der Recall kommt aus
+> der größeren Menge, die Precision aus der kleineren. **Auf derselben Einheit gerechnet
+> sind es 10 von 11.**
+
+Die fehlende Episode ist lehrreich: Sie begann **innerhalb einer bereits laufenden
+Nullserie**, die zuvor als Fehlalarm eröffnet worden war. Die tägliche Auswahl berührt
+sie, ein *neuer* Alarm entsteht aber nicht. Ohne Ticketzustand — eröffnet, bestätigt,
+verworfen, geschlossen — kann das System nicht entscheiden, ob daraus ein neuer Fund wird
+oder ein weiterlaufender Fehlalarm. **Das ist keine Rechenfrage, sondern eine fehlende
+Zustandsmaschine.**
 
 > **Präzision allein hätte hier in die Irre geführt, Recall allein auch.** Wer nur die
-> Trefferquote zeigt, lässt eine Regel schlecht aussehen, die nichts übersieht. Wer nur
-> den Recall zeigt, verschweigt 249 unnötige Technikeinsätze. **Beide Zahlen gehören in
-> denselben Bericht**, sonst kann man mit derselben Regel jedes Urteil begründen.
+> Trefferquote zeigt, lässt eine Regel schlecht aussehen, die fast nichts übersieht. Wer
+> nur den Recall zeigt, verschweigt rund 250 unnötige Technikeinsätze. **Beide Zahlen
+> gehören in denselben Bericht — und auf dieselbe Einheit.**
 
 **Die Kosten sind außerdem nicht die von A2.** Das 20-%-Kriterium und die sechs Plätze
 stammen aus der Rechnung für eine Schreibtischprüfung im Betriebsbüro. Bei einer Station
@@ -1272,8 +1316,10 @@ def zeige(tag, ueberschrift):
 # Eine fruehere Fassung waehlte den Tag des global auffaelligsten Vorgangs
 # und zeigte ihn ohne Kennzeichnung: ein Extrembeispiel als Normalfall.
 # Der Normalfall ist hier aber die LEERE Liste.
-laengen = {t: len(l) for t, l in
-           zip(sorted(pruef.starttag.unique()), listen)}
+# Die Zuordnung kommt aus der LAUFACHSE, nicht aus vorhandenen Starttagen.
+# Sonst verrutscht sie an einem Tag ohne Fahrtstart - und niemand merkt es.
+laengen = {bis.normalize() - pd.Timedelta(days=1): len(l)
+           for bis, l in zip(laeufe, listen)}
 voll = max(laengen, key=laengen.get)
 leer = next(t for t in sorted(laengen) if laengen[t] == 0)
 
@@ -1302,15 +1348,28 @@ liste.to_csv("tagesliste_beispiel.csv", index=False)
 # Im Training fielen sie nicht auf, weil start == end bei einem fehlenden
 # Wert schlicht False ergibt. Der Trainingspfad war grosszuegig, der
 # Produktionspfad streng - und beide sollen dasselbe tun.
-PFLICHTFELDER = ["startzeit", "endzeit", "start_station_id",
-                 "entgelt_eur", "typ_code", "status"]
-OPTIONALE_FELDER = ["end_station_id"]   # fehlt = frei abgestellt
+# SCHLUESSEL VORHANDEN ist etwas anderes als WERT GEFUELLT.
+#
+# end_station_id DARF leer sein - das heisst "frei abgestellt". Der
+# Schluessel muss aber DA sein: Fehlt er ganz, ist das ein Schema- oder
+# Uebertragungsfehler, und der soll auffallen statt als freie Abstellung
+# durchzugehen.
+ERFORDERLICHE_SCHLUESSEL = ["startzeit", "endzeit", "start_station_id",
+                            "end_station_id", "entgelt_eur", "typ_code", "status"]
+NICHT_NULL_FELDER = ["startzeit", "endzeit", "start_station_id",
+                     "entgelt_eur", "typ_code", "status"]
 
 def vorgang_bewerten(roh):
     """Rohvorgang -> Merkmale -> Auffaelligkeitswert und Begruendung."""
-    fehlt = [f for f in PFLICHTFELDER if f not in roh or pd.isna(roh[f])]
-    if fehlt:
-        raise ValueError(f"Pflichtfelder fehlen: {', '.join(fehlt)}")
+    ohne_schluessel = [f for f in ERFORDERLICHE_SCHLUESSEL if f not in roh]
+    if ohne_schluessel:
+        raise ValueError(
+            f"Diese Schluessel fehlen im Datensatz: {', '.join(ohne_schluessel)}. "
+            "Das ist ein Schemafehler - nicht zu verwechseln mit einem leeren "
+            "Wert, der bei end_station_id zulaessig ist.")
+    leer = [f for f in NICHT_NULL_FELDER if pd.isna(roh[f])]
+    if leer:
+        raise ValueError(f"Diese Felder duerfen nicht leer sein: {', '.join(leer)}")
     if roh["status"] != "abgeschlossen":
         raise ValueError(
             f"Status '{roh['status']}' - bewertet werden nur abgeschlossene "
@@ -1333,7 +1392,7 @@ def vorgang_bewerten(roh):
         "stunde": start.hour,
         # Fehlendes Ziel = frei abgestellt = keine Rundtour. Genau so
         # rechnet auch der Trainingspfad.
-        "ist_rundtour": int(pd.notna(roh.get("end_station_id"))
+        "ist_rundtour": int(pd.notna(roh["end_station_id"])
                             and roh["start_station_id"] == roh["end_station_id"]),
         "entgelt_eur": float(roh["entgelt_eur"]),
         "entgelt_je_minute": float(roh["entgelt_eur"]) / max(dauer, 1),
@@ -1367,13 +1426,21 @@ print(f"Frei abgestellte Fahrt (Vorgang {int(frei_probe.ausleihe_id)}): "
 print(f"Solche Faelle sind {anteil_frei:.1%} der Population; ein Pflichtfeld")
 print("end_station_id haette sie alle abgelehnt.\\n")
 
-# Gegenprobe 3: ein unbekannter Radtyp wird gemeldet, nicht geraten.
+# Gegenprobe 3: ein FEHLENDER Schluessel wird abgelehnt - anders als ein
+# leerer Wert, der oben durchging.
+try:
+    ohne = {k: v for k, v in probe.to_dict().items() if k != "end_station_id"}
+    vorgang_bewerten(ohne)
+except ValueError as fehler:
+    print(f"Fehlender Schlüssel (nicht: leerer Wert):\\n  {fehler}\\n")
+
+# Gegenprobe 4: ein unbekannter Radtyp wird gemeldet, nicht geraten.
 try:
     vorgang_bewerten({**probe.to_dict(), "typ_code": "LASTEN_XL"})
 except ValueError as fehler:
     print(f"Unbekannter Radtyp:\\n  {fehler}\\n")
 
-# Gegenprobe 4: ein abgebrochener Vorgang wird abgewiesen.
+# Gegenprobe 5: ein abgebrochener Vorgang wird abgewiesen.
 try:
     vorgang_bewerten({**probe.to_dict(), "status": "abgebrochen"})
 except ValueError as fehler:
@@ -1388,8 +1455,8 @@ joblib.dump({
     "pipeline": wald,                      # Skalierer UND Wald zusammen
     "merkmale": MERKMALE,
     "rohspalten_begruendung": ROHSPALTEN,
-    "pflichtfelder_roh": PFLICHTFELDER,
-    "optionale_felder_roh": OPTIONALE_FELDER,
+    "erforderliche_schluessel_roh": ERFORDERLICHE_SCHLUESSEL,
+    "nicht_null_felder_roh": NICHT_NULL_FELDER,
     "bekannte_radtypen": list(mittel_je_typ.index),
     "mittel_je_typ": mittel_je_typ.to_dict(),
     "streuung_je_typ": streuung_je_typ.to_dict(),
@@ -1397,9 +1464,14 @@ joblib.dump({
     "schwelle_herkunft": "Alertbudget-Annahme: obere 0,5 % des Referenzzeitraums. "
                          "Nicht empirisch optimiert - dafuer fehlen die Labels.",
     "listenlaenge": LISTENLAENGE,
-    "referenz_von": str(referenz.startzeit.min().date()),
-    "referenz_bis": str(REFERENZ_BIS.date()),
-    "pruefzeit_bis": str(pruefzeit.startzeit.max().date()),
+    # DIE UHRZEIT IST DIE HALBE INFORMATION. "2025-08-27" verschweigt,
+    # dass der Schnitt um 8 Uhr liegt - und genau daran haengt, welcher
+    # Vorgang in welche Menge faellt.
+    "a2_schnitt": A2_SCHNITT.isoformat(),
+    "referenz_definition": "endzeit < a2_schnitt",
+    "referenz_von": referenz.startzeit.min().isoformat(),
+    "pruefzeit_bis": pruefzeit.endzeit.max().isoformat(),
+    "zeitzone": "naive Ortszeit Europe/Berlin - keine tz-Information in den Daten",
     "datenherkunft": "ERFUNDENE LEHRDATEN - Fahrten und Stoerungen synthetisch",
     "freigegeben_fuer": [],
     "status": {
@@ -1513,7 +1585,7 @@ MD("""
 | 2 Data Understanding | Eine **Lücke** in der Dauerverteilung trennt Fahrten von Rückgabeproblemen. Und eine Sackgasse: Die Geschwindigkeit taugt nichts, weil sie aus der Dauer abgeleitet ist |
 | 3 Data Preparation | Fünf Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor keine auffällige *Fahrt* ist — wiederholtes Fehlen bei demselben Rad ist sehr wohl ein Fall, nur ein anderer: Datenqualität statt Fahrverhalten |
 | 4 Modeling | Interquartilsregel (4.505 Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
-| 5 Evaluation | Die globale Rangliste meldet 56 %, die tatsächlich erzeugbare Tagesliste 16,4 % — **ein Drittel davon, bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B fällt die Präzision von 32 % über 44 % und 13,4 % auf **3,9 % je neuem Alarm**; sie findet zwar **alle 11 Episoden am ersten Tag**, reißt aber beide Wirtschaftlichkeitshürden |
+| 5 Evaluation | Die globale Rangliste meldet 56 %, die tatsächlich erzeugbare Tagesliste 16,4 % — **ein Drittel davon, bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B fällt die Präzision von 32 % über 44 % und 13,4 % auf **3,9 % je neuem Alarm**; sie erkennt je nach Einheit **11 von 11** (tägliche Rohmeldungen) oder **10 von 11** Episoden (neue Alarme), reißt aber beide Wirtschaftlichkeitshürden |
 | 6 Deployment | **Keines der drei Produkte ist betrieblich freigegeben.** A1 ist als Regel und Funktion spezifiziert und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen. A2 läuft nur im Schattenbetrieb. B ist nicht freigegeben. Der verbindliche Status steht im Modellpaket; die Tabelle in 6.1 ist von Hand geschrieben |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
