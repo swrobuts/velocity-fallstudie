@@ -163,3 +163,101 @@ misst den neuen Effekt mit dem alten, zu optimistischen Maßstab.
 Konkret: A1 bis A5, dann B1 bis B5 — erst danach entsteht die erste neue
 Zahl. Sie wird niedriger sein als die heutigen 0,464 €, weil der Holdout
 ehrlicher misst. Das ist gewollt.
+
+---
+
+## 4. Ergebnisse des Prototyps (01.09.2026)
+
+Der neue Aufbau wurde vollständig durchgerechnet, bevor das Notebook
+geschrieben wird. Datenstand `analytics/*.csv`, zeitlicher Schnitt
+70 / 15 / 15.
+
+| Menge | Fahrten | Zeitraum |
+|---|---|---|
+| Training | 32.643 | 01.09.2023 – 26.09.2025 |
+| Validierung | 6.995 | 26.09.2025 – 22.05.2026 |
+| **Holdout, unberührt** | 6.995 | 22.05.2026 – 24.08.2026 |
+
+### Baselines (Validierung)
+
+| | MAE |
+|---|---|
+| A Median aller Fahrten | 9,18 Min |
+| B Median je Radtyp | 9,17 Min — **bringt nichts** |
+| C Median je Startstation | 6,06 Min |
+| D Median je Verbindung | 5,83 Min |
+
+Das Ziel bringt gegenüber der Startstation **0,23 Minuten**. Der Review
+hatte hier den großen Sprung erwartet.
+
+### Modelle (Validierung) — die Wahl fällt hier, nicht auf dem Holdout
+
+| | MAE | MedAE |
+|---|---|---|
+| Nullmodell (Median) | 9,18 | 6,00 |
+| Lineare Regression | 5,59 | 3,59 |
+| Entscheidungsbaum (T = 10) | 5,24 | 2,85 |
+| **Random Forest (200)** | **4,67** | **2,44** |
+
+### Finaler Holdout — einmal, nach der Wahl
+
+| | |
+|---|---|
+| Random Forest | **MAE 5,93 Min** |
+| dieselbe Menge, Baseline D | MAE 7,36 Min |
+
+Der Holdout ist **27 % schlechter** als die Validierung. Genau das ist der
+Unterschied, den der alte zufällige Schnitt verdeckt hat. Das Modell
+schlägt die Verbindungs-Baseline aber deutlich (−19 %) — es verdient
+seinen Unterhalt.
+
+### Preisfehler mit der VOLLEN Tariflogik
+
+Startgebühr + Minutenpreis, gedeckelt auf den Tageshöchstpreis, je Fahrt
+für Ist und Prognose getrennt gerechnet.
+
+| Radtyp | n | Preisfehler | unter 0,50 € | Urteil |
+|---|---|---|---|---|
+| CITY | 3.776 | 0,614 € | 62,9 % | fällt durch |
+| EBIKE | 2.562 | 1,285 € | 42,3 % | fällt durch |
+| CARGO | 657 | 3,907 € | 18,7 % | fällt durch |
+
+**Alle drei fallen durch.** Das alte Notebook meldete für CITY 0,464 € —
+diese Zahl war ein Artefakt des zufälligen Schnitts und der vereinfachten
+Preisformel.
+
+### Fehleranalyse: woran es liegt
+
+| | n | MAE | Preisfehler |
+|---|---|---|---|
+| Rundtour (Start = Ziel) | 1.613 | 10,93 Min | 2,159 € |
+| echter Weg | 5.382 | 4,43 Min | 0,872 € |
+
+### Rücksprung nach Phase 1: Rundtouren als eigener Geschäftsfall
+
+| Radtyp | n | Preisfehler | unter 0,50 € | Urteil |
+|---|---|---|---|---|
+| **CITY** | 2.930 | **0,454 €** | 70,3 % | **besteht** |
+| EBIKE | 1.946 | 0,978 € | 48,2 % | fällt durch |
+| CARGO | 506 | 2,884 € | 21,5 % | fällt durch |
+
+Nebenprobe: Das Modell **nur** auf echten Wegen zu trainieren ändert
+nichts (MAE 4,43 gegen 4,43). Die Rundtouren vergiften das Training also
+nicht — sie sind schlicht nicht vorhersagbar.
+
+### Zweite Rücksprungoption: Spanne statt Punkt
+
+80-%-Intervall über Quantilregression: Abdeckung **81,6 %**, mittlere
+Breite **14,6 Minuten**. Ehrlich, aber breit — als zweite Ausbaustufe
+vermerkt, nicht als erste Lösung.
+
+### Was das Notebook am Ende sagen wird
+
+1. Die neue Frage macht die Zielstation zulässig — Leakage hängt am
+   Prozess, nicht am Spaltennamen.
+2. Ehrlich gemessen besteht **zunächst kein einziger Radtyp**.
+3. Die Fehleranalyse zeigt den Grund: Rundtouren.
+4. Nach einem begründeten Rücksprung besteht **CITY knapp** (0,454 €
+   gegen 0,50 €) — für echte Wege, ohne Rundtouren.
+5. Ausgeliefert wird genau das, und nur das: CITY, echte Wege, technisch
+   erzwungen.
