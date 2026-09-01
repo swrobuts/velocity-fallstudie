@@ -1,15 +1,24 @@
 %% Was weiss man WANN? Der Leakage-Test aus Notebook 1, Phase 3.1.
+%% Die Zielstation steht hier auf der ERLAUBTEN Seite - anders als im
+%% naheliegenden Entwurf. Der Grund steht im Notebook: Sie ist erlaubt,
+%% WEIL der Kunde sie im geaenderten Prozess vorher waehlt, nicht weil
+%% ihr Spaltenname harmlos klaenge. Aendert man den Prozess, aendert
+%% sich die Antwort. Anzeigetexte mit echten Umlauten, Spalten in ASCII.
 flowchart LR
-    A["Kunde entsperrt<br/>das Rad"]:::jetzt
-    B["Fahrt laeuft"]:::spaeter
-    C["Kunde stellt<br/>das Rad ab"]:::spaeter
+    A["Kunde wählt<br/>sein Ziel"]:::jetzt
+    B["Kunde tippt auf<br/>Preis schätzen"]:::jetzt
+    C["Fahrt läuft"]:::spaeter
+    D["Kunde stellt<br/>das Rad ab"]:::spaeter
 
-    A --> B --> C
+    A --> B --> C --> D
 
-    A -.-> V1["startstation<br/>startzeit<br/>typ_code<br/>temperatur<br/>ist_feiertag"]:::erlaubt
-    C -.-> V2["endzeit<br/>distanz_km<br/>zielstation"]:::verboten
+    B -.-> V1["ERLAUBT<br/>start_station_id<br/>ziel_station_id<br/>startzeit · typ_code<br/>Luftlinie · Zeitfenster"]:::erlaubt
+    D -.-> V2["GESPERRT<br/>endzeit<br/>dauer_min<br/>distanz_km<br/>entgelt_eur<br/>temp_mittel_c"]:::verboten
+
+    V1 -.-> H["Vorbehalt: Trainiert wird auf dem<br/>TATSÄCHLICHEN Ziel. Im Betrieb kommt das<br/>GEPLANTE — ein unvalidierter Stellvertreter."]:::hinweis
 
     classDef jetzt fill:#003E6E,stroke:#003E6E,color:#FFFFFF
     classDef spaeter fill:#F7F5EF,stroke:#C9C3B4,color:#404040
     classDef erlaubt fill:#FFFFFF,stroke:#55801C,stroke-width:2px,color:#55801C
     classDef verboten fill:#FFFFFF,stroke:#A32638,stroke-width:2px,color:#A32638
+    classDef hinweis fill:#E3DED1,stroke:#C9C3B4,color:#555148

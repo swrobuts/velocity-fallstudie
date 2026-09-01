@@ -25,10 +25,10 @@ Deshalb vier Teile:
   C Fuenf Faelle       Gleiches Geruest, Tiefe nur dort, wo dieser Fall
                        etwas Neues zeigt. Denn jedes Notebook betont
                        eine andere Phase:
-                         Fall 2 -> Phase 6  ausgeliefert wird die Regel
+                         Fall 2 -> Phase 6  das Modell verdient seinen Unterhalt
                          Fall 3 -> Phase 1  Kriterien ohne Zielgroesse
                          Fall 4 -> Phase 3  Schnitt entlang der Zeit
-                         Fall 5 -> Phase 5  von 42 Regeln bleibt eine
+                         Fall 5 -> Phase 5  von 32 Regeln bleibt keine
                          Fall 6 -> Ruecksprung 4 nach 3
   D Synthese           Die sechs Faelle zurueck auf den Kreislauf.
 
@@ -42,6 +42,7 @@ analytics/notebooks/, nicht aus dem Gedaechtnis.
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 
 from pptx import Presentation
@@ -96,7 +97,24 @@ def kapitel(prs, nummer, titel, frage, notiz):
     return s
 
 
-def folie(prs, kicker, titel, intro=None, quelle=Q):
+# Welches Notebook gerade behandelt wird. Die Fallkapitel setzen das am
+# Anfang; folie() leitet daraus zusammen mit dem Kicker die Fusszeile ab.
+AKTUELLES_NB = [None]
+
+
+def folie(prs, kicker, titel, intro=None, quelle=None):
+    """Eine Inhaltsfolie. Die Quellenzeile entsteht, wo es geht, von selbst.
+
+    Das Deck ist eine Lesehilfe: Jede Folie eines Fallkapitels soll sagen,
+    wo im Notebook das Gezeigte steht. Von Hand gepflegt bleibt das nicht
+    vollstaendig - beim ersten Durchlauf trugen 24 von 120 Folien eine
+    Quelle. Deshalb wird sie aus dem Kicker abgeleitet: „Phase 5 · ...“
+    oder „Fall 2 · Phase 5“ ergibt Abschnitt 5 des laufenden Notebooks.
+    """
+    if quelle is None:
+        nb = AKTUELLES_NB[0]
+        phase = re.search(r"Phase (\d)", kicker)
+        quelle = nbq(nb, phase.group(1) if phase else "") if nb else Q
     s = prs.slides.add_slide(lay(prs, "Slide"))
     s._intro_unten = kopf(s, kicker, titel, quelle=quelle, intro=intro)
     return s
@@ -163,6 +181,28 @@ def zellfolie(prs, nb, abschnitt, kicker, titel, ausschnitt, deutung, notiz):
     return s
 
 
+# ── Hoehen ausrechnen statt schaetzen
+#
+# Die zweite Form auf einer Folie braucht die Unterkante der ersten.
+# Beim Umbau von Fall 1 standen dort geschaetzte Zahlen, und der
+# Deckpruefer meldete elf Ueberlappungen - eine Tabelle mit fuenf
+# Zeilen ist eben 40 pt hoeher als eine mit vier. Diese drei Funktionen
+# nutzen dieselben Formeln wie die Motive in thws.py.
+
+def h_tabelle(n_zeilen, zeilen_h):
+    """Kopfzeile plus n Datenzeilen."""
+    return (n_zeilen + 1) * zeilen_h
+
+
+def h_gestapelt(n, hoehe, luecke):
+    """streifen, schichtenstapel, ampel_matrix - n Karten mit Luecke."""
+    return n * hoehe + (n - 1) * luecke
+
+
+def darunter(y, hoehe, abstand=14):
+    return y + hoehe + abstand
+
+
 def streifen(s, zeilen, **kw):
     """regel_streifen, das auch Zweiertupel annimmt.
 
@@ -174,6 +214,7 @@ def streifen(s, zeilen, **kw):
 
 
 def rahmen(prs):
+    AKTUELLES_NB[0] = None
     """Die zwei Folien zwischen Titel und Kapitel 1: Aufhaenger und Wegweiser."""
     s = folie(prs, "Der Ausgangspunkt",
               "Sechs Projekte, sechs Verfahren — und sechsmal dieselbe Reihenfolge",
@@ -214,6 +255,7 @@ def rahmen(prs):
 # ═══════════════════════════════════════════════════ Teil A — Die Karte
 
 def teil_karte(prs):
+    AKTUELLES_NB[0] = None
     kapitel(prs, 1, "Der Kreislauf",
             "Warum braucht ein Datenprojekt überhaupt eine feste Schrittfolge?",
             "Wir bauen in diesem Kapitel die Landkarte. Sie ist bewusst knapp gehalten "
@@ -363,8 +405,8 @@ def teil_karte(prs):
     vorher_nachher(s,
                    ("So läuft es meistens", "Kriterium nach dem Ergebnis", [
                        "1. Daten laden, Modell rechnen",
-                       "2. MAE liegt bei 0,91 €",
-                       "3. „Unter einem Euro — ordentlich.“",
+                       "2. Der Fehler liegt bei 3,96 Minuten",
+                       "3. „Unter vier Minuten — ordentlich.“",
                        "",
                        "Die Hürde wurde an das Ergebnis",
                        "angelegt, nicht umgekehrt. So kann",
@@ -376,10 +418,11 @@ def teil_karte(prs):
                        "   50 Cent liegen“ — vor allem",
                        "   anderen festgelegt",
                        "2. Daten laden, Modell rechnen",
-                       "3. 0,91 € — Kriterium gerissen",
+                       "3. CITY 0,41 € hält, EBIKE 0,85 €",
+                       "   und CARGO 2,48 € reißen",
                        "",
-                       "Genau so steht es in Notebook 1.",
-                       "Und deshalb ist das Ergebnis dort",
+                       "Genau so steht es in Notebook 1 —",
+                       "und deshalb ist das Ergebnis dort",
                        "eine Erkenntnis statt einer Ausrede.",
                    ], False),
                    y=unter_intro(s), hoehe=222)
@@ -394,12 +437,14 @@ def teil_karte(prs):
               "läuft vollständig durch; die übrigen fünf gehen dort in die Tiefe, "
               "wo sie etwas Neues zu zeigen haben.")
     tabelle(s, ["Fall", "Verfahren", "Zeigt", "Der Satz, der bleibt"], [
-        ["1", "Regression", "alle sechs", "Die gemittelte Kennzahl verdeckt, dass ein "
-                                          "Drittel besteht"],
-        ["2", "Klassifikation", "Phase 6", "Ausgeliefert wird die Regel, nicht das Modell"],
+        ["1", "Regression", "alle sechs", "Ob ein Merkmal erlaubt ist, entscheidet der "
+                                          "Prozess — nicht der Spaltenname"],
+        ["2", "Klassifikation", "Phase 6", "Ein Modell muss seinen Unterhalt verdienen — "
+                                           "hier verdient es ihn"],
         ["3", "Clustering", "Phase 1", "Erfolgskriterien auch ohne Zielgröße"],
         ["4", "Zeitreihe", "Phase 3", "Die genaueste Prognose ist nicht die günstigste"],
-        ["5", "Assoziation", "Phase 5", "Von 42 Regeln erfüllt genau eine beide Hürden"],
+        ["5", "Assoziation", "Phase 5", "Keine Regel nimmt beide Hürden — und die "
+                                        "Hürde bleibt trotzdem stehen"],
         ["6", "Anomalie", "Rücksprung", "Kein Verfahren erzeugt Information, die in den "
                                         "Daten nicht steckt"],
     ], y=unter_intro(s), spalten_b=[50, 130, 110, 613.5], zeilen_h=42)
@@ -423,674 +468,875 @@ def teil_karte(prs):
 # ═════════════════════════════════════ Teil B — Referenzfall Notebook 1
 
 def teil_referenzfall(prs):
+    AKTUELLES_NB[0] = 1
     kapitel(prs, 2, "Fall 1 — Regression: der volle Durchlauf",
-            "Wie lange dauert diese Fahrt — und reicht die Schätzung, um vorher "
-            "einen Preis anzuzeigen?",
+            "Was kostet die Fahrt zu diesem Ziel — und wann sagt die App besser "
+            "gar nichts?",
             "Dieses Kapitel ist das Rückgrat des Decks. Es läuft alle sechs Phasen "
             "vollständig durch, mit den echten Zahlen aus Notebook 1. Die Regression "
             "ist bewusst gewählt: Sie ist das vertrauteste Verfahren, deshalb bleibt "
             "die Aufmerksamkeit beim VORGEHEN statt beim Verfahren. Alle folgenden "
-            "Fälle setzen dieses Kapitel voraus.")
+            "Fälle setzen dieses Kapitel voraus. Bitten Sie die Studierenden, das "
+            "Notebook parallel offen zu haben — jede Folie nennt in der Fußzeile "
+            "ihren Abschnitt.")
+
+    # ── Der Einwand, aus dem der ganze Fall entsteht
+    s = folie(prs, "Fall 1", "Der Einwand, mit dem dieses Notebook anfängt",
+              "Die naheliegende Idee: Beim Entsperren schätzt ein Modell die "
+              "Fahrtdauer, das Tarifblatt macht daraus einen Preis. Diese Idee hat "
+              "einen Fehler — und zwar keinen technischen.")
+    vorher_nachher(s,
+                   ("Die naheliegende Idee", "Schätzen beim Entsperren", [
+                       "Das Modell kennt Startstation,",
+                       "Uhrzeit und Wochentag.",
+                       "",
+                       "Damit kann es zwei Fahrten nicht",
+                       "unterscheiden, die gleich beginnen:",
+                       "acht Minuten zum Bahnhof gegen",
+                       "neunzig Minuten am Main entlang.",
+                   ], False),
+                   ("Der Einwand", "Der Nutzer weiß es besser", [
+                       "Er kennt sein Ziel.",
+                       "Er weiß, ob er es eilig hat.",
+                       "Er weiß, ob er unterwegs anhält.",
+                       "",
+                       "Wozu soll ein Modell etwas",
+                       "vorhersagen, das der Mensch",
+                       "davor längst weiß?",
+                   ], False),
+                   y=unter_intro(s), hoehe=206)
+    phasenleiste(s, 1)
+    notizen(s, "Diese Folie ist der Einstieg in den ganzen Fall, und sie ist "
+               "unbequem: Der Einwand kommt nicht aus der Statistik, sondern aus dem "
+               "Produkt. Ein Modell, das eine Zahl liefert, die der Nutzer selbst "
+               "besser kennt, ist technisch einwandfrei und trotzdem nutzlos. "
+               "Lassen Sie die Studierenden zuerst selbst überlegen, was man dagegen "
+               "tun kann — die meisten schlagen ein besseres Verfahren vor. Die "
+               "Antwort auf der nächsten Folie ist eine andere.")
+
+    s = folie(prs, "Fall 1", "Nicht das Verfahren ändern — den Prozess",
+              "Das Problem ist keins des Verfahrens, sondern eines der Information. "
+              "Fehlende Information holt man nicht durch mehr Rechenleistung herein, "
+              "sondern indem man fragt.")
+    prozesskette(s, "App an der\nStation", [
+        ("Ziel auf der\nKarte wählen", ""), ("„Preis\nschätzen“", ""),
+        ("Spanne wird\nangezeigt", ""),
+    ], "Kunde\nentscheidet", y=unter_intro(s) + 6, hoehe=84)
+    sandkarte(s, "Und daraus folgt die Einsicht, die das ganze Notebook trägt",
+              ["Ob ein Merkmal verwendet werden darf, entscheidet nicht sein "
+               "Spaltenname, sondern der Zeitpunkt, zu dem es im Prozess entsteht.",
+               "Die Zielstation war im alten Entwurf verboten. Im neuen ist sie "
+               "erlaubt — nicht, weil sich die Daten geändert hätten, sondern weil "
+               "der Kunde sie jetzt vorher eingibt.",
+               "Ändert man den Prozess, ändert sich die Antwort auf die Frage, was "
+               "Leakage ist."],
+              y=unter_intro(s) + 106)
+    phasenleiste(s, 1)
+    notizen(s, "Das ist der Satz, den die Studierenden aus Notebook 1 mitnehmen "
+               "sollen. Leakage wird meistens als Liste verbotener Spaltennamen "
+               "gelehrt. Hier sieht man, dass dieselbe Spalte je nach Prozess "
+               "verboten oder erlaubt ist. Wer nur die Liste gelernt hat, hätte die "
+               "Zielstation weiterhin gesperrt — und damit das bessere Produkt "
+               "verhindert.")
+
+    s = folie(prs, "Fall 1", "Die Annahme, auf der alles Weitere ruht",
+              "Ein Prozess, den wir künftig ändern, macht eine historische "
+              "Ergebnisspalte nicht rückwirkend zu einer Eingabe. Das muss auf den "
+              "Tisch, bevor irgendeine Zahl fällt.")
+    kachelreihe(s, [
+        ("Worauf trainiert wird", [
+            "end_station_id — die Station,",
+            "an der die Fahrt tatsächlich",
+            "geendet hat.",
+            "",
+            "Das steht so in den",
+            "historischen Daten.",
+        ]),
+        ("Was im Betrieb ankommt", [
+            "Die Station, die der Kunde",
+            "vorher gewählt hat.",
+            "",
+            "Beide fallen auseinander,",
+            "wenn jemand umplant oder",
+            "die Zielstation voll ist.",
+        ]),
+        ("Was daraus folgt", [
+            "Das tatsächliche Ziel ist ein",
+            "unvalidierter Stellvertreter",
+            "für das geplante.",
+            "",
+            "Jede Zahl in diesem Notebook",
+            "ist deshalb eine Obergrenze.",
+        ]),
+    ], y=unter_intro(s), hoehe=186)
+    sandband(s, "Prüfen lässt sich diese Annahme erst, wenn die App das geplante Ziel "
+                "speichert. Bis dahin steht sie als Vorbehalt im Notebook — nicht in "
+                "einer Fußnote am Ende.", y=unter_intro(s) + 196)
+    phasenleiste(s, 1)
+    notizen(s, "Diese Folie ist der Grund, warum das Notebook glaubwürdig ist. Es "
+               "wäre leicht gewesen, den Unterschied zwischen geplantem und "
+               "tatsächlichem Ziel zu übergehen — niemand hätte es gemerkt. Fragen "
+               "Sie die Studierenden, welche Zahl auf den folgenden Folien dadurch "
+               "kleiner würde. Antwort: alle.")
 
     s = folie(prs, "Fall 1", "Der Fall auf einen Blick",
               "Bevor wir loslaufen: wohin die Reise geht. Das Urteil steht hier "
-              "schon — die interessante Frage ist, wie man dorthin kommt.")
+              "schon — interessant ist der Weg dorthin.")
     steckbrief(s, [
-        ("Geschäftsfrage", "Kann VeloCity beim Entsperren anzeigen, was die Fahrt "
-                           "kosten wird?"),
-        ("Analytisches Ziel", "Fahrtdauer in Minuten schätzen, aus dem, was beim "
-                              "Entsperren bekannt ist"),
-        ("Erfolgskriterium", "Mittlerer Preisfehler unter 50 Cent — festgelegt vor "
-                             "dem ersten Blick in die Daten"),
-        ("Daten", "rund 60.000 Fahrten aus drei Jahren, dazu Wetter und Kalender"),
-        ("Verfahren", "Nullmodell, lineare Regression, Entscheidungsbaum, Random Forest"),
-        ("Urteil", "Ein Drittel der Flotte besteht, zwei Drittel nicht — und das "
-                   "sieht man nur getrennt"),
+        ("Geschäftsfrage", "Kann die App den Preis nennen, nachdem der Kunde sein "
+                           "Ziel gewählt hat?"),
+        ("Analytisches Ziel", "Die Dauer in Minuten schätzen — der Preis folgt "
+                              "daraus über das Tarifblatt"),
+        ("Erfolgskriterium", "Preisfehler unter 50 Cent, festgelegt vor dem ersten "
+                             "Blick in die Daten"),
+        ("Daten", "60.425 Vorgänge aus drei Jahren, davon 47.054 im Geltungsbereich"),
+        ("Verfahren", "Vier Baselines, dann lineare Regression, Baum, Random Forest"),
+        ("Urteil", "CITY hält die Grenze — und wir springen trotzdem zurück"),
     ], y=unter_intro(s))
-    notizen(s, "Sagen Sie das Urteil ruhig vorweg. Es nimmt keine Spannung — im "
-               "Gegenteil: Die Studierenden hören danach aufmerksamer zu, weil sie "
-               "wissen, dass es nicht glattgeht.")
+    notizen(s, "Die letzte Zeile ist der ungewöhnliche Teil. In den meisten "
+               "Lehrbeispielen kommt der Rücksprung, weil etwas schiefgeht. Hier "
+               "kommt er, obwohl das Kriterium hält. Warum, sehen wir in Phase 5.")
 
     # ─────────────────────────────────────────────── Phase 1
     s = folie(prs, "Phase 1 · Business Understanding", "Vom Wunsch zur Zahl",
-              "„Der Kunde soll vorher wissen, was es kostet.“ Das ist ein Wunsch, "
-              "kein Auftrag. Aus ihm wird in drei Schritten etwas Messbares.")
-    prozesskette(s, "Wunsch", [
-        ("Geschäfts-\nziel", ""), ("Analytisches\nZiel", ""),
-        ("Erfolgs-\nkriterium", ""), ("Fehler-\nkosten", ""),
-    ], "Messbar", y=unter_intro(s) + 6, hoehe=84)
-    sandkarte(s, "Die drei Schritte an diesem Fall",
-              ["Geschäftsziel: Beim Entsperren steht eine Preisangabe auf dem Bildschirm.",
-               "Analytisches Ziel: Die DAUER schätzen — der Preis folgt daraus über das Tarifblatt.",
-               "Erfolgskriterium: Die Angabe liegt im Mittel unter 50 Cent daneben."],
-              y=unter_intro(s) + 106)
+              "„Der Kunde soll wissen, was es kostet.“ Das ist ein Wunsch, kein "
+              "Auftrag. Aus ihm wird in drei Schritten etwas Messbares.")
+    streifen(s, [
+        ("Geschäftsziel", "Nach der Zielwahl steht eine Preisangabe auf dem Bildschirm"),
+        ("Analytisches Ziel", "Geschätzt wird die DAUER, nicht der Preis"),
+        ("Erfolgskriterium", "Die Angabe liegt im Mittel unter 50 Cent daneben — "
+                             "die Grenze kommt aus dem Produktmanagement"),
+        ("Gemessen auf", "einem Zeitraum, den das Modell beim Training nie gesehen hat"),
+    ], y=(y := unter_intro(s)), hoehe=48, luecke=9, chip_b=250)
+    sandband(s, "Man schätzt nie, was man ausrechnen kann. Das Tarifblatt ist exakt "
+                "bekannt — es zu schätzen wäre ein zusätzlicher Fehler ohne jeden "
+                "Gegenwert.", y=darunter(y, h_gestapelt(4, 48, 9)))
     phasenleiste(s, 1)
-    notizen(s, "Der Sprung vom Preis zur Dauer ist die eigentliche Modellierungs"
-               "entscheidung dieser Phase, und sie fällt hier, nicht in Phase 4. "
-               "Den Preis direkt zu schätzen wäre schlechter: Das Tarifblatt ist "
-               "bekannt und exakt — man schätzt nie, was man ausrechnen kann.")
+    notizen(s, "Der Sprung vom Preis zur Dauer ist die eigentliche "
+               "Modellierungsentscheidung dieser Phase, und sie fällt hier, nicht in "
+               "Phase 4. Wer den Preis direkt schätzt, schätzt zwei Dinge auf einmal: "
+               "die Dauer und die Tariflogik. Die zweite kennt er aber genau.")
 
     s = folie(prs, "Phase 1 · Business Understanding",
-              "Dieselbe Grenze bedeutet für jedes Rad etwas anderes",
-              "50 Cent Preistoleranz — geteilt durch den Minutenpreis ergibt das die "
-              "erlaubte Abweichung in Minuten. Und die fällt dramatisch verschieden aus.")
-    tabelle(s, ["Radtyp", "Minutenpreis", "Erlaubte Abweichung", "Was das heißt"], [
-        ["CITY", "0,10 €", "5,0 Minuten", "komfortabel — hier ist Spielraum"],
-        ["EBIKE", "0,25 €", "2,0 Minuten", "eng"],
-        ["CARGO", "0,50 €", "1,0 Minuten", "praktisch unerreichbar"],
-    ], y=unter_intro(s), spalten_b=[130, 150, 220, 403.5], zeilen_h=44)
-    sandband(s, "Diese Tabelle entscheidet den ganzen Fall — und sie steht in Phase 1, "
-                "lange bevor ein Modell gerechnet wurde. Wer sie überspringt, wundert "
-                "sich in Phase 5 über ein Ergebnis, das er nicht deuten kann.",
-             y=unter_intro(s) + 190)
+              "Der Geltungsbereich — was ausdrücklich nicht dazugehört",
+              "Drei Einschränkungen, und die dritte ist eine Setzung. Der Unterschied "
+              "gehört benannt, nicht versteckt.")
+    tabelle(s, ["Einschränkung", "Warum", "Belegt oder gesetzt?"], [
+        ["Nur abgeschlossene Fahrten", "Abbrüche und Stornierungen sind keine Fahrten",
+         "belegt — sie dauern zwei Minuten"],
+        ["Nur Station zu Station", "Wer frei im Gebiet abstellt, hat kein Ziel gewählt",
+         "belegt — betrifft ein Fünftel"],
+        ["Nur Fahrten bis acht Stunden",
+         "Darüber liegt eine vergessene Rückgabe, ein eigener Geschäftsfall",
+         "gesetzt — es gibt keine Statusangabe, die das trennt"],
+    ], y=(y := unter_intro(s)), spalten_b=[220, 350, 333.5], zeilen_h=58)
+    sandband(s, "Die dritte Zeile ist die ehrlichste der Folie: Acht Stunden sind "
+                "eine Verabredung, keine Messung. Sie gehört fachlich abgesichert — "
+                "und bis dahin steht sie als offener Punkt im Notebook.",
+             y=darunter(y, h_tabelle(3, 58)))
     phasenleiste(s, 1)
-    notizen(s, "Hier lohnt eine Minute Stille. Die Studierenden sollen selbst darauf "
-               "kommen, dass eine EINZIGE Preisgrenze zu drei verschiedenen "
-               "Anforderungen an dasselbe Modell führt. Das ist der Kern von Phase 1: "
-               "Die Fachlichkeit bestimmt die Messlatte, nicht die Statistik.")
+    notizen(s, "Der Geltungsbereich entscheidet mit darüber, wie gut ein Modell "
+               "aussieht. Wer ihn eng zieht, bekommt bessere Zahlen für ein "
+               "kleineres Produkt. Deshalb gehört er in Phase 1 und nicht in die "
+               "Datenaufbereitung — sonst gerät er zur nachträglichen Ausrede.")
 
-    zellfolie(prs, 1, "1 — Erfolgskriterien", "Phase 1 · im Notebook",
-              "Die Umrechnung, Zeile für Zeile",
-              "nb1-kriterium",
-              "Drei Zeilen Code — und aus einer Preisgrenze werden drei verschiedene "
-              "Anforderungen an dasselbe Modell.",
-              "Das ist die Zelle, aus der die Tabelle der letzten Folie stammt. Zeigen "
-              "Sie auf die Division: grenze_eur geteilt durch preis_pro_minute_eur. "
-              "Mehr steckt nicht dahinter — und genau diese drei Zeilen entscheiden "
-              "am Ende über das Urteil des ganzen Projekts.")
-
-    s = folie(prs, "Phase 1 · Business Understanding",
-              "Erfolgskriterien werden festgelegt, bevor jemand die Daten sieht")
-    vorher_nachher(s,
-                   ("Was passiert wäre", "Kriterium nach dem Ergebnis", [
-                       "MAE 4,58 Minuten, R² 0,754.",
-                       "",
-                       "„Drei Viertel der Streuung erklärt —",
-                       "das ist ein gutes Modell.“",
-                       "",
-                       "Stimmt sogar. Nur beantwortet es",
-                       "die Frage nicht, die gestellt war.",
-                   ], False),
-                   ("Was tatsächlich steht", "Kriterium vor den Daten", [
-                       "„Unter 50 Cent Preisfehler.“",
-                       "",
-                       "Daraus: 5,0 / 2,0 / 1,0 Minuten",
-                       "je nach Radtyp.",
-                       "",
-                       "Erst diese Grenze macht aus einem",
-                       "guten R² ein brauchbares oder ein",
-                       "unbrauchbares Ergebnis.",
-                   ], False),
-                   y=unter_intro(s), hoehe=210)
-    phasenleiste(s, 1)
-    notizen(s, "R² 0,754 ist für sozialwissenschaftliche Verhältnisse hervorragend. "
-               "Und trotzdem reicht es für zwei von drei Radtypen nicht. Genau diese "
-               "Diskrepanz ist der Grund, warum Phase 1 nicht übersprungen werden darf.")
-
-    s = folie(prs, "Phase 1 · Business Understanding",
-              "Was in dieser Phase noch entschieden wird")
-    kachelreihe(s, [
-        ("Fehlerkosten", [
-            "Ist Unterschätzen so schlimm",
-            "wie Überschätzen?",
-            "Hier: ja, beide Richtungen",
-            "ärgern gleich. In Fall 2 und 4",
-            "ist das anders — dort steht",
-            "ein Preisschild an jeder Seite.",
-        ]),
-        ("Datenzugang", [
-            "Was ist zum Zeitpunkt der",
-            "Vorhersage tatsächlich",
-            "bekannt?",
-            "Beim Entsperren: Station,",
-            "Uhrzeit, Radtyp, Wetter.",
-            "Sonst nichts.",
-        ]),
-        ("Abbruchkriterium", [
-            "Wann sagen wir ehrlich,",
-            "dass es nicht geht?",
-            "Hier: Wenn auch nach einem",
-            "Rücksprung kein Radtyp die",
-            "Grenze hält, wird die Anzeige",
-            "nicht gebaut.",
-        ]),
-    ], y=unter_intro(s), hoehe=196)
-    phasenleiste(s, 1)
-    notizen(s, "Der dritte Punkt fehlt in fast allen Lehrbeispielen. Ein Projekt "
-               "braucht eine verabredete Abbruchbedingung, sonst läuft es endlos "
-               "weiter, weil immer noch ein Verfahren übrig ist, das man probieren "
-               "könnte.")
+    zellfolie(prs, 1, "1 — Das Tarifblatt", "Phase 1 · im Notebook",
+              "Das Tarifblatt: drei Räder, drei Minutenpreise",
+              "nb1-tarif",
+              "Startgebühr, Minutenpreis, Tageshöchstpreis — daraus wird später der "
+              "Preis gerechnet, nicht geschätzt.",
+              "Zeigen Sie auf die Spalte preis_pro_minute_eur: 0,10 gegen 0,25 gegen "
+              "0,50 Euro. Dieselbe 50-Cent-Grenze bedeutet damit für das City-Rad "
+              "fünf Minuten Spielraum und für das Lastenrad eine einzige. Diese "
+              "Spreizung entscheidet in Phase 5 über das Urteil — und sie steht "
+              "schon hier, in Phase 1.")
 
     # ─────────────────────────────────────────────── Phase 2
-    s = folie(prs, "Phase 2 · Data Understanding", "Erst sehen, dann rechnen",
-              "In dieser Phase wird nichts modelliert. Es wird beschrieben, "
-              "erkundet und geprüft — in dieser Reihenfolge.")
-    streifen(s, [
-        ("2.1 Beschaffen", "Sieben CSV-Dateien, kein Zugriff auf die Produktivdatenbank"),
-        ("2.2 Beschreiben", "Wie viele Zeilen, welche Spalten, wo sind Lücken?"),
-        ("2.3 Zielgröße", "Zuerst die Dauer selbst ansehen — Verteilung, Ausläufer, Schiefe"),
-        ("2.4 Zusammenhänge", "Welche Merkmale trennen? Station, Stunde und Tagesart deutlich"),
-    ], y=unter_intro(s), hoehe=54, luecke=8, chip_b=250)
+    s = folie(prs, "Phase 2 · Data Understanding", "Nicht jeder Vorgang ist eine Fahrt",
+              "Bevor irgendetwas gerechnet wird: Was steht überhaupt in der Tabelle? "
+              "Die Antwort ändert die Datenmenge um ein Fünftel.")
+    tabelle(s, ["Status", "Anzahl", "Mediandauer", "Was das heißt"], [
+        ["abgeschlossen", "58.737", "11 Minuten", "das sind Fahrten"],
+        ["abgebrochen", "1.364", "2 Minuten", "Vorgänge, die nie eine wurden"],
+        ["storniert", "324", "1 Minute", "dito — und beide verzerren die kurzen Wege"],
+    ], y=unter_intro(s), spalten_b=[190, 120, 150, 443.5], zeilen_h=46)
+    sandband(s, "Zwei Minuten sind keine Fahrt, sondern ein Fehlgriff am Schloss. "
+                "Wer sie mitzählt, drückt genau die kurzen Strecken nach unten, um "
+                "die es hier geht.", y=unter_intro(s) + 194)
     phasenleiste(s, 2)
-    notizen(s, "Die Reihenfolge ist kein Zufall: erst die Zielgröße allein, dann ihr "
-               "Verhältnis zu den Merkmalen. Wer mit Korrelationsmatrizen anfängt, "
-               "übersieht, dass die Zielgröße rechtsschief ist — und das entscheidet "
-               "später über die Modellwahl.")
+    notizen(s, "Diese Folie steht bewusst vor allen Kennzahlen. Studierende beginnen "
+               "Phase 2 meistens mit einer Verteilung der Zielgröße. Sinnvoller ist "
+               "die Frage, ob jede Zeile überhaupt den Sachverhalt beschreibt, um "
+               "den es geht — hier tut das jede fünfte Zeile nicht.")
+
+    zellfolie(prs, 1, "2.2", "Phase 2 · im Notebook",
+              "Der Trichter: von 60.425 auf 47.054 Fahrten",
+              "nb1-trichter",
+              "Jeder Schritt mit Zeilenzahl. 77,9 Prozent bleiben übrig — und ein "
+              "Fünftel fehlt aus einem Grund, der kein Fehler ist.",
+              "Fast 20 Prozent der Fahrten enden frei im Geschäftsgebiet und haben "
+              "deshalb kein Ziel. Das sieht aus wie ein Datenqualitätsproblem und ist "
+              "in Wahrheit ein beworbenes Produktmerkmal. Wer es wegbereinigt, "
+              "verliert ein Fünftel der Daten für nichts — wer es als Fehler meldet, "
+              "blamiert sich vor dem Fachbereich.")
 
     s = folie(prs, "Phase 2 · Data Understanding",
-              "Zwei Qualitätsbefunde — und die Frage, ob sie Fehler sind",
-              "Nicht jede Auffälligkeit ist ein Fehler. Der Unterschied entscheidet "
-              "darüber, ob man bereinigt oder ob man etwas gelernt hat.")
-    tabelle(s, ["Befund", "Umfang", "Fehler oder Erkenntnis?"], [
-        ["Fahrten ohne Distanzangabe", "42 %",
-         "Erkenntnis: Nicht jedes Rad hat den Sensor. Die Spalte darf deshalb kein "
-         "Pflichtmerkmal werden — sie fehlt bei zwei von fünf Fahrten"],
-        ["Vorgänge unter einer Minute", "2,7 %",
-         "Fehler: Das sind keine Fahrten, sondern Fehlentsperrungen. Sie werden "
-         "begründet ausgeschlossen — mit Zeilenzahl davor und danach"],
-    ], y=unter_intro(s), spalten_b=[240, 90, 573.5], zeilen_h=72)
+              "Rundtouren: dieselbe Verbindung, jede beliebige Dauer",
+              "Bei jeder sechsten Fahrt mit Ziel ist das Ziel der Start. Für ein "
+              "Modell, das aus der Verbindung lernt, ist das ein Problem.")
+    tabelle(s, ["Art der Fahrt", "Anzahl", "Mediandauer", "Mittlere Hälfte"], [
+        ["Rundtour — Start ist gleich Ziel", "7.749", "18 Minuten", "11 bis 33 Minuten"],
+        ["echter Weg", "39.305", "10 Minuten", "7 bis 16 Minuten"],
+    ], y=(y := unter_intro(s)), spalten_b=[330, 120, 160, 293.5], zeilen_h=48)
+    sandkarte(s, "Warum das zählt",
+              ["Bei einer Rundtour trägt das Ziel per Definition nichts zur Dauer bei "
+               "— es ist ja der Start.",
+               "Und sie streuen doppelt so stark: 22 Minuten Spannweite gegen 9.",
+               "Das ausgelieferte Produkt wird Rundtouren deshalb gar nicht "
+               "beantworten. Diese Entscheidung fällt hier, nicht in Phase 6."],
+              y=darunter(y, h_tabelle(2, 48)))
     phasenleiste(s, 2)
-    notizen(s, "Das ist die wichtigste Unterscheidung dieser Phase. Die 42 Prozent "
-               "sehen aus wie ein Datenqualitätsproblem und sind in Wahrheit eine "
-               "Aussage über die Flotte. Wer sie wegbereinigt, verliert 42 Prozent "
-               "der Daten für nichts.")
+    notizen(s, "16,5 Prozent klingt nach einer Randgruppe. Es sind aber genau die "
+               "Fahrten, bei denen das neue Verfahren nichts gewinnt — der Kunde "
+               "wählt als Ziel den Start und bekommt trotzdem keine belastbare "
+               "Auskunft. Die App sagt das später offen.")
 
     s = folie(prs, "Phase 2 · Data Understanding",
-              "Die Zielgröße ist rechtsschief — und das hat Folgen")
-    kachelreihe(s, [
-        ("Was man sieht", [
-            "Die meisten Fahrten sind kurz.",
-            "Ein langer Ausläufer nach rechts:",
-            "wenige sehr lange Fahrten.",
-            "",
-            "Mittelwert und Median fallen",
-            "deutlich auseinander.",
-        ]),
-        ("Warum das zählt", [
-            "Der mittlere absolute Fehler",
-            "behandelt eine Abweichung von",
-            "5 Minuten bei einer 10-Minuten-",
-            "Fahrt genauso wie bei einer",
-            "Stunde — fachlich ist das",
-            "aber nicht dasselbe.",
-        ]),
-        ("Was daraus folgt", [
-            "Vermerkt für Phase 3 und für",
-            "den Rücksprung: Ein Modell auf",
-            "dem Logarithmus der Dauer",
-            "träfe solche Verteilungen",
-            "oft besser.",
-            "Eine Zeile, große Wirkung.",
-        ]),
-    ], y=unter_intro(s), hoehe=196)
+              "Was die Verbindung erklärt — ein erster Blick ohne Modell",
+              "Man kann den Nutzen der Zielinformation schätzen, bevor man ein "
+              "Verfahren wählt: Wie weit kommt man mit dem bloßen Median?")
+    tabelle(s, ["Was man weiß", "Mittlerer absoluter Fehler"], [
+        ["gar nichts — der Median aller Fahrten", "8,04 Minuten"],
+        ["die Startstation", "5,29 Minuten"],
+        ["Start UND Ziel — die Verbindung", "5,03 Minuten"],
+    ], y=unter_intro(s), spalten_b=[450, 453.5], zeilen_h=46)
+    sandband(s, "Der große Sprung kommt von der Startstation, nicht vom Ziel. Diese "
+                "Zahl steht in Phase 2 — und sie wird in Phase 4 mit einem Modell "
+                "noch einmal überprüft.", y=unter_intro(s) + 194)
     phasenleiste(s, 2)
-    notizen(s, "Hier entsteht schon in Phase 2 ein Vermerk für einen möglichen "
-               "Rücksprung. Genau so soll es sein: Man notiert die Beobachtung, "
-               "handelt aber noch nicht — sonst optimiert man ins Blaue.")
-
-    s = folie(prs, "Phase 2 · Data Understanding",
-              "Was die Erkundung über die Merkmale sagt",
-              "Die späteren Koeffizienten der linearen Regression bestätigen, was "
-              "hier schon sichtbar wird — in Minuten je Einheit.")
-    tabelle(s, ["Merkmal", "Wirkung auf die Dauer", "Deutung"], [
-        ["Wochenende", "+ 8,8 Minuten", "Freizeitfahrten sind länger als Pendelfahrten"],
-        ["Feiertag", "+ 7,3 Minuten", "derselbe Effekt, noch stärker"],
-        ["Start Residenz", "+ 8,6 Minuten", "touristischer Ausgangspunkt"],
-        ["Start Zellerau", "− 10,2 Minuten", "Wohngebiet, kurze Wege in die Stadt"],
-        ["Radtyp EBIKE", "− 3,4 Minuten", "schneller unterwegs, gleiche Strecke"],
-    ], y=unter_intro(s), spalten_b=[210, 190, 503.5], zeilen_h=38)
-    phasenleiste(s, 2)
-    notizen(s, "Diese Zahlen sind nicht nur Modellausgabe, sie sind ein Plausibilitäts"
-               "test. Wenn hier etwas stünde, das dem Betriebswissen widerspricht, "
-               "wäre das ein Grund, die Daten noch einmal anzusehen — nicht das "
-               "Betriebswissen zu verwerfen.")
+    notizen(s, "Hier lohnt eine Vorwarnung an die Studierenden: Das ganze Notebook "
+               "ist um die Zielinformation herum gebaut, und schon in Phase 2 zeigt "
+               "sich, dass sie wenig beiträgt. Ein Projekt, das diese Zahl "
+               "verschweigt, verkauft seinen eigenen Umbau schöner, als er ist.")
 
     # ─────────────────────────────────────────────── Phase 3
     s = folie(prs, "Phase 3 · Data Preparation",
-              "Die gefährlichste Falle des ganzen Kreislaufs",
-              "Leakage: Merkmale, die im Training vorhanden sind, zum Zeitpunkt der "
-              "Vorhersage aber noch gar nicht existieren. Das Modell wird großartig — "
-              "und im Betrieb unbrauchbar.")
-    vorher_nachher(s,
-                   ("Verlockend", "Was in den Daten steht", [
-                       "endzeit",
-                       "distanz_km",
-                       "zielstation",
-                       "",
-                       "Alle drei sagen die Dauer",
-                       "hervorragend voraus.",
-                       "R² ginge Richtung 1,0.",
-                   ], True),
-                   ("Zulässig", "Was beim Entsperren bekannt ist", [
-                       "startstation, startzeit",
-                       "typ_code",
-                       "temperatur, niederschlag",
-                       "ist_wochenende, ist_feiertag",
-                       "",
-                       "Die Endzeit kennt man erst,",
-                       "wenn die Fahrt vorbei ist.",
-                   ], True),
-                   y=unter_intro(s), hoehe=216)
-    phasenleiste(s, 3)
-    notizen(s, "Die Probe aufs Exempel: Stellen Sie sich vor, die App soll den Preis "
-               "anzeigen, während der Kunde noch am Rad steht. Woher soll sie die "
-               "Zielstation kennen? Genau diese Frage — was weiß ich JETZT? — ist der "
-               "Leakage-Test. Er braucht keine Statistik, nur gesunden Menschenverstand.")
-
-    s = folie(prs, "Phase 3 · im Notebook", "Wann weiß man was? Der Leakage-Test",
+              "Der Leakage-Test: nicht welche Spalte, sondern wann sie entsteht",
               "Die Frage ist nicht statistisch, sondern zeitlich: Was steht in dem "
               "Moment zur Verfügung, in dem die Anzeige erscheinen soll?",
               quelle=nbq(1, "3.1"))
-    diagramm(s, bild("nb1-leakage"), y=unter_intro(s), hoehe=ZONE_UNTEN - unter_intro(s) - 34)
-    notizen(s, "Grün, was beim Entsperren bekannt ist. Rot, was erst beim Abstellen "
-               "entsteht. Der Test braucht keine Statistik — nur die Frage, wann der "
-               "Wert entsteht. Wer sie stellt, findet Leakage zuverlässig.")
+    diagramm(s, bild("nb1-leakage"), y=unter_intro(s),
+             hoehe=ZONE_UNTEN - unter_intro(s) - 34)
+    notizen(s, "Grün, was beim Antippen von „Preis schätzen“ bekannt ist. Rot, was "
+               "erst beim Abstellen entsteht. Die Zielstation steht auf der grünen "
+               "Seite — im alten Entwurf stand sie auf der roten. Nichts an den "
+               "Daten hat sich geändert, nur der Prozess. Der sandfarbene Kasten "
+               "rechts hält den Vorbehalt fest, damit das Bild nicht mehr verspricht, "
+               "als das Notebook belegen kann.")
 
     zellfolie(prs, 1, "3.1", "Phase 3 · im Notebook",
-              "Die gesperrten Spalten, im Klartext",
-              "nb1-leakage",
-              "Im Notebook stehen die drei gesperrten Spalten mit Begründung — nicht "
-              "kommentarlos weggelassen, sondern benannt.",
-              "Lassen Sie die Studierenden die drei Namen vorlesen. Wer sie später in "
-              "einem eigenen Projekt versehentlich verwendet, erinnert sich an diese "
-              "Zelle.")
+              "Gesperrt und erlaubt, jeweils mit Begründung",
+              "nb1-gesperrt",
+              "Fünf Spalten sind gesperrt, weil sie zum Anfragezeitpunkt nicht "
+              "existieren. Eine ist erlaubt, obwohl sie nach „Ende“ klingt.",
+              "Lassen Sie die Studierenden die letzte Zeile lesen. end_station_id "
+              "ist erlaubt, weil der Kunde sie gewählt hat — mit dem Vorbehalt aus "
+              "dem Kasten. Auch temp_mittel_c ist gesperrt: Das Tagesmittel der "
+              "Temperatur kennt man erst am Abend. Wer Wetter verwenden will, "
+              "braucht archivierte Prognosen, keine Messwerte.")
 
     s = folie(prs, "Phase 3 · Data Preparation",
-              "Jeder Filter mit Zeilenzahl davor und danach",
-              "Drei begründete Ausschlüsse. Wer nicht mitzählt, merkt nicht, wenn ein "
-              "Filter die halbe Datenmenge frisst.")
-    tabelle(s, ["Filter", "Begründung"], [
-        ["Vorgänge unter 1 Minute", "Fehlentsperrungen, keine Fahrten — 2,7 % der Zeilen"],
-        ["Fahrten über 24 Stunden", "Rückgabeprobleme, ein anderer Sachverhalt"],
-        ["Ausgemusterte Räder", "Ihre Fahrten stammen aus einem anderen Flottenzustand"],
-    ], y=unter_intro(s), spalten_b=[300, 603.5], zeilen_h=44)
-    sandband(s, "Ein Filter ohne Zeilenzahl ist eine Behauptung. Mit Zeilenzahl ist er "
-                "ein nachprüfbarer Schritt — und genau daran erkennt man in einem "
-                "fremden Notebook, ob sorgfältig gearbeitet wurde.",
-             y=unter_intro(s) + 180)
+              "Aufteilen: vier Abschnitte entlang der Zeit, nicht zwei",
+              "Ein Rücksprung ist eine neue Runde — und eine neue Runde braucht "
+              "einen Zeitraum, den die alte nicht schon aufgebraucht hat.")
+    tabelle(s, ["Abschnitt", "Fahrten", "Zeitraum", "Wofür"], [
+        ["Training", "28.232", "09/2023 bis 07/2025", "das Modell lernt"],
+        ["Validierung", "7.058", "07/2025 bis 12/2025", "Modellwahl"],
+        ["Test 1", "5.882", "12/2025 bis 06/2026", "Prüfung der Punktschätzung"],
+        ["Test 2", "5.882", "06/2026 bis 08/2026", "Prüfung der Spanne nach dem Rücksprung"],
+    ], y=(y := unter_intro(s)), spalten_b=[150, 110, 240, 403.5], zeilen_h=42)
+    sandband(s, "Test 1 ist Winter und Frühjahr, Test 2 ist Sommer. Das ist kein "
+                "Zufall der Aufteilung, sondern eine Eigenschaft der Daten — und es "
+                "wird uns in Phase 5 beschäftigen.", y=darunter(y, h_tabelle(4, 42)))
     phasenleiste(s, 3)
-    notizen(s, "Empfehlen Sie den Studierenden, das in ihren eigenen Notebooks zur "
-               "Gewohnheit zu machen: vor jedem Filter len(df), danach len(df). Es "
-               "kostet eine Zeile und rettet ganze Projekte.")
+    notizen(s, "Der übliche Fehler ist ein zweigeteilter Datensatz. Dann prüft man "
+               "nach dem Rücksprung auf demselben Testzeitraum, auf dem man schon "
+               "einmal geprüft hat — und weiß nicht mehr, ob das Ergebnis hält oder "
+               "ob man sich an den Testdaten entlanggehangelt hat. Vier Abschnitte "
+               "kosten nichts außer Vorausdenken.")
 
-    s = folie(prs, "Phase 3 · Data Preparation",
-              "Aus einem Zeitstempel werden fünf Merkmale",
-              "Merkmale bauen heißt: dem Verfahren das zeigen, was ein Mensch in den "
-              "Daten sieht. Ein Zeitstempel allein sagt einem Modell nichts.")
-    kachelreihe(s, [
-        ("Aus der Zeit", [
-            "stunde  — 0 bis 23",
-            "wochentag — 0 bis 6",
-            "monat — Jahresgang",
-            "ist_wochenende",
-            "ist_feiertag",
-        ]),
-        ("Aus dem Wetter", [
-            "temperatur",
-            "niederschlag",
-            "",
-            "Angejoint über das Datum,",
-            "aus echten ERA5-Daten",
-            "für Würzburg.",
-        ]),
-        ("Kodieren", [
-            "Station und Radtyp sind",
-            "Kategorien, keine Zahlen.",
-            "",
-            "One-Hot: aus einer Spalte",
-            "mit zehn Werten werden",
-            "zehn Ja-Nein-Spalten.",
-        ]),
-    ], y=unter_intro(s), hoehe=190)
-    phasenleiste(s, 3)
-    notizen(s, "Der Hinweis auf One-Hot lohnt: Würde man die Stationen von 1 bis 10 "
-               "durchnummerieren, unterstellte man dem Modell eine Ordnung, die es "
-               "nicht gibt — Station 8 wäre dann „mehr“ als Station 4.")
-
-    s = folie(prs, "Phase 3 · Data Preparation",
-              "Aufteilen — und warum es hier zufällig sein darf")
-    vorher_nachher(s,
-                   ("In diesem Fall", "Zufälliger Schnitt, 80/20", [
-                       "Die Frage lautet: Wie lange",
-                       "dauert DIESE Fahrt?",
-                       "",
-                       "Es wird nichts über die Zukunft",
-                       "ausgesagt, sondern über eine",
-                       "einzelne Fahrt mit bekannten",
-                       "Umständen. Zufällig ist zulässig.",
-                   ], False),
-                   ("In Fall 2 und 4", "Schnitt entlang der Zeit", [
-                       "Dort lautet die Frage: Was",
-                       "passiert MORGEN?",
-                       "",
-                       "Ein zufälliger Schnitt ließe das",
-                       "Modell aus der Zukunft lernen.",
-                       "Das Ergebnis wäre glänzend",
-                       "und wertlos.",
-                   ], False),
-                   y=unter_intro(s), hoehe=216)
-    phasenleiste(s, 3)
-    notizen(s, "Diese Folie greift vor. Das ist Absicht: Die Studierenden sollen "
-               "wissen, dass die Antwort auf „wie teilt man auf?“ von der Frage "
-               "abhängt und nicht vom Verfahren. In Fall 4 kommen wir darauf zurück.")
+    zellfolie(prs, 1, "3.3", "Phase 3 · im Notebook",
+              "Die Aufteilung — samt zweier unbequemer Hinweise",
+              "nb1-abschnitte",
+              "Das Notebook sagt selbst, wo seine Aufteilung nicht sauber ist: Die "
+              "Erkundung in Phase 2 lief über den gesamten Datensatz.",
+              "Punkt 2 der Ausgabe ist der wichtigere: Test 2 trägt in Phase 6 die "
+              "Auswahl des Artefakts UND die Freigabe. Damit ist er eine "
+              "Kalibrierung, keine unabhängige Endprüfung mehr. Das steht so im "
+              "Notebook — und es ist die Sorte Satz, die man in Projektberichten "
+              "selten liest.")
 
     # ─────────────────────────────────────────────── Phase 4
     s = folie(prs, "Phase 4 · Modeling",
-              "Zuerst das Nullmodell — sonst weiß man nicht, was man gewonnen hat",
-              "Das Nullmodell tippt immer den Mittelwert. Es ist absichtlich dumm. "
-              "Seine Zahl ist der Maßstab, an dem alles andere gemessen wird.")
-    tabelle(s, ["Modell", "MAE (Min)", "R²", "Was es bedeutet"], [
-        ["Nullmodell (immer der Mittelwert)", "11,58", "−0,000", "der Maßstab"],
-        ["Lineare Regression", "5,93", "0,655", "die Hälfte des Fehlers weg"],
-        ["Entscheidungsbaum (Tiefe 8)", "4,88", "0,729", "nichtlineare Zusammenhänge"],
-        ["Random Forest (200 Bäume)", "4,58", "0,754", "das beste — 60,4 % besser als null"],
-    ], y=unter_intro(s), spalten_b=[300, 100, 90, 413.5], zeilen_h=40)
+              "Vier Baselines, bevor ein Modell gerechnet wird",
+              "Ohne Maßstab ist jede Zahl gut. Diese vier Zeilen kosten zusammen "
+              "zehn Minuten und entscheiden, was später als Erfolg gelten darf.")
+    tabelle(s, ["Baseline", "MAE (Minuten)", "Was sie beweist"], [
+        ["A  Median aller Fahrten", "8,10", "die Untergrenze des Nichtwissens"],
+        ["B  Median je Radtyp", "8,01", "der Radtyp allein bringt fast nichts"],
+        ["C  Median je Startstation", "5,29", "der große Sprung — 2,81 Minuten"],
+        ["D  Median je Verbindung", "5,02", "das Ziel bringt 0,27 Minuten dazu"],
+    ], y=(y := unter_intro(s)), spalten_b=[290, 160, 453.5], zeilen_h=42)
+    sandband(s, "Baseline D ist der eigentliche Gegner: Sie ist eine Nachschlagetabelle "
+                "aus Medianen und kostet keine Zeile Modellcode. Alles, was ein "
+                "Verfahren später beiträgt, muss über diesen 5,02 Minuten liegen.",
+             y=darunter(y, h_tabelle(4, 42)))
     phasenleiste(s, 4)
-    notizen(s, "R² des Nullmodells ist −0,000, nicht 0,000 — ein Rundungsartefakt, das "
-               "zeigt, dass es auf der Testmenge minimal schlechter ist als der dortige "
-               "Mittelwert. Das ist normal und ein gutes Zeichen dafür, dass die "
-               "Testmenge wirklich unberührt war.")
+    notizen(s, "Der Vergleich B gegen C ist lehrreich: Der Radtyp — also die "
+               "Eigenschaft, an der das Preisblatt hängt — sagt über die Dauer fast "
+               "nichts. Die Startstation sagt viel. Studierende erwarten das "
+               "umgekehrt, weil E-Bikes schneller sind. Sie sind schneller, aber "
+               "die Leute fahren mit ihnen weiter.")
 
-    zellfolie(prs, 1, "4.3", "Phase 4 · im Notebook",
-              "Der Modellvergleich, wie er im Notebook steht",
-              "nb1-modelle",
-              "Vier Zeilen, von oben nach unten immer besser — und die oberste ist "
-              "absichtlich dumm.",
-              "Die Tabelle wächst im Notebook Zelle für Zelle: erst das Nullmodell "
-              "allein, dann kommt die lineare Regression dazu, dann Baum und Wald. "
-              "Diese Reihenfolge ist der Grund, warum man am Ende sagen kann, wieviel "
-              "jeder Schritt gebracht hat.")
+    zellfolie(prs, 1, "4.1", "Phase 4 · im Notebook",
+              "Die vier Baselines, wie sie im Notebook stehen",
+              "nb1-baselines",
+              "2,81 Minuten kommen von der Startstation, 0,27 vom Ziel. Diese beiden "
+              "Zahlen tragen die ganze Diskussion um den Prozessumbau.",
+              "Fragen Sie an dieser Stelle: Rechtfertigen 0,27 Minuten einen Umbau "
+              "der App? Die ehrliche Antwort ist, dass die Zahl allein es nicht tut. "
+              "Was sie rechtfertigt, ist das ANDERE Produkt, das dadurch möglich "
+              "wird — eine Auskunft zum gewählten Ziel statt einer Zahl, die der "
+              "Kunde ohnehin besser kennt.")
 
     s = folie(prs, "Phase 4 · Modeling",
-              "Vom Durchschaubaren zum Stärkeren, nicht umgekehrt")
-    prozesskette(s, "Null-\nmodell", [
-        ("Lineare\nRegression", ""), ("Entscheidungs-\nbaum", ""),
-        ("Random\nForest", ""),
-    ], "Bestes\nModell", y=unter_intro(s) + 10, hoehe=90)
-    sandkarte(s, "Warum diese Reihenfolge",
-              ["Die lineare Regression liefert Koeffizienten, die man LESEN kann — "
-               "„Wochenende: +8,8 Minuten“.",
-               "Der Wald ist stärker, aber stumm. Wer mit ihm anfängt, verliert die "
-               "Möglichkeit zu prüfen, ob das Modell fachlich Sinn ergibt.",
-               "Und wenn der Abstand klein bleibt, gewinnt das einfachere Modell — "
-               "siehe Fall 2, wo genau das passiert."],
-              y=unter_intro(s) + 124)
-    phasenleiste(s, 4)
-    notizen(s, "Die Reihenfolge ist kein Ritual. Sie erzeugt bei jedem Schritt eine "
-               "Information: Wieviel bringt Nichtlinearität? Wieviel bringt das "
-               "Ensemble? Wer sofort den Wald rechnet, hat eine Zahl und keine Antwort.")
-
-    s = folie(prs, "Phase 4 · Modeling",
-              "Was die Koeffizienten verraten — und warum man sie ansieht",
-              "Die lineare Regression ist hier nicht das beste Modell. Sie ist das "
-              "Modell, das erklärt, was in den Daten steckt.")
+              "Eine Pipeline, damit im Betrieb nichts auseinanderfällt",
+              "Kodierung und Modell gehören in ein Objekt. Getrennt gespeichert "
+              "überleben sie den ersten Betriebsmonat nicht.")
     code_kacheln(s,
-                 ("Die stärksten Verlängerer", [
-                     "ist_wochenende        +8.78",
-                     "startstation_Residenz +8.55",
-                     "ist_feiertag          +7.30",
-                     "startstation_Alte     +5.80",
-                     "  Mainbruecke",
-                 ], GRUEN_D),
-                 ("Die stärksten Verkürzer", [
-                     "startstation_Zellerau  -10.18",
-                     "startstation_Grombuehl  -5.42",
-                     "typ_code_EBIKE          -3.38",
-                     "startstation_Sanderring -3.35",
-                     "startstation_Marktplatz -3.05",
-                 ], ROT_A),
-                 y=unter_intro(s), hoehe=180)
+                 ("Was zusammengehört", [
+                     "ColumnTransformer",
+                     "  OneHotEncoder(",
+                     "    handle_unknown='ignore')",
+                     "  numerische Spalten",
+                     "+ RandomForestRegressor",
+                     "= eine Pipeline",
+                 ], BLAU),
+                 ("Warum zusammen", [
+                     "Die Spaltenreihenfolge steckt",
+                     "im selben Objekt wie das",
+                     "Modell — sie kann nicht mehr",
+                     "verrutschen.",
+                     "handle_unknown: eine neue",
+                     "Station wirft keinen Fehler.",
+                 ], TUERKIS),
+                 y=unter_intro(s), hoehe=200)
     phasenleiste(s, 4)
-    notizen(s, "Lesen Sie zwei davon laut vor und fragen Sie, ob das plausibel ist. "
-               "Residenz und Alte Mainbrücke sind touristisch, Zellerau und Grombühl "
-               "sind Wohn- und Klinikgebiet. Das Modell hat die Stadt gelernt, ohne "
-               "je einen Stadtplan gesehen zu haben.")
+    notizen(s, "Eine Pipeline ist keine Stilfrage. Wer den Kodierer getrennt vom "
+               "Modell speichert, hat zwei Dateien, die zusammenpassen müssen — und "
+               "irgendwann tun sie es nicht mehr. handle_unknown='ignore' ist die "
+               "zweite Vorsorge: Eine Station, die es beim Training noch nicht gab, "
+               "führt zu einer Vorhersage aus lauter Nullen statt zu einem Absturz. "
+               "Ob diese Vorhersage etwas taugt, ist eine andere Frage — in Phase 6 "
+               "wird sie deshalb gar nicht erst angeboten.")
+
+    s = folie(prs, "Phase 4 · Modeling",
+              "Vier Modelle, gewählt wird auf der Validierung",
+              "Nicht auf dem Test. Der Unterschied trennt eine Modellwahl von einer "
+              "nachträglichen Begründung.")
+    tabelle(s, ["Modell", "MAE auf der Validierung", "Was es beisteuert"], [
+        ["Nullmodell (Median)", "8,10 Minuten", "der Median, ohne jedes Merkmal"],
+        ["Lineare Regression", "4,61 Minuten", "schon besser als Baseline D"],
+        ["Entscheidungsbaum (Tiefe 10)", "4,23 Minuten", "nichtlineare Zusammenhänge"],
+        ["Random Forest (200 Bäume) — gewählt", "3,96 Minuten", "21 % besser als Baseline D"],
+    ], y=(y := unter_intro(s)), spalten_b=[350, 230, 323.5], zeilen_h=40)
+    sandband(s, "21 Prozent gegenüber einer Nachschlagetabelle aus Medianen: ein "
+                "realer Gewinn, aber kein spektakulärer. Ob er den Betrieb eines "
+                "Modells rechtfertigt, entscheidet Phase 6.",
+             y=darunter(y, h_tabelle(4, 40)))
+    phasenleiste(s, 4)
+    notizen(s, "Der Vergleich in der dritten Spalte ist der ehrliche: nicht gegen "
+               "das Nullmodell, sondern gegen die beste Baseline. Gegen das "
+               "Nullmodell wären es 51 Prozent — eine Zahl, die gut klingt und "
+               "nichts bedeutet, weil niemand das Nullmodell ausliefern würde.")
+
+    s = folie(prs, "Phase 4 · Modeling",
+              "Bringt das Ziel wirklich etwas? Eine Ablation",
+              "Das ganze Projekt ruht auf der Annahme, dass die Zielwahl hilft. Also "
+              "wird sie geprüft — indem man sie wegnimmt.")
+    vorher_nachher(s,
+                   ("Ohne Zielmerkmale", "Nur Start, Zeit, Radtyp", [
+                       "MAE  4,35 Minuten",
+                       "",
+                       "Das Modell weiß nicht, wohin",
+                       "die Fahrt geht — und ist",
+                       "trotzdem deutlich besser als",
+                       "jede Baseline.",
+                   ], False),
+                   ("Mit Zielmerkmalen", "Ziel und Luftlinie dazu", [
+                       "MAE  3,96 Minuten",
+                       "",
+                       "Beitrag des Ziels:",
+                       "0,39 Minuten — neun Prozent.",
+                       "",
+                       "Real, aber bescheiden.",
+                   ], False),
+                   y=unter_intro(s), hoehe=196)
+    sandband(s, "Das gehört in den Bericht, nicht in eine Fußnote: Die neue "
+                "Geschäftslogik ist richtig, ihr messbarer Zusatznutzen in diesem "
+                "Datensatz ist klein.", y=unter_intro(s) + 206)
+    phasenleiste(s, 4)
+    notizen(s, "Eine Ablation ist die billigste Selbstkontrolle, die es gibt: einmal "
+               "ohne das Merkmal rechnen, an dem das Projekt hängt. Wer sie "
+               "weglässt, kann nicht ausschließen, dass sein Umbau nichts bringt. "
+               "Hier bringt er etwas — nur weniger, als die Erzählung nahelegt.")
 
     # ─────────────────────────────────────────────── Phase 5
     s = folie(prs, "Phase 5 · Evaluation",
-              "Die technische Güte ist gut. Die Frage ist, ob sie reicht.",
-              "MAE 4,58 Minuten, 60 Prozent besser als das Nullmodell. Ein "
-              "zufriedenes Nicken — und genau hier hören die meisten Projekte auf.")
-    sandkarte(s, "Was jetzt kommt, ist der entscheidende Schritt",
-              ["Die 4,58 Minuten müssen in die Währung der Phase 1 übersetzt werden: in Euro.",
-               "Minuten × Minutenpreis = Preisfehler. Und der Minutenpreis ist je Radtyp verschieden.",
-               "Erst diese Umrechnung beantwortet die Frage, die tatsächlich gestellt war."],
-              y=unter_intro(s))
-    tabelle(s, ["Blickwinkel", "Ergebnis", "Urteil"], [
-        ["Über alle Räder gemittelt", "0,91 € Preisfehler", "Kriterium gerissen"],
-        ["Getrennt nach Radtyp", "CITY 0,464 € · EBIKE 1,01 € · CARGO 3,09 €",
-         "einer besteht, zwei nicht"],
-    ], y=unter_intro(s) + 130, spalten_b=[240, 340, 323.5], zeilen_h=44)
+              "Von Minuten zu Euro — mit der vollen Tariflogik",
+              "3,93 Minuten auf Test 1. Diese Zahl beantwortet die Frage aus Phase 1 "
+              "nicht. Erst die Umrechnung in Euro tut das.")
+    tabelle(s, ["Radtyp", "Fahrten", "Fahrt kostet", "Abweichung",
+                "unter 0,50 €", "Kriterium"], [
+        ["CITY", "3.325", "1,67 €", "0,41 €", "74 %", "erfüllt"],
+        ["EBIKE", "2.049", "4,34 €", "0,85 €", "51 %", "gerissen"],
+        ["CARGO", "508", "11,97 €", "2,48 €", "19 %", "gerissen"],
+    ], y=(y := unter_intro(s)), spalten_b=[110, 110, 160, 160, 160, 203.5], zeilen_h=46)
+    sandkarte(s, "Gerechnet wird der volle Tarif, nicht Minuten mal Minutenpreis",
+              ["Startgebühr plus Minuten mal Minutenpreis, gedeckelt auf den "
+               "Tageshöchstpreis — für den tatsächlichen und den geschätzten Wert "
+               "getrennt.",
+               "Nur so entspricht die Zahl dem, was auf der Rechnung des Kunden "
+               "steht."],
+              y=darunter(y, h_tabelle(3, 46)))
     phasenleiste(s, 5)
-    notizen(s, "Lassen Sie die gemittelte Zahl kurz stehen, bevor Sie die zweite Zeile "
-               "aufdecken. 0,91 € heißt: Projekt gescheitert, Anzeige wird nicht gebaut. "
-               "Die getrennte Betrachtung dreht das Urteil für 53 Prozent aller Fahrten "
-               "ins Gegenteil.")
+    notizen(s, "Die Spalte ganz rechts ist die eigentliche Nachricht dieser Folie: "
+               "Bei CITY liegt die Anzeige in 74 Prozent der Fälle innerhalb der "
+               "Toleranz — also bei rund jeder vierten Fahrt außerhalb. Der "
+               "Mittelwert von 0,41 Euro sagt darüber nichts. Merken Sie sich diese "
+               "26 Prozent; sie sind gleich der Grund für den Rücksprung.")
 
     zellfolie(prs, 1, "5.2", "Phase 5 · im Notebook",
-              "Die entscheidende Rechnung: Minuten werden zu Euro",
+              "Die entscheidende Rechnung, Zeile für Zeile",
               "nb1-preisfehler",
-              "Hier kippt das Projekt — und zwar nicht in der Statistik, sondern in "
-              "der Umrechnung ins Preisblatt.",
-              "Das ist die wichtigste Zelle des ganzen Notebooks. Bis hierher sah "
-              "alles gut aus. Die Multiplikation mit dem Minutenpreis macht aus einem "
-              "ordentlichen Modell ein Urteil — und das fällt je Radtyp anders aus.")
+              "Drei Zeilen, drei Urteile — und die Statistik ist bei allen dreien "
+              "dieselbe. Was sich unterscheidet, ist der Minutenpreis.",
+              "Diese Tabelle ist der Kern von Phase 5. Das Modell ist für alle drei "
+              "Radtypen gleich gut; das fachliche Urteil fällt trotzdem "
+              "verschieden aus. Wer nur MAE und R² berichtet, sieht das nie.")
 
     s = folie(prs, "Phase 5 · Evaluation",
-              "Die gemittelte Kennzahl hat ein bestehendes Drittel verdeckt",
-              "Dies ist der wichtigste Satz des ganzen Falls — und er hat nichts mit "
-              "Statistik zu tun, sondern mit dem Preisblatt.")
-    ampel_matrix(s, ["unter 0,50 €"], [
-        ("CITY — 0,464 € Preisfehler", [True],
-         "Freigabe. Betrifft rund 53 % aller Fahrten"),
-        ("EBIKE — 1,01 € Preisfehler", [False],
-         "Rücksprung. Mehr als doppelt so hoch wie erlaubt"),
-        ("CARGO — 3,09 € Preisfehler", [False],
-         "Rücksprung. Die Punktschätzung ist hier die falsche Zusage"),
-    ], y=unter_intro(s) + 26, zeilen_h=48, luecke=8, label_b=300)
-    sandband(s, "CITY betrifft rund 53 % aller Fahrten — der Nutzen ist real. Wer nur "
-                "auf MAE und R² schaut, sieht das nie: Die technische Kennzahl ist für "
-                "alle drei Radtypen dieselbe, das fachliche Urteil ist es nicht.",
-             y=unter_intro(s) + 192)
+              "Zwei Gegenproben — und beide fallen negativ aus",
+              "Bevor man ein Ergebnis erklärt, prüft man die zwei naheliegenden "
+              "Erklärungen. Hier trägt keine von beiden.")
+    vorher_nachher(s,
+                   ("Vermutung 1", "Schätzen wir systematisch zu hoch?", [
+                       "CARGO   − 0,25 €",
+                       "CITY    + 0,04 €",
+                       "EBIKE   + 0,11 €",
+                       "",
+                       "Nein. Über- und Unterschätzung",
+                       "heben sich weitgehend auf.",
+                   ], False),
+                   ("Vermutung 2", "Ist das Modell bei teuren Rädern schlechter?", [
+                       "CARGO   2,48 € von 11,97 €  = 21 %",
+                       "CITY    0,41 € von  1,67 €  = 24 %",
+                       "EBIKE   0,85 € von  4,34 €  = 20 %",
+                       "",
+                       "Nein. Relativ zum Fahrpreis ist",
+                       "die Abweichung überall ähnlich.",
+                   ], False),
+                   y=unter_intro(s), hoehe=196)
+    sandband(s, "Was sich unterscheidet, ist nicht das Modell, sondern die Strenge "
+                "einer festen 50-Cent-Grenze bei drei sehr verschiedenen Fahrpreisen.",
+             y=unter_intro(s) + 206)
     phasenleiste(s, 5)
-    notizen(s, "Das Modell ist für alle drei Radtypen gleich gut. Was sich "
-               "unterscheidet, ist der Minutenpreis: 0,10 gegen 0,50 Euro. Derselbe "
-               "Schätzfehler kostet beim Lastenrad das Fünffache. Die Statistik ist "
-               "unschuldig — die Fachlichkeit entscheidet.")
+    notizen(s, "Diese Folie schützt vor einer bequemen Fehldiagnose. Man könnte aus "
+               "der vorigen Tabelle schließen, das Modell tauge für teure Räder "
+               "nicht — und dann Monate mit besseren Verfahren verbringen. Es liegt "
+               "aber nicht am Modell, sondern daran, dass 50 Cent von 1,67 Euro "
+               "etwas anderes sind als 50 Cent von 11,97 Euro.")
 
-    s = folie(prs, "Phase 5 · Evaluation", "Wo irrt das Modell? — Fehleranalyse",
-              "Nicht nur WIE gut, sondern WORAN es scheitert. Eine Kennzahl sagt "
-              "das erste, nur der Blick auf die Fälle sagt das zweite.")
+    s = folie(prs, "Phase 5 · Evaluation",
+              "Wie belastbar ist das? Vier Fenster statt einer Zahl",
+              "Ein einzelner Testzeitraum kann günstig liegen. Rollierend geprüft "
+              "sieht man, wie stark das Ergebnis schwankt.")
+    tabelle(s, ["Fenster", "Fahrten", "MAE (Minuten)", "CITY-Preisfehler"], [
+        ["10/2024 bis 02/2025", "3.529", "3,52", "0,37 €"],
+        ["02/2025 bis 05/2025", "3.529", "3,73", "0,38 €"],
+        ["05/2025 bis 07/2025", "3.529", "4,39", "0,45 €"],
+        ["07/2025 bis 09/2025", "3.529", "4,33", "0,45 €"],
+    ], y=(y := unter_intro(s)), spalten_b=[300, 130, 200, 273.5], zeilen_h=40)
+    sandband(s, "Der CITY-Preisfehler schwankt zwischen 0,37 € und 0,45 €. Die Grenze "
+                "von 0,50 € liegt oberhalb der gesamten Schwankung — im schlechtesten "
+                "Fenster mit fünf Cent Abstand. Für CITY ist die Punktschätzung damit "
+                "belastbar.", y=darunter(y, h_tabelle(4, 40)))
+    phasenleiste(s, 5)
+    notizen(s, "Die beiden schlechteren Fenster sind Sommer. Das Modell wird im "
+               "Sommer schlechter, weil dann mehr aus Vergnügen gefahren wird. Diese "
+               "Beobachtung erklärt später, warum die Tabelle quartalsweise neu "
+               "gerechnet werden muss — und sie ist ein Beispiel dafür, dass eine "
+               "einzelne Testzahl eine Jahreszeit sein kann.")
+
+    s = folie(prs, "Phase 5 · Evaluation", "Woran es liegt — und woran nicht",
+              "Nicht wie gut, sondern woran es scheitert. Das Muster ist kein "
+              "statistisches, sondern ein menschliches.")
+    vorher_nachher(s,
+                   ("Schwierig", "Gefahren, um zu fahren", [
+                       "Dom → Residenz",
+                       "  32 Min · Abweichung 0,77 €",
+                       "Residenz → Juliuspromenade",
+                       "  28 Min · Abweichung 0,78 €",
+                       "",
+                       "Je nach Anlass zwanzig oder",
+                       "vierzig Minuten unterwegs.",
+                   ], False),
+                   ("Treffsicher", "Gefahren, um anzukommen", [
+                       "Grombühl Klinikum → Sanderau",
+                       "  7 Min · Abweichung 0,09 €",
+                       "Sanderau → Uni Sanderring",
+                       "  7 Min · Abweichung 0,11 €",
+                       "",
+                       "Pendelwege, jeden Tag",
+                       "ungefähr gleich.",
+                   ], False),
+                   y=unter_intro(s), hoehe=196)
+    sandband(s, "Das Modell ist genau, wo gefahren wird, um anzukommen — und ungenau, "
+                "wo gefahren wird, um zu fahren.", y=unter_intro(s) + 206)
+    phasenleiste(s, 5)
+    notizen(s, "Ein zweiter Befund derselben Zelle: Rundtouren haben 6,05 Minuten MAE "
+               "gegen 3,49 bei echten Wegen. Beides sagt dasselbe — was eine Fahrt "
+               "lang macht, ist der Zweck, und der steht in keiner Spalte. Ob "
+               "überhaupt kein Merkmal das könnte, wissen wir nicht: Nutzerabsicht, "
+               "Höhenprofil und Stationsauslastung sind ungeprüfte Kandidaten.")
+
+    s = folie(prs, "Phase 5 · Evaluation",
+              "Der Rücksprung — obwohl das Kriterium hält",
+              "Für CITY könnten wir jetzt ausliefern. Wir tun es nicht, und zwar aus "
+              "zwei Gründen, die nichts mit einem gerissenen Kriterium zu tun haben.")
     kachelreihe(s, [
-        ("Der Befund", [
-            "Lange Fahrten werden",
-            "systematisch unterschätzt.",
+        ("Ein Mittelwert ist\nkeine Erfahrung", [
+            "0,41 € im Mittel klingt gut.",
             "",
-            "Das Modell zieht alles zur",
-            "Mitte — eine Eigenschaft",
-            "aller Mittelwertverfahren.",
+            "Bei rund jeder vierten",
+            "CITY-Fahrt liegt die Anzeige",
+            "aber um mehr als 50 Cent",
+            "daneben. Ein Kunde erlebt",
+            "keinen Mittelwert.",
         ]),
-        ("Die Erklärung", [
-            "Die Zielgröße ist rechtsschief",
-            "(Befund aus Phase 2).",
+        ("Zwei von drei Radtypen\nhaben kein Produkt", [
+            "EBIKE und CARGO reißen die",
+            "Grenze deutlich.",
             "",
-            "Was eine Fahrt lang macht,",
-            "steht nicht in den Daten:",
-            "Umwege, Pausen, Wetterwechsel.",
+            "Eine Lösung nur für das",
+            "billigste Rad beantwortet",
+            "die Geschäftsfrage nicht.",
         ]),
-        ("Die Folge", [
-            "Für CARGO ist die",
-            "Punktschätzung die falsche",
-            "Zusage — nicht das falsche",
-            "Modell.",
+        ("Also: die Zusage ändern", [
+            "Nicht die Grenze lockern —",
+            "verboten und hier unnötig.",
             "",
-            "Das führt zum Rücksprung.",
+            "Nicht das Verfahren tauschen —",
+            "die Ablation zeigt, dass die",
+            "Information fehlt, nicht die",
+            "Rechenkraft.",
         ]),
     ], y=unter_intro(s), hoehe=196)
-    phasenleiste(s, 5)
-    notizen(s, "Der Unterschied zwischen „falsches Modell“ und „falsche Zusage“ ist "
-               "der Kern dieser Folie. Ein besseres Verfahren würde hier nichts "
-               "retten — die Information fehlt in den Daten. Was hilft, ist eine "
-               "andere Zusage.")
-
-    s = folie(prs, "Phase 5 · Evaluation", "Das Urteil: weiter, zurück oder abbrechen")
-    streifen(s, [
-        ("CITY — weiter", "Kriterium erfüllt, Phase 6 für diesen Radtyp"),
-        ("EBIKE — zurück", "1,01 € gegen 0,50 € — mehr als doppelt so hoch"),
-        ("CARGO — zurück", "3,09 € — die Punktschätzung ist die falsche Zusage"),
-        ("Nicht: Schwelle senken", "Die Grenze kam aus dem Produktmanagement. Sie "
-                                   "nachträglich zu lockern hieße, das Kriterium "
-                                   "abzuschaffen"),
-    ], y=unter_intro(s), hoehe=54, luecke=8, chip_b=250)
     phasenleiste(s, 5, rueckspruenge=(1,))
-    notizen(s, "Der vierte Streifen ist der wichtigste. Die Versuchung, die Schwelle "
-               "auf 1,00 Euro zu setzen, ist groß und wäre in fünf Sekunden getan. "
-               "Genau davor schützt die Regel, das Kriterium vor den Daten "
-               "festzulegen — es gehört einem anderen, nämlich dem Fach.")
+    notizen(s, "Das ist der ungewöhnlichste Moment des Falls. Der Rücksprung kommt "
+               "nicht aus einem Fehlschlag, sondern aus zwei Beobachtungen, die das "
+               "Erfolgskriterium selbst nicht abbildet. Genau deshalb reicht es "
+               "nicht, Kriterien abzuhaken — man muss sie auch daraufhin ansehen, "
+               "was sie NICHT messen.")
 
     s = folie(prs, "Phase 5 · Evaluation",
-              "Der Rücksprung: nicht das Modell ändern, die Frage ändern",
-              "Drei Wege zurück, jeder in eine andere Phase. So sieht ein "
-              "Rücksprung konkret aus.")
-    tabelle(s, ["Zurück nach", "Was sich ändert", "Warum"], [
-        ["Phase 1", "Statt einer Zahl eine Spanne: „zwischen 4 und 9 €“",
-         "Das ändert die Geschäftszusage — und damit das Verfahren: gefragt wären "
-         "Quantile, nicht Mittelwerte"],
-        ["Phase 2", "Neue Merkmale beschaffen: Steigungsprofil, Wetterumschwung",
-         "Was eine Fahrt lang macht, steht heute nicht in den Daten"],
-        ["Phase 3", "Modell auf dem Logarithmus der Dauer rechnen",
-         "Trifft rechtsschiefe Verteilungen besser — eine Zeile, möglicherweise "
-         "große Wirkung"],
-    ], y=unter_intro(s), spalten_b=[110, 330, 463.5], zeilen_h=58)
-    phasenleiste(s, 5, rueckspruenge=(1, 2, 3))
-    notizen(s, "Beachten Sie die Reihenfolge der Kosten: Phase 3 ist eine Zeile "
-               "Code, Phase 2 ist ein Beschaffungsprojekt, Phase 1 ist ein Gespräch "
-               "mit dem Produktmanagement. Man beginnt mit dem Billigsten — aber man "
-               "verschweigt die anderen nicht.")
+              "Das neue Kriterium — wieder vor der Messung festgelegt",
+              "Statt einer Zahl eine Spanne. Damit ändert sich nicht die "
+              "Verfahrensklasse, sondern das, was die App verspricht.")
+    tabelle(s, ["", "Neues Erfolgskriterium"], [
+        ["trifft", "Die angezeigte Spanne enthält den tatsächlichen Preis in "
+                   "mindestens 80 % der Fälle — insgesamt UND je Radtyp"],
+        ["nützt", "Die Spanne ist höchstens 1,00 € breit. Ist sie breiter, zeigt die "
+                  "App gar nichts an"],
+        ["gemessen auf", "Test 2 — dem Zeitraum, den bis hierher nichts berührt hat"],
+    ], y=(y := unter_intro(s)), spalten_b=[180, 723.5], zeilen_h=54)
+    sandband(s, "Die zweite Zeile ist die wichtigere. Eine Spanne von 4 bis 12 Euro "
+                "trifft fast immer — und nützt niemandem. Ohne die Breitenregel wäre "
+                "das Kriterium wertlos.", y=darunter(y, h_tabelle(3, 54)))
+    phasenleiste(s, 5, rueckspruenge=(1,))
+    notizen(s, "Beide Zeilen zusammen sind ein gutes Beispiel dafür, wie ein "
+               "Kriterium aussehen muss: Eine Bedingung allein lässt sich immer "
+               "erfüllen, indem man die andere verletzt. Erst das Paar beschreibt "
+               "ein Produkt.")
+
+    s = folie(prs, "Phase 5 · Evaluation",
+              "Zwei Kandidaten für dieselbe Zusage",
+              "Eine Spanne kann man rechnen lassen oder nachschlagen. Beide Wege "
+              "werden gebaut und gegen dasselbe Kriterium gehalten.")
+    tabelle(s, ["", "Quantilregression", "Perzentiltabelle"], [
+        ["antwortet bei", "45,4 % der Anfragen", "31,0 %"],
+        ["Abdeckung (angezeigt)", "87,5 %", "83,2 %"],
+        ["schlechtester Radtyp", "86,5 %", "74,6 % — EBIKE"],
+        ["verworfen, weil zu breit", "54,6 %", "0 % (per Konstruktion)"],
+        ["Kriterium insgesamt", "erfüllt", "verfehlt"],
+    ], y=(y := unter_intro(s)), spalten_b=[280, 320, 303.5], zeilen_h=32)
+    sandband(s, "Gemessen am eigenen Kriterium ist die Quantilregression der bessere "
+                "Kandidat. Das gehört so gesagt — auch wenn die Entscheidung gleich "
+                "anders ausfällt.", y=darunter(y, h_tabelle(5, 32)))
+    phasenleiste(s, 5)
+    notizen(s, "Die Zeile „verworfen, weil zu breit“ ist die interessanteste: Über "
+               "die Hälfte der Spannen des Modells wäre für den Kunden wertlos. Was "
+               "das Modell gut macht, ist gerade das Weglassen — es antwortet nur "
+               "dort, wo es eine schmale Spanne bilden kann.")
+
+    zellfolie(prs, 1, "5.6", "Phase 5 · im Notebook",
+              "Der Kandidatenvergleich, wie er im Notebook steht",
+              "nb1-kandidaten",
+              "Hätte man nur die Dauerabdeckung gemessen, sähen beide gut aus. Erst "
+              "die vollständige Prüfung — Preis, je Radtyp, Breite — trennt sie.",
+              "Weisen Sie darauf hin, dass die Bewertung nur zählt, was die App "
+              "tatsächlich ANZEIGEN würde. Eine Spanne über einem Euro wird nicht "
+              "angezeigt, also darf sie auch nicht in die Abdeckung eingehen. Über "
+              "den Median gerechnet hätte ein Kandidat mit wenigen sehr breiten "
+              "Spannen deutlich besser ausgesehen, als er ist.")
+
+    s = folie(prs, "Phase 5 · Evaluation",
+              "Warum trotzdem die Tabelle ausgeliefert wird",
+              "Nicht wegen der Güte — die spricht für das Modell. Sondern weil die "
+              "App eine statische Seite ohne Python ist.")
+    vorher_nachher(s,
+                   ("Quantilregression", "Was für sie spricht", [
+                       "trifft häufiger und antwortet öfter",
+                       "kann eine neue Verbindung",
+                       "  einschätzen",
+                       "berücksichtigt Wochentag",
+                       "  und Saison",
+                       "",
+                       "Braucht aber Python im Betrieb.",
+                   ], False),
+                   ("Perzentiltabelle", "Was für sie spricht", [
+                       "läuft ohne Python — 136 Zeilen",
+                       "  in der Datenbank",
+                       "ist von Hand nachprüfbar",
+                       "wer Ortskenntnis hat, kann",
+                       "  widersprechen",
+                       "",
+                       "Antwortet dafür seltener.",
+                   ], False),
+                   y=unter_intro(s), hoehe=200)
+    sandband(s, "Wir liefern den schwächeren Kandidaten aus, weil der stärkere nicht "
+                "dorthin passt, wo er laufen müsste. Der dritte Weg — die "
+                "Modellvorhersagen vorab tabellieren — steht als offene Entscheidung "
+                "im Notebook.", y=unter_intro(s) + 210)
+    phasenleiste(s, 5)
+    notizen(s, "Der dritte Weg wäre, die Vorhersagen des Modells für jede Kombination "
+               "vorab auszurechnen und zu tabellieren: bessere Treffsicherheit, "
+               "gleiche Betriebsform. Der Preis wäre, dass die Zeilen nicht mehr für "
+               "sich sprechen — eine Modellvorhersage kann man nicht nachrechnen, "
+               "indem man in die Historie sieht. Diese Abwägung gehört dem "
+               "Auftraggeber, nicht der Analyse.")
 
     # ─────────────────────────────────────────────── Phase 6
     s = folie(prs, "Phase 6 · Deployment",
-              "Ausgeliefert wird nicht das Modell, sondern ein Paket",
-              "Ein gespeichertes Modell ohne seine Merkmalsliste ist wertlos — "
-              "niemand weiß mehr, in welcher Reihenfolge die Spalten erwartet werden.")
-    code_kacheln(s,
-                 ("Was gespeichert wird", [
-                     "paket = {",
-                     "  'modell':   wald,",
-                     "  'merkmale': spalten,",
-                     "  'gilt_fuer': ['CITY'],",
-                     "  'stand':    '2026-08-31',",
-                     "}",
-                 ], BLAU),
-                 ("Warum jedes Feld", [
-                     "modell    — das Gelernte",
-                     "merkmale  — Reihenfolge und",
-                     "            Namen der Spalten",
-                     "gilt_fuer — NUR CITY ist",
-                     "            freigegeben",
-                     "stand     — wann veraltet es?",
-                 ], TUERKIS),
-                 y=unter_intro(s), hoehe=190)
+              "Vom Datensatz zum Artefakt — durch Streichen",
+              "Drei Filter stehen zwischen 60.425 Rohzeilen und 136 Tabellenzeilen. "
+              "Jeder von ihnen erzeugt Schweigen, wo keine Auskunft trägt.",
+              quelle=nbq(1, "6.1 bis 6.3"))
+    diagramm(s, bild("nb1-artefakt"), y=unter_intro(s) + 20,
+             hoehe=ZONE_UNTEN - unter_intro(s) - 60)
+    notizen(s, "Gehen Sie den Weg einmal von rechts nach links: Jede Zeile, die es "
+               "in das grüne Feld geschafft hat, hat drei Prüfungen bestanden. Und "
+               "jede Zeile, die im roten Feld gelandet ist, führt in der App nicht zu "
+               "einer schlechteren Anzeige, sondern zu gar keiner. Das ist der "
+               "Unterschied zwischen einem Produkt mit Geltungsbereich und einem, das "
+               "auf jede Frage irgendetwas antwortet.")
+
+    s = folie(prs, "Phase 6 · Deployment", "Die Freigabe steckt in der Tabelle",
+              "Nicht in einer Aktennotiz und nicht in einer Bedingung im "
+              "Anwendungscode: Was nicht trägt, hat keine Zeile.")
+    ampel_matrix(s, ["80 %"], [
+        ("CITY — 84,0 % auf Test 2", [True],
+         "1.408 Prüffahrten. Freigegeben"),
+        ("EBIKE — 74,6 % auf Test 2", [False],
+         "nur 134 Prüffahrten. Keine Zeile in der Tabelle"),
+        ("CARGO — keine Kombination erreicht 30 Fahrten", [False],
+         "scheitert schon an der Datengrundlage"),
+    ], y=(y := unter_intro(s) + 26), zeilen_h=48, luecke=8, label_b=330)
+    sandkarte(s, "Und eine Ebene tiefer, je Kombination",
+              ["14 Kombinationen haben mindestens 20 Prüffahrten — 11 davon halten "
+               "die 80 %, 3 nicht. Diese drei werden ausgeschlossen.",
+               "140 Kombinationen haben weniger (im Median 7). Für sie lässt sich "
+               "einzeln nichts Belastbares sagen — sie bleiben drin, aber die "
+               "Zusage gilt nur insgesamt und je Radtyp."],
+              y=darunter(y, h_gestapelt(3, 48, 8)))
     phasenleiste(s, 6)
-    notizen(s, "Das Feld gilt_fuer ist die technische Umsetzung des Urteils aus "
-               "Phase 5. Die Freigabe steht nicht in einer Aktennotiz, sondern im "
-               "Paket selbst — so kann die Anwendung gar nicht auf die Idee kommen, "
-               "das Modell für ein Lastenrad zu befragen.")
+    notizen(s, "Der zweite Punkt der Sandkarte ist eine ehrliche Einschränkung, die "
+               "man leicht übergeht: Die 80 Prozent sind insgesamt und je Radtyp "
+               "geprüft, nicht je Verbindung. Ausgeschlossen wird nur, was messbar "
+               "durchfällt — nicht alles, was ungeprüft ist. Das steht so auch in "
+               "der Liste der offenen Punkte am Ende des Notebooks.")
+
+    zellfolie(prs, 1, "6.3", "Phase 6 · im Notebook",
+              "Das ausgelieferte Artefakt, Zeile für Zeile",
+              "nb1-tabelle",
+              "136 Zeilen, 60 Verbindungen, nur CITY. Zwei Stationen, ein Radtyp, "
+              "ein Zeitfenster — und zwei Zahlen in Minuten und in Euro.",
+              "Achten Sie auf die letzte Spalte: fahrten_grundlage. Jede Zeile sagt, "
+              "auf wie vielen vergleichbaren Fahrten sie beruht. Damit kann jeder im "
+              "Betrieb nachsehen, wie belastbar eine einzelne Auskunft ist — bei 192 "
+              "Fahrten anders als bei 42. Genau das kann eine Modellvorhersage nicht.")
+
+    s = folie(prs, "Phase 6 · Deployment", "Die ehrliche Produktreichweite",
+              "Was die App am Ende wirklich beantworten kann. Diese Zahl steht im "
+              "Notebook, weil sie sonst niemand ausrechnet.")
+    schichtenstapel(s, [
+        ("5.882 Fahrten im Prüfzeitraum — abgeschlossen und mit Ziel", False),
+        ("4.969 davon echte Wege, keine Rundtouren  ·  84 %", False),
+        ("1.326 davon mit einer freigegebenen Spanne  ·  23 % aller Fahrten", True),
+    ], y=(y := unter_intro(s) + 10), hoehe=52, luecke=14)
+    sandband(s, "Die App kann für gut jede fünfte Fahrt einen Preis nennen. Für den "
+                "Rest sagt sie, dass sie es nicht kann — und das ist besser als eine "
+                "Zahl, die nicht trägt.", y=darunter(y, h_gestapelt(3, 52, 14)))
+    phasenleiste(s, 6)
+    notizen(s, "22,5 Prozent klingen nach einem mageren Ergebnis, und in einer "
+               "Projektpräsentation würde diese Zahl gern fehlen. Sie ist aber die "
+               "einzige, die beschreibt, was der Kunde erlebt. Fragen Sie die "
+               "Studierenden, welche Zahl sie stattdessen berichtet hätten — die "
+               "meisten nennen die 84,5 Prozent Abdeckung, und die gilt nur für die "
+               "Fahrten, bei denen überhaupt etwas angezeigt wird.")
 
     s = folie(prs, "Phase 6 · Deployment",
-              "Die Funktion, die der Entsperr-Dialog tatsächlich aufruft",
-              "Ein Modell, das niemand aufruft, hat keinen Wert. Hier wird aus dem "
-              "Gelernten eine Funktion mit einer klaren Schnittstelle.")
+              "Die Funktion, die die App aufruft — und wann sie schweigt",
+              "Vier Eingaben, eine Antwort. In drei von vier Fällen lautet die "
+              "Antwort: keine Anzeige.")
     code_kacheln(s,
-                 ("Aufruf", [
+                 ("Der Aufruf", [
                      "preis_schaetzen(",
-                     "  station='Hauptbahnhof',",
-                     "  zeitpunkt=jetzt,",
-                     "  typ='CITY',",
+                     "  start_id=9,",
+                     "  ziel_id=6,",
+                     "  typ_code='CITY',",
+                     "  stunde=17,",
                      ")",
-                     "-> 'etwa 3,10 EUR'",
+                 ], BLAU),
+                 ("Die vier möglichen Antworten", [
+                     "0,60 bis 1,30 € · 5 bis 12 Min",
+                     "  Grundlage: 78 Fahrten",
+                     "— Für Rundfahrten schätzen wir",
+                     "  keinen Preis.",
+                     "— Für diese Verbindung liegt",
+                     "  keine belastbare Schätzung vor.",
                  ], GRUEN_D),
-                 ("Was die Funktion prüft", [
-                     "1. Ist typ freigegeben?",
-                     "   Sonst: keine Anzeige.",
-                     "2. Merkmale in der",
-                     "   gespeicherten Reihenfolge",
-                     "3. Dauer -> Preis ueber das",
-                     "   Tarifblatt, nicht geschaetzt",
-                 ], ORANGE),
-                 y=unter_intro(s), hoehe=190)
+                 y=unter_intro(s), hoehe=186)
+    sandband(s, "Die Begründung wird mitgeliefert, nicht nur das Schweigen. Eine App, "
+                "die ohne Erklärung nichts anzeigt, wirkt kaputt — eine, die den "
+                "Grund nennt, wirkt sorgfältig.", y=unter_intro(s) + 196)
     phasenleiste(s, 6)
-    notizen(s, "Punkt 3 ist eine Wiederholung der Entscheidung aus Phase 1: Der "
-               "Preis wird gerechnet, nicht geschätzt. Geschätzt wird nur, was man "
-               "nicht wissen kann — die Dauer.")
+    notizen(s, "Die dritte Antwort deckt zwei sehr verschiedene Fälle ab: eine "
+               "bekannte Verbindung ohne genügend Fahrten und eine Station, die es "
+               "gar nicht gibt. Beide führen zur selben Auskunft, und das ist "
+               "richtig so — der Kunde soll nicht erfahren, wie die Tabelle gebaut "
+               "ist, sondern nur, ob er eine Zahl bekommt.")
+
+    zellfolie(prs, 1, "6.4", "Phase 6 · im Notebook",
+              "Vier Anfragen, drei Absagen",
+              "nb1-app",
+              "So sieht die Schnittstelle zur Webanwendung aus: eine Zeile mit Preis, "
+              "Minuten und Fallzahl — oder eine Absage mit Grund.",
+              "Diese Zelle ist die Brücke zwischen Notebook und Produkt. Die Tabelle "
+              "wird nach velocity.preisschaetzung geladen, die Website liest sie über "
+              "eine Sicht und zeigt beim Radtyp einen kleinen Preisschätzer an — "
+              "ein- und ausschaltbar über eine Option im Kundenkonto. Damit ist "
+              "Phase 6 hier keine Übung, sondern eine ausgelieferte Funktion.")
 
     s = folie(prs, "Phase 6 · Deployment",
-              "Was nach der Auslieferung passieren muss",
-              "Ein Modell ist kein Bauwerk, sondern ein Lebensmittel. Es hat ein "
-              "Haltbarkeitsdatum, das niemand kennt — deshalb wird gemessen.")
+              "Überwachung: drei Fälle, die einander ausschließen",
+              "Eine Schwelle allein genügt nicht. Bei 78 Prozent gemessener "
+              "Abdeckung muss klar sein, welche Regel gilt — sonst greifen zwei "
+              "gleichzeitig.")
     tabelle(s, ["Auslöser", "Schwelle", "Handlung"], [
-        ["Laufende Messung", "unter 0,45 €", "alles in Ordnung"],
-        ["", "0,45 bis 0,55 €", "beobachten, nicht handeln"],
-        ["", "über 0,55 €", "nachtrainieren"],
-        ["Tarifblatt ändert sich", "Minutenpreis neu",
-         "Erfolgskriterium neu rechnen — die erlaubte Minuten-Toleranz hängt daran"],
-    ], y=unter_intro(s), spalten_b=[220, 160, 523.5], zeilen_h=40)
+        ["Abdeckung je Kombination,\ngleitend über 8 Wochen",
+         "untere Vertrauensgrenze ≥ 80 %", "anzeigen"],
+        ["", "Intervall überlappt 80 %", "anzeigen, aber Warnung und Neuberechnung"],
+        ["", "obere Vertrauensgrenze < 80 %", "Kombination abschalten"],
+        ["Fallzahl je Kombination", "unter 20 im Fenster",
+         "keine Aussage möglich, Vorwoche weiterverwenden"],
+        ["Tarif ändert sich", "Minutenpreis neu",
+         "gesamte Tabelle neu rechnen — sie enthält Euro"],
+    ], y=unter_intro(s), spalten_b=[230, 260, 413.5], zeilen_h=44)
     phasenleiste(s, 6)
-    notizen(s, "Die letzte Zeile ist die feinste: Ändert VeloCity den Minutenpreis, "
-               "ändert sich die erlaubte Minuten-Toleranz — und ein Modell, das "
-               "gestern bestanden hat, fällt heute durch, ohne dass sich an ihm "
-               "etwas geändert hätte. Das Erfolgskriterium hängt am Geschäft.")
+    notizen(s, "Maßgeblich ist das Wilson-Intervall zum Niveau 95 Prozent, nicht der "
+               "Schätzwert. Damit entscheidet nicht eine gesetzte Ersatzschwelle, "
+               "sondern die Frage, ob die Daten überhaupt für eine Aussage reichen. "
+               "Wer schneller abschalten will, braucht mehr Fahrten je Fenster — "
+               "keine andere Zahl. Die letzte Zeile ist die feinste: Die Tabelle "
+               "enthält Euro, nicht nur Minuten. Eine Tarifänderung macht sie in "
+               "einer Nacht falsch.")
 
     s = folie(prs, "Phase 6 · Deployment",
-              "Der Testwert war optimistisch — und das ist der Normalfall",
-              "Der Schattenbetrieb rechnet 30 Tage lang mit, ohne dem Kunden etwas "
-              "anzuzeigen. Erst er sagt, was das Modell im Betrieb leistet.")
-    tabelle(s, ["Messung", "Preisfehler", "Bewertung"], [
-        ["Testmenge aus Phase 5", "0,464 €", "Kriterium erfüllt"],
-        ["Schattenbetrieb, letzte 30 Tage", "0,493 €",
-         "gerade eben gehalten — aber ohne jede Reserve"],
-    ], y=unter_intro(s), spalten_b=[300, 150, 453.5], zeilen_h=44)
-    sandkarte(s, "Warum der Testwert schöner ist als die Wirklichkeit", [
-        "Die Testmenge ist ein zufälliger Schnitt durch drei Jahre — der "
-        "Schattenbetrieb sind 30 zusammenhängende Tage.",
-        "Die Ampel steht deshalb auf GELB: weiterlaufen lassen, noch nicht anzeigen.",
-        "Die ehrliche Antwort ist nicht, die Schwelle zu senken, sondern weiter zu messen."],
-        y=unter_intro(s) + 140)
+              "Was ein echter Schattenbetrieb wäre — und warum wir ihn nicht haben",
+              "Was dieses Notebook Test 2 nennt, ist ein rückblickender Test auf "
+              "vergangenen Daten. Ein Schattenbetrieb ist etwas anderes.")
+    streifen(s, [
+        ("1 bis 3", "Tabelle einfrieren · in der App das GEPLANTE Ziel speichern · "
+                    "Schätzung berechnen, aber nicht anzeigen"),
+        ("4 und 5", "Nach der Fahrt tatsächliches Ziel und Dauer ergänzen · geplantes "
+                    "gegen tatsächliches Ziel vergleichen"),
+        ("6 und 7", "Abdeckung, Breite, Reichweite und Ablehnungsgründe auswerten · "
+                    "erst danach sichtbar schalten"),
+    ], y=(y := unter_intro(s)), hoehe=62, luecke=10, chip_b=140)
+    sandkarte(s, "Schritt 2 und 5 sind der Kern", [
+        "Sie prüfen die Annahme vom Anfang: Ist das geplante Ziel ein brauchbarer "
+        "Stellvertreter für das tatsächliche?",
+        "Ohne sie bleibt die Grundannahme dieses Notebooks ungeprüft — und alle "
+        "Zahlen bleiben Obergrenzen.",
+    ], y=darunter(y, h_gestapelt(3, 62, 10)))
     phasenleiste(s, 6)
-    notizen(s, "Diese Folie ist Gold wert für die Berufspraxis. Fast jedes Modell "
-               "wird im Betrieb schlechter als im Test. Wer das erwartet, plant einen "
-               "Schattenbetrieb ein. Wer es nicht erwartet, erklärt später, warum die "
-               "Zahlen in der Präsentation anders waren.")
+    notizen(s, "Hier schließt sich der Kreis zur dritten Folie dieses Kapitels. Die "
+               "Annahme wurde am Anfang benannt, hat das ganze Notebook getragen — "
+               "und am Ende steht, wie man sie prüfen würde und dass es noch nicht "
+               "geschehen ist. Das ist der Unterschied zwischen einer offenen Frage "
+               "und einer verschwiegenen.")
 
     # ─────────────────────────────────────────────── Kreisschluss
-    zellfolie(prs, 1, "6.4", "Phase 6 · im Notebook",
-              "Der Schattenbetrieb, gerechnet statt behauptet",
-              "nb1-schatten",
-              "0,493 € gegen 0,464 € auf der Testmenge — die Ampel steht auf GELB, "
-              "und das Notebook sagt es selbst.",
-              "Beachten Sie die letzte Zeile der Ausgabe: Das Notebook stellt die "
-              "Ampel selbst und begründet sie. Ein Bericht, der die Bewertung dem "
-              "Leser überlässt, ist kein Bericht.")
-
     s = folie(prs, "Fall 1 · Abschluss", "Der Kreislauf schließt sich",
-              "Sechs Phasen, ein Durchlauf, ein geteiltes Urteil — und drei "
-              "benannte Wege zurück.")
+              "Sechs Phasen, ein Rücksprung von Phase 5 zurück in Phase 1 — und ein "
+              "Produkt, das öfter schweigt als spricht.")
     tabelle(s, ["Phase", "Was dabei herauskam"], [
-        ["1 Business Understanding", "Aus „Preis vorher anzeigen“ wurde: unter 50 Cent "
-                                     "— und daraus je Radtyp eine Minuten-Toleranz"],
-        ["2 Data Understanding", "Die Daten tragen die Frage. Zwei Befunde: 42 % ohne "
-                                 "Distanz, 2,7 % keine echten Fahrten"],
-        ["3 Data Preparation", "Leakage vermieden, drei begründete Filter, Wetter und "
-                               "Kalender angejoint"],
-        ["4 Modeling", "Nullmodell als Maßstab, dann linear, Baum, Wald — 60,4 % besser"],
-        ["5 Evaluation", "Gemittelt gerissen (0,91 €), getrennt besteht CITY (0,464 €)"],
-        ["6 Deployment", "Paket, Funktion, Überwachung, Schattenbetrieb — GELB"],
+        ["1 Business Understanding", "Der Prozess wurde geändert, nicht das "
+                                     "Verfahren. Kriterium: unter 50 Cent"],
+        ["2 Data Understanding", "Ein Fünftel endet frei im Gebiet, ein weiteres "
+                                 "Fünftel sind Rundtouren"],
+        ["3 Data Preparation", "Zielstation erlaubt — als Stellvertreter. Wetter "
+                               "gesperrt. Vier Zeitabschnitte"],
+        ["4 Modeling", "Vier Baselines, dann Modelle. Eine Ablation zeigt: das Ziel "
+                       "bringt 9 %"],
+        ["5 Evaluation", "CITY hält die Grenze. Trotzdem Rücksprung — der Mittelwert "
+                         "bildet die einzelne Fahrt nicht ab"],
+        ["6 Deployment", "Ausgeliefert wird die Tabelle, nicht das Modell. 136 "
+                         "Zeilen, nur CITY, 22,5 % Reichweite"],
     ], y=unter_intro(s), spalten_b=[230, 673.5], zeilen_h=40)
     notizen(s, "Diese Tabelle steht wörtlich am Ende von Notebook 1. Die Studierenden "
-               "finden sie dort wieder — das ist Absicht: Folie und Notebook sollen "
-               "sich decken, damit die Vorlesung und die Nacharbeit dieselbe Sprache "
-               "sprechen.")
+               "finden sie dort wieder — Folie und Notebook sollen dieselbe Sprache "
+               "sprechen, damit die Nacharbeit nicht bei null anfängt.")
 
+    s = folie(prs, "Fall 1 · Abschluss", "Was offen bleibt — ausdrücklich",
+              "Ein Projektbericht ohne diese Liste ist unvollständig. Sie steht am "
+              "Ende des Notebooks, nicht im Kleingedruckten.")
+    tabelle(s, ["Offener Punkt", "Was daraus folgt"], [
+        ["Das geplante Ziel wird nicht erfasst", "Alle Zahlen sind Obergrenzen"],
+        ["Kein echter Schattenbetrieb", "Test 2 hat kalibriert und freigegeben — die "
+                                        "unabhängige Endprüfung steht aus"],
+        ["Keine Zusage je Verbindung", "Die 80 % gelten insgesamt und je Radtyp"],
+        ["Kein Wetter", "Ohne archivierte Prognosen fehlt ein vermutlich starkes "
+                        "Merkmal"],
+        ["Kein Produkt für EBIKE und CARGO", "Weder als Zahl noch als Spanne"],
+        ["Der bessere Kandidat wird nicht ausgeliefert",
+         "Die Modellvorhersagen zu tabellieren wäre der nächste Schritt"],
+    ], y=unter_intro(s), spalten_b=[350, 553.5], zeilen_h=42)
+    notizen(s, "Gehen Sie diese Liste langsam durch. Sie ist der beste Teil des "
+               "Notebooks: Jeder Punkt ist eine Einschränkung, die niemand bemerkt "
+               "hätte. Ein Bericht, der so etwas aufschreibt, ist mehr wert als "
+               "einer mit besseren Zahlen — weil man auf ihm aufbauen kann.")
 
 # ═════════════════════════════════════════════ Teil C — Faelle 2 bis 6
 #
@@ -1107,12 +1353,16 @@ def teil_referenzfall(prs):
 # Inhaltszone ohne Abstandsrechnerei eingehalten.
 
 def fall2(prs):
-    kapitel(prs, 3, "Fall 2 — Klassifikation: wenn die Regel gewinnt",
-            "Welche Räder müssen als Nächstes in die Werkstatt — und braucht es "
-            "dafür überhaupt ein Modell?",
-            "Dieser Fall zeigt Phase 6 von innen. Er endet mit einem Ergebnis, das "
-            "in Lehrbüchern selten vorkommt: Das Modell wird gebaut, geprüft — und "
-            "dann NICHT ausgeliefert, weil eine einzeilige Regel genauso gut ist.")
+    AKTUELLES_NB[0] = 2
+    kapitel(prs, 3, "Fall 2 — Klassifikation: was ein Modell wert sein muss",
+            "Welche Räder müssen als Nächstes in die Werkstatt — und lohnt sich "
+            "dafür der Betrieb eines Modells?",
+            "Dieser Fall zeigt Phase 6 von innen. Das Modell gewinnt hier — aber "
+            "erst der Vergleich mit der Faustregel des Werkstattmeisters macht "
+            "seinen Beitrag benennbar. Ohne diesen Maßstab stünde im Notebook eine "
+            "Trefferquote, und niemand könnte sagen, ob sie gut ist. Der Fall ist "
+            "damit das Gegenstück zu Fall 1, wo eine schlichte Tabelle das Rennen "
+            "macht.")
 
     s = folie(prs, "Fall 2", "Der Fall auf einen Blick")
     steckbrief(s, [
@@ -1125,7 +1375,8 @@ def fall2(prs):
                          "— rund 7 : 1"),
         ("Verfahren", "Zwei Faustregeln als Maßstab, dann Entscheidungsbaum und "
                       "Random Forest"),
-        ("Urteil", "Regel und Wald treffen gleich gut — ausgeliefert wird die Regel"),
+        ("Urteil", "Der Wald schlägt die Faustregel messbar — ausgeliefert wird "
+                   "das Modell, die Regel bleibt Rückfallebene"),
     ], y=unter_intro(s))
     notizen(s, "Die Kostenmatrix in Zeile 4 ist der Unterschied zu Fall 1. Dort waren "
                "beide Fehlerrichtungen gleich ärgerlich; hier kostet die eine das "
@@ -1203,53 +1454,97 @@ def fall2(prs):
                "Wer sie nicht rechnet, kann am Ende nicht sagen, ob das Modell etwas "
                "beigetragen hat — er kann nur sagen, dass es funktioniert.")
 
-    s = folie(prs, "Fall 2 · Phase 5", "Gleichstand — und was das bedeutet",
-              "Trefferquote und Kosten sind auf die zweite Stelle identisch. Das ist "
-              "kein Zufall, sondern eine Aussage über die Aufgabe.")
-    tabelle(s, ["Verfahren", "Trefferquote", "Kosten", "Aufwand"], [
-        ["Regel A (Kilometerstand)", "70,0 %", "10.890 €", "eine Zeile"],
-        ["Random Forest", "70,0 %", "10.890 €", "Training, Pflege, Überwachung"],
-    ], y=unter_intro(s), spalten_b=[300, 150, 150, 303.5], zeilen_h=48)
+    s = folie(prs, "Fall 2 · Phase 5", "Der Wald schlägt die Faustregel — knapp",
+              "Beide Erfolgskriterien standen vor der Messung fest: mindestens 70 % "
+              "Trefferquote, und günstiger als die heutige Faustregel.")
+    tabelle(s, ["Vorgehen", "Treffer", "Trefferquote", "Kosten je Quartal", "70-%-Hürde"], [
+        ["gar nicht vorsorglich prüfen", "0", "0 %", "18.540 €", "—"],
+        ["Faustregel: km seit letzter Meldung", "38", "63,3 %", "12.250 €", "gerissen"],
+        ["Entscheidungsbaum", "37", "61,7 %", "12.455 €", "gerissen"],
+        ["Random Forest — gewählt", "43", "71,7 %", "11.225 €", "erfüllt"],
+    ], y=(y := unter_intro(s)), spalten_b=[300, 100, 150, 190, 163.5], zeilen_h=40)
+    sandband(s, "Erst die Regel macht das Modell bewertbar. Ohne sie stünde hier eine "
+                "Trefferquote, und niemand könnte sagen, ob sie gut ist. Mit ihr steht "
+                "hier ein Satz, den die Werkstatt versteht.",
+             y=darunter(y, h_tabelle(4, 40)))
     phasenleiste(s, 5)
-    notizen(s, "Lassen Sie die Zahlen wirken. Studierende erwarten hier, dass der Wald "
-               "gewinnt — er ist ja das stärkere Verfahren. Dass er es nicht tut, "
-               "heißt: Der Verschleiß hängt fast ausschließlich an den gefahrenen "
-               "Kilometern. Mehr Information steckt in den Daten nicht.")
+    notizen(s, "Beachten Sie die zweite Zeile: Die Faustregel des Werkstattmeisters "
+               "ist mit Abstand die beste der drei Regeln und lässt die anderen weit "
+               "hinter sich. Der Wald schlägt sie trotzdem — in Treffern wie in "
+               "Kosten. In der Bedeutungsgrafik steht km_seit_meldung ganz vorn: Der "
+               "Wald hat die Regel des Meisters gefunden und ist dann noch ein Stück "
+               "weiter gegangen. Das ist der Normalfall eines gelungenen Modells.")
 
     zellfolie(prs, 2, "5.4", "Phase 5 · im Notebook",
-              "Der Gleichstand, gegen die Kriterien aus Phase 1 gehalten",
-              "nb2-gleichstand",
-              "Beide Kandidaten, beide Kriterien, eine Tabelle — und kein Unterschied.",
-              "Das Notebook prüft hier ausdrücklich gegen die Kriterien, die in Phase 1 "
-              "festgelegt wurden, und nicht gegen das, was sich gerade anbietet. "
-              "Genau deshalb ist der Gleichstand ein Ergebnis und keine Enttäuschung.")
+              "Beide Kandidaten, gegen die Kriterien aus Phase 1 gehalten",
+              "nb2-kriterien",
+              "Die Faustregel reißt die 70-Prozent-Hürde, das Modell hält sie — und "
+              "ist zugleich günstiger. Damit ist die Entscheidung gefallen.",
+              "Das Notebook prüft hier gegen die Kriterien, die in Phase 1 festgelegt "
+              "wurden, und nicht gegen das, was sich gerade anbietet. Der Unterschied "
+              "ist klein: 71,7 gegen 63,3 Prozent, gut tausend Euro im Quartal. Klein "
+              "genug, dass man ihn ohne den vorher gebauten Maßstab gar nicht "
+              "bemerkt hätte.")
 
-    s = folie(prs, "Fall 2 · Phase 6", "Ausgeliefert wird die Regel, nicht das Modell",
-              "Bei Gleichstand gewinnt die einfachere Lösung. Das ist keine "
-              "Bescheidenheit, sondern eine Kostenrechnung über die Lebensdauer.")
-    vorher_nachher(s,
-                   ("Das Modell", "Was seine Auslieferung kostet", [
-                       "Trainingsdaten vorhalten",
-                       "Regelmäßig nachtrainieren",
-                       "Überwachen, ob es abdriftet",
-                       "Erklären, warum Rad 47 auf",
-                       "  der Liste steht",
-                       "Jemanden vorhalten, der das kann",
-                   ], False),
-                   ("Die Regel", "Was ihre Auslieferung kostet", [
-                       "Eine SQL-Abfrage",
-                       "",
-                       "Jede Werkstattkraft versteht,",
-                       "warum ein Rad auf der Liste",
-                       "steht — und kann widersprechen,",
-                       "wenn es falsch ist.",
-                   ], False),
-                   y=unter_intro(s), hoehe=200)
+    s = folie(prs, "Fall 2 · Phase 6",
+              "Ausgeliefert wird das Modell — und die Regel bleibt im Paket",
+              "Das Modell erfüllt beide Kriterien und schlägt die Faustregel. Es "
+              "geht in Betrieb. Kostenlos ist diese Entscheidung nicht.")
+    tabelle(s, ["", "Faustregel", "Random Forest"], [
+        ["Trefferquote", "63,3 %", "71,7 %"],
+        ["Kosten je Quartal", "12.250 €", "11.225 €"],
+        ["erklärbar", "„seit 288 km nicht in der Werkstatt“", "nur über Umwege"],
+        ["Wartungsaufwand", "keiner", "vierteljährlich nachtrainieren"],
+        ["Abhängigkeiten im Betrieb", "keine", "scikit-learn, joblib, Versionsstände"],
+    ], y=(y := unter_intro(s)), spalten_b=[240, 340, 323.5], zeilen_h=36)
+    sandband(s, "Die unteren drei Zeilen sind der Preis. Er ist hier gerechtfertigt, "
+                "weil die oberen beiden zugunsten des Modells ausfallen — und nur "
+                "deshalb.", y=darunter(y, h_tabelle(5, 36)))
     phasenleiste(s, 6)
-    notizen(s, "Der letzte Punkt rechts ist der eigentliche Gewinn: Eine Regel, der "
-               "man widersprechen kann, wird benutzt. Eine Blackbox, die man nur "
-               "glauben kann, wird umgangen. Das entscheidet über den Erfolg im "
-               "Betrieb mehr als jede Trefferquote.")
+    notizen(s, "Ein Modell muss seinen Unterhalt verdienen. Hier verdient es ihn. "
+               "Fiele die Trefferquote gleich aus, wäre die Regel die bessere Lösung, "
+               "und der Bericht müsste das so schreiben, statt das Modell "
+               "auszuliefern, weil man es nun einmal gebaut hat. Genau dieser Fall "
+               "tritt in Notebook 1 ein — dort gewinnt die Tabelle.")
+
+    s = folie(prs, "Fall 2 · Phase 6", "Warum die Regel trotzdem mit ausgeliefert wird",
+              "Sie ist nicht der Verlierer des Vergleichs, sondern zwei Dinge, die "
+              "das Modell im Betrieb braucht.")
+    kachelreihe(s, [
+        ("Rückfallebene", [
+            "Wenn das Modell einmal nicht",
+            "lädt — falscher Versionsstand,",
+            "fehlende Bibliothek —,",
+            "steht die Werkstatt nicht",
+            "ohne Liste da.",
+            "",
+            "Eine SQL-Abfrage genügt.",
+        ]),
+        ("Maßstab der Überwachung", [
+            "Ein Modell ohne Vergleichsgröße",
+            "merkt sein eigenes Nachlassen",
+            "nicht.",
+            "",
+            "Fällt der Abstand zur Regel auf",
+            "null, ist die Nachricht klar —",
+            "auch ohne neue Kennzahl.",
+        ]),
+        ("Und für die Werkstatt", [
+            "Wer widersprechen kann, benutzt",
+            "die Liste. Wer nur glauben kann,",
+            "umgeht sie.",
+            "",
+            "Die Regel liefert für jedes Rad",
+            "einen Satz, den jede",
+            "Werkstattkraft nachprüfen kann.",
+        ]),
+    ], y=unter_intro(s), hoehe=200)
+    phasenleiste(s, 6)
+    notizen(s, "Der mittlere Punkt wird in Projekten regelmäßig vergessen. Man baut "
+               "eine Überwachung auf Kennzahlen des Modells — Trefferquote, "
+               "Kalibrierung — und merkt nicht, dass sich die Welt geändert hat, weil "
+               "alle Kennzahlen mitwandern. Eine unveränderliche Faustregel als "
+               "Referenzlinie kostet nichts und meldet genau das.")
 
     s = folie(prs, "Fall 2 · Phase 6", "Die Rückkopplung, die dieses Verfahren schwierig macht",
               "Wer die Liste abarbeitet, verändert die Daten, aus denen das nächste "
@@ -1272,15 +1567,17 @@ def fall2(prs):
         ["3 Data Preparation", "Zeitlicher Schnitt, acht Stichtage, jüngster als Test"],
         ["4 Modeling", "Erst zwei Faustregeln, dann Baum und Wald mit class_weight "
                        "aus der Kostenmatrix"],
-        ["5 Evaluation", "Gleichstand: je 70,0 % und je 10.890 €"],
-        ["6 Deployment", "Die Regel — mit Wartungsliste, Überwachung und der "
-                         "Rückkopplungsfalle"],
+        ["5 Evaluation", "Der Wald schlägt die Faustregel: 71,7 % gegen 63,3 %, "
+                         "11.225 € gegen 12.250 €"],
+        ["6 Deployment", "Das Modell — mit der Regel als Rückfallebene und Maßstab, "
+                         "dazu Wartungsliste und Rückkopplungsfalle"],
     ], y=unter_intro(s), spalten_b=[230, 673.5], zeilen_h=40)
     notizen(s, "Ein Modell muss seinen Unterhalt verdienen. Dieser Satz ist die "
                "Quintessenz des Falls — und er gilt weit über die Wartung hinaus.")
 
 
 def fall3(prs):
+    AKTUELLES_NB[0] = 3
     kapitel(prs, 4, "Fall 3 — Clustering: Erfolg ohne Zielgröße",
             "Wie legt man Erfolgskriterien fest, wenn es gar keine richtige Antwort "
             "gibt, an der man messen könnte?",
@@ -1394,7 +1691,8 @@ def fall3(prs):
             "gesamte Umsatz.",
         ]),
         ("Befund 2", [
-            "Knapp 30 % der Kundschaft",
+            "Knapp ein Drittel der",
+            "Kundschaft — 998 von 3.200 —",
             "taucht in der Segmentierung",
             "gar nicht auf.",
             "",
@@ -1477,6 +1775,7 @@ def fall3(prs):
 
 
 def fall4(prs):
+    AKTUELLES_NB[0] = 4
     kapitel(prs, 5, "Fall 4 — Zeitreihe: der Schnitt entlang der Zeit",
             "Wie viele Fahrten kommen morgen — und warum ist die genaueste "
             "Prognose nicht die beste?",
@@ -1533,7 +1832,7 @@ def fall4(prs):
     zellfolie(prs, 4, "2.3", "Phase 2 · im Notebook",
               "Die Störgröße, in zwei Zeilen entlarvt",
               "nb4-stoergroesse",
-              "Roh: Faktor 0,91. Bei gleicher Temperatur: 0,74. Derselbe Datensatz, "
+              "Roh: Faktor 0,91. Bei gleicher Temperatur: 0,75. Derselbe Datensatz, "
               "zwei völlig verschiedene Aussagen.",
               "Das ist die schärfste Zelle des Notebooks. Die rohe Zahl legt nahe, "
               "Ferien wirkten schwach dämpfend. Kontrolliert man die Temperatur, ist "
@@ -1595,7 +1894,7 @@ def fall4(prs):
             "Fünffache einer zu hohen.",
         ]),
         ("Mit Aufschlag", [
-            "Rund 14 % werden auf die",
+            "Rund 16 % werden auf die",
             "Prognose aufgeschlagen.",
             "",
             "Der mittlere Fehler steigt.",
@@ -1645,7 +1944,7 @@ def fall4(prs):
     zellfolie(prs, 4, "6.1", "Phase 6 · im Notebook",
               "Zwei Fehlerwerte — und nur einer zählt",
               "nb4-ehrlich",
-              "MAE 12,65 mit dem tatsächlichen Wetter, 16,96 mit einer simulierten "
+              "MAE 12,50 mit dem tatsächlichen Wetter, 17,13 mit einer simulierten "
               "Vorhersage. Die zweite Zahl ist die ehrliche.",
               "Die Zeile sagt es selbst: „unrealistisch“ und „realistisch“. Wer in "
               "einem Bericht nur die erste Zahl zeigt, hat nicht gelogen und trotzdem "
@@ -1671,12 +1970,15 @@ def fall4(prs):
 
 
 def fall5(prs):
-    kapitel(prs, 6, "Fall 5 — Assoziation: wenn die Hürde fast alles wegnimmt",
+    AKTUELLES_NB[0] = 5
+    kapitel(prs, 6, "Fall 5 — Assoziation: wenn die Hürde alles wegnimmt",
             "Welche Wege gehören zusammen — und wieviel von dem, was auffällt, "
             "ist überhaupt brauchbar?",
             "Dieser Fall zeigt Phase 5 von innen. Er ist der beste Beleg dafür, "
-            "wozu vorab festgelegte Kriterien gut sind: Von 42 gefundenen Regeln "
-            "überlebt genau eine.")
+            "wozu vorab festgelegte Kriterien gut sind: Von 32 gefundenen Regeln "
+            "übersteht keine einzige beide Hürden — und die stärkste verfehlt sie "
+            "um ein Hundertstel Prozentpunkt. Genau das ist der Moment, in dem die "
+            "Versuchung am größten ist, das Kriterium nachträglich zu senken.")
 
     s = folie(prs, "Fall 5", "Der Fall auf einen Blick")
     steckbrief(s, [
@@ -1688,8 +1990,8 @@ def fall5(prs):
                            "Transporterfahrt begründen"),
         ("Datensicht", "Eine Fahrt ist ein Warenkorb: Startort und Zielort zusammen"),
         ("Verfahren", "Support, Konfidenz und Lift von Hand — drei Divisionen"),
-        ("Urteil", "Von 42 Regeln erfüllen 10 das Lift-, 2 das Support- und nur "
-                   "EINE beide Kriterien"),
+        ("Urteil", "Von 32 Regeln nimmt keine beide Hürden — die stärkste "
+                   "verfehlt sie um 0,01 Prozentpunkte"),
     ], y=unter_intro(s))
     notizen(s, "Die drei Kennzahlen sind mit Absicht von Hand gerechnet und nicht aus "
                "einer Bibliothek geholt. Wer die drei Divisionen einmal selbst "
@@ -1793,47 +2095,95 @@ def fall5(prs):
               "Konfidenz und Lift nicht mehr. Deshalb steht die Rechnung im Notebook "
               "ausgeschrieben und nicht als Bibliotheksaufruf.")
 
-    s = folie(prs, "Fall 5 · Phase 5", "Von 42 Regeln bleibt eine",
+    s = folie(prs, "Fall 5 · Phase 5", "Von 32 Regeln bleibt keine",
               "Hoher Lift und hoher Support schließen einander fast aus. Wer beide "
-              "Hürden vorab setzt, siebt radikal.")
+              "Hürden vorab setzt, siebt radikal — hier bis auf null.")
     tabelle(s, ["Hürde", "Regeln, die sie erfüllen"], [
-        ["Alle gefundenen Regeln", "42"],
-        ["Lift ≥ 1,3", "10"],
-        ["Support ≥ 1 %", "2"],
-        ["Beide zugleich", "1"],
-    ], y=unter_intro(s), spalten_b=[500, 403.5], zeilen_h=44)
+        ["Alle gefundenen Regeln", "32"],
+        ["Lift ≥ 1,3", "9"],
+        ["Support ≥ 1 %", "0"],
+        ["Beide zugleich", "0"],
+    ], y=(y := unter_intro(s)), spalten_b=[500, 403.5], zeilen_h=44)
+    sandband(s, "Die stärkste Regel — werktags früh vom Hauptbahnhof zum Hubland "
+                "Campus — erreicht 0,99 % Support. Zur Hürde fehlen 0,01 "
+                "Prozentpunkte, also rund fünf Fahrten in drei Jahren.",
+             y=darunter(y, h_tabelle(4, 44)))
     phasenleiste(s, 5)
     notizen(s, "Warum schließen sie einander fast aus? Ein sehr spezifisches Muster "
                "ist selten (niedriger Support), ein sehr häufiges ist unspezifisch "
                "(niedriger Lift). Wer nur eine der beiden Hürden setzt, findet "
-               "entweder Belangloses oder Zufälliges.")
+               "entweder Belangloses oder Zufälliges. Hier kommt beides zusammen — "
+               "und das Ergebnis ist eine leere Liste.")
+
+    s = folie(prs, "Fall 5 · Phase 5",
+              "0,99 gegen 1,00 Prozent — der teuerste Moment eines Projekts",
+              "Die Hürde auf 0,9 % zu senken wäre die Arbeit von zehn Sekunden. "
+              "Niemand würde es je bemerken. Genau deshalb darf es nicht passieren.")
+    kachelreihe(s, [
+        ("Was verlockend wäre", [
+            "„0,99 ist doch praktisch 1.“",
+            "",
+            "Eine Zeile im Notebook, und",
+            "aus dem Fehlschlag wird ein",
+            "Ergebnis mit einer Regel,",
+            "über die man vortragen kann.",
+        ]),
+        ("Warum es verboten ist", [
+            "Ein Kriterium, das man nach",
+            "dem Ergebnis anpasst, misst",
+            "nichts mehr.",
+            "",
+            "Es wäre dasselbe, wie es gar",
+            "nicht erst aufgestellt zu",
+            "haben.",
+        ]),
+        ("Was stattdessen gilt", [
+            "Keine Regel wird freigegeben.",
+            "",
+            "Ob 1 % die richtige Hürde für",
+            "ein Netz aus zehn Stationen",
+            "ist, gehört zurück in Phase 1",
+            "— als Gespräch mit der",
+            "Disposition, nicht als Zeile.",
+        ]),
+    ], y=unter_intro(s), hoehe=196)
+    phasenleiste(s, 5, rueckspruenge=(1,))
+    notizen(s, "Dies ist die vielleicht wichtigste Folie des ganzen Decks. Der Fall "
+               "ist so knapp, dass jede Ausrede greifbar wäre — und genau daran "
+               "zeigt sich, ob ein Erfolgskriterium ernst gemeint war. Fragen Sie "
+               "die Studierenden ehrlich, was sie täten. Die meisten würden senken. "
+               "Genau deshalb steht diese Folie hier.")
 
     zellfolie(prs, 5, "5.2", "Phase 5 · im Notebook",
-              "Die Hürden sieben — 42, dann 10, dann 2, dann 1",
+              "Die Hürden sieben — 32, dann 9, dann keine",
               "nb5-huerden",
-              "Jede Hürde einzeln aufgeführt, mit der Zahl der Regeln, die sie "
-              "überstehen. Die letzte Zeile ist das Ergebnis des Notebooks.",
+              "Und darunter, gemessen statt behauptet: wie knapp die stärkste Regel "
+              "scheitert.",
               "Diese Ausgabe ist der beste Beleg des ganzen Decks dafür, wozu vorab "
-              "gesetzte Kriterien gut sind. Hätte man sie nach dem Ergebnis gewählt, "
-              "stünde hier eine komfortable Zahl statt einer ehrlichen.")
+              "gesetzte Kriterien gut sind. Beachten Sie die letzten Zeilen: Das "
+              "Notebook rechnet aus, wie weit die beste Regel danebenliegt, statt "
+              "das Scheitern nur zu behaupten. Wer den Abstand kennt, kann in "
+              "Phase 1 begründet darüber reden — wer ihn nicht kennt, senkt die "
+              "Hürde aus dem Bauch heraus.")
 
-    s = folie(prs, "Fall 5 · Phase 6", "Zwei Pläne aus einer Analyse",
-              "Die eine überlebende Regel begründet zwei verschiedene Einsätze — "
-              "und beide tragen denselben Vorbehalt.")
+    s = folie(prs, "Fall 5 · Phase 6", "Zwei Pläne — ganz ohne freigegebene Regel",
+              "Der Umlaufplan entsteht aus den Salden je Station und Zeitfenster, "
+              "nicht aus den Regeln. Deshalb trägt er, obwohl keine Regel freikam.")
     vorher_nachher(s,
                    ("Plan A", "Umverteilen zwischen Stationen", [
                        "Der Pendelstrom morgens",
                        "leert eine Station und füllt",
                        "eine andere.",
                        "",
-                       "Gegengeprüft über die",
-                       "kunde_id: Es sind tatsächlich",
-                       "dieselben Personen.",
+                       "Gegenprobe über die kunde_id:",
+                       "nur 13,8 % fahren abends",
+                       "zurück — die Richtung stimmt,",
+                       "die Personen nicht.",
                    ], False),
                    ("Plan B", "Frei abgestellte Räder einsammeln", [
                        "„Frei abgestellt“ wurde ein",
                        "eigenes Ziel — sonst wären",
-                       "23 % der Fahrten unsichtbar",
+                       "19,8 % der Fahrten unsichtbar",
                        "geblieben.",
                        "",
                        "Vorbehalt: Wegeketten sind",
@@ -1855,7 +2205,8 @@ def fall5(prs):
                                "Regel unbelegt"],
         ["4 Modeling", "Support, Konfidenz und Lift von Hand — eine Regel Zeile für "
                        "Zeile nachgerechnet"],
-        ["5 Evaluation", "42 Regeln, 10 mit Lift, 2 mit Support, 1 mit beidem"],
+        ["5 Evaluation", "32 Regeln, 9 mit Lift, keine mit Support — die stärkste "
+                         "verfehlt die Hürde um 0,01 Prozentpunkte"],
         ["6 Deployment", "Zwei Pläne, mit Datenschutzvorbehalt"],
     ], y=unter_intro(s), spalten_b=[230, 673.5], zeilen_h=42)
     notizen(s, "Merksatz: Die auffälligste Regel ist meistens die uninteressanteste. "
@@ -1863,6 +2214,7 @@ def fall5(prs):
 
 
 def fall6(prs):
+    AKTUELLES_NB[0] = 6
     kapitel(prs, 7, "Fall 6 — Anomalie: der Rücksprung zum Mitlesen",
             "Was ist gestern schiefgelaufen — und was tut man, wenn das Modell "
             "sauber rechnet und trotzdem Unbrauchbares liefert?",
@@ -1874,11 +2226,13 @@ def fall6(prs):
     steckbrief(s, [
         ("Zwei Aufgaben", "A) Auffällige Fahrten finden  B) Stationsausfälle erkennen"),
         ("Das Produkt", "Eine Tagesliste mit zehn Plätzen für die Disposition"),
-        ("Erfolgskriterium", "Erstaunlich niedrig: ab 5 % Treffer lohnt sich die Liste"),
+        ("Erfolgskriterium", "Jeder fünfte Eintrag muss tragen — 20 %. Rentabel "
+                             "wäre die Liste schon ab 5 %"),
         ("Verfahren", "Interquartilsregel als Maßstab, dann Isolation Forest"),
         ("Der Rücksprung", "Phase 4 zurück nach Phase 3 — das Modell fand die "
                            "Preisklasse statt der Anomalien"),
-        ("Urteil", "Aufgabe A besteht mit 40 % · Aufgabe B scheitert bei 9,5 % und "
+        ("Urteil", "Aufgabe A erfüllt das Kriterium mit 36 % · Aufgabe B verfehlt "
+                   "es mit höchstens 14 % und "
                    "wird nicht freigegeben"),
     ], y=unter_intro(s))
     notizen(s, "Die 5 Prozent in Zeile 3 überraschen. Sie kommen aus einer "
@@ -1960,13 +2314,17 @@ def fall6(prs):
               "Die Korrektur ist klein: das Entgelt innerhalb des Radtyps normieren. "
               "Die Wirkung ist groß.")
     tabelle(s, ["", "Trefferquote", "Bewertung"], [
-        ["Erster Versuch", "6 %", "unbrauchbar — gefunden wurde die Preisklasse"],
-        ["Nach der Normierung", "40 %", "Kriterium aus Phase 1 (5 %) deutlich erfüllt"],
+        ["Erster Versuch", "2,0 %", "unbrauchbar — gefunden wurde die Preisklasse"],
+        ["Nach der Normierung", "36,0 %", "Kriterium aus Phase 1 (20 %) erfüllt"],
     ], y=unter_intro(s), spalten_b=[250, 180, 473.5], zeilen_h=48)
     phasenleiste(s, 3, rueckspruenge=(4,))
-    notizen(s, "Sechs auf vierzig Prozent durch eine Normierung. Studierende sollen "
-               "mitnehmen: Der größte Hebel lag nicht im Verfahren, sondern in der "
-               "Datenaufbereitung — wie so oft.")
+    notizen(s, "Von 2 auf 36 Prozent durch eine Normierung — von einem Treffer unter "
+               "fünfzig auf achtzehn. Studierende sollen mitnehmen: Der größte Hebel "
+               "lag nicht im Verfahren, sondern in der Datenaufbereitung, wie so oft. "
+               "Und beachten Sie den Maßstab: 20 Prozent sind das Erfolgskriterium, "
+               "nicht die Rentabilitätsschwelle. Rechnen würde sich die Liste schon "
+               "ab 5 Prozent — aber eine Liste, bei der neunzehn von zwanzig "
+               "Einträgen unnötig sind, öffnet nach zwei Wochen niemand mehr.")
 
     zellfolie(prs, 6, "4.5", "Nach dem Rücksprung · im Notebook",
               "Dieselbe Auswertung, nach der Normierung",
@@ -1982,10 +2340,15 @@ def fall6(prs):
               "sind es nicht. Der Grund liegt nicht am Verfahren.")
     kachelreihe(s, [
         ("Der Befund", [
-            "Trefferquote 9,5 %.",
+            "Beste Trefferquote 14 %,",
+            "bei einer Liste von 100.",
             "",
-            "Das Kriterium für Aufgabe B",
-            "wird deutlich verfehlt.",
+            "Bei 50 Plätzen — der Länge,",
+            "die das Betriebsbüro schafft —",
+            "sind es 0 %.",
+            "",
+            "Das Kriterium von 20 % wird",
+            "deutlich verfehlt.",
         ]),
         ("Warum", [
             "Rund fünf Fahrten je Station",
@@ -2040,16 +2403,17 @@ def fall6(prs):
 
     s = folie(prs, "Fall 6 · Abschluss", "Der Kreislauf schließt sich")
     tabelle(s, ["Phase", "Was dabei herauskam"], [
-        ["1 Business Understanding", "Zwei Aufgaben, zehn Listenplätze, und eine "
-                                     "niedrige, aber begründete Hürde: 5 % Treffer"],
+        ["1 Business Understanding", "Zwei Aufgaben, zehn Listenplätze. Rentabel ab "
+                                     "5 %, gefordert werden 20 % — sonst wird die "
+                                     "Liste nicht benutzt"],
         ["2 Data Understanding", "Eine Lücke in der Dauerverteilung trennt Fahrten von "
                                  "Rückgabeproblemen. Sackgasse: die Geschwindigkeit"],
         ["3 Data Preparation", "Sechs Merkmale; distanz_km bleibt draußen, weil ein "
                                "fehlender Sensor kein auffälliger Vorgang ist"],
         ["4 Modeling", "Interquartilsregel unbrauchbar (über 2.000 Treffer), dann "
                        "Isolation Forest — der die Preisklasse fand"],
-        ["5 Evaluation", "Nach der Korrektur 6 % → 40 %. Aufgabe A besteht, B scheitert "
-                         "an den Grundraten"],
+        ["5 Evaluation", "Nach der Korrektur 2 % → 36 %. Aufgabe A erfüllt das "
+                         "Kriterium, B verfehlt es an den Grundraten"],
         ["6 Deployment", "Tagesliste mit Begründung; Aufgabe B ausdrücklich nicht "
                          "freigegeben"],
     ], y=unter_intro(s), spalten_b=[230, 673.5], zeilen_h=42)
@@ -2061,6 +2425,7 @@ def fall6(prs):
 # ═══════════════════════════════════════════════════ Teil D — Synthese
 
 def teil_synthese(prs):
+    AKTUELLES_NB[0] = None
     kapitel(prs, 8, "Synthese",
             "Was war in allen sechs Fällen gleich — und was hat jeder einzelne "
             "über den Kreislauf gelehrt?",
@@ -2071,16 +2436,16 @@ def teil_synthese(prs):
               "Die Tabelle aus Kapitel 1 — jetzt ausgefüllt mit dem, was wir "
               "unterwegs gesehen haben.")
     tabelle(s, ["Fall", "Zeigt", "Der Satz, der bleibt"], [
-        ["1 Regression", "Phase 5", "Die gemittelte Kennzahl verdeckte ein bestehendes "
-                                    "Drittel — 0,91 € gegen 0,464 €"],
-        ["2 Klassifikation", "Phase 6", "Bei Gleichstand gewinnt die einfachere Lösung: "
-                                        "ausgeliefert wird die Regel"],
+        ["1 Regression", "Phase 5", "Der Rücksprung kam, obwohl das Kriterium hielt — "
+                                    "ein Mittelwert ist keine Erfahrung"],
+        ["2 Klassifikation", "Phase 6", "Das Modell verdient seinen Unterhalt — "
+                                        "messbar, weil vorher ein Maßstab stand"],
         ["3 Clustering", "Phase 1", "Erfolgskriterien ohne Zielgröße — und eine bessere "
                                     "Frage als die, mit der wir anfingen"],
         ["4 Zeitreihe", "Phase 3", "Der Schnitt folgt der Zeit. Und die genaueste "
                                    "Prognose ist nicht die günstigste"],
-        ["5 Assoziation", "Phase 5", "Von 42 Regeln überlebt eine — dank Hürden, die "
-                                     "vorher standen"],
+        ["5 Assoziation", "Phase 5", "Keine der 32 Regeln überlebt — die stärkste "
+                                     "scheitert um 0,01 Prozentpunkte"],
         ["6 Anomalie", "Rücksprung", "Kein Verfahren erzeugt Information, die in den "
                                      "Daten nicht steckt"],
     ], y=unter_intro(s), spalten_b=[170, 110, 623.5], zeilen_h=42)

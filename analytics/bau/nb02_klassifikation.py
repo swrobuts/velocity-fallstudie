@@ -382,7 +382,14 @@ vergleich.append(liste_bewerten("Faustregel: meiste Kilometer gesamt",
 vergleich.append(liste_bewerten("Faustregel: km seit letzter Meldung",
                                 test_zeilen.km_seit_meldung.values, y_test))
 ##ENDE
-print(pd.DataFrame(vergleich).to_string(index=False))
+# Trefferquote als Prozent: Als Dezimalzahl muss sie jeder Leser - und
+# jede Folie, die auf diese Tabelle zeigt - selbst umrechnen.
+def als_prozent(df):
+    d = df.copy()
+    d["Trefferquote"] = d["Trefferquote"].map(lambda x: f"{x:.1%}")
+    return d
+
+print(als_prozent(pd.DataFrame(vergleich)).to_string(index=False))
 '''),
 
 MD("""
@@ -464,7 +471,7 @@ for name, modell in [("Entscheidungsbaum", baum), ("Random Forest", wald)]:
     vergleich.append(liste_bewerten(f"Modell: {name}", wahrscheinlichkeit, y_test))
 
 tabelle = pd.DataFrame(vergleich)
-print(tabelle.to_string(index=False))
+print(als_prozent(tabelle).to_string(index=False))
 
 bestes = tabelle.loc[tabelle["Kosten (EUR)"].idxmin(), "Vorgehen"]
 ersparnis = tabelle["Kosten (EUR)"].iloc[0] - tabelle["Kosten (EUR)"].min()

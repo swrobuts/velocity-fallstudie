@@ -52,23 +52,44 @@ CHROME = pathlib.Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chr
 # mehrdeutig sucht, bekommt einen Abbruch statt eines falschen Bildes.
 AUSSCHNITTE = {
     # ── Notebook 1: der Referenzfall
-    "nb1-kriterium": ("01_Regression_Fahrtdauer",
-                      "Erlaubter Schätzfehler bei 50 Cent", 0, 1180),
-    "nb1-leakage": ("01_Regression_Fahrtdauer", "gesperrt", 0, 1180),
-    "nb1-modelle": ("01_Regression_Fahrtdauer", "Bestes Modell: Random Forest", 0, 1180),
+    #
+    # Die Namen mit Bindestrich-Suffix meiden eine Kollision: Es gibt
+    # auch Mermaid-Bilder nb1-leakage und nb1-artefakt, und beide landen
+    # in demselben Ordner. Zwei Quellen, ein Dateiname - das waere ein
+    # Bild, das sich je nach Reihenfolge der Werkzeuge aendert.
+    "nb1-tarif": ("01_Regression_Fahrtdauer",
+                  "Das Tarifblatt - exakt bekannt", 0, 1180),
+    "nb1-trichter": ("01_Regression_Fahrtdauer",
+                     "Frei abgestellt und damit ohne Ziel", 0, 1180, "ausgabe"),
+    "nb1-rundtouren": ("01_Regression_Fahrtdauer",
+                       "Rundtouren sind", 0, 1180, "ausgabe"),
+    "nb1-gesperrt": ("01_Regression_Fahrtdauer",
+                     "Erlaubt, obwohl es nach", 0, 1180),
+    "nb1-abschnitte": ("01_Regression_Fahrtdauer",
+                       "Test 2 (Spanne)", 0, 1180, "ausgabe"),
+    "nb1-baselines": ("01_Regression_Fahrtdauer",
+                      "Vom Nichtwissen zur Startstation", 0, 1180, "ausgabe"),
+    "nb1-ablation": ("01_Regression_Fahrtdauer",
+                     "Beitrag des Ziels", 0, 1180),
     "nb1-preisfehler": ("01_Regression_Fahrtdauer",
-                        "Anteil der Fahrten mit unter 50 Cent Abweichung", 0, 1180),
-    "nb1-schatten": ("01_Regression_Fahrtdauer", "Schattenbetrieb, nur", 0, 1180),
+                        "Fahrt kostet", 0, 1180, "ausgabe"),
+    "nb1-kandidaten": ("01_Regression_Fahrtdauer",
+                       "vollstaendiges Kriterium", 0, 1180, "ausgabe"),
+    "nb1-tabelle": ("01_Regression_Fahrtdauer",
+                    "Das ausgelieferte Artefakt", 0, 1180, "ausgabe"),
+    "nb1-app": ("01_Regression_Fahrtdauer",
+                "Für Rundfahrten schätzen wir keinen Preis", 0, 1180, "ausgabe"),
 
     # ── Notebook 2: die Regel gewinnt
     "nb2-kosten": ("02_Klassifikation_Wartungsrisiko", "Kostenmatrix", 0, 1180),
     "nb2-schnitt": ("02_Klassifikation_Wartungsrisiko",
                     "Training: 1458 Zeilen aus 7 Stichtagen", 0, 1180),
-    "nb2-gleichstand": ("02_Klassifikation_Wartungsrisiko",
-                        "Erfolgskriterien aus Phase 1, für beide Kandidaten", 0, 1180, "ausgabe"),
+    "nb2-kriterien": ("02_Klassifikation_Wartungsrisiko",
+                      "Erfolgskriterien aus Phase 1, für beide Kandidaten", 0, 1180, "ausgabe"),
 
     # ── Notebook 3: ohne Zielgroesse
-    "nb3-k": ("03_Clustering_Stationen_und_Kunden", "56.9       0.659", 0, 1180, "ausgabe"),
+    "nb3-k": ("03_Clustering_Stationen_und_Kunden",
+              'k_suchen(S_skaliert, "A) Stationen")', 0, 1180, "ausgabe"),
     "nb3-hypothese": ("03_Clustering_Stationen_und_Kunden",
                       "HYPOTHESE, kein Befund", 0, 1180),
 
@@ -80,12 +101,13 @@ AUSSCHNITTE = {
                     "mit simulierter Wettervorhersage", 0, 1180),
 
     # ── Notebook 5: die Huerden sieben
-    "nb5-regel": ("05_Assoziation_Wege_im_Netz", "WENN Start = Hubland", 0, 1180),
+    "nb5-regel": ("05_Assoziation_Wege_im_Netz",
+                  "Basisrate  = Anteil aller Fahrten", 0, 1180),
     "nb5-huerden": ("05_Assoziation_Wege_im_Netz", "Regeln insgesamt:", 0, 1180, "ausgabe"),
 
     # ── Notebook 6: der Ruecksprung
     "nb6-fehlschlag": ("06_Anomalieerkennung_Auffaellige_Vorgaenge",
-                       "50573       85.0    CARGO", 0, 1180),
+                       'nlargest(10, "auffaelligkeit_erst")', 0, 1180),
     "nb6-korrektur": ("06_Anomalieerkennung_Auffaellige_Vorgaenge",
                       "Radtyp-Verteilung der 50 auffälligsten Vorgänge, jetzt", 0, 1180),
     "nb6-aufgabeB": ("06_Anomalieerkennung_Auffaellige_Vorgaenge",
@@ -94,13 +116,24 @@ AUSSCHNITTE = {
 
 
 def html_erzeugen(name: str, cache: pathlib.Path) -> pathlib.Path:
-    """Wandelt ein Notebook nach HTML, einmal je Lauf."""
-    ziel = cache / f"{name}.html"
+    """Wandelt ein Notebook nach HTML, einmal je Lauf.
+
+    Der Zwischenspeicher haengt am Aenderungsdatum des Notebooks. Ohne
+    das hat er nach einem Umbau von Notebook 1 klaglos die ALTE Fassung
+    weiterverwendet - die Suchtexte trafen ins Leere, und haetten sie
+    getroffen, waere ein veraltetes Bild auf der Folie gelandet, ohne
+    dass irgendetwas gemeldet worden waere.
+    """
+    quelle = NB / f"{name}.ipynb"
+    ziel = cache / f"{name}-{int(quelle.stat().st_mtime)}.html"
+    for veraltet in cache.glob(f"{name}-*.html"):
+        if veraltet != ziel:
+            veraltet.unlink()
     if ziel.exists():
         return ziel
     subprocess.run(
         ["jupyter", "nbconvert", "--to", "html", "--template", "lab",
-         "--output-dir", str(cache), "--output", name, str(NB / f"{name}.ipynb")],
+         "--output-dir", str(cache), "--output", ziel.stem, str(quelle)],
         check=True, capture_output=True)
     return ziel
 

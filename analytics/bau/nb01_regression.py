@@ -845,7 +845,17 @@ def bewerten(name, u, o):
 vergleich = pd.DataFrame({
     "Quantilregression": bewerten("Modell", "modell_von", "modell_bis"),
     "Perzentiltabelle":  bewerten("Tabelle", "von", "bis")}).T
-print(vergleich.to_string(float_format=lambda x: f"{x:.3f}"))
+# Anteile als Prozent, Breite in Euro. Drei Nachkommastellen zwingen den
+# Leser zum Kopfrechnen - und die Folien, die auf diese Tabelle zeigen,
+# muessten dieselbe Umrechnung noch einmal machen. Zwei Rechenwege fuer
+# dieselbe Zahl sind eine Fehlerquelle ohne Nutzen.
+anzeige = vergleich.copy()
+for spalte in anzeige.columns:
+    if spalte.startswith("Breite"):
+        anzeige[spalte] = anzeige[spalte].map(lambda x: f"{x:.2f} EUR")
+    else:
+        anzeige[spalte] = anzeige[spalte].map(lambda x: f"{x * 100:.1f} %")
+print(anzeige.to_string())
 print()
 for name, s in vergleich.iterrows():
     haelt = s["Abdeckung (angezeigt)"] >= 0.80 and s["schlechtester Radtyp"] >= 0.80
@@ -1073,7 +1083,10 @@ print(f"   Preisspanne im Median   {z.breite.median():.2f} €")
 print(f"   Reichweite              {len(z)/len(test2):.1%} der Fahrten im Geltungsbereich")
 print()
 if len(freigabe_tabelle):
-    print(freigabe_tabelle.head(6).to_string(index=False))
+    # line_width gross genug, damit die Tabelle NICHT umbricht: Ein
+    # Umbruch mitten in den Spalten macht sie im Notebook wie auf der
+    # Folie unlesbar - die Werte stehen dann unter den falschen Koepfen.
+    print(freigabe_tabelle.head(6).to_string(index=False, line_width=200))
 """),
 
 MD("""

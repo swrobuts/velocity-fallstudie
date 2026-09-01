@@ -108,11 +108,11 @@ k = fahrten[fahrten.status == "abgeschlossen"].copy()
 namen = stationen.set_index("station_id").name
 k["start"] = k.start_station_id.map(namen)
 # FREI ABGESTELLT IST EIN ZIEL, KEIN FEHLENDER WERT.
-# Rund ein Viertel der Fahrten endet nicht an einer Station, sondern irgendwo
+# Rund ein Fuenftel der Fahrten endet nicht an einer Station, sondern irgendwo
 # im Geschaeftsgebiet - die Kundenwebsite wirbt damit ("ueberall in der roten
 # Umrandung, ohne Zuschlag"). Wer diese Zeilen als fehlende Werte behandelt,
-# wirft ein Viertel der Daten weg, ohne es zu merken, und alle Regeln
-# verlieren ein Viertel ihrer Belege.
+# wirft ein Fuenftel der Daten weg, ohne es zu merken, und alle Regeln
+# verlieren ein Fuenftel ihrer Belege.
 k["ziel"] = k.end_station_id.map(namen).fillna("frei abgestellt")
 k["stunde"] = k.startzeit.dt.hour
 k["ist_frei"] = ((k.startzeit.dt.dayofweek >= 5)
@@ -154,10 +154,10 @@ print((je_station.sort_values(ascending=False) * 100).round(1).to_string())
 MD("""
 **Zwei Befunde stehen hier, und beide sind wichtig.**
 
-**Erstens:** Rund ein Viertel der Fahrten endet **nicht an einer Station**. Das ist kein
+**Erstens:** Rund ein Fünftel der Fahrten endet **nicht an einer Station**. Das ist kein
 Datenmangel, sondern ein beworbenes Merkmal — man darf das Rad überall im Geschäftsgebiet
 abstellen. Ein Analyst, der `end_station_id` als Pflichtfeld behandelt und die Zeilen
-verwirft, verliert ein Viertel seiner Belege und merkt es nicht. **Wir behandeln „frei
+verwirft, verliert ein Fünftel seiner Belege und merkt es nicht. **Wir behandeln „frei
 abgestellt“ deshalb als eigenes Ziel.** Bei den Ausflugsstationen ist der Anteil am
 höchsten — wer aufs Käppele fährt, stellt oben ab, wo er ist.
 
@@ -293,6 +293,15 @@ print(f"Regeln insgesamt:            {len(regeln)}")
 print(f"davon mit Lift ≥ 1,3:        {(regeln.Lift >= 1.3).sum()}")
 print(f"davon mit Support ≥ 1 %:     {(regeln.Support >= 0.01).sum()}")
 print(f"davon mit BEIDEM:            {len(brauchbar)}")
+
+# Wie knapp scheitert die STAERKSTE Regel? Diese Zeile entscheidet, ob
+# das Ergebnis eine Aussage ueber die Stadt ist oder ueber die Huerde.
+beste = regeln.loc[regeln.Support.idxmax()]
+print(f"\\nDie Regel mit dem groessten Support:")
+print(f"   {beste['wenn Start']} -> {beste['dann Ziel']}  ({beste.Kontext})")
+print(f"   Support {beste.Support:.4f} = {beste.Support * 100:.2f} %"
+      f"   Lift {beste.Lift:.2f}   {int(beste.Fahrten)} Fahrten")
+print(f"   Zur Huerde von 1,00 % fehlen {(0.01 - beste.Support) * 100:.2f} Prozentpunkte.")
 '''),
 
 MD("""
@@ -311,7 +320,7 @@ schlicht Zufall.
 **Wer eine Regelliste nach Lift sortiert und die ersten zehn vorträgt, trägt zehn
 Zufälle vor.** Das ist der häufigste Fehler bei Assoziationsanalysen.
 
-### 5.2 Die brauchbaren Regeln
+### 5.2 Die brauchbaren Regeln — es gibt keine
 """),
 
 CODE('''
@@ -320,12 +329,27 @@ print(ergebnis.to_string(index=False))
 '''),
 
 MD("""
-### 5.3 Kriterium 3: Was davon begründet eine Fahrt des Transporters?
+Die Tabelle ist leer. **Keine einzige Regel erfüllt beide Schwellen aus Phase 1.**
 
-Jetzt kommt der Teil, den keine Kennzahl abnimmt. Lesen Sie die Regeln und fragen Sie bei
-jeder: **Was würde die Disposition anders machen?**
+Und sie scheitert knapp: Die stärkste Regel — werktags früh vom Hauptbahnhof zum Hubland
+Campus — erreicht einen Support von 0,99 %. Zur Hürde von 1,00 % fehlt ihr **ein
+Hundertstel Prozentpunkt**, also rund fünf Fahrten in drei Jahren.
 
-Zwei Muster stechen heraus, und sie gehören zusammen:
+> **Genau hier entscheidet sich, ob ein Erfolgskriterium etwas wert ist.** Die Hürde auf
+> 0,9 % zu senken wäre die Arbeit von zehn Sekunden, und niemand würde es je bemerken.
+> Es wäre aber dasselbe, wie sie gar nicht erst aufgestellt zu haben: Ein Kriterium, das
+> man nach dem Ergebnis anpasst, misst nichts.
+
+**Das Ergebnis ist damit: keine Regel wird freigegeben.** Was das für das Projekt heißt,
+steht in 5.4 — und es heißt ausdrücklich nicht, dass die Analyse umsonst war.
+
+### 5.3 Was die durchgefallenen Regeln trotzdem zeigen — als Hypothese
+
+Die neun Regeln, die wenigstens die Lift-Hürde nehmen, dürfen den Umlaufplan nicht
+begründen. Ansehen darf man sie trotzdem — sie sind eine **Hypothese**, kein Befund, und
+sie werden gleich unabhängig überprüft.
+
+Zwei Muster stechen in ihnen heraus, und sie gehören zusammen:
 
 - **morgens** fließt es von den Pendlerstationen zu den Uni-Stationen
 - **abends** fließt dasselbe zurück
@@ -357,12 +381,40 @@ print(f"\\nAnteil an der Morgengruppe: {len(gemeinsam)/max(morgens.kunde_id.nuni
 '''),
 
 MD("""
-**Die Deutung hält stand — teilweise.** Knapp ein Viertel derer, die morgens vom Bahnhof
-zum Campus fahren, fährt abends dieselbe Strecke zurück. Das ist deutlich mehr, als
-Zufall hergäbe, aber es sind eben auch drei Viertel, die es **nicht** tun: Sie fahren
-anders zurück, zu anderer Zeit, oder gar nicht. Damit ist aus der Assoziationsregel eine belegte
-Aussage über Personen geworden — und genau so geht man mit einer Regel um, die man
-ernst nehmen will: **nachfassen, nicht glauben.**
+**Die Deutung hält stand — schwächer, als man erwartet hätte.** Von 354 Personen, die
+morgens vom Bahnhof zum Campus fahren, fahren abends 49 dieselbe Strecke zurück: **13,8 %**,
+also etwa jede siebte. Mehr als Zufall hergäbe, aber weit entfernt von dem geschlossenen
+Pendelstrom, den die Regel nahelegt.
+
+Sechs von sieben tun etwas anderes: Sie fahren zu anderer Zeit zurück, nehmen einen
+anderen Weg, oder gar kein Rad. **Die Regel beschreibt eine Richtung, keine Personen.**
+
+Und genau so geht man mit einer Regel um, die man ernst nehmen will: **nachfassen, nicht
+glauben.** Hier hat das Nachfassen die Deutung nicht widerlegt, aber deutlich
+zurechtgerückt — und das ist der Normalfall.
+
+### 5.4 Das Urteil: keine Freigabe, und trotzdem kein Fehlschlag
+
+| | |
+|---|---|
+| **Regeln gefunden** | 32 |
+| **davon mit Lift ≥ 1,3** | 9 |
+| **davon mit Support ≥ 1 %** | 0 |
+| **freigegeben** | **keine** |
+
+Was folgt daraus? Drei Wege, und zwei davon sind verboten:
+
+1. **Die Hürde senken.** Verboten. Sie stand vor der Messung fest.
+2. **Andere Regelformen suchen.** Zulässig, aber eine neue Runde: Regeln mit mehreren
+   Bedingungen statt „ein Start → ein Ziel“ hätten größere Warenkörbe und damit anderen
+   Support.
+3. **Zurück zu Phase 1 und fragen, ob 1 % die richtige Hürde ist.** Das ist die ehrliche
+   Antwort — aber es ist ein Gespräch mit der Disposition, keine Änderung im Notebook.
+
+> **Der Ertrag dieses Notebooks steckt nicht in den Regeln.** Er steckt in den Salden aus
+> Phase 6, die ohne jede Regel auskommen — und in der Erkenntnis, dass die stärksten
+> Ströme dieser Stadt zu schwach sind, um eine Ein-Prozent-Hürde zu nehmen. Auch das ist
+> ein Befund über das Netz.
 """),
 
 # =====================================================================
@@ -452,7 +504,7 @@ Und er besteht aus **zwei Teilen**, die man nicht vermengen darf:
 | **Einsammeln** | frei abgestellte Räder aufnehmen | die frei endenden Fahrten |
 
 Rechnet man beides in einer Tabelle, steht bei **jeder** Station „auffüllen" — denn ein
-Viertel aller Räder verlässt das Stationsnetz und kommt nirgends an. Die Zeile „abholen
+Fünftel aller Räder verlässt das Stationsnetz und kommt nirgends an. Die Zeile „abholen
 bei: frei abgestellt" wäre als Anweisung sinnlos: Der Fahrer weiß dann, dass irgendwo
 Räder stehen, aber nicht wo.
 
@@ -491,7 +543,7 @@ MD("""
 | 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Der stärkste Zusammenhang im Datensatz sind die Rundtouren (knapp 20 % der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
-| 5 Evaluation | Hoher Lift und hoher Support schließen einander fast aus: von 42 Regeln erfüllen 10 das Lift-, 2 das Support- und nur **eine** beide Kriterien. Die Deutung des Pendelstroms wurde über die `kunde_id` gegengeprüft |
+| 5 Evaluation | Hoher Lift und hoher Support schließen einander fast aus: von 32 Regeln nehmen 9 die Lift-, aber **keine** die Support-Hürde. Die stärkste verfehlt sie um ein Hundertstel Prozentpunkt — und die Hürde wird trotzdem nicht gesenkt. Die Deutung des Pendelstroms hielt der Gegenprobe über die `kunde_id` nur teilweise stand (13,8 %) |
 | 6 Deployment | **Zwei** Pläne — Umverteilen zwischen Stationen und Einsammeln der frei abgestellten Räder —, mit Datenschutzvorbehalt |
 
 **Was eine zweite Runde anders machen würde**

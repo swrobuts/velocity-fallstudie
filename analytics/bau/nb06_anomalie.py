@@ -68,10 +68,18 @@ verdienen.
 | **Fehlalarm** | jemand sieht sich einen Vorgang an, der in Ordnung war | **6 €** (fünf Minuten) |
 | **übersehene Auffälligkeit** | Rad bleibt liegen, wird gestohlen oder beschädigt | **Verlust 120 €** |
 
-Bei zehn Plätzen auf der Liste heißt das: **Ab einer Trefferquote von rund 5 % lohnt sich
-die Liste bereits** — der eine Fund trägt die neunzehn Fehlalarme. Das ist eine
-ungewöhnlich niedrige Hürde, und sie ist typisch für Anomalieerkennung: Man darf sich viel
-Ungenauigkeit leisten, solange die Fälle selten und die Funde wertvoll sind.
+Bei zehn Plätzen auf der Liste heißt das: **Ab einer Trefferquote von rund 5 % rechnet
+sich die Liste bereits** — der eine Fund trägt die neunzehn Fehlalarme. Das ist eine
+ungewöhnlich niedrige Schwelle, und sie ist typisch für Anomalieerkennung: Man darf sich
+viel Ungenauigkeit leisten, solange die Fälle selten und die Funde wertvoll sind.
+
+> **Diese 5 % sind aber nicht unser Erfolgskriterium.** Sie sind die Grenze, ab der die
+> Liste kein Geld verbrennt. Eine Liste, bei der neunzehn von zwanzig Einträgen unnötig
+> sind, wird nach zwei Wochen niemand mehr öffnen — und dann ist der rechnerische Nutzen
+> gleich null. Wir setzen deshalb **20 %** an: jeder fünfte Eintrag muss tragen.
+>
+> Der Unterschied zwischen „rechnet sich" und „wird benutzt" ist genau der Grund, warum
+> Erfolgskriterien nicht aus einer Kostenrechnung allein folgen.
 
 ### Erfolgskriterien
 
@@ -531,7 +539,7 @@ Die Wand ist eine **Frage der Grundraten**:
    Terminalmeldungen verfügbar sind.
 
 Ein Projektbericht, der das so schreibt, ist mehr wert als einer, der eine Trefferquote
-von 9,5 % als Erfolg verkauft.
+von 14 % als Erfolg verkauft.
 """),
 
 # =====================================================================
@@ -612,11 +620,11 @@ MD("""
 
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | Zwei Aufgaben, eine Tagesliste mit zehn Plätzen, und eine Kosten-Nutzen-Rechnung, die eine erstaunlich niedrige Hürde ergibt: ab 5 % Treffer lohnt sich die Liste |
+| 1 Business Understanding | Zwei Aufgaben, eine Tagesliste mit zehn Plätzen. Die Kosten-Nutzen-Rechnung ergibt eine Rentabilitätsschwelle von 5 % — das Erfolgskriterium liegt mit 20 % bewusst darüber, weil eine Liste voller Fehlalarme nicht benutzt wird |
 | 2 Data Understanding | Eine **Lücke** in der Dauerverteilung trennt Fahrten von Rückgabeproblemen. Und eine Sackgasse: Die Geschwindigkeit taugt nichts, weil sie aus der Dauer abgeleitet ist |
 | 3 Data Preparation | Sechs Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor kein auffälliger Vorgang ist |
 | 4 Modeling | Interquartilsregel (über 2.000 Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert |
-| 5 Evaluation | Die Korrektur hebt die Trefferquote von 6 % auf 40 %. Aufgabe A besteht das Kriterium, **Aufgabe B scheitert** — an den Grundraten, nicht am Verfahren |
+| 5 Evaluation | Die Korrektur hebt die Trefferquote von 2 % auf 36 %. Aufgabe A erfüllt das Kriterium, **Aufgabe B verfehlt es** mit höchstens 14 % — an den Grundraten, nicht am Verfahren |
 | 6 Deployment | Tagesliste mit Begründung je Vorgang; Aufgabe B ausdrücklich nicht freigegeben |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**

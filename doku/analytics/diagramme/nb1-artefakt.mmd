@@ -1,0 +1,26 @@
+%% Wie aus 60.425 Rohzeilen 136 Tabellenzeilen werden - Notebook 1.
+%% Der Weg vom Datensatz zum ausgelieferten Produkt, mit den drei
+%% Stellen, an denen bewusst etwas WEGGELASSEN wird. Genau diese
+%% Verluste sind der Inhalt: Ein Artefakt entsteht durch Streichen.
+%% Querformat, damit es die Inhaltszone einer Folie ausfuellt.
+flowchart LR
+    R["60.425 Vorgänge<br/>drei Jahre"]:::quelle
+    G["47.054 Fahrten<br/>im Geltungsbereich"]:::schritt
+    K["Kandidaten je Verbindung,<br/>Radtyp und Tageszeit"]:::schritt
+    F1{"mindestens<br/>30 Fahrten?"}:::frage
+    F2{"Spanne höchstens<br/>1,00 € breit?"}:::frage
+    F3{"messbar unter<br/>80 % gefallen?"}:::frage
+    A["136 Zeilen · 60 Verbindungen<br/>nur CITY<br/>Abdeckung 84,5 %"]:::ziel
+    W["keine Zeile — und damit<br/>keine Anzeige in der App"]:::weg
+
+    R --> G --> K --> F1
+    F1 -- ja --> F2 -- ja --> F3 -- nein --> A
+    F1 -- nein --> W
+    F2 -- "nein, zu breit" --> W
+    F3 -- ja --> W
+
+    classDef quelle fill:#003E6E,stroke:#003E6E,color:#FFFFFF
+    classDef schritt fill:#F7F5EF,stroke:#C9C3B4,color:#404040
+    classDef frage fill:#FFFFFF,stroke:#003E6E,stroke-width:2px,color:#003E6E
+    classDef ziel fill:#FFFFFF,stroke:#55801C,stroke-width:2px,color:#55801C
+    classDef weg fill:#FFFFFF,stroke:#A32638,stroke-width:2px,color:#A32638
