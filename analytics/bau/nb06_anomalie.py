@@ -57,7 +57,7 @@ MD("""
 
 Im Betriebsbüro sitzt morgens jemand, der den Vortag durchsieht. Heute geschieht das
 stichprobenhaft: Man scrollt durch die Liste und schaut, was ins Auge fällt. Bei rund
-**55 Fahrten am Tag** geht das noch; bei einem wachsenden Netz nicht mehr.
+**einigen Dutzend Fahrten am Tag** geht das noch; bei einem wachsenden Netz nicht mehr.
 
 Gesucht ist eine **kurze Tagesliste**, die einen menschlichen Blick verdient. Wie kurz,
 wird gleich ausgerechnet — nicht gesetzt.
@@ -161,6 +161,9 @@ pd.set_option("display.width", 160)
 # Die Zahlen aus Phase 1 - hier ausgedruckt, damit Text und Rechnung nicht
 # auseinanderlaufen koennen. Beide Schwellen werden ABGELEITET, nicht gesetzt.
 NUTZEN_FUND = 120.0        # geborgenes Rad statt Verlust
+# Acht Stunden. Die Zahl steht EINMAL - sie definiert die Teilwahrheit,
+# und der Fliesstext beruft sich darauf.
+LANGFAHRT_MIN = merke("langfahrt_min", 8 * 60)
 KOSTEN_FEHLALARM = 6.0     # fuenf Minuten Ansehen ohne Befund
 KRITERIUM_TREFFER = 0.20   # Erfolgskriterium fuer Aufgabe B
 ZEITBUDGET_MIN = 30.0      # was das Betriebsbuero morgens hat
@@ -258,7 +261,7 @@ plt.tight_layout(); plt.show()
 
 print(f"Fahrten über  2 Stunden: {int((echte.dauer_min > 120).sum()):>5d}")
 print(f"Fahrten über  3 Stunden: {int((echte.dauer_min > 180).sum()):>5d}")
-print(f"Fahrten über  8 Stunden: {int((echte.dauer_min > 480).sum()):>5d}")
+print(f"Fahrten über  8 Stunden: {int((echte.dauer_min > LANGFAHRT_MIN).sum()):>5d}")
 print(f"längste Fahrt:           {echte.dauer_min.max()/60:>5.1f} Stunden")
 '''),
 
@@ -286,7 +289,8 @@ print(mit_distanz.tempo_kmh.describe([.001, .01, .5, .99, .999]).round(1).to_str
 
 MD("""
 **Die Geschwindigkeit liefert hier nichts** — sie liegt zwischen 9 und 22 km/h, ohne einen
-einzigen Ausreißer. In echten Daten wäre sie die erste Adresse für Anomalien: 45 km/h auf
+<!-- zahl-ohne-ausgabe: 45 erfundenes Beispieltempo, keine Messung -->
+einzigen Ausreißer. In echten Daten wäre sie die erste Adresse für Anomalien: Tempo 45 auf
 einem CITY-Rad bedeutet, dass das Rad im Transporter lag, 2 km/h bedeutet Schieben.
 
 Der Grund ist die Herkunft dieses Datensatzes: **Die Distanz wurde aus der Dauer
@@ -582,7 +586,7 @@ es finden soll.
 """),
 
 CODE('''
-merkmalstabelle["ist_rueckgabeproblem"] = (merkmalstabelle.dauer_min > 480).astype(int)
+merkmalstabelle["ist_rueckgabeproblem"] = (merkmalstabelle.dauer_min > LANGFAHRT_MIN).astype(int)
 gesamt_probleme = int(merkmalstabelle.ist_rueckgabeproblem.sum())
 print(f"Bekannte Rückgabeprobleme im Datensatz: {gesamt_probleme}\\n")
 
@@ -611,7 +615,7 @@ MD("""
 **Zwei Dinge stehen in dieser Tabelle, und das zweite ist das wichtigere.**
 
 **Erstens:** Die Regel „sortiere nach Dauer“ schlägt beide Modellfassungen um Längen. Das
-ist kein Zufall, sondern **Konstruktion**: Wir haben die Teilwahrheit als `dauer_min > 480`
+ist kein Zufall, sondern **Konstruktion**: Wir haben die Teilwahrheit als `dauer_min > {{langfahrt_min:.0f}}`
 definiert, und `dauer_min` ist eines der Merkmale des Modells. Die Regel *ist* die
 Definition. Sie kann gar nicht verlieren.
 
@@ -631,7 +635,7 @@ unangenehm.
 
 Das hat drei Folgen, und alle drei gehören in den Bericht:
 
-1. **Für „vergessene Rückgaben“ braucht es kein Modell.** `dauer_min > 480` ist die
+1. **Für „vergessene Rückgaben“ braucht es kein Modell.** Die Schwelle selbst ist die
    Antwort, sie kostet eine Zeile SQL, und sie ist vollständig. Wer diese eine Sorte
    Auffälligkeit sucht, ist hier fertig.
 2. **Das Erfolgskriterium aus Phase 1 misst das Falsche.** „Mindestens 20 % Treffer
@@ -774,8 +778,10 @@ Tagesliste ist unbekannt, und die {{globale_quote:.1%}} haben sie nie belegt.**
 > **Und noch eine Korrektur, die man leicht übersieht.** Eine frühere Fassung bildete die
 > Morgenliste aus den Fahrten mit **Starttag t**. Ein Lauf um 8 Uhr verarbeitet aber, was
 > **seit dem letzten Lauf neu abgeschlossen** wurde — sonst fallen alle Fahrten durchs
-> Raster, die über Mitternacht liefen. Die Korrektur hebt die Zahl der Meldungen von 65
-> auf 73 und die gefundenen Langfahrten von 4 auf 12.
+<!-- zahl-ohne-ausgabe: 65 Anekdote ueber eine fruehere Fassung -->
+<!-- zahl-ohne-ausgabe: 73 Anekdote ueber eine fruehere Fassung -->
+> Raster, die über Mitternacht liefen. Die Korrektur hob damals die Zahl der Meldungen
+> von 65 auf 73 und die gefundenen Langfahrten von 4 auf 12.
 >
 > Der Unterschied steckt in keiner Formel, sondern in der **Kohorte**: Wer nach dem
 > Startzeitpunkt gruppiert, obwohl er über Abschlüsse entscheidet, verliert genau die
@@ -923,7 +929,8 @@ hergeben:
 ### 5.5 Kriterium: **Warum** fällt ein Vorgang auf?
 
 Ein Isolation Forest liefert eine Zahl, keine Begründung. Für den Betrieb ist das zu
-wenig — „Vorgang 38558 hat Wert 0,75“ löst keine Handlung aus. Wir bauen die Begründung
+<!-- zahl-ohne-ausgabe: 12345 erfundene Beispielnummer -->
+wenig — „Vorgang 12345 hat Wert 0,75“ löst keine Handlung aus. Wir bauen die Begründung
 deshalb selbst, indem wir für jeden gemeldeten Vorgang nachsehen, welches Merkmal am
 weitesten vom Üblichen entfernt liegt.
 """),
@@ -1134,6 +1141,9 @@ print(f"  davon Wiederholungen einer schon")
 print(f"  gemeldeten laufenden Störung:      {wiederholungen:>6d}")
 print(f"  neue Alarme:                       {len(neue_alarme):>6d}")
 print()
+merke("stat_rohmeldungen", len(gemeldet_tage))
+merke("stat_neue_alarme", len(neue_alarme))
+merke("stat_wiederholungen", len(gemeldet_tage) - len(neue_alarme))
 tagesquote = merke("stat_je_tag", gemeldet_tage.ist_stoerung.mean())
 alarmquote = merke("stat_je_alarm", neue_alarme.ist_stoerung.mean())
 print(f"  Trefferquote je gemeldetem TAG:    {tagesquote:>6.1%}")
@@ -1241,8 +1251,8 @@ die letzte die richtige:
 
 | Einheit | Anzahl | Precision | Episoden erkannt |
 |---|---:|---:|---:|
-| tägliche Rohmeldung | 381 | 13,4 % | **11 von 11** |
-| neuer Alarm (dedupliziert) | 259 | 3,9 % | **10 von 11** |
+| tägliche Rohmeldung | {{stat_rohmeldungen:.0f}} | {{stat_je_tag:.1%}} | **{{episoden_roh:.0f}} von {{episoden_gesamt:.0f}}** |
+| neuer Alarm (dedupliziert) | {{stat_neue_alarme:.0f}} | {{stat_je_alarm:.1%}} | **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** |
 
 > **Precision und Recall müssen auf derselben Einheit stehen.** Eine frühere Fassung nahm
 > die Precision je *neuem Alarm* (3,9 %) und den Recall je *täglicher Rohmeldung* (11/11)
@@ -1273,11 +1283,11 @@ darf die Korrektur überhaupt noch vorgenommen werden — sie ändert das Ergebn
 **Jeder einzelne Schritt hat die Zahl kleiner gemacht, und jeder war richtig.** Das ist
 der Normalfall: Eine Kennzahl wird selten besser, wenn man ehrlicher rechnet.
 
-Der letzte Schritt ist der, den man am leichtesten übersieht. Die 26 Störungen erzeugen
-**107 gestörte Stationstage** — im Mittel gut vier Tage je Ereignis, im Extremfall
-sechzehn. Meldet das System dieselbe offene Störung jeden Morgen erneut, hat es sie
-**einmal** gefunden und danach fünfzehnmal wiederholt. Von 381 gemeldeten Stationstagen
-im Prüfzeitraum sind 122 solche Wiederholungen.
+Der letzte Schritt ist der, den man am leichtesten übersieht. Eine Störung dauert
+mehrere Tage. Meldet das System dieselbe offene Störung jeden Morgen erneut, hat es sie
+**einmal** gefunden und danach wiederholt. Von {{stat_rohmeldungen:.0f}} gemeldeten
+Stationstagen im Prüfzeitraum sind {{stat_wiederholungen:.0f}} solche Wiederholungen —
+übrig bleiben {{stat_neue_alarme:.0f}} neue Alarme.
 
 > **Wer Tage zählt statt Ereignisse, hält Wiederholungen für Erfolge.** Und je länger eine
 > Störung offen bleibt, desto besser sieht die Kennzahl aus — genau verkehrt herum.
@@ -1545,7 +1555,7 @@ MD("""
 | **B** Stationsstörungen | nichts | **nicht freigegeben** — die täglich ausführbare Regel reißt beide Hürden |
 
 > **Warum A1 nicht „in Betrieb" heißt, obwohl es 45 von 45 findet.** Diese Quote ist
-> **logisch zwingend**: Die Teilwahrheit ist als `dauer_min > 480` definiert, die Regel
+> **logisch zwingend**: Die Teilwahrheit ist über dieselbe Schwelle definiert, die Regel
 > prüft dasselbe. Was dabei geprüft wird, ist die Zeitrechnung im Notebook — nicht, ob im
 > Betrieb etwas funktioniert.
 >

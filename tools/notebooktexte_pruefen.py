@@ -71,6 +71,24 @@ MIT_EINHEIT = re.compile(r"(\d{1,3}(?:[.\s]\d{3})*(?:,\d{1,2})?)\s?(%|€|Cent)"
 # Raeder", "63 fahruntauglich", "seit 592 km", "17 von 60", "228 Zeilen"
 # liefen alle daran vorbei. Ein Gutachten fand genau diese fuenf.
 GANZZAHL = re.compile(r"(?<![\d,.%-])(\d{2,6})(?![\d,.%])")
+# Nicht jede ganze Zahl ist eine Messung. Jahreszahlen, Uhrzeiten und
+# Seitenangaben sind Sprache, keine Ergebnisse - sie zu melden erzeugt
+# Rauschen, und ein Pruefer mit Rauschen wird ueberlesen.
+KEIN_MESSWERT = (
+    re.compile(r"\bS\.\s?\d"),          # Seitenangabe in einer Quelle
+    re.compile(r"\d:\d"),                # Uhrzeit
+)
+
+
+def sprachzahl(zahl: str, zeile: str) -> bool:
+    """Jahreszahl, Uhrzeit oder Seitenangabe statt Messwert?"""
+    if len(zahl) == 4 and 1900 <= int(zahl) <= 2100:
+        return True
+    stelle = zeile.find(zahl)
+    if stelle < 0:
+        return False
+    umfeld = zeile[max(0, stelle - 4):stelle + len(zahl) + 3]
+    return any(m.search(umfeld) for m in KEIN_MESSWERT)
 OHNE_EINHEIT = re.compile(r"\b\d{1,3}(?:[.\s]\d{3})+(?:,\d{1,2})?\b|\b\d+,\d{1,2}\b")
 
 
@@ -199,7 +217,10 @@ def pruefe(datei: pathlib.Path) -> list[tuple[str, str]]:
         for zahl in GANZZAHL.findall(text):
             if zahl in HARMLOS or belegt(zahl, raum, gesetzt, erlaubt):
                 continue
-            befunde.append((zahl, zeile_um(text, zahl)))
+            kontext = zeile_um(text, zahl)
+            if sprachzahl(zahl, kontext):
+                continue
+            befunde.append((zahl, kontext))
     # Dubletten zusammenfassen
     gesehen, eindeutig = set(), []
     for z, kontext in befunde:

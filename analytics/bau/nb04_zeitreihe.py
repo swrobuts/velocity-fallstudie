@@ -64,7 +64,7 @@ Veranstaltungstagen und bei Wetterumschwüngen geht das regelmäßig daneben.
 >
 > | | |
 > |---|---|
-> | **ein Rad bedient mehrere Fahrten** | 120 Fahrten heißen nicht 120 Räder |
+> | **ein Rad bedient mehrere Fahrten** | hundert Fahrten heißen nicht hundert Räder |
 > | **die Verteilung zählt** | Eine Station kann leer sein, während anderswo Räder stehen |
 > | **Ladezustand, Werkstatt, Kapazität** | bestimmen mit, was überhaupt verfügbar ist |
 > | **Personalbedarf** | folgt aus Arbeitsmengen, Schichten und Touren, nicht aus Fahrten |
@@ -1032,7 +1032,7 @@ MD("""
    stärksten Merkmale überhaupt — hier bewusst weggelassen, damit der Beitrag von Wetter
    und Kalender sichtbar bleibt.
 3. **Ein Verfahren, das Unsicherheit mitliefert.** Statt einer Zahl eine Spanne
-   („zwischen 95 und 130 Fahrten“) — dann kann die Disposition selbst entscheiden, wie
+   (ein Intervall statt einer Zahl) — dann kann die Disposition selbst entscheiden, wie
    vorsichtig sie plant, statt sich auf unseren Aufschlag zu verlassen.
 
 **Was offen bleibt — ausdrücklich**

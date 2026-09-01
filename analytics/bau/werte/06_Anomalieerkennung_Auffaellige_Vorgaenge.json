@@ -1,4 +1,5 @@
 {
+ "langfahrt_min": 480,
  "n_abgebrochen": 2326,
  "n_storniert": 570,
  "iqr_treffer": 4699,
@@ -13,6 +14,9 @@
  "listenlaenge": 6,
  "stat_falsch_50": 0.02,
  "stat_richtig_50": 0.22,
+ "stat_rohmeldungen": 497,
+ "stat_neue_alarme": 363,
+ "stat_wiederholungen": 134,
  "stat_je_tag": 0.096579476861167,
  "stat_je_alarm": 0.030303030303030304,
  "episoden_gesamt": 11,

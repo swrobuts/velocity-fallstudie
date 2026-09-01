@@ -599,7 +599,7 @@ Fahrten im Jahr betrifft, fährt kein Transporter."* Das ist eine Aussage über
 Warenkörben über drei Jahre**. Das sind zwei verschiedene Maßstäbe, und die Ausgabe oben
 rechnet sie ineinander um:
 
-- Die supportstärkste Regel umfasst 505 Fahrten — das sind **0,68 Fahrten je Werktag**.
+- Die supportstärkste Regel umfasst {{top_fahrten:,}} Fahrten.
 - Die Ein-Prozent-Hürde verlangt **0,69 Fahrten je Werktag**.
 - Der Abstand zwischen beiden beträgt **fünf Fahrten in drei Jahren**.
 
@@ -745,19 +745,37 @@ print(f"Personen mit Abendfahrt:                            {abends.kunde_id.nun
 print(f"Personen, die IRGENDWANN in drei Jahren beides taten: {len(irgendwann):>4d}")
 print(f"Hin- und Rückfahrt AM SELBEN TAG:                   {len(am_selben_tag):>5d}")
 print()
+merke("hin_fahrten", len(morgens)); merke("rueck_fahrten_paar", len(abends))
+merke("personen_morgens", morgens.kunde_id.nunique())
+merke("personen_abends", abends.kunde_id.nunique())
+merke("personen_irgendwann", len(irgendwann))
+merke("personen_selber_tag", len(am_selben_tag))
+merke("anteil_irgendwann", len(irgendwann) / max(abends.kunde_id.nunique(), 1))
+
+# Der else-Zweig fehlte. Er wurde nie gebraucht, solange die Zahl null war -
+# und genau deshalb stand im Fliesstext daneben "keinen einzigen Tag", auch
+# als es einen gab. Ein Zweig ohne Gegenstueck ist eine Behauptung mit
+# Ablaufdatum.
 if len(am_selben_tag) == 0:
     print("NULL. Nicht wenige - keine einzige.")
     print("Die Deutung 'dieselben Menschen fahren hin und zurueck' ist damit")
     print("widerlegt, nicht bestaetigt und nicht zurechtgerueckt.")
+else:
+    print(f"{len(am_selben_tag)} von {len(abends)} Abendfahrten - das ist")
+    print(f"{len(am_selben_tag) / max(len(abends), 1):.2%} und traegt die Deutung nicht.")
+    print("'Dieselben Menschen fahren hin und zurueck' waere eine Aussage")
+    print("ueber viele; gemessen sind es Einzelfaelle.")
 '''),
 
 MD("""
-**Die Deutung ist widerlegt.** In drei Jahren gibt es **keinen einzigen Tag**, an dem
-dieselbe Person morgens vom Bahnhof zum Campus und abends zurückgefahren wäre. Nicht
-wenige — null.
+**Die Deutung trägt nicht.** In fünf Jahren gibt es
+{{personen_selber_tag:.0f}} Fälle, in denen dieselbe Person morgens vom Bahnhof zum Campus
+und abends zurückgefahren ist — bei {{rueck_fahrten_paar:.0f}} Abendfahrten. Das ist kein
+Muster, das ist ein Zufall.
 
-**Und hier wäre beinahe eine Fehldeutung stehen geblieben.** 49 Personen haben
-*irgendwann* beide Richtungen benutzt, und 49 von 354 sind 13,8 %. Eine frühere Fassung
+**Und hier wäre beinahe eine Fehldeutung stehen geblieben.**
+{{personen_irgendwann:.0f}} Personen haben *irgendwann* beide Richtungen benutzt, und
+{{personen_irgendwann:.0f}} von {{personen_abends:.0f}} sind {{anteil_irgendwann:.1%}}. Eine frühere Fassung
 dieses Notebooks hat genau diese Zahl gedruckt und dazu geschrieben, die Deutung halte
 „schwächer als erwartet" stand. Das war falsch:
 
@@ -935,6 +953,9 @@ print(bedarf.groupby("fenster", observed=True).agg(
     Mittel="mean", Median="median",
     P90=lambda x: x.quantile(0.9), Maximum="max").round(1).to_string())
 print("\\n    ZWEI AGGREGATIONEN, ZWEI FRAGEN:\\n")
+merke("bedarf_mittel", bedarf_tag.mean()); merke("bedarf_median", bedarf_tag.median())
+merke("bedarf_p90", bedarf_tag.quantile(0.9)); merke("bedarf_max", bedarf_tag.max())
+merke("rest_mittel", rest_tag.mean())
 print(f"    (a) Summe der vier Fenster - Ausgleich NACH JEDEM Fenster:")
 print(f"        Mittel {bedarf_tag.mean():.2f}   Median {bedarf_tag.median():.0f}   "
       f"P90 {bedarf_tag.quantile(0.9):.0f}   Maximum {bedarf_tag.max():.0f}")
@@ -959,6 +980,19 @@ print(f"      Langfristmittel {bsp.mean():+.2f} Räder — Spanne der einzelnen 
       f"{bsp.min():+.0f} bis {bsp.max():+.0f}")
 print(f"      An {(bsp.abs() >= 5).mean():.0%} der Werktage weicht der Tagessaldo um "
       f"5 oder mehr Räder ab.")
+
+# Der Nennerfehler, um den es im Text geht - hier gerechnet statt behauptet.
+_mit_vorkommen = int((bsp != 0).sum())
+merke("bsp_werktage", len(bsp)); merke("bsp_mit_vorkommen", _mit_vorkommen)
+merke("bsp_ohne_vorkommen", len(bsp) - _mit_vorkommen)
+merke("bsp_mittel_alle", bsp.mean())
+merke("bsp_mittel_teil", bsp[bsp != 0].mean())
+print(f"\\n      NENNERPROBE: an {_mit_vorkommen} der {len(bsp)} Werktage kam die")
+print(f"      Station ueberhaupt vor. Nur ueber diese gemittelt: "
+      f"{bsp[bsp != 0].mean():+.2f} Raeder,")
+print(f"      ueber alle {len(bsp)}: {bsp.mean():+.2f}. Die Differenz sind die "
+      f"{len(bsp) - _mit_vorkommen} Tage")
+print("      mit Saldo null - keine fehlenden Daten, sondern ruhige Tage.")
 '''),
 
 CODE('''
@@ -1163,10 +1197,10 @@ Tag zu bewegen wären:
 
 | | Räder je Werktag |
 |---|---|
-| Mittel | **19,8** |
-| Median | 19 |
-| an jedem zehnten Werktag mindestens | 32 |
-| Maximum | **56** |
+| Mittel | **{{bedarf_mittel:.1f}}** |
+| Median | {{bedarf_median:.0f}} |
+| an jedem zehnten Werktag mindestens | {{bedarf_p90:.0f}} |
+| Maximum | **{{bedarf_max:.0f}}** |
 
 > **Was diese Zahl genau ist — und was nicht.** Sie addiert die vier Zeitfenster und
 > unterstellt damit, dass **nach jedem Fenster** vollständig ausgeglichen wird. Wer nur
@@ -1184,13 +1218,14 @@ Aggregation.** Das Beispiel Hubland Campus macht es greifbar: Langfristmittel **
 aber die einzelnen Werktage reichen von **−3 bis +14**.
 
 > **Auch dieses Beispiel hatte einen Nennerfehler**, und er ist typisch. Die Tagestabelle
-> enthält nur Tage, an denen eine Station überhaupt vorkam — für Hubland früh sind das 647
-> der 741 Werktage. Gemittelt über diese 647 kommt **+1,86** heraus, über alle 741
-> dagegen **+1,63**. Die fehlenden 94 Tage sind keine fehlenden Daten, sondern Tage mit
+> enthält nur Tage, an denen eine Station überhaupt vorkam — für Hubland früh sind das
+> {{bsp_mit_vorkommen:.0f}} der {{bsp_werktage:.0f}} Werktage. Gemittelt über diese kommt
+> **{{bsp_mittel_teil:+.2f}}** heraus, über alle dagegen **{{bsp_mittel_alle:+.2f}}**. Die
+> fehlenden {{bsp_ohne_vorkommen:.0f}} Tage sind keine fehlenden Daten, sondern Tage mit
 > Saldo null.
 >
-> **Zwei Zahlen für dieselbe Größe standen dadurch im selben Notebook**: 1,86 im Text,
-> 1,63 in der Tabelle direkt darüber. Wer Nullen weglässt, weil sie nicht in den Daten
+> **Zwei Zahlen für dieselbe Größe standen dadurch im selben Notebook** — eine im Text,
+> eine in der Tabelle direkt darüber. Wer Nullen weglässt, weil sie nicht in den Daten
 > stehen, mittelt über die falsche Grundgesamtheit.
 
 > **Die Regel dahinter gilt weit über dieses Notebook hinaus.** Wenn eine Kennzahl über
@@ -1214,8 +1249,9 @@ Dazu kommen die zwei Kostengrößen, die schon der Ein-Prozent-Hürde in Phase 5
 **was eine Fahrt kostet** und **was ein leerer Stationsplatz kostet**. Das ist kein
 Zufall — es ist dieselbe Lücke, die an zwei Stellen auftaucht.
 
+<!-- zahl-ohne-ausgabe: 1205 Anekdote ueber eine fruehere Fassung, kein aktueller Messwert -->
 > **Eine frühere Fassung druckte hier „+1205 Räder laufen auf“.** Das war die Summe über
-> 741 Werktage, gedruckt wie eine Anweisung an den Fahrer. Die Korrektur — durch die
+> alle Werktage, gedruckt wie eine Anweisung an den Fahrer. Die Korrektur — durch die
 > Werktage teilen — war richtig und hat den Fehler nur verschoben: aus einer zu großen
 > Zahl ohne Zeitbezug wurde eine zu kleine Zahl mit falscher Aggregation. **Erst der
 > Tagessaldo beantwortet die Frage, die gestellt war.**
@@ -1225,8 +1261,9 @@ Zufall — es ist dieselbe Lücke, die an zwei Stellen auftaucht.
 Was Tabelle (B) hergibt, ist die **Richtung** — und auch die nicht überall. Morgens
 gewinnen Hubland Campus und Universität Sanderring Räder hinzu, während Hauptbahnhof,
 Sanderau, Zellerau und Grombühl sie verlieren. Das ist über die Tage hinweg stabil: Die
-Uni-Stationen gewinnen an 68 bis 70 % der Werktage hinzu, die Pendlerstationen verlieren
-an 58 bis 61 %.
+Uni-Stationen gewinnen an der klaren Mehrheit der Werktage hinzu, die Wohnlagen
+verlieren — die Spalten „Tage mit Plus" und „Tage mit Minus" in der Ausgabe oben nennen
+die Anteile je Station.
 
 > **Mittags ist es anders, und eine frühere Fassung hat es falsch ausgegeben.** Dort stand
 > „abholen bei Hubland Campus", weil der Median genau null war und die Regel lautete
@@ -1397,8 +1434,9 @@ MD("""
    Datensatzes: Eine Fahrt vom Hauptbahnhof zum Campus und eine Fahrt vom Campus zum
    Hauptbahnhof sind **zwei verschiedene Ereignisse**, keine zwei Lesarten desselben. Sie
    haben verschiedene Häufigkeiten, verschiedene Zeitfenster und verschiedenen Lift — die
-   Rückrichtung Hubland → Hauptbahnhof kam mit 217 Fahrten nicht einmal über die
-   Suchgrenze, während die Hinrichtung 505 hatte.
+   Die beiden Richtungen zwischen Hauptbahnhof und Hubland Campus zählen
+   {{hin_fahrten:.0f}} Fahrten morgens und {{rueck_fahrten_paar:.0f}} abends — verschiedene
+   Häufigkeiten, verschiedene Zeitfenster, verschiedener Lift.
 
    Wer die Symmetrieregel aus dem Lehrbuch auf gerichtete Wege überträgt, rechnet mit
    einer Eigenschaft, die diese Daten nicht haben. Und keine der drei Kennzahlen kennt

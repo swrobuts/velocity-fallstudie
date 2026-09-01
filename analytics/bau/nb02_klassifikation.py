@@ -65,7 +65,7 @@ Das ist der Kern dieser Phase, und er entscheidet später über das ganze Modell
 | Fehler | Was passiert | Kosten |
 |---|---|---|
 | **Falsch negativ** — Modell sagt „unauffällig“, das Rad fällt aber aus | Kunde bleibt liegen, Bergungsfahrt, Ersatz, Beschwerde | **180 €** |
-| **Falsch positiv** — Modell sagt „prüfen“, das Rad war in Ordnung | 35 Minuten Werkstattzeit umsonst | **25 €** |
+| **Falsch positiv** — Modell sagt „prüfen“, das Rad war in Ordnung | eine halbe Stunde Werkstattzeit umsonst | **25 €** |
 
 **Ein verpasster Ausfall kostet gut sieben Mal so viel wie eine unnötige Prüfung.**
 Ein Modell, das beide Fehler gleich behandelt, optimiert deshalb das Falsche. Wir werden
@@ -93,8 +93,9 @@ BASIS = os.environ.get("VELO_BASIS",
     __ROHBASIS__)
 pd.set_option("display.width", 150)
 
-KOSTEN_VERPASST = 180.0     # falsch negativ: Ausfall auf der Strasse
-KOSTEN_UNNOETIG = 25.0      # falsch positiv: Pruefung ohne Befund
+KOSTEN_VERPASST = merke("kosten_verpasst", 180.0)  # falsch negativ: Ausfall auf der Strasse
+KOSTEN_UNNOETIG = merke("kosten_unnoetig", 25.0)   # falsch positiv: Pruefung ohne Befund
+merke("kosten_summe", 180.0 + 25.0)   # was ein Treffer beide Seiten bewegt
 KAPAZITAET = merke("kapazitaet", 60)   # Pruefungen je Quartal
 merke("pruefungen_je_woche", KAPAZITAET / 13)  # ein Quartal hat 13 Wochen
 HORIZONT_TAGE = 90          # Vorhersagefenster
@@ -230,7 +231,7 @@ werden soll — und muss beim Rechnen unsichtbar bleiben.
 
 ### 3.2 Die Frage mehrfach stellen
 
-Ein einziger Stichtag ergäbe 228 Zeilen — zu wenig. Wir stellen dieselbe Frage deshalb
+Ein einziger Stichtag ergäbe {{zeilen_je_stichtag:.0f}} Zeilen — zu wenig. Wir stellen dieselbe Frage deshalb
 zu **mehreren Zeitpunkten**, im Abstand eines Quartals. Jedes Rad taucht dann mehrfach
 auf, aber mit *unterschiedlichem* Wissensstand und *unterschiedlichem* Ausgang. Das ist
 kein Trick, sondern genau die Art, wie solche Modelle in der Praxis gebaut werden.
@@ -395,6 +396,19 @@ def zeile_bauen(stichtag):
     nach_reparatur = seit.letzte_reparatur.isna() | (seit.startzeit > seit.letzte_reparatur)
     km_seit = seit[nach_reparatur].groupby("fahrrad_id").km_fahrt.sum().rename("km_seit_reparatur")
 
+    # DIESELBE RECHNUNG MIT DEM FALSCHEN STICHTAG - fuer die Ablation in 5.2.
+    # Sie wird nicht als Merkmal trainiert, sondern nur als Rangfolge
+    # verglichen: Was haette die Regel geleistet, wenn man bei der MELDUNG
+    # zurueckgesetzt haette? Behauptet wird der Unterschied im Text ohnehin;
+    # hier steht er gerechnet daneben.
+    letzte_meldung = (frueher.groupby("fahrrad_id").gemeldet_am.max()
+                      .rename("letzte_meldung"))
+    seit_m = bis_jetzt.merge(letzte_meldung, left_on="fahrrad_id",
+                             right_index=True, how="left")
+    nach_meldung = seit_m.letzte_meldung.isna() | (seit_m.startzeit > seit_m.letzte_meldung)
+    km_seit_m = (seit_m[nach_meldung].groupby("fahrrad_id").km_fahrt.sum()
+                 .rename("km_seit_meldung"))
+
     # OFFENE SCHAEDEN GEHOEREN NICHT IN EINE RISIKOLISTE.
     # Ein Rad mit gemeldetem, noch nicht erledigtem Schaden muss ohnehin in
     # die Werkstatt. Es auf die Vorsorgeliste zu setzen verbraucht einen der
@@ -405,9 +419,9 @@ def zeile_bauen(stichtag):
     bestand = bestand[~bestand.fahrrad_id.isin(offen)]
 
     z = bestand.set_index("fahrrad_id").join(
-        [nutzung_fenster, gesamt, meldungen_bisher, letzte_reparatur, km_seit])
+        [nutzung_fenster, gesamt, meldungen_bisher, letzte_reparatur, km_seit, km_seit_m])
     for spalte in ["fahrten_180", "km_180", "hoehenmeter_180", "fahrten_gesamt", "km_gesamt",
-                   "meldungen_bisher", "km_seit_reparatur"]:
+                   "meldungen_bisher", "km_seit_reparatur", "km_seit_meldung"]:
         z[spalte] = z[spalte].fillna(0)
     z["dauer_mittel"] = z.dauer_mittel.fillna(z.dauer_mittel.median())
     z["tage_im_bestand"] = (stichtag - z.angeschafft_am).dt.days
@@ -428,6 +442,7 @@ stichtage = pd.date_range(end=ende - pd.Timedelta(days=HORIZONT_TAGE), periods=8
 panel = pd.concat([zeile_bauen(s) for s in stichtage], ignore_index=True)
 
 print("Stichtage:", ", ".join(str(s.date()) for s in stichtage))
+merke("zeilen_je_stichtag", len(panel) // len(stichtage))
 print(f"\\nZeilen im Panel: {len(panel)}   ({len(stichtage)} Stichtage × rund "
       f"{len(panel)//len(stichtage)} Räder)")
 print(f"Anteil positiver Fälle: {panel.meldet_sich.mean():.1%}")
@@ -662,6 +677,7 @@ MD("### 5.1 Die Confusion-Matrix — welche Art Fehler macht das Modell?"),
 CODE('''
 p_wald = wald.predict_proba(X_test)[:, 1]
 p_regel = test_zeilen.km_seit_reparatur.values     # die Faustregel als Rangfolge
+p_regel_meldung = test_zeilen.km_seit_meldung.values   # dieselbe Regel, falscher Stichtag
 
 # Hier steht noch KEINE Entscheidung - die faellt in 5.6. Diese Grafik
 # zeigt deshalb BEIDE Kandidaten nebeneinander, damit niemand eine
@@ -707,28 +723,77 @@ print(classification_report(y_test, auf_liste.astype(int),
 MD("""
 ### 5.2 Warum die Faustregel plötzlich mithält
 
-Die Tabelle zeigt die Faustregel **knapp vor** dem Random Forest —
-{{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer. Ein Vorsprung von einem Rad ist
-kein Beleg für Überlegenheit; er sagt nur, dass das Modell die Regel **nicht** schlägt.
-Das war in einer früheren Fassung dieses Notebooks anders — dort lag der Wald vorn. Der
-Unterschied liegt nicht am Modell, sondern an einem Merkmal.
+Die Tabelle zeigt die Faustregel vor dem Random Forest —
+{{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer. In einer früheren Fassung dieses
+Notebooks lag der Wald vorn, und die Erklärung dafür lautete: Es liege nicht am Modell,
+sondern an einem Merkmal.
 
-In der ersten Fassung setzte `km_seit_reparatur` bei der **Meldung** zurück statt bei der
-**erledigten Reparatur**. Wie groß dieser Unterschied ist, steht in Phase 3 gerechnet:
-Zwischen Meldung und Reparatur wird bei einem Großteil der Fälle weitergefahren. Diese
-Kilometer wurden dem frisch reparierten Bauteil gutgeschrieben — ausgerechnet bei den
-Rädern, die gerade auffällig geworden waren.
+Denn in der ersten Fassung setzte `km_seit_reparatur` bei der **Meldung** zurück statt bei
+der **erledigten Reparatur**. Zwischen beidem wird weitergefahren — Phase 3 hat es
+gezählt. Diese Kilometer wurden dem frisch reparierten Bauteil gutgeschrieben,
+ausgerechnet bei den Rädern, die gerade auffällig geworden waren. Der Wald konnte den
+Fehler ausgleichen, die Faustregel nicht.
 
-Der Wald hatte gelernt, diesen Fehler auszugleichen. Die Faustregel konnte das nicht.
+Das ist eine gute Geschichte. **Gute Geschichten muss man gegen die Zahlen halten.**
 
-> **Der scheinbare Vorsprung des Modells war der Defekt des Merkmals, gegen das es
-> antrat.** Mit dem richtig zurückgesetzten Merkmal erreicht die Regel
-> {{quote_regel:.1%}} — und der ganze Abstand ist verschwunden.
+**Wie groß dieser Unterschied ist, sollte man nicht behaupten, sondern messen.** Die
+nächste Zelle rechnet dieselbe Faustregel zweimal — einmal mit jedem Rücksetzzeitpunkt,
+auf demselben Datenstand:
+"""),
 
-Das ist die unbequemste Lehre dieses Notebooks: **Ein Modell kann gegen eine Baseline
-gewinnen, weil die Baseline schlecht gebaut ist.** Wer den Vergleich ernst meint, muss der
-Regel dieselbe Sorgfalt widmen wie dem Modell. Sonst kauft man ein Modell, das nichts
-weiter tut, als einen Fehler in der Datenaufbereitung zu reparieren.
+CODE('''
+# ABLATION DES RUECKSETZZEITPUNKTS
+# Zwei Rangfolgen, ein Datenstand, ein Unterschied: Wann faellt der Zaehler
+# zurueck - bei der Meldung oder bei der erledigten Reparatur? Die Regel ist
+# sonst dieselbe.
+_ab = []
+for _bez, _score in [("bei der MELDUNG zurueckgesetzt", p_regel_meldung),
+                     ("bei der REPARATUR zurueckgesetzt", p_regel)]:
+    _ab.append(liste_bewerten(f"km seit ... {_bez}", _score, y_test))
+_ablation = pd.DataFrame(_ab)
+print("ABLATION - dieselbe Faustregel, zwei Ruecksetzzeitpunkte (Testquartal)\\n")
+print(als_prozent(_ablation).to_string(index=False))
+
+_meldung, _reparatur = _ablation.Treffer.iloc[0], _ablation.Treffer.iloc[1]
+merke("ablation_meldung", int(_meldung)); merke("ablation_reparatur", int(_reparatur))
+merke("ablation_differenz", int(_reparatur - _meldung))
+
+# Wie verschieden sind die beiden Ranglisten ueberhaupt?
+_top_m = set(np.argsort(-p_regel_meldung)[:KAPAZITAET])
+_top_r = set(np.argsort(-p_regel)[:KAPAZITAET])
+merke("ablation_gemeinsam", len(_top_m & _top_r))
+print(f"\\nUnterschied: {_reparatur - _meldung:+d} Treffer von {KAPAZITAET}.")
+print(f"Die beiden Listen teilen {len(_top_m & _top_r)} von {KAPAZITAET} Raedern.")
+print()
+if abs(_reparatur - _meldung) <= 1:
+    print("DAS IST DAS ERGEBNIS, UND ES IST UNBEQUEM: Der Ruecksetzzeitpunkt")
+    print("ist fachlich richtig, aber auf DIESEM Datenstand aendert er die")
+    print("Guete praktisch nicht. Zwischen Meldung und Reparatur liegen im")
+    print("Mittel wenige Tage; die Kilometer daraus sind gegen die Strecke")
+    print("seit der letzten Reparatur klein.")
+else:
+    print(f"Der Ruecksetzzeitpunkt bewegt {abs(_reparatur - _meldung)} Treffer -")
+    print("ein Merkmalsdetail mit messbarer Wirkung auf die Guete.")
+'''),
+
+MD("""
+
+Die Ablation misst {{ablation_meldung:.0f}} gegen {{ablation_reparatur:.0f}} Treffer, und
+die beiden Listen teilen {{ablation_gemeinsam:.0f}} von {{kapazitaet:.0f}} Rädern.
+**Der Rücksetzzeitpunkt allein erklärt den früheren Abstand also nicht.** Zwischen den
+beiden Fassungen dieses Notebooks wurden auch die Daten neu erzeugt, die Distanzquelle
+umgestellt und die Ausreißerbehandlung geändert — welcher dieser Eingriffe wie viel
+beigetragen hat, ist im Nachhinein nicht mehr trennbar.
+
+**Das ist die unbequemste Lehre dieses Notebooks, und sie hat zwei Hälften.** Die erste:
+Ein Modell kann gegen eine Baseline gewinnen, weil die Baseline schlecht gebaut ist — wer
+den Vergleich ernst meint, muss der Regel dieselbe Sorgfalt widmen wie dem Modell.
+
+Die zweite: **Eine Erklärung, die plausibel klingt, ist deshalb noch nicht die richtige.**
+Der korrigierte Rücksetzzeitpunkt ist fachlich unstrittig — er bildet ab, was in der
+Werkstatt geschieht. Als *Erklärung* für den verschwundenen Modellvorteil trägt er auf
+diesem Datenstand trotzdem nicht. Wer eine Ursache benennt, ohne sie zu isolieren, hat
+eine Vermutung berichtet und sie Befund genannt.
 
 Sehen Sie sich zur Deutung die Bedeutungsgrafik oben an: `km_seit_reparatur` steht ganz
 vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — mehr aber auch nicht.
@@ -866,13 +931,21 @@ print("braeuchte es einen gepaarten Test auf denselben Raedern.")
 '''),
 
 MD("""
-> **Die 70-Prozent-Hürde ist damit nicht belegt, sondern nur nicht widerlegt.** Bei 60
-> Beobachtungen kann man den Unterschied zwischen einem guten und einem mittelmäßigen
-> Verfahren nicht auflösen. Wer auf dieser Grundlage ein Modell einführt, entscheidet
-> nach Rauschen.
+> **Lesen Sie die Zeilen über diesem Absatz, nicht diesen Absatz.** Welches Verfahren die
+> Hürde von {{huerde:.0%}} statistisch trägt, entscheidet die Lage seines Intervalls — die
+> Ausgabe sagt es für jedes einzeln. Die Untergrenzen liegen bei
+> {{wilson_unten_regel:.1%}} für die Faustregel und {{wilson_unten_wald:.1%}} für den Wald.
 >
-> Für eine belastbare Freigabe bräuchte es mehrere unabhängige Quartale — genau das, was
-> Abschnitt 5.3 macht.
+> **Drei Lagen sind möglich, und nur zwei davon sind eine Antwort:** Liegt die Hürde
+> *unter* dem Intervall, ist sie gestützt. Liegt sie *über* dem Intervall, ist sie
+> widerlegt. Liegt sie *innerhalb*, ist das Ergebnis mit beiden Welten verträglich — mit
+> einem Verfahren, das die Hürde nimmt, und mit einem, das sie verfehlt. Das ist kein
+> knappes Ja, sondern ein Nichtwissen.
+>
+> Bei {{kapazitaet:.0f}} Beobachtungen ist dieses Nichtwissen der Normalfall, nicht die
+> Ausnahme. Deshalb steht in Phase 5 nicht nur der Punktwert, sondern das Intervall — und
+> deshalb entscheidet über die Auslieferung nicht ein einzelnes Quartal, sondern die
+> rollierende Validierung in Abschnitt 5.3.
 
 ### 5.5 Zwei Zahlen, die man nicht verwechseln darf
 """),
@@ -953,26 +1026,57 @@ for name, score in [("Faustregel: km seit Reparatur", p_regel),
     k2 = e["Kosten (EUR)"] < kosten_heute
     # K3 gilt fuer die Regel per Definition - sie IST der Massstab.
     k3 = True if "Faustregel" in name else vorteil_roll > 0
-    urteile[name] = (e, k1a, k2, k3)
+    # K1b wurde frueher gerechnet, gedruckt - und dann fallengelassen. Ein
+    # Kriterium, das in der Tabelle steht, aber nicht in der Bedingung, ist
+    # keine Huerde, sondern Dekoration: Bei einem anderen Datenstand ginge ein
+    # Verfahren mit gerissenem K1b in Betrieb, und niemand saehe es.
+    urteile[name] = (e, {"K1a": k1a, "K1b": k1b, "K2": k2, "K3": k3})
     betrag = f"{e['Kosten (EUR)']:,.0f}".replace(",", ".")
     ja = lambda b: "ERFÜLLT" if b else "GERISSEN"
     print(f"{name:30s}{e['Trefferquote']:>7.1%}{betrag:>8s} €"
           f"{ja(k1a):>11s}{ja(k1b):>12s}{ja(k2):>11s}{ja(k3):>11s}")
 
-alle_drei = [n for n in urteile if all(urteile[n][1:])]
+# Welche Gates BINDEN, steht hier - einmal, benannt, vor dem Ergebnis.
+PFLICHTGATES = ("K1a", "K1b", "K2", "K3")
+
+alle_gates = [n for n in urteile if all(urteile[n][1][g] for g in PFLICHTGATES)]
 
 # ─── EINE QUELLE FÜR DAS AUSGELIEFERTE VERFAHREN ────────────────────
 # Ab hier arbeitet ALLES mit diesen beiden Variablen: Confusion-Matrix,
 # Kapazitätskurve, Liste, CSV und Modellpaket. In einer früheren Fassung
 # stand im Text "Random Forest geht in Betrieb", während der Export nach
 # der Faustregel sortierte - drei Zellen lang unbemerkt.
-ausgeliefertes_verfahren = min(alle_drei, key=lambda n: urteile[n][0]["Kosten (EUR)"])
-ausgelieferter_score = {"Faustregel: km seit Reparatur": p_regel,
-                        "Modell: Random Forest": p_wald}[ausgeliefertes_verfahren]
+#
+# Faellt KEIN Kandidat durch alle Pflichtgates, gibt es kein Produkt. Frueher
+# lief min() dann auf eine leere Liste und brach mit einem ValueError ab -
+# ein Absturz ist keine Freigabeentscheidung.
+KEINE_FREIGABE = not alle_gates
+if KEINE_FREIGABE:
+    ausgeliefertes_verfahren = None
+    ausgelieferter_score = None
+else:
+    ausgeliefertes_verfahren = min(alle_gates,
+                                   key=lambda n: urteile[n][0]["Kosten (EUR)"])
+    ausgelieferter_score = {"Faustregel: km seit Reparatur": p_regel,
+                            "Modell: Random Forest": p_wald}[ausgeliefertes_verfahren]
 
 print()
-print(f"  Alle drei Kriterien erfüllt: {', '.join(alle_drei) if alle_drei else 'keines'}")
-print(f"  AUSGELIEFERT WIRD:           {ausgeliefertes_verfahren.upper()}")
+print(f"  Pflichtgates: {' · '.join(PFLICHTGATES)}")
+for name, (_, gates) in urteile.items():
+    offen = [g for g in PFLICHTGATES if not gates[g]]
+    print(f"    {name:32s} {'alle erfüllt' if not offen else 'gerissen: ' + ', '.join(offen)}")
+if KEINE_FREIGABE:
+    print("\\n  KEINE FREIGABE: Kein Verfahren erfüllt alle Pflichtgates.")
+    print("  Es wird keine Liste erzeugt und kein Modell ausgeliefert.")
+else:
+    print(f"\\n  AUSGELIEFERT WIRD:           {ausgeliefertes_verfahren.upper()}")
+# Wie stark unterscheiden sich die beiden Top-Listen ueberhaupt?
+_l_regel = set(np.argsort(-p_regel)[:KAPAZITAET])
+_l_wald = set(np.argsort(-p_wald)[:KAPAZITAET])
+merke("listen_gemeinsam", len(_l_regel & _l_wald))
+merke("listen_exklusiv", KAPAZITAET - len(_l_regel & _l_wald))
+merke("keine_freigabe", int(KEINE_FREIGABE))
+_ = merke("pflichtgates", " · ".join(PFLICHTGATES))
 '''),
 
 MD("""
@@ -988,8 +1092,9 @@ versteht sie, und sie trifft genauso gut.
 > Merkmalsmenge, dieser Waldkonfiguration und diesen fünf Perioden ist kein stabiler
 > Zusatznutzen gegenüber der Faustregel nachgewiesen.**
 >
-> Das ist etwas anderes als „der Wald lernt nichts dazu". Die beiden Listen unterscheiden
-> sich bei 17 von 60 Rädern — er sortiert durchaus anders, nur nicht besser. Und geprüft
+> Das ist etwas anderes als „der Wald lernt nichts dazu". Die beiden Listen teilen
+> {{listen_gemeinsam:.0f}} von {{kapazitaet:.0f}} Rädern und unterscheiden sich bei
+> je {{listen_exklusiv:.0f}} — er sortiert durchaus anders, nur nicht besser. Und geprüft
 > wurden ein Baum und eine Waldkonfiguration, nicht der Modellraum.
 
 > **Ein Wort zum Klassengewicht {{klassengewicht:.1f}}.** Es stammt aus dem Kostenverhältnis, ist aber
@@ -1045,7 +1150,7 @@ Bei fester Listenlänge `k` und `P` positiven Rädern gilt `FP = k − TP` und `
 also:
 
 ```text
-Kosten = 25k + 180P − 205 × TP
+Kosten = {{kosten_unnoetig:.0f}}k + {{kosten_verpasst:.0f}}P − {{kosten_summe:.0f}} × TP
 ```
 
 Jeder zusätzliche Listenplatz kostet 25 € und bringt im Erwartungswert mehr als 25 € an
@@ -1126,11 +1231,23 @@ ausgabe = ausgabe.rename(columns={
     "rangwert": "km seit letzter Reparatur", "km_180": "km (180 Tage)",
     "meldungen_bisher": "Meldungen bisher", "tage_seit_reparatur": "Tage seit Reparatur"})
 
-print(f"WARTUNGSLISTE  Quartal ab {letzter.date()}   ({KAPAZITAET} Räder)\\n")
+merke("spitzenwert_km", float(ausgabe["km seit letzter Reparatur"].max()))
+
+# ZWEI ARTEFAKTE, ZWEI ZWECKE - und sie duerfen nicht denselben Namen tragen.
+#
+# Diese Liste steht auf dem Stichtag {letzter}, dessen 90 Tage laengst
+# vorbei sind: Ihr Ausgang ist bekannt und wurde gerade zur Bewertung
+# benutzt. Sie ist ein TESTARTEFAKT, keine Werkstattliste. Eine Datei
+# "wartungsliste.csv" haette genau das verwischt - der Name haette ein
+# Betriebsprodukt behauptet, wo eine Rueckschau steht.
+_test_datei = f"testliste_historisch_{letzter.date()}.csv"
+print(f"HISTORISCHE TESTLISTE  Stichtag {letzter.date()}   ({KAPAZITAET} Räder)")
+print("Der 90-Tage-Ausgang dieser Liste ist BEKANNT und wurde oben zur")
+print("Bewertung verwendet. Sie ist kein Auftrag an die Werkstatt.\\n")
 print(ausgabe.head(15).to_string(index=False))
 print(f"\\n... und {len(ausgabe) - 15} weitere.")
 
-ausgabe.to_csv("wartungsliste.csv", index=False)
+ausgabe.to_csv(_test_datei, index=False)
 
 # Das Paket beschreibt, WAS ausgeliefert wird - abgeleitet, nicht getippt.
 # Das Modell wandert mit hinein, obwohl es nicht ausgeliefert wird: als
@@ -1153,9 +1270,38 @@ paket = {
     "erstellt_am": datetime.date.today().isoformat(),
 }
 joblib.dump(paket, "wartungsmodell.joblib")
+
+# ─── DIE SCHATTENLISTE: derselbe Stichtag wie die Wirklichkeit ──────
+# Was die Werkstatt HEUTE bekaeme, steht auf dem letzten Tag der Daten -
+# und sein Ausgang ist unbekannt, weil die 90 Tage noch nicht vorbei sind.
+# Genau das macht sie zur Schattenliste: Sie laesst sich erst nach Ablauf
+# des Quartals bewerten. Wer sie vorher beurteilt, beurteilt nichts.
+_schatten_stichtag = fahrten.startzeit.max().normalize()
+_schatten = zeile_bauen(_schatten_stichtag)
+_schatten = _schatten[_schatten.fahrrad_id.notna()].copy()
+_schatten["rangwert"] = _schatten.km_seit_reparatur
+_schatten = _schatten.nlargest(KAPAZITAET, "rangwert").reset_index(drop=True)
+_schatten.insert(0, "rang", range(1, len(_schatten) + 1))
+_schatten_aus = _schatten[["rang", "fahrrad_id", "typ_code", "rangwert",
+                           "km_180", "meldungen_bisher"]].round(0)
+_schatten_aus["stichtag"] = _schatten_stichtag.date()
+_schatten_aus["gilt_bis"] = (_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()
+_schatten_aus["status"] = "SCHATTENBETRIEB - nicht handlungsleitend"
+_schatten_aus["regelversion"] = paket["regel_spalte"]
+_schatten_datei = f"schattenliste_{_schatten_stichtag.date()}.csv"
+_schatten_aus.to_csv(_schatten_datei, index=False)
+merke("schatten_stichtag", str(_schatten_stichtag.date()))
+
 print()
 print(f"ausgeliefert: {paket['ausgeliefert']}")
-print("geschrieben: wartungsliste.csv, wartungsmodell.joblib")
+print(f"geschrieben: {_test_datei} (historisch, Ausgang bekannt)")
+print(f"             {_schatten_datei} (Schattenbetrieb, Ausgang offen)")
+print("             wartungsmodell.joblib")
+print()
+print(f"Die Schattenliste steht auf dem {_schatten_stichtag.date()} - dem letzten Tag")
+print(f"der Daten. Bewertbar wird sie am {(_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()},")
+print("wenn die 90 Tage vorbei sind. Bis dahin ist sie eine Vorhersage")
+print("ohne Ergebnis - und genau das ist der Unterschied zur Liste darueber.")
 '''),
 
 MD("""
@@ -1166,9 +1312,9 @@ Rechnung über die Lebensdauer:
 
 | | Faustregel | Random Forest |
 |---|---|---|
-| Trefferquote auf dem Test | gleich | gleich |
-| über die Validierungsquartale | leicht vorn | leicht hinten |
-| erklärbar | „das Rad ist seit 592 km nicht in der Werkstatt gewesen" | nur über Umwege |
+| Trefferquote auf dem Test | {{quote_regel:.1%}} | {{quote_wald:.1%}} |
+| über die Validierungsquartale | {{roll_regel:.0f}} Treffer | {{roll_wald:.0f}} Treffer |
+| erklärbar | „das Rad ist seit {{spitzenwert_km:.0f}} km nicht in der Werkstatt gewesen" | nur über Umwege |
 | Wartungsaufwand | geringer — die Regel selbst ändert sich nicht | vierteljährlich nachtrainieren |
 | Abhängigkeiten im Betrieb | Fahrten-, Distanz-, Typ- und Wartungsdaten | dieselben, **zusätzlich** scikit-learn, joblib, Versionsstände |
 
@@ -1317,8 +1463,9 @@ MD("""
 1. **Erfundene Daten.** Alle Euro-Beträge sind Szenariorechnungen, keine gemessenen
    Ersparnisse. Vor einem echten Einsatz müsste alles mit realen Daten neu validiert
    werden.
-2. **Das Ziel ist zu weit gefasst.** Vorhergesagt wird *irgendeine* Meldung. Von den 102
-   auffälligen Rädern des Testquartals hat nur ein Drittel eine Meldung der Stufe
+2. **Das Ziel ist zu weit gefasst.** Vorhergesagt wird *irgendeine* Meldung. Von den
+   {{positive_im_test:.0f}} auffälligen Rädern des Testquartals haben
+   {{positive_fahruntauglich:.0f}} ({{anteil_fahruntauglich:.1%}}) eine Meldung der Stufe
    „fahruntauglich". Leichte und schwere Schäden kosten in unserer Matrix dasselbe.
 3. **Die Wirksamkeit der Prüfung ist unbekannt.** Wir wissen nicht, welchen Anteil der
    Schäden eine Inspektion überhaupt findet und verhindert. Ohne diese Größe ist jede
