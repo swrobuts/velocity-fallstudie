@@ -1,0 +1,15 @@
+%% Was weiss man WANN? Der Leakage-Test aus Notebook 1, Phase 3.1.
+flowchart LR
+    A["Kunde entsperrt<br/>das Rad"]:::jetzt
+    B["Fahrt laeuft"]:::spaeter
+    C["Kunde stellt<br/>das Rad ab"]:::spaeter
+
+    A --> B --> C
+
+    A -.-> V1["startstation<br/>startzeit<br/>typ_code<br/>temperatur<br/>ist_feiertag"]:::erlaubt
+    C -.-> V2["endzeit<br/>distanz_km<br/>zielstation"]:::verboten
+
+    classDef jetzt fill:#003E6E,stroke:#003E6E,color:#FFFFFF
+    classDef spaeter fill:#F7F5EF,stroke:#C9C3B4,color:#404040
+    classDef erlaubt fill:#FFFFFF,stroke:#55801C,stroke-width:2px,color:#55801C
+    classDef verboten fill:#FFFFFF,stroke:#A32638,stroke-width:2px,color:#A32638

@@ -1,0 +1,12 @@
+%% Die Falle jeder vorausschauenden Wartung - Notebook 2, Phase 6.4.
+flowchart LR
+    M["Modell sagt<br/>Defekt vorher"] --> L["Rad kommt<br/>auf die Liste"]
+    L --> W["Werkstatt<br/>repariert vorher"]
+    W --> D["Der Defekt<br/>tritt nie ein"]
+    D --> X["Modell lernt:<br/>kein Defekt"]
+    X -. "das Modell wird schlechter,<br/>WEIL es erfolgreich war" .-> M
+
+    K["Ausweg: Kontrollgruppe<br/>ein Teil der Flotte wird bewusst<br/>NICHT nach Liste gewartet"]:::ausweg
+    K -.-> X
+
+    classDef ausweg fill:#FFFFFF,stroke:#55801C,stroke-width:2px,color:#55801C

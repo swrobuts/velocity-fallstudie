@@ -1,0 +1,22 @@
+%% Welcher Fall beleuchtet welche Phase? Die Grundlage der Deckstruktur.
+flowchart LR
+    subgraph K["Der Kreislauf"]
+        direction LR
+        P1["1 Business<br/>Understanding"]
+        P2["2 Data<br/>Understanding"]
+        P3["3 Data<br/>Preparation"]
+        P4["4 Modeling"]
+        P5["5 Evaluation"]
+        P6["6 Deployment"]
+        P1 --> P2 --> P3 --> P4 --> P5 --> P6
+    end
+
+    F3["Fall 3 Clustering<br/>Kriterien ohne Zielgroesse"] --> P1
+    F4["Fall 4 Zeitreihe<br/>Schnitt entlang der Zeit"] --> P3
+    F1["Fall 1 Regression<br/>die gemittelte Kennzahl luegt"] --> P5
+    F5["Fall 5 Assoziation<br/>von 42 Regeln bleibt eine"] --> P5
+    F2["Fall 2 Klassifikation<br/>ausgeliefert wird die Regel"] --> P6
+    F6["Fall 6 Anomalie<br/>der Ruecksprung 4 nach 3"] --> P4
+
+    classDef fall fill:#FFFFFF,stroke:#4AB5C4,stroke-width:2px,color:#003E6E
+    class F1,F2,F3,F4,F5,F6 fall

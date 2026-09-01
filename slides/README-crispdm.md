@@ -1,6 +1,6 @@
 # Foliendeck — CRISP-DM an sechs Fallbeispielen
 
-90 Folien im THWS-Design, gebaut aus demselben Master wie das Datenbankdeck
+110 Folien im THWS-Design, gebaut aus demselben Master wie das Datenbankdeck
 (`assets/template.pptx`, Layouts Frontpage_Digital, Chapter, Slide).
 
 ## Die didaktische Entscheidung, die diesem Deck zugrunde liegt
@@ -35,8 +35,47 @@ Phase.** Das ist der Grund, warum sich die Fälle nicht gleich behandeln lassen.
 | Rahmen | — | 3 | Titel · sechs Projekte, ein Vorgehen · Wegweiser |
 | **A Die Karte** | 1 | 12 | Der Kreislauf kompakt: je eine Folie pro Phase, die Rücksprünge, die zwei häufigen Fehler |
 | **B Referenzfall** | 2 | 27 | Notebook 1 Phase für Phase — 4 + 4 + 4 + 3 + 5 + 4, dazu Steckbrief und Kreisschluss |
-| **C Fälle 2–6** | 3–7 | 41 | Gleiches Gerüst, Tiefe nur an der jeweiligen Kernstelle |
+| **C Fälle 2–6** | 3–7 | 51 | Gleiches Gerüst, Tiefe nur an der jeweiligen Kernstelle |
 | **D Synthese** | 8 | 7 | Die sechs Fälle zurück auf der Karte, acht Sätze, Ausblick |
+
+## Das Deck ist eine Lesehilfe, kein Text daneben
+
+Drei Dinge stellen den Bezug zum Notebook her:
+
+**1. Achtzehn echte Zellausschnitte.** Code und Ausgabe, im Notebook-Look, erzeugt von
+`tools/notebook_ausschnitte.py`. Jeder trägt darunter ein Band, das sagt, worauf zu
+achten ist — ohne diese eine Zeile wäre ein Screenshot nur Dekoration.
+
+**2. Eine Quellenzeile auf jeder Folie, die auf Datei UND Abschnitt zeigt.**
+`analytics/notebooks/01_Regression_Fahrtdauer.ipynb · Abschnitt 5.2` — damit endet das
+Suchen. Eine Folie, die eine Zahl nennt, ohne zu sagen wo sie steht, schickt die
+Studierenden auf die Suche.
+
+**3. Vier Mermaid-Diagramme** unter `doku/analytics/diagramme/`, gerendert mit
+`tools/render_diagrams.sh` im THWS-Farbschema:
+
+| Datei | Zeigt |
+|---|---|
+| `crispdm-kreis` | Der Kreislauf mit den Rücksprüngen, die in den sechs Notebooks tatsächlich vorkommen |
+| `crispdm-faelle` | Welcher Fall beleuchtet welche Phase — die Begründung des Deckaufbaus |
+| `nb1-leakage` | Was weiß man wann? Der Leakage-Test als Zeitachse |
+| `nb2-rueckkopplung` | Die Falle jeder vorausschauenden Wartung, samt Ausweg |
+
+## Ausschnitte neu erzeugen
+
+```bash
+python3 tools/notebook_ausschnitte.py           # alle achtzehn
+python3 tools/notebook_ausschnitte.py nb1-modelle
+```
+
+Die Zellen werden über einen **Suchtext** ausgewählt, nicht über ihre Nummer: Nummern
+verschieben sich, sobald jemand eine Zelle einfügt, und dann zeigt die Folie klaglos die
+falsche Stelle. Trifft ein Suchtext mehrere Zellen, bricht das Werkzeug ab — beim ersten
+Lauf hat das zehn falsche Bilder verhindert.
+
+Für Zellen mit langem Code steht im Katalog `"ausgabe"` als fünftes Feld: Dann zeigt die
+Folie nur das Ergebnis. Sonst wird das Bild auf der Folie zu schmal, um lesbar zu sein —
+gemessen, nicht geschätzt: unter etwa 470 pt Breite ist Quelltext im Hörsaal verloren.
 
 **Der wiederkehrende Anker ist die Phasenleiste** am Fuß jeder Inhaltsfolie — dieselbe
 Rolle, die im Datenbankdeck der rote Faden zu Annas Fahrt spielt. Sie macht die

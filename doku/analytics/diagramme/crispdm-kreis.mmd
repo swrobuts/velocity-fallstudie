@@ -1,0 +1,18 @@
+%% Der Kreislauf als Kreis, nicht als Kette - mit den Rueckspruengen,
+%% die in den sechs VeloCity-Notebooks tatsaechlich vorkommen.
+flowchart LR
+    P1["1 Business<br/>Understanding<br/><i>Woran messen wir Erfolg?</i>"]
+    P2["2 Data<br/>Understanding<br/><i>Tragen die Daten die Frage?</i>"]
+    P3["3 Data<br/>Preparation<br/><i>Was darf ich verwenden?</i>"]
+    P4["4 Modeling<br/><i>Welches Verfahren?</i>"]
+    P5["5 Evaluation<br/><i>Reicht das fuer die Entscheidung?</i>"]
+    P6["6 Deployment<br/><i>Wie kommt es in den Betrieb?</i>"]
+
+    P1 --> P2 --> P3 --> P4 --> P5 --> P6
+    P5 -. "Fall 1, Fall 3<br/>bessere Frage" .-> P1
+    P4 -. "Fall 6<br/>Merkmale normieren" .-> P3
+    P6 -. "laufender Betrieb<br/>liefert neue Daten" .-> P2
+
+    classDef phase fill:#F7F5EF,stroke:#003E6E,stroke-width:2px,color:#0B1F44
+    classDef zurueck fill:#E3DED1,stroke:#A32638,stroke-width:2px,color:#A32638
+    class P1,P2,P3,P4,P5,P6 phase

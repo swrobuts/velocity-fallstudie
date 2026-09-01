@@ -17,7 +17,9 @@ trap 'rm -f "$PUP"' EXIT
 
 mkdir -p slides/assets
 fehler=0
-for quelle in doku/datenmodell/erd/*.mmd; do
+# Zwei Quellorte: die ER-Diagramme des Datenmodells und die Diagramme
+# des Analytics-Decks. Beide landen in slides/assets/.
+for quelle in doku/datenmodell/erd/*.mmd doku/analytics/diagramme/*.mmd; do
   name=$(basename "$quelle" .mmd)
   ziel="slides/assets/${name}.png"
   if npx --no-install mmdc -i "$quelle" -o "$ziel" -w 2000 -b white \

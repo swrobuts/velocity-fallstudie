@@ -50,7 +50,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from thws import (  # noqa: E402
     BLAU, BREITE, FLUCHT_L, GRUEN_D, ORANGE, ROT_A, TUERKIS, TEXT_SEK,
     ZONE_OBEN, ZONE_UNTEN,
-    ampel_matrix, code_kacheln, kachelreihe, kopf, leitfrage, notizen,
+    ampel_matrix, code_kacheln, diagramm, kachelreihe, kopf, leitfrage, notizen,
     phasenleiste, prozesskette, regel_streifen, sandband, sandkarte,
     schichtenstapel, steckbrief, tabelle, vorher_nachher,
 )
@@ -104,6 +104,63 @@ def folie(prs, kicker, titel, intro=None, quelle=Q):
 
 def unter_intro(s, abstand=16):
     return getattr(s, '_intro_unten', 110) + abstand
+
+
+ASSETS = WURZEL / "slides" / "assets"
+
+NB_DATEI = {
+    1: "01_Regression_Fahrtdauer",
+    2: "02_Klassifikation_Wartungsrisiko",
+    3: "03_Clustering_Stationen_und_Kunden",
+    4: "04_Zeitreihe_Nachfrageprognose",
+    5: "05_Assoziation_Wege_im_Netz",
+    6: "06_Anomalieerkennung_Auffaellige_Vorgaenge",
+}
+
+
+def nbq(nummer, abschnitt="", hinweis=""):
+    """Quellenzeile, die auf Datei UND Abschnitt zeigt.
+
+    Das Deck ist eine Lesehilfe. Eine Folie, die eine Zahl nennt, ohne zu
+    sagen, wo sie steht, schickt die Studierenden auf die Suche. Diese
+    Zeile beendet die Suche: Datei, Abschnitt, fertig.
+    """
+    teile = [f"analytics/notebooks/{NB_DATEI[nummer]}.ipynb"]
+    if abschnitt:
+        teile.append(f"Abschnitt {abschnitt}")
+    if hinweis:
+        teile.append(hinweis)
+    return " · ".join(teile)
+
+
+def bild(name: str) -> str:
+    pfad = ASSETS / f"{name}.png"
+    if not pfad.exists():
+        raise SystemExit(
+            f"Bild fehlt: {pfad}\n"
+            "Zuerst: python3 tools/notebook_ausschnitte.py "
+            "und bash tools/render_diagrams.sh")
+    return str(pfad)
+
+
+def zellfolie(prs, nb, abschnitt, kicker, titel, ausschnitt, deutung, notiz):
+    """Eine Folie, die eine ECHTE Notebookzelle zeigt und sie deutet.
+
+    Das Bild traegt die Folie, der Text darunter sagt, worauf zu achten
+    ist. Ohne diese eine Zeile ist ein Screenshot nur Dekoration.
+    """
+    s = folie(prs, kicker, titel, quelle=nbq(nb, abschnitt))
+    y = unter_intro(s, 10)
+    # Die Hoehe des Bandes folgt seinem Text (dieselbe Rechnung wie in
+    # thws.sandband). Geschaetzt hatte ich 60 - bei drei Zeilen ragte das
+    # Band dann 6 pt aus der Inhaltszone, und der Pruefer hat es gemeldet.
+    je_zeile = int((BREITE - 32) / (14 * 0.52))
+    band_h = max(52, max(1, -(-len(deutung) // je_zeile)) * 20 + 26)
+    band_y = ZONE_UNTEN - band_h
+    diagramm(s, bild(ausschnitt), y=y, hoehe=band_y - y - 14)
+    sandband(s, deutung, y=band_y)
+    notizen(s, notiz)
+    return s
 
 
 def streifen(s, zeilen, **kw):
@@ -205,11 +262,7 @@ def teil_karte(prs):
     s = folie(prs, "Überblick", "Sechs Phasen, und jede beantwortet genau eine Frage",
               "Von der Geschäftsfrage zum laufenden Betrieb. Die Reihenfolge ist "
               "verbindlich, aber sie ist keine Einbahnstraße.")
-    prozesskette(s, "Geschäfts-\nfrage", [
-        ("Business\nUnderstanding", ""), ("Data\nUnderstanding", ""),
-        ("Data\nPreparation", ""), ("Modeling", ""),
-        ("Evaluation", ""), ("Deployment", ""),
-    ], "Im\nBetrieb", y=unter_intro(s) + 10, hoehe=96)
+    diagramm(s, bild("crispdm-kreis"), y=unter_intro(s), breite=BREITE)
     sandkarte(s, "Die Faustregel, die alle unterschätzen",
               ["Phase 2 und 3 kosten in echten Projekten 60 bis 80 Prozent der Zeit.",
                "Phase 4 — das Modellieren, an das alle denken — sind oft zehn Zeilen Code.",
@@ -355,6 +408,17 @@ def teil_karte(prs):
                "der Synthese am Ende noch einmal auf, dann ausgefüllt mit dem, was "
                "wir unterwegs gesehen haben.")
 
+    s = folie(prs, "Wegweiser", "Dieselbe Zuordnung als Bild",
+              "Welcher Fall beleuchtet welche Phase? Diese Zuordnung ist der Grund "
+              "für den Aufbau des Decks.")
+    diagramm(s, bild("crispdm-faelle"), y=unter_intro(s),
+             hoehe=ZONE_UNTEN - unter_intro(s) - 34)
+    notizen(s, "Zwei Fälle zeigen auf Phase 5 — Fall 1 und Fall 5 —, aber aus "
+               "verschiedenen Richtungen: der eine, weil die gemittelte Kennzahl "
+               "täuscht, der andere, weil vorab gesetzte Hürden radikal sieben. "
+               "Das ist kein Zufall: Phase 5 ist die Phase, in der sich entscheidet, "
+               "ob die Arbeit der Phasen 1 bis 4 etwas taugte.")
+
 
 # ═════════════════════════════════════ Teil B — Referenzfall Notebook 1
 
@@ -424,6 +488,16 @@ def teil_referenzfall(prs):
                "kommen, dass eine EINZIGE Preisgrenze zu drei verschiedenen "
                "Anforderungen an dasselbe Modell führt. Das ist der Kern von Phase 1: "
                "Die Fachlichkeit bestimmt die Messlatte, nicht die Statistik.")
+
+    zellfolie(prs, 1, "1 — Erfolgskriterien", "Phase 1 · im Notebook",
+              "Die Umrechnung, Zeile für Zeile",
+              "nb1-kriterium",
+              "Drei Zeilen Code — und aus einer Preisgrenze werden drei verschiedene "
+              "Anforderungen an dasselbe Modell.",
+              "Das ist die Zelle, aus der die Tabelle der letzten Folie stammt. Zeigen "
+              "Sie auf die Division: grenze_eur geteilt durch preis_pro_minute_eur. "
+              "Mehr steckt nicht dahinter — und genau diese drei Zeilen entscheiden "
+              "am Ende über das Urteil des ganzen Projekts.")
 
     s = folie(prs, "Phase 1 · Business Understanding",
               "Erfolgskriterien werden festgelegt, bevor jemand die Daten sieht")
@@ -603,6 +677,24 @@ def teil_referenzfall(prs):
                "Zielstation kennen? Genau diese Frage — was weiß ich JETZT? — ist der "
                "Leakage-Test. Er braucht keine Statistik, nur gesunden Menschenverstand.")
 
+    s = folie(prs, "Phase 3 · im Notebook", "Wann weiß man was? Der Leakage-Test",
+              "Die Frage ist nicht statistisch, sondern zeitlich: Was steht in dem "
+              "Moment zur Verfügung, in dem die Anzeige erscheinen soll?",
+              quelle=nbq(1, "3.1"))
+    diagramm(s, bild("nb1-leakage"), y=unter_intro(s), hoehe=ZONE_UNTEN - unter_intro(s) - 34)
+    notizen(s, "Grün, was beim Entsperren bekannt ist. Rot, was erst beim Abstellen "
+               "entsteht. Der Test braucht keine Statistik — nur die Frage, wann der "
+               "Wert entsteht. Wer sie stellt, findet Leakage zuverlässig.")
+
+    zellfolie(prs, 1, "3.1", "Phase 3 · im Notebook",
+              "Die gesperrten Spalten, im Klartext",
+              "nb1-leakage",
+              "Im Notebook stehen die drei gesperrten Spalten mit Begründung — nicht "
+              "kommentarlos weggelassen, sondern benannt.",
+              "Lassen Sie die Studierenden die drei Namen vorlesen. Wer sie später in "
+              "einem eigenen Projekt versehentlich verwendet, erinnert sich an diese "
+              "Zelle.")
+
     s = folie(prs, "Phase 3 · Data Preparation",
               "Jeder Filter mit Zeilenzahl davor und danach",
               "Drei begründete Ausschlüsse. Wer nicht mitzählt, merkt nicht, wenn ein "
@@ -699,6 +791,16 @@ def teil_referenzfall(prs):
                "Mittelwert. Das ist normal und ein gutes Zeichen dafür, dass die "
                "Testmenge wirklich unberührt war.")
 
+    zellfolie(prs, 1, "4.3", "Phase 4 · im Notebook",
+              "Der Modellvergleich, wie er im Notebook steht",
+              "nb1-modelle",
+              "Vier Zeilen, von oben nach unten immer besser — und die oberste ist "
+              "absichtlich dumm.",
+              "Die Tabelle wächst im Notebook Zelle für Zelle: erst das Nullmodell "
+              "allein, dann kommt die lineare Regression dazu, dann Baum und Wald. "
+              "Diese Reihenfolge ist der Grund, warum man am Ende sagen kann, wieviel "
+              "jeder Schritt gebracht hat.")
+
     s = folie(prs, "Phase 4 · Modeling",
               "Vom Durchschaubaren zum Stärkeren, nicht umgekehrt")
     prozesskette(s, "Null-\nmodell", [
@@ -764,6 +866,15 @@ def teil_referenzfall(prs):
                "aufdecken. 0,91 € heißt: Projekt gescheitert, Anzeige wird nicht gebaut. "
                "Die getrennte Betrachtung dreht das Urteil für 53 Prozent aller Fahrten "
                "ins Gegenteil.")
+
+    zellfolie(prs, 1, "5.2", "Phase 5 · im Notebook",
+              "Die entscheidende Rechnung: Minuten werden zu Euro",
+              "nb1-preisfehler",
+              "Hier kippt das Projekt — und zwar nicht in der Statistik, sondern in "
+              "der Umrechnung ins Preisblatt.",
+              "Das ist die wichtigste Zelle des ganzen Notebooks. Bis hierher sah "
+              "alles gut aus. Die Multiplikation mit dem Minutenpreis macht aus einem "
+              "ordentlichen Modell ein Urteil — und das fällt je Radtyp anders aus.")
 
     s = folie(prs, "Phase 5 · Evaluation",
               "Die gemittelte Kennzahl hat ein bestehendes Drittel verdeckt",
@@ -952,6 +1063,15 @@ def teil_referenzfall(prs):
                "Zahlen in der Präsentation anders waren.")
 
     # ─────────────────────────────────────────────── Kreisschluss
+    zellfolie(prs, 1, "6.4", "Phase 6 · im Notebook",
+              "Der Schattenbetrieb, gerechnet statt behauptet",
+              "nb1-schatten",
+              "0,493 € gegen 0,464 € auf der Testmenge — die Ampel steht auf GELB, "
+              "und das Notebook sagt es selbst.",
+              "Beachten Sie die letzte Zeile der Ausgabe: Das Notebook stellt die "
+              "Ampel selbst und begründet sie. Ein Bericht, der die Bewertung dem "
+              "Leser überlässt, ist kein Bericht.")
+
     s = folie(prs, "Fall 1 · Abschluss", "Der Kreislauf schließt sich",
               "Sechs Phasen, ein Durchlauf, ein geteiltes Urteil — und drei "
               "benannte Wege zurück.")
@@ -1012,6 +1132,15 @@ def fall2(prs):
                "Siebenfache der anderen. Das gehört ins Modell, nicht in die "
                "Nachbetrachtung.")
 
+    zellfolie(prs, 2, "1 — Fehlerkosten", "Phase 1 · im Notebook",
+              "Die Kostenmatrix, aus der alles Weitere folgt",
+              "nb2-kosten",
+              "180 € gegen 25 €. Diese beiden Zahlen bestimmen das Erfolgskriterium, "
+              "die Klassengewichte und am Ende die Auslieferung.",
+              "Fragen Sie, woher solche Zahlen kommen. Antwort: aus dem Betrieb, nicht "
+              "aus den Daten. Ein Datenprojekt, das sie nicht erfragt, erfindet sie "
+              "implizit — meist als 1 : 1, und das ist fast immer falsch.")
+
     s = folie(prs, "Fall 2", "Was hier anders ist als in Fall 1",
               "Drei Unterschiede — und jeder verändert eine Phase.")
     tabelle(s, ["", "Fall 1 — Regression", "Fall 2 — Klassifikation"], [
@@ -1040,6 +1169,15 @@ def fall2(prs):
     notizen(s, "Der Satz „44 Prozent melden sich, die Werkstatt schafft 26“ ist der "
                "Grund, warum es überhaupt eine Rangfolge braucht. Es geht nicht darum, "
                "alle Defekte zu finden, sondern die richtigen 60 Räder auszuwählen.")
+
+    zellfolie(prs, 2, "3.3", "Phase 3 · im Notebook",
+              "Der zeitliche Schnitt, in Zahlen",
+              "nb2-schnitt",
+              "1458 Trainingszeilen aus sieben Stichtagen, getestet am jüngsten — "
+              "kein einziger Blick in die Zukunft.",
+              "Die Zeilenzahlen stehen mit Absicht in der Ausgabe. Wer sie nicht "
+              "ausgibt, merkt nicht, wenn ein Stichtag leer bleibt oder ein Filter "
+              "mehr wegnimmt als gedacht.")
 
     s = folie(prs, "Fall 2 · Phase 4", "Zuerst die Faustregeln — dann erst die Modelle",
               "Zwei Regeln, wie sie die Werkstatt heute im Kopf hat. Sie sind der "
@@ -1078,6 +1216,14 @@ def fall2(prs):
                "heißt: Der Verschleiß hängt fast ausschließlich an den gefahrenen "
                "Kilometern. Mehr Information steckt in den Daten nicht.")
 
+    zellfolie(prs, 2, "5.4", "Phase 5 · im Notebook",
+              "Der Gleichstand, gegen die Kriterien aus Phase 1 gehalten",
+              "nb2-gleichstand",
+              "Beide Kandidaten, beide Kriterien, eine Tabelle — und kein Unterschied.",
+              "Das Notebook prüft hier ausdrücklich gegen die Kriterien, die in Phase 1 "
+              "festgelegt wurden, und nicht gegen das, was sich gerade anbietet. "
+              "Genau deshalb ist der Gleichstand ein Ergebnis und keine Enttäuschung.")
+
     s = folie(prs, "Fall 2 · Phase 6", "Ausgeliefert wird die Regel, nicht das Modell",
               "Bei Gleichstand gewinnt die einfachere Lösung. Das ist keine "
               "Bescheidenheit, sondern eine Kostenrechnung über die Lebensdauer.")
@@ -1108,10 +1254,8 @@ def fall2(prs):
     s = folie(prs, "Fall 2 · Phase 6", "Die Rückkopplung, die dieses Verfahren schwierig macht",
               "Wer die Liste abarbeitet, verändert die Daten, aus denen das nächste "
               "Modell lernt. Diese Falle betrifft jede vorausschauende Wartung.")
-    prozesskette(s, "Modell\nsagt vorher", [
-        ("Rad kommt\nauf die Liste", ""), ("Werkstatt\nrepariert", ""),
-        ("Defekt tritt\nnie ein", ""), ("Modell lernt:\nkein Defekt", ""),
-    ], "Modell wird\nschlechter", y=unter_intro(s) + 20, hoehe=96)
+    diagramm(s, bild("nb2-rueckkopplung"), y=unter_intro(s),
+             hoehe=ZONE_UNTEN - unter_intro(s) - 34)
     notizen(s, "Das Modell sabotiert sich selbst, wenn es erfolgreich ist. Der Ausweg "
                "ist eine Kontrollgruppe: ein Teil der Flotte wird bewusst nicht nach "
                "Liste gewartet, damit man weiter lernt, was ohne Eingriff passiert "
@@ -1226,6 +1370,15 @@ def fall3(prs):
                "k richtig ist. Die Fachlichkeit entscheidet — und deshalb standen die "
                "Kriterien vorher fest.")
 
+    zellfolie(prs, 3, "4.2", "Phase 4 · im Notebook",
+              "Ellenbogen und Silhouette, nebeneinander gerechnet",
+              "nb3-k",
+              "Zwei Kennzahlen je k — und keine davon entscheidet. Die Entscheidung "
+              "fällt am Kriterium „benennbar“ aus Phase 1.",
+              "Zeigen Sie auf die Spalte Silhouette: Der Unterschied zwischen k=3 und "
+              "k=4 ist klein. Wer allein danach ginge, könnte würfeln. Erst die Frage, "
+              "ob die Disposition den Gruppen einen Namen geben kann, entscheidet.")
+
     s = folie(prs, "Fall 3 · Phase 5", "Zwei Befunde, die weh tun",
               "Die Segmentierung sollte Zielgruppen für den Newsletter liefern. "
               "Herausgekommen ist eine Frage an die Preisgestaltung.")
@@ -1266,6 +1419,15 @@ def fall3(prs):
                "es?“, sondern „sind die Freiminuten dort richtig eingesetzt, wo sie "
                "liegen?“ Betonen Sie: Es gibt bei VeloCity keine Grundgebühr — das ist "
                "Teil des Produktversprechens, nicht ein Versäumnis.")
+
+    zellfolie(prs, 3, "5.B.3", "Phase 5 · im Notebook",
+              "Die Idee für die Geschäftsführung — ausdrücklich als Hypothese",
+              "nb3-hypothese",
+              "Das Notebook schreibt „HYPOTHESE, kein Befund“ in die Ausgabe selbst. "
+              "Damit kann die Zahl nicht als Ergebnis missverstanden werden.",
+              "Das ist handwerklich vorbildlich und gehört betont: Eine Rechnung, die "
+              "auf einer Annahme beruht, kennzeichnet sich selbst — im Code, nicht nur "
+              "im Fließtext daneben. Wer nur die Ausgabe kopiert, kopiert die Warnung mit.")
 
     s = folie(prs, "Fall 3 · Phase 6", "Zwei Auslieferungen, zwei Vorbehalte",
               "Aus einer Analyse werden zwei sehr verschiedene Produkte — und beide "
@@ -1368,6 +1530,16 @@ def fall4(prs):
                "gleicher Temperatur. Dann schrumpft der Effekt zusammen. Genau diese "
                "Kontrolle unterscheidet eine Datenanalyse von einer Korrelationsjagd.")
 
+    zellfolie(prs, 4, "2.3", "Phase 2 · im Notebook",
+              "Die Störgröße, in zwei Zeilen entlarvt",
+              "nb4-stoergroesse",
+              "Roh: Faktor 0,91. Bei gleicher Temperatur: 0,74. Derselbe Datensatz, "
+              "zwei völlig verschiedene Aussagen.",
+              "Das ist die schärfste Zelle des Notebooks. Die rohe Zahl legt nahe, "
+              "Ferien wirkten schwach dämpfend. Kontrolliert man die Temperatur, ist "
+              "der Effekt deutlich stärker — er war vorher vom Sommer überdeckt. "
+              "Lassen Sie die beiden Faktoren nebeneinander stehen.")
+
     s = folie(prs, "Fall 4 · Phase 3", "Der Schnitt folgt der Zeit, nicht dem Zufall",
               "Dies ist die Folie, wegen der dieser Fall im Deck steht. Ein "
               "zufälliger Schnitt wäre hier ein schwerer, aber unsichtbarer Fehler.")
@@ -1447,6 +1619,16 @@ def fall4(prs):
                "steht in Phase 1: die ungleichen Fehlerkosten. Wer Phase 1 "
                "übersprungen hat, kann diese Entscheidung gar nicht treffen.")
 
+    zellfolie(prs, 4, "5.1", "Phase 5 · im Notebook",
+              "Die Kostenrechnung, die den Aufschlag begründet",
+              "nb4-aufschlag",
+              "Das Notebook rechnet beides aus: die Kosten ohne und mit "
+              "Sicherheitsaufschlag. Erst dieser Vergleich rechtfertigt ein "
+              "absichtlich ungenaueres Modell.",
+              "Ohne diese Rechnung wäre der Aufschlag reine Bauchentscheidung. Mit ihr "
+              "ist er eine belegte Optimierung — und genau das ist der Unterschied "
+              "zwischen Erfahrung und Willkür.")
+
     s = folie(prs, "Fall 4 · Phase 6", "Das ehrliche Eingeständnis gehört in den Bericht",
               "Das Modell rechnete mit dem TATSÄCHLICHEN Wetter. Im Betrieb steht "
               "nur eine Wettervorhersage zur Verfügung.")
@@ -1459,6 +1641,16 @@ def fall4(prs):
     notizen(s, "Die Versuchung, den schönen Wert zu berichten, ist groß — er ist ja "
                "korrekt gerechnet. Er beantwortet nur nicht die Frage, die im Betrieb "
                "gestellt wird. Dasselbe Muster wie der Schattenbetrieb in Fall 1.")
+
+    zellfolie(prs, 4, "6.1", "Phase 6 · im Notebook",
+              "Zwei Fehlerwerte — und nur einer zählt",
+              "nb4-ehrlich",
+              "MAE 12,65 mit dem tatsächlichen Wetter, 16,96 mit einer simulierten "
+              "Vorhersage. Die zweite Zahl ist die ehrliche.",
+              "Die Zeile sagt es selbst: „unrealistisch“ und „realistisch“. Wer in "
+              "einem Bericht nur die erste Zahl zeigt, hat nicht gelogen und trotzdem "
+              "getäuscht. Das Notebook nimmt einem die Entscheidung ab, indem es beide "
+              "nebeneinander stellt.")
 
     s = folie(prs, "Fall 4 · Abschluss", "Der Kreislauf schließt sich")
     tabelle(s, ["Phase", "Was dabei herauskam"], [
@@ -1592,6 +1784,15 @@ def fall5(prs):
                "nicht geprüft wurde, gehört benannt. Sonst liest sie sich später wie "
                "ein Befund.")
 
+    zellfolie(prs, 5, "4", "Phase 4 · im Notebook",
+              "Eine einzelne Regel, von Hand nachgerechnet",
+              "nb5-regel",
+              "Support, Konfidenz und Lift für eine konkrete Regel — drei Divisionen, "
+              "Zeile für Zeile nachvollziehbar.",
+              "Wer diese drei Divisionen einmal selbst gesehen hat, verwechselt "
+              "Konfidenz und Lift nicht mehr. Deshalb steht die Rechnung im Notebook "
+              "ausgeschrieben und nicht als Bibliotheksaufruf.")
+
     s = folie(prs, "Fall 5 · Phase 5", "Von 42 Regeln bleibt eine",
               "Hoher Lift und hoher Support schließen einander fast aus. Wer beide "
               "Hürden vorab setzt, siebt radikal.")
@@ -1606,6 +1807,15 @@ def fall5(prs):
                "ist selten (niedriger Support), ein sehr häufiges ist unspezifisch "
                "(niedriger Lift). Wer nur eine der beiden Hürden setzt, findet "
                "entweder Belangloses oder Zufälliges.")
+
+    zellfolie(prs, 5, "5.2", "Phase 5 · im Notebook",
+              "Die Hürden sieben — 42, dann 10, dann 2, dann 1",
+              "nb5-huerden",
+              "Jede Hürde einzeln aufgeführt, mit der Zahl der Regeln, die sie "
+              "überstehen. Die letzte Zeile ist das Ergebnis des Notebooks.",
+              "Diese Ausgabe ist der beste Beleg des ganzen Decks dafür, wozu vorab "
+              "gesetzte Kriterien gut sind. Hätte man sie nach dem Ergebnis gewählt, "
+              "stünde hier eine komfortable Zahl statt einer ehrlichen.")
 
     s = folie(prs, "Fall 5 · Phase 6", "Zwei Pläne aus einer Analyse",
               "Die eine überlebende Regel begründet zwei verschiedene Einsätze — "
@@ -1736,6 +1946,16 @@ def fall6(prs):
                "Ausreißer gefunden. Nur der Blick auf die Fälle zeigt, dass es die "
                "Preisklasse war.")
 
+    zellfolie(prs, 6, "4.4", "Phase 4 · im Notebook",
+              "Der Fehlschlag, den nur der Blick auf die Zeilen zeigt",
+              "nb6-fehlschlag",
+              "Oben in der Liste: fast nur CARGO. Die Spalte entgelt_je_minute "
+              "verrät, warum — das Modell hat die Preisklasse gefunden.",
+              "Keine Kennzahl hätte das gemeldet. Der Isolation Forest hat sauber "
+              "gearbeitet und stabile Ausreißer gefunden. Erst die Tabelle zeigt, "
+              "dass es die falschen sind. Das ist die Begründung für die Regel: "
+              "Sehen Sie sich immer die Extremfälle an.")
+
     s = folie(prs, "Fall 6 · Rücksprung", "Zurück nach Phase 3 — und was es brachte",
               "Die Korrektur ist klein: das Entgelt innerhalb des Radtyps normieren. "
               "Die Wirkung ist groß.")
@@ -1747,6 +1967,15 @@ def fall6(prs):
     notizen(s, "Sechs auf vierzig Prozent durch eine Normierung. Studierende sollen "
                "mitnehmen: Der größte Hebel lag nicht im Verfahren, sondern in der "
                "Datenaufbereitung — wie so oft.")
+
+    zellfolie(prs, 6, "4.5", "Nach dem Rücksprung · im Notebook",
+              "Dieselbe Auswertung, nach der Normierung",
+              "nb6-korrektur",
+              "Die Radtyp-Verteilung der fünfzig auffälligsten Vorgänge ist jetzt "
+              "gemischt statt einseitig. Genau das war das Ziel der Korrektur.",
+              "Vergleichen Sie mit der Folie davor. Dieselbe Auswertung, dieselben "
+              "Daten, ein normiertes Merkmal — und ein völlig anderes Bild. Der "
+              "Hebel lag in Phase 3, nicht im Verfahren.")
 
     s = folie(prs, "Fall 6 · Phase 5", "Aufgabe B scheitert — und das ist ein Ergebnis",
               "Stationsausfälle sollten aus dem Fahrtaufkommen erkennbar sein. Sie "
@@ -1782,6 +2011,15 @@ def fall6(prs):
                "die in den Daten nicht steckt. Ein negatives Ergebnis, sauber "
                "begründet, ist ein vollwertiges Projektergebnis — es verhindert, dass "
                "jemand anderes dieselbe Sackgasse noch einmal ausprobiert.")
+
+    zellfolie(prs, 6, "5.4", "Phase 5 · im Notebook",
+              "Aufgabe B, ausgerechnet und verworfen",
+              "nb6-aufgabeB",
+              "Null gefundene Störungen bei einer Listenlänge von 50. Das Notebook "
+              "rechnet das Scheitern aus, statt es zu verschweigen.",
+              "Ein negatives Ergebnis, das ausgerechnet und dokumentiert ist, hat "
+              "einen echten Wert: Es verhindert, dass jemand anderes dieselbe "
+              "Sackgasse noch einmal ausprobiert.")
 
     s = folie(prs, "Fall 6 · Phase 6", "Ausgeliefert wird nur, was besteht",
               "Zwei Aufgaben, ein Ergebnis. Aufgabe B wird ausdrücklich nicht "
