@@ -712,6 +712,34 @@ else
   ergebnis 1 "Der Zustand 'kein Mitarbeiter' fehlt"
 fi
 
+# ------------------------------------------- Lehrmaterial: Text gegen Zahl
+#
+# Diese beiden Pruefungen sind aus Schaden entstanden. Dreimal ist in
+# diesem Projekt eine Aussage stehengeblieben, nachdem sich die Zahl
+# darunter geaendert hatte: ein gedrehtes Urteil, dessen Export nicht
+# mitzog; ein neu erzeugter Lehrdatensatz, dessen Fliesstext blieb; ein
+# Foliensatz, der vier veraltete Zahlen weitertrug. Keiner dieser Fehler
+# war ohne maschinellen Abgleich zu sehen.
+#
+# Eine Aenderung gilt erst als fertig, wenn diese Abnahme gruen ist -
+# nicht, wenn die geaenderte Stelle stimmt.
+
+if python3 tools/notebooktexte_pruefen.py >/tmp/abnahme-nbtext.log 2>&1; then
+  ergebnis 0 "Jede Zahl im Notebooktext steht auch in einer Ausgabe"
+else
+  ergebnis 1 "Notebooktexte nennen Zahlen, die nirgends ausgegeben werden"
+  sed -n '1,20p' /tmp/abnahme-nbtext.log | sed 's/^/     /'
+fi
+
+if [ -f slides/velocity-crispdm.pptx ]; then
+  if python3 tools/folienzahlen_pruefen.py >/tmp/abnahme-folien.log 2>&1; then
+    ergebnis 0 "Jede Folienzahl steht im Notebook, das die Folie zitiert"
+  else
+    ergebnis 1 "Folien nennen Zahlen, die ihr Notebook nicht hergibt"
+    sed -n '1,20p' /tmp/abnahme-folien.log | sed 's/^/     /'
+  fi
+fi
+
 # ----------------------------------------------------------- Ergebnis
 printf '\n%s────────────────────────────────────────%s\n' "$blau" "$aus"
 if [ "$fehler" -eq 0 ]; then

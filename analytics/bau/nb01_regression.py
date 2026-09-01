@@ -384,7 +384,11 @@ Ein Rücksprung ist eine **neue Modellierungsrunde**. Sie braucht ihren eigenen 
 
 CODE("""
 d = d.sort_values("startzeit").reset_index(drop=True)
-g1, g2, g3 = d.startzeit.quantile([0.60, 0.75, 0.875])
+ANTEILE = [0.60, 0.75, 0.875]
+g1, g2, g3 = d.startzeit.quantile(ANTEILE)
+print(f"Aufgeteilt nach Zeit: {ANTEILE[0]:.0%} Training, "
+      f"{ANTEILE[1]-ANTEILE[0]:.1%} Validierung, "
+      f"{ANTEILE[2]-ANTEILE[1]:.1%} Test 1, {1-ANTEILE[2]:.1%} Test 2\\n")
 
 training    = d[d.startzeit <  g1]
 validierung = d[(d.startzeit >= g1) & (d.startzeit < g2)]

@@ -65,7 +65,34 @@ def MD(text):
 
 
 def CODE(quelltext):
-    return ("code", quelltext.strip("\n"))
+    """Eine Codezelle - und sofort gegengeprueft, ob sie ueberhaupt parst.
+
+    Warum hier und nicht erst beim Ausfuehren: Die Bauskripte schreiben
+    ihren Code in dreifach zitierte Strings. Ein `\\n` in einem print muss
+    darin DOPPELT maskiert sein, sonst wird daraus beim Parsen des
+    Bauskripts ein echter Zeilenumbruch - und der zerreisst den String in
+    der erzeugten Zelle. Die Fehlermeldung kommt dann aus dem Notebook,
+    zeigt auf eine Zeilennummer INNERHALB der Zelle und nennt das
+    Bauskript nicht. Beim Umbau von Notebook 2 ist mir das sechsmal
+    hintereinander passiert; jedes Mal kostete es einen Bauversuch.
+
+    Diese Pruefung nennt Zelle, Zeile und Ursache sofort.
+    """
+    quelltext = quelltext.strip("\n")
+    try:
+        compile(quelltext, "<CODE-Block>", "exec")
+    except SyntaxError as fehler:
+        zeilen = quelltext.split("\n")
+        stelle = zeilen[fehler.lineno - 1] if fehler.lineno and fehler.lineno <= len(zeilen) else ""
+        hinweis = ""
+        if "unterminated string" in str(fehler.msg or ""):
+            hinweis = ("\n    Verdacht: ein einfaches \\n in einem String. In den "
+                       "Bauskripten\n    muss es doppelt maskiert sein.")
+        raise SystemExit(
+            f"ABBRUCH: Ein CODE-Block laesst sich nicht parsen.\n"
+            f"    {fehler.msg} in Zeile {fehler.lineno} des Blocks\n"
+            f"    > {stelle.strip()}{hinweis}") from None
+    return ("code", quelltext)
 
 
 PHASEN = [

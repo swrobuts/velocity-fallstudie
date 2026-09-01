@@ -22,7 +22,7 @@ Phase.** Das ist der Grund, warum sich die Fälle nicht gleich behandeln lassen.
 | Fall | Verfahren | Zeigt | Der Satz, der bleibt |
 |---|---|---|---|
 | 1 | Regression | **alle sechs** | Ob ein Merkmal erlaubt ist, entscheidet der Prozess — nicht der Spaltenname |
-| 2 | Klassifikation | **Phase 6** | Ein Modell muss seinen Unterhalt verdienen — hier verdient es ihn |
+| 2 | Klassifikation | **Phase 6** | Ein Modell kann gegen eine Baseline gewinnen, weil die Baseline schlecht gebaut ist |
 | 3 | Clustering | **Phase 1** | Erfolgskriterien ohne Zielgröße — und eine bessere Frage als die, mit der wir anfingen |
 | 4 | Zeitreihe | **Phase 3** | Der Schnitt folgt der Zeit. Und die genaueste Prognose ist nicht die günstigste |
 | 5 | Assoziation | **Phase 5** | Keine Regel nimmt beide Hürden — und die Hürde bleibt trotzdem stehen |
@@ -30,9 +30,10 @@ Phase.** Das ist der Grund, warum sich die Fälle nicht gleich behandeln lassen.
 
 Die Fälle 1, 2 und 5 sind bewusst als **Gegenstücke** aufgebaut: In Fall 1 hält eine
 schlichte Nachschlagetabelle mit einer Quantilregression mit und wird ausgeliefert. In
-Fall 2 schlägt das Modell die Faustregel und geht in Betrieb. In Fall 5 nimmt am Ende
-keiner der Kandidaten die Hürde. Dreimal dieselbe Frage — *lohnt sich das Verfahren?* —
-und dreimal eine andere Antwort, weil dreimal vorher ein Maßstab gebaut wurde.
+Fall 2 holt der Random Forest gegen eine einzeilige Faustregel nichts heraus. In Fall 5
+nimmt am Ende keiner der Kandidaten die Hürde. Dreimal dieselbe Frage — *lohnt sich das
+Verfahren?* — und dreimal fällt sie gegen das aufwendigere Verfahren aus, weil dreimal
+vorher ein Maßstab gebaut wurde.
 
 ## Aufbau
 
@@ -170,8 +171,9 @@ und `folienzahlen_pruefen.py` hält das nach. Die wichtigsten:
   (51 %) · CARGO 2,48 € (19 %)
 - **Fall 1, Artefakt:** 136 Zeilen, 60 Verbindungen, nur CITY, Abdeckung 84,5 %,
   Preisspanne im Median 0,70 €, Reichweite 22,5 %
-- **Fall 2:** Faustregel „km seit letzter Meldung" 63,3 % und 12.250 € · Random Forest
-  71,7 % und 11.225 €
+- **Fall 2:** Faustregel „km seit letzter Reparatur" und Random Forest je 71,7 % und
+  11.045 € auf dem Test. Über fünf Validierungsquartale 137 gegen 129 Treffer zugunsten
+  der Regel
 - **Fall 3:** vier Stationstypen, 100 % Übereinstimmung mit der verdeckten Wahrheit
 - **Fall 4:** MAE 12,50 mit tatsächlichem Wetter, 17,13 mit simulierter Vorhersage
 - **Fall 5:** 32 Regeln, 9 mit Lift ≥ 1,3, **keine** mit Support ≥ 1 %. Die stärkste

@@ -21,8 +21,8 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 | `station.csv` | erfunden | 10 Stationen an realen Würzburger Orten, Anzahl/Lage/Kapazität nicht erhoben |
 | `fahrrad.csv` | erfunden | 240 Räder, Typen CITY/EBIKE/CARGO wie im echten Schema, mit Ausmusterungen |
 | `kunde.csv` | erfunden | 3.200 Kundinnen und Kunden mit Anmeldedatum, Geburtsjahr, Stadtteil, Tarif |
-| `ausleihe.csv` | erfunden | rund 60.000 Fahrten über drei Jahre, mit Entgelt nach echtem Preismodell. Knapp ein Viertel endet **frei im Geschäftsgebiet** statt an einer Station |
-| `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | 735 Meldungen; der Verschleiß wächst mit den Kilometern **seit der letzten Reparatur** und fällt danach zurück |
+| `ausleihe.csv` | erfunden | rund 60.000 Fahrten über drei Jahre, mit Entgelt nach echtem Preismodell. Rund ein Fünftel endet **frei im Geschäftsgebiet** statt an einer Station |
+| `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | 640 Meldungen mit zugehörigen Aufträgen; der Verschleiß wächst mit den Kilometern **seit der letzten erledigten Reparatur** und fällt danach zurück. Zwischen Meldung und Reparatur liegen im Mittel knapp drei Tage — in denen weitergefahren wird |
 | `stationsstoerung.csv` | erfunden | 26 Ausfälle an 107 Tagen |
 
 **Die erfundenen Daten sind für die Lehre bewusst verstärkt.** Die Muster, die die
@@ -139,13 +139,14 @@ RFM-Segmentierung interessant.
 
 - Kilometer je Rad ↔ Anzahl Meldungen **r = +0,80**
 - Entscheidend ist aber nicht die Lebenszeit-Nutzung, sondern die **Nutzung seit der
-  letzten Reparatur**: In einem 90-Tage-Fenster melden sich rund 45 % der Räder, und die
-  Faustregel „meiste Kilometer seit der letzten Meldung“ trifft davon **73 %** —
-  besser als ein Random Forest auf denselben Daten (68 %)
+  letzten erledigten Reparatur**: In einem 90-Tage-Fenster im Mai melden sich rund 46 %
+  der Räder, und die Faustregel „meiste Kilometer seit der letzten Reparatur“ trifft
+  davon **71,7 %** — genauso viel wie ein Random Forest auf denselben Daten. Über fünf
+  Validierungsquartale liegt die Regel sogar leicht vorn
 
 **Datenqualität (für die Data-Preparation-Phase)**
 
-- **41,7 % der Fahrten haben keine gemessene Distanz** — kein Fehler, sondern ein
+- **40,1 % der Fahrten haben keine gemessene Distanz** — kein Fehler, sondern ein
   Sensorthema, das zu behandeln ist
 - 2,7 % der Fahrten sind abgebrochen oder storniert
 - 52 Ausleihen dauern über acht Stunden — der Anker für die Anomalieerkennung

@@ -337,6 +337,9 @@ MD("### 5.1 Die Kostenrechnung — und warum die genaueste Prognose nicht die be
 CODE('''
 KOSTEN_UNTER = 4.00
 KOSTEN_UEBER = 0.80
+print(f"Fehlerkosten aus Phase 1: Unterdeckung {KOSTEN_UNTER:.2f} EUR je Rad, "
+      f"Überdeckung {KOSTEN_UEBER:.2f} EUR je Rad "
+      f"(Verhältnis {KOSTEN_UNTER/KOSTEN_UEBER:.0f} zu 1).")
 
 def kosten(y_wahr, y_prognose):
     fehl = np.asarray(y_wahr) - np.asarray(y_prognose)

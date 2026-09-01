@@ -58,9 +58,11 @@ Daten selbst. Was sich von Notebook zu Notebook ändert, ist die **Art der Frage
 Lehrbeispiele, in denen alles auf Anhieb funktioniert, erziehen zu falschen Erwartungen.
 Diese hier enthalten ausdrücklich:
 
-- **Notebook 1:** Das Modell besteht nur für einen von drei Radtypen — und der
-  Schattenbetrieb ist schlechter als die Testmenge
-- **Notebook 2:** Der Random Forest **verliert** gegen eine einzeilige Faustregel
+- **Notebook 1:** Ob ein Merkmal erlaubt ist, entscheidet der Prozess und nicht der
+  Spaltenname — ausgeliefert wird am Ende eine Tabelle, nicht das bessere Modell
+- **Notebook 2:** Der Random Forest holt gegen eine einzeilige Faustregel **nichts
+  heraus** — und sein scheinbarer Vorsprung in einer früheren Fassung war ein Fehler im
+  Merkmal, gegen das er antrat
 - **Notebook 3:** Die Umsatzgröße war falsch definiert, und 29 % der Kundschaft fallen
   aus der Segmentierung heraus
 - **Notebook 4:** Ein roher Mittelwertvergleich behauptet das Gegenteil des Richtigen

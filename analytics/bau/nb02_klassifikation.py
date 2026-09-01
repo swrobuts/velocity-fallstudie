@@ -11,6 +11,27 @@ kopf("Klassifikation: Welche Räder müssen als Nächstes in die Werkstatt?",
      "Welche 60 Räder soll die Werkstatt im nächsten Quartal vorsorglich prüfen?",
      NAME),
 
+MD("""
+> ### ⚠ Woher die Daten kommen — bitte zuerst lesen
+>
+> **VeloCity ist ein erfundener Fahrradverleih, und alle Daten dieses Notebooks sind
+> erzeugt.** Räder, Fahrten, Schadensmeldungen und Wartungsaufträge hat niemand
+> beobachtet; sie stammen aus einem Generator, der die Muster, um die es hier geht,
+> **absichtlich verstärkt** eingebaut hat.
+>
+> Das hat Folgen für jeden Satz, der weiter unten steht:
+>
+> | | |
+> |---|---|
+> | **Alle Euro-Beträge** | Szenariorechnungen unter gesetzten Annahmen, keine gemessenen Ersparnisse |
+> | **„geht in Betrieb"** | heißt hier: geht in den Lehrbetrieb. Für eine echte Werkstatt müsste alles mit realen Daten neu validiert werden |
+> | **Die Trefferquoten** | gelten für diesen Datensatz. Dass die Muster darin sauberer sind als in der Wirklichkeit, ist Absicht |
+>
+> **Was trotzdem echt ist:** das Vorgehen. Wie man eine Baseline baut, wie man zeitlich
+> aufteilt, woran man einen instabilen Modellvorteil erkennt und wann man ein Modell
+> nicht ausliefert — das überträgt sich, die Zahlen nicht.
+"""),
+
 # =====================================================================
 PHASE(1, "Die Werkstatt hat begrenzte Kapazität. Sie soll die Räder prüfen, bei denen "
          "sich das lohnt — nicht die, die zufällig oben auf der Liste stehen."),
@@ -199,21 +220,55 @@ kein Trick, sondern genau die Art, wie solche Modelle in der Praxis gebaut werde
 CODE('''
 abgeschlossen = fahrten[fahrten.status == "abgeschlossen"].copy()
 abgeschlossen["dauer_min"] = (abgeschlossen.endzeit - abgeschlossen.startzeit).dt.total_seconds() / 60
+vorher = len(abgeschlossen)
 
-# DIE SENSORLUECKE SCHLIESSEN
-# distanz_km fehlt bei 42 Prozent der Fahrten. Wer einfach aufsummiert, misst
-# nicht die Nutzung, sondern die Verfuegbarkeit des Sensors - und zwar je Rad
-# unterschiedlich stark. Wir schaetzen die Strecke stattdessen aus Dauer und
-# typischer Geschwindigkeit. Verschlissen wird auch, wenn niemand misst.
+# AUSREISSER ZUERST - sonst wandern sie in jedes Verschleissmerkmal.
+# Eine Fahrt ueber acht Stunden ist keine Fahrt, sondern eine vergessene
+# Rueckgabe. Bei 11 bis 18 km/h ergaebe die laengste davon knapp 300
+# geschaetzte Kilometer an EINEM Tag - und traegt ein Rad weit nach oben.
+LANGFAHRT_STUNDEN = 8
+lang = abgeschlossen.dauer_min > LANGFAHRT_STUNDEN * 60
+print(f"Fahrten über {LANGFAHRT_STUNDEN} Stunden: {lang.sum()} "
+      f"(längste {abgeschlossen.dauer_min.max():.0f} Minuten) - ausgeschlossen")
+abgeschlossen = abgeschlossen[~lang].copy()
+print(f"Abgeschlossene Fahrten: {vorher} -> {len(abgeschlossen)}")
+
+# DIE SENSORLUECKE SCHLIESSEN - aber erst NACH dem Messwert.
+# Wo eine Distanz gemessen wurde, wird sie verwendet. Nur die Luecke wird
+# geschaetzt. Alles zu schaetzen hiesse, sechs von zehn vorhandenen
+# Messungen wegzuwerfen, weil vier fehlen.
 TYPISCHE_GESCHWINDIGKEIT = {"CITY": 13.0, "EBIKE": 18.0, "CARGO": 11.0}   # km/h
 abgeschlossen = abgeschlossen.merge(raeder[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
-abgeschlossen["km_schaetz"] = (abgeschlossen.dauer_min / 60.0
-                               * abgeschlossen.typ_code.map(TYPISCHE_GESCHWINDIGKEIT))
+schaetzung = (abgeschlossen.dauer_min / 60.0
+              * abgeschlossen.typ_code.map(TYPISCHE_GESCHWINDIGKEIT))
+hat_messwert = abgeschlossen.distanz_km.notna()
+abgeschlossen["km_fahrt"] = abgeschlossen.distanz_km.where(hat_messwert, schaetzung)
+abgeschlossen["km_geschaetzt"] = ~hat_messwert
 
-gemessen = abgeschlossen.dropna(subset=["distanz_km"])
-abweichung = (gemessen.km_schaetz - gemessen.distanz_km).abs().mean()
+abweichung = (schaetzung[hat_messwert] - abgeschlossen.distanz_km[hat_messwert]).abs().mean()
+print(f"\\nGemessen:   {hat_messwert.sum():>6d} Fahrten ({hat_messwert.mean():.1%})")
+print(f"Geschätzt:  {(~hat_messwert).sum():>6d} Fahrten ({(~hat_messwert).mean():.1%})")
 print(f"Wo beides vorliegt, weicht die Schätzung im Mittel um {abweichung:.2f} km ab")
-print(f"(mittlere gemessene Strecke: {gemessen.distanz_km.mean():.2f} km)")
+print(f"(mittlere gemessene Strecke: {abgeschlossen.distanz_km[hat_messwert].mean():.2f} km)")
+
+# WIE LANGE STEHT EIN SCHADEN OFFEN? Diese Zahl entscheidet, ob der
+# Unterschied zwischen "seit der Meldung" und "seit der Reparatur"
+# fachlich zaehlt oder eine Spitzfindigkeit ist.
+werkstatt = schaeden.merge(auftraege[["schadensmeldung_id", "erledigt_am"]],
+                           on="schadensmeldung_id", how="left")
+liegezeit = (werkstatt.erledigt_am - werkstatt.gemeldet_am).dt.total_seconds() / 86400
+dazwischen = werkstatt.dropna(subset=["erledigt_am"]).merge(
+    abgeschlossen[["fahrrad_id", "startzeit"]], on="fahrrad_id", how="left")
+ist_dazwischen = ((dazwischen.startzeit > dazwischen.gemeldet_am)
+                  & (dazwischen.startzeit <= dazwischen.erledigt_am))
+print(f"Zwischen Meldung und erledigter Reparatur vergehen im Mittel "
+      f"{liegezeit.mean():.1f} Tage (höchstens {liegezeit.max():.1f}).")
+print(f"In dieser Zeit wird weitergefahren: "
+      f"{dazwischen[ist_dazwischen].schadensmeldung_id.nunique()} von "
+      f"{werkstatt.erledigt_am.notna().sum()} Meldungen betroffen, "
+      f"{int(ist_dazwischen.sum())} Fahrten.")
+print("Diese Kilometer gehen auf das ALTE Bauteil - also wird bei der")
+print("Reparatur zurückgesetzt, nicht bei der Meldung.")
 
 RUECKBLICK_TAGE = 180
 
@@ -227,33 +282,51 @@ def zeile_bauen(stichtag):
                             & (abgeschlossen.startzeit <= stichtag)]
     nutzung_fenster = fenster.groupby("fahrrad_id").agg(
         fahrten_180=("ausleihe_id", "size"),
-        km_180=("km_schaetz", "sum"),
+        km_180=("km_fahrt", "sum"),
         dauer_mittel=("dauer_min", "mean"),
     )
     bis_jetzt = abgeschlossen[abgeschlossen.startzeit <= stichtag]
     gesamt = bis_jetzt.groupby("fahrrad_id").agg(
         fahrten_gesamt=("ausleihe_id", "size"),
-        km_gesamt=("km_schaetz", "sum"),
+        km_gesamt=("km_fahrt", "sum"),
     )
     frueher = schaeden[schaeden.gemeldet_am <= stichtag]
     meldungen_bisher = frueher.groupby("fahrrad_id").size().rename("meldungen_bisher")
-    letzte = frueher.groupby("fahrrad_id").gemeldet_am.max().rename("letzte_meldung")
 
-    # KILOMETER SEIT DER LETZTEN MELDUNG - das fachlich entscheidende Merkmal.
-    # Ein Bremsbelag weiss nicht, wieviel das Rad in seinem Leben gefahren ist,
-    # sondern nur, wieviel seit seinem Einbau.
-    seit = bis_jetzt.merge(letzte, left_on="fahrrad_id", right_index=True, how="left")
-    nach_reparatur = seit.letzte_meldung.isna() | (seit.startzeit > seit.letzte_meldung)
-    km_seit = seit[nach_reparatur].groupby("fahrrad_id").km_schaetz.sum().rename("km_seit_meldung")
+    # KILOMETER SEIT DER LETZTEN ERLEDIGTEN REPARATUR.
+    #
+    # Nicht seit der MELDUNG: Zwischen Meldung und Reparatur vergehen im
+    # Mittel 2,8 Tage, und in dieser Zeit wird weitergefahren - bei 508 der
+    # 640 Meldungen, insgesamt 1.031 Fahrten. Diese Kilometer gehen auf das
+    # ALTE Bauteil. Wer bei der Meldung zurücksetzt, schreibt sie dem neuen
+    # gut und macht das wichtigste Merkmal des Notebooks systematisch zu
+    # klein - ausgerechnet bei den Rädern, die gerade auffällig waren.
+    erledigt = schaeden.merge(
+        auftraege[["schadensmeldung_id", "erledigt_am"]], on="schadensmeldung_id", how="left")
+    fertig = erledigt[erledigt.erledigt_am.notna() & (erledigt.erledigt_am <= stichtag)]
+    letzte_reparatur = fertig.groupby("fahrrad_id").erledigt_am.max().rename("letzte_reparatur")
+
+    seit = bis_jetzt.merge(letzte_reparatur, left_on="fahrrad_id", right_index=True, how="left")
+    nach_reparatur = seit.letzte_reparatur.isna() | (seit.startzeit > seit.letzte_reparatur)
+    km_seit = seit[nach_reparatur].groupby("fahrrad_id").km_fahrt.sum().rename("km_seit_reparatur")
+
+    # OFFENE SCHAEDEN GEHOEREN NICHT IN EINE RISIKOLISTE.
+    # Ein Rad mit gemeldetem, noch nicht erledigtem Schaden muss ohnehin in
+    # die Werkstatt. Es auf die Vorsorgeliste zu setzen verbraucht einen der
+    # 60 Plaetze fuer eine Entscheidung, die schon gefallen ist.
+    offen = set(erledigt[(erledigt.gemeldet_am <= stichtag)
+                         & (erledigt.erledigt_am.isna()
+                            | (erledigt.erledigt_am > stichtag))].fahrrad_id)
+    bestand = bestand[~bestand.fahrrad_id.isin(offen)]
 
     z = bestand.set_index("fahrrad_id").join(
-        [nutzung_fenster, gesamt, meldungen_bisher, letzte, km_seit])
+        [nutzung_fenster, gesamt, meldungen_bisher, letzte_reparatur, km_seit])
     for spalte in ["fahrten_180", "km_180", "fahrten_gesamt", "km_gesamt",
-                   "meldungen_bisher", "km_seit_meldung"]:
+                   "meldungen_bisher", "km_seit_reparatur"]:
         z[spalte] = z[spalte].fillna(0)
     z["dauer_mittel"] = z.dauer_mittel.fillna(z.dauer_mittel.median())
     z["tage_im_bestand"] = (stichtag - z.angeschafft_am).dt.days
-    z["tage_seit_meldung"] = (stichtag - z.letzte_meldung).dt.days.fillna(9999)
+    z["tage_seit_reparatur"] = (stichtag - z.letzte_reparatur).dt.days.fillna(9999)
     z["km_je_tag"] = z.km_gesamt / z.tage_im_bestand.clip(lower=1)
 
     # --- Label: NUR aus der Zeit NACH dem Stichtag
@@ -279,7 +352,7 @@ print(panel.groupby(panel.stichtag.dt.date).meldet_sich.agg(["size", "mean"]).ro
 
 MD("""
 > **Sehen Sie sich die Spalte `mean` genau an.** Der Anteil auffälliger Räder schwankt
-> zwischen rund **9 % im November und 44 % im Mai** — um fast das Fünffache. Das ist kein
+> zwischen rund **8 % im November und 46 % im Mai** — um mehr als das Fünffache. Das ist kein
 > Fehler in den Daten, sondern die Jahreszeit: Im Winter wird kaum gefahren, also
 > verschleißt kaum etwas, also meldet sich kaum ein Rad.
 >
@@ -299,8 +372,8 @@ MD("""
 
 CODE('''
 merkmale = ["fahrten_180", "km_180", "dauer_mittel", "fahrten_gesamt", "km_gesamt",
-            "meldungen_bisher", "tage_im_bestand", "tage_seit_meldung", "km_je_tag",
-            "km_seit_meldung"]
+            "meldungen_bisher", "tage_im_bestand", "tage_seit_reparatur", "km_je_tag",
+            "km_seit_reparatur"]
 typ_dummies = pd.get_dummies(panel["typ_code"], prefix="typ").astype(int)
 X_alle = pd.concat([panel[merkmale], typ_dummies], axis=1)
 y_alle = panel["meldet_sich"]
@@ -378,9 +451,9 @@ vergleich.append(liste_bewerten("Faustregel: ältestes Rad zuerst",
                                 test_zeilen.tage_im_bestand.values, y_test))
 vergleich.append(liste_bewerten("Faustregel: meiste Kilometer gesamt",
                                 test_zeilen.km_gesamt.values, y_test))
-##LUECKE Ergänzen Sie eine dritte Faustregel: die meisten Kilometer SEIT DER LETZTEN MELDUNG zuerst.
-vergleich.append(liste_bewerten("Faustregel: km seit letzter Meldung",
-                                test_zeilen.km_seit_meldung.values, y_test))
+##LUECKE Ergänzen Sie eine dritte Faustregel: die meisten Kilometer SEIT DER LETZTEN ERLEDIGTEN REPARATUR zuerst.
+vergleich.append(liste_bewerten("Faustregel: km seit letzter Reparatur",
+                                test_zeilen.km_seit_reparatur.values, y_test))
 ##ENDE
 # Trefferquote als Prozent: Als Dezimalzahl muss sie jeder Leser - und
 # jede Folie, die auf diese Tabelle zeigt - selbst umrechnen.
@@ -456,7 +529,7 @@ print(wichtigkeit.round(3).to_string())
 MD("""
 > **Vorsicht bei der Deutung.** „Bedeutung des Merkmals“ heißt hier: wie oft und wie
 > wirksam der Wald an diesem Merkmal aufgeteilt hat. Das ist **keine Ursache-Wirkung**.
-> Dass `tage_seit_meldung` weit oben steht, heißt nicht, dass langes Schweigen einen
+> Dass `tage_seit_reparatur` weit oben steht, heißt nicht, dass langes Schweigen einen
 > Defekt verursacht — es heißt, dass dieses Merkmal die Räder gut trennt.
 """),
 
@@ -483,9 +556,12 @@ MD("### 5.1 Die Confusion-Matrix — welche Art Fehler macht das Modell?"),
 
 CODE('''
 p_wald = wald.predict_proba(X_test)[:, 1]
-p_regel = test_zeilen.km_seit_meldung.values     # die Faustregel als Rangfolge
+p_regel = test_zeilen.km_seit_reparatur.values     # die Faustregel als Rangfolge
 
-# Ausgeliefert wird, was gewinnt - das entscheidet Abschnitt 5.4.
+# Hier steht noch KEINE Entscheidung - die faellt in 5.6. Diese Grafik
+# zeigt deshalb BEIDE Kandidaten nebeneinander, damit niemand eine
+# Confusion-Matrix fuer das eine Verfahren mit dem Urteil ueber das
+# andere verwechselt. Genau das war in einer frueheren Fassung passiert.
 reihenfolge = np.argsort(-p_regel)
 auf_liste = np.zeros(len(y_test), dtype=bool)
 auf_liste[reihenfolge[:KAPAZITAET]] = True
@@ -494,7 +570,7 @@ cm = confusion_matrix(y_test, auf_liste.astype(int))
 fig, achsen = plt.subplots(1, 2, figsize=(12.5, 4.5))
 ConfusionMatrixDisplay(cm, display_labels=["unauffällig", "meldet sich"]).plot(
     cmap="Blues", ax=achsen[0], colorbar=False)
-achsen[0].set_title(f"Quartalsliste mit {KAPAZITAET} Rädern (Faustregel)")
+achsen[0].set_title(f"Quartalsliste mit {KAPAZITAET} Rädern — Faustregel")
 achsen[0].set_xlabel("vom Modell auf die Liste gesetzt"); achsen[0].set_ylabel("tatsächlich")
 
 # Wie gut ist die Rangfolge? Trefferquote in Abhaengigkeit der Listenlaenge.
@@ -507,7 +583,7 @@ quoten_wald = []
 for k_ in laengen:
     g = np.zeros(len(y_test), dtype=bool); g[np.argsort(-p_wald)[:k_]] = True
     quoten_wald.append((np.asarray(y_test)[g] == 1).mean())
-achsen[1].plot(list(laengen), quoten, color="#e00034", lw=2, label="Faustregel (km seit Meldung)")
+achsen[1].plot(list(laengen), quoten, color="#e00034", lw=2, label="Faustregel (km seit Reparatur)")
 achsen[1].plot(list(laengen), quoten_wald, color="#3d4b6b", lw=2, ls="--", label="Random Forest")
 achsen[1].axhline(float(y_test.mean()), color="#8c95a8", ls="--",
                   label=f"Zufall ({y_test.mean():.0%})")
@@ -517,114 +593,288 @@ achsen[1].set_title("Je kürzer die Liste, desto treffsicherer muss sie sein")
 achsen[1].legend(); achsen[1].grid(alpha=.3); achsen[1].set_ylim(0, 1)
 plt.tight_layout(); plt.show()
 
+print("Klassifikationsbericht der FAUSTREGEL (das Modell folgt in 5.5):")
 print(classification_report(y_test, auf_liste.astype(int),
                             target_names=["unauffällig", "meldet sich"], digits=3))
 '''),
 
 MD("""
-### 5.2 Das Modell hat nichts hinzugefügt
+### 5.2 Warum die Faustregel plötzlich mithält
 
-Lesen Sie die Tabelle von oben nach unten. Die Faustregel des Werkstattmeisters —
-sortiere nach Kilometern seit der letzten Meldung — ist mit Abstand die beste der drei
-Regeln und lässt die beiden anderen weit hinter sich. Sie ist eine Zeile Code.
+Die Tabelle zeigt einen Gleichstand: **Faustregel und Random Forest treffen gleich oft
+und kosten gleich viel.** Das war in einer früheren Fassung dieses Notebooks anders —
+dort lag der Wald vorn. Der Unterschied liegt nicht am Modell, sondern an einem Merkmal.
 
-**Der Random Forest schlägt sie trotzdem**, und zwar messbar: mehr Treffer und geringere
-Kosten je Quartal. Der Abstand ist nicht groß, aber er ist da.
+In der ersten Fassung setzte `km_seit_reparatur` bei der **Meldung** zurück statt bei der
+**erledigten Reparatur**. Wie groß dieser Unterschied ist, steht in Phase 3 gerechnet:
+Zwischen Meldung und Reparatur wird bei einem Großteil der Fälle weitergefahren. Diese
+Kilometer wurden dem frisch reparierten Bauteil gutgeschrieben — ausgerechnet bei den
+Rädern, die gerade auffällig geworden waren.
 
-> **Erst die Regel macht das Modell bewertbar.** Ohne sie stünde in diesem Notebook eine
-> Trefferquote und niemand könnte sagen, ob sie gut ist. Mit ihr steht dort ein Satz, den
-> die Werkstatt versteht: *So viel bringt das Modell gegenüber dem, was wir heute schon
-> tun — und so viel spart es im Quartal.*
+Der Wald hatte gelernt, diesen Fehler auszugleichen. Die Faustregel konnte das nicht.
 
-Sehen Sie sich zur Deutung die Bedeutungsgrafik oben an: `km_seit_meldung` steht ganz
-vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — und dann noch etwas
-darüber hinaus gelernt. Das ist der Normalfall eines gelungenen Modells: Es bestätigt das
-Fachwissen und geht ein Stück weiter.
+> **Der scheinbare Vorsprung des Modells war der Defekt des Merkmals, gegen das es
+> antrat.** Mit dem richtigen Merkmal steigt die Regel von 63,3 auf 71,7 Prozent — und
+> der ganze Abstand ist verschwunden.
 
-**Das ist keine Selbstverständlichkeit.** In Notebook 1 hält eine schlichte
-Nachschlagetabelle mit einer Quantilregression mit; dort wäre die Entscheidung anders
-ausgefallen. Ob sich der Aufwand lohnt, entscheidet nicht das Verfahren, sondern die
-Messung gegen den Maßstab — und den muss man vorher gebaut haben.
+Das ist die unbequemste Lehre dieses Notebooks: **Ein Modell kann gegen eine Baseline
+gewinnen, weil die Baseline schlecht gebaut ist.** Wer den Vergleich ernst meint, muss der
+Regel dieselbe Sorgfalt widmen wie dem Modell. Sonst kauft man ein Modell, das nichts
+weiter tut, als einen Fehler in der Datenaufbereitung zu reparieren.
 
-> **Und noch etwas ist an der Tabelle bemerkenswert:** Die beiden ersten Faustregeln —
-> ältestes Rad und meiste Kilometer — treffen mit je 51,7 % **exakt gleich gut**. Wer
-> zwischen ihnen wählt, wählt zwischen zwei gleich mittelmäßigen Antworten. Der Gewinn
-> steckt nicht darin, eine bessere Kennzahl zu suchen, sondern die richtige.
+Sehen Sie sich zur Deutung die Bedeutungsgrafik oben an: `km_seit_reparatur` steht ganz
+vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — mehr aber auch nicht.
 
+> **Und noch etwas ist an der Tabelle bemerkenswert:** Die beiden schwächeren Faustregeln
+> — ältestes Rad und meiste Kilometer — liegen mit 45,0 und 51,7 Prozent nah beieinander.
+> Wer zwischen ihnen wählt, wählt zwischen zwei mittelmäßigen Antworten. Der Gewinn steckt
+> nicht darin, eine bessere Kennzahl zu suchen, sondern die richtige Frage zu stellen:
+> nicht *wie alt* ist das Rad, sondern *wie weit seit der Reparatur*.
 
-### 5.3 Wie gut ist die Liste, die die Werkstatt bekommt?
+### 5.3 Ein Quartal ist keine Aussage
 
+Der Gleichstand oben steht auf **einem** Stichtag. Die Grundrate schwankt aber zwischen
+7,6 Prozent im November und 45,5 Prozent im Mai — um das Sechsfache. Ein Verfahren, das
+im Mai vorn liegt, kann im November hinten liegen, ohne dass sich an ihm etwas geändert
+hat.
 
+Deshalb wird hier nicht auf dem Testquartal entschieden, sondern auf allen Quartalen
+davor. Für jedes wird neu trainiert, mit allem, was zu diesem Zeitpunkt bekannt war.
+"""),
 
-Das rechte Bild beantwortet die Frage, die die Werkstattleitung wirklich stellt.
+CODE('''
+def rollierend(bis_stichtag):
+    """Trainiert auf allem VOR dem Stichtag und bewertet auf ihm."""
+    tr = panel[panel.stichtag < bis_stichtag]
+    te = panel[panel.stichtag == bis_stichtag]
+    Xtr = X_alle.loc[tr.index]; Xte = X_alle.loc[te.index]
+    m = RandomForestClassifier(n_estimators=300, max_depth=8, min_samples_leaf=10,
+                               class_weight=gewichte, random_state=42, n_jobs=-1)
+    m.fit(Xtr, tr.meldet_sich)
+    return (m.predict_proba(Xte)[:, 1], te.km_seit_reparatur.values,
+            te.meldet_sich.values)
 
-Die Kurve fällt nach rechts ab, und das ist genau richtig: Die ersten Räder auf der Liste
-sind die sichersten Fälle. Je länger man die Liste macht, desto mehr Wackelkandidaten
-kommen dazu. Bei der Kapazität von 60 lesen Sie ab, welchen Anteil Treffer die Liste
-enthält — und der Abstand zur grauen Zufallslinie ist der Wert des Modells.
+# Die VALIDIERUNG: alle Stichtage ausser dem ersten (zu wenig Trainingsdaten)
+# und dem letzten (der bleibt unangetastet fuer den Test).
+validierung = stichtage[2:-1]
+zeilen = []
+for tag in validierung:
+    pw, pr, yy = rollierend(tag)
+    ew = liste_bewerten("Wald", pw, yy); er = liste_bewerten("Regel", pr, yy)
+    zeilen.append({"Stichtag": tag.date(), "Räder": len(yy),
+                   "Grundrate": yy.mean(),
+                   "Wald": ew["Treffer"], "Regel": er["Treffer"],
+                   "Vorteil Wald (EUR)": er["Kosten (EUR)"] - ew["Kosten (EUR)"]})
 
-### 5.4 Bewertung gegen die Erfolgskriterien aus Phase 1
+roll = pd.DataFrame(zeilen)
+roll["Grundrate"] = roll.Grundrate.map(lambda x: f"{x:.1%}")
+print("ROLLIERENDE VALIDIERUNG - je Stichtag neu trainiert\\n")
+print(roll.to_string(index=False))
+print(f"\\nSumme über {len(roll)} Quartale:  Wald {roll.Wald.sum()} Treffer, "
+      f"Regel {roll.Regel.sum()} Treffer")
+vorteil = roll["Vorteil Wald (EUR)"].sum()
+print(f"Vorteil des Modells: {vorteil:,.0f} EUR insgesamt, "
+      f"{vorteil/len(roll):,.0f} EUR je Quartal".replace(",", "."))
+besser = int((roll.Wald > roll.Regel).sum()); gleich = int((roll.Wald == roll.Regel).sum())
+print(f"Wald besser in {besser}, gleichauf in {gleich}, "
+      f"schlechter in {len(roll)-besser-gleich} Quartalen")
+'''),
+
+MD("""
+Damit ist die Entscheidung gefallen, und zwar gegen das Modell. Über die
+Validierungsquartale bringt der Wald **keinen Vorteil** — er liegt sogar leicht hinten,
+und das vor jedem Betriebsaufwand.
+
+> **Ein Modell muss seinen Unterhalt verdienen.** Hier verdient es ihn nicht.
+
+### 5.4 Wie sicher ist eine Trefferquote überhaupt?
+
+43 von 60 sind 71,7 Prozent. Diese Zahl klingt genauer, als sie ist: Sie beruht auf 60
+Beobachtungen. Das Wilson-Intervall sagt, welche wahren Trefferquoten mit diesem Ergebnis
+verträglich sind.
+"""),
+
+CODE('''
+def wilson(treffer, n, z=1.96):
+    """95-Prozent-Intervall fuer einen Anteil - auch bei kleinem n brauchbar."""
+    if n == 0:
+        return (float("nan"), float("nan"))
+    p = treffer / n
+    nenner = 1 + z**2 / n
+    mitte = (p + z**2 / (2*n)) / nenner
+    rand = z * np.sqrt(p*(1-p)/n + z**2 / (4*n*n)) / nenner
+    return mitte - rand, mitte + rand
+
+print(f"{'Verfahren':32s}{'Treffer':>9s}{'Quote':>9s}{'95-%-Intervall':>20s}")
+print("-" * 70)
+for name, score in [("Faustregel: km seit Reparatur", p_regel),
+                    ("Modell: Random Forest", p_wald)]:
+    e = liste_bewerten(name, score, y_test)
+    u, o = wilson(e["Treffer"], KAPAZITAET)
+    print(f"{name:32s}{e['Treffer']:>9d}{e['Trefferquote']:>8.1%}"
+          f"{u:>12.1%} bis {o:.1%}")
+
+print(f"\\nDie Hürde von 70 % liegt INNERHALB beider Intervalle.")
+print("Das Ergebnis ist mit einer wahren Quote von 60 % ebenso verträglich wie mit 80 %.")
+print("Ein Treffer weniger - 42 von 60 - wäre exakt 70,0 % gewesen.")
+'''),
+
+MD("""
+> **Die 70-Prozent-Hürde ist damit nicht belegt, sondern nur nicht widerlegt.** Bei 60
+> Beobachtungen kann man den Unterschied zwischen einem guten und einem mittelmäßigen
+> Verfahren nicht auflösen. Wer auf dieser Grundlage ein Modell einführt, entscheidet
+> nach Rauschen.
+>
+> Für eine belastbare Freigabe bräuchte es mehrere unabhängige Quartale — genau das, was
+> Abschnitt 5.3 macht.
+
+### 5.5 Zwei Zahlen, die man nicht verwechseln darf
+"""),
+
+CODE('''
+positive = int(y_test.sum())
+for name, score in [("Faustregel: km seit Reparatur", p_regel),
+                    ("Modell: Random Forest", p_wald)]:
+    e = liste_bewerten(name, score, y_test)
+    print(f"{name}")
+    print(f"   Treffsicherheit  {e['Treffer']:>3d} von {KAPAZITAET} ausgewählten Rädern "
+          f"melden sich    = {e['Treffer']/KAPAZITAET:.1%}")
+    print(f"   Abdeckung        {e['Treffer']:>3d} von {positive} auffälligen Rädern "
+          f"werden erreicht = {e['Treffer']/positive:.1%}")
+    print(f"   -> {positive - e['Treffer']} Ausfälle bleiben unentdeckt\\n")
+'''),
+
+MD("""
+**Die erste Zahl beschreibt die Liste, die zweite das Problem.** Beide sind richtig, und
+sie sagen Gegensätzliches: Die Liste ist gut — von den 60 geprüften Rädern melden sich
+sieben von zehn. Das Problem ist damit nicht gelöst — von den auffälligen Rädern erreicht
+die Liste nur gut vier von zehn.
+
+Der Grund ist die Kapazität, nicht das Verfahren: 60 Plätze bei über hundert auffälligen
+Rädern. **Kein Ranking der Welt kann mehr abdecken, als die Liste lang ist.** Wer die
+Abdeckung erhöhen will, muss über Kapazität reden, nicht über Modelle.
+
+### 5.6 Bewertung gegen die Erfolgskriterien aus Phase 1
+
+Jetzt kommen die beiden Kriterien aus Phase 1 zum Einsatz — und ein drittes, das die
+rollierende Validierung erzwingt: **Ein Modell wird nur ausgeliefert, wenn es die
+Faustregel über mehrere Quartale schlägt.** Ein einzelnes gutes Quartal genügt nicht.
 """),
 
 CODE('''
 kosten_heute = float(tabelle.loc[tabelle.Vorgehen.str.contains("ältestes"), "Kosten (EUR)"].iloc[0])
+vorteil_roll = roll["Vorteil Wald (EUR)"].sum()
 
-print("Erfolgskriterien aus Phase 1, für beide Kandidaten:")
-print()
-print(f"{'':32s}{'Treffer':>9s}{'Kosten':>12s}{'K1 >=70%':>12s}{'K2 günstiger':>15s}")
-print("-" * 80)
+print(f"{'':32s}{'Treffer':>9s}{'Kosten':>11s}{'K1 >=70%':>11s}"
+      f"{'K2 günstiger':>14s}{'K3 stabil':>12s}")
+print("-" * 90)
 
 urteile = {}
-for name, rangfolge in [("Faustregel: km seit Meldung", p_regel),
-                        ("Modell: Random Forest", p_wald)]:
-    e = liste_bewerten(name, rangfolge, y_test)
+for name, score in [("Faustregel: km seit Reparatur", p_regel),
+                    ("Modell: Random Forest", p_wald)]:
+    e = liste_bewerten(name, score, y_test)
     k1 = e["Trefferquote"] >= 0.70
     k2 = e["Kosten (EUR)"] < kosten_heute
-    urteile[name] = (e, k1, k2)
+    # K3 gilt fuer die Regel per Definition - sie IST der Massstab.
+    k3 = True if "Faustregel" in name else vorteil_roll > 0
+    urteile[name] = (e, k1, k2, k3)
     betrag = f"{e['Kosten (EUR)']:,.0f}".replace(",", ".")
-    print(f"{name:32s}{e['Trefferquote']:>8.1%}{betrag:>10s} €"
-          f"{'ERFÜLLT' if k1 else 'GERISSEN':>12s}{'ERFÜLLT' if k2 else 'GERISSEN':>15s}")
+    print(f"{name:32s}{e['Trefferquote']:>8.1%}{betrag:>9s} €"
+          f"{'ERFÜLLT' if k1 else 'GERISSEN':>11s}{'ERFÜLLT' if k2 else 'GERISSEN':>14s}"
+          f"{'ERFÜLLT' if k3 else 'GERISSEN':>12s}")
 
-beide = [n for n in urteile if urteile[n][1] and urteile[n][2]]
-sieger = min(urteile, key=lambda n: urteile[n][0]["Kosten (EUR)"])
-trefferquote = urteile[sieger][0]["Trefferquote"]
+alle_drei = [n for n in urteile if all(urteile[n][1:])]
+
+# ─── EINE QUELLE FÜR DAS AUSGELIEFERTE VERFAHREN ────────────────────
+# Ab hier arbeitet ALLES mit diesen beiden Variablen: Confusion-Matrix,
+# Kapazitätskurve, Liste, CSV und Modellpaket. In einer früheren Fassung
+# stand im Text "Random Forest geht in Betrieb", während der Export nach
+# der Faustregel sortierte - drei Zellen lang unbemerkt.
+ausgeliefertes_verfahren = min(alle_drei, key=lambda n: urteile[n][0]["Kosten (EUR)"])
+ausgelieferter_score = {"Faustregel: km seit Reparatur": p_regel,
+                        "Modell: Random Forest": p_wald}[ausgeliefertes_verfahren]
+
 print()
-print(f"  Beide Kriterien erfüllt von: {', '.join(beide) if beide else 'keinem'}")
-print(f"  Günstigstes Vorgehen:        {sieger}")
-print()
-print(f"  Entscheidung: {sieger.upper()} GEHT IN BETRIEB")
+print(f"  Alle drei Kriterien erfüllt: {', '.join(alle_drei) if alle_drei else 'keines'}")
+print(f"  AUSGELIEFERT WIRD:           {ausgeliefertes_verfahren.upper()}")
 '''),
 
 MD("""
-### 5.5 Und was, wenn die Werkstatt mehr Kapazität bekäme?
+**Der Wald reißt das dritte Kriterium.** Über die Validierungsquartale bringt er keinen
+Vorteil — und ein Verfahren, das nur in einem günstigen Quartal vorn liegt, ist kein
+Verfahren, sondern ein Zufall.
 
-Die Kapazität von 60 war eine Vorgabe aus Phase 1. Sie ist aber verhandelbar — und die
-Analyse kann sagen, ob sich eine Verhandlung lohnt.
+Ausgeliefert wird deshalb die Faustregel. Sie kostet eine Zeile SQL, jede Werkstattkraft
+versteht sie, und sie trifft genauso gut.
+
+> **Das Modell war trotzdem nicht umsonst.** Ohne es wüssten wir nicht, dass die Regel
+> ausgereizt ist. Ein Wald mit 300 Bäumen auf denselben Merkmalen findet nichts, was über
+> „Kilometer seit der Reparatur" hinausgeht — das ist eine Aussage über die Daten, und
+> zwar eine wertvolle: **Mehr Modell hilft hier nicht, mehr Merkmale vielleicht schon.**
+
+### 5.7 Und was, wenn die Werkstatt mehr Kapazität bekäme?
+
+Die Kapazität von 60 war eine Vorgabe aus Phase 1. Naheliegend ist die Frage, ob sich
+eine größere Werkstatt lohnt. Die Antwort der Kostenformel ist unbrauchbar — und gerade
+deshalb lehrreich.
 """),
 
 CODE('''
-zeilen = []
-for k in [20, 40, 60, 80, 100, 120]:
-    e = liste_bewerten(f"Kapazität {k}", p_regel, y_test, kapazitaet=k)
-    e["Kapazität"] = k
-    zeilen.append(e)
-kapazitaeten = pd.DataFrame(zeilen).set_index("Kapazität")
-print(kapazitaeten[["Treffer", "Trefferquote", "unnötig geprüft",
-                    "Ausfälle verpasst", "Kosten (EUR)"]].to_string())
+# Nicht nur 20 bis 120, sondern JEDE Listenlaenge. Wer nur einen Ausschnitt
+# rechnet, findet das Minimum am Rand des Ausschnitts und haelt es fuer ein
+# Optimum. Genau das ist in einer frueheren Fassung passiert: Dort stand
+# "die guenstigste Kapazitaet ist 120" - es war schlicht der groesste
+# gepruefte Wert.
+alle_k = range(1, len(y_test) + 1)
+kosten_k = [liste_bewerten("x", ausgelieferter_score, y_test, kapazitaet=k)["Kosten (EUR)"]
+            for k in alle_k]
+guenstigste = int(np.argmin(kosten_k)) + 1
 
-plt.figure(figsize=(8, 4))
-plt.plot(kapazitaeten.index, kapazitaeten["Kosten (EUR)"], marker="o", color="#e00034")
-plt.axvline(KAPAZITAET, color="#3d4b6b", ls=":", label="heutige Kapazität")
-guenstigste = kapazitaeten["Kosten (EUR)"].idxmin()
-plt.axvline(guenstigste, color="#8AB833", ls="--", label=f"günstigste Kapazität: {guenstigste}")
-plt.xlabel("Prüfungen je Quartal"); plt.ylabel("erwartete Kosten (EUR)")
-plt.title("Wieviel Werkstattkapazität lohnt sich?"); plt.legend(); plt.grid(alpha=.3)
+plt.figure(figsize=(8.5, 4))
+plt.plot(list(alle_k), kosten_k, color="#e00034", lw=2)
+plt.axvline(KAPAZITAET, color="#3d4b6b", ls=":", label=f"heutige Kapazität ({KAPAZITAET})")
+plt.axvline(guenstigste, color="#8AB833", ls="--",
+            label=f"rechnerisches Minimum: {guenstigste}")
+plt.xlabel("Prüfungen je Quartal"); plt.ylabel("Kosten nach der Formel aus Phase 1 (EUR)")
+plt.title("Die Kostenformel hat ihr Minimum am rechten Rand"); plt.legend(); plt.grid(alpha=.3)
 plt.tight_layout(); plt.show()
 
-mehr = kapazitaeten.loc[KAPAZITAET, "Kosten (EUR)"] - kapazitaeten["Kosten (EUR)"].min()
-print(f"Mit {guenstigste} statt {KAPAZITAET} Prüfungen liessen sich je Quartal "
-      f"rund {mehr:,.0f} EUR sparen.".replace(",", "."))
+for k in [20, 60, 120, len(y_test)]:
+    e = liste_bewerten(f"k={k}", ausgelieferter_score, y_test, kapazitaet=k)
+    print(f"  Kapazität {k:>4d}: {e['Treffer']:>3d} Treffer, "
+          f"{e['Kosten (EUR)']:>8,.0f} EUR".replace(",", "."))
+print(f"\\nRechnerisches Minimum bei {guenstigste} von {len(y_test)} Rädern.")
 '''),
+
+MD("""
+**Die Formel empfiehlt, praktisch die ganze Flotte zu prüfen.** Das ist offensichtlich
+Unsinn — und der Fehler steckt nicht in der Rechnung, sondern in der Formel:
+
+```text
+Kosten = falsch_positive × 25 € + falsch_negative × 180 €
+```
+
+Bei fester Listenlänge `k` und `P` positiven Rädern gilt `FP = k − TP` und `FN = P − TP`,
+also:
+
+```text
+Kosten = 25k + 180P − 205 × TP
+```
+
+Jeder zusätzliche Listenplatz kostet 25 € und bringt im Erwartungswert mehr als 25 € an
+vermiedenen Ausfällen, solange die Trefferquote über 12 Prozent liegt. Bei einer
+Grundrate von 45 Prozent ist das bis zum letzten Rad der Fall.
+
+> **Was in der Formel fehlt:** die Prüfkosten der Treffer. Ein gefundener Schaden
+> verursacht Arbeitszeit und Ersatzteile; in dieser Rechnung ist er kostenlos. Ebenso
+> fehlt, mit welcher Wahrscheinlichkeit eine Prüfung den Schaden überhaupt findet und
+> verhindert.
+
+**Deshalb bleibt die Kapazität hier eine harte Vorgabe und wird nicht optimiert.** Die
+Formel taugt, um zwei Verfahren bei *gleicher* Listenlänge zu vergleichen — dafür ist sie
+in diesem Notebook auch benutzt worden. Sie taugt nicht, um die Listenlänge selbst zu
+wählen. Wer sie dafür verwendet, bekommt eine Antwort, die niemand umsetzen würde.
+"""),
 
 MD("""
 **Das ist der Punkt, an dem aus einer Analyse eine Entscheidungsvorlage wird.** Die Frage
@@ -634,87 +884,119 @@ abgeleitet ist, die in Phase 1 festgelegt wurden.
 """),
 
 # =====================================================================
-PHASE(6, "Aus dem Modell wird eine Liste, die montags in der Werkstatt liegt."),
+PHASE(6, "Aus der Auswertung wird eine Liste, die zu Quartalsbeginn in der Werkstatt liegt."),
 
 CODE('''
 import joblib, datetime
 
 liste = test_zeilen.copy()
-liste["rangwert"] = p_regel                       # das ausgelieferte Verfahren
-liste["risiko"] = p_wald                          # zum Vergleich, nicht zur Sortierung
+liste["rangwert"] = ausgelieferter_score          # KEIN zweiter Wert, kein Umweg
+liste["modellscore"] = p_wald                     # nur zum Vergleich, nicht zur Sortierung
 liste = liste.sort_values("rangwert", ascending=False).head(KAPAZITAET)
 liste["rang"] = range(1, len(liste) + 1)
 
+# ─── SELBSTPRÜFUNG ──────────────────────────────────────────────────
+# Die exportierte Liste MUSS die Top 60 des Verfahrens sein, das oben
+# als ausgeliefert benannt wurde. In einer früheren Fassung stimmte das
+# nicht: Der Text erklärte den Wald zum Sieger, sortiert wurde nach der
+# Regel. Die beiden Listen überschnitten sich in 43 von 60 Rädern -
+# niemandem fiel es auf. Diese Zeile lässt das Notebook durchfallen.
+soll = set(test_zeilen.iloc[np.argsort(-np.asarray(ausgelieferter_score))[:KAPAZITAET]].fahrrad_id)
+assert set(liste.fahrrad_id) == soll, (
+    f"Die exportierte Liste passt nicht zu '{ausgeliefertes_verfahren}'")
+print(f"Selbstprüfung bestanden: Liste = Top {KAPAZITAET} von '{ausgeliefertes_verfahren}'\\n")
+
 ausgabe = liste[["rang", "rahmennummer", "typ_code", "rangwert", "km_180",
-                 "meldungen_bisher", "tage_seit_meldung", "risiko"]].copy()
+                 "meldungen_bisher", "tage_seit_reparatur", "modellscore"]].copy()
 ausgabe["rangwert"] = ausgabe.rangwert.round(0)
 ausgabe["km_180"] = ausgabe.km_180.round(0)
-ausgabe["risiko"] = (ausgabe.risiko * 100).round(0).astype(int).astype(str) + " %"
+# "Modellscore", nicht "Risiko": Die Werte des Waldes sind mit starken
+# Klassengewichten trainiert und nicht kalibriert. Ihr Mittel liegt bei
+# 55 Prozent, die tatsächliche Grundrate bei 45. Als Rangfolge taugen
+# sie, als Wahrscheinlichkeit nicht.
+ausgabe["modellscore"] = ausgabe.modellscore.round(2)
 ausgabe = ausgabe.rename(columns={
     "rahmennummer": "Rahmennummer", "typ_code": "Typ",
     "rangwert": "km seit letzter Reparatur", "km_180": "km (180 Tage)",
-    "meldungen_bisher": "Meldungen bisher", "tage_seit_meldung": "Tage seit Meldung",
-    "risiko": "Modell (nur Vergleich)"})
+    "meldungen_bisher": "Meldungen bisher", "tage_seit_reparatur": "Tage seit Reparatur",
+    "modellscore": "Modellscore (nur Vergleich)"})
 
 print(f"WARTUNGSLISTE  Quartal ab {letzter.date()}   ({KAPAZITAET} Räder)\\n")
 print(ausgabe.head(15).to_string(index=False))
 print(f"\\n... und {len(ausgabe) - 15} weitere.")
 
 ausgabe.to_csv("wartungsliste.csv", index=False)
-# Ausgeliefert wird das MODELL - es hat beide Kriterien erfuellt und die
-# Faustregel geschlagen. Die Regel wandert trotzdem mit ins Paket: als
-# Rueckfallebene, wenn das Modell einmal nicht laedt, und als Massstab
-# fuer die Ueberwachung. Was ausgeliefert ist, steht ausdruecklich darin.
-joblib.dump({
-    "ausgeliefert": "Modell: Random Forest auf km_seit_meldung und Nutzungsmerkmalen",
+
+# Das Paket beschreibt, WAS ausgeliefert wird - abgeleitet, nicht getippt.
+# Das Modell wandert mit hinein, obwohl es nicht ausgeliefert wird: als
+# Beleg, dass es geprueft wurde, und als Ausgangspunkt der naechsten Runde.
+paket = {
+    "ausgeliefert": ausgeliefertes_verfahren,
+    "regel": "Räder nach Kilometern seit der letzten ERLEDIGTEN Reparatur, absteigend",
+    "regel_spalte": "km_seit_reparatur",
+    "trefferquote_test": round(float(urteile[ausgeliefertes_verfahren][0]["Trefferquote"]), 3),
+    "vertrauensintervall_test": [round(float(g), 3)
+                                 for g in wilson(urteile[ausgeliefertes_verfahren][0]["Treffer"],
+                                                 KAPAZITAET)],
+    "geprueft_aber_nicht_ausgeliefert": "Random Forest",
     "modell": wald,
     "merkmalsspalten": list(X_alle.columns),
-    "trefferquote_test": round(float(urteile["Modell: Random Forest"][0]["Trefferquote"]), 3),
-    "rueckfall_regel": "Räder nach Kilometern seit der letzten Meldung, absteigend",
-    "rueckfall_spalte": "km_seit_meldung",
-    "rueckfall_trefferquote": round(float(urteile["Faustregel: km seit Meldung"][0]["Trefferquote"]), 3),
+    "vorteil_modell_validierung_eur": float(vorteil_roll),
     "horizont_tage": HORIZONT_TAGE, "rueckblick_tage": RUECKBLICK_TAGE,
-    "kapazitaet": KAPAZITAET, "erstellt_am": datetime.date.today().isoformat(),
-}, "wartungsmodell.joblib")
+    "kapazitaet": KAPAZITAET,
+    "datenherkunft": "ERFUNDENE LEHRDATEN - keine Grundlage für Betriebsentscheidungen",
+    "erstellt_am": datetime.date.today().isoformat(),
+}
+joblib.dump(paket, "wartungsmodell.joblib")
 print()
+print(f"ausgeliefert: {paket['ausgeliefert']}")
 print("geschrieben: wartungsliste.csv, wartungsmodell.joblib")
 '''),
 
 MD("""
-### 6.1 Ausgeliefert wird das Modell — und die Regel bleibt als Rückfallebene
+### 6.1 Ausgeliefert wird die Regel — und das Modell bleibt im Paket
 
-Das Modell erfüllt beide Kriterien aus Phase 1 und schlägt die Faustregel. Es geht in
-Betrieb. Die Entscheidung ist damit gefallen — aber sie ist nicht kostenlos:
+Bei Gleichstand gewinnt die einfachere Lösung. Das ist keine Bescheidenheit, sondern eine
+Rechnung über die Lebensdauer:
 
-| | Regel | Modell |
+| | Faustregel | Random Forest |
 |---|---|---|
-| Trefferquote | die Tabelle oben nennt sie | höher — die Zahl steht dort |
-| Kosten je Quartal | höher | niedriger |
-| Erklärbar | „das Rad ist seit 288 km nicht in der Werkstatt gewesen“ | nur über Umwege |
+| Trefferquote auf dem Test | gleich | gleich |
+| über die Validierungsquartale | leicht vorn | leicht hinten |
+| erklärbar | „das Rad ist seit 288 km nicht in der Werkstatt gewesen" | nur über Umwege |
 | Wartungsaufwand | keiner | vierteljährlich nachtrainieren |
-| Bricht bei neuen Radtypen | nein | ja |
+| bricht bei neuen Radtypen | nein | ja |
 | Abhängigkeiten im Betrieb | keine | scikit-learn, joblib, Versionsstände |
 
-Die unteren vier Zeilen sind der Preis. Er ist hier gerechtfertigt, weil die oberen beiden
-zugunsten des Modells ausfallen — **und nur deshalb.**
+Die unteren vier Zeilen sind der Preis eines Modells. Er wäre zu zahlen, wenn die oberen
+beiden dafür sprächen. Sie tun es nicht.
 
-> **Ein Modell muss seinen Unterhalt verdienen.** Hier verdient es ihn. Fiele die
-> Trefferquote gleich aus, wäre die Regel die bessere Lösung, und der Projektbericht
-> müsste das so schreiben, statt das Modell auszuliefern, weil man es nun einmal gebaut
-> hat.
+> **Ein Modell muss seinen Unterhalt verdienen.** Hier verdient es ihn nicht — und der
+> Projektbericht muss das so schreiben, statt das Modell auszuliefern, weil man es nun
+> einmal gebaut hat.
 
-**Die Regel bleibt trotzdem im Paket** — aus zwei Gründen, die im Betrieb zählen: Sie ist
-die Rückfallebene, wenn das Modell einmal nicht lädt, und sie ist der Maßstab, an dem die
-Überwachung merkt, dass das Modell abdriftet. Ein Modell ohne Vergleichsgröße merkt sein
-eigenes Nachlassen nicht.
+**Das Modell bleibt trotzdem im Paket**, aus zwei Gründen: Es belegt, dass die Regel
+geprüft wurde und nicht aus Bequemlichkeit gewählt ist. Und es ist der Ausgangspunkt der
+nächsten Runde — wenn neue Merkmale dazukommen, wird der Vergleich wiederholt.
+
+> **Der eigentliche Ertrag des Modells steht nicht in der Trefferquote.** Er steht darin,
+> dass ein Wald mit 300 Bäumen auf diesen Merkmalen nichts findet, was über „Kilometer
+> seit der Reparatur" hinausgeht. Das ist eine belastbare Aussage über die Daten: **Mehr
+> Rechenleistung hilft hier nicht. Mehr Information vielleicht schon.**
 
 ### 6.2 Die Liste ist das eigentliche Produkt
 
 Nicht das Modell, nicht die Confusion-Matrix — **diese Tabelle**. Sie ist so gebaut, dass
-die Werkstatt sie ohne Nacharbeit übernehmen kann: Rahmennummer statt Datenbank-ID,
-Risiko in Prozent statt als Fließkommazahl, und daneben die Zahlen, die die Einschätzung
-begründen. Ein Meister, der Rad WUE-0087 für unbedenklich hält, sieht sofort, worauf sich
-das Modell stützt, und kann widersprechen.
+die Werkstatt sie ohne Nacharbeit übernehmen kann: Rahmennummer statt Datenbank-ID, und
+daneben die Zahlen, die die Reihenfolge begründen. Ein Meister, der ein Rad für
+unbedenklich hält, sieht sofort, worauf sich die Liste stützt, und kann widersprechen.
+
+> **Die letzte Spalte heißt „Modellscore" und nicht „Risiko".** Der Wald wurde mit
+> starken Klassengewichten trainiert; seine Ausgabewerte sind eine brauchbare
+> **Rangfolge**, aber keine Wahrscheinlichkeiten. Ihr Mittelwert liegt bei 55 Prozent,
+> die tatsächliche Grundrate bei 45. Wer sie als „Ausfallrisiko in Prozent" anzeigt,
+> behauptet eine Genauigkeit, die nicht da ist. Sie stehen in der Liste nur, damit man
+> sieht, wo die beiden Verfahren voneinander abweichen.
 
 In der VeloCity-Warenwirtschaft (`wawi.butscher.cloud`) gehört diese Liste in den Bereich
 **Instandhaltung**, als eigene Ansicht neben den gemeldeten Schäden.
@@ -743,9 +1025,26 @@ Ein Rad, das vorsorglich geprüft und instandgesetzt wurde, meldet sich anschlie
 gerade deshalb unauffällig war, weil das Modell es erkannt hatte. Das Modell lernt
 gegen sich selbst.
 
-**Gegenmittel:** Die durchgeführten Prüfungen mitprotokollieren und beim Nachtrainieren
-als Merkmal führen (`wurde_vorsorglich_geprueft`). Nur dann kann das Modell zwischen
-„war nie gefährdet“ und „wurde rechtzeitig gerettet“ unterscheiden.
+**Ein Merkmal `wurde_vorsorglich_geprueft` löst das nicht.** Es sagt, dass geprüft wurde
+— nicht, was ohne Prüfung passiert wäre. Genau das ist die Frage, und sie ist an keinem
+einzelnen Rad zu beantworten: Man sieht immer nur einen der beiden Ausgänge.
+
+Was tatsächlich hilft, ist ein **Vergleich zwischen Rädern**:
+
+1. **Alles protokollieren:** Auswahlgrund, Prüfdatum, Befund, durchgeführte Reparatur und
+   die späteren Meldungen. Ohne dieses Protokoll ist gar nichts auswertbar.
+2. **Erst im Schatten mitlaufen lassen:** Liste erzeugen, aber nicht danach handeln. So
+   bleibt die Grundrate unverändert und man sieht, ob die Liste trifft.
+3. **Dann eine Kontrollgruppe:** Ein fachlich vertretbarer Teil der Flotte wird weiter
+   nach dem Standardprozess gewartet. Nur der Unterschied zwischen beiden Gruppen misst,
+   was die Maßnahme bewirkt.
+
+Punkt 3 kostet Geld und ist trotzdem richtig: Ohne ihn lässt sich nie sagen, ob die
+gesunkene Ausfallquote von der Liste kommt oder vom milden Winter.
+
+> **Und eine Warnung für die Überwachung:** Wenn die Liste wirkt, sinkt die Trefferquote
+> — die verhinderten Schäden tauchen als „unauffällig" auf. Eine fallende Trefferquote
+> kann also Erfolg oder Versagen bedeuten. Ohne Kontrollgruppe ist sie nicht deutbar.
 """),
 
 # =====================================================================
@@ -757,28 +1056,46 @@ MD("""
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | Aus „vorausschauend warten“ wurde eine Kostenmatrix: 180 € je verpasstem Ausfall gegen 25 € je unnötiger Prüfung — Verhältnis rund 7 : 1. Zwei Erfolgskriterien, eines davon der Vergleich mit der heutigen Faustregel |
-| 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r ≈ 0,7), aber nicht deterministisch. 44 % der Räder melden sich je Quartal, die Werkstatt schafft 26 % |
-| 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung: Merkmale aus 180 Tagen davor, Label aus 90 Tagen danach, acht Stichtage, Testmenge ist der jüngste |
-| 4 Modeling | Zuerst zwei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | Die Faustregel des Werkstattmeisters ist ein starker Maßstab — der Random Forest schlägt sie messbar, in Treffern wie in Kosten. Erst der Maßstab macht diesen Beitrag benennbar |
-| 6 Deployment | **Ausgeliefert wird das Modell**, die Regel bleibt als Rückfallebene und als Maßstab für die Überwachung. Dazu Wartungsliste und die Rückkopplungsfalle |
+| 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r ≈ 0,7), aber nicht deterministisch. Der Anteil auffälliger Räder schwankt saisonal um mehr als das Fünffache |
+| 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung. Gemessene Distanzen bevorzugt, Langfahrten ausgeschlossen, Räder mit offenem Schaden aus der Prognosepopulation genommen. Rückgesetzt wird bei der **erledigten Reparatur**, nicht bei der Meldung |
+| 4 Modeling | Drei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
+| 5 Evaluation | Auf dem Testquartal Gleichstand. Über fünf Validierungsquartale liegt die Faustregel vorn. Das Wilson-Intervall zeigt, dass 60 Beobachtungen die beiden Verfahren gar nicht trennen können |
+| 6 Deployment | **Ausgeliefert wird die Faustregel.** Das Modell bleibt im Paket als Beleg der Prüfung und als Ausgangspunkt der nächsten Runde |
 
-**Was eine zweite Runde anders machen würde**
+**Drei Sätze, die aus diesem Notebook bleiben sollten**
 
-1. **Zurück zu Phase 1:** Nicht jede Meldung ist gleich schlimm. Ein Plattfuß kostet
-   anderes als ein Bremsdefekt. Die Kostenmatrix müsste nach `schwere` aufgeschlüsselt
-   werden — dann würde aus der Klassifikation eine Kostenminimierung mit drei Klassen.
-2. **Zurück zu Phase 2:** Uns fehlt, was ein Rad *erlebt* hat: Stürze, Vandalismus,
-   Standzeiten im Regen. Ein Rad an der Alten Mainbrücke wird anders beansprucht als
-   eines am Hubland — die Startstationen des Rades wären ein Merkmal, das wir nicht
-   verwendet haben.
-3. **Zurück zu Phase 3:** Der Rückblick von 180 Tagen war gesetzt, nicht geprüft.
-   Vielleicht sagen 60 Tage mehr über den nächsten Defekt aus als ein halbes Jahr.
-4. **Die Jahreszeit ernst nehmen.** Der Anteil auffälliger Räder schwankt zwischen 9 %
-   im November und 44 % im Mai. Eine feste Kapazität von 60 Prüfungen je Quartal ist
-   dafür das falsche Werkzeug — sinnvoller wäre eine Schwelle auf der Risikozahl
-   („alles über 60 % kommt in die Werkstatt“), die im Winter von selbst kürzere Listen
-   erzeugt. Das ändert die Auslieferung, nicht das Modell.
+> Ein Modell kann gegen eine Baseline gewinnen, weil die Baseline schlecht gebaut ist.
+> Wer den Vergleich ernst meint, gibt der Regel dieselbe Sorgfalt wie dem Modell.
+
+> Ein einzelnes gutes Quartal ist kein Ergebnis. Bei einer Grundrate, die zwischen 8 und
+> 46 Prozent schwankt, entscheidet die Jahreszeit mit — nicht nur das Verfahren.
+
+> Treffsicherheit und Abdeckung sind zwei Zahlen. Sieben von zehn geprüften Rädern
+> melden sich; vier von zehn auffälligen Rädern werden erreicht. Beide sind richtig.
+
+**Was offen bleibt — ausdrücklich**
+
+1. **Erfundene Daten.** Alle Euro-Beträge sind Szenariorechnungen, keine gemessenen
+   Ersparnisse. Vor einem echten Einsatz müsste alles mit realen Daten neu validiert
+   werden.
+2. **Das Ziel ist zu weit gefasst.** Vorhergesagt wird *irgendeine* Meldung. Von den 102
+   auffälligen Rädern des Testquartals hat nur ein Drittel eine Meldung der Stufe
+   „fahruntauglich". Leichte und schwere Schäden kosten in unserer Matrix dasselbe.
+3. **Die Wirksamkeit der Prüfung ist unbekannt.** Wir wissen nicht, welchen Anteil der
+   Schäden eine Inspektion überhaupt findet und verhindert. Ohne diese Größe ist jede
+   Nutzenrechnung eine Obergrenze.
+4. **Die Kostenformel trägt keine Kapazitätsentscheidung.** Ihr Minimum liegt bei der
+   ganzen Flotte, weil die Prüfkosten der Treffer fehlen (Abschnitt 5.7).
+5. **Die Rückkopplung ist nicht gelöst.** Dafür bräuchte es Protokoll, Schattenbetrieb
+   und Kontrollgruppe (Abschnitt 6.4).
+6. **Kein echter Schattenbetrieb.** Der Teststichtag liegt in der Vergangenheit, sein
+   Ausgang war beim Rechnen bekannt.
+7. **Fünf Validierungsquartale sind wenig.** Für eine saisonale Aussage bräuchte es
+   mehrere Jahre.
+8. **Der Rückblick von 180 Tagen ist gesetzt, nicht geprüft.** Vielleicht sagen 60 Tage
+   mehr über den nächsten Defekt aus als ein halbes Jahr.
+9. **Was ein Rad *erlebt* hat, fehlt** — Stürze, Vandalismus, Standzeiten im Regen. Auch
+   die Stationen, an denen es unterwegs war, sind kein Merkmal.
 
 **Weiter geht es mit Notebook 3 — Clustering und Segmentierung:** Dort gibt es zum ersten
 Mal **kein Label**. Niemand sagt dem Verfahren, was richtig ist; es soll die Gruppen

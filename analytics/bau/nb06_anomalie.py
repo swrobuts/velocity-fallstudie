@@ -103,6 +103,21 @@ BASIS = os.environ.get("VELO_BASIS",
     "https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/main/analytics/")
 pd.set_option("display.width", 160)
 
+# Die Zahlen aus Phase 1 - hier ausgedruckt, damit Text und Rechnung nicht
+# auseinanderlaufen koennen. Die Rentabilitaetsschwelle wird abgeleitet,
+# nicht behauptet.
+NUTZEN_FUND = 120.0        # geborgenes Rad statt Verlust
+KOSTEN_FEHLALARM = 6.0     # fuenf Minuten Ansehen ohne Befund
+KRITERIUM_TREFFER = 0.20   # Erfolgskriterium: jeder fuenfte Eintrag traegt
+
+schwelle = KOSTEN_FEHLALARM / (NUTZEN_FUND + KOSTEN_FEHLALARM)
+print(f"Ein Fund ist {NUTZEN_FUND:.0f} EUR wert, ein Fehlalarm kostet "
+      f"{KOSTEN_FEHLALARM:.0f} EUR.")
+print(f"Rentabel ist die Liste ab {schwelle:.1%} Trefferquote - "
+      f"ein Fund traegt {NUTZEN_FUND/KOSTEN_FEHLALARM:.0f} Fehlalarme.")
+print(f"Gefordert werden trotzdem {KRITERIUM_TREFFER:.0%}: Eine Liste voller "
+      f"Fehlalarme wird nicht benutzt.")
+
 fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
 raeder = pd.read_csv(BASIS + "fahrrad.csv")
 stationen = pd.read_csv(BASIS + "station.csv")

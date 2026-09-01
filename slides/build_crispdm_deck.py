@@ -25,7 +25,7 @@ Deshalb vier Teile:
   C Fuenf Faelle       Gleiches Geruest, Tiefe nur dort, wo dieser Fall
                        etwas Neues zeigt. Denn jedes Notebook betont
                        eine andere Phase:
-                         Fall 2 -> Phase 6  das Modell verdient seinen Unterhalt
+                         Fall 2 -> Phase 6  das Modell verdient seinen Unterhalt nicht
                          Fall 3 -> Phase 1  Kriterien ohne Zielgroesse
                          Fall 4 -> Phase 3  Schnitt entlang der Zeit
                          Fall 5 -> Phase 5  von 32 Regeln bleibt keine
@@ -152,12 +152,38 @@ def nbq(nummer, abschnitt="", hinweis=""):
 
 
 def bild(name: str) -> str:
+    """Pfad zu einem Bild - und die Pruefung, ob es noch aktuell ist.
+
+    Ein Zellausschnitt, der aelter ist als sein Notebook, zeigt eine
+    Ausgabe, die es so nicht mehr gibt. Genau das ist passiert: Der
+    Suchanker fuer nb2-kriterien zeigte auf eine geloeschte Zeile, das
+    Werkzeug brach ab - und der Deckbau lief trotzdem durch, weil das
+    alte PNG noch dalag. Auf der Folie stand danach ein Bild aus einer
+    Fassung, deren Urteil umgedreht worden war.
+    """
     pfad = ASSETS / f"{name}.png"
     if not pfad.exists():
         raise SystemExit(
             f"Bild fehlt: {pfad}\n"
             "Zuerst: python3 tools/notebook_ausschnitte.py "
             "und bash tools/render_diagrams.sh")
+    # Zwei Sorten Bilder, zwei Quellen: Mermaid-Diagramme kommen aus einer
+    # .mmd-Datei, Zellausschnitte aus einem Notebook. Der Praefix nb1-
+    # steht bei beiden - entschieden wird deshalb ueber die Existenz der
+    # Diagrammquelle, nicht ueber den Namen.
+    diagramm_quelle = WURZEL / "doku" / "analytics" / "diagramme" / f"{name}.mmd"
+    if diagramm_quelle.exists():
+        quelle, befehl = diagramm_quelle, "bash tools/render_diagrams.sh"
+    else:
+        nummer = name[2] if name.startswith("nb") and name[2:3].isdigit() else None
+        if not (nummer and int(nummer) in NB_DATEI):
+            return str(pfad)
+        quelle = WURZEL / "analytics" / "notebooks" / f"{NB_DATEI[int(nummer)]}.ipynb"
+        befehl = f"python3 tools/notebook_ausschnitte.py {name}"
+    if quelle.exists() and quelle.stat().st_mtime > pfad.stat().st_mtime + 1:
+        raise SystemExit(
+            f"Bild veraltet: {pfad.name} ist aelter als {quelle.name}.\n"
+            f"Zuerst: {befehl}")
     return str(pfad)
 
 
@@ -440,7 +466,7 @@ def teil_karte(prs):
         ["1", "Regression", "alle sechs", "Ob ein Merkmal erlaubt ist, entscheidet der "
                                           "Prozess — nicht der Spaltenname"],
         ["2", "Klassifikation", "Phase 6", "Ein Modell muss seinen Unterhalt verdienen — "
-                                           "hier verdient es ihn"],
+                                           "hier verdient es ihn nicht"],
         ["3", "Clustering", "Phase 1", "Erfolgskriterien auch ohne Zielgröße"],
         ["4", "Zeitreihe", "Phase 3", "Die genaueste Prognose ist nicht die günstigste"],
         ["5", "Assoziation", "Phase 5", "Keine Regel nimmt beide Hürden — und die "
@@ -1357,12 +1383,11 @@ def fall2(prs):
     kapitel(prs, 3, "Fall 2 — Klassifikation: was ein Modell wert sein muss",
             "Welche Räder müssen als Nächstes in die Werkstatt — und lohnt sich "
             "dafür der Betrieb eines Modells?",
-            "Dieser Fall zeigt Phase 6 von innen. Das Modell gewinnt hier — aber "
-            "erst der Vergleich mit der Faustregel des Werkstattmeisters macht "
-            "seinen Beitrag benennbar. Ohne diesen Maßstab stünde im Notebook eine "
-            "Trefferquote, und niemand könnte sagen, ob sie gut ist. Der Fall ist "
-            "damit das Gegenstück zu Fall 1, wo eine schlichte Tabelle das Rennen "
-            "macht.")
+            "Dieser Fall zeigt Phase 6 von innen und endet mit einem Ergebnis, das "
+            "in Lehrbüchern selten vorkommt: Das Modell wird gebaut, geprüft — und "
+            "nicht ausgeliefert, weil eine einzeilige Faustregel genauso gut ist. "
+            "Zwei Dinge machen den Fall lehrreich: Der Maßstab entsteht VOR dem "
+            "Modell, und er wird über mehrere Quartale geprüft statt über eines.")
 
     s = folie(prs, "Fall 2", "Der Fall auf einen Blick")
     steckbrief(s, [
@@ -1375,8 +1400,8 @@ def fall2(prs):
                          "— rund 7 : 1"),
         ("Verfahren", "Zwei Faustregeln als Maßstab, dann Entscheidungsbaum und "
                       "Random Forest"),
-        ("Urteil", "Der Wald schlägt die Faustregel messbar — ausgeliefert wird "
-                   "das Modell, die Regel bleibt Rückfallebene"),
+        ("Urteil", "Gleichstand auf dem Test, über fünf Quartale liegt die Regel "
+                   "vorn — ausgeliefert wird die Regel"),
     ], y=unter_intro(s))
     notizen(s, "Die Kostenmatrix in Zeile 4 ist der Unterschied zu Fall 1. Dort waren "
                "beide Fehlerrichtungen gleich ärgerlich; hier kostet die eine das "
@@ -1424,8 +1449,8 @@ def fall2(prs):
     zellfolie(prs, 2, "3.3", "Phase 3 · im Notebook",
               "Der zeitliche Schnitt, in Zahlen",
               "nb2-schnitt",
-              "1458 Trainingszeilen aus sieben Stichtagen, getestet am jüngsten — "
-              "kein einziger Blick in die Zukunft.",
+              "Sieben Stichtage zum Trainieren, der jüngste zum Testen — und ein "
+              "Anteil positiver Fälle, der sich dabei verdoppelt.",
               "Die Zeilenzahlen stehen mit Absicht in der Ausgabe. Wer sie nicht "
               "ausgibt, merkt nicht, wenn ein Stichtag leer bleibt oder ein Filter "
               "mehr wegnimmt als gedacht.")
@@ -1454,97 +1479,157 @@ def fall2(prs):
                "Wer sie nicht rechnet, kann am Ende nicht sagen, ob das Modell etwas "
                "beigetragen hat — er kann nur sagen, dass es funktioniert.")
 
-    s = folie(prs, "Fall 2 · Phase 5", "Der Wald schlägt die Faustregel — knapp",
+    s = folie(prs, "Fall 2 · Phase 5", "Gleichstand auf dem Testquartal",
               "Beide Erfolgskriterien standen vor der Messung fest: mindestens 70 % "
               "Trefferquote, und günstiger als die heutige Faustregel.")
-    tabelle(s, ["Vorgehen", "Treffer", "Trefferquote", "Kosten je Quartal", "70-%-Hürde"], [
-        ["gar nicht vorsorglich prüfen", "0", "0 %", "18.540 €", "—"],
-        ["Faustregel: km seit letzter Meldung", "38", "63,3 %", "12.250 €", "gerissen"],
-        ["Entscheidungsbaum", "37", "61,7 %", "12.455 €", "gerissen"],
-        ["Random Forest — gewählt", "43", "71,7 %", "11.225 €", "erfüllt"],
-    ], y=(y := unter_intro(s)), spalten_b=[300, 100, 150, 190, 163.5], zeilen_h=40)
-    sandband(s, "Erst die Regel macht das Modell bewertbar. Ohne sie stünde hier eine "
-                "Trefferquote, und niemand könnte sagen, ob sie gut ist. Mit ihr steht "
-                "hier ein Satz, den die Werkstatt versteht.",
-             y=darunter(y, h_tabelle(4, 40)))
+    tabelle(s, ["Vorgehen", "Treffer", "Trefferquote", "Kosten je Quartal"], [
+        ["gar nicht vorsorglich prüfen", "0", "0 %", "18.360 €"],
+        ["Faustregel: ältestes Rad", "27", "45,0 %", "14.325 €"],
+        ["Faustregel: meiste Kilometer", "31", "51,7 %", "13.505 €"],
+        ["Faustregel: km seit letzter Reparatur", "43", "71,7 %", "11.045 €"],
+        ["Random Forest", "43", "71,7 %", "11.045 €"],
+    ], y=(y := unter_intro(s)), spalten_b=[380, 120, 180, 223.5], zeilen_h=36)
+    sandband(s, "Treffer für Treffer identisch. Der Wald mit 300 Bäumen findet nichts, "
+                "was über „Kilometer seit der Reparatur“ hinausgeht.",
+             y=darunter(y, h_tabelle(5, 36)))
     phasenleiste(s, 5)
-    notizen(s, "Beachten Sie die zweite Zeile: Die Faustregel des Werkstattmeisters "
-               "ist mit Abstand die beste der drei Regeln und lässt die anderen weit "
-               "hinter sich. Der Wald schlägt sie trotzdem — in Treffern wie in "
-               "Kosten. In der Bedeutungsgrafik steht km_seit_meldung ganz vorn: Der "
-               "Wald hat die Regel des Meisters gefunden und ist dann noch ein Stück "
-               "weiter gegangen. Das ist der Normalfall eines gelungenen Modells.")
+    notizen(s, "Lassen Sie die letzten beiden Zeilen wirken. Studierende erwarten "
+               "hier, dass der Wald gewinnt — er ist ja das stärkere Verfahren. Dass "
+               "er es nicht tut, heißt: Der Verschleiß hängt fast ausschließlich an "
+               "den Kilometern seit der Reparatur. Mehr Information steckt in diesen "
+               "Merkmalen nicht. Und beachten Sie die beiden schwächeren Regeln: 45 "
+               "und 52 Prozent. Der Gewinn steckt nicht darin, eine bessere Kennzahl "
+               "zu suchen, sondern die richtige Frage zu stellen.")
+
+    s = folie(prs, "Fall 2 · Phase 5",
+              "Ein Quartal ist keine Aussage — fünf schon eher",
+              "Der Anteil auffälliger Räder schwankt zwischen 8 % im November und "
+              "46 % im Mai. Wer auf einem Quartal entscheidet, entscheidet über die "
+              "Jahreszeit mit.")
+    tabelle(s, ["Stichtag", "Grundrate", "Random Forest", "Faustregel"], [
+        ["03/2025", "22,7 %", "21", "25"],
+        ["05/2025", "46,9 %", "42", "45"],
+        ["08/2025", "26,5 %", "30", "30"],
+        ["11/2025", "7,6 %", "11", "10"],
+        ["02/2026", "20,7 %", "25", "27"],
+        ["Summe", "", "129", "137"],
+    ], y=(y := unter_intro(s)), spalten_b=[220, 200, 250, 233.5], zeilen_h=32)
+    sandband(s, "Über fünf Quartale liegt die Faustregel vorn — der Wald kostet 328 € "
+                "je Quartal mehr, noch vor jedem Betriebsaufwand.",
+             y=darunter(y, h_tabelle(6, 32)))
+    phasenleiste(s, 5)
+    notizen(s, "Für jedes Quartal wird neu trainiert, mit allem, was zu diesem "
+               "Zeitpunkt bekannt war. Das letzte Quartal bleibt unangetastet — es ist "
+               "der Test, nicht die Entscheidungsgrundlage. Genau daran war eine "
+               "frühere Fassung dieses Falls gescheitert: Sie hat auf dem einen "
+               "günstigen Quartal entschieden.")
+
+    s = folie(prs, "Fall 2 · Phase 5",
+              "Wie sicher ist eine Trefferquote aus 60 Beobachtungen?",
+              "43 von 60 sind 71,7 %. Die Zahl klingt genauer, als sie ist.")
+    kachelreihe(s, [
+        ("Das Wilson-Intervall", [
+            "71,7 % aus 60 Beobachtungen",
+            "bedeutet:",
+            "",
+            "59,2 % bis 81,5 %",
+            "",
+            "Verträglich mit 60 % ebenso",
+            "wie mit 80 %.",
+        ]),
+        ("Was das heißt", [
+            "Die 70-%-Hürde liegt mitten",
+            "im Intervall.",
+            "",
+            "Sie ist damit nicht belegt,",
+            "sondern nur nicht widerlegt.",
+            "",
+            "Ein Treffer weniger wäre",
+            "exakt 70,0 % gewesen.",
+        ]),
+        ("Was hilft", [
+            "Nicht ein größeres Modell,",
+            "sondern mehr Perioden.",
+            "",
+            "Fünf Quartale trennen die",
+            "Verfahren, ein Quartal",
+            "nicht.",
+        ]),
+    ], y=unter_intro(s), hoehe=196)
+    phasenleiste(s, 5)
+    notizen(s, "Diese Folie gehört zu den wichtigsten des Decks. Studierende lesen "
+               "71,7 Prozent als eine Tatsache. Sie ist eine Schätzung aus 60 "
+               "Beobachtungen, und die Unsicherheit ist größer als jeder Unterschied, "
+               "über den hier gestritten wird.")
 
     zellfolie(prs, 2, "5.4", "Phase 5 · im Notebook",
-              "Beide Kandidaten, gegen die Kriterien aus Phase 1 gehalten",
+              "Drei Kriterien, und das dritte entscheidet",
               "nb2-kriterien",
-              "Die Faustregel reißt die 70-Prozent-Hürde, das Modell hält sie — und "
-              "ist zugleich günstiger. Damit ist die Entscheidung gefallen.",
-              "Das Notebook prüft hier gegen die Kriterien, die in Phase 1 festgelegt "
-              "wurden, und nicht gegen das, was sich gerade anbietet. Der Unterschied "
-              "ist klein: 71,7 gegen 63,3 Prozent, gut tausend Euro im Quartal. Klein "
-              "genug, dass man ihn ohne den vorher gebauten Maßstab gar nicht "
-              "bemerkt hätte.")
+              "Trefferquote und Kosten sind gleich. Das dritte Kriterium — der "
+              "Vorteil über mehrere Quartale — reißt das Modell.",
+              "Das dritte Kriterium ist erst nach dem Review dazugekommen, und es ist "
+              "das wichtigste: Ein Verfahren muss über mehrere Perioden vorn liegen, "
+              "nicht über eine. Ohne dieses Kriterium hätte das Notebook das Modell "
+              "ausgeliefert — auf Grundlage eines einzigen günstigen Quartals.")
 
     s = folie(prs, "Fall 2 · Phase 6",
-              "Ausgeliefert wird das Modell — und die Regel bleibt im Paket",
-              "Das Modell erfüllt beide Kriterien und schlägt die Faustregel. Es "
-              "geht in Betrieb. Kostenlos ist diese Entscheidung nicht.")
+              "Ausgeliefert wird die Regel — und das Modell bleibt im Paket",
+              "Bei Gleichstand gewinnt die einfachere Lösung. Das ist keine "
+              "Bescheidenheit, sondern eine Rechnung über die Lebensdauer.")
     tabelle(s, ["", "Faustregel", "Random Forest"], [
-        ["Trefferquote", "63,3 %", "71,7 %"],
-        ["Kosten je Quartal", "12.250 €", "11.225 €"],
-        ["erklärbar", "„seit 288 km nicht in der Werkstatt“", "nur über Umwege"],
+        ["Trefferquote auf dem Test", "71,7 %", "71,7 %"],
+        ["über fünf Validierungsquartale", "137 Treffer", "129 Treffer"],
+        ["erklärbar", "„seit 592 km nicht in der Werkstatt“", "nur über Umwege"],
         ["Wartungsaufwand", "keiner", "vierteljährlich nachtrainieren"],
         ["Abhängigkeiten im Betrieb", "keine", "scikit-learn, joblib, Versionsstände"],
-    ], y=(y := unter_intro(s)), spalten_b=[240, 340, 323.5], zeilen_h=36)
-    sandband(s, "Die unteren drei Zeilen sind der Preis. Er ist hier gerechtfertigt, "
-                "weil die oberen beiden zugunsten des Modells ausfallen — und nur "
-                "deshalb.", y=darunter(y, h_tabelle(5, 36)))
+    ], y=(y := unter_intro(s)), spalten_b=[260, 320, 323.5], zeilen_h=36)
+    sandband(s, "Die unteren drei Zeilen sind der Preis eines Modells. Er wäre zu "
+                "zahlen, wenn die oberen beiden dafür sprächen. Sie tun es nicht.",
+             y=darunter(y, h_tabelle(5, 36)))
     phasenleiste(s, 6)
-    notizen(s, "Ein Modell muss seinen Unterhalt verdienen. Hier verdient es ihn. "
-               "Fiele die Trefferquote gleich aus, wäre die Regel die bessere Lösung, "
-               "und der Bericht müsste das so schreiben, statt das Modell "
-               "auszuliefern, weil man es nun einmal gebaut hat. Genau dieser Fall "
-               "tritt in Notebook 1 ein — dort gewinnt die Tabelle.")
+    notizen(s, "Ein Modell muss seinen Unterhalt verdienen. Hier verdient es ihn "
+               "nicht — und der Bericht muss das so schreiben, statt das Modell "
+               "auszuliefern, weil man es nun einmal gebaut hat. Zum zweiten Mal in "
+               "dieser Fallstudie hält ein durchschaubares Verfahren mit einem "
+               "Modell mit; in Notebook 1 war es eine Nachschlagetabelle.")
 
-    s = folie(prs, "Fall 2 · Phase 6", "Warum die Regel trotzdem mit ausgeliefert wird",
-              "Sie ist nicht der Verlierer des Vergleichs, sondern zwei Dinge, die "
-              "das Modell im Betrieb braucht.")
+    s = folie(prs, "Fall 2 · Phase 6", "Warum das Modell trotzdem nicht umsonst war",
+              "Ein Verfahren, das nicht ausgeliefert wird, kann trotzdem die "
+              "wertvollste Auskunft des Projekts liefern.")
     kachelreihe(s, [
-        ("Rückfallebene", [
-            "Wenn das Modell einmal nicht",
-            "lädt — falscher Versionsstand,",
-            "fehlende Bibliothek —,",
-            "steht die Werkstatt nicht",
-            "ohne Liste da.",
+        ("Es belegt die Wahl", [
+            "Die Regel ist nicht aus",
+            "Bequemlichkeit gewählt,",
+            "sondern geprüft.",
             "",
-            "Eine SQL-Abfrage genügt.",
+            "Das ist der Unterschied",
+            "zwischen einer Entscheidung",
+            "und einer Unterlassung.",
         ]),
-        ("Maßstab der Überwachung", [
-            "Ein Modell ohne Vergleichsgröße",
-            "merkt sein eigenes Nachlassen",
-            "nicht.",
+        ("Es misst die Obergrenze", [
+            "Ein Wald mit 300 Bäumen",
+            "findet auf diesen Merkmalen",
+            "nichts, was über „Kilometer",
+            "seit der Reparatur“ hinausgeht.",
             "",
-            "Fällt der Abstand zur Regel auf",
-            "null, ist die Nachricht klar —",
-            "auch ohne neue Kennzahl.",
+            "Mehr Rechenleistung hilft",
+            "hier nicht.",
         ]),
-        ("Und für die Werkstatt", [
-            "Wer widersprechen kann, benutzt",
-            "die Liste. Wer nur glauben kann,",
-            "umgeht sie.",
+        ("Es ist der nächste Anlauf", [
+            "Kommen neue Merkmale dazu —",
+            "Stürze, Standzeiten, Stationen",
+            "der Fahrten —, wird der",
+            "Vergleich wiederholt.",
             "",
-            "Die Regel liefert für jedes Rad",
-            "einen Satz, den jede",
-            "Werkstattkraft nachprüfen kann.",
+            "Dann kann er anders",
+            "ausgehen.",
         ]),
     ], y=unter_intro(s), hoehe=200)
     phasenleiste(s, 6)
-    notizen(s, "Der mittlere Punkt wird in Projekten regelmäßig vergessen. Man baut "
-               "eine Überwachung auf Kennzahlen des Modells — Trefferquote, "
-               "Kalibrierung — und merkt nicht, dass sich die Welt geändert hat, weil "
-               "alle Kennzahlen mitwandern. Eine unveränderliche Faustregel als "
-               "Referenzlinie kostet nichts und meldet genau das.")
+    notizen(s, "Die mittlere Kachel ist der eigentliche Ertrag. „Mehr Modell hilft "
+               "nicht, mehr Information vielleicht schon“ ist eine belastbare Aussage "
+               "über die Daten — und sie sagt dem Auftraggeber, wo er als Nächstes "
+               "investieren muss: nicht in Rechenleistung, sondern in Erfassung.")
 
     s = folie(prs, "Fall 2 · Phase 6", "Die Rückkopplung, die dieses Verfahren schwierig macht",
               "Wer die Liste abarbeitet, verändert die Daten, aus denen das nächste "
@@ -1567,10 +1652,10 @@ def fall2(prs):
         ["3 Data Preparation", "Zeitlicher Schnitt, acht Stichtage, jüngster als Test"],
         ["4 Modeling", "Erst zwei Faustregeln, dann Baum und Wald mit class_weight "
                        "aus der Kostenmatrix"],
-        ["5 Evaluation", "Der Wald schlägt die Faustregel: 71,7 % gegen 63,3 %, "
-                         "11.225 € gegen 12.250 €"],
-        ["6 Deployment", "Das Modell — mit der Regel als Rückfallebene und Maßstab, "
-                         "dazu Wartungsliste und Rückkopplungsfalle"],
+        ["5 Evaluation", "Gleichstand auf dem Test. Über fünf Validierungsquartale "
+                         "liegt die Regel vorn: 137 gegen 129 Treffer"],
+        ["6 Deployment", "Die Regel — mit Wartungsliste, Überwachung und der "
+                         "Rückkopplungsfalle. Das Modell bleibt im Paket"],
     ], y=unter_intro(s), spalten_b=[230, 673.5], zeilen_h=40)
     notizen(s, "Ein Modell muss seinen Unterhalt verdienen. Dieser Satz ist die "
                "Quintessenz des Falls — und er gilt weit über die Wartung hinaus.")
@@ -2438,8 +2523,8 @@ def teil_synthese(prs):
     tabelle(s, ["Fall", "Zeigt", "Der Satz, der bleibt"], [
         ["1 Regression", "Phase 5", "Der Rücksprung kam, obwohl das Kriterium hielt — "
                                     "ein Mittelwert ist keine Erfahrung"],
-        ["2 Klassifikation", "Phase 6", "Das Modell verdient seinen Unterhalt — "
-                                        "messbar, weil vorher ein Maßstab stand"],
+        ["2 Klassifikation", "Phase 6", "Der scheinbare Modellvorsprung war ein "
+                                        "Defekt im Merkmal, gegen das er antrat"],
         ["3 Clustering", "Phase 1", "Erfolgskriterien ohne Zielgröße — und eine bessere "
                                     "Frage als die, mit der wir anfingen"],
         ["4 Zeitreihe", "Phase 3", "Der Schnitt folgt der Zeit. Und die genaueste "

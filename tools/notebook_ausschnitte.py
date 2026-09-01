@@ -83,9 +83,9 @@ AUSSCHNITTE = {
     # ── Notebook 2: die Regel gewinnt
     "nb2-kosten": ("02_Klassifikation_Wartungsrisiko", "Kostenmatrix", 0, 1180),
     "nb2-schnitt": ("02_Klassifikation_Wartungsrisiko",
-                    "Training: 1458 Zeilen aus 7 Stichtagen", 0, 1180),
+                    "Anteil positiv  Training", 0, 1180),
     "nb2-kriterien": ("02_Klassifikation_Wartungsrisiko",
-                      "Erfolgskriterien aus Phase 1, für beide Kandidaten", 0, 1180, "ausgabe"),
+                      "AUSGELIEFERT WIRD", 0, 1180, "ausgabe"),
 
     # ── Notebook 3: ohne Zielgroesse
     "nb3-k": ("03_Clustering_Stationen_und_Kunden",
