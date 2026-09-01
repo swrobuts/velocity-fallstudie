@@ -290,6 +290,7 @@ print(f"Stichtag: {stichtag.date()}, Fenster: letzte 365 Tage")
 neu_dabei = kunden.set_index("kunde_id").registriert_am > stichtag - pd.Timedelta(days=365)
 print(f"Davon erst im Fenster angemeldet: {int(neu_dabei.reindex(rfm.index).fillna(False).sum())} "
       f"- fuer sie ist 'je Jahr' eine Untertreibung.")
+merke("n_rfm", len(rfm))
 print(f"Kundschaft mit mindestens einer Fahrt darin: {len(rfm)} von {len(kunden)}")
 print(f"ohne jede Fahrt im Fenster: {len(kunden) - len(rfm)} — die betrachten wir gleich gesondert\\n")
 print(rfm[["recency", "frequenz", "umsatz"]].describe().round(1).to_string())
@@ -436,7 +437,10 @@ plt.tight_layout(); plt.show()
 
 for c in sorted(S.cluster.unique()):
     g = S[S.cluster == c]
-    spitze = int(g[stundenspalten].mean().values.argmax())
+    # Die Stunde steht im SPALTENNAMEN, nicht im Index: Vor fuenf Uhr faehrt
+    # niemand, also fehlen die ersten Spalten - ein Index waere um genau diese
+    # Zahl verschoben und ergaebe Spitzen um drei Uhr morgens.
+    spitze = int(g[stundenspalten].mean().idxmax().removeprefix("stunde_"))
     print(f"Cluster {c}: {', '.join(g.index):<62s} Spitze {spitze:>2d} Uhr, "
           f"Wochenende {g.wochenendanteil.mean():.0%}, Dauer {g.dauer_median.mean():.0f} Min")
 '''),
@@ -663,6 +667,11 @@ liste_wechsel = float((lz_heute[in_liste] != lz_vor[in_liste]).mean())
 print("\\n(1c) NUR DIE KAMPAGNEN-ARBEITSLISTE - der enge Nenner\\n")
 print(f"     Zu beiden Zeitpunkten in der Arbeitsliste: {len(in_liste)}")
 print(f"     Segmentwechsel binnen 90 Tagen: {liste_wechsel:.2%}")
+merke("gate_eng", liste_wechsel)
+merke("gate_weit", lz_wechsel)
+merke("gate_differenz", (liste_wechsel - lz_wechsel) * 100)
+merke("n_registriert", len(lz_gemeinsam))
+_ = merke("n_arbeitsliste", len(in_liste))
 print(f"\\n     Differenz zum weiten Nenner: "
       f"{(liste_wechsel - lz_wechsel) * 100:+.2f} Prozentpunkte.")
 print("     Die stabilen Nicht-Zielpersonen fehlen hier - und mit ihnen die")
@@ -757,11 +766,16 @@ MD("""
 > | **Kampagnen-Arbeitsliste** | **25,68 %** | die Menschen, die eine Ansprache bekämen — **hieran hängt das Gate** |
 > | alle Lebenszykluszustände | 24,75 % | Diagnose der Bestandsdynamik |
 > | die vier RFM-Regeln allein | 24,89 % | ein Ausschnitt davon |
-> | k-Means, jeweils neu gerechnet | 26,5 % (ARI 0,442) | ein Modell, das **nicht** ausgeliefert wird |
+> | k-Means, jeweils neu gerechnet | nur Modelldiagnose | ein Modell, das **nicht** ausgeliefert wird |
 >
-> **Der Nenner entscheidet, und zwar hier über das Ergebnis.** Nimmt man alle 3.111
-> registrierten Personen, sind es 24,75 % und das Gate hält. Nimmt man die 2.878, die
-> tatsächlich in einer Arbeitsliste stünden, sind es **25,68 % — und es reißt.**
+> **Der Nenner muss trotzdem vorher feststehen.** Nimmt man alle
+> {{n_registriert:,}} registrierten Personen, sind es {{gate_weit:.2%}}. Nimmt man die
+> {{n_arbeitsliste:,}}, die tatsächlich in einer Arbeitsliste stünden, sind es
+> {{gate_eng:.2%}} — ein Unterschied von {{gate_differenz:+.2f}} Prozentpunkten.
+>
+> Diesmal entscheidet er nicht: Beide Werte liegen über der Alarmschwelle. Das ist ein
+> glücklicher Umstand, kein Argument — bei einer knapperen Lage hinge das Urteil daran,
+> und dann wäre die Wahl des Nenners nach der Messung eine Manipulation.
 >
 > Der Unterschied sind die dauerhaft stabilen Nicht-Zielpersonen (Zustand „Nie
 > aktiviert"), die nie angeschrieben werden. Sie im Nenner zu behalten macht die Quote
@@ -793,9 +807,9 @@ mehr, als die Startwertprüfung allein zeigen konnte, und es gilt für diesen sy
 Datensatz mit seinen vier bewusst erzeugten Typen.
 
 **Die Kundensegmente sind es nur annähernd.** Bei den zehn Stationen
-liefert jeder Startwert dieselbe Einteilung. Bei 2.199 Kundinnen und Kunden wandern je
-nach Startwert einzelne Personen zwischen den Gruppen — der ARI bleibt hoch, erreicht
-aber nicht 1,0.
+liefert jeder Startwert dieselbe Einteilung. Bei mehreren tausend Kundinnen und Kunden
+können je nach Startwert einzelne Personen zwischen den Gruppen wandern — der ARI bleibt
+hoch, muss aber nicht 1,0 erreichen.
 
 Für die Auslieferung heißt das: Die Stationszuordnung ist **am aktuellen Datenstand und
 über die getesteten Startwerte** reproduzierbar — nicht „fest" im Sinne von dauerhaft. Der
@@ -862,6 +876,28 @@ tarifverteilung = (rfm.groupby("cluster").tarif_code.value_counts(normalize=True
 uebersicht = profil.join(tarifverteilung)
 print(uebersicht.to_string())
 
+# Der Befund, um den es gleich geht: Wer am haeufigsten faehrt, bringt je
+# Fahrt am wenigsten. Die Zahlen kommen von hier, nicht aus dem Fliesstext -
+# und die Cluster werden ueber ihre Eigenschaften angesprochen, nicht ueber
+# ihre Nummer, die k-Means beliebig vergibt.
+_je_fahrt = (profil.umsatz_fenster / profil.fahrten_fenster).round(2)
+_haeufigste = profil.fahrten_fenster.idxmax()
+_umsatzstaerkste = profil.umsatz_fenster.idxmax()
+merke("viel_fahrten", profil.fahrten_fenster[_haeufigste])
+merke("viel_umsatz", profil.umsatz_fenster[_haeufigste])
+merke("viel_je_fahrt", _je_fahrt[_haeufigste])
+merke("stark_fahrten", profil.fahrten_fenster[_umsatzstaerkste])
+merke("stark_umsatz", profil.umsatz_fenster[_umsatzstaerkste])
+merke("stark_je_fahrt", _je_fahrt[_umsatzstaerkste])
+_ = merke("faktor_je_fahrt", _je_fahrt[_umsatzstaerkste] / max(_je_fahrt[_haeufigste], 0.01))
+print()
+print(f"Am haeufigsten faehrt Cluster {_haeufigste}: "
+      f"{profil.fahrten_fenster[_haeufigste]:.1f} Fahrten, "
+      f"{_je_fahrt[_haeufigste]:.2f} EUR je Fahrt")
+print(f"Am meisten Umsatz bringt Cluster {_umsatzstaerkste}: "
+      f"{profil.fahrten_fenster[_umsatzstaerkste]:.1f} Fahrten, "
+      f"{_je_fahrt[_umsatzstaerkste]:.2f} EUR je Fahrt")
+
 fig, achsen = plt.subplots(1, 3, figsize=(15, 4))
 for spalte, achse, titel in zip(["recency", "frequenz", "umsatz"], achsen,
                                 ["Recency (Tage seit letzter Fahrt)",
@@ -883,26 +919,23 @@ wurde — für 406 von ihnen wäre „je Jahr“ schlicht falsch:
 **Das Segment mit den meisten Fahrten bringt am wenigsten Umsatz JE FAHRT.** Und diese
 Einschränkung ist wichtig — lesen Sie die Tabelle genau:
 
-| Cluster | Fahrten im Fenster | Umsatz im Fenster | Umsatz je Fahrt |
-|---|---:|---:|---:|
-| 0 — Vielfahrer | **18,4** | 13,70 € | **0,74 €** |
-| 1 — Umsatzträger | 6,1 | **38,90 €** | 6,38 € |
-| 2 — Eingeschlafen | 1,6 | 5,30 € | 3,31 € |
-| 3 — Gelegenheit | 4,3 | 3,50 € | 0,81 € |
+Die Zelle darüber stellt die beiden Randgruppen nebeneinander:
 
-Die Vielfahrer bringen **nicht** den geringsten Umsatz — das tun die Gelegenheitsnutzer
-mit 3,50 €. Die Vielfahrer bringen den geringsten Umsatz **je Fahrt**: 74 Cent, während
-ein Umsatzträger 6,38 € je Fahrt bringt, also mehr als das Achtfache.
+Die Gruppe mit den **meisten Fahrten** kommt auf {{viel_fahrten:.1f}} Fahrten und
+{{viel_umsatz:.2f}} € im Fenster — das sind **{{viel_je_fahrt:.2f}} € je Fahrt**. Die
+Gruppe mit dem **höchsten Umsatz** fährt nur {{stark_fahrten:.1f}} mal, bringt aber
+{{stark_umsatz:.2f}} € — **{{stark_je_fahrt:.2f}} € je Fahrt**, also das
+{{faktor_je_fahrt:.1f}}-Fache.
 
-> **Der Vergleich, auf den es ankommt:** Cluster 0 fährt **dreimal so oft** wie Cluster 1
-> und bringt dabei **ein gutes Drittel** von dessen Umsatz. Wer beide Zahlen
-> nebeneinanderlegt, sieht das Problem; wer nur eine nimmt, sieht es nicht.
+> **Der Vergleich, auf den es ankommt:** Wer am häufigsten fährt, bringt je Fahrt am
+> wenigsten. Wer beide Zahlen nebeneinanderlegt, sieht das Problem; wer nur eine nimmt,
+> sieht es nicht.
 
-> **Die Clusternummern sind nicht bedeutungstragend.** In einer früheren Fassung dieses
-> Notebooks war Cluster 0 der Umsatzträger; nach einer Verschiebung des Stichtags um
-> wenige Stunden ist es der Vielfahrer. k-Means vergibt die Nummern in der Reihenfolge,
-> in der es die Zentren findet — **wer sich auf eine Clusternummer verlässt, verlässt sich
-> auf einen Zufall.** Genau deshalb liefert Phase 6 Schwellen aus und keine Nummern.
+> **Die Clusternummern sind nicht bedeutungstragend.** k-Means vergibt sie in der
+> Reihenfolge, in der es die Zentren findet — schon eine leichte Verschiebung des
+> Stichtags kann sie vertauschen. **Wer sich auf eine Clusternummer verlässt, verlässt
+> sich auf einen Zufall.** Deshalb spricht auch dieser Text die Gruppen über ihre
+> Eigenschaften an, und Phase 6 liefert Schwellen aus statt Nummern.
 
 Ein Blick auf die Tarifverteilung erklärt es: Die Vielfahrer sitzen überwiegend im
 **OEPNV-Abo** oder im **Premium**-Tarif — mit 600 bzw. 1.000 Freiminuten im Monat. Sie
@@ -943,14 +976,52 @@ Freiminuten — und die haben einen Listenwert.
 """),
 
 CODE("""
+import math
+
 raeder = pd.read_csv(BASIS + "fahrrad.csv")
 preise = pd.read_csv(BASIS + "nutzungspreis.csv").set_index("typ_code")
 
+tarife = pd.read_csv(BASIS + "tarif.csv")
+kunden_tarif = kunden.merge(tarife[["tarif_code", "rabatt_prozent"]],
+                           on="tarif_code", how="left")
+
 fenster2 = fenster.merge(raeder[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
+fenster2 = fenster2.merge(kunden_tarif[["kunde_id", "rabatt_prozent"]],
+                          on="kunde_id", how="left")
 fenster2["dauer_min"] = (fenster2.endzeit - fenster2.startzeit).dt.total_seconds() / 60
 fenster2["freiminuten"] = (fenster2.dauer_min - fenster2.berechnete_minuten).clip(lower=0)
-fenster2["verschenkt_eur"] = (fenster2.freiminuten
-                              * fenster2.typ_code.map(preise.preis_pro_minute_eur))
+
+# WAS DIE FREIMINUTEN WERT SIND - mit der vollen Tariflogik, nicht mit dem
+# blossen Minutenpreis. Der Rabatt gilt auch fuer die geschenkten Minuten, und
+# der Tagesdeckel begrenzt sie: Wer ohnehin am Deckel liegt, dem schenkt das
+# Kontingent nichts mehr.
+#
+# Der Wert ist die DIFFERENZ zwischen dem, was ohne Kontingent faellig waere,
+# und dem, was tatsaechlich gezahlt wurde. Damit steht das gespeicherte
+# entgelt_eur in der Rechnung - eine eigene Formel, die man daneben halten
+# muesste, gibt es gar nicht erst.
+def preis_ohne_freiminuten(minuten, typ, rabatt_prozent):
+    p = preise.loc[typ]
+    minuten = int(math.ceil(max(0.0, minuten)))
+    tage = max(1, math.ceil(minuten / (24 * 60)))
+    roh = min(p.startgebuehr_eur + minuten * p.preis_pro_minute_eur,
+              p.tageshoechstpreis_eur * tage)
+    return round(roh * (1 - rabatt_prozent / 100.0), 2)
+
+fenster2["voller_preis"] = [
+    preis_ohne_freiminuten(m, t, r) for m, t, r
+    in zip(fenster2.dauer_min, fenster2.typ_code, fenster2.rabatt_prozent.fillna(0))]
+fenster2["verschenkt_eur"] = (fenster2.voller_preis - fenster2.entgelt_eur).clip(lower=0)
+
+# Gegenprobe: Wo keine Freiminuten flossen, muss der volle Preis dem
+# gezahlten entsprechen. Trifft das nicht zu, stimmt die Tariflogik nicht.
+_ohne = fenster2[fenster2.freiminuten < 0.01]
+_abw = (_ohne.voller_preis - _ohne.entgelt_eur).abs()
+print(f"Gegenprobe an {len(_ohne):,} Fahrten ohne Freiminutennutzung: "
+      f"{(_abw < 0.005).mean():.2%} exakt gleich")
+assert (_abw < 0.005).mean() > 0.999, (
+    "Die Tariflogik bildet das gespeicherte Entgelt nicht ab - "
+    "der verschenkte Betrag waere dann geraten.")
 
 je_kunde = fenster2.groupby("kunde_id").verschenkt_eur.sum()
 rfm["verschenkt"] = je_kunde.reindex(rfm.index).fillna(0)
@@ -1089,29 +1160,50 @@ CODE('''
 # Die Zuordnung folgt zwei Merkmalen: dem Wochenendanteil und der Uhrzeit
 # der Spitze. Beide stehen in der Tabelle aus Phase 5 - hier wird nichts
 # geraten, sondern abgelesen.
-namen_cluster, regeln = {}, {}
+namen_cluster, regeln, merkmale_je_cluster = {}, {}, {}
 for c in sorted(S.cluster.unique()):
     g = S[S.cluster == c]
-    spitze = int(g[stundenspalten].mean().values.argmax())
+    # Die Stunde steht im SPALTENNAMEN, nicht im Index: Vor fuenf Uhr faehrt
+    # niemand, also fehlen die ersten Spalten - ein Index waere um genau diese
+    # Zahl verschoben und ergaebe Spitzen um drei Uhr morgens.
+    spitze = int(g[stundenspalten].mean().idxmax().removeprefix("stunde_"))
     we = g.wochenendanteil.mean()
+    # Vier Zweige, jeder an einer fachlichen Ueberlegung festgemacht - nicht an
+    # den Clustern dieses Datenstands. Wer die Schwellen an die aktuellen
+    # Gruppen anpasst, bekommt beim naechsten Stand wieder eine Kollision.
     if we > 0.45:
         bez, regel = ("Ausflugsstation",
-                      "Abfahrtsspitze spät und am Wochenende — Hypothese: "
+                      "Abfahrtsspitze am Wochenende — Hypothese: "
                       "Bestandsprüfung erst spätvormittags nötig")
+    elif spitze <= 9 and g.dauer_median.mean() > 15:
+        # Morgens wird abgefahren, und die Wege sind lang: Wohngebiet am Rand.
+        bez, regel = ("Wohnstation",
+                      "Abfahrtsspitze früh, lange Wege in die Stadt — "
+                      "Hypothese: frühe Bestandsprüfung testen")
     elif spitze <= 9:
-        bez, regel = ("Pendlerstation",
-                      "Abfahrtsspitze früh, zweite am Nachmittag — Hypothese: "
-                      "frühe Bestandsprüfung testen")
-    elif we > 0.25:
+        # Morgens wird abgefahren, aber die Wege sind kurz: mitten im Zentrum.
         bez, regel = ("Innenstadtstation",
-                      "Abfahrten über den Tag verteilt, abends erhöht — Hypothese: "
-                      "Nachmittagsprüfung testen")
+                      "Abfahrtsspitze früh, kurze Wege im Zentrum — "
+                      "Hypothese: frühe Prüfung, kleinere Nachfüllmenge testen")
+    elif spitze >= 16:
+        # Abends wird abgefahren: Hier kommt man an und faehrt weiter.
+        bez, regel = ("Verkehrsknoten",
+                      "Abfahrtsspitze am Abend, wenn die Züge ankommen — "
+                      "Hypothese: Bestand am späten Nachmittag auffüllen")
+    elif we > 0.25:
+        # Nachmittagsspitze mit erhöhtem Wochenendanteil: Vorlesungsende und
+        # Ausflugsrückkehr fallen hier zusammen.
+        bez, regel = ("Nachmittagsstation",
+                      "Abfahrtsspitze am frühen Nachmittag, auch am Wochenende — "
+                      "Hypothese: Mittagsprüfung testen")
     else:
         bez, regel = ("Uni-Station",
-                      "Abfahrtsspitze am Nachmittag — Hypothese: Bestandsprüfung "
-                      "zu dieser Zeit testen; einen Semestereffekt separat mit "
-                      "dem Vorlesungskalender untersuchen")
+                      "Abfahrtsspitze am frühen Nachmittag — Hypothese: "
+                      "Bestandsprüfung zu dieser Zeit testen; einen "
+                      "Semestereffekt separat mit dem Vorlesungskalender "
+                      "untersuchen")
     namen_cluster[c], regeln[c] = bez, regel
+    merkmale_je_cluster[c] = (spitze, we, g.dauer_median.mean(), list(g.index))
     for name in g.index:
         print(f"{name:<22s} {bez:<18s} {regel}")
 
@@ -1125,10 +1217,19 @@ for c in sorted(S.cluster.unique()):
 # Marktplatz und Juliuspromenade bekamen die Anweisung "vorlesungsfreie
 # Zeit: halbe Bestueckung", die fuer sie falsch ist. Aufgefallen ist es
 # niemandem, weil der Text daneben etwas anderes behauptete.
-assert len(set(namen_cluster.values())) == len(namen_cluster), (
-    f"Kriterium 2 verletzt: {len(namen_cluster)} Gruppen, aber nur "
-    f"{len(set(namen_cluster.values()))} verschiedene Bezeichnungen - "
-    f"{namen_cluster}")
+if len(set(namen_cluster.values())) != len(namen_cluster):
+    # Die Meldung muss zeigen, WAS kollidiert - sonst sucht man die Ursache
+    # in den Daten, obwohl sie in der Benennungsregel steckt.
+    zeilen = ["Kriterium 2 verletzt: zwei Gruppen tragen denselben Namen.", ""]
+    for c, (sp, we_, dau, mitglieder) in sorted(merkmale_je_cluster.items()):
+        zeilen.append(f"  Cluster {c}: {namen_cluster[c]:<18s} "
+                      f"Spitze {sp:2d} Uhr, Wochenende {we_:.0%}, "
+                      f"Dauer {dau:.0f} Min")
+        zeilen.append(f"             {', '.join(mitglieder)}")
+    zeilen.append("")
+    zeilen.append("Die Benennungsregel unterscheidet diese Gruppen nicht. Entweder "
+                  "braucht sie ein weiteres Merkmal, oder die Gruppen sind eine.")
+    raise AssertionError("\\n".join(zeilen))
 assert len(set(regeln.values())) == len(regeln), (
     f"Kriterium 2 verletzt: zwei Gruppen bekommen dieselbe Regel - {regeln}")
 print(f"\\nKriterium 2 geprüft: {len(namen_cluster)} Gruppen, "
@@ -1197,7 +1298,7 @@ print("\\nDas ist der Preis der Nachvollziehbarkeit - und er gehört benannt.")
 MD("""
 ### 6.2 Die Population — wer überhaupt angeschrieben werden darf
 
-Bis hierher war von 2.199 RFM-Kunden die Rede. Ein Kampagnenplan braucht aber die
+Bis hierher war von {{n_rfm:,}} RFM-Kunden die Rede. Ein Kampagnenplan braucht aber die
 **ganze** Kundschaft und einen **einzigen Nenner** — sonst summieren sich die Anteile auf
 100 % einer Teilmenge, und daneben stehen weitere Kunden, die nirgends auftauchen.
 
@@ -1403,7 +1504,8 @@ MD("""
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**
 
-1. **Die Vielfahrer bringen den geringsten Umsatz je Fahrt** — 74 Cent gegen 6,38 € —
+1. **Die Vielfahrer bringen den geringsten Umsatz je Fahrt** —
+   {{viel_je_fahrt:.2f}} € gegen {{stark_je_fahrt:.2f}} € —
    weil ihre Tarife Freiminuten
    enthalten. Und weil in den vorliegenden Daten **keine Grundgebühr und keine andere
    Kompensation** erfasst ist — Partnerzahlungen oder Rahmenverträge sind nicht
