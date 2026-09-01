@@ -407,3 +407,68 @@ def vorher_nachher(slide, links, rechts, *, y=ZONE_OBEN, hoehe=250):
         _absatz(tf, titel, groesse=14, farbe=farbe, fett=True, erste=True)
         for z in zeilen:
             _absatz(tf, z, groesse=13, farbe=TEXT, mono=mono, abstand=3)
+
+
+PHASEN = ('Business\nUnderstanding', 'Data\nUnderstanding', 'Data\nPreparation',
+          'Modeling', 'Evaluation', 'Deployment')
+
+
+def phasenleiste(slide, aktuell, *, y=ZONE_UNTEN - 40, rueckspruenge=()):
+    """Motiv 11: Wo im CRISP-DM-Kreislauf stehen wir gerade?
+
+    Der wiederkehrende Anker des Analytics-Decks - dieselbe Rolle, die im
+    Datenbankdeck der rote Faden zu Annas Fahrt spielt. Sechs Felder,
+    das laufende ausgefuellt.
+
+    aktuell:       1..6, oder 0 fuer "keine Phase" (Uebersichtsfolien)
+    rueckspruenge: Phasennummern, auf die dieser Fall zurueckgesprungen
+                   ist. Sie bekommen den Warnton - der Rueckschritt ist
+                   das, was CRISP-DM von einer Liste unterscheidet, und
+                   er soll sichtbar sein, nicht nur erwaehnt.
+    """
+    hoehe = 40
+    luecke = 5
+    feld_b = (BREITE - 5 * luecke) / 6
+    for i, name in enumerate(PHASEN):
+        nr = i + 1
+        x = FLUCHT_L + i * (feld_b + luecke)
+        if nr == aktuell:
+            fuell, schrift, rand = BLAU, WEISS, None
+        elif nr in rueckspruenge:
+            fuell, schrift, rand = SAND_D, ROT_A, ROT_A
+        else:
+            fuell, schrift, rand = WEISS, GRAU, HAAR
+        rechteck(slide, x, y, feld_b, hoehe, fuell=fuell, linie=rand)
+        box = slide.shapes.add_textbox(Pt(x + 6), Pt(y + 3), Pt(feld_b - 12), Pt(hoehe - 6))
+        tf = _tf(box, rand=(0, 0, 0, 0))
+        tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        # Der Name steht zweizeilig; 13 pt ist die Untergrenze des Skills,
+        # deshalb wird die Zeile nicht kleiner gesetzt, sondern umbrochen.
+        _absatz(tf, f'{nr} {name.splitlines()[0]}', groesse=13, farbe=schrift,
+                fett=(nr == aktuell), erste=True, ausricht=PP_ALIGN.CENTER)
+        rest = name.splitlines()[1] if '\n' in name else ''
+        if rest:
+            _absatz(tf, rest, groesse=13, farbe=schrift, fett=(nr == aktuell),
+                    ausricht=PP_ALIGN.CENTER)
+
+
+def steckbrief(slide, zeilen, *, y=ZONE_OBEN, hoehe=None):
+    """Motiv 12: Der Fall auf einen Blick - Frage, Daten, Verfahren, Urteil.
+
+    Zwei Spalten Begriff/Wert. Steht am Anfang jedes Fallkapitels, damit
+    die Studierenden vor dem Durchlaufen wissen, wohin die Reise geht.
+    """
+    zeilen_h = 34
+    hoehe = hoehe or (len(zeilen) * zeilen_h + 16)
+    rechteck(slide, FLUCHT_L, y, BREITE, hoehe, fuell=SAND, linie=HAAR)
+    leiste(slide, FLUCHT_L, y, hoehe, BLAU, breite=6)
+    begriff_b = 190
+    for i, (begriff, wert) in enumerate(zeilen):
+        zy = y + 8 + i * zeilen_h
+        b = slide.shapes.add_textbox(Pt(FLUCHT_L + 20), Pt(zy), Pt(begriff_b), Pt(zeilen_h - 4))
+        tf = _tf(b, rand=(0, 0, 0, 0)); tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        _absatz(tf, begriff, groesse=13, farbe=BLAU, fett=True, erste=True)
+        w = slide.shapes.add_textbox(Pt(FLUCHT_L + 20 + begriff_b), Pt(zy),
+                                     Pt(BREITE - begriff_b - 44), Pt(zeilen_h - 4))
+        tf = _tf(w, rand=(0, 0, 0, 0)); tf.vertical_anchor = MSO_ANCHOR.MIDDLE
+        _absatz(tf, wert, groesse=13, farbe=TEXT, erste=True)
