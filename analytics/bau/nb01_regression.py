@@ -364,7 +364,7 @@ Ein Rücksprung ist eine **neue Modellierungsrunde**. Sie braucht ihren eigenen 
 | **Training** (60 %) | das Modell lernt | die ältesten Fahrten |
 | **Validierung** (15 %) | wir *wählen* Verfahren und Einstellungen | mittlerer Zeitraum |
 | **Test 1** (12,5 %) | die Punktschätzung wird *einmal* gemessen | danach verbraucht |
-| **Test 2** (12,5 %) | die Spanne wird *einmal* gemessen | bis Phase 5.6 unberührt |
+| **Test 2** (12,5 %) | die Spanne wird *einmal* gemessen | kein Training, keine Modellwahl, keine Schwelle |
 """),
 
 CODE("""
@@ -384,6 +384,14 @@ print()
 print("Test 1 ist Winter und Frühjahr, Test 2 ist Sommer. Dass die beiden")
 print("Zeiträume verschiedene Jahreszeiten sind, ist kein Zufall der Aufteilung,")
 print("sondern eine Eigenschaft der Daten - und sie wird uns beschäftigen.")
+print()
+print("EINE EINSCHRAENKUNG, DIE MAN NICHT VERSCHWEIGEN DARF: Die Erkundung in")
+print("Phase 2 - Verteilung der Dauer, Rundtouren, laengste Verbindungen - lief")
+print("auf dem GESAMTEN Datensatz, also auch ueber Test 2. Fuer Training,")
+print("Modellwahl und Schwellen ist Test 2 unberuehrt; voellig blind sind wir")
+print("ihm gegenueber aber nicht. Sauberer waere, die Grenze vor der Erkundung")
+print("zu ziehen - in einem Lehrnotebook, das die Daten erst vorstellt, waere")
+print("das allerdings eine seltsame Reihenfolge.")
 """),
 
 PHASE(4, "Verdient ein Modell seinen Unterhalt gegenüber einer Nachschlagetabelle?"),
@@ -765,34 +773,69 @@ tab = tab[(tab.n >= 30) & (tab.preis_bis - tab.preis_von <= 1.00)]
 print(f"{len(tab)} Kombinationen erfuellen die beiden Regeln aus Phase 1.")
 zukunft = zukunft.merge(tab, on=["route", "typ_code", "fenster"], how="left")
 
-# AUFGABE: Wie oft liegt die tatsächliche Dauer INNERHALB der Spanne?
-##LUECKE Abdeckung für beide Kandidaten, nur wo eine Spanne vorliegt.
-def abdeckung(u, o):
-    da = zukunft[o].notna()
-    return ((zukunft[da].dauer_min >= zukunft[da][u])
-            & (zukunft[da].dauer_min <= zukunft[da][o])).mean()
+# Gemessen wird gegen das VOLLSTAENDIGE Kriterium aus Phase 5.5, nicht
+# nur gegen die Dauerabdeckung: Preisabdeckung insgesamt UND je Radtyp,
+# dazu die Breitenregel. Eine Spanne von 1,78 Euro trifft leicht - sie
+# nuetzt nur niemandem.
+zukunft["p_ist"] = [fahrpreis(m, t) for m, t in zip(zukunft.dauer_min, zukunft.typ_code)]
+
+# AUFGABE: Aus einer Spanne in Minuten wird eine Spanne in Euro, und
+# daraus die Frage, ob der tatsaechliche Preis darin liegt.
+##LUECKE Zwei Preisgrenzen je Fahrt, dann der Vergleich.
+def preisspanne(u, o):
+    von = [fahrpreis(m, t) for m, t in zip(zukunft[u], zukunft.typ_code)]
+    bis = [fahrpreis(m, t) for m, t in zip(zukunft[o], zukunft.typ_code)]
+    return pd.Series(von, index=zukunft.index), pd.Series(bis, index=zukunft.index)
 ##ENDE
 
-print(f"{'Kandidat':30}{'Abdeckung':>11}{'Breite (Median)':>18}{'Auskunft für':>15}")
-for name, u, o in (("Quantilregression", "modell_von", "modell_bis"),
-                   ("Perzentile je Verbindung", "von", "bis")):
+def bewerten(name, u, o):
     da = zukunft[o].notna()
-    print(f"{name:30}{abdeckung(u, o):>10.1%}"
-          f"{(zukunft[da][o] - zukunft[da][u]).median():>14.1f} Min"
-          f"{da.mean():>14.0%}")
+    von, bis = preisspanne(u, o)
+    drin = (zukunft.p_ist >= von - 0.001) & (zukunft.p_ist <= bis + 0.001)
+    breite = bis - von
+    schmal = breite <= 1.00
+    je_typ = {ty: drin[da & (zukunft.typ_code == ty)].mean()
+              for ty in sorted(zukunft[da].typ_code.unique())}
+    return {
+        "Auskunft": da.mean(),
+        "Abdeckung": drin[da].mean(),
+        "schlechtester Radtyp": min(je_typ.values()) if je_typ else float("nan"),
+        "Breite (Median)": breite[da].median(),
+        "Anteil <= 1 EUR": schmal[da].mean(),
+        "Abdeckung der schmalen": drin[da & schmal].mean() if (da & schmal).any() else float("nan"),
+    }
+
+vergleich = pd.DataFrame({
+    "Quantilregression": bewerten("Modell", "modell_von", "modell_bis"),
+    "Perzentiltabelle":  bewerten("Tabelle", "von", "bis")}).T
+print(vergleich.to_string(float_format=lambda x: f"{x:.3f}"))
 print()
-print("Die Quantilregression antwortet immer, die Tabelle nur dort, wo sie")
-print("freigegeben ist. Verglichen werden muessen deshalb nicht nur die")
-print("Abdeckungen, sondern auch die Reichweiten - siehe Phase 6.2.")
+for name, z in vergleich.iterrows():
+    haelt = (z["Abdeckung"] >= 0.80 and z["schlechtester Radtyp"] >= 0.80
+             and z["Breite (Median)"] <= 1.00)
+    print(f"{name:22} vollstaendiges Kriterium: "
+          f"{'ERFUELLT' if haelt else 'NICHT ERFUELLT'}")
 """),
 
 MD("""
-Beide halten die 80 Prozent. Die Tabelle trifft sogar etwas besser und ist schmaler —
-**aber sie schweigt bei drei von vier Anfragen.** Die Quantilregression antwortet immer.
+**Keiner der beiden Kandidaten erfüllt das vollständige Kriterium.** Das ist das
+ehrliche Ergebnis, und es fällt bei jedem aus einem anderen Grund aus:
 
-Das ist der eigentliche Zielkonflikt, und er lässt sich nicht wegrechnen: Wer immer
-antwortet, antwortet auch dort, wo er es nicht sollte. Wer nur dort antwortet, wo die
-Daten es hergeben, lässt die meisten Anfragen unbeantwortet.
+- Die **Quantilregression** antwortet immer und trifft insgesamt knapp über 80 Prozent —
+  aber ihre Spannen sind im Median breiter als ein Euro, und nur gut vier von zehn
+  erfüllen die Breitenregel. Eine Spanne, die alles einschließt, trifft leicht; sie
+  nützt nur niemandem. Beim EBIKE bleibt sie zusätzlich unter der Marke.
+- Die **Perzentiltabelle** hält die Breitenregel per Konstruktion und trifft besser —
+  aber sie schweigt bei mehr als zwei von drei Anfragen, und beim EBIKE reißt sie das
+  Kriterium deutlich.
+
+Hätte man nur die Dauerabdeckung gemessen, sähen beide gut aus. Erst die vollständige
+Prüfung — Preis, je Radtyp, Breite — zeigt, dass so noch kein Produkt daraus wird.
+
+**Der Unterschied liegt darin, was sich reparieren lässt.** Die Tabelle kann man auf den
+Bereich einschränken, in dem sie hält: auf den Radtyp, der die Marke erreicht, und auf
+Kombinationen, die nicht messbar durchfallen. Bei der Quantilregression ginge das nicht —
+ihre Spannen wären auch dann noch zu breit.
 
 Weitere Unterschiede:
 
@@ -803,7 +846,8 @@ Weitere Unterschiede:
 | ist von Hand prüfbar | nein | ja |
 | berücksichtigt Wochentag und Saison | ja | nein |
 
-**Wir liefern die Tabelle aus** — und nehmen das Schweigen in Kauf. Drei Gründe:
+**Wir liefern die Tabelle aus** — eingeschränkt auf den Bereich, in dem sie das
+Kriterium hält, und mit dem Schweigen als Preis. Drei Gründe:
 
 1. Die App ist statisch und kann kein Modell laden.
 2. Eine Auskunft, der jemand mit Ortskenntnis widersprechen kann, ist im Betrieb mehr
@@ -834,11 +878,18 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 
 1. mindestens 30 Fahrten als Grundlage,
 2. eine Spanne von höchstens 1,00 €,
-3. und eine **auf Test 2 gemessene** Abdeckung von mindestens 80 Prozent — je Radtyp.
+3. und eine **auf Test 2 gemessene** Abdeckung von mindestens 80 Prozent — **insgesamt
+   und je Radtyp**, dazu der Ausschluss jeder Kombination, die dort *messbar* darunter
+   liegt.
 
-Die dritte Bedingung fehlte in der ersten Fassung. Damit war die Freigabe eine Behauptung
-über die Vergangenheit, nicht über die Zukunft — und sie hätte gleich zu einem Widerspruch
-geführt, wie die nächste Zelle zeigt.
+> **Was diese Freigabe leistet — und was nicht.** Die 80 Prozent sind für die Tabelle
+> als Ganzes und für jeden freigegebenen Radtyp gemessen. Für die **einzelne**
+> Verbindung ist das keine Zusage: Die meisten Kombinationen haben im Testzeitraum nur
+> eine Handvoll Fahrten, und aus acht Fahrten lässt sich keine 80-Prozent-Aussage
+> ableiten. Ausgeschlossen wird deshalb, was messbar durchfällt — nicht behauptet, dass
+> alles Übrige bestanden hätte.
+>
+> Eine echte Zusage je Verbindung bräuchte den Schattenbetrieb aus 6.6.
 """),
 
 CODE("""
@@ -858,10 +909,27 @@ je_komb = z.groupby(["route", "typ_code", "fenster"]).agg(
     abdeckung=("im_intervall", "mean"), n=("im_intervall", "size"),
     breite=("breite", "median"))
 gross = je_komb[je_komb.n >= 20]
-print(f"\\nJe Kombination mit mindestens 20 Prüffahrten: {len(gross)} geprüft, "
-      f"{(gross.abdeckung >= 0.80).sum()} erfüllen 80 %, "
-      f"{(gross.abdeckung < 0.80).sum()} nicht")
-print(f"   schlechteste {gross.abdeckung.min():.0%}, beste {gross.abdeckung.max():.0%}")
+klein = je_komb[je_komb.n < 20]
+print(f"\\nJe Kombination:")
+print(f"   {len(gross):>4} mit mindestens 20 Prüffahrten - davon erfüllen "
+      f"{(gross.abdeckung >= 0.80).sum()} die 80 %, {(gross.abdeckung < 0.80).sum()} nicht")
+if len(gross):
+    print(f"        schlechteste {gross.abdeckung.min():.0%}, beste {gross.abdeckung.max():.0%}")
+print(f"   {len(klein):>4} mit WENIGER als 20 Prüffahrten "
+      f"(im Median {klein.n.median():.0f}) - fuer sie laesst sich")
+print(f"        ueber die einzelne Kombination nichts Belastbares sagen.")
+
+# Was messbar durchfaellt, wird nicht ausgeliefert. Das ist KEINE Garantie
+# je Kombination - fuer die Mehrzahl ist die Pruefmenge dafuer zu klein -,
+# aber es waere unredlich, eine Kombination anzuzeigen, von der wir WISSEN,
+# dass sie das Kriterium verfehlt.
+durchgefallen = set(gross[gross.abdeckung < 0.80].index)
+if durchgefallen:
+    print(f"\\n   Ausgeschlossen, weil messbar unter 80 %:")
+    for r, ty, fn in sorted(durchgefallen):
+        print(f"        {r} / {ty} / {fn}  "
+              f"({je_komb.loc[(r, ty, fn), 'abdeckung']:.0%} bei "
+              f"{je_komb.loc[(r, ty, fn), 'n']:.0f} Prüffahrten)")
 print(f"\\nSpannenbreite im Median: {z.breite.median():.2f} €")
 
 # DRITTE REGEL, und sie kommt aus dieser Messung: Ein Radtyp, dessen
@@ -877,6 +945,11 @@ for x in sorted(je_typ.index):
           f"{'freigegeben' if x in freigegebene_typen else 'NICHT freigegeben'}")
 tab = tab[tab.typ_code.isin(freigegebene_typen)]
 z = z[z.typ_code.isin(freigegebene_typen)]
+
+schluessel = list(zip(tab.route, tab.typ_code, tab.fenster))
+tab = tab[[k not in durchgefallen for k in schluessel]]
+z = z[[k not in durchgefallen
+       for k in zip(z.route, z.typ_code, z.fenster)]]
 """),
 
 MD("""
@@ -906,13 +979,28 @@ print("besser als eine Zahl, die nicht trägt.")
 
 MD("""
 ### 6.3 Die Tabelle bauen und ausliefern
+
+> **Eine Schwäche, die in der Tabelle steckt.** Dreißig Fahrten sind die Untergrenze für
+> eine Zeile — für ein 10-%- und ein 90-%-Quantil heißt das rund **drei Beobachtungen je
+> Rand**. Die Grenzen der Spanne stehen damit auf sehr dünnem Grund, auch wenn die Mitte
+> gut belegt ist. Für eine echte Freigabe wären höhere Mindestfallzahlen, Bootstrap-
+> Intervalle oder eine kalibrierte Intervallmethode angebracht. Wir belassen es bei
+> dreißig und sagen dazu, was das bedeutet.
 """),
 
 CODE("""
+# IDs statt Namen als Schluessel. Namen aendern sich - "Grombuehl/Klinikum"
+# wurde zu "Grombühl Klinikum" -, und eine Schnittstelle, die daran haengt,
+# bricht bei jeder Umbenennung. Die Namen bleiben mit drin, aber fuer die
+# Anzeige, nicht als Schluessel.
+id_je_name = station.set_index("name").station_id
+
 zeilen = []
 for _, g in tab.iterrows():
     start, ziel = g.route.split(" → ")
-    zeilen.append(dict(startstation=start, zielstation=ziel, typ_code=g.typ_code,
+    zeilen.append(dict(start_station_id=int(id_je_name[start]),
+                       ziel_station_id=int(id_je_name[ziel]),
+                       startstation=start, zielstation=ziel, typ_code=g.typ_code,
                        zeitfenster=g.fenster,
                        minuten_von=round(g["von"]), minuten_bis=round(g["bis"]),
                        preis_von=round(g.preis_von, 2), preis_bis=round(g.preis_bis, 2),
@@ -984,8 +1072,15 @@ worden. Die Grenzen sind jetzt aneinander ausgerichtet.
 | Auslöser | Schwelle | Handlung |
 |---|---|---|
 | Abdeckung je Kombination, gleitend über 8 Wochen | ≥ 80 % | anzeigen |
-| | 75 bis 80 % | Warnung, Neuberechnung anstoßen |
-| | < 75 % | **Kombination abschalten** — das Kriterium ist verfehlt |
+| | 75 bis 80 % | anzeigen, aber Warnung und Neuberechnung |
+| | < 75 % | **Kombination abschalten** |
+
+Die Zone zwischen 75 und 80 Prozent ist kein aufgeweichtes Kriterium, sondern eine
+**Unsicherheitszone** — und sie braucht diese Begründung, sonst ist sie genau das
+Aufweichen, vor dem dieses Notebook sonst warnt: Bei 200 Fahrten im Achtwochenfenster hat
+eine gemessene Abdeckung von 78 Prozent ein Vertrauensintervall, das die 80 noch
+einschließt. Sofort abzuschalten hieße, auf Rauschen zu reagieren. Wer eine harte Kante
+will, muss die Fallzahl erhöhen, nicht die Zone abschaffen.
 | Fallzahl je Kombination | < 20 im Fenster | keine Aussage möglich, Vorwoche weiterverwenden |
 | neue Station | — | keine Zeile, also keine Anzeige |
 | **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |

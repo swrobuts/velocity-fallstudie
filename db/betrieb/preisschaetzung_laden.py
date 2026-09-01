@@ -42,7 +42,8 @@ import run  # noqa: E402  - liefert verbinde() und liest .env
 WURZEL = pathlib.Path(__file__).resolve().parent.parent.parent
 QUELLE = WURZEL / "analytics" / "preisschaetzung.csv"
 
-SPALTEN = ["startstation", "zielstation", "typ_code", "zeitfenster",
+SPALTEN = ["start_station_id", "ziel_station_id",
+           "startstation", "zielstation", "typ_code", "zeitfenster",
            "minuten_von", "minuten_bis", "preis_von", "preis_bis",
            "fahrten_grundlage"]
 
@@ -76,9 +77,14 @@ def main() -> int:
     trocken = "--trocken" in sys.argv
     daten = lesen()
     print(f"{len(daten)} Zeilen aus {QUELLE.name} gelesen und geprueft.")
-    verbindungen = len({(d[0], d[1]) for d in daten})
+    # Ueber den Spaltennamen, nicht ueber die Position: Als die IDs
+    # dazukamen, verschob sich alles um zwei, und die Zusammenfassung
+    # meldete Stationsnamen als Radtypen.
+    i = {name: k for k, name in enumerate(SPALTEN)}
+    verbindungen = len({(d[i["start_station_id"]], d[i["ziel_station_id"]])
+                        for d in daten})
     print(f"   {verbindungen} Verbindungen, "
-          f"Radtypen {sorted({d[2] for d in daten})}")
+          f"Radtypen {sorted({d[i['typ_code']] for d in daten})}")
     if trocken:
         print("\nTrockenlauf - nichts geschrieben.")
         return 0

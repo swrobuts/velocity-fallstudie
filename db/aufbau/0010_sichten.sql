@@ -112,7 +112,8 @@ select t.tarif_id, t.tarif_code, t.bezeichnung, t.art::text as art, t.voraussetz
 
 drop view if exists velocity.v_preisschaetzung;
 create view velocity.v_preisschaetzung as
-select startstation, zielstation, typ_code, zeitfenster,
+select start_station_id, ziel_station_id,
+       startstation, zielstation, typ_code, zeitfenster,
        minuten_von, minuten_bis, preis_von, preis_bis,
        fahrten_grundlage, stand
   from velocity.preisschaetzung;

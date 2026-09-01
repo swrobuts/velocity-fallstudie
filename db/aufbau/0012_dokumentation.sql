@@ -286,6 +286,10 @@ comment on column velocity.v_preisschaetzung.stand             is 'Datum der Ber
 comment on column velocity.v_mein_profil.zeigt_preisschaetzer  is 'Hat der Kunde den Preisschaetzer eingeschaltet? Steuert, ob die Radkacheln den Knopf zeigen.';
 comment on view   velocity.v_preisschaetzung is 'Die freigegebenen Preisspannen, wie die Website sie liest. Enthaelt keine Zeile fuer Rundfahrten und keine fuer Verbindungen, deren Spanne breiter als ein Euro waere - was hier fehlt, wird in der App nicht angezeigt.';
 comment on table  velocity.preisschaetzung is 'Ergebnis der Quantilregression aus analytics/notebooks/01_Regression_Fahrtdauer.ipynb: je Verbindung, Radtyp und Tageszeit eine Preisspanne. Enthaelt NUR die freigegebenen Kombinationen - mindestens 30 Fahrten als Grundlage und hoechstens 1,00 Euro Spannbreite. Was fehlt, wird in der App nicht angezeigt.';
+comment on column velocity.preisschaetzung.start_station_id   is 'Startstation als ID - der stabile Schluessel. Namen aendern sich, IDs nicht.';
+comment on column velocity.preisschaetzung.ziel_station_id    is 'Zielstation als ID. Die Namensspalten daneben sind fuer die Anzeige, nicht zum Verknuepfen.';
+comment on column velocity.v_preisschaetzung.start_station_id is 'Startstation als ID - damit die App nicht ueber Namen verknuepfen muss.';
+comment on column velocity.v_preisschaetzung.ziel_station_id  is 'Zielstation als ID.';
 comment on column velocity.preisschaetzung.schaetzung_id      is 'Technischer Schluessel. Fachlich identifiziert wird eine Zeile ueber Startstation, Zielstation, Radtyp und Zeitfenster.';
 comment on column velocity.preisschaetzung.startstation       is 'Name der Station, an der die Fahrt beginnt - so, wie er in velocity.station steht. Bewusst der Name und nicht die ID: Die Tabelle kommt aus einem Notebook, das mit Namen arbeitet, und sie soll ohne Nachschlagen lesbar sein.';
 comment on column velocity.preisschaetzung.zielstation        is 'Name der vom Kunden gewaehlten Zielstation. Nie gleich der Startstation - fuer Rundfahrten gibt es keine Schaetzung.';

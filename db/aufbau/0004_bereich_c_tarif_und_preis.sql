@@ -102,6 +102,12 @@ end $$;
 -- haette. Neu laden mit db/betrieb/preisschaetzung_laden.py.
 create table if not exists velocity.preisschaetzung (
   schaetzung_id     bigint generated always as identity primary key,
+  -- IDs sind der Schluessel, Namen stehen fuer die Anzeige daneben. Ein
+  -- Name aendert sich - aus "Grombuehl/Klinikum" wurde "Grombühl
+  -- Klinikum" -, und eine Schnittstelle, die daran haengt, bricht bei
+  -- jeder Umbenennung still.
+  start_station_id  bigint,
+  ziel_station_id   bigint,
   startstation      text        not null,
   zielstation       text        not null,
   typ_code          text        not null,
@@ -129,7 +135,9 @@ create table if not exists velocity.preisschaetzung (
 -- Fuer eine Tabelle, die schon ohne sie angelegt wurde:
 alter table velocity.preisschaetzung
   add column if not exists erstellt_am  timestamptz not null default now(),
-  add column if not exists geaendert_am timestamptz not null default now();
+  add column if not exists geaendert_am timestamptz not null default now(),
+  add column if not exists start_station_id bigint,
+  add column if not exists ziel_station_id  bigint;
 
 select velocity.fn_audit_anhaengen('preisschaetzung');
 
