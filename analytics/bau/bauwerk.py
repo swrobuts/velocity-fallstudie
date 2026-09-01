@@ -56,7 +56,12 @@ ANALYTICS = os.path.dirname(HIER)
 ZIEL = os.path.join(ANALYTICS, "notebooks")
 ZIEL_UEBUNG = os.path.join(ZIEL, "uebung")
 
-ROHBASIS = "https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/main/analytics/"
+# Die Daten haengen an einem festen Tag, nicht an main: so bekommen alle
+# Studierenden denselben Stand, auch wenn die Fallstudie weitergepflegt
+# wird. Der Tag wird verschoben, wenn sich die Musterdaten aendern.
+DATENSTAND = "daten-v2"
+ROHBASIS = ("https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/"
+            f"{DATENSTAND}/analytics/")
 COLAB = "https://colab.research.google.com/github/swrobuts/velocity-fallstudie/blob/main/analytics/notebooks/"
 
 

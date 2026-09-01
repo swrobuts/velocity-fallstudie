@@ -126,6 +126,9 @@ fahrrad   = pd.read_csv(BASIS + "fahrrad.csv")
 feiertag  = pd.read_csv(BASIS + "feiertage.csv", parse_dates=["datum"])
 schulfrei = pd.read_csv(BASIS + "schulferien.csv", parse_dates=["von", "bis"])
 preise    = pd.read_csv(BASIS + "nutzungspreis.csv")
+# Die Routenmatrix haelt fuer jede Verbindung die tatsaechliche Radstrecke
+# und die mittlere Steigung fest. Die Kopfzeilen mit # sind Herkunftsangaben.
+routen    = pd.read_csv(BASIS + "radrouten_matrix.csv", comment="#")
 
 print(f"{len(ausleihe):,} Fahrten, {len(station)} Stationen, {len(fahrrad)} Räder")
 print()
@@ -313,18 +316,18 @@ kodiert — 23 Uhr und 0 Uhr sind Nachbarn, als Zahlen aber maximal weit auseina
 CODE("""
 d = d.merge(fahrrad[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
 
-koord = station.set_index("station_id")
-for rolle, spalte in (("start", "start_station_id"), ("ziel", "end_station_id")):
-    d[f"{rolle}_lat"] = d[spalte].map(koord.latitude)
-    d[f"{rolle}_lon"] = d[spalte].map(koord.longitude)
-
-# Luftlinie nach Haversine - anders als ein Routen-Kürzel auch für eine
-# Verbindung berechenbar, die im Training nie vorkam.
-R = 6371.0
-p1, p2 = np.radians(d.start_lat), np.radians(d.ziel_lat)
-dl = np.radians(d.ziel_lon - d.start_lon)
-h = np.sin((p2 - p1) / 2) ** 2 + np.cos(p1) * np.cos(p2) * np.sin(dl / 2) ** 2
-d["luftlinie_km"] = 2 * R * np.arcsin(np.sqrt(h))
+# Strecke und Steigung aus der Routenmatrix holen. Beide sind Eigenschaften
+# der Verbindung, nicht der Fahrt - sie stehen also schon vor dem Losfahren
+# fest und sind als Merkmal erlaubt.
+matrix = routen.set_index(["von_id", "nach_id"])
+schluessel = list(zip(d.start_station_id.astype("Int64").astype(str),
+                      d.end_station_id.astype("Int64").astype(str)))
+d["strecke_km"] = [matrix.strecke_m.get(s, np.nan) / 1000 for s in schluessel]
+d["steigung_promille"] = [matrix.steigung_promille.get(s, np.nan) for s in schluessel]
+# Rundtouren haben keine Relation in der Matrix: Start und Ziel sind derselbe
+# Ort. Wie weit dazwischen gefahren wurde, steht nirgends - das Merkmal
+# ist_rundtour sagt dem Modell, dass die Strecke hier nichts bedeutet.
+d[["strecke_km", "steigung_promille"]] = d[["strecke_km", "steigung_promille"]].fillna(0.0)
 
 d["datum"]  = d.startzeit.dt.normalize()
 d["stunde"] = d.startzeit.dt.hour
@@ -342,22 +345,26 @@ for _, z in schulfrei.iterrows():
     in_ferien |= (d.datum >= z.von) & (d.datum <= z.bis)
 d["ist_ferien"] = in_ferien.astype(int)
 
+echt = d[d.ist_rundtour == 0]
 print(f"{len(d):,} Fahrten, {d.route.nunique()} Verbindungen")
-print(f"Luftlinie {d.luftlinie_km.min():.2f} bis {d.luftlinie_km.max():.2f} km "
-      f"(0,00 km sind die Rundtouren)")
+print(f"Strecke {echt.strecke_km.min():.2f} bis {echt.strecke_km.max():.2f} km, "
+      f"Median {echt.strecke_km.median():.2f} km")
+print(f"Steigung {echt.steigung_promille.min():+.0f} bis "
+      f"{echt.steigung_promille.max():+.0f} Promille "
+      f"(Hubland liegt 90 Meter über der Altstadt)")
 """),
 
 MD("""
 ### 3.3 Aufteilen — entlang der Zeit, in VIER Abschnitte
 
-Hier liegt die zweite große Korrektur dieser Runde.
+Wir teilen viermal, nicht dreimal. Der Grund steht schon jetzt fest, bevor wir ein
+Ergebnis gesehen haben: CRISP-DM sieht den Rücksprung von der Evaluation in die
+Modellierung ausdrücklich vor. Wenn wir ihn gehen, ist die zweite Runde ein **neues
+Modell** — und ein Test, auf dem bereits gemessen wurde, ist für sie kein Test mehr,
+sondern Entwicklungsinformation.
 
-Die erste Fassung teilte dreifach: Training, Validierung, Holdout. Danach stellte sich in
-der Evaluation heraus, dass die Punktschätzung nicht trägt — und es wurde eine Spanne
-entwickelt und **auf demselben Holdout** geprüft. Damit war der Holdout keine unberührte
-Prüfmenge mehr, sondern Entwicklungsinformation.
-
-Ein Rücksprung ist eine **neue Modellierungsrunde**. Sie braucht ihren eigenen Test.
+Wer nur dreimal teilt, muss beim Rücksprung entweder neu erheben oder sich selbst
+belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 
 | Abschnitt | wofür | Regel |
 |---|---|---|
@@ -462,7 +469,8 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.tree import DecisionTreeRegressor
 
 KATEGORIAL = ["start_name", "ziel_name", "route", "typ_code"]
-NUMERISCH  = ["luftlinie_km", "ist_rundtour", "stunde_sin", "stunde_cos",
+NUMERISCH  = ["strecke_km", "steigung_promille", "ist_rundtour",
+              "stunde_sin", "stunde_cos",
               "monat_sin", "monat_cos", "wochentag", "ist_wochenende",
               "ist_feiertag", "ist_ferien"]
 MERKMALE = KATEGORIAL + NUMERISCH
@@ -502,7 +510,8 @@ print(f"Baseline D lag bei {tabelle[3][1]:.2f} Min - das Modell ist "
 MD("""
 > **Zur linearen Regression:** `drop="first"` beseitigt die Dummy-Falle innerhalb eines
 > Merkmals, aber nicht die Abhängigkeiten zwischen ihnen — die Route bestimmt Start und
-> Ziel, `ist_rundtour` folgt aus der Route, die Luftlinie ist je Route konstant. Die
+> Ziel, `ist_rundtour` folgt aus der Route, Strecke und Steigung sind je Route
+> konstant. Die
 > Vorhersagen sind brauchbar, die **Koeffizienten aber nicht eindeutig interpretierbar**.
 > Wer sie lesen will, braucht eine redundanzfreie Merkmalsmenge oder eine regularisierte
 > Regression.
@@ -515,7 +524,8 @@ ist es, **dasselbe Modell** einmal mit und einmal ohne die Zielmerkmale zu rechn
 
 CODE("""
 OHNE_ZIEL_KAT = ["start_name", "typ_code"]
-OHNE_ZIEL_NUM = [s for s in NUMERISCH if s not in ("luftlinie_km", "ist_rundtour")]
+OHNE_ZIEL_NUM = [s for s in NUMERISCH
+                 if s not in ("strecke_km", "steigung_promille", "ist_rundtour")]
 
 ohne = Pipeline([
     ("aufbereiten", ColumnTransformer([
@@ -529,12 +539,68 @@ mae_ohne = mean_absolute_error(validierung.dauer_min,
 
 print(f"Random Forest OHNE Zielmerkmale: MAE {mae_ohne:5.2f} Min")
 print(f"Random Forest MIT Zielmerkmalen: MAE {guete[bestes]:5.2f} Min")
+anteil_ziel = 1 - guete[bestes] / mae_ohne
 print(f"Beitrag des Ziels:               {mae_ohne - guete[bestes]:5.2f} Min "
-      f"({1 - guete[bestes]/mae_ohne:.0%})")
+      f"({anteil_ziel:.0%})")
+merke("ablation_anteil", anteil_ziel)
+merke("mae_ohne_ziel", mae_ohne)
 print()
-print("Die neue Geschäftslogik ist richtig - aber der messbare Zusatznutzen")
-print("der Zielinformation ist in diesem Datensatz bescheiden. Das gehört")
-print("in den Bericht, nicht in eine Fußnote.")
+print("Wohin jemand faehrt, ist das mit Abstand wichtigste Merkmal: Ohne das")
+print("Ziel kennt das Modell die Strecke nicht, und ohne Strecke bleibt nur")
+print("der Durchschnitt. Die Geschaeftslogik - erst fragen, dann schaetzen -")
+print("ist damit nicht nur richtig, sondern die Voraussetzung des Produkts.")
+"""),
+
+MD("""
+### 4.4 Was der Wald findet und die Gerade nicht kann
+
+Der Random Forest ist besser als die lineare Regression. Das allein ist kein Argument —
+teurer ist er auch. Ein Verfahren, das Wechselwirkungen abbilden kann, rechtfertigt sich
+erst, wenn es welche **gibt**.
+
+Würzburg liefert eine: Das Hubland liegt rund neunzig Meter über der Altstadt. Was
+kostet diese Steigung an Tempo — und kostet sie jedes Rad dasselbe?
+
+> **Zur Lesart der Zahlen:** Wir teilen die Streckenlänge durch die Ausleihdauer. Das
+> ergibt das Tempo von Station zu Station, inklusive Ampeln, Umwegen und dem An- und
+> Abschließen — nicht die Geschwindigkeit auf der Strecke. Es liegt deshalb spürbar
+> unter dem, was der Tacho zeigen würde. Für den Vergleich zwischen den Radtypen spielt
+> das keine Rolle: Der Abzug trifft alle drei gleich.
+"""),
+
+CODE("""
+echt_v = validierung[validierung.ist_rundtour == 0].copy()
+echt_v["kmh"] = echt_v.strecke_km / (echt_v.dauer_min / 60)
+klassen = pd.cut(echt_v.steigung_promille, [-100, -8, -3, 3, 8, 100],
+                 labels=["stark bergab", "bergab", "eben", "bergauf", "stark bergauf"])
+tempo = echt_v.groupby([klassen, "typ_code"], observed=True).kmh.mean().unstack()
+
+print("Mittleres Tempo in km/h je Steigung und Radtyp:")
+print(tempo.round(1).to_string())
+print()
+print("Was der Anstieg kostet (eben gegen stark bergauf):")
+for typ in tempo.columns:
+    eben, berg = tempo.loc["eben", typ], tempo.loc["stark bergauf", typ]
+    verlust = 1 - berg / eben
+    print(f"   {typ:6} {eben:5.1f} -> {berg:5.1f} km/h   {verlust:5.1%} langsamer")
+    merke(f"anstieg_{typ.lower()}", verlust)
+"""),
+
+MD("""
+Das Citybike verliert am Anstieg {{anstieg_city:.0%}} seines Tempos, das E-Bike nur
+{{anstieg_ebike:.0%}} — der Motor fängt die Steigung ab. Das Lastenrad trifft es mit
+{{anstieg_cargo:.0%}} am härtesten.
+
+**Genau das ist eine Wechselwirkung:** Die Wirkung der Steigung hängt vom Radtyp ab. Eine
+lineare Regression addiert einen festen Steigungskoeffizienten und einen festen
+Radtyp-Zuschlag; sie kann nur sagen „Steigung kostet x Minuten" und „E-Bikes sind y
+Minuten schneller", nicht „Steigung kostet das E-Bike weniger". Ein Baum kann es, weil er
+erst nach dem Radtyp und dann innerhalb jedes Astes nach der Steigung teilt.
+
+> **Für die Praxis:** Wer die lineare Regression behalten will, muss den
+> Wechselwirkungsterm von Hand bilden — Steigung mal Radtyp als eigene Spalte. Das
+> Baumverfahren findet ihn selbst. Der Preis dafür sind Koeffizienten, die man nicht
+> mehr ablesen kann.
 """),
 
 PHASE(5, "Reicht das für die Preisanzeige? Und wenn nicht — was dann?"),
@@ -592,6 +658,9 @@ for t, g in pruef.groupby("typ_code"):
     print(f"{t:8} {len(g):>6,} {g.p_ist.mean():>12.2f} € {pf:>11.2f} € "
           f"{(g.preisfehler < 0.50).mean():>12.0%} "
           f"{'erfüllt' if pf < 0.50 else 'gerissen':>12}")
+    if t == "CITY":
+        merke("preisfehler_city", pf)
+        merke("city_unter_50", (g.preisfehler < 0.50).mean())
 """),
 
 MD("""
@@ -718,10 +787,10 @@ Nutzerabsicht, Höhenprofil oder Stationsauslastung sind ungeprüfte Kandidaten.
 Für CITY könnten wir jetzt ausliefern. Trotzdem springen wir zurück, und zwar aus zwei
 Gründen, die nichts mit einem gerissenen Kriterium zu tun haben.
 
-**Erstens misst das Kriterium den Durchschnitt, nicht die Erfahrung.** 0,41 € im Mittel
-klingt gut. Die Zeile daneben sagt aber: Bei rund jeder vierten CITY-Fahrt liegt die
-Anzeige um **mehr als 50 Cent** daneben. Ein Kunde erlebt keinen Mittelwert, er erlebt
-seine Fahrt.
+**Erstens misst das Kriterium den Durchschnitt, nicht die Erfahrung.**
+{{preisfehler_city:.2f}} € im Mittel klingt gut. Die Spalte daneben sagt aber: Nur
+{{city_unter_50:.0%}} der CITY-Fahrten bleiben innerhalb der 50 Cent — bei den übrigen
+liegt die Anzeige darüber. Ein Kunde erlebt keinen Mittelwert, er erlebt seine Fahrt.
 
 **Zweitens haben zwei von drei Radtypen gar kein Produkt.** Eine Lösung, die nur für das
 billigste Rad funktioniert, ist keine Antwort auf die Geschäftsfrage.
@@ -729,8 +798,10 @@ billigste Rad funktioniert, ist keine Antwort auf die Geschäftsfrage.
 Drei Wege stehen offen:
 
 1. **Grenze lockern.** Verboten — und hier auch unnötig.
-2. **Besseres Modell suchen.** Die Ablation in 4.3 zeigt, wie wenig selbst das Ziel
-   beiträgt; die fehlende Information steckt nicht im Verfahren.
+2. **Besseres Modell suchen.** Die Ablation in 4.3 zeigt, dass die Verbindung bereits
+   {{ablation_anteil:.0%}} des Fehlers erklärt — das Verfahren schöpft die vorhandene
+   Information also aus. Was fehlt, ist der Anlass der einzelnen Fahrt, und der steht
+   in keiner Spalte.
 3. **Die Zusage ändern.** Statt einer Zahl, die für ein Viertel der Fahrten zu genau
    klingt, eine **Spanne**, die die tatsächliche Streuung zeigt.
 
@@ -747,9 +818,10 @@ Regression —, sondern das, was die App verspricht.
 
 ### 5.6 Welches Artefakt? Zwei Kandidaten, ehrlich verglichen
 
-In der ersten Fassung stand hier ein Widerspruch: Der Text sagte, die Quantilregression
-werde ausgeliefert — gebaut wurde dann eine Tabelle aus historischen Perzentilen. Das
-sind zwei verschiedene Produkte, und man muss sich entscheiden.
+Für die Spanne gibt es zwei Wege, und sie führen zu **zwei verschiedenen Produkten**:
+eine Quantilregression, die für jede Anfrage rechnet, oder eine Tabelle aus historischen
+Perzentilen, die nachschlägt. Beide werden auf demselben Kriterium gemessen, bevor
+entschieden wird.
 """),
 
 CODE("""
@@ -865,27 +937,32 @@ for name, s in vergleich.iterrows():
     haelt = s["Abdeckung (angezeigt)"] >= 0.80 and s["schlechtester Radtyp"] >= 0.80
     print(f"{name:22} vollstaendiges Kriterium: "
           f"{'ERFUELLT' if haelt else 'NICHT ERFUELLT'}")
+
+merke("quantil_auskunft", vergleich.loc["Quantilregression", "Auskunft (angezeigt)"])
+merke("quantil_verworfen", vergleich.loc["Quantilregression", "verworfen, zu breit"])
+merke("tabelle_auskunft", vergleich.loc["Perzentiltabelle", "Auskunft (angezeigt)"])
+merke("tabelle_schlechtester", vergleich.loc["Perzentiltabelle", "schlechtester Radtyp"])
 """),
 
 MD("""
-Das Ergebnis ist eindeutig, und es fällt anders aus, als die Reihenfolge der Kapitel
-vermuten lässt:
+**Beide Kandidaten erfüllen das vollständige Kriterium** — insgesamt und für jeden
+Radtyp. Damit fällt die Entscheidung nicht über die Güte.
 
-- Die **Quantilregression** verwirft gut die Hälfte ihrer Spannen als zu breit. Auf dem
-  Rest — knapp der Hälfte aller Anfragen — **erfüllt sie das vollständige Kriterium**,
-  insgesamt wie für jeden Radtyp.
-- Die **Perzentiltabelle** hält die Breitenregel per Konstruktion und antwortet seltener.
-  Sie **verfehlt das Kriterium**, weil sie beim EBIKE deutlich unter 80 Prozent bleibt.
+- Die **Quantilregression** verwirft {{quantil_verworfen:.0%}} ihrer Spannen als zu
+  breit. Was sie gut macht, ist gerade dieses Weglassen: Sie antwortet nur dort, wo sie
+  eine schmale Spanne bilden kann, und beantwortet dafür {{quantil_auskunft:.0%}} der
+  Anfragen.
+- Die **Perzentiltabelle** hält die Breitenregel per Konstruktion, antwortet mit
+  {{tabelle_auskunft:.0%}} etwas seltener und liegt beim schwächsten Radtyp bei
+  {{tabelle_schlechtester:.0%}} — knapp über der Grenze.
 
-> **Gemessen am eigenen Kriterium ist damit die Quantilregression der bessere Kandidat.**
-> Das gehört so gesagt, auch wenn die Entscheidung gleich anders ausfällt.
+> Der knappe Abstand der Tabelle beim schwächsten Radtyp ist kein Nebensatz. Er gehört
+> in die Überwachung aus 6.5: Was mit weniger als einem Prozentpunkt Abstand freigegeben
+> wird, kann beim nächsten Datenstand darunter liegen.
 
-Bemerkenswert ist die Zeile *verworfen, zu breit*: Über die Hälfte ihrer Spannen wäre für
-den Kunden wertlos. Was sie gut macht, ist gerade das Weglassen — sie antwortet nur dort,
-wo sie eine schmale Spanne bilden kann.
-
-Hätte man nur die Dauerabdeckung gemessen, sähen beide gut aus. Erst die vollständige
-Prüfung — Preis, je Radtyp, Breite — zeigt, dass so noch kein Produkt daraus wird.
+Hätte man nur die Dauerabdeckung gemessen, sähen beide besser aus, als sie sind. Erst die
+vollständige Prüfung — Preis, je Radtyp, Breite — trennt die beiden Kandidaten
+überhaupt sichtbar.
 
 **Warum trotzdem die Tabelle?** Nicht wegen der Güte — die spricht für das Modell.
 Sondern weil die App eine statische Seite ohne Python ist und kein Modell laden kann.
@@ -894,7 +971,7 @@ Weitere Unterschiede:
 
 | | Quantilregression | Perzentiltabelle |
 |---|---|---|
-| kann eine **neue** Verbindung einschätzen | ja, über Luftlinie und Radtyp | nein |
+| kann eine **neue** Verbindung einschätzen | ja, über Strecke, Steigung und Radtyp | nein |
 | ist ohne Python lauffähig | nein | ja |
 | ist von Hand prüfbar | nein | ja |
 | berücksichtigt Wochentag und Saison | ja | nein |
@@ -1016,9 +1093,10 @@ z = z[[k not in durchgefallen
 MD("""
 ### 6.2 Die ehrliche Produktreichweite
 
-Eine Zahl, die in der ersten Fassung fehlte und die man nicht verschweigen darf: Für wie
-viele Anfragen kann die App überhaupt etwas sagen? Gezählt wird, was **tatsächlich
-ausgeliefert** wird — also nach dem Ausschluss aus 6.1.
+Eine Zahl, die man nicht verschweigen darf: Für wie viele Anfragen kann die App
+überhaupt etwas sagen? Ein Kriterium, das nur für die beantworteten Fälle gilt, sagt
+nichts über die Reichweite. Gezählt wird deshalb, was **tatsächlich ausgeliefert**
+wird — also nach dem Ausschluss aus 6.1.
 """),
 
 CODE("""
@@ -1033,6 +1111,7 @@ print(f"   {mit_ziel_ohne_rund:>6,}  davon echte Wege, keine Rundtouren   "
 print(f"   {mit_auskunft:>6,}  davon mit einer freigegebenen Spanne  "
       f"({mit_auskunft/alle_t2:.0%} aller Fahrten)")
 print()
+merke("reichweite", mit_auskunft / alle_t2)
 print(f"Die App kann also für {mit_auskunft/alle_t2:.0%} der Fahrten einen Preis nennen.")
 print("Für den Rest sagt sie ehrlich, dass sie es nicht kann - und das ist")
 print("besser als eine Zahl, die nicht trägt.")
@@ -1047,7 +1126,8 @@ MD("""
 > belegt ist.
 >
 > Die Zahl ist ein Kompromiss, kein Ergebnis: Bei fünfzig fielen rund ein Drittel der
-> Verbindungen weg, und die Reichweite sänke weiter unter die ohnehin knappen 23 Prozent.
+> Verbindungen weg, und die Reichweite sänke weiter unter die ohnehin knappen
+> {{reichweite:.0%}}.
 > Für eine Produktfreigabe wäre der Kompromiss anders zu setzen — mit höherer
 > Mindestfallzahl, Bootstrap-Intervallen für die Ränder oder einer kalibrierten
 > Intervallmethode. Hier steht er so, und er steht hier, damit man ihn sieht.
@@ -1150,9 +1230,9 @@ for probe in proben:
 MD("""
 ### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
 
-In der ersten Fassung stand als Erfolgskriterium 80 Prozent, als Handlungsschwelle aber
-erst 75 und 60 Prozent. Eine bereits gescheiterte Kombination wäre damit weiter angezeigt
-worden. Die Grenzen sind jetzt aneinander ausgerichtet.
+Die Handlungsschwellen sind am Erfolgskriterium ausgerichtet: Wer bei 80 Prozent
+freigibt, darf nicht erst bei 60 Prozent eingreifen — sonst bliebe eine bereits
+gescheiterte Kombination weiter in der App.
 
 | Auslöser | Schwelle | Handlung |
 |---|---|---|
