@@ -15,7 +15,7 @@ Runde 2, nach dem zweiten methodischen Review (01.09.2026). Umgesetzt:
   * Rollierende Pruefung, Ziel-Ablation, ehrliche Produktreichweite,
     Abdeckung je Segment, harmonisierte Ueberwachungsgrenzen.
 """
-from bauwerk import CODE, MD, PHASE, ROHBASIS, kopf
+from bauwerk import CODE, MD, PHASE, kopf
 
 NAME = "01_Regression_Fahrtdauer"
 
@@ -126,7 +126,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 BASIS = os.environ.get("VELO_BASIS",
-    """ + '"' + ROHBASIS + '"' + """)
+    __ROHBASIS__)
 
 ausleihe  = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
 station   = pd.read_csv(BASIS + "station.csv")
@@ -1148,6 +1148,26 @@ for _u, _o in (("modell_von", "modell_bis"), ("von", "bis")):
     _kreuzt = (zukunft[_u] > zukunft[_o]).sum()
     assert _kreuzt == 0, f"{_kreuzt} gekreuzte Spannen in {_u}/{_o}"
 
+# Eine Quote aus wenigen Faellen ist keine Zusage. Das Wilson-Intervall sagt,
+# welche wahren Abdeckungen mit dem Beobachteten noch vereinbar sind - erst
+# wenn seine UNTERGRENZE die Schwelle haelt, gilt eine Bedingung als erfuellt.
+def wilson(treffer, gesamt, z_wert=1.96):
+    if gesamt == 0:
+        return 0.0, 1.0
+    anteil = treffer / gesamt
+    nenner = 1 + z_wert**2 / gesamt
+    mitte = (anteil + z_wert**2 / (2 * gesamt)) / nenner
+    rand = z_wert * math.sqrt(anteil * (1 - anteil) / gesamt
+                              + z_wert**2 / (4 * gesamt**2)) / nenner
+    return mitte - rand, mitte + rand
+
+
+# Das Primaergate aus Phase 6.1, hier schon gebraucht: Die Gruppe, bei der die
+# Schaetzung ueberhaupt in den Preis eingeht, entscheidet ueber das Produkt.
+# Es gehoert deshalb in den Kandidatenvergleich - nicht erst hinter die Wahl.
+GATE_PREISABHAENGIG = 0.80
+
+
 def bewerten(name, u, o):
     \"\"\"Bewertet nur, was die App tatsaechlich ANZEIGEN wuerde.
 
@@ -1170,9 +1190,16 @@ def bewerten(name, u, o):
         gezeigt = zeigbar & maske
         je_typ[ty] = drin[gezeigt].mean() if gezeigt.any() else 0.0
         reichweite_typ[ty] = gezeigt.sum() / max(1, maske.sum())
+    # Die Guthabenlage haengt an der Spanne DIESES Kandidaten: Wessen Guthaben
+    # die obere Grenze deckt, zahlt nur die Startgebuehr - unabhaengig von der
+    # Schaetzung. Ein enger schaetzender Kandidat verschiebt die Grenze.
+    preisabhaengig = zeigbar & (zukunft.freiminuten_rest < zukunft[u])
+    gate_unten, _ = wilson(int(drin[preisabhaengig].sum()), int(preisabhaengig.sum()))
     return {
         "Auskunft (angezeigt)": zeigbar.mean(),
         "Abdeckung (angezeigt)": drin[zeigbar].mean(),
+        "preisabhaengig n": int(preisabhaengig.sum()),
+        "Primaergate (Untergrenze)": gate_unten,
         "schlechtester Radtyp": min(je_typ.values()) if je_typ else float("nan"),
         "geringste Reichweite": min(reichweite_typ.values()),
         "Breite (Median)": (bis - von)[zeigbar].median(),
@@ -1205,7 +1232,8 @@ for name, s in vergleich.iterrows():
     # erfuellt das Kriterium nicht, auch wenn die wenigen Antworten stimmen.
     haelt = (s["Abdeckung (angezeigt)"] >= 0.80
              and s["schlechtester Radtyp"] >= 0.80
-             and s["geringste Reichweite"] >= MINDESTREICHWEITE)
+             and s["geringste Reichweite"] >= MINDESTREICHWEITE
+             and s["Primaergate (Untergrenze)"] >= GATE_PREISABHAENGIG)
     # Die Fallzahl gehoert neben das Urteil. Eine Quote aus dreissig Faellen
     # traegt keine Freigabe, auch wenn sie ueber der Schwelle liegt.
     n_angezeigt = int(round(s["Auskunft (angezeigt)"] * len(zukunft)))
@@ -1390,19 +1418,6 @@ z["breite"] = z.preis_bis - z.preis_von
 _ = merke("abdeckung_gesamt", z.im_intervall.mean())
 print(f"Abdeckung insgesamt auf Test 2: {z.im_intervall.mean():.1%}   (Kriterium 80 %)")
 print()
-# Eine Quote aus wenigen Faellen ist keine Zusage. Das Wilson-Intervall sagt,
-# welche wahren Abdeckungen mit dem Beobachteten noch vereinbar sind - erst
-# wenn seine UNTERGRENZE die Schwelle haelt, ist der Radtyp freigegeben.
-def wilson(treffer, gesamt, z_wert=1.96):
-    if gesamt == 0:
-        return 0.0, 1.0
-    anteil = treffer / gesamt
-    nenner = 1 + z_wert**2 / gesamt
-    mitte = (anteil + z_wert**2 / (2 * gesamt)) / nenner
-    rand = z_wert * math.sqrt(anteil * (1 - anteil) / gesamt
-                              + z_wert**2 / (4 * gesamt**2)) / nenner
-    return mitte - rand, mitte + rand
-
 print(f"{'Radtyp':8}{'n':>7}{'Abdeckung':>12}{'95 %-Intervall':>18}{'Urteil':>14}")
 for t, g in z.groupby("typ_code"):
     unten, oben = wilson(g.im_intervall.sum(), len(g))

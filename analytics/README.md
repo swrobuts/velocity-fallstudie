@@ -9,7 +9,7 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 
 | Datei | Herkunft | Anmerkung |
 |---|---|---|
-| `wetter.csv` | **echt** | Tageswerte Würzburg (49,79° N, 9,95° O), Open-Meteo/ERA5-Archiv, 01.09.2023 – 24.08.2026 |
+| `wetter.csv` | **echt** | Tageswerte Würzburg (49,79° N, 9,95° O), Open-Meteo/ERA5-Archiv, 1.827 Tageswerte vom 24.08.2021 bis 24.08.2026 |
 | `feiertage.csv` | **echt** | Bayerische gesetzliche Feiertage, bewegliche über das Osterdatum |
 | `schulferien.csv` | **echt, Termine typisiert** | Bayerische Schulferien; die Tagesgrenzen schwanken jährlich, hier stehen die typischen Zeiträume (Spalte `genauigkeit`) |
 | `semesterzeiten.csv` | **echt, Termine typisiert** | Vorlesungszeiten der JMU Würzburg, ebenso typisiert |
@@ -19,10 +19,10 @@ Datenbank erzeugt** — reine CSV-Dateien aus `generieren.py`, kein Zugriff auf
 | `geschaeftsgebiet.csv` | **echt** | Das Polygon aus `db/aufbau/0008_referenzdaten.sql` — die Fläche, in der frei abgestellt werden darf |
 | `fahrradtyp.csv` | **echt** | Bezeichnungen und Merkmale der drei Radtypen, dieselben wie in den Tarifkarten der Website |
 | `station.csv` | erfunden | 10 Stationen an realen Würzburger Orten, Anzahl/Lage/Kapazität nicht erhoben |
-| `fahrrad.csv` | erfunden | 240 Räder, Typen CITY/EBIKE/CARGO wie im echten Schema, mit Ausmusterungen |
+| `fahrrad.csv` | erfunden | 350 Räder, Typen CITY/EBIKE/CARGO wie im echten Schema, mit Ausmusterungen |
 | `kunde.csv` | erfunden | 3.200 Kundinnen und Kunden mit Anmeldedatum, Geburtsjahr, Stadtteil, Tarif |
-| `ausleihe.csv` | erfunden | rund 60.000 Fahrten über drei Jahre, mit Entgelt nach echtem Preismodell. Rund ein Fünftel endet **frei im Geschäftsgebiet** statt an einer Station |
-| `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | 640 Meldungen mit zugehörigen Aufträgen; der Verschleiß wächst mit den Kilometern **seit der letzten erledigten Reparatur** und fällt danach zurück. Zwischen Meldung und Reparatur liegen im Mittel knapp drei Tage — in denen weitergefahren wird |
+| `ausleihe.csv` | erfunden | 107.297 Fahrten über fünf Jahre, mit Entgelt nach echtem Preismodell. Rund ein Fünftel endet **frei im Geschäftsgebiet** statt an einer Station |
+| `schadensmeldung.csv`, `wartungsauftrag.csv` | erfunden | 1.425 Meldungen mit zugehörigen Aufträgen; der Verschleiß wächst mit den Kilometern **seit der letzten erledigten Reparatur** und fällt danach zurück. Zwischen Meldung und Reparatur liegen im Mittel knapp drei Tage — in denen weitergefahren wird |
 | `stationsstoerung.csv` | erfunden | 26 Ausfälle an 107 Tagen |
 
 **Die erfundenen Daten sind für die Lehre bewusst verstärkt.** Die Muster, die die
@@ -139,12 +139,14 @@ RFM-Segmentierung interessant.
 
 **Instandhaltung (für die Klassifikation)**
 
-- Kilometer je Rad ↔ Anzahl Meldungen **r = +0,80**
+- Kilometer je Rad ↔ Anzahl Meldungen **r = +0,914** (für echte Flottendaten
+  auffällig stark — der Generator leitet Schäden im Wesentlichen aus der Fahrleistung ab)
 - Entscheidend ist aber nicht die Lebenszeit-Nutzung, sondern die **Nutzung seit der
-  letzten erledigten Reparatur**: In einem 90-Tage-Fenster im Mai melden sich rund 46 %
+  letzten erledigten Reparatur**: In einem 90-Tage-Fenster im Mai melden sich rund 53 %
   der Räder, und die Faustregel „meiste Kilometer seit der letzten Reparatur“ trifft
-  davon **71,7 %** — genauso viel wie ein Random Forest auf denselben Daten. Über fünf
-  Validierungsquartale liegt die Regel sogar leicht vorn
+  davon **86,7 %** — einen Treffer mehr als ein Random Forest auf denselben Daten
+  (52 gegen 51 von 60). Über fünf Validierungsquartale liegt die Regel deutlich vorn
+  (180 gegen 159 Treffer)
 
 **Datenqualität (für die Data-Preparation-Phase)**
 

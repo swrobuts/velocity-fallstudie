@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Notebook 5 - Assoziationsanalyse: Welche Wege gehoeren zusammen?"""
-from bauwerk import CODE, MD, PHASE, ROHBASIS, kopf
+from bauwerk import CODE, MD, PHASE, kopf
 
 NAME = "05_Assoziation_Wege_im_Netz"
 
@@ -142,7 +142,7 @@ import matplotlib.pyplot as plt
 # Auswertung, die spaeter exakt reproduzierbar sein muss, gehoert hier ein
 # fester Commit-Hash statt 'main' hinein.
 BASIS = os.environ.get("VELO_BASIS",
-    """ + '"' + ROHBASIS + '"' + """)
+    __ROHBASIS__)
 pd.set_option("display.width", 160)
 
 fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit"])

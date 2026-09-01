@@ -16,11 +16,13 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import re
 import pandas as pd
 
 BASIS = Path(__file__).resolve().parent.parent
 DATEN = Path(os.environ.get("VELO_OUT") or BASIS / "analytics")
 
+MENGE_NENNENSWERT = 10        # kleinere Tabellen nennen keine Zeilenzahl
 TEMPO_OBERGRENZE_KMH = 30.0     # darueber ist es kein Fahrrad mehr
 TEMPO_UNTERGRENZE_KMH = 3.5     # darunter schiebt man
 MINDESTJAHRE = 5.0
@@ -266,6 +268,53 @@ def betrieb(d: dict) -> None:
            f"Fahrtenzahl mehr als verdoppelt oder halbiert")
 
 
+def beschreibung(d: dict) -> None:
+    """Haelt die Mengenangaben der README gegen die Dateien, die sie beschreibt.
+
+    Die README nannte "640 Meldungen", waehrend schadensmeldung.csv 1.425
+    Zeilen hatte - der Datensatz war neu erzeugt, der Text nicht. Studierende
+    lesen diese Datei zuerst; eine falsche Zahl darin ist die erste, der sie
+    begegnen. Geprueft wird jede Angabe der Form "<Zahl> <Wort>" in derselben
+    Tabellenzeile wie ein `dateiname.csv`.
+    """
+    readme = BASIS / "analytics" / "README.md"
+    if not readme.exists():
+        pruefe(False, "README vorhanden", "analytics/README.md fehlt")
+        return
+    abweichend = []
+    for zeile in readme.read_text(encoding="utf-8").split("\n"):
+        dateien = re.findall(r"`([a-z_]+\.csv)`", zeile)
+        if not dateien:
+            continue
+        zahlen = [int(z.replace(".", "").replace("\u202f", ""))
+                  for z in re.findall(r"\b(\d{1,3}(?:[.\u202f]\d{3})+|\d{2,})\b", zeile)]
+        if not zahlen:
+            continue
+        echte = set()
+        for name in dateien:
+            pfad = DATEN / name
+            if not pfad.exists():
+                continue
+            with open(pfad, encoding="utf-8") as f:
+                n = sum(1 for z in f if not z.startswith("#")) - 1
+            # Kleine Nachschlagetabellen (Tarife, Radtypen) nennen ihre
+            # Zeilenzahl nicht, sondern ihre Inhalte - dort waere die
+            # Forderung nach einer Mengenangabe reines Rauschen.
+            if n >= MENGE_NENNENSWERT:
+                echte.add(n)
+        # Gemeldet wird nur, wenn KEINE Zahl der Zeile die Zeilenzahl trifft.
+        # Eine Zeile darf neben ihr weitere Groessen nennen ("26 Ausfaelle an
+        # 107 Tagen") und Jahreszahlen enthalten - nur fehlen darf die wahre
+        # Menge nicht.
+        if echte and not (set(zahlen) & echte):
+            abweichend.append(f"{'/'.join(dateien)}: README nennt "
+                              + "/".join(f"{z:,}".replace(",", ".") for z in zahlen)
+                              + f", gezaehlt {sorted(echte)}")
+    pruefe(not abweichend, "README-Mengenangaben treffen zu",
+           "; ".join(abweichend) if abweichend
+           else "jede Zeilenzahl der README entspricht ihrer Datei")
+
+
 def main() -> int:
     fehlend = [n for n in ("ausleihe.csv", "fahrrad.csv", "kunde.csv",
                            "radrouten_matrix.csv", "fehlanfrage.csv",
@@ -276,7 +325,8 @@ def main() -> int:
     daten = lade()
     for abschnitt, name in ((physik, "Physik"), (umfang, "Umfang"),
                             (konsistenz, "Konsistenz"), (bestand, "Bestand"),
-                            (betrieb, "Betrieb"), (struktur, "Struktur")):
+                            (betrieb, "Betrieb"), (struktur, "Struktur"),
+                            (beschreibung, "Beschreibung")):
         vorher = len(ergebnisse)
         try:
             abschnitt(daten)

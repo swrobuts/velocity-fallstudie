@@ -54,6 +54,7 @@ from nbformat.v4 import new_code_cell, new_markdown_cell, new_notebook
 HIER = os.path.dirname(os.path.abspath(__file__))
 ANALYTICS = os.path.dirname(HIER)
 ZIEL = os.path.join(ANALYTICS, "notebooks")
+WERTE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "werte")
 ZIEL_UEBUNG = os.path.join(ZIEL, "uebung")
 
 # Die Daten haengen an einem festen COMMIT, nicht an main und nicht an einem
@@ -172,6 +173,11 @@ def CODE(quelltext):
     Diese Pruefung nennt Zelle, Zeile und Ursache sofort.
     """
     quelltext = quelltext.strip("\n")
+    # Der Marker fuer die Datenquelle wird hier ersetzt, nicht im Zellcode
+    # verkettet: Eine Verkettung funktioniert nur in Bloecken mit einer
+    # bestimmten Anfuehrungsform und steht in der anderen woertlich im
+    # Notebook - dann laeuft es beim Studierenden gar nicht erst an.
+    quelltext = quelltext.replace("__ROHBASIS__", f'"{ROHBASIS}"')
     try:
         compile(quelltext, "<CODE-Block>", "exec")
     except SyntaxError as fehler:
@@ -323,6 +329,14 @@ def bauen(name, zellen, ausfuehren=True):
         zellen = [(art, _einsetzen(inhalt, werte, f"{name} (Uebung)")
                    if art == "md" else inhalt) for art, inhalt in zellen]
         zellen = [("code", MERKZETTEL_ANFANG)] + zellen
+
+    # Der Merkzettel verlaesst das Notebook, aber nicht den Bau: Die
+    # Textpruefung muss eingesetzte Werte von handgetippten unterscheiden
+    # koennen. Ein eingesetzter Wert ist per Konstruktion richtig; nur eine
+    # von Hand geschriebene Zahl kann der Ausgabe widersprechen.
+    os.makedirs(WERTE, exist_ok=True)
+    with open(os.path.join(WERTE, f"{name}.json"), "w", encoding="utf-8") as f:
+        json.dump(werte, f, ensure_ascii=False, indent=1, default=str)
 
     nbformat.write(vor, os.path.join(ZIEL, f"{name}.ipynb"))
     ueb = _notebook(zellen, _uebung)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Notebook 4 - Zeitreihe: Wieviele Fahrten kommen morgen?"""
-from bauwerk import CODE, MD, PHASE, ROHBASIS, kopf
+from bauwerk import CODE, MD, PHASE, kopf
 
 NAME = "04_Zeitreihe_Nachfrageprognose"
 
@@ -111,7 +111,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 BASIS = os.environ.get("VELO_BASIS",
-    """ + '"' + ROHBASIS + '"' + """)
+    __ROHBASIS__)
 pd.set_option("display.width", 150)
 
 fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit"])

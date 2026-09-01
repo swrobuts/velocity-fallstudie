@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Notebook 2 - Klassifikation: Welche Raeder muessen naechstes Quartal in die Werkstatt?"""
-from bauwerk import CODE, MD, PHASE, ROHBASIS, kopf
+from bauwerk import CODE, MD, PHASE, kopf
 
 NAME = "02_Klassifikation_Wartungsrisiko"
 
@@ -43,9 +43,10 @@ VeloCity repariert heute **reaktiv**: Ein Rad fällt aus, jemand meldet es, die 
 rückt aus. Das ist teuer und ärgerlich — das Rad steht irgendwo im Stadtgebiet, ein
 Kunde ist unterwegs liegengeblieben, und der Ruf leidet.
 
-Die Werkstattleitung hat Kapazität für **60 vorsorgliche Prüfungen je Quartal** (rund
-fünf pro Werktag, neben dem laufenden Betrieb). Die Frage ist nicht *ob* geprüft wird,
-sondern **welche 60 Räder**.
+Die Werkstattleitung hat Kapazität für **{{kapazitaet:.0f}} vorsorgliche Prüfungen je
+Quartal** (rund {{pruefungen_je_woche:.1f}} pro Woche, also etwa eine pro Werktag, neben
+dem laufenden Betrieb). Die Frage ist nicht *ob* geprüft wird, sondern **welche
+{{kapazitaet:.0f}} Räder**.
 
 ### Warum das eine Klassifikation ist
 
@@ -89,12 +90,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 BASIS = os.environ.get("VELO_BASIS",
-    """ + '"' + ROHBASIS + '"' + """)
+    __ROHBASIS__)
 pd.set_option("display.width", 150)
 
 KOSTEN_VERPASST = 180.0     # falsch negativ: Ausfall auf der Strasse
 KOSTEN_UNNOETIG = 25.0      # falsch positiv: Pruefung ohne Befund
-KAPAZITAET = 60             # Pruefungen je Quartal
+KAPAZITAET = merke("kapazitaet", 60)   # Pruefungen je Quartal
+merke("pruefungen_je_woche", KAPAZITAET / 13)  # ein Quartal hat 13 Wochen
 HORIZONT_TAGE = 90          # Vorhersagefenster
 
 print(f"Ein verpasster Ausfall kostet das "
@@ -147,7 +149,7 @@ achsen[1].set_xlabel("gemessene Kilometer je Rad"); achsen[1].set_ylabel("Anzahl
 achsen[1].set_title("Nutzung gegen Meldungen")
 plt.tight_layout(); plt.show()
 
-r = verbund[["km_gesamt", "meldungen"]].corr().iloc[0, 1]
+r = merke("korrelation_km_meldungen", verbund[["km_gesamt", "meldungen"]].corr().iloc[0, 1])
 print(f"Korrelation Kilometer <-> Meldungen: r = {r:.3f}")
 print(f"Meldungen je Rad: Mittel {je_rad.mean():.1f}, Median {je_rad.median():.0f}, "
       f"Maximum {je_rad.max()}")
@@ -155,9 +157,21 @@ print(f"Meldungen je Rad: Mittel {je_rad.mean():.1f}, Median {je_rad.median():.0
 
 MD("""
 **Der Zusammenhang ist da, aber er ist nicht perfekt** — und genau so soll es sein. Bei
-r ≈ 0,7 gibt es viel gemeinsame Bewegung und trotzdem Räder, die viel gefahren wurden
-und selten melden, und umgekehrt. Wäre r = 0,99, bräuchte man kein Modell, sondern eine
-Sortierung nach Kilometern. Wäre r = 0,1, wäre nichts zu lernen.
+r = {{korrelation_km_meldungen:.3f}} gibt es viel gemeinsame Bewegung und trotzdem Räder,
+die viel gefahren wurden und selten melden, und umgekehrt.
+
+Ein Wort zur Höhe: {{korrelation_km_meldungen:.3f}} ist für einen Zusammenhang zwischen
+Nutzung und Schadensmeldungen **auffällig stark**. In echten Flottendaten liegt er
+niedriger, weil Meldungen auch von Wetter, Abstellort und Meldefreude abhängen. Hier
+erzeugt der Datengenerator Schäden im Wesentlichen aus der Fahrleistung — das Signal ist
+also sauberer, als die Wirklichkeit es liefern würde. Für das Lernen der Methode ist das
+gewollt; für eine Übertragung auf echte Daten ist es die wichtigste Einschränkung dieses
+Notebooks.
+
+<!-- zahl-ohne-ausgabe: 0,99 rhetorischer Grenzfall, keine gemessene Groesse -->
+<!-- zahl-ohne-ausgabe: 0,1 rhetorischer Grenzfall, keine gemessene Groesse -->
+Wäre r = 0,99, bräuchte man kein Modell, sondern eine Sortierung nach Kilometern.
+Wäre r = 0,1, wäre nichts zu lernen.
 
 ### 2.2 Die entscheidende Frage der Datenaufbereitung: Wann fragen wir?
 """),
@@ -173,14 +187,17 @@ positiv = im_bestand.fahrrad_id.isin(melden)
 
 print(f"Stichtag: {stichtag.date()}, Fenster bis {ende.date()}")
 print(f"Räder im Bestand:             {len(im_bestand)}")
+merke("quote_meldung_fenster", positiv.mean())
+merke("anteil_flotte_pruefbar", KAPAZITAET / len(im_bestand))
 print(f"davon mit Meldung im Fenster: {positiv.sum()}  ({positiv.mean():.1%})")
 print(f"\\nWerkstattkapazität {KAPAZITAET} von {len(im_bestand)} Rädern "
       f"= {KAPAZITAET/len(im_bestand):.0%} der Flotte")
 '''),
 
 MD("""
-Rund **44 % der Räder** melden sich in einem Quartal — die Klassen sind also gut besetzt.
-Aber die Werkstatt kann nur **26 % der Flotte** prüfen. Das Modell muss also nicht nur
+Rund **{{quote_meldung_fenster:.1%}} der Räder** melden sich in einem Quartal — die Klassen
+sind also gut besetzt. Aber die Werkstatt kann nur
+**{{anteil_flotte_pruefbar:.0%}} der Flotte** prüfen. Das Modell muss also nicht nur
 richtig liegen, sondern **priorisieren**: Es muss sagen, welche Räder am dringendsten
 sind, nicht nur welche überhaupt auffällig werden. Darauf kommen wir in Phase 5 zurück.
 """),
@@ -416,11 +433,24 @@ print(f"\\nZeilen im Panel: {len(panel)}   ({len(stichtage)} Stichtage × rund "
 print(f"Anteil positiver Fälle: {panel.meldet_sich.mean():.1%}")
 print("\\nAnteil je Stichtag:")
 print(panel.groupby(panel.stichtag.dt.date).meldet_sich.agg(["size", "mean"]).round(3).to_string())
+
+# Diese Spanne laeuft ueber ALLE Stichtage des Panels. Die rollierende
+# Validierung in Phase 5 nutzt nur die spaeteren - beide Spannen sind
+# richtig, aber sie zaehlen Verschiedenes und brauchen darum eigene Namen.
+_pg = panel.groupby(panel.stichtag).meldet_sich.mean()
+merke("panel_grundrate_min", _pg.min())
+merke("panel_grundrate_max", _pg.max())
+merke("panel_grundrate_faktor", _pg.max() / max(_pg.min(), 0.001))
+merke("panel_stichtage", panel.stichtag.nunique())
+print(f"\\nSpanne über alle {panel.stichtag.nunique()} Stichtage: "
+      f"{_pg.min():.1%} bis {_pg.max():.1%}")
 '''),
 
 MD("""
-> **Sehen Sie sich die Spalte `mean` genau an.** Der Anteil auffälliger Räder schwankt
-> zwischen rund **8 % im November und 46 % im Mai** — um mehr als das Fünffache. Das ist kein
+> **Sehen Sie sich die Spalte `mean` genau an.** Über die
+> {{panel_stichtage:.0f}} Stichtage schwankt der Anteil auffälliger Räder zwischen
+> **{{panel_grundrate_min:.1%}} und {{panel_grundrate_max:.1%}}** — um das
+> {{panel_grundrate_faktor:.1f}}-Fache. Das ist kein
 > Fehler in den Daten, sondern die Jahreszeit: Im Winter wird kaum gefahren, also
 > verschleißt kaum etwas, also meldet sich kaum ein Rad.
 >
@@ -560,7 +590,7 @@ from sklearn.ensemble import RandomForestClassifier
 
 # class_weight uebersetzt die Kostenasymmetrie aus Phase 1 in das Modell:
 # ein verpasster Ausfall wiegt gut sieben unnoetige Pruefungen auf.
-gewichte = {0: 1.0, 1: KOSTEN_VERPASST / KOSTEN_UNNOETIG}
+gewichte = {0: 1.0, 1: merke("klassengewicht", KOSTEN_VERPASST / KOSTEN_UNNOETIG)}
 print("Klassengewichte:", {k: round(v, 1) for k, v in gewichte.items()})
 
 baum = DecisionTreeClassifier(max_depth=3, min_samples_leaf=40,
@@ -677,9 +707,11 @@ print(classification_report(y_test, auf_liste.astype(int),
 MD("""
 ### 5.2 Warum die Faustregel plötzlich mithält
 
-Die Tabelle zeigt einen Gleichstand: **Faustregel und Random Forest treffen gleich oft
-und kosten gleich viel.** Das war in einer früheren Fassung dieses Notebooks anders —
-dort lag der Wald vorn. Der Unterschied liegt nicht am Modell, sondern an einem Merkmal.
+Die Tabelle zeigt die Faustregel **knapp vor** dem Random Forest —
+{{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer. Ein Vorsprung von einem Rad ist
+kein Beleg für Überlegenheit; er sagt nur, dass das Modell die Regel **nicht** schlägt.
+Das war in einer früheren Fassung dieses Notebooks anders — dort lag der Wald vorn. Der
+Unterschied liegt nicht am Modell, sondern an einem Merkmal.
 
 In der ersten Fassung setzte `km_seit_reparatur` bei der **Meldung** zurück statt bei der
 **erledigten Reparatur**. Wie groß dieser Unterschied ist, steht in Phase 3 gerechnet:
@@ -690,8 +722,8 @@ Rädern, die gerade auffällig geworden waren.
 Der Wald hatte gelernt, diesen Fehler auszugleichen. Die Faustregel konnte das nicht.
 
 > **Der scheinbare Vorsprung des Modells war der Defekt des Merkmals, gegen das es
-> antrat.** Mit dem richtigen Merkmal steigt die Regel von 63,3 auf 71,7 Prozent — und
-> der ganze Abstand ist verschwunden.
+> antrat.** Mit dem richtig zurückgesetzten Merkmal erreicht die Regel
+> {{quote_regel:.1%}} — und der ganze Abstand ist verschwunden.
 
 Das ist die unbequemste Lehre dieses Notebooks: **Ein Modell kann gegen eine Baseline
 gewinnen, weil die Baseline schlecht gebaut ist.** Wer den Vergleich ernst meint, muss der
@@ -758,25 +790,30 @@ print("ROLLIERENDE VALIDIERUNG - je Stichtag neu trainiert\\n")
 print(roll.to_string(index=False))
 print(f"\\nSumme über {len(roll)} Quartale:  Wald {roll.Wald.sum()} Treffer, "
       f"Regel {roll.Regel.sum()} Treffer")
+merke("roll_regel", int(roll.Regel.sum())); merke("roll_wald", int(roll.Wald.sum()))
+merke("roll_quartale", len(roll))
 vorteil = roll["Vorteil Wald (EUR)"].sum()
 print(f"Vorteil des Modells: {vorteil:,.0f} EUR insgesamt, "
       f"{vorteil/len(roll):,.0f} EUR je Quartal".replace(",", "."))
-besser = int((roll.Wald > roll.Regel).sum()); gleich = int((roll.Wald == roll.Regel).sum())
+besser = merke("wald_besser", int((roll.Wald > roll.Regel).sum()))
+gleich = int((roll.Wald == roll.Regel).sum())
 print(f"Wald besser in {besser}, gleichauf in {gleich}, "
       f"schlechter in {len(roll)-besser-gleich} Quartalen")
 '''),
 
 MD("""
 Damit ist die Entscheidung gefallen, und zwar gegen das Modell. Über die
-Validierungsquartale bringt der Wald **keinen Vorteil** — er liegt sogar leicht hinten,
-und das vor jedem Betriebsaufwand.
+{{roll_quartale:.0f}} Validierungsquartale trifft der Wald {{roll_wald:.0f}}-mal, die
+Regel {{roll_regel:.0f}}-mal; vorn liegt der Wald in {{wald_besser:.0f}} von
+{{roll_quartale:.0f}} Quartalen. Das ist **kein Vorteil**, und das vor jedem
+Betriebsaufwand.
 
 > **Ein Modell muss seinen Unterhalt verdienen.** Hier verdient es ihn nicht.
 
 ### 5.4 Wie sicher ist eine Trefferquote überhaupt?
 
-43 von 60 sind 71,7 Prozent. Diese Zahl klingt genauer, als sie ist: Sie beruht auf 60
-Beobachtungen. Das Wilson-Intervall sagt, welche wahren Trefferquoten mit diesem Ergebnis
+{{treffer_regel:.0f}} von {{kapazitaet:.0f}} sind {{quote_regel:.1%}}. Diese Zahl klingt
+genauer, als sie ist: Sie beruht auf {{kapazitaet:.0f}} Beobachtungen. Das Wilson-Intervall sagt, welche wahren Trefferquoten mit diesem Ergebnis
 verträglich sind.
 """),
 
@@ -793,16 +830,39 @@ def wilson(treffer, n, z=1.96):
 
 print(f"{'Verfahren':32s}{'Treffer':>9s}{'Quote':>9s}{'95-%-Intervall':>20s}")
 print("-" * 70)
+HUERDE = merke("huerde", 0.70)
+grenzen = {}
 for name, score in [("Faustregel: km seit Reparatur", p_regel),
                     ("Modell: Random Forest", p_wald)]:
     e = liste_bewerten(name, score, y_test)
     u, o = wilson(e["Treffer"], KAPAZITAET)
+    grenzen[name] = (u, o)
+    kurz = "regel" if "Faustregel" in name else "wald"
+    merke("treffer_" + kurz, e["Treffer"]); merke("quote_" + kurz, e["Trefferquote"])
+    if kurz == "regel":
+        merke("quote_regel_von_zehn", e["Trefferquote"] * 10)
+        merke("abdeckung_von_zehn", e["Treffer"] / int(y_test.sum()) * 10)
     print(f"{name:32s}{e['Treffer']:>9d}{e['Trefferquote']:>8.1%}"
           f"{u:>12.1%} bis {o:.1%}")
 
-print(f"\\nDie Hürde von 70 % liegt INNERHALB beider Intervalle.")
-print("Das Ergebnis ist mit einer wahren Quote von 60 % ebenso verträglich wie mit 80 %.")
-print("Ein Treffer weniger - 42 von 60 - wäre exakt 70,0 % gewesen.")
+# DAS URTEIL FOLGT AUS DEN GRENZEN, es steht nicht daneben. Eine gedruckte
+# Schlussfolgerung ohne gerechneten Wert bleibt stehen, wenn sich die Zahlen
+# aendern - und widerspricht dann der Tabelle direkt darueber.
+print()
+for name, (u, o) in grenzen.items():
+    if u >= HUERDE:
+        lage = f"Huerde {HUERDE:.0%} liegt UNTER dem Intervall - gestuetzt"
+    elif o < HUERDE:
+        lage = f"Huerde {HUERDE:.0%} liegt UEBER dem Intervall - widerlegt"
+    else:
+        lage = f"Huerde {HUERDE:.0%} liegt INNERHALB - unentschieden"
+    print(f"   {name:32s} {lage}")
+    merke("wilson_unten_" + ("regel" if "Faustregel" in name else "wald"), u)
+
+print()
+print("Die Intervalle sagen, welche wahren Quoten mit dem Beobachteten vereinbar")
+print("sind. Sie vergleichen die beiden Verfahren NICHT miteinander - dafuer")
+print("braeuchte es einen gepaarten Test auf denselben Raedern.")
 '''),
 
 MD("""
@@ -818,7 +878,15 @@ MD("""
 """),
 
 CODE('''
-positive = int(y_test.sum())
+positive = merke("positive_im_test", int(y_test.sum()))
+# Wie viele der auffaelligen Raeder sind wirklich fahruntauglich? Die
+# Kostenmatrix behandelt leicht und schwer gleich - hier steht, wie stark
+# diese Vereinfachung vereinfacht.
+_schwer = schaeden[(schaeden.gemeldet_am > letzter)
+                   & (schaeden.gemeldet_am <= letzter + pd.Timedelta(days=HORIZONT_TAGE))
+                   & (schaeden.schwere == "fahruntauglich")].fahrrad_id.nunique()
+merke("positive_fahruntauglich", _schwer)
+merke("anteil_fahruntauglich", _schwer / positive)
 for name, score in [("Faustregel: km seit Reparatur", p_regel),
                     ("Modell: Random Forest", p_wald)]:
     e = liste_bewerten(name, score, y_test)
@@ -832,12 +900,13 @@ for name, score in [("Faustregel: km seit Reparatur", p_regel),
 
 MD("""
 **Die erste Zahl beschreibt die Liste, die zweite das Problem.** Beide sind richtig, und
-sie sagen Gegensätzliches: Die Liste ist gut — von den 60 geprüften Rädern melden sich
-sieben von zehn. Das Problem ist damit nicht gelöst — von den auffälligen Rädern erreicht
-die Liste nur gut vier von zehn.
+sie sagen Gegensätzliches: Die Liste ist gut — von den {{kapazitaet:.0f}} geprüften
+Rädern melden sich {{quote_regel_von_zehn:.1f}} von zehn. Das Problem ist damit nicht
+gelöst — von den auffälligen Rädern erreicht die Liste nur
+{{abdeckung_von_zehn:.1f}} von zehn.
 
-Der Grund ist die Kapazität, nicht das Verfahren: 60 Plätze bei über hundert auffälligen
-Rädern. **Kein Ranking der Welt kann mehr abdecken, als die Liste lang ist.** Wer die
+Der Grund ist die Kapazität, nicht das Verfahren: {{kapazitaet:.0f}} Plätze bei
+{{positive_im_test:.0f}} auffälligen Rädern. **Kein Ranking der Welt kann mehr abdecken, als die Liste lang ist.** Wer die
 Abdeckung erhöhen will, muss über Kapazität reden, nicht über Modelle.
 
 ### 5.6 Bewertung gegen die Erfolgskriterien aus Phase 1
@@ -854,8 +923,14 @@ Das erste Kriterium steht in zwei Spalten, und der Unterschied ist der Kern von 
   Grenze des Wilson-Intervalls darüber liegen.
 
 Die Entscheidung unten folgt K1a. **Das ist eine Lehrentscheidung, keine Freigabe:** Für
-einen realen Einsatz wäre K1b das richtige Kriterium, und es ist von keinem der beiden
-Verfahren erfüllt.
+einen realen Einsatz wäre K1b das richtige Kriterium. Wo die beiden Verfahren dabei
+stehen, hat Abschnitt 5.4 gerechnet; die Spalte `K1b belegt` in der Tabelle unten
+wiederholt das Ergebnis.
+
+Entscheidend ist die Reihenfolge, nicht der Ausgang: Das Kriterium stand **vor** der
+Messung fest, der Befund kam danach. Ein nachträglich erfülltes Kriterium begründet keine
+Freigabe — es widerspricht ihr nur nicht. Wer die Hürde erst nach dem Blick auf das
+Ergebnis festlegt, prüft nichts mehr, sondern beschreibt.
 """),
 
 CODE('''
@@ -917,7 +992,7 @@ versteht sie, und sie trifft genauso gut.
 > sich bei 17 von 60 Rädern — er sortiert durchaus anders, nur nicht besser. Und geprüft
 > wurden ein Baum und eine Waldkonfiguration, nicht der Modellraum.
 
-> **Ein Wort zum Klassengewicht 7,2.** Es stammt aus dem Kostenverhältnis, ist aber
+> **Ein Wort zum Klassengewicht {{klassengewicht:.1f}}.** Es stammt aus dem Kostenverhältnis, ist aber
 > **keine direkte Übersetzung der Geschäftsentscheidung**: Bei einer festen Liste von 60
 > Rädern entscheidet kein Schwellenwert, sondern der Rang. Das Gewicht verändert, was
 > der Wald lernt, und kann die Rangfolge verbessern oder verschlechtern. Ob 7,2 der
@@ -990,7 +1065,8 @@ wählen.
 > **Auch beim Verfahrensvergleich bleibt sie ein Szenario.** Sie unterstellt, dass jeder
 > Treffer den Schaden vollständig verhindert, dass jeder verpasste Ausfall genau 180 €
 > kostet und dass ein leichter Defekt so teuer ist wie ein fahruntauglicher. Von den
-> auffälligen Rädern des Testquartals ist nur ein Drittel fahruntauglich — zwei Listen
+> {{positive_im_test:.0f}} auffälligen Rädern des Testquartals sind
+> {{positive_fahruntauglich:.0f}} fahruntauglich ({{anteil_fahruntauglich:.1%}}) — zwei Listen
 > mit gleich vielen Treffern können wirtschaftlich sehr verschieden sein. Wo im Folgenden
 > Euro stehen, stehen **Szenariokosten**.
 """),
@@ -1217,10 +1293,10 @@ MD("""
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | Aus „vorausschauend warten“ wurde eine Kostenmatrix: 180 € je verpasstem Ausfall gegen 25 € je unnötiger Prüfung — Verhältnis rund 7 : 1. Zwei Erfolgskriterien, eines davon der Vergleich mit der heutigen Faustregel |
-| 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r ≈ 0,7), aber nicht deterministisch. Der Anteil auffälliger Räder schwankt saisonal um mehr als das Fünffache |
+| 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r = {{korrelation_km_meldungen:.3f}}, für echte Flottendaten auffällig stark), aber nicht deterministisch. Der Anteil auffälliger Räder schwankt saisonal um mehr als das Fünffache |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung. Gemessene Distanzen bevorzugt, Langfahrten ausgeschlossen, Räder mit offenem Schaden aus der Prognosepopulation genommen. Rückgesetzt wird bei der **erledigten Reparatur**, nicht bei der Meldung |
 | 4 Modeling | Drei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | Auf dem Testquartal Gleichstand. Über fünf Validierungsquartale liegt die Faustregel vorn. Das Wilson-Intervall zeigt, dass 60 Beobachtungen die beiden Verfahren gar nicht trennen können |
+| 5 Evaluation | Auf dem Testquartal liegt die Faustregel knapp vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer), über {{roll_quartale:.0f}} Validierungsquartale deutlich ({{roll_regel:.0f}} gegen {{roll_wald:.0f}}). Beide Verfahren belegen die {{huerde:.0%}}-Hürde; das Wilson-Intervall bewertet jedes Verfahren für sich und vergleicht die beiden **nicht** miteinander |
 | 6 Deployment | **Ausgeliefert wird die Faustregel.** Das Modell bleibt im Paket als Beleg der Prüfung und als Ausgangspunkt der nächsten Runde |
 
 **Drei Sätze, die aus diesem Notebook bleiben sollten**
@@ -1228,8 +1304,10 @@ MD("""
 > Ein Modell kann gegen eine Baseline gewinnen, weil die Baseline schlecht gebaut ist.
 > Wer den Vergleich ernst meint, gibt der Regel dieselbe Sorgfalt wie dem Modell.
 
-> Ein einzelnes gutes Quartal ist kein Ergebnis. Bei einer Grundrate, die zwischen 8 und
-> 46 Prozent schwankt, entscheidet die Jahreszeit mit — nicht nur das Verfahren.
+> Ein einzelnes gutes Quartal ist kein Ergebnis. Bei einer Grundrate, die über die
+> {{panel_stichtage:.0f}} Stichtage zwischen {{panel_grundrate_min:.1%}} und
+> {{panel_grundrate_max:.1%}} schwankt, entscheidet die Jahreszeit mit — nicht nur das
+> Verfahren.
 
 > Treffsicherheit und Abdeckung sind zwei Zahlen. Sieben von zehn geprüften Rädern
 > melden sich; vier von zehn auffälligen Rädern werden erreicht. Beide sind richtig.

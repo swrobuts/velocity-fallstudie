@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """Notebook 6 - Anomalieerkennung: Was ist gestern schiefgelaufen?"""
-from bauwerk import CODE, MD, PHASE, ROHBASIS, kopf
+from bauwerk import CODE, MD, PHASE, kopf
 
 NAME = "06_Anomalieerkennung_Auffaellige_Vorgaenge"
 
@@ -155,7 +155,7 @@ import matplotlib.pyplot as plt
 # Auswertung, die spaeter exakt reproduzierbar sein muss, gehoert hier ein
 # fester Commit-Hash statt 'main' hinein.
 BASIS = os.environ.get("VELO_BASIS",
-    """ + '"' + ROHBASIS + '"' + """)
+    __ROHBASIS__)
 pd.set_option("display.width", 160)
 
 # Die Zahlen aus Phase 1 - hier ausgedruckt, damit Text und Rechnung nicht

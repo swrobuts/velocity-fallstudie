@@ -5,6 +5,8 @@ gefunden wurde. Sie soll ihn beim naechsten Mal vor dem Review finden.
 
   Hartes Ergebnis   Radtypnamen im Fliesstext statt aus einem Platzhalter
   Gate ohne Sperre  ein Kriterium, das der Text entscheidend nennt, aber nichts sperrt
+  Hartes Urteil     ein gedrucktes Ergebnis, das aus keiner Zahl folgt
+  Ladepfad          Vorgabequelle ist kein benutzbarer Pfad - laeuft beim Studierenden nicht
   Harte Quelle      Datenzugriff auf einen beweglichen Zweig statt einen Commit
   Toter Status      ein Freigabestatus, der berechnet, aber nie gepruft wird
   Nullfuellung      .fillna(0) verdeckt fehlende Werte, statt sie zu melden
@@ -232,6 +234,140 @@ def pruefe_gate_ohne_sperre(bauskript: str) -> list[str]:
     return funde
 
 
+
+def pruefe_ladepfad(code: list[str]) -> list[str]:
+    """Laeuft das Notebook so, wie ein Studierender es bekommt?
+
+    Ohne gesetztes VELO_BASIS muss der Vorgabewert eine benutzbare Quelle sein:
+    eine URL oder ein Pfad. Steht dort ein Codefragment - etwa ein
+    Verkettungsausdruck, der in dieser Anfuehrungsform nicht aufgeloest wurde -,
+    endet die erste Ladezelle mit FileNotFoundError. Beim Bauen faellt das nie
+    auf, weil dort VELO_BASIS gesetzt ist.
+    """
+    funde = []
+    for nummer, quelle in enumerate(code):
+        for treffer in re.finditer(
+                r'os\.environ\.get\(\s*["\']VELO_BASIS["\']\s*,\s*([^)]+)\)', quelle):
+            vorgabe = treffer.group(1).strip()
+            # Zulaessig ist nur ein reiner String, der wie eine Quelle aussieht.
+            passt = re.fullmatch(r'["\'](https?://|/|\.{0,2}/)[^"\']*["\']',
+                                 vorgabe, re.S)
+            if not passt:
+                funde.append(
+                    f"Zelle {nummer}: Der Vorgabewert fuer VELO_BASIS ist keine "
+                    f"benutzbare Quelle, sondern {vorgabe[:52]!r} - ohne gesetzte "
+                    f"Umgebungsvariable laeuft das Notebook nicht an")
+    return funde
+
+
+
+# Woerter, die ein URTEIL ausdruecken - keine Beschreibung, sondern einen
+# Befund, der aus Zahlen folgen muss.
+URTEILSWORTE_CODE = (
+    "INNERHALB", "AUSSERHALB", "ERFUELLT", "ERFÜLLT", "GERISSEN", "BESTANDEN",
+    "NICHT BESTANDEN", "haelt", "hält", "liegt unter", "liegt ueber",
+    "liegt über", "ist erfuellt", "ist erfüllt",
+)
+
+
+def pruefe_hartes_urteil(code: list[str]) -> list[str]:
+    """Ein gedrucktes Urteil muss aus den gerechneten Zahlen folgen.
+
+    Ein print, das ein Ergebnis behauptet, ohne eine berechnete Groesse zu
+    verwenden und ohne in einem bedingten Zweig zu stehen, bleibt stehen, wenn
+    sich die Zahlen aendern - und widerspricht dann der Zelle darueber.
+    """
+    funde = []
+    for nummer, quelle in enumerate(code):
+        zeilen = quelle.split("\n")
+        for i, zeile in enumerate(zeilen):
+            nackt = zeile.strip()
+            if not nackt.startswith("print("):
+                continue
+            if not any(w in zeile for w in URTEILSWORTE_CODE):
+                continue
+            # Enthaelt die Zeile einen eingesetzten Wert oder einen Ausdruck?
+            hat_wert = re.search(r"\{[^}]+\}", zeile) or re.search(r"\+\s*\w", zeile)
+            # Steht sie in einem bedingten Zweig? (Einrueckung > 0 und ein
+            # if/elif/else in den Zeilen davor auf geringerer Einrueckung)
+            tiefe = len(zeile) - len(zeile.lstrip())
+            bedingt = False
+            for davor in reversed(zeilen[:i]):
+                if not davor.strip():
+                    continue
+                d_tiefe = len(davor) - len(davor.lstrip())
+                if d_tiefe < tiefe and re.match(r"\s*(if|elif|else)\b", davor):
+                    bedingt = True
+                    break
+                if d_tiefe < tiefe:
+                    break
+            if not hat_wert and not bedingt:
+                funde.append(
+                    f"Zelle {nummer}: {nackt[:76]} - ein Urteil ohne gerechneten "
+                    f"Wert und ohne Bedingung; es bleibt stehen, wenn sich die "
+                    f"Zahlen aendern")
+    return funde
+
+
+URTEIL_WORT = re.compile(
+    r"(?:ist|sind|wird|werden|bleibt|w[äa]re)\s+(?:\w+\s+){0,4}"
+    r"(?:erf[üu]llt|nicht erf[üu]llt|gerissen|verfehlt|bestanden|belegt)"
+    r"|von (?:kein|beid|allen|einem)\w*\s+(?:der\s+)?(?:\w+\s+){0,2}"
+    r"Verfahren\s+(?:\w+\s+){0,2}erf[üu]llt")
+KRITERIUM = re.compile(r"\bK\d[ab]?\b")
+
+
+def pruefe_urteil_im_text(markdown: list[str]) -> list[str]:
+    """Findet Urteile ueber Erfolgskriterien, die im Fliesstext festgeschrieben sind.
+
+    Markdown kann nicht rechnen. Ein Satz wie "K1b ist von keinem der beiden
+    Verfahren erfuellt" ist damit eine Behauptung, die nichts zwingt, mit der
+    Rechnung mitzuwandern - und genau dieser Satz stand in Notebook 2, nachdem
+    die Zahlen ihn laengst widerlegt hatten (beide Verfahren erfuellen K1b).
+
+    pruefe_hartes_urteil() faengt denselben Fehler im CODE. Dort ist die Abhilfe
+    eine Bedingung; hier ist sie eine andere: Das Urteil gehoert in eine
+    Ausgabe, der Fliesstext verweist darauf oder setzt einen Platzhalter.
+    Ein Satz mit {{platzhalter}} gilt darum als gedeckt.
+    """
+    befunde = []
+    for i, text in enumerate(markdown, 1):
+        for satz in re.split(r"(?<=[.:!?])\s+", text):
+            if not (KRITERIUM.search(satz) and URTEIL_WORT.search(satz)):
+                continue
+            if "{{" in satz or "`" in satz:   # Platzhalter oder Spaltenverweis
+                continue
+            befunde.append(f"Markdownzelle {i}: '{satz.strip()[:90]}' - ein Urteil "
+                           f"ueber ein Erfolgskriterium im Fliesstext; es wandert "
+                           f"nicht mit, wenn sich die Zahlen aendern")
+    return befunde
+
+
+def pruefe_platzhalterrest(markdown: list[str], bauskript: str) -> list[str]:
+    """Findet Platzhalter, die im gebauten Notebook noch als Text dastehen.
+
+    Ein Platzhalter wird beim Bauen durch seinen Wert ersetzt. Bleibt er
+    stehen, ist entweder der Schluessel nie gemerkt worden oder die Klammern
+    stimmen nicht - {{wert:.1f} mit einer schliessenden Klammer zu wenig sieht
+    im Quelltext richtig aus und wird von keinem Muster erfasst. Der Leser
+    bekommt dann rohe Zeichen zu sehen, wo eine Zahl stehen sollte.
+
+    Geprueft wird gegen BEIDE Seiten: das gebaute Notebook (steht dort noch
+    eine geschweifte Klammer?) und das Bauskript (ist ein Platzhalter falsch
+    geschlossen?). Der zweite Teil faengt den Fehler, bevor er sichtbar wird.
+    """
+    befunde = []
+    for i, text in enumerate(markdown, 1):
+        for treffer in re.findall(r"\{\{[a-z0-9_]+(?::[^}\n]*)?\}{0,2}", text):
+            befunde.append(f"Markdownzelle {i}: '{treffer}' ist im gebauten "
+                           f"Notebook stehengeblieben - der Leser sieht rohe Zeichen "
+                           f"statt einer Zahl")
+    for treffer in re.findall(r"\{\{[a-z0-9_]+:[^}\n]+\}(?!\})", bauskript):
+        befunde.append(f"Bauskript: '{treffer}' ist nicht mit '}}}}' geschlossen "
+                       f"und wird deshalb nie ersetzt")
+    return befunde
+
+
 def main() -> int:
     dateien = sorted(NOTEBOOKS.glob("*.ipynb"))
     if not dateien:
@@ -239,7 +375,7 @@ def main() -> int:
         return 2
     gesamt = gesamt_hinweise = 0
     for pfad in dateien:
-        code, ausgaben, _ = zellen(pfad)
+        code, ausgaben, markdown = zellen(pfad)
         # Zum Notebook gehoert sein Bauskript - dort stehen die Platzhalter noch.
         skripte = sorted((BASIS / "analytics" / "bau").glob("nb0*.py"))
         passend = [s for s in skripte
@@ -248,9 +384,13 @@ def main() -> int:
         fehler = (pruefe_blinder_abgleich(code, ausgaben)
                   + pruefe_sichtbarer_rest(code)
                   + pruefe_harte_quelle(code)
+                  + pruefe_ladepfad(code)
+                  + pruefe_hartes_urteil(code)
                   + pruefe_status_ohne_wirkung(code)
                   + pruefe_harte_ergebnisnamen(bauskript)
-                  + pruefe_gate_ohne_sperre(bauskript))
+                  + pruefe_gate_ohne_sperre(bauskript)
+                  + pruefe_platzhalterrest(markdown, bauskript)
+                  + pruefe_urteil_im_text(markdown))
         hinweise = (pruefe_nullfuellung(code) + pruefe_freie_schwellen(code)
                     + pruefe_urteil_ohne_zahl(ausgaben))
         if fehler:

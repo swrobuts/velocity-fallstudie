@@ -22,19 +22,30 @@ nicht zuverlaessig - dieses Werkzeug tut es bei jedem Lauf.
 
 Wie geprueft wird
 -----------------
-Jede Zahl im Markdown eines Notebooks muss in einer AUSGABE desselben
-Notebooks vorkommen. Deutsche und englische Schreibweise gelten als
-dieselbe Zahl, Prozentwerte auch als Bruchteil geschrieben.
+Jede Zahl im Markdown muss in einer Ausgabe IN IHRER NAEHE vorkommen -
+in den Zellen, auf die der Satz sich bezieht, nicht irgendwo im Notebook.
+
+Diese Naehe ist der ganze Punkt. Die erste Fassung dieses Werkzeugs suchte
+jede Textzahl im gesamten Ausgaberaum des Notebooks. Der enthaelt rund 250
+verschiedene Zahlen; nachgemessen kamen damit 50 von 99 frei erfundenen
+Prozentwerten unbemerkt durch. Ein Pruefer, der jede zweite falsche Zahl
+durchlaesst, ist keine Pruefung, sondern eine Muenze - er hat in Notebook 2
+dreizehn widersprechende Zahlen bestaetigt, die ein Gutachten dann fand.
+
+Das Fenster (FENSTER_VOR Codezellen davor, FENSTER_NACH danach) bildet ab,
+worauf ein Fliesstext sich tatsaechlich beruft: auf die Ausgabe direkt
+darueber, gelegentlich auf die gleich folgende.
 
 Der Quelltext bleibt bewusst draussen: Dort stehen Bildgroessen,
 Zufallsstartwerte und Farbcodes, und die decken falsche Textzahlen zu.
 
 Grenzen - bewusst benannt
 -------------------------
-Das Werkzeug findet Zahlen, die nirgends ausgegeben werden. Es findet
-keine Zahl aus dem falschen Zusammenhang und keine falsche Behauptung
-ohne Zahl ("das Modell gewinnt"). Dafuer gibt es keinen Ersatz fuers
-Lesen - aber es verkleinert das, was gelesen werden muss.
+Das Werkzeug findet Zahlen ohne Beleg in der Naehe. Es findet keine Zahl,
+die zufaellig auch in der Nachbarausgabe steht, und keine falsche
+Behauptung ohne Zahl ("das Modell gewinnt"; dafuer gibt es
+pruefe_hartes_urteil in notebook_pruefungen.py). Ersatz fuers Lesen ist es
+nicht - aber es verkleinert das, was gelesen werden muss, erheblich.
 """
 from __future__ import annotations
 
@@ -45,6 +56,7 @@ import sys
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 NB = WURZEL / "analytics" / "notebooks"
+WERTE = WURZEL / "analytics" / "bau" / "werte"
 
 # Zahlen, die zur Sprache gehoeren: Phasennummern, Abschnitte, Jahre,
 # Schwellen aus Erfolgskriterien, Kostenkonstanten aus Phase 1.
@@ -79,26 +91,106 @@ def formen(zahl: str) -> set[str]:
     return {s for s in v if s}
 
 
+FENSTER_VOR = 3   # Codezellen vor dem Text
+FENSTER_NACH = 1  # Codezellen danach
+
+
+def umgebung(zellen: list, i: int) -> str:
+    """Die Ausgaben, auf die sich ein Text an Stelle i berufen kann."""
+    vor, nach, teile = 0, 0, []
+    for j in range(i - 1, -1, -1):
+        if zellen[j]["cell_type"] != "code":
+            continue
+        teile += ["".join(o.get("text", [])) for o in zellen[j].get("outputs", [])]
+        vor += 1
+        if vor >= FENSTER_VOR:
+            break
+    for j in range(i + 1, len(zellen)):
+        if zellen[j]["cell_type"] != "code":
+            continue
+        teile += ["".join(o.get("text", [])) for o in zellen[j].get("outputs", [])]
+        nach += 1
+        if nach >= FENSTER_NACH:
+            break
+    return " ".join(teile)
+
+
+KONSTANTE = re.compile(r"^\s*([A-Z][A-Z0-9_]{2,})\s*=\s*([-\d.]+)", re.M)
+AUSNAHME = re.compile(r"<!--\s*zahl-ohne-ausgabe:\s*([^\s]+)\s+(.+?)-->")
+
+
+def eingesetzte_werte(stamm: str) -> set[str]:
+    """Zahlen, die der Bau selbst aus dem Merkzettel in den Text gesetzt hat.
+
+    Ein Platzhalter {{schluessel:format}} wird beim Bauen durch den gerechneten
+    Wert ersetzt. So ein Wert KANN der Rechnung nicht widersprechen - er ist
+    die Rechnung. Ihn zu melden waere Rauschen; schlimmer noch, es bestrafte
+    genau den Weg, der Textfehler ausschliesst.
+
+    Was uebrig bleibt, ist die Menge, um die es geht: von Hand getippte Zahlen.
+    """
+    datei = WERTE / f"{stamm}.json"
+    if not datei.exists():
+        return set()
+    werte = set()
+    for roh in json.loads(datei.read_text(encoding="utf-8")).values():
+        try:
+            zahl = float(roh)
+        except (TypeError, ValueError):
+            continue
+        for muster in ("{:g}", "{:.0f}", "{:.1f}", "{:.2f}", "{:.3f}"):
+            for wert in (zahl, zahl * 100):   # auch die Prozentschreibweise
+                s = muster.format(wert)
+                werte |= {s, s.replace(".", ","),
+                          f"{wert:,.0f}".replace(",", ".")}   # Tausenderpunkt
+    return werte
+
+
+def gesetzte_werte(zellen: list) -> set[str]:
+    """Zahlen, die das Notebook als Konstante SETZT statt sie zu messen.
+
+    Kostensaetze und Erfolgskriterien stehen vor der ersten Messung fest -
+    sie koennen per Definition in keiner Ausgabe belegt sein. Wer sie als
+    Fehler meldet, erzeugt Rauschen, und ein Pruefer mit Rauschen wird
+    ueberlesen. Erkannt werden nur GROSSGESCHRIEBENE Namen: das ist die
+    Schreibweise, die dieses Projekt fuer feste Groessen verwendet.
+    """
+    werte = set()
+    for c in zellen:
+        if c["cell_type"] != "code":
+            continue
+        for _, roh in KONSTANTE.findall("".join(c["source"])):
+            werte |= formen(roh.replace(".", ","))
+            try:  # 0.70 im Code, "70 %" im Text
+                werte |= formen(f"{float(roh) * 100:g}".replace(".", ","))
+            except ValueError:
+                pass
+    return werte
+
+
 def pruefe(datei: pathlib.Path) -> list[tuple[str, str]]:
     nb = json.loads(datei.read_text(encoding="utf-8"))
-    ausgaben, texte = [], []
-    for c in nb["cells"]:
-        if c["cell_type"] == "markdown":
-            texte.append("".join(c["source"]))
-        for o in c.get("outputs", []):
-            ausgaben.append("".join(o.get("text", [])))
-    raum = " ".join(ausgaben)
+    zellen = nb["cells"]
+    gesetzt = gesetzte_werte(zellen) | eingesetzte_werte(datei.stem)
+    texte = [("".join(c["source"]), umgebung(zellen, i))
+             for i, c in enumerate(zellen) if c["cell_type"] == "markdown"]
+    # Ausdruecklich begruendete Ausnahmen: <!-- zahl-ohne-ausgabe: 0,99 Grund -->
+    erlaubt = {}
+    for text, _ in texte:
+        for zahl, grund in AUSNAHME.findall(text):
+            erlaubt[zahl] = grund
     befunde = []
-    for text in texte:
+    for text, raum in texte:
         for zahl, einheit in MIT_EINHEIT.findall(text):
             if zahl in HARMLOS and einheit != "€":
                 continue
-            if not (formen(zahl) & set(re.findall(r"[\d.,]+", raum))):
-                if not any(f in raum for f in formen(zahl)):
-                    befunde.append((f"{zahl} {einheit}", zeile_um(text, zahl)))
+            if belegt(zahl, raum, gesetzt, erlaubt):
+                continue
+            befunde.append((f"{zahl} {einheit}", zeile_um(text, zahl)))
         for zahl in OHNE_EINHEIT.findall(text):
-            if not any(f in raum for f in formen(zahl)):
-                befunde.append((zahl, zeile_um(text, zahl)))
+            if belegt(zahl, raum, gesetzt, erlaubt):
+                continue
+            befunde.append((zahl, zeile_um(text, zahl)))
     # Dubletten zusammenfassen
     gesehen, eindeutig = set(), []
     for z, kontext in befunde:
@@ -107,6 +199,13 @@ def pruefe(datei: pathlib.Path) -> list[tuple[str, str]]:
         gesehen.add(z)
         eindeutig.append((z, kontext))
     return eindeutig
+
+
+def belegt(zahl: str, raum: str, gesetzt: set[str], erlaubt: dict) -> bool:
+    """Eine Textzahl gilt als gedeckt, wenn sie gemessen, gesetzt oder
+    ausdruecklich begruendet ist - in dieser Reihenfolge der Verlaesslichkeit."""
+    f = formen(zahl)
+    return bool(f & gesetzt) or zahl in erlaubt or any(s in raum for s in f)
 
 
 def zeile_um(text: str, zahl: str) -> str:
