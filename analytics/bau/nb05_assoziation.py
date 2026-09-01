@@ -345,9 +345,9 @@ falsch verstanden.**
 CODE('''
 # Die Gegenprobe zur Deutung: fahren morgens und abends dieselben Leute?
 morgens = koerbe[(koerbe.tagesart == "Werktag") & (koerbe.fenster == "früh (5-10)")
-                 & (koerbe.start == "Hauptbahnhof") & (koerbe.ziel == "Hubland")]
+                 & (koerbe.start == "Hauptbahnhof") & (koerbe.ziel == "Hubland Campus")]
 abends = koerbe[(koerbe.tagesart == "Werktag") & (koerbe.fenster == "abend (15-20)")
-                & (koerbe.start == "Hubland") & (koerbe.ziel == "Hauptbahnhof")]
+                & (koerbe.start == "Hubland Campus") & (koerbe.ziel == "Hauptbahnhof")]
 gemeinsam = set(morgens.kunde_id) & set(abends.kunde_id)
 
 print(f"Kundschaft mit Fahrt Hauptbahnhof -> Hubland  (morgens): {morgens.kunde_id.nunique():>5d}")

@@ -399,7 +399,7 @@ MD("""
 ### 5.3 Kriterium 3 aus Phase 1: **Warum** fällt ein Vorgang auf?
 
 Ein Isolation Forest liefert eine Zahl, keine Begründung. Für den Betrieb ist das zu
-wenig — „Vorgang 41207 hat Wert 0,71“ löst keine Handlung aus. Wir bauen die Begründung
+wenig — „Vorgang 38558 hat Wert 0,75“ löst keine Handlung aus. Wir bauen die Begründung
 deshalb selbst, indem wir für jeden gemeldeten Vorgang nachsehen, welches Merkmal am
 weitesten vom Üblichen entfernt liegt.
 """),

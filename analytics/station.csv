@@ -1,11 +1,11 @@
 station_id,stationsnummer,name,latitude,longitude,kapazitaet
-1,S-0001,Hauptbahnhof,49.8018,9.9359,40
-2,S-0002,Residenz,49.7936,9.9436,24
-3,S-0003,Alte Mainbruecke,49.7913,9.928,20
-4,S-0004,Sanderring,49.7889,9.9366,30
-5,S-0005,Hubland,49.7766,9.972,34
-6,S-0006,Marktplatz,49.7943,9.9294,26
-7,S-0007,Zellerau,49.7891,9.9089,22
-8,S-0008,Ringpark Nord,49.8021,9.9421,18
-9,S-0009,Kaeppele,49.7847,9.9186,12
-10,S-0010,Grombuehl/Klinikum,49.8064,9.9536,28
+1,S-0001,Hauptbahnhof,49.8019,9.9358,40
+2,S-0002,Marktplatz,49.7944,9.9295,25
+3,S-0003,Universität Sanderring,49.788,9.9353,35
+4,S-0004,Residenz,49.793,9.939,25
+5,S-0005,Juliuspromenade,49.796,9.928,30
+6,S-0006,Dom,49.7938,9.9322,25
+7,S-0007,Sanderau,49.7818,9.9412,30
+8,S-0008,Hubland Campus,49.781,9.972,40
+9,S-0009,Grombühl Klinikum,49.8046,9.9424,25
+10,S-0010,Zellerau,49.7965,9.9142,20

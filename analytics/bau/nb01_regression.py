@@ -254,7 +254,7 @@ plt.tight_layout(); plt.show()
 MD("""
 Links: stark rechtsschief — deshalb ist der **Median** das richtige Nullmodell, nicht der
 Mittelwert. Rechts das Muster, das dieses Notebook trägt: Die langen Verbindungen führen
-zum Käppele und in den Ringpark, die kurzen verbinden Bahnhof, Klinikum und Campus.
+zu Dom und Residenz, die kurzen verbinden Bahnhof, Klinikum und Campus.
 """),
 
 PHASE(3, "Welche Merkmale sind zum Zeitpunkt der Anfrage verfügbar — und welche nicht?"),
@@ -568,7 +568,7 @@ for t, g in pruef.groupby("typ_code"):
 """),
 
 MD("""
-Für CITY ist die Grenze **eingehalten** — knapp. Für EBIKE und CARGO nicht.
+Für **CITY ist die Grenze eingehalten**, für EBIKE und CARGO nicht.
 
 Bevor daraus eine Freigabe wird, zwei Fragen, die man sich in dieser Lage immer stellen
 sollte.
@@ -592,12 +592,14 @@ print("      Was sich unterscheidet, ist die Strenge einer festen 50-Cent-Grenze
 """),
 
 MD("""
-### 5.3 Wie belastbar sind diese 0,47 €?
+### 5.3 Wie belastbar ist dieses Ergebnis?
 
-CITY liegt drei Cent unter der Grenze. Eine einzelne Zahl auf einem einzelnen Zeitraum
-sagt aber nichts darüber, wie sie im nächsten Quartal aussieht. Wir prüfen das
-**innerhalb** von Training und Validierung — Test 1 ist verbraucht, Test 2 bleibt
-unberührt.
+Eine einzelne Zahl auf einem einzelnen Zeitraum sagt nichts darüber, wie sie im nächsten
+Quartal aussieht. Der Fehler ist im Sommer erkennbar größer als im Winter — ein Kriterium,
+das nur in einer Jahreszeit hält, ist keine Zusage.
+
+Wir prüfen das **innerhalb** von Training und Validierung: Test 1 ist verbraucht, Test 2
+bleibt unberührt.
 """),
 
 CODE("""
@@ -625,17 +627,26 @@ for i in range(len(grenzen) - 1):
           f"{len(pruef_i):>6,}{mean_absolute_error(pruef_i.dauer_min, v):>8.2f}"
           f"{pf:>18.2f} €")
 
-print(f"\\nDer CITY-Preisfehler schwankt zwischen {min(schwankung):.2f} € "
-      f"und {max(schwankung):.2f} €.")
-print("Die Grenze von 0,50 € liegt INNERHALB dieser Schwankung.")
+lo, hi = min(schwankung), max(schwankung)
+print(f"\\nDer CITY-Preisfehler schwankt zwischen {lo:.2f} € und {hi:.2f} €.")
+if lo <= 0.50 <= hi:
+    print("Die Grenze von 0,50 € liegt INNERHALB dieser Schwankung - das")
+    print("Kriterium haelt also mal und reisst mal. Das ist keine Zusage.")
+elif hi < 0.50:
+    print(f"Die Grenze von 0,50 € liegt OBERHALB der Schwankung: In allen")
+    print(f"vier Fenstern haelt das Kriterium, im schlechtesten mit {0.50-hi:.2f} €")
+    print("Abstand. Fuer CITY ist die Punktschaetzung damit belastbar.")
+else:
+    print("Die Grenze von 0,50 € liegt UNTERHALB der Schwankung - das")
+    print("Kriterium reisst in jedem Fenster.")
 """),
 
 MD("""
-Das ist der entscheidende Befund dieser Phase.
+Der saisonale Unterschied ist deutlich sichtbar — im Sommer, wenn mehr Ausflugsfahrten
+stattfinden, steigt der Fehler —, aber er bleibt in allen vier Fenstern unter der Grenze.
+**Für CITY ist die Punktschätzung damit belastbar**, nicht nur einmalig gelungen.
 
-Die 0,47 € aus Test 1 sind kein Fehler — aber sie sind auch keine belastbare Freigabe. Im
-Sommer, wenn mehr Ausflugsfahrten stattfinden, liegt derselbe Aufbau bei 0,56 €. Eine
-Zusage, die je nach Jahreszeit hält oder nicht hält, ist keine Zusage.
+Für EBIKE und CARGO gibt es dagegen bisher überhaupt kein Produkt.
 
 ### 5.4 Woran es liegt
 """),
@@ -667,24 +678,36 @@ Das Muster ist kein statistisches, sondern ein menschliches:
 > wird, um zu fahren.**
 
 Auf den Pendelverbindungen liegt die Anzeige um wenige Cent daneben. Auf den Verbindungen
-zum Käppele und in den Ringpark liegt sie deutlich daneben, weil die Leute dort je nach
+zu Dom und Residenz liegt sie deutlich daneben, weil die Leute dort je nach
 Anlass zwanzig oder vierzig Minuten unterwegs sind.
 
 **Die derzeit verfügbaren Merkmale reichen nicht aus, um individuelle Stopps und den
 Fahrtzweck abzubilden.** Ob überhaupt keine Merkmale das könnten, wissen wir nicht —
 Nutzerabsicht, Höhenprofil oder Stationsauslastung sind ungeprüfte Kandidaten.
 
-### 5.5 Der Rücksprung — zurück nach Phase 1
+### 5.5 Der Rücksprung — und warum er kommt, obwohl das Kriterium hält
 
-Drei Möglichkeiten:
+Für CITY könnten wir jetzt ausliefern. Trotzdem springen wir zurück, und zwar aus zwei
+Gründen, die nichts mit einem gerissenen Kriterium zu tun haben.
 
-1. **Grenze lockern.** Verboten. Sie kam aus dem Produktmanagement.
+**Erstens misst das Kriterium den Durchschnitt, nicht die Erfahrung.** 0,41 € im Mittel
+klingt gut. Die Zeile daneben sagt aber: Bei rund jeder vierten CITY-Fahrt liegt die
+Anzeige um **mehr als 50 Cent** daneben. Ein Kunde erlebt keinen Mittelwert, er erlebt
+seine Fahrt.
+
+**Zweitens haben zwei von drei Radtypen gar kein Produkt.** Eine Lösung, die nur für das
+billigste Rad funktioniert, ist keine Antwort auf die Geschäftsfrage.
+
+Drei Wege stehen offen:
+
+1. **Grenze lockern.** Verboten — und hier auch unnötig.
 2. **Besseres Modell suchen.** Die Ablation in 4.3 zeigt, wie wenig selbst das Ziel
-   beiträgt; die Information fehlt in den Daten.
-3. **Die Zusage ändern.** Statt einer Zahl, die Genauigkeit vortäuscht, eine **Spanne**.
+   beiträgt; die fehlende Information steckt nicht im Verfahren.
+3. **Die Zusage ändern.** Statt einer Zahl, die für ein Viertel der Fahrten zu genau
+   klingt, eine **Spanne**, die die tatsächliche Streuung zeigt.
 
-Der dritte Weg ist der ehrliche. Er ändert nicht die Verfahrensklasse — eine
-Quantilregression ist weiterhin Regression —, sondern das, was die App verspricht.
+Der dritte Weg ändert nicht die Verfahrensklasse — eine Quantilregression ist weiterhin
+Regression —, sondern das, was die App verspricht.
 
 **Neues Erfolgskriterium, vor der Messung festgelegt:**
 
@@ -807,10 +830,15 @@ PHASE(6, "Wie kommt das in die App — und was ist dabei noch offen?"),
 MD("""
 ### 6.1 Die Freigabe steckt in der Tabelle
 
-Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt: genug Fahrten
-als Grundlage, eine nützlich schmale Spanne — und eine **auf Test 2 gemessene** Abdeckung
-von mindestens 80 Prozent. Die dritte Bedingung fehlte in der ersten Fassung; damit war
-die Freigabe eine Behauptung über die Vergangenheit, nicht über die Zukunft.
+Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
+
+1. mindestens 30 Fahrten als Grundlage,
+2. eine Spanne von höchstens 1,00 €,
+3. und eine **auf Test 2 gemessene** Abdeckung von mindestens 80 Prozent — je Radtyp.
+
+Die dritte Bedingung fehlte in der ersten Fassung. Damit war die Freigabe eine Behauptung
+über die Vergangenheit, nicht über die Zukunft — und sie hätte gleich zu einem Widerspruch
+geführt, wie die nächste Zelle zeigt.
 """),
 
 CODE("""
@@ -835,19 +863,34 @@ print(f"\\nJe Kombination mit mindestens 20 Prüffahrten: {len(gross)} geprüft,
       f"{(gross.abdeckung < 0.80).sum()} nicht")
 print(f"   schlechteste {gross.abdeckung.min():.0%}, beste {gross.abdeckung.max():.0%}")
 print(f"\\nSpannenbreite im Median: {z.breite.median():.2f} €")
+
+# DRITTE REGEL, und sie kommt aus dieser Messung: Ein Radtyp, dessen
+# Spannen die 80 Prozent nicht halten, wird nicht freigegeben - auch dann
+# nicht, wenn seine Zeilen die beiden anderen Regeln erfuellen. Sie greift
+# HIER und nicht erst beim Schreiben der Datei, damit die Reichweite in
+# 6.2 die des ausgelieferten Artefakts ist und nicht die eines groesseren.
+je_typ = z.groupby("typ_code").im_intervall.mean()
+freigegebene_typen = sorted(je_typ[je_typ >= 0.80].index)
+print()
+for x in sorted(je_typ.index):
+    print(f"   {x:8} {je_typ[x]:.1%}  "
+          f"{'freigegeben' if x in freigegebene_typen else 'NICHT freigegeben'}")
+tab = tab[tab.typ_code.isin(freigegebene_typen)]
+z = z[z.typ_code.isin(freigegebene_typen)]
 """),
 
 MD("""
 ### 6.2 Die ehrliche Produktreichweite
 
 Eine Zahl, die in der ersten Fassung fehlte und die man nicht verschweigen darf: Für wie
-viele Anfragen kann die App überhaupt etwas sagen?
+viele Anfragen kann die App überhaupt etwas sagen? Gezählt wird, was **tatsächlich
+ausgeliefert** wird — also nach dem Ausschluss aus 6.1.
 """),
 
 CODE("""
 alle_t2 = len(test2)
 mit_ziel_ohne_rund = len(zukunft)
-mit_auskunft = int(hat_spanne.sum())
+mit_auskunft = len(z)          # nur freigegebene Radtypen und Kombinationen
 
 print("Von allen Fahrten des Zeitraums Test 2:")
 print(f"   {alle_t2:>6,}  Fahrten insgesamt (schon gefiltert: abgeschlossen, mit Ziel)")
@@ -866,8 +909,6 @@ MD("""
 """),
 
 CODE("""
-# Die Tabelle steht bereits - sie hat ihre Regeln in 5.6 mitbekommen.
-# Hier wird nur noch in die Form gebracht, die die Datenbank erwartet.
 zeilen = []
 for _, g in tab.iterrows():
     start, ziel = g.route.split(" → ")
@@ -911,17 +952,17 @@ def preis_schaetzen(start, ziel, typ_code, stunde):
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
             "grundlage": f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"}
 
-# Die Stationsnamen stehen hier GENAU so wie in den Daten. In der ersten
-# Fassung stand hier "Käppele", in den Daten steht "Kaeppele" - die
-# Auskunft wurde also wegen der Schreibweise verweigert und nicht wegen
-# einer zu breiten Spanne. Produktiv gehoeren unveraenderliche IDs an
-# diese Stelle, Namen nur in die Anzeige.
+# Die Stationsnamen stehen hier GENAU so wie in den Daten - und die
+# stammen seit dem 01.09.2026 aus velocity.station. Vorher hatte der
+# Lehrdatensatz eigene Orte, und eine Probe mit "Käppele" scheiterte an
+# der Schreibweise statt an der Streuung. Produktiv gehoeren
+# unveraenderliche IDs an diese Stelle, Namen nur in die Anzeige.
 STUNDE_JE_FENSTER = {"frueh": 8, "vormittag": 12, "nachmittag": 17, "abend": 21}
 erste = freigabe_tabelle.iloc[0] if len(freigabe_tabelle) else None
 proben = ([(erste.startstation, erste.zielstation, erste.typ_code,
             STUNDE_JE_FENSTER[erste.zeitfenster])] if erste is not None else [])
 proben += [("Hauptbahnhof", "Hauptbahnhof", "CITY", 8),
-           ("Alte Mainbruecke", "Kaeppele", "CITY", 14),
+           ("Dom", "Residenz", "CITY", 14),
            ("Hauptbahnhof", "Neue Station", "CITY", 8)]
 
 for probe in proben:

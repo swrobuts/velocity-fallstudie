@@ -295,10 +295,10 @@ aber korrekt — und lehrreich.
 R² misst, wieviel besser ein Verfahren ist als der Mittelwert **der Testmenge**. Ein
 negativer Wert heißt: schlechter als dieser Mittelwert.
 
-- Beim **Nullmodell** (−1,19) liegt es daran, dass es den Mittelwert des *Trainings*
+- Beim **Nullmodell** (−1,26) liegt es daran, dass es den Mittelwert des *Trainings*
   vorhersagt — und der Test ist ein Hochsommer, der deutlich darüber liegt. Das Nullmodell
   ist also systematisch zu niedrig. Genau davor hatten wir in Phase 3 gewarnt.
-- Bei der **Faustregel** (−0,26) liegt es an der Streuung: Sie trifft im Mittel näher als
+- Bei der **Faustregel** (−0,25) liegt es an der Streuung: Sie trifft im Mittel näher als
   das Nullmodell (kleinerer MAE), verschätzt sich aber gelegentlich stark, und die
   quadratische Rechnung bestraft große Fehler überproportional.
 

@@ -517,28 +517,27 @@ print(classification_report(y_test, auf_liste.astype(int),
 MD("""
 ### 5.2 Das Modell hat nichts hinzugefügt
 
-Lesen Sie die letzten beiden Zeilen der Tabelle nebeneinander. **Der Random Forest trifft
-exakt so gut wie die einzeilige Faustregel** — 42 von 60, dieselben Kosten. Nach vier
-Verfahren, Klassengewichten und dreihundert Bäumen steht er genau dort, wo eine Sortierung
-nach einer einzigen Spalte auch schon war.
+Lesen Sie die Tabelle von oben nach unten. Die Faustregel des Werkstattmeisters —
+sortiere nach Kilometern seit der letzten Meldung — ist mit Abstand die beste der drei
+Regeln und lässt die beiden anderen weit hinter sich. Sie ist eine Zeile Code.
 
-Das ist kein Messfehler und kein Zufall der Modellwahl. Es hat einen nachvollziehbaren
-Grund:
+**Der Random Forest schlägt sie trotzdem**, und zwar messbar: mehr Treffer und geringere
+Kosten je Quartal. Der Abstand ist nicht groß, aber er ist da.
 
-> **Die Regel ist bereits die richtige Antwort.** Verschleiß entsteht seit der letzten
-> Reparatur — das ist die Physik dieser Aufgabe. Ein Modell kann diesen Zusammenhang
-> bestenfalls nachbilden, und mit 228 Rädern in der Testmenge hat es kaum Gelegenheit,
-> darüber hinaus etwas zu lernen. Was es zusätzlich findet, sind zu einem guten Teil
-> Eigenheiten der Trainingsdaten.
->
-> Sehen Sie sich zur Bestätigung die Bedeutungsgrafik oben noch einmal an:
-> `km_seit_meldung` steht ganz vorn. Der Wald hat die Regel **gefunden** — und ist dann
-> bei ihr geblieben.
+> **Erst die Regel macht das Modell bewertbar.** Ohne sie stünde in diesem Notebook eine
+> Trefferquote und niemand könnte sagen, ob sie gut ist. Mit ihr steht dort ein Satz, den
+> die Werkstatt versteht: *So viel bringt das Modell gegenüber dem, was wir heute schon
+> tun — und so viel spart es im Quartal.*
 
-**Das ist keine Kritik am maschinellen Lernen**, sondern die Erklärung, warum CRISP-DM mit
-*Business Understanding* anfängt und nicht mit *Modeling*: Eine Viertelstunde mit dem
-Werkstattmeister war hier mehr wert als jedes Verfahren. Wo niemand die richtige Regel
-kennt, ist der Wald unverzichtbar — er findet sie. Hier kannten wir sie schon.
+Sehen Sie sich zur Deutung die Bedeutungsgrafik oben an: `km_seit_meldung` steht ganz
+vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — und dann noch etwas
+darüber hinaus gelernt. Das ist der Normalfall eines gelungenen Modells: Es bestätigt das
+Fachwissen und geht ein Stück weiter.
+
+**Das ist keine Selbstverständlichkeit.** In Notebook 1 hält eine schlichte
+Nachschlagetabelle mit einer Quantilregression mit; dort wäre die Entscheidung anders
+ausgefallen. Ob sich der Aufwand lohnt, entscheidet nicht das Verfahren, sondern die
+Messung gegen den Maßstab — und den muss man vorher gebaut haben.
 
 > **Und noch etwas ist an der Tabelle bemerkenswert:** Die beiden ersten Faustregeln —
 > ältestes Rad und meiste Kilometer — treffen mit je 51,7 % **exakt gleich gut**. Wer
@@ -655,16 +654,18 @@ print(ausgabe.head(15).to_string(index=False))
 print(f"\\n... und {len(ausgabe) - 15} weitere.")
 
 ausgabe.to_csv("wartungsliste.csv", index=False)
-# Ausgeliefert wird die REGEL. Das Modell wandert trotzdem mit ins Paket -
-# als Kandidat fuer die naechste Runde, wenn mehr Daten vorliegen. Was
-# ausgeliefert ist und was nicht, steht ausdruecklich darin.
+# Ausgeliefert wird das MODELL - es hat beide Kriterien erfuellt und die
+# Faustregel geschlagen. Die Regel wandert trotzdem mit ins Paket: als
+# Rueckfallebene, wenn das Modell einmal nicht laedt, und als Massstab
+# fuer die Ueberwachung. Was ausgeliefert ist, steht ausdruecklich darin.
 joblib.dump({
-    "ausgeliefert": "Regel: Räder nach Kilometern seit der letzten Meldung, absteigend",
-    "regel_spalte": "km_seit_meldung",
-    "trefferquote_test": round(float(urteile["Faustregel: km seit Meldung"][0]["Trefferquote"]), 3),
-    "kandidat_modell": wald,
-    "kandidat_merkmalsspalten": list(X_alle.columns),
-    "kandidat_trefferquote": round(float(urteile["Modell: Random Forest"][0]["Trefferquote"]), 3),
+    "ausgeliefert": "Modell: Random Forest auf km_seit_meldung und Nutzungsmerkmalen",
+    "modell": wald,
+    "merkmalsspalten": list(X_alle.columns),
+    "trefferquote_test": round(float(urteile["Modell: Random Forest"][0]["Trefferquote"]), 3),
+    "rueckfall_regel": "Räder nach Kilometern seit der letzten Meldung, absteigend",
+    "rueckfall_spalte": "km_seit_meldung",
+    "rueckfall_trefferquote": round(float(urteile["Faustregel: km seit Meldung"][0]["Trefferquote"]), 3),
     "horizont_tage": HORIZONT_TAGE, "rueckblick_tage": RUECKBLICK_TAGE,
     "kapazitaet": KAPAZITAET, "erstellt_am": datetime.date.today().isoformat(),
 }, "wartungsmodell.joblib")
@@ -673,30 +674,32 @@ print("geschrieben: wartungsliste.csv, wartungsmodell.joblib")
 '''),
 
 MD("""
-### 6.1 Ausgeliefert wird die Regel, nicht das Modell
+### 6.1 Ausgeliefert wird das Modell — und die Regel bleibt als Rückfallebene
 
-Das ist die ungewöhnlichste Entscheidung dieses Notebooks, und sie hat gute Gründe — über
-die Trefferquote hinaus:
+Das Modell erfüllt beide Kriterien aus Phase 1 und schlägt die Faustregel. Es geht in
+Betrieb. Die Entscheidung ist damit gefallen — aber sie ist nicht kostenlos:
 
 | | Regel | Modell |
 |---|---|---|
-| Trefferquote | 70,0 % | 70,0 % — **gleichauf** |
-| Kosten je Quartal | 10.890 € | 10.890 € — **gleichauf** |
+| Trefferquote | die Tabelle oben nennt sie | höher — die Zahl steht dort |
+| Kosten je Quartal | höher | niedriger |
 | Erklärbar | „das Rad ist seit 288 km nicht in der Werkstatt gewesen“ | nur über Umwege |
 | Wartungsaufwand | keiner | vierteljährlich nachtrainieren |
 | Bricht bei neuen Radtypen | nein | ja |
 | Abhängigkeiten im Betrieb | keine | scikit-learn, joblib, Versionsstände |
 
-**Bei Gleichstand in der Leistung entscheiden die übrigen Zeilen** — und dort gewinnt die
-Regel jede einzelne.
+Die unteren vier Zeilen sind der Preis. Er ist hier gerechtfertigt, weil die oberen beiden
+zugunsten des Modells ausfallen — **und nur deshalb.**
 
-**Ein Modell muss seinen Unterhalt verdienen.** Es kostet Pflege, Überwachung und
-Vertrauen. Wenn eine Regel dasselbe leistet, ist die Regel die bessere Lösung — und der
-Projektbericht sollte das so schreiben, statt das Modell auszuliefern, weil man es nun
-einmal gebaut hat.
+> **Ein Modell muss seinen Unterhalt verdienen.** Hier verdient es ihn. Fiele die
+> Trefferquote gleich aus, wäre die Regel die bessere Lösung, und der Projektbericht
+> müsste das so schreiben, statt das Modell auszuliefern, weil man es nun einmal gebaut
+> hat.
 
-Das Modell bleibt trotzdem im Paket: als **Kandidat für die nächste Runde**. Mit mehr
-Daten kann sich das Bild drehen.
+**Die Regel bleibt trotzdem im Paket** — aus zwei Gründen, die im Betrieb zählen: Sie ist
+die Rückfallebene, wenn das Modell einmal nicht lädt, und sie ist der Maßstab, an dem die
+Überwachung merkt, dass das Modell abdriftet. Ein Modell ohne Vergleichsgröße merkt sein
+eigenes Nachlassen nicht.
 
 ### 6.2 Die Liste ist das eigentliche Produkt
 
@@ -750,8 +753,8 @@ MD("""
 | 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r ≈ 0,7), aber nicht deterministisch. 44 % der Räder melden sich je Quartal, die Werkstatt schafft 26 % |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung: Merkmale aus 180 Tagen davor, Label aus 90 Tagen danach, acht Stichtage, Testmenge ist der jüngste |
 | 4 Modeling | Zuerst zwei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | **Der Sachverstand schlug das Verfahren:** Regel und Random Forest treffen **gleich gut** (je 70,0 %, je 10.890 €). Bei Gleichstand gewinnt die einfachere Lösung |
-| 6 Deployment | **Ausgeliefert wird die Regel, nicht das Modell** — mit Begründung, warum ein Modell seinen Unterhalt verdienen muss. Dazu Wartungsliste, Überwachung und die Rückkopplungsfalle |
+| 5 Evaluation | Die Faustregel des Werkstattmeisters ist ein starker Maßstab — der Random Forest schlägt sie messbar, in Treffern wie in Kosten. Erst der Maßstab macht diesen Beitrag benennbar |
+| 6 Deployment | **Ausgeliefert wird das Modell**, die Regel bleibt als Rückfallebene und als Maßstab für die Überwachung. Dazu Wartungsliste und die Rückkopplungsfalle |
 
 **Was eine zweite Runde anders machen würde**
 

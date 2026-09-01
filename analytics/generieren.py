@@ -65,18 +65,31 @@ print("Stammdaten ...")
 # STATIONEN
 # typ steuert die Erzeugung und wird NICHT exportiert (siehe Kopfkommentar).
 # =====================================================================
+# NAMEN, NUMMERN UND KOORDINATEN STAMMEN AUS velocity.station (01.09.2026).
+#
+# Vorher stand hier eine eigene Liste mit eigenen Orten - Kaeppele,
+# Ringpark Nord, Alte Mainbruecke. Solange der Lehrdatensatz fuer sich
+# stand, war das gleichgueltig. Seit Notebook 1 seine Preisspannen an die
+# Kundenwebsite liefert, ist es das nicht mehr: Die App haette Stationen
+# angeboten, die es im Netz gar nicht gibt, und die echten verschwiegen.
+# Sechs von zehn Namen stimmten nicht ueberein.
+#
+# Die Spalte typ steuert die Erzeugung und wird NICHT exportiert. Sie ist
+# nach dem tatsaechlichen Ort vergeben: Bahnhof, Klinikum, Sanderau und
+# Zellerau tragen Pendelverkehr, die beiden Hochschulstandorte den
+# Vorlesungsrhythmus, Dom und Residenz den Ausflugsverkehr.
 STATIONEN = [
     # id, nummer, name, lat, lon, kapazitaet, typ
-    (1,  "S-0001", "Hauptbahnhof",       49.8018, 9.9359, 40, "pendler"),
-    (2,  "S-0002", "Residenz",           49.7936, 9.9436, 24, "freizeit"),
-    (3,  "S-0003", "Alte Mainbruecke",   49.7913, 9.9280, 20, "freizeit"),
-    (4,  "S-0004", "Sanderring",         49.7889, 9.9366, 30, "uni"),
-    (5,  "S-0005", "Hubland",            49.7766, 9.9720, 34, "uni"),
-    (6,  "S-0006", "Marktplatz",         49.7943, 9.9294, 26, "misch"),
-    (7,  "S-0007", "Zellerau",           49.7891, 9.9089, 22, "pendler"),
-    (8,  "S-0008", "Ringpark Nord",      49.8021, 9.9421, 18, "freizeit"),
-    (9,  "S-0009", "Kaeppele",           49.7847, 9.9186, 12, "freizeit"),
-    (10, "S-0010", "Grombuehl/Klinikum", 49.8064, 9.9536, 28, "pendler"),
+    (1,  "S-0001", "Hauptbahnhof",           49.8019, 9.9358, 40, "pendler"),
+    (2,  "S-0002", "Marktplatz",             49.7944, 9.9295, 25, "misch"),
+    (3,  "S-0003", "Universität Sanderring", 49.7880, 9.9353, 35, "uni"),
+    (4,  "S-0004", "Residenz",               49.7930, 9.9390, 25, "freizeit"),
+    (5,  "S-0005", "Juliuspromenade",        49.7960, 9.9280, 30, "misch"),
+    (6,  "S-0006", "Dom",                    49.7938, 9.9322, 25, "freizeit"),
+    (7,  "S-0007", "Sanderau",               49.7818, 9.9412, 30, "pendler"),
+    (8,  "S-0008", "Hubland Campus",         49.7810, 9.9720, 40, "uni"),
+    (9,  "S-0009", "Grombühl Klinikum",      49.8046, 9.9424, 25, "pendler"),
+    (10, "S-0010", "Zellerau",               49.7965, 9.9142, 20, "pendler"),
 ]
 schreibe("station.csv",
          ["station_id", "stationsnummer", "name", "latitude", "longitude", "kapazitaet"],
@@ -531,18 +544,22 @@ def zielgewicht(start_typ, ziel_typ, fenster, frei):
 
 # Benannte Verbindungen, die es in Wuerzburg so oder aehnlich gibt.
 # Schluessel: (start_id, ziel_id, Zeitfenster, ist_freier_Tag) -> Verstaerkung
+# Dieselben Verkehre wie zuvor, jetzt auf den echten Stationen. Die
+# Pendelachsen laufen zum Bahnhof und zu den beiden Hochschulstandorten,
+# die Ausflugswege am Wochenende zwischen Dom, Residenz und Promenade.
 STARKE_WEGE = {
-    (1, 5, "frueh", False): 2.6,    # Hauptbahnhof -> Hubland (Campus)
-    (1, 4, "frueh", False): 2.0,    # Hauptbahnhof -> Sanderring
-    (1, 10, "frueh", False): 2.2,   # Hauptbahnhof -> Klinikum
-    (5, 1, "abend", False): 2.8,    # Hubland -> Hauptbahnhof
-    (4, 1, "abend", False): 2.1,    # Sanderring -> Hauptbahnhof
-    (10, 1, "abend", False): 2.0,   # Klinikum -> Hauptbahnhof
-    (7, 6, "frueh", False): 1.8,    # Zellerau -> Marktplatz
-    (2, 3, "frueh", True): 2.4,     # Residenz -> Alte Mainbruecke (Wochenende)
-    (3, 9, "mittag", True): 2.6,    # Alte Mainbruecke -> Kaeppele
-    (9, 3, "abend", True): 2.2,     # Kaeppele -> Alte Mainbruecke
-    (2, 8, "mittag", True): 1.9,    # Residenz -> Ringpark
+    (1, 8, "frueh", False): 2.6,    # Hauptbahnhof -> Hubland Campus
+    (1, 3, "frueh", False): 2.0,    # Hauptbahnhof -> Universität Sanderring
+    (1, 9, "frueh", False): 2.2,    # Hauptbahnhof -> Grombühl Klinikum
+    (8, 1, "abend", False): 2.8,    # Hubland Campus -> Hauptbahnhof
+    (3, 1, "abend", False): 2.1,    # Universität Sanderring -> Hauptbahnhof
+    (9, 1, "abend", False): 2.0,    # Grombühl Klinikum -> Hauptbahnhof
+    (10, 2, "frueh", False): 1.8,   # Zellerau -> Marktplatz
+    (7, 3, "frueh", False): 1.9,    # Sanderau -> Universität Sanderring
+    (4, 6, "frueh", True): 2.4,     # Residenz -> Dom (Wochenende)
+    (6, 5, "mittag", True): 2.6,    # Dom -> Juliuspromenade
+    (5, 6, "abend", True): 2.2,     # Juliuspromenade -> Dom
+    (4, 5, "mittag", True): 1.9,    # Residenz -> Juliuspromenade
 }
 
 PROFIL_CODES = [p[0] for p in PROFILE]

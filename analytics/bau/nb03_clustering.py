@@ -405,13 +405,13 @@ Namen liefert der Verstand.** Lesen Sie die vier Kurven und die Zeile darunter:
 **Alle vier Kriterien aus Phase 1 sind erfüllt:** benennbar, unterschiedlich zu behandeln,
 groß genug, und stabil (`n_init=25` prüft 25 Zufallsstarts und nimmt den besten).
 
-> **Und hier zeigt sich, warum die Kriterien aus Phase 1 nötig waren.** Sehen Sie sich
-> die Silhouettenwerte noch einmal an: 0,398 bei k = 2 und 0,397 bei k = 4 — praktisch
-> gleich. **Die Kennzahl konnte die Frage nicht entscheiden.** Hätten wir uns auf sie
-> verlassen, wären wir bei zwei Gruppen gelandet — „Werktagsstationen" und
-> „Wochenendstationen" —, und die Disposition hätte für Pendler- und Uni-Stationen
-> dieselbe Regel bekommen, obwohl die eine um 7 Uhr und die andere um 14 Uhr ihre Spitze
-> hat.
+> **Hier stimmen Kennzahl und Fachlichkeit überein** — der Silhouettenwert ist bei k = 4
+> am höchsten, und die vier Gruppen lassen sich benennen. Das ist der angenehme Fall.
+>
+> **Verlassen kann man sich darauf nicht.** Bei der Kundensegmentierung weiter unten liegen
+> die Silhouettenwerte für k = 2, k = 4 und k = 5 dicht beieinander; dort entscheidet die
+> Kennzahl gar nichts, und die vier Kriterien aus Phase 1 sind das Einzige, was bleibt.
+> Wer nur auf die Kennzahl schaut, hat kein Verfahren für den Fall, dass sie schweigt.
 >
 > Entschieden hat **Kriterium 2**: Für jede Gruppe muss es eine andere Maßnahme geben.
 > Bei k = 2 gibt es sie nicht, bei k = 4 schon. Das ist keine Schwäche des Verfahrens,
@@ -426,10 +426,11 @@ CODE('''
 # das Clustering sie wiedergefunden hat. Im Betrieb ist das unmoeglich; dort
 # bleibt es beim fachlichen Urteil oben.
 ERZEUGT_ALS = {
-    "Hauptbahnhof": "pendler", "Zellerau": "pendler", "Grombuehl/Klinikum": "pendler",
-    "Sanderring": "uni", "Hubland": "uni",
-    "Residenz": "freizeit", "Alte Mainbruecke": "freizeit",
-    "Ringpark Nord": "freizeit", "Kaeppele": "freizeit",
+    "Hauptbahnhof": "pendler", "Zellerau": "pendler",
+    "Grombühl Klinikum": "pendler", "Sanderau": "pendler",
+    "Universität Sanderring": "uni", "Hubland Campus": "uni",
+    "Residenz": "freizeit", "Dom": "freizeit",
+    "Juliuspromenade": "misch",
     "Marktplatz": "misch",
 }
 pruefung = pd.DataFrame({"gefunden": S.cluster,
