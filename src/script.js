@@ -65,15 +65,41 @@ document.addEventListener("DOMContentLoaded", async () => {
        brach ab - sichtbar nur in der Konsole, die Seite blieb stumm. */
     let radKachelSchaetzknoepfe = [];
 
+    /* Fuer welche Radtypen gibt es ueberhaupt Schaetzungen? Steht nach
+       preisschaetzerLaden() bereit; bis dahin leer, und dann sind die
+       Knoepfe ohnehin ausgeblendet. */
+    let schaetzbareTypen = new Set();
+
     /* Ein- und ausblenden statt neu bauen: Die Kacheln enthalten Bilder,
        und ein Neuaufbau liesse sie flackern. */
     function radKachelSchaetzknoepfeSetzen() {
-        for (const knopf of radKachelSchaetzknoepfe) knopf.hidden = !preisschaetzerAn;
+        for (const { knopf, text } of radKachelSchaetzknoepfe) {
+            knopf.hidden = !preisschaetzerAn;
+            /* AUSGEGRAUT STATT ENTTAEUSCHT.
+               Fuer EBIKE und CARGO gibt es keine einzige Schaetzung - das
+               Modell aus Notebook 1 wurde nur fuer CITY freigegeben. Bis
+               zum 01.09.2026 liess sich der Knopf trotzdem oeffnen und
+               meldete dann "Fuer dieses Rad liegt keine Schaetzung vor".
+               Wer nichts zu sagen hat, sagt es besser vorher. */
+            const geht = schaetzbareTypen.has(knopf.dataset.typ);
+            knopf.disabled = !geht;
+            knopf.classList.toggle('ist-leer', !geht);
+            text.textContent = geht ? 'Preis schätzen' : 'Zu wenig Daten';
+            knopf.setAttribute('aria-label', geht
+                ? `Preis für eine Fahrt mit dem ${knopf.dataset.bezeichnung} schätzen`
+                : `Für das ${knopf.dataset.bezeichnung} liegen zu wenige vergleichbare `
+                  + 'Fahrten für eine Schätzung vor');
+            knopf.title = geht ? '' :
+                'Das Modell schätzt nur dort, wo genug vergleichbare Fahrten vorliegen.';
+        }
     }
 
     async function preisschaetzerLaden() {
-        const profil = await fetchProfil();
+        const [profil, typen] = await Promise.all([
+            fetchProfil(), fetchSchaetzbareTypen()
+        ]);
         preisschaetzerAn = Boolean(profil?.zeigt_preisschaetzer);
+        schaetzbareTypen = typen;
         if (schalter) schalter.checked = preisschaetzerAn;
         radKachelSchaetzknoepfeSetzen();
     }
@@ -610,15 +636,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             schaetzen.type = 'button';
             schaetzen.className = 'rad-kachel-schaetzen btn-outline';
             schaetzen.dataset.typ = k.typ_code;
+            schaetzen.dataset.bezeichnung = k.bezeichnung;
             schaetzen.dataset.lade = 'schaetzer';
             schaetzen.setAttribute('aria-expanded', 'false');
-            schaetzen.setAttribute('aria-label',
-                `Preis für eine Fahrt mit dem ${k.bezeichnung} schätzen`);
             const symbol = document.createElement('i');
             symbol.className = 'fa-solid fa-route';
             symbol.setAttribute('aria-hidden', 'true');
-            schaetzen.append(symbol, document.createTextNode('Preis schätzen'));
-            radKachelSchaetzknoepfe.push(schaetzen);
+            /* Die Beschriftung sitzt in einem eigenen Element, damit
+               radKachelSchaetzknoepfeSetzen() sie austauschen kann, ohne
+               das Symbol mitzureissen. */
+            const beschriftung = document.createElement('span');
+            beschriftung.textContent = 'Preis schätzen';
+            schaetzen.append(symbol, beschriftung);
+            /* Knopf UND Beschriftung merken. Ein querySelector auf eine
+               Klasse, die es nur im Skript gibt, waere im HTML nicht
+               nachweisbar - tools/frontend_check.py meldet solche Sucher
+               zu Recht. Die Referenz ist ohnehin direkter. */
+            radKachelSchaetzknoepfe.push({ knopf: schaetzen, text: beschriftung });
 
             /* Der Buchungsknopf steht OBEN, die zwei Preisfragen darunter:
                die Handlung vor der Frage nach dem Preis. */
@@ -1129,6 +1163,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!ladeIstOffen(ziel)) return;
         ziel.style.height = hoch + 'px';
         ziel.getAnimations().forEach(a => a.cancel());
+        /* Ab jetzt folgt die Hoehe dem Inhalt - siehe ladenBeobachter. */
+        ladenBeobachter.observe(tafel);
 
         /* IN DEN BLICK HOLEN. Die Kacheln sind hoch, der Knopf sitzt an
            ihrem unteren Rand, und die Lade faehrt DARUNTER aus - auf
@@ -1141,6 +1177,26 @@ document.addEventListener("DOMContentLoaded", async () => {
             ziel.scrollIntoView({ block: 'end', behavior: 'auto' });
         }
     }
+
+    /* DIE HOEHE MUSS AUCH DEM INHALT FOLGEN, NICHT NUR DEM FENSTER.
+       Die Lade bekommt beim Oeffnen eine gemessene Hoehe. Der Schaetzer
+       darin ist beim Oeffnen aber noch leer ("Waehle ein Ziel, dann
+       rechnen wir") und waechst erst, wenn die Schaetzung eintrifft:
+       Preis, Dauer, Grundlage. Die gemessene Hoehe galt da laengst - und
+       die Fussnote darunter lag hinter overflow: hidden.
+       Ein ResizeObserver auf dem Inhalt fuehrt die Hoehe nach. Er sieht
+       jede Aenderung, egal ob sie vom Fenster, vom Text oder von einer
+       eintreffenden Antwort kommt. */
+    const ladenBeobachter = new ResizeObserver((eintraege) => {
+        for (const eintrag of eintraege) {
+            const lade = eintrag.target.closest('.rad-kachel-schublade');
+            if (!lade || !ladeIstOffen(lade)) continue;
+            /* auto, dann messen: sonst misst man die alte feste Hoehe. */
+            lade.style.height = 'auto';
+            const hoch = lade.scrollHeight;
+            lade.style.height = hoch + 'px';
+        }
+    });
 
     /* Die offene Lade traegt eine feste, gemessene Hoehe. Aendert sich
        die Fensterbreite, bricht der Text darin anders um und der Wert

@@ -118,6 +118,17 @@ async function fetchSchaetzbareZiele(startstation, typCode) {
     return [...new Set(zeilen.map(z => z.zielstation))];
 }
 
+/* Welche Radtypen haben ueberhaupt eine Schaetzung?
+
+   Gefragt wird EINMAL beim Anmelden, nicht je Kachel: Die Antwort
+   entscheidet, ob der Schaetzknopf ueberhaupt anklickbar ist. Ein Knopf,
+   der sich oeffnen laesst und dann "keine Schaetzung" meldet, hat den
+   Menschen zweimal beschaeftigt und einmal enttaeuscht. */
+async function fetchSchaetzbareTypen() {
+    const zeilen = await ladeListe('v_preisschaetzung', 'typ_code');
+    return new Set(zeilen.map(z => z.typ_code));
+}
+
 /* Startstationen, von denen aus es Schaetzungen gibt. */
 async function fetchSchaetzbareStarts(typCode) {
     const zeilen = await ladeListe('v_preisschaetzung', 'startstation', (q) => q

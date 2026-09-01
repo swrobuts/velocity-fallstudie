@@ -402,13 +402,13 @@ rfm["cluster"] = km_kunden.labels_
 profil = rfm.groupby("cluster").agg(
     kunden=("frequenz", "size"),
     recency_tage=("recency", "mean"),
-    fahrten_jahr=("frequenz", "mean"),
-    umsatz_jahr=("umsatz", "mean"),
+    fahrten_fenster=("frequenz", "mean"),
+    umsatz_fenster=("umsatz", "mean"),
 ).round(1)
 # Umsatz JE FAHRT - die Groesse, um die es gleich geht. Ohne sie liest man
 # die Tabelle falsch: Das fahrtstaerkste Segment hat nicht den geringsten
 # Jahresumsatz, sondern den geringsten Umsatz je Fahrt.
-profil["umsatz_je_fahrt"] = (profil.umsatz_jahr / profil.fahrten_jahr).round(2)
+profil["umsatz_je_fahrt"] = (profil.umsatz_fenster / profil.fahrten_fenster).round(2)
 profil["anteil"] = (profil.kunden / profil.kunden.sum() * 100).round(1)
 print(profil.to_string())
 '''),
@@ -461,7 +461,7 @@ glauben.
 
 **Kriterien 1 bis 3 aus Phase 1 sind damit erfüllt:** Jede Gruppe ist benennbar, jede
 bekommt in Phase 6 eine eigene Regel, und keine ist zu klein. Kriterium 2 wird dort
-außerdem maschinell geprüft — **vier Gruppen müssen vier verschiedene Maßnahmen
+außerdem maschinell geprüft — **vier Gruppen müssen vier verschiedene Prüfungshypothesen
 ergeben.** Eine frühere Fassung dieses Notebooks hat genau daran gescheitert, ohne dass
 es auffiel.
 
@@ -567,9 +567,50 @@ regel_vor = regel_segmente_zum(VORQUARTAL)
 gemeinsam = regel_heute.index.intersection(regel_vor.index)
 wechselquote = float((regel_heute[gemeinsam] != regel_vor[gemeinsam]).mean())
 
-print("(1) DAS AUSGELIEFERTE VERFAHREN - feste Schwellen, beide Stichtage\\n")
-print(f"    In beiden Fenstern aktiv: {len(gemeinsam)} Kundinnen und Kunden")
-print(f"    Segmentwechsel binnen 90 Tagen: {wechselquote:.1%}")
+print("(1a) DIE VIER RFM-REGELN - feste Schwellen, beide Stichtage\\n")
+print(f"     In beiden Fenstern aktiv: {len(gemeinsam)} Kundinnen und Kunden")
+print(f"     Segmentwechsel binnen 90 Tagen: {wechselquote:.1%}")
+
+# ---------------------------------------------------------------------
+# (1b) DIE VOLLSTAENDIGE AUSLIEFERUNG - sieben Lebenszyklussegmente.
+#
+# Der Export enthaelt mehr als die vier RFM-Segmente: "Frueher aktiv,
+# jetzt inaktiv" und "Neu, noch keine Erstfahrt" kommen dazu, "Nie
+# aktiviert" wird analysiert und ausgeschlossen. Ein Gate, das nur die
+# vier misst, laesst genau die Uebergaenge aus, die entscheiden, WER
+# ueberhaupt angeschrieben wird - naemlich den Wechsel zwischen aktiv
+# und inaktiv.
+# ---------------------------------------------------------------------
+def lebenszyklus_zum(cut):
+    """Die vollstaendige siebenstufige Logik zu einem Zeitpunkt."""
+    r = rfm_zum_cutoff(cut)
+    seg = r.apply(segment_benennen, axis=1)
+    gefahren_bis = set(echte.loc[echte.startzeit < cut, "kunde_id"])
+    reg = pd.to_datetime(kunden.set_index("kunde_id").registriert_am)
+    dabei = (cut - reg).dt.days
+    # nur Kundschaft, die zu diesem Zeitpunkt schon registriert war
+    registriert = dabei[dabei >= 0].index
+    ergebnis = {}
+    for kid in registriert:
+        if kid in seg.index:
+            ergebnis[kid] = seg[kid]
+        elif kid in gefahren_bis:
+            ergebnis[kid] = "Früher aktiv, jetzt inaktiv"
+        elif dabei[kid] <= FENSTER_TAGE:
+            ergebnis[kid] = "Neu, noch keine Erstfahrt"
+        else:
+            ergebnis[kid] = "Nie aktiviert"
+    return pd.Series(ergebnis)
+
+lz_heute = lebenszyklus_zum(CUTOFF)
+lz_vor = lebenszyklus_zum(VORQUARTAL)
+lz_gemeinsam = lz_heute.index.intersection(lz_vor.index)
+lz_wechsel = float((lz_heute[lz_gemeinsam] != lz_vor[lz_gemeinsam]).mean())
+
+print("\\n(1b) DIE VOLLSTAENDIGE AUSLIEFERUNG - sieben Lebenszyklussegmente\\n")
+print(f"     An beiden Stichtagen registriert: {len(lz_gemeinsam)} Kundinnen und Kunden")
+print(f"     Segmentwechsel binnen 90 Tagen: {lz_wechsel:.2%}")
+print("\\n     DIESE Zahl bindet das Gate - sie misst, was ausgeliefert wird.")
 
 # ---------------------------------------------------------------------
 # (2) DIE MODELLDIAGNOSE: wie stabil waere das Clustering gewesen?
@@ -595,10 +636,12 @@ print("    vertreten. Gebunden wird das Gate an (1).")
 # entscheidet weiter unten darueber, ob die Kampagnenliste als freigegeben
 # oder als gesperrt exportiert wird.
 GATE_WECHSEL = 0.25
-KUNDENSEGMENTE_STABIL = bool(wechselquote <= GATE_WECHSEL)
+# Gebunden wird die VOLLSTAENDIGE Logik, nicht der RFM-Ausschnitt.
+KUNDENSEGMENTE_STABIL = bool(lz_wechsel <= GATE_WECHSEL)
 
 print(f"\\nDie Überwachung in Phase 6 nennt {GATE_WECHSEL:.0%} je Quartal als Alarmschwelle.")
-print(f"Gemessen am AUSGELIEFERTEN Verfahren: {wechselquote:.1%}")
+print(f"Gemessen an der vollstaendigen Lebenszykluslogik: {lz_wechsel:.2%}")
+print(f"(die vier RFM-Regeln allein kaemen auf {wechselquote:.1%} - ein Ausschnitt)")
 print(f"-> Sie ist {'gehalten' if KUNDENSEGMENTE_STABIL else 'GERISSEN'}.")
 print("\\nDiese Variable bindet den Export in Phase 6 - sie ist keine Randnotiz.")
 print("Und sie bindet ihn an das, was tatsaechlich ausgeliefert wird.")
@@ -638,8 +681,18 @@ print("    nicht 'je Jahr'. Und das zugehoerige Freigabe-Gate bleibt offen.")
 
 MD("""
 > **Jeder vierte Kunde wechselt binnen eines Quartals das Segment** — und das bei
-> unveränderter Methode und unveränderten Schwellen. Der ARI von 0,467 sagt dasselbe: Die
-> Einteilung ist zwischen zwei Zeitpunkten nur zur Hälfte dieselbe.
+> unveränderter Methode und unveränderten Schwellen. Die drei Zahlen oben messen aber
+> **drei verschiedene Dinge**, und nur eine davon gehört zum Produkt:
+>
+> | Kennzahl | Wert | Was sie misst |
+> |---|---:|---|
+> | Lebenszyklusregeln, sieben Segmente | **24,75 %** | das **ausgelieferte** Verfahren — hieran hängt das Gate |
+> | die vier RFM-Regeln allein | 24,9 % | ein Ausschnitt davon |
+> | k-Means, jeweils neu gerechnet | 26,5 % (ARI 0,442) | ein Modell, das **nicht** ausgeliefert wird |
+>
+> Der ARI sagt also **nicht dasselbe**: Er beschreibt das separat neu berechnete
+> Clustering. Eine frühere Fassung stellte ihn neben die Regelquote, als wären es zwei
+> Belege für denselben Satz.
 >
 > Das ist kein Fehler des Verfahrens. RFM misst Verhalten in einem gleitenden Fenster,
 > und Verhalten ändert sich. Aber es hat eine **harte Folge für die Auslieferung**:
@@ -668,7 +721,7 @@ Cluster-Nummern ausgeliefert, sondern über nachvollziehbare Schwellen** — die
 reproduzierbar.
 
 > **Und noch eine Zahl, die man nicht überlesen sollte:** Der Silhouettenwert der
-> Kundensegmente liegt bei 0,405, der der Stationen bei 0,759. Werte um 0,4 heißen:
+> Kundensegmente liegt bei 0,409, der der Stationen bei 0,759. Werte um 0,4 heißen:
 > Es *gibt* eine Struktur, aber die Gruppen gehen ineinander über. Das ist bei
 > Kundendaten der Normalfall und kein Fehler — es ist aber ein Grund, die Segmente als
 > Arbeitshilfe zu behandeln und nicht als Naturkonstante.
@@ -728,7 +781,7 @@ print(uebersicht.to_string())
 fig, achsen = plt.subplots(1, 3, figsize=(15, 4))
 for spalte, achse, titel in zip(["recency", "frequenz", "umsatz"], achsen,
                                 ["Recency (Tage seit letzter Fahrt)",
-                                 "Frequency (Fahrten je Jahr)", "Monetary (Entgelt je Jahr)"]):
+                                 "Frequency (Fahrten im Fenster)", "Monetary (Entgelt im Fenster)"]):
     daten = [rfm.loc[rfm.cluster == c, spalte].values for c in sorted(rfm.cluster.unique())]
     achse.boxplot(daten, tick_labels=[f"C{c}" for c in sorted(rfm.cluster.unique())],
                   showfliers=False)
@@ -739,8 +792,9 @@ plt.tight_layout(); plt.show()
 MD("""
 ### 5.B.1 Ein Befund, der so nicht erwartet war
 
-Sehen Sie sich die Spalten `fahrten_jahr` und `umsatz_jahr` nebeneinander an — gemeint
-ist jeweils **das Beobachtungsfenster**, nicht garantiert ein volles Jahr:
+Sehen Sie sich die Spalten `fahrten_fenster` und `umsatz_fenster` nebeneinander an. Sie
+heißen so und nicht `..._jahr`, weil ein Teil der Kundschaft **kein volles Jahr** beobachtet
+wurde — für 406 von ihnen wäre „je Jahr“ schlicht falsch:
 
 **Das Segment mit den meisten Fahrten bringt am wenigsten Umsatz JE FAHRT.** Und diese
 Einschränkung ist wichtig — lesen Sie die Tabelle genau:
@@ -819,7 +873,7 @@ rfm["verschenkt"] = je_kunde.reindex(rfm.index).fillna(0)
 
 vergleich = rfm.groupby("cluster").agg(
     kunden=("umsatz", "size"),
-    fahrten_jahr=("frequenz", "mean"),
+    fahrten_fenster=("frequenz", "mean"),
     gezahlt=("umsatz", "mean"),
     verschenkt=("verschenkt", "mean"),
 ).round(2)
@@ -888,7 +942,7 @@ je_monat = mit_freiminuten.verschenkt.mean() / 12
 
 print("HYPOTHESE, kein Befund:")
 print(f"  Kundschaft mit Freiminuten:            {len(mit_freiminuten):>6d}")
-print(f"  im Mittel abgegeben, je Jahr:          {mit_freiminuten.verschenkt.mean():>6.2f} EUR")
+print(f"  im Mittel abgegeben, im Fenster:       {mit_freiminuten.verschenkt.mean():>6.2f} EUR")
 print(f"  ein ausgleichender Beitrag laege bei:  {je_monat:>6.2f} EUR im Monat")
 print()
 print("  Zu bedenken, bevor daraus ein Vorschlag wird:")
@@ -927,7 +981,8 @@ entweder verloren oder zurückzugewinnen.
 """),
 
 # =====================================================================
-PHASE(6, "Aus vier Stationstypen werden Dispositions-HYPOTHESEN, aus sieben Lebenszyklus-"
+PHASE(6, "Aus vier Stationstypen werden Dispositions-HYPOTHESEN, aus sieben "
+         "Lebenszyklusgruppen ein analytischer Kampagnen-Arbeitsstand"
          "ein Kampagnenplan."),
 
 CODE('''
@@ -963,8 +1018,9 @@ for c in sorted(S.cluster.unique()):
                       "Nachmittagsprüfung testen")
     else:
         bez, regel = ("Uni-Station",
-                      "Abfahrten an den Semesterrhythmus gebunden — Hypothese: "
-                      "Bestand nach Vorlesungszeit staffeln")
+                      "Abfahrtsspitze am Nachmittag — Hypothese: Bestandsprüfung "
+                      "zu dieser Zeit testen; einen Semestereffekt separat mit "
+                      "dem Vorlesungskalender untersuchen")
     namen_cluster[c], regeln[c] = bez, regel
     for name in g.index:
         print(f"{name:<22s} {bez:<18s} {regel}")
@@ -1178,8 +1234,9 @@ kopf = [
     f"# Stichtag: {stichtag.date()}, gueltig bis "
     f"{(stichtag + pd.Timedelta(days=90)).date()}",
     "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
-    f"# Segmentstabilitaet je Quartal: {wechselquote:.1%} Wechsel "
-    f"(Schwelle {GATE_WECHSEL:.0%}), gemessen am ausgelieferten Regelverfahren",
+    f"# Segmentstabilitaet je Quartal: {lz_wechsel:.2%} Wechsel "
+    f"(Schwelle {GATE_WECHSEL:.0%}), gemessen an der vollstaendigen "
+    f"Lebenszykluslogik",
     f"# STATUS: {freigabe}",
     "# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN.",
 ]
@@ -1211,9 +1268,9 @@ MD("""
 liest und prüft. Sie sagen, *wann* an einer Station losgefahren wird, und leiten daraus
 ab, *wann sich ein Blick auf den Bestand lohnt*. Sie sagen nicht, wie viele Räder dort
 stehen sollen; dafür fehlen Ankünfte, Kapazität und verlorene Nachfrage.
-Er muss aber **nachgerechnet werden**, wenn eine Station dazukommt — und dann kann sich
-die Zuordnung *aller* Stationen ändern, weil k-Means alle Zentren neu setzt. Ein neues
-Cluster-Ergebnis ist nie eine Ergänzung, immer eine Neuberechnung.
+Sie müssen aber **neu berechnet werden**, wenn eine Station dazukommt — und dann kann
+sich die Zuordnung *aller* Stationen ändern, weil k-Means alle Zentren neu setzt. Ein
+neues Cluster-Ergebnis ist nie eine Ergänzung, immer eine Neuberechnung.
 
 **Der Kampagnenplan** ist heikler, und zwar aus einem Grund, der nichts mit Statistik zu
 tun hat:
@@ -1272,13 +1329,16 @@ MD("""
    hat eine Frage hervorgebracht, die vorher niemand gestellt hatte. Sauber wäre dafür
    ein **Deckungsbeitrag** statt des Entgelts: abzüglich der Kosten, die eine Fahrt
    verursacht (Umverteilung, Verschleiß, Strom).
-2. **Zurück zu Phase 5:** Die zeitliche Stabilität der **vollständigen** Lebenszyklus-
-   regeln prüfen, nicht nur der vier RFM-Segmente. Der aktuelle Vergleich lässt die
-   Übergänge zwischen aktiv und inaktiv außen vor — und genau die entscheiden, wer
-   überhaupt angeschrieben wird.
-3. **Zurück zu Phase 3:** Die Nichtfahrer als eigenes Segment mitführen, statt sie
-   herausfallen zu lassen. RFM braucht dafür eine Erweiterung, oft „RFM + Status“ genannt.
-3. **Ein anderes Verfahren erwägen:** k-Means unterstellt kugelförmige, gleich große
+2. **Zurück zu Phase 3:** Die kurze Beobachtungsdauer fachlich behandeln — junge
+   Kundschaft als eigene Onboardingkohorte, eine Mindestexposition oder
+   expositionsbereinigte Schwellen. Die Hochrechnung in Phase 5 ist eine Diagnose, keine
+   Lösung; das zugehörige Freigabe-Gate bleibt bis dahin offen.
+3. **Die Schwellen prospektiv prüfen.** Sie sind am aktuellen Datenstand abgelesen und
+   dann rückwärts auf ein früheres Fenster angewandt. Das ist eine Stabilitätsdiagnose,
+   kein Zukunftstest — und die beiden 365-Tage-Fenster überlappen sich stark. Sauber
+   wäre: Schwellen auf einem früheren Stand festlegen, unverändert auf einen später
+   unberührten Zeitraum anwenden, und das über mehrere rollierende Cutoffs.
+4. **Ein anderes Verfahren erwägen:** k-Means unterstellt kugelförmige, gleich große
    Gruppen. Für Segmente mit sehr unterschiedlicher Streuung sind hierarchisches
    Clustering oder Gaussian Mixture Models oft passender.
 

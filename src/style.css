@@ -3698,6 +3698,25 @@ a, button, [role="button"], summary, label { -webkit-tap-highlight-color: transp
 }
 .rad-kachel-schaetzen i { font-size: .9em; }
 
+/* AUSGEGRAUT, ABER LESBAR.
+   Der Knopf verschwindet nicht: Dass es fuer dieses Rad keine Schaetzung
+   gibt, ist eine Auskunft und soll sichtbar bleiben. Der Kontrast bleibt
+   ueber 4.5:1, damit der Hinweis auch lesbar ist - ein ausgegrauter
+   Knopf, den niemand entziffern kann, informiert nicht. */
+.rad-kachel-schaetzen:disabled,
+.rad-kachel-schaetzen.ist-leer {
+  color: var(--grau);
+  border-color: var(--linie);
+  background: var(--paper);
+  cursor: not-allowed;
+  font-weight: 600;
+}
+.rad-kachel-schaetzen:disabled:hover,
+.rad-kachel-schaetzen.ist-leer:hover {
+  background: var(--paper); color: var(--grau); border-color: var(--linie);
+}
+.rad-kachel-schaetzen:disabled i { opacity: .55; }
+
 /* --- Die Tafel in der Schublade --- */
 .schaetzer {
   display: grid; gap: var(--a3);
