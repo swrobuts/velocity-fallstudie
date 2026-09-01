@@ -364,7 +364,22 @@ Ein Rücksprung ist eine **neue Modellierungsrunde**. Sie braucht ihren eigenen 
 | **Training** (60 %) | das Modell lernt | die ältesten Fahrten |
 | **Validierung** (15 %) | wir *wählen* Verfahren und Einstellungen | mittlerer Zeitraum |
 | **Test 1** (12,5 %) | die Punktschätzung wird *einmal* gemessen | danach verbraucht |
-| **Test 2** (12,5 %) | die Spanne wird *einmal* gemessen | kein Training, keine Modellwahl, keine Schwelle |
+| **Test 2** (12,5 %) | die zweite Runde wird darauf **kalibriert und freigegeben** | kein Training — aber Auswahl und Filterung |
+
+> **Test 2 ist kein finaler Test, sondern ein Kalibrierungszeitraum.** Auf ihm wird das
+> Artefakt ausgewählt, ein Radtyp ausgeschlossen und über einzelne Kombinationen
+> entschieden. Wer daraufhin Kennzahlen berichtet, berichtet die Güte einer Auswahl, die
+> auf ebendiesen Daten getroffen wurde — sie fällt zu günstig aus.
+>
+> Die unabhängige Prüfung des fertigen Artefakts kann deshalb erst der Schattenbetrieb
+> aus Phase 6.6 leisten. Diesen Zwischenschritt zu benennen ist ehrlicher, als eine
+> vierte Menge zu erfinden, für die die Daten nicht reichen:
+>
+> ```text
+> Training → Validierung → Test 1: Punktschätzung
+>          → Rücksprung  → Test 2: Kalibrierung und Freigabe des Intervallprodukts
+>          → Schattenbetrieb: finale, unabhängige Prüfung
+> ```
 """),
 
 CODE("""
@@ -385,13 +400,13 @@ print("Test 1 ist Winter und Frühjahr, Test 2 ist Sommer. Dass die beiden")
 print("Zeiträume verschiedene Jahreszeiten sind, ist kein Zufall der Aufteilung,")
 print("sondern eine Eigenschaft der Daten - und sie wird uns beschäftigen.")
 print()
-print("EINE EINSCHRAENKUNG, DIE MAN NICHT VERSCHWEIGEN DARF: Die Erkundung in")
-print("Phase 2 - Verteilung der Dauer, Rundtouren, laengste Verbindungen - lief")
-print("auf dem GESAMTEN Datensatz, also auch ueber Test 2. Fuer Training,")
-print("Modellwahl und Schwellen ist Test 2 unberuehrt; voellig blind sind wir")
-print("ihm gegenueber aber nicht. Sauberer waere, die Grenze vor der Erkundung")
-print("zu ziehen - in einem Lehrnotebook, das die Daten erst vorstellt, waere")
-print("das allerdings eine seltsame Reihenfolge.")
+print("ZWEIERLEI IST DABEI ZU BEACHTEN:")
+print("1. Die Erkundung in Phase 2 lief ueber den GESAMTEN Datensatz, also auch")
+print("   ueber Test 2. Trainiert wurde dort nie, aber blind sind wir ihm")
+print("   gegenueber auch nicht.")
+print("2. Test 2 traegt in Phase 6 die Auswahl des Artefakts und die Freigabe.")
+print("   Er ist damit ein KALIBRIERUNGSZEITRAUM, kein unabhaengiger Endtest.")
+print("   Den kann erst der Schattenbetrieb liefern.")
 """),
 
 PHASE(4, "Verdient ein Modell seinen Unterhalt gegenüber einer Nachschlagetabelle?"),
@@ -606,8 +621,9 @@ Eine einzelne Zahl auf einem einzelnen Zeitraum sagt nichts darüber, wie sie im
 Quartal aussieht. Der Fehler ist im Sommer erkennbar größer als im Winter — ein Kriterium,
 das nur in einer Jahreszeit hält, ist keine Zusage.
 
-Wir prüfen das **innerhalb** von Training und Validierung: Test 1 ist verbraucht, Test 2
-bleibt unberührt.
+Wir prüfen das **innerhalb** von Training und Validierung: Test 1 ist verbraucht, und
+Test 2 ist bis hierher nicht angefasst — er wird ab Phase 5.6 für die zweite Runde
+gebraucht.
 """),
 
 CODE("""
@@ -789,20 +805,25 @@ def preisspanne(u, o):
 ##ENDE
 
 def bewerten(name, u, o):
+    \"\"\"Bewertet nur, was die App tatsaechlich ANZEIGEN wuerde.
+
+    Die Breitenregel gilt je EINZELNER Spanne, nicht im Median: Eine
+    Spanne ueber einem Euro wird nicht angezeigt, also darf sie auch
+    nicht in die Abdeckung eingehen. Ueber den Median gerechnet haette
+    ein Kandidat mit wenigen sehr breiten Spannen gut ausgesehen.
+    \"\"\"
     da = zukunft[o].notna()
     von, bis = preisspanne(u, o)
     drin = (zukunft.p_ist >= von - 0.001) & (zukunft.p_ist <= bis + 0.001)
-    breite = bis - von
-    schmal = breite <= 1.00
-    je_typ = {ty: drin[da & (zukunft.typ_code == ty)].mean()
-              for ty in sorted(zukunft[da].typ_code.unique())}
+    zeigbar = da & ((bis - von) <= 1.00)
+    je_typ = {ty: drin[zeigbar & (zukunft.typ_code == ty)].mean()
+              for ty in sorted(zukunft[zeigbar].typ_code.unique())}
     return {
-        "Auskunft": da.mean(),
-        "Abdeckung": drin[da].mean(),
+        "Auskunft (angezeigt)": zeigbar.mean(),
+        "Abdeckung (angezeigt)": drin[zeigbar].mean(),
         "schlechtester Radtyp": min(je_typ.values()) if je_typ else float("nan"),
-        "Breite (Median)": breite[da].median(),
-        "Anteil <= 1 EUR": schmal[da].mean(),
-        "Abdeckung der schmalen": drin[da & schmal].mean() if (da & schmal).any() else float("nan"),
+        "Breite (Median)": (bis - von)[zeigbar].median(),
+        "verworfen, zu breit": (da & ~zeigbar).mean(),
     }
 
 vergleich = pd.DataFrame({
@@ -810,9 +831,8 @@ vergleich = pd.DataFrame({
     "Perzentiltabelle":  bewerten("Tabelle", "von", "bis")}).T
 print(vergleich.to_string(float_format=lambda x: f"{x:.3f}"))
 print()
-for name, z in vergleich.iterrows():
-    haelt = (z["Abdeckung"] >= 0.80 and z["schlechtester Radtyp"] >= 0.80
-             and z["Breite (Median)"] <= 1.00)
+for name, s in vergleich.iterrows():
+    haelt = s["Abdeckung (angezeigt)"] >= 0.80 and s["schlechtester Radtyp"] >= 0.80
     print(f"{name:22} vollstaendiges Kriterium: "
           f"{'ERFUELLT' if haelt else 'NICHT ERFUELLT'}")
 """),
@@ -821,13 +841,16 @@ MD("""
 **Keiner der beiden Kandidaten erfüllt das vollständige Kriterium.** Das ist das
 ehrliche Ergebnis, und es fällt bei jedem aus einem anderen Grund aus:
 
-- Die **Quantilregression** antwortet immer und trifft insgesamt knapp über 80 Prozent —
-  aber ihre Spannen sind im Median breiter als ein Euro, und nur gut vier von zehn
-  erfüllen die Breitenregel. Eine Spanne, die alles einschließt, trifft leicht; sie
-  nützt nur niemandem. Beim EBIKE bleibt sie zusätzlich unter der Marke.
-- Die **Perzentiltabelle** hält die Breitenregel per Konstruktion und trifft besser —
-  aber sie schweigt bei mehr als zwei von drei Anfragen, und beim EBIKE reißt sie das
-  Kriterium deutlich.
+- Die **Quantilregression** rechnet für jede Anfrage eine Spanne — aber deutlich mehr als
+  die Hälfte davon ist breiter als ein Euro und dürfte gar nicht angezeigt werden. Übrig
+  bleiben gut vier von zehn Anfragen. Auf denen trifft sie knapp die 80 Prozent, beim
+  schlechtesten Radtyp bleibt sie darunter.
+- Die **Perzentiltabelle** hält die Breitenregel per Konstruktion und trifft insgesamt
+  besser — aber sie schweigt bei mehr als zwei von drei Anfragen, und beim EBIKE reißt
+  sie das Kriterium deutlich.
+
+Bemerkenswert ist die Zeile *verworfen, zu breit*: Die Quantilregression sieht nur so
+lange nach dem besseren Produkt aus, wie man ihre unbrauchbar breiten Spannen mitzählt.
 
 Hätte man nur die Dauerabdeckung gemessen, sähen beide gut aus. Erst die vollständige
 Prüfung — Preis, je Radtyp, Breite — zeigt, dass so noch kein Produkt daraus wird.
@@ -980,12 +1003,16 @@ print("besser als eine Zahl, die nicht trägt.")
 MD("""
 ### 6.3 Die Tabelle bauen und ausliefern
 
-> **Eine Schwäche, die in der Tabelle steckt.** Dreißig Fahrten sind die Untergrenze für
-> eine Zeile — für ein 10-%- und ein 90-%-Quantil heißt das rund **drei Beobachtungen je
-> Rand**. Die Grenzen der Spanne stehen damit auf sehr dünnem Grund, auch wenn die Mitte
-> gut belegt ist. Für eine echte Freigabe wären höhere Mindestfallzahlen, Bootstrap-
-> Intervalle oder eine kalibrierte Intervallmethode angebracht. Wir belassen es bei
-> dreißig und sagen dazu, was das bedeutet.
+> **Warum dreißig — und was daran schwach ist.** Dreißig Fahrten sind die Untergrenze für
+> eine Zeile. Für ein 10-%- und ein 90-%-Quantil heißt das rund **drei Beobachtungen je
+> Rand**; die Ränder der Spanne stehen damit auf dünnem Grund, auch wenn die Mitte gut
+> belegt ist.
+>
+> Die Zahl ist ein Kompromiss, kein Ergebnis: Bei fünfzig fielen rund ein Drittel der
+> Verbindungen weg, und die Reichweite sänke weiter unter die ohnehin knappen 23 Prozent.
+> Für eine Produktfreigabe wäre der Kompromiss anders zu setzen — mit höherer
+> Mindestfallzahl, Bootstrap-Intervallen für die Ränder oder einer kalibrierten
+> Intervallmethode. Hier steht er so, und er steht hier, damit man ihn sieht.
 """),
 
 CODE("""
@@ -1008,9 +1035,21 @@ for _, g in tab.iterrows():
 
 freigabe_tabelle = pd.DataFrame(zeilen)
 freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
-print(f"{len(freigabe_tabelle)} freigegebene Kombinationen geschrieben.")
+
+# DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
+# Filtern. Die Werte weiter oben galten der ungefilterten Tabelle; wer
+# nur die liest, berichtet etwas anderes, als er ausliefert.
+print("Das ausgelieferte Artefakt:")
+print(f"   Radtypen                {sorted(freigabe_tabelle.typ_code.unique())}")
+print(f"   Kombinationen           {len(freigabe_tabelle)}")
+print(f"   Verbindungen            "
+      f"{freigabe_tabelle.groupby(['start_station_id','ziel_station_id']).ngroups}")
+print(f"   Abdeckung auf Test 2    {z.im_intervall.mean():.1%}")
+print(f"   Preisspanne im Median   {z.breite.median():.2f} €")
+print(f"   Reichweite              {len(z)/len(test2):.1%} der Fahrten im Geltungsbereich")
+print()
 if len(freigabe_tabelle):
-    print(freigabe_tabelle.head(8).to_string(index=False))
+    print(freigabe_tabelle.head(6).to_string(index=False))
 """),
 
 MD("""
@@ -1021,17 +1060,23 @@ Einschränkung, die nur im Bericht steht, ist keine.
 """),
 
 CODE("""
+# Der Schluessel sind die IDs, nicht die Namen. Ein Name aendert sich -
+# aus "Grombuehl/Klinikum" wurde "Grombühl Klinikum" -, und eine
+# Schnittstelle, die daran haengt, bricht bei jeder Umbenennung still.
 if len(freigabe_tabelle):
     NACHSCHLAGE = freigabe_tabelle.set_index(
-        ["startstation", "zielstation", "typ_code", "zeitfenster"])
+        ["start_station_id", "ziel_station_id", "typ_code", "zeitfenster"])
 else:
     NACHSCHLAGE = pd.DataFrame().set_index(pd.MultiIndex.from_arrays([[], [], [], []]))
 
-def preis_schaetzen(start, ziel, typ_code, stunde):
-    \"\"\"Gibt die Preisspanne zurueck - oder sagt, dass sie es nicht kann.\"\"\"
-    if start == ziel:
+def preis_schaetzen(start_id, ziel_id, typ_code, stunde):
+    \"\"\"Gibt die Preisspanne zurueck - oder sagt, dass sie es nicht kann.
+
+    Angesprochen wird ueber Stations-IDs. Namen sind Anzeigewerte.
+    \"\"\"
+    if start_id == ziel_id:
         return {"anzeige": None, "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
-    schluessel = (start, ziel, typ_code, fenster_von(stunde))
+    schluessel = (start_id, ziel_id, typ_code, fenster_von(stunde))
     if schluessel not in NACHSCHLAGE.index:
         return {"anzeige": None,
                 "hinweis": "Für diese Verbindung liegt keine belastbare Schätzung vor."}
@@ -1040,22 +1085,21 @@ def preis_schaetzen(start, ziel, typ_code, stunde):
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
             "grundlage": f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"}
 
-# Die Stationsnamen stehen hier GENAU so wie in den Daten - und die
-# stammen seit dem 01.09.2026 aus velocity.station. Vorher hatte der
-# Lehrdatensatz eigene Orte, und eine Probe mit "Käppele" scheiterte an
-# der Schreibweise statt an der Streuung. Produktiv gehoeren
-# unveraenderliche IDs an diese Stelle, Namen nur in die Anzeige.
 STUNDE_JE_FENSTER = {"frueh": 8, "vormittag": 12, "nachmittag": 17, "abend": 21}
+name_je_id = station.set_index("station_id").name
 erste = freigabe_tabelle.iloc[0] if len(freigabe_tabelle) else None
-proben = ([(erste.startstation, erste.zielstation, erste.typ_code,
+proben = ([(int(erste.start_station_id), int(erste.ziel_station_id), erste.typ_code,
             STUNDE_JE_FENSTER[erste.zeitfenster])] if erste is not None else [])
-proben += [("Hauptbahnhof", "Hauptbahnhof", "CITY", 8),
-           ("Dom", "Residenz", "CITY", 14),
-           ("Hauptbahnhof", "Neue Station", "CITY", 8)]
+proben += [(1, 1, "CITY", 8),        # Rundfahrt
+           (6, 4, "CITY", 14),       # Verbindung ohne Freigabe
+           (1, 999, "CITY", 8)]      # Station, die es nicht gibt
 
 for probe in proben:
     e = preis_schaetzen(*probe)
-    print(f"{probe[0]} → {probe[1]} ({probe[2]}, {probe[3]} Uhr)")
+    # Namen NUR fuer die Ausgabe - so herum ist es richtig.
+    n1 = name_je_id.get(probe[0], f"Station {probe[0]}")
+    n2 = name_je_id.get(probe[1], f"Station {probe[1]}")
+    print(f"{n1} → {n2} ({probe[2]}, {probe[3]} Uhr)")
     if e["anzeige"]:
         print(f"   {e['anzeige']}   {e['minuten']}   Grundlage: {e['grundlage']}")
     else:
@@ -1072,20 +1116,18 @@ worden. Die Grenzen sind jetzt aneinander ausgerichtet.
 | Auslöser | Schwelle | Handlung |
 |---|---|---|
 | Abdeckung je Kombination, gleitend über 8 Wochen | ≥ 80 % | anzeigen |
-| | 75 bis 80 % | anzeigen, aber Warnung und Neuberechnung |
-| | < 75 % | **Kombination abschalten** |
-
-Die Zone zwischen 75 und 80 Prozent ist kein aufgeweichtes Kriterium, sondern eine
-**Unsicherheitszone** — und sie braucht diese Begründung, sonst ist sie genau das
-Aufweichen, vor dem dieses Notebook sonst warnt: Bei 200 Fahrten im Achtwochenfenster hat
-eine gemessene Abdeckung von 78 Prozent ein Vertrauensintervall, das die 80 noch
-einschließt. Sofort abzuschalten hieße, auf Rauschen zu reagieren. Wer eine harte Kante
-will, muss die Fallzahl erhöhen, nicht die Zone abschaffen.
+| | untere Vertrauensgrenze unter 80 % | anzeigen, aber Warnung und Neuberechnung |
+| | Schätzwert selbst unter 80 % | **Kombination abschalten** |
 | Fallzahl je Kombination | < 20 im Fenster | keine Aussage möglich, Vorwoche weiterverwenden |
 | neue Station | — | keine Zeile, also keine Anzeige |
 | **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |
 | Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
 
+Die mittlere Zeile ist keine aufgeweichte Grenze, sondern eine **Unsicherheitszone** — und
+sie wird gerechnet, nicht gesetzt: Maßgeblich ist die untere Grenze eines
+Wilson-Intervalls zum Niveau 95 %. Bei 200 Fahrten und 78 % gemessener Abdeckung reicht
+dieses Intervall noch über die 80 hinaus; sofort abzuschalten hieße, auf Rauschen zu
+reagieren. Fällt der Schätzwert selbst unter 80 %, wird abgeschaltet.
 ### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
 
 Was dieses Notebook „Test 2“ nennt, ist ein **rückblickender Test auf vergangenen
@@ -1112,16 +1154,23 @@ MD("""
 | 2 Data Understanding | Abbrüche und Stornierungen sind keine Fahrten. Ein Fünftel endet frei im Gebiet, ein weiteres Fünftel sind Rundtouren |
 | 3 Data Preparation | Zielstation erlaubt — als Stellvertreter. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, wie wenig das Ziel beiträgt |
-| 5 Evaluation | CITY hält die Grenze auf Test 1 knapp — die rollierende Prüfung zeigt, dass die Grenze innerhalb der Saisonschwankung liegt. Rücksprung zur Spanne |
-| 6 Deployment | Ausgeliefert wird die Tabelle, nicht das Modell. Freigabe je Kombination, gegen Test 2 gemessen |
+| 5 Evaluation | CITY hält die Grenze auf Test 1 und in allen vier Fenstern der rollierenden Prüfung. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet und zwei Radtypen kein Produkt haben |
+| 6 Deployment | Ausgeliefert wird die Tabelle, nicht das Modell — für CITY, ohne die messbar durchgefallenen Kombinationen. Kalibriert und freigegeben auf Test 2 |
 
 **Der Rücksprung, den man hier mitverfolgen konnte**
 
-Er kommt nicht, weil das Modell versagt hätte — CITY hielt die Grenze. Er kommt, weil die
-Prüfung über mehrere Zeiträume zeigt, dass dieses Halten Zufall der Jahreszeit ist.
+Er kommt nicht, weil das Modell versagt hätte. Für CITY hält die 50-Cent-Grenze auf Test 1
+und in allen vier Fenstern der rollierenden Prüfung. Er kommt aus zwei anderen Gründen:
 
-> Ein Kriterium, das mal erfüllt und mal gerissen wird, ist keine Zusage. Wer nur einmal
-> misst, erfährt das nicht.
+> **Ein Mittelwert ist keine Erfahrung.** Bei rund jeder vierten CITY-Fahrt läge die
+> angezeigte Zahl um mehr als 50 Cent daneben — der Durchschnitt sagt darüber nichts.
+
+> **Und für zwei von drei Radtypen gäbe es überhaupt kein Produkt.** Eine Lösung nur für
+> das billigste Rad beantwortet die Geschäftsfrage nicht.
+
+Die Spanne löst den ersten Punkt. **Den zweiten löst sie nicht:** Auch das
+Intervallprodukt umfasst am Ende nur CITY. Für E-Bike und Lastenrad bleibt die Frage
+offen.
 
 **Vier Sätze, die aus diesem Notebook bleiben sollten**
 
@@ -1130,20 +1179,23 @@ Prüfung über mehrere Zeiträume zeigt, dass dieses Halten Zufall der Jahreszei
 > Das Modell ist genau, wo gefahren wird, um anzukommen, und ungenau, wo gefahren wird,
 > um zu fahren.
 
-> Ein Rücksprung ist eine neue Runde — und eine neue Runde braucht einen neuen,
-> unberührten Test.
+> Ein Rücksprung ist eine neue Runde — und eine neue Runde braucht einen eigenen
+> Zeitraum. Ob der auch unberührt bleibt, muss man ehrlich sagen: Test 2 trägt hier die
+> Kalibrierung, nicht die unabhängige Endprüfung.
 
 > Ausgeliefert wird, was gemessen wurde. Nicht das, was im Text steht.
 
 **Was offen bleibt — ausdrücklich**
 
 1. **Das geplante Ziel wird nicht erfasst.** Alle Zahlen sind Obergrenzen.
-2. **Kein echter Schattenbetrieb.** Test 2 ist ein Rückblick.
-3. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
-4. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
-5. **Die Stationsnamen des Lehrdatensatzes stimmen nicht mit denen der Produktivdatenbank
-   überein.** Solange das so ist, kann die Tabelle nicht an die echte App angeschlossen
-   werden — sie nennt Stationen, die es dort nicht gibt.
+2. **Kein echter Schattenbetrieb.** Test 2 hat das Artefakt kalibriert und freigegeben —
+   die unabhängige Prüfung des fertigen Artefakts steht damit noch aus.
+3. **Keine Zusage je Verbindung.** Die 80 Prozent gelten insgesamt und je Radtyp.
+   Ausgeschlossen ist, was messbar durchfällt; für die Mehrzahl der Kombinationen ist die
+   Prüfmenge zu klein für eine Einzelaussage.
+4. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
+5. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
+6. **Kein Produkt für E-Bike und Lastenrad.** Weder als Zahl noch als Spanne.
 
 **Weiter geht es mit Notebook 2 — Klassifikation:** Dort ist die Zielgröße keine Zahl
 mehr, sondern eine Entscheidung, und die beiden Fehlerarten sind unterschiedlich teuer.
