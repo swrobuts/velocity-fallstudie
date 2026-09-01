@@ -61,7 +61,10 @@ def formen(zahl: str) -> set[str]:
     """Alle Schreibweisen, unter denen dieselbe Zahl gedruckt sein kann."""
     roh = zahl.replace(" ", "")
     v = {roh, roh.replace(",", "."), roh.replace(".", ""),
-         roh.replace(".", "").replace(",", ".")}
+         roh.replace(".", "").replace(",", "."),
+         # Der Fliesstext trennt Tausender mit Punkt, pandas mit Komma.
+         # Beides meint dieselbe Zahl.
+         roh.replace(".", ","), roh.replace(",", "")}
     try:
         wert = float(roh.replace(".", "").replace(",", "."))
     except ValueError:

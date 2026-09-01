@@ -73,7 +73,9 @@ def pruefe_sichtbarer_rest(code: list[str]) -> list[str]:
     funde = []
     for nummer, quelle in enumerate(code):
         zeilen = [z for z in quelle.strip().split("\n") if z.strip()]
-        if zeilen and re.match(r"^\s*merke\(", zeilen[-1]):
+        # Nur eine Anweisung auf oberster Ebene druckt ihren Wert. Steht merke()
+        # eingerueckt in einer Schleife, sieht man nichts.
+        if zeilen and re.match(r"^merke\(", zeilen[-1]):
             funde.append(f"Zelle {nummer}: merke() steht als letzte Anweisung - "
                          f"der Rueckgabewert erscheint als Ausgabe")
     return funde
@@ -121,13 +123,15 @@ def pruefe_blinder_abgleich(code: list[str], ausgaben: list[str]) -> list[str]:
     # verglichen oder zugesichert werden. In einer Aufzaehlung gesperrter
     # Merkmale zu stehen genuegt nicht.
     rechnend = re.compile(
-        r"^[^#]*\b\w*{spalte}\w*\b[^#]*"
-        r"(?:assert|abs\(|==|!=|\s-\s|\.mean|\.corr|\.sum|merge|vergleich)")
+        r"^(?![^#]*#).*\b{spalte}\b.*$")
+    rechenzeichen = re.compile(
+        r"assert|abs\(|==|!=|\s-\s|\.mean|\.corr|\.sum|merge|vergleich")
     for spalte, (bezeichnung, bestandteile) in NACHGEBAUTE_LOGIK.items():
         if not any(teil in ganzer_code for teil in bestandteile):
             continue
         muster = re.compile(rechnend.pattern.format(spalte=spalte), re.I)
-        if not any(muster.search(zeile) for zeile in ganzer_code.split("\n")):
+        if not any(muster.search(zeile) and rechenzeichen.search(zeile)
+                   for zeile in ganzer_code.split("\n")):
             funde.append(
                 f"{bezeichnung} wird aus {bestandteile[0]} nachgebaut, ohne das "
                 f"Ergebnis je gegen die gespeicherte Spalte {spalte} zu halten - "

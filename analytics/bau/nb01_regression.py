@@ -113,6 +113,7 @@ von „sehr lange unterwegs“ trennt. Sie gehört fachlich abgesichert.
 
 CODE("""
 import os
+import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -129,6 +130,9 @@ preise    = pd.read_csv(BASIS + "nutzungspreis.csv")
 # Die Routenmatrix haelt fuer jede Verbindung die tatsaechliche Radstrecke
 # und die mittlere Steigung fest. Die Kopfzeilen mit # sind Herkunftsangaben.
 routen    = pd.read_csv(BASIS + "radrouten_matrix.csv", comment="#")
+# Der Preis haengt am Tarif des Kunden, nicht nur am Radtyp.
+kunde     = pd.read_csv(BASIS + "kunde.csv", parse_dates=["registriert_am"])
+tarife    = pd.read_csv(BASIS + "tarif.csv")
 
 print(f"{len(ausleihe):,} Fahrten, {len(station)} Stationen, {len(fahrrad)} Räder")
 print()
@@ -327,12 +331,23 @@ d["steigung_promille"] = [matrix.steigung_promille.get(s, np.nan) for s in schlu
 # Rundtouren haben keine Relation in der Matrix: Start und Ziel sind derselbe
 # Ort. Wie weit dazwischen gefahren wurde, steht nirgends - das Merkmal
 # ist_rundtour sagt dem Modell, dass die Strecke hier nichts bedeutet.
+#
+# Jede ANDERE fehlende Strecke waere dagegen ein Datenfehler. Sie stillschweigend
+# auf null zu setzen wuerde ihn verstecken, deshalb hier eine Zusicherung.
+fehlt = d.strecke_km.isna() & (d.ist_rundtour == 0)
+assert not fehlt.any(), (
+    f"{fehlt.sum()} echte Verbindungen fehlen in der Routenmatrix: "
+    f"{sorted(set(zip(d[fehlt].start_station_id, d[fehlt].end_station_id)))[:5]}")
 d[["strecke_km", "steigung_promille"]] = d[["strecke_km", "steigung_promille"]].fillna(0.0)
 
 d["datum"]  = d.startzeit.dt.normalize()
 d["stunde"] = d.startzeit.dt.hour
 d["wochentag"] = d.startzeit.dt.dayofweek
 d["ist_wochenende"] = (d.wochentag >= 5).astype(int)
+# Auch der Wochentag ist zyklisch: Sonntag und Montag liegen nebeneinander,
+# als Zahlen 6 und 0 aber maximal weit auseinander.
+d["wochentag_sin"] = np.sin(2 * np.pi * d.wochentag / 7)
+d["wochentag_cos"] = np.cos(2 * np.pi * d.wochentag / 7)
 d["monat"] = d.startzeit.dt.month
 # Zyklisch: der Dezember liegt neben dem Januar, 23 Uhr neben 0 Uhr.
 d["stunde_sin"] = np.sin(2 * np.pi * d.stunde / 24)
@@ -345,8 +360,38 @@ for _, z in schulfrei.iterrows():
     in_ferien |= (d.datum >= z.von) & (d.datum <= z.bis)
 d["ist_ferien"] = in_ferien.astype(int)
 
+# ---- Tarif und Freiminutenstand
+# Der Preis haengt nicht nur am Radtyp: Jeder Tarif bringt ein monatliches
+# Freiminutenkontingent und teils einen Rabatt mit. Wie viel davon noch uebrig
+# ist, weiss die App zum Anfragezeitpunkt - fuer die Vergangenheit muessen wir
+# es aus den bisherigen Fahrten des Monats zurueckrechnen.
+#
+# Gerechnet wird auf ALLEN abgeschlossenen Fahrten, nicht auf der oben
+# gefilterten Menge: Auch eine Rundtour und auch eine sehr lange Fahrt
+# verbrauchen Freiminuten. Wer hier auf d rechnet, bekommt zu hohe Restbestaende.
+alle = ausleihe[ausleihe.status == "abgeschlossen"].sort_values("startzeit").copy()
+alle["dauer_min"] = (alle.endzeit - alle.startzeit).dt.total_seconds() / 60
+alle = alle.merge(kunde[["kunde_id", "tarif_code"]], on="kunde_id", how="left")
+alle = alle.merge(tarife[["tarif_code", "freiminuten_pro_monat", "rabatt_prozent"]],
+                  on="tarif_code", how="left")
+alle["genutzt"] = alle.dauer_min - alle.berechnete_minuten
+alle["monat"] = alle.startzeit.dt.to_period("M")
+# Kumulieren und um die eigene Fahrt vermindern: der Stand VOR dieser Fahrt.
+# Ohne diesen Versatz stuende die eigene Nutzung schon im Merkmal - ein
+# Leakage, das man erst am zu guten Ergebnis bemerkt.
+verbraucht = (alle.groupby(["kunde_id", "monat"]).genutzt.cumsum() - alle.genutzt)
+alle["freiminuten_rest"] = (alle.freiminuten_pro_monat - verbraucht).clip(lower=0)
+d = d.merge(alle[["ausleihe_id", "tarif_code", "freiminuten_pro_monat",
+                  "rabatt_prozent", "freiminuten_rest"]],
+            on="ausleihe_id", how="left")
+
 echt = d[d.ist_rundtour == 0]
 print(f"{len(d):,} Fahrten, {d.route.nunique()} Verbindungen")
+print(f"Tarife: " + ", ".join(f"{t} {n:,}" for t, n in
+                              d.tarif_code.value_counts().items()))
+print(f"Freiminuten offen bei Fahrtbeginn: Median "
+      f"{d.freiminuten_rest.median():.0f} min, "
+      f"{(d.freiminuten_rest == 0).mean():.0%} der Fahrten ohne Restguthaben")
 print(f"Strecke {echt.strecke_km.min():.2f} bis {echt.strecke_km.max():.2f} km, "
       f"Median {echt.strecke_km.median():.2f} km")
 print(f"Steigung {echt.steigung_promille.min():+.0f} bis "
@@ -470,8 +515,8 @@ from sklearn.tree import DecisionTreeRegressor
 
 KATEGORIAL = ["start_name", "ziel_name", "route", "typ_code"]
 NUMERISCH  = ["strecke_km", "steigung_promille", "ist_rundtour",
-              "stunde_sin", "stunde_cos",
-              "monat_sin", "monat_cos", "wochentag", "ist_wochenende",
+              "stunde_sin", "stunde_cos", "wochentag_sin", "wochentag_cos",
+              "monat_sin", "monat_cos", "ist_wochenende",
               "ist_feiertag", "ist_ferien"]
 MERKMALE = KATEGORIAL + NUMERISCH
 
@@ -543,7 +588,7 @@ anteil_ziel = 1 - guete[bestes] / mae_ohne
 print(f"Beitrag des Ziels:               {mae_ohne - guete[bestes]:5.2f} Min "
       f"({anteil_ziel:.0%})")
 merke("ablation_anteil", anteil_ziel)
-merke("mae_ohne_ziel", mae_ohne)
+_ = merke("mae_ohne_ziel", mae_ohne)  # Wert nur festhalten
 print()
 print("Wohin jemand faehrt, ist das mit Abstand wichtigste Merkmal: Ohne das")
 print("Ziel kennt das Modell die Strecke nicht, und ohne Strecke bleibt nur")
@@ -629,25 +674,65 @@ print(f"auf der Validierung      : MAE {guete[bestes]:5.2f} Min")
 MD("""
 ### 5.2 Von Minuten zu Euro — mit der vollen Tariflogik
 
-Der Preis ist nicht Minuten mal Minutenpreis. Er ist Startgebühr **plus** Minutenpreis,
-**gedeckelt** auf den Tageshöchstpreis. Ist- und Schätzpreis werden je Fahrt getrennt
-gerechnet.
+Die Geschäftsfrage lautet: *Was kostet **diesen Kunden** die Fahrt?* Das ist nicht der
+Listenpreis des Radtyps. Zwischen beiden liegen drei Regeln aus der Preisauskunft:
+
+| Regel | Wirkung |
+|---|---|
+| **Freiminuten** | Studierende haben 300, ÖPNV-Abonnenten 600, Premium 1.000 Minuten im Monat |
+| **Rabatt** | Premium zahlt 20 % weniger auf den Restbetrag |
+| **Tagesdeckel** | Startgebühr plus Zeitentgelt, gedeckelt je angefangenem Tag |
+
+Die Startgebühr fällt **auch dann an**, wenn Freiminuten die ganze Fahrt decken.
+
+Die Reihenfolge ist nicht beliebig: erst aufrunden, dann Freiminuten abziehen, dann
+deckeln, dann rabattieren. Eine andere Reihenfolge ergibt andere Beträge.
+
+> **Was hier getrennt bleibt.** Die Regression schätzt nur die **Dauer**. Der Preis
+> entsteht daraus durch eine feste Rechenvorschrift ohne jede Unsicherheit. Diese
+> Trennung ist keine Förmlichkeit: Ändert das Unternehmen morgen die Tarife, muss
+> das Modell nicht neu gelernt werden.
 """),
 
 CODE("""
 tarif = preise.set_index("typ_code")
 
-def fahrpreis(minuten, typ):
+def kundenpreis(minuten, typ, freiminuten_rest, rabatt_prozent):
+    \"\"\"Was der Kunde tatsächlich zahlt - Freiminuten und Rabatt eingerechnet.\"\"\"
     z = tarif.loc[typ]
-    roh = z.startgebuehr_eur + np.maximum(0.0, minuten) * z.preis_pro_minute_eur
-    return float(min(roh, z.tageshoechstpreis_eur))
+    # Angefangene Minuten zählen voll: die Schätzung ist eine Kommazahl,
+    # die Abrechnung kennt nur ganze Minuten.
+    minuten = int(math.ceil(max(0.0, minuten)))
+    berechnet = minuten - min(freiminuten_rest, minuten)
+    tage = max(1, math.ceil(minuten / (24 * 60)))
+    roh = min(z.startgebuehr_eur + berechnet * z.preis_pro_minute_eur,
+              z.tageshoechstpreis_eur * tage)
+    return round(roh * (1 - rabatt_prozent / 100.0), 2)
+
+# Erst gegenprüfen, dann verwenden: Die Formel muss das ergeben, was in der
+# Datenbank steht. Sonst bewerten wir gleich unsere eigene Rechnung statt der
+# Wirklichkeit - und merken es nie.
+nachgerechnet = [kundenpreis(m, t, r, ra) for m, t, r, ra
+                 in zip(pruef.dauer_min, pruef.typ_code,
+                        pruef.freiminuten_rest, pruef.rabatt_prozent)]
+abweichung = (np.array(nachgerechnet) - pruef.entgelt_eur.values)
+treffer = float((np.abs(abweichung) < 0.005).mean())
+merke("tarif_treffer", treffer)
+print(f"Nachgerechnetes Entgelt gegen das gespeicherte: "
+      f"{treffer:.2%} exakt gleich, größte Abweichung "
+      f"{np.abs(abweichung).max():.2f} €")
+assert treffer > 0.999, (
+    "Die Tariflogik bildet das gespeicherte Entgelt nicht ab - "
+    "jede Preisaussage danach waere ohne Wert.")
 
 # AUFGABE: Ist- und Schätzpreis je Fahrt, daraus der Betrag der Abweichung.
-# NICHT die Minutendifferenz mal Preis - wegen des Deckels ist der
+# NICHT die Minutendifferenz mal Preis - wegen Deckel und Freiminuten ist der
 # Zusammenhang nicht überall linear.
 ##LUECKE Drei Zeilen: p_ist, p_geschaetzt, preisfehler.
-pruef["p_ist"] = [fahrpreis(m, t) for m, t in zip(pruef.dauer_min, pruef.typ_code)]
-pruef["p_geschaetzt"] = [fahrpreis(m, t) for m, t in zip(pruef.dauer_geschaetzt, pruef.typ_code)]
+pruef["p_ist"] = pruef.entgelt_eur
+pruef["p_geschaetzt"] = [kundenpreis(m, t, r, ra) for m, t, r, ra
+                         in zip(pruef.dauer_geschaetzt, pruef.typ_code,
+                                pruef.freiminuten_rest, pruef.rabatt_prozent)]
 pruef["preisfehler"] = (pruef.p_geschaetzt - pruef.p_ist).abs()
 ##ENDE
 
@@ -660,7 +745,7 @@ for t, g in pruef.groupby("typ_code"):
           f"{'erfüllt' if pf < 0.50 else 'gerissen':>12}")
     if t == "CITY":
         merke("preisfehler_city", pf)
-        merke("city_unter_50", (g.preisfehler < 0.50).mean())
+        _ = merke("city_unter_50", (g.preisfehler < 0.50).mean())  # Wert nur festhalten, nicht anzeigen
 """),
 
 MD("""
@@ -717,8 +802,10 @@ for i in range(len(grenzen) - 1):
     v = np.maximum(1.0, m.predict(pruef_i[MERKMALE]))
     c = pruef_i[pruef_i.typ_code == "CITY"]
     vc = np.maximum(1.0, m.predict(c[MERKMALE]))
-    pf = np.mean(np.abs([fahrpreis(x, "CITY") for x in vc]
-                        - np.array([fahrpreis(x, "CITY") for x in c.dauer_min])))
+    pf = np.mean(np.abs(
+        np.array([kundenpreis(x, "CITY", r, ra) for x, r, ra
+                  in zip(vc, c.freiminuten_rest, c.rabatt_prozent)])
+        - c.entgelt_eur.values))
     schwankung.append(pf)
     print(f"{pruef_i.startzeit.min():%m/%Y} bis {pruef_i.startzeit.max():%m/%Y}   "
           f"{len(pruef_i):>6,}{mean_absolute_error(pruef_i.dauer_min, v):>8.2f}"
@@ -867,13 +954,22 @@ tab = pd.DataFrame({"von_roh": gruppen.quantile(.10), "bis_roh": gruppen.quantil
 # fuer sich richtig gerechnet sind.
 tab["von"] = tab.von_roh.round()
 tab["bis"] = tab.bis_roh.round()
-tab["preis_von"] = [fahrpreis(m, t) for m, t in zip(tab["von"], tab.typ_code)]
-tab["preis_bis"] = [fahrpreis(m, t) for m, t in zip(tab["bis"], tab.typ_code)]
+# Die Tabelle haelt die DAUERspanne, nicht die Preisspanne: Der Preis haengt
+# am Tarif und am Freiminutenstand des angemeldeten Kunden. Zwei Kunden auf
+# derselben Strecke zahlen verschieden viel - eine Tabelle je Verbindung
+# koennte das gar nicht abbilden. Die App rechnet den Preis zur Laufzeit.
+#
+# Fuer die Breitenregel brauchen wir dennoch einen Massstab. Wir nehmen den
+# Basistarif: Er hat keine Freiminuten und keinen Rabatt und ist damit der
+# TEUERSTE Fall. Wessen Spanne dort unter einem Euro bleibt, bleibt es fuer
+# jeden anderen Tarif erst recht.
+tab["preis_von_basis"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(tab["von"], tab.typ_code)]
+tab["preis_bis_basis"] = [kundenpreis(m, t, 0, 0.0) for m, t in zip(tab["bis"], tab.typ_code)]
 
 # Die Ein-Euro-Regel greift auf den ANGEZEIGTEN Werten. Das Runden kann
 # eine Spanne knapp ueber die Grenze heben oder unter sie druecken -
 # geprueft wird deshalb danach, nicht davor.
-tab = tab[(tab.n >= 30) & (tab.preis_bis - tab.preis_von <= 1.00)]
+tab = tab[(tab.n >= 30) & (tab.preis_bis_basis - tab.preis_von_basis <= 1.00)]
 print(f"{len(tab)} Kombinationen erfuellen die beiden Regeln aus Phase 1.")
 zukunft = zukunft.merge(tab, on=["route", "typ_code", "fenster"], how="left")
 
@@ -881,18 +977,24 @@ zukunft = zukunft.merge(tab, on=["route", "typ_code", "fenster"], how="left")
 # nur gegen die Dauerabdeckung: Preisabdeckung insgesamt UND je Radtyp,
 # dazu die Breitenregel. Eine Spanne von 1,78 Euro trifft leicht - sie
 # nuetzt nur niemandem.
-zukunft["p_ist"] = [fahrpreis(m, t) for m, t in zip(zukunft.dauer_min, zukunft.typ_code)]
+# Die Wahrheit ist nicht unsere Formel, sondern der Betrag, der dem Kunden
+# berechnet wurde. entgelt_eur ist als MERKMAL gesperrt - es entsteht erst nach
+# der Fahrt. Als Massstab der Bewertung ist es genau richtig.
+zukunft["p_ist"] = zukunft.entgelt_eur
 
 # AUFGABE: Aus einer Spanne in Minuten wird eine Spanne in Euro, und
 # daraus die Frage, ob der tatsaechliche Preis darin liegt.
 ##LUECKE Zwei Preisgrenzen je Fahrt, dann der Vergleich.
 def preisspanne(u, o):
-    # Auch hier aus den GERUNDETEN Minuten - bewertet wird, was angezeigt
-    # wuerde, nicht ein Zwischenwert, den nie jemand zu sehen bekommt.
+    # Je Fahrt mit dem TARIF DIESES KUNDEN gerechnet, aus den GERUNDETEN
+    # Minuten: bewertet wird, was die App anzeigen wuerde.
     def euro(spalte):
-        return pd.Series([fahrpreis(round(m), ty) if pd.notna(m) else np.nan
-                          for m, ty in zip(zukunft[spalte], zukunft.typ_code)],
-                         index=zukunft.index)
+        return pd.Series(
+            [kundenpreis(round(m), ty, r, ra) if pd.notna(m) else np.nan
+             for m, ty, r, ra in zip(zukunft[spalte], zukunft.typ_code,
+                                     zukunft.freiminuten_rest,
+                                     zukunft.rabatt_prozent)],
+            index=zukunft.index)
     return euro(u), euro(o)
 ##ENDE
 
@@ -935,26 +1037,29 @@ print(anzeige.to_string())
 print()
 for name, s in vergleich.iterrows():
     haelt = s["Abdeckung (angezeigt)"] >= 0.80 and s["schlechtester Radtyp"] >= 0.80
-    print(f"{name:22} vollstaendiges Kriterium: "
-          f"{'ERFUELLT' if haelt else 'NICHT ERFUELLT'}")
+    # Die Fallzahl gehoert neben das Urteil. Eine Quote aus dreissig Faellen
+    # traegt keine Freigabe, auch wenn sie ueber der Schwelle liegt.
+    n_angezeigt = int(round(s["Auskunft (angezeigt)"] * len(zukunft)))
+    print(f"{name:22} auf {n_angezeigt:,} angezeigten Faellen: "
+          f"vollstaendiges Kriterium {'ERFUELLT' if haelt else 'NICHT ERFUELLT'}")
 
 merke("quantil_auskunft", vergleich.loc["Quantilregression", "Auskunft (angezeigt)"])
 merke("quantil_verworfen", vergleich.loc["Quantilregression", "verworfen, zu breit"])
 merke("tabelle_auskunft", vergleich.loc["Perzentiltabelle", "Auskunft (angezeigt)"])
-merke("tabelle_schlechtester", vergleich.loc["Perzentiltabelle", "schlechtester Radtyp"])
+_ = merke("tabelle_schlechtester", vergleich.loc["Perzentiltabelle", "schlechtester Radtyp"])  # Wert nur festhalten, nicht anzeigen
 """),
 
 MD("""
 **Beide Kandidaten erfüllen das vollständige Kriterium** — insgesamt und für jeden
 Radtyp. Damit fällt die Entscheidung nicht über die Güte.
 
-- Die **Quantilregression** verwirft {{quantil_verworfen:.0%}} ihrer Spannen als zu
+- Die **Quantilregression** verwirft {{quantil_verworfen:.1%}} ihrer Spannen als zu
   breit. Was sie gut macht, ist gerade dieses Weglassen: Sie antwortet nur dort, wo sie
-  eine schmale Spanne bilden kann, und beantwortet dafür {{quantil_auskunft:.0%}} der
+  eine schmale Spanne bilden kann, und beantwortet dafür {{quantil_auskunft:.1%}} der
   Anfragen.
 - Die **Perzentiltabelle** hält die Breitenregel per Konstruktion, antwortet mit
-  {{tabelle_auskunft:.0%}} etwas seltener und liegt beim schwächsten Radtyp bei
-  {{tabelle_schlechtester:.0%}} — knapp über der Grenze.
+  {{tabelle_auskunft:.1%}} etwas seltener und liegt beim schwächsten Radtyp bei
+  {{tabelle_schlechtester:.1%}} — knapp über der Grenze.
 
 > Der knappe Abstand der Tabelle beim schwächsten Radtyp ist kein Nebensatz. Er gehört
 > in die Überwachung aus 6.5: Was mit weniger als einem Prozentpunkt Abstand freigegeben
@@ -1020,6 +1125,16 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
    und je Radtyp**, dazu der Ausschluss jeder Kombination, die dort *messbar* darunter
    liegt.
 
+> **Die Gesamtquote verdeckt die Gruppe, auf die es ankommt.**
+> {{abdeckung_gedeckt:.1%}} Abdeckung bei den {{n_gedeckt:,}} Fahrten, deren Freiminuten
+> die Fahrt decken — dort ist der Preis die Startgebühr, unabhängig von der Dauer, und
+> die Spanne ist {{breite_gedeckt:.2f}} € breit. Jedes Modell trifft das.
+>
+> Bei den {{n_offen:,}} Fahrten ohne ausreichendes Guthaben sind es
+> {{abdeckung_offen:.1%}}, mit einer Untergrenze von {{unten_offen:.1%}} — knapp über
+> der Schwelle. **Das ist die eigentliche Leistung, und sie ist deutlich schwächer als
+> die Gesamtzahl vermuten lässt.**
+
 > **Was diese Freigabe leistet — und was nicht.** Die 80 Prozent sind für die Tabelle
 > als Ganzes und für jeden freigegebenen Radtyp gemessen. Für die **einzelne**
 > Verbindung ist das keine Zusage: Die meisten Kombinationen haben im Testzeitraum nur
@@ -1031,17 +1146,62 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 """),
 
 CODE("""
-zukunft["p_ist"] = [fahrpreis(m, t) for m, t in zip(zukunft.dauer_min, zukunft.typ_code)]
+zukunft["p_ist"] = zukunft.entgelt_eur
 hat_spanne = zukunft["bis"].notna()
 z = zukunft[hat_spanne].copy()
+# Aus der Dauerspanne wird die Preisspanne DIESES Kunden. Weil die Tariflogik
+# monoton ist - mehr Minuten kosten nie weniger -, ueberträgt sie die Abdeckung
+# der Dauer unveraendert auf den Preis.
+z["preis_von"] = [kundenpreis(m, ty, r, ra) for m, ty, r, ra
+                  in zip(z["von"], z.typ_code, z.freiminuten_rest, z.rabatt_prozent)]
+z["preis_bis"] = [kundenpreis(m, ty, r, ra) for m, ty, r, ra
+                  in zip(z["bis"], z.typ_code, z.freiminuten_rest, z.rabatt_prozent)]
 z["im_intervall"] = (z.p_ist >= z.preis_von - 0.001) & (z.p_ist <= z.preis_bis + 0.001)
 z["breite"] = z.preis_bis - z.preis_von
 
 print(f"Abdeckung insgesamt auf Test 2: {z.im_intervall.mean():.1%}   (Kriterium 80 %)")
-print(f"\\n{'Radtyp':8}{'n':>7}{'Abdeckung':>12}{'Urteil':>12}")
+print()
+# Eine Quote aus wenigen Faellen ist keine Zusage. Das Wilson-Intervall sagt,
+# welche wahren Abdeckungen mit dem Beobachteten noch vereinbar sind - erst
+# wenn seine UNTERGRENZE die Schwelle haelt, ist der Radtyp freigegeben.
+def wilson(treffer, gesamt, z_wert=1.96):
+    if gesamt == 0:
+        return 0.0, 1.0
+    anteil = treffer / gesamt
+    nenner = 1 + z_wert**2 / gesamt
+    mitte = (anteil + z_wert**2 / (2 * gesamt)) / nenner
+    rand = z_wert * math.sqrt(anteil * (1 - anteil) / gesamt
+                              + z_wert**2 / (4 * gesamt**2)) / nenner
+    return mitte - rand, mitte + rand
+
+print(f"{'Radtyp':8}{'n':>7}{'Abdeckung':>12}{'95 %-Intervall':>18}{'Urteil':>14}")
 for t, g in z.groupby("typ_code"):
+    unten, oben = wilson(g.im_intervall.sum(), len(g))
+    urteil = ("erfüllt" if unten >= 0.80 else
+              "unsicher" if oben >= 0.80 else "darunter")
     print(f"{t:8}{len(g):>7,}{g.im_intervall.mean():>11.1%}"
-          f"{'erfüllt' if g.im_intervall.mean() >= 0.80 else 'darunter':>12}")
+          f"{unten:>10.1%}–{oben:.1%}{urteil:>14}")
+    merke(f"abdeckung_{t.lower()}", g.im_intervall.mean())
+    merke(f"unten_{t.lower()}", unten)
+    merke(f"n_{t.lower()}", len(g))
+
+# Die zweite Aufteilung ist die wichtigere. Wessen Freiminuten die Fahrt decken,
+# zahlt nur die Startgebuehr - unabhaengig davon, wie lange er faehrt. Fuer ihn
+# ist der Preis exakt bekannt, und jedes Modell trifft ihn. Erst wer sein
+# Kontingent aufgebraucht hat, zahlt nach Minuten. Eine Gesamtquote mischt
+# beide Gruppen und sieht deshalb besser aus, als das Produkt ist.
+z["guthaben_deckt"] = z.freiminuten_rest >= z.dauer_min
+print(f"\\n{'Guthabenlage':22}{'n':>7}{'Abdeckung':>12}{'95 %-Intervall':>18}{'Breite':>9}")
+for gedeckt, g in z.groupby("guthaben_deckt"):
+    name = "deckt die Fahrt" if gedeckt else "reicht nicht"
+    unten, oben = wilson(g.im_intervall.sum(), len(g))
+    print(f"{name:22}{len(g):>7,}{g.im_intervall.mean():>11.1%}"
+          f"{unten:>10.1%}–{oben:.1%}{g.breite.median():>8.2f}€")
+    merke("abdeckung_gedeckt" if gedeckt else "abdeckung_offen", g.im_intervall.mean())
+    merke("n_gedeckt" if gedeckt else "n_offen", len(g))
+    merke("breite_gedeckt" if gedeckt else "breite_offen", g.breite.median())
+    if not gedeckt:
+        merke("unten_offen", unten)
 
 je_komb = z.groupby(["route", "typ_code", "fenster"]).agg(
     abdeckung=("im_intervall", "mean"), n=("im_intervall", "size"),
@@ -1148,8 +1308,14 @@ for _, g in tab.iterrows():
                        startstation=start, zielstation=ziel, typ_code=g.typ_code,
                        zeitfenster=g.fenster,
                        minuten_von=int(g["von"]), minuten_bis=int(g["bis"]),
-                       preis_von=round(g.preis_von, 2), preis_bis=round(g.preis_bis, 2),
-                       fahrten_grundlage=int(g.n)))
+                       # Der Basistarif ist der teuerste Fall: keine
+                       # Freiminuten, kein Rabatt. Die App rechnet daraus den
+                       # Preis des angemeldeten Kunden.
+                       preis_von_basis=round(g.preis_von_basis, 2),
+                       preis_bis_basis=round(g.preis_bis_basis, 2),
+                       fahrten_grundlage=int(g.n),
+                       datenstand=str(d.startzeit.max().date()),
+                       tarifversion=str(preise.preis_pro_minute_eur.sum())))
 
 freigabe_tabelle = pd.DataFrame(zeilen)
 freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
@@ -1190,10 +1356,15 @@ if len(freigabe_tabelle):
 else:
     NACHSCHLAGE = pd.DataFrame().set_index(pd.MultiIndex.from_arrays([[], [], [], []]))
 
-def preis_schaetzen(start_id, ziel_id, typ_code, stunde):
+def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
+                    freiminuten_rest=0, rabatt_prozent=0.0):
     \"\"\"Gibt die Preisspanne zurueck - oder sagt, dass sie es nicht kann.
 
     Angesprochen wird ueber Stations-IDs. Namen sind Anzeigewerte.
+
+    Freiminutenstand und Rabatt kommen aus dem Konto des angemeldeten Kunden.
+    Ohne Angabe wird der Basistarif gerechnet - der teuerste Fall, den die
+    Anzeige einem nicht angemeldeten Besucher zeigen darf.
     \"\"\"
     if start_id == ziel_id:
         return {"anzeige": None, "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
@@ -1202,7 +1373,9 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde):
         return {"anzeige": None,
                 "hinweis": "Für diese Verbindung liegt keine belastbare Schätzung vor."}
     z = NACHSCHLAGE.loc[schluessel]
-    return {"anzeige": f"{z.preis_von:.2f} bis {z.preis_bis:.2f} €",
+    von = kundenpreis(z.minuten_von, typ_code, freiminuten_rest, rabatt_prozent)
+    bis = kundenpreis(z.minuten_bis, typ_code, freiminuten_rest, rabatt_prozent)
+    return {"anzeige": f"{von:.2f} bis {bis:.2f} €",
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
             "grundlage": f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"}
 
