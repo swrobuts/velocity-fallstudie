@@ -12,6 +12,13 @@ kopf("Anomalieerkennung: Was ist gestern schiefgelaufen?",
      NAME),
 
 MD("""
+> **Lehrdatensatz.** Fahrten, Langzeitvorgänge und Stationsstörungen in dieser Fallstudie
+> sind **synthetisch erzeugt** und didaktisch verstärkt: Die langen Fahrten und die
+> Störungstage wurden absichtlich als Anker eingebaut, damit sich überhaupt etwas messen
+> lässt. Alle Trefferquoten in diesem Notebook zeigen deshalb **das Verhalten der
+> Verfahren**, nicht die Güte eines Betriebssystems. Für eine reale Freigabe zählt keine
+> einzige Zahl von hier.
+
 ## Das Verfahren, das nach dem Gegenteil sucht
 
 Alle bisherigen Notebooks haben **Muster** gesucht. Dieses sucht die **Abweichung vom
@@ -50,15 +57,36 @@ Im Betriebsbüro sitzt morgens jemand, der den Vortag durchsieht. Heute geschieh
 stichprobenhaft: Man scrollt durch die Liste und schaut, was ins Auge fällt. Bei rund
 **55 Fahrten am Tag** geht das noch; bei einem wachsenden Netz nicht mehr.
 
-Gesucht ist eine **Tagesliste mit höchstens zehn Vorgängen**, die einen menschlichen Blick
-verdienen.
+Gesucht ist eine **kurze Tagesliste**, die einen menschlichen Blick verdient. Wie kurz,
+wird gleich ausgerechnet — nicht gesetzt.
 
-### Zwei Sorten von Auffälligkeit — und zwei Aufgaben
+### Drei Produkte, nicht eine Liste
 
-| | Aufgabe | Beispiel | wer handelt |
-|---|---|---|---|
-| **A** | **Auffällige Fahrten** | Rad seit 14 Stunden unterwegs | Betrieb sucht das Rad |
-| **B** | **Auffällige Stationstage** | Station steht still, obwohl sie sollte | Technik prüft das Terminal |
+Die naheliegende Fassung dieser Aufgabe lautet: „eine Liste mit den auffälligsten
+Vorgängen von gestern". Sie ist falsch, und der Fehler ist nicht offensichtlich — er liegt
+im **Zeitpunkt**.
+
+Ein Rad, das seit vierzehn Stunden unterwegs ist, soll **jetzt** gesucht werden, nicht
+morgen früh. Eine ungewöhnlich teure Fahrt von gestern kann warten. Und eine stillstehende
+Station betrifft überhaupt nicht dieselbe Beobachtungseinheit — dort ist ein *Stationstag*
+der Fall, keine Fahrt.
+
+Wir trennen deshalb von Anfang an drei Produkte:
+
+| | Produkt | Wann entschieden wird | Datengrundlage | Wer handelt |
+|---|---|---|---|---|
+| **A1** | **offene Rückgaben** | laufend, in Echtzeit | Vorgänge, die **noch offen** sind | Betrieb kontaktiert und sucht |
+| **A2** | **auffällige abgeschlossene Fahrten** | morgens, über den Vortag | Fahrten, die **bereits beendet** sind | Betriebsbüro prüft am Schreibtisch |
+| **B** | **auffällige Stationstage** | morgens, über den Vortag | Stationstage | Technik prüft das Terminal |
+
+> **Warum diese Trennung der wichtigste Schritt des ganzen Notebooks ist.** Eine frühere
+> Fassung hat A1 und A2 in eine Liste geworfen und dabei die Maßnahme „Rad bergen, bevor
+> es verschwindet" mit **abgeschlossenen** Fahrten begründet. Bei einer abgeschlossenen
+> Fahrt ist das Rad längst zurück — da ist nichts mehr zu bergen. Die Liste war richtig
+> gerechnet und für ihren angegebenen Zweck nutzlos.
+>
+> **Wer den Entscheidungszeitpunkt nicht festlegt, baut ein Produkt, das es nicht geben
+> kann.**
 
 ### Was ein Fund wert ist, und was ein Fehlalarm kostet
 
@@ -68,10 +96,17 @@ verdienen.
 | **Fehlalarm** | jemand sieht sich einen Vorgang an, der in Ordnung war | **6 €** (fünf Minuten) |
 | **übersehene Auffälligkeit** | Rad bleibt liegen, wird gestohlen oder beschädigt | **Verlust 120 €** |
 
-Bei zehn Plätzen auf der Liste heißt das: **Ab einer Trefferquote von rund 5 % rechnet
-sich die Liste bereits** — der eine Fund trägt die neunzehn Fehlalarme. Das ist eine
-ungewöhnlich niedrige Schwelle, und sie ist typisch für Anomalieerkennung: Man darf sich
-viel Ungenauigkeit leisten, solange die Fälle selten und die Funde wertvoll sind.
+**Ab einer Trefferquote von rund 5 % rechnet sich die Liste bereits** — der eine Fund
+trägt die neunzehn Fehlalarme. Das ist eine ungewöhnlich niedrige Schwelle, und sie ist
+typisch für Anomalieerkennung: Man darf sich viel Ungenauigkeit leisten, solange die Fälle
+selten und die Funde wertvoll sind.
+
+> **Wie lang darf die Liste sein?** Auch diese Zahl wird gerechnet, nicht gesetzt. Das
+> Betriebsbüro hat morgens eine halbe Stunde, eine Prüfung dauert fünf Minuten — das sind
+> **sechs Fälle**, nicht zehn. Eine frühere Fassung dieses Notebooks nannte im selben
+> Absatz „eine halbe Stunde" und „zehn Plätze"; zehn Prüfungen brauchen aber 50 Minuten.
+> Die Listenlänge wird unten aus Zeitbudget und Prüfdauer abgeleitet, damit sich der
+> Widerspruch nicht wiederholen kann.
 
 > **Diese 5 % sind aber nicht unser Erfolgskriterium.** Sie sind die Grenze, ab der die
 > Liste kein Geld verbrennt. Eine Liste, bei der neunzehn von zwanzig Einträgen unnötig
@@ -81,13 +116,28 @@ viel Ungenauigkeit leisten, solange die Fälle selten und die Funde wertvoll sin
 > Der Unterschied zwischen „rechnet sich" und „wird benutzt" ist genau der Grund, warum
 > Erfolgskriterien nicht aus einer Kostenrechnung allein folgen.
 
-### Erfolgskriterien
+### Erfolgskriterien — je Produkt eigene, weil es drei Produkte sind
 
-| | Kriterium | Schwelle |
-|---|---|---|
-| **fachlich** | Die Tagesliste enthält höchstens 10 Vorgänge | die Kapazität des Betriebsbüros |
-| **Treffer** | Mindestens jeder fünfte gemeldete Vorgang ist tatsächlich behandlungsbedürftig | sonst wird die Liste ignoriert |
-| **Nachvollziehbar** | Zu jedem Vorgang muss dastehen, **warum** er auffällt | „das Modell sagt so“ reicht nicht |
+| Produkt | Kriterium | Schwelle | Prüfbar? |
+|---|---|---|---|
+| **A1** offene Rückgaben | jeder offene Vorgang über der Schwelle wird gemeldet, **bevor** er endet | Vollständigkeit | ja, an den bekannten Langfahrten |
+| **A2** auffällige Fahrten | Liste ≤ Kapazität, jede Zeile mit Begründung | Kapazität und Nachvollziehbarkeit | ja |
+| **A2** auffällige Fahrten | Trefferquote | **nicht festlegbar** | **nein** — siehe unten |
+| **B** Stationstage | mindestens jede fünfte gemeldete **Störungsepisode** ist echt | 20 % | ja, gegen `stationsstoerung.csv` |
+
+> **Für A2 gibt es bewusst kein Trefferkriterium, und das ist keine Nachlässigkeit.** Eine
+> Trefferquote braucht ein Label. Für „unbekannte Auffälligkeiten" gibt es per Definition
+> keines — wer eines hätte, wüsste schon, wonach er sucht. Was wir haben, ist eine
+> **Teilwahrheit** (Fahrten über acht Stunden), und die misst nur, wie gut das Modell eine
+> Regel nachbaut, die wir ohnehin haben.
+>
+> Der einzige ehrliche Weg für A2 heißt **Schattenbetrieb**: Die Liste läuft mit, jemand
+> beurteilt jede Zeile, und **danach** — nicht vorher — lässt sich eine Trefferquote
+> nennen. Bis dahin ist A2 eine Hypothesenliste, kein Erkennungssystem.
+
+> **Und ein Kriterium, das hier fehlt und in einer zweiten Runde dazugehört:** eine
+> Zufallsstichprobe aus den **nicht** gemeldeten Vorgängen. Ohne sie erfährt man nie, wie
+> viele Probleme die Liste übersehen hat — man sieht nur die, die sie zeigt.
 """),
 
 # =====================================================================
@@ -99,24 +149,34 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# Die Adresse zeigt auf den Zweig 'main' - der sich aendern kann. Fuer eine
+# Auswertung, die spaeter exakt reproduzierbar sein muss, gehoert hier ein
+# fester Commit-Hash statt 'main' hinein.
 BASIS = os.environ.get("VELO_BASIS",
     "https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/main/analytics/")
 pd.set_option("display.width", 160)
 
 # Die Zahlen aus Phase 1 - hier ausgedruckt, damit Text und Rechnung nicht
-# auseinanderlaufen koennen. Die Rentabilitaetsschwelle wird abgeleitet,
-# nicht behauptet.
+# auseinanderlaufen koennen. Beide Schwellen werden ABGELEITET, nicht gesetzt.
 NUTZEN_FUND = 120.0        # geborgenes Rad statt Verlust
 KOSTEN_FEHLALARM = 6.0     # fuenf Minuten Ansehen ohne Befund
-KRITERIUM_TREFFER = 0.20   # Erfolgskriterium: jeder fuenfte Eintrag traegt
+KRITERIUM_TREFFER = 0.20   # Erfolgskriterium fuer Aufgabe B
+ZEITBUDGET_MIN = 30.0      # was das Betriebsbuero morgens hat
+PRUEFDAUER_MIN = 5.0       # was eine Pruefung kostet
+MORGENSTUNDE = 8           # wann die Liste auf dem Schreibtisch liegt
 
 schwelle = KOSTEN_FEHLALARM / (NUTZEN_FUND + KOSTEN_FEHLALARM)
+LISTENLAENGE = int(ZEITBUDGET_MIN // PRUEFDAUER_MIN)
 print(f"Ein Fund ist {NUTZEN_FUND:.0f} EUR wert, ein Fehlalarm kostet "
       f"{KOSTEN_FEHLALARM:.0f} EUR.")
 print(f"Rentabel ist die Liste ab {schwelle:.1%} Trefferquote - "
       f"ein Fund traegt {NUTZEN_FUND/KOSTEN_FEHLALARM:.0f} Fehlalarme.")
-print(f"Gefordert werden trotzdem {KRITERIUM_TREFFER:.0%}: Eine Liste voller "
-      f"Fehlalarme wird nicht benutzt.")
+print(f"Gefordert werden fuer Aufgabe B trotzdem {KRITERIUM_TREFFER:.0%}: Eine Liste "
+      f"voller Fehlalarme wird nicht benutzt.")
+print(f"\\nListenlaenge = {ZEITBUDGET_MIN:.0f} min Zeitbudget / {PRUEFDAUER_MIN:.0f} min "
+      f"je Pruefung = {LISTENLAENGE} Plaetze.")
+print("Diese Zahl wird nirgends von Hand ueberschrieben - sonst behauptet der")
+print("Text eine Kapazitaet, die der Code nicht einhaelt.")
 
 fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
 raeder = pd.read_csv(BASIS + "fahrrad.csv")
@@ -132,6 +192,25 @@ print(fahrten.status.value_counts().to_string())
 echte = fahrten[fahrten.status == "abgeschlossen"].copy()
 print(f"\\nFahrtdauer in Minuten — die Quantile sagen mehr als der Mittelwert:")
 print(echte.dauer_min.quantile([.5, .9, .99, .999, 1.0]).round(1).to_string())
+
+# ZEITLICHE TRENNUNG - AUCH BEI EINEM UNUEBERWACHTEN VERFAHREN.
+#
+# Der Isolation Forest lernt keinen Zielwert, aber er lernt einen
+# REFERENZZUSTAND: was normal ist. Fittet man ihn auf allen drei Jahren und
+# bewertet dann eine Tagesliste vom Maerz 2024, kennt dieser Referenzzustand
+# die Zukunft dieses Tages. Dasselbe gilt fuer die typspezifischen Mittel-
+# werte und den Skalierer.
+#
+# Deshalb: die ersten zwei Drittel sind Referenz, das letzte Drittel wird
+# nur bewertet - nie gelernt.
+tage_alle = echte.startzeit.dt.normalize()
+REFERENZ_BIS = tage_alle.min() + (tage_alle.max() - tage_alle.min()) * 2 // 3
+referenz = echte[tage_alle <= REFERENZ_BIS].copy()
+pruefzeit = echte[tage_alle > REFERENZ_BIS].copy()
+print(f"\\nReferenzzeitraum bis {REFERENZ_BIS.date()}: {len(referenz):,d} Fahrten"
+      .replace(",", "."))
+print(f"Pruefzeitraum danach:              {len(pruefzeit):,d} Fahrten"
+      .replace(",", "."))
 '''),
 
 MD("### 2.1 Die Verteilung und ihr Ausläufer"),
@@ -197,6 +276,8 @@ PHASE(3, "Merkmale je Fahrt — und die Entscheidung, welche davon überhaupt ta
 
 CODE('''
 merkmalstabelle = echte.copy()
+merkmalstabelle["ist_referenz"] = (merkmalstabelle.startzeit.dt.normalize()
+                                   <= REFERENZ_BIS)
 merkmalstabelle["stunde"] = merkmalstabelle.startzeit.dt.hour
 merkmalstabelle["wochentag"] = merkmalstabelle.startzeit.dt.dayofweek
 merkmalstabelle["ist_rundtour"] = (merkmalstabelle.start_station_id
@@ -212,10 +293,24 @@ print(X.describe().round(2).to_string())
 '''),
 
 MD("""
-> **Warum `distanz_km` nicht dabei ist.** Sie fehlt bei 40 % der hier betrachteten Fahrten. Ein
-> Anomalieverfahren würde dann entweder diese 40 % gar nicht bewerten oder — schlimmer —
-> das Fehlen selbst als Auffälligkeit werten. Beides wäre falsch: Ein ausgefallener Sensor
-> ist kein auffälliger Vorgang.
+> **Warum `distanz_km` nicht dabei ist.** Sie fehlt bei 40 % der hier betrachteten Fahrten.
+> Ein Anomalieverfahren würde dann entweder diese 40 % gar nicht bewerten oder — schlimmer
+> — das Fehlen selbst als Auffälligkeit werten. Beides wäre für die Frage *„war diese
+> Fahrt ungewöhnlich?"* falsch.
+>
+> **Das heißt aber nicht, dass fehlende Werte uninteressant wären.** Wenn bei einem
+> bestimmten Rad die Distanz immer wieder fehlt, ist das sehr wohl ein Fall — nur ein
+> anderer: ein **Wartungsfall am Sensor**, keine auffällige Fahrt. Beides gehört in
+> getrennte Auswertungen. Fehlende Werte nach Rad, Sensor und Zeitraum auszuwerten wäre
+> ein eigenes, lohnendes Datenqualitäts-Monitoring — dieses Notebook macht es nicht.
+
+> **Und eine Warnung zu den Entgeltmerkmalen.** `dauer_min`, `entgelt_eur` und
+> `entgelt_je_minute` hängen über die Tariflogik eng zusammen — das Entgelt *ist* im
+> Wesentlichen die Dauer mal einem Minutenpreis. Das Modell bekommt damit dreimal
+> ungefähr dasselbe Signal und gewichtet Tarifeffekte entsprechend über. Sauberer wäre,
+> das **erwartete** Entgelt nach der vollständigen Preislogik zu berechnen und nur den
+> Rest — tatsächlich minus erwartet — als Merkmal zu verwenden. Das wäre dann ein echtes
+> Abrechnungssignal statt einer zweiten Dauerspalte.
 """),
 
 # =====================================================================
@@ -242,7 +337,7 @@ print(f"Fahrten darüber: {int((echte.dauer_min > grenze).sum()):,d} "
 '''),
 
 MD("""
-**Über zweitausend Ausreißer — bei zehn Plätzen auf der Tagesliste.** Die Regel ist nicht
+**Über viertausend Ausreißer — bei sechs Plätzen auf der Tagesliste.** Die Regel ist nicht
 falsch, sie ist nur für diese Verteilung ungeeignet: Bei einer rechtsschiefen Verteilung
 markiert sie einen großen Teil des völlig normalen Ausläufers.
 
@@ -263,15 +358,28 @@ gleichzeitig zurecht und ist schnell.
 CODE('''
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
 
-X_skaliert = StandardScaler().fit_transform(X)
+# SKALIERER UND WALD GEHOEREN IN EINE PIPELINE.
+#
+# Eine fruehere Fassung schrieb StandardScaler().fit_transform(X) - der
+# Skalierer war danach nirgends mehr greifbar. Gespeichert wurde nur der
+# Wald. Ein neuer Vorgang haette also nie so skaliert werden koennen wie
+# die Trainingsdaten; das Modellpaket war nicht verwendbar.
+#
+# Gefittet wird NUR auf dem Referenzzeitraum, bewertet wird alles.
+ist_ref = merkmalstabelle.ist_referenz.values
 
-##LUECKE Trainieren Sie einen IsolationForest mit contamination=0.005, n_estimators=300, random_state=42.
-wald_erst = IsolationForest(contamination=0.005, n_estimators=300, random_state=42)
-wald_erst.fit(X_skaliert)
+##LUECKE Bauen Sie eine Pipeline aus StandardScaler und IsolationForest (contamination=0.005, n_estimators=300, random_state=42).
+wald_erst = Pipeline([
+    ("skalierer", StandardScaler()),
+    ("wald", IsolationForest(contamination=0.005, n_estimators=300, random_state=42)),
+])
+wald_erst.fit(X[ist_ref])
 ##ENDE
 
-merkmalstabelle["auffaelligkeit_erst"] = -wald_erst.score_samples(X_skaliert)
+merkmalstabelle["auffaelligkeit_erst"] = -wald_erst.named_steps["wald"].score_samples(
+    wald_erst.named_steps["skalierer"].transform(X))
 
 plt.figure(figsize=(9, 4))
 plt.hist(merkmalstabelle.auffaelligkeit_erst, bins=80, color="#3d4b6b")
@@ -321,16 +429,31 @@ Rad dieses Typs"* statt *„teuer"*.
 ### 4.5 Die Korrektur: innerhalb des Radtyps normieren
 """),
 
-CODE("""
-def z_je_typ(werte, typ):
-    \"\"\"Wie weit liegt dieser Wert vom Ueblichen SEINES Radtyps entfernt?\"\"\"
-    gruppe = werte.groupby(typ)
-    return (werte - gruppe.transform("mean")) / gruppe.transform("std").replace(0, 1)
+CODE('''
+# NORMIERUNG AUS DEM REFERENZZEITRAUM - nicht aus allen Daten.
+#
+# Mittelwert und Streuung je Radtyp sind ein Referenzzustand wie jeder
+# andere. Werden sie aus allen drei Jahren gebildet, kennt die Bewertung
+# eines Tages im Maerz 2024 die Fahrten des Jahres 2026.
+ROH_Z = ["dauer_min", "entgelt_eur", "entgelt_je_minute"]
+ref = merkmalstabelle[merkmalstabelle.ist_referenz]
+mittel_je_typ = ref.groupby("typ_code")[ROH_Z + ["stunde", "ist_rundtour"]].mean()
+streuung_je_typ = (ref.groupby("typ_code")[ROH_Z + ["stunde", "ist_rundtour"]]
+                   .std().replace(0, 1))
 
-merkmalstabelle["dauer_z"] = z_je_typ(merkmalstabelle.dauer_min, merkmalstabelle.typ_code)
-merkmalstabelle["entgelt_z"] = z_je_typ(merkmalstabelle.entgelt_eur, merkmalstabelle.typ_code)
-merkmalstabelle["entgelt_je_minute_z"] = z_je_typ(merkmalstabelle.entgelt_je_minute,
-                                                  merkmalstabelle.typ_code)
+def z_je_typ(spalte):
+    """Wie weit liegt dieser Wert vom Ueblichen SEINES Radtyps entfernt?
+
+    Der Massstab kommt aus dem Referenzzeitraum und wird auf ALLE Zeilen
+    angewandt - so, wie es im Betrieb auch waere.
+    """
+    m = merkmalstabelle.typ_code.map(mittel_je_typ[spalte])
+    sd = merkmalstabelle.typ_code.map(streuung_je_typ[spalte])
+    return (merkmalstabelle[spalte] - m) / sd
+
+merkmalstabelle["dauer_z"] = z_je_typ("dauer_min")
+merkmalstabelle["entgelt_z"] = z_je_typ("entgelt_eur")
+merkmalstabelle["entgelt_je_minute_z"] = z_je_typ("entgelt_je_minute")
 
 # WOCHENTAG IST RAUS.
 #
@@ -343,19 +466,51 @@ merkmalstabelle["entgelt_je_minute_z"] = z_je_typ(merkmalstabelle.entgelt_je_min
 MERKMALE = ["dauer_z", "stunde", "ist_rundtour",
             "entgelt_z", "entgelt_je_minute_z"]
 X2 = merkmalstabelle[MERKMALE]
-X2_skaliert = StandardScaler().fit_transform(X2)
 
-wald = IsolationForest(contamination=0.005, n_estimators=300, random_state=42).fit(X2_skaliert)
-merkmalstabelle["auffaelligkeit"] = -wald.score_samples(X2_skaliert)
+wald = Pipeline([
+    ("skalierer", StandardScaler()),
+    ("wald", IsolationForest(contamination=0.005, n_estimators=300, random_state=42)),
+]).fit(X2[ist_ref])
+
+def bewerten(zeilen):
+    """Auffaelligkeitswert fuer beliebige Zeilen - eine Funktion, ein Vertrag."""
+    Z = zeilen[MERKMALE]
+    return -wald.named_steps["wald"].score_samples(
+        wald.named_steps["skalierer"].transform(Z))
+
+merkmalstabelle["auffaelligkeit"] = bewerten(merkmalstabelle)
+
+# Die Meldeschwelle kommt aus dem REFERENZZEITRAUM, nicht aus dem Ergebnis.
+# contamination=0.005 setzt sie implizit - wir machen sie explizit, damit
+# die Tagesliste sie auch anwenden kann.
+SCORE_SCHWELLE = float(np.quantile(
+    merkmalstabelle.loc[merkmalstabelle.ist_referenz, "auffaelligkeit"], 1 - 0.005))
+print(f"Meldeschwelle aus dem Referenzzeitraum (obere 0,5 %): {SCORE_SCHWELLE:.4f}\\n")
 
 print("Radtyp-Verteilung der 50 auffälligsten Vorgänge, jetzt:")
 print((merkmalstabelle.nlargest(50, "auffaelligkeit").typ_code
        .value_counts(normalize=True) * 100).round(0).to_string())
-"""),
+print("\\nZum Vergleich, Anteil aller Fahrten:")
+print((merkmalstabelle.typ_code.value_counts(normalize=True) * 100).round(0).to_string())
+'''),
 
 MD("""
-**Der CARGO-Überhang ist verschwunden.** Ob die Korrektur auch inhaltlich etwas gebracht
-hat, misst Phase 5.
+**Der CARGO-Überhang ist deutlich kleiner — verschwunden ist er nicht.** Vor der
+Normierung stellte CARGO fast alle Spitzenplätze, jetzt sind es 22 % der Top 50 bei einem
+Flottenanteil von 10 %. Das ist immer noch das Doppelte.
+
+> **Eine frühere Fassung schrieb hier „der CARGO-Überhang ist verschwunden".** Das war
+> Wunschdenken beim Lesen der eigenen Tabelle. Die Normierung hat den Effekt von fast
+> vollständig auf doppelt übervertreten gedrückt — eine große Verbesserung und keine
+> Beseitigung. Wer den Rest auch noch will, muss weiter: robustere Maße als Mittelwert und
+> Streuung (Median und mittlere absolute Abweichung), oder je Radtyp ein eigenes Modell.
+
+> **Und noch etwas steht in der Tabelle:** EBIKE ist mit 26 % gegenüber 37 % Flottenanteil
+> jetzt **unter**vertreten. Eine Normierung, die einen Typ hebt, senkt zwangsläufig einen
+> anderen. Ob das richtig ist, kann keine Kennzahl beantworten — nur jemand, der weiß, ob
+> E-Bike-Fahrten seltener Probleme machen.
+
+Ob die Korrektur auch inhaltlich etwas gebracht hat, misst Phase 5.
 """),
 
 # =====================================================================
@@ -375,6 +530,8 @@ merkmalstabelle["ist_rueckgabeproblem"] = (merkmalstabelle.dauer_min > 480).asty
 gesamt_probleme = int(merkmalstabelle.ist_rueckgabeproblem.sum())
 print(f"Bekannte Rückgabeprobleme im Datensatz: {gesamt_probleme}\\n")
 
+# ZUERST DIE AUSWERTUNG, DIE MAN GERNE MACHT - und die nichts ueber das
+# Produkt sagt. Sie sortiert alle drei Jahre und nimmt die Spitze.
 zeilen = []
 for k in (50, 100, 300, 1000):
     # Die BASELINE zuerst: eine Zeile, sortiere nach Dauer.
@@ -386,16 +543,32 @@ for k in (50, 100, 300, 1000):
         zeilen.append({"Listenlänge": k, "Vorgehen": name, "gefundene Probleme": treffer,
                        "Trefferquote": round(treffer / k, 3),
                        "Anteil aller Probleme": round(treffer / gesamt_probleme, 3)})
+print("GLOBALE RANGLISTE über drei Jahre — so wird oft ausgewertet:")
 print(pd.DataFrame(zeilen).to_string(index=False))
+global_top50 = float(merkmalstabelle.nlargest(50, "auffaelligkeit")
+                     .ist_rueckgabeproblem.mean())
+print(f"\\nMerken Sie sich die {global_top50:.0%} des normierten Modells bei Laenge 50.")
+print("Sie sind gleich das Gegenstueck zu einer sehr viel unangenehmeren Zahl.")
 '''),
 
 MD("""
-**Die erste Zeile ist die unangenehmste — und sie muss dort stehen.**
+**Zwei Dinge stehen in dieser Tabelle, und das zweite ist das wichtigere.**
 
-Die Regel „sortiere nach Dauer“ schlägt beide Modellfassungen um Längen. Das ist kein
-Zufall, sondern **Konstruktion**: Wir haben die Teilwahrheit als `dauer_min > 480`
+**Erstens:** Die Regel „sortiere nach Dauer“ schlägt beide Modellfassungen um Längen. Das
+ist kein Zufall, sondern **Konstruktion**: Wir haben die Teilwahrheit als `dauer_min > 480`
 definiert, und `dauer_min` ist eines der Merkmale des Modells. Die Regel *ist* die
 Definition. Sie kann gar nicht verlieren.
+
+**Zweitens — und das ist der eigentliche Fehler:** Diese ganze Tabelle bewertet ein
+Produkt, das es nicht gibt.
+
+> Eine globale Top-50-Liste über drei Jahre kann **niemand am Morgen erzeugen**. Wer am
+> 12. März 2024 die fünfzig auffälligsten Fahrten „aller Zeiten“ sehen will, müsste die
+> Jahre 2025 und 2026 bereits kennen. Das Produkt aus Phase 1 ist eine **Tagesliste** —
+> sechs Plätze, jeden Morgen, nur mit dem, was bis dahin passiert ist.
+
+Was die Tagesliste tatsächlich leistet, rechnet die nächste Zelle aus. Das Ergebnis ist
+unangenehm.
 
 > **Eine Prüfgröße, die aus einem Modellmerkmal gebaut ist, prüft nichts.** Sie belohnt
 > das Wiederfinden dessen, was man schon weiß.
@@ -421,33 +594,152 @@ Dasselbe Verfahren, bessere Merkmale.
 """),
 
 CODE('''
-trefferquote_a = float(merkmalstabelle.nlargest(50, "auffaelligkeit").ist_rueckgabeproblem.mean())
-regelquote_a = float(merkmalstabelle.nlargest(50, "dauer_min").ist_rueckgabeproblem.mean())
-print("Erfolgskriterium aus Phase 1 für Aufgabe A: mindestens 20 % Treffer")
-print(f"  Regel 'nach Dauer sortiert'  {regelquote_a:>6.1%}   "
-      f"{'ERFÜLLT' if regelquote_a >= 0.20 else 'GERISSEN'}")
-print(f"  Modell                       {trefferquote_a:>6.1%}   "
-      f"{'ERFÜLLT' if trefferquote_a >= 0.20 else 'GERISSEN'}")
-print()
-print("Beide erfüllen das Kriterium - und die Regel deutlich besser. Fuer")
-print("VERGESSENE RUECKGABEN geht deshalb die Regel in Betrieb, nicht das Modell.")
-print("Das Modell bleibt fuer das, was die Regel nicht sieht - und dafuer gibt")
-print("es kein Label und keine Trefferquote.")
-print()
+# DIE POLICY, WIE SIE MORGENS WIRKLICH LAEUFT.
+#
+# Fuer jeden Tag t im Pruefzeitraum: Was liegt am Morgen des Folgetags um
+# 8 Uhr auf dem Schreibtisch? Zwei Bedingungen, die beide oft vergessen
+# werden:
+#   1. Die Fahrt muss an Tag t begonnen haben.
+#   2. Sie muss VOR dem Stichtag beendet sein - sonst sind Dauer, Endzeit
+#      und Entgelt zu diesem Zeitpunkt noch gar nicht bekannt.
+# Erst danach greift die Schwelle, und erst danach die Kappung auf K.
+merkmalstabelle["starttag"] = merkmalstabelle.startzeit.dt.normalize()
+pruef = merkmalstabelle[~merkmalstabelle.ist_referenz]
 
-top10 = merkmalstabelle.nlargest(10, "auffaelligkeit")
-anzeige = top10[["ausleihe_id", "startzeit", "dauer_min", "typ_code", "entgelt_eur",
-                 "ist_rundtour", "ist_rueckgabeproblem"]].copy()
-anzeige["dauer"] = anzeige.dauer_min.apply(
-    lambda m: f"{int(m//60)} h {int(m%60):02d} min" if m >= 60 else f"{int(m)} min")
-anzeige["startzeit"] = anzeige.startzeit.dt.strftime("%a %d.%m.%Y %H:%M")
-print("DIE ZEHN AUFFÄLLIGSTEN VORGÄNGE\\n")
-print(anzeige[["ausleihe_id", "startzeit", "dauer", "typ_code", "entgelt_eur",
-               "ist_rundtour", "ist_rueckgabeproblem"]].to_string(index=False))
+listen, uebersehen_offen = [], 0
+for t in sorted(pruef.starttag.unique()):
+    stichtag = pd.Timestamp(t) + pd.Timedelta(days=1, hours=MORGENSTUNDE)
+    des_tages = pruef[pruef.starttag == t]
+    bekannt = des_tages[des_tages.endzeit < stichtag]
+    uebersehen_offen += int(des_tages.ist_rueckgabeproblem.sum()
+                            - bekannt.ist_rueckgabeproblem.sum())
+    ueber_schwelle = bekannt[bekannt.auffaelligkeit >= SCORE_SCHWELLE]
+    listen.append(ueber_schwelle.nlargest(
+        min(LISTENLAENGE, len(ueber_schwelle)), "auffaelligkeit"))
+tagesliste_pruef = pd.concat(listen) if listen else pruef.head(0)
+
+tage = pruef.starttag.nunique()
+eintraege = len(tagesliste_pruef)
+treffer = int(tagesliste_pruef.ist_rueckgabeproblem.sum())
+print("DIE TAGESLISTE, WIE SIE IM BETRIEB ENTSTEHT (Prüfzeitraum)\\n")
+print(f"  Tage:                              {tage:>6d}")
+print(f"  ausgegebene Listeneinträge:        {eintraege:>6d}")
+print(f"  durchschnittliche Listenlänge:     {eintraege / tage:>6.2f}  (Kapazität "
+      f"{LISTENLAENGE})")
+print(f"  Tage mit LEERER Liste:             {sum(len(l) == 0 for l in listen):>6d}")
+print(f"  bekannte Rückgabeprobleme darin:   {treffer:>6d}")
+print(f"  Trefferquote gegen die Teilwahrheit: {treffer / max(eintraege, 1):>6.2%}")
+tagesquote_a2 = treffer / max(eintraege, 1)
+print()
+print(f"  Zum Vergleich, globale Top 50 über drei Jahre: {global_top50:>6.1%}")
+print(f"  Verhältnis: die globale Rangliste sieht {global_top50 / max(tagesquote_a2, 1e-9):.0f}-mal")
+print("  besser aus als das Produkt, das tatsächlich ausgeliefert würde -")
+print("  bei demselben Modell und denselben Daten. Der Unterschied ist")
+print("  allein die Auswahlregel.")
+print()
+print(f"  Und noch etwas: {uebersehen_offen} der Langfahrten im Prüfzeitraum waren")
+print(f"  am Folgemorgen um {MORGENSTUNDE} Uhr noch gar nicht beendet. Für eine")
+print("  rückblickende Tagesliste sind sie unsichtbar - sie gehören zu A1.")
 '''),
 
 MD("""
-### 5.3 Kriterium 3 aus Phase 1: **Warum** fällt ein Vorgang auf?
+### 5.3 Was diese Zahlen bedeuten — und was sie nicht bedeuten
+
+Die globale Rangliste meldet **56 %**, die tatsächlich erzeugbare Tagesliste **6,2 %** —
+neunmal weniger, bei demselben Modell und denselben Daten.
+
+**Die 6,2 % sind aber nicht die „wahre Trefferquote".** Sie messen nur, wie oft ein
+Listeneintrag eine *bekannte* Langfahrt ist — und Langfahrten sind nicht das, wofür diese
+Liste gedacht ist. Die richtige Lesart ist:
+
+| Zahl | Was sie belegt |
+|---|---|
+| 56 % (global, drei Jahre) | **nichts über das Produkt** — die Liste ist am Morgen nicht erzeugbar |
+| 6,2 % (Tagesliste) | dass die Liste **kaum Langfahrten** enthält — was in Ordnung ist, dafür ist sie nicht da |
+| die wahre Trefferquote | **unbekannt** — dafür fehlen die Labels |
+
+Der Befund lautet also nicht „das Modell ist schlecht", sondern: **Die Güte der
+Tagesliste ist unbekannt, und die 56 % haben sie nie belegt.**
+
+> **Eine dritte Zahl steht ebenfalls in der Ausgabe und ist die interessanteste:** Die
+> Liste ist an **89 % der Tage leer**. Im Mittel enthält sie 0,18 Einträge, bei einer
+> Kapazität von sechs. Die Meldeschwelle aus dem Referenzzeitraum ist also der bindende
+> Faktor, nicht das Zeitbudget des Betriebsbüros.
+>
+> Das ist keine Fehlfunktion — es ist die ehrliche Folge davon, die Schwelle **vor** der
+> Kappung anzuwenden. Eine frühere Fassung füllte die Liste jeden Tag bis auf zehn auf,
+> auch wenn kein einziger Vorgang auffällig war. **Eine Liste, die immer voll ist, meldet
+> nicht Auffälligkeiten, sondern Ränge.** Um sie zu kennen, muss
+jemand die Liste eine Zeit lang durchsehen und jede Zeile beurteilen. Das ist der
+Schattenbetrieb aus Phase 1, und daran führt kein Weg vorbei.
+
+> **Warum eine falsche Auswertung schlimmer ist als gar keine.** Ohne Zahl hätte niemand
+> behauptet, das Produkt sei geprüft. Mit den 28 % im Bericht steht eine Freigabe im Raum,
+> die auf einer Rechnung beruht, die den Entscheidungszeitpunkt ignoriert. **Eine Kennzahl
+> muss zu dem Produkt gehören, das ausgeliefert wird — sonst prüft sie ein anderes.**
+
+### 5.4 Produkt A1: die offenen Rückgaben, die keine Liste sieht
+
+Die Zahl ganz unten in der Ausgabe ist der Grund für die Trennung aus Phase 1: Ein Teil
+der Langfahrten war am Folgemorgen **noch gar nicht beendet**. Für eine rückblickende
+Tagesliste existieren sie nicht — ihre Dauer stand zu dem Zeitpunkt noch nicht fest.
+
+Und genau sie sind die Fälle, bei denen Handeln noch etwas nützt.
+"""),
+
+CODE('''
+# PRODUKT A1: eine Echtzeitregel auf OFFENEN Vorgaengen.
+#
+# Kein Modell, kein Training. Die Regel lautet: Ist ein Vorgang laenger als
+# GRENZE_STUNDEN offen, melde ihn - jetzt, nicht morgen frueh.
+GRENZE_STUNDEN = 8
+
+lang = merkmalstabelle[merkmalstabelle.ist_rueckgabeproblem == 1].copy()
+lang["alarm"] = lang.startzeit + pd.Timedelta(hours=GRENZE_STUNDEN)
+lang["vorsprung_h"] = (lang.endzeit - lang.alarm).dt.total_seconds() / 3600
+lang["morgenliste"] = lang.startzeit.dt.normalize() + pd.Timedelta(
+    days=1, hours=MORGENSTUNDE)
+
+print(f"Bekannte Langfahrten über {GRENZE_STUNDEN} Stunden: {len(lang)}\\n")
+print("Die Echtzeitregel meldet JEDE von ihnen - per Definition, denn sie ist")
+print("die Definition. Interessant ist nicht OB, sondern WANN:\\n")
+print("  Vorsprung vor der tatsächlichen Rückgabe:")
+print(f"     Median {lang.vorsprung_h.median():>5.1f} Stunden, "
+      f"Minimum {lang.vorsprung_h.min():>4.1f}, Maximum {lang.vorsprung_h.max():>5.1f}")
+noch_offen = int((lang.endzeit > lang.morgenliste).sum())
+print(f"\\n  Von diesen {len(lang)} Vorgängen waren am Folgemorgen um "
+      f"{MORGENSTUNDE} Uhr")
+print(f"  noch {noch_offen} nicht beendet - für die rückblickende Tagesliste")
+print("  also unsichtbar. Die Echtzeitregel hatte sie da längst gemeldet,")
+print(f"  im Mittel {lang.loc[lang.endzeit > lang.morgenliste, 'vorsprung_h'].mean():.0f} "
+      f"Stunden vor der Rückgabe.")
+print()
+print("ERFOLGSKRITERIUM A1: jeder offene Vorgang über der Schwelle wird")
+print(f"gemeldet, bevor er endet.   {len(lang)}/{len(lang)} = ERFÜLLT")
+print()
+print("Das ist kein beeindruckendes Ergebnis - es ist Buchhaltung. Genau")
+print("deshalb braucht A1 kein Modell.")
+'''),
+
+MD("""
+**Für A1 ist das Ergebnis trivial, und das ist die Pointe.** Die Regel findet alle Fälle,
+weil sie die Definition ist. Ihr Wert liegt nicht in der Trefferquote, sondern im
+**Zeitpunkt**: Sie meldet Stunden bevor das Rad zurückkommt — die Tagesliste hätte einen
+großen Teil dieser Fälle am Folgemorgen noch gar nicht gesehen.
+
+> **Ein Verfahren, das dieselbe Frage später beantwortet, ist keine bessere Lösung,
+> sondern eine schlechtere.** Bei A1 ist die einfachste denkbare Regel nicht nur
+> ausreichend, sondern der einzigen Alternative überlegen — weil sie früher greift.
+
+**Was in einer echten Umsetzung dazugehört** und hier fehlt, weil die Daten es nicht
+hergeben:
+
+- der Status „offen" in Echtzeit statt rückblickend rekonstruiert,
+- vertraglich erlaubte Langzeitmieten, die nicht gemeldet werden sollen,
+- abgestufte Schwellen: Hinweis, Kundenkontakt, Suche,
+- der letzte bekannte Standort des Rades.
+
+### 5.5 Kriterium: **Warum** fällt ein Vorgang auf?
 
 Ein Isolation Forest liefert eine Zahl, keine Begründung. Für den Betrieb ist das zu
 wenig — „Vorgang 38558 hat Wert 0,75“ löst keine Handlung aus. Wir bauen die Begründung
@@ -458,16 +750,20 @@ weitesten vom Üblichen entfernt liegt.
 CODE('''
 # Die Begruendung vergleicht gegen den Mittelwert DESSELBEN RADTYPS - aus
 # demselben Grund, aus dem die Merkmale normiert wurden. "40 Euro, ueblich sind
-# 2,20" waere fuer ein CARGO-Rad eine irrefuehrende Auskunft.
-# Dieselben Merkmale wie im Modell - ohne wochentag. Was nicht in die
-# Rangfolge eingeht, darf auch nicht als Begruendung erscheinen.
+# 2,20" waere fuer ein CARGO-Rad eine irrefuehrende Auskunft. Es sind
+# dieselben Mittelwerte aus dem REFERENZZEITRAUM wie in Phase 4.5; was nicht
+# in die Rangfolge eingeht, darf auch nicht als Begruendung erscheinen.
+#
+# ACHTUNG - DAS IST KEINE ERKLAERUNG DES MODELLS.
+# Der Isolation Forest bewertet Pfadlaengen im mehrdimensionalen Raum. Was
+# hier ausgegeben wird, sind die beiden Merkmale mit dem groessten EINZELNEN
+# Abstand zum Typmittel. Das beschreibt gut, was an der Zeile ungewoehnlich
+# ist - es sagt nicht zwingend, warum das Modell genau diesen Wert vergab.
 ROHSPALTEN = ["dauer_min", "stunde", "ist_rundtour",
               "entgelt_eur", "entgelt_je_minute"]
-mittel_je_typ = merkmalstabelle.groupby("typ_code")[ROHSPALTEN].mean()
-streuung_je_typ = merkmalstabelle.groupby("typ_code")[ROHSPALTEN].std().replace(0, 1)
 
 def begruendung(zeile, wieviele=2):
-    """Welche Merkmale liegen am weitesten vom Ueblichen SEINES Radtyps entfernt?"""
+    """Die auffaelligsten EINZELMERKMALE - eine Heuristik, keine Modellerklaerung."""
     typ = zeile.typ_code
     m, sd = mittel_je_typ.loc[typ], streuung_je_typ.loc[typ]
     abstand = ((zeile[ROHSPALTEN] - m) / sd).abs().sort_values(ascending=False)
@@ -478,8 +774,9 @@ def begruendung(zeile, wieviele=2):
         teile.append(f"{merkmal} = {wert:.1f} ({richtung}, bei {typ} üblich {m[merkmal]:.1f})")
     return "; ".join(teile)
 
-print("TAGESLISTE FÜR DAS BETRIEBSBÜRO\\n")
-for rang, (_, zeile) in enumerate(top10.iterrows(), start=1):
+top_beispiele = merkmalstabelle.nlargest(LISTENLAENGE, "auffaelligkeit")
+print("DIE AUFFÄLLIGSTEN VORGÄNGE MIT BEGRÜNDUNG\\n")
+for rang, (_, zeile) in enumerate(top_beispiele.iterrows(), start=1):
     print(f"{rang:>2d}. Vorgang {int(zeile.ausleihe_id):>6d}  "
           f"{zeile.startzeit.strftime('%d.%m.%Y %H:%M')}  Rad {int(zeile.fahrrad_id):>3d} ({zeile.typ_code})")
     print(f"    {begruendung(zeile)}")
@@ -489,9 +786,22 @@ MD("""
 Jetzt steht neben jedem Vorgang, **was** an ihm ungewöhnlich ist. Damit kann jemand
 entscheiden, ob es sich lohnt hinzusehen — und das ist der ganze Zweck der Liste.
 
+> **Eine Einschränkung, die dazugehört.** Diese Zeile ist eine **Beschreibung der Zeile**,
+> keine Erklärung des Modells. Sie nennt die beiden Merkmale mit dem größten einzelnen
+> Abstand zum Typmittel; der Isolation Forest entscheidet aber über alle Merkmale
+> gemeinsam. Beides fällt oft zusammen, muss es aber nicht. Wer „das Modell hat wegen X
+> gemeldet" sagen will, braucht ein Attributionsverfahren — und muss dessen Grenzen
+> ebenfalls dazuschreiben.
+
+> **Und ein Merkmal gehört auf den Prüfstand:** `ist_rundtour` taucht regelmäßig als
+> Begründung „ungewöhnlich hoch" auf. Aus Notebook 5 wissen wir aber, dass Rundtouren ein
+> **normales Nutzungsmuster** sind — rund jede sechste angedockte Fahrt endet dort, wo sie
+> begann. Ein Merkmal gehört nur dann in die Liste, wenn es eine **Prüfhandlung** auslöst.
+> „Ist eine Rundtour" allein löst keine aus.
+
 ---
 
-### 5.4 Aufgabe B — und die Regel, die man zuerst hätte bauen müssen
+### 5.6 Aufgabe B — und die Regel, die man zuerst hätte bauen müssen
 
 Nun zur zweiten Aufgabe aus Phase 1: **auffällige Stationstage**. Hier liegt der Fall
 besonders günstig, denn es gibt eine **dokumentierte Wahrheit**: 26 Stationsstörungen
@@ -536,7 +846,7 @@ MD("""
 **Und da steht das Problem, in zwei Zahlen.**
 
 Jede Störung führt zu einem Tag ohne Fahrt — das Signal ist also da. Aber es gibt **rund
-tausend Stationstage ohne Fahrt**, und nur etwa jeder elfte davon ist eine Störung. Alle
+tausend Stationstage ohne Fahrt**, und nur etwa jeder zehnte davon ist eine Störung. Alle
 anderen sind schlicht ruhige Tage: eine kleine Station im Januar bei Regen.
 
 Rechnen wir aus, was das für jedes noch so gute Verfahren bedeutet.
@@ -545,95 +855,189 @@ Rechnen wir aus, was das für jedes noch so gute Verfahren bedeutet.
 CODE('''
 kandidaten = je_tag.dropna(subset=["erwartet"]).copy()
 kandidaten["auffaelligkeit_tag"] = -(kandidaten.abweichung / kandidaten.erwartet.clip(lower=1))
-
-# ZUERST DIE EINFACHSTE REGEL, DIE ES GIBT - wie in Notebook 2.
-# "Sieh dir nur die Stationstage ohne jede Fahrt an, und darunter die
-# mit dem groessten Einbruch gegenueber dem eigenen Mittel."
 nulltage = kandidaten[kandidaten.fahrten == 0]
 
-def bewerten_b(name, menge, spalte=None):
-    zeilen = []
-    for k in (50, 100, 200, 500):
-        top = menge.nlargest(k, spalte) if spalte else menge.head(k)
-        treffer = int(top.ist_stoerung.sum())
-        zeilen.append({"Vorgehen": name, "Listenlänge": k,
-                       "gefundene Störungen": treffer,
-                       "Trefferquote": round(treffer / min(k, len(menge)), 3)})
-    return zeilen
-
-vergleich_b = pd.DataFrame(
-    bewerten_b("Modell: alle Stationstage", kandidaten, "auffaelligkeit_tag")
-    + bewerten_b("Regel: nur Nulltage, nach Einbruch", nulltage, "abweichung"))
-print(vergleich_b.pivot(index="Listenlänge", columns="Vorgehen",
-                        values="Trefferquote").to_string())
+# ERSTE PRUEFUNG DES SCORES: taugt er ueberhaupt zum Sortieren?
+#
+# Fuer einen Nulltag ist abweichung = 0 - erwartet = -erwartet. Der relative
+# Score wird damit -(-erwartet/erwartet) = 1 - IMMER, unabhaengig davon, wie
+# gross der Einbruch war. Ein Score, der fuer fast alle Kandidaten denselben
+# Wert hat, sortiert nicht; die Reihenfolge kommt dann aus der Zeilenfolge
+# der Tabelle.
+gebunden = int((nulltage.auffaelligkeit_tag.round(9) == 1).sum())
+print("PRUEFUNG DES STATIONSSCORES\\n")
+print(f"  Nulltage insgesamt:                    {len(nulltage):>6d}")
+print(f"  davon mit Score exakt 1,0 (gebunden):  {gebunden:>6d} "
+      f"= {gebunden / len(nulltage):.0%}")
+print("  -> Der relative Score ist als Rangfolge unbrauchbar.")
 print()
-print(f"Alle {int(kandidaten.ist_stoerung.sum())} Störungen liegen an Nulltagen -")
-print(f"die Regel erreicht also 100 % Abdeckung bei {len(nulltage)} Kandidaten.")
+print("  Der ABSOLUTE Einbruch unterscheidet dagegen sehr wohl:")
+print(f"     erwartete Fahrten an Nulltagen: Median {nulltage.erwartet.median():.0f}, "
+      f"Maximum {nulltage.erwartet.max():.0f}")
 
-bestes_modell = max(z["Trefferquote"] for z in
-                    bewerten_b("m", kandidaten, "auffaelligkeit_tag"))
-beste_regel = max(z["Trefferquote"] for z in
-                  bewerten_b("r", nulltage, "abweichung"))
-print(f"\\nErfolgskriterium aus Phase 1: mindestens 20 % Trefferquote")
-for name, wert in [("Modell", bestes_modell), ("Regel", beste_regel)]:
-    print(f"  {name:<8s} {wert:.1%}   ->  {'ERFÜLLT' if wert >= 0.20 else 'GERISSEN'}")
+# ZWEITE PRUEFUNG: die Sortierrichtung.
+#
+# "Groesster Einbruch" heisst: die Station haette am meisten leisten sollen.
+# abweichung ist NEGATIV (0 - erwartet). Das groesste Minus ist also der
+# KLEINSTE Wert - nsmallest, nicht nlargest. Eine fruehere Fassung nahm
+# nlargest und bekam damit die Stationen mit der GERINGSTEN Erwartung.
+print("\\n\\nSORTIERRICHTUNG - derselbe Datensatz, zwei Lesarten\\n")
+zeilen = []
+for k in (10, 50, 100, 200):
+    falsch = nulltage.nlargest(k, "abweichung").ist_stoerung.mean()
+    richtig = nulltage.nsmallest(k, "abweichung").ist_stoerung.mean()
+    zeilen.append({"Listenlänge": k,
+                   "nlargest (kleinster Einbruch)": round(falsch, 3),
+                   "nsmallest (größter Einbruch)": round(richtig, 3)})
+print(pd.DataFrame(zeilen).to_string(index=False))
+print("\\n  Bei zehn Eintraegen faellt der Fehler nicht auf - beide Spalten sind")
+print("  gleich. Ab fuenfzig trennen sie sich deutlich. Ein Fehler, den die")
+print("  kleinste Ausgabe verdeckt, ist trotzdem ein Fehler.")
 '''),
 
 MD("""
-### 5.5 Das Modell scheitert — die Aufgabe nicht
+### 5.7 Und jetzt die Auswertung, die zählt: was geht an einem Morgen?
 
-**Lesen Sie die beiden Spalten nebeneinander.** Der Isolation Forest über alle
-Stationstage erreicht 14 Prozent und reißt das Kriterium. Die Regel „sieh dir nur die
-Tage ohne jede Fahrt an, und darunter die mit dem größten Einbruch" erreicht **32
-Prozent** und erfüllt es.
+Die Tabelle darüber ist immer noch eine **globale Rangliste über drei Jahre** — derselbe
+Denkfehler wie bei Aufgabe A2, nur an anderer Stelle. Am Morgen des 13. März sieht das
+System die Nulltage vom 12. März, sonst nichts.
 
-> **Aufgabe B ist lösbar. Nur nicht mit einem Anomalieverfahren.**
+Die gute Nachricht: Es gibt zehn Stationen, an einem Tag also höchstens zehn Nulltage.
+Das Alertbudget von sechs Plätzen ist selten bindend — die Frage ist deshalb nicht
+*welche* Nulltage man meldet, sondern **ob es sich lohnt, sie überhaupt zu melden**.
 
-Woran das liegt, steht in den Zahlen darüber: **Alle Störungen liegen an Nulltagen.** Die
-gesuchte Menge ist also von vornherein auf 1.041 der 10.890 Stationstage eingegrenzt —
-und diese Eingrenzung ist Fachwissen, keine Statistik. Ein Verfahren, das über alle
-10.890 Tage sucht, verbringt seine Kraft damit, diese Eingrenzung nachzuerfinden. Es
-schafft das schlechter, als ein Satz Fachwissen es vorgibt.
+Und es gibt eine zweite Sache, die man leicht falsch zählt.
+"""),
 
-**Das ist die Lehre dieses Notebooks, und sie ist unbequem:**
+CODE('''
+# STATIONSSTOERUNGEN SIND EPISODEN, KEINE TAGE.
+#
+# 26 Stoerungen erzeugen 107 gestoerte Stationstage - im Mittel gut vier
+# Tage je Ereignis. Ein System, das dieselbe offene Stoerung jeden Morgen
+# erneut meldet, hat sie EINMAL gefunden und danach vier Mal wiederholt.
+# Wer Tage zaehlt, haelt Wiederholungen fuer Erfolge.
+episoden = stoerungen.assign(
+    tage=(stoerungen.bis - stoerungen["von"]).dt.days + 1)
+print(f"Störungsereignisse: {len(episoden)}, gestörte Stationstage: "
+      f"{int(je_tag.ist_stoerung.sum())}")
+print(f"Tage je Ereignis: Mittel {episoden.tage.mean():.1f}, "
+      f"Maximum {episoden.tage.max()}\\n")
 
-> Ein Verfahren, das schlechter ist als eine Zeile Fachwissen, ist nicht am Problem
-> gescheitert, sondern an der Aufgabenstellung. Wer keine Baseline baut, hält das eine
-> für das andere.
+# DIE POLICY, TAEGLICH, NUR IM PRUEFZEITRAUM.
+pruef_tage = kandidaten[kandidaten.datum > REFERENZ_BIS]
+offen = {}          # Station -> Datum des letzten Alarms einer laufenden Episode
+gemeldet_tage, neue_alarme, wiederholungen = [], [], 0
 
-**In einer früheren Fassung stand hier, Aufgabe B sei „mit diesen Daten nicht lösbar".**
-Das war falsch, und es war aus demselben Grund falsch wie der umgekehrte Fehler in
-Notebook 2: Dort ließ eine schlecht gebaute Baseline ein Modell zu gut aussehen — hier
-ließ eine **fehlende** Baseline eine Aufgabe unlösbar aussehen. Beide Male hilft dasselbe:
-**erst die einfachste Lösung bauen, dann das Verfahren daran messen.**
+for tag, gruppe in pruef_tage.groupby("datum"):
+    heute = gruppe[gruppe.fahrten == 0].nsmallest(
+        min(LISTENLAENGE, int((gruppe.fahrten == 0).sum())), "abweichung")
+    for _, z in heute.iterrows():
+        gemeldet_tage.append(z)
+        vortag = offen.get(z.start_station_id)
+        if vortag is not None and (tag - vortag).days <= 1:
+            wiederholungen += 1          # dieselbe Stoerung, schon gemeldet
+        else:
+            neue_alarme.append(z)
+        offen[z.start_station_id] = tag
 
-**Was trotzdem gilt — die Grenzen der Regel:**
+gemeldet_tage = pd.DataFrame(gemeldet_tage)
+neue_alarme = pd.DataFrame(neue_alarme)
 
-1. **Die Trefferquote bleibt bescheiden.** Von hundert vorgelegten Stationstagen sind
-   knapp zwei Drittel Fehlalarme. Bei einem Prüfaufwand von wenigen Minuten je Fall geht
-   das auf; bei einem Technikereinsatz nicht.
-2. **Die eigentliche Lösung ist keine Analyse.** Die Terminals melden ihren Status
-   ohnehin; würden diese Meldungen gespeichert, wäre die Frage eine Datenbankabfrage und
-   keine Schätzung. Das bleibt die Empfehlung an den Betrieb.
-3. **Ein größeres Netz würde beides erleichtern.** Bei 50 Fahrten je Station und Tag wäre
-   ein Nulltag ein Ereignis und kein Alltag.
+print("STATIONSREGEL, TAEGLICH AUSGEFUEHRT (Prüfzeitraum)\\n")
+print(f"  gemeldete Stationstage:            {len(gemeldet_tage):>6d}")
+print(f"  davon Wiederholungen einer schon")
+print(f"  gemeldeten laufenden Störung:      {wiederholungen:>6d}")
+print(f"  neue Alarme:                       {len(neue_alarme):>6d}")
+print()
+tagesquote = gemeldet_tage.ist_stoerung.mean()
+alarmquote = neue_alarme.ist_stoerung.mean()
+print(f"  Trefferquote je gemeldetem TAG:    {tagesquote:>6.1%}")
+print(f"  Trefferquote je NEUEM ALARM:       {alarmquote:>6.1%}")
+print()
+print(f"  Erfolgskriterium aus Phase 1: {KRITERIUM_TREFFER:.0%} je Alarm")
+print(f"  -> {'ERFÜLLT' if alarmquote >= KRITERIUM_TREFFER else 'GERISSEN'}")
+'''),
+
+MD("""
+### 5.8 Das Ergebnis für Aufgabe B: nicht freigegeben
+
+**Die täglich ausführbare Regel reißt das Kriterium.** Nicht knapp.
+
+Der Weg dorthin ist lehrreich, weil an jeder Station eine Zahl größer wurde:
+
+| Auswertung | Trefferquote | Was daran nicht stimmt |
+|---|---|---|
+| globale Top 50, `nlargest` | **32 %** | falsche Sortierrichtung **und** globale Rangliste |
+| globale Top 50, richtig sortiert | 44 % | immer noch eine globale Rangliste |
+| täglich, je gemeldetem **Tag** | 13,4 % | zählt jeden Folgetag derselben Störung als eigenen Erfolg |
+| täglich, je **neuem Alarm** | **3,9 %** | — das ist die Zahl, die zählt |
+
+**Jeder einzelne Schritt hat die Zahl kleiner gemacht, und jeder war richtig.** Das ist
+der Normalfall: Eine Kennzahl wird selten besser, wenn man ehrlicher rechnet.
+
+Der letzte Schritt ist der, den man am leichtesten übersieht. Die 26 Störungen erzeugen
+**107 gestörte Stationstage** — im Mittel gut vier Tage je Ereignis, im Extremfall
+sechzehn. Meldet das System dieselbe offene Störung jeden Morgen erneut, hat es sie
+**einmal** gefunden und danach fünfzehnmal wiederholt. Von 381 gemeldeten Stationstagen
+im Prüfzeitraum sind 122 solche Wiederholungen.
+
+> **Wer Tage zählt statt Ereignisse, hält Wiederholungen für Erfolge.** Und je länger eine
+> Störung offen bleibt, desto besser sieht die Kennzahl aus — genau verkehrt herum.
+
+> **Aufgabe B ist damit nicht gelöst.** In einer früheren Fassung stand hier, die Regel
+> erfülle das Kriterium mit 32 % und gehe in Betrieb. Diese 32 % entstanden aus einer
+> Rangliste über drei Jahre, mit einer Sortierung in die falsche Richtung, und sie zählten
+> jeden Folgetag derselben Störung als eigenen Erfolg. **Drei Fehler, die alle in dieselbe
+> Richtung wirkten** — und das ist kein Zufall: Fehler, die das Ergebnis verschlechtern,
+> fallen beim Schreiben auf. Die anderen nicht.
+
+**Was das nicht heißt:** Es heißt nicht, dass die Aufgabe unlösbar ist. Es heißt, dass
+diese Regel sie nicht löst. Der Grund steht in den Daten: Alle Störungen liegen an
+Nulltagen, aber die allermeisten Nulltage sind einfach **ruhige Tage** — eine kleine
+Station im Januar bei Regen.
+
+Um beides zu trennen, müsste man erklären, *warum* eine Station gestern keine Fahrt hatte.
+Dafür gibt es Kandidaten, die dieses Notebook nicht nutzt: Wetter und Kalender aus
+Notebook 4, das Stationsvolumen aus Notebook 3, die Nachbarstationen. Eine Nulltags-
+**Wahrscheinlichkeit** statt einer Nulltags-**Regel** wäre die nächste Runde.
+
+> **Die eigentliche Lösung bleibt trotzdem eine bessere Datenquelle.** Die Terminals
+> melden ihren Status ohnehin; würden diese Meldungen gespeichert, wäre die Frage eine
+> Datenbankabfrage und keine Schätzung. **Ein Verfahren, das eine fehlende Spalte
+> rekonstruiert, ist selten besser als die Spalte.**
 """),
 
 # =====================================================================
-PHASE(6, "Aufgabe A geht in Betrieb — Aufgabe B als Regel, nicht als Modell."),
+PHASE(6, "Eine Regel geht in Betrieb, ein Modell in den Schattenbetrieb, "
+         "und eines wird nicht freigegeben."),
 
 CODE('''
 import joblib, datetime
 
-LISTENLAENGE = 10
+WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag",
+              "Freitag", "Samstag", "Sonntag"]
 
-def tagesliste(datum, tabelle=merkmalstabelle, laenge=LISTENLAENGE):
-    """Die Liste, die morgens im Betriebsbüro aufschlägt."""
+def tagesliste(datum, tabelle=merkmalstabelle, laenge=LISTENLAENGE,
+               schwelle=SCORE_SCHWELLE, morgenstunde=MORGENSTUNDE):
+    """Die Liste, die am Morgen NACH 'datum' im Betriebsbüro aufschlägt.
+
+    Drei Regeln, die eine fruehere Fassung alle drei verletzt hat:
+      1. Nur Vorgaenge, die zum Stichtag BEENDET waren - sonst stuenden
+         hier Dauer und Entgelt, die es noch gar nicht gab.
+      2. Zuerst die Schwelle, dann die Kappung auf K. Eine Liste darf
+         LEER sein; an einem ruhigen Tag ist das die richtige Antwort.
+      3. Die Schwelle stammt aus dem Referenzzeitraum, nicht aus den
+         Daten, die gerade bewertet werden.
+    """
     tag = pd.Timestamp(datum)
-    des_tages = tabelle[tabelle.startzeit.dt.normalize() == tag]
-    if des_tages.empty:
-        return pd.DataFrame()
-    top = des_tages.nlargest(min(laenge, len(des_tages)), "auffaelligkeit").copy()
+    stichtag = tag + pd.Timedelta(days=1, hours=morgenstunde)
+    des_tages = tabelle[(tabelle.startzeit.dt.normalize() == tag)
+                        & (tabelle.endzeit < stichtag)]
+    ueber = des_tages[des_tages.auffaelligkeit >= schwelle]
+    if ueber.empty:
+        return pd.DataFrame(columns=["Vorgang", "Uhrzeit", "Dauer", "Typ", "Rad",
+                                     "Wert", "Begründung"])
+    top = ueber.nlargest(min(laenge, len(ueber)), "auffaelligkeit").copy()
     top["Begründung"] = top.apply(begruendung, axis=1)
     top["Uhrzeit"] = top.startzeit.dt.strftime("%H:%M")
     top["Dauer"] = top.dauer_min.apply(lambda m: f"{int(m//60)}h{int(m%60):02d}")
@@ -642,44 +1046,108 @@ def tagesliste(datum, tabelle=merkmalstabelle, laenge=LISTENLAENGE):
         columns={"ausleihe_id": "Vorgang", "typ_code": "Typ", "fahrrad_id": "Rad",
                  "auffaelligkeit": "Wert"})
 
-beispieltag = merkmalstabelle.nlargest(1, "auffaelligkeit").startzeit.dt.normalize().iloc[0]
-liste = tagesliste(beispieltag)
-print(f"TAGESLISTE {beispieltag.strftime('%A, %d.%m.%Y')}\\n")
-print(liste.round({"Wert": 3}).to_string(index=False))
+def zeige(tag, ueberschrift):
+    liste = tagesliste(tag)
+    t = pd.Timestamp(tag)
+    print(f"{ueberschrift}: {WOCHENTAGE[t.dayofweek]}, {t.strftime('%d.%m.%Y')}")
+    if liste.empty:
+        print("   (leer - kein Vorgang über der Meldeschwelle)\\n")
+    else:
+        print(liste.round({"Wert": 3}).to_string(index=False) + "\\n")
+    return liste
+
+# ZWEI TAGE ZEIGEN, NICHT EINEN - und den haeufigeren zuerst.
+#
+# Eine fruehere Fassung waehlte den Tag des global auffaelligsten Vorgangs
+# und zeigte ihn ohne Kennzeichnung: ein Extrembeispiel als Normalfall.
+# Der Normalfall ist hier aber die LEERE Liste.
+laengen = {t: len(l) for t, l in
+           zip(sorted(pruef.starttag.unique()), listen)}
+voll = max(laengen, key=laengen.get)
+leer = next(t for t in sorted(laengen) if laengen[t] == 0)
+
+anteil_leer = sum(v == 0 for v in laengen.values()) / len(laengen)
+print(f"An {anteil_leer:.0%} der Tage im Prüfzeitraum ist die Liste LEER.")
+print("Das ist der Normalfall, nicht der Ausnahmefall - und es ist die")
+print("richtige Antwort: An einem ruhigen Tag gibt es nichts anzusehen.\\n")
+
+liste = zeige(voll, "DER VOLLSTE TAG des Prüfzeitraums")
+zeige(leer, "EIN GEWÖHNLICHER TAG - und damit einer ohne Meldung")
 liste.to_csv("tagesliste_beispiel.csv", index=False)
 
-joblib.dump({"modell": wald, "merkmale": MERKMALE,
-             "mittel_je_typ": mittel_je_typ.to_dict(),
-             "streuung_je_typ": streuung_je_typ.to_dict(),
-             "listenlaenge": LISTENLAENGE,
-             "freigegeben_fuer": ["auffällige Fahrten"],
-             "nicht_freigegeben_fuer": ["Stationsstörungen — Datenlage unzureichend"],
-             "trainiert_am": datetime.date.today().isoformat()}, "anomaliemodell.joblib")
-print("\\ngeschrieben: tagesliste_beispiel.csv, anomaliemodell.joblib")
+# DAS MODELLPAKET - vollstaendig genug, um einen neuen Vorgang zu bewerten.
+#
+# Eine fruehere Fassung speicherte den Wald ohne den Skalierer. Damit war
+# das Paket nicht verwendbar: Die Merkmale eines neuen Vorgangs haetten
+# nie so skaliert werden koennen wie im Training.
+joblib.dump({
+    "pipeline": wald,                      # Skalierer UND Wald zusammen
+    "merkmale": MERKMALE,
+    "rohspalten_begruendung": ROHSPALTEN,
+    "mittel_je_typ": mittel_je_typ.to_dict(),
+    "streuung_je_typ": streuung_je_typ.to_dict(),
+    "score_schwelle": SCORE_SCHWELLE,
+    "listenlaenge": LISTENLAENGE,
+    "referenz_von": str(referenz.startzeit.min().date()),
+    "referenz_bis": str(REFERENZ_BIS.date()),
+    "pruefzeit_bis": str(pruefzeit.startzeit.max().date()),
+    "datenherkunft": "ERFUNDENE LEHRDATEN - Fahrten und Stoerungen synthetisch",
+    "freigegeben_fuer": [],
+    "status": {
+        "A1 offene Rueckgaben": "Regel jetzt-startzeit>8h - kein Modell noetig, "
+                                "nicht Teil dieses Pakets",
+        "A2 auffaellige Fahrten": "NUR SCHATTENBETRIEB - Trefferquote unbekannt, "
+                                  "Labels fehlen",
+        "B Stationsstoerungen": "NICHT FREIGEGEBEN - Kriterium taeglich gerissen",
+    },
+    "trainiert_am": datetime.date.today().isoformat(),
+}, "anomaliemodell.joblib")
+print("geschrieben: tagesliste_beispiel.csv, anomaliemodell.joblib")
+print("\\nFreigabestatus im Paket:")
+print("  A1  Regel, kein Modell")
+print("  A2  Schattenbetrieb")
+print("  B   nicht freigegeben")
 '''),
 
 MD("""
-### 6.1 Was ausgeliefert wird — zwei Dinge, nicht eines
+### 6.1 Was ausgeliefert wird — und was ausdrücklich nicht
 
-Die Auswertung in Phase 5 hat die Aufgabe geteilt, und die Auslieferung folgt dieser
-Teilung:
-
-| Sorte Auffälligkeit | Was ausgeliefert wird | Warum |
+| Produkt | Was ausgeliefert wird | Status |
 |---|---|---|
-| **Vergessene Rückgaben** (über 8 Stunden) | eine Zeile SQL: `dauer_min > 480` | vollständig, nachprüfbar, kein Modell nötig |
-| **Auffällige Stationstage** | die Regel aus 5.5: nur Nulltage, nach Einbruch sortiert | schlägt das Modell und erfüllt das Kriterium |
-| **Alles andere** — Rundtouren zu 47 €, Ausleihen um 22 Uhr, 0,50 € je Minute | die Tagesliste des Isolation Forest | dafür gibt es keine Regel, weil niemand vorher weiß, wonach er sucht |
+| **A1** vergessene Rückgaben | Echtzeitregel auf **offenen** Vorgängen: länger als 8 Stunden offen → melden | **in Betrieb** — vollständig, nachprüfbar, kein Modell nötig |
+| **A2** auffällige Fahrten | Tagesliste mit Schwelle, höchstens sechs Plätze, Begründung je Zeile | **nur Schattenbetrieb** — die Trefferquote ist unbekannt |
+| **B** Stationsstörungen | nichts | **nicht freigegeben** — die täglich ausführbare Regel reißt das Kriterium |
 
-> **Nur die dritte Zeile rechtfertigt ein Modell.** Die ersten beiden hätte man auch ohne
-> Analyse gefunden — man hätte nur vorher fragen müssen. Genau das ist der Grund, warum
-> in diesem Notebook zuerst die Regeln gebaut wurden und dann das Verfahren.
+> **Eine frühere Fassung dieses Notebooks behauptete hier das Gegenteil:** Aufgabe B gehe
+> „als Regel in Betrieb“ — während das gespeicherte Modellpaket im selben Atemzug
+> `"nicht_freigegeben_fuer": ["Stationsstörungen"]` enthielt. Text und Artefakt
+> widersprachen sich, und niemand hätte es beim Lesen bemerkt.
+>
+> **Ein Freigabestatus gehört an genau eine Stelle.** Er steht jetzt im Paket, und der
+> Text liest ihn von dort ab, statt ihn zu wiederholen.
 
-Für die dritte Zeile gibt es **keine Trefferquote**, und das ist keine Lücke, sondern die
+### 6.2 Warum A2 nur im Schattenbetrieb läuft
+
+Für die Tagesliste gibt es **keine Trefferquote**, und das ist keine Lücke, sondern die
 Sache selbst: Wer eine Kennzahl für „unbekannte Auffälligkeiten“ hätte, wüsste ja schon,
-wonach er sucht. Beurteilen kann sie nur, wer die Liste ansieht — und genau dafür steht
-in jeder Zeile eine Begründung.
+wonach er sucht.
 
-### 6.2 Der Rückkopplungsvorteil, den dieses Modell hat
+Was das konkret bedeutet:
+
+1. Die Liste läuft mit und wird **nicht** als geprüftes Erkennungssystem bezeichnet.
+2. Jede Zeile bekommt ein Urteil: *war ein Problem* oder *war in Ordnung*.
+3. Zusätzlich wird eine **Zufallsstichprobe nicht gemeldeter Vorgänge** geprüft — sonst
+   erfährt niemand, was die Liste übersieht.
+4. Erst wenn ein paar hundert Urteile vorliegen, lässt sich eine Trefferquote nennen —
+   und dann auch, ob sich die Liste lohnt.
+
+> **Punkt 3 ist der, den fast alle weglassen.** Wer nur die gemeldeten Fälle beurteilt,
+> misst die Präzision und erfährt über die Vollständigkeit nichts. Ein System, das täglich
+> sechs harmlose Vorgänge meldet und alle echten Probleme übersieht, sieht in dieser
+> Auswertung genauso aus wie eines, das nichts übersieht.
+
+
+### 6.3 Der Rückkopplungsvorteil, den dieses Modell hat
 
 In Notebook 2 war die Rückkopplung ein Problem: Wer die Wartungsliste befolgt, verhindert
 die Ausfälle, die er vorhersagen wollte, und verdirbt sich damit die Trainingsdaten.
@@ -700,10 +1168,11 @@ weitermachen, sobald Rückmeldungen da sind.
 
 | Wache | Schwelle | Reaktion |
 |---|---|---|
-| Trefferquote der Tagesliste | unter 20 % über einen Monat | Schwelle oder Merkmale überarbeiten |
-| Anteil bestätigter Vorgänge | Rückmeldung bleibt aus | **die Liste wird ignoriert** — organisatorisches Problem |
-| Verteilung der Fahrtdauer | verschiebt sich | „normal“ hat sich geändert, Modell neu anlernen |
-| Zahl der Vorgänge je Tag | wächst deutlich | zehn Plätze reichen nicht mehr |
+| Anteil bestätigter Vorgänge | Rückmeldung bleibt aus | **die Liste wird ignoriert** — organisatorisches Problem, und das Ende jeder Bewertbarkeit |
+| Trefferquote im Schattenbetrieb | sobald genug Urteile vorliegen | **erst dann** lässt sich überhaupt eine Schwelle festlegen |
+| Anteil leerer Listen | weicht deutlich von den heute gemessenen 89 % ab | der Referenzzustand passt nicht mehr — Schwelle neu bestimmen |
+| Verteilung der Fahrtdauer | verschiebt sich | „normal“ hat sich geändert, Referenzzeitraum neu wählen |
+| Alter des Referenzzeitraums | älter als ein Jahr | neu anlernen, bevor „normal“ von gestern ist |
 
 **Die zweite Zeile ist die wichtigste.** Ein Anomaliemodell, dessen Meldungen niemand
 bestätigt, ist nach einem halben Jahr nicht mehr zu bewerten — und wird still abgeschaltet.
@@ -717,12 +1186,12 @@ MD("""
 
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | Zwei Aufgaben, eine Tagesliste mit zehn Plätzen. Die Kosten-Nutzen-Rechnung ergibt eine Rentabilitätsschwelle von 5 % — das Erfolgskriterium liegt mit 20 % bewusst darüber, weil eine Liste voller Fehlalarme nicht benutzt wird |
+| 1 Business Understanding | **Drei** Produkte mit drei Entscheidungszeitpunkten, nicht eine Liste. Listenlänge aus Zeitbudget und Prüfdauer abgeleitet: sechs Plätze. Rentabilitätsschwelle 4,8 %, Kriterium für B bewusst bei 20 % — und für A2 bewusst **keines**, weil das Label fehlt |
 | 2 Data Understanding | Eine **Lücke** in der Dauerverteilung trennt Fahrten von Rückgabeproblemen. Und eine Sackgasse: Die Geschwindigkeit taugt nichts, weil sie aus der Dauer abgeleitet ist |
 | 3 Data Preparation | Sechs Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor kein auffälliger Vorgang ist |
-| 4 Modeling | Interquartilsregel (über 2.000 Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert |
-| 5 Evaluation | Die Korrektur hebt Aufgabe A von 2 % auf 36 %. Bei Aufgabe B **verfehlt das Modell** das Kriterium mit 14 % — eine einzeilige Regel erreicht 32 % und erfüllt es. Das Verfahren war das Problem, nicht die Daten |
-| 6 Deployment | Tagesliste mit Begründung je Vorgang. Für Aufgabe B wird die Regel empfohlen, nicht das Modell |
+| 4 Modeling | Interquartilsregel (4.505 Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
+| 5 Evaluation | Die globale Rangliste meldet 56 %, die tatsächlich erzeugbare Tagesliste 6,2 % — **neunmal weniger, bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B fällt die Trefferquote von 32 % über 44 % und 13,4 % auf **3,9 % je neuem Alarm** — Kriterium gerissen |
+| 6 Deployment | A1 als Echtzeitregel in Betrieb, A2 nur im Schattenbetrieb, B **nicht freigegeben**. Der Status steht im Modellpaket, nicht im Fließtext |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
 
@@ -734,18 +1203,23 @@ zehn obersten Zeilen **angesehen** hat.
 > **Sehen Sie sich immer die Extremfälle an, die ein Modell meldet.** Eine Kennzahl sagt
 > Ihnen, *wie gut* — nur der Blick auf die Fälle sagt Ihnen, *woran*.
 
-**Die zwei Sätze, die aus diesem Notebook bleiben**
+**Die drei Sätze, die aus diesem Notebook bleiben**
 
-> Sehen Sie sich immer an, was ein Modell meldet. Der CARGO-Fehlschlag stand in keiner
-> Kennzahl — er stand in den zehn obersten Zeilen.
+> **1.** Sehen Sie sich immer an, was ein Modell meldet. Der CARGO-Fehlschlag stand in
+> keiner Kennzahl — er stand in den obersten Zeilen.
 
-> Ein Verfahren, das schlechter ist als eine Zeile Fachwissen, ist nicht am Problem
-> gescheitert, sondern an der Aufgabenstellung.
+> **2.** Eine Kennzahl muss zu dem Produkt gehören, das ausgeliefert wird. Eine Rangliste
+> über drei Jahre ist am Morgen nicht erzeugbar; sie misst deshalb nichts, was jemand
+> bekommt — auch dann nicht, wenn sie korrekt gerechnet ist.
 
-Bei Aufgabe B hat der Isolation Forest über alle 10.890 Stationstage gesucht, obwohl
-alle Störungen an den 1.041 Nulltagen liegen. Diese Eingrenzung ist Fachwissen. Wer sie
-dem Verfahren überlässt, bekommt sie schlechter zurück, als er sie hätte hineingeben
-können.
+> **3.** Ein Score, der für 99 % seiner Kandidaten denselben Wert hat, sortiert nicht.
+> Die Reihenfolge kommt dann aus der Zeilenfolge der Tabelle, und niemand sieht es.
+
+Bei Aufgabe B kam noch eine vierte Sorte Fehler dazu: **Alle drei Fehler wirkten in
+dieselbe Richtung.** Die falsche Sortierung, die globale Rangliste und die Tageszählung
+statt Ereigniszählung machten die Zahl jeweils größer. Das ist typisch und hat einen
+banalen Grund — ein Fehler, der das eigene Ergebnis verschlechtert, fällt beim Schreiben
+auf. Die anderen nicht.
 
 Die eigentliche Lösung bleibt trotzdem eine bessere Datenquelle: Die Statusmeldungen der
 Terminals fallen ohnehin an. Würden sie gespeichert, wäre die Frage eine Abfrage und
@@ -758,9 +1232,18 @@ keine Schätzung.
    legitimes Ergebnis. Bis dahin läuft die Regel aus 5.5.
 2. **Rückmeldungen einsammeln.** Sobald ein paar hundert Vorgänge beurteilt sind, wird
    aus der Anomalieerkennung eine Klassifikation mit echtem Label.
-3. **Nach Radtyp getrennt rechnen.** Was bei einem CARGO-Rad normal ist — lange Dauer,
-   hohes Entgelt —, ist bei einem CITY-Rad auffällig. Ein gemeinsames Modell mittelt
-   diesen Unterschied weg.
+3. **Je Radtyp ein eigenes Modell.** Bisher wird ein gemeinsames Modell mit
+   typspezifisch normierten Merkmalen gerechnet — das ist etwas anderes und offensichtlich
+   nicht genug: CARGO ist in den Top 50 immer noch doppelt übervertreten, EBIKE
+   untervertreten. Dazu robustere Maße (Median und mittlere absolute Abweichung statt
+   Mittelwert und Streuung), denn genau die Extremfälle, die wir suchen, verzerren
+   Mittelwert und Streuung.
+4. **Eine Nulltags-Wahrscheinlichkeit statt einer Nulltags-Regel.** Wetter und Kalender
+   aus Notebook 4, Stationsvolumen aus Notebook 3, Nachbarstationen. Erst wenn erklärt
+   ist, warum eine Station gestern still war, lässt sich „ruhig“ von „gestört“ trennen.
+5. **Abgebrochene und stornierte Vorgänge ansehen.** 1.364 Abbrüche und 324 Stornierungen
+   wurden hier vor der Analyse entfernt. Häufungen davon können auf App-, Zahlungs- oder
+   Schlossprobleme hinweisen — als eigene Zeitreihe, nicht vermischt mit den Fahrten.
 
 ---
 
@@ -773,10 +1256,21 @@ keine Schätzung.
 | 3 | Clustering | keine | Vier Stationstypen, vier Kundensegmente — und eine falsch definierte Umsatzgröße |
 | 4 | Zeitreihe | eine Zahl, in der Zeit | Nachfrageprognose — mit ehrlichem Abschlag für die Wettervorhersage |
 | 5 | Assoziation | keine | Umlaufplan — und die Einsicht, dass hoher Lift meist wenig Support bedeutet |
-| 6 | Anomalie | keine | Tagesliste — und ein sauber begründetes „geht nicht“ für die zweite Aufgabe |
+| 6 | Anomalie | keine | Eine Echtzeitregel in Betrieb, eine Tagesliste im Schattenbetrieb, eine Aufgabe nicht freigegeben |
 
-**Dreimal Freigabe, einmal Teilfreigabe, zweimal Rücksprung.** Das ist keine schlechte
-Bilanz, sondern eine realistische. Analyseprojekte, in denen alles auf Anhieb funktioniert,
-gibt es in Lehrbüchern — und sonst nirgends.
+**Einmal Teilfreigabe, einmal Machbarkeitsindiz, dreimal Rücksprung, einmal
+Schattenbetrieb — und keine einzige uneingeschränkte Betriebsfreigabe.**
+
+Das ist keine schlechte Bilanz, sondern eine realistische. Analyseprojekte, in denen alles
+auf Anhieb funktioniert, gibt es in Lehrbüchern — und sonst nirgends.
+
+> **Was in allen sechs Notebooks dieselbe Ursache hatte:** Nicht ein einziges Modell ist
+> an seiner Mathematik gescheitert. Gescheitert sind Kennzahlen, die zu einem anderen
+> Produkt gehörten als dem ausgelieferten; Kriterien, die auf der falschen Skala lagen;
+> Baselines, die fehlten oder falsch gebaut waren; und Sätze, die stehen blieben,
+> nachdem sich die Rechnung darunter geändert hatte.
+>
+> **Das Handwerk steckt nicht im Verfahren. Es steckt darin, zu prüfen, ob die Zahl das
+> misst, was daneben behauptet wird.**
 """),
 ]
