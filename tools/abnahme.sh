@@ -731,6 +731,13 @@ else
   sed -n '1,20p' /tmp/abnahme-nbtext.log | sed 's/^/     /'
 fi
 
+if python3 tools/grants_pruefen.py >/tmp/abnahme-grants.log 2>&1; then
+  ergebnis 0 "Jedes Recht aus 0011_sicherheit.sql ist in der Datenbank gesetzt"
+else
+  ergebnis 1 "Ein GRANT steht im Repo, aber nicht in der Datenbank"
+  sed -n '1,20p' /tmp/abnahme-grants.log | sed 's/^/     /'
+fi
+
 if python3 tools/tote_schwellen_pruefen.py >/tmp/abnahme-gates.log 2>&1; then
   ergebnis 0 "Jedes ausgegebene Urteil haengt an einer Entscheidung im Code"
 else
