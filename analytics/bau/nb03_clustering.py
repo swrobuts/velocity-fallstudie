@@ -12,6 +12,13 @@ kopf("Clustering: Welche Gruppen stecken in den Daten?",
      NAME),
 
 MD("""
+> **Lehrdatensatz.** Fahrten, Stationen und Kundschaft dieser Fallstudie sind
+> **synthetisch erzeugt**. Für die Stationen gilt das besonders: Sie wurden mit genau vier
+> Typen angelegt, die im Generator absichtlich verstärkt wurden. Wenn das Clustering unten
+> diese vier Typen sauber wiederfindet, ist das ein **erfolgreicher Test des Verfahrens
+> gegen den Generator** — keine Bestätigung an echten Daten. Silhouettenwerte und
+> Trefferquoten in diesem Notebook zeigen Methodenverhalten, nicht Marktrealität.
+
 ## Zwei Fragen, ein Verfahren
 
 Dieses Notebook behandelt **zwei Aufgaben parallel**, weil beide dasselbe Verfahren
@@ -509,8 +516,17 @@ print(f"In beiden Quartalen aktiv: {len(gemeinsam)} Kundinnen und Kunden")
 print(f"ARI zwischen den beiden Zeitpunkten: "
       f"{adjusted_rand_score(vorquartal[gemeinsam], heute[gemeinsam]):.3f}")
 print(f"Segmentwechsel nach bester Zuordnung: {wechselquote:.1%}")
-print(f"\\nDie Überwachung in Phase 6 nennt 25 % je Quartal als Alarmschwelle.")
-print(f"-> Sie ist {'GERISSEN' if wechselquote > 0.25 else 'gehalten'}.")
+# DAS GATE IST EINE VARIABLE, KEIN SATZ.
+#
+# Eine Schwelle, die nur im Text steht, bindet nichts. Diese hier
+# entscheidet weiter unten darueber, ob die Kampagnenliste als freigegeben
+# oder als gesperrt exportiert wird.
+GATE_WECHSEL = 0.25
+KUNDENSEGMENTE_STABIL = bool(wechselquote <= GATE_WECHSEL)
+
+print(f"\\nDie Überwachung in Phase 6 nennt {GATE_WECHSEL:.0%} je Quartal als Alarmschwelle.")
+print(f"-> Sie ist {'gehalten' if KUNDENSEGMENTE_STABIL else 'GERISSEN'}.")
+print("\\nDiese Variable bindet den Export in Phase 6 - sie ist keine Randnotiz.")
 '''),
 
 MD("""
@@ -796,7 +812,7 @@ entweder verloren oder zurückzugewinnen.
 """),
 
 # =====================================================================
-PHASE(6, "Aus vier Stationstypen wird ein Umverteilungsplan, aus fünf Kundengruppen "
+PHASE(6, "Aus vier Stationstypen werden Dispositions-HYPOTHESEN, aus fünf Kundengruppen "
          "ein Kampagnenplan."),
 
 CODE('''
@@ -853,8 +869,28 @@ ausgabe_stationen = (S.reset_index()
                      [["station_id", "stationsnummer", "name", "stationstyp", "regel",
                        "wochenendanteil", "dauer_median", "fahrten_gesamt"]])
 ausgabe_stationen["stichtag"] = stichtag.date()
-ausgabe_stationen.to_csv("stationstypen.csv", index=False)
-print("geschrieben: stationstypen.csv")
+
+# WAS HIER STEHT - UND WAS NICHT.
+#
+# Die Typen und Regeln sind ausschliesslich aus ABFAHRTSPROFILEN abgeleitet:
+# wann wird an dieser Station losgefahren. Fuer einen Umverteilungsplan
+# fehlt die halbe Rechnung - Ankuenfte, Nettofluss, tatsaechlicher Bestand,
+# Leer- und Vollzeiten, Kapazitaet, Stoerungen und die frei zurueck-
+# gegebenen Raeder (Notebook 5). Die Datei heisst deshalb "stationsprofile"
+# und die Spalte "hypothese", nicht "plan" und nicht "regel".
+ausgabe_stationen = ausgabe_stationen.rename(columns={"regel": "hypothese"})
+kopf_st = [
+    f"# Stichtag: {stichtag.date()}",
+    "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
+    "# Grundlage: NUR Abfahrtsprofile - keine Ankuenfte, Bestaende oder Kapazitaeten",
+    "# STATUS: HYPOTHESEN - kein Umverteilungsplan, keine Sollbestaende",
+]
+with open("stationsprofile.csv", "w", encoding="utf-8") as f:
+    f.write("\\n".join(kopf_st) + "\\n")
+    ausgabe_stationen.to_csv(f, index=False)
+print("geschrieben: stationsprofile.csv")
+print("Die Spalte heisst 'hypothese': Sie sagt, WANN abgefahren wird -")
+print("nicht, wieviele Raeder an dieser Station stehen sollen.")
 '''),
 
 CODE('''
@@ -969,12 +1005,44 @@ export["auswahlgrund"] = export.apply(
 spalten = ["kundennummer", "segment", "maßnahme", "auswahlgrund",
            "stichtag", "gilt_bis", "tarif_code"]
 export = export[export.segment != "Nie aktiviert"][spalten]
-export.to_csv("kampagnenliste.csv")
-print(f"KAMPAGNENLISTE  Stichtag {stichtag.date()}, gültig 90 Tage\\n")
+
+# DAS GATE AUS PHASE 5 ENTSCHEIDET, WAS HIER PASSIERT.
+#
+# Eine fruehere Fassung stellte in Phase 5 fest, dass die Stabilitaets-
+# schwelle gerissen ist - und exportierte drei Zellen spaeter trotzdem
+# eine Kampagnenliste, als waere nichts gewesen. Ein Kriterium, das den
+# Export nicht bindet, ist kein Kriterium.
+freigabe = "FREIGEGEBEN" if KUNDENSEGMENTE_STABIL else "GESPERRT"
+kopf = [
+    f"# Stichtag: {stichtag.date()}, gueltig bis "
+    f"{(stichtag + pd.Timedelta(days=90)).date()}",
+    "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
+    f"# Segmentstabilitaet je Quartal: {wechselquote:.1%} Wechsel "
+    f"(Schwelle {GATE_WECHSEL:.0%})",
+    f"# STATUS: {freigabe}",
+]
+if not KUNDENSEGMENTE_STABIL:
+    kopf.append("# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN. Die Segmente sind "
+                "zwischen zwei Quartalen zu instabil;")
+    kopf.append("# jeder vierte Kunde bekaeme eine Ansprache, die zum Zeitpunkt "
+                "des Versands nicht mehr passt.")
+with open("kampagnenliste.csv", "w", encoding="utf-8") as f:
+    f.write("\\n".join(kopf) + "\\n")
+    export.to_csv(f)
+
+print(f"KAMPAGNENLISTE  Stichtag {stichtag.date()}, gültig 90 Tage")
+print(f"STATUS: {freigabe}\\n")
 print(export.head(8).to_string())
 print(f"\\n{len(export)} ansprechbare Kundinnen und Kunden, "
       f"{export.segment.nunique()} Segmente")
-print("geschrieben: kampagnenliste.csv")'''),
+print("geschrieben: kampagnenliste.csv")
+if not KUNDENSEGMENTE_STABIL:
+    print()
+    print("ABER: Das Stabilitaetsgate aus Phase 5 ist gerissen "
+          f"({wechselquote:.1%} > {GATE_WECHSEL:.0%}).")
+    print("Die Datei traegt deshalb den Status GESPERRT und geht NICHT an ein")
+    print("Kampagnensystem. Sie bleibt als Arbeitsstand und als Beleg dafuer,")
+    print("was das Gate verhindert hat.")'''),
 MD("""
 ### 6.4 Was bei diesen beiden Auslieferungen zu beachten ist
 

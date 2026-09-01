@@ -731,6 +731,13 @@ else
   sed -n '1,20p' /tmp/abnahme-nbtext.log | sed 's/^/     /'
 fi
 
+if python3 tools/tote_schwellen_pruefen.py >/tmp/abnahme-gates.log 2>&1; then
+  ergebnis 0 "Jedes ausgegebene Urteil haengt an einer Entscheidung im Code"
+else
+  ergebnis 1 "Ein Erfolgskriterium wird gedruckt, beeinflusst aber nichts"
+  sed -n '1,20p' /tmp/abnahme-gates.log | sed 's/^/     /'
+fi
+
 if [ -f slides/velocity-crispdm.pptx ]; then
   if python3 tools/folienzahlen_pruefen.py >/tmp/abnahme-folien.log 2>&1; then
     ergebnis 0 "Jede Folienzahl steht im Notebook, das die Folie zitiert"

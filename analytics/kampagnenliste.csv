@@ -1,3 +1,9 @@
+# Stichtag: 2026-08-24, gueltig bis 2026-11-22
+# Datenherkunft: SYNTHETISCHE LEHRDATEN
+# Segmentstabilitaet je Quartal: 25.4% Wechsel (Schwelle 25%)
+# STATUS: GESPERRT
+# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN. Die Segmente sind zwischen zwei Quartalen zu instabil;
+# jeder vierte Kunde bekaeme eine Ansprache, die zum Zeitpunkt des Versands nicht mehr passt.
 kunde_id,kundennummer,segment,maßnahme,auswahlgrund,stichtag,gilt_bis,tarif_code
 1,K-000001,Vielfahrer mit Freiminuten,"Bindung halten — und je Tarif prüfen, ob das Freiminutenvolumen nötig ist","recency 24 d, 15 Fahrten, 9.70 EUR",2026-08-24,2026-11-22,STUDENT
 2,K-000002,"Neu, noch keine Erstfahrt",Willkommensansprache zur Erstfahrt,"seit 348 Tagen angemeldet, keine Fahrt",2026-08-24,2026-11-22,BASIS

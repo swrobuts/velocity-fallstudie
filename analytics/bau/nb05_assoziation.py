@@ -495,9 +495,11 @@ p-Wert von **0,00230**.
 > desselben Tages hängen zusammen. Ein Bootstrap über Tage oder Kundennummern wäre
 > ehrlicher und fiele vermutlich schwächer aus.
 >
-> Was wir sagen können: **Die Häufungen sind nicht mit reinem Zufall zu erklären, und sie
-> halten in einem späteren Zeitraum** (Phase 5.5). Beides zusammen ist ein Stabilitätsindiz
-> — kein Signifikanznachweis und erst recht kein Beleg betrieblicher Relevanz.
+> Was wir sagen können: **Unter dem gewählten Unabhängigkeitsmodell sind die Häufungen
+> sehr unwahrscheinlich, und sie halten in einem späteren Zeitraum** (Phase 5.5). Beides
+> zusammen ist ein Stabilitätsindiz — kein Signifikanznachweis und erst recht kein Beleg
+> betrieblicher Relevanz. Der Zusatz „unter dem gewählten Modell“ ist keine Floskel: Fällt
+> die Unabhängigkeitsannahme, fällt die Aussage mit.
 
 > **Eine wichtige Unterscheidung bleibt.** „Statistisch auffällig" und „betrieblich
 > relevant" sind zwei verschiedene Dinge, und die Assoziationsanalyse liefert nur das
@@ -1031,7 +1033,9 @@ print("gruppiert nach der jeweils nächsten Station. Das zeigt räumlich-zeitlic
 print("Häufungen der Vergangenheit; eine Route und ein Einsatzzeitpunkt folgen")
 print("daraus nicht.")
 print(einsammeln.to_string())
-print(f"\\ninsgesamt {len(frei) / WERKTAGE:.1f} Räder je Werktag")
+print(f"\\ninsgesamt {len(frei) / WERKTAGE:.1f} frei endende FAHRTEREIGNISSE je Werktag")
+print(f"(von {raeder_tag.mean():.1f} verschiedenen Raedern - dieselbe Unterscheidung")
+print("wie oben. Die Tabelle zaehlt Ereignisse, nicht Fahrzeuge.)")
 
 print(f"\\nZum Vergleich die alte, falsche Gruppierung nach Startstation:")
 print(nach_start.sum(axis=1).sort_values(ascending=False).head(3).round(2).to_string())
@@ -1046,18 +1050,31 @@ print("also an den falschen Stellen verortet worden.")
 # Betriebsanweisung gelesen. "umlaufplan" heisst das erste hier bewusst
 # NICHT mehr: Ein Plan braucht Datum, Menge, Quelle, Ziel und ein
 # Entscheidungskriterium - nichts davon steht drin.
-kopf = [
-    f"# Analysezeitraum: {koerbe.startzeit.min().date()} bis "
-    f"{koerbe.startzeit.max().date()} ({WERKTAGE} Werktage)",
-    "# Einheit: Raeder je Werktag (Mittelwerte bzw. Quantile ueber alle Werktage)",
-    "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
-    "# Status: EXPLORATIV - nicht freigegeben, kein Einsatzplan",
-    "# Gueltigkeit: keine - historische Auswertung ohne Einsatzdatum",
-]
-for datei, tabelle in [("stationssalden_werktag.csv", kennzahl.round(2)),
-                       ("abstell_hotspots_werktag.csv", einsammeln)]:
+# JEDE DATEI IHRE EIGENE EINHEIT.
+#
+# Eine gemeinsame Kopfzeile "Raeder je Werktag" war fuer die Hotspots
+# falsch: dort stehen frei endende FAHRTEREIGNISSE, nicht Fahrzeuge. Eine
+# Einheit, die fuer zwei Dateien gleichzeitig gelten soll, gilt meist fuer
+# keine von beiden genau.
+def kopf_fuer(einheit):
+    return [
+        f"# Analysezeitraum: {koerbe.startzeit.min().date()} bis "
+        f"{koerbe.startzeit.max().date()} ({WERKTAGE} Werktage)",
+        f"# Einheit: {einheit}",
+        "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
+        "# Status: EXPLORATIV - nicht freigegeben, kein Einsatzplan",
+        "# Gueltigkeit: keine - historische Auswertung ohne Einsatzdatum",
+    ]
+
+for datei, tabelle, einheit in [
+        ("stationssalden_werktag.csv", kennzahl.round(2),
+         f"Netto-Radbewegungen je Werktag; Verteilungskennzahlen ueber alle "
+         f"{WERKTAGE} Werktage"),
+        ("abstell_hotspots_werktag.csv", einsammeln,
+         f"frei endende FAHRTEREIGNISSE je Werktag; historische Mittelwerte "
+         f"ueber alle {WERKTAGE} Werktage")]:
     with open(datei, "w", encoding="utf-8") as f:
-        f.write("\\n".join(kopf) + "\\n")
+        f.write("\\n".join(kopf_fuer(einheit)) + "\\n")
         tabelle.to_csv(f)
 print()
 print("geschrieben: stationssalden_werktag.csv, abstell_hotspots_werktag.csv")
@@ -1279,7 +1296,7 @@ MD("""
 
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. Drei Erfolgskriterien: Support ≥ 1 %, Lift ≥ 1,3, und die Regel muss eine Transporterfahrt begründen |
+| 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. Drei Erfolgskriterien: Support ≥ 1 %, kontextbedingter Lift ≥ 1,3 und **Ziel ist eine konkrete Station**. K3 prüft nur technische Adressierbarkeit — nicht Wirtschaftlichkeit und nicht, ob sich eine Transporterfahrt lohnt |
 | 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren (16,5 % der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
@@ -1303,10 +1320,11 @@ MD("""
 1. **Das Erfolgskriterium neu formulieren** — in Fahrten je Werktag, hergeleitet aus den
    Kosten einer Transporterfahrt. Diese Kosten zu beschaffen ist die erste Aufgabe, nicht
    die letzte. **Vor** der nächsten Messung.
-2. **Die Regelsuche und ihre Prüfung trennen.** Wir haben die 32 Regeln auf demselben
-   Datensatz gefunden **und** bewertet. Wer sucht und prüft, wo er gesucht hat, findet
-   seine eigenen Zufälle wieder. Sauber wäre: auf den ersten zwei Jahren suchen, am
-   dritten prüfen — so wie es Notebook 4 mit seinen Zeitscheiben vormacht.
+2. **Die Bestätigung rollierend machen.** Der einmalige Schnitt aus Phase 5.5 — suchen
+   in den ersten zwei Dritteln, prüfen im letzten — ist bereits umgesetzt und hat gehalten
+   (8 von 9 Regeln). Er ist aber **eine einzige Realisierung**, und 2023 wie 2026 sind
+   Teiljahre. Mehrere rollierende, saisonal vergleichbare Fenster würden zeigen, ob die
+   Stabilität an den Regeln liegt oder am gewählten Schnittpunkt.
 3. **Zurück zu Phase 3:** Die vier Zeitfenster sind gesetzt, nicht gefunden. Eine
    Aufteilung nach den tatsächlichen Spitzen (aus Notebook 3!) könnte schärfere Regeln
    liefern. Die Untergrenze von 0,5 % Support gehört dabei mit auf den Prüfstand — sie
