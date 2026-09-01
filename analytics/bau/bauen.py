@@ -46,14 +46,17 @@ def pruefen(gebaute):
         eigene, sammelt = [], False
         for nackt, roh in zeilen:
             if kopf.match(nackt):
-                sammelt = any(n in nackt for n in gebaute)
-                if sammelt and not nackt.startswith("ok"):
+                # Nur harte Funde halten den Bau auf. Ein Hinweis ist ein
+                # Hinweis - sonst blockiert jede fillna-Meldung die Abnahme.
+                sammelt = (any(n in nackt for n in gebaute)
+                           and nackt.startswith(("FEHLER", "PRUEFEN")))
+                if sammelt:
                     eigene.append(nackt)
             elif sammelt and nackt.strip():
                 eigene.append(nackt)
         betroffen = bool(eigene)
         fremde = sum(1 for nackt, _ in zeilen
-                     if kopf.match(nackt) and not nackt.startswith("ok")
+                     if nackt.startswith(("FEHLER", "PRUEFEN"))
                      and not any(n in nackt for n in gebaute))
         nachsatz = f"   ({fremde} Fund(e) in anderen Notebooks)" if fremde else ""
         print(f"  {'FEHLER ' if betroffen else 'ok     '} {zweck}{nachsatz}")

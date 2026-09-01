@@ -111,6 +111,8 @@ raeder = pd.read_csv(BASIS + "fahrrad.csv", parse_dates=["angeschafft_am", "ausg
 schaeden = pd.read_csv(BASIS + "schadensmeldung.csv", parse_dates=["gemeldet_am"])
 auftraege = pd.read_csv(BASIS + "wartungsauftrag.csv", parse_dates=["eroeffnet_am", "erledigt_am"])
 fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
+# Die Routenmatrix haelt Strecke und Steigung jeder Verbindung fest.
+routen = pd.read_csv(BASIS + "radrouten_matrix.csv", comment="#")
 
 print(f"Räder:              {len(raeder):>6d}   davon ausgemustert: {(raeder.status=='ausgemustert').sum()}")
 print(f"Schadensmeldungen:  {len(schaeden):>6d}")
@@ -217,6 +219,27 @@ auf, aber mit *unterschiedlichem* Wissensstand und *unterschiedlichem* Ausgang. 
 kein Trick, sondern genau die Art, wie solche Modelle in der Praxis gebaut werden.
 """),
 
+MD("""
+### Woher die Kilometer kommen — drei Quellen, absteigend nach Güte
+
+Der Sensor meldet nur einen Teil der Strecken. Die Lücke lässt sich auf zwei Wegen
+füllen, und sie sind nicht gleich gut:
+
+1. **Der Messwert**, wo er vorliegt.
+2. **Die Routenmatrix**, wo Start und Ziel bekannt sind. Die Strecke zwischen zwei
+   Stationen steht fest — sie muss nicht geraten werden.
+3. **Dauer mal typischer Geschwindigkeit**, wo die Fahrt frei im Gebiet endete und es
+   kein Ziel gibt.
+
+Die Reihenfolge ist keine Geschmacksfrage. Die nächste Zelle prüft beide Ersatzquellen
+dort, wo der Sensor gemessen hat — dann kennen wir die Wahrheit und können vergleichen.
+
+> **Und ein Merkmal entsteht dabei, das es vorher nicht gab:** die **Höhenmeter**.
+> Bergauf leidet der Antrieb, bergab die Bremse. Beides ist Verschleiß, und beides
+> steht in keiner Spalte der Ausleihtabelle — erst die Steigung der Verbindung macht es
+> rechenbar.
+"""),
+
 CODE('''
 abgeschlossen = fahrten[fahrten.status == "abgeschlossen"].copy()
 abgeschlossen["dauer_min"] = (abgeschlossen.endzeit - abgeschlossen.startzeit).dt.total_seconds() / 60
@@ -233,22 +256,66 @@ print(f"Fahrten über {LANGFAHRT_STUNDEN} Stunden: {lang.sum()} "
 abgeschlossen = abgeschlossen[~lang].copy()
 print(f"Abgeschlossene Fahrten: {vorher} -> {len(abgeschlossen)}")
 
-# DIE SENSORLUECKE SCHLIESSEN - aber erst NACH dem Messwert.
-# Wo eine Distanz gemessen wurde, wird sie verwendet. Nur die Luecke wird
-# geschaetzt. Alles zu schaetzen hiesse, sechs von zehn vorhandenen
-# Messungen wegzuwerfen, weil vier fehlen.
+# DIE SENSORLUECKE SCHLIESSEN - in der Reihenfolge der Guete.
+# Wo eine Distanz gemessen wurde, wird sie verwendet. Alles zu schaetzen
+# hiesse, sechs von zehn vorhandenen Messungen wegzuwerfen, weil vier fehlen.
+# Drei Quellen in absteigender Guete:
+#   1. der Messwert, wo er da ist;
+#   2. die Routenmatrix, wo Start und Ziel bekannt sind - die Strecke steht
+#      dort fest und muss nicht geraten werden;
+#   3. Dauer mal typischer Geschwindigkeit, wo die Fahrt frei endete.
 TYPISCHE_GESCHWINDIGKEIT = {"CITY": 13.0, "EBIKE": 18.0, "CARGO": 11.0}   # km/h
 abgeschlossen = abgeschlossen.merge(raeder[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
+
+matrix = routen.set_index(["von_id", "nach_id"])
+schluessel = [
+    (str(int(a)), str(int(b))) if pd.notna(b) else None
+    for a, b in zip(abgeschlossen.start_station_id, abgeschlossen.end_station_id)]
+aus_matrix = pd.Series(
+    [np.nan if s is None or s[0] == s[1] else matrix.strecke_m.get(s, np.nan) / 1000
+     for s in schluessel], index=abgeschlossen.index)
+steigung = pd.Series(
+    [np.nan if s is None or s[0] == s[1] else matrix.steigung_promille.get(s, np.nan)
+     for s in schluessel], index=abgeschlossen.index)
+
 schaetzung = (abgeschlossen.dauer_min / 60.0
               * abgeschlossen.typ_code.map(TYPISCHE_GESCHWINDIGKEIT))
 hat_messwert = abgeschlossen.distanz_km.notna()
-abgeschlossen["km_fahrt"] = abgeschlossen.distanz_km.where(hat_messwert, schaetzung)
-abgeschlossen["km_geschaetzt"] = ~hat_messwert
+abgeschlossen["km_fahrt"] = abgeschlossen.distanz_km.where(
+    hat_messwert, aus_matrix.fillna(schaetzung))
+abgeschlossen["km_geschaetzt"] = ~hat_messwert & aus_matrix.isna()
+abgeschlossen["km_aus_matrix"] = ~hat_messwert & aus_matrix.notna()
 
-abweichung = (schaetzung[hat_messwert] - abgeschlossen.distanz_km[hat_messwert]).abs().mean()
-print(f"\\nGemessen:   {hat_messwert.sum():>6d} Fahrten ({hat_messwert.mean():.1%})")
-print(f"Geschätzt:  {(~hat_messwert).sum():>6d} Fahrten ({(~hat_messwert).mean():.1%})")
-print(f"Wo beides vorliegt, weicht die Schätzung im Mittel um {abweichung:.2f} km ab")
+# HOEHENMETER. Bergauf leidet der Antrieb, bergab die Bremse. Beides ist
+# Verschleiss, und beides steht in keiner Spalte der Ausleihtabelle - erst die
+# Steigung der Verbindung macht es rechenbar.
+abgeschlossen["hoehenmeter"] = (
+    steigung.abs().fillna(0) / 1000.0 * abgeschlossen.km_fahrt * 1000.0)
+print(f"Kilometer je Fahrt: {hat_messwert.mean():.0%} gemessen, "
+      f"{abgeschlossen.km_aus_matrix.mean():.0%} aus der Routenmatrix, "
+      f"{abgeschlossen.km_geschaetzt.mean():.0%} geschätzt")
+
+# Wie gut waeren die beiden Ersatzquellen dort, wo wir die Wahrheit kennen?
+abw_schaetzung = (schaetzung[hat_messwert]
+                  - abgeschlossen.distanz_km[hat_messwert]).abs().mean()
+_prueffall = hat_messwert & aus_matrix.notna()
+abw_matrix = (aus_matrix[_prueffall]
+              - abgeschlossen.distanz_km[_prueffall]).abs().mean()
+merke("anteil_gemessen", hat_messwert.mean())
+merke("anteil_matrix", abgeschlossen.km_aus_matrix.mean())
+merke("anteil_geschaetzt", abgeschlossen.km_geschaetzt.mean())
+merke("abweichung_matrix", abw_matrix)
+_ = merke("abweichung_schaetzung", abw_schaetzung)
+print()
+print(f"Gemessen:            {hat_messwert.sum():>6d} Fahrten ({hat_messwert.mean():.1%})")
+print(f"aus der Routenmatrix:{abgeschlossen.km_aus_matrix.sum():>6d} Fahrten "
+      f"({abgeschlossen.km_aus_matrix.mean():.1%})")
+print(f"geschätzt:           {abgeschlossen.km_geschaetzt.sum():>6d} Fahrten "
+      f"({abgeschlossen.km_geschaetzt.mean():.1%})")
+print()
+print("Gegenprobe dort, wo der Sensor gemessen hat:")
+print(f"   Routenmatrix weicht im Mittel um {abw_matrix:.2f} km ab")
+print(f"   Dauer mal Tempo weicht um        {abw_schaetzung:.2f} km ab")
 print(f"(mittlere gemessene Strecke: {abgeschlossen.distanz_km[hat_messwert].mean():.2f} km)")
 
 # WIE LANGE STEHT EIN SCHADEN OFFEN? Diese Zahl entscheidet, ob der
@@ -283,6 +350,7 @@ def zeile_bauen(stichtag):
     nutzung_fenster = fenster.groupby("fahrrad_id").agg(
         fahrten_180=("ausleihe_id", "size"),
         km_180=("km_fahrt", "sum"),
+        hoehenmeter_180=("hoehenmeter", "sum"),
         dauer_mittel=("dauer_min", "mean"),
     )
     bis_jetzt = abgeschlossen[abgeschlossen.startzeit <= stichtag]
@@ -321,7 +389,7 @@ def zeile_bauen(stichtag):
 
     z = bestand.set_index("fahrrad_id").join(
         [nutzung_fenster, gesamt, meldungen_bisher, letzte_reparatur, km_seit])
-    for spalte in ["fahrten_180", "km_180", "fahrten_gesamt", "km_gesamt",
+    for spalte in ["fahrten_180", "km_180", "hoehenmeter_180", "fahrten_gesamt", "km_gesamt",
                    "meldungen_bisher", "km_seit_reparatur"]:
         z[spalte] = z[spalte].fillna(0)
     z["dauer_mittel"] = z.dauer_mittel.fillna(z.dauer_mittel.median())
@@ -371,7 +439,8 @@ MD("""
 """),
 
 CODE('''
-merkmale = ["fahrten_180", "km_180", "dauer_mittel", "fahrten_gesamt", "km_gesamt",
+merkmale = ["fahrten_180", "km_180", "hoehenmeter_180", "dauer_mittel",
+            "fahrten_gesamt", "km_gesamt",
             "meldungen_bisher", "tage_im_bestand", "tage_seit_reparatur", "km_je_tag",
             "km_seit_reparatur"]
 typ_dummies = pd.get_dummies(panel["typ_code"], prefix="typ").astype(int)
@@ -457,6 +526,12 @@ vergleich.append(liste_bewerten("Faustregel: km seit letzter Reparatur",
 ##ENDE
 # Trefferquote als Prozent: Als Dezimalzahl muss sie jeder Leser - und
 # jede Folie, die auf diese Tabelle zeigt - selbst umrechnen.
+_alt = next(v for v in vergleich if "ältestes Rad" in v["Vorgehen"])
+_km = next(v for v in vergleich if "meiste Kilometer" in v["Vorgehen"])
+merke("faustregel_alter", _alt["Trefferquote"])
+_ = merke("faustregel_km", _km["Trefferquote"])
+
+
 def als_prozent(df):
     d = df.copy()
     d["Trefferquote"] = d["Trefferquote"].map(lambda x: f"{x:.1%}")
@@ -627,17 +702,18 @@ Sehen Sie sich zur Deutung die Bedeutungsgrafik oben an: `km_seit_reparatur` ste
 vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — mehr aber auch nicht.
 
 > **Und noch etwas ist an der Tabelle bemerkenswert:** Die beiden schwächeren Faustregeln
-> — ältestes Rad und meiste Kilometer — liegen mit 45,0 und 51,7 Prozent nah beieinander.
+> — ältestes Rad und meiste Kilometer — liegen mit {{faustregel_alter:.1%}} und
+> {{faustregel_km:.1%}} nah beieinander.
 > Wer zwischen ihnen wählt, wählt zwischen zwei mittelmäßigen Antworten. Der Gewinn steckt
 > nicht darin, eine bessere Kennzahl zu suchen, sondern die richtige Frage zu stellen:
 > nicht *wie alt* ist das Rad, sondern *wie weit seit der Reparatur*.
 
 ### 5.3 Ein Quartal ist keine Aussage
 
-Der Gleichstand oben steht auf **einem** Stichtag. Die Grundrate schwankt aber zwischen
-7,6 Prozent im November und 45,5 Prozent im Mai — um das Sechsfache. Ein Verfahren, das
-im Mai vorn liegt, kann im November hinten liegen, ohne dass sich an ihm etwas geändert
-hat.
+Der Gleichstand oben steht auf **einem** Stichtag. Die Grundrate schwankt aber über die
+Quartale zwischen {{grundrate_min:.1%}} und {{grundrate_max:.1%}} — um mehr als das
+{{grundrate_faktor:.1f}}-Fache. Ein Verfahren, das in einem Quartal vorn liegt, kann im
+nächsten hinten liegen, ohne dass sich an ihm etwas geändert hat.
 
 Deshalb wird hier nicht auf dem Testquartal entschieden, sondern auf allen Quartalen
 davor. Für jedes wird neu trainiert, mit allem, was zu diesem Zeitpunkt bekannt war.
@@ -673,6 +749,10 @@ for tag in validierung:
                    "Vorteil Wald (EUR)": er["Kosten (EUR)"] - ew["Kosten (EUR)"]})
 
 roll = pd.DataFrame(zeilen)
+_gr = pd.DataFrame(zeilen).Grundrate
+merke("grundrate_min", _gr.min())
+merke("grundrate_max", _gr.max())
+_ = merke("grundrate_faktor", _gr.max() / max(_gr.min(), 0.001))
 roll["Grundrate"] = roll.Grundrate.map(lambda x: f"{x:.1%}")
 print("ROLLIERENDE VALIDIERUNG - je Stichtag neu trainiert\\n")
 print(roll.to_string(index=False))
