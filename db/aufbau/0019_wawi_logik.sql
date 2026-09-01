@@ -1144,7 +1144,23 @@ revoke all on all functions in schema velocity from public, anon, authenticated;
 -- trifft nicht nur die in dieser Datei neu angelegten Funktionen,
 -- sondern JEDE Funktion im Schema velocity - auch die vier
 -- Website-Funktionen aus 0009/0011 (api_kunde_sicherstellen,
--- api_profil_aktualisieren, api_ausleihe_starten, api_ausleihe_beenden)
+-- api_profil_aktualisieren, api_preisschaetzer_umschalten,
+-- api_ausleihe_starten, api_ausleihe_beenden)
+--
+-- ACHTUNG, DOPPELTE PFLEGE - HIER IST SCHON EINMAL ETWAS DURCHGEFALLEN.
+--
+-- Der pauschale "revoke all on all functions" oben nimmt auch die Grants
+-- aus 0011 mit. Diese Liste stellt sie wieder her. Wer in 0011 eine neue
+-- api_-Funktion ergaenzt und HIER nicht, hat sie nach jedem Aufbaulauf
+-- wieder verloren - lautlos.
+--
+-- Genau das ist mit api_preisschaetzer_umschalten passiert: in 0011
+-- ergaenzt, hier vergessen. Die Funktion war da, die Spalte war da, die
+-- Website war ausgeliefert - und der Schalter meldete
+-- "Einstellung konnte nicht gespeichert werden".
+--
+-- tools/grants_pruefen.py vergleicht seither 0011 gegen die Datenbank
+-- und faellt auf, wenn diese Liste unvollstaendig ist.
 -- und ist_mitarbeiter/hat_rolle aus 0017. 0019 ist die letzte Datei der
 -- Aufbaukette und laeuft nach 0011 und 0017 - ohne diese sechs hier
 -- erneut aufzufuehren, wuerde ihr eigener Grant durch den Grant dieser
@@ -1158,6 +1174,7 @@ revoke all on all functions in schema velocity from public, anon, authenticated;
 grant execute on function
   velocity.api_kunde_sicherstellen(),
   velocity.api_profil_aktualisieren(text, text, text, date, text, text, text, text),
+  velocity.api_preisschaetzer_umschalten(boolean),
   velocity.api_ausleihe_starten(bigint),
   velocity.api_ausleihe_beenden(bigint, bigint, numeric, numeric),
   velocity.ist_mitarbeiter(),

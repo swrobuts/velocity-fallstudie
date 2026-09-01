@@ -252,8 +252,26 @@ und ohne jede Statistikkenntnis erklärbar bleibt — **RFM**:
 """),
 
 CODE('''
-stichtag = echte.startzeit.max().normalize()
-fenster = echte[echte.startzeit > stichtag - pd.Timedelta(days=365)]
+# EIN CUTOFF, UND ER LIEGT HINTER DEN DATEN - NICHT MITTENDRIN.
+#
+# Eine fruehere Fassung setzte den Stichtag auf .normalize() des letzten
+# Fahrtbeginns: 24.08.2026 00:00. Das Fenster hatte aber keine obere
+# Grenze und nahm die 77 Fahrten desselben Tages bis 22:57 Uhr mit. Der
+# Export behauptete damit einen Informationsstand um Mitternacht und
+# rechnete mit Daten aus dessen Zukunft.
+#
+# Die Stabilitaetspruefung schnitt umgekehrt bei "<= tag" ab und liess
+# genau diese 77 Fahrten weg. RFM, Stabilitaet und Export standen damit
+# auf drei verschiedenen Populationen.
+DATENSTAND = echte.startzeit.max()
+CUTOFF = DATENSTAND.normalize() + pd.Timedelta(days=1)
+stichtag = CUTOFF                      # ein Name, ein Zeitpunkt
+FENSTER_TAGE = 365
+fenster = echte[(echte.startzeit > CUTOFF - pd.Timedelta(days=FENSTER_TAGE))
+                & (echte.startzeit < CUTOFF)]
+print(f"Datenstand:  letzte Fahrt {DATENSTAND:%d.%m.%Y %H:%M} Uhr")
+print(f"Cutoff:      {CUTOFF:%d.%m.%Y %H:%M} Uhr - alles davor zaehlt, nichts danach")
+print(f"Fenster:     die {FENSTER_TAGE} Tage davor\\n")
 
 rfm = fenster.groupby("kunde_id").agg(
     letzte_fahrt=("startzeit", "max"),
@@ -489,12 +507,41 @@ Das lässt sich messen: dieselbe Rechnung, verschoben um 90 Tage.
 CODE('''
 from scipy.optimize import linear_sum_assignment
 
-def segmente_zum_stichtag(tag):
-    """Dieselbe RFM-Rechnung, nur zu einem anderen Zeitpunkt."""
-    f = echte[(echte.startzeit > tag - pd.Timedelta(days=365)) & (echte.startzeit <= tag)]
-    r = f.groupby("kunde_id").agg(
-        recency=("startzeit", lambda s: (tag - s.max()).days),
+# DIE SCHWELLEN STEHEN HIER - VOR IHRER PRUEFUNG.
+#
+# Sie sind an den Clusterprofilen abgelesen; das Clustering war die
+# Erkundung. Angewendet werden sie auf jede einzelne Kundenzeile, und
+# genau diese Regeln gehen in Phase 6 in den Export.
+SCHWELLE_RECENCY = 150
+SCHWELLE_FREQUENZ = 12
+SCHWELLE_UMSATZ = 30
+
+def segment_benennen(zeile):
+    if zeile.recency > SCHWELLE_RECENCY:
+        return "Eingeschlafen"
+    if zeile.frequenz > SCHWELLE_FREQUENZ:
+        return "Vielfahrer mit Freiminuten"
+    if zeile.umsatz > SCHWELLE_UMSATZ:
+        return "Umsatzträger im Basistarif"
+    return "Gelegenheitsnutzer"
+
+def rfm_zum_cutoff(cut):
+    """Dieselbe RFM-Rechnung wie oben, nur zu einem anderen Zeitpunkt.
+    Dieselbe Fenstergrenze, dieselbe Ausschlussregel - sonst vergliche
+    man zwei verschiedene Populationen."""
+    f = echte[(echte.startzeit > cut - pd.Timedelta(days=FENSTER_TAGE))
+              & (echte.startzeit < cut)]
+    return f.groupby("kunde_id").agg(
+        recency=("startzeit", lambda s: (cut - s.max()).days),
         frequenz=("ausleihe_id", "size"), umsatz=("entgelt_eur", "sum"))
+
+def regel_segmente_zum(cut):
+    """Was das AUSGELIEFERTE Verfahren zu diesem Zeitpunkt gesagt haette."""
+    return rfm_zum_cutoff(cut).apply(segment_benennen, axis=1)
+
+def cluster_segmente_zum(cut):
+    """Was ein NEU gerechnetes k-Means gesagt haette - Modelldiagnose."""
+    r = rfm_zum_cutoff(cut)
     R = r.copy()
     R["frequenz"] = np.log1p(R.frequenz)
     R["umsatz"] = np.log1p(R.umsatz)
@@ -502,20 +549,46 @@ def segmente_zum_stichtag(tag):
         StandardScaler().fit_transform(R))
     return pd.Series(labels, index=r.index)
 
-heute = segmente_zum_stichtag(stichtag)
-vorquartal = segmente_zum_stichtag(stichtag - pd.Timedelta(days=90))
-gemeinsam = heute.index.intersection(vorquartal.index)
+VORQUARTAL = CUTOFF - pd.Timedelta(days=90)
 
-# Cluster-Nummern sind willkuerlich - erst die beste Zuordnung macht sie
-# vergleichbar. Ohne diesen Schritt zaehlt man Umbenennungen als Wechsel.
-kreuz = pd.crosstab(vorquartal[gemeinsam], heute[gemeinsam]).values
+# ---------------------------------------------------------------------
+# (1) DAS GATE: die Stabilitaet DES AUSGELIEFERTEN PRODUKTS.
+#
+# Eine fruehere Fassung mass hier die Stabilitaet eines jeweils NEU
+# gerechneten k-Means - und band den Export daran. Ausgeliefert werden
+# aber feste Schwellen. Das Gate bewertete also ein Verfahren, das
+# niemand bekommt.
+#
+# Bei festen Segmentnamen braucht es kein Labelmatching: Die Namen sind
+# an beiden Stichtagen dieselben, ein Vergleich genuegt.
+# ---------------------------------------------------------------------
+regel_heute = regel_segmente_zum(CUTOFF)
+regel_vor = regel_segmente_zum(VORQUARTAL)
+gemeinsam = regel_heute.index.intersection(regel_vor.index)
+wechselquote = float((regel_heute[gemeinsam] != regel_vor[gemeinsam]).mean())
+
+print("(1) DAS AUSGELIEFERTE VERFAHREN - feste Schwellen, beide Stichtage\\n")
+print(f"    In beiden Fenstern aktiv: {len(gemeinsam)} Kundinnen und Kunden")
+print(f"    Segmentwechsel binnen 90 Tagen: {wechselquote:.1%}")
+
+# ---------------------------------------------------------------------
+# (2) DIE MODELLDIAGNOSE: wie stabil waere das Clustering gewesen?
+#     Interessant, aber NICHT das Gate - das Clustering wird nicht
+#     ausgeliefert.
+# ---------------------------------------------------------------------
+cl_heute = cluster_segmente_zum(CUTOFF)
+cl_vor = cluster_segmente_zum(VORQUARTAL)
+gem_cl = cl_heute.index.intersection(cl_vor.index)
+kreuz = pd.crosstab(cl_vor[gem_cl], cl_heute[gem_cl]).values
 zeile, spalte = linear_sum_assignment(-kreuz)
-wechselquote = 1 - kreuz[zeile, spalte].sum() / len(gemeinsam)
+cluster_wechsel = 1 - kreuz[zeile, spalte].sum() / len(gem_cl)
 
-print(f"In beiden Quartalen aktiv: {len(gemeinsam)} Kundinnen und Kunden")
-print(f"ARI zwischen den beiden Zeitpunkten: "
-      f"{adjusted_rand_score(vorquartal[gemeinsam], heute[gemeinsam]):.3f}")
-print(f"Segmentwechsel nach bester Zuordnung: {wechselquote:.1%}")
+print("\\n(2) ZUM VERGLEICH das Clustering - nur Modelldiagnose\\n")
+print(f"    ARI zwischen den Zeitpunkten: "
+      f"{adjusted_rand_score(cl_vor[gem_cl], cl_heute[gem_cl]):.3f}")
+print(f"    Segmentwechsel nach bester Zuordnung: {cluster_wechsel:.1%}")
+print("\\n    Die beiden Zahlen sind nicht dasselbe und duerfen sich nicht")
+print("    vertreten. Gebunden wird das Gate an (1).")
 # DAS GATE IST EINE VARIABLE, KEIN SATZ.
 #
 # Eine Schwelle, die nur im Text steht, bindet nichts. Diese hier
@@ -525,8 +598,42 @@ GATE_WECHSEL = 0.25
 KUNDENSEGMENTE_STABIL = bool(wechselquote <= GATE_WECHSEL)
 
 print(f"\\nDie Überwachung in Phase 6 nennt {GATE_WECHSEL:.0%} je Quartal als Alarmschwelle.")
+print(f"Gemessen am AUSGELIEFERTEN Verfahren: {wechselquote:.1%}")
 print(f"-> Sie ist {'gehalten' if KUNDENSEGMENTE_STABIL else 'GERISSEN'}.")
 print("\\nDiese Variable bindet den Export in Phase 6 - sie ist keine Randnotiz.")
+print("Und sie bindet ihn an das, was tatsaechlich ausgeliefert wird.")
+
+# ---------------------------------------------------------------------
+# (3) WIE ROBUST IST DIE ZUORDNUNG GEGEN UNGLEICHE BEOBACHTUNGSDAUER?
+#
+# Ein Teil der Kundschaft ist erst im Fenster dazugekommen. Ihre Werte
+# heissen "je Jahr", stammen aber aus wenigen Wochen - und werden mit
+# denselben Schwellen bewertet wie ein volles Jahr.
+#
+# Die Hochrechnung auf 365 Tage ist NICHT die richtige Loesung: Gerade
+# bei neuen Kunden ist das Verhalten nicht stationaer. Sie zeigt aber,
+# wie viel an dieser Entscheidung haengt.
+# ---------------------------------------------------------------------
+angemeldet = pd.to_datetime(kunden.set_index("kunde_id").registriert_am)
+beobachtet = (CUTOFF - angemeldet).dt.days.clip(upper=FENSTER_TAGE)
+jung = beobachtet[beobachtet < FENSTER_TAGE].index.intersection(rfm.index)
+
+segment_roh = rfm.apply(segment_benennen, axis=1)
+hoch = rfm.loc[jung].copy()
+faktor = FENSTER_TAGE / beobachtet.loc[jung].clip(lower=1)
+hoch["frequenz"] = hoch.frequenz * faktor
+hoch["umsatz"] = hoch.umsatz * faktor
+anders = (hoch.apply(segment_benennen, axis=1) != segment_roh.loc[jung])
+
+print("\\n(3) UNGLEICHE BEOBACHTUNGSDAUER\\n")
+print(f"    RFM-Kundschaft mit weniger als {FENSTER_TAGE} Tagen Historie: {len(jung)}")
+print(f"    Median der beobachteten Tage bei ihnen: "
+      f"{beobachtet.loc[jung].median():.0f}")
+print(f"    davon anderes Segment nach Hochrechnung: {int(anders.sum())} "
+      f"= {anders.mean():.1%}")
+print(f"    das sind {anders.sum() / len(rfm):.1%} der gesamten RFM-Kundschaft")
+print("\\n    Die Spalten heissen deshalb ab hier 'im Beobachtungsfenster',")
+print("    nicht 'je Jahr'. Und das zugehoerige Freigabe-Gate bleibt offen.")
 '''),
 
 MD("""
@@ -550,11 +657,11 @@ Was das kostet, rechnen wir in Phase 6 ebenfalls aus. Es ist nicht umsonst.""" )
 
 MD("""
 **Die Stationen sind stabil, die Kundensegmente nur annähernd.** Bei den zehn Stationen
-liefert jeder Startwert dieselbe Einteilung. Bei 2.202 Kundinnen und Kunden wandern je
+liefert jeder Startwert dieselbe Einteilung. Bei 2.199 Kundinnen und Kunden wandern je
 nach Startwert einzelne Personen zwischen den Gruppen — der ARI bleibt hoch, erreicht
 aber nicht 1,0.
 
-Für die Auslieferung heißt das: Der Dispositionsplan ist eine feste Zuordnung, der
+Für die Auslieferung heißt das: Die Stationsprofile sind eine feste Zuordnung, der
 Kampagnenplan ist es nicht. Wer nächstes Quartal neu clustert, bekommt bei einzelnen
 Kunden ein anderes Segment. **Deshalb wird der Kampagnenplan in Phase 6 nicht über
 Cluster-Nummern ausgeliefert, sondern über nachvollziehbare Schwellen** — die sind
@@ -632,25 +739,32 @@ plt.tight_layout(); plt.show()
 MD("""
 ### 5.B.1 Ein Befund, der so nicht erwartet war
 
-Sehen Sie sich die Spalten `fahrten_jahr` und `umsatz_jahr` nebeneinander an:
+Sehen Sie sich die Spalten `fahrten_jahr` und `umsatz_jahr` nebeneinander an — gemeint
+ist jeweils **das Beobachtungsfenster**, nicht garantiert ein volles Jahr:
 
 **Das Segment mit den meisten Fahrten bringt am wenigsten Umsatz JE FAHRT.** Und diese
 Einschränkung ist wichtig — lesen Sie die Tabelle genau:
 
-| Cluster | Fahrten je Jahr | Umsatz je Jahr | Umsatz je Fahrt |
+| Cluster | Fahrten im Fenster | Umsatz im Fenster | Umsatz je Fahrt |
 |---|---:|---:|---:|
-| 0 — Umsatzträger | 7,5 | **41,20 €** | 5,49 € |
-| 1 — Gelegenheit | 4,2 | 3,80 € | 0,90 € |
+| 0 — Vielfahrer | **18,4** | 13,70 € | **0,74 €** |
+| 1 — Umsatzträger | 6,1 | **38,90 €** | 6,38 € |
 | 2 — Eingeschlafen | 1,6 | 5,30 € | 3,31 € |
-| 3 — Vielfahrer | **18,1** | 10,70 € | **0,59 €** |
+| 3 — Gelegenheit | 4,3 | 3,50 € | 0,81 € |
 
-Die Vielfahrer bringen **nicht** den geringsten Jahresumsatz — das tun die
-Gelegenheitsnutzer mit 3,80 €. Die Vielfahrer bringen den geringsten Umsatz **je Fahrt**:
-59 Cent, während ein Umsatzträger 5,49 € je Fahrt bringt, also fast das Zehnfache.
+Die Vielfahrer bringen **nicht** den geringsten Umsatz — das tun die Gelegenheitsnutzer
+mit 3,50 €. Die Vielfahrer bringen den geringsten Umsatz **je Fahrt**: 74 Cent, während
+ein Umsatzträger 6,38 € je Fahrt bringt, also mehr als das Achtfache.
 
-> **Der Vergleich, auf den es ankommt:** Cluster 3 fährt **2,4-mal so oft** wie Cluster 0
-> und bringt dabei **ein Viertel** des Jahresumsatzes. Wer beide Zahlen nebeneinanderlegt,
-> sieht das Problem; wer nur eine nimmt, sieht es nicht.
+> **Der Vergleich, auf den es ankommt:** Cluster 0 fährt **dreimal so oft** wie Cluster 1
+> und bringt dabei **ein gutes Drittel** von dessen Umsatz. Wer beide Zahlen
+> nebeneinanderlegt, sieht das Problem; wer nur eine nimmt, sieht es nicht.
+
+> **Die Clusternummern sind nicht bedeutungstragend.** In einer früheren Fassung dieses
+> Notebooks war Cluster 0 der Umsatzträger; nach einer Verschiebung des Stichtags um
+> wenige Stunden ist es der Vielfahrer. k-Means vergibt die Nummern in der Reihenfolge,
+> in der es die Zentren findet — **wer sich auf eine Clusternummer verlässt, verlässt sich
+> auf einen Zufall.** Genau deshalb liefert Phase 6 Schwellen aus und keine Nummern.
 
 Ein Blick auf die Tarifverteilung erklärt es: Die Vielfahrer sitzen überwiegend im
 **OEPNV-Abo** oder im **Premium**-Tarif — mit 600 bzw. 1.000 Freiminuten im Monat. Sie
@@ -745,7 +859,8 @@ plt.tight_layout(); plt.show()
 
 MD("""
 **Jetzt ist das Bild vollständig, ohne dass wir eine Zahl erfinden mussten.** Das Segment
-mit den meisten Fahrten zahlt am wenigsten *und* bekommt am meisten geschenkt. Beides
+mit den meisten Fahrten zahlt am wenigsten **je Fahrt** *und* bekommt am meisten
+geschenkt. Beides
 zusammen erklärt den Befund vollständig.
 
 > **Für CRISP-DM ist dieser Moment lehrbuchreif** — allerdings anders, als man zunächst
@@ -812,11 +927,19 @@ entweder verloren oder zurückzugewinnen.
 """),
 
 # =====================================================================
-PHASE(6, "Aus vier Stationstypen werden Dispositions-HYPOTHESEN, aus fünf Kundengruppen "
+PHASE(6, "Aus vier Stationstypen werden Dispositions-HYPOTHESEN, aus sieben Lebenszyklus-"
          "ein Kampagnenplan."),
 
 CODE('''
-# --- A) Der Dispositionsplan
+# --- A) Die Stationsprofile
+#
+# WAS HIER STEHT, SIND HYPOTHESEN - KEINE BESTANDSANWEISUNGEN.
+#
+# Eine fruehere Fassung schrieb "bis 6:30 Uhr voll" und "halbe
+# Bestueckung". Beides sind Aussagen ueber BESTAENDE, abgeleitet
+# ausschliesslich aus ABFAHRTSPROFILEN. Ohne Ankuenfte, Kapazitaet und
+# verlorene Nachfrage folgt daraus keine Menge - nur die Vermutung, wann
+# ein Blick auf den Bestand lohnt.
 #
 # Die Zuordnung folgt zwei Merkmalen: dem Wochenendanteil und der Uhrzeit
 # der Spitze. Beide stehen in der Tabelle aus Phase 5 - hier wird nichts
@@ -827,13 +950,21 @@ for c in sorted(S.cluster.unique()):
     spitze = int(g[stundenspalten].mean().values.argmax())
     we = g.wochenendanteil.mean()
     if we > 0.45:
-        bez, regel = "Ausflugsstation", "erst gegen 11 Uhr auffüllen, Schwerpunkt Sa/So"
+        bez, regel = ("Ausflugsstation",
+                      "Abfahrtsspitze spät und am Wochenende — Hypothese: "
+                      "Bestandsprüfung erst spätvormittags nötig")
     elif spitze <= 9:
-        bez, regel = "Pendlerstation", "bis 6:30 Uhr voll, nachmittags Abfluss einplanen"
+        bez, regel = ("Pendlerstation",
+                      "Abfahrtsspitze früh, zweite am Nachmittag — Hypothese: "
+                      "frühe Bestandsprüfung testen")
     elif we > 0.25:
-        bez, regel = "Innenstadtstation", "abends nachlegen, am Wochenende halb so viel"
+        bez, regel = ("Innenstadtstation",
+                      "Abfahrten über den Tag verteilt, abends erhöht — Hypothese: "
+                      "Nachmittagsprüfung testen")
     else:
-        bez, regel = "Uni-Station", "vorlesungsfreie Zeit: halbe Bestückung"
+        bez, regel = ("Uni-Station",
+                      "Abfahrten an den Semesterrhythmus gebunden — Hypothese: "
+                      "Bestand nach Vorlesungszeit staffeln")
     namen_cluster[c], regeln[c] = bez, regel
     for name in g.index:
         print(f"{name:<22s} {bez:<18s} {regel}")
@@ -896,20 +1027,14 @@ print("nicht, wieviele Raeder an dieser Station stehen sollen.")
 CODE('''
 # --- B) Der Kampagnenplan: Schwellen JE KUNDE, nicht je Cluster
 #
-# Die Schwellen sind an den Clusterprofilen abgelesen - das Clustering war
-# die Erkundung. Angewendet werden sie aber auf jede einzelne Zeile: nur
-# so ist die Zuordnung reproduzierbar und nachrechenbar. Eine fruehere
-# Fassung wendete sie auf die vier Cluster-MITTELWERTE an und vergab den
-# Namen dann an alle Mitglieder - das ist etwas anderes.
-def segment_benennen(zeile):
-    if zeile.recency > 150:
-        return "Eingeschlafen"
-    if zeile.frequenz > 12:
-        return "Vielfahrer mit Freiminuten"
-    if zeile.umsatz > 30:
-        return "Umsatzträger im Basistarif"
-    return "Gelegenheitsnutzer"
-
+# Die Schwellen stehen in Phase 5 - dort wurden sie aufgestellt und dort
+# wurde ihre zeitliche Stabilitaet geprueft. Hier werden sie nur noch
+# angewendet, auf jede einzelne Zeile: nur so ist die Zuordnung
+# reproduzierbar. Eine fruehere Fassung wendete sie auf die vier
+# Cluster-MITTELWERTE an und vergab den Namen dann an alle Mitglieder -
+# das ist etwas anderes.
+print(f"Angewandte Schwellen (aus Phase 5): recency > {SCHWELLE_RECENCY}, "
+      f"frequenz > {SCHWELLE_FREQUENZ}, umsatz > {SCHWELLE_UMSATZ}\\n")
 rfm["segment"] = rfm.apply(segment_benennen, axis=1)
 
 # WAS KOSTET DER WECHSEL VON CLUSTERN AUF SCHWELLEN?
@@ -926,7 +1051,7 @@ print("\\nDas ist der Preis der Nachvollziehbarkeit - und er gehört benannt.")
 MD("""
 ### 6.2 Die Population — wer überhaupt angeschrieben werden darf
 
-Bis hierher war von 2.202 RFM-Kunden die Rede. Ein Kampagnenplan braucht aber die
+Bis hierher war von 2.199 RFM-Kunden die Rede. Ein Kampagnenplan braucht aber die
 **ganze** Kundschaft und einen **einzigen Nenner** — sonst summieren sich die Anteile auf
 100 % einer Teilmenge, und daneben stehen weitere Kunden, die nirgends auftauchen.
 
@@ -956,13 +1081,22 @@ def lebenszyklus(kid, zeile):
     return "Nie aktiviert"
 
 alle["segment"] = [lebenszyklus(k, z) for k, z in alle.iterrows()]
-alle["ansprechbar"] = alle.status == "aktiv"
+# AKTIVES KONTO IST NICHT GLEICH ANSPRECHBAR.
+#
+# Der Status sagt, dass das Konto nicht gesperrt ist. Ueber eine
+# Werbeeinwilligung oder eine andere Rechtsgrundlage fuer Direktmarketing
+# sagt er nichts - dieses Feld gibt es in den Daten gar nicht. Der Name
+# "ansprechbar" hat genau das behauptet.
+alle["konto_aktiv"] = alle.status == "aktiv"
+# Waere die Einwilligung erfasst, stuende sie hier. Sie ist es nicht -
+# deshalb bleibt die Spalte leer und das zugehoerige Gate offen.
+alle["marketing_freigegeben"] = pd.NA
 
 print(f"Kundschaft insgesamt: {len(alle)}")
-print(f"davon gesperrt und damit NICHT ansprechbar: {(~alle.ansprechbar).sum()}\\n")
+print(f"davon gesperrt und damit ausgeschlossen: {(~alle.konto_aktiv).sum()}\\n")
 
 uebersicht = (alle.groupby("segment")
-              .agg(kunden=("status", "size"), ansprechbar=("ansprechbar", "sum")))
+              .agg(kunden=("status", "size"), konten_aktiv=("konto_aktiv", "sum")))
 uebersicht["Anteil gesamt"] = (uebersicht.kunden / len(alle) * 100).round(1)
 print("EIN Nenner: alle Kundinnen und Kunden\\n")
 print(uebersicht.sort_values("kunden", ascending=False).to_string())
@@ -991,7 +1125,7 @@ massnahmen = {
     "Nie aktiviert":               "keine Kampagne — Karteileiche",
 }
 
-export = alle[alle.ansprechbar].copy()
+export = alle[alle.konto_aktiv].copy()
 export["maßnahme"] = export.segment.map(massnahmen)
 export["stichtag"] = stichtag.date()
 export["gilt_bis"] = (stichtag + pd.Timedelta(days=90)).date()
@@ -999,7 +1133,8 @@ export["auswahlgrund"] = export.apply(
     lambda z: (f"recency {rfm.recency.get(z.name, float('nan')):.0f} d, "
                f"{rfm.frequenz.get(z.name, 0):.0f} Fahrten, "
                f"{rfm.umsatz.get(z.name, 0):.2f} EUR")
-    if z.name in rfm.index else f"seit {z.tage_dabei:.0f} Tagen angemeldet, keine Fahrt",
+    if z.name in rfm.index
+    else f"seit {z.tage_dabei:.0f} Tagen angemeldet, keine Fahrt im {FENSTER_TAGE}-Tage-Fenster",
     axis=1)
 
 spalten = ["kundennummer", "segment", "maßnahme", "auswahlgrund",
@@ -1012,41 +1147,70 @@ export = export[export.segment != "Nie aktiviert"][spalten]
 # schwelle gerissen ist - und exportierte drei Zellen spaeter trotzdem
 # eine Kampagnenliste, als waere nichts gewesen. Ein Kriterium, das den
 # Export nicht bindet, ist kein Kriterium.
-freigabe = "FREIGEGEBEN" if KUNDENSEGMENTE_STABIL else "GESPERRT"
+# EINE FREIGABE HAENGT AN MEHR ALS EINER ZAHL.
+#
+# Eine fruehere Fassung leitete den Status allein aus der Stabilitaet ab.
+# Als das Gate von 25,4 % (falsch gemessen) auf 24,9 % (richtig gemessen)
+# fiel, waere die Datei damit von GESPERRT auf FREIGEGEBEN gesprungen -
+# ohne dass sich an ihrer Verwendbarkeit irgendetwas geaendert haette.
+#
+# Ein Kriterium, dessen Vorzeichen eine ganze Freigabe dreht, war nie
+# das einzige Kriterium. Hier stehen alle - und die meisten sind offen.
+GATES = {
+    f"Segmentstabilitaet <= {GATE_WECHSEL:.0%} je Quartal": KUNDENSEGMENTE_STABIL,
+    "Beobachtungsdauer der jungen Kunden behandelt":        False,
+    "Rechtsgrundlage fuer Direktmarketing dokumentiert":    False,
+    "Kontaktkanal, Abmeldung und Sperrliste angebunden":    False,
+    "Wirkung der Massnahmen kontrolliert messbar":          False,
+    "reale statt synthetischer Daten":                      False,
+}
+KAMPAGNENFREIGABE = all(GATES.values())
+freigabe = ("LEHR-GATE BESTANDEN - KEINE KAMPAGNENFREIGABE"
+            if KUNDENSEGMENTE_STABIL else
+            "LEHR-GATE GERISSEN - KEINE KAMPAGNENFREIGABE")
+
+print("FREIGABEPRUEFUNG\\n")
+for name, erfuellt in GATES.items():
+    print(f"   {'erfuellt' if erfuellt else 'OFFEN   '}  {name}")
+print(f"\\n   Kampagnenfreigabe: {'JA' if KAMPAGNENFREIGABE else 'NEIN'} "
+      f"({sum(GATES.values())} von {len(GATES)} Gates)\\n")
 kopf = [
     f"# Stichtag: {stichtag.date()}, gueltig bis "
     f"{(stichtag + pd.Timedelta(days=90)).date()}",
     "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
     f"# Segmentstabilitaet je Quartal: {wechselquote:.1%} Wechsel "
-    f"(Schwelle {GATE_WECHSEL:.0%})",
+    f"(Schwelle {GATE_WECHSEL:.0%}), gemessen am ausgelieferten Regelverfahren",
     f"# STATUS: {freigabe}",
+    "# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN.",
 ]
+kopf += [f"# offenes Gate: {n}" for n, e in GATES.items() if not e]
 if not KUNDENSEGMENTE_STABIL:
-    kopf.append("# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN. Die Segmente sind "
-                "zwischen zwei Quartalen zu instabil;")
-    kopf.append("# jeder vierte Kunde bekaeme eine Ansprache, die zum Zeitpunkt "
-                "des Versands nicht mehr passt.")
+    kopf.append("# Zusaetzlich: jeder vierte Kunde bekaeme eine Ansprache, die "
+                "zum Zeitpunkt des Versands nicht mehr passt.")
 with open("kampagnenliste.csv", "w", encoding="utf-8") as f:
     f.write("\\n".join(kopf) + "\\n")
     export.to_csv(f)
 
 print(f"KAMPAGNENLISTE  Stichtag {stichtag.date()}, gültig 90 Tage")
 print(f"STATUS: {freigabe}\\n")
+print("Auch bei bestandenem Stabilitaetsgate geht diese Datei an kein")
+print("Kampagnensystem: Fuenf der sechs Gates sind offen, darunter die")
+print("Rechtsgrundlage. Ein analytischer Arbeitsstand, mehr nicht.\\n")
 print(export.head(8).to_string())
-print(f"\\n{len(export)} ansprechbare Kundinnen und Kunden, "
+print(f"\\n{len(export)} aktive Konten in der Liste, "
       f"{export.segment.nunique()} Segmente")
 print("geschrieben: kampagnenliste.csv")
 if not KUNDENSEGMENTE_STABIL:
     print()
-    print("ABER: Das Stabilitaetsgate aus Phase 5 ist gerissen "
-          f"({wechselquote:.1%} > {GATE_WECHSEL:.0%}).")
-    print("Die Datei traegt deshalb den Status GESPERRT und geht NICHT an ein")
-    print("Kampagnensystem. Sie bleibt als Arbeitsstand und als Beleg dafuer,")
-    print("was das Gate verhindert hat.")'''),
+    print("Zusaetzlich ist das Stabilitaetsgate gerissen "
+          f"({wechselquote:.1%} > {GATE_WECHSEL:.0%}).")'''),
 MD("""
 ### 6.4 Was bei diesen beiden Auslieferungen zu beachten ist
 
-**Der Dispositionsplan** ist unkritisch: vier Regeln, die ein Mensch liest und befolgt.
+**Die Stationsprofile** sind vergleichsweise harmlos — vier Hypothesen, die ein Mensch
+liest und prüft. Sie sagen, *wann* an einer Station losgefahren wird, und leiten daraus
+ab, *wann sich ein Blick auf den Bestand lohnt*. Sie sagen nicht, wie viele Räder dort
+stehen sollen; dafür fehlen Ankünfte, Kapazität und verlorene Nachfrage.
 Er muss aber **nachgerechnet werden**, wenn eine Station dazukommt — und dann kann sich
 die Zuordnung *aller* Stationen ändern, weil k-Means alle Zentren neu setzt. Ein neues
 Cluster-Ergebnis ist nie eine Ergänzung, immer eine Neuberechnung.
@@ -1059,7 +1223,7 @@ tun hat:
 > Rückgewinnungsmail ist Direktwerbung; ein Segment „zahlungsschwach“ wäre etwas ganz
 > anderes. Die Grenze verläuft nicht dort, wo die Technik endet.
 
-### 6.2 Überwachung
+### 6.5 Überwachung
 
 | Wache | Schwelle | Reaktion |
 |---|---|---|
@@ -1086,11 +1250,11 @@ MD("""
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
 | 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: 100 %. Stabilität gemessen, nicht behauptet | Vier Segmente, nur annähernd stabil und mit schwächerer Trennung — dazu zwei Befunde, die weh tun, und eine hypothetische Rechnung |
-| 6 Deployment | Dispositionsplan als CSV | Kampagnenplan, mit Datenschutzvorbehalt |
+| 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Gesperrter analytischer Arbeitsstand**: fünf von sechs Freigabe-Gates offen, darunter die Rechtsgrundlage |
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**
 
-1. **Die Vielfahrer bringen den geringsten Umsatz je Fahrt** — 59 Cent gegen 5,49 € —
+1. **Die Vielfahrer bringen den geringsten Umsatz je Fahrt** — 74 Cent gegen 6,38 € —
    weil ihre Tarife Freiminuten
    enthalten. Und weil VeloCity **keine Grundgebühr** erhebt, gibt es nichts, was das
    ausgliche: Das Nutzungsentgelt ist der gesamte Umsatz. Das ist kein Messfehler,
@@ -1108,7 +1272,11 @@ MD("""
    hat eine Frage hervorgebracht, die vorher niemand gestellt hatte. Sauber wäre dafür
    ein **Deckungsbeitrag** statt des Entgelts: abzüglich der Kosten, die eine Fahrt
    verursacht (Umverteilung, Verschleiß, Strom).
-2. **Zurück zu Phase 3:** Die Nichtfahrer als eigenes Segment mitführen, statt sie
+2. **Zurück zu Phase 5:** Die zeitliche Stabilität der **vollständigen** Lebenszyklus-
+   regeln prüfen, nicht nur der vier RFM-Segmente. Der aktuelle Vergleich lässt die
+   Übergänge zwischen aktiv und inaktiv außen vor — und genau die entscheiden, wer
+   überhaupt angeschrieben wird.
+3. **Zurück zu Phase 3:** Die Nichtfahrer als eigenes Segment mitführen, statt sie
    herausfallen zu lassen. RFM braucht dafür eine Erweiterung, oft „RFM + Status“ genannt.
 3. **Ein anderes Verfahren erwägen:** k-Means unterstellt kugelförmige, gleich große
    Gruppen. Für Segmente mit sehr unterschiedlicher Streuung sind hierarchisches

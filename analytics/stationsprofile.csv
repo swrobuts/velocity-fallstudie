@@ -1,15 +1,15 @@
-# Stichtag: 2026-08-24
+# Stichtag: 2026-08-25
 # Datenherkunft: SYNTHETISCHE LEHRDATEN
 # Grundlage: NUR Abfahrtsprofile - keine Ankuenfte, Bestaende oder Kapazitaeten
 # STATUS: HYPOTHESEN - kein Umverteilungsplan, keine Sollbestaende
 station_id,stationsnummer,name,stationstyp,hypothese,wochenendanteil,dauer_median,fahrten_gesamt,stichtag
-1,S-0001,Hauptbahnhof,Pendlerstation,"bis 6:30 Uhr voll, nachmittags Abfluss einplanen",0.15163543982216576,8.0,6298,2026-08-24
-2,S-0002,Marktplatz,Innenstadtstation,"abends nachlegen, am Wochenende halb so viel",0.3393815960007406,13.0,5401,2026-08-24
-3,S-0003,Universität Sanderring,Uni-Station,vorlesungsfreie Zeit: halbe Bestückung,0.14153999501619735,8.0,4013,2026-08-24
-4,S-0004,Residenz,Ausflugsstation,"erst gegen 11 Uhr auffüllen, Schwerpunkt Sa/So",0.5600167879127028,29.0,7148,2026-08-24
-5,S-0005,Juliuspromenade,Innenstadtstation,"abends nachlegen, am Wochenende halb so viel",0.33514935186924666,13.0,5323,2026-08-24
-6,S-0006,Dom,Ausflugsstation,"erst gegen 11 Uhr auffüllen, Schwerpunkt Sa/So",0.5565205403915081,29.0,7254,2026-08-24
-7,S-0007,Sanderau,Pendlerstation,"bis 6:30 Uhr voll, nachmittags Abfluss einplanen",0.1607843137254902,8.0,6375,2026-08-24
-8,S-0008,Hubland Campus,Uni-Station,vorlesungsfreie Zeit: halbe Bestückung,0.13841075218108936,8.0,4241,2026-08-24
-9,S-0009,Grombühl Klinikum,Pendlerstation,"bis 6:30 Uhr voll, nachmittags Abfluss einplanen",0.1590128084973446,8.0,6402,2026-08-24
-10,S-0010,Zellerau,Pendlerstation,"bis 6:30 Uhr voll, nachmittags Abfluss einplanen",0.16523400191021967,8.0,6282,2026-08-24
+1,S-0001,Hauptbahnhof,Pendlerstation,"Abfahrtsspitze früh, zweite am Nachmittag — Hypothese: frühe Bestandsprüfung testen",0.15163543982216576,8.0,6298,2026-08-25
+2,S-0002,Marktplatz,Innenstadtstation,"Abfahrten über den Tag verteilt, abends erhöht — Hypothese: Nachmittagsprüfung testen",0.3393815960007406,13.0,5401,2026-08-25
+3,S-0003,Universität Sanderring,Uni-Station,Abfahrten an den Semesterrhythmus gebunden — Hypothese: Bestand nach Vorlesungszeit staffeln,0.14153999501619735,8.0,4013,2026-08-25
+4,S-0004,Residenz,Ausflugsstation,Abfahrtsspitze spät und am Wochenende — Hypothese: Bestandsprüfung erst spätvormittags nötig,0.5600167879127028,29.0,7148,2026-08-25
+5,S-0005,Juliuspromenade,Innenstadtstation,"Abfahrten über den Tag verteilt, abends erhöht — Hypothese: Nachmittagsprüfung testen",0.33514935186924666,13.0,5323,2026-08-25
+6,S-0006,Dom,Ausflugsstation,Abfahrtsspitze spät und am Wochenende — Hypothese: Bestandsprüfung erst spätvormittags nötig,0.5565205403915081,29.0,7254,2026-08-25
+7,S-0007,Sanderau,Pendlerstation,"Abfahrtsspitze früh, zweite am Nachmittag — Hypothese: frühe Bestandsprüfung testen",0.1607843137254902,8.0,6375,2026-08-25
+8,S-0008,Hubland Campus,Uni-Station,Abfahrten an den Semesterrhythmus gebunden — Hypothese: Bestand nach Vorlesungszeit staffeln,0.13841075218108936,8.0,4241,2026-08-25
+9,S-0009,Grombühl Klinikum,Pendlerstation,"Abfahrtsspitze früh, zweite am Nachmittag — Hypothese: frühe Bestandsprüfung testen",0.1590128084973446,8.0,6402,2026-08-25
+10,S-0010,Zellerau,Pendlerstation,"Abfahrtsspitze früh, zweite am Nachmittag — Hypothese: frühe Bestandsprüfung testen",0.16523400191021967,8.0,6282,2026-08-25
