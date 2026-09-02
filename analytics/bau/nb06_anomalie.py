@@ -125,7 +125,32 @@ selten und die Funde wertvoll sind.
 | **A1** offene Rückgaben | jeder offene Vorgang über der Schwelle wird gemeldet, **bevor** er endet | Vollständigkeit | **nur logisch** — Label und Regel benutzen dieselbe 8-Stunden-Grenze; betrieblich nicht prüfbar |
 | **A2** auffällige Fahrten | Liste ≤ Kapazität, jede Zeile mit Begründung | Kapazität und Nachvollziehbarkeit | ja |
 | **A2** auffällige Fahrten | Trefferquote | **nicht festlegbar** | **nein** — siehe unten |
-| **B** Stationstage | mindestens jede fünfte gemeldete **Störungsepisode** ist echt | 20 % | ja, gegen `stationsstoerung.csv` |
+| **B1** Stationsstörungen | Präzision je **neuem Alarm** (dedupliziert) | ≥ {{b_gate_praezision:.0%}} | ja, gegen `stationsstoerung.csv` |
+| **B2** Stationsstörungen | Recall je **Störungsepisode** | ≥ {{b_gate_recall:.0%}} | ja |
+| **B3** Stationsstörungen | Verzug bis zum ersten Alarm | ≤ {{b_gate_verzug}} Tag | ja |
+| **B4** Stationsstörungen | Alarme je Tag im Mittel, **Technikkapazität** | ≤ {{b_gate_kapazitaet:.0f}} | ja |
+
+> **Warum B vier Kriterien braucht und nicht eines.** Eine Regel, die fast nie meldet,
+> erfüllt eine Präzisionshürde mühelos und übersieht dabei fast jede Störung. Präzision
+> ohne Recall ist deshalb kein Gütemaß, sondern eine Einladung zum Schweigen. Umgekehrt
+> ist ein hoher Recall wertlos, wenn die Liste im Betrieb nicht abgearbeitet werden kann
+> — daher B4.
+>
+> **Jede Zahl nennt ihren Nenner**, und das ist bei B keine Formalie: „je gemeldetem
+> Stationstag", „je neuem Alarm" und „je Störungsepisode" sind drei verschiedene
+> Einheiten, und dieselbe Regel sieht in ihnen sehr verschieden aus. Bindend ist der
+> **neue Alarm** — das ist die Einheit, die einen Technikereinsatz auslöst.
+>
+> **Zu B4 gehört eine offene Annahme.** Die Kapazität von {{b_gate_kapazitaet:.0f}}
+> Alarmen je Tag ist aus dem Zeitbudget des **Betriebsbüros** abgeleitet — also aus
+> Produkt A. Bei B fährt die Technik hin und prüft ein Terminal; deren Zeitbudget und
+> Bearbeitungsdauer je Stationsalarm liegen nicht vor. B4 ist deshalb als
+> **Platzhalterschwelle** zu lesen und wird bis zur fachlichen Klärung ausgewiesen, aber
+> **nicht freigabebindend** ausgewertet.
+>
+> **Diese Fassung ist eine dokumentierte Überarbeitung von Phase 1.** Die erste kannte
+> nur B1. B2 bis B4 wurden ergänzt, **bevor** der Testabschnitt geöffnet wurde — der
+> einzige Zeitpunkt, zu dem eine solche Ergänzung noch zulässig ist.
 
 > **Für A2 gibt es bewusst kein Trefferkriterium, und das ist keine Nachlässigkeit.** Eine
 > Trefferquote braucht ein Label. Für „unbekannte Auffälligkeiten" gibt es per Definition
@@ -1377,26 +1402,37 @@ merke("entw_episoden", w_entw["episoden"])
 #
 # Nicht nur die Praezision. Eine Regel, die selten meldet, erfuellt B1
 # und uebersieht alles - deshalb haengt der Status an ALLEN vieren.
+# B4 IST AUSGEWIESEN, ABER NICHT BINDEND.
+#
+# Die Kapazitaet stammt aus dem Zeitbudget des BETRIEBSBUEROS - also aus
+# Produkt A. Bei B faehrt die Technik hin und prueft ein Terminal; deren
+# Zeitbudget und Bearbeitungsdauer je Stationsalarm liegen nicht vor.
+# Eine Schwelle aus der falschen Rolle darf keine Freigabe entscheiden.
+# Sie steht trotzdem da, damit die Luecke sichtbar bleibt.
 B_ERGEBNIS = [
     ("B1 Praezision je NEUEM ALARM", w_test["praezision_alarm"],
-     B_GATE["B1 Praezision je NEUEM ALARM"], ">=", "quote"),
+     B_GATE["B1 Praezision je NEUEM ALARM"], ">=", "quote", True),
     ("B2 Recall je STOERUNGSEPISODE", w_test["recall"],
-     B_GATE["B2 Recall je STOERUNGSEPISODE"], ">=", "quote"),
+     B_GATE["B2 Recall je STOERUNGSEPISODE"], ">=", "quote", True),
     ("B3 Verzug bis zum ersten Alarm", w_test["verzug_max"],
-     B_GATE["B3 Verzug bis zum ersten Alarm"], "<=", "zahl"),
-    ("B4 Alarme je Tag im Mittel", w_test["alarme_je_tag"],
-     B_GATE["B4 Alarme je Tag im Mittel"], "<=", "zahl"),
+     B_GATE["B3 Verzug bis zum ersten Alarm"], "<=", "zahl", True),
+    ("B4 Alarme je Tag im Mittel (Annahme)", w_test["alarme_je_tag"],
+     B_GATE["B4 Alarme je Tag im Mittel"], "<=", "zahl", False),
 ]
-print("DAS URTEIL UEBER B - alle vier Gates, gemessen auf dem TESTABSCHNITT:")
-_haelt = []
-for _bez, _ist, _soll, _op, _art in B_ERGEBNIS:
+print("DAS URTEIL UEBER B - gemessen auf dem TESTABSCHNITT:")
+_haelt, _bindend = [], []
+for _bez, _ist, _soll, _op, _art, _bind in B_ERGEBNIS:
     ok = (_ist >= _soll) if _op == ">=" else (_ist <= _soll)
     ok = bool(ok) and not pd.isna(_ist)
     _haelt.append(ok)
+    if _bind:
+        _bindend.append(ok)
     _f = (lambda v: format(v, ".1%")) if _art == "quote" else (lambda v: format(v, ".2f"))
-    print(f"   {_bez:<32s} {_f(_ist):>7s} {_op} {_f(_soll):>7s}   "
-          f"{'haelt' if ok else 'HAELT NICHT'}")
-B_GATES_HALTEN = all(_haelt)
+    print(f"   {_bez:<38s} {_f(_ist):>7s} {_op} {_f(_soll):>7s}   "
+          f"{'haelt' if ok else 'HAELT NICHT'}"
+          f"{'' if _bind else '   (nicht bindend)'}")
+B_GATES_HALTEN = all(_bindend)
+merke("b_gates_bindend", len(_bindend))
 
 # WAS DIE ZAHL AUSHAELT - und was sie nicht aushaelt.
 #
@@ -1420,8 +1456,8 @@ print("   Der Testabschnitt WIDERLEGT die Regel also nicht - er TRAEGT sie"
       if not B1_WIDERLEGT else "   Die Regel ist auf diesem Abschnitt widerlegt.")
 print("   nur nicht. Fuer eine Freigabe reicht 'nicht widerlegt' nicht aus."
       if not B1_WIDERLEGT else "")
-merke("b_gates_halten", "alle vier" if B_GATES_HALTEN
-      else f"{sum(_haelt)} von {len(_haelt)}")
+merke("b_gates_halten", "alle drei bindenden" if B_GATES_HALTEN
+      else f"{sum(_bindend)} von {len(_bindend)} bindenden")
 
 # Wirtschaftlichkeit - dieselben Annahmen wie in Phase 1, hier gemessen.
 print()
@@ -1795,22 +1831,40 @@ PRODUKTE = {
         "im_paket": B_STATUS == "pilot",
     },
 }
-FREIGEGEBEN_FUER = [n for n, w in PRODUKTE.items() if w["im_paket"]]
+# ZWEI VERSCHIEDENE FRAGEN, ZWEI VERSCHIEDENE LISTEN.
+#
+# Frueher gab es nur "im_paket", und daraus wurde ein Feld
+# "freigegeben_fuer". Damit behauptete das Paket eine Freigabe fuer A2 -
+# ein Produkt im SCHATTENBETRIEB, dessen Trefferquote mangels Labels
+# ausdruecklich unbekannt ist. Paketzugehoerigkeit ist eine technische
+# Frage ("sind die Bestandteile drin?"), Freigabe eine betriebliche
+# ("darf danach gehandelt werden?"). Sie fallen hier auseinander.
+PAKET_ENTHAELT = [n for n, w in PRODUKTE.items() if w["im_paket"]]
+OPERATIV_FREIGEGEBEN_FUER = [n for n, w in PRODUKTE.items()
+                             if w["status"] in ("pilot", "sichtbar")]
 for _k, _n in (("a1_status", "A1 vergessene Rueckgaben"),
                ("a2_status", "A2 auffaellige Fahrten")):
     merke(_k, PRODUKTE[_n]["status"])
 
-# Die Zusicherung, die den alten Widerspruch unmoeglich macht: Wer B als
-# freigegeben fuehrt, muss es auch ins Paket legen - und umgekehrt.
-assert (("B Stationsstoerungen" in FREIGEGEBEN_FUER)
+# Die Zusicherungen, die den alten Widerspruch unmoeglich machen.
+assert (("B Stationsstoerungen" in PAKET_ENTHAELT)
         == (PRODUKTE["B Stationsstoerungen"]["status"] == "pilot")), (
     "B ist in einer Quelle freigegeben und in der anderen nicht.")
 assert B_STATUS in ("pilot", "explorativ"), B_STATUS
+# Kein Produkt im Schatten-, Explorativ- oder Spezifikationsstatus darf
+# unter "operativ freigegeben" auftauchen.
+for _n, _w in PRODUKTE.items():
+    if _w["status"] in ("schatten", "explorativ", "spezifiziert"):
+        assert _n not in OPERATIV_FREIGEGEBEN_FUER, (
+            f"{_n} hat Status {_w['status']} und gilt trotzdem als freigegeben.")
 
 print("STATUS DER DREI PRODUKTE - eine Quelle, aus der alles andere liest:")
 for _n, _w in PRODUKTE.items():
     print(f"   {_n:<26s} {_w['status']:<12s} {_w['satz'][:52]}...")
-print(f"   im Paket freigegeben: {FREIGEGEBEN_FUER or 'keines'}")
+print(f"   technisch im Paket:   {PAKET_ENTHAELT or 'keines'}")
+print(f"   operativ freigegeben: {OPERATIV_FREIGEGEBEN_FUER or 'keines'}")
+print("   Das ist nicht dasselbe: A2 ist im Paket enthalten, damit man die")
+print("   Tagesliste ueberhaupt erzeugen kann - freigegeben ist sie nicht.")
 print()
 
 # DAS MODELLPAKET - vollstaendig genug, um einen neuen Vorgang zu bewerten.
@@ -1840,10 +1894,12 @@ joblib.dump({
     "pruefzeit_bis": pruefzeit.endzeit.max().isoformat(),
     "zeitzone": "naive Ortszeit Europe/Berlin - keine tz-Information in den Daten",
     "datenherkunft": "ERFUNDENE LEHRDATEN - Fahrten und Stoerungen synthetisch",
-    "freigegeben_fuer": FREIGEGEBEN_FUER,
+    "paket_enthaelt": PAKET_ENTHAELT,
+    "operativ_freigegeben_fuer": OPERATIV_FREIGEGEBEN_FUER,
     "status": {n: f"{w['status']}: {w['satz']}" for n, w in PRODUKTE.items()},
-    "b_gates": {b: {"gefordert": s, "gemessen": float(i), "haelt": bool(h)}
-                for (b, i, s, _op, _a), h in zip(B_ERGEBNIS, _haelt)},
+    "b_gates": {b: {"gefordert": s, "gemessen": float(i), "haelt": bool(h),
+                    "bindend": bool(bd)}
+                for (b, i, s, _op, _a, bd), h in zip(B_ERGEBNIS, _haelt)},
     "b_entwicklung_bis": B_ENTWICKLUNG_BIS.isoformat(),
     "b_regel": {k: str(v) for k, v in B_REGEL.items()},
     "trainiert_am": datetime.date.today().isoformat(),
@@ -1954,7 +2010,7 @@ MD("""
 | 2 Data Understanding | Eine **Lücke** in der Dauerverteilung trennt Fahrten von Rückgabeproblemen. Und eine Sackgasse: Die Geschwindigkeit taugt nichts, weil sie aus der Dauer abgeleitet ist |
 | 3 Data Preparation | Fünf Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor keine auffällige *Fahrt* ist — wiederholtes Fehlen bei demselben Rad ist sehr wohl ein Fall, nur ein anderer: Datenqualität statt Fahrverhalten |
 | 4 Modeling | Interquartilsregel ({{iqr_treffer:,}} Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
-| 5 Evaluation | Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste {{tagesquote:.1%}} — **bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B hob eine Nachbesserung die Präzision von {{stat_alt_quote:.1%}} auf {{stat_je_tag:.1%}} je Meldung und {{stat_je_alarm:.1%}} je Alarm — beide über der Hürde von {{kriterium_treffer:.0%}}. Der Preis: **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** Episoden statt aller |
+| 5 Evaluation | Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste {{tagesquote:.1%}} — **bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B hob eine Nachbesserung die Präzision der alten Regel von {{stat_alt_quote:.1%}}; im **Entwicklungsabschnitt** erreicht sie {{entw_je_alarm:.1%}} je neuem Alarm. Im **unangetasteten Test** sind es {{stat_je_alarm:.1%}} je neuem Alarm gegen die geforderten {{b_gate_praezision:.0%}} — **B1 damit gerissen**. Recall {{episoden_neu:.0f}}/{{episoden_gesamt:.0f}} Episoden und Verzug {{b_verzug}} Tag halten; insgesamt {{b_gates_halten}} |
 | 6 Deployment | **A1 spezifiziert, A2 im Schattenbetrieb, B {{b_status}}.** A1 ist als Regel und Funktion beschrieben und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. A2 hat den Status „{{a2_status}}", weil das Label fehlt. Bei B halten {{b_gates_halten}} der vier vorab festgelegten Gates auf dem unangetasteten Testabschnitt. Alle drei Statusangaben stammen aus derselben Quelle wie das Modellpaket |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**

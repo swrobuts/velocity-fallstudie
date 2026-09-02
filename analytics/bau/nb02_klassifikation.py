@@ -1832,8 +1832,19 @@ gar nicht bewertet wird, und die Zuständigkeit.
 | Ausgeschlossene Langfahrten | Anteil im Referenzquartal | +50 % relativ | +100 % relativ | 30 Fahrten | Datenbetrieb | Rückgabeprozess oder Datenerfassung hat sich geändert |
 | Wartungsaufträge ohne `erledigt_am` | Anteil im Referenzquartal | 10 % | 20 % | 50 Aufträge | Werkstattleitung | Der Reset des Merkmals greift nicht mehr |
 | Räder mit offenem Schaden | Bestand im Referenzquartal | +50 % relativ | +100 % relativ | 20 Räder | Werkstattleitung | Die Werkstatt kommt nicht nach — die Vorsorgeliste ist dann das falsche Werkzeug |
-| Treffsicherheit der Quartalsliste | {{quote_regel:.0%}} | Wilson-Untergrenze unter {{huerde:.0%}} | Untergrenze unter der Grundrate | {{kapazitaet:.0f}} Räder | Analytik | Bei Stopp: Liste aussetzen, Regel neu prüfen |
+| Treffsicherheit der Quartalsliste — **Gate K3** | Untergrenze {{k3_unten_regel:.1%}} gegen Schwelle {{k3_schwelle:.1%}} | Wilson-Untergrenze **unter {{k3_lift_diagnose}} × Grundrate des Quartals** | Wilson-**Obergrenze** unter {{k3_lift_diagnose}} × Grundrate | {{kapazitaet:.0f}} Räder | Analytik | Bei Stopp: Liste aussetzen, Regel neu prüfen |
+| dieselbe Größe gegen die alte {{huerde:.0%}}-Marke — **D70, nur Diagnose** | {{quote_regel:.0%}} beobachtet | — | — | {{kapazitaet:.0f}} Räder | Analytik | **Löst nichts aus.** Steht hier, damit man sieht, wo die ursprüngliche Zusage stünde |
 | Räder, die trotz Prüfung ausfallen | im Schattenbetrieb zu erheben | 20 % der Geprüften | 35 % | 30 Geprüfte | Werkstattleitung | Die Prüfung selbst greift zu kurz — kein Datenproblem |
+
+> **Die Warnschwelle ist dieselbe Größe wie das Freigabegate — und das ist kein Zufall.**
+> Eine frühere Fassung warnte bei {{huerde:.0%}} und stoppte an der Grundrate; freigegeben
+> wurde aber über K3, also über {{k3_lift_diagnose}} × Grundrate. Damit hätte die Regel
+> weiterlaufen können, obwohl das Gate, das sie überhaupt in Betrieb gebracht hat,
+> längst gerissen wäre. **Wer an einer anderen Zahl überwacht als an der, mit der er
+> freigegeben hat, überwacht das falsche Produkt.**
+>
+> Die Schwelle wandert dabei mit der Grundrate mit — im Winter liegt sie tiefer als im
+> Sommer. Genau dafür wurde K3 relativ formuliert.
 
 > **Zwei Dinge, die diese Tabelle noch nicht kann.** Erstens ist die Treffsicherheit erst
 > nach {{horizont_tage:.0f}} Tagen messbar — die Wache läuft also immer ein Quartal
@@ -1893,11 +1904,11 @@ MD("""
 
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | Aus „vorausschauend warten“ wurde eine Kostenmatrix: 180 € je verpasstem Ausfall gegen 25 € je unnötiger Prüfung — Verhältnis rund 7 : 1. Zwei Erfolgskriterien, eines davon der Vergleich mit der heutigen Faustregel |
+| 1 Business Understanding | Aus „vorausschauend warten“ wurde eine Kostenmatrix: 180 € je verpasstem Ausfall gegen 25 € je unnötiger Prüfung — Verhältnis rund 7 : 1. **Drei bindende Kriterien: {{pflichtgates}}** — K1 Nutzen über die Quartale, K2 Vergleich mit der heutigen Faustregel, K3 statistische Absicherung. Die ursprüngliche {{huerde:.0%}}-Marke bleibt als Diagnose D70 und bindet nicht |
 | 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r = {{korrelation_km_meldungen:.3f}}, für echte Flottendaten auffällig stark), aber nicht deterministisch. Der Anteil auffälliger Räder schwankt saisonal um das {{panel_grundrate_faktor:.1f}}-Fache |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung. Gemessene Distanzen bevorzugt, Langfahrten ausgeschlossen, Räder mit offenem Schaden aus der Prognosepopulation genommen. Rückgesetzt wird bei der **erledigten Reparatur**, nicht bei der Meldung |
 | 4 Modeling | Drei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | Auf dem Testquartal liegt die Faustregel vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer) und belegt dort die {{huerde:.0%}}-Hürde statistisch, der Wald nicht (Untergrenze {{wilson_unten_wald:.1%}}). Über {{roll_quartale:.0f}} Validierungsquartale nimmt die Regel die Nutzenschwelle in {{k3_quartale_lift_regel:.0f}} Quartalen. Die ursprüngliche {{huerde:.0%}}-Zusage war unerfüllbar — in einem Quartal liegt die Orakelschranke bei {{winter_orakel:.1%}} |
+| 5 Evaluation | Auf dem Testquartal liegt die Faustregel vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer). **Entschieden hat K3:** Die Wilson-Untergrenze der Regel liegt bei {{k3_unten_regel:.1%}} über der dynamischen Schwelle von {{k3_schwelle:.1%}} ({{k3_lift_diagnose}} × Grundrate {{grundrate_test:.1%}}); der Wald erreicht nur {{k3_unten_wald:.1%}} und reißt K3. Über {{roll_quartale:.0f}} Validierungsquartale nimmt die Regel K1 in {{k3_quartale_lift_regel:.0f}} Quartalen. Zur Einordnung: D70 erfüllen beide ({{d70_regel}} / {{d70_wald}}) — die Marke war ohnehin unerfüllbar, in einem Quartal liegt die Orakelschranke bei {{winter_orakel:.1%}} |
 | 6 Deployment | **Ausgeliefert wird die Faustregel.** Dazu eine Schattenliste zum {{schatten_stichtag}}, bewertbar nach {{horizont_tage:.0f}} Tagen — die Freigabe steht auf historischen Daten und wird prospektiv nachgeprüft |
 
 **Drei Sätze, die aus diesem Notebook bleiben sollten**
