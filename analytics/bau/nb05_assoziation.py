@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Notebook 5 - Assoziationsanalyse: Welche Wege gehoeren zusammen?"""
 from bauwerk import CODE, MD, PHASE, kopf
+from gestaltung import kacheln, laufzeit_code
 
 NAME = "05_Assoziation_Wege_im_Netz"
 
@@ -156,7 +157,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import plotly.graph_objects as go
+  ''' + laufzeit_code() + '''
 # Die Adresse zeigt auf einen festen Commit - dadurch rechnet jeder Leser
 # mit denselben Daten wie dieses Notebook. Wuerde hier 'main' stehen, aendert
 # sich die Grundlage still, sobald jemand die Daten anfasst. Fuer eine
@@ -478,6 +480,10 @@ print("  meist sich selbst.")
 '''),
 
 # =====================================================================
+MD(kacheln([("{{brauchbare_regeln:.0f}}", "Regeln nehmen A1 bis A3"),
+             ("{{b1_gehalten:.0f}} von {{b1_kandidaten:.0f}}", "halten B1 unter Unsicherheit"),
+             ("{{huerde_je_werktag:.2f}}", "Fahrten je Werktag verlangt die Hürde")])),
+
 PHASE(5, "Die Regeln mit dem höchsten Lift sind nicht die nützlichsten. "
          "Jetzt kommen die Kriterien aus Phase 1 zum Einsatz."),
 
@@ -499,6 +505,33 @@ plt.xlabel("Support (% der Warenkörbe)"); plt.ylabel("kontextbedingter Lift")
 plt.title("Jede Blase ist eine Regel — die Größe zeigt die Konfidenz")
 plt.legend(); plt.grid(alpha=.3)
 plt.tight_layout(); plt.show()
+
+# DIESELBE PUNKTWOLKE, BEDIENBAR. Die statische Grafik daruber bleibt
+# stehen: Sie traegt die Aussage auch dort, wo Skripte entfernt werden.
+# Der Zusatz hier ist das Weiterlesen - welche Regel hinter einem Punkt
+# steckt, steht sonst in keiner Achse.
+_pw = regeln.assign(
+    Gruppe=np.where(regeln.index.isin(brauchbar.index),
+                    "erfuellt alle drei", "faellt durch"))
+_fig = go.Figure()
+for _name, _teil in _pw.groupby("Gruppe"):
+    _fig.add_trace(go.Scatter(
+        x=_teil.Support * 100, y=_teil[LIFT], mode="markers", name=_name,
+        marker=dict(size=6 + _teil.Konfidenz * 26, opacity=.72,
+                    line=dict(width=0)),
+        customdata=np.stack([_teil["wenn Start"], _teil["dann Ziel"],
+                             _teil.Kontext, _teil.Fahrten,
+                             _teil.Konfidenz], axis=-1),
+        hovertemplate=("<b>%{customdata[0]} → %{customdata[1]}</b><br>"
+                       "%{customdata[2]}<br>"
+                       "Support %{x:.2f} %   Lift %{y:.2f}<br>"
+                       "%{customdata[3]} Fahrten, Konfidenz "
+                       "%{customdata[4]:.0%}<extra></extra>")))
+_fig.add_vline(x=K1_SUPPORT * 100, line=dict(dash="dash", color=FARBE["warnung"]))
+_fig.add_hline(y=K2_LIFT, line=dict(dash="dash", color=FARBE["gut"]))
+_fig.update_xaxes(title="Support (% der Warenkoerbe)")
+_fig.update_yaxes(title="kontextbedingter Lift")
+interaktiv(_fig, "Jede Blase ist eine Regel - zum Weiterlesen darauf zeigen")
 
 print(f"Regeln insgesamt:                 {len(regeln)}")
 print(f"K1  Support ≥ {K1_SUPPORT:.0%}:                {(regeln.Support >= K1_SUPPORT).sum()}")
@@ -874,7 +907,8 @@ merke("split_haelt", haelt_13); merke("split_gesamt", len(zusammen))
 haelt_1 = int((zusammen[f"{LIFT} bestätigt"] > 1.0).sum())
 print(f"   davon spaeter weiterhin Lift >= {K2_LIFT}:  {haelt_13} von {len(zusammen)}")
 print(f"   davon spaeter weiterhin Lift > 1:    {haelt_1} von {len(zusammen)}\\n")
-print(zusammen.round(3).to_string(index=False))
+from IPython.display import display
+display(stil(zusammen.round(3), balken=f"{LIFT} bestätigt"))
 
 # ─── VIER TEILFENSTER DES BESTAETIGUNGSZEITRAUMS ────────────────────
 # Ein einziger Schnitt legt das Bestaetigungsfenster auf eine bestimmte
@@ -1082,6 +1116,11 @@ ohne jede Regel auskommt.
 
 # =====================================================================
 PHASE(6, "Was ausgeliefert wird — ein Hinweis für Menschen, kein Transportauftrag."),
+
+MD(kacheln([("{{b_regeln_n:.0f}}", "Regeln im Artefakt"),
+            ("{{b_je_tag_max:.2f}}", "Fahrten je Tag, größte Regel"),
+            ("{{bedarf_mittel:.1f}}", "Räder je Werktag zu bewegen"),
+            ("{{andere_station:.0%}}", "frei abgestellt bei anderer Station")])),
 
 MD("""
 > **Achtung, hier wechselt die Analyse.** Was jetzt kommt, folgt **nicht** aus den Regeln.
