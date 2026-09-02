@@ -1724,11 +1724,14 @@ neben der ersten, und zwei Quellen für dieselbe Zahl gehen irgendwann auseinand
 **Was in jedem Notebook herauskam, steht in jedem Notebook** — in seiner eigenen
 Schlusszelle, aus seinen eigenen Variablen erzeugt. Lesen Sie es dort.
 
-Was sich dagegen über alle sechs sagen lässt, ohne zu veralten: **Kein einziges Verfahren
-ging uneingeschränkt in Betrieb.** Jedes endete mit einer Teilfreigabe, einem
-Machbarkeitsindiz, einem Rücksprung oder einem Schattenbetrieb — und in jedem Fall waren
-es nicht die Kennzahlen, die das entschieden haben, sondern die Frage, ob jemand mit dem
-Ergebnis verantwortlich handeln kann.
+Was sich dagegen über alle sechs sagen lässt, ohne zu veralten: **Ein Verfahren ging in
+Betrieb, fünf nicht** — und in keinem der sechs Fälle haben die Kennzahlen das
+entschieden, sondern die Frage, ob jemand mit dem Ergebnis verantwortlich handeln kann.
+
+Die eine Freigabe ist dabei so lehrreich wie die fünf Absagen. Sie kam nicht zustande,
+weil dort besser gerechnet worden wäre, sondern weil dort **eine vorher festgelegte Hürde
+tatsächlich genommen wurde** — und weil die Frage, ob das Verfahren überhaupt betrieben
+werden darf, gestellt wurde, bevor jemand die Ergebnisse kannte.
 
 Das ist keine schlechte Bilanz, sondern eine realistische. Analyseprojekte, in denen alles
 auf Anhieb funktioniert, gibt es in Lehrbüchern — und sonst nirgends.

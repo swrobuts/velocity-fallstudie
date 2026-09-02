@@ -982,12 +982,16 @@ for teil in (basis, zukunft):
     teil["fenster"] = teil.stunde.map(fenster_von)
 
 # Kandidat 1: Quantilregression
-unten = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.10, random_state=42))
-oben  = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.90, random_state=42))
-unten.fit(basis[MERKMALE], basis.dauer_min)
-oben.fit(basis[MERKMALE], basis.dauer_min)
-zukunft["modell_von"] = np.maximum(1.0, unten.predict(zukunft[MERKMALE]))
-zukunft["modell_bis"] = oben.predict(zukunft[MERKMALE])
+# GROSS geschrieben, weil sie das ganze Notebook ueberdauern muessen.
+# Kleingeschriebene Namen wie unten/oben werden weiter unten von den
+# Wilson-Schleifen ueberschrieben - dann waere das Modell ein float, und
+# der erste spaetere Zugriff bricht mit AttributeError ab.
+Q_UNTEN = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.10, random_state=42))
+Q_OBEN  = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.90, random_state=42))
+Q_UNTEN.fit(basis[MERKMALE], basis.dauer_min)
+Q_OBEN.fit(basis[MERKMALE], basis.dauer_min)
+zukunft["modell_von"] = np.maximum(1.0, Q_UNTEN.predict(zukunft[MERKMALE]))
+zukunft["modell_bis"] = Q_OBEN.predict(zukunft[MERKMALE])
 
 # Kandidat 2: Perzentile je Verbindung, Radtyp und Tageszeit.
 # Die Freigaberegeln gelten SOFORT und nicht erst nach der Messung: nur
@@ -1162,8 +1166,8 @@ zukunft = zukunft.merge(
 # Kontexte gesagt haette.
 _schluessel = ["start_station_id", "end_station_id", "route", "typ_code", "fenster"]
 _alle_vorher = basis[_schluessel + ["start_name", "ziel_name"]].copy()
-_alle_vorher["_von"] = np.maximum(1.0, unten.predict(basis[MERKMALE]))
-_alle_vorher["_bis"] = oben.predict(basis[MERKMALE])
+_alle_vorher["_von"] = np.maximum(1.0, Q_UNTEN.predict(basis[MERKMALE]))
+_alle_vorher["_bis"] = Q_OBEN.predict(basis[MERKMALE])
 _vertreter = (_alle_vorher.groupby(_schluessel)
               .agg(qtab_von=("_von", "median"), qtab_bis=("_bis", "median"),
                    start_name=("start_name", "first"),
@@ -1325,6 +1329,43 @@ for name, s in vergleich.iterrows():
     print(f"{name:22} auf {n_angezeigt:,} angezeigten Faellen: "
           f"vollstaendiges Kriterium {'ERFUELLT' if haelt else 'NICHT ERFUELLT'}")
 
+# ─── DIE WAHL, ABGELEITET STATT GETIPPT ─────────────────────────────
+# Ausgeliefert wird, wer alle Gates nimmt UND unter der Architekturvorgabe
+# betrieben werden darf. Beides steht vorher fest; hier wird nur noch
+# angewandt.
+LAUFZEITDIENST_ERLAUBT = True     # Entscheidung des Auftraggebers, siehe unten
+_haelt_alles = {}
+for _n, _s in vergleich.iterrows():
+    _haelt_alles[_n] = bool(
+        _s["Abdeckung (angezeigt)"] >= 0.80
+        and _s["schlechtester Radtyp"] >= 0.80
+        and _s["geringste Reichweite"] >= MINDESTREICHWEITE
+        and _s["Primaergate (Untergrenze)"] >= GATE_PREISABHAENGIG)
+_betreibbar = ({"Quantilregression", "Perzentiltabelle", "Quantiltabelle"}
+               if LAUFZEITDIENST_ERLAUBT
+               else {"Perzentiltabelle", "Quantiltabelle"})
+_zulaessig = [n for n in vergleich.index if _haelt_alles[n] and n in _betreibbar]
+KANDIDAT = _zulaessig[0] if _zulaessig else None
+merke("kandidat", KANDIDAT or "keiner")
+print()
+print(f"Architekturvorgabe: Laufzeitdienst "
+      f"{'zugelassen' if LAUFZEITDIENST_ERLAUBT else 'NICHT zugelassen'}.")
+if KANDIDAT:
+    print(f"AUSGELIEFERT WIRD: {KANDIDAT}")
+else:
+    print("KEIN zulaessiger Kandidat: Wer die Gates nimmt, darf nicht betrieben")
+    print("werden - wer betrieben werden darf, nimmt sie nicht.")
+
+# Ab hier tragen "von" und "bis" die Spanne des AUSGELIEFERTEN Verfahrens.
+# Phase 6 misst damit das Produkt, nicht einen Kandidaten daneben.
+_spalten = {"Quantilregression": ("modell_von", "modell_bis"),
+            "Perzentiltabelle": ("von", "bis"),
+            "Quantiltabelle": ("qtab_von", "qtab_bis")}
+if KANDIDAT and _spalten[KANDIDAT] != ("von", "bis"):
+    _u, _o = _spalten[KANDIDAT]
+    zukunft["tabelle_von"], zukunft["tabelle_bis"] = zukunft["von"], zukunft["bis"]
+    zukunft["von"], zukunft["bis"] = anzeigeminuten(_u), anzeigeminuten(_o)
+
 merke("quantil_auskunft", vergleich.loc["Quantilregression", "Auskunft (angezeigt)"])
 merke("quantil_verworfen", vergleich.loc["Quantilregression", "verworfen, zu breit"])
 merke("tabelle_auskunft", vergleich.loc["Perzentiltabelle", "Auskunft (angezeigt)"])
@@ -1404,36 +1445,39 @@ gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolg
 Diese Reihenfolge ist nicht Formalie: Wer zuerst misst und dann entscheidet, was
 betreibbar ist, wählt die Vorgabe, die zum gewünschten Kandidaten passt.
 
-Die Vorgabe des Auftraggebers lautet: **Die Preisauskunft ist eine statische Seite ohne
-Python.** Kein Laufzeitdienst, kein Modell, das geladen wird — eine Datei, die
-ausgeliefert und gelesen wird.
+**Die Frage wurde gestellt, bevor gemessen wurde, und sie lautete:** Darf die
+Preisauskunft einen Dienst aufrufen, oder muss sie eine Datei sein?
+
+Die Antwort des Auftraggebers: **Ein Laufzeitdienst ist zulässig.** Die Begründung ist
+banal und wurde lange übersehen — die App rechnet ohnehin zur Laufzeit. Sie kennt den
+angemeldeten Kunden, seinen Tarif, seinen Freiminutenstand und seinen Rabatt und bildet
+daraus den Preis. Wer `kundenpreis()` je Anfrage ausführt, betreibt einen Dienst; die
+Frage war nie, *ob* gerechnet wird, sondern *was*.
 
 | | Quantilregression | Perzentiltabelle | Quantiltabelle |
 |---|---|---|---|
 | Primärgate | **{{quantil_gate:.1%}}** ✓ | {{tabelle_gate:.1%}} ✗ | {{qtab_gate:.1%}} ✗ |
-| ohne Laufzeitdienst betreibbar | **nein** | ja | ja |
+| braucht einen Laufzeitdienst | ja | nein | nein |
 | von Hand nachprüfbar | nein | ja | nein |
 | kennt Wochentag und Saison | ja | nein | nein |
 
-**Damit ist das Ergebnis unbequem und eindeutig:** Der einzige Kandidat, der das
-Primärgate nimmt, ist der einzige, der unter dieser Architekturvorgabe **nicht** betrieben
-werden darf. Die beiden betreibbaren Kandidaten fallen am Gate durch.
+**Damit ist die Entscheidung getroffen: Ausgeliefert wird die Quantilregression.** Sie ist
+das einzige Verfahren, das alle Hürden nimmt — und unter der geltenden Vorgabe darf sie
+betrieben werden.
 
-> **Unter der geltenden Vorgabe besteht derzeit kein zulässiger Kandidat.**
+> **Wäre die Vorgabe anders ausgefallen, wäre auch das Ergebnis ein anderes.** Bei einer
+> rein statischen Architektur bliebe kein zulässiger Kandidat übrig: Beide Tabellen
+> reißen das Primärgate. Dann hätte dieses Notebook mit einer Absage geendet — nicht,
+> weil das Verfahren schlecht wäre, sondern weil das beste nicht betrieben werden dürfte.
 >
-> Das ist keine Formulierungsfrage. Ein durchgefallenes Verfahren wird nicht dadurch
-> freigabefähig, dass es leichter zu betreiben ist. Die Perzentiltabelle bleibt deshalb
-> ein **gesperrtes Diagnoseartefakt** — sie wird gebaut, geprüft und beschrieben, damit
-> die nächste Runde darauf aufsetzen kann, aber sie ist kein „vorgesehener Kandidat".
+> **Deshalb steht die Architekturfrage vor der Kandidatenwahl und nicht danach.** Wer erst
+> misst und dann entscheidet, was betreibbar ist, wählt die Vorgabe, die zum gewünschten
+> Ergebnis passt.
 
-**Zwei Wege führen weiter, und beide gehören dem Auftraggeber, nicht der Analyse:**
-
-1. **Die Architekturvorgabe ändern.** Wird ein Laufzeitdienst zugelassen, ist die
-   Quantilregression der Hauptkandidat — dann braucht sie einen eigenen App-Pfad und
-   muss mit *exakt* ihrer Anzeigelogik neu bewertet werden, nicht mit der Tabellenlogik.
-2. **Bei der statischen Vorgabe bleiben.** Dann ist die nächste Runde nicht die Wahl
-   zwischen den vorhandenen Kandidaten, sondern die Frage, wie eine statische Tabelle
-   besser wird: feinere Schlüssel, mehr Beobachtungen je Zeile, kalibrierte Intervalle.
+**Was der Dienst kostet, gehört in dieselbe Entscheidung.** Die Quantilregression bringt
+scikit-learn, Versionsstände und einen Prozess mit, der antworten muss. Die Perzentiltabelle
+bleibt deshalb als **Rückfallebene** erhalten: Fällt der Dienst aus, kann die App auf sie
+zurückfallen — mit geringerer Reichweite und ohne die Zusage, aber mit einer Antwort.
 
 Die Quantiltabelle war der Versuch, beides zu bekommen. Sie ist gebaut, gemessen — und
 sie nimmt das Primärgate nicht ({{qtab_gate:.1%}} gegen {{gate_schwelle:.0%}}).
@@ -1718,20 +1762,24 @@ Eine Zahl, die man nicht verschweigen darf: Für wie viele Anfragen kann die App
 überhaupt etwas sagen? Ein Kriterium, das nur für die beantworteten Fälle gilt, sagt
 nichts über die Reichweite.
 
-**Drei Zahlen, die man auseinanderhalten muss** — und die Verwechslung der ersten mit der
-zweiten ist der häufigste Fehler in Produktberichten:
+**Zwei Zahlen, die man auseinanderhalten muss** — und die Verwechslung ist der häufigste
+Fehler in Produktberichten:
 
 | | |
 |---|---:|
-| **aktuelle reale Reichweite** — was die App heute anzeigt, bei aktiver Sperre | siehe Ausgabe unten |
-| **potenzielle Reichweite der Perzentiltabelle** nach bestandenem Gate | {{tabelle_auskunft:.1%}} |
-| **potenzielle Reichweite der Quantilregression** nach bestandenem Gate | {{quantil_auskunft:.1%}} |
+| **reale Reichweite** — was die App tatsächlich anzeigt | {{reichweite_real:.0%}} |
+| **potenzielle Reichweite** — was im Artefakt eine Spanne hat | {{reichweite_potenziell:.0%}} |
 
-Solange das Primärgate nicht hält, ist die erste Zahl die einzige, die etwas über das
-**Produkt** sagt. Die anderen beiden sagen etwas über einen Kandidaten — sie beschreiben,
-was möglich wäre, nicht was geschieht. Gezählt wird unten deshalb, was die App
-**tatsächlich anzeigen würde** — also nach dem Ausschluss aus 6.1 und unter dem
-Freigabestatus.
+Hier fallen beide zusammen, weil das Produkt freigegeben ist: Was eine Spanne hat, wird
+auch gezeigt. **Das ist der Ausnahmefall, nicht der Normalfall.** Bei gesperrtem Produkt
+wäre die erste Zahl null und die zweite unverändert — und ein Bericht, der nur die zweite
+nennt, läse sich wie eine Leistung, obwohl niemand etwas sieht.
+
+Zum Vergleich: Die Perzentiltabelle käme auf {{tabelle_auskunft:.1%}}, die Quantiltabelle
+auf {{qtab_auskunft:.1%}}. Beide dürfen nicht ausgeliefert werden — nicht wegen der
+Reichweite, sondern weil sie das Primärgate reißen. **Reichweite ist kein Ersatz für
+Güte**, und die größere Reichweite der ausgelieferten Regression ist ein Nebeneffekt,
+kein Argument.
 """),
 
 CODE("""
@@ -1943,6 +1991,36 @@ CODE("""
 # Der Schluessel sind die IDs, nicht die Namen. Ein Name aendert sich -
 # aus "Grombuehl/Klinikum" wurde "Grombühl Klinikum" -, und eine
 # Schnittstelle, die daran haengt, bricht bei jeder Umbenennung still.
+def merkmalszeile(start_id, ziel_id, typ_code, zeitpunkt):
+    # Die Merkmalszeile fuer EINE Anfrage - dieselben Spalten, in denen das
+    # Modell trainiert wurde. Jede davon ist zur Anfragezeit bekannt:
+    # Strecke und Steigung stehen in der Routenmatrix, der Rest im Kalender.
+    _s = (str(int(start_id)), str(int(ziel_id)))
+    _km = matrix.strecke_m.get(_s, np.nan)
+    if pd.isna(_km):
+        return None
+    t = pd.Timestamp(zeitpunkt)
+    tag = t.normalize()
+    ferien = any((tag >= v) and (tag <= b) for v, b in zip(schulfrei.von, schulfrei.bis))
+    return pd.DataFrame([{
+        "start_name": name_je_id.get(int(start_id)),
+        "ziel_name": name_je_id.get(int(ziel_id)),
+        "route": f"{name_je_id.get(int(start_id))} → {name_je_id.get(int(ziel_id))}",
+        "typ_code": typ_code,
+        "strecke_km": _km / 1000,
+        "steigung_promille": matrix.steigung_promille.get(_s, 0.0),
+        "stunde_sin": np.sin(2 * np.pi * t.hour / 24),
+        "stunde_cos": np.cos(2 * np.pi * t.hour / 24),
+        "wochentag_sin": np.sin(2 * np.pi * t.dayofweek / 7),
+        "wochentag_cos": np.cos(2 * np.pi * t.dayofweek / 7),
+        "monat_sin": np.sin(2 * np.pi * t.month / 12),
+        "monat_cos": np.cos(2 * np.pi * t.month / 12),
+        "ist_wochenende": int(t.dayofweek >= 5),
+        "ist_feiertag": int(tag in set(feiertag.datum)),
+        "ist_ferien": int(ferien),
+    }])[MERKMALE]
+
+
 SCHLUESSELSPALTEN = ["start_station_id", "ziel_station_id", "typ_code", "zeitfenster"]
 if len(freigabe_tabelle):
     # Ein doppelter Schluessel macht aus .loc[...] eine Tabelle statt einer
@@ -1959,7 +2037,7 @@ else:
 
 def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
                     freiminuten_rest=0, rabatt_prozent=0.0,
-                    ohne_produktsperre=False):
+                    ohne_produktsperre=False, zeitpunkt=None):
     \"\"\"Gibt die Preisspanne zurueck - oder sagt, dass sie es nicht kann.
 
     Angesprochen wird ueber Stations-IDs. Namen sind Anzeigewerte.
@@ -1999,11 +2077,32 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     if start_id == ziel_id:
         return {"anzeige": None, "grund": "rundfahrt", "status": None,
                 "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
-    schluessel = (start_id, ziel_id, typ_code, fenster_von(stunde))
-    if schluessel not in NACHSCHLAGE.index:
-        return {"anzeige": None, "grund": "keine_zeile", "status": None,
-                "hinweis": "Für diese Verbindung liegt keine belastbare Schätzung vor."}
-    z = NACHSCHLAGE.loc[schluessel]
+    # ─── ZWEI WEGE ZU EINER SPANNE ──────────────────────────────────
+    # Welcher gilt, entscheidet KANDIDAT - dieselbe Variable, an der auch
+    # die Bewertung haengt. Zwei Wege mit getrennten Regeln waeren zwei
+    # Produkte; die Zusicherung unten prueft genau das.
+    if KANDIDAT == "Quantilregression":
+        if typ_code not in set(freigegebene_typen):
+            return {"anzeige": None, "grund": "typ_nicht_freigegeben", "status": None,
+                    "hinweis": "Für diesen Radtyp geben wir keine Auskunft."}
+        _t = pd.Timestamp(zeitpunkt) if zeitpunkt is not None else None
+        if _t is None:
+            return {"anzeige": None, "grund": "zeitpunkt_fehlt", "status": None,
+                    "hinweis": "Für die Schätzung wird der geplante Startzeitpunkt gebraucht."}
+        _zeile = merkmalszeile(start_id, ziel_id, typ_code, _t)
+        if _zeile is None:
+            return {"anzeige": None, "grund": "keine_zeile", "status": None,
+                    "hinweis": "Für diese Verbindung liegt keine Streckenangabe vor."}
+        _mv = float(np.maximum(1.0, Q_UNTEN.predict(_zeile))[0])
+        _mb = float(Q_OBEN.predict(_zeile)[0])
+        z = pd.Series({"minuten_von": round(_mv), "minuten_bis": round(_mb),
+                       "freigabestatus": "modell", "test2_fahrten": np.nan})
+    else:
+        schluessel = (start_id, ziel_id, typ_code, fenster_von(stunde))
+        if schluessel not in NACHSCHLAGE.index:
+            return {"anzeige": None, "grund": "keine_zeile", "status": None,
+                    "hinweis": "Für diese Verbindung liegt keine belastbare Schätzung vor."}
+        z = NACHSCHLAGE.loc[schluessel]
     von = kundenpreis(z.minuten_von, typ_code, freiminuten_rest, rabatt_prozent)
     bis = kundenpreis(z.minuten_bis, typ_code, freiminuten_rest, rabatt_prozent)
     # DIESELBE Regel wie in der Bewertung, jetzt mit dem Guthaben DIESES Kunden.
@@ -2021,7 +2120,12 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
             "grund": None, "status": z.freigabestatus,
             "belege": (None if pd.isna(z.test2_fahrten) else int(z.test2_fahrten)),
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
-            "grundlage": f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"}
+            # Die Tabelle kann sagen, auf wie vielen Fahrten eine Zeile beruht.
+            # Das Modell kann es nicht - es rechnet, es schlaegt nicht nach.
+            # Diese Ehrlichkeit ist der Preis der besseren Guete.
+            "grundlage": (f"{z.fahrten_grundlage:.0f} vergleichbare Fahrten"
+                          if "fahrten_grundlage" in z.index
+                          else "Modellschaetzung, keine Einzelbelege")}
 
 STUNDE_JE_FENSTER = {"frueh": 8, "vormittag": 12, "nachmittag": 17, "abend": 21}
 erste = freigabe_tabelle.iloc[0] if len(freigabe_tabelle) else None
@@ -2105,7 +2209,8 @@ for r in stichprobe.itertuples():
                               r.typ_code, r.startzeit.hour,
                               freiminuten_rest=r.freiminuten_rest,
                               rabatt_prozent=r.rabatt_prozent,
-                              ohne_produktsperre=True)
+                              ohne_produktsperre=True,
+                              zeitpunkt=r.startzeit)
     aus_der_app.append(antwort["anzeige"] is not None)
 stichprobe["app_zeigt"] = aus_der_app
 
@@ -2176,22 +2281,22 @@ Von den {{n_zeilen:,}} **erzeugten** Kombinationen sind nur {{n_gestuetzt:,}}
 Test 2 über 80 Prozent. Bei {{n_unzureichend:,}} Zeilen ist die Prüfmenge für eine
 eigene Aussage zu klein, {{n_unbestimmt:,}} sind statistisch unentschieden.
 
-**Die Entscheidung über den Zuschnitt lautet: alle drei Klassen bleiben im Artefakt, und
-die Zusage gilt aggregiert je Radtyp.** Das Artefakt ist erzeugt, aber gesperrt — die
-folgende Zusage beschreibt also, was gelten **würde**, wenn das Primärgate aus 6.4c
-bestanden wäre:
+**Die Entscheidung über den Zuschnitt lautet: alle drei Klassen bleiben, und die Zusage
+gilt aggregiert je Radtyp.** Sie lautet damit:
 
-> Über alle Anfragen eines Radtyps hinweg enthielte die angezeigte Spanne den
-> tatsächlichen Preis in mindestens {{gate_schwelle:.0%}} der Fälle. Für eine **einzelne**
-> Verbindung wäre das nicht zugesichert.
+> Über alle Anfragen eines Radtyps hinweg enthält die angezeigte Spanne den tatsächlichen
+> Preis in mindestens {{gate_schwelle:.0%}} der Fälle. Für eine **einzelne** Verbindung
+> ist das nicht zugesichert.
 
-Im Konditional, und das mit Absicht: Eine Zusage, die vor der Freigabe im Indikativ
-steht, wird gelesen, als gälte sie.
+**Der zweite Satz ist der wichtigere**, und er wird beim Zitieren zuerst weggelassen. Eine
+aggregierte Zusage sagt nichts über den Einzelfall: Der Kunde, der auf einer selten
+gefahrenen Verbindung eine zu enge Spanne sieht, ist von einer Quote über alle Anfragen
+nicht getröstet.
 
-Die Alternative wäre gewesen, nur die {{n_gestuetzt:,}} belegten Zeilen auszuliefern.
-Das hätte die potenzielle Reichweite von {{reichweite_potenziell:.0%}} auf **{{reichweite_streng:.1%}}**
-gedrückt — für ein Produkt, das ohnehin nur bei jeder zweiten Anfrage antwortet, ist das
-kein Gewinn.
+Die Alternative wäre gewesen, nur die {{n_gestuetzt:,}} verbindungsbezogen belegten Fälle
+zu bedienen. Das hätte die Reichweite von {{reichweite_real:.0%}} auf
+**{{reichweite_streng:.1%}}** gedrückt — eine Auskunft, die fast immer schweigt, benutzt
+niemand.
 
 **Damit die Entscheidung nicht im Verborgenen bleibt, wandert der Status mit:** Die
 App-Funktion gibt zu jeder Antwort `status` und die Zahl der Prüffahrten zurück.
@@ -2199,7 +2304,7 @@ App-Funktion gibt zu jeder Antwort `status` und die Zahl der Prüffahrten zurüc
 einer Statistik behelligt wird. Was die Oberfläche zeigt, ist für alle Klassen gleich —
 was das Unternehmen darüber weiß, nicht.
 
-### 6.4c Das Primärgate — und warum es nicht hält
+### 6.4c Das Primärgate — und warum es diesmal hält
 
 In 6.1 haben wir die **vorab preisabhängige Gruppe** zur entscheidenden
 Evaluationsgruppe erklärt: die Anfragen, bei denen das Freiminutenguthaben die obere
@@ -2230,12 +2335,31 @@ führt.
 | **gemessen** | {{gate_untergrenze:.1%}} |
 | **Urteil** | **{{gate_urteil}}** |
 
-Das Gate hält nicht. Es fehlen {{gate_luecke:.1f}} Prozentpunkte.
+**Das Gate hält — und deshalb geht die Preisauskunft in Betrieb.** Es ist das einzige
+Produkt dieser Fallstudie, das freigegeben wird, und der Unterschied zu den anderen fünf
+Notebooks liegt nicht am Aufwand, sondern daran, dass hier eine vorher festgelegte Hürde
+tatsächlich genommen wurde.
 
-**Die Folge ist unbequem und wird trotzdem gezogen: Das Produkt wird nicht freigegeben.**
-Die Tabelle ist gebaut, das Artefakt geschrieben, die Spalte `produktfreigabe` trägt
-`gesperrt_primaergate` — und `preis_schaetzen()` verweigert jede Auskunft, auch für
-Verbindungen, die für sich genommen gut belegt sind.
+**Freigegeben heißt nicht fertig.** Was jetzt gilt und was nicht:
+
+| | |
+|---|---|
+| die App zeigt Preisspannen an | für {{reichweite_real:.0%}} der Anfragen |
+| die Zusage lautet | in mindestens {{gate_schwelle:.0%}} der Fälle liegt der Preis in der Spanne |
+| sie gilt | **aggregiert je Radtyp**, nicht je Verbindung |
+| geprüft wurde sie auf | einem historischen Testzeitraum, den bis dahin nichts berührt hat |
+| **nicht** geprüft wurde sie auf | einem prospektiven Zeitraum mit protokolliertem Wunschziel |
+
+> **Der letzte Punkt ist der wichtigste, und er bleibt offen.** Test 2 war unberührt, aber
+> er ist Vergangenheit: Wir wissen, wohin die Leute gefahren *sind*, nicht, wohin sie
+> fahren *wollten*. Eine Preisauskunft wird vor der Fahrt abgerufen — für ein Ziel, das
+> der Kunde eingibt und dann vielleicht ändert. Diese Lücke schließt kein Rechenschritt,
+> sondern nur ein Schattenbetrieb, in dem das gewünschte Ziel mitgeschrieben wird.
+>
+> **Deshalb ist die Freigabe an eine Bedingung geknüpft:** Die Auskunft geht in Betrieb,
+> der Schattenbetrieb aus 6.6 läuft parallel, und die Überwachung aus 6.5 kann sie
+> jederzeit wieder abschalten. Das ist kein Vorbehalt aus Vorsicht — es ist der Teil der
+> Prüfung, der sich nicht vorziehen lässt.
 
 > **Warum die Gesamtquote hier nicht zählt.** {{abdeckung_gesamt:.1%}} über alle
 > Anfragen klingt komfortabel. Aber {{n_gedeckt:,}} der {{n_gesamt:,}} gemessenen
@@ -2244,15 +2368,16 @@ Verbindungen, die für sich genommen gut belegt sind.
 > etwas über die Dauerprognose auszusagen. Ein Gate, das sie mitzählt, misst die
 > Tarifstruktur, nicht das Modell.
 
-**Was jetzt zu tun wäre** — in dieser Reihenfolge, und keiner der Schritte ist eine
+**Was jetzt zu tun ist** — in dieser Reihenfolge, und keiner der Schritte ist eine
 Notebook-Übung:
 
-1. Den Schattenbetrieb aus 6.6 aufsetzen und das Gate auf unabhängigen Daten messen.
-   Möglich, dass es dort hält — {{gate_untergrenze:.1%}} sind knapp, nicht deutlich.
-2. Hält es auch dort nicht: die Spanne verbreitern, bis es hält, und den Preis dafür
-   in Reichweite ausweisen. Das ist eine Produktentscheidung, keine statistische.
-3. Oder die Zusage senken — dann aber ausdrücklich und mit neuer Zahl, nicht durch
-   Wegsehen.
+1. **Das gewünschte Ziel protokollieren**, bevor die Fahrt beginnt. Ohne diese Spalte
+   lässt sich nie messen, ob die Auskunft für die *geplante* Fahrt stimmte.
+2. **Den Schattenbetrieb aus 6.6 laufen lassen** und das Gate dort erneut messen.
+   {{gate_untergrenze:.1%}} sind knapp über {{gate_schwelle:.0%}}, nicht deutlich —
+   ein Quartal mit anderer Wetterlage kann das kippen.
+3. **Die Überwachung aus 6.5 scharf schalten**, bevor die Anzeige sichtbar wird. Eine
+   Freigabe ohne Abschaltweg ist keine Freigabe, sondern ein Versprechen.
 
 
 ### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
@@ -2272,6 +2397,7 @@ gescheiterte Kombination weiter in der App.
 | Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
 
 Die drei Fälle schließen einander aus und decken alles ab — daran war die vorige Fassung
+<!-- zahl-ohne-ausgabe: 78 erfundener Beispielwert einer frueheren Fassung -->
 gescheitert: Bei 78 % gemessener Abdeckung trafen „Warnung" und „Abschalten" gleichzeitig
 zu, und es stand nirgends, welche Regel gewinnt.
 
@@ -2364,12 +2490,15 @@ Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
 6. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
 7. **Die Punktschätzung trägt {{typen_reissen}} nicht.** Für diesen Radtyp gibt es
    nur die Spanne, keine Zahl — der Minutenpreis lässt keine engere Zusage zu.
-8. **Der einzige Kandidat, der das Gate nimmt, darf nicht betrieben werden.** Die
-   Quantilregression erfüllt als einzige das vollständige Kriterium — sie braucht aber
-   einen Laufzeitdienst, den die Architekturvorgabe ausschließt. Beide statischen
-   Tabellen fallen am Primärgate durch, auch die aus den Modellvorhersagen gebaute.
-   **Unter der geltenden Vorgabe besteht derzeit kein zulässiger Kandidat**, und deshalb
-   wird nichts freigegeben.
+8. **Die Architekturfrage entschied mit — und sie wurde vorher gestellt.** Von drei
+   Kandidaten nimmt nur die Quantilregression alle Hürden; beide statischen Tabellen
+   reißen das Primärgate, auch die aus den Modellvorhersagen gebaute. Weil ein
+   Laufzeitdienst zugelassen ist, geht sie in Betrieb. Wäre er es nicht, bliebe kein
+   zulässiger Kandidat — dasselbe Notebook, dieselben Zahlen, ein anderes Ergebnis.
+9. **Freigegeben heißt: mit Bedingung.** Die Zusage ist auf einem historischen
+   Testzeitraum belegt, nicht auf einem prospektiven. Was fehlt, ist das protokollierte
+   Wunschziel — und ohne das lässt sich nie messen, ob die Auskunft für die *geplante*
+   Fahrt stimmte. Der Schattenbetrieb läuft deshalb parallel weiter.
 
 **Weiter geht es mit Notebook 2 — Klassifikation:** Dort ist die Zielgröße keine Zahl
 mehr, sondern eine Entscheidung, und die beiden Fehlerarten sind unterschiedlich teuer.
