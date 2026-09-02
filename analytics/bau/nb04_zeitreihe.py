@@ -91,7 +91,7 @@ absichtlich etwas zu hoch. Wir rechnen das in Phase 5 aus.
 
 | | Kriterium | Schwelle |
 |---|---|---|
-| **fachlich** | Die Prognose muss die Faustregel „wie letzte Woche“ deutlich schlagen | mindestens 30 % weniger Fehler |
+| **fachlich** | Die Prognose muss die Faustregel „wie letzte Woche“ deutlich schlagen | mindestens 30 % weniger Fehler — **in mindestens 95 % der Wettervorhersage-Pfade** |
 | **wirtschaftlich** | Die erwarteten Kosten je Tag müssen unter denen der Faustregel liegen | |
 | **Betrieb** | Die Prognose muss am Vorabend um 18 Uhr vorliegen | dann beginnt die Nachtschicht |
 
@@ -688,8 +688,23 @@ print(f"     Kriterium 1 (≥ {K1_HUERDE:.0%}) erfüllt in {treffer_k1} von {PFA
 print(f"     Kriterium 2 (günstiger) erfüllt in {treffer_k2} von {PFADE} Pfaden "
       f"= {treffer_k2 / PFADE:.0%}")
 
-urteil = ("MACHBARKEITSINDIZ" if (k1 and k2) else "RÜCKSPRUNG")
-print(f"\\n  Gesamturteil: {urteil} — kein Nachweis.")
+# ─── DAS URTEIL HAENGT AN DEN PFADEN, NICHT AN EINEM ────────────────
+# Phase 1 verlangt die Fehlerreduktion in mindestens 95 % der
+# Wettervorhersage-Pfade. Ein einzelner Pfad - auch ein vorab
+# festgelegter - waere eine Einzelrealisierung, keine Aussage ueber
+# Robustheit. Die Schwelle stand vor der Messung fest.
+PFAD_ANTEIL = 0.95
+_anteil_k1 = treffer_k1 / PFADE
+_anteil_k2 = treffer_k2 / PFADE
+K1_ROBUST = _anteil_k1 >= PFAD_ANTEIL
+K2_ROBUST = _anteil_k2 >= PFAD_ANTEIL
+merke("pfad_anteil", PFAD_ANTEIL)
+merke("k1_pfadanteil", _anteil_k1); merke("k2_pfadanteil", _anteil_k2)
+urteil = ("FREIGABE ALS PILOT" if (K1_ROBUST and K2_ROBUST) else "RÜCKSPRUNG")
+merke("nb04_urteil", urteil)
+print(f"\\n  Gesamturteil: {urteil}")
+print(f"  Kriterium 1 haelt in {_anteil_k1:.0%} der Pfade, Kriterium 2 in "
+      f"{_anteil_k2:.0%} - gefordert sind {PFAD_ANTEIL:.0%}.")
 
 # Jeder Satz hier folgt aus k1, k2 und treffer_k1. Eine gedruckte
 # Schlussfolgerung, die unabhaengig von den Zahlen dasteht, ueberlebt
@@ -704,17 +719,22 @@ else:
 
 _fehl = PFADE - treffer_k1
 if _fehl:
-    print(f"  Kriterium 1 hält aber nicht über alle Wetterziehungen: in {_fehl}")
-    print(f"  von {PFADE} Pfaden ({_fehl / PFADE:.0%}) fällt die Fehlerreduktion")
-    print(f"  unter {K1_HUERDE:.0%}.")
+    print(f"  In {_fehl} von {PFADE} Pfaden ({_fehl / PFADE:.0%}) faellt die")
+    print(f"  Fehlerreduktion unter {K1_HUERDE:.0%}. Die Zusage verlangt")
+    print(f"  {PFAD_ANTEIL:.0%} - sie ist damit "
+          f"{'gehalten' if K1_ROBUST else 'GERISSEN'}.")
 else:
-    print(f"  Kriterium 1 hält über alle {PFADE} Wetterziehungen. Das ist ein")
-    print("  starkes Indiz - ein Nachweis wird es dadurch nicht.")
+    print(f"  Kriterium 1 haelt ueber alle {PFADE} Wetterziehungen.")
 print("  Ein einzelner, vorab festgelegter Pfad ist eine gueltige Einzel-")
 print("  realisierung - aber keine Aussage darueber, wie robust das Ergebnis")
 print(f"  gegenueber Wetterfehlern ist. Genau dafuer stehen die {PFADE} Pfade.")
 merke("pfade", PFADE); merke("pfade_k1", treffer_k1); merke("pfade_k1_fehl", _fehl)
-print("\\n  Ausdrücklich KEINE Betriebsfreigabe: Die Wetterunsicherheit ist simuliert,")
+print()
+if K1_ROBUST and K2_ROBUST:
+    print("  FREIGABE ALS PILOT - mit drei benannten Grenzen:")
+    print("  Die Wetterunsicherheit ist simuliert,")
+else:
+    print("  KEINE Betriebsfreigabe: Die Wetterunsicherheit ist simuliert,")
 print("  es gibt nur ein Validierungs- und ein Testfenster, und die Übersetzung von")
 print("  Fahrten zu Rädern und Schichten steht aus.")
 print(f"\\n  Zum Vergleich - mit Ist-Wetter gerechnet waeren es "

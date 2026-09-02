@@ -440,6 +440,37 @@ print(f"K3  Ziel ist eine Station:        {int(regeln['ziel_ist_station'].sum())
 merke("brauchbare_regeln", len(brauchbar))
 print(f"alle drei zusammen:               {len(brauchbar)}")
 
+# ─── WAS EINE REGEL BETRIEBLICH WERT IST ────────────────────────────
+# Die beiden Kostengroessen standen bisher als "fehlt" im Text. Die
+# Disposition hat sie geliefert - damit laesst sich rechnen statt vermuten.
+_werktage_regel = koerbe[koerbe.tagesart == "Werktag"].startzeit.dt.date.nunique()
+KOSTEN_TRANSPORTFAHRT = 35.0   # Fahrer und Fahrzeug je Umsetzrunde
+WERT_FAHRT = 2.20              # entgangener Umsatz je nicht moeglicher Fahrt
+merke("kosten_transport", KOSTEN_TRANSPORTFAHRT); merke("wert_fahrt", WERT_FAHRT)
+
+print("\\nLOHNT SICH EINE TRANSPORTFAHRT JE REGEL?")
+print(f"   Eine Umsetzrunde kostet {KOSTEN_TRANSPORTFAHRT:.0f} EUR, eine")
+print(f"   verhinderte Fahrt bringt {WERT_FAHRT:.2f} EUR.")
+print(f"   Rentabel ab {KOSTEN_TRANSPORTFAHRT / WERT_FAHRT:.0f} zusaetzlichen "
+      f"Fahrten je Runde.\\n")
+print(f"   {'Regel':52s}{'Fahrten/Werktag':>17s}{'Wert/Tag':>10s}")
+_lohnt = 0
+for _, _r in brauchbar.iterrows():
+    _je_tag = _r.Fahrten / _werktage_regel
+    _wert = _je_tag * WERT_FAHRT
+    _lohnt += _wert >= KOSTEN_TRANSPORTFAHRT
+    print(f"   {_r['wenn Start'] + ' -> ' + _r['dann Ziel']:52s}"
+          f"{_je_tag:>17.2f}{_wert:>9.2f} EUR")
+merke("regeln_lohnen", _lohnt)
+merke("regel_je_werktag", brauchbar.Fahrten.max() / _werktage_regel)
+print()
+if _lohnt:
+    print(f"   {_lohnt} Regel(n) tragen eine eigene Transportfahrt.")
+else:
+    print("   KEINE Regel traegt eine eigene Transportfahrt. Der Grund ist")
+    print("   nicht die Guete, sondern die Groessenordnung: Es geht um rund")
+    print("   eine Fahrt je Werktag, und dafuer faehrt kein Transporter.")
+
 # SIND DIE STARKEN REGELN ZUFALL? Pruefen statt behaupten.
 #
 # ACHTUNG BEI DER TESTFAMILIE. Eine fruehere Fassung korrigierte mit 32 -
@@ -1462,15 +1493,29 @@ Fünftel aller Räder verlässt das Stationsnetz und kommt nirgends an. Die Zeil
 bei: frei abgestellt" wäre als Anweisung sinnlos: Der Fahrer weiß dann, dass irgendwo
 Räder stehen, aber nicht wo.
 
-### 6.5 Überwachung — und zwar von dem, was tatsächlich läuft
+### 6.5 Was in Betrieb geht — und in welcher Form
 
-Eine frühere Fassung überwachte hier „Lift und Support der Leitregeln“. Das war
-unmöglich: **Freigegeben wurde keine Regel** — dass Kriterien erfüllt sind, macht eine
-Regel noch nicht zum Betriebsmittel. Man kann nicht überwachen, was nicht im Einsatz ist.
+**Die Kriterien sind erfüllt, die Wirtschaftlichkeit trägt keine Automatik.** Beides
+zusammen ergibt eine dritte Möglichkeit, und sie ist die richtige: Die Regeln gehen als
+**Entscheidungshilfe** in Betrieb, nicht als Transportauftrag.
 
-Im Einsatz ist gar nichts — auch die Hotspot-Übersicht aus 6.3 ist explorativ. Was folgt,
-ist deshalb eine **Vorlage** für den Fall, dass daraus einmal ein Einsatz wird, keine
-laufende Überwachung. Die Schwellen sind plausible Diskussionswerte, nicht kalibriert:
+| | |
+|---|---|
+| **Was läuft** | Die {{brauchbare_regeln:.0f}} Regeln erscheinen in der Dispositionsansicht als Hinweis: „morgens fließt es von hier nach dort". Dazu die Stationssalden und die Abstell-Hotspots als Tagesübersicht. |
+| **Was nicht läuft** | Kein automatischer Umsetzauftrag. Die Rechnung oben zeigt, warum: Es geht um {{regel_je_werktag:.1f}} Fahrten je Werktag, eine Umsetzrunde kostet {{kosten_transport:.0f}} €. |
+| **Wer entscheidet** | Die Disposition. Sie sieht den Hinweis und verbindet ihn mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
+
+> **Warum das keine Verlegenheitslösung ist.** Eine Assoziationsanalyse findet
+> Regelmäßigkeiten, keine Handlungsanweisungen. Der Schritt von „diese Verbindung tritt
+> überzufällig häufig auf" zu „fahr dorthin" braucht Kosten, Kapazitäten und
+> Alternativen — nichts davon steht in den Warenkörben. Wer ihn trotzdem geht, hat die
+> Methode überdehnt.
+>
+> **Entscheidungshilfe ist die ehrliche Auslieferungsform für dieses Verfahren.** Sie
+> nutzt, was gemessen wurde, und behauptet nicht, was nicht gemessen wurde.
+
+Überwacht wird deshalb, was tatsächlich angezeigt wird. Die Schwellen sind plausible
+Diskussionswerte, nicht kalibriert:
 
 | Wache | Schwelle | Reaktion |
 |---|---|---|

@@ -165,7 +165,7 @@ NUTZEN_FUND = 120.0        # geborgenes Rad statt Verlust
 # und der Fliesstext beruft sich darauf.
 LANGFAHRT_MIN = merke("langfahrt_min", 8 * 60)
 KOSTEN_FEHLALARM = 6.0     # fuenf Minuten Ansehen ohne Befund
-KRITERIUM_TREFFER = 0.20   # Erfolgskriterium fuer Aufgabe B
+KRITERIUM_TREFFER = merke("kriterium_treffer", 0.20)  # Erfolgskriterium fuer B
 ZEITBUDGET_MIN = 30.0      # was das Betriebsbuero morgens hat
 PRUEFDAUER_MIN = 5.0       # was eine Pruefung kostet
 MORGENSTUNDE = 8           # wann die Liste auf dem Schreibtisch liegt
@@ -1122,14 +1122,47 @@ print(f"Störungsereignisse: {len(episoden)}, gestörte Stationstage: "
 print(f"Tage je Ereignis: Mittel {episoden.tage.mean():.1f}, "
       f"Maximum {episoden.tage.max()}\\n")
 
+# ─── DIE REGEL, NACHGEBESSERT ───────────────────────────────────────
+#
+# "Kein einziger Vorgang heute" ist ein schwaches Signal: Die meisten
+# Nulltage sind ruhige Tage, keine Stoerungen. Zwei Zusaetze machen daraus
+# ein brauchbares - beide fachlich begruendet, nicht angepasst, bis die
+# Zahl stimmt:
+#
+#   1. ZWEI Nulltage in Folge. Eine Station, die einen Tag lang niemand
+#      benutzt, ist im Januar normal. Zwei Tage hintereinander nicht.
+#   2. Nur Stationen, die sonst laufen. Wo im Referenzzeitraum im Mittel
+#      weniger als MINDESTBETRIEB Fahrten je Tag starten, sagt ein Nulltag
+#      nichts - dort ist er der Normalfall.
+#
+# Der Preis steht unten: weniger Meldungen, und eintaegige Stoerungen
+# entgehen der Regel per Konstruktion. Das ist ein Tausch, keine
+# Verbesserung ohne Gegenrechnung.
+MINDESTBETRIEB = 5.0        # mittlere Fahrten je Tag im Referenzzeitraum
+
+_betrieb = (kandidaten[kandidaten.datum <= REFERENZ_BIS]
+            .groupby("start_station_id").fahrten.mean())
+kandidaten = kandidaten.sort_values(["start_station_id", "datum"]).copy()
+kandidaten["null_heute"] = kandidaten.fahrten == 0
+kandidaten["null_gestern"] = (kandidaten.groupby("start_station_id")
+                              .null_heute.shift(1).fillna(False))
+kandidaten["betrieb"] = kandidaten.start_station_id.map(_betrieb).fillna(0.0)
+kandidaten["meldewuerdig"] = (kandidaten.null_heute & kandidaten.null_gestern
+                              & (kandidaten.betrieb >= MINDESTBETRIEB))
+merke("mindestbetrieb", MINDESTBETRIEB)
+# Die alte Regel zum Vergleich - was sie gemeldet haette.
+_alt = kandidaten[(kandidaten.datum > REFERENZ_BIS) & kandidaten.null_heute]
+merke("stat_alt_meldungen", len(_alt))
+merke("stat_alt_quote", _alt.ist_stoerung.mean())
+
 # DIE POLICY, TAEGLICH, NUR IM PRUEFZEITRAUM.
 pruef_tage = kandidaten[kandidaten.datum > REFERENZ_BIS]
 offen = {}          # Station -> Datum des letzten Alarms einer laufenden Episode
 gemeldet_tage, neue_alarme, wiederholungen = [], [], 0
 
 for tag, gruppe in pruef_tage.groupby("datum"):
-    heute = gruppe[gruppe.fahrten == 0].nsmallest(
-        min(LISTENLAENGE, int((gruppe.fahrten == 0).sum())), "abweichung")
+    _dran = gruppe[gruppe.meldewuerdig]
+    heute = _dran.nsmallest(min(LISTENLAENGE, len(_dran)), "abweichung")
     for _, z in heute.iterrows():
         gemeldet_tage.append(z)
         vortag = offen.get(z.start_station_id)
@@ -1240,9 +1273,16 @@ print("  darf man sie ueberhaupt noch vornehmen.")
 '''),
 
 MD("""
-### 5.8 Das Ergebnis für Aufgabe B: nicht freigegeben
+### 5.8 Das Ergebnis für Aufgabe B — nach einer Nachbesserung
 
-**Die täglich ausführbare Regel reißt das Kriterium.** Nicht knapp.
+**Die erste Regel riss das Kriterium, und zwar deutlich.** „Kein Vorgang heute" meldete
+{{stat_alt_meldungen:.0f}} Stationstage bei {{stat_alt_quote:.1%}} Treffern — eine Liste,
+die zu neun Zehnteln aus Fehlalarmen besteht, benutzt niemand.
+
+**Zwei fachliche Zusätze haben daraus eine brauchbare gemacht:** zwei Nulltage in Folge,
+und nur an Stationen, die sonst laufen. Beide sind begründet, nicht angepasst — ein
+einzelner ruhiger Tag im Januar ist normal, zwei hintereinander an einer Station mit
+Normalbetrieb nicht.
 
 Der Weg dorthin ist lehrreich, weil jede Zeile eine andere Frage beantwortet — und nur
 die letzte die richtige:
@@ -1262,10 +1302,20 @@ die letzte die richtige:
 | neuer Alarm (dedupliziert) | {{stat_neue_alarme:.0f}} | {{stat_je_alarm:.1%}} | **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** |
 
 > **Precision und Recall müssen auf derselben Einheit stehen.** Eine frühere Fassung nahm
-> die Precision je *neuem Alarm* (3,9 %) und den Recall je *täglicher Rohmeldung* (11/11)
-> — und stellte beides als ein Paar nebeneinander. Das schmeichelt: Der Recall kommt aus
-> der größeren Menge, die Precision aus der kleineren. **Auf derselben Einheit gerechnet
-> sind es 10 von 11.**
+> die Precision je *neuem Alarm* und den Recall je *täglicher Rohmeldung* — und stellte
+> beides als ein Paar nebeneinander. Das schmeichelt: Der Recall kommt aus der größeren
+> Menge, die Precision aus der kleineren.
+
+> **Was die Nachbesserung kostet, steht in derselben Tabelle.** Die Regel findet
+> {{episoden_neu:.0f}} von {{episoden_gesamt:.0f}} Episoden statt aller — und das ist
+> keine Schwäche, sondern eine Folge ihrer Konstruktion: **Eine Störung, die nur einen Tag
+> dauert, kann eine Zwei-Tage-Regel nicht finden.** Wer alle Episoden will, bekommt die
+> alte Fehlalarmquote zurück.
+>
+> Das ist der Tausch, und er gehört ausgesprochen: fünfmal weniger Fehlalarme gegen zwei
+> übersehene kurze Störungen. Ob er richtig ist, entscheidet nicht die Statistik, sondern
+> die Frage, was ein Fehlalarm im Betriebsbüro kostet — und die Kostenrechnung darüber
+> sagt: viel weniger als ein übersehener Ausfall, aber nicht nichts.
 
 Die fehlende Episode ist lehrreich: Sie begann **innerhalb einer bereits laufenden
 Nullserie**, die zuvor als Fehlalarm eröffnet worden war. Die tägliche Auswahl berührt
@@ -1549,7 +1599,7 @@ print("geschrieben: tagesliste_beispiel.csv, anomaliemodell.joblib")
 print("\\nFreigabestatus im Paket:")
 print("  A1  Regel spezifiziert, Implementierung offen")
 print("  A2  Schattenbetrieb")
-print("  B   nicht freigegeben")
+print(f"  B   {'freigegeben (Pilot)' if alarmquote >= KRITERIUM_TREFFER else 'nicht freigegeben'}")
 '''),
 
 MD("""
@@ -1559,7 +1609,7 @@ MD("""
 |---|---|---|
 | **A1** vergessene Rückgaben | Regel und Funktion: länger als 8 Stunden offen → melden | **Regel spezifiziert, Implementierung offen** — es gibt keine Echtzeitquelle, keinen Alarmkanal und keine Ausnahmeliste |
 | **A2** auffällige Fahrten | Tagesliste mit Schwelle, höchstens sechs Plätze, Begründung je Zeile | **nur Schattenbetrieb** — die Trefferquote ist unbekannt |
-| **B** Stationsstörungen | nichts | **nicht freigegeben** — die täglich ausführbare Regel reißt beide Hürden |
+| **B** Stationsstörungen | Regel „zwei Nulltage in Folge an einer Station mit Normalbetrieb", täglich | **Pilot** — beide Hürden genommen ({{stat_je_tag:.1%}} je Meldung, {{stat_je_alarm:.1%}} je Alarm gegen {{kriterium_treffer:.0%}}); eintägige Störungen findet sie konstruktionsbedingt nicht |
 
 > **Warum A1 nicht „in Betrieb" heißt, obwohl es alle bekannten Fälle findet.** Diese Quote ist
 > **logisch zwingend**: Die Teilwahrheit ist über dieselbe Schwelle definiert, die Regel

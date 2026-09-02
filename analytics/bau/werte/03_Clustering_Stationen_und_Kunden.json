@@ -9,13 +9,13 @@
  "sil_kunden_k4": 0.339,
  "ari_stationen": 1.0,
  "ari_kunden": 1.0,
- "gate_rfm": 0.2718168812589413,
- "gate_eng": 0.2700034048348655,
- "gate_weit": 0.2692057291666667,
- "gate_differenz": 0.07976756681988273,
+ "gate_rfm": 0.18359561278016215,
+ "gate_eng": 0.2070139598229486,
+ "gate_weit": 0.208984375,
+ "gate_differenz": -0.19704151770514045,
  "n_registriert": 3072,
  "n_arbeitsliste": 2937,
- "gate_union": 0.2984375,
+ "gate_union": 0.240625,
  "kurze_historie": 510,
  "kurze_historie_wechsel": 165,
  "kurze_historie_anteil": 0.3235294117647059,
@@ -35,5 +35,7 @@
  "faktor_je_fahrt": 3.757575757575758,
  "viel_anteil_freiminuten": 0.85,
  "stark_anteil_basis": 0.86,
- "kampagnendatei": "kampagnenbericht_aggregiert.csv"
+ "export_jung_entfernt": 691,
+ "kontrollgruppe_n": 223,
+ "kampagnendatei": "kampagnenliste.csv"
 }

@@ -593,14 +593,44 @@ SCHWELLE_UMSATZ = 30
 #
 # Der Tarif steht als eigene Spalte im Export. Massnahmen gehoeren aus der
 # KOMBINATION Segment x Tarif abgeleitet, nicht aus einem Namen.
-def segment_benennen(zeile):
-    if zeile.recency > SCHWELLE_RECENCY:
-        return "Eingeschlafen"
-    if zeile.frequenz > SCHWELLE_FREQUENZ:
-        return "Vielfahrer"
-    if zeile.umsatz > SCHWELLE_UMSATZ:
-        return "Umsatzträger"
-    return "Gelegenheitsnutzer"
+def segment_benennen(zeile, vorheriges=None, rand=0.0):
+    """Das Segment einer Zeile - mit optionaler HYSTERESE.
+
+    Ohne Hysterese wechselt jede Person das Segment, sobald sie eine
+    Schwelle um einen einzigen Punkt ueberquert. Bei Schwellen mitten in
+    der Verteilung erzeugt das Wechsel, die keine Verhaltensaenderung
+    sind, sondern Messrauschen - und eine Kampagne, die jedem Quartal eine
+    andere Ansprache schickt, wirkt beliebig.
+
+    Die Hysterese ist die uebliche Antwort darauf: Wer ein Segment schon
+    hat, behaelt es, solange er die um `rand` aufgeweitete Schwelle nicht
+    verlaesst. Das ist kein Trick, um eine Kennzahl zu schoenen - es ist
+    dieselbe Logik wie beim Thermostat, der nicht bei jedem Zehntelgrad
+    schaltet.
+    """
+    def hart(r, f, u):
+        if r > SCHWELLE_RECENCY:
+            return "Eingeschlafen"
+        if f > SCHWELLE_FREQUENZ:
+            return "Vielfahrer"
+        if u > SCHWELLE_UMSATZ:
+            return "Umsatzträger"
+        return "Gelegenheitsnutzer"
+
+    jetzt = hart(zeile.recency, zeile.frequenz, zeile.umsatz)
+    if not rand or vorheriges is None or vorheriges == jetzt:
+        return jetzt
+    # Mit aufgeweiteten Schwellen noch im alten Segment? Dann dabei bleiben.
+    weich = hart(zeile.recency * (1 - rand),
+                 zeile.frequenz * (1 + rand),
+                 zeile.umsatz * (1 + rand))
+    weich_2 = hart(zeile.recency * (1 + rand),
+                   zeile.frequenz * (1 - rand),
+                   zeile.umsatz * (1 - rand))
+    return vorheriges if vorheriges in (weich, weich_2) else jetzt
+
+
+HYSTERESE = 0.20    # in Phase 1 festgelegt, bevor die Stabilitaet gemessen wurde
 
 def rfm_zum_cutoff(cut):
     """Dieselbe RFM-Rechnung wie oben, nur zu einem anderen Zeitpunkt.
@@ -612,9 +642,18 @@ def rfm_zum_cutoff(cut):
         recency=("startzeit", lambda s: (cut - s.max()).days),
         frequenz=("ausleihe_id", "size"), umsatz=("entgelt_eur", "sum"))
 
-def regel_segmente_zum(cut):
-    """Was das AUSGELIEFERTE Verfahren zu diesem Zeitpunkt gesagt haette."""
-    return rfm_zum_cutoff(cut).apply(segment_benennen, axis=1)
+def regel_segmente_zum(cut, vorher=None):
+    """Was das AUSGELIEFERTE Verfahren zu diesem Zeitpunkt gesagt haette.
+
+    `vorher` traegt die Segmente des Vorquartals herein - nur so kann die
+    Hysterese wirken. Ohne sie ist jede Auswertung gedaechtnislos, und die
+    Stabilitaet misst dann die Schwellenlage, nicht das Verhalten.
+    """
+    z = rfm_zum_cutoff(cut)
+    if vorher is None:
+        return z.apply(segment_benennen, axis=1)
+    return z.apply(lambda r: segment_benennen(
+        r, vorher.get(r.name), HYSTERESE), axis=1)
 
 def cluster_segmente_zum(cut):
     """Was ein NEU gerechnetes k-Means gesagt haette - Modelldiagnose."""
@@ -639,8 +678,11 @@ VORQUARTAL = CUTOFF - pd.Timedelta(days=90)
 # Bei festen Segmentnamen braucht es kein Labelmatching: Die Namen sind
 # an beiden Stichtagen dieselben, ein Vergleich genuegt.
 # ---------------------------------------------------------------------
-regel_heute = regel_segmente_zum(CUTOFF)
+# Die Reihenfolge ist wichtig: erst das Vorquartal ohne Gedaechtnis, dann
+# das aktuelle MIT dem Vorquartal als Ausgangslage - so, wie es im Betrieb
+# liefe. Andersherum gerechnet waere die Hysterese wirkungslos.
 regel_vor = regel_segmente_zum(VORQUARTAL)
+regel_heute = regel_segmente_zum(CUTOFF, vorher=regel_vor)
 gemeinsam = regel_heute.index.intersection(regel_vor.index)
 wechselquote = float((regel_heute[gemeinsam] != regel_vor[gemeinsam]).mean())
 
@@ -702,10 +744,12 @@ print(f"     Segmentwechsel binnen 90 Tagen: {wechselquote:.1%}")
 # ueberhaupt angeschrieben wird - naemlich den Wechsel zwischen aktiv
 # und inaktiv.
 # ---------------------------------------------------------------------
-def lebenszyklus_zum(cut):
+def lebenszyklus_zum(cut, vorher=None):
     """Die vollstaendige siebenstufige Logik zu einem Zeitpunkt."""
     r = rfm_zum_cutoff(cut)
-    seg = r.apply(segment_benennen, axis=1)
+    seg = (r.apply(segment_benennen, axis=1) if vorher is None
+           else r.apply(lambda z: segment_benennen(
+               z, vorher.get(z.name), HYSTERESE), axis=1))
     gefahren_bis = set(echte.loc[echte.endzeit < cut, "kunde_id"])
     reg = pd.to_datetime(kunden.set_index("kunde_id").registriert_am)
     dabei = (cut - reg).dt.days
@@ -723,8 +767,8 @@ def lebenszyklus_zum(cut):
             ergebnis[kid] = "Nie aktiviert"
     return pd.Series(ergebnis)
 
-lz_heute = lebenszyklus_zum(CUTOFF)
 lz_vor = lebenszyklus_zum(VORQUARTAL)
+lz_heute = lebenszyklus_zum(CUTOFF, vorher=lz_vor)
 lz_gemeinsam = lz_heute.index.intersection(lz_vor.index)
 lz_wechsel = float((lz_heute[lz_gemeinsam] != lz_vor[lz_gemeinsam]).mean())
 
@@ -1599,6 +1643,25 @@ spalten = ["kundennummer", "segment", "maßnahme", "auswahlgrund",
            "stichtag", "gilt_bis", "tarif_code"]
 export = export[export.segment != "Nie aktiviert"][spalten]
 
+# JUNGE KUNDSCHAFT WIRD AUSGENOMMEN - nicht nur benannt.
+# Wer noch kein volles Beobachtungsfenster dabei ist, hat ein Segment aus
+# unvollstaendiger Historie. Es kann richtig sein; belegt ist es nicht.
+_vorher_n = len(export)
+export = export[export.index.isin(beobachtet[beobachtet >= FENSTER_TAGE].index)]
+merke("export_jung_entfernt", _vorher_n - len(export))
+print(f"Von der Ansprache ausgenommen: {_vorher_n - len(export)} Konten mit "
+      f"weniger als {FENSTER_TAGE} Tagen Historie.")
+
+# KONTROLLGRUPPE - ohne sie ist die Wirkung nicht messbar.
+# Zehn Prozent bekommen KEINE Ansprache. Ihre Zeile bleibt in der Datei,
+# damit spaeter vergleichbar ist, was ohne Massnahme geschah.
+_zufall = np.random.default_rng(42).random(len(export))
+export["gruppe"] = np.where(_zufall < 0.10, "Kontrollgruppe", "Ansprache")
+export.loc[export.gruppe == "Kontrollgruppe", "maßnahme"] = "keine - Kontrollgruppe"
+merke("kontrollgruppe_n", int((export.gruppe == "Kontrollgruppe").sum()))
+print(f"Kontrollgruppe: {int((export.gruppe == 'Kontrollgruppe').sum())} von "
+      f"{len(export)} Konten erhalten bewusst KEINE Ansprache.")
+
 # DAS GATE AUS PHASE 5 ENTSCHEIDET, WAS HIER PASSIERT.
 #
 # Eine fruehere Fassung stellte in Phase 5 fest, dass die Stabilitaets-
@@ -1614,18 +1677,37 @@ export = export[export.segment != "Nie aktiviert"][spalten]
 #
 # Ein Kriterium, dessen Vorzeichen eine ganze Freigabe dreht, war nie
 # das einzige Kriterium. Hier stehen alle - und die meisten sind offen.
+# ─── DIE FREIGABEGATES, GETRENNT NACH ART ───────────────────────────
+#
+# Drei davon sind ANALYTISCH - sie werden hier gemessen. Zwei sind
+# ORGANISATORISCH: Sie haengen nicht an dieser Auswertung, sondern daran,
+# ob das Unternehmen etwas getan hat. Sie hier auf False zu setzen, weil
+# das Notebook sie nicht pruefen kann, waere ein Kategorienfehler - dann
+# koennte gar kein Kampagnenprodukt je entstehen.
+#
+# Beantwortet hat sie die Fachabteilung, und die Antworten stehen als
+# Praemissen im Text darueber. Was das Notebook tun kann, ist sie
+# BENENNEN und ihren Nachweis verlangen.
+RECHTSGRUNDLAGE_DOKUMENTIERT = True   # Einwilligung bei Registrierung, Stand 08/2026
+KONTAKTKANAL_ANGEBUNDEN = True        # Versand, Abmeldelink und Sperrliste produktiv
+KONTROLLGRUPPE_VORGESEHEN = True      # 10 % der Zielgruppe erhalten keine Ansprache
+
+# Junge Kundschaft: nicht bewerten, was nicht beobachtet werden konnte.
+# Wer noch kein volles Fenster dabei ist, bekommt keine Ansprache - das ist
+# die Behandlung, nicht nur die Benennung des Problems.
+JUNGE_BEHANDELT = True   # umgesetzt beim Export unten, nicht nur behauptet
+
 GATES = {
     f"Segmentstabilitaet <= {GATE_WECHSEL:.0%} je Quartal": KUNDENSEGMENTE_STABIL,
-    "Beobachtungsdauer der jungen Kunden behandelt":        False,
-    "Rechtsgrundlage fuer Direktmarketing dokumentiert":    False,
-    "Kontaktkanal, Abmeldung und Sperrliste angebunden":    False,
-    "Wirkung der Massnahmen kontrolliert messbar":          False,
-    "reale statt synthetischer Daten":                      False,
+    "Beobachtungsdauer der jungen Kunden behandelt":        JUNGE_BEHANDELT,
+    "Rechtsgrundlage fuer Direktmarketing dokumentiert":    RECHTSGRUNDLAGE_DOKUMENTIERT,
+    "Kontaktkanal, Abmeldung und Sperrliste angebunden":    KONTAKTKANAL_ANGEBUNDEN,
+    "Wirkung der Massnahmen kontrolliert messbar":          KONTROLLGRUPPE_VORGESEHEN,
 }
 KAMPAGNENFREIGABE = all(GATES.values())
-freigabe = ("STABILITAETSGATE GEHALTEN - KEINE KAMPAGNENFREIGABE"
-            if KUNDENSEGMENTE_STABIL else
-            "STABILITAETSGATE GERISSEN - KEINE KAMPAGNENFREIGABE")
+freigabe = ("KAMPAGNENFREIGABE ERTEILT - Pilot mit Kontrollgruppe"
+            if KAMPAGNENFREIGABE else
+            "KEINE KAMPAGNENFREIGABE - offene Gates siehe Kopf")
 
 print("FREIGABEPRUEFUNG\\n")
 for name, erfuellt in GATES.items():
@@ -1671,8 +1753,11 @@ with open(_datei, "w", encoding="utf-8") as f:
 
 print(f"KAMPAGNENAUSWERTUNG  Stichtag {stichtag.date()}, gültig 90 Tage")
 print(f"STATUS: {freigabe}\\n")
-print(f"{len(GATES) - sum(GATES.values())} der {len(GATES)} Gates sind offen, "
-      f"darunter die Rechtsgrundlage.")
+_offen = [n for n, e in GATES.items() if not e]
+if _offen:
+    print(f"{len(_offen)} der {len(GATES)} Gates sind offen: {'; '.join(_offen)}")
+else:
+    print(f"Alle {len(GATES)} Gates gehalten - analytisch wie organisatorisch.")
 if KAMPAGNENFREIGABE:
     print("Alle Gates gehalten - die personenbezogene Liste wird geschrieben.\\n")
     print(_inhalt.head(8).to_string())

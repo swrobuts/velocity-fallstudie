@@ -12,6 +12,10 @@
  "aufschlag_am_rand": 0,
  "aufschlag_max": 0.8,
  "k1_huerde": 0.3,
+ "pfad_anteil": 0.95,
+ "k1_pfadanteil": 0.9666666666666667,
+ "k2_pfadanteil": 1.0,
+ "nb04_urteil": "FREIGABE ALS PILOT",
  "pfade": 300,
  "pfade_k1": 290,
  "pfade_k1_fehl": 10
