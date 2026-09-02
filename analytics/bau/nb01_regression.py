@@ -691,7 +691,8 @@ for name, teil in (("Training", training), ("Validierung", validierung),
     print(f"{name:16} {len(teil):>7,} Fahrten   "
           f"{teil.startzeit.min():%d.%m.%Y} bis {teil.startzeit.max():%d.%m.%Y}")
 print()
-print(f"Test 1 reicht von {test1.startzeit.min():%m/%Y} bis {test1.startzeit.max():%m/%Y}, Kalibrierung ist Sommer.")
+print(f"Test 1 reicht von {test1.startzeit.min():%m/%Y} bis {test1.startzeit.max():%m/%Y}, "
+      f"die Kalibrierung von {kalib.startzeit.min():%m/%Y} bis {kalib.startzeit.max():%m/%Y}.")
 print("Dass die beiden")
 print("Zeiträume verschiedene Jahreszeiten sind, ist kein Zufall der Aufteilung,")
 print("sondern eine Eigenschaft der Daten - und sie wird uns beschäftigen.")
@@ -1762,6 +1763,24 @@ KANDIDAT = (min(_zulaessig,
 merke("kandidat", KANDIDAT or "keiner")
 merke("zulaessige_n", len(_zulaessig))
 merke("zulaessige", aufzaehlung(sorted(_zulaessig)) if _zulaessig else "keiner")
+# WER WELCHE HUERDE NIMMT, ENTSCHEIDET DER LAUF - NICHT DER AUTOR.
+# Hier stand das Urteil frueher im Fliesstext ("nur einer nimmt alle
+# Huerden", Haken und Kreuze in der Vergleichstabelle). Ein Datenstand
+# spaeter log der Text, waehrend die Ausgabe daneben das Gegenteil
+# druckte. Jetzt liefert der Lauf die Zeichen und den Satz.
+for _n, _kurz in (("Quantilregression", "quantil"),
+                  ("Perzentiltabelle", "tabelle"),
+                  ("Quantiltabelle", "qtab")):
+    merke(f"{_kurz}_haken", "\u2713" if _haelt_alles[_n] else "\u2717")
+    merke(f"{_kurz}_urteil",
+          "nimmt alle H\u00fcrden" if _haelt_alles[_n] else "f\u00e4llt durch")
+_n_halten = sum(_haelt_alles.values())
+merke("kandidatenfazit", {
+    0: "und keiner nimmt alle H\u00fcrden",
+    1: "und nur einer nimmt alle H\u00fcrden",
+    2: "und zwei von ihnen nehmen alle H\u00fcrden",
+    3: "und alle drei nehmen jede H\u00fcrde",
+}[_n_halten])
 print()
 print(f"Architekturvorgabe: Laufzeitdienst "
       f"{'zugelassen' if LAUFZEITDIENST_ERLAUBT else 'NICHT zugelassen'}.")
@@ -1842,7 +1861,7 @@ gehört zusammen mit der Unsicherheit in den Bericht, nicht in eine Fußnote.
 """),
 
 MD("""
-**Drei Kandidaten, und nur einer nimmt alle Hürden.** Entscheidend ist die Spalte
+**Drei Kandidaten, {{kandidatenfazit}}.** Entscheidend ist die Spalte
 `Primaergate` — die Wilson-Untergrenze in der Gruppe, bei der die Schätzung überhaupt in
 den Preis eingeht. Sie steht **im** Vergleich, nicht dahinter: Ein Kandidat, der erst
 gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolge.
@@ -1852,26 +1871,36 @@ gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolg
   {{gate_schwelle:.0%}}. Sie verwirft {{quantil_verworfen:.1%}} ihrer Spannen als zu
   breit — und genau dieses Weglassen macht sie gut: Sie antwortet nur dort, wo sie eine
   schmale Spanne bilden kann.
-- Die **Perzentiltabelle** antwortet auf {{tabelle_auskunft:.1%}} der Anfragen, erreicht
-  aber nur {{tabelle_gate:.1%}} am Primärgate. Ihre geringste Reichweite über alle
-  Radtypen beträgt {{tabelle_reichweite:.1%}}.
+- Die **Perzentiltabelle** antwortet auf {{tabelle_auskunft:.1%}} der Anfragen und
+  erreicht am Primärgate {{tabelle_gate:.1%}}. Ihre geringste Reichweite über alle
+  Radtypen beträgt {{tabelle_reichweite:.1%}} — beides über der jeweiligen Schwelle.
+  Sie ist dabei nichts als eine CSV: kein Dienst, keine Bibliotheksversion, von Hand
+  nachrechenbar.
 - Die **Quantiltabelle** ist der Versuch, beides zu bekommen: die Vorhersagen des Modells
   über alle real beobachteten Kontexte einer Kombination gerechnet, zusammengefasst
   und als CSV abgelegt. Betrieblich ist sie eine
   Tabelle wie die andere. Sie antwortet auf {{qtab_auskunft:.1%}} der Anfragen — und
-  erreicht am Primärgate {{qtab_gate:.1%}}, **weniger als beide anderen**.
+  erreicht am Primärgate {{qtab_gate:.1%}}: **weniger als beide anderen, aber immer
+  noch über den geforderten {{gate_schwelle:.0%}}**.
 
 > **Das ist das interessanteste Ergebnis dieses Abschnitts.** Die naheliegende Idee,
-> das Modell zu tabellieren und so seine Güte ohne seinen Betriebsaufwand zu bekommen,
-> geht nicht auf. Der Grund liegt darin, was beim Tabellieren verloren geht: Das Modell
+> das Modell zu tabellieren und so seine Stärke ohne seinen Betriebsaufwand zu bekommen,
+> geht nur zur Hälfte auf: Die **Güte** nimmt die Quantiltabelle mit — jede Hürde hält
+> sie. Die **Reichweite** nimmt sie nicht mit; sie beantwortet
+> {{qtab_auskunft:.1%}} der Anfragen statt der {{quantil_auskunft:.1%}} des Modells und
+> liegt damit sogar unter der schlichteren Perzentiltabelle.
+> Der Grund liegt darin, was beim Tabellieren verloren geht: Das Modell
 > kennt Wochentag, Monat, Feiertag und Ferienlage und rechnet für **diese** Anfrage; die
 > Tabelle mittelt sie über die Kombination weg. Was die Quantilregression über die
 > Perzentiltabelle hebt, steckt also nicht im Verfahren, sondern in den Merkmalen, die
 > nur zur Laufzeit verfügbar sind.
 >
-> **Wer die Güte will, muss den Dienst betreiben.** Das ist keine technische Fußnote,
-> sondern die eigentliche Entscheidung: scikit-learn, Versionsstände und ein Dienst, der
-> antwortet, gegen eine CSV, die jedes System lesen kann.
+> **Wer die Reichweite will, muss den Dienst betreiben.** Die zugesagte Güte hat die
+> CSV auch — sie nimmt dieselben Hürden. Was ihr fehlt, sind die
+> {{verzicht_reichweite:.1%}} zusätzlich beantworteten Anfragen. Das ist keine
+> technische Fußnote, sondern die eigentliche Entscheidung: scikit-learn,
+> Versionsstände und ein Dienst, der antwortet, gegen eine CSV, die jedes System
+> lesen kann.
 
 > **Warum das Kriterium die Reichweite braucht.** Ohne sie könnte ein Kandidat bestehen,
 > indem er für einen ganzen Radtyp schweigt: Was er sagt, stimmt dann fast immer — er
@@ -1895,14 +1924,16 @@ Frage war nie, *ob* gerechnet wird, sondern *was*.
 
 | | Quantilregression | Perzentiltabelle | Quantiltabelle |
 |---|---|---|---|
-| Primärgate | **{{quantil_gate:.1%}}** ✓ | {{tabelle_gate:.1%}} ✗ | {{qtab_gate:.1%}} ✗ |
+| Primärgate (verlangt {{gate_schwelle:.0%}}) | {{quantil_gate:.1%}} {{quantil_haken}} | {{tabelle_gate:.1%}} {{tabelle_haken}} | {{qtab_gate:.1%}} {{qtab_haken}} |
+| vollständiger Freigabekatalog | {{quantil_urteil}} | {{tabelle_urteil}} | {{qtab_urteil}} |
+| Reichweite (beantwortete Anfragen) | {{quantil_auskunft:.1%}} | {{tabelle_auskunft:.1%}} | {{qtab_auskunft:.1%}} |
 | braucht einen Laufzeitdienst | ja | nein | nein |
 | von Hand nachprüfbar | nein | ja | nein |
 | kennt Wochentag und Saison | ja | nein | nein |
 
-**Damit ist die Entscheidung getroffen: Ausgeliefert wird die Quantilregression.** Sie ist
-eines von {{zulaessige_n:.0f}} Verfahren, die alle Hürden nehmen. Ausgeliefert wird
-trotzdem die {{kandidat}} — nach der vorab benannten Auswahlregel.
+**Damit ist die Entscheidung getroffen: Ausgeliefert wird die {{kandidat}}.** Sie ist
+eines von {{zulaessige_n:.0f}} Verfahren, die alle Hürden nehmen ({{zulaessige}}).
+Entschieden hat also nicht die Güte, sondern die vorab benannte Auswahlregel.
 
 > **Die Architekturfrage steht vor der Kandidatenwahl und nicht danach.** Wer erst misst
 > und dann entscheidet, was betreibbar ist, wählt die Vorgabe, die zum gewünschten
@@ -1915,12 +1946,19 @@ trotzdem die {{kandidat}} — nach der vorab benannten Auswahlregel.
 > {{verzicht_kandidat}}.
 
 **Was der Dienst kostet, gehört in dieselbe Entscheidung.** Die Quantilregression bringt
-scikit-learn, Versionsstände und einen Prozess mit, der antworten muss. Die Perzentiltabelle
-bleibt deshalb als **Rückfallebene** erhalten: Fällt der Dienst aus, kann die App auf sie
-zurückfallen — mit geringerer Reichweite und ohne die Zusage, aber mit einer Antwort.
+scikit-learn, Versionsstände und einen Prozess mit, der antworten muss — und genau
+deshalb wird sie **nicht** ausgeliefert, obwohl sie die größte Reichweite hat. Sie
+bleibt als gemessener, dokumentierter Kandidat im Paket: Wer die
+{{verzicht_reichweite:.1%}} Mehrreichweite braucht, muss sie gegen die Betriebskosten
+rechnen. Diese Rechnung gibt es in diesem Notebook nicht — und solange sie fehlt,
+gewinnt die Datei.
 
-Die Quantiltabelle war der Versuch, beides zu bekommen. Sie ist gebaut, gemessen — und
-sie nimmt das Primärgate nicht ({{qtab_gate:.1%}} gegen {{gate_schwelle:.0%}}).
+Die Quantiltabelle war der Versuch, beides zu bekommen: die Merkmale des Modells,
+abgelegt in einer Datei. Sie ist gebaut und gemessen — und sie nimmt jede Hürde
+({{qtab_gate:.1%}} am Primärgate gegen {{gate_schwelle:.0%}}). Was sie **nicht**
+einlöst, ist ihr Zweck: Sie beantwortet {{qtab_auskunft:.1%}} der Anfragen und liegt
+damit unter der Perzentiltabelle, die denselben Betriebsaufwand hat und sich leichter
+erklären lässt.
 
 **Wie sie gebaut wird, ist dabei nicht gleichgültig.** Eine erste Fassung bildete je
 Kombination den Median jedes Merkmals und schickte diesen einen Vektor durch das Modell.
@@ -1928,14 +1966,16 @@ Das ist falsch, und zwar aus zwei Gründen: Die getrennten Mediane von `stunde_s
 `stunde_cos` ergeben keinen realen Zeitpunkt — der Punkt liegt *im* Einheitskreis statt
 auf ihm —, und die Vorhersage am Medianvektor ist nicht der Median der Vorhersagen. Jetzt
 wird für **jede tatsächlich beobachtete Fahrt** der Gruppe vorhergesagt und erst danach
-zusammengefasst. Das hebt die Untergrenze spürbar; für das Gate reicht es nicht.
+zusammengefasst. Das hebt die Untergrenze spürbar — erst dadurch nimmt sie das Gate.
 
-Was sie zeigt, ist der Grund für ihr Scheitern: Der Schlüssel aus Verbindung, Radtyp und
-Tageszeit ist zu grob für die Merkmale, aus denen das Modell seine Güte zieht — Wochentag,
-Monat, Feiertag und Ferienlage werden über die Gruppe hinweg gemittelt.
+Was sie zeigt, ist die Grenze des Tabellierens: Der Schlüssel aus Verbindung, Radtyp und
+Tageszeit ist zu grob für die Merkmale, aus denen das Modell seine **Reichweite** zieht —
+Wochentag, Monat, Feiertag und Ferienlage werden über die Gruppe hinweg gemittelt. Die
+Treffsicherheit übersteht das; die Zahl der Anfragen, für die sich noch eine schmale
+Spanne bilden lässt, nicht.
 
-> **Damit ist gezeigt, dass DIESE Materialisierung nicht genügt — nicht, dass jede
-> scheitert.** Ein feinerer Schlüssel (Wochentag statt nur Tagesart, Saison statt nur
+> **Damit ist gezeigt, dass DIESE Materialisierung die Reichweite des Modells nicht
+> erreicht — nicht, dass jede scheitert.** Ein feinerer Schlüssel (Wochentag statt nur Tagesart, Saison statt nur
 > Monat) oder zeitlich kalibrierte Conformal-Intervalle wären die nächsten Kandidaten.
 > Die Schlussfolgerung bleibt bis dahin auf den geprüften Aufbau begrenzt.
 
@@ -2261,6 +2301,19 @@ freigegebene_typen = sorted(
 # Endpruefung sein - das ist die Lehre dieses Notebooks, und sie gilt auch
 # fuer sein eigenes Ergebnis. Die unabhaengige Pruefung steht aus; bis
 # dahin laeuft der Dienst im Schatten.
+# ─── WIE WEIT REICHT DER KALENDER? ──────────────────────────────────
+# Diese Grenze entscheidet zweierlei, und beides braucht sie HIER, vor
+# der Schnittstelle: ob das Paket heute ueberhaupt arbeiten darf
+# (EINSATZBEREIT) und bis zu welchem FAHRTAG es antworten darf
+# (GUELTIG_BIS). Frueher stand sie erst in 6.7 - die App kannte sie
+# nicht und rechnete auch fuer Tage, fuer die ist_feiertag und
+# ist_ferien still null sind.
+KALENDERHORIZONT = min(pd.Timestamp(feiertag.datum.max()),
+                       pd.Timestamp(schulfrei.bis.max()))
+EINSATZBEREIT = bool(KALENDERHORIZONT >= pd.Timestamp.today().normalize())
+GUELTIG_AB = pd.Timestamp.today().normalize()
+GUELTIG_BIS = min(GUELTIG_AB + pd.Timedelta(days=90), KALENDERHORIZONT)
+
 GATES_HALTEN = bool(PRIMAERGATE_BESTANDEN and len(freigegebene_typen) == 3)
 UNABHAENGIG_GEPRUEFT = False      # bis 6.7: die Abnahme ist noch versiegelt
 PRODUKTSTATUS = ("sichtbar" if (GATES_HALTEN and UNABHAENGIG_GEPRUEFT)
@@ -2380,11 +2433,13 @@ folgenreichste Fehler dieses Notebooks:
 | `preisschaetzung.csv` | **das ausgelieferte Verfahren** — die {{kandidat}}, eine Datei, die jedes System liest | {{gate_schwelle:.0%}}, belegt mit {{gate_untergrenze:.1%}} |
 | `modellpaket_preisspanne.joblib` | die **Alternative**, die den Gates ebenfalls genügt: beide Quantilmodelle mit Vorverarbeitung, Nachschlagetabellen, Tariflogik und Schwellen | dieselbe Zusage — sie wartet nur auf eine Betriebskostenrechnung |
 
-Warum das getrennt gehört: Die Tabelle *sieht aus* wie das Produkt. Sie hat dieselben
-Spalten, dieselben Verbindungen, dieselbe Anzeigeform. Sie hält die Zusage aber nicht —
-und ein Rückfall, der dieselbe Zusage anzeigt wie das Produkt, ist kein Rückfall, sondern
-ein zweites, ungeprüftes Produkt. Die Schnittstelle in 6.4 gibt deshalb bei jeder Antwort
-`quelle` und `zusage` mit zurück; im Rückfall steht dort ausdrücklich keine Zusage.
+Warum das getrennt gehört: **Beide** Artefakte sehen aus wie das Produkt. Sie haben
+dieselben Verbindungen, dieselbe Anzeigeform, und beide haben die Gates genommen.
+Ausgeliefert wird trotzdem genau eines — die {{kandidat}} —, und nur für dieses ist die
+Zusage in 6.7 an unabhängigen Daten nachgemessen. Die Schnittstelle in 6.4 gibt deshalb
+bei jeder Antwort `quelle` und `zusage` mit zurück: Wer eine Antwort aus einer anderen
+Quelle bekommt — etwa aus der Rückfallebene, wenn ein Laufzeitdienst ausgeliefert wäre
+und gerade nicht antwortet —, bekommt sie ausdrücklich **ohne** Zusage.
 
 **Ein Beipackzettel gehört zum Modell.** Ein `.joblib` allein ist nicht auslieferbar: Wer
 die Merkmalsreihenfolge verliert, bekommt Vorhersagen, die aussehen wie Vorhersagen und
@@ -2657,7 +2712,15 @@ for _k, _v in MODELLPAKET.items():
 # DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
 # Filtern. Die Werte weiter oben galten der ungefilterten Tabelle; wer
 # nur die liest, berichtet etwas anderes, als er ausliefert.
-print("\\nDie Rueckfalltabelle im Einzelnen:")
+# WIE DIE CSV HEISST, ENTSCHEIDET DER LAUF: Ist die Tabelle der
+# gewaehlte Kandidat, IST sie das Produkt - sie "Rueckfalltabelle" zu
+# nennen, waehrend der Text daneben sie als ausgeliefert bezeichnet,
+# war genau der Widerspruch, den die Pruefung gemeldet hat.
+_CSV_ROLLE = ("Das ausgelieferte Verfahren" if KANDIDAT != "Quantilregression"
+              else "Die Rueckfalltabelle")
+_CSV_ROLLE_KURZ = ("ausgeliefertes Verfahren" if KANDIDAT != "Quantilregression"
+                   else "Rueckfalltabelle")
+print(f"\\n{_CSV_ROLLE} im Einzelnen:")
 print(f"   Radtypen                {sorted(freigabe_tabelle.typ_code.unique())}")
 print(f"   Kombinationen           {len(freigabe_tabelle)}")
 print(f"   Verbindungen            "
@@ -2796,6 +2859,26 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
                     else "Die Preisauskunft ist noch nicht freigegeben.")
         return {"anzeige": None, "grund": _grund, "status": PRODUKTSTATUS,
                 "hinweis": _hinweis}
+    # ─── DIE GUELTIGKEIT GILT DEM FAHRTAG, NICHT NUR DEM BAUTAG ─────
+    #
+    # EINSATZBEREIT beantwortet: Darf das Paket HEUTE arbeiten? Das ist
+    # nicht dieselbe Frage wie: Darf es fuer DIESEN Fahrtag antworten?
+    # Eine App fragt fuer die Zukunft - wer im Dezember fahren will,
+    # fragt heute. Liegt der Fahrtag hinter dem Kalenderhorizont, sind
+    # ist_feiertag und ist_ferien still null, und die Schaetzung fuer
+    # den ersten Ferientag saehe aus wie die fuer einen Dienstag.
+    # Kein Fehler, keine Warnung, nur ein falscher Preis - genau die
+    # Sorte Fehler, vor der dieses Notebook warnt.
+    # Geprueft wird nur das ENDE. Vergangene Tage kennt der Kalender; die
+    # Bewertung in 6.4a bis 6.7 fragt genau solche Tage ab, und ein
+    # Produkt, das seine eigene Messung verweigert, waere nicht pruefbar.
+    # Gefaehrlich ist die andere Richtung.
+    if _t.normalize() > GUELTIG_BIS:
+        return {"anzeige": None, "grund": "ausserhalb_gueltigkeit",
+                "status": PRODUKTSTATUS,
+                "hinweis": (f"Die Auskunft gilt für Fahrten bis zum "
+                            f"{GUELTIG_BIS:%d.%m.%Y}. Für spätere Tage liegen "
+                            f"Feiertage und Ferien noch nicht vor.")}
     if start_id == ziel_id:
         return {"anzeige": None, "grund": "rundfahrt", "status": None,
                 "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
@@ -2842,10 +2925,12 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
         _quelle, _zusage = "modell", GATE_PREISABHAENGIG
     else:
         _quelle = "rueckfalltabelle" if _rueckfall else "tabelle"
-        # Die Tabelle nimmt das Primaergate nicht. Als REGULAERE Quelle
-        # (KANDIDAT == Perzentiltabelle) waere sie deshalb gar nicht
-        # ausgewaehlt worden; als RUECKFALL darf sie liefern, aber ohne
-        # Zusage - deshalb hier None statt der 80 Prozent.
+        # Als REGULAERE Quelle traegt die Tabelle die Zusage: Sie ist
+        # dann der gewaehlte Kandidat und hat alle Gates genommen. Als
+        # RUECKFALL - also wenn die Quantilregression ausgeliefert wird
+        # und der Dienst gerade nicht antwortet - liefert sie ohne
+        # Zusage, weil dann NICHT sie gemessen wurde, sondern das
+        # Modell. Deshalb hier None statt der 80 Prozent.
         _zusage = None if _rueckfall else GATE_PREISABHAENGIG
         schluessel = (start_id, ziel_id, typ_code, fenster_von(stunde))
         if schluessel not in NACHSCHLAGE.index:
@@ -3072,6 +3157,11 @@ _pruef = [
     ("Rabatt 150 %",           dict(rabatt_prozent=150.0),      "rabatt_ungueltig"),
     ("Radtyp 'ROLLER'",        dict(typ_code="ROLLER"),         "typ_unbekannt"),
     ("Start gleich Ziel",      dict(ziel_id=_s),                "rundfahrt"),
+    # Der Fahrtag liegt hinter dem Kalender. Diese Pruefung fehlte: Das
+    # PAKET trug ein Ablaufdatum, die App hielt sich nicht daran und
+    # rechnete mit ist_feiertag = 0 fuer Tage, die sie nicht kennt.
+    ("Fahrtag nach Ablauf",    dict(zeitpunkt=GUELTIG_BIS + pd.Timedelta(days=1)),
+                                                                "ausserhalb_gueltigkeit"),
 ]
 for _bez, _abw, _erwartet in _pruef:
     _arg = dict(start_id=_s, ziel_id=_z, typ_code=_t, zeitpunkt=_zt,
@@ -3275,9 +3365,14 @@ ABNAHME_GATES[f"Gate 1  preisabhaengig aggregiert >= {GATE_PREISABHAENGIG:.0%}"]
 # es auf JEDER Ebene - sonst verspricht das Produkt je Radtyp etwas
 # anderes als insgesamt.
 _ab_bedingt = _ab_zeigt[_ab_zeigt.tatsaechliches_ziel == _ab_zeigt.geplant]
-for _ty in sorted(_ab_bedingt.typ.unique()):
+# UEBER ALLE RADTYPEN, nicht nur ueber die mit bedingten Faellen: Ein
+# Radtyp, fuer den die App nie zielgetreu antwortet, faellt durch - er
+# verschwindet nicht. Genau so rechnet der Kandidatenvergleich (0,0 bei
+# leerer Gruppe); zwei Rechnungen unter einem Namen waeren wieder zwei
+# Wahrheiten.
+for _ty in sorted(A.typ.unique()):
     _g = _ab_bedingt[_ab_bedingt.typ == _ty]
-    _u, _ = wilson(int(_g.drin.sum()), len(_g))
+    _u, _ = wilson(int(_g.drin.sum()), len(_g)) if len(_g) else (0.0, 0.0)
     ABNAHME_GATES[f"Gate 3  {_ty} angezeigt >= {GATE_PREISABHAENGIG:.0%}"] = {
         "wert": _u, "schwelle": GATE_PREISABHAENGIG, "n": len(_g),
         "haelt": bool(_u >= GATE_PREISABHAENGIG)}
@@ -3312,9 +3407,9 @@ UNABHAENGIG_GEPRUEFT = ABNAHME_BESTANDEN
 # "sichtbar" lautete und die App munter Preise zeigte. Ein Vermerk, den
 # niemand durchsetzt, ist ein Kommentar. Jetzt entscheidet er mit - und
 # die Schnittstelle unten setzt ihn durch.
-KALENDERHORIZONT = min(pd.Timestamp(feiertag.datum.max()),
-                       pd.Timestamp(schulfrei.bis.max()))
-EINSATZBEREIT = bool(KALENDERHORIZONT >= pd.Timestamp.today().normalize())
+# KALENDERHORIZONT und EINSATZBEREIT stehen seit 6.3 fest - dieselben
+# Werte, die die Schnittstelle schon durchsetzt. Zweimal rechnen hiesse,
+# zwei Wahrheiten zu riskieren.
 merke("kalenderhorizont", str(KALENDERHORIZONT.date()))
 merke("einsatzbereit", "ja" if EINSATZBEREIT else "nein")
 
@@ -3399,11 +3494,14 @@ MODELLPAKET["operativ_gueltig_ab"] = MODELLPAKET["gebaut_am"]
 # kuerzer; das Paket haette Gueltigkeit fuer Tage behauptet, die es
 # nicht rechnen kann.
 _KALENDERHORIZONT = KALENDERHORIZONT
-_WUNSCHENDE = pd.Timestamp.today() + pd.Timedelta(days=90)
-MODELLPAKET["operativ_gueltig_bis"] = str(min(_WUNSCHENDE, _KALENDERHORIZONT).date())
+_WUNSCHENDE = GUELTIG_AB + pd.Timedelta(days=90)
+MODELLPAKET["operativ_gueltig_bis"] = str(GUELTIG_BIS.date())
 MODELLPAKET["gueltigkeit_begrenzt_durch"] = (
     "Kalenderhorizont" if _KALENDERHORIZONT < _WUNSCHENDE else "90-Tage-Regel")
 MODELLPAKET["kalenderhorizont"] = str(_KALENDERHORIZONT.date())
+# Was das Paket verspricht, muss die Schnittstelle auch durchsetzen.
+assert MODELLPAKET["operativ_gueltig_bis"] == str(GUELTIG_BIS.date()), (
+    "Paket und Schnittstelle nennen verschiedene Gueltigkeitsenden.")
 merke("gueltig_bis", MODELLPAKET["operativ_gueltig_bis"])
 merke("gueltigkeit_grund", MODELLPAKET["gueltigkeit_begrenzt_durch"])
 assert MODELLPAKET["operativ_gueltig_bis"] <= MODELLPAKET["kalenderhorizont"], (
@@ -3452,7 +3550,7 @@ print("ARTEFAKTE GESCHRIEBEN - jetzt, mit feststehendem Status:")
 print(f"   modellpaket_preisspanne.joblib   Status {PRODUKTSTATUS}, "
       f"Grund {STATUSGRUND}")
 print(f"   modellpaket_preisspanne.json     lesbarer Beipackzettel")
-print(f"   preisschaetzung.csv              Rueckfalltabelle, "
+print(f"   preisschaetzung.csv              {_CSV_ROLLE_KURZ}, "
       f"{len(freigabe_tabelle)} Zeilen")
 print(f"   operativ gueltig                 {MODELLPAKET['operativ_gueltig_ab']} "
       f"bis {MODELLPAKET['operativ_gueltig_bis']}")
@@ -3715,11 +3813,14 @@ angewandt auf sein eigenes Ergebnis.
 **Was jetzt zu tun ist** — in dieser Reihenfolge, und keiner der Schritte ist eine
 Notebook-Übung:
 
-1. **Den Kalender nachliefern.** Feiertage und Schulferien reichen nur bis
-   {{kalenderhorizont}}; ohne sie sind `ist_feiertag` und `ist_ferien` für jeden
-   künftigen Tag still null. Das Paket ist deshalb **einsatzbereit: {{einsatzbereit}}**.
-   Beide Kalender sind öffentlich und Jahre im Voraus bekannt — es fehlt eine Datei,
-   kein Modell.
+1. **Den Kalender fortschreiben, bevor er ausläuft.** Feiertage und Schulferien
+   reichen bis {{kalenderhorizont}}. Für jeden Tag danach wären `ist_feiertag` und
+   `ist_ferien` still null, und die Schätzung für den ersten Ferientag sähe aus wie
+   die für einen Dienstag. Deshalb trägt das Paket ein Ablaufdatum: Es ist heute
+   **einsatzbereit: {{einsatzbereit}}** und beantwortet Anfragen für Fahrten bis zum
+   **{{gueltig_bis}}** — danach schweigt die Schnittstelle mit dem Grund
+   `ausserhalb_gueltigkeit`, bis der Kalender nachgeliefert ist. Beide Kalender sind
+   öffentlich und Jahre im Voraus bekannt: Es fehlt eine Datei, kein Modell.
 2. **Den Schattenbetrieb aus 6.6 laufen lassen** und das Gate dort erneut messen.
    {{gate_untergrenze:.1%}} sind knapp über {{gate_schwelle:.0%}}, nicht deutlich —
    ein Quartal mit anderer Wetterlage kann das kippen.

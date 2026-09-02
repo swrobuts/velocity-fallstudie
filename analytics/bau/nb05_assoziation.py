@@ -733,6 +733,11 @@ print(f"   = {beste.Fahrten / werktage:.2f} Fahrten je Werktag.")
 print(f"   Die Huerde verlangt {K1_SUPPORT * len(koerbe) / werktage:.2f} Fahrten je Werktag.")
 print(f"   Der Abstand betraegt {abs(_abstand_f):.0f} Fahrten ueber den ganzen Zeitraum")
 print(f"   - rund {abs(_abstand_f) / werktage * 100:.1f} Hundertstel einer Fahrt je Werktag.")
+# Die beiden Zahlen, die im Schlussteil die Huerde greifbar machen.
+# Frueher standen dort 0,68 und 0,69 fest im Text - Werte eines alten
+# Datenstands, die kein Lauf mehr erzeugt.
+merke("huerde_je_werktag", float(K1_SUPPORT * len(koerbe) / werktage))
+merke("top_je_werktag", float(beste.Fahrten / werktage))
 merke("top_support", beste.Support)
 merke("top_abstand_pp", _abstand_pp)
 _ = merke("k1_support", K1_SUPPORT)
@@ -858,10 +863,12 @@ rechnet sie ineinander um:
 - Was die Hürde in Fahrten je Werktag verlangt und wie weit die Regel davon entfernt ist,
   rechnet die Zelle oben aus.
 
-**Der Punkt ist nicht die Richtung des Abstands, sondern seine Größe.** Eine Hürde, die
-in Betriebsgrößen um Hundertstel einer Fahrt je Werktag entscheidet, entscheidet
-über nichts Betriebliches — sie entscheidet über eine Stelle hinter dem Komma. Beide Werte
-liegen weit unterhalb dessen, was eine Transporterfahrt rechtfertigt.
+**Der Punkt ist nicht die Richtung des Abstands, sondern die Skala.** Die Hürde verlangt
+{{huerde_je_werktag:.2f}} Fahrten je Werktag, die stärkste Regel bringt
+{{top_je_werktag:.2f}}. Beide Werte liegen weit unterhalb dessen, was eine
+Transporterfahrt rechtfertigt — die Hürde trennt also nicht „lohnt sich" von „lohnt sich
+nicht", sondern zwei Größenordnungen, in denen ohnehin kein Transporter fährt. Ob eine
+Regel sie nimmt, sagt betrieblich nichts.
 
 **Das Kriterium war schlecht formuliert.** Nicht zu streng und nicht zu lax: auf der
 falschen Skala.
@@ -1066,6 +1073,11 @@ merke("personen_morgens", morgens.kunde_id.nunique())
 merke("personen_abends", abends.kunde_id.nunique())
 merke("personen_irgendwann", len(irgendwann))
 merke("personen_selber_tag", len(am_selben_tag))
+_n_tag = len(am_selben_tag)
+merke("tagesprobe_satz",
+      "an keinem einzigen gemeinsamen Tag" if _n_tag == 0
+      else "und nur eine einzige davon am selben Tag" if _n_tag == 1
+      else f"und nur {_n_tag} davon am selben Tag")
 merke("anteil_irgendwann", len(irgendwann) / max(abends.kunde_id.nunique(), 1))
 
 # Der else-Zweig fehlte. Er wurde nie gebraucht, solange die Zahl null war -
@@ -1666,8 +1678,9 @@ DISPOKOPF = [
     f"# Evidenz aus dem Bestaetigungszeitraum "
     f"{bestaetigung.startzeit.min().date()} bis {bestaetigung.startzeit.max().date()}",
     "# KEINE AUTOMATISCHE AKTION - ein Mensch entscheidet, ob gefahren wird.",
-    "# Jede Zeile ist im Bestaetigungszeitraum einzeln bestaetigt "
-    f"(Lift >= {K2_LIFT}).",
+    "# Jede Zeile ist im Bestaetigungszeitraum einzeln bestaetigt: "
+    f"untere 95-%-Grenze eines Tagesblock-Bootstraps >= {K2_LIFT}",
+    f"# (nicht blosser Punktschaetzer >= {K2_LIFT} - der haelt bei mehr Regeln).",
     "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
     "# KEINE reale Betriebsfreigabe - Lehrbeispiel. Es gibt bewusst kein",
     "# Gueltigkeitsdatum: Was hier bestanden ist, ist ein analytisches",
@@ -1991,7 +2004,7 @@ Regeln werden also als **Dispositionshinweis** übergeben, nicht als Transportau
 | **Was erzeugt wird** | `dispositionshinweise.csv` mit den **{{b_regeln_n:.0f}} einzeln bestätigten Regeln**, jede mit ihrer Größenordnung daneben (höchstens {{b_je_tag_max:.2f}} Fahrten je Tag). Dazu die Stationssalden und die Abstell-Hotspots — beide ausdrücklich explorativ. |
 | **Was damit NICHT gezeigt ist** | dass die Datei in einer Dispositionsansicht ankommt. Dieses Notebook prüft den **Export**: Spalten, Nenner, Kopfzeilen. Ladeweg, Schema, Anzeige der Größenordnung und Fehlerverhalten der Oberfläche sind ein Integrationstest, den es hier nicht gibt. Die ehrliche Formulierung lautet **„für die Übergabe erzeugt"**, nicht „läuft". |
 | **Was nicht läuft** | Kein automatischer Umsetzauftrag. A4 ist **{{a4_zustand}}** — nicht widerlegt: Die Szenariorechnung zeigt eine Größenordnung von höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt gegen {{kosten_transport:.0f}} € je Runde. Sie ist **keine Obergrenze** — die Fahrten, die mangels Rad nie stattfanden, stehen nirgends in diesen Daten. |
-| **Wofür die Evidenz gilt** | Bestätigungszeitraum {{b_zeitraum_von}} bis {{b_zeitraum_bis}}. Das ist **kein Gültigkeitsdatum**: Die Datei nennt getrennt davon `gebaut_am` und eine operative Gültigkeit von 90 Tagen ab Bau. |
+| **Wofür die Evidenz gilt** | Bestätigungszeitraum {{b_zeitraum_von}} bis {{b_zeitraum_bis}}. Das ist **kein Gültigkeitsdatum** — und die Datei nennt auch keines. Sie trägt `gebaut_am` und den Evidenzzeitraum, mehr nicht: Ein Gültigkeitsdatum wäre eine Zusage, nach der jemand handeln darf, und die gibt dieses Lehr-Gate nicht her. |
 | **Wer entscheidet** | Die Disposition. Sie sieht den Hinweis und verbindet ihn mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
 
 > **Warum das keine Verlegenheitslösung ist.** Eine Assoziationsanalyse findet
@@ -2056,7 +2069,7 @@ MD("""
 | 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren ({{anteil_rundtouren:.1%}} der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
-| 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen A1 bis A3 — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sie auf der falschen Skala liegt: Sie entscheidet in Betriebsgrößen um Hundertstel einer Fahrt je Tag. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — nur {{personen_selber_tag:.0f}} von {{rueck_fahrten_paar:.0f}} Abendfahrten stammen von jemandem, der morgens hingefahren war |
+| 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen A1 bis A3 — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sie auf der falschen Skala liegt: Sie verlangt {{huerde_je_werktag:.2f}} Fahrten je Werktag — eine Größenordnung, in der keine Transporterfahrt beginnt. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — nur {{personen_selber_tag:.0f}} von {{rueck_fahrten_paar:.0f}} Abendfahrten stammen von jemandem, der morgens hingefahren war |
 | 6 Deployment | {{status_satz}} Erzeugt wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln** (Bootstrap-Untergrenze ≥ {{k2_lift}}), jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Keine Automatik, weil A4 **{{a4_zustand}}** ist: Ohne Leerstandsereignisse und entgangene Nachfrage lässt sich die Wirtschaftlichkeit nicht prüfen. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
@@ -2066,11 +2079,13 @@ MD("""
 > Datensatz, zweimal aggregiert.
 
 > **2.** Ein Erfolgskriterium muss in der Einheit formuliert sein, in der es begründet
-> wurde. Eine Hürde, die zwischen 0,68 und 0,69 Fahrten je Werktag entscheidet, misst
-> nichts — und darf trotzdem nicht nachträglich verschoben werden.
+> wurde. Eine Hürde bei {{huerde_je_werktag:.2f}} Fahrten je Werktag trennt keine
+> Transporterfahrt von keiner — sie misst nichts. Und darf trotzdem nicht nachträglich
+> verschoben werden.
 
-> **3.** Eine Regel, deren Zahlen stimmen, kann eine falsche Geschichte tragen. 49
-> Personen fuhren „beide Richtungen“ — an keinem einzigen gemeinsamen Tag.
+> **3.** Eine Regel, deren Zahlen stimmen, kann eine falsche Geschichte tragen.
+> {{personen_irgendwann:.0f}} Personen fuhren „beide Richtungen“ —
+> {{tagesprobe_satz}}.
 
 **Was eine zweite Runde anders machen würde**
 
