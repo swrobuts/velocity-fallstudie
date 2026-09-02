@@ -65,6 +65,10 @@
  "frei_raeder_tag": 8.872323552735924,
  "hotspots_abstellort": "Dom, Hauptbahnhof, Grombühl Klinikum",
  "hotspots_startstation": "Grombühl Klinikum, Sanderau, Zellerau",
+ "b_regeln_n": 9,
+ "b_je_tag_max": 1.02,
+ "b_zeitraum_von": "2024-12-24",
+ "b_zeitraum_bis": "2026-08-24",
  "status_a": "nicht freigegeben",
  "status_b": "freigegeben",
  "status_satz": "Produkt A (automatische Umverteilungsregel): nicht freigegeben. Produkt B (Dispositionshinweis): freigegeben."

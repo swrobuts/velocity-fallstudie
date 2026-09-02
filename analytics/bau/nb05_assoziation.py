@@ -503,16 +503,26 @@ print("   Gerechnet wird der EXTREMFALL: jede beobachtete Regelfahrt waere")
 print("   ohne Umverteilung verloren und durch die Runde gerettet.")
 print(f"   Rentabel ab {KOSTEN_TRANSPORTFAHRT / WERT_FAHRT:.0f} zusaetzlichen "
       f"Fahrten je Runde.\\n")
-print(f"   {'Regel':52s}{'Fahrten/Werktag':>17s}{'Wert/Tag':>10s}")
-_lohnt = 0
+# JEDE REGEL MIT IHREM EIGENEN TAGESNENNER.
+#
+# Eine Regel im Kontext "frei · abend" betrifft keine Werktage. Sie
+# durch Werktage zu teilen macht sie kleiner, als sie ist - und zwar
+# genau dort, wo die Rechnung ueber eine Freigabe entscheidet.
+_tage_je_art_alle = (koerbe.groupby("tagesart").startzeit.apply(
+    lambda s: s.dt.date.nunique()).to_dict())
+print(f"   {'Regel':46s}{'Kontext':>10s}{'Fahrten/Tag':>13s}{'Wert/Tag':>10s}")
+_lohnt, _je_tag_max = 0, 0.0
 for _, _r in brauchbar.iterrows():
-    _je_tag = _r.Fahrten / _werktage_regel
+    _art = str(_r.Kontext).split(" · ")[0]
+    _nenner = _tage_je_art_alle.get(_art, 0)
+    _je_tag = _r.Fahrten / _nenner if _nenner else float("nan")
+    _je_tag_max = max(_je_tag_max, _je_tag)
     _wert = _je_tag * WERT_FAHRT
     _lohnt += _wert >= KOSTEN_TRANSPORTFAHRT
-    print(f"   {_r['wenn Start'] + ' -> ' + _r['dann Ziel']:52s}"
-          f"{_je_tag:>17.2f}{_wert:>9.2f} EUR")
+    print(f"   {_r['wenn Start'] + ' -> ' + _r['dann Ziel']:46s}{_art:>10s}"
+          f"{_je_tag:>13.2f}{_wert:>9.2f} EUR")
 merke("regeln_lohnen", _lohnt)
-merke("regel_je_werktag", brauchbar.Fahrten.max() / _werktage_regel)
+merke("regel_je_werktag", _je_tag_max)
 print()
 if _lohnt:
     print(f"   {_lohnt} Regel(n) tragen eine eigene Transportfahrt.")
@@ -1437,14 +1447,50 @@ print("geschrieben: stationssalden_werktag.csv, abstell_hotspots_werktag.csv")
 _best_lift = zusammen[f"{LIFT} bestätigt"]
 b_regeln = zusammen[_best_lift.notna() & (_best_lift >= K2_LIFT)].copy()
 
-# Groessenordnung je Regel - B2 verlangt, dass sie NEBEN der Regel steht.
-_fahrten_ent = gewaehlt_ent.set_index(schluessel).Fahrten
-b_regeln["fahrten_je_werktag"] = [
-    round(_fahrten_ent.get(tuple(k), 0) / _werktage_regel, 2)
-    for k in b_regeln[schluessel].itertuples(index=False)]
+# ─── DIE GROESSENORDNUNG - ZAEHLER UND NENNER AUS DEMSELBEN ZEITRAUM ─
+#
+# Hier stand ein Nennerfehler, und er ist der haeufigste ueberhaupt: Der
+# Zaehler kam aus dem ENTDECKUNGSzeitraum (dem ersten Drittel), geteilt
+# wurde aber durch die Werktage des GESAMTEN Datensatzes. Die angezeigte
+# Groessenordnung war damit um rund den Faktor drei zu klein - und B2
+# wurde eingefuehrt, damit die Disposition die Groesse nicht falsch
+# einschaetzt.
+#
+# Gerechnet wird jetzt auf dem BESTAETIGUNGSzeitraum: Das ist der
+# Zeitraum, auf den sich die ausgewiesene Evidenz bezieht, und der
+# juengste dazu.
+#
+# UND DER RICHTIGE TAGESNENNER JE KONTEXT. Eine Regel im Kontext
+# "frei · abend" betrifft keine Werktage. Sie durch Werktage zu teilen
+# waere derselbe Fehler noch einmal, nur kleiner.
+_tage_je_art = (bestaetigung.groupby("tagesart").startzeit.apply(
+    lambda s: s.dt.date.nunique()).to_dict())
+_fahrten_best = r_best.set_index(schluessel).Fahrten
+
+def _tagesart(kontext):
+    return str(kontext).split(" · ")[0]
+
+def _je_tag(zeile):
+    _art = _tagesart(zeile.Kontext)
+    _n = _tage_je_art.get(_art, 0)
+    _f = _fahrten_best.get((zeile.Kontext, zeile._2, zeile._3), 0)
+    return round(_f / _n, 2) if _n else float("nan")
+
+b_regeln["fahrten_je_tag"] = [_je_tag(z) for z in b_regeln.itertuples()]
+b_regeln["tagesart"] = [_tagesart(k) for k in b_regeln.Kontext]
+b_regeln["tage_im_nenner"] = [_tage_je_art.get(a, 0) for a in b_regeln.tagesart]
 b_regeln["status"] = "Hinweis - keine automatische Aktion"
-b_regeln["gueltig_von"] = str(bestaetigung.startzeit.min().date())
-b_regeln["gueltig_bis"] = str(bestaetigung.startzeit.max().date())
+# EVIDENZZEITRAUM IST KEINE GUELTIGKEIT.
+#
+# Frueher hiessen diese beiden Felder gueltig_von/gueltig_bis. Damit war
+# ein heute erzeugtes Artefakt laut eigener Datei schon abgelaufen -
+# derselbe Fehler, den Notebook 1 an seinem Modellpaket hatte.
+b_regeln["bestaetigungszeitraum_von"] = str(bestaetigung.startzeit.min().date())
+b_regeln["bestaetigungszeitraum_bis"] = str(bestaetigung.startzeit.max().date())
+b_regeln["gebaut_am"] = str(pd.Timestamp.today().date())
+b_regeln["operativ_gueltig_ab"] = str(pd.Timestamp.today().date())
+b_regeln["operativ_gueltig_bis"] = str((pd.Timestamp.today()
+                                        + pd.Timedelta(days=90)).date())
 
 DISPOKOPF = [
     f"# Produkt B: Dispositionshinweis, Stand {koerbe.startzeit.max().date()}",
@@ -1461,9 +1507,13 @@ print("\\nPRODUKT B - DAS ARTEFAKT, DAS TATSAECHLICH AUSGELIEFERT WIRD\\n")
 print(f"   von {len(zusammen)} entdeckten Regeln sind {len(b_regeln)} einzeln bestaetigt")
 if len(b_regeln):
     _zeig = b_regeln[schluessel + [f"{LIFT} entdeckt", f"{LIFT} bestätigt",
-                                   "fahrten_je_werktag"]]
+                                   "fahrten_je_tag", "tage_im_nenner"]]
     print(_zeig.round(2).to_string(index=False))
 print(f"\\n   geschrieben: dispositionshinweise.csv ({len(b_regeln)} Zeilen)")
+merke("b_regeln_n", len(b_regeln))
+merke("b_je_tag_max", float(b_regeln.fahrten_je_tag.max()) if len(b_regeln) else 0.0)
+merke("b_zeitraum_von", str(bestaetigung.startzeit.min().date()))
+merke("b_zeitraum_bis", str(bestaetigung.startzeit.max().date()))
 
 # ─── B1 BIS B4, AM ARTEFAKT GEPRUEFT ────────────────────────────────
 #
@@ -1475,7 +1525,38 @@ _datei = pd.read_csv("dispositionshinweise.csv", skiprows=len(DISPOKOPF)) \
 
 B1_TRAEGT = bool(len(b_regeln)) and bool(
     (b_regeln[f"{LIFT} bestätigt"] >= K2_LIFT).all())
-B2_ERFUELLT = "fahrten_je_werktag" in _datei.columns
+# B2 WIRD NACHGERECHNET, NICHT ABGEHAKT.
+#
+# Frueher stand hier nur, ob die Spalte existiert. Eine Spalte mit
+# falschen Zahlen erfuellt aber kein Kriterium - sie ist schlimmer als
+# keine, weil sie Vertrauen erzeugt. Geprueft wird deshalb: Spalte da,
+# Werte numerisch und nicht negativ, Nenner dokumentiert - und fuer die
+# erste Zeile die Rechnung unabhaengig wiederholt.
+_b2_pruefungen = []
+if len(_datei):
+    _b2_pruefungen.append(("Spalte vorhanden", "fahrten_je_tag" in _datei.columns))
+    _b2_pruefungen.append(("Nenner dokumentiert", "tage_im_nenner" in _datei.columns))
+    if all(e for _, e in _b2_pruefungen):
+        _w = pd.to_numeric(_datei.fahrten_je_tag, errors="coerce")
+        _b2_pruefungen.append(("numerisch", bool(_w.notna().all())))
+        _b2_pruefungen.append(("nicht negativ", bool((_w >= 0).all())))
+        # Gegenrechnung fuer die erste Zeile, aus den Rohdaten.
+        _z0 = _datei.iloc[0]
+        _art0 = str(_z0.Kontext).split(" · ")[0]
+        _fen0 = str(_z0.Kontext).split(" · ")[1]
+        _teil = bestaetigung[(bestaetigung.tagesart == _art0)
+                             & (bestaetigung.fenster.astype(str) == _fen0)]
+        _n0 = bestaetigung[bestaetigung.tagesart == _art0].startzeit.dt.date.nunique()
+        _fahrten0 = len(_teil[(_teil.start == _z0["wenn Start"])
+                              & (_teil.ziel == _z0["dann Ziel"])])
+        _nach = round(_fahrten0 / _n0, 2) if _n0 else float("nan")
+        _b2_pruefungen.append((f"nachgerechnet ({_fahrten0}/{_n0} = {_nach})",
+                               abs(_nach - float(_z0.fahrten_je_tag)) < 0.01))
+B2_ERFUELLT = bool(_b2_pruefungen) and all(e for _, e in _b2_pruefungen)
+print()
+print("   B2 im Einzelnen - am Artefakt geprueft, nicht behauptet:")
+for _bez, _e in _b2_pruefungen:
+    print(f"      {'ok    ' if _e else 'FEHLER'}  {_bez}")
 B3_ERFUELLT = any("KEINE AUTOMATISCHE AKTION" in z for z in _kopf[:len(DISPOKOPF)])
 # B4 - die Begleitauswertungen muessen "explorativ" im Kopf tragen.
 B4_ERFUELLT = all(
@@ -1701,8 +1782,9 @@ Regeln gehen also als **Dispositionshinweis** in Betrieb, nicht als Transportauf
 
 | | |
 |---|---|
-| **Was läuft** | Die {{brauchbare_regeln:.0f}} Regeln erscheinen in der Dispositionsansicht als Hinweis: „morgens fließt es von hier nach dort". Dazu die Stationssalden und die Abstell-Hotspots als Tagesübersicht. |
-| **Was nicht läuft** | Kein automatischer Umsetzauftrag — A4 hält nicht. Die Obergrenzenrechnung zeigt, warum: Es geht um {{regel_je_werktag:.1f}} Fahrten je Werktag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt, eine Umsetzrunde kostet angenommene {{kosten_transport:.0f}} €. |
+| **Was läuft** | Die **{{b_regeln_n:.0f}} einzeln bestätigten Regeln** aus `dispositionshinweise.csv` erscheinen in der Dispositionsansicht als Hinweis: „morgens fließt es von hier nach dort" — jede mit ihrer Größenordnung daneben, höchstens {{b_je_tag_max:.2f}} Fahrten je Tag. Dazu die Stationssalden und die Abstell-Hotspots als Tagesübersicht. |
+| **Was nicht läuft** | Kein automatischer Umsetzauftrag — A4 hält nicht. Die Obergrenzenrechnung zeigt, warum: Es geht um höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt, eine Umsetzrunde kostet angenommene {{kosten_transport:.0f}} €. |
+| **Wofür die Evidenz gilt** | Bestätigungszeitraum {{b_zeitraum_von}} bis {{b_zeitraum_bis}}. Das ist **kein Gültigkeitsdatum**: Die Datei nennt getrennt davon `gebaut_am` und eine operative Gültigkeit von 90 Tagen ab Bau. |
 | **Wer entscheidet** | Die Disposition. Sie sieht den Hinweis und verbindet ihn mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
 
 > **Warum das keine Verlegenheitslösung ist.** Eine Assoziationsanalyse findet
@@ -1768,7 +1850,7 @@ MD("""
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
 | 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen alle drei Hürden — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sich zeigt, dass sie auf der falschen Skala liegt: Sie entscheidet in Betriebsgrößen um Hundertstel einer Fahrt je Werktag. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — {{personen_selber_tag:.0f}} Fälle bei {{rueck_fahrten_paar:.0f}} Abendfahrten |
-| 6 Deployment | {{status_satz}} Die Regeln erscheinen als Hinweis in der Dispositionsansicht, dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Die Obergrenzenrechnung sagt, warum keine Automatik: {{regel_je_werktag:.1f}} Fahrten je Werktag bei angenommenen {{kosten_transport:.0f}} € je Umsetzrunde. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
+| 6 Deployment | {{status_satz}} Ausgeliefert wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln**, jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Die Obergrenzenrechnung sagt, warum keine Automatik: höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{kosten_transport:.0f}} € je Umsetzrunde. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
 
