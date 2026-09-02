@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Notebook 4 - Zeitreihe: Wieviele Fahrten kommen morgen?"""
 from bauwerk import CODE, MD, PHASE, kopf
+from gestaltung import kacheln, laufzeit_code
 
 NAME = "04_Zeitreihe_Nachfrageprognose"
 
@@ -38,7 +39,7 @@ MD("""
 """),
 
 MD("""
-## Was diese Aufgabe von den ersten drei unterscheidet
+## Einordnung: Prognose entlang der Zeit
 
 Auch Notebook 1 trennt bereits **zeitlich** — ein zufälliger Schnitt wäre dort ebenso
 falsch gewesen, weil Saison, Tarifänderungen und verändertes Verhalten Fahrten eben nicht
@@ -111,7 +112,7 @@ Veranstaltungstagen und bei Wetterumschwüngen geht das regelmäßig daneben.
 > dieses Notebook nicht leistet. Was es leistet, ist die Zahl, auf der sie aufsetzen
 > müsste — und die Frage, wie man mit ihrer Unsicherheit umgeht.
 
-### Die beiden Fehlerarten — ungleich teuer
+### Kosten der beiden Fehlerrichtungen
 
 Die Kosten sind **je Fahrt** angesetzt, nicht je Rad — das ist die Einheit, die dieses
 Notebook prognostiziert.
@@ -138,7 +139,7 @@ absichtlich etwas zu hoch. Wir rechnen das in Phase 5 aus.
 > simuliert, und ein einzelner Pfad ist eine Einzelrealisierung. Ein Kostenvorteil, der
 > nur in der Hälfte der Wetterziehungen entsteht, ist kein Kostenvorteil, sondern Glück.
 
-### Was „Pilot" in diesem Notebook bedeutet — und was nicht
+### Was „Pilot" hier bedeutet
 
 Der Begriff wird in dieser Reihe an mehreren Stellen benutzt, und er bedeutet nicht
 überall dasselbe. Hier heißt er:
@@ -169,6 +170,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+''' + laufzeit_code() + '''
 
 BASIS = os.environ.get("VELO_BASIS",
     __ROHBASIS__)
@@ -193,7 +196,7 @@ MD("""
 > nicht auf den Tag vor einer Woche. Hier gibt es keine Lücken — geprüft, nicht
 > angenommen.
 
-### 2.1 Die Reihe ansehen
+### 2.1 Verlauf der Reihe
 """),
 
 CODE('''
@@ -208,6 +211,24 @@ achsen[1].plot(letzte.index, letzte.fahrten, marker=".", lw=1, color="#3d4b6b")
 achsen[1].set_title("Die letzten 120 Tage — jetzt sieht man den Wochenrhythmus")
 achsen[1].grid(alpha=.3)
 plt.tight_layout(); plt.show()
+
+# DIESELBE REIHE ZUM HINEINZOOMEN. Die statischen Bilder oben bleiben
+# stehen - sie tragen die Aussage auch dort, wo Skripte entfernt werden.
+# Der Zusatz hier ist das, was ein festes Bild nicht kann: einen
+# beliebigen Zeitraum aufziehen und einzelne Tage ablesen.
+_fig = go.Figure()
+_fig.add_trace(go.Scatter(x=reihe.index, y=reihe.fahrten, mode="lines",
+                          name="Fahrten je Tag", line=dict(width=.9),
+                          hovertemplate="%{x|%d.%m.%Y}<br>%{y} Fahrten<extra></extra>"))
+# Gerundet gesendet: Plotly schreibt sonst jede Nachkommastelle des
+# gleitenden Mittels in die Datei, und die interessiert im Diagramm nicht.
+_fig.add_trace(go.Scatter(x=reihe.index,
+                          y=reihe.fahrten.rolling(28, center=True).mean().round(1),
+                          mode="lines", name="gleitendes Mittel, 28 Tage",
+                          line=dict(width=2.4), hoverinfo="skip"))
+_fig.update_xaxes(rangeslider=dict(visible=True), title="Datum")
+_fig.update_yaxes(title="Fahrten")
+interaktiv(_fig, "Fahrten je Tag - Zeitraum unten aufziehen", hoehe=440)
 '''),
 
 MD("""
@@ -219,7 +240,7 @@ MD("""
 Dazu kommen einzelne Ausschläge nach oben und unten, die weder zum Jahr noch zur Woche
 gehören. Denen gehen wir gleich nach.
 
-### 2.2 Die Merkmale, die sich anbieten
+### 2.2 Verfügbare Merkmale
 """),
 
 CODE('''
@@ -273,7 +294,7 @@ print(f"An Veranstaltungstagen im Mittel Faktor {faktor:.2f} gegenüber normalen
 '''),
 
 MD("""
-### 2.3 Eine Falle, in die man hier zwangsläufig tappt
+### 2.3 Der Ferieneffekt als Scheinzusammenhang
 
 Prüfen wir den Effekt der **Schulferien**. Die naheliegende Rechnung ist ein Vergleich der
 Mittelwerte — und sie führt in die Irre.
@@ -496,7 +517,7 @@ if umgekehrt != gewaehlt_name:
 '''),
 
 MD("""
-### Drei Beobachtungen, die man leicht überliest
+### Drei Beobachtungen zur Reihe
 
 **1. Die Faustregel ist schlechter als das Nullmodell.**
 {{mae_faustregel:.2f}} gegen {{mae_null:.2f}} Fahrten MAE — und beide haben ein negatives
@@ -877,7 +898,7 @@ MD("""
 > ein einzelnes günstiges Quartal beinahe ein Modell in Betrieb gebracht hätte. Es steht
 > als erster Punkt in den offenen Fragen.
 
-### 5.4 Wo irrt das Modell? Die schlechtesten Tage ansehen
+### 5.4 Die Tage mit dem größten Fehler
 """),
 
 CODE('''
@@ -902,8 +923,13 @@ print(schlechteste.nsmallest(5, "Abweichung").to_string())
 PHASE(6, "Die Prognose muss jeden Abend um 18 Uhr auf dem Tisch liegen — mit einer "
          "Zutat, die wir bisher geschummelt haben."),
 
+MD(kacheln([("{{gewaehlt_name}}", "gewähltes Verfahren"),
+            ("{{mae_linear:.1f}}", "Fahrten mittlerer Fehler"),
+            ("{{mae_faustregel:.1f}}", "Fehler der Faustregel"),
+            ("{{nb04_status}}", "Status")])),
+
 MD("""
-### 6.1 Was die simulierte Wettervorhersage nicht abbildet
+### 6.1 Grenzen der simulierten Wettervorhersage
 
 Das Machbarkeitsurteil in Phase 5 steht schon auf der Betriebszahl — das war die wichtigste
 Korrektur an diesem Notebook. Zwei Dinge bleiben trotzdem offen, und sie gehören genannt:
@@ -1112,7 +1138,7 @@ in einer CSV stehen. Findet nächstes Jahr ein neues Festival statt, das niemand
 wird die Prognose an diesem Tag deutlich zu niedrig sein — und niemand wird wissen, warum.
 **Ein Modell ist nur so aktuell wie die Stammdaten, die es füttert.**
 
-### 6.4 Der Betriebsablauf
+### 6.4 Betriebsablauf
 
 ```
    17:45   Wettervorhersage abrufen
@@ -1130,7 +1156,7 @@ wird die Prognose an diesem Tag deutlich zu niedrig sein — und niemand wird wi
 MD("""
 ---
 
-# Der Kreislauf schließt sich
+# Zusammenfassung
 
 | Phase | Ergebnis |
 |---|---|

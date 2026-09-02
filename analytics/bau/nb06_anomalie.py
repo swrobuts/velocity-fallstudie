@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Notebook 6 - Anomalieerkennung: Was ist gestern schiefgelaufen?"""
 from bauwerk import CODE, MD, PHASE, kopf
+from gestaltung import kacheln, laufzeit_code
 
 NAME = "06_Anomalieerkennung_Auffaellige_Vorgaenge"
 
@@ -46,7 +47,7 @@ MD("""
 > Verfahren**, nicht die Güte eines Betriebssystems. Für eine reale Freigabe zählt keine
 > einzige Zahl von hier.
 
-## Das Verfahren, das nach dem Gegenteil sucht
+## Einordnung: Anomalieerkennung
 
 Alle bisherigen Notebooks haben **Muster** gesucht. Dieses sucht die **Abweichung vom
 Muster** — und dreht damit die übliche Frage um:
@@ -87,7 +88,7 @@ stichprobenhaft: Man scrollt durch die Liste und schaut, was ins Auge fällt. Be
 Gesucht ist eine **kurze Tagesliste**, die einen menschlichen Blick verdient. Wie kurz,
 wird gleich ausgerechnet — nicht gesetzt.
 
-### Drei Produkte, nicht eine Liste
+### Drei Produkte mit drei Zeitpunkten
 
 Die naheliegende Fassung dieser Aufgabe lautet: „eine Liste mit den auffälligsten
 Vorgängen von gestern". Sie ist falsch, und der Fehler ist nicht offensichtlich — er liegt
@@ -115,7 +116,7 @@ Wir trennen deshalb von Anfang an drei Produkte:
 > **Der Entscheidungszeitpunkt gehört deshalb an den Anfang: Er bestimmt, welche Daten
 > zur Verfügung stehen und welche Maßnahme überhaupt möglich ist.**
 
-### Was ein Fund wert ist, und was ein Fehlalarm kostet
+### Nutzen eines Funds, Kosten eines Fehlalarms
 
 | | | Kosten |
 |---|---|---|
@@ -142,7 +143,7 @@ selten und die Funde wertvoll sind.
 > Der Unterschied zwischen „rechnet sich" und „wird benutzt" ist genau der Grund, warum
 > Erfolgskriterien nicht aus einer Kostenrechnung allein folgen.
 
-### Erfolgskriterien — je Produkt eigene, weil es drei Produkte sind
+### Erfolgskriterien je Produkt
 
 | Produkt | Kriterium | Schwelle | Prüfbar? |
 |---|---|---|---|
@@ -200,6 +201,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+''' + laufzeit_code() + '''
 
 # Die Adresse zeigt auf den Zweig 'main' - der sich aendern kann. Fuer eine
 # Auswertung, die spaeter exakt reproduzierbar sein muss, gehoert hier ein
@@ -393,6 +396,22 @@ achsen[2].hist(echte.loc[echte.dauer_min.between(60, 200), "dauer_min"], bins=40
 achsen[2].set_title("Der Übergangsbereich, 60 bis 200 Minuten"); achsen[2].set_xlabel("Minuten")
 plt.tight_layout(); plt.show()
 
+# DIE LUECKE ZUM NACHMESSEN. Wo genau die Verteilung abreisst, entscheidet
+# spaeter die Schwelle fuer Produkt A1; im festen Bild laesst sich das nur
+# ungefaehr ablesen. Die statischen Bilder oben bleiben stehen.
+# VORHER BINNEN, DANN SENDEN. go.Histogram schickt jeden einzelnen Wert
+# an den Browser; bei ueber hunderttausend Fahrten blaeht das die Datei um
+# ein Vielfaches. Die Klassen stehen hier ohnehin fest.
+_h = echte.dauer_min[echte.dauer_min.between(30, 300)]
+_anzahl, _kanten = np.histogram(_h, bins=90, range=(30, 300))
+_mitte = (_kanten[:-1] + _kanten[1:]) / 2
+_fig = go.Figure(go.Bar(x=_mitte, y=_anzahl, width=(_kanten[1] - _kanten[0]),
+                        hovertemplate=("%{x:.0f} Minuten<br>%{y} Fahrten"
+                                       "<extra></extra>")))
+_fig.update_xaxes(title="Minuten", dtick=30)
+_fig.update_yaxes(title="Fahrten")
+interaktiv(_fig, "Fahrtdauer zwischen 30 und 300 Minuten - wo reißt die Verteilung ab?")
+
 print(f"Fahrten über  2 Stunden: {int((echte.dauer_min > 120).sum()):>5d}")
 print(f"Fahrten über  3 Stunden: {int((echte.dauer_min > 180).sum()):>5d}")
 print(f"Fahrten über  8 Stunden: {int((echte.dauer_min > LANGFAHRT_MIN).sum()):>5d}")
@@ -411,7 +430,7 @@ Häufchen. Das sind zwei verschiedene Dinge in einer Spalte:
 > vermischt wurden.** Sie zu erkennen ist der wichtigste Schritt der
 > Datenaufbereitung; die Trennung der Vorgänge folgt daraus.
 
-### 2.2 Eine Sackgasse, die man kennen sollte
+### 2.2 Die Geschwindigkeit als abgeleitete Größe
 """),
 
 CODE('''
@@ -484,7 +503,7 @@ PHASE(4, "Zwei Wege zum selben Ziel: eine Regel, die jeder versteht, und ein Ver
          "das mehr sieht."),
 
 MD("""
-### 4.1 Der einfache Weg: die Interquartilsregel
+### 4.1 Die Interquartilsregel
 
 Die klassische Ausreißerregel braucht keine Bibliothek und keinen Rechner:
 
@@ -558,7 +577,7 @@ plt.tight_layout(); plt.show()
 '''),
 
 MD("""
-### 4.3 Der erste Blick auf das Ergebnis — und ein Fehlschlag
+### 4.3 Erste Auswertung des Ergebnisses
 
 Bevor irgendetwas bewertet wird: **Wer steht ganz oben?**
 """),
@@ -586,7 +605,7 @@ print((referenz_tab.typ_code.value_counts(normalize=True) * 100).round(0).to_str
 """),
 
 MD("""
-### 4.4 Das Modell hat den Radtyp gefunden, nicht die Anomalie
+### 4.4 Befund: das Modell trennt Radtypen
 
 Fast alle gemeldeten Vorgänge sind **CARGO-Räder** — obwohl sie nur einen kleinen Teil
 der Flotte ausmachen. Und die Dauer dieser Fahrten ist unauffällig; auffällig ist nur das
@@ -604,7 +623,7 @@ viel wie eine sehr lange CITY-Fahrt.
 sondern die Merkmale. Wir müssen das Entgelt so umrechnen, dass es sagt *„teuer für ein
 Rad dieses Typs"* statt *„teuer"*.
 
-### 4.5 Die Korrektur: innerhalb des Radtyps normieren
+### 4.5 Normierung innerhalb des Radtyps
 """),
 
 CODE('''
@@ -786,7 +805,7 @@ Das hat drei Folgen, und alle drei gehören in den Bericht:
 50 Vorgängen findet der erste Versuch fast nichts, die normierte Fassung deutlich mehr.
 Dasselbe Verfahren, bessere Merkmale.
 
-### 5.2 Was findet das Verfahren sonst noch?
+### 5.2 Weitere Funde des Verfahrens
 """),
 
 CODE('''
@@ -893,7 +912,7 @@ print("     Formel - eine falsch gezogene Kohorte.")
 '''),
 
 MD("""
-### 5.3 Was diese Zahlen bedeuten — und was sie nicht bedeuten
+### 5.3 Aussagekraft der Kennzahlen
 
 Die globale Rangliste meldet **{{globale_quote:.1%}}**, die tatsächlich erzeugbare
 Tagesliste **{{tagesquote:.1%}}** — bei demselben Modell und denselben Daten.
@@ -940,7 +959,7 @@ Schattenbetrieb aus Phase 1, und daran führt kein Weg vorbei.
 > die auf einer Rechnung beruht, die den Entscheidungszeitpunkt ignoriert. **Eine Kennzahl
 > muss zu dem Produkt gehören, das ausgeliefert wird — sonst prüft sie ein anderes.**
 
-### 5.4 Produkt A1: die offenen Rückgaben, die keine Liste sieht
+### 5.4 Produkt A1: offene Rückgaben
 
 Die Zahl ganz unten in der Ausgabe ist der Grund für die Trennung aus Phase 1: Ein Teil
 der Langfahrten war am Folgemorgen **noch gar nicht beendet**. Für eine rückblickende
@@ -1061,7 +1080,7 @@ hergeben:
 - abgestufte Schwellen: Hinweis, Kundenkontakt, Suche,
 - der letzte bekannte Standort des Rades.
 
-### 5.5 Kriterium: **Warum** fällt ein Vorgang auf?
+### 5.5 Begründung je Fund
 
 Ein Isolation Forest liefert eine Zahl, keine Begründung. Für den Betrieb ist das zu
 <!-- zahl-ohne-ausgabe: 12345 erfundene Beispielnummer -->
@@ -1125,7 +1144,7 @@ entscheiden, ob es sich lohnt hinzusehen — und das ist der ganze Zweck der Lis
 
 ---
 
-### 5.6 Aufgabe B — und die Regel, die man zuerst hätte bauen müssen
+### 5.6 Produkt B: die Regel als Ausgangspunkt
 
 Nun zur zweiten Aufgabe aus Phase 1: **auffällige Stationstage**. Hier liegt der Fall
 besonders günstig, denn es gibt eine **dokumentierte Wahrheit**: 26 Stationsstörungen
@@ -1229,7 +1248,7 @@ print("  kleinste Ausgabe verdeckt, ist trotzdem ein Fehler.")
 '''),
 
 MD("""
-### 5.7 Und jetzt die Auswertung, die zählt: was geht an einem Morgen?
+### 5.7 Die Tagesliste, wie sie im Betrieb entsteht
 
 Die Tabelle darüber ist immer noch eine **globale Rangliste über drei Jahre** — derselbe
 Denkfehler wie bei Aufgabe A2, nur an anderer Stelle. Am Morgen des 13. März sieht das
@@ -1515,7 +1534,7 @@ print(f"   {B_STATUSSATZ}")
 '''),
 
 MD("""
-### 5.8 Das Ergebnis für Aufgabe B — und warum es einen dritten Zeitabschnitt brauchte
+### 5.8 Ergebnis für Produkt B auf dem dritten Zeitabschnitte
 
 **Die erste Regel riss das Kriterium, und zwar deutlich.** „Kein Vorgang heute" meldete
 {{stat_alt_meldungen:.0f}} Stationstage bei {{stat_alt_quote:.1%}} Treffern — eine Liste,
@@ -1547,7 +1566,7 @@ Die Präzision fällt vom Entwicklungs- auf den Testabschnitt. Das ist der Norma
 kein Skandal: Auf dem Abschnitt, an dem man eine Regel geschliffen hat, sieht sie
 besser aus. **Genau deshalb steht die zweite Spalte hier — und nur sie zählt.**
 
-#### Der Gate-Katalog, vorab und vollständig
+#### Der Gate-Katalog
 
 Ein einzelnes Präzisionskriterium ist manipulierbar: Eine Regel, die fast nie meldet,
 erfüllt es mühelos und übersieht dabei fast jede Störung. Der Katalog steht deshalb
@@ -1571,7 +1590,7 @@ vollständig in Phase 1, und **jede Zahl nennt ihren Nenner**:
 > zu wenig; für ein Verwerfen ist es zu wenig in die andere Richtung. Was fehlt, sind
 > Fälle, und die liefert nur ein prospektiver Schattenpilot.
 
-#### Der Weg zu dieser Zahl — jeder Schritt hat sie kleiner gemacht
+#### Wie die Zahl zustande kommt
 
 | Auswertung | Trefferquote | Was daran nicht stimmt |
 |---|---|---|
@@ -1613,7 +1632,7 @@ eröffnet, bestätigt, verworfen, geschlossen — kann das System nicht entschei
 daraus ein neuer Fund wird oder ein weiterlaufender Fehlalarm. **Das ist keine
 Rechenfrage, sondern eine fehlende Zustandsmaschine.**
 
-#### Die Kosten sind nicht die von A2 — und sie sind Annahmen
+#### Die Kosten von B sind Annahmen, nicht die von A2
 
 Das {{kriterium_treffer:.0%}}-Kriterium und die Listenlänge stammen aus der Rechnung für
 eine Schreibtischprüfung im Betriebsbüro. Bei einer Station fährt die Technik hin. Mit
@@ -1647,6 +1666,11 @@ Notebook 4, das Stationsvolumen aus Notebook 3, die Nachbarstationen. Eine Nullt
 # =====================================================================
 PHASE(6, "Eine Regel ist spezifiziert, ein Modell geht in den Schattenbetrieb, "
          "und eines wird nicht freigegeben."),
+
+MD(kacheln([("{{a1_status}}", "Produkt A1"),
+            ("{{a2_status}}", "Produkt A2"),
+            ("{{b_status}}", "Produkt B"),
+            ("{{tagesquote:.1%}}", "Trefferquote der Tagesliste")])),
 
 CODE('''
 import joblib, datetime
@@ -1935,7 +1959,7 @@ for _n, _w in PRODUKTE.items():
 '''),
 
 MD("""
-### 6.1 Was ausgeliefert wird — und was ausdrücklich nicht
+### 6.1 Was ausgeliefert wird
 
 | Produkt | Was ausgeliefert wird | Status |
 |---|---|---|
@@ -1991,7 +2015,7 @@ Was das konkret bedeutet:
 > Auswertung genauso aus wie eines, das nichts übersieht.
 
 
-### 6.3 Der Rückkopplungsvorteil, den A2 hat
+### 6.3 Rückkopplung bei A2
 
 In Notebook 2 war die Rückkopplung ein Problem: Wer die Wartungsliste befolgt, verhindert
 die Ausfälle, die er vorhersagen wollte, und verdirbt sich damit die Trainingsdaten.
@@ -2026,7 +2050,7 @@ bestätigt, ist nach einem halben Jahr nicht mehr zu bewerten — und wird still
 MD("""
 ---
 
-# Der Kreislauf schließt sich
+# Zusammenfassung
 
 | Phase | Ergebnis |
 |---|---|
@@ -2096,7 +2120,7 @@ keine Schätzung.
 
 ---
 
-# Damit ist der Kreis geschlossen — über alle sechs Notebooks
+# Rückblick über alle sechs Notebooks
 
 | | Verfahren | Zielgröße | Wonach gefragt wird |
 |---|---|---|---|

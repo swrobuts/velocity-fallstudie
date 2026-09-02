@@ -6839,7 +6839,7 @@
     ]
   ],
   "alternative": "quantilregression (modell_unten / modell_oben)",
-  "gebaut_am": "2026-09-02",
+  "gebaut_am": "2026-09-03",
   "statusgrund": "freigegeben",
   "abnahme_untergrenze": 0.8113887252728376,
   "abnahme_bestanden": true,
@@ -6887,7 +6887,7 @@
       "haelt": true
     }
   },
-  "operativ_gueltig_ab": "2026-09-02",
+  "operativ_gueltig_ab": "2026-09-03",
   "operativ_gueltig_bis": "2026-11-07",
   "gueltigkeit_begrenzt_durch": "Kalenderhorizont",
   "kalenderhorizont": "2026-11-07",

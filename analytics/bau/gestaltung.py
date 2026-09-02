@@ -2,8 +2,8 @@
 
 Das Thema wird ueber die Umgebungsvariable VELO_THEMA gesetzt:
 
-    VELO_THEMA=thws     Kursfarben wie im Foliendeck (Standard)
-    VELO_THEMA=neutral  Graustufen mit einem Akzent
+    VELO_THEMA=neutral  Graustufen mit einem Akzent (Standard)
+    VELO_THEMA=thws     Kursfarben wie im Foliendeck
 
 WAS HIER DRIN IST UND WARUM
 
@@ -54,11 +54,11 @@ THEMEN = {
 
 
 def thema() -> dict:
-    return THEMEN.get(os.environ.get("VELO_THEMA", "thws"), THEMEN["thws"])
+    return THEMEN.get(os.environ.get("VELO_THEMA", "neutral"), THEMEN["neutral"])
 
 
 def thema_name() -> str:
-    return os.environ.get("VELO_THEMA", "thws")
+    return os.environ.get("VELO_THEMA", "neutral")
 
 
 # ------------------------------------------------------- Bausteine fuer Text

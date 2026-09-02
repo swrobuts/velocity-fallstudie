@@ -16,6 +16,7 @@ Runde 2, nach dem zweiten methodischen Review (01.09.2026). Umgesetzt:
     Abdeckung je Segment, harmonisierte Ueberwachungsgrenzen.
 """
 from bauwerk import CODE, MD, PHASE, kopf
+from gestaltung import kacheln, laufzeit_code
 
 NAME = "01_Regression_Fahrtdauer"
 
@@ -54,7 +55,7 @@ MD("""
 """),
 
 MD("""
-## Der Einwand, mit dem dieses Notebook anfängt
+## Warum eine Spanne und keine Zahl
 
 Die naheliegende Idee lautet: Beim Entsperren schätzt ein Modell die Fahrtdauer, das
 Tarifblatt macht daraus einen Preis, die App zeigt ihn an.
@@ -81,7 +82,7 @@ Daraus folgt die Einsicht, die dieses Notebook trägt:
 Und daraus folgt sofort die erste Einschränkung, die wir offen benennen müssen.
 """),
 MD("""
-## Vier Wörter, die in dieser Reihe nicht dasselbe bedeuten
+## Vier Begriffe zum Freigabestand
 
 Diese sechs Notebooks liefern am Ende sehr verschiedene Dinge aus, und die Wörter dafür
 werden im Alltag als Synonyme benutzt. Hier sind sie es nicht:
@@ -162,7 +163,7 @@ Tarifblatt, und das ist exakt bekannt.
 
 > **Man schätzt nie, was man ausrechnen kann.**
 
-### Das Erfolgskriterium — festgelegt, bevor wir die Daten ansehen
+### Erfolgskriterium, festgelegt vor dem Blick in die Daten
 
 | | |
 |---|---|
@@ -193,6 +194,8 @@ import math
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+""" + laufzeit_code() + """
 
 BASIS = os.environ.get("VELO_BASIS",
     __ROHBASIS__)
@@ -219,7 +222,7 @@ print(preise.to_string(index=False))
 PHASE(2, "Für wie viele Fahrten gilt die Frage — und was steckt sonst noch in den Daten?"),
 
 MD("""
-### 2.1 Nicht jeder Vorgang ist eine Fahrt
+### 2.1 Was als Fahrt zählt
 
 Bevor irgendetwas gefiltert wird, ein Blick auf die Statusspalte. Sie wurde in der ersten
 Runde dieses Notebooks übersehen — mit Folgen, die wir gleich sehen.
@@ -265,7 +268,7 @@ print("besonders die kurzen Strecken, um die es hier geht.")
 """),
 
 MD("""
-### 2.2 Für wie viele Fahrten gibt es ein Ziel?
+### 2.2 Verfügbarkeit des Ziels
 
 Die Website wirbt damit, dass man das Rad überall im Geschäftsgebiet abstellen darf.
 Genau diese Fahrten haben keine Zielstation und fallen aus dem Geltungsbereich.
@@ -332,7 +335,7 @@ print("   berechneten Betrag, nicht gegen eine Wunschfahrt.")
 """),
 
 MD("""
-### 2.3 Rundtouren — dieselbe Verbindung, jede Dauer
+### 2.3 Rundtouren: gleiche Verbindung, beliebige Dauer
 """),
 
 CODE("""
@@ -393,7 +396,7 @@ print("bewertet wird an ihnen nichts, denn angeboten wird ihnen nichts.")
 """),
 
 MD("""
-### 2.4 Was die Verbindung erklärt — ein erster Blick
+### 2.4 Erklärungsanteil der Verbindung
 
 Drei Nachschlagetabellen, je eine Zeile Code. Sie werden uns in Phase 4 als Maßstab
 wiederbegegnen.
@@ -442,6 +445,21 @@ achsen[1].set_yticklabels([r[:32] for r in oben.index], fontsize=8)
 achsen[1].set_title("Die zwölf längsten Verbindungen (Median)")
 achsen[1].set_xlabel("Minuten")
 plt.tight_layout(); plt.show()
+
+# DIESELBEN VERBINDUNGEN, LESBAR. Im Bild oben sind die Namen auf 32
+# Zeichen gekuerzt; hier steht beim Zeigen der volle Name samt Fallzahl.
+# Die statische Grafik bleibt, sie traegt die Aussage auch ohne Skripte.
+_alle = (d.groupby("route").dauer_min.agg(["median", "count"])
+         .query("count >= 200").sort_values("median"))
+_fig = go.Figure(go.Bar(
+    x=_alle["median"], y=_alle.index, orientation="h",
+    customdata=_alle["count"],
+    hovertemplate=("<b>%{y}</b><br>Median %{x:.1f} Minuten<br>"
+                   "%{customdata} Fahrten<extra></extra>")))
+_fig.update_xaxes(title="Minuten (Median)")
+_fig.update_yaxes(title="", automargin=True)
+interaktiv(_fig, "Alle Verbindungen mit mindestens 200 Fahrten",
+           hoehe=max(360, 16 * len(_alle)))
 """),
 
 MD("""
@@ -585,7 +603,7 @@ print(f"Steigung {echt.steigung_promille.min():+.0f} bis "
 """),
 
 MD("""
-### 3.3 Aufteilen — entlang der Zeit, in VIER Abschnitte
+### 3.3 Aufteilung entlang der Zeit in vier Abschnitte
 
 Wir teilen viermal, nicht dreimal. Der Grund steht schon jetzt fest, bevor wir ein
 Ergebnis gesehen haben: CRISP-DM sieht den Rücksprung von der Evaluation in die
@@ -778,7 +796,7 @@ print(f"Von der Startstation zum Ziel:    {tabelle[2][1] - tabelle[3][1]:.2f} Mi
 """),
 
 MD("""
-### 4.2 Eine Pipeline, damit im Betrieb nichts auseinanderfällt
+### 4.2 Pipeline: Vorverarbeitung und Modell in einem Objekt
 """),
 
 CODE("""
@@ -856,7 +874,7 @@ MD("""
 > Wer sie lesen will, braucht eine redundanzfreie Merkmalsmenge oder eine regularisierte
 > Regression.
 
-### 4.3 Bringt das Ziel wirklich etwas? Eine Ablation
+### 4.3 Ablation: Was trägt die Zielangabe bei?
 
 Der Vergleich zweier Nachschlagetabellen in Phase 2 war ein Hinweis, kein Beweis. Sauber
 ist es, **dasselbe Modell** einmal mit und einmal ohne die Zielmerkmale zu rechnen.
@@ -892,7 +910,7 @@ print("ist damit nicht nur richtig, sondern die Voraussetzung des Produkts.")
 """),
 
 MD("""
-### 4.4 Was der Wald findet und die Gerade nicht kann
+### 4.4 Wechselwirkungen: Random Forest gegen lineare Regression
 
 Der Random Forest ist besser als die lineare Regression. Das allein ist kein Argument —
 teurer ist er auch. Ein Verfahren, das Wechselwirkungen abbilden kann, rechtfertigt sich
@@ -948,7 +966,7 @@ erst nach dem Radtyp und dann innerhalb jedes Astes nach der Steigung teilt.
 PHASE(5, "Reicht das für die Preisanzeige? Und wenn nicht — was dann?"),
 
 MD("""
-### 5.1 Test 1, einmal
+### 5.1 Messung auf Test 1
 """),
 
 CODE("""
@@ -969,7 +987,7 @@ print(f"auf der Validierung      : MAE {guete[bestes]:5.2f} Min")
 """),
 
 MD("""
-### 5.2 Von Minuten zu Euro — mit der vollen Tariflogik
+### 5.2 Von Minuten zu Euro über die Tariflogik
 
 Die Geschäftsfrage lautet: *Was kostet **diesen Kunden** die Fahrt?* Das ist nicht der
 Listenpreis des Radtyps. Zwischen beiden liegen drei Regeln aus der Preisauskunft:
@@ -1089,7 +1107,7 @@ print("      Was sich unterscheidet, ist die Strenge einer festen 50-Cent-Grenze
 """),
 
 MD("""
-### 5.3 Wie belastbar ist dieses Ergebnis?
+### 5.3 Belastbarkeit des Ergebnisses
 
 Eine einzelne Zahl auf einem einzelnen Zeitraum sagt nichts darüber, wie sie im nächsten
 Quartal aussieht. Ein Kriterium, das nur in einer Jahreszeit hält, wäre keine Zusage —
@@ -1150,7 +1168,7 @@ Fenstern nicht — was sie über längere Zeiträume tut, sagen sie nicht.
 
 Für CARGO gibt es dagegen bisher kein Produkt.
 
-### 5.4 Woran es liegt
+### 5.4 Ursachen der verbleibenden Abweichung
 """),
 
 CODE("""
@@ -1181,7 +1199,7 @@ Der Zweck steht in keiner Spalte.
 Fahrtzweck abzubilden.** Ob überhaupt keine Merkmale das könnten, wissen wir nicht —
 Nutzerabsicht, Höhenprofil oder Stationsauslastung sind ungeprüfte Kandidaten.
 
-### 5.5 Der Rücksprung — und warum er kommt, obwohl das Kriterium hält
+### 5.5 Rücksprung trotz erfülltem Kriterium
 
 Für CITY könnten wir jetzt ausliefern. Trotzdem springen wir zurück, und zwar aus zwei
 Gründen, die nichts mit einem gerissenen Kriterium zu tun haben.
@@ -1228,7 +1246,7 @@ Citybike 0,10 €: Ein Euro Spielraum sind dort zwei Minuten, hier zehn.
 | **nützt** | Die Spanne umfasst höchstens **12 Minuten** *und* höchstens **60 %** des angezeigten Preises, sonst zeigt die App nichts |
 | **gemessen auf** | **Kalibrierung** — dem Zeitraum, den bis hierher nichts berührt hat |
 
-### 5.6 Welches Artefakt? Drei Kandidaten, ehrlich verglichen
+### 5.6 Drei Kandidaten im Vergleich
 
 Für die Spanne gibt es drei Wege, und sie führen zu **drei verschiedenen Produkten**:
 eine Quantilregression, die für jede Anfrage rechnet; eine Tabelle aus historischen
@@ -1879,7 +1897,7 @@ _ = merke("gate_schwelle", GATE_PREISABHAENGIG)
 """),
 
 MD("""
-### Wie sicher ist ein Perzentil aus dreißig Fahrten?
+### Unsicherheit eines Perzentils aus dreißig Fahrten
 
 Die Mindestfallzahl von 30 ist eine Setzung, und sie ist knapp: Das 90-Prozent-Perzentil
 liegt dann rechnerisch auf der siebenundzwanzigsten Beobachtung — es hängt an den letzten
@@ -1949,7 +1967,7 @@ gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolg
 > sagt nur nichts. Die Reichweite je Radtyp gehört deshalb mit hinein, **festgelegt vor
 > der Messung**, und ein Radtyp ohne einzige Auskunft zählt als null, nicht als fehlend.
 
-### Die Architekturvorgabe steht vor der Kandidatenwahl
+### Architekturvorgabe vor der Kandidatenwahl
 
 **Bevor irgendein Kandidat gewählt wird, muss feststehen, was betrieben werden darf.**
 Diese Reihenfolge ist nicht Formalie: Wer zuerst misst und dann entscheidet, was
@@ -2030,8 +2048,13 @@ Spanne bilden lässt, nicht.
 
 PHASE(6, "Wie kommt das in die App — und was ist dabei noch offen?"),
 
+MD(kacheln([("{{kandidat}}", "wird ausgeliefert"),
+            ("{{ab_unten:.1%}}", "Zusage auf der Abnahme"),
+            ("{{ab_gates_halten:.0f}} von {{ab_gates_gesamt:.0f}}", "Gates halten"),
+            ("{{reichweite_real:.0%}}", "der Anfragen beantwortet")])),
+
 MD("""
-### 6.1 Welche Kombinationen überhaupt ausgeliefert werden
+### 6.1 Welche Kombinationen ausgeliefert werden
 
 **Ausgeliefert wird die {{kandidat}}** (die Auswahl steht in 5.7). Was hier gefiltert
 wird, ist genau diese Tabelle — dieselben Regeln entscheiden auch beim Laufzeitdienst,
@@ -2395,7 +2418,7 @@ z = z[[k not in durchgefallen
 """),
 
 MD("""
-### 6.2 Die ehrliche Produktreichweite
+### 6.2 Produktreichweite
 
 Eine Zahl, die man nicht verschweigen darf: Für wie viele Anfragen kann die App
 überhaupt etwas sagen? Ein Kriterium, das nur für die beantworteten Fälle gilt, sagt
@@ -2469,7 +2492,7 @@ else:
 """),
 
 MD("""
-### 6.3 Zwei Artefakte — und nur eines ist das Produkt
+### 6.3 Zwei Artefakte, ein Produkt
 
 Am Ende dieser Phase entstehen **zwei** Dateien. Sie dürfen nicht verwechselt werden:
 
@@ -2807,7 +2830,7 @@ if len(freigabe_tabelle):
 """),
 
 MD("""
-### 6.4 Die Funktion, die die App aufruft
+### 6.4 Die Schnittstelle der App
 
 Sie verweigert die Auskunft, wenn die Kombination nicht freigegeben ist. Eine fachliche
 Einschränkung, die nur im Bericht steht, ist keine.
@@ -3145,7 +3168,7 @@ print(f"   {_echt['hinweis']}  (Grund: {_echt['grund']})")
 """),
 
 MD("""
-### 6.4a Zeigt die App genau das, was wir gemessen haben?
+### 6.4a Abgleich: Anzeige gegen Messung
 
 Zwischen der Bewertung in Phase 5.6 und der ausgelieferten Funktion liegen mehrere
 Schritte: Filter auf der Tabelle, Radtypfreigabe, Statussperre, die kundenbezogene
@@ -3275,7 +3298,7 @@ else:
 """),
 
 MD("""
-### 6.4b Worauf sich die Zusage bezieht — und worauf nicht
+### 6.4b Geltungsbereich der Zusage
 
 Von den {{n_zeilen:,}} **erzeugten** Kombinationen sind nur {{n_gestuetzt:,}}
 **verbindungsbezogen** belegt: Nur bei ihnen liegt die untere Vertrauensgrenze aus
@@ -3305,7 +3328,7 @@ App-Funktion gibt zu jeder Antwort `status` und die Zahl der Prüffahrten zurüc
 einer Statistik behelligt wird. Was die Oberfläche zeigt, ist für alle Klassen gleich —
 was das Unternehmen darüber weiß, nicht.
 
-### 6.4c Das Primärgate — und warum es diesmal hält
+### 6.4c Das Primärgate auf der Kalibrierung
 
 In 6.1 haben wir die **vorab preisabhängige Gruppe** zur entscheidenden
 Evaluationsgruppe erklärt: die Anfragen, bei denen das Freiminutenguthaben die obere
@@ -3361,7 +3384,7 @@ sein. Das ist die Lehre dieses Notebooks, angewandt auf sein eigenes Ergebnis. D
 steht der Status hier noch auf „{{vorabstatus}}", und deshalb folgt **6.7**.
 
 
-### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
+### 6.5 Überwachung und Abschaltschwellen
 
 Die Handlungsschwellen sind am Erfolgskriterium ausgerichtet: Wer bei 80 Prozent
 freigibt, darf nicht erst bei 60 Prozent eingreifen — sonst bliebe eine bereits
@@ -3393,7 +3416,7 @@ Maßgeblich ist jetzt das **Wilson-Intervall zum Niveau 95 %**, nicht der Schät
 So entscheidet nicht eine gesetzte Ersatzschwelle, sondern die Frage, ob die Daten für
 eine Aussage überhaupt reichen. Wer schneller abschalten will, braucht mehr Fahrten je
 Fenster, keine andere Zahl.
-### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
+### 6.6 Was ein Schattenbetrieb leisten müsste
 
 **Zwei Freigaben, nicht eine — und nur die erste ist hier zu haben.** Die Abnahme in
 6.7 beantwortet die Frage: *Hält die Zusage auf Daten, die nichts an diesem Verfahren
@@ -3421,7 +3444,7 @@ nicht weil die Erfassung in einer echten App nachgewiesen wäre.
 """),
 
 MD("""
-### 6.7 Die Abnahme — der Zeitraum, den bis hierher nichts berührt hat
+### 6.7 Die Abnahme auf dem versiegelten Zeitraum
 
 Alles bisher Gerechnete steht auf der **Kalibrierung**: Dort wurde die Tabelle gefiltert,
 dort wurden die Radtypen freigegeben, dort hat das Primärgate gemessen. Ein Zeitraum, an
@@ -3916,7 +3939,7 @@ print("   Datensatz. Das sagt kein historischer Zeitraum - nur der Betrieb.")
 """),
 
 MD("""
-### 6.8 Was jetzt gilt — und was nicht
+### 6.8 Was jetzt gilt
 
 **Die unabhängige Prüfung ist erfolgt.** Die Abnahme hat auf einem Zeitraum gemessen,
 den bis zum Öffnen nichts berührt hat: {{ab_gates_halten:.0f}} von
@@ -3975,7 +3998,7 @@ Notebook-Übung:
 """),
 
 MD("""
-# Der Kreislauf schließt sich
+# Zusammenfassung
 
 | Phase | Ergebnis |
 |---|---|

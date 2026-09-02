@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Notebook 2 - Klassifikation: Welche Raeder muessen naechstes Quartal in die Werkstatt?"""
 from bauwerk import CODE, MD, PHASE, kopf
+from gestaltung import kacheln, laufzeit_code
 
 NAME = "02_Klassifikation_Wartungsrisiko"
 
@@ -86,7 +87,7 @@ eine Schadensmeldung auslösen — ja oder nein? Zwei Klassen, also Klassifikati
 > Elements ist nicht bekannt.“*
 > — Provost/Fawcett, *Data Science für Unternehmen*, S. 45 f.
 
-### Die beiden Fehlerarten sind unterschiedlich teuer
+### Kosten der beiden Fehlerarten
 
 Das ist der Kern dieser Phase, und er entscheidet später über das ganze Modell:
 
@@ -150,6 +151,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+''' + laufzeit_code() + '''
 
 BASIS = os.environ.get("VELO_BASIS",
     __ROHBASIS__)
@@ -260,7 +263,7 @@ Notebooks.
 Wäre r = 0,99, bräuchte man kein Modell, sondern eine Sortierung nach Kilometern.
 Wäre r = 0,1, wäre nichts zu lernen.
 
-### 2.2 Die entscheidende Frage der Datenaufbereitung: Wann fragen wir?
+### 2.2 Der Zeitpunkt der Frage
 """),
 
 CODE('''
@@ -294,7 +297,7 @@ PHASE(3, "Wir bauen eine Tabelle, in der jede Zeile eine **Frage zu einem Zeitpu
          "„Rad 47, Stand 1. April — meldet es sich bis zum 30. Juni?\“"),
 
 MD("""
-### 3.1 Der häufigste Fehler bei Wartungsvorhersagen
+### 3.1 Zielgröße und Stichtag
 
 Man nimmt jedes Rad, zählt seine Kilometer **über den gesamten Zeitraum** und fragt: hat
 es je eine Meldung gehabt? Das ergibt eine schöne Tabelle — und ein wertloses Modell.
@@ -315,7 +318,7 @@ gemeldet?“ hilft der Werkstatt nicht, denn sie plant *das nächste Quartal*.
 Alles links vom Stichtag darf ins Modell. Alles rechts davon ist das, was vorhergesagt
 werden soll — und muss beim Rechnen unsichtbar bleiben.
 
-### 3.2 Die Frage mehrfach stellen
+### 3.2 Mehrere Stichtage je Rad
 
 Ein einziger Stichtag ergäbe {{zeilen_je_stichtag:.0f}} Zeilen — zu wenig. Wir stellen dieselbe Frage deshalb
 zu **mehreren Zeitpunkten**, im Abstand eines Quartals. Jedes Rad taucht dann mehrfach
@@ -324,7 +327,7 @@ kein Trick, sondern genau die Art, wie solche Modelle in der Praxis gebaut werde
 """),
 
 MD("""
-### Woher die Kilometer kommen — drei Quellen, absteigend nach Güte
+### Herkunft der Kilometerangaben
 
 Der Sensor meldet nur einen Teil der Strecken. Die Lücke lässt sich auf zwei Wegen
 füllen, und sie sind nicht gleich gut:
@@ -577,7 +580,7 @@ MD("""
 > Wir lassen das hier so stehen und kommen am Ende darauf zurück — es ist einer der
 > Punkte, an denen eine zweite Runde ansetzen müsste.
 
-### 3.3 Aufteilen — zeitlich, nicht zufällig
+### 3.3 Zeitliche Aufteilung
 """),
 
 CODE('''
@@ -768,7 +771,7 @@ Verschleiß entsteht.
 Merken Sie sich diese Zahlen. Wir kommen in Phase 5 darauf zurück, wenn das Modell
 gerechnet hat — und das Ergebnis wird ungemütlich.
 
-### 4.2 Entscheidungsbaum — mit Gewichtung der Klassen
+### 4.2 Entscheidungsbaum mit Klassengewichtung
 """),
 
 CODE('''
@@ -887,6 +890,23 @@ achsen[1].set_title("Je kürzer die Liste, desto treffsicherer muss sie sein")
 achsen[1].legend(); achsen[1].grid(alpha=.3); achsen[1].set_ylim(0, 1)
 plt.tight_layout(); plt.show()
 
+# DIESELBE KURVE ZUM ABLESEN. Im Bild oben laesst sich der Wert an einer
+# bestimmten Listenlaenge nur schaetzen; hier steht er beim Zeigen da.
+# Die statische Grafik bleibt als Beleg erhalten.
+_fig = go.Figure()
+for _bez, _werte in (("Faustregel (km seit Reparatur)", quoten),
+                     ("Random Forest", quoten_wald)):
+    _fig.add_trace(go.Scatter(x=list(laengen), y=_werte, mode="lines", name=_bez,
+                              hovertemplate=("Liste mit %{x} Plätzen<br>"
+                                             "%{y:.1%} Treffer<extra></extra>")))
+_fig.add_hline(y=float(y_test.mean()), line=dict(dash="dash", color=FARBE["linie"]),
+               annotation_text=f"Zufall ({y_test.mean():.0%})")
+_fig.add_vline(x=KAPAZITAET, line=dict(dash="dot", color=FARBE["warnung"]),
+               annotation_text=f"Kapazität ({KAPAZITAET})")
+_fig.update_xaxes(title="Länge der Liste")
+_fig.update_yaxes(title="Anteil Treffer", tickformat=".0%", range=[0, 1])
+interaktiv(_fig, "Trefferquote nach Listenlänge")
+
 print("Klassifikationsbericht der FAUSTREGEL (das Modell folgt in 5.5):")
 print(classification_report(y_test, auf_liste.astype(int),
                             target_names=["unauffällig", "meldet sich"], digits=3))
@@ -973,7 +993,7 @@ vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — mehr aber au
 > durch eine bessere Kennzahl, sondern durch die zugrunde liegende Frage:
 > nicht *wie alt* ist das Rad, sondern *wie weit seit der Reparatur*.
 
-### 5.3 Ein Quartal ist keine Aussage
+### 5.3 Ergebnis über mehrere Quartale
 
 Der Gleichstand oben steht auf **einem** Stichtag. Die Grundrate schwankt aber über die
 Quartale zwischen {{grundrate_min:.1%}} und {{grundrate_max:.1%}} — um mehr als das
@@ -1143,7 +1163,7 @@ Betriebsaufwand.
 
 > **Ein Modell muss seinen Unterhalt verdienen.** Hier verdient es ihn nicht.
 
-### 5.4 Wie sicher ist eine Trefferquote überhaupt?
+### 5.4 Unsicherheit der Trefferquote
 
 {{treffer_regel:.0f}} von {{kapazitaet:.0f}} sind {{quote_regel:.1%}}. Diese Zahl klingt
 genauer, als sie ist: Sie beruht auf {{kapazitaet:.0f}} Beobachtungen. Das Wilson-Intervall sagt, welche wahren Trefferquoten mit diesem Ergebnis
@@ -1204,7 +1224,7 @@ MD("""
 > deshalb entscheidet über die Auslieferung nicht ein einzelnes Quartal, sondern die
 > rollierende Validierung in Abschnitt 5.3.
 
-### 5.5 Zwei Zahlen, die man nicht verwechseln darf
+### 5.5 Treffsicherheit und Abdeckung
 """),
 
 CODE('''
@@ -1512,7 +1532,7 @@ Zukunft die Zusage verfehlt.
 > richtige Wert ist, müsste auf den Validierungsquartalen gegen Precision@60 geprüft
 > werden — hier ist es gesetzt, nicht gefunden.
 
-### 5.7 Und was, wenn die Werkstatt mehr Kapazität bekäme?
+### 5.7 Wirkung einer größeren Kapazität
 
 Die Kapazität von 60 war eine Vorgabe aus Phase 1. Naheliegend ist die Frage, ob sich
 eine größere Werkstatt lohnt. Die Antwort der Kostenformel ist unbrauchbar — und gerade
@@ -1606,6 +1626,11 @@ Schritt ist kein weiteres Modell, sondern ein Gespräch mit Werkstatt und Contro
 
 # =====================================================================
 PHASE(6, "Aus der Auswertung wird eine Liste, die zu Quartalsbeginn in der Werkstatt liegt."),
+
+MD(kacheln([("Faustregel", "wird ausgeliefert"),
+            ("{{quote_regel_von_zehn:.1f}} von 10", "geprüfte Räder werden auffällig"),
+            ("{{abdeckung_von_zehn:.1f}} von 10", "auffällige Räder erfasst"),
+            ("{{wilson_unten_regel:.1%}}", "untere Grenze gegen {{k3_schwelle:.1%}}")])),
 
 CODE('''
 # WAECHTER: Ohne bestandenes Gate entsteht KEIN Artefakt.
@@ -1765,15 +1790,13 @@ else:
     print("Ausgang bereits bekannt ist und die deshalb nichts mehr beweist.")
 '''),
 
-MD("""
-### 6.1 Ausgeliefert wird die Regel — und das Modell bleibt im Paket
+MD("""### 6.1 Ausgeliefert wird die Regel
 
 Beide Verfahren nehmen die Pflichtgates bis auf eines: Der Wald reißt K3, die
 statistische Absicherung im Testquartal — seine Wilson-Untergrenze liegt bei
 {{k3_unten_wald:.1%}} gegen die geforderten {{k3_schwelle:.1%}}, die der Regel bei
-{{k3_unten_regel:.1%}}. Damit bleibt die Faustregel; bei ähnlicher
-Güte fiele die Entscheidung ohnehin auf sie. Ausschlaggebend ist eine Rechnung über die
-Lebensdauer:
+{{k3_unten_regel:.1%}}. Damit bleibt die Faustregel. Bei ähnlicher Güte fiele die
+Entscheidung ohnehin auf sie, und zwar wegen der Betriebskosten:
 
 | | Faustregel | Random Forest |
 |---|---|---|
@@ -1784,72 +1807,45 @@ Lebensdauer:
 | Abhängigkeiten im Betrieb | Fahrten-, Distanz-, Typ- und Wartungsdaten | dieselben, **zusätzlich** scikit-learn, joblib, Versionsstände |
 
 Die unteren drei Zeilen sind der Preis eines Modells. Er wäre zu zahlen, wenn die oberen
-beiden dafür sprächen. Sie tun es nicht.
+beiden dafür sprächen — sie tun es nicht.
 
-> ### ⚠ „Eine Zeile SQL" wäre zu schön
->
-> Der Sortierausdruck ist eine Zeile. Das Merkmal darunter ist es nicht. `km_seit_reparatur`
-> setzt voraus:
->
-> 1. Langfahrten über acht Stunden ausschließen,
-> 2. gemessene Distanzen verwenden und nur die fehlenden schätzen,
-> 3. die Schätzung braucht **je Radtyp** eine Geschwindigkeit — ein unbekannter Typ
->    erzeugt `NaN` und damit ein Rad ganz unten in der Liste,
-> 4. die Verknüpfung mit **erledigten** Wartungsaufträgen,
-> 5. den Ausschluss offener Schäden,
-> 6. eine Stichtagslogik und eine Regel für neue Räder.
->
-> **Ausgeliefert wird also nicht eine Regel, sondern eine Regel plus ihre
-> Merkmalslogik** — und die gehört genauso versioniert und getestet wie ein Modell. Was
-> gegenüber dem Wald entfällt, ist das Nachtrainieren, nicht die Sorgfalt.
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Was an der Faustregel nicht eine Zeile ist</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Der Sortierausdruck ist eine Zeile. Das Merkmal <code>km_seit_reparatur</code> darunter setzt voraus:</p><ol><li>Langfahrten über acht Stunden ausschließen,</li><li>gemessene Distanzen verwenden und nur die fehlenden schätzen,</li><li>je Radtyp eine Geschwindigkeit für die Schätzung — ein unbekannter Typ erzeugt <code>NaN</code> und damit ein Rad ganz unten in der Liste,</li><li>die Verknüpfung mit <strong>erledigten</strong> Wartungsaufträgen,</li><li>den Ausschluss offener Schäden,</li><li>eine Stichtagslogik und eine Regel für neue Räder.</li></ol><p>Ausgeliefert wird also eine Regel <strong>samt ihrer Merkmalslogik</strong>, und die gehört genauso versioniert und getestet wie ein Modell. Was gegenüber dem Wald entfällt, ist das Nachtrainieren, nicht die Sorgfalt.</p></div></details>
 
-> **Ein Modell muss seinen Unterhalt verdienen.** Hier verdient es ihn nicht — und der
-> Projektbericht muss das so schreiben, statt das Modell auszuliefern, weil man es nun
-> einmal gebaut hat.
+**Das Modell bleibt im Paket.** Es belegt, dass die Regel geprüft und nicht aus
+Bequemlichkeit gewählt wurde, und es ist der Ausgangspunkt der nächsten Runde. Sein
+Ertrag steht dabei nicht in der Trefferquote, sondern in dem, was der Vergleich
+ausschließt: Auf dieser Merkmalsmenge und über diese fünf Perioden ist kein stabiler
+Zusatznutzen nachweisbar. Das sagt, wo als Nächstes zu investieren wäre — in Merkmale,
+nicht in Rechenleistung.
 
-**Das Modell bleibt trotzdem im Paket**, aus zwei Gründen: Es belegt, dass die Regel
-geprüft wurde und nicht aus Bequemlichkeit gewählt ist. Und es ist der Ausgangspunkt der
-nächsten Runde — wenn neue Merkmale dazukommen, wird der Vergleich wiederholt.
+### 6.2 Die Prüfliste als Produkt
 
-> **Der eigentliche Ertrag des Modells steht nicht in der Trefferquote.** Er steht in
-> dem, was der Vergleich ausschließt: Auf dieser Merkmalsmenge und über diese fünf
-> Perioden ist **kein stabiler Zusatznutzen nachweisbar**. Das ist eine belastbare
-> Aussage darüber, wo als Nächstes zu investieren wäre — **nicht in Rechenleistung,
-> sondern in Merkmale**, die es heute nicht gibt.
+Ausgeliefert wird nicht das Modell und nicht die Confusion-Matrix, sondern **diese
+Tabelle**. Sie ist so gebaut, dass die Werkstatt sie ohne Nacharbeit übernehmen kann:
+Rahmennummer statt Datenbank-ID, daneben die Zahlen, die die Reihenfolge begründen. Wer
+ein Rad für unbedenklich hält, sieht, worauf sich die Liste stützt, und kann
+widersprechen.
 
-### 6.2 Die Liste ist das eigentliche Produkt
+**In der Liste steht kein Modellscore.** Er stammt aus einem Verfahren, das nicht
+freigegeben ist, und wäre neben dem Rang der Regel ein zweites, widersprechendes Signal.
+Wer beide sehen will, findet sie im Analysebericht.
 
-Nicht das Modell, nicht die Confusion-Matrix — **diese Tabelle**. Sie ist so gebaut, dass
-die Werkstatt sie ohne Nacharbeit übernehmen kann: Rahmennummer statt Datenbank-ID, und
-daneben die Zahlen, die die Reihenfolge begründen. Ein Meister, der ein Rad für
-unbedenklich hält, sieht sofort, worauf sich die Liste stützt, und kann widersprechen.
-
-> **In der Liste steht kein Modellscore.** Der Wald wurde mit starken Klassengewichten
-> trainiert; seine Ausgabewerte sind eine brauchbare **Rangfolge**, aber keine
-> Wahrscheinlichkeiten — der Abstand zwischen mittlerem Score und tatsächlicher
-> Grundrate steht oben gerechnet.
->
-> Wichtiger noch: Er stammt aus einem Verfahren, das **ausdrücklich nicht freigegeben
-> ist**. Neben einem Rang, den die Regel bestimmt, erzeugt eine zweite Zahl in der
-> Werkstatt nur ein widersprechendes Signal. Wer beide sehen will, findet sie im
-> Analysebericht.
-
-In der VeloCity-Warenwirtschaft (`wawi.butscher.cloud`) gehört diese Liste in den Bereich
+In der VeloCity-Warenwirtschaft (`wawi.butscher.cloud`) gehört die Liste in den Bereich
 **Instandhaltung**, als eigene Ansicht neben den gemeldeten Schäden.
 
-### 6.3 Überwachung — für die Regel, nicht für das Modell
+### 6.3 Überwachung der ausgelieferten Regel
 
-Eine Regel kann man nicht nachtrainieren. Was bei ihr überwacht wird, sind die **Daten,
-aus denen ihr Merkmal entsteht** — und die Frage, ob die Liste im Betrieb noch trifft.
+Eine Regel lässt sich nicht nachtrainieren. Überwacht werden deshalb die **Daten, aus
+denen ihr Merkmal entsteht**, und die Frage, ob die Liste im Betrieb noch trifft.
+
+Jede Schwelle ist eine Zahl, kein Adjektiv: „Steigt deutlich" ist nachts um drei nicht
+entscheidbar. Jede Zeile nennt Referenz, Warn- und Stoppwert, die Mindestfallzahl und die
+Zuständigkeit.
 
 <!-- zahl-ohne-ausgabe: 45 gesetzte Warnschwelle, keine Messung -->
 <!-- zahl-ohne-ausgabe: 55 gesetzte Stoppschwelle, keine Messung -->
 <!-- zahl-ohne-ausgabe: 35 gesetzte Stoppschwelle, keine Messung -->
 <!-- zahl-ohne-ausgabe: 500 gesetzte Mindestfallzahl -->
-**Jede Schwelle ist eine Zahl, kein Adjektiv.** „Steigt deutlich" ist im Betrieb nicht
-entscheidbar: Wer nachts um drei eine Meldung bekommt, muss wissen, ob er handeln soll.
-Jede Zeile nennt deshalb Referenz, Warn- und Stoppwert, die Mindestfallzahl, unter der
-gar nicht bewertet wird, und die Zuständigkeit.
 
 | Wache | Referenz heute | Warnen ab | Stoppen ab | Mindestzahl | Wer | Reaktion |
 |---|---:|---:|---:|---:|---|---|
@@ -1859,74 +1855,56 @@ gar nicht bewertet wird, und die Zuständigkeit.
 | Wartungsaufträge ohne `erledigt_am` | Anteil im Referenzquartal | 10 % | 20 % | 50 Aufträge | Werkstattleitung | Der Reset des Merkmals greift nicht mehr |
 | Räder mit offenem Schaden | Bestand im Referenzquartal | +50 % relativ | +100 % relativ | 20 Räder | Werkstattleitung | Die Werkstatt kommt nicht nach — die Vorsorgeliste ist dann das falsche Werkzeug |
 | Treffsicherheit der Quartalsliste — **Gate K3** | Untergrenze {{k3_unten_regel:.1%}} gegen Schwelle {{k3_schwelle:.1%}} | Wilson-Untergrenze **unter {{k3_lift_diagnose}} × Grundrate des Quartals** | Wilson-**Obergrenze** unter {{k3_lift_diagnose}} × Grundrate | {{kapazitaet:.0f}} Räder | Analytik | Bei Stopp: Liste aussetzen, Regel neu prüfen |
-| dieselbe Größe gegen die alte {{huerde:.0%}}-Marke — **D70, nur Diagnose** | {{quote_regel:.0%}} beobachtet | — | — | {{kapazitaet:.0f}} Räder | Analytik | **Löst nichts aus.** Steht hier, damit man sieht, wo die ursprüngliche Zusage stünde |
+| dieselbe Größe gegen die alte {{huerde:.0%}}-Marke — **D70, nur Diagnose** | {{quote_regel:.0%}} beobachtet | — | — | {{kapazitaet:.0f}} Räder | Analytik | **Löst nichts aus.** Steht hier, damit sichtbar bleibt, wo die ursprüngliche Zusage läge |
 | Räder, die trotz Prüfung ausfallen | im Schattenbetrieb zu erheben | 20 % der Geprüften | 35 % | 30 Geprüfte | Werkstattleitung | Die Prüfung selbst greift zu kurz — kein Datenproblem |
 
-> **Die Warnschwelle ist dieselbe Größe wie das Freigabegate — und das ist kein Zufall.**
-> Eine frühere Fassung warnte bei {{huerde:.0%}} und stoppte an der Grundrate; freigegeben
-> wurde aber über K3, also über {{k3_lift_diagnose}} × Grundrate. Damit hätte die Regel
-> weiterlaufen können, obwohl das Gate, das sie überhaupt in Betrieb gebracht hat,
-> längst gerissen wäre. **Wer an einer anderen Zahl überwacht als an der, mit der er
-> freigegeben hat, überwacht das falsche Produkt.**
->
-> Die Schwelle wandert dabei mit der Grundrate mit — im Winter liegt sie tiefer als im
-> Sommer. Genau dafür wurde K3 relativ formuliert.
+**Überwacht wird an derselben Größe, mit der freigegeben wurde.** Eine Warnschwelle bei
+{{huerde:.0%}} neben einer Freigabe über K3 hätte die Regel weiterlaufen lassen, obwohl
+das Gate längst gerissen wäre. Die Schwelle wandert dabei mit der Grundrate — im Winter
+liegt sie tiefer als im Sommer; genau dafür ist K3 relativ formuliert.
 
-> **Zwei Dinge, die diese Tabelle noch nicht kann.** Erstens ist die Treffsicherheit erst
-> nach {{horizont_tage:.0f}} Tagen messbar — die Wache läuft also immer ein Quartal
-> hinterher. Zweitens verändert die Maßnahme selbst, was gemessen wird: Ein geprüftes und
-> repariertes Rad meldet sich nicht mehr, und die Liste sieht dadurch schlechter aus, je
-> besser sie wirkt. Ohne Kontrollgruppe — eine Zufallsauswahl, die **nicht** geprüft wird
-> — ist die Trefferquote im Betrieb keine Gütekennzahl mehr.
+Zwei Einschränkungen bleiben. Die Treffsicherheit ist erst nach {{horizont_tage:.0f}}
+Tagen messbar, die Wache läuft also ein Quartal hinterher. Und die Maßnahme verändert,
+was gemessen wird: Ein geprüftes und repariertes Rad meldet sich nicht mehr — die Liste
+sieht schlechter aus, je besser sie wirkt. Ohne Kontrollgruppe ist die Trefferquote im
+Betrieb keine Gütekennzahl.
 
-**Die letzte Zeile ist die wichtigste und wird fast immer vergessen.** Eine perfekte
-Rangfolge nützt nichts, wenn die Prüfung den Defekt nicht findet. Dann ist nicht die
-Vorhersage falsch, sondern die Maßnahme.
+Die letzte Zeile der Tabelle ist deshalb die wichtigste: Eine perfekte Rangfolge nützt
+nichts, wenn die Prüfung den Defekt nicht findet. Dann ist nicht die Vorhersage falsch,
+sondern die Maßnahme.
 
-**Und die zweite Zeile ist die unangenehmste:** Sie zeigt, dass die „einfache Regel" gar
-nicht so einfach ist — dazu gleich mehr.
+Der Random Forest bleibt im Paket, wird aber **nicht** überwacht — er läuft nicht. Für
+ihn gilt nur, dass der Vergleich zu wiederholen ist, wenn neue Merkmale dazukommen.
 
-Der Random Forest bleibt im Paket, wird aber **nicht** überwacht. Er läuft nicht; für ihn
-gilt nur, dass der Vergleich zu wiederholen ist, wenn neue Merkmale dazukommen.
+### 6.4 Rückkopplung zwischen Liste und Zielgröße
 
-### 6.4 Die Rückkopplung, die dieses Verfahren besonders schwierig macht
+**Sobald die Liste benutzt wird, verändert sie die Daten, aus denen sie lernt.** Ein Rad,
+das vorsorglich geprüft und instandgesetzt wurde, meldet sich anschließend nicht. Im
+nächsten Trainingslauf erscheint es als „unauffällig" — obwohl es gerade deshalb
+unauffällig war, weil die Liste es erkannt hatte.
 
-Hier steckt eine Falle, die es in Notebook 1 nicht gab:
+Ein Merkmal `wurde_vorsorglich_geprueft` löst das nicht: Es sagt, dass geprüft wurde,
+nicht, was ohne Prüfung geschehen wäre. An einem einzelnen Rad ist immer nur einer der
+beiden Ausgänge zu sehen. Was hilft, ist ein Vergleich zwischen Rädern:
 
-> **Sobald die Liste benutzt wird, verändert sie die Daten, aus denen sie lernt.**
-
-Ein Rad, das vorsorglich geprüft und instandgesetzt wurde, meldet sich anschließend
-*nicht*. Im nächsten Trainingslauf erscheint es damit als „unauffällig“ — obwohl es
-gerade deshalb unauffällig war, weil das Modell es erkannt hatte. Das Modell lernt
-gegen sich selbst.
-
-**Ein Merkmal `wurde_vorsorglich_geprueft` löst das nicht.** Es sagt, dass geprüft wurde
-— nicht, was ohne Prüfung passiert wäre. Genau das ist die Frage, und sie ist an keinem
-einzelnen Rad zu beantworten: Man sieht immer nur einen der beiden Ausgänge.
-
-Was tatsächlich hilft, ist ein **Vergleich zwischen Rädern**:
-
-1. **Alles protokollieren:** Auswahlgrund, Prüfdatum, Befund, durchgeführte Reparatur und
-   die späteren Meldungen. Ohne dieses Protokoll ist gar nichts auswertbar.
-2. **Erst im Schatten mitlaufen lassen:** Liste erzeugen, aber nicht danach handeln. So
-   bleibt die Grundrate unverändert und man sieht, ob die Liste trifft.
+1. **Alles protokollieren:** Auswahlgrund, Prüfdatum, Befund, Reparatur und die späteren
+   Meldungen. Ohne dieses Protokoll ist nichts auswertbar.
+2. **Erst im Schatten mitlaufen lassen:** Liste erzeugen, aber nicht danach handeln. Die
+   Grundrate bleibt unverändert, und man sieht, ob die Liste trifft.
 3. **Dann eine Kontrollgruppe:** Ein fachlich vertretbarer Teil der Flotte wird weiter
    nach dem Standardprozess gewartet. Nur der Unterschied zwischen beiden Gruppen misst,
    was die Maßnahme bewirkt.
 
-Punkt 3 kostet Geld und ist trotzdem richtig: Ohne ihn lässt sich nie sagen, ob die
-gesunkene Ausfallquote von der Liste kommt oder vom milden Winter.
-
-> **Und eine Warnung für die Überwachung:** Wenn die Liste wirkt, sinkt die Trefferquote
-> — die verhinderten Schäden tauchen als „unauffällig" auf. Eine fallende Trefferquote
-> kann also Erfolg oder Versagen bedeuten. Ohne Kontrollgruppe ist sie nicht deutbar.
+Punkt 3 kostet Geld und ist trotzdem richtig: Ohne ihn lässt sich nicht sagen, ob eine
+gesunkene Ausfallquote von der Liste kommt oder vom milden Winter. Und wenn die Liste
+wirkt, sinkt die Trefferquote — eine fallende Quote kann Erfolg oder Versagen bedeuten.
 """),
 
 # =====================================================================
 MD("""
 ---
 
-# Der Kreislauf schließt sich
+# Zusammenfassung
 
 | Phase | Ergebnis |
 |---|---|

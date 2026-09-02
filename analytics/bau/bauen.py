@@ -18,6 +18,10 @@ PRUEFER = [
     ("tools/notebook_pruefungen.py", "Bekannte Fehlerbilder"),
     ("tools/notebooktexte_pruefen.py", "Zahlen im Text gegen die Ausgaben"),
     ("tools/tote_schwellen_pruefen.py", "Kriterien ohne Wirkung im Code"),
+    # Sprachliche Ueberarbeitungen koennen freigaberelevante Aussagen
+    # entfernen, ohne dass eine Zahlenpruefung anschlaegt. Diese Liste
+    # haelt dagegen.
+    ("tools/freigabe_pruefen.py", "Freigabeaussagen in den Notebooks"),
 ]
 
 

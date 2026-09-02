@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Notebook 3 - Clustering: Stationstypen und Kundensegmente."""
 from bauwerk import CODE, MD, PHASE, kopf
+from gestaltung import kacheln, laufzeit_code
 
 NAME = "03_Clustering_Stationen_und_Kunden"
 
@@ -47,7 +48,7 @@ MD("""
 > gegen den Generator** — keine Bestätigung an echten Daten. Silhouettenwerte und
 > Trefferquoten in diesem Notebook zeigen Methodenverhalten, nicht Marktrealität.
 
-## Zwei Fragen, ein Verfahren
+## Zwei Fragestellungen, ein Verfahren
 
 Dieses Notebook behandelt **zwei Aufgaben parallel**, weil beide dasselbe Verfahren
 brauchen und der Vergleich lehrreicher ist als jede für sich:
@@ -60,7 +61,7 @@ brauchen und der Vergleich lehrreicher ist als jede für sich:
 Sie werden sehen: **Die sechs Phasen sind identisch.** Was sich unterscheidet, sind die
 Merkmale und die Deutung — nicht das Vorgehen.
 
-## Was Clustering von den ersten beiden Notebooks unterscheidet
+## Einordnung: unüberwachtes Lernen
 
 In Notebook 1 und 2 gab es eine **Zielspalte**: die Fahrtdauer, die Schadensmeldung.
 Das Modell konnte sich an ihr messen, und wir konnten sagen, ob es richtig lag.
@@ -109,7 +110,7 @@ Der Newsletter geht heute an alle 3.200 Kundinnen und Kunden gleich. Die Öffnun
 entsprechend. Das Marketing möchte **drei bis fünf Segmente**, für die sich
 unterschiedliche Ansprache lohnt.
 
-### Die Erfolgskriterien — auch ohne Zielgröße
+### Erfolgskriterien ohne Zielgröße
 
 Das ist die schwierigste Stelle dieser Phase, und sie wird gerne übersprungen. Ein
 Clustering-Ergebnis kann man nicht auf „richtig“ prüfen. Man kann aber sehr wohl vorher
@@ -126,7 +127,7 @@ festlegen, **wann es brauchbar ist**:
 **Kriterium 2 ist das schärfste.** Es hat schon manches statistisch tadellose Clustering
 zu Recht beerdigt.
 
-#### Kriterium 5 im Detail — und warum es hier ausführlich steht
+#### Kriterium 5 im Detail
 
 Kriterium 4 und Kriterium 5 messen **verschiedene Dinge**. Startwertstabilität sagt, ob
 die Rechnung reproduzierbar ist. Zeitliche Stabilität sagt, ob dieselbe Person in einem
@@ -173,7 +174,7 @@ man die Eingangswerte um {{hysterese:.0%}} in beide Richtungen verschiebt.
 > entsteht keine personenbezogene Liste**, sondern nur ein aggregierter Bericht. Die
 > Wechselquote ohne Hysterese steht als Sensitivitätswert daneben.
 
-### Was von außen kommt — und deshalb keine Analyse ist
+### Vorgaben, die nicht aus der Analyse stammen
 
 Zwei Voraussetzungen für die Kampagne entscheiden nicht die Daten, sondern das
 Unternehmen. Sie stehen hier, weil sie sonst später als stillschweigende Annahme im Code
@@ -202,6 +203,8 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+''' + laufzeit_code() + '''
 
 BASIS = os.environ.get("VELO_BASIS",
     __ROHBASIS__)
@@ -277,7 +280,7 @@ print(f"\\n{len(kunden)} Kundinnen und Kunden, {len(echte)} abgeschlossene Fahrt
 '''),
 
 MD("""
-### 2.1 Der erste Blick: unterscheiden sich die Stationen überhaupt?
+### 2.1 Unterscheiden sich die Stationen?
 
 Bevor wir clustern, schauen wir hin. Wenn alle zehn Stationen denselben Tagesgang haben,
 gibt es nichts zu gruppieren.
@@ -306,6 +309,21 @@ plt.xlabel("Stunde"); plt.ylabel("Anteil der Werktagsfahrten dieser Station")
 plt.title("Tagesgang je Station — werktags, jede Station auf 100 % normiert")
 plt.legend(ncol=2, fontsize=9); plt.grid(alpha=.3)
 plt.tight_layout(); plt.show()
+
+# DERSELBE TAGESGANG, BEDIENBAR. Bei zehn Kurven ist die Zuordnung ueber
+# eine Legende muehsam; hier genuegt Zeigen, und ueber die Legende lassen
+# sich einzelne Stationen aus- und wieder einblenden.
+_fig = go.Figure()
+for _sid in tagesgang.index:
+    _fig.add_trace(go.Scatter(
+        x=list(tagesgang.columns), y=tagesgang.loc[_sid], mode="lines+markers",
+        name=str(namen[_sid]), line=dict(width=1.6), marker=dict(size=4),
+        hovertemplate=(f"<b>{namen[_sid]}</b><br>%{{x}}:00 Uhr<br>"
+                       "%{y:.1%} der Werktagsfahrten<extra></extra>")))
+_fig.update_xaxes(title="Stunde", dtick=2)
+_fig.update_yaxes(title="Anteil der Werktagsfahrten", tickformat=".0%")
+interaktiv(_fig, "Tagesgang je Station - auf die Legende klicken blendet aus",
+           hoehe=460)
 '''),
 
 MD("""
@@ -348,7 +366,7 @@ MD("""
 Schon diese drei Spalten trennen sichtbar: Der Wochenendanteil reicht von rund 11 % bis
 knapp 50 %. Das wird gleich ein starkes Merkmal sein.
 
-### Standardisieren — und warum das hier zwingend ist
+### Standardisierung der Merkmale
 """),
 
 CODE('''
@@ -436,7 +454,7 @@ print(rfm[["recency", "frequenz", "umsatz"]].describe().round(1).to_string())
 '''),
 
 MD("""
-### Die schiefe Verteilung — und was man dagegen tut
+### Schiefe Verteilungen und Logarithmierung
 """),
 
 CODE('''
@@ -470,7 +488,7 @@ gleichmäßiger verteilt ist und ihre Einheit — Tage — anschaulich bleibt.
 PHASE(4, "k-Means für beide Aufgaben. Die eigentliche Frage lautet: **wie viele Gruppen?**"),
 
 MD("""
-### 4.1 Wie k-Means arbeitet — in vier Sätzen
+### 4.1 Wie k-Means arbeitet
 
 1. Wirf *k* Punkte zufällig in den Merkmalsraum („Zentren“).
 2. Ordne jedes Objekt dem nächstgelegenen Zentrum zu.
@@ -632,7 +650,7 @@ for c in sorted(S.cluster.unique()):
 '''),
 
 MD("""
-### Die Gruppen benennen — Kriterium 1 aus Phase 1
+### Benennung der Gruppen (Kriterium 1)
 
 Jetzt kommt der Schritt, den kein Algorithmus abnimmt. Die Zahlen liefern Gruppen; **die
 Namen liefert der Verstand.**
@@ -667,7 +685,7 @@ außerdem maschinell geprüft — **vier Gruppen müssen vier verschiedene Prüf
 ergeben.** Ohne diese Prüfung bleibt unbemerkt, wenn zwei Gruppen in derselben
 Maßnahme enden — die Einteilung wäre dann für den Zweck ohne Wirkung.
 
-### Kriterien 4 und 5: Stabilität — gemessen, nicht behauptet
+### Kriterien 4 und 5: gemessene Stabilität
 
 `n_init=25` ist **keine** Stabilitätsprüfung. Es rechnet 25 Startpunkte durch und nimmt
 den mit der geringsten Streuung — das ist Qualitätssicherung innerhalb eines Laufs, nicht
@@ -1422,7 +1440,7 @@ MD("""
 > Clustering. Sie steht hier nur, um zu zeigen, dass die fachliche Deutung oben nicht
 > Wunschdenken war.
 
-### 5.B Kundschaft: die Segmente lesen
+### 5.B Die Kundensegmente
 """),
 
 CODE('''
@@ -1507,7 +1525,7 @@ plt.tight_layout(); plt.show()
 '''),
 
 MD("""
-### 5.B.1 Ein Befund, der so nicht erwartet war
+### 5.B.1 Umsatz je Fahrt nach Segment
 
 Sehen Sie sich die Spalten `fahrten_fenster` und `umsatz_fenster` nebeneinander an. Sie
 heißen so und nicht `..._jahr`, weil ein Teil der Kundschaft **kein volles Jahr** beobachtet
@@ -1557,7 +1575,7 @@ berechnet.
 > Studierendenausweis, Nahverkehrsabo oder Rahmenvertrag über den Arbeitgeber. Die Spalte
 > `voraussetzung` in `tarif.csv` nennt sie.
 
-### 5.B.2 Das ist kein Messfehler — das ist ein Preisproblem
+### 5.B.2 Ursache: die Tarifstruktur
 
 An dieser Stelle liegt die Versuchung nahe, nach einer fehlenden Umsatzkomponente zu
 suchen: Zahlen die Vielfahrer nicht vielleicht einen Monatsbeitrag, den wir übersehen
@@ -1702,7 +1720,7 @@ zusammen erklärt den Befund vollständig.
 > sondern weil die Analyse eine bessere Frage hervorgebracht hat als die, mit der sie
 > begonnen hat. Das ist der häufigere und wertvollere Fall.
 
-### 5.B.3 Eine Idee für die Geschäftsführung — ausdrücklich als Vorschlag
+### 5.B.3 Rechenbeispiel für die Geschäftsführung
 
 Die folgende Rechnung ist **kein Befund aus den Daten**, sondern ein Was-wäre-wenn. Sie
 gehört in eine Entscheidungsvorlage, nicht in einen Analysebericht — und muss als
@@ -1738,7 +1756,7 @@ print("  wenigsten binden - das lässt sich mit denselben Daten prüfen.")
 """),
 
 MD("""
-### 5.B.4 Und die Kundschaft ganz ohne Fahrt?
+### 5.B.4 Kundschaft ohne Fahrt im Betrachtungszeitraum
 """),
 
 CODE('''
@@ -1766,6 +1784,11 @@ entweder abgewandert oder zurückzugewinnen.
 # =====================================================================
 PHASE(6, "Aus vier Stationstypen werden Dispositions-HYPOTHESEN, aus sieben "
          "Lebenszyklusgruppen ein analytischer Kampagnen-Arbeitsstand."),
+
+MD(kacheln([("{{gates_erfuellt}} von {{gates_gesamt}}", "Kriterien erfüllt"),
+            ("{{generator_treffer:.0%}}", "Stationstypen richtig zugeordnet"),
+            ("{{viel_je_fahrt:.2f}} €", "Umsatz je Fahrt, {{viel_segment}}"),
+            ("{{kurze_historie_anteil:.0%}}", "Kundschaft ohne Fahrt im Fenster")])),
 
 CODE('''
 # --- A) Die Stationsprofile
@@ -1917,7 +1940,7 @@ print("\\nDas ist der Preis der Nachvollziehbarkeit - und er gehört benannt.")
 '''),
 
 MD("""
-### 6.2 Die Population — wer überhaupt angeschrieben werden darf
+### 6.2 Zulässige Empfängergruppe
 
 Bis hierher war von {{n_rfm:,}} RFM-Kunden die Rede. Ein Kampagnenplan braucht aber die
 **ganze** Kundschaft und einen **einzigen Nenner** — sonst summieren sich die Anteile auf
@@ -1979,7 +2002,7 @@ braucht eine Willkommensansprache, „Früher aktiv, jetzt inaktiv" eine Rückge
 „Nie aktiviert" nach über einem Jahr ist eine Karteileiche. Drei Zustände, drei Maßnahmen
 — genau das verlangt Kriterium 2 aus Phase 1.
 
-### 6.3 Der Export, den ein Kampagnensystem lesen kann
+### 6.3 Export für das Kampagnensystem
 """),
 
 CODE('''
@@ -2192,7 +2215,7 @@ if not KUNDENSEGMENTE_STABIL:
           f"Zustand '{GATE_ZUSTAND}'.")
     print(f"   {GATE_SATZ}.")'''),
 MD("""
-### 6.4 Was bei diesen beiden Auslieferungen zu beachten ist
+### 6.4 Auflagen für beide Auslieferungen
 
 **Die Stationsprofile** sind vergleichsweise harmlos — vier Hypothesen, die ein Mensch
 liest und prüft. Sie sagen, *wann* an einer Station losgefahren wird, und leiten daraus
@@ -2227,7 +2250,7 @@ Gruppe der Nichtfahrer wächst, ist das ein Geschäftsproblem, kein Analyseprobl
 MD("""
 ---
 
-# Der Kreislauf schließt sich
+# Zusammenfassung
 
 | Phase | A) Stationen | B) Kundschaft |
 |---|---|---|
