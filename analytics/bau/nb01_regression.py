@@ -69,7 +69,10 @@ werden im Alltag als Synonyme benutzt. Hier sind sie es nicht:
 **Der Unterschied zwischen den ersten beiden ist der teuerste.** „Qualifiziert" ist eine
 Aussage über Zahlen; „Schattenbetrieb" ist der Zustand, in dem man prüft, ob diese
 Aussage auch trägt, wenn die Wirklichkeit dazwischenkommt. Ein Verfahren kann jede Hürde
-nehmen und trotzdem im Schatten bleiben — genau das passiert in diesem Notebook.
+nehmen und trotzdem im Schatten bleiben, solange die Prüfung an denselben Daten hängt,
+an denen es eingestellt wurde. Genau diesen Weg geht dieses Notebook: Phase 6 setzt den
+Status zunächst auf „schatten"; erst die versiegelte Abnahme in 6.7 entscheidet darüber,
+und sie endet hier bei **„{{produktstatus}}"**.
 
 > **Warum das nicht in einer Übersichtstabelle über alle sechs Notebooks steht.** Welchen
 > Status ein einzelnes Verfahren erreicht, entscheidet seine eigene Rechnung, und die
@@ -2448,8 +2451,10 @@ für Menschen, die wissen wollen, was sie da betreiben.
 
 **Und was liest die Website?** Genau diese Datei. Der Ladeweg
 `db/betrieb/preisschaetzung_laden.py` füllt `velocity.preisschaetzung`, die Website liest
-`v_preisschaetzung`. Solange der Laufzeitdienst im Schattenbetrieb läuft, ist das
-konsequent — nur darf die Website dann auch nur das anzeigen, was die Tabelle trägt.
+`v_preisschaetzung`. Das passt genau dann, wenn die Tabelle auch das ausgelieferte
+Verfahren ist — und das ist sie hier: ausgeliefert wird die {{kandidat}}. Wäre die
+Quantilregression gewählt worden, müsste die Website den Dienst rufen und dürfte die
+Tabelle nur als Rückfall ohne Zusage anzeigen.
 
 ### 6.3a Die Tabelle bauen
 
