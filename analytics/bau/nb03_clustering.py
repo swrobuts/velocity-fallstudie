@@ -136,10 +136,14 @@ man die Eingangswerte um {{hysterese:.0%}} in beide Richtungen verschiebt.
 > Verfahrensentwicklung, aber es verbraucht dieses Stichtagspaar: Auf ihm kann das Gate
 > nicht mehr unabhängig prüfen, was es mitgeformt hat.
 >
-> Deshalb wird die eingefrorene Regel zusätzlich über **frühere Stichtagspaare** gerechnet,
-> die bei der Entwicklung nie angesehen wurden. Die Freigabe hängt an diesen — nicht an
-> dem Paar, an dem entwickelt wurde. Und die Wechselquote **ohne** Hysterese steht als
-> Sensitivitätswert daneben, damit die Wirkung der Stabilisierung sichtbar bleibt.
+> **Und damit fehlt die unabhängige Prüfung.** Die Schwellen wurden am vollständigen
+> Datenstand gewählt; ein späterer Stichtag existiert nicht. Frühere Stichtage helfen
+> nicht: Aus deren Sicht stammen die Schwellen aus der Zukunft. Die Regel wird deshalb
+> über frühere Paare gerechnet — aber als **Stabilitätsdiagnose**, die nichts freigibt.
+>
+> **Solange die prospektive Prüfung aussteht, bleibt die Segmentierung explorativ und es
+> entsteht keine personenbezogene Liste**, sondern nur ein aggregierter Bericht. Die
+> Wechselquote ohne Hysterese steht als Sensitivitätswert daneben.
 
 ### Was von außen kommt — und deshalb keine Analyse ist
 
@@ -896,26 +900,73 @@ print(f"     Segmentwechsel binnen 90 Tagen: {lz_wechsel:.2%}")
 # Ein Gate, das den weiten Nenner nimmt, misst sich selbst schoen.
 # ---------------------------------------------------------------------
 NICHT_IN_KAMPAGNE = {"Nie aktiviert"}
-in_liste = [k for k in lz_gemeinsam
-            if lz_heute[k] not in NICHT_IN_KAMPAGNE
-            and lz_vor[k] not in NICHT_IN_KAMPAGNE]
-liste_wechsel = float((lz_heute[in_liste] != lz_vor[in_liste]).mean())
+AUSSERHALB = "ausserhalb der Liste"
 
-print("\\n(1c) NUR DIE KAMPAGNEN-ARBEITSLISTE - der enge Nenner\\n")
-print(f"     Zu beiden Zeitpunkten in der Arbeitsliste: {len(in_liste)}")
+# DIE VEREINIGUNGSMENGE, NICHT DIE SCHNITTMENGE.
+#
+# Phase 1 definiert die Arbeitsliste als "Personen, die zu EINEM der
+# beiden Stichtage eine Ansprache bekaemen". Eine fruehere Fassung
+# rechnete die Schnittmenge - nur wer an BEIDEN Stichtagen drin war.
+# Damit fielen genau die Uebergaenge heraus, die eine Kampagne am
+# staerksten spuert: Wer neu in die Ansprache kommt oder aus ihr
+# herausfaellt, wechselt sein Segment sehr wohl.
+#
+# Wer ausserhalb steht, bekommt dafuer einen eigenen Zustand - sonst
+# liesse sich ein Eintritt gar nicht als Wechsel darstellen.
+def arbeitsliste(vor, heute):
+    """Vereinigungsmenge plus expliziter Aussenzustand."""
+    idx = vor.index.union(heute.index)
+    _v = pd.Series([vor.get(k, AUSSERHALB) for k in idx], index=idx)
+    _h = pd.Series([heute.get(k, AUSSERHALB) for k in idx], index=idx)
+    drin = [k for k in idx
+            if (_v[k] not in NICHT_IN_KAMPAGNE and _v[k] != AUSSERHALB)
+            or (_h[k] not in NICHT_IN_KAMPAGNE and _h[k] != AUSSERHALB)]
+    return _v[drin], _h[drin]
+
+_v_liste, _h_liste = arbeitsliste(lz_vor, lz_heute)
+in_liste = list(_v_liste.index)
+liste_wechsel = float((_h_liste != _v_liste).mean())
+
+# Gegenprobe an einem Beispielkonto: Ein Eintritt MUSS als Wechsel
+# zaehlen. Ohne diesen Test bliebe die Definition eine Behauptung.
+_eintritte = [k for k in in_liste if _v_liste[k] == AUSSERHALB]
+_austritte = [k for k in in_liste if _h_liste[k] == AUSSERHALB]
+if _eintritte:
+    _b = _eintritte[0]
+    assert _h_liste[_b] != _v_liste[_b], "Ein Eintritt zaehlt nicht als Wechsel"
+print(f"\\n(1c-Nenner) Vereinigungsmenge: {len(in_liste)} Konten, davon "
+      f"{len(_eintritte)} Eintritte und {len(_austritte)} Austritte.")
+print(f"     Die Schnittmenge waere {sum(1 for k in in_liste if _v_liste[k] != AUSSERHALB and _h_liste[k] != AUSSERHALB)}"
+      f" Konten - und haette die Uebergaenge nicht gezaehlt.")
+merke("n_eintritte", len(_eintritte)); merke("n_austritte", len(_austritte))
+
+print("\\n(1c) DIE KAMPAGNEN-ARBEITSLISTE - der Nenner aus Phase 1\\n")
+print(f"     An mindestens einem Stichtag in der Arbeitsliste: {len(in_liste)}")
 print(f"     Segmentwechsel binnen 90 Tagen: {liste_wechsel:.2%}")
 
 # ---------------------------------------------------------------------
-# (1d) DIE FRUEHEREN STICHTAGSPAARE - UNANGETASTET.
+# (1d) DIE FRUEHEREN STICHTAGSPAARE - EINE DIAGNOSE, KEIN HOLDOUT.
 #
-# Hysterese und Schwelle sind an DIESEM Paar entstanden (Phase 1,
-# Kriterium 5). Damit ist es verbraucht: Es kann nicht unabhaengig
-# pruefen, was es mitgeformt hat.
+# ACHTUNG, HIER STAND EIN METHODISCHER FEHLER, und er ist lehrreich
+# genug, um stehenzubleiben.
 #
-# Die frueheren Paare wurden bei der Entwicklung nie angesehen. Sie sind
-# damit ein echter Holdout - nur eben rueckwaerts statt vorwaerts. Die
-# Regel laeuft dort unveraendert, mit denselben Schwellen und derselben
-# Hysterese; nichts wird nachjustiert.
+# Eine fruehere Fassung nannte diese Rechnung einen "unangetasteten
+# Holdout" und band die Freigabe der personenbezogenen Kampagnenliste
+# daran. Das ist falsch, und zwar aus zwei Gruenden:
+#
+#   1. RUECKWAERTS IST NICHT UNABHAENGIG. Die Schwellen (150 / 12 / 30)
+#      und die Hysterese wurden am heutigen Datenstand festgelegt. Aus
+#      Sicht eines Stichtags im November 2025 stammen sie damit aus der
+#      ZUKUNFT. Ein Test, dessen Regeln die Zukunft kennen, ist kein Test.
+#   2. DIE FENSTER UEBERLAPPEN. Jedes RFM-Fenster ist 365 Tage lang, die
+#      Stichtage liegen 90 Tage auseinander - benachbarte Paare teilen
+#      rund drei Viertel ihrer Fahrten. Vier Messungen, aber nicht vier
+#      unabhaengige.
+#
+# Was die Rechnung trotzdem zeigt: ob die eingefrorene Regel ueber
+# verschiedene Zeitlagen hinweg aehnlich viele Wechsel erzeugt. Das ist
+# eine STABILITAETSDIAGNOSE und als solche wertvoll. Sie darf nur nichts
+# freigeben.
 FROZEN = dict(gate=GATE_WECHSEL, hysterese=HYSTERESE)
 paare = []
 for _versatz in (90, 180, 270):
@@ -935,7 +986,9 @@ def wechsel_auf(a, b, hysterese):
         return float("nan"), 0
     return float((_h[_liste] != _v[_liste]).mean()), len(_liste)
 
-print("\\n(1d) UNANGETASTETE STICHTAGSPAARE - die Regel eingefroren\\n")
+print("\\n(1d) STABILITAETSDIAGNOSE ueber frueher liegende Stichtage\\n")
+print("     KEIN Holdout: Die Schwellen stammen aus dem heutigen Datenstand")
+print("     und sind aus Sicht dieser Stichtage Zukunftswissen.\\n")
 print(f"     eingefroren: Schwelle {FROZEN['gate']:.0%}, "
       f"Hysterese {FROZEN['hysterese']:.0%}")
 print(f"     {'Stichtage':<26s}{'Arbeitsliste':>13s}{'Wechsel':>10s}   Urteil")
@@ -948,10 +1001,28 @@ for _a, _b in paare:
 _w_ent, _n_ent = liste_wechsel, len(in_liste)
 print(f"     {VORQUARTAL:%d.%m.%Y} → {CUTOFF:%d.%m.%Y}{_n_ent:>13d}{_w_ent:>9.2%}   "
       f"(Entwicklung - verbraucht)")
-HOLDOUT_HAELT = bool(_holdout) and all(w <= GATE_WECHSEL for _, _, w, _n in _holdout)
+DIAGNOSE_HAELT = bool(_holdout) and all(w <= GATE_WECHSEL for _, _, w, _n in _holdout)
 merke("holdout_paare", len(_holdout))
 merke("holdout_max", max((w for _, _, w, _n in _holdout), default=float("nan")))
-merke("holdout_urteil", "alle" if HOLDOUT_HAELT else "nicht alle")
+merke("holdout_urteil", "alle" if DIAGNOSE_HAELT else "nicht alle")
+
+# ─── UND DIE PROSPEKTIVE PRUEFUNG? ES GIBT SIE NICHT. ───────────────
+#
+# Ein Kriterium, das ueber einen personenbezogenen Export entscheidet,
+# braucht Daten, die keine seiner Festlegungen beeinflusst haben. Solche
+# Daten liegen hier nicht vor: Die Schwellen wurden am vollstaendigen
+# Datenstand gewaehlt, und ein spaeterer Stichtag existiert nicht.
+#
+# Das laesst sich nicht wegrechnen. Es laesst sich nur benennen - und
+# die Freigabe daran binden.
+PROSPEKTIV_GEPRUEFT = False
+PROSPEKTIV_MOEGLICH_AB = (CUTOFF + pd.Timedelta(days=90)).date()
+merke("prospektiv_ab", PROSPEKTIV_MOEGLICH_AB.strftime("%d.%m.%Y"))
+print()
+print("     PROSPEKTIVE PRUEFUNG: steht aus.")
+print(f"     Moeglich ab {PROSPEKTIV_MOEGLICH_AB:%d.%m.%Y} - ein Quartal nach dem")
+print("     Einfrieren der Regeln. Bis dahin bleibt die Segmentierung")
+print("     explorativ, und es entsteht KEINE personenbezogene Liste.")
 
 # ---------------------------------------------------------------------
 # (1e) SENSITIVITAET: WAS TUT DIE HYSTERESE EIGENTLICH?
@@ -974,7 +1045,7 @@ _ohne_haelt = [w for _, _, w in _ohne if w <= GATE_WECHSEL]
 merke("hyst_ohne_haelt", len(_ohne_haelt))
 print()
 if len(_ohne_haelt) == len(_ohne):
-    print("     Das Gate haelt auf den Holdout-Paaren auch OHNE Hysterese.")
+    print("     Die Diagnose bleibt auch OHNE Hysterese unauffaellig.")
     print("     Sie glaettet also die Kante, sie rettet das Urteil nicht -")
     print("     und genau das muss man zeigen duerfen.")
 else:
@@ -1031,7 +1102,15 @@ print("    vertreten. Gebunden wird das Gate an (1).")
 #
 # Das Entwicklungspaar bleibt sichtbar - es zeigt, wie die Regel dort
 # aussieht, wo sie gebaut wurde. Entscheiden darf es nicht.
-KUNDENSEGMENTE_STABIL = bool(HOLDOUT_HAELT and liste_wechsel <= GATE_WECHSEL)
+# GEBUNDEN WIRD DIE PROSPEKTIVE PRUEFUNG - und die steht aus.
+#
+# Frueher stand hier HOLDOUT_HAELT, also die Rueckwaertsdiagnose. Damit
+# gab eine Rechnung, deren Regeln die Zukunft kannten, eine Liste mit
+# Klarnamen frei. Das ist der Fehler, vor dem diese Reihe an vier
+# Stellen warnt - und er stand hier im Code.
+KUNDENSEGMENTE_STABIL = bool(PROSPEKTIV_GEPRUEFT
+                             and DIAGNOSE_HAELT
+                             and liste_wechsel <= GATE_WECHSEL)
 merke("gate_urteil_kunden", "gehalten" if KUNDENSEGMENTE_STABIL else "gerissen")
 merke("gate_abstand", (GATE_WECHSEL - liste_wechsel) * 100)
 
@@ -1039,9 +1118,11 @@ print(f"\\nDie Überwachung in Phase 6 nennt {GATE_WECHSEL:.0%} je Quartal als A
 print(f"   Kampagnen-Arbeitsliste, Entwicklung:  {liste_wechsel:>6.2%}   "
       f"{'unter' if liste_wechsel <= GATE_WECHSEL else 'ueber'} der Schwelle "
       f"({abs(GATE_WECHSEL - liste_wechsel) * 100:.2f} pp)")
-print(f"   dieselbe Groesse, HOLDOUT (bindend):  "
+print(f"   dieselbe Groesse, Rueckwaertsdiagnose: "
       f"hoechstens {max((w for _, _, w, _n in _holdout), default=float('nan')):>6.2%}   "
-      f"{'gehalten' if HOLDOUT_HAELT else 'GERISSEN'}")
+      f"{'unauffaellig' if DIAGNOSE_HAELT else 'AUFFAELLIG'}   (bindet NICHT)")
+print(f"   prospektive Pruefung (bindend):       "
+      f"{'bestanden' if PROSPEKTIV_GEPRUEFT else 'STEHT AUS':>13s}")
 print(f"   alle Lebenszykluszustaende:        {lz_wechsel:>6.2%}   (Diagnose)")
 print(f"   nur die vier RFM-Regeln:           {wechselquote:>6.2%}   (Ausschnitt)")
 print()
@@ -1144,18 +1225,23 @@ MD("""
 > knapperen Lage hinge das Urteil daran, und dann wäre die Wahl des Nenners nach der
 > Messung eine Manipulation.
 
-> **Und die Zahl, die wirklich bindet, steht nicht in dieser Tabelle.** Sie stammt aus
-> den {{holdout_paare}} Stichtagspaaren, die bei der Entwicklung von Hysterese und
-> Schwelle nie angesehen wurden; dort liegt der schlechteste Wert bei
-> {{holdout_max:.2%}}, und {{holdout_urteil}} Paare halten. Das Paar in dieser Tabelle
-> ist das **Entwicklungspaar** — es zeigt, wie die Regel dort aussieht, wo sie gebaut
-> wurde, und darf deshalb nicht entscheiden.
+> **Und die Zahl, die binden würde, gibt es nicht.** Über {{holdout_paare}} frühere
+> Stichtagspaare liegt der schlechteste Wert bei {{holdout_max:.2%}}, {{holdout_urteil}}
+> Paare bleiben unter der Schwelle — aber das ist eine **Diagnose, kein Test**: Die
+> Schwellen wurden am heutigen Datenstand gewählt und sind aus Sicht dieser Stichtage
+> Zukunftswissen. Hinzu kommt, dass sich die 365-Tage-Fenster benachbarter Paare zu rund
+> drei Vierteln überschneiden — vier Messungen, aber nicht vier unabhängige.
+>
+> **Eine frühere Fassung dieses Notebooks hat genau daran die Freigabe einer Liste mit
+> Klarnamen gehängt.** Das war der schwerste Fehler der ganzen Reihe, und er stand nicht
+> im Text, sondern im Code: `KUNDENSEGMENTE_STABIL = HOLDOUT_HAELT and ...`. Wer eine
+> Rückwärtsrechnung „Holdout" nennt, glaubt irgendwann selbst daran.
 >
 > **Was die Hysterese dabei tut, steht offen daneben.** Ohne sie stiege die Wechselquote
 > des Entwicklungspaars von {{gate_eng:.2%}} auf {{hyst_ohne:.2%}}
 > (+{{hyst_wirkung:.2f}} Prozentpunkte), und auf den Holdout-Paaren hielten dann nur noch
 > {{hyst_ohne_haelt}} von {{holdout_paare}}. **Die Kantenglättung trägt das Urteil also
-> mit.** Das ist kein Fehler — sie ist in Phase 1 begründet und vor der Holdout-Messung
+> mit.** Das ist kein Fehler — sie ist in Phase 1 begründet und vor der Messung
 > eingefroren —, aber es wäre einer, es zu verschweigen.
 >
 > Der Unterschied sind die dauerhaft stabilen Nicht-Zielpersonen (Zustand „Nie
@@ -1929,7 +2015,7 @@ ORGANISATORISCHE_NAMEN = {
     "Wirkung der Massnahmen kontrolliert messbar",
 }
 GATES = {
-    f"Segmentstabilitaet <= {GATE_WECHSEL:.0%} je Quartal (Holdout)": KUNDENSEGMENTE_STABIL,
+    f"Segmentstabilitaet <= {GATE_WECHSEL:.0%}, PROSPEKTIV geprueft": KUNDENSEGMENTE_STABIL,
     "Beobachtungsdauer der jungen Kunden behandelt":        JUNGE_BEHANDELT,
     "Rechtsgrundlage fuer Direktmarketing dokumentiert":    RECHTSGRUNDLAGE_DOKUMENTIERT,
     "Kontaktkanal, Abmeldung und Sperrliste angebunden":    KONTAKTKANAL_ANGEBUNDEN,
@@ -1952,6 +2038,10 @@ KAMPAGNENFREIGABE = (STATUS_ANALYTISCH == "belegt"
                      and STATUS_EINSATZ == "freigegeben")
 merke("status_analytisch", STATUS_ANALYTISCH)
 merke("status_einsatz", STATUS_EINSATZ)
+merke("gates_gesamt", len(GATES))
+merke("gates_erfuellt", sum(GATES.values()))
+merke("exportart", "eine personenbezogene Kampagnenliste" if KAMPAGNENFREIGABE
+      else "nur ein aggregierter Bericht ohne Namen")
 freigabe = (f"analytisch {STATUS_ANALYTISCH}, Einsatz {STATUS_EINSATZ}"
             + (" - Pilot mit Kontrollgruppe" if KAMPAGNENFREIGABE else ""))
 print("ZWEI STATUS, GETRENNT GEFUEHRT:")
@@ -2082,12 +2172,12 @@ MD("""
 | Phase | A) Stationen | B) Kundschaft |
 |---|---|---|
 | 1 Business Understanding | Umverteilung nach Regeln statt nach Gefühl | Newsletter nach Segmenten statt an alle |
-| *gemeinsame Erfolgskriterien* | benennbar · unterschiedlich behandelbar · groß genug · stabil | dieselben vier für beide Teile |
+| *gemeinsame Erfolgskriterien* | benennbar · unterschiedlich behandelbar · groß genug · startwertstabil · zeitlich stabil | dieselben **fünf** für beide Teile; für die Kampagne kommen die drei organisatorischen Gates hinzu ({{gates_gesamt}} insgesamt) |
 | 2 Data Understanding | Stammdaten enthalten keinen Typ — das Muster steckt im Verhalten | Kein Segment in der Kundentabelle |
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
 | 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: {{generator_treffer:.0%}} Mehrheitszuordnung, ARI {{generator_ari:.3f}}. Stabilität gemessen, nicht behauptet | Vier Segmente, über die Startwerte reproduzierbar (ARI {{ari_kunden:.3f}}), aber mit schwächerer Trennung (Silhouette {{sil_kunden_k4:.3f}}) — dazu zwei Befunde, die weh tun, und eine hypothetische Rechnung |
-| 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Kampagnenpilot freigegeben**: Alle fünf Gates halten. Das Stabilitätsgate erst, seit die Segmente eine Hysterese haben — gemessen am Nenner, der zur Auslieferung passt: {{gate_eng:.2%}} gegen {{gate_wechsel:.0%}}. {{kontrollgruppe_n:,}} Konten bilden die Kontrollgruppe |
+| 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Analytisch {{status_analytisch}}, Einsatz {{status_einsatz}}** — {{gates_erfuellt}} von {{gates_gesamt}} Gates. Es entsteht **{{exportart}}**. Gemessen am Nenner aus Phase 1 (Vereinigungsmenge): {{gate_eng:.2%}} gegen {{gate_wechsel:.0%}} — was fehlt, ist nicht die Zahl, sondern eine **prospektive** Prüfung |
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**
 
@@ -2112,15 +2202,16 @@ MD("""
    hat eine Frage hervorgebracht, die vorher niemand gestellt hatte. Sauber wäre dafür
    ein **Deckungsbeitrag** statt des Entgelts: abzüglich der Kosten, die eine Fahrt
    verursacht (Umverteilung, Verschleiß, Strom).
-2. **Zurück zu Phase 3:** Die kurze Beobachtungsdauer fachlich behandeln — junge
-   Kundschaft als eigene Onboardingkohorte, eine Mindestexposition oder
-   expositionsbereinigte Schwellen. Die Hochrechnung in Phase 5 ist eine Diagnose, keine
-   Lösung; das zugehörige Freigabe-Gate bleibt bis dahin offen.
-3. **Die Schwellen prospektiv prüfen.** Sie sind am aktuellen Datenstand abgelesen und
-   dann rückwärts auf ein früheres Fenster angewandt. Das ist eine Stabilitätsdiagnose,
-   kein Zukunftstest — und die beiden 365-Tage-Fenster überlappen sich stark. Sauber
-   wäre: Schwellen auf einem früheren Stand festlegen, unverändert auf einen später
-   unberührten Zeitraum anwenden, und das über mehrere rollierende Cutoffs.
+2. **Zurück zu Phase 3, bei der jungen Kundschaft.** Die gewählte Behandlung ist der
+   **Ausschluss**: Wer noch kein volles Jahr dabei ist, bekommt keine Ansprache. Damit
+   ist das Gate erfüllt — aber die Behandlung ist grob. Besser wären eine eigene
+   Onboardingkohorte, eine Mindestexposition oder expositionsbereinigte Schwellen.
+3. **Die Schwellen prospektiv prüfen — das ist der Punkt, an dem die Kampagne hängt.**
+   Sie sind am aktuellen Datenstand abgelesen; frühere Fenster können sie deshalb nicht
+   unabhängig prüfen, und ihre 365-Tage-Fenster überlappen sich obendrein stark. Sauber
+   ist nur ein Weg: Schwellen jetzt einfrieren, ein Quartal warten und sie unverändert
+   auf den dann neuen, unberührten Stichtag anwenden — frühestens ab
+   {{prospektiv_ab}}. Bis dahin bleibt es beim aggregierten Bericht.
 4. **Ein anderes Verfahren erwägen:** k-Means unterstellt kugelförmige, gleich große
    Gruppen. Für Segmente mit sehr unterschiedlicher Streuung sind hierarchisches
    Clustering oder Gaussian Mixture Models oft passender.
