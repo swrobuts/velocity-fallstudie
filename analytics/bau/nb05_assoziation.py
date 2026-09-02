@@ -41,7 +41,7 @@ MD("""
 """),
 
 MD("""
-## Das dritte Gesicht des maschinellen Lernens
+## Einordnung des Verfahrens
 
 | Notebook | Ergebnis des Verfahrens |
 |---|---|
@@ -91,7 +91,7 @@ Am Beispiel der Regel **{Brot} → {Butter}**:
 **Lift = 1** bedeutet kein Zusammenhang, **Lift = 2** doppelt so häufig wie erwartet,
 **Lift < 1** ein Meiden.
 
-### Der Lift im Kontext
+### Kontextbedingter Lift
 
 Jede Fahrt hat einen **Kontext**: Werktag oder freier Tag, dazu eines von vier
 Zeitfenstern. Die Ziele sind je nach Kontext unterschiedlich beliebt — der Campus ist
@@ -109,7 +109,7 @@ Der Zähler ist in beiden Fällen derselbe. Für die supportstärkste Regel dies
 hier wird ausschließlich der kontextbedingte Lift ausgewiesen; die Schwellen beziehen
 sich auf ihn. Beide Werte stehen in Phase 4 nebeneinander.
 
-### Erfolgskriterien: drei Hürden für jede Regel
+### Erfolgskriterien
 
 | | Kriterium | Schwelle | Warum |
 |---|---|---|---|
@@ -122,7 +122,7 @@ als Code geprüft. Ob Menge, Bestand, Kapazität und Kosten eine Transporterfahr
 rechtfertigen, sagt es nicht. Kriterium 1 sortiert die meisten Regeln aus, darunter die
 mit den höchsten Lift-Werten.
 
-### Zwei Produkte, zwei Kriteriensätze
+### Produkt A und Produkt B
 
 Dieses Notebook kann zwei verschiedene Dinge abliefern. Beide Kriteriensätze stehen vor
 der ersten Rechnung fest.
@@ -218,7 +218,7 @@ beieinander, zwischen {{station_min:.1%}} und {{station_max:.1%}}; sie sind also
 > die Tabelle hier für die Lift-Grundlage hält,
 > rechnet mit den falschen Nennern.
 
-### 2.1 Der triviale Zusammenhang, den man zuerst finden muss
+### 2.1 Rundtouren als trivialer Zusammenhang
 """),
 
 CODE('''
@@ -435,7 +435,7 @@ print("weil er den Kontexteffekt mitzaehlt. Beide Spalten beschreiben dieselben 
 '''),
 
 MD("""
-### Die Zahlen einer einzelnen Regel nachrechnen
+### Nachrechnung einer einzelnen Regel
 
 Damit klar ist, dass hier keine Magie stattfindet, rechnen wir eine Regel von Hand nach.
 """),
@@ -730,7 +730,7 @@ _ = merke("k1_support", K1_SUPPORT)
 '''),
 
 MD("""
-### 5.1 Was die Punktwolke zeigt
+### 5.1 Support und Lift im Streudiagramm
 
 Die Punktwolke fällt nach rechts ab. Der übliche Grund dafür — je spezieller eine Regel,
 desto kleiner ihr Support — greift hier **nicht**: Alle Regeln sind gleich spezifisch,
@@ -743,7 +743,7 @@ aus kleinen Zählwerten gebildet wird. **Was wie ein Zusammenhang aussieht, ist 
 einer Verteilung.** Die Regeln mit den höchsten Lift-Werten stehen links oben — bei einem
 Support von Bruchteilen eines Prozents und damit ohne Nutzen für die Disposition.
 
-### Sind die stärksten Regeln Zufall?
+### Signifikanzprüfung der stärksten Regeln
 
 Für jede Regel liegt eine Vierfeldertafel vor: Fahrten ab dieser Station in diesem
 Fenster zu diesem Ziel gegen alle übrigen. Fishers exakter Test prüft, ob eine solche
@@ -770,7 +770,7 @@ Signifikanz, sondern an der Größe. Ohne die Support-Untergrenze von 0,5 % bei 
 stünden hier Regeln mit drei oder vier Fahrten und Lift-Werten jenseits von 10 — die
 wären tatsächlich meist Zufall.
 
-### 5.2 Die Regeln, die alle drei Kriterien nehmen
+### 5.2 Regeln, die A1 bis A3 erfüllen
 """),
 
 CODE('''
@@ -802,7 +802,7 @@ werden kann. **Zweitens heißt A1 bis A3 erfüllt nicht freigegeben:** Diese Hü
 wann ein Muster groß und deutlich genug ist, um betrachtet zu werden. Ob ein Transporter
 fährt, entscheidet A4 — und dessen Beträge sind gesetzte Szenarioannahmen.
 
-### Die Hürde misst nicht, was sie messen sollte
+### Die Support-Hürde auf der Betriebsskala
 
 Die Begründung für die Ein-Prozent-Hürde lautete in Phase 1: *„Für eine Regel, die
 zwanzig Fahrten im Jahr betrifft, fährt kein Transporter."* Das ist eine Aussage über
@@ -816,7 +816,7 @@ Hürde trennt damit nicht „lohnt sich" von „lohnt sich nicht", sondern zwei
 Größenordnungen, in denen ohnehin kein Transporter fährt. **Das Kriterium war auf der
 falschen Skala formuliert** — nicht zu streng und nicht zu lax.
 
-### Was jetzt nicht passiert
+### Warum die Hürde nicht angepasst wird
 
 Die Hürde wird **nicht** ersetzt und die Rechnung nicht wiederholt. Ein Kriterium, das
 nach dem Ergebnis geändert wird, misst nichts mehr — auch dann nicht, wenn die Änderung
@@ -936,7 +936,7 @@ Drei Einschränkungen gehören dazu:
 """),
 
 MD("""
-### 5.4 Was die durchgefallenen Regeln trotzdem zeigen — als Hypothese
+### 5.4 Durchgefallene Regeln als Hypothesen
 
 Die {{split_gesamt:.0f}} Regeln, die wenigstens die Lift-Hürde nehmen, dürfen den Umlaufplan nicht
 begründen. Ansehen darf man sie trotzdem — sie sind eine **Hypothese**, kein Befund, und
@@ -1052,7 +1052,7 @@ Support, Konfidenz und Lift der Hin-Richtung sind davon unberührt; die Kennzahl
 stimmen. Falsch war die Deutung daneben. Für die Maßnahme ändert sich nichts: Die Räder
 laufen am Campus auf, unabhängig davon, wer sie dorthin gefahren hat.
 
-### 5.5 Das Urteil: Kriterien erfüllt, Freigabe trotzdem nicht
+### 5.5 Freigabeurteil
 
 **A1 bis A3 sind erfüllt, Produkt A ist trotzdem {{status_a}}.** Was fehlt, ist A4 — und
 zwar nicht, weil Kostenzahlen fehlten: {{kosten_transport:.0f}} € je Umsetzrunde und
@@ -1745,7 +1745,7 @@ print("Die Dateien heissen bewusst nicht 'Plan' - ein Plan braucht Datum,")
 print("Bestand, Menge und ein Entscheidungskriterium.")
 '''),
 
-MD("""### 6.1 Der Mittelwert, der den Bedarf verschwinden lässt
+MD("""### 6.1 Wahl der Kennzahl: Mittelwert oder Tagesverteilung
 
 Tabelle (A) nennt als größten Überschuss **{{saldo_max:+.2f}} Räder je Werktag** und als
 größten Fehlbestand **{{saldo_min:+.2f}}** — bei Stationen mit {{kap_min:.0f}} bis
@@ -1797,7 +1797,7 @@ Ungleichgewichte. Dazu fehlen drei Angaben:
 Dazu die zwei Kostengrößen, die schon der Ein-Prozent-Hürde fehlten: was eine Fahrt
 kostet und was ein leerer Stationsplatz kostet. Dieselbe Lücke an zwei Stellen.
 
-### 6.2 Die Stationssalden: Richtung manchmal, Menge nie
+### 6.2 Stationssalden: Aussagekraft und Grenzen
 
 Tabelle (B) gibt die **Richtung** her, und auch die nicht überall. Morgens gewinnen
 Hubland Campus und Universität Sanderring Räder hinzu, während Hauptbahnhof, Sanderau,
@@ -1816,7 +1816,7 @@ es fünf oder mehr. Die exportierte Datei enthält deshalb die Verteilung statt 
 je Station und heißt `stationssalden_werktag.csv`, nicht `umlaufplan` — ein Plan
 bräuchte Datum, Bestand, Menge und ein Entscheidungskriterium.
 
-### 6.3 Das Einsammeln — und wo die Räder wirklich stehen
+### 6.3 Einsammeln frei abgestellter Räder
 
 Werktäglich enden **{{frei_fahrten_tag:.2f}} Fahrten** frei im Gebiet, von
 **{{frei_raeder_tag:.2f}} verschiedenen Rädern**. Die beiden Zahlen fallen auseinander,
@@ -1840,7 +1840,7 @@ entsprechend: nach Abstellort **{{hotspots_abstellort}}**, nach Startstation wä
 ({{frei_ohne_koordinate:.0f}} fehlend) — eine Ortsfrage über eine Herkunftsspalte zu
 beantworten ergibt eine plausible Tabelle und einen falsch fahrenden Transporter.
 
-### 6.4 Was diese Auswertung ist — und was nicht
+### 6.4 Reichweite und Grenzen der Auswertung
 
 Sie zeigt, **wo sich frei abgestellte Räder in der Vergangenheit gehäuft haben** und in
 welchen Zeitfenstern. Sie sagt nicht, wo heute Abend welche stehen — dafür bräuchte es
@@ -1860,7 +1860,7 @@ In einer gemeinsamen Tabelle stünde bei jeder Station „auffüllen", weil ein 
 Räder das Stationsnetz verlässt. Die Zeile „abholen bei: frei abgestellt" wäre als
 Anweisung wertlos.
 
-### 6.5 Was übergeben wird — und in welcher Form
+### 6.5 Übergabe und Überwachung
 
 **Produkt A ist {{status_a}}, Produkt B ist {{status_b}}.** Beide Urteile stammen aus
 derselben Zelle in Phase 5, gemessen an den Kriterien aus Phase 1. Die Regeln werden als
@@ -1910,7 +1910,7 @@ ein **Prüfbedarf**, keine abschließende Rechtsbewertung.
 # =====================================================================
 MD("""---
 
-# Der Kreislauf schließt sich
+# Zusammenfassung
 
 | Phase | Ergebnis |
 |---|---|

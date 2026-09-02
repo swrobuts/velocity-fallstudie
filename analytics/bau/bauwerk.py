@@ -339,6 +339,87 @@ def hat_luecken(zellen):
 
 # ---------------------------------------------------------------- Bauen
 
+# ---------------------------------------------------------------- Darstellung
+
+# WARUM HTML STATT MARKDOWN-TABELLEN
+#
+# Colab zentriert Markdown-Tabellen und laesst sie so schmal wie ihr
+# Inhalt. Zwischen linksbuendigem Fliesstext und mittig schwebenden
+# Tabellen wirkt die Seite zerrissen. Eine HTML-Tabelle mit
+# align="left" und Inline-Stilen sitzt in Colab und in Jupyter an der
+# Textkante.
+#
+# GitHub entfernt style-Attribute beim Rendern. Das ist eingeplant: Ohne
+# sie bleibt eine gewoehnliche Tabelle stehen - schlichter, aber
+# vollstaendig lesbar. Deshalb steckt die Bedeutung in der Struktur
+# (thead, th, td) und nur das Aussehen im Stil.
+_TAB_RAHMEN = ("border-collapse:collapse;margin:14px 0 18px 0;"
+               "font-size:0.95em;line-height:1.45")
+_TAB_KOPF = ("text-align:left;padding:7px 14px 7px 0;border-bottom:2px solid #003E6E;"
+             "color:#003E6E;font-weight:600;vertical-align:bottom")
+_TAB_ZELLE = ("text-align:left;padding:6px 14px 6px 0;"
+              "border-bottom:1px solid #E3DED1;vertical-align:top")
+
+
+def _inline(text):
+    """Markdown-Auszeichnung im Zellinhalt: fett, kursiv, Code."""
+    text = re.sub(r"`([^`]+)`",
+                  r'<code style="background:#F7F5EF;padding:1px 4px;'
+                  r'border-radius:3px">\1</code>', text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<![*\w])\*([^*]+)\*(?![*\w])", r"<em>\1</em>", text)
+    return text
+
+
+def _zellen_einer_zeile(zeile):
+    roh = zeile.strip()
+    if roh.startswith("|"):
+        roh = roh[1:]
+    if roh.endswith("|"):
+        roh = roh[:-1]
+    return [s.strip() for s in roh.split("|")]
+
+
+def _ist_trennzeile(zeile):
+    return bool(re.fullmatch(r"\|?[\s:|-]+\|?", zeile.strip())) and "-" in zeile
+
+
+def tabellen_als_html(quelle):
+    """Wandelt Markdown-Pipetabellen in linksbuendige HTML-Tabellen."""
+    zeilen = quelle.split("\n")
+    raus, i = [], 0
+    while i < len(zeilen):
+        # Eine Tabelle beginnt mit einer Kopfzeile und einer Trennzeile.
+        if (zeilen[i].strip().startswith("|") and i + 1 < len(zeilen)
+                and _ist_trennzeile(zeilen[i + 1])):
+            kopf = _zellen_einer_zeile(zeilen[i])
+            i += 2
+            koerper = []
+            while i < len(zeilen) and zeilen[i].strip().startswith("|"):
+                koerper.append(_zellen_einer_zeile(zeilen[i]))
+                i += 1
+            html = [f'<table align="left" style="{_TAB_RAHMEN}">']
+            # Eine Tabelle ganz ohne Kopftexte braucht auch keinen Kopf.
+            if any(z for z in kopf):
+                html.append("<thead><tr>" + "".join(
+                    f'<th style="{_TAB_KOPF}">{_inline(z)}</th>' for z in kopf)
+                    + "</tr></thead>")
+            html.append("<tbody>")
+            for zeile in koerper:
+                html.append("<tr>" + "".join(
+                    f'<td style="{_TAB_ZELLE}">{_inline(z)}</td>' for z in zeile)
+                    + "</tr>")
+            html.append("</tbody></table>")
+            # Der Umbruch loest den Float wieder auf, sonst laeuft der
+            # naechste Absatz neben die Tabelle.
+            html.append('<div style="clear:both"></div>')
+            raus.append("\n".join(html))
+            continue
+        raus.append(zeilen[i])
+        i += 1
+    return "\n".join(raus)
+
+
 def _notebook(zellen, wandler):
     nb = new_notebook()
     nb.metadata.update({
@@ -405,8 +486,14 @@ def bauen(name, zellen, ausfuehren=True):
     with open(os.path.join(WERTE, f"{name}.json"), "w", encoding="utf-8") as f:
         json.dump(werte, f, ensure_ascii=False, indent=1, default=str)
 
+    for zelle in vor.cells:
+        if zelle.cell_type == "markdown":
+            zelle.source = tabellen_als_html(zelle.source)
     nbformat.write(vor, os.path.join(ZIEL, f"{name}.ipynb"))
     ueb = _notebook(zellen, _uebung)
+    for zelle in ueb.cells:
+        if zelle.cell_type == "markdown":
+            zelle.source = tabellen_als_html(zelle.source)
     nbformat.write(ueb, os.path.join(ZIEL_UEBUNG, f"{name}.ipynb"))
 
     n_luecken = sum(len([t for t in _teile(quelltext) if t[0] == "luecke"])

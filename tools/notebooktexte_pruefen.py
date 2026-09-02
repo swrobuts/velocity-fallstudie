@@ -249,11 +249,22 @@ def pruefe(datei: pathlib.Path) -> list[tuple[str, str]]:
     nb = json.loads(datei.read_text(encoding="utf-8"))
     zellen = nb["cells"]
     gesetzt = gesetzte_werte(zellen) | eingesetzte_werte(datei.stem)
-    texte = [("".join(c["source"]), umgebung(zellen, i))
-             for i, c in enumerate(zellen) if c["cell_type"] == "markdown"]
+    # HTML-Auszeichnung ist keine Prosa. Seit die Tabellen als HTML
+    # gerendert werden, stehen in den Zellen Stilangaben wie "14px" oder
+    # "0.95em" - fuer diese Pruefung Zahlen ohne Ausgabe, fuer den Leser
+    # unsichtbar. Geprueft wird deshalb der Text OHNE Tags; der Inhalt
+    # der Tabellenzellen bleibt dabei vollstaendig erhalten.
+    def ohne_tags(quelle: str) -> str:
+        # Kommentare bleiben: Die Ausnahmen stehen selbst als HTML-Kommentar
+        # im Text und wuerden sonst mit den Tags verschwinden.
+        return re.sub(r"<(?!!--)[^>]+>", " ", quelle)
+
+    roh = [("".join(c["source"]), umgebung(zellen, i))
+           for i, c in enumerate(zellen) if c["cell_type"] == "markdown"]
+    texte = [(ohne_tags(text), raum) for text, raum in roh]
     # Ausdruecklich begruendete Ausnahmen: <!-- zahl-ohne-ausgabe: 0,99 Grund -->
     erlaubt = {}
-    for text, _ in texte:
+    for text, _ in roh:
         for zahl, grund in AUSNAHME.findall(text):
             erlaubt[zahl] = grund
     befunde = []
