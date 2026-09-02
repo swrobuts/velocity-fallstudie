@@ -112,7 +112,7 @@ Eine Regel ist für die Disposition **nur dann brauchbar**, wenn alle drei zutre
 
 | | Kriterium | Schwelle | Warum |
 |---|---|---|---|
-| 1 | **Support** | mindestens 1 % aller Fahrten | Für eine Regel, die zwanzig Fahrten im Jahr betrifft, fährt kein Transporter |
+| 1 | **Support** | mindestens 1 % der **Warenkörbe** | Für eine Regel, die zwanzig Fahrten im Jahr betrifft, fährt kein Transporter |
 | 2 | **kontextbedingter Lift** | mindestens 1,3 | Darunter ist es Zufall oder schlicht Größe |
 | 3 | **Ziel ist eine konkrete Station** | Start ≠ Ziel, und das Ziel ist keine freie Abstellung | eine Rundtour verschiebt kein Rad; „frei abgestellt“ ist kein Ort, den man anfahren kann |
 
@@ -270,6 +270,15 @@ k["tagesart"] = np.where(k.ist_frei, "frei", "Werktag")
 # bleiben drin - sie sind ein Ziel wie jedes andere.
 koerbe = k[k.start != k.ziel].copy()
 print(f"Warenkörbe für die Regelsuche: {len(koerbe):,d}".replace(",", "."))
+# DER NENNER DES SUPPORTS HAT EINEN NAMEN, UND ER IST NICHT "alle Fahrten".
+# Gezaehlt wird gegen die Warenkoerbe - abgeschlossene Fahrten OHNE Rundtouren.
+# Der Unterschied ist kein Rundungsfehler.
+merke("koerbe_n", len(koerbe)); merke("fahrten_n", len(k))
+merke("koerbe_anteil", len(koerbe) / len(k))
+print(f"   Das sind {len(koerbe) / len(k):.1%} der {len(k):,d} abgeschlossenen "
+      f"Fahrten.".replace(",", "."))
+print("   Der Support misst gegen DIESE Menge, nicht gegen alle Fahrten -")
+print("   die Rundtouren sind vorher ausgeschieden.")
 print("\\nVerteilung über die Zeitfenster:")
 print(pd.crosstab(koerbe.fenster, koerbe.tagesart, margins=True).to_string())
 '''),
@@ -419,7 +428,7 @@ brauchbar = regeln[(regeln.Support >= K1_SUPPORT) & (regeln[LIFT] >= K2_LIFT)
                    & regeln["ziel_ist_station"]]
 plt.scatter(brauchbar.Support * 100, brauchbar[LIFT], s=brauchbar.Konfidenz * 220,
             alpha=.9, color="#e00034", edgecolor="none", label="erfüllt alle drei")
-plt.xlabel("Support (% aller Fahrten)"); plt.ylabel("kontextbedingter Lift")
+plt.xlabel("Support (% der Warenkörbe)"); plt.ylabel("kontextbedingter Lift")
 plt.title("Jede Blase ist eine Regel — die Größe zeigt die Konfidenz")
 plt.legend(); plt.grid(alpha=.3)
 plt.tight_layout(); plt.show()
@@ -456,8 +465,52 @@ print(f"Groesster korrigierter p-Wert unter diesen zehn: {top10.p_korrigiert.max
 print()
 print("Was dieser Test NICHT zeigt: Er behandelt jede Fahrt als unabhaengige")
 print("Beobachtung. Dieselben Personen fahren aber wiederholt, und Fahrten")
-print("desselben Tages haengen zusammen. Ein Bootstrap ueber Tage oder")
-print("Kundennummern waere ehrlicher - und faellt vermutlich schwaecher aus.")
+print("desselben Tages haengen zusammen.")
+
+# ─── BLOCKBOOTSTRAP UEBER TAGE ──────────────────────────────────────
+# "Waere ehrlicher und faellt vermutlich schwaecher aus" - das ist eine
+# Vermutung, und Vermutungen gehoeren gerechnet. Gezogen werden ganze TAGE
+# mit Zuruecklegen: Ein Tag geht komplett hinein oder gar nicht. Damit
+# bleibt erhalten, was der Fisher-Test wegdefiniert - dass Fahrten desselben
+# Tages zusammenhaengen.
+BOOTSTRAP_ZIEHUNGEN = 300
+_rng = np.random.default_rng(42)
+_tage = koerbe.startzeit.dt.normalize()
+_nach_tag = {t: g for t, g in koerbe.groupby(_tage)}
+_alle_tage = list(_nach_tag)
+
+_top = regeln.nlargest(1, LIFT).iloc[0]
+_lifts = []
+for _ in range(BOOTSTRAP_ZIEHUNGEN):
+    _wahl = _rng.choice(len(_alle_tage), size=len(_alle_tage), replace=True)
+    _stich = pd.concat([_nach_tag[_alle_tage[i]] for i in _wahl])
+    _raum = _stich[(_stich.tagesart == _top.Kontext.split(" · ")[0])
+                   & (_stich.fenster == _top.Kontext.split(" · ")[1])]
+    if not len(_raum):
+        continue
+    _ab = _raum[_raum.start == _top["wenn Start"]]
+    _basis = (_raum.ziel == _top["dann Ziel"]).mean()
+    if not len(_ab) or _basis <= 0:
+        continue
+    _lifts.append((_ab.ziel == _top["dann Ziel"]).mean() / _basis)
+
+_u, _o = np.percentile(_lifts, [2.5, 97.5])
+merke("block_lift_unten", _u); merke("block_lift_oben", _o)
+merke("block_ziehungen", BOOTSTRAP_ZIEHUNGEN)
+_tage_text = f"{len(_alle_tage):,d}".replace(",", ".")
+print(f"\\nBLOCKBOOTSTRAP ueber {_tage_text} Tage, {BOOTSTRAP_ZIEHUNGEN} Ziehungen:")
+print(f"   Staerkste Regel: {_top['wenn Start']} -> {_top['dann Ziel']} "
+      f"({_top.Kontext})")
+print(f"   Lift im Datensatz: {_top[LIFT]:.2f}")
+print(f"   95-%-Bereich ueber Tagesziehungen: {_u:.2f} bis {_o:.2f}")
+if _u > 1.0:
+    print("   Auch unter Tagesabhaengigkeit bleibt der Lift ueber 1 - der")
+    print("   Befund traegt die Blockstruktur.")
+else:
+    print("   Unter Tagesabhaengigkeit reicht der Bereich unter 1 - was der")
+    print("   Fisher-Test als sicher auswies, ist es dann nicht.")
+print("   Der Fisher-Test ignoriert diese Struktur; er faellt deshalb")
+print("   zuversichtlicher aus als der Bootstrap.")
 
 # Wie knapp scheitert die STAERKSTE Regel? Und vor allem: was verlangt die
 # Huerde eigentlich, wenn man sie in Fahrten je Werktag uebersetzt?
@@ -524,12 +577,19 @@ MD("""
 Die Punktwolke fällt nach rechts ab, und das ist kein Zufall, sondern fast ein
 Naturgesetz dieser Methode:
 
-> **Je spezieller eine Regel, desto kleiner ihr Support** — das gilt immer. Beim Lift
-> gilt kein solcher Zusammenhang: Er kann steigen, fallen oder gleich bleiben.
+> **Je spezieller eine Regel, desto kleiner ihr Support** — das gilt immer, wenn man einer
+> bestehenden Regel eine weitere Bedingung *hinzufügt*. Beim Lift gilt kein solcher
+> Zusammenhang: Er kann steigen, fallen oder gleich bleiben.
 
-Im Bild sieht es trotzdem so aus, als hingen beide zusammen, und das hat einen banalen
-Grund: Ganz links, bei kleinem Support, liegen die Regeln mit wenigen Belegen — und dort
-streut der Lift einfach stärker. **Was wie ein Zusammenhang aussieht, ist der Rand einer
+**Dieser Satz erklärt das Bild hier allerdings nicht**, und der Unterschied ist lehrreich.
+Alle Regeln in der Wolke sind **gleich spezifisch**: Tagesart, Zeitfenster und Startstation
+sagen jeweils genau ein Ziel voraus. Keine ist eine Erweiterung einer anderen. Ihre
+verschiedenen Supportwerte kommen nicht aus verschiedener Komplexität, sondern schlicht
+daraus, dass manche Start-Ziel-Paare häufiger sind als andere.
+
+Was das Bild dann zeigt, ist etwas Einfacheres: Ganz links, bei kleinem Support, stehen
+die Regeln mit wenigen Belegen — und dort streut der Lift stärker, weil er aus kleinen
+Zählwerten gebildet wird. **Was wie ein Zusammenhang aussieht, ist der Rand einer
 Verteilung.**
 
 Ganz links oben stehen die spektakulären Regeln — hoher Lift, aber ein Support von
@@ -687,13 +747,48 @@ zusammen = gewaehlt_ent[schluessel + [LIFT, "Support"]].merge(
     r_best[schluessel + [LIFT, "Support"]], on=schluessel,
     how="left", suffixes=(" entdeckt", " bestätigt"))
 
-print(f"Im Entdeckungszeitraum ausgewaehlt (Support ≥ 0,5 %, Lift ≥ 1,3): "
-      f"{len(gewaehlt_ent)} Regeln")
-haelt_13 = int((zusammen[f"{LIFT} bestätigt"] >= 1.3).sum())
+print(f"Im Entdeckungszeitraum ausgewaehlt (Support >= {MINDEST_SUPPORT:.1%}, "
+      f"Lift >= {K2_LIFT}): {len(gewaehlt_ent)} Regeln")
+haelt_13 = int((zusammen[f"{LIFT} bestätigt"] >= K2_LIFT).sum())
 haelt_1 = int((zusammen[f"{LIFT} bestätigt"] > 1.0).sum())
-print(f"   davon spaeter weiterhin Lift ≥ 1,3:  {haelt_13} von {len(zusammen)}")
+print(f"   davon spaeter weiterhin Lift >= {K2_LIFT}:  {haelt_13} von {len(zusammen)}")
 print(f"   davon spaeter weiterhin Lift > 1:    {haelt_1} von {len(zusammen)}\\n")
 print(zusammen.round(3).to_string(index=False))
+
+# ─── MEHRERE BESTAETIGUNGSFENSTER STATT EINES EINZIGEN ──────────────
+# Ein einziger Schnitt legt das Bestaetigungsfenster auf eine bestimmte
+# Jahreszeit. Faellt es guenstig, sieht jede Regel stabil aus; faellt es
+# unguenstig, keine. Vier gleich lange Fenster, jedes gegen dieselben im
+# ersten Drittel entdeckten Regeln - so laesst sich Saison von Stabilitaet
+# trennen.
+print("\\nDIESELBEN REGELN IN VIER FOLGEFENSTERN:")
+_rest = koerbe[koerbe.startzeit > GRENZE]
+_grenzen = pd.date_range(_rest.startzeit.min(), _rest.startzeit.max(), periods=5)
+print(f"   {'Fenster':>26s}{'Fahrten':>9s}{'Lift >= ' + str(K2_LIFT):>12s}"
+      f"{'Lift > 1':>10s}")
+_haelt_je_fenster = []
+for _i in range(4):
+    _teil = _rest[(_rest.startzeit >= _grenzen[_i])
+                  & (_rest.startzeit < _grenzen[_i + 1])]
+    _rb = regeln_finden(_teil, ["tagesart", "fenster"], mindest_support=0.0)
+    _z = gewaehlt_ent[schluessel].merge(_rb[schluessel + [LIFT]], on=schluessel,
+                                        how="left")
+    _h13 = int((_z[LIFT] >= K2_LIFT).sum()); _h1 = int((_z[LIFT] > 1.0).sum())
+    _haelt_je_fenster.append(_h13)
+    _bez = f"{_grenzen[_i].date()} bis {_grenzen[_i + 1].date()}"
+    print(f"   {_bez:>26s}{len(_teil):>9,d}{_h13:>9d}/{len(_z)}"
+          f"{_h1:>8d}/{len(_z)}".replace(",", "."))
+merke("fenster_min", min(_haelt_je_fenster)); merke("fenster_max", max(_haelt_je_fenster))
+merke("fenster_regeln", len(gewaehlt_ent))
+print()
+if min(_haelt_je_fenster) == max(_haelt_je_fenster):
+    print(f"   In jedem Fenster halten {min(_haelt_je_fenster)} von "
+          f"{len(gewaehlt_ent)} Regeln die Lift-Huerde.")
+else:
+    print(f"   Zwischen {min(_haelt_je_fenster)} und {max(_haelt_je_fenster)} von "
+          f"{len(gewaehlt_ent)} Regeln halten die Huerde - je nach Fenster.")
+    print("   Ein einzelner Schnitt haette einen dieser Werte geliefert und")
+    print("   ihn wie ein Ergebnis aussehen lassen.")
 '''),
 
 MD("""
