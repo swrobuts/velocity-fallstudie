@@ -12,6 +12,30 @@ kopf("Zeitreihe: Wie viele Fahrten kommen morgen?",
      NAME),
 
 MD("""
+> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+>
+> **Die Frage.** Die Disposition plant abends für den nächsten Tag. Wie viele Fahrten
+> werden es?
+>
+> **Was hier gerechnet wird.** Aus Kalender und **Wettervorhersage** eine Tageszahl.
+> Das Wort *Vorhersage* ist der Kern: Verglichen wird unter dem Wetter, das um 18 Uhr
+> bekannt ist — nicht unter dem, das hinterher wirklich war.
+>
+> **Was herauskam.** Gewählt wurde **{{gewaehlt_name}}** mit einem mittleren Fehler von
+> {{mae_linear:.1f}} Fahrten, gegen {{mae_faustregel:.1f}} bei der Faustregel und
+> {{mae_null:.1f}} beim Nullmodell. Unter *Ist*-Wetter liegen beide praktisch
+> gleichauf ({{ist_boosting:.2f}} gegen {{ist_linear:.2f}}) — unter *Prognose*wetter
+> zieht das einfachere Verfahren davon ({{mae_linear:.2f}} gegen
+> {{mae_boosting:.2f}}). Die Modellwahl hängt daran, womit man vergleicht.
+>
+> **Status: {{nb04_status}}** — {{nb04_statussatz}}
+>
+> **Der Haken.** Prognostiziert werden *Fahrten insgesamt*. Gebraucht werden *Räder je
+> Station*. Diese Übersetzung ist keine Formel, sondern eine eigene Analyse — und sie
+> fehlt noch.
+"""),
+
+MD("""
 ## Was diese Aufgabe von den ersten drei unterscheidet
 
 Auch Notebook 1 trennt bereits **zeitlich** — ein zufälliger Schnitt wäre dort ebenso
@@ -743,12 +767,12 @@ merke("k1_pfadanteil", _anteil_k1); merke("k2_pfadanteil", _anteil_k2)
 # Modellpaket, Konsole und Schlusszelle lesen aus dieser einen Variable.
 STATUS = ("schattenpilot" if (K1_ROBUST and K2_ROBUST) else "ruecksprung")
 STATUS_SATZ = {
-    "schattenpilot": "Schattenpilot freigegeben - die Prognose laeuft im "
+    "schattenpilot": "Schattenpilot freigegeben \u2014 die Prognose l\u00e4uft im "
                      "internen Planungswerkzeug mit und wird protokolliert; "
                      "niemand handelt nach ihr. Keine operative "
                      "Dispositionsfreigabe.",
-    "ruecksprung": "Ruecksprung - die vorab festgelegten Kriterien halten "
-                   "ueber die Wetterpfade nicht.",
+    "ruecksprung": "R\u00fccksprung \u2014 die vorab festgelegten Kriterien "
+                   "halten \u00fcber die Wetterpfade nicht.",
 }[STATUS]
 urteil = STATUS.upper()
 merke("nb04_urteil", urteil)

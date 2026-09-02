@@ -27,6 +27,31 @@ kopf("Regression: Was kostet die Fahrt zu diesem Ziel?",
      NAME),
 
 MD("""
+> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+>
+> **Die Frage.** Der Kunde steht am Rad, tippt ein Ziel ein und will vorher wissen,
+> was die Fahrt kostet. Der Preis hängt an der Dauer — und die kennt vorher niemand.
+>
+> **Was hier gerechnet wird.** Statt *einer* Zahl schätzen wir eine **Spanne**
+> („zwischen 8 und 14 Minuten"), und daraus wird über das Tarifblatt ein Preisbereich.
+> Drei Verfahren treten dafür an; welches ausgeliefert wird, entscheidet eine Regel,
+> die vor der Messung feststeht.
+>
+> **Was herauskam.** Ausgeliefert wird die **{{kandidat}}** —
+> {{kandidatenfazit}}, also hat nicht die Güte entschieden, sondern der Betrieb.
+> Die Zusage von {{gate_schwelle:.0%}} hält auf dem versiegelten Abnahmezeitraum mit
+> **{{ab_unten:.1%}}** ({{ab_gates_halten:.0f}} von {{ab_gates_gesamt:.0f}} Hürden).
+> Die App antwortet auf **{{reichweite_real:.0%}}** der Anfragen und schweigt sonst.
+>
+> **Status: {{produktstatus}}** — {{statussatz}}, gültig für Fahrten bis zum
+> {{gueltig_bis_lang}}.
+>
+> **Der Haken.** In {{zielabweichung:.0%}} der Fahrten endet jemand woanders, als er
+> angegeben hat. Deshalb trägt die Zusage eine Bedingung — und die steht in jeder
+> Antwort der App, nicht nur in diesem Notebook.
+"""),
+
+MD("""
 ## Der Einwand, mit dem dieses Notebook anfängt
 
 Die naheliegende Idee lautet: Beim Entsperren schätzt ein Modell die Fahrtdauer, das
@@ -3512,6 +3537,9 @@ MODELLPAKET["kalenderhorizont"] = str(_KALENDERHORIZONT.date())
 assert MODELLPAKET["operativ_gueltig_bis"] == str(GUELTIG_BIS.date()), (
     "Paket und Schnittstelle nennen verschiedene Gueltigkeitsenden.")
 merke("gueltig_bis", MODELLPAKET["operativ_gueltig_bis"])
+# Dasselbe Datum, wie man es liest. Im Fliesstext ist "2026-11-07" ein
+# Maschinenformat; ein Handout fuer Studierende liest sich anders.
+merke("gueltig_bis_lang", f"{GUELTIG_BIS:%d.%m.%Y}")
 merke("gueltigkeit_grund", MODELLPAKET["gueltigkeit_begrenzt_durch"])
 assert MODELLPAKET["operativ_gueltig_bis"] <= MODELLPAKET["kalenderhorizont"], (
     "Das Paket behauptet Gueltigkeit fuer Tage, die sein Kalender nicht kennt.")

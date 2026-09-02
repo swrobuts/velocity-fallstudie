@@ -14,6 +14,28 @@ kopf("Anomalieerkennung: Was ist gestern schiefgelaufen?",
      NAME),
 
 MD("""
+> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+>
+> **Die Frage.** Drei verschiedene, und genau das ist der Kern: Welches Rad ist
+> **jetzt** überfällig? Welche abgeschlossene Fahrt verdient **heute früh** einen
+> Blick? Welche Station stand **gestern** still?
+>
+> **Was hier gerechnet wird.** Für die erste Frage genügt eine Regel — dafür braucht es
+> kein Modell. Für die zweite lernt ein Isolation Forest, was „normal" ist. Beim ersten
+> Versuch fand er die Preisklasse statt der Anomalien; aufgefallen ist das nicht durch
+> eine Kennzahl, sondern dadurch, dass jemand die zehn obersten Zeilen **angesehen** hat.
+>
+> **Was herauskam.** **A1 {{a1_status}}** — als Regel beschrieben und logisch geprüft;
+> Echtzeitquelle und Alarmkanal fehlen. **A2 {{a2_status}}** — es gibt kein Label, also
+> keine belegte Güte. **B {{b_status}}**: {{b_gates_halten}} Gates halten auf dem
+> unangetasteten Testabschnitt — {{b_statussatz}}.
+>
+> **Der Haken.** Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich
+> erzeugbare **Tagesliste** {{tagesquote:.1%}} — bei demselben Modell. Eine Kennzahl auf
+> der Gesamtliste sagt nichts über die Liste, die im Betrieb entsteht.
+"""),
+
+MD("""
 > **Lehrdatensatz.** Fahrten, Langzeitvorgänge und Stationsstörungen in dieser Fallstudie
 > sind **synthetisch erzeugt** und didaktisch verstärkt: Die langen Fahrten und die
 > Störungstage wurden absichtlich als Anker eingebaut, damit sich überhaupt etwas messen
@@ -1478,10 +1500,11 @@ print("   voller Fehlalarme nach zwei Wochen niemand mehr oeffnet.")
 #                  belegt; sie darf laufen, aber nicht als Zusage
 B_STATUS = "pilot" if B_GATES_HALTEN else "explorativ"
 B_STATUSSATZ = {
-    "pilot": "Pilotfreigabe - alle vier Gates halten auf einem Abschnitt, "
-             "der an der Regelentwicklung nicht beteiligt war",
-    "explorativ": "explorativ entwickelte Regel; prospektiver Schattenpilot "
-                  "noetig - der Testabschnitt traegt die Freigabe nicht",
+    "pilot": "Pilotfreigabe \u2014 alle vier Gates halten auf einem "
+             "Abschnitt, der an der Regelentwicklung nicht beteiligt war",
+    "explorativ": "explorativ entwickelte Regel; ein prospektiver "
+                  "Schattenpilot ist n\u00f6tig \u2014 der Testabschnitt "
+                  "tr\u00e4gt die Freigabe nicht",
 }[B_STATUS]
 merke("b_status", B_STATUS)
 merke("b_statussatz", B_STATUSSATZ)

@@ -17,7 +17,7 @@
  "k2_pfadanteil": 1.0,
  "nb04_urteil": "SCHATTENPILOT",
  "nb04_status": "schattenpilot",
- "nb04_statussatz": "Schattenpilot freigegeben - die Prognose laeuft im internen Planungswerkzeug mit und wird protokolliert; niemand handelt nach ihr. Keine operative Dispositionsfreigabe.",
+ "nb04_statussatz": "Schattenpilot freigegeben — die Prognose läuft im internen Planungswerkzeug mit und wird protokolliert; niemand handelt nach ihr. Keine operative Dispositionsfreigabe.",
  "pfade": 300,
  "pfade_k1": 290,
  "pfade_k1_fehl": 10

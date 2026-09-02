@@ -135,3 +135,18 @@ if __name__ == "__main__":
 
     if gebaut:
         pruefen(gebaut)
+        # DAS HANDOUT ZIEHT SEINE ZAHLEN AUS DENSELBEN MERKZETTELN.
+        # Nur nach einem vollstaendigen Lauf: Wer ein einzelnes Notebook
+        # neu baut, bekaeme sonst ein Handout aus zwei Datenstaenden -
+        # genau der Fehler, den dieses Projekt schon einmal teuer bezahlt
+        # hat.
+        if len(gebaut) == len(MODULE):
+            import handout
+            ziel, zeichen = handout.bauen()
+            wurzel = os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.abspath(__file__))))
+            print(f"\nHandout: {os.path.relpath(ziel, wurzel)} "
+                  f"({zeichen:,} Zeichen)".replace(",", "."))
+        else:
+            print("\nHandout uebersprungen - es braucht alle sechs Notebooks "
+                  "aus demselben Lauf.")

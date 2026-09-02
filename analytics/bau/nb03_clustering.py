@@ -12,6 +12,31 @@ kopf("Clustering: Welche Gruppen stecken in den Daten?",
      NAME),
 
 MD("""
+> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+>
+> **Die Frage.** Niemand hat je aufgeschrieben, welche Station ein Pendlerbahnhof ist
+> und welche Kundin eine Gelegenheitsfahrerin. Steckt das im Verhalten?
+>
+> **Was hier gerechnet wird.** Gruppieren ohne vorgegebene Antwort: Stationen nach
+> ihrem Tagesgang, Kundschaft nach Zuletzt/Wie-oft/Wie-viel. Es gibt kein „richtig",
+> also muss man prüfen, ob die Gruppen überhaupt etwas taugen — und das heißt hier:
+> benennbar, unterschiedlich behandelbar, groß genug, startwertstabil, zeitlich stabil.
+>
+> **Was herauskam.** Bei den **Stationen** finden sich benennbare Typen; gegen die
+> verdeckte Wahrheit geprüft sind {{generator_treffer:.0%}} richtig zugeordnet
+> (ARI {{generator_ari:.3f}}). Ausgeliefert werden **Profile als Hypothesen**, kein
+> Sollbestand. Bei der **Kundschaft** halten {{gates_erfuellt:.0f}} von
+> {{gates_gesamt:.0f}} Hürden: analytisch **{{status_analytisch}}**, für den Einsatz
+> **{{status_einsatz}}** — es entsteht nur ein aggregierter Bericht ohne Namen.
+>
+> **Die zwei Befunde, die wehtun.** Die {{viel_segment}} bringen den geringsten Umsatz
+> je Fahrt ({{viel_je_fahrt:.2f}} € gegen {{stark_je_fahrt:.2f}} €) — kein Messfehler,
+> sondern ein Preisproblem. Und {{kurze_historie_anteil:.0%}} der Kundschaft taucht gar
+> nicht auf, weil sie im letzten Jahr nicht gefahren ist: Wer aufhört, verschwindet aus
+> der Tabelle und aus dem Blick.
+"""),
+
+MD("""
 > **Lehrdatensatz.** Fahrten, Stationen und Kundschaft dieser Fallstudie sind
 > **synthetisch erzeugt**. Für die Stationen gilt das besonders: Sie wurden mit genau vier
 > Typen angelegt, die im Generator absichtlich verstärkt wurden. Wenn das Clustering unten

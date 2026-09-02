@@ -12,6 +12,32 @@ kopf("Assoziationsanalyse: Welche Wege gehören zusammen?",
      NAME),
 
 MD("""
+> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+>
+> **Die Frage.** Gibt es Strecken, die im selben Zeitfenster häufiger vorkommen, als
+> bei zufälliger Zielwahl zu erwarten wäre? Und halten diese Muster über die Zeit?
+>
+> **Was hier gerechnet wird.** Gezählt wird, nicht trainiert: Support, Konfidenz, Lift
+> — drei Divisionen. Die Regeln werden in den ersten zwei Dritteln der Zeit gesucht und
+> im letzten Drittel geprüft, das bis dahin niemand geöffnet hat.
+>
+> **Was herauskam.** **Produkt A (automatische Umverteilung): {{status_a}}** — nicht
+> weil die Regeln schlecht wären, sondern weil die Wirtschaftlichkeit
+> **{{a4_zustand_text}}** ist: Die Fahrten, die mangels Rad nie stattfanden, stehen
+> nirgends in diesen Daten. **Produkt B (Dispositionshinweis):
+> {{b_regeln_n:.0f}} Regeln** von {{b1_kandidaten:.0f}} Kandidaten — jede einzeln im
+> unangetasteten Zeitraum bestätigt, verlangt war die untere Grenze eines
+> Tagesblock-Bootstraps über {{k2_lift}}, nicht bloß ein Punktschätzer.
+>
+> **Status: {{status_b}}**
+>
+> **Der Haken.** Die Hürde aus Phase 1 klingt nach einer Zahl, ist aber keine:
+> {{k1_support:.0%}} aller Warenkörbe sind {{huerde_je_werktag:.2f}} Fahrten je
+> Werktag — eine Größenordnung, in der kein Transporter losfährt. Das Kriterium war auf
+> der falschen Skala formuliert. Verschoben wird es trotzdem nicht.
+"""),
+
+MD("""
 ## Das dritte Gesicht des maschinellen Lernens
 
 | Notebook | Ergebnis des Verfahrens |
@@ -1770,6 +1796,12 @@ assert not len(b_regeln) or (b_regeln[f"{LIFT} bestätigt"] >= K2_LIFT).all(), (
 A4_ZUSTAND = "nicht_pruefbar"
 A4_TRAEGT = False        # nicht freigegeben - aber siehe A4_ZUSTAND
 merke("a4_zustand", A4_ZUSTAND)
+# Derselbe Zustand, einmal als Kuerzel fuer den Code und einmal so, wie
+# man ihn vorliest. Im Fliesstext stand bisher das Kuerzel.
+merke("a4_zustand_text", {"nicht_pruefbar": "mit diesen Daten nicht pr\u00fcfbar",
+                          "traegt": "wirtschaftlich tragf\u00e4hig",
+                          "traegt_nicht": "wirtschaftlich nicht tragf\u00e4hig",
+                          }.get(A4_ZUSTAND, A4_ZUSTAND))
 # ─── DER STATUS, EINMAL - UND ALLES LIEST DARAUS ────────────────────
 #
 # Zwei Produkte aus Phase 1, zwei Urteile. B1 bis B4 sind oben AM
@@ -2008,7 +2040,7 @@ Regeln werden also als **Dispositionshinweis** übergeben, nicht als Transportau
 |---|---|
 | **Was erzeugt wird** | `dispositionshinweise.csv` mit den **{{b_regeln_n:.0f}} einzeln bestätigten Regeln**, jede mit ihrer Größenordnung daneben (höchstens {{b_je_tag_max:.2f}} Fahrten je Tag). Dazu die Stationssalden und die Abstell-Hotspots — beide ausdrücklich explorativ. |
 | **Was damit NICHT gezeigt ist** | dass die Datei in einer Dispositionsansicht ankommt. Dieses Notebook prüft den **Export**: Spalten, Nenner, Kopfzeilen. Ladeweg, Schema, Anzeige der Größenordnung und Fehlerverhalten der Oberfläche sind ein Integrationstest, den es hier nicht gibt. Die ehrliche Formulierung lautet **„für die Übergabe erzeugt"**, nicht „läuft". |
-| **Was nicht läuft** | Kein automatischer Umsetzauftrag. A4 ist **{{a4_zustand}}** — nicht widerlegt: Die Szenariorechnung zeigt eine Größenordnung von höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt gegen {{kosten_transport:.0f}} € je Runde. Sie ist **keine Obergrenze** — die Fahrten, die mangels Rad nie stattfanden, stehen nirgends in diesen Daten. |
+| **Was nicht läuft** | Kein automatischer Umsetzauftrag. A4 ist **{{a4_zustand_text}}** — nicht widerlegt: Die Szenariorechnung zeigt eine Größenordnung von höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt gegen {{kosten_transport:.0f}} € je Runde. Sie ist **keine Obergrenze** — die Fahrten, die mangels Rad nie stattfanden, stehen nirgends in diesen Daten. |
 | **Wofür die Evidenz gilt** | Bestätigungszeitraum {{b_zeitraum_von}} bis {{b_zeitraum_bis}}. Das ist **kein Gültigkeitsdatum** — und die Datei nennt auch keines. Sie trägt `gebaut_am` und den Evidenzzeitraum, mehr nicht: Ein Gültigkeitsdatum wäre eine Zusage, nach der jemand handeln darf, und die gibt dieses Lehr-Gate nicht her. |
 | **Wer entscheidet** | Die Disposition. Sie sieht den Hinweis und verbindet ihn mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
 
@@ -2075,7 +2107,7 @@ MD("""
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
 | 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen A1 bis A3 — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sie auf der falschen Skala liegt: Sie verlangt {{huerde_je_werktag:.2f}} Fahrten je Werktag — eine Größenordnung, in der keine Transporterfahrt beginnt. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — nur {{personen_selber_tag:.0f}} von {{rueck_fahrten_paar:.0f}} Abendfahrten stammen von jemandem, der morgens hingefahren war |
-| 6 Deployment | {{status_satz}} Erzeugt wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln** (Bootstrap-Untergrenze ≥ {{k2_lift}}), jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Keine Automatik, weil A4 **{{a4_zustand}}** ist: Ohne Leerstandsereignisse und entgangene Nachfrage lässt sich die Wirtschaftlichkeit nicht prüfen. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
+| 6 Deployment | {{status_satz}} Erzeugt wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln** (Bootstrap-Untergrenze ≥ {{k2_lift}}), jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Keine Automatik, weil A4 **{{a4_zustand_text}}** ist: Ohne Leerstandsereignisse und entgangene Nachfrage lässt sich die Wirtschaftlichkeit nicht prüfen. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
 
