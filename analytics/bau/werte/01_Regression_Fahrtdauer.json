@@ -105,5 +105,9 @@
  "ab_gates_halten": 7,
  "abnahme_urteil": "bestanden",
  "reichweite_real": 0.3357548663500047,
- "statusgrund": "freigegeben"
+ "statusgrund": "freigegeben",
+ "gueltig_bis": "2026-08-15",
+ "kalenderhorizont": "2026-08-15",
+ "gueltigkeit_grund": "Kalenderhorizont",
+ "einsatzbereit": "nein"
 }

@@ -2580,6 +2580,22 @@ MODELLPAKET = {
               for t in sorted(preise.typ_code)},
     "tarifversion": TARIFVERSION,
     "datenversion": DATENVERSION,
+    # ─── DIE REFERENZDATEN - OHNE SIE RECHNET NIEMAND ───────────────
+    #
+    # Ein Paket, das nur Modell und Schwellen enthaelt, zwingt den
+    # Betreiber, Stationsnamen, Streckenlaengen und den Kalender
+    # anderswo zu besorgen - und wenn er dabei eine andere Quelle
+    # erwischt, rechnet dasselbe Modell etwas anderes. Alles, was
+    # merkmalszeile() braucht, gehoert deshalb hier hinein.
+    "stationsnamen": {int(i): str(n) for i, n in name_je_id.items()},
+    "routenmerkmale": {f"{s}->{z}": {"strecke_km": float(matrix.strecke_m[(s, z)]) / 1000,
+                                     "steigung_promille": float(
+                                         matrix.steigung_promille.get((s, z), 0.0))}
+                       for (s, z) in matrix.index},
+    "feiertage": sorted(str(pd.Timestamp(d).date()) for d in feiertag.datum),
+    "schulferien": [{"von": str(pd.Timestamp(v).date()),
+                     "bis": str(pd.Timestamp(b).date())}
+                    for v, b in zip(schulfrei.von, schulfrei.bis)],
     # Gesperrte Kombinationen - die App darf sie nicht anzeigen.
     "gesperrte_kombinationen": [list(k) for k in sorted(durchgefallen)],
     "gebaut_am": str(pd.Timestamp.today().date()),
@@ -3117,7 +3133,9 @@ for _r in abnahme.itertuples():
     if _a["anzeige"] is None:
         _zeilen.append({"gezeigt": False, "drin": False, "typ": _r.typ_code,
                         "grund": _a["grund"], "preisabhaengig": False,
-                        "preisabh_ohne_bedingung": False})
+                        "preisabh_ohne_bedingung": False,
+                        "tatsaechliches_ziel": _r.tatsaechliches_ziel,
+                        "geplant": _r.end_station_id})
         continue
     _von, _bis = (float(x) for x in _a["anzeige"].replace(" €", "").split(" bis "))
     _min_von = float(_a["minuten"].split(" bis ")[0])
@@ -3134,6 +3152,8 @@ for _r in abnahme.itertuples():
                                and _r.tatsaechliches_ziel == _r.end_station_id),
         # Ohne die Bedingung - als Diagnose daneben, nie als Urteil.
         "preisabh_ohne_bedingung": bool(_r.freiminuten_rest < _min_von),
+        "tatsaechliches_ziel": _r.tatsaechliches_ziel,
+        "geplant": _r.end_station_id,
     })
 
 A = pd.DataFrame(_zeilen)
@@ -3200,9 +3220,16 @@ ABNAHME_GATES[f"Gate 1  preisabhaengig aggregiert >= {GATE_PREISABHAENGIG:.0%}"]
     "wert": _ab_unten, "schwelle": GATE_PREISABHAENGIG, "n": len(A_offen),
     "haelt": bool(_ab_unten >= GATE_PREISABHAENGIG)}
 
-# Gate 3: alle ANGEZEIGTEN Faelle je Radtyp - dieselbe Rechnung wie in 5.5.
-for _ty in sorted(_ab_zeigt.typ.unique()):
-    _g = _ab_zeigt[_ab_zeigt.typ == _ty]
+# Gate 3 je Radtyp - MIT DERSELBEN BEDINGUNG WIE GATE 1.
+#
+# Hier lag eine Inkonsistenz: Gate 1 mass die zielgetreue Gruppe,
+# Gate 3 alle angezeigten Faelle. Zwei Gates, zwei Grundgesamtheiten,
+# und beide hiessen "die Zusage". Wenn die Zusage bedingt ist, ist sie
+# es auf JEDER Ebene - sonst verspricht das Produkt je Radtyp etwas
+# anderes als insgesamt.
+_ab_bedingt = _ab_zeigt[_ab_zeigt.tatsaechliches_ziel == _ab_zeigt.geplant]
+for _ty in sorted(_ab_bedingt.typ.unique()):
+    _g = _ab_bedingt[_ab_bedingt.typ == _ty]
     _u, _ = wilson(int(_g.drin.sum()), len(_g))
     ABNAHME_GATES[f"Gate 3  {_ty} angezeigt >= {GATE_PREISABHAENGIG:.0%}"] = {
         "wert": _u, "schwelle": GATE_PREISABHAENGIG, "n": len(_g),
@@ -3287,8 +3314,62 @@ MODELLPAKET["abnahme_gates"] = {
     for _b, _w in ABNAHME_GATES.items()}
 # Operative Gueltigkeit beginnt beim BAU, nicht in der Vergangenheit.
 MODELLPAKET["operativ_gueltig_ab"] = MODELLPAKET["gebaut_am"]
-MODELLPAKET["operativ_gueltig_bis"] = str(
-    (pd.Timestamp.today() + pd.Timedelta(days=90)).date())
+# ─── DIE GUELTIGKEIT ENDET, WO DER KALENDER ENDET ───────────────────
+#
+# Das Modell braucht ist_feiertag und ist_ferien. Fuer einen Tag, den
+# der mitgelieferte Kalender nicht kennt, sind beide still null - und
+# eine Vorhersage fuer den ersten Ferientag sieht dann aus wie eine fuer
+# einen normalen Dienstag. Kein Fehler, keine Warnung, nur ein falscher
+# Preis.
+#
+# Frueher standen hier stur 90 Tage ab Bau. Der Kalender reicht aber
+# kuerzer; das Paket haette Gueltigkeit fuer Tage behauptet, die es
+# nicht rechnen kann.
+_KALENDERHORIZONT = min(pd.Timestamp(feiertag.datum.max()),
+                        pd.Timestamp(schulfrei.bis.max()))
+_WUNSCHENDE = pd.Timestamp.today() + pd.Timedelta(days=90)
+MODELLPAKET["operativ_gueltig_bis"] = str(min(_WUNSCHENDE, _KALENDERHORIZONT).date())
+MODELLPAKET["gueltigkeit_begrenzt_durch"] = (
+    "Kalenderhorizont" if _KALENDERHORIZONT < _WUNSCHENDE else "90-Tage-Regel")
+MODELLPAKET["kalenderhorizont"] = str(_KALENDERHORIZONT.date())
+merke("gueltig_bis", MODELLPAKET["operativ_gueltig_bis"])
+merke("kalenderhorizont", MODELLPAKET["kalenderhorizont"])
+merke("gueltigkeit_grund", MODELLPAKET["gueltigkeit_begrenzt_durch"])
+assert MODELLPAKET["operativ_gueltig_bis"] <= MODELLPAKET["kalenderhorizont"], (
+    "Das Paket behauptet Gueltigkeit fuer Tage, die sein Kalender nicht kennt.")
+
+# ─── UND JETZT DIE UNBEQUEME FOLGE ──────────────────────────────────
+#
+# Der Kalender endet VOR dem Bautag. Das Paket ist damit heute schon
+# ausserhalb seiner eigenen Gueltigkeit - nicht, weil das Modell
+# schlecht waere, sondern weil ihm die Feiertage und Ferien der
+# kommenden Monate fehlen. Ohne sie sind ist_feiertag und ist_ferien
+# fuer jeden kuenftigen Tag still null, und die Vorhersage fuer den
+# ersten Ferientag sieht aus wie die fuer einen normalen Dienstag.
+#
+# Das ist eine BETRIEBLICHE Voraussetzung, keine analytische - dieselbe
+# Art von Punkt wie die Rechtsgrundlage in Notebook 3. Sie wird deshalb
+# benannt und nicht weggerechnet.
+EINSATZBEREIT = MODELLPAKET["operativ_gueltig_bis"] >= MODELLPAKET["gebaut_am"]
+MODELLPAKET["einsatzbereit"] = bool(EINSATZBEREIT)
+MODELLPAKET["einsatzvoraussetzung"] = (
+    "" if EINSATZBEREIT else
+    "Kalender (Feiertage und Schulferien) muss bis zum Ende des "
+    "geplanten Einsatzzeitraums nachgeliefert werden")
+merke("einsatzbereit", "ja" if EINSATZBEREIT else "nein")
+if not EINSATZBEREIT:
+    print()
+    print("BETRIEBLICHE VORAUSSETZUNG - noch nicht erfuellt:")
+    print(f"   Der mitgelieferte Kalender endet am {MODELLPAKET['kalenderhorizont']},")
+    print(f"   gebaut wurde das Paket am {MODELLPAKET['gebaut_am']}.")
+    print("   Fuer jeden Tag danach waeren ist_feiertag und ist_ferien still")
+    print("   null - die Vorhersage fuer den ersten Ferientag saehe aus wie")
+    print("   die fuer einen normalen Dienstag. Kein Fehler, keine Warnung,")
+    print("   nur ein falscher Preis.")
+    print()
+    print("   Was fehlt, ist kein Modell, sondern eine Datei: Feiertage und")
+    print("   Schulferien bis zum Ende des Einsatzzeitraums. Beide sind")
+    print("   oeffentlich und Jahre im Voraus bekannt.")
 assert MODELLPAKET["operativ_gueltig_ab"] >= MODELLPAKET["gebaut_am"], (
     "Ein Paket kann nicht vor seiner Erstellung gelten.")
 joblib.dump(MODELLPAKET, "modellpaket_preisspanne.joblib")
@@ -3310,39 +3391,90 @@ print(f"   Kalibrierung (Grundlage)         "
       f"{MODELLPAKET['kalibrierungszeitraum_von']} bis "
       f"{MODELLPAKET['kalibrierungszeitraum_bis']}")
 
-# ─── DER RELOADTEST: LAEUFT DAS PAKET OHNE DIESES NOTEBOOK? ─────────
-#
-# Ein Modellpaket ist erst dann ausgeliefert, wenn es ohne den Kontext
-# funktioniert, in dem es entstanden ist. Geprueft wird deshalb mit
-# einem frisch geladenen Paket und einer Merkmalszeile, die
-# AUSSCHLIESSLICH aus dem Paket gebaut wird - keine Variable aus diesem
-# Notebook darf dabei helfen.
-_geladen = joblib.load("modellpaket_preisspanne.joblib")
-_zv_tab = {tuple(int(x) for x in k.split("->")): v
-           for k, v in _geladen["zielverlaesslichkeit_tabelle"].items()}
 _r0 = abnahme.iloc[0]
-_zeile_paket = merkmalszeile(int(_r0.start_station_id), int(_r0.end_station_id),
-                             _r0.typ_code, _r0.startzeit).copy()
-# Das Merkmal NEU setzen - aus dem Paket, nicht aus ZV_TABELLE.
-_zeile_paket["zielverlaesslichkeit"] = _zv_tab.get(
-    (int(_r0.start_station_id), int(_r0.end_station_id)),
-    _geladen["zielverlaesslichkeit_global"])
-_v_paket = float(np.maximum(1.0, _geladen["modell_unten"].predict(
-    _zeile_paket[_geladen["merkmale"]]))[0])
-_b_paket = float(_geladen["modell_oben"].predict(
-    _zeile_paket[_geladen["merkmale"]])[0])
-_v_hier = float(np.maximum(1.0, Q_UNTEN.predict(_zeile_paket[MERKMALE]))[0])
+# ─── DER RELOADTEST - IN EINEM EIGENEN PROZESS ──────────────────────
+#
+# Der vorige Test lief IM Notebook und benutzte merkmalszeile() - also
+# genau die Funktion, die im Betrieb fehlt. Er konnte deshalb gar nicht
+# auffallen lassen, dass dem Paket Stationsnamen, Streckenlaengen oder
+# der Kalender fehlen: Er holte sie sich still aus dem Notebook.
+#
+# Jetzt startet ein NEUER Python-Prozess. Er kennt keine Variable dieses
+# Notebooks, bekommt nur den Dateinamen des Pakets und eine Anfrage als
+# JSON - und muss daraus eine Spanne rechnen. Was ihm fehlt, faellt auf.
+import subprocess, sys, json as _json
+
+_anfrage = {"start_id": int(_r0.start_station_id),
+            "ziel_id": int(_r0.end_station_id),
+            "typ_code": str(_r0.typ_code),
+            "zeitpunkt": str(pd.Timestamp(_r0.startzeit))}
+
+_pruefcode = \'\'\'
+import json, sys
+import joblib, numpy as np, pandas as pd
+
+p = joblib.load(sys.argv[1])
+a = json.loads(sys.argv[2])
+s, z, typ = int(a["start_id"]), int(a["ziel_id"]), a["typ_code"]
+t = pd.Timestamp(a["zeitpunkt"])
+
+# ALLES aus dem Paket - keine Datei, kein Notebook, kein Netz.
+route = p["routenmerkmale"][f"{s}->{z}"]
+n_s, n_z = p["stationsnamen"][s], p["stationsnamen"][z]
+tag = str(t.date())
+zeile = pd.DataFrame([{
+    "start_name": n_s, "ziel_name": n_z, "route": n_s + " \u2192 " + n_z,
+    "typ_code": typ,
+    "strecke_km": route["strecke_km"],
+    "steigung_promille": route["steigung_promille"],
+    "stunde_sin": np.sin(2*np.pi*t.hour/24), "stunde_cos": np.cos(2*np.pi*t.hour/24),
+    "wochentag_sin": np.sin(2*np.pi*t.dayofweek/7),
+    "wochentag_cos": np.cos(2*np.pi*t.dayofweek/7),
+    "monat_sin": np.sin(2*np.pi*t.month/12), "monat_cos": np.cos(2*np.pi*t.month/12),
+    "ist_wochenende": int(t.dayofweek >= 5),
+    "ist_feiertag": int(tag in set(p["feiertage"])),
+    "ist_ferien": int(any(f["von"] <= tag <= f["bis"] for f in p["schulferien"])),
+    "zielverlaesslichkeit": p["zielverlaesslichkeit_tabelle"].get(
+        str(s) + "->" + str(z), p["zielverlaesslichkeit_global"]),
+}])[p["merkmale"]]
+
+von = float(np.maximum(1.0, p["modell_unten"].predict(zeile))[0])
+bis = float(p["modell_oben"].predict(zeile)[0])
+tarif = p["tarif"][typ]
+preis = lambda m: round(tarif["startgebuehr"] + m * tarif["preis_pro_minute"], 2)
+print(json.dumps({"von_min": round(von), "bis_min": round(bis),
+                  "von_eur": preis(round(von)), "bis_eur": preis(round(bis)),
+                  "zusage": p["zusage_text"],
+                  "gueltig_bis": p["operativ_gueltig_bis"]}))
+\'\'\'
+
+Path("_reloadprobe.py").write_text(_pruefcode, encoding="utf-8")
+_lauf = subprocess.run([sys.executable, "_reloadprobe.py",
+                        "modellpaket_preisspanne.joblib", _json.dumps(_anfrage)],
+                       capture_output=True, text=True)
 print()
-print("RELOADTEST - das Paket allein, ohne dieses Notebook:")
-print(f"   Merkmale im Paket           {len(_geladen['merkmale'])}")
-print(f"   Zielverlaesslichkeit        {len(_zv_tab)} Verbindungen + Standardwert")
-print(f"   Vorhersage aus dem Paket    {_v_paket:.1f} bis {_b_paket:.1f} Minuten")
-assert abs(_v_paket - _v_hier) < 1e-9, (
-    "Das geladene Paket rechnet anders als das Notebook.")
-assert set(_geladen["merkmale"]) == set(MERKMALE), "Merkmalsmenge weicht ab."
-assert "zielverlaesslichkeit" in _geladen["merkmale"], "Merkmal fehlt im Paket."
-assert _geladen["zielverlaesslichkeit_tabelle"], "Nachschlagetabelle fehlt im Paket."
-print("   identisch zur Rechnung im Notebook - das Paket ist vollstaendig.")
+print("RELOADTEST - eigener Prozess, nur das Paket, keine Notebookvariable")
+print()
+if _lauf.returncode != 0:
+    print(_lauf.stderr[-1200:])
+assert _lauf.returncode == 0, (
+    "Das Paket allein reicht nicht fuer eine Vorhersage - es fehlt etwas.")
+_erg = _json.loads(_lauf.stdout)
+for _k, _v in _erg.items():
+    print(f"   {_k:14s} {_v}")
+
+# Gegenprobe gegen DAS MODELL, nicht gegen preis_schaetzen: Geprueft
+# wird das Modellpaket, und ausgeliefert wird die Tabelle. Der fremde
+# Prozess muss dasselbe rechnen wie Q_UNTEN und Q_OBEN hier.
+_zeile_hier = merkmalszeile(int(_r0.start_station_id), int(_r0.end_station_id),
+                            _r0.typ_code, _r0.startzeit)
+_v_hier = round(float(np.maximum(1.0, Q_UNTEN.predict(_zeile_hier))[0]))
+_b_hier = round(float(Q_OBEN.predict(_zeile_hier)[0]))
+assert (_erg["von_min"], _erg["bis_min"]) == (_v_hier, _b_hier), (
+    f"Fremder Prozess {_erg['von_min']}-{_erg['bis_min']}, "
+    f"Notebook {_v_hier}-{_b_hier}")
+print()
+print("   Identisch zur Rechnung im Notebook. Das Paket ist eigenstaendig.")
 
 print()
 print("   Was auch eine bestandene Abnahme NICHT ersetzt: das geplante Ziel.")
@@ -3468,8 +3600,11 @@ angewandt auf sein eigenes Ergebnis.
 **Was jetzt zu tun ist** — in dieser Reihenfolge, und keiner der Schritte ist eine
 Notebook-Übung:
 
-1. **Das gewünschte Ziel protokollieren**, bevor die Fahrt beginnt. Ohne diese Spalte
-   lässt sich nie messen, ob die Auskunft für die *geplante* Fahrt stimmte.
+1. **Den Kalender nachliefern.** Feiertage und Schulferien reichen nur bis
+   {{kalenderhorizont}}; ohne sie sind `ist_feiertag` und `ist_ferien` für jeden
+   künftigen Tag still null. Das Paket ist deshalb **einsatzbereit: {{einsatzbereit}}**.
+   Beide Kalender sind öffentlich und Jahre im Voraus bekannt — es fehlt eine Datei,
+   kein Modell.
 2. **Den Schattenbetrieb aus 6.6 laufen lassen** und das Gate dort erneut messen.
    {{gate_untergrenze:.1%}} sind knapp über {{gate_schwelle:.0%}}, nicht deutlich —
    ein Quartal mit anderer Wetterlage kann das kippen.
@@ -3535,7 +3670,7 @@ MD("""
 |---|---|
 | 1 Business Understanding | Der Prozess wurde geändert, nicht das Verfahren. Kriterium: Preisfehler unter 50 Cent. Geltungsbereich ausdrücklich eingeschränkt |
 | 2 Data Understanding | Abbrüche und Stornierungen sind keine Fahrten. {{anteil_frei:.1%}} enden frei im Gebiet, {{anteil_rundtour:.1%}} sind Rundtouren |
-| 3 Data Preparation | **Geplantes** Ziel erlaubt (die App kennt es), tatsächliches Ziel nur als Maßstab. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale, dazu die Zielverlässlichkeit je Verbindung ({{zv_min:.0%}} bis {{zv_max:.0%}}) |
+| 3 Data Preparation | **Geplantes** Ziel erlaubt (die App kennt es), tatsächliches Ziel nur als Maßstab. Wetter verboten. Training, Validierung, Test 1 und Kalibrierung — die **Abnahme** ist schon in Phase 2 versiegelt. Zyklische Zeitmerkmale, dazu die Zielverlässlichkeit je Verbindung ({{zv_min:.0%}} bis {{zv_max:.0%}}) |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, dass die Zielangabe {{ablation_anteil:.0%}} des Fehlers erklärt |
 | 5 Evaluation | {{typen_halten}} halten die Grenze auf Test 1, {{typen_reissen}} nicht. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet |
 | 6 Deployment | **Ausgeliefert wird die {{kandidat}}** — für {{typen_freigegeben}}. Alle drei Kandidaten nehmen alle Gates; entschieden hat die vorab benannte Auswahlregel: die einfachste Architektur. Das kostet {{verzicht_reichweite:.1%}} Reichweite gegenüber der {{verzicht_kandidat}}, die als Modellpaket bereitliegt. Primärgate {{gate_untergrenze:.1%}} gegen {{gate_schwelle:.0%}}, Status **{{produktstatus}}** — {{statussatz}} |
@@ -3592,7 +3727,7 @@ eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
 7. **Die Punktschätzung trägt {{typen_reissen}} nicht.** Für diesen Radtyp gibt es
    nur die Spanne, keine Zahl — der Minutenpreis lässt keine engere Zusage zu.
 8. **Die Architekturfrage entschied mit — und sie wurde vorher gestellt.** Von drei
-   Kandidaten nimmt nur die Quantilregression alle Hürden; beide statischen Tabellen
+   Kandidaten nehmen **alle drei** alle Hürden; die beiden statischen Tabellen
    reißen das Primärgate, auch die aus den Modellvorhersagen gebaute. Weil ein
    Laufzeitdienst zugelassen ist, kommt sie überhaupt in Frage — im Status
    „{{produktstatus}}". Wäre er es nicht, bliebe kein
