@@ -1711,17 +1711,36 @@ _zulaessig = [n for n in vergleich.index if _haelt_alles[n] and n in _betreibbar
 # bestanden. Wenn mehrere Verfahren alle Gates nehmen, muss eine vorher
 # benannte Regel sagen, welches ausgeliefert wird.
 #
-# DIE REGEL: Unter allen zulaessigen Kandidaten gewinnt der mit der
-# groessten REICHWEITE. Begruendung aus Phase 1: Die Gates sichern die
-# Guete - sie sind Mindestanforderungen, keine Rangliste. Ist die Guete
-# gesichert, nuetzt das Produkt umso mehr, je mehr Anfragen es
-# beantwortet. Bei Gleichstand entscheidet die schmalere Spanne.
-AUSWAHLREGEL = ("groesste Reichweite unter allen, die ALLE Gates nehmen; "
-                "bei Gleichstand die schmalere Spanne")
+# DIE REGEL: Unter allen zulaessigen Kandidaten gewinnt die EINFACHSTE
+# ARCHITEKTUR.
+#
+# Warum nicht die groesste Reichweite? Weil die Gates bereits alles
+# sichern, was das Produkt koennen muss - Genauigkeit, Abdeckung je
+# Radtyp UND eine Mindestreichweite. Wer diese Huerden nimmt, ist
+# ausreichend. Zwischen zwei ausreichenden Loesungen entscheidet dann
+# nicht mehr die Analytik, sondern der Betrieb.
+#
+# Und dort sind sie nicht gleich teuer: Eine CSV liest jedes System,
+# ohne dass jemand nachts Bereitschaft hat. Ein Laufzeitdienst braucht
+# einen Server, eine scikit-learn-Version, ein Deployment und jemanden,
+# der ihn repariert, wenn er nicht antwortet. Diese Kosten stehen in
+# keiner Zelle dieses Notebooks - und genau deshalb darf ein Modell sie
+# nicht stillschweigend verursachen, nur weil es eine Kennzahl hebt.
+#
+# WAS DIE REGEL KOSTET, WIRD BERICHTET: die Reichweite, die man
+# liegenlaesst. Wer den Dienst trotzdem will, muss die Mehrreichweite
+# gegen die Betriebskosten rechnen - und diese Rechnung gibt es nicht.
+# Die Regel steht damit VOR der Messung fest und ist nicht nachjustierbar:
+# Sie kennt keine Schwelle, an der man drehen koennte.
+ARCHITEKTURRANG = {"Perzentiltabelle": 0, "Quantiltabelle": 0,   # nur eine CSV
+                   "Quantilregression": 1}                       # Laufzeitdienst
+AUSWAHLREGEL = ("einfachste Architektur unter allen, die ALLE Gates nehmen "
+                "(CSV vor Laufzeitdienst); bei gleicher Architektur die "
+                "groessere Reichweite")
 merke("auswahlregel", AUSWAHLREGEL)
-KANDIDAT = (max(_zulaessig,
-                key=lambda n: (vergleich.loc[n, "Auskunft (angezeigt)"],
-                               -vergleich.loc[n, "Breite (Median)"]))
+KANDIDAT = (min(_zulaessig,
+                key=lambda n: (ARCHITEKTURRANG[n],
+                               -vergleich.loc[n, "Auskunft (angezeigt)"]))
             if _zulaessig else None)
 merke("kandidat", KANDIDAT or "keiner")
 merke("zulaessige_n", len(_zulaessig))
@@ -1735,11 +1754,25 @@ if KANDIDAT:
           f"({aufzaehlung(sorted(_zulaessig))}).")
     if len(_zulaessig) > 1:
         print("Es scheitert also NICHT an der Guete - alle zulaessigen halten sie.")
-        print("Entschieden hat die Reichweite:")
-        for _n in sorted(_zulaessig,
-                         key=lambda x: -vergleich.loc[x, "Auskunft (angezeigt)"]):
-            print(f"   {_n:22s} {vergleich.loc[_n, 'Auskunft (angezeigt)']:>6.1%} "
-                  f"Auskunft, Spanne {vergleich.loc[_n, 'Breite (Median)']:.2f} EUR")
+        print("Entschieden hat die Architektur:")
+        for _n in sorted(_zulaessig, key=lambda x: (ARCHITEKTURRANG[x],
+                         -vergleich.loc[x, "Auskunft (angezeigt)"])):
+            _art = "CSV" if ARCHITEKTURRANG[_n] == 0 else "Laufzeitdienst"
+            print(f"   {_n:22s} {_art:16s} "
+                  f"{vergleich.loc[_n, 'Auskunft (angezeigt)']:>6.1%} Auskunft")
+        _bester = max(_zulaessig, key=lambda x: vergleich.loc[x, "Auskunft (angezeigt)"])
+        _kosten = (vergleich.loc[_bester, "Auskunft (angezeigt)"]
+                   - vergleich.loc[KANDIDAT, "Auskunft (angezeigt)"])
+        merke("verzicht_reichweite", float(_kosten))
+        merke("verzicht_kandidat", _bester)
+        if _kosten > 0:
+            print()
+            print(f"   DAS KOSTET: {_kosten:.1%} Reichweite. Die {_bester} beantwortet")
+            print(f"   {vergleich.loc[_bester, 'Auskunft (angezeigt)']:.1%} der Anfragen "
+                  f"statt {vergleich.loc[KANDIDAT, 'Auskunft (angezeigt)']:.1%}.")
+            print("   Ob sich ein Laufzeitdienst dafuer lohnt, entscheidet eine")
+            print("   Rechnung, die dieses Notebook NICHT hat: Betriebskosten")
+            print("   gegen Mehrreichweite. Solange sie fehlt, gewinnt die CSV.")
     print(f"\\nAUSGELIEFERT WIRD: {KANDIDAT}")
 else:
     print("KEIN zulaessiger Kandidat: Wer die Gates nimmt, darf nicht betrieben")
@@ -1898,11 +1931,11 @@ Monat, Feiertag und Ferienlage werden über die Gruppe hinweg gemittelt.
 PHASE(6, "Wie kommt das in die App — und was ist dabei noch offen?"),
 
 MD("""
-### 6.1 Welche Kombinationen überhaupt in die Rückfalltabelle dürfen
+### 6.1 Welche Kombinationen überhaupt ausgeliefert werden
 
-**Ausgeliefert wird die Quantilregression** (siehe 6.3); was hier gefiltert wird, ist die
-**Rückfalltabelle**. Die Filterregeln stehen trotzdem hier und nicht nebenbei: Sie sind
-dieselben, mit denen auch der Laufzeitdienst entscheidet, ob er überhaupt etwas anzeigt.
+**Ausgeliefert wird die {{kandidat}}** (die Auswahl steht in 5.7). Was hier gefiltert
+wird, ist genau diese Tabelle — dieselben Regeln entscheiden auch beim Laufzeitdienst,
+ob er etwas anzeigt.
 
 Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 
@@ -2325,8 +2358,8 @@ folgenreichste Fehler dieses Notebooks:
 
 | Artefakt | was es ist | Zusage |
 |---|---|---|
-| `modellpaket_preisspanne.joblib` | **das ausgelieferte Verfahren** — beide Quantilmodelle mit Vorverarbeitung, Merkmalsreihenfolge, Radtypen, Gate-Status, Gültigkeitszeitraum | {{gate_schwelle:.0%}}, belegt mit {{gate_untergrenze:.1%}} |
-| `preisschaetzung.csv` | die **Rückfalltabelle** aus den historischen Perzentilen — Notbehelf bei Dienstausfall | **keine** — sie nimmt das Primärgate nicht ({{tabelle_gate}}) |
+| `preisschaetzung.csv` | **das ausgelieferte Verfahren** — die {{kandidat}}, eine Datei, die jedes System liest | {{gate_schwelle:.0%}}, belegt mit {{gate_untergrenze:.1%}} |
+| `modellpaket_preisspanne.joblib` | die **Alternative**, die den Gates ebenfalls genügt: beide Quantilmodelle mit Vorverarbeitung, Nachschlagetabellen, Tariflogik und Schwellen | dieselbe Zusage — sie wartet nur auf eine Betriebskostenrechnung |
 
 Warum das getrennt gehört: Die Tabelle *sieht aus* wie das Produkt. Sie hat dieselben
 Spalten, dieselben Verbindungen, dieselbe Anzeigeform. Sie hält die Zusage aber nicht —
@@ -2339,7 +2372,7 @@ die Merkmalsreihenfolge verliert, bekommt Vorhersagen, die aussehen wie Vorhersa
 falsch sind. Deshalb liegt neben dem Paket eine lesbare `.json` mit denselben Angaben —
 für Menschen, die wissen wollen, was sie da betreiben.
 
-**Und was liest die Website heute?** Die Rückfalltabelle. Der Ladeweg
+**Und was liest die Website?** Genau diese Datei. Der Ladeweg
 `db/betrieb/preisschaetzung_laden.py` füllt `velocity.preisschaetzung`, die Website liest
 `v_preisschaetzung`. Solange der Laufzeitdienst im Schattenbetrieb läuft, ist das
 konsequent — nur darf die Website dann auch nur das anzeigen, was die Tabelle trägt.
@@ -2484,7 +2517,8 @@ _bedient_streng = z.merge(
 _ = merke("reichweite_streng", len(_bedient_streng) / len(zukunft))
 # ─── ZWEI ARTEFAKTE, ZWEI ROLLEN - GETRENNT BENANNT ─────────────────
 #
-# 1. DAS MODELLPAKET ist das ausgelieferte Verfahren. Es enthaelt beide
+# 1. DAS MODELLPAKET ist die ALTERNATIVE - das Verfahren, das die Gates
+#    ebenfalls nimmt, aber einen Laufzeitdienst braucht. Es enthaelt beide
 #    Quantilmodelle samt Vorverarbeitung, die Merkmalsreihenfolge, den
 #    Gate-Status und den Gueltigkeitsbereich. Ohne diese Beipacks ist ein
 #    Modell nicht auslieferbar: Wer die Merkmalsreihenfolge verliert,
@@ -3504,7 +3538,7 @@ MD("""
 | 3 Data Preparation | **Geplantes** Ziel erlaubt (die App kennt es), tatsächliches Ziel nur als Maßstab. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale, dazu die Zielverlässlichkeit je Verbindung ({{zv_min:.0%}} bis {{zv_max:.0%}}) |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, dass die Zielangabe {{ablation_anteil:.0%}} des Fehlers erklärt |
 | 5 Evaluation | {{typen_halten}} halten die Grenze auf Test 1, {{typen_reissen}} nicht. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet |
-| 6 Deployment | **Ausgeliefert wird die Quantilregression** als Laufzeitdienst — für {{typen_freigegeben}}, als Modellpaket mit Beipackzettel. Das Primärgate der preisabhängigen Gruppe hält mit {{gate_untergrenze:.1%}} die zugesagten {{gate_schwelle:.0%}}. Status: **{{produktstatus}}** — {{statussatz}}. Die Perzentiltabelle bleibt als Rückfallebene, im Code implementiert und **ohne** Zusage |
+| 6 Deployment | **Ausgeliefert wird die {{kandidat}}** — für {{typen_freigegeben}}. Alle drei Kandidaten nehmen alle Gates; entschieden hat die vorab benannte Auswahlregel: die einfachste Architektur. Das kostet {{verzicht_reichweite:.1%}} Reichweite gegenüber der {{verzicht_kandidat}}, die als Modellpaket bereitliegt. Primärgate {{gate_untergrenze:.1%}} gegen {{gate_schwelle:.0%}}, Status **{{produktstatus}}** — {{statussatz}} |
 
 **Der Rücksprung, den man hier mitverfolgen konnte**
 
@@ -3563,8 +3597,10 @@ eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
    Laufzeitdienst zugelassen ist, kommt sie überhaupt in Frage — im Status
    „{{produktstatus}}". Wäre er es nicht, bliebe kein
    zulässiger Kandidat — dasselbe Notebook, dieselben Zahlen, ein anderes Ergebnis.
-   Genau deshalb trägt die Rückfalltabelle keine Zusage: Sie ist derselbe Kandidat, der
-   die Hürde gerissen hat.
+   Diesmal fiel sie anders aus als erwartet: **Alle drei Kandidaten nehmen alle
+   Gates.** Entschieden hat deshalb nicht die Güte, sondern der Betrieb — und der
+   Verzicht auf {{verzicht_reichweite:.1%}} Reichweite ist der Preis dafür, dass niemand
+   nachts einen Dienst neu starten muss.
 9. **Der Status „{{produktstatus}}" heißt: mit Bedingung.** Die Zusage ist auf der
    Abnahme belegt — einem historischen Zeitraum, den bis zum Öffnen nichts berührt hat.
    Ein *prospektiver* Zeitraum ist er trotzdem nicht. Was fehlt, ist das protokollierte

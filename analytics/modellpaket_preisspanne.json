@@ -1,5 +1,5 @@
 {
-  "verfahren": "Quantilregression",
+  "verfahren": "Perzentiltabelle",
   "quantil_unten": 0.1,
   "quantil_oben": 0.9,
   "merkmale": [
@@ -120,14 +120,14 @@
   ],
   "produktstatus": "sichtbar",
   "gate_schwelle": 0.8,
-  "gate_untergrenze": 0.8647990998359258,
+  "gate_untergrenze": 0.8334112510903023,
   "kalibrierungszeitraum_von": "2025-11-14",
   "kalibrierungszeitraum_bis": "2026-06-29",
   "abnahmezeitraum_von": "2026-06-29",
   "abnahmezeitraum_bis": "2026-08-24",
   "max_fahrtdauer_minuten": 480,
   "zusage_text": "Preis für eine Fahrt zu Ihrem gewählten Ziel. Fahren Sie ein anderes Ziel an, gilt die Schätzung nicht.",
-  "auswahlregel": "groesste Reichweite unter allen, die ALLE Gates nehmen; bei Gleichstand die schmalere Spanne",
+  "auswahlregel": "einfachste Architektur unter allen, die ALLE Gates nehmen (CSV vor Laufzeitdienst); bei gleicher Architektur die groessere Reichweite",
   "breitenregel_minuten": 12,
   "breitenregel_anteil": 0.6,
   "mindestreichweite": 0.1,
@@ -148,50 +148,56 @@
   },
   "tarifversion": "375720e51a8b",
   "datenversion": "d704ee26359d",
-  "gesperrte_kombinationen": [],
+  "gesperrte_kombinationen": [
+    [
+      "Dom → Marktplatz",
+      "EBIKE",
+      "vormittag"
+    ]
+  ],
   "gebaut_am": "2026-09-02",
   "statusgrund": "freigegeben",
-  "abnahme_untergrenze": 0.8481103846758549,
+  "abnahme_untergrenze": 0.8113887252728376,
   "abnahme_bestanden": true,
   "abnahme_gates": {
     "Gate 1  preisabhaengig aggregiert >= 80%": {
-      "wert": 0.8481103846758549,
+      "wert": 0.8113887252728376,
       "schwelle": 0.8,
-      "n": 557,
+      "n": 534,
       "haelt": true
     },
     "Gate 3  CARGO angezeigt >= 80%": {
-      "wert": 0.9270072317116338,
+      "wert": 0.8691755722005804,
       "schwelle": 0.8,
-      "n": 229,
+      "n": 183,
       "haelt": true
     },
     "Gate 3  CITY angezeigt >= 80%": {
-      "wert": 0.9590289923973407,
+      "wert": 0.9100876623655969,
       "schwelle": 0.8,
-      "n": 1377,
+      "n": 749,
       "haelt": true
     },
     "Gate 3  EBIKE angezeigt >= 80%": {
-      "wert": 0.9280480027233875,
+      "wert": 0.9017058956920363,
       "schwelle": 0.8,
-      "n": 1388,
+      "n": 1013,
       "haelt": true
     },
     "Gate 4  CARGO Reichweite >= 10%": {
-      "wert": 0.4045936395759717,
+      "wert": 0.32332155477031804,
       "schwelle": 0.1,
       "n": 566,
       "haelt": true
     },
     "Gate 4  CITY Reichweite >= 10%": {
-      "wert": 0.4289719626168224,
+      "wert": 0.23333333333333334,
       "schwelle": 0.1,
       "n": 3210,
       "haelt": true
     },
     "Gate 4  EBIKE Reichweite >= 10%": {
-      "wert": 0.7103377686796315,
+      "wert": 0.5184237461617196,
       "schwelle": 0.1,
       "n": 1954,
       "haelt": true
