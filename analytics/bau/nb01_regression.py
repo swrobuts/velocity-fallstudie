@@ -600,7 +600,7 @@ belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 | **Training** (60 %) | das Modell lernt | die ältesten Fahrten |
 | **Validierung** (15 %) | wir *wählen* Verfahren und Einstellungen | mittlerer Zeitraum |
 | **Test 1** (12,5 %) | die Punktschätzung wird *einmal* gemessen | danach verbraucht |
-| **Kalibrierung** (12,5 %) | die zweite Runde wird darauf **kalibriert und freigegeben** | kein Training — aber Auswahl und Filterung |
+| **Kalibrierung** (12,5 %) | die zweite Runde wird darauf **kalibriert und für die unabhängige Abnahme vorbereitet** | kein Training — aber Auswahl und Filterung |
 
 > **Kalibrierung ist kein finaler Test, sondern ein Kalibrierungszeitraum.** Auf ihm wird das
 > Artefakt ausgewählt, über Radtypen entschieden und über einzelne Kombinationen
@@ -733,9 +733,12 @@ print("1. Die Erkundung in Phase 2 lief ueber alles, was NICHT versiegelt ist -"
 print("   also auch ueber die Kalibrierung. Trainiert wurde dort nie, aber blind")
 print("   sind wir ihr gegenueber auch nicht. Der Abnahmezeitraum dagegen war")
 print("   schon vor der ersten Grafik weg.")
-print("2. Kalibrierung traegt in Phase 6 die Auswahl des Artefakts und die Freigabe.")
-print("   Er ist damit ein KALIBRIERUNGSZEITRAUM, kein unabhaengiger Endtest.")
-print("   Den kann erst der Schattenbetrieb liefern.")
+print("2. Die Kalibrierung traegt in Phase 6 die Auswahl des Artefakts, die")
+print("   Radtypfreigabe und die Filterung der Kombinationen - nicht die")
+print("   Produktfreigabe. Sie ist damit ein KALIBRIERUNGSZEITRAUM, kein")
+print("   unabhaengiger Endtest. Den liefert die Abnahme in 6.7; was auch sie")
+print("   nicht leisten kann, ist ein Blick nach vorn - dafuer braucht es")
+print("   den Schattenbetrieb.")
 """),
 
 PHASE(4, "Verdient ein Modell seinen Unterhalt gegenüber einer Nachschlagetabelle?"),
