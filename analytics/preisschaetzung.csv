@@ -1,326 +1,205 @@
 start_station_id,ziel_station_id,startstation,zielstation,typ_code,zeitfenster,minuten_von,minuten_bis,preis_von_basis,preis_bis_basis,fahrten_grundlage,datenstand,tarifversion,datenversion,produktstatus,statusgrund,lernbasis_bis,kalibrierung_bis,kalib_fahrten,kalib_abdeckung,kalib_untergrenze,kalib_obergrenze,freigabestatus
-1,2,Hauptbahnhof,Marktplatz,CITY,frueh,8,13,0.9,1.4,43,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-1,2,Hauptbahnhof,Marktplatz,CITY,nachmittag,7,13,0.8,1.4,123,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-1,2,Hauptbahnhof,Marktplatz,CITY,vormittag,8,14,0.9,1.5,72,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-1,3,Hauptbahnhof,Universität Sanderring,CITY,frueh,10,19,1.1,2.0,105,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-1,3,Hauptbahnhof,Universität Sanderring,CITY,nachmittag,10,17,1.1,1.8,100,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.5,0.15,0.85,unzureichend
-1,3,Hauptbahnhof,Universität Sanderring,EBIKE,frueh,9,14,3.25,4.5,32,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-1,4,Hauptbahnhof,Residenz,CARGO,nachmittag,11,16,7.5,10.0,38,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-1,4,Hauptbahnhof,Residenz,CITY,nachmittag,9,15,1.0,1.6,213,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
-1,4,Hauptbahnhof,Residenz,CITY,vormittag,10,17,1.1,1.8,96,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-1,4,Hauptbahnhof,Residenz,EBIKE,nachmittag,7,12,2.75,4.0,53,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
-1,5,Hauptbahnhof,Juliuspromenade,CITY,frueh,7,12,0.8,1.3,46,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-1,5,Hauptbahnhof,Juliuspromenade,CITY,nachmittag,7,12,0.8,1.3,130,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-1,5,Hauptbahnhof,Juliuspromenade,CITY,vormittag,8,15,0.9,1.6,72,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-1,5,Hauptbahnhof,Juliuspromenade,EBIKE,nachmittag,5,9,2.25,3.25,31,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-1,6,Hauptbahnhof,Dom,CARGO,nachmittag,10,19,7.0,11.5,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-1,6,Hauptbahnhof,Dom,CITY,nachmittag,9,16,1.0,1.7,226,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,0.8889,0.565,0.9801,unzureichend
-1,6,Hauptbahnhof,Dom,CITY,vormittag,10,18,1.1,1.9,99,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-1,6,Hauptbahnhof,Dom,EBIKE,nachmittag,7,12,2.75,4.0,49,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
-1,7,Hauptbahnhof,Sanderau,CARGO,nachmittag,15,25,9.5,14.5,95,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,0.6667,0.2077,0.9385,unzureichend
-1,7,Hauptbahnhof,Sanderau,CITY,frueh,13,24,1.4,2.5,48,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-1,7,Hauptbahnhof,Sanderau,CITY,nachmittag,13,22,1.4,2.3,374,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,0.9,0.5958,0.9821,unzureichend
-1,7,Hauptbahnhof,Sanderau,CITY,vormittag,14,23,1.5,2.4,75,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-1,7,Hauptbahnhof,Sanderau,EBIKE,nachmittag,10,17,3.5,5.25,105,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-1,9,Hauptbahnhof,Grombühl Klinikum,CARGO,nachmittag,10,16,7.0,10.0,56,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,0.0,0.0,0.7935,unzureichend
-1,9,Hauptbahnhof,Grombühl Klinikum,CITY,frueh,8,15,0.9,1.6,68,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-1,9,Hauptbahnhof,Grombühl Klinikum,CITY,nachmittag,8,13,0.9,1.4,323,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,0.8571,0.6006,0.9599,unzureichend
-1,9,Hauptbahnhof,Grombühl Klinikum,CITY,vormittag,9,14,1.0,1.5,54,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,0.5,0.0945,0.9055,unzureichend
-1,9,Hauptbahnhof,Grombühl Klinikum,EBIKE,nachmittag,5,9,2.25,3.25,73,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
-1,10,Hauptbahnhof,Zellerau,CARGO,nachmittag,11,18,7.5,11.0,53,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-1,10,Hauptbahnhof,Zellerau,CITY,nachmittag,8,14,0.9,1.5,283,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,17.0,1.0,0.8157,1.0,unzureichend
-1,10,Hauptbahnhof,Zellerau,CITY,vormittag,9,16,1.0,1.7,53,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,0.5,0.0945,0.9055,unzureichend
-1,10,Hauptbahnhof,Zellerau,EBIKE,nachmittag,7,12,2.75,4.0,71,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-2,1,Marktplatz,Hauptbahnhof,CARGO,frueh,9,17,6.5,10.5,83,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-2,1,Marktplatz,Hauptbahnhof,CARGO,vormittag,9,18,6.5,11.0,60,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-2,1,Marktplatz,Hauptbahnhof,CITY,frueh,7,12,0.8,1.3,372,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,17.0,1.0,0.8157,1.0,unzureichend
-2,1,Marktplatz,Hauptbahnhof,CITY,vormittag,8,15,0.9,1.6,252,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
-2,1,Marktplatz,Hauptbahnhof,EBIKE,frueh,6,11,2.5,3.75,97,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
-2,1,Marktplatz,Hauptbahnhof,EBIKE,nachmittag,6,13,2.5,4.25,38,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-2,1,Marktplatz,Hauptbahnhof,EBIKE,vormittag,6,12,2.5,4.0,70,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-2,3,Marktplatz,Universität Sanderring,CARGO,frueh,7,11,5.5,7.5,89,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-2,3,Marktplatz,Universität Sanderring,CARGO,vormittag,8,14,6.0,9.0,57,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-2,3,Marktplatz,Universität Sanderring,CITY,frueh,6,11,0.7,1.2,419,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,22.0,1.0,0.8513,1.0,gestuetzt
-2,3,Marktplatz,Universität Sanderring,CITY,vormittag,7,12,0.8,1.3,238,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
-2,3,Marktplatz,Universität Sanderring,EBIKE,frueh,5,8,2.25,3.0,111,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,12.0,0.8333,0.552,0.953,unzureichend
-2,3,Marktplatz,Universität Sanderring,EBIKE,vormittag,5,8,2.25,3.0,71,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
-2,4,Marktplatz,Residenz,CARGO,nachmittag,6,14,5.0,9.0,42,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.75,0.3006,0.9544,unzureichend
-2,4,Marktplatz,Residenz,CARGO,vormittag,7,13,5.5,8.5,38,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-2,4,Marktplatz,Residenz,EBIKE,nachmittag,4,9,2.0,3.25,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.6,0.2307,0.8824,unzureichend
-2,4,Marktplatz,Residenz,EBIKE,vormittag,4,8,2.0,3.0,41,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
-2,5,Marktplatz,Juliuspromenade,CITY,nachmittag,2,4,0.3,0.5,72,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-2,5,Marktplatz,Juliuspromenade,CITY,vormittag,2,4,0.3,0.5,97,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-2,5,Marktplatz,Juliuspromenade,EBIKE,vormittag,2,4,1.5,2.0,31,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-2,6,Marktplatz,Dom,CARGO,nachmittag,4,8,4.0,6.0,41,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-2,6,Marktplatz,Dom,CARGO,vormittag,3,7,3.5,5.5,41,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-2,6,Marktplatz,Dom,CITY,frueh,3,6,0.4,0.7,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-2,6,Marktplatz,Dom,CITY,nachmittag,3,6,0.4,0.7,218,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,13.0,1.0,0.7719,1.0,unzureichend
-2,6,Marktplatz,Dom,CITY,vormittag,3,6,0.4,0.7,157,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,13.0,0.8462,0.5776,0.9567,unzureichend
-2,6,Marktplatz,Dom,EBIKE,nachmittag,3,5,1.75,2.25,59,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,0.7143,0.3589,0.9178,unzureichend
-2,6,Marktplatz,Dom,EBIKE,vormittag,3,5,1.75,2.25,48,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-2,7,Marktplatz,Sanderau,CITY,nachmittag,11,19,1.2,2.0,214,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
-2,7,Marktplatz,Sanderau,CITY,vormittag,12,23,1.3,2.4,103,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-2,7,Marktplatz,Sanderau,EBIKE,nachmittag,9,16,3.25,5.0,54,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,0.8,0.4902,0.9433,unzureichend
-2,9,Marktplatz,Grombühl Klinikum,CARGO,frueh,15,26,9.5,15.0,114,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-2,9,Marktplatz,Grombühl Klinikum,CITY,frueh,13,21,1.4,2.2,501,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,21.0,0.9524,0.7733,0.9915,unbestimmt
-2,9,Marktplatz,Grombühl Klinikum,CITY,vormittag,14,24,1.5,2.5,323,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,16.0,1.0,0.8064,1.0,unzureichend
-2,9,Marktplatz,Grombühl Klinikum,EBIKE,frueh,10,17,3.5,5.25,138,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,15.0,1.0,0.7961,1.0,unzureichend
-2,9,Marktplatz,Grombühl Klinikum,EBIKE,nachmittag,11,16,3.75,5.0,35,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-2,9,Marktplatz,Grombühl Klinikum,EBIKE,vormittag,11,21,3.75,6.25,77,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
-2,10,Marktplatz,Zellerau,CARGO,nachmittag,11,20,7.5,12.0,41,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,0.0,0.0,0.7935,unzureichend
-2,10,Marktplatz,Zellerau,CITY,abend,9,17,1.0,1.8,30,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.75,0.3006,0.9544,unzureichend
-2,10,Marktplatz,Zellerau,CITY,frueh,9,17,1.0,1.8,35,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-2,10,Marktplatz,Zellerau,CITY,nachmittag,9,17,1.0,1.8,197,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-2,10,Marktplatz,Zellerau,EBIKE,nachmittag,7,14,2.75,4.5,35,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-3,1,Universität Sanderring,Hauptbahnhof,CARGO,nachmittag,13,24,8.5,14.0,51,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-3,1,Universität Sanderring,Hauptbahnhof,CITY,nachmittag,11,20,1.2,2.1,204,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,19.0,0.8947,0.6861,0.9706,unzureichend
-3,1,Universität Sanderring,Hauptbahnhof,CITY,vormittag,12,21,1.3,2.2,89,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,0.875,0.5291,0.9776,unzureichend
-3,1,Universität Sanderring,Hauptbahnhof,EBIKE,nachmittag,10,17,3.5,5.25,46,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-3,2,Universität Sanderring,Marktplatz,CITY,abend,6,11,0.7,1.2,42,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-3,2,Universität Sanderring,Marktplatz,CITY,frueh,7,11,0.8,1.2,34,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-3,2,Universität Sanderring,Marktplatz,CITY,nachmittag,6,10,0.7,1.1,66,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-3,2,Universität Sanderring,Marktplatz,CITY,vormittag,7,12,0.8,1.3,104,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-3,4,Universität Sanderring,Residenz,CITY,abend,5,10,0.6,1.1,46,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-3,4,Universität Sanderring,Residenz,CITY,nachmittag,5,10,0.6,1.1,64,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.75,0.3006,0.9544,unzureichend
-3,4,Universität Sanderring,Residenz,CITY,vormittag,6,11,0.7,1.2,105,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-3,5,Universität Sanderring,Juliuspromenade,CITY,abend,7,13,0.8,1.4,42,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-3,5,Universität Sanderring,Juliuspromenade,CITY,frueh,7,13,0.8,1.4,52,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-3,5,Universität Sanderring,Juliuspromenade,CITY,nachmittag,7,11,0.8,1.2,71,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-3,5,Universität Sanderring,Juliuspromenade,CITY,vormittag,7,12,0.8,1.3,103,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,0.8571,0.4869,0.9743,unzureichend
-3,6,Universität Sanderring,Dom,CARGO,vormittag,6,13,5.0,8.5,33,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-3,6,Universität Sanderring,Dom,CITY,abend,6,11,0.7,1.2,46,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-3,6,Universität Sanderring,Dom,CITY,nachmittag,6,11,0.7,1.2,57,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-3,6,Universität Sanderring,Dom,CITY,vormittag,6,11,0.7,1.2,115,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-3,6,Universität Sanderring,Dom,EBIKE,vormittag,5,8,2.25,3.0,34,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-3,7,Universität Sanderring,Sanderau,CARGO,nachmittag,8,13,6.0,8.5,41,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-3,7,Universität Sanderring,Sanderau,CARGO,vormittag,8,12,6.0,8.0,35,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-3,7,Universität Sanderring,Sanderau,CITY,abend,6,10,0.7,1.1,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-3,7,Universität Sanderring,Sanderau,CITY,nachmittag,6,11,0.7,1.2,123,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,0.8889,0.565,0.9801,unzureichend
-3,7,Universität Sanderring,Sanderau,CITY,vormittag,7,12,0.8,1.3,113,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-3,7,Universität Sanderring,Sanderau,EBIKE,nachmittag,5,8,2.25,3.0,33,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-3,9,Universität Sanderring,Grombühl Klinikum,CITY,nachmittag,12,22,1.3,2.3,133,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,0.7778,0.4526,0.9368,unzureichend
-3,9,Universität Sanderring,Grombühl Klinikum,CITY,vormittag,13,23,1.4,2.4,111,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
-3,9,Universität Sanderring,Grombühl Klinikum,EBIKE,nachmittag,9,15,3.25,4.75,38,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-3,10,Universität Sanderring,Zellerau,CITY,nachmittag,13,24,1.4,2.5,122,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.6,0.2307,0.8824,unzureichend
-3,10,Universität Sanderring,Zellerau,CITY,vormittag,14,25,1.5,2.6,90,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,0.8571,0.4869,0.9743,unzureichend
-4,1,Residenz,Hauptbahnhof,EBIKE,nachmittag,8,16,3.0,5.0,36,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,0.8571,0.4869,0.9743,unzureichend
-4,2,Residenz,Marktplatz,CARGO,nachmittag,6,11,5.0,7.5,38,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-4,2,Residenz,Marktplatz,CARGO,vormittag,6,11,5.0,7.5,42,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.75,0.3006,0.9544,unzureichend
-4,2,Residenz,Marktplatz,CITY,abend,5,10,0.6,1.1,46,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-4,2,Residenz,Marktplatz,CITY,frueh,5,8,0.6,0.9,41,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,0.8571,0.4869,0.9743,unzureichend
-4,2,Residenz,Marktplatz,CITY,nachmittag,5,10,0.6,1.1,181,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,11.0,0.9091,0.6226,0.9838,unzureichend
-4,2,Residenz,Marktplatz,CITY,vormittag,5,10,0.6,1.1,189,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
-4,2,Residenz,Marktplatz,EBIKE,nachmittag,4,8,2.0,3.0,42,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,11.0,0.9091,0.6226,0.9838,unzureichend
-4,2,Residenz,Marktplatz,EBIKE,vormittag,4,8,2.0,3.0,53,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,15.0,0.9333,0.7018,0.9881,unzureichend
-4,3,Residenz,Universität Sanderring,CITY,nachmittag,5,10,0.6,1.1,110,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
-4,3,Residenz,Universität Sanderring,CITY,vormittag,5,10,0.6,1.1,110,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,0.9,0.5958,0.9821,unzureichend
-4,5,Residenz,Juliuspromenade,CARGO,nachmittag,6,13,5.0,8.5,42,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-4,5,Residenz,Juliuspromenade,CARGO,vormittag,7,14,5.5,9.0,65,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-4,5,Residenz,Juliuspromenade,CITY,nachmittag,6,11,0.7,1.2,164,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-4,5,Residenz,Juliuspromenade,EBIKE,nachmittag,5,9,2.25,3.25,38,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,0.875,0.5291,0.9776,unzureichend
-4,5,Residenz,Juliuspromenade,EBIKE,vormittag,5,11,2.25,3.75,74,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,15.0,0.9333,0.7018,0.9881,unzureichend
-4,6,Residenz,Dom,CARGO,frueh,5,9,4.5,6.5,38,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-4,6,Residenz,Dom,CARGO,nachmittag,4,9,4.0,6.5,72,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,0.6667,0.3,0.9032,unzureichend
-4,6,Residenz,Dom,CARGO,vormittag,4,8,4.0,6.0,49,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-4,6,Residenz,Dom,CITY,abend,4,8,0.5,0.9,52,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-4,6,Residenz,Dom,CITY,frueh,4,7,0.5,0.8,92,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,0.875,0.5291,0.9776,unzureichend
-4,6,Residenz,Dom,CITY,nachmittag,4,7,0.5,0.8,333,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,21.0,0.8095,0.6,0.9233,unbestimmt
-4,6,Residenz,Dom,CITY,vormittag,4,8,0.5,0.9,276,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,17.0,0.8824,0.6566,0.9671,unzureichend
-4,6,Residenz,Dom,EBIKE,frueh,4,7,2.0,2.75,34,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
-4,6,Residenz,Dom,EBIKE,nachmittag,3,7,1.75,2.75,86,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,19.0,0.9474,0.7536,0.9906,unzureichend
-4,6,Residenz,Dom,EBIKE,vormittag,4,7,2.0,2.75,70,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,18.0,1.0,0.8241,1.0,unzureichend
-4,7,Residenz,Sanderau,CARGO,nachmittag,11,23,7.5,13.5,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,0.5,0.0945,0.9055,unzureichend
-4,7,Residenz,Sanderau,EBIKE,nachmittag,7,15,2.75,4.75,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-4,7,Residenz,Sanderau,EBIKE,vormittag,8,16,3.0,5.0,43,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,CARGO,frueh,8,13,6.0,8.5,97,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,0.8571,0.4869,0.9743,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,CARGO,nachmittag,8,13,6.0,8.5,39,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,CARGO,vormittag,8,15,6.0,9.5,77,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,0.75,0.4093,0.9285,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,CITY,abend,7,13,0.8,1.4,37,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,0.6667,0.2077,0.9385,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,CITY,frueh,6,11,0.7,1.2,493,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,28.0,1.0,0.8794,1.0,gestuetzt
-5,1,Juliuspromenade,Hauptbahnhof,CITY,nachmittag,7,13,0.8,1.4,181,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,CITY,vormittag,7,13,0.8,1.4,255,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,15.0,0.8667,0.6212,0.9626,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,EBIKE,frueh,5,8,2.25,3.0,147,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,0.9,0.5958,0.9821,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,EBIKE,nachmittag,6,11,2.5,3.75,50,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-5,1,Juliuspromenade,Hauptbahnhof,EBIKE,vormittag,6,10,2.5,3.5,97,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,0.9,0.5958,0.9821,unzureichend
-5,2,Juliuspromenade,Marktplatz,CITY,abend,2,4,0.3,0.5,33,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,2,Juliuspromenade,Marktplatz,CITY,vormittag,2,4,0.3,0.5,128,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-5,2,Juliuspromenade,Marktplatz,EBIKE,vormittag,2,3,1.5,1.75,32,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-5,3,Juliuspromenade,Universität Sanderring,CARGO,frueh,10,15,7.0,9.5,68,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,0.0,0.0,0.7935,unzureichend
-5,3,Juliuspromenade,Universität Sanderring,CITY,abend,8,15,0.9,1.6,37,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-5,3,Juliuspromenade,Universität Sanderring,CITY,frueh,9,15,1.0,1.6,302,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,0.9286,0.6853,0.9873,unzureichend
-5,3,Juliuspromenade,Universität Sanderring,CITY,vormittag,9,16,1.0,1.7,218,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,13.0,0.9231,0.6669,0.9863,unzureichend
-5,3,Juliuspromenade,Universität Sanderring,EBIKE,frueh,7,10,2.75,3.5,84,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
-5,3,Juliuspromenade,Universität Sanderring,EBIKE,vormittag,6,12,2.5,4.0,58,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,0.875,0.5291,0.9776,unzureichend
-5,4,Juliuspromenade,Residenz,CARGO,nachmittag,9,17,6.5,10.5,45,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,4,Juliuspromenade,Residenz,CARGO,vormittag,10,19,7.0,11.5,39,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-5,4,Juliuspromenade,Residenz,CITY,abend,8,14,0.9,1.5,55,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,4,Juliuspromenade,Residenz,EBIKE,nachmittag,6,11,2.5,3.75,45,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-5,4,Juliuspromenade,Residenz,EBIKE,vormittag,6,11,2.5,3.75,40,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-5,6,Juliuspromenade,Dom,CARGO,nachmittag,5,9,4.5,6.5,82,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-5,6,Juliuspromenade,Dom,CARGO,vormittag,5,12,4.5,8.0,42,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,6,Juliuspromenade,Dom,CITY,abend,4,8,0.5,0.9,45,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,0.5,0.0945,0.9055,unzureichend
-5,6,Juliuspromenade,Dom,CITY,frueh,5,9,0.6,1.0,52,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-5,6,Juliuspromenade,Dom,CITY,nachmittag,4,8,0.5,0.9,328,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
-5,6,Juliuspromenade,Dom,EBIKE,nachmittag,3,7,1.75,2.75,57,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
-5,6,Juliuspromenade,Dom,EBIKE,vormittag,4,7,2.0,2.75,55,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,0.8889,0.565,0.9801,unzureichend
-5,7,Juliuspromenade,Sanderau,CITY,abend,13,23,1.4,2.4,37,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,7,Juliuspromenade,Sanderau,CITY,frueh,13,24,1.4,2.5,54,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,7,Juliuspromenade,Sanderau,CITY,nachmittag,12,23,1.3,2.4,175,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
-5,7,Juliuspromenade,Sanderau,EBIKE,nachmittag,10,20,3.5,6.0,42,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-5,8,Juliuspromenade,Hubland Campus,EBIKE,frueh,18,30,5.5,8.5,136,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
-5,9,Juliuspromenade,Grombühl Klinikum,CARGO,frueh,15,24,9.5,14.0,162,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,9,Juliuspromenade,Grombühl Klinikum,CARGO,vormittag,17,27,10.5,15.5,108,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-5,9,Juliuspromenade,Grombühl Klinikum,CITY,frueh,12,20,1.3,2.1,794,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,24.0,0.9167,0.7415,0.9768,unbestimmt
-5,9,Juliuspromenade,Grombühl Klinikum,CITY,nachmittag,13,24,1.4,2.5,169,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,13.0,0.9231,0.6669,0.9863,unzureichend
-5,9,Juliuspromenade,Grombühl Klinikum,CITY,vormittag,13,22,1.4,2.3,417,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,19.0,1.0,0.8318,1.0,unzureichend
-5,9,Juliuspromenade,Grombühl Klinikum,EBIKE,frueh,9,14,3.25,4.5,186,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,15.0,1.0,0.7961,1.0,unzureichend
-5,9,Juliuspromenade,Grombühl Klinikum,EBIKE,nachmittag,10,17,3.5,5.25,43,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-5,9,Juliuspromenade,Grombühl Klinikum,EBIKE,vormittag,9,15,3.25,4.75,102,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
-5,10,Juliuspromenade,Zellerau,CARGO,nachmittag,9,19,6.5,11.5,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-5,10,Juliuspromenade,Zellerau,CITY,abend,8,13,0.9,1.4,31,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-5,10,Juliuspromenade,Zellerau,CITY,frueh,8,14,0.9,1.5,39,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-5,10,Juliuspromenade,Zellerau,CITY,nachmittag,8,15,0.9,1.6,177,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,0.6667,0.2077,0.9385,unzureichend
-5,10,Juliuspromenade,Zellerau,EBIKE,nachmittag,6,11,2.5,3.75,49,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-6,1,Dom,Hauptbahnhof,EBIKE,nachmittag,8,18,3.0,5.5,45,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
-6,2,Dom,Marktplatz,CARGO,vormittag,3,6,3.5,5.0,40,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-6,2,Dom,Marktplatz,CITY,abend,3,5,0.4,0.6,43,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-6,2,Dom,Marktplatz,CITY,frueh,3,5,0.4,0.6,56,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-6,2,Dom,Marktplatz,CITY,vormittag,3,5,0.4,0.6,190,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,20.0,0.95,0.7639,0.9911,unbestimmt
-6,2,Dom,Marktplatz,EBIKE,nachmittag,3,5,1.75,2.25,43,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-6,2,Dom,Marktplatz,EBIKE,vormittag,2,4,1.5,2.0,36,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
-6,3,Dom,Universität Sanderring,CARGO,nachmittag,7,13,5.5,8.5,30,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-6,3,Dom,Universität Sanderring,EBIKE,nachmittag,5,10,2.25,3.5,32,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-6,4,Dom,Residenz,CARGO,nachmittag,5,10,4.5,7.0,84,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-6,4,Dom,Residenz,CARGO,vormittag,5,10,4.5,7.0,59,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-6,4,Dom,Residenz,CITY,abend,4,8,0.5,0.9,65,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-6,4,Dom,Residenz,CITY,frueh,5,9,0.6,1.0,72,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-6,4,Dom,Residenz,EBIKE,nachmittag,3,7,1.75,2.75,75,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,16.0,1.0,0.8064,1.0,unzureichend
-6,4,Dom,Residenz,EBIKE,vormittag,4,7,2.0,2.75,54,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,0.7857,0.5241,0.9243,unzureichend
-6,5,Dom,Juliuspromenade,CARGO,nachmittag,4,9,4.0,6.5,39,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-6,5,Dom,Juliuspromenade,CARGO,vormittag,5,9,4.5,6.5,89,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-6,5,Dom,Juliuspromenade,CITY,abend,4,8,0.5,0.9,44,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-6,5,Dom,Juliuspromenade,CITY,frueh,4,7,0.5,0.8,60,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-6,5,Dom,Juliuspromenade,CITY,nachmittag,4,8,0.5,0.9,152,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
-6,5,Dom,Juliuspromenade,CITY,vormittag,4,8,0.5,0.9,358,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,34.0,0.8824,0.7338,0.9533,unbestimmt
-6,5,Dom,Juliuspromenade,EBIKE,nachmittag,3,6,1.75,2.5,43,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,18.0,1.0,0.8241,1.0,unzureichend
-6,5,Dom,Juliuspromenade,EBIKE,vormittag,4,7,2.0,2.75,83,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,20.0,1.0,0.8389,1.0,gestuetzt
-6,7,Dom,Sanderau,EBIKE,nachmittag,8,17,3.0,5.25,57,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
-6,7,Dom,Sanderau,EBIKE,vormittag,9,15,3.25,4.75,33,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.75,0.3006,0.9544,unzureichend
-6,9,Dom,Grombühl Klinikum,CITY,frueh,12,23,1.3,2.4,36,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-6,9,Dom,Grombühl Klinikum,EBIKE,nachmittag,7,16,2.75,5.0,40,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-6,10,Dom,Zellerau,EBIKE,nachmittag,10,22,3.5,6.5,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.75,0.3006,0.9544,unzureichend
-7,1,Sanderau,Hauptbahnhof,EBIKE,frueh,16,27,5.0,7.75,137,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,0.8889,0.565,0.9801,unzureichend
-7,1,Sanderau,Hauptbahnhof,EBIKE,nachmittag,16,27,5.0,7.75,71,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-7,2,Sanderau,Marktplatz,CITY,frueh,12,21,1.3,2.2,44,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-7,2,Sanderau,Marktplatz,CITY,nachmittag,13,20,1.4,2.1,89,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-7,2,Sanderau,Marktplatz,CITY,vormittag,14,26,1.5,2.7,77,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-7,3,Sanderau,Universität Sanderring,CARGO,frueh,10,17,7.0,10.5,121,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-7,3,Sanderau,Universität Sanderring,CARGO,vormittag,12,18,8.0,11.0,61,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-7,3,Sanderau,Universität Sanderring,CITY,frueh,9,15,1.0,1.6,452,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,22.0,0.9091,0.7218,0.9747,unbestimmt
-7,3,Sanderau,Universität Sanderring,CITY,nachmittag,9,16,1.0,1.7,108,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-7,3,Sanderau,Universität Sanderring,CITY,vormittag,9,15,1.0,1.6,218,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,13.0,1.0,0.7719,1.0,unzureichend
-7,3,Sanderau,Universität Sanderring,EBIKE,frueh,7,12,2.75,4.0,131,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,13.0,0.9231,0.6669,0.9863,unzureichend
-7,3,Sanderau,Universität Sanderring,EBIKE,nachmittag,8,11,3.0,3.75,32,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.75,0.3006,0.9544,unzureichend
-7,3,Sanderau,Universität Sanderring,EBIKE,vormittag,8,12,3.0,4.0,71,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-7,4,Sanderau,Residenz,CITY,abend,14,24,1.5,2.5,48,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-7,4,Sanderau,Residenz,CITY,nachmittag,13,24,1.4,2.5,215,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-7,4,Sanderau,Residenz,CITY,vormittag,16,26,1.7,2.7,106,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-7,4,Sanderau,Residenz,EBIKE,nachmittag,11,20,3.75,6.0,56,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,0.75,0.4093,0.9285,unzureichend
-7,5,Sanderau,Juliuspromenade,CITY,abend,14,26,1.5,2.7,36,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-7,5,Sanderau,Juliuspromenade,CITY,frueh,14,25,1.5,2.6,60,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-7,5,Sanderau,Juliuspromenade,CITY,nachmittag,13,23,1.4,2.4,88,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-7,5,Sanderau,Juliuspromenade,CITY,vormittag,15,22,1.6,2.3,71,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-7,6,Sanderau,Dom,CARGO,nachmittag,17,26,10.5,15.0,54,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-7,6,Sanderau,Dom,CITY,abend,16,26,1.7,2.7,50,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-7,6,Sanderau,Dom,CITY,nachmittag,14,24,1.5,2.5,215,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
-7,6,Sanderau,Dom,EBIKE,nachmittag,11,18,3.75,5.5,49,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,0.75,0.4093,0.9285,unzureichend
-7,8,Sanderau,Hubland Campus,EBIKE,frueh,14,23,4.5,6.75,139,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
-7,8,Sanderau,Hubland Campus,EBIKE,vormittag,15,24,4.75,7.0,70,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,16.0,1.0,0.8064,1.0,unzureichend
-7,9,Sanderau,Grombühl Klinikum,EBIKE,frueh,17,27,5.25,7.75,111,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.6,0.2307,0.8824,unzureichend
-7,9,Sanderau,Grombühl Klinikum,EBIKE,nachmittag,18,27,5.5,7.75,81,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-7,9,Sanderau,Grombühl Klinikum,EBIKE,vormittag,17,28,5.25,8.0,72,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-8,1,Hubland Campus,Hauptbahnhof,CITY,nachmittag,18,29,1.9,3.0,261,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-8,1,Hubland Campus,Hauptbahnhof,EBIKE,nachmittag,15,26,4.75,7.5,67,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-8,7,Hubland Campus,Sanderau,CITY,nachmittag,16,27,1.7,2.8,154,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-9,1,Grombühl Klinikum,Hauptbahnhof,CARGO,frueh,7,11,5.5,7.5,152,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
-9,1,Grombühl Klinikum,Hauptbahnhof,CARGO,nachmittag,7,12,5.5,8.0,87,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-9,1,Grombühl Klinikum,Hauptbahnhof,CITY,abend,7,10,0.8,1.1,36,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-9,1,Grombühl Klinikum,Hauptbahnhof,CITY,frueh,6,10,0.7,1.1,680,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,33.0,0.9394,0.8039,0.9832,gestuetzt
-9,1,Grombühl Klinikum,Hauptbahnhof,CITY,nachmittag,6,10,0.7,1.1,515,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,23.0,0.913,0.732,0.9758,unbestimmt
-9,1,Grombühl Klinikum,Hauptbahnhof,CITY,vormittag,7,11,0.8,1.2,376,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,24.0,1.0,0.862,1.0,gestuetzt
-9,1,Grombühl Klinikum,Hauptbahnhof,EBIKE,frueh,5,8,2.25,3.0,178,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,16.0,0.9375,0.7167,0.9889,unzureichend
-9,1,Grombühl Klinikum,Hauptbahnhof,EBIKE,nachmittag,5,9,2.25,3.25,108,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,15.0,1.0,0.7961,1.0,unzureichend
-9,1,Grombühl Klinikum,Hauptbahnhof,EBIKE,vormittag,6,10,2.5,3.5,97,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-9,2,Grombühl Klinikum,Marktplatz,CITY,frueh,12,21,1.3,2.2,57,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,0.5,0.0945,0.9055,unzureichend
-9,2,Grombühl Klinikum,Marktplatz,CITY,nachmittag,11,19,1.2,2.0,114,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-9,2,Grombühl Klinikum,Marktplatz,CITY,vormittag,12,23,1.3,2.4,77,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-9,2,Grombühl Klinikum,Marktplatz,EBIKE,nachmittag,9,16,3.25,5.0,40,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-9,3,Grombühl Klinikum,Universität Sanderring,CARGO,frueh,11,18,7.5,11.0,105,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-9,3,Grombühl Klinikum,Universität Sanderring,CARGO,vormittag,11,20,7.5,12.0,56,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-9,3,Grombühl Klinikum,Universität Sanderring,CITY,frueh,9,16,1.0,1.7,436,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,35.0,0.9143,0.7762,0.9704,unbestimmt
-9,3,Grombühl Klinikum,Universität Sanderring,CITY,nachmittag,10,17,1.1,1.8,86,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.6,0.2307,0.8824,unzureichend
-9,3,Grombühl Klinikum,Universität Sanderring,CITY,vormittag,10,18,1.1,1.9,291,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,16.0,1.0,0.8064,1.0,unzureichend
-9,3,Grombühl Klinikum,Universität Sanderring,EBIKE,frueh,8,13,3.0,4.25,140,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,23.0,1.0,0.8569,1.0,gestuetzt
-9,3,Grombühl Klinikum,Universität Sanderring,EBIKE,nachmittag,9,13,3.25,4.25,30,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,0.6667,0.2077,0.9385,unzureichend
-9,3,Grombühl Klinikum,Universität Sanderring,EBIKE,vormittag,8,13,3.0,4.25,76,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-9,4,Grombühl Klinikum,Residenz,CARGO,nachmittag,9,17,6.5,10.5,46,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-9,4,Grombühl Klinikum,Residenz,CITY,nachmittag,9,16,1.0,1.7,178,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
-9,4,Grombühl Klinikum,Residenz,EBIKE,nachmittag,8,13,3.0,4.25,57,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
-9,5,Grombühl Klinikum,Juliuspromenade,CITY,abend,12,18,1.3,1.9,33,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,0.5,0.0945,0.9055,unzureichend
-9,5,Grombühl Klinikum,Juliuspromenade,CITY,nachmittag,11,18,1.2,1.9,120,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-9,5,Grombühl Klinikum,Juliuspromenade,CITY,vormittag,12,22,1.3,2.3,79,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,0.5,0.15,0.85,unzureichend
-9,5,Grombühl Klinikum,Juliuspromenade,EBIKE,nachmittag,8,14,3.0,4.5,36,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-9,6,Grombühl Klinikum,Dom,CARGO,nachmittag,10,21,7.0,12.5,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-9,6,Grombühl Klinikum,Dom,CITY,abend,9,16,1.0,1.7,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-9,6,Grombühl Klinikum,Dom,CITY,frueh,9,17,1.0,1.8,49,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-9,6,Grombühl Klinikum,Dom,CITY,nachmittag,8,15,0.9,1.6,192,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-9,6,Grombühl Klinikum,Dom,EBIKE,nachmittag,7,12,2.75,4.0,40,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-9,7,Grombühl Klinikum,Sanderau,CARGO,nachmittag,15,24,9.5,14.0,74,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-9,7,Grombühl Klinikum,Sanderau,CITY,nachmittag,12,20,1.3,2.1,308,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,17.0,1.0,0.8157,1.0,unzureichend
-9,7,Grombühl Klinikum,Sanderau,CITY,vormittag,13,24,1.4,2.5,70,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-9,7,Grombühl Klinikum,Sanderau,EBIKE,nachmittag,10,16,3.5,5.0,95,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-9,8,Grombühl Klinikum,Hubland Campus,EBIKE,frueh,16,26,5.0,7.5,176,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-9,10,Grombühl Klinikum,Zellerau,CARGO,nachmittag,15,24,9.5,14.0,66,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,0.0,0.0,0.7935,unzureichend
-9,10,Grombühl Klinikum,Zellerau,CITY,nachmittag,12,20,1.3,2.1,280,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,15.0,0.8,0.5481,0.9295,unzureichend
-9,10,Grombühl Klinikum,Zellerau,CITY,vormittag,13,23,1.4,2.4,71,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-9,10,Grombühl Klinikum,Zellerau,EBIKE,nachmittag,10,15,3.5,4.75,60,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,CARGO,frueh,9,15,6.5,9.5,87,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,CARGO,nachmittag,10,16,7.0,10.0,56,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,CARGO,vormittag,10,17,7.0,10.5,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,CITY,abend,9,16,1.0,1.7,35,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,CITY,frueh,8,13,0.9,1.4,397,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,22.0,1.0,0.8513,1.0,gestuetzt
-10,1,Zellerau,Hauptbahnhof,CITY,nachmittag,8,14,0.9,1.5,278,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,CITY,vormittag,8,15,0.9,1.6,225,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,EBIKE,frueh,7,11,2.75,3.75,98,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,13.0,1.0,0.7719,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,EBIKE,nachmittag,7,10,2.75,3.5,64,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-10,1,Zellerau,Hauptbahnhof,EBIKE,vormittag,8,14,3.0,4.5,58,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
-10,2,Zellerau,Marktplatz,CITY,frueh,7,11,0.8,1.2,90,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-10,2,Zellerau,Marktplatz,CITY,nachmittag,7,12,0.8,1.3,94,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-10,2,Zellerau,Marktplatz,EBIKE,frueh,7,11,2.75,3.75,31,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
-10,3,Zellerau,Universität Sanderring,CARGO,frueh,18,28,11.0,16.0,108,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-10,3,Zellerau,Universität Sanderring,CITY,frueh,16,25,1.7,2.6,494,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,19.0,0.8421,0.6243,0.9448,unzureichend
-10,3,Zellerau,Universität Sanderring,CITY,nachmittag,15,27,1.6,2.8,86,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-10,3,Zellerau,Universität Sanderring,EBIKE,frueh,12,20,4.0,6.0,109,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,17.0,1.0,0.8157,1.0,unzureichend
-10,3,Zellerau,Universität Sanderring,EBIKE,vormittag,14,21,4.5,6.25,47,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-10,4,Zellerau,Residenz,CITY,nachmittag,15,26,1.6,2.7,203,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
-10,4,Zellerau,Residenz,CITY,vormittag,16,28,1.7,2.9,80,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
-10,4,Zellerau,Residenz,EBIKE,nachmittag,11,19,3.75,5.75,62,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
-10,4,Zellerau,Residenz,EBIKE,vormittag,15,26,4.75,7.5,30,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-10,5,Zellerau,Juliuspromenade,CITY,abend,7,12,0.8,1.3,39,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-10,5,Zellerau,Juliuspromenade,CITY,frueh,7,12,0.8,1.3,61,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-10,5,Zellerau,Juliuspromenade,CITY,nachmittag,6,11,0.7,1.2,107,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-10,5,Zellerau,Juliuspromenade,CITY,vormittag,7,12,0.8,1.3,62,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-10,5,Zellerau,Juliuspromenade,EBIKE,nachmittag,6,9,2.5,3.25,31,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
-10,6,Zellerau,Dom,CARGO,nachmittag,15,25,9.5,14.5,43,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-10,6,Zellerau,Dom,CITY,abend,14,24,1.5,2.5,62,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
-10,6,Zellerau,Dom,CITY,nachmittag,12,22,1.3,2.3,214,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-10,6,Zellerau,Dom,EBIKE,nachmittag,10,18,3.5,5.5,56,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
-10,7,Zellerau,Sanderau,EBIKE,nachmittag,14,24,4.5,7.0,83,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
-10,9,Zellerau,Grombühl Klinikum,CARGO,frueh,17,26,10.5,15.0,113,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
-10,9,Zellerau,Grombühl Klinikum,CARGO,nachmittag,16,23,10.0,13.5,58,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
-10,9,Zellerau,Grombühl Klinikum,CITY,frueh,13,22,1.4,2.3,493,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,22.0,1.0,0.8513,1.0,gestuetzt
-10,9,Zellerau,Grombühl Klinikum,CITY,nachmittag,13,22,1.4,2.3,280,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,13.0,1.0,0.7719,1.0,unzureichend
-10,9,Zellerau,Grombühl Klinikum,CITY,vormittag,14,25,1.5,2.6,232,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
-10,9,Zellerau,Grombühl Klinikum,EBIKE,frueh,10,17,3.5,5.25,118,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
-10,9,Zellerau,Grombühl Klinikum,EBIKE,nachmittag,10,17,3.5,5.25,78,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
-10,9,Zellerau,Grombühl Klinikum,EBIKE,vormittag,11,20,3.75,6.0,68,2026-08-24,375720e51a8b,a8a274c603ca,sichtbar,freigegeben,2026-04-24,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+1,2,Hauptbahnhof,Marktplatz,CARGO,nachmittag,9,15,6.5,9.5,40,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
+1,2,Hauptbahnhof,Marktplatz,CITY,nachmittag,8,15,0.9,1.6,181,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,17.0,1.0,0.8157,1.0,unzureichend
+1,2,Hauptbahnhof,Marktplatz,CITY,vormittag,8,15,0.9,1.6,100,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
+1,2,Hauptbahnhof,Marktplatz,EBIKE,nachmittag,7,14,2.75,4.5,32,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
+1,3,Hauptbahnhof,Universität Sanderring,CARGO,nachmittag,11,19,7.5,11.5,37,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,0.0,0.0,0.7935,unzureichend
+1,4,Hauptbahnhof,Residenz,EBIKE,nachmittag,6,12,2.5,4.0,61,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,15.0,1.0,0.7961,1.0,unzureichend
+1,5,Hauptbahnhof,Juliuspromenade,EBIKE,nachmittag,5,11,2.25,3.75,49,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
+1,6,Hauptbahnhof,Dom,EBIKE,nachmittag,6,12,2.5,4.0,60,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
+1,6,Hauptbahnhof,Dom,EBIKE,vormittag,6,14,2.5,4.5,32,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
+1,7,Hauptbahnhof,Sanderau,CARGO,nachmittag,14,26,9.0,15.0,84,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
+1,7,Hauptbahnhof,Sanderau,CITY,abend,13,22,1.4,2.3,36,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+1,7,Hauptbahnhof,Sanderau,CITY,nachmittag,12,22,1.3,2.3,353,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,23.0,0.9565,0.7901,0.9923,unbestimmt
+1,7,Hauptbahnhof,Sanderau,CITY,vormittag,14,22,1.5,2.3,76,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+1,7,Hauptbahnhof,Sanderau,EBIKE,nachmittag,10,18,3.5,5.5,86,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,28.0,1.0,0.8794,1.0,gestuetzt
+1,8,Hauptbahnhof,Hubland Campus,EBIKE,frueh,15,26,4.75,7.5,42,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+1,9,Hauptbahnhof,Grombühl Klinikum,CARGO,nachmittag,9,16,6.5,10.0,58,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,0.6,0.2307,0.8824,unzureichend
+1,9,Hauptbahnhof,Grombühl Klinikum,CITY,nachmittag,7,13,0.8,1.4,348,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,22.0,0.9091,0.7218,0.9747,unbestimmt
+1,9,Hauptbahnhof,Grombühl Klinikum,EBIKE,nachmittag,5,10,2.25,3.5,66,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,21.0,0.9524,0.7733,0.9915,unbestimmt
+1,10,Hauptbahnhof,Zellerau,CARGO,nachmittag,9,19,6.5,11.5,62,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
+1,10,Hauptbahnhof,Zellerau,CITY,nachmittag,8,15,0.9,1.6,312,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,29.0,1.0,0.883,1.0,gestuetzt
+1,10,Hauptbahnhof,Zellerau,CITY,vormittag,9,16,1.0,1.7,63,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
+1,10,Hauptbahnhof,Zellerau,EBIKE,nachmittag,7,13,2.75,4.25,70,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,15.0,1.0,0.7961,1.0,unzureichend
+2,1,Marktplatz,Hauptbahnhof,CARGO,frueh,9,18,6.5,11.0,85,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
+2,1,Marktplatz,Hauptbahnhof,CARGO,nachmittag,9,16,6.5,10.0,38,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+2,1,Marktplatz,Hauptbahnhof,CITY,frueh,7,13,0.8,1.4,365,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,28.0,1.0,0.8794,1.0,gestuetzt
+2,1,Marktplatz,Hauptbahnhof,EBIKE,frueh,6,12,2.5,4.0,93,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,19.0,1.0,0.8318,1.0,unzureichend
+2,1,Marktplatz,Hauptbahnhof,EBIKE,nachmittag,6,13,2.5,4.25,35,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,13.0,0.7692,0.4974,0.9182,unzureichend
+2,1,Marktplatz,Hauptbahnhof,EBIKE,vormittag,6,13,2.5,4.25,69,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,16.0,1.0,0.8064,1.0,unzureichend
+2,3,Marktplatz,Universität Sanderring,CARGO,frueh,7,13,5.5,8.5,89,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
+2,3,Marktplatz,Universität Sanderring,CARGO,vormittag,7,14,5.5,9.0,70,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
+2,3,Marktplatz,Universität Sanderring,CITY,frueh,6,11,0.7,1.2,412,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,34.0,1.0,0.8985,1.0,gestuetzt
+2,3,Marktplatz,Universität Sanderring,EBIKE,frueh,5,9,2.25,3.25,97,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,36.0,0.9167,0.7817,0.9713,unbestimmt
+2,3,Marktplatz,Universität Sanderring,EBIKE,vormittag,5,8,2.25,3.0,57,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,23.0,1.0,0.8569,1.0,gestuetzt
+2,4,Marktplatz,Residenz,EBIKE,vormittag,4,10,2.0,3.5,54,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,13.0,0.8462,0.5776,0.9567,unzureichend
+2,5,Marktplatz,Juliuspromenade,CARGO,vormittag,3,5,3.5,4.5,40,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
+2,6,Marktplatz,Dom,CARGO,nachmittag,4,8,4.0,6.0,49,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
+2,6,Marktplatz,Dom,CARGO,vormittag,4,10,4.0,7.0,49,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
+2,6,Marktplatz,Dom,EBIKE,nachmittag,3,5,1.75,2.25,66,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,16.0,0.8125,0.5699,0.9341,unzureichend
+2,6,Marktplatz,Dom,EBIKE,vormittag,3,5,1.75,2.25,65,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
+2,7,Marktplatz,Sanderau,CITY,nachmittag,10,18,1.1,1.9,200,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,16.0,1.0,0.8064,1.0,unzureichend
+2,7,Marktplatz,Sanderau,EBIKE,nachmittag,9,16,3.25,5.0,41,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,16.0,0.875,0.6398,0.965,unzureichend
+2,9,Marktplatz,Grombühl Klinikum,CARGO,frueh,14,25,9.0,14.5,124,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,0.5,0.0945,0.9055,unzureichend
+2,9,Marktplatz,Grombühl Klinikum,CITY,frueh,12,21,1.3,2.2,520,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,44.0,0.9545,0.8486,0.9874,gestuetzt
+2,9,Marktplatz,Grombühl Klinikum,CITY,vormittag,13,24,1.4,2.5,352,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,24.0,1.0,0.862,1.0,gestuetzt
+2,9,Marktplatz,Grombühl Klinikum,EBIKE,frueh,10,18,3.5,5.5,127,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,39.0,1.0,0.9103,1.0,gestuetzt
+2,9,Marktplatz,Grombühl Klinikum,EBIKE,nachmittag,10,16,3.5,5.0,37,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,10.0,0.8,0.4902,0.9433,unzureichend
+2,9,Marktplatz,Grombühl Klinikum,EBIKE,vormittag,11,21,3.75,6.25,79,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,19.0,1.0,0.8318,1.0,unzureichend
+2,10,Marktplatz,Zellerau,EBIKE,nachmittag,6,14,2.5,4.5,37,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
+3,1,Universität Sanderring,Hauptbahnhof,EBIKE,nachmittag,8,18,3.0,5.5,42,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,16.0,1.0,0.8064,1.0,unzureichend
+3,2,Universität Sanderring,Marktplatz,CARGO,vormittag,7,14,5.5,9.0,36,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
+3,2,Universität Sanderring,Marktplatz,CITY,abend,5,10,0.6,1.1,56,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+3,4,Universität Sanderring,Residenz,EBIKE,vormittag,4,9,2.0,3.25,33,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
+3,5,Universität Sanderring,Juliuspromenade,CITY,frueh,7,12,0.8,1.3,56,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
+3,5,Universität Sanderring,Juliuspromenade,CITY,nachmittag,7,13,0.8,1.4,109,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
+3,5,Universität Sanderring,Juliuspromenade,CITY,vormittag,7,13,0.8,1.4,127,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,17.0,1.0,0.8157,1.0,unzureichend
+3,5,Universität Sanderring,Juliuspromenade,EBIKE,nachmittag,6,13,2.5,4.25,31,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,12.0,0.8333,0.552,0.953,unzureichend
+3,5,Universität Sanderring,Juliuspromenade,EBIKE,vormittag,7,15,2.75,4.75,33,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,12.0,0.6667,0.3906,0.8619,unzureichend
+3,6,Universität Sanderring,Dom,CARGO,vormittag,6,14,5.0,9.0,42,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
+3,7,Universität Sanderring,Sanderau,CARGO,vormittag,8,13,6.0,8.5,35,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
+3,9,Universität Sanderring,Grombühl Klinikum,CITY,vormittag,12,22,1.3,2.3,122,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
+3,9,Universität Sanderring,Grombühl Klinikum,EBIKE,nachmittag,8,14,3.0,4.5,37,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
+4,1,Residenz,Hauptbahnhof,EBIKE,nachmittag,7,16,2.75,5.0,43,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,7.0,0.8571,0.4869,0.9743,unzureichend
+4,2,Residenz,Marktplatz,CARGO,vormittag,6,14,5.0,9.0,52,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
+4,2,Residenz,Marktplatz,CITY,abend,5,10,0.6,1.1,63,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
+4,2,Residenz,Marktplatz,EBIKE,nachmittag,4,10,2.0,3.5,59,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,25.0,0.96,0.8046,0.9929,gestuetzt
+4,3,Residenz,Universität Sanderring,CARGO,vormittag,7,13,5.5,8.5,37,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
+4,3,Residenz,Universität Sanderring,CITY,frueh,5,10,0.6,1.1,44,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+4,3,Residenz,Universität Sanderring,EBIKE,nachmittag,4,9,2.0,3.25,39,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+4,3,Residenz,Universität Sanderring,EBIKE,vormittag,4,9,2.0,3.25,34,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
+4,6,Residenz,Dom,CARGO,frueh,5,9,4.5,6.5,34,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+4,6,Residenz,Dom,CARGO,nachmittag,4,10,4.0,7.0,95,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+4,6,Residenz,Dom,CARGO,vormittag,4,8,4.0,6.0,71,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
+4,6,Residenz,Dom,CITY,abend,4,8,0.5,0.9,67,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+4,6,Residenz,Dom,CITY,frueh,4,7,0.5,0.8,100,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
+4,6,Residenz,Dom,CITY,nachmittag,4,8,0.5,0.9,389,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,36.0,0.9167,0.7817,0.9713,unbestimmt
+4,6,Residenz,Dom,CITY,vormittag,4,8,0.5,0.9,358,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,29.0,1.0,0.883,1.0,gestuetzt
+4,6,Residenz,Dom,EBIKE,frueh,4,8,2.0,3.0,36,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
+4,6,Residenz,Dom,EBIKE,nachmittag,3,7,1.75,2.75,102,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,33.0,0.9091,0.7643,0.9686,unbestimmt
+4,6,Residenz,Dom,EBIKE,vormittag,3,8,1.75,3.0,91,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,26.0,1.0,0.8713,1.0,gestuetzt
+4,7,Residenz,Sanderau,EBIKE,nachmittag,7,15,2.75,4.75,39,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,0.8889,0.565,0.9801,unzureichend
+4,7,Residenz,Sanderau,EBIKE,vormittag,9,18,3.25,5.5,37,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
+5,1,Juliuspromenade,Hauptbahnhof,CARGO,frueh,8,15,6.0,9.5,91,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,11.0,0.8182,0.523,0.9486,unzureichend
+5,1,Juliuspromenade,Hauptbahnhof,CARGO,vormittag,8,17,6.0,10.5,82,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,0.8889,0.565,0.9801,unzureichend
+5,1,Juliuspromenade,Hauptbahnhof,CITY,abend,7,13,0.8,1.4,39,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
+5,1,Juliuspromenade,Hauptbahnhof,CITY,frueh,6,11,0.7,1.2,471,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,52.0,0.9808,0.8988,0.9966,gestuetzt
+5,1,Juliuspromenade,Hauptbahnhof,CITY,nachmittag,7,13,0.8,1.4,196,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,16.0,1.0,0.8064,1.0,unzureichend
+5,1,Juliuspromenade,Hauptbahnhof,EBIKE,frueh,5,9,2.25,3.25,131,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,26.0,0.9615,0.8111,0.9932,gestuetzt
+5,1,Juliuspromenade,Hauptbahnhof,EBIKE,nachmittag,6,10,2.5,3.5,45,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,15.0,0.8,0.5481,0.9295,unzureichend
+5,1,Juliuspromenade,Hauptbahnhof,EBIKE,vormittag,5,10,2.25,3.5,84,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,23.0,0.913,0.732,0.9758,unbestimmt
+5,3,Juliuspromenade,Universität Sanderring,CARGO,frueh,8,15,6.0,9.5,76,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
+5,3,Juliuspromenade,Universität Sanderring,CITY,frueh,8,15,0.9,1.6,303,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
+5,3,Juliuspromenade,Universität Sanderring,EBIKE,frueh,6,10,2.5,3.5,74,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,30.0,0.9667,0.8333,0.9941,gestuetzt
+5,3,Juliuspromenade,Universität Sanderring,EBIKE,vormittag,6,12,2.5,4.0,47,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,18.0,0.9444,0.7424,0.9901,unzureichend
+5,4,Juliuspromenade,Residenz,CARGO,nachmittag,8,18,6.0,11.0,59,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
+5,4,Juliuspromenade,Residenz,EBIKE,nachmittag,6,12,2.5,4.0,51,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
+5,4,Juliuspromenade,Residenz,EBIKE,vormittag,5,12,2.25,4.0,50,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
+5,6,Juliuspromenade,Dom,CARGO,nachmittag,5,10,4.5,7.0,84,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
+5,6,Juliuspromenade,Dom,CARGO,vormittag,5,12,4.5,8.0,47,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+5,6,Juliuspromenade,Dom,CITY,abend,4,8,0.5,0.9,55,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
+5,6,Juliuspromenade,Dom,EBIKE,nachmittag,3,7,1.75,2.75,67,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,19.0,1.0,0.8318,1.0,unzureichend
+5,6,Juliuspromenade,Dom,EBIKE,vormittag,3,7,1.75,2.75,65,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,18.0,0.9444,0.7424,0.9901,unzureichend
+5,7,Juliuspromenade,Sanderau,EBIKE,nachmittag,9,20,3.25,6.0,41,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
+5,9,Juliuspromenade,Grombühl Klinikum,CARGO,frueh,14,24,9.0,14.0,171,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,0.8889,0.565,0.9801,unzureichend
+5,9,Juliuspromenade,Grombühl Klinikum,CITY,frueh,12,20,1.3,2.1,839,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,62.0,0.9677,0.8898,0.9911,gestuetzt
+5,9,Juliuspromenade,Grombühl Klinikum,CITY,vormittag,12,23,1.3,2.4,446,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,37.0,0.9189,0.787,0.972,unbestimmt
+5,9,Juliuspromenade,Grombühl Klinikum,EBIKE,frueh,9,14,3.25,4.5,181,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,44.0,0.9773,0.8819,0.996,gestuetzt
+5,9,Juliuspromenade,Grombühl Klinikum,EBIKE,nachmittag,8,16,3.0,5.0,46,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+5,9,Juliuspromenade,Grombühl Klinikum,EBIKE,vormittag,9,16,3.25,5.0,104,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,28.0,0.9643,0.8229,0.9937,gestuetzt
+5,10,Juliuspromenade,Zellerau,EBIKE,nachmittag,6,12,2.5,4.0,49,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,0.8333,0.4365,0.9699,unzureichend
+6,2,Dom,Marktplatz,EBIKE,nachmittag,3,6,1.75,2.5,65,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,18.0,0.9444,0.7424,0.9901,unzureichend
+6,2,Dom,Marktplatz,EBIKE,vormittag,3,5,1.75,2.25,50,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,21.0,0.9048,0.7109,0.9735,unbestimmt
+6,3,Dom,Universität Sanderring,EBIKE,nachmittag,5,10,2.25,3.5,39,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
+6,3,Dom,Universität Sanderring,EBIKE,vormittag,5,10,2.25,3.5,35,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,8.0,1.0,0.6756,1.0,unzureichend
+6,4,Dom,Residenz,CARGO,nachmittag,5,12,4.5,8.0,111,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
+6,4,Dom,Residenz,CITY,frueh,5,10,0.6,1.1,94,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
+6,4,Dom,Residenz,EBIKE,nachmittag,4,8,2.0,3.0,90,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,30.0,0.9333,0.7868,0.9815,unbestimmt
+6,4,Dom,Residenz,EBIKE,vormittag,4,10,2.0,3.5,72,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,26.0,1.0,0.8713,1.0,gestuetzt
+6,5,Dom,Juliuspromenade,CARGO,nachmittag,4,9,4.0,6.5,53,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
+6,5,Dom,Juliuspromenade,CARGO,vormittag,5,10,4.5,7.0,116,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+6,5,Dom,Juliuspromenade,CITY,frueh,4,8,0.5,0.9,71,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+6,5,Dom,Juliuspromenade,EBIKE,nachmittag,3,8,1.75,3.0,58,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,31.0,0.9032,0.751,0.9665,unbestimmt
+6,5,Dom,Juliuspromenade,EBIKE,vormittag,4,9,2.0,3.25,107,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,33.0,0.9697,0.8468,0.9946,gestuetzt
+6,7,Dom,Sanderau,EBIKE,nachmittag,8,16,3.0,5.0,51,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,14.0,0.9286,0.6853,0.9873,unzureichend
+6,7,Dom,Sanderau,EBIKE,vormittag,9,17,3.25,5.25,31,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
+7,1,Sanderau,Hauptbahnhof,EBIKE,frueh,15,27,4.75,7.75,125,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,26.0,0.9615,0.8111,0.9932,gestuetzt
+7,1,Sanderau,Hauptbahnhof,EBIKE,nachmittag,15,27,4.75,7.75,65,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,14.0,0.8571,0.6006,0.9599,unzureichend
+7,2,Sanderau,Marktplatz,CARGO,nachmittag,14,26,9.0,15.0,31,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+7,2,Sanderau,Marktplatz,EBIKE,nachmittag,10,19,3.5,5.75,37,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,8.0,0.875,0.5291,0.9776,unzureichend
+7,3,Sanderau,Universität Sanderring,CARGO,frueh,10,17,7.0,10.5,116,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,7.0,0.8571,0.4869,0.9743,unzureichend
+7,3,Sanderau,Universität Sanderring,CARGO,vormittag,12,20,8.0,12.0,68,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
+7,3,Sanderau,Universität Sanderring,CITY,frueh,9,16,1.0,1.7,443,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,31.0,1.0,0.8897,1.0,gestuetzt
+7,3,Sanderau,Universität Sanderring,EBIKE,frueh,7,14,2.75,4.5,123,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,32.0,0.9062,0.7578,0.9676,unbestimmt
+7,3,Sanderau,Universität Sanderring,EBIKE,vormittag,8,14,3.0,4.5,67,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
+7,4,Sanderau,Residenz,EBIKE,nachmittag,11,23,3.75,6.75,62,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+7,5,Sanderau,Juliuspromenade,EBIKE,nachmittag,12,21,4.0,6.25,35,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,10.0,0.9,0.5958,0.9821,unzureichend
+7,6,Sanderau,Dom,CARGO,nachmittag,17,26,10.5,15.0,56,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+7,6,Sanderau,Dom,EBIKE,nachmittag,11,21,3.75,6.25,59,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,7.0,0.8571,0.4869,0.9743,unzureichend
+7,8,Sanderau,Hubland Campus,EBIKE,frueh,13,22,4.25,6.5,113,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,21.0,0.9524,0.7733,0.9915,unbestimmt
+7,9,Sanderau,Grombühl Klinikum,EBIKE,frueh,17,27,5.25,7.75,106,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,21.0,0.8571,0.6536,0.9502,unbestimmt
+7,9,Sanderau,Grombühl Klinikum,EBIKE,nachmittag,17,26,5.25,7.5,83,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,15.0,0.8667,0.6212,0.9626,unzureichend
+8,7,Hubland Campus,Sanderau,CITY,nachmittag,16,28,1.7,2.9,150,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
+9,1,Grombühl Klinikum,Hauptbahnhof,CARGO,frueh,7,12,5.5,8.0,145,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
+9,1,Grombühl Klinikum,Hauptbahnhof,CARGO,nachmittag,7,16,5.5,10.0,83,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,0.8889,0.565,0.9801,unzureichend
+9,1,Grombühl Klinikum,Hauptbahnhof,CARGO,vormittag,7,13,5.5,8.5,76,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
+9,1,Grombühl Klinikum,Hauptbahnhof,CITY,abend,7,12,0.8,1.3,40,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+9,1,Grombühl Klinikum,Hauptbahnhof,CITY,frueh,6,10,0.7,1.1,628,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,69.0,0.971,0.9003,0.992,gestuetzt
+9,1,Grombühl Klinikum,Hauptbahnhof,CITY,nachmittag,6,11,0.7,1.2,489,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,41.0,0.9512,0.8386,0.9865,gestuetzt
+9,1,Grombühl Klinikum,Hauptbahnhof,CITY,vormittag,7,11,0.8,1.2,358,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,36.0,1.0,0.9036,1.0,gestuetzt
+9,1,Grombühl Klinikum,Hauptbahnhof,EBIKE,frueh,5,9,2.25,3.25,166,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,36.0,1.0,0.9036,1.0,gestuetzt
+9,1,Grombühl Klinikum,Hauptbahnhof,EBIKE,nachmittag,5,9,2.25,3.25,99,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,23.0,0.913,0.732,0.9758,unbestimmt
+9,1,Grombühl Klinikum,Hauptbahnhof,EBIKE,vormittag,6,11,2.5,3.75,88,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,17.0,1.0,0.8157,1.0,unzureichend
+9,2,Grombühl Klinikum,Marktplatz,EBIKE,frueh,7,16,2.75,5.0,30,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
+9,2,Grombühl Klinikum,Marktplatz,EBIKE,nachmittag,9,17,3.25,5.25,43,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,12.0,0.9167,0.6461,0.9851,unzureichend
+9,3,Grombühl Klinikum,Universität Sanderring,CARGO,frueh,10,20,7.0,12.0,106,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+9,3,Grombühl Klinikum,Universität Sanderring,CARGO,vormittag,11,20,7.5,12.0,59,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
+9,3,Grombühl Klinikum,Universität Sanderring,CITY,frueh,9,17,1.0,1.8,421,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,55.0,0.9273,0.8274,0.9714,gestuetzt
+9,3,Grombühl Klinikum,Universität Sanderring,EBIKE,frueh,8,15,3.0,4.75,123,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,50.0,0.94,0.8378,0.9794,gestuetzt
+9,3,Grombühl Klinikum,Universität Sanderring,EBIKE,nachmittag,8,13,3.0,4.25,31,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+9,3,Grombühl Klinikum,Universität Sanderring,EBIKE,vormittag,8,13,3.0,4.25,70,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,20.0,1.0,0.8389,1.0,gestuetzt
+9,4,Grombühl Klinikum,Residenz,CARGO,nachmittag,8,17,6.0,10.5,57,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+9,4,Grombühl Klinikum,Residenz,EBIKE,nachmittag,6,13,2.5,4.25,61,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,16.0,0.9375,0.7167,0.9889,unzureichend
+9,5,Grombühl Klinikum,Juliuspromenade,CITY,abend,12,19,1.3,2.0,47,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
+9,5,Grombühl Klinikum,Juliuspromenade,CITY,nachmittag,10,18,1.1,1.9,190,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,18.0,0.9444,0.7424,0.9901,unzureichend
+9,5,Grombühl Klinikum,Juliuspromenade,EBIKE,frueh,7,15,2.75,4.75,31,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,4.0,1.0,0.5101,1.0,unzureichend
+9,5,Grombühl Klinikum,Juliuspromenade,EBIKE,nachmittag,8,16,3.0,5.0,46,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,15.0,0.9333,0.7018,0.9881,unzureichend
+9,5,Grombühl Klinikum,Juliuspromenade,EBIKE,vormittag,9,20,3.25,6.0,35,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,8.0,0.875,0.5291,0.9776,unzureichend
+9,6,Grombühl Klinikum,Dom,EBIKE,nachmittag,7,15,2.75,4.75,41,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,11.0,1.0,0.7412,1.0,unzureichend
+9,7,Grombühl Klinikum,Sanderau,CARGO,nachmittag,14,25,9.0,14.5,81,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
+9,7,Grombühl Klinikum,Sanderau,CITY,abend,13,23,1.4,2.4,39,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,1.0,0.2065,1.0,unzureichend
+9,7,Grombühl Klinikum,Sanderau,CITY,nachmittag,12,21,1.3,2.2,287,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,28.0,1.0,0.8794,1.0,gestuetzt
+9,7,Grombühl Klinikum,Sanderau,EBIKE,nachmittag,10,16,3.5,5.0,84,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,19.0,0.9474,0.7536,0.9906,unzureichend
+9,8,Grombühl Klinikum,Hubland Campus,EBIKE,frueh,15,25,4.75,7.25,139,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,15.0,1.0,0.7961,1.0,unzureichend
+9,10,Grombühl Klinikum,Zellerau,CARGO,nachmittag,13,24,8.5,14.0,69,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+9,10,Grombühl Klinikum,Zellerau,CITY,nachmittag,12,21,1.3,2.2,296,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,18.0,1.0,0.8241,1.0,unzureichend
+9,10,Grombühl Klinikum,Zellerau,EBIKE,nachmittag,10,18,3.5,5.5,57,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,16.0,0.8125,0.5699,0.9341,unzureichend
+10,1,Zellerau,Hauptbahnhof,CARGO,frueh,9,15,6.5,9.5,77,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
+10,1,Zellerau,Hauptbahnhof,CARGO,nachmittag,10,18,7.0,11.0,57,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,1.0,0.5655,1.0,unzureichend
+10,1,Zellerau,Hauptbahnhof,CARGO,vormittag,10,19,7.0,11.5,54,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,5.0,0.8,0.3755,0.9638,unzureichend
+10,1,Zellerau,Hauptbahnhof,CITY,frueh,8,14,0.9,1.5,379,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,38.0,1.0,0.9082,1.0,gestuetzt
+10,1,Zellerau,Hauptbahnhof,EBIKE,frueh,7,12,2.75,4.0,78,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,39.0,1.0,0.9103,1.0,gestuetzt
+10,1,Zellerau,Hauptbahnhof,EBIKE,nachmittag,6,12,2.5,4.0,65,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,12.0,1.0,0.7575,1.0,unzureichend
+10,1,Zellerau,Hauptbahnhof,EBIKE,vormittag,8,15,3.0,4.75,51,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
+10,2,Zellerau,Marktplatz,CARGO,nachmittag,9,17,6.5,10.5,31,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,1.0,0.0,0.0,0.7935,unzureichend
+10,2,Zellerau,Marktplatz,CITY,nachmittag,8,15,0.9,1.6,130,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
+10,2,Zellerau,Marktplatz,EBIKE,frueh,7,16,2.75,5.0,40,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+10,2,Zellerau,Marktplatz,EBIKE,nachmittag,6,11,2.5,3.75,36,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
+10,3,Zellerau,Universität Sanderring,CARGO,frueh,18,29,11.0,16.5,103,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,10.0,1.0,0.7225,1.0,unzureichend
+10,3,Zellerau,Universität Sanderring,CITY,frueh,15,26,1.6,2.7,471,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,30.0,0.9,0.7438,0.9654,unbestimmt
+10,3,Zellerau,Universität Sanderring,EBIKE,frueh,12,19,4.0,5.75,98,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,28.0,0.8929,0.728,0.9629,unbestimmt
+10,3,Zellerau,Universität Sanderring,EBIKE,vormittag,13,21,4.25,6.25,42,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,15.0,0.9333,0.7018,0.9881,unzureichend
+10,4,Zellerau,Residenz,EBIKE,nachmittag,11,19,3.75,5.75,69,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,9.0,1.0,0.7008,1.0,unzureichend
+10,5,Zellerau,Juliuspromenade,CARGO,nachmittag,6,12,5.0,8.0,41,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,6.0,1.0,0.6097,1.0,unzureichend
+10,5,Zellerau,Juliuspromenade,EBIKE,nachmittag,6,11,2.5,3.75,39,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,13.0,1.0,0.7719,1.0,unzureichend
+10,6,Zellerau,Dom,CARGO,nachmittag,13,25,8.5,14.5,56,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,3.0,1.0,0.4385,1.0,unzureichend
+10,6,Zellerau,Dom,EBIKE,nachmittag,10,20,3.5,6.0,55,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,13.0,1.0,0.7719,1.0,unzureichend
+10,7,Zellerau,Sanderau,EBIKE,nachmittag,13,24,4.25,7.0,79,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,14.0,1.0,0.7847,1.0,unzureichend
+10,9,Zellerau,Grombühl Klinikum,CARGO,frueh,16,25,10.0,14.5,120,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,7.0,1.0,0.6457,1.0,unzureichend
+10,9,Zellerau,Grombühl Klinikum,CARGO,nachmittag,15,24,9.5,14.0,71,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,2.0,1.0,0.3424,1.0,unzureichend
+10,9,Zellerau,Grombühl Klinikum,CITY,frueh,13,22,1.4,2.3,526,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,49.0,0.9796,0.8931,0.9964,gestuetzt
+10,9,Zellerau,Grombühl Klinikum,CITY,nachmittag,12,22,1.3,2.3,306,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,31.0,0.9677,0.8381,0.9943,gestuetzt
+10,9,Zellerau,Grombühl Klinikum,CITY,vormittag,14,25,1.5,2.6,261,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,18.0,1.0,0.8241,1.0,unzureichend
+10,9,Zellerau,Grombühl Klinikum,EBIKE,frueh,10,17,3.5,5.25,100,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,30.0,1.0,0.8865,1.0,gestuetzt
+10,9,Zellerau,Grombühl Klinikum,EBIKE,nachmittag,10,17,3.5,5.25,82,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,18.0,0.8889,0.672,0.969,unzureichend
+10,9,Zellerau,Grombühl Klinikum,EBIKE,vormittag,11,21,3.75,6.25,73,2026-06-29,375720e51a8b,d704ee26359d,sichtbar,freigegeben,2025-11-14,2026-06-29,15.0,1.0,0.7961,1.0,unzureichend

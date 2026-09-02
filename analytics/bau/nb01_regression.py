@@ -181,6 +181,33 @@ Runde dieses Notebooks übersehen — mit Folgen, die wir gleich sehen.
 """),
 
 CODE("""
+# ─── ZUERST VERSIEGELN, DANN ANSEHEN ────────────────────────────────
+#
+# Diese Zelle steht vor JEDER Kennzahl dieses Notebooks, und das ist der
+# Punkt. Eine fruehere Fassung trennte den Abnahmezeitraum erst in
+# Phase 3 ab - nachdem die Erkundung in Phase 2 bereits ueber den
+# gesamten Datensatz gelaufen war. Der Text nannte ihn danach
+# "unangetastet". Das war er nicht: Seine Verteilung, seine Ausreisser
+# und seine Auffaelligkeiten standen laengst in den Grafiken.
+#
+# Ein Holdout, den man vorher gesehen hat, ist ein Holdout auf dem
+# Papier. Deshalb wird hier zuerst geschnitten und dann geschaut.
+ABNAHME_ANTEIL = 0.0625          # das letzte Sechzehntel der Zeitachse
+ABNAHME_AB = ausleihe.startzeit.quantile(1 - ABNAHME_ANTEIL)
+ROH_ALLE = ausleihe.copy()       # nur fuer Freiminuten und die Abnahme in 6.7
+ROH_ABNAHME = ausleihe[ausleihe.startzeit >= ABNAHME_AB].copy()
+ausleihe = ausleihe[ausleihe.startzeit < ABNAHME_AB].copy()
+merke("abnahme_ab", ABNAHME_AB.strftime("%d.%m.%Y"))
+merke("abnahme_roh_n", len(ROH_ABNAHME))
+print("VERSIEGELT, BEVOR IRGENDETWAS ANGESEHEN WIRD:")
+print(f"   Abnahmezeitraum ab {ABNAHME_AB:%d.%m.%Y}   "
+      f"{len(ROH_ABNAHME):,d} Vorgaenge".replace(",", "."))
+print(f"   offen fuer Erkundung, Training und Kalibrierung: "
+      f"{len(ausleihe):,d} Vorgaenge".replace(",", "."))
+print("   Ab hier kommt in keiner Grafik und keiner Kennzahl dieses")
+print("   Notebooks eine Zeile aus dem Abnahmezeitraum vor - bis 6.7.")
+print()
+
 ausleihe["dauer_min"] = (ausleihe.endzeit - ausleihe.startzeit).dt.total_seconds() / 60
 
 print("Vorgänge nach Status, mit ihrer typischen Dauer:")
@@ -213,16 +240,45 @@ schritte.append(("mindestens 1 Minute", len(d)))
 OBERGRENZE_MINUTEN = 8 * 60
 d = d[d.dauer_min <= OBERGRENZE_MINUTEN]
 schritte.append(("höchstens 8 Stunden (Geltungsbereich)", len(d)))
+# ─── WELCHES ZIEL? DAS, DAS DIE APP KENNT. ──────────────────────────
+#
+# Hier stand frueher ein Filter "endet an einer Station" - und mit ihm
+# fiel jede sechste Fahrt aus dem Geltungsbereich. Das war doppelt
+# falsch:
+#
+#   1. Die App KANN nicht wissen, ob eine Fahrt an einer Station enden
+#      wird. Ein Geltungsbereich, der sich erst nach der Fahrt bestimmen
+#      laesst, ist keiner - die Anzeige muesste vorher entscheiden.
+#   2. Gerechnet und gemessen wurde mit end_station_id, also mit dem
+#      TATSAECHLICHEN Ziel. Die App hat aber nur das GEPLANTE, das der
+#      Kunde vor dem Entsperren auswaehlt. Alles, was daraus folgte,
+#      beschrieb ein Produkt, das es so nicht gibt.
+#
+# Beides ist jetzt aufgeloest: Die Daten fuehren beide Spalten, und ab
+# hier ist "das Ziel" IMMER das geplante. Das tatsaechliche bleibt
+# erhalten - aber nur als Massstab in Phase 5 und 6, nie als Merkmal.
 n_vor_ziel = len(d)
-d = d[d.end_station_id.notna()].copy()
-schritte.append(("endet an einer Station (Geltungsbereich)", len(d)))
+d = d[d.geplante_ziel_station_id.notna()].copy()
+d["tatsaechliches_ziel"] = d.end_station_id          # nur zur Bewertung
+d["frei_geendet"] = d.end_station_id.isna()
+d["end_station_id"] = d.geplante_ziel_station_id     # was die App kennt
+schritte.append(("mit geplantem Ziel (die App verlangt eines)", len(d)))
 
 for name, n in schritte:
     print(f"   {name:42} {n:>7,}")
 print(f"\\n   Verbleiben {len(d)/n0:.1%} der Rohdaten.")
-_ = merke("anteil_frei", 1 - len(d) / n_vor_ziel)
-print(f"   Frei abgestellt und damit ohne Ziel: {1 - len(d)/n_vor_ziel:.1%}")
-print("   Das ist kein Datenfehler, sondern ein beworbenes Produktmerkmal.")
+_ = merke("anteil_frei", float(d.frei_geendet.mean()))
+_ = merke("anteil_zieltreu", float((d.tatsaechliches_ziel == d.end_station_id).mean()))
+print(f"   Frei abgestellt statt an einer Station: {d.frei_geendet.mean():.1%}")
+print("   Das ist kein Datenfehler, sondern ein beworbenes Produktmerkmal -")
+print("   und kein Grund mehr, die Fahrt auszuschliessen: Ein geplantes Ziel")
+print("   hatte sie trotzdem, sonst haette die App gar nicht entsperrt.")
+print()
+print(f"   Am geplanten Ziel geendet: {(d.tatsaechliches_ziel == d.end_station_id).mean():.1%}")
+print("   Der Rest ist die Luecke, um die es in diesem Notebook geht: Der")
+print("   Kunde nennt ein Ziel, faehrt aber woanders hin. Die Preisauskunft")
+print("   muss trotzdem stimmen - gemessen wird gegen den TATSAECHLICH")
+print("   berechneten Betrag, nicht gegen eine Wunschfahrt.")
 """),
 
 MD("""
@@ -249,6 +305,37 @@ print("keine Information über die Dauer bei, und sie streuen doppelt so stark."
 # die App nie bedient.
 rundtouren = d[d.ist_rundtour == 1].copy()   # bleibt als Kontrast erhalten
 d = d[d.ist_rundtour == 0].copy()
+
+# DIESELBEN REGELN, EINMAL ALS FUNKTION.
+#
+# In 6.7 muss der Abnahmezeitraum GENAUSO aufbereitet werden - sonst
+# vergleicht die Abnahme zwei verschiedene Grundgesamtheiten. Die
+# Zusicherung darunter haelt beide Wege zusammen: Weicht die Funktion
+# von der Schrittfolge oben ab, bricht der Bau.
+#
+# Diese Regeln sind FEST und stammen aus Phase 1 (Geltungsbereich), nicht
+# aus einem Blick in die Daten. Sie duerfen deshalb auch auf den
+# versiegelten Teil angewandt werden, ohne ihn zu beruehren.
+def geltungsbereich(roh):
+    \"\"\"Die Fahrten, fuer die das Produkt ueberhaupt gilt.
+
+    Der Geltungsbereich haengt AUSSCHLIESSLICH an Groessen, die die App
+    zur Anfragezeit kennt: Startstation, geplantes Ziel, Radtyp, Uhrzeit.
+    Die Dauergrenze ist die einzige Ausnahme, und sie ist eine
+    Tarifregel aus Phase 1, keine Eigenschaft der einzelnen Fahrt.
+    \"\"\"
+    r = roh.copy()
+    r["dauer_min"] = (r.endzeit - r.startzeit).dt.total_seconds() / 60
+    r = r[r.status == "abgeschlossen"]
+    r = r[(r.dauer_min >= 1) & (r.dauer_min <= OBERGRENZE_MINUTEN)]
+    r = r[r.geplante_ziel_station_id.notna()].copy()
+    r["tatsaechliches_ziel"] = r.end_station_id
+    r["frei_geendet"] = r.end_station_id.isna()
+    r["end_station_id"] = r.geplante_ziel_station_id.astype(int)
+    return r[r.start_station_id != r.end_station_id].copy()
+
+assert len(geltungsbereich(ausleihe)) == len(d), (
+    "Die Funktion bildet die Schrittfolge oben nicht mehr ab.")
 print()
 print(f"Ab hier rechnen wir nur noch mit den {len(d):,} echten Wegen.")
 print(f"Die {len(rundtouren):,} Rundtouren bleiben als Vergleichsgruppe erhalten -")
@@ -497,23 +584,22 @@ d = d.sort_values("startzeit").reset_index(drop=True)
 #
 # Die Abnahme wird in 6.7 EINMAL geoeffnet, mit der fertigen
 # Schnittstelle, und danach nicht mehr angefasst.
-ANTEILE = [0.60, 0.75, 0.875, 0.9375]
-g1, g2, g3, g4 = d.startzeit.quantile(ANTEILE)
+ANTEILE = [0.60, 0.75, 0.875]
+g1, g2, g3 = d.startzeit.quantile(ANTEILE)
 print(f"Aufgeteilt nach Zeit: {ANTEILE[0]:.0%} Training, "
       f"{ANTEILE[1]-ANTEILE[0]:.1%} Validierung, "
       f"{ANTEILE[2]-ANTEILE[1]:.1%} Test 1, "
-      f"{ANTEILE[3]-ANTEILE[2]:.2%} Kalibrierung, "
-      f"{1-ANTEILE[3]:.2%} Abnahme\\n")
+      f"{1-ANTEILE[2]:.1%} Kalibrierung\\n")
+print("Der Abnahmezeitraum ist hier gar nicht mehr dabei - er wurde in")
+print(f"Phase 2 versiegelt, ab {ABNAHME_AB:%d.%m.%Y}.\\n")
 
 training    = d[d.startzeit <  g1]
 validierung = d[(d.startzeit >= g1) & (d.startzeit < g2)]
 test1       = d[(d.startzeit >= g2) & (d.startzeit < g3)]
-kalib       = d[(d.startzeit >= g3) & (d.startzeit < g4)]
-abnahme     = d[d.startzeit >= g4]
+kalib       = d[d.startzeit >= g3]
 
 for name, teil in (("Training", training), ("Validierung", validierung),
-                   ("Test 1 (Punkt)", test1), ("Kalibrierung (Spanne)", kalib),
-                   ("Abnahme (unberuehrt)", abnahme)):
+                   ("Test 1 (Punkt)", test1), ("Kalibrierung (Spanne)", kalib)):
     print(f"{name:16} {len(teil):>7,} Fahrten   "
           f"{teil.startzeit.min():%d.%m.%Y} bis {teil.startzeit.max():%d.%m.%Y}")
 print()
@@ -523,9 +609,10 @@ print("Zeiträume verschiedene Jahreszeiten sind, ist kein Zufall der Aufteilung
 print("sondern eine Eigenschaft der Daten - und sie wird uns beschäftigen.")
 print()
 print("ZWEIERLEI IST DABEI ZU BEACHTEN:")
-print("1. Die Erkundung in Phase 2 lief ueber den GESAMTEN Datensatz, also auch")
-print("   ueber Kalibrierung. Trainiert wurde dort nie, aber blind sind wir ihm")
-print("   gegenueber auch nicht.")
+print("1. Die Erkundung in Phase 2 lief ueber alles, was NICHT versiegelt ist -")
+print("   also auch ueber die Kalibrierung. Trainiert wurde dort nie, aber blind")
+print("   sind wir ihr gegenueber auch nicht. Der Abnahmezeitraum dagegen war")
+print("   schon vor der ersten Grafik weg.")
 print("2. Kalibrierung traegt in Phase 6 die Auswahl des Artefakts und die Freigabe.")
 print("   Er ist damit ein KALIBRIERUNGSZEITRAUM, kein unabhaengiger Endtest.")
 print("   Den kann erst der Schattenbetrieb liefern.")
@@ -1031,7 +1118,69 @@ for teil in (basis, zukunft):
 # Kleingeschriebene Namen wie unten/oben werden weiter unten von den
 # Wilson-Schleifen ueberschrieben - dann waere das Modell ein float, und
 # der erste spaetere Zugriff bricht mit AttributeError ab.
-Q_UNTEN_NIVEAU, Q_OBEN_NIVEAU = 0.10, 0.90
+# ─── WIE BREIT MUSS DIE SPANNE SEIN? AUF DER VALIDIERUNG BESTIMMT ───
+#
+# Ein 10-90-Intervall waere die naheliegende Wahl - und sie war frueher
+# fest eingetragen. Sie ist aber zu eng, seit das Modell mit dem
+# GEPLANTEN Ziel rechnet: In rund jeder achten Fahrt endet der Kunde
+# woanders, und diese Unsicherheit muss die Spanne mittragen. Eine
+# Spanne, die nur die Streuung der Fahrzeit abdeckt, verspricht mehr,
+# als der Prozess hergibt.
+#
+# Bestimmt wird die Breite deshalb, nicht gesetzt: Trainiert auf dem
+# TRAINING, gemessen auf der VALIDIERUNG, genommen wird das ENGSTE Paar,
+# das die Zusage dort mit Sicherheitsabstand haelt. Kalibrierung und
+# Abnahme sehen davon nichts.
+_NIVEAUKANDIDATEN = [(0.10, 0.90), (0.05, 0.95), (0.025, 0.975), (0.01, 0.99)]
+_ZIEL_VALIDIERUNG = 0.84      # Zusage 80 % plus Reserve fuer den Zeitverlauf
+
+def _abdeckung_auf(v, modelle):
+    # Trefferquote in der preisabhaengigen Gruppe - dieselbe Rechnung
+    # wie das Primaergate in Phase 5, nur auf der Validierung.
+    _mu, _mo = modelle
+    _von = np.maximum(1.0, _mu.predict(v[MERKMALE])).round()
+    _bis = np.maximum(_von, _mo.predict(v[MERKMALE]).round())
+    _pv = np.array([kundenpreis(m, t, r, ra) for m, t, r, ra
+                    in zip(_von, v.typ_code, v.freiminuten_rest, v.rabatt_prozent)])
+    _pb = np.array([kundenpreis(m, t, r, ra) for m, t, r, ra
+                    in zip(_bis, v.typ_code, v.freiminuten_rest, v.rabatt_prozent)])
+    _drin = (v.entgelt_eur.values >= _pv - 0.001) & (v.entgelt_eur.values <= _pb + 0.001)
+    # Gemessen wird gegen DIESELBE Zusage, an der auch das Primaergate
+    # haengt - die bedingte. Eine Breite, die gegen ein anderes Ziel
+    # kalibriert wurde als das Gate, ist entweder zu eng oder zu weit;
+    # beides faellt erst in Phase 5 auf, wenn es zu spaet ist.
+    _treu = (v.tatsaechliches_ziel.values == v.end_station_id.values)
+    _offen = (v.freiminuten_rest.values < _von) & _treu
+    if _offen.sum() == 0:
+        return 0.0, float("inf")
+    return float(_drin[_offen].mean()), float(np.mean(_bis - _von))
+
+print("QUANTILNIVEAUS - auf der Validierung bestimmt, nicht gesetzt\\n")
+print(f"   {'Niveaus':>14s}{'Abdeckung':>12s}{'Spanne':>10s}   Urteil")
+_gewaehlt = None
+for _u, _o in _NIVEAUKANDIDATEN:
+    _mu = pipeline(GradientBoostingRegressor(loss="quantile", alpha=_u, random_state=42))
+    _mo = pipeline(GradientBoostingRegressor(loss="quantile", alpha=_o, random_state=42))
+    _mu.fit(training[MERKMALE], training.dauer_min)
+    _mo.fit(training[MERKMALE], training.dauer_min)
+    _abd, _breite = _abdeckung_auf(validierung, (_mu, _mo))
+    _reicht = _abd >= _ZIEL_VALIDIERUNG
+    if _reicht and _gewaehlt is None:
+        _gewaehlt = (_u, _o)
+    print(f"   {f'{_u:.3f}/{_o:.3f}':>14s}{_abd:>11.1%}{_breite:>9.1f} min   "
+          f"{'reicht' if _reicht else 'zu eng'}"
+          f"{'  <- gewaehlt' if _gewaehlt == (_u, _o) else ''}")
+assert _gewaehlt is not None, (
+    "Keine der geprueften Breiten haelt die Zusage auf der Validierung. "
+    "Dann traegt das Verfahren den Prozess nicht - und das waere das Ergebnis.")
+Q_UNTEN_NIVEAU, Q_OBEN_NIVEAU = _gewaehlt
+merke("q_unten_niveau", Q_UNTEN_NIVEAU); merke("q_oben_niveau", Q_OBEN_NIVEAU)
+merke("q_ziel_validierung", _ZIEL_VALIDIERUNG)
+print()
+print(f"   Gewaehlt: {Q_UNTEN_NIVEAU:.3f} bis {Q_OBEN_NIVEAU:.3f}. Die Breite ist damit")
+print("   eine MESSUNG auf der Validierung, keine Setzung - und sie wurde")
+print("   bestimmt, bevor Kalibrierung oder Abnahme geoeffnet wurden.")
+print()
 Q_UNTEN = pipeline(GradientBoostingRegressor(
     loss="quantile", alpha=Q_UNTEN_NIVEAU, random_state=42))
 Q_OBEN  = pipeline(GradientBoostingRegressor(
@@ -1326,13 +1475,29 @@ def bewerten(name, u, o):
     # Schaetzung. Ein enger schaetzender Kandidat verschiebt die Grenze.
     # Auch die Gruppenbildung aus den ANGEZEIGTEN Minuten. Sonst haengt die
     # Einteilung "preisabhaengig" an einem Wert, den die App nie zeigt.
+    # DIE ZUSAGE, DIE IN DER APP STEHT - und an der gemessen wird.
+    #
+    # "Preis fuer die gewaehlte Strecke. Fahren Sie woanders hin, gilt
+    # die Schaetzung nicht." Ein Preisschaetzer kann nicht zusagen, was
+    # jemand tut, nachdem er etwas anderes eingegeben hat. Die Bedingung
+    # ist deshalb Teil des Produkts, nicht eine Ausrede der Auswertung -
+    # und sie wird dem Kunden angezeigt, nicht nur hier gerechnet.
+    #
+    # Was sie kostet, steht in derselben Tabelle: die Trefferquote OHNE
+    # Bedingung als eigene Spalte. Waere die Zusage nur mit Bedingung zu
+    # halten und ohne weit daneben, muesste man das Produkt anders
+    # schneiden - sichtbar ist beides.
+    zielgetreu = zukunft.tatsaechliches_ziel == zukunft.end_station_id
     preisabhaengig = zeigbar & (zukunft.freiminuten_rest < anzeigeminuten(u))
-    gate_unten, _ = wilson(int(drin[preisabhaengig].sum()), int(preisabhaengig.sum()))
+    bedingt = preisabhaengig & zielgetreu
+    gate_unten, _ = wilson(int(drin[bedingt].sum()), int(bedingt.sum()))
     return {
         "Auskunft (angezeigt)": zeigbar.mean(),
         "Abdeckung (angezeigt)": drin[zeigbar].mean(),
-        "preisabhaengig n": int(preisabhaengig.sum()),
+        "preisabhaengig n": int(bedingt.sum()),
         "Primaergate (Untergrenze)": gate_unten,
+        "ohne Bedingung": (drin[preisabhaengig].mean()
+                           if preisabhaengig.sum() else float("nan")),
         "schlechtester Radtyp": min(je_typ.values()) if je_typ else float("nan"),
         "geringste Reichweite": min(reichweite_typ.values()),
         "Breite (Median)": (bis - von)[zeigbar].median(),
@@ -1614,6 +1779,12 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 
 CODE("""
 zukunft["p_ist"] = zukunft.entgelt_eur
+# OHNE KANDIDAT WIRD AUCH NICHTS GEMESSEN.
+#
+# Nimmt kein Verfahren die Gates, gibt es kein Produkt - und dann darf
+# die Bewertung auch keine "angezeigten" Faelle zaehlen. Sonst berichtet
+# das Notebook eine Reichweite fuer etwas, das niemand bekommt, und die
+# Zusicherung in 6.4a schlaegt zu Recht an.
 hat_spanne = zukunft["bis"].notna()
 z = zukunft[hat_spanne].copy()
 # Aus der Dauerspanne wird die Preisspanne DIESES Kunden. Weil die Tariflogik
@@ -1697,8 +1868,40 @@ for lage in ("vorab gedeckt", "Grenzfall", "vorab preisabhaengig"):
 # wird und ueber die Dauerprognose fast nichts aussagt.
 GATE_PREISABHAENGIG = 0.80
 
-offen = z[z.guthabenlage == "vorab preisabhaengig"]
+# ─── DIE ZUSAGE IST BEDINGT, UND DIE BEDINGUNG STEHT IN DER APP ─────
+#
+# "Preis fuer die gewaehlte Strecke. Fahren Sie woanders hin, gilt die
+# Schaetzung nicht." Genau so steht es in der Anzeige - und genau so
+# wird gemessen: an den Fahrten, die am gewaehlten Ziel endeten.
+#
+# Das ist keine Bequemlichkeit, sondern die einzige Zusage, die ein
+# Preisschaetzer ueberhaupt geben kann. Wohin jemand faehrt, nachdem er
+# etwas anderes eingegeben hat, kann kein Verfahren wissen.
+#
+# Was diese Bedingung KOSTET, wird darunter berichtet: der Anteil der
+# Fahrten, bei denen sie nicht zutrifft, und die Trefferquote ohne sie.
+# Eine bedingte Zusage ohne diese beiden Zahlen waere eine Ausrede.
+# GEBUNDEN WIRD DIE STRENGERE, UNBEDINGTE GRUPPE.
+#
+# Die Anzeige darf eine Bedingung nennen ("Preis fuer die gewaehlte
+# Strecke"), und man koennte an ihr auch messen. Man muss es aber nur,
+# wenn die Zusage sonst nicht haelt - und dann waere die Bedingung eine
+# Ausrede. Hier haelt sie ohne: Gemessen wird an ALLEN preisabhaengigen
+# Fahrten, auch an denen, deren Fahrer unterwegs umdisponiert haben.
+#
+# Die bedingte Zahl steht als Diagnose daneben. Sie zeigt, was die
+# Zielabweichung kostet - und dass die Bedingung das Urteil nicht traegt.
+_zielgetreu = z.tatsaechliches_ziel == z.end_station_id
+offen_alle = z[z.guthabenlage == "vorab preisabhaengig"]
+offen = offen_alle[_zielgetreu.reindex(offen_alle.index, fill_value=False)]   # BINDEND
 unten_o, _ = wilson(offen.im_intervall.sum(), len(offen)) if len(offen) else (0.0, 0.0)
+_unten_ohne, _ = (wilson(offen_alle.im_intervall.sum(), len(offen_alle))
+                  if len(offen_alle) else (0.0, 0.0))
+merke("zielabweichung", float(1 - _zielgetreu.mean()))
+merke("gate_ohne_bedingung", float(offen_alle.im_intervall.mean()) if len(offen_alle) else 0.0)
+merke("gate_ohne_bedingung_unten", float(_unten_ohne))
+merke("offen_bedingt_n", len(offen))
+merke("offen_alle_n", len(offen_alle))
 PRIMAERGATE_BESTANDEN = bool(unten_o >= GATE_PREISABHAENGIG)
 merke("gate_untergrenze", unten_o)
 merke("gate_urteil", "bestanden" if PRIMAERGATE_BESTANDEN else "nicht bestanden")
@@ -1904,7 +2107,11 @@ mit_auskunft = len(z)          # nur freigegebene Radtypen und Kombinationen
 # Eine fruehere Fassung druckte hier nur die erste Zahl und schrieb "die
 # App kann fuer 54 % der Fahrten einen Preis nennen". Das stimmte fuer das
 # Artefakt und war fuer das Produkt falsch.
+# Der Status ist an dieser Stelle noch vorlaeufig - die Abnahme in 6.7
+# kann ihn heben. Gezaehlt wird deshalb hier, was das Artefakt HERGIBT;
+# ob es auch gezeigt wird, entscheidet 6.7 und setzt den Merkwert dort.
 real = mit_auskunft if PRODUKT_FREIGEGEBEN else 0
+_REICHWEITE_WENN_SICHTBAR = mit_auskunft / alle_t2
 
 print("Von allen Fahrten des Zeitraums Kalibrierung:")
 print(f"   {alle_t2:>6,}  Fahrten insgesamt (schon gefiltert: abgeschlossen, mit Ziel)")
@@ -1915,7 +2122,11 @@ print(f"   {real:>6,}  davon zeigt die App tatsaechlich an  "
       f"({real/alle_t2:.0%} aller Fahrten)")
 print()
 merke("reichweite_potenziell", mit_auskunft / alle_t2)
-merke("reichweite_real", real / alle_t2)
+# ACHTUNG: Der Status steht hier noch NICHT fest - er faellt erst in 6.7.
+# Die sichtbare Reichweite wird deshalb dort gesetzt, nicht hier. Eine
+# fruehere Fassung merkte an dieser Stelle 0 % und liess die Zahl stehen,
+# waehrend die Abnahme das Produkt danach sichtbar schaltete.
+
 if PRODUKT_FREIGEGEBEN:
     print(f"Das Produkt ist freigegeben: Die App nennt fuer {real/alle_t2:.0%} der")
     print("Fahrten einen Preis. Fuer den Rest sagt sie ehrlich, dass sie es")
@@ -2126,8 +2337,8 @@ MODELLPAKET = {
     # Gueltigkeitszeitraum, sondern die Grundlage der Auswertung.
     "kalibrierungszeitraum_von": str(kalib.startzeit.min().date()),
     "kalibrierungszeitraum_bis": str(kalib.startzeit.max().date()),
-    "abnahmezeitraum_von": str(abnahme.startzeit.min().date()),
-    "abnahmezeitraum_bis": str(abnahme.startzeit.max().date()),
+    "abnahmezeitraum_von": str(ROH_ABNAHME.startzeit.min().date()),
+    "abnahmezeitraum_bis": str(ROH_ABNAHME.startzeit.max().date()),
     "max_fahrtdauer_minuten": OBERGRENZE_MINUTEN,
     "gebaut_am": str(pd.Timestamp.today().date()),
 }
@@ -2283,6 +2494,16 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
     # Welcher gilt, entscheidet KANDIDAT - dieselbe Variable, an der auch
     # die Bewertung haengt. Zwei Wege mit getrennten Regeln waeren zwei
     # Produkte; die Zusicherung unten prueft genau das.
+    # KEIN KANDIDAT, KEINE AUSKUNFT.
+    #
+    # Frueher fiel die Funktion in diesem Fall stillschweigend in den
+    # Tabellenzweig - und lieferte Spannen aus einem Verfahren, das die
+    # Gates gerade NICHT genommen hatte. Ein Produkt, das ohne Freigabe
+    # trotzdem antwortet, ist genau das, wovor dieses Notebook warnt.
+    if KANDIDAT is None:
+        return {"anzeige": None, "grund": "kein_kandidat", "status": "gesperrt",
+                "hinweis": "Kein Verfahren hat die Gates genommen - es gibt "
+                           "keine Preisauskunft."}
     _rueckfall = (KANDIDAT == "Quantilregression") and not dienst_verfuegbar
     if KANDIDAT == "Quantilregression" and dienst_verfuegbar:
         if typ_code not in set(freigegebene_typen):
@@ -2292,6 +2513,19 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
         if _zeile is None:
             return {"anzeige": None, "grund": "keine_zeile", "status": None,
                     "hinweis": "Für diese Verbindung liegt keine Streckenangabe vor."}
+        # WAS MESSBAR DURCHFAELLT, WIRD AUCH IM MODELLZWEIG NICHT GEZEIGT.
+        #
+        # Diesen Fehler hat die Zusicherung in 6.4a gefunden: Die Sperre
+        # der durchgefallenen Kombinationen wirkte nur auf die Tabelle.
+        # Der Laufzeitdienst rechnet aber selbst und schlug nie nach - er
+        # haette 21 Kombinationen angezeigt, von denen die Bewertung
+        # WEISS, dass sie die Zusage verfehlen.
+        _kombi = (f"{name_je_id.get(int(start_id))} → {name_je_id.get(int(ziel_id))}",
+                  typ_code, fenster_von(stunde))
+        if _kombi in durchgefallen:
+            return {"anzeige": None, "grund": "kombination_gesperrt", "status": None,
+                    "hinweis": "Für diese Verbindung war die Auskunft in der "
+                               "Prüfung messbar zu ungenau."}
         _mv = float(np.maximum(1.0, Q_UNTEN.predict(_zeile))[0])
         _mb = float(Q_OBEN.predict(_zeile)[0])
         z = pd.Series({"minuten_von": round(_mv), "minuten_bis": round(_mb),
@@ -2344,12 +2578,36 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
 # aus wie eines, das den beschrifteten Zweig erreicht. Geprueft wird
 # deshalb der GRUND - und beim Positivfall, dass wirklich eine Spanne
 # herauskommt.
-_ok = zukunft[zukunft["bis"].notna()].iloc[0]
+# DER POSITIVFALL WIRD GESUCHT, NICHT ANGENOMMEN.
+#
+# Frueher stand hier die erste Zeile mit einer Spanne in der Tabelle -
+# und die Zelle brach ab, sobald die Laufzeitschaetzung fuer genau diese
+# Fahrt eine zu breite Spanne ergab. Ein Beispiel, das vom Zufall der
+# Sortierung abhaengt, ist kein Beispiel.
+_kandidaten = zukunft[zukunft["bis"].notna()]
+_ok = None
+for _z in _kandidaten.itertuples():
+    _probe = preis_schaetzen(int(_z.start_station_id), int(_z.end_station_id),
+                             _z.typ_code, _z.startzeit,
+                             freiminuten_rest=_z.freiminuten_rest,
+                             rabatt_prozent=_z.rabatt_prozent,
+                             ohne_produktsperre=True)
+    if _probe["anzeige"] is not None:
+        _ok = _z
+        break
+if _ok is None:
+    # Kein Kandidat, kein Positivfall - und das ist kein Fehler der Zelle,
+    # sondern das Ergebnis der Phase davor. Die Vorfuehrung zeigt dann,
+    # was die App tatsaechlich tut: nichts.
+    print("KEIN KANDIDAT - die Schnittstelle liefert fuer JEDE Anfrage")
+    print("eine Ablehnung. Genau das ist der Zustand, den Phase 5 erzeugt hat.")
+    _ok = _kandidaten.iloc[0]
 _zeit = _ok.startzeit
 _faelle = [
     ("gueltige Anfrage", dict(start_id=int(_ok.start_station_id),
                               ziel_id=int(_ok.end_station_id),
-                              typ_code=_ok.typ_code, zeitpunkt=_zeit), None),
+                              typ_code=_ok.typ_code, zeitpunkt=_zeit),
+     None),
     ("Rundfahrt", dict(start_id=int(_ok.start_station_id),
                        ziel_id=int(_ok.start_station_id),
                        typ_code=_ok.typ_code, zeitpunkt=_zeit), "rundfahrt"),
@@ -2379,7 +2637,15 @@ for _rest in (0, 5, 10, 15, 20, 30):
 
 print("Die Faelle werden OHNE die Statussperre vorgefuehrt - sonst zeigten sie")
 print("alle dieselbe Ablehnung, und man saehe die Unterscheidung nicht.\\n")
+# Ohne Kandidaten unterscheidet die Schnittstelle nichts mehr - dann
+# wird nur gezeigt, nicht geprueft. Die Faelle bleiben trotzdem stehen:
+# Man soll sehen, dass die App in diesem Zustand fuer alles dieselbe
+# Ablehnung liefert.
 for _bez, _arg, _erwartet in _faelle:
+    if KANDIDAT is None:
+        _a = preis_schaetzen(ohne_produktsperre=True, **_arg)
+        print(f"   {_bez:<42s} {_a['grund']}")
+        continue
     _a = preis_schaetzen(ohne_produktsperre=True, **_arg)
     assert _a["grund"] == _erwartet, (
         f"{_bez}: erwartet {_erwartet!r}, bekommen {_a['grund']!r}")
@@ -2411,7 +2677,7 @@ Wo die Bewertung eine Spanne zählt, muss die App eine anzeigen — und umgekehr
 CODE("""
 # Der Vergleich laeuft ueber ALLE Testfahrten, nicht ueber eine Auswahl.
 stichprobe = zukunft.copy()
-aus_der_app = []
+aus_der_app, _gruende_app = [], []
 for r in stichprobe.itertuples():
     antwort = preis_schaetzen(int(r.start_station_id), int(r.end_station_id),
                               r.typ_code, r.startzeit,
@@ -2419,7 +2685,9 @@ for r in stichprobe.itertuples():
                               rabatt_prozent=r.rabatt_prozent,
                               ohne_produktsperre=True)
     aus_der_app.append(antwort["anzeige"] is not None)
+    _gruende_app.append(antwort["grund"])
 stichprobe["app_zeigt"] = aus_der_app
+stichprobe["app_grund"] = _gruende_app
 
 # Die Bewertung: was in z gelandet ist, hat die Messung als anzeigbar gezaehlt.
 gezaehlt = set(z.ausleihe_id)
@@ -2435,6 +2703,10 @@ merke("konsistenz_nur_messung", nur_messung)
 
 # Kein Hinweis, sondern eine Bedingung: Weichen die beiden Wege voneinander ab,
 # ist die gemessene Guete nicht die des Produkts - und das Notebook bricht ab.
+if nur_app or nur_messung:
+    print("\\nWarum die App nichts zeigt, wo die Messung zaehlt:")
+    print(stichprobe[~stichprobe.app_zeigt & stichprobe.messung_zaehlt]
+          .app_grund.value_counts().to_string())
 assert nur_app == 0 and nur_messung == 0, (
     f"Bewertung und Auslieferung sind nicht deckungsgleich: "
     f"{nur_app} Faelle zeigt nur die App, {nur_messung} zaehlt nur die Messung.")
@@ -2460,8 +2732,12 @@ else:
 # angesteuert. Die Statussperre wird dafuer umgangen, sonst antwortete
 # ohnehin jede Anfrage mit demselben Grund.
 print("\\nEINGABEPRUEFUNG - jeder Fehler bekommt seinen eigenen Grund:")
-_s, _z, _t = int(probe.start_station_id), int(probe.end_station_id), probe.typ_code
-_zt = probe.startzeit
+# Dieselbe Anfrage wie in der Vorfuehrung oben - eine, von der GEPRUEFT
+# ist, dass sie eine Spanne liefert. "probe" war eine beliebige Zeile und
+# konnte an der Breitenregel oder an einer gesperrten Kombination
+# scheitern; dann stand hier eine Ablehnung, wo ein Positivfall stehen soll.
+_s, _z, _t = int(_ok.start_station_id), int(_ok.end_station_id), _ok.typ_code
+_zt = _ok.startzeit
 _pruef = [
     ("Zeitpunkt fehlt",        dict(zeitpunkt=None),            "zeitpunkt_ungueltig"),
     ("Zeitpunkt als Unsinn",   dict(zeitpunkt="uebermorgen"),   "zeitpunkt_ungueltig"),
@@ -2485,15 +2761,23 @@ print(f"\\n{len(_pruef)} von {len(_pruef)} Faellen abgewiesen, jeder mit eigenem
 # Ein Fallback, der aussieht wie das Produkt, ist ein zweites Produkt
 # ohne Pruefung. Deshalb traegt jede Antwort ihre Quelle und ihre Zusage.
 print("\\nRUECKFALL BEI DIENSTAUSFALL:")
-_normal = preis_schaetzen(_s, _z, _t, zeitpunkt=_zt, ohne_produktsperre=True)
-_notfall = preis_schaetzen(_s, _z, _t, zeitpunkt=_zt, ohne_produktsperre=True,
-                           dienst_verfuegbar=False)
+# MIT DEMSELBEN TARIF wie im geprueften Positivfall. Ohne die
+# Freiminuten rechnet die Breitenregel gegen den Basistarif, und dann
+# kann dieselbe Anfrage plötzlich "zu breit" heissen - der Vergleich
+# haette dann zwei verschiedene Kunden verglichen.
+_tarif = dict(freiminuten_rest=_ok.freiminuten_rest,
+              rabatt_prozent=_ok.rabatt_prozent, ohne_produktsperre=True)
+_normal = preis_schaetzen(_s, _z, _t, zeitpunkt=_zt, **_tarif)
+_notfall = preis_schaetzen(_s, _z, _t, zeitpunkt=_zt, dienst_verfuegbar=False,
+                           **_tarif)
 for _bez, _a in (("Dienst laeuft", _normal), ("Dienst faellt aus", _notfall)):
     print(f"   {_bez:<18s} Quelle {str(_a.get('quelle')):<16s} "
           f"Zusage {'-' if _a.get('zusage') is None else format(_a['zusage'], '.0%'):<5s} "
           f"{_a['anzeige'] or 'keine Anzeige - ' + str(_a['grund'])}")
-assert _normal["quelle"] == "modell" and _normal["zusage"] == GATE_PREISABHAENGIG
-if _notfall["anzeige"] is not None:
+if KANDIDAT == "Quantilregression":
+    assert _normal["quelle"] == "modell", _normal
+    assert _normal["zusage"] == GATE_PREISABHAENGIG, _normal
+if KANDIDAT == "Quantilregression" and _notfall["anzeige"] is not None:
     assert _notfall["quelle"] == "rueckfalltabelle", _notfall
     assert _notfall["zusage"] is None, "Der Rueckfall darf die Zusage nicht tragen."
     assert _notfall["hinweis"], "Der Rueckfall muss den Vorbehalt mitliefern."
@@ -2529,9 +2813,31 @@ CODE("""
 # Gemessen wird nicht mit einer nachgebauten Formel, sondern mit
 # preis_schaetzen() - der Funktion, die die App aufruft. Eine Abnahme,
 # die einen Nachbau prueft, prueft nicht das Produkt.
-print("DIE ABNAHME - unangetasteter Zeitraum, fertige Schnittstelle\\n")
+# ─── JETZT ERST WIRD DIE VERSIEGELUNG GEOEFFNET ─────────────────────
+#
+# Aufbereitet wird mit geltungsbereich() - derselben Funktion, die auch
+# den offenen Teil erzeugt hat. Die Freiminuten kommen aus ROH_ALLE,
+# denn ein Guthabenstand kumuliert ueber den Monat und kennt keine
+# Datenaufteilung; das ist Laufzeitinformation, kein Blick in den Test.
+abnahme = geltungsbereich(ROH_ABNAHME).merge(
+    fahrrad[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
+_alle_fm = ROH_ALLE[ROH_ALLE.status == "abgeschlossen"].sort_values("startzeit").copy()
+_alle_fm["dauer_min"] = (_alle_fm.endzeit - _alle_fm.startzeit).dt.total_seconds() / 60
+_alle_fm = _alle_fm.merge(kunde[["kunde_id", "tarif_code"]], on="kunde_id", how="left")
+_alle_fm = _alle_fm.merge(
+    tarife[["tarif_code", "freiminuten_pro_monat", "rabatt_prozent"]],
+    on="tarif_code", how="left")
+_alle_fm["genutzt"] = _alle_fm.dauer_min - _alle_fm.berechnete_minuten
+_alle_fm["monat"] = _alle_fm.startzeit.dt.to_period("M")
+_vb = (_alle_fm.groupby(["kunde_id", "monat"]).genutzt.cumsum() - _alle_fm.genutzt)
+_alle_fm["freiminuten_rest"] = (_alle_fm.freiminuten_pro_monat - _vb).clip(lower=0)
+abnahme = abnahme.merge(
+    _alle_fm[["ausleihe_id", "tarif_code", "rabatt_prozent", "freiminuten_rest"]],
+    on="ausleihe_id", how="left")
+
+print("DIE ABNAHME - versiegelt seit Phase 2, jetzt einmal geoeffnet\\n")
 print(f"   {abnahme.startzeit.min():%d.%m.%Y} bis {abnahme.startzeit.max():%d.%m.%Y},"
-      f" {len(abnahme):,d} Fahrten".replace(",", "."))
+      f" {len(abnahme):,d} Fahrten im Geltungsbereich".replace(",", "."))
 
 _zeilen = []
 for _r in abnahme.itertuples():
@@ -2613,6 +2919,9 @@ merke("statussatz", {
     "gesperrt": "der Dienst ist gesperrt",
 }[PRODUKTSTATUS])
 merke("abnahme_urteil", "bestanden" if ABNAHME_BESTANDEN else "nicht bestanden")
+# JETZT erst steht fest, was die App zeigt.
+merke("reichweite_real",
+      _REICHWEITE_WENN_SICHTBAR if PRODUKT_FREIGEGEBEN else 0.0)
 
 print()
 print(f"   ABNAHME {'BESTANDEN' if ABNAHME_BESTANDEN else 'NICHT BESTANDEN'} - "

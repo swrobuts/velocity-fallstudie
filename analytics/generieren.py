@@ -1295,19 +1295,44 @@ schreibe("umsetzfahrt.csv",
 #   2. Der Zufall kommt aus einem EIGENEN Generator. Der Hauptstrom
 #      bleibt unberuehrt, damit alle uebrigen Spalten und alle anderen
 #      Dateien Zeichen fuer Zeichen dieselben bleiben wie vorher.
-ZIELTREUE = 0.88          # Anteil der Fahrten, die am geplanten Ziel enden
+# WER FREI ABSTELLT, IST TROTZDEM ANGEKOMMEN.
+#
+# Eine erste Fassung wertete JEDE frei abgestellte Fahrt als
+# Zielabweichung. Das war falsch gedacht: Wer sein Rad hundert Meter vor
+# der Station abstellt, ist dort, wo er hinwollte - und genau darauf
+# kommt es an, denn der Preis haengt an der DAUER. Mit jener Fassung lag
+# die Zielabweichung bei rund einem Viertel aller Fahrten; das ist fuer
+# ein Produkt, dessen Preis am genannten Ziel haengt, unplausibel hoch.
+#
+# Richtig ist: Das geplante Ziel ist die Station, in deren Naehe die
+# Fahrt endete - ob angedockt oder nicht. Eine echte Abweichung ist,
+# wenn jemand unterwegs umdisponiert und woanders landet.
+ZIELTREUE = 0.90          # Anteil der Fahrten, die am geplanten Ziel enden
 _zrng = random.Random(20260902)
 _station_ids = list(STATION_IDS)
+_koord = {sid: (lat, lon) for sid, _n, _b, lat, lon, _k, _t in STATIONEN}
+
+def _naechste_station(lat, lon):
+    return min(_station_ids,
+               key=lambda i: (_koord[i][0] - lat) ** 2 + (_koord[i][1] - lon) ** 2)
 
 for _row in ausleihe_rows:
-    _start, _ende = _row[3], _row[5]
-    if _ende != "" and _zrng.random() < ZIELTREUE:
-        _geplant = _ende                      # gefahren wie geplant
+    _start, _ende, _lat, _lon = _row[3], _row[5], _row[11], _row[12]
+    if _ende != "":
+        _angekommen = _ende
+    elif _lat not in ("", None) and _lon not in ("", None):
+        _angekommen = _naechste_station(float(_lat), float(_lon))
     else:
-        # Meinung geaendert, weitergefahren oder frei abgestellt: Das
-        # geplante Ziel ist trotzdem eine Station - die App laesst nichts
-        # anderes zu. Es ist nur eine andere als die, an der die Fahrt endete.
-        _moeglich = [i for i in _station_ids if i != _start and i != _ende]
+        _angekommen = None
+    if _angekommen is not None and _zrng.random() < ZIELTREUE:
+        # Gefahren wie geplant. Auch eine Rundtour ist eine Absicht: Wer
+        # eine Runde dreht, waehlt in der App seine Startstation als Ziel -
+        # und bekommt dort keine Auskunft, weil eine Rundtour keine
+        # Verbindung ist. Das ist eine Produktentscheidung, kein Datenfehler.
+        _geplant = _angekommen
+    else:
+        # Unterwegs umdisponiert: Das geplante Ziel ist eine andere Station.
+        _moeglich = [i for i in _station_ids if i != _angekommen]
         _geplant = _zrng.choice(_moeglich)
     _row.append(_geplant)
 
