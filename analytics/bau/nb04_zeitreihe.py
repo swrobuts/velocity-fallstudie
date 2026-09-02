@@ -14,16 +14,28 @@ kopf("Zeitreihe: Wie viele Fahrten kommen morgen?",
 MD("""
 ## Was diese Aufgabe von den ersten drei unterscheidet
 
-In Notebook 1 haben wir Fahrten zufällig in Training und Test geteilt. Das war richtig,
-weil Fahrten untereinander austauschbar sind.
+Auch Notebook 1 trennt bereits **zeitlich** — ein zufälliger Schnitt wäre dort ebenso
+falsch gewesen, weil Saison, Tarifänderungen und verändertes Verhalten Fahrten eben nicht
+austauschbar machen. Der Unterschied liegt also nicht zwischen „zufällig richtig" und
+„zeitlich richtig".
 
-**Hier wäre dasselbe Vorgehen ein schwerer Fehler.** Wir sagen die *Zukunft* vorher, und
-die Zukunft darf beim Training nicht schon auf dem Tisch gelegen haben. Ein zufälliger
-Schnitt würde dem Modell den 15. August zum Lernen geben und den 14. zum Testen — es
-wüsste dann bereits, wie der Sommer 2026 verlaufen ist.
+**Er liegt in der Struktur der Aufgabe.** In Notebook 1 ist die Reihenfolge ein
+*Risiko*: Sie darf nicht verletzt werden, sonst leckt Zukunft ins Training. Hier ist die
+Reihenfolge ein *Bestandteil der Zielgröße*. Drei Dinge kommen hinzu, die es dort nicht
+gab:
 
-> **Die Reihenfolge ist hier ein Teil der Daten.** Das ist der ganze Unterschied — und
-> er zieht sich durch alle sechs Phasen.
+| | in Notebook 1 | hier |
+|---|---|---|
+| Beobachtungseinheit | die einzelne Fahrt | der aggregierte Tag |
+| Zusammenhang der Zeilen | Zeilen sind Momentaufnahmen | benachbarte Tage hängen voneinander ab (Autokorrelation) |
+| Prognosehorizont | keiner — geschätzt wird der aktuelle Vorgang | ausdrücklich: der morgige Tag, entschieden am Vorabend |
+
+> **Die Reihenfolge ist hier ein Teil der Daten, nicht nur eine Nebenbedingung.** Aus der
+> Autokorrelation entstehen die Merkmale (Vortag, Vorwoche), aus dem Horizont entsteht
+> die Frage, was um 18 Uhr überhaupt bekannt ist. Das zieht sich durch alle sechs Phasen.
+
+> **Ein zufälliger Schnitt bliebe trotzdem verboten** — er gäbe dem Modell den 15. August
+> zum Lernen und den 14. zum Testen.
 """),
 
 # =====================================================================
@@ -91,9 +103,31 @@ absichtlich etwas zu hoch. Wir rechnen das in Phase 5 aus.
 
 | | Kriterium | Schwelle |
 |---|---|---|
-| **fachlich** | Die Prognose muss die Faustregel „wie letzte Woche“ deutlich schlagen | mindestens 30 % weniger Fehler — **in mindestens 95 % der Wettervorhersage-Pfade** |
-| **wirtschaftlich** | Die erwarteten Kosten je Tag müssen unter denen der Faustregel liegen | |
-| **Betrieb** | Die Prognose muss am Vorabend um 18 Uhr vorliegen | dann beginnt die Nachtschicht |
+| **K1 fachlich** | Die Prognose muss die Faustregel „wie letzte Woche“ deutlich schlagen | mindestens 30 % weniger Fehler — **in mindestens {{pfad_anteil:.0%}} der Wettervorhersage-Pfade** |
+| **K2 wirtschaftlich** | Die erwarteten Kosten je Tag müssen unter denen der Faustregel liegen | ebenfalls **in mindestens {{pfad_anteil:.0%}} der Pfade** |
+| **K3 Betrieb** | Die Prognose muss am Vorabend um 18 Uhr vorliegen | dann beginnt die Nachtschicht |
+
+> **Die {{pfad_anteil:.0%}} gelten für K1 *und* K2 — das steht hier, weil es sonst später
+> stillschweigend hinzukäme.** Der Grund ist derselbe für beide: Die Wettervorhersage ist
+> simuliert, und ein einzelner Pfad ist eine Einzelrealisierung. Ein Kostenvorteil, der
+> nur in der Hälfte der Wetterziehungen entsteht, ist kein Kostenvorteil, sondern Glück.
+
+### Was „Pilot" in diesem Notebook bedeutet — und was nicht
+
+Der Begriff wird in dieser Reihe an mehreren Stellen benutzt, und er bedeutet nicht
+überall dasselbe. Hier heißt er:
+
+| | |
+|---|---|
+| **Wer sieht die Prognose** | die Disposition, im internen Planungswerkzeug — niemand sonst |
+| **Wird danach gehandelt** | nein. Die Schichtplanung entsteht weiter wie bisher; die Prognose läuft daneben und wird protokolliert |
+| **Laufzeit** | mindestens vier zusammenhängende Quartale, damit alle Jahreszeiten einmal vorkommen |
+| **Abbruchkriterium** | K1 reißt in zwei aufeinanderfolgenden Monaten, oder die Prognose liegt an mehr als fünf Tagen je Monat nicht um 18 Uhr vor |
+| **Was danach entschieden wird** | ob aus dem Mitlauf eine operative Dispositionshilfe wird — das ist eine eigene Freigabe mit eigenen Kriterien |
+
+**Ein Pilot in diesem Sinne ist ein Schattenlauf, keine Dispositionsfreigabe.** Er kostet
+nichts außer Rechenzeit, weil niemand nach ihm handelt — und genau deshalb darf er
+starten, obwohl das Wetter simuliert ist und nur ein Testfenster vorliegt.
 
 Das dritte Kriterium ist kein Nebensatz: Es bestimmt, **welche Merkmale erlaubt sind.**
 Um 18 Uhr des Vortages kennen wir die Wettervorhersage, aber nicht das tatsächliche
@@ -700,8 +734,26 @@ K1_ROBUST = _anteil_k1 >= PFAD_ANTEIL
 K2_ROBUST = _anteil_k2 >= PFAD_ANTEIL
 merke("pfad_anteil", PFAD_ANTEIL)
 merke("k1_pfadanteil", _anteil_k1); merke("k2_pfadanteil", _anteil_k2)
-urteil = ("FREIGABE ALS PILOT" if (K1_ROBUST and K2_ROBUST) else "RÜCKSPRUNG")
+# ─── EIN STATUS, EINE BEDEUTUNG ─────────────────────────────────────
+#
+# "Pilot" heisst hier: Schattenlauf im internen Planungswerkzeug,
+# niemand handelt danach (siehe Phase 1). Das ist NICHT dasselbe wie
+# eine operative Dispositionsfreigabe - und weil das Wetter simuliert
+# ist und nur ein Testfenster vorliegt, waere die auch nicht zu haben.
+# Modellpaket, Konsole und Schlusszelle lesen aus dieser einen Variable.
+STATUS = ("schattenpilot" if (K1_ROBUST and K2_ROBUST) else "ruecksprung")
+STATUS_SATZ = {
+    "schattenpilot": "Schattenpilot freigegeben - die Prognose laeuft im "
+                     "internen Planungswerkzeug mit und wird protokolliert; "
+                     "niemand handelt nach ihr. Keine operative "
+                     "Dispositionsfreigabe.",
+    "ruecksprung": "Ruecksprung - die vorab festgelegten Kriterien halten "
+                   "ueber die Wetterpfade nicht.",
+}[STATUS]
+urteil = STATUS.upper()
 merke("nb04_urteil", urteil)
+merke("nb04_status", STATUS)
+merke("nb04_statussatz", STATUS_SATZ)
 print(f"\\n  Gesamturteil: {urteil}")
 print(f"  Kriterium 1 haelt in {_anteil_k1:.0%} der Pfade, Kriterium 2 in "
       f"{_anteil_k2:.0%} - gefordert sind {PFAD_ANTEIL:.0%}.")
@@ -730,13 +782,14 @@ print("  realisierung - aber keine Aussage darueber, wie robust das Ergebnis")
 print(f"  gegenueber Wetterfehlern ist. Genau dafuer stehen die {PFADE} Pfade.")
 merke("pfade", PFADE); merke("pfade_k1", treffer_k1); merke("pfade_k1_fehl", _fehl)
 print()
-if K1_ROBUST and K2_ROBUST:
-    print("  FREIGABE ALS PILOT - mit drei benannten Grenzen:")
-    print("  Die Wetterunsicherheit ist simuliert,")
-else:
-    print("  KEINE Betriebsfreigabe: Die Wetterunsicherheit ist simuliert,")
-print("  es gibt nur ein Validierungs- und ein Testfenster, und die Übersetzung von")
-print("  Fahrten zu Rädern und Schichten steht aus.")
+print(f"  {STATUS_SATZ}")
+print()
+print("  Drei Grenzen, die auch im Schattenlauf bestehen bleiben:")
+print("  Die Wetterunsicherheit ist simuliert, es gibt nur ein Validierungs-")
+print("  und ein Testfenster, und die Übersetzung von Fahrten zu Rädern und")
+print("  Schichten steht aus. Genau deshalb ist der Pilot ein Mitlauf und")
+print("  keine Dispositionshilfe: Er kostet nichts, weil niemand nach ihm")
+print("  handelt - und er sammelt die saisonalen Fenster, die noch fehlen.")
 print(f"\\n  Zum Vergleich - mit Ist-Wetter gerechnet waeren es "
       f"{kosten_schoen:,.0f} EUR gewesen.".replace(",", "."))
 print("  Diese Zahl steht hier nur, damit man den Unterschied sieht.")
@@ -1007,8 +1060,11 @@ joblib.dump({"modell": gewaehlt, "merkmale": merkmale, "aufschlag": bester,
              "validierung_bis": str(X_val.index.max().date()),
              "test_bis": str(X_test.index.max().date()),
              "datenherkunft": "ERFUNDENE LEHRDATEN - Nachfrage synthetisch erzeugt",
-             "freigabestatus": "Machbarkeitsindiz auf synthetischen Daten, "
-                               "keine Betriebsfreigabe",
+             "freigabestatus": STATUS,
+             "freigabestatus_klartext": STATUS_SATZ,
+             "gates": {"K1 Fehlerreduktion je Pfad": bool(K1_ROBUST),
+                       "K2 Kostenvorteil je Pfad": bool(K2_ROBUST),
+                       "geforderter Pfadanteil": PFAD_ANTEIL},
              "kostenbasis": "Szenarioproxy aus angenommenen Fehlerkosten je Fahrt, "
                             "keine gemessenen Betriebskosten",
              "trainiert_am": datetime.date.today().isoformat()}, "nachfragemodell.joblib")
@@ -1057,7 +1113,7 @@ MD("""
 | 3 Data Preparation | Schnitt entlang der Zeit in **drei** Abschnitte: Training, Validierung, Test. Die Testmenge ist der Sommer 2026 und liegt weit über dem Trainingsmittel |
 | 4 Modeling | Nullmodell, echte Faustregel, linear und Gradient Boosting — verglichen unter **Prognosewetter**, nicht unter Ist-Wetter. Unter Ist-Wetter hätte das Boosting gewonnen, unter Prognosewetter gewinnt die lineare Regression |
 | 5 Evaluation | Modell UND Aufschlag auf der Validierung gewählt, beides unter Prognosewetter. Der Test wurde erst **nach** dem Einfrieren beider Entscheidungen geöffnet; alles danach ist Diagnose und ändert die Wahl nicht mehr. Damit ist dieses Testfenster für eine weitere Entwicklungsrunde verbraucht |
-| 6 Deployment | Prognosefunktion, Modellpaket und Überwachung. Offen bleibt, dass die Wetterunsicherheit simuliert und nicht gemessen ist — und dass ein Sommerfenster keine Jahresaussage trägt |
+| 6 Deployment | Prognosefunktion, Modellpaket und Überwachung. Status: **{{nb04_status}}** — {{nb04_statussatz}} Offen bleibt, dass die Wetterunsicherheit simuliert und nicht gemessen ist — und dass ein Sommerfenster keine Jahresaussage trägt |
 
 **Was eine zweite Runde anders machen würde**
 
@@ -1084,8 +1140,10 @@ MD("""
    Extremwetter stärker. Belastbar wird die Zahl erst mit **archivierten Vorhersagen**.
 3. **Ein Sommerfenster trägt keine Jahresaussage.** Das Testmittel liegt weit über dem
    Trainingsmittel. Wie das Modell im November arbeitet, weiß dieses Notebook nicht.
-4. **Ein einziges Testfenster.** Für eine Freigabe bräuchte es mehrere, am besten je
-   Jahreszeit eines.
+4. **Ein einziges Testfenster.** Für eine **operative Dispositionsfreigabe** bräuchte es
+   mehrere, am besten je Jahreszeit eines. Genau die sammelt der Schattenpilot ein — das
+   ist sein Zweck, und deshalb ist er keine Vorstufe der Freigabe, sondern ihre
+   Voraussetzung.
 5. **Der Aufschlag ist eine Krücke.** Fachlich sauber wäre eine Quantilsregression, die
    die Kostenasymmetrie im Modell selbst abbildet statt in einem Faktor danach.
 6. **Erfundene Daten.** Alle Euro-Beträge sind Szenariorechnungen unter gesetzten
