@@ -12,28 +12,31 @@ kopf("Clustering: Welche Gruppen stecken in den Daten?",
      NAME),
 
 MD("""
-> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+> ### Kurzfassung
 >
-> **Die Frage.** Niemand hat je aufgeschrieben, welche Station ein Pendlerbahnhof ist
-> und welche Kundin eine Gelegenheitsfahrerin. Steckt das im Verhalten?
+> **Fragestellung.** In den Stammdaten ist nicht vermerkt, welche Station als
+> Pendlerstation dient und welches Nutzungsmuster einzelne Kundengruppen zeigen. Lässt
+> sich beides aus dem beobachteten Verhalten rekonstruieren?
 >
-> **Was hier gerechnet wird.** Gruppieren ohne vorgegebene Antwort: Stationen nach
-> ihrem Tagesgang, Kundschaft nach Zuletzt/Wie-oft/Wie-viel. Es gibt kein „richtig",
-> also muss man prüfen, ob die Gruppen überhaupt etwas taugen — und das heißt hier:
-> benennbar, unterschiedlich behandelbar, groß genug, startwertstabil, zeitlich stabil.
+> **Vorgehen.** Zwei getrennte Clusteranalysen: Stationen nach ihrem Tagesgang,
+> Kundschaft nach Aktualität, Häufigkeit und Umsatz. Da es keine vorgegebene richtige
+> Lösung gibt, werden die Gruppen an fünf vorab festgelegten Kriterien gemessen — sie
+> müssen benennbar, unterschiedlich behandelbar und hinreichend groß sein sowie
+> gegenüber dem Startwert und über die Zeit stabil bleiben.
 >
-> **Was herauskam.** Bei den **Stationen** finden sich benennbare Typen; gegen die
-> verdeckte Wahrheit geprüft sind {{generator_treffer:.0%}} richtig zugeordnet
-> (ARI {{generator_ari:.3f}}). Ausgeliefert werden **Profile als Hypothesen**, kein
-> Sollbestand. Bei der **Kundschaft** halten {{gates_erfuellt:.0f}} von
-> {{gates_gesamt:.0f}} Hürden: analytisch **{{status_analytisch}}**, für den Einsatz
-> **{{status_einsatz}}** — es entsteht nur ein aggregierter Bericht ohne Namen.
+> **Ergebnis.** Bei den Stationen entstehen benennbare Typen; gegen die dem Verfahren
+> nicht bekannte Zuordnung geprüft sind {{generator_treffer:.0%}} richtig zugeordnet
+> (Adjusted Rand Index {{generator_ari:.3f}}). Ausgeliefert werden Stationsprofile; sie
+> sind ausdrücklich als Hypothesen gekennzeichnet und geben keinen Sollbestand vor. Bei
+> der Kundschaft halten {{gates_erfuellt:.0f}} von {{gates_gesamt:.0f}} Kriterien:
+> analytisch **{{status_analytisch}}**, für den Einsatz **{{status_einsatz}}** — es
+> entsteht ausschließlich ein aggregierter Bericht ohne Namensnennung.
 >
-> **Die zwei Befunde, die wehtun.** Die {{viel_segment}} bringen den geringsten Umsatz
-> je Fahrt ({{viel_je_fahrt:.2f}} € gegen {{stark_je_fahrt:.2f}} €) — kein Messfehler,
-> sondern ein Preisproblem. Und {{kurze_historie_anteil:.0%}} der Kundschaft taucht gar
-> nicht auf, weil sie im letzten Jahr nicht gefahren ist: Wer aufhört, verschwindet aus
-> der Tabelle und aus dem Blick.
+> **Zwei Befunde verdienen besondere Beachtung.** Das Segment {{viel_segment}} erzielt
+> mit {{viel_je_fahrt:.2f}} € je Fahrt den geringsten Umsatz, bei den
+> {{stark_segment}}n sind es {{stark_je_fahrt:.2f}} € — ein Befund zur Tarifstruktur,
+> kein Messfehler. Und {{kurze_historie_anteil:.0%}} der Kundschaft erscheinen in der
+> Segmentierung überhaupt nicht, weil sie im Betrachtungszeitraum nicht gefahren sind.
 """),
 
 MD("""
@@ -1152,10 +1155,13 @@ GATE_ZUSTAND = ("bestanden" if (PUNKTWERT_HAELT and PROSPEKTIV_GEPRUEFT)
                 else "gerissen" if not PUNKTWERT_HAELT
                 else "offen")
 GATE_SATZ = {
-    "bestanden": "Punktwert unter der Schwelle und prospektiv geprueft",
-    "gerissen":  "Punktwert ueber der Schwelle - das Kriterium ist verfehlt",
-    "offen":     ("Punktwert unter der Schwelle, aber die prospektive Pruefung "
-                  "steht aus - nicht belegt, nicht widerlegt"),
+    "bestanden": ("Der Punktwert liegt unter der Schwelle, und die prospektive "
+                  "Pr\u00fcfung ist erfolgt"),
+    "gerissen":  ("Der Punktwert liegt \u00fcber der Schwelle; das Kriterium "
+                  "ist verfehlt"),
+    "offen":     ("Der Punktwert liegt unter der Schwelle, die prospektive "
+                  "Pr\u00fcfung steht jedoch aus \u2014 das Kriterium ist "
+                  "damit weder belegt noch widerlegt"),
 }[GATE_ZUSTAND]
 merke("gate_urteil_kunden", GATE_ZUSTAND)
 merke("gate_satz_kunden", GATE_SATZ)

@@ -27,28 +27,30 @@ kopf("Regression: Was kostet die Fahrt zu diesem Ziel?",
      NAME),
 
 MD("""
-> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+> ### Kurzfassung
 >
-> **Die Frage.** Der Kunde steht am Rad, tippt ein Ziel ein und will vorher wissen,
-> was die Fahrt kostet. Der Preis hängt an der Dauer — und die kennt vorher niemand.
+> **Fragestellung.** Die Kundschaft soll den Preis kennen, bevor sie losfährt. Er ergibt
+> sich aus der Fahrtdauer, und die steht zum Zeitpunkt der Anfrage noch nicht fest.
 >
-> **Was hier gerechnet wird.** Statt *einer* Zahl schätzen wir eine **Spanne**
-> („zwischen 8 und 14 Minuten"), und daraus wird über das Tarifblatt ein Preisbereich.
-> Drei Verfahren treten dafür an; welches ausgeliefert wird, entscheidet eine Regel,
-> die vor der Messung feststeht.
+> **Vorgehen.** Geschätzt wird keine einzelne Zahl, sondern eine **Spanne** für die
+> Dauer, die das Tarifblatt in einen Preisbereich umrechnet. Drei Verfahren treten
+> gegeneinander an; welches ausgeliefert wird, entscheidet eine vor der Messung
+> festgelegte Auswahlregel.
 >
-> **Was herauskam.** Ausgeliefert wird die **{{kandidat}}** —
-> {{kandidatenfazit}}, also hat nicht die Güte entschieden, sondern der Betrieb.
-> Die Zusage von {{gate_schwelle:.0%}} hält auf dem versiegelten Abnahmezeitraum mit
-> **{{ab_unten:.1%}}** ({{ab_gates_halten:.0f}} von {{ab_gates_gesamt:.0f}} Hürden).
-> Die App antwortet auf **{{reichweite_real:.0%}}** der Anfragen und schweigt sonst.
+> **Ergebnis.** {{zulaessige_satz}}. Ausgeliefert wird die **{{kandidat}}** — nicht
+> wegen besserer Prognosegüte,
+> sondern weil die Auswahlregel bei gleicher Eignung die einfachere Betriebsform
+> bevorzugt. Die Zusage von {{gate_schwelle:.0%}} ist auf dem versiegelten
+> Abnahmezeitraum belegt: **{{ab_unten:.1%}}**, {{ab_gates_halten:.0f}} von
+> {{ab_gates_gesamt:.0f}} Gates halten. Beantwortet werden {{reichweite_real:.0%}} der
+> Anfragen; in den übrigen Fällen gibt die Anwendung keine Auskunft.
 >
-> **Status: {{produktstatus}}** — {{statussatz}}, gültig für Fahrten bis zum
+> **Status: {{produktstatus}}** — {{statussatz}}. Die Auskunft gilt für Fahrten bis zum
 > {{gueltig_bis_lang}}.
 >
-> **Der Haken.** In {{zielabweichung:.0%}} der Fahrten endet jemand woanders, als er
-> angegeben hat. Deshalb trägt die Zusage eine Bedingung — und die steht in jeder
-> Antwort der App, nicht nur in diesem Notebook.
+> **Was offen bleibt.** In {{zielabweichung:.0%}} der Fahrten weicht das tatsächliche
+> Ende vom angegebenen Ziel ab. Die Zusage trägt deshalb eine Bedingung, die in jeder
+> Antwort der Anwendung mitgeteilt wird.
 """),
 
 MD("""
@@ -1804,6 +1806,12 @@ for _n, _kurz in (("Quantilregression", "quantil"),
     merke(f"{_kurz}_urteil",
           "nimmt alle H\u00fcrden" if _haelt_alles[_n] else "f\u00e4llt durch")
 _n_halten = sum(_haelt_alles.values())
+merke("zulaessige_satz", {
+    0: "Keines der drei gepr\u00fcften Verfahren besteht s\u00e4mtliche H\u00fcrden",
+    1: "Nur eines der drei gepr\u00fcften Verfahren besteht s\u00e4mtliche H\u00fcrden",
+    2: "Zwei der drei gepr\u00fcften Verfahren bestehen s\u00e4mtliche H\u00fcrden",
+    3: "Alle drei gepr\u00fcften Verfahren bestehen s\u00e4mtliche H\u00fcrden",
+}[len(_zulaessig)])
 merke("kandidatenfazit", {
     0: "und keiner nimmt alle H\u00fcrden",
     1: "und nur einer nimmt alle H\u00fcrden",
@@ -2355,6 +2363,9 @@ merke("statussatz", {
     "gesperrt": "der Dienst ist gesperrt",
 }[PRODUKTSTATUS])
 merke("gates_halten", "ja" if GATES_HALTEN else "nein")
+# Der Stand VOR der Abnahme, unter eigenem Namen: "produktstatus" traegt
+# ab 6.7 den endgueltigen Wert und ueberschreibt diesen hier.
+merke("vorabstatus", PRODUKTSTATUS)
 
 # Die App zeigt nur im Status "sichtbar" etwas an. Im Schattenbetrieb
 # rechnet sie, protokolliert und schweigt nach aussen.
@@ -3239,6 +3250,152 @@ else:
 """),
 
 MD("""
+### 6.4b Worauf sich die Zusage bezieht — und worauf nicht
+
+Von den {{n_zeilen:,}} **erzeugten** Kombinationen sind nur {{n_gestuetzt:,}}
+**verbindungsbezogen** belegt: Nur bei ihnen liegt die untere Vertrauensgrenze aus
+Kalibrierung über 80 Prozent. Bei {{n_unzureichend:,}} Zeilen ist die Prüfmenge für eine
+eigene Aussage zu klein, {{n_unbestimmt:,}} sind statistisch unentschieden.
+
+**Die Entscheidung über den Zuschnitt lautet: alle drei Klassen bleiben, und die Zusage
+gilt aggregiert je Radtyp.** Sie lautet damit:
+
+> Über alle Anfragen eines Radtyps hinweg enthält die angezeigte Spanne den tatsächlichen
+> Preis in mindestens {{gate_schwelle:.0%}} der Fälle. Für eine **einzelne** Verbindung
+> ist das nicht zugesichert.
+
+**Der zweite Satz ist der wichtigere**, und er wird beim Zitieren zuerst weggelassen. Eine
+aggregierte Zusage sagt nichts über den Einzelfall: Der Kunde, der auf einer selten
+gefahrenen Verbindung eine zu enge Spanne sieht, ist von einer Quote über alle Anfragen
+nicht getröstet.
+
+Die Alternative wäre gewesen, nur die {{n_gestuetzt:,}} verbindungsbezogen belegten Fälle
+zu bedienen. Das hätte die Reichweite von {{reichweite_real:.0%}} auf
+**{{reichweite_streng:.1%}}** gedrückt — eine Auskunft, die fast immer schweigt, benutzt
+niemand.
+
+**Damit die Entscheidung nicht im Verborgenen bleibt, wandert der Status mit:** Die
+App-Funktion gibt zu jeder Antwort `status` und die Zahl der Prüffahrten zurück.
+Überwachung und Support sehen so, worauf eine Anzeige beruht, ohne dass der Kunde mit
+einer Statistik behelligt wird. Was die Oberfläche zeigt, ist für alle Klassen gleich —
+was das Unternehmen darüber weiß, nicht.
+
+### 6.4c Das Primärgate — und warum es diesmal hält
+
+In 6.1 haben wir die **vorab preisabhängige Gruppe** zur entscheidenden
+Evaluationsgruppe erklärt: die Anfragen, bei denen das Freiminutenguthaben die obere
+Intervallgrenze *nicht* deckt und der Preis deshalb überhaupt an der Dauerschätzung
+hängt. Wer das sagt, muss es auch messen lassen.
+
+**Welche Gates gelten, steht vor der Messung fest — und zwar vollständig.** Ein
+Gate-Katalog, der erst nach dem Ergebnis präzisiert wird, ist kein Katalog, sondern eine
+nachträgliche Begründung. Diese vier Fragen sind deshalb vorab entschieden:
+
+| | Gate | gilt? |
+|---|---|---|
+| 1 | preisabhängige Gruppe **aggregiert**: Wilson-Untergrenze ≥ {{gate_schwelle:.0%}} | **ja — bindend** |
+| 2 | preisabhängige Gruppe **je Radtyp**: dieselbe Untergrenze | nein |
+| 3 | alle angezeigten Fälle je Radtyp: Untergrenze ≥ {{gate_schwelle:.0%}} | **ja** (Kriterium aus 5.5) |
+| 4 | Mindestreichweite je Radtyp | **ja** (Kriterium aus 5.5) |
+
+> **Alle drei bindenden Gates werden auf der Abnahme erneut geprüft, nicht nur Gate 1.**
+> Eine frühere Fassung band das Abnahmeurteil allein an die aggregierte Untergrenze —
+> also an das wichtigste, aber eben nur eines von dreien. Ein Freigabelauf, der sich das
+> günstigste Kriterium heraussucht, ist kein Freigabelauf. In 6.7 stehen deshalb
+> {{ab_gates_gesamt:.0f}} Einzelprüfungen (Gate 1 einmal, Gate 3 und Gate 4 je Radtyp),
+> und der Status wird nur gesetzt, wenn **alle** halten.
+
+**Warum Gate 2 nicht gilt, und warum das vorher gesagt sein muss.** Die App macht der
+Kundschaft **eine** Zusage — nicht drei nach Radtyp getrennte. Das bindende Gate prüft
+deshalb die Ebene, auf der die Zusage ausgesprochen wird. Je Radtyp wird dieselbe Größe
+als **Diagnose** mitgeführt: Sie zeigt, wo das Produkt schwach ist, ohne es zu sperren.
+
+Diese Entscheidung muss man sich unbequem machen, denn sie hat eine Folge: Gemessen
+halten {{offen_typen_halten}} von {{offen_typen_gesamt}} Radtypen dieselbe Untergrenze;
+{{offen_schwaechster_typ}} kommt auf {{offen_schwaechste_grenze:.1%}} und läge damit
+unter {{gate_schwelle:.0%}}. Als bindendes Gate hätte Gate 2 das Produkt also gekippt.
+Genau deshalb ist entscheidend, **wann** die Festlegung fiel: vorher — mit dieser
+Begründung und in Kenntnis des Risikos, dass sie später unbequem wird. Nach der Messung
+getroffen wäre dieselbe Festlegung das Gegenteil: die Wahl derjenigen Auswertungsebene,
+die zum gewünschten Ergebnis führt. Die kleinste Gruppe umfasst
+{{offen_kleinste_gruppe}} Fahrten — klein genug, dass ihre Untergrenze stark vom
+Stichprobenumfang und nicht nur von der Modellgüte abhängt; das ist die *sachliche*
+Nebenbegründung, aber sie trägt die Entscheidung nicht allein.
+
+| | |
+|---|---|
+| **bindendes Gate** | Untergrenze des 95-%-Intervalls in der preisabhängigen Gruppe, aggregiert ≥ {{gate_schwelle:.0%}} |
+| **gemessen** | {{gate_untergrenze:.1%}} |
+| **Urteil** | **{{gate_urteil}}** |
+
+**Das Gate hält — auf der Kalibrierung.** Damit ist die vorab festgelegte Hürde
+genommen; was noch fehlt, ist nicht die Güte, sondern eine **unabhängige** Prüfung des
+fertigen Artefakts. Die Kalibrierung kann sie nicht leisten, weil auf ihr die Intervalle
+kalibriert und die Kombinationen gefiltert wurden — derselbe Zeitraum kann nicht beides
+sein. Das ist die Lehre dieses Notebooks, angewandt auf sein eigenes Ergebnis. Deshalb
+steht der Status hier noch auf „{{vorabstatus}}", und deshalb folgt **6.7**.
+
+
+### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
+
+Die Handlungsschwellen sind am Erfolgskriterium ausgerichtet: Wer bei 80 Prozent
+freigibt, darf nicht erst bei 60 Prozent eingreifen — sonst bliebe eine bereits
+gescheiterte Kombination weiter in der App.
+
+| Auslöser | Schwelle | Handlung |
+|---|---|---|
+| Abdeckung je Kombination, gleitend über 8 Wochen | **untere** Vertrauensgrenze ≥ 80 % | anzeigen |
+| | Intervall überlappt 80 % | anzeigen, aber Warnung und Neuberechnung |
+| | **obere** Vertrauensgrenze < 80 % | **Kombination abschalten** |
+| Fallzahl je Kombination | < 20 im Fenster | keine eigene Aussage; es gilt die aggregierte Zusage je Radtyp |
+| neue Station | — | keine Zeile, also keine Anzeige |
+| **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |
+| Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
+
+Die drei Fälle schließen einander aus und decken alles ab — daran war die vorige Fassung
+<!-- zahl-ohne-ausgabe: 78 erfundener Beispielwert einer frueheren Fassung -->
+gescheitert: Bei 78 % gemessener Abdeckung trafen „Warnung" und „Abschalten" gleichzeitig
+zu, und es stand nirgends, welche Regel gewinnt.
+
+Maßgeblich ist jetzt das **Wilson-Intervall zum Niveau 95 %**, nicht der Schätzwert:
+
+- Liegt schon die untere Grenze bei 80 % oder darüber, ist die Kombination belegt.
+- Überlappt das Intervall die 80 %, wissen wir es nicht — dann wird angezeigt und
+  gewarnt. Bei 200 Fahrten und 78 % gemessener Abdeckung ist das der Fall.
+- Liegt die **obere** Grenze unter 80 %, ist die Kombination widerlegt und wird
+  abgeschaltet.
+
+So entscheidet nicht eine gesetzte Ersatzschwelle, sondern die Frage, ob die Daten für
+eine Aussage überhaupt reichen. Wer schneller abschalten will, braucht mehr Fahrten je
+Fenster, keine andere Zahl.
+### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
+
+**Zwei Freigaben, nicht eine — und nur die erste ist hier zu haben.** Die Abnahme in
+6.7 beantwortet die Frage: *Hält die Zusage auf Daten, die nichts an diesem Verfahren
+berührt hat?* Sie beantwortet **nicht** die zweite: *Hält sie auch, wenn eine echte App
+das geplante Ziel erfasst?* Denn auch die Abnahme ist ein **rückblickender Test auf
+vergangenen Daten** — sie liest ein Feld, das im Datensatz schon steht, statt zu prüfen,
+wie gut eine App es füllt.
+
+Ein Schattenbetrieb ist etwas anderes:
+
+1. Tabelle zu einem Stichtag einfrieren.
+2. In der App das **geplante** Ziel vor dem Entsperren speichern.
+3. Schätzung berechnen, aber nicht anzeigen.
+4. Nach der Fahrt tatsächliches Ziel, Dauer und Preis ergänzen.
+5. Geplantes gegen tatsächliches Ziel vergleichen — das ist der Test der Annahme aus dem
+   Kasten ganz oben.
+6. Abdeckung, Breite, Reichweite und Ablehnungsgründe je Verbindung auswerten.
+7. Erst danach die Erfassungsqualität als belegt behandeln — und die Überwachung aus
+   6.5 von „darf abschalten" auf „muss nicht mehr" umstellen.
+
+Punkt 2 und 5 sind der Kern. Ohne sie bleibt die Grundannahme dieses Notebooks
+ungeprüft — und deshalb bleibt die Überwachung aus 6.5 scharf, egal wie die Abnahme
+gleich ausgeht: Eine Anzeige läuft dann, weil ein historischer Zeitraum gehalten hat,
+nicht weil die Erfassung in einer echten App nachgewiesen wäre.
+"""),
+
+MD("""
 ### 6.7 Die Abnahme — der Zeitraum, den bis hierher nichts berührt hat
 
 Alles bisher Gerechnete steht auf der **Kalibrierung**: Dort wurde die Tabelle gefiltert,
@@ -3734,90 +3891,13 @@ print("   Datensatz. Das sagt kein historischer Zeitraum - nur der Betrieb.")
 """),
 
 MD("""
-### 6.4b Worauf sich die Zusage bezieht — und worauf nicht
+### 6.8 Was jetzt gilt — und was nicht
 
-Von den {{n_zeilen:,}} **erzeugten** Kombinationen sind nur {{n_gestuetzt:,}}
-**verbindungsbezogen** belegt: Nur bei ihnen liegt die untere Vertrauensgrenze aus
-Kalibrierung über 80 Prozent. Bei {{n_unzureichend:,}} Zeilen ist die Prüfmenge für eine
-eigene Aussage zu klein, {{n_unbestimmt:,}} sind statistisch unentschieden.
-
-**Die Entscheidung über den Zuschnitt lautet: alle drei Klassen bleiben, und die Zusage
-gilt aggregiert je Radtyp.** Sie lautet damit:
-
-> Über alle Anfragen eines Radtyps hinweg enthält die angezeigte Spanne den tatsächlichen
-> Preis in mindestens {{gate_schwelle:.0%}} der Fälle. Für eine **einzelne** Verbindung
-> ist das nicht zugesichert.
-
-**Der zweite Satz ist der wichtigere**, und er wird beim Zitieren zuerst weggelassen. Eine
-aggregierte Zusage sagt nichts über den Einzelfall: Der Kunde, der auf einer selten
-gefahrenen Verbindung eine zu enge Spanne sieht, ist von einer Quote über alle Anfragen
-nicht getröstet.
-
-Die Alternative wäre gewesen, nur die {{n_gestuetzt:,}} verbindungsbezogen belegten Fälle
-zu bedienen. Das hätte die Reichweite von {{reichweite_real:.0%}} auf
-**{{reichweite_streng:.1%}}** gedrückt — eine Auskunft, die fast immer schweigt, benutzt
-niemand.
-
-**Damit die Entscheidung nicht im Verborgenen bleibt, wandert der Status mit:** Die
-App-Funktion gibt zu jeder Antwort `status` und die Zahl der Prüffahrten zurück.
-Überwachung und Support sehen so, worauf eine Anzeige beruht, ohne dass der Kunde mit
-einer Statistik behelligt wird. Was die Oberfläche zeigt, ist für alle Klassen gleich —
-was das Unternehmen darüber weiß, nicht.
-
-### 6.4c Das Primärgate — und warum es diesmal hält
-
-In 6.1 haben wir die **vorab preisabhängige Gruppe** zur entscheidenden
-Evaluationsgruppe erklärt: die Anfragen, bei denen das Freiminutenguthaben die obere
-Intervallgrenze *nicht* deckt und der Preis deshalb überhaupt an der Dauerschätzung
-hängt. Wer das sagt, muss es auch messen lassen.
-
-**Welche Gates gelten, steht vor der Messung fest — und zwar vollständig.** Ein
-Gate-Katalog, der erst nach dem Ergebnis präzisiert wird, ist kein Katalog, sondern eine
-nachträgliche Begründung. Diese vier Fragen sind deshalb vorab entschieden:
-
-| | Gate | gilt? |
-|---|---|---|
-| 1 | preisabhängige Gruppe **aggregiert**: Wilson-Untergrenze ≥ {{gate_schwelle:.0%}} | **ja — bindend** |
-| 2 | preisabhängige Gruppe **je Radtyp**: dieselbe Untergrenze | nein |
-| 3 | alle angezeigten Fälle je Radtyp: Untergrenze ≥ {{gate_schwelle:.0%}} | **ja** (Kriterium aus 5.5) |
-| 4 | Mindestreichweite je Radtyp | **ja** (Kriterium aus 5.5) |
-
-> **Alle drei bindenden Gates werden auf der Abnahme erneut geprüft, nicht nur Gate 1.**
-> Eine frühere Fassung band das Abnahmeurteil allein an die aggregierte Untergrenze —
-> also an das wichtigste, aber eben nur eines von dreien. Ein Freigabelauf, der sich das
-> günstigste Kriterium heraussucht, ist kein Freigabelauf. In 6.7 stehen deshalb
-> {{ab_gates_gesamt:.0f}} Einzelprüfungen (Gate 1 einmal, Gate 3 und Gate 4 je Radtyp),
-> und der Status wird nur gesetzt, wenn **alle** halten.
-
-**Warum Gate 2 nicht gilt, und warum das vorher gesagt sein muss.** Die App macht der
-Kundschaft **eine** Zusage — nicht drei nach Radtyp getrennte. Das bindende Gate prüft
-deshalb die Ebene, auf der die Zusage ausgesprochen wird. Je Radtyp wird dieselbe Größe
-als **Diagnose** mitgeführt: Sie zeigt, wo das Produkt schwach ist, ohne es zu sperren.
-
-Diese Entscheidung muss man sich unbequem machen, denn sie hat eine Folge: Gemessen
-halten {{offen_typen_halten}} von {{offen_typen_gesamt}} Radtypen dieselbe Untergrenze;
-{{offen_schwaechster_typ}} kommt auf {{offen_schwaechste_grenze:.1%}} und läge damit
-unter {{gate_schwelle:.0%}}. Als bindendes Gate hätte Gate 2 das Produkt also gekippt.
-Genau deshalb ist entscheidend, **wann** die Festlegung fiel: vorher — mit dieser
-Begründung und in Kenntnis des Risikos, dass sie später unbequem wird. Nach der Messung
-getroffen wäre dieselbe Festlegung das Gegenteil: die Wahl derjenigen Auswertungsebene,
-die zum gewünschten Ergebnis führt. Die kleinste Gruppe umfasst
-{{offen_kleinste_gruppe}} Fahrten — klein genug, dass ihre Untergrenze stark vom
-Stichprobenumfang und nicht nur von der Modellgüte abhängt; das ist die *sachliche*
-Nebenbegründung, aber sie trägt die Entscheidung nicht allein.
-
-| | |
-|---|---|
-| **bindendes Gate** | Untergrenze des 95-%-Intervalls in der preisabhängigen Gruppe, aggregiert ≥ {{gate_schwelle:.0%}} |
-| **gemessen** | {{gate_untergrenze:.1%}} |
-| **Urteil** | **{{gate_urteil}}** |
-
-**Das Gate hält — und deshalb geht die Preisauskunft in Betrieb, im Status
-„{{produktstatus}}".** Das heißt: {{statussatz}}. Die vorab festgelegte Hürde ist
-genommen; was fehlt, ist nicht die Güte, sondern eine **unabhängige** Prüfung des
-fertigen Artefakts. Kalibrierung kann sie nicht leisten, weil er die Intervalle kalibriert
-hat — derselbe Zeitraum kann nicht beides sein. Das ist die Lehre dieses Notebooks,
-angewandt auf sein eigenes Ergebnis.
+**Die unabhängige Prüfung ist erfolgt.** Die Abnahme hat auf einem Zeitraum gemessen,
+den bis zum Öffnen nichts berührt hat: {{ab_gates_halten:.0f}} von
+{{ab_gates_gesamt:.0f}} Gates halten, das Primärgate mit {{ab_unten:.1%}}. Damit steht
+der Status auf **„{{produktstatus}}"** — {{statussatz}}. Was jetzt noch offen ist, ist
+etwas anderes als eine unabhängige Prüfung: eine **prospektive**.
 
 **In Betrieb heißt nicht fertig.** Was jetzt gilt und was nicht:
 
@@ -3862,70 +3942,10 @@ Notebook-Übung:
    `ausserhalb_gueltigkeit`, bis der Kalender nachgeliefert ist. Beide Kalender sind
    öffentlich und Jahre im Voraus bekannt: Es fehlt eine Datei, kein Modell.
 2. **Den Schattenbetrieb aus 6.6 laufen lassen** und das Gate dort erneut messen.
-   {{gate_untergrenze:.1%}} sind knapp über {{gate_schwelle:.0%}}, nicht deutlich —
-   ein Quartal mit anderer Wetterlage kann das kippen.
-3. **Die Überwachung aus 6.5 scharf schalten**, bevor die Anzeige sichtbar wird. Eine
+   Auf der Abnahme sind es {{ab_unten:.1%}} gegen {{gate_schwelle:.0%}} — knapp über
+   der Hürde, nicht deutlich. Ein Quartal mit anderer Wetterlage kann das kippen.
+3. **Die Überwachung aus 6.5 scharf halten.** Sie läuft, solange die Anzeige läuft:
    Ohne Abschaltweg wäre eine Freigabe nur ein Versprechen.
-
-
-### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
-
-Die Handlungsschwellen sind am Erfolgskriterium ausgerichtet: Wer bei 80 Prozent
-freigibt, darf nicht erst bei 60 Prozent eingreifen — sonst bliebe eine bereits
-gescheiterte Kombination weiter in der App.
-
-| Auslöser | Schwelle | Handlung |
-|---|---|---|
-| Abdeckung je Kombination, gleitend über 8 Wochen | **untere** Vertrauensgrenze ≥ 80 % | anzeigen |
-| | Intervall überlappt 80 % | anzeigen, aber Warnung und Neuberechnung |
-| | **obere** Vertrauensgrenze < 80 % | **Kombination abschalten** |
-| Fallzahl je Kombination | < 20 im Fenster | keine eigene Aussage; es gilt die aggregierte Zusage je Radtyp |
-| neue Station | — | keine Zeile, also keine Anzeige |
-| **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |
-| Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
-
-Die drei Fälle schließen einander aus und decken alles ab — daran war die vorige Fassung
-<!-- zahl-ohne-ausgabe: 78 erfundener Beispielwert einer frueheren Fassung -->
-gescheitert: Bei 78 % gemessener Abdeckung trafen „Warnung" und „Abschalten" gleichzeitig
-zu, und es stand nirgends, welche Regel gewinnt.
-
-Maßgeblich ist jetzt das **Wilson-Intervall zum Niveau 95 %**, nicht der Schätzwert:
-
-- Liegt schon die untere Grenze bei 80 % oder darüber, ist die Kombination belegt.
-- Überlappt das Intervall die 80 %, wissen wir es nicht — dann wird angezeigt und
-  gewarnt. Bei 200 Fahrten und 78 % gemessener Abdeckung ist das der Fall.
-- Liegt die **obere** Grenze unter 80 %, ist die Kombination widerlegt und wird
-  abgeschaltet.
-
-So entscheidet nicht eine gesetzte Ersatzschwelle, sondern die Frage, ob die Daten für
-eine Aussage überhaupt reichen. Wer schneller abschalten will, braucht mehr Fahrten je
-Fenster, keine andere Zahl.
-### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
-
-**Zwei Freigaben, nicht eine.** Die Abnahme in 6.7 ist erfolgt, sie war unabhängig, und
-sie hat den Status auf „{{produktstatus}}" gesetzt. Sie beantwortet die Frage: *Hielt die
-Zusage auf Daten, die nichts an diesem Verfahren berührt hat?* Sie beantwortet **nicht**
-die zweite Frage: *Hält sie auch, wenn eine echte App das geplante Ziel erfasst?* Dafür
-gibt es nur einen Weg, und dieses Notebook ist ihn nicht gegangen.
-
-Auch die Abnahme ist ein **rückblickender Test auf vergangenen Daten**. Ein
-Schattenbetrieb ist etwas anderes:
-
-1. Tabelle zu einem Stichtag einfrieren.
-2. In der App das **geplante** Ziel vor dem Entsperren speichern.
-3. Schätzung berechnen, aber nicht anzeigen.
-4. Nach der Fahrt tatsächliches Ziel, Dauer und Preis ergänzen.
-5. Geplantes gegen tatsächliches Ziel vergleichen — das ist der Test der Annahme aus dem
-   Kasten ganz oben.
-6. Abdeckung, Breite, Reichweite und Ablehnungsgründe je Verbindung auswerten.
-7. Erst danach die Erfassungsqualität als belegt behandeln — und die Überwachung aus
-   6.5 von „darf abschalten" auf „muss nicht mehr" umstellen.
-
-Punkt 2 und 5 sind der Kern. Ohne sie bleibt die Grundannahme dieses Notebooks ungeprüft:
-Die Anzeige läuft, weil die Abnahme gehalten hat — nicht, weil die Erfassung in einer
-echten App nachgewiesen wäre. Genau deshalb bleibt die Überwachung scharf.
-
-
 """),
 
 MD("""

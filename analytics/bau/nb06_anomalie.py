@@ -14,25 +14,28 @@ kopf("Anomalieerkennung: Was ist gestern schiefgelaufen?",
      NAME),
 
 MD("""
-> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+> ### Kurzfassung
 >
-> **Die Frage.** Drei verschiedene, und genau das ist der Kern: Welches Rad ist
-> **jetzt** überfällig? Welche abgeschlossene Fahrt verdient **heute früh** einen
-> Blick? Welche Station stand **gestern** still?
+> **Fragestellung.** Drei Fragen mit drei unterschiedlichen Entscheidungszeitpunkten:
+> Welches Rad ist gegenwärtig überfällig? Welche abgeschlossenen Vorgänge verdienen am
+> Folgetag eine Prüfung? Welche Station war über längere Zeit ohne Bewegung?
 >
-> **Was hier gerechnet wird.** Für die erste Frage genügt eine Regel — dafür braucht es
-> kein Modell. Für die zweite lernt ein Isolation Forest, was „normal" ist. Beim ersten
-> Versuch fand er die Preisklasse statt der Anomalien; aufgefallen ist das nicht durch
-> eine Kennzahl, sondern dadurch, dass jemand die zehn obersten Zeilen **angesehen** hat.
+> **Vorgehen.** Die erste Frage beantwortet eine Regel; ein Modell ist dafür nicht
+> erforderlich. Für die zweite lernt ein Isolation Forest, welche Vorgänge als
+> unauffällig gelten. Im ersten Anlauf trennte er die Preisklassen statt der Anomalien —
+> bemerkt wurde das nicht anhand einer Kennzahl, sondern durch Sichtung der obersten
+> Zeilen der Rangliste.
 >
-> **Was herauskam.** **A1 {{a1_status}}** — als Regel beschrieben und logisch geprüft;
-> Echtzeitquelle und Alarmkanal fehlen. **A2 {{a2_status}}** — es gibt kein Label, also
-> keine belegte Güte. **B {{b_status}}**: {{b_gates_halten}} Gates halten auf dem
-> unangetasteten Testabschnitt — {{b_statussatz}}.
+> **Ergebnis.** Produkt A1 ist {{a1_status}}: als Regel beschrieben und retrospektiv
+> geprüft, doch Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen. Produkt A2 steht
+> auf {{a2_status}}, da für die Bewertung kein Label vorliegt. Bei Produkt B halten
+> {{b_gates_halten}} Gates auf dem unangetasteten Testabschnitt; der Status lautet
+> {{b_status}} — {{b_statussatz}}.
 >
-> **Der Haken.** Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich
-> erzeugbare **Tagesliste** {{tagesquote:.1%}} — bei demselben Modell. Eine Kennzahl auf
-> der Gesamtliste sagt nichts über die Liste, die im Betrieb entsteht.
+> **Was offen bleibt.** Die globale Rangliste erreicht {{globale_quote:.1%}}, die im
+> Betrieb tatsächlich erzeugbare Tagesliste dagegen {{tagesquote:.1%}} — bei identischem
+> Modell. Eine Kennzahl, die auf der Gesamtliste ermittelt wurde, beschreibt nicht die
+> Liste, mit der später gearbeitet wird.
 """),
 
 MD("""

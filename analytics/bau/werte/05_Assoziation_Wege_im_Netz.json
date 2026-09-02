@@ -91,6 +91,6 @@
  "a4_zustand": "nicht_pruefbar",
  "a4_zustand_text": "mit diesen Daten nicht prüfbar",
  "status_a": "nicht freigegeben (Wirtschaftlichkeit nicht prüfbar)",
- "status_b": "analytisches Lehr-Gate bestanden - keine reale Betriebsfreigabe",
- "status_satz": "Produkt A (automatische Umverteilungsregel): nicht freigegeben (Wirtschaftlichkeit nicht prüfbar). Produkt B (Dispositionshinweis): analytisches Lehr-Gate bestanden - keine reale Betriebsfreigabe."
+ "status_b": "analytisches Lehr-Gate bestanden — keine reale Betriebsfreigabe",
+ "status_satz": "Produkt A (automatische Umverteilungsregel): nicht freigegeben (Wirtschaftlichkeit nicht prüfbar). Produkt B (Dispositionshinweis): analytisches Lehr-Gate bestanden — keine reale Betriebsfreigabe."
 }

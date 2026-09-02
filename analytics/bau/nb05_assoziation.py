@@ -12,29 +12,32 @@ kopf("Assoziationsanalyse: Welche Wege gehören zusammen?",
      NAME),
 
 MD("""
-> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+> ### Kurzfassung
 >
-> **Die Frage.** Gibt es Strecken, die im selben Zeitfenster häufiger vorkommen, als
-> bei zufälliger Zielwahl zu erwarten wäre? Und halten diese Muster über die Zeit?
+> **Fragestellung.** Gibt es Verbindungen, die innerhalb desselben Zeitfensters häufiger
+> auftreten, als bei zufälliger Zielwahl zu erwarten wäre? Und sind diese Muster
+> zeitlich stabil?
 >
-> **Was hier gerechnet wird.** Gezählt wird, nicht trainiert: Support, Konfidenz, Lift
-> — drei Divisionen. Die Regeln werden in den ersten zwei Dritteln der Zeit gesucht und
-> im letzten Drittel geprüft, das bis dahin niemand geöffnet hat.
+> **Vorgehen.** Gezählt statt trainiert: Support, Konfidenz und Lift ergeben sich aus
+> drei Divisionen. Die Regeln werden in den ersten zwei Dritteln des Zeitraums gesucht;
+> das letzte Drittel bleibt bis zur Bestätigung ungeöffnet.
 >
-> **Was herauskam.** **Produkt A (automatische Umverteilung): {{status_a}}** — nicht
-> weil die Regeln schlecht wären, sondern weil die Wirtschaftlichkeit
-> **{{a4_zustand_text}}** ist: Die Fahrten, die mangels Rad nie stattfanden, stehen
-> nirgends in diesen Daten. **Produkt B (Dispositionshinweis):
-> {{b_regeln_n:.0f}} Regeln** von {{b1_kandidaten:.0f}} Kandidaten — jede einzeln im
-> unangetasteten Zeitraum bestätigt, verlangt war die untere Grenze eines
-> Tagesblock-Bootstraps über {{k2_lift}}, nicht bloß ein Punktschätzer.
+> **Ergebnis.** Produkt A, die automatische Umverteilung, ist {{status_a}}.
+> Ausschlaggebend dafür ist nicht die Qualität der Regeln: Fahrten, die mangels
+> verfügbarem Rad nie zustande kamen, sind in diesen Daten nicht enthalten, und ohne sie
+> ist der Nutzen einer Umverteilung nicht zu beziffern. Produkt B, der
+> Dispositionshinweis, umfasst
+> {{b_regeln_n:.0f}} von {{b1_kandidaten:.0f}} geprüften Regeln. Gefordert war nicht ein
+> Punktschätzer über {{k2_lift}}, sondern die untere Grenze eines
+> Tagesblock-Bootstraps — nur so lässt sich die Abhängigkeit von Fahrten desselben Tages
+> berücksichtigen.
 >
 > **Status: {{status_b}}**
 >
-> **Der Haken.** Die Hürde aus Phase 1 klingt nach einer Zahl, ist aber keine:
-> {{k1_support:.0%}} aller Warenkörbe sind {{huerde_je_werktag:.2f}} Fahrten je
-> Werktag — eine Größenordnung, in der kein Transporter losfährt. Das Kriterium war auf
-> der falschen Skala formuliert. Verschoben wird es trotzdem nicht.
+> **Was offen bleibt.** Die Hürde aus Phase 1 ist als Anteil an allen Warenkörben
+> formuliert. Umgerechnet entspricht sie {{huerde_je_werktag:.2f}} Fahrten je Werktag —
+> einer Größenordnung, in der keine Umsetzfahrt begonnen wird. Das Kriterium war damit
+> auf der falschen Skala formuliert; verschoben wurde es dennoch nicht.
 """),
 
 MD("""
@@ -1822,7 +1825,8 @@ STATUS_A = ("freigegeben" if (len(brauchbar) > 0 and A4_TRAEGT)
 # erfundenen Daten. Was bestanden ist, ist ein LEHR-GATE - die
 # analytische Huerde, die dieses Notebook vorab definiert hat. Ob das
 # Produkt in Betrieb geht, entscheidet niemand hier.
-STATUS_B = ("analytisches Lehr-Gate bestanden - keine reale Betriebsfreigabe"
+STATUS_B = ("analytisches Lehr-Gate bestanden \u2014 keine reale "
+            "Betriebsfreigabe"
             if all(B_GATES.values())
             else "analytisches Lehr-Gate nicht bestanden")
 STATUS_SATZ = (

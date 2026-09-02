@@ -12,29 +12,31 @@ kopf("Klassifikation: Welche Räder müssen als Nächstes in die Werkstatt?",
      NAME),
 
 MD("""
-> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+> ### Kurzfassung
 >
-> **Die Frage.** Die Werkstatt schafft nur {{kapazitaet:.0f}} Räder je Quartal.
-> Welche soll sie sich ansehen, damit möglichst wenige unterwegs liegenbleiben?
+> **Fragestellung.** Die Werkstatt kann je Quartal nur {{kapazitaet:.0f}} Räder
+> vorsorglich prüfen. Welche Räder gehören auf diese Liste?
 >
-> **Was hier gerechnet wird.** Für jedes Rad wird geschätzt, ob es in den nächsten
-> {{horizont_tage:.0f}} Tagen auffällig wird. Das ist eine **Entscheidung**, keine
-> Zahl — und die beiden Fehler sind ungleich teuer: ein verpasster Ausfall
-> {{kosten_verpasst:.0f}} €, eine unnötige Prüfung {{kosten_unnoetig:.0f}} €.
+> **Vorgehen.** Für jedes Rad wird vorhergesagt, ob es innerhalb von
+> {{horizont_tage:.0f}} Tagen auffällig wird. Die beiden Fehlerarten sind
+> unterschiedlich teuer — ein übersehener Ausfall kostet {{kosten_verpasst:.0f}} €, eine
+> unnötige Prüfung {{kosten_unnoetig:.0f}} € —, und dieses Verhältnis geht als
+> Klassengewicht in die Modelle ein.
 >
-> **Was herauskam.** Ausgeliefert wird die **Faustregel**, nicht der Random Forest.
-> Im Testquartal trifft die Regel {{treffer_regel:.0f}} Räder gegen
-> {{treffer_wald:.0f}} — entschieden hat aber die statistische Absicherung:
-> Untergrenze der Regel {{wilson_unten_regel:.1%}} gegen die geforderten
-> {{k3_schwelle:.1%}}, der Wald erreicht nur {{wilson_unten_wald:.1%}}.
-> Von zehn geprüften Rädern melden sich {{quote_regel_von_zehn:.1f}}; von zehn
-> auffälligen erreicht die Liste {{abdeckung_von_zehn:.1f}}.
+> **Ergebnis.** Ausgeliefert wird eine Faustregel, nicht das Random-Forest-Modell. Im
+> Testquartal trifft die Regel {{treffer_regel:.0f}} Räder gegenüber
+> {{treffer_wald:.0f}}; ausschlaggebend war jedoch die statistische Absicherung. Die
+> untere Vertrauensgrenze der Regel liegt bei {{wilson_unten_regel:.1%}} und damit über
+> der geforderten Schwelle von {{k3_schwelle:.1%}}, das Random-Forest-Modell erreicht
+> {{wilson_unten_wald:.1%}} und verfehlt sie. Von zehn geprüften Rädern werden
+> {{quote_regel_von_zehn:.1f}} auffällig; von zehn auffälligen erfasst die Liste
+> {{abdeckung_von_zehn:.1f}}.
 >
-> **Der Haken.** Der Anteil auffälliger Räder schwankt über die
+> **Was offen bleibt.** Der Anteil auffälliger Räder schwankt über die
 > {{panel_stichtage:.0f}} Stichtage zwischen {{panel_grundrate_min:.1%}} und
-> {{panel_grundrate_max:.1%}}. Ein einzelnes gutes Quartal ist deshalb kein Ergebnis —
-> es kann die Jahreszeit gewesen sein. Deshalb liegt eine Schattenliste zum
-> {{schatten_stichtag_lang}} bei, die erst später bewertbar wird.
+> {{panel_grundrate_max:.1%}}. Ein einzelnes günstiges Quartal belegt daher wenig.
+> Beigelegt ist eine Schattenliste zum {{schatten_stichtag_lang}}, deren Bewertung erst
+> nach Ablauf des Horizonts möglich ist.
 """),
 
 MD("""

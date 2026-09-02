@@ -58,242 +58,259 @@ def werte_sammeln():
     return alle
 
 
-VORLAGE = """# Was die sechs Modelle erforschen — und was dabei herauskommt
+VORLAGE = """# Die sechs Modelle der VeloCity-Fallstudie
 
-*VeloCity-Fallstudie · Handout für Studierende · automatisch aus den
-Notebook-Ergebnissen erzeugt, deshalb immer auf dem Stand des letzten Laufs.*
+*Handout zur Lehrveranstaltung. Sämtliche Kennzahlen dieses Dokuments werden beim Bau
+der Notebooks aus deren Ergebnissen eingesetzt; es gibt daher keinen Stand, der von den
+Notebooks abweicht.*
 
 ---
 
-## Vorab: vier Wörter, ohne die nichts davon zu verstehen ist
+## Begriffe, die in allen sechs Notebooks gleich verwendet werden
 
-Jedes Notebook endet mit einem **Status**. Der sagt, was mit dem Ergebnis
-passieren darf — und das ist etwas anderes als „das Modell ist gut".
+Jedes Notebook endet mit einem **Status**. Er beschreibt nicht die Güte eines Verfahrens,
+sondern die Frage, wofür dessen Ergebnis verwendet werden darf.
 
-| Status | Was das heißt |
+| Status | Bedeutung |
 |---|---|
-| **gesperrt** | Das Verfahren hat seine eigene Hürde nicht genommen. Es wird nicht benutzt. |
-| **Schattenbetrieb** | Es rechnet mit und wird protokolliert. **Niemand sieht das Ergebnis, niemand handelt danach.** So prüft man, ob eine Rechnung auch in der Wirklichkeit hält. |
-| **betriebsgesperrt** | Die Zahlen halten, aber eine Voraussetzung fehlt — zum Beispiel ein Kalender, der nicht weit genug reicht. Kein Modellproblem, trotzdem keine Freigabe. |
-| **sichtbar** | Kundschaft oder Personal bekommen das Ergebnis tatsächlich zu sehen. |
+| **gesperrt** | Das Verfahren hat die vorab festgelegte Hürde nicht genommen und wird nicht eingesetzt. |
+| **Schattenbetrieb** | Das Verfahren rechnet mit, die Ergebnisse werden protokolliert, aber nicht angezeigt; niemand handelt nach ihnen. Auf diese Weise lässt sich prüfen, ob eine Rechnung auch im laufenden Betrieb trägt. |
+| **betriebsgesperrt** | Die Kennzahlen halten, doch eine betriebliche Voraussetzung fehlt — etwa ein Kalender, der nicht weit genug reicht. Das ist kein Modellproblem, begründet aber auch keine Freigabe. |
+| **sichtbar** | Das Ergebnis wird Kundschaft oder Personal tatsächlich angezeigt. |
 
-Zwei Begriffe kommen ständig vor:
+Zwei weitere Begriffe kehren durchgängig wieder:
 
-- **Zusage.** Was das Produkt verspricht, in Zahlen. Beispiel aus Notebook 1:
-  *„In mindestens {{nb01_gate_schwelle:.0%}} der Fälle liegt der wirkliche Preis in der
-  angezeigten Spanne."* An genau diesem Satz wird gemessen — nicht an einer
-  Kennzahl, die gut aussieht.
-- **Reichweite.** Auf wie viele Anfragen das Produkt überhaupt antwortet. Ein Modell,
-  das fast immer schweigt, hat leicht eine hohe Trefferquote. Deshalb zählt beides.
+**Zusage.** Die Leistung, die ein Produkt zusichert, formuliert als überprüfbare Aussage.
+In Notebook 1 lautet sie: *In mindestens {{nb01_gate_schwelle:.0%}} der Fälle enthält die
+angezeigte Spanne den tatsächlichen Preis.* Gemessen wird an dieser Aussage, nicht an
+einer Kennzahl, die sich im Nachhinein als günstig erweist.
 
-> **Der wichtigste Satz des ganzen Kurses:** Ein Erfolgskriterium wird **vor** der
-> Messung festgelegt. Wer es hinterher anpasst, misst nichts mehr — auch dann nicht,
-> wenn die Änderung sachlich richtig wäre.
+**Reichweite.** Der Anteil der Anfragen, die überhaupt beantwortet werden. Ein Verfahren,
+das in Zweifelsfällen schweigt, erreicht mühelos eine hohe Trefferquote; erst beide
+Größen zusammen beschreiben ein Produkt.
+
+> **Grundregel der gesamten Fallstudie:** Ein Erfolgskriterium wird **vor** der Messung
+> festgelegt. Wird es nachträglich angepasst, verliert die Messung ihre Aussagekraft —
+> auch dann, wenn die Anpassung sachlich begründet wäre.
 
 ---
 
-## Notebook 1 — Was kostet meine Fahrt? *(Regression)*
+## Notebook 1 — Preisauskunft vor Fahrtantritt *(Regression)*
 
-**Die Frage.** Der Kunde steht am Rad, gibt ein Ziel ein und will vorher wissen,
-was die Fahrt kostet. Der Preis hängt an der Dauer — die Dauer kennt niemand vorher.
+**Fragestellung.** Die Kundschaft soll den Preis kennen, bevor sie losfährt. Der Preis
+ergibt sich aus der Fahrtdauer, und diese steht zum Zeitpunkt der Anfrage noch nicht fest.
 
-**Was das Modell tut.** Es schätzt aus Start, geplantem Ziel, Radtyp und Zeitpunkt
-nicht *eine* Zahl, sondern eine **Spanne** („zwischen 8 und 14 Minuten"). Aus der
-Spanne wird über die Tariflogik ein Preisbereich.
+**Vorgehen.** Geschätzt wird keine einzelne Zahl, sondern eine **Spanne** für die Dauer,
+die das Tarifblatt in einen Preisbereich umrechnet. Drei Verfahren treten gegeneinander
+an: eine Quantilregression, eine Tabelle aus historischen Perzentilen und eine tabellierte
+Fassung der Regression. Alle drei werden am selben Kriterium gemessen, bevor entschieden
+wird.
 
-**Das Ergebnis.**
+**Ergebnis.** {{nb01_zulaessige_satz}} ({{nb01_zulaessige}}). Ausgeliefert wird die
+**{{nb01_kandidat}}** — nicht wegen der besseren Prognosegüte, sondern nach einer vorab
+festgelegten Auswahlregel,
+die bei gleicher Eignung die einfachere Betriebsform bevorzugt. Eine CSV-Datei lässt sich
+ohne laufenden Dienst betreiben; das kostet {{nb01_verzicht_reichweite:.1%}} Reichweite
+gegenüber der {{nb01_verzicht_kandidat}}.
 
-- Ausgeliefert wird die **{{nb01_kandidat}}**. Sie war nicht die genaueste, sondern
-  die einfachste unter denen, die alle Hürden nahmen — eine CSV-Datei statt eines
-  Dienstes, der nachts jemanden aus dem Bett holt.
 - Die Zusage von {{nb01_gate_schwelle:.0%}} ist auf einem versiegelten Zeitraum belegt:
   **{{nb01_ab_unten:.1%}}** auf der Abnahme, {{nb01_ab_gates_halten:.0f}} von
-  {{nb01_ab_gates_gesamt:.0f}} Hürden halten.
-- Die App antwortet auf **{{nb01_reichweite_real:.0%}}** der Anfragen. Bei den übrigen
-  sagt sie nichts — bewusst, weil die Spanne dort zu breit wäre, um zu nützen.
-- Status: **{{nb01_produktstatus}}** ({{nb01_statussatz}}), gültig für Fahrten bis zum
+  {{nb01_ab_gates_gesamt:.0f}} Gates halten.
+- Beantwortet werden **{{nb01_reichweite_real:.0%}}** der Anfragen. In den übrigen Fällen
+  gibt die Anwendung keine Auskunft, weil die Spanne dort zu breit wäre, um zu nützen.
+- Status: **{{nb01_produktstatus}}**; die Auskunft gilt für Fahrten bis zum
   {{nb01_gueltig_bis_lang}}.
 
-**Der Haken, den man kennen muss.** In {{nb01_zielabweichung:.0%}} der Fahrten endet
-jemand woanders, als er angegeben hat. Deshalb trägt die Zusage eine Bedingung, und die
-steht in jeder Antwort der App: *„{{nb01_zusage_text}}"*
+**Was offen bleibt.** In {{nb01_zielabweichung:.0%}} der Fahrten weicht das tatsächliche
+Ende vom angegebenen Ziel ab. Die Zusage trägt deshalb eine Bedingung, die in jeder
+Antwort der Anwendung mitgeteilt wird: *„{{nb01_zusage_text}}"* Ob eine reale Anwendung
+das gewünschte Ziel ebenso vollständig erfasst wie dieser Datensatz, lässt sich nur im
+Schattenbetrieb klären.
 
 ---
 
-## Notebook 2 — Welches Rad geht als nächstes kaputt? *(Klassifikation)*
+## Notebook 2 — Vorausschauende Wartung *(Klassifikation)*
 
-**Die Frage.** Die Werkstatt kann pro Woche nur eine begrenzte Zahl Räder prüfen.
-Welche soll sie sich ansehen, damit möglichst wenige unterwegs ausfallen?
+**Fragestellung.** Die Werkstatt kann je Quartal nur {{nb02_kapazitaet:.0f}} Räder
+vorsorglich prüfen. Welche Räder gehören auf diese Liste?
 
-**Was das Modell tut.** Für jedes Rad wird geschätzt, ob es in den nächsten
-{{nb02_horizont_tage:.0f}} Tagen auffällig wird. Das ist eine **Entscheidung**, keine
-Zahl — und die beiden Fehler kosten unterschiedlich viel: ein verpasster Ausfall
-{{nb02_kosten_verpasst:.0f}} €, eine unnötige Prüfung {{nb02_kosten_unnoetig:.0f}} €.
+**Vorgehen.** Für jedes Rad wird vorhergesagt, ob es innerhalb von
+{{nb02_horizont_tage:.0f}} Tagen auffällig wird. Die beiden Fehlerarten sind
+unterschiedlich teuer: Ein übersehener Ausfall kostet {{nb02_kosten_verpasst:.0f}} €,
+eine unnötige Prüfung {{nb02_kosten_unnoetig:.0f}} €. Dieses Verhältnis geht als
+Klassengewicht in die Modelle ein.
 
-**Das Ergebnis.**
+**Ergebnis.** Ausgeliefert wird eine Faustregel, nicht das Random-Forest-Modell. Im
+Testquartal trifft die Regel {{nb02_treffer_regel:.0f}} Räder gegenüber
+{{nb02_treffer_wald:.0f}}. Ausschlaggebend war jedoch nicht dieser Vorsprung, sondern die
+statistische Absicherung: Die untere Vertrauensgrenze der Regel liegt bei
+{{nb02_wilson_unten_regel:.1%}} und damit über der geforderten Schwelle von
+{{nb02_k3_schwelle:.1%}}; das Random-Forest-Modell erreicht {{nb02_wilson_unten_wald:.1%}}
+und verfehlt sie. Von zehn geprüften Rädern werden {{nb02_quote_regel_von_zehn:.1f}}
+innerhalb des Horizonts auffällig; von zehn tatsächlich auffälligen Rädern erfasst die
+Liste {{nb02_abdeckung_von_zehn:.1f}}. Beide Kennzahlen sind zutreffend und messen
+Verschiedenes.
 
-- **Ausgeliefert wird die Faustregel, nicht der Wald.** Im Testquartal trifft die
-  Regel {{nb02_treffer_regel:.0f}} Räder, der Random Forest
-  {{nb02_treffer_wald:.0f}} — und entschieden hat die statistische Absicherung:
-  Untergrenze der Regel {{nb02_wilson_unten_regel:.1%}} gegen die geforderten
-  {{nb02_k3_schwelle:.1%}}, der Wald erreicht nur {{nb02_wilson_unten_wald:.1%}}.
-- Von zehn geprüften Rädern melden sich {{nb02_quote_regel_von_zehn:.1f}}; von zehn
-  auffälligen erreicht die Liste {{nb02_abdeckung_von_zehn:.1f}}. Beide Zahlen sind
-  richtig, und sie messen Verschiedenes.
-- Dazu eine Schattenliste zum {{nb02_schatten_stichtag_lang}} — die Freigabe steht auf
-  historischen Daten und wird prospektiv nachgeprüft.
-
-**Der Haken.** Der Anteil auffälliger Räder schwankt über die
+**Was offen bleibt.** Der Anteil auffälliger Räder schwankt über die
 {{nb02_panel_stichtage:.0f}} Stichtage zwischen {{nb02_panel_grundrate_min:.1%}} und
-{{nb02_panel_grundrate_max:.1%}}. Ein einzelnes gutes Quartal ist deshalb kein Ergebnis
-— es kann die Jahreszeit gewesen sein.
+{{nb02_panel_grundrate_max:.1%}}. Ein einzelnes günstiges Quartal belegt daher wenig; es
+kann ebenso gut die Jahreszeit gewesen sein. Aus diesem Grund liegt eine Schattenliste
+zum {{nb02_schatten_stichtag_lang}} bei, deren Bewertung erst nach Ablauf des Horizonts
+möglich ist.
 
 ---
 
-## Notebook 3 — Welche Sorten von Stationen und Kunden gibt es? *(Clustering)*
+## Notebook 3 — Stationstypen und Kundensegmente *(Clustering)*
 
-**Die Frage.** Niemand hat je aufgeschrieben, welche Station ein Pendlerbahnhof ist
-und welche Kundin eine Gelegenheitsfahrerin. Steckt das im Verhalten?
+**Fragestellung.** In den Stammdaten ist nicht vermerkt, welche Station als
+Pendlerstation dient und welches Nutzungsmuster einzelne Kundengruppen zeigen. Lässt sich
+beides aus dem beobachteten Verhalten rekonstruieren?
 
-**Was das Modell tut.** Es gruppiert — ohne vorgegebene Antwort. Stationen nach ihrem
-Tagesgang, Kundschaft nach Zuletzt/Wie-oft/Wie-viel (RFM).
+**Vorgehen.** Zwei getrennte Clusteranalysen: Stationen nach ihrem Tagesgang, Kundschaft
+nach Aktualität, Häufigkeit und Umsatz. Da es keine vorgegebene richtige Lösung gibt,
+werden die Gruppen an fünf vorab festgelegten Kriterien gemessen — sie müssen benennbar,
+unterschiedlich behandelbar und hinreichend groß sein sowie gegenüber dem Startwert und
+über die Zeit stabil bleiben.
 
-**Das Ergebnis.**
+**Ergebnis.** Bei den **Stationen** entstehen benennbare Typen. Gegen die im Datensatz
+hinterlegte, dem Verfahren nicht bekannte Zuordnung geprüft, sind
+{{nb03_generator_treffer:.0%}} richtig zugeordnet (Adjusted Rand Index
+{{nb03_generator_ari:.3f}}). Ausgeliefert werden Stationsprofile; sie sind ausdrücklich
+als Hypothesen gekennzeichnet und geben keinen Sollbestand vor.
 
-- **Stationen:** benennbare Typen, gegen die verdeckte Wahrheit geprüft —
-  {{nb03_generator_treffer:.0%}} richtig zugeordnet, ARI {{nb03_generator_ari:.3f}}.
-  Ausgeliefert werden **Stationsprofile als Hypothesen**, kein Sollbestand.
-- **Kundschaft:** {{nb03_gates_erfuellt:.0f}} von {{nb03_gates_gesamt:.0f}} Hürden.
-  Analytisch **{{nb03_status_analytisch}}**, für den Einsatz
-  **{{nb03_status_einsatz}}** — es entsteht nur ein aggregierter Bericht ohne Namen.
-  {{nb03_gate_satz_kunden}}
+Bei der **Kundschaft** halten {{nb03_gates_erfuellt:.0f}} von {{nb03_gates_gesamt:.0f}}
+Kriterien. Analytisch gilt das Ergebnis als {{nb03_status_analytisch}}, für den Einsatz
+als {{nb03_status_einsatz}}: Es entsteht ausschließlich ein aggregierter Bericht ohne
+Namensnennung. {{nb03_gate_satz_kunden}}.
 
-**Die zwei Befunde, die wehtun.**
-
-1. Die **{{nb03_viel_segment}}** bringen den geringsten Umsatz je Fahrt —
-   {{nb03_viel_je_fahrt:.2f}} € gegen {{nb03_stark_je_fahrt:.2f}} € bei den
-   {{nb03_stark_segment}}n. Kein Messfehler, sondern ein Preisproblem, das die
-   Segmentierung sichtbar gemacht hat.
-2. **{{nb03_kurze_historie_anteil:.0%}}** der Kundschaft taucht in der Segmentierung
-   überhaupt nicht auf, weil sie im letzten Jahr nicht gefahren ist. RFM sieht nur, wer
-   kauft — wer aufgehört hat, fällt aus dem Blick.
-
----
-
-## Notebook 4 — Wie viele Fahrten werden es morgen? *(Zeitreihe)*
-
-**Die Frage.** Die Disposition plant abends für den nächsten Tag. Wie viele Fahrten
-kommen?
-
-**Was das Modell tut.** Es rechnet aus Kalender und **Wettervorhersage** eine
-Tageszahl. Entscheidend ist das Wort *Vorhersage*: Verglichen wird unter dem Wetter,
-das um 18 Uhr bekannt ist — nicht unter dem, das hinterher wirklich war.
-
-**Das Ergebnis.**
-
-- Gewählt wurde **{{nb04_gewaehlt_name}}** mit einem mittleren Fehler von
-  {{nb04_mae_linear:.1f}} Fahrten, gegen {{nb04_mae_faustregel:.1f}} bei der Faustregel
-  und {{nb04_mae_null:.1f}} beim Nullmodell.
-- Unter *Ist*-Wetter liegen lineares Modell und Gradient Boosting praktisch gleichauf
-  ({{nb04_ist_linear:.2f}} gegen {{nb04_ist_boosting:.2f}}). Erst unter *Prognose*wetter
-  zieht das einfachere Verfahren davon ({{nb04_mae_linear:.2f}} gegen
-  {{nb04_mae_boosting:.2f}}) — die Modellwahl hängt daran, womit man vergleicht.
-- Status: **{{nb04_status}}** — {{nb04_statussatz}}
-
-**Der Haken.** Prognostiziert werden *Fahrten insgesamt*. Gebraucht werden *Räder je
-Station*. Diese Übersetzung ist keine Formel, sondern eine eigene Analyse — und sie
-fehlt noch.
+**Zwei Befunde verdienen besondere Beachtung.** Erstens erzielt das Segment
+{{nb03_viel_segment}} mit {{nb03_viel_je_fahrt:.2f}} € je Fahrt den geringsten Umsatz,
+während es bei den {{nb03_stark_segment}}n {{nb03_stark_je_fahrt:.2f}} € sind. Das ist
+kein Messfehler, sondern ein Befund zur Tarifstruktur, den erst die Segmentierung
+sichtbar gemacht hat. Zweitens erscheinen {{nb03_kurze_historie_anteil:.0%}} der
+Kundschaft in der Segmentierung überhaupt nicht, weil sie im Betrachtungszeitraum nicht
+gefahren sind. Ein Verfahren, das auf Nutzung beruht, erfasst abgewanderte Kundschaft
+nicht.
 
 ---
 
-## Notebook 5 — Von wo nach wo fahren die Leute? *(Assoziation)*
+## Notebook 4 — Nachfrageprognose für den Folgetag *(Zeitreihe)*
 
-**Die Frage.** Gibt es Strecken, die im selben Zeitfenster häufiger vorkommen, als es
-bei zufälliger Zielwahl zu erwarten wäre? Und halten diese Muster über die Zeit?
+**Fragestellung.** Die Disposition plant am Vorabend für den kommenden Tag. Mit wie
+vielen Fahrten ist zu rechnen?
 
-**Was das Modell tut.** Es zählt — Support, Konfidenz, Lift, drei Divisionen. Danach
-wird die Regelmenge in einem Zeitraum gesucht, den es vorher nie gesehen hat, noch
-einmal geprüft.
+**Vorgehen.** Aus Kalendermerkmalen und der **Wettervorhersage** wird eine Tageszahl
+geschätzt. Entscheidend ist der Unterschied zwischen Vorhersage und späterem Ist-Wetter:
+Verglichen werden die Verfahren unter dem Wetter, das um 18 Uhr bekannt ist, nicht unter
+dem, das sich im Nachhinein eingestellt hat.
 
-**Das Ergebnis.**
+**Ergebnis.** Gewählt wurde {{nb04_gewaehlt_name}} mit einem mittleren absoluten Fehler
+von {{nb04_mae_linear:.1f}} Fahrten, gegenüber {{nb04_mae_faustregel:.1f}} bei der
+Faustregel und {{nb04_mae_null:.1f}} beim Nullmodell. Unter Ist-Wetter liegen lineares
+Modell und Gradient Boosting praktisch gleichauf ({{nb04_ist_linear:.2f}} gegenüber
+{{nb04_ist_boosting:.2f}}); erst unter Prognosewetter setzt sich das einfachere Verfahren
+ab ({{nb04_mae_linear:.2f}} gegenüber {{nb04_mae_boosting:.2f}}). Die Modellwahl hängt
+damit unmittelbar an der Frage, unter welchen Bedingungen verglichen wird.
 
-- **Produkt A (automatische Umverteilung): nicht freigegeben.** Nicht weil die Regeln
-  schlecht wären, sondern weil die Wirtschaftlichkeit mit diesen Daten
-  **{{nb05_a4_zustand_text}}** ist: Die Fahrten, die mangels Rad nie stattfanden, stehen
-  nirgends.
-- **Produkt B (Dispositionshinweis): {{nb05_b_regeln_n:.0f}} Regeln.** Jede einzeln im
-  unangetasteten Zeitraum bestätigt — verlangt war die untere Grenze eines
-  Tagesblock-Bootstraps über {{nb05_k2_lift}}, nicht bloß ein Punktschätzer.
-  Von {{nb05_b1_kandidaten:.0f}} Kandidaten halten {{nb05_b1_gehalten:.0f}}.
-- Status: **{{nb05_status_b}}**
+**Status.** {{nb04_statussatz}}
 
-**Der Haken.** Die Hürde aus Phase 1 klingt nach einer Zahl, ist aber keine:
-{{nb05_k1_support:.0%}} aller Warenkörbe sind {{nb05_huerde_je_werktag:.2f}} Fahrten je
-Werktag — eine Größenordnung, in der kein Transporter losfährt. Das Kriterium war auf
-der falschen Skala formuliert. Es wurde trotzdem nicht nachträglich verschoben.
+**Was offen bleibt.** Prognostiziert wird die Gesamtzahl der Fahrten; benötigt wird die
+Zahl der Räder je Station. Diese Umrechnung ist keine Formel, sondern eine eigene
+Analyse, und sie steht noch aus.
 
 ---
 
-## Notebook 6 — Was ist hier gerade seltsam? *(Anomalieerkennung)*
+## Notebook 5 — Systematische Ströme im Netz *(Assoziationsanalyse)*
 
-**Die Frage.** Drei verschiedene, und das ist der Kern des Notebooks: Was ist ein
-Rückgabeproblem *jetzt*? Was ist eine auffällige Fahrt? Welches Rad hat ein
-Datenqualitätsproblem?
+**Fragestellung.** Gibt es Verbindungen, die innerhalb desselben Zeitfensters häufiger
+auftreten, als bei zufälliger Zielwahl zu erwarten wäre? Und sind diese Muster zeitlich
+stabil?
 
-**Was das Modell tut.** Für die erste Frage genügt eine Regel. Für die zweite lernt ein
-Isolation Forest, was „normal" ist — beim ersten Versuch fand er die Preisklasse statt
-der Anomalien, und das fiel nur auf, weil jemand die zehn obersten Zeilen **angesehen**
-hat.
+**Vorgehen.** Gezählt statt trainiert: Support, Konfidenz und Lift ergeben sich aus drei
+Divisionen. Die Regeln werden in den ersten zwei Dritteln des Zeitraums gesucht; das
+letzte Drittel bleibt bis zur Bestätigung ungeöffnet.
 
-**Das Ergebnis.**
+**Ergebnis.** **Produkt A**, die automatische Umverteilung, ist {{nb05_status_a}}.
+Ausschlaggebend dafür ist nicht die Qualität der Regeln: Fahrten, die mangels
+verfügbarem Rad nie zustande kamen, sind in diesen Daten nicht enthalten und lassen sich
+auch nicht aus den beobachteten Fahrten erschließen. Ohne sie ist der Nutzen einer
+Umverteilung nicht zu beziffern.
 
-- **A1 {{nb06_a1_status}}** — als Regel beschrieben und logisch geprüft; Echtzeitquelle
-  und Alarmkanal fehlen.
-- **A2 {{nb06_a2_status}}** — es gibt kein Label, also keine belegte Güte. Die globale
-  Rangliste meldet {{nb06_globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste
-  {{nb06_tagesquote:.1%}} — **bei demselben Modell**.
-- **B {{nb06_b_status}}** — {{nb06_b_gates_halten}} Hürden halten auf dem unangetasteten
-  Testabschnitt.
+**Produkt B**, der Dispositionshinweis, umfasst {{nb05_b_regeln_n:.0f}} von
+{{nb05_b1_kandidaten:.0f}} geprüften Regeln. Gefordert war nicht ein Punktschätzer über
+{{nb05_k2_lift}}, sondern die untere Grenze eines Tagesblock-Bootstraps; nur so lässt
+sich die Abhängigkeit von Fahrten desselben Tages berücksichtigen. Status:
+**{{nb05_status_b}}**.
 
-**Der Haken.** Eine Kennzahl auf der Gesamtliste sagt nichts über die Liste, die im
-Betrieb tatsächlich entsteht. Der Unterschied zwischen {{nb06_globale_quote:.1%}} und
-{{nb06_tagesquote:.1%}} ist kein Rundungsfehler, sondern zwei verschiedene Produkte.
+**Was offen bleibt.** Die Hürde aus Phase 1 ist als Anteil an allen Warenkörben
+formuliert. Umgerechnet entspricht sie {{nb05_huerde_je_werktag:.2f}} Fahrten je Werktag
+— einer Größenordnung, in der keine Umsetzfahrt begonnen wird. Das Kriterium war damit
+auf der falschen Skala formuliert. Verschoben wurde es dennoch nicht, weil eine
+nachträglich angepasste Hürde nichts mehr misst.
 
 ---
 
-## Was Sie mit alldem anfangen können
+## Notebook 6 — Auffällige Vorgänge erkennen *(Anomalieerkennung)*
 
-**Die sechs Status auf einen Blick** — so, wie der letzte Lauf sie gesetzt hat:
+**Fragestellung.** Drei Fragen mit drei unterschiedlichen Entscheidungszeitpunkten:
+Welches Rad ist gegenwärtig überfällig? Welche abgeschlossenen Vorgänge verdienen am
+Folgetag eine Prüfung? Welche Station war über längere Zeit ohne Bewegung?
 
-| Notebook | Was ausgeliefert wird | Status |
+**Vorgehen.** Die erste Frage beantwortet eine Regel; ein Modell ist dafür nicht
+erforderlich. Für die zweite lernt ein Isolation Forest, welche Vorgänge als
+unauffällig gelten. Im ersten Anlauf trennte er die Preisklassen statt der Anomalien.
+Bemerkt wurde das nicht anhand einer Kennzahl, sondern durch Sichtung der obersten
+Zeilen der Rangliste.
+
+**Ergebnis.** Produkt **A1** ist {{nb06_a1_status}}: als Regel beschrieben und
+retrospektiv geprüft; Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. Produkt
+**A2** steht auf {{nb06_a2_status}}, da für die Bewertung kein Label vorliegt. Bei
+Produkt **B** halten {{nb06_b_gates_halten}} Gates auf dem unangetasteten Testabschnitt;
+der Status lautet {{nb06_b_status}}.
+
+**Was offen bleibt.** Die globale Rangliste erreicht eine Trefferquote von
+{{nb06_globale_quote:.1%}}, die im Betrieb tatsächlich erzeugbare Tagesliste dagegen
+{{nb06_tagesquote:.1%}} — bei identischem Modell. Eine Kennzahl, die auf der Gesamtliste
+ermittelt wurde, beschreibt nicht die Liste, mit der später gearbeitet wird.
+
+---
+
+## Übersicht und Ertrag
+
+**Status nach dem letzten Lauf:**
+
+| Notebook | Ausgeliefertes Artefakt | Status |
 |---|---|---|
-| 1 Preisauskunft | {{nb01_kandidat}} als CSV | **{{nb01_produktstatus}}** |
-| 2 Wartungsrisiko | Faustregel + Schattenliste | historisch freigegeben, prospektiv offen |
-| 3 Segmente | Stationsprofile · aggregierter Kundenbericht | analytisch {{nb03_status_analytisch}}, Einsatz {{nb03_status_einsatz}} |
-| 4 Nachfrage | {{nb04_gewaehlt_name}} | **{{nb04_status}}** |
-| 5 Wege im Netz | Produkt A: {{nb05_status_a}} · Produkt B: {{nb05_b_regeln_n:.0f}} Regeln | **{{nb05_status_b}}** |
-| 6 Anomalien | A1, A2, B getrennt | A1 {{nb06_a1_status}} · A2 {{nb06_a2_status}} · B {{nb06_b_status}} |
+| 1 Preisauskunft | {{nb01_kandidat}} als CSV-Datei | {{nb01_produktstatus}} |
+| 2 Wartung | Faustregel und Schattenliste | historisch freigegeben, prospektiv offen |
+| 3 Segmente | Stationsprofile; aggregierter Kundenbericht | analytisch {{nb03_status_analytisch}}, Einsatz {{nb03_status_einsatz}} |
+| 4 Nachfrage | {{nb04_gewaehlt_name}} | {{nb04_status}} |
+| 5 Ströme im Netz | Produkt A: {{nb05_status_a}}; Produkt B: {{nb05_b_regeln_n:.0f}} Regeln | {{nb05_status_b}} |
+| 6 Anomalien | A1, A2 und B getrennt | A1 {{nb06_a1_status}}, A2 {{nb06_a2_status}}, B {{nb06_b_status}} |
 
-**Der größere Teil davon darf am Ende nichts entscheiden.** Das ist kein Scheitern,
-sondern das Ergebnis. Ein Kurs, in dem sechs von sechs Modellen freigegeben werden, hat
-entweder sehr viel Glück gehabt oder seine Kriterien nachträglich angepasst.
+Der überwiegende Teil dieser Verfahren darf am Ende keine Entscheidung treffen. Das ist
+kein Scheitern, sondern das Ergebnis der Prüfung. Eine Fallstudie, in der sechs von sechs
+Verfahren freigegeben werden, hat entweder ungewöhnliches Glück gehabt oder ihre
+Kriterien nachträglich angepasst.
 
-Was Sie an jedem der sechs Notebooks üben können — unabhängig vom Verfahren:
+**Fünf Punkte gelten unabhängig vom Verfahren:**
 
-1. **Die Frage vor der Methode.** Jedes Notebook beginnt mit einer
-   Geschäftsentscheidung, nicht mit einem Algorithmus. Wer mit „ich nehme mal einen
-   Random Forest" anfängt, hat schon verloren.
-2. **Das Kriterium vor der Messung.** Und in der Einheit, in der später entschieden
-   wird — Notebook 5 zeigt, was passiert, wenn man das versäumt.
-3. **Die Baseline ernst nehmen.** In Notebook 2 gewinnt die Faustregel, in Notebook 4
-   das einfachere Modell, in Notebook 1 die Tabelle. Dreimal.
-4. **Einen Zeitraum versiegeln.** Wer auf denselben Daten einstellt und prüft, misst
-   seine eigene Auswahl.
-5. **Hinsehen.** Der teuerste Fehler dieser Fallstudie (Notebook 6) fiel nicht durch
-   eine Kennzahl auf, sondern durch einen Blick in die Tabelle.
+1. **Die Fragestellung steht vor der Methode.** Jedes Notebook beginnt mit einer
+   betrieblichen Entscheidung, nicht mit einem Algorithmus. Wer mit der Wahl des
+   Verfahrens einsetzt, überspringt die Festlegungen, an denen sich später alles
+   entscheidet.
+2. **Das Kriterium steht vor der Messung** — und zwar in der Einheit, in der später
+   entschieden wird. Notebook 5 zeigt, welche Folgen es hat, wenn diese Bedingung
+   verletzt ist.
+3. **Die Vergleichsbasis verdient dieselbe Sorgfalt wie das Modell.** In Notebook 2 setzt
+   sich eine Faustregel durch, in Notebook 4 das einfachere Verfahren, in Notebook 1 eine
+   Tabelle.
+4. **Ein Zeitraum muss versiegelt bleiben.** Wer auf denselben Daten einstellt und prüft,
+   misst die Güte seiner eigenen Auswahl.
+5. **Ergebnisse müssen gesichtet werden.** Der folgenreichste Fehler dieser Fallstudie
+   (Notebook 6) fiel nicht durch eine Kennzahl auf, sondern beim Lesen der Rangliste.
 
-> **Und der Satz, der über allem steht:** Ausgeliefert wird, was gemessen wurde — nicht
-> das, was im Text steht.
+> Maßgeblich ist, was gemessen wurde — nicht, was im begleitenden Text steht.
 """
 
 

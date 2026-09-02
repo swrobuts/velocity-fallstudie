@@ -29,7 +29,7 @@
  "n_registriert": 3072,
  "n_arbeitsliste": 3099,
  "gate_urteil_kunden": "offen",
- "gate_satz_kunden": "Punktwert unter der Schwelle, aber die prospektive Pruefung steht aus - nicht belegt, nicht widerlegt",
+ "gate_satz_kunden": "Der Punktwert liegt unter der Schwelle, die prospektive Prüfung steht jedoch aus — das Kriterium ist damit weder belegt noch widerlegt",
  "punktwert_haelt": "ja",
  "gate_abstand": 0.15327525008067,
  "gate_union": 0.240625,

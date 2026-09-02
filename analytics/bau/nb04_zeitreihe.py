@@ -12,27 +12,29 @@ kopf("Zeitreihe: Wie viele Fahrten kommen morgen?",
      NAME),
 
 MD("""
-> ### In einfachen Worten — die Kurzfassung dieses Notebooks
+> ### Kurzfassung
 >
-> **Die Frage.** Die Disposition plant abends für den nächsten Tag. Wie viele Fahrten
-> werden es?
+> **Fragestellung.** Die Disposition plant am Vorabend für den kommenden Tag. Mit wie
+> vielen Fahrten ist zu rechnen?
 >
-> **Was hier gerechnet wird.** Aus Kalender und **Wettervorhersage** eine Tageszahl.
-> Das Wort *Vorhersage* ist der Kern: Verglichen wird unter dem Wetter, das um 18 Uhr
-> bekannt ist — nicht unter dem, das hinterher wirklich war.
+> **Vorgehen.** Aus Kalendermerkmalen und der Wettervorhersage wird eine Tageszahl
+> geschätzt. Entscheidend ist der Unterschied zwischen Vorhersage und späterem
+> Ist-Wetter: Verglichen werden die Verfahren unter dem Wetter, das um 18 Uhr bekannt
+> ist, nicht unter dem, das sich im Nachhinein eingestellt hat.
 >
-> **Was herauskam.** Gewählt wurde **{{gewaehlt_name}}** mit einem mittleren Fehler von
-> {{mae_linear:.1f}} Fahrten, gegen {{mae_faustregel:.1f}} bei der Faustregel und
-> {{mae_null:.1f}} beim Nullmodell. Unter *Ist*-Wetter liegen beide praktisch
-> gleichauf ({{ist_boosting:.2f}} gegen {{ist_linear:.2f}}) — unter *Prognose*wetter
-> zieht das einfachere Verfahren davon ({{mae_linear:.2f}} gegen
-> {{mae_boosting:.2f}}). Die Modellwahl hängt daran, womit man vergleicht.
+> **Ergebnis.** Gewählt wurde {{gewaehlt_name}} mit einem mittleren absoluten Fehler von
+> {{mae_linear:.1f}} Fahrten, gegenüber {{mae_faustregel:.1f}} bei der Faustregel und
+> {{mae_null:.1f}} beim Nullmodell. Unter Ist-Wetter liegen lineares Modell und Gradient
+> Boosting praktisch gleichauf ({{ist_linear:.2f}} gegenüber {{ist_boosting:.2f}}); erst
+> unter Prognosewetter setzt sich das einfachere Verfahren ab ({{mae_linear:.2f}}
+> gegenüber {{mae_boosting:.2f}}). Die Modellwahl hängt damit unmittelbar daran, unter
+> welchen Bedingungen verglichen wird.
 >
-> **Status: {{nb04_status}}** — {{nb04_statussatz}}
+> **Status.** {{nb04_statussatz}}
 >
-> **Der Haken.** Prognostiziert werden *Fahrten insgesamt*. Gebraucht werden *Räder je
-> Station*. Diese Übersetzung ist keine Formel, sondern eine eigene Analyse — und sie
-> fehlt noch.
+> **Was offen bleibt.** Prognostiziert wird die Gesamtzahl der Fahrten; benötigt wird
+> die Zahl der Räder je Station. Diese Umrechnung ist keine Formel, sondern eine eigene
+> Analyse, und sie steht noch aus.
 """),
 
 MD("""
