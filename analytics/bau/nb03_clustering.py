@@ -1370,7 +1370,7 @@ reproduzierbar.
 > **Verlassen kann man sich auf sie ohnehin nicht.** Bei der Kundensegmentierung liegen
 > die Silhouettenwerte für k = 2, k = 4 und k = 5 dicht beieinander; dort entscheidet die
 > Kennzahl gar nichts, und die fünf Kriterien aus Phase 1 sind das Einzige, was bleibt.
-> Wer nur auf die Kennzahl schaut, hat kein Verfahren für den Fall, dass sie schweigt.
+> Ohne vorab festgelegte Kriterien bleibt kein Maßstab, sobald die Kennzahl nicht trennt.
 >
 > Entschieden hat **Kriterium 2**: Für jede Gruppe muss es eine andere Maßnahme geben.
 > Bei k = 2 gibt es sie nicht, bei k = 4 schon. Das ist keine Schwäche des Verfahrens,
@@ -1688,8 +1688,8 @@ plt.tight_layout(); plt.show()
 
 MD("""
 **Jetzt ist das Bild vollständig, ohne dass wir eine Zahl erfinden mussten.** Das Segment
-mit den meisten Fahrten zahlt am wenigsten **je Fahrt** *und* bekommt am meisten
-geschenkt. Beides
+mit den meisten Fahrten zahlt am wenigsten **je Fahrt** *und* erhält zugleich die
+meisten Freiminuten. Beides
 zusammen erklärt den Befund vollständig.
 
 > **Für CRISP-DM ist dieser Moment lehrbuchreif** — allerdings anders, als man zunächst
@@ -1754,8 +1754,8 @@ print((ohne_fahrt.tarif_code.value_counts(normalize=True) * 100).round(0).to_str
 MD("""
 **Diese Gruppe war in der Segmentierung gar nicht enthalten** — sie hat keine Fahrten,
 also kein RFM-Profil. Sie ist aber mit knapp 30 % des Bestands die **größte Gruppe
-überhaupt**, und für das Marketing die interessanteste: Wer nichts mehr fährt, ist
-entweder verloren oder zurückzugewinnen.
+überhaupt**, und für das Marketing die relevanteste: Wer nicht mehr fährt, ist
+entweder abgewandert oder zurückzugewinnen.
 
 > **Das ist der klassische Fehler bei RFM.** Das Verfahren betrachtet nur, wer gekauft
 > hat. Wer aufgehört hat, fällt aus der Tabelle — und damit aus dem Blick. Man muss diese
@@ -2235,10 +2235,10 @@ MD("""
 | 2 Data Understanding | Stammdaten enthalten keinen Typ — das Muster steckt im Verhalten | Kein Segment in der Kundentabelle |
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
-| 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: {{generator_treffer:.0%}} Mehrheitszuordnung, ARI {{generator_ari:.3f}}. Stabilität gemessen, nicht behauptet | Vier Segmente, über die Startwerte reproduzierbar (ARI {{ari_kunden:.3f}}), aber mit schwächerer Trennung (Silhouette {{sil_kunden_k4:.3f}}) — dazu zwei Befunde, die weh tun, und eine hypothetische Rechnung |
+| 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: {{generator_treffer:.0%}} Mehrheitszuordnung, ARI {{generator_ari:.3f}}. Stabilität gemessen, nicht behauptet | Vier Segmente, über die Startwerte reproduzierbar (ARI {{ari_kunden:.3f}}), aber mit schwächerer Trennung (Silhouette {{sil_kunden_k4:.3f}}) — dazu zwei Befunde mit betrieblichen Folgen und eine hypothetische Rechnung |
 | 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Analytisch {{status_analytisch}}, Einsatz {{status_einsatz}}** — {{gates_erfuellt}} von {{gates_gesamt}} Gates. Es entsteht **{{exportart}}**. Gemessen am Nenner aus Phase 1 (Vereinigungsmenge): {{gate_eng:.2%}} gegen {{gate_wechsel:.0%}} — was fehlt, ist nicht die Zahl, sondern eine **prospektive** Prüfung |
 
-**Die zwei Befunde aus Phase 5.B, die weh tun**
+**Die zwei Befunde aus Phase 5.B mit betrieblichen Folgen**
 
 1. **Die Vielfahrer bringen den geringsten Umsatz je Fahrt** —
    {{viel_je_fahrt:.2f}} € gegen {{stark_je_fahrt:.2f}} € —

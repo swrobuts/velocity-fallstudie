@@ -658,8 +658,8 @@ Ziehungen" ist eben eine Verteilung, kein einzelner Wert.
 > wird. Ein Test mit Wetterdaten, die um 18 Uhr niemand hat, misst ein Werkzeug, das es
 > nicht gibt. Ob das Ergebnis dabei schmeichelhaft ausfällt oder nicht, ist gleichgültig.
 
-Eine frühere Fassung schrieb hier: *„ist im Betrieb schlechter als im Test — immer."* Der
-Satz klingt streng und ist falsch; die Zahlen direkt darüber widerlegen ihn.
+Eine frühere Fassung schrieb hier: *„ist im Betrieb schlechter als im Test — immer."*
+Diese Aussage ist zu allgemein und wird durch die Zahlen darüber widerlegt.
 """),
 
 CODE('''
@@ -1186,7 +1186,7 @@ MD("""
    stärker — für einen fairen Vergleich bräuchte es zyklische Merkmale.
 
 **Weiter geht es mit Notebook 5 — Assoziationsanalyse:** Dort gibt es weder eine
-Zielgröße noch Gruppen, sondern **Regeln**: Was hängt mit was zusammen? Und wir werden
-sehen, dass die auffälligste Regel meistens die uninteressanteste ist.
+Zielgröße noch Gruppen, sondern **Regeln**: Was hängt mit was zusammen? Dabei zeigt
+sich, dass die auffälligsten Regeln meist die geringste betriebliche Bedeutung haben.
 """),
 ]

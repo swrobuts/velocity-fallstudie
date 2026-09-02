@@ -154,9 +154,9 @@ Kriterium, das nur im Text steht, ist keines.
 > und kann es nicht sagen. Eine frühere Fassung nannte es „handlungsfähig" und
 > versprach damit mehr, als sie prüfte.
 
-**Kriterium 1 ist das, das am meisten Regeln aussortiert** — und zwar gerade die mit den
-spektakulärsten Lift-Werten. Wir werden das gleich sehen. Ob es dabei das Richtige misst,
-ist eine eigene Frage; sie wird in Phase 5 gestellt und fällt unangenehm aus.
+**Kriterium 1 sortiert die meisten Regeln aus** — und zwar gerade die mit den höchsten
+Lift-Werten; die Auswertung in Phase 5 zeigt das. Ob es dabei das Richtige misst, ist
+eine eigene Frage, und sie wird dort ebenfalls gestellt.
 
 ### Zwei Produkte, zwei Kriteriensätze
 
@@ -793,15 +793,15 @@ die Regeln mit wenigen Belegen — und dort streut der Lift stärker, weil er au
 Zählwerten gebildet wird. **Was wie ein Zusammenhang aussieht, ist der Rand einer
 Verteilung.**
 
-Ganz links oben stehen die spektakulären Regeln — hoher Lift, aber ein Support von
-Bruchteilen eines Prozents. Sie beschreiben wenige Fahrten und sind für die Disposition
-deshalb wertlos.
+Ganz links oben stehen die Regeln mit den höchsten Lift-Werten — bei einem Support von
+Bruchteilen eines Prozents. Sie beschreiben so wenige Fahrten, dass sie für die
+Disposition ohne Nutzen sind.
 
 ### Sind die Top-Regeln denn Zufall? Nachsehen statt behaupten
 
 Es liegt nahe, jetzt zu sagen: *„Wer eine Regelliste nach Lift sortiert und die ersten
-zehn vorträgt, trägt zehn Zufälle vor."* Der Satz klingt gut, ist griffig — und in diesem
-Datensatz **falsch**. Die Ausgabe oben hat ihn geprüft.
+zehn vorträgt, trägt zehn Zufälle vor."* Für den vorliegenden Datensatz trifft diese
+Aussage **nicht** zu; die Ausgabe oben hat sie geprüft.
 
 Für jede Regel steht eine Vierfeldertafel zur Verfügung: Fahrten ab dieser Station in
 diesem Fenster zu diesem Ziel, gegen alles andere. Fishers exakter Test beantwortet damit
@@ -905,7 +905,7 @@ falschen Skala.
 ### Was jetzt nicht passiert
 
 Die naheliegende Reaktion wäre, die Hürde durch eine bessere zu ersetzen und noch einmal
-zu rechnen. **Das wäre der Fehler**, und zwar der teuerste in diesem ganzen Notebook.
+zu rechnen. **Das wäre ein schwerer methodischer Fehler.**
 
 > Ein Kriterium, das man ändert, **nachdem** man das Ergebnis gesehen hat, misst nichts
 > mehr — auch dann nicht, wenn die Änderung sachlich richtig ist. Der Verdacht, dass die
@@ -2062,8 +2062,8 @@ Regeln werden also als **Dispositionshinweis** übergeben, nicht als Transportau
 > **Warum das keine Verlegenheitslösung ist.** Eine Assoziationsanalyse findet
 > Regelmäßigkeiten, keine Handlungsanweisungen. Der Schritt von „diese Verbindung tritt
 > überzufällig häufig auf" zu „fahr dorthin" braucht Kosten, Kapazitäten und
-> Alternativen — nichts davon steht in den Warenkörben. Wer ihn trotzdem geht, hat die
-> Methode überdehnt.
+> Alternativen — nichts davon steht in den Warenkörben. Wer ihn ohne diese Angaben
+> geht, überschreitet die Aussagekraft der Methode.
 >
 > **Der Dispositionshinweis ist die ehrliche Auslieferungsform für dieses Verfahren.** Sie
 > nutzt, was gemessen wurde, und behauptet nicht, was nicht gemessen wurde.

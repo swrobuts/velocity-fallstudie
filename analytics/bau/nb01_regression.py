@@ -93,7 +93,8 @@ werden im Alltag als Synonyme benutzt. Hier sind sie es nicht:
 | **Pilot** | Ein begrenzter, befristeter echter Einsatz mit benanntem Abbruchkriterium und Kontrollmöglichkeit | ein Test |
 | **operativer Einsatz** | Das Ergebnis wirkt ohne weitere Prüfung auf Kundschaft, Personal oder Geld | dass das Verfahren fehlerfrei ist |
 
-**Der Unterschied zwischen den ersten beiden ist der teuerste.** „Qualifiziert" ist eine
+**Zwischen den ersten beiden liegt der Unterschied, der in der Praxis am häufigsten
+übersehen wird.** „Qualifiziert" ist eine
 Aussage über Zahlen; „Schattenbetrieb" ist der Zustand, in dem man prüft, ob diese
 Aussage auch trägt, wenn die Wirklichkeit dazwischenkommt. Ein Verfahren kann jede Hürde
 nehmen und trotzdem im Schatten bleiben, solange die Prüfung an denselben Daten hängt,
@@ -1186,7 +1187,8 @@ Für CITY könnten wir jetzt ausliefern. Trotzdem springen wir zurück, und zwar
 Gründen, die nichts mit einem gerissenen Kriterium zu tun haben.
 
 **Erstens misst das Kriterium den Durchschnitt, nicht die Erfahrung.**
-{{preisfehler_city:.2f}} € im Mittel klingt gut. Die Spalte daneben sagt aber: Nur
+Der Mittelwert liegt bei {{preisfehler_city:.2f}} € und damit unter der Grenze. Die
+Spalte daneben zeigt jedoch: Nur
 {{city_unter_50:.0%}} der CITY-Fahrten bleiben innerhalb der 50 Cent — bei den übrigen
 liegt die Anzeige darüber. Ein Kunde erlebt keinen Mittelwert, er erlebt seine Fahrt.
 
@@ -1892,7 +1894,7 @@ ist fast halb so unsicher wie die Spanne breit sein darf.
 **Warum wir trotzdem bei 30 bleiben:** Die Tabelle darunter zeigt den Preis der Strenge.
 Bei 50 verlieren wir ein Fünftel der bedienten Anfragen, bei 100 fast die Hälfte. Das ist
 eine Abwägung zwischen Schärfe und Reichweite, keine statistische Wahrheit — und sie
-gehört zusammen mit der Unsicherheit in den Bericht, nicht in eine Fußnote.
+gehört zusammen mit der Unsicherheit in den Bericht.
 
 > Für eine Produktfreigabe wäre der saubere Weg ein anderer: die Spanne nicht aus dem
 > empirischen Perzentil zu bilden, sondern aus einem Verfahren, das seine eigene
@@ -1923,7 +1925,7 @@ gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolg
   erreicht am Primärgate {{qtab_gate:.1%}}: **weniger als beide anderen, aber immer
   noch über den geforderten {{gate_schwelle:.0%}}**.
 
-> **Das ist das interessanteste Ergebnis dieses Abschnitts.** Die naheliegende Idee,
+> **Damit ist die Ausgangsfrage dieses Abschnitts beantwortet.** Die naheliegende Idee,
 > das Modell zu tabellieren und so seine Stärke ohne seinen Betriebsaufwand zu bekommen,
 > geht nur zur Hälfte auf: Die **Güte** nimmt die Quantiltabelle mit — jede Hürde hält
 > sie. Die **Reichweite** nimmt sie nicht mit; sie beantwortet
@@ -1937,8 +1939,8 @@ gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolg
 >
 > **Wer die Reichweite will, muss den Dienst betreiben.** Die zugesagte Güte hat die
 > CSV auch — sie nimmt dieselben Hürden. Was ihr fehlt, sind die
-> {{verzicht_reichweite:.1%}} zusätzlich beantworteten Anfragen. Das ist keine
-> technische Fußnote, sondern die eigentliche Entscheidung: scikit-learn,
+> {{verzicht_reichweite:.1%}} zusätzlich beantworteten Anfragen. Zu entscheiden ist
+> damit zwischen zwei Betriebsformen: scikit-learn,
 > Versionsstände und ein Dienst, der antwortet, gegen eine CSV, die jedes System
 > lesen kann.
 
@@ -2469,8 +2471,7 @@ else:
 MD("""
 ### 6.3 Zwei Artefakte — und nur eines ist das Produkt
 
-Am Ende dieser Phase entstehen **zwei** Dateien, und sie zu verwechseln wäre der
-folgenreichste Fehler dieses Notebooks:
+Am Ende dieser Phase entstehen **zwei** Dateien. Sie dürfen nicht verwechselt werden:
 
 | Artefakt | was es ist | Zusage |
 |---|---|---|
@@ -3432,7 +3433,7 @@ geöffnet**. Geprüft wird nicht mit einer nachgebauten Formel, sondern mit
 
 > **Das ist der Moment, in dem sich entscheidet, ob die App etwas anzeigt.** Hält die
 > Zusage hier, wird der Status auf „sichtbar" gesetzt. Hält sie nicht, bleibt der Dienst
-> im Schatten — und das wäre kein Unglück, sondern der Zweck der Übung.
+> im Schatten. Auch das ist ein zulässiges Ergebnis dieser Prüfung.
 """),
 
 CODE("""
@@ -3948,7 +3949,8 @@ etwas anderes als eine unabhängige Prüfung: eine **prospektive**.
 > Prüfung, der sich nicht vorziehen lässt.
 
 > **Warum die Gesamtquote hier nicht zählt.** {{abdeckung_gesamt:.1%}} über alle
-> Anfragen klingt komfortabel. Aber {{n_gedeckt:,}} der {{n_gesamt:,}} gemessenen
+> Anfragen liegt weit über der Schwelle, sagt aber wenig aus: {{n_gedeckt:,}} der
+> {{n_gesamt:,}} gemessenen
 > Fahrten liegen in der Gruppe, deren Guthaben die Fahrt deckt — dort ist der Preis die
 > Startgebühr, und **jede** Schätzung trifft. Diese Fälle tragen die Gesamtquote, ohne
 > etwas über die Dauerprognose auszusagen. Ein Gate, das sie mitzählt, misst die

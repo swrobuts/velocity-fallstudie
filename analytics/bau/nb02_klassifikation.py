@@ -68,8 +68,8 @@ MD("""
 ### Die Ausgangslage
 
 VeloCity repariert heute **reaktiv**: Ein Rad fällt aus, jemand meldet es, die Werkstatt
-rückt aus. Das ist teuer und ärgerlich — das Rad steht irgendwo im Stadtgebiet, ein
-Kunde ist unterwegs liegengeblieben, und der Ruf leidet.
+rückt aus. Das ist teuer: Das Rad steht irgendwo im Stadtgebiet, ein Kunde ist
+unterwegs liegengeblieben, und die Werkstattfahrt war nicht eingeplant.
 
 Die Werkstattleitung hat Kapazität für **{{kapazitaet:.0f}} vorsorgliche Prüfungen je
 Quartal** (rund {{pruefungen_je_woche:.1f}} pro Woche, also etwa eine pro Werktag, neben
@@ -102,14 +102,15 @@ das in Phase 4 ausdrücklich einstellen müssen.
 ### Die Erfolgskriterien
 
 **Die erste Fassung dieser Kriterien lautete:** „Von den 60 Rädern auf der Quartalsliste
-müssen mindestens 70 % tatsächlich auffällig werden." Das klingt vernünftig und ist es
-nicht — der Grund steht in Phase 2, und er hat uns hierher zurückgeschickt.
+müssen mindestens 70 % tatsächlich auffällig werden." Diese Formulierung ist nicht
+haltbar; der Grund steht in Phase 2 und hat zu einem Rücksprung geführt.
 
 > **Warum eine feste Trefferquote bei fester Kapazität nicht funktioniert.** Im November
 > stehen unter {{winter_bestand:.0f}} Rädern nur {{winter_positiv:.0f}} auffällige. Wer
 > davon 60 auf eine Liste setzt, hat höchstens {{winter_positiv:.0f}} Treffer — das sind
-> {{winter_orakel:.1%}}. **Ein allwissendes Orakel verfehlt die Zusage.** Nicht knapp,
-> sondern grundsätzlich: Es gibt nicht genug kaputte Räder, um die Liste zu füllen.
+> {{winter_orakel:.1%}}. **Die Zusage ist in diesem Quartal auch bei perfekter
+> Vorhersage nicht erreichbar** — und zwar nicht knapp, sondern grundsätzlich: Es gibt
+> nicht genug auffällige Räder, um die Liste zu füllen.
 >
 > Eine Zusage, die kein Verfahren halten kann, ist kein anspruchsvolles Ziel. Sie ist
 > falsch formuliert — und sie misst die Jahreszeit, nicht die Güte. Eine Trefferquote von
@@ -1558,8 +1559,8 @@ else:
 '''),
 
 MD("""
-**Die Formel empfiehlt, praktisch die ganze Flotte zu prüfen.** Das ist offensichtlich
-Unsinn — und der Fehler steckt nicht in der Rechnung, sondern in der Formel:
+**Die Formel empfiehlt, praktisch die ganze Flotte zu prüfen.** Das ist betrieblich
+nicht umsetzbar. Der Fehler steckt nicht in der Rechnung, sondern in der Formel:
 
 ```text
 Kosten = falsch_positive × {{kosten_unnoetig:.0f}} € + falsch_negative × {{kosten_verpasst:.0f}} €

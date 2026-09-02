@@ -58,9 +58,9 @@ Muster** — und dreht damit die übliche Frage um:
 | Notebook 5 | Welche typischen Zusammenhänge gibt es? |
 | **Notebook 6** | **Was passt in keines dieser Muster?** |
 
-Das klingt einfacher, als es ist. Denn die eigentliche Schwierigkeit liegt nicht darin,
-Ausreißer zu finden — das erledigt jedes Verfahren in drei Zeilen. Sie liegt in der
-Frage danach:
+Die Aufgabe ist schwieriger, als die Frage vermuten lässt. Die eigentliche
+Schwierigkeit liegt nicht darin, Ausreißer zu finden — das leistet jedes Verfahren mit
+wenigen Zeilen Code. Sie liegt in der Frage danach:
 
 > **Auffällig ist nicht dasselbe wie problematisch.**
 
@@ -136,7 +136,7 @@ selten und die Funde wertvoll sind.
 > Widerspruch nicht wiederholen kann.
 
 > **Diese 5 % sind aber nicht unser Erfolgskriterium.** Sie sind die Grenze, ab der die
-> Liste kein Geld verbrennt. Eine Liste, bei der neunzehn von zwanzig Einträgen unnötig
+> Liste wirtschaftlich vertretbar ist. Eine Liste, bei der neunzehn von zwanzig Einträgen unnötig
 > sind, wird nach zwei Wochen niemand mehr öffnen — und dann ist der rechnerische Nutzen
 > gleich null. Wir setzen deshalb **20 %** an: jeder fünfte Eintrag muss tragen.
 >
@@ -408,8 +408,8 @@ Häufchen. Das sind zwei verschiedene Dinge in einer Spalte:
 - über acht Stunden: **keine Fahrten**, sondern Räder, die nicht zurückgegeben wurden
 
 > **Eine Lücke in einer Verteilung ist immer ein Hinweis darauf, dass zwei Vorgänge
-> vermischt wurden.** Wer sie sieht, hat die halbe Anomalieerkennung schon im Kopf
-> erledigt — der Rest ist Handwerk.
+> vermischt wurden.** Sie zu erkennen ist der wichtigste Schritt der
+> Datenaufbereitung; die Trennung der Vorgänge folgt daraus.
 
 ### 2.2 Eine Sackgasse, die man kennen sollte
 """),
@@ -750,7 +750,7 @@ print("Sie sind gleich das Gegenstueck zu einer sehr viel unangenehmeren Zahl.")
 MD("""
 **Zwei Dinge stehen in dieser Tabelle, und das zweite ist das wichtigere.**
 
-**Erstens:** Die Regel „sortiere nach Dauer“ schlägt beide Modellfassungen um Längen. Das
+**Erstens:** Die Regel „sortiere nach Dauer“ schlägt beide Modellfassungen deutlich. Das
 ist kein Zufall, sondern **Konstruktion**: Wir haben die Teilwahrheit als `dauer_min > {{langfahrt_min:.0f}}`
 definiert, und `dauer_min` ist eines der Merkmale des Modells. Die Regel *ist* die
 Definition. Sie kann gar nicht verlieren.
@@ -777,7 +777,7 @@ Das hat drei Folgen, und alle drei gehören in den Bericht:
 2. **Das Erfolgskriterium aus Phase 1 misst das Falsche.** „Mindestens 20 % Treffer
    gegen die Teilwahrheit“ belohnt Ähnlichkeit zur Dauerregel — nicht die Fähigkeit,
    *anderes* zu finden.
-3. **Der Wert des Verfahrens liegt genau dort, wo die Teilwahrheit blind ist:** bei den
+3. **Der Wert des Verfahrens liegt genau dort, wo die Teilwahrheit nichts erfasst:** bei den
    CARGO-Rundtouren, den Fahrten zu 0,50 € je Minute, den Ausleihen um 22 Uhr. Für die
    gibt es **kein Label** — und damit auch keine Trefferquote. Ob sie etwas taugen,
    entscheidet nur, wer sie ansieht.
@@ -924,7 +924,8 @@ Tagesliste ist unbekannt, und die {{globale_quote:.1%}} haben sie nie belegt.**
 > Fälle, die über die Periodengrenze laufen — und das sind bei Rückgabeproblemen
 > überdurchschnittlich viele.
 
-> **Eine dritte Zahl steht ebenfalls in der Ausgabe und ist die interessanteste:** Die
+> **Eine dritte Zahl steht ebenfalls in der Ausgabe und ist für den Betrieb die
+> wichtigste:** Die
 > Liste ist an **{{laeufe_leer:.0%}} der Tage leer**. Im Mittel enthält sie
 > {{laenge_mittel:.2f}} Einträge, bei einer Kapazität von {{listenlaenge:.0f}}. Die Meldeschwelle aus dem Referenzzeitraum ist also der bindende
 > Faktor, nicht das Zeitbudget des Betriebsbüros.
@@ -1046,8 +1047,8 @@ print("geprueft. Echtzeitimplementierung und Betriebsvalidierung offen.")
 '''),
 
 MD("""
-**Für A1 ist das Ergebnis trivial, und das ist die Pointe.** Die Regel findet alle Fälle,
-weil sie die Definition ist. Ihr Wert liegt nicht in der Trefferquote, sondern im
+**Für A1 fällt das Ergebnis definitionsgemäß aus.** Die Regel findet alle Fälle,
+weil sie die Definition ist. Ihr Wert liegt deshalb nicht in der Trefferquote, sondern im
 **Zeitpunkt**: Sie meldet Stunden bevor das Rad zurückkommt — die Tagesliste hätte einen
 großen Teil dieser Fälle am Folgemorgen noch gar nicht gesehen.
 
