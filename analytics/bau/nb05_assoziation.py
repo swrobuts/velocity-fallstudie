@@ -171,7 +171,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Die Adresse zeigt auf den Zweig 'main' - der sich aendern kann. Fuer eine
+# Die Adresse zeigt auf einen festen Commit - dadurch rechnet jeder Leser
+# mit denselben Daten wie dieses Notebook. Wuerde hier 'main' stehen, aendert
+# sich die Grundlage still, sobald jemand die Daten anfasst. Fuer eine
 # Auswertung, die spaeter exakt reproduzierbar sein muss, gehoert hier ein
 # fester Commit-Hash statt 'main' hinein.
 BASIS = os.environ.get("VELO_BASIS",
@@ -862,8 +864,10 @@ Die Hürde bleibt also stehen, und für **Produkt A** lautet das Ergebnis
 > *Eine Regel ist brauchbar, wenn sie mindestens N Fahrten je Werktag betrifft — wobei N
 > aus den Kosten einer Transporterfahrt hergeleitet wird, nicht aus einer runden Zahl.*
 
-Dass wir diese Zahl heute nicht nennen können, ist selbst ein Befund: **Die Kosten einer
-Transporterfahrt standen nie in den Projektunterlagen.** Ohne sie ist jede Hürde geraten.
+Dass wir diese Zahl heute nicht nennen können, ist selbst ein Befund: **Gemessene Kosten einer
+Transporterfahrt standen nie in den Projektunterlagen.** Die {{kosten_transport:.0f}} €
+und {{wert_fahrt:.2f}} €, mit denen dieses Notebook rechnet, sind gesetzte
+Szenarioannahmen — sie ersetzen keine Messung. Ohne echte Werte ist jede Hürde geraten.
 
 ### 5.5 Entdeckung und Bestätigung trennen
 
@@ -1240,6 +1244,10 @@ plt.tight_layout(); plt.show()
 
 print("(A) DER MITTELWERT — Netto-Saldo je Werktag, über alle Werktage gemittelt:")
 print(tabelle.to_string())
+merke("saldo_max", float(tabelle.values.max()))
+merke("saldo_min", float(tabelle.values.min()))
+merke("kap_min", int(stationen.kapazitaet.min()))
+merke("kap_max", int(stationen.kapazitaet.max()))
 print(f"\\n    Größter Überschuss: {tabelle.values.max():.2f} Räder je Werktag")
 print(f"    Größter Fehlbestand: {tabelle.values.min():.2f} Räder je Werktag")
 print(f"    Zum Vergleich: die Stationen fassen {stationen.kapazitaet.min()} "
@@ -1276,6 +1284,7 @@ ALLE_WERKTAGE = sorted(ang_werktag.datum.unique())
 bsp = (je_tag.netto.xs("Hubland Campus", level="station")
        .xs("früh (0-10)", level="fenster").reindex(ALLE_WERKTAGE, fill_value=0))
 print(f"\\n    Beispiel Hubland Campus, früh (alle {len(bsp)} Werktage):")
+merke("bsp_spanne_min", float(bsp.min())); merke("bsp_spanne_max", float(bsp.max()))
 print(f"      Langfristmittel {bsp.mean():+.2f} Räder — Spanne der einzelnen Tage "
       f"{bsp.min():+.0f} bis {bsp.max():+.0f}")
 print(f"      An {(bsp.abs() >= 5).mean():.0%} der Werktage weicht der Tagessaldo um "
@@ -1326,10 +1335,9 @@ for fenster in BEZEICHNUNGEN:
         #
         # Eine fruehere Fassung schrieb  richtung = "abholen" if Median >= 0.
         # Damit wurde jeder Median von genau 0 zu "abholen" - auch dort, wo
-        # an deutlich mehr Tagen Raeder FEHLTEN als uebrig waren. Am Hubland
-        # Campus mittags sind 43 % der Tage negativ und 26 % positiv; die
-        # Ausgabe lautete trotzdem "abholen" - obwohl im vollstaendigen
-        # Raster 43 % der Tage negativ und nur 26 % positiv sind.
+        # an mehr Tagen Raeder FEHLTEN als uebrig waren. Konkrete Zahlen
+        # stehen hier bewusst nicht mehr: Sie aendern sich mit jedem
+        # Datenstand, und ein Kommentar wandert nicht mit.
         #
         # Die Richtung folgt jetzt aus den Tagen, nicht aus dem Median, und
         # sie darf auch offen bleiben.
@@ -1419,8 +1427,9 @@ raeder_tag = (frei.groupby("datum").fahrrad_id.nunique()
               .reindex(ALLE_WERKTAGE, fill_value=0))
 print(f"\\nJe Werktag: {ereignisse_tag.mean():.2f} frei endende FAHRTEN, aber nur "
       f"{raeder_tag.mean():.2f} verschiedene RAEDER.")
-print(f"An {int((ereignisse_tag > raeder_tag).sum())} Tagen kommt mindestens ein Rad "
-      f"mehrfach vor.")
+_mehrfach = int((ereignisse_tag > raeder_tag).sum())
+merke("tage_mehrfach", _mehrfach)
+print(f"An {_mehrfach} Tagen kommt mindestens ein Rad mehrfach vor.")
 print("Der Unterschied ist hier klein - die Einheit bleibt trotzdem wichtig.")
 
 merke("frei_fahrten_tag", float(ereignisse_tag.mean()))
@@ -1745,8 +1754,10 @@ print("Bestand, Menge und ein Entscheidungskriterium.")
 MD("""
 ### 6.1 Der Mittelwert, der den Bedarf verschwinden lässt
 
-Tabelle (A) sieht harmlos aus. Der größte Überschuss beträgt **1,75 Räder je Werktag**,
-der größte Fehlbestand **−1,15** — bei Stationen, die 20 bis 40 Räder fassen. Wer nur
+Tabelle (A) sieht harmlos aus. Der größte Überschuss beträgt
+**{{saldo_max:+.2f}} Räder je Werktag**, der größte Fehlbestand
+**{{saldo_min:+.2f}}** — bei Stationen, die {{kap_min:.0f}} bis {{kap_max:.0f}} Räder
+fassen. Wer nur
 diese Tabelle liest, kommt zu einem klaren Schluss: **Für zwei Räder fährt kein
 Transporter. Der Plan trägt nicht.**
 
@@ -1780,8 +1791,9 @@ Tag zu bewegen wären:
 > vollständigem Ausgleich nach jedem Zeitfenster*.
 
 **Zwischen dem Stationsmittelwert und den {{bedarf_mittel:.1f}} liegt kein neuer
-Datensatz, sondern eine andere Aggregation.** Das Beispiel Hubland Campus macht es greifbar: Langfristmittel **+1,63**,
-aber die einzelnen Werktage reichen von **−3 bis +14**.
+Datensatz, sondern eine andere Aggregation.** Das Beispiel Hubland Campus macht es
+greifbar: Langfristmittel **{{bsp_mittel_alle:+.2f}}**, aber die einzelnen Werktage
+reichen von **{{bsp_spanne_min:+.0f}} bis {{bsp_spanne_max:+.0f}}**.
 
 > **Auch dieses Beispiel hatte einen Nennerfehler**, und er ist typisch. Die Tagestabelle
 > enthält nur Tage, an denen eine Station überhaupt vorkam — für Hubland früh sind das
@@ -1834,8 +1846,10 @@ die Anteile je Station.
 
 > **Mittags ist es anders, und eine frühere Fassung hat es falsch ausgegeben.** Dort stand
 > „abholen bei Hubland Campus", weil der Median genau null war und die Regel lautete
-> `abholen, wenn Median >= 0`. Tatsächlich fehlten mittags an **43 %** der Tage Räder und
-> nur an 26 % waren welche übrig — die Anweisung zeigte in die falsche Richtung.
+> `abholen, wenn Median >= 0`. Ein Median von genau null wurde damit zu „abholen" —
+> auch dort, wo an mehr Tagen Räder fehlten als übrig waren. Die Ausgabe oben nennt je
+> Station die Anteile der Plus- und Minustage; die Richtung folgt jetzt aus ihnen und
+> darf auch „keine stabile Richtung" lauten.
 >
 > **Ein Median von null ist keine Richtung, sondern die Abwesenheit einer.** Die Ausgabe
 > leitet die Richtung jetzt aus dem Verhältnis der Plus- und Minustage ab und darf auch
@@ -1854,8 +1868,10 @@ bräuchte Datum, Bestand, Menge und ein Entscheidungskriterium.
 ### 6.3 Das Einsammeln — und wo die Räder wirklich stehen
 
 Werktäglich enden **{{frei_fahrten_tag:.2f}} Fahrten** frei im Gebiet — von
-**{{frei_raeder_tag:.2f}} verschiedenen Rädern**, denn manche werden am selben Tag
-mehrfach frei abgestellt. Diese Runde braucht keine
+**{{frei_raeder_tag:.2f}} verschiedenen Rädern**. Die beiden Zahlen fallen auseinander,
+sobald ein Rad an einem Tag mehrfach frei abgestellt wird; in diesem Datenstand geschieht
+das an **{{tage_mehrfach:.0f}}** Tagen. Die Unterscheidung bleibt trotzdem stehen: Sie
+ist eine Eigenschaft der Einheit, nicht dieses Datenstands. Diese Runde braucht keine
 einzige Assoziationsregel; sie folgt direkt aus der Auszählung.
 
 Nur muss man dafür wissen, **wo** die Räder stehen. Eine frühere Fassung dieses Notebooks
@@ -1908,15 +1924,22 @@ Fünftel aller Räder verlässt das Stationsnetz und kommt nirgends an. Die Zeil
 bei: frei abgestellt" wäre als Anweisung sinnlos: Der Fahrer weiß dann, dass irgendwo
 Räder stehen, aber nicht wo.
 
-### 6.5 Was in Betrieb geht — und in welcher Form
+### 6.5 Was übergeben wird — und in welcher Form
 
 **Produkt A ist {{status_a}}, Produkt B ist {{status_b}}** — beide Urteile stammen aus
 derselben Zelle in Phase 5, gegen die Kriterien, die Phase 1 für sie festgelegt hat. Die
-Regeln gehen also als **Dispositionshinweis** in Betrieb, nicht als Transportauftrag.
+Regeln werden also als **Dispositionshinweis** übergeben, nicht als Transportauftrag.
+
+> **„Übergeben" ist bewusst schwächer als „läuft".** Dieses Notebook erzeugt eine Datei
+> und prüft sie — Spalten, Nenner, Kopfzeilen. Ob sie in einer Ansicht ankommt, ob der
+> Ladeweg stimmt, ob die Größenordnung dort auch angezeigt wird und was bei einem
+> Fehler passiert, ist ein Integrationstest. Den gibt es hier nicht, also wird er auch
+> nicht behauptet.
 
 | | |
 |---|---|
-| **Was läuft** | Die **{{b_regeln_n:.0f}} einzeln bestätigten Regeln** aus `dispositionshinweise.csv` erscheinen in der Dispositionsansicht als Hinweis: „morgens fließt es von hier nach dort" — jede mit ihrer Größenordnung daneben, höchstens {{b_je_tag_max:.2f}} Fahrten je Tag. Dazu die Stationssalden und die Abstell-Hotspots als Tagesübersicht. |
+| **Was erzeugt wird** | `dispositionshinweise.csv` mit den **{{b_regeln_n:.0f}} einzeln bestätigten Regeln**, jede mit ihrer Größenordnung daneben (höchstens {{b_je_tag_max:.2f}} Fahrten je Tag). Dazu die Stationssalden und die Abstell-Hotspots — beide ausdrücklich explorativ. |
+| **Was damit NICHT gezeigt ist** | dass die Datei in einer Dispositionsansicht ankommt. Dieses Notebook prüft den **Export**: Spalten, Nenner, Kopfzeilen. Ladeweg, Schema, Anzeige der Größenordnung und Fehlerverhalten der Oberfläche sind ein Integrationstest, den es hier nicht gibt. Die ehrliche Formulierung lautet **„für die Übergabe erzeugt"**, nicht „läuft". |
 | **Was nicht läuft** | Kein automatischer Umsetzauftrag — A4 hält nicht. Die Obergrenzenrechnung zeigt, warum: Es geht um höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt, eine Umsetzrunde kostet angenommene {{kosten_transport:.0f}} €. |
 | **Wofür die Evidenz gilt** | Bestätigungszeitraum {{b_zeitraum_von}} bis {{b_zeitraum_bis}}. Das ist **kein Gültigkeitsdatum**: Die Datei nennt getrennt davon `gebaut_am` und eine operative Gültigkeit von 90 Tagen ab Bau. |
 | **Wer entscheidet** | Die Disposition. Sie sieht den Hinweis und verbindet ihn mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
@@ -1959,8 +1982,8 @@ haben, ergibt Kennzahlen, die zu nichts mehr gehören.
 
 ### 6.6 Ein Hinweis, der nicht fehlen darf
 
-Diese Analyse arbeitet mit **Bewegungsdaten von Personen**. Für den Einsammel- und den
-Salden und Hotspots brauchen wir sie nur aggregiert — und genau so sollten beide auch
+Diese Analyse arbeitet mit **Bewegungsdaten von Personen**. Für die Stationssalden und
+die Abstell-Hotspots brauchen wir sie nur aggregiert — und genau so sollten beide auch
 entstehen.
 
 Die Gegenprobe in Phase 5 ist etwas anderes: Sie greift auf `kunde_id` und Datum zurück
@@ -1983,7 +2006,7 @@ MD("""
 | 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren ({{anteil_rundtouren:.1%}} der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
-| 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen alle drei Hürden — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sich zeigt, dass sie auf der falschen Skala liegt: Sie entscheidet in Betriebsgrößen um Hundertstel einer Fahrt je Werktag. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — {{personen_selber_tag:.0f}} Fälle bei {{rueck_fahrten_paar:.0f}} Abendfahrten |
+| 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen A1 bis A3 — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sie auf der falschen Skala liegt: Sie entscheidet in Betriebsgrößen um Hundertstel einer Fahrt je Tag. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — nur {{personen_selber_tag:.0f}} von {{rueck_fahrten_paar:.0f}} Abendfahrten stammen von jemandem, der morgens hingefahren war |
 | 6 Deployment | {{status_satz}} Ausgeliefert wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln**, jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Die Obergrenzenrechnung sagt, warum keine Automatik: höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{kosten_transport:.0f}} € je Umsetzrunde. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
@@ -2025,7 +2048,7 @@ MD("""
    **Bei uns gilt das nicht**, und das ist eine der wichtigsten Eigenheiten dieses
    Datensatzes: Eine Fahrt vom Hauptbahnhof zum Campus und eine Fahrt vom Campus zum
    Hauptbahnhof sind **zwei verschiedene Ereignisse**, keine zwei Lesarten desselben. Sie
-   haben verschiedene Häufigkeiten, verschiedene Zeitfenster und verschiedenen Lift — die
+   haben verschiedene Häufigkeiten, verschiedene Zeitfenster und verschiedenen Lift.
    Die beiden Richtungen zwischen Hauptbahnhof und Hubland Campus zählen
    {{hin_fahrten:.0f}} Fahrten morgens und {{rueck_fahrten_paar:.0f}} abends — verschiedene
    Häufigkeiten, verschiedene Zeitfenster, verschiedener Lift.
