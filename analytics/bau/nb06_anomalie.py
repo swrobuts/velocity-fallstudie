@@ -166,6 +166,7 @@ NUTZEN_FUND = 120.0        # geborgenes Rad statt Verlust
 LANGFAHRT_MIN = merke("langfahrt_min", 8 * 60)
 KOSTEN_FEHLALARM = 6.0     # fuenf Minuten Ansehen ohne Befund
 KRITERIUM_TREFFER = merke("kriterium_treffer", 0.20)  # Erfolgskriterium fuer B
+
 ZEITBUDGET_MIN = 30.0      # was das Betriebsbuero morgens hat
 PRUEFDAUER_MIN = 5.0       # was eine Pruefung kostet
 MORGENSTUNDE = 8           # wann die Liste auf dem Schreibtisch liegt
@@ -182,6 +183,61 @@ print(f"\\nListenlaenge = {ZEITBUDGET_MIN:.0f} min Zeitbudget / {PRUEFDAUER_MIN:
       f"je Pruefung = {LISTENLAENGE} Plaetze.")
 # Diese Zahl wird nirgends von Hand ueberschrieben - sonst behauptet der
 # Text eine Kapazitaet, die der Code nicht einhaelt.
+
+# ─── DER GATE-KATALOG FUER AUFGABE B - VOLLSTAENDIG UND VORAB ───────
+#
+# Ein einzelnes Praezisionskriterium ist manipulierbar: Eine Regel, die
+# fast nie meldet, erfuellt es leicht und uebersieht fast jede Stoerung.
+# Deshalb stehen hier VIER Huerden, und jede nennt ihren NENNER - ohne
+# Nenner ist eine Quote keine Aussage.
+#
+# Diese Fassung des Katalogs ist eine dokumentierte Ueberarbeitung von
+# Phase 1: Die vorige kannte nur B1. Sie wurde festgelegt, BEVOR der
+# Testabschnitt geoeffnet wurde (siehe Phase 2) - das ist der einzige
+# Zeitpunkt, zu dem so eine Ergaenzung noch zulaessig ist.
+B_GATE = {
+    "B1 Praezision je NEUEM ALARM":      KRITERIUM_TREFFER,
+    "B2 Recall je STOERUNGSEPISODE":     0.60,
+    "B3 Verzug bis zum ersten Alarm":    1,      # Tage, Maximum
+    "B4 Alarme je Tag im Mittel":        float(ZEITBUDGET_MIN // PRUEFDAUER_MIN),
+}
+# Begruendungen, damit die Zahlen nicht als gesetzt dastehen:
+#   B1  Eine Liste, die zu vier Fuenfteln aus Fehlalarmen besteht, wird
+#       nach zwei Wochen nicht mehr geoeffnet. Betriebliche Erfahrung,
+#       keine Rechnung - und deshalb strenger als die Rentabilitaets-
+#       schwelle weiter unten.
+#   B2  Unter der Haelfte traegt weiter die Kundenmeldung den Prozess;
+#       dann ist die Regel ein Beiwerk und kein Produkt. 60 Prozent ist
+#       die naechste runde Marke darueber.
+#   B3  Zwei Tage Ausfall bemerkt die Kundschaft vor uns. Ein Tag ist
+#       die Grenze, ab der die Meldung dem Betrieb noch etwas nuetzt.
+#   B4  Die Kapazitaet des Betriebsbueros - dieselbe Rechnung wie fuer
+#       Produkt A, weil dieselben Leute die Liste abarbeiten.
+#
+# EIGENE KOSTEN FUER B, nicht die von A2. Die 120/6 EUR beschreiben die
+# Suche nach einem FAHRRAD durch das Betriebsbuero. Bei einer Station
+# faehrt die Technik hin und prueft ein Terminal. Diese Zahlen liegen
+# NICHT vor; sie sind ausdrueckliche ANNAHMEN und muessen vom Betrieb
+# bestaetigt werden, bevor B in den Wirkbetrieb geht.
+B_KOSTEN_PRUEFUNG = 25.0    # ANNAHME: Anfahrt und Terminalpruefung
+B_NUTZEN_FUND = 300.0       # ANNAHME: frueh erkannt statt tagelang aus
+B_SCHWELLE_RENTABEL = B_KOSTEN_PRUEFUNG / (B_NUTZEN_FUND + B_KOSTEN_PRUEFUNG)
+for _n, _w in (("b_gate_praezision", B_GATE["B1 Praezision je NEUEM ALARM"]),
+               ("b_gate_recall", B_GATE["B2 Recall je STOERUNGSEPISODE"]),
+               ("b_gate_verzug", B_GATE["B3 Verzug bis zum ersten Alarm"]),
+               ("b_gate_kapazitaet", B_GATE["B4 Alarme je Tag im Mittel"]),
+               ("b_kosten_pruefung", B_KOSTEN_PRUEFUNG),
+               ("b_nutzen_fund", B_NUTZEN_FUND),
+               ("b_schwelle_rentabel", B_SCHWELLE_RENTABEL)):
+    merke(_n, _w)
+print("GATE-KATALOG FUER AUFGABE B - vorab, vollstaendig, mit Nenner:")
+for _bez, _w in B_GATE.items():
+    _e = "Tage" if "Verzug" in _bez else ("Alarme" if "je Tag" in _bez else "")
+    print(f"   {_bez:<34s} {_w if _e else format(_w, '.0%'):>6} {_e}")
+print(f"   Rentabel waere B schon ab {B_SCHWELLE_RENTABEL:.1%} je Alarm "
+      f"({B_KOSTEN_PRUEFUNG:.0f} / {B_NUTZEN_FUND:.0f} EUR, ANNAHMEN).")
+print("   B1 ist strenger als die Rentabilitaet - eine Liste muss benutzt")
+print("   werden, nicht nur rechnerisch aufgehen.")
 
 fahrten = pd.read_csv(BASIS + "ausleihe.csv", parse_dates=["startzeit", "endzeit"])
 raeder = pd.read_csv(BASIS + "fahrrad.csv")
@@ -232,6 +288,34 @@ tage_alle = echte.startzeit.dt.normalize()
 A2_SCHNITT = ((tage_alle.min() + (tage_alle.max() - tage_alle.min()) * 2 // 3)
               .normalize() + pd.Timedelta(days=1) + MORGENSTUNDE_TD)
 REFERENZ_BIS = A2_SCHNITT      # ein Name, ein Wert, ein Zeitstempel
+
+# ─── DER DRITTE ABSCHNITT - UND WARUM ES IHN BRAUCHT ────────────────
+#
+# Fuer Produkt A reichen zwei Abschnitte: Der Isolation Forest lernt auf
+# der Referenz, bewertet wird danach. Fuer Produkt B reicht das NICHT.
+# Die Stationsregel wurde nachgebessert, NACHDEM ihr erstes Ergebnis
+# vorlag - zwei Nulltage in Folge, Mindestbetrieb. Beides ist fachlich
+# begruendet, aber es ist Entwicklung, und Entwicklung verbraucht den
+# Zeitraum, auf dem sie stattfindet.
+#
+# Wer danach auf demselben Zeitraum freigibt, legitimiert genau die
+# Testsatz-Nachnutzung, vor der diese Reihe an vier Stellen warnt.
+#
+# Deshalb wird der Pruefzeitraum halbiert:
+#   ENTWICKLUNG  - hier wurde die Regel gebaut und darf gebaut werden
+#   TEST         - unangetastet; hier faellt das Urteil ueber B
+#
+# Die Parameter der Regel stehen VOR dieser Zeile fest (Phase 1 und der
+# Block "DIE REGEL, EINGEFROREN"). Danach wird nichts mehr gedreht.
+_pz_tage = tage_alle[tage_alle >= A2_SCHNITT.normalize()]
+B_ENTWICKLUNG_BIS = (_pz_tage.min()
+                     + (_pz_tage.max() - _pz_tage.min()) / 2).normalize()
+merke("b_entwicklung_bis", B_ENTWICKLUNG_BIS.strftime("%d.%m.%Y"))
+merke("b_test_ab", (B_ENTWICKLUNG_BIS + pd.Timedelta(days=1)).strftime("%d.%m.%Y"))
+print(f"\\nFuer Produkt B ein DRITTER Abschnitt:")
+print(f"   Entwicklung  bis {B_ENTWICKLUNG_BIS:%d.%m.%Y}   (hier wurde die Regel gebaut)")
+print(f"   Test         ab  {B_ENTWICKLUNG_BIS + pd.Timedelta(days=1):%d.%m.%Y}   "
+      f"(unangetastet - hier faellt das Urteil)")
 
 referenz = echte[echte.endzeit < A2_SCHNITT].copy()
 pruefzeit = echte[echte.endzeit >= A2_SCHNITT].copy()
@@ -1155,61 +1239,68 @@ kandidaten["betrieb"] = kandidaten.start_station_id.map(_betrieb).fillna(0.0)
 kandidaten["meldewuerdig"] = (kandidaten.null_heute & kandidaten.null_gestern
                               & (kandidaten.betrieb >= MINDESTBETRIEB))
 merke("mindestbetrieb", MINDESTBETRIEB)
-# Die alte Regel zum Vergleich - was sie gemeldet haette.
-_alt = kandidaten[(kandidaten.datum > REFERENZ_BIS) & kandidaten.null_heute]
+# Die alte Regel zum Vergleich - gemessen auf der ENTWICKLUNGSHAELFTE,
+# denn dort wurde sie verworfen.
+_alt = kandidaten[(kandidaten.datum > REFERENZ_BIS)
+                  & (kandidaten.datum <= B_ENTWICKLUNG_BIS)
+                  & kandidaten.null_heute]
 merke("stat_alt_meldungen", len(_alt))
 merke("stat_alt_quote", _alt.ist_stoerung.mean())
 
-# DIE POLICY, TAEGLICH, NUR IM PRUEFZEITRAUM.
-pruef_tage = kandidaten[kandidaten.datum > REFERENZ_BIS]
-offen = {}          # Station -> Datum des letzten Alarms einer laufenden Episode
-gemeldet_tage, neue_alarme, wiederholungen = [], [], 0
-
-for tag, gruppe in pruef_tage.groupby("datum"):
-    _dran = gruppe[gruppe.meldewuerdig]
-    heute = _dran.nsmallest(min(LISTENLAENGE, len(_dran)), "abweichung")
-    for _, z in heute.iterrows():
-        gemeldet_tage.append(z)
-        vortag = offen.get(z.start_station_id)
-        if vortag is not None and (tag - vortag).days <= 1:
-            wiederholungen += 1          # dieselbe Stoerung, schon gemeldet
-        else:
-            neue_alarme.append(z)
-        offen[z.start_station_id] = tag
-
-gemeldet_tage = pd.DataFrame(gemeldet_tage)
-neue_alarme = pd.DataFrame(neue_alarme)
-
-print("STATIONSREGEL, TAEGLICH AUSGEFUEHRT (Prüfzeitraum)\\n")
-print(f"  gemeldete Stationstage:            {len(gemeldet_tage):>6d}")
-print(f"  davon Wiederholungen einer schon")
-print(f"  gemeldeten laufenden Störung:      {wiederholungen:>6d}")
-print(f"  neue Alarme:                       {len(neue_alarme):>6d}")
-print()
-merke("stat_rohmeldungen", len(gemeldet_tage))
-merke("stat_neue_alarme", len(neue_alarme))
-merke("stat_wiederholungen", len(gemeldet_tage) - len(neue_alarme))
-tagesquote = merke("stat_je_tag", gemeldet_tage.ist_stoerung.mean())
-alarmquote = merke("stat_je_alarm", neue_alarme.ist_stoerung.mean())
-print(f"  Trefferquote je gemeldetem TAG:    {tagesquote:>6.1%}")
-print(f"  Trefferquote je NEUEM ALARM:       {alarmquote:>6.1%}")
-print()
-# DIE ANDERE HAELFTE DER GUETE: WIE VIELE EPISODEN WURDEN UEBERHAUPT
-# GEFUNDEN, UND WIE SCHNELL?
+# ─── DIE REGEL, EINGEFROREN ─────────────────────────────────────────
 #
-# Nur Praezision zu zeigen beguenstigt eine Regel, die fast nie meldet.
-# Nur Recall zu zeigen verschweigt die Fehlalarme. Beides gehoert hin.
-# PRECISION UND RECALL AUF DERSELBEN EINHEIT - ODER BEIDE GETRENNT.
-#
-# Die Precision oben ist je NEUEM ALARM gerechnet (259 Stueck). Wer den
-# Recall daneben aus den 381 TAEGLICHEN ROHMELDUNGEN nimmt, stellt zwei
-# verschiedene Objekte nebeneinander und bekommt ein zu schoenes Paar.
-# Beide Ebenen werden deshalb getrennt ausgewiesen.
-episoden_pz = stoerungen[stoerungen["von"] > REFERENZ_BIS]
+# Ab hier wird an der Regel nichts mehr geaendert. Was sie ausmacht,
+# steht in dieser Liste - und die Liste wird gedruckt, damit niemand
+# spaeter behaupten kann, es sei etwas anderes gewesen.
+B_REGEL = {
+    "Nulltage in Folge":        2,
+    "Mindestbetrieb (Fa./Tag)": MINDESTBETRIEB,
+    "Listenlaenge":             LISTENLAENGE,
+    "Entprellung":              "ein Alarm je Station, solange die Serie laeuft",
+    "Sortierung":               "aufsteigend nach Abweichung",
+}
+print("DIE REGEL, EINGEFROREN VOR DEM TESTABSCHNITT:")
+for _bez, _w in B_REGEL.items():
+    print(f"   {_bez:<28s} {_w}")
+print()
 
-def episoden_recall(menge):
+
+def wilson(treffer, n, z=1.96):
+    # Dieselbe Rechnung wie in Notebook 1 und 2. Bei 22 Alarmen ist der
+    # Punktschaetzer eine Zufallszahl mit Nachkommastelle - das Intervall
+    # sagt, was man ueberhaupt behaupten darf.
+    if n == 0:
+        return 0.0, 1.0
+    ph, m = treffer / n, z * z / n
+    mitte = (ph + m / 2) / (1 + m)
+    rand = (z / (1 + m)) * np.sqrt(ph * (1 - ph) / n + m / (4 * n))
+    return max(0.0, mitte - rand), min(1.0, mitte + rand)
+
+
+def stationspolicy(tage):
+    # Die Tagesliste, wie sie im Betrieb entsteht - identisch fuer beide
+    # Abschnitte. Eine Policy, die je Abschnitt anders liefe, waere zwei
+    # Policies und die Trennung wertlos.
+    offen, gemeldet, neue, wdh = {}, [], [], 0
+    for tag, gruppe in tage.groupby("datum"):
+        _dran = gruppe[gruppe.meldewuerdig]
+        heute = _dran.nsmallest(min(LISTENLAENGE, len(_dran)), "abweichung")
+        for _, z in heute.iterrows():
+            gemeldet.append(z)
+            vortag = offen.get(z.start_station_id)
+            if vortag is not None and (tag - vortag).days <= 1:
+                wdh += 1
+            else:
+                neue.append(z)
+            offen[z.start_station_id] = tag
+    _leer = pd.DataFrame(columns=tage.columns)
+    return (pd.DataFrame(gemeldet) if gemeldet else _leer,
+            pd.DataFrame(neue) if neue else _leer, wdh)
+
+
+def episoden_recall(menge, episoden):
     erkannt, verzug = 0, []
-    for _, r in episoden_pz.iterrows():
+    for _, r in episoden.iterrows():
         tage_ep = pd.date_range(r["von"], r["bis"], freq="D")
         treffer = [i for i, d in enumerate(tage_ep) if (d, r.station_id) in menge]
         if treffer:
@@ -1217,80 +1308,210 @@ def episoden_recall(menge):
             verzug.append(treffer[0])
     return erkannt, verzug
 
-roh_menge = set(zip(gemeldet_tage.datum, gemeldet_tage.start_station_id))
-neu_menge = set(zip(neue_alarme.datum, neue_alarme.start_station_id))
-erkannt_roh, verzug_roh = episoden_recall(roh_menge)
-erkannt_neu, verzug_neu = episoden_recall(neu_menge)
-merke("episoden_gesamt", len(episoden_pz))
-merke("episoden_roh", erkannt_roh); merke("episoden_neu", erkannt_neu)
 
-print()
-print(f"  Störungsepisoden im Prüfzeitraum:  {len(episoden_pz):>6d}\\n")
-print("  ZWEI EBENEN, GETRENNT AUSGEWIESEN:")
-print(f"    je täglicher Rohmeldung ({len(gemeldet_tage)} Stück):")
-print(f"       Precision {tagesquote:>6.1%}   Episoden erkannt {erkannt_roh}/"
-      f"{len(episoden_pz)}   Verzug max {max(verzug_roh) if verzug_roh else 0} Tage")
-print(f"    je neuem Alarm ({len(neue_alarme)} Stück):")
-print(f"       Precision {alarmquote:>6.1%}   Episoden erkannt {erkannt_neu}/"
-      f"{len(episoden_pz)}   Verzug max {max(verzug_neu) if verzug_neu else 0} Tage")
-print()
-# Ob eine Episode fehlt, entscheidet die Rechnung - nicht dieser Absatz.
-# Er stand hier frueher unbedingt und behauptete eine Luecke, die es
-# in diesem Datenstand nicht gibt.
-_fehlend = len(episoden_pz) - erkannt_neu
-if _fehlend > 0:
-    print(f"  {_fehlend} Episode(n) fehlen in der Alarmsicht. Solche Faelle beginnen")
-    print("  INNERHALB einer schon laufenden Nullserie, die als Fehlalarm")
-    print("  eroeffnet worden war. Ohne Ticketzustand kann das System nicht")
-    print("  unterscheiden, ob daraus ein neuer Fund oder ein weiterlaufender")
-    print("  Fehlalarm wird.")
-else:
-    print("  Beide Sichten erkennen alle Episoden. Das ist kein Verdienst der")
-    print("  Regel, sondern eine Frage der Lage: Solange keine neue Stoerung")
-    print("  INNERHALB einer laufenden Nullserie beginnt, faellt die fehlende")
-    print("  Ticketzustandslogik nicht auf. Sie fehlt trotzdem.")
+def bewerte(tage, episoden, titel):
+    gem, neu, wdh = stationspolicy(tage)
+    _neu_menge = set(zip(neu.datum, neu.start_station_id))
+    _roh_menge = set(zip(gem.datum, gem.start_station_id))
+    erk, verzug = episoden_recall(_neu_menge, episoden)
+    erk_roh, _ = episoden_recall(_roh_menge, episoden)
+    n_tage = tage.datum.nunique()
+    w = {
+        "gemeldet": len(gem), "neue": len(neu), "wiederholungen": wdh,
+        "praezision_tag": gem.ist_stoerung.mean() if len(gem) else 0.0,
+        "praezision_alarm": neu.ist_stoerung.mean() if len(neu) else 0.0,
+        "episoden": len(episoden), "erkannt": erk, "erkannt_roh": erk_roh,
+        "recall": erk / len(episoden) if len(episoden) else float("nan"),
+        "verzug_max": max(verzug) if verzug else 0,
+        "alarme_je_tag": len(neu) / n_tage if n_tage else 0.0,
+    }
+    w["treffer_alarm"] = int(neu.ist_stoerung.sum()) if len(neu) else 0
+    w["p_unten"], w["p_oben"] = wilson(w["treffer_alarm"], len(neu))
+    print(titel)
+    print(f"   Stationstage gemeldet   {w['gemeldet']:>6d}   davon "
+          f"{w['wiederholungen']} Wiederholungen")
+    print(f"   neue Alarme             {w['neue']:>6d}   "
+          f"{w['alarme_je_tag']:.2f} je Tag")
+    print(f"   Praezision je Alarm     {w['praezision_alarm']:>6.1%}   "
+          f"95-%-Intervall {w['p_unten']:.1%} bis {w['p_oben']:.1%}")
+    print(f"   (je gemeldetem Tag      {w['praezision_tag']:>6.1%})")
+    print(f"   Episoden erkannt        {w['erkannt']:>3d}/{w['episoden']:<3d}"
+          f"  Recall {w['recall']:>6.1%}   Verzug max {w['verzug_max']} Tage")
+    print()
+    return w
 
-# EIGENE WIRTSCHAFTLICHKEIT FUER B - nicht die von A2.
+
+# ─── ZUERST DIE ENTWICKLUNGSHAELFTE - DORT WURDE GEBAUT ─────────────
+entw_tage = kandidaten[(kandidaten.datum > REFERENZ_BIS)
+                       & (kandidaten.datum <= B_ENTWICKLUNG_BIS)]
+test_tage = kandidaten[kandidaten.datum > B_ENTWICKLUNG_BIS]
+episoden_entw = stoerungen[(stoerungen["von"] > REFERENZ_BIS)
+                           & (stoerungen["von"] <= B_ENTWICKLUNG_BIS)]
+episoden_test = stoerungen[stoerungen["von"] > B_ENTWICKLUNG_BIS]
+
+print("STATIONSREGEL, TAEGLICH AUSGEFUEHRT\\n")
+w_entw = bewerte(entw_tage, episoden_entw,
+                 "ENTWICKLUNG (verbraucht - hier wurde die Regel gebaut):")
+w_test = bewerte(test_tage, episoden_test,
+                 "TEST (unangetastet - hier faellt das Urteil ueber B):")
+
+# Die Merkwerte kommen aus dem TESTABSCHNITT. Wer die guenstigeren
+# Entwicklungszahlen in den Text schriebe, berichtete etwas anderes,
+# als er freigibt.
+merke("stat_rohmeldungen", w_test["gemeldet"])
+merke("stat_neue_alarme", w_test["neue"])
+merke("stat_wiederholungen", w_test["wiederholungen"])
+tagesquote = merke("stat_je_tag", w_test["praezision_tag"])
+alarmquote = merke("stat_je_alarm", w_test["praezision_alarm"])
+merke("episoden_gesamt", w_test["episoden"])
+merke("episoden_neu", w_test["erkannt"])
+merke("episoden_roh", w_test["erkannt_roh"])
+merke("b_recall", w_test["recall"])
+merke("b_verzug", w_test["verzug_max"])
+merke("b_alarme_je_tag", w_test["alarme_je_tag"])
+merke("entw_je_alarm", w_entw["praezision_alarm"])
+merke("entw_recall", w_entw["recall"])
+merke("entw_episoden", w_entw["episoden"])
+
+# ─── DAS URTEIL: ALLE VIER GATES, AUF DEM TESTABSCHNITT ─────────────
 #
-# Die 120/6 EUR aus Phase 1 beschreiben die Suche nach einem FAHRRAD durch
-# das Betriebsbuero. Bei einer Station handelt die Technik, faehrt hin und
-# prueft ein Terminal - andere Kosten, anderer Nutzen, andere Kapazitaet.
-# Diese Zahlen liegen NICHT vor; die folgenden sind ausdrueckliche
-# Annahmen und muessen vom Betrieb kommen.
-B_KOSTEN_PRUEFUNG = 25.0    # Anfahrt und Terminalpruefung
-B_NUTZEN_FUND = 300.0       # frueh erkannte Stoerung statt tagelangem Ausfall
-b_schwelle = B_KOSTEN_PRUEFUNG / (B_NUTZEN_FUND + B_KOSTEN_PRUEFUNG)
+# Nicht nur die Praezision. Eine Regel, die selten meldet, erfuellt B1
+# und uebersieht alles - deshalb haengt der Status an ALLEN vieren.
+B_ERGEBNIS = [
+    ("B1 Praezision je NEUEM ALARM", w_test["praezision_alarm"],
+     B_GATE["B1 Praezision je NEUEM ALARM"], ">=", "quote"),
+    ("B2 Recall je STOERUNGSEPISODE", w_test["recall"],
+     B_GATE["B2 Recall je STOERUNGSEPISODE"], ">=", "quote"),
+    ("B3 Verzug bis zum ersten Alarm", w_test["verzug_max"],
+     B_GATE["B3 Verzug bis zum ersten Alarm"], "<=", "zahl"),
+    ("B4 Alarme je Tag im Mittel", w_test["alarme_je_tag"],
+     B_GATE["B4 Alarme je Tag im Mittel"], "<=", "zahl"),
+]
+print("DAS URTEIL UEBER B - alle vier Gates, gemessen auf dem TESTABSCHNITT:")
+_haelt = []
+for _bez, _ist, _soll, _op, _art in B_ERGEBNIS:
+    ok = (_ist >= _soll) if _op == ">=" else (_ist <= _soll)
+    ok = bool(ok) and not pd.isna(_ist)
+    _haelt.append(ok)
+    _f = (lambda v: format(v, ".1%")) if _art == "quote" else (lambda v: format(v, ".2f"))
+    print(f"   {_bez:<32s} {_f(_ist):>7s} {_op} {_f(_soll):>7s}   "
+          f"{'haelt' if ok else 'HAELT NICHT'}")
+B_GATES_HALTEN = all(_haelt)
+
+# WAS DIE ZAHL AUSHAELT - und was sie nicht aushaelt.
+#
+# 22 Alarme sind wenig. Der Punktschaetzer verfehlt B1, aber das
+# Intervall ueberlappt die Huerde: Der Testabschnitt WIDERLEGT die Regel
+# nicht, er TRAEGT sie nur nicht. Das ist ein Unterschied, und er
+# entscheidet, was als naechstes zu tun ist - nachbessern oder Daten
+# sammeln.
+_u, _o = w_test["p_unten"], w_test["p_oben"]
+_schwelle = B_GATE["B1 Praezision je NEUEM ALARM"]
+B1_WIDERLEGT = bool(_o < _schwelle)
+merke("b1_unten", _u); merke("b1_oben", _o)
+merke("b1_urteil", "widerlegt" if B1_WIDERLEGT
+      else ("belegt" if _u >= _schwelle else "unbestimmt"))
 print()
-print("  WIRTSCHAFTLICHKEIT VON B - eigene Annahmen, nicht die von A2:")
-print(f"     Technikpruefung {B_KOSTEN_PRUEFUNG:.0f} EUR, frueher Fund "
-      f"{B_NUTZEN_FUND:.0f} EUR")
-print(f"     rentabel ab {b_schwelle:.1%} Trefferquote je Alarm")
+print(f"   B1 im Detail: {w_test['treffer_alarm']} Treffer aus "
+      f"{w_test['neue']} Alarmen -> {_u:.1%} bis {_o:.1%}")
+print("   Das Intervall ueberlappt die Huerde." if not B1_WIDERLEGT
+      else "   Das Intervall liegt vollstaendig unter der Huerde.")
+print("   Der Testabschnitt WIDERLEGT die Regel also nicht - er TRAEGT sie"
+      if not B1_WIDERLEGT else "   Die Regel ist auf diesem Abschnitt widerlegt.")
+print("   nur nicht. Fuer eine Freigabe reicht 'nicht widerlegt' nicht aus."
+      if not B1_WIDERLEGT else "")
+merke("b_gates_halten", "alle vier" if B_GATES_HALTEN
+      else f"{sum(_haelt)} von {len(_haelt)}")
+
+# Wirtschaftlichkeit - dieselben Annahmen wie in Phase 1, hier gemessen.
 print()
-print(f"  Gemessen: {alarmquote:.1%} je neuem Alarm.")
-print(f"     gegen die eigene Rentabilitaetsschwelle ({b_schwelle:.1%}): "
-      f"{'ERFÜLLT' if alarmquote >= b_schwelle else 'GERISSEN'}")
-print(f"     gegen das Kriterium aus Phase 1 ({KRITERIUM_TREFFER:.0%}): "
-      f"{'ERFÜLLT' if alarmquote >= KRITERIUM_TREFFER else 'GERISSEN'}")
+print("WIRTSCHAFTLICHKEIT VON B - eigene ANNAHMEN, nicht die von A2:")
+print(f"   rentabel ab {B_SCHWELLE_RENTABEL:.1%} je Alarm "
+      f"({B_KOSTEN_PRUEFUNG:.0f} / {B_NUTZEN_FUND:.0f} EUR)")
+print(f"   gemessen    {alarmquote:.1%} je Alarm auf dem Testabschnitt   "
+      f"{'rentabel' if alarmquote >= B_SCHWELLE_RENTABEL else 'NICHT rentabel'}")
+print("   Rentabel allein reicht nicht: B1 ist strenger, weil eine Liste")
+print("   voller Fehlalarme nach zwei Wochen niemand mehr oeffnet.")
+
+# ─── DER STATUS, EINE QUELLE ────────────────────────────────────────
+#
+# Zwei Stufen, und sie sind nicht dasselbe:
+#   pilot        - alle vorab festgelegten Gates halten auf Daten, die
+#                  keine Regelentscheidung beeinflusst haben
+#   explorativ   - die Regel ist entwickelt, aber nicht unabhaengig
+#                  belegt; sie darf laufen, aber nicht als Zusage
+B_STATUS = "pilot" if B_GATES_HALTEN else "explorativ"
+B_STATUSSATZ = {
+    "pilot": "Pilotfreigabe - alle vier Gates halten auf einem Abschnitt, "
+             "der an der Regelentwicklung nicht beteiligt war",
+    "explorativ": "explorativ entwickelte Regel; prospektiver Schattenpilot "
+                  "noetig - der Testabschnitt traegt die Freigabe nicht",
+}[B_STATUS]
+merke("b_status", B_STATUS)
+merke("b_statussatz", B_STATUSSATZ)
 print()
-print("  Die Regel reisst BEIDE Huerden - die geliehene und die eigene.")
-print("  Deshalb aendert die Korrektur am Ergebnis nichts, und deshalb")
-print("  darf man sie ueberhaupt noch vornehmen.")
+print(f"STATUS VON PRODUKT B: {B_STATUS}")
+print(f"   {B_STATUSSATZ}")
 '''),
 
 MD("""
-### 5.8 Das Ergebnis für Aufgabe B — nach einer Nachbesserung
+### 5.8 Das Ergebnis für Aufgabe B — und warum es einen dritten Zeitabschnitt brauchte
 
 **Die erste Regel riss das Kriterium, und zwar deutlich.** „Kein Vorgang heute" meldete
 {{stat_alt_meldungen:.0f}} Stationstage bei {{stat_alt_quote:.1%}} Treffern — eine Liste,
-die zu neun Zehnteln aus Fehlalarmen besteht, benutzt niemand.
+die fast nur aus Fehlalarmen besteht, benutzt niemand.
 
-**Zwei fachliche Zusätze haben daraus eine brauchbare gemacht:** zwei Nulltage in Folge,
-und nur an Stationen, die sonst laufen. Beide sind begründet, nicht angepasst — ein
-einzelner ruhiger Tag im Januar ist normal, zwei hintereinander an einer Station mit
-Normalbetrieb nicht.
+**Zwei fachliche Zusätze machten daraus eine plausible Regel:** zwei Nulltage in Folge,
+und nur an Stationen, die sonst laufen. Beide sind begründet — ein einzelner ruhiger Tag
+im Januar ist normal, zwei hintereinander an einer Station mit Normalbetrieb nicht.
 
-Der Weg dorthin ist lehrreich, weil jede Zeile eine andere Frage beantwortet — und nur
-die letzte die richtige:
+**Und genau hier liegt die Falle, die dieses Notebook fast übersehen hätte.** Diese
+Zusätze entstanden, *nachdem* das Ergebnis der ersten Regel vorlag. Das ist völlig
+legitim — so arbeitet man. Aber es ist **Entwicklung**, und Entwicklung verbraucht den
+Zeitraum, auf dem sie stattfindet. Wer danach auf demselben Zeitraum freigibt, tut
+genau das, wovor Notebook 1 und 2 warnen: Er misst sein Verfahren an Daten, die es
+mitgeformt haben.
+
+Deshalb ist der Prüfzeitraum halbiert: Entwicklung bis {{b_entwicklung_bis}},
+**unangetasteter Test ab {{b_test_ab}}**. Die Regel ist vor dem zweiten Abschnitt
+eingefroren worden — Nulltage, Mindestbetrieb, Listenlänge, Entprellung, Sortierung.
+
+**Was der Unterschied ausmacht, sieht man sofort:**
+
+| | Entwicklung | Test (unangetastet) |
+|---|---:|---:|
+| Präzision je neuem Alarm | {{entw_je_alarm:.1%}} | **{{stat_je_alarm:.1%}}** |
+| Störungsepisoden erkannt | {{entw_recall:.1%}} von {{entw_episoden:.0f}} | {{b_recall:.1%}} von {{episoden_gesamt:.0f}} |
+
+Die Präzision fällt vom Entwicklungs- auf den Testabschnitt. Das ist der Normalfall und
+kein Skandal: Auf dem Abschnitt, an dem man eine Regel geschliffen hat, sieht sie
+besser aus. **Genau deshalb steht die zweite Spalte hier — und nur sie zählt.**
+
+#### Der Gate-Katalog, vorab und vollständig
+
+Ein einzelnes Präzisionskriterium ist manipulierbar: Eine Regel, die fast nie meldet,
+erfüllt es mühelos und übersieht dabei fast jede Störung. Der Katalog steht deshalb
+vollständig in Phase 1, und **jede Zahl nennt ihren Nenner**:
+
+| | Gate | Nenner | gefordert | gemessen (Test) | |
+|---|---|---|---:|---:|---|
+| B1 | Präzision | je **neuem Alarm** | {{b_gate_praezision:.0%}} | {{stat_je_alarm:.1%}} | **hält nicht** |
+| B2 | Recall | je **Störungsepisode** | {{b_gate_recall:.0%}} | {{b_recall:.1%}} | hält |
+| B3 | Verzug bis zum ersten Alarm | Tage | ≤ {{b_gate_verzug}} | {{b_verzug}} | hält |
+| B4 | Alarme je Tag | Kapazität | ≤ {{b_gate_kapazitaet:.0f}} | {{b_alarme_je_tag:.2f}} | hält |
+
+**Drei von vier halten — und das reicht nicht.** Der Status von Produkt B lautet deshalb:
+**{{b_status}}** — {{b_statussatz}}.
+
+> **„Hält nicht" und „widerlegt" sind zwei verschiedene Aussagen.** Bei
+> {{stat_neue_alarme:.0f}} Alarmen reicht die Datenmenge für keine scharfe Aussage: Das
+> 95-%-Intervall der Präzision läuft von {{b1_unten:.1%}} bis {{b1_oben:.1%}} und
+> überlappt die geforderten {{b_gate_praezision:.0%}}. Der Testabschnitt **widerlegt** die
+> Regel also nicht — er **trägt** sie nur nicht. Für eine Freigabe ist „nicht widerlegt"
+> zu wenig; für ein Verwerfen ist es zu wenig in die andere Richtung. Was fehlt, sind
+> Fälle, und die liefert nur ein prospektiver Schattenpilot.
+
+#### Der Weg zu dieser Zahl — jeder Schritt hat sie kleiner gemacht
 
 | Auswertung | Trefferquote | Was daran nicht stimmt |
 |---|---|---|
@@ -1299,75 +1520,61 @@ die letzte die richtige:
 | täglich, je gemeldetem **Tag** | {{stat_je_tag:.1%}} | zählt jeden Folgetag derselben Störung als eigenen Erfolg |
 | täglich, je **neuem Alarm** | **{{stat_je_alarm:.1%}}** | — das ist die Zahl, die zählt |
 
-**Und die andere Hälfte der Wahrheit — auf zwei Ebenen, weil es zwei sind:**
+Der letzte Schritt ist der, den man am leichtesten übersieht. Eine Störung dauert
+mehrere Tage. Meldet das System dieselbe offene Störung jeden Morgen erneut, hat es sie
+**einmal** gefunden und danach wiederholt. Von {{stat_rohmeldungen:.0f}} gemeldeten
+Stationstagen im Testabschnitt sind {{stat_wiederholungen:.0f}} solche Wiederholungen —
+übrig bleiben {{stat_neue_alarme:.0f}} neue Alarme.
+
+> **Wer Tage zählt statt Ereignisse, hält Wiederholungen für Erfolge.** Und je länger eine
+> Störung offen bleibt, desto besser sieht die Kennzahl aus — genau verkehrt herum.
+
+**Precision und Recall müssen auf derselben Einheit stehen.** Eine frühere Fassung nahm
+die Precision je *neuem Alarm* und den Recall je *täglicher Rohmeldung* und stellte
+beides als ein Paar nebeneinander. Das schmeichelt: Der Recall kommt aus der größeren
+Menge, die Precision aus der kleineren. Beide Ebenen stehen deshalb getrennt:
 
 | Einheit | Anzahl | Precision | Episoden erkannt |
 |---|---:|---:|---:|
 | tägliche Rohmeldung | {{stat_rohmeldungen:.0f}} | {{stat_je_tag:.1%}} | **{{episoden_roh:.0f}} von {{episoden_gesamt:.0f}}** |
 | neuer Alarm (dedupliziert) | {{stat_neue_alarme:.0f}} | {{stat_je_alarm:.1%}} | **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** |
 
-> **Precision und Recall müssen auf derselben Einheit stehen.** Eine frühere Fassung nahm
-> die Precision je *neuem Alarm* und den Recall je *täglicher Rohmeldung* — und stellte
-> beides als ein Paar nebeneinander. Das schmeichelt: Der Recall kommt aus der größeren
-> Menge, die Precision aus der kleineren.
+#### Was die Konstruktion der Regel kostet
 
-> **Was die Nachbesserung kostet, steht in derselben Tabelle.** Die Regel findet
-> {{episoden_neu:.0f}} von {{episoden_gesamt:.0f}} Episoden statt aller — und das ist
-> keine Schwäche, sondern eine Folge ihrer Konstruktion: **Eine Störung, die nur einen Tag
-> dauert, kann eine Zwei-Tage-Regel nicht finden.** Wer alle Episoden will, bekommt die
-> alte Fehlalarmquote zurück.
->
-> Das ist der Tausch, und er gehört ausgesprochen: fünfmal weniger Fehlalarme gegen zwei
-> übersehene kurze Störungen. Ob er richtig ist, entscheidet nicht die Statistik, sondern
-> die Frage, was ein Fehlalarm im Betriebsbüro kostet — und die Kostenrechnung darüber
-> sagt: viel weniger als ein übersehener Ausfall, aber nicht nichts.
+**Eine Störung, die nur einen Tag dauert, kann eine Zwei-Tage-Regel nicht finden.** Das
+ist keine Schwäche der Umsetzung, sondern eine Folge der Bauart. Wer alle Episoden will,
+bekommt die Fehlalarmquote der ersten Regel zurück. Der Tausch gehört ausgesprochen:
+deutlich weniger Fehlalarme gegen die kurzen Störungen, die per Konstruktion durchfallen.
 
-Die fehlende Episode ist lehrreich: Sie begann **innerhalb einer bereits laufenden
-Nullserie**, die zuvor als Fehlalarm eröffnet worden war. Die tägliche Auswahl berührt
-sie, ein *neuer* Alarm entsteht aber nicht. Ohne Ticketzustand — eröffnet, bestätigt,
-verworfen, geschlossen — kann das System nicht entscheiden, ob daraus ein neuer Fund wird
-oder ein weiterlaufender Fehlalarm. **Das ist keine Rechenfrage, sondern eine fehlende
-Zustandsmaschine.**
+Ein zweiter Konstruktionsfehler ist noch offen: Beginnt eine neue Störung **innerhalb
+einer bereits laufenden Nullserie**, die zuvor als Fehlalarm eröffnet wurde, berührt die
+tägliche Auswahl sie zwar, ein *neuer* Alarm entsteht aber nicht. Ohne Ticketzustand —
+eröffnet, bestätigt, verworfen, geschlossen — kann das System nicht entscheiden, ob
+daraus ein neuer Fund wird oder ein weiterlaufender Fehlalarm. **Das ist keine
+Rechenfrage, sondern eine fehlende Zustandsmaschine.**
 
-> **Präzision allein hätte hier in die Irre geführt, Recall allein auch.** Wer nur die
-> Trefferquote zeigt, lässt eine Regel schlecht aussehen, die fast nichts übersieht. Wer
-> nur den Recall zeigt, verschweigt rund 250 unnötige Technikeinsätze. **Beide Zahlen
-> gehören in denselben Bericht — und auf dieselbe Einheit.**
+#### Die Kosten sind nicht die von A2 — und sie sind Annahmen
 
-**Die Kosten sind außerdem nicht die von A2.** Das 20-%-Kriterium und die sechs Plätze
-stammen aus der Rechnung für eine Schreibtischprüfung im Betriebsbüro. Bei einer Station
-fährt die Technik hin — andere Kosten, anderer Nutzen, andere Kapazität. Mit eigenen
-Annahmen (25 € Prüfung, 300 € früher Fund) liegt die Rentabilitätsschwelle bei **7,7 %**.
+Das {{kriterium_treffer:.0%}}-Kriterium und die Listenlänge stammen aus der Rechnung für
+eine Schreibtischprüfung im Betriebsbüro. Bei einer Station fährt die Technik hin. Mit
+eigenen Annahmen ({{b_kosten_pruefung:.0f}} € Prüfung, {{b_nutzen_fund:.0f}} € früher
+Fund) liegt die Rentabilitätsschwelle bei {{b_schwelle_rentabel:.1%}}.
 
-Mit 3,9 % reißt die Regel **beide** Hürden: die geliehene und die eigene. Genau deshalb
-darf die Korrektur überhaupt noch vorgenommen werden — sie ändert das Ergebnis nicht.
-
-**Jeder einzelne Schritt hat die Zahl kleiner gemacht, und jeder war richtig.** Das ist
-der Normalfall: Eine Kennzahl wird selten besser, wenn man ehrlicher rechnet.
-
-Der letzte Schritt ist der, den man am leichtesten übersieht. Eine Störung dauert
-mehrere Tage. Meldet das System dieselbe offene Störung jeden Morgen erneut, hat es sie
-**einmal** gefunden und danach wiederholt. Von {{stat_rohmeldungen:.0f}} gemeldeten
-Stationstagen im Prüfzeitraum sind {{stat_wiederholungen:.0f}} solche Wiederholungen —
-übrig bleiben {{stat_neue_alarme:.0f}} neue Alarme.
-
-> **Wer Tage zählt statt Ereignisse, hält Wiederholungen für Erfolge.** Und je länger eine
-> Störung offen bleibt, desto besser sieht die Kennzahl aus — genau verkehrt herum.
-
-> **Aufgabe B ist damit nicht gelöst.** In einer früheren Fassung stand hier, die Regel
-> erfülle das Kriterium mit 32 % und gehe in Betrieb. Diese 32 % entstanden aus einer
-> Rangliste über drei Jahre, mit einer Sortierung in die falsche Richtung, und sie zählten
-> jeden Folgetag derselben Störung als eigenen Erfolg. **Drei Fehler, die alle in dieselbe
-> Richtung wirkten** — und das ist kein Zufall: Fehler, die das Ergebnis verschlechtern,
-> fallen beim Schreiben auf. Die anderen nicht.
+> **Diese beiden Beträge sind Annahmen, keine Messungen.** Sie sind hier eingesetzt, weil
+> ohne Kostenseite gar keine Aussage möglich wäre — nicht, weil sie belegt wären. Bevor B
+> in den Wirkbetrieb geht, müssen sie vom Betrieb kommen. Die gemessenen
+> {{stat_je_alarm:.1%}} liegen über der Rentabilitätsschwelle; **rentabel allein reicht
+> aber nicht**, denn B1 ist bewusst strenger: Eine Liste, die überwiegend aus
+> Fehlalarmen besteht, wird nach zwei Wochen nicht mehr geöffnet, egal was die
+> Kostenrechnung sagt.
 
 **Was das nicht heißt:** Es heißt nicht, dass die Aufgabe unlösbar ist. Es heißt, dass
-diese Regel sie nicht löst. Der Grund steht in den Daten: Alle Störungen liegen an
-Nulltagen, aber die allermeisten Nulltage sind einfach **ruhige Tage** — eine kleine
-Station im Januar bei Regen.
+diese Regel auf unabhängigen Daten noch nicht trägt. Der Grund steht in den Daten: Alle
+Störungen liegen an Nulltagen, aber die allermeisten Nulltage sind einfach **ruhige
+Tage** — eine kleine Station im Januar bei Regen.
 
-Um beides zu trennen, müsste man erklären, *warum* eine Station gestern keine Fahrt hatte.
-Dafür gibt es Kandidaten, die dieses Notebook nicht nutzt: Wetter und Kalender aus
+Um beides zu trennen, müsste man erklären, *warum* eine Station gestern keine Fahrt
+hatte. Dafür gibt es Kandidaten, die dieses Notebook nicht nutzt: Wetter und Kalender aus
 Notebook 4, das Stationsvolumen aus Notebook 3, die Nachbarstationen. Eine Nulltags-
 **Wahrscheinlichkeit** statt einer Nulltags-**Regel** wäre die nächste Runde.
 
@@ -1562,6 +1769,47 @@ try:
 except ValueError as fehler:
     print(f"Falscher Status:\\n  {fehler}\\n")
 
+# ─── EINE STATUSQUELLE FUER ALLE DREI PRODUKTE ──────────────────────
+#
+# Frueher stand der Status an vier Stellen: im Paket, in der Konsole, in
+# der Deployment-Tabelle und in der Schlusszelle. Drei davon waren von
+# Hand gepflegt, und sie widersprachen einander - das Paket sagte "NICHT
+# FREIGEGEBEN", die Zeile darunter "freigegeben (Pilot)". Jetzt gibt es
+# genau ein Woerterbuch, und alles andere liest daraus.
+PRODUKTE = {
+    "A1 vergessene Rueckgaben": {
+        "status": "spezifiziert",
+        "satz": "Regel spezifiziert und retrospektiv logisch geprueft; "
+                "Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen",
+        "im_paket": False,
+    },
+    "A2 auffaellige Fahrten": {
+        "status": "schatten",
+        "satz": "Schattenbetrieb - die Liste entsteht taeglich, die "
+                "Trefferquote ist mangels Labels unbekannt",
+        "im_paket": True,
+    },
+    "B Stationsstoerungen": {
+        "status": B_STATUS,
+        "satz": B_STATUSSATZ,
+        "im_paket": B_STATUS == "pilot",
+    },
+}
+FREIGEGEBEN_FUER = [n for n, w in PRODUKTE.items() if w["im_paket"]]
+
+# Die Zusicherung, die den alten Widerspruch unmoeglich macht: Wer B als
+# freigegeben fuehrt, muss es auch ins Paket legen - und umgekehrt.
+assert (("B Stationsstoerungen" in FREIGEGEBEN_FUER)
+        == (PRODUKTE["B Stationsstoerungen"]["status"] == "pilot")), (
+    "B ist in einer Quelle freigegeben und in der anderen nicht.")
+assert B_STATUS in ("pilot", "explorativ"), B_STATUS
+
+print("STATUS DER DREI PRODUKTE - eine Quelle, aus der alles andere liest:")
+for _n, _w in PRODUKTE.items():
+    print(f"   {_n:<26s} {_w['status']:<12s} {_w['satz'][:52]}...")
+print(f"   im Paket freigegeben: {FREIGEGEBEN_FUER or 'keines'}")
+print()
+
 # DAS MODELLPAKET - vollstaendig genug, um einen neuen Vorgang zu bewerten.
 #
 # Eine fruehere Fassung speicherte den Wald ohne den Skalierer. Damit war
@@ -1589,22 +1837,18 @@ joblib.dump({
     "pruefzeit_bis": pruefzeit.endzeit.max().isoformat(),
     "zeitzone": "naive Ortszeit Europe/Berlin - keine tz-Information in den Daten",
     "datenherkunft": "ERFUNDENE LEHRDATEN - Fahrten und Stoerungen synthetisch",
-    "freigegeben_fuer": [],
-    "status": {
-        "A1 offene Rueckgaben": "Regel spezifiziert und retrospektiv logisch "
-                                "geprueft; Echtzeitquelle, Ausnahmeliste und "
-                                "Alarmkanal fehlen. Nicht Teil dieses Pakets.",
-        "A2 auffaellige Fahrten": "NUR SCHATTENBETRIEB - Trefferquote unbekannt, "
-                                  "Labels fehlen",
-        "B Stationsstoerungen": "NICHT FREIGEGEBEN - Kriterium taeglich gerissen",
-    },
+    "freigegeben_fuer": FREIGEGEBEN_FUER,
+    "status": {n: f"{w['status']}: {w['satz']}" for n, w in PRODUKTE.items()},
+    "b_gates": {b: {"gefordert": s, "gemessen": float(i), "haelt": bool(h)}
+                for (b, i, s, _op, _a), h in zip(B_ERGEBNIS, _haelt)},
+    "b_entwicklung_bis": B_ENTWICKLUNG_BIS.isoformat(),
+    "b_regel": {k: str(v) for k, v in B_REGEL.items()},
     "trainiert_am": datetime.date.today().isoformat(),
 }, "anomaliemodell.joblib")
 print("geschrieben: tagesliste_beispiel.csv, anomaliemodell.joblib")
-print("\\nFreigabestatus im Paket:")
-print("  A1  Regel spezifiziert, Implementierung offen")
-print("  A2  Schattenbetrieb")
-print(f"  B   {'freigegeben (Pilot)' if alarmquote >= KRITERIUM_TREFFER else 'nicht freigegeben'}")
+print("\\nFreigabestatus im Paket - identisch mit der Quelle oben:")
+for _n, _w in PRODUKTE.items():
+    print(f"   {_n:<26s} {_w['status']}")
 '''),
 
 MD("""
@@ -1614,7 +1858,7 @@ MD("""
 |---|---|---|
 | **A1** vergessene Rückgaben | Regel und Funktion: länger als 8 Stunden offen → melden | **Regel spezifiziert, Implementierung offen** — es gibt keine Echtzeitquelle, keinen Alarmkanal und keine Ausnahmeliste |
 | **A2** auffällige Fahrten | Tagesliste mit Schwelle, höchstens sechs Plätze, Begründung je Zeile | **nur Schattenbetrieb** — die Trefferquote ist unbekannt |
-| **B** Stationsstörungen | Regel „zwei Nulltage in Folge an einer Station mit Normalbetrieb", täglich | **Pilot** — beide Hürden genommen ({{stat_je_tag:.1%}} je Meldung, {{stat_je_alarm:.1%}} je Alarm gegen {{kriterium_treffer:.0%}}); eintägige Störungen findet sie konstruktionsbedingt nicht |
+| **B** Stationsstörungen | Regel „zwei Nulltage in Folge an einer Station mit Normalbetrieb", täglich | **{{b_status}}** — {{b_gates_halten}} der vier vorab festgelegten Gates halten auf dem unangetasteten Testabschnitt ({{stat_je_alarm:.1%}} je Alarm gegen {{b_gate_praezision:.0%}}); eintägige Störungen findet die Regel konstruktionsbedingt nicht |
 
 > **Warum A1 nicht „in Betrieb" heißt, obwohl es alle bekannten Fälle findet.** Diese Quote ist
 > **logisch zwingend**: Die Teilwahrheit ist über dieselbe Schwelle definiert, die Regel
@@ -1626,10 +1870,16 @@ MD("""
 > viele Fehlalarme entstehen und ob am Ende ein Rad geborgen wird. **Eine Regel, die man
 > aus ihrer eigenen Definition zurückrechnet, ist eine Spezifikation, kein Nachweis.**
 
-> **Eine frühere Fassung dieses Notebooks behauptete hier das Gegenteil:** Aufgabe B gehe
-> „als Regel in Betrieb“ — während das gespeicherte Modellpaket im selben Atemzug
-> `"nicht_freigegeben_fuer": ["Stationsstörungen"]` enthielt. Text und Artefakt
-> widersprachen sich, und niemand hätte es beim Lesen bemerkt.
+> **Diese Tabelle ist keine zweite Statusquelle.** Jede Zelle darin ist ein Platzhalter,
+> der aus demselben Wörterbuch `PRODUKTE` gefüllt wird, aus dem auch das Modellpaket
+> entsteht — und eine Zusicherung im Code bricht den Bau ab, wenn beide auseinanderlaufen.
+>
+> Das ist die Lehre aus zwei früheren Fassungen: In der einen ging B „als Regel in
+> Betrieb“, während das Paket daneben `"nicht_freigegeben_fuer": ["Stationsstörungen"]`
+> enthielt. In der anderen sagte das Paket „NICHT FREIGEGEBEN“ und die Zeile darunter
+> „freigegeben (Pilot)“. Beide Male stand der Widerspruch offen im Notebook, und beide
+> Male fiel er beim Lesen nicht auf. **Ein Status, der an vier Stellen von Hand gepflegt
+> wird, ist kein Status, sondern vier Behauptungen.**
 >
 > **Ein Freigabestatus gehört an genau eine Stelle — und die ist das Artefakt.** Die
 > Tabelle darüber ist von Hand geschrieben; sie liest das Paket **nicht** ein. Bei einer
@@ -1702,7 +1952,7 @@ MD("""
 | 3 Data Preparation | Fünf Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor keine auffällige *Fahrt* ist — wiederholtes Fehlen bei demselben Rad ist sehr wohl ein Fall, nur ein anderer: Datenqualität statt Fahrverhalten |
 | 4 Modeling | Interquartilsregel ({{iqr_treffer:,}} Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
 | 5 Evaluation | Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste {{tagesquote:.1%}} — **bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B hob eine Nachbesserung die Präzision von {{stat_alt_quote:.1%}} auf {{stat_je_tag:.1%}} je Meldung und {{stat_je_alarm:.1%}} je Alarm — beide über der Hürde von {{kriterium_treffer:.0%}}. Der Preis: **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** Episoden statt aller |
-| 6 Deployment | **A1 spezifiziert, A2 im Schattenbetrieb, B als Pilot freigegeben.** A1 ist als Regel und Funktion beschrieben und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. A2 läuft im Schattenbetrieb, weil das Label fehlt. B nimmt beide Hürden und geht als Pilot in Betrieb. Der verbindliche Status steht im Modellpaket |
+| 6 Deployment | **A1 spezifiziert, A2 im Schattenbetrieb, B {{b_status}}.** A1 ist als Regel und Funktion beschrieben und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. A2 läuft im Schattenbetrieb, weil das Label fehlt. Bei B halten {{b_gates_halten}} der vier vorab festgelegten Gates auf dem unangetasteten Testabschnitt. Alle drei Statusangaben stammen aus derselben Quelle wie das Modellpaket |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
 
@@ -1738,23 +1988,26 @@ keine Schätzung.
 
 **Was eine zweite Runde anders machen würde**
 
-1. **Terminalmeldungen beschaffen** und Aufgabe B damit erneut angehen. Vermutlich ist
+1. **Den prospektiven Schattenpilot fahren.** Der Testabschnitt widerlegt die Regel
+   nicht, er trägt sie nur nicht — was fehlt, sind Fälle. Ein Schattenpilot, der die
+   Regel mitlaufen lässt, ohne Technikeinsätze auszulösen, liefert sie in ein bis zwei
+   Quartalen: {{stat_neue_alarme:.0f}} Alarme in einem halben Jahr heißt, dass eine
+   belastbare Aussage über die Präzision Zeit braucht, nicht ein besseres Verfahren.
+2. **Terminalmeldungen beschaffen** und Aufgabe B damit erneut angehen. Vermutlich ist
    sie dann gar keine Analyseaufgabe mehr, sondern eine Abfrage — auch das ist ein
-   legitimes Ergebnis. **Bis dahin läuft nichts** — die Nulltage-Regel ist nicht
-   freigegeben. Was sie höchstens verdient, ist ein begleitender Pilot mit eigenem
-   Technikbudget.
-2. **Rückmeldungen einsammeln.** Sobald ein paar hundert Vorgänge beurteilt sind, wird
+   legitimes Ergebnis, und das bessere.
+3. **Rückmeldungen einsammeln.** Sobald ein paar hundert Vorgänge beurteilt sind, wird
    aus der Anomalieerkennung eine Klassifikation mit echtem Label.
-3. **Je Radtyp ein eigenes Modell.** Bisher wird ein gemeinsames Modell mit
+4. **Je Radtyp ein eigenes Modell.** Bisher wird ein gemeinsames Modell mit
    typspezifisch normierten Merkmalen gerechnet — das ist etwas anderes und offensichtlich
    nicht genug: CARGO ist in den Top 50 immer noch doppelt übervertreten, EBIKE
    untervertreten. Dazu robustere Maße (Median und mittlere absolute Abweichung statt
    Mittelwert und Streuung), denn genau die Extremfälle, die wir suchen, verzerren
    Mittelwert und Streuung.
-4. **Eine Nulltags-Wahrscheinlichkeit statt einer Nulltags-Regel.** Wetter und Kalender
+5. **Eine Nulltags-Wahrscheinlichkeit statt einer Nulltags-Regel.** Wetter und Kalender
    aus Notebook 4, Stationsvolumen aus Notebook 3, Nachbarstationen. Erst wenn erklärt
    ist, warum eine Station gestern still war, lässt sich „ruhig“ von „gestört“ trennen.
-5. **Abgebrochene und stornierte Vorgänge ansehen.** {{n_abgebrochen:,}} Abbrüche und {{n_storniert:,}} Stornierungen
+6. **Abgebrochene und stornierte Vorgänge ansehen.** {{n_abgebrochen:,}} Abbrüche und {{n_storniert:,}} Stornierungen
    wurden hier vor der Analyse entfernt. Häufungen davon können auf App-, Zahlungs- oder
    Schlossprobleme hinweisen — als eigene Zeitreihe, nicht vermischt mit den Fahrten.
 
@@ -1779,22 +2032,15 @@ neben der ersten, und zwei Quellen für dieselbe Zahl gehen irgendwann auseinand
 **Was in jedem Notebook herauskam, steht in jedem Notebook** — in seiner eigenen
 Schlusszelle, aus seinen eigenen Variablen erzeugt. Lesen Sie es dort.
 
-Was sich dagegen über alle sechs sagen lässt, ohne zu veralten: **Jedes Verfahren ist im
-Betrieb — und keines ohne Einschränkung.** Nicht die Kennzahlen haben das entschieden,
-sondern die Frage, ob jemand mit dem Ergebnis verantwortlich handeln kann.
+**Und der Status?** Er steht dort, wo er entsteht — in der Schlusszelle des jeweiligen
+Notebooks, aus dessen eigenen Variablen erzeugt. Hier stand er früher noch einmal als
+Tabelle, direkt unter dem Absatz, der genau davor warnt. Sie ist entfernt: Eine
+handgepflegte Statustabelle über sechs Notebooks veraltet mit dem ersten Neubau eines
+davon, und dann widerspricht sie dem Notebook, das sie zusammenfassen soll.
 
-| | geht in Betrieb als | die Grenze, die dabeisteht |
-|---|---|---|
-| 1 Regression | Preisauskunft in der App | belegt auf historischen Daten, nicht prospektiv |
-| 2 Klassifikation | Wartungsliste je Quartal | die Zusage musste vorher repariert werden |
-| 3 Clustering | Kampagnenpilot mit Kontrollgruppe | Wirkung erst nach dem Quartal messbar |
-| 4 Zeitreihe | Nachfrageprognose mit Aufschlag | Wetterunsicherheit ist simuliert |
-| 5 Assoziation | Entscheidungshilfe der Disposition | keine Automatik, dafür fehlt die Wirtschaftlichkeit |
-| 6 Anomalie | A1 spezifiziert, A2 im Schatten, B als Pilot | eintägige Störungen findet B nicht |
-
-**Keiner dieser Wege war der, den die erste Fassung vorgesehen hatte.** Zwei Verfahren
+**Keiner der sechs Wege war der, den die erste Fassung vorgesehen hatte.** Verfahren
 gingen erst in Betrieb, nachdem sie verbessert worden waren; eines erst, nachdem seine
-Zusage repariert war; eines nur in einer engeren Form als geplant.
+Zusage repariert war; mehrere nur in einer engeren Form als geplant.
 
 **Der unbequemste Befund dieser Fallstudie steckt in Notebook 2:** Dort war die Zusage so
 formuliert, dass kein Verfahren sie hätte halten können — auch keines mit vollständiger
@@ -1802,9 +2048,9 @@ Kenntnis der Zukunft. **Ein Kriterium kann falsch sein, nicht nur unerreicht.** 
 nicht prüft, misst Verfahren gegen ein Ziel, das es nicht gibt, und hält das Ergebnis für
 eine Aussage über die Verfahren.
 
-Dass am Ende alles läuft, ist deshalb keine Erfolgsmeldung, sondern das Ergebnis von
-sechs Rücksprüngen. **In Lehrbüchern funktioniert alles auf Anhieb. Hier hat nichts auf
-Anhieb funktioniert** — und genau das ist der Teil, der sich üben lässt.
+Was am Ende läuft, läuft nicht deshalb, weil die Verfahren gut waren, sondern weil nach
+jedem Befund eine Runde folgte. **In Lehrbüchern funktioniert alles auf Anhieb. Hier hat
+nichts auf Anhieb funktioniert** — und genau das ist der Teil, der sich üben lässt.
 
 > **Was in allen sechs Notebooks dieselbe Ursache hatte:** Nicht ein einziges Modell ist
 > an seiner Mathematik gescheitert. Gescheitert sind Kennzahlen, die zu einem anderen
