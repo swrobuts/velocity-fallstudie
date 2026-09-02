@@ -93,12 +93,19 @@ BASIS = os.environ.get("VELO_BASIS",
     __ROHBASIS__)
 pd.set_option("display.width", 150)
 
+# Woher stammen die Daten? Der eingebaute Pfad zeigt auf einen festen
+# Git-Commit; steht er im Pfad, ist er die genaueste Angabe. Sonst - etwa
+# beim lokalen Bauen - bleibt der Pfad selbst als Herkunft.
+import re as _re
+_treffer = _re.search(r"[0-9a-f]{40}", BASIS)
+DATENSTAND_KURZ = _treffer.group(0)[:12] if _treffer else f"lokal:{BASIS[-30:]}"
+
 KOSTEN_VERPASST = merke("kosten_verpasst", 180.0)  # falsch negativ: Ausfall auf der Strasse
 KOSTEN_UNNOETIG = merke("kosten_unnoetig", 25.0)   # falsch positiv: Pruefung ohne Befund
 merke("kosten_summe", 180.0 + 25.0)   # was ein Treffer beide Seiten bewegt
 KAPAZITAET = merke("kapazitaet", 60)   # Pruefungen je Quartal
 merke("pruefungen_je_woche", KAPAZITAET / 13)  # ein Quartal hat 13 Wochen
-HORIZONT_TAGE = 90          # Vorhersagefenster
+HORIZONT_TAGE = merke("horizont_tage", 90)   # Vorhersagefenster
 
 print(f"Ein verpasster Ausfall kostet das "
       f"{KOSTEN_VERPASST / KOSTEN_UNNOETIG:.1f}-fache einer unnötigen Prüfung.")
@@ -474,8 +481,15 @@ MD("""
 > 1. **Die Testmenge ist ein Mai-Stichtag** — ein Zeitpunkt mit hohem Anteil. Ein Modell,
 >    das auf gemischten Jahreszeiten trainiert wurde, ist dort systematisch zu
 >    zurückhaltend.
-> 2. **Die Kapazität von 60 Rädern passt nicht zu jeder Jahreszeit.** Im November wären
->    60 Prüfungen Verschwendung, im Mai zu wenig.
+> 2. **Die feste Kapazität von {{kapazitaet:.0f}} Rädern erzeugt je Jahreszeit ein
+>    anderes Verhältnis von Treffsicherheit und Abdeckung.** Bei niedriger Grundrate
+>    enthält dieselbe Liste zwangsläufig mehr Fehlalarme, bei hoher deckt sie einen
+>    kleineren Teil der auffälligen Räder ab.
+>
+>    **Ob sie zu hoch oder zu niedrig ist, lässt sich hier nicht sagen.** Dafür fehlen
+>    zwei Größen: was eine Prüfung kostet, die einen Schaden findet, und wie viel Schaden
+>    sie tatsächlich verhindert. Phase 5 kommt darauf zurück und zeigt, warum die
+>    vorhandene Kostenformel die Kapazität gerade **nicht** bestimmen kann.
 >
 > Wir lassen das hier so stehen und kommen am Ende darauf zurück — es ist einer der
 > Punkte, an denen eine zweite Runde ansetzen müsste.
@@ -488,7 +502,22 @@ merkmale = ["fahrten_180", "km_180", "hoehenmeter_180", "dauer_mittel",
             "fahrten_gesamt", "km_gesamt",
             "meldungen_bisher", "tage_im_bestand", "tage_seit_reparatur", "km_je_tag",
             "km_seit_reparatur"]
-typ_dummies = pd.get_dummies(panel["typ_code"], prefix="typ").astype(int)
+# UNBEKANNTE RADTYPEN BRECHEN AB, STATT STILL ZU VERSCHWINDEN.
+# get_dummies bildet die Spalten aus dem, was IM DATENSATZ steht. Kaeme ein
+# vierter Typ hinzu, entstuende klaglos eine vierte Spalte - und ein
+# gespeichertes Modell bekaeme beim Anwenden eine Merkmalsmenge, die es nicht
+# kennt. Umgekehrt fehlte eine Spalte, wenn ein Typ ausfaellt. Beides faellt
+# erst auf, wenn eine Vorhersage unsinnig ist.
+TYPEN_ERWARTET = ("CARGO", "CITY", "EBIKE")
+_gefunden = tuple(sorted(panel.typ_code.unique()))
+assert _gefunden == TYPEN_ERWARTET, (
+    f"Radtypen im Panel: {_gefunden}, erwartet {TYPEN_ERWARTET}. "
+    f"Eine Aenderung der Flotte verlangt eine Entscheidung, keine stille "
+    f"Anpassung der Merkmalsmenge.")
+typ_dummies = pd.get_dummies(pd.Categorical(panel["typ_code"],
+                                            categories=TYPEN_ERWARTET),
+                             prefix="typ").astype(int)
+typ_dummies.index = panel.index
 X_alle = pd.concat([panel[merkmale], typ_dummies], axis=1)
 y_alle = panel["meldet_sich"]
 
@@ -508,11 +537,69 @@ print(f"Anteil positiv  Training {y_train.mean():.1%} | Test {y_test.mean():.1%}
 
 MD("""
 > **Warum nicht `train_test_split` wie in Notebook 1?** Weil dasselbe Rad in mehreren
-> Zeilen vorkommt. Ein zufälliger Schnitt würde Rad 47 vom Januar ins Training und Rad 47
-> vom April in den Test legen — das Modell hätte das Rad dann schon gesehen und sähe
-> besser aus, als es ist. Der Schnitt entlang der Zeit vermeidet das und bildet
-> zusätzlich die Betriebslage ab.
+> Zeilen vorkommt und ein zufälliger Schnitt Zeilen aus der **Zukunft** ins Training
+> legen würde. Der Schnitt entlang der Zeit vermeidet das und bildet zusätzlich die
+> Betriebslage ab: trainieren auf allem Vergangenen, anwenden auf den heutigen Stand.
+>
+> **Was er NICHT vermeidet, muss man dazusagen.** Der Zeitschnitt trennt nach
+> **Informationszeitpunkt**, nicht nach Fahrrädern. Fast jedes Rad der Testmenge steht
+> auch in früheren Trainingsschnappschüssen — mit anderen Merkmalswerten, aber als
+> dasselbe Objekt. Die nächste Zelle zählt es.
+>
+> Für die Frage dieses Notebooks ist das in Ordnung: Gefragt ist, wie die **bestehende**
+> Flotte priorisiert wird, nicht wie ein fabrikneues Rad eingeschätzt wird. Eine Aussage
+> über ungesehene Räder ließe sich daraus aber nicht ableiten — dafür bräuchte es einen
+> Schnitt entlang der Fahrräder.
 """),
+
+CODE('''
+# WAS DIE TESTMENGE NICHT HERGIBT - drei Zahlen, die man kennen muss,
+# bevor man ihre Ergebnisse als Guete liest.
+_test_ids = set(panel.loc[ist_test, "fahrrad_id"])
+_train_ids = set(panel.loc[~ist_test, "fahrrad_id"])
+
+print("(1) ENTITAETEN - trennt der Zeitschnitt auch die Raeder?")
+_bekannt = len(_test_ids & _train_ids)
+print(f"    Raeder in der Testmenge:              {len(_test_ids):>5d}")
+print(f"    davon schon im Training gesehen:      {_bekannt:>5d} "
+      f"({_bekannt / len(_test_ids):.1%})")
+print("    Der Schnitt trennt nach Informationszeitpunkt, nicht nach Raedern.")
+print("    Eine Fahrrad-ID ist kein Merkmal - direktes Auswendiglernen ist")
+print("    ausgeschlossen. Unabhaengig sind die Zeilen trotzdem nicht.")
+merke("test_raeder", len(_test_ids)); merke("test_raeder_bekannt", _bekannt)
+merke("test_raeder_bekannt_anteil", _bekannt / len(_test_ids))
+
+print("\\n(2) ZENSIERUNG - stehen alle Testraeder das volle Quartal unter Risiko?")
+_bis = letzter + pd.Timedelta(days=HORIZONT_TAGE)
+_ausgemustert = raeder[raeder.fahrrad_id.isin(_test_ids)
+                       & raeder.ausgemustert_am.notna()
+                       & (raeder.ausgemustert_am <= _bis)]
+_aus_ids = set(_ausgemustert.fahrrad_id)
+_aus_positiv = len(_aus_ids & set(panel.loc[ist_test & (panel.meldet_sich == 1),
+                                            "fahrrad_id"]))
+print(f"    im Horizont ausgemustert:             {len(_aus_ids):>5d}")
+print(f"    davon vorher mit Meldung (positiv):   {_aus_positiv:>5d}")
+print(f"    ohne Meldung, aber verkuerzt beobachtet: {len(_aus_ids) - _aus_positiv:>3d}")
+print("    Die letzten zaehlen als 'meldet sich nicht' - obwohl sie gar nicht")
+print("    die volle Zeit hatten, sich zu melden. Das ist ZENSIERUNG, und ein")
+print("    binaeres Label kennt sie nicht.")
+merke("zensiert", len(_aus_ids)); merke("zensiert_negativ", len(_aus_ids) - _aus_positiv)
+
+print("\\n(3) MEHRFACHMELDUNGEN - ist ein Rad ein Ereignis?")
+_meldungen_test = schaeden[(schaeden.gemeldet_am > letzter)
+                           & (schaeden.gemeldet_am <= _bis)
+                           & schaeden.fahrrad_id.isin(_test_ids)]
+_n_meldungen = len(_meldungen_test)
+_n_raeder = _meldungen_test.fahrrad_id.nunique()
+print(f"    Meldungen im Testfenster:             {_n_meldungen:>5d}")
+print(f"    betroffene Raeder:                    {_n_raeder:>5d}")
+print(f"    Raeder mit mehr als einer Meldung:    {_n_meldungen - _n_raeder:>5d}")
+print("    Label und Kostenformel zaehlen jedes Rad hoechstens einmal. Das")
+print("    passt, WENN eine Pruefung alle Folgemeldungen verhindert - und")
+print("    genau diese Wirkung ist nirgends belegt.")
+merke("meldungen_test", _n_meldungen)
+_ = merke("raeder_mehrfach", _n_meldungen - _n_raeder)
+'''),
 
 # =====================================================================
 PHASE(4, "Erst die Faustregel, die es zu schlagen gilt. Dann Modelle — und zwar mit "
@@ -1048,6 +1135,30 @@ print()
 print("   Die Kostenmatrix behandelt leicht und schwer gleich. Solange das so")
 print("   ist, optimiert das Verfahren auf das breite Ziel - auch wenn die")
 print("   Werkstatt das engere meint.")
+
+# ─── SENSITIVITAET: DIE ZENSIERTEN NEGATIVFAELLE ────────────────────
+# Raeder, die im Horizont ausgemustert wurden und keine Meldung hatten,
+# zaehlen als "meldet sich nicht" - obwohl sie nicht die volle Zeit unter
+# Risiko standen. Was passiert, wenn man sie weglaesst? Ein Verfahren, das
+# nur ohne sie gut aussieht, hat sein Ergebnis von der Ausmusterung.
+_unvollstaendig = _aus_ids - set(test_zeilen.loc[y_test.values == 1, "fahrrad_id"])
+_behalten = ~test_zeilen.fahrrad_id.isin(_unvollstaendig).values
+print(f"\\nSENSITIVITAET - ohne {int((~_behalten).sum())} unvollstaendig beobachtete "
+      f"Negativfaelle:")
+print(f"   {'Verfahren':32s}{'mit allen':>12s}{'ohne':>8s}{'Differenz':>12s}")
+for _name, _score in [("Faustregel: km seit Reparatur", p_regel),
+                      ("Modell: Random Forest", p_wald)]:
+    _voll = liste_bewerten(_name, _score, y_test)["Trefferquote"]
+    _ohne = liste_bewerten(_name, np.asarray(_score)[_behalten],
+                           np.asarray(y_test)[_behalten])["Trefferquote"]
+    print(f"   {_name:32s}{_voll:>11.1%}{_ohne:>8.1%}{_ohne - _voll:>+11.1%}")
+    merke("zensur_" + ("regel" if "Faustregel" in _name else "wald"), _ohne - _voll)
+print()
+print("   Verschiebt sich die Rangfolge nicht, traegt die Zensierung das")
+print("   Ergebnis nicht. Sie bleibt trotzdem ein Mangel des Labels: Richtig")
+print("   waere, Ausmusterung als KONKURRIERENDES EREIGNIS zu behandeln -")
+print("   ein Rad, das verschrottet wird, meldet sich nicht mehr, aber es")
+print("   hat auch nicht 'bestanden'.")
 for name, score in [("Faustregel: km seit Reparatur", p_regel),
                     ("Modell: Random Forest", p_wald)]:
     e = liste_bewerten(name, score, y_test)
@@ -1365,6 +1476,19 @@ else:
     print(ausgabe.head(15).to_string(index=False))
     print(f"\\n... und {len(ausgabe) - 15} weitere.")
 
+    # BETRIEBSMETADATEN GEHOEREN IN DIE DATEI, NICHT IN DIE E-MAIL.
+    # Wer eine CSV in einem Ordner findet, muss ihr ansehen koennen, woher
+    # sie kommt und ob sie benutzt werden darf.
+    ausgabe["stichtag"] = letzter.date()
+    ausgabe["gilt_bis"] = (letzter + pd.Timedelta(days=HORIZONT_TAGE)).date()
+    ausgabe["kennzeichnung"] = "HISTORISCHER_TEST - Ausgang bekannt"
+    ausgabe["regelversion"] = "km_seit_reparatur"
+    ausgabe["datenstand"] = DATENSTAND_KURZ
+    # KEIN Feld "freigabestatus": Diese Zeilen entstehen nur im Zweig, in dem
+    # die Gates gehalten haben - das Feld koennte gar nichts anderes sagen.
+    # Ein Status, der nur einen Wert annehmen kann, ist Dekoration. Was
+    # stattdessen hilft, ist die Angabe, WELCHE Huerden geprueft wurden.
+    ausgabe["gates_geprueft"] = " · ".join(PFLICHTGATES)
     ausgabe.to_csv(_test_datei, index=False)
 
     # Das Paket beschreibt, WAS ausgeliefert wird - abgeleitet, nicht getippt.
@@ -1406,6 +1530,10 @@ else:
     _schatten_aus["gilt_bis"] = (_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()
     _schatten_aus["status"] = "SCHATTENBETRIEB - nicht handlungsleitend"
     _schatten_aus["regelversion"] = paket["regel_spalte"]
+    _schatten_aus["kennzeichnung"] = "SCHATTENBETRIEB - Ausgang offen"
+    _schatten_aus["datenstand"] = DATENSTAND_KURZ
+    _schatten_aus["bewertbar_ab"] = (_schatten_stichtag
+                                     + pd.Timedelta(days=HORIZONT_TAGE)).date()
     _schatten_datei = f"schattenliste_{_schatten_stichtag.date()}.csv"
     _schatten_aus.to_csv(_schatten_datei, index=False)
     merke("schatten_stichtag", str(_schatten_stichtag.date()))
@@ -1495,15 +1623,27 @@ In der VeloCity-Warenwirtschaft (`wawi.butscher.cloud`) gehört diese Liste in d
 Eine Regel kann man nicht nachtrainieren. Was bei ihr überwacht wird, sind die **Daten,
 aus denen ihr Merkmal entsteht** — und die Frage, ob die Liste im Betrieb noch trifft.
 
-| Wache | Schwelle | Reaktion |
-|---|---|---|
-| Fahrten ohne gemessene Distanz | Anteil steigt deutlich über 40 % | Die Schätzung trägt mehr als geplant — Sensorlage prüfen |
-| Unbekannter Radtyp | taucht auf | **Sofort:** Die Geschwindigkeitstabelle kennt ihn nicht, die Kilometer werden zu `NaN` |
-| Ausgeschlossene Langfahrten | Zahl steigt | Rückgabeprozess oder Datenerfassung hat sich geändert |
-| Wartungsaufträge ohne `erledigt_am` | Anteil steigt | Der Reset des Merkmals greift nicht mehr |
-| Räder mit offenem Schaden | Zahl steigt stark | Die Werkstatt kommt nicht nach — die Vorsorgeliste ist dann das falsche Werkzeug |
-| Treffsicherheit der Quartalsliste | fällt unter die Grundrate | Die Regel sortiert nicht mehr besser als der Zufall — Daten, Ziel und Regel neu prüfen |
-| Räder, die trotz Prüfung ausfallen | steigt | Die Prüfung selbst greift zu kurz — kein Datenproblem |
+**Jede Schwelle ist eine Zahl, kein Adjektiv.** „Steigt deutlich" ist im Betrieb nicht
+entscheidbar: Wer nachts um drei eine Meldung bekommt, muss wissen, ob er handeln soll.
+Jede Zeile nennt deshalb Referenz, Warn- und Stoppwert, die Mindestfallzahl, unter der
+gar nicht bewertet wird, und die Zuständigkeit.
+
+| Wache | Referenz heute | Warnen ab | Stoppen ab | Mindestzahl | Wer | Reaktion |
+|---|---:|---:|---:|---:|---|---|
+| Fahrten ohne gemessene Distanz | {{anteil_geschaetzt:.0%}} | 45 % | 55 % | 500 Fahrten | Datenbetrieb | Die Schätzung trägt mehr als geplant — Sensorlage prüfen |
+| Unbekannter Radtyp | keiner | — | erstes Auftreten | 1 | Datenbetrieb | **Sofort:** Die Merkmalsmenge kennt ihn nicht, der Lauf bricht ab |
+| Ausgeschlossene Langfahrten | Anteil im Referenzquartal | +50 % relativ | +100 % relativ | 30 Fahrten | Datenbetrieb | Rückgabeprozess oder Datenerfassung hat sich geändert |
+| Wartungsaufträge ohne `erledigt_am` | Anteil im Referenzquartal | 10 % | 20 % | 50 Aufträge | Werkstattleitung | Der Reset des Merkmals greift nicht mehr |
+| Räder mit offenem Schaden | Bestand im Referenzquartal | +50 % relativ | +100 % relativ | 20 Räder | Werkstattleitung | Die Werkstatt kommt nicht nach — die Vorsorgeliste ist dann das falsche Werkzeug |
+| Treffsicherheit der Quartalsliste | {{quote_regel:.0%}} | Wilson-Untergrenze unter {{huerde:.0%}} | Untergrenze unter der Grundrate | {{kapazitaet:.0f}} Räder | Analytik | Bei Stopp: Liste aussetzen, Regel neu prüfen |
+| Räder, die trotz Prüfung ausfallen | im Schattenbetrieb zu erheben | 20 % der Geprüften | 35 % | 30 Geprüfte | Werkstattleitung | Die Prüfung selbst greift zu kurz — kein Datenproblem |
+
+> **Zwei Dinge, die diese Tabelle noch nicht kann.** Erstens ist die Treffsicherheit erst
+> nach {{horizont_tage:.0f}} Tagen messbar — die Wache läuft also immer ein Quartal
+> hinterher. Zweitens verändert die Maßnahme selbst, was gemessen wird: Ein geprüftes und
+> repariertes Rad meldet sich nicht mehr, und die Liste sieht dadurch schlechter aus, je
+> besser sie wirkt. Ohne Kontrollgruppe — eine Zufallsauswahl, die **nicht** geprüft wird
+> — ist die Trefferquote im Betrieb keine Gütekennzahl mehr.
 
 **Die letzte Zeile ist die wichtigste und wird fast immer vergessen.** Eine perfekte
 Rangfolge nützt nichts, wenn die Prüfung den Defekt nicht findet. Dann ist nicht die
