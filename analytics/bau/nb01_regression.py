@@ -1068,7 +1068,18 @@ for untergrenze, obergrenze in ((30, 49), (50, 99), (100, 10 ** 6)):
         continue
     # Median und Streuung ueber DIESELBE Auswahl - sonst kann der Median
     # ausserhalb des Bereichs liegen, der ihn erklaeren soll.
-    stichprobe = passende[:40]
+    #
+    # Frueher stand hier passende[:40] - die ERSTEN vierzig. Welche das sind,
+    # haengt an der Sortierung der Gruppierung, also an etwas, das mit der
+    # Sache nichts zu tun hat. Gezogen wird jetzt mit festem Startwert; bei
+    # hoechstens vierzig Gruppen werden ohnehin alle genommen.
+    BOOTSTRAP_GRUPPEN = 40
+    if len(passende) <= BOOTSTRAP_GRUPPEN:
+        stichprobe = passende
+    else:
+        _wahl = np.random.default_rng(42).choice(len(passende),
+                                                 size=BOOTSTRAP_GRUPPEN, replace=False)
+        stichprobe = [passende[i] for i in sorted(_wahl)]
     spannen = [perzentil_streuung(g.values) for g in stichprobe]
     mitte = float(np.median([np.quantile(g.values, 0.90) for g in stichprobe]))
     # Diese beiden hiessen frueher unten/oben - dieselben Namen wie die
@@ -1077,7 +1088,8 @@ for untergrenze, obergrenze in ((30, 49), (50, 99), (100, 10 ** 6)):
     b_unten = float(np.median([s[0] for s in spannen]))
     b_oben = float(np.median([s[1] for s in spannen]))
     schild = f"{untergrenze}-{obergrenze}" if obergrenze < 10 ** 6 else f"ab {untergrenze}"
-    print(f"   {schild:>7}  {len(passende):>8}  {mitte:>7.0f} min  "
+    _marke = "" if len(passende) <= BOOTSTRAP_GRUPPEN else f" (Stichprobe {len(stichprobe)})"
+    print(f"   {schild:>7}  {str(len(passende)) + _marke:>8}  {mitte:>7.0f} min  "
           f"{b_unten:>6.0f}-{b_oben:<3.0f} min  {b_oben - b_unten:>4.0f} min")
     if untergrenze == 30:
         _ = merke("bootstrap_breite_30", b_oben - b_unten)
@@ -1752,11 +1764,37 @@ def kennung(rahmen, laenge=12):
 TARIFVERSION = kennung(pd.concat([preise, tarife], axis=0, ignore_index=True))
 # Bewusst OHNE den Ladepfad: Ob lokal gebaut oder von GitHub geladen, dieselben
 # Daten muessen dieselbe Kennung ergeben.
+# Drei Kennzahlen reichen nicht. Eine geaenderte einzelne Zeile, die weder
+# die Anzahl noch die spaeteste Startzeit noch die Entgeltsumme verschiebt,
+# bliebe unbemerkt - und genau solche Aenderungen macht man beim Nachbessern.
+# Gehasht wird deshalb der INHALT jeder Eingabedatei.
+def dateikennung(name, laenge=12):
+    # SHA-256 des Dateiinhalts - unabhaengig davon, wie pandas ihn liest.
+    import urllib.request
+    quelle = BASIS + name
+    try:
+        if quelle.startswith("http"):
+            with urllib.request.urlopen(quelle, timeout=30) as f:
+                roh = f.read()
+        else:
+            roh = open(quelle, "rb").read()
+    except Exception:                                    # noqa: BLE001
+        return "nicht-lesbar"
+    return hashlib.sha256(roh).hexdigest()[:laenge]
+
+EINGABEDATEIEN = ["ausleihe.csv", "station.csv", "fahrrad.csv",
+                  "nutzungspreis.csv", "tarif.csv", "radrouten_matrix.csv"]
+EINGABEKENNUNGEN = {n: dateikennung(n) for n in EINGABEDATEIEN}
 DATENVERSION = kennung(pd.DataFrame({
-    "fahrten": [len(ausleihe)],
-    "bis": [str(ausleihe.startzeit.max())],
-    "entgelt": [round(ausleihe.entgelt_eur.sum(), 2)]}))
+    "datei": list(EINGABEKENNUNGEN), "hash": list(EINGABEKENNUNGEN.values())}))
+
 print(f"Tarifversion {TARIFVERSION}   Datenversion {DATENVERSION}")
+print("\\nEingabedateien - SHA-256 (12 Stellen):")
+for _n, _h in EINGABEKENNUNGEN.items():
+    print(f"   {_n:<22s} {_h}")
+print("\\nEine geaenderte Zeile in einer dieser Dateien aendert die Datenversion.")
+print("Die drei Kennzahlen der frueheren Fassung - Anzahl, letzte Startzeit,")
+print("Entgeltsumme - haetten sie nicht bemerkt.")
 
 zeilen = []
 for _, g in tab.iterrows():
@@ -1860,9 +1898,17 @@ CODE("""
 # Der Schluessel sind die IDs, nicht die Namen. Ein Name aendert sich -
 # aus "Grombuehl/Klinikum" wurde "Grombühl Klinikum" -, und eine
 # Schnittstelle, die daran haengt, bricht bei jeder Umbenennung still.
+SCHLUESSELSPALTEN = ["start_station_id", "ziel_station_id", "typ_code", "zeitfenster"]
 if len(freigabe_tabelle):
-    NACHSCHLAGE = freigabe_tabelle.set_index(
-        ["start_station_id", "ziel_station_id", "typ_code", "zeitfenster"])
+    # Ein doppelter Schluessel macht aus .loc[...] eine Tabelle statt einer
+    # Zeile - und der Zugriff auf z.minuten_von liefert dann eine Series.
+    # Das faellt erst auf, wenn eine Anzeige unsinnig aussieht. Geprueft wird
+    # deshalb VOR dem set_index, nicht danach.
+    _doppelt = freigabe_tabelle.duplicated(SCHLUESSELSPALTEN).sum()
+    assert _doppelt == 0, (
+        f"{_doppelt} doppelte Schluessel in der Freigabetabelle - "
+        f"der Nachschlagezugriff waere mehrdeutig.")
+    NACHSCHLAGE = freigabe_tabelle.set_index(SCHLUESSELSPALTEN)
 else:
     NACHSCHLAGE = pd.DataFrame().set_index(pd.MultiIndex.from_arrays([[], [], [], []]))
 
@@ -1881,7 +1927,25 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     Filterlogik gegen die Offlinebewertung halten, auch wenn das Produkt als
     Ganzes gesperrt ist. Im Betrieb wird der Schalter nie gesetzt.
     \"\"\"
-    # Die erste Pruefung gilt dem PRODUKT, nicht der Anfrage: Solange das
+    # EINGABEN PRUEFEN, BEVOR GERECHNET WIRD.
+    # Eine Schnittstelle, die auf unsinnige Eingaben irgendetwas zurueckgibt,
+    # ist schlimmer als eine, die nichts zurueckgibt: Der Aufrufer merkt den
+    # Fehler nicht. Jeder Grund ist eindeutig benannt, damit die aufrufende
+    # Seite unterscheiden kann, was sie falsch gemacht hat.
+    if not isinstance(stunde, (int, np.integer)) or not 0 <= stunde <= 23:
+        return {"anzeige": None, "grund": "stunde_ungueltig", "status": None,
+                "hinweis": "Die Stunde muss eine ganze Zahl von 0 bis 23 sein."}
+    if freiminuten_rest is None or freiminuten_rest < 0:
+        return {"anzeige": None, "grund": "freiminuten_ungueltig", "status": None,
+                "hinweis": "Ein Freiminutenstand kann nicht negativ sein."}
+    if not 0.0 <= rabatt_prozent <= 100.0:
+        return {"anzeige": None, "grund": "rabatt_ungueltig", "status": None,
+                "hinweis": "Ein Rabatt liegt zwischen 0 und 100 Prozent."}
+    if typ_code not in set(preise.typ_code):
+        return {"anzeige": None, "grund": "typ_unbekannt", "status": None,
+                "hinweis": f"Den Radtyp '{typ_code}' kennt die Preisliste nicht."}
+
+    # Die naechste Pruefung gilt dem PRODUKT, nicht der Anfrage: Solange das
     # Primaergate nicht haelt, zeigt die App gar nichts an - auch nicht dort,
     # wo die einzelne Kombination gut belegt waere.
     if not PRODUKT_FREIGEGEBEN and not ohne_produktsperre:
@@ -2031,6 +2095,32 @@ else:
     assert gesperrt["anzeige"] is None and gesperrt["grund"] == "produkt_nicht_freigegeben"
     print("Das Produkt ist NICHT freigegeben: Die App verweigert jede Auskunft,")
     print("auch fuer Kombinationen, die fuer sich genommen belegt waeren.")
+
+# Dritte Aussage: Die Eingabepruefung meldet den RICHTIGEN Grund. Eine
+# Pruefung, die nie ausgeloest wird, ist unbelegt - hier wird jede einzeln
+# angesteuert. Die Produktsperre wird dafuer umgangen, sonst antwortete
+# ohnehin jede Anfrage mit demselben Grund.
+print("\\nEINGABEPRUEFUNG - jeder Fehler bekommt seinen eigenen Grund:")
+_s, _z, _t = int(probe.start_station_id), int(probe.end_station_id), probe.typ_code
+_faelle = [
+    ("Stunde 24",              dict(stunde=24),                "stunde_ungueltig"),
+    ("Stunde -1",              dict(stunde=-1),                "stunde_ungueltig"),
+    ("Stunde als Text",        dict(stunde="8"),               "stunde_ungueltig"),
+    ("Freiminuten negativ",    dict(freiminuten_rest=-5),      "freiminuten_ungueltig"),
+    ("Rabatt 150 %",           dict(rabatt_prozent=150.0),     "rabatt_ungueltig"),
+    ("Radtyp 'ROLLER'",        dict(typ_code="ROLLER"),        "typ_unbekannt"),
+    ("Start gleich Ziel",      dict(ziel_id=_s),               "rundfahrt"),
+]
+for _bez, _abw, _erwartet in _faelle:
+    _arg = dict(start_id=_s, ziel_id=_z, typ_code=_t, stunde=8,
+                ohne_produktsperre=True)
+    _arg.update(_abw)
+    _antwort = preis_schaetzen(**_arg)
+    assert _antwort["grund"] == _erwartet, (
+        f"{_bez}: erwartet '{_erwartet}', bekommen '{_antwort['grund']}'")
+    assert _antwort["anzeige"] is None, f"{_bez} liefert trotzdem eine Anzeige"
+    print(f"   {_bez:<22s} -> {_antwort['grund']}")
+print(f"\\n{len(_faelle)} von {len(_faelle)} Faellen abgewiesen, jeder mit eigenem Grund.")
 """),
 
 MD("""
@@ -2119,9 +2209,27 @@ Evaluationsgruppe erklärt: die Anfragen, bei denen das Freiminutenguthaben die 
 Intervallgrenze *nicht* deckt und der Preis deshalb überhaupt an der Dauerschätzung
 hängt. Wer das sagt, muss es auch messen lassen.
 
+**Welche Gates gelten, steht vor der Messung fest — und zwar vollständig.** Ein
+Gate-Katalog, der erst nach dem Ergebnis präzisiert wird, ist kein Katalog, sondern eine
+nachträgliche Begründung. Diese vier Fragen sind deshalb vorab entschieden:
+
+| | Gate | gilt? |
+|---|---|---|
+| 1 | preisabhängige Gruppe **aggregiert**: Wilson-Untergrenze ≥ {{gate_schwelle:.0%}} | **ja — bindend** |
+| 2 | preisabhängige Gruppe **je Radtyp**: dieselbe Untergrenze | nein |
+| 3 | alle angezeigten Fälle je Radtyp: Untergrenze ≥ {{gate_schwelle:.0%}} | **ja** (Kriterium aus 5.5) |
+| 4 | Mindestreichweite je Radtyp | **ja** (Kriterium aus 5.5) |
+
+**Warum Gate 2 nicht gilt, und warum das vorher gesagt sein muss.** Die preisabhängige
+Gruppe ist je Radtyp klein; eine Untergrenze aus wenigen Dutzend Fällen liegt so tief,
+dass sie faktisch jedes Produkt verhindern würde — auch ein gutes. Das ist eine
+vertretbare Entscheidung, solange sie **vorher** fällt. Nach der Messung getroffen wäre
+sie das Gegenteil: die Wahl derjenigen Auswertungsebene, die zum gewünschten Ergebnis
+führt.
+
 | | |
 |---|---|
-| **Gate** | Untergrenze des 95-%-Intervalls in der preisabhängigen Gruppe ≥ 80 % |
+| **bindendes Gate** | Untergrenze des 95-%-Intervalls in der preisabhängigen Gruppe, aggregiert ≥ {{gate_schwelle:.0%}} |
 | **gemessen** | {{gate_untergrenze:.1%}} |
 | **Urteil** | **{{gate_urteil}}** |
 
