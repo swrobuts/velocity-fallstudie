@@ -300,13 +300,41 @@ k["tagesart"] = np.where(k.ist_frei, "frei", "Werktag")
 
 # Rundtouren ausgeschlossen (siehe Phase 2). Die frei abgestellten Fahrten
 # bleiben drin - sie sind ein Ziel wie jedes andere.
-koerbe = k[k.start != k.ziel].copy()
+KOERBE_ALLE = k[k.start != k.ziel].copy()
+
+# ─── ZUERST VERSIEGELN, DANN SUCHEN ─────────────────────────────────
+#
+# Hier stand der Schnitt frueher NICHT - er kam erst in Phase 5.5, nach
+# der Regelsuche, nach der Rangliste, nach den Fisher-Tests, nach dem
+# Bootstrap und nach mehreren Deutungen. Danach hiess das letzte Drittel
+# "Bestaetigungszeitraum, den die Suche nicht gesehen hat". Gesehen
+# hatte sie ihn sehr wohl: Er steckte in jeder dieser Rechnungen.
+#
+# Ein Holdout, den man erst nachtraeglich zum Holdout erklaert, ist
+# keiner. Deshalb faellt der Schnitt jetzt hier, unmittelbar nach dem
+# Bilden der Warenkoerbe und vor der ersten Suche.
+_spanne_alle = KOERBE_ALLE.startzeit.max() - KOERBE_ALLE.startzeit.min()
+GRENZE = KOERBE_ALLE.startzeit.min() + _spanne_alle * 2 // 3
+entdeckung = KOERBE_ALLE[KOERBE_ALLE.startzeit <= GRENZE].copy()
+bestaetigung = KOERBE_ALLE[KOERBE_ALLE.startzeit > GRENZE].copy()
+
+# Ab hier heisst "koerbe" der ENTDECKUNGSZEITRAUM. Alles, was gesucht,
+# getestet, gedeutet und ausgewaehlt wird, sieht nur ihn.
+koerbe = entdeckung
+merke("grenze_datum", GRENZE.strftime("%d.%m.%Y"))
+merke("entdeckung_n", len(entdeckung)); merke("bestaetigung_n", len(bestaetigung))
+print("VERSIEGELT, BEVOR DIE ERSTE REGEL GESUCHT WIRD:")
+print(f"   Entdeckung   bis {GRENZE:%d.%m.%Y}   {len(entdeckung):,d} Warenkoerbe"
+      .replace(",", "."))
+print(f"   Bestaetigung danach              {len(bestaetigung):,d} Warenkoerbe "
+      f"- wird in 5.5 EINMAL geoeffnet".replace(",", "."))
+print()
 print(f"Warenkörbe für die Regelsuche: {len(koerbe):,d}".replace(",", "."))
 # DER NENNER DES SUPPORTS HAT EINEN NAMEN, UND ER IST NICHT "alle Fahrten".
 # Gezaehlt wird gegen die Warenkoerbe - abgeschlossene Fahrten OHNE Rundtouren.
 # Der Unterschied ist kein Rundungsfehler.
 merke("koerbe_n", len(koerbe)); merke("fahrten_n", len(k))
-merke("koerbe_anteil", len(koerbe) / len(k))
+merke("koerbe_anteil", len(KOERBE_ALLE) / len(k))
 print(f"   Das sind {len(koerbe) / len(k):.1%} der {len(k):,d} abgeschlossenen "
       f"Fahrten.".replace(",", "."))
 print("   Der Support misst gegen DIESE Menge, nicht gegen alle Fahrten -")
@@ -476,31 +504,55 @@ print(f"alle drei zusammen:               {len(brauchbar)}")
 # Die beiden Kostengroessen standen bisher als "fehlt" im Text. Die
 # Disposition hat sie geliefert - damit laesst sich rechnen statt vermuten.
 _werktage_regel = koerbe[koerbe.tagesart == "Werktag"].startzeit.dt.date.nunique()
-# ─── A4: EINE OBERGRENZENRECHNUNG, KEINE WIRKUNGSMESSUNG ────────────
+# ─── A4: NICHT PRUEFBAR - UND DAS IST ETWAS ANDERES ALS "GERISSEN" ──
 #
-# Was hier gerechnet wird, ist ein EXTREMFALL: Unterstellt wird, dass
-# JEDE beobachtete Regelfahrt ohne Umverteilung verloren ginge und durch
-# eine Transporterfahrt gerettet wuerde. Beides ist mit Sicherheit zu
-# guenstig gerechnet - eine Assoziationsregel zeigt Fahrten, die
-# ZUSTANDE GEKOMMEN sind, nicht Fahrten, die ausgefallen waeren.
+# ACHTUNG, HIER STAND EIN DENKFEHLER, und er ist lehrreich genug, um
+# ihn stehen zu lassen. Frueher hiess dieser Block "Obergrenzenrechnung"
+# und schloss: Selbst im guenstigsten Fall traegt keine Regel eine
+# Umsetzrunde, also faellt A4 durch.
 #
-# Der Sinn dieser Rechnung ist deshalb einseitig: Liegt schon die
-# OBERGRENZE unter den Kosten, ist die Absage belastbar. Laege sie
-# darueber, waere damit gar nichts gezeigt - dann braeuchte es
-# Leerstands- und Vollstandsereignisse, nicht erfuellte Nachfrage,
-# Anfangsbestand, Stationskapazitaet, Transportkapazitaet, den
-# Eingriffszeitpunkt und einen geschaetzten kausalen Effekt.
+# Das ist keine Obergrenze. Gezaehlt werden Fahrten, die ZUSTANDE
+# GEKOMMEN sind. Gefragt ist aber, wie viele Fahrten OHNE Umverteilung
+# ausgefallen waeren - und die koennen mehr, gleich viele oder weniger
+# sein. Wenn eine Station morgens leer stand, erzeugt die verhinderte
+# Fahrt keine Zeile: Sie ist in diesen Daten unsichtbar. Beobachtete
+# Erfolge sind keine Schranke fuer entgangene Nachfrage.
 #
-# Beide Betraege sind GESETZTE SZENARIOANNAHMEN, keine gemessenen Kosten.
+# Dazu eine Einheit, die nicht passt: "Wert je Tag" gegen "Kosten je
+# Runde" laesst sich nur vergleichen, wenn feststeht, wie viele Runden
+# es je Tag gibt. Das stand nirgends.
+#
+# Das ehrliche Ergebnis lautet: A4 ist mit diesen Daten NICHT PRUEFBAR.
+# Produkt A bleibt ohne Freigabe - aber wegen fehlender Evidenz, nicht
+# wegen widerlegter Wirtschaftlichkeit. Der Unterschied entscheidet,
+# was als naechstes zu tun ist: Daten beschaffen, nicht Verfahren
+# verbessern.
+#
+# WAS FUER EINE ECHTE A4-PRUEFUNG FEHLT:
+#   - zeitaufgeloeste Stationsbestaende und Kapazitaeten
+#   - Leer- und Vollstandszeiten
+#   - eine Schaetzung der nicht erfuellten Nachfrage
+#   - Umverteilungsrichtung und -menge
+#   - Rundenfrequenz sowie Personal- und Fahrzeugkosten
+#   - moeglichst ein kausaler Vergleich mit und ohne Massnahme
+#
+# Die Rechnung bleibt als SZENARIO stehen - sie zeigt die
+# Groessenordnung. Entscheiden darf sie nichts.
+RUNDEN_JE_TAG = 1        # ANNAHME, damit die Einheiten ueberhaupt passen
+merke("runden_je_tag", RUNDEN_JE_TAG)
 KOSTEN_TRANSPORTFAHRT = 35.0   # ANNAHME: Fahrer und Fahrzeug je Umsetzrunde
 WERT_FAHRT = 2.20              # ANNAHME: entgangener Umsatz je Fahrt
 merke("kosten_transport", KOSTEN_TRANSPORTFAHRT); merke("wert_fahrt", WERT_FAHRT)
 
-print("\\nA4 - OBERGRENZENRECHNUNG JE REGEL (keine Wirkungsmessung)")
+print("\\nA4 - SZENARIORECHNUNG JE REGEL (keine Obergrenze, kein Beweis)")
 print(f"   Angenommen: eine Umsetzrunde kostet {KOSTEN_TRANSPORTFAHRT:.0f} EUR,")
 print(f"   eine verhinderte Fahrt bringt {WERT_FAHRT:.2f} EUR. Beides gesetzt.")
-print("   Gerechnet wird der EXTREMFALL: jede beobachtete Regelfahrt waere")
-print("   ohne Umverteilung verloren und durch die Runde gerettet.")
+print(f"   Angenommen ausserdem: {RUNDEN_JE_TAG} Umsetzrunde je Tag - sonst")
+print("   liessen sich 'Wert je Tag' und 'Kosten je Runde' nicht vergleichen.")
+print("   Gerechnet wird, als waere jede beobachtete Regelfahrt ohne")
+print("   Umverteilung verloren gegangen. Das ist KEINE Obergrenze: Die")
+print("   Fahrten, die mangels Rad nie stattfanden, stehen nirgends in")
+print("   diesen Daten.")
 print(f"   Rentabel ab {KOSTEN_TRANSPORTFAHRT / WERT_FAHRT:.0f} zusaetzlichen "
       f"Fahrten je Runde.\\n")
 # JEDE REGEL MIT IHREM EIGENEN TAGESNENNER.
@@ -527,13 +579,12 @@ print()
 if _lohnt:
     print(f"   {_lohnt} Regel(n) tragen eine eigene Transportfahrt.")
 else:
-    print("   KEINE Regel traegt eine eigene Transportfahrt - nicht einmal")
-    print("   in dieser Obergrenzenrechnung. Der Grund ist nicht die Guete,")
-    print("   sondern die Groessenordnung: Es geht um rund eine Fahrt je")
-    print("   Werktag, und dafuer faehrt kein Transporter.")
-    print("   Genau in dieser einen Richtung ist die Rechnung belastbar:")
-    print("   Liegt schon die Obergrenze darunter, liegt die Wirklichkeit")
-    print("   erst recht darunter.")
+    print("   Im Szenario traegt keine Regel eine eigene Transportfahrt - es")
+    print("   geht um rund eine Fahrt je Tag.")
+    print()
+    print("   ABER: Das WIDERLEGT A4 nicht. Die entgangene Nachfrage steht")
+    print("   nicht in diesen Daten - eine Station, die morgens leer war,")
+    print("   erzeugt keine Zeile. A4 ist damit NICHT PRUEFBAR.")
 
 # SIND DIE STARKEN REGELN ZUFALL? Pruefen statt behaupten.
 #
@@ -826,11 +877,15 @@ Drittel **nachsehen**.
 """),
 
 CODE('''
-# ENTDECKEN UND BESTAETIGEN AUF VERSCHIEDENEN ZEITRAEUMEN.
-spanne = koerbe.startzeit.max() - koerbe.startzeit.min()
-GRENZE = koerbe.startzeit.min() + spanne * 2 // 3
-entdeckung = koerbe[koerbe.startzeit <= GRENZE]
-bestaetigung = koerbe[koerbe.startzeit > GRENZE]
+# ─── JETZT WIRD DIE VERSIEGELUNG GEOEFFNET - EINMAL ─────────────────
+#
+# Der Schnitt liegt nicht hier, sondern in Phase 3, VOR der ersten
+# Suche. Alles, was bis hierher gerechnet wurde - Regeln, Rangliste,
+# Fisher, Bootstrap, Deutungen -, sah ausschliesslich den
+# Entdeckungszeitraum.
+#
+# Ab jetzt wird der Bestaetigungszeitraum gelesen. Danach wird an
+# keiner Schwelle mehr gedreht; die Regelmenge steht fest.
 print(f"Entdeckung:   bis {GRENZE.date()}   {len(entdeckung):,d} Fahrten".replace(",", "."))
 print(f"Bestaetigung: danach            {len(bestaetigung):,d} Fahrten\\n".replace(",", "."))
 
@@ -867,7 +922,9 @@ print(zusammen.round(3).to_string(index=False))
 # steht die Regelmenge fest und wird viermal nachgerechnet. Das prueft
 # Saisonabhaengigkeit, nicht die Suchstrategie.
 print("\\nDIESELBEN REGELN IN VIER TEILFENSTERN DES BESTAETIGUNGSZEITRAUMS:")
-_rest = koerbe[koerbe.startzeit > GRENZE]
+# "koerbe" ist jetzt der Entdeckungszeitraum - die Teilfenster liegen
+# im BESTAETIGUNGSzeitraum und muessen dort gebildet werden.
+_rest = bestaetigung
 _grenzen = pd.date_range(_rest.startzeit.min(), _rest.startzeit.max(), periods=5)
 print(f"   {'Fenster':>26s}{'Fahrten':>9s}{'Lift >= ' + str(K2_LIFT):>12s}"
       f"{'Lift > 1':>10s}")
@@ -951,11 +1008,11 @@ Personen. Die nächste Zelle sieht deshalb in den `kunde_id` nach.
 CODE('''
 # DIE GEGENPROBE ZUR DEUTUNG: fahren morgens und abends dieselben Leute -
 # und zwar AM SELBEN TAG? Nur dann ist es eine Hin- und Rueckfahrt.
-koerbe["datum"] = koerbe.startzeit.dt.normalize()
+KOERBE_ALLE["datum"] = KOERBE_ALLE.startzeit.dt.normalize()
 
-morgens = koerbe[(koerbe.tagesart == "Werktag") & (koerbe.fenster == "früh (0-10)")
+morgens = KOERBE_ALLE[(KOERBE_ALLE.tagesart == "Werktag") & (KOERBE_ALLE.fenster == "früh (0-10)")
                  & (koerbe.start == "Hauptbahnhof") & (koerbe.ziel == "Hubland Campus")]
-abends = koerbe[(koerbe.tagesart == "Werktag") & (koerbe.fenster == "abend (15-20)")
+abends = KOERBE_ALLE[(KOERBE_ALLE.tagesart == "Werktag") & (KOERBE_ALLE.fenster == "abend (15-20)")
                 & (koerbe.start == "Hubland Campus") & (koerbe.ziel == "Hauptbahnhof")]
 
 # Zwei verschiedene Fragen, die leicht zu verwechseln sind:
@@ -1102,7 +1159,7 @@ CODE('''
 #     kommen an keiner anderen an. Wuerde man beides in eine Tabelle werfen,
 #     stuende ueberall "auffuellen" - und die Zeile "abholen bei: frei
 #     abgestellt" waere als Anweisung sinnlos.
-angedockte_koerbe = koerbe[koerbe.ziel != "frei abgestellt"]
+angedockte_koerbe = KOERBE_ALLE[KOERBE_ALLE.ziel != "frei abgestellt"]
 
 ab = angedockte_koerbe.groupby(["tagesart", "fenster", "start"], observed=True).size().rename("ab")
 zu = angedockte_koerbe.groupby(["tagesart", "fenster", "ziel"], observed=True).size().rename("zu")
@@ -1117,7 +1174,7 @@ saldo["netto"] = saldo.zu - saldo.ab
 # Eine frühere Fassung druckte hier die Rohsummen - "+1205 Raeder laufen
 # auf" am Hubland. Das liest sich wie eine Anweisung an den Transporter
 # und ist in Wirklichkeit die Summe ueber alle Werktage des Datensatzes.
-WERKTAGE = koerbe[koerbe.tagesart == "Werktag"].startzeit.dt.date.nunique()
+WERKTAGE = KOERBE_ALLE[KOERBE_ALLE.tagesart == "Werktag"].startzeit.dt.date.nunique()
 print(f"Der Datensatz enthält {WERKTAGE} verschiedene Werktage.\\n")
 
 werktag = saldo.loc["Werktag"].reset_index()
@@ -1303,7 +1360,7 @@ print(f"an jedem zehnten Werktag {bedarf_tag.quantile(0.9):.0f} oder mehr - bei 
 # JEDE frei abgestellte Fahrt gefuellt. Wir ordnen jedes Rad der Station
 # zu, die ihm am naechsten liegt.
 # =====================================================================
-frei = koerbe[(koerbe.tagesart == "Werktag") & (koerbe.ziel == "frei abgestellt")].copy()
+frei = KOERBE_ALLE[(KOERBE_ALLE.tagesart == "Werktag") & (KOERBE_ALLE.ziel == "frei abgestellt")].copy()
 fehlend = frei[["end_latitude", "end_longitude"]].isna().any(axis=1).sum()
 merke("frei_werktags", len(frei)); merke("frei_ohne_koordinate", int(fehlend))
 print(f"\\nFrei abgestellte Fahrten werktags: {len(frei)}, "
@@ -1444,8 +1501,75 @@ print("geschrieben: stationssalden_werktag.csv, abstell_hotspots_werktag.csv")
 #
 # Ein Gate muss auf der Einheit liegen, die ausgeliefert wird. Also:
 # JEDE angezeigte Regel muss ihre eigene Bestaetigung haben.
-_best_lift = zusammen[f"{LIFT} bestätigt"]
-b_regeln = zusammen[_best_lift.notna() & (_best_lift >= K2_LIFT)].copy()
+# ─── B1: BESTAETIGT HEISST NICHT "PUNKTSCHAETZER KNAPP DRUEBER" ──────
+#
+# Hier stand: bestaetigt, wenn der Lift im Bestaetigungszeitraum >= 1,3
+# ist. Ein Punktschaetzer bei 1,31 belegt aber nicht, dass die Regel die
+# Schwelle auch unter Stichprobenunsicherheit haelt - erst recht nicht,
+# wenn Fahrten desselben Tages zusammenhaengen.
+#
+# Geprueft wird deshalb JEDE ausgelieferte Regel mit demselben
+# Tagesblock-Bootstrap, der oben nur fuer die staerkste Regel lief.
+# B1 verlangt: die untere 95-%-Grenze liegt bei mindestens K2_LIFT.
+B1_ZIEHUNGEN = 400
+_rng_b = np.random.default_rng(20260902)
+_tage_b = bestaetigung.startzeit.dt.normalize()
+_nach_tag_b = {t: g for t, g in bestaetigung.groupby(_tage_b)}
+_tage_liste_b = list(_nach_tag_b)
+
+def lift_bootstrap(kontext, start, ziel, ziehungen=B1_ZIEHUNGEN):
+    # Ganze Tage mit Zuruecklegen - ein Tag geht komplett hinein oder gar
+    # nicht. Zurueck kommt die untere Grenze des 95-%-Bereichs.
+    _art, _fen = str(kontext).split(" · ")
+    _werte = []
+    for _ in range(ziehungen):
+        _wahl = _rng_b.choice(len(_tage_liste_b), size=len(_tage_liste_b), replace=True)
+        _stich = pd.concat([_nach_tag_b[_tage_liste_b[i]] for i in _wahl])
+        _raum = _stich[(_stich.tagesart == _art) & (_stich.fenster == _fen)]
+        if not len(_raum):
+            continue
+        _ab = _raum[_raum.start == start]
+        _basis = (_raum.ziel == ziel).mean()
+        if not len(_ab) or _basis == 0:
+            continue
+        _werte.append(((_ab.ziel == ziel).mean()) / _basis)
+    if len(_werte) < 20:
+        return float("nan")
+    return float(np.quantile(_werte, 0.025))
+
+print("\\nB1 - JEDE REGEL EINZELN, MIT TAGESBLOCK-BOOTSTRAP")
+print(f"   {B1_ZIEHUNGEN} Ziehungen ganzer Tage aus dem Bestaetigungszeitraum.")
+print(f"   Verlangt: untere 95-%-Grenze >= {K2_LIFT}\\n")
+_kandidaten_b1 = zusammen[zusammen[f"{LIFT} bestätigt"].notna()
+                          & (zusammen[f"{LIFT} bestätigt"] >= K2_LIFT)].copy()
+# Spalten ueber ihre NAMEN ansprechen, nicht ueber Positionen. Eine
+# fruehere Fassung nahm _z._5 und druckte damit den Support statt des
+# Lifts - Positionszugriffe verschieben sich, sobald eine Spalte
+# dazukommt.
+_untergrenzen = []
+for _, _z in _kandidaten_b1.iterrows():
+    _untergrenzen.append(lift_bootstrap(_z["Kontext"], _z["wenn Start"],
+                                        _z["dann Ziel"]))
+_kandidaten_b1["lift_untergrenze"] = _untergrenzen
+_kandidaten_b1["b1_haelt"] = _kandidaten_b1.lift_untergrenze >= K2_LIFT
+
+print(f"   {'Kontext':<26s}{'Start -> Ziel':<40s}{'Punkt':>7s}{'Unten':>8s}   Urteil")
+for _, _z in _kandidaten_b1.iterrows():
+    _weg = f"{_z['wenn Start']} -> {_z['dann Ziel']}"
+    print(f"   {str(_z['Kontext']):<26s}{_weg:<40s}"
+          f"{_z[f'{LIFT} bestätigt']:>7.2f}{_z['lift_untergrenze']:>8.2f}   "
+          f"{'haelt' if _z['b1_haelt'] else 'HAELT NICHT'}")
+
+b_regeln = _kandidaten_b1[_kandidaten_b1.b1_haelt].copy()
+print()
+print(f"   {len(b_regeln)} von {len(_kandidaten_b1)} Regeln halten B1 unter Unsicherheit.")
+print(f"   {len(_kandidaten_b1) - len(b_regeln)} liegen zwar im Punktschaetzer ueber")
+print("   der Schwelle, aber ihr Intervall reicht darunter - sie gehen NICHT")
+print("   in das Artefakt. Genau das ist der Unterschied zwischen 'beobachtet'")
+print("   und 'bestaetigt'.")
+merke("b1_kandidaten", len(_kandidaten_b1))
+merke("b1_gehalten", len(b_regeln))
+merke("b1_ziehungen", B1_ZIEHUNGEN)
 
 # ─── DIE GROESSENORDNUNG - ZAEHLER UND NENNER AUS DEMSELBEN ZEITRAUM ─
 #
@@ -1568,7 +1692,16 @@ B4_ERFUELLT = all(
 assert not len(b_regeln) or (b_regeln[f"{LIFT} bestätigt"] >= K2_LIFT).all(), (
     "Eine unbestaetigte Regel ist im Dispositionshinweis gelandet.")
 
-A4_TRAEGT = bool(_lohnt > 0)
+# DREI ZUSTAENDE, NICHT ZWEI.
+#
+# "nicht_pruefbar" ist kein hoeflicher Ausdruck fuer "gerissen". Ein
+# gerissenes Gate sagt: Das Verfahren taugt nicht. Ein nicht pruefbares
+# sagt: Wir wissen es nicht - und muessen Daten beschaffen, nicht das
+# Verfahren verbessern. Wer beides gleich benennt, schickt das Projekt
+# in die falsche Richtung.
+A4_ZUSTAND = "nicht_pruefbar"
+A4_TRAEGT = False        # nicht freigegeben - aber siehe A4_ZUSTAND
+merke("a4_zustand", A4_ZUSTAND)
 # ─── DER STATUS, EINMAL - UND ALLES LIEST DARAUS ────────────────────
 #
 # Zwei Produkte aus Phase 1, zwei Urteile. B1 bis B4 sind oben AM
@@ -1580,7 +1713,8 @@ B_GATES = {"B1 Bestaetigungszeitraum": B1_TRAEGT,
            "B3 keine Automatik": B3_ERFUELLT,
            "B4 Begleitanalysen als explorativ gekennzeichnet": B4_ERFUELLT}
 
-STATUS_A = "freigegeben" if (len(brauchbar) > 0 and A4_TRAEGT) else "nicht freigegeben"
+STATUS_A = ("freigegeben" if (len(brauchbar) > 0 and A4_TRAEGT)
+            else "nicht freigegeben (Wirtschaftlichkeit nicht prüfbar)")
 STATUS_B = "freigegeben" if all(B_GATES.values()) else "nicht freigegeben"
 STATUS_SATZ = (
     f"Produkt A (automatische Umverteilungsregel): {STATUS_A}. "
@@ -1594,7 +1728,7 @@ print("\\nDIE ZWEI PRODUKTE AUS PHASE 1 - ein Urteil je Produkt:\\n")
 print(f"   Produkt A  automatische Umverteilungsregel   {STATUS_A.upper()}")
 print(f"      A1-A3 (Support, Lift, Stationsziel): {len(brauchbar)} Regel(n) nehmen sie")
 print(f"      A4 (wirtschaftlich): {_lohnt} von {len(brauchbar)} tragen eine "
-      f"eigene Umsetzrunde  ->  {'haelt' if A4_TRAEGT else 'HAELT NICHT'}")
+      f"eigene Umsetzrunde  ->  {A4_ZUSTAND.upper()}")
 print(f"\\n   Produkt B  Dispositionshinweis               {STATUS_B.upper()}")
 for _n, _e in B_GATES.items():
     print(f"      {'erfuellt' if _e else 'OFFEN   '}  {_n}")

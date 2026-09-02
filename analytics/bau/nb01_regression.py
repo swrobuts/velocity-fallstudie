@@ -632,7 +632,40 @@ def zielverlaesslichkeit_setzen(rahmen, global_wert, tabelle):
 # ausschliesslich aus den Zeilen VOR g1, also aus dem Training.
 _lern = d[d.startzeit < g1]
 ZV_GLOBAL, ZV_TABELLE = zielverlaesslichkeit_lernen(_lern)
-d["zielverlaesslichkeit"] = zielverlaesslichkeit_setzen(d, ZV_GLOBAL, ZV_TABELLE)
+
+# ─── IM TRAINING FORTSCHREITEND, DANACH EINGEFROREN ─────────────────
+#
+# Eine Tabelle, die aus dem GANZEN Training gerechnet und dann auf
+# dieselben Trainingszeilen gelegt wird, laesst jede Zeile ein bisschen
+# in ihre eigene Zukunft sehen: Der Wert fuer den 3. Januar enthaelt
+# auch die Fahrten vom 30. Juni. Das Modell lernt dann an einem
+# Merkmal, das es im Betrieb so nie bekommt - und sieht besser aus,
+# als es ist.
+#
+# Fuer die Trainingszeilen wird der Wert deshalb FORTSCHREITEND
+# gerechnet: nur aus Fahrten, die VOR der jeweiligen Zeile liegen.
+# Fuer alles danach (Validierung, Kalibrierung, Abnahme) gilt die
+# eingefrorene Tabelle - so, wie es im Betrieb waere.
+d = d.sort_values("startzeit").reset_index(drop=True)
+_treu = (d.tatsaechliches_ziel == d.end_station_id).astype(float)
+_grp = d.groupby(["start_station_id", "end_station_id"])
+_n_vor = _grp.cumcount()                                  # Fahrten davor
+_s_vor = _grp[_treu.name if _treu.name else 0].cumsum() if False else (
+    _treu.groupby([d.start_station_id, d.end_station_id]).cumsum() - _treu)
+_lauf = np.arange(len(d))
+_glob_vor = (_treu.cumsum() - _treu) / np.maximum(_lauf, 1)
+_glob_vor = _glob_vor.where(_lauf > 0, ZV_GLOBAL)
+K_ZV = 30
+_fortschreitend = (_s_vor + _glob_vor * K_ZV) / (_n_vor + K_ZV)
+
+_ist_training = d.startzeit < g1
+d["zielverlaesslichkeit"] = np.where(
+    _ist_training, _fortschreitend,
+    zielverlaesslichkeit_setzen(d, ZV_GLOBAL, ZV_TABELLE))
+merke("zv_k", K_ZV)
+print(f"Zielverlaesslichkeit: im Training fortschreitend aus je {int(_n_vor.max())} "
+      f"bis 0 frueheren Fahrten,")
+print("danach die eingefrorene Trainingstabelle - wie im Betrieb.")
 merke("zv_global", ZV_GLOBAL)
 merke("zv_min", float(min(ZV_TABELLE.values())))
 merke("zv_max", float(max(ZV_TABELLE.values())))
@@ -1221,8 +1254,14 @@ _ZIEL_VALIDIERUNG = 0.84      # Zusage 80 % plus Reserve fuer den Zeitverlauf
 # WAS DIE BEDINGUNG KOSTET, wird ueberall danebengestellt: die
 # Trefferquote OHNE sie. Ohne diese zweite Zahl waere die Bedingung
 # eine Ausrede - mit ihr ist sie eine Produkteigenschaft.
-ZUSAGE_TEXT = ("Preis für die gewählte Strecke. Fahren Sie ein anderes Ziel "
-               "an, gilt die Schätzung nicht.")
+# WORAUF SICH DIE ZUSAGE BEZIEHT - und worauf nicht.
+#
+# "Strecke" waere zu viel versprochen: Welchen WEG jemand nimmt, weiss
+# die App nicht und sagt sie auch nicht zu. Zugesagt ist eine Fahrt zum
+# GEWAEHLTEN ZIEL - der Umweg ueber die Altstadt ist darin enthalten,
+# die Fahrt zu einem anderen Ziel nicht.
+ZUSAGE_TEXT = ("Preis für eine Fahrt zu Ihrem gewählten Ziel. Fahren Sie ein "
+               "anderes Ziel an, gilt die Schätzung nicht.")
 merke("zusage_text", ZUSAGE_TEXT)
 
 
@@ -1663,13 +1702,45 @@ _betreibbar = ({"Quantilregression", "Perzentiltabelle", "Quantiltabelle"}
                if LAUFZEITDIENST_ERLAUBT
                else {"Perzentiltabelle", "Quantiltabelle"})
 _zulaessig = [n for n in vergleich.index if _haelt_alles[n] and n in _betreibbar]
-KANDIDAT = _zulaessig[0] if _zulaessig else None
+
+# ─── WELCHER VON MEHREREN? DIE REGEL STEHT VORHER FEST ──────────────
+#
+# Hier stand _zulaessig[0] - also der erste in der Reihenfolge der
+# Tabelle. Das ist keine Entscheidung, sondern ein Zufall der
+# Sortierung, und der Text behauptete danach, nur dieser eine habe
+# bestanden. Wenn mehrere Verfahren alle Gates nehmen, muss eine vorher
+# benannte Regel sagen, welches ausgeliefert wird.
+#
+# DIE REGEL: Unter allen zulaessigen Kandidaten gewinnt der mit der
+# groessten REICHWEITE. Begruendung aus Phase 1: Die Gates sichern die
+# Guete - sie sind Mindestanforderungen, keine Rangliste. Ist die Guete
+# gesichert, nuetzt das Produkt umso mehr, je mehr Anfragen es
+# beantwortet. Bei Gleichstand entscheidet die schmalere Spanne.
+AUSWAHLREGEL = ("groesste Reichweite unter allen, die ALLE Gates nehmen; "
+                "bei Gleichstand die schmalere Spanne")
+merke("auswahlregel", AUSWAHLREGEL)
+KANDIDAT = (max(_zulaessig,
+                key=lambda n: (vergleich.loc[n, "Auskunft (angezeigt)"],
+                               -vergleich.loc[n, "Breite (Median)"]))
+            if _zulaessig else None)
 merke("kandidat", KANDIDAT or "keiner")
+merke("zulaessige_n", len(_zulaessig))
+merke("zulaessige", aufzaehlung(sorted(_zulaessig)) if _zulaessig else "keiner")
 print()
 print(f"Architekturvorgabe: Laufzeitdienst "
       f"{'zugelassen' if LAUFZEITDIENST_ERLAUBT else 'NICHT zugelassen'}.")
+print(f"Auswahlregel (vorab): {AUSWAHLREGEL}")
 if KANDIDAT:
-    print(f"AUSGELIEFERT WIRD: {KANDIDAT}")
+    print(f"\\nAlle Gates nehmen: {len(_zulaessig)} von {len(vergleich)} Verfahren "
+          f"({aufzaehlung(sorted(_zulaessig))}).")
+    if len(_zulaessig) > 1:
+        print("Es scheitert also NICHT an der Guete - alle zulaessigen halten sie.")
+        print("Entschieden hat die Reichweite:")
+        for _n in sorted(_zulaessig,
+                         key=lambda x: -vergleich.loc[x, "Auskunft (angezeigt)"]):
+            print(f"   {_n:22s} {vergleich.loc[_n, 'Auskunft (angezeigt)']:>6.1%} "
+                  f"Auskunft, Spanne {vergleich.loc[_n, 'Breite (Median)']:.2f} EUR")
+    print(f"\\nAUSGELIEFERT WIRD: {KANDIDAT}")
 else:
     print("KEIN zulaessiger Kandidat: Wer die Gates nimmt, darf nicht betrieben")
     print("werden - wer betrieben werden darf, nimmt sie nicht.")
@@ -2431,6 +2502,17 @@ MODELLPAKET = {
     "modell_unten": Q_UNTEN, "modell_oben": Q_OBEN,
     "quantil_unten": Q_UNTEN_NIVEAU, "quantil_oben": Q_OBEN_NIVEAU,
     "merkmale": list(MERKMALE),
+    # OHNE DIESE TABELLE IST DAS PAKET NICHT LAUFFAEHIG.
+    #
+    # Das Modell erwartet die Spalte "zielverlaesslichkeit". Wer das
+    # Paket laedt und sie nicht bilden kann, bekommt entweder einen
+    # Fehler oder - schlimmer - eine Vorhersage aus einem falsch
+    # gefuellten Merkmal. Sie gehoert deshalb ins Paket, nicht in den
+    # Kopf des Autors. Die Schluessel werden als Text abgelegt, damit
+    # JSON sie tragen kann.
+    "zielverlaesslichkeit_global": float(ZV_GLOBAL),
+    "zielverlaesslichkeit_tabelle": {f"{s}->{z}": float(w)
+                                     for (s, z), w in ZV_TABELLE.items()},
     "radtypen": sorted(freigegebene_typen),
     "produktstatus": PRODUKTSTATUS,
     "gate_schwelle": GATE_PREISABHAENGIG,
@@ -2445,6 +2527,27 @@ MODELLPAKET = {
     "abnahmezeitraum_von": str(ROH_ABNAHME.startzeit.min().date()),
     "abnahmezeitraum_bis": str(ROH_ABNAHME.startzeit.max().date()),
     "max_fahrtdauer_minuten": OBERGRENZE_MINUTEN,
+    # ─── ALLES, WAS DER BETRIEB SONST NOCH BRAUCHT ──────────────────
+    #
+    # Ein Paket, das nur das Modell enthaelt, laesst den Betreiber die
+    # halbe Entscheidungslogik nachbauen - und zwar raten. Was die
+    # Anzeige steuert, gehoert deshalb mit hinein.
+    "zusage_text": ZUSAGE_TEXT,
+    "auswahlregel": AUSWAHLREGEL,
+    "breitenregel_minuten": SPANNE_MAX_MIN,
+    "breitenregel_anteil": SPANNE_MAX_ANTEIL,
+    "mindestreichweite": MINDESTREICHWEITE,
+    "mindestfahrten_je_kombination": MINDESTFAHRTEN,
+    # Die Tariflogik: ohne sie wird aus Minuten kein Preis.
+    "tarif": {t: {"startgebuehr": float(preise.set_index("typ_code")
+                                        .loc[t, "startgebuehr_eur"]),
+                  "preis_pro_minute": float(preise.set_index("typ_code")
+                                            .loc[t, "preis_pro_minute_eur"])}
+              for t in sorted(preise.typ_code)},
+    "tarifversion": TARIFVERSION,
+    "datenversion": DATENVERSION,
+    # Gesperrte Kombinationen - die App darf sie nicht anzeigen.
+    "gesperrte_kombinationen": [list(k) for k in sorted(durchgefallen)],
     "gebaut_am": str(pd.Timestamp.today().date()),
 }
 # GESCHRIEBEN WIRD ERST NACH DER ABNAHME (6.7).
@@ -3172,6 +3275,40 @@ print(f"   operativ gueltig                 {MODELLPAKET['operativ_gueltig_ab']}
 print(f"   Kalibrierung (Grundlage)         "
       f"{MODELLPAKET['kalibrierungszeitraum_von']} bis "
       f"{MODELLPAKET['kalibrierungszeitraum_bis']}")
+
+# ─── DER RELOADTEST: LAEUFT DAS PAKET OHNE DIESES NOTEBOOK? ─────────
+#
+# Ein Modellpaket ist erst dann ausgeliefert, wenn es ohne den Kontext
+# funktioniert, in dem es entstanden ist. Geprueft wird deshalb mit
+# einem frisch geladenen Paket und einer Merkmalszeile, die
+# AUSSCHLIESSLICH aus dem Paket gebaut wird - keine Variable aus diesem
+# Notebook darf dabei helfen.
+_geladen = joblib.load("modellpaket_preisspanne.joblib")
+_zv_tab = {tuple(int(x) for x in k.split("->")): v
+           for k, v in _geladen["zielverlaesslichkeit_tabelle"].items()}
+_r0 = abnahme.iloc[0]
+_zeile_paket = merkmalszeile(int(_r0.start_station_id), int(_r0.end_station_id),
+                             _r0.typ_code, _r0.startzeit).copy()
+# Das Merkmal NEU setzen - aus dem Paket, nicht aus ZV_TABELLE.
+_zeile_paket["zielverlaesslichkeit"] = _zv_tab.get(
+    (int(_r0.start_station_id), int(_r0.end_station_id)),
+    _geladen["zielverlaesslichkeit_global"])
+_v_paket = float(np.maximum(1.0, _geladen["modell_unten"].predict(
+    _zeile_paket[_geladen["merkmale"]]))[0])
+_b_paket = float(_geladen["modell_oben"].predict(
+    _zeile_paket[_geladen["merkmale"]])[0])
+_v_hier = float(np.maximum(1.0, Q_UNTEN.predict(_zeile_paket[MERKMALE]))[0])
+print()
+print("RELOADTEST - das Paket allein, ohne dieses Notebook:")
+print(f"   Merkmale im Paket           {len(_geladen['merkmale'])}")
+print(f"   Zielverlaesslichkeit        {len(_zv_tab)} Verbindungen + Standardwert")
+print(f"   Vorhersage aus dem Paket    {_v_paket:.1f} bis {_b_paket:.1f} Minuten")
+assert abs(_v_paket - _v_hier) < 1e-9, (
+    "Das geladene Paket rechnet anders als das Notebook.")
+assert set(_geladen["merkmale"]) == set(MERKMALE), "Merkmalsmenge weicht ab."
+assert "zielverlaesslichkeit" in _geladen["merkmale"], "Merkmal fehlt im Paket."
+assert _geladen["zielverlaesslichkeit_tabelle"], "Nachschlagetabelle fehlt im Paket."
+print("   identisch zur Rechnung im Notebook - das Paket ist vollstaendig.")
 
 print()
 print("   Was auch eine bestandene Abnahme NICHT ersetzt: das geplante Ziel.")
