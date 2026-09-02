@@ -83,6 +83,8 @@
  "hotspots_startstation": "Grombühl Klinikum, Sanderau, Zellerau",
  "b1_kandidaten": 11,
  "b1_gehalten": 6,
+ "b1_raus_punkt": 2,
+ "b1_raus_intervall": 3,
  "b1_ziehungen": 400,
  "b_regeln_n": 6,
  "b_je_tag_max": 1.02,

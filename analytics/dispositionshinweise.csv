@@ -2,7 +2,7 @@
 # Evidenz aus dem Bestaetigungszeitraum 2024-12-24 bis 2026-08-24
 # KEINE AUTOMATISCHE AKTION - ein Mensch entscheidet, ob gefahren wird.
 # Jede Zeile ist im Bestaetigungszeitraum einzeln bestaetigt: untere 95-%-Grenze eines Tagesblock-Bootstraps >= 1.3
-# (nicht blosser Punktschaetzer >= 1.3 - der haelt bei mehr Regeln).
+# (nicht blosser Punktschaetzer >= 1.3 - der liesse 9 Regeln zu statt 6).
 # Datenherkunft: SYNTHETISCHE LEHRDATEN
 # KEINE reale Betriebsfreigabe - Lehrbeispiel. Es gibt bewusst kein
 # Gueltigkeitsdatum: Was hier bestanden ist, ist ein analytisches

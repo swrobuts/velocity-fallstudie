@@ -335,7 +335,7 @@ KOERBE_ALLE = k[k.start != k.ziel].copy()
 
 # ─── ZUERST VERSIEGELN, DANN SUCHEN ─────────────────────────────────
 #
-# Hier stand der Schnitt frueher NICHT - er kam erst in Phase 5.5, nach
+# Hier stand der Schnitt frueher NICHT - er kam erst in Phase 5.3, nach
 # der Regelsuche, nach der Rangliste, nach den Fisher-Tests, nach dem
 # Bootstrap und nach mehreren Deutungen. Danach hiess das letzte Drittel
 # "Bestaetigungszeitraum, den die Suche nicht gesehen hat". Gesehen
@@ -358,7 +358,7 @@ print("VERSIEGELT, BEVOR DIE ERSTE REGEL GESUCHT WIRD:")
 print(f"   Entdeckung   bis {GRENZE:%d.%m.%Y}   {len(entdeckung):,d} Warenkoerbe"
       .replace(",", "."))
 print(f"   Bestaetigung danach              {len(bestaetigung):,d} Warenkoerbe "
-      f"- wird in 5.5 EINMAL geoeffnet".replace(",", "."))
+      f"- wird in 5.3 EINMAL geoeffnet".replace(",", "."))
 print()
 print(f"Warenkörbe für die Regelsuche: {len(koerbe):,d}".replace(",", "."))
 # DER NENNER DES SUPPORTS HAT EINEN NAMEN, UND ER IST NICHT "alle Fahrten".
@@ -824,7 +824,7 @@ korrigierte p-Wert ausfällt, steht in der Ausgabe oben.
 > ehrlicher und fiele vermutlich schwächer aus.
 >
 > Was wir sagen können: **Unter dem gewählten Unabhängigkeitsmodell sind die Häufungen
-> sehr unwahrscheinlich, und sie halten in einem späteren Zeitraum** (Phase 5.5). Beides
+> sehr unwahrscheinlich, und sie halten in einem späteren Zeitraum** (Phase 5.3). Beides
 > zusammen ist ein Stabilitätsindiz — kein Signifikanznachweis und erst recht kein Beleg
 > betrieblicher Relevanz. Der Zusatz „unter dem gewählten Modell“ ist keine Floskel: Fällt
 > die Unabhängigkeitsannahme, fällt die Aussage mit.
@@ -924,7 +924,7 @@ Transporterfahrt standen nie in den Projektunterlagen.** Die {{kosten_transport:
 und {{wert_fahrt:.2f}} €, mit denen dieses Notebook rechnet, sind gesetzte
 Szenarioannahmen — sie ersetzen keine Messung. Ohne echte Werte ist jede Hürde geraten.
 
-### 5.5 Entdeckung und Bestätigung trennen
+### 5.3 Entdeckung und Bestätigung trennen
 
 Alles bisher Gerechnete hat **denselben Datensatz zum Suchen und zum Bewerten** benutzt.
 Das ist bei einer Regelsuche besonders heikel: Wir haben 800 Kombinationen durchgesehen
@@ -1028,7 +1028,7 @@ Drei Einschränkungen gehören dazu:
 """),
 
 MD("""
-### 5.3 Was die durchgefallenen Regeln trotzdem zeigen — als Hypothese
+### 5.4 Was die durchgefallenen Regeln trotzdem zeigen — als Hypothese
 
 Die {{split_gesamt:.0f}} Regeln, die wenigstens die Lift-Hürde nehmen, dürfen den Umlaufplan nicht
 begründen. Ansehen darf man sie trotzdem — sie sind eine **Hypothese**, kein Befund, und
@@ -1155,7 +1155,7 @@ Die Räder laufen am Campus auf, ganz gleich, wer sie dorthin gefahren hat. Die 
 für die Maßnahme nie nötig — nur für die Erzählung. Deshalb fällt sie auch ersatzlos
 weg.
 
-### 5.4 Das Urteil: Kriterien erfüllt, Freigabe trotzdem nicht
+### 5.5 Das Urteil: Kriterien erfüllt, Freigabe trotzdem nicht
 
 | | |
 |---|---|
@@ -1642,13 +1642,23 @@ for _, _z in _kandidaten_b1.iterrows():
 
 b_regeln = _kandidaten_b1[_kandidaten_b1.b1_haelt].copy()
 print()
+_raus = _kandidaten_b1[~_kandidaten_b1.b1_haelt]
+_punkt_raus = int((_raus[f"{LIFT} bestätigt"] < K2_LIFT).sum())
+_ohne_grenze = int(_raus.lift_untergrenze.isna().sum())
+_intervall_raus = len(_raus) - _punkt_raus - _ohne_grenze
 print(f"   {len(b_regeln)} von {len(_kandidaten_b1)} Regeln halten B1 unter Unsicherheit.")
-print(f"   {len(_kandidaten_b1) - len(b_regeln)} liegen zwar im Punktschaetzer ueber")
-print("   der Schwelle, aber ihr Intervall reicht darunter - sie gehen NICHT")
-print("   in das Artefakt. Genau das ist der Unterschied zwischen 'beobachtet'")
-print("   und 'bestaetigt'.")
+print(f"   Von den {len(_raus)} ausgeschlossenen scheitern {_punkt_raus} schon am")
+print(f"   Punktschaetzer (Lift < {K2_LIFT}) - fuer sie braucht es den Bootstrap")
+print(f"   gar nicht. {_intervall_raus} liegen im Punktschaetzer ueber der Schwelle,")
+print("   aber ihr Intervall reicht darunter: Genau diese Gruppe zeigt den")
+print("   Unterschied zwischen 'beobachtet' und 'bestaetigt'.")
+if _ohne_grenze:
+    print(f"   {_ohne_grenze} lassen sich nicht bewerten - zu wenige Ziehungen")
+    print("   mit belegtem Kontext. Nicht bewertbar heisst nicht bestanden.")
 merke("b1_kandidaten", len(_kandidaten_b1))
 merke("b1_gehalten", len(b_regeln))
+merke("b1_raus_punkt", _punkt_raus)
+merke("b1_raus_intervall", _intervall_raus)
 merke("b1_ziehungen", B1_ZIEHUNGEN)
 
 # ─── DIE GROESSENORDNUNG - ZAEHLER UND NENNER AUS DEMSELBEN ZEITRAUM ─
@@ -1709,7 +1719,8 @@ DISPOKOPF = [
     "# KEINE AUTOMATISCHE AKTION - ein Mensch entscheidet, ob gefahren wird.",
     "# Jede Zeile ist im Bestaetigungszeitraum einzeln bestaetigt: "
     f"untere 95-%-Grenze eines Tagesblock-Bootstraps >= {K2_LIFT}",
-    f"# (nicht blosser Punktschaetzer >= {K2_LIFT} - der haelt bei mehr Regeln).",
+    f"# (nicht blosser Punktschaetzer >= {K2_LIFT} - der liesse "
+    f"{len(_kandidaten_b1) - _punkt_raus} Regeln zu statt {len(b_regeln)}).",
     "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
     "# KEINE reale Betriebsfreigabe - Lehrbeispiel. Es gibt bewusst kein",
     "# Gueltigkeitsdatum: Was hier bestanden ist, ist ein analytisches",
@@ -2133,7 +2144,7 @@ MD("""
 1. **Das Erfolgskriterium neu formulieren** — in Fahrten je Werktag, hergeleitet aus den
    Kosten einer Transporterfahrt. Diese Kosten zu beschaffen ist die erste Aufgabe, nicht
    die letzte. **Vor** der nächsten Messung.
-2. **Die Bestätigung rollierend machen.** Der einmalige Schnitt aus Phase 5.5 — suchen
+2. **Die Bestätigung rollierend machen.** Der einmalige Schnitt aus Phase 5.3 — suchen
    in den ersten zwei Dritteln, prüfen im letzten — ist bereits umgesetzt und hat gehalten
    ({{split_haelt:.0f}} von {{split_gesamt:.0f}} Regeln; über die vier
    **aufeinanderfolgenden Teilfenster des Bestätigungszeitraums** sind es

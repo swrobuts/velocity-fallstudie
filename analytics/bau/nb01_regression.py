@@ -614,7 +614,7 @@ belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 >
 > ```text
 > Training → Validierung → Test 1: Punktschätzung
->          → Rücksprung  → Kalibrierung: Kalibrierung und Freigabe des Intervallprodukts
+>          → Rücksprung  → Kalibrierung: Kalibrierung des Intervallprodukts und Vorbereitung der Abnahme
 >          → Abnahme (6.7): unabhängige, rückblickende Prüfung — entscheidet den Status
 >          → Schattenbetrieb: prospektive Prüfung in der echten App — steht aus
 > ```
@@ -2471,7 +2471,7 @@ folgenreichste Fehler dieses Notebooks:
 
 | Artefakt | was es ist | Zusage |
 |---|---|---|
-| `preisschaetzung.csv` | **das ausgelieferte Verfahren** — die {{kandidat}}, eine Datei, die jedes System liest | {{gate_schwelle:.0%}}, belegt mit {{gate_untergrenze:.1%}} |
+| `preisschaetzung.csv` | **das ausgelieferte Verfahren** — die {{kandidat}}, eine Datei, die jedes System liest | {{gate_schwelle:.0%}}, auf der Kalibrierung mit {{gate_untergrenze:.1%}} eingestellt und in 6.7 auf der Abnahme mit {{ab_unten:.1%}} belegt |
 | `modellpaket_preisspanne.joblib` | die **Alternative**, die den Gates ebenfalls genügt: beide Quantilmodelle mit Vorverarbeitung, Nachschlagetabellen, Tariflogik und Schwellen | dieselbe Zusage — sie wartet nur auf eine Betriebskostenrechnung |
 
 Warum das getrennt gehört: **Beide** Artefakte sehen aus wie das Produkt. Sie haben
@@ -3958,7 +3958,7 @@ MD("""
 | 3 Data Preparation | **Geplantes** Ziel erlaubt (die App kennt es), tatsächliches Ziel nur als Maßstab. Wetter verboten. Training, Validierung, Test 1 und Kalibrierung — die **Abnahme** ist schon in Phase 2 versiegelt. Zyklische Zeitmerkmale, dazu die Zielverlässlichkeit je Verbindung ({{zv_min:.0%}} bis {{zv_max:.0%}}) |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, dass die Zielangabe {{ablation_anteil:.0%}} des Fehlers erklärt |
 | 5 Evaluation | {{typen_halten}} halten die Grenze auf Test 1, {{typen_reissen}} nicht. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet |
-| 6 Deployment | **Ausgeliefert wird die {{kandidat}}** — für {{typen_freigegeben}}. Alle drei Kandidaten nehmen alle Gates; entschieden hat die vorab benannte Auswahlregel: die einfachste Architektur. Das kostet {{verzicht_reichweite:.1%}} Reichweite gegenüber der {{verzicht_kandidat}}, die als Modellpaket bereitliegt. Primärgate {{gate_untergrenze:.1%}} gegen {{gate_schwelle:.0%}}, Status **{{produktstatus}}** — {{statussatz}} |
+| 6 Deployment | **Ausgeliefert wird die {{kandidat}}** — für {{typen_freigegeben}}. Alle drei Kandidaten nehmen alle Gates; entschieden hat die vorab benannte Auswahlregel: die einfachste Architektur. Das kostet {{verzicht_reichweite:.1%}} Reichweite gegenüber der {{verzicht_kandidat}}, die als Modellpaket bereitliegt. Primärgate auf der Kalibrierung {{gate_untergrenze:.1%}}, auf der unabhängigen **Abnahme** {{ab_unten:.1%}} gegen {{gate_schwelle:.0%}} — dort halten {{ab_gates_halten:.0f}} von {{ab_gates_gesamt:.0f}} Gates. Darauf, nicht auf der Kalibrierung, beruht der Status **{{produktstatus}}** — {{statussatz}} |
 
 **Der Rücksprung, den man hier mitverfolgen konnte**
 
@@ -3997,7 +3997,8 @@ eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
 
 1. **Das geplante Ziel wird erfasst — in *diesen* Daten.** Ob eine echte App es in derselben Qualität erfasst, ist offen: ob Kunden es sorgfältig wählen, wie oft sie es unterwegs ändern, ob die Erfassung lückenlos ist. Das beantwortet kein historischer Datensatz, sondern nur ein Schattenbetrieb in der echten App.
 2. **Das Primärgate hält — je Radtyp aber nicht überall.** Aggregiert
-   {{gate_untergrenze:.1%}} gegen {{gate_schwelle:.0%}}; in der Diagnose je Radtyp
+   {{gate_untergrenze:.1%}} auf der Kalibrierung und {{ab_unten:.1%}} auf der Abnahme
+   gegen {{gate_schwelle:.0%}}; in der Diagnose je Radtyp
    bleibt {{offen_schwaechster_typ}} mit {{offen_schwaechste_grenze:.1%}} darunter.
    Bindend ist die aggregierte Ebene — vorab so festgelegt, weil die App eine Zusage
    macht und nicht drei. Die Diagnose bleibt trotzdem stehen.
