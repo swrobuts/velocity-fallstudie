@@ -128,6 +128,38 @@ Kriterium, das nur im Text steht, ist keines.
 **Kriterium 1 ist das, das am meisten Regeln aussortiert** — und zwar gerade die mit den
 spektakulärsten Lift-Werten. Wir werden das gleich sehen. Ob es dabei das Richtige misst,
 ist eine eigene Frage; sie wird in Phase 5 gestellt und fällt unangenehm aus.
+
+### Zwei Produkte, zwei Kriteriensätze
+
+Dieses Notebook kann **zwei verschiedene Dinge** abliefern, und sie brauchen verschiedene
+Nachweise. Beide werden hier festgelegt, vor der ersten Rechnung:
+
+**Produkt A — die automatische Umverteilungsregel.** Der Transporter fährt, weil eine
+Regel es sagt. Dafür reichen die drei Kriterien oben **nicht**; hinzu kommt eine vierte,
+wirtschaftliche Hürde:
+
+| | Kriterium | Schwelle |
+|---|---|---|
+| **A4** | Der Wert der Fahrten, die eine Regel je Umsetzrunde betrifft, muss die Kosten dieser Runde übersteigen | {{kosten_transport:.0f}} € je Runde gegen {{wert_fahrt:.2f}} € je Fahrt — **beides gesetzte Szenarioannahmen**, keine gemessenen Kosten |
+
+**Produkt B — der Dispositionshinweis.** Kein Transportauftrag, sondern ein Satz in der
+Dispositionsansicht, den ein Mensch liest und bewertet. Ein Hinweis darf schwächer belegt
+sein als ein Auftrag — aber nicht beliebig:
+
+| | Kriterium | Warum |
+|---|---|---|
+| **B1** | Die Regel hält in einem **Bestätigungszeitraum**, den die Suche nicht gesehen hat | Ein Muster aus dem Suchzeitraum ist eine Beschreibung, kein Befund |
+| **B2** | Die Anzeige nennt die **Größenordnung** — Fahrten je Werktag — direkt neben der Regel | Ohne sie liest jemand „Pendelstrom" und schickt einen Transporter |
+| **B3** | Kein automatischer Auftrag; die Entscheidung trifft ein Mensch | Für die Automatik fehlt A4 |
+| **B4** | Begleitende Auswertungen (Stationssalden, Abstell-Hotspots) tragen im Dateikopf und in der Ansicht das Wort **explorativ** | Sie hatten nie vorab gesetzte Kriterien |
+
+> **Warum das hier steht und nicht in Phase 6.** Eine frühere Fassung hat in Phase 5
+> geschrieben „freigegeben ist nichts" und in Phase 6 „freigegeben als Entscheidungshilfe".
+> Beides stand nebeneinander im selben Notebook. Der Grund war nicht Nachlässigkeit,
+> sondern ein fehlendes Produkt: Die Entscheidungshilfe war nie als eigenes Produkt mit
+> eigenen Kriterien definiert, also gab es auch keinen Maßstab, an dem sie freigegeben
+> oder verweigert werden konnte. **Ein Produkt ohne Kriterien kann man weder freigeben
+> noch ablehnen — man kann nur darüber streiten.**
 """),
 
 # =====================================================================
@@ -444,13 +476,31 @@ print(f"alle drei zusammen:               {len(brauchbar)}")
 # Die beiden Kostengroessen standen bisher als "fehlt" im Text. Die
 # Disposition hat sie geliefert - damit laesst sich rechnen statt vermuten.
 _werktage_regel = koerbe[koerbe.tagesart == "Werktag"].startzeit.dt.date.nunique()
-KOSTEN_TRANSPORTFAHRT = 35.0   # Fahrer und Fahrzeug je Umsetzrunde
-WERT_FAHRT = 2.20              # entgangener Umsatz je nicht moeglicher Fahrt
+# ─── A4: EINE OBERGRENZENRECHNUNG, KEINE WIRKUNGSMESSUNG ────────────
+#
+# Was hier gerechnet wird, ist ein EXTREMFALL: Unterstellt wird, dass
+# JEDE beobachtete Regelfahrt ohne Umverteilung verloren ginge und durch
+# eine Transporterfahrt gerettet wuerde. Beides ist mit Sicherheit zu
+# guenstig gerechnet - eine Assoziationsregel zeigt Fahrten, die
+# ZUSTANDE GEKOMMEN sind, nicht Fahrten, die ausgefallen waeren.
+#
+# Der Sinn dieser Rechnung ist deshalb einseitig: Liegt schon die
+# OBERGRENZE unter den Kosten, ist die Absage belastbar. Laege sie
+# darueber, waere damit gar nichts gezeigt - dann braeuchte es
+# Leerstands- und Vollstandsereignisse, nicht erfuellte Nachfrage,
+# Anfangsbestand, Stationskapazitaet, Transportkapazitaet, den
+# Eingriffszeitpunkt und einen geschaetzten kausalen Effekt.
+#
+# Beide Betraege sind GESETZTE SZENARIOANNAHMEN, keine gemessenen Kosten.
+KOSTEN_TRANSPORTFAHRT = 35.0   # ANNAHME: Fahrer und Fahrzeug je Umsetzrunde
+WERT_FAHRT = 2.20              # ANNAHME: entgangener Umsatz je Fahrt
 merke("kosten_transport", KOSTEN_TRANSPORTFAHRT); merke("wert_fahrt", WERT_FAHRT)
 
-print("\\nLOHNT SICH EINE TRANSPORTFAHRT JE REGEL?")
-print(f"   Eine Umsetzrunde kostet {KOSTEN_TRANSPORTFAHRT:.0f} EUR, eine")
-print(f"   verhinderte Fahrt bringt {WERT_FAHRT:.2f} EUR.")
+print("\\nA4 - OBERGRENZENRECHNUNG JE REGEL (keine Wirkungsmessung)")
+print(f"   Angenommen: eine Umsetzrunde kostet {KOSTEN_TRANSPORTFAHRT:.0f} EUR,")
+print(f"   eine verhinderte Fahrt bringt {WERT_FAHRT:.2f} EUR. Beides gesetzt.")
+print("   Gerechnet wird der EXTREMFALL: jede beobachtete Regelfahrt waere")
+print("   ohne Umverteilung verloren und durch die Runde gerettet.")
 print(f"   Rentabel ab {KOSTEN_TRANSPORTFAHRT / WERT_FAHRT:.0f} zusaetzlichen "
       f"Fahrten je Runde.\\n")
 print(f"   {'Regel':52s}{'Fahrten/Werktag':>17s}{'Wert/Tag':>10s}")
@@ -467,9 +517,13 @@ print()
 if _lohnt:
     print(f"   {_lohnt} Regel(n) tragen eine eigene Transportfahrt.")
 else:
-    print("   KEINE Regel traegt eine eigene Transportfahrt. Der Grund ist")
-    print("   nicht die Guete, sondern die Groessenordnung: Es geht um rund")
-    print("   eine Fahrt je Werktag, und dafuer faehrt kein Transporter.")
+    print("   KEINE Regel traegt eine eigene Transportfahrt - nicht einmal")
+    print("   in dieser Obergrenzenrechnung. Der Grund ist nicht die Guete,")
+    print("   sondern die Groessenordnung: Es geht um rund eine Fahrt je")
+    print("   Werktag, und dafuer faehrt kein Transporter.")
+    print("   Genau in dieser einen Richtung ist die Rechnung belastbar:")
+    print("   Liegt schon die Obergrenze darunter, liegt die Wirklichkeit")
+    print("   erst recht darunter.")
 
 # SIND DIE STARKEN REGELN ZUFALL? Pruefen statt behaupten.
 #
@@ -681,10 +735,12 @@ if len(ergebnis) == 0:
     print("KEINE REGEL nimmt alle drei Huerden. Das ist ein Ergebnis, kein Fehler -")
     print("aber es heisst auch: es gibt nichts auszuliefern.")
 else:
-    print(f"{len(ergebnis)} Regel(n) nehmen alle drei Huerden.")
-    print("Das ist NICHT dasselbe wie eine Betriebsfreigabe. Die Kriterien")
-    print("aus Phase 1 sind statistische Mindestanforderungen; ob sich eine")
-    print("Transporterfahrt lohnt, entscheiden Kosten, die wir nicht haben.")
+    print(f"{len(ergebnis)} Regel(n) nehmen die Huerden A1 bis A3.")
+    print("Das ist NICHT dasselbe wie eine Betriebsfreigabe: A1-A3 sind")
+    print("statistische Mindestanforderungen. Ob sich eine Transporterfahrt")
+    print("lohnt, entscheidet A4 - und dafuer stehen zwei GESETZTE")
+    print("Szenarioannahmen bereit (Kosten je Runde, Wert je Fahrt). Was")
+    print("fehlt, sind nicht die Zahlen, sondern ihre Messung.")
 '''),
 
 MD("""
@@ -698,12 +754,13 @@ supportstärkste — {{top_kontext}} von „{{top_start}}" nach „{{top_ziel}}"
 > daran, welche Hürde man betrachtet. Wer das nicht dazusagt, kann sich nachträglich die
 > passende aussuchen.
 
-> **Und die wichtigere Unterscheidung: Kriterium erfüllt heißt nicht freigegeben.** Die
-> Hürden aus Phase 1 sind statistische Mindestanforderungen — sie sagen, wann ein Muster
-> groß und deutlich genug ist, um überhaupt betrachtet zu werden. Ob sich für dieses
-> Muster ein Transporter in Bewegung setzt, ist eine wirtschaftliche Frage, und die
-> Kostengrößen dafür fehlen uns. Ein bestandenes Kriterium ist eine Eintrittskarte, keine
-> Entscheidung.
+> **Und die wichtigere Unterscheidung: A1 bis A3 erfüllt heißt nicht freigegeben.** Diese
+> drei Hürden aus Phase 1 sind statistische Mindestanforderungen — sie sagen, wann ein
+> Muster groß und deutlich genug ist, um überhaupt betrachtet zu werden. Ob sich für
+> dieses Muster ein Transporter in Bewegung setzt, entscheidet A4. Die Beträge dafür
+> stehen in Phase 1, aber als **gesetzte Szenarioannahmen**; was fehlt, sind reale
+> Kosten- und Wirkungsparameter. **Ein bestandenes Kriterium ist eine Eintrittskarte,
+> keine Entscheidung.**
 
 ### Die Hürde misst nicht, was sie messen sollte
 
@@ -781,6 +838,7 @@ zusammen = gewaehlt_ent[schluessel + [LIFT, "Support"]].merge(
 print(f"Im Entdeckungszeitraum ausgewaehlt (Support >= {MINDEST_SUPPORT:.1%}, "
       f"Lift >= {K2_LIFT}): {len(gewaehlt_ent)} Regeln")
 haelt_13 = int((zusammen[f"{LIFT} bestätigt"] >= K2_LIFT).sum())
+merke("split_haelt", haelt_13); merke("split_gesamt", len(zusammen))
 haelt_1 = int((zusammen[f"{LIFT} bestätigt"] > 1.0).sum())
 print(f"   davon spaeter weiterhin Lift >= {K2_LIFT}:  {haelt_13} von {len(zusammen)}")
 print(f"   davon spaeter weiterhin Lift > 1:    {haelt_1} von {len(zusammen)}\\n")
@@ -820,6 +878,45 @@ else:
           f"{len(gewaehlt_ent)} Regeln halten die Huerde - je nach Fenster.")
     print("   Ein einzelner Schnitt haette einen dieser Werte geliefert und")
     print("   ihn wie ein Ergebnis aussehen lassen.")
+
+# ─── DER STATUS, EINMAL - UND ALLES LIEST DARAUS ────────────────────
+#
+# Zwei Produkte aus Phase 1, zwei Urteile. Frueher stand in Phase 5
+# "freigegeben ist nichts" und in Phase 6 "freigegeben als
+# Entscheidungshilfe" - zwei Saetze, ein Notebook, kein Massstab.
+A4_TRAEGT = bool(_lohnt > 0)
+B1_TRAEGT = bool(haelt_13 > 0)
+B2_ERFUELLT = True   # die Anzeige nennt Fahrten je Werktag - siehe Export unten
+B3_ERFUELLT = True   # kein automatischer Auftrag, Mensch entscheidet
+B4_ERFUELLT = True   # Dateikopf und Ansicht tragen "explorativ"
+B_GATES = {"B1 Bestaetigungszeitraum": B1_TRAEGT,
+           "B2 Groessenordnung sichtbar": B2_ERFUELLT,
+           "B3 keine Automatik": B3_ERFUELLT,
+           "B4 Begleitanalysen als explorativ gekennzeichnet": B4_ERFUELLT}
+
+STATUS_A = "freigegeben" if (len(brauchbar) > 0 and A4_TRAEGT) else "nicht freigegeben"
+STATUS_B = "freigegeben" if all(B_GATES.values()) else "nicht freigegeben"
+STATUS_SATZ = (
+    f"Produkt A (automatische Umverteilungsregel): {STATUS_A}. "
+    f"Produkt B (Dispositionshinweis): {STATUS_B}."
+)
+merke("status_a", STATUS_A)
+merke("status_b", STATUS_B)
+merke("status_satz", STATUS_SATZ)
+
+print("\\nDIE ZWEI PRODUKTE AUS PHASE 1 - ein Urteil je Produkt:\\n")
+print(f"   Produkt A  automatische Umverteilungsregel   {STATUS_A.upper()}")
+print(f"      A1-A3 (Support, Lift, Stationsziel): {len(brauchbar)} Regel(n) nehmen sie")
+print(f"      A4 (wirtschaftlich): {_lohnt} von {len(brauchbar)} tragen eine "
+      f"eigene Umsetzrunde  ->  {'haelt' if A4_TRAEGT else 'HAELT NICHT'}")
+print(f"\\n   Produkt B  Dispositionshinweis               {STATUS_B.upper()}")
+for _n, _e in B_GATES.items():
+    print(f"      {'erfuellt' if _e else 'OFFEN   '}  {_n}")
+print()
+print("   Das ist kein Trostpreis, sondern eine andere Zusage: Ein Hinweis,")
+print("   den ein Mensch bewertet, braucht keinen Wirtschaftlichkeitsnachweis -")
+print("   er loest ja keine Fahrt aus. Ein Auftrag braucht ihn, und deshalb")
+print("   entsteht keiner.")
 '''),
 
 MD("""
@@ -839,7 +936,7 @@ Drei Einschränkungen gehören dazu:
 MD("""
 ### 5.3 Was die durchgefallenen Regeln trotzdem zeigen — als Hypothese
 
-Die neun Regeln, die wenigstens die Lift-Hürde nehmen, dürfen den Umlaufplan nicht
+Die {{split_gesamt:.0f}} Regeln, die wenigstens die Lift-Hürde nehmen, dürfen den Umlaufplan nicht
 begründen. Ansehen darf man sie trotzdem — sie sind eine **Hypothese**, kein Befund, und
 sie werden gleich unabhängig überprüft.
 
@@ -956,9 +1053,16 @@ weg.
 Die Zahlen dieser Übersicht stehen in der Kriterienausgabe in Phase 5 — lesen Sie sie
 dort, statt sie hier noch einmal zu tippen.
 
-Entscheidend ist die letzte Zeile: **Die Kriterien sind erfüllt, freigegeben ist
-trotzdem nichts.** Was fehlt, ist keine Statistik, sondern eine Kostengröße — was eine
-Transporterfahrt kostet und was ein leerer Stationsplatz kostet.
+Entscheidend ist die letzte Zeile: **A1 bis A3 sind erfüllt, Produkt A ist trotzdem
+{{status_a}}.** Was fehlt, ist keine Statistik, sondern A4 — und zwar nicht, weil die
+Kostenzahlen fehlten: {{kosten_transport:.0f}} € je Umsetzrunde und {{wert_fahrt:.2f}} €
+je Fahrt stehen in Phase 1. **Sie sind gesetzte Szenarioannahmen, keine Messungen.** Was
+fehlt, sind reale Kosten- und Wirkungsparameter — und selbst mit den gesetzten trägt
+keine Regel eine eigene Runde.
+
+**Produkt B ist davon unberührt: {{status_b}}.** Der Dispositionshinweis löst keine Fahrt
+aus, braucht also keinen Wirtschaftlichkeitsnachweis; seine vier Kriterien B1 bis B4
+stehen ebenfalls in Phase 1 und werden im Code geprüft.
 
 Was folgt daraus? Drei Wege:
 
@@ -989,12 +1093,12 @@ Was folgt daraus? Drei Wege:
 """),
 
 # =====================================================================
-PHASE(6, "Operative Folgeanalyse: Welche Fragen bleiben, obwohl keine Regel "
-         "freigegeben wurde?"),
+PHASE(6, "Was ausgeliefert wird — ein Hinweis für Menschen, kein Transportauftrag."),
 
 MD("""
 > **Achtung, hier wechselt die Analyse.** Was jetzt kommt, folgt **nicht** aus den Regeln.
-> Es wurde keine freigegeben, und was unten steht, ist mit keiner einzigen davon gerechnet.
+> Produkt A ist {{status_a}}, und was unten steht, ist mit keiner einzigen Regel
+> gerechnet.
 >
 > Eine frühere Fassung überschrieb diese Phase mit *„Aus Regeln wird ein Umlaufplan für
 > den Transporter"*. Das war schlicht falsch: Der Umlauf- und Einsammelteil ist eine
@@ -1002,9 +1106,14 @@ MD("""
 > eine eigene Geschäftsfrage, eigene Erfolgskriterien und eine eigene Validierung — alles
 > drei hat sie nicht.
 >
-> **Was hier entsteht, ist Planungsinput, keine Freigabe.** Der Unterschied ist nicht
-> sprachlich: Eine freigegebene Analyse hat vorab gesetzte Kriterien erfüllt. Diese hier
-> hatte nie welche.
+> **Was hier entsteht, ist Planungsinput.** Der Unterschied ist nicht sprachlich: Eine
+> freigegebene Analyse hat vorab gesetzte Kriterien erfüllt. Stationssalden und
+> Abstell-Hotspots hatten nie welche — sie tragen deshalb Kopf und Beschriftung
+> **explorativ**, und genau das verlangt Kriterium B4 aus Phase 1.
+>
+> **Freigegeben ist trotzdem etwas:** Produkt B, der Dispositionshinweis
+> ({{status_b}}). Er besteht aus den Regeln, die B1 halten, und er erscheint als Hinweis
+> neben der Größenordnung — nicht als Auftrag.
 """),
 
 CODE('''
@@ -1249,6 +1358,15 @@ print(f"   ... von der nächsten Station:  Median {np.median(frei.abstand_km):.2
 print(f"   ... von der Startstation:      Median {np.median(abstand_start):.2f} km, "
       f"P90 {np.quantile(abstand_start, .9):.2f} km")
 merke("andere_station", (frei['nächste_station'] != frei.start).mean())
+# JEDE ZAHL, DIE SPAETER IM TEXT STEHT, WIRD HIER FESTGEHALTEN.
+#
+# Der Fliesstext nannte frueher 0,30 / 0,58 / 1,27 / 3,03 km und 87,1 % -
+# Werte eines aelteren Datenstands, die stehen blieben, als die Rechnung
+# sich aenderte. Wer eine Zahl abtippt, baut eine zweite Quelle.
+merke("frei_naechste_median", float(np.median(frei.abstand_km)))
+merke("frei_naechste_p90", float(np.quantile(frei.abstand_km, .9)))
+merke("frei_start_median", float(np.median(abstand_start)))
+merke("frei_start_p90", float(np.quantile(abstand_start, .9)))
 print(f"   Anteil, bei dem die nächste Station NICHT die Startstation ist: "
       f"{(frei['nächste_station'] != frei.start).mean():.1%}")
 
@@ -1270,6 +1388,9 @@ print(f"\\nJe Werktag: {ereignisse_tag.mean():.2f} frei endende FAHRTEN, aber nu
 print(f"An {int((ereignisse_tag > raeder_tag).sum())} Tagen kommt mindestens ein Rad "
       f"mehrfach vor.")
 print("Der Unterschied ist hier klein - die Einheit bleibt trotzdem wichtig.")
+
+merke("frei_fahrten_tag", float(ereignisse_tag.mean()))
+merke("frei_raeder_tag", float(raeder_tag.mean()))
 
 einsammeln = (frei.groupby(["nächste_station", "fenster"], observed=True).size()
               .unstack(fill_value=0).reindex(columns=BEZEICHNUNGEN, fill_value=0)
@@ -1293,6 +1414,13 @@ print("gegen die richtige nach Abstellort:")
 print(einsammeln.sum(axis=1).sort_values(ascending=False).head(3).round(2).to_string())
 print("Die drei Schwerpunkte sind andere - die historischen Haeufungen waeren")
 print("also an den falschen Stellen verortet worden.")
+# Auch die NAMEN kommen aus der Rechnung. Frueher standen im Text
+# "Residenz, Universitaet Sanderring und Hauptbahnhof" - die Namen der
+# falschen Gruppierung, dazu von einem aelteren Stand.
+_top_ab = list(einsammeln.sum(axis=1).sort_values(ascending=False).head(3).index)
+_top_start = list(nach_start.sum(axis=1).sort_values(ascending=False).head(3).index)
+merke("hotspots_abstellort", ", ".join(_top_ab))
+merke("hotspots_startstation", ", ".join(_top_start))
 
 # EXPORTE MIT KOPFZEILEN - Zeitraum, Einheit, Status.
 #
@@ -1363,15 +1491,15 @@ Tag zu bewegen wären:
 > unterstellt damit, dass **nach jedem Fenster** vollständig ausgeglichen wird. Wer nur
 > einmal am Tag fährt, gleicht weniger aus, weil Bewegungen am Nachmittag Salden vom
 > Vormittag teilweise wieder aufheben. Rechnet man nur das Ungleichgewicht am **Tagesende**,
-> sind es **11,1** statt 19,8.
+> sind es **{{rest_mittel:.1f}}** statt {{bedarf_mittel:.1f}}.
 >
 > Beide Zahlen sind richtig gerechnet. Welche gilt, entscheidet der **Eingriffszeitpunkt** —
 > und der ist eine betriebliche Festlegung, keine statistische. Der korrekte Name für die
-> 19,8 lautet deshalb: *theoretische Summe der Netto-Ungleichgewichte bei vollständigem
-> Ausgleich nach jedem Zeitfenster*.
+> {{bedarf_mittel:.1f}} lautet deshalb: *theoretische Summe der Netto-Ungleichgewichte bei
+> vollständigem Ausgleich nach jedem Zeitfenster*.
 
-**Zwischen „1,75“ und „19,8“ liegt kein neuer Datensatz, sondern eine andere
-Aggregation.** Das Beispiel Hubland Campus macht es greifbar: Langfristmittel **+1,63**,
+**Zwischen dem Stationsmittelwert und den {{bedarf_mittel:.1f}} liegt kein neuer
+Datensatz, sondern eine andere Aggregation.** Das Beispiel Hubland Campus macht es greifbar: Langfristmittel **+1,63**,
 aber die einzelnen Werktage reichen von **−3 bis +14**.
 
 > **Auch dieses Beispiel hatte einen Nennerfehler**, und er ist typisch. Die Tagestabelle
@@ -1392,7 +1520,8 @@ aber die einzelnen Werktage reichen von **−3 bis +14**.
 > Tageswerte, nicht ihren Schwerpunkt.
 
 **Trägt der Plan denn nun?** Diese Frage beantwortet das Notebook **nicht**, und das ist
-kein Versäumnis, sondern eine Grenze. Weder 19,8 noch 11,1 sind ein *Transportbedarf* —
+kein Versäumnis, sondern eine Grenze. Weder {{bedarf_mittel:.1f}} noch
+{{rest_mittel:.1f}} sind ein *Transportbedarf* —
 beides sind Ungleichgewichte, die aus Fahrten gerechnet wurden. Zu einem Bedarf fehlen
 drei Dinge:
 
@@ -1443,8 +1572,9 @@ bräuchte Datum, Bestand, Menge und ein Entscheidungskriterium.
 
 ### 6.3 Das Einsammeln — und wo die Räder wirklich stehen
 
-Werktäglich enden **10,7 Fahrten** frei im Gebiet — von **10,3 verschiedenen Rädern**,
-denn manche werden am selben Tag mehrfach frei abgestellt. Diese Runde braucht keine
+Werktäglich enden **{{frei_fahrten_tag:.2f}} Fahrten** frei im Gebiet — von
+**{{frei_raeder_tag:.2f}} verschiedenen Rädern**, denn manche werden am selben Tag
+mehrfach frei abgestellt. Diese Runde braucht keine
 einzige Assoziationsregel; sie folgt direkt aus der Auszählung.
 
 Nur muss man dafür wissen, **wo** die Räder stehen. Eine frühere Fassung dieses Notebooks
@@ -1453,15 +1583,14 @@ Herkunftsangabe:
 
 | | Median | an 9 von 10 Fahrten höchstens |
 |---|---|---|
-| Abstand des Rades zur **nächsten** Station | 0,30 km | 0,58 km |
-| Abstand des Rades zur **Start**station | 1,27 km | 3,03 km |
+| Abstand des Rades zur **nächsten** Station | {{frei_naechste_median:.2f}} km | {{frei_naechste_p90:.2f}} km |
+| Abstand des Rades zur **Start**station | {{frei_start_median:.2f}} km | {{frei_start_p90:.2f}} km |
 
-**Bei 87,1 % der frei abgestellten Räder ist die nächstgelegene Station eine andere als
-die, an der die Fahrt begann.** Die Gruppierung nach Startstation war also nicht ungenau —
+**Bei {{andere_station:.1%}} der frei abgestellten Räder ist die nächstgelegene Station
+eine andere als die, an der die Fahrt begann.** Die Gruppierung nach Startstation war also nicht ungenau —
 sie war in {{andere_station:.0%}} der Fälle die falsche Station. Die drei Schwerpunkte
-verschieben sich entsprechend: Nach Abstellort sind es **Residenz, Universität
-Sanderring und Hauptbahnhof**, nach Startstation wären es Grombühl, Sanderau und
-Zellerau gewesen.
+verschieben sich entsprechend: Nach Abstellort sind es **{{hotspots_abstellort}}**,
+nach Startstation wären es {{hotspots_startstation}} gewesen.
 
 > **Der Fehler war nicht, die Endkoordinaten falsch zu benutzen — sondern sie gar nicht
 > zu benutzen.** `end_latitude` und `end_longitude` sind für **jede** frei abgestellte
@@ -1500,14 +1629,14 @@ Räder stehen, aber nicht wo.
 
 ### 6.5 Was in Betrieb geht — und in welcher Form
 
-**Die Kriterien sind erfüllt, die Wirtschaftlichkeit trägt keine Automatik.** Beides
-zusammen ergibt eine dritte Möglichkeit, und sie ist die richtige: Die Regeln gehen als
-**Entscheidungshilfe** in Betrieb, nicht als Transportauftrag.
+**Produkt A ist {{status_a}}, Produkt B ist {{status_b}}** — beide Urteile stammen aus
+derselben Zelle in Phase 5, gegen die Kriterien, die Phase 1 für sie festgelegt hat. Die
+Regeln gehen also als **Dispositionshinweis** in Betrieb, nicht als Transportauftrag.
 
 | | |
 |---|---|
 | **Was läuft** | Die {{brauchbare_regeln:.0f}} Regeln erscheinen in der Dispositionsansicht als Hinweis: „morgens fließt es von hier nach dort". Dazu die Stationssalden und die Abstell-Hotspots als Tagesübersicht. |
-| **Was nicht läuft** | Kein automatischer Umsetzauftrag. Die Rechnung oben zeigt, warum: Es geht um {{regel_je_werktag:.1f}} Fahrten je Werktag, eine Umsetzrunde kostet {{kosten_transport:.0f}} €. |
+| **Was nicht läuft** | Kein automatischer Umsetzauftrag — A4 hält nicht. Die Obergrenzenrechnung zeigt, warum: Es geht um {{regel_je_werktag:.1f}} Fahrten je Werktag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt, eine Umsetzrunde kostet angenommene {{kosten_transport:.0f}} €. |
 | **Wer entscheidet** | Die Disposition. Sie sieht den Hinweis und verbindet ihn mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
 
 > **Warum das keine Verlegenheitslösung ist.** Eine Assoziationsanalyse findet
@@ -1516,8 +1645,12 @@ zusammen ergibt eine dritte Möglichkeit, und sie ist die richtige: Die Regeln g
 > Alternativen — nichts davon steht in den Warenkörben. Wer ihn trotzdem geht, hat die
 > Methode überdehnt.
 >
-> **Entscheidungshilfe ist die ehrliche Auslieferungsform für dieses Verfahren.** Sie
+> **Der Dispositionshinweis ist die ehrliche Auslieferungsform für dieses Verfahren.** Sie
 > nutzt, was gemessen wurde, und behauptet nicht, was nicht gemessen wurde.
+>
+> **Und sie ist keine nachträgliche Umdeutung.** Produkt B steht mit vier eigenen
+> Kriterien in Phase 1 — vor der ersten Rechnung. Wäre B1 gerissen (die Regeln halten im
+> Bestätigungszeitraum nicht), gäbe es auch diesen Hinweis nicht.
 
 Überwacht wird deshalb, was tatsächlich angezeigt wird. Die Schwellen sind plausible
 Diskussionswerte, nicht kalibriert:
@@ -1569,12 +1702,13 @@ MD("""
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
 | 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen alle drei Hürden — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sich zeigt, dass sie auf der falschen Skala liegt: Sie entscheidet in Betriebsgrößen um Hundertstel einer Fahrt je Werktag. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — {{personen_selber_tag:.0f}} Fälle bei {{rueck_fahrten_paar:.0f}} Abendfahrten |
-| 6 Deployment | **Freigegeben als Entscheidungshilfe**, nicht als Transportauftrag: Die Regeln erscheinen in der Dispositionsansicht, dazu Stationssalden und Abstell-Hotspots. Die Kostenrechnung sagt, warum keine Automatik — es geht um {{regel_je_werktag:.1f}} Fahrten je Werktag bei {{kosten_transport:.0f}} € je Umsetzrunde. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.0%}} ist die nächste Station eine andere als die Startstation |
+| 6 Deployment | {{status_satz}} Die Regeln erscheinen als Hinweis in der Dispositionsansicht, dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Die Obergrenzenrechnung sagt, warum keine Automatik: {{regel_je_werktag:.1f}} Fahrten je Werktag bei angenommenen {{kosten_transport:.0f}} € je Umsetzrunde. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
 
-> **1.** Ein Mittelwert über Plus und Minus misst den Trend, nicht die Arbeit. „1,75 Räder
-> je Werktag“ und „19,8 Räder je Werktag“ sind derselbe Datensatz, zweimal aggregiert.
+> **1.** Ein Mittelwert über Plus und Minus misst den Trend, nicht die Arbeit. Der
+> Stationsmittelwert und die {{bedarf_mittel:.1f}} Räder je Werktag sind derselbe
+> Datensatz, zweimal aggregiert.
 
 > **2.** Ein Erfolgskriterium muss in der Einheit formuliert sein, in der es begründet
 > wurde. Eine Hürde, die zwischen 0,68 und 0,69 Fahrten je Werktag entscheidet, misst
@@ -1590,7 +1724,9 @@ MD("""
    die letzte. **Vor** der nächsten Messung.
 2. **Die Bestätigung rollierend machen.** Der einmalige Schnitt aus Phase 5.5 — suchen
    in den ersten zwei Dritteln, prüfen im letzten — ist bereits umgesetzt und hat gehalten
-   (8 von 9 Regeln). Er ist aber **eine einzige Realisierung**, und 2023 wie 2026 sind
+   ({{split_haelt:.0f}} von {{split_gesamt:.0f}} Regeln; über die vier rollierenden
+   Fenster sind es {{fenster_min:.0f}} bis {{fenster_max:.0f}} von
+   {{fenster_regeln:.0f}}). Er ist aber **eine einzige Realisierung**, und die Randjahre sind
    Teiljahre. Mehrere rollierende, saisonal vergleichbare Fenster würden zeigen, ob die
    Stabilität an den Regeln liegt oder am gewählten Schnittpunkt.
 3. **Zurück zu Phase 3:** Die vier Zeitfenster sind gesetzt, nicht gefunden. Eine
