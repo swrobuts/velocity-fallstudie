@@ -1111,7 +1111,30 @@ print("    vertreten. Gebunden wird das Gate an (1).")
 KUNDENSEGMENTE_STABIL = bool(PROSPEKTIV_GEPRUEFT
                              and DIAGNOSE_HAELT
                              and liste_wechsel <= GATE_WECHSEL)
-merke("gate_urteil_kunden", "gehalten" if KUNDENSEGMENTE_STABIL else "gerissen")
+# ─── DREI ZUSTAENDE, NICHT ZWEI ─────────────────────────────────────
+#
+# "gerissen" und "nicht belegt" sind verschiedene Dinge, und dieses
+# Notebook hat sie verwechselt: Der Punktwert lag mit 24,85 % UNTER der
+# Schwelle von 25 % - das Kriterium war also gehalten -, aber die
+# prospektive Pruefung fehlte. Ausgegeben wurde trotzdem "gerissen",
+# und eine Zeile weiter stand sogar "24.85% > 25%".
+#
+# Wer beides gleich benennt, schickt die naechste Runde in die falsche
+# Richtung: Bei "gerissen" muesste man das Verfahren verbessern, bei
+# "nicht belegt" muss man warten und messen.
+PUNKTWERT_HAELT = bool(liste_wechsel <= GATE_WECHSEL)
+GATE_ZUSTAND = ("bestanden" if (PUNKTWERT_HAELT and PROSPEKTIV_GEPRUEFT)
+                else "gerissen" if not PUNKTWERT_HAELT
+                else "offen")
+GATE_SATZ = {
+    "bestanden": "Punktwert unter der Schwelle und prospektiv geprueft",
+    "gerissen":  "Punktwert ueber der Schwelle - das Kriterium ist verfehlt",
+    "offen":     ("Punktwert unter der Schwelle, aber die prospektive Pruefung "
+                  "steht aus - nicht belegt, nicht widerlegt"),
+}[GATE_ZUSTAND]
+merke("gate_urteil_kunden", GATE_ZUSTAND)
+merke("gate_satz_kunden", GATE_SATZ)
+merke("punktwert_haelt", "ja" if PUNKTWERT_HAELT else "nein")
 merke("gate_abstand", (GATE_WECHSEL - liste_wechsel) * 100)
 
 print(f"\\nDie Überwachung in Phase 6 nennt {GATE_WECHSEL:.0%} je Quartal als Alarmschwelle.\\n")
@@ -1204,8 +1227,9 @@ print("    nicht 'je Jahr'. Und das zugehoerige Freigabe-Gate bleibt offen.")
 MD("""
 > **{{gate_eng:.2%}} der Kampagnen-Arbeitsliste wechseln binnen eines Quartals das
 > Segment** — bei unveränderter Methode und unveränderten Schwellen. Das sind
-> {{gate_abstand:.2f}} Prozentpunkte unter der Schwelle von {{gate_wechsel:.0%}}; das
-> Kriterium ist damit **{{gate_urteil_kunden}}**. Die drei Zahlen oben messen aber
+> {{gate_abstand:.2f}} Prozentpunkte **unter** der Schwelle von {{gate_wechsel:.0%}} —
+> der Punktwert hält sie also. Der Gate-Zustand lautet trotzdem
+> **{{gate_urteil_kunden}}**: {{gate_satz_kunden}}. Die drei Zahlen oben messen aber
 > **drei verschiedene Dinge**, und nur eine davon gehört zum Produkt:
 >
 > | Kennzahl | Wert | Was sie misst |
@@ -2128,9 +2152,13 @@ if not KUNDENSEGMENTE_STABIL:
     # die des RFM-Ausschnitts. Drei Nenner liefern drei Zahlen; wer hier die
     # falsche druckt, begruendet die Sperre mit einer Groesse, die sie nicht
     # ausgeloest hat.
-    print("Zusaetzlich ist das Stabilitaetsgate gerissen "
-          f"({liste_wechsel:.2%} > {GATE_WECHSEL:.0%}, gemessen auf der "
-          "Kampagnen-Arbeitsliste).")'''),
+    # DAS VERGLEICHSZEICHEN KOMMT AUS DEM VERGLEICH, nicht aus der
+    # Erwartung. Hier stand fest "> 25 %" - bei gemessenen 24,85 %.
+    _zeichen = "<=" if PUNKTWERT_HAELT else ">"
+    print(f"Zum Stabilitaetsgate: {liste_wechsel:.2%} {_zeichen} "
+          f"{GATE_WECHSEL:.0%} auf der Kampagnen-Arbeitsliste - "
+          f"Zustand '{GATE_ZUSTAND}'.")
+    print(f"   {GATE_SATZ}.")'''),
 MD("""
 ### 6.4 Was bei diesen beiden Auslieferungen zu beachten ist
 
