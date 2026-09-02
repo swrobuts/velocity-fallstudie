@@ -1271,10 +1271,51 @@ schreibe("fehlanfrage.csv", ["zeitpunkt", "station_id", "grund"], fehlanfrage_ro
 schreibe("umsetzfahrt.csv",
          ["zeitpunkt", "fahrrad_id", "von_ort", "nach_station_id", "art"],
          umsetzfahrt_rows)
+# =====================================================================
+# DAS GEPLANTE ZIEL - was der Kunde VOR der Fahrt in der App auswaehlt
+# =====================================================================
+#
+# Warum diese Spalte existiert, und warum sie hier und nicht oben
+# entsteht:
+#
+# Die App fragt vor dem Entsperren nach dem Ziel - erst danach kann sie
+# einen Preis schaetzen. Was in den Betriebsdaten steht, ist aber das
+# Ziel, an dem die Fahrt TATSAECHLICH endete. Beides faellt auseinander:
+# Man aendert unterwegs die Meinung, faehrt weiter, stellt frei ab.
+#
+# Ohne diese Spalte laesst sich die Preisauskunft nie freigeben - man
+# koennte immer nur pruefen, wie gut die Schaetzung fuer ein Ziel war,
+# das die App zur Anfragezeit gar nicht kannte. Genau das war der
+# Freigabeblocker in Notebook 1.
+#
+# ZWEI DINGE SIND DABEI EHRLICH ZU SAGEN:
+#   1. Die Abweichungsquote ist eine SZENARIOANNAHME, keine Messung.
+#      Im echten Betrieb muss sie protokolliert werden; hier ist sie
+#      gesetzt, und die Notebooks nennen sie als solche.
+#   2. Der Zufall kommt aus einem EIGENEN Generator. Der Hauptstrom
+#      bleibt unberuehrt, damit alle uebrigen Spalten und alle anderen
+#      Dateien Zeichen fuer Zeichen dieselben bleiben wie vorher.
+ZIELTREUE = 0.88          # Anteil der Fahrten, die am geplanten Ziel enden
+_zrng = random.Random(20260902)
+_station_ids = list(STATION_IDS)
+
+for _row in ausleihe_rows:
+    _start, _ende = _row[3], _row[5]
+    if _ende != "" and _zrng.random() < ZIELTREUE:
+        _geplant = _ende                      # gefahren wie geplant
+    else:
+        # Meinung geaendert, weitergefahren oder frei abgestellt: Das
+        # geplante Ziel ist trotzdem eine Station - die App laesst nichts
+        # anderes zu. Es ist nur eine andere als die, an der die Fahrt endete.
+        _moeglich = [i for i in _station_ids if i != _start and i != _ende]
+        _geplant = _zrng.choice(_moeglich)
+    _row.append(_geplant)
+
 schreibe("ausleihe.csv",
          ["ausleihe_id", "kunde_id", "fahrrad_id", "start_station_id", "startzeit",
           "end_station_id", "endzeit", "status", "distanz_km", "entgelt_eur",
-          "berechnete_minuten", "end_latitude", "end_longitude"],
+          "berechnete_minuten", "end_latitude", "end_longitude",
+          "geplante_ziel_station_id"],
          ausleihe_rows)
 
 print("Instandhaltung ...")
