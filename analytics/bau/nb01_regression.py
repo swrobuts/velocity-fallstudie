@@ -433,7 +433,7 @@ Verfügung, in dem die Anzeige erscheinen soll?**
 | Spalte | verfügbar? | warum |
 |---|---|---|
 | `start_station_id` | ja | der Kunde steht dort |
-| `end_station_id` | **ja, mit Vorbehalt** | der Kunde hat gewählt — historisch steht hier aber das *tatsächliche* Ziel (siehe Kasten oben) |
+| `end_station_id` | **ja** | trägt ab Phase 3 das **geplante** Ziel — was der Kunde vor dem Entsperren wählt (siehe Kasten oben). Das tatsächliche Ende steht getrennt in `tatsaechliches_ziel` und ist nie Merkmal |
 | `startzeit` | ja | jetzt |
 | Feiertag, Ferien | ja | stehen im Kalender |
 | `typ_code` | ja | das Rad steht vor ihm |
@@ -582,13 +582,14 @@ belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 >
 > Die unabhängige Prüfung des fertigen Artefakts leistet deshalb die **Abnahme** — der
 > fünfte Abschnitt, der schon in Phase 2 versiegelt wurde und in 6.7 einmal geöffnet
-> wird. Was auch sie nicht leisten kann, ist ein Blick in die Zukunft; dafür bliebe der
-> Schattenbetrieb:
+> wird. Sie ist unabhängig, aber sie ist **rückblickend**. Einen Blick nach vorn kann sie
+> nicht leisten; dafür bliebe der Schattenbetrieb:
 >
 > ```text
 > Training → Validierung → Test 1: Punktschätzung
 >          → Rücksprung  → Kalibrierung: Kalibrierung und Freigabe des Intervallprodukts
->          → Schattenbetrieb: finale, unabhängige Prüfung
+>          → Abnahme (6.7): unabhängige, rückblickende Prüfung — entscheidet den Status
+>          → Schattenbetrieb: prospektive Prüfung in der echten App — steht aus
 > ```
 """),
 
@@ -2302,8 +2303,9 @@ freigegebene_typen = sorted(
 # Warum nicht direkt sichtbar? Weil Kalibrierung die Intervalle KALIBRIERT hat.
 # Derselbe Zeitraum kann nicht zugleich Kalibrierung und unabhaengige
 # Endpruefung sein - das ist die Lehre dieses Notebooks, und sie gilt auch
-# fuer sein eigenes Ergebnis. Die unabhaengige Pruefung steht aus; bis
-# dahin laeuft der Dienst im Schatten.
+# fuer sein eigenes Ergebnis. Die unabhaengige Pruefung kommt in 6.7 -
+# bis dahin laeuft der Dienst im Schatten, und zwar unabhaengig davon,
+# wie gut die Zahlen hier aussehen.
 # ─── WIE WEIT REICHT DER KALENDER? ──────────────────────────────────
 # Diese Grenze entscheidet zweierlei, und beides braucht sie HIER, vor
 # der Schnittstelle: ob das Paket heute ueberhaupt arbeiten darf
@@ -2603,10 +2605,12 @@ _ = merke("reichweite_streng", len(_bedient_streng) / len(zukunft))
 #    Modell nicht auslieferbar: Wer die Merkmalsreihenfolge verliert,
 #    bekommt Vorhersagen, die aussehen wie Vorhersagen - und falsch sind.
 #
-# 2. DIE RUECKFALLTABELLE ist NICHT das Modell. Sie entsteht aus den
-#    historischen Perzentilen, nimmt das Primaergate nicht und darf
-#    deshalb nicht dieselbe Zusage tragen. Sie ist der Notbehelf bei
-#    Dienstausfall - und das Artefakt, das die Website heute liest.
+# 2. DIE TABELLE ist NICHT das Modell. Sie entsteht aus historischen
+#    Perzentilen und kennt Wochentag und Saison nicht. Sie nimmt die
+#    Gates trotzdem - und ist hier der gewaehlte Kandidat, also das
+#    Artefakt, das die Website liest. Nur wenn KANDIDAT die
+#    Quantilregression waere, liefe sie als Rueckfall bei
+#    Dienstausfall, und dann duerfte sie die Zusage NICHT tragen.
 import joblib, json
 from pathlib import Path
 
@@ -3798,11 +3802,14 @@ angewandt auf sein eigenes Ergebnis.
 | geprüft wurde sie auf | der **Abnahme** (6.7), einem Zeitraum, den bis zum Öffnen dort nichts berührt hat |
 | **nicht** geprüft wurde sie auf | einem prospektiven Zeitraum in der echten App — die Erfassungsqualität des geplanten Ziels ist dort noch unbekannt |
 
-> **Der letzte Punkt ist der wichtigste, und er bleibt offen.** Auch die Abnahme
-> ist Vergangenheit: Wir wissen, wohin die Leute gefahren *sind*, nicht, wohin sie
-> fahren *wollten*. Eine Preisauskunft wird vor der Fahrt abgerufen — für ein Ziel, das
-> der Kunde eingibt und dann vielleicht ändert. Diese Lücke schließt kein Rechenschritt,
-> sondern nur ein Schattenbetrieb, in dem das gewünschte Ziel mitgeschrieben wird.
+> **Der letzte Punkt ist der wichtigste, und er bleibt offen.** Auch die Abnahme ist
+> Vergangenheit. Das *geplante* Ziel steht in diesen Daten — es ist die Modelleingabe,
+> und in {{zielabweichung:.0%}} der Fahrten weicht das tatsächliche Ende davon ab; genau
+> das misst die Zusage mit. Was diese Daten nicht beantworten können, ist die Frage
+> davor: ob eine **echte** App dasselbe Feld ebenso vollständig und sorgfältig füllt —
+> ob Kunden es bewusst wählen, wie oft sie unterwegs umdisponieren, ob die Erfassung
+> lückenlos ist. Diese Lücke schließt kein Rechenschritt, sondern nur ein
+> Schattenbetrieb, in dem das gewünschte Ziel im Echtbetrieb mitgeschrieben wird.
 >
 > **Deshalb steht der Status auf „{{produktstatus}}":** {{statussatz}}. Die Überwachung
 > aus 6.5 kann den Dienst jederzeit wieder abschalten. Das ist kein Vorbehalt aus Vorsicht — es ist der Teil der
@@ -3867,8 +3874,14 @@ eine Aussage überhaupt reichen. Wer schneller abschalten will, braucht mehr Fah
 Fenster, keine andere Zahl.
 ### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
 
-Was dieses Notebook „Kalibrierung“ nennt, ist ein **rückblickender Test auf vergangenen
-Daten**. Ein Schattenbetrieb ist etwas anderes:
+**Zwei Freigaben, nicht eine.** Die Abnahme in 6.7 ist erfolgt, sie war unabhängig, und
+sie hat den Status auf „{{produktstatus}}" gesetzt. Sie beantwortet die Frage: *Hielt die
+Zusage auf Daten, die nichts an diesem Verfahren berührt hat?* Sie beantwortet **nicht**
+die zweite Frage: *Hält sie auch, wenn eine echte App das geplante Ziel erfasst?* Dafür
+gibt es nur einen Weg, und dieses Notebook ist ihn nicht gegangen.
+
+Auch die Abnahme ist ein **rückblickender Test auf vergangenen Daten**. Ein
+Schattenbetrieb ist etwas anderes:
 
 1. Tabelle zu einem Stichtag einfrieren.
 2. In der App das **geplante** Ziel vor dem Entsperren speichern.
@@ -3877,9 +3890,12 @@ Daten**. Ein Schattenbetrieb ist etwas anderes:
 5. Geplantes gegen tatsächliches Ziel vergleichen — das ist der Test der Annahme aus dem
    Kasten ganz oben.
 6. Abdeckung, Breite, Reichweite und Ablehnungsgründe je Verbindung auswerten.
-7. Erst danach sichtbar schalten.
+7. Erst danach die Erfassungsqualität als belegt behandeln — und die Überwachung aus
+   6.5 von „darf abschalten" auf „muss nicht mehr" umstellen.
 
-Punkt 2 und 5 sind der Kern. Ohne sie bleibt die Grundannahme dieses Notebooks ungeprüft.
+Punkt 2 und 5 sind der Kern. Ohne sie bleibt die Grundannahme dieses Notebooks ungeprüft:
+Die Anzeige läuft, weil die Abnahme gehalten hat — nicht, weil die Erfassung in einer
+echten App nachgewiesen wäre. Genau deshalb bleibt die Überwachung scharf.
 
 
 """),
@@ -3940,8 +3956,8 @@ eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
 3. **Die unabhängige Prüfung ist erfolgt — aber sie ist rückblickend.** Die Kalibrierung
    hat das Artefakt eingestellt, die **Abnahme** hat es auf einem versiegelten Zeitraum
    geprüft: {{ab_gates_halten:.0f}} von {{ab_gates_gesamt:.0f}} Gates halten, Status
-   „{{produktstatus}}". Was weiterhin fehlt, ist ein prospektiver Zeitraum, den nichts
-   berührt hat, kann die Zusage unabhängig belegen.
+   „{{produktstatus}}". Was weiterhin fehlt, ist ein **prospektiver** Zeitraum: einer,
+   der zum Zeitpunkt der Freigabe noch gar nicht existierte.
 4. **Keine Zusage je Verbindung.** Die {{gate_schwelle:.0%}} gelten insgesamt.
    Ausgeschlossen ist, was messbar durchfällt; für die Mehrzahl der Kombinationen ist die
    Prüfmenge zu klein für eine Einzelaussage.
@@ -3960,7 +3976,7 @@ eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
    nachts einen Dienst neu starten muss.
 9. **Der Status „{{produktstatus}}" heißt: mit Bedingung.** Die Zusage ist auf der
    Abnahme belegt — einem historischen Zeitraum, den bis zum Öffnen nichts berührt hat.
-   Ein *prospektiver* Zeitraum ist er trotzdem nicht. Was fehlt, ist das protokollierte
+   Ein *prospektiver* Zeitraum ist er trotzdem nicht. Was fehlt, ist der protokollierte
    Nachweis, dass eine echte App das geplante Ziel ebenso vollständig und sorgfältig
    erfasst wie dieser Datensatz. Die Überwachung aus 6.5 läuft deshalb weiter und darf
    abschalten.

@@ -1710,8 +1710,13 @@ _kopf = open("dispositionshinweise.csv", encoding="utf-8").read().split(chr(10))
 _datei = pd.read_csv("dispositionshinweise.csv", skiprows=len(DISPOKOPF)) \
     if len(b_regeln) else pd.DataFrame()
 
+# B1 IST DIE UNTERGRENZE, NICHT DER PUNKTSCHAETZER - also wird auch sie
+# geprueft. Der Punktschaetzer stand hier, weil b_regeln ohnehin nur
+# Regeln mit haltender Untergrenze enthaelt; das Ergebnis war richtig,
+# die Bedingung aber eine andere als die vorab definierte. Wer die
+# Filterung spaeter aendert, merkt den Unterschied dann sofort.
 B1_TRAEGT = bool(len(b_regeln)) and bool(
-    (b_regeln[f"{LIFT} bestätigt"] >= K2_LIFT).all())
+    (b_regeln.lift_untergrenze >= K2_LIFT).all())
 # B2 WIRD NACHGERECHNET, NICHT ABGEHAKT.
 #
 # Frueher stand hier nur, ob die Spalte existiert. Eine Spalte mit
