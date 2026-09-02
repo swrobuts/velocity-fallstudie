@@ -1148,13 +1148,29 @@ zukunft = zukunft.merge(
 # steckt das Modell darin. Was dabei verloren geht, ist die Feinheit
 # innerhalb einer Kombination - das Modell kennt Wochentag, Monat und
 # Wetterlage, die Tabelle mittelt sie weg.
+# WIE TABELLIERT MAN EIN MODELL? Nicht ueber den Medianvektor.
+#
+# Naheliegend waere: je Gruppe den Median jedes Merkmals bilden und diesen
+# einen Vektor durch das Modell schicken. Das geht bei zyklischen Paaren
+# schief - die getrennten Mediane von stunde_sin und stunde_cos ergeben
+# keinen realen Zeitpunkt, sondern einen Punkt IM Kreis statt auf ihm.
+# Ausserdem ist die Vorhersage am Median nicht der Median der Vorhersagen.
+#
+# Richtig ist der umgekehrte Weg: fuer JEDE real beobachtete Fahrt der
+# Gruppe vorhersagen und die Vorhersagen dann zusammenfassen. Damit steht
+# in der Tabelle, was das Modell ueber die tatsaechlich vorgekommenen
+# Kontexte gesagt haette.
 _schluessel = ["start_station_id", "end_station_id", "route", "typ_code", "fenster"]
-_vertreter = basis.groupby(_schluessel)[NUMERISCH].median().reset_index()
-_vertreter["n"] = basis.groupby(_schluessel).size().values
-for _s in ("start_name", "ziel_name"):
-    _vertreter[_s] = basis.groupby(_schluessel)[_s].first().values
-_vertreter["qtab_von"] = np.maximum(1.0, unten.predict(_vertreter[MERKMALE])).round()
-_vertreter["qtab_bis"] = oben.predict(_vertreter[MERKMALE]).round()
+_alle_vorher = basis[_schluessel + ["start_name", "ziel_name"]].copy()
+_alle_vorher["_von"] = np.maximum(1.0, unten.predict(basis[MERKMALE]))
+_alle_vorher["_bis"] = oben.predict(basis[MERKMALE])
+_vertreter = (_alle_vorher.groupby(_schluessel)
+              .agg(qtab_von=("_von", "median"), qtab_bis=("_bis", "median"),
+                   start_name=("start_name", "first"),
+                   ziel_name=("ziel_name", "first"),
+                   n=("_von", "size")).reset_index())
+_vertreter["qtab_von"] = _vertreter.qtab_von.round()
+_vertreter["qtab_bis"] = _vertreter.qtab_bis.round()
 _vertreter["p_von"] = [kundenpreis(m, t, 0, 0.0)
                        for m, t in zip(_vertreter.qtab_von, _vertreter.typ_code)]
 _vertreter["p_bis"] = [kundenpreis(m, t, 0, 0.0)
@@ -1256,7 +1272,9 @@ def bewerten(name, u, o):
     # Die Guthabenlage haengt an der Spanne DIESES Kandidaten: Wessen Guthaben
     # die obere Grenze deckt, zahlt nur die Startgebuehr - unabhaengig von der
     # Schaetzung. Ein enger schaetzender Kandidat verschiebt die Grenze.
-    preisabhaengig = zeigbar & (zukunft.freiminuten_rest < zukunft[u])
+    # Auch die Gruppenbildung aus den ANGEZEIGTEN Minuten. Sonst haengt die
+    # Einteilung "preisabhaengig" an einem Wert, den die App nie zeigt.
+    preisabhaengig = zeigbar & (zukunft.freiminuten_rest < anzeigeminuten(u))
     gate_unten, _ = wilson(int(drin[preisabhaengig].sum()), int(preisabhaengig.sum()))
     return {
         "Auskunft (angezeigt)": zeigbar.mean(),
@@ -1358,7 +1376,8 @@ gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolg
   aber nur {{tabelle_gate:.1%}} am Primärgate. Ihre geringste Reichweite über alle
   Radtypen beträgt {{tabelle_reichweite:.1%}}.
 - Die **Quantiltabelle** ist der Versuch, beides zu bekommen: die Vorhersagen des Modells
-  einmal je Kombination ausgerechnet und als CSV abgelegt. Betrieblich ist sie eine
+  über alle real beobachteten Kontexte einer Kombination gerechnet, zusammengefasst
+  und als CSV abgelegt. Betrieblich ist sie eine
   Tabelle wie die andere. Sie antwortet auf {{qtab_auskunft:.1%}} der Anfragen — und
   erreicht am Primärgate {{qtab_gate:.1%}}, **weniger als beide anderen**.
 
@@ -1416,11 +1435,25 @@ werden darf. Die beiden betreibbaren Kandidaten fallen am Gate durch.
    zwischen den vorhandenen Kandidaten, sondern die Frage, wie eine statische Tabelle
    besser wird: feinere Schlüssel, mehr Beobachtungen je Zeile, kalibrierte Intervalle.
 
-Die Quantiltabelle war der Versuch, beides zu bekommen. Sie ist gebaut und gemessen — und
-sie liegt am Gate unter beiden anderen. Als „nächster Schritt" taugt sie damit nicht
-mehr; sie ist ein **geprüfter und verworfener** Weg. Was sie zeigt, ist der Grund für ihr
-Scheitern: Eine Kombination aus Verbindung, Radtyp und Tageszeit ist zu grob, um die
-Merkmale zu tragen, aus denen das Modell seine Güte zieht.
+Die Quantiltabelle war der Versuch, beides zu bekommen. Sie ist gebaut, gemessen — und
+sie nimmt das Primärgate nicht ({{qtab_gate:.1%}} gegen {{gate_schwelle:.0%}}).
+
+**Wie sie gebaut wird, ist dabei nicht gleichgültig.** Eine erste Fassung bildete je
+Kombination den Median jedes Merkmals und schickte diesen einen Vektor durch das Modell.
+Das ist falsch, und zwar aus zwei Gründen: Die getrennten Mediane von `stunde_sin` und
+`stunde_cos` ergeben keinen realen Zeitpunkt — der Punkt liegt *im* Einheitskreis statt
+auf ihm —, und die Vorhersage am Medianvektor ist nicht der Median der Vorhersagen. Jetzt
+wird für **jede tatsächlich beobachtete Fahrt** der Gruppe vorhergesagt und erst danach
+zusammengefasst. Das hebt die Untergrenze spürbar; für das Gate reicht es nicht.
+
+Was sie zeigt, ist der Grund für ihr Scheitern: Der Schlüssel aus Verbindung, Radtyp und
+Tageszeit ist zu grob für die Merkmale, aus denen das Modell seine Güte zieht — Wochentag,
+Monat, Feiertag und Ferienlage werden über die Gruppe hinweg gemittelt.
+
+> **Damit ist gezeigt, dass DIESE Materialisierung nicht genügt — nicht, dass jede
+> scheitert.** Ein feinerer Schlüssel (Wochentag statt nur Tagesart, Saison statt nur
+> Monat) oder zeitlich kalibrierte Conformal-Intervalle wären die nächsten Kandidaten.
+> Die Schlussfolgerung bleibt bis dahin auf den geprüften Aufbau begrenzt.
 
 
 > **Das ist kein analytisches Scheitern.** Der Nachweis, dass eine durchschaubare Tabelle

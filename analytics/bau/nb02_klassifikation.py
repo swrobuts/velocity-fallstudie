@@ -104,6 +104,21 @@ KOSTEN_VERPASST = merke("kosten_verpasst", 180.0)  # falsch negativ: Ausfall auf
 KOSTEN_UNNOETIG = merke("kosten_unnoetig", 25.0)   # falsch positiv: Pruefung ohne Befund
 merke("kosten_summe", 180.0 + 25.0)   # was ein Treffer beide Seiten bewegt
 KAPAZITAET = merke("kapazitaet", 60)   # Pruefungen je Quartal
+
+# Die Zusage aus Phase 1 - sie steht vor allem anderen, weil alles andere
+# sich an ihr misst.
+HUERDE = merke("huerde", 0.70)
+
+
+def wilson(treffer, n, z=1.96):
+    # 95-Prozent-Intervall fuer einen Anteil - auch bei kleinem n brauchbar.
+    if n == 0:
+        return (float("nan"), float("nan"))
+    p = treffer / n
+    nenner = 1 + z**2 / n
+    mitte = (p + z**2 / (2*n)) / nenner
+    rand = z * np.sqrt(p*(1-p)/n + z**2 / (4*n*n)) / nenner
+    return mitte - rand, mitte + rand
 merke("pruefungen_je_woche", KAPAZITAET / 13)  # ein Quartal hat 13 Wochen
 HORIZONT_TAGE = merke("horizont_tage", 90)   # Vorhersagefenster
 
@@ -936,43 +951,69 @@ for tag in validierung:
 roll_roh = pd.DataFrame(zeilen)          # ungerundet, fuer die Gates
 roll = roll_roh.drop(columns=["Quote Wald", "Quote Regel"])
 
-# ─── K3: EIN STABILITAETSGATE, DAS DIE JAHRESZEIT NICHT MISST ───────
+# ─── K3: HAELT DIE ZUSAGE AUCH AUSSERHALB DES TESTQUARTALS? ─────────
 #
-# Naheliegend waere: "In wie vielen Quartalen nimmt der Kandidat die
-# 70-%-Huerde?" Die Antwort waere 0 von 5 fuer die Regel und 1 von 5 fuer
-# den Wald - nicht weil die Verfahren schlecht sind, sondern weil die
-# Grundrate zwischen den Quartalen um den Faktor drei schwankt. Eine
-# Trefferquote von 40 % bei 16,5 % Grundrate ist eine bessere Leistung als
-# 68 % bei 46 %. Wer roh vergleicht, misst den Winter.
+# Phase 1 hat eine Zusage gemacht: Mindestens 70 % der ausgewaehlten Raeder
+# muessen im Folgequartal auffaellig werden. Diese Zusage ist das Produkt.
+# K3 fragt deshalb genau sie - in mindestens vier von fuenf Quartalen, aus
+# eigener Kraft, fuer beide Kandidaten gleich.
 #
-# Gemessen wird deshalb der LIFT: um welchen Faktor uebertrifft die Liste
-# die Grundrate ihres eigenen Quartals. Diese Groesse kennt den Kandidaten
-# nicht - dieselbe Frage geht an beide.
-K3_LIFT = 1.5
+# Eine fruehere Fassung ersetzte das durch ein LIFT-Gate: um welchen Faktor
+# uebertrifft die Liste die Grundrate ihres Quartals. Als Mass fuer
+# Ranglistenqualitaet ist das richtig und fair - aber es beantwortet die
+# Frage nicht, die in Phase 1 steht. Ein Kriterium, das gegen ein anderes
+# getauscht wird, nachdem das erste nicht haelt, ist kein Kriterium mehr.
+#
+# Der Lift bleibt - als DIAGNOSE neben dem Gate, nicht an seiner Stelle.
 K3_MINDESTQUARTALE = 4
-merke("k3_lift", K3_LIFT); merke("k3_mindestquartale", K3_MINDESTQUARTALE)
+K3_LIFT_DIAGNOSE = 1.5
+merke("k3_mindestquartale", K3_MINDESTQUARTALE)
+_ = merke("k3_lift_diagnose", K3_LIFT_DIAGNOSE)
 
 roll_roh["Lift Wald"] = roll_roh["Quote Wald"] / roll_roh.Grundrate
 roll_roh["Lift Regel"] = roll_roh["Quote Regel"] / roll_roh.Grundrate
 
-print("\\nK3 - LIFT UEBER DER GRUNDRATE DES JEWEILIGEN QUARTALS:")
+print("\\nK3 - HAELT DIE 70-%-ZUSAGE UEBER DIE QUARTALE?")
 print(roll_roh[["Stichtag", "Grundrate", "Quote Regel", "Lift Regel",
                 "Quote Wald", "Lift Wald"]].round(3).to_string(index=False))
+_k3_regel = int((roll_roh["Quote Regel"] >= HUERDE).sum())
+_k3_wald = int((roll_roh["Quote Wald"] >= HUERDE).sum())
+merke("k3_quartale_regel", _k3_regel); merke("k3_quartale_wald", _k3_wald)
+_summe_regel, _summe_wald = int(roll_roh.Regel.sum()), int(roll_roh.Wald.sum())
+_plaetze = len(roll_roh) * KAPAZITAET
+merke("roll_quote_regel", _summe_regel / _plaetze)
+_u_regel, _o_regel = wilson(_summe_regel, _plaetze)
+merke("roll_wilson_unten", _u_regel)
+
 print()
-print(f"   Gefordert: Lift >= {K3_LIFT} in mindestens {K3_MINDESTQUARTALE} "
-      f"von {len(roll_roh)} Quartalen.")
+print(f"   Gefordert: Trefferquote >= {HUERDE:.0%} in mindestens "
+      f"{K3_MINDESTQUARTALE} von {len(roll_roh)} Quartalen.")
+print(f"      Faustregel: {_k3_regel} von {len(roll_roh)}")
+print(f"      Wald:       {_k3_wald} von {len(roll_roh)}")
 print()
-print("   Wie empfindlich ist das? Dieselbe Rechnung bei anderer Schwelle:")
+print(f"   Zusammengefasst ueber alle Quartale: Regel {_summe_regel} von "
+      f"{_plaetze} = {_summe_regel / _plaetze:.1%}")
+print(f"      Wilson-Intervall {_u_regel:.1%} bis {_o_regel:.1%} - die Huerde "
+      f"von {HUERDE:.0%} liegt darueber.")
+print("      (Dieselben Raeder kommen mehrfach vor; das Intervall ist damit")
+print("      zu eng gerechnet - der Abstand zur Huerde bleibt eindeutig.)")
+print()
+print("   DIAGNOSE, KEIN GATE - der Lift ueber der Quartalsgrundrate:")
 print(f"   {'Lift-Schwelle':>14s}{'Regel':>9s}{'Wald':>8s}")
-for _s in (1.3, 1.4, K3_LIFT, 1.6, 1.7):
+for _s in (1.3, 1.4, K3_LIFT_DIAGNOSE, 1.6, 1.7):
     _r = int((roll_roh["Lift Regel"] >= _s).sum())
     _w = int((roll_roh["Lift Wald"] >= _s).sum())
-    _marke = "  <- gesetzt" if _s == K3_LIFT else ""
-    print(f"   {_s:>14.1f}{_r:>7d}/{len(roll_roh)}{_w:>6d}/{len(roll_roh)}{_marke}")
+    print(f"   {_s:>14.1f}{_r:>7d}/{len(roll_roh)}{_w:>6d}/{len(roll_roh)}")
 print()
-print("   Die Schwelle ist eine SETZUNG, keine gemessene Groesse - deshalb")
-print("   steht sie hier mit ihrer Empfindlichkeit. Bei 1,7 faellt auch der")
-print("   Wald durch; bei 1,3 bestehen beide muehelos.")
+_lift_regel = int((roll_roh["Lift Regel"] >= K3_LIFT_DIAGNOSE).sum())
+_lift_wald = int((roll_roh["Lift Wald"] >= K3_LIFT_DIAGNOSE).sum())
+print(f"   Als Rangliste sind beide brauchbar: Lift >= {K3_LIFT_DIAGNOSE} in")
+print(f"   {_lift_regel} von {len(roll_roh)} Quartalen (Regel) und {_lift_wald} "
+      f"von {len(roll_roh)} (Wald).")
+print(f"   Die Zusage von {HUERDE:.0%} halten sie in {_k3_regel} bzw. {_k3_wald}")
+print("   Quartalen. Das sind zwei verschiedene Saetze, und der zweite ist der,")
+print("   der in Phase 1 steht. Wer das Kriterium nach der Messung gegen ein")
+print("   guenstigeres tauscht, hat keines mehr.")
 _gr = pd.DataFrame(zeilen).Grundrate
 merke("grundrate_min", _gr.min())
 merke("grundrate_max", _gr.max())
@@ -1010,19 +1051,8 @@ verträglich sind.
 """),
 
 CODE('''
-def wilson(treffer, n, z=1.96):
-    """95-Prozent-Intervall fuer einen Anteil - auch bei kleinem n brauchbar."""
-    if n == 0:
-        return (float("nan"), float("nan"))
-    p = treffer / n
-    nenner = 1 + z**2 / n
-    mitte = (p + z**2 / (2*n)) / nenner
-    rand = z * np.sqrt(p*(1-p)/n + z**2 / (4*n*n)) / nenner
-    return mitte - rand, mitte + rand
-
 print(f"{'Verfahren':32s}{'Treffer':>9s}{'Quote':>9s}{'95-%-Intervall':>20s}")
 print("-" * 70)
-HUERDE = merke("huerde", 0.70)
 grenzen = {}
 for name, score in [("Faustregel: km seit Reparatur", p_regel),
                     ("Modell: Random Forest", p_wald)]:
@@ -1194,7 +1224,7 @@ Das erste Kriterium steht in zwei Spalten, und der Unterschied ist der Kern von 
 - **K1b** fragt, ob die Hürde auch *statistisch getragen* wird — dafür müsste die untere
   Grenze des Wilson-Intervalls darüber liegen.
 
-Die Entscheidung unten folgt K1a. **Das ist eine Lehrentscheidung, keine Freigabe:** Für
+Bindend sind alle vier Gates — {{pflichtgates}}. **Das ist eine Lehrentscheidung, keine Freigabe:** Für
 einen realen Einsatz wäre K1b das richtige Kriterium. Wo die beiden Verfahren dabei
 stehen, hat Abschnitt 5.4 gerechnet; die Spalte `K1b belegt` in der Tabelle unten
 wiederholt das Ergebnis.
@@ -1235,10 +1265,9 @@ for name, score in [("Faustregel: km seit Reparatur", p_regel),
     # Validierungsquartale nimmt der Kandidat AUS EIGENER KRAFT die
     # K1a-Huerde? Kein Vergleich, keine Kostendifferenz - dieselbe Frage
     # an jeden.
-    _spalte = "Lift Regel" if "Faustregel" in name else "Lift Wald"
-    _bestanden = int((roll_roh[_spalte] >= K3_LIFT).sum())
+    _spalte = "Quote Regel" if "Faustregel" in name else "Quote Wald"
+    _bestanden = int((roll_roh[_spalte] >= HUERDE).sum())
     k3 = _bestanden >= K3_MINDESTQUARTALE
-    merke("k3_quartale_" + ("regel" if "Faustregel" in name else "wald"), _bestanden)
     # K1b wurde frueher gerechnet, gedruckt - und dann fallengelassen. Ein
     # Kriterium, das in der Tabelle steht, aber nicht in der Bedingung, ist
     # keine Huerde, sondern Dekoration: Bei einem anderen Datenstand ginge ein
@@ -1287,18 +1316,35 @@ else:
 _l_regel = set(np.argsort(-p_regel)[:KAPAZITAET])
 _l_wald = set(np.argsort(-p_wald)[:KAPAZITAET])
 merke("listen_gemeinsam", len(_l_regel & _l_wald))
+# Der hoechste Listenwert - unabhaengig davon, ob ein Artefakt entsteht.
+_ = merke("spitzenwert_km", float(np.sort(p_regel)[-1]))
 merke("listen_exklusiv", KAPAZITAET - len(_l_regel & _l_wald))
 merke("keine_freigabe", int(KEINE_FREIGABE))
 _ = merke("pflichtgates", " · ".join(PFLICHTGATES))
 '''),
 
 MD("""
-**Der Wald reißt das dritte Kriterium.** Über die Validierungsquartale bringt er keinen
-Vorteil — und ein Verfahren, das nur in einem günstigen Quartal vorn liegt, ist kein
-Verfahren, sondern ein Zufall.
+**Beide Verfahren reißen K3, und das entscheidet alles Weitere.** Die Zusage aus Phase 1
+lautet {{huerde:.0%}} — im Testquartal halten beide sie, über die
+{{roll_quartale:.0f}} Validierungsquartale hält sie die Regel in
+{{k3_quartale_regel:.0f}} und der Wald in {{k3_quartale_wald:.0f}} von
+{{roll_quartale:.0f}}. Zusammengefasst trifft die Regel {{roll_regel:.0f}} von
+{{roll_quartale:.0f}} × {{kapazitaet:.0f}} Listenplätzen — {{roll_quote_regel:.1%}}, mit
+einer Wilson-Untergrenze von {{roll_wilson_unten:.1%}}.
 
-Ausgeliefert wird deshalb die Faustregel. Sie kostet eine Zeile SQL, jede Werkstattkraft
-versteht sie, und sie trifft genauso gut.
+**Es wird deshalb nichts ausgeliefert.** Das Testquartal war ein Mai-Stichtag mit hoher
+Grundrate; die Zusage hält dort und sonst nicht. Ein Verfahren, das nur in der günstigen
+Jahreszeit trifft, ist für ein Quartalsprodukt untauglich — und ein Quartalsprodukt ist
+genau das, was hier gebaut werden sollte.
+
+> **Die Versuchung an dieser Stelle hat einen Namen.** Man könnte K3 durch den Lift
+> ersetzen: Beide Verfahren schlagen die Grundrate ihres Quartals deutlich, beide
+> bestünden. Genau das stand in einer früheren Fassung dieses Notebooks — und es ist
+> der häufigste Weg, wie aus einer gescheiterten Messung eine bestandene wird. **Wer das
+> Kriterium wechselt, nachdem er das Ergebnis kennt, hat kein Kriterium mehr.**
+>
+> Der Lift bleibt als Diagnose stehen. Er sagt etwas Richtiges — die Rangfolge ist gut —
+> aber er sagt nicht, was Phase 1 gefragt hat.
 
 > **Das Modell war trotzdem nicht umsonst.** Ohne es stünde hier eine Trefferquote und
 > niemand könnte sagen, ob sie gut ist. Was gezeigt wurde, ist präzise dies: **Mit dieser
@@ -1376,7 +1422,7 @@ Kosten = {{kosten_unnoetig:.0f}}k + {{kosten_verpasst:.0f}}P − {{kosten_summe:
 
 Jeder zusätzliche Listenplatz kostet 25 € und bringt im Erwartungswert mehr als 25 € an
 vermiedenen Ausfällen, solange die Trefferquote über 12 Prozent liegt. Bei einer
-Grundrate von 45 Prozent ist das bis zum letzten Rad der Fall.
+Grundrate von {{quote_meldung_fenster:.0%}} ist das bis zum letzten Rad der Fall.
 
 > **Was in der Formel fehlt:** die Prüfkosten der Treffer. Ein gefundener Schaden
 > verursacht Arbeitszeit und Ersatzteile; in dieser Rechnung ist er kostenlos. Ebenso
@@ -1460,7 +1506,6 @@ else:
         "rangwert": "km seit letzter Reparatur", "km_180": "km (180 Tage)",
         "meldungen_bisher": "Meldungen bisher", "tage_seit_reparatur": "Tage seit Reparatur"})
 
-    merke("spitzenwert_km", float(ausgabe["km seit letzter Reparatur"].max()))
 
     # ZWEI ARTEFAKTE, ZWEI ZWECKE - und sie duerfen nicht denselben Namen tragen.
     #
@@ -1513,48 +1558,73 @@ else:
     }
     joblib.dump(paket, "wartungsmodell.joblib")
 
-    # ─── DIE SCHATTENLISTE: derselbe Stichtag wie die Wirklichkeit ──────
-    # Was die Werkstatt HEUTE bekaeme, steht auf dem letzten Tag der Daten -
-    # und sein Ausgang ist unbekannt, weil die 90 Tage noch nicht vorbei sind.
-    # Genau das macht sie zur Schattenliste: Sie laesst sich erst nach Ablauf
-    # des Quartals bewerten. Wer sie vorher beurteilt, beurteilt nichts.
-    _schatten_stichtag = fahrten.startzeit.max().normalize()
-    _schatten = zeile_bauen(_schatten_stichtag)
-    _schatten = _schatten[_schatten.fahrrad_id.notna()].copy()
-    _schatten["rangwert"] = _schatten.km_seit_reparatur
-    _schatten = _schatten.nlargest(KAPAZITAET, "rangwert").reset_index(drop=True)
-    _schatten.insert(0, "rang", range(1, len(_schatten) + 1))
-    _schatten_aus = _schatten[["rang", "fahrrad_id", "typ_code", "rangwert",
-                               "km_180", "meldungen_bisher"]].round(0)
-    _schatten_aus["stichtag"] = _schatten_stichtag.date()
-    _schatten_aus["gilt_bis"] = (_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()
-    _schatten_aus["status"] = "SCHATTENBETRIEB - nicht handlungsleitend"
-    _schatten_aus["regelversion"] = paket["regel_spalte"]
-    _schatten_aus["kennzeichnung"] = "SCHATTENBETRIEB - Ausgang offen"
-    _schatten_aus["datenstand"] = DATENSTAND_KURZ
-    _schatten_aus["bewertbar_ab"] = (_schatten_stichtag
-                                     + pd.Timedelta(days=HORIZONT_TAGE)).date()
-    _schatten_datei = f"schattenliste_{_schatten_stichtag.date()}.csv"
-    _schatten_aus.to_csv(_schatten_datei, index=False)
-    merke("schatten_stichtag", str(_schatten_stichtag.date()))
 
-    print()
+# ─── DIE SCHATTENLISTE - SIE ENTSTEHT IMMER ─────────────────────────
+#
+# Sie steht ABSICHTLICH ausserhalb des Freigabewaechters. Wenn nichts
+# freigegeben wird, ist sie das einzige sinnvolle Artefakt: eine
+# Vorhersage, deren Ausgang noch aussteht. Sie behauptet keine Guete,
+# sie ermoeglicht, eine zu messen - und genau daran fehlt es hier.
+# Was die Werkstatt HEUTE bekaeme, steht auf dem letzten Tag der Daten -
+# und sein Ausgang ist unbekannt, weil die 90 Tage noch nicht vorbei sind.
+# Genau das macht sie zur Schattenliste: Sie laesst sich erst nach Ablauf
+# des Quartals bewerten. Wer sie vorher beurteilt, beurteilt nichts.
+_schatten_stichtag = fahrten.startzeit.max().normalize()
+_schatten = zeile_bauen(_schatten_stichtag)
+_schatten = _schatten[_schatten.fahrrad_id.notna()].copy()
+_schatten["rangwert"] = _schatten.km_seit_reparatur
+_schatten = _schatten.nlargest(KAPAZITAET, "rangwert").reset_index(drop=True)
+_schatten.insert(0, "rang", range(1, len(_schatten) + 1))
+_schatten_aus = _schatten[["rang", "fahrrad_id", "typ_code", "rangwert",
+                           "km_180", "meldungen_bisher"]].round(0)
+_schatten_aus["stichtag"] = _schatten_stichtag.date()
+_schatten_aus["gilt_bis"] = (_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()
+_schatten_aus["status"] = "SCHATTENBETRIEB - nicht handlungsleitend"
+_schatten_aus["regelversion"] = "km_seit_reparatur"
+_schatten_aus["kennzeichnung"] = "SCHATTENBETRIEB - Ausgang offen"
+_schatten_aus["datenstand"] = DATENSTAND_KURZ
+_schatten_aus["bewertbar_ab"] = (_schatten_stichtag
+                                 + pd.Timedelta(days=HORIZONT_TAGE)).date()
+_schatten_datei = f"schattenliste_{_schatten_stichtag.date()}.csv"
+_schatten_aus.to_csv(_schatten_datei, index=False)
+merke("schatten_stichtag", str(_schatten_stichtag.date()))
+
+print()
+if KEINE_FREIGABE:
+    print("Kein Verfahren hat alle Pflichtgates genommen - es entsteht weder")
+    print("eine Werkstattliste noch ein Modellpaket.")
+    print(f"geschrieben: {_schatten_datei} (Schattenbetrieb, Ausgang offen)")
+else:
     print(f"ausgeliefert: {paket['ausgeliefert']}")
     print(f"geschrieben: {_test_datei} (historisch, Ausgang bekannt)")
     print(f"             {_schatten_datei} (Schattenbetrieb, Ausgang offen)")
     print("             wartungsmodell.joblib")
-    print()
-    print(f"Die Schattenliste steht auf dem {_schatten_stichtag.date()} - dem letzten Tag")
-    print(f"der Daten. Bewertbar wird sie am {(_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()},")
-    print("wenn die 90 Tage vorbei sind. Bis dahin ist sie eine Vorhersage")
-    print("ohne Ergebnis - und genau das ist der Unterschied zur Liste darueber.")
+print()
+print(f"Die Schattenliste steht auf dem {_schatten_stichtag.date()} - dem letzten Tag")
+print(f"der Daten. Bewertbar wird sie am {(_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()},")
+print("wenn die 90 Tage vorbei sind. Bis dahin ist sie eine Vorhersage")
+print("ohne Ergebnis.")
+print()
+if KEINE_FREIGABE:
+    print("Genau das ist der Punkt: Was fehlt, ist kein besseres Verfahren,")
+    print("sondern eine Messung, die noch aussteht. Die Zusage haelt auf dem")
+    print("historischen Testquartal und nicht ueber die Jahreszeiten - ob sie")
+    print("prospektiv haelt, entscheidet dieses Quartal, nicht diese Analyse.")
+else:
+    print("Das ist der Unterschied zur historischen Liste darueber, deren")
+    print("Ausgang bereits bekannt ist und die deshalb nichts mehr beweist.")
 '''),
 
 MD("""
-### 6.1 Ausgeliefert wird die Regel — und das Modell bleibt im Paket
+### 6.1 Was gebaut würde, wenn die Zusage hielte
 
-Bei Gleichstand gewinnt die einfachere Lösung. Das ist keine Bescheidenheit, sondern eine
-Rechnung über die Lebensdauer:
+**Dieser Abschnitt beschreibt einen Fall, der nicht eingetreten ist.** Beide Verfahren
+reißen K3; ausgeliefert wird nichts. Er steht trotzdem hier, weil die Frage „was wäre
+das Produkt?" beantwortet sein muss, bevor man über Freigabe entscheidet — und weil die
+Rechnung über die Lebensdauer auch für die nächste Runde gilt.
+
+Träte der Fall ein, gewänne bei ähnlicher Güte die einfachere Lösung. Das ist keine
+Bescheidenheit, sondern eine Rechnung über die Lebensdauer:
 
 | | Faustregel | Random Forest |
 |---|---|---|
@@ -1623,6 +1693,10 @@ In der VeloCity-Warenwirtschaft (`wawi.butscher.cloud`) gehört diese Liste in d
 Eine Regel kann man nicht nachtrainieren. Was bei ihr überwacht wird, sind die **Daten,
 aus denen ihr Merkmal entsteht** — und die Frage, ob die Liste im Betrieb noch trifft.
 
+<!-- zahl-ohne-ausgabe: 45 gesetzte Warnschwelle, keine Messung -->
+<!-- zahl-ohne-ausgabe: 55 gesetzte Stoppschwelle, keine Messung -->
+<!-- zahl-ohne-ausgabe: 35 gesetzte Stoppschwelle, keine Messung -->
+<!-- zahl-ohne-ausgabe: 500 gesetzte Mindestfallzahl -->
 **Jede Schwelle ist eine Zahl, kein Adjektiv.** „Steigt deutlich" ist im Betrieb nicht
 entscheidbar: Wer nachts um drei eine Meldung bekommt, muss wissen, ob er handeln soll.
 Jede Zeile nennt deshalb Referenz, Warn- und Stoppwert, die Mindestfallzahl, unter der
@@ -1697,11 +1771,11 @@ MD("""
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | Aus „vorausschauend warten“ wurde eine Kostenmatrix: 180 € je verpasstem Ausfall gegen 25 € je unnötiger Prüfung — Verhältnis rund 7 : 1. Zwei Erfolgskriterien, eines davon der Vergleich mit der heutigen Faustregel |
-| 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r = {{korrelation_km_meldungen:.3f}}, für echte Flottendaten auffällig stark), aber nicht deterministisch. Der Anteil auffälliger Räder schwankt saisonal um mehr als das Fünffache |
+| 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r = {{korrelation_km_meldungen:.3f}}, für echte Flottendaten auffällig stark), aber nicht deterministisch. Der Anteil auffälliger Räder schwankt saisonal um das {{panel_grundrate_faktor:.1f}}-Fache |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung. Gemessene Distanzen bevorzugt, Langfahrten ausgeschlossen, Räder mit offenem Schaden aus der Prognosepopulation genommen. Rückgesetzt wird bei der **erledigten Reparatur**, nicht bei der Meldung |
 | 4 Modeling | Drei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | Auf dem Testquartal liegt die Faustregel knapp vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer), über {{roll_quartale:.0f}} Validierungsquartale deutlich ({{roll_regel:.0f}} gegen {{roll_wald:.0f}}). Beide Verfahren belegen die {{huerde:.0%}}-Hürde; das Wilson-Intervall bewertet jedes Verfahren für sich und vergleicht die beiden **nicht** miteinander |
-| 6 Deployment | **Ausgeliefert wird die Faustregel.** Das Modell bleibt im Paket als Beleg der Prüfung und als Ausgangspunkt der nächsten Runde |
+| 5 Evaluation | Auf dem Testquartal liegt die Faustregel vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer) und belegt dort die {{huerde:.0%}}-Hürde, der Wald nicht (Untergrenze {{wilson_unten_wald:.1%}}). Über {{roll_quartale:.0f}} Validierungsquartale hält **keines von beiden** die Zusage: {{roll_regel:.0f}} gegen {{roll_wald:.0f}} Treffer, zusammengefasst {{roll_quote_regel:.1%}}. **Freigegeben wird nichts** |
+| 6 Deployment | **Nichts wird ausgeliefert.** Erzeugt werden eine historische Testliste mit bekanntem Ausgang und eine Schattenliste zum {{schatten_stichtag}}, bewertbar nach {{horizont_tage:.0f}} Tagen. Das ist der nächste Schritt, keine Freigabe |
 
 **Drei Sätze, die aus diesem Notebook bleiben sollten**
 
@@ -1713,8 +1787,10 @@ MD("""
 > {{panel_grundrate_max:.1%}} schwankt, entscheidet die Jahreszeit mit — nicht nur das
 > Verfahren.
 
-> Treffsicherheit und Abdeckung sind zwei Zahlen. Sieben von zehn geprüften Rädern
-> melden sich; vier von zehn auffälligen Rädern werden erreicht. Beide sind richtig.
+> Treffsicherheit und Abdeckung sind zwei Zahlen. Im Testquartal melden sich
+> {{quote_regel_von_zehn:.1f}} von zehn geprüften Rädern; erreicht werden
+> {{abdeckung_von_zehn:.1f}} von zehn auffälligen. Beide sind richtig, und beide gelten
+> nur für dieses eine Quartal.
 
 **Was offen bleibt — ausdrücklich**
 
