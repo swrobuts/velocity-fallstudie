@@ -158,7 +158,7 @@ Befund. Die Hysterese verlangt deshalb, dass ein Wechsel auch dann noch besteht,
 man die Eingangswerte um {{hysterese:.0%}} in beide Richtungen verschiebt.
 
 > **Diese Fassung von Kriterium 5 ist eine dokumentierte Überarbeitung von Phase 1.**
-> Die erste Fassung kannte nur Kriterium 4 und nannte es „Stabilität“. Hysterese und
+> Ursprünglich stand dort nur Kriterium 4 unter dem Namen „Stabilität“. Hysterese und
 > {{gate_wechsel:.0%}}-Schwelle sind **nach** der ersten Messung entstanden — beim
 > Stichtagspaar, das weiter unten als „Entwicklung“ markiert ist. Das ist legitime
 > Verfahrensentwicklung, aber es verbraucht dieses Stichtagspaar: Auf ihm kann das Gate
@@ -664,8 +664,8 @@ wäre nach der nächsten Datenlieferung falsch, ohne dass es jemand merkt.
 **Kriterien 1 bis 3 aus Phase 1 sind damit erfüllt:** Jede Gruppe ist benennbar, jede
 bekommt in Phase 6 eine eigene Regel, und keine ist zu klein. Kriterium 2 wird dort
 außerdem maschinell geprüft — **vier Gruppen müssen vier verschiedene Prüfungshypothesen
-ergeben.** Eine frühere Fassung dieses Notebooks hat genau daran gescheitert, ohne dass
-es auffiel.
+ergeben.** Ohne diese Prüfung bleibt unbemerkt, wenn zwei Gruppen in derselben
+Maßnahme enden — die Einteilung wäre dann für den Zweck ohne Wirkung.
 
 ### Kriterien 4 und 5: Stabilität — gemessen, nicht behauptet
 
@@ -1287,10 +1287,11 @@ MD("""
 > Zukunftswissen. Hinzu kommt, dass sich die 365-Tage-Fenster benachbarter Paare zu rund
 > drei Vierteln überschneiden — vier Messungen, aber nicht vier unabhängige.
 >
-> **Eine frühere Fassung dieses Notebooks hat genau daran die Freigabe einer Liste mit
-> Klarnamen gehängt.** Das war der schwerste Fehler der ganzen Reihe, und er stand nicht
-> im Text, sondern im Code: `KUNDENSEGMENTE_STABIL = HOLDOUT_HAELT and ...`. Wer eine
-> Rückwärtsrechnung „Holdout" nennt, glaubt irgendwann selbst daran.
+> **Diese Unterscheidung ist freigaberelevant.** Eine Rückwärtsrechnung als „Holdout"
+> zu bezeichnen und eine Freigabe daran zu knüpfen, wäre der schwerwiegendere Fehler —
+> zumal eine solche Verknüpfung im Code steht und nicht im Text
+> (`KUNDENSEGMENTE_STABIL = HOLDOUT_HAELT and ...`) und beim Lesen der Prosa nicht
+> auffällt.
 >
 > **Was die Hysterese dabei tut, steht offen daneben.** Ohne sie stiege die Wechselquote
 > des Entwicklungspaars von {{gate_eng:.2%}} auf {{hyst_ohne:.2%}}
@@ -1301,12 +1302,12 @@ MD("""
 >
 > Der Unterschied sind die dauerhaft stabilen Nicht-Zielpersonen (Zustand „Nie
 > aktiviert"), die nie angeschrieben werden. Sie im Nenner zu behalten macht die Quote
-> besser, ohne dass an der Auslieferung irgendetwas stabiler wäre. **Eine frühere Fassung
-> band das Gate an den weiten Nenner — und bestand es damit knapp.**
+> besser, ohne dass an der Auslieferung irgendetwas stabiler wäre. **Am weiten Nenner
+> gemessen würde das Gate knapp halten; maßgeblich ist deshalb der enge.**
 >
 > Der ARI sagt also **nicht dasselbe**: Er beschreibt das separat neu berechnete
-> Clustering. Eine frühere Fassung stellte ihn neben die Regelquote, als wären es zwei
-> Belege für denselben Satz.
+> Clustering. Neben der Regelquote gelesen, wirkt er wie ein zweiter Beleg für dieselbe
+> Aussage — er ist keiner.
 >
 > Das ist kein Fehler des Verfahrens. RFM misst Verhalten in einem gleitenden Fenster,
 > und Verhalten ändert sich. Aber es hat eine **harte Folge für die Auslieferung**:

@@ -137,8 +137,9 @@ vollständiger Kenntnis der Zukunft erreichen.
 
 > **Diese drei Namen gelten für das ganze Notebook.** K1, K2, K3 bedeuten in Phase 5, im
 > Code, in der Ergebnistabelle, in der Überwachung und in der Schlusszelle jeweils genau
-> das, was hier steht. Eine frühere Fassung nannte dieselben Buchstaben an verschiedenen
-> Stellen verschieden — und niemand konnte das Urteil noch auf die Zusage zurückführen.
+> das, was hier steht. Werden dieselben Bezeichner an verschiedenen Stellen
+> unterschiedlich belegt, lässt sich das Freigabeurteil nicht mehr auf die Zusage
+> zurückführen.
 
 Das wirtschaftliche Kriterium ist das wichtigste und wird gerne vergessen: **Ein Modell
 muss nicht gut sein, sondern besser als das, was heute schon getan wird.**
@@ -892,22 +893,19 @@ print(classification_report(y_test, auf_liste.astype(int),
 '''),
 
 MD("""
-### 5.2 Warum die Faustregel plötzlich mithält
+### 5.2 Der Rücksetzzeitpunkt von `km_seit_reparatur`
 
 Die Tabelle zeigt die Faustregel vor dem Random Forest —
-{{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer. In einer früheren Fassung dieses
-Notebooks lag der Wald vorn, und die Erklärung dafür lautete: Es liege nicht am Modell,
-sondern an einem Merkmal.
+{{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer.
 
-Denn in der ersten Fassung setzte `km_seit_reparatur` bei der **Meldung** zurück statt bei
-der **erledigten Reparatur**. Zwischen beidem wird weitergefahren — Phase 3 hat es
-gezählt. Diese Kilometer wurden dem frisch reparierten Bauteil gutgeschrieben,
-ausgerechnet bei den Rädern, die gerade auffällig geworden waren. Der Wald konnte den
-Fehler ausgleichen, die Faustregel nicht.
+Als Erklärung für den Abstand zwischen Regel und Modell kommt ein Merkmalsdetail in
+Betracht. Der Zähler `km_seit_reparatur` lässt sich bei der **Meldung** eines Schadens
+zurücksetzen oder erst bei der **erledigten Reparatur**. Zwischen beiden Zeitpunkten
+wird weitergefahren; Phase 3 hat diese Kilometer gezählt. Beim Rücksetzen zur Meldung
+werden sie dem frisch reparierten Bauteil gutgeschrieben — und zwar bei genau den
+Rädern, die gerade auffällig geworden sind.
 
-Das ist eine gute Geschichte. **Gute Geschichten muss man gegen die Zahlen halten.**
-
-**Wie groß dieser Unterschied ist, sollte man nicht behaupten, sondern messen.** Die
+**Wie groß dieser Effekt ist, wird gemessen und nicht begründet.** Die
 nächste Zelle rechnet dieselbe Faustregel zweimal — einmal mit jedem Rücksetzzeitpunkt,
 auf demselben Datenstand:
 """),
@@ -937,9 +935,9 @@ print(f"\\nUnterschied: {_reparatur - _meldung:+d} Treffer von {KAPAZITAET}.")
 print(f"Die beiden Listen teilen {len(_top_m & _top_r)} von {KAPAZITAET} Raedern.")
 print()
 if abs(_reparatur - _meldung) <= 1:
-    print("DAS IST DAS ERGEBNIS, UND ES IST UNBEQUEM: Der Ruecksetzzeitpunkt")
-    print("ist fachlich richtig, aber auf DIESEM Datenstand aendert er die")
-    print("Guete praktisch nicht. Zwischen Meldung und Reparatur liegen im")
+    print("ERGEBNIS: Der Ruecksetzzeitpunkt ist fachlich richtig gewaehlt,")
+    print("aendert auf DIESEM Datenstand aber die Guete praktisch nicht.")
+    print("Zwischen Meldung und Reparatur liegen im")
     print("Mittel wenige Tage; die Kilometer daraus sind gegen die Strecke")
     print("seit der letzten Reparatur klein.")
 else:
@@ -951,20 +949,19 @@ MD("""
 
 Die Ablation misst {{ablation_meldung:.0f}} gegen {{ablation_reparatur:.0f}} Treffer, und
 die beiden Listen teilen {{ablation_gemeinsam:.0f}} von {{kapazitaet:.0f}} Rädern.
-**Der Rücksetzzeitpunkt allein erklärt den früheren Abstand also nicht.** Zwischen den
-beiden Fassungen dieses Notebooks wurden auch die Daten neu erzeugt, die Distanzquelle
-umgestellt und die Ausreißerbehandlung geändert — welcher dieser Eingriffe wie viel
-beigetragen hat, ist im Nachhinein nicht mehr trennbar.
+**Der Rücksetzzeitpunkt allein erklärt den Abstand zwischen Regel und Modell also
+nicht.** Er ist fachlich richtig gewählt, weil er abbildet, was in der Werkstatt
+geschieht; auf diesem Datenstand verändert er die Güte jedoch kaum.
 
-**Das ist die unbequemste Lehre dieses Notebooks, und sie hat zwei Hälften.** Die erste:
-Ein Modell kann gegen eine Baseline gewinnen, weil die Baseline schlecht gebaut ist — wer
-den Vergleich ernst meint, muss der Regel dieselbe Sorgfalt widmen wie dem Modell.
+**Daraus folgen zwei Feststellungen.** Die erste:
+Ein Modell kann gegen eine Baseline gewinnen, weil die Baseline schlecht gebaut ist. Ein
+belastbarer Vergleich verlangt für die Regel dieselbe Sorgfalt wie für das Modell.
 
 Die zweite: **Eine Erklärung, die plausibel klingt, ist deshalb noch nicht die richtige.**
 Der korrigierte Rücksetzzeitpunkt ist fachlich unstrittig — er bildet ab, was in der
 Werkstatt geschieht. Als *Erklärung* für den verschwundenen Modellvorteil trägt er auf
-diesem Datenstand trotzdem nicht. Wer eine Ursache benennt, ohne sie zu isolieren, hat
-eine Vermutung berichtet und sie Befund genannt.
+diesem Datenstand trotzdem nicht. Eine Ursache, die nicht isoliert gemessen wurde,
+bleibt eine Vermutung und darf nicht als Befund berichtet werden.
 
 Sehen Sie sich zur Deutung die Bedeutungsgrafik oben an: `km_seit_reparatur` steht ganz
 vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — mehr aber auch nicht.
@@ -972,8 +969,8 @@ vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — mehr aber au
 > **Und noch etwas ist an der Tabelle bemerkenswert:** Die beiden schwächeren Faustregeln
 > — ältestes Rad und meiste Kilometer — liegen mit {{faustregel_alter:.1%}} und
 > {{faustregel_km:.1%}} nah beieinander.
-> Wer zwischen ihnen wählt, wählt zwischen zwei mittelmäßigen Antworten. Der Gewinn steckt
-> nicht darin, eine bessere Kennzahl zu suchen, sondern die richtige Frage zu stellen:
+> Zwischen ihnen zu wählen bringt entsprechend wenig. Der Unterschied entsteht nicht
+> durch eine bessere Kennzahl, sondern durch die zugrunde liegende Frage:
 > nicht *wie alt* ist das Rad, sondern *wie weit seit der Reparatur*.
 
 ### 5.3 Ein Quartal ist keine Aussage
@@ -1311,8 +1308,8 @@ gelöst — von den auffälligen Rädern erreicht die Liste nur
 {{abdeckung_von_zehn:.1f}} von zehn.
 
 Der Grund ist die Kapazität, nicht das Verfahren: {{kapazitaet:.0f}} Plätze bei
-{{positive_im_test:.0f}} auffälligen Rädern. **Kein Ranking der Welt kann mehr abdecken, als die Liste lang ist.** Wer die
-Abdeckung erhöhen will, muss über Kapazität reden, nicht über Modelle.
+{{positive_im_test:.0f}} auffälligen Rädern. **Keine Rangfolge kann mehr Fälle abdecken, als die Liste Plätze hat.** Eine höhere
+Abdeckung setzt deshalb mehr Kapazität voraus, nicht ein anderes Verfahren.
 
 ### 5.6 Bewertung gegen die Erfolgskriterien aus Phase 1
 
@@ -1320,11 +1317,10 @@ Jetzt kommen die beiden Kriterien aus Phase 1 zum Einsatz — und ein drittes, d
 rollierende Validierung erzwingt: **Ein Modell wird nur ausgeliefert, wenn es die
 Faustregel über mehrere Quartale schlägt.** Ein einzelnes gutes Quartal genügt nicht.
 
-**Die Gates heißen hier genauso wie in Phase 1 — und bedeuten dasselbe.** Das ist keine
-Formalie: Eine frühere Fassung führte hier K1a, K1b, K2 und K3 ein, wobei K3 den Lift
-bezeichnete, während Phase 1 unter K3 die statistische Absicherung verstand. Zwei
-Kataloge unter denselben Buchstaben sind schlimmer als keiner — das Urteil lässt sich
-dann nicht mehr auf die Zusage zurückführen.
+**Die Gates heißen hier genauso wie in Phase 1 und bedeuten dasselbe.** Zwei Kataloge
+unter denselben Bezeichnern — etwa K3 einmal für den Lift und einmal für die
+statistische Absicherung — machen das Freigabeurteil unauflösbar: Es lässt sich dann
+nicht mehr auf die Zusage aus Phase 1 zurückführen.
 
 | | Gate | woran es hängt |
 |---|---|---|
@@ -1349,8 +1345,8 @@ Bindend sind diese drei — {{pflichtgates}}.
 
 Entscheidend ist die Reihenfolge, nicht der Ausgang: Das Kriterium stand **vor** der
 Messung fest, der Befund kam danach. Ein nachträglich erfülltes Kriterium begründet keine
-Freigabe — es widerspricht ihr nur nicht. Wer die Hürde erst nach dem Blick auf das
-Ergebnis festlegt, prüft nichts mehr, sondern beschreibt.
+Freigabe — es widerspricht ihr nur nicht. Eine erst nach dem Ergebnis festgelegte Hürde
+prüft nichts; sie beschreibt den Befund.
 """),
 
 CODE('''
@@ -1495,9 +1491,9 @@ Zukunft die Zusage verfehlt.
 > Phase 1, wo die Zusage entstanden ist, nicht hierher.
 >
 > Die Probe darauf ist die Orakelschranke: Sie hängt allein an den Daten und an der
-> Kapazität, an keinem Modell. Wer eine Zusage gibt, sollte sie kennen, **bevor** er
-> misst. Wir kannten sie nicht — das war der Fehler, und er hat mehrere Runden
-> Modellvergleich gekostet, die nichts entscheiden konnten.
+> Kapazität, an keinem Modell. Sie gehört deshalb berechnet, **bevor** eine Zusage
+> formuliert wird — sonst werden Verfahren an einer Grenze gemessen, die keines von
+> ihnen erreichen kann.
 
 > **Das Modell war trotzdem nicht umsonst.** Ohne es stünde hier eine Trefferquote und
 > niemand könnte sagen, ob sie gut ist. Was gezeigt wurde, ist präzise dies: **Mit dieser
@@ -1775,8 +1771,8 @@ MD("""
 Beide Verfahren nehmen die Pflichtgates bis auf eines: Der Wald reißt K3, die
 statistische Absicherung im Testquartal — seine Wilson-Untergrenze liegt bei
 {{k3_unten_wald:.1%}} gegen die geforderten {{k3_schwelle:.1%}}, die der Regel bei
-{{k3_unten_regel:.1%}}. Damit bleibt die Faustregel — und bei ähnlicher
-Güte gewänne sie ohnehin. Das ist keine Bescheidenheit, sondern eine Rechnung über die
+{{k3_unten_regel:.1%}}. Damit bleibt die Faustregel; bei ähnlicher
+Güte fiele die Entscheidung ohnehin auf sie. Ausschlaggebend ist eine Rechnung über die
 Lebensdauer:
 
 | | Faustregel | Random Forest |

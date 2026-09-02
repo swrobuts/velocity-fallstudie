@@ -106,14 +106,14 @@ Wir trennen deshalb von Anfang an drei Produkte:
 | **A2** | **auffällige abgeschlossene Fahrten** | morgens, über den Vortag | Fahrten, die **bereits beendet** sind | Betriebsbüro prüft am Schreibtisch |
 | **B** | **auffällige Stationstage** | morgens, über den Vortag | Stationstage | Technik prüft das Terminal |
 
-> **Warum diese Trennung der wichtigste Schritt des ganzen Notebooks ist.** Eine frühere
-> Fassung hat A1 und A2 in eine Liste geworfen und dabei die Maßnahme „Rad bergen, bevor
-> es verschwindet" mit **abgeschlossenen** Fahrten begründet. Bei einer abgeschlossenen
-> Fahrt ist das Rad längst zurück — da ist nichts mehr zu bergen. Die Liste war richtig
-> gerechnet und für ihren angegebenen Zweck nutzlos.
+> **Warum diese Trennung vor der Verfahrenswahl steht.** Werden A1 und A2 in einer Liste
+> zusammengefasst, wird die Maßnahme „Rad bergen, bevor es verschwindet" mit
+> **abgeschlossenen** Fahrten begründet. Bei einer abgeschlossenen Fahrt ist das Rad
+> zurück; eine Bergung ist dann gegenstandslos. Die Liste wäre korrekt gerechnet und für
+> den angegebenen Zweck unbrauchbar.
 >
-> **Wer den Entscheidungszeitpunkt nicht festlegt, baut ein Produkt, das es nicht geben
-> kann.**
+> **Der Entscheidungszeitpunkt gehört deshalb an den Anfang: Er bestimmt, welche Daten
+> zur Verfügung stehen und welche Maßnahme überhaupt möglich ist.**
 
 ### Was ein Fund wert ist, und was ein Fehlalarm kostet
 
@@ -130,10 +130,9 @@ selten und die Funde wertvoll sind.
 
 > **Wie lang darf die Liste sein?** Auch diese Zahl wird gerechnet, nicht gesetzt. Das
 > Betriebsbüro hat morgens eine halbe Stunde, eine Prüfung dauert fünf Minuten — das sind
-> **sechs Fälle**, nicht zehn. Eine frühere Fassung dieses Notebooks nannte im selben
-> Absatz „eine halbe Stunde" und „zehn Plätze"; zehn Prüfungen brauchen aber 50 Minuten.
-> Die Listenlänge wird unten aus Zeitbudget und Prüfdauer abgeleitet, damit sich der
-> Widerspruch nicht wiederholen kann.
+> **sechs Fälle**, nicht zehn. Eine gesetzte Länge widerspricht dem Zeitbudget leicht:
+> Zehn Prüfungen brauchen 50 Minuten. Die Listenlänge wird unten deshalb aus Zeitbudget
+> und Prüfdauer berechnet statt angenommen.
 
 > **Diese 5 % sind aber nicht unser Erfolgskriterium.** Sie sind die Grenze, ab der die
 > Liste wirtschaftlich vertretbar ist. Eine Liste, bei der neunzehn von zwanzig Einträgen unnötig
@@ -179,7 +178,8 @@ selten und die Funde wertvoll sind.
 
 > **Für A2 gibt es bewusst kein Trefferkriterium, und das ist keine Nachlässigkeit.** Eine
 > Trefferquote braucht ein Label. Für „unbekannte Auffälligkeiten" gibt es per Definition
-> keines — wer eines hätte, wüsste schon, wonach er sucht. Was wir haben, ist eine
+> keines; wer über ein Label verfügt, kennt die gesuchte Auffälligkeit bereits. Was
+> vorliegt, ist eine
 > **Teilwahrheit** (Fahrten über acht Stunden), und die misst nur, wie gut das Modell eine
 > Regel nachbaut, die wir ohnehin haben.
 >
@@ -431,8 +431,8 @@ Der Grund ist die Herkunft dieses Datensatzes: **Die Distanz wurde aus der Dauer
 gerechnet**, mit einer typtypischen Geschwindigkeit und wenig Streuung. Wo eine Größe aus
 einer anderen abgeleitet ist, kann sie nichts Neues zeigen.
 
-> **Das ist keine Schwäche dieses Notebooks, sondern eine Lehre für jeden Datensatz:**
-> Man muss wissen, wie eine Spalte entstanden ist. Eine abgeleitete Größe als
+> **Der Punkt gilt über diesen Datensatz hinaus:**
+> Wie eine Spalte entstanden ist, gehört zur Datenprüfung. Eine abgeleitete Größe als
 > „unabhängigen Beleg“ zu verwenden, ist einer der häufigsten Fehler überhaupt — und in
 > echten Unternehmensdaten oft schwerer zu erkennen als hier.
 """),
@@ -692,11 +692,11 @@ MD("""
 Normierung stellte CARGO fast alle Spitzenplätze, jetzt sind es 24 % der Top 50 bei einem
 Flottenanteil von 10 %. Das ist immer noch mehr als das Doppelte.
 
-> **Eine frühere Fassung schrieb hier „der CARGO-Überhang ist verschwunden".** Das war
-> Wunschdenken beim Lesen der eigenen Tabelle. Die Normierung hat den Effekt von fast
-> vollständig auf doppelt übervertreten gedrückt — eine große Verbesserung und keine
-> Beseitigung. Wer den Rest auch noch will, muss weiter: robustere Maße als Mittelwert und
-> Streuung (Median und mittlere absolute Abweichung), oder je Radtyp ein eigenes Modell.
+> **Der CARGO-Überhang ist damit nicht beseitigt.** Die Normierung hat ihn von fast
+> vollständiger auf doppelte Übervertretung gedrückt — eine deutliche Verbesserung, aber
+> keine Beseitigung. Für den verbleibenden Anteil wären robustere Maße als Mittelwert und
+> Streuung nötig (Median und mittlere absolute Abweichung) oder je Radtyp ein eigenes
+> Modell.
 
 > **Und noch etwas steht in der Tabelle:** {{untertyp}} ist mit
 > {{untertyp_liste:.0%}} gegenüber {{untertyp_flotte:.0%}} Flottenanteil jetzt
@@ -752,8 +752,8 @@ MD("""
 
 **Erstens:** Die Regel „sortiere nach Dauer“ schlägt beide Modellfassungen deutlich. Das
 ist kein Zufall, sondern **Konstruktion**: Wir haben die Teilwahrheit als `dauer_min > {{langfahrt_min:.0f}}`
-definiert, und `dauer_min` ist eines der Merkmale des Modells. Die Regel *ist* die
-Definition. Sie kann gar nicht verlieren.
+definiert, und `dauer_min` ist eines der Merkmale des Modells. Die Regel *ist* damit
+die Definition und kann in dieser Messung nicht schlechter abschneiden.
 
 **Zweitens — und das ist der eigentliche Fehler:** Diese ganze Tabelle bewertet ein
 Produkt, das es nicht gibt.
@@ -772,8 +772,8 @@ unangenehm.
 Das hat drei Folgen, und alle drei gehören in den Bericht:
 
 1. **Für „vergessene Rückgaben“ braucht es kein Modell.** Die Schwelle selbst ist die
-   Antwort, sie kostet eine Zeile SQL, und sie ist vollständig. Wer diese eine Sorte
-   Auffälligkeit sucht, ist hier fertig.
+   Antwort, sie kostet eine Zeile SQL, und sie ist vollständig. Für diese eine Sorte
+   Auffälligkeit ist damit keine weitere Analyse erforderlich.
 2. **Das Erfolgskriterium aus Phase 1 misst das Falsche.** „Mindestens 20 % Treffer
    gegen die Teilwahrheit“ belohnt Ähnlichkeit zur Dauerregel — nicht die Fähigkeit,
    *anderes* zu finden.
@@ -911,13 +911,10 @@ Liste gedacht ist. Die richtige Lesart ist:
 Der Befund lautet also nicht „das Modell ist schlecht", sondern: **Die Güte der
 Tagesliste ist unbekannt, und die {{globale_quote:.1%}} haben sie nie belegt.**
 
-> **Und noch eine Korrektur, die man leicht übersieht.** Eine frühere Fassung bildete die
-> Morgenliste aus den Fahrten mit **Starttag t**. Ein Lauf um 8 Uhr verarbeitet aber, was
-> **seit dem letzten Lauf neu abgeschlossen** wurde — sonst fallen alle Fahrten durchs
-<!-- zahl-ohne-ausgabe: 65 Anekdote ueber eine fruehere Fassung -->
-<!-- zahl-ohne-ausgabe: 73 Anekdote ueber eine fruehere Fassung -->
-> Raster, die über Mitternacht liefen. Die Korrektur hob damals die Zahl der Meldungen
-> von 65 auf 73 und die gefundenen Langfahrten von 4 auf 12.
+> **Ein zweiter Punkt betrifft die Abgrenzung der Tagesmenge.** Wird die Morgenliste aus
+> den Fahrten mit **Starttag t** gebildet, fehlen alle Fahrten, die über Mitternacht
+> liefen. Ein Lauf um 8 Uhr verarbeitet, was **seit dem letzten Lauf neu abgeschlossen**
+> wurde — danach wird hier gruppiert.
 >
 > Der Unterschied steckt in keiner Formel, sondern in der **Kohorte**: Wer nach dem
 > Startzeitpunkt gruppiert, obwohl er über Abschlüsse entscheidet, verliert genau die

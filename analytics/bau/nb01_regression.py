@@ -120,10 +120,10 @@ MD("""
 > | **tatsächliches Ziel** | `tatsaechliches_ziel` | wo die Fahrt endete — nachträglich beobachtet, **nie Merkmal** |
 > | **tatsächlicher Preis** | `entgelt_eur` | was berechnet wurde — der **Maßstab** der Bewertung |
 >
-> Eine frühere Fassung trainierte auf dem tatsächlichen Ziel und nannte es einen
-> „unvalidierten Stellvertreter". Das war ehrlich benannt, aber es beschrieb ein anderes
-> Produkt als das, das gebaut werden sollte: Die App kennt zur Anfragezeit nur das
-> geplante Ziel. **Seit die Daten es führen, rechnet dieses Notebook damit.**
+> Auf dem **tatsächlichen** Ziel zu trainieren wäre naheliegend, beschriebe aber ein
+> anderes Produkt: Die App kennt zur Anfragezeit nur das geplante Ziel. Modelleingabe
+> ist deshalb ausschließlich `geplante_ziel_station_id`; das tatsächliche Ende dient
+> allein der Bewertung.
 >
 > **Und die beiden fallen auseinander.** In {{zielabweichung:.0%}} der bewerteten
 > Fahrten endet jemand woanders, als er angegeben hat. Das ist keine Störgröße, die man
@@ -469,7 +469,7 @@ Verfügung, in dem die Anzeige erscheinen soll?**
 | `endzeit`, `dauer_min` | nein | entstehen am Ende der Fahrt |
 | `distanz_km`, `entgelt_eur` | nein | werden während und nach der Fahrt gebildet |
 
-Die Wetterzeile ist neu und war in der ersten Runde falsch. Ein Modell, das mit dem
+Die Wetterzeile verdient besondere Aufmerksamkeit. Ein Modell, das mit dem
 *Tagesmittel* rechnet, benutzt Wissen von heute Abend für eine Anfrage von heute früh —
 und ein zeitlicher Schnitt heilt das nicht, weil auch im Testzeitraum das nachträglich
 bekannte Tageswetter eingesetzt würde.
@@ -2002,9 +2002,9 @@ einlöst, ist ihr Zweck: Sie beantwortet {{qtab_auskunft:.1%}} der Anfragen und 
 damit unter der Perzentiltabelle, die denselben Betriebsaufwand hat und sich leichter
 erklären lässt.
 
-**Wie sie gebaut wird, ist dabei nicht gleichgültig.** Eine erste Fassung bildete je
-Kombination den Median jedes Merkmals und schickte diesen einen Vektor durch das Modell.
-Das ist falsch, und zwar aus zwei Gründen: Die getrennten Mediane von `stunde_sin` und
+**Wie sie gebaut wird, ist dabei nicht gleichgültig.** Naheliegend wäre, je
+Kombination den Median jedes Merkmals zu bilden und diesen einen Vektor durch das Modell
+zu schicken. Das ist aus zwei Gründen falsch: Die getrennten Mediane von `stunde_sin` und
 `stunde_cos` ergeben keinen realen Zeitpunkt — der Punkt liegt *im* Einheitskreis statt
 auf ihm —, und die Vorhersage am Medianvektor ist nicht der Median der Vorhersagen. Jetzt
 wird für **jede tatsächlich beobachtete Fahrt** der Gruppe vorhergesagt und erst danach
@@ -3324,9 +3324,9 @@ nachträgliche Begründung. Diese vier Fragen sind deshalb vorab entschieden:
 | 4 | Mindestreichweite je Radtyp | **ja** (Kriterium aus 5.5) |
 
 > **Alle drei bindenden Gates werden auf der Abnahme erneut geprüft, nicht nur Gate 1.**
-> Eine frühere Fassung band das Abnahmeurteil allein an die aggregierte Untergrenze —
-> also an das wichtigste, aber eben nur eines von dreien. Ein Freigabelauf, der sich das
-> günstigste Kriterium heraussucht, ist kein Freigabelauf. In 6.7 stehen deshalb
+> Das Abnahmeurteil allein an die aggregierte Untergrenze zu binden, würde es an das
+> wichtigste, aber eben nur an eines von drei Kriterien knüpfen. Ein Freigabelauf, der
+> sich das günstigste Kriterium auswählt, prüft nicht. In 6.7 stehen deshalb
 > {{ab_gates_gesamt:.0f}} Einzelprüfungen (Gate 1 einmal, Gate 3 und Gate 4 je Radtyp),
 > und der Status wird nur gesetzt, wenn **alle** halten.
 

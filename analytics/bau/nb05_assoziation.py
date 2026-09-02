@@ -49,23 +49,17 @@ MD("""
 | 3 | eine **Gruppe** je Objekt (Stationstyp, Kundensegment) |
 | **5** | **Regeln über Zusammenhänge** — keine Vorhersage, keine Gruppe |
 
-> **Womit wir hier rechnen.** Die VeloCity-Daten sind **synthetisch** — erzeugt für diese
-> Fallstudie, nicht in Würzburg gemessen. Die Verfahren, die Fallstricke und die
-> Entscheidungswege sind echt; die Zahlen beschreiben kein reales Verkehrsaufkommen.
-> Wo unten „die Ströme dieser Stadt" steht, ist immer der Datensatz gemeint.
+Die Assoziationsanalyse stammt aus dem Handel und heißt dort **Warenkorbanalyse**:
+Welche Artikel liegen zusammen im Einkaufswagen? Übertragen auf VeloCity ist **eine
+Fahrt ein Warenkorb** — darin liegen Start, Ziel, Tageszeit, Wochentag und Radtyp. Die
+Frage lautet: Was liegt regelmäßig zusammen im selben Korb?
 
-Die Assoziationsanalyse stammt aus dem Handel und heißt dort **Warenkorbanalyse**: Welche
-Artikel liegen zusammen im Einkaufswagen? Das berühmte (und wahrscheinlich erfundene)
-Beispiel ist *Windeln und Bier*.
+Die drei Kennzahlen bestehen aus je einer Division und werden hier ohne Bibliothek
+gerechnet.
 
-Übertragen auf VeloCity: **Eine Fahrt ist ein Warenkorb.** Darin liegen die Startstation,
-die Zielstation, die Tageszeit, der Wochentag, der Radtyp. Die Frage lautet: Was liegt
-regelmäßig zusammen im selben Korb?
-
-> **Warum wir das ohne Bibliothek rechnen.** Für Assoziationsregeln gibt es fertige
-> Pakete (`mlxtend`, `apyori`). Wir rechnen die drei Kennzahlen hier von Hand — sie
-> bestehen aus je einer Division, und wer sie einmal selbst gerechnet hat, fällt später
-> nicht auf eine Regel herein, die nur nach etwas aussieht.
+> **Datengrundlage.** Die VeloCity-Daten sind **synthetisch**, erzeugt für diese
+> Fallstudie. Verfahren und Entscheidungswege sind übertragbar; die Zahlen beschreiben
+> kein reales Verkehrsaufkommen.
 """),
 
 # =====================================================================
@@ -75,27 +69,18 @@ PHASE(1, "Die Disposition weiß, dass sie morgens umverteilen muss. Sie weiß ni
 MD("""
 ### Die Ausgangslage
 
-Aus Notebook 3 wissen wir, welche **Typen** von Stationen es gibt. Was wir nicht wissen:
-**welche Station sich zugunsten welcher anderen leert.** Der Transporter fährt morgens
-los und verteilt nach Gefühl um.
+Notebook 3 hat die **Typen** von Stationen bestimmt. Offen ist, **welche Station sich
+zugunsten welcher anderen leert**. Die Frage lautet nicht mehr „wie viele Räder"
+(Notebook 4), sondern **„von wo nach wo"**.
 
-Die Frage ist also nicht mehr „wie viele Räder“ (das war Notebook 4), sondern
-**„von wo nach wo“**.
+Eine Kreuztabelle Start × Ziel beantwortet sie nicht: Sie zeigt absolute Häufigkeiten,
+und die größten Zahlen stehen dort, wo am meisten Betrieb ist. Der Hauptbahnhof steht
+überall oben, weil er groß ist, nicht weil er besondere Beziehungen hat. Der **Lift**
+rechnet diesen Größeneffekt heraus.
 
-### Warum Assoziationsanalyse und nicht einfach eine Kreuztabelle?
+### Die drei Kennzahlen
 
-Eine Kreuztabelle Start × Ziel könnte man auch bauen. Sie hätte aber ein Problem: Sie
-zeigt **absolute Häufigkeiten**, und die größten Zahlen stehen dort, wo einfach am
-meisten los ist. Der Hauptbahnhof taucht überall oben auf — nicht weil er besondere
-Beziehungen hat, sondern weil er groß ist.
-
-Die Assoziationsanalyse rechnet das heraus. Ihre dritte Kennzahl, der **Lift**, fragt
-genau das: *Kommt diese Kombination häufiger vor, als man bei Unabhängigkeit erwarten
-würde?*
-
-### Die drei Kennzahlen — an einem Beispiel aus dem Handel
-
-Regel: **{Brot} → {Butter}**
+Am Beispiel der Regel **{Brot} → {Butter}**:
 
 | Kennzahl | Frage | Rechnung |
 |---|---|---|
@@ -103,92 +88,64 @@ Regel: **{Brot} → {Butter}**
 | **Konfidenz** | Wenn Brot drin ist — wie oft dann auch Butter? | Körbe mit beidem ÷ Körbe mit Brot |
 | **Lift** | Ist das mehr, als der Zufall hergäbe? | Konfidenz ÷ Anteil aller Körbe mit Butter |
 
-**Lift = 1** heißt: kein Zusammenhang. **Lift = 2**: doppelt so häufig wie erwartet.
-**Lift < 1**: die beiden meiden einander.
+**Lift = 1** bedeutet kein Zusammenhang, **Lift = 2** doppelt so häufig wie erwartet,
+**Lift < 1** ein Meiden.
 
-### Ein Zusatz, der bei uns nötig ist: der Lift **im Kontext**
+### Der Lift im Kontext
 
-Im Supermarkt gibt es nur einen Korb. Bei uns hat jede Fahrt einen **Kontext** — Werktag
-oder frei, und eines von vier Zeitfenstern. Und die Ziele sind je nach Kontext ganz
-verschieden beliebt: Der Campus ist werktags früh ein häufiges Ziel und sonntags abends
-fast keines.
-
-Rechnet man den Lift gegen den Anteil über **alle** Fahrten, misst man deshalb zwei Dinge
-auf einmal: den Zusammenhang *und* den Umstand, dass morgens andere Ziele gefragt sind als
-abends. Wir rechnen deshalb gegen die Basisrate **im selben Kontext**:
+Jede Fahrt hat einen **Kontext**: Werktag oder freier Tag, dazu eines von vier
+Zeitfenstern. Die Ziele sind je nach Kontext unterschiedlich beliebt — der Campus ist
+werktags früh häufiges Ziel, sonntags abends kaum. Ein Lift gegen den Anteil über
+**alle** Fahrten misst deshalb zwei Dinge zugleich.
 
 | | Nenner der Division | Was er misst |
 |---|---|---|
 | klassischer Lift | Anteil des Ziels an **allen** Fahrten | Zusammenhang **und** Kontexteffekt, vermischt |
-| **kontextbedingter Lift** ← unsere Wahl | Anteil des Ziels **im selben Kontext** | nur den Zusammenhang, bei gleichem Kontext |
+| **kontextbedingter Lift** ← gewählt | Anteil des Ziels **im selben Kontext** | nur den Zusammenhang, bei gleichem Kontext |
 
-In beiden Fällen ist der Zähler derselbe: die Konfidenz, also der Anteil der Fahrten ab
-dieser Startstation in diesem Kontext, die an diesem Ziel enden.
+Der Zähler ist in beiden Fällen derselbe. Für die supportstärkste Regel dieses Notebooks
+— {{top_kontext}} von „{{top_start}}" nach „{{top_ziel}}" — liegt der klassische Lift bei
+**{{top_lift_klassisch:.2f}}**, der kontextbedingte bei **{{top_lift_kontext:.2f}}**. Ab
+hier wird ausschließlich der kontextbedingte Lift ausgewiesen; die Schwellen beziehen
+sich auf ihn. Beide Werte stehen in Phase 4 nebeneinander.
 
-Der Unterschied ist nicht klein. Für die **supportstärkste** Regel dieses Notebooks —
-{{top_kontext}} von „{{top_start}}" nach „{{top_ziel}}" — liegt der klassische Lift bei
-**{{top_lift_klassisch:.2f}}**, der kontextbedingte bei **{{top_lift_kontext:.2f}}**. Ein
-guter Teil des klassischen Werts kommt also gar nicht von der Verbindung, sondern daher,
-dass das Ziel in diesem Zeitfenster ohnehin gefragt ist.
-
-**Wir weisen ab hier ausschließlich den kontextbedingten Lift aus**, und die Schwelle in
-den Erfolgskriterien bezieht sich auf ihn. Beide Werte stehen in Phase 4 nebeneinander,
-damit der Abstand sichtbar bleibt.
-
-### Die Erfolgskriterien
-
-Eine Regel ist für die Disposition **nur dann brauchbar**, wenn alle drei zutreffen:
+### Erfolgskriterien: drei Hürden für jede Regel
 
 | | Kriterium | Schwelle | Warum |
 |---|---|---|---|
 | 1 | **Support** | mindestens 1 % der **Warenkörbe** | Für eine Regel, die zwanzig Fahrten im Jahr betrifft, fährt kein Transporter |
 | 2 | **kontextbedingter Lift** | mindestens 1,3 | Darunter ist es Zufall oder schlicht Größe |
-| 3 | **Ziel ist eine konkrete Station** | Start ≠ Ziel, und das Ziel ist keine freie Abstellung | eine Rundtour verschiebt kein Rad; „frei abgestellt“ ist kein Ort, den man anfahren kann |
+| 3 | **Ziel ist eine konkrete Station** | Start ≠ Ziel, und das Ziel ist keine freie Abstellung | eine Rundtour verschiebt kein Rad; „frei abgestellt" ist kein anfahrbarer Ort |
 
-**Kriterium 3 wird in Phase 5 als Code geprüft**, nicht als Absichtserklärung. Ein
-Kriterium, das nur im Text steht, ist keines.
-
-> **Und es heißt bewusst nicht „handlungsfähig".** Geprüft wird ausschließlich, ob das
-> Ziel eine anfahrbare Station ist — **technische Adressierbarkeit**. Ob Menge, Bestand,
-> Kapazität und Kosten eine Transporterfahrt rechtfertigen, sagt dieses Kriterium nicht
-> und kann es nicht sagen. Eine frühere Fassung nannte es „handlungsfähig" und
-> versprach damit mehr, als sie prüfte.
-
-**Kriterium 1 sortiert die meisten Regeln aus** — und zwar gerade die mit den höchsten
-Lift-Werten; die Auswertung in Phase 5 zeigt das. Ob es dabei das Richtige misst, ist
-eine eigene Frage, und sie wird dort ebenfalls gestellt.
+Kriterium 3 prüft ausschließlich die **technische Adressierbarkeit** und wird in Phase 5
+als Code geprüft. Ob Menge, Bestand, Kapazität und Kosten eine Transporterfahrt
+rechtfertigen, sagt es nicht. Kriterium 1 sortiert die meisten Regeln aus, darunter die
+mit den höchsten Lift-Werten.
 
 ### Zwei Produkte, zwei Kriteriensätze
 
-Dieses Notebook kann **zwei verschiedene Dinge** abliefern, und sie brauchen verschiedene
-Nachweise. Beide werden hier festgelegt, vor der ersten Rechnung:
+Dieses Notebook kann zwei verschiedene Dinge abliefern. Beide Kriteriensätze stehen vor
+der ersten Rechnung fest.
 
-**Produkt A — die automatische Umverteilungsregel.** Der Transporter fährt, weil eine
-Regel es sagt. Dafür reichen die drei Kriterien oben **nicht**; hinzu kommt eine vierte,
-wirtschaftliche Hürde:
+**Produkt A — automatische Umverteilung.** Der Transporter fährt, weil eine Regel es
+sagt. Dafür kommt zu den drei Hürden eine vierte, wirtschaftliche:
 
 | | Kriterium | Schwelle |
 |---|---|---|
 | **A4** | Der Wert der Fahrten, die eine Regel je Umsetzrunde betrifft, muss die Kosten dieser Runde übersteigen | {{kosten_transport:.0f}} € je Runde gegen {{wert_fahrt:.2f}} € je Fahrt — **beides gesetzte Szenarioannahmen**, keine gemessenen Kosten |
 
-**Produkt B — der Dispositionshinweis.** Kein Transportauftrag, sondern ein Satz in der
-Dispositionsansicht, den ein Mensch liest und bewertet. Ein Hinweis darf schwächer belegt
-sein als ein Auftrag — aber nicht beliebig:
+**Produkt B — Dispositionshinweis.** Kein Transportauftrag, sondern ein Satz in der
+Dispositionsansicht, den ein Mensch bewertet:
 
 | | Kriterium | Warum |
 |---|---|---|
 | **B1** | Die Regel hält in einem **Bestätigungszeitraum**, den die Suche nicht gesehen hat | Ein Muster aus dem Suchzeitraum ist eine Beschreibung, kein Befund |
-| **B2** | Die Anzeige nennt die **Größenordnung** — Fahrten je Werktag — direkt neben der Regel | Ohne sie liest jemand „Pendelstrom" und schickt einen Transporter |
+| **B2** | Die Anzeige nennt die **Größenordnung** — Fahrten je Werktag — neben der Regel | Ohne sie wird „Pendelstrom" als Transportauftrag gelesen |
 | **B3** | Kein automatischer Auftrag; die Entscheidung trifft ein Mensch | Für die Automatik fehlt A4 |
 | **B4** | Begleitende Auswertungen (Stationssalden, Abstell-Hotspots) tragen im Dateikopf und in der Ansicht das Wort **explorativ** | Sie hatten nie vorab gesetzte Kriterien |
 
-> **Warum das hier steht und nicht in Phase 6.** Eine frühere Fassung hat in Phase 5
-> geschrieben „freigegeben ist nichts" und in Phase 6 „freigegeben als Entscheidungshilfe".
-> Beides stand nebeneinander im selben Notebook. Der Grund war nicht Nachlässigkeit,
-> sondern ein fehlendes Produkt: Die Entscheidungshilfe war nie als eigenes Produkt mit
-> eigenen Kriterien definiert, also gab es auch keinen Maßstab, an dem sie freigegeben
-> oder verweigert werden konnte. **Ein Produkt ohne Kriterien kann man weder freigeben
-> noch ablehnen — man kann nur darüber streiten.**
+Ohne eigene Kriterien ließe sich der Dispositionshinweis weder freigeben noch ablehnen.
+Er wird deshalb hier als eigenes Produkt definiert, nicht erst in Phase 6.
 """),
 
 # =====================================================================
@@ -773,71 +730,45 @@ _ = merke("k1_support", K1_SUPPORT)
 '''),
 
 MD("""
-### 5.1 Das Bild erzählt die ganze Geschichte
+### 5.1 Was die Punktwolke zeigt
 
-Die Punktwolke fällt nach rechts ab, und das ist kein Zufall, sondern fast ein
-Naturgesetz dieser Methode:
+Die Punktwolke fällt nach rechts ab. Der übliche Grund dafür — je spezieller eine Regel,
+desto kleiner ihr Support — greift hier **nicht**: Alle Regeln sind gleich spezifisch,
+denn Tagesart, Zeitfenster und Startstation sagen jeweils genau ein Ziel voraus. Keine
+ist die Erweiterung einer anderen. Die unterschiedlichen Supportwerte kommen allein
+daher, dass manche Start-Ziel-Paare häufiger sind als andere.
 
-> **Je spezieller eine Regel, desto kleiner ihr Support** — das gilt immer, wenn man einer
-> bestehenden Regel eine weitere Bedingung *hinzufügt*. Beim Lift gilt kein solcher
-> Zusammenhang: Er kann steigen, fallen oder gleich bleiben.
+Was das Bild zeigt, ist einfacher: Bei kleinem Support streut der Lift stärker, weil er
+aus kleinen Zählwerten gebildet wird. **Was wie ein Zusammenhang aussieht, ist der Rand
+einer Verteilung.** Die Regeln mit den höchsten Lift-Werten stehen links oben — bei einem
+Support von Bruchteilen eines Prozents und damit ohne Nutzen für die Disposition.
 
-**Dieser Satz erklärt das Bild hier allerdings nicht**, und der Unterschied ist lehrreich.
-Alle Regeln in der Wolke sind **gleich spezifisch**: Tagesart, Zeitfenster und Startstation
-sagen jeweils genau ein Ziel voraus. Keine ist eine Erweiterung einer anderen. Ihre
-verschiedenen Supportwerte kommen nicht aus verschiedener Komplexität, sondern schlicht
-daraus, dass manche Start-Ziel-Paare häufiger sind als andere.
+### Sind die stärksten Regeln Zufall?
 
-Was das Bild dann zeigt, ist etwas Einfacheres: Ganz links, bei kleinem Support, stehen
-die Regeln mit wenigen Belegen — und dort streut der Lift stärker, weil er aus kleinen
-Zählwerten gebildet wird. **Was wie ein Zusammenhang aussieht, ist der Rand einer
-Verteilung.**
+Für jede Regel liegt eine Vierfeldertafel vor: Fahrten ab dieser Station in diesem
+Fenster zu diesem Ziel gegen alle übrigen. Fishers exakter Test prüft, ob eine solche
+Häufung bei Unabhängigkeit plausibel wäre.
 
-Ganz links oben stehen die Regeln mit den höchsten Lift-Werten — bei einem Support von
-Bruchteilen eines Prozents. Sie beschreiben so wenige Fahrten, dass sie für die
-Disposition ohne Nutzen sind.
+**Korrigiert wird über die Zahl der durchsuchten Kombinationen, nicht über die der
+gefundenen Regeln.** Der Supportfilter ist datenabhängig und hat bereits ausgewählt; wer
+erst danach korrigiert, rechnet die Testfamilie klein. Durchsucht wurden **800**
+Kombinationen aus Tagesart, Fenster, Start und Ziel; mit 800 wird multipliziert
+(**Bonferroni-Korrektur**). Das Ergebnis steht in der Ausgabe oben.
 
-### Sind die Top-Regeln denn Zufall? Nachsehen statt behaupten
+**Was daraus folgt und was nicht.** Die Häufungen sind unter dem gewählten
+Unabhängigkeitsmodell auch nach konservativer Korrektur auffällig. Real sind sie damit
+nicht belegt: Fishers Test behandelt jede Fahrt als unabhängige Beobachtung, während
+dieselben Personen wiederholt fahren und Fahrten desselben Tages zusammenhängen. Fällt
+die Unabhängigkeitsannahme, fällt die Aussage mit. Belastbar ist deshalb nur die
+Kombination aus statistischer Auffälligkeit und Bestätigung in einem späteren Zeitraum
+(Phase 5.3) — ein Stabilitätsindiz, kein Signifikanznachweis und kein Beleg
+betrieblicher Relevanz.
 
-Es liegt nahe, jetzt zu sagen: *„Wer eine Regelliste nach Lift sortiert und die ersten
-zehn vorträgt, trägt zehn Zufälle vor."* Für den vorliegenden Datensatz trifft diese
-Aussage **nicht** zu; die Ausgabe oben hat sie geprüft.
-
-Für jede Regel steht eine Vierfeldertafel zur Verfügung: Fahrten ab dieser Station in
-diesem Fenster zu diesem Ziel, gegen alles andere. Fishers exakter Test beantwortet damit
-die Frage, ob eine solche Häufung bei Unabhängigkeit noch plausibel wäre.
-
-**Womit wird korrigiert?** Nicht mit der Zahl der gefundenen Regeln. Sie sind das, was
-den Supportfilter überlebt hat — und dieser Filter ist **datenabhängig**, er hat also schon ausgewählt. Wer
-danach korrigiert, korrigiert nur den Rest und rechnet sich die Familie klein. Durchsucht
-wurden **800** Kombinationen aus Tagesart, Fenster, Start und Ziel; mit 800 wird
-multipliziert (**Bonferroni-Korrektur**).
-
-Wie viele der zehn diesen strengeren Test bestehen und wie hoch der schwächste
-korrigierte p-Wert ausfällt, steht in der Ausgabe oben.
-
-> **Was daraus folgt — und was nicht.** Die beobachteten Häufungen sind unter dem
-> gewählten Unabhängigkeitsmodell auch nach konservativer Korrektur statistisch auffällig.
-> **Das heißt nicht, dass die Regeln „real" sind.** Fishers Test behandelt jede Fahrt als
-> unabhängige Beobachtung; tatsächlich fahren dieselben Personen wiederholt, und Fahrten
-> desselben Tages hängen zusammen. Ein Bootstrap über Tage oder Kundennummern wäre
-> ehrlicher und fiele vermutlich schwächer aus.
->
-> Was wir sagen können: **Unter dem gewählten Unabhängigkeitsmodell sind die Häufungen
-> sehr unwahrscheinlich, und sie halten in einem späteren Zeitraum** (Phase 5.3). Beides
-> zusammen ist ein Stabilitätsindiz — kein Signifikanznachweis und erst recht kein Beleg
-> betrieblicher Relevanz. Der Zusatz „unter dem gewählten Modell“ ist keine Floskel: Fällt
-> die Unabhängigkeitsannahme, fällt die Aussage mit.
-
-> **Eine wichtige Unterscheidung bleibt.** „Statistisch auffällig" und „betrieblich
-> relevant" sind zwei verschiedene Dinge, und die Assoziationsanalyse liefert nur das
-> erste. Der übliche Merksatz — hoher Lift heißt Zufall — verwechselt beides. Hier
-> scheitern die Regeln nicht an der Signifikanz, sondern an der Größe.
-
-**Wo der Merksatz trotzdem stimmt:** Hätten wir keine Support-Untergrenze von 0,5 %
-gesetzt, stünden hier Regeln mit drei oder vier Fahrten und Lift-Werten jenseits von 10 —
-und die wären dann tatsächlich meist Zufall. Die Untergrenze bei der Suche ist es, die
-den Merksatz hier entkräftet, nicht der Datensatz.
+**Statistisch auffällig und betrieblich relevant sind zwei verschiedene Dinge.** Die
+Assoziationsanalyse liefert nur das erste. Hier scheitern die Regeln nicht an der
+Signifikanz, sondern an der Größe. Ohne die Support-Untergrenze von 0,5 % bei der Suche
+stünden hier Regeln mit drei oder vier Fahrten und Lift-Werten jenseits von 10 — die
+wären tatsächlich meist Zufall.
 
 ### 5.2 Die Regeln, die alle drei Kriterien nehmen
 """),
@@ -864,75 +795,52 @@ MD("""
 supportstärkste — {{top_kontext}} von „{{top_start}}" nach „{{top_ziel}}" — erreicht
 {{top_support:.2%}} Support gegenüber der Hürde von {{k1_support:.0%}}.
 
-> **„Stärkste Regel" ist zweideutig, und die Zweideutigkeit ist folgenreich.** Den größten
-> **Lift** hat in aller Regel eine andere als den größten **Support** — die Tabelle in
-> Phase 4 zeigt beide Spalten nebeneinander. Welche Regel „stärker" ist, hängt allein
-> daran, welche Hürde man betrachtet. Wer das nicht dazusagt, kann sich nachträglich die
-> passende aussuchen.
-
-> **Und die wichtigere Unterscheidung: A1 bis A3 erfüllt heißt nicht freigegeben.** Diese
-> drei Hürden aus Phase 1 sind statistische Mindestanforderungen — sie sagen, wann ein
-> Muster groß und deutlich genug ist, um überhaupt betrachtet zu werden. Ob sich für
-> dieses Muster ein Transporter in Bewegung setzt, entscheidet A4. Die Beträge dafür
-> stehen in Phase 1, aber als **gesetzte Szenarioannahmen**; was fehlt, sind reale
-> Kosten- und Wirkungsparameter. **Ein bestandenes Kriterium ist eine Eintrittskarte,
-> keine Entscheidung.**
+Zwei Einordnungen gehören dazu. **Erstens ist „stärkste Regel" zweideutig:** Die Regel
+mit dem größten Lift ist in aller Regel eine andere als die mit dem größten Support. Die
+Tabelle in Phase 4 zeigt beide Spalten, damit die Wahl nicht nachträglich getroffen
+werden kann. **Zweitens heißt A1 bis A3 erfüllt nicht freigegeben:** Diese Hürden sagen,
+wann ein Muster groß und deutlich genug ist, um betrachtet zu werden. Ob ein Transporter
+fährt, entscheidet A4 — und dessen Beträge sind gesetzte Szenarioannahmen.
 
 ### Die Hürde misst nicht, was sie messen sollte
 
-Jetzt kommt der unangenehme Teil, und er betrifft nicht die Daten, sondern **uns**.
+Die Begründung für die Ein-Prozent-Hürde lautete in Phase 1: *„Für eine Regel, die
+zwanzig Fahrten im Jahr betrifft, fährt kein Transporter."* Das ist eine Aussage über
+**Fahrten je Tag**. Gemessen wurde aber ein **Anteil an allen Warenkörben über drei
+Jahre** — eine andere Skala. Die Ausgabe oben rechnet beide ineinander um: Die Hürde
+verlangt {{huerde_je_werktag:.2f}} Fahrten je Werktag, die supportstärkste Regel mit
+{{top_fahrten:,}} Fahrten bringt {{top_je_werktag:.2f}}.
 
-Die Begründung für die Ein-Prozent-Hürde lautete in Phase 1: *„Für eine Regel, die zwanzig
-Fahrten im Jahr betrifft, fährt kein Transporter."* Das ist eine Aussage über
-**Betriebsgrößen** — über Fahrten je Tag. Gemessen haben wir aber einen **Anteil an allen
-Warenkörben über drei Jahre**. Das sind zwei verschiedene Maßstäbe, und die Ausgabe oben
-rechnet sie ineinander um:
-
-- Die supportstärkste Regel umfasst {{top_fahrten:,}} Fahrten.
-- Was die Hürde in Fahrten je Werktag verlangt und wie weit die Regel davon entfernt ist,
-  rechnet die Zelle oben aus.
-
-**Der Punkt ist nicht die Richtung des Abstands, sondern die Skala.** Die Hürde verlangt
-{{huerde_je_werktag:.2f}} Fahrten je Werktag, die stärkste Regel bringt
-{{top_je_werktag:.2f}}. Beide Werte liegen weit unterhalb dessen, was eine
-Transporterfahrt rechtfertigt — die Hürde trennt also nicht „lohnt sich" von „lohnt sich
-nicht", sondern zwei Größenordnungen, in denen ohnehin kein Transporter fährt. Ob eine
-Regel sie nimmt, sagt betrieblich nichts.
-
-**Das Kriterium war schlecht formuliert.** Nicht zu streng und nicht zu lax: auf der
-falschen Skala.
+Beide Werte liegen weit unterhalb dessen, was eine Transporterfahrt rechtfertigt. Die
+Hürde trennt damit nicht „lohnt sich" von „lohnt sich nicht", sondern zwei
+Größenordnungen, in denen ohnehin kein Transporter fährt. **Das Kriterium war auf der
+falschen Skala formuliert** — nicht zu streng und nicht zu lax.
 
 ### Was jetzt nicht passiert
 
-Die naheliegende Reaktion wäre, die Hürde durch eine bessere zu ersetzen und noch einmal
-zu rechnen. **Das wäre ein schwerer methodischer Fehler.**
+Die Hürde wird **nicht** ersetzt und die Rechnung nicht wiederholt. Ein Kriterium, das
+nach dem Ergebnis geändert wird, misst nichts mehr — auch dann nicht, wenn die Änderung
+sachlich richtig ist; der Verdacht der Anpassung an das gewünschte Ergebnis lässt sich
+nachträglich nicht ausräumen.
 
-> Ein Kriterium, das man ändert, **nachdem** man das Ergebnis gesehen hat, misst nichts
-> mehr — auch dann nicht, wenn die Änderung sachlich richtig ist. Der Verdacht, dass die
-> neue Hürde genau so gewählt wurde, dass das gewünschte Ergebnis herauskommt, lässt sich
-> hinterher nicht mehr ausräumen. Nicht einmal von einem selbst.
+Für **Produkt A** lautet das Ergebnis damit {{status_a}}; der Mangel wird protokolliert
+statt repariert. Für eine zweite Runde gehört das Kriterium neu formuliert, **vor** der
+nächsten Messung und in der Einheit der Disposition: *mindestens N Fahrten je Werktag,
+wobei N aus den Kosten einer Transporterfahrt hergeleitet wird.*
 
-Die Hürde bleibt also stehen, und für **Produkt A** lautet das Ergebnis
-{{status_a}}; der Mangel wird protokolliert statt repariert. Für eine zweite Runde gehört das Kriterium neu formuliert —
-**vor** der nächsten Messung, und in der Einheit, in der die Disposition denkt:
-
-> *Eine Regel ist brauchbar, wenn sie mindestens N Fahrten je Werktag betrifft — wobei N
-> aus den Kosten einer Transporterfahrt hergeleitet wird, nicht aus einer runden Zahl.*
-
-Dass wir diese Zahl heute nicht nennen können, ist selbst ein Befund: **Gemessene Kosten einer
-Transporterfahrt standen nie in den Projektunterlagen.** Die {{kosten_transport:.0f}} €
-und {{wert_fahrt:.2f}} €, mit denen dieses Notebook rechnet, sind gesetzte
-Szenarioannahmen — sie ersetzen keine Messung. Ohne echte Werte ist jede Hürde geraten.
+Dass diese Zahl heute fehlt, ist selbst ein Befund: **Gemessene Kosten einer
+Transporterfahrt lagen nie vor.** Die {{kosten_transport:.0f}} € je Runde und
+{{wert_fahrt:.2f}} € je Fahrt sind gesetzte Szenarioannahmen.
 
 ### 5.3 Entdeckung und Bestätigung trennen
 
 Alles bisher Gerechnete hat **denselben Datensatz zum Suchen und zum Bewerten** benutzt.
-Das ist bei einer Regelsuche besonders heikel: Wir haben 800 Kombinationen durchgesehen
-und die auffälligsten behalten. Ob sie auch in einem Zeitraum auffällig sind, den die
-Suche nie gesehen hat, ist damit nicht beantwortet.
+Bei einer Regelsuche wiegt das schwer: 800 Kombinationen wurden durchgesehen und die
+auffälligsten behalten. Ob sie auch in einem Zeitraum auffällig sind, den die Suche nie
+gesehen hat, ist damit offen.
 
-Die einfachste Gegenprobe: Regeln in den ersten zwei Dritteln **suchen**, im letzten
-Drittel **nachsehen**.
+Die Gegenprobe: Regeln in den ersten zwei Dritteln **suchen**, im letzten Drittel
+**nachsehen**.
 """),
 
 CODE('''
@@ -1038,9 +946,8 @@ Ein Muster sticht heraus: **morgens** fließt es aus den Wohnlagen in Richtung A
 Studium. Die supportstärkste Regel der Liste ist {{top_kontext}} von „{{top_start}}" nach
 „{{top_ziel}}" mit {{top_fahrten:,}} Fahrten.
 
-**Die naheliegende Fortsetzung lautet: abends fließt dasselbe zurück.** Diesen Satz haben
-frühere Fassungen dieses Notebooks an dieser Stelle geschrieben. Er hat nur einen Fehler:
-**Die Rückrichtung steht gar nicht in der Regelliste.**
+**Die naheliegende Fortsetzung lautet: abends fließt dasselbe zurück.** Diese Aussage
+lässt sich aus der Regelliste nicht ableiten: **Die Rückrichtung steht dort gar nicht.**
 
 Sehen Sie in der Ausgabe oben nach: Die Rückrichtung „{{top_ziel}}" → „{{top_start}}"
 im Fenster {{rueck_fenster}} kommt auf {{rueck_fahrten:.0f}} Fahrten, einen Support von
@@ -1125,80 +1032,52 @@ else:
 '''),
 
 MD("""
-**Die Deutung trägt nicht.** In fünf Jahren gibt es
-{{personen_selber_tag:.0f}} Fälle, in denen dieselbe Person morgens vom Bahnhof zum Campus
-und abends zurückgefahren ist — bei {{rueck_fahrten_paar:.0f}} Abendfahrten. Das ist kein
-Muster, das ist ein Zufall.
+**Die Deutung trägt nicht.** In fünf Jahren gibt es {{personen_selber_tag:.0f}} Fälle, in
+denen dieselbe Person morgens vom Bahnhof zum Campus und abends zurückgefahren ist — bei
+{{rueck_fahrten_paar:.0f}} Abendfahrten.
 
-**Und hier wäre beinahe eine Fehldeutung stehen geblieben.**
-{{personen_irgendwann:.0f}} Personen haben *irgendwann* beide Richtungen benutzt, und
-{{personen_irgendwann:.0f}} von {{personen_abends:.0f}} sind {{anteil_irgendwann:.1%}}. Eine frühere Fassung
-dieses Notebooks hat genau diese Zahl gedruckt und dazu geschrieben, die Deutung halte
-„schwächer als erwartet" stand. Das war falsch:
+Eine Fehldeutung liegt dabei nahe: {{personen_irgendwann:.0f}} Personen haben
+*irgendwann* beide Richtungen benutzt, das sind {{anteil_irgendwann:.1%}} von
+{{personen_abends:.0f}}. Diese Zahl als abgeschwächte Bestätigung zu lesen, wäre falsch:
 
 | Was gezählt wurde | Was daraus gelesen wurde |
 |---|---|
 | {{personen_irgendwann:.0f}} Personen benutzten *irgendwann* beide Richtungen | „{{personen_irgendwann:.0f}} Personen fahren hin und zurück" |
 | Über alle Werktage hinweg, in beliebiger Kombination | ein täglicher Pendelweg |
 
-Zwischen beiden Sätzen liegt die **Tagesbindung** — und ohne sie zählt man Menschen, die
-im März einmal hin- und im Oktober einmal zurückgefahren sind, als Pendler.
+Zwischen beiden Sätzen liegt die **Tagesbindung**. Ohne sie zählt man Personen, die im
+März einmal hin- und im Oktober einmal zurückgefahren sind, als Pendler.
 
-> **Die Regel merkt davon nichts.** Support, Konfidenz und Lift sind für die
-> Hin-Richtung völlig in Ordnung; die Zahlen stimmen. Falsch war nur die *Geschichte*, die
-> daneben stand. Assoziationsregeln erzählen keine Geschichten — sie zählen
-> Übereinstimmungen. Die Geschichte kommt vom Menschen davor, und sie muss getrennt
-> geprüft werden.
-
-**Was der Pendelstrom für den Transporter bedeutet, ändert sich dadurch übrigens nicht.**
-Die Räder laufen am Campus auf, ganz gleich, wer sie dorthin gefahren hat. Die Deutung war
-für die Maßnahme nie nötig — nur für die Erzählung. Deshalb fällt sie auch ersatzlos
-weg.
+Support, Konfidenz und Lift der Hin-Richtung sind davon unberührt; die Kennzahlen
+stimmen. Falsch war die Deutung daneben. Für die Maßnahme ändert sich nichts: Die Räder
+laufen am Campus auf, unabhängig davon, wer sie dorthin gefahren hat.
 
 ### 5.5 Das Urteil: Kriterien erfüllt, Freigabe trotzdem nicht
 
-| | |
-|---|---|
-Die Zahlen dieser Übersicht stehen in der Kriterienausgabe in Phase 5 — lesen Sie sie
-dort, statt sie hier noch einmal zu tippen.
-
-Entscheidend ist die letzte Zeile: **A1 bis A3 sind erfüllt, Produkt A ist trotzdem
-{{status_a}}.** Was fehlt, ist keine Statistik, sondern A4 — und zwar nicht, weil die
-Kostenzahlen fehlten: {{kosten_transport:.0f}} € je Umsetzrunde und {{wert_fahrt:.2f}} €
-je Fahrt stehen in Phase 1. **Sie sind gesetzte Szenarioannahmen, keine Messungen.** Was
-fehlt, sind reale Kosten- und Wirkungsparameter — und selbst mit den gesetzten trägt
-keine Regel eine eigene Runde.
+**A1 bis A3 sind erfüllt, Produkt A ist trotzdem {{status_a}}.** Was fehlt, ist A4 — und
+zwar nicht, weil Kostenzahlen fehlten: {{kosten_transport:.0f}} € je Umsetzrunde und
+{{wert_fahrt:.2f}} € je Fahrt stehen in Phase 1, sind aber **gesetzte
+Szenarioannahmen**. Selbst mit ihnen trägt keine Regel eine eigene Runde. Die Zahlen je
+Hürde stehen in der Kriterienausgabe in Phase 5.
 
 **Produkt B ist davon unberührt: {{status_b}}.** Der Dispositionshinweis löst keine Fahrt
-aus, braucht also keinen Wirtschaftlichkeitsnachweis; seine vier Kriterien B1 bis B4
-stehen ebenfalls in Phase 1 und werden im Code geprüft.
+aus und braucht deshalb keinen Wirtschaftlichkeitsnachweis; seine vier Kriterien werden
+im Code geprüft.
 
-Was folgt daraus? Drei Wege:
+Daraus ergeben sich drei Wege:
 
-1. **Die Hürde nachträglich verschieben.** Verboten — in beide Richtungen. Sie stand vor
-   der Messung fest. Sie jetzt zu senken wäre Schönrechnen; sie jetzt zu erhöhen, weil
-   das Ergebnis unbequem ist, wäre dasselbe in Grün.
-2. **Regeln mit mehreren Bedingungen suchen** („Regen **und** Werktag **und** Bahnhof“).
-   Das hilft hier **nicht**, und der Grund ist wichtig genug für einen eigenen Absatz.
+1. **Die Hürde nachträglich verschieben** — unzulässig, in beide Richtungen. Sie stand
+   vor der Messung fest.
+2. **Regeln mit mehreren Bedingungen suchen.** Das hilft hier nicht: Jede zusätzliche
+   Bedingung verkleinert die Menge der zutreffenden Körbe, **der Support kann dadurch nur
+   sinken**. Genau darauf beruht der Apriori-Algorithmus. Beim Lift ist die Richtung
+   offen — und knapp ist hier der Support.
 3. **Zurück zu Phase 1**, das Kriterium in Fahrten je Werktag neu formulieren und die
    Kosten einer Transporterfahrt beschaffen. Das ist ein Gespräch mit der Disposition,
    keine Änderung im Notebook.
 
-> **Warum mehr Bedingungen den Support nicht retten können.** Jede zusätzliche Bedingung
-> verkleinert die Menge der Körbe, auf die eine Regel zutrifft — **der Support kann
-> dadurch nur sinken, nie steigen.** Das ist keine Eigenheit unserer Daten, sondern eine
-> Rechenregel: Wer die Bedingung „und es regnet“ hinzufügt, schließt alle trockenen Tage
-> aus. Genau darauf beruht der Apriori-Algorithmus: Er muss Kombinationen mit zu geringem
-> Support gar nicht erst prüfen, weil ihre Erweiterungen zwangsläufig noch seltener sind.
-> **Spezialisieren senkt den Support** — sicher und immer. Was es mit dem Lift macht, ist
-> offen: Wenn die Zusatzbedingung mit der Regel zusammenhängt, steigt er; wenn nicht,
-> bleibt er ungefähr gleich; wirkt sie gegenläufig, sinkt er. Und knapp ist hier der
-> Support.
-
-> **Der Ertrag dieses Notebooks steckt nicht in den Regeln.** Er steckt in Phase 6, die
-> ohne jede Regel auskommt — und in zwei Einsichten, die teurer waren als jede
-> Regelliste: dass ein Erfolgskriterium auf der falschen Skala nichts misst, und dass
-> eine Regel, die stimmt, trotzdem eine falsche Geschichte tragen kann.
+Der Ertrag dieses Notebooks steckt damit nicht in den Regeln, sondern in Phase 6, die
+ohne jede Regel auskommt.
 """),
 
 # =====================================================================
@@ -1209,8 +1088,8 @@ MD("""
 > Produkt A ist {{status_a}}, und was unten steht, ist mit keiner einzigen Regel
 > gerechnet.
 >
-> Eine frühere Fassung überschrieb diese Phase mit *„Aus Regeln wird ein Umlaufplan für
-> den Transporter"*. Das war schlicht falsch: Der Umlauf- und Einsammelteil ist eine
+> Eine Überschrift wie *„Aus Regeln wird ein Umlaufplan für den Transporter"* wäre
+> deshalb unzutreffend: Der Umlauf- und Einsammelteil ist eine
 > **eigene, explorative Auswertung** der Nettoflüsse und der Endkoordinaten. Sie braucht
 > eine eigene Geschäftsfrage, eigene Erfolgskriterien und eine eigene Validierung — alles
 > drei hat sie nicht.
@@ -1866,26 +1745,16 @@ print("Die Dateien heissen bewusst nicht 'Plan' - ein Plan braucht Datum,")
 print("Bestand, Menge und ein Entscheidungskriterium.")
 '''),
 
-MD("""
-### 6.1 Der Mittelwert, der den Bedarf verschwinden lässt
+MD("""### 6.1 Der Mittelwert, der den Bedarf verschwinden lässt
 
-Tabelle (A) sieht harmlos aus. Der größte Überschuss beträgt
-**{{saldo_max:+.2f}} Räder je Werktag**, der größte Fehlbestand
-**{{saldo_min:+.2f}}** — bei Stationen, die {{kap_min:.0f}} bis {{kap_max:.0f}} Räder
-fassen. Wer nur
-diese Tabelle liest, kommt zu einem klaren Schluss: **Für zwei Räder fährt kein
-Transporter. Der Plan trägt nicht.**
+Tabelle (A) nennt als größten Überschuss **{{saldo_max:+.2f}} Räder je Werktag** und als
+größten Fehlbestand **{{saldo_min:+.2f}}** — bei Stationen mit {{kap_min:.0f}} bis
+{{kap_max:.0f}} Plätzen. Daraus zu schließen, für zwei Räder fahre kein Transporter,
+wäre falsch. Nicht wegen der Zahlen, sondern wegen der **Wahl der Kennzahl**.
 
-**Genau dieser Schluss stand in einer früheren Fassung dieses Notebooks, und er war
-falsch.** Nicht weil sich jemand verrechnet hätte — die Zahlen in (A) stimmen alle. Falsch
-war die **Wahl der Kennzahl**.
-
-Der Mittelwert ist **vorzeichenbehaftet**. Ein Tag mit +6 und ein Tag mit −6 ergeben
-zusammen 0. Aus dieser 0 liest man „nichts zu tun“ — obwohl an beiden Tagen sechs Räder zu
-bewegen waren. **Der Transporter fährt aber an einzelnen Tagen, nicht im Mittel.**
-
-Tabelle (B) rechnet deshalb den Saldo **je Tag** und zählt dann, wie viele Räder an diesem
-Tag zu bewegen wären:
+Der Mittelwert ist vorzeichenbehaftet: Ein Tag mit +6 und einer mit −6 ergeben zusammen
+null. An beiden Tagen waren sechs Räder zu bewegen. **Der Transporter fährt an
+einzelnen Tagen, nicht im Mittel.** Tabelle (B) rechnet deshalb den Saldo je Tag:
 
 | | Räder je Werktag |
 |---|---|
@@ -1894,104 +1763,69 @@ Tag zu bewegen wären:
 | an jedem zehnten Werktag mindestens | {{bedarf_p90:.0f}} |
 | Maximum | **{{bedarf_max:.0f}}** |
 
-> **Was diese Zahl genau ist — und was nicht.** Sie addiert die vier Zeitfenster und
-> unterstellt damit, dass **nach jedem Fenster** vollständig ausgeglichen wird. Wer nur
-> einmal am Tag fährt, gleicht weniger aus, weil Bewegungen am Nachmittag Salden vom
-> Vormittag teilweise wieder aufheben. Rechnet man nur das Ungleichgewicht am **Tagesende**,
-> sind es **{{rest_mittel:.1f}}** statt {{bedarf_mittel:.1f}}.
->
-> Beide Zahlen sind richtig gerechnet. Welche gilt, entscheidet der **Eingriffszeitpunkt** —
-> und der ist eine betriebliche Festlegung, keine statistische. Der korrekte Name für die
-> {{bedarf_mittel:.1f}} lautet deshalb: *theoretische Summe der Netto-Ungleichgewichte bei
-> vollständigem Ausgleich nach jedem Zeitfenster*.
+Diese Zahl addiert die vier Zeitfenster und unterstellt vollständigen Ausgleich **nach
+jedem Fenster**. Wer nur einmal täglich fährt, gleicht weniger aus; für das
+Ungleichgewicht am Tagesende sind es **{{rest_mittel:.1f}}**. Beide Werte sind richtig
+gerechnet — welcher gilt, entscheidet der **Eingriffszeitpunkt**, und der ist eine
+betriebliche Festlegung.
 
-**Zwischen dem Stationsmittelwert und den {{bedarf_mittel:.1f}} liegt kein neuer
-Datensatz, sondern eine andere Aggregation.** Das Beispiel Hubland Campus macht es
-greifbar: Langfristmittel **{{bsp_mittel_alle:+.2f}}**, aber die einzelnen Werktage
-reichen von **{{bsp_spanne_min:+.0f}} bis {{bsp_spanne_max:+.0f}}**.
+Zwischen dem Stationsmittelwert und den {{bedarf_mittel:.1f}} liegt kein neuer Datensatz,
+sondern eine andere Aggregation. Beispiel Hubland Campus: Langfristmittel
+**{{bsp_mittel_alle:+.2f}}**, einzelne Werktage von **{{bsp_spanne_min:+.0f}} bis
+{{bsp_spanne_max:+.0f}}**.
 
-> **Auch dieses Beispiel hatte einen Nennerfehler**, und er ist typisch. Die Tagestabelle
-> enthält nur Tage, an denen eine Station überhaupt vorkam — für Hubland früh sind das
-> {{bsp_mit_vorkommen:.0f}} der {{bsp_werktage:.0f}} Werktage. Gemittelt über diese kommt
-> **{{bsp_mittel_teil:+.2f}}** heraus, über alle dagegen **{{bsp_mittel_alle:+.2f}}**. Die
-> fehlenden {{bsp_ohne_vorkommen:.0f}} Tage sind keine fehlenden Daten, sondern Tage mit
-> Saldo null.
->
-> **Zwei Zahlen für dieselbe Größe standen dadurch im selben Notebook** — eine im Text,
-> eine in der Tabelle direkt darüber. Wer Nullen weglässt, weil sie nicht in den Daten
-> stehen, mittelt über die falsche Grundgesamtheit.
+Der Nenner ist dabei entscheidend: Die Tagestabelle enthält nur Tage, an denen die
+Station vorkam — für Hubland früh {{bsp_mit_vorkommen:.0f}} von {{bsp_werktage:.0f}}
+Werktagen. Über diese gemittelt ergibt sich **{{bsp_mittel_teil:+.2f}}**, über alle
+**{{bsp_mittel_alle:+.2f}}**. Die {{bsp_ohne_vorkommen:.0f}} fehlenden Tage sind keine
+Datenlücke, sondern Tage mit Saldo null.
 
-> **Die Regel dahinter gilt weit über dieses Notebook hinaus.** Wenn eine Kennzahl über
-> Zeit gemittelt wird und dabei positive und negative Werte enthält, **misst der
-> Mittelwert den Trend, nicht die Arbeit.** Für alles, was pro Tag getan werden muss —
-> Umverteilen, Personaleinsatz, Lagerauffüllung — braucht man die Verteilung der
-> Tageswerte, nicht ihren Schwerpunkt.
+> **Die Regel gilt über dieses Notebook hinaus:** Enthält eine über die Zeit gemittelte
+> Kennzahl positive und negative Werte, misst der Mittelwert den Trend, nicht die Arbeit.
+> Für alles, was je Tag zu tun ist, braucht man die Verteilung der Tageswerte.
 
-**Trägt der Plan denn nun?** Diese Frage beantwortet das Notebook **nicht**, und das ist
-kein Versäumnis, sondern eine Grenze. Weder {{bedarf_mittel:.1f}} noch
-{{rest_mittel:.1f}} sind ein *Transportbedarf* —
-beides sind Ungleichgewichte, die aus Fahrten gerechnet wurden. Zu einem Bedarf fehlen
-drei Dinge:
+**Ob der Plan trägt, beantwortet dieses Notebook nicht.** Weder {{bedarf_mittel:.1f}}
+noch {{rest_mittel:.1f}} sind ein Transportbedarf; beides sind aus Fahrten gerechnete
+Ungleichgewichte. Dazu fehlen drei Angaben:
 
 | fehlt | warum es entscheidet |
 |---|---|
 | **Anfangsbestand** je Station | Ein Überschuss von +6 ist an einer halbvollen Station belanglos und an einer vollen ein Problem |
 | **Kapazität** | Über der Kapazität geht nichts mehr hinein, darunter ist Luft |
-| **Eingriffszeitpunkt** | Er entscheidet, welche der beiden Aggregationen überhaupt gilt |
+| **Eingriffszeitpunkt** | Er entscheidet, welche der beiden Aggregationen gilt |
 
-Dazu kommen die zwei Kostengrößen, die schon der Ein-Prozent-Hürde in Phase 5 fehlten:
-**was eine Fahrt kostet** und **was ein leerer Stationsplatz kostet**. Das ist kein
-Zufall — es ist dieselbe Lücke, die an zwei Stellen auftaucht.
-
-<!-- zahl-ohne-ausgabe: 1205 Anekdote ueber eine fruehere Fassung, kein aktueller Messwert -->
-> **Eine frühere Fassung druckte hier „+1205 Räder laufen auf“.** Das war die Summe über
-> alle Werktage, gedruckt wie eine Anweisung an den Fahrer. Die Korrektur — durch die
-> Werktage teilen — war richtig und hat den Fehler nur verschoben: aus einer zu großen
-> Zahl ohne Zeitbezug wurde eine zu kleine Zahl mit falscher Aggregation. **Erst der
-> Tagessaldo beantwortet die Frage, die gestellt war.**
+Dazu die zwei Kostengrößen, die schon der Ein-Prozent-Hürde fehlten: was eine Fahrt
+kostet und was ein leerer Stationsplatz kostet. Dieselbe Lücke an zwei Stellen.
 
 ### 6.2 Die Stationssalden: Richtung manchmal, Menge nie
 
-Was Tabelle (B) hergibt, ist die **Richtung** — und auch die nicht überall. Morgens
-gewinnen Hubland Campus und Universität Sanderring Räder hinzu, während Hauptbahnhof,
-Sanderau, Zellerau und Grombühl sie verlieren. Das ist über die Tage hinweg stabil: Die
-Uni-Stationen gewinnen an der klaren Mehrheit der Werktage hinzu, die Wohnlagen
-verlieren — die Spalten „Tage mit Plus" und „Tage mit Minus" in der Ausgabe oben nennen
-die Anteile je Station.
+Tabelle (B) gibt die **Richtung** her, und auch die nicht überall. Morgens gewinnen
+Hubland Campus und Universität Sanderring Räder hinzu, während Hauptbahnhof, Sanderau,
+Zellerau und Grombühl verlieren; die Spalten „Tage mit Plus" und „Tage mit Minus" nennen
+die Anteile.
 
-> **Mittags ist es anders, und eine frühere Fassung hat es falsch ausgegeben.** Dort stand
-> „abholen bei Hubland Campus", weil der Median genau null war und die Regel lautete
-> `abholen, wenn Median >= 0`. Ein Median von genau null wurde damit zu „abholen" —
-> auch dort, wo an mehr Tagen Räder fehlten als übrig waren. Die Ausgabe oben nennt je
-> Station die Anteile der Plus- und Minustage; die Richtung folgt jetzt aus ihnen und
-> darf auch „keine stabile Richtung" lauten.
->
-> **Ein Median von null ist keine Richtung, sondern die Abwesenheit einer.** Die Ausgabe
-> leitet die Richtung jetzt aus dem Verhältnis der Plus- und Minustage ab und darf auch
-> „keine stabile Richtung" sagen.
+Mittags liegt der Fall anders. Eine Regel `abholen, wenn Median >= 0` ordnet einen Median
+von genau null der Richtung „abholen" zu — auch dort, wo an mehr Tagen Räder fehlten als
+übrig waren. **Ein Median von null bezeichnet keine Richtung, sondern das Fehlen einer.**
+Die Richtung wird deshalb aus dem Verhältnis der Plus- und Minustage abgeleitet und darf
+auch „keine stabile Richtung" lauten.
 
-Was sie **nicht** hergeben, ist die Stückzahl für einen bestimmten Morgen. Der Median liegt
-bei ±1 Rad, die typische Spanne bei −4 bis +4, und an rund jedem zehnten Werktag sind es
-fünf oder mehr. **Eine historische Auswertung kann deshalb nur sagen, welche Stationen
-dazu neigen, sich zu leeren oder zu füllen — wie viele Räder an einem bestimmten Morgen zu
-bewegen sind, sagt sie nicht.**
-
-Deshalb steht in der exportierten Datei auch nicht eine Zahl je Station, sondern die
-Verteilung. Und sie heißt `stationssalden_werktag.csv`, nicht `umlaufplan` — ein Plan
+Die **Stückzahl** für einen bestimmten Morgen geben die Salden nicht her: Der Median
+liegt bei ±1 Rad, die typische Spanne bei −4 bis +4, an rund jedem zehnten Werktag sind
+es fünf oder mehr. Die exportierte Datei enthält deshalb die Verteilung statt einer Zahl
+je Station und heißt `stationssalden_werktag.csv`, nicht `umlaufplan` — ein Plan
 bräuchte Datum, Bestand, Menge und ein Entscheidungskriterium.
 
 ### 6.3 Das Einsammeln — und wo die Räder wirklich stehen
 
-Werktäglich enden **{{frei_fahrten_tag:.2f}} Fahrten** frei im Gebiet — von
+Werktäglich enden **{{frei_fahrten_tag:.2f}} Fahrten** frei im Gebiet, von
 **{{frei_raeder_tag:.2f}} verschiedenen Rädern**. Die beiden Zahlen fallen auseinander,
-sobald ein Rad an einem Tag mehrfach frei abgestellt wird; in diesem Datenstand geschieht
-das an **{{tage_mehrfach:.0f}}** Tagen. Die Unterscheidung bleibt trotzdem stehen: Sie
-ist eine Eigenschaft der Einheit, nicht dieses Datenstands. Diese Runde braucht keine
-einzige Assoziationsregel; sie folgt direkt aus der Auszählung.
+sobald ein Rad an einem Tag mehrfach frei abgestellt wird; hier an
+**{{tage_mehrfach:.0f}}** Tagen. Diese Auswertung braucht keine einzige
+Assoziationsregel; sie folgt aus der Auszählung.
 
-Nur muss man dafür wissen, **wo** die Räder stehen. Eine frühere Fassung dieses Notebooks
-gruppierte sie nach ihrer **Startstation** — und das ist keine Ortsangabe, sondern eine
-Herkunftsangabe:
+Entscheidend ist, **wo** die Räder stehen. Eine Gruppierung nach der **Startstation**
+liefert das nicht — sie ist eine Herkunfts-, keine Ortsangabe:
 
 | | Median | an 9 von 10 Fahrten höchstens |
 |---|---|---|
@@ -1999,80 +1833,51 @@ Herkunftsangabe:
 | Abstand des Rades zur **Start**station | {{frei_start_median:.2f}} km | {{frei_start_p90:.2f}} km |
 
 **Bei {{andere_station:.1%}} der frei abgestellten Räder ist die nächstgelegene Station
-eine andere als die, an der die Fahrt begann.** Die Gruppierung nach Startstation war also nicht ungenau —
-sie war in {{andere_station:.0%}} der Fälle die falsche Station. Die drei Schwerpunkte
-verschieben sich entsprechend: Nach Abstellort sind es **{{hotspots_abstellort}}**,
-nach Startstation wären es {{hotspots_startstation}} gewesen.
-
-> **Der Fehler war nicht, die Endkoordinaten falsch zu benutzen — sondern sie gar nicht
-> zu benutzen.** `end_latitude` und `end_longitude` sind für **jede** frei abgestellte
-> Fahrt gefüllt — alle {{frei_werktags:,}} werktäglichen, keine einzige ohne
-> ({{frei_ohne_koordinate:.0f}} fehlend). Wer eine Frage nach dem Ort mit einer Spalte beantwortet, in
-> der keine Orte stehen, bekommt eine plausible Tabelle und einen falsch fahrenden
-> Transporter.
-
-**Der Ertrag dieses Notebooks ist damit Plan B, nicht Plan A** — und Plan B kommt ohne
-Regeln aus.
+eine andere als die, an der die Fahrt begann.** Die Schwerpunkte verschieben sich
+entsprechend: nach Abstellort **{{hotspots_abstellort}}**, nach Startstation wären es
+{{hotspots_startstation}} gewesen. `end_latitude` und `end_longitude` sind für jede der
+{{frei_werktags:,}} werktäglichen frei endenden Fahrten gefüllt
+({{frei_ohne_koordinate:.0f}} fehlend) — eine Ortsfrage über eine Herkunftsspalte zu
+beantworten ergibt eine plausible Tabelle und einen falsch fahrenden Transporter.
 
 ### 6.4 Was diese Auswertung ist — und was nicht
 
 Sie zeigt, **wo sich frei abgestellte Räder in der Vergangenheit gehäuft haben** und in
 welchen Zeitfenstern. Sie sagt nicht, wo heute Abend welche stehen — dafür bräuchte es
-Live-Positionen. Und sie sagt erst recht nicht, **wie viele** Räder an eine Station
-gehören; das war Notebook 4, und beide gehören im Betrieb zusammen.
+Live-Positionen — und auch nicht, wie viele Räder an eine Station gehören; das war
+Notebook 4. Der Unterschied zwischen „wo es sich häuft" und „wo einzusammeln ist" ist
+der zwischen einer Karte und einer Route; für die Route fehlen Bestand,
+Fahrzeugkapazität, Zeitfenster und Fahrtkosten.
 
-> **Der Unterschied zwischen „wo es sich häuft" und „wo einzusammeln ist" ist der
-> Unterschied zwischen einer Karte und einer Route.** Für die Route fehlen der aktuelle
-> Bestand, die Fahrzeugkapazität, das Zeitfenster und die Fahrtkosten. Eine frühere
-> Fassung schrieb hier „Er sagt, wo und wann einzusammeln ist" — das war eine Karte, die
-> sich als Route ausgab.
-
-Und er besteht aus **zwei Teilen**, die man nicht vermengen darf:
+Zwei Aufgaben sind dabei zu trennen:
 
 | | Aufgabe | Datengrundlage |
 |---|---|---|
 | **Umverteilen** | Räder von vollen zu leeren Stationen fahren | nur Fahrten, die an einer Station enden |
 | **Einsammeln** | frei abgestellte Räder aufnehmen | die frei endenden Fahrten |
 
-Rechnet man beides in einer Tabelle, steht bei **jeder** Station „auffüllen" — denn ein
-Fünftel aller Räder verlässt das Stationsnetz und kommt nirgends an. Die Zeile „abholen
-bei: frei abgestellt" wäre als Anweisung sinnlos: Der Fahrer weiß dann, dass irgendwo
-Räder stehen, aber nicht wo.
+In einer gemeinsamen Tabelle stünde bei jeder Station „auffüllen", weil ein Fünftel aller
+Räder das Stationsnetz verlässt. Die Zeile „abholen bei: frei abgestellt" wäre als
+Anweisung wertlos.
 
 ### 6.5 Was übergeben wird — und in welcher Form
 
-**Produkt A ist {{status_a}}, Produkt B ist {{status_b}}** — beide Urteile stammen aus
-derselben Zelle in Phase 5, gegen die Kriterien, die Phase 1 für sie festgelegt hat. Die
-Regeln werden also als **Dispositionshinweis** übergeben, nicht als Transportauftrag.
-
-> **„Übergeben" ist bewusst schwächer als „läuft".** Dieses Notebook erzeugt eine Datei
-> und prüft sie — Spalten, Nenner, Kopfzeilen. Ob sie in einer Ansicht ankommt, ob der
-> Ladeweg stimmt, ob die Größenordnung dort auch angezeigt wird und was bei einem
-> Fehler passiert, ist ein Integrationstest. Den gibt es hier nicht, also wird er auch
-> nicht behauptet.
+**Produkt A ist {{status_a}}, Produkt B ist {{status_b}}.** Beide Urteile stammen aus
+derselben Zelle in Phase 5, gemessen an den Kriterien aus Phase 1. Die Regeln werden als
+**Dispositionshinweis** übergeben, nicht als Transportauftrag.
 
 | | |
 |---|---|
 | **Was erzeugt wird** | `dispositionshinweise.csv` mit den **{{b_regeln_n:.0f}} einzeln bestätigten Regeln**, jede mit ihrer Größenordnung daneben (höchstens {{b_je_tag_max:.2f}} Fahrten je Tag). Dazu die Stationssalden und die Abstell-Hotspots — beide ausdrücklich explorativ. |
-| **Was damit NICHT gezeigt ist** | dass die Datei in einer Dispositionsansicht ankommt. Dieses Notebook prüft den **Export**: Spalten, Nenner, Kopfzeilen. Ladeweg, Schema, Anzeige der Größenordnung und Fehlerverhalten der Oberfläche sind ein Integrationstest, den es hier nicht gibt. Die ehrliche Formulierung lautet **„für die Übergabe erzeugt"**, nicht „läuft". |
-| **Was nicht läuft** | Kein automatischer Umsetzauftrag. A4 ist **{{a4_zustand_text}}** — nicht widerlegt: Die Szenariorechnung zeigt eine Größenordnung von höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt gegen {{kosten_transport:.0f}} € je Runde. Sie ist **keine Obergrenze** — die Fahrten, die mangels Rad nie stattfanden, stehen nirgends in diesen Daten. |
-| **Wofür die Evidenz gilt** | Bestätigungszeitraum {{b_zeitraum_von}} bis {{b_zeitraum_bis}}. Das ist **kein Gültigkeitsdatum** — und die Datei nennt auch keines. Sie trägt `gebaut_am` und den Evidenzzeitraum, mehr nicht: Ein Gültigkeitsdatum wäre eine Zusage, nach der jemand handeln darf, und die gibt dieses Lehr-Gate nicht her. |
-| **Wer entscheidet** | Die Disposition. Sie sieht den Hinweis und verbindet ihn mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
+| **Was damit NICHT gezeigt ist** | dass die Datei in einer Dispositionsansicht ankommt. Geprüft wird der **Export**: Spalten, Nenner, Kopfzeilen. Ladeweg, Schema, Anzeige der Größenordnung und Fehlerverhalten sind ein Integrationstest, den es hier nicht gibt. Die zutreffende Formulierung lautet **„für die Übergabe erzeugt"**, nicht „läuft". |
+| **Was nicht läuft** | Kein automatischer Umsetzauftrag. A4 ist **{{a4_zustand_text}}** — nicht widerlegt: Die Szenariorechnung zeigt höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt gegen {{kosten_transport:.0f}} € je Runde. Sie ist **keine Obergrenze** — die Fahrten, die mangels Rad nie stattfanden, stehen nirgends in diesen Daten. |
+| **Wofür die Evidenz gilt** | Bestätigungszeitraum {{b_zeitraum_von}} bis {{b_zeitraum_bis}}. Das ist **kein Gültigkeitsdatum** — und die Datei nennt auch keines. Sie trägt `gebaut_am` und den Evidenzzeitraum: Ein Gültigkeitsdatum wäre eine Zusage, nach der jemand handeln darf, und die gibt dieses Lehr-Gate nicht her. |
+| **Wer entscheidet** | Die Disposition. Sie verbindet den Hinweis mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
 
-> **Warum das keine Verlegenheitslösung ist.** Eine Assoziationsanalyse findet
-> Regelmäßigkeiten, keine Handlungsanweisungen. Der Schritt von „diese Verbindung tritt
-> überzufällig häufig auf" zu „fahr dorthin" braucht Kosten, Kapazitäten und
-> Alternativen — nichts davon steht in den Warenkörben. Wer ihn ohne diese Angaben
-> geht, überschreitet die Aussagekraft der Methode.
->
-> **Der Dispositionshinweis ist die ehrliche Auslieferungsform für dieses Verfahren.** Sie
-> nutzt, was gemessen wurde, und behauptet nicht, was nicht gemessen wurde.
->
-> **Und sie ist keine nachträgliche Umdeutung.** Produkt B steht mit vier eigenen
-> Kriterien in Phase 1 — vor der ersten Rechnung. Wäre B1 gerissen (die Regeln halten im
-> Bestätigungszeitraum nicht), gäbe es auch diesen Hinweis nicht.
+Produkt B ist keine nachträgliche Umdeutung: Es steht mit vier eigenen Kriterien in
+Phase 1. Wäre B1 gerissen, gäbe es auch diesen Hinweis nicht.
 
-Überwacht wird deshalb, was tatsächlich angezeigt wird. Die Schwellen sind plausible
+Überwacht wird, was tatsächlich angezeigt wird. Die Schwellen sind plausible
 Diskussionswerte, nicht kalibriert:
 
 | Wache | Schwelle | Reaktion |
@@ -2080,103 +1885,78 @@ Diskussionswerte, nicht kalibriert:
 | frei endende Fahrten je Werktag | weichen zwei Wochen lang um mehr als ein Drittel ab | Nutzungsverhalten hat sich geändert — neu auszählen |
 | Schwerpunkt-Station wechselt | zwei Monate in Folge | Route anpassen |
 | Anteil frei abgestellter Fahrten | steigt über 25 % oder fällt unter 15 % | Geschäftsgebiet oder Preismodell wurde geändert |
-| theoretisches Netto-Ungleichgewicht (Tabelle B) | P90 überschreitet 40 Räder | Umverteilung neu bewerten — dann lohnt sie womöglich |
-| neue Station im Netz | taucht auf | **alles neu rechnen** — siehe unten |
+| theoretisches Netto-Ungleichgewicht (Tabelle B) | P90 überschreitet 40 Räder | Umverteilung neu bewerten |
+| neue Station im Netz | taucht auf | **alles neu rechnen** |
 | Baustelle oder Sperrung | gemeldet | betroffene Wege aussetzen, nicht nachjustieren |
 
-**Die vorletzte Zeile gilt auch für die Regeln, falls sie je zum Einsatz kämen.** Der Lift
-misst gegen die Basisrate der Ziele im Kontext. Kommt eine elfte Station dazu, verschiebt
-sich diese Basisrate für **jede** Regel — auch für solche, die mit der neuen Station
-nichts zu tun haben.
+Die vorletzte Zeile hat einen methodischen Grund: Der Lift misst gegen die Basisrate der
+Ziele im Kontext. Eine elfte Station verschiebt diese Basisrate für **jede** Regel, auch
+für solche ohne Bezug zur neuen Station. **Assoziationsregeln lassen sich deshalb nicht
+stückweise fortschreiben**, sondern nur vollständig neu berechnen und erneut gegen die
+Kriterien aus Phase 1 prüfen.
 
-**Fortschreiben lassen sich Assoziationsregeln deshalb nicht stückweise.** Neue Fahrten
-und neue Stationen einzurechnen ist selbstverständlich möglich — aber nur als
-**vollständige Neuberechnung**, die anschließend neu validiert wird und dieselben
-Kriterien aus Phase 1 erneut durchlaufen muss. Einzelne Regeln nachzujustieren, während die Basisraten sich verschoben
-haben, ergibt Kennzahlen, die zu nichts mehr gehören.
+### 6.6 Datenschutz
 
-### 6.6 Ein Hinweis, der nicht fehlen darf
-
-Diese Analyse arbeitet mit **Bewegungsdaten von Personen**. Für die Stationssalden und
-die Abstell-Hotspots brauchen wir sie nur aggregiert — und genau so sollten beide auch
-entstehen.
+Diese Analyse arbeitet mit **Bewegungsdaten von Personen**. Für Stationssalden und
+Abstell-Hotspots werden sie nur aggregiert benötigt, und so sollten beide auch entstehen.
 
 Die Gegenprobe in Phase 5 ist etwas anderes: Sie greift auf `kunde_id` und Datum zurück
-und fragt, wer an welchem Tag welchen Weg gefahren ist. **Das ist ein Bewegungsprofil.**
-Dass es hier zur Widerlegung einer eigenen Behauptung diente, macht es nicht harmloser.
-Bevor so etwas im Regelbetrieb läuft, gehört es rechtlich geprüft — Zweckbindung,
-Rechtsgrundlage, Speicherdauer. Das ist hier ausdrücklich ein **Prüfbedarf**, keine
-abschließende Rechtsbewertung; die kann dieses Notebook nicht leisten.
+und fragt, wer an welchem Tag welchen Weg gefahren ist. **Das ist ein Bewegungsprofil**,
+auch wenn es hier der Widerlegung einer eigenen Behauptung diente. Vor einem
+Regelbetrieb gehören Zweckbindung, Rechtsgrundlage und Speicherdauer geprüft. Das ist
+ein **Prüfbedarf**, keine abschließende Rechtsbewertung.
 """),
 
 # =====================================================================
-MD("""
----
+MD("""---
 
 # Der Kreislauf schließt sich
 
 | Phase | Ergebnis |
 |---|---|
 | 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. **Zwei Produkte mit eigenen Kriterien:** Produkt A (automatische Umverteilung) verlangt A1 Support ≥ {{k1_support:.0%}}, A2 kontextbedingter Lift ≥ 1,3, A3 Ziel ist eine konkrete Station **und A4 Wirtschaftlichkeit**; Produkt B (Dispositionshinweis) verlangt B1 Bestätigung **je einzelner Regel**, B2 Größenordnung neben der Regel, B3 keine Automatik, B4 Begleitanalysen als explorativ gekennzeichnet |
-| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren ({{anteil_rundtouren:.1%}} der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
+| 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Rundtouren ({{anteil_rundtouren:.1%}} der angedockten Fahrten) sind trivial und ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
-| 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen A1 bis A3 — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sie auf der falschen Skala liegt: Sie verlangt {{huerde_je_werktag:.2f}} Fahrten je Werktag — eine Größenordnung, in der keine Transporterfahrt beginnt. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — nur {{personen_selber_tag:.0f}} von {{rueck_fahrten_paar:.0f}} Abendfahrten stammen von jemandem, der morgens hingefahren war |
-| 6 Deployment | {{status_satz}} Erzeugt wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln** (Bootstrap-Untergrenze ≥ {{k2_lift}}), jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Keine Automatik, weil A4 **{{a4_zustand_text}}** ist: Ohne Leerstandsereignisse und entgangene Nachfrage lässt sich die Wirtschaftlichkeit nicht prüfen. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
+| 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen A1 bis A3. Die Hürde wird nicht verschoben, obwohl sie auf der falschen Skala liegt: Sie verlangt {{huerde_je_werktag:.2f}} Fahrten je Werktag. Die Pendlerdeutung hält die tagesgenaue Gegenprobe nicht aus — {{personen_selber_tag:.0f}} von {{rueck_fahrten_paar:.0f}} Abendfahrten stammen von jemandem, der morgens hingefahren war |
+| 6 Deployment | {{status_satz}} Erzeugt wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln** (Bootstrap-Untergrenze ≥ {{k2_lift}}), jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots, beide **explorativ**. Keine Automatik, weil A4 **{{a4_zustand_text}}** ist. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
 
-**Die drei Sätze, die aus diesem Notebook bleiben**
+**Drei Ergebnisse dieses Notebooks**
 
-> **1.** Ein Mittelwert über Plus und Minus misst den Trend, nicht die Arbeit. Der
-> Stationsmittelwert und die {{bedarf_mittel:.1f}} Räder je Werktag sind derselbe
-> Datensatz, zweimal aggregiert.
-
-> **2.** Ein Erfolgskriterium muss in der Einheit formuliert sein, in der es begründet
-> wurde. Eine Hürde bei {{huerde_je_werktag:.2f}} Fahrten je Werktag trennt keine
-> Transporterfahrt von keiner — sie misst nichts. Und darf trotzdem nicht nachträglich
-> verschoben werden.
-
-> **3.** Eine Regel, deren Zahlen stimmen, kann eine falsche Geschichte tragen.
-> {{personen_irgendwann:.0f}} Personen fuhren „beide Richtungen“ —
-> {{tagesprobe_satz}}.
+1. Ein Mittelwert über Plus und Minus misst den Trend, nicht die Arbeit. Der
+   Stationsmittelwert und die {{bedarf_mittel:.1f}} Räder je Werktag sind derselbe
+   Datensatz, zweimal aggregiert.
+2. Ein Erfolgskriterium muss in der Einheit formuliert sein, in der es begründet wurde.
+   Eine Hürde bei {{huerde_je_werktag:.2f}} Fahrten je Werktag misst betrieblich nichts —
+   und darf trotzdem nicht nachträglich verschoben werden.
+3. Eine Regel mit korrekten Kennzahlen kann eine falsche Deutung tragen.
+   {{personen_irgendwann:.0f}} Personen fuhren „beide Richtungen" —
+   {{tagesprobe_satz}}.
 
 **Was eine zweite Runde anders machen würde**
 
 1. **Das Erfolgskriterium neu formulieren** — in Fahrten je Werktag, hergeleitet aus den
-   Kosten einer Transporterfahrt. Diese Kosten zu beschaffen ist die erste Aufgabe, nicht
-   die letzte. **Vor** der nächsten Messung.
-2. **Die Bestätigung rollierend machen.** Der einmalige Schnitt aus Phase 5.3 — suchen
-   in den ersten zwei Dritteln, prüfen im letzten — ist bereits umgesetzt und hat gehalten
-   ({{split_haelt:.0f}} von {{split_gesamt:.0f}} Regeln; über die vier
-   **aufeinanderfolgenden Teilfenster des Bestätigungszeitraums** sind es
-   {{fenster_min:.0f}} bis {{fenster_max:.0f}} von {{fenster_regeln:.0f}}). Das sind
-   ausdrücklich **keine rollierenden Fenster**: Alle vier prüfen dieselben im ersten
-   Drittel gefundenen Regeln, statt in jedem Fold neu aus dessen eigener Vergangenheit
-   zu suchen. Er ist außerdem **eine einzige Realisierung**, und die Randjahre sind
-   Teiljahre. Mehrere rollierende, saisonal vergleichbare Fenster würden zeigen, ob die
-   Stabilität an den Regeln liegt oder am gewählten Schnittpunkt.
+   Kosten einer Transporterfahrt. Diese Kosten zu beschaffen ist die erste Aufgabe.
+2. **Die Bestätigung rollierend machen.** Der einmalige Schnitt aus Phase 5.3 hat
+   gehalten ({{split_haelt:.0f}} von {{split_gesamt:.0f}} Regeln; über die vier
+   aufeinanderfolgenden Teilfenster {{fenster_min:.0f}} bis {{fenster_max:.0f}} von
+   {{fenster_regeln:.0f}}). Das sind **keine rollierenden Fenster**: Alle vier prüfen
+   dieselben im ersten Drittel gefundenen Regeln. Mehrere rollierende, saisonal
+   vergleichbare Fenster würden zeigen, ob die Stabilität an den Regeln liegt oder am
+   Schnittpunkt.
 3. **Zurück zu Phase 3:** Die vier Zeitfenster sind gesetzt, nicht gefunden. Eine
-   Aufteilung nach den tatsächlichen Spitzen (aus Notebook 3!) könnte schärfere Regeln
-   liefern. Die Untergrenze von 0,5 % Support gehört dabei mit auf den Prüfstand — sie
-   hat die zweitstärkste Verbindung des Datensatzes aussortiert, bevor sie jemand
-   gesehen hat.
+   Aufteilung nach den tatsächlichen Spitzen könnte schärfere Regeln liefern. Die
+   Support-Untergrenze von 0,5 % gehört mit auf den Prüfstand — sie hat die
+   zweitstärkste Verbindung aussortiert, bevor sie jemand gesehen hat.
 4. **Die Richtung ernst nehmen.** In der klassischen Warenkorbanalyse sind Support und
-   Lift symmetrisch: *{Brot, Butter}* ist derselbe Korb wie *{Butter, Brot}*.
+   Lift symmetrisch. Hier nicht: Eine Fahrt vom Hauptbahnhof zum Campus und eine vom
+   Campus zum Hauptbahnhof sind zwei verschiedene Ereignisse mit verschiedenen
+   Häufigkeiten, Zeitfenstern und Lift-Werten — {{hin_fahrten:.0f}} Fahrten morgens
+   gegen {{rueck_fahrten_paar:.0f}} abends. Und keine der drei Kennzahlen kennt ein
+   *weil*.
 
-   **Bei uns gilt das nicht**, und das ist eine der wichtigsten Eigenheiten dieses
-   Datensatzes: Eine Fahrt vom Hauptbahnhof zum Campus und eine Fahrt vom Campus zum
-   Hauptbahnhof sind **zwei verschiedene Ereignisse**, keine zwei Lesarten desselben. Sie
-   haben verschiedene Häufigkeiten, verschiedene Zeitfenster und verschiedenen Lift.
-   Die beiden Richtungen zwischen Hauptbahnhof und Hubland Campus zählen
-   {{hin_fahrten:.0f}} Fahrten morgens und {{rueck_fahrten_paar:.0f}} abends — verschiedene
-   Häufigkeiten, verschiedene Zeitfenster, verschiedener Lift.
-
-   Wer die Symmetrieregel aus dem Lehrbuch auf gerichtete Wege überträgt, rechnet mit
-   einer Eigenschaft, die diese Daten nicht haben. Und keine der drei Kennzahlen kennt
-   ein *weil*: Dass morgens Räder zum Campus fahren, sagt nichts darüber, ob die Vorlesung
-   der Grund ist.
-
-**Weiter geht es mit Notebook 6 — Anomalieerkennung:** Dort suchen wir nicht das Muster,
-sondern seine Ausnahmen. Und wir werden feststellen, dass die schwierigste Frage nicht
-lautet „was ist auffällig?“, sondern „**was davon ist ein Problem?**“
+**Weiter geht es mit Notebook 6 — Anomalieerkennung:** Dort werden nicht Muster gesucht,
+sondern ihre Ausnahmen. Die schwierigste Frage lautet dabei nicht „was ist auffällig?",
+sondern „was davon ist ein Problem?"
 """),
 ]

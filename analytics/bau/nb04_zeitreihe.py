@@ -658,8 +658,8 @@ Ziehungen" ist eben eine Verteilung, kein einzelner Wert.
 > wird. Ein Test mit Wetterdaten, die um 18 Uhr niemand hat, misst ein Werkzeug, das es
 > nicht gibt. Ob das Ergebnis dabei schmeichelhaft ausfällt oder nicht, ist gleichgültig.
 
-Eine frühere Fassung schrieb hier: *„ist im Betrieb schlechter als im Test — immer."*
-Diese Aussage ist zu allgemein und wird durch die Zahlen darüber widerlegt.
+Die pauschale Aussage *„ein Modell ist im Betrieb schlechter als im Test — immer"*
+trifft hier nicht zu; die Zahlen darüber widerlegen sie.
 """),
 
 CODE('''
