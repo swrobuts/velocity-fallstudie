@@ -51,8 +51,20 @@ def orakel(positive: int, k: int) -> float:
 
 
 def wartungsliste() -> list[tuple[str, bool, str]]:
-    """Notebook 2: 70 Prozent auf einer Liste von 60 Raedern, je Quartal."""
-    KAPAZITAET, HORIZONT, ZUSAGE = 60, 90, 0.70
+    """Notebook 2: Nutzenschwelle auf einer Liste von 60 Raedern, je Quartal.
+
+    Phase 1 verlangte urspruenglich 70 Prozent Trefferquote. Genau dieses
+    Werkzeug hat gezeigt, dass die Zusage im Winter unerfuellbar ist - dort
+    gibt es nicht genug auffaellige Raeder, um die Liste zu fuellen. Nach dem
+    dokumentierten Ruecksprung lautet sie: mindestens LIFT-mal so viele
+    Treffer wie eine Zufallsauswahl gleicher Laenge.
+
+    Geprueft wird beides. Die alte Zusage steht als historischer Befund
+    daneben - sie ist der Grund fuer den Ruecksprung und gehoert nicht
+    stillschweigend geloescht.
+    """
+    KAPAZITAET, HORIZONT = 60, 90
+    ZUSAGE_ALT, LIFT = 0.70, 1.5
     s = pd.read_csv(DATEN / "schadensmeldung.csv", parse_dates=["gemeldet_am"])
     a = pd.read_csv(DATEN / "ausleihe.csv", parse_dates=["startzeit"])
     r = pd.read_csv(DATEN / "fahrrad.csv",
@@ -67,10 +79,16 @@ def wartungsliste() -> list[tuple[str, bool, str]]:
         kuenftig = set(s[(s.gemeldet_am > t)
                          & (s.gemeldet_am <= t + pd.Timedelta(days=HORIZONT))].fahrrad_id)
         positiv = int(bestand.fahrrad_id.isin(kuenftig).sum())
+        grundrate = positiv / max(len(bestand), 1)
         schranke = orakel(positiv, KAPAZITAET)
-        zeilen.append((str(t.date()), schranke >= ZUSAGE,
-                       f"{positiv} positive von {len(bestand)} -> Orakel "
-                       f"{schranke:.1%} gegen Zusage {ZUSAGE:.0%}"))
+        # Die geltende Zusage: Lift ueber der Grundrate des Quartals.
+        # Erreichbar, solange das Orakel den geforderten Faktor hergibt.
+        erreichbar = schranke >= LIFT * grundrate
+        alt = "erfuellbar" if schranke >= ZUSAGE_ALT else "UNERFUELLBAR"
+        zeilen.append((str(t.date()), erreichbar,
+                       f"{positiv} positive von {len(bestand)}, Grundrate "
+                       f"{grundrate:.1%} -> Orakel {schranke:.1%}, gefordert "
+                       f"{LIFT * grundrate:.1%}   (alte 70-%-Zusage: {alt})"))
     return zeilen
 
 
@@ -87,12 +105,17 @@ def main() -> int:
             offen += not erreichbar
     print()
     if offen:
-        print(f"{ROT}{offen} Zeitraum/Zeitraeume, in denen die Zusage von keinem")
-        print(f"Verfahren gehalten werden kann.{AUS} Das ist kein Modellproblem -")
-        print("die Zusage gehoert in Phase 1 repariert, nicht das Verfahren.")
+        print(f"{ROT}{offen} Zeitraum/Zeitraeume, in denen die geltende Zusage von")
+        print(f"keinem Verfahren gehalten werden kann.{AUS} Das ist kein")
+        print("Modellproblem - die Zusage gehoert in Phase 1 repariert.")
     else:
-        print(f"{GRUEN}Jede Zusage ist auf diesen Daten erreichbar.{AUS}")
-        print("Ob sie erreicht wird, sagt diese Pruefung nicht.")
+        print(f"{GRUEN}Jede geltende Zusage ist auf diesen Daten erreichbar.{AUS}")
+        print("Ob sie erreicht wird, sagt diese Pruefung nicht - sie trennt")
+        print("nur 'schwer' von 'unmoeglich'.")
+        print()
+        print(f"{GELB}Die urspruengliche 70-%-Zusage war es nicht: Wo oben")
+        print(f"'UNERFUELLBAR' steht, haette auch ein allwissendes Verfahren sie")
+        print(f"verfehlt. Das war der Grund fuer den Ruecksprung nach Phase 1.{AUS}")
     return 1 if offen else 0
 
 

@@ -57,6 +57,7 @@ import sys
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 NB = WURZEL / "analytics" / "notebooks"
 WERTE = WURZEL / "analytics" / "bau" / "werte"
+_PLATZHALTER_TEXT = re.compile(r"\{\{[a-z0-9_]+(?::[^}]*)?\}\}")
 
 # Zahlen, die zur Sprache gehoeren: Phasennummern, Abschnitte, Jahre,
 # Schwellen aus Erfolgskriterien, Kostenkonstanten aus Phase 1.
@@ -82,7 +83,7 @@ KEIN_MESSWERT = (
 
 def sprachzahl(zahl: str, zeile: str) -> bool:
     """Jahreszahl, Uhrzeit oder Seitenangabe statt Messwert?"""
-    if len(zahl) == 4 and 1900 <= int(zahl) <= 2100:
+    if zahl.isdigit() and len(zahl) == 4 and 1900 <= int(zahl) <= 2100:
         return True
     stelle = zeile.find(zahl)
     if stelle < 0:
@@ -191,6 +192,59 @@ def gesetzte_werte(zellen: list) -> set[str]:
     return werte
 
 
+def getippt_statt_gesetzt(stamm: str) -> list[tuple[str, str]]:
+    """Zahlen, die als Messwert vorliegen, aber im BAUSKRIPT getippt sind.
+
+    Geprueft wird das Bauskript, nicht das gebaute Notebook: Dort sind
+    Platzhalter schon ersetzt, und eine eingesetzte Zahl saehe aus wie eine
+    getippte. Der Unterschied ist aber genau der Punkt.
+
+    Eine getippte Zahl, die es auch als Messwert gibt, ist heute richtig und
+    morgen falsch: Beim naechsten Datenstand wandert der Messwert, die
+    Kopie nicht. Das ist der Rohstoff, aus dem alle Textfehler dieses
+    Projekts entstanden sind - die Abhilfe ist mechanisch,
+    {{schluessel:format}} statt der Ziffern.
+    """
+    werte_datei = WERTE / f"{stamm}.json"
+    skript = next((s for s in sorted((WURZEL / "analytics" / "bau").glob("nb0*.py"))
+                   if stamm.split("_")[0].lstrip("0") in s.name.split("_")[0]), None)
+    if not werte_datei.exists() or skript is None:
+        return []
+    werte = json.loads(werte_datei.read_text(encoding="utf-8"))
+    je_form: dict[str, str] = {}
+    for schluessel, roh in werte.items():
+        try:
+            zahl = float(roh)
+        except (TypeError, ValueError):
+            continue
+        if abs(zahl) < 10:
+            continue
+        for muster in ("{:g}", "{:.0f}", "{:.1f}", "{:.2f}"):
+            for wert in (zahl, zahl * 100):
+                s = muster.format(wert)
+                for form in (s, s.replace(".", ","),
+                             f"{wert:,.0f}".replace(",", ".")):
+                    je_form.setdefault(form, schluessel)
+
+    # Nur MD("""...""")-Bloecke - im Code sind Konstanten erlaubt.
+    md = re.findall(r'MD\("""(.*?)"""\)', skript.read_text(encoding="utf-8"), re.S)
+    befunde, gesehen = [], set()
+    for text in md:
+        ohne = _PLATZHALTER_TEXT.sub("", text)
+        for zeile in ohne.split("\n"):
+            if "zahl-ohne-ausgabe" in zeile or "|---" in zeile:
+                continue
+            for zahl in re.findall(r"(?<![\d,.])\d[\d.]*(?:,\d+)?(?![\d,.])", zeile):
+                if zahl in HARMLOS or zahl not in je_form or zahl in gesehen:
+                    continue
+                if sprachzahl(zahl, zeile):
+                    continue
+                gesehen.add(zahl)
+                befunde.append((f"{zahl} steht als {{{{{je_form[zahl]}}}}} bereit",
+                                zeile.strip()[:88]))
+    return befunde
+
+
 def pruefe(datei: pathlib.Path) -> list[tuple[str, str]]:
     nb = json.loads(datei.read_text(encoding="utf-8"))
     zellen = nb["cells"]
@@ -245,6 +299,22 @@ def zeile_um(text: str, zahl: str) -> str:
     return ""
 
 
+def bericht_getippte() -> None:
+    """Zusatzbericht, KEIN Gate: zweistellige Zahlen kollidieren zu leicht.
+
+    Die Liste ist als Arbeitshilfe gedacht - jede Zeile ist zu pruefen, nicht
+    blind zu ersetzen. Als Abbruchbedingung waere sie Rauschen, und ein
+    Pruefer mit Rauschen wird ueberlesen.
+    """
+    print("\nZusatzbericht - im Text getippt, obwohl als Messwert vorhanden:")
+    gesamt = 0
+    for datei in sorted(NB.glob("*.ipynb")):
+        for zahl, kontext in getippt_statt_gesetzt(datei.stem):
+            print(f"   {datei.stem[:2]}  {zahl:<44s} {kontext[:64]}")
+            gesamt += 1
+    print(f"   {gesamt} Stelle(n) - jede einzeln pruefen, viele sind Zufallstreffer.")
+
+
 def main() -> int:
     gewuenscht = sys.argv[1:]
     dateien = [p for p in sorted(NB.glob("*.ipynb"))
@@ -261,6 +331,8 @@ def main() -> int:
             print(f"           {zahl:>12}   {kontext}")
     print(f"\n{len(dateien)} Notebook(s) geprueft, {gesamt} Zahl(en) ohne Entsprechung "
           f"in einer Ausgabe.")
+    if not gewuenscht:
+        bericht_getippte()
     return 1 if gesamt else 0
 
 

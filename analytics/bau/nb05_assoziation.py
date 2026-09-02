@@ -1020,6 +1020,8 @@ angedockte_koerbe = koerbe[koerbe.ziel != "frei abgestellt"]
 
 ab = angedockte_koerbe.groupby(["tagesart", "fenster", "start"], observed=True).size().rename("ab")
 zu = angedockte_koerbe.groupby(["tagesart", "fenster", "ziel"], observed=True).size().rename("zu")
+# nullen-sind-echt: Eine Station ohne Abfahrten hat null Abfahrten. Der
+# fehlende Eintrag ist das Ereignis, nicht seine Abwesenheit im Datensatz.
 saldo = pd.concat([ab, zu], axis=1).fillna(0)
 saldo.index.names = ["tagesart", "fenster", "station"]
 saldo["netto"] = saldo.zu - saldo.ab
@@ -1033,6 +1035,7 @@ WERKTAGE = koerbe[koerbe.tagesart == "Werktag"].startzeit.dt.date.nunique()
 print(f"Der Datensatz enthält {WERKTAGE} verschiedene Werktage.\\n")
 
 werktag = saldo.loc["Werktag"].reset_index()
+# nullen-sind-echt: Fenster ohne Bewegung haben Saldo null.
 tabelle_gesamt = werktag.pivot(index="station", columns="fenster", values="netto").fillna(0)
 tabelle = (tabelle_gesamt / WERKTAGE).round(2)
 
@@ -1051,6 +1054,7 @@ ang_werktag["datum"] = ang_werktag.startzeit.dt.normalize()
 
 ab_t = ang_werktag.groupby(["datum", "fenster", "start"], observed=True).size().rename("ab")
 zu_t = ang_werktag.groupby(["datum", "fenster", "ziel"], observed=True).size().rename("zu")
+# nullen-sind-echt: siehe oben - kein Eintrag heisst keine Bewegung.
 je_tag = pd.concat([ab_t, zu_t], axis=1).fillna(0)
 je_tag.index.names = ["datum", "fenster", "station"]
 je_tag["netto"] = je_tag.zu - je_tag.ab
@@ -1075,6 +1079,7 @@ bedarf_tag = bedarf.groupby("datum").sum()
 # Kapazitaet und Eingriffszeitpunkt.
 ab_t2 = ang_werktag.groupby(["datum", "start"], observed=True).size().rename("ab")
 zu_t2 = ang_werktag.groupby(["datum", "ziel"], observed=True).size().rename("zu")
+# nullen-sind-echt: dasselbe am Tagesende.
 tagesende = pd.concat([ab_t2, zu_t2], axis=1).fillna(0)
 tagesende["netto"] = tagesende.zu - tagesende.ab
 rest_tag = tagesende.groupby(level=0).netto.apply(lambda x: x[x > 0].sum())
@@ -1564,7 +1569,7 @@ MD("""
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
 | 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen alle drei Hürden — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sich zeigt, dass sie auf der falschen Skala liegt: Sie entscheidet in Betriebsgrößen um Hundertstel einer Fahrt je Werktag. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — {{personen_selber_tag:.0f}} Fälle bei {{rueck_fahrten_paar:.0f}} Abendfahrten |
-| 6 Deployment | **Keine Freigabe** — Phase 6 ist eine eigene explorative Auswertung, die mit keiner Regel rechnet. Der Langfristmittelwert zeigte 1,75 Räder je Werktag; je Tag gerechnet sind es 19,8 bei Ausgleich nach jedem Fenster und 11,1 am Tagesende. Beides sind Ungleichgewichte, kein Bedarf. Die Abstell-Hotspots sind über die **End**koordinaten verortet — bei 87 % ist die nächste Station eine andere als die Startstation |
+| 6 Deployment | **Freigegeben als Entscheidungshilfe**, nicht als Transportauftrag: Die Regeln erscheinen in der Dispositionsansicht, dazu Stationssalden und Abstell-Hotspots. Die Kostenrechnung sagt, warum keine Automatik — es geht um {{regel_je_werktag:.1f}} Fahrten je Werktag bei {{kosten_transport:.0f}} € je Umsetzrunde. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.0%}} ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
 

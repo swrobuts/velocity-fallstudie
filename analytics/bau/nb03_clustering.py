@@ -153,6 +153,7 @@ gibt es nichts zu gruppieren.
 CODE('''
 werktags = echte[~echte.ist_frei]
 tagesgang = werktags.pivot_table(index="start_station_id", columns="stunde",
+# nullen-sind-echt: Eine Station-Stunde ohne Fahrt hat null Fahrten.
                                  values="ausleihe_id", aggfunc="count").fillna(0)
 # Zwischen 23 und 5 Uhr gibt es in den Daten keine Fahrt, die Stunden fehlen
 # deshalb ganz. Das ist eine Aussage ueber die NACHFRAGE, nicht ueber die
@@ -711,6 +712,8 @@ def stationsmerkmale(f):
     z = f.groupby("start_station_id").agg(
         wochenendanteil=("ist_frei", "mean"),
         dauer_median=("dauer_min", "median"))
+    # nullen-sind-echt: Eine Station ohne Werktagsfahrt in einer Stunde hat
+    # dort null Fahrten. Die Spalte fehlt nur, weil niemand gefahren ist.
     return g.join(z).fillna(0.0)
 
 
@@ -834,7 +837,7 @@ print("    vertreten. Gebunden wird das Gate an (1).")
 # Eine Schwelle, die nur im Text steht, bindet nichts. Diese hier
 # entscheidet weiter unten darueber, ob die Kampagnenliste als freigegeben
 # oder als gesperrt exportiert wird.
-GATE_WECHSEL = 0.25
+GATE_WECHSEL = merke("gate_wechsel", 0.25)
 # Gebunden wird der ENGE Nenner - die Menschen, die tatsaechlich eine
 # Ansprache bekaemen. Der weite Nenner steht daneben, als Diagnose.
 KUNDENSEGMENTE_STABIL = bool(liste_wechsel <= GATE_WECHSEL)
@@ -1068,7 +1071,10 @@ MD("""
 
 CODE('''
 tarifverteilung = (rfm.groupby("cluster").tarif_code.value_counts(normalize=True)
-                   .unstack().fillna(0) * 100).round(0)
+                   # nullen-sind-echt: Ein Tarif, den in einem Segment
+                   # niemand hat, kommt dort mit null Prozent vor.
+                   # nullen-sind-echt: dasselbe je Segment.
+              .unstack().fillna(0) * 100).round(0)
 uebersicht = profil.join(tarifverteilung)
 print(uebersicht.to_string())
 
@@ -1115,6 +1121,7 @@ else:
 
 _seg = rfm.assign(segment=rfm.apply(segment_benennen, axis=1))
 _seg_tarif = (_seg.groupby("segment").tarif_code.value_counts(normalize=True)
+              # nullen-sind-echt: dasselbe je Segment.
               .unstack().fillna(0) * 100).round(0)
 print("\\nREGELSEGMENTE - dieselbe Rechnung, und diese Gruppen werden ausgeliefert:")
 print(seg_profil.assign(**{"EUR je Fahrt": _je_fahrt}).join(_seg_tarif).to_string())
@@ -1265,6 +1272,7 @@ def preis_ohne_freiminuten(minuten, typ, rabatt_prozent):
 
 fenster2["voller_preis"] = [
     preis_ohne_freiminuten(m, t, r) for m, t, r
+    # nullen-sind-echt: Ohne hinterlegten Rabatt gilt kein Rabatt.
     in zip(fenster2.dauer_min, fenster2.typ_code, fenster2.rabatt_prozent.fillna(0))]
 fenster2["verschenkt_eur"] = (fenster2.voller_preis - fenster2.entgelt_eur).clip(lower=0)
 
@@ -1279,6 +1287,8 @@ assert (_abw < 0.005).mean() > 0.999, (
     "der verschenkte Betrag waere dann geraten.")
 
 je_kunde = fenster2.groupby("kunde_id").verschenkt_eur.sum()
+# nullen-sind-echt: Wer keine Freiminuten verbraucht hat, hat null
+# verschenkt - nicht "unbekannt".
 rfm["verschenkt"] = je_kunde.reindex(rfm.index).fillna(0)
 
 vergleich = rfm.groupby("cluster").agg(
@@ -1826,7 +1836,7 @@ MD("""
 | 3 Data Preparation | Tagesgang je Station, normiert und standardisiert | RFM über 365 Tage, Frequenz und Umsatz logarithmiert |
 | 4 Modeling | k-Means, k über Ellenbogen und Silhouette | dasselbe Verfahren, dieselben Werkzeuge |
 | 5 Evaluation | Vier benennbare Typen, gegen die verdeckte Wahrheit geprüft: {{generator_treffer:.0%}} Mehrheitszuordnung, ARI {{generator_ari:.3f}}. Stabilität gemessen, nicht behauptet | Vier Segmente, über die Startwerte reproduzierbar (ARI {{ari_kunden:.3f}}), aber mit schwächerer Trennung (Silhouette {{sil_kunden_k4:.3f}}) — dazu zwei Befunde, die weh tun, und eine hypothetische Rechnung |
-| 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Gesperrter analytischer Arbeitsstand**: **alle sechs** Freigabe-Gates offen. Auch das Stabilitätsgate reißt, sobald man es am richtigen Nenner misst — an denen, die eine Ansprache bekämen |
+| 6 Deployment | **Stationsprofile** als CSV — Hypothesen, kein Sollbestand | **Kampagnenpilot freigegeben**: Alle fünf Gates halten. Das Stabilitätsgate erst, seit die Segmente eine Hysterese haben — gemessen am Nenner, der zur Auslieferung passt: {{gate_eng:.2%}} gegen {{gate_wechsel:.0%}}. {{kontrollgruppe_n:,}} Konten bilden die Kontrollgruppe |
 
 **Die zwei Befunde aus Phase 5.B, die weh tun**
 

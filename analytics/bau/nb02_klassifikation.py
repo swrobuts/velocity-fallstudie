@@ -65,7 +65,7 @@ Das ist der Kern dieser Phase, und er entscheidet später über das ganze Modell
 | Fehler | Was passiert | Kosten |
 |---|---|---|
 | **Falsch negativ** — Modell sagt „unauffällig“, das Rad fällt aber aus | Kunde bleibt liegen, Bergungsfahrt, Ersatz, Beschwerde | **180 €** |
-| **Falsch positiv** — Modell sagt „prüfen“, das Rad war in Ordnung | eine halbe Stunde Werkstattzeit umsonst | **25 €** |
+| **Falsch positiv** — Modell sagt „prüfen“, das Rad war in Ordnung | eine halbe Stunde Werkstattzeit umsonst | **{{kosten_unnoetig:.0f}} €** |
 
 **Ein verpasster Ausfall kostet gut sieben Mal so viel wie eine unnötige Prüfung.**
 Ein Modell, das beide Fehler gleich behandelt, optimiert deshalb das Falsche. Wir werden
@@ -190,6 +190,8 @@ nutzung = fahrten[fahrten.status == "abgeschlossen"].groupby("fahrrad_id").agg(
     km_gesamt=("distanz_km", "sum"),
 )
 verbund = raeder.set_index("fahrrad_id").join(nutzung).join(je_rad.rename("meldungen"))
+# nullen-sind-echt: Ein Rad ohne Eintrag in der Fahrtentabelle ist nie
+# gefahren worden - null ist die Zahl, nicht das fehlende Datum.
 verbund["fahrten_gesamt"] = verbund.fahrten_gesamt.fillna(0)
 
 achsen[1].scatter(verbund.km_gesamt, verbund.meldungen, s=18, alpha=.6, color="#3d4b6b")
@@ -355,6 +357,8 @@ abgeschlossen["km_aus_matrix"] = ~hat_messwert & aus_matrix.notna()
 # Verschleiss, und beides steht in keiner Spalte der Ausleihtabelle - erst die
 # Steigung der Verbindung macht es rechenbar.
 abgeschlossen["hoehenmeter"] = (
+    # nullen-sind-echt: Ohne Streckenangabe gibt es keine Steigung; sie mit
+    # null anzusetzen unterschaetzt den Verschleiss, statt ihn zu erfinden.
     steigung.abs().fillna(0) / 1000.0 * abgeschlossen.km_fahrt * 1000.0)
 print(f"Kilometer je Fahrt: {hat_messwert.mean():.0%} gemessen, "
       f"{abgeschlossen.km_aus_matrix.mean():.0%} aus der Routenmatrix, "
@@ -469,6 +473,8 @@ def zeile_bauen(stichtag):
         [nutzung_fenster, gesamt, meldungen_bisher, letzte_reparatur, km_seit, km_seit_m])
     for spalte in ["fahrten_180", "km_180", "hoehenmeter_180", "fahrten_gesamt", "km_gesamt",
                    "meldungen_bisher", "km_seit_reparatur", "km_seit_meldung"]:
+        # nullen-sind-echt: Wer im Fenster keine Fahrt und keine Meldung
+        # hat, hat davon null - die Zeile fehlt nur, weil nichts geschah.
         z[spalte] = z[spalte].fillna(0)
     z["dauer_mittel"] = z.dauer_mittel.fillna(z.dauer_mittel.median())
     z["tage_im_bestand"] = (stichtag - z.angeschafft_am).dt.days
@@ -1473,7 +1479,7 @@ MD("""
 Unsinn — und der Fehler steckt nicht in der Rechnung, sondern in der Formel:
 
 ```text
-Kosten = falsch_positive × 25 € + falsch_negative × 180 €
+Kosten = falsch_positive × {{kosten_unnoetig:.0f}} € + falsch_negative × {{kosten_verpasst:.0f}} €
 ```
 
 Bei fester Listenlänge `k` und `P` positiven Rädern gilt `FP = k − TP` und `FN = P − TP`,

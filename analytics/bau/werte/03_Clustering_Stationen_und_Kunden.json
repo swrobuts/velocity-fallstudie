@@ -15,6 +15,7 @@
  "gate_differenz": -0.19704151770514045,
  "n_registriert": 3072,
  "n_arbeitsliste": 2937,
+ "gate_wechsel": 0.25,
  "gate_union": 0.240625,
  "kurze_historie": 510,
  "kurze_historie_wechsel": 165,

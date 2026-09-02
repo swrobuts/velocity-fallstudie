@@ -542,6 +542,8 @@ print((referenz_tab.typ_code.value_counts(normalize=True) * 100).round(0).to_str
 # Typ das ist und wie stark er abweicht, entscheidet die Rechnung.
 _liste = referenz_tab.nlargest(50, "auffaelligkeit").typ_code.value_counts(normalize=True)
 _flotte = referenz_tab.typ_code.value_counts(normalize=True)
+# nullen-sind-echt: Ein Radtyp, der in der Top-50-Liste nicht vorkommt, hat
+# dort den Anteil null - genau das ist der Befund.
 _diff = (_liste.reindex(_flotte.index).fillna(0) - _flotte)
 _unter = _diff.idxmin()
 merke("untertyp", _unter)
@@ -1146,6 +1148,9 @@ kandidaten = kandidaten.sort_values(["start_station_id", "datum"]).copy()
 kandidaten["null_heute"] = kandidaten.fahrten == 0
 kandidaten["null_gestern"] = (kandidaten.groupby("start_station_id")
                               .null_heute.shift(1).fillna(False))
+# nullen-sind-echt: Eine Station ohne Fahrten im Referenzzeitraum hat dort
+# einen Mittelwert von null - und faellt damit unter MINDESTBETRIEB, was
+# die gewollte Wirkung ist.
 kandidaten["betrieb"] = kandidaten.start_station_id.map(_betrieb).fillna(0.0)
 kandidaten["meldewuerdig"] = (kandidaten.null_heute & kandidaten.null_gestern
                               & (kandidaten.betrieb >= MINDESTBETRIEB))
@@ -1696,8 +1701,8 @@ MD("""
 | 2 Data Understanding | Eine **Lücke** in der Dauerverteilung trennt Fahrten von Rückgabeproblemen. Und eine Sackgasse: Die Geschwindigkeit taugt nichts, weil sie aus der Dauer abgeleitet ist |
 | 3 Data Preparation | Fünf Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor keine auffällige *Fahrt* ist — wiederholtes Fehlen bei demselben Rad ist sehr wohl ein Fall, nur ein anderer: Datenqualität statt Fahrverhalten |
 | 4 Modeling | Interquartilsregel ({{iqr_treffer:,}} Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
-| 5 Evaluation | Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste {{tagesquote:.1%}} — **bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B fällt die Präzision von {{stat_falsch_50:.1%}} über {{stat_richtig_50:.1%}} und {{stat_je_tag:.1%}} auf **{{stat_je_alarm:.1%}} je neuem Alarm**; sie erkennt **{{episoden_roh:.0f}} von {{episoden_gesamt:.0f}}** Episoden je täglicher Rohmeldung und **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** je neuem Alarm, reißt aber beide Wirtschaftlichkeitshürden |
-| 6 Deployment | **Keines der drei Produkte ist betrieblich freigegeben.** A1 ist als Regel und Funktion spezifiziert und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen. A2 läuft nur im Schattenbetrieb. B ist nicht freigegeben. Der verbindliche Status steht im Modellpaket; die Tabelle in 6.1 ist von Hand geschrieben |
+| 5 Evaluation | Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste {{tagesquote:.1%}} — **bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B hob eine Nachbesserung die Präzision von {{stat_alt_quote:.1%}} auf {{stat_je_tag:.1%}} je Meldung und {{stat_je_alarm:.1%}} je Alarm — beide über der Hürde von {{kriterium_treffer:.0%}}. Der Preis: **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** Episoden statt aller |
+| 6 Deployment | **A1 spezifiziert, A2 im Schattenbetrieb, B als Pilot freigegeben.** A1 ist als Regel und Funktion beschrieben und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. A2 läuft im Schattenbetrieb, weil das Label fehlt. B nimmt beide Hürden und geht als Pilot in Betrieb. Der verbindliche Status steht im Modellpaket |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
 
@@ -1774,21 +1779,32 @@ neben der ersten, und zwei Quellen für dieselbe Zahl gehen irgendwann auseinand
 **Was in jedem Notebook herauskam, steht in jedem Notebook** — in seiner eigenen
 Schlusszelle, aus seinen eigenen Variablen erzeugt. Lesen Sie es dort.
 
-Was sich dagegen über alle sechs sagen lässt, ohne zu veralten: **Zwei Verfahren gingen in
-Betrieb, vier nicht** — und in keinem der sechs Fälle haben die Kennzahlen das
-entschieden, sondern die Frage, ob jemand mit dem Ergebnis verantwortlich handeln kann.
+Was sich dagegen über alle sechs sagen lässt, ohne zu veralten: **Jedes Verfahren ist im
+Betrieb — und keines ohne Einschränkung.** Nicht die Kennzahlen haben das entschieden,
+sondern die Frage, ob jemand mit dem Ergebnis verantwortlich handeln kann.
 
-Die beiden Freigaben sind dabei so lehrreich wie die vier Absagen. Sie kamen nicht
-zustande, weil dort besser gerechnet worden wäre, sondern weil dort **vorher festgelegte
-Hürden tatsächlich genommen wurden**.
+| | geht in Betrieb als | die Grenze, die dabeisteht |
+|---|---|---|
+| 1 Regression | Preisauskunft in der App | belegt auf historischen Daten, nicht prospektiv |
+| 2 Klassifikation | Wartungsliste je Quartal | die Zusage musste vorher repariert werden |
+| 3 Clustering | Kampagnenpilot mit Kontrollgruppe | Wirkung erst nach dem Quartal messbar |
+| 4 Zeitreihe | Nachfrageprognose mit Aufschlag | Wetterunsicherheit ist simuliert |
+| 5 Assoziation | Entscheidungshilfe der Disposition | keine Automatik, dafür fehlt die Wirtschaftlichkeit |
+| 6 Anomalie | A1 spezifiziert, A2 im Schatten, B als Pilot | eintägige Störungen findet B nicht |
 
-In einem der beiden Fälle musste die Hürde vorher allerdings repariert werden — sie war
-so formuliert, dass kein Verfahren sie hätte halten können. Das ist der unbequemste
-Befund dieser Fallstudie: **Ein Kriterium kann falsch sein, nicht nur unerreicht.** Wer
-das nicht prüft, misst Verfahren gegen ein Ziel, das es nicht gibt.
+**Keiner dieser Wege war der, den die erste Fassung vorgesehen hatte.** Zwei Verfahren
+gingen erst in Betrieb, nachdem sie verbessert worden waren; eines erst, nachdem seine
+Zusage repariert war; eines nur in einer engeren Form als geplant.
 
-Das ist keine schlechte Bilanz, sondern eine realistische. Analyseprojekte, in denen alles
-auf Anhieb funktioniert, gibt es in Lehrbüchern — und sonst nirgends.
+**Der unbequemste Befund dieser Fallstudie steckt in Notebook 2:** Dort war die Zusage so
+formuliert, dass kein Verfahren sie hätte halten können — auch keines mit vollständiger
+Kenntnis der Zukunft. **Ein Kriterium kann falsch sein, nicht nur unerreicht.** Wer das
+nicht prüft, misst Verfahren gegen ein Ziel, das es nicht gibt, und hält das Ergebnis für
+eine Aussage über die Verfahren.
+
+Dass am Ende alles läuft, ist deshalb keine Erfolgsmeldung, sondern das Ergebnis von
+sechs Rücksprüngen. **In Lehrbüchern funktioniert alles auf Anhieb. Hier hat nichts auf
+Anhieb funktioniert** — und genau das ist der Teil, der sich üben lässt.
 
 > **Was in allen sechs Notebooks dieselbe Ursache hatte:** Nicht ein einziges Modell ist
 > an seiner Mathematik gescheitert. Gescheitert sind Kennzahlen, die zu einem anderen

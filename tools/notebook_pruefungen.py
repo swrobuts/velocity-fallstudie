@@ -63,16 +63,30 @@ def zellen(pfad: Path) -> tuple[list, list, list]:
 
 
 def pruefe_nullfuellung(code: list[str]) -> list[str]:
-    """fillna(0) ohne vorherige Zusicherung verdeckt Datenluecken."""
+    """fillna(0) verdeckt Datenluecken - es sei denn, Null ist der wahre Wert.
+
+    Beides kommt vor, und der Unterschied ist nicht am Code zu sehen: Ob
+    eine fehlende Fahrtenzahl "keine Fahrt" heisst oder "nicht erfasst",
+    weiss nur, wer die Daten kennt. Deshalb verlangt diese Pruefung eine
+    Aussage - entweder eine Zusicherung, dass keine Luecke vorliegt, oder
+    die ausdrueckliche Kennzeichnung
+
+        # nullen-sind-echt: <Begruendung>
+
+    Eine Kennzeichnung ist keine Formalie: Sie zwingt dazu, den Satz
+    hinzuschreiben, und ein falscher Satz faellt beim Lesen auf. Ein
+    ungekennzeichnetes fillna(0) faellt nie auf.
+    """
     funde = []
     for nummer, quelle in enumerate(code):
         for treffer in re.finditer(r"\.fillna\(\s*0(?:\.0)?\s*\)", quelle):
-            davor = quelle[:treffer.start()]
-            if "assert" not in davor.split("\n")[-12:][0:1] and "assert" not in "\n".join(
-                    davor.split("\n")[-12:]):
-                zeile = quelle[:treffer.start()].count("\n") + 1
-                funde.append(f"Zelle {nummer}, Zeile {zeile}: fillna(0) ohne "
-                             f"vorangehende Zusicherung")
+            umfeld = "\n".join(quelle[:treffer.start()].split("\n")[-12:])
+            if "assert" in umfeld or "nullen-sind-echt" in umfeld:
+                continue
+            zeile = quelle[:treffer.start()].count("\n") + 1
+            funde.append(f"Zelle {nummer}, Zeile {zeile}: fillna(0) ohne "
+                         f"Zusicherung und ohne Begruendung "
+                         f"(# nullen-sind-echt: ...)")
     return funde
 
 
@@ -350,6 +364,53 @@ FREIGABEMARKE = re.compile(r"\b(?:KEINE_FREIGABE|PRODUKT_FREIGEGEBEN|"
 STATUSMARKE = re.compile(r"[A-Za-z_]*status\b", re.I)
 
 
+NEGATIV = re.compile(
+    r"(?:Produkt|Verfahren|Regel|Liste|Modell|A1|A2|\bB\b)[^.]{0,40}"
+    r"(?:ist|wird|bleibt) nicht freigegeben"
+    r"|keine (?:Betriebs|Kampagnen|Produkt)?freigabe"
+    r"|wird nichts (?:ausgeliefert|freigegeben)"
+    r"|nichts (?:geht|wird) in Betrieb"
+    r"|kein (?:zulaessiger|zulässiger) Kandidat"
+    r"|im Einsatz ist gar nichts"
+    r"|Es wurde keine einzige Regel freigegeben"
+    r"|Freigegeben wird (?:sie|es|er) nicht"
+    r"|\*\*Keine Freigabe\*\*"
+    r"|alle (?:sechs|fuenf|fünf|vier|drei) (?:Freigabe-)?Gates offen"
+    r"|Gesperrter analytischer Arbeitsstand", re.I)
+POSITIV = re.compile(
+    r"AUSGELIEFERT WIRD|Kampagnenfreigabe: JA|FREIGABE ALS PILOT"
+    r"|freigegeben \(Pilot\)|Das Produkt ist freigegeben", re.I)
+
+
+def pruefe_altprosa(markdown: list[str], ausgaben: list[str]) -> list[str]:
+    """Findet Fliesstext, der eine Sperre behauptet, waehrend das Notebook freigibt.
+
+    Der teuerste Fehler dieser Fallstudie war nicht eine falsche Zahl,
+    sondern ein stehengebliebener Zustand: Das Notebook lieferte aus, und
+    drei Kapitel weiter stand noch "nicht freigegeben". Zahlen faengt die
+    Textpruefung; Worte nicht.
+
+    Geprueft wird nur, wenn die AUSGABEN eine Freigabe belegen. Dann darf
+    im Fliesstext keine unbedingte Sperraussage mehr stehen - es sei denn,
+    sie ist erkennbar rueckblickend ("eine fruehere Fassung", "haette",
+    "waere") oder bedingt ("wenn", "falls").
+    """
+    if not any(POSITIV.search(a) for a in ausgaben):
+        return []
+    rueckblick = re.compile(r"fr[üu]here|zuvor|h[äa]tte|w[äa]re|wenn |falls |sonst |"
+                            r"anders ausgefallen|nicht eingetreten", re.I)
+    befunde = []
+    for i, text in enumerate(markdown, 1):
+        for satz in re.split(r"(?<=[.!?])\s+", text):
+            if not NEGATIV.search(satz) or rueckblick.search(satz):
+                continue
+            if "{{" in satz:          # aus der Rechnung gefuellt
+                continue
+            befunde.append(f"Markdownzelle {i}: '{satz.strip()[:88]}' - behauptet eine "
+                           f"Sperre, obwohl die Ausgaben eine Freigabe zeigen")
+    return befunde
+
+
 def pruefe_artefakt_ohne_waechter(code: list[str]) -> list[str]:
     """Ein Artefakt darf nur entstehen, wenn die Freigabe es zulaesst.
 
@@ -500,7 +561,8 @@ def main() -> int:
                   + pruefe_platzhalterrest(markdown, bauskript)
                   + pruefe_urteil_im_text(markdown)
                   + pruefe_gate_mit_fremder_zahl(code)
-                  + pruefe_artefakt_ohne_waechter(code))
+                  + pruefe_artefakt_ohne_waechter(code)
+                  + pruefe_altprosa(markdown, ausgaben))
         hinweise = (pruefe_nullfuellung(code) + pruefe_freie_schwellen(code)
                     + pruefe_urteil_ohne_zahl(ausgaben))
         if fehler:

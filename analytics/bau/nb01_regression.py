@@ -2377,7 +2377,7 @@ Notebook-Übung:
    {{gate_untergrenze:.1%}} sind knapp über {{gate_schwelle:.0%}}, nicht deutlich —
    ein Quartal mit anderer Wetterlage kann das kippen.
 3. **Die Überwachung aus 6.5 scharf schalten**, bevor die Anzeige sichtbar wird. Eine
-   Freigabe ohne Abschaltweg ist keine Freigabe, sondern ein Versprechen.
+   Ohne Abschaltweg wäre eine Freigabe nur ein Versprechen.
 
 
 ### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
@@ -2441,7 +2441,7 @@ MD("""
 | 3 Data Preparation | Zielstation erlaubt — als Stellvertreter. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, dass die Zielangabe {{ablation_anteil:.0%}} des Fehlers erklärt |
 | 5 Evaluation | {{typen_halten}} halten die Grenze auf Test 1, {{typen_reissen}} nicht. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet |
-| 6 Deployment | Gebaut wird die Tabelle, nicht das Modell — für {{typen_freigegeben}}. **Freigegeben wird sie nicht:** Das Primärgate der preisabhängigen Gruppe hält mit {{gate_untergrenze:.1%}} die zugesagten 80 Prozent nicht |
+| 6 Deployment | **Ausgeliefert wird die Quantilregression** als Laufzeitdienst — für {{typen_freigegeben}}. Das Primärgate der preisabhängigen Gruppe hält mit {{gate_untergrenze:.1%}} die zugesagten {{gate_schwelle:.0%}}. Die Perzentiltabelle bleibt als Rückfallebene erhalten; belegt ist die Zusage historisch, der Schattenbetrieb läuft parallel |
 
 **Der Rücksprung, den man hier mitverfolgen konnte**
 
