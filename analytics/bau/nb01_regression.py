@@ -53,6 +53,30 @@ Daraus folgt die Einsicht, die dieses Notebook trägt:
 
 Und daraus folgt sofort die erste Einschränkung, die wir offen benennen müssen.
 """),
+MD("""
+## Vier Wörter, die in dieser Reihe nicht dasselbe bedeuten
+
+Diese sechs Notebooks liefern am Ende sehr verschiedene Dinge aus, und die Wörter dafür
+werden im Alltag als Synonyme benutzt. Hier sind sie es nicht:
+
+| Wort | Was es heißt | Was es **nicht** heißt |
+|---|---|---|
+| **qualifiziert** | Die vorab festgelegten Gütekriterien halten auf den vorhandenen Daten | dass jemand das Ergebnis zu sehen bekommt — dieses Notebook nennt den Zustand `GATES_HALTEN` |
+| **Schattenbetrieb** | Das Verfahren rechnet mit, Ergebnisse werden protokolliert, **niemand sieht sie und niemand handelt danach** | eine abgeschwächte Freigabe |
+| **Pilot** | Ein begrenzter, befristeter echter Einsatz mit benanntem Abbruchkriterium und Kontrollmöglichkeit | ein Test |
+| **operativer Einsatz** | Das Ergebnis wirkt ohne weitere Prüfung auf Kundschaft, Personal oder Geld | dass das Verfahren fehlerfrei ist |
+
+**Der Unterschied zwischen den ersten beiden ist der teuerste.** „Qualifiziert" ist eine
+Aussage über Zahlen; „Schattenbetrieb" ist der Zustand, in dem man prüft, ob diese
+Aussage auch trägt, wenn die Wirklichkeit dazwischenkommt. Ein Verfahren kann jede Hürde
+nehmen und trotzdem im Schatten bleiben — genau das passiert in diesem Notebook.
+
+> **Warum das nicht in einer Übersichtstabelle über alle sechs Notebooks steht.** Welchen
+> Status ein einzelnes Verfahren erreicht, entscheidet seine eigene Rechnung, und die
+> steht in seinem eigenen Notebook. Eine Statusübersicht an einer siebten Stelle wäre
+> eine zweite Quelle, die beim nächsten Neubau veraltet. **Was hier steht, sind die
+> Begriffe — nicht die Ergebnisse.**
+"""),
 
 MD("""
 > ### ⚠ Die Annahme, auf der alles Weitere ruht
@@ -1764,11 +1788,18 @@ freigegebene_typen = sorted(
 # die Tabelle gebaut - aber nicht freigegeben.
 # ─── EINE STATUSQUELLE FUER DAS GANZE NOTEBOOK ──────────────────────
 #
-# Drei Stufen, und sie sind NICHT dasselbe:
+# Drei Stufen, und sie sind NICHT dasselbe. Die Namen sind dieselben wie
+# im Begriffskasten ganz oben:
 #
-#   qualifiziert  - die Gates halten auf den vorhandenen Daten
-#   schatten      - der Dienst laeuft und protokolliert, zeigt aber nichts an
-#   sichtbar      - die Anzeige ist fuer Kundinnen und Kunden freigeschaltet
+#   gesperrt   - die Gates halten nicht; es entsteht kein Produkt
+#   schatten   - qualifiziert, aber unabhaengig ungeprueft: Der Dienst
+#                rechnet und protokolliert und zeigt nach aussen nichts
+#   sichtbar   - die Anzeige ist fuer Kundinnen und Kunden freigeschaltet
+#
+# "qualifiziert" ist dabei kein eigener Status, sondern die Bedingung
+# fuer die beiden oberen: GATES_HALTEN. Ob daraus "schatten" oder
+# "sichtbar" wird, entscheidet die zweite Frage - ob unabhaengig
+# geprueft wurde.
 #
 # Warum nicht direkt sichtbar? Weil Test 2 die Intervalle KALIBRIERT hat.
 # Derselbe Zeitraum kann nicht zugleich Kalibrierung und unabhaengige
