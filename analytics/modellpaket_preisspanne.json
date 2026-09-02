@@ -36,6 +36,50 @@
   "statusgrund": "freigegeben",
   "abnahme_untergrenze": 0.8003892333611203,
   "abnahme_bestanden": true,
+  "abnahme_gates": {
+    "Gate 1  preisabhaengig aggregiert >= 80%": {
+      "wert": 0.8003892333611203,
+      "schwelle": 0.8,
+      "n": 700,
+      "haelt": true
+    },
+    "Gate 3  CARGO angezeigt >= 80%": {
+      "wert": 0.9357900058647312,
+      "schwelle": 0.8,
+      "n": 220,
+      "haelt": true
+    },
+    "Gate 3  CITY angezeigt >= 80%": {
+      "wert": 0.9610677835010508,
+      "schwelle": 0.8,
+      "n": 1361,
+      "haelt": true
+    },
+    "Gate 3  EBIKE angezeigt >= 80%": {
+      "wert": 0.9206156993994054,
+      "schwelle": 0.8,
+      "n": 1368,
+      "haelt": true
+    },
+    "Gate 4  CARGO Reichweite >= 10%": {
+      "wert": 0.38869257950530034,
+      "schwelle": 0.1,
+      "n": 566,
+      "haelt": true
+    },
+    "Gate 4  CITY Reichweite >= 10%": {
+      "wert": 0.42398753894081,
+      "schwelle": 0.1,
+      "n": 3210,
+      "haelt": true
+    },
+    "Gate 4  EBIKE Reichweite >= 10%": {
+      "wert": 0.7001023541453428,
+      "schwelle": 0.1,
+      "n": 1954,
+      "haelt": true
+    }
+  },
   "operativ_gueltig_ab": "2026-09-02",
   "operativ_gueltig_bis": "2026-12-01"
 }

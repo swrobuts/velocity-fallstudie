@@ -2906,7 +2906,44 @@ for _g, _n in A[~A.gezeigt].grund.value_counts().items():
 # Fassung unterscheidet: Der Status wird hier NEU gesetzt, aus einer
 # Messung auf Daten, die keine Entscheidung dieses Notebooks beeinflusst
 # haben. Vorher stand er auf "schatten", weil genau diese Messung fehlte.
-ABNAHME_BESTANDEN = bool(_ab_unten >= GATE_PREISABHAENGIG)
+# ─── ALLE BINDENDEN GATES, NICHT NUR DAS WICHTIGSTE ─────────────────
+#
+# Hier stand: ABNAHME_BESTANDEN = _ab_unten >= GATE_PREISABHAENGIG -
+# also nur Gate 1. Der Katalog in 6.4c nennt aber DREI bindende Gates,
+# und ein Freigabelauf, der sich das guenstigste heraussucht, ist keiner.
+# Gate 2 (preisabhaengige Gruppe je Radtyp) bindet weiterhin nicht; das
+# steht so in 6.4c und ist dort begruendet.
+_ab_zeigt = A[A.gezeigt]
+ABNAHME_GATES = {}
+ABNAHME_GATES[f"Gate 1  preisabhaengig aggregiert >= {GATE_PREISABHAENGIG:.0%}"] = {
+    "wert": _ab_unten, "schwelle": GATE_PREISABHAENGIG, "n": len(A_offen),
+    "haelt": bool(_ab_unten >= GATE_PREISABHAENGIG)}
+
+# Gate 3: alle ANGEZEIGTEN Faelle je Radtyp - dieselbe Rechnung wie in 5.5.
+for _ty in sorted(_ab_zeigt.typ.unique()):
+    _g = _ab_zeigt[_ab_zeigt.typ == _ty]
+    _u, _ = wilson(int(_g.drin.sum()), len(_g))
+    ABNAHME_GATES[f"Gate 3  {_ty} angezeigt >= {GATE_PREISABHAENGIG:.0%}"] = {
+        "wert": _u, "schwelle": GATE_PREISABHAENGIG, "n": len(_g),
+        "haelt": bool(_u >= GATE_PREISABHAENGIG)}
+
+# Gate 4: Mindestreichweite je Radtyp - Anteil der Anfragen dieses
+# Radtyps, die ueberhaupt eine Auskunft bekommen.
+for _ty in sorted(A.typ.unique()):
+    _alle_ty = A[A.typ == _ty]
+    _r = len(_alle_ty[_alle_ty.gezeigt]) / max(1, len(_alle_ty))
+    ABNAHME_GATES[f"Gate 4  {_ty} Reichweite >= {MINDESTREICHWEITE:.0%}"] = {
+        "wert": _r, "schwelle": MINDESTREICHWEITE, "n": len(_alle_ty),
+        "haelt": bool(_r >= MINDESTREICHWEITE)}
+
+print()
+print("ALLE BINDENDEN GATES AUF DER ABNAHME - nicht nur das wichtigste:")
+for _bez, _w in ABNAHME_GATES.items():
+    print(f"   {_bez:<44s} {_w['wert']:>6.1%}  n={_w['n']:>5,d}   "
+          f"{'haelt' if _w['haelt'] else 'HAELT NICHT'}".replace(",", "."))
+ABNAHME_BESTANDEN = all(_w["haelt"] for _w in ABNAHME_GATES.values())
+merke("ab_gates_gesamt", len(ABNAHME_GATES))
+merke("ab_gates_halten", sum(1 for _w in ABNAHME_GATES.values() if _w["haelt"]))
 UNABHAENGIG_GEPRUEFT = ABNAHME_BESTANDEN
 PRODUKTSTATUS = ("sichtbar" if (GATES_HALTEN and UNABHAENGIG_GEPRUEFT)
                  else "schatten" if GATES_HALTEN else "gesperrt")
@@ -2961,6 +2998,12 @@ MODELLPAKET["produktstatus"] = PRODUKTSTATUS
 MODELLPAKET["statusgrund"] = STATUSGRUND
 MODELLPAKET["abnahme_untergrenze"] = float(_ab_unten)
 MODELLPAKET["abnahme_bestanden"] = bool(ABNAHME_BESTANDEN)
+# Jedes Gate mit Nenner, Fallzahl und Grenze - wer das Paket betreibt,
+# soll nicht nachschlagen muessen, worauf die Freigabe beruht.
+MODELLPAKET["abnahme_gates"] = {
+    _b: {"wert": float(_w["wert"]), "schwelle": float(_w["schwelle"]),
+         "n": int(_w["n"]), "haelt": bool(_w["haelt"])}
+    for _b, _w in ABNAHME_GATES.items()}
 # Operative Gueltigkeit beginnt beim BAU, nicht in der Vergangenheit.
 MODELLPAKET["operativ_gueltig_ab"] = MODELLPAKET["gebaut_am"]
 MODELLPAKET["operativ_gueltig_bis"] = str(
@@ -3041,6 +3084,13 @@ nachträgliche Begründung. Diese vier Fragen sind deshalb vorab entschieden:
 | 2 | preisabhängige Gruppe **je Radtyp**: dieselbe Untergrenze | nein |
 | 3 | alle angezeigten Fälle je Radtyp: Untergrenze ≥ {{gate_schwelle:.0%}} | **ja** (Kriterium aus 5.5) |
 | 4 | Mindestreichweite je Radtyp | **ja** (Kriterium aus 5.5) |
+
+> **Alle drei bindenden Gates werden auf der Abnahme erneut geprüft, nicht nur Gate 1.**
+> Eine frühere Fassung band das Abnahmeurteil allein an die aggregierte Untergrenze —
+> also an das wichtigste, aber eben nur eines von dreien. Ein Freigabelauf, der sich das
+> günstigste Kriterium heraussucht, ist kein Freigabelauf. In 6.7 stehen deshalb
+> {{ab_gates_gesamt:.0f}} Einzelprüfungen (Gate 1 einmal, Gate 3 und Gate 4 je Radtyp),
+> und der Status wird nur gesetzt, wenn **alle** halten.
 
 **Warum Gate 2 nicht gilt, und warum das vorher gesagt sein muss.** Die App macht der
 Kundschaft **eine** Zusage — nicht drei nach Radtyp getrennte. Das bindende Gate prüft
