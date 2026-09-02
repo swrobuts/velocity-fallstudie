@@ -92,10 +92,73 @@ festlegen, **wann es brauchbar ist**:
 | **1 Benennbarkeit** | Jede Gruppe muss sich in einem Satz beschreiben lassen, den ein Fachfremder versteht | Was man nicht benennen kann, kann man auch nicht bearbeiten |
 | **2 Handlungsrelevanz** | Für jede Gruppe muss es eine **andere** Maßnahme geben | Zwei Gruppen mit derselben Maßnahme sind eine Gruppe |
 | **3 Größe** | Keine Gruppe unter 5 % der Objekte | Ein Segment mit zwölf Kunden lohnt keine eigene Kampagne |
-| **4 Stabilität** | Ein zweiter Lauf mit anderem Zufallsstart muss dieselben Gruppen liefern | Sonst ist es Zufall, kein Muster |
+| **4 Startwertstabilität** | Ein zweiter Lauf mit anderem Zufallsstart muss dieselben Gruppen liefern | Sonst ist es Zufall, kein Muster |
+| **5 Zeitliche Stabilität** | Höchstens {{gate_wechsel:.0%}} der **Kampagnen-Arbeitsliste** wechseln binnen eines Quartals das Segment | Eine Ansprache, die jedes Quartal umspringt, wirkt beliebig |
 
 **Kriterium 2 ist das schärfste.** Es hat schon manches statistisch tadellose Clustering
 zu Recht beerdigt.
+
+#### Kriterium 5 im Detail — und warum es hier ausführlich steht
+
+Kriterium 4 und Kriterium 5 messen **verschiedene Dinge**. Startwertstabilität sagt, ob
+die Rechnung reproduzierbar ist. Zeitliche Stabilität sagt, ob dieselbe Person in einem
+Vierteljahr noch dieselbe Ansprache bekommt. Das erste ist eine Eigenschaft des
+Algorithmus, das zweite eine Eigenschaft des Produkts — und nur das zweite interessiert
+die Kundin, die im Januar als „Treue Kundschaft“ und im April als „Gelegenheitsnutzung“
+angeschrieben wird.
+
+Ein Stabilitätskriterium ohne Nenner ist wertlos, deshalb steht er hier:
+
+| | |
+|---|---|
+| **Zielpopulation** | die **Kampagnen-Arbeitsliste**: Personen, die zu einem der beiden Stichtage tatsächlich eine Ansprache bekämen |
+| **Wechsel** | das ausgelieferte Regelverfahren vergibt an den beiden Stichtagen verschiedene Segmentnamen |
+| **Abstand** | ein Quartal (90 Tage) |
+| **Schwelle** | höchstens {{gate_wechsel:.0%}} |
+| **Hysterese** | {{hysterese:.0%}} — ein Wechsel zählt erst, wenn er auch bei um ±{{hysterese:.0%}} verschobenen Eingangswerten bestehen bleibt |
+
+**Warum die Arbeitsliste der Nenner ist und nicht „alle Kunden".** Wer alle zählt, nimmt
+die dauerhaft inaktiven Nicht-Zielpersonen mit hinein. Die sind per Definition stabil,
+drücken die Quote nach unten und machen das Gate leichter — ohne dass an der
+Auslieferung irgendetwas stabiler wäre. Der weite Nenner wird trotzdem mitgeführt, als
+Diagnose neben dem bindenden Wert.
+
+**Warum es überhaupt eine Hysterese gibt.** Feste Schwellen erzeugen Wechsel an der
+Kante: Wer bei 4,9 Fahrten links und bei 5,1 rechts liegt, wechselt das Segment, ohne
+sein Verhalten nennenswert geändert zu haben. Das ist ein Artefakt der Schwelle, kein
+Befund. Die Hysterese verlangt deshalb, dass ein Wechsel auch dann noch besteht, wenn
+man die Eingangswerte um {{hysterese:.0%}} in beide Richtungen verschiebt.
+
+> **Diese Fassung von Kriterium 5 ist eine dokumentierte Überarbeitung von Phase 1.**
+> Die erste Fassung kannte nur Kriterium 4 und nannte es „Stabilität“. Hysterese und
+> {{gate_wechsel:.0%}}-Schwelle sind **nach** der ersten Messung entstanden — beim
+> Stichtagspaar, das weiter unten als „Entwicklung“ markiert ist. Das ist legitime
+> Verfahrensentwicklung, aber es verbraucht dieses Stichtagspaar: Auf ihm kann das Gate
+> nicht mehr unabhängig prüfen, was es mitgeformt hat.
+>
+> Deshalb wird die eingefrorene Regel zusätzlich über **frühere Stichtagspaare** gerechnet,
+> die bei der Entwicklung nie angesehen wurden. Die Freigabe hängt an diesen — nicht an
+> dem Paar, an dem entwickelt wurde. Und die Wechselquote **ohne** Hysterese steht als
+> Sensitivitätswert daneben, damit die Wirkung der Stabilisierung sichtbar bleibt.
+
+### Was von außen kommt — und deshalb keine Analyse ist
+
+Zwei Voraussetzungen für die Kampagne entscheiden nicht die Daten, sondern das
+Unternehmen. Sie stehen hier, weil sie sonst später als stillschweigende Annahme im Code
+auftauchen würden:
+
+| | Prämisse | Herkunft | Stand |
+|---|---|---|---|
+| **O1** | Für werbliche Ansprache dieser Kundschaft liegt eine dokumentierte Rechtsgrundlage vor (Einwilligung oder berechtigtes Interesse mit Widerspruchsmöglichkeit) | **Szenarioprämisse des Auftraggebers**, nicht aus den Daten belegbar | Lehrfall, Fassung {{datenstand}} |
+| **O2** | Ein Kontaktkanal mit Abmeldefunktion und Zustellprotokoll ist angebunden | **Szenarioprämisse des Auftraggebers** | Lehrfall, Fassung {{datenstand}} |
+
+> **Das sind keine Ergebnisse, sondern Vorgaben.** In den Daten steht dazu nichts, und es
+> könnte auch nichts darin stehen — eine Einwilligung ist ein Vorgang im Unternehmen,
+> keine Spalte in der Fahrtentabelle. Im Code stehen sie deshalb als benannte Prämissen
+> mit Quellenangabe, nicht als Analyseergebnis; und weil sie Prämissen sind, wird der
+> **analytische** Status vom **organisatorischen** getrennt geführt. Fällt eine der
+> beiden weg, entsteht kein personenbezogener Export — der aggregierte Bericht bleibt
+> davon unberührt.
 """),
 
 # =====================================================================
@@ -117,6 +180,44 @@ stationen = pd.read_csv(BASIS + "station.csv")
 kunden = pd.read_csv(BASIS + "kunde.csv", parse_dates=["registriert_am"])
 tarife = pd.read_csv(BASIS + "tarif.csv")
 feiertage = set(pd.read_csv(BASIS + "feiertage.csv").datum)
+
+# ─── DIE KRITERIEN AUS PHASE 1, ALS KONSTANTEN ──────────────────────
+#
+# Sie stehen HIER, in der ersten Codezelle, und nicht dort, wo sie
+# gebraucht werden. Der Grund ist nicht Ordnungsliebe: Eine Schwelle,
+# die erst im Auswertungscode auftaucht, hat den Anschein, aus der
+# Auswertung zu stammen. Diese hier stammen aus Phase 1 und stehen
+# deshalb VOR jeder Zahl, die sie beurteilen.
+GATE_WECHSEL = merke("gate_wechsel", 0.25)   # Kriterium 5, Schwelle
+HYSTERESE = merke("hysterese", 0.20)         # Kriterium 5, Kantenglaettung
+MIN_SEGMENTANTEIL = merke("min_segmentanteil", 0.05)   # Kriterium 3
+
+# DIE ORGANISATORISCHEN PRAEMISSEN - VOM AUFTRAGGEBER, NICHT AUS DEN DATEN.
+#
+# Sie sind keine Messung und koennen keine sein: Eine Einwilligung ist
+# ein Vorgang im Unternehmen, keine Spalte in der Fahrtentabelle. Sie
+# stehen als benannte Praemisse mit Quelle da, damit niemand sie fuer
+# ein Analyseergebnis haelt - und damit sichtbar ist, was passiert,
+# wenn eine davon wegfaellt.
+PRAEMISSEN = {
+    "O1 Rechtsgrundlage dokumentiert": {
+        "erfuellt": True,
+        "quelle": "Szenarioprämisse des Auftraggebers (Lehrfall), Phase 1",
+    },
+    "O2 Kontaktkanal mit Abmeldefunktion": {
+        "erfuellt": True,
+        "quelle": "Szenarioprämisse des Auftraggebers (Lehrfall), Phase 1",
+    },
+}
+ORGANISATORISCH_ERFUELLT = all(w["erfuellt"] for w in PRAEMISSEN.values())
+print("PRAEMISSEN AUS PHASE 1 - vom Auftraggeber gesetzt, nicht gemessen:")
+for _n, _w in PRAEMISSEN.items():
+    print(f"   {_n:<38s} {'ja' if _w['erfuellt'] else 'nein'}   {_w['quelle']}")
+print(f"\\nKRITERIEN AUS PHASE 1 - Schwellen, bevor irgendetwas gerechnet ist:")
+print(f"   Kriterium 3  Mindestanteil je Segment      {MIN_SEGMENTANTEIL:.0%}")
+print(f"   Kriterium 5  Wechselquote Arbeitsliste     hoechstens {GATE_WECHSEL:.0%}")
+print(f"   Kriterium 5  Hysterese                     {HYSTERESE:.0%}")
+print()
 
 echte = fahrten[fahrten.status == "abgeschlossen"].copy()
 echte["datum"] = echte.startzeit.dt.strftime("%Y-%m-%d")
@@ -265,6 +366,7 @@ CODE('''
 # genau diese 77 Fahrten weg. RFM, Stabilitaet und Export standen damit
 # auf drei verschiedenen Populationen.
 DATENSTAND = echte.startzeit.max()
+merke("datenstand", DATENSTAND.strftime("%d.%m.%Y"))
 CUTOFF = DATENSTAND.normalize() + pd.Timedelta(days=1)
 stichtag = CUTOFF                      # ein Name, ein Zeitpunkt
 FENSTER_TAGE = 365
@@ -467,7 +569,7 @@ print(profil.to_string())
 '''),
 
 # =====================================================================
-PHASE(5, "Ohne Zielgröße gibt es keine Trefferquote. Es gibt aber die vier Kriterien "
+PHASE(5, "Ohne Zielgröße gibt es keine Trefferquote. Es gibt aber die fünf Kriterien "
          "aus Phase 1 — und die sind streng genug."),
 
 MD("### 5.A Stationen: ergeben die Gruppen fachlich Sinn?"),
@@ -533,7 +635,7 @@ außerdem maschinell geprüft — **vier Gruppen müssen vier verschiedene Prüf
 ergeben.** Eine frühere Fassung dieses Notebooks hat genau daran gescheitert, ohne dass
 es auffiel.
 
-### Kriterium 4: Stabilität — gemessen, nicht behauptet
+### Kriterien 4 und 5: Stabilität — gemessen, nicht behauptet
 
 `n_init=25` ist **keine** Stabilitätsprüfung. Es rechnet 25 Startpunkte durch und nimmt
 den mit der geringsten Streuung — das ist Qualitätssicherung innerhalb eines Laufs, nicht
@@ -630,8 +732,6 @@ def segment_benennen(zeile, vorheriges=None, rand=0.0):
                    zeile.umsatz * (1 - rand))
     return vorheriges if vorheriges in (weich, weich_2) else jetzt
 
-
-HYSTERESE = 0.20    # in Phase 1 festgelegt, bevor die Stabilitaet gemessen wurde
 
 def rfm_zum_cutoff(cut):
     """Dieselbe RFM-Rechnung wie oben, nur zu einem anderen Zeitpunkt.
@@ -747,12 +847,18 @@ print(f"     Segmentwechsel binnen 90 Tagen: {wechselquote:.1%}")
 # ueberhaupt angeschrieben wird - naemlich den Wechsel zwischen aktiv
 # und inaktiv.
 # ---------------------------------------------------------------------
-def lebenszyklus_zum(cut, vorher=None):
-    """Die vollstaendige siebenstufige Logik zu einem Zeitpunkt."""
+def lebenszyklus_zum(cut, vorher=None, hysterese=None):
+    """Die vollstaendige siebenstufige Logik zu einem Zeitpunkt.
+
+    `hysterese` ist nur fuer die Sensitivitaetsrechnung da: Mit 0.0
+    laeuft dieselbe Logik ohne Kantenglaettung. Im Betrieb gilt immer
+    der Wert aus Phase 1.
+    """
+    h = HYSTERESE if hysterese is None else hysterese
     r = rfm_zum_cutoff(cut)
     seg = (r.apply(segment_benennen, axis=1) if vorher is None
            else r.apply(lambda z: segment_benennen(
-               z, vorher.get(z.name), HYSTERESE), axis=1))
+               z, vorher.get(z.name), h), axis=1))
     gefahren_bis = set(echte.loc[echte.endzeit < cut, "kunde_id"])
     reg = pd.to_datetime(kunden.set_index("kunde_id").registriert_am)
     dabei = (cut - reg).dt.days
@@ -798,6 +904,85 @@ liste_wechsel = float((lz_heute[in_liste] != lz_vor[in_liste]).mean())
 print("\\n(1c) NUR DIE KAMPAGNEN-ARBEITSLISTE - der enge Nenner\\n")
 print(f"     Zu beiden Zeitpunkten in der Arbeitsliste: {len(in_liste)}")
 print(f"     Segmentwechsel binnen 90 Tagen: {liste_wechsel:.2%}")
+
+# ---------------------------------------------------------------------
+# (1d) DIE FRUEHEREN STICHTAGSPAARE - UNANGETASTET.
+#
+# Hysterese und Schwelle sind an DIESEM Paar entstanden (Phase 1,
+# Kriterium 5). Damit ist es verbraucht: Es kann nicht unabhaengig
+# pruefen, was es mitgeformt hat.
+#
+# Die frueheren Paare wurden bei der Entwicklung nie angesehen. Sie sind
+# damit ein echter Holdout - nur eben rueckwaerts statt vorwaerts. Die
+# Regel laeuft dort unveraendert, mit denselben Schwellen und derselben
+# Hysterese; nichts wird nachjustiert.
+FROZEN = dict(gate=GATE_WECHSEL, hysterese=HYSTERESE)
+paare = []
+for _versatz in (90, 180, 270):
+    _b = CUTOFF - pd.Timedelta(days=_versatz)
+    _a = _b - pd.Timedelta(days=90)
+    if _a - pd.Timedelta(days=FENSTER_TAGE) < echte.startzeit.min():
+        continue        # zu frueh: das Rueckblickfenster waere nicht voll
+    paare.append((_a, _b))
+
+def wechsel_auf(a, b, hysterese):
+    _v = lebenszyklus_zum(a, hysterese=hysterese)
+    _h = lebenszyklus_zum(b, vorher=_v, hysterese=hysterese)
+    _g = _h.index.intersection(_v.index)
+    _liste = [k for k in _g if _h[k] not in NICHT_IN_KAMPAGNE
+              and _v[k] not in NICHT_IN_KAMPAGNE]
+    if not _liste:
+        return float("nan"), 0
+    return float((_h[_liste] != _v[_liste]).mean()), len(_liste)
+
+print("\\n(1d) UNANGETASTETE STICHTAGSPAARE - die Regel eingefroren\\n")
+print(f"     eingefroren: Schwelle {FROZEN['gate']:.0%}, "
+      f"Hysterese {FROZEN['hysterese']:.0%}")
+print(f"     {'Stichtage':<26s}{'Arbeitsliste':>13s}{'Wechsel':>10s}   Urteil")
+_holdout = []
+for _a, _b in paare:
+    _w, _n = wechsel_auf(_a, _b, HYSTERESE)
+    _holdout.append((_a, _b, _w, _n))
+    print(f"     {_a:%d.%m.%Y} → {_b:%d.%m.%Y}{_n:>13d}{_w:>9.2%}   "
+          f"{'haelt' if _w <= GATE_WECHSEL else 'HAELT NICHT'}")
+_w_ent, _n_ent = liste_wechsel, len(in_liste)
+print(f"     {VORQUARTAL:%d.%m.%Y} → {CUTOFF:%d.%m.%Y}{_n_ent:>13d}{_w_ent:>9.2%}   "
+      f"(Entwicklung - verbraucht)")
+HOLDOUT_HAELT = bool(_holdout) and all(w <= GATE_WECHSEL for _, _, w, _n in _holdout)
+merke("holdout_paare", len(_holdout))
+merke("holdout_max", max((w for _, _, w, _n in _holdout), default=float("nan")))
+merke("holdout_urteil", "alle" if HOLDOUT_HAELT else "nicht alle")
+
+# ---------------------------------------------------------------------
+# (1e) SENSITIVITAET: WAS TUT DIE HYSTERESE EIGENTLICH?
+#
+# Eine Stabilisierung, deren Wirkung man nicht sieht, ist eine
+# Stabilisierung, die man nicht beurteilen kann. Dieselbe Rechnung noch
+# einmal - ohne Hysterese.
+_ohne = [(a, b, wechsel_auf(a, b, 0.0)[0]) for a, b in paare]
+_w_ent_ohne = wechsel_auf(VORQUARTAL, CUTOFF, 0.0)[0]
+print("\\n(1e) SENSITIVITAET - dieselben Paare OHNE Hysterese\\n")
+print(f"     {'Stichtage':<26s}{'mit':>9s}{'ohne':>9s}{'Differenz':>12s}")
+for (a, b, w_mit, _n), (_, _, w_ohne) in zip(_holdout, _ohne):
+    print(f"     {a:%d.%m.%Y} → {b:%d.%m.%Y}{w_mit:>9.2%}{w_ohne:>9.2%}"
+          f"{(w_ohne - w_mit) * 100:>11.2f} pp")
+print(f"     {VORQUARTAL:%d.%m.%Y} → {CUTOFF:%d.%m.%Y}{_w_ent:>9.2%}"
+      f"{_w_ent_ohne:>9.2%}{(_w_ent_ohne - _w_ent) * 100:>11.2f} pp")
+merke("hyst_ohne", _w_ent_ohne)
+merke("hyst_wirkung", (_w_ent_ohne - _w_ent) * 100)
+_ohne_haelt = [w for _, _, w in _ohne if w <= GATE_WECHSEL]
+merke("hyst_ohne_haelt", len(_ohne_haelt))
+print()
+if len(_ohne_haelt) == len(_ohne):
+    print("     Das Gate haelt auf den Holdout-Paaren auch OHNE Hysterese.")
+    print("     Sie glaettet also die Kante, sie rettet das Urteil nicht -")
+    print("     und genau das muss man zeigen duerfen.")
+else:
+    print("     OHNE Hysterese reisst das Gate auf mindestens einem Paar.")
+    print("     Die Stabilisierung traegt das Urteil damit MIT. Das ist kein")
+    print("     Fehler, aber es gehoert offen dazugesagt: Ohne die in Phase 1")
+    print("     begruendete Kantenglaettung waere die Aussage eine andere.")
+
 merke("gate_eng", liste_wechsel)
 merke("gate_weit", lz_wechsel)
 merke("gate_differenz", (liste_wechsel - lz_wechsel) * 100)
@@ -837,14 +1022,26 @@ print("    vertreten. Gebunden wird das Gate an (1).")
 # Eine Schwelle, die nur im Text steht, bindet nichts. Diese hier
 # entscheidet weiter unten darueber, ob die Kampagnenliste als freigegeben
 # oder als gesperrt exportiert wird.
-GATE_WECHSEL = merke("gate_wechsel", 0.25)
-# Gebunden wird der ENGE Nenner - die Menschen, die tatsaechlich eine
-# Ansprache bekaemen. Der weite Nenner steht daneben, als Diagnose.
-KUNDENSEGMENTE_STABIL = bool(liste_wechsel <= GATE_WECHSEL)
+# GEBUNDEN WIRD DER HOLDOUT, NICHT DIE ENTWICKLUNG.
+#
+# Zwei Bedingungen, und beide muessen halten:
+#   - der enge Nenner (die Arbeitsliste) statt des weiten
+#   - die UNANGETASTETEN Stichtagspaare aus (1d), nicht das Paar, an
+#     dem Hysterese und Schwelle entstanden sind
+#
+# Das Entwicklungspaar bleibt sichtbar - es zeigt, wie die Regel dort
+# aussieht, wo sie gebaut wurde. Entscheiden darf es nicht.
+KUNDENSEGMENTE_STABIL = bool(HOLDOUT_HAELT and liste_wechsel <= GATE_WECHSEL)
+merke("gate_urteil_kunden", "gehalten" if KUNDENSEGMENTE_STABIL else "gerissen")
+merke("gate_abstand", (GATE_WECHSEL - liste_wechsel) * 100)
 
 print(f"\\nDie Überwachung in Phase 6 nennt {GATE_WECHSEL:.0%} je Quartal als Alarmschwelle.\\n")
-print(f"   Kampagnen-Arbeitsliste (bindend):  {liste_wechsel:>6.2%}   "
-      f"{'gehalten' if KUNDENSEGMENTE_STABIL else 'GERISSEN'}")
+print(f"   Kampagnen-Arbeitsliste, Entwicklung:  {liste_wechsel:>6.2%}   "
+      f"{'unter' if liste_wechsel <= GATE_WECHSEL else 'ueber'} der Schwelle "
+      f"({abs(GATE_WECHSEL - liste_wechsel) * 100:.2f} pp)")
+print(f"   dieselbe Groesse, HOLDOUT (bindend):  "
+      f"hoechstens {max((w for _, _, w, _n in _holdout), default=float('nan')):>6.2%}   "
+      f"{'gehalten' if HOLDOUT_HAELT else 'GERISSEN'}")
 print(f"   alle Lebenszykluszustaende:        {lz_wechsel:>6.2%}   (Diagnose)")
 print(f"   nur die vier RFM-Regeln:           {wechselquote:>6.2%}   (Ausschnitt)")
 print()
@@ -924,8 +1121,10 @@ print("    nicht 'je Jahr'. Und das zugehoerige Freigabe-Gate bleibt offen.")
 '''),
 
 MD("""
-> **Jeder vierte Kunde wechselt binnen eines Quartals das Segment** — und das bei
-> unveränderter Methode und unveränderten Schwellen. Die drei Zahlen oben messen aber
+> **{{gate_eng:.2%}} der Kampagnen-Arbeitsliste wechseln binnen eines Quartals das
+> Segment** — bei unveränderter Methode und unveränderten Schwellen. Das sind
+> {{gate_abstand:.2f}} Prozentpunkte unter der Schwelle von {{gate_wechsel:.0%}}; das
+> Kriterium ist damit **{{gate_urteil_kunden}}**. Die drei Zahlen oben messen aber
 > **drei verschiedene Dinge**, und nur eine davon gehört zum Produkt:
 >
 > | Kennzahl | Wert | Was sie misst |
@@ -940,9 +1139,24 @@ MD("""
 > {{n_arbeitsliste:,}}, die tatsächlich in einer Arbeitsliste stünden, sind es
 > {{gate_eng:.2%}} — ein Unterschied von {{gate_differenz:+.2f}} Prozentpunkten.
 >
-> Diesmal entscheidet er nicht: Beide Werte liegen über der Alarmschwelle. Das ist ein
-> glücklicher Umstand, kein Argument — bei einer knapperen Lage hinge das Urteil daran,
-> und dann wäre die Wahl des Nenners nach der Messung eine Manipulation.
+> Diesmal entscheidet er nicht: Beide Werte liegen unter der Schwelle von
+> {{gate_wechsel:.0%}}. Das ist ein glücklicher Umstand, kein Argument — bei einer
+> knapperen Lage hinge das Urteil daran, und dann wäre die Wahl des Nenners nach der
+> Messung eine Manipulation.
+
+> **Und die Zahl, die wirklich bindet, steht nicht in dieser Tabelle.** Sie stammt aus
+> den {{holdout_paare}} Stichtagspaaren, die bei der Entwicklung von Hysterese und
+> Schwelle nie angesehen wurden; dort liegt der schlechteste Wert bei
+> {{holdout_max:.2%}}, und {{holdout_urteil}} Paare halten. Das Paar in dieser Tabelle
+> ist das **Entwicklungspaar** — es zeigt, wie die Regel dort aussieht, wo sie gebaut
+> wurde, und darf deshalb nicht entscheiden.
+>
+> **Was die Hysterese dabei tut, steht offen daneben.** Ohne sie stiege die Wechselquote
+> des Entwicklungspaars von {{gate_eng:.2%}} auf {{hyst_ohne:.2%}}
+> (+{{hyst_wirkung:.2f}} Prozentpunkte), und auf den Holdout-Paaren hielten dann nur noch
+> {{hyst_ohne_haelt}} von {{holdout_paare}}. **Die Kantenglättung trägt das Urteil also
+> mit.** Das ist kein Fehler — sie ist in Phase 1 begründet und vor der Holdout-Messung
+> eingefroren —, aber es wäre einer, es zu verschweigen.
 >
 > Der Unterschied sind die dauerhaft stabilen Nicht-Zielpersonen (Zustand „Nie
 > aktiviert"), die nie angeschrieben werden. Sie im Nenner zu behalten macht die Quote
@@ -1014,7 +1228,7 @@ reproduzierbar.
 >
 > **Verlassen kann man sich auf sie ohnehin nicht.** Bei der Kundensegmentierung liegen
 > die Silhouettenwerte für k = 2, k = 4 und k = 5 dicht beieinander; dort entscheidet die
-> Kennzahl gar nichts, und die vier Kriterien aus Phase 1 sind das Einzige, was bleibt.
+> Kennzahl gar nichts, und die fünf Kriterien aus Phase 1 sind das Einzige, was bleibt.
 > Wer nur auf die Kennzahl schaut, hat kein Verfahren für den Fall, dass sie schweigt.
 >
 > Entschieden hat **Kriterium 2**: Für jede Gruppe muss es eine andere Maßnahme geben.
@@ -1695,29 +1909,57 @@ print(f"Kontrollgruppe: {int((export.gruppe == 'Kontrollgruppe').sum())} von "
 # das Notebook sie nicht pruefen kann, waere ein Kategorienfehler - dann
 # koennte gar kein Kampagnenprodukt je entstehen.
 #
-# Beantwortet hat sie die Fachabteilung, und die Antworten stehen als
-# Praemissen im Text darueber. Was das Notebook tun kann, ist sie
-# BENENNEN und ihren Nachweis verlangen.
-RECHTSGRUNDLAGE_DOKUMENTIERT = True   # Einwilligung bei Registrierung, Stand 08/2026
-KONTAKTKANAL_ANGEBUNDEN = True        # Versand, Abmeldelink und Sperrliste produktiv
-KONTROLLGRUPPE_VORGESEHEN = True      # 10 % der Zielgruppe erhalten keine Ansprache
+# Sie kommen aus PRAEMISSEN (erste Codezelle, Phase 1) - Vorgaben des
+# Auftraggebers mit Quellenangabe, nicht Messungen dieses Notebooks.
+# Hier wird nur gelesen, nichts gesetzt: Eine Zeile "= True" mitten im
+# Auswertungscode sieht aus wie ein Ergebnis und ist keines.
+RECHTSGRUNDLAGE_DOKUMENTIERT = PRAEMISSEN["O1 Rechtsgrundlage dokumentiert"]["erfuellt"]
+KONTAKTKANAL_ANGEBUNDEN = PRAEMISSEN["O2 Kontaktkanal mit Abmeldefunktion"]["erfuellt"]
+KONTROLLGRUPPE_VORGESEHEN = True      # 10 % der Zielgruppe erhalten keine Ansprache,
+                                      # umgesetzt beim Export unten
 
 # Junge Kundschaft: nicht bewerten, was nicht beobachtet werden konnte.
 # Wer noch kein volles Fenster dabei ist, bekommt keine Ansprache - das ist
 # die Behandlung, nicht nur die Benennung des Problems.
 JUNGE_BEHANDELT = True   # umgesetzt beim Export unten, nicht nur behauptet
 
+ORGANISATORISCHE_NAMEN = {
+    "Rechtsgrundlage fuer Direktmarketing dokumentiert",
+    "Kontaktkanal, Abmeldung und Sperrliste angebunden",
+    "Wirkung der Massnahmen kontrolliert messbar",
+}
 GATES = {
-    f"Segmentstabilitaet <= {GATE_WECHSEL:.0%} je Quartal": KUNDENSEGMENTE_STABIL,
+    f"Segmentstabilitaet <= {GATE_WECHSEL:.0%} je Quartal (Holdout)": KUNDENSEGMENTE_STABIL,
     "Beobachtungsdauer der jungen Kunden behandelt":        JUNGE_BEHANDELT,
     "Rechtsgrundlage fuer Direktmarketing dokumentiert":    RECHTSGRUNDLAGE_DOKUMENTIERT,
     "Kontaktkanal, Abmeldung und Sperrliste angebunden":    KONTAKTKANAL_ANGEBUNDEN,
     "Wirkung der Massnahmen kontrolliert messbar":          KONTROLLGRUPPE_VORGESEHEN,
 }
-KAMPAGNENFREIGABE = all(GATES.values())
-freigabe = ("KAMPAGNENFREIGABE ERTEILT - Pilot mit Kontrollgruppe"
-            if KAMPAGNENFREIGABE else
-            "KEINE KAMPAGNENFREIGABE - offene Gates siehe Kopf")
+# ─── ZWEI STATUS, NICHT EINER ───────────────────────────────────────
+#
+# Die analytische Freigabe sagt: Das Verfahren ist stabil genug, um
+# ausgeliefert zu werden. Die Einsatzfreigabe sagt: Es DARF ausgeliefert
+# werden. Das erste entscheiden die Daten, das zweite das Unternehmen.
+# Beides in eine Variable zu werfen hiesse, eine Praemisse als Ergebnis
+# auszugeben - und genau das ist der Fehler, den dieses Notebook lehrt.
+ANALYTISCHE_GATES = {n: e for n, e in GATES.items()
+                     if n not in ORGANISATORISCHE_NAMEN}
+STATUS_ANALYTISCH = ("belegt" if all(ANALYTISCHE_GATES.values())
+                     else "nicht belegt")
+STATUS_EINSATZ = ("freigegeben" if ORGANISATORISCH_ERFUELLT and KONTROLLGRUPPE_VORGESEHEN
+                  else "gesperrt")
+KAMPAGNENFREIGABE = (STATUS_ANALYTISCH == "belegt"
+                     and STATUS_EINSATZ == "freigegeben")
+merke("status_analytisch", STATUS_ANALYTISCH)
+merke("status_einsatz", STATUS_EINSATZ)
+freigabe = (f"analytisch {STATUS_ANALYTISCH}, Einsatz {STATUS_EINSATZ}"
+            + (" - Pilot mit Kontrollgruppe" if KAMPAGNENFREIGABE else ""))
+print("ZWEI STATUS, GETRENNT GEFUEHRT:")
+print(f"   analytisch (misst dieses Notebook):  {STATUS_ANALYTISCH}")
+print(f"   Einsatz    (setzt der Auftraggeber): {STATUS_EINSATZ}")
+for _n, _w in PRAEMISSEN.items():
+    print(f"      {_n:<38s} {_w['quelle']}")
+print()
 
 print("FREIGABEPRUEFUNG\\n")
 for name, erfuellt in GATES.items():
@@ -1734,11 +1976,20 @@ kopf = [
     "# Historische Kontosperren und Marketing-Einwilligungen sind nicht "
     "rekonstruierbar - dies ist die Stabilitaet der ANALYTISCHEN Regeln.",
     f"# STATUS: {freigabe}",
-    "# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN.",
+    # Frueher stand hier unbedingt "NICHT UEBERGEBEN" - auch dann, wenn
+    # der Code die Datei gerade freigegeben hatte. Die Datei war damit
+    # laut Code freigegeben und laut eigenem Kopf gesperrt. Jetzt haengt
+    # der Satz am selben Schalter wie die Datei.
+    ("# Freigegeben als PILOT mit Kontrollgruppe. Uebergabe nur an das im "
+     "Einsatzstatus benannte System, nur fuer diesen Stichtag."
+     if KAMPAGNENFREIGABE else
+     "# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN - Freigabe nicht erteilt."),
+    ("# Organisatorische Voraussetzungen sind SZENARIOPRAEMISSEN des "
+     "Auftraggebers (Lehrfall), keine Messung dieses Notebooks."),
 ]
 kopf += [f"# offenes Gate: {n}" for n, e in GATES.items() if not e]
 if not KUNDENSEGMENTE_STABIL:
-    kopf.append("# Zusaetzlich: jeder vierte Kunde bekaeme eine Ansprache, die "
+    kopf.append(f"# Zusaetzlich: {liste_wechsel:.1%} der Arbeitsliste bekaemen eine Ansprache, die "
                 "zum Zeitpunkt des Versands nicht mehr passt.")
 # KEIN PERSONENBEZOGENER BESTAND OHNE FREIGABE.
 #
