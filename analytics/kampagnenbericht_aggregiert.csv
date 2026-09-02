@@ -1,0 +1,20 @@
+# Stichtag: 2026-08-25, gueltig bis 2026-11-23
+# Datenherkunft: SYNTHETISCHE LEHRDATEN
+# Segmentstabilitaet je Quartal: 27.00% Wechsel (Schwelle 25%), gemessen an der Kampagnen-Arbeitsliste; ueber alle Lebenszykluszustaende waeren es 26.92%
+# Historische Kontosperren und Marketing-Einwilligungen sind nicht rekonstruierbar - dies ist die Stabilitaet der ANALYTISCHEN Regeln.
+# STATUS: STABILITAETSGATE GERISSEN - KEINE KAMPAGNENFREIGABE
+# NICHT AN EIN KAMPAGNENSYSTEM UEBERGEBEN.
+# offenes Gate: Segmentstabilitaet <= 25% je Quartal
+# offenes Gate: Beobachtungsdauer der jungen Kunden behandelt
+# offenes Gate: Rechtsgrundlage fuer Direktmarketing dokumentiert
+# offenes Gate: Kontaktkanal, Abmeldung und Sperrliste angebunden
+# offenes Gate: Wirkung der Massnahmen kontrolliert messbar
+# offenes Gate: reale statt synthetischer Daten
+# Zusaetzlich: jeder vierte Kunde bekaeme eine Ansprache, die zum Zeitpunkt des Versands nicht mehr passt.
+segment,konten,maßnahme
+Eingeschlafen,224,Rückgewinnung: einmalig Freiminuten
+"Früher aktiv, jetzt inaktiv",599,Rückgewinnung: was hat gefehlt?
+Gelegenheitsnutzer,1122,Anlass schaffen: Wetter-/Veranstaltungshinweis
+"Neu, noch keine Erstfahrt",191,Willkommensansprache zur Erstfahrt
+Umsatzträger,226,nicht anfassen: sie tragen den Umsatz
+Vielfahrer,650,"Bindung halten — und je Tarif prüfen, ob das Freiminutenvolumen nötig ist"

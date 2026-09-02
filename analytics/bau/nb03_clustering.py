@@ -267,8 +267,12 @@ DATENSTAND = echte.startzeit.max()
 CUTOFF = DATENSTAND.normalize() + pd.Timedelta(days=1)
 stichtag = CUTOFF                      # ein Name, ein Zeitpunkt
 FENSTER_TAGE = 365
+# ABGESCHLOSSEN vor dem Cutoff, nicht nur begonnen. Entgelt und Dauer
+# stehen erst mit der Rueckgabe fest; eine Fahrt, die vorher beginnt und
+# danach endet, brächte Information aus der Zukunft in den Schnappschuss.
+# Am frueheren Cutoff gibt es genau so einen Fall.
 fenster = echte[(echte.startzeit > CUTOFF - pd.Timedelta(days=FENSTER_TAGE))
-                & (echte.startzeit < CUTOFF)]
+                & (echte.endzeit < CUTOFF)]
 print(f"Datenstand:  letzte Fahrt {DATENSTAND:%d.%m.%Y %H:%M} Uhr")
 print(f"Cutoff:      {CUTOFF:%d.%m.%Y %H:%M} Uhr - alles davor zaehlt, nichts danach")
 print(f"Fenster:     die {FENSTER_TAGE} Tage davor\\n")
@@ -390,6 +394,46 @@ eigenen Gruppe als bei der nächstbesten? Werte über 0,5 gelten als deutliche S
 CODE('''
 K_STATIONEN = 4
 km_stationen = KMeans(n_clusters=K_STATIONEN, n_init=25, random_state=42).fit(S_skaliert)
+
+# ─── WIE STARK HAENGT DIE LOESUNG AN DER GEWICHTUNG? ────────────────
+# Jedes der 26 Merkmale wird EINZELN standardisiert. Damit wiegt der Block
+# aus 24 Stundenwerten zusammen zwoelfmal so schwer wie Wochenendanteil und
+# Mediandauer zusammen - eine Entscheidung, die niemand getroffen hat, sie
+# ergibt sich aus der Anzahl der Spalten.
+from sklearn.metrics import adjusted_rand_score
+_stunden = [i for i, s in enumerate(merkmale_station) if s.startswith("stunde_")]
+_andere = [i for i in range(len(merkmale_station)) if i not in _stunden]
+
+def _mit_gewicht(anteil_stunden):
+    # Jeden Block auf seine eigene Summe normieren, dann gewichten: So
+    # entscheidet die gewuenschte Bedeutung, nicht die Spaltenzahl.
+    x = S_skaliert.copy()
+    x[:, _stunden] *= np.sqrt(anteil_stunden / len(_stunden))
+    x[:, _andere] *= np.sqrt((1 - anteil_stunden) / len(_andere))
+    return KMeans(n_clusters=4, n_init=25, random_state=42).fit_predict(x)
+
+_grund = KMeans(n_clusters=4, n_init=25, random_state=42).fit_predict(S_skaliert)
+print("\\nEMPFINDLICHKEIT gegenueber der Blockgewichtung (k = 4):")
+print(f"   {'Gewicht Stundenblock':>22s}{'ARI zur Notebookloesung':>26s}")
+for _a in (0.5, 0.7, 0.9, len(_stunden) / len(merkmale_station)):
+    _ari = adjusted_rand_score(_grund, _mit_gewicht(_a))
+    _marke = "  <- entspricht der Spaltenzahl" if _a > 0.9 else ""
+    print(f"   {_a:>21.0%}{_ari:>25.3f}{_marke}")
+merke("gewicht_ari_halb", adjusted_rand_score(_grund, _mit_gewicht(0.5)))
+_ari_halb = adjusted_rand_score(_grund, _mit_gewicht(0.5))
+print()
+if _ari_halb < 0.7:
+    print(f"   Bei Gleichgewichtung der beiden Bloecke betraegt der ARI zur")
+    print(f"   Notebookloesung nur {_ari_halb:.2f} - das ist eine ANDERE Einteilung.")
+    print("   Das beweist nicht, dass sie besser ist. Es zeigt, dass die Loesung")
+    print("   an einer Entscheidung haengt, die bisher niemand getroffen hat:")
+    print("   Der Stundenblock wiegt schwer, weil er 24 Spalten hat, nicht weil")
+    print("   jemand ihn fuer das Wesentliche haelt.")
+else:
+    print(f"   Auch bei Gleichgewichtung bleibt die Einteilung weitgehend")
+    print(f"   dieselbe (ARI {_ari_halb:.2f}) - die Loesung haengt hier nicht an")
+    print("   der Blockgewichtung. Das ist ein guenstiger Befund, kein")
+    print("   garantierter: Bei anderen Merkmalen kann es anders liegen.")
 S["cluster"] = km_stationen.labels_
 
 print(f"Ergebnis mit k = {K_STATIONEN}:\\n")
@@ -563,7 +607,7 @@ def rfm_zum_cutoff(cut):
     Dieselbe Fenstergrenze, dieselbe Ausschlussregel - sonst vergliche
     man zwei verschiedene Populationen."""
     f = echte[(echte.startzeit > cut - pd.Timedelta(days=FENSTER_TAGE))
-              & (echte.startzeit < cut)]
+              & (echte.endzeit < cut)]
     return f.groupby("kunde_id").agg(
         recency=("startzeit", lambda s: (cut - s.max()).days),
         frequenz=("ausleihe_id", "size"), umsatz=("entgelt_eur", "sum"))
@@ -605,13 +649,33 @@ wechselquote = float((regel_heute[gemeinsam] != regel_vor[gemeinsam]).mean())
 #     ueber Zufallsstartwerte - also ueber die Rechnung, nicht ueber die
 #     Zeit. Dieselbe Frage, dieselbe Methode.
 # ---------------------------------------------------------------------
-def stationstypen_zum(cut):
-    f = echte[(echte.startzeit > cut - pd.Timedelta(days=FENSTER_TAGE))
-              & (echte.startzeit < cut)].copy()
+def stationsmerkmale(f):
+    """Die 26 Zahlen je Station - EINE Definition fuer alle Verwendungen.
+
+    Der Hauptlauf nahm 24 WERKTAGSstunden plus Wochenendanteil plus
+    Mediandauer; die Stabilitaetspruefung nahm 24 Stunden ueber alle Tage
+    und liess die beiden anderen weg. Sie prueft dann eine verwandte, aber
+    nicht dieselbe Repraesentation - und ein guenstiges Ergebnis sagt
+    nichts ueber das Modell, das wirklich laeuft.
+    """
+    f = f.copy()
     f["stunde"] = f.startzeit.dt.hour
-    g = (f.groupby(["start_station_id", "stunde"]).size()
+    f["dauer_min"] = (f.endzeit - f.startzeit).dt.total_seconds() / 60
+    _werktags = f[~f.ist_frei]
+    g = (_werktags.groupby(["start_station_id", "stunde"]).size()
          .unstack(fill_value=0).reindex(columns=range(24), fill_value=0))
     g = g.div(g.sum(axis=1).clip(lower=1), axis=0)
+    g.columns = [f"stunde_{h:02d}" for h in g.columns]
+    z = f.groupby("start_station_id").agg(
+        wochenendanteil=("ist_frei", "mean"),
+        dauer_median=("dauer_min", "median"))
+    return g.join(z).fillna(0.0)
+
+
+def stationstypen_zum(cut):
+    f = echte[(echte.startzeit > cut - pd.Timedelta(days=FENSTER_TAGE))
+              & (echte.endzeit < cut)]
+    g = stationsmerkmale(f)
     return pd.Series(
         KMeans(n_clusters=K_STATIONEN, n_init=25, random_state=42)
         .fit_predict(StandardScaler().fit_transform(g)), index=g.index)
@@ -642,7 +706,7 @@ def lebenszyklus_zum(cut):
     """Die vollstaendige siebenstufige Logik zu einem Zeitpunkt."""
     r = rfm_zum_cutoff(cut)
     seg = r.apply(segment_benennen, axis=1)
-    gefahren_bis = set(echte.loc[echte.startzeit < cut, "kunde_id"])
+    gefahren_bis = set(echte.loc[echte.endzeit < cut, "kunde_id"])
     reg = pd.to_datetime(kunden.set_index("kunde_id").registriert_am)
     dabei = (cut - reg).dt.days
     # nur Kundschaft, die zu diesem Zeitpunkt schon registriert war
@@ -737,9 +801,42 @@ print(f"   Kampagnen-Arbeitsliste (bindend):  {liste_wechsel:>6.2%}   "
 print(f"   alle Lebenszykluszustaende:        {lz_wechsel:>6.2%}   (Diagnose)")
 print(f"   nur die vier RFM-Regeln:           {wechselquote:>6.2%}   (Ausschnitt)")
 print()
-print("Drei Nenner, drei Zahlen. Waehlt man den weitesten, besteht das Gate;")
-print("waehlt man den, der zur Auslieferung passt, reisst es. Der Nenner ist")
-print("hier keine Formalie - er entscheidet.")
+# Ob die Wahl des Nenners das Urteil dreht, entscheidet die Rechnung.
+# Frueher stand hier unbedingt "waehlt man den weitesten, besteht das Gate" -
+# das war einmal richtig und blieb stehen, als es das nicht mehr war.
+_alle_nenner = {"Arbeitsliste": liste_wechsel, "Lebenszyklus": lz_wechsel,
+                "RFM-Regeln": wechselquote}
+_bestehen = [n for n, w in _alle_nenner.items() if w <= GATE_WECHSEL]
+print("Drei Nenner, drei Zahlen.")
+if len(_bestehen) == len(_alle_nenner):
+    print("Diesmal bestehen alle drei - die Wahl des Nenners dreht das Urteil")
+    print("nicht. Das ist Glueck, kein Argument: Bei knapperer Lage haenge das")
+    print("Urteil daran, und eine Wahl nach der Messung waere Manipulation.")
+elif not _bestehen:
+    print("Diesmal reissen alle drei - die Wahl des Nenners dreht das Urteil")
+    print("nicht. Das ist Glueck, kein Argument: Bei knapperer Lage haenge das")
+    print("Urteil daran, und eine Wahl nach der Messung waere Manipulation.")
+else:
+    print(f"Bestanden haetten: {', '.join(_bestehen)} - gerissen die uebrigen.")
+    print("Der Nenner ist hier keine Formalie, er entscheidet. Deshalb steht")
+    print("vorher fest, welcher bindet: die Arbeitsliste.")
+
+# P1.4: Ein- und Austritte zaehlen mit.
+# Die Schnittmenge misst, wer die MASSNAHME wechselt. Betrieblich ist auch
+# ein Wechsel, wer neu auf die Liste kommt oder von ihr verschwindet - fuer
+# die Person aendert sich dann am meisten. Die Vereinigungsmenge mit einem
+# ausdruecklichen Zustand "ausserhalb" misst das.
+_union = lz_heute.index.union(lz_vor.index)
+_h = lz_heute.reindex(_union).fillna("ausserhalb der Arbeitsliste")
+_v = lz_vor.reindex(_union).fillna("ausserhalb der Arbeitsliste")
+_union_wechsel = float((_h != _v).mean())
+merke("gate_union", _union_wechsel)
+print(f"\\nZum Vergleich, Vereinigungsmenge mit Zustand 'ausserhalb':")
+print(f"   {len(_union)} Personen, Wechselquote {_union_wechsel:.2%}")
+print("   Diese Zahl ist naeher an der betrieblichen Frage - sie zaehlt auch,")
+print("   wer neu angesprochen wuerde oder herausfaellt. Gebunden bleibt das")
+print("   Gate trotzdem an die Schnittmenge, weil DIESE Festlegung vor der")
+print("   Messung stand. Geaendert wird sie vor der naechsten, nicht jetzt.")
 print("\\nDiese Variable bindet den Export in Phase 6 - sie ist keine Randnotiz.")
 print("Und sie bindet ihn an das, was tatsaechlich ausgeliefert wird.")
 
@@ -1070,15 +1167,23 @@ das Geschäft:
 > **Die aktivsten Kundinnen und Kunden bringen am wenigsten ein — und niemand gleicht das
 > aus.**
 
-Rechnen wir aus, um wieviel es geht. In den Daten steht neben dem gezahlten Entgelt auch,
-wie viele Minuten **berechnet** wurden. Die Differenz zur Fahrtdauer sind die verbrauchten
-Freiminuten — und die haben einen Listenwert.
+Rechnen wir aus, um wieviel es geht. Die Zelle unten bildet für jede Fahrt den Preis, den
+sie **ohne** Freiminuten gekostet hätte — mit Startgebühr, Minutenpreis, Premiumrabatt und
+Tageshöchstpreis, also nach derselben Tariflogik wie die echte Abrechnung. Die Differenz
+zum gezahlten Entgelt ist der tarifliche Gegenwert der Freiminuten.
 
-> **Listenwert ist nicht entgangener Umsatz.** Die Rechnung multipliziert jede Freiminute
-> mit dem vollen Minutenpreis. Ohne Freiminuten griffen aber zwei Regeln, die den Betrag
-> drücken: der **Premiumrabatt** von 20 % und der **Tageshöchstpreis**. Und Kundschaft,
-> die zahlen müsste, führe vermutlich weniger. Der Listenwert ist eine **Obergrenze** —
-> die Zelle unten zeigt an den Langfahrten, wie weit sie danebenliegen kann.
+> **Diese Zahl ist ein statisches Gegenfaktum, kein realisierbarer Mehrumsatz.** Sie
+> beantwortet genau eine Frage: *Was hätten dieselben Fahrten bei null Freiminuten
+> gekostet?* Der Tarif ist darin vollständig abgebildet — Rabatt und Deckel eingeschlossen.
+>
+> **Was sie nicht abbildet, ist das Verhalten.** Kundschaft, die für jede Minute zahlt,
+> fährt vermutlich weniger, kürzer oder gar nicht. Der Betrag ist deshalb eine
+> **Obergrenze unter unverändertem Fahrverhalten** — und Fahrverhalten ist genau das, was
+> sich bei einer Tarifänderung ändert.
+>
+> Die Frage, wo Freiminuten „am wenigsten binden", lässt sich mit Beobachtungsdaten
+> ohnehin nicht beantworten: Wer viele Freiminuten verbraucht, könnte sie brauchen — oder
+> gerade deshalb dabei sein. Das trennt nur ein Versuch, kein Datensatz.
 """),
 
 CODE("""
@@ -1543,19 +1648,44 @@ kopf += [f"# offenes Gate: {n}" for n, e in GATES.items() if not e]
 if not KUNDENSEGMENTE_STABIL:
     kopf.append("# Zusaetzlich: jeder vierte Kunde bekaeme eine Ansprache, die "
                 "zum Zeitpunkt des Versands nicht mehr passt.")
-with open("kampagnenliste.csv", "w", encoding="utf-8") as f:
-    f.write("\\n".join(kopf) + "\\n")
-    export.to_csv(f)
+# KEIN PERSONENBEZOGENER BESTAND OHNE FREIGABE.
+#
+# Ein Kopfkommentar "nicht versenden" schuetzt niemanden: Die Datei enthielt
+# dennoch dreitausend Konten mit zugeordneter Massnahme - handlungsfaehig,
+# sobald sie jemand oeffnet. Solange Rechtsgrundlage, Einwilligung und
+# technische Freigabe fehlen, entsteht nur ein AGGREGIERTER Pruefbericht.
+# Die personenbezogene Zuordnung bleibt im Arbeitsspeicher.
+if KAMPAGNENFREIGABE:
+    _datei = "kampagnenliste.csv"
+    _inhalt = export
+else:
+    _datei = "kampagnenbericht_aggregiert.csv"
+    _inhalt = (export.groupby("segment")
+               .agg(konten=("maßnahme", "size"),
+                    maßnahme=("maßnahme", "first"))
+               .reset_index())
 
-print(f"KAMPAGNENLISTE  Stichtag {stichtag.date()}, gültig 90 Tage")
+with open(_datei, "w", encoding="utf-8") as f:
+    f.write("\\n".join(kopf) + "\\n")
+    _inhalt.to_csv(f, index=not KAMPAGNENFREIGABE is False)
+
+print(f"KAMPAGNENAUSWERTUNG  Stichtag {stichtag.date()}, gültig 90 Tage")
 print(f"STATUS: {freigabe}\\n")
-print(f"Diese Datei geht an kein Kampagnensystem: {len(GATES) - sum(GATES.values())}")
-print(f"der {len(GATES)} Gates sind offen, darunter die Rechtsgrundlage.")
-print("Ein analytischer Arbeitsstand, mehr nicht.\\n")
-print(export.head(8).to_string())
-print(f"\\n{len(export)} aktive Konten in der Liste, "
-      f"{export.segment.nunique()} Segmente")
-print("geschrieben: kampagnenliste.csv")
+print(f"{len(GATES) - sum(GATES.values())} der {len(GATES)} Gates sind offen, "
+      f"darunter die Rechtsgrundlage.")
+if KAMPAGNENFREIGABE:
+    print("Alle Gates gehalten - die personenbezogene Liste wird geschrieben.\\n")
+    print(_inhalt.head(8).to_string())
+    print(f"\\n{len(_inhalt)} aktive Konten, {export.segment.nunique()} Segmente")
+else:
+    print("Deshalb entsteht KEINE personenbezogene Liste, sondern ein")
+    print("aggregierter Bericht. Er sagt, wie viele Konten je Segment")
+    print("angesprochen WUERDEN - er nennt niemanden.\\n")
+    print(_inhalt.to_string(index=False))
+    print(f"\\n{export.shape[0]} Konten waeren betroffen - die Zuordnung")
+    print("Person zu Massnahme verlaesst dieses Notebook nicht.")
+merke("kampagnendatei", _datei)
+print(f"\\ngeschrieben: {_datei}")
 if not KUNDENSEGMENTE_STABIL:
     print()
     # Gemeldet wird die Zahl, die das Gate ENTSCHEIDET (liste_wechsel), nicht

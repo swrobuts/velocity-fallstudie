@@ -17,3 +17,4 @@ doku/verifikation/*sicherung*/
 
 # Arbeitsbereich der Subagenten-Ausfuehrung (Ledger, Briefs, Reviewpakete)
 .superpowers/
+analytics/kampagnenliste.csv
