@@ -1071,13 +1071,16 @@ for untergrenze, obergrenze in ((30, 49), (50, 99), (100, 10 ** 6)):
     stichprobe = passende[:40]
     spannen = [perzentil_streuung(g.values) for g in stichprobe]
     mitte = float(np.median([np.quantile(g.values, 0.90) for g in stichprobe]))
-    unten = float(np.median([s[0] for s in spannen]))
-    oben = float(np.median([s[1] for s in spannen]))
+    # Diese beiden hiessen frueher unten/oben - dieselben Namen wie die
+    # beiden Quantilmodelle. Die Schleife ueberschrieb sie mit floats;
+    # jeder spaetere Zugriff auf das Modell waere abgestuerzt.
+    b_unten = float(np.median([s[0] for s in spannen]))
+    b_oben = float(np.median([s[1] for s in spannen]))
     schild = f"{untergrenze}-{obergrenze}" if obergrenze < 10 ** 6 else f"ab {untergrenze}"
     print(f"   {schild:>7}  {len(passende):>8}  {mitte:>7.0f} min  "
-          f"{unten:>6.0f}-{oben:<3.0f} min  {oben - unten:>4.0f} min")
+          f"{b_unten:>6.0f}-{b_oben:<3.0f} min  {b_oben - b_unten:>4.0f} min")
     if untergrenze == 30:
-        _ = merke("bootstrap_breite_30", oben - unten)
+        _ = merke("bootstrap_breite_30", b_oben - b_unten)
 
 # ---- Und was kostet eine strengere Mindestfallzahl an Reichweite?
 print()
@@ -1117,6 +1120,41 @@ zukunft = zukunft.merge(
     tab.drop(columns=["start_station_id", "end_station_id"]),
     on=["route", "typ_code", "fenster"], how="left")
 
+# ─── DER DRITTE KANDIDAT: DIE QUANTILE, VORAB TABELLIERT ────────────
+#
+# Die beiden bisherigen Kandidaten haben je einen Nachteil, und es ist
+# nicht derselbe. Die Quantilregression trifft besser, braucht aber zur
+# Laufzeit ein Modell - scikit-learn, Versionsstaende, ein Dienst, der
+# antwortet. Die Perzentiltabelle ist eine CSV, die jedes System lesen
+# kann, trifft aber schlechter.
+#
+# Es gibt einen dritten Weg, und er kostet nichts: die Vorhersagen des
+# Modells EINMAL fuer jede Kombination ausrechnen und als Tabelle
+# ablegen. Betrieblich ist das eine CSV wie die andere; inhaltlich
+# steckt das Modell darin. Was dabei verloren geht, ist die Feinheit
+# innerhalb einer Kombination - das Modell kennt Wochentag, Monat und
+# Wetterlage, die Tabelle mittelt sie weg.
+_schluessel = ["start_station_id", "end_station_id", "route", "typ_code", "fenster"]
+_vertreter = basis.groupby(_schluessel)[NUMERISCH].median().reset_index()
+_vertreter["n"] = basis.groupby(_schluessel).size().values
+for _s in ("start_name", "ziel_name"):
+    _vertreter[_s] = basis.groupby(_schluessel)[_s].first().values
+_vertreter["qtab_von"] = np.maximum(1.0, unten.predict(_vertreter[MERKMALE])).round()
+_vertreter["qtab_bis"] = oben.predict(_vertreter[MERKMALE]).round()
+_vertreter["p_von"] = [kundenpreis(m, t, 0, 0.0)
+                       for m, t in zip(_vertreter.qtab_von, _vertreter.typ_code)]
+_vertreter["p_bis"] = [kundenpreis(m, t, 0, 0.0)
+                       for m, t in zip(_vertreter.qtab_bis, _vertreter.typ_code)]
+# DIESELBEN Huerden wie fuer die Perzentiltabelle - sonst vergleicht man
+# zwei Tabellen mit verschiedenen Zulassungsregeln.
+qtab = _vertreter[(_vertreter.n >= MINDESTFAHRTEN)
+                  & spanne_nuetzt(_vertreter.qtab_von, _vertreter.qtab_bis,
+                                  _vertreter.p_von, _vertreter.p_bis)]
+print(f"\\nQuantiltabelle: {len(qtab)} Kombinationen (Perzentiltabelle: {len(tab)}).")
+zukunft = zukunft.merge(
+    qtab[["route", "typ_code", "fenster", "qtab_von", "qtab_bis"]],
+    on=["route", "typ_code", "fenster"], how="left")
+
 # Gemessen wird gegen das VOLLSTAENDIGE Kriterium aus Phase 5.5, nicht
 # nur gegen die Dauerabdeckung: Preisabdeckung insgesamt UND je Radtyp,
 # dazu die Breitenregel. Eine Spanne von 1,78 Euro trifft leicht - sie
@@ -1144,7 +1182,8 @@ def preisspanne(u, o):
 
 # Zwei getrennt geschaetzte Quantile koennen sich theoretisch kreuzen: das
 # untere ueber dem oberen. Dann waere die Spanne leer und die Anzeige unsinnig.
-for _u, _o in (("modell_von", "modell_bis"), ("von", "bis")):
+for _u, _o in (("modell_von", "modell_bis"), ("von", "bis"),
+               ("qtab_von", "qtab_bis")):
     _kreuzt = (zukunft[_u] > zukunft[_o]).sum()
     assert _kreuzt == 0, f"{_kreuzt} gekreuzte Spannen in {_u}/{_o}"
 
@@ -1214,7 +1253,8 @@ MINDESTREICHWEITE = 0.10
 
 vergleich = pd.DataFrame({
     "Quantilregression": bewerten("Modell", "modell_von", "modell_bis"),
-    "Perzentiltabelle":  bewerten("Tabelle", "von", "bis")}).T
+    "Perzentiltabelle":  bewerten("Tabelle", "von", "bis"),
+    "Quantiltabelle":    bewerten("Quantiltabelle", "qtab_von", "qtab_bis")}).T
 # Anteile als Prozent, Breite in Euro. Drei Nachkommastellen zwingen den
 # Leser zum Kopfrechnen - und die Folien, die auf diese Tabelle zeigen,
 # muessten dieselbe Umrechnung noch einmal machen. Zwei Rechenwege fuer
@@ -1223,6 +1263,9 @@ anzeige = vergleich.copy()
 for spalte in anzeige.columns:
     if spalte.startswith("Breite"):
         anzeige[spalte] = anzeige[spalte].map(lambda x: f"{x:.2f} EUR")
+    elif spalte.endswith(" n"):
+        # Eine Fallzahl ist kein Anteil. Vorher stand hier "209700.0 %".
+        anzeige[spalte] = anzeige[spalte].map(lambda x: f"{int(x):,}".replace(",", "."))
     else:
         anzeige[spalte] = anzeige[spalte].map(lambda x: f"{x * 100:.1f} %")
 print(anzeige.to_string())
@@ -1244,7 +1287,12 @@ merke("quantil_auskunft", vergleich.loc["Quantilregression", "Auskunft (angezeig
 merke("quantil_verworfen", vergleich.loc["Quantilregression", "verworfen, zu breit"])
 merke("tabelle_auskunft", vergleich.loc["Perzentiltabelle", "Auskunft (angezeigt)"])
 _ = merke("tabelle_schlechtester", vergleich.loc["Perzentiltabelle", "schlechtester Radtyp"])
-_ = merke("tabelle_reichweite", vergleich.loc["Perzentiltabelle", "geringste Reichweite"])  # Wert nur festhalten, nicht anzeigen
+merke("tabelle_reichweite", vergleich.loc["Perzentiltabelle", "geringste Reichweite"])
+for _n, _k in (("quantil", "Quantilregression"), ("tabelle", "Perzentiltabelle"),
+               ("qtab", "Quantiltabelle")):
+    merke(f"{_n}_gate", vergleich.loc[_k, "Primaergate (Untergrenze)"])
+merke("qtab_auskunft", vergleich.loc["Quantiltabelle", "Auskunft (angezeigt)"])
+_ = merke("gate_schwelle", GATE_PREISABHAENGIG)
 """),
 
 MD("""
@@ -1272,14 +1320,35 @@ gehört zusammen mit der Unsicherheit in den Bericht, nicht in eine Fußnote.
 """),
 
 MD("""
-**Beide Kandidaten erfüllen das vollständige Kriterium** — insgesamt, je Radtyp und in
-der Reichweite. Damit fällt die Entscheidung nicht über die Güte.
+**Drei Kandidaten, und nur einer nimmt alle Hürden.** Entscheidend ist die Spalte
+`Primaergate` — die Wilson-Untergrenze in der Gruppe, bei der die Schätzung überhaupt in
+den Preis eingeht. Sie steht **im** Vergleich, nicht dahinter: Ein Kandidat, der erst
+gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolge.
 
 - Die **Quantilregression** antwortet auf {{quantil_auskunft:.1%}} der Anfragen und
-  verwirft {{quantil_verworfen:.1%}} ihrer Spannen als zu breit. Was sie gut macht, ist
-  gerade dieses Weglassen: Sie antwortet nur dort, wo sie eine schmale Spanne bilden kann.
-- Die **Perzentiltabelle** antwortet auf {{tabelle_auskunft:.1%}} der Anfragen; ihre
-  geringste Reichweite über alle Radtypen beträgt {{tabelle_reichweite:.1%}}.
+  erreicht am Primärgate {{quantil_gate:.1%}} gegen die geforderten
+  {{gate_schwelle:.0%}}. Sie verwirft {{quantil_verworfen:.1%}} ihrer Spannen als zu
+  breit — und genau dieses Weglassen macht sie gut: Sie antwortet nur dort, wo sie eine
+  schmale Spanne bilden kann.
+- Die **Perzentiltabelle** antwortet auf {{tabelle_auskunft:.1%}} der Anfragen, erreicht
+  aber nur {{tabelle_gate:.1%}} am Primärgate. Ihre geringste Reichweite über alle
+  Radtypen beträgt {{tabelle_reichweite:.1%}}.
+- Die **Quantiltabelle** ist der Versuch, beides zu bekommen: die Vorhersagen des Modells
+  einmal je Kombination ausgerechnet und als CSV abgelegt. Betrieblich ist sie eine
+  Tabelle wie die andere. Sie antwortet auf {{qtab_auskunft:.1%}} der Anfragen — und
+  erreicht am Primärgate {{qtab_gate:.1%}}, **weniger als beide anderen**.
+
+> **Das ist das interessanteste Ergebnis dieses Abschnitts.** Die naheliegende Idee,
+> das Modell zu tabellieren und so seine Güte ohne seinen Betriebsaufwand zu bekommen,
+> geht nicht auf. Der Grund liegt darin, was beim Tabellieren verloren geht: Das Modell
+> kennt Wochentag, Monat, Feiertag und Ferienlage und rechnet für **diese** Anfrage; die
+> Tabelle mittelt sie über die Kombination weg. Was die Quantilregression über die
+> Perzentiltabelle hebt, steckt also nicht im Verfahren, sondern in den Merkmalen, die
+> nur zur Laufzeit verfügbar sind.
+>
+> **Wer die Güte will, muss den Dienst betreiben.** Das ist keine technische Fußnote,
+> sondern die eigentliche Entscheidung: scikit-learn, Versionsstände und ein Dienst, der
+> antwortet, gegen eine CSV, die jedes System lesen kann.
 
 > **Warum das Kriterium die Reichweite braucht.** Ohne sie könnte ein Kandidat bestehen,
 > indem er für einen ganzen Radtyp schweigt: Was er sagt, stimmt dann fast immer — er
@@ -1302,8 +1371,9 @@ Weitere Unterschiede:
 | ist von Hand prüfbar | nein | ja |
 | berücksichtigt Wochentag und Saison | ja | nein |
 
-**Wir liefern die Tabelle aus** — eingeschränkt auf den Bereich, in dem sie das
-Kriterium hält, und mit dem Schweigen als Preis. Zwei Gründe:
+**Als Kandidat vorgesehen ist die Perzentiltabelle** — eingeschränkt auf den Bereich, in
+dem sie messbar trägt, und mit dem Schweigen als Preis. Ob daraus ein Produkt wird,
+entscheidet das Primärgate in 6.4c, nicht dieser Abschnitt. Zwei Gründe für die Wahl:
 
 1. Die App ist statisch und kann kein Modell laden.
 2. Eine Auskunft, der jemand mit Ortskenntnis widersprechen kann, ist im Betrieb mehr
@@ -1589,8 +1659,22 @@ MD("""
 
 Eine Zahl, die man nicht verschweigen darf: Für wie viele Anfragen kann die App
 überhaupt etwas sagen? Ein Kriterium, das nur für die beantworteten Fälle gilt, sagt
-nichts über die Reichweite. Gezählt wird deshalb, was **tatsächlich ausgeliefert**
-wird — also nach dem Ausschluss aus 6.1.
+nichts über die Reichweite.
+
+**Drei Zahlen, die man auseinanderhalten muss** — und die Verwechslung der ersten mit der
+zweiten ist der häufigste Fehler in Produktberichten:
+
+| | |
+|---|---:|
+| **aktuelle reale Reichweite** — was die App heute anzeigt, bei aktiver Sperre | siehe Ausgabe unten |
+| **potenzielle Reichweite der Perzentiltabelle** nach bestandenem Gate | {{tabelle_auskunft:.1%}} |
+| **potenzielle Reichweite der Quantilregression** nach bestandenem Gate | {{quantil_auskunft:.1%}} |
+
+Solange das Primärgate nicht hält, ist die erste Zahl die einzige, die etwas über das
+**Produkt** sagt. Die anderen beiden sagen etwas über einen Kandidaten — sie beschreiben,
+was möglich wäre, nicht was geschieht. Gezählt wird unten deshalb, was die App
+**tatsächlich anzeigen würde** — also nach dem Ausschluss aus 6.1 und unter dem
+Freigabestatus.
 """),
 
 CODE("""
@@ -1598,16 +1682,38 @@ alle_t2 = len(test2)
 mit_ziel_ohne_rund = len(zukunft)
 mit_auskunft = len(z)          # nur freigegebene Radtypen und Kombinationen
 
+# ZWEI REICHWEITEN, UND SIE DUERFEN NICHT VERWECHSELT WERDEN.
+#
+# Die POTENZIELLE Reichweite zaehlt, fuer wie viele Fahrten das Artefakt
+# eine Spanne enthaelt. Die REALE zaehlt, fuer wie viele die App sie auch
+# anzeigt - und solange der Freigabestatus sperrt, ist das keine einzige.
+# Eine fruehere Fassung druckte hier nur die erste Zahl und schrieb "die
+# App kann fuer 54 % der Fahrten einen Preis nennen". Das stimmte fuer das
+# Artefakt und war fuer das Produkt falsch.
+real = mit_auskunft if PRODUKT_FREIGEGEBEN else 0
+
 print("Von allen Fahrten des Zeitraums Test 2:")
 print(f"   {alle_t2:>6,}  Fahrten insgesamt (schon gefiltert: abgeschlossen, mit Ziel)")
 print(f"   (Rundtouren sind schon in Phase 2.3 ausgeschieden)")
-print(f"   {mit_auskunft:>6,}  davon mit einer freigegebenen Spanne  "
+print(f"   {mit_auskunft:>6,}  davon mit einer erzeugten Spanne im Artefakt  "
       f"({mit_auskunft/alle_t2:.0%} aller Fahrten)")
+print(f"   {real:>6,}  davon zeigt die App tatsaechlich an  "
+      f"({real/alle_t2:.0%} aller Fahrten)")
 print()
-merke("reichweite", mit_auskunft / alle_t2)
-print(f"Die App kann also für {mit_auskunft/alle_t2:.0%} der Fahrten einen Preis nennen.")
-print("Für den Rest sagt sie ehrlich, dass sie es nicht kann - und das ist")
-print("besser als eine Zahl, die nicht trägt.")
+merke("reichweite_potenziell", mit_auskunft / alle_t2)
+merke("reichweite_real", real / alle_t2)
+if PRODUKT_FREIGEGEBEN:
+    print(f"Das Produkt ist freigegeben: Die App nennt fuer {real/alle_t2:.0%} der")
+    print("Fahrten einen Preis. Fuer den Rest sagt sie ehrlich, dass sie es")
+    print("nicht kann - und das ist besser als eine Zahl, die nicht traegt.")
+else:
+    print(f"Das Produkt ist GESPERRT. Die App nennt fuer {real/alle_t2:.0%} der Fahrten")
+    print(f"einen Preis - nicht fuer {mit_auskunft/alle_t2:.0%}. Die zweite Zahl beschreibt,")
+    print("was das Artefakt enthaelt; die erste, was geschieht.")
+    print()
+    print("Diese Unterscheidung ist der haeufigste Fehler in Produktberichten:")
+    print("Die potenzielle Reichweite eines gesperrten Artefakts liest sich wie")
+    print("eine Leistung, ist aber eine Moeglichkeit.")
 """),
 
 MD("""
@@ -1619,8 +1725,8 @@ MD("""
 > belegt ist.
 >
 > Die Zahl ist ein Kompromiss, kein Ergebnis: Bei fünfzig fielen rund ein Drittel der
-> Verbindungen weg, und die Reichweite sänke weiter unter die ohnehin knappen
-> {{reichweite:.0%}}.
+> Verbindungen weg, und die potenzielle Reichweite sänke weiter unter die ohnehin
+> knappen {{reichweite_potenziell:.0%}}.
 > Für eine Produktfreigabe wäre der Kompromiss anders zu setzen — mit höherer
 > Mindestfallzahl, Bootstrap-Intervallen für die Ränder oder einer kalibrierten
 > Intervallmethode. Hier steht er so, und er steht hier, damit man ihn sieht.
@@ -1928,60 +2034,27 @@ else:
 """),
 
 MD("""
-### 6.4c Das Primärgate — und warum es nicht hält
-
-In 6.1 haben wir die **vorab preisabhängige Gruppe** zur entscheidenden
-Evaluationsgruppe erklärt: die Anfragen, bei denen das Freiminutenguthaben die obere
-Intervallgrenze *nicht* deckt und der Preis deshalb überhaupt an der Dauerschätzung
-hängt. Wer das sagt, muss es auch messen lassen.
-
-| | |
-|---|---|
-| **Gate** | Untergrenze des 95-%-Intervalls in der preisabhängigen Gruppe ≥ 80 % |
-| **gemessen** | {{gate_untergrenze:.1%}} |
-| **Urteil** | **{{gate_urteil}}** |
-
-Das Gate hält nicht. Es fehlen {{gate_luecke:.1f}} Prozentpunkte.
-
-**Die Folge ist unbequem und wird trotzdem gezogen: Das Produkt wird nicht freigegeben.**
-Die Tabelle ist gebaut, das Artefakt geschrieben, die Spalte `produktfreigabe` trägt
-`gesperrt_primaergate` — und `preis_schaetzen()` verweigert jede Auskunft, auch für
-Verbindungen, die für sich genommen gut belegt sind.
-
-> **Warum die Gesamtquote hier nicht zählt.** {{abdeckung_gesamt:.1%}} über alle
-> Anfragen klingt komfortabel. Aber {{n_gedeckt:,}} der {{n_gesamt:,}} gemessenen
-> Fahrten liegen in der Gruppe, deren Guthaben die Fahrt deckt — dort ist der Preis die
-> Startgebühr, und **jede** Schätzung trifft. Diese Fälle tragen die Gesamtquote, ohne
-> etwas über die Dauerprognose auszusagen. Ein Gate, das sie mitzählt, misst die
-> Tarifstruktur, nicht das Modell.
-
-**Was jetzt zu tun wäre** — in dieser Reihenfolge, und keiner der Schritte ist eine
-Notebook-Übung:
-
-1. Den Schattenbetrieb aus 6.6 aufsetzen und das Gate auf unabhängigen Daten messen.
-   Möglich, dass es dort hält — {{gate_untergrenze:.1%}} sind knapp, nicht deutlich.
-2. Hält es auch dort nicht: die Spanne verbreitern, bis es hält, und den Preis dafür
-   in Reichweite ausweisen. Das ist eine Produktentscheidung, keine statistische.
-3. Oder die Zusage senken — dann aber ausdrücklich und mit neuer Zahl, nicht durch
-   Wegsehen.
-
 ### 6.4b Worauf sich die Zusage bezieht — und worauf nicht
 
-Von den {{n_zeilen:,}} ausgelieferten Kombinationen sind nur {{n_gestuetzt:,}}
+Von den {{n_zeilen:,}} **erzeugten** Kombinationen sind nur {{n_gestuetzt:,}}
 **verbindungsbezogen** belegt: Nur bei ihnen liegt die untere Vertrauensgrenze aus
 Test 2 über 80 Prozent. Bei {{n_unzureichend:,}} Zeilen ist die Prüfmenge für eine
 eigene Aussage zu klein, {{n_unbestimmt:,}} sind statistisch unentschieden.
 
-**Die Produktentscheidung lautet: Wir liefern alle drei Klassen aus, und die Zusage
-gilt aggregiert.** Sie ist damit ausdrücklich eine Aussage über den Radtyp, nicht über
-die einzelne Verbindung:
+**Die Entscheidung über den Zuschnitt lautet: alle drei Klassen bleiben im Artefakt, und
+die Zusage gilt aggregiert je Radtyp.** Das Artefakt ist erzeugt, aber gesperrt — die
+folgende Zusage beschreibt also, was gelten **würde**, wenn das Primärgate aus 6.4c
+bestanden wäre:
 
-> Über alle Anfragen eines Radtyps hinweg enthält die angezeigte Spanne den
-> tatsächlichen Preis in mindestens 80 Prozent der Fälle. Für eine **einzelne**
-> Verbindung ist das nicht zugesichert.
+> Über alle Anfragen eines Radtyps hinweg enthielte die angezeigte Spanne den
+> tatsächlichen Preis in mindestens {{gate_schwelle:.0%}} der Fälle. Für eine **einzelne**
+> Verbindung wäre das nicht zugesichert.
+
+Im Konditional, und das mit Absicht: Eine Zusage, die vor der Freigabe im Indikativ
+steht, wird gelesen, als gälte sie.
 
 Die Alternative wäre gewesen, nur die {{n_gestuetzt:,}} belegten Zeilen auszuliefern.
-Das hätte die Reichweite von {{reichweite:.0%}} auf **{{reichweite_streng:.1%}}**
+Das hätte die potenzielle Reichweite von {{reichweite_potenziell:.0%}} auf **{{reichweite_streng:.1%}}**
 gedrückt — für ein Produkt, das ohnehin nur bei jeder zweiten Anfrage antwortet, ist das
 kein Gewinn.
 
@@ -2037,6 +2110,46 @@ Daten**. Ein Schattenbetrieb ist etwas anderes:
 7. Erst danach sichtbar schalten.
 
 Punkt 2 und 5 sind der Kern. Ohne sie bleibt die Grundannahme dieses Notebooks ungeprüft.
+
+
+### 6.4c Das Primärgate — und warum es nicht hält
+
+In 6.1 haben wir die **vorab preisabhängige Gruppe** zur entscheidenden
+Evaluationsgruppe erklärt: die Anfragen, bei denen das Freiminutenguthaben die obere
+Intervallgrenze *nicht* deckt und der Preis deshalb überhaupt an der Dauerschätzung
+hängt. Wer das sagt, muss es auch messen lassen.
+
+| | |
+|---|---|
+| **Gate** | Untergrenze des 95-%-Intervalls in der preisabhängigen Gruppe ≥ 80 % |
+| **gemessen** | {{gate_untergrenze:.1%}} |
+| **Urteil** | **{{gate_urteil}}** |
+
+Das Gate hält nicht. Es fehlen {{gate_luecke:.1f}} Prozentpunkte.
+
+**Die Folge ist unbequem und wird trotzdem gezogen: Das Produkt wird nicht freigegeben.**
+Die Tabelle ist gebaut, das Artefakt geschrieben, die Spalte `produktfreigabe` trägt
+`gesperrt_primaergate` — und `preis_schaetzen()` verweigert jede Auskunft, auch für
+Verbindungen, die für sich genommen gut belegt sind.
+
+> **Warum die Gesamtquote hier nicht zählt.** {{abdeckung_gesamt:.1%}} über alle
+> Anfragen klingt komfortabel. Aber {{n_gedeckt:,}} der {{n_gesamt:,}} gemessenen
+> Fahrten liegen in der Gruppe, deren Guthaben die Fahrt deckt — dort ist der Preis die
+> Startgebühr, und **jede** Schätzung trifft. Diese Fälle tragen die Gesamtquote, ohne
+> etwas über die Dauerprognose auszusagen. Ein Gate, das sie mitzählt, misst die
+> Tarifstruktur, nicht das Modell.
+
+**Was jetzt zu tun wäre** — in dieser Reihenfolge, und keiner der Schritte ist eine
+Notebook-Übung:
+
+1. Den Schattenbetrieb aus 6.6 aufsetzen und das Gate auf unabhängigen Daten messen.
+   Möglich, dass es dort hält — {{gate_untergrenze:.1%}} sind knapp, nicht deutlich.
+2. Hält es auch dort nicht: die Spanne verbreitern, bis es hält, und den Preis dafür
+   in Reichweite ausweisen. Das ist eine Produktentscheidung, keine statistische.
+3. Oder die Zusage senken — dann aber ausdrücklich und mit neuer Zahl, nicht durch
+   Wegsehen.
+
+
 """),
 
 MD("""
@@ -2066,7 +2179,8 @@ aus zwei anderen Gründen:
 Die Spanne löst **beide** Punkte: Sie zeigt die Streuung, statt sie zu verschweigen, und
 sie trägt für **{{typen_freigegeben}}** — weil die Nützlichkeitsregel aus 5.5 die Güte des
 Modells von der Preisstruktur trennt. Was bleibt, ist keine Lücke im Sortiment, sondern
-eine in der Reichweite: Für {{reichweite:.0%}} der Fahrten kann die App etwas sagen.
+eine in der Reichweite: Das erzeugte Artefakt deckt {{reichweite_potenziell:.0%}} der
+Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
 
 **Vier Sätze, die aus diesem Notebook bleiben sollten**
 
