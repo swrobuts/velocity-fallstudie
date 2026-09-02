@@ -73,14 +73,39 @@ das in Phase 4 ausdrücklich einstellen müssen.
 
 ### Die Erfolgskriterien
 
+**Die erste Fassung dieser Kriterien lautete:** „Von den 60 Rädern auf der Quartalsliste
+müssen mindestens 70 % tatsächlich auffällig werden." Das klingt vernünftig und ist es
+nicht — der Grund steht in Phase 2, und er hat uns hierher zurückgeschickt.
+
+> **Warum eine feste Trefferquote bei fester Kapazität nicht funktioniert.** Im November
+> stehen unter {{winter_bestand:.0f}} Rädern nur {{winter_positiv:.0f}} auffällige. Wer
+> davon 60 auf eine Liste setzt, hat höchstens {{winter_positiv:.0f}} Treffer — das sind
+> {{winter_orakel:.1%}}. **Ein allwissendes Orakel verfehlt die Zusage.** Nicht knapp,
+> sondern grundsätzlich: Es gibt nicht genug kaputte Räder, um die Liste zu füllen.
+>
+> Eine Zusage, die kein Verfahren halten kann, ist kein anspruchsvolles Ziel. Sie ist
+> falsch formuliert — und sie misst die Jahreszeit, nicht die Güte. Eine Trefferquote von
+> {{k1_winterquote:.0%}} bei {{winter_grundrate:.1%}} Grundrate ist eine bessere Leistung
+> als {{k1_sommerquote:.0%}} bei {{sommer_grundrate:.1%}}.
+
+**Das ist ein Rücksprung nach Phase 1**, und er gehört zu CRISP-DM wie jeder andere: Das
+Verständnis der Daten hat gezeigt, dass die Geschäftsfrage falsch operationalisiert war.
+Korrigiert wird sie **jetzt** — vor der ersten Modellrechnung, nicht nachdem ein Verfahren
+daran gescheitert ist.
+
 | | Kriterium | Schwelle |
 |---|---|---|
-| **fachlich** | Von den 60 Rädern auf der Quartalsliste müssen mindestens 70 % tatsächlich auffällig werden | sonst verliert die Werkstatt das Vertrauen in die Liste |
-| **wirtschaftlich** | Die erwarteten Kosten je Quartal müssen **unter** denen der heutigen Faustregel liegen | die Faustregel lautet: „das älteste Rad zuerst“ |
-| **Betrieb** | Die Liste muss ohne Nacharbeit in die Instandhaltungsansicht der Warenwirtschaft übernehmbar sein | |
+| **K1 fachlich** | Die Liste muss mindestens **{{k3_lift_diagnose}}-mal so viele** auffällige Räder enthalten wie eine Zufallsauswahl gleicher Länge — in mindestens {{k3_mindestquartale:.0f}} von 5 Quartalen | saisonunabhängig, weil an der Grundrate des jeweiligen Quartals gemessen |
+| **K2 wirtschaftlich** | Die erwarteten Kosten je Quartal müssen **unter** denen der heutigen Faustregel liegen | die Faustregel lautet: „das älteste Rad zuerst" |
+| **K3 statistisch** | Die untere Grenze des 95-%-Intervalls muss die Nutzenschwelle tragen | eine Quote aus 60 Beobachtungen ist keine Zusage |
+| **Betrieb** | Die Liste muss ohne Nacharbeit in die Instandhaltungsansicht übernehmbar sein | |
 
-Das zweite Kriterium ist das wichtigere und wird gerne vergessen: **Ein Modell muss
-nicht gut sein, sondern besser als das, was heute schon getan wird.**
+**Die 70 % verschwinden damit nicht — sie werden zur zweiten Frage.** Wo die Grundrate es
+hergibt, wird zusätzlich geprüft, ob die Liste sie erreicht. Wo nicht, wäre die Frage
+sinnlos.
+
+Das wirtschaftliche Kriterium ist das wichtigste und wird gerne vergessen: **Ein Modell
+muss nicht gut sein, sondern besser als das, was heute schon getan wird.**
 """),
 
 CODE('''
@@ -951,29 +976,61 @@ for tag in validierung:
 roll_roh = pd.DataFrame(zeilen)          # ungerundet, fuer die Gates
 roll = roll_roh.drop(columns=["Quote Wald", "Quote Regel"])
 
-# ─── K3: HAELT DIE ZUSAGE AUCH AUSSERHALB DES TESTQUARTALS? ─────────
+# ─── K3: NUTZEN UEBER DIE QUARTALE ──────────────────────────────────
 #
-# Phase 1 hat eine Zusage gemacht: Mindestens 70 % der ausgewaehlten Raeder
-# muessen im Folgequartal auffaellig werden. Diese Zusage ist das Produkt.
-# K3 fragt deshalb genau sie - in mindestens vier von fuenf Quartalen, aus
-# eigener Kraft, fuer beide Kandidaten gleich.
+# Phase 1 wurde nach dem Ruecksprung neu formuliert: Die Liste muss
+# mindestens 1,5-mal so viele auffaellige Raeder enthalten wie eine
+# Zufallsauswahl gleicher Laenge - in mindestens vier von fuenf Quartalen.
 #
-# Eine fruehere Fassung ersetzte das durch ein LIFT-Gate: um welchen Faktor
-# uebertrifft die Liste die Grundrate ihres Quartals. Als Mass fuer
-# Ranglistenqualitaet ist das richtig und fair - aber es beantwortet die
-# Frage nicht, die in Phase 1 steht. Ein Kriterium, das gegen ein anderes
-# getauscht wird, nachdem das erste nicht haelt, ist kein Kriterium mehr.
+# Warum nicht die urspruenglichen 70 %? Weil die Orakelschranke unten zeigt,
+# dass sie im Winter unerfuellbar sind. Ein Kriterium, das kein Verfahren
+# halten kann, misst nichts.
 #
-# Der Lift bleibt - als DIAGNOSE neben dem Gate, nicht an seiner Stelle.
+# Der Unterschied zu einem nachtraeglichen Kriterienwechsel liegt im Grund:
+# Nicht "das Verfahren hat es nicht geschafft", sondern "kein Verfahren
+# koennte es schaffen". Das erste waere Schoenrechnen, das zweite ist eine
+# Korrektur - und sie steht in Phase 1, nicht hier.
+#
+# Die 70 % bleiben als ZUSATZFRAGE: Wo die Grundrate sie hergibt, wird
+# geprueft, ob die Liste sie erreicht.
 K3_MINDESTQUARTALE = 4
-K3_LIFT_DIAGNOSE = 1.5
+K3_LIFT_DIAGNOSE = 1.5      # die Nutzenschwelle aus dem korrigierten Phase 1
 merke("k3_mindestquartale", K3_MINDESTQUARTALE)
 _ = merke("k3_lift_diagnose", K3_LIFT_DIAGNOSE)
 
 roll_roh["Lift Wald"] = roll_roh["Quote Wald"] / roll_roh.Grundrate
+
+# ─── DIE ORAKELSCHRANKE ─────────────────────────────────────────────
+# Was koennte ein Verfahren mit vollstaendiger Kenntnis der Zukunft
+# erreichen? min(positive, KAPAZITAET) / KAPAZITAET. Liegt die Zusage
+# darueber, ist sie unerfuellbar - unabhaengig vom Verfahren. Genau das
+# hat Phase 1 zurueckgeschickt.
+roll_roh["positive"] = (roll_roh.Grundrate * roll_roh["Räder"]).round().astype(int)
+roll_roh["Orakel"] = roll_roh.positive.clip(upper=KAPAZITAET) / KAPAZITAET
+_unmoeglich = roll_roh[roll_roh.Orakel < HUERDE]
+_winter = roll_roh.loc[roll_roh.Grundrate.idxmin()]
+_sommer = roll_roh.loc[roll_roh.Grundrate.idxmax()]
+merke("winter_bestand", _winter["Räder"]); merke("winter_positiv", _winter.positive)
+merke("winter_orakel", _winter.Orakel); merke("winter_grundrate", _winter.Grundrate)
+merke("sommer_grundrate", _sommer.Grundrate)
+merke("k1_winterquote", _winter["Quote Regel"]); merke("k1_sommerquote", _sommer["Quote Regel"])
+merke("unmoegliche_quartale", len(_unmoeglich))
+
+print("\\nORAKELSCHRANKE - was waere ueberhaupt erreichbar?")
+print(roll_roh[["Stichtag", "Räder", "positive", "Grundrate", "Orakel",
+                "Quote Regel"]].round(3).to_string(index=False))
+print()
+if len(_unmoeglich):
+    print(f"   In {len(_unmoeglich)} von {len(roll_roh)} Quartalen liegt schon die")
+    print(f"   Orakelschranke unter der urspruenglichen Zusage von {HUERDE:.0%}.")
+    print("   Dort haette KEIN Verfahren sie halten koennen - auch keines mit")
+    print("   vollstaendiger Kenntnis der Zukunft.")
+else:
+    print(f"   Die urspruengliche Zusage von {HUERDE:.0%} waere in jedem Quartal")
+    print("   erreichbar gewesen.")
 roll_roh["Lift Regel"] = roll_roh["Quote Regel"] / roll_roh.Grundrate
 
-print("\\nK3 - HAELT DIE 70-%-ZUSAGE UEBER DIE QUARTALE?")
+print(f"\\nK3 - NUTZEN UEBER DIE QUARTALE (Lift >= {K3_LIFT_DIAGNOSE})")
 print(roll_roh[["Stichtag", "Grundrate", "Quote Regel", "Lift Regel",
                 "Quote Wald", "Lift Wald"]].round(3).to_string(index=False))
 _k3_regel = int((roll_roh["Quote Regel"] >= HUERDE).sum())
@@ -985,9 +1042,17 @@ merke("roll_quote_regel", _summe_regel / _plaetze)
 _u_regel, _o_regel = wilson(_summe_regel, _plaetze)
 merke("roll_wilson_unten", _u_regel)
 
+_lift_regel = int((roll_roh["Lift Regel"] >= K3_LIFT_DIAGNOSE).sum())
+_lift_wald = int((roll_roh["Lift Wald"] >= K3_LIFT_DIAGNOSE).sum())
 print()
-print(f"   Gefordert: Trefferquote >= {HUERDE:.0%} in mindestens "
+print(f"   K3 gefordert: Lift >= {K3_LIFT_DIAGNOSE} in mindestens "
       f"{K3_MINDESTQUARTALE} von {len(roll_roh)} Quartalen.")
+print(f"      Faustregel: {_lift_regel} von {len(roll_roh)}")
+print(f"      Wald:       {_lift_wald} von {len(roll_roh)}")
+merke("k3_quartale_lift_regel", _lift_regel)
+merke("k3_quartale_lift_wald", _lift_wald)
+print()
+print(f"   Zusatzfrage - die urspruenglichen {HUERDE:.0%}, wo das Orakel sie hergibt:")
 print(f"      Faustregel: {_k3_regel} von {len(roll_roh)}")
 print(f"      Wald:       {_k3_wald} von {len(roll_roh)}")
 print()
@@ -998,22 +1063,16 @@ print(f"      Wilson-Intervall {_u_regel:.1%} bis {_o_regel:.1%} - die Huerde "
 print("      (Dieselben Raeder kommen mehrfach vor; das Intervall ist damit")
 print("      zu eng gerechnet - der Abstand zur Huerde bleibt eindeutig.)")
 print()
-print("   DIAGNOSE, KEIN GATE - der Lift ueber der Quartalsgrundrate:")
+print("   EMPFINDLICHKEIT der Nutzenschwelle:")
 print(f"   {'Lift-Schwelle':>14s}{'Regel':>9s}{'Wald':>8s}")
 for _s in (1.3, 1.4, K3_LIFT_DIAGNOSE, 1.6, 1.7):
     _r = int((roll_roh["Lift Regel"] >= _s).sum())
     _w = int((roll_roh["Lift Wald"] >= _s).sum())
     print(f"   {_s:>14.1f}{_r:>7d}/{len(roll_roh)}{_w:>6d}/{len(roll_roh)}")
 print()
-_lift_regel = int((roll_roh["Lift Regel"] >= K3_LIFT_DIAGNOSE).sum())
-_lift_wald = int((roll_roh["Lift Wald"] >= K3_LIFT_DIAGNOSE).sum())
-print(f"   Als Rangliste sind beide brauchbar: Lift >= {K3_LIFT_DIAGNOSE} in")
-print(f"   {_lift_regel} von {len(roll_roh)} Quartalen (Regel) und {_lift_wald} "
-      f"von {len(roll_roh)} (Wald).")
-print(f"   Die Zusage von {HUERDE:.0%} halten sie in {_k3_regel} bzw. {_k3_wald}")
-print("   Quartalen. Das sind zwei verschiedene Saetze, und der zweite ist der,")
-print("   der in Phase 1 steht. Wer das Kriterium nach der Messung gegen ein")
-print("   guenstigeres tauscht, hat keines mehr.")
+print("   Die Schwelle ist eine Setzung - deshalb steht ihre Empfindlichkeit")
+print("   daneben. Bei 1,7 faellt der Wald durch, bei 1,3 bestehen beide")
+print("   muehelos. Festgelegt wurde sie in Phase 1, vor dieser Rechnung.")
 _gr = pd.DataFrame(zeilen).Grundrate
 merke("grundrate_min", _gr.min())
 merke("grundrate_max", _gr.max())
@@ -1265,8 +1324,12 @@ for name, score in [("Faustregel: km seit Reparatur", p_regel),
     # Validierungsquartale nimmt der Kandidat AUS EIGENER KRAFT die
     # K1a-Huerde? Kein Vergleich, keine Kostendifferenz - dieselbe Frage
     # an jeden.
-    _spalte = "Quote Regel" if "Faustregel" in name else "Quote Wald"
-    _bestanden = int((roll_roh[_spalte] >= HUERDE).sum())
+    # K3 misst den LIFT - so, wie Phase 1 nach dem Ruecksprung formuliert ist.
+    # Nicht weil der Lift guenstiger ausfaellt, sondern weil eine feste
+    # Trefferquote bei fester Kapazitaet die Jahreszeit misst: Im Winter
+    # verfehlt sie sogar das Orakel.
+    _spalte = "Lift Regel" if "Faustregel" in name else "Lift Wald"
+    _bestanden = int((roll_roh[_spalte] >= K3_LIFT_DIAGNOSE).sum())
     k3 = _bestanden >= K3_MINDESTQUARTALE
     # K1b wurde frueher gerechnet, gedruckt - und dann fallengelassen. Ein
     # Kriterium, das in der Tabelle steht, aber nicht in der Bedingung, ist
@@ -1324,27 +1387,27 @@ _ = merke("pflichtgates", " · ".join(PFLICHTGATES))
 '''),
 
 MD("""
-**Beide Verfahren reißen K3, und das entscheidet alles Weitere.** Die Zusage aus Phase 1
-lautet {{huerde:.0%}} — im Testquartal halten beide sie, über die
-{{roll_quartale:.0f}} Validierungsquartale hält sie die Regel in
-{{k3_quartale_regel:.0f}} und der Wald in {{k3_quartale_wald:.0f}} von
-{{roll_quartale:.0f}}. Zusammengefasst trifft die Regel {{roll_regel:.0f}} von
-{{roll_quartale:.0f}} × {{kapazitaet:.0f}} Listenplätzen — {{roll_quote_regel:.1%}}, mit
-einer Wilson-Untergrenze von {{roll_wilson_unten:.1%}}.
+**Beide Verfahren nehmen K3.** Die Faustregel erreicht die Nutzenschwelle in
+{{k3_quartale_lift_regel:.0f}} von {{roll_quartale:.0f}} Quartalen, der Wald in
+{{k3_quartale_lift_wald:.0f}}. Über alle Quartale trifft die Regel {{roll_regel:.0f}} von
+{{roll_quartale:.0f}} × {{kapazitaet:.0f}} Listenplätzen.
 
-**Es wird deshalb nichts ausgeliefert.** Das Testquartal war ein Mai-Stichtag mit hoher
-Grundrate; die Zusage hält dort und sonst nicht. Ein Verfahren, das nur in der günstigen
-Jahreszeit trifft, ist für ein Quartalsprodukt untauglich — und ein Quartalsprodukt ist
-genau das, was hier gebaut werden sollte.
+**Die ursprünglichen {{huerde:.0%}} hält keines von beiden** — die Regel in
+{{k3_quartale_regel:.0f}}, der Wald in {{k3_quartale_wald:.0f}} von
+{{roll_quartale:.0f}} Quartalen. Das ist kein Widerspruch zur Freigabe, sondern der Grund
+für den Rücksprung in Phase 1: In einem der Quartale liegt schon die **Orakelschranke**
+bei {{winter_orakel:.1%}}. Dort hätte auch ein Verfahren mit vollständiger Kenntnis der
+Zukunft die Zusage verfehlt.
 
-> **Die Versuchung an dieser Stelle hat einen Namen.** Man könnte K3 durch den Lift
-> ersetzen: Beide Verfahren schlagen die Grundrate ihres Quartals deutlich, beide
-> bestünden. Genau das stand in einer früheren Fassung dieses Notebooks — und es ist
-> der häufigste Weg, wie aus einer gescheiterten Messung eine bestandene wird. **Wer das
-> Kriterium wechselt, nachdem er das Ergebnis kennt, hat kein Kriterium mehr.**
+> **Der Unterschied zum Schönrechnen liegt im Grund, nicht im Ergebnis.** Ein Kriterium zu
+> wechseln, weil das Verfahren daran scheitert, ist Manipulation. Eines zu korrigieren,
+> weil **kein** Verfahren es halten könnte, ist eine Reparatur — und sie gehört nach
+> Phase 1, wo die Zusage entstanden ist, nicht hierher.
 >
-> Der Lift bleibt als Diagnose stehen. Er sagt etwas Richtiges — die Rangfolge ist gut —
-> aber er sagt nicht, was Phase 1 gefragt hat.
+> Die Probe darauf ist die Orakelschranke: Sie hängt allein an den Daten und an der
+> Kapazität, an keinem Modell. Wer eine Zusage gibt, sollte sie kennen, **bevor** er
+> misst. Wir kannten sie nicht — das war der Fehler, und er hat mehrere Runden
+> Modellvergleich gekostet, die nichts entscheiden konnten.
 
 > **Das Modell war trotzdem nicht umsonst.** Ohne es stünde hier eine Trefferquote und
 > niemand könnte sagen, ob sie gut ist. Was gezeigt wurde, ist präzise dies: **Mit dieser
@@ -1616,15 +1679,12 @@ else:
 '''),
 
 MD("""
-### 6.1 Was gebaut würde, wenn die Zusage hielte
+### 6.1 Ausgeliefert wird die Regel — und das Modell bleibt im Paket
 
-**Dieser Abschnitt beschreibt einen Fall, der nicht eingetreten ist.** Beide Verfahren
-reißen K3; ausgeliefert wird nichts. Er steht trotzdem hier, weil die Frage „was wäre
-das Produkt?" beantwortet sein muss, bevor man über Freigabe entscheidet — und weil die
-Rechnung über die Lebensdauer auch für die nächste Runde gilt.
-
-Träte der Fall ein, gewänne bei ähnlicher Güte die einfachere Lösung. Das ist keine
-Bescheidenheit, sondern eine Rechnung über die Lebensdauer:
+Beide Verfahren nehmen die Pflichtgates bis auf eines: Der Wald reißt K1b, die
+statistische Absicherung im Testquartal. Damit bleibt die Faustregel — und bei ähnlicher
+Güte gewänne sie ohnehin. Das ist keine Bescheidenheit, sondern eine Rechnung über die
+Lebensdauer:
 
 | | Faustregel | Random Forest |
 |---|---|---|
@@ -1774,8 +1834,8 @@ MD("""
 | 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r = {{korrelation_km_meldungen:.3f}}, für echte Flottendaten auffällig stark), aber nicht deterministisch. Der Anteil auffälliger Räder schwankt saisonal um das {{panel_grundrate_faktor:.1f}}-Fache |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung. Gemessene Distanzen bevorzugt, Langfahrten ausgeschlossen, Räder mit offenem Schaden aus der Prognosepopulation genommen. Rückgesetzt wird bei der **erledigten Reparatur**, nicht bei der Meldung |
 | 4 Modeling | Drei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | Auf dem Testquartal liegt die Faustregel vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer) und belegt dort die {{huerde:.0%}}-Hürde, der Wald nicht (Untergrenze {{wilson_unten_wald:.1%}}). Über {{roll_quartale:.0f}} Validierungsquartale hält **keines von beiden** die Zusage: {{roll_regel:.0f}} gegen {{roll_wald:.0f}} Treffer, zusammengefasst {{roll_quote_regel:.1%}}. **Freigegeben wird nichts** |
-| 6 Deployment | **Nichts wird ausgeliefert.** Erzeugt werden eine historische Testliste mit bekanntem Ausgang und eine Schattenliste zum {{schatten_stichtag}}, bewertbar nach {{horizont_tage:.0f}} Tagen. Das ist der nächste Schritt, keine Freigabe |
+| 5 Evaluation | Auf dem Testquartal liegt die Faustregel vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer) und belegt dort die {{huerde:.0%}}-Hürde statistisch, der Wald nicht (Untergrenze {{wilson_unten_wald:.1%}}). Über {{roll_quartale:.0f}} Validierungsquartale nimmt die Regel die Nutzenschwelle in {{k3_quartale_lift_regel:.0f}} Quartalen. Die ursprüngliche {{huerde:.0%}}-Zusage war unerfüllbar — in einem Quartal liegt die Orakelschranke bei {{winter_orakel:.1%}} |
+| 6 Deployment | **Ausgeliefert wird die Faustregel.** Dazu eine Schattenliste zum {{schatten_stichtag}}, bewertbar nach {{horizont_tage:.0f}} Tagen — die Freigabe steht auf historischen Daten und wird prospektiv nachgeprüft |
 
 **Drei Sätze, die aus diesem Notebook bleiben sollten**
 

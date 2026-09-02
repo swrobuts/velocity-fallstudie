@@ -1724,14 +1724,18 @@ neben der ersten, und zwei Quellen für dieselbe Zahl gehen irgendwann auseinand
 **Was in jedem Notebook herauskam, steht in jedem Notebook** — in seiner eigenen
 Schlusszelle, aus seinen eigenen Variablen erzeugt. Lesen Sie es dort.
 
-Was sich dagegen über alle sechs sagen lässt, ohne zu veralten: **Ein Verfahren ging in
-Betrieb, fünf nicht** — und in keinem der sechs Fälle haben die Kennzahlen das
+Was sich dagegen über alle sechs sagen lässt, ohne zu veralten: **Zwei Verfahren gingen in
+Betrieb, vier nicht** — und in keinem der sechs Fälle haben die Kennzahlen das
 entschieden, sondern die Frage, ob jemand mit dem Ergebnis verantwortlich handeln kann.
 
-Die eine Freigabe ist dabei so lehrreich wie die fünf Absagen. Sie kam nicht zustande,
-weil dort besser gerechnet worden wäre, sondern weil dort **eine vorher festgelegte Hürde
-tatsächlich genommen wurde** — und weil die Frage, ob das Verfahren überhaupt betrieben
-werden darf, gestellt wurde, bevor jemand die Ergebnisse kannte.
+Die beiden Freigaben sind dabei so lehrreich wie die vier Absagen. Sie kamen nicht
+zustande, weil dort besser gerechnet worden wäre, sondern weil dort **vorher festgelegte
+Hürden tatsächlich genommen wurden**.
+
+In einem der beiden Fälle musste die Hürde vorher allerdings repariert werden — sie war
+so formuliert, dass kein Verfahren sie hätte halten können. Das ist der unbequemste
+Befund dieser Fallstudie: **Ein Kriterium kann falsch sein, nicht nur unerreicht.** Wer
+das nicht prüft, misst Verfahren gegen ein Ziel, das es nicht gibt.
 
 Das ist keine schlechte Bilanz, sondern eine realistische. Analyseprojekte, in denen alles
 auf Anhieb funktioniert, gibt es in Lehrbüchern — und sonst nirgends.
