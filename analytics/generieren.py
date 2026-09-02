@@ -263,8 +263,19 @@ for jahr in (2023, 2024, 2025, 2026):
         dt = _OSTERN[jahr] + timedelta(days=delta)
         FEIERTAGE.add(dt)
         feiertag_rows.append((dt, name))
+# DER KALENDER DARF NICHT AM DATENENDE AUFHOEREN.
+#
+# Frueher wurde hier auf VON..BIS geschnitten - der Kalender endete also
+# mit der letzten Fahrt. Ein Modell, das ist_feiertag und ist_ferien
+# braucht, kann damit fuer keinen einzigen kuenftigen Tag rechnen: Beide
+# Merkmale waeren still null, und die Vorhersage fuer den ersten
+# Ferientag saehe aus wie die fuer einen normalen Dienstag.
+#
+# Feiertage und Ferien sind aber gerade das, was man im Voraus WEISS.
+# Sie werden deshalb vollstaendig geschrieben, so weit die Listen oben
+# reichen - nicht bis zur letzten Fahrt.
 schreibe("feiertage.csv", ["datum", "bezeichnung"],
-         [[d.isoformat(), n] for d, n in sorted(feiertag_rows) if VON <= d <= BIS])
+         [[d.isoformat(), n] for d, n in sorted(feiertag_rows) if VON <= d])
 
 # =====================================================================
 # SCHULFERIEN BAYERN
@@ -316,7 +327,7 @@ for von, bis, name in FERIEN:
         d += timedelta(days=1)
 schreibe("schulferien.csv", ["von", "bis", "bezeichnung", "genauigkeit"],
          [[v.isoformat(), b.isoformat(), n, "amtlicher Termin"]
-          for v, b, n in FERIEN if VON <= b and v <= BIS])
+          for v, b, n in FERIEN if VON <= b])
 
 # =====================================================================
 # SEMESTERZEITEN (JMU Wuerzburg, typisiert)
