@@ -2752,10 +2752,31 @@ MODELLPAKET = {
 # Status feststeht. Frueher wurde hier bereits eine CSV mit dem Vermerk
 # "gesperrt_primaergate" geschrieben - waehrend das Primaergate gehalten
 # hatte und der Grund ein ganz anderer war.
+# WARUM NICHT EINFACH DER WERT: routenmerkmale ergab hier eine einzige
+# Ausgabezeile mit ueber 80.000 Zeichen, tabelle noch einmal 28.000.
+# Jupyter zeigt das klaglos an - GitHub rendert das Notebook damit gar
+# nicht mehr, und gelesen hat diese Zeichenwueste ohnehin nie jemand.
+# Was an dieser Stelle zaehlt, ist ob ein Eintrag da ist und wie gross
+# er ist, nicht sein Inhalt. Der vollstaendige Inhalt steht im
+# Beipackzettel modellpaket_preisspanne.json.
+def paketwert(wert):
+    if isinstance(wert, dict):
+        if not wert:
+            return "leeres Woerterbuch"
+        _bsp = ", ".join(str(_s) for _s in list(wert)[:3])
+        return f"{len(wert)} Eintraege   z. B. {_bsp}"
+    if isinstance(wert, (list, tuple, set)):
+        return f"{len(wert)} Eintraege" if wert else "leer"
+    _s = str(wert)
+    return _s if len(_s) <= 70 else _s[:67] + "..."
+
 print("Modellpaket vorbereitet - geschrieben wird es nach der Abnahme:")
 for _k, _v in MODELLPAKET.items():
     if _k not in ("modell_unten", "modell_oben"):
-        print(f"   {_k:28s} {_v}")
+        print(f"   {_k:28s} {paketwert(_v)}")
+print()
+print("   Die Inhalte der grossen Eintraege stehen vollstaendig im")
+print("   Beipackzettel modellpaket_preisspanne.json - nicht hier.")
 
 # DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
 # Filtern. Die Werte weiter oben galten der ungefilterten Tabelle; wer

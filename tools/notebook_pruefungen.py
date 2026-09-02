@@ -433,6 +433,38 @@ def pruefe_altprosa(markdown: list[str], ausgaben: list[str],
     return befunde
 
 
+# Was eine Ausgabezeile hoechstens lang sein darf. Der Wert ist eine
+# Setzung, aber keine willkuerliche: Bei rund 2.000 Zeichen ist eine
+# Zeile schon lange nicht mehr lesbar, und deutlich darueber steigt der
+# Notebook-Renderer von GitHub aus.
+MAX_AUSGABEZEILE = 2000
+
+
+def pruefe_lange_ausgabezeile(ausgaben: list[str]) -> list[str]:
+    """Eine einzige Zeile mit Zehntausenden Zeichen macht das Notebook unlesbar.
+
+    Gefunden wurde das, weil GitHub Notebook 01 nicht mehr rendern
+    konnte: print(f"{schluessel} {wert}") ueber ein Woerterbuch mit
+    neunzig Verbindungen ergab eine Zeile mit 82.936 Zeichen. In Jupyter
+    faellt das nicht auf - die Zelle scrollt eben weit nach rechts.
+
+    Die Pruefung meldet deshalb jede Ausgabezeile ueber MAX_AUSGABEZEILE
+    Zeichen. Der Weg heraus ist nie, die Zeile zu kuerzen, sondern die
+    Groesse statt des Inhalts zu drucken: "90 Eintraege" sagt mehr als
+    neunzig ausgeschriebene Strecken.
+    """
+    funde = []
+    for i, aus in enumerate(ausgaben):
+        for zeile in aus.split("\n"):
+            if len(zeile) > MAX_AUSGABEZEILE:
+                funde.append(
+                    f"Codezelle {i + 1}: Ausgabezeile mit {len(zeile):,} Zeichen "
+                    f"(Grenze {MAX_AUSGABEZEILE:,}). Anfang: "
+                    f"{zeile.strip()[:60]!r}. Groesse statt Inhalt drucken."
+                    .replace(",", "."))
+    return funde
+
+
 def pruefe_artefakt_ohne_waechter(code: list[str]) -> list[str]:
     """Ein Artefakt darf nur entstehen, wenn die Freigabe es zulaesst.
 
@@ -643,6 +675,7 @@ def main() -> int:
                   + pruefe_status_im_text(bauskript)
                   + pruefe_gate_mit_fremder_zahl(code)
                   + pruefe_artefakt_ohne_waechter(code)
+                  + pruefe_lange_ausgabezeile(ausgaben)
                   + pruefe_altprosa(markdown, ausgaben, bauskript))
         hinweise = (pruefe_nullfuellung(code) + pruefe_freie_schwellen(code)
                     + pruefe_urteil_ohne_zahl(ausgaben))
