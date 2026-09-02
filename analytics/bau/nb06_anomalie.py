@@ -828,6 +828,7 @@ lang["vorsprung_h"] = (lang.endzeit - lang.alarm).dt.total_seconds() / 3600
 lang["morgenliste"] = lang.startzeit.dt.normalize() + pd.Timedelta(
     days=1, hours=MORGENSTUNDE)
 
+merke("bekannte_langfahrten", len(lang))
 print(f"Bekannte Langfahrten über {GRENZE_STUNDEN} Stunden: {len(lang)}\\n")
 print("Die Echtzeitregel meldet JEDE von ihnen - per Definition, denn sie ist")
 print("die Definition. Interessant ist nicht OB, sondern WANN:\\n")
@@ -1028,14 +1029,20 @@ je_tag["ist_stoerung"] = [(d, s) in gestoert for d, s in
 print(f"Stationstage insgesamt:            {len(je_tag):,d}".replace(",", "."))
 print(f"davon dokumentierte Störungen:     {int(je_tag.ist_stoerung.sum())}")
 print(f"Stationstage ganz ohne Fahrt:      {int((je_tag.fahrten == 0).sum()):,d}".replace(",", "."))
-print(f"davon dokumentierte Störungen:     {int(((je_tag.fahrten == 0) & je_tag.ist_stoerung).sum())}")
+_null = int((je_tag.fahrten == 0).sum())
+_null_stoerung = int(((je_tag.fahrten == 0) & je_tag.ist_stoerung).sum())
+merke("nulltage", _null); merke("nulltage_stoerung", _null_stoerung)
+merke("nulltage_anteil", _null_stoerung / max(_null, 1))
+merke("nulltage_jeder", round(_null / max(_null_stoerung, 1)))
+print(f"davon dokumentierte Störungen:     {_null_stoerung}")
 '''),
 
 MD("""
 **Und da steht das Problem, in zwei Zahlen.**
 
-Jede Störung führt zu einem Tag ohne Fahrt — das Signal ist also da. Aber es gibt **rund
-tausend Stationstage ohne Fahrt**, und nur etwa jeder zehnte davon ist eine Störung. Alle
+Jede Störung führt zu einem Tag ohne Fahrt — das Signal ist also da. Aber es gibt
+**{{nulltage:,}} Stationstage ohne Fahrt**, und nur {{nulltage_stoerung:.0f}} davon
+({{nulltage_anteil:.1%}}, also etwa jeder {{nulltage_jeder:.0f}}.) sind eine Störung. Alle
 anderen sind schlicht ruhige Tage: eine kleine Station im Januar bei Regen.
 
 Rechnen wir aus, was das für jedes noch so gute Verfahren bedeutet.
@@ -1554,7 +1561,7 @@ MD("""
 | **A2** auffällige Fahrten | Tagesliste mit Schwelle, höchstens sechs Plätze, Begründung je Zeile | **nur Schattenbetrieb** — die Trefferquote ist unbekannt |
 | **B** Stationsstörungen | nichts | **nicht freigegeben** — die täglich ausführbare Regel reißt beide Hürden |
 
-> **Warum A1 nicht „in Betrieb" heißt, obwohl es 45 von 45 findet.** Diese Quote ist
+> **Warum A1 nicht „in Betrieb" heißt, obwohl es alle bekannten Fälle findet.** Diese Quote ist
 > **logisch zwingend**: Die Teilwahrheit ist über dieselbe Schwelle definiert, die Regel
 > prüft dasselbe. Was dabei geprüft wird, ist die Zeitrechnung im Notebook — nicht, ob im
 > Betrieb etwas funktioniert.
@@ -1700,17 +1707,28 @@ keine Schätzung.
 
 # Damit ist der Kreis geschlossen — über alle sechs Notebooks
 
-| | Verfahren | Zielgröße | Was am Ende herauskam |
+| | Verfahren | Zielgröße | Wonach gefragt wird |
 |---|---|---|---|
-| 1 | Regression | eine Zahl | Preisanzeige — freigegeben nur für CITY |
-| 2 | Klassifikation | eine Kategorie | Wartungsliste — und die Erkenntnis, dass Sachverstand das Verfahren schlug |
-| 3 | Clustering | keine | Vier Stationstypen, vier Kundensegmente — und eine falsch definierte Umsatzgröße |
-| 4 | Zeitreihe | eine Zahl, in der Zeit | Nachfrageprognose — mit ehrlichem Abschlag für die Wettervorhersage |
-| 5 | Assoziation | keine | **Keine Regel freigegeben** — und eine getrennte explorative Folgeanalyse zu Stationssalden und Abstell-Hotspots |
-| 6 | Anomalie | keine | Eine Regel spezifiziert, eine Tagesliste im Schattenbetrieb, eine Aufgabe nicht freigegeben — **nichts davon im Betrieb** |
+| 1 | Regression | eine Zahl | Wie lange dauert diese Fahrt? |
+| 2 | Klassifikation | eine Kategorie | Welche Räder prüfen wir als Nächstes? |
+| 3 | Clustering | keine | Welche Stationen und Kunden ähneln einander? |
+| 4 | Zeitreihe | eine Zahl, in der Zeit | Wie viele Fahrten kommen morgen? |
+| 5 | Assoziation | keine | Welche Wege treten gemeinsam auf? |
+| 6 | Anomalie | keine | Welche Vorgänge sehen falsch aus? |
 
-**Einmal Teilfreigabe, einmal Machbarkeitsindiz, dreimal Rücksprung, einmal
-Schattenbetrieb — und keine einzige uneingeschränkte Betriebsfreigabe.**
+**Diese Übersicht nennt bewusst keine Ergebnisse.** Sie stand hier früher mit Zahlen und
+Freigabestatus aller sechs Notebooks — und war regelmäßig veraltet, sobald eines davon neu
+gerechnet wurde. Eine Zusammenfassung, die Ergebnisse dupliziert, ist eine zweite Quelle
+neben der ersten, und zwei Quellen für dieselbe Zahl gehen irgendwann auseinander.
+
+**Was in jedem Notebook herauskam, steht in jedem Notebook** — in seiner eigenen
+Schlusszelle, aus seinen eigenen Variablen erzeugt. Lesen Sie es dort.
+
+Was sich dagegen über alle sechs sagen lässt, ohne zu veralten: **Kein einziges Verfahren
+ging uneingeschränkt in Betrieb.** Jedes endete mit einer Teilfreigabe, einem
+Machbarkeitsindiz, einem Rücksprung oder einem Schattenbetrieb — und in jedem Fall waren
+es nicht die Kennzahlen, die das entschieden haben, sondern die Frage, ob jemand mit dem
+Ergebnis verantwortlich handeln kann.
 
 Das ist keine schlechte Bilanz, sondern eine realistische. Analyseprojekte, in denen alles
 auf Anhieb funktioniert, gibt es in Lehrbüchern — und sonst nirgends.

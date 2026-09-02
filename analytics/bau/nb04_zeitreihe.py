@@ -500,10 +500,17 @@ def kosten(y_wahr, y_prognose):
 # passt, und berichtet ihn als Ergebnis. In einer frueheren Fassung
 # dieses Notebooks stand genau das - und der so gefundene Aufschlag ging
 # anschliessend in das Freigabekriterium ein.
+# DER SUCHRAUM MUSS DAS OPTIMUM ENTHALTEN, NICHT NUR BEGRENZEN.
+# Eine fruehere Fassung suchte bis 30 % und fand 30 % - also genau den
+# groessten geprueften Wert. Das ist kein gefundenes Optimum, sondern ein
+# Randminimum: Es sagt nur, dass es innerhalb der Grenze nicht besser ging.
+# Wer den Rand als Ergebnis berichtet, berichtet die Grenze des Suchraums.
 grund_val = kosten(y_val, prognose_val)
-aufschlaege = np.arange(0, 0.31, 0.02)
+aufschlaege = np.arange(0, 0.81, 0.02)
 kostenreihe = [kosten(y_val, prognose_val * (1 + a)) for a in aufschlaege]
-bester = aufschlaege[int(np.argmin(kostenreihe))]
+_i = int(np.argmin(kostenreihe))
+bester = aufschlaege[_i]
+AM_RAND = _i in (0, len(aufschlaege) - 1)
 
 plt.figure(figsize=(9, 4))
 plt.plot(aufschlaege * 100, kostenreihe, marker="o", color="#e00034")
@@ -518,6 +525,17 @@ print(f"Auf der VALIDIERUNG gewählt:")
 print(f"  ohne Aufschlag:  {grund_val:8,.0f} EUR".replace(",", "."))
 print(f"  mit {bester:.0%} Aufschlag: {min(kostenreihe):8,.0f} EUR".replace(",", "."))
 print(f"  Ersparnis:       {grund_val - min(kostenreihe):8,.0f} EUR über 90 Tage".replace(",", "."))
+print(f"\\nSuchraum: {aufschlaege[0]:.0%} bis {aufschlaege[-1]:.0%} in "
+      f"{len(aufschlaege)} Schritten.")
+if AM_RAND:
+    print("ACHTUNG: Das Minimum liegt am RAND des Suchraums. Damit ist nicht")
+    print("gezeigt, dass dieser Aufschlag optimal ist - nur, dass es innerhalb")
+    print("der Grenze nicht besser ging. Der Suchraum gehoert erweitert.")
+else:
+    print("Das Minimum liegt INNERHALB des Suchraums - links und rechts davon")
+    print("wird es teurer. Das ist ein gefundenes Optimum, kein Randwert.")
+merke("aufschlag", bester); merke("aufschlag_am_rand", int(AM_RAND))
+merke("aufschlag_max", aufschlaege[-1])
 print(f"\\nDieser Aufschlag von {bester:.0%} wird jetzt UNVERAENDERT auf den Test angewendet -")
 print(f"zusammen mit dem auf der Validierung gewählten Modell ({gewaehlt_name}).")
 '''),

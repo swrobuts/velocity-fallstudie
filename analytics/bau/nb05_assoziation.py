@@ -281,8 +281,11 @@ CODE('''
 from scipy.stats import fisher_exact
 
 # Die Suchgrenze steht EINMAL - sie ist ein Filter vor jedem Kriterium und
-# entscheidet mit, was ueberhaupt sichtbar wird.
+# entscheidet mit, was ueberhaupt sichtbar wird. Die beiden Erfolgskriterien
+# aus Phase 1 stehen daneben, ebenfalls je einmal.
 MINDEST_SUPPORT = 0.005
+K1_SUPPORT = 0.01      # Erfolgskriterium 1: Anteil aller Warenkoerbe
+K2_LIFT = 1.3          # Erfolgskriterium 2: kontextbedingter Lift
 
 
 def regeln_finden(koerbe, kontextspalten, mindest_support=MINDEST_SUPPORT):
@@ -411,8 +414,8 @@ LIFT = "Lift (Kontext)"
 plt.scatter(regeln.Support * 100, regeln[LIFT], s=regeln.Konfidenz * 220,
             alpha=.55, color="#3d4b6b", edgecolor="none")
 plt.axvline(1.0, color="#e00034", ls="--", label="Kriterium 1: Support ≥ 1 %")
-plt.axhline(1.3, color="#8AB833", ls="--", label="Kriterium 2: Lift ≥ 1,3")
-brauchbar = regeln[(regeln.Support >= 0.01) & (regeln[LIFT] >= 1.3)
+plt.axhline(K2_LIFT, color="#8AB833", ls="--", label=f"Kriterium 2: Lift >= {K2_LIFT}")
+brauchbar = regeln[(regeln.Support >= K1_SUPPORT) & (regeln[LIFT] >= K2_LIFT)
                    & regeln["ziel_ist_station"]]
 plt.scatter(brauchbar.Support * 100, brauchbar[LIFT], s=brauchbar.Konfidenz * 220,
             alpha=.9, color="#e00034", edgecolor="none", label="erfüllt alle drei")
@@ -422,9 +425,10 @@ plt.legend(); plt.grid(alpha=.3)
 plt.tight_layout(); plt.show()
 
 print(f"Regeln insgesamt:                 {len(regeln)}")
-print(f"K1  Support ≥ 1 %:                {(regeln.Support >= 0.01).sum()}")
-print(f"K2  Lift (Kontext) ≥ 1,3:         {(regeln[LIFT] >= 1.3).sum()}")
+print(f"K1  Support ≥ {K1_SUPPORT:.0%}:                {(regeln.Support >= K1_SUPPORT).sum()}")
+print(f"K2  Lift (Kontext) ≥ {K2_LIFT}:       {(regeln[LIFT] >= K2_LIFT).sum()}")
 print(f"K3  Ziel ist eine Station:        {int(regeln['ziel_ist_station'].sum())}")
+merke("brauchbare_regeln", len(brauchbar))
 print(f"alle drei zusammen:               {len(brauchbar)}")
 
 # SIND DIE STARKEN REGELN ZUFALL? Pruefen statt behaupten.
@@ -496,15 +500,22 @@ print(f"\\nDie Regel mit dem groessten Support:")
 print(f"   {beste['wenn Start']} -> {beste['dann Ziel']}  ({beste.Kontext})")
 print(f"   Support {beste.Support:.4f} = {beste.Support * 100:.2f} %"
       f"   Lift (Kontext) {beste[LIFT]:.2f}   {int(beste.Fahrten)} Fahrten")
-print(f"   Zur Huerde von 1,00 % fehlen {(0.01 - beste.Support) * 100:.2f} Prozentpunkte.")
+# "Fehlen" gilt nur unterhalb der Huerde. Oberhalb ergaeben sich negative
+# fehlende Prozentpunkte - eine Formulierung, die es nicht gibt.
+_abstand_pp = (beste.Support - K1_SUPPORT) * 100
+_abstand_f = beste.Fahrten - K1_SUPPORT * len(koerbe)
+_wort = "ueberschreitet sie um" if _abstand_pp >= 0 else "verfehlt sie um"
+print(f"   Zur Huerde von {K1_SUPPORT:.2%}: {_wort} {abs(_abstand_pp):.2f} Prozentpunkte.")
 print()
 print("   DIESELBE HUERDE, IN BETRIEBSGROESSEN:")
 print(f"   Diese Regel umfasst {int(beste.Fahrten)} Fahrten in {werktage} Werktagen")
 print(f"   = {beste.Fahrten / werktage:.2f} Fahrten je Werktag.")
-print(f"   Die 1-%-Huerde verlangt {0.01 * len(koerbe) / werktage:.2f} Fahrten je Werktag.")
-print(f"   Der Abstand zur Huerde betraegt {(0.01 * len(koerbe) - beste.Fahrten):.0f} Fahrten")
-print(f"   in drei Jahren - rund {(0.01 * len(koerbe) - beste.Fahrten) / werktage * 100:.1f}")
-print("   Hundertstel einer Fahrt je Werktag.")
+print(f"   Die Huerde verlangt {K1_SUPPORT * len(koerbe) / werktage:.2f} Fahrten je Werktag.")
+print(f"   Der Abstand betraegt {abs(_abstand_f):.0f} Fahrten ueber den ganzen Zeitraum")
+print(f"   - rund {abs(_abstand_f) / werktage * 100:.1f} Hundertstel einer Fahrt je Werktag.")
+merke("top_support", beste.Support)
+merke("top_abstand_pp", _abstand_pp)
+_ = merke("k1_support", K1_SUPPORT)
 '''),
 
 MD("""
@@ -535,14 +546,14 @@ Für jede Regel steht eine Vierfeldertafel zur Verfügung: Fahrten ab dieser Sta
 diesem Fenster zu diesem Ziel, gegen alles andere. Fishers exakter Test beantwortet damit
 die Frage, ob eine solche Häufung bei Unabhängigkeit noch plausibel wäre.
 
-**Womit wird korrigiert?** Nicht mit 32. Die 32 Regeln sind das, was den Supportfilter
-überlebt hat — und dieser Filter ist **datenabhängig**, er hat also schon ausgewählt. Wer
+**Womit wird korrigiert?** Nicht mit der Zahl der gefundenen Regeln. Sie sind das, was
+den Supportfilter überlebt hat — und dieser Filter ist **datenabhängig**, er hat also schon ausgewählt. Wer
 danach korrigiert, korrigiert nur den Rest und rechnet sich die Familie klein. Durchsucht
 wurden **800** Kombinationen aus Tagesart, Fenster, Start und Ziel; mit 800 wird
 multipliziert (**Bonferroni-Korrektur**).
 
-**Alle zehn bestehen auch diesen strengeren Test**, der schwächste mit einem korrigierten
-p-Wert von **0,00230**.
+Wie viele der zehn diesen strengeren Test bestehen und wie hoch der schwächste
+korrigierte p-Wert ausfällt, steht in der Ausgabe oben.
 
 > **Was daraus folgt — und was nicht.** Die beobachteten Häufungen sind unter dem
 > gewählten Unabhängigkeitsmodell auch nach konservativer Korrektur statistisch auffällig.
@@ -567,27 +578,41 @@ gesetzt, stünden hier Regeln mit drei oder vier Fahrten und Lift-Werten jenseit
 und die wären dann tatsächlich meist Zufall. Die Untergrenze bei der Suche ist es, die
 den Merksatz hier entkräftet, nicht der Datensatz.
 
-### 5.2 Die brauchbaren Regeln — es gibt keine
+### 5.2 Die Regeln, die alle drei Kriterien nehmen
 """),
 
 CODE('''
 ergebnis = brauchbar.sort_values(["Kontext", LIFT], ascending=[True, False])
 print(ergebnis[anzeige].to_string(index=False) if len(ergebnis)
       else "(leer — keine Regel erfüllt alle drei Kriterien)")
+print()
+if len(ergebnis) == 0:
+    print("KEINE REGEL nimmt alle drei Huerden. Das ist ein Ergebnis, kein Fehler -")
+    print("aber es heisst auch: es gibt nichts auszuliefern.")
+else:
+    print(f"{len(ergebnis)} Regel(n) nehmen alle drei Huerden.")
+    print("Das ist NICHT dasselbe wie eine Betriebsfreigabe. Die Kriterien")
+    print("aus Phase 1 sind statistische Mindestanforderungen; ob sich eine")
+    print("Transporterfahrt lohnt, entscheiden Kosten, die wir nicht haben.")
 '''),
 
 MD("""
-Die Tabelle ist leer. **Keine einzige Regel erfüllt beide Schwellen aus Phase 1.**
+**{{brauchbare_regeln:.0f}} Regel(n) nehmen alle drei Hürden aus Phase 1.** Die
+supportstärkste — {{top_kontext}} von „{{top_start}}" nach „{{top_ziel}}" — erreicht
+{{top_support:.2%}} Support gegenüber der Hürde von {{k1_support:.0%}}.
 
-Und sie scheitert knapp: Die **supportstärkste** Regel — werktags früh vom Hauptbahnhof
-zum Hubland Campus — erreicht einen Support von 0,99 %.
+> **„Stärkste Regel" ist zweideutig, und die Zweideutigkeit ist folgenreich.** Den größten
+> **Lift** hat in aller Regel eine andere als den größten **Support** — die Tabelle in
+> Phase 4 zeigt beide Spalten nebeneinander. Welche Regel „stärker" ist, hängt allein
+> daran, welche Hürde man betrachtet. Wer das nicht dazusagt, kann sich nachträglich die
+> passende aussuchen.
 
-> **„Stärkste Regel" ist zweideutig, und die Zweideutigkeit ist hier folgenreich.** Den
-> größten **Lift** hat eine ganz andere: Dom → Juliuspromenade, mittags an freien Tagen,
-> mit 1,91 gegenüber 1,69. Den größten **Support** hat die Bahnhofsregel. Welche „stärker"
-> ist, hängt allein daran, welche Hürde man betrachtet — und an der Support-Hürde
-> scheitern beide. Zur Hürde von 1,00 % fehlt ihr **ein
-Hundertstel Prozentpunkt**, also rund fünf Fahrten in drei Jahren.
+> **Und die wichtigere Unterscheidung: Kriterium erfüllt heißt nicht freigegeben.** Die
+> Hürden aus Phase 1 sind statistische Mindestanforderungen — sie sagen, wann ein Muster
+> groß und deutlich genug ist, um überhaupt betrachtet zu werden. Ob sich für dieses
+> Muster ein Transporter in Bewegung setzt, ist eine wirtschaftliche Frage, und die
+> Kostengrößen dafür fehlen uns. Ein bestandenes Kriterium ist eine Eintrittskarte, keine
+> Entscheidung.
 
 ### Die Hürde misst nicht, was sie messen sollte
 
@@ -600,11 +625,11 @@ Warenkörben über drei Jahre**. Das sind zwei verschiedene Maßstäbe, und die 
 rechnet sie ineinander um:
 
 - Die supportstärkste Regel umfasst {{top_fahrten:,}} Fahrten.
-- Die Ein-Prozent-Hürde verlangt **0,69 Fahrten je Werktag**.
-- Der Abstand zwischen beiden beträgt **fünf Fahrten in drei Jahren**.
+- Was die Hürde in Fahrten je Werktag verlangt und wie weit die Regel davon entfernt ist,
+  rechnet die Zelle oben aus.
 
-**In der Sprache, in der das Kriterium begründet wurde, unterscheiden die beiden Zahlen
-nichts.** Eine Hürde, die zwischen 0,68 und 0,69 Fahrten je Werktag trennt, entscheidet
+**Der Punkt ist nicht die Richtung des Abstands, sondern seine Größe.** Eine Hürde, die
+in Betriebsgrößen um Hundertstel einer Fahrt je Werktag entscheidet, entscheidet
 über nichts Betriebliches — sie entscheidet über eine Stelle hinter dem Komma. Beide Werte
 liegen weit unterhalb dessen, was eine Transporterfahrt rechtfertigt.
 
@@ -652,7 +677,7 @@ print(f"Entdeckung:   bis {GRENZE.date()}   {len(entdeckung):,d} Fahrten".replac
 print(f"Bestaetigung: danach            {len(bestaetigung):,d} Fahrten\\n".replace(",", "."))
 
 r_ent = regeln_finden(entdeckung, ["tagesart", "fenster"])
-gewaehlt_ent = r_ent[(r_ent.Support >= 0.005) & (r_ent[LIFT] >= 1.3)]
+gewaehlt_ent = r_ent[(r_ent.Support >= MINDEST_SUPPORT) & (r_ent[LIFT] >= K2_LIFT)]
 
 # Im Bestaetigungszeitraum OHNE Supportfilter nachrechnen - wir wollen die
 # ausgewaehlten Regeln wiederfinden, nicht neu suchen.
@@ -742,7 +767,7 @@ print(f"Fahrten Hubland -> Hauptbahnhof  (werktags abends): {len(abends):>5d}")
 print()
 print(f"Personen mit Morgenfahrt:                           {morgens.kunde_id.nunique():>5d}")
 print(f"Personen mit Abendfahrt:                            {abends.kunde_id.nunique():>5d}")
-print(f"Personen, die IRGENDWANN in drei Jahren beides taten: {len(irgendwann):>4d}")
+print(f"Personen, die IRGENDWANN beides taten:               {len(irgendwann):>5d}")
 print(f"Hin- und Rückfahrt AM SELBEN TAG:                   {len(am_selben_tag):>5d}")
 print()
 merke("hin_fahrten", len(morgens)); merke("rueck_fahrten_paar", len(abends))
@@ -781,8 +806,8 @@ dieses Notebooks hat genau diese Zahl gedruckt und dazu geschrieben, die Deutung
 
 | Was gezählt wurde | Was daraus gelesen wurde |
 |---|---|
-| 49 Personen benutzten in drei Jahren *irgendwann* beide Richtungen | „49 Personen fahren hin und zurück" |
-| Über 1 000 Werktage hinweg, in beliebiger Kombination | ein täglicher Pendelweg |
+| {{personen_irgendwann:.0f}} Personen benutzten *irgendwann* beide Richtungen | „{{personen_irgendwann:.0f}} Personen fahren hin und zurück" |
+| Über alle Werktage hinweg, in beliebiger Kombination | ein täglicher Pendelweg |
 
 Zwischen beiden Sätzen liegt die **Tagesbindung** — und ohne sie zählt man Menschen, die
 im März einmal hin- und im Oktober einmal zurückgefahren sind, als Pendler.
@@ -798,21 +823,22 @@ Die Räder laufen am Campus auf, ganz gleich, wer sie dorthin gefahren hat. Die 
 für die Maßnahme nie nötig — nur für die Erzählung. Deshalb fällt sie auch ersatzlos
 weg.
 
-### 5.4 Das Urteil: keine Freigabe, und trotzdem kein Fehlschlag
+### 5.4 Das Urteil: Kriterien erfüllt, Freigabe trotzdem nicht
 
 | | |
 |---|---|
-| **Regeln gefunden** (ab 0,5 % Support) | 32 |
-| K1 — Support ≥ 1 % | 0 |
-| K2 — kontextbedingter Lift ≥ 1,3 | 9 |
-| K3 — Ziel ist eine konkrete Station | 16 |
-| **alle drei zusammen** | **0** |
-| **freigegeben** | **keine** |
+Die Zahlen dieser Übersicht stehen in der Kriterienausgabe in Phase 5 — lesen Sie sie
+dort, statt sie hier noch einmal zu tippen.
 
-Was folgt daraus? Drei Wege, und nur einer ist gangbar:
+Entscheidend ist die letzte Zeile: **Die Kriterien sind erfüllt, freigegeben ist
+trotzdem nichts.** Was fehlt, ist keine Statistik, sondern eine Kostengröße — was eine
+Transporterfahrt kostet und was ein leerer Stationsplatz kostet.
 
-1. **Die Hürde senken.** Verboten. Sie stand vor der Messung fest — auch jetzt, wo wir
-   wissen, dass sie auf der falschen Skala liegt.
+Was folgt daraus? Drei Wege:
+
+1. **Die Hürde nachträglich verschieben.** Verboten — in beide Richtungen. Sie stand vor
+   der Messung fest. Sie jetzt zu senken wäre Schönrechnen; sie jetzt zu erhöhen, weil
+   das Ergebnis unbequem ist, wäre dasselbe in Grün.
 2. **Regeln mit mehreren Bedingungen suchen** („Regen **und** Werktag **und** Bahnhof“).
    Das hilft hier **nicht**, und der Grund ist wichtig genug für einen eigenen Absatz.
 3. **Zurück zu Phase 1**, das Kriterium in Fahrten je Werktag neu formulieren und die
@@ -1344,8 +1370,8 @@ Räder stehen, aber nicht wo.
 ### 6.5 Überwachung — und zwar von dem, was tatsächlich läuft
 
 Eine frühere Fassung überwachte hier „Lift und Support der Leitregeln“. Das war
-unmöglich: **Es wurde keine einzige Regel freigegeben.** Man kann nicht überwachen, was
-nicht im Einsatz ist.
+unmöglich: **Freigegeben wurde keine Regel** — dass Kriterien erfüllt sind, macht eine
+Regel noch nicht zum Betriebsmittel. Man kann nicht überwachen, was nicht im Einsatz ist.
 
 Im Einsatz ist gar nichts — auch die Hotspot-Übersicht aus 6.3 ist explorativ. Was folgt,
 ist deshalb eine **Vorlage** für den Fall, dass daraus einmal ein Einsatz wird, keine
@@ -1397,7 +1423,7 @@ MD("""
 | 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren ({{anteil_rundtouren:.1%}} der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
-| 5 Evaluation | Von 32 Regeln nehmen 9 die Lift-Hürde, 16 haben eine Station als Ziel, aber **keine** nimmt die Support-Hürde. Die stärkste verfehlt sie um fünf Fahrten in drei Jahren — und die Hürde wird trotzdem nicht gesenkt, obwohl sich zeigt, dass sie auf der falschen Skala liegt. Die Deutung des Pendelstroms wurde von der tagesgenauen Gegenprobe **widerlegt**: null Hin- und Rückfahrten am selben Tag |
+| 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen alle drei Hürden — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sich zeigt, dass sie auf der falschen Skala liegt: Sie entscheidet in Betriebsgrößen um Hundertstel einer Fahrt je Werktag. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — {{personen_selber_tag:.0f}} Fälle bei {{rueck_fahrten_paar:.0f}} Abendfahrten |
 | 6 Deployment | **Keine Freigabe** — Phase 6 ist eine eigene explorative Auswertung, die mit keiner Regel rechnet. Der Langfristmittelwert zeigte 1,75 Räder je Werktag; je Tag gerechnet sind es 19,8 bei Ausgleich nach jedem Fenster und 11,1 am Tagesende. Beides sind Ungleichgewichte, kein Bedarf. Die Abstell-Hotspots sind über die **End**koordinaten verortet — bei 87 % ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
