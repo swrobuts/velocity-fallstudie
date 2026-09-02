@@ -952,12 +952,14 @@ Citybike 0,10 €: Ein Euro Spielraum sind dort zwei Minuten, hier zehn.
 | **nützt** | Die Spanne umfasst höchstens **12 Minuten** *und* höchstens **60 %** des angezeigten Preises, sonst zeigt die App nichts |
 | **gemessen auf** | **Test 2** — dem Zeitraum, den bis hierher nichts berührt hat |
 
-### 5.6 Welches Artefakt? Zwei Kandidaten, ehrlich verglichen
+### 5.6 Welches Artefakt? Drei Kandidaten, ehrlich verglichen
 
-Für die Spanne gibt es zwei Wege, und sie führen zu **zwei verschiedenen Produkten**:
-eine Quantilregression, die für jede Anfrage rechnet, oder eine Tabelle aus historischen
-Perzentilen, die nachschlägt. Beide werden auf demselben Kriterium gemessen, bevor
-entschieden wird.
+Für die Spanne gibt es drei Wege, und sie führen zu **drei verschiedenen Produkten**:
+eine Quantilregression, die für jede Anfrage rechnet; eine Tabelle aus historischen
+Perzentilen, die nachschlägt; und die Vorhersagen der Quantilregression, einmal vorab
+ausgerechnet und ebenfalls als Tabelle abgelegt. Alle drei werden auf demselben
+Kriterium gemessen, bevor entschieden wird — und mit **derselben Anzeigelogik**: ganze
+Minuten, daraus der Preis, daraus die Breitenregel.
 """),
 
 CODE("""
@@ -1179,13 +1181,21 @@ zukunft["p_ist"] = zukunft.entgelt_eur
 # AUFGABE: Aus einer Spanne in Minuten wird eine Spanne in Euro, und
 # daraus die Frage, ob der tatsaechliche Preis darin liegt.
 ##LUECKE Zwei Preisgrenzen je Fahrt, dann der Vergleich.
+def anzeigeminuten(spalte):
+    # EINE Stelle rundet. Die App zeigt ganze Minuten; alles, was danach
+    # geprueft oder gerechnet wird - Preis UND Breitenregel -, muss von
+    # diesen Werten ausgehen. Eine fruehere Fassung rundete nur fuer den
+    # Preis und pruefte die Breite auf den ungerundeten Modellwerten: zwei
+    # Anzeigelogiken fuer dieselbe Anzeige.
+    return zukunft[spalte].round()
+
+
 def preisspanne(u, o):
-    # Je Fahrt mit dem TARIF DIESES KUNDEN gerechnet, aus den GERUNDETEN
-    # Minuten: bewertet wird, was die App anzeigen wuerde.
+    # Je Fahrt mit dem TARIF DIESES KUNDEN, aus den ANGEZEIGTEN Minuten.
     def euro(spalte):
         return pd.Series(
-            [kundenpreis(round(m), ty, r, ra) if pd.notna(m) else np.nan
-             for m, ty, r, ra in zip(zukunft[spalte], zukunft.typ_code,
+            [kundenpreis(m, ty, r, ra) if pd.notna(m) else np.nan
+             for m, ty, r, ra in zip(anzeigeminuten(spalte), zukunft.typ_code,
                                      zukunft.freiminuten_rest,
                                      zukunft.rabatt_prozent)],
             index=zukunft.index)
@@ -1230,7 +1240,9 @@ def bewerten(name, u, o):
     da = zukunft[o].notna()
     von, bis = preisspanne(u, o)
     drin = (zukunft.p_ist >= von - 0.001) & (zukunft.p_ist <= bis + 0.001)
-    zeigbar = da & spanne_nuetzt(zukunft[u], zukunft[o], von, bis)
+    # Breitenregel auf den ANGEZEIGTEN Minuten - denselben, aus denen der
+    # Preis gebildet wurde.
+    zeigbar = da & spanne_nuetzt(anzeigeminuten(u), anzeigeminuten(o), von, bis)
     # Ueber ALLE Radtypen des Datensatzes, nicht nur ueber die angezeigten.
     # Sonst verschwindet ein Radtyp, fuer den ein Kandidat nie antwortet,
     # einfach aus der Bewertung - und der Kandidat besteht, weil er schweigt.
@@ -1367,49 +1379,49 @@ gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolg
 > sagt nur nichts. Die Reichweite je Radtyp gehört deshalb mit hinein, **festgelegt vor
 > der Messung**, und ein Radtyp ohne einzige Auskunft zählt als null, nicht als fehlend.
 
-**Warum trotzdem die Tabelle?** Nicht wegen der Güte — die spricht für das Modell.
-Sondern weil die App eine statische Seite ohne Python ist und kein Modell laden kann.
+### Die Architekturvorgabe steht vor der Kandidatenwahl
 
-Beide erfüllen das Kriterium, also entscheidet die Betriebsfähigkeit — nicht die Güte.
-Das ist ein Argument, das man aussprechen muss: Wir liefern **nicht** das bessere
-Verfahren aus, sondern das lauffähige.
+**Bevor irgendein Kandidat gewählt wird, muss feststehen, was betrieben werden darf.**
+Diese Reihenfolge ist nicht Formalie: Wer zuerst misst und dann entscheidet, was
+betreibbar ist, wählt die Vorgabe, die zum gewünschten Kandidaten passt.
 
-Weitere Unterschiede:
+Die Vorgabe des Auftraggebers lautet: **Die Preisauskunft ist eine statische Seite ohne
+Python.** Kein Laufzeitdienst, kein Modell, das geladen wird — eine Datei, die
+ausgeliefert und gelesen wird.
 
-| | Quantilregression | Perzentiltabelle |
-|---|---|---|
-| kann eine **neue** Verbindung einschätzen | technisch ja, solange Routendaten vorliegen — für ungesehene Stationen aber nicht validiert | nein |
-| ist ohne Python lauffähig | nein | ja |
-| ist von Hand prüfbar | nein | ja |
-| berücksichtigt Wochentag und Saison | ja | nein |
+| | Quantilregression | Perzentiltabelle | Quantiltabelle |
+|---|---|---|---|
+| Primärgate | **{{quantil_gate:.1%}}** ✓ | {{tabelle_gate:.1%}} ✗ | {{qtab_gate:.1%}} ✗ |
+| ohne Laufzeitdienst betreibbar | **nein** | ja | ja |
+| von Hand nachprüfbar | nein | ja | nein |
+| kennt Wochentag und Saison | ja | nein | nein |
 
-**Als Kandidat vorgesehen ist die Perzentiltabelle** — eingeschränkt auf den Bereich, in
-dem sie messbar trägt, und mit dem Schweigen als Preis. Ob daraus ein Produkt wird,
-entscheidet das Primärgate in 6.4c, nicht dieser Abschnitt. Zwei Gründe für die Wahl:
+**Damit ist das Ergebnis unbequem und eindeutig:** Der einzige Kandidat, der das
+Primärgate nimmt, ist der einzige, der unter dieser Architekturvorgabe **nicht** betrieben
+werden darf. Die beiden betreibbaren Kandidaten fallen am Gate durch.
 
-1. Die App ist statisch und kann kein Modell laden.
-2. Eine Auskunft, der jemand mit Ortskenntnis widersprechen kann, ist im Betrieb mehr
-   wert als eine, die man glauben muss.
+> **Unter der geltenden Vorgabe besteht derzeit kein zulässiger Kandidat.**
+>
+> Das ist keine Formulierungsfrage. Ein durchgefallenes Verfahren wird nicht dadurch
+> freigabefähig, dass es leichter zu betreiben ist. Die Perzentiltabelle bleibt deshalb
+> ein **gesperrtes Diagnoseartefakt** — sie wird gebaut, geprüft und beschrieben, damit
+> die nächste Runde darauf aufsetzen kann, aber sie ist kein „vorgesehener Kandidat".
 
-> **Und der Preis dafür steht in den Zahlen:** Die Tabelle antwortet auf
-> {{tabelle_auskunft:.1%}} der Anfragen, die Quantilregression auf
-> {{quantil_auskunft:.1%}} — beide für jeden Radtyp, die Tabelle nur seltener. Wir
-> liefern den schwächeren Kandidaten aus, weil der stärkere nicht dorthin passt, wo er
-> laufen müsste.
+**Zwei Wege führen weiter, und beide gehören dem Auftraggeber, nicht der Analyse:**
 
-**Es gäbe einen dritten Weg, und er ist die nächste Runde:** die Vorhersagen des Modells
-für jede Kombination aus Verbindung, Radtyp und Tageszeit **vorab ausrechnen und
-tabellieren**. Dann liefe im Betrieb wieder nur eine Tabelle, gefüllt aber aus dem
-besseren Verfahren. Der Preis wäre, dass die Zeilen nicht mehr für sich sprechen — man
-kann eine Modellvorhersage nicht mehr nachrechnen, indem man in die Historie sieht.
+1. **Die Architekturvorgabe ändern.** Wird ein Laufzeitdienst zugelassen, ist die
+   Quantilregression der Hauptkandidat — dann braucht sie einen eigenen App-Pfad und
+   muss mit *exakt* ihrer Anzeigelogik neu bewertet werden, nicht mit der Tabellenlogik.
+2. **Bei der statischen Vorgabe bleiben.** Dann ist die nächste Runde nicht die Wahl
+   zwischen den vorhandenen Kandidaten, sondern die Frage, wie eine statische Tabelle
+   besser wird: feinere Schlüssel, mehr Beobachtungen je Zeile, kalibrierte Intervalle.
 
-Diese Abwägung — nachvollziehbar gegen treffsicher — gehört dem Auftraggeber, nicht der
-Analyse. Sie ist hier ausdrücklich als offen vermerkt.
+Die Quantiltabelle war der Versuch, beides zu bekommen. Sie ist gebaut und gemessen — und
+sie liegt am Gate unter beiden anderen. Als „nächster Schritt" taugt sie damit nicht
+mehr; sie ist ein **geprüfter und verworfener** Weg. Was sie zeigt, ist der Grund für ihr
+Scheitern: Eine Kombination aus Verbindung, Radtyp und Tageszeit ist zu grob, um die
+Merkmale zu tragen, aus denen das Modell seine Güte zieht.
 
-Und damit ist auch die Behauptung vom Tisch, das Modell werde wegen seiner
-Verallgemeinerung auf neue Stationen gebraucht: Die Tabelle kann das nicht, und sie
-verweigert die Auskunft in genau diesem Fall — was ehrlicher ist als eine Vorhersage aus
-einem Nullvektor.
 
 > **Das ist kein analytisches Scheitern.** Der Nachweis, dass eine durchschaubare Tabelle
 > für den konkreten Zweck genügt, ist ein Ergebnis. Zum zweiten Mal in dieser Fallstudie
@@ -2154,54 +2166,6 @@ App-Funktion gibt zu jeder Antwort `status` und die Zahl der Prüffahrten zurüc
 einer Statistik behelligt wird. Was die Oberfläche zeigt, ist für alle Klassen gleich —
 was das Unternehmen darüber weiß, nicht.
 
-### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
-
-Die Handlungsschwellen sind am Erfolgskriterium ausgerichtet: Wer bei 80 Prozent
-freigibt, darf nicht erst bei 60 Prozent eingreifen — sonst bliebe eine bereits
-gescheiterte Kombination weiter in der App.
-
-| Auslöser | Schwelle | Handlung |
-|---|---|---|
-| Abdeckung je Kombination, gleitend über 8 Wochen | **untere** Vertrauensgrenze ≥ 80 % | anzeigen |
-| | Intervall überlappt 80 % | anzeigen, aber Warnung und Neuberechnung |
-| | **obere** Vertrauensgrenze < 80 % | **Kombination abschalten** |
-| Fallzahl je Kombination | < 20 im Fenster | keine eigene Aussage; es gilt die aggregierte Zusage je Radtyp |
-| neue Station | — | keine Zeile, also keine Anzeige |
-| **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |
-| Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
-
-Die drei Fälle schließen einander aus und decken alles ab — daran war die vorige Fassung
-gescheitert: Bei 78 % gemessener Abdeckung trafen „Warnung" und „Abschalten" gleichzeitig
-zu, und es stand nirgends, welche Regel gewinnt.
-
-Maßgeblich ist jetzt das **Wilson-Intervall zum Niveau 95 %**, nicht der Schätzwert:
-
-- Liegt schon die untere Grenze bei 80 % oder darüber, ist die Kombination belegt.
-- Überlappt das Intervall die 80 %, wissen wir es nicht — dann wird angezeigt und
-  gewarnt. Bei 200 Fahrten und 78 % gemessener Abdeckung ist das der Fall.
-- Liegt die **obere** Grenze unter 80 %, ist die Kombination widerlegt und wird
-  abgeschaltet.
-
-So entscheidet nicht eine gesetzte Ersatzschwelle, sondern die Frage, ob die Daten für
-eine Aussage überhaupt reichen. Wer schneller abschalten will, braucht mehr Fahrten je
-Fenster, keine andere Zahl.
-### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
-
-Was dieses Notebook „Test 2“ nennt, ist ein **rückblickender Test auf vergangenen
-Daten**. Ein Schattenbetrieb ist etwas anderes:
-
-1. Tabelle zu einem Stichtag einfrieren.
-2. In der App das **geplante** Ziel vor dem Entsperren speichern.
-3. Schätzung berechnen, aber nicht anzeigen.
-4. Nach der Fahrt tatsächliches Ziel, Dauer und Preis ergänzen.
-5. Geplantes gegen tatsächliches Ziel vergleichen — das ist der Test der Annahme aus dem
-   Kasten ganz oben.
-6. Abdeckung, Breite, Reichweite und Ablehnungsgründe je Verbindung auswerten.
-7. Erst danach sichtbar schalten.
-
-Punkt 2 und 5 sind der Kern. Ohne sie bleibt die Grundannahme dieses Notebooks ungeprüft.
-
-
 ### 6.4c Das Primärgate — und warum es nicht hält
 
 In 6.1 haben wir die **vorab preisabhängige Gruppe** zur entscheidenden
@@ -2256,6 +2220,54 @@ Notebook-Übung:
    in Reichweite ausweisen. Das ist eine Produktentscheidung, keine statistische.
 3. Oder die Zusage senken — dann aber ausdrücklich und mit neuer Zahl, nicht durch
    Wegsehen.
+
+
+### 6.5 Überwachung — mit Grenzen, die zum Kriterium passen
+
+Die Handlungsschwellen sind am Erfolgskriterium ausgerichtet: Wer bei 80 Prozent
+freigibt, darf nicht erst bei 60 Prozent eingreifen — sonst bliebe eine bereits
+gescheiterte Kombination weiter in der App.
+
+| Auslöser | Schwelle | Handlung |
+|---|---|---|
+| Abdeckung je Kombination, gleitend über 8 Wochen | **untere** Vertrauensgrenze ≥ 80 % | anzeigen |
+| | Intervall überlappt 80 % | anzeigen, aber Warnung und Neuberechnung |
+| | **obere** Vertrauensgrenze < 80 % | **Kombination abschalten** |
+| Fallzahl je Kombination | < 20 im Fenster | keine eigene Aussage; es gilt die aggregierte Zusage je Radtyp |
+| neue Station | — | keine Zeile, also keine Anzeige |
+| **Tarif ändert sich** | Minutenpreis neu | **gesamte Tabelle neu rechnen** — sie enthält Euro |
+| Quartalswechsel | — | neu rechnen; im Winter sind die Ausflugsfahrten kürzer |
+
+Die drei Fälle schließen einander aus und decken alles ab — daran war die vorige Fassung
+gescheitert: Bei 78 % gemessener Abdeckung trafen „Warnung" und „Abschalten" gleichzeitig
+zu, und es stand nirgends, welche Regel gewinnt.
+
+Maßgeblich ist jetzt das **Wilson-Intervall zum Niveau 95 %**, nicht der Schätzwert:
+
+- Liegt schon die untere Grenze bei 80 % oder darüber, ist die Kombination belegt.
+- Überlappt das Intervall die 80 %, wissen wir es nicht — dann wird angezeigt und
+  gewarnt. Bei 200 Fahrten und 78 % gemessener Abdeckung ist das der Fall.
+- Liegt die **obere** Grenze unter 80 %, ist die Kombination widerlegt und wird
+  abgeschaltet.
+
+So entscheidet nicht eine gesetzte Ersatzschwelle, sondern die Frage, ob die Daten für
+eine Aussage überhaupt reichen. Wer schneller abschalten will, braucht mehr Fahrten je
+Fenster, keine andere Zahl.
+### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
+
+Was dieses Notebook „Test 2“ nennt, ist ein **rückblickender Test auf vergangenen
+Daten**. Ein Schattenbetrieb ist etwas anderes:
+
+1. Tabelle zu einem Stichtag einfrieren.
+2. In der App das **geplante** Ziel vor dem Entsperren speichern.
+3. Schätzung berechnen, aber nicht anzeigen.
+4. Nach der Fahrt tatsächliches Ziel, Dauer und Preis ergänzen.
+5. Geplantes gegen tatsächliches Ziel vergleichen — das ist der Test der Annahme aus dem
+   Kasten ganz oben.
+6. Abdeckung, Breite, Reichweite und Ablehnungsgründe je Verbindung auswerten.
+7. Erst danach sichtbar schalten.
+
+Punkt 2 und 5 sind der Kern. Ohne sie bleibt die Grundannahme dieses Notebooks ungeprüft.
 
 
 """),
@@ -2319,9 +2331,12 @@ Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
 6. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
 7. **Die Punktschätzung trägt {{typen_reissen}} nicht.** Für diesen Radtyp gibt es
    nur die Spanne, keine Zahl — der Minutenpreis lässt keine engere Zusage zu.
-8. **Der bessere Kandidat wird nicht ausgeliefert.** Die Quantilregression erfüllt das
-   Kriterium und antwortet häufiger; ausgeliefert wird die Tabelle, weil die App statisch
-   ist. Ihre Vorhersagen vorab zu tabellieren wäre der nächste Schritt.
+8. **Der einzige Kandidat, der das Gate nimmt, darf nicht betrieben werden.** Die
+   Quantilregression erfüllt als einzige das vollständige Kriterium — sie braucht aber
+   einen Laufzeitdienst, den die Architekturvorgabe ausschließt. Beide statischen
+   Tabellen fallen am Primärgate durch, auch die aus den Modellvorhersagen gebaute.
+   **Unter der geltenden Vorgabe besteht derzeit kein zulässiger Kandidat**, und deshalb
+   wird nichts freigegeben.
 
 **Weiter geht es mit Notebook 2 — Klassifikation:** Dort ist die Zielgröße keine Zahl
 mehr, sondern eine Entscheidung, und die beiden Fehlerarten sind unterschiedlich teuer.

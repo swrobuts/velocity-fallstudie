@@ -955,11 +955,59 @@ positive = merke("positive_im_test", int(y_test.sum()))
 # Wie viele der auffaelligen Raeder sind wirklich fahruntauglich? Die
 # Kostenmatrix behandelt leicht und schwer gleich - hier steht, wie stark
 # diese Vereinfachung vereinfacht.
-_schwer = schaeden[(schaeden.gemeldet_am > letzter)
-                   & (schaeden.gemeldet_am <= letzter + pd.Timedelta(days=HORIZONT_TAGE))
-                   & (schaeden.schwere == "fahruntauglich")].fahrrad_id.nunique()
+# NUR RAEDER DER TESTPOPULATION. Eine fruehere Fassung zaehlte alle Raeder
+# mit schwerer Meldung im Fenster und teilte durch die 127 positiven
+# TESTraeder - Zaehler und Nenner kamen aus verschiedenen Mengen. Zwei davon
+# gehoerten gar nicht zur Prognosepopulation.
+_im_test = set(test_zeilen.fahrrad_id)
+_schwere_meldungen = schaeden[
+    (schaeden.gemeldet_am > letzter)
+    & (schaeden.gemeldet_am <= letzter + pd.Timedelta(days=HORIZONT_TAGE))
+    & (schaeden.schwere == "fahruntauglich")
+    & schaeden.fahrrad_id.isin(_im_test)]
+_schwer_ids = set(_schwere_meldungen.fahrrad_id)
+_schwer = len(_schwer_ids)
 merke("positive_fahruntauglich", _schwer)
 merke("anteil_fahruntauglich", _schwer / positive)
+
+# ─── GEGENRECHNUNG: DAS ENGERE ZIEL ─────────────────────────────────
+# Vorhergesagt wird "irgendeine Meldung". Fuer die Werkstatt ist das nicht
+# dasselbe wie "faellt aus". Dieselben beiden Ranglisten, gegen das engere
+# Ziel gemessen - ohne dass eines der Verfahren darauf trainiert waere.
+y_schwer = np.array([1 if fid in _schwer_ids else 0
+                     for fid in test_zeilen.fahrrad_id])
+print("\\nGEGENRECHNUNG - dasselbe Ranking, engeres Ziel 'fahruntauglich':")
+print(f"   {'Verfahren':32s}{'Treffer':>9s}{'Precision@' + str(KAPAZITAET):>14s}"
+      f"{'Recall':>9s}")
+_schwer_treffer = {}
+for _name, _score in [("Faustregel: km seit Reparatur", p_regel),
+                      ("Modell: Random Forest", p_wald)]:
+    _liste = np.zeros(len(y_schwer), dtype=bool)
+    _liste[np.argsort(-_score)[:KAPAZITAET]] = True
+    _tr = int(y_schwer[_liste].sum())
+    _schwer_treffer[_name] = _tr
+    print(f"   {_name:32s}{_tr:>9d}{_tr / KAPAZITAET:>13.1%}"
+          f"{_tr / max(_schwer, 1):>9.1%}")
+_kurz = {"Faustregel: km seit Reparatur": "regel", "Modell: Random Forest": "wald"}
+for _n, _k in _kurz.items():
+    merke("schwer_treffer_" + _k, _schwer_treffer[_n])
+_vorn = max(_schwer_treffer, key=_schwer_treffer.get)
+merke("schwer_vorn", _vorn)
+print()
+if _schwer_treffer["Modell: Random Forest"] > _schwer_treffer["Faustregel: km seit Reparatur"]:
+    print("   Beim engeren Ziel liegt das MODELL vorn - bei umgekehrter Reihenfolge")
+    print("   gegenueber dem breiten Ziel. Das ist kein Beleg fuer eine Freigabe:")
+    print("   ein Testquartal, und trainiert wurde auf dem breiten Label. Es zeigt")
+    print("   aber, dass die Verfahrensrangfolge an der ZIELDEFINITION haengt.")
+elif _schwer_treffer["Modell: Random Forest"] < _schwer_treffer["Faustregel: km seit Reparatur"]:
+    print("   Auch beim engeren Ziel liegt die REGEL vorn. Die Rangfolge dreht")
+    print("   sich hier also nicht - was sie bei anderer Datenlage koennte.")
+else:
+    print("   Beim engeren Ziel treffen beide gleich oft.")
+print()
+print("   Die Kostenmatrix behandelt leicht und schwer gleich. Solange das so")
+print("   ist, optimiert das Verfahren auf das breite Ziel - auch wenn die")
+print("   Werkstatt das engere meint.")
 for name, score in [("Faustregel: km seit Reparatur", p_regel),
                     ("Modell: Random Forest", p_wald)]:
     e = liste_bewerten(name, score, y_test)
