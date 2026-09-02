@@ -24,11 +24,18 @@
     "CITY",
     "EBIKE"
   ],
-  "produktstatus": "schatten",
+  "produktstatus": "sichtbar",
   "gate_schwelle": 0.8,
-  "gate_untergrenze": 0.8223052585358098,
-  "gueltig_ab": "2026-04-24",
-  "gueltig_bis": "2026-08-24",
+  "gate_untergrenze": 0.8188186501557527,
+  "kalibrierungszeitraum_von": "2026-04-24",
+  "kalibrierungszeitraum_bis": "2026-06-29",
+  "abnahmezeitraum_von": "2026-06-29",
+  "abnahmezeitraum_bis": "2026-08-24",
   "max_fahrtdauer_minuten": 480,
-  "gebaut_am": "2026-09-02"
+  "gebaut_am": "2026-09-02",
+  "statusgrund": "freigegeben",
+  "abnahme_untergrenze": 0.8118205969632262,
+  "abnahme_bestanden": true,
+  "operativ_gueltig_ab": "2026-09-02",
+  "operativ_gueltig_bis": "2026-12-01"
 }

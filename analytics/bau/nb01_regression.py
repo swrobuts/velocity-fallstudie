@@ -464,9 +464,9 @@ belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 | **Training** (60 %) | das Modell lernt | die ältesten Fahrten |
 | **Validierung** (15 %) | wir *wählen* Verfahren und Einstellungen | mittlerer Zeitraum |
 | **Test 1** (12,5 %) | die Punktschätzung wird *einmal* gemessen | danach verbraucht |
-| **Test 2** (12,5 %) | die zweite Runde wird darauf **kalibriert und freigegeben** | kein Training — aber Auswahl und Filterung |
+| **Kalibrierung** (12,5 %) | die zweite Runde wird darauf **kalibriert und freigegeben** | kein Training — aber Auswahl und Filterung |
 
-> **Test 2 ist kein finaler Test, sondern ein Kalibrierungszeitraum.** Auf ihm wird das
+> **Kalibrierung ist kein finaler Test, sondern ein Kalibrierungszeitraum.** Auf ihm wird das
 > Artefakt ausgewählt, über Radtypen entschieden und über einzelne Kombinationen
 > entschieden. Wer daraufhin Kennzahlen berichtet, berichtet die Güte einer Auswahl, die
 > auf ebendiesen Daten getroffen wurde — sie fällt zu günstig aus.
@@ -477,39 +477,56 @@ belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 >
 > ```text
 > Training → Validierung → Test 1: Punktschätzung
->          → Rücksprung  → Test 2: Kalibrierung und Freigabe des Intervallprodukts
+>          → Rücksprung  → Kalibrierung: Kalibrierung und Freigabe des Intervallprodukts
 >          → Schattenbetrieb: finale, unabhängige Prüfung
 > ```
 """),
 
 CODE("""
 d = d.sort_values("startzeit").reset_index(drop=True)
-ANTEILE = [0.60, 0.75, 0.875]
-g1, g2, g3 = d.startzeit.quantile(ANTEILE)
+# FUENF ABSCHNITTE, NICHT VIER - UND DER LETZTE WIRD NICHT ANGEFASST.
+#
+# Eine fruehere Fassung hatte vier: Training, Validierung, Test 1 und
+# einen letzten Abschnitt, der zugleich die Spannen KALIBRIERTE und sie
+# FREIGAB. Das geht nicht. Wer auf denselben Daten einstellt und prueft,
+# prueft, ob sich das Verfahren an seine eigene Einstellung erinnert.
+#
+# Der letzte Abschnitt ist deshalb halbiert:
+#   Kalibrierung - hier werden Tabelle, Filter und Gates eingestellt
+#   Abnahme      - unangetastet; hier faellt das Urteil ueber das Produkt
+#
+# Die Abnahme wird in 6.7 EINMAL geoeffnet, mit der fertigen
+# Schnittstelle, und danach nicht mehr angefasst.
+ANTEILE = [0.60, 0.75, 0.875, 0.9375]
+g1, g2, g3, g4 = d.startzeit.quantile(ANTEILE)
 print(f"Aufgeteilt nach Zeit: {ANTEILE[0]:.0%} Training, "
       f"{ANTEILE[1]-ANTEILE[0]:.1%} Validierung, "
-      f"{ANTEILE[2]-ANTEILE[1]:.1%} Test 1, {1-ANTEILE[2]:.1%} Test 2\\n")
+      f"{ANTEILE[2]-ANTEILE[1]:.1%} Test 1, "
+      f"{ANTEILE[3]-ANTEILE[2]:.2%} Kalibrierung, "
+      f"{1-ANTEILE[3]:.2%} Abnahme\\n")
 
 training    = d[d.startzeit <  g1]
 validierung = d[(d.startzeit >= g1) & (d.startzeit < g2)]
 test1       = d[(d.startzeit >= g2) & (d.startzeit < g3)]
-test2       = d[d.startzeit >= g3]
+kalib       = d[(d.startzeit >= g3) & (d.startzeit < g4)]
+abnahme     = d[d.startzeit >= g4]
 
 for name, teil in (("Training", training), ("Validierung", validierung),
-                   ("Test 1 (Punkt)", test1), ("Test 2 (Spanne)", test2)):
+                   ("Test 1 (Punkt)", test1), ("Kalibrierung (Spanne)", kalib),
+                   ("Abnahme (unberuehrt)", abnahme)):
     print(f"{name:16} {len(teil):>7,} Fahrten   "
           f"{teil.startzeit.min():%d.%m.%Y} bis {teil.startzeit.max():%d.%m.%Y}")
 print()
-print(f"Test 1 reicht von {test1.startzeit.min():%m/%Y} bis {test1.startzeit.max():%m/%Y}, Test 2 ist Sommer.")
+print(f"Test 1 reicht von {test1.startzeit.min():%m/%Y} bis {test1.startzeit.max():%m/%Y}, Kalibrierung ist Sommer.")
 print("Dass die beiden")
 print("Zeiträume verschiedene Jahreszeiten sind, ist kein Zufall der Aufteilung,")
 print("sondern eine Eigenschaft der Daten - und sie wird uns beschäftigen.")
 print()
 print("ZWEIERLEI IST DABEI ZU BEACHTEN:")
 print("1. Die Erkundung in Phase 2 lief ueber den GESAMTEN Datensatz, also auch")
-print("   ueber Test 2. Trainiert wurde dort nie, aber blind sind wir ihm")
+print("   ueber Kalibrierung. Trainiert wurde dort nie, aber blind sind wir ihm")
 print("   gegenueber auch nicht.")
-print("2. Test 2 traegt in Phase 6 die Auswahl des Artefakts und die Freigabe.")
+print("2. Kalibrierung traegt in Phase 6 die Auswahl des Artefakts und die Freigabe.")
 print("   Er ist damit ein KALIBRIERUNGSZEITRAUM, kein unabhaengiger Endtest.")
 print("   Den kann erst der Schattenbetrieb liefern.")
 """),
@@ -849,7 +866,7 @@ Quartal aussieht. Ein Kriterium, das nur in einer Jahreszeit hält, wäre keine 
 also prüfen wir es über mehrere.
 
 Wir prüfen das **innerhalb** von Training und Validierung: Test 1 ist verbraucht, und
-Test 2 wurde bis hierher weder zum Anpassen noch zum Auswählen verwendet. Völlig blind
+Kalibrierung wurde bis hierher weder zum Anpassen noch zum Auswählen verwendet. Völlig blind
 ist er trotzdem nicht — die Erkundung in Phase 2 hat den gesamten Datensatz gesehen.
 Er wird ab Phase 5.6 für die zweite Runde gebraucht.
 """),
@@ -978,7 +995,7 @@ Citybike 0,10 €: Ein Euro Spielraum sind dort zwei Minuten, hier zehn.
 |---|---|
 | **trifft** | Die angezeigte Spanne enthält den tatsächlichen Preis in mindestens **80 %** der Fälle — insgesamt *und* je Radtyp |
 | **nützt** | Die Spanne umfasst höchstens **12 Minuten** *und* höchstens **60 %** des angezeigten Preises, sonst zeigt die App nichts |
-| **gemessen auf** | **Test 2** — dem Zeitraum, den bis hierher nichts berührt hat |
+| **gemessen auf** | **Kalibrierung** — dem Zeitraum, den bis hierher nichts berührt hat |
 
 ### 5.6 Welches Artefakt? Drei Kandidaten, ehrlich verglichen
 
@@ -993,11 +1010,11 @@ Minuten, daraus der Preis, daraus die Breitenregel.
 CODE("""
 from sklearn.ensemble import GradientBoostingRegressor
 
-# Alles, was VOR Test 2 liegt, darf jetzt in die Lernmenge - Test 2 ist
+# Alles, was VOR Kalibrierung liegt, darf jetzt in die Lernmenge - Kalibrierung ist
 # der unberuehrte Zeitraum dieser zweiten Runde.
 basis = pd.concat([training, validierung, test1])
 # Rundtouren sind schon in Phase 2.3 ausgeschieden - hier bleibt nichts zu filtern.
-zukunft = test2.copy()
+zukunft = kalib.copy()
 
 FENSTER = [(5, 10, "frueh"), (10, 15, "vormittag"),
            (15, 20, "nachmittag"), (20, 24, "abend")]
@@ -1540,13 +1557,17 @@ Monat, Feiertag und Ferienlage werden über die Gruppe hinweg gemittelt.
 PHASE(6, "Wie kommt das in die App — und was ist dabei noch offen?"),
 
 MD("""
-### 6.1 Die Freigabe steckt in der Tabelle
+### 6.1 Welche Kombinationen überhaupt in die Rückfalltabelle dürfen
+
+**Ausgeliefert wird die Quantilregression** (siehe 6.3); was hier gefiltert wird, ist die
+**Rückfalltabelle**. Die Filterregeln stehen trotzdem hier und nicht nebenbei: Sie sind
+dieselben, mit denen auch der Laufzeitdienst entscheidet, ob er überhaupt etwas anzeigt.
 
 Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 
 1. mindestens 30 Fahrten als Grundlage,
 2. eine Spanne von höchstens 12 Minuten und 60 % des Preises,
-3. und eine **auf Test 2 gemessene** Abdeckung von mindestens 80 Prozent — **insgesamt
+3. und eine **auf Kalibrierung gemessene** Abdeckung von mindestens 80 Prozent — **insgesamt
    und je Radtyp**, dazu der Ausschluss jeder Kombination, die dort *messbar* darunter
    liegt.
 
@@ -1565,12 +1586,15 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 > der Spanne ist der Preis damit die Startgebühr, unabhängig von der Dauer. Wer diese
 > Grenze überfährt, zahlt trotzdem Minuten — deshalb stehen dort
 > {{abdeckung_gedeckt:.1%}} und nicht hundert Prozent. Die dritte Gruppe, {{anteil_preisabhaengig:.0%}} der Anfragen, zahlt
-> nach Minuten: **Nur dort leistet die Schätzung überhaupt etwas.** Und dort liegt die
-> Untergrenze des Vertrauensbereichs **unter der zugesagten Schwelle von 80 Prozent**.
+> nach Minuten: **Nur dort leistet die Schätzung überhaupt etwas.** Dort liegt die
+> Untergrenze des Vertrauensbereichs bei **{{unten_offen:.1%}}** gegen die zugesagten
+> {{gate_schwelle:.0%}} — das Primärgate ist damit **{{gate_urteil}}**.
 >
-> **Für die Gruppe, auf die es ankommt, ist die Zusage damit nicht statistisch
-> gestützt.** Die Gesamtquote von {{abdeckung_gesamt:.1%}} verdeckt das vollständig. Wer
-> nur sie berichtet, verspricht etwas, das die Daten nicht hergeben.
+> **Die Gesamtquote von {{abdeckung_gesamt:.1%}} hätte das nicht gezeigt, in keine
+> Richtung.** Sie liegt deutlich höher als der Wert, auf den es ankommt, weil sie die
+> beiden oberen Gruppen mitzählt, in denen das Guthaben den Preis ohnehin bestimmt. Wer
+> nur sie berichtet, berichtet eine Zahl, die mit der Zusage nichts zu tun hat — auch
+> dann, wenn das Urteil am Ende günstig ausfällt.
 >
 > Diese Gruppe ist die **vorab festgelegte Evaluationsgruppe**: An ihr, nicht am
 > Gesamtmittel, entscheidet sich, ob das Produkt trägt. Sie nachträglich über die
@@ -1584,7 +1608,8 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
 > ableiten. Ausgeschlossen wird deshalb, was messbar durchfällt — nicht behauptet, dass
 > alles Übrige bestanden hätte.
 >
-> Eine echte Zusage je Verbindung bräuchte den Schattenbetrieb aus 6.6.
+> Eine echte Zusage je Verbindung bräuchte deutlich mehr Fahrten je Kombination — die
+> Abnahme in 6.7 prüft die Zusage auf der Ebene, auf der sie ausgesprochen wird.
 """),
 
 CODE("""
@@ -1618,7 +1643,7 @@ z["im_intervall"] = (z.p_ist >= z.preis_von - 0.001) & (z.p_ist <= z.preis_bis +
 z["breite"] = z.preis_bis - z.preis_von
 
 _ = merke("abdeckung_gesamt", z.im_intervall.mean())
-print(f"Abdeckung insgesamt auf Test 2: {z.im_intervall.mean():.1%}   (Kriterium 80 %)")
+print(f"Abdeckung insgesamt auf Kalibrierung: {z.im_intervall.mean():.1%}   (Kriterium 80 %)")
 print()
 print(f"{'Radtyp':8}{'n':>7}{'Abdeckung':>12}{'95 %-Intervall':>18}{'Urteil':>14}")
 for t, g in z.groupby("typ_code"):
@@ -1707,11 +1732,11 @@ print(f"   Untergrenze {unten_o:.1%} gegen geforderte "
 # Spalten laesst sich spaeter nicht sagen, ob ein Ruecklauf ein echtes Problem
 # ist oder das Rauschen von zwoelf Faellen.
 belege = z.groupby(["start_station_id", "end_station_id", "typ_code", "fenster"]).agg(
-    test2_fahrten=("im_intervall", "size"),
-    test2_abdeckung=("im_intervall", "mean")).reset_index()
-belege[["test2_untergrenze", "test2_obergrenze"]] = [
+    kalib_fahrten=("im_intervall", "size"),
+    kalib_abdeckung=("im_intervall", "mean")).reset_index()
+belege[["kalib_untergrenze", "kalib_obergrenze"]] = [
     wilson(round(a * n_), n_) for a, n_
-    in zip(belege.test2_abdeckung, belege.test2_fahrten)]
+    in zip(belege.kalib_abdeckung, belege.kalib_fahrten)]
 # Eine einzige Stelle entscheidet ueber den Status - und dieselbe Funktion
 # entscheidet spaeter, ob die App antworten darf. Ein Status, der nur in einer
 # Spalte steht und nirgends sperrt, ist keine Freigabelogik, sondern Zierrat.
@@ -1736,7 +1761,7 @@ def freigabestatus(treffer, anzahl):
 
 belege["freigabestatus"] = [
     freigabestatus(round(a * n_), n_)
-    for a, n_ in zip(belege.test2_abdeckung, belege.test2_fahrten)]
+    for a, n_ in zip(belege.kalib_abdeckung, belege.kalib_fahrten)]
 print(f"\\nBelege je Kombination: {len(belege)} Zeilen")
 for status, anzahl in belege.freigabestatus.value_counts().items():
     print(f"   {status:14} {anzahl:4d}"
@@ -1801,7 +1826,7 @@ freigegebene_typen = sorted(
 # "sichtbar" wird, entscheidet die zweite Frage - ob unabhaengig
 # geprueft wurde.
 #
-# Warum nicht direkt sichtbar? Weil Test 2 die Intervalle KALIBRIERT hat.
+# Warum nicht direkt sichtbar? Weil Kalibrierung die Intervalle KALIBRIERT hat.
 # Derselbe Zeitraum kann nicht zugleich Kalibrierung und unabhaengige
 # Endpruefung sein - das ist die Lehre dieses Notebooks, und sie gilt auch
 # fuer sein eigenes Ergebnis. Die unabhaengige Pruefung steht aus; bis
@@ -1851,13 +1876,13 @@ Fehler in Produktberichten:
 
 | | |
 |---|---:|
-| **reale Reichweite** — was die App tatsächlich anzeigt | {{reichweite_real:.0%}} |
-| **potenzielle Reichweite** — was im Artefakt eine Spanne hat | {{reichweite_potenziell:.0%}} |
+| **sichtbare Reichweite** — was die App im Status „{{produktstatus}}" tatsächlich anzeigt | {{reichweite_real:.0%}} |
+| **potenzielle Reichweite** — was im Artefakt überhaupt eine Spanne hat | {{reichweite_potenziell:.0%}} |
 
-Hier fallen beide zusammen, weil das Produkt freigegeben ist: Was eine Spanne hat, wird
-auch gezeigt. **Das ist der Ausnahmefall, nicht der Normalfall.** Bei gesperrtem Produkt
-wäre die erste Zahl null und die zweite unverändert — und ein Bericht, der nur die zweite
-nennt, läse sich wie eine Leistung, obwohl niemand etwas sieht.
+**Die beiden Zahlen sind nicht dasselbe, und sie fallen nur zusammen, wenn der Status
+„sichtbar" lautet.** Im Status „schatten" wäre die erste null und die zweite unverändert
+— ein Bericht, der nur die zweite nennt, läse sich dann wie eine Leistung, obwohl
+niemand etwas sieht. Deshalb tragen sie verschiedene Namen und werden getrennt geführt.
 
 Zum Vergleich: Die Perzentiltabelle käme auf {{tabelle_auskunft:.1%}}, die Quantiltabelle
 auf {{qtab_auskunft:.1%}}. Beide dürfen nicht ausgeliefert werden — nicht wegen der
@@ -1867,7 +1892,7 @@ kein Argument.
 """),
 
 CODE("""
-alle_t2 = len(test2)
+alle_t2 = len(kalib)
 mit_ziel_ohne_rund = len(zukunft)
 mit_auskunft = len(z)          # nur freigegebene Radtypen und Kombinationen
 
@@ -1881,7 +1906,7 @@ mit_auskunft = len(z)          # nur freigegebene Radtypen und Kombinationen
 # Artefakt und war fuer das Produkt falsch.
 real = mit_auskunft if PRODUKT_FREIGEGEBEN else 0
 
-print("Von allen Fahrten des Zeitraums Test 2:")
+print("Von allen Fahrten des Zeitraums Kalibrierung:")
 print(f"   {alle_t2:>6,}  Fahrten insgesamt (schon gefiltert: abgeschlossen, mit Ziel)")
 print(f"   (Rundtouren sind schon in Phase 2.3 ausgeschieden)")
 print(f"   {mit_auskunft:>6,}  davon mit einer erzeugten Spanne im Artefakt  "
@@ -2023,22 +2048,24 @@ for _, g in tab.iterrows():
                        # Die Perzentile stammen aus training + validierung +
                        # test1, nicht nur aus dem Training. Ein Feld namens
                        # "trainingsende" haette darueber getaeuscht.
-                       produktfreigabe=("frei" if PRODUKT_FREIGEGEBEN
-                                        else "gesperrt_primaergate"),
+                       # Der Status wird erst nach der Abnahme (6.7)
+                       # gestempelt - hier steht der Platzhalter.
+                       produktstatus="wird_in_6_7_gesetzt",
+                       statusgrund="wird_in_6_7_gesetzt",
                        lernbasis_bis=str(basis.startzeit.max().date()),
-                       kalibrierung_bis=str(test2.startzeit.max().date())))
+                       kalibrierung_bis=str(kalib.startzeit.max().date())))
 
 freigabe_tabelle = pd.DataFrame(zeilen)
-# Die Belege aus Test 2 wandern in dieselbe Datei: Wer die Tabelle betreibt,
+# Die Belege aus Kalibrierung wandern in dieselbe Datei: Wer die Tabelle betreibt,
 # sieht je Zeile, worauf ihre Freigabe beruht.
 freigabe_tabelle = freigabe_tabelle.merge(
     belege.rename(columns={"end_station_id": "ziel_station_id",
                            "fenster": "zeitfenster"}),
     on=["start_station_id", "ziel_station_id", "typ_code", "zeitfenster"],
     how="left")
-freigabe_tabelle[["test2_abdeckung", "test2_untergrenze", "test2_obergrenze"]] = (
-    freigabe_tabelle[["test2_abdeckung", "test2_untergrenze",
-                      "test2_obergrenze"]].round(4))
+freigabe_tabelle[["kalib_abdeckung", "kalib_untergrenze", "kalib_obergrenze"]] = (
+    freigabe_tabelle[["kalib_abdeckung", "kalib_untergrenze",
+                      "kalib_obergrenze"]].round(4))
 freigabe_tabelle["freigabestatus"] = freigabe_tabelle.freigabestatus.fillna(
     "ungeprueft")
 # Was der Status sperrt, wird nicht ausgeliefert. Sonst waere er eine Spalte
@@ -2048,8 +2075,8 @@ gesperrt = ~freigabe_tabelle.freigabestatus.isin(AUSLIEFERBAR)
 if gesperrt.any():
     print(f"{gesperrt.sum()} Kombination(en) gesperrt:")
     for _, r in freigabe_tabelle[gesperrt].iterrows():
-        anzahl = ("keine" if pd.isna(r.test2_fahrten)
-                  else f"{r.test2_fahrten:.0f}")
+        anzahl = ("keine" if pd.isna(r.kalib_fahrten)
+                  else f"{r.kalib_fahrten:.0f}")
         print(f"   {r.startstation} → {r.zielstation}, {r.typ_code}, {r.zeitfenster}"
               f"   Status {r.freigabestatus}, {anzahl} Prüffahrten")
 freigabe_tabelle = freigabe_tabelle[~gesperrt].copy()
@@ -2092,26 +2119,28 @@ MODELLPAKET = {
     "produktstatus": PRODUKTSTATUS,
     "gate_schwelle": GATE_PREISABHAENGIG,
     "gate_untergrenze": float(unten_o),
-    "gueltig_ab": str(test2.startzeit.min().date()),
-    "gueltig_bis": str(test2.startzeit.max().date()),
+    # KEIN FELD NAMENS "gueltig". Eine fruehere Fassung schrieb den
+    # Kalibrierungszeitraum unter diesem Namen ins Paket - damit war ein
+    # heute gebautes Modell laut eigener Metadaten schon vor seiner
+    # Erstellung abgelaufen. Historische Auswertungsdaten sind kein
+    # Gueltigkeitszeitraum, sondern die Grundlage der Auswertung.
+    "kalibrierungszeitraum_von": str(kalib.startzeit.min().date()),
+    "kalibrierungszeitraum_bis": str(kalib.startzeit.max().date()),
+    "abnahmezeitraum_von": str(abnahme.startzeit.min().date()),
+    "abnahmezeitraum_bis": str(abnahme.startzeit.max().date()),
     "max_fahrtdauer_minuten": OBERGRENZE_MINUTEN,
     "gebaut_am": str(pd.Timestamp.today().date()),
 }
-joblib.dump(MODELLPAKET, "modellpaket_preisspanne.joblib")
-_beipack = {k: v for k, v in MODELLPAKET.items()
-            if k not in ("modell_unten", "modell_oben")}
-Path("modellpaket_preisspanne.json").write_text(
-    json.dumps(_beipack, ensure_ascii=False, indent=2), encoding="utf-8")
-print("Modellpaket geschrieben - das ist das ausgelieferte Verfahren:")
-for _k, _v in _beipack.items():
-    print(f"   {_k:24s} {_v}")
-
-# Die Rueckfalltabelle behaelt ihren Dateinamen, weil der Ladeweg in die
-# Datenbank daran haengt. Der Name sagt aber nicht, was sie ist - deshalb
-# steht es hier, im Notebook und im Text darunter.
-freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
-print(f"\\nRueckfalltabelle geschrieben: {len(freigabe_tabelle)} Zeilen "
-      f"(preisschaetzung.csv) - NICHT das ausgewaehlte Verfahren.")
+# GESCHRIEBEN WIRD ERST NACH DER ABNAHME (6.7).
+#
+# Ein Artefakt, das seinen Status traegt, darf nicht entstehen, bevor der
+# Status feststeht. Frueher wurde hier bereits eine CSV mit dem Vermerk
+# "gesperrt_primaergate" geschrieben - waehrend das Primaergate gehalten
+# hatte und der Grund ein ganz anderer war.
+print("Modellpaket vorbereitet - geschrieben wird es nach der Abnahme:")
+for _k, _v in MODELLPAKET.items():
+    if _k not in ("modell_unten", "modell_oben"):
+        print(f"   {_k:28s} {_v}")
 
 # DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
 # Filtern. Die Werte weiter oben galten der ungefilterten Tabelle; wer
@@ -2121,9 +2150,9 @@ print(f"   Radtypen                {sorted(freigabe_tabelle.typ_code.unique())}"
 print(f"   Kombinationen           {len(freigabe_tabelle)}")
 print(f"   Verbindungen            "
       f"{freigabe_tabelle.groupby(['start_station_id','ziel_station_id']).ngroups}")
-print(f"   Abdeckung auf Test 2    {z.im_intervall.mean():.1%}")
+print(f"   Abdeckung auf Kalibrierung    {z.im_intervall.mean():.1%}")
 print(f"   Preisspanne im Median   {z.breite.median():.2f} €")
-print(f"   Reichweite              {len(z)/len(test2):.1%} der Fahrten im Geltungsbereich")
+print(f"   Reichweite              {len(z)/len(kalib):.1%} der Fahrten im Geltungsbereich")
 print()
 if len(freigabe_tabelle):
     # line_width gross genug, damit die Tabelle NICHT umbricht: Ein
@@ -2266,7 +2295,7 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
         _mv = float(np.maximum(1.0, Q_UNTEN.predict(_zeile))[0])
         _mb = float(Q_OBEN.predict(_zeile)[0])
         z = pd.Series({"minuten_von": round(_mv), "minuten_bis": round(_mb),
-                       "freigabestatus": "modell", "test2_fahrten": np.nan})
+                       "freigabestatus": "modell", "kalib_fahrten": np.nan})
         _quelle, _zusage = "modell", GATE_PREISABHAENGIG
     else:
         _quelle = "rueckfalltabelle" if _rueckfall else "tabelle"
@@ -2299,7 +2328,7 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
             "hinweis": (None if _zusage is not None else
                         "Grobe Orientierung aus der Rückfalltabelle - für sie "
                         "gilt die Trefferzusage nicht."),
-            "belege": (None if pd.isna(z.test2_fahrten) else int(z.test2_fahrten)),
+            "belege": (None if pd.isna(z.kalib_fahrten) else int(z.kalib_fahrten)),
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
             # Die Tabelle kann sagen, auf wie vielen Fahrten eine Zeile beruht.
             # Das Modell kann es nicht - es rechnet, es schlaegt nicht nach.
@@ -2375,7 +2404,7 @@ Schritte: Filter auf der Tabelle, Radtypfreigabe, Statussperre, die kundenbezoge
 Breitenregel. Jeder davon kann in der einen Logik stehen und in der anderen fehlen —
 und dann verspricht das Notebook etwas, das die App nicht hält.
 
-Statt das zu behaupten, prüfen wir es: **Jede Fahrt aus Test 2 einmal durch beide Wege.**
+Statt das zu behaupten, prüfen wir es: **Jede Fahrt aus Kalibrierung einmal durch beide Wege.**
 Wo die Bewertung eine Spanne zählt, muss die App eine anzeigen — und umgekehrt.
 """),
 
@@ -2475,11 +2504,192 @@ else:
 """),
 
 MD("""
+### 6.7 Die Abnahme — der Zeitraum, den bis hierher nichts berührt hat
+
+Alles bisher Gerechnete steht auf der **Kalibrierung**: Dort wurde die Tabelle gefiltert,
+dort wurden die Radtypen freigegeben, dort hat das Primärgate gemessen. Ein Zeitraum, an
+dem man einstellt, kann nicht zugleich derjenige sein, der die Einstellung prüft.
+
+Deshalb gibt es einen fünften Abschnitt, und er wird **jetzt zum ersten und einzigen Mal
+geöffnet**. Geprüft wird nicht mit einer nachgebauten Formel, sondern mit
+`preis_schaetzen()` — genau der Funktion, die die App aufruft.
+
+> **Das ist der Moment, in dem sich entscheidet, ob die App etwas anzeigt.** Hält die
+> Zusage hier, wird der Status auf „sichtbar" gesetzt. Hält sie nicht, bleibt der Dienst
+> im Schatten — und das wäre kein Unglück, sondern der Zweck der Übung.
+"""),
+
+CODE("""
+# ─── DIE ABNAHME - EINMAL, MIT DER FERTIGEN SCHNITTSTELLE ───────────
+#
+# Bis hierher wurde aus diesem Zeitraum nichts benutzt: nicht zum
+# Trainieren, nicht zum Filtern, nicht zum Einstellen einer Schwelle.
+# Er wird jetzt EINMAL geoeffnet.
+#
+# Gemessen wird nicht mit einer nachgebauten Formel, sondern mit
+# preis_schaetzen() - der Funktion, die die App aufruft. Eine Abnahme,
+# die einen Nachbau prueft, prueft nicht das Produkt.
+print("DIE ABNAHME - unangetasteter Zeitraum, fertige Schnittstelle\\n")
+print(f"   {abnahme.startzeit.min():%d.%m.%Y} bis {abnahme.startzeit.max():%d.%m.%Y},"
+      f" {len(abnahme):,d} Fahrten".replace(",", "."))
+
+_zeilen = []
+for _r in abnahme.itertuples():
+    _a = preis_schaetzen(int(_r.start_station_id), int(_r.end_station_id),
+                         _r.typ_code, _r.startzeit,
+                         freiminuten_rest=_r.freiminuten_rest,
+                         rabatt_prozent=_r.rabatt_prozent,
+                         ohne_produktsperre=True)
+    if _a["anzeige"] is None:
+        _zeilen.append({"gezeigt": False, "drin": False, "typ": _r.typ_code,
+                        "grund": _a["grund"], "preisabhaengig": False})
+        continue
+    _von, _bis = (float(x) for x in _a["anzeige"].replace(" €", "").split(" bis "))
+    _min_von = float(_a["minuten"].split(" bis ")[0])
+    _zeilen.append({
+        "gezeigt": True,
+        "drin": bool(_von - 0.001 <= _r.entgelt_eur <= _bis + 0.001),
+        "typ": _r.typ_code, "grund": None,
+        # DIESELBE Abgrenzung wie beim Primaergate in 5.5: Wo das Guthaben
+        # die untere Minutengrenze deckt, ist der Preis nicht von der
+        # Schaetzung abhaengig - dort trifft jede Spanne. Eine Abnahme auf
+        # einer anderen Gruppe waere eine andere Zusage.
+        "preisabhaengig": bool(_r.freiminuten_rest < _min_von),
+    })
+
+A = pd.DataFrame(_zeilen)
+A_gezeigt = A[A.gezeigt]
+A_offen = A_gezeigt[A_gezeigt.preisabhaengig]
+_ab_unten, _ab_oben = wilson(int(A_offen.drin.sum()), len(A_offen))
+
+merke("ab_n", len(A))
+merke("ab_gezeigt", len(A_gezeigt))
+merke("ab_reichweite", len(A_gezeigt) / len(A))
+merke("ab_abdeckung_gesamt", A_gezeigt.drin.mean())
+merke("ab_offen_n", len(A_offen))
+merke("ab_offen_quote", A_offen.drin.mean())
+merke("ab_unten", _ab_unten)
+
+print(f"   Auskunft erteilt bei     {len(A_gezeigt):>6,d} von {len(A):,d} Fahrten "
+      f"({len(A_gezeigt)/len(A):.1%})".replace(",", "."))
+print(f"   davon preisabhaengig     {len(A_offen):>6,d}".replace(",", "."))
+print()
+print(f"   Treffer insgesamt        {A_gezeigt.drin.mean():>6.1%}")
+print(f"   Treffer preisabhaengig   {A_offen.drin.mean():>6.1%}")
+print(f"   95-%-Untergrenze         {_ab_unten:>6.1%}   gegen geforderte "
+      f"{GATE_PREISABHAENGIG:.0%}")
+print()
+
+# Je Radtyp - dieselbe Diagnose wie in 5.5, jetzt auf der Abnahme.
+print("   Je Radtyp (Diagnose):")
+for _ty in sorted(A_offen.typ.unique()):
+    _g = A_offen[A_offen.typ == _ty]
+    _u, _ = wilson(int(_g.drin.sum()), len(_g))
+    print(f"      {_ty:6s} {len(_g):>5,d} Fahrten   Treffer {_g.drin.mean():>6.1%}   "
+          f"Untergrenze {_u:>6.1%}".replace(",", "."))
+print()
+
+# Warum wurde nichts angezeigt, wo nichts angezeigt wurde?
+print("   Wo keine Auskunft kam, warum:")
+for _g, _n in A[~A.gezeigt].grund.value_counts().items():
+    print(f"      {_g:<24s} {_n:>5,d}".replace(",", "."))
+
+# ─── DAS URTEIL ─────────────────────────────────────────────────────
+#
+# Und jetzt der Punkt, an dem sich dieses Notebook von einer frueheren
+# Fassung unterscheidet: Der Status wird hier NEU gesetzt, aus einer
+# Messung auf Daten, die keine Entscheidung dieses Notebooks beeinflusst
+# haben. Vorher stand er auf "schatten", weil genau diese Messung fehlte.
+ABNAHME_BESTANDEN = bool(_ab_unten >= GATE_PREISABHAENGIG)
+UNABHAENGIG_GEPRUEFT = ABNAHME_BESTANDEN
+PRODUKTSTATUS = ("sichtbar" if (GATES_HALTEN and UNABHAENGIG_GEPRUEFT)
+                 else "schatten" if GATES_HALTEN else "gesperrt")
+PRODUKT_FREIGEGEBEN = PRODUKTSTATUS == "sichtbar"
+SCHATTENBETRIEB = PRODUKTSTATUS == "schatten"
+merke("produktstatus", PRODUKTSTATUS)
+merke("statussatz", {
+    "sichtbar": "die Anzeige ist freigeschaltet",
+    "schatten": "der Dienst rechnet und protokolliert, zeigt aber noch nichts an",
+    "gesperrt": "der Dienst ist gesperrt",
+}[PRODUKTSTATUS])
+merke("abnahme_urteil", "bestanden" if ABNAHME_BESTANDEN else "nicht bestanden")
+
+print()
+print(f"   ABNAHME {'BESTANDEN' if ABNAHME_BESTANDEN else 'NICHT BESTANDEN'} - "
+      f"Produktstatus jetzt: {PRODUKTSTATUS}")
+if ABNAHME_BESTANDEN:
+    print("   Die Zusage haelt auf einem Zeitraum, den nichts an diesem")
+    print("   Verfahren beruehrt hat. Damit ist die Anzeige freigeschaltet.")
+else:
+    print("   Die Zusage haelt auf dem unangetasteten Zeitraum NICHT. Der")
+    print("   Dienst bleibt im Schatten - und zwar mit Recht: Was auf der")
+    print("   Kalibrierung gut aussah, traegt hier nicht.")
+
+# EINE ABNAHME IST KEIN DAUERBETRIEB.
+#
+# Auch ein bestandener Abnahmelauf sagt nur etwas ueber DIESEN Zeitraum.
+# Was er nicht ersetzt, steht in 6.6: das protokollierte Wunschziel. Die
+# Ueberwachung aus 6.5 laeuft deshalb weiter, und sie darf abschalten.
+print()
+# ─── JETZT ERST WERDEN DIE ARTEFAKTE GESCHRIEBEN ────────────────────
+#
+# Der Status steht fest, also darf er auf die Datei. Der GRUND steht
+# separat daneben: "Primaergate" ist nur zulaessig, wenn das Primaergate
+# tatsaechlich gerissen ist - die Zusicherung darunter erzwingt das.
+STATUSGRUND = ("freigegeben" if PRODUKT_FREIGEGEBEN
+               else "primaergate_gerissen" if not PRIMAERGATE_BESTANDEN
+               else "abnahme_nicht_bestanden" if not UNABHAENGIG_GEPRUEFT
+               else "radtypgate_gerissen")
+assert (STATUSGRUND != "primaergate_gerissen") or (not PRIMAERGATE_BESTANDEN), (
+    "Statusgrund 'primaergate_gerissen' bei bestandenem Primaergate.")
+merke("statusgrund", STATUSGRUND)
+
+freigabe_tabelle["produktstatus"] = PRODUKTSTATUS
+freigabe_tabelle["statusgrund"] = STATUSGRUND
+freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
+
+MODELLPAKET["produktstatus"] = PRODUKTSTATUS
+MODELLPAKET["statusgrund"] = STATUSGRUND
+MODELLPAKET["abnahme_untergrenze"] = float(_ab_unten)
+MODELLPAKET["abnahme_bestanden"] = bool(ABNAHME_BESTANDEN)
+# Operative Gueltigkeit beginnt beim BAU, nicht in der Vergangenheit.
+MODELLPAKET["operativ_gueltig_ab"] = MODELLPAKET["gebaut_am"]
+MODELLPAKET["operativ_gueltig_bis"] = str(
+    (pd.Timestamp.today() + pd.Timedelta(days=90)).date())
+assert MODELLPAKET["operativ_gueltig_ab"] >= MODELLPAKET["gebaut_am"], (
+    "Ein Paket kann nicht vor seiner Erstellung gelten.")
+joblib.dump(MODELLPAKET, "modellpaket_preisspanne.joblib")
+_beipack = {k: v for k, v in MODELLPAKET.items()
+            if k not in ("modell_unten", "modell_oben")}
+Path("modellpaket_preisspanne.json").write_text(
+    json.dumps(_beipack, ensure_ascii=False, indent=2), encoding="utf-8")
+
+print()
+print("ARTEFAKTE GESCHRIEBEN - jetzt, mit feststehendem Status:")
+print(f"   modellpaket_preisspanne.joblib   Status {PRODUKTSTATUS}, "
+      f"Grund {STATUSGRUND}")
+print(f"   modellpaket_preisspanne.json     lesbarer Beipackzettel")
+print(f"   preisschaetzung.csv              Rueckfalltabelle, "
+      f"{len(freigabe_tabelle)} Zeilen")
+print(f"   operativ gueltig                 {MODELLPAKET['operativ_gueltig_ab']} "
+      f"bis {MODELLPAKET['operativ_gueltig_bis']}")
+print(f"   Kalibrierung (Grundlage)         "
+      f"{MODELLPAKET['kalibrierungszeitraum_von']} bis "
+      f"{MODELLPAKET['kalibrierungszeitraum_bis']}")
+
+print()
+print("   Was auch eine bestandene Abnahme NICHT ersetzt: das geplante Ziel.")
+print("   Gemessen wurde gegen die TATSAECHLICH gefahrene Strecke. Ob die")
+print("   Auskunft auch fuer das Ziel stimmt, das der Kunde eingibt und dann")
+print("   aendert, sagt kein historischer Zeitraum - nur der Betrieb.")
+"""),
+
+MD("""
 ### 6.4b Worauf sich die Zusage bezieht — und worauf nicht
 
 Von den {{n_zeilen:,}} **erzeugten** Kombinationen sind nur {{n_gestuetzt:,}}
 **verbindungsbezogen** belegt: Nur bei ihnen liegt die untere Vertrauensgrenze aus
-Test 2 über 80 Prozent. Bei {{n_unzureichend:,}} Zeilen ist die Prüfmenge für eine
+Kalibrierung über 80 Prozent. Bei {{n_unzureichend:,}} Zeilen ist die Prüfmenge für eine
 eigene Aussage zu klein, {{n_unbestimmt:,}} sind statistisch unentschieden.
 
 **Die Entscheidung über den Zuschnitt lautet: alle drei Klassen bleiben, und die Zusage
@@ -2549,7 +2759,7 @@ Nebenbegründung, aber sie trägt die Entscheidung nicht allein.
 **Das Gate hält — und deshalb geht die Preisauskunft in Betrieb, im Status
 „{{produktstatus}}".** Das heißt: {{statussatz}}. Die vorab festgelegte Hürde ist
 genommen; was fehlt, ist nicht die Güte, sondern eine **unabhängige** Prüfung des
-fertigen Artefakts. Test 2 kann sie nicht leisten, weil er die Intervalle kalibriert
+fertigen Artefakts. Kalibrierung kann sie nicht leisten, weil er die Intervalle kalibriert
 hat — derselbe Zeitraum kann nicht beides sein. Das ist die Lehre dieses Notebooks,
 angewandt auf sein eigenes Ergebnis.
 
@@ -2560,11 +2770,12 @@ angewandt auf sein eigenes Ergebnis.
 | die App zeigt Preisspannen an | für {{reichweite_real:.0%}} der Anfragen |
 | die Zusage lautet | in mindestens {{gate_schwelle:.0%}} der Fälle liegt der Preis in der Spanne |
 | sie gilt | **aggregiert je Radtyp**, nicht je Verbindung |
-| geprüft wurde sie auf | einem historischen Testzeitraum, den bis dahin nichts berührt hat |
+| eingestellt wurde sie auf | der **Kalibrierung** — dort wurden Tabelle, Filter und Gates bestimmt; dieser Zeitraum ist damit verbraucht |
+| geprüft wurde sie auf | der **Abnahme** (6.7), einem Zeitraum, den bis zum Öffnen dort nichts berührt hat |
 | **nicht** geprüft wurde sie auf | einem prospektiven Zeitraum mit protokolliertem Wunschziel |
 
-> **Der letzte Punkt ist der wichtigste, und er bleibt offen.** Test 2 war unberührt, aber
-> er ist Vergangenheit: Wir wissen, wohin die Leute gefahren *sind*, nicht, wohin sie
+> **Der letzte Punkt ist der wichtigste, und er bleibt offen.** Auch die Abnahme
+> ist Vergangenheit: Wir wissen, wohin die Leute gefahren *sind*, nicht, wohin sie
 > fahren *wollten*. Eine Preisauskunft wird vor der Fahrt abgerufen — für ein Ziel, das
 > der Kunde eingibt und dann vielleicht ändert. Diese Lücke schließt kein Rechenschritt,
 > sondern nur ein Schattenbetrieb, in dem das gewünschte Ziel mitgeschrieben wird.
@@ -2626,7 +2837,7 @@ eine Aussage überhaupt reichen. Wer schneller abschalten will, braucht mehr Fah
 Fenster, keine andere Zahl.
 ### 6.6 Was ein echter Schattenbetrieb wäre — und warum wir ihn noch nicht haben
 
-Was dieses Notebook „Test 2“ nennt, ist ein **rückblickender Test auf vergangenen
+Was dieses Notebook „Kalibrierung“ nennt, ist ein **rückblickender Test auf vergangenen
 Daten**. Ein Schattenbetrieb ist etwas anderes:
 
 1. Tabelle zu einem Stichtag einfrieren.
@@ -2670,8 +2881,9 @@ aus zwei anderen Gründen:
 Die Spanne löst **beide** Punkte: Sie zeigt die Streuung, statt sie zu verschweigen, und
 sie trägt für **{{typen_freigegeben}}** — weil die Nützlichkeitsregel aus 5.5 die Güte des
 Modells von der Preisstruktur trennt. Was bleibt, ist keine Lücke im Sortiment, sondern
-eine in der Reichweite: Das erzeugte Artefakt deckt {{reichweite_potenziell:.0%}} der
-Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
+eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
+{{reichweite_potenziell:.0%}} der Fahrten ab — sichtbar sind im Status
+„{{produktstatus}}" {{reichweite_real:.0%}}.
 
 **Vier Sätze, die aus diesem Notebook bleiben sollten**
 
@@ -2682,7 +2894,7 @@ Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
 > keiner Spalte.
 
 > Ein Rücksprung ist eine neue Runde — und eine neue Runde braucht einen eigenen
-> Zeitraum. Ob der auch unberührt bleibt, muss man ehrlich sagen: Test 2 trägt hier die
+> Zeitraum. Ob der auch unberührt bleibt, muss man ehrlich sagen: Kalibrierung trägt hier die
 > Kalibrierung, nicht die unabhängige Endprüfung.
 
 > Ausgeliefert wird, was gemessen wurde. Nicht das, was im Text steht.
@@ -2695,7 +2907,7 @@ Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
    bleibt {{offen_schwaechster_typ}} mit {{offen_schwaechste_grenze:.1%}} darunter.
    Bindend ist die aggregierte Ebene — vorab so festgelegt, weil die App eine Zusage
    macht und nicht drei. Die Diagnose bleibt trotzdem stehen.
-3. **Die unabhängige Prüfung steht aus.** Test 2 hat das Artefakt kalibriert; deshalb
+3. **Die unabhängige Prüfung steht aus.** Kalibrierung hat das Artefakt kalibriert; deshalb
    Status „{{produktstatus}}" statt sichtbar. Erst ein prospektiver Zeitraum, den nichts
    berührt hat, kann die Zusage unabhängig belegen.
 4. **Keine Zusage je Verbindung.** Die {{gate_schwelle:.0%}} gelten insgesamt.
@@ -2713,10 +2925,11 @@ Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
    zulässiger Kandidat — dasselbe Notebook, dieselben Zahlen, ein anderes Ergebnis.
    Genau deshalb trägt die Rückfalltabelle keine Zusage: Sie ist derselbe Kandidat, der
    die Hürde gerissen hat.
-9. **Freigegeben heißt: mit Bedingung.** Die Zusage ist auf einem historischen
-   Testzeitraum belegt, nicht auf einem prospektiven. Was fehlt, ist das protokollierte
-   Wunschziel — und ohne das lässt sich nie messen, ob die Auskunft für die *geplante*
-   Fahrt stimmte. Der Schattenbetrieb läuft deshalb parallel weiter.
+9. **Der Status „{{produktstatus}}" heißt: mit Bedingung.** Die Zusage ist auf der
+   Abnahme belegt — einem historischen Zeitraum, den bis zum Öffnen nichts berührt hat.
+   Ein *prospektiver* Zeitraum ist er trotzdem nicht. Was fehlt, ist das protokollierte
+   Wunschziel; ohne das lässt sich nie messen, ob die Auskunft für die *geplante* Fahrt
+   stimmte. Die Überwachung aus 6.5 läuft deshalb weiter und darf abschalten.
 
 **Weiter geht es mit Notebook 2 — Klassifikation:** Dort ist die Zielgröße keine Zahl
 mehr, sondern eine Entscheidung, und die beiden Fehlerarten sind unterschiedlich teuer.
