@@ -97,12 +97,19 @@ daran gescheitert ist.
 |---|---|---|
 | **K1 fachlich** | Die Liste muss mindestens **{{k3_lift_diagnose}}-mal so viele** auffällige Räder enthalten wie eine Zufallsauswahl gleicher Länge — in mindestens {{k3_mindestquartale:.0f}} von 5 Quartalen | saisonunabhängig, weil an der Grundrate des jeweiligen Quartals gemessen |
 | **K2 wirtschaftlich** | Die erwarteten Kosten je Quartal müssen **unter** denen der heutigen Faustregel liegen | die Faustregel lautet: „das älteste Rad zuerst" |
-| **K3 statistisch** | Die untere Grenze des 95-%-Intervalls muss die Nutzenschwelle tragen | eine Quote aus 60 Beobachtungen ist keine Zusage |
+| **K3 statistisch** | Die untere Grenze des 95-%-Wilson-Intervalls der Listenpräzision muss im Testquartal über **{{k3_lift_diagnose}} × Grundrate** liegen | eine Quote aus {{kapazitaet:.0f}} Beobachtungen ist keine Zusage |
 | **Betrieb** | Die Liste muss ohne Nacharbeit in die Instandhaltungsansicht übernehmbar sein | |
 
-**Die 70 % verschwinden damit nicht — sie werden zur zweiten Frage.** Wo die Grundrate es
-hergibt, wird zusätzlich geprüft, ob die Liste sie erreicht. Wo nicht, wäre die Frage
-sinnlos.
+**Die 70 % verschwinden damit nicht — sie werden zur Diagnose.** Sie stehen als Spalte
+`D70` in der Ergebnistabelle und sagen, wo die Verfahren gegenüber der ursprünglichen
+Zusage stehen. **Bindend sind sie nicht**, und zwar aus einem Grund, den Abschnitt 5.4
+rechnet: Wo die Grundrate zu niedrig ist, könnte sie nicht einmal ein Verfahren mit
+vollständiger Kenntnis der Zukunft erreichen.
+
+> **Diese drei Namen gelten für das ganze Notebook.** K1, K2, K3 bedeuten in Phase 5, im
+> Code, in der Ergebnistabelle, in der Überwachung und in der Schlusszelle jeweils genau
+> das, was hier steht. Eine frühere Fassung nannte dieselben Buchstaben an verschiedenen
+> Stellen verschieden — und niemand konnte das Urteil noch auf die Zusage zurückführen.
 
 Das wirtschaftliche Kriterium ist das wichtigste und wird gerne vergessen: **Ein Modell
 muss nicht gut sein, sondern besser als das, was heute schon getan wird.**
@@ -582,10 +589,12 @@ print(f"Anteil positiv  Training {y_train.mean():.1%} | Test {y_test.mean():.1%}
 '''),
 
 MD("""
-> **Warum nicht `train_test_split` wie in Notebook 1?** Weil dasselbe Rad in mehreren
-> Zeilen vorkommt und ein zufälliger Schnitt Zeilen aus der **Zukunft** ins Training
-> legen würde. Der Schnitt entlang der Zeit vermeidet das und bildet zusätzlich die
-> Betriebslage ab: trainieren auf allem Vergangenen, anwenden auf den heutigen Stand.
+> **Warum kein zufälliger `train_test_split`?** Auch Notebook 1 trennt zeitlich — das ist
+> hier also kein Gegensatz, sondern derselbe Grundsatz. Was in Notebook 2 **hinzukommt**:
+> Dasselbe Rad steht in mehreren Zeilen. Ein zeilenweise zufälliger Schnitt verteilt
+> damit nicht nur Zukunft ins Training, sondern Zukunftsinformation **desselben Objekts**
+> auf beide Seiten. Der Schnitt entlang der Zeit vermeidet beides und bildet zusätzlich
+> die Betriebslage ab: trainieren auf allem Vergangenen, anwenden auf den heutigen Stand.
 >
 > **Was er NICHT vermeidet, muss man dazusagen.** Der Zeitschnitt trennt nach
 > **Informationszeitpunkt**, nicht nach Fahrrädern. Fast jedes Rad der Testmenge steht
@@ -1282,17 +1291,32 @@ Jetzt kommen die beiden Kriterien aus Phase 1 zum Einsatz — und ein drittes, d
 rollierende Validierung erzwingt: **Ein Modell wird nur ausgeliefert, wenn es die
 Faustregel über mehrere Quartale schlägt.** Ein einzelnes gutes Quartal genügt nicht.
 
-Das erste Kriterium steht in zwei Spalten, und der Unterschied ist der Kern von 5.4:
+**Die Gates heißen hier genauso wie in Phase 1 — und bedeuten dasselbe.** Das ist keine
+Formalie: Eine frühere Fassung führte hier K1a, K1b, K2 und K3 ein, wobei K3 den Lift
+bezeichnete, während Phase 1 unter K3 die statistische Absicherung verstand. Zwei
+Kataloge unter denselben Buchstaben sind schlimmer als keiner — das Urteil lässt sich
+dann nicht mehr auf die Zusage zurückführen.
 
-- **K1a** fragt, ob der *beobachtete* Wert die 70 Prozent erreicht. Das ist die Lesart,
-  die in Projektberichten üblich ist.
-- **K1b** fragt, ob die Hürde auch *statistisch getragen* wird — dafür müsste die untere
-  Grenze des Wilson-Intervalls darüber liegen.
+| | Gate | woran es hängt |
+|---|---|---|
+| **K1** | Lift ≥ {{k3_lift_diagnose}} in mindestens {{k3_mindestquartale:.0f}} von {{roll_quartale:.0f}} Validierungsquartalen | dieselbe Frage an beide Kandidaten, ohne Vergleich untereinander |
+| **K2** | erwartete Kosten im Testquartal unter denen der Faustregel „ältestes Rad zuerst" | besser als das, was heute schon getan wird |
+| **K3** | Wilson-Untergrenze der Listenpräzision > {{k3_lift_diagnose}} × Grundrate des Testquartals ({{k3_schwelle:.1%}}) | eine Quote aus {{kapazitaet:.0f}} Beobachtungen ist keine Zusage |
 
-Bindend sind alle vier Gates — {{pflichtgates}}. **Das ist eine Lehrentscheidung, keine Freigabe:** Für
-einen realen Einsatz wäre K1b das richtige Kriterium. Wo die beiden Verfahren dabei
-stehen, hat Abschnitt 5.4 gerechnet; die Spalte `K1b belegt` in der Tabelle unten
-wiederholt das Ergebnis.
+Bindend sind diese drei — {{pflichtgates}}.
+
+> **Und die ursprünglichen {{huerde:.0%}}?** Sie stehen als Diagnosespalte `D70` in der
+> Tabelle, **nicht** in den Pflichtgates. Der Grund steht in 5.4: Die Orakelschranke
+> zeigt, dass sie in {{unmoegliche_quartale:.0f}} von {{roll_quartale:.0f}} Quartalen
+> unerfüllbar sind — auch für ein Verfahren mit vollständiger Kenntnis der Zukunft.
+> Eine Hürde, die niemand nehmen kann, misst nicht das Verfahren, sondern die Jahreszeit.
+> Sie trotzdem als Gate zu führen, nachdem man das gezeigt hat, wäre der Widerspruch,
+> den dieses Notebook eigentlich vorführt.
+>
+> **Das heißt nicht, dass sie verschwindet.** Sie steht in der Tabelle, damit man sieht,
+> wo die Verfahren gegenüber der ursprünglichen Zusage stehen — und sie darf jederzeit
+> wieder bindend werden, wenn jemand sie neu und vorab begründet. Was sie nicht darf:
+> stillschweigend wieder ins Urteil einwandern.
 
 Entscheidend ist die Reihenfolge, nicht der Ausgang: Das Kriterium stand **vor** der
 Messung fest, der Befund kam danach. Ein nachträglich erfülltes Kriterium begründet keine
@@ -1304,51 +1328,82 @@ CODE('''
 kosten_heute = float(tabelle.loc[tabelle.Vorgehen.str.contains("ältestes"), "Kosten (EUR)"].iloc[0])
 vorteil_roll = roll["Vorteil Wald (EUR)"].sum()
 
-print(f"{'':30s}{'Treffer':>8s}{'Kosten':>10s}{'K1a beob.':>11s}"
-      f"{'K1b belegt':>12s}{'K2 günst.':>11s}{'K3 stabil':>11s}")
+# ─── DER KANONISCHE GATE-KATALOG ────────────────────────────────────
+#
+# DREI Namen, DREI Bedeutungen - dieselben wie in Phase 1, Wort fuer Wort.
+# Frueher hiessen sie hier K1a, K1b, K2, K3, und K3 bezeichnete den Lift,
+# waehrend Phase 1 unter K3 die statistische Absicherung verstand. Zwei
+# Kataloge unter denselben Buchstaben sind schlimmer als keiner: Man kann
+# das Urteil nicht mehr auf die Zusage zurueckfuehren.
+#
+# Die 70 % sind KEIN Gate mehr. Sie stehen als Diagnose D70 in der
+# Tabelle, weil die Orakelschranke gezeigt hat, dass sie in einzelnen
+# Quartalen unerfuellbar sind. Ein Wert, der in der Tabelle steht, aber
+# nicht in der Bedingung, muss auch so heissen.
+GATE_KATALOG = {
+    "K1": f"Lift >= {K3_LIFT_DIAGNOSE} in mindestens {K3_MINDESTQUARTALE} "
+          f"von {len(roll_roh)} Validierungsquartalen",
+    "K2": "erwartete Kosten im Testquartal unter denen der Faustregel",
+    "K3": f"Wilson-Untergrenze der Listenpraezision > {K3_LIFT_DIAGNOSE} "
+          f"x Grundrate des Testquartals",
+}
+PFLICHTGATES = tuple(GATE_KATALOG)
+GRUNDRATE_TEST = float(y_test.mean())
+K3_SCHWELLE = K3_LIFT_DIAGNOSE * GRUNDRATE_TEST
+merke("grundrate_test", GRUNDRATE_TEST)
+merke("k3_schwelle", K3_SCHWELLE)
+print("GATE-KATALOG - dieselben Namen und Bedeutungen wie in Phase 1:")
+for _k, _b in GATE_KATALOG.items():
+    print(f"   {_k}  {_b}")
+print(f"   D70 (nur Diagnose) beobachtete Trefferquote >= {HUERDE:.0%}")
+print(f"\\nGrundrate im Testquartal {GRUNDRATE_TEST:.1%}, "
+      f"K3-Schwelle damit {K3_SCHWELLE:.1%}.\\n")
+
+print(f"{'':30s}{'Treffer':>8s}{'Kosten':>10s}{'K1 Lift':>10s}"
+      f"{'K2 Kosten':>11s}{'K3 belegt':>11s}{'D70':>10s}")
 print("-" * 94)
 
 urteile = {}
 for name, score in [("Faustregel: km seit Reparatur", p_regel),
                     ("Modell: Random Forest", p_wald)]:
     e = liste_bewerten(name, score, y_test)
-    # K1a ist deskriptiv: der beobachtete Punktschaetzer.
-    # K1b ist die Frage, ob die Huerde auch statistisch getragen wird -
-    # dafuer muesste die UNTERE Grenze des Intervalls darueber liegen.
-    k1a = e["Trefferquote"] >= 0.70
-    k1b = wilson(e["Treffer"], KAPAZITAET)[0] >= 0.70
-    k2 = e["Kosten (EUR)"] < kosten_heute
-    # K3 gilt fuer die Regel per Definition - sie IST der Massstab.
-    # K3 GILT FUER BEIDE GLEICH.
-    # Frueher stand hier: k3 = True fuer die Faustregel, sonst
-    # vorteil_roll > 0. Die Regel bekam das Stabilitaetsgate also geschenkt,
-    # und das Modell musste sie schlagen - zwei verschiedene Huerden unter
-    # einem Namen. Ein Gate, das den Kandidaten kennt, prueft nicht ihn,
-    # sondern die Absicht dessen, der es geschrieben hat.
-    #
-    # Jetzt zaehlt fuer beide dasselbe: In wie vielen der
-    # Validierungsquartale nimmt der Kandidat AUS EIGENER KRAFT die
-    # K1a-Huerde? Kein Vergleich, keine Kostendifferenz - dieselbe Frage
-    # an jeden.
-    # K3 misst den LIFT - so, wie Phase 1 nach dem Ruecksprung formuliert ist.
-    # Nicht weil der Lift guenstiger ausfaellt, sondern weil eine feste
-    # Trefferquote bei fester Kapazitaet die Jahreszeit misst: Im Winter
-    # verfehlt sie sogar das Orakel.
+    # K1 - der Nutzen ueber die Quartale. Dieselbe Frage an beide
+    # Kandidaten: In wie vielen Validierungsquartalen nimmt er AUS EIGENER
+    # KRAFT die Nutzenschwelle? Kein Vergleich, keine Kostendifferenz.
+    # Frueher bekam die Faustregel dieses Gate geschenkt (k3 = True), weil
+    # sie "der Massstab" sei - ein Gate, das den Kandidaten kennt, prueft
+    # nicht ihn, sondern die Absicht dessen, der es geschrieben hat.
     _spalte = "Lift Regel" if "Faustregel" in name else "Lift Wald"
     _bestanden = int((roll_roh[_spalte] >= K3_LIFT_DIAGNOSE).sum())
-    k3 = _bestanden >= K3_MINDESTQUARTALE
-    # K1b wurde frueher gerechnet, gedruckt - und dann fallengelassen. Ein
-    # Kriterium, das in der Tabelle steht, aber nicht in der Bedingung, ist
-    # keine Huerde, sondern Dekoration: Bei einem anderen Datenstand ginge ein
-    # Verfahren mit gerissenem K1b in Betrieb, und niemand saehe es.
-    urteile[name] = (e, {"K1a": k1a, "K1b": k1b, "K2": k2, "K3": k3})
+    k1 = _bestanden >= K3_MINDESTQUARTALE
+    # K2 - besser als das, was heute schon getan wird.
+    k2 = e["Kosten (EUR)"] < kosten_heute
+    # K3 - die statistische Absicherung, die Phase 1 verlangt: Traegt die
+    # UNTERE Intervallgrenze die Nutzenschwelle? Nicht die 70 %, sondern
+    # das 1,5-fache der Grundrate DIESES Quartals - dieselbe Groesse wie
+    # in K1, nur einmal statistisch abgesichert statt beobachtet.
+    _unten = wilson(e["Treffer"], KAPAZITAET)[0]
+    k3 = _unten > K3_SCHWELLE
+    # D70 - Diagnose, nicht Gate. Sie steht hier, weil die urspruengliche
+    # Zusage 70 % lautete und man sehen soll, wo die Verfahren stehen.
+    d70 = e["Trefferquote"] >= HUERDE
+    urteile[name] = (e, {"K1": k1, "K2": k2, "K3": k3}, {"D70": d70,
+                                                         "wilson_unten": _unten,
+                                                         "quartale": _bestanden})
     betrag = f"{e['Kosten (EUR)']:,.0f}".replace(",", ".")
     ja = lambda b: "ERFÜLLT" if b else "GERISSEN"
     print(f"{name:30s}{e['Trefferquote']:>7.1%}{betrag:>8s} €"
-          f"{ja(k1a):>11s}{ja(k1b):>12s}{ja(k2):>11s}{ja(k3):>11s}")
+          f"{ja(k1):>10s}{ja(k2):>11s}{ja(k3):>11s}"
+          f"{('ja' if d70 else 'nein'):>10s}")
 
-# Welche Gates BINDEN, steht hier - einmal, benannt, vor dem Ergebnis.
-PFLICHTGATES = ("K1a", "K1b", "K2", "K3")
+print(f"\\n   K3 im Detail - Wilson-Untergrenze gegen {K3_SCHWELLE:.1%}:")
+for name, (_e, _g, _d) in urteile.items():
+    print(f"      {name:32s} {_d['wilson_unten']:>6.1%}   "
+          f"{'traegt' if _g['K3'] else 'TRAEGT NICHT'}")
+merke("k3_unten_regel", urteile["Faustregel: km seit Reparatur"][2]["wilson_unten"])
+merke("k3_unten_wald", urteile["Modell: Random Forest"][2]["wilson_unten"])
+merke("d70_regel", "ja" if urteile["Faustregel: km seit Reparatur"][2]["D70"] else "nein")
+merke("d70_wald", "ja" if urteile["Modell: Random Forest"][2]["D70"] else "nein")
 
 alle_gates = [n for n in urteile if all(urteile[n][1][g] for g in PFLICHTGATES)]
 
@@ -1372,8 +1427,8 @@ else:
                             "Modell: Random Forest": p_wald}[ausgeliefertes_verfahren]
 
 print()
-print(f"  Pflichtgates: {' · '.join(PFLICHTGATES)}")
-for name, (_, gates) in urteile.items():
+print(f"  Pflichtgates: {' · '.join(PFLICHTGATES)}   (D70 bindet NICHT)")
+for name, (_, gates, _d) in urteile.items():
     offen = [g for g in PFLICHTGATES if not gates[g]]
     print(f"    {name:32s} {'alle erfüllt' if not offen else 'gerissen: ' + ', '.join(offen)}")
 if KEINE_FREIGABE:
@@ -1687,8 +1742,10 @@ else:
 MD("""
 ### 6.1 Ausgeliefert wird die Regel — und das Modell bleibt im Paket
 
-Beide Verfahren nehmen die Pflichtgates bis auf eines: Der Wald reißt K1b, die
-statistische Absicherung im Testquartal. Damit bleibt die Faustregel — und bei ähnlicher
+Beide Verfahren nehmen die Pflichtgates bis auf eines: Der Wald reißt K3, die
+statistische Absicherung im Testquartal — seine Wilson-Untergrenze liegt bei
+{{k3_unten_wald:.1%}} gegen die geforderten {{k3_schwelle:.1%}}, die der Regel bei
+{{k3_unten_regel:.1%}}. Damit bleibt die Faustregel — und bei ähnlicher
 Güte gewänne sie ohnehin. Das ist keine Bescheidenheit, sondern eine Rechnung über die
 Lebensdauer:
 

@@ -72,10 +72,16 @@
  "schwer_vorn": "Faustregel: km seit Reparatur",
  "zensur_regel": 0.03400000000000003,
  "zensur_wald": 0.017000000000000015,
+ "grundrate_test": 0.4956521739130435,
+ "k3_schwelle": 0.7434782608695653,
+ "k3_unten_regel": 0.7782097940014187,
+ "k3_unten_wald": 0.6099104639810865,
+ "d70_regel": "ja",
+ "d70_wald": "ja",
  "listen_gemeinsam": 39,
  "spitzenwert_km": 483.5638333333333,
  "listen_exklusiv": 21,
  "keine_freigabe": 0,
- "pflichtgates": "K1a · K1b · K2 · K3",
+ "pflichtgates": "K1 · K2 · K3",
  "schatten_stichtag": "2026-08-24"
 }
