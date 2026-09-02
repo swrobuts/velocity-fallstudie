@@ -81,21 +81,35 @@ nehmen und trotzdem im Schatten bleiben — genau das passiert in diesem Noteboo
 MD("""
 > ### ⚠ Die Annahme, auf der alles Weitere ruht
 >
-> Wir trainieren auf `end_station_id` — der Station, an der die Fahrt **tatsächlich
-> geendet hat**. Im künftigen Betrieb bekommt das Modell die Station, die der Kunde
-> **vorher gewählt** hat. Das ist nicht dasselbe.
+> **Drei Begriffe, die in diesem Notebook streng getrennt bleiben:**
 >
-> Beide fallen auseinander, wenn jemand unterwegs umplant, die Zielstation voll ist oder
-> die Fahrt anders endet als gedacht. Ein Prozess, den wir künftig ändern, macht eine
-> historische Ergebnisspalte nicht rückwirkend zu einer Eingabe.
+> | | | |
+> |---|---|---|
+> | **geplantes Ziel** | `geplante_ziel_station_id` | was der Kunde vor dem Entsperren wählt — **die Modelleingabe** |
+> | **tatsächliches Ziel** | `tatsaechliches_ziel` | wo die Fahrt endete — nachträglich beobachtet, **nie Merkmal** |
+> | **tatsächlicher Preis** | `entgelt_eur` | was berechnet wurde — der **Maßstab** der Bewertung |
 >
-> **Wir behandeln das tatsächliche Ziel deshalb als unvalidierten Stellvertreter für das
-> geplante Ziel.** Wie gut dieser Stellvertreter ist, kann dieses Notebook nicht
-> beantworten — dafür müsste die App das geplante Ziel erst einmal speichern. Bis dahin
-> sind die Zahlen in diesem Notebook eine **optimistische Näherung** für das, was im
-> Betrieb erreichbar ist: Das tatsächliche Ziel ist bereits erreicht, das geplante
-> könnte davon abweichen. Eine bewiesene Obergrenze ist das nicht — dafür müsste man
-> wissen, wie oft und wie stark beide auseinanderfallen.
+> Eine frühere Fassung trainierte auf dem tatsächlichen Ziel und nannte es einen
+> „unvalidierten Stellvertreter". Das war ehrlich benannt, aber es beschrieb ein anderes
+> Produkt als das, das gebaut werden sollte: Die App kennt zur Anfragezeit nur das
+> geplante Ziel. **Seit die Daten es führen, rechnet dieses Notebook damit.**
+>
+> **Und die beiden fallen auseinander.** In {{zielabweichung:.0%}} der bewerteten
+> Fahrten endet jemand woanders, als er angegeben hat. Das ist keine Störgröße, die man
+> wegdefiniert, sondern die zentrale Eigenschaft dieses Produkts — und der Grund, warum
+> die Zusage eine Bedingung trägt:
+>
+> > *„{{zusage_text}}"*
+>
+> Dieser Satz steht in **jeder** Antwort der App, und an genau dieser Bedingung wird
+> gemessen — in der Kandidatenwahl, in der Kalibrierung, in der Abnahme. Was sie kostet,
+> steht überall daneben: die Trefferquote **ohne** sie.
+>
+> **Was offen bleibt, ist etwas anderes als früher.** Nicht mehr „das geplante Ziel wird
+> nicht erfasst" — es wird erfasst. Offen ist, ob eine *echte* App es in derselben
+> Qualität erfasst: ob Kunden es sorgfältig wählen, wie oft sie es unterwegs ändern und
+> ob die Erfassung lückenlos ist. Das beantwortet kein historischer Datensatz, sondern
+> nur ein Schattenbetrieb in der echten App.
 """),
 
 PHASE(1, "Aus „der Kunde soll den Preis vorher kennen“ wird eine Zahl mit einer Grenze."),
@@ -593,6 +607,41 @@ print(f"Aufgeteilt nach Zeit: {ANTEILE[0]:.0%} Training, "
 print("Der Abnahmezeitraum ist hier gar nicht mehr dabei - er wurde in")
 print(f"Phase 2 versiegelt, ab {ABNAHME_AB:%d.%m.%Y}.\\n")
 
+def zielverlaesslichkeit_lernen(lern):
+    # Je Verbindung: Anteil der Fahrten, die am genannten Ziel endeten.
+    # Verbindungen mit wenigen Fahrten werden zur Gesamtquote hin
+    # geglaettet - sonst stuende bei drei Fahrten eine 0 % oder 100 %,
+    # die nichts bedeutet.
+    _global = float((lern.tatsaechliches_ziel == lern.end_station_id).mean())
+    _g = lern.assign(_treu=(lern.tatsaechliches_ziel == lern.end_station_id)) \
+             .groupby(["start_station_id", "end_station_id"])._treu.agg(["mean", "size"])
+    K = 30          # Glaettungsgewicht: ab rund 30 Fahrten zaehlt die Verbindung
+    _g["wert"] = (_g["mean"] * _g["size"] + _global * K) / (_g["size"] + K)
+    return _global, _g["wert"].to_dict()
+
+
+def zielverlaesslichkeit_setzen(rahmen, global_wert, tabelle):
+    return [tabelle.get((int(s), int(z)), global_wert)
+            for s, z in zip(rahmen.start_station_id, rahmen.end_station_id)]
+
+
+# ─── ZIELVERLAESSLICHKEIT: GELERNT NUR AUF DEM TRAINING ─────────────
+#
+# Die Spalte muss auf d liegen, bevor die Teilmengen entstehen - sonst
+# haette jede Teilmenge ihre eigene Kopie. Gelernt wird sie aber
+# ausschliesslich aus den Zeilen VOR g1, also aus dem Training.
+_lern = d[d.startzeit < g1]
+ZV_GLOBAL, ZV_TABELLE = zielverlaesslichkeit_lernen(_lern)
+d["zielverlaesslichkeit"] = zielverlaesslichkeit_setzen(d, ZV_GLOBAL, ZV_TABELLE)
+merke("zv_global", ZV_GLOBAL)
+merke("zv_min", float(min(ZV_TABELLE.values())))
+merke("zv_max", float(max(ZV_TABELLE.values())))
+print(f"Zielverlaesslichkeit je Verbindung, aus dem Training: "
+      f"{min(ZV_TABELLE.values()):.1%} bis {max(ZV_TABELLE.values()):.1%} "
+      f"(insgesamt {ZV_GLOBAL:.1%})")
+print("Das Modell sieht damit, WO das genannte Ziel wackelt - und kann die")
+print("Spanne genau dort weiten, statt ueberall.\\n")
+
 training    = d[d.startzeit <  g1]
 validierung = d[(d.startzeit >= g1) & (d.startzeit < g2)]
 test1       = d[(d.startzeit >= g2) & (d.startzeit < g3)]
@@ -670,9 +719,28 @@ KATEGORIAL = ["start_name", "ziel_name", "route", "typ_code"]
 NUMERISCH  = ["strecke_km", "steigung_promille",
               "stunde_sin", "stunde_cos", "wochentag_sin", "wochentag_cos",
               "monat_sin", "monat_cos", "ist_wochenende",
-              "ist_feiertag", "ist_ferien"]
+              "ist_feiertag", "ist_ferien",
+              # WIE VERLAESSLICH IST DAS GENANNTE ZIEL AUF DIESER STRECKE?
+              #
+              # Seit das Modell mit dem GEPLANTEN Ziel rechnet, steckt in
+              # jeder Anfrage eine zusaetzliche Unsicherheit: Der Kunde
+              # kann woanders hinfahren. Sie ist aber nicht ueberall
+              # gleich gross - auf einer Pendelstrecke zum Bahnhof haelt
+              # sich fast jeder ans Ziel, auf einer Freizeitrunde nicht.
+              #
+              # Das Modell kann das nicht wissen, solange es niemand
+              # hinschreibt. Diese Spalte schreibt es hin: der Anteil der
+              # Fahrten dieser Verbindung, die frueher tatsaechlich am
+              # genannten Ziel endeten. Damit kann die Quantilregression
+              # die Spanne genau dort weiten, wo das Ziel wackelt - und
+              # anderswo eng lassen.
+              #
+              # ZUR ANFRAGEZEIT BEKANNT: Die Zahl stammt aus der
+              # Vergangenheit, nicht aus der laufenden Fahrt. Gerechnet
+              # wird sie ausschliesslich auf dem TRAINING; Validierung,
+              # Kalibrierung und Abnahme schlagen nur nach.
+              "zielverlaesslichkeit"]
 MERKMALE = KATEGORIAL + NUMERISCH
-
 def pipeline(modell, drop=None):
     # handle_unknown="ignore" verhindert einen Absturz bei einer neuen
     # Station. Es macht die Vorhersage aber nicht gültig - die unbekannte
@@ -1134,6 +1202,47 @@ for teil in (basis, zukunft):
 _NIVEAUKANDIDATEN = [(0.10, 0.90), (0.05, 0.95), (0.025, 0.975), (0.01, 0.99)]
 _ZIEL_VALIDIERUNG = 0.84      # Zusage 80 % plus Reserve fuer den Zeitverlauf
 
+# ─── DIE ZUSAGE, EINMAL FORMULIERT ──────────────────────────────────
+#
+# "Preis fuer die gewaehlte Strecke. Fahren Sie ein anderes Ziel an,
+#  gilt die Schaetzung nicht."
+#
+# Dieser Satz ist das Produkt. Er steht hier, er steht in jeder
+# Antwort der App, und an ihm - an genau ihm - wird gemessen: in der
+# Kandidatenwahl, in der Kalibrierung, in der Abnahme und in der
+# Ueberwachung. Eine fruehere Fassung filterte an zwei von vier
+# Stellen anders und verglich damit Kennzahlen, die Verschiedenes
+# zaehlten.
+#
+# WARUM BEDINGT? Weil kein Verfahren wissen kann, wohin jemand faehrt,
+# nachdem er etwas anderes eingegeben hat. Eine unbedingte Zusage waere
+# eine Zusage ueber fremdes Verhalten.
+#
+# WAS DIE BEDINGUNG KOSTET, wird ueberall danebengestellt: die
+# Trefferquote OHNE sie. Ohne diese zweite Zahl waere die Bedingung
+# eine Ausrede - mit ihr ist sie eine Produkteigenschaft.
+ZUSAGE_TEXT = ("Preis für die gewählte Strecke. Fahren Sie ein anderes Ziel "
+               "an, gilt die Schätzung nicht.")
+merke("zusage_text", ZUSAGE_TEXT)
+
+
+def primaerpopulation(rahmen, minuten_von):
+    # DIE EINE ZIELPOPULATION DIESES NOTEBOOKS - preisabhaengig UND
+    # zielgetreu. Beides gehoert zusammen: Das erste sagt, wann die
+    # Schaetzung ueberhaupt in den Preis eingeht, das zweite, fuer
+    # welche Fahrt sie gegeben wurde.
+    _preisabhaengig = (np.asarray(rahmen.freiminuten_rest.values)
+                       < np.asarray(minuten_von))
+    _zielgetreu = (np.asarray(rahmen.tatsaechliches_ziel.values)
+                   == np.asarray(rahmen.end_station_id.values))
+    return _preisabhaengig & _zielgetreu
+
+
+def nur_preisabhaengig(rahmen, minuten_von):
+    # Dieselbe Menge OHNE die Bedingung - fuer die Diagnose daneben.
+    return np.asarray(rahmen.freiminuten_rest.values) < np.asarray(minuten_von)
+
+
 def _abdeckung_auf(v, modelle):
     # Trefferquote in der preisabhaengigen Gruppe - dieselbe Rechnung
     # wie das Primaergate in Phase 5, nur auf der Validierung.
@@ -1145,12 +1254,8 @@ def _abdeckung_auf(v, modelle):
     _pb = np.array([kundenpreis(m, t, r, ra) for m, t, r, ra
                     in zip(_bis, v.typ_code, v.freiminuten_rest, v.rabatt_prozent)])
     _drin = (v.entgelt_eur.values >= _pv - 0.001) & (v.entgelt_eur.values <= _pb + 0.001)
-    # Gemessen wird gegen DIESELBE Zusage, an der auch das Primaergate
-    # haengt - die bedingte. Eine Breite, die gegen ein anderes Ziel
-    # kalibriert wurde als das Gate, ist entweder zu eng oder zu weit;
-    # beides faellt erst in Phase 5 auf, wenn es zu spaet ist.
-    _treu = (v.tatsaechliches_ziel.values == v.end_station_id.values)
-    _offen = (v.freiminuten_rest.values < _von) & _treu
+    # DIE PRIMAERPOPULATION - ueberall dieselbe (siehe primaerpopulation).
+    _offen = primaerpopulation(v, _von)
     if _offen.sum() == 0:
         return 0.0, float("inf")
     return float(_drin[_offen].mean()), float(np.mean(_bis - _von))
@@ -1487,17 +1592,17 @@ def bewerten(name, u, o):
     # Bedingung als eigene Spalte. Waere die Zusage nur mit Bedingung zu
     # halten und ohne weit daneben, muesste man das Produkt anders
     # schneiden - sichtbar ist beides.
-    zielgetreu = zukunft.tatsaechliches_ziel == zukunft.end_station_id
-    preisabhaengig = zeigbar & (zukunft.freiminuten_rest < anzeigeminuten(u))
-    bedingt = preisabhaengig & zielgetreu
-    gate_unten, _ = wilson(int(drin[bedingt].sum()), int(bedingt.sum()))
+    _m = anzeigeminuten(u)
+    bindend = zeigbar & pd.Series(primaerpopulation(zukunft, _m), index=zukunft.index)
+    ohne_bed = zeigbar & pd.Series(nur_preisabhaengig(zukunft, _m), index=zukunft.index)
+    gate_unten, _ = wilson(int(drin[bindend].sum()), int(bindend.sum()))
     return {
         "Auskunft (angezeigt)": zeigbar.mean(),
         "Abdeckung (angezeigt)": drin[zeigbar].mean(),
-        "preisabhaengig n": int(bedingt.sum()),
+        "preisabhaengig n": int(bindend.sum()),
         "Primaergate (Untergrenze)": gate_unten,
-        "ohne Bedingung": (drin[preisabhaengig].mean()
-                           if preisabhaengig.sum() else float("nan")),
+        "ohne Bedingung (Diagnose)": (drin[ohne_bed].mean()
+                                      if ohne_bed.sum() else float("nan")),
         "schlechtester Radtyp": min(je_typ.values()) if je_typ else float("nan"),
         "geringste Reichweite": min(reichweite_typ.values()),
         "Breite (Median)": (bis - von)[zeigbar].median(),
@@ -1892,8 +1997,8 @@ GATE_PREISABHAENGIG = 0.80
 # Die bedingte Zahl steht als Diagnose daneben. Sie zeigt, was die
 # Zielabweichung kostet - und dass die Bedingung das Urteil nicht traegt.
 _zielgetreu = z.tatsaechliches_ziel == z.end_station_id
-offen_alle = z[z.guthabenlage == "vorab preisabhaengig"]
-offen = offen_alle[_zielgetreu.reindex(offen_alle.index, fill_value=False)]   # BINDEND
+offen_alle = z[z.guthabenlage == "vorab preisabhaengig"]      # Diagnose
+offen = offen_alle[_zielgetreu.reindex(offen_alle.index, fill_value=False)]  # BINDEND
 unten_o, _ = wilson(offen.im_intervall.sum(), len(offen)) if len(offen) else (0.0, 0.0)
 _unten_ohne, _ = (wilson(offen_alle.im_intervall.sum(), len(offen_alle))
                   if len(offen_alle) else (0.0, 0.0))
@@ -2035,7 +2140,7 @@ freigegebene_typen = sorted(
 # fuer sein eigenes Ergebnis. Die unabhaengige Pruefung steht aus; bis
 # dahin laeuft der Dienst im Schatten.
 GATES_HALTEN = bool(PRIMAERGATE_BESTANDEN and len(freigegebene_typen) == 3)
-UNABHAENGIG_GEPRUEFT = False      # kein prospektiver Zeitraum mit Wunschziel
+UNABHAENGIG_GEPRUEFT = False      # bis 6.7: die Abnahme ist noch versiegelt
 PRODUKTSTATUS = ("sichtbar" if (GATES_HALTEN and UNABHAENGIG_GEPRUEFT)
                  else "schatten" if GATES_HALTEN else "gesperrt")
 merke("produktstatus", PRODUKTSTATUS)
@@ -2410,6 +2515,10 @@ def merkmalszeile(start_id, ziel_id, typ_code, zeitpunkt):
         "ist_wochenende": int(t.dayofweek >= 5),
         "ist_feiertag": int(tag in set(feiertag.datum)),
         "ist_ferien": int(ferien),
+        # Zur Anfragezeit bekannt: aus der Vergangenheit nachgeschlagen,
+        # nicht aus der laufenden Fahrt.
+        "zielverlaesslichkeit": ZV_TABELLE.get(
+            (int(start_id), int(ziel_id)), ZV_GLOBAL),
     }])[MERKMALE]
 
 
@@ -2559,7 +2668,14 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
     return {"anzeige": f"{von:.2f} bis {bis:.2f} €",
             "grund": None, "status": z.freigabestatus,
             "quelle": _quelle, "zusage": _zusage,
-            "hinweis": (None if _zusage is not None else
+            # DIE BEDINGUNG STEHT IN JEDER ANTWORT.
+            #
+            # Gemessen wird an Fahrten, die am gewaehlten Ziel enden.
+            # Eine Zusage, die eine Bedingung hat und sie nicht nennt,
+            # ist keine Zusage, sondern ein Vorbehalt zulasten des
+            # Kunden. Deshalb geht ZUSAGE_TEXT mit jeder Auskunft raus -
+            # auch mit der aus dem Modell, nicht nur mit dem Rueckfall.
+            "hinweis": (ZUSAGE_TEXT if _zusage is not None else
                         "Grobe Orientierung aus der Rückfalltabelle - für sie "
                         "gilt die Trefferzusage nicht."),
             "belege": (None if pd.isna(z.kalib_fahrten) else int(z.kalib_fahrten)),
@@ -2655,6 +2771,17 @@ for _bez, _arg, _erwartet in _faelle:
     else:
         print(f"{_bez:42s} keine Anzeige - {_a['grund']}")
 print(f"\\n{len(_faelle)} von {len(_faelle)} Faellen erreichen den beschrifteten Zweig.")
+_beispiel = preis_schaetzen(int(_ok.start_station_id), int(_ok.end_station_id),
+                            _ok.typ_code, _zeit,
+                            freiminuten_rest=_ok.freiminuten_rest,
+                            rabatt_prozent=_ok.rabatt_prozent,
+                            ohne_produktsperre=True)
+print()
+print("WAS DIE APP DEM KUNDEN ZEIGT - Spanne UND Bedingung:")
+print(f"   {_beispiel['anzeige']}")
+print(f"   {_beispiel['hinweis']}")
+assert _beispiel["hinweis"] == ZUSAGE_TEXT, (
+    "Die Auskunft nennt die Bedingung nicht, an der sie gemessen wurde.")
 
 print()
 print(f"Im Betrieb gilt der Status '{PRODUKTSTATUS}':")
@@ -2821,6 +2948,10 @@ CODE("""
 # Datenaufteilung; das ist Laufzeitinformation, kein Blick in den Test.
 abnahme = geltungsbereich(ROH_ABNAHME).merge(
     fahrrad[["fahrrad_id", "typ_code"]], on="fahrrad_id", how="left")
+# Dieselbe Nachschlagetabelle wie ueberall - gelernt auf dem Training,
+# hier nur angewandt.
+abnahme["zielverlaesslichkeit"] = zielverlaesslichkeit_setzen(
+    abnahme, ZV_GLOBAL, ZV_TABELLE)
 _alle_fm = ROH_ALLE[ROH_ALLE.status == "abgeschlossen"].sort_values("startzeit").copy()
 _alle_fm["dauer_min"] = (_alle_fm.endzeit - _alle_fm.startzeit).dt.total_seconds() / 60
 _alle_fm = _alle_fm.merge(kunde[["kunde_id", "tarif_code"]], on="kunde_id", how="left")
@@ -2848,7 +2979,8 @@ for _r in abnahme.itertuples():
                          ohne_produktsperre=True)
     if _a["anzeige"] is None:
         _zeilen.append({"gezeigt": False, "drin": False, "typ": _r.typ_code,
-                        "grund": _a["grund"], "preisabhaengig": False})
+                        "grund": _a["grund"], "preisabhaengig": False,
+                        "preisabh_ohne_bedingung": False})
         continue
     _von, _bis = (float(x) for x in _a["anzeige"].replace(" €", "").split(" bis "))
     _min_von = float(_a["minuten"].split(" bis ")[0])
@@ -2856,17 +2988,25 @@ for _r in abnahme.itertuples():
         "gezeigt": True,
         "drin": bool(_von - 0.001 <= _r.entgelt_eur <= _bis + 0.001),
         "typ": _r.typ_code, "grund": None,
-        # DIESELBE Abgrenzung wie beim Primaergate in 5.5: Wo das Guthaben
-        # die untere Minutengrenze deckt, ist der Preis nicht von der
-        # Schaetzung abhaengig - dort trifft jede Spanne. Eine Abnahme auf
-        # einer anderen Gruppe waere eine andere Zusage.
-        "preisabhaengig": bool(_r.freiminuten_rest < _min_von),
+        # DIESELBE Population wie ueberall sonst - primaerpopulation():
+        # preisabhaengig UND zielgetreu. Eine Abnahme auf einer anderen
+        # Gruppe waere eine andere Zusage, und genau das war der Fehler
+        # der vorigen Fassung: Kalibrierung mass bedingt, die Abnahme
+        # unbedingt, und beide Zahlen hiessen "Primaergate".
+        "preisabhaengig": bool(_r.freiminuten_rest < _min_von
+                               and _r.tatsaechliches_ziel == _r.end_station_id),
+        # Ohne die Bedingung - als Diagnose daneben, nie als Urteil.
+        "preisabh_ohne_bedingung": bool(_r.freiminuten_rest < _min_von),
     })
 
 A = pd.DataFrame(_zeilen)
 A_gezeigt = A[A.gezeigt]
-A_offen = A_gezeigt[A_gezeigt.preisabhaengig]
+A_offen = A_gezeigt[A_gezeigt.preisabhaengig]                    # BINDEND
+A_ohne = A_gezeigt[A_gezeigt.preisabh_ohne_bedingung]            # Diagnose
 _ab_unten, _ab_oben = wilson(int(A_offen.drin.sum()), len(A_offen))
+_ab_unten_ohne, _ = wilson(int(A_ohne.drin.sum()), len(A_ohne)) if len(A_ohne) else (0.0, 0.0)
+merke("ab_ohne_bedingung_unten", float(_ab_unten_ohne))
+merke("ab_ohne_bedingung_n", len(A_ohne))
 
 merke("ab_n", len(A))
 merke("ab_gezeigt", len(A_gezeigt))
@@ -2881,7 +3021,11 @@ print(f"   Auskunft erteilt bei     {len(A_gezeigt):>6,d} von {len(A):,d} Fahrte
 print(f"   davon preisabhaengig     {len(A_offen):>6,d}".replace(",", "."))
 print()
 print(f"   Treffer insgesamt        {A_gezeigt.drin.mean():>6.1%}")
-print(f"   Treffer preisabhaengig   {A_offen.drin.mean():>6.1%}")
+print(f"   Treffer bindend          {A_offen.drin.mean():>6.1%}   "
+      f"(preisabhaengig UND zielgetreu, n={len(A_offen):,d})".replace(",", "."))
+print(f"   dieselbe Zahl OHNE die Bedingung: {A_ohne.drin.mean():>6.1%}   "
+      f"Untergrenze {_ab_unten_ohne:.1%}, n={len(A_ohne):,d}".replace(",", "."))
+print("   Die zweite Zahl entscheidet nichts - sie sagt, was die Bedingung kostet.")
 print(f"   95-%-Untergrenze         {_ab_unten:>6.1%}   gegen geforderte "
       f"{GATE_PREISABHAENGIG:.0%}")
 print()
@@ -2974,7 +3118,7 @@ else:
 # EINE ABNAHME IST KEIN DAUERBETRIEB.
 #
 # Auch ein bestandener Abnahmelauf sagt nur etwas ueber DIESEN Zeitraum.
-# Was er nicht ersetzt, steht in 6.6: das protokollierte Wunschziel. Die
+# Was er nicht ersetzt, steht in 6.6: die Erfassungsqualitaet in der
 # Ueberwachung aus 6.5 laeuft deshalb weiter, und sie darf abschalten.
 print()
 # ─── JETZT ERST WERDEN DIE ARTEFAKTE GESCHRIEBEN ────────────────────
@@ -3131,7 +3275,7 @@ angewandt auf sein eigenes Ergebnis.
 | sie gilt | **aggregiert je Radtyp**, nicht je Verbindung |
 | eingestellt wurde sie auf | der **Kalibrierung** — dort wurden Tabelle, Filter und Gates bestimmt; dieser Zeitraum ist damit verbraucht |
 | geprüft wurde sie auf | der **Abnahme** (6.7), einem Zeitraum, den bis zum Öffnen dort nichts berührt hat |
-| **nicht** geprüft wurde sie auf | einem prospektiven Zeitraum mit protokolliertem Wunschziel |
+| **nicht** geprüft wurde sie auf | einem prospektiven Zeitraum in der echten App — die Erfassungsqualität des geplanten Ziels ist dort noch unbekannt |
 
 > **Der letzte Punkt ist der wichtigste, und er bleibt offen.** Auch die Abnahme
 > ist Vergangenheit: Wir wissen, wohin die Leute gefahren *sind*, nicht, wohin sie
@@ -3220,7 +3364,7 @@ MD("""
 |---|---|
 | 1 Business Understanding | Der Prozess wurde geändert, nicht das Verfahren. Kriterium: Preisfehler unter 50 Cent. Geltungsbereich ausdrücklich eingeschränkt |
 | 2 Data Understanding | Abbrüche und Stornierungen sind keine Fahrten. {{anteil_frei:.1%}} enden frei im Gebiet, {{anteil_rundtour:.1%}} sind Rundtouren |
-| 3 Data Preparation | Zielstation erlaubt — als Stellvertreter. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale |
+| 3 Data Preparation | **Geplantes** Ziel erlaubt (die App kennt es), tatsächliches Ziel nur als Maßstab. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale, dazu die Zielverlässlichkeit je Verbindung ({{zv_min:.0%}} bis {{zv_max:.0%}}) |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, dass die Zielangabe {{ablation_anteil:.0%}} des Fehlers erklärt |
 | 5 Evaluation | {{typen_halten}} halten die Grenze auf Test 1, {{typen_reissen}} nicht. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet |
 | 6 Deployment | **Ausgeliefert wird die Quantilregression** als Laufzeitdienst — für {{typen_freigegeben}}, als Modellpaket mit Beipackzettel. Das Primärgate der preisabhängigen Gruppe hält mit {{gate_untergrenze:.1%}} die zugesagten {{gate_schwelle:.0%}}. Status: **{{produktstatus}}** — {{statussatz}}. Die Perzentiltabelle bleibt als Rückfallebene, im Code implementiert und **ohne** Zusage |
@@ -3260,7 +3404,7 @@ eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
 
 **Was offen bleibt — ausdrücklich**
 
-1. **Das geplante Ziel wird nicht erfasst.** Alle Zahlen sind optimistische Näherungen, keine bewiesenen Obergrenzen.
+1. **Das geplante Ziel wird erfasst — in *diesen* Daten.** Ob eine echte App es in derselben Qualität erfasst, ist offen: ob Kunden es sorgfältig wählen, wie oft sie es unterwegs ändern, ob die Erfassung lückenlos ist. Das beantwortet kein historischer Datensatz, sondern nur ein Schattenbetrieb in der echten App.
 2. **Das Primärgate hält — je Radtyp aber nicht überall.** Aggregiert
    {{gate_untergrenze:.1%}} gegen {{gate_schwelle:.0%}}; in der Diagnose je Radtyp
    bleibt {{offen_schwaechster_typ}} mit {{offen_schwaechste_grenze:.1%}} darunter.
@@ -3287,8 +3431,9 @@ eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
 9. **Der Status „{{produktstatus}}" heißt: mit Bedingung.** Die Zusage ist auf der
    Abnahme belegt — einem historischen Zeitraum, den bis zum Öffnen nichts berührt hat.
    Ein *prospektiver* Zeitraum ist er trotzdem nicht. Was fehlt, ist das protokollierte
-   Wunschziel; ohne das lässt sich nie messen, ob die Auskunft für die *geplante* Fahrt
-   stimmte. Die Überwachung aus 6.5 läuft deshalb weiter und darf abschalten.
+   Nachweis, dass eine echte App das geplante Ziel ebenso vollständig und sorgfältig
+   erfasst wie dieser Datensatz. Die Überwachung aus 6.5 läuft deshalb weiter und darf
+   abschalten.
 
 **Weiter geht es mit Notebook 2 — Klassifikation:** Dort ist die Zielgröße keine Zahl
 mehr, sondern eine Entscheidung, und die beiden Fehlerarten sind unterschiedlich teuer.

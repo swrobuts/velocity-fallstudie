@@ -63,10 +63,77 @@ ZIEL_UEBUNG = os.path.join(ZIEL, "uebung")
 #
 # Beim Erneuern der Musterdaten wird dieser Wert bewusst nachgezogen. Das ist
 # der Sinn: Wer die Daten aendert, aendert sichtbar auch den Datenstand.
-DATENSTAND = "17810afc24029bf82bafa0cbfb480810e6a98e3c"
+DATENSTAND = "61be8734c5ea837800087dc336d3a4d40e841551"
 ROHBASIS = ("https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/"
             f"{DATENSTAND}/analytics/")
 COLAB = "https://colab.research.google.com/github/swrobuts/velocity-fallstudie/blob/main/analytics/notebooks/"
+
+
+def datenstand_pruefen(analytics_ordner):
+    """Enthaelt der Commit DATENSTAND dieselben Daten, mit denen hier gerechnet wurde?
+
+    Dieser Pruefer entstand aus einem Fehler, den man lokal nicht sehen
+    kann: Die Notebooks laden ihre Daten von GitHub, das Bauen benutzt
+    aber den lokalen Ordner. Wer die Daten aendert und DATENSTAND
+    vergisst, baut Notebooks, die bei ihm richtig rechnen und bei allen
+    anderen mit ALTEN Daten - inklusive anderer Kennzahlen, anderer
+    Gates und eines anderen Freigabeurteils.
+
+    Genau das ist passiert: Ein externer Pruefer bekam eine Abnahme mit
+    78,1 % und "nicht bestanden", waehrend hier 80,0 % und "bestanden"
+    stand. Nicht der Code war schuld, sondern eine vergessene Zeile.
+
+    Verglichen wird der Git-Blob-Hash JEDER Datendatei am Commit
+    DATENSTAND mit der lokalen Datei. Damit darf DATENSTAND auf jeden
+    Commit zeigen, der die aktuellen Daten enthaelt - auch auf einen
+    spaeteren.
+    """
+    import subprocess
+    from pathlib import Path as _P
+    ordner = _P(analytics_ordner)
+    # NUR DIE EINGABEDATEN, nicht die Ausgaben der Notebooks.
+    #
+    # preisschaetzung.csv, kampagnenliste.csv und Konsorten entstehen
+    # BEIM Bauen - sie sind Ergebnis, nicht Quelle. Sie hier zu pruefen
+    # hiesse zu verlangen, dass ein Ergebnis schon committet ist, bevor
+    # es berechnet wurde. Welche Dateien Quelle sind, sagt der Generator
+    # selbst: Was er schreibt, lesen die Notebooks.
+    _gen = ordner / "generieren.py"
+    if not _gen.exists():
+        return []
+    quelltext = _gen.read_text(encoding="utf-8")
+    dateien = sorted(set(re.findall(r'schreibe\("([^"]+\.csv)"', quelltext))
+                     | {"wetter.csv"})       # echte Messdaten, nur gelesen
+    if not dateien:
+        return []
+    befunde = []
+    for name in dateien:
+        lokal = subprocess.run(["git", "hash-object", str(ordner / name)],
+                               capture_output=True, text=True)
+        entfernt = subprocess.run(
+            ["git", "rev-parse", f"{DATENSTAND}:analytics/{name}"],
+            capture_output=True, text=True)
+        if lokal.returncode or entfernt.returncode:
+            continue                    # Datei gibt es dort (noch) nicht
+        if lokal.stdout.strip() != entfernt.stdout.strip():
+            befunde.append(name)
+    if befunde:
+        return [f"Am Commit DATENSTAND ({DATENSTAND[:12]}) stehen andere Daten als "
+                f"hier gerechnet wurde: {', '.join(befunde[:5])}"
+                f"{' und weitere' if len(befunde) > 5 else ''}. "
+                f"Die Notebooks laden von GitHub - beim Leser kaemen ALTE Daten an."]
+    return []                      # kein git-Kontext, kein Urteil
+    if not letzte.startswith(DATENSTAND) and not DATENSTAND.startswith(letzte[:12]):
+        return [f"DATENSTAND zeigt auf {DATENSTAND[:12]}, aber ausleihe.csv wurde "
+                f"zuletzt in {letzte[:12]} geaendert. Die Notebooks laden von "
+                f"GitHub - beim Leser kaemen ALTE Daten an."]
+    schmutzig = subprocess.run(
+        ["git", "status", "--porcelain", "--", ordner + "/ausleihe.csv"],
+        capture_output=True, text=True).stdout.strip()
+    if schmutzig:
+        return ["ausleihe.csv ist lokal geaendert und noch nicht committet - "
+                "DATENSTAND kann noch gar nicht darauf zeigen."]
+    return []
 
 
 # ---------------------------------------------------------------- Platzhalter

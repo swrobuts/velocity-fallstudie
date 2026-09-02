@@ -17,7 +17,8 @@
     "monat_cos",
     "ist_wochenende",
     "ist_feiertag",
-    "ist_ferien"
+    "ist_ferien",
+    "zielverlaesslichkeit"
   ],
   "radtypen": [
     "CARGO",
@@ -26,7 +27,7 @@
   ],
   "produktstatus": "sichtbar",
   "gate_schwelle": 0.8,
-  "gate_untergrenze": 0.86341542378803,
+  "gate_untergrenze": 0.8492223207549856,
   "kalibrierungszeitraum_von": "2025-11-14",
   "kalibrierungszeitraum_bis": "2026-06-29",
   "abnahmezeitraum_von": "2026-06-29",
@@ -34,41 +35,41 @@
   "max_fahrtdauer_minuten": 480,
   "gebaut_am": "2026-09-02",
   "statusgrund": "freigegeben",
-  "abnahme_untergrenze": 0.8003892333611203,
+  "abnahme_untergrenze": 0.8340064221789204,
   "abnahme_bestanden": true,
   "abnahme_gates": {
     "Gate 1  preisabhaengig aggregiert >= 80%": {
-      "wert": 0.8003892333611203,
+      "wert": 0.8340064221789204,
       "schwelle": 0.8,
-      "n": 700,
+      "n": 562,
       "haelt": true
     },
     "Gate 3  CARGO angezeigt >= 80%": {
-      "wert": 0.9357900058647312,
+      "wert": 0.9076670401836096,
       "schwelle": 0.8,
-      "n": 220,
+      "n": 235,
       "haelt": true
     },
     "Gate 3  CITY angezeigt >= 80%": {
-      "wert": 0.9610677835010508,
+      "wert": 0.9552776697512351,
       "schwelle": 0.8,
-      "n": 1361,
+      "n": 1363,
       "haelt": true
     },
     "Gate 3  EBIKE angezeigt >= 80%": {
-      "wert": 0.9206156993994054,
+      "wert": 0.9278055430217383,
       "schwelle": 0.8,
       "n": 1368,
       "haelt": true
     },
     "Gate 4  CARGO Reichweite >= 10%": {
-      "wert": 0.38869257950530034,
+      "wert": 0.41519434628975266,
       "schwelle": 0.1,
       "n": 566,
       "haelt": true
     },
     "Gate 4  CITY Reichweite >= 10%": {
-      "wert": 0.42398753894081,
+      "wert": 0.42461059190031153,
       "schwelle": 0.1,
       "n": 3210,
       "haelt": true

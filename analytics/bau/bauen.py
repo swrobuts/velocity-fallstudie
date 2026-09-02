@@ -6,7 +6,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bauwerk import bauen
+from bauwerk import bauen, datenstand_pruefen
 
 MODULE = ["nb01_regression", "nb02_klassifikation", "nb03_clustering",
           "nb04_zeitreihe", "nb05_assoziation", "nb06_anomalie"]
@@ -29,6 +29,17 @@ def pruefen(gebaute):
         os.path.abspath(__file__))))
     print("\nPruefe ...")
     gescheitert = []
+    # ZUERST: Zeigt DATENSTAND auf die Daten, die hier gerechnet wurden?
+    # Diese Pruefung kostet nichts und haette einen ganzen Pruefdurchlauf
+    # gerettet - siehe die Begruendung in bauwerk.datenstand_pruefen.
+    _stand = datenstand_pruefen(os.path.join(wurzel, "analytics"))
+    if _stand:
+        print("  FEHLER  Datenstand der Notebooks")
+        for _z in _stand:
+            print(f"          {_z}")
+        gescheitert.append("Datenstand der Notebooks")
+    else:
+        print("  ok      Datenstand der Notebooks")
     for skript, zweck in PRUEFER:
         lauf = subprocess.run([sys.executable, skript], cwd=wurzel,
                               capture_output=True, text=True)
