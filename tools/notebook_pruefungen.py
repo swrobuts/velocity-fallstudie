@@ -341,6 +341,45 @@ VERGLEICH = re.compile(
     r"([a-z_][a-z0-9_]*)\s*(?:<=|>=|<|>|==|!=)\s*([A-Za-z_][A-Za-z0-9_]*)", re.M)
 
 
+SCHREIBT = re.compile(r"\.to_csv\(|joblib\.dump\(|\.to_json\(|\.to_parquet\(")
+FREIGABEMARKE = re.compile(r"\b(?:KEINE_FREIGABE|PRODUKT_FREIGEGEBEN|"
+                           r"[A-Z_]*FREIGEGEBEN|[A-Z_]*FREIGABE[A-Z_]*)\b")
+# Ein Artefakt ohne Gate ist zulaessig - aber dann muss es sagen, was es ist.
+# Die explorativen Tafeln in Notebook 3 und 5 tragen einen STATUS-Kopf
+# ("HYPOTHESEN - kein Umverteilungsplan"); das ist die ehrliche Form.
+STATUSMARKE = re.compile(r"[A-Za-z_]*status\b", re.I)
+
+
+def pruefe_artefakt_ohne_waechter(code: list[str]) -> list[str]:
+    """Ein Artefakt darf nur entstehen, wenn die Freigabe es zulaesst.
+
+    In Notebook 2 stand der Nichtfreigabepfad im Text, aber nicht im Code:
+    Faellt kein Kandidat durch alle Gates, war ausgelieferter_score None -
+    und die naechste Zelle brach mit einem TypeError ab. Ein Absturz ist
+    keine Freigabeentscheidung, und eine Liste, die trotz gerissener Gates
+    geschrieben wird, ist schlimmer als beides.
+
+    Gemeldet wird jede Zelle, die eine Datei schreibt, ohne dass in derselben
+    Zelle entweder eine Freigabevariable geprueft oder ein STATUS deklariert
+    wird. Beides ist zulaessig, keines von beidem nicht: Wer eine Datei
+    schreibt, muss sagen, ob sie benutzt werden darf. Der Waechter muss dort
+    stehen, wo geschrieben wird - ein Kommentar drei Zellen frueher haelt
+    niemanden auf.
+    """
+    befunde = []
+    for nr, quelle in enumerate(code, 1):
+        if not SCHREIBT.search(quelle):
+            continue
+        if FREIGABEMARKE.search(quelle) or STATUSMARKE.search(quelle):
+            continue
+        zeile = next((z.strip() for z in quelle.split("\n") if SCHREIBT.search(z)), "")
+        befunde.append(
+            f"Zelle {nr}: '{zeile[:70]}' schreibt ein Artefakt, ohne Freigabepruefung "
+            f"und ohne deklarierten Status - der Leser der Datei erfaehrt nicht, "
+            f"ob er sie benutzen darf")
+    return befunde
+
+
 def pruefe_gate_mit_fremder_zahl(code: list[str]) -> list[str]:
     """Findet Gates, die mit einer anderen Zahl begruendet werden als der,
     die sie entscheidet.
@@ -460,7 +499,8 @@ def main() -> int:
                   + pruefe_gate_ohne_sperre(bauskript)
                   + pruefe_platzhalterrest(markdown, bauskript)
                   + pruefe_urteil_im_text(markdown)
-                  + pruefe_gate_mit_fremder_zahl(code))
+                  + pruefe_gate_mit_fremder_zahl(code)
+                  + pruefe_artefakt_ohne_waechter(code))
         hinweise = (pruefe_nullfuellung(code) + pruefe_freie_schwellen(code)
                     + pruefe_urteil_ohne_zahl(ausgaben))
         if fehler:

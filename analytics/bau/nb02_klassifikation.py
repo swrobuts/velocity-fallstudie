@@ -843,9 +843,49 @@ for tag in validierung:
     zeilen.append({"Stichtag": tag.date(), "Räder": len(yy),
                    "Grundrate": yy.mean(),
                    "Wald": ew["Treffer"], "Regel": er["Treffer"],
+                   "Quote Wald": ew["Trefferquote"], "Quote Regel": er["Trefferquote"],
                    "Vorteil Wald (EUR)": er["Kosten (EUR)"] - ew["Kosten (EUR)"]})
 
-roll = pd.DataFrame(zeilen)
+roll_roh = pd.DataFrame(zeilen)          # ungerundet, fuer die Gates
+roll = roll_roh.drop(columns=["Quote Wald", "Quote Regel"])
+
+# ─── K3: EIN STABILITAETSGATE, DAS DIE JAHRESZEIT NICHT MISST ───────
+#
+# Naheliegend waere: "In wie vielen Quartalen nimmt der Kandidat die
+# 70-%-Huerde?" Die Antwort waere 0 von 5 fuer die Regel und 1 von 5 fuer
+# den Wald - nicht weil die Verfahren schlecht sind, sondern weil die
+# Grundrate zwischen den Quartalen um den Faktor drei schwankt. Eine
+# Trefferquote von 40 % bei 16,5 % Grundrate ist eine bessere Leistung als
+# 68 % bei 46 %. Wer roh vergleicht, misst den Winter.
+#
+# Gemessen wird deshalb der LIFT: um welchen Faktor uebertrifft die Liste
+# die Grundrate ihres eigenen Quartals. Diese Groesse kennt den Kandidaten
+# nicht - dieselbe Frage geht an beide.
+K3_LIFT = 1.5
+K3_MINDESTQUARTALE = 4
+merke("k3_lift", K3_LIFT); merke("k3_mindestquartale", K3_MINDESTQUARTALE)
+
+roll_roh["Lift Wald"] = roll_roh["Quote Wald"] / roll_roh.Grundrate
+roll_roh["Lift Regel"] = roll_roh["Quote Regel"] / roll_roh.Grundrate
+
+print("\\nK3 - LIFT UEBER DER GRUNDRATE DES JEWEILIGEN QUARTALS:")
+print(roll_roh[["Stichtag", "Grundrate", "Quote Regel", "Lift Regel",
+                "Quote Wald", "Lift Wald"]].round(3).to_string(index=False))
+print()
+print(f"   Gefordert: Lift >= {K3_LIFT} in mindestens {K3_MINDESTQUARTALE} "
+      f"von {len(roll_roh)} Quartalen.")
+print()
+print("   Wie empfindlich ist das? Dieselbe Rechnung bei anderer Schwelle:")
+print(f"   {'Lift-Schwelle':>14s}{'Regel':>9s}{'Wald':>8s}")
+for _s in (1.3, 1.4, K3_LIFT, 1.6, 1.7):
+    _r = int((roll_roh["Lift Regel"] >= _s).sum())
+    _w = int((roll_roh["Lift Wald"] >= _s).sum())
+    _marke = "  <- gesetzt" if _s == K3_LIFT else ""
+    print(f"   {_s:>14.1f}{_r:>7d}/{len(roll_roh)}{_w:>6d}/{len(roll_roh)}{_marke}")
+print()
+print("   Die Schwelle ist eine SETZUNG, keine gemessene Groesse - deshalb")
+print("   steht sie hier mit ihrer Empfindlichkeit. Bei 1,7 faellt auch der")
+print("   Wald durch; bei 1,3 bestehen beide muehelos.")
 _gr = pd.DataFrame(zeilen).Grundrate
 merke("grundrate_min", _gr.min())
 merke("grundrate_max", _gr.max())
@@ -1073,7 +1113,21 @@ for name, score in [("Faustregel: km seit Reparatur", p_regel),
     k1b = wilson(e["Treffer"], KAPAZITAET)[0] >= 0.70
     k2 = e["Kosten (EUR)"] < kosten_heute
     # K3 gilt fuer die Regel per Definition - sie IST der Massstab.
-    k3 = True if "Faustregel" in name else vorteil_roll > 0
+    # K3 GILT FUER BEIDE GLEICH.
+    # Frueher stand hier: k3 = True fuer die Faustregel, sonst
+    # vorteil_roll > 0. Die Regel bekam das Stabilitaetsgate also geschenkt,
+    # und das Modell musste sie schlagen - zwei verschiedene Huerden unter
+    # einem Namen. Ein Gate, das den Kandidaten kennt, prueft nicht ihn,
+    # sondern die Absicht dessen, der es geschrieben hat.
+    #
+    # Jetzt zaehlt fuer beide dasselbe: In wie vielen der
+    # Validierungsquartale nimmt der Kandidat AUS EIGENER KRAFT die
+    # K1a-Huerde? Kein Vergleich, keine Kostendifferenz - dieselbe Frage
+    # an jeden.
+    _spalte = "Lift Regel" if "Faustregel" in name else "Lift Wald"
+    _bestanden = int((roll_roh[_spalte] >= K3_LIFT).sum())
+    k3 = _bestanden >= K3_MINDESTQUARTALE
+    merke("k3_quartale_" + ("regel" if "Faustregel" in name else "wald"), _bestanden)
     # K1b wurde frueher gerechnet, gedruckt - und dann fallengelassen. Ein
     # Kriterium, das in der Tabelle steht, aber nicht in der Bedingung, ist
     # keine Huerde, sondern Dekoration: Bei einem anderen Datenstand ginge ein
@@ -1160,30 +1214,38 @@ deshalb lehrreich.
 """),
 
 CODE('''
-# Nicht nur 20 bis 120, sondern JEDE Listenlaenge. Wer nur einen Ausschnitt
-# rechnet, findet das Minimum am Rand des Ausschnitts und haelt es fuer ein
-# Optimum. Genau das ist in einer frueheren Fassung passiert: Dort stand
-# "die guenstigste Kapazitaet ist 120" - es war schlicht der groesste
-# gepruefte Wert.
-alle_k = range(1, len(y_test) + 1)
-kosten_k = [liste_bewerten("x", ausgelieferter_score, y_test, kapazitaet=k)["Kosten (EUR)"]
-            for k in alle_k]
-guenstigste = int(np.argmin(kosten_k)) + 1
+# WAECHTER: Ohne bestandenes Gate entsteht KEIN Artefakt.
+# Der Nichtfreigabepfad ist kein Sonderfall, den man beschreibt - er muss
+# laufen. Vorher brach die naechste Zelle mit einem TypeError ab, weil
+# ausgelieferter_score None war: ein Absturz statt einer Entscheidung.
+if KEINE_FREIGABE:
+    print("KEINE FREIGABE - kein Kandidat hat alle Pflichtgates genommen.")
+    print("Es wird nichts gerechnet, nichts geschrieben, nichts gespeichert.")
+else:
+    # Nicht nur 20 bis 120, sondern JEDE Listenlaenge. Wer nur einen Ausschnitt
+    # rechnet, findet das Minimum am Rand des Ausschnitts und haelt es fuer ein
+    # Optimum. Genau das ist in einer frueheren Fassung passiert: Dort stand
+    # "die guenstigste Kapazitaet ist 120" - es war schlicht der groesste
+    # gepruefte Wert.
+    alle_k = range(1, len(y_test) + 1)
+    kosten_k = [liste_bewerten("x", ausgelieferter_score, y_test, kapazitaet=k)["Kosten (EUR)"]
+                for k in alle_k]
+    guenstigste = int(np.argmin(kosten_k)) + 1
 
-plt.figure(figsize=(8.5, 4))
-plt.plot(list(alle_k), kosten_k, color="#e00034", lw=2)
-plt.axvline(KAPAZITAET, color="#3d4b6b", ls=":", label=f"heutige Kapazität ({KAPAZITAET})")
-plt.axvline(guenstigste, color="#8AB833", ls="--",
-            label=f"rechnerisches Minimum: {guenstigste}")
-plt.xlabel("Prüfungen je Quartal"); plt.ylabel("Kosten nach der Formel aus Phase 1 (EUR)")
-plt.title("Die Kostenformel hat ihr Minimum am rechten Rand"); plt.legend(); plt.grid(alpha=.3)
-plt.tight_layout(); plt.show()
+    plt.figure(figsize=(8.5, 4))
+    plt.plot(list(alle_k), kosten_k, color="#e00034", lw=2)
+    plt.axvline(KAPAZITAET, color="#3d4b6b", ls=":", label=f"heutige Kapazität ({KAPAZITAET})")
+    plt.axvline(guenstigste, color="#8AB833", ls="--",
+                label=f"rechnerisches Minimum: {guenstigste}")
+    plt.xlabel("Prüfungen je Quartal"); plt.ylabel("Kosten nach der Formel aus Phase 1 (EUR)")
+    plt.title("Die Kostenformel hat ihr Minimum am rechten Rand"); plt.legend(); plt.grid(alpha=.3)
+    plt.tight_layout(); plt.show()
 
-for k in [20, 60, 120, len(y_test)]:
-    e = liste_bewerten(f"k={k}", ausgelieferter_score, y_test, kapazitaet=k)
-    print(f"  Kapazität {k:>4d}: {e['Treffer']:>3d} Treffer, "
-          f"{e['Kosten (EUR)']:>8,.0f} EUR".replace(",", "."))
-print(f"\\nRechnerisches Minimum bei {guenstigste} von {len(y_test)} Rädern.")
+    for k in [20, 60, 120, len(y_test)]:
+        e = liste_bewerten(f"k={k}", ausgelieferter_score, y_test, kapazitaet=k)
+        print(f"  Kapazität {k:>4d}: {e['Treffer']:>3d} Treffer, "
+              f"{e['Kosten (EUR)']:>8,.0f} EUR".replace(",", "."))
+    print(f"\\nRechnerisches Minimum bei {guenstigste} von {len(y_test)} Rädern.")
 '''),
 
 MD("""
@@ -1240,116 +1302,124 @@ Schritt ist kein weiteres Modell, sondern ein Gespräch mit Werkstatt und Contro
 PHASE(6, "Aus der Auswertung wird eine Liste, die zu Quartalsbeginn in der Werkstatt liegt."),
 
 CODE('''
-import joblib, datetime
+# WAECHTER: Ohne bestandenes Gate entsteht KEIN Artefakt.
+# Der Nichtfreigabepfad ist kein Sonderfall, den man beschreibt - er muss
+# laufen. Vorher brach die naechste Zelle mit einem TypeError ab, weil
+# ausgelieferter_score None war: ein Absturz statt einer Entscheidung.
+if KEINE_FREIGABE:
+    print("KEINE FREIGABE - kein Kandidat hat alle Pflichtgates genommen.")
+    print("Es wird nichts gerechnet, nichts geschrieben, nichts gespeichert.")
+else:
+    import joblib, datetime
 
-liste = test_zeilen.copy()
-liste["rangwert"] = ausgelieferter_score          # KEIN zweiter Wert, kein Umweg
-# Wie weit ist der Modellscore von einer Wahrscheinlichkeit entfernt?
-# Gemessen, nicht behauptet - und getrennt von der Liste ausgegeben.
-print(f"Modellscore im Mittel {p_wald.mean():.1%}, "
-      f"tatsächliche Grundrate {float(y_test.mean()):.1%} - "
-      f"Abstand {abs(p_wald.mean() - float(y_test.mean())) * 100:.1f} Prozentpunkte.")
-print("Als Rangfolge brauchbar, als Wahrscheinlichkeit nicht. Deshalb steht")
-print("der Score im Analysebericht, nicht in der Werkstattliste.\\n")
-liste = liste.sort_values("rangwert", ascending=False).head(KAPAZITAET)
-liste["rang"] = range(1, len(liste) + 1)
+    liste = test_zeilen.copy()
+    liste["rangwert"] = ausgelieferter_score          # KEIN zweiter Wert, kein Umweg
+    # Wie weit ist der Modellscore von einer Wahrscheinlichkeit entfernt?
+    # Gemessen, nicht behauptet - und getrennt von der Liste ausgegeben.
+    print(f"Modellscore im Mittel {p_wald.mean():.1%}, "
+          f"tatsächliche Grundrate {float(y_test.mean()):.1%} - "
+          f"Abstand {abs(p_wald.mean() - float(y_test.mean())) * 100:.1f} Prozentpunkte.")
+    print("Als Rangfolge brauchbar, als Wahrscheinlichkeit nicht. Deshalb steht")
+    print("der Score im Analysebericht, nicht in der Werkstattliste.\\n")
+    liste = liste.sort_values("rangwert", ascending=False).head(KAPAZITAET)
+    liste["rang"] = range(1, len(liste) + 1)
 
-# ─── SELBSTPRÜFUNG ──────────────────────────────────────────────────
-# Die exportierte Liste MUSS die Top 60 des Verfahrens sein, das oben
-# als ausgeliefert benannt wurde. In einer früheren Fassung stimmte das
-# nicht: Der Text erklärte den Wald zum Sieger, sortiert wurde nach der
-# Regel. Die beiden Listen überschnitten sich in 43 von 60 Rädern -
-# niemandem fiel es auf. Diese Zeile lässt das Notebook durchfallen.
-soll = set(test_zeilen.iloc[np.argsort(-np.asarray(ausgelieferter_score))[:KAPAZITAET]].fahrrad_id)
-assert set(liste.fahrrad_id) == soll, (
-    f"Die exportierte Liste passt nicht zu '{ausgeliefertes_verfahren}'")
-print(f"Selbstprüfung bestanden: Liste = Top {KAPAZITAET} von '{ausgeliefertes_verfahren}'\\n")
+    # ─── SELBSTPRÜFUNG ──────────────────────────────────────────────────
+    # Die exportierte Liste MUSS die Top 60 des Verfahrens sein, das oben
+    # als ausgeliefert benannt wurde. In einer früheren Fassung stimmte das
+    # nicht: Der Text erklärte den Wald zum Sieger, sortiert wurde nach der
+    # Regel. Die beiden Listen überschnitten sich in 43 von 60 Rädern -
+    # niemandem fiel es auf. Diese Zeile lässt das Notebook durchfallen.
+    soll = set(test_zeilen.iloc[np.argsort(-np.asarray(ausgelieferter_score))[:KAPAZITAET]].fahrrad_id)
+    assert set(liste.fahrrad_id) == soll, (
+        f"Die exportierte Liste passt nicht zu '{ausgeliefertes_verfahren}'")
+    print(f"Selbstprüfung bestanden: Liste = Top {KAPAZITAET} von '{ausgeliefertes_verfahren}'\\n")
 
-# Der Modellscore steht NICHT in der ausgelieferten Liste. Er stammt aus
-# einem Verfahren, das ausdruecklich nicht freigegeben ist; neben einem
-# Rang, den die Regel bestimmt, erzeugt er in der Werkstatt ein zweites,
-# widersprechendes Signal. Er gehoert in den Analysebericht, nicht auf
-# den Werkstatttisch.
-ausgabe = liste[["rang", "rahmennummer", "typ_code", "rangwert", "km_180",
-                 "meldungen_bisher", "tage_seit_reparatur"]].copy()
-ausgabe["rangwert"] = ausgabe.rangwert.round(0)
-ausgabe["km_180"] = ausgabe.km_180.round(0)
-ausgabe = ausgabe.rename(columns={
-    "rahmennummer": "Rahmennummer", "typ_code": "Typ",
-    "rangwert": "km seit letzter Reparatur", "km_180": "km (180 Tage)",
-    "meldungen_bisher": "Meldungen bisher", "tage_seit_reparatur": "Tage seit Reparatur"})
+    # Der Modellscore steht NICHT in der ausgelieferten Liste. Er stammt aus
+    # einem Verfahren, das ausdruecklich nicht freigegeben ist; neben einem
+    # Rang, den die Regel bestimmt, erzeugt er in der Werkstatt ein zweites,
+    # widersprechendes Signal. Er gehoert in den Analysebericht, nicht auf
+    # den Werkstatttisch.
+    ausgabe = liste[["rang", "rahmennummer", "typ_code", "rangwert", "km_180",
+                     "meldungen_bisher", "tage_seit_reparatur"]].copy()
+    ausgabe["rangwert"] = ausgabe.rangwert.round(0)
+    ausgabe["km_180"] = ausgabe.km_180.round(0)
+    ausgabe = ausgabe.rename(columns={
+        "rahmennummer": "Rahmennummer", "typ_code": "Typ",
+        "rangwert": "km seit letzter Reparatur", "km_180": "km (180 Tage)",
+        "meldungen_bisher": "Meldungen bisher", "tage_seit_reparatur": "Tage seit Reparatur"})
 
-merke("spitzenwert_km", float(ausgabe["km seit letzter Reparatur"].max()))
+    merke("spitzenwert_km", float(ausgabe["km seit letzter Reparatur"].max()))
 
-# ZWEI ARTEFAKTE, ZWEI ZWECKE - und sie duerfen nicht denselben Namen tragen.
-#
-# Diese Liste steht auf dem Stichtag {letzter}, dessen 90 Tage laengst
-# vorbei sind: Ihr Ausgang ist bekannt und wurde gerade zur Bewertung
-# benutzt. Sie ist ein TESTARTEFAKT, keine Werkstattliste. Eine Datei
-# "wartungsliste.csv" haette genau das verwischt - der Name haette ein
-# Betriebsprodukt behauptet, wo eine Rueckschau steht.
-_test_datei = f"testliste_historisch_{letzter.date()}.csv"
-print(f"HISTORISCHE TESTLISTE  Stichtag {letzter.date()}   ({KAPAZITAET} Räder)")
-print("Der 90-Tage-Ausgang dieser Liste ist BEKANNT und wurde oben zur")
-print("Bewertung verwendet. Sie ist kein Auftrag an die Werkstatt.\\n")
-print(ausgabe.head(15).to_string(index=False))
-print(f"\\n... und {len(ausgabe) - 15} weitere.")
+    # ZWEI ARTEFAKTE, ZWEI ZWECKE - und sie duerfen nicht denselben Namen tragen.
+    #
+    # Diese Liste steht auf dem Stichtag {letzter}, dessen 90 Tage laengst
+    # vorbei sind: Ihr Ausgang ist bekannt und wurde gerade zur Bewertung
+    # benutzt. Sie ist ein TESTARTEFAKT, keine Werkstattliste. Eine Datei
+    # "wartungsliste.csv" haette genau das verwischt - der Name haette ein
+    # Betriebsprodukt behauptet, wo eine Rueckschau steht.
+    _test_datei = f"testliste_historisch_{letzter.date()}.csv"
+    print(f"HISTORISCHE TESTLISTE  Stichtag {letzter.date()}   ({KAPAZITAET} Räder)")
+    print("Der 90-Tage-Ausgang dieser Liste ist BEKANNT und wurde oben zur")
+    print("Bewertung verwendet. Sie ist kein Auftrag an die Werkstatt.\\n")
+    print(ausgabe.head(15).to_string(index=False))
+    print(f"\\n... und {len(ausgabe) - 15} weitere.")
 
-ausgabe.to_csv(_test_datei, index=False)
+    ausgabe.to_csv(_test_datei, index=False)
 
-# Das Paket beschreibt, WAS ausgeliefert wird - abgeleitet, nicht getippt.
-# Das Modell wandert mit hinein, obwohl es nicht ausgeliefert wird: als
-# Beleg, dass es geprueft wurde, und als Ausgangspunkt der naechsten Runde.
-paket = {
-    "ausgeliefert": ausgeliefertes_verfahren,
-    "regel": "Räder nach Kilometern seit der letzten ERLEDIGTEN Reparatur, absteigend",
-    "regel_spalte": "km_seit_reparatur",
-    "trefferquote_test": round(float(urteile[ausgeliefertes_verfahren][0]["Trefferquote"]), 3),
-    "vertrauensintervall_test": [round(float(g), 3)
-                                 for g in wilson(urteile[ausgeliefertes_verfahren][0]["Treffer"],
-                                                 KAPAZITAET)],
-    "geprueft_aber_nicht_ausgeliefert": "Random Forest",
-    "modell": wald,
-    "merkmalsspalten": list(X_alle.columns),
-    "vorteil_modell_validierung_eur": float(vorteil_roll),
-    "horizont_tage": HORIZONT_TAGE, "rueckblick_tage": RUECKBLICK_TAGE,
-    "kapazitaet": KAPAZITAET,
-    "datenherkunft": "ERFUNDENE LEHRDATEN - keine Grundlage für Betriebsentscheidungen",
-    "erstellt_am": datetime.date.today().isoformat(),
-}
-joblib.dump(paket, "wartungsmodell.joblib")
+    # Das Paket beschreibt, WAS ausgeliefert wird - abgeleitet, nicht getippt.
+    # Das Modell wandert mit hinein, obwohl es nicht ausgeliefert wird: als
+    # Beleg, dass es geprueft wurde, und als Ausgangspunkt der naechsten Runde.
+    paket = {
+        "ausgeliefert": ausgeliefertes_verfahren,
+        "regel": "Räder nach Kilometern seit der letzten ERLEDIGTEN Reparatur, absteigend",
+        "regel_spalte": "km_seit_reparatur",
+        "trefferquote_test": round(float(urteile[ausgeliefertes_verfahren][0]["Trefferquote"]), 3),
+        "vertrauensintervall_test": [round(float(g), 3)
+                                     for g in wilson(urteile[ausgeliefertes_verfahren][0]["Treffer"],
+                                                     KAPAZITAET)],
+        "geprueft_aber_nicht_ausgeliefert": "Random Forest",
+        "modell": wald,
+        "merkmalsspalten": list(X_alle.columns),
+        "vorteil_modell_validierung_eur": float(vorteil_roll),
+        "horizont_tage": HORIZONT_TAGE, "rueckblick_tage": RUECKBLICK_TAGE,
+        "kapazitaet": KAPAZITAET,
+        "datenherkunft": "ERFUNDENE LEHRDATEN - keine Grundlage für Betriebsentscheidungen",
+        "erstellt_am": datetime.date.today().isoformat(),
+    }
+    joblib.dump(paket, "wartungsmodell.joblib")
 
-# ─── DIE SCHATTENLISTE: derselbe Stichtag wie die Wirklichkeit ──────
-# Was die Werkstatt HEUTE bekaeme, steht auf dem letzten Tag der Daten -
-# und sein Ausgang ist unbekannt, weil die 90 Tage noch nicht vorbei sind.
-# Genau das macht sie zur Schattenliste: Sie laesst sich erst nach Ablauf
-# des Quartals bewerten. Wer sie vorher beurteilt, beurteilt nichts.
-_schatten_stichtag = fahrten.startzeit.max().normalize()
-_schatten = zeile_bauen(_schatten_stichtag)
-_schatten = _schatten[_schatten.fahrrad_id.notna()].copy()
-_schatten["rangwert"] = _schatten.km_seit_reparatur
-_schatten = _schatten.nlargest(KAPAZITAET, "rangwert").reset_index(drop=True)
-_schatten.insert(0, "rang", range(1, len(_schatten) + 1))
-_schatten_aus = _schatten[["rang", "fahrrad_id", "typ_code", "rangwert",
-                           "km_180", "meldungen_bisher"]].round(0)
-_schatten_aus["stichtag"] = _schatten_stichtag.date()
-_schatten_aus["gilt_bis"] = (_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()
-_schatten_aus["status"] = "SCHATTENBETRIEB - nicht handlungsleitend"
-_schatten_aus["regelversion"] = paket["regel_spalte"]
-_schatten_datei = f"schattenliste_{_schatten_stichtag.date()}.csv"
-_schatten_aus.to_csv(_schatten_datei, index=False)
-merke("schatten_stichtag", str(_schatten_stichtag.date()))
+    # ─── DIE SCHATTENLISTE: derselbe Stichtag wie die Wirklichkeit ──────
+    # Was die Werkstatt HEUTE bekaeme, steht auf dem letzten Tag der Daten -
+    # und sein Ausgang ist unbekannt, weil die 90 Tage noch nicht vorbei sind.
+    # Genau das macht sie zur Schattenliste: Sie laesst sich erst nach Ablauf
+    # des Quartals bewerten. Wer sie vorher beurteilt, beurteilt nichts.
+    _schatten_stichtag = fahrten.startzeit.max().normalize()
+    _schatten = zeile_bauen(_schatten_stichtag)
+    _schatten = _schatten[_schatten.fahrrad_id.notna()].copy()
+    _schatten["rangwert"] = _schatten.km_seit_reparatur
+    _schatten = _schatten.nlargest(KAPAZITAET, "rangwert").reset_index(drop=True)
+    _schatten.insert(0, "rang", range(1, len(_schatten) + 1))
+    _schatten_aus = _schatten[["rang", "fahrrad_id", "typ_code", "rangwert",
+                               "km_180", "meldungen_bisher"]].round(0)
+    _schatten_aus["stichtag"] = _schatten_stichtag.date()
+    _schatten_aus["gilt_bis"] = (_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()
+    _schatten_aus["status"] = "SCHATTENBETRIEB - nicht handlungsleitend"
+    _schatten_aus["regelversion"] = paket["regel_spalte"]
+    _schatten_datei = f"schattenliste_{_schatten_stichtag.date()}.csv"
+    _schatten_aus.to_csv(_schatten_datei, index=False)
+    merke("schatten_stichtag", str(_schatten_stichtag.date()))
 
-print()
-print(f"ausgeliefert: {paket['ausgeliefert']}")
-print(f"geschrieben: {_test_datei} (historisch, Ausgang bekannt)")
-print(f"             {_schatten_datei} (Schattenbetrieb, Ausgang offen)")
-print("             wartungsmodell.joblib")
-print()
-print(f"Die Schattenliste steht auf dem {_schatten_stichtag.date()} - dem letzten Tag")
-print(f"der Daten. Bewertbar wird sie am {(_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()},")
-print("wenn die 90 Tage vorbei sind. Bis dahin ist sie eine Vorhersage")
-print("ohne Ergebnis - und genau das ist der Unterschied zur Liste darueber.")
+    print()
+    print(f"ausgeliefert: {paket['ausgeliefert']}")
+    print(f"geschrieben: {_test_datei} (historisch, Ausgang bekannt)")
+    print(f"             {_schatten_datei} (Schattenbetrieb, Ausgang offen)")
+    print("             wartungsmodell.joblib")
+    print()
+    print(f"Die Schattenliste steht auf dem {_schatten_stichtag.date()} - dem letzten Tag")
+    print(f"der Daten. Bewertbar wird sie am {(_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()},")
+    print("wenn die 90 Tage vorbei sind. Bis dahin ist sie eine Vorhersage")
+    print("ohne Ergebnis - und genau das ist der Unterschied zur Liste darueber.")
 '''),
 
 MD("""
