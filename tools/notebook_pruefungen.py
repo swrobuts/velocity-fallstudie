@@ -512,6 +512,64 @@ def pruefe_urteil_im_text(markdown: list[str]) -> list[str]:
     return befunde
 
 
+# Der Freigabestatus eines Produkts ist eine BERECHNETE Groesse: Er haengt
+# an Gates, und die haengen an Zahlen. Steht er als Wort im Fliesstext,
+# ist er eine zweite Quelle - und zwei Quellen fuer dieselbe Aussage gehen
+# auseinander. In dieser Reihe ist genau das viermal passiert:
+#   nb01  "Das Primaergate haelt nicht" bei gemessenen 82,2 % gegen 80 %
+#   nb03  "ueber der Alarmschwelle" bei 20,70 % gegen 25 %
+#   nb05  "freigegeben ist nichts" neben "freigegeben als Entscheidungshilfe"
+#   nb06  "Die Regel reisst BEIDE Huerden" neben zwei bestandenen Gates
+# Gemeldet wird nur die BEHAUPTENDE Form: ein Produkt, dem ein Status
+# zugesprochen wird. Das blosse Wort reicht nicht - "Was ein echter
+# Schattenbetrieb waere" erklaert den Begriff, es behauptet nichts. Eine
+# fruehere Fassung dieses Pruefers meldete 34 Stellen, davon 30 solche
+# Erklaerungen; ein Pruefer, der so laut ist, wird abgeschaltet.
+STATUSWORT = re.compile(
+    r"(?:ist|sind|bleibt|bleiben|wird|werden|geht|gehen|l[äa]uft|l[äa]ufen)"
+    r"\s+(?:\w+\s+){0,3}"
+    r"(?:freigegeben|gesperrt|im Schattenbetrieb|als Pilot|in Betrieb)"
+    r"|^\s*[*>|\s]*\**Freigegeben\**\s+(?:ist|wird|sind|werden)"
+    r"|\bFreigabe\s+(?:erteilt|verweigert)\b", re.I | re.M)
+# Ein Satz darf den Status nennen, wenn er ihn NICHT behauptet: als
+# Platzhalter, als Codeverweis, als Definition, als Bedingung oder als
+# Bericht ueber eine fruehere Fassung.
+STATUS_GEDECKT = re.compile(
+    r"\{\{|`|\bheisst\b|\bheißt\b|\bbedeutet\b|\bfr[üu]here?n? Fassung\b"
+    r"|\bFr[üu]her\b|\bstand hier\b|\bw[äa]re\b|\bw[äa]ren\b|\bh[äa]tte\b"
+    r"|\bh[äa]tten\b|\bwenn\b|\bfalls\b|\bsobald\b|\bsolange\b"
+    r"|\bnicht als\b|\bDefinition\b|\bBegriff\b|\bm[üu]sste\b", re.I)
+
+
+def pruefe_status_im_text(bauskript: str) -> list[str]:
+    """Findet Freigabestatus, die als Wort im Fliesstext behauptet werden.
+
+    Geprueft wird das BAUSKRIPT, nicht das gebaute Notebook - und das ist
+    der ganze Witz: Im Notebook ist {{status_a}} laengst durch "nicht
+    freigegeben" ersetzt, und ein gesetzter Platzhalter saehe dann genauso
+    aus wie ein von Hand getippter Status. Ein Pruefer, der das nicht
+    unterscheiden kann, meldet die richtigen Stellen nicht und die
+    falschen dafuer alle.
+
+    Markdown kann nicht rechnen. Ein Satz wie "freigegeben als
+    Entscheidungshilfe" bleibt stehen, wenn das Gate darunter kippt - und
+    dann sagt dieselbe Seite an zwei Stellen Verschiedenes.
+
+    Gedeckt sind Saetze, die den Status nicht behaupten: mit Platzhalter,
+    als Definition, als Bedingung oder als Bericht ueber eine fruehere
+    Fassung.
+    """
+    befunde = []
+    for nr, block in enumerate(re.findall(r'MD\("""(.*?)"""\)', bauskript, re.S), 1):
+        for satz in re.split(r"(?<=[.:!?])\s+|\n(?=[|>#])", block):
+            if not STATUSWORT.search(satz) or STATUS_GEDECKT.search(satz):
+                continue
+            befunde.append(f"MD-Block {nr}: '{satz.strip()[:90]}' - ein "
+                           f"Freigabestatus als Wort im Fliesstext; er wandert "
+                           f"nicht mit, wenn das Gate kippt (Platzhalter setzen)")
+    return befunde
+
+
 def pruefe_platzhalterrest(markdown: list[str], bauskript: str) -> list[str]:
     """Findet Platzhalter, die im gebauten Notebook noch als Text dastehen.
 
@@ -560,6 +618,7 @@ def main() -> int:
                   + pruefe_gate_ohne_sperre(bauskript)
                   + pruefe_platzhalterrest(markdown, bauskript)
                   + pruefe_urteil_im_text(markdown)
+                  + pruefe_status_im_text(bauskript)
                   + pruefe_gate_mit_fremder_zahl(code)
                   + pruefe_artefakt_ohne_waechter(code)
                   + pruefe_altprosa(markdown, ausgaben))

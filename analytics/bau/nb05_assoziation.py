@@ -1111,8 +1111,7 @@ MD("""
 > Abstell-Hotspots hatten nie welche — sie tragen deshalb Kopf und Beschriftung
 > **explorativ**, und genau das verlangt Kriterium B4 aus Phase 1.
 >
-> **Freigegeben ist trotzdem etwas:** Produkt B, der Dispositionshinweis
-> ({{status_b}}). Er besteht aus den Regeln, die B1 halten, und er erscheint als Hinweis
+> **Produkt B ist davon unberührt — es ist {{status_b}}:** der Dispositionshinweis. Er besteht aus den Regeln, die B1 halten, und er erscheint als Hinweis
 > neben der Größenordnung — nicht als Auftrag.
 """),
 
@@ -1671,8 +1670,8 @@ nichts zu tun haben.
 
 **Fortschreiben lassen sich Assoziationsregeln deshalb nicht stückweise.** Neue Fahrten
 und neue Stationen einzurechnen ist selbstverständlich möglich — aber nur als
-**vollständige Neuberechnung**, die anschließend neu validiert und als neue Regelversion
-freigegeben wird. Einzelne Regeln nachzujustieren, während die Basisraten sich verschoben
+**vollständige Neuberechnung**, die anschließend neu validiert wird und dieselben
+Kriterien aus Phase 1 erneut durchlaufen muss. Einzelne Regeln nachzujustieren, während die Basisraten sich verschoben
 haben, ergibt Kennzahlen, die zu nichts mehr gehören.
 
 ### 6.6 Ein Hinweis, der nicht fehlen darf

@@ -2538,9 +2538,8 @@ angewandt auf sein eigenes Ergebnis.
 > der Kunde eingibt und dann vielleicht ändert. Diese Lücke schließt kein Rechenschritt,
 > sondern nur ein Schattenbetrieb, in dem das gewünschte Ziel mitgeschrieben wird.
 >
-> **Deshalb ist die Freigabe an eine Bedingung geknüpft:** Die Auskunft geht in Betrieb,
-> der Schattenbetrieb aus 6.6 läuft parallel, und die Überwachung aus 6.5 kann sie
-> jederzeit wieder abschalten. Das ist kein Vorbehalt aus Vorsicht — es ist der Teil der
+> **Deshalb steht der Status auf „{{produktstatus}}":** {{statussatz}}. Die Überwachung
+> aus 6.5 kann den Dienst jederzeit wieder abschalten. Das ist kein Vorbehalt aus Vorsicht — es ist der Teil der
 > Prüfung, der sich nicht vorziehen lässt.
 
 > **Warum die Gesamtquote hier nicht zählt.** {{abdeckung_gesamt:.1%}} über alle
@@ -2678,7 +2677,8 @@ Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
 8. **Die Architekturfrage entschied mit — und sie wurde vorher gestellt.** Von drei
    Kandidaten nimmt nur die Quantilregression alle Hürden; beide statischen Tabellen
    reißen das Primärgate, auch die aus den Modellvorhersagen gebaute. Weil ein
-   Laufzeitdienst zugelassen ist, geht sie in Betrieb. Wäre er es nicht, bliebe kein
+   Laufzeitdienst zugelassen ist, kommt sie überhaupt in Frage — im Status
+   „{{produktstatus}}". Wäre er es nicht, bliebe kein
    zulässiger Kandidat — dasselbe Notebook, dieselben Zahlen, ein anderes Ergebnis.
    Genau deshalb trägt die Rückfalltabelle keine Zusage: Sie ist derselbe Kandidat, der
    die Hürde gerissen hat.

@@ -1796,6 +1796,9 @@ PRODUKTE = {
     },
 }
 FREIGEGEBEN_FUER = [n for n, w in PRODUKTE.items() if w["im_paket"]]
+for _k, _n in (("a1_status", "A1 vergessene Rueckgaben"),
+               ("a2_status", "A2 auffaellige Fahrten")):
+    merke(_k, PRODUKTE[_n]["status"])
 
 # Die Zusicherung, die den alten Widerspruch unmoeglich macht: Wer B als
 # freigegeben fuehrt, muss es auch ins Paket legen - und umgekehrt.
@@ -1952,7 +1955,7 @@ MD("""
 | 3 Data Preparation | Fünf Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor keine auffällige *Fahrt* ist — wiederholtes Fehlen bei demselben Rad ist sehr wohl ein Fall, nur ein anderer: Datenqualität statt Fahrverhalten |
 | 4 Modeling | Interquartilsregel ({{iqr_treffer:,}} Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
 | 5 Evaluation | Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste {{tagesquote:.1%}} — **bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B hob eine Nachbesserung die Präzision von {{stat_alt_quote:.1%}} auf {{stat_je_tag:.1%}} je Meldung und {{stat_je_alarm:.1%}} je Alarm — beide über der Hürde von {{kriterium_treffer:.0%}}. Der Preis: **{{episoden_neu:.0f}} von {{episoden_gesamt:.0f}}** Episoden statt aller |
-| 6 Deployment | **A1 spezifiziert, A2 im Schattenbetrieb, B {{b_status}}.** A1 ist als Regel und Funktion beschrieben und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. A2 läuft im Schattenbetrieb, weil das Label fehlt. Bei B halten {{b_gates_halten}} der vier vorab festgelegten Gates auf dem unangetasteten Testabschnitt. Alle drei Statusangaben stammen aus derselben Quelle wie das Modellpaket |
+| 6 Deployment | **A1 spezifiziert, A2 im Schattenbetrieb, B {{b_status}}.** A1 ist als Regel und Funktion beschrieben und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. A2 hat den Status „{{a2_status}}", weil das Label fehlt. Bei B halten {{b_gates_halten}} der vier vorab festgelegten Gates auf dem unangetasteten Testabschnitt. Alle drei Statusangaben stammen aus derselben Quelle wie das Modellpaket |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
 

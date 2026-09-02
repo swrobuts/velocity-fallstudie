@@ -51,5 +51,7 @@
  "b1_urteil": "unbestimmt",
  "b_gates_halten": "3 von 4",
  "b_status": "explorativ",
- "b_statussatz": "explorativ entwickelte Regel; prospektiver Schattenpilot noetig - der Testabschnitt traegt die Freigabe nicht"
+ "b_statussatz": "explorativ entwickelte Regel; prospektiver Schattenpilot noetig - der Testabschnitt traegt die Freigabe nicht",
+ "a1_status": "spezifiziert",
+ "a2_status": "schatten"
 }
