@@ -1,0 +1,34 @@
+{
+  "verfahren": "Quantilregression",
+  "quantil_unten": 0.1,
+  "quantil_oben": 0.9,
+  "merkmale": [
+    "start_name",
+    "ziel_name",
+    "route",
+    "typ_code",
+    "strecke_km",
+    "steigung_promille",
+    "stunde_sin",
+    "stunde_cos",
+    "wochentag_sin",
+    "wochentag_cos",
+    "monat_sin",
+    "monat_cos",
+    "ist_wochenende",
+    "ist_feiertag",
+    "ist_ferien"
+  ],
+  "radtypen": [
+    "CARGO",
+    "CITY",
+    "EBIKE"
+  ],
+  "produktstatus": "schatten",
+  "gate_schwelle": 0.8,
+  "gate_untergrenze": 0.8223052585358098,
+  "gueltig_ab": "2026-04-24",
+  "gueltig_bis": "2026-08-24",
+  "max_fahrtdauer_minuten": 480,
+  "gebaut_am": "2026-09-02"
+}

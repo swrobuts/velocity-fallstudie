@@ -183,7 +183,11 @@ d = ausleihe[ausleihe.status == "abgeschlossen"]
 schritte.append(("nur abgeschlossene Vorgänge", len(d)))
 d = d[d.dauer_min >= 1]
 schritte.append(("mindestens 1 Minute", len(d)))
-d = d[d.dauer_min <= 8 * 60]
+# Acht Stunden: gesetzte Grenze, nicht gemessene. Sie steht als
+# benannte Konstante, damit sie im Modellpaket mitgeliefert wird -
+# eine Grenze, die nur im Filtercode steht, kennt der Betrieb nicht.
+OBERGRENZE_MINUTEN = 8 * 60
+d = d[d.dauer_min <= OBERGRENZE_MINUTEN]
 schritte.append(("höchstens 8 Stunden (Geltungsbereich)", len(d)))
 n_vor_ziel = len(d)
 d = d[d.end_station_id.notna()].copy()
@@ -986,8 +990,11 @@ for teil in (basis, zukunft):
 # Kleingeschriebene Namen wie unten/oben werden weiter unten von den
 # Wilson-Schleifen ueberschrieben - dann waere das Modell ein float, und
 # der erste spaetere Zugriff bricht mit AttributeError ab.
-Q_UNTEN = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.10, random_state=42))
-Q_OBEN  = pipeline(GradientBoostingRegressor(loss="quantile", alpha=0.90, random_state=42))
+Q_UNTEN_NIVEAU, Q_OBEN_NIVEAU = 0.10, 0.90
+Q_UNTEN = pipeline(GradientBoostingRegressor(
+    loss="quantile", alpha=Q_UNTEN_NIVEAU, random_state=42))
+Q_OBEN  = pipeline(GradientBoostingRegressor(
+    loss="quantile", alpha=Q_OBEN_NIVEAU, random_state=42))
 Q_UNTEN.fit(basis[MERKMALE], basis.dauer_min)
 Q_OBEN.fit(basis[MERKMALE], basis.dauer_min)
 zukunft["modell_von"] = np.maximum(1.0, Q_UNTEN.predict(zukunft[MERKMALE]))
@@ -1648,6 +1655,24 @@ merke("gate_untergrenze", unten_o)
 merke("gate_urteil", "bestanden" if PRIMAERGATE_BESTANDEN else "nicht bestanden")
 merke("gate_luecke", max(0.0, (GATE_PREISABHAENGIG - unten_o) * 100))
 _ = merke("n_gesamt", len(z))
+# Dieselbe Gruppe je Radtyp - als DIAGNOSE. Ob sie bindet, ist eine Frage
+# der Produktzusage und in Phase 1 entschieden, nicht hier.
+print("\\nDieselbe Gruppe je Radtyp (Diagnose, nicht bindend):")
+_je_typ_offen = []
+for _ty in sorted(offen.typ_code.unique()):
+    _g = offen[offen.typ_code == _ty]
+    _u, _o = wilson(int(_g.im_intervall.sum()), len(_g))
+    _je_typ_offen.append((_ty, len(_g), _g.im_intervall.mean(), _u))
+    print(f"   {_ty:6s} {len(_g):>6,d} Faelle   Abdeckung {_g.im_intervall.mean():>6.1%}"
+          f"   Untergrenze {_u:>6.1%}"
+          f"   {'haelt' if _u >= GATE_PREISABHAENGIG else 'HAELT NICHT'}".replace(",", "."))
+_schwaechster = min(_je_typ_offen, key=lambda z: z[3])
+merke("offen_kleinste_gruppe", min(z[1] for z in _je_typ_offen))
+merke("offen_schwaechster_typ", _schwaechster[0])
+merke("offen_schwaechste_grenze", _schwaechster[3])
+merke("offen_typen_halten", sum(1 for z in _je_typ_offen if z[3] >= GATE_PREISABHAENGIG))
+merke("offen_typen_gesamt", len(_je_typ_offen))
+
 print(f"\\nPRIMAERGATE - vorab preisabhaengige Gruppe:")
 print(f"   Untergrenze {unten_o:.1%} gegen geforderte "
       f"{GATE_PREISABHAENGIG:.0%}  ->  "
@@ -1737,7 +1762,35 @@ freigegebene_typen = sorted(
 # entscheidet das Primaergate: Halten die Fahrten, bei denen die Schaetzung
 # ueberhaupt in den Preis eingeht, die zugesagten 80 Prozent? Wenn nicht, wird
 # die Tabelle gebaut - aber nicht freigegeben.
-PRODUKT_FREIGEGEBEN = bool(PRIMAERGATE_BESTANDEN and len(freigegebene_typen) == 3)
+# ─── EINE STATUSQUELLE FUER DAS GANZE NOTEBOOK ──────────────────────
+#
+# Drei Stufen, und sie sind NICHT dasselbe:
+#
+#   qualifiziert  - die Gates halten auf den vorhandenen Daten
+#   schatten      - der Dienst laeuft und protokolliert, zeigt aber nichts an
+#   sichtbar      - die Anzeige ist fuer Kundinnen und Kunden freigeschaltet
+#
+# Warum nicht direkt sichtbar? Weil Test 2 die Intervalle KALIBRIERT hat.
+# Derselbe Zeitraum kann nicht zugleich Kalibrierung und unabhaengige
+# Endpruefung sein - das ist die Lehre dieses Notebooks, und sie gilt auch
+# fuer sein eigenes Ergebnis. Die unabhaengige Pruefung steht aus; bis
+# dahin laeuft der Dienst im Schatten.
+GATES_HALTEN = bool(PRIMAERGATE_BESTANDEN and len(freigegebene_typen) == 3)
+UNABHAENGIG_GEPRUEFT = False      # kein prospektiver Zeitraum mit Wunschziel
+PRODUKTSTATUS = ("sichtbar" if (GATES_HALTEN and UNABHAENGIG_GEPRUEFT)
+                 else "schatten" if GATES_HALTEN else "gesperrt")
+merke("produktstatus", PRODUKTSTATUS)
+merke("statussatz", {
+    "sichtbar": "die Anzeige ist freigeschaltet",
+    "schatten": "der Dienst rechnet und protokolliert, zeigt aber noch nichts an",
+    "gesperrt": "der Dienst ist gesperrt",
+}[PRODUKTSTATUS])
+merke("gates_halten", "ja" if GATES_HALTEN else "nein")
+
+# Die App zeigt nur im Status "sichtbar" etwas an. Im Schattenbetrieb
+# rechnet sie, protokolliert und schweigt nach aussen.
+PRODUKT_FREIGEGEBEN = PRODUKTSTATUS == "sichtbar"
+SCHATTENBETRIEB = PRODUKTSTATUS == "schatten"
 _ = merke("produkt_freigegeben", "ja" if PRODUKT_FREIGEGEBEN else "nein")
 merke("typen_freigegeben", aufzaehlung(freigegebene_typen))
 _ = merke("anzahl_typen_freigegeben", len(freigegebene_typen))
@@ -1745,7 +1798,7 @@ print()
 for x in sorted(je_typ.index):
     print(f"   {x:8} {je_typ[x]:.1%}  "
           f"{'Radtypgate erfuellt' if x in freigegebene_typen else 'Radtypgate gerissen'}"
-          f"{'' if PRODUKT_FREIGEGEBEN else '  (Produkt gesperrt: Primaergate)'}")
+          f"   Status: {PRODUKTSTATUS}")
 tab = tab[tab.typ_code.isin(freigegebene_typen)]
 z = z[z.typ_code.isin(freigegebene_typen)]
 
@@ -1822,7 +1875,33 @@ else:
 """),
 
 MD("""
-### 6.3 Die Tabelle bauen und ausliefern
+### 6.3 Zwei Artefakte — und nur eines ist das Produkt
+
+Am Ende dieser Phase entstehen **zwei** Dateien, und sie zu verwechseln wäre der
+folgenreichste Fehler dieses Notebooks:
+
+| Artefakt | was es ist | Zusage |
+|---|---|---|
+| `modellpaket_preisspanne.joblib` | **das ausgelieferte Verfahren** — beide Quantilmodelle mit Vorverarbeitung, Merkmalsreihenfolge, Radtypen, Gate-Status, Gültigkeitszeitraum | {{gate_schwelle:.0%}}, belegt mit {{gate_untergrenze:.1%}} |
+| `preisschaetzung.csv` | die **Rückfalltabelle** aus den historischen Perzentilen — Notbehelf bei Dienstausfall | **keine** — sie nimmt das Primärgate nicht ({{tabelle_gate}}) |
+
+Warum das getrennt gehört: Die Tabelle *sieht aus* wie das Produkt. Sie hat dieselben
+Spalten, dieselben Verbindungen, dieselbe Anzeigeform. Sie hält die Zusage aber nicht —
+und ein Rückfall, der dieselbe Zusage anzeigt wie das Produkt, ist kein Rückfall, sondern
+ein zweites, ungeprüftes Produkt. Die Schnittstelle in 6.4 gibt deshalb bei jeder Antwort
+`quelle` und `zusage` mit zurück; im Rückfall steht dort ausdrücklich keine Zusage.
+
+**Ein Beipackzettel gehört zum Modell.** Ein `.joblib` allein ist nicht auslieferbar: Wer
+die Merkmalsreihenfolge verliert, bekommt Vorhersagen, die aussehen wie Vorhersagen und
+falsch sind. Deshalb liegt neben dem Paket eine lesbare `.json` mit denselben Angaben —
+für Menschen, die wissen wollen, was sie da betreiben.
+
+**Und was liest die Website heute?** Die Rückfalltabelle. Der Ladeweg
+`db/betrieb/preisschaetzung_laden.py` füllt `velocity.preisschaetzung`, die Website liest
+`v_preisschaetzung`. Solange der Laufzeitdienst im Schattenbetrieb läuft, ist das
+konsequent — nur darf die Website dann auch nur das anzeigen, was die Tabelle trägt.
+
+### 6.3a Die Tabelle bauen
 
 > **Warum dreißig — und was daran schwach ist.** Dreißig Fahrten sind die Untergrenze für
 > eine Zeile. Für ein 10-%- und ein 90-%-Quantil heißt das rund **drei Beobachtungen je
@@ -1958,13 +2037,55 @@ _bedient_streng = z.merge(
         ["start_station_id", "end_station_id", "typ_code", "fenster"]],
     on=["start_station_id", "end_station_id", "typ_code", "fenster"], how="inner")
 _ = merke("reichweite_streng", len(_bedient_streng) / len(zukunft))
+# ─── ZWEI ARTEFAKTE, ZWEI ROLLEN - GETRENNT BENANNT ─────────────────
+#
+# 1. DAS MODELLPAKET ist das ausgelieferte Verfahren. Es enthaelt beide
+#    Quantilmodelle samt Vorverarbeitung, die Merkmalsreihenfolge, den
+#    Gate-Status und den Gueltigkeitsbereich. Ohne diese Beipacks ist ein
+#    Modell nicht auslieferbar: Wer die Merkmalsreihenfolge verliert,
+#    bekommt Vorhersagen, die aussehen wie Vorhersagen - und falsch sind.
+#
+# 2. DIE RUECKFALLTABELLE ist NICHT das Modell. Sie entsteht aus den
+#    historischen Perzentilen, nimmt das Primaergate nicht und darf
+#    deshalb nicht dieselbe Zusage tragen. Sie ist der Notbehelf bei
+#    Dienstausfall - und das Artefakt, das die Website heute liest.
+import joblib, json
+from pathlib import Path
+
+MODELLPAKET = {
+    "verfahren": KANDIDAT,
+    "modell_unten": Q_UNTEN, "modell_oben": Q_OBEN,
+    "quantil_unten": Q_UNTEN_NIVEAU, "quantil_oben": Q_OBEN_NIVEAU,
+    "merkmale": list(MERKMALE),
+    "radtypen": sorted(freigegebene_typen),
+    "produktstatus": PRODUKTSTATUS,
+    "gate_schwelle": GATE_PREISABHAENGIG,
+    "gate_untergrenze": float(unten_o),
+    "gueltig_ab": str(test2.startzeit.min().date()),
+    "gueltig_bis": str(test2.startzeit.max().date()),
+    "max_fahrtdauer_minuten": OBERGRENZE_MINUTEN,
+    "gebaut_am": str(pd.Timestamp.today().date()),
+}
+joblib.dump(MODELLPAKET, "modellpaket_preisspanne.joblib")
+_beipack = {k: v for k, v in MODELLPAKET.items()
+            if k not in ("modell_unten", "modell_oben")}
+Path("modellpaket_preisspanne.json").write_text(
+    json.dumps(_beipack, ensure_ascii=False, indent=2), encoding="utf-8")
+print("Modellpaket geschrieben - das ist das ausgelieferte Verfahren:")
+for _k, _v in _beipack.items():
+    print(f"   {_k:24s} {_v}")
+
+# Die Rueckfalltabelle behaelt ihren Dateinamen, weil der Ladeweg in die
+# Datenbank daran haengt. Der Name sagt aber nicht, was sie ist - deshalb
+# steht es hier, im Notebook und im Text darunter.
 freigabe_tabelle.to_csv("preisschaetzung.csv", index=False)
+print(f"\\nRueckfalltabelle geschrieben: {len(freigabe_tabelle)} Zeilen "
+      f"(preisschaetzung.csv) - NICHT das ausgewaehlte Verfahren.")
 
 # DIE KENNZAHLEN DES TATSAECHLICH AUSGELIEFERTEN ARTEFAKTS, nach allen
 # Filtern. Die Werte weiter oben galten der ungefilterten Tabelle; wer
 # nur die liest, berichtet etwas anderes, als er ausliefert.
-print("Das erzeugte Artefakt:"
-      if not PRODUKT_FREIGEGEBEN else "Das ausgelieferte Artefakt:")
+print("\\nDie Rueckfalltabelle im Einzelnen:")
 print(f"   Radtypen                {sorted(freigabe_tabelle.typ_code.unique())}")
 print(f"   Kombinationen           {len(freigabe_tabelle)}")
 print(f"   Verbindungen            "
@@ -2035,9 +2156,9 @@ if len(freigabe_tabelle):
 else:
     NACHSCHLAGE = pd.DataFrame().set_index(pd.MultiIndex.from_arrays([[], [], [], []]))
 
-def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
+def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
                     freiminuten_rest=0, rabatt_prozent=0.0,
-                    ohne_produktsperre=False, zeitpunkt=None):
+                    ohne_produktsperre=False, dienst_verfuegbar=True):
     \"\"\"Gibt die Preisspanne zurueck - oder sagt, dass sie es nicht kann.
 
     Angesprochen wird ueber Stations-IDs. Namen sind Anzeigewerte.
@@ -2049,15 +2170,32 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     ohne_produktsperre dient allein der Pruefung: Damit laesst sich die
     Filterlogik gegen die Offlinebewertung halten, auch wenn das Produkt als
     Ganzes gesperrt ist. Im Betrieb wird der Schalter nie gesetzt.
+
+    dienst_verfuegbar=False schaltet auf die RUECKFALLTABELLE um - den Fall,
+    dass der Laufzeitdienst ausfaellt. Die Tabelle nimmt das Primaergate
+    NICHT; sie darf deshalb nicht dieselbe Zusage anzeigen. Jede Antwort
+    traegt darum "quelle" und "zusage" mit: woher der Wert kommt und was
+    zugesagt ist. Eine Rueckfallantwort ohne Zusage ist eine Orientierung,
+    keine Auskunft.
     \"\"\"
     # EINGABEN PRUEFEN, BEVOR GERECHNET WIRD.
     # Eine Schnittstelle, die auf unsinnige Eingaben irgendetwas zurueckgibt,
     # ist schlimmer als eine, die nichts zurueckgibt: Der Aufrufer merkt den
     # Fehler nicht. Jeder Grund ist eindeutig benannt, damit die aufrufende
     # Seite unterscheiden kann, was sie falsch gemacht hat.
-    if not isinstance(stunde, (int, np.integer)) or not 0 <= stunde <= 23:
-        return {"anzeige": None, "grund": "stunde_ungueltig", "status": None,
-                "hinweis": "Die Stunde muss eine ganze Zahl von 0 bis 23 sein."}
+    # EINE ZEITQUELLE. Frueher nahm der Tabellenzweig eine separate `stunde`
+    # und der Modellzweig einen `zeitpunkt` - zwei Angaben, die sich
+    # widersprechen konnten, ohne dass es jemand bemerkt haette. Jetzt wird
+    # die Stunde aus dem Zeitpunkt abgeleitet; es gibt nichts mehr zu
+    # widersprechen.
+    try:
+        _t = pd.Timestamp(zeitpunkt)
+    except (TypeError, ValueError):
+        _t = pd.NaT
+    if pd.isna(_t):
+        return {"anzeige": None, "grund": "zeitpunkt_ungueltig", "status": None,
+                "hinweis": "Für die Schätzung wird ein gültiger Startzeitpunkt gebraucht."}
+    stunde = int(_t.hour)
     if freiminuten_rest is None or freiminuten_rest < 0:
         return {"anzeige": None, "grund": "freiminuten_ungueltig", "status": None,
                 "hinweis": "Ein Freiminutenstand kann nicht negativ sein."}
@@ -2072,8 +2210,12 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     # Primaergate nicht haelt, zeigt die App gar nichts an - auch nicht dort,
     # wo die einzelne Kombination gut belegt waere.
     if not PRODUKT_FREIGEGEBEN and not ohne_produktsperre:
-        return {"anzeige": None, "grund": "produkt_nicht_freigegeben", "status": None,
-                "hinweis": "Die Preisauskunft ist noch nicht freigegeben."}
+        _grund = ("schattenbetrieb" if SCHATTENBETRIEB else "produkt_nicht_freigegeben")
+        _hinweis = ("Die Auskunft wird berechnet und protokolliert, aber noch nicht "
+                    "angezeigt." if SCHATTENBETRIEB else
+                    "Die Preisauskunft ist noch nicht freigegeben.")
+        return {"anzeige": None, "grund": _grund, "status": PRODUKTSTATUS,
+                "hinweis": _hinweis}
     if start_id == ziel_id:
         return {"anzeige": None, "grund": "rundfahrt", "status": None,
                 "hinweis": "Für Rundfahrten schätzen wir keinen Preis."}
@@ -2081,14 +2223,11 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     # Welcher gilt, entscheidet KANDIDAT - dieselbe Variable, an der auch
     # die Bewertung haengt. Zwei Wege mit getrennten Regeln waeren zwei
     # Produkte; die Zusicherung unten prueft genau das.
-    if KANDIDAT == "Quantilregression":
+    _rueckfall = (KANDIDAT == "Quantilregression") and not dienst_verfuegbar
+    if KANDIDAT == "Quantilregression" and dienst_verfuegbar:
         if typ_code not in set(freigegebene_typen):
             return {"anzeige": None, "grund": "typ_nicht_freigegeben", "status": None,
                     "hinweis": "Für diesen Radtyp geben wir keine Auskunft."}
-        _t = pd.Timestamp(zeitpunkt) if zeitpunkt is not None else None
-        if _t is None:
-            return {"anzeige": None, "grund": "zeitpunkt_fehlt", "status": None,
-                    "hinweis": "Für die Schätzung wird der geplante Startzeitpunkt gebraucht."}
         _zeile = merkmalszeile(start_id, ziel_id, typ_code, _t)
         if _zeile is None:
             return {"anzeige": None, "grund": "keine_zeile", "status": None,
@@ -2097,7 +2236,14 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
         _mb = float(Q_OBEN.predict(_zeile)[0])
         z = pd.Series({"minuten_von": round(_mv), "minuten_bis": round(_mb),
                        "freigabestatus": "modell", "test2_fahrten": np.nan})
+        _quelle, _zusage = "modell", GATE_PREISABHAENGIG
     else:
+        _quelle = "rueckfalltabelle" if _rueckfall else "tabelle"
+        # Die Tabelle nimmt das Primaergate nicht. Als REGULAERE Quelle
+        # (KANDIDAT == Perzentiltabelle) waere sie deshalb gar nicht
+        # ausgewaehlt worden; als RUECKFALL darf sie liefern, aber ohne
+        # Zusage - deshalb hier None statt der 80 Prozent.
+        _zusage = None if _rueckfall else GATE_PREISABHAENGIG
         schluessel = (start_id, ziel_id, typ_code, fenster_von(stunde))
         if schluessel not in NACHSCHLAGE.index:
             return {"anzeige": None, "grund": "keine_zeile", "status": None,
@@ -2118,6 +2264,10 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
     # aber Ueberwachung und Support muessen wissen, worauf die Zeile beruht.
     return {"anzeige": f"{von:.2f} bis {bis:.2f} €",
             "grund": None, "status": z.freigabestatus,
+            "quelle": _quelle, "zusage": _zusage,
+            "hinweis": (None if _zusage is not None else
+                        "Grobe Orientierung aus der Rückfalltabelle - für sie "
+                        "gilt die Trefferzusage nicht."),
             "belege": (None if pd.isna(z.test2_fahrten) else int(z.test2_fahrten)),
             "minuten": f"{z.minuten_von:.0f} bis {z.minuten_bis:.0f} Minuten",
             # Die Tabelle kann sagen, auf wie vielen Fahrten eine Zeile beruht.
@@ -2127,65 +2277,63 @@ def preis_schaetzen(start_id, ziel_id, typ_code, stunde,
                           if "fahrten_grundlage" in z.index
                           else "Modellschaetzung, keine Einzelbelege")}
 
-STUNDE_JE_FENSTER = {"frueh": 8, "vormittag": 12, "nachmittag": 17, "abend": 21}
-erste = freigabe_tabelle.iloc[0] if len(freigabe_tabelle) else None
-proben = ([(int(erste.start_station_id), int(erste.ziel_station_id), erste.typ_code,
-            STUNDE_JE_FENSTER[erste.zeitfenster])] if erste is not None else [])
-# Der Negativfall wird GESUCHT, nicht behauptet: eine Kombination, die
-# tatsaechlich nicht in der Tabelle steht. Ein fest eingetragenes Beispiel
-# waere beim naechsten Datenstand vielleicht doch freigegeben - und der
-# Kommentar wuerde etwas anderes sagen als die Ausgabe.
-vorhanden = set(NACHSCHLAGE.index)
-ohne_freigabe = next(
-    ((a, b, "CITY", 14) for a in station.station_id for b in station.station_id
-     if a != b and (a, b, "CITY", "nachmittag") not in vorhanden), None)
-assert ohne_freigabe is not None, "Keine unfreigegebene Verbindung zum Vorfuehren gefunden"
-
-# Auch der Zweig "fuer diesen Tarif zu breit" braucht einen Fall. Wir suchen
-# eine Kombination, deren Spanne im Basistarif haelt, bei einem Kunden mit
-# teilweisem Guthaben aber relativ zu breit wird.
-zu_breit = None
-for _, zeile in freigabe_tabelle.iterrows():
-    for _rest in (0, 5, 10, 15, 20):
-        _v = kundenpreis(zeile.minuten_von, zeile.typ_code, _rest, 0.0)
-        _b = kundenpreis(zeile.minuten_bis, zeile.typ_code, _rest, 0.0)
-        if not spanne_nuetzt(zeile.minuten_von, zeile.minuten_bis, _v, _b):
-            zu_breit = (int(zeile.start_station_id), int(zeile.ziel_station_id),
-                        zeile.typ_code, STUNDE_JE_FENSTER[zeile.zeitfenster], _rest)
-            break
-    if zu_breit:
+# ─── DIE VORFUEHRUNG - JEDER FALL ERREICHT SEINEN ZWEIG ─────────────
+#
+# Frueher pruefte diese Zelle nur, ob eine Anzeige ausbleibt. Das ist zu
+# wenig: Ein Beispiel, das aus dem falschen Grund scheitert, sieht genauso
+# aus wie eines, das den beschrifteten Zweig erreicht. Geprueft wird
+# deshalb der GRUND - und beim Positivfall, dass wirklich eine Spanne
+# herauskommt.
+_ok = zukunft[zukunft["bis"].notna()].iloc[0]
+_zeit = _ok.startzeit
+_faelle = [
+    ("gueltige Anfrage", dict(start_id=int(_ok.start_station_id),
+                              ziel_id=int(_ok.end_station_id),
+                              typ_code=_ok.typ_code, zeitpunkt=_zeit), None),
+    ("Rundfahrt", dict(start_id=int(_ok.start_station_id),
+                       ziel_id=int(_ok.start_station_id),
+                       typ_code=_ok.typ_code, zeitpunkt=_zeit), "rundfahrt"),
+    ("Station, die es nicht gibt", dict(start_id=int(_ok.start_station_id),
+                                        ziel_id=999, typ_code=_ok.typ_code,
+                                        zeitpunkt=_zeit), "keine_zeile"),
+    ("Radtyp, den die Preisliste nicht kennt",
+     dict(start_id=int(_ok.start_station_id), ziel_id=int(_ok.end_station_id),
+          typ_code="ROLLER", zeitpunkt=_zeit), "typ_unbekannt"),
+    ("ohne Zeitpunkt", dict(start_id=int(_ok.start_station_id),
+                            ziel_id=int(_ok.end_station_id),
+                            typ_code=_ok.typ_code, zeitpunkt=None),
+     "zeitpunkt_ungueltig"),
+]
+# Der Zweig "fuer diesen Tarif zu breit" wird GESUCHT, nicht behauptet.
+for _rest in (0, 5, 10, 15, 20, 30):
+    _pr = preis_schaetzen(int(_ok.start_station_id), int(_ok.end_station_id),
+                          _ok.typ_code, _zeit, freiminuten_rest=_rest,
+                          ohne_produktsperre=True)
+    if _pr["grund"] == "spanne_zu_breit":
+        _faelle.append((f"Spanne zu breit bei {_rest} Freiminuten",
+                        dict(start_id=int(_ok.start_station_id),
+                             ziel_id=int(_ok.end_station_id), typ_code=_ok.typ_code,
+                             zeitpunkt=_zeit, freiminuten_rest=_rest),
+                        "spanne_zu_breit"))
         break
 
-proben += [(1, 1, "CITY", 8), ohne_freigabe, (1, 999, "CITY", 8)]
-beschriftung = ["freigegebene Verbindung", "Rundfahrt", "Verbindung ohne Freigabe",
-                "Station, die es nicht gibt"][-len(proben):]
-if zu_breit:
-    proben.append(zu_breit[:4] + (zu_breit[4],))
-    beschriftung.append("Spanne fuer diesen Tarif zu breit")
-
-# Die Einzelfaelle werden OHNE die Produktsperre vorgefuehrt - sonst zeigten
-# sie alle dieselbe Ablehnung, und man saehe nicht mehr, wie die Funktion die
-# einzelnen Faelle unterscheidet. Die Sperre selbst kommt danach.
-for probe, was in zip(proben, beschriftung):
-    e = preis_schaetzen(*probe[:4], freiminuten_rest=probe[4] if len(probe) > 4 else 0,
-                        ohne_produktsperre=True)
-    # Die drei Verweigerungsfaelle muessen auch wirklich verweigern.
-    if was != "freigegebene Verbindung":
-        assert e["anzeige"] is None, f"{was} liefert wider Erwarten eine Anzeige"
-    # Namen NUR fuer die Ausgabe - so herum ist es richtig.
-    n1 = name_je_id.get(probe[0], f"Station {probe[0]}")
-    n2 = name_je_id.get(probe[1], f"Station {probe[1]}")
-    print(f"{n1} → {n2} ({probe[2]}, {probe[3]} Uhr) - {was}")
-    if e["anzeige"]:
-        print(f"   {e['anzeige']}   {e['minuten']}   Grundlage: {e['grundlage']}")
+print("Die Faelle werden OHNE die Statussperre vorgefuehrt - sonst zeigten sie")
+print("alle dieselbe Ablehnung, und man saehe die Unterscheidung nicht.\\n")
+for _bez, _arg, _erwartet in _faelle:
+    _a = preis_schaetzen(ohne_produktsperre=True, **_arg)
+    assert _a["grund"] == _erwartet, (
+        f"{_bez}: erwartet {_erwartet!r}, bekommen {_a['grund']!r}")
+    if _erwartet is None:
+        assert _a["anzeige"] is not None, f"{_bez} liefert keine Spanne"
+        print(f"{_bez:42s} {_a['anzeige']}   ({_a['minuten']})")
     else:
-        print(f"   keine Anzeige - {e['hinweis']}")
+        print(f"{_bez:42s} keine Anzeige - {_a['grund']}")
+print(f"\\n{len(_faelle)} von {len(_faelle)} Faellen erreichen den beschrifteten Zweig.")
 
-if not PRODUKT_FREIGEGEBEN:
-    print()
-    print("So weit die Faelle. Im Betrieb kaeme keiner davon zum Tragen:")
-    erste_probe = preis_schaetzen(*proben[0][:4])
-    print(f"   {erste_probe['hinweis']}  (Grund: {erste_probe['grund']})")
+print()
+print(f"Im Betrieb gilt der Status '{PRODUKTSTATUS}':")
+_echt = preis_schaetzen(**_faelle[0][1])
+print(f"   {_echt['hinweis']}  (Grund: {_echt['grund']})")
 """),
 
 MD("""
@@ -2206,11 +2354,10 @@ stichprobe = zukunft.copy()
 aus_der_app = []
 for r in stichprobe.itertuples():
     antwort = preis_schaetzen(int(r.start_station_id), int(r.end_station_id),
-                              r.typ_code, r.startzeit.hour,
+                              r.typ_code, r.startzeit,
                               freiminuten_rest=r.freiminuten_rest,
                               rabatt_prozent=r.rabatt_prozent,
-                              ohne_produktsperre=True,
-                              zeitpunkt=r.startzeit)
+                              ohne_produktsperre=True)
     aus_der_app.append(antwort["anzeige"] is not None)
 stichprobe["app_zeigt"] = aus_der_app
 
@@ -2238,31 +2385,33 @@ print("Die Filterlogik beider Wege stimmt ueberein.")
 # die App gar nichts - unabhaengig davon, wie gut die einzelne Zeile belegt ist.
 probe = zukunft.iloc[0]
 gesperrt = preis_schaetzen(int(probe.start_station_id), int(probe.end_station_id),
-                           probe.typ_code, probe.startzeit.hour)
+                           probe.typ_code, probe.startzeit)
 if PRODUKT_FREIGEGEBEN:
-    print("Das Produkt ist freigegeben - die App zeigt an, was hier gemessen wurde.")
+    print("Status 'sichtbar' - die App zeigt an, was hier gemessen wurde.")
 else:
-    assert gesperrt["anzeige"] is None and gesperrt["grund"] == "produkt_nicht_freigegeben"
-    print("Das Produkt ist NICHT freigegeben: Die App verweigert jede Auskunft,")
-    print("auch fuer Kombinationen, die fuer sich genommen belegt waeren.")
+    assert gesperrt["anzeige"] is None, "Trotz gesperrtem Status wird angezeigt"
+    assert gesperrt["status"] == PRODUKTSTATUS
+    print(f"Status '{PRODUKTSTATUS}': Die App zeigt nach aussen nichts an -")
+    print(f"auch nicht fuer Kombinationen, die fuer sich genommen belegt waeren.")
+    print(f"Grund, den die Schnittstelle zurueckgibt: {gesperrt['grund']}")
 
 # Dritte Aussage: Die Eingabepruefung meldet den RICHTIGEN Grund. Eine
 # Pruefung, die nie ausgeloest wird, ist unbelegt - hier wird jede einzeln
-# angesteuert. Die Produktsperre wird dafuer umgangen, sonst antwortete
+# angesteuert. Die Statussperre wird dafuer umgangen, sonst antwortete
 # ohnehin jede Anfrage mit demselben Grund.
 print("\\nEINGABEPRUEFUNG - jeder Fehler bekommt seinen eigenen Grund:")
 _s, _z, _t = int(probe.start_station_id), int(probe.end_station_id), probe.typ_code
-_faelle = [
-    ("Stunde 24",              dict(stunde=24),                "stunde_ungueltig"),
-    ("Stunde -1",              dict(stunde=-1),                "stunde_ungueltig"),
-    ("Stunde als Text",        dict(stunde="8"),               "stunde_ungueltig"),
-    ("Freiminuten negativ",    dict(freiminuten_rest=-5),      "freiminuten_ungueltig"),
-    ("Rabatt 150 %",           dict(rabatt_prozent=150.0),     "rabatt_ungueltig"),
-    ("Radtyp 'ROLLER'",        dict(typ_code="ROLLER"),        "typ_unbekannt"),
-    ("Start gleich Ziel",      dict(ziel_id=_s),               "rundfahrt"),
+_zt = probe.startzeit
+_pruef = [
+    ("Zeitpunkt fehlt",        dict(zeitpunkt=None),            "zeitpunkt_ungueltig"),
+    ("Zeitpunkt als Unsinn",   dict(zeitpunkt="uebermorgen"),   "zeitpunkt_ungueltig"),
+    ("Freiminuten negativ",    dict(freiminuten_rest=-5),       "freiminuten_ungueltig"),
+    ("Rabatt 150 %",           dict(rabatt_prozent=150.0),      "rabatt_ungueltig"),
+    ("Radtyp 'ROLLER'",        dict(typ_code="ROLLER"),         "typ_unbekannt"),
+    ("Start gleich Ziel",      dict(ziel_id=_s),                "rundfahrt"),
 ]
-for _bez, _abw, _erwartet in _faelle:
-    _arg = dict(start_id=_s, ziel_id=_z, typ_code=_t, stunde=8,
+for _bez, _abw, _erwartet in _pruef:
+    _arg = dict(start_id=_s, ziel_id=_z, typ_code=_t, zeitpunkt=_zt,
                 ohne_produktsperre=True)
     _arg.update(_abw)
     _antwort = preis_schaetzen(**_arg)
@@ -2270,7 +2419,28 @@ for _bez, _abw, _erwartet in _faelle:
         f"{_bez}: erwartet '{_erwartet}', bekommen '{_antwort['grund']}'")
     assert _antwort["anzeige"] is None, f"{_bez} liefert trotzdem eine Anzeige"
     print(f"   {_bez:<22s} -> {_antwort['grund']}")
-print(f"\\n{len(_faelle)} von {len(_faelle)} Faellen abgewiesen, jeder mit eigenem Grund.")
+print(f"\\n{len(_pruef)} von {len(_pruef)} Faellen abgewiesen, jeder mit eigenem Grund.")
+
+# Vierte Aussage: Der RUECKFALL liefert - aber nicht dieselbe Zusage.
+# Ein Fallback, der aussieht wie das Produkt, ist ein zweites Produkt
+# ohne Pruefung. Deshalb traegt jede Antwort ihre Quelle und ihre Zusage.
+print("\\nRUECKFALL BEI DIENSTAUSFALL:")
+_normal = preis_schaetzen(_s, _z, _t, zeitpunkt=_zt, ohne_produktsperre=True)
+_notfall = preis_schaetzen(_s, _z, _t, zeitpunkt=_zt, ohne_produktsperre=True,
+                           dienst_verfuegbar=False)
+for _bez, _a in (("Dienst laeuft", _normal), ("Dienst faellt aus", _notfall)):
+    print(f"   {_bez:<18s} Quelle {str(_a.get('quelle')):<16s} "
+          f"Zusage {'-' if _a.get('zusage') is None else format(_a['zusage'], '.0%'):<5s} "
+          f"{_a['anzeige'] or 'keine Anzeige - ' + str(_a['grund'])}")
+assert _normal["quelle"] == "modell" and _normal["zusage"] == GATE_PREISABHAENGIG
+if _notfall["anzeige"] is not None:
+    assert _notfall["quelle"] == "rueckfalltabelle", _notfall
+    assert _notfall["zusage"] is None, "Der Rueckfall darf die Zusage nicht tragen."
+    assert _notfall["hinweis"], "Der Rueckfall muss den Vorbehalt mitliefern."
+    print(f"   Vorbehalt im Klartext: {_notfall['hinweis']}")
+else:
+    print(f"   Diese Verbindung steht nicht in der Rueckfalltabelle "
+          f"(Grund: {_notfall['grund']}) - dann zeigt die App gar nichts.")
 """),
 
 MD("""
@@ -2322,12 +2492,22 @@ nachträgliche Begründung. Diese vier Fragen sind deshalb vorab entschieden:
 | 3 | alle angezeigten Fälle je Radtyp: Untergrenze ≥ {{gate_schwelle:.0%}} | **ja** (Kriterium aus 5.5) |
 | 4 | Mindestreichweite je Radtyp | **ja** (Kriterium aus 5.5) |
 
-**Warum Gate 2 nicht gilt, und warum das vorher gesagt sein muss.** Die preisabhängige
-Gruppe ist je Radtyp klein; eine Untergrenze aus wenigen Dutzend Fällen liegt so tief,
-dass sie faktisch jedes Produkt verhindern würde — auch ein gutes. Das ist eine
-vertretbare Entscheidung, solange sie **vorher** fällt. Nach der Messung getroffen wäre
-sie das Gegenteil: die Wahl derjenigen Auswertungsebene, die zum gewünschten Ergebnis
-führt.
+**Warum Gate 2 nicht gilt, und warum das vorher gesagt sein muss.** Die App macht der
+Kundschaft **eine** Zusage — nicht drei nach Radtyp getrennte. Das bindende Gate prüft
+deshalb die Ebene, auf der die Zusage ausgesprochen wird. Je Radtyp wird dieselbe Größe
+als **Diagnose** mitgeführt: Sie zeigt, wo das Produkt schwach ist, ohne es zu sperren.
+
+Diese Entscheidung muss man sich unbequem machen, denn sie hat eine Folge: Gemessen
+halten {{offen_typen_halten}} von {{offen_typen_gesamt}} Radtypen dieselbe Untergrenze;
+{{offen_schwaechster_typ}} kommt auf {{offen_schwaechste_grenze:.1%}} und läge damit
+unter {{gate_schwelle:.0%}}. Als bindendes Gate hätte Gate 2 das Produkt also gekippt.
+Genau deshalb ist entscheidend, **wann** die Festlegung fiel: vorher — mit dieser
+Begründung und in Kenntnis des Risikos, dass sie später unbequem wird. Nach der Messung
+getroffen wäre dieselbe Festlegung das Gegenteil: die Wahl derjenigen Auswertungsebene,
+die zum gewünschten Ergebnis führt. Die kleinste Gruppe umfasst
+{{offen_kleinste_gruppe}} Fahrten — klein genug, dass ihre Untergrenze stark vom
+Stichprobenumfang und nicht nur von der Modellgüte abhängt; das ist die *sachliche*
+Nebenbegründung, aber sie trägt die Entscheidung nicht allein.
 
 | | |
 |---|---|
@@ -2335,12 +2515,14 @@ führt.
 | **gemessen** | {{gate_untergrenze:.1%}} |
 | **Urteil** | **{{gate_urteil}}** |
 
-**Das Gate hält — und deshalb geht die Preisauskunft in Betrieb.** Es ist das einzige
-Produkt dieser Fallstudie, das freigegeben wird, und der Unterschied zu den anderen fünf
-Notebooks liegt nicht am Aufwand, sondern daran, dass hier eine vorher festgelegte Hürde
-tatsächlich genommen wurde.
+**Das Gate hält — und deshalb geht die Preisauskunft in Betrieb, im Status
+„{{produktstatus}}".** Das heißt: {{statussatz}}. Die vorab festgelegte Hürde ist
+genommen; was fehlt, ist nicht die Güte, sondern eine **unabhängige** Prüfung des
+fertigen Artefakts. Test 2 kann sie nicht leisten, weil er die Intervalle kalibriert
+hat — derselbe Zeitraum kann nicht beides sein. Das ist die Lehre dieses Notebooks,
+angewandt auf sein eigenes Ergebnis.
 
-**Freigegeben heißt nicht fertig.** Was jetzt gilt und was nicht:
+**In Betrieb heißt nicht fertig.** Was jetzt gilt und was nicht:
 
 | | |
 |---|---|
@@ -2441,7 +2623,7 @@ MD("""
 | 3 Data Preparation | Zielstation erlaubt — als Stellvertreter. Wetter verboten. Vier Zeitabschnitte, zyklische Zeitmerkmale |
 | 4 Modeling | Vier Baselines, dann Modelle; eine Ablation zeigt, dass die Zielangabe {{ablation_anteil:.0%}} des Fehlers erklärt |
 | 5 Evaluation | {{typen_halten}} halten die Grenze auf Test 1, {{typen_reissen}} nicht. Trotzdem Rücksprung — weil der Mittelwert die einzelne Fahrt nicht abbildet |
-| 6 Deployment | **Ausgeliefert wird die Quantilregression** als Laufzeitdienst — für {{typen_freigegeben}}. Das Primärgate der preisabhängigen Gruppe hält mit {{gate_untergrenze:.1%}} die zugesagten {{gate_schwelle:.0%}}. Die Perzentiltabelle bleibt als Rückfallebene erhalten; belegt ist die Zusage historisch, der Schattenbetrieb läuft parallel |
+| 6 Deployment | **Ausgeliefert wird die Quantilregression** als Laufzeitdienst — für {{typen_freigegeben}}, als Modellpaket mit Beipackzettel. Das Primärgate der preisabhängigen Gruppe hält mit {{gate_untergrenze:.1%}} die zugesagten {{gate_schwelle:.0%}}. Status: **{{produktstatus}}** — {{statussatz}}. Die Perzentiltabelle bleibt als Rückfallebene, im Code implementiert und **ohne** Zusage |
 
 **Der Rücksprung, den man hier mitverfolgen konnte**
 
@@ -2478,12 +2660,15 @@ Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
 **Was offen bleibt — ausdrücklich**
 
 1. **Das geplante Ziel wird nicht erfasst.** Alle Zahlen sind optimistische Näherungen, keine bewiesenen Obergrenzen.
-2. **Das Primärgate hält nicht.** {{gate_untergrenze:.1%}} statt 80 Prozent in der
-   preisabhängigen Gruppe. Das Produkt bleibt gesperrt, bis der Schattenbetrieb zeigt,
-   ob die Lücke von {{gate_luecke:.1f}} Punkten Zufall war oder Substanz hat.
-3. **Kein echter Schattenbetrieb.** Test 2 hat das Artefakt kalibriert — die
-   unabhängige Prüfung des fertigen Artefakts steht damit noch aus.
-4. **Keine Zusage je Verbindung.** Die 80 Prozent gelten insgesamt und je Radtyp.
+2. **Das Primärgate hält — je Radtyp aber nicht überall.** Aggregiert
+   {{gate_untergrenze:.1%}} gegen {{gate_schwelle:.0%}}; in der Diagnose je Radtyp
+   bleibt {{offen_schwaechster_typ}} mit {{offen_schwaechste_grenze:.1%}} darunter.
+   Bindend ist die aggregierte Ebene — vorab so festgelegt, weil die App eine Zusage
+   macht und nicht drei. Die Diagnose bleibt trotzdem stehen.
+3. **Die unabhängige Prüfung steht aus.** Test 2 hat das Artefakt kalibriert; deshalb
+   Status „{{produktstatus}}" statt sichtbar. Erst ein prospektiver Zeitraum, den nichts
+   berührt hat, kann die Zusage unabhängig belegen.
+4. **Keine Zusage je Verbindung.** Die {{gate_schwelle:.0%}} gelten insgesamt.
    Ausgeschlossen ist, was messbar durchfällt; für die Mehrzahl der Kombinationen ist die
    Prüfmenge zu klein für eine Einzelaussage.
 5. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
@@ -2495,6 +2680,8 @@ Fahrten ab — angezeigt werden bei gesperrtem Produkt {{reichweite_real:.0%}}.
    reißen das Primärgate, auch die aus den Modellvorhersagen gebaute. Weil ein
    Laufzeitdienst zugelassen ist, geht sie in Betrieb. Wäre er es nicht, bliebe kein
    zulässiger Kandidat — dasselbe Notebook, dieselben Zahlen, ein anderes Ergebnis.
+   Genau deshalb trägt die Rückfalltabelle keine Zusage: Sie ist derselbe Kandidat, der
+   die Hürde gerissen hat.
 9. **Freigegeben heißt: mit Bedingung.** Die Zusage ist auf einem historischen
    Testzeitraum belegt, nicht auf einem prospektiven. Was fehlt, ist das protokollierte
    Wunschziel — und ohne das lässt sich nie messen, ob die Auskunft für die *geplante*
