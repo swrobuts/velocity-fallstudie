@@ -1,11 +1,15 @@
-# Produkt B: Dispositionshinweis, Stand 2024-12-23
+# Produkt B: Dispositionshinweis, gebaut am 2026-09-02
+# Evidenz aus dem Bestaetigungszeitraum 2024-12-24 bis 2026-08-24
 # KEINE AUTOMATISCHE AKTION - ein Mensch entscheidet, ob gefahren wird.
 # Jede Zeile ist im Bestaetigungszeitraum einzeln bestaetigt (Lift >= 1.3).
 # Datenherkunft: SYNTHETISCHE LEHRDATEN
-Kontext,wenn Start,dann Ziel,Lift (Kontext) entdeckt,Support entdeckt,Lift (Kontext) bestätigt,Support bestätigt,lift_untergrenze,b1_haelt,fahrten_je_tag,tagesart,tage_im_nenner,status,bestaetigungszeitraum_von,bestaetigungszeitraum_bis,gebaut_am,operativ_gueltig_ab,operativ_gueltig_bis
-Werktag · früh (0-10),Grombühl Klinikum,Hauptbahnhof,1.5875404372646638,0.012058478284067869,1.482998444351468,0.011307344389403402,1.3737533365497518,True,1.02,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02,2026-09-02,2026-12-01
-Werktag · früh (0-10),Juliuspromenade,Grombühl Klinikum,1.9136448146000264,0.015419912495998292,1.5084303562787498,0.009934309713547276,1.394070214098263,True,0.89,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02,2026-09-02,2026-12-01
-Werktag · früh (0-10),Marktplatz,Grombühl Klinikum,1.305683069707874,0.008608117241133995,1.4439894741279122,0.009207409002799915,1.334553027689117,True,0.83,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02,2026-09-02,2026-12-01
-Werktag · mittag (10-15),Grombühl Klinikum,Hauptbahnhof,1.830371715764331,0.006562800128054637,1.6788652568712292,0.0060305836743484815,1.5195648645108388,True,0.54,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02,2026-09-02,2026-12-01
-Werktag · mittag (10-15),Juliuspromenade,Grombühl Klinikum,1.9341793537618894,0.007612136733895351,1.5533740744773519,0.005465216454878311,1.4026472023945862,True,0.49,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02,2026-09-02,2026-12-01
-Werktag · abend (15-20),Grombühl Klinikum,Hauptbahnhof,1.6822555336308718,0.008714829438338135,1.5827867728398899,0.007915141072582382,1.4493750214571703,True,0.71,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02,2026-09-02,2026-12-01
+# KEINE reale Betriebsfreigabe - Lehrbeispiel. Es gibt bewusst kein
+# Gueltigkeitsdatum: Was hier bestanden ist, ist ein analytisches
+# Lehr-Gate, keine Zusage, nach der jemand handeln darf.
+Kontext,wenn Start,dann Ziel,Lift (Kontext) entdeckt,Support entdeckt,Lift (Kontext) bestätigt,Support bestätigt,lift_untergrenze,b1_haelt,fahrten_je_tag,tagesart,tage_im_nenner,status,bestaetigungszeitraum_von,bestaetigungszeitraum_bis,gebaut_am
+Werktag · früh (0-10),Grombühl Klinikum,Hauptbahnhof,1.5875404372646638,0.012058478284067869,1.482998444351468,0.011307344389403402,1.3737533365497518,True,1.02,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02
+Werktag · früh (0-10),Juliuspromenade,Grombühl Klinikum,1.9136448146000264,0.015419912495998292,1.5084303562787498,0.009934309713547276,1.394070214098263,True,0.89,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02
+Werktag · früh (0-10),Marktplatz,Grombühl Klinikum,1.305683069707874,0.008608117241133995,1.4439894741279122,0.009207409002799915,1.334553027689117,True,0.83,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02
+Werktag · mittag (10-15),Grombühl Klinikum,Hauptbahnhof,1.830371715764331,0.006562800128054637,1.6788652568712292,0.0060305836743484815,1.5195648645108388,True,0.54,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02
+Werktag · mittag (10-15),Juliuspromenade,Grombühl Klinikum,1.9341793537618894,0.007612136733895351,1.5533740744773519,0.005465216454878311,1.4026472023945862,True,0.49,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02
+Werktag · abend (15-20),Grombühl Klinikum,Hauptbahnhof,1.6822555336308718,0.008714829438338135,1.5827867728398899,0.007915141072582382,1.4493750214571703,True,0.71,Werktag,413,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24,2026-09-02

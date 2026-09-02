@@ -63,7 +63,7 @@ ZIEL_UEBUNG = os.path.join(ZIEL, "uebung")
 #
 # Beim Erneuern der Musterdaten wird dieser Wert bewusst nachgezogen. Das ist
 # der Sinn: Wer die Daten aendert, aendert sichtbar auch den Datenstand.
-DATENSTAND = "61be8734c5ea837800087dc336d3a4d40e841551"
+DATENSTAND = "91119429f347b80f754315d8ce054d2bea3b8310"
 ROHBASIS = ("https://raw.githubusercontent.com/swrobuts/velocity-fallstudie/"
             f"{DATENSTAND}/analytics/")
 COLAB = "https://colab.research.google.com/github/swrobuts/velocity-fallstudie/blob/main/analytics/notebooks/"

@@ -252,6 +252,11 @@ schritte.append(("mindestens 1 Minute", len(d)))
 # benannte Konstante, damit sie im Modellpaket mitgeliefert wird -
 # eine Grenze, die nur im Filtercode steht, kennt der Betrieb nicht.
 OBERGRENZE_MINUTEN = 8 * 60
+merke("obergrenze_stunden", OBERGRENZE_MINUTEN / 60)
+# WIE VIELE FAHRTEN DIESE GRENZE AUSSCHLIESST - und warum das eine
+# Einschraenkung der ZUSAGE ist, nicht nur der Auswertung: Ob eine Fahrt
+# laenger als acht Stunden wird, weiss die App beim Entsperren nicht.
+merke("anteil_ueberlang", float((d.dauer_min > OBERGRENZE_MINUTEN).mean()))
 d = d[d.dauer_min <= OBERGRENZE_MINUTEN]
 schritte.append(("höchstens 8 Stunden (Geltungsbereich)", len(d)))
 # ─── WELCHES ZIEL? DAS, DAS DIE APP KENNT. ──────────────────────────
@@ -572,9 +577,10 @@ belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 > entschieden. Wer daraufhin Kennzahlen berichtet, berichtet die Güte einer Auswahl, die
 > auf ebendiesen Daten getroffen wurde — sie fällt zu günstig aus.
 >
-> Die unabhängige Prüfung des fertigen Artefakts kann deshalb erst der Schattenbetrieb
-> aus Phase 6.6 leisten. Diesen Zwischenschritt zu benennen ist ehrlicher, als eine
-> vierte Menge zu erfinden, für die die Daten nicht reichen:
+> Die unabhängige Prüfung des fertigen Artefakts leistet deshalb die **Abnahme** — der
+> fünfte Abschnitt, der schon in Phase 2 versiegelt wurde und in 6.7 einmal geöffnet
+> wird. Was auch sie nicht leisten kann, ist ein Blick in die Zukunft; dafür bliebe der
+> Schattenbetrieb:
 >
 > ```text
 > Training → Validierung → Test 1: Punktschätzung
@@ -1260,8 +1266,8 @@ _ZIEL_VALIDIERUNG = 0.84      # Zusage 80 % plus Reserve fuer den Zeitverlauf
 # die App nicht und sagt sie auch nicht zu. Zugesagt ist eine Fahrt zum
 # GEWAEHLTEN ZIEL - der Umweg ueber die Altstadt ist darin enthalten,
 # die Fahrt zu einem anderen Ziel nicht.
-ZUSAGE_TEXT = ("Preis für eine Fahrt zu Ihrem gewählten Ziel. Fahren Sie ein "
-               "anderes Ziel an, gilt die Schätzung nicht.")
+ZUSAGE_TEXT = ("Preis für eine Fahrt zu Ihrem gewählten Ziel, bis 8 Stunden. "
+               "Fahren Sie ein anderes Ziel an oder länger, gilt die Schätzung nicht.")
 merke("zusage_text", ZUSAGE_TEXT)
 
 
@@ -1608,11 +1614,22 @@ def bewerten(name, u, o):
     # Sonst verschwindet ein Radtyp, fuer den ein Kandidat nie antwortet,
     # einfach aus der Bewertung - und der Kandidat besteht, weil er schweigt.
     alle_typen = sorted(zukunft.typ_code.unique())
+    # DIESELBE PRUEFUNG WIE IN DER ABNAHME - Wilson-Untergrenze auf der
+    # bedingten Population.
+    #
+    # Hier stand der blosse Punktschaetzer auf allen angezeigten Faellen.
+    # Die Abnahme rechnete dagegen die Untergrenze auf der zielgetreuen
+    # Gruppe. Zwei verschiedene Rechnungen unter demselben Namen
+    # "Radtypgate" - und "alle Gates bestanden" hiess dann an zwei
+    # Stellen Verschiedenes.
+    _treu_alle = zukunft.tatsaechliches_ziel == zukunft.end_station_id
     je_typ, reichweite_typ = {}, {}
     for ty in alle_typen:
         maske = zukunft.typ_code == ty
         gezeigt = zeigbar & maske
-        je_typ[ty] = drin[gezeigt].mean() if gezeigt.any() else 0.0
+        _bed = gezeigt & _treu_alle
+        je_typ[ty] = (wilson(int(drin[_bed].sum()), int(_bed.sum()))[0]
+                      if _bed.any() else 0.0)
         reichweite_typ[ty] = gezeigt.sum() / max(1, maske.sum())
     # Die Guthabenlage haengt an der Spanne DIESES Kandidaten: Wessen Guthaben
     # die obere Grenze deckt, zahlt nur die Startgebuehr - unabhaengig von der
@@ -1884,17 +1901,18 @@ Frage war nie, *ob* gerechnet wird, sondern *was*.
 | kennt Wochentag und Saison | ja | nein | nein |
 
 **Damit ist die Entscheidung getroffen: Ausgeliefert wird die Quantilregression.** Sie ist
-das einzige Verfahren, das alle Hürden nimmt — und unter der geltenden Vorgabe darf sie
-betrieben werden.
+eines von {{zulaessige_n:.0f}} Verfahren, die alle Hürden nehmen. Ausgeliefert wird
+trotzdem die {{kandidat}} — nach der vorab benannten Auswahlregel.
 
-> **Wäre die Vorgabe anders ausgefallen, wäre auch das Ergebnis ein anderes.** Bei einer
-> rein statischen Architektur bliebe kein zulässiger Kandidat übrig: Beide Tabellen
-> reißen das Primärgate. Dann hätte dieses Notebook mit einer Absage geendet — nicht,
-> weil das Verfahren schlecht wäre, sondern weil das beste nicht betrieben werden dürfte.
+> **Die Architekturfrage steht vor der Kandidatenwahl und nicht danach.** Wer erst misst
+> und dann entscheidet, was betreibbar ist, wählt die Vorgabe, die zum gewünschten
+> Ergebnis passt. Hier war sie vorher gestellt — und die Auswahlregel dazu ebenfalls:
+> **{{auswahlregel}}**.
 >
-> **Deshalb steht die Architekturfrage vor der Kandidatenwahl und nicht danach.** Wer erst
-> misst und dann entscheidet, was betreibbar ist, wählt die Vorgabe, die zum gewünschten
-> Ergebnis passt.
+> **Diesmal fiel das Ergebnis anders aus als erwartet.** Alle {{zulaessige_n:.0f}}
+> Kandidaten nehmen alle Gates. Entschieden hat also nicht die Güte, sondern der
+> Betrieb — und das kostet {{verzicht_reichweite:.1%}} Reichweite gegenüber der
+> {{verzicht_kandidat}}.
 
 **Was der Dienst kostet, gehört in dieselbe Entscheidung.** Die Quantilregression bringt
 scikit-learn, Versionsstände und einen Prozess mit, der antworten muss. Die Perzentiltabelle
@@ -2259,6 +2277,7 @@ merke("gates_halten", "ja" if GATES_HALTEN else "nein")
 # rechnet sie, protokolliert und schweigt nach aussen.
 PRODUKT_FREIGEGEBEN = PRODUKTSTATUS == "sichtbar"
 SCHATTENBETRIEB = PRODUKTSTATUS == "schatten"
+BETRIEBSGESPERRT = PRODUKTSTATUS == "betriebsgesperrt"
 _ = merke("produkt_freigegeben", "ja" if PRODUKT_FREIGEGEBEN else "nein")
 merke("typen_freigegeben", aufzaehlung(freigegebene_typen))
 _ = merke("anzahl_typen_freigegeben", len(freigegebene_typen))
@@ -2573,11 +2592,20 @@ MODELLPAKET = {
     "mindestreichweite": MINDESTREICHWEITE,
     "mindestfahrten_je_kombination": MINDESTFAHRTEN,
     # Die Tariflogik: ohne sie wird aus Minuten kein Preis.
-    "tarif": {t: {"startgebuehr": float(preise.set_index("typ_code")
-                                        .loc[t, "startgebuehr_eur"]),
-                  "preis_pro_minute": float(preise.set_index("typ_code")
-                                            .loc[t, "preis_pro_minute_eur"])}
-              for t in sorted(preise.typ_code)},
+    # DIE VOLLSTAENDIGE TARIFLOGIK - inklusive Deckel.
+    #
+    # Frueher standen hier nur Startgebuehr und Minutenpreis. Der
+    # Tageshoechstpreis fehlte, obwohl die Auswertung ihn anwendet: Ein
+    # Nachbau aus dem Paket haette bei langen Fahrten zu VIEL berechnet,
+    # und der Reloadtest haette es nicht gemerkt, weil er dieselbe
+    # unvollstaendige Formel benutzte.
+    "tarif": {t: {"startgebuehr": float(tarif.loc[t, "startgebuehr_eur"]),
+                  "preis_pro_minute": float(tarif.loc[t, "preis_pro_minute_eur"]),
+                  "tageshoechstpreis": float(tarif.loc[t, "tageshoechstpreis_eur"])}
+              for t in sorted(tarif.index)},
+    "preisformel": ("min(startgebuehr + berechnete_minuten * preis_pro_minute, "
+                    "tageshoechstpreis * angefangene_tage) * (1 - rabatt/100); "
+                    "berechnete_minuten = aufgerundete Minuten abzueglich Freiminuten"),
     "tarifversion": TARIFVERSION,
     "datenversion": DATENVERSION,
     # ─── DIE REFERENZDATEN - OHNE SIE RECHNET NIEMAND ───────────────
@@ -2598,6 +2626,21 @@ MODELLPAKET = {
                     for v, b in zip(schulfrei.von, schulfrei.bis)],
     # Gesperrte Kombinationen - die App darf sie nicht anzeigen.
     "gesperrte_kombinationen": [list(k) for k in sorted(durchgefallen)],
+    # ─── DAS AUSGELIEFERTE PRODUKT SELBST ───────────────────────────
+    #
+    # "verfahren" nennt die Perzentiltabelle - im Paket lagen aber nur
+    # die beiden Quantilmodelle. Der Reloadtest prueft dann etwas
+    # anderes als das, was ausgeliefert wird.
+    #
+    # Beides gehoert hinein, klar benannt: die TABELLE als Produkt, die
+    # MODELLE als Alternative, die auf eine Betriebskostenrechnung
+    # wartet.
+    "produkt": "tabelle",
+    "tabelle": freigabe_tabelle[["start_station_id", "ziel_station_id", "typ_code",
+                                 "zeitfenster", "minuten_von", "minuten_bis"]]
+                .to_dict(orient="records"),
+    "zeitfenster_grenzen": [[int(a), int(b), str(n)] for a, b, n in FENSTER],
+    "alternative": "quantilregression (modell_unten / modell_oben)",
     "gebaut_am": str(pd.Timestamp.today().date()),
 }
 # GESCHRIEBEN WIRD ERST NACH DER ABNAHME (6.7).
@@ -2743,10 +2786,14 @@ def preis_schaetzen(start_id, ziel_id, typ_code, zeitpunkt,
     # Primaergate nicht haelt, zeigt die App gar nichts an - auch nicht dort,
     # wo die einzelne Kombination gut belegt waere.
     if not PRODUKT_FREIGEGEBEN and not ohne_produktsperre:
-        _grund = ("schattenbetrieb" if SCHATTENBETRIEB else "produkt_nicht_freigegeben")
+        _grund = ("schattenbetrieb" if SCHATTENBETRIEB
+                  else "kalender_fehlt" if BETRIEBSGESPERRT
+                  else "produkt_nicht_freigegeben")
         _hinweis = ("Die Auskunft wird berechnet und protokolliert, aber noch nicht "
                     "angezeigt." if SCHATTENBETRIEB else
-                    "Die Preisauskunft ist noch nicht freigegeben.")
+                    "Für den angefragten Zeitraum fehlen Feiertage und Ferien - "
+                    "ohne sie wäre die Schätzung still falsch." if BETRIEBSGESPERRT
+                    else "Die Preisauskunft ist noch nicht freigegeben.")
         return {"anzeige": None, "grund": _grund, "status": PRODUKTSTATUS,
                 "hinweis": _hinweis}
     if start_id == ziel_id:
@@ -3253,13 +3300,39 @@ ABNAHME_BESTANDEN = all(_w["haelt"] for _w in ABNAHME_GATES.values())
 merke("ab_gates_gesamt", len(ABNAHME_GATES))
 merke("ab_gates_halten", sum(1 for _w in ABNAHME_GATES.values() if _w["haelt"]))
 UNABHAENGIG_GEPRUEFT = ABNAHME_BESTANDEN
-PRODUKTSTATUS = ("sichtbar" if (GATES_HALTEN and UNABHAENGIG_GEPRUEFT)
-                 else "schatten" if GATES_HALTEN else "gesperrt")
+
+# ─── DIE BETRIEBLICHE VORAUSSETZUNG ENTSCHEIDET MIT ─────────────────
+#
+# Das Modell braucht ist_feiertag und ist_ferien. Der mitgelieferte
+# Kalender endet frueher als der Bautag - fuer jeden kuenftigen Tag
+# waeren beide still null, und die Vorhersage fuer den ersten Ferientag
+# saehe aus wie die fuer einen normalen Dienstag.
+#
+# Frueher stand das nur als Vermerk im Paket, waehrend der Status
+# "sichtbar" lautete und die App munter Preise zeigte. Ein Vermerk, den
+# niemand durchsetzt, ist ein Kommentar. Jetzt entscheidet er mit - und
+# die Schnittstelle unten setzt ihn durch.
+KALENDERHORIZONT = min(pd.Timestamp(feiertag.datum.max()),
+                       pd.Timestamp(schulfrei.bis.max()))
+EINSATZBEREIT = bool(KALENDERHORIZONT >= pd.Timestamp.today().normalize())
+merke("kalenderhorizont", str(KALENDERHORIZONT.date()))
+merke("einsatzbereit", "ja" if EINSATZBEREIT else "nein")
+
+# VIER STUFEN. Die vierte ist neu: Analytisch kann alles halten und das
+# Produkt trotzdem nicht laufen, weil eine Betriebsvoraussetzung fehlt.
+# Das ist kein Modellproblem - aber es ist auch keine Freigabe.
+PRODUKTSTATUS = (
+    "sichtbar" if (GATES_HALTEN and UNABHAENGIG_GEPRUEFT and EINSATZBEREIT)
+    else "betriebsgesperrt" if (GATES_HALTEN and UNABHAENGIG_GEPRUEFT)
+    else "schatten" if GATES_HALTEN else "gesperrt")
 PRODUKT_FREIGEGEBEN = PRODUKTSTATUS == "sichtbar"
 SCHATTENBETRIEB = PRODUKTSTATUS == "schatten"
+BETRIEBSGESPERRT = PRODUKTSTATUS == "betriebsgesperrt"
 merke("produktstatus", PRODUKTSTATUS)
 merke("statussatz", {
     "sichtbar": "die Anzeige ist freigeschaltet",
+    "betriebsgesperrt": ("analytisch abgenommen, betrieblich gesperrt - der "
+                         "mitgelieferte Kalender endet vor dem Bautag"),
     "schatten": "der Dienst rechnet und protokolliert, zeigt aber noch nichts an",
     "gesperrt": "der Dienst ist gesperrt",
 }[PRODUKTSTATUS])
@@ -3325,15 +3398,13 @@ MODELLPAKET["operativ_gueltig_ab"] = MODELLPAKET["gebaut_am"]
 # Frueher standen hier stur 90 Tage ab Bau. Der Kalender reicht aber
 # kuerzer; das Paket haette Gueltigkeit fuer Tage behauptet, die es
 # nicht rechnen kann.
-_KALENDERHORIZONT = min(pd.Timestamp(feiertag.datum.max()),
-                        pd.Timestamp(schulfrei.bis.max()))
+_KALENDERHORIZONT = KALENDERHORIZONT
 _WUNSCHENDE = pd.Timestamp.today() + pd.Timedelta(days=90)
 MODELLPAKET["operativ_gueltig_bis"] = str(min(_WUNSCHENDE, _KALENDERHORIZONT).date())
 MODELLPAKET["gueltigkeit_begrenzt_durch"] = (
     "Kalenderhorizont" if _KALENDERHORIZONT < _WUNSCHENDE else "90-Tage-Regel")
 MODELLPAKET["kalenderhorizont"] = str(_KALENDERHORIZONT.date())
 merke("gueltig_bis", MODELLPAKET["operativ_gueltig_bis"])
-merke("kalenderhorizont", MODELLPAKET["kalenderhorizont"])
 merke("gueltigkeit_grund", MODELLPAKET["gueltigkeit_begrenzt_durch"])
 assert MODELLPAKET["operativ_gueltig_bis"] <= MODELLPAKET["kalenderhorizont"], (
     "Das Paket behauptet Gueltigkeit fuer Tage, die sein Kalender nicht kennt.")
@@ -3350,13 +3421,11 @@ assert MODELLPAKET["operativ_gueltig_bis"] <= MODELLPAKET["kalenderhorizont"], (
 # Das ist eine BETRIEBLICHE Voraussetzung, keine analytische - dieselbe
 # Art von Punkt wie die Rechtsgrundlage in Notebook 3. Sie wird deshalb
 # benannt und nicht weggerechnet.
-EINSATZBEREIT = MODELLPAKET["operativ_gueltig_bis"] >= MODELLPAKET["gebaut_am"]
 MODELLPAKET["einsatzbereit"] = bool(EINSATZBEREIT)
 MODELLPAKET["einsatzvoraussetzung"] = (
     "" if EINSATZBEREIT else
     "Kalender (Feiertage und Schulferien) muss bis zum Ende des "
     "geplanten Einsatzzeitraums nachgeliefert werden")
-merke("einsatzbereit", "ja" if EINSATZBEREIT else "nein")
 if not EINSATZBEREIT:
     print()
     print("BETRIEBLICHE VORAUSSETZUNG - noch nicht erfuellt:")
@@ -3391,7 +3460,18 @@ print(f"   Kalibrierung (Grundlage)         "
       f"{MODELLPAKET['kalibrierungszeitraum_von']} bis "
       f"{MODELLPAKET['kalibrierungszeitraum_bis']}")
 
-_r0 = abnahme.iloc[0]
+# Als Beispiel eine Anfrage, die das AUSGELIEFERTE Produkt auch
+# beantwortet - sonst prueft der Reloadtest nur den Modellzweig und
+# laesst die Tabelle, also das Produkt, ungeprueft.
+_r0 = None
+for _z in abnahme.itertuples():
+    if preis_schaetzen(int(_z.start_station_id), int(_z.end_station_id),
+                       _z.typ_code, _z.startzeit,
+                       ohne_produktsperre=True)["anzeige"] is not None:
+        _r0 = _z
+        break
+assert _r0 is not None, "Keine Abnahmefahrt bekommt eine Auskunft."
+
 # ─── DER RELOADTEST - IN EINEM EIGENEN PROZESS ──────────────────────
 #
 # Der vorige Test lief IM Notebook und benutzte merkmalszeile() - also
@@ -3410,7 +3490,7 @@ _anfrage = {"start_id": int(_r0.start_station_id),
             "zeitpunkt": str(pd.Timestamp(_r0.startzeit))}
 
 _pruefcode = \'\'\'
-import json, sys
+import json, math, sys
 import joblib, numpy as np, pandas as pd
 
 p = joblib.load(sys.argv[1])
@@ -3438,14 +3518,36 @@ zeile = pd.DataFrame([{
         str(s) + "->" + str(z), p["zielverlaesslichkeit_global"]),
 }])[p["merkmale"]]
 
-von = float(np.maximum(1.0, p["modell_unten"].predict(zeile))[0])
-bis = float(p["modell_oben"].predict(zeile)[0])
-tarif = p["tarif"][typ]
-preis = lambda m: round(tarif["startgebuehr"] + m * tarif["preis_pro_minute"], 2)
-print(json.dumps({"von_min": round(von), "bis_min": round(bis),
-                  "von_eur": preis(round(von)), "bis_eur": preis(round(bis)),
-                  "zusage": p["zusage_text"],
-                  "gueltig_bis": p["operativ_gueltig_bis"]}))
+# 1) DAS AUSGELIEFERTE PRODUKT: die Tabelle.
+fenster = next((n for a, b, n in p["zeitfenster_grenzen"] if a <= t.hour < b), "nacht")
+treffer = [r for r in p["tabelle"]
+           if r["start_station_id"] == s and r["ziel_station_id"] == z
+           and r["typ_code"] == typ and r["zeitfenster"] == fenster]
+tab_von = treffer[0]["minuten_von"] if treffer else None
+tab_bis = treffer[0]["minuten_bis"] if treffer else None
+
+# 2) DIE ALTERNATIVE: das Modell.
+mod_von = float(np.maximum(1.0, p["modell_unten"].predict(zeile))[0])
+mod_bis = float(p["modell_oben"].predict(zeile)[0])
+
+# Die VOLLSTAENDIGE Preisformel - mit Deckel.
+tar = p["tarif"][typ]
+def preis(minuten, frei=0.0, rabatt=0.0):
+    m = int(math.ceil(max(0.0, minuten)))
+    berechnet = m - min(frei, m)
+    tage = max(1, math.ceil(m / (24 * 60)))
+    roh = min(tar["startgebuehr"] + berechnet * tar["preis_pro_minute"],
+              tar["tageshoechstpreis"] * tage)
+    return round(roh * (1 - rabatt / 100.0), 2)
+
+print(json.dumps({
+    "produkt": p["produkt"],
+    "tab_von_min": tab_von, "tab_bis_min": tab_bis,
+    "tab_von_eur": None if tab_von is None else preis(tab_von),
+    "tab_bis_eur": None if tab_bis is None else preis(tab_bis),
+    "modell_von_min": round(mod_von), "modell_bis_min": round(mod_bis),
+    "zusage": p["zusage_text"],
+    "gueltig_bis": p["operativ_gueltig_bis"]}))
 \'\'\'
 
 Path("_reloadprobe.py").write_text(_pruefcode, encoding="utf-8")
@@ -3470,17 +3572,30 @@ _zeile_hier = merkmalszeile(int(_r0.start_station_id), int(_r0.end_station_id),
                             _r0.typ_code, _r0.startzeit)
 _v_hier = round(float(np.maximum(1.0, Q_UNTEN.predict(_zeile_hier))[0]))
 _b_hier = round(float(Q_OBEN.predict(_zeile_hier)[0]))
-assert (_erg["von_min"], _erg["bis_min"]) == (_v_hier, _b_hier), (
-    f"Fremder Prozess {_erg['von_min']}-{_erg['bis_min']}, "
+assert (_erg["modell_von_min"], _erg["modell_bis_min"]) == (_v_hier, _b_hier), (
+    f"Modellzweig: fremder Prozess {_erg['modell_von_min']}-{_erg['modell_bis_min']}, "
     f"Notebook {_v_hier}-{_b_hier}")
+# UND das ausgelieferte Produkt: Die Tabelle im Paket muss dieselbe
+# Spanne liefern wie preis_schaetzen() hier.
+_hier_app = preis_schaetzen(int(_r0.start_station_id), int(_r0.end_station_id),
+                            _r0.typ_code, _r0.startzeit, ohne_produktsperre=True)
+assert _erg["tab_von_min"] is not None, (
+    "Die Tabelle im Paket kennt diese Anfrage nicht - das ausgelieferte "
+    "Produkt waere aus dem Paket allein nicht zu beantworten.")
+assert _hier_app["minuten"] == (f"{_erg['tab_von_min']:.0f} bis "
+                                f"{_erg['tab_bis_min']:.0f} Minuten"), (
+    f"Tabellenzweig weicht ab: Paket {_erg['tab_von_min']}-"
+    f"{_erg['tab_bis_min']}, Notebook {_hier_app['minuten']}")
 print()
 print("   Identisch zur Rechnung im Notebook. Das Paket ist eigenstaendig.")
 
 print()
-print("   Was auch eine bestandene Abnahme NICHT ersetzt: das geplante Ziel.")
-print("   Gemessen wurde gegen die TATSAECHLICH gefahrene Strecke. Ob die")
-print("   Auskunft auch fuer das Ziel stimmt, das der Kunde eingibt und dann")
-print("   aendert, sagt kein historischer Zeitraum - nur der Betrieb.")
+print("   Was auch eine bestandene Abnahme NICHT ersetzt:")
+print("   Gerechnet wurde mit dem GEPLANTEN Ziel - so, wie die App es kennt -")
+print("   und gemessen gegen den TATSAECHLICH berechneten Betrag. Das ist die")
+print("   richtige Paarung. Offen bleibt etwas anderes: ob eine echte App das")
+print("   geplante Ziel ebenso vollstaendig und sorgfaeltig erfasst wie dieser")
+print("   Datensatz. Das sagt kein historischer Zeitraum - nur der Betrieb.")
 """),
 
 MD("""
@@ -3716,24 +3831,25 @@ eine in der Reichweite: Das erzeugte Artefakt deckt potenziell
    bleibt {{offen_schwaechster_typ}} mit {{offen_schwaechste_grenze:.1%}} darunter.
    Bindend ist die aggregierte Ebene — vorab so festgelegt, weil die App eine Zusage
    macht und nicht drei. Die Diagnose bleibt trotzdem stehen.
-3. **Die unabhängige Prüfung steht aus.** Kalibrierung hat das Artefakt kalibriert; deshalb
-   Status „{{produktstatus}}" statt sichtbar. Erst ein prospektiver Zeitraum, den nichts
+3. **Die unabhängige Prüfung ist erfolgt — aber sie ist rückblickend.** Die Kalibrierung
+   hat das Artefakt eingestellt, die **Abnahme** hat es auf einem versiegelten Zeitraum
+   geprüft: {{ab_gates_halten:.0f}} von {{ab_gates_gesamt:.0f}} Gates halten, Status
+   „{{produktstatus}}". Was weiterhin fehlt, ist ein prospektiver Zeitraum, den nichts
    berührt hat, kann die Zusage unabhängig belegen.
 4. **Keine Zusage je Verbindung.** Die {{gate_schwelle:.0%}} gelten insgesamt.
    Ausgeschlossen ist, was messbar durchfällt; für die Mehrzahl der Kombinationen ist die
    Prüfmenge zu klein für eine Einzelaussage.
 5. **Kein Wetter.** Ohne archivierte Prognosen fehlt ein vermutlich starkes Merkmal.
-6. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt.**
+6. **Die Acht-Stunden-Grenze ist gesetzt, nicht belegt — und sie ist zur Anfragezeit
+   nicht prüfbar.** Der Geltungsbereich schließt Fahrten über {{obergrenze_stunden:.0f}}
+   Stunden aus; ob eine Fahrt so lang wird, weiß die App beim Entsperren nicht. Die
+   Zusage gilt deshalb genau genommen für Fahrten *innerhalb* dieser Grenze — bei
+   längeren greift ohnehin der Tagesdeckel, und die Spanne wäre dann zu niedrig. Das
+   betrifft {{anteil_ueberlang:.2%}} der Fahrten und steht in der Anzeige als Vorbehalt.
 7. **Die Punktschätzung trägt {{typen_reissen}} nicht.** Für diesen Radtyp gibt es
    nur die Spanne, keine Zahl — der Minutenpreis lässt keine engere Zusage zu.
-8. **Die Architekturfrage entschied mit — und sie wurde vorher gestellt.** Von drei
-   Kandidaten nehmen **alle drei** alle Hürden; die beiden statischen Tabellen
-   reißen das Primärgate, auch die aus den Modellvorhersagen gebaute. Weil ein
-   Laufzeitdienst zugelassen ist, kommt sie überhaupt in Frage — im Status
-   „{{produktstatus}}". Wäre er es nicht, bliebe kein
-   zulässiger Kandidat — dasselbe Notebook, dieselben Zahlen, ein anderes Ergebnis.
-   Diesmal fiel sie anders aus als erwartet: **Alle drei Kandidaten nehmen alle
-   Gates.** Entschieden hat deshalb nicht die Güte, sondern der Betrieb — und der
+8. **Die Architekturfrage entschied mit — und sie wurde vorher gestellt.** Alle
+   {{zulaessige_n:.0f}} Kandidaten nehmen alle Hürden. Entschieden hat deshalb nicht die Güte, sondern der Betrieb — und der
    Verzicht auf {{verzicht_reichweite:.1%}} Reichweite ist der Preis dafür, dass niemand
    nachts einen Dienst neu starten muss.
 9. **Der Status „{{produktstatus}}" heißt: mit Bedingung.** Die Zusage ist auf der

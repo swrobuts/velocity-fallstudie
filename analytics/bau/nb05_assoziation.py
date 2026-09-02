@@ -357,6 +357,25 @@ from scipy.stats import fisher_exact
 MINDEST_SUPPORT = 0.005
 K1_SUPPORT = 0.01      # Erfolgskriterium 1: Anteil aller Warenkoerbe
 K2_LIFT = 1.3          # Erfolgskriterium 2: kontextbedingter Lift
+merke("k2_lift", K2_LIFT)
+
+# ─── DIE ABNAHMEREGEL FUER B1 - VOR DEM OEFFNEN DES HOLDOUTS ────────
+#
+# Hier stand sie frueher nicht. Festgelegt wurde erst NACH dem Oeffnen
+# des Bestaetigungszeitraums, dass die untere Bootstrap-Grenze
+# mindestens K2_LIFT betragen muss. Das ist genau die Reihenfolge, vor
+# der dieses Notebook sonst warnt: Wer die Abnahmeregel formuliert,
+# nachdem er die Zahlen gesehen hat, prueft nichts mehr.
+#
+#   B1 gilt als bestanden, wenn die untere Grenze eines
+#   Tagesblock-Bootstraps (ganze Tage mit Zuruecklegen) mindestens
+#   K2_LIFT betraegt - je AUSGELIEFERTER Regel, nicht im Mittel.
+#
+# Nicht der Punktschaetzer: Ein Wert von 1,31 belegt nicht, dass eine
+# Regel die Schwelle auch unter Stichprobenunsicherheit haelt.
+B1_ZIEHUNGEN = 400        # Bootstrapziehungen
+B1_NIVEAU = 0.025         # untere Grenze des 95-%-Bereichs
+merke("b1_niveau", B1_NIVEAU)
 
 
 def regeln_finden(koerbe, kontextspalten, mindest_support=MINDEST_SUPPORT):
@@ -1014,10 +1033,20 @@ CODE('''
 # und zwar AM SELBEN TAG? Nur dann ist es eine Hin- und Rueckfahrt.
 KOERBE_ALLE["datum"] = KOERBE_ALLE.startzeit.dt.normalize()
 
-morgens = KOERBE_ALLE[(KOERBE_ALLE.tagesart == "Werktag") & (KOERBE_ALLE.fenster == "früh (0-10)")
-                 & (koerbe.start == "Hauptbahnhof") & (koerbe.ziel == "Hubland Campus")]
-abends = KOERBE_ALLE[(KOERBE_ALLE.tagesart == "Werktag") & (KOERBE_ALLE.fenster == "abend (15-20)")
-                & (koerbe.start == "Hubland Campus") & (koerbe.ziel == "Hauptbahnhof")]
+# HIER STAND EIN FILTERFEHLER, und er ist typisch fuer jede Umstellung:
+# Gefiltert wurde KOERBE_ALLE, aber zwei der vier Bedingungen kamen aus
+# koerbe - dem kuerzeren Entdeckungszeitraum. Pandas richtet solche
+# Masken still am Index aus; das Ergebnis war stillschweigend nur das
+# erste Drittel, waehrend der Text "in fuenf Jahren" behauptete.
+#
+# Kein Absturz, keine Warnung, nur zu kleine Zahlen. Deshalb steht die
+# Menge jetzt EINMAL in einer Variablen und wird nur noch aus ihr
+# gefiltert.
+_alle = KOERBE_ALLE
+morgens = _alle[(_alle.tagesart == "Werktag") & (_alle.fenster == "früh (0-10)")
+                & (_alle.start == "Hauptbahnhof") & (_alle.ziel == "Hubland Campus")]
+abends = _alle[(_alle.tagesart == "Werktag") & (_alle.fenster == "abend (15-20)")
+               & (_alle.start == "Hubland Campus") & (_alle.ziel == "Hauptbahnhof")]
 
 # Zwei verschiedene Fragen, die leicht zu verwechseln sind:
 irgendwann = set(morgens.kunde_id) & set(abends.kunde_id)
@@ -1479,8 +1508,14 @@ merke("hotspots_startstation", ", ".join(_top_start))
 # keine von beiden genau.
 def kopf_fuer(einheit):
     return [
-        f"# Analysezeitraum: {koerbe.startzeit.min().date()} bis "
-        f"{koerbe.startzeit.max().date()} ({WERKTAGE} Werktage)",
+        # DER ZEITRAUM DER DATEI, NICHT DER DER REGELSUCHE.
+        #
+        # Hier stand koerbe - also der Entdeckungszeitraum. Gerechnet
+        # sind die Salden und Hotspots aber ueber ALLE Werktage. Die
+        # Kopfzeile behauptete damit einen Zeitraum, der zu den Zahlen
+        # darunter nicht passte.
+        f"# Analysezeitraum: {KOERBE_ALLE.startzeit.min().date()} bis "
+        f"{KOERBE_ALLE.startzeit.max().date()} ({WERKTAGE} Werktage)",
         f"# Einheit: {einheit}",
         "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
         "# Status: EXPLORATIV - nicht freigegeben, kein Einsatzplan",
@@ -1510,17 +1545,13 @@ print("geschrieben: stationssalden_werktag.csv, abstell_hotspots_werktag.csv")
 #
 # Ein Gate muss auf der Einheit liegen, die ausgeliefert wird. Also:
 # JEDE angezeigte Regel muss ihre eigene Bestaetigung haben.
-# ─── B1: BESTAETIGT HEISST NICHT "PUNKTSCHAETZER KNAPP DRUEBER" ──────
+# ─── B1, GENAU WIE IN PHASE 3 FESTGELEGT ────────────────────────────
 #
-# Hier stand: bestaetigt, wenn der Lift im Bestaetigungszeitraum >= 1,3
-# ist. Ein Punktschaetzer bei 1,31 belegt aber nicht, dass die Regel die
-# Schwelle auch unter Stichprobenunsicherheit haelt - erst recht nicht,
-# wenn Fahrten desselben Tages zusammenhaengen.
-#
-# Geprueft wird deshalb JEDE ausgelieferte Regel mit demselben
-# Tagesblock-Bootstrap, der oben nur fuer die staerkste Regel lief.
-# B1 verlangt: die untere 95-%-Grenze liegt bei mindestens K2_LIFT.
-B1_ZIEHUNGEN = 400
+# Die Regel steht bei den uebrigen Kriterien, VOR dem Oeffnen dieses
+# Zeitraums. Hier wird sie nur angewandt - und zwar auf ALLE im
+# Entdeckungszeitraum gewaehlten Regeln, nicht nur auf die, deren
+# Punktschaetzer schon ueber der Schwelle liegt. Sonst entschiede der
+# Punktschaetzer doch wieder mit.
 _rng_b = np.random.default_rng(20260902)
 _tage_b = bestaetigung.startzeit.dt.normalize()
 _nach_tag_b = {t: g for t, g in bestaetigung.groupby(_tage_b)}
@@ -1544,13 +1575,12 @@ def lift_bootstrap(kontext, start, ziel, ziehungen=B1_ZIEHUNGEN):
         _werte.append(((_ab.ziel == ziel).mean()) / _basis)
     if len(_werte) < 20:
         return float("nan")
-    return float(np.quantile(_werte, 0.025))
+    return float(np.quantile(_werte, B1_NIVEAU))
 
 print("\\nB1 - JEDE REGEL EINZELN, MIT TAGESBLOCK-BOOTSTRAP")
 print(f"   {B1_ZIEHUNGEN} Ziehungen ganzer Tage aus dem Bestaetigungszeitraum.")
 print(f"   Verlangt: untere 95-%-Grenze >= {K2_LIFT}\\n")
-_kandidaten_b1 = zusammen[zusammen[f"{LIFT} bestätigt"].notna()
-                          & (zusammen[f"{LIFT} bestätigt"] >= K2_LIFT)].copy()
+_kandidaten_b1 = zusammen[zusammen[f"{LIFT} bestätigt"].notna()].copy()
 # Spalten ueber ihre NAMEN ansprechen, nicht ueber Positionen. Eine
 # fruehere Fassung nahm _z._5 und druckte damit den Support statt des
 # Lifts - Positionszugriffe verschieben sich, sobald eine Spalte
@@ -1621,16 +1651,27 @@ b_regeln["status"] = "Hinweis - keine automatische Aktion"
 b_regeln["bestaetigungszeitraum_von"] = str(bestaetigung.startzeit.min().date())
 b_regeln["bestaetigungszeitraum_bis"] = str(bestaetigung.startzeit.max().date())
 b_regeln["gebaut_am"] = str(pd.Timestamp.today().date())
-b_regeln["operativ_gueltig_ab"] = str(pd.Timestamp.today().date())
-b_regeln["operativ_gueltig_bis"] = str((pd.Timestamp.today()
-                                        + pd.Timedelta(days=90)).date())
+# KEINE OPERATIVE GUELTIGKEIT AUF ERFUNDENEN DATEN.
+#
+# Ein Gueltigkeitsdatum sagt: Bis dahin darf danach gehandelt werden.
+# Das kann eine Auswertung auf synthetischen Lehrdaten nicht zusagen -
+# egal wie sauber sie gerechnet ist. Was das Feld tragen darf, ist der
+# Zeitraum, aus dem die EVIDENZ stammt.
+# Der Hinweis gehoert in den Dateikopf, nicht in jede Zeile: Eine
+# Spalte, die in jeder Zeile dasselbe sagt, ist keine Eigenschaft der
+# Zeile - und unser Pruefer meldet zu Recht einen "Status ohne Wirkung".
 
 DISPOKOPF = [
-    f"# Produkt B: Dispositionshinweis, Stand {koerbe.startzeit.max().date()}",
+    f"# Produkt B: Dispositionshinweis, gebaut am {pd.Timestamp.today().date()}",
+    f"# Evidenz aus dem Bestaetigungszeitraum "
+    f"{bestaetigung.startzeit.min().date()} bis {bestaetigung.startzeit.max().date()}",
     "# KEINE AUTOMATISCHE AKTION - ein Mensch entscheidet, ob gefahren wird.",
     "# Jede Zeile ist im Bestaetigungszeitraum einzeln bestaetigt "
     f"(Lift >= {K2_LIFT}).",
     "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
+    "# KEINE reale Betriebsfreigabe - Lehrbeispiel. Es gibt bewusst kein",
+    "# Gueltigkeitsdatum: Was hier bestanden ist, ist ein analytisches",
+    "# Lehr-Gate, keine Zusage, nach der jemand handeln darf.",
 ]
 with open("dispositionshinweise.csv", "w", encoding="utf-8") as _f:
     _f.write(chr(10).join(DISPOKOPF) + chr(10))
@@ -1724,7 +1765,16 @@ B_GATES = {"B1 Bestaetigungszeitraum": B1_TRAEGT,
 
 STATUS_A = ("freigegeben" if (len(brauchbar) > 0 and A4_TRAEGT)
             else "nicht freigegeben (Wirtschaftlichkeit nicht prüfbar)")
-STATUS_B = "freigegeben" if all(B_GATES.values()) else "nicht freigegeben"
+# KEINE BETRIEBSFREIGABE AUF SYNTHETISCHEN DATEN.
+#
+# "freigegeben" klingt nach einer Entscheidung, die jemand mit
+# Verantwortung getroffen hat. Getroffen hat sie hier ein Notebook auf
+# erfundenen Daten. Was bestanden ist, ist ein LEHR-GATE - die
+# analytische Huerde, die dieses Notebook vorab definiert hat. Ob das
+# Produkt in Betrieb geht, entscheidet niemand hier.
+STATUS_B = ("analytisches Lehr-Gate bestanden - keine reale Betriebsfreigabe"
+            if all(B_GATES.values())
+            else "analytisches Lehr-Gate nicht bestanden")
 STATUS_SATZ = (
     f"Produkt A (automatische Umverteilungsregel): {STATUS_A}. "
     f"Produkt B (Dispositionshinweis): {STATUS_B}."
@@ -1940,7 +1990,7 @@ Regeln werden also als **Dispositionshinweis** übergeben, nicht als Transportau
 |---|---|
 | **Was erzeugt wird** | `dispositionshinweise.csv` mit den **{{b_regeln_n:.0f}} einzeln bestätigten Regeln**, jede mit ihrer Größenordnung daneben (höchstens {{b_je_tag_max:.2f}} Fahrten je Tag). Dazu die Stationssalden und die Abstell-Hotspots — beide ausdrücklich explorativ. |
 | **Was damit NICHT gezeigt ist** | dass die Datei in einer Dispositionsansicht ankommt. Dieses Notebook prüft den **Export**: Spalten, Nenner, Kopfzeilen. Ladeweg, Schema, Anzeige der Größenordnung und Fehlerverhalten der Oberfläche sind ein Integrationstest, den es hier nicht gibt. Die ehrliche Formulierung lautet **„für die Übergabe erzeugt"**, nicht „läuft". |
-| **Was nicht läuft** | Kein automatischer Umsetzauftrag — A4 hält nicht. Die Obergrenzenrechnung zeigt, warum: Es geht um höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt, eine Umsetzrunde kostet angenommene {{kosten_transport:.0f}} €. |
+| **Was nicht läuft** | Kein automatischer Umsetzauftrag. A4 ist **{{a4_zustand}}** — nicht widerlegt: Die Szenariorechnung zeigt eine Größenordnung von höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{wert_fahrt:.2f}} € je Fahrt gegen {{kosten_transport:.0f}} € je Runde. Sie ist **keine Obergrenze** — die Fahrten, die mangels Rad nie stattfanden, stehen nirgends in diesen Daten. |
 | **Wofür die Evidenz gilt** | Bestätigungszeitraum {{b_zeitraum_von}} bis {{b_zeitraum_bis}}. Das ist **kein Gültigkeitsdatum**: Die Datei nennt getrennt davon `gebaut_am` und eine operative Gültigkeit von 90 Tagen ab Bau. |
 | **Wer entscheidet** | Die Disposition. Sie sieht den Hinweis und verbindet ihn mit dem, was das System nicht weiß — Baustellen, Veranstaltungen, ausgefallene Fahrzeuge. |
 
@@ -2007,7 +2057,7 @@ MD("""
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
 | 5 Evaluation | {{brauchbare_regeln:.0f}} Regel(n) nehmen A1 bis A3 — die Kriterienausgabe in Phase 5 nennt die Zahlen je Hürde. Die Hürde wird trotzdem nicht verschoben, obwohl sie auf der falschen Skala liegt: Sie entscheidet in Betriebsgrößen um Hundertstel einer Fahrt je Tag. Die Deutung des Pendelstroms hält die tagesgenaue Gegenprobe nicht aus — nur {{personen_selber_tag:.0f}} von {{rueck_fahrten_paar:.0f}} Abendfahrten stammen von jemandem, der morgens hingefahren war |
-| 6 Deployment | {{status_satz}} Ausgeliefert wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln**, jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Die Obergrenzenrechnung sagt, warum keine Automatik: höchstens {{b_je_tag_max:.2f}} Fahrten je Tag bei angenommenen {{kosten_transport:.0f}} € je Umsetzrunde. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
+| 6 Deployment | {{status_satz}} Erzeugt wird `dispositionshinweise.csv` mit **{{b_regeln_n:.0f}} einzeln bestätigten Regeln** (Bootstrap-Untergrenze ≥ {{k2_lift}}), jede mit Größenordnung und Nenner; dazu Stationssalden und Abstell-Hotspots — beide ausdrücklich **explorativ**. Keine Automatik, weil A4 **{{a4_zustand}}** ist: Ohne Leerstandsereignisse und entgangene Nachfrage lässt sich die Wirtschaftlichkeit nicht prüfen. Die Hotspots sind über die **End**koordinaten verortet; bei {{andere_station:.1%}} ist die nächste Station eine andere als die Startstation |
 
 **Die drei Sätze, die aus diesem Notebook bleiben**
 

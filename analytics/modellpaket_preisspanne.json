@@ -126,7 +126,7 @@
   "abnahmezeitraum_von": "2026-06-29",
   "abnahmezeitraum_bis": "2026-08-24",
   "max_fahrtdauer_minuten": 480,
-  "zusage_text": "Preis für eine Fahrt zu Ihrem gewählten Ziel. Fahren Sie ein anderes Ziel an, gilt die Schätzung nicht.",
+  "zusage_text": "Preis für eine Fahrt zu Ihrem gewählten Ziel, bis 8 Stunden. Fahren Sie ein anderes Ziel an oder länger, gilt die Schätzung nicht.",
   "auswahlregel": "einfachste Architektur unter allen, die ALLE Gates nehmen (CSV vor Laufzeitdienst); bei gleicher Architektur die groessere Reichweite",
   "breitenregel_minuten": 12,
   "breitenregel_anteil": 0.6,
@@ -135,17 +135,21 @@
   "tarif": {
     "CARGO": {
       "startgebuehr": 2.0,
-      "preis_pro_minute": 0.5
+      "preis_pro_minute": 0.5,
+      "tageshoechstpreis": 110.0
     },
     "CITY": {
       "startgebuehr": 0.1,
-      "preis_pro_minute": 0.1
+      "preis_pro_minute": 0.1,
+      "tageshoechstpreis": 50.0
     },
     "EBIKE": {
       "startgebuehr": 1.0,
-      "preis_pro_minute": 0.25
+      "preis_pro_minute": 0.25,
+      "tageshoechstpreis": 75.0
     }
   },
+  "preisformel": "min(startgebuehr + berechnete_minuten * preis_pro_minute, tageshoechstpreis * angefangene_tage) * (1 - rabatt/100); berechnete_minuten = aufgerundete Minuten abzueglich Freiminuten",
   "tarifversion": "375720e51a8b",
   "datenversion": "d704ee26359d",
   "stationsnamen": {
@@ -4970,7 +4974,11 @@
     "2026-05-14",
     "2026-05-25",
     "2026-06-04",
-    "2026-08-15"
+    "2026-08-15",
+    "2026-10-03",
+    "2026-11-01",
+    "2026-12-25",
+    "2026-12-26"
   ],
   "schulferien": [
     {
@@ -5096,6 +5104,10 @@
     {
       "von": "2026-08-03",
       "bis": "2026-09-15"
+    },
+    {
+      "von": "2026-11-02",
+      "bis": "2026-11-07"
     }
   ],
   "gesperrte_kombinationen": [
@@ -5105,6 +5117,1728 @@
       "vormittag"
     ]
   ],
+  "produkt": "tabelle",
+  "tabelle": [
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 2,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 9,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 2,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 2,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 2,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 11,
+      "minuten_bis": 19
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 5,
+      "minuten_bis": 11
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 6,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 7,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 14,
+      "minuten_bis": 26
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 7,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 13,
+      "minuten_bis": 22
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 7,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 12,
+      "minuten_bis": 22
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 7,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 14,
+      "minuten_bis": 22
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 8,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 15,
+      "minuten_bis": 26
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 9,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 9,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 10,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 9,
+      "minuten_bis": 19
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 10,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 10,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 9,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 1,
+      "ziel_station_id": 10,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 9,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 9,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 6,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 6,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 7,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 3,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 6,
+      "minuten_bis": 11
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 5,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 5,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 4,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 5,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 3,
+      "minuten_bis": 5
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 4,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 3,
+      "minuten_bis": 5
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 3,
+      "minuten_bis": 5
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 7,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 9,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 9,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 14,
+      "minuten_bis": 25
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 12,
+      "minuten_bis": 21
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 13,
+      "minuten_bis": 24
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 10,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 11,
+      "minuten_bis": 21
+    },
+    {
+      "start_station_id": 2,
+      "ziel_station_id": 10,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 2,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 7,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 2,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 4,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 5,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 5,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 5,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 7,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 6,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 7,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 8,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 12,
+      "minuten_bis": 22
+    },
+    {
+      "start_station_id": 3,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 2,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 6,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 2,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 2,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 4,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 3,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 4,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 4,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 5,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 4,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 4,
+      "minuten_bis": 7
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 3,
+      "minuten_bis": 7
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 3,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 4,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 9,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 8,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 6,
+      "minuten_bis": 11
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 5,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 3,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 6,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 6,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 4,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 5,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 5,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 6,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 3,
+      "minuten_bis": 7
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 3,
+      "minuten_bis": 7
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 9,
+      "minuten_bis": 20
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 9,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 14,
+      "minuten_bis": 24
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 9,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 15,
+      "minuten_bis": 27
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 12,
+      "minuten_bis": 20
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 12,
+      "minuten_bis": 23
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 9,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 9,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 5,
+      "ziel_station_id": 10,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 2,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 3,
+      "minuten_bis": 6
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 4,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 5,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 4,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 4,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 5,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 4,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 5,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 5,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 5,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 4,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 3,
+      "minuten_bis": 8
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 4,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 6,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 9,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 15,
+      "minuten_bis": 27
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 15,
+      "minuten_bis": 27
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 2,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 14,
+      "minuten_bis": 26
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 2,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 19
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 10,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 12,
+      "minuten_bis": 20
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 3,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 9,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 8,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 11,
+      "minuten_bis": 23
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 12,
+      "minuten_bis": 21
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 17,
+      "minuten_bis": 26
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 11,
+      "minuten_bis": 21
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 8,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 13,
+      "minuten_bis": 22
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 8,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 14,
+      "minuten_bis": 24
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 17,
+      "minuten_bis": 27
+    },
+    {
+      "start_station_id": 7,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 17,
+      "minuten_bis": 26
+    },
+    {
+      "start_station_id": 8,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 18,
+      "minuten_bis": 30
+    },
+    {
+      "start_station_id": 8,
+      "ziel_station_id": 4,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 20,
+      "minuten_bis": 32
+    },
+    {
+      "start_station_id": 8,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 21,
+      "minuten_bis": 33
+    },
+    {
+      "start_station_id": 8,
+      "ziel_station_id": 7,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 16,
+      "minuten_bis": 28
+    },
+    {
+      "start_station_id": 8,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 18,
+      "minuten_bis": 30
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 7,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 7,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 6,
+      "minuten_bis": 10
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 11
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 7,
+      "minuten_bis": 11
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 5,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 5,
+      "minuten_bis": 9
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 6,
+      "minuten_bis": 11
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 2,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 11,
+      "minuten_bis": 21
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 2,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 2,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 9,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 10,
+      "minuten_bis": 20
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 11,
+      "minuten_bis": 20
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 3,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 9,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 8,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 4,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 13
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 5,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 12,
+      "minuten_bis": 19
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 5,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 9,
+      "minuten_bis": 20
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 7,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 7,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 14,
+      "minuten_bis": 25
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 7,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 13,
+      "minuten_bis": 23
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 7,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 12,
+      "minuten_bis": 21
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 8,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 15,
+      "minuten_bis": 25
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 10,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 13,
+      "minuten_bis": 24
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 10,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 12,
+      "minuten_bis": 21
+    },
+    {
+      "start_station_id": 9,
+      "ziel_station_id": 10,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 9,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 18
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 1,
+      "typ_code": "CARGO",
+      "zeitfenster": "vormittag",
+      "minuten_von": 10,
+      "minuten_bis": 19
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 1,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 8,
+      "minuten_bis": 14
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 1,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 2,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 9,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 2,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 8,
+      "minuten_bis": 15
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 2,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 7,
+      "minuten_bis": 16
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 2,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 11
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 3,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 18,
+      "minuten_bis": 29
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 3,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 15,
+      "minuten_bis": 26
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 12,
+      "minuten_bis": 19
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 3,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 13,
+      "minuten_bis": 21
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 4,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 11,
+      "minuten_bis": 19
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 5,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 12
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 5,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 6,
+      "minuten_bis": 11
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 6,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 13,
+      "minuten_bis": 25
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 6,
+      "typ_code": "CITY",
+      "zeitfenster": "abend",
+      "minuten_von": 13,
+      "minuten_bis": 24
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 6,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 20
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 7,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 23,
+      "minuten_bis": 35
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 7,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 13,
+      "minuten_bis": 24
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 9,
+      "typ_code": "CARGO",
+      "zeitfenster": "frueh",
+      "minuten_von": 16,
+      "minuten_bis": 25
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 9,
+      "typ_code": "CARGO",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 15,
+      "minuten_bis": 24
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "frueh",
+      "minuten_von": 13,
+      "minuten_bis": 22
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 12,
+      "minuten_bis": 22
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 9,
+      "typ_code": "CITY",
+      "zeitfenster": "vormittag",
+      "minuten_von": 14,
+      "minuten_bis": 25
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "frueh",
+      "minuten_von": 10,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "nachmittag",
+      "minuten_von": 10,
+      "minuten_bis": 17
+    },
+    {
+      "start_station_id": 10,
+      "ziel_station_id": 9,
+      "typ_code": "EBIKE",
+      "zeitfenster": "vormittag",
+      "minuten_von": 11,
+      "minuten_bis": 21
+    }
+  ],
+  "zeitfenster_grenzen": [
+    [
+      5,
+      10,
+      "frueh"
+    ],
+    [
+      10,
+      15,
+      "vormittag"
+    ],
+    [
+      15,
+      20,
+      "nachmittag"
+    ],
+    [
+      20,
+      24,
+      "abend"
+    ]
+  ],
+  "alternative": "quantilregression (modell_unten / modell_oben)",
   "gebaut_am": "2026-09-02",
   "statusgrund": "freigegeben",
   "abnahme_untergrenze": 0.8113887252728376,
@@ -5154,9 +6888,9 @@
     }
   },
   "operativ_gueltig_ab": "2026-09-02",
-  "operativ_gueltig_bis": "2026-08-15",
+  "operativ_gueltig_bis": "2026-11-07",
   "gueltigkeit_begrenzt_durch": "Kalenderhorizont",
-  "kalenderhorizont": "2026-08-15",
-  "einsatzbereit": false,
-  "einsatzvoraussetzung": "Kalender (Feiertage und Schulferien) muss bis zum Ende des geplanten Einsatzzeitraums nachgeliefert werden"
+  "kalenderhorizont": "2026-11-07",
+  "einsatzbereit": true,
+  "einsatzvoraussetzung": ""
 }
