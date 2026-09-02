@@ -37,9 +37,6 @@
  "fenster_min": 8,
  "fenster_max": 9,
  "fenster_regeln": 11,
- "status_a": "nicht freigegeben",
- "status_b": "freigegeben",
- "status_satz": "Produkt A (automatische Umverteilungsregel): nicht freigegeben. Produkt B (Dispositionshinweis): freigegeben.",
  "hin_fahrten": 245,
  "rueck_fahrten_paar": 410,
  "personen_morgens": 198,
@@ -67,5 +64,8 @@
  "frei_fahrten_tag": 8.872323552735924,
  "frei_raeder_tag": 8.872323552735924,
  "hotspots_abstellort": "Dom, Hauptbahnhof, Grombühl Klinikum",
- "hotspots_startstation": "Grombühl Klinikum, Sanderau, Zellerau"
+ "hotspots_startstation": "Grombühl Klinikum, Sanderau, Zellerau",
+ "status_a": "nicht freigegeben",
+ "status_b": "freigegeben",
+ "status_satz": "Produkt A (automatische Umverteilungsregel): nicht freigegeben. Produkt B (Dispositionshinweis): freigegeben."
 }

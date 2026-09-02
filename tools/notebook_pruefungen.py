@@ -382,7 +382,8 @@ POSITIV = re.compile(
     r"|freigegeben \(Pilot\)|Das Produkt ist freigegeben", re.I)
 
 
-def pruefe_altprosa(markdown: list[str], ausgaben: list[str]) -> list[str]:
+def pruefe_altprosa(markdown: list[str], ausgaben: list[str],
+                    bauskript: str = "") -> list[str]:
     """Findet Fliesstext, der eine Sperre behauptet, waehrend das Notebook freigibt.
 
     Der teuerste Fehler dieser Fallstudie war nicht eine falsche Zahl,
@@ -394,7 +395,26 @@ def pruefe_altprosa(markdown: list[str], ausgaben: list[str]) -> list[str]:
     im Fliesstext keine unbedingte Sperraussage mehr stehen - es sei denn,
     sie ist erkennbar rueckblickend ("eine fruehere Fassung", "haette",
     "waere") oder bedingt ("wenn", "falls").
+
+    UND: Sie darf aus einem Platzhalter stammen. Im gebauten Notebook ist
+    {{status_a}} laengst durch "nicht freigegeben" ersetzt und von einer
+    getippten Sperre nicht mehr zu unterscheiden. Notebook 5 hat zwei
+    Produkte mit verschiedenem Status - dort ist "Produkt A ist nicht
+    freigegeben" neben einer Freigabe von Produkt B voellig richtig.
+    Deshalb wird gegen das BAUSKRIPT gegengeprueft: Steht der Satz dort
+    mit einem Platzhalter, ist er datengetrieben und kein Befund.
     """
+    # Alle Saetze des Bauskripts, die einen Platzhalter tragen - als
+    # Textanfaenge, damit sie sich im gebauten Text wiederfinden lassen.
+    dynamisch = []
+    for block in re.findall(r'MD\("""(.*?)"""\)', bauskript, re.S):
+        for satz in re.split(r"(?<=[.!?])\s+", block):
+            if "{{" in satz:
+                # Der Textanfang vor dem ersten Platzhalter ist der Teil,
+                # der beim Bauen unveraendert bleibt.
+                vorspann = satz.split("{{")[0].strip()
+                if len(vorspann) >= 12:
+                    dynamisch.append(vorspann)
     if not any(POSITIV.search(a) for a in ausgaben):
         return []
     rueckblick = re.compile(r"fr[üu]here|zuvor|h[äa]tte|w[äa]re|wenn |falls |sonst |"
@@ -406,6 +426,8 @@ def pruefe_altprosa(markdown: list[str], ausgaben: list[str]) -> list[str]:
                 continue
             if "{{" in satz:          # aus der Rechnung gefuellt
                 continue
+            if any(v in satz for v in dynamisch):
+                continue              # im Bauskript ein Platzhalter
             befunde.append(f"Markdownzelle {i}: '{satz.strip()[:88]}' - behauptet eine "
                            f"Sperre, obwohl die Ausgaben eine Freigabe zeigen")
     return befunde
@@ -621,7 +643,7 @@ def main() -> int:
                   + pruefe_status_im_text(bauskript)
                   + pruefe_gate_mit_fremder_zahl(code)
                   + pruefe_artefakt_ohne_waechter(code)
-                  + pruefe_altprosa(markdown, ausgaben))
+                  + pruefe_altprosa(markdown, ausgaben, bauskript))
         hinweise = (pruefe_nullfuellung(code) + pruefe_freie_schwellen(code)
                     + pruefe_urteil_ohne_zahl(ausgaben))
         if fehler:

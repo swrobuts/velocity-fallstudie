@@ -1,0 +1,14 @@
+# Produkt B: Dispositionshinweis, Stand 2026-08-24
+# KEINE AUTOMATISCHE AKTION - ein Mensch entscheidet, ob gefahren wird.
+# Jede Zeile ist im Bestaetigungszeitraum einzeln bestaetigt (Lift >= 1.3).
+# Datenherkunft: SYNTHETISCHE LEHRDATEN
+Kontext,wenn Start,dann Ziel,Lift (Kontext) entdeckt,Support entdeckt,Lift (Kontext) bestätigt,Support bestätigt,fahrten_je_werktag,status,gueltig_von,gueltig_bis
+Werktag · früh (0-10),Grombühl Klinikum,Hauptbahnhof,1.5875404372646638,0.012058478284067869,1.482998444351468,0.011307344389403402,0.54,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24
+Werktag · früh (0-10),Juliuspromenade,Grombühl Klinikum,1.9136448146000264,0.015419912495998292,1.5084303562787498,0.009934309713547276,0.69,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24
+Werktag · früh (0-10),Marktplatz,Grombühl Klinikum,1.305683069707874,0.008608117241133995,1.4439894741279122,0.009207409002799915,0.38,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24
+Werktag · mittag (10-15),Grombühl Klinikum,Hauptbahnhof,1.830371715764331,0.006562800128054637,1.6788652568712292,0.0060305836743484815,0.29,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24
+Werktag · mittag (10-15),Grombühl Klinikum,Hubland Campus,1.4920669238956892,0.006402731832248426,1.3514592988176695,0.005761361188886495,0.29,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24
+Werktag · mittag (10-15),Juliuspromenade,Grombühl Klinikum,1.9341793537618894,0.007612136733895351,1.5533740744773519,0.005465216454878311,0.34,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24
+Werktag · abend (15-20),Grombühl Klinikum,Hauptbahnhof,1.6822555336308718,0.008714829438338135,1.5827867728398899,0.007915141072582382,0.39,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24
+Werktag · abend (15-20),Sanderau,Zellerau,1.3668767501509933,0.005211112296802191,1.4410986568835817,0.004980615981046737,0.23,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24
+Werktag · abend (15-20),Zellerau,Sanderau,1.373060540649287,0.006224878170241525,1.4055774356526234,0.0060305836743484815,0.28,Hinweis - keine automatische Aktion,2024-12-24,2026-08-24

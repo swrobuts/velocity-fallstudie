@@ -794,8 +794,8 @@ zu rechnen. **Das wäre der Fehler**, und zwar der teuerste in diesem ganzen Not
 > neue Hürde genau so gewählt wurde, dass das gewünschte Ergebnis herauskommt, lässt sich
 > hinterher nicht mehr ausräumen. Nicht einmal von einem selbst.
 
-Die Hürde bleibt also stehen, das Ergebnis lautet **keine Freigabe**, und der Mangel wird
-protokolliert statt repariert. Für eine zweite Runde gehört das Kriterium neu formuliert —
+Die Hürde bleibt also stehen, und für **Produkt A** lautet das Ergebnis
+{{status_a}}; der Mangel wird protokolliert statt repariert. Für eine zweite Runde gehört das Kriterium neu formuliert —
 **vor** der nächsten Messung, und in der Einheit, in der die Disposition denkt:
 
 > *Eine Regel ist brauchbar, wenn sie mindestens N Fahrten je Werktag betrifft — wobei N
@@ -844,13 +844,19 @@ print(f"   davon spaeter weiterhin Lift >= {K2_LIFT}:  {haelt_13} von {len(zusam
 print(f"   davon spaeter weiterhin Lift > 1:    {haelt_1} von {len(zusammen)}\\n")
 print(zusammen.round(3).to_string(index=False))
 
-# ─── MEHRERE BESTAETIGUNGSFENSTER STATT EINES EINZIGEN ──────────────
+# ─── VIER TEILFENSTER DES BESTAETIGUNGSZEITRAUMS ────────────────────
 # Ein einziger Schnitt legt das Bestaetigungsfenster auf eine bestimmte
 # Jahreszeit. Faellt es guenstig, sieht jede Regel stabil aus; faellt es
-# unguenstig, keine. Vier gleich lange Fenster, jedes gegen dieselben im
-# ersten Drittel entdeckten Regeln - so laesst sich Saison von Stabilitaet
-# trennen.
-print("\\nDIESELBEN REGELN IN VIER FOLGEFENSTERN:")
+# unguenstig, keine. Vier gleich lange Teilfenster, jedes gegen dieselben
+# im ersten Drittel entdeckten Regeln - so laesst sich Saison von
+# Stabilitaet trennen.
+#
+# DAS IST KEINE ROLLIERENDE VALIDIERUNG, und der Unterschied ist wichtig
+# genug fuer diesen Kommentar: Bei einem Rolling Origin wuerde in JEDEM
+# Fold neu gesucht, und zwar nur in dessen eigener Vergangenheit. Hier
+# steht die Regelmenge fest und wird viermal nachgerechnet. Das prueft
+# Saisonabhaengigkeit, nicht die Suchstrategie.
+print("\\nDIESELBEN REGELN IN VIER TEILFENSTERN DES BESTAETIGUNGSZEITRAUMS:")
 _rest = koerbe[koerbe.startzeit > GRENZE]
 _grenzen = pd.date_range(_rest.startzeit.min(), _rest.startzeit.max(), periods=5)
 print(f"   {'Fenster':>26s}{'Fahrten':>9s}{'Lift >= ' + str(K2_LIFT):>12s}"
@@ -879,44 +885,6 @@ else:
     print("   Ein einzelner Schnitt haette einen dieser Werte geliefert und")
     print("   ihn wie ein Ergebnis aussehen lassen.")
 
-# ─── DER STATUS, EINMAL - UND ALLES LIEST DARAUS ────────────────────
-#
-# Zwei Produkte aus Phase 1, zwei Urteile. Frueher stand in Phase 5
-# "freigegeben ist nichts" und in Phase 6 "freigegeben als
-# Entscheidungshilfe" - zwei Saetze, ein Notebook, kein Massstab.
-A4_TRAEGT = bool(_lohnt > 0)
-B1_TRAEGT = bool(haelt_13 > 0)
-B2_ERFUELLT = True   # die Anzeige nennt Fahrten je Werktag - siehe Export unten
-B3_ERFUELLT = True   # kein automatischer Auftrag, Mensch entscheidet
-B4_ERFUELLT = True   # Dateikopf und Ansicht tragen "explorativ"
-B_GATES = {"B1 Bestaetigungszeitraum": B1_TRAEGT,
-           "B2 Groessenordnung sichtbar": B2_ERFUELLT,
-           "B3 keine Automatik": B3_ERFUELLT,
-           "B4 Begleitanalysen als explorativ gekennzeichnet": B4_ERFUELLT}
-
-STATUS_A = "freigegeben" if (len(brauchbar) > 0 and A4_TRAEGT) else "nicht freigegeben"
-STATUS_B = "freigegeben" if all(B_GATES.values()) else "nicht freigegeben"
-STATUS_SATZ = (
-    f"Produkt A (automatische Umverteilungsregel): {STATUS_A}. "
-    f"Produkt B (Dispositionshinweis): {STATUS_B}."
-)
-merke("status_a", STATUS_A)
-merke("status_b", STATUS_B)
-merke("status_satz", STATUS_SATZ)
-
-print("\\nDIE ZWEI PRODUKTE AUS PHASE 1 - ein Urteil je Produkt:\\n")
-print(f"   Produkt A  automatische Umverteilungsregel   {STATUS_A.upper()}")
-print(f"      A1-A3 (Support, Lift, Stationsziel): {len(brauchbar)} Regel(n) nehmen sie")
-print(f"      A4 (wirtschaftlich): {_lohnt} von {len(brauchbar)} tragen eine "
-      f"eigene Umsetzrunde  ->  {'haelt' if A4_TRAEGT else 'HAELT NICHT'}")
-print(f"\\n   Produkt B  Dispositionshinweis               {STATUS_B.upper()}")
-for _n, _e in B_GATES.items():
-    print(f"      {'erfuellt' if _e else 'OFFEN   '}  {_n}")
-print()
-print("   Das ist kein Trostpreis, sondern eine andere Zusage: Ein Hinweis,")
-print("   den ein Mensch bewertet, braucht keinen Wirtschaftlichkeitsnachweis -")
-print("   er loest ja keine Fahrt aus. Ein Auftrag braucht ihn, und deshalb")
-print("   entsteht keiner.")
 '''),
 
 MD("""
@@ -1455,6 +1423,105 @@ for datei, tabelle, einheit in [
         tabelle.to_csv(f)
 print()
 print("geschrieben: stationssalden_werktag.csv, abstell_hotspots_werktag.csv")
+
+# ─── PRODUKT B: NUR BESTAETIGTE REGELN, UND ALS EIGENES ARTEFAKT ────
+#
+# Hier stand ein Freigabefehler, und er ist typisch genug, um ihn stehen
+# zu lassen: B1 galt frueher als bestanden, sobald IRGENDEINE der elf
+# Regeln im Bestaetigungszeitraum hielt. Damit haette das Produkt
+# freigegeben werden koennen, waehrend die tatsaechlich angezeigten
+# Regeln unbestaetigt sind.
+#
+# Ein Gate muss auf der Einheit liegen, die ausgeliefert wird. Also:
+# JEDE angezeigte Regel muss ihre eigene Bestaetigung haben.
+_best_lift = zusammen[f"{LIFT} bestätigt"]
+b_regeln = zusammen[_best_lift.notna() & (_best_lift >= K2_LIFT)].copy()
+
+# Groessenordnung je Regel - B2 verlangt, dass sie NEBEN der Regel steht.
+_fahrten_ent = gewaehlt_ent.set_index(schluessel).Fahrten
+b_regeln["fahrten_je_werktag"] = [
+    round(_fahrten_ent.get(tuple(k), 0) / _werktage_regel, 2)
+    for k in b_regeln[schluessel].itertuples(index=False)]
+b_regeln["status"] = "Hinweis - keine automatische Aktion"
+b_regeln["gueltig_von"] = str(bestaetigung.startzeit.min().date())
+b_regeln["gueltig_bis"] = str(bestaetigung.startzeit.max().date())
+
+DISPOKOPF = [
+    f"# Produkt B: Dispositionshinweis, Stand {koerbe.startzeit.max().date()}",
+    "# KEINE AUTOMATISCHE AKTION - ein Mensch entscheidet, ob gefahren wird.",
+    "# Jede Zeile ist im Bestaetigungszeitraum einzeln bestaetigt "
+    f"(Lift >= {K2_LIFT}).",
+    "# Datenherkunft: SYNTHETISCHE LEHRDATEN",
+]
+with open("dispositionshinweise.csv", "w", encoding="utf-8") as _f:
+    _f.write(chr(10).join(DISPOKOPF) + chr(10))
+    b_regeln.to_csv(_f, index=False)
+
+print("\\nPRODUKT B - DAS ARTEFAKT, DAS TATSAECHLICH AUSGELIEFERT WIRD\\n")
+print(f"   von {len(zusammen)} entdeckten Regeln sind {len(b_regeln)} einzeln bestaetigt")
+if len(b_regeln):
+    _zeig = b_regeln[schluessel + [f"{LIFT} entdeckt", f"{LIFT} bestätigt",
+                                   "fahrten_je_werktag"]]
+    print(_zeig.round(2).to_string(index=False))
+print(f"\\n   geschrieben: dispositionshinweise.csv ({len(b_regeln)} Zeilen)")
+
+# ─── B1 BIS B4, AM ARTEFAKT GEPRUEFT ────────────────────────────────
+#
+# Frueher standen hier drei Konstanten True. Eine Bedingung, die niemand
+# pruefen kann, ist keine Bedingung.
+_kopf = open("dispositionshinweise.csv", encoding="utf-8").read().split(chr(10))
+_datei = pd.read_csv("dispositionshinweise.csv", skiprows=len(DISPOKOPF)) \
+    if len(b_regeln) else pd.DataFrame()
+
+B1_TRAEGT = bool(len(b_regeln)) and bool(
+    (b_regeln[f"{LIFT} bestätigt"] >= K2_LIFT).all())
+B2_ERFUELLT = "fahrten_je_werktag" in _datei.columns
+B3_ERFUELLT = any("KEINE AUTOMATISCHE AKTION" in z for z in _kopf[:len(DISPOKOPF)])
+# B4 - die Begleitauswertungen muessen "explorativ" im Kopf tragen.
+B4_ERFUELLT = all(
+    "EXPLORATIV" in open(_n, encoding="utf-8").readline().upper()
+    or "EXPLORATIV" in "".join(open(_n, encoding="utf-8").readlines()[:6]).upper()
+    for _n in ("stationssalden_werktag.csv", "abstell_hotspots_werktag.csv"))
+
+# Die Zusicherung, die den alten Fehler unmoeglich macht.
+assert not len(b_regeln) or (b_regeln[f"{LIFT} bestätigt"] >= K2_LIFT).all(), (
+    "Eine unbestaetigte Regel ist im Dispositionshinweis gelandet.")
+
+A4_TRAEGT = bool(_lohnt > 0)
+# ─── DER STATUS, EINMAL - UND ALLES LIEST DARAUS ────────────────────
+#
+# Zwei Produkte aus Phase 1, zwei Urteile. B1 bis B4 sind oben AM
+# ARTEFAKT geprueft, nicht behauptet. Frueher stand in Phase 5
+# "freigegeben ist nichts" und in Phase 6 "freigegeben als
+# Entscheidungshilfe" - zwei Saetze, ein Notebook, kein Massstab.
+B_GATES = {"B1 Bestaetigungszeitraum": B1_TRAEGT,
+           "B2 Groessenordnung sichtbar": B2_ERFUELLT,
+           "B3 keine Automatik": B3_ERFUELLT,
+           "B4 Begleitanalysen als explorativ gekennzeichnet": B4_ERFUELLT}
+
+STATUS_A = "freigegeben" if (len(brauchbar) > 0 and A4_TRAEGT) else "nicht freigegeben"
+STATUS_B = "freigegeben" if all(B_GATES.values()) else "nicht freigegeben"
+STATUS_SATZ = (
+    f"Produkt A (automatische Umverteilungsregel): {STATUS_A}. "
+    f"Produkt B (Dispositionshinweis): {STATUS_B}."
+)
+merke("status_a", STATUS_A)
+merke("status_b", STATUS_B)
+merke("status_satz", STATUS_SATZ)
+
+print("\\nDIE ZWEI PRODUKTE AUS PHASE 1 - ein Urteil je Produkt:\\n")
+print(f"   Produkt A  automatische Umverteilungsregel   {STATUS_A.upper()}")
+print(f"      A1-A3 (Support, Lift, Stationsziel): {len(brauchbar)} Regel(n) nehmen sie")
+print(f"      A4 (wirtschaftlich): {_lohnt} von {len(brauchbar)} tragen eine "
+      f"eigene Umsetzrunde  ->  {'haelt' if A4_TRAEGT else 'HAELT NICHT'}")
+print(f"\\n   Produkt B  Dispositionshinweis               {STATUS_B.upper()}")
+for _n, _e in B_GATES.items():
+    print(f"      {'erfuellt' if _e else 'OFFEN   '}  {_n}")
+print()
+print("   Das ist kein Trostpreis, sondern eine andere Zusage: Ein Hinweis,")
+print("   den ein Mensch bewertet, braucht keinen Wirtschaftlichkeitsnachweis -")
+print("   er loest ja keine Fahrt aus. Ein Auftrag braucht ihn, und deshalb")
+print("   entsteht keiner.")
 print("Beide mit Kopfzeilen: Zeitraum, Einheit, Herkunft, Status.")
 print("Die Dateien heissen bewusst nicht 'Plan' - ein Plan braucht Datum,")
 print("Bestand, Menge und ein Entscheidungskriterium.")
@@ -1696,7 +1763,7 @@ MD("""
 
 | Phase | Ergebnis |
 |---|---|
-| 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. Drei Erfolgskriterien: Support ≥ 1 %, kontextbedingter Lift ≥ 1,3 und **Ziel ist eine konkrete Station**. K3 prüft nur technische Adressierbarkeit — nicht Wirtschaftlichkeit und nicht, ob sich eine Transporterfahrt lohnt |
+| 1 Business Understanding | „Von wo nach wo?“ statt „wie viele?“. **Zwei Produkte mit eigenen Kriterien:** Produkt A (automatische Umverteilung) verlangt A1 Support ≥ {{k1_support:.0%}}, A2 kontextbedingter Lift ≥ 1,3, A3 Ziel ist eine konkrete Station **und A4 Wirtschaftlichkeit**; Produkt B (Dispositionshinweis) verlangt B1 Bestätigung **je einzelner Regel**, B2 Größenordnung neben der Regel, B3 keine Automatik, B4 Begleitanalysen als explorativ gekennzeichnet |
 | 2 Data Understanding | Eine Fahrt ist ein Warenkorb. Die häufigste triviale Start-Ziel-Gleichheit sind die Rundtouren ({{anteil_rundtouren:.1%}} der angedockten Fahrten) — wahr und nutzlos, deshalb ausgeschlossen |
 | 3 Data Preparation | Vier Zeitfenster statt 24 Stunden, sonst wäre jede Regel unbelegt |
 | 4 Modeling | Support, Konfidenz und Lift von Hand — drei Divisionen, eine davon Zeile für Zeile nachgerechnet |
@@ -1723,9 +1790,12 @@ MD("""
    die letzte. **Vor** der nächsten Messung.
 2. **Die Bestätigung rollierend machen.** Der einmalige Schnitt aus Phase 5.5 — suchen
    in den ersten zwei Dritteln, prüfen im letzten — ist bereits umgesetzt und hat gehalten
-   ({{split_haelt:.0f}} von {{split_gesamt:.0f}} Regeln; über die vier rollierenden
-   Fenster sind es {{fenster_min:.0f}} bis {{fenster_max:.0f}} von
-   {{fenster_regeln:.0f}}). Er ist aber **eine einzige Realisierung**, und die Randjahre sind
+   ({{split_haelt:.0f}} von {{split_gesamt:.0f}} Regeln; über die vier
+   **aufeinanderfolgenden Teilfenster des Bestätigungszeitraums** sind es
+   {{fenster_min:.0f}} bis {{fenster_max:.0f}} von {{fenster_regeln:.0f}}). Das sind
+   ausdrücklich **keine rollierenden Fenster**: Alle vier prüfen dieselben im ersten
+   Drittel gefundenen Regeln, statt in jedem Fold neu aus dessen eigener Vergangenheit
+   zu suchen. Er ist außerdem **eine einzige Realisierung**, und die Randjahre sind
    Teiljahre. Mehrere rollierende, saisonal vergleichbare Fenster würden zeigen, ob die
    Stabilität an den Regeln liegt oder am gewählten Schnittpunkt.
 3. **Zurück zu Phase 3:** Die vier Zeitfenster sind gesetzt, nicht gefunden. Eine
