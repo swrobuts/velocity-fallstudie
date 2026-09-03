@@ -76,11 +76,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         for (const { knopf, text } of radKachelSchaetzknoepfe) {
             knopf.hidden = !preisschaetzerAn;
             /* AUSGEGRAUT STATT ENTTAEUSCHT.
-               Fuer EBIKE und CARGO gibt es keine einzige Schaetzung - das
-               Modell aus Notebook 1 wurde nur fuer CITY freigegeben. Bis
-               zum 01.09.2026 liess sich der Knopf trotzdem oeffnen und
-               meldete dann "Fuer dieses Rad liegt keine Schaetzung vor".
-               Wer nichts zu sagen hat, sagt es besser vorher. */
+               Bis zum 01.09.2026 liess sich der Knopf fuer jeden Radtyp
+               oeffnen und meldete dann "Fuer dieses Rad liegt keine
+               Schaetzung vor". Wer nichts zu sagen hat, sagt es besser
+               vorher.
+
+               Der Kommentar hier nannte bis zum 03.09.2026 EBIKE und
+               CARGO als dauerhaft leer. Das stimmte nicht: Nicht das
+               Modell hatte sie ausgeschlossen, sondern eine absolute
+               Eurogrenze im CHECK der Tabelle, die 150 von 212
+               freigegebenen Zeilen abwies. Seit sie durch die Regel des
+               Notebooks ersetzt ist, liefern alle drei Typen
+               Schaetzungen. Welche das sind, entscheidet weiterhin die
+               Datenlage - deshalb bleibt die Abfrage. */
             const geht = schaetzbareTypen.has(knopf.dataset.typ);
             knopf.disabled = !geht;
             knopf.classList.toggle('ist-leer', !geht);

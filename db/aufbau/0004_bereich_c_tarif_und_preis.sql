@@ -124,9 +124,26 @@ create table if not exists velocity.preisschaetzung (
   constraint preisschaetzung_reihenfolge_chk check (minuten_von <= minuten_bis
                                                and preis_von   <= preis_bis),
   constraint preisschaetzung_keine_rundfahrt_chk check (startstation <> zielstation),
-  -- Genau die Grenze aus Phase 1 des Notebooks, hier erzwungen: eine
-  -- Spanne breiter als ein Euro ist ehrlich, aber unbrauchbar.
-  constraint preisschaetzung_breite_chk check (preis_bis - preis_von <= 1.00),
+  -- Die Nuetzlichkeitsregel aus Phase 5.5 des Notebooks, hier erzwungen.
+  -- Sie steht dort in spanne_nuetzt() als SPANNE_MAX_MIN = 12 und
+  -- SPANNE_MAX_ANTEIL = 0.60; tools/breitenregel_pruefen.py haelt beide
+  -- Seiten gegeneinander.
+  --
+  -- HIER STAND BIS ZUM 03.09.2026 EINE ABSOLUTE GRENZE VON 1,00 EURO.
+  -- Sie war nicht die Regel des Notebooks, sondern eine aeltere, und sie
+  -- schloss die teuren Radtypen faktisch aus: Bei 0,50 Euro je Minute
+  -- (Cargo) entspricht ein Euro Spanne ganzen ZWEI Minuten Unsicherheit,
+  -- bei 0,25 (E-Bike) vier. Von 212 freigegebenen Zeilen verletzten 150
+  -- diese Grenze - 54 von 55 bei Cargo, 87 von 102 beim E-Bike. Die
+  -- Tabelle enthielt deshalb nur City-Bikes, und die Preisschaetzung
+  -- zeigte fuer zwei von drei Radtypen nie etwas an.
+  --
+  -- Eine absolute Eurogrenze ist fuer diesen Zweck falsch: Sie misst die
+  -- Unsicherheit in Euro, waehrend das Modell sie in Minuten schaetzt.
+  -- Derselbe Minutenfehler kostet je nach Tarif das Fuenffache.
+  constraint preisschaetzung_breite_chk
+    check (minuten_bis - minuten_von <= 12
+       and preis_bis - preis_von <= 0.60 * greatest((preis_von + preis_bis) / 2, 0.01)),
   constraint preisschaetzung_grundlage_chk check (fahrten_grundlage >= 30),
   constraint preisschaetzung_fenster_chk
     check (zeitfenster in ('frueh', 'vormittag', 'nachmittag', 'abend'))
@@ -138,6 +155,26 @@ alter table velocity.preisschaetzung
   add column if not exists geaendert_am timestamptz not null default now(),
   add column if not exists start_station_id bigint,
   add column if not exists ziel_station_id  bigint;
+
+-- Fuer eine Tabelle, die noch die absolute Eurogrenze traegt (Begruendung
+-- oben am Constraint): loesen und neu setzen.
+--
+-- NOT VALID, und zwar mit Absicht. Der Altbestand stammt aus einem
+-- aelteren Notebooklauf und erfuellt die heutige Regel in 95 von 136
+-- Faellen nicht. NOT VALID heisst: ab sofort bindend fuer jede neue
+-- Zeile, ohne den Bestand zu pruefen. Damit muss dieser Aufbau keine
+-- Daten loeschen - das erledigt db/betrieb/preisschaetzung_laden.py, das
+-- die Tabelle ohnehin vollstaendig ersetzt und die Bedingung danach
+-- gueltig schaltet. Ein Aufbau beschreibt das Modell; Daten wegzuraeumen
+-- ist nicht seine Aufgabe.
+alter table velocity.preisschaetzung
+  drop constraint if exists preisschaetzung_breite_chk;
+
+alter table velocity.preisschaetzung
+  add constraint preisschaetzung_breite_chk
+    check (minuten_bis - minuten_von <= 12
+       and preis_bis - preis_von <= 0.60 * greatest((preis_von + preis_bis) / 2, 0.01))
+    not valid;
 
 select velocity.fn_audit_anhaengen('preisschaetzung');
 

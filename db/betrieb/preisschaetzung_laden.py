@@ -13,7 +13,17 @@ enthaelt je Verbindung, Radtyp und Tageszeit eine Preisspanne - aber nur
 fuer die Kombinationen, die zwei Bedingungen erfuellen:
 
   * mindestens 30 vergleichbare Fahrten als Grundlage
-  * Spanne hoechstens 1,00 Euro breit
+  * Spanne hoechstens 12 Minuten breit
+  * Preisspanne hoechstens 60 Prozent ihrer Mitte
+
+Die letzten beiden sind die Nuetzlichkeitsregel aus Phase 5.5 des
+Notebooks (spanne_nuetzt). Bis zum 03.09.2026 stand hier und im CHECK der
+Tabelle stattdessen eine absolute Grenze von 1,00 Euro. Sie stammte aus
+einer aelteren Fassung und schloss die teuren Radtypen aus - bei Cargo
+entspricht ein Euro Spanne zwei Minuten Unsicherheit. Folge: 150 von 212
+freigegebenen Zeilen liessen sich nicht laden, die Tabelle enthielt nur
+City-Bikes, und die Preisschaetzung zeigte fuer zwei von drei Radtypen
+nie etwas an.
 
 Was diese Bedingungen nicht erfuellt, steht nicht in der Datei und
 deshalb auch nicht in der Tabelle. Die Website zeigt dann nichts an.
@@ -32,6 +42,7 @@ wuerde sie stehenlassen.
 """
 from __future__ import annotations
 
+import collections
 import csv
 import pathlib
 import sys
@@ -42,10 +53,29 @@ import run  # noqa: E402  - liefert verbinde() und liest .env
 WURZEL = pathlib.Path(__file__).resolve().parent.parent.parent
 QUELLE = WURZEL / "analytics" / "preisschaetzung.csv"
 
-SPALTEN = ["start_station_id", "ziel_station_id",
-           "startstation", "zielstation", "typ_code", "zeitfenster",
-           "minuten_von", "minuten_bis", "preis_von", "preis_bis",
-           "fahrten_grundlage"]
+# Zielspalte in der Tabelle -> Spalte in der CSV. Die beiden Preisspalten
+# heissen dort preis_*_basis: Das Notebook rechnet sie im Basistarif, also
+# ohne Freiminuten und Rabatt - dem teuersten Fall. Wessen Spanne dort
+# schmal genug ist, ist es in jedem anderen Tarif erst recht.
+SPALTEN = {
+    "start_station_id": "start_station_id",
+    "ziel_station_id": "ziel_station_id",
+    "startstation": "startstation",
+    "zielstation": "zielstation",
+    "typ_code": "typ_code",
+    "zeitfenster": "zeitfenster",
+    "minuten_von": "minuten_von",
+    "minuten_bis": "minuten_bis",
+    "preis_von": "preis_von_basis",
+    "preis_bis": "preis_bis_basis",
+    "fahrten_grundlage": "fahrten_grundlage",
+}
+
+# Dieselben Werte wie SPANNE_MAX_MIN und SPANNE_MAX_ANTEIL in
+# analytics/bau/nb01_regression.py. tools/breitenregel_pruefen.py haelt
+# Notebook, SQL-CHECK und diesen Lader gegeneinander.
+SPANNE_MAX_MIN = 12
+SPANNE_MAX_ANTEIL = 0.60
 
 
 def lesen() -> list[tuple]:
@@ -55,9 +85,13 @@ def lesen() -> list[tuple]:
             "Zuerst das Notebook bauen: python3 analytics/bau/bauen.py nb01")
     with QUELLE.open(encoding="utf-8") as f:
         zeilen = list(csv.DictReader(f))
-    fehlt = [s for s in SPALTEN if s not in zeilen[0]]
+    fehlt = [q for q in SPALTEN.values() if q not in zeilen[0]]
     if fehlt:
-        raise SystemExit(f"Spalten fehlen in {QUELLE.name}: {fehlt}")
+        raise SystemExit(
+            f"Spalten fehlen in {QUELLE.name}: {fehlt}\n"
+            "Die Datei stammt aus Phase 6 von NB01. Aendert sich dort eine\n"
+            "Spalte, muss die Abbildung SPALTEN oben nachgezogen werden -\n"
+            "genau das ist am 01.09.2026 unterblieben.")
     daten = []
     for z in zeilen:
         # Die Pruefungen der Tabelle noch einmal hier, damit ein
@@ -65,11 +99,17 @@ def lesen() -> list[tuple]:
         # mit einer lesbaren Meldung.
         if z["startstation"] == z["zielstation"]:
             raise SystemExit(f"Rundfahrt in der Datei: {z['startstation']}")
-        if float(z["preis_bis"]) - float(z["preis_von"]) > 1.0001:
+        von, bis = float(z["preis_von_basis"]), float(z["preis_bis_basis"])
+        mv, mb = int(z["minuten_von"]), int(z["minuten_bis"])
+        if mb - mv > SPANNE_MAX_MIN:
             raise SystemExit(
-                f"Spanne breiter als 1,00 EUR: {z['startstation']} -> "
-                f"{z['zielstation']} ({z['preis_von']} bis {z['preis_bis']})")
-        daten.append(tuple(z[s] for s in SPALTEN))
+                f"Spanne breiter als {SPANNE_MAX_MIN} Minuten: "
+                f"{z['startstation']} -> {z['zielstation']} ({mv} bis {mb})")
+        if bis - von > SPANNE_MAX_ANTEIL * max((von + bis) / 2, 0.01) + 1e-4:
+            raise SystemExit(
+                f"Preisspanne breiter als {SPANNE_MAX_ANTEIL:.0%} ihrer Mitte: "
+                f"{z['startstation']} -> {z['zielstation']} ({von} bis {bis})")
+        daten.append(tuple(z[quelle] for quelle in SPALTEN.values()))
     return daten
 
 
@@ -83,8 +123,14 @@ def main() -> int:
     i = {name: k for k, name in enumerate(SPALTEN)}
     verbindungen = len({(d[i["start_station_id"]], d[i["ziel_station_id"]])
                         for d in daten})
-    print(f"   {verbindungen} Verbindungen, "
-          f"Radtypen {sorted({d[i['typ_code']] for d in daten})}")
+    je_typ = collections.Counter(d[i["typ_code"]] for d in daten)
+    print(f"   {verbindungen} Verbindungen, Radtypen {dict(sorted(je_typ.items()))}")
+    # Ein Radtyp ohne eine einzige Zeile heisst: Fuer ihn zeigt die App
+    # nie eine Schaetzung. Genau so ist es zwei Tage lang unbemerkt
+    # geblieben, deshalb steht es jetzt als Warnung im Lauf.
+    if len(je_typ) < 3:
+        print(f"   WARNUNG: nur {len(je_typ)} von 3 Radtypen vertreten - "
+              f"fuer die uebrigen zeigt die App nichts an.")
     if trocken:
         print("\nTrockenlauf - nichts geschrieben.")
         return 0
@@ -98,11 +144,19 @@ def main() -> int:
     c.executemany(
         f"insert into velocity.preisschaetzung ({', '.join(SPALTEN)}) "
         f"values ({', '.join(['%s'] * len(SPALTEN))})", daten)
+    # Die Breitenregel steht im Aufbau als NOT VALID, damit er keinen
+    # Altbestand loeschen muss (siehe 0004_bereich_c_tarif_und_preis.sql).
+    # Jetzt, wo nur noch frisch geladene Zeilen darin stehen, wird sie
+    # geprueft und gueltig geschaltet. Schlaegt das fehl, ist die CSV
+    # nicht die, fuer die der Lader sie haelt.
+    c.execute("alter table velocity.preisschaetzung "
+              "validate constraint preisschaetzung_breite_chk")
     v.commit()
     c.execute("select count(*) from velocity.preisschaetzung")
     nachher = c.fetchone()[0]
     v.close()
     print(f"\nvorher {vorher} Zeilen, jetzt {nachher}.")
+    print("Breitenregel geprueft und gueltig geschaltet.")
     return 0
 
 

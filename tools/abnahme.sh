@@ -230,6 +230,19 @@ else
   grep -A3 '^FEHLER' /tmp/abnahme-erd.log | head -20 | sed 's/^/     /'
 fi
 
+# --------------------------- 7bb Breitenregel der Preisschaetzung
+# Dieselbe Regel steht im Notebook, im CHECK der Tabelle und im Lader.
+# Als sie am 01.09.2026 nur im Notebook geaendert wurde, wies der Lader
+# 150 von 212 Zeilen ab - still, bei gruener Abnahme. In der App zeigte
+# die Preisschaetzung danach zwei Tage lang fuer E-Bike und Cargo nichts.
+schritt "Breitenregel der Preisschaetzung"
+if python3 tools/breitenregel_pruefen.py >/tmp/abnahme-breite.log 2>&1; then
+  ergebnis 0 "$(sed -n '2p' /tmp/abnahme-breite.log | sed 's/^ *//')"
+else
+  ergebnis 1 "Notebook, CHECK und Lader sagen nicht dasselbe"
+  grep -A1 'FEHLER' /tmp/abnahme-breite.log | head -12 | sed 's/^/     /'
+fi
+
 # ------------------------------ 7c Vollstaendigkeit der Diagramme
 # erd_check.py hat einen blinden Fleck: Es vergleicht Beziehungen, und
 # eine Tabelle ohne Fremdschluessel hat keine. velocity.preisschaetzung
