@@ -551,7 +551,7 @@ def baue() -> Presentation:
               "ist die Voraussetzung dafür, dass man einen Aufbau gefahrlos wiederholen kann.")
     schichtenstapel(s, [
         ("0001 Schema, Erweiterungen, Aufzählungstypen, Audit-Mechanik", True),
-        ("0002 bis 0007 · die sechs Fachbereiche A bis F, 27 Tabellen", False),
+        ("0002 bis 0007 · die sechs Fachbereiche A bis F, 28 Tabellen", False),
         ("0008 Referenzdaten: Entgeltarten, Preise, Tarife, Inhalte", False),
         ("0009 Geschäftslogik: fn_-Fachlogik und api_-Zugriffsschicht", True),
         ("0010 Sichten · 0011 Zugriffsschutz · 0012 Data Dictionary", True),
@@ -604,8 +604,8 @@ def baue() -> Presentation:
           "  and a.attname not in",
           "      ('erstellt_am','geaendert_am');",
           "",
-          "316 Spalten, 264 beschrieben,",
-          "52 technische Audit-Spalten ausgenommen."], GRUEN_D),
+          "320 Spalten im Aufbau, 248 beschrieben,",
+          "72 technische Audit-Spalten ausgenommen."], GRUEN_D),
         y=176, hoehe=240)
     notizen(s, "Der Trick ist der Test, nicht der Kommentar. Ohne ihn schreibt man die "
                "ersten zwanzig Kommentare und vergisst die restlichen zweihundert.")
@@ -766,10 +766,10 @@ def baue() -> Presentation:
          ["37 Basistabellen legt der Aufbau an — für beide dieselben",
           "Eine Kundenadresse ist eine Kundenadresse",
           "Keine Kopie, die veralten könnte"]),
-        ("16 Sichten, 14 Funktionen",
+        ("17 Sichten, 14 Funktionen",
          ["Gelesen wird über v_wawi_…",
           "Geschrieben über api_…",
-          "Vier weitere api_ dienen der Website"]),
+          "Fünf weitere api_ dienen der Website"]),
         ("Fünf Rollen",
          ["leitung · disposition · werkstatt",
           "kundenservice · demo",

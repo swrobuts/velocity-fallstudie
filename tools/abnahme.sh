@@ -355,6 +355,15 @@ if [ -f slides/velocity-datenbankentwurf.pptx ]; then
     ergebnis 1 "Layoutbefunde"
     head -12 /tmp/abnahme-deck.log | sed 's/^/     /'
   fi
+  # check_deck.py prueft die Geometrie. Diese zweite Pruefung haelt die
+  # Objektzahlen im Deck gegen db/aufbau/*.sql - sie stehen dort von Hand
+  # in slides/build_deck.py und veralten still, wenn das Schema waechst.
+  if python3 slides/check_deck_schema.py >/tmp/abnahme-deck-schema.log 2>&1; then
+    ergebnis 0 "$(tail -1 /tmp/abnahme-deck-schema.log)"
+  else
+    ergebnis 1 "Objektzahlen im Deck weichen vom Aufbau ab"
+    sed -n '2,12p' /tmp/abnahme-deck-schema.log | sed 's/^/     /'
+  fi
 else
   ergebnis 1 "slides/velocity-datenbankentwurf.pptx fehlt — python3 slides/build_deck.py"
 fi
