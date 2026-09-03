@@ -22,29 +22,32 @@ Rückgabewert 0, wenn alles besteht.
 | 6 | Abgleichsbericht | Übernahme vollständig, Beträge stimmen auf den Cent |
 | 7 | Mermaid-Diagramme | alle Quellen validieren |
 | 8 | Kardinalitäten der Diagramme | ERD und Relationenmodell stimmen überein |
-| 9 | PDF nicht älter als das Deck | das exportierte PDF ist aktuell |
-| 10 | Folieninhalte | Foliendeck gegen die Fachinhalte geprüft |
-| 11 | HTML und JavaScript passen zusammen | Vertragsprüfung für `src/` (`tools/frontend_check.py`) |
-| 12 | Durchstich | Ausleihe bis Abrechnung, mit echtem COMMIT |
-| 13 | Zahlen in Anleitung und Vortrag | gegen die Datenbank nachgerechnet |
-| 14 | Freisteller | Radbilder gegen ihre Vorlage |
-| 15 | Fingerabdrücke | an allen eingebundenen Dateien der Website |
-| 16 | Bedienbarkeit (Website) | Punkte aus dem UX-Audit vom 24.08.2026 (`tools/ux_check.py`) |
-| 17 | Website spricht nur Sichten und api-Funktionen | keine Basistabelle, keine `fn_`-Funktion im Frontend |
-| 18 | Foliendeck | ohne Layoutbefund |
-| 19 | Passwörter unerreichbar | `auth.users` antwortet mit HTTP 406 |
-| 20 | Zahlungsmittel gesperrt | HTTP 401 ohne Anmeldung |
-| 21 | Warenwirtschaft: Basistabellen | sieben Tabellen antworten mit HTTP 401 |
-| 22 | Warenwirtschaft: Sichten ohne Anmeldung | `v_wawi_flotte` antwortet mit HTTP 401 |
-| 23 | Rechenannahmen | jede nennt ihre Quelle |
-| 24 | Kunde sieht eigene Fahrten | `v_meine_ausleihe`/`v_meine_rechnung`/`v_mein_profil` lesbar |
-| 25 | Keine Funktion versehentlich ausführbar | nur `api_`-Funktionen freigegeben, keine für `anon` |
-| 26 | Radstatus | stimmt mit offenen Ausleihen überein |
-| 27 | Fahruntauglich nicht verfügbar | kein Rad mit offener schwerer Meldung auf „verfügbar" |
-| 28 | **Warenwirtschaft: Vertrag HTML/JavaScript** | `tools/wawi_check.py` — Zustandsschalen, Barrierefreiheit, Namensraum, Vorgangs-Kennung |
-| 29 | **Warenwirtschaft spricht nur Sichten und api-Funktionen** | keine Basistabelle, keine `fn_`-Funktion in `wawi/` |
-| 30 | **`wawi.butscher.cloud` antwortet** | liefert die Anmeldeseite — **bleibt rot bis zur Veröffentlichung**, siehe Hinweis unten |
-| 31 | **Warenwirtschaft weist Nicht-Mitarbeitende ab** | der Zustand „kein Mitarbeiter" ist gebaut und wird geschaltet |
+| 9 | **Breitenregel der Preisschätzung** | Notebook, SQL-CHECK und Ladelauf nennen dieselbe Regel, und jeder Radtyp hat Zeilen |
+| 10 | **Jede Tabelle in einem Diagramm** | `tools/erd_vollstaendig.py` — eine Tabelle ohne Fremdschlüssel fällt einer Beziehungsprüfung nicht auf |
+| 11 | PDF nicht älter als das Deck | das exportierte PDF ist aktuell |
+| 12 | Folieninhalte | Foliendeck gegen die Fachinhalte geprüft |
+| 13 | HTML und JavaScript passen zusammen | Vertragsprüfung für `src/` (`tools/frontend_check.py`) |
+| 14 | Durchstich | Ausleihe bis Abrechnung, mit echtem COMMIT |
+| 15 | Zahlen in Anleitung und Vortrag | gegen die Datenbank nachgerechnet |
+| 16 | Freisteller | Radbilder gegen ihre Vorlage |
+| 17 | Fingerabdrücke | an allen eingebundenen Dateien der Website |
+| 18 | **Ausgelieferter Stand ist der geprüfte** | die Fingerabdrücke auf `bikes.butscher.cloud` gegen `src/` — sonst prüft alles nur, was hier liegt |
+| 19 | Bedienbarkeit (Website) | Punkte aus dem UX-Audit vom 24.08.2026 (`tools/ux_check.py`) |
+| 20 | Website spricht nur Sichten und api-Funktionen | keine Basistabelle, keine `fn_`-Funktion im Frontend |
+| 21 | Foliendeck | ohne Layoutbefund |
+| 22 | Passwörter unerreichbar | `auth.users` antwortet mit HTTP 406 |
+| 23 | Zahlungsmittel gesperrt | HTTP 401 ohne Anmeldung |
+| 24 | Warenwirtschaft: Basistabellen | sieben Tabellen antworten mit HTTP 401 |
+| 25 | Warenwirtschaft: Sichten ohne Anmeldung | `v_wawi_flotte` antwortet mit HTTP 401 |
+| 26 | Rechenannahmen | jede nennt ihre Quelle |
+| 27 | Kunde sieht eigene Fahrten | `v_meine_ausleihe`/`v_meine_rechnung`/`v_mein_profil` lesbar |
+| 28 | Keine Funktion versehentlich ausführbar | nur `api_`-Funktionen freigegeben, keine für `anon` |
+| 29 | Radstatus | stimmt mit offenen Ausleihen überein |
+| 30 | Fahruntauglich nicht verfügbar | kein Rad mit offener schwerer Meldung auf „verfügbar" |
+| 31 | **Warenwirtschaft: Vertrag HTML/JavaScript** | `tools/wawi_check.py` — Zustandsschalen, Barrierefreiheit, Namensraum, Vorgangs-Kennung |
+| 32 | **Warenwirtschaft spricht nur Sichten und api-Funktionen** | keine Basistabelle, keine `fn_`-Funktion in `wawi/` |
+| 33 | **`wawi.butscher.cloud` antwortet** | liefert die Anmeldeseite — **bleibt rot bis zur Veröffentlichung**, siehe Hinweis unten |
+| 34 | **Warenwirtschaft weist Nicht-Mitarbeitende ab** | der Zustand „kein Mitarbeiter" ist gebaut und wird geschaltet |
 
 > **Prüfung 30 ist zum Stand dieser Aufgabe erwartungsgemäß rot.** Die
 > Bereitstellung für `wawi.butscher.cloud` ist gebaut und trocken erprobt

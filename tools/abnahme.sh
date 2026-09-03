@@ -341,6 +341,20 @@ else
   head -6 /tmp/abnahme-vers.log | sed 's/^/     /'
 fi
 
+# ------------------------- Ist der geprueft Stand auch der ausgelieferte
+# Die Pruefung darueber sagt, dass die Stempel HIER stimmen. Sie sagt
+# nichts darueber, ob Besucher diesen Stand bekommen. Am 03.09.2026 wurde
+# der Preisschaetzer dreimal repariert und dreimal "laeuft" gemeldet -
+# gemessen gegen localhost, waehrend auf bikes.butscher.cloud die alten
+# Dateien lagen. Jede Pruefung war gruen, drei Runden lang.
+schritt "Ausgelieferter Stand ist der geprüfte"
+if python3 tools/ausgeliefert_pruefen.py >/tmp/abnahme-ausg.log 2>&1; then
+  ergebnis 0 "$(tail -1 /tmp/abnahme-ausg.log | sed 's/^ *//')"
+else
+  ergebnis 1 "Live liegt etwas anderes — bash tools/veroeffentlichen.sh"
+  grep 'FEHLER' /tmp/abnahme-ausg.log | head -8 | sed 's/^/     /'
+fi
+
 # Der Vertragspruefer oben sieht nur, ob die Elemente da sind. Ob die
 # Seite bedienbar ist, sieht er nicht - eine Aussenpruefung fand 45
 # unbenannte Marker, tote Rechtsverweise und einen Dialog ohne Rolle,
