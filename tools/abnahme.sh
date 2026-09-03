@@ -230,6 +230,19 @@ else
   grep -A3 '^FEHLER' /tmp/abnahme-erd.log | head -20 | sed 's/^/     /'
 fi
 
+# ------------------------------ 7c Vollstaendigkeit der Diagramme
+# erd_check.py hat einen blinden Fleck: Es vergleicht Beziehungen, und
+# eine Tabelle ohne Fremdschluessel hat keine. velocity.preisschaetzung
+# fehlte deshalb zwei Tage in jedem Diagramm, ohne dass eine Pruefung
+# etwas gemeldet haette - und drei weitere standen nie darin.
+schritt "Jede Tabelle in einem Diagramm"
+if python3 tools/erd_vollstaendig.py >/tmp/abnahme-erdvoll.log 2>&1; then
+  ergebnis 0 "$(tail -1 /tmp/abnahme-erdvoll.log)"
+else
+  ergebnis 1 "Diagramme bilden das Modell nicht vollstaendig ab"
+  grep -A1 '^  FEHLER' /tmp/abnahme-erdvoll.log | head -20 | sed 's/^/     /'
+fi
+
 # ------------------------------- 7d Kein veraltetes PDF danebenlegen
 # Ein PDF, das aelter ist als das Deck, ist schlimmer als keines: es
 # sieht fertig aus und zeigt einen ueberholten Stand. Genau daran ist

@@ -38,3 +38,9 @@ erDiagram
         numeric  longitude
         smallint akkustand_prozent "NULL ohne Akku"
     }
+    GESCHAEFTSGEBIET {
+        bigint  gebiet_id PK
+        text    name      UK
+        polygon flaeche   "CHECK: mindestens drei Ecken"
+        boolean aktiv
+    }

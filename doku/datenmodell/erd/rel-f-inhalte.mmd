@@ -25,3 +25,12 @@ erDiagram
         integer sortierung "UK mit typ_id"
         text    merkmal
     }
+    HOEHENMARKE {
+        bigint  marke_id   PK
+        text    name       UK
+        integer hoehe_m    "CHECK: -500 bis 5000"
+        numeric latitude   "NULL erlaubt"
+        numeric longitude
+        text    quelle     "Herkunft der Höhenangabe"
+        integer sortierung "Reihenfolge in der Höhengrafik"
+    }

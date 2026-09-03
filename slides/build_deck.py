@@ -286,9 +286,10 @@ def baue() -> Presentation:
          "Annas Fahrt erscheint am Monatsende als eine Zeile auf einer Rechnung.",
          "Was nicht gespeichert wird, kann nicht abfließen. Das ist keine Bequemlichkeit, "
          "sondern die wirksamste Schutzmaßnahme überhaupt."),
-        ("2 · Bereich F", "Redaktionsinhalte: warum drei Tabellen und nicht eine",
-         "FAQ, Nutzungsschritte und Kennzahlen könnten in einer generischen "
-         "Schlüssel-Wert-Tabelle liegen — das wäre flexibler und schlechter.",
+        ("2 · Bereich F", "Redaktionsinhalte: warum vier Tabellen und nicht eine",
+         "FAQ, Nutzungsschritte, Kennzahlen und Höhenmarken könnten in einer "
+         "generischen Schlüssel-Wert-Tabelle liegen — das wäre flexibler und "
+         "schlechter.",
          "rel-f-inhalte",
          "Der Preis, den Anna auf der Tarifkarte sieht, wird aus nutzungspreis gerechnet — nicht getippt.",
          "Ein Entity-Attribute-Value-Modell wäre in dritter Normalform und trotzdem falsch: "
