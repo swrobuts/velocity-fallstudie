@@ -1010,10 +1010,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     let schaetzerTyp = null;
 
     /* Beschriftung der Fenster. Die Grenzen stehen in SCHAETZER_FENSTER;
-       hier steht nur, wie sie heissen. */
+       hier steht nur, wie sie heissen.
+
+       DIE UHRZEIT STEHT VORN, DAS WORT DAHINTER. Bis zum 03.09.2026 war
+       es umgekehrt - und dann behauptet "vormittags (10-15 Uhr)" etwas,
+       das ab zwoelf schlicht falsch ist. Die Spanne ist die Tatsache, das
+       Wort nur die Lesehilfe; in dieser Reihenfolge widerspricht es sich
+       nicht mehr. Die Schluessel bleiben, wie sie sind: Sie stehen so in
+       velocity.preisschaetzung und in der Zusicherung des Notebooks. */
     const FENSTER_NAME = {
-        frueh: 'früh (5–10 Uhr)', vormittag: 'vormittags (10–15 Uhr)',
-        nachmittag: 'nachmittags (15–20 Uhr)', abend: 'abends (20–24 Uhr)',
+        frueh:      '5–10 Uhr · morgens',
+        vormittag:  '10–15 Uhr · mittags',
+        nachmittag: '15–20 Uhr · nachmittags',
+        abend:      '20–24 Uhr · abends',
     };
 
     async function schaetzerVorbereiten(typCode) {
