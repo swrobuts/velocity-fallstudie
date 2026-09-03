@@ -1,20 +1,14 @@
-> ## ⚠ Dieses Deck ist nicht mehr aktuell (Stand 3. September 2026)
+> ## Stand 3. September 2026 — neu gebaut
 >
-> Die 124 Folien tragen **abgetippte** Zahlen. Seit der Neuerzeugung der Daten
-> widersprechen sie den Notebooks — nachgewiesen mit
-> `python3 slides/check_deck_zahlen.py`. Betroffen sind alle sechs Fallkapitel,
-> am schwersten Fall 5: Dort trägt das Deck die Aussage „von 32 Regeln bleibt
-> keine" und den Merksatz „0,99 gegen 1,00 Prozent", während heute zwei Regeln
-> A1 bis A3 nehmen und die stärkste Regel mit 1,54 % **über** der Hürde liegt.
-> Auch der Umverteilungsbedarf (1,8 statt 25,7 Räder je Werktag) und die
-> Stationskapazitäten (20–40 statt 35–65) stimmen nicht mehr.
+> Die Fallkapitel (Teil B und C) sind vollständig neu und lesen ihre Zahlen aus
+> `analytics/bau/werte/*.json` — derselben Quelle wie Handout und Use-Case-Decks.
+> Ein unbekannter Schlüssel bricht den Bau ab, statt eine Lücke zu drucken.
+> Die Teile A (Der Kreislauf) und D (Synthese) sind erhalten und in zwei Aussagen
+> korrigiert.
 >
-> **Bis zur Überarbeitung nicht in der Lehre einsetzen.** Aktuell und an die
-> Messwerte gebunden sind stattdessen:
->
-> * `slides/usecases/*.pptx` — je Fall zwei Folien, aus den Merkzetteln erzeugt
-> * `doku/analytics/Handout_Die_sechs_Modelle.md` — dasselbe für den Fließtext
-> * die sechs Notebooks selbst
+> Aus 124 Folien wurden 56. Geprüft mit `slides/check_deck.py` (Raster, Überlauf)
+> und `slides/check_deck_zahlen.py` (Zahlen gegen die Merkzettel).
+
 
 # Foliendeck — CRISP-DM an sechs Fallbeispielen
 
