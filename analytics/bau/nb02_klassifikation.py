@@ -555,30 +555,22 @@ print(f"\\nSpanne über alle {panel.stichtag.nunique()} Stichtage: "
 '''),
 
 MD("""
-> **Sehen Sie sich die Spalte `mean` genau an.** Über die
-> {{panel_stichtage:.0f}} Stichtage schwankt der Anteil auffälliger Räder zwischen
-> **{{panel_grundrate_min:.1%}} und {{panel_grundrate_max:.1%}}** — um das
-> {{panel_grundrate_faktor:.1f}}-Fache. Das ist kein
-> Fehler in den Daten, sondern die Jahreszeit: Im Winter wird kaum gefahren, also
-> verschleißt kaum etwas, also meldet sich kaum ein Rad.
->
-> Für uns hat das zwei Folgen, und beide sind unangenehm:
->
-> 1. **Die Testmenge ist ein Mai-Stichtag** — ein Zeitpunkt mit hohem Anteil. Ein Modell,
->    das auf gemischten Jahreszeiten trainiert wurde, ist dort systematisch zu
->    zurückhaltend.
-> 2. **Die feste Kapazität von {{kapazitaet:.0f}} Rädern erzeugt je Jahreszeit ein
->    anderes Verhältnis von Treffsicherheit und Abdeckung.** Bei niedriger Grundrate
->    enthält dieselbe Liste zwangsläufig mehr Fehlalarme, bei hoher deckt sie einen
->    kleineren Teil der auffälligen Räder ab.
->
->    **Ob sie zu hoch oder zu niedrig ist, lässt sich hier nicht sagen.** Dafür fehlen
->    zwei Größen: was eine Prüfung kostet, die einen Schaden findet, und wie viel Schaden
->    sie tatsächlich verhindert. Phase 5 kommt darauf zurück und zeigt, warum die
->    vorhandene Kostenformel die Kapazität gerade **nicht** bestimmen kann.
->
-> Wir lassen das hier so stehen und kommen am Ende darauf zurück — es ist einer der
-> Punkte, an denen eine zweite Runde ansetzen müsste.
+**Die Spalte `mean` ist der wichtigste Teil dieser Tabelle.** Über die
+{{panel_stichtage:.0f}} Stichtage schwankt der Anteil auffälliger Räder zwischen
+**{{panel_grundrate_min:.1%}} und {{panel_grundrate_max:.1%}}**, also um das
+{{panel_grundrate_faktor:.1f}}-Fache. Das ist kein Datenfehler, sondern die Jahreszeit:
+Im Winter wird kaum gefahren, also verschleißt kaum etwas.
+
+Daraus folgen zwei Dinge:
+
+1. **Die Testmenge ist ein Mai-Stichtag**, also ein Zeitpunkt mit hohem Anteil. Ein
+   Modell, das auf gemischten Jahreszeiten trainiert wurde, ist dort systematisch zu
+   zurückhaltend.
+2. **Die feste Kapazität erzeugt je Jahreszeit ein anderes Verhältnis von
+   Treffsicherheit und Abdeckung.** Bei niedriger Grundrate enthält dieselbe Liste mehr
+   Fehlalarme, bei hoher deckt sie einen kleineren Teil der auffälligen Räder ab.
+
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Ist die Kapazit\u00e4t von {{kapazitaet:.0f}} R\u00e4dern richtig gew\u00e4hlt?</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Die Frage l\u00e4sst sich hier nicht beantworten. Daf\u00fcr fehlen zwei Gr\u00f6\u00dfen: was eine Pr\u00fcfung kostet, die einen Schaden findet, und wie viel Schaden sie tats\u00e4chlich verhindert.</p><p>Phase 5 kommt darauf zur\u00fcck und zeigt, warum die vorhandene Kostenformel die Kapazit\u00e4t gerade <strong>nicht</strong> bestimmen kann. Es ist einer der Punkte, an denen eine zweite Runde ansetzen m\u00fcsste.</p></div></details>
 
 ### 3.3 Zeitliche Aufteilung
 """),
@@ -622,22 +614,13 @@ print(f"Anteil positiv  Training {y_train.mean():.1%} | Test {y_test.mean():.1%}
 '''),
 
 MD("""
-> **Warum kein zufälliger `train_test_split`?** Auch Notebook 1 trennt zeitlich — das ist
-> hier also kein Gegensatz, sondern derselbe Grundsatz. Was in Notebook 2 **hinzukommt**:
-> Dasselbe Rad steht in mehreren Zeilen. Ein zeilenweise zufälliger Schnitt verteilt
-> damit nicht nur Zukunft ins Training, sondern Zukunftsinformation **desselben Objekts**
-> auf beide Seiten. Der Schnitt entlang der Zeit vermeidet beides und bildet zusätzlich
-> die Betriebslage ab: trainieren auf allem Vergangenen, anwenden auf den heutigen Stand.
->
-> **Was er NICHT vermeidet, muss man dazusagen.** Der Zeitschnitt trennt nach
-> **Informationszeitpunkt**, nicht nach Fahrrädern. Fast jedes Rad der Testmenge steht
-> auch in früheren Trainingsschnappschüssen — mit anderen Merkmalswerten, aber als
-> dasselbe Objekt. Die nächste Zelle zählt es.
->
-> Für die Frage dieses Notebooks ist das in Ordnung: Gefragt ist, wie die **bestehende**
-> Flotte priorisiert wird, nicht wie ein fabrikneues Rad eingeschätzt wird. Eine Aussage
-> über ungesehene Räder ließe sich daraus aber nicht ableiten — dafür bräuchte es einen
-> Schnitt entlang der Fahrräder.
+**Warum kein zufälliger `train_test_split`?** Auch Notebook 1 trennt zeitlich; neu ist
+hier, dass dasselbe Rad in mehreren Zeilen steht. Ein zeilenweise zufälliger Schnitt
+verteilt damit nicht nur Zukunft ins Training, sondern Zukunftsinformation **desselben
+Objekts** auf beide Seiten. Der Schnitt entlang der Zeit vermeidet beides und bildet die
+Betriebslage ab: trainieren auf allem Vergangenen, anwenden auf den heutigen Stand.
+
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Was der Zeitschnitt nicht leistet</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Er trennt nach <strong>Informationszeitpunkt</strong>, nicht nach Fahrr\u00e4dern. Fast jedes Rad der Testmenge steht auch in fr\u00fcheren Trainingsschnappsch\u00fcssen \u2014 mit anderen Merkmalswerten, aber als dasselbe Objekt. Die n\u00e4chste Zelle z\u00e4hlt es.</p><p>F\u00fcr die Frage dieses Notebooks ist das in Ordnung: Gefragt ist, wie die <strong>bestehende</strong> Flotte priorisiert wird, nicht wie ein fabrikneues Rad eingesch\u00e4tzt wird. Eine Aussage \u00fcber ungesehene R\u00e4der lie\u00dfe sich daraus nicht ableiten \u2014 daf\u00fcr br\u00e4uchte es einen Schnitt entlang der Fahrr\u00e4der.</p></div></details>
 """),
 
 CODE('''
@@ -1208,21 +1191,18 @@ print("braeuchte es einen gepaarten Test auf denselben Raedern.")
 '''),
 
 MD("""
-> **Lesen Sie die Zeilen über diesem Absatz, nicht diesen Absatz.** Welches Verfahren die
-> Hürde von {{huerde:.0%}} statistisch trägt, entscheidet die Lage seines Intervalls — die
-> Ausgabe sagt es für jedes einzeln. Die Untergrenzen liegen bei
-> {{wilson_unten_regel:.1%}} für die Faustregel und {{wilson_unten_wald:.1%}} für den Wald.
->
-> **Drei Lagen sind möglich, und nur zwei davon sind eine Antwort:** Liegt die Hürde
-> *unter* dem Intervall, ist sie gestützt. Liegt sie *über* dem Intervall, ist sie
-> widerlegt. Liegt sie *innerhalb*, ist das Ergebnis mit beiden Welten verträglich — mit
-> einem Verfahren, das die Hürde nimmt, und mit einem, das sie verfehlt. Das ist kein
-> knappes Ja, sondern ein Nichtwissen.
->
-> Bei {{kapazitaet:.0f}} Beobachtungen ist dieses Nichtwissen der Normalfall, nicht die
-> Ausnahme. Deshalb steht in Phase 5 nicht nur der Punktwert, sondern das Intervall — und
-> deshalb entscheidet über die Auslieferung nicht ein einzelnes Quartal, sondern die
-> rollierende Validierung in Abschnitt 5.3.
+**Über die Hürde entscheidet die Lage des Intervalls, nicht der Punktwert.** Die
+Untergrenzen liegen bei {{wilson_unten_regel:.1%}} für die Faustregel und
+{{wilson_unten_wald:.1%}} für den Wald.
+
+Drei Lagen sind möglich, und nur zwei davon sind eine Antwort: Liegt die Hürde *unter*
+dem Intervall, ist sie gestützt; liegt sie *darüber*, ist sie widerlegt. Liegt sie
+*innerhalb*, ist das Ergebnis mit beiden Welten verträglich — kein knappes Ja, sondern
+ein Nichtwissen.
+
+Bei {{kapazitaet:.0f}} Beobachtungen ist dieses Nichtwissen der Normalfall. Deshalb steht
+in Phase 5 das Intervall neben dem Punktwert, und deshalb entscheidet über die
+Auslieferung nicht ein einzelnes Quartal, sondern die rollierende Validierung in 5.3.
 
 ### 5.5 Treffsicherheit und Abdeckung
 """),
@@ -1350,18 +1330,15 @@ nicht mehr auf die Zusage aus Phase 1 zurückführen.
 
 Bindend sind diese drei — {{pflichtgates}}.
 
-> **Und die ursprünglichen {{huerde:.0%}}?** Sie stehen als Diagnosespalte `D70` in der
-> Tabelle, **nicht** in den Pflichtgates. Der Grund steht in 5.4: Die Orakelschranke
-> zeigt, dass sie in {{unmoegliche_quartale:.0f}} von {{roll_quartale:.0f}} Quartalen
-> unerfüllbar sind — auch für ein Verfahren mit vollständiger Kenntnis der Zukunft.
-> Eine Hürde, die niemand nehmen kann, misst nicht das Verfahren, sondern die Jahreszeit.
-> Sie trotzdem als Gate zu führen, nachdem man das gezeigt hat, wäre der Widerspruch,
-> den dieses Notebook eigentlich vorführt.
->
-> **Das heißt nicht, dass sie verschwindet.** Sie steht in der Tabelle, damit man sieht,
-> wo die Verfahren gegenüber der ursprünglichen Zusage stehen — und sie darf jederzeit
-> wieder bindend werden, wenn jemand sie neu und vorab begründet. Was sie nicht darf:
-> stillschweigend wieder ins Urteil einwandern.
+**Die ursprünglichen {{huerde:.0%}}** stehen als Diagnosespalte `D70` in der Tabelle,
+nicht in den Pflichtgates. Die Orakelschranke zeigt, dass sie in
+{{unmoegliche_quartale:.0f}} von {{roll_quartale:.0f}} Quartalen unerfüllbar sind — auch
+für ein Verfahren mit vollständiger Kenntnis der Zukunft. Eine Hürde, die niemand nehmen
+kann, misst nicht das Verfahren, sondern die Jahreszeit.
+
+Sie bleibt trotzdem sichtbar, damit erkennbar ist, wo die Verfahren gegenüber der
+ursprünglichen Zusage stehen, und sie darf wieder bindend werden — aber nur, wenn jemand
+sie neu und vorab begründet, nicht durch stillschweigendes Einwandern ins Urteil.
 
 Entscheidend ist die Reihenfolge, nicht der Ausgang: Das Kriterium stand **vor** der
 Messung fest, der Befund kam danach. Ein nachträglich erfülltes Kriterium begründet keine
@@ -1505,25 +1482,20 @@ für den Rücksprung in Phase 1: In einem der Quartale liegt schon die **Orakels
 bei {{winter_orakel:.1%}}. Dort hätte auch ein Verfahren mit vollständiger Kenntnis der
 Zukunft die Zusage verfehlt.
 
-> **Der Unterschied zum Schönrechnen liegt im Grund, nicht im Ergebnis.** Ein Kriterium zu
-> wechseln, weil das Verfahren daran scheitert, ist Manipulation. Eines zu korrigieren,
-> weil **kein** Verfahren es halten könnte, ist eine Reparatur — und sie gehört nach
-> Phase 1, wo die Zusage entstanden ist, nicht hierher.
->
-> Die Probe darauf ist die Orakelschranke: Sie hängt allein an den Daten und an der
-> Kapazität, an keinem Modell. Sie gehört deshalb berechnet, **bevor** eine Zusage
-> formuliert wird — sonst werden Verfahren an einer Grenze gemessen, die keines von
-> ihnen erreichen kann.
+**Der Unterschied zum Schönrechnen liegt im Grund, nicht im Ergebnis.** Ein Kriterium zu
+wechseln, weil das Verfahren daran scheitert, ist Manipulation; eines zu korrigieren,
+weil **kein** Verfahren es halten könnte, ist eine Reparatur — und sie gehört nach
+Phase 1, wo die Zusage entstanden ist. Die Probe darauf ist die Orakelschranke: Sie
+hängt allein an den Daten und an der Kapazität, an keinem Modell, und gehört deshalb
+berechnet, **bevor** eine Zusage formuliert wird.
 
-> **Das Modell war trotzdem nicht umsonst.** Ohne es stünde hier eine Trefferquote und
-> niemand könnte sagen, ob sie gut ist. Was gezeigt wurde, ist präzise dies: **Mit dieser
-> Merkmalsmenge, dieser Waldkonfiguration und diesen fünf Perioden ist kein stabiler
-> Zusatznutzen gegenüber der Faustregel nachgewiesen.**
->
-> Das ist etwas anderes als „der Wald lernt nichts dazu". Die beiden Listen teilen
-> {{listen_gemeinsam:.0f}} von {{kapazitaet:.0f}} Rädern und unterscheiden sich bei
-> je {{listen_exklusiv:.0f}} — er sortiert durchaus anders, nur nicht besser. Und geprüft
-> wurden ein Baum und eine Waldkonfiguration, nicht der Modellraum.
+**Das Modell war trotzdem nicht umsonst.** Ohne es stünde hier eine Trefferquote, ohne
+dass jemand sagen könnte, ob sie gut ist. Gezeigt ist präzise dies: Mit dieser
+Merkmalsmenge, dieser Waldkonfiguration und diesen fünf Perioden ist **kein stabiler
+Zusatznutzen** gegenüber der Faustregel nachgewiesen. Das ist etwas anderes als „der
+Wald lernt nichts dazu" — die beiden Listen teilen {{listen_gemeinsam:.0f}} von
+{{kapazitaet:.0f}} Rädern und unterscheiden sich bei je {{listen_exklusiv:.0f}}. Er
+sortiert anders, nur nicht besser.
 
 > **Ein Wort zum Klassengewicht {{klassengewicht:.1f}}.** Es stammt aus dem Kostenverhältnis, ist aber
 > **keine direkte Übersetzung der Geschäftsentscheidung**: Bei einer festen Liste von 60
