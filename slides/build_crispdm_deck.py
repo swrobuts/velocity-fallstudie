@@ -723,12 +723,12 @@ def fall2(prs):
          ("Urteil", "Ausgeliefert wird die Faustregel; das Modell bleibt im Paket")],
         ["", "Kriterium", "Schwelle"],
         [["K1", "Mehr auffällige Räder als eine Zufallsauswahl gleicher Länge",
-          f"{w.z('k3_lift_diagnose', 1)}-fach, in mindestens "
-          f"{w.z('k3_mindestquartale')} von 5 Quartalen"],
+          f"{w.z('lift_faktor', 1)}-fach, in mindestens "
+          f"{w.z('k1_mindestquartale')} von 5 Quartalen"],
          ["K2", "Die erwarteten Kosten liegen unter denen der heutigen Faustregel",
           "„das älteste Rad zuerst“"],
          ["K3", "Die untere Vertrauensgrenze der Listenpräzision hält im Testquartal",
-          f"über {w.z('k3_lift_diagnose', 1)} × Grundrate des Quartals"],
+          f"über {w.z('lift_faktor', 1)} × Grundrate des Quartals"],
          ["D70", "Die ursprünglich genannte 70-Prozent-Marke",
           "nur Diagnose — in einem Quartal nicht erreichbar"]],
         ["", "Faustregel", "Random Forest"],

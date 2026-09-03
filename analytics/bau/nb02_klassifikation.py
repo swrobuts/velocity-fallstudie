@@ -125,9 +125,9 @@ daran gescheitert ist.
 
 | | Kriterium | Schwelle |
 |---|---|---|
-| **K1 fachlich** | Die Liste muss mindestens **{{k3_lift_diagnose}}-mal so viele** auffällige Räder enthalten wie eine Zufallsauswahl gleicher Länge — in mindestens {{k3_mindestquartale:.0f}} von 5 Quartalen | saisonunabhängig, weil an der Grundrate des jeweiligen Quartals gemessen |
+| **K1 fachlich** | Die Liste muss mindestens **{{lift_faktor}}-mal so viele** auffällige Räder enthalten wie eine Zufallsauswahl gleicher Länge — in mindestens {{k1_mindestquartale:.0f}} von 5 Quartalen | saisonunabhängig, weil an der Grundrate des jeweiligen Quartals gemessen |
 | **K2 wirtschaftlich** | Die erwarteten Kosten je Quartal müssen **unter** denen der heutigen Faustregel liegen | die Faustregel lautet: „das älteste Rad zuerst" |
-| **K3 statistisch** | Die untere Grenze des 95-%-Wilson-Intervalls der Listenpräzision muss im Testquartal über **{{k3_lift_diagnose}} × Grundrate** liegen | eine Quote aus {{kapazitaet:.0f}} Beobachtungen ist keine Zusage |
+| **K3 statistisch** | Die untere Grenze des 95-%-Wilson-Intervalls der Listenpräzision muss im Testquartal über **{{lift_faktor}} × Grundrate** liegen | eine Quote aus {{kapazitaet:.0f}} Beobachtungen ist keine Zusage |
 | **Betrieb** | Die Liste muss ohne Nacharbeit in die Instandhaltungsansicht übernehmbar sein | |
 
 **Die 70 % verschwinden damit nicht — sie werden zur Diagnose.** Sie stehen als Spalte
@@ -976,7 +976,7 @@ vorn. Der Wald hat die Regel des Werkstattmeisters **gefunden** — mehr aber au
 > durch eine bessere Kennzahl, sondern durch die zugrunde liegende Frage:
 > nicht *wie alt* ist das Rad, sondern *wie weit seit der Reparatur*.
 
-### 5.3 Ergebnis über mehrere Quartale
+### 5.3 K1: Nutzen über mehrere Quartale
 
 Der Gleichstand oben steht auf **einem** Stichtag. Die Grundrate schwankt aber über die
 Quartale zwischen {{grundrate_min:.1%}} und {{grundrate_max:.1%}} — um mehr als das
@@ -1020,7 +1020,7 @@ for tag in validierung:
 roll_roh = pd.DataFrame(zeilen)          # ungerundet, fuer die Gates
 roll = roll_roh.drop(columns=["Quote Wald", "Quote Regel"])
 
-# ─── K3: NUTZEN UEBER DIE QUARTALE ──────────────────────────────────
+# ─── K1: NUTZEN UEBER DIE QUARTALE ──────────────────────────────────
 #
 # Phase 1 wurde nach dem Ruecksprung neu formuliert: Die Liste muss
 # mindestens 1,5-mal so viele auffaellige Raeder enthalten wie eine
@@ -1037,10 +1037,19 @@ roll = roll_roh.drop(columns=["Quote Wald", "Quote Regel"])
 #
 # Die 70 % bleiben als ZUSATZFRAGE: Wo die Grundrate sie hergibt, wird
 # geprueft, ob die Liste sie erreicht.
-K3_MINDESTQUARTALE = 4
-K3_LIFT_DIAGNOSE = 1.5      # die Nutzenschwelle aus dem korrigierten Phase 1
-merke("k3_mindestquartale", K3_MINDESTQUARTALE)
-_ = merke("k3_lift_diagnose", K3_LIFT_DIAGNOSE)
+# DER FAKTOR GEHOERT ZU ZWEI GATES, DIE MINDESTZAHL NUR ZU EINEM.
+#
+# K1 verlangt Lift >= LIFT_FAKTOR in mindestens K1_MINDESTQUARTALE von
+# fuenf Quartalen; K3 verlangt die Wilson-Untergrenze im Testquartal
+# ueber LIFT_FAKTOR x Grundrate. Derselbe Faktor, zwei verschiedene
+# Gates - deshalb traegt er keinen Gate-Namen. Frueher hiessen beide
+# Groessen K3_..., und der Text nannte den Quartalslift folgerichtig
+# K3. Das ist genau der Widerspruch, den dieses Notebook vorfuehrt:
+# zwei Kataloge unter denselben Buchstaben.
+LIFT_FAKTOR = 1.5           # die Nutzenschwelle aus dem korrigierten Phase 1
+K1_MINDESTQUARTALE = 4
+merke("k1_mindestquartale", K1_MINDESTQUARTALE)
+_ = merke("lift_faktor", LIFT_FAKTOR)
 
 roll_roh["Lift Wald"] = roll_roh["Quote Wald"] / roll_roh.Grundrate
 
@@ -1074,7 +1083,7 @@ else:
     print("   erreichbar gewesen.")
 roll_roh["Lift Regel"] = roll_roh["Quote Regel"] / roll_roh.Grundrate
 
-print(f"\\nK3 - NUTZEN UEBER DIE QUARTALE (Lift >= {K3_LIFT_DIAGNOSE})")
+print(f"\\nK1 - NUTZEN UEBER DIE QUARTALE (Lift >= {LIFT_FAKTOR})")
 print(roll_roh[["Stichtag", "Grundrate", "Quote Regel", "Lift Regel",
                 "Quote Wald", "Lift Wald"]].round(3).to_string(index=False))
 _k3_regel = int((roll_roh["Quote Regel"] >= HUERDE).sum())
@@ -1086,15 +1095,15 @@ merke("roll_quote_regel", _summe_regel / _plaetze)
 _u_regel, _o_regel = wilson(_summe_regel, _plaetze)
 merke("roll_wilson_unten", _u_regel)
 
-_lift_regel = int((roll_roh["Lift Regel"] >= K3_LIFT_DIAGNOSE).sum())
-_lift_wald = int((roll_roh["Lift Wald"] >= K3_LIFT_DIAGNOSE).sum())
+_lift_regel = int((roll_roh["Lift Regel"] >= LIFT_FAKTOR).sum())
+_lift_wald = int((roll_roh["Lift Wald"] >= LIFT_FAKTOR).sum())
 print()
-print(f"   K3 gefordert: Lift >= {K3_LIFT_DIAGNOSE} in mindestens "
-      f"{K3_MINDESTQUARTALE} von {len(roll_roh)} Quartalen.")
+print(f"   K1 gefordert: Lift >= {LIFT_FAKTOR} in mindestens "
+      f"{K1_MINDESTQUARTALE} von {len(roll_roh)} Quartalen.")
 print(f"      Faustregel: {_lift_regel} von {len(roll_roh)}")
 print(f"      Wald:       {_lift_wald} von {len(roll_roh)}")
-merke("k3_quartale_lift_regel", _lift_regel)
-merke("k3_quartale_lift_wald", _lift_wald)
+merke("k1_quartale_regel", _lift_regel)
+merke("k1_quartale_wald", _lift_wald)
 print()
 print(f"   Zusatzfrage - die urspruenglichen {HUERDE:.0%}, wo das Orakel sie hergibt:")
 print(f"      Faustregel: {_k3_regel} von {len(roll_roh)}")
@@ -1109,7 +1118,7 @@ print("      zu eng gerechnet - der Abstand zur Huerde bleibt eindeutig.)")
 print()
 print("   EMPFINDLICHKEIT der Nutzenschwelle:")
 print(f"   {'Lift-Schwelle':>14s}{'Regel':>9s}{'Wald':>8s}")
-for _s in (1.3, 1.4, K3_LIFT_DIAGNOSE, 1.6, 1.7):
+for _s in (1.3, 1.4, LIFT_FAKTOR, 1.6, 1.7):
     _r = int((roll_roh["Lift Regel"] >= _s).sum())
     _w = int((roll_roh["Lift Wald"] >= _s).sum())
     print(f"   {_s:>14.1f}{_r:>7d}/{len(roll_roh)}{_w:>6d}/{len(roll_roh)}")
@@ -1201,8 +1210,9 @@ dem Intervall, ist sie gestützt; liegt sie *darüber*, ist sie widerlegt. Liegt
 ein Nichtwissen.
 
 Bei {{kapazitaet:.0f}} Beobachtungen ist dieses Nichtwissen der Normalfall. Deshalb steht
-in Phase 5 das Intervall neben dem Punktwert, und deshalb entscheidet über die
-Auslieferung nicht ein einzelnes Quartal, sondern die rollierende Validierung in 5.3.
+in Phase 5 das Intervall neben dem Punktwert — und deshalb entscheidet über die
+Auslieferung nicht ein einzelnes Quartal, sondern der vollständige Katalog aus K1, K2
+und K3 in 5.6.
 
 ### 5.5 Treffsicherheit und Abdeckung
 """),
@@ -1313,9 +1323,11 @@ Abdeckung setzt deshalb mehr Kapazität voraus, nicht ein anderes Verfahren.
 
 ### 5.6 Bewertung gegen die Erfolgskriterien aus Phase 1
 
-Jetzt kommen die beiden Kriterien aus Phase 1 zum Einsatz — und ein drittes, das die
-rollierende Validierung erzwingt: **Ein Modell wird nur ausgeliefert, wenn es die
-Faustregel über mehrere Quartale schlägt.** Ein einzelnes gutes Quartal genügt nicht.
+Jetzt werden die **drei Kriterien aus Phase 1** angewandt — K1, K2 und K3, unverändert
+in Bedeutung und Schwelle. K1 verlangt einen Lift von {{lift_faktor}} in mindestens
+{{k1_mindestquartale:.0f}} von {{roll_quartale:.0f}} Quartalen, K2 vergleicht die Kosten
+im Testquartal mit denen der heutigen Altersregel, K3 verlangt die statistische
+Absicherung im Testquartal. Ein einzelnes gutes Quartal genügt für keines davon.
 
 **Die Gates heißen hier genauso wie in Phase 1 und bedeuten dasselbe.** Zwei Kataloge
 unter denselben Bezeichnern — etwa K3 einmal für den Lift und einmal für die
@@ -1324,9 +1336,9 @@ nicht mehr auf die Zusage aus Phase 1 zurückführen.
 
 | | Gate | woran es hängt |
 |---|---|---|
-| **K1** | Lift ≥ {{k3_lift_diagnose}} in mindestens {{k3_mindestquartale:.0f}} von {{roll_quartale:.0f}} Validierungsquartalen | dieselbe Frage an beide Kandidaten, ohne Vergleich untereinander |
+| **K1** | Lift ≥ {{lift_faktor}} in mindestens {{k1_mindestquartale:.0f}} von {{roll_quartale:.0f}} Validierungsquartalen | dieselbe Frage an beide Kandidaten, ohne Vergleich untereinander |
 | **K2** | erwartete Kosten im Testquartal unter denen der Faustregel „ältestes Rad zuerst" | besser als das, was heute schon getan wird |
-| **K3** | Wilson-Untergrenze der Listenpräzision > {{k3_lift_diagnose}} × Grundrate des Testquartals ({{k3_schwelle:.1%}}) | eine Quote aus {{kapazitaet:.0f}} Beobachtungen ist keine Zusage |
+| **K3** | Wilson-Untergrenze der Listenpräzision > {{lift_faktor}} × Grundrate des Testquartals ({{k3_schwelle:.1%}}) | eine Quote aus {{kapazitaet:.0f}} Beobachtungen ist keine Zusage |
 
 Bindend sind diese drei — {{pflichtgates}}.
 
@@ -1363,15 +1375,15 @@ vorteil_roll = roll["Vorteil Wald (EUR)"].sum()
 # Quartalen unerfuellbar sind. Ein Wert, der in der Tabelle steht, aber
 # nicht in der Bedingung, muss auch so heissen.
 GATE_KATALOG = {
-    "K1": f"Lift >= {K3_LIFT_DIAGNOSE} in mindestens {K3_MINDESTQUARTALE} "
+    "K1": f"Lift >= {LIFT_FAKTOR} in mindestens {K1_MINDESTQUARTALE} "
           f"von {len(roll_roh)} Validierungsquartalen",
     "K2": "erwartete Kosten im Testquartal unter denen der Faustregel",
-    "K3": f"Wilson-Untergrenze der Listenpraezision > {K3_LIFT_DIAGNOSE} "
+    "K3": f"Wilson-Untergrenze der Listenpraezision > {LIFT_FAKTOR} "
           f"x Grundrate des Testquartals",
 }
 PFLICHTGATES = tuple(GATE_KATALOG)
 GRUNDRATE_TEST = float(y_test.mean())
-K3_SCHWELLE = K3_LIFT_DIAGNOSE * GRUNDRATE_TEST
+K3_SCHWELLE = LIFT_FAKTOR * GRUNDRATE_TEST
 merke("grundrate_test", GRUNDRATE_TEST)
 merke("k3_schwelle", K3_SCHWELLE)
 print("GATE-KATALOG - dieselben Namen und Bedeutungen wie in Phase 1:")
@@ -1396,8 +1408,8 @@ for name, score in [("Faustregel: km seit Reparatur", p_regel),
     # sie "der Massstab" sei - ein Gate, das den Kandidaten kennt, prueft
     # nicht ihn, sondern die Absicht dessen, der es geschrieben hat.
     _spalte = "Lift Regel" if "Faustregel" in name else "Lift Wald"
-    _bestanden = int((roll_roh[_spalte] >= K3_LIFT_DIAGNOSE).sum())
-    k1 = _bestanden >= K3_MINDESTQUARTALE
+    _bestanden = int((roll_roh[_spalte] >= LIFT_FAKTOR).sum())
+    k1 = _bestanden >= K1_MINDESTQUARTALE
     # K2 - besser als das, was heute schon getan wird.
     k2 = e["Kosten (EUR)"] < kosten_heute
     # K3 - die statistische Absicherung, die Phase 1 verlangt: Traegt die
@@ -1470,9 +1482,9 @@ _ = merke("pflichtgates", " · ".join(PFLICHTGATES))
 '''),
 
 MD("""
-**Beide Verfahren nehmen K3.** Die Faustregel erreicht die Nutzenschwelle in
-{{k3_quartale_lift_regel:.0f}} von {{roll_quartale:.0f}} Quartalen, der Wald in
-{{k3_quartale_lift_wald:.0f}}. Über alle Quartale trifft die Regel {{roll_regel:.0f}} von
+**Beide Verfahren nehmen K1.** Die Faustregel erreicht die Nutzenschwelle in
+{{k1_quartale_regel:.0f}} von {{roll_quartale:.0f}} Quartalen, der Wald in
+{{k1_quartale_wald:.0f}}. Über alle Quartale trifft die Regel {{roll_regel:.0f}} von
 {{roll_quartale:.0f}} × {{kapazitaet:.0f}} Listenplätzen.
 
 **Die ursprünglichen {{huerde:.0%}} hält keines von beiden** — die Regel in
@@ -1781,7 +1793,7 @@ Entscheidung ohnehin auf sie, und zwar wegen der Betriebskosten:
 Die unteren drei Zeilen sind der Preis eines Modells. Er wäre zu zahlen, wenn die oberen
 beiden dafür sprächen — sie tun es nicht.
 
-<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Was an der Faustregel nicht eine Zeile ist</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Der Sortierausdruck ist eine Zeile. Das Merkmal <code>km_seit_reparatur</code> darunter setzt voraus:</p><ol><li>Langfahrten über acht Stunden ausschließen,</li><li>gemessene Distanzen verwenden und nur die fehlenden schätzen,</li><li>je Radtyp eine Geschwindigkeit für die Schätzung — ein unbekannter Typ erzeugt <code>NaN</code> und damit ein Rad ganz unten in der Liste,</li><li>die Verknüpfung mit <strong>erledigten</strong> Wartungsaufträgen,</li><li>den Ausschluss offener Schäden,</li><li>eine Stichtagslogik und eine Regel für neue Räder.</li></ol><p>Ausgeliefert wird also eine Regel <strong>samt ihrer Merkmalslogik</strong>, und die gehört genauso versioniert und getestet wie ein Modell. Was gegenüber dem Wald entfällt, ist das Nachtrainieren, nicht die Sorgfalt.</p></div></details>
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Was an der Faustregel nicht eine Zeile ist</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Der Sortierausdruck ist eine Zeile. Das Merkmal <code>km_seit_reparatur</code> darunter setzt voraus:</p><ol><li>Langfahrten über acht Stunden ausschließen,</li><li>gemessene Distanzen verwenden und nur die fehlenden schätzen,</li><li>je Radtyp eine Geschwindigkeit für die Schätzung — ein unbekannter Typ lässt den Lauf mit einer Zusicherung abbrechen, statt still eine Merkmalsspalte zu verschieben,</li><li>die Verknüpfung mit <strong>erledigten</strong> Wartungsaufträgen,</li><li>den Ausschluss offener Schäden,</li><li>eine Stichtagslogik und eine Regel für neue Räder.</li></ol><p>Ausgeliefert wird also eine Regel <strong>samt ihrer Merkmalslogik</strong>, und die gehört genauso versioniert und getestet wie ein Modell. Was gegenüber dem Wald entfällt, ist das Nachtrainieren, nicht die Sorgfalt.</p></div></details>
 
 **Das Modell bleibt im Paket.** Es belegt, dass die Regel geprüft und nicht aus
 Bequemlichkeit gewählt wurde, und es ist der Ausgangspunkt der nächsten Runde. Sein
@@ -1826,7 +1838,7 @@ Zuständigkeit.
 | Ausgeschlossene Langfahrten | Anteil im Referenzquartal | +50 % relativ | +100 % relativ | 30 Fahrten | Datenbetrieb | Rückgabeprozess oder Datenerfassung hat sich geändert |
 | Wartungsaufträge ohne `erledigt_am` | Anteil im Referenzquartal | 10 % | 20 % | 50 Aufträge | Werkstattleitung | Der Reset des Merkmals greift nicht mehr |
 | Räder mit offenem Schaden | Bestand im Referenzquartal | +50 % relativ | +100 % relativ | 20 Räder | Werkstattleitung | Die Werkstatt kommt nicht nach — die Vorsorgeliste ist dann das falsche Werkzeug |
-| Treffsicherheit der Quartalsliste — **Gate K3** | Untergrenze {{k3_unten_regel:.1%}} gegen Schwelle {{k3_schwelle:.1%}} | Wilson-Untergrenze **unter {{k3_lift_diagnose}} × Grundrate des Quartals** | Wilson-**Obergrenze** unter {{k3_lift_diagnose}} × Grundrate | {{kapazitaet:.0f}} Räder | Analytik | Bei Stopp: Liste aussetzen, Regel neu prüfen |
+| Treffsicherheit der Quartalsliste — **Gate K3** | Untergrenze {{k3_unten_regel:.1%}} gegen Schwelle {{k3_schwelle:.1%}} | Wilson-Untergrenze **unter {{lift_faktor}} × Grundrate des Quartals** | Wilson-**Obergrenze** unter {{lift_faktor}} × Grundrate | {{kapazitaet:.0f}} Räder | Analytik | Bei Stopp: Liste aussetzen, Regel neu prüfen |
 | dieselbe Größe gegen die alte {{huerde:.0%}}-Marke — **D70, nur Diagnose** | {{quote_regel:.0%}} beobachtet | — | — | {{kapazitaet:.0f}} Räder | Analytik | **Löst nichts aus.** Steht hier, damit sichtbar bleibt, wo die ursprüngliche Zusage läge |
 | Räder, die trotz Prüfung ausfallen | im Schattenbetrieb zu erheben | 20 % der Geprüften | 35 % | 30 Geprüfte | Werkstattleitung | Die Prüfung selbst greift zu kurz — kein Datenproblem |
 
@@ -1884,7 +1896,7 @@ MD("""
 | 2 Data Understanding | Nutzung und Meldungen hängen zusammen (r = {{korrelation_km_meldungen:.3f}}, für echte Flottendaten auffällig stark), aber nicht deterministisch. Der Anteil auffälliger Räder schwankt saisonal um das {{panel_grundrate_faktor:.1f}}-Fache |
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung. Gemessene Distanzen bevorzugt, Langfahrten ausgeschlossen, Räder mit offenem Schaden aus der Prognosepopulation genommen. Rückgesetzt wird bei der **erledigten Reparatur**, nicht bei der Meldung |
 | 4 Modeling | Drei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
-| 5 Evaluation | Auf dem Testquartal liegt die Faustregel vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer). **Entschieden hat K3:** Die Wilson-Untergrenze der Regel liegt bei {{k3_unten_regel:.1%}} über der dynamischen Schwelle von {{k3_schwelle:.1%}} ({{k3_lift_diagnose}} × Grundrate {{grundrate_test:.1%}}); der Wald erreicht nur {{k3_unten_wald:.1%}} und reißt K3. Über {{roll_quartale:.0f}} Validierungsquartale nimmt die Regel K1 in {{k3_quartale_lift_regel:.0f}} Quartalen. Zur Einordnung: D70 erfüllen beide ({{d70_regel}} / {{d70_wald}}) — die Marke war ohnehin unerfüllbar, in einem Quartal liegt die Orakelschranke bei {{winter_orakel:.1%}} |
+| 5 Evaluation | Auf dem Testquartal liegt die Faustregel vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer). **Entschieden hat K3:** Die Wilson-Untergrenze der Regel liegt bei {{k3_unten_regel:.1%}} über der dynamischen Schwelle von {{k3_schwelle:.1%}} ({{lift_faktor}} × Grundrate {{grundrate_test:.1%}}); der Wald erreicht nur {{k3_unten_wald:.1%}} und reißt K3. Über {{roll_quartale:.0f}} Validierungsquartale nimmt die Regel K1 in {{k1_quartale_regel:.0f}} Quartalen. Zur Einordnung: D70 erfüllen beide ({{d70_regel}} / {{d70_wald}}) — die Marke war ohnehin unerfüllbar, in einem Quartal liegt die Orakelschranke bei {{winter_orakel:.1%}} |
 | 6 Deployment | **Ausgeliefert wird die Faustregel.** Dazu eine Schattenliste zum {{schatten_stichtag}}, bewertbar nach {{horizont_tage:.0f}} Tagen — die Freigabe steht auf historischen Daten und wird prospektiv nachgeprüft |
 
 **Drei Sätze, die aus diesem Notebook bleiben sollten**
