@@ -34,3 +34,14 @@ erDiagram
         numeric   preis_pro_minute
         numeric   tageshoechstpreis
     }
+    PREISSCHAETZUNG {
+        bigint  schaetzung_id     PK
+        bigint  start_station_id  "mit ziel_station_id, ohne Fremdschlüssel"
+        text    startstation      "UK: Start, Ziel, Typ, Zeitfenster"
+        text    typ_code
+        text    zeitfenster       "vier Tagesabschnitte"
+        integer minuten_von       "mit minuten_bis: Quantile der Dauer"
+        numeric preis_von         "mit preis_bis, CHECK: Spanne max. 1,00 EUR"
+        integer fahrten_grundlage "CHECK: mindestens 30 Fahrten"
+        date    stand
+    }

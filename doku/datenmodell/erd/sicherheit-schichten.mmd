@@ -2,8 +2,8 @@ flowchart TB
     B["Browser mit dem öffentlichen anon-Key"]
 
     subgraph erlaubt["erreichbar"]
-        V["v_station · v_verfuegbares_fahrrad · v_tarifkarte<br/>v_tarif · v_faq · v_nutzungsschritt · v_kennzahl"]
-        R["api_kunde_sicherstellen · api_ausleihe_starten<br/>api_ausleihe_beenden · api_profil_aktualisieren"]
+        V["v_station · v_verfuegbares_fahrrad · v_tarifkarte · v_tarif<br/>v_faq · v_nutzungsschritt · v_kennzahl · v_hoehenmarke<br/>v_geschaeftsgebiet · v_preisschaetzung"]
+        R["api_kunde_sicherstellen · api_ausleihe_starten<br/>api_ausleihe_beenden · api_profil_aktualisieren<br/>api_preisschaetzer_umschalten"]
     end
 
     subgraph gesperrt["unerreichbar"]
