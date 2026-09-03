@@ -800,4 +800,11 @@ fi
 printf '\n%sNicht automatisierbar — bitte selbst durchklicken:%s\n' "$grau" "$aus"
 printf '%s  python3 -m http.server 8765 --directory src   und dann http://localhost:8765%s\n' "$grau" "$aus"
 printf '%s  Schrittfolge in doku/verifikation/2026-08-23-e2e-protokoll.md%s\n' "$grau" "$aus"
+# Der abgemeldete Teil ist inzwischen aufgezeichnet, nicht nur beschrieben.
+# Was wirklich eine Person braucht, ist der angemeldete Ablauf: Dafuer
+# muss ein Konto angelegt und ein Passwort eingegeben werden.
+printf '%s  Offen ist davon nur der ANGEMELDETE Ablauf (Registrierung, Anmeldung,%s\n' "$grau" "$aus"
+printf '%s  Ausleihe starten und beenden). Oeffentliche Ansicht und Zugriffsschutz%s\n' "$grau" "$aus"
+printf '%s  sind aufgezeichnet in doku/verifikation/2026-09-03-e2e-protokoll.md.%s\n' "$grau" "$aus"
+printf '%s  Die Fachlogik dahinter ohne Klicken: python3 db/durchstich.py%s\n' "$grau" "$aus"
 exit $([ "$fehler" -gt 0 ] && echo 1 || echo 0)
