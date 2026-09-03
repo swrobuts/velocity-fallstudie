@@ -92,15 +92,40 @@ HTTP 200, `0 Abweichung(en)`. Die zehnte ist `v_preisschaetzung`; sie
 fehlte bis zum 03.09.2026 in der Erlaubnisliste und war damit von dieser
 Prüfung nicht abgedeckt.
 
-## 4 Nicht geprüft: der angemeldete Ablauf
+## 4 Der angemeldete Ablauf
 
-Registrierung, Anmeldung, Ausleihe starten und beenden sowie die
-Abrechnungsanzeige sind **offen** — unverändert gegenüber dem 23.08.2026
-und aus demselben Grund: Dafür müsste ein Benutzerkonto angelegt und ein
-Passwort in ein Formular eingegeben werden.
+**Nachtrag vom selben Abend: der angemeldete Ablauf ist geprüft.** Der
+Auftraggeber hat sich im Prüfbrowser selbst angemeldet und die Sitzung
+übergeben — damit entfiel das Hindernis, das seit dem 23.08.2026 bestand.
+Registrierung und Passworteingabe bleiben ungeprüft; sie sind nicht Teil
+dessen, was hier geleistet wird.
 
-Die dahinterliegende Fachlogik ist ohne Klicken belegt, und zwar
-gründlicher, als ein Durchlauf es könnte:
+Geprüft wurde als Kunde 2334 (`K-000013`) auf `bikes.butscher.cloud`:
+
+| Schritt | Erwartung | Ergebnis |
+|---|---|---|
+| Kundensatz | Kundennummer `K-######`, `auth_uid` gesetzt | `K-000013`, gesetzt, Status aktiv — **bestanden** |
+| Rad wählen | Popover mit Typen und Preisen | Station Sanderau, City-Bike 3,10 € und E-Bike Sport 8,50 € je 30 Min — **bestanden** |
+| Fahrt starten | Banner mit laufender Zeit | `City-Bike CB-00275 · 0:04 · bisher 0,20 Euro` — **bestanden** |
+| Ausleihe in der Datenbank | Zeile mit Startstation und offenem Ende | 84270, Sanderau, `endzeit` NULL, Status aktiv; Rad auf `ausgeliehen`, Position geleert — **bestanden** |
+| Rückgabestation | die Maske fragt, sie rät nicht | Auswahl mit Entfernungen, Startstation als `0 m` markiert; gewählt: Universität Sanderring (809 m) — **bestanden** |
+| Fahrt beenden | Meldung mit Dauer und Betrag | `Dauer 2 Min · Universität Sanderring · Gesamtbetrag 0,30 Euro · Startgebühr 0,10 · Zeitentgelt 0,20` — **bestanden** |
+| Abrechnung | mindestens `STARTGEBUEHR` und `ZEITENTGELT`, Summe wie angezeigt | 0,10 + 2 × 0,10 = **0,30 €**, identisch mit der Oberfläche — **bestanden** |
+| Rad danach | verfügbar an der **gewählten** Station | `verfuegbar` an Universität Sanderring — **bestanden** |
+
+Der vorletzte Punkt ist der eigentliche: Die Oberfläche zeigt keinen
+gerundeten Eigenwert an, sondern genau die Summe der gebuchten
+Entgeltpositionen. Der letzte hält fest, dass die Rückgabestation die
+gewählte ist — bis zum 23.08.2026 buchte die Anwendung stillschweigend
+auf die erste Station der geladenen Liste, damals eine vierzig Kilometer
+entfernte.
+
+Die Ausleihe 84270 bleibt in den Daten stehen. Sie ist ein regulärer
+Vorgang und wird nicht weggeräumt: Ein Protokoll, das seine Spuren
+beseitigt, ist nicht nachprüfbar.
+
+Die dahinterliegende Fachlogik ist zusätzlich ohne Klicken belegt, und
+zwar über mehr Fälle, als ein einzelner Durchlauf zeigen kann:
 
 - `db/durchstich.py` geht den ganzen Weg für alle drei Fahrradtypen gegen
   die echte Datenbank, unter der Rolle `authenticated`, mit echtem
