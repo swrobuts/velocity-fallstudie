@@ -999,12 +999,13 @@ def rollierend(bis_stichtag):
     return (m.predict_proba(Xte)[:, 1], te.km_seit_reparatur.values,
             te.meldet_sich.values)
 
-# Die VALIDIERUNG: alle Stichtage ausser dem ersten (zu wenig Trainingsdaten)
-# und dem letzten (der bleibt unangetastet fuer den Test).
-# Der letzte Stichtag bleibt aussen vor. Ein Wort zur Ehrlichkeit: Er ist
-# der letzte HISTORISCHE Holdout, kein unangetasteter Test - seine Zahlen
-# wurden in einer frueheren Fassung dieses Notebooks bereits angesehen,
-# und danach wurden Distanzlogik, Ausreisser und Reparaturzeitpunkt
+# Die VALIDIERUNG laeuft ueber stichtage[2:-1] - alle Stichtage ausser den
+# beiden ersten und dem letzten. Vor dem ersten Stichtag liegen ueberhaupt
+# keine Trainingsdaten, vor dem zweiten nur ein einziger; der letzte bleibt
+# fuer den Test reserviert.
+# Zum letzten Stichtag: Er ist der letzte HISTORISCHE Holdout, kein
+# unangetasteter Test - seine Zahlen lagen beim Bau dieses Notebooks bereits
+# vor, und danach wurden Distanzlogik, Ausreisser und Reparaturzeitpunkt
 # geaendert. Ein wirklich unangetasteter Test braucht eine Zukunftsperiode.
 validierung = stichtage[2:-1]
 zeilen = []
@@ -1086,9 +1087,11 @@ roll_roh["Lift Regel"] = roll_roh["Quote Regel"] / roll_roh.Grundrate
 print(f"\\nK1 - NUTZEN UEBER DIE QUARTALE (Lift >= {LIFT_FAKTOR})")
 print(roll_roh[["Stichtag", "Grundrate", "Quote Regel", "Lift Regel",
                 "Quote Wald", "Lift Wald"]].round(3).to_string(index=False))
-_k3_regel = int((roll_roh["Quote Regel"] >= HUERDE).sum())
-_k3_wald = int((roll_roh["Quote Wald"] >= HUERDE).sum())
-merke("k3_quartale_regel", _k3_regel); merke("k3_quartale_wald", _k3_wald)
+# D70 ist die alte Zusage HUERDE aus Phase 1 - eine Diagnose, kein Gate.
+# Sie zaehlt etwas anderes als K3 und traegt deshalb ihren eigenen Namen.
+_d70_regel = int((roll_roh["Quote Regel"] >= HUERDE).sum())
+_d70_wald = int((roll_roh["Quote Wald"] >= HUERDE).sum())
+merke("d70_quartale_regel", _d70_regel); merke("d70_quartale_wald", _d70_wald)
 _summe_regel, _summe_wald = int(roll_roh.Regel.sum()), int(roll_roh.Wald.sum())
 _plaetze = len(roll_roh) * KAPAZITAET
 merke("roll_quote_regel", _summe_regel / _plaetze)
@@ -1105,9 +1108,9 @@ print(f"      Wald:       {_lift_wald} von {len(roll_roh)}")
 merke("k1_quartale_regel", _lift_regel)
 merke("k1_quartale_wald", _lift_wald)
 print()
-print(f"   Zusatzfrage - die urspruenglichen {HUERDE:.0%}, wo das Orakel sie hergibt:")
-print(f"      Faustregel: {_k3_regel} von {len(roll_roh)}")
-print(f"      Wald:       {_k3_wald} von {len(roll_roh)}")
+print(f"   Diagnose D70 - die urspruenglichen {HUERDE:.0%}, wo das Orakel sie hergibt:")
+print(f"      Faustregel: {_d70_regel} von {len(roll_roh)}")
+print(f"      Wald:       {_d70_wald} von {len(roll_roh)}")
 print()
 print(f"   Zusammengefasst ueber alle Quartale: Regel {_summe_regel} von "
       f"{_plaetze} = {_summe_regel / _plaetze:.1%}")
@@ -1327,7 +1330,9 @@ Jetzt werden die **drei Kriterien aus Phase 1** angewandt — K1, K2 und K3, unv
 in Bedeutung und Schwelle. K1 verlangt einen Lift von {{lift_faktor}} in mindestens
 {{k1_mindestquartale:.0f}} von {{roll_quartale:.0f}} Quartalen, K2 vergleicht die Kosten
 im Testquartal mit denen der heutigen Altersregel, K3 verlangt die statistische
-Absicherung im Testquartal. Ein einzelnes gutes Quartal genügt für keines davon.
+Absicherung im Testquartal. K2 und K3 werden jeweils am Testquartal bestimmt; ein
+einzelnes gutes Quartal genügt daher nicht für die Gesamtfreigabe, weil zusätzlich K1
+über {{roll_quartale:.0f}} Validierungsquartale erfüllt sein muss.
 
 **Die Gates heißen hier genauso wie in Phase 1 und bedeuten dasselbe.** Zwei Kataloge
 unter denselben Bezeichnern — etwa K3 einmal für den Lift und einmal für die
@@ -1487,8 +1492,8 @@ MD("""
 {{k1_quartale_wald:.0f}}. Über alle Quartale trifft die Regel {{roll_regel:.0f}} von
 {{roll_quartale:.0f}} × {{kapazitaet:.0f}} Listenplätzen.
 
-**Die ursprünglichen {{huerde:.0%}} hält keines von beiden** — die Regel in
-{{k3_quartale_regel:.0f}}, der Wald in {{k3_quartale_wald:.0f}} von
+**Die ursprünglichen {{huerde:.0%}} — die Diagnose `D70` — hält keines von beiden**: die
+Regel in {{d70_quartale_regel:.0f}}, der Wald in {{d70_quartale_wald:.0f}} von
 {{roll_quartale:.0f}} Quartalen. Das ist kein Widerspruch zur Freigabe, sondern der Grund
 für den Rücksprung in Phase 1: In einem der Quartale liegt schon die **Orakelschranke**
 bei {{winter_orakel:.1%}}. Dort hätte auch ein Verfahren mit vollständiger Kenntnis der
