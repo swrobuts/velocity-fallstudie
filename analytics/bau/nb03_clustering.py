@@ -1274,127 +1274,73 @@ print("    nicht 'je Jahr'. Und das zugehoerige Freigabe-Gate bleibt offen.")
 '''),
 
 MD("""
-> **{{gate_eng:.2%}} der Kampagnen-Arbeitsliste wechseln binnen eines Quartals das
-> Segment** — bei unveränderter Methode und unveränderten Schwellen. Das sind
-> {{gate_abstand:.2f}} Prozentpunkte **unter** der Schwelle von {{gate_wechsel:.0%}} —
-> der Punktwert hält sie also. Der Gate-Zustand lautet trotzdem
-> **{{gate_urteil_kunden}}**: {{gate_satz_kunden}}. Die drei Zahlen oben messen aber
-> **drei verschiedene Dinge**, und nur eine davon gehört zum Produkt:
->
-> | Kennzahl | Wert | Was sie misst |
-> |---|---:|---|
-> | **Kampagnen-Arbeitsliste** | **{{gate_eng:.2%}}** | die Menschen, die eine Ansprache bekämen — **hieran hängt das Gate** |
-> | alle Lebenszykluszustände | {{gate_weit:.2%}} | Diagnose der Bestandsdynamik |
-> | die vier RFM-Regeln allein | {{gate_rfm:.2%}} | ein Ausschnitt davon |
-> | k-Means, jeweils neu gerechnet | nur Modelldiagnose | ein Modell, das **nicht** ausgeliefert wird |
->
-> **Der Nenner muss trotzdem vorher feststehen.** Nimmt man alle
-> {{n_registriert:,}} registrierten Personen, sind es {{gate_weit:.2%}}. Nimmt man die
-> {{n_arbeitsliste:,}}, die tatsächlich in einer Arbeitsliste stünden, sind es
-> {{gate_eng:.2%}} — ein Unterschied von {{gate_differenz:+.2f}} Prozentpunkten.
->
-> Diesmal entscheidet er nicht: Beide Werte liegen unter der Schwelle von
-> {{gate_wechsel:.0%}}. Das ist ein glücklicher Umstand, kein Argument — bei einer
-> knapperen Lage hinge das Urteil daran, und dann wäre die Wahl des Nenners nach der
-> Messung eine Manipulation.
+**{{gate_eng:.2%}} der Kampagnen-Arbeitsliste wechseln binnen eines Quartals das
+Segment** — bei unveränderter Methode und unveränderten Schwellen, also
+{{gate_abstand:.2f}} Prozentpunkte **unter** der Schwelle von {{gate_wechsel:.0%}}. Der
+Punktwert hält sie. Der Gate-Zustand lautet trotzdem **{{gate_urteil_kunden}}**:
+{{gate_satz_kunden}}.
 
-> **Und die Zahl, die binden würde, gibt es nicht.** Über {{holdout_paare}} frühere
-> Stichtagspaare liegt der schlechteste Wert bei {{holdout_max:.2%}}, {{holdout_urteil}}
-> Paare bleiben unter der Schwelle — aber das ist eine **Diagnose, kein Test**: Die
-> Schwellen wurden am heutigen Datenstand gewählt und sind aus Sicht dieser Stichtage
-> Zukunftswissen. Hinzu kommt, dass sich die 365-Tage-Fenster benachbarter Paare zu rund
-> drei Vierteln überschneiden — vier Messungen, aber nicht vier unabhängige.
->
-> **Diese Unterscheidung ist freigaberelevant.** Eine Rückwärtsrechnung als „Holdout"
-> zu bezeichnen und eine Freigabe daran zu knüpfen, wäre der schwerwiegendere Fehler —
-> zumal eine solche Verknüpfung im Code steht und nicht im Text
-> (`KUNDENSEGMENTE_STABIL = HOLDOUT_HAELT and ...`) und beim Lesen der Prosa nicht
-> auffällt.
->
-> **Was die Hysterese dabei tut, steht offen daneben.** Ohne sie stiege die Wechselquote
-> des Entwicklungspaars von {{gate_eng:.2%}} auf {{hyst_ohne:.2%}}
-> (+{{hyst_wirkung:.2f}} Prozentpunkte), und auf den Holdout-Paaren hielten dann nur noch
-> {{hyst_ohne_haelt}} von {{holdout_paare}}. **Die Kantenglättung trägt das Urteil also
-> mit.** Das ist kein Fehler — sie ist in Phase 1 begründet und vor der Messung
-> eingefroren —, aber es wäre einer, es zu verschweigen.
->
-> Der Unterschied sind die dauerhaft stabilen Nicht-Zielpersonen (Zustand „Nie
-> aktiviert"), die nie angeschrieben werden. Sie im Nenner zu behalten macht die Quote
-> besser, ohne dass an der Auslieferung irgendetwas stabiler wäre. **Am weiten Nenner
-> gemessen würde das Gate knapp halten; maßgeblich ist deshalb der enge.**
->
-> Der ARI sagt also **nicht dasselbe**: Er beschreibt das separat neu berechnete
-> Clustering. Neben der Regelquote gelesen, wirkt er wie ein zweiter Beleg für dieselbe
-> Aussage — er ist keiner.
->
-> Das ist kein Fehler des Verfahrens. RFM misst Verhalten in einem gleitenden Fenster,
-> und Verhalten ändert sich. Aber es hat eine **harte Folge für die Auslieferung**:
+Drei Kennzahlen messen hier Verschiedenes, und nur eine gehört zum Produkt:
 
-**Cluster-Nummern kann man nicht ausliefern.** Wer im Januar „Cluster 3" ist, ist es im
-April vielleicht nicht mehr — und niemand kann nachvollziehen, warum. Die Nummer ist eine
-Rechenposition, kein Merkmal des Kunden.
+| Kennzahl | Wert | Was sie misst |
+|---|---:|---|
+| **Kampagnen-Arbeitsliste** | **{{gate_eng:.2%}}** | die Menschen, die eine Ansprache bekämen — **hieran hängt das Gate** |
+| alle Lebenszykluszustände | {{gate_weit:.2%}} | Diagnose der Bestandsdynamik |
+| die vier RFM-Regeln allein | {{gate_rfm:.2%}} | ein Ausschnitt davon |
+| k-Means, jeweils neu gerechnet | nur Modelldiagnose | ein Modell, das **nicht** ausgeliefert wird |
 
-**Deshalb wird in Phase 6 nicht das Clustering ausgeliefert, sondern eine Regel.** Das
-Clustering hat seine Arbeit getan: Es hat gezeigt, *dass* es vier Gruppen gibt und *wo*
-sie ungefähr liegen. Die Auslieferung übernehmen nachvollziehbare Schwellen, die jeder
-nachrechnen kann — und die bei jedem neuen Stichtag dieselbe Bedeutung haben.
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Warum der Nenner vorher feststehen muss</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Nimmt man alle {{n_registriert:,}} registrierten Personen, sind es {{gate_weit:.2%}}; nimmt man die {{n_arbeitsliste:,}}, die tatsächlich in einer Arbeitsliste stünden, {{gate_eng:.2%}} — ein Unterschied von {{gate_differenz:+.2f}} Prozentpunkten.</p><p>Hier entscheidet er nicht, weil beide Werte unter der Schwelle liegen. Das ist ein glücklicher Umstand, kein Argument: Bei knapperer Lage hinge das Urteil daran, und die Wahl des Nenners nach der Messung wäre eine Manipulation.</p><p>Der Unterschied sind die dauerhaft stabilen Nicht-Zielpersonen (Zustand „Nie aktiviert“), die nie angeschrieben werden. Sie im Nenner zu behalten macht die Quote besser, ohne dass an der Auslieferung etwas stabiler wäre.</p></div></details>
 
-Was das kostet, rechnen wir in Phase 6 ebenfalls aus. Es ist nicht umsonst.""" ),
+**Eine bindende Prüfung gibt es nicht.** Über {{holdout_paare}} frühere Stichtagspaare
+liegt der schlechteste Wert bei {{holdout_max:.2%}}, {{holdout_urteil}} Paare bleiben
+unter der Schwelle — das ist eine **Diagnose, kein Test**: Die Schwellen wurden am
+heutigen Datenstand gewählt und sind aus Sicht dieser Stichtage Zukunftswissen. Hinzu
+kommt, dass sich die 365-Tage-Fenster benachbarter Paare zu rund drei Vierteln
+überschneiden.
+
+**Diese Unterscheidung ist freigaberelevant.** Eine Rückwärtsrechnung als „Holdout" zu
+bezeichnen und eine Freigabe daran zu knüpfen, wäre der schwerwiegendere Fehler — zumal
+eine solche Verknüpfung im Code stünde (`KUNDENSEGMENTE_STABIL = HOLDOUT_HAELT and ...`)
+und beim Lesen der Prosa nicht auffiele.
+
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Was die Hysterese zum Urteil beiträgt</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Ohne sie stiege die Wechselquote des Entwicklungspaars von {{gate_eng:.2%}} auf {{hyst_ohne:.2%}} (+{{hyst_wirkung:.2f}} Prozentpunkte), und auf den Holdout-Paaren hielten nur noch {{hyst_ohne_haelt}} von {{holdout_paare}}. <strong>Die Kantenglättung trägt das Urteil also mit.</strong></p><p>Das ist kein Fehler — sie ist in Phase 1 begründet und vor der Messung eingefroren. Es wäre einer, das zu verschweigen.</p></div></details>
+
+Der ARI sagt dabei **nicht dasselbe**: Er beschreibt das separat neu berechnete
+Clustering. Neben der Regelquote gelesen wirkt er wie ein zweiter Beleg für dieselbe
+Aussage — er ist keiner.
+
+**Cluster-Nummern lassen sich nicht ausliefern.** Wer im Januar „Cluster 3" ist, ist es
+im April vielleicht nicht mehr, und niemand kann nachvollziehen, warum. Die Nummer ist
+eine Rechenposition, kein Merkmal des Kunden. RFM misst Verhalten in einem gleitenden
+Fenster, und Verhalten ändert sich — das ist kein Fehler des Verfahrens, hat aber eine
+harte Folge für die Auslieferung.
+
+**Ausgeliefert wird deshalb nicht das Clustering, sondern eine Regel.** Das Clustering
+hat gezeigt, *dass* es vier Gruppen gibt und *wo* sie liegen. Die Auslieferung
+übernehmen nachvollziehbare Schwellen, die bei jedem Stichtag dieselbe Bedeutung haben.
+""" ),
 
 MD("""
-**Die Stationen sind stabil — über Startwerte *und* über die Zeit.** Der ARI zwischen zwei
-um 90 Tage verschobenen Fenstern beträgt 1,000; die Zuordnung ändert sich nicht. Das ist
-mehr, als die Startwertprüfung allein zeigen konnte, und es gilt für diesen synthetischen
-Datensatz mit seinen vier bewusst erzeugten Typen.
+**Die Stationen sind stabil — über Startwerte und über die Zeit.** Der ARI zwischen zwei
+um 90 Tage verschobenen Fenstern beträgt 1,000. Auch die Kundensegmente sind über die
+Startwerte reproduzierbar: {{ari_kunden:.3f}} bei der Kundschaft, {{ari_stationen:.3f}}
+bei den Stationen.
 
-**Auch die Kundensegmente sind über die Startwerte reproduzierbar** — der niedrigste
-gemessene ARI beträgt {{ari_kunden:.3f}} bei den Kunden und {{ari_stationen:.3f}} bei den
-Stationen.
+Das ist ein günstiger Befund, kein garantierter. **Startwertstabilität misst die
+Rechnung, nicht die Sache** — dass dasselbe Verfahren zweimal dasselbe ergibt, sagt
+nichts darüber, ob die Gruppen morgen noch dieselben sind. Bei mehreren tausend Personen
+liegen viele nahe an einer Gruppengrenze.
 
-Das ist ein günstiger Befund, kein garantierter. Bei mehreren tausend Kundinnen und Kunden
-liegen viele nahe an einer Gruppengrenze; ein anderer Startwert oder ein um wenige Tage
-verschobenes Fenster kann sie auf die andere Seite bringen. **Startwertstabilität misst
-die Rechnung, nicht die Sache** — dass dasselbe Verfahren zweimal dasselbe ergibt, sagt
-nichts darüber, ob die Gruppen morgen noch dieselben sind.
+Für die Auslieferung heißt das: Die Stationszuordnung ist am aktuellen Datenstand
+reproduzierbar, nicht dauerhaft fest. Der Kampagnenplan ist es nicht — er wird deshalb
+über Schwellen ausgeliefert, nicht über Cluster-Nummern.
 
-Für die Auslieferung heißt das: Die Stationszuordnung ist **am aktuellen Datenstand und
-über die getesteten Startwerte** reproduzierbar — nicht „fest" im Sinne von dauerhaft. Der
-Kampagnenplan ist es nicht. Wer nächstes Quartal neu clustert, bekommt bei einzelnen
-Kunden ein anderes Segment. **Deshalb wird der Kampagnenplan in Phase 6 nicht über
-Cluster-Nummern ausgeliefert, sondern über nachvollziehbare Schwellen** — die sind
-reproduzierbar.
+**Der Silhouettenwert liegt bei k = 4 für die Kundschaft bei {{sil_kunden_k4:.3f}}, für
+die Stationen bei {{sil_stationen_k4:.3f}}.** Werte um 0,4 heißen: Es gibt eine
+Struktur, aber die Gruppen gehen ineinander über. Bei Kundendaten ist das der Normalfall
+— und ein Grund, die Segmente als Arbeitshilfe zu behandeln, nicht als Naturkonstante.
 
-> **Und noch eine Zahl, die man nicht überlesen sollte:** Der Silhouettenwert der
-> Kundensegmente liegt bei k = 4 bei {{sil_kunden_k4:.3f}}, der der Stationen bei
-> {{sil_stationen_k4:.3f}}. Werte um 0,4 heißen:
-> Es *gibt* eine Struktur, aber die Gruppen gehen ineinander über. Das ist bei
-> Kundendaten der Normalfall und kein Fehler — es ist aber ein Grund, die Segmente als
-> Arbeitshilfe zu behandeln und nicht als Naturkonstante.
-
-> **Bei den Stationen zeigt die Kennzahl woanders hin als die Fachlichkeit.** Den
-> höchsten Silhouettenwert hat **k = {{sil_stationen_bestes_k:.0f}}**
-> ({{sil_stationen_bestwert:.3f}}), nicht das gewählte k = 4
-> ({{sil_stationen_k4:.3f}}). Gewählt wurde k = 4 trotzdem — aber dann muss man sagen,
-> warum, und darf sich nicht hinter der Kennzahl verstecken.
->
-> Der Grund ist Kriterium 2: Bei zehn Stationen erzeugt jedes weitere k Gruppen von ein
-> bis zwei Stationen, für die es keine eigene Maßnahme gibt. Schon bei k = 4 besteht eine
-> Gruppe nur aus dem Hauptbahnhof. **Ein Cluster, das eine einzige Station enthält, ist
-> kein Typ, sondern ein Sonderfall** — und Sonderfälle behandelt man einzeln, nicht mit
-> einem Verfahren.
->
-> Genau das ist die Lehre: Eine Kennzahl, die einen Zielkonflikt nicht kennt, kann ihn
-> auch nicht entscheiden. Die Silhouette misst Trennschärfe, nicht Handhabbarkeit.
->
-> **Verlassen kann man sich auf sie ohnehin nicht.** Bei der Kundensegmentierung liegen
-> die Silhouettenwerte für k = 2, k = 4 und k = 5 dicht beieinander; dort entscheidet die
-> Kennzahl gar nichts, und die fünf Kriterien aus Phase 1 sind das Einzige, was bleibt.
-> Ohne vorab festgelegte Kriterien bleibt kein Maßstab, sobald die Kennzahl nicht trennt.
->
-> Entschieden hat **Kriterium 2**: Für jede Gruppe muss es eine andere Maßnahme geben.
-> Bei k = 2 gibt es sie nicht, bei k = 4 schon. Das ist keine Schwäche des Verfahrens,
-> sondern die Arbeitsteilung: Die Statistik liefert Kandidaten, die Fachlichkeit
-> entscheidet.
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Warum k = 4 und nicht das Optimum der Kennzahl</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Den höchsten Silhouettenwert hat <strong>k = {{sil_stationen_bestes_k:.0f}}</strong> ({{sil_stationen_bestwert:.3f}}), nicht das gewählte k = 4 ({{sil_stationen_k4:.3f}}). Entschieden hat Kriterium 2: Bei zehn Stationen erzeugt jedes weitere k Gruppen von ein bis zwei Stationen, für die es keine eigene Maßnahme gibt. Ein Cluster mit einer einzigen Station ist kein Typ, sondern ein Sonderfall.</p><p>Bei der Kundschaft liegen die Werte für k = 2, 4 und 5 dicht beieinander; dort entscheidet die Kennzahl gar nichts. Ohne vorab festgelegte Kriterien bliebe kein Maßstab. Die Statistik liefert Kandidaten, die Fachlichkeit entscheidet.</p></div></details>
 """),
 
 CODE('''

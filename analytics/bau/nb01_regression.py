@@ -621,22 +621,19 @@ belügen. Der vierte Abschnitt kostet 12,5 % der Daten und erspart beides.
 | **Test 1** (12,5 %) | die Punktschätzung wird *einmal* gemessen | danach verbraucht |
 | **Kalibrierung** (12,5 %) | die zweite Runde wird darauf **kalibriert und für die unabhängige Abnahme vorbereitet** | kein Training — aber Auswahl und Filterung |
 
-> **Kalibrierung ist kein finaler Test, sondern ein Kalibrierungszeitraum.** Auf ihm wird das
-> Artefakt ausgewählt, über Radtypen entschieden und über einzelne Kombinationen
-> entschieden. Wer daraufhin Kennzahlen berichtet, berichtet die Güte einer Auswahl, die
-> auf ebendiesen Daten getroffen wurde — sie fällt zu günstig aus.
->
-> Die unabhängige Prüfung des fertigen Artefakts leistet deshalb die **Abnahme** — der
-> fünfte Abschnitt, der schon in Phase 2 versiegelt wurde und in 6.7 einmal geöffnet
-> wird. Sie ist unabhängig, aber sie ist **rückblickend**. Einen Blick nach vorn kann sie
-> nicht leisten; dafür bliebe der Schattenbetrieb:
->
-> ```text
-> Training → Validierung → Test 1: Punktschätzung
->          → Rücksprung  → Kalibrierung: Kalibrierung des Intervallprodukts und Vorbereitung der Abnahme
->          → Abnahme (6.7): unabhängige, rückblickende Prüfung — entscheidet den Status
->          → Schattenbetrieb: prospektive Prüfung in der echten App — steht aus
-> ```
+**Die Kalibrierung ist kein finaler Test.** Auf ihr wird das Artefakt ausgewählt und
+über Radtypen und Kombinationen entschieden. Wer daraufhin Kennzahlen berichtet,
+berichtet die Güte einer Auswahl, die auf ebendiesen Daten getroffen wurde — sie fällt
+zu günstig aus. Die unabhängige Prüfung leistet die **Abnahme**: der fünfte Abschnitt,
+in Phase 2 versiegelt und in 6.7 einmal geöffnet. Sie ist unabhängig, aber
+**rückblickend**; nach vorn schaut nur der Schattenbetrieb.
+
+```text
+Training → Validierung → Test 1: Punktschätzung
+         → Rücksprung  → Kalibrierung: Kalibrierung des Intervallprodukts und Vorbereitung der Abnahme
+         → Abnahme (6.7): unabhängige, rückblickende Prüfung — entscheidet den Status
+         → Schattenbetrieb: prospektive Prüfung in der echten App — steht aus
+```
 """),
 
 CODE("""
@@ -1943,44 +1940,30 @@ gewählt und dann am Gate gemessen wird, ist keine Wahl, sondern eine Reihenfolg
   erreicht am Primärgate {{qtab_gate:.1%}}: **weniger als beide anderen, aber immer
   noch über den geforderten {{gate_schwelle:.0%}}**.
 
-> **Damit ist die Ausgangsfrage dieses Abschnitts beantwortet.** Die naheliegende Idee,
-> das Modell zu tabellieren und so seine Stärke ohne seinen Betriebsaufwand zu bekommen,
-> geht nur zur Hälfte auf: Die **Güte** nimmt die Quantiltabelle mit — jede Hürde hält
-> sie. Die **Reichweite** nimmt sie nicht mit; sie beantwortet
-> {{qtab_auskunft:.1%}} der Anfragen statt der {{quantil_auskunft:.1%}} des Modells und
-> liegt damit sogar unter der schlichteren Perzentiltabelle.
-> Der Grund liegt darin, was beim Tabellieren verloren geht: Das Modell
-> kennt Wochentag, Monat, Feiertag und Ferienlage und rechnet für **diese** Anfrage; die
-> Tabelle mittelt sie über die Kombination weg. Was die Quantilregression über die
-> Perzentiltabelle hebt, steckt also nicht im Verfahren, sondern in den Merkmalen, die
-> nur zur Laufzeit verfügbar sind.
->
-> **Wer die Reichweite will, muss den Dienst betreiben.** Die zugesagte Güte hat die
-> CSV auch — sie nimmt dieselben Hürden. Was ihr fehlt, sind die
-> {{verzicht_reichweite:.1%}} zusätzlich beantworteten Anfragen. Zu entscheiden ist
-> damit zwischen zwei Betriebsformen: scikit-learn,
-> Versionsstände und ein Dienst, der antwortet, gegen eine CSV, die jedes System
-> lesen kann.
+**Damit ist die Ausgangsfrage des Abschnitts beantwortet.** Die naheliegende Idee, das
+Modell zu tabellieren und so seine Stärke ohne seinen Betriebsaufwand zu bekommen, geht
+nur zur Hälfte auf: Die **Güte** nimmt die Quantiltabelle mit — jede Hürde hält sie. Die
+**Reichweite** nimmt sie nicht mit; sie beantwortet {{qtab_auskunft:.1%}} der Anfragen
+statt der {{quantil_auskunft:.1%}} des Modells und liegt damit sogar unter der
+schlichteren Perzentiltabelle.
 
-> **Warum das Kriterium die Reichweite braucht.** Ohne sie könnte ein Kandidat bestehen,
-> indem er für einen ganzen Radtyp schweigt: Was er sagt, stimmt dann fast immer — er
-> sagt nur nichts. Die Reichweite je Radtyp gehört deshalb mit hinein, **festgelegt vor
-> der Messung**, und ein Radtyp ohne einzige Auskunft zählt als null, nicht als fehlend.
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Warum das Tabellieren die Reichweite kostet</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Beim Tabellieren geht verloren, woraus das Modell seine Reichweite zieht: Es kennt Wochentag, Monat, Feiertag und Ferienlage und rechnet f\u00fcr <em>diese</em> Anfrage, w\u00e4hrend die Tabelle sie \u00fcber die Kombination hinweg mittelt. Was die Quantilregression \u00fcber die Perzentiltabelle hebt, steckt also nicht im Verfahren, sondern in Merkmalen, die nur zur Laufzeit verf\u00fcgbar sind.</p><p><strong>Wer die Reichweite will, muss den Dienst betreiben.</strong> Die zugesagte G\u00fcte hat die CSV auch \u2014 sie nimmt dieselben H\u00fcrden. Was ihr fehlt, sind {{verzicht_reichweite:.1%}} zus\u00e4tzlich beantwortete Anfragen.</p></div></details>
+
+**Das Kriterium braucht die Reichweite.** Ohne sie könnte ein Kandidat bestehen, indem er
+für einen ganzen Radtyp schweigt: Was er sagt, stimmt dann fast immer — er sagt nur
+nichts. Die Reichweite je Radtyp gehört deshalb mit hinein, festgelegt vor der Messung,
+und ein Radtyp ohne einzige Auskunft zählt als null, nicht als fehlend.
 
 ### Architekturvorgabe vor der Kandidatenwahl
 
-**Bevor irgendein Kandidat gewählt wird, muss feststehen, was betrieben werden darf.**
-Diese Reihenfolge ist nicht Formalie: Wer zuerst misst und dann entscheidet, was
-betreibbar ist, wählt die Vorgabe, die zum gewünschten Kandidaten passt.
+**Bevor ein Kandidat gewählt wird, muss feststehen, was betrieben werden darf.** Wer
+zuerst misst und dann entscheidet, was betreibbar ist, wählt die Vorgabe, die zum
+gewünschten Kandidaten passt.
 
-**Die Frage wurde gestellt, bevor gemessen wurde, und sie lautete:** Darf die
-Preisauskunft einen Dienst aufrufen, oder muss sie eine Datei sein?
-
-Die Antwort des Auftraggebers: **Ein Laufzeitdienst ist zulässig.** Die Begründung ist
-banal und wurde lange übersehen — die App rechnet ohnehin zur Laufzeit. Sie kennt den
-angemeldeten Kunden, seinen Tarif, seinen Freiminutenstand und seinen Rabatt und bildet
-daraus den Preis. Wer `kundenpreis()` je Anfrage ausführt, betreibt einen Dienst; die
-Frage war nie, *ob* gerechnet wird, sondern *was*.
+Die Frage stand vor der Messung: Darf die Preisauskunft einen Dienst aufrufen, oder muss
+sie eine Datei sein? Die Antwort des Auftraggebers lautete **ja, ein Laufzeitdienst ist
+zulässig** — die App rechnet ohnehin zur Laufzeit, wenn sie aus Tarif, Freiminuten und
+Rabatt den Preis bildet. Die Frage war nie, *ob* gerechnet wird, sondern *was*.
 
 | | Quantilregression | Perzentiltabelle | Quantiltabelle |
 |---|---|---|---|
@@ -2068,45 +2051,31 @@ Aufgenommen wird eine Kombination nur, wenn sie drei Bedingungen erfüllt:
    und je Radtyp**, dazu der Ausschluss jeder Kombination, die dort *messbar* darunter
    liegt.
 
-> **Die Gesamtquote verdeckt die Gruppe, auf die es ankommt.**
->
-> Die Einteilung steht **vor** der Fahrt fest — die App kennt den Freiminutenstand und
-> die geschätzte Spanne, mehr braucht sie nicht:
->
-> | Lage bei der Anfrage | Fahrten | Abdeckung | Untergrenze | Spanne |
-> |---|---:|---:|---:|---:|
-> | Rest deckt die **obere** Grenze | {{n_gedeckt:,}} | {{abdeckung_gedeckt:.1%}} | {{unten_gedeckt:.1%}} | {{breite_gedeckt:.2f}} € |
-> | Grenzfall | {{n_grenz:,}} | {{abdeckung_grenz:.1%}} | {{unten_grenz:.1%}} | {{breite_grenz:.2f}} € |
-> | Rest deckt die **untere** Grenze nicht | {{n_offen:,}} | {{abdeckung_offen:.1%}} | **{{unten_offen:.1%}}** | {{breite_offen:.2f}} € |
->
-> In der ersten Gruppe deckt das Guthaben die **angezeigte obere Grenze**. Innerhalb
-> der Spanne ist der Preis damit die Startgebühr, unabhängig von der Dauer. Wer diese
-> Grenze überfährt, zahlt trotzdem Minuten — deshalb stehen dort
-> {{abdeckung_gedeckt:.1%}} und nicht hundert Prozent. Die dritte Gruppe, {{anteil_preisabhaengig:.0%}} der Anfragen, zahlt
-> nach Minuten: **Nur dort leistet die Schätzung überhaupt etwas.** Dort liegt die
-> Untergrenze des Vertrauensbereichs bei **{{unten_offen:.1%}}** gegen die zugesagten
-> {{gate_schwelle:.0%}} — das Primärgate ist damit **{{gate_urteil}}**.
->
-> **Die Gesamtquote von {{abdeckung_gesamt:.1%}} hätte das nicht gezeigt, in keine
-> Richtung.** Sie liegt deutlich höher als der Wert, auf den es ankommt, weil sie die
-> beiden oberen Gruppen mitzählt, in denen das Guthaben den Preis ohnehin bestimmt. Wer
-> nur sie berichtet, berichtet eine Zahl, die mit der Zusage nichts zu tun hat — auch
-> dann, wenn das Urteil am Ende günstig ausfällt.
->
-> Diese Gruppe ist die **vorab festgelegte Evaluationsgruppe**: An ihr, nicht am
-> Gesamtmittel, entscheidet sich, ob das Produkt trägt. Sie nachträglich über die
-> tatsächliche Dauer abzugrenzen wäre bequemer und wertlos — die App kennt die
-> tatsächliche Dauer nicht.
+**Die Gesamtquote verdeckt die Gruppe, auf die es ankommt.** Die Einteilung steht vor
+der Fahrt fest — die App kennt den Freiminutenstand und die geschätzte Spanne:
 
-> **Was diese Freigabe leistet — und was nicht.** Die 80 Prozent sind für die Tabelle
-> als Ganzes und für jeden freigegebenen Radtyp gemessen. Für die **einzelne**
-> Verbindung ist das keine Zusage: Die meisten Kombinationen haben im Testzeitraum nur
-> eine Handvoll Fahrten, und aus acht Fahrten lässt sich keine 80-Prozent-Aussage
-> ableiten. Ausgeschlossen wird deshalb, was messbar durchfällt — nicht behauptet, dass
-> alles Übrige bestanden hätte.
->
-> Eine echte Zusage je Verbindung bräuchte deutlich mehr Fahrten je Kombination — die
-> Abnahme in 6.7 prüft die Zusage auf der Ebene, auf der sie ausgesprochen wird.
+| Lage bei der Anfrage | Fahrten | Abdeckung | Untergrenze | Spanne |
+|---|---:|---:|---:|---:|
+| Rest deckt die **obere** Grenze | {{n_gedeckt:,}} | {{abdeckung_gedeckt:.1%}} | {{unten_gedeckt:.1%}} | {{breite_gedeckt:.2f}} € |
+| Grenzfall | {{n_grenz:,}} | {{abdeckung_grenz:.1%}} | {{unten_grenz:.1%}} | {{breite_grenz:.2f}} € |
+| Rest deckt die **untere** Grenze nicht | {{n_offen:,}} | {{abdeckung_offen:.1%}} | **{{unten_offen:.1%}}** | {{breite_offen:.2f}} € |
+
+In der ersten Gruppe deckt das Guthaben die angezeigte obere Grenze; der Preis ist dann
+die Startgebühr, unabhängig von der Dauer. Wer die Grenze überfährt, zahlt trotzdem
+Minuten — deshalb stehen dort {{abdeckung_gedeckt:.1%}} und nicht hundert Prozent.
+
+**Nur die dritte Gruppe zahlt nach Minuten** — {{anteil_preisabhaengig:.0%}} der
+Anfragen. Dort leistet die Schätzung überhaupt etwas, und dort liegt die Untergrenze bei
+**{{unten_offen:.1%}}** gegen die zugesagten {{gate_schwelle:.0%}}: Das Primärgate ist
+damit **{{gate_urteil}}**.
+
+Die Gesamtquote von {{abdeckung_gesamt:.1%}} hätte das in keine Richtung gezeigt. Sie
+zählt die beiden oberen Gruppen mit, in denen das Guthaben den Preis ohnehin bestimmt.
+Diese Gruppe ist deshalb die **vorab festgelegte Evaluationsgruppe** — sie nachträglich
+über die tatsächliche Dauer abzugrenzen wäre bequemer und wertlos, denn die App kennt
+die tatsächliche Dauer nicht.
+
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Was die Freigabe je Verbindung nicht leistet</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Die {{gate_schwelle:.0%}} sind f\u00fcr die Tabelle als Ganzes und je freigegebenem Radtyp gemessen. F\u00fcr die <strong>einzelne</strong> Verbindung ist das keine Zusage: Die meisten Kombinationen haben im Testzeitraum nur eine Handvoll Fahrten, und aus acht Fahrten l\u00e4sst sich keine solche Aussage ableiten.</p><p>Ausgeschlossen wird deshalb, was messbar durchf\u00e4llt \u2014 nicht behauptet, dass alles \u00dcbrige bestanden h\u00e4tte. Eine echte Zusage je Verbindung br\u00e4uchte deutlich mehr Fahrten je Kombination.</p></div></details>
 """),
 
 CODE("""

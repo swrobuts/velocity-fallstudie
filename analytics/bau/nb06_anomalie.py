@@ -81,25 +81,17 @@ PHASE(1, "Der Betrieb hat morgens eine halbe Stunde. Was soll er sich ansehen?")
 MD("""
 ### Die Ausgangslage
 
-Im Betriebsbüro sitzt morgens jemand, der den Vortag durchsieht. Heute geschieht das
-stichprobenhaft: Man scrollt durch die Liste und schaut, was ins Auge fällt. Bei rund
-**einigen Dutzend Fahrten am Tag** geht das noch; bei einem wachsenden Netz nicht mehr.
-
-Gesucht ist eine **kurze Tagesliste**, die einen menschlichen Blick verdient. Wie kurz,
-wird gleich ausgerechnet — nicht gesetzt.
+Im Betriebsbüro sitzt morgens jemand, der den Vortag durchsieht — heute stichprobenhaft,
+bei wachsendem Netz nicht mehr machbar. Gesucht ist eine **kurze Tagesliste**, die einen
+menschlichen Blick verdient. Wie kurz, wird ausgerechnet, nicht gesetzt.
 
 ### Drei Produkte mit drei Zeitpunkten
 
-Die naheliegende Fassung dieser Aufgabe lautet: „eine Liste mit den auffälligsten
-Vorgängen von gestern". Sie ist falsch, und der Fehler ist nicht offensichtlich — er liegt
-im **Zeitpunkt**.
-
-Ein Rad, das seit vierzehn Stunden unterwegs ist, soll **jetzt** gesucht werden, nicht
-morgen früh. Eine ungewöhnlich teure Fahrt von gestern kann warten. Und eine stillstehende
-Station betrifft überhaupt nicht dieselbe Beobachtungseinheit — dort ist ein *Stationstag*
-der Fall, keine Fahrt.
-
-Wir trennen deshalb von Anfang an drei Produkte:
+Die naheliegende Fassung der Aufgabe lautet „eine Liste mit den auffälligsten Vorgängen
+von gestern". Sie ist falsch, und der Fehler liegt im **Zeitpunkt**: Ein Rad, das seit
+vierzehn Stunden unterwegs ist, muss **jetzt** gesucht werden. Eine teure Fahrt von
+gestern kann warten. Und eine stillstehende Station betrifft eine andere
+Beobachtungseinheit — dort ist ein *Stationstag* der Fall, keine Fahrt.
 
 | | Produkt | Wann entschieden wird | Datengrundlage | Wer handelt |
 |---|---|---|---|---|
@@ -107,14 +99,11 @@ Wir trennen deshalb von Anfang an drei Produkte:
 | **A2** | **auffällige abgeschlossene Fahrten** | morgens, über den Vortag | Fahrten, die **bereits beendet** sind | Betriebsbüro prüft am Schreibtisch |
 | **B** | **auffällige Stationstage** | morgens, über den Vortag | Stationstage | Technik prüft das Terminal |
 
-> **Warum diese Trennung vor der Verfahrenswahl steht.** Werden A1 und A2 in einer Liste
-> zusammengefasst, wird die Maßnahme „Rad bergen, bevor es verschwindet" mit
-> **abgeschlossenen** Fahrten begründet. Bei einer abgeschlossenen Fahrt ist das Rad
-> zurück; eine Bergung ist dann gegenstandslos. Die Liste wäre korrekt gerechnet und für
-> den angegebenen Zweck unbrauchbar.
->
-> **Der Entscheidungszeitpunkt gehört deshalb an den Anfang: Er bestimmt, welche Daten
-> zur Verfügung stehen und welche Maßnahme überhaupt möglich ist.**
+Diese Trennung steht **vor** der Verfahrenswahl. Werden A1 und A2 in einer Liste
+zusammengefasst, wird die Maßnahme „Rad bergen, bevor es verschwindet" mit
+**abgeschlossenen** Fahrten begründet — bei denen das Rad längst zurück ist. Die Liste
+wäre korrekt gerechnet und für ihren Zweck unbrauchbar. Der Entscheidungszeitpunkt
+bestimmt, welche Daten vorliegen und welche Maßnahme überhaupt möglich ist.
 
 ### Nutzen eines Funds, Kosten eines Fehlalarms
 
@@ -124,30 +113,25 @@ Wir trennen deshalb von Anfang an drei Produkte:
 | **Fehlalarm** | jemand sieht sich einen Vorgang an, der in Ordnung war | **6 €** (fünf Minuten) |
 | **übersehene Auffälligkeit** | Rad bleibt liegen, wird gestohlen oder beschädigt | **Verlust 120 €** |
 
-**Ab einer Trefferquote von rund 5 % rechnet sich die Liste bereits** — der eine Fund
-trägt die neunzehn Fehlalarme. Das ist eine ungewöhnlich niedrige Schwelle, und sie ist
-typisch für Anomalieerkennung: Man darf sich viel Ungenauigkeit leisten, solange die Fälle
-selten und die Funde wertvoll sind.
+**Ab rund 5 % Trefferquote rechnet sich die Liste** — ein Fund trägt neunzehn
+Fehlalarme. Das ist typisch für Anomalieerkennung: Man darf sich viel Ungenauigkeit
+leisten, solange die Fälle selten und die Funde wertvoll sind.
 
-> **Wie lang darf die Liste sein?** Auch diese Zahl wird gerechnet, nicht gesetzt. Das
-> Betriebsbüro hat morgens eine halbe Stunde, eine Prüfung dauert fünf Minuten — das sind
-> **sechs Fälle**, nicht zehn. Eine gesetzte Länge widerspricht dem Zeitbudget leicht:
-> Zehn Prüfungen brauchen 50 Minuten. Die Listenlänge wird unten deshalb aus Zeitbudget
-> und Prüfdauer berechnet statt angenommen.
+**Diese 5 % sind aber nicht das Erfolgskriterium.** Eine Liste, bei der neunzehn von
+zwanzig Einträgen unnötig sind, öffnet nach zwei Wochen niemand mehr — dann ist der
+rechnerische Nutzen null. Angesetzt werden deshalb **20 %**: jeder fünfte Eintrag muss
+tragen. Der Unterschied zwischen „rechnet sich" und „wird benutzt" ist der Grund, warum
+Erfolgskriterien nicht aus einer Kostenrechnung allein folgen.
 
-> **Diese 5 % sind aber nicht unser Erfolgskriterium.** Sie sind die Grenze, ab der die
-> Liste wirtschaftlich vertretbar ist. Eine Liste, bei der neunzehn von zwanzig Einträgen unnötig
-> sind, wird nach zwei Wochen niemand mehr öffnen — und dann ist der rechnerische Nutzen
-> gleich null. Wir setzen deshalb **20 %** an: jeder fünfte Eintrag muss tragen.
->
-> Der Unterschied zwischen „rechnet sich" und „wird benutzt" ist genau der Grund, warum
-> Erfolgskriterien nicht aus einer Kostenrechnung allein folgen.
+**Die Listenlänge wird ebenfalls gerechnet.** Das Betriebsbüro hat morgens eine halbe
+Stunde, eine Prüfung dauert fünf Minuten — das sind sechs Fälle, nicht zehn. Zehn
+Prüfungen bräuchten 50 Minuten.
 
 ### Erfolgskriterien je Produkt
 
 | Produkt | Kriterium | Schwelle | Prüfbar? |
 |---|---|---|---|
-| **A1** offene Rückgaben | jeder offene Vorgang über der Schwelle wird gemeldet, **bevor** er endet | Vollständigkeit | **nur logisch** — Label und Regel benutzen dieselbe 8-Stunden-Grenze; betrieblich nicht prüfbar |
+| **A1** offene Rückgaben | jeder offene Vorgang über der Schwelle wird gemeldet, **bevor** er endet | Vollständigkeit | **nur logisch** — Label und Regel benutzen dieselbe 8-Stunden-Grenze |
 | **A2** auffällige Fahrten | Liste ≤ Kapazität, jede Zeile mit Begründung | Kapazität und Nachvollziehbarkeit | ja |
 | **A2** auffällige Fahrten | Trefferquote | **nicht festlegbar** | **nein** — siehe unten |
 | **B1** Stationsstörungen | Präzision je **neuem Alarm** (dedupliziert) | ≥ {{b_gate_praezision:.0%}} | ja, gegen `stationsstoerung.csv` |
@@ -155,42 +139,19 @@ selten und die Funde wertvoll sind.
 | **B3** Stationsstörungen | Verzug bis zum ersten Alarm | ≤ {{b_gate_verzug}} Tag | ja |
 | **B4** Stationsstörungen | Alarme je Tag im Mittel, **Technikkapazität** | ≤ {{b_gate_kapazitaet:.0f}} | ja |
 
-> **Warum B vier Kriterien braucht und nicht eines.** Eine Regel, die fast nie meldet,
-> erfüllt eine Präzisionshürde mühelos und übersieht dabei fast jede Störung. Präzision
-> ohne Recall ist deshalb kein Gütemaß, sondern eine Einladung zum Schweigen. Umgekehrt
-> ist ein hoher Recall wertlos, wenn die Liste im Betrieb nicht abgearbeitet werden kann
-> — daher B4.
->
-> **Jede Zahl nennt ihren Nenner**, und das ist bei B keine Formalie: „je gemeldetem
-> Stationstag", „je neuem Alarm" und „je Störungsepisode" sind drei verschiedene
-> Einheiten, und dieselbe Regel sieht in ihnen sehr verschieden aus. Bindend ist der
-> **neue Alarm** — das ist die Einheit, die einen Technikereinsatz auslöst.
->
-> **Zu B4 gehört eine offene Annahme.** Die Kapazität von {{b_gate_kapazitaet:.0f}}
-> Alarmen je Tag ist aus dem Zeitbudget des **Betriebsbüros** abgeleitet — also aus
-> Produkt A. Bei B fährt die Technik hin und prüft ein Terminal; deren Zeitbudget und
-> Bearbeitungsdauer je Stationsalarm liegen nicht vor. B4 ist deshalb als
-> **Platzhalterschwelle** zu lesen und wird bis zur fachlichen Klärung ausgewiesen, aber
-> **nicht freigabebindend** ausgewertet.
->
-> **Diese Fassung ist eine dokumentierte Überarbeitung von Phase 1.** Die erste kannte
-> nur B1. B2 bis B4 wurden ergänzt, **bevor** der Testabschnitt geöffnet wurde — der
-> einzige Zeitpunkt, zu dem eine solche Ergänzung noch zulässig ist.
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Warum Produkt B vier Kriterien braucht</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Eine Regel, die fast nie meldet, erfüllt eine Präzisionshürde mühelos und übersieht dabei fast jede Störung. Präzision ohne Recall ist deshalb kein Gütemaß. Umgekehrt ist ein hoher Recall wertlos, wenn die Liste im Betrieb nicht abgearbeitet werden kann — daher B4.</p><p><strong>Jede Zahl nennt ihren Nenner.</strong> „Je gemeldetem Stationstag“, „je neuem Alarm“ und „je Störungsepisode“ sind drei verschiedene Einheiten, in denen dieselbe Regel sehr verschieden aussieht. Bindend ist der <strong>neue Alarm</strong> — die Einheit, die einen Technikereinsatz auslöst.</p><p><strong>Zu B4 gehört eine offene Annahme.</strong> Die Kapazität von {{b_gate_kapazitaet:.0f}} Alarmen je Tag stammt aus dem Zeitbudget des Betriebsbüros, also aus Produkt A. Bei B fährt die Technik hin; deren Zeitbudget liegt nicht vor. B4 ist deshalb eine Platzhalterschwelle und wird ausgewiesen, aber <strong>nicht freigabebindend</strong> ausgewertet.</p><p>B2 bis B4 wurden gegenüber der ersten Fassung ergänzt — <strong>bevor</strong> der Testabschnitt geöffnet wurde. Das ist der einzige Zeitpunkt, zu dem eine solche Ergänzung zulässig ist.</p></div></details>
 
-> **Für A2 gibt es bewusst kein Trefferkriterium, und das ist keine Nachlässigkeit.** Eine
-> Trefferquote braucht ein Label. Für „unbekannte Auffälligkeiten" gibt es per Definition
-> keines; wer über ein Label verfügt, kennt die gesuchte Auffälligkeit bereits. Was
-> vorliegt, ist eine
-> **Teilwahrheit** (Fahrten über acht Stunden), und die misst nur, wie gut das Modell eine
-> Regel nachbaut, die wir ohnehin haben.
->
-> Der einzige ehrliche Weg für A2 heißt **Schattenbetrieb**: Die Liste läuft mit, jemand
-> beurteilt jede Zeile, und **danach** — nicht vorher — lässt sich eine Trefferquote
-> nennen. Bis dahin ist A2 eine Hypothesenliste, kein Erkennungssystem.
+**Für A2 gibt es bewusst kein Trefferkriterium.** Eine Trefferquote braucht ein Label;
+für „unbekannte Auffälligkeiten" gibt es per Definition keines. Was vorliegt, ist eine
+**Teilwahrheit** — Fahrten über acht Stunden —, und die misst nur, wie gut das Modell
+eine Regel nachbaut, die ohnehin vorhanden ist. Der einzige belastbare Weg für A2 ist
+der **Schattenbetrieb**: Die Liste läuft mit, jemand beurteilt jede Zeile, und
+**danach** lässt sich eine Trefferquote nennen. Bis dahin ist A2 eine Hypothesenliste,
+kein Erkennungssystem.
 
-> **Und ein Kriterium, das hier fehlt und in einer zweiten Runde dazugehört:** eine
-> Zufallsstichprobe aus den **nicht** gemeldeten Vorgängen. Ohne sie erfährt man nie, wie
-> viele Probleme die Liste übersehen hat — man sieht nur die, die sie zeigt.
+**Ein Kriterium fehlt und gehört in eine zweite Runde:** eine Zufallsstichprobe aus den
+**nicht** gemeldeten Vorgängen. Ohne sie bleibt unbekannt, wie viele Probleme die Liste
+übersieht — sichtbar sind nur die, die sie zeigt.
 """),
 
 # =====================================================================
@@ -1967,40 +1928,21 @@ MD("""
 | **A2** auffällige Fahrten | Tagesliste mit Schwelle, höchstens sechs Plätze, Begründung je Zeile | **nur Schattenbetrieb** — die Trefferquote ist unbekannt |
 | **B** Stationsstörungen | Regel „zwei Nulltage in Folge an einer Station mit Normalbetrieb", täglich | **{{b_status}}** — {{b_gates_halten}} der vier vorab festgelegten Gates halten auf dem unangetasteten Testabschnitt ({{stat_je_alarm:.1%}} je Alarm gegen {{b_gate_praezision:.0%}}); eintägige Störungen findet die Regel konstruktionsbedingt nicht |
 
-> **Warum A1 nicht „in Betrieb" heißt, obwohl es alle bekannten Fälle findet.** Diese Quote ist
-> **logisch zwingend**: Die Teilwahrheit ist über dieselbe Schwelle definiert, die Regel
-> prüft dasselbe. Was dabei geprüft wird, ist die Zeitrechnung im Notebook — nicht, ob im
-> Betrieb etwas funktioniert.
->
-> Ungeprüft bleibt alles Entscheidende: ob offene Vorgänge in Echtzeit abrufbar sind, wie
-> vertraglich erlaubte Langzeitmieten ausgenommen werden (die Liste existiert nicht), wie
-> viele Fehlalarme entstehen und ob am Ende ein Rad geborgen wird. **Eine Regel, die man
-> aus ihrer eigenen Definition zurückrechnet, ist eine Spezifikation, kein Nachweis.**
+**A1 heißt nicht „in Betrieb", obwohl es alle bekannten Fälle findet.** Diese Quote ist
+logisch zwingend: Die Teilwahrheit ist über dieselbe Schwelle definiert, die die Regel
+prüft. Geprüft wird damit die Zeitrechnung im Notebook, nicht der Betrieb. Ungeprüft
+bleibt alles Entscheidende — ob offene Vorgänge in Echtzeit abrufbar sind, wie
+vertraglich erlaubte Langzeitmieten ausgenommen werden, wie viele Fehlalarme entstehen
+und ob am Ende ein Rad geborgen wird. **Eine Regel, die aus ihrer eigenen Definition
+zurückgerechnet wird, ist eine Spezifikation, kein Nachweis.**
 
-> **Diese Tabelle ist keine zweite Statusquelle.** Jede Zelle darin ist ein Platzhalter,
-> der aus demselben Wörterbuch `PRODUKTE` gefüllt wird, aus dem auch das Modellpaket
-> entsteht — und eine Zusicherung im Code bricht den Bau ab, wenn beide auseinanderlaufen.
->
-> Das ist die Lehre aus zwei früheren Fassungen: In der einen ging B „als Regel in
-> Betrieb“, während das Paket daneben `"nicht_freigegeben_fuer": ["Stationsstörungen"]`
-> enthielt. In der anderen sagte das Paket „NICHT FREIGEGEBEN“ und die Zeile darunter
-> „freigegeben (Pilot)“. Beide Male stand der Widerspruch offen im Notebook, und beide
-> Male fiel er beim Lesen nicht auf. **Ein Status, der an vier Stellen von Hand gepflegt
-> wird, ist kein Status, sondern vier Behauptungen.**
->
-> **Ein Freigabestatus gehört an genau eine Stelle — und die ist das Artefakt.** Die
-> Tabelle darüber ist von Hand geschrieben; sie liest das Paket **nicht** ein. Bei einer
-> Lehrfassung ist das vertretbar, solange man es dazusagt. In einer Betriebsfassung müsste
-> der Text aus `anomaliemodell.joblib` erzeugt werden, sonst laufen beide über kurz oder
-> lang wieder auseinander — genau so ist der Widerspruch oben entstanden.
+<details style="margin:12px 0 18px 0;border-left:3px solid #D8D8D8;padding-left:14px"><summary style="cursor:pointer;color:#2F2F2F;font-weight:600;padding:2px 0">Warum ein Freigabestatus nur an einer Stelle stehen darf</summary><div style="color:#333333;line-height:1.55;padding-top:8px"><p>Jede Zelle der Tabelle ist ein Platzhalter aus demselben Wörterbuch <code>PRODUKTE</code>, aus dem auch das Modellpaket entsteht; eine Zusicherung im Code bricht den Bau ab, wenn beide auseinanderlaufen.</p><p>Ohne diese Kopplung entstehen Widersprüche, die beim Lesen nicht auffallen: eine Zeile <em>„als Regel in Betrieb“</em> neben einem Paket mit <code>„nicht_freigegeben_fuer“: [„Stationsstörungen“]</code>. Ein Status, der an vier Stellen von Hand gepflegt wird, ist kein Status, sondern vier Behauptungen.</p><p>Die Tabelle oben ist von Hand geschrieben und liest das Paket <strong>nicht</strong> ein. Für eine Lehrfassung ist das vertretbar, solange es dabeisteht; in einer Betriebsfassung müsste der Text aus <code>anomaliemodell.joblib</code> erzeugt werden.</p></div></details>
 
 ### 6.2 Warum A2 nur im Schattenbetrieb läuft
 
-Für die Tagesliste gibt es **keine Trefferquote**, und das ist keine Lücke, sondern die
-Sache selbst: Wer eine Kennzahl für „unbekannte Auffälligkeiten“ hätte, wüsste ja schon,
-wonach er sucht.
-
-Was das konkret bedeutet:
+Für die Tagesliste gibt es **keine Trefferquote** — nicht als Lücke, sondern der Sache
+nach: Wer eine Kennzahl für unbekannte Auffälligkeiten hätte, wüsste bereits, wonach er
+sucht. Daraus folgen vier Schritte:
 
 1. Die Liste läuft mit und wird **nicht** als geprüftes Erkennungssystem bezeichnet.
 2. Jede Zeile bekommt ein Urteil: *war ein Problem* oder *war in Ordnung*.
@@ -2009,10 +1951,10 @@ Was das konkret bedeutet:
 4. Erst wenn ein paar hundert Urteile vorliegen, lässt sich eine Trefferquote nennen —
    und dann auch, ob sich die Liste lohnt.
 
-> **Punkt 3 ist der, den fast alle weglassen.** Wer nur die gemeldeten Fälle beurteilt,
-> misst die Präzision und erfährt über die Vollständigkeit nichts. Ein System, das täglich
-> sechs harmlose Vorgänge meldet und alle echten Probleme übersieht, sieht in dieser
-> Auswertung genauso aus wie eines, das nichts übersieht.
+**Punkt 3 entscheidet.** Wer nur die gemeldeten Fälle beurteilt, misst die Präzision und
+erfährt über die Vollständigkeit nichts: Ein System, das täglich sechs harmlose Vorgänge
+meldet und alle echten Probleme übersieht, sieht dabei aus wie eines, das nichts
+übersieht.
 
 
 ### 6.3 Rückkopplung bei A2

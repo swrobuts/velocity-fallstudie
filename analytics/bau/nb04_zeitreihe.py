@@ -96,21 +96,19 @@ Jeden Abend plant die Disposition den nächsten Tag: Räder laden, prüfen, vert
 Frühdienst besetzen. Grundlage ist heute die Faustregel *„so viel wie letzte Woche"*. An
 Veranstaltungstagen und bei Wetterumschwüngen geht das regelmäßig daneben.
 
-> ### ⚠ Was dieses Notebook liefert — und was nicht
->
-> Prognostiziert wird die **Zahl der Fahrten** eines Tages. Das ist **nicht** dasselbe wie
-> die Zahl bereitzustellender Räder und erst recht nicht der Personalbedarf:
->
-> | | |
-> |---|---|
-> | **ein Rad bedient mehrere Fahrten** | hundert Fahrten heißen nicht hundert Räder |
-> | **die Verteilung zählt** | Eine Station kann leer sein, während anderswo Räder stehen |
-> | **Ladezustand, Werkstatt, Kapazität** | bestimmen mit, was überhaupt verfügbar ist |
-> | **Personalbedarf** | folgt aus Arbeitsmengen, Schichten und Touren, nicht aus Fahrten |
->
-> Die Übersetzung von Fahrten zu Rädern und Schichten ist eine **eigene Analyse**, die
-> dieses Notebook nicht leistet. Was es leistet, ist die Zahl, auf der sie aufsetzen
-> müsste — und die Frage, wie man mit ihrer Unsicherheit umgeht.
+**Prognostiziert wird die Zahl der Fahrten eines Tages** — nicht die Zahl
+bereitzustellender Räder und erst recht nicht der Personalbedarf:
+
+| | |
+|---|---|
+| **ein Rad bedient mehrere Fahrten** | hundert Fahrten heißen nicht hundert Räder |
+| **die Verteilung zählt** | Eine Station kann leer sein, während anderswo Räder stehen |
+| **Ladezustand, Werkstatt, Kapazität** | bestimmen mit, was überhaupt verfügbar ist |
+| **Personalbedarf** | folgt aus Arbeitsmengen, Schichten und Touren, nicht aus Fahrten |
+
+Die Übersetzung von Fahrten zu Rädern und Schichten ist eine **eigene Analyse**, die
+dieses Notebook nicht leistet. Es liefert die Zahl, auf der sie aufsetzen müsste — und
+die Frage, wie mit deren Unsicherheit umzugehen ist.
 
 ### Kosten der beiden Fehlerrichtungen
 
@@ -134,10 +132,9 @@ absichtlich etwas zu hoch. Wir rechnen das in Phase 5 aus.
 | **K2 wirtschaftlich** | Die erwarteten Kosten je Tag müssen unter denen der Faustregel liegen | ebenfalls **in mindestens {{pfad_anteil:.0%}} der Pfade** |
 | **K3 Betrieb** | Die Prognose muss am Vorabend um 18 Uhr vorliegen | dann beginnt die Nachtschicht |
 
-> **Die {{pfad_anteil:.0%}} gelten für K1 *und* K2 — das steht hier, weil es sonst später
-> stillschweigend hinzukäme.** Der Grund ist derselbe für beide: Die Wettervorhersage ist
-> simuliert, und ein einzelner Pfad ist eine Einzelrealisierung. Ein Kostenvorteil, der
-> nur in der Hälfte der Wetterziehungen entsteht, ist kein Kostenvorteil, sondern Glück.
+**Die {{pfad_anteil:.0%}} gelten für K1 und K2 gleichermaßen.** Die Wettervorhersage ist
+simuliert, und ein einzelner Pfad ist eine Einzelrealisierung: Ein Kostenvorteil, der nur
+in der Hälfte der Wetterziehungen entsteht, ist keiner.
 
 ### Was „Pilot" hier bedeutet
 
