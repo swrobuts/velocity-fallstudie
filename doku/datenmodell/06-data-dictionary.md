@@ -299,6 +299,7 @@ Geschäftspartner auf der Nachfrageseite. Die Anmeldung liegt bei Supabase Auth,
 | `registriert_am` | `timestamp with time zone` | nein | `now()` | Fachlicher Zeitpunkt der Anmeldung, unabhängig von der technischen Audit-Spalte. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+| `zeigt_preisschaetzer` | `boolean` | nein | `false` | Zeigt die App auf den Radkacheln den Knopf fuer die Preisschaetzung? Voreinstellung aus. Die Einstellung haengt am Konto, nicht am Geraet - der Auftraggeber wollte den Vergleich mit und ohne Modell ueber Geraete hinweg vorfuehren koennen. |
 
 ## `mitarbeiter` (Tabelle)
 
@@ -379,6 +380,28 @@ Koordinaten je Ortsname, fuer die schematische Landkarte der Stationen (Gestaltu
 | `ort` | `text` | nein |  | Ortsname, wortgleich zu velocity.adresse.ort - der Join-Schluessel zu v_wawi_kundenorte. |
 | `latitude` | `numeric(9,6)` | nein |  | Breitengrad des Ortszentrums. |
 | `longitude` | `numeric(9,6)` | nein |  | Laengengrad des Ortszentrums. |
+
+## `preisschaetzung` (Tabelle)
+
+Ergebnis der Quantilregression aus analytics/notebooks/01_Regression_Fahrtdauer.ipynb: je Verbindung, Radtyp und Tageszeit eine Preisspanne. Enthaelt NUR die freigegebenen Kombinationen - mindestens 30 Fahrten als Grundlage und hoechstens 1,00 Euro Spannbreite. Was fehlt, wird in der App nicht angezeigt.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `schaetzung_id` | `bigint` | nein |  | Technischer Schluessel. Fachlich identifiziert wird eine Zeile ueber Startstation, Zielstation, Radtyp und Zeitfenster. |
+| `startstation` | `text` | nein |  | Name der Station, an der die Fahrt beginnt - so, wie er in velocity.station steht. Bewusst der Name und nicht die ID: Die Tabelle kommt aus einem Notebook, das mit Namen arbeitet, und sie soll ohne Nachschlagen lesbar sein. |
+| `zielstation` | `text` | nein |  | Name der vom Kunden gewaehlten Zielstation. Nie gleich der Startstation - fuer Rundfahrten gibt es keine Schaetzung. |
+| `typ_code` | `text` | nein |  | Fahrradtyp, fuer den die Spanne gilt. Der Minutenpreis unterscheidet sich je Typ, also auch die Euro-Spanne. |
+| `zeitfenster` | `text` | nein |  | frueh (5-10), vormittag (10-15), nachmittag (15-20), abend (20-24). Grober als die Stunde, weil eine Spanne je Stunde auf zu wenigen Fahrten beruhen wuerde. |
+| `minuten_von` | `integer` | nein |  | Untere Grenze der geschaetzten Dauer, aus dem 10-Prozent-Quantil der vergleichbaren Fahrten. |
+| `minuten_bis` | `integer` | nein |  | Obere Grenze der geschaetzten Dauer, aus dem 90-Prozent-Quantil. Zusammen decken die beiden Grenzen rund 80 Prozent der tatsaechlichen Fahrten ab. |
+| `preis_von` | `numeric(6,2)` | nein |  | Untere Grenze der angezeigten Spanne in Euro, aus dem 10-Prozent-Quantil der Dauer ueber das Tarifblatt gerechnet. ACHTUNG: Aendert sich der Minutenpreis, ist diese Spalte falsch - Tabelle neu laden. |
+| `preis_bis` | `numeric(6,2)` | nein |  | Obere Grenze der angezeigten Spanne in Euro. Die Differenz zu preis_von ist per CHECK auf einen Euro begrenzt - eine breitere Spanne ist ehrlich, aber zum Planen unbrauchbar. |
+| `fahrten_grundlage` | `integer` | nein |  | Zahl der vergleichbaren Fahrten, auf denen die Spanne beruht. Wird in der App genannt, damit die Schaetzung nachvollziehbar bleibt. |
+| `stand` | `date` | nein | `CURRENT_DATE` | Wann die Zeile berechnet wurde. Aeltere Staende sind ein Grund, die Tabelle neu zu laden - vor allem nach einer Tarifaenderung. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
+| `start_station_id` | `bigint` | ja |  | Startstation als ID - der stabile Schluessel. Namen aendern sich, IDs nicht. |
+| `ziel_station_id` | `bigint` | ja |  | Zielstation als ID. Die Namensspalten daneben sind fuer die Anzeige, nicht zum Verknuepfen. |
 
 ## `rechenannahme` (Tabelle)
 
@@ -663,6 +686,7 @@ Stammdaten des angemeldeten Kunden. Läuft mit Definer-Rechten und filtert selbs
 | `geburtsdatum` | `date` | ja |  | Geburtsdatum, Grundlage der Altersgrenze. |
 | `status` | `text` | ja |  | aktiv, gesperrt oder geschlossen. |
 | `registriert_am` | `timestamp with time zone` | ja |  | Zeitpunkt der Anmeldung. |
+| `zeigt_preisschaetzer` | `boolean` | ja |  | Hat der Kunde den Preisschaetzer eingeschaltet? Steuert, ob die Radkacheln den Knopf zeigen. |
 | `strasse` | `text` | ja |  | Strasse der Rechnungsadresse. |
 | `hausnummer` | `text` | ja |  | Hausnummer der Rechnungsadresse. |
 | `plz` | `text` | ja |  | Postleitzahl der Rechnungsadresse. |
@@ -713,6 +737,25 @@ Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begren
 | `nummer` | `integer` | ja |  | Position in der Abfolge. |
 | `titel` | `text` | ja |  | Überschrift der Karte. |
 | `beschreibung` | `text` | ja |  | Erläuternder Text. |
+
+## `v_preisschaetzung` (Sicht)
+
+Die freigegebenen Preisspannen, wie die Website sie liest. Enthaelt keine Zeile fuer Rundfahrten und keine fuer Verbindungen, deren Spanne breiter als ein Euro waere - was hier fehlt, wird in der App nicht angezeigt.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `start_station_id` | `bigint` | ja |  | Startstation als ID - damit die App nicht ueber Namen verknuepfen muss. |
+| `ziel_station_id` | `bigint` | ja |  | Zielstation als ID. |
+| `startstation` | `text` | ja |  | Name der Startstation. |
+| `zielstation` | `text` | ja |  | Name der gewaehlten Zielstation. |
+| `typ_code` | `text` | ja |  | Fahrradtyp, fuer den die Spanne gilt. |
+| `zeitfenster` | `text` | ja |  | frueh, vormittag, nachmittag oder abend. |
+| `minuten_von` | `integer` | ja |  | Untere Grenze der geschaetzten Dauer in Minuten. |
+| `minuten_bis` | `integer` | ja |  | Obere Grenze der geschaetzten Dauer in Minuten. |
+| `preis_von` | `numeric(6,2)` | ja |  | Untere Grenze der angezeigten Preisspanne in Euro. |
+| `preis_bis` | `numeric(6,2)` | ja |  | Obere Grenze der angezeigten Preisspanne in Euro. |
+| `fahrten_grundlage` | `integer` | ja |  | Zahl der Fahrten, auf denen die Spanne beruht - wird in der App genannt. |
+| `stand` | `date` | ja |  | Datum der Berechnung. |
 
 ## `v_station` (Sicht)
 
@@ -788,7 +831,7 @@ Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begren
 
 ## `v_wawi_auftrag` (Sicht)
 
-Arbeitssicht der Werkstatt: jeder Wartungsauftrag mit Rad, Bearbeiter und Bearbeitungsstand. Filtert selbst über velocity.hat_rolle.
+Arbeitssicht der Werkstatt: jeder Wartungsauftrag mit Rad, Bearbeiter und Bearbeitungsstand. Filtert selbst über velocity.hat_rolle. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql).
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -806,30 +849,31 @@ Arbeitssicht der Werkstatt: jeder Wartungsauftrag mit Rad, Bearbeiter und Bearbe
 
 ## `v_wawi_fahrt_km` (Sicht)
 
-Einzige Stelle, an der Strecken geschätzt werden. ist_geschaetzt sagt, ob; verfahren sagt, WOMIT. Trägt seit der Gesamtprüfung vom 25.08.2026 eine eigene velocity.hat_rolle('leitung')-Schranke statt nur velocity.ist_mitarbeiter(): die Zeilen führen ausleihe_id, kunde_id und startzeit je Einzelfahrt, also ein Bewegungsprofil - Spec 4.2 gibt das ausdrücklich nur der Leitung, nicht jeder Fachrolle. Der frühere Stand begründete das Fehlen der eigenen Schranke mit demselben Satz, der hier jetzt für das Gegenteil steht: eine Sicht, die ihre Schranke von einer anderen erbt, hat keine eigene.
+Einzige Stelle, an der Strecken geschätzt werden. ist_geschaetzt sagt, ob; verfahren sagt, WOMIT. Trägt seit der Gesamtprüfung vom 25.08.2026 eine eigene velocity.hat_rolle('leitung')-Schranke statt nur velocity.ist_mitarbeiter(): die Zeilen führen ausleihe_id, kunde_id und startzeit je Einzelfahrt, also ein Bewegungsprofil - Spec 4.2 gibt das ausdrücklich nur der Leitung, nicht jeder Fachrolle. Der frühere Stand begründete das Fehlen der eigenen Schranke mit demselben Satz, der hier jetzt für das Gegenteil steht: eine Sicht, die ihre Schranke von einer anderen erbt, hat keine eigene. Traegt AUS DEMSELBEN GRUND KEIN velocity.hat_rolle('demo') (0020_demo_zugang.sql) - ohnehin fuer authenticated vollstaendig entzogen (siehe unten), und ein Bewegungsprofil bliebe das Letzte, was ein oeffentlich beworbener Zugang lesen darf, unabhaengig davon, ueber welchen Weg. v_wawi_km_co2 liest seit der zweiten Demozugang-Runde NICHT MEHR FROM dieser Sicht (siehe deren eigener Kommentar) - es gibt also seither ohnehin keinen indirekten Zugriffsweg mehr, den diese Zeile noch offenhalten müsste.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
-| `ausleihe_id` | `bigint` | ja |  | Schlüssel der Fahrt, für den Verweis aus v_wawi_km_co2 auf die einzelne Ausleihe hinter der Aggregation. |
+| `ausleihe_id` | `bigint` | ja |  | Schlüssel der Fahrt, für einen Verweis auf die einzelne Ausleihe hinter einer Aggregation. v_wawi_km_co2 liest diese Spalte seit ihrer Entkopplung (zweite Demozugang-Runde) nicht mehr über diese Sicht, sondern direkt aus velocity.ausleihe. |
 | `startzeit` | `timestamp with time zone` | ja |  | Beginn der Fahrt, Grundlage der Monatsgruppierung und der Zeitscheibe für Umwegfaktor, Reisegeschwindigkeit und CO2-Annahmen (rechenannahme.gueltigkeit). |
 | `kunde_id` | `bigint` | ja |  | Fahrender Kunde, für eine spätere Auswertung je Kunde ohne erneuten Join auf ausleihe. |
-| `typ_code` | `text` | ja |  | Fahrradtyp der Fahrt, bestimmt in v_wawi_km_co2 die passende CO2-Annahme (co2_rad für CITY, sonst co2_ebike). |
+| `typ_code` | `text` | ja |  | Fahrradtyp der Fahrt. v_wawi_km_co2 bestimmt daraus dieselbe CO2-Annahme (co2_rad für CITY, sonst co2_ebike) - seit ihrer Entkopplung (zweite Demozugang-Runde) über einen eigenen Join auf fahrradtyp, nicht mehr über diese Spalte. |
 | `kilometer` | `numeric` | ja |  | Drei Fälle, siehe verfahren: gemessene Strecke (ausleihe.distanz_km), wo vorhanden; sonst, bei einer Rundfahrt mit Luftlinie null (Start- und Endpunkt gleich), aus der Dauer geschätzt (rechenannahme reisegeschwindigkeit); sonst aus der Luftlinie zwischen Start- und Endpunkt mal Umwegfaktor (rechenannahme). NULL, wenn weder Distanz noch beide Koordinatenpaare vorliegen - eine erfundene Zahl aus einem halben Koordinatenpaar wäre schlimmer als keine. |
 | `ist_geschaetzt` | `boolean` | ja |  | Wahr, wenn kilometer nicht gemessen wurde (verfahren aus_dauer oder aus_luftlinie). Gehört zu jeder Verwendung von kilometer dazu, siehe Kopfkommentar der Sicht. |
 | `verfahren` | `text` | ja |  | gemessen, aus_dauer oder aus_luftlinie - WOMIT kilometer ermittelt wurde. Nötig, weil ist_geschaetzt allein zwei verschiedene Schätzverfahren in einen Topf würfe: aus_dauer (Rundfahrten, Luftlinie strukturell null, Reisegeschwindigkeit als Grundlage) und aus_luftlinie (Luftlinie mal Umwegfaktor) irren sich auf unterschiedliche Weise und müssen sich getrennt auswerten lassen. |
 
 ## `v_wawi_fahrten_je_tag` (Sicht)
 
-Tagesaggregation der abgeschlossenen Fahrten für den Drill-Down aus einer angeklickten Monatszeile der Auswertungen. Absichtlich ohne Personenbezug: keine ausleihe_id, keine kunde_id, keine Uhrzeit - eine Tagessumme ist kein Bewegungsprofil, anders als v_wawi_fahrt_km (siehe deren Kopfkommentar). Bewusst ohne Radtyp-Spalte, siehe Kommentar am create view. Filtert selbst über velocity.hat_rolle('leitung'), dieselbe Rolle wie die drei Monatssichten, aus denen heraus der Drill-Down aufgerufen wird.
+Tagesaggregation der abgeschlossenen Fahrten für den Drill-Down aus einer angeklickten Monatszeile der Auswertungen. Absichtlich ohne Personenbezug: keine ausleihe_id, keine kunde_id, keine Uhrzeit - eine Tagessumme ist kein Bewegungsprofil, anders als v_wawi_fahrt_km (siehe deren Kopfkommentar). Bewusst ohne Radtyp-Spalte, siehe Kommentar am create view. Filtert selbst über velocity.hat_rolle('leitung'), dieselbe Rolle wie die drei Monatssichten, aus denen heraus der Drill-Down aufgerufen wird. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql).
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
 | `tag` | `date` | ja |  | Kalendertag der Fahrt (startzeit), die x-Achse der Säulengrafik. Ein Tag ohne abgeschlossene Fahrt taucht hier NICHT als Zeile auf - die Oberfläche muss ihn selbst als null Fahrten ergänzen, sonst sieht eine echte Lücke im Betrieb wie ein Ladefehler aus (siehe monatsdrilldownEinfuegen() in auswertungen.js). |
 | `fahrten` | `bigint` | ja |  | Zahl der an diesem Tag abgeschlossenen Ausleihen, dieselbe Zählweise (count(distinct ausleihe_id) where status = 'abgeschlossen') wie in v_wawi_umsatz_radtyp/v_wawi_umsatz_kundengruppe/v_wawi_km_co2 - die Summe dieser Spalte über einen Monat muss deshalb die fahrten-Summe der passenden Zeilen jeder der drei Monatssichten ergeben. Genau das prüft test_v_fahrten_je_tag_stimmt_mit_monatssichten_ueberein in t0018_wawi_sichten.sql als wichtigste Zusicherung dieser Sicht. |
+| `umsatz` | `numeric` | ja |  | Summe der Entgeltpositionen aller an diesem Tag abgeschlossenen Fahrten, in Euro. Korrekturpositionen mit negativem Betrag zaehlen mit (wie in v_wawi_umsatz_radtyp). null, wenn keine der Fahrten des Tages abgerechnet ist - die Oberflaeche zeigt dann einen Gedankenstrich, nicht 0,00 Euro. |
 
 ## `v_wawi_fahrten_je_tag_rad` (Sicht)
 
-Dritte Ebene des Drill-Downs (Monat -> Tag -> Räder): jede an einem Tag abgeschlossene Fahrt, vom RAD her gesehen statt vom Kunden - Flottenbetrieb, kein Bewegungsprofil. Bewusst OHNE ausleihe_id, kunde_id, kundennummer oder Name: dieselben Fahrten wie v_wawi_fahrten_je_tag, nach Rad statt nach Kunde geschnitten - siehe ausführlicher Kopfkommentar am create view für die Begründung dieser Grenze. Kein Join auf v_wawi_fahrt_km (deren eigene hat_rolle('leitung')-Schranke würde disposition sonst ungewollt ausschließen) - die Kilometerformel steht deshalb ein zweites Mal hier. Filtert selbst über velocity.hat_rolle('leitung') oder velocity.hat_rolle('disposition').
+Dritte Ebene des Drill-Downs (Monat -> Tag -> Räder): jede an einem Tag abgeschlossene Fahrt, vom RAD her gesehen statt vom Kunden - Flottenbetrieb, kein Bewegungsprofil. Bewusst OHNE ausleihe_id, kunde_id, kundennummer oder Name: dieselben Fahrten wie v_wawi_fahrten_je_tag, nach Rad statt nach Kunde geschnitten - siehe ausführlicher Kopfkommentar am create view für die Begründung dieser Grenze. Kein Join auf v_wawi_fahrt_km (deren eigene hat_rolle('leitung')-Schranke würde disposition sonst ungewollt ausschließen) - die Kilometerformel steht deshalb ein zweites Mal hier. Filtert selbst über velocity.hat_rolle('leitung') oder velocity.hat_rolle('disposition'). Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql).
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -843,10 +887,23 @@ Dritte Ebene des Drill-Downs (Monat -> Tag -> Räder): jede an einem Tag abgesch
 | `dauer_minuten` | `integer` | ja |  | Dauer der Fahrt in Minuten. |
 | `kilometer` | `numeric` | ja |  | Gefahrene Strecke - gemessen oder geschätzt, siehe ist_geschaetzt und die Drei-Fall-Formel im Kopfkommentar (identisch zu v_wawi_fahrt_km.kilometer). NULL, wenn weder Distanz noch beide Koordinatenpaare vorliegen. |
 | `ist_geschaetzt` | `boolean` | ja |  | Wahr, wenn kilometer nicht gemessen, sondern aus Dauer oder Luftlinie geschätzt wurde - gehört zu jeder Anzeige von kilometer dazu. |
+| `umsatz` | `numeric` | ja |  | Summe der Entgeltpositionen dieser einen Fahrt, in Euro. Netto in dem Sinn, dass Korrekturpositionen mit negativem Betrag mitzaehlen (siehe v_wawi_umsatz_radtyp weiter oben). null, wenn die Fahrt keine Entgeltposition traegt - dann ist sie NICHT abgerechnet, was etwas anderes ist als 0,00 Euro; die Oberflaeche zeigt dafuer einen Gedankenstrich. Additiv ueber Fahrten, deshalb in der Warenwirtschaft als summierbare Spalte gefuehrt. |
+
+## `v_wawi_fahrten_je_tag_typ` (Sicht)
+
+Fahrten und Umsatz je Kalendertag UND Radtyp - die nach Radtyp filterbare Fassung von v_wawi_fahrten_je_tag. Die Summe ueber alle Radtypen eines Tages ergibt exakt dessen Zeile dort (in t0018 geprueft). Kein Kundenbezug. Filtert selbst ueber velocity.hat_rolle('leitung') oder velocity.hat_rolle('demo') - dieselbe Schranke wie die groebere Sicht.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `tag` | `date` | ja |  | Kalendertag der Fahrt (startzeit) - derselbe Wert wie in v_wawi_fahrten_je_tag, nur je Radtyp noch einmal aufgeteilt. |
+| `typ_code` | `text` | ja |  | Fachlicher Schluessel des Radtyps (fahrradtyp.typ_code) - der Wert, ueber den die Oberflaeche filtert; die Anzeige nimmt bezeichnung aus der Spalte typ daneben. |
+| `typ` | `text` | ja |  | Bezeichnung des Radtyps zum Anzeigen (fahrradtyp.bezeichnung), z. B. "City-Bike". |
+| `fahrten` | `bigint` | ja |  | Zahl der an diesem Tag abgeschlossenen Fahrten MIT DIESEM RADTYP. Ueber alle Radtypen summiert ergibt sie die Fahrtenzahl in v_wawi_fahrten_je_tag. |
+| `umsatz` | `numeric` | ja |  | Summe der Entgeltpositionen der Fahrten dieses Tages MIT DIESEM RADTYP, in Euro. null, wenn keine davon abgerechnet ist - nicht abgerechnet ist etwas anderes als null Euro. |
 
 ## `v_wawi_flotte` (Sicht)
 
-Arbeitssicht der Flotte für Disposition und Werkstatt: ein Rad je Zeile mit Standort, Wartungshistorie und dem dringlichsten offenen Schaden. Filtert selbst über velocity.hat_rolle, siehe Kopfkommentar der Datei.
+Arbeitssicht der Flotte für Disposition und Werkstatt: ein Rad je Zeile mit Standort, Wartungshistorie und dem dringlichsten offenen Schaden. Filtert selbst über velocity.hat_rolle, siehe Kopfkommentar der Datei. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (siehe 0020_demo_zugang.sql) - keine Personendaten in dieser Sicht.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -874,11 +931,11 @@ Arbeitssicht der Flotte für Disposition und Werkstatt: ein Rad je Zeile mit Sta
 
 ## `v_wawi_km_co2` (Sicht)
 
-CO2-Ersparnis gegenüber dem Pkw, ausschliesslich für die Leitung - eigener Rollenfilter (hat_rolle('leitung')), nicht nur geerbt aus v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt gehören in jede Darstellung dieser Zahl.
+CO2-Ersparnis gegenüber dem Pkw, für Leitung und - seit der zweiten Demozugang-Runde - für 'demo'. Liest seither NICHT MEHR FROM v_wawi_fahrt_km, sondern direkt aus velocity.ausleihe (dieselbe Drei-Fall-Kilometerformel ein drittes Mal, siehe Kopfkommentar am create view) und trägt dadurch eine eigene, unabhängige (hat_rolle('leitung') or hat_rolle('demo'))-Schranke, nicht mehr nur geerbt aus v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt gehören in jede Darstellung dieser Zahl. 'demo' ist hier unbedenklich, anders als bei v_wawi_fahrt_km selbst: diese Sicht führt weder kunde_id noch ausleihe_id, nur eine Monatsaggregation je Radtyp ohne Personenbezug - dieselbe Einstufung wie v_wawi_umsatz_radtyp/v_wawi_umsatz_kundengruppe.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
-| `monat` | `date` | ja |  | Erster Tag des Monats der Fahrt (v_wawi_fahrt_km.startzeit). |
+| `monat` | `date` | ja |  | Erster Tag des Monats der Fahrt (ausleihe.startzeit). |
 | `typ_code` | `text` | ja |  | Fahrradtyp, bestimmt die verglichene Eigenemission (co2_rad vs. co2_ebike). |
 | `fahrten` | `bigint` | ja |  | Zahl der Fahrten mit bekannter oder geschätzter Kilometerzahl in diesem Monat und Typ. Nenner für anteil_geschaetzt. |
 | `kilometer` | `numeric` | ja |  | Summe der gefahrenen Kilometer, gemessen und geschätzt gemeinsam - anteil_geschaetzt und fahrten_geschaetzt sagen, wie viel davon Schätzung ist. |
@@ -888,7 +945,7 @@ CO2-Ersparnis gegenüber dem Pkw, ausschliesslich für die Leitung - eigener Rol
 
 ## `v_wawi_kunde` (Sicht)
 
-Arbeitssicht des Kundenservice: Stammdaten, laufender Tarif und Kontostand je Kunde. Bewusst ohne einzelne Fahrten (Bewegungsprofil), ohne Zahlungsmittel (GR17) und ohne alles aus dem Schema auth - was niemand braucht, wird nicht ausgeliefert. Filtert selbst über velocity.hat_rolle.
+Arbeitssicht des Kundenservice: Stammdaten, laufender Tarif und Kontostand je Kunde. Bewusst ohne einzelne Fahrten (Bewegungsprofil), ohne Zahlungsmittel (GR17) und ohne alles aus dem Schema auth - was niemand braucht, wird nicht ausgeliefert. Filtert selbst über velocity.hat_rolle. Seit der zweiten Demozugang-Runde zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql) - ausdrückliche Entscheidung des Auftraggebers: die 1014 Kundensätze sind vollständig erfundene Musterdaten, keine echten Personen. Schreiben bleibt gesperrt: die vier api_kunde_*-Funktionen verlangen weiterhin 'kundenservice' (0019_wawi_logik.sql), unabhängig von dieser Sicht - wawi/kunden.js zeigt deshalb Speichern/Sperren/Auskunft/Löschung für 'demo' nicht an, obwohl der Bereich selbst jetzt sichtbar ist.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -917,7 +974,7 @@ Arbeitssicht des Kundenservice: Stammdaten, laufender Tarif und Kontostand je Ku
 
 ## `v_wawi_kundenorte` (Sicht)
 
-Kundschaft je Ort, aggregiert mit Koordinate fuer die Stationskarte (Gestaltungsauftrag Stationen, Punkt 4). Absichtlich ohne kunde_id, Name oder Adresse - siehe der ausfuehrliche Kopfkommentar am create view fuer die Begruendung, warum eine Zaehlung je Ort zulaessig ist, wo ein Punkt je Person es nicht waere. Filtert selbst ueber velocity.hat_rolle.
+Kundschaft je Ort, aggregiert mit Koordinate fuer die Stationskarte (Gestaltungsauftrag Stationen, Punkt 4). Absichtlich ohne kunde_id, Name oder Adresse - siehe der ausfuehrliche Kopfkommentar am create view fuer die Begruendung, warum eine Zaehlung je Ort zulaessig ist, wo ein Punkt je Person es nicht waere. Filtert selbst ueber velocity.hat_rolle, seit dem Demozugang zusaetzlich velocity.hat_rolle('demo') (0020_demo_zugang.sql) - dieselbe Aggregation, die auch fuer disposition schon die Grenze zieht, gilt fuer 'demo' identisch, deshalb KEIN Widerspruch zum Ausschluss von v_wawi_kunde.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -928,7 +985,7 @@ Kundschaft je Ort, aggregiert mit Koordinate fuer die Stationskarte (Gestaltungs
 
 ## `v_wawi_modell` (Sicht)
 
-Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_rad_anlegen eine modell_id verlangt und keine Sicht sie herausgab.
+Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_rad_anlegen eine modell_id verlangt und keine Sicht sie herausgab. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql) - der Demozugang liest die Auswahlliste ohnehin nie schreibend weiter, siehe dort.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -950,7 +1007,7 @@ Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_r
 
 ## `v_wawi_schaden` (Sicht)
 
-Arbeitssicht der Werkstatt: jede Schadensmeldung mit Rad, Schwere und Alter, unabhängig vom Bearbeitungsstand. Filtert selbst über velocity.hat_rolle. Bewusst OHNE disposition (Spec 5.1 nennt nur werkstatt) - Gesamtprüfung Punkt 3: die Disposition sieht ihren Bedarf für die Flottenplanung, offene Schäden je Rad, bereits über v_wawi_flotte.offene_schaeden und .hoechste_schwere. Freitext (kategorie, beschreibung) und melderart braucht sie dafür nicht - "was niemand braucht, wird nicht ausgeliefert" (Spec 4.2). Ein früherer Entwurf liess disposition hier zusätzlich zu; das war derselbe Rechteüberschuss, der bei v_wawi_umsatz_radtyp weiter unten schon einmal zurückgenommen wurde.
+Arbeitssicht der Werkstatt: jede Schadensmeldung mit Rad, Schwere und Alter, unabhängig vom Bearbeitungsstand. Filtert selbst über velocity.hat_rolle. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql). Bewusst OHNE disposition (Spec 5.1 nennt nur werkstatt) - Gesamtprüfung Punkt 3: die Disposition sieht ihren Bedarf für die Flottenplanung, offene Schäden je Rad, bereits über v_wawi_flotte.offene_schaeden und .hoechste_schwere. Freitext (kategorie, beschreibung) und melderart braucht sie dafür nicht - "was niemand braucht, wird nicht ausgeliefert" (Spec 4.2). Ein früherer Entwurf liess disposition hier zusätzlich zu; das war derselbe Rechteüberschuss, der bei v_wawi_umsatz_radtyp weiter unten schon einmal zurückgenommen wurde.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -969,7 +1026,7 @@ Arbeitssicht der Werkstatt: jede Schadensmeldung mit Rad, Schwere und Alter, una
 
 ## `v_wawi_station` (Sicht)
 
-Arbeitssicht der Disposition: Kapazitaet und Belegung je Station, samt stillgelegter Stationen (GR22 - eine Station wird stillgelegt, nicht gelöscht, deshalb bleibt sie hier sichtbar statt zu verschwinden). Filtert selbst über velocity.hat_rolle.
+Arbeitssicht der Disposition: Kapazitaet und Belegung je Station, samt stillgelegter Stationen (GR22 - eine Station wird stillgelegt, nicht gelöscht, deshalb bleibt sie hier sichtbar statt zu verschwinden). Filtert selbst über velocity.hat_rolle. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql).
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -990,7 +1047,7 @@ Arbeitssicht der Disposition: Kapazitaet und Belegung je Station, samt stillgele
 
 ## `v_wawi_station_flotte` (Sicht)
 
-Welche Raeder stehen an welcher Station (Gestaltungsauftrag Stationen, Punkt 1) - dieselben Spalten wie v_wawi_flotte, aber ueber station_id gefiltert statt ueber den Namenstext v_wawi_flotte.standort, der keine unique-Constraint traegt (siehe Kopfkommentar am create view). Nur Raeder MIT Station (fp.station_id is not null) - ein Rad auf freier Ausleihe gehoert in keine Stationsdetailmaske. Filtert selbst ueber velocity.hat_rolle, dieselben Rollen wie v_wawi_station.
+Welche Raeder stehen an welcher Station (Gestaltungsauftrag Stationen, Punkt 1) - dieselben Spalten wie v_wawi_flotte, aber ueber station_id gefiltert statt ueber den Namenstext v_wawi_flotte.standort, der keine unique-Constraint traegt (siehe Kopfkommentar am create view). Nur Raeder MIT Station (fp.station_id is not null) - ein Rad auf freier Ausleihe gehoert in keine Stationsdetailmaske. Filtert selbst ueber velocity.hat_rolle, dieselben Rollen wie v_wawi_station, seit dem Demozugang zusaetzlich velocity.hat_rolle('demo') (0020_demo_zugang.sql).
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -1006,7 +1063,7 @@ Welche Raeder stehen an welcher Station (Gestaltungsauftrag Stationen, Punkt 1) 
 
 ## `v_wawi_stationsauslastung` (Sicht)
 
-Zu- und Abgaenge sowie aktueller Fuellstand je Station, für Disposition und Leitung. Zählt ausschliesslich abgeschlossene Ausleihen - eine laufende Fahrt hat an ihrer Endstation noch keinen Zugang. Filtert selbst über velocity.hat_rolle.
+Zu- und Abgaenge sowie aktueller Fuellstand je Station, für Disposition und Leitung. Zählt ausschliesslich abgeschlossene Ausleihen - eine laufende Fahrt hat an ihrer Endstation noch keinen Zugang. Filtert selbst über velocity.hat_rolle. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql).
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -1022,7 +1079,7 @@ Zu- und Abgaenge sowie aktueller Fuellstand je Station, für Disposition und Lei
 
 ## `v_wawi_stationsverkehr_zeitfenster` (Sicht)
 
-Zu- und Abgang je Station in Zweistundenbloecken, getrennt nach Werktag und Wochenende, gemittelt ueber den gesamten verfuegbaren Zeitraum (Gestaltungsauftrag Stationen, Punkt 3) - siehe Kopfkommentar am create view fuer die nachgemessene Begruendung von Blockgroesse, Wochentagstrennung und Mittelungszeitraum. Aggregat ohne Personenbezug: keine ausleihe_id, keine kunde_id, kein Kalendertag. Filtert selbst ueber velocity.hat_rolle, dieselben Rollen wie v_wawi_stationsauslastung.
+Zu- und Abgang je Station in Zweistundenbloecken, getrennt nach Werktag und Wochenende, gemittelt ueber den gesamten verfuegbaren Zeitraum (Gestaltungsauftrag Stationen, Punkt 3) - siehe Kopfkommentar am create view fuer die nachgemessene Begruendung von Blockgroesse, Wochentagstrennung und Mittelungszeitraum. Aggregat ohne Personenbezug: keine ausleihe_id, keine kunde_id, kein Kalendertag. Filtert selbst ueber velocity.hat_rolle, dieselben Rollen wie v_wawi_stationsauslastung, seit dem Demozugang zusaetzlich velocity.hat_rolle('demo') (0020_demo_zugang.sql).
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -1039,7 +1096,7 @@ Zu- und Abgang je Station in Zweistundenbloecken, getrennt nach Werktag und Woch
 
 ## `v_wawi_umsatz_kundengruppe` (Sicht)
 
-Monatsumsatz je Tarifgruppe für die Leitung. Die Gruppe ist der Tarif zum Zeitpunkt der Fahrt (a.mitgliedschaft_id), nicht der heutige - siehe Kommentar am create view. sum(ep.betrag) ohne zweite Multiplikation mit vorzeichen, wie bei v_wawi_umsatz_radtyp. Filtert selbst über velocity.hat_rolle.
+Monatsumsatz je Tarifgruppe für die Leitung. Die Gruppe ist der Tarif zum Zeitpunkt der Fahrt (a.mitgliedschaft_id), nicht der heutige - siehe Kommentar am create view. sum(ep.betrag) ohne zweite Multiplikation mit vorzeichen, wie bei v_wawi_umsatz_radtyp. Filtert selbst über velocity.hat_rolle. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql) - eine Gruppenaggregation (Tarifgruppe je Monat), kein Einzelkunde.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -1053,7 +1110,7 @@ Monatsumsatz je Tarifgruppe für die Leitung. Die Gruppe ist der Tarif zum Zeitp
 
 ## `v_wawi_umsatz_radtyp` (Sicht)
 
-Monatsumsatz je Fahrradtyp, ausschliesslich für die Leitung - die Spec reserviert Auswertungen für diese Rolle, disposition bekommt nur die Stationsauslastung. sum(ep.betrag) ohne zweite Multiplikation mit vorzeichen - siehe Kommentar am create view. Filtert selbst über velocity.hat_rolle.
+Monatsumsatz je Fahrradtyp, ausschliesslich für die Leitung - die Spec reserviert Auswertungen für diese Rolle, disposition bekommt nur die Stationsauslastung. sum(ep.betrag) ohne zweite Multiplikation mit vorzeichen - siehe Kommentar am create view. Filtert selbst über velocity.hat_rolle. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql) - eine Monatsaggregation ohne Personenbezug.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|

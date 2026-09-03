@@ -33,6 +33,9 @@ GESPERRT = [
 ERLAUBT = [
     "v_station", "v_verfuegbares_fahrrad", "v_tarifkarte", "v_tarif",
     "v_faq", "v_nutzungsschritt", "v_kennzahl", "v_hoehenmarke", "v_geschaeftsgebiet",
+    # Seit 01.09.2026 an anon freigegeben (0011_sicherheit.sql), von der
+    # Website gelesen - stand aber vier Tage lang nicht in dieser Liste.
+    "v_preisschaetzung",
 ]
 
 

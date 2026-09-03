@@ -17,7 +17,7 @@ Rückgabewert 0, wenn alles besteht.
 | 1 | Zugangsdaten | `.env` ist vollständig |
 | 2 | Aufbaukette zweimal | die SQL-Dateien in `db/aufbau/` laufen, gezählt statt eingetragen, und sind idempotent |
 | 3 | Datenbanktests | 128 pgTAP-Testfunktionen |
-| 4 | Zugriffsschutz | 13 Ressourcen gesperrt, 9 Sichten öffentlich — über HTTP geprüft |
+| 4 | Zugriffsschutz | 13 Ressourcen gesperrt, 10 Sichten öffentlich — über HTTP geprüft |
 | 5 | Altschema | Der anon-Key kommt nicht mehr an die Altdaten |
 | 6 | Abgleichsbericht | Übernahme vollständig, Beträge stimmen auf den Cent |
 | 7 | Mermaid-Diagramme | alle Quellen validieren |

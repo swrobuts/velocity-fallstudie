@@ -21,8 +21,8 @@ vergeben.
 
 | Rolle | Erreicht |
 |---|---|
-| `anon` | ausschließlich die neun öffentlichen Sichten |
-| `authenticated` | zusätzlich die eigenen Zeilen von neun Tabellen und die vier `api_`-Funktionen |
+| `anon` | ausschließlich die zehn öffentlichen Sichten |
+| `authenticated` | zusätzlich die eigenen Zeilen von neun Tabellen und die fünf `api_`-Funktionen |
 | niemand von außen | Basistabellen mit Personenbezug, `adresse`, die `fn_`-Fachlogik |
 
 ## Zwei Arten von Sichten
