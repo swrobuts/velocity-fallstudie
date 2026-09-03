@@ -993,19 +993,57 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let schaetzerTyp = null;
 
+    /* Beschriftung der Fenster. Die Grenzen stehen in SCHAETZER_FENSTER;
+       hier steht nur, wie sie heissen. */
+    const FENSTER_NAME = {
+        frueh: 'früh (5–10 Uhr)', vormittag: 'vormittags (10–15 Uhr)',
+        nachmittag: 'nachmittags (15–20 Uhr)', abend: 'abends (20–24 Uhr)',
+    };
+
     async function schaetzerVorbereiten(typCode) {
         schaetzerTyp = typCode;
         const start = document.getElementById('schaetzer-start');
         const ziel  = document.getElementById('schaetzer-ziel');
+        const fenster = document.getElementById('schaetzer-fenster');
         const ergebnis = document.getElementById('schaetzer-ergebnis');
-        if (!start || !ziel || !ergebnis) return;
+        if (!start || !ziel || !fenster || !ergebnis) return;
 
         ergebnis.replaceChildren(schaetzerZeile('Einen Moment …', ''));
-        const starts = await fetchSchaetzbareStarts(typCode);
-        if (!starts.length) {
+
+        /* Erst die Tageszeit: Sie bestimmt, welche Stationen ueberhaupt
+           zur Auswahl stehen. Angeboten wird nur, wozu es Zeilen gibt -
+           fuer Cargo etwa gibt es abends keine einzige. */
+        const moeglich = await fetchSchaetzbareFenster(typCode);
+        const liste = SCHAETZER_FENSTER.map(([, , n]) => n).filter(n => moeglich.has(n));
+        if (!liste.length) {
             ergebnis.replaceChildren(schaetzerZeile(
                 'Für dieses Rad liegt keine Schätzung vor.',
                 'Das Modell gibt nur Auskunft, wo es genug vergleichbare Fahrten gibt.'));
+            start.replaceChildren(); ziel.replaceChildren(); fenster.replaceChildren();
+            return;
+        }
+        /* Vorbelegt mit der aktuellen Tageszeit, wenn es dafuer etwas
+           gibt - sonst mit dem ersten Fenster, das etwas hergibt.
+           Zwischen 0 und 5 Uhr gibt es keine aktuelle Tageszeit, und auch
+           dann soll der Schaetzer benutzbar sein statt zu schweigen. */
+        const jetzt = schaetzerFenster(new Date().getHours());
+        fenster.replaceChildren(...liste.map(n => neueOption(n, FENSTER_NAME[n] || n)));
+        fenster.value = liste.includes(jetzt) ? jetzt : liste[0];
+
+        await schaetzerStartsLaden();
+    }
+
+    async function schaetzerStartsLaden() {
+        const start = document.getElementById('schaetzer-start');
+        const ziel  = document.getElementById('schaetzer-ziel');
+        const fenster = document.getElementById('schaetzer-fenster');
+        const ergebnis = document.getElementById('schaetzer-ergebnis');
+        if (!start || !ziel || !fenster || !ergebnis || !schaetzerTyp) return;
+        const starts = await fetchSchaetzbareStarts(schaetzerTyp, fenster.value);
+        if (!starts.length) {
+            ergebnis.replaceChildren(schaetzerZeile(
+                'Zu dieser Tageszeit liegt für dieses Rad keine Schätzung vor.',
+                'Wähle eine andere Tageszeit.'));
             start.replaceChildren(); ziel.replaceChildren();
             return;
         }
@@ -1039,7 +1077,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const start = document.getElementById('schaetzer-start');
         const ziel  = document.getElementById('schaetzer-ziel');
         if (!start || !ziel || !schaetzerTyp) return;
-        const ziele = await fetchSchaetzbareZiele(start.value, schaetzerTyp);
+        const fenster = document.getElementById('schaetzer-fenster');
+        const ziele = await fetchSchaetzbareZiele(start.value, schaetzerTyp,
+                                                  fenster?.value);
         ziel.replaceChildren(neueOption('', 'Ziel wählen …'),
                              ...ziele.map(z => neueOption(z, z)));
         schaetzerZeigen();
@@ -1055,11 +1095,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             ergebnis.replaceChildren(schaetzerZeile('Wähle ein Ziel, dann rechnen wir.', ''));
             return;
         }
-        const fenster = schaetzerFenster(new Date().getHours());
+        /* Das GEWAEHLTE Fenster, nicht die Uhr. Vorher stand hier
+           new Date().getHours(): Wer um zweiundzwanzig Uhr ein E-Bike
+           anschaute, bekam nie eine Zahl, weil im Fenster "abend" nur
+           City-Zeilen stehen. */
+        const fensterFeld = document.getElementById('schaetzer-fenster');
+        const fenster = fensterFeld?.value;
         if (!fenster) {
             ergebnis.replaceChildren(schaetzerZeile(
-                'Zwischen 0 und 5 Uhr schätzen wir nicht.',
-                'In diesen Stunden gibt es zu wenige vergangene Fahrten.'));
+                'Wähle eine Tageszeit.', ''));
             return;
         }
         const z = await fetchPreisspanne(start.value, ziel.value, schaetzerTyp, fenster);
@@ -1092,6 +1136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ergebnis.replaceChildren(box);
     }
 
+    document.getElementById('schaetzer-fenster')?.addEventListener('change', schaetzerStartsLaden);
     document.getElementById('schaetzer-start')?.addEventListener('change', schaetzerZieleLaden);
     document.getElementById('schaetzer-ziel')?.addEventListener('change', schaetzerZeigen);
 

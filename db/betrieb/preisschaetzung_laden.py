@@ -144,6 +144,32 @@ def main() -> int:
     c.executemany(
         f"insert into velocity.preisschaetzung ({', '.join(SPALTEN)}) "
         f"values ({', '.join(['%s'] * len(SPALTEN))})", daten)
+
+    # Die IDs aus der CSV zeigen ins Leere. Das Notebook nummeriert seine
+    # Stationen selbst durch (1, 2, 3 ...), die Datenbank vergibt eigene
+    # Schluessel (30, 31, 32 ...). Alle 212 Zeilen trugen deshalb eine
+    # start_station_id, zu der es keine Station gibt. Aufgefallen ist es
+    # nicht, weil die Website ueber die NAMEN sucht - aber ein Verweis,
+    # der ins Leere zeigt, ist ein Fehler, auch wenn ihn gerade niemand
+    # verfolgt. Hier wird er ueber den Namen aufgeloest, der Fachschluessel
+    # der Tabelle ist ohnehin der Name.
+    c.execute("""
+        update velocity.preisschaetzung p
+           set start_station_id = s1.station_id,
+               ziel_station_id  = s2.station_id
+          from velocity.station s1, velocity.station s2
+         where s1.name = p.startstation and s2.name = p.zielstation""")
+    c.execute("""
+        select count(*) from velocity.preisschaetzung p
+          left join velocity.station s on s.station_id = p.start_station_id
+         where s.station_id is null""")
+    offen = c.fetchone()[0]
+    if offen:
+        v.rollback(); v.close()
+        raise SystemExit(
+            f"{offen} Zeilen mit einem Stationsnamen, den es nicht gibt - "
+            "nichts geschrieben.")
+
     # Die Breitenregel steht im Aufbau als NOT VALID, damit er keinen
     # Altbestand loeschen muss (siehe 0004_bereich_c_tarif_und_preis.sql).
     # Jetzt, wo nur noch frisch geladene Zeilen darin stehen, wird sie
@@ -156,7 +182,7 @@ def main() -> int:
     nachher = c.fetchone()[0]
     v.close()
     print(f"\nvorher {vorher} Zeilen, jetzt {nachher}.")
-    print("Breitenregel geprueft und gueltig geschaltet.")
+    print("Stations-IDs ueber die Namen aufgeloest, Breitenregel gueltig.")
     return 0
 
 

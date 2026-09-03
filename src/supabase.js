@@ -106,16 +106,35 @@ async function fetchPreisspanne(startstation, zielstation, typCode, zeitfenster)
     return zeilen[0] || null;
 }
 
-/* Alle Zielstationen, fuer die es von dieser Startstation aus ueberhaupt
-   eine Schaetzung gibt. Die Auswahlliste zeigt nur, was auch beantwortet
-   werden kann - eine Liste voller Eintraege, die dann "keine Schaetzung"
-   melden, waere eine Zumutung. */
-async function fetchSchaetzbareZiele(startstation, typCode) {
+/* Alle Zielstationen, fuer die es von dieser Startstation aus IM
+   GEWAEHLTEN ZEITFENSTER eine Schaetzung gibt. Die Auswahlliste zeigt
+   nur, was auch beantwortet werden kann - eine Liste voller Eintraege,
+   die dann "keine Schaetzung" melden, waere eine Zumutung.
+
+   Das Zeitfenster fehlte hier bis zum 03.09.2026. Die Liste zeigte jede
+   Verbindung, fuer die es IRGENDWANN eine Schaetzung gibt, gesucht wurde
+   dann fuer die aktuelle Tageszeit. Wer abends ein E-Bike waehlte, bekam
+   eine gefuellte Liste und danach immer "Fuer diese Verbindung schaetzen
+   wir nicht" - im Fenster "abend" stehen nur City-Zeilen. Genau die
+   Sackgasse, die der Absatz darueber vermeiden will. */
+async function fetchSchaetzbareZiele(startstation, typCode, zeitfenster) {
     const zeilen = await ladeListe('v_preisschaetzung', 'zielstation', (q) => q
         .eq('startstation', startstation)
         .eq('typ_code', typCode)
+        .eq('zeitfenster', zeitfenster)
         .order('zielstation'));
     return [...new Set(zeilen.map(z => z.zielstation))];
+}
+
+/* In welchen Zeitfenstern gibt es fuer diesen Radtyp ueberhaupt etwas?
+
+   Die Datenlage ist je Fenster verschieden - abends liegen am wenigsten
+   Fahrten vor. Statt den Nutzer an die Uhr zu binden, bekommt er die
+   Fenster zur Auswahl, und zwar nur die, die eine Antwort haben. */
+async function fetchSchaetzbareFenster(typCode) {
+    const zeilen = await ladeListe('v_preisschaetzung', 'zeitfenster', (q) => q
+        .eq('typ_code', typCode));
+    return new Set(zeilen.map(z => z.zeitfenster));
 }
 
 /* Welche Radtypen haben ueberhaupt eine Schaetzung?
@@ -129,10 +148,12 @@ async function fetchSchaetzbareTypen() {
     return new Set(zeilen.map(z => z.typ_code));
 }
 
-/* Startstationen, von denen aus es Schaetzungen gibt. */
-async function fetchSchaetzbareStarts(typCode) {
+/* Startstationen, von denen aus es im gewaehlten Zeitfenster
+   Schaetzungen gibt - aus demselben Grund wie bei den Zielen. */
+async function fetchSchaetzbareStarts(typCode, zeitfenster) {
     const zeilen = await ladeListe('v_preisschaetzung', 'startstation', (q) => q
         .eq('typ_code', typCode)
+        .eq('zeitfenster', zeitfenster)
         .order('startstation'));
     return [...new Set(zeilen.map(z => z.startstation))];
 }

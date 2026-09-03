@@ -543,9 +543,9 @@
 
 <!-- App Scripts (Reihenfolge wichtig!) -->
 <script src="config.js?v=a7625464"></script>
-<script src="supabase.js?v=3aeac4c9"></script>
+<script src="supabase.js?v=114ade78"></script>
 <script src="auth.js?v=61b78d72"></script>
-<script src="script.js?v=16006d49"></script>
+<script src="script.js?v=0714a385"></script>
 
 
 <!-- DER FAHRPREISRECHNER WOHNT IN EINER SCHUBLADE (28.08.2026).
@@ -576,12 +576,20 @@
       <span class="schaetzer-marke">Nach</span>
       <select id="schaetzer-ziel"></select>
     </label>
+    <!-- Die Tageszeit war bis zum 03.09.2026 nicht waehlbar, sie kam aus
+         der Uhr. Abends gibt es aber nur fuer City-Bikes Schaetzungen -
+         wer um zehn ein E-Bike anschaute, sah nie eine Zahl. Jetzt ist
+         sie ein Feld, vorbelegt mit der aktuellen Tageszeit. -->
+    <label class="schaetzer-feld">
+      <span class="schaetzer-marke">Wann</span>
+      <select id="schaetzer-fenster"></select>
+    </label>
   </div>
   <div class="schaetzer-ergebnis" id="schaetzer-ergebnis" role="status" aria-live="polite">
     <p class="schaetzer-platzhalter">Wähle ein Ziel, dann rechnen wir.</p>
   </div>
   <p class="schaetzer-fussnote">
-    Geschätzt aus vergangenen Fahrten derselben Verbindung zur selben
+    Geschätzt aus vergangenen Fahrten derselben Verbindung zur gewählten
     Tageszeit. Keine Zusage — was du tatsächlich zahlst, hängt davon ab,
     wie lange du unterwegs bist.
   </p>
