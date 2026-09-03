@@ -1,3 +1,21 @@
+> ## ⚠ Dieses Deck ist nicht mehr aktuell (Stand 3. September 2026)
+>
+> Die 124 Folien tragen **abgetippte** Zahlen. Seit der Neuerzeugung der Daten
+> widersprechen sie den Notebooks — nachgewiesen mit
+> `python3 slides/check_deck_zahlen.py`. Betroffen sind alle sechs Fallkapitel,
+> am schwersten Fall 5: Dort trägt das Deck die Aussage „von 32 Regeln bleibt
+> keine" und den Merksatz „0,99 gegen 1,00 Prozent", während heute zwei Regeln
+> A1 bis A3 nehmen und die stärkste Regel mit 1,54 % **über** der Hürde liegt.
+> Auch der Umverteilungsbedarf (1,8 statt 25,7 Räder je Werktag) und die
+> Stationskapazitäten (20–40 statt 35–65) stimmen nicht mehr.
+>
+> **Bis zur Überarbeitung nicht in der Lehre einsetzen.** Aktuell und an die
+> Messwerte gebunden sind stattdessen:
+>
+> * `slides/usecases/*.pptx` — je Fall zwei Folien, aus den Merkzetteln erzeugt
+> * `doku/analytics/Handout_Die_sechs_Modelle.md` — dasselbe für den Fließtext
+> * die sechs Notebooks selbst
+
 # Foliendeck — CRISP-DM an sechs Fallbeispielen
 
 120 Folien im THWS-Design, gebaut aus demselben Master wie das Datenbankdeck
