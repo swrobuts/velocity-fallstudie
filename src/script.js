@@ -106,7 +106,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const [profil, typen] = await Promise.all([
             fetchProfil(), fetchSchaetzbareTypen()
         ]);
-        preisschaetzerAn = Boolean(profil?.zeigt_preisschaetzer);
+        /* Kein Profil heisst KEIN WUNSCH, nicht "aus". Sonst faellt ein
+           Konto, dessen Profil gerade nicht geladen werden konnte, still
+           auf einen ausgeschalteten Schaetzer zurueck. */
+        preisschaetzerAn = profil ? Boolean(profil.zeigt_preisschaetzer) : true;
         schaetzbareTypen = typen;
         if (schalter) schalter.checked = preisschaetzerAn;
         radKachelSchaetzknoepfeSetzen();
@@ -146,7 +149,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // ===== UI UPDATE FUNKTION =====
-    function updateUI(user) {
+    async function updateUI(user) {
         if (user) {
             const name = getUserDisplayName();
             userNavBtn.innerHTML = `<i class="fa-solid fa-circle-user"></i> ${escapeHtml(name)}`;
@@ -181,10 +184,23 @@ document.addEventListener("DOMContentLoaded", async () => {
             userNavBtn.removeAttribute('aria-controls');
             userNavBtn.onclick = (e) => { e.preventDefault(); openModal(); };
             hideRentalBanner();
-            /* Abgemeldet gibt es keinen Schaetzer: Die Einstellung
-               gehoert zu einem Konto, und ohne Konto gibt es keine. */
-            preisschaetzerAn = false;
-            if (schalter) schalter.checked = false;
+            /* Abgemeldet ist der Schaetzer AN.
+
+               Bis zum 03.09.2026 stand hier preisschaetzerAn = false, mit
+               der Begruendung, die Einstellung gehoere zu einem Konto.
+               Das verwechselt zwei Dinge: Der SCHALTER gehoert zum Konto,
+               die SCHAETZUNG nicht. v_preisschaetzung ist an anon
+               freigegeben und traegt keinen Personenbezug - es sind
+               aggregierte Spannen je Verbindung. Es gab hier also nichts
+               zu schuetzen, nur etwas zu verstecken.
+
+               Zusammen mit der Voreinstellung "aus" am Konto bekam den
+               Schaetzer damit praktisch niemand zu Gesicht: abgemeldet
+               nie, angemeldet nur, wer einen Schalter im Kontomenue
+               findet und umlegt. */
+            preisschaetzerAn = true;
+            if (schalter) schalter.checked = true;
+            schaetzbareTypen = await fetchSchaetzbareTypen();
             radKachelSchaetzknoepfeSetzen();
         }
     }

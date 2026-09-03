@@ -97,6 +97,20 @@ create table if not exists velocity.kunde (
 alter table velocity.kunde
   add column if not exists zeigt_preisschaetzer boolean not null default false;
 
+-- Voreinstellung AN, seit dem 03.09.2026.
+--
+-- Sie stand auf aus, und der Schalter sitzt im Kontomenue. Damit sah den
+-- Preisschaetzer faktisch niemand: 1013 von 1014 Konten hatten ihn aus,
+-- jedes neue ebenfalls, und abgemeldet war er ohnehin abgeschaltet. Ein
+-- Merkmal, das man erst finden muss, um es einzuschalten, wird nicht
+-- gefunden - es war zwei Tage lang unbemerkt tot.
+--
+-- Der Zweck des Schalters bleibt: der Vergleich mit und ohne Modell. Nur
+-- die Richtung dreht sich - man schaltet ihn jetzt AUS, um die Seite ohne
+-- Modell zu sehen, statt ihn zu suchen, um sie mit Modell zu sehen.
+alter table velocity.kunde
+  alter column zeigt_preisschaetzer set default true;
+
 select velocity.fn_audit_anhaengen('kunde');
 
 create index if not exists idx_kunde_nachname on velocity.kunde (nachname);

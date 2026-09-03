@@ -170,10 +170,20 @@ begin
   insert into velocity.kunde (email, vorname, nachname)
        values ('schalter@example.org', 'Sara', 'Test')
     returning kunde_id into v_k;
+  -- Voreinstellung AN, seit dem 03.09.2026. Hier stand bis dahin false,
+  -- mit der Begruendung, eine Schaetzung, die niemand bestellt hat,
+  -- gehoere nicht auf den Schirm. Das Ergebnis war eine andere: Sie kam
+  -- ueberhaupt nie auf einen Schirm. 1013 von 1014 Konten hatten den
+  -- Schalter aus, jedes neue ebenfalls, und abgemeldet war der Schaetzer
+  -- im Frontend fest abgeschaltet. Ein Merkmal, das man erst finden muss,
+  -- um es einzuschalten, wird nicht gefunden.
+  --
+  -- Der Schalter bleibt, und mit ihm der Vergleich mit und ohne Modell -
+  -- nur legt man ihn jetzt zum ABschalten um statt zum Einschalten.
   return next is((select zeigt_preisschaetzer from velocity.kunde where kunde_id = v_k),
-                 false,
-                 'Voreinstellung aus - eine Schaetzung, die niemand bestellt hat, '
-                 'gehoert nicht auf den Schirm');
+                 true,
+                 'Voreinstellung an - der Schalter ist zum Abschalten da, '
+                 'nicht zum Finden');
 
   -- Fuer den Schalter selbst brauchen wir eine echte Anmeldung. Wir
   -- nehmen einen vorhandenen Kunden mit auth_uid; gibt es keinen, bleibt

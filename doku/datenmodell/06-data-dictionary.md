@@ -299,7 +299,7 @@ Geschäftspartner auf der Nachfrageseite. Die Anmeldung liegt bei Supabase Auth,
 | `registriert_am` | `timestamp with time zone` | nein | `now()` | Fachlicher Zeitpunkt der Anmeldung, unabhängig von der technischen Audit-Spalte. |
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
-| `zeigt_preisschaetzer` | `boolean` | nein | `false` | Zeigt die App auf den Radkacheln den Knopf fuer die Preisschaetzung? Voreinstellung aus. Die Einstellung haengt am Konto, nicht am Geraet - der Auftraggeber wollte den Vergleich mit und ohne Modell ueber Geraete hinweg vorfuehren koennen. |
+| `zeigt_preisschaetzer` | `boolean` | nein | `true` | Zeigt die App auf den Radkacheln den Knopf fuer die Preisschaetzung? Voreinstellung an, seit dem 03.09.2026. Die Einstellung haengt am Konto, nicht am Geraet - der Auftraggeber wollte den Vergleich mit und ohne Modell ueber Geraete hinweg vorfuehren koennen. Bis zum 03.09.2026 stand die Voreinstellung auf aus; damit hatten 1013 von 1014 Konten den Schaetzer abgeschaltet, ohne es je entschieden zu haben, und abgemeldet war er im Frontend fest aus. Der Vergleich ist weiterhin moeglich - man legt den Schalter jetzt zum Abschalten um. |
 
 ## `mitarbeiter` (Tabelle)
 
@@ -383,7 +383,7 @@ Koordinaten je Ortsname, fuer die schematische Landkarte der Stationen (Gestaltu
 
 ## `preisschaetzung` (Tabelle)
 
-Ergebnis der Quantilregression aus analytics/notebooks/01_Regression_Fahrtdauer.ipynb: je Verbindung, Radtyp und Tageszeit eine Preisspanne. Enthaelt NUR die freigegebenen Kombinationen - mindestens 30 Fahrten als Grundlage und hoechstens 1,00 Euro Spannbreite. Was fehlt, wird in der App nicht angezeigt.
+Ergebnis der Quantilregression aus analytics/notebooks/01_Regression_Fahrtdauer.ipynb: je Verbindung, Radtyp und Tageszeit eine Preisspanne. Enthaelt NUR die freigegebenen Kombinationen - mindestens 30 Fahrten als Grundlage, hoechstens 12 Minuten Spannbreite und hoechstens 60 Prozent der Preismitte. Was fehlt, wird in der App nicht angezeigt.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
@@ -740,7 +740,7 @@ Rechnungen des angemeldeten Kunden. Läuft mit den Rechten des Aufrufers, begren
 
 ## `v_preisschaetzung` (Sicht)
 
-Die freigegebenen Preisspannen, wie die Website sie liest. Enthaelt keine Zeile fuer Rundfahrten und keine fuer Verbindungen, deren Spanne breiter als ein Euro waere - was hier fehlt, wird in der App nicht angezeigt.
+Die freigegebenen Preisspannen, wie die Website sie liest. Enthaelt keine Zeile fuer Rundfahrten und keine fuer Verbindungen, deren Spanne die Nuetzlichkeitsregel aus Phase 5.5 des Notebooks reisst (hoechstens 12 Minuten und hoechstens 60 Prozent der Preismitte) - was hier fehlt, wird in der App nicht angezeigt.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|
