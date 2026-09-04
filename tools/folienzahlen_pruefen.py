@@ -91,6 +91,28 @@ def notizraum(stamm: str) -> str:
     return " ".join(teile)
 
 
+def sqlraum(pfad: pathlib.Path) -> str:
+    """Die PROSA einer SQL-Datei: Kommentarzeilen und comment-on-Texte.
+
+    Nicht jede Folie zitiert ein Notebook. Die Uebertragung der Regel aus
+    Fall 2 in das Betriebssystem ist im Deck ein eigener Punkt, und ihre
+    Zahlen stehen nicht in einem Notebook, sondern im Kopfkommentar von
+    db/aufbau/0021_wartungsprognose.sql - dort, wo begruendet wird, warum
+    sich die Regel nicht abschreiben liess.
+
+    Der CODE bleibt draussen, aus demselben Grund wie der Notebook-
+    Quelltext: Seine Zahlen - Spaltenbreiten, Grenzwerte, Kapazitaeten -
+    decken falsche Folienzahlen zu. Geprueft wird gegen das, was ein
+    Leser tatsaechlich liest.
+    """
+    text = pfad.read_text(encoding="utf-8")
+    zeilen = [z.strip().lstrip("- ") for z in text.splitlines()
+              if z.strip().startswith("--")]
+    for m in re.finditer(r"comment on\b.*?\bis\b(.*?);", text, re.S | re.I):
+        zeilen += re.findall(r"'([^']*)'", m.group(1))
+    return " ".join(zeilen)
+
+
 def einheit_drin(zahl: str, einheit: str, raum: str) -> bool:
     """Prueft eine Angabe MIT ihrer Einheit.
 
@@ -148,18 +170,24 @@ def main() -> int:
         raise SystemExit(f"Deck fehlt: {ziel}\n"
                          "Zuerst: python3 slides/build_crispdm_deck.py")
     raeume = {p.stem: notizraum(p.stem) for p in sorted(NB.glob("*.ipynb"))}
+    sqlraeume = {f"db/aufbau/{p.name}": sqlraum(p)
+                 for p in sorted((WURZEL / "db" / "aufbau").glob("*.sql"))}
     prs = Presentation(str(ziel))
     geprueft = befunde = 0
     for nr, folie in enumerate(prs.slides, 1):
-        quelle = next((sh.text_frame.text for sh in folie.shapes
-                       if sh.has_text_frame and "analytics/notebooks/" in sh.text_frame.text),
-                      None)
-        if not quelle:
+        texte = [sh.text_frame.text for sh in folie.shapes if sh.has_text_frame]
+        raum = marke = None
+        for quelle in texte:
+            tr = re.search(r"notebooks/(\S+?)\.ipynb", quelle)
+            if tr and tr.group(1) in raeume:
+                raum, marke = raeume[tr.group(1)], tr.group(1)[:2]
+                break
+            tr = re.search(r"(db/aufbau/\S+?\.sql)", quelle)
+            if tr and tr.group(1) in sqlraeume:
+                raum, marke = sqlraeume[tr.group(1)], "db"
+                break
+        if raum is None:
             continue
-        treffer = re.search(r"notebooks/(\S+?)\.ipynb", quelle)
-        if not treffer or treffer.group(1) not in raeume:
-            continue
-        raum = raeume[treffer.group(1)]
         geprueft += 1
         fremd = set()
         for sh in folie.shapes:
@@ -180,8 +208,8 @@ def main() -> int:
             befunde += 1
             titel = next((sh.text_frame.text.split("\n")[0] for sh in folie.shapes
                           if sh.has_text_frame and sh.text_frame.text.strip()), "")
-            print(f"Folie {nr:3}  {treffer.group(1)[:2]}  {titel[:56]}")
-            print(f"           steht nicht im Notebook: {', '.join(sorted(fremd))}")
+            print(f"Folie {nr:3}  {marke}  {titel[:56]}")
+            print(f"           steht nicht in der Quelle: {', '.join(sorted(fremd))}")
     print(f"\n{geprueft} Folien mit Quellenangabe geprueft, {befunde} Befund(e).")
     return 1 if befunde else 0
 

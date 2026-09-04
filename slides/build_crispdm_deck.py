@@ -1032,6 +1032,46 @@ def teil_synthese(prs):
                "Verfahren kann man nachschlagen; diese Reihenfolge muss man sich "
                "angewöhnen.")
 
+    # DIE EINZIGE FOLIE DES DECKS, DIE NICHT AUS EINEM NOTEBOOK STAMMT.
+    # Sie zeigt, was NACH Phase 6 passiert: Die Faustregel aus Fall 2 ist
+    # in das Betriebssystem uebernommen worden - und hat sich dabei
+    # geaendert. Ihre Quellenzeile zeigt deshalb auf die Aufbaudatei;
+    # tools/folienzahlen_pruefen.py prueft ihre Zahlen gegen deren
+    # Kopfkommentar, genau wie sonst gegen ein Notebook.
+    s = folie(prs, "Synthese", "Gleiche Frage, andere Daten — andere Formel",
+              "Die Faustregel aus Fall 2 ist inzwischen in der Warenwirtschaft "
+              "angekommen und rechnet dort auf dem echten Bestand. Übernommen "
+              "werden konnte die Frage — wer hat seit der letzten Reparatur am "
+              "meisten gearbeitet? —, nicht die Rechnung. Drei Messungen haben "
+              "sie umgeschrieben.",
+              quelle="db/aufbau/0021_wartungsprognose.sql · Kopfkommentar")
+    y0 = unter_intro(s)
+    streifen(s, [
+        ("Die Strecke fehlt.",
+         "Bei 40 % der Fahrten, je Rad zwischen 37 % und 82 % — eine "
+         "Kilometersumme sortierte nach Datenqualität statt nach Verschleiß",
+         "Fahrzeit statt Kilometer"),
+        ("Der Typ schlägt das Rad.",
+         "Lastenradfahrt 39 Minuten, Cityradfahrt 19 — die Liste enthielt 96 % "
+         "aller Lastenräder und 4 % der Cityräder, jetzt 8 % und 25 %",
+         "geteilt durch den Typ-Median"),
+        ("Ein Ausreißer kippt alles.",
+         "Ein Rad stand mit 6.435 Fahrminuten auf Platz 1 — davon 5.422 aus "
+         "einer einzigen Fahrt über 90 Stunden; jetzt steht es auf Platz 52",
+         "höchstens 300 Minuten je Fahrt"),
+    ], y=y0, hoehe=64, luecke=10, chip_b=196)
+    sandband(s, "Übertragbar ist die Frage, nicht die Formel. Wer eine Regel "
+                "mitnimmt, ohne sie am neuen Bestand nachzumessen, nimmt die "
+                "Annahmen des alten Bestands stillschweigend mit.",
+             y=darunter(y0, 3 * 64 + 2 * 10))
+    notizen(s, "Diese Folie beantwortet die Frage, die im Block sonst offen "
+               "bleibt: Was passiert mit einem Ergebnis nach der Freigabe? Hier "
+               "ist es nachvollziehbar - dieselbe Idee, ein anderer Datenbestand, "
+               "und jede der drei Änderungen ist an einer Messung festgemacht, "
+               "nicht an einer Meinung. Wer die Folie im Vortrag vertieft: Der "
+               "dritte Punkt ist der billigste und der wirksamste. Eine einzige "
+               "nicht beendete Ausleihe hatte die ganze Rangfolge bestimmt.")
+
     s = folie(prs, "Synthese", "Wo die Zeit tatsächlich hingeht",
               "Zählt man die Codezellen der sechs Notebooks nach Phasen, ergibt "
               "sich dasselbe Bild wie in echten Projekten.")

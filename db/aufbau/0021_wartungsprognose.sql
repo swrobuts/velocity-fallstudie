@@ -45,6 +45,11 @@
 -- MEDIAN DES TYPS geteilt. Die Rangfolge entsteht damit INNERHALB des
 -- Typs, und die Zahl ist lesbar: 1,47 heisst "dieses Rad hat halb so
 -- viel mehr gearbeitet wie ein durchschnittliches Rad seiner Art".
+-- Nachgemessen, vorher gegen nachher - Anteil des Typs auf der Liste:
+--
+--   Lastenrad   96 %  ->   8 %
+--   E-Bike      54 %  ->  17 %
+--   Cityrad      4 %  ->  25 %
 --
 -- DRITTENS: Eine einzige nicht beendete Ausleihe kippt die Liste. Rad
 -- EB-00447 stand mit 6.435 Minuten auf Platz 1 - davon 5.422 aus EINER
