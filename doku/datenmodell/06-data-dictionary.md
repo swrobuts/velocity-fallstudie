@@ -1173,4 +1173,4 @@ Arbeitssicht der eingefrorenen Prüflisten: ein Rad je Zeile mit Platz, Dringlic
 | `regelversion` | `text` | ja |  | Welche Regel die Reihenfolge bestimmt hat. |
 | `gilt_bis` | `date` | ja |  | Ende des Vorhersagefensters. |
 | `betriebsmodus` | `text` | ja |  | probelauf: die Liste ordnet keine Reparatur an. |
-| `dringlichkeit` | `text` | ja |  | Reihenfolge des Arbeitstags: zuerst (Platz 1-20), danach (21-40), wenn Zeit bleibt (ab 41). |
+| `dringlichkeit` | `text` | ja |  | Reihenfolge des Arbeitstags: zuerst (Platz 1-20), danach (21-40), wenn Zeit bleibt (ab 41). KEINE eigene Information - der Platz in Zwanzigerblöcken, sonst nichts. Die Grenzen sind Schnitte und keine Schwellen in den Daten: am 04.09.2026 lagen zwischen Platz 20 und 21 drei Tausendstel der Nutzungsquote, über die ganze Liste dagegen 0,33. |

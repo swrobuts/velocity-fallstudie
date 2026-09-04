@@ -347,6 +347,12 @@ select p.stichtag,
        -- die Reihenfolge des Arbeitstags: zuerst, danach, wenn Zeit
        -- bleibt. Die Grenzen sind dieselben Zwanzigerbloecke, in denen
        -- Notebook 2 seine Trefferquoten misst.
+       -- SCHNITTE, KEINE SCHWELLEN. Die Grenzen bei 20 und 40 teilen den
+       -- Arbeitstag ein; in den Daten liegt dort nichts. Gemessen am
+       -- 04.09.2026: zwischen Platz 20 und 21 drei Tausendstel der
+       -- Nutzungsquote, zwischen 40 und 41 zwei - ueber die ganze Liste
+       -- dagegen 0,33. Der groesste Abstand zwischen zwei Nachbarn liegt
+       -- zwischen Platz 1 und 2 und damit gerade nicht auf einer Grenze.
        case when p.rang <= 20 then 'zuerst'
             when p.rang <= 40 then 'danach'
             else 'wenn Zeit bleibt' end as dringlichkeit
@@ -387,7 +393,7 @@ comment on column velocity.v_wawi_wartungsprognose.meldungen_bisher is 'Zahl der
 comment on column velocity.v_wawi_wartungsprognose.regelversion is 'Welche Regel die Reihenfolge bestimmt hat.';
 comment on column velocity.v_wawi_wartungsprognose.gilt_bis is 'Ende des Vorhersagefensters.';
 comment on column velocity.v_wawi_wartungsprognose.betriebsmodus is 'probelauf: die Liste ordnet keine Reparatur an.';
-comment on column velocity.v_wawi_wartungsprognose.dringlichkeit is 'Reihenfolge des Arbeitstags: zuerst (Platz 1-20), danach (21-40), wenn Zeit bleibt (ab 41).';
+comment on column velocity.v_wawi_wartungsprognose.dringlichkeit is 'Reihenfolge des Arbeitstags: zuerst (Platz 1-20), danach (21-40), wenn Zeit bleibt (ab 41). KEINE eigene Information - der Platz in Zwanzigerblöcken, sonst nichts. Die Grenzen sind Schnitte und keine Schwellen in den Daten: am 04.09.2026 lagen zwischen Platz 20 und 21 drei Tausendstel der Nutzungsquote, über die ganze Liste dagegen 0,33.';
 
 -- ---- Rechte ----------------------------------------------------------
 -- Die Basistabelle bleibt zu, wie jede andere. Die Warenwirtschaft
