@@ -161,23 +161,37 @@ async function instandhaltungAufbauen() {
     // die niemand ansieht). Jetzt sieht sie jemand - jede einzelne. Und
     // sieben plus drei Zeilen sind kein Preis: es sind weniger Daten als
     // eine einzige der frueheren Zaehlanfragen an Netzverkehr kostete.
-    const [alleSchaeden, alleAuftraege, modelleFuerTypnamen] = await Promise.all([
-        ladeListe('v_wawi_schaden',
-            'schadensmeldung_id, rahmennummer, typ_code, gemeldet_am, kategorie, ' +
-            'schwere, status, auftraege',
-            (q) => q.order('gemeldet_am')),
-        ladeListe('v_wawi_auftrag',
-            'wartungsauftrag_id, schadensmeldung_id, status, arbeitszeit_minuten'),
-        ladeListe('v_wawi_modell', 'typ_code, typ')
-    ]);
-    zeigeKopftafel(vorgang, instandhaltungKopftafel(
-        alleSchaeden, alleAuftraege,
-        // v_wawi_schaden traegt nur typ_code, keinen ausgeschriebenen
-        // Namen (siehe deren Spaltenliste) - v_wawi_modell dagegen schon.
-        // Neun Modellzeilen statt einer eigens angelegten
-        // Uebersetzungstabelle nur fuer drei Radtypnamen, die ohnehin
-        // schon in der Datenbank stehen.
-        new Map(modelleFuerTypnamen.map((m) => [m.typ_code, m.typ]))));
+    //
+    // NUR AUF DEN BEIDEN VORGANGSREITERN. Die Tafel zeigt die
+    // SCHADENSFAELLE; auf der Prueffliste stuenden ueber 60
+    // vorgeschlagenen Raedern sieben Schadensmeldungen, die mit ihnen
+    // nichts zu tun haben - und es waere die erste Zahl, die jemand
+    // liest. Beim Einbau des dritten Reiters war die Tafel schlicht
+    // nicht bedacht; aufgefallen ist es erst auf einem Bildschirmfoto.
+    //
+    // Damit entfallen dort auch diese drei Ladeanfragen. Sie holten
+    // Zeilen fuer eine Tafel, die niemand mehr sieht.
+    if (unterbereich === 'pruefliste') {
+        zeigeKopftafel(vorgang, null);
+    } else {
+        const [alleSchaeden, alleAuftraege, modelleFuerTypnamen] = await Promise.all([
+            ladeListe('v_wawi_schaden',
+                'schadensmeldung_id, rahmennummer, typ_code, gemeldet_am, kategorie, ' +
+                'schwere, status, auftraege',
+                (q) => q.order('gemeldet_am')),
+            ladeListe('v_wawi_auftrag',
+                'wartungsauftrag_id, schadensmeldung_id, status, arbeitszeit_minuten'),
+            ladeListe('v_wawi_modell', 'typ_code, typ')
+        ]);
+        zeigeKopftafel(vorgang, instandhaltungKopftafel(
+            alleSchaeden, alleAuftraege,
+            // v_wawi_schaden traegt nur typ_code, keinen ausgeschriebenen
+            // Namen (siehe deren Spaltenliste) - v_wawi_modell dagegen schon.
+            // Neun Modellzeilen statt einer eigens angelegten
+            // Uebersetzungstabelle nur fuer drei Radtypnamen, die ohnehin
+            // schon in der Datenbank stehen.
+            new Map(modelleFuerTypnamen.map((m) => [m.typ_code, m.typ]))));
+    }
 
     if      (unterbereich === 'schaeden')   await schaedenZeigen(vorgang);
     else if (unterbereich === 'pruefliste') await pruefListeZeigen(vorgang);
