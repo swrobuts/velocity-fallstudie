@@ -52,16 +52,17 @@ EINRICHTUNG
         SUPABASE_URL, SUPABASE_ANON_KEY,
         WAWI_AGENT_EMAIL, WAWI_AGENT_PASSWORT
 
+    Eigene Umgebung, damit die allgemeine unberuehrt bleibt:
+        bash mcp/einrichten.sh
+
     Claude Desktop, ~/Library/Application Support/Claude/
     claude_desktop_config.json:
 
         {"mcpServers": {"velocity-wawi": {
-            "command": "python3",
-            "args": ["<Pfad>/velocity-fallstudie/mcp/server.py"]}}}
+            "command": "<Pfad>/mcp/.venv/bin/python",
+            "args": ["<Pfad>/mcp/server.py"]}}}
 
-    Claude Code:  claude mcp add velocity-wawi -- python3 <Pfad>/mcp/server.py
-
-Aufruf zum Selbsttest: python3 mcp/server.py --pruefen
+Aufruf zum Selbsttest: mcp/.venv/bin/python mcp/server.py --pruefen
 """
 from __future__ import annotations
 

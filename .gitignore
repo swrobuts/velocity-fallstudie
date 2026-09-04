@@ -25,3 +25,7 @@ doku/verifikation/*sicherung*/
 analytics/kampagnenliste.csv
 analytics/testliste_historisch_*.csv
 analytics/wartungsliste.csv
+
+# Die virtuelle Umgebung des MCP-Servers. Sie entsteht mit
+# bash mcp/einrichten.sh und gehoert nicht ins Repository.
+mcp/.venv/

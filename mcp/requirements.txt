@@ -1,0 +1,7 @@
+# Die Abhaengigkeiten des MCP-Servers, festgenagelt auf Hauptversionen.
+#
+# mcp 2.x hat FastMCP in MCPServer umbenannt und die API geaendert;
+# server.py ist gegen 2.x geschrieben. Die Obergrenze verhindert, dass
+# ein spaeteres 3.x den Server im Semester lautlos zerlegt.
+mcp>=2.1,<3
+httpx>=0.27,<1

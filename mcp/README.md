@@ -32,31 +32,41 @@ Domain ist nach RFC 2606 reserviert). Dann den Mitarbeitersatz anhängen:
 python3 db/run.py db/betrieb/mitarbeiter_agentenkonto.sql
 ```
 
-**2 · Zugangsdaten.** In die nicht versionierte `.env`:
+**2 · Umgebung.** Der Server bekommt eine eigene, damit er die
+Arbeitsumgebung nicht anfasst, in der noch anderes läuft:
+
+```bash
+bash mcp/einrichten.sh
+```
+
+Das legt `mcp/.venv` an (gitignored) und nennt am Ende den Python-Pfad,
+der in die Konfiguration gehört.
+
+**3 · Zugangsdaten.** In die nicht versionierte `.env`:
 
 ```
 WAWI_AGENT_EMAIL=agent@wawi.invalid
 WAWI_AGENT_PASSWORT=…
 ```
 
-**3 · Prüfen**, bevor irgendein Client ins Spiel kommt:
+**4 · Prüfen**, bevor irgendein Client ins Spiel kommt:
 
 ```bash
-python3 mcp/server.py --pruefen
+mcp/.venv/bin/python mcp/server.py --pruefen
 ```
 
 Meldet sich an, liest eine Zeile aus `v_wawi_flotte`, zählt die
 Werkzeuge. Wer diesen Schritt überspringt und in Claude Desktop nur
 „keine Werkzeuge" sieht, sucht den Fehler im falschen Programm.
 
-**4 · Eintragen.** Claude Desktop, in
+**5 · Eintragen.** Claude Desktop, in
 `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "velocity-wawi": {
-      "command": "python3",
+      "command": "<Pfad>/velocity-fallstudie/mcp/.venv/bin/python",
       "args": ["<Pfad>/velocity-fallstudie/mcp/server.py"]
     }
   }
@@ -66,7 +76,7 @@ Werkzeuge. Wer diesen Schritt überspringt und in Claude Desktop nur
 Claude Code nimmt denselben Server:
 
 ```bash
-claude mcp add velocity-wawi -- python3 <Pfad>/velocity-fallstudie/mcp/server.py
+claude mcp add velocity-wawi -- <Pfad>/mcp/.venv/bin/python <Pfad>/mcp/server.py
 ```
 
 ## Die Werkzeuge

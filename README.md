@@ -128,7 +128,8 @@ python3 tools/breitenregel_pruefen.py  # Notebook, SQL-CHECK und Ladelauf der Pr
 python3 tools/readme_pruefen.py        # die Notebook-README gegen die Merkzettel
 python3 tools/notebooks_frisch_gebaut.py  # sind die Notebooks der gebaute Stand?
 python3 tools/mcp_check.py             # die Werkzeuge des MCP-Servers gegen die Datenbank
-python3 mcp/server.py --pruefen        # Anmeldung des Agentenzugangs
+bash mcp/einrichten.sh                 # eigene Umgebung für den MCP-Server
+mcp/.venv/bin/python mcp/server.py --pruefen   # Anmeldung des Agentenzugangs
 python3 tools/freisteller_pruefen.py   # die Radbilder gegen ihre Vorlagen
 python3 tools/zahlen_gegen_db.py       # Anleitung und Vortrag gegen die Datenbank
 python3 tools/raeder_weissgrund.py     # Radbilder neu erzeugen
