@@ -8,7 +8,7 @@ Geschäftsfrage bis zur Auslieferung und zurück.
 | 1 | `01_Regression_Fahrtdauer` | Regression | Was kostet mich diese Fahrt voraussichtlich? | **sichtbar** — die Anzeige ist freigeschaltet, für alle drei Radtypen |
 | 2 | `02_Klassifikation_Wartungsrisiko` | Klassifikation | Welche 60 Räder prüfen wir nächstes Quartal? | Freigabe — **für die Faustregel, nicht für das Modell** |
 | 3 | `03_Clustering_Stationen_und_Kunden` | Clustering + RFM | Welche Stationstypen und Kundensegmente gibt es? | für den Einsatz freigegeben, **analytisch nicht belegt** |
-| 4 | `04_Zeitreihe_Nachfrageprognose` | Zeitreihe | Wie viele Räder braucht der Frühdienst morgen? | **Schattenpilot** — rechnet mit, entscheidet nicht |
+| 4 | `04_Zeitreihe_Nachfrageprognose` | Zeitreihe | Wie viele Räder braucht der Frühdienst morgen? | **Probebetrieb** — rechnet mit, entscheidet nicht |
 | 5 | `05_Assoziation_Wege_im_Netz` | Assoziationsanalyse | Zwischen welchen Stationen fließt es wann? | Produkt A **nicht freigegeben**, Produkt B nur analytisch |
 | 6 | `06_Anomalieerkennung_Auffaellige_Vorgaenge` | Anomalieerkennung | Was soll sich der Betrieb heute früh ansehen? | Teilfreigabe — **eine Aufgabe scheitert begründet** |
 

@@ -74,7 +74,7 @@ auszuführen. Sie entstehen aus einer Quelle unter `analytics/bau/` und
 werden beim Bauen ausgeführt — fällt eine Zelle um, bricht der Bau ab.
 
 Der Ausgang ist nicht immer eine Freigabe. Ein Notebook endet mit
-*Schattenpilot*, eines verweigert einem seiner beiden Produkte die
+*Probebetrieb*, eines verweigert einem seiner beiden Produkte die
 Freigabe, weil die Wirtschaftlichkeit nicht prüfbar ist. Das ist Absicht:
 Ein Verfahren, das nichts taugt, muss man erkennen dürfen.
 

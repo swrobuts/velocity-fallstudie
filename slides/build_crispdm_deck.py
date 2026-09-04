@@ -855,7 +855,7 @@ def fall4(prs):
         ["Die Planung bekommt eine begründete Zahl statt eines Erfahrungswerts.",
          "Der Aufschlag macht die teurere Fehlerrichtung zu einer sichtbaren "
          "Entscheidung.",
-         "Der Schattenpilot läuft mit und wird protokolliert."],
+         "Der Probebetrieb läuft mit und wird protokolliert."],
         ["Prognostiziert wird die Gesamtzahl; gebraucht werden Räder je Station.",
          "Die Wetterunsicherheit ist simuliert, nicht gemessen.",
          "Ein Sommerfenster trägt keine Jahresaussage."],

@@ -13,7 +13,7 @@ Am 04.09.2026 fielen vier Falschaussagen auf einmal auf:
   Notebook 1  "Teilfreigabe (nur CITY)"   - der Status ist "sichtbar", und
               die Preisschaetzung deckt seit dem 03.09. alle drei Radtypen
               ab (212 Zeilen: CARGO 55, CITY 55, EBIKE 102)
-  Notebook 4  "Freigabe"                  - es ist ein Schattenpilot
+  Notebook 4  "Freigabe"                  - es ist ein Probebetrieb
   Notebook 5  "Freigabe"                  - Produkt A ist nicht
               freigegeben, Produkt B hat nur ein analytisches Lehr-Gate
   Notebook 5  "1,8 Raeder je Werktag bei Stationen fuer 20 bis 40"
@@ -81,8 +81,8 @@ AUSSAGEN = [
      lambda w: w["03"]["status_einsatz"] == "freigegeben"
                and w["03"]["status_analytisch"] == "nicht belegt"),
     ("04", "Status Notebook 4",
-     "**Schattenpilot** — rechnet mit, entscheidet nicht",
-     lambda w: w["04"]["nb04_status"] == "schattenpilot"),
+     "**Probebetrieb** — rechnet mit, entscheidet nicht",
+     lambda w: w["04"]["nb04_status"] == "probebetrieb"),
     ("05", "Status Notebook 5",
      "Produkt A **nicht freigegeben**, Produkt B nur analytisch",
      lambda w: w["05"]["status_a"].startswith("nicht freigegeben")),

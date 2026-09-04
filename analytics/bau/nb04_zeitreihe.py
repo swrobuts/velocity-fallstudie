@@ -785,9 +785,9 @@ merke("k1_pfadanteil", _anteil_k1); merke("k2_pfadanteil", _anteil_k2)
 # eine operative Dispositionsfreigabe - und weil das Wetter simuliert
 # ist und nur ein Testfenster vorliegt, waere die auch nicht zu haben.
 # Modellpaket, Konsole und Schlusszelle lesen aus dieser einen Variable.
-STATUS = ("schattenpilot" if (K1_ROBUST and K2_ROBUST) else "ruecksprung")
+STATUS = ("probebetrieb" if (K1_ROBUST and K2_ROBUST) else "ruecksprung")
 STATUS_SATZ = {
-    "schattenpilot": "Schattenpilot freigegeben \u2014 die Prognose l\u00e4uft im "
+    "probebetrieb": "Probebetrieb freigegeben \u2014 die Prognose l\u00e4uft im "
                      "internen Planungswerkzeug mit und wird protokolliert; "
                      "niemand handelt nach ihr. Keine operative "
                      "Dispositionsfreigabe.",
@@ -1190,7 +1190,7 @@ MD("""
 3. **Ein Sommerfenster trägt keine Jahresaussage.** Das Testmittel liegt weit über dem
    Trainingsmittel. Wie das Modell im November arbeitet, weiß dieses Notebook nicht.
 4. **Ein einziges Testfenster.** Für eine **operative Dispositionsfreigabe** bräuchte es
-   mehrere, am besten je Jahreszeit eines. Genau die sammelt der Schattenpilot ein — das
+   mehrere, am besten je Jahreszeit eines. Genau die sammelt der Probebetrieb ein — das
    ist sein Zweck, und deshalb ist er keine Vorstufe der Freigabe, sondern ihre
    Voraussetzung.
 5. **Der Aufschlag ist eine Krücke.** Fachlich sauber wäre eine Quantilsregression, die

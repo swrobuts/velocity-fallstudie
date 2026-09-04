@@ -73,7 +73,7 @@ PFLICHT = {
     ("Aufschlag auf der Validierung gewaehlt", r"[Aa]ufschlag", "alle"),
     ("Test erst nach dem Einfrieren geoeffnet",
      r"eingefroren|Einfrieren|erst \*\*nach\*\*", "md"),
-    ("Status Schattenpilot", r"[Ss]chattenpilot", "alle"),
+    ("Status Probebetrieb", r"[Pp]robebetrieb", "alle"),
     ("Fahrten statt Raeder je Station", r"Räder je Station", "md"),
 ],
 "05_Assoziation_Wege_im_Netz": [

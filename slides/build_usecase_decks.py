@@ -401,7 +401,7 @@ def fall04():
             "und sie ist nachweislich besser als die bisherige Faustregel.",
             f"Der Aufschlag von {w.p('aufschlag', 0)} macht die teurere Fehlerrichtung "
             f"zu einer sichtbaren Entscheidung statt zu einem Bauchgefühl.",
-            "Ein Schattenpilot läuft mit und wird protokolliert, ohne dass jemand "
+            "Ein Probebetrieb läuft mit und wird protokolliert, ohne dass jemand "
             "nach der Prognose handelt.",
         ],
         "grenze": [

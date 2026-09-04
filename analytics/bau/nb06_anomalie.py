@@ -1484,7 +1484,7 @@ B_STATUSSATZ = {
     "pilot": "Pilotfreigabe \u2014 alle vier Gates halten auf einem "
              "Abschnitt, der an der Regelentwicklung nicht beteiligt war",
     "explorativ": "explorativ entwickelte Regel; ein prospektiver "
-                  "Schattenpilot ist n\u00f6tig \u2014 der Testabschnitt "
+                  "Probebetrieb ist n\u00f6tig \u2014 der Testabschnitt "
                   "tr\u00e4gt die Freigabe nicht",
 }[B_STATUS]
 merke("b_status", B_STATUS)
@@ -1549,7 +1549,7 @@ vollständig in Phase 1, und **jede Zahl nennt ihren Nenner**:
 > überlappt die geforderten {{b_gate_praezision:.0%}}. Der Testabschnitt **widerlegt** die
 > Regel also nicht — er **trägt** sie nur nicht. Für eine Freigabe ist „nicht widerlegt"
 > zu wenig; für ein Verwerfen ist es zu wenig in die andere Richtung. Was fehlt, sind
-> Fälle, und die liefert nur ein prospektiver Schattenpilot.
+> Fälle, und die liefert nur ein prospektiver Probebetrieb.
 
 #### Wie die Zahl zustande kommt
 
@@ -2037,8 +2037,8 @@ keine Schätzung.
 
 **Was eine zweite Runde anders machen würde**
 
-1. **Den prospektiven Schattenpilot fahren.** Der Testabschnitt widerlegt die Regel
-   nicht, er trägt sie nur nicht — was fehlt, sind Fälle. Ein Schattenpilot, der die
+1. **Den prospektiven Probebetrieb fahren.** Der Testabschnitt widerlegt die Regel
+   nicht, er trägt sie nur nicht — was fehlt, sind Fälle. Ein Probebetrieb, der die
    Regel mitlaufen lässt, ohne Technikeinsätze auszulösen, liefert sie in ein bis zwei
    Quartalen: {{stat_neue_alarme:.0f}} Alarme in einem halben Jahr heißt, dass eine
    belastbare Aussage über die Präzision Zeit braucht, nicht ein besseres Verfahren.

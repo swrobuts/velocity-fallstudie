@@ -152,7 +152,7 @@ Modell und Gradient Boosting praktisch gleichauf (11,14 gegenüber
 ab (13,90 gegenüber 14,34). Die Modellwahl hängt
 damit unmittelbar an der Frage, unter welchen Bedingungen verglichen wird.
 
-**Status.** Schattenpilot freigegeben — die Prognose läuft im internen Planungswerkzeug mit und wird protokolliert; niemand handelt nach ihr. Keine operative Dispositionsfreigabe.
+**Status.** Probebetrieb freigegeben — die Prognose läuft im internen Planungswerkzeug mit und wird protokolliert; niemand handelt nach ihr. Keine operative Dispositionsfreigabe.
 
 **Was offen bleibt.** Prognostiziert wird die Gesamtzahl der Fahrten; benötigt wird die
 Zahl der Räder je Station. Diese Umrechnung ist keine Formel, sondern eine eigene
@@ -224,7 +224,7 @@ ermittelt wurde, beschreibt nicht die Liste, mit der später gearbeitet wird.
 | 1 Preisauskunft | Perzentiltabelle als CSV-Datei | sichtbar |
 | 2 Wartung | Faustregel und Prognoseliste | historisch freigegeben, prospektiv offen |
 | 3 Segmente | Stationsprofile; aggregierter Kundenbericht | analytisch nicht belegt, Einsatz freigegeben |
-| 4 Nachfrage | Lineare Regression | schattenpilot |
+| 4 Nachfrage | Lineare Regression | probebetrieb |
 | 5 Ströme im Netz | Produkt A: nicht freigegeben (Wirtschaftlichkeit nicht prüfbar); Produkt B: 6 Regeln | analytisches Lehr-Gate bestanden — keine reale Betriebsfreigabe |
 | 6 Anomalien | A1, A2 und B getrennt | A1 spezifiziert, A2 schatten, B explorativ |
 
