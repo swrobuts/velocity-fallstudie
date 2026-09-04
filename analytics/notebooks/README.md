@@ -28,10 +28,41 @@ Sie entstehen aus **einer** Quelle unter `analytics/bau/` und werden beim Bauen
 ausgeführt. Fällt eine Zelle um, bricht der Bau ab — was hier liegt, ist damit
 nachweislich lauffähig.
 
-> **Die Notebooks sind Bauprodukte.** Wer eines in PyCharm oder Jupyter öffnet und
-> ausführt, ändert Ausführungszähler und Ausgaben; Git meldet die Datei dann als
-> geändert. Das ist normal und darf verworfen werden (`git checkout -- <Datei>`).
-> Geändert wird die Quelle in `analytics/bau/`, nie das Notebook selbst.
+### Lokal öffnen und ausführen
+
+Das geht, und es soll gehen. Nur eines muss man wissen: **Ein Notebook trägt seine
+Ausgaben in sich.** Genau deshalb ist auf GitHub jedes Ergebnis lesbar, ohne dass
+jemand etwas startet — und genau deshalb schreibt jede ausgeführte Zelle in die
+Datei. Git meldet sie danach als geändert.
+
+Das ist kein Schaden, solange es nicht committet wird:
+
+```bash
+git restore analytics/notebooks/            # alle zurück auf den gebauten Stand
+git restore analytics/notebooks/01_*.ipynb  # nur eines
+```
+
+Die Notebooks sind wiederherstellbar, weil sie **Bauprodukte** sind: Sie entstehen
+aus `analytics/bau/` und lassen sich jederzeit neu erzeugen. Deshalb gilt
+
+> **Zum Ausprobieren:** ausführen, ansehen, danach `git restore`.
+> **Zum Ändern:** die Quelle unter `analytics/bau/` ändern und neu bauen —
+> ein einzelnes Notebook braucht je nach Fall 7 bis 140 Sekunden.
+
+`.ipynb_checkpoints/` — die Zwischenstände von PyCharm und Jupyter — sind
+ignoriert und stören nicht.
+
+**Warum nicht automatisch?** Ein Git-Filter könnte die flüchtigen Teile beim
+Committen wegrechnen. Er müsste dafür aber mehr tun, als es zunächst aussieht:
+Zwei Läufe verteilen dieselbe Ausgabe unterschiedlich auf Blöcke, und eine
+pandas-Styler-Tabelle trägt je Lauf eine andere Zufallskennung. Ein Filter, der
+bei jedem Commit in freigegebenes Lehrmaterial schreibt, ist das Risiko nicht
+wert — `git restore` ist ein Befehl.
+
+Damit ein versehentlich ausgeführtes Notebook nicht doch auf GitHub landet, prüft
+`tools/notebooks_frisch_gebaut.py` die Ausführungszähler: Ein gebautes Notebook
+zählt lückenlos von 1 hoch, ein von Hand gerechnetes nicht. Die Prüfung läuft in
+`tools/abnahme.sh` mit.
 
 ## In Google Colab öffnen
 

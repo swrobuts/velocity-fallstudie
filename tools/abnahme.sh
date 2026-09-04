@@ -329,6 +329,19 @@ fi
 # "Teilfreigabe (nur CITY)", waehrend die Preisschaetzung laengst alle drei
 # Radtypen abdeckt. Keine Zahl war je falsch gerechnet; sie waren alle
 # einmal richtig und sind stehengeblieben.
+# ------------------- Sind die abgelegten Notebooks frisch gebaut?
+# Sie tragen ihre Ausgaben mit sich, damit auf GitHub jedes Ergebnis ohne
+# Rechnen lesbar ist. Wer eines lokal oeffnet und Zellen ausfuehrt,
+# schreibt hinein. Am 04.09.2026 lag genau so ein Stand im Arbeitsbaum:
+# Notebook 1 mit Zaehlern ab 7 und 862 verlorenen Ausgabezeilen.
+schritt "Notebooks stammen aus einem sauberen Lauf"
+if python3 tools/notebooks_frisch_gebaut.py >/tmp/abnahme-nbfrisch.log 2>&1; then
+  ergebnis 0 "$(tail -1 /tmp/abnahme-nbfrisch.log | sed 's/^ *//')"
+else
+  ergebnis 1 "ein Notebook ist von Hand gerechnet worden"
+  grep -A1 'FEHLER' /tmp/abnahme-nbfrisch.log | head -12 | sed 's/^/     /'
+fi
+
 schritt "Anleitungen gegen ihre Quelle"
 if python3 tools/readme_pruefen.py >/tmp/abnahme-readme.log 2>&1; then
   ergebnis 0 "$(tail -1 /tmp/abnahme-readme.log | sed 's/^ *//')"

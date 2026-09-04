@@ -118,7 +118,7 @@ python3 -m http.server 8766 --directory wawi
 ## Werkzeuge
 
 ```bash
-bash tools/abnahme.sh                  # alle 35 Prüfungen
+bash tools/abnahme.sh                  # alle 36 Prüfungen
 python3 tools/versionieren.py          # Fingerabdrücke der eingebundenen Dateien
 python3 tools/ausgeliefert_pruefen.py  # ist der geprüfte Stand auch der ausgelieferte?
 python3 tools/ux_check.py              # Bedienbarkeit und Regressionen der Website
@@ -126,6 +126,7 @@ python3 tools/wawi_check.py            # Vertrag zwischen HTML und JavaScript de
 python3 tools/erd_vollstaendig.py      # steht jede Tabelle in einem Diagramm?
 python3 tools/breitenregel_pruefen.py  # Notebook, SQL-CHECK und Ladelauf der Preisschätzung
 python3 tools/readme_pruefen.py        # die Notebook-README gegen die Merkzettel
+python3 tools/notebooks_frisch_gebaut.py  # sind die Notebooks der gebaute Stand?
 python3 tools/freisteller_pruefen.py   # die Radbilder gegen ihre Vorlagen
 python3 tools/zahlen_gegen_db.py       # Anleitung und Vortrag gegen die Datenbank
 python3 tools/raeder_weissgrund.py     # Radbilder neu erzeugen
