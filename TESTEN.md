@@ -15,7 +15,7 @@ Rückgabewert 0, wenn alles besteht.
 |---|---|---|
 | 1 | Zugangsdaten | `.env` ist vollständig |
 | 2 | Aufbaukette zweimal | die SQL-Dateien in `db/aufbau/` laufen, gezählt statt eingetragen, und sind idempotent |
-| 3 | Datenbanktests | 164 pgTAP-Testfunktionen |
+| 3 | Datenbanktests | 180 pgTAP-Testfunktionen |
 | 4 | Zugriffsschutz | 13 Ressourcen gesperrt, 10 Sichten öffentlich — über HTTP geprüft |
 | 5 | Altschema | Der anon-Key kommt nicht mehr an die Altdaten |
 | 6 | Abgleichsbericht | Übernahme vollständig, Beträge stimmen auf den Cent |
@@ -30,31 +30,27 @@ Rückgabewert 0, wenn alles besteht.
 | 15 | Zahlen in Anleitung und Vortrag | gegen die Datenbank nachgerechnet |
 | 16 | **Notebooks stammen aus einem sauberen Lauf** | Ausführungszähler laufen lückenlos ab 1 — sonst wurde von Hand gerechnet |
 | 17 | **Anleitungen gegen ihre Quelle** | Statusspalte der Notebook-README gegen die Merkzettel, Prüfungszahl gegen `tools/abnahme.sh` |
-| 18 | Freisteller | Radbilder gegen ihre Vorlage |
-| 19 | Fingerabdrücke | an allen eingebundenen Dateien der Website |
-| 20 | **Ausgelieferter Stand ist der geprüfte** | die Fingerabdrücke auf `bikes.butscher.cloud` gegen `src/` — sonst prüft alles nur, was hier liegt |
-| 21 | Bedienbarkeit (Website) | Punkte aus dem UX-Audit vom 24.08.2026 (`tools/ux_check.py`) |
-| 22 | Website spricht nur Sichten und api-Funktionen | keine Basistabelle, keine `fn_`-Funktion im Frontend |
-| 23 | Foliendeck | ohne Layoutbefund |
-| 24 | Passwörter unerreichbar | `auth.users` antwortet mit HTTP 406 |
-| 25 | Zahlungsmittel gesperrt | HTTP 401 ohne Anmeldung |
-| 26 | Warenwirtschaft: Basistabellen | sieben Tabellen antworten mit HTTP 401 |
-| 27 | Warenwirtschaft: Sichten ohne Anmeldung | `v_wawi_flotte` antwortet mit HTTP 401 |
-| 28 | Rechenannahmen | jede nennt ihre Quelle |
-| 29 | Kunde sieht eigene Fahrten | `v_meine_ausleihe`/`v_meine_rechnung`/`v_mein_profil` lesbar |
-| 30 | Keine Funktion versehentlich ausführbar | nur `api_`-Funktionen freigegeben, keine für `anon` |
-| 31 | Radstatus | stimmt mit offenen Ausleihen überein |
-| 32 | Fahruntauglich nicht verfügbar | kein Rad mit offener schwerer Meldung auf „verfügbar" |
-| 33 | **Warenwirtschaft: Vertrag HTML/JavaScript** | `tools/wawi_check.py` — Zustandsschalen, Barrierefreiheit, Namensraum, Vorgangs-Kennung |
-| 34 | **Warenwirtschaft spricht nur Sichten und api-Funktionen** | keine Basistabelle, keine `fn_`-Funktion in `wawi/` |
-| 35 | **`wawi.butscher.cloud` antwortet** | liefert die Anmeldeseite — **bleibt rot bis zur Veröffentlichung**, siehe Hinweis unten |
-| 36 | **Warenwirtschaft weist Nicht-Mitarbeitende ab** | der Zustand „kein Mitarbeiter" ist gebaut und wird geschaltet |
+| 18 | **MCP-Server gegen die Datenbank** | `tools/mcp_check.py` — jedes Werkzeug zeigt auf eine Sicht oder Funktion, die es gibt, und keine `api_`-Funktion fehlt unbemerkt |
+| 19 | Freisteller | Radbilder gegen ihre Vorlage |
+| 20 | Fingerabdrücke | an allen eingebundenen Dateien der Website |
+| 21 | **Ausgelieferter Stand ist der geprüfte** | die Fingerabdrücke auf `bikes.butscher.cloud` gegen `src/` — sonst prüft alles nur, was hier liegt |
+| 22 | Bedienbarkeit (Website) | Punkte aus dem UX-Audit vom 24.08.2026 (`tools/ux_check.py`) |
+| 23 | Website spricht nur Sichten und api-Funktionen | keine Basistabelle, keine `fn_`-Funktion im Frontend |
+| 24 | Foliendeck | ohne Layoutbefund |
+| 25 | Passwörter unerreichbar | `auth.users` antwortet mit HTTP 406 |
+| 26 | Zahlungsmittel gesperrt | HTTP 401 ohne Anmeldung |
+| 27 | Warenwirtschaft: Basistabellen | sieben Tabellen antworten mit HTTP 401 |
+| 28 | Warenwirtschaft: Sichten ohne Anmeldung | `v_wawi_flotte` antwortet mit HTTP 401 |
+| 29 | Rechenannahmen | jede nennt ihre Quelle |
+| 30 | Kunde sieht eigene Fahrten | `v_meine_ausleihe`/`v_meine_rechnung`/`v_mein_profil` lesbar |
+| 31 | Keine Funktion versehentlich ausführbar | nur `api_`-Funktionen freigegeben, keine für `anon` |
+| 32 | Radstatus | stimmt mit offenen Ausleihen überein |
+| 33 | Fahruntauglich nicht verfügbar | kein Rad mit offener schwerer Meldung auf „verfügbar" |
+| 34 | **Warenwirtschaft: Vertrag HTML/JavaScript** | `tools/wawi_check.py` — Zustandsschalen, Barrierefreiheit, Namensraum, Vorgangs-Kennung |
+| 35 | **Warenwirtschaft spricht nur Sichten und api-Funktionen** | keine Basistabelle, keine `fn_`-Funktion in `wawi/` |
+| 36 | **`wawi.butscher.cloud` antwortet** | liefert die Anmeldeseite, HTTP 200 |
+| 37 | **Warenwirtschaft weist Nicht-Mitarbeitende ab** | der Zustand „kein Mitarbeiter" ist gebaut und wird geschaltet |
 
-> **Prüfung 30 ist zum Stand dieser Aufgabe erwartungsgemäß rot.** Die
-> Bereitstellung für `wawi.butscher.cloud` ist gebaut und trocken erprobt
-> (`tools/wawi_veroeffentlichen.sh`), die Veröffentlichung selbst steht
-> noch aus. Rot heißt hier „noch nicht ausgeliefert", nicht „defekt" —
-> nach der Veröffentlichung muss sie ohne Codeänderung grün werden.
 
 ## Diese Datei war stale
 
@@ -64,9 +60,9 @@ und beim Lesen nicht mehr:
 
 | Diese Datei behauptete | Tatsächlich (nachgezählt) | Nachgezählt mit |
 |---|---|---|
-| „Neun Prüfungen" | damals 31 Prüfungen, heute 36 | `grep -c '^schritt "' tools/abnahme.sh` |
-| „12 SQL-Dateien" | 18 Dateien | `ls db/aufbau/*.sql \| wc -l` |
-| „51 pgTAP-Testfunktionen" | 128 Testfunktionen | `python3 db/test.py 2>&1 \| grep -cE '^ok [0-9]+ - velocity_test\.'` |
+| „Neun Prüfungen" | am 26.08.2026: 31 Prüfungen | `grep -c '^schritt "' tools/abnahme.sh` |
+| „12 SQL-Dateien" | am 26.08.2026: 18 Dateien | `ls db/aufbau/*.sql \| wc -l` |
+| „51 pgTAP-Testfunktionen" | am 26.08.2026: 128 Testfunktionen | `python3 db/test.py 2>&1 \| grep -cE '^ok [0-9]+ - velocity_test\.'` |
 | „`auth.users` ist leer" | 2 Konten | `select count(*) from auth.users` |
 
 Der Auftrag für diese Aufgabe nannte selbst schon Korrekturzahlen — „27
@@ -169,8 +165,9 @@ Konto bleibt davon unberührt.
 
 ## Warenwirtschaft — wie du sie prüfst
 
-Automatisch geprüft wird `wawi/` durch die Prüfungen 21, 22, 28, 29, 30
-und 31 in `tools/abnahme.sh` sowie durch `tools/wawi_check.py` allein.
+Automatisch geprüft wird `wawi/` durch die sechs Prüfungen in
+`tools/abnahme.sh`, deren Name mit „Warenwirtschaft" oder „WaWi" beginnt,
+sowie durch `tools/wawi_check.py` allein.
 Was bleibt, ist Handarbeit — dieselbe Einschränkung wie bei der Website:
 eine echte Anmeldung mit Passworteingabe kann kein Skript ersetzen.
 
@@ -201,7 +198,8 @@ Dann auf `http://localhost:8766`, angemeldet mit `swrobuts@googlemail.com`
 5. **Abmelden, mit einem reinen Kundenkonto ohne Mitarbeiterstatus
    erneut anmelden** (falls eines zur Hand ist). Erwartung: „Kein
    Zugang", kein Arbeitsbereich, kein Fehler in der Konsole — siehe
-   Prüfung 31 und `doku/datenmodell/08-warenwirtschaft.md`.
+   die Prüfung „Warenwirtschaft weist Nicht-Mitarbeitende ab"
+   und `doku/datenmodell/08-warenwirtschaft.md`.
 
 > **Rollenprüfung ohne zweites Konto:** in der Browser-Konsole
 > `await hat_rolle_pruefen()` gibt es nicht — stattdessen zeigt
@@ -220,12 +218,11 @@ die Rollentrennung gegen echte Fixturen, und die Oberfläche selbst wird
 mit Attrappen geprüft (Rollen-Set von Hand gesetzt, keine echte
 Anmeldung) — dieselbe Einschränkung wie bei jedem vorherigen Schritt.
 
-**Veröffentlichung:** `wawi.butscher.cloud` ist zum Stand dieser Aufgabe
-**noch nicht** ausgeliefert — die Bereitstellung ist gebaut und trocken
-erprobt (`tools/wawi_veroeffentlichen.sh`), eine noch laufende Prüfung
-steht der Freigabe voran. Prüfung 30 in `tools/abnahme.sh` bleibt deshalb
-rot, bis das nachgeholt ist; das ist der erwartete Zustand, keine
-Regression.
+**Veröffentlichung:** `wawi.butscher.cloud` ist ausgeliefert und antwortet
+mit HTTP 200. Die Prüfung „wawi.butscher.cloud antwortet" ist damit
+grün. Sie war zum Stand der damaligen Aufgabe absichtlich rot: die
+Bereitstellung war gebaut und trocken erprobt
+(`tools/wawi_veroeffentlichen.sh`), aber noch nicht ausgeführt.
 
 ## Wenn du etwas geändert hast
 

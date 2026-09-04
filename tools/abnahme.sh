@@ -115,7 +115,7 @@ PYEOF
 printf '%sAbnahme Phase 1 und 2 — VeloCity%s\n' "$blau" "$aus"
 printf '%s%s%s\n' "$grau" "$(date '+%d.%m.%Y %H:%M')" "$aus"
 
-# ---------------------------------------------------------------- 1 .env
+# ---------------------------------------------------------------- .env
 schritt "Zugangsdaten"
 if [ -f .env ]; then
   fehlend=""
@@ -127,7 +127,7 @@ else
   ergebnis 1 ".env fehlt — Vorlage: .env.example"
 fi
 
-# ------------------------------------------------- 2 Aufbaukette zweimal
+# ------------------------------------------------- Aufbaukette zweimal
 schritt "Aufbaukette, zweimal (Idempotenz)"
 # Dateizahl GEZAEHLT statt eingetragen: eine feste Zahl hier ("12
 # Dateien") stand bis zur Gesamtpruefung vom 26.08.2026 unveraendert im
@@ -144,7 +144,7 @@ else
   tail -5 /tmp/abnahme2.log | sed 's/^/     /'
 fi
 
-# ------------------------------------------------------- 3 pgTAP-Tests
+# ------------------------------------------------------- pgTAP-Tests
 schritt "Datenbanktests (pgTAP)"
 if python3 db/test.py >/tmp/abnahme-test.log 2>&1; then
   ok=$(grep -c '^ok ' /tmp/abnahme-test.log)
@@ -154,7 +154,7 @@ else
   grep -A3 '^not ok' /tmp/abnahme-test.log | head -20 | sed 's/^/     /'
 fi
 
-# --------------------------------------------------- 4 Zugriffsschutz
+# --------------------------------------------------- Zugriffsschutz
 schritt "Zugriffsschutz ueber die REST-Schnittstelle"
 # Zahlen GEZAEHLT statt eingetragen, aus derselben Ueberlegung wie bei
 # Pruefung 2: hier stand bis zur Gesamtpruefung vom 26.08.2026 "7 Sichten
@@ -176,7 +176,7 @@ case $rc in
      grep '^FEHLER' /tmp/abnahme-sec.log | sed 's/^/     /' ;;
 esac
 
-# ------------------------------------------------ 5 Altschema dicht
+# ------------------------------------------------ Altschema dicht
 schritt "Altschema cityBikesRental abgesichert"
 KEY=$(grep '^SUPABASE_ANON_KEY=' .env 2>/dev/null | cut -d= -f2-)
 URL=$(grep '^SUPABASE_URL=' .env 2>/dev/null | cut -d= -f2-)
@@ -193,7 +193,7 @@ else
   ergebnis 1 "SUPABASE_URL oder SUPABASE_ANON_KEY fehlt in .env"
 fi
 
-# ------------------------------------------------ 6 Abgleichsbericht
+# ------------------------------------------------ Abgleichsbericht
 schritt "Abgleichsbericht der Datenuebernahme"
 python3 - <<'PY' 2>/tmp/abnahme-abgleich.err
 import sys, pathlib; sys.path.insert(0, 'db')
@@ -209,7 +209,7 @@ sys.exit(1 if schlecht else 0)
 PY
 ergebnis $? "keine unerklaerte Abweichung"
 
-# ------------------------------------------------------- 7 Diagramme
+# ------------------------------------------------------- Diagramme
 schritt "Mermaid-Diagramme"
 if node tools/mermaid_check.mjs doku/datenmodell/erd/*.mmd >/tmp/abnahme-mmd.log 2>&1; then
   ergebnis 0 "$(grep -c '^OK' /tmp/abnahme-mmd.log) Quellen validieren"
@@ -406,7 +406,7 @@ else
   grep '^  FEHL' /tmp/abnahme-ux.log | head -10 | sed 's/^/     /'
 fi
 
-# --------------------------------------------------------- 8 Website
+# --------------------------------------------------------- Website
 schritt "Website spricht nur Sichten und api-Funktionen"
 dz_log=$(pruefe_direktzugriff "src/supabase.js" "v_" "api_" "")
 dz_rc=$?
@@ -424,7 +424,7 @@ else
   ergebnis 1 "Syntaxfehler im Frontend"
 fi
 
-# ------------------------------------------------------- 9 Foliendeck
+# ------------------------------------------------------- Foliendeck
 schritt "Foliendeck"
 if [ -f slides/velocity-datenbankentwurf.pptx ]; then
   if python3 slides/check_deck.py slides/velocity-datenbankentwurf.pptx >/tmp/abnahme-deck.log 2>&1; then
@@ -446,7 +446,7 @@ else
   ergebnis 1 "slides/velocity-datenbankentwurf.pptx fehlt — python3 slides/build_deck.py"
 fi
 
-# --------------------------------------------- 19 Passwoerter
+# --------------------------------------------- Passwoerter
 schritt "Passwoerter sind von aussen unerreichbar"
 KEY=$(grep '^SUPABASE_ANON_KEY=' .env 2>/dev/null | cut -d= -f2-)
 URL=$(grep '^SUPABASE_URL=' .env 2>/dev/null | cut -d= -f2-)
@@ -461,7 +461,7 @@ code=$(curl -s -o /dev/null -w '%{http_code}' \
 [ "$code" = "200" ] && ergebnis 1 "auth.users antwortet mit 200" \
                     || ergebnis 0 "auth.users nicht erreichbar (HTTP $code)"
 
-# --------------------------------------------- 20 Zahlungsmittel
+# --------------------------------------------- Zahlungsmittel
 schritt "Zahlungsmittel bleiben gesperrt"
 # Diese Pruefung laeuft mit dem anon-Schluessel, ohne jede Anmeldung -
 # und fuer anon fehlt das Recht tatsaechlich, das ist hier korrekt.
@@ -483,7 +483,7 @@ code=$(curl -s -o /dev/null -w '%{http_code}' \
 [ "$code" = "200" ] && ergebnis 1 "zahlungsmittel antwortet mit 200" \
                     || ergebnis 0 "zahlungsmittel gesperrt (HTTP $code)"
 
-# --------------------------------------------- 21 Basistabellen der WaWi
+# --------------------------------------------- Basistabellen der WaWi
 schritt "Warenwirtschaft spricht keine Basistabelle an"
 # Accept-Profile: velocity - siehe Begruendung bei Pruefung 19/20.
 # "nicht 200" reicht hier nicht als Beweis: ein PostgREST-Cache-Miss
@@ -515,7 +515,7 @@ else
   ergebnis 0 "alle sieben Tabellen antworten mit HTTP 401"
 fi
 
-# --------------------------------------------- 22 Sichten ohne Anmeldung
+# --------------------------------------------- Sichten ohne Anmeldung
 schritt "WaWi-Sichten sind ohne Anmeldung unerreichbar"
 # War hier als "liefert []" formuliert: die Annahme, PostgREST melde
 # Kunden und Mitarbeitende als dieselbe Rolle an und jede Sicht filtere
@@ -579,7 +579,7 @@ else
   fi
 fi
 
-# --------------------------------------------- 23 Rechenannahmen
+# --------------------------------------------- Rechenannahmen
 schritt "Jede Rechenannahme nennt ihre Quelle"
 # Eine Zahl ohne Herkunft ist eine Behauptung. Der CHECK-Constraint
 # rechenannahme_quelle_chk weist eine leere Quelle bereits ab; diese
@@ -605,7 +605,7 @@ PYEOF
 [ "$n" = "0" ] && ergebnis 0 "alle Annahmen mit Quelle" \
                || ergebnis 1 "$n Annahmen ohne Quelle"
 
-# --------------------------------------------- 24 Kundensicht
+# --------------------------------------------- Kundensicht
 schritt "Ein angemeldeter Kunde sieht seine eigenen Fahrten"
 # Diese Pruefung gibt es, weil genau hier eine Luecke klaffte: der
 # Rechteentzug in 0017 riss die Grants mit, die 0011 fuer die
@@ -637,7 +637,7 @@ PYEOF
 [ "$n" = "0" ] && ergebnis 0 "v_meine_ausleihe, v_meine_rechnung und v_mein_profil sind lesbar" \
                || ergebnis 1 "$n"
 
-# --------------------------------------------- 25 Funktionsrechte
+# --------------------------------------------- Funktionsrechte
 schritt "Keine Funktion ist versehentlich fuer jeden ausfuehrbar"
 # PostgreSQL gibt jeder neu angelegten Funktion implizit EXECUTE an
 # PUBLIC. Die Zeile "alter default privileges" in 0011 faengt das
@@ -705,7 +705,7 @@ PYEOF
 [ "$n2" = "0" ] && ergebnis 0 "keine api_-Funktion fuer anon ausfuehrbar" \
                 || ergebnis 1 "$n2 api_-Funktion(en) fuer anon ausfuehrbar"
 
-# --------------------------------------------- 26 Radstatus
+# --------------------------------------------- Radstatus
 schritt "Radstatus und offene Ausleihen stimmen ueberein"
 # Genau dieser Widerspruch lag 37-fach in den uebernommenen Daten und
 # fiel nie auf, weil keine Oberflaeche beides nebeneinander zeigte.
@@ -728,7 +728,7 @@ PYEOF
 [ "$n" = "0" ] && ergebnis 0 "kein Rad mit widerspruechlichem Status" \
                || ergebnis 1 "$n Raeder mit widerspruechlichem Status"
 
-# --------------------------------------------- 27 Fahruntauglich nicht verfuegbar
+# --------------------------------------------- Fahruntauglich nicht verfuegbar
 schritt "Kein Rad mit offener fahruntauglicher Meldung ist verfuegbar"
 # Gegenstueck zu 26: api_rad_status_setzen liess ein Rad ungeprueft auf
 # 'verfuegbar', selbst mit einer offenen fahruntauglichen Meldung. Diese
@@ -753,7 +753,7 @@ PYEOF
 [ "$n" = "0" ] && ergebnis 0 "kein fahruntaugliches Rad auf verfuegbar" \
                || ergebnis 1 "$n Rad/Raeder fahruntauglich, aber verfuegbar"
 
-# --------------------------------------------- 28 WaWi-Vertrag
+# --------------------------------------------- WaWi-Vertrag
 schritt "Warenwirtschaft: Vertrag zwischen HTML und JavaScript"
 if python3 tools/wawi_check.py >/tmp/abnahme-wawi.log 2>&1; then
   ergebnis 0 "$(grep -c '^  ok' /tmp/abnahme-wawi.log) Punkte nachgeprueft"
@@ -762,7 +762,7 @@ else
   grep '^  FEHL' /tmp/abnahme-wawi.log | head -10 | sed 's/^/     /'
 fi
 
-# --------------------------------------------- 29 WaWi spricht nur Sichten
+# --------------------------------------------- WaWi spricht nur Sichten
 schritt "Warenwirtschaft spricht nur Sichten und api-Funktionen"
 # Dieselbe Regel wie fuer die Website, und derselbe Test (siehe
 # pruefe_direktzugriff oben) - nur gegen wawi/*.js. Ein Zugriff auf eine
@@ -778,7 +778,7 @@ else
   echo "$dz_log" | grep '^FEHLER' | sed 's/^/     /'
 fi
 
-# --------------------------------------------- 30 WaWi erreichbar
+# --------------------------------------------- WaWi erreichbar
 schritt "wawi.butscher.cloud antwortet"
 code=$(curl -s -o /tmp/wawi.html -w '%{http_code}' https://wawi.butscher.cloud)
 if [ "$code" = "200" ] && grep -q "VeloCity Warenwirtschaft" /tmp/wawi.html; then
@@ -787,7 +787,7 @@ else
   ergebnis 1 "HTTP $code, Inhalt unerwartet"
 fi
 
-# --------------------------------------------- 31 kein Kundenzugang
+# --------------------------------------------- kein Kundenzugang
 schritt "Warenwirtschaft weist Nicht-Mitarbeitende ab"
 # Der haeufigste Fall und der, den man vergisst: JEDER Kunde kann sich
 # anmelden, weil es dieselbe auth.users ist. Die Oberflaeche muss das
