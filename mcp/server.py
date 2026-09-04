@@ -198,6 +198,8 @@ SICHTEN = {
     "v_wawi_umsatz_kundengruppe": "Monatsumsatz je Tarifgruppe — nur für die "
                      "Leitung.",
     "v_wawi_km_co2": "Gefahrene Kilometer und CO₂-Ersparnis gegenüber dem Pkw.",
+    "v_wawi_protokoll": "Wer wann an welchem Datensatz welches Feld geändert "
+                     "hat — ohne die Werte selbst. Nur für die Rolle leitung.",
 }
 
 # Die vier api_-Funktionen der Website. Sie handeln auf dem eigenen
@@ -226,7 +228,7 @@ server = MCPServer(
 # ─────────────────────────────────────────────────────── Lesen
 @server.tool()
 def sichten_auflisten() -> str:
-    """Nennt die 18 Sichten der Warenwirtschaft mit ihrem Inhalt.
+    """Nennt die 19 Sichten der Warenwirtschaft mit ihrem Inhalt.
 
     Erster Aufruf, wenn unklar ist, wo etwas steht. Die Namen daraus
     gehören in sicht_lesen.
@@ -450,6 +452,31 @@ def vorfuehrbestand_auffrischen() -> str:
     Umsatz-, Fahrten- oder CO₂-Auswertung ein. Braucht leitung.
     """
     return _rpc("api_lehrbetrieb_vorfuehrbestand_auffrischen")
+
+
+@server.tool()
+def protokoll_lesen(tabelle: str | None = None, seit: str | None = None,
+                    limit: int = 30) -> str:
+    """Zeigt, wer zuletzt was geändert hat.
+
+    tabelle  auf eine Tabelle einschränken, etwa "kunde" oder "fahrrad".
+    seit     ISO-Zeitpunkt, etwa "2026-09-04T20:00".
+    limit    höchstens 200, jüngste zuerst.
+
+    Die geänderten WERTE stehen bewusst nicht darin: Das Protokoll hält
+    auch Personendaten fest, die nach Art. 17 DSGVO aus dem Kundensatz
+    gelöscht wurden. Wer wann was angefasst hat, beantwortet diese Sicht
+    vollständig — womit, nicht.
+
+    Braucht die Rolle leitung.
+    """
+    filter: dict[str, str] = {}
+    if tabelle:
+        filter["tabelle"] = f"eq.{tabelle}"
+    if seit:
+        filter["zeitpunkt"] = f"gte.{seit}"
+    return sicht_lesen("v_wawi_protokoll", filter=filter,
+                       sortierung="zeitpunkt.desc", limit=min(int(limit), 200))
 
 
 # ─────────────────────────────────────────────────────── Selbsttest

@@ -183,7 +183,11 @@ def main():
     ist = zahl_im_repo()
     wortzahl = '|'.join(ZAHLWORT)
     for name, wert in ist.items():
-        muster = re.compile(r'(\d+|' + wortzahl + r')\s+' + name[:6], re.I)
+        # \b VOR die Alternative: ohne sie fand 'zwanzig' sich mitten in
+        # 'Einundzwanzig' wieder und meldete 20 statt 21. Zahlwoerter
+        # ueber zwanzig stehen nicht in ZAHLWORT - fuer die gehoert die
+        # Ziffer auf die Folie, sonst prueft hier gar nichts mehr.
+        muster = re.compile(r'\b(\d+|' + wortzahl + r')\s+' + name[:6], re.I)
         for m in muster.finditer(ganz):
             gesagt = ZAHLWORT.get(m.group(1).lower(), m.group(1))
             if gesagt != wert:

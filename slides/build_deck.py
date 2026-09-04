@@ -547,7 +547,7 @@ def baue() -> Presentation:
             "Was kostet Annas Fahrt genau — und warum?",
             "Jetzt lösen wir die Frage vom Anfang auf. Jeder Cent muss begründbar sein.")
 
-    s = folie(prs, "6 · Implementierung", "Zwanzig Aufbauschritte, jeder für sich lauffähig",
+    s = folie(prs, "6 · Implementierung", "21 Aufbauschritte, jeder für sich lauffähig",
               "Jede Datei ist idempotent: sie läuft zweimal hintereinander fehlerfrei. Das "
               "ist die Voraussetzung dafür, dass man einen Aufbau gefahrlos wiederholen kann.")
     schichtenstapel(s, [
@@ -767,7 +767,7 @@ def baue() -> Presentation:
          ["38 Basistabellen legt der Aufbau an — für beide dieselben",
           "Eine Kundenadresse ist eine Kundenadresse",
           "Keine Kopie, die veralten könnte"]),
-        ("18 Sichten, 15 Funktionen",
+        ("19 Sichten, 15 Funktionen",
          ["Gelesen wird über v_wawi_…",
           "Geschrieben über api_…",
           "Fünf weitere api_ dienen der Website"]),

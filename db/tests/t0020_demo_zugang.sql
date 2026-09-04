@@ -91,6 +91,14 @@ begin
      where n.nspname = 'velocity' and c.relkind = 'v'
        and c.relname like 'v\_wawi\_%'
        and has_table_privilege('authenticated', 'velocity.' || c.relname, 'SELECT')
+       -- v_wawi_protokoll ist die dritte begruendete Ausnahme, und die
+       -- erste, die 'demo' AUSSCHLIESST statt einzuschliessen: Sie
+       -- fuehrt die Namen von Mitarbeitenden, und 'demo' ist der auf der
+       -- Anmeldeseite oeffentlich beworbene Zugang. Wer wann was
+       -- geaendert hat, geht niemanden im Internet etwas an. Statt
+       -- stillschweigend zu fehlen, traegt sie unten eine eigene
+       -- Zusicherung - in beide Richtungen.
+       and c.relname <> 'v_wawi_protokoll'
      order by 1
   loop
     v_gezaehlt := v_gezaehlt + 1;
@@ -123,6 +131,23 @@ begin
   return next cmp_ok(v_n, '>', 0::bigint,
     'v_wawi_km_co2 liefert fuer die reine demo-Rolle Zeilen - entkoppelt von v_wawi_fahrt_km, siehe Kommentar dort');
 
+  -- Die dritte Ausnahme, und die einzige, die in die andere Richtung
+  -- zeigt: LEER fuer 'demo'. Eine Ausnahme, die nur aus dem Sweep
+  -- herausgenommen wird, ist ein Loch - diese Zeile macht eine
+  -- Zusicherung daraus.
+  execute 'select count(*) from velocity.v_wawi_protokoll' into v_n;
+  return next is(v_n, 0::bigint,
+    'v_wawi_protokoll bleibt fuer die reine demo-Rolle leer - sie fuehrt Namen von Mitarbeitenden, und demo ist der oeffentlich beworbene Zugang');
+
+  perform set_config('request.jwt.claims', '', true);
+
+  -- Und die Gegenrichtung, damit die Ausnahme nicht eine kaputte Sicht
+  -- verdeckt: Mit der Rolle leitung MUSS sie Zeilen liefern.
+  perform velocity_test.fixture_rollen('demo-protokoll-leitung', array['leitung']);
+  execute 'select count(*) from velocity.v_wawi_protokoll' into v_n;
+  return next cmp_ok(v_n, '>', 0::bigint,
+    'v_wawi_protokoll liefert der Rolle leitung Zeilen - die Ausnahme oben verdeckt keine leere Sicht');
+
   perform set_config('request.jwt.claims', '', true);
 
   -- Gegenprobe: ein Mitarbeiter OHNE jede Rolle sieht in KEINER dieser
@@ -136,6 +161,7 @@ begin
      where n.nspname = 'velocity' and c.relkind = 'v'
        and c.relname like 'v\_wawi\_%'
        and has_table_privilege('authenticated', 'velocity.' || c.relname, 'SELECT')
+       and c.relname <> 'v_wawi_protokoll'   -- siehe oben
      order by 1
   loop
     execute format('select count(*) from velocity.%I', v_sicht) into v_n;

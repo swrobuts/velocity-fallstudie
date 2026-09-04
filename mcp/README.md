@@ -1,7 +1,7 @@
 # Die Warenwirtschaft als Werkzeugfläche für einen Agenten
 
 Ein MCP-Server über `wawi.butscher.cloud`. Er legt kein neues System an,
-sondern ein anderes Vorderteil vor dasselbe: 18 Sichten zum Lesen,
+sondern ein anderes Vorderteil vor dasselbe: 19 Sichten zum Lesen,
 15 `api_`-Funktionen zum Ändern — dieselben Aufrufe, die auch der
 Browser macht.
 
@@ -83,8 +83,9 @@ claude mcp add velocity-wawi -- <Pfad>/mcp/.venv/bin/python <Pfad>/mcp/server.py
 
 | Lesen | |
 |---|---|
-| `sichten_auflisten` | nennt die 18 Sichten mit ihrem Inhalt |
+| `sichten_auflisten` | nennt die 19 Sichten mit ihrem Inhalt |
 | `sicht_lesen` | liest eine davon, mit Filter, Sortierung und Grenze |
+| `protokoll_lesen` | wer wann was geändert hat — **ohne die Werte**, Rolle `leitung` |
 
 | Ändern | Rolle |
 |---|---|
