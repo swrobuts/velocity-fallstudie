@@ -118,6 +118,10 @@ def zahl_im_repo():
         'Abnahmepruefungen': sh("grep -c '^schritt ' tools/abnahme.sh"),
         'Basistabellen': sh("grep -rhoiE 'create table (if not exists )?velocity\\.' "
                             "db/aufbau/*.sql | wc -l"),
+        # Seit Kapitel 12 nennt eine Folie die Zahl der Agentenwerkzeuge.
+        # Sie steht im Server von Hand, eine je Funktion - genau die Sorte
+        # Zahl, die beim naechsten hinzugefuegten Werkzeug veraltet.
+        'Werkzeuge': sh("grep -c '^@server.tool()' mcp/server.py"),
     }
 
 

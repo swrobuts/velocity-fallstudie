@@ -2,7 +2,7 @@
 
 Ein MCP-Server über `wawi.butscher.cloud`. Er legt kein neues System an,
 sondern ein anderes Vorderteil vor dasselbe: 20 Sichten zum Lesen,
-15 `api_`-Funktionen zum Ändern — dieselben Aufrufe, die auch der
+16 `api_`-Funktionen zum Ändern — dieselben Aufrufe, die auch der
 Browser macht.
 
 ## Warum das so wenig Arbeit war

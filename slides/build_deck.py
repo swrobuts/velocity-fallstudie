@@ -145,7 +145,7 @@ def baue() -> Presentation:
                "und 4,00 sind die beiden naheliegenden Fehler — der eine ignoriert den "
                "Tarif, der andere dreht die Reihenfolge um.")
 
-    s = folie(prs, "Orientierung", "Zwölf Kapitel, zwölf Fragen an Annas Fahrt",
+    s = folie(prs, "Orientierung", "Dreizehn Kapitel, dreizehn Fragen an Annas Fahrt",
               "Die Reihenfolge ist zwingend. Anforderungen vor Modell, Modell vor "
               "Relationen, Relationen vor DDL. Wer sie umdreht, bindet sich an eine "
               "Umsetzung, bevor er weiß, was umzusetzen ist.")
@@ -161,8 +161,9 @@ def baue() -> Presentation:
              ["9 Warenwirtschaft", "Wer arbeitet mit der Fahrt, wenn sie bezahlt ist?"],
              ["10 Analytik",      "Welche Frage stellt die Leitung — und welche Zeile antwortet?"],
              ["11 Oberflächen",   "Wie kommt Annas Rad auf zwei verschiedene Bildschirme?"],
-             ["12 Abschluss",     "Was bleibt — und was ist entworfen, aber nicht gebaut?"]],
-            y=180, spalten_b=[220, 683.5], zeilen_h=23)
+             ["12 Agent",         "Was ändert sich, wenn kein Mensch mehr klickt?"],
+             ["13 Abschluss",     "Was bleibt — und was ist entworfen, aber nicht gebaut?"]],
+            y=176, spalten_b=[220, 683.5], zeilen_h=22)
     notizen(s, "Diese Tabelle ist die Landkarte. Ich komme nach jedem Kapitel kurz darauf "
                "zurück und hake ab.")
 
@@ -980,12 +981,135 @@ def baue() -> Presentation:
                "ausgemustertes Rad zu löschen würde jede Fahrt entwerten, die damit gemacht "
                "wurde — und damit auch Annas Rechnung. Historie verträgt kein DELETE.")
 
-    # ═══════════════════════════════════════════════════ 12 Abschluss
-    kapitel(prs, 12, "Zusammenfassung und Ausblick",
-            "Was bleibt aus zwölf Kapiteln — und was ist entworfen, aber nicht gebaut?",
+    # ═════════════════════════════ 12 Der Agent an der Warenwirtschaft
+    kapitel(prs, 12, "Der Agent an der Warenwirtschaft",
+            "Was ändert sich, wenn nicht mehr ein Mensch klickt, sondern ein Programm?",
+            "Dieselben Sichten, dieselben Funktionen, ein dritter Aufrufer — und damit "
+            "die Rechtefrage aus Kapitel 7 noch einmal, diesmal unter Belastung.")
+
+    s = folie(prs, "12 · Der Agent", "Ein drittes Vorderteil, ohne eine Zeile am Modell",
+              "Beide Oberflächen sprechen die Datenbank ausschließlich über Sichten und "
+              "api_-Funktionen an. Ein Programm kann denselben Weg gehen — am Modell war "
+              "dafür nichts zu ändern.")
+    schichtenstapel(s, [
+        ("Kundenwebsite · Warenwirtschaft · Programm eines Agenten", False),
+        ("Eine Adresse für alle drei", False),
+        ("20 Sichten zum Lesen, 21 api_-Funktionen zum Schreiben", True),
+        ("Row Level Security und hat_rolle() — hier fällt die Entscheidung", True),
+        ("Die Tabellen darunter: für keinen der drei erreichbar", False),
+    ], y=unter_intro(s), hoehe=50, luecke=10)
+    faden(s, "Annas Rad steht in einer Zeile — der Browser und das Programm lesen dieselbe.")
+    notizen(s, "Der Schnitt entstand im Kapitel 8 für die Website und im Kapitel 9 für die "
+               "Warenwirtschaft — für zwei Oberflächen mit einem Menschen davor. Dass ein "
+               "dritter Aufrufer ohne Umbau danebenpasst, war nicht geplant. Es ist der "
+               "nachträgliche Beleg dafür, dass die Schnittstelle an der richtigen Stelle "
+               "liegt: Sie beschreibt, WAS erlaubt ist, und nicht, WER fragt.")
+
+    s = folie(prs, "12 · Der Agent", "Woher das Programm seine Rechte bekommt",
+              "Ein Programm, das die Warenwirtschaft bedienen soll, braucht Rechte. Die "
+              "naheliegende Antwort ist die falsche.")
+    vorher_nachher(s,
+        ("Der naive Weg", "Ein eigener Zugang für das Programm", [
+            "Ein Dienstschlüssel, der an der Row Level Security vorbeikommt",
+            "Die Rechteprüfung steht im Programm — und ist dort änderbar",
+            "Im Protokoll steht kein Name, die Änderung kam „vom System“",
+            "Weniger erlauben heißt: Programmcode ändern",
+        ], False),
+        ("Der gewählte Weg", "Ein Konto wie jedes andere", [
+            "Anmeldung mit E-Mail und Passwort, wie bei jedem Mitarbeitenden",
+            "Die Fachrollen hängen am Mitarbeitersatz — mehr hat es nicht",
+            "hat_rolle() entscheidet in der Sicht, nicht im Programm",
+            "Jede Änderung trägt die Personalnummer des Agentenkontos",
+        ], False),
+        y=unter_intro(s), hoehe=186)
+    sandband(s, "Im Programm steht keine einzige Rechteprüfung. Wer dem Agenten weniger "
+                "erlauben will, nimmt seinem Konto eine Rolle weg — nicht seiner "
+                "Aufgabenbeschreibung.", y=390)
+    notizen(s, "Das ist Kapitel 7 noch einmal, und diesmal wird es ernst: Ein Programm "
+               "ermüdet nicht, probiert schnell und macht keinen Unterschied zwischen "
+               "einer harmlosen und einer schweren Änderung. Wenn der Schutz im Aufrufer "
+               "läge, wäre er hier weg. Er liegt aber in der Datenbank, und deshalb "
+               "ändert sich durch den neuen Aufrufer an den Rechten nichts.")
+
+    s = folie(prs, "12 · Der Agent", "Zwanzig Werkzeuge — und fünf, die mit Absicht fehlen",
+              "Das Programm bietet genau die Funktionen an, die auch die Warenwirtschaft "
+              "benutzt. Was fehlt, fehlt aus einem Grund, den man am Modell ablesen kann.")
+    kachelreihe(s, [
+        ("Vier zum Lesen", [
+            "Sichten auflisten und abfragen",
+            "Änderungsprotokoll — nur mit der Rolle leitung",
+            "Radereignisse mit Vorher und Nachher",
+        ]),
+        ("Sechzehn zum Ändern", [
+            "Räder, Kunden und Stationen anlegen",
+            "Status setzen, Schäden melden, Aufträge schließen",
+            "Drei davon sind nicht rücknehmbar",
+        ]),
+        ("Fünf ausgelassen", [
+            "Ausleihe starten und beenden, Profil, Kundensatz, Preisschätzer",
+            "Alle handeln auf dem eigenen Kundensatz des Aufrufers",
+            "Ein Mitarbeiterkonto hat keinen — sie liefen in einen Fehler",
+        ]),
+    ], y=unter_intro(s), hoehe=186)
+    sandband(s, "Auslassen ist eine Entscheidung, kein Vergessen: eine Prüfung verlangt zu "
+                "jeder api_-Funktion entweder ein Werkzeug oder einen Eintrag in der "
+                "Ausnahmeliste.", y=400)
+    notizen(s, "Die fünf ausgelassenen Funktionen sind kein Sicherheitsargument. Sie "
+               "handeln auf dem eigenen Kundensatz des angemeldeten Kontos, und ein "
+               "Mitarbeiterkonto hat keinen. Sie wären also nicht gefährlich, sondern "
+               "wirkungslos. Der Unterschied ist wichtig: Wer alles Unbequeme als "
+               "Sicherheitsfrage verkauft, kann die echten nicht mehr begründen.")
+
+    s = folie(prs, "12 · Der Agent", "Löschen: zwei Rechtsgrundlagen, ein Kunde",
+              "Ein Kunde verlangt Löschung, seine Rechnungen sind aufbewahrungspflichtig. "
+              "Beides gilt gleichzeitig — deshalb gibt es zwei Funktionen und nicht eine.")
+    tabelle(s, ["", "Anonymisieren", "Vollständig löschen"],
+            [["Fall", "Es hängen Belege daran", "Es hängt nichts daran"],
+             ["Die Fachzeile", "bleibt stehen", "verschwindet"],
+             ["Die Personendaten", "werden überschrieben", "sind weg"],
+             ["Grundlage", "Art. 17 Abs. 3 lit. b DSGVO", "Art. 17 Abs. 1 DSGVO"],
+             ["Dahinter", "§ 147 AO, § 257 HGB: zehn Jahre", "keine Aufbewahrungspflicht"],
+             ["Rolle", "leitung", "kundenservice"]],
+            y=unter_intro(s), spalten_b=[190, 356.7, 356.8], zeilen_h=32)
+    sandband(s, "Der Agent muss das nicht wissen: Beim Versuch am falschen Kunden antwortet "
+                "die Datenbank selbst — „nicht löschbar: Fahrten und Rechnungen hängen "
+                "daran. Aufbewahrungspflicht nach § 147 AO und § 257 HGB.“", y=418)
+    notizen(s, "Der Konflikt ist nur scheinbar. Art. 17 Abs. 3 lit. b nimmt genau das aus, "
+               "was eine gesetzliche Aufbewahrungspflicht verlangt. Die schwierige Frage "
+               "ist nicht, welches Recht gilt, sondern wo die Fallunterscheidung steht. "
+               "Steht sie in der Oberfläche, hängt sie an der Aufmerksamkeit der Person "
+               "davor. Hier steht sie in der Funktion selbst: Sie zählt Fahrten, "
+               "Rechnungen, Mitgliedschaften und Schadensmeldungen und verweigert mit "
+               "einem Satz, der sagt, was dagegensteht.")
+
+    s = folie(prs, "12 · Der Agent", "Was er getan hat — und der Weg zurück",
+              "Ein Programm, das ändern darf, ist nur dann vorführbar, wenn hinterher "
+              "nachvollziehbar ist, was es geändert hat. Dafür führt das Modell zwei "
+              "getrennte Bücher.")
+    regel_streifen(s, [
+        ("Änderungsprotokoll", "Kunde, Mitarbeiter, Station — wer, wann, welches Feld",
+         "aenderungsprotokoll"),
+        ("Lebenslaufakte", "Räder führen ihr Vorher und Nachher im Klartext mit",
+         "fahrrad_ereignis"),
+        ("Eigenes Konto", "Was ein Mensch tat und was ein Programm, bleibt trennbar",
+         "personalnummer"),
+        ("Weg zurück", "Ausmustern und Löschen sind endgültig — zurück nur über den Abzug",
+         "pg_dump / pg_restore"),
+    ], y=unter_intro(s), hoehe=54, luecke=10, chip_b=200)
+    faden(s, "Wer Annas Rad ausmustert, steht danach in der Lebenslaufakte — Mensch wie Programm.")
+    notizen(s, "Die Aufteilung wirkt zufällig, ist es aber nicht: Den Protokolltrigger "
+               "tragen drei Tabellen, weil dort Personendaten stehen und die Sicht darauf "
+               "die Werte deshalb weglässt. Räder führen stattdessen eine Lebenslaufakte "
+               "mit Vorher und Nachher im Klartext — ein Radstatus ist kein Personendatum. "
+               "Der letzte Punkt ist der unbequeme: Es gibt keine Rücknahmefunktion. Wer "
+               "vorführen will, was ein Agent anrichten kann, sichert vorher das Schema.")
+
+    # ═══════════════════════════════════════════════════ 13 Abschluss
+    kapitel(prs, 13, "Zusammenfassung und Ausblick",
+            "Was bleibt aus dreizehn Kapiteln — und was ist entworfen, aber nicht gebaut?",
             "Acht Sätze zum Mitnehmen — und der Rest des Modells, der auf dem Papier steht.")
 
-    s = folie(prs, "12 · Zusammenfassung", "Acht Sätze, die diese Einheit tragen",
+    s = folie(prs, "13 · Zusammenfassung", "Acht Sätze, die diese Einheit tragen",
               "Wenn Sie nichts anderes mitnehmen, dann diese acht. Zu jedem sollten Sie ein "
               "Beispiel aus Annas Fahrt nennen können.")
     regel_streifen(s, [
@@ -1001,7 +1125,7 @@ def baue() -> Presentation:
     notizen(s, "Zu jedem Satz gibt es eine Folie in dieser Einheit und eine Stelle im "
                "Modell. Das eignet sich als Prüfungsvorbereitung.")
 
-    s = folie(prs, "12 · Ausblick", "Was entworfen ist, aber noch nicht gebaut",
+    s = folie(prs, "13 · Ausblick", "Was entworfen ist, aber noch nicht gebaut",
               "Die Instandhaltung steht seit Kapitel 9. Beschaffung, Lager und die Logistik "
               "sind entworfen, aber nicht gebaut — grau hinterlegt im Diagramm.")
     oben = unter_intro(s)

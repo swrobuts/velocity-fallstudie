@@ -34,10 +34,12 @@ from __future__ import annotations
 import ast
 import os
 import pathlib
+import re
 import sys
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 SERVER = WURZEL / "mcp" / "server.py"
+ANLEITUNG = WURZEL / "mcp" / "README.md"
 
 
 def env_laden() -> None:
@@ -138,6 +140,22 @@ def main() -> int:
             funde.append((name, f"übergibt {', '.join(sorted(fremd))} — "
                                 f"die Funktion kennt nur "
                                 f"{', '.join(sorted(db_funktionen[name]))}"))
+
+    # Die Anleitung nennt beide Zahlen von Hand. Sie stand am 05.09.2026
+    # falsch - "15 api_-Funktionen", waehrend es 16 waren, seit
+    # api_kunde_loeschen dazukam. Dieselbe Sorte Fehler wie die
+    # Pruefungszahl in TESTEN.md, und derselbe Weg dagegen: zaehlen.
+    anleitung = ANLEITUNG.read_text(encoding="utf-8") if ANLEITUNG.exists() else ""
+    for zahl, muster, was in (
+            (len(sichten),  r"(\d+) Sichten zum Lesen",       "Sichten"),
+            (len(aufrufe),  r"(\d+) `api_`-Funktionen zum",   "api_-Funktionen")):
+        m = re.search(muster, anleitung)
+        if m is None:
+            funde.append(("mcp/README.md",
+                          f"die Angabe zur Zahl der {was} steht nicht mehr da"))
+        elif int(m.group(1)) != zahl:
+            funde.append(("mcp/README.md",
+                          f"nennt {m.group(1)} {was}, der Server bietet {zahl}"))
 
     print(f"{len(sichten)} Sichten und {len(aufrufe)} api_-Aufrufe des "
           f"MCP-Servers gegen die Datenbank\n  ({len(db_sichten)} v_wawi_-Sichten, "
