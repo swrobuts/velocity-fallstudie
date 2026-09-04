@@ -952,7 +952,13 @@ async function pruefListeZeigen(vorgang) {
         { feld: 'rang',          titel: t('field.platz'), filterbar: false },
         { feld: 'rahmennummer',  titel: t('field.rad') },
         { feld: 'typ',           titel: t('field.radtyp') },
-        { feld: 'standort',      titel: t('field.standort'), formatieren: (w) => w || '—' },
+        // DASSELBE WORT WIE IN DER FLOTTE. standort ist NULL, solange ein
+        // Rad faehrt (GR13 - unterwegs steht es nirgends). Ein Strich sah
+        // dort schon einmal wie eine leere, fehlerhafte Zelle aus; siehe
+        // die Begruendung an der Spalte 'standort' in flotte.js. Dieselbe
+        // Sache gehoert in beiden Listen gleich beschriftet.
+        { feld: 'standort',      titel: t('field.standort'),
+          formatieren: (w) => w || t('misc.underway') },
         { feld: 'dringlichkeit', titel: t('field.dringlichkeit'),
           formatieren: dringlichkeitAnzeige,
           // Dieselbe Auszeichnung wie bei einem offenen Schaden: was
@@ -982,7 +988,7 @@ function pruefListeMaske(zeile) {
         { name: 'rahmennummer', titel: t('field.rad'),    wert: zeile.rahmennummer, nurLesen: true },
         { name: 'typ',          titel: t('field.radtyp'), wert: zeile.typ, nurLesen: true },
         { name: 'standort',     titel: t('field.standort'),
-          wert: zeile.standort || '—', nurLesen: true },
+          wert: zeile.standort || t('misc.underway'), nurLesen: true },
         { name: 'dringlichkeit', titel: t('field.dringlichkeit'),
           wert: dringlichkeitAnzeige(zeile.dringlichkeit), nurLesen: true },
         { name: 'nutzungsquote', titel: t('field.nutzung'),
