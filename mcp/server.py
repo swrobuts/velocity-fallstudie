@@ -426,6 +426,24 @@ def kunde_anonymisieren(kunde_id: int, grund: str) -> str:
 
 
 @server.tool()
+def kunde_loeschen(kunde_id: int, grund: str) -> str:
+    """Löscht einen Kunden vollständig — die Zeile verschwindet.
+
+    NICHT RÜCKNEHMBAR, und die einzige Stelle im ganzen System, an der
+    eine Fachzeile wirklich gelöscht wird.
+
+    Geht nur, wenn NICHTS am Kunden hängt: keine Fahrt, keine Rechnung,
+    keine Mitgliedschaft, keine Schadensmeldung. Sonst verweigert die
+    Datenbank und nennt, was dagegensteht — für diese Fälle gilt die
+    Aufbewahrungspflicht nach § 147 AO und § 257 HGB, und der richtige
+    Weg ist kunde_anonymisieren.
+
+    Braucht kundenservice.
+    """
+    return _rpc("api_kunde_loeschen", p_kunde_id=kunde_id, p_grund=grund)
+
+
+@server.tool()
 def kunde_auskunft(kunde_id: int) -> str:
     """Erzeugt die Selbstauskunft nach Art. 15 DSGVO als JSON.
 
@@ -476,8 +494,9 @@ def protokoll_lesen(tabelle: str | None = None, seit: str | None = None,
     limit    höchstens 200, jüngste zuerst.
 
     Die geänderten WERTE stehen bewusst nicht darin: Das Protokoll hält
-    auch Personendaten fest, die nach Art. 17 DSGVO aus dem Kundensatz
-    gelöscht wurden. Wer wann was angefasst hat, beantwortet diese Sicht
+    zu jeder Änderung den alten und den neuen Wert fest — für die ganze
+    Kundschaft. Mit ihnen wäre es keine Aufsicht mehr, sondern eine
+    Datenquelle. Wer wann was angefasst hat, beantwortet diese Sicht
     vollständig — womit, nicht.
 
     Braucht die Rolle leitung.

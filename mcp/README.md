@@ -97,6 +97,7 @@ claude mcp add velocity-wawi -- <Pfad>/mcp/.venv/bin/python <Pfad>/mcp/server.py
 | `kunde_anlegen`, `kunde_aktualisieren`, `kunde_auskunft` | kundenservice |
 | `kunde_sperren` | kundenservice · leitung |
 | `kunde_anonymisieren` | leitung — **nicht rücknehmbar** |
+| `kunde_loeschen` | kundenservice — **nicht rücknehmbar**, nur ohne jeden Beleg |
 | `station_anlegen`, `station_stilllegen` | disposition · leitung |
 | `vorfuehrbestand_auffrischen` | leitung |
 

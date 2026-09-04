@@ -1032,7 +1032,7 @@ Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_r
 
 ## `v_wawi_protokoll` (Sicht)
 
-Änderungsprotokoll ohne wert_alt und wert_neu: wer wann an welchem Datensatz welches Feld geändert hat. Die beiden Wertspalten fehlen absichtlich - sie halten nach Art. 17 gelöschte Personendaten fest, siehe Kopfkommentar von 0022_protokollsicht.sql. Nur für die Leitung.
+Änderungsprotokoll ohne wert_alt und wert_neu: wer wann an welchem Datensatz welches Feld geändert hat. Die beiden Wertspalten fehlen absichtlich - sie hielten die Änderungsgeschichte jedes Kunden fest, siehe Kopfkommentar von 0022_protokollsicht.sql. Nur für die Leitung.
 
 | Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
 |---|---|---|---|---|

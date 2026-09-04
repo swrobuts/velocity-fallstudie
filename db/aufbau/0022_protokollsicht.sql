@@ -16,23 +16,28 @@
 -- ---------------------------------------------------------------------
 -- OHNE wert_alt UND wert_neu, UND ZWAR AUS EINEM GRUND
 --
--- Das Protokoll haelt zu jeder Aenderung den alten und den neuen Wert
--- fest. Bei einer Anonymisierung nach Art. 17 DSGVO heisst das: Vorname,
--- Nachname und E-Mail sind aus velocity.kunde geloescht und stehen im
--- Protokoll weiter. Es ist der Ort, an dem geloeschte Personendaten
--- ueberleben.
+-- BERICHTIGUNG. In der ersten Fassung stand hier, das Protokoll sei der
+-- Ort, an dem nach Art. 17 DSGVO geloeschte Personendaten ueberleben.
+-- Das ist FALSCH: api_kunde_anonymisieren ueberschreibt wert_alt und
+-- wert_neu der betroffenen Felder mit '[anonymisiert]', und
+-- api_kunde_loeschen (0023) tut dasselbe mit '[geloescht]'. Eine
+-- Loeschung kommt im Protokoll also sehr wohl an.
 --
--- Eine Sicht, die diese beiden Spalten herausgibt, hoebe die Loeschung
--- praktisch auf - fuer jeden, der die Rolle leitung traegt, und ueber
--- den MCP-Server auch fuer einen Agenten. Sie fehlen deshalb.
+-- Der richtige Grund ist ein anderer und wiegt schwerer. Das Protokoll
+-- haelt zu JEDER Aenderung den alten und den neuen Wert fest - fuer die
+-- ganze Kundschaft, nicht nur fuer geloeschte. Wer eine Telefonnummer
+-- korrigiert, hinterlaesst die alte; wer umzieht, beide Adressen. Eine
+-- Sicht, die diese zwei Spalten herausgibt, macht aus dem Pruefbuch eine
+-- Datenquelle: mit einer einzigen Abfrage haette ein Agent die
+-- Aenderungsgeschichte jedes Kunden.
 --
 -- Was bleibt, beantwortet die Frage der Uebung vollstaendig: WER hat
 -- WANN an WELCHEM Datensatz WELCHES Feld geaendert. Womit, steht nicht
 -- da - und muss fuer diesen Zweck auch nicht.
 --
--- Wer den anderen Fall lehren will - dass eine Loeschung im Protokoll
--- nicht ankommt -, zeigt die Tabelle in psql. Das ist die richtige
--- Huerde dafuer: hoch genug, dass es eine Entscheidung bleibt.
+-- Wer die Werte doch braucht - etwa um zu zeigen, dass eine
+-- Anonymisierung im Protokoll ankommt -, sieht in psql nach. Das ist die
+-- richtige Huerde dafuer: hoch genug, dass es eine Entscheidung bleibt.
 --
 -- ---------------------------------------------------------------------
 -- NUR FUER DIE LEITUNG
@@ -62,8 +67,8 @@ select p.protokoll_id,
 
 comment on view velocity.v_wawi_protokoll is
   'Änderungsprotokoll ohne wert_alt und wert_neu: wer wann an welchem Datensatz welches Feld '
-  'geändert hat. Die beiden Wertspalten fehlen absichtlich - sie halten nach Art. 17 gelöschte '
-  'Personendaten fest, siehe Kopfkommentar von 0022_protokollsicht.sql. Nur für die Leitung.';
+  'geändert hat. Die beiden Wertspalten fehlen absichtlich - sie hielten die Änderungsgeschichte '
+  'jedes Kunden fest, siehe Kopfkommentar von 0022_protokollsicht.sql. Nur für die Leitung.';
 comment on column velocity.v_wawi_protokoll.protokoll_id is 'Surrogatschlüssel der Protokollzeile.';
 comment on column velocity.v_wawi_protokoll.zeitpunkt is 'Wann die Änderung geschah.';
 comment on column velocity.v_wawi_protokoll.mitarbeiter_id is 'Wer sie ausgelöst hat, NULL bei Läufen ohne Anmeldung.';
