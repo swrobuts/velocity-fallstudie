@@ -533,25 +533,36 @@ schritt "WaWi-Sichten sind ohne Anmeldung unerreichbar"
 # Bis zur Gesamtpruefung vom 26.08.2026 fragte diese Pruefung nur
 # v_wawi_flotte ab - eine von zehn Sichten. Haette sie alle geprueft,
 # waere der eigentliche Befund von selbst aufgefallen: v_wawi_modell
-# antwortet mit HTTP 404 (PGRST205, "not in schema cache"), nicht mit
-# 401, weil sie neu ist und PostgREST seinen Schema-Cache seit ihrer
-# Anlage nicht neu geladen hat. Die Liste unten wird deshalb wie bei
-# Pruefung 2 und 4 ABGELEITET, nicht aufgezaehlt: sie liest denselben
-# "grant select on ... to authenticated"-Block am Ende von
-# db/aufbau/0019_wawi_logik.sql, der auch tatsaechlich bestimmt, welche
-# Sicht authenticated erreichen darf. v_wawi_fahrt_km steht dort
-# ABSICHTLICH nicht (siehe Kommentar dort: Bewegungsprofil, ihr wurde
-# das Recht mit einem revoke wieder entzogen) und taucht deshalb hier
-# zu Recht nicht auf - sie soll fuer niemanden ohne eigene Rolle
-# erreichbar sein, ihre Abwesenheit in dieser Liste ist kein Fehler.
+# antwortete mit HTTP 404 (PGRST205, "not in schema cache"), weil
+# PostgREST seinen Schema-Cache seit ihrer Anlage nicht neu geladen
+# hatte. Seither wird die Liste ABGELEITET, nicht aufgezaehlt - und
+# seit dem 05.09.2026 aus den create-Anweisungen statt aus den
+# Rechten, siehe den Kommentar im Block darunter.
 sichten=$(python3 - <<'PY'
-import re
-text = open('db/aufbau/0019_wawi_logik.sql', encoding='utf-8').read()
-text = re.sub(r'--[^\n]*', '', text)   # Zeilenkommentare raus, sonst zaehlen Beispielnamen darin mit
-treffer = re.search(r'grant\s+select\s+on\s+([^;]*?)\s+to\s+authenticated\s*;', text, re.S)
-if treffer:
-    for name in re.findall(r'velocity\.(v_wawi_\w+)', treffer.group(1)):
-        print(name)
+import pathlib, re
+# ALLE v_wawi_-Sichten, aus ihren create-Anweisungen. Frueher wurde die
+# Liste aus dem grant-Block am Ende von 0019_wawi_logik.sql abgeleitet -
+# damals die einzige Datei, die v_wawi_-Sichten freigab. Bei der Abnahme
+# vom 05.09.2026 fragte sie 16 von 20 ab, ohne das zu sagen: 0021 und
+# 0022 vergeben ihre Rechte einzeln, und v_wawi_fahrt_km fiel als
+# "absichtlich nicht freigegeben" ganz heraus - ausgerechnet das
+# Bewegungsprofil, die einzige Sicht, die niemand ohne Leitungsrolle
+# sehen darf. (Nachgemessen: alle vier antworten mit 401. Es fehlte der
+# Nachweis, nicht der Schutz.)
+#
+# Ueber die create-Anweisungen statt ueber die Rechte, weil die Frage
+# hier eine andere ist: nicht "wer darf das lesen", sondern "erreicht
+# es jemand OHNE Anmeldung". Darauf lautet die Antwort fuer jede
+# WaWi-Sicht gleich, und die Liste kann nicht mehr auseinanderlaufen,
+# wenn Rechte umziehen.
+namen = []
+for datei in sorted(pathlib.Path('db/aufbau').glob('*.sql')):
+    text = re.sub(r'--[^\n]*', '', datei.read_text(encoding='utf-8'))
+    for n in re.findall(r'create\s+(?:or\s+replace\s+)?view\s+velocity\.(v_wawi_\w+)',
+                        text, re.I):
+        if n not in namen:
+            namen.append(n)
+print('\n'.join(namen))
 PY
 )
 if [ -z "$sichten" ]; then

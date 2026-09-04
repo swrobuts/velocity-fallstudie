@@ -40,7 +40,7 @@ Rückgabewert 0, wenn alles besteht.
 | 25 | Passwörter unerreichbar | `auth.users` antwortet mit HTTP 406 |
 | 26 | Zahlungsmittel gesperrt | HTTP 401 ohne Anmeldung |
 | 27 | Warenwirtschaft: Basistabellen | sieben Tabellen antworten mit HTTP 401 |
-| 28 | Warenwirtschaft: Sichten ohne Anmeldung | `v_wawi_flotte` antwortet mit HTTP 401 |
+| 28 | Warenwirtschaft: Sichten ohne Anmeldung | alle 20 `v_wawi_`-Sichten antworten mit HTTP 401 |
 | 29 | Rechenannahmen | jede nennt ihre Quelle |
 | 30 | Kunde sieht eigene Fahrten | `v_meine_ausleihe`/`v_meine_rechnung`/`v_mein_profil` lesbar |
 | 31 | Keine Funktion versehentlich ausführbar | nur `api_`-Funktionen freigegeben, keine für `anon` |
