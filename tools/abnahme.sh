@@ -350,6 +350,17 @@ else
   grep -A1 'FEHLER' /tmp/abnahme-readme.log | head -12 | sed 's/^/     /'
 fi
 
+# Der MCP-Server nennt 18 Sichten und 15 api_-Funktionen von Hand. Ein
+# Werkzeug, dessen Funktion es nicht mehr gibt, faellt nicht beim Bauen
+# auf, sondern erst, wenn ein Agent es mitten in einer Vorfuehrung ruft.
+schritt "MCP-Server gegen die Datenbank"
+if python3 tools/mcp_check.py >/tmp/abnahme-mcp.log 2>&1; then
+  ergebnis 0 "$(tail -1 /tmp/abnahme-mcp.log | sed 's/^ *//')"
+else
+  ergebnis 1 "Ein Werkzeug zeigt auf ein Objekt, das es nicht gibt"
+  grep -A1 'FEHLER' /tmp/abnahme-mcp.log | head -12 | sed 's/^/     /'
+fi
+
 schritt "Freisteller gegen die Vorlage"
 if python3 tools/freisteller_pruefen.py >/tmp/abnahme-frei.log 2>&1; then
   ergebnis 0 "$(grep -c '✓' /tmp/abnahme-frei.log) Messungen an drei Raedern"

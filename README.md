@@ -118,7 +118,7 @@ python3 -m http.server 8766 --directory wawi
 ## Werkzeuge
 
 ```bash
-bash tools/abnahme.sh                  # alle 36 Prüfungen
+bash tools/abnahme.sh                  # alle 37 Prüfungen
 python3 tools/versionieren.py          # Fingerabdrücke der eingebundenen Dateien
 python3 tools/ausgeliefert_pruefen.py  # ist der geprüfte Stand auch der ausgelieferte?
 python3 tools/ux_check.py              # Bedienbarkeit und Regressionen der Website
@@ -127,6 +127,8 @@ python3 tools/erd_vollstaendig.py      # steht jede Tabelle in einem Diagramm?
 python3 tools/breitenregel_pruefen.py  # Notebook, SQL-CHECK und Ladelauf der Preisschätzung
 python3 tools/readme_pruefen.py        # die Notebook-README gegen die Merkzettel
 python3 tools/notebooks_frisch_gebaut.py  # sind die Notebooks der gebaute Stand?
+python3 tools/mcp_check.py             # die Werkzeuge des MCP-Servers gegen die Datenbank
+python3 mcp/server.py --pruefen        # Anmeldung des Agentenzugangs
 python3 tools/freisteller_pruefen.py   # die Radbilder gegen ihre Vorlagen
 python3 tools/zahlen_gegen_db.py       # Anleitung und Vortrag gegen die Datenbank
 python3 tools/raeder_weissgrund.py     # Radbilder neu erzeugen
@@ -146,6 +148,20 @@ bash tools/wawi_veroeffentlichen.sh    # Warenwirtschaft auf den Server stellen
 SQL-Kette über den Zugriffsschutz bis zu beiden Oberflächen und den
 Notebooks. Was dort grün ist, ist nachgerechnet und nicht nur angesehen.
 Die vollständige Liste steht in `TESTEN.md`.
+
+## Die Warenwirtschaft als Werkzeugfläche
+
+Dieselben 18 Sichten und 15 `api_`-Funktionen, die die Warenwirtschaft
+im Browser benutzt, stehen über einen MCP-Server auch einem Agenten
+offen — ohne Umbau, weil der Schnitt zwischen Sichten und Funktionen
+ohnehin schon eine Werkzeugfläche ist.
+
+Die Rechte liegen dabei nicht im Server, sondern beim Konto, mit dem er
+sich anmeldet: Row Level Security und `velocity.hat_rolle()` entscheiden
+weiter. Wer dem Agenten weniger erlauben will, nimmt seinem **Konto**
+eine Rolle weg, nicht seiner Aufgabenbeschreibung.
+
+Einrichtung, Werkzeugliste und die bewussten Auslassungen: `mcp/README.md`.
 
 ## Ein Weg zurück
 

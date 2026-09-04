@@ -7,7 +7,7 @@ cd ~/Library/CloudStorage/OneDrive-Persönlich/Vorlesungen/"Datenbasierte Fallst
 bash tools/abnahme.sh
 ```
 
-**36 Prüfungen**, jede meldet ✓ oder ✗. Das Skript läuft immer bis zum Ende durch — du
+**37 Prüfungen**, jede meldet ✓ oder ✗. Das Skript läuft immer bis zum Ende durch — du
 bekommst das vollständige Bild und nicht nur den ersten Fehler.
 Rückgabewert 0, wenn alles besteht.
 
