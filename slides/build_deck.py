@@ -767,7 +767,7 @@ def baue() -> Presentation:
          ["38 Basistabellen legt der Aufbau an — für beide dieselben",
           "Eine Kundenadresse ist eine Kundenadresse",
           "Keine Kopie, die veralten könnte"]),
-        ("19 Sichten, 15 Funktionen",
+        ("20 Sichten, 15 Funktionen",
          ["Gelesen wird über v_wawi_…",
           "Geschrieben über api_…",
           "Fünf weitere api_ dienen der Website"]),

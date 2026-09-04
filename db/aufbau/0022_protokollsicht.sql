@@ -74,12 +74,66 @@ comment on column velocity.v_wawi_protokoll.datensatz_id is 'Schlüssel des geä
 comment on column velocity.v_wawi_protokoll.aktion is 'INSERT, UPDATE oder DELETE.';
 comment on column velocity.v_wawi_protokoll.feld is 'Geändertes Feld. Der Wert selbst steht hier bewusst nicht.';
 
+-- ---------------------------------------------------------------------
+-- DAS ZWEITE BUCH
+--
+-- Beim ersten Durchstich mit dem MCP-Server fiel auf, dass ein
+-- Statuswechsel an einem Rad in v_wawi_protokoll NICHT auftaucht. Das
+-- ist kein Fehler, sondern die Aufteilung des Modells: den
+-- Protokolltrigger tragen genau drei Tabellen - kunde, mitarbeiter,
+-- station. Raeder fuehren stattdessen eine LEBENSLAUFAKTE,
+-- velocity.fahrrad_ereignis (Bereich I, GR21), mit Vorher-Nachher im
+-- Klartext.
+--
+-- Fuer die Frage "was hat der Agent getan" ist das zweite Buch sogar das
+-- wichtigere: Raeder umsetzen, Schaeden melden, Auftraege abschliessen -
+-- die haeufigsten Eingriffe stehen hier und nicht dort. Ohne diese Sicht
+-- endet die Vorfuehrung an derselben Stelle wie zuvor.
+create or replace view velocity.v_wawi_radereignis as
+select e.ereignis_id,
+       e.zeitpunkt,
+       f.fahrrad_id,
+       f.rahmennummer,
+       e.ereignisart,
+       e.mitarbeiter_id,
+       m.personalnummer,
+       coalesce(m.vorname || ' ' || m.nachname, 'ohne Anmeldung') as wer,
+       -- Die Bemerkung traegt bei einem Statuswechsel das Vorher-Nachher
+       -- ("verfuegbar -> wartung - Grund"). Sie steht hier, anders als
+       -- wert_alt/wert_neu drueben: Ein Radstatus ist kein Personendatum.
+       e.bemerkung,
+       e.beleg_tabelle,
+       e.beleg_id
+  from velocity.fahrrad_ereignis e
+  join velocity.fahrrad f on f.fahrrad_id = e.fahrrad_id
+  left join velocity.mitarbeiter m on m.mitarbeiter_id = e.mitarbeiter_id
+ where velocity.hat_rolle('werkstatt')
+    or velocity.hat_rolle('disposition')
+    or velocity.hat_rolle('leitung');
+
+comment on view velocity.v_wawi_radereignis is
+  'Lebenslaufakte der Räder: wer wann welchen Status gesetzt hat, mit Vorher-Nachher in der '
+  'Bemerkung. Das zweite Protokollbuch neben v_wawi_protokoll - Räder tragen keinen '
+  'Protokolltrigger, siehe Kopfkommentar von 0022_protokollsicht.sql.';
+comment on column velocity.v_wawi_radereignis.ereignis_id is 'Surrogatschlüssel des Ereignisses.';
+comment on column velocity.v_wawi_radereignis.zeitpunkt is 'Wann es geschah.';
+comment on column velocity.v_wawi_radereignis.fahrrad_id is 'Das betroffene Rad.';
+comment on column velocity.v_wawi_radereignis.rahmennummer is 'Seine Nummer, für die Werkstatt.';
+comment on column velocity.v_wawi_radereignis.ereignisart is 'Art des Ereignisses, etwa status_geaendert.';
+comment on column velocity.v_wawi_radereignis.mitarbeiter_id is 'Wer es auslöste, NULL ohne Anmeldung.';
+comment on column velocity.v_wawi_radereignis.personalnummer is 'Personalnummer desselben, NULL ohne Anmeldung.';
+comment on column velocity.v_wawi_radereignis.wer is 'Name des Auslösers, sonst „ohne Anmeldung".';
+comment on column velocity.v_wawi_radereignis.bemerkung is 'Freitext, bei Statuswechseln das Vorher-Nachher samt Grund.';
+comment on column velocity.v_wawi_radereignis.beleg_tabelle is 'Spur auf den auslösenden Vorgang, keine geprüfte Beziehung.';
+comment on column velocity.v_wawi_radereignis.beleg_id is 'Schlüssel dort, ebenfalls nur eine Spur.';
+
 -- ---- Rechte ----------------------------------------------------------
 -- Die Sicht braucht ihr eigenes Leserecht; sie erbt nichts von der
 -- Tabelle darunter. Ohne dieses grant sieht niemand etwas, auch die
 -- Leitung nicht - derselbe Fehler wie bei v_wawi_wartungsprognose am
 -- 04.09.2026, siehe dort.
-grant select on velocity.v_wawi_protokoll to authenticated;
+grant select on velocity.v_wawi_protokoll  to authenticated;
+grant select on velocity.v_wawi_radereignis to authenticated;
 
 -- Und wie jede neu angelegte Sicht ist sie von aussen erst erreichbar,
 -- nachdem PostgREST seinen Schemakatalog neu gelesen hat:

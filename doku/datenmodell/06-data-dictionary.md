@@ -1046,6 +1046,24 @@ Auswahlliste für die Radanlage. Entstanden beim Bau der Oberfläche, weil api_r
 | `aktion` | `text` | ja |  | INSERT, UPDATE oder DELETE. |
 | `feld` | `text` | ja |  | Geändertes Feld. Der Wert selbst steht hier bewusst nicht. |
 
+## `v_wawi_radereignis` (Sicht)
+
+Lebenslaufakte der Räder: wer wann welchen Status gesetzt hat, mit Vorher-Nachher in der Bemerkung. Das zweite Protokollbuch neben v_wawi_protokoll - Räder tragen keinen Protokolltrigger, siehe Kopfkommentar von 0022_protokollsicht.sql.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `ereignis_id` | `bigint` | ja |  | Surrogatschlüssel des Ereignisses. |
+| `zeitpunkt` | `timestamp with time zone` | ja |  | Wann es geschah. |
+| `fahrrad_id` | `bigint` | ja |  | Das betroffene Rad. |
+| `rahmennummer` | `text` | ja |  | Seine Nummer, für die Werkstatt. |
+| `ereignisart` | `velocity.fahrrad_ereignisart` | ja |  | Art des Ereignisses, etwa status_geaendert. |
+| `mitarbeiter_id` | `bigint` | ja |  | Wer es auslöste, NULL ohne Anmeldung. |
+| `personalnummer` | `text` | ja |  | Personalnummer desselben, NULL ohne Anmeldung. |
+| `wer` | `text` | ja |  | Name des Auslösers, sonst „ohne Anmeldung". |
+| `bemerkung` | `text` | ja |  | Freitext, bei Statuswechseln das Vorher-Nachher samt Grund. |
+| `beleg_tabelle` | `text` | ja |  | Spur auf den auslösenden Vorgang, keine geprüfte Beziehung. |
+| `beleg_id` | `bigint` | ja |  | Schlüssel dort, ebenfalls nur eine Spur. |
+
 ## `v_wawi_schaden` (Sicht)
 
 Arbeitssicht der Werkstatt: jede Schadensmeldung mit Rad, Schwere und Alter, unabhängig vom Bearbeitungsstand. Filtert selbst über velocity.hat_rolle. Seit dem Demozugang zusätzlich für velocity.hat_rolle('demo') lesbar (0020_demo_zugang.sql). Bewusst OHNE disposition (Spec 5.1 nennt nur werkstatt) - Gesamtprüfung Punkt 3: die Disposition sieht ihren Bedarf für die Flottenplanung, offene Schäden je Rad, bereits über v_wawi_flotte.offene_schaeden und .hoechste_schwere. Freitext (kategorie, beschreibung) und melderart braucht sie dafür nicht - "was niemand braucht, wird nicht ausgeliefert" (Spec 4.2). Ein früherer Entwurf liess disposition hier zusätzlich zu; das war derselbe Rechteüberschuss, der bei v_wawi_umsatz_radtyp weiter unten schon einmal zurückgenommen wurde.

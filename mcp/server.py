@@ -200,6 +200,8 @@ SICHTEN = {
     "v_wawi_km_co2": "Gefahrene Kilometer und CO₂-Ersparnis gegenüber dem Pkw.",
     "v_wawi_protokoll": "Wer wann an welchem Datensatz welches Feld geändert "
                      "hat — ohne die Werte selbst. Nur für die Rolle leitung.",
+    "v_wawi_radereignis": "Lebenslaufakte der Räder: wer wann welchen Status "
+                     "gesetzt hat, mit Vorher-Nachher. Das zweite Protokollbuch.",
 }
 
 # Die vier api_-Funktionen der Website. Sie handeln auf dem eigenen
@@ -228,7 +230,7 @@ server = MCPServer(
 # ─────────────────────────────────────────────────────── Lesen
 @server.tool()
 def sichten_auflisten() -> str:
-    """Nennt die 19 Sichten der Warenwirtschaft mit ihrem Inhalt.
+    """Nennt die 20 Sichten der Warenwirtschaft mit ihrem Inhalt.
 
     Erster Aufruf, wenn unklar ist, wo etwas steht. Die Namen daraus
     gehören in sicht_lesen.
@@ -272,7 +274,17 @@ def sicht_lesen(sicht: str, spalten: str = "*", filter: dict[str, str] | None = 
 
 
 def _rpc(funktion: str, **argumente: Any) -> str:
-    """Ruft eine api_-Funktion und gibt ihr Ergebnis als Text zurueck."""
+    """Ruft eine api_-Funktion und gibt ihr Ergebnis als Text zurueck.
+
+    NONE-WERTE WERDEN WEGGELASSEN, NICHT UEBERGEBEN. PostgREST macht aus
+    einem uebergebenen null ein SQL-NULL und schaltet damit die VORGABE
+    der Funktion ab. Bei api_wartungsprognose_erzeugen (p_stichtag
+    default current_date) fiel das im ersten Durchstich auf: Der Aufruf
+    ohne Stichtag lief mit stichtag = NULL, fand nichts, schrieb nichts
+    und meldete "0" - kein Fehler, nur ein stilles Nichts. Wer einen
+    Parameter nicht nennt, will die Vorgabe.
+    """
+    argumente = {k: v for k, v in argumente.items() if v is not None}
     antwort = httpx.post(f"{URL}/rest/v1/rpc/{funktion}", headers=_kopf(True),
                          json=argumente, timeout=60)
     if antwort.status_code not in (200, 204):
@@ -476,6 +488,31 @@ def protokoll_lesen(tabelle: str | None = None, seit: str | None = None,
     if seit:
         filter["zeitpunkt"] = f"gte.{seit}"
     return sicht_lesen("v_wawi_protokoll", filter=filter,
+                       sortierung="zeitpunkt.desc", limit=min(int(limit), 200))
+
+
+@server.tool()
+def radereignisse_lesen(rahmennummer: str | None = None, seit: str | None = None,
+                        limit: int = 30) -> str:
+    """Zeigt, was zuletzt mit den Rädern geschah — das zweite Protokollbuch.
+
+    rahmennummer  auf ein Rad einschränken, etwa "CB-00021".
+    seit          ISO-Zeitpunkt, etwa "2026-09-04T20:00".
+    limit         höchstens 200, jüngste zuerst.
+
+    Änderungen an Rädern stehen NICHT in protokoll_lesen: Den
+    Protokolltrigger tragen nur kunde, mitarbeiter und station. Räder
+    führen eine eigene Lebenslaufakte, und die Bemerkung dort nennt das
+    Vorher-Nachher im Klartext ("verfuegbar -> wartung - Grund").
+
+    Braucht werkstatt, disposition oder leitung.
+    """
+    filter: dict[str, str] = {}
+    if rahmennummer:
+        filter["rahmennummer"] = f"eq.{rahmennummer}"
+    if seit:
+        filter["zeitpunkt"] = f"gte.{seit}"
+    return sicht_lesen("v_wawi_radereignis", filter=filter,
                        sortierung="zeitpunkt.desc", limit=min(int(limit), 200))
 
 

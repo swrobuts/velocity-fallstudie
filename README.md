@@ -152,7 +152,7 @@ Die vollständige Liste steht in `TESTEN.md`.
 
 ## Die Warenwirtschaft als Werkzeugfläche
 
-Dieselben 19 Sichten und 15 `api_`-Funktionen, die die Warenwirtschaft
+Dieselben 20 Sichten und 15 `api_`-Funktionen, die die Warenwirtschaft
 im Browser benutzt, stehen über einen MCP-Server auch einem Agenten
 offen — ohne Umbau, weil der Schnitt zwischen Sichten und Funktionen
 ohnehin schon eine Werkzeugfläche ist.
