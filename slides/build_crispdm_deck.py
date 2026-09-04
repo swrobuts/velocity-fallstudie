@@ -1032,6 +1032,46 @@ def teil_synthese(prs):
                "Verfahren kann man nachschlagen; diese Reihenfolge muss man sich "
                "angewöhnen.")
 
+    # WIE WEIT KOMMT EIN ERGEBNIS? Die Frage beantwortet der Block sonst
+    # nirgends im Ganzen - jedes Fallkapitel sagt es nur fuer sich. Drei
+    # Stufen, sechs Faelle: einer bleibt im Notebook, drei enden als
+    # Datei, zwei erreichen einen Bildschirm.
+    #
+    # Bewusst OHNE gemessene Zahlen: Die Aussage steckt in der Verteilung
+    # 1 zu 3 zu 2, nicht in Kennwerten. Wer hier Trefferquoten dazusetzt,
+    # macht aus einer Einordnung eine zweite Ergebnisfolie.
+    s = folie(prs, "Synthese", "Wie weit kommt ein Ergebnis?",
+              "Sechs Fälle, sechs Ergebnisse — und drei verschiedene Enden. Wie weit "
+              "eines kommt, entscheidet nicht die Güte der Rechnung, sondern was "
+              "danach noch fehlt.")
+    y0 = unter_intro(s)
+    streifen(s, [
+        ("Steht im Notebook.",
+         "Nachlesbar, aber nicht benutzbar: keine Datei, keine Tabelle — nur "
+         "die Ausgabe unter der Zelle",
+         "Fall 4"),
+        ("Liegt als Datei bereit.",
+         "Eine CSV, die jemand öffnen und weitergeben kann. Ob sie jemand "
+         "benutzt, steht nicht in der Datei",
+         "Fall 3 · 5 · 6"),
+        ("Ist in der Anwendung.",
+         "Es erscheint, ohne dass jemand danach fragt — die Preisspanne auf "
+         "der Website, die Prüfliste in der Warenwirtschaft",
+         "Fall 1 · 2"),
+    ], y=y0, hoehe=64, luecke=10, chip_b=150)
+    sandband(s, "Zwei von sechs erreichen einen Bildschirm. Die anderen vier "
+                "bleiben aus vier verschiedenen Gründen stehen — und keiner "
+                "davon ist ein Rechenfehler.",
+             y=darunter(y0, 3 * 64 + 2 * 10))
+    notizen(s, "Die vier Gründe, falls jemand fragt: Fall 3 liefert absichtlich "
+               "nur einen aggregierten Bericht ohne Namen - der Datenschutz "
+               "entscheidet, nicht die Kennzahl. Fall 4 wartet auf die "
+               "prospektive Prüfung. Bei Fall 5 ist die Wirtschaftlichkeit mit "
+               "diesen Daten nicht prüfbar. Fall 6 fehlen die Fälle, nicht die "
+               "Methode. Vier verschiedene Hindernisse, und keines davon "
+               "verschwindet dadurch, dass man ein besseres Modell rechnet. "
+               "Wer die Folie kurz halten will, sagt nur den Satz im Band.")
+
     # DIE EINZIGE FOLIE DES DECKS, DIE NICHT AUS EINEM NOTEBOOK STAMMT.
     # Sie zeigt, was NACH Phase 6 passiert: Die Faustregel aus Fall 2 ist
     # in das Betriebssystem uebernommen worden - und hat sich dabei

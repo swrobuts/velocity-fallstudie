@@ -1829,8 +1829,8 @@ PRODUKTE = {
         "im_paket": False,
     },
     "A2 auffaellige Fahrten": {
-        "status": "schatten",
-        "satz": "Schattenbetrieb - die Liste entsteht taeglich, die "
+        "status": "probebetrieb",
+        "satz": "Probebetrieb - die Liste entsteht taeglich, die "
                 "Trefferquote ist mangels Labels unbekannt",
         "im_paket": True,
     },
@@ -1863,7 +1863,7 @@ assert B_STATUS in ("pilot", "explorativ"), B_STATUS
 # Kein Produkt im Schatten-, Explorativ- oder Spezifikationsstatus darf
 # unter "operativ freigegeben" auftauchen.
 for _n, _w in PRODUKTE.items():
-    if _w["status"] in ("schatten", "explorativ", "spezifiziert"):
+    if _w["status"] in ("probebetrieb", "explorativ", "spezifiziert"):
         assert _n not in OPERATIV_FREIGEGEBEN_FUER, (
             f"{_n} hat Status {_w['status']} und gilt trotzdem als freigegeben.")
 
@@ -2001,7 +2001,7 @@ MD("""
 | 3 Data Preparation | Fünf Merkmale je Fahrt; `distanz_km` bleibt draußen, weil ein fehlender Sensor keine auffällige *Fahrt* ist — wiederholtes Fehlen bei demselben Rad ist sehr wohl ein Fall, nur ein anderer: Datenqualität statt Fahrverhalten |
 | 4 Modeling | Interquartilsregel ({{iqr_treffer:,}} Treffer — unbrauchbar), dann Isolation Forest — der **beim ersten Versuch die Preisklasse fand statt der Anomalien**. Rücksprung nach Phase 3, Entgelt je Radtyp normiert. Alles nur auf dem Referenzzeitraum angepasst |
 | 5 Evaluation | Die globale Rangliste meldet {{globale_quote:.1%}}, die tatsächlich erzeugbare Tagesliste {{tagesquote:.1%}} — **bei demselben Modell**. Für A2 gibt es damit keine belegte Güte, nur einen Schattenbetrieb. Bei B hob eine Nachbesserung die Präzision der alten Regel von {{stat_alt_quote:.1%}}; im **Entwicklungsabschnitt** erreicht sie {{entw_je_alarm:.1%}} je neuem Alarm. Im **unangetasteten Test** sind es {{stat_je_alarm:.1%}} je neuem Alarm gegen die geforderten {{b_gate_praezision:.0%}} — **B1 damit gerissen**. Recall {{episoden_neu:.0f}}/{{episoden_gesamt:.0f}} Episoden und Verzug {{b_verzug}} Tag halten; insgesamt {{b_gates_halten}} |
-| 6 Deployment | **A1 spezifiziert, A2 im Schattenbetrieb, B {{b_status}}.** A1 ist als Regel und Funktion beschrieben und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. A2 hat den Status „{{a2_status}}", weil das Label fehlt. Bei B halten {{b_gates_halten}} der vier vorab festgelegten Gates auf dem unangetasteten Testabschnitt. Alle drei Statusangaben stammen aus derselben Quelle wie das Modellpaket |
+| 6 Deployment | **A1 spezifiziert, A2 im Probebetrieb, B {{b_status}}.** A1 ist als Regel und Funktion beschrieben und retrospektiv logisch geprüft — Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. A2 hat den Status „{{a2_status}}", weil das Label fehlt. Bei B halten {{b_gates_halten}} der vier vorab festgelegten Gates auf dem unangetasteten Testabschnitt. Alle drei Statusangaben stammen aus derselben Quelle wie das Modellpaket |
 
 **Der Rücksprung, den man in diesem Notebook mitverfolgen konnte**
 

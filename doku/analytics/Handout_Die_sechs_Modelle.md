@@ -204,7 +204,7 @@ Zeilen der Rangliste.
 
 **Ergebnis.** Produkt **A1** ist spezifiziert: als Regel beschrieben und
 retrospektiv geprüft; Echtzeitquelle, Ausnahmeliste und Alarmkanal fehlen noch. Produkt
-**A2** steht auf schatten, da für die Bewertung kein Label vorliegt. Bei
+**A2** steht auf probebetrieb, da für die Bewertung kein Label vorliegt. Bei
 Produkt **B** halten 2 von 3 bindenden Gates auf dem unangetasteten Testabschnitt;
 der Status lautet explorativ.
 
@@ -226,7 +226,7 @@ ermittelt wurde, beschreibt nicht die Liste, mit der später gearbeitet wird.
 | 3 Segmente | Stationsprofile; aggregierter Kundenbericht | analytisch nicht belegt, Einsatz freigegeben |
 | 4 Nachfrage | Lineare Regression | probebetrieb |
 | 5 Ströme im Netz | Produkt A: nicht freigegeben (Wirtschaftlichkeit nicht prüfbar); Produkt B: 6 Regeln | analytisches Lehr-Gate bestanden — keine reale Betriebsfreigabe |
-| 6 Anomalien | A1, A2 und B getrennt | A1 spezifiziert, A2 schatten, B explorativ |
+| 6 Anomalien | A1, A2 und B getrennt | A1 spezifiziert, A2 probebetrieb, B explorativ |
 
 Der überwiegende Teil dieser Verfahren darf am Ende keine Entscheidung treffen. Das ist
 kein Scheitern, sondern das Ergebnis der Prüfung. Eine Fallstudie, in der sechs von sechs
