@@ -94,7 +94,7 @@ Verschiedenes.
 **Was offen bleibt.** Der Anteil auffälliger Räder schwankt über die
 8 Stichtage zwischen 14,4 % und
 49,6 %. Ein einzelnes günstiges Quartal belegt daher wenig; es
-kann ebenso gut die Jahreszeit gewesen sein. Aus diesem Grund liegt eine Schattenliste
+kann ebenso gut die Jahreszeit gewesen sein. Aus diesem Grund liegt eine Prognoseliste
 zum 24.08.2026 bei, deren Bewertung erst nach Ablauf des Horizonts
 möglich ist.
 
@@ -222,7 +222,7 @@ ermittelt wurde, beschreibt nicht die Liste, mit der später gearbeitet wird.
 | Notebook | Ausgeliefertes Artefakt | Status |
 |---|---|---|
 | 1 Preisauskunft | Perzentiltabelle als CSV-Datei | sichtbar |
-| 2 Wartung | Faustregel und Schattenliste | historisch freigegeben, prospektiv offen |
+| 2 Wartung | Faustregel und Prognoseliste | historisch freigegeben, prospektiv offen |
 | 3 Segmente | Stationsprofile; aggregierter Kundenbericht | analytisch nicht belegt, Einsatz freigegeben |
 | 4 Nachfrage | Lineare Regression | schattenpilot |
 | 5 Ströme im Netz | Produkt A: nicht freigegeben (Wirtschaftlichkeit nicht prüfbar); Produkt B: 6 Regeln | analytisches Lehr-Gate bestanden — keine reale Betriebsfreigabe |

@@ -52,7 +52,7 @@ PFLICHT = {
      r"Schnitt entlang der Zeit|zeitlich", "md"),
     ("Faustregel wird ausgeliefert", r"Faustregel", "alle"),
     ("Wilson-Untergrenze entscheidet", r"Wilson", "alle"),
-    ("Schattenliste beigelegt", r"[Ss]chattenliste", "alle"),
+    ("Prognoseliste beigelegt", r"[Pp]rognoseliste", "alle"),
     ("Grundrate schwankt saisonal", r"Grundrate", "alle"),
 ],
 "03_Clustering_Stationen_und_Kunden": [

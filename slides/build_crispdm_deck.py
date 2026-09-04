@@ -744,7 +744,7 @@ def fall2(prs):
          f"Von zehn geprüften Rädern werden {w.z('quote_regel_von_zehn', 1)} "
          f"auffällig.",
          f"Von zehn auffälligen erfasst die Liste {w.z('abdeckung_von_zehn', 1)}.",
-         f"Dazu eine Schattenliste zum {w['schatten_stichtag_lang']}."],
+         f"Dazu eine Prognoseliste zum {w['prognose_stichtag_lang']}."],
         ["Die Werkstatt kann die Liste ohne Nacharbeit übernehmen.",
          "Kein Modellbetrieb, keine Versionsstände, erklärbar im Streitfall.",
          "Das Kostenverhältnis steht sichtbar in der Entscheidung."],

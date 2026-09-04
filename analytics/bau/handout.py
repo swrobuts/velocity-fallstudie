@@ -154,8 +154,8 @@ Verschiedenes.
 **Was offen bleibt.** Der Anteil auffälliger Räder schwankt über die
 {{nb02_panel_stichtage:.0f}} Stichtage zwischen {{nb02_panel_grundrate_min:.1%}} und
 {{nb02_panel_grundrate_max:.1%}}. Ein einzelnes günstiges Quartal belegt daher wenig; es
-kann ebenso gut die Jahreszeit gewesen sein. Aus diesem Grund liegt eine Schattenliste
-zum {{nb02_schatten_stichtag_lang}} bei, deren Bewertung erst nach Ablauf des Horizonts
+kann ebenso gut die Jahreszeit gewesen sein. Aus diesem Grund liegt eine Prognoseliste
+zum {{nb02_prognose_stichtag_lang}} bei, deren Bewertung erst nach Ablauf des Horizonts
 möglich ist.
 
 ---
@@ -282,7 +282,7 @@ ermittelt wurde, beschreibt nicht die Liste, mit der später gearbeitet wird.
 | Notebook | Ausgeliefertes Artefakt | Status |
 |---|---|---|
 | 1 Preisauskunft | {{nb01_kandidat}} als CSV-Datei | {{nb01_produktstatus}} |
-| 2 Wartung | Faustregel und Schattenliste | historisch freigegeben, prospektiv offen |
+| 2 Wartung | Faustregel und Prognoseliste | historisch freigegeben, prospektiv offen |
 | 3 Segmente | Stationsprofile; aggregierter Kundenbericht | analytisch {{nb03_status_analytisch}}, Einsatz {{nb03_status_einsatz}} |
 | 4 Nachfrage | {{nb04_gewaehlt_name}} | {{nb04_status}} |
 | 5 Ströme im Netz | Produkt A: {{nb05_status_a}}; Produkt B: {{nb05_b_regeln_n:.0f}} Regeln | {{nb05_status_b}} |

@@ -266,7 +266,7 @@ def fall02():
             f"Der Anteil auffälliger Räder schwankt über {w['panel_stichtage']} "
             f"Stichtage zwischen {w.p('panel_grundrate_min')} und "
             f"{w.p('panel_grundrate_max')}. Ein einzelnes gutes Quartal belegt wenig.",
-            f"Beigelegt ist eine Schattenliste zum {w['schatten_stichtag_lang']}; "
+            f"Beigelegt ist eine Prognoseliste zum {w['prognose_stichtag_lang']}; "
             f"bewertbar wird sie erst nach {w['horizont_tage']} Tagen.",
         ],
         "merksatz": ("Ein Modell schlägt eine Faustregel nur dann, wenn die Faustregel "

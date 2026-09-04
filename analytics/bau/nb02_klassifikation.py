@@ -36,7 +36,7 @@ MD("""
 > **Was offen bleibt.** Der Anteil auffälliger Räder schwankt über die
 > {{panel_stichtage:.0f}} Stichtage zwischen {{panel_grundrate_min:.1%}} und
 > {{panel_grundrate_max:.1%}}. Ein einzelnes günstiges Quartal belegt daher wenig.
-> Beigelegt ist eine Schattenliste zum {{schatten_stichtag_lang}}, deren Bewertung erst
+> Beigelegt ist eine Prognoseliste zum {{prognose_stichtag_lang}}, deren Bewertung erst
 > nach Ablauf des Horizonts möglich ist.
 """),
 
@@ -1730,42 +1730,42 @@ else:
 # sie ermoeglicht, eine zu messen - und genau daran fehlt es hier.
 # Was die Werkstatt HEUTE bekaeme, steht auf dem letzten Tag der Daten -
 # und sein Ausgang ist unbekannt, weil die 90 Tage noch nicht vorbei sind.
-# Genau das macht sie zur Schattenliste: Sie laesst sich erst nach Ablauf
+# Genau das macht sie zur Prognoseliste: Sie laesst sich erst nach Ablauf
 # des Quartals bewerten. Wer sie vorher beurteilt, beurteilt nichts.
-_schatten_stichtag = fahrten.startzeit.max().normalize()
-_schatten = zeile_bauen(_schatten_stichtag)
-_schatten = _schatten[_schatten.fahrrad_id.notna()].copy()
-_schatten["rangwert"] = _schatten.km_seit_reparatur
-_schatten = _schatten.nlargest(KAPAZITAET, "rangwert").reset_index(drop=True)
-_schatten.insert(0, "rang", range(1, len(_schatten) + 1))
-_schatten_aus = _schatten[["rang", "fahrrad_id", "typ_code", "rangwert",
+_prognose_stichtag = fahrten.startzeit.max().normalize()
+_prognose = zeile_bauen(_prognose_stichtag)
+_prognose = _prognose[_prognose.fahrrad_id.notna()].copy()
+_prognose["rangwert"] = _prognose.km_seit_reparatur
+_prognose = _prognose.nlargest(KAPAZITAET, "rangwert").reset_index(drop=True)
+_prognose.insert(0, "rang", range(1, len(_prognose) + 1))
+_prognose_aus = _prognose[["rang", "fahrrad_id", "typ_code", "rangwert",
                            "km_180", "meldungen_bisher"]].round(0)
-_schatten_aus["stichtag"] = _schatten_stichtag.date()
-_schatten_aus["gilt_bis"] = (_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()
-_schatten_aus["status"] = "SCHATTENBETRIEB - nicht handlungsleitend"
-_schatten_aus["regelversion"] = "km_seit_reparatur"
-_schatten_aus["kennzeichnung"] = "SCHATTENBETRIEB - Ausgang offen"
-_schatten_aus["datenstand"] = DATENSTAND_KURZ
-_schatten_aus["bewertbar_ab"] = (_schatten_stichtag
+_prognose_aus["stichtag"] = _prognose_stichtag.date()
+_prognose_aus["gilt_bis"] = (_prognose_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()
+_prognose_aus["status"] = "SCHATTENBETRIEB - nicht handlungsleitend"
+_prognose_aus["regelversion"] = "km_seit_reparatur"
+_prognose_aus["kennzeichnung"] = "SCHATTENBETRIEB - Ausgang offen"
+_prognose_aus["datenstand"] = DATENSTAND_KURZ
+_prognose_aus["bewertbar_ab"] = (_prognose_stichtag
                                  + pd.Timedelta(days=HORIZONT_TAGE)).date()
-_schatten_datei = f"schattenliste_{_schatten_stichtag.date()}.csv"
-_schatten_aus.to_csv(_schatten_datei, index=False)
-merke("schatten_stichtag", str(_schatten_stichtag.date()))
-merke("schatten_stichtag_lang", f"{_schatten_stichtag:%d.%m.%Y}")
+_prognose_datei = f"prognoseliste_{_prognose_stichtag.date()}.csv"
+_prognose_aus.to_csv(_prognose_datei, index=False)
+merke("prognose_stichtag", str(_prognose_stichtag.date()))
+merke("prognose_stichtag_lang", f"{_prognose_stichtag:%d.%m.%Y}")
 
 print()
 if KEINE_FREIGABE:
     print("Kein Verfahren hat alle Pflichtgates genommen - es entsteht weder")
     print("eine Werkstattliste noch ein Modellpaket.")
-    print(f"geschrieben: {_schatten_datei} (Schattenbetrieb, Ausgang offen)")
+    print(f"geschrieben: {_prognose_datei} (Schattenbetrieb, Ausgang offen)")
 else:
     print(f"ausgeliefert: {paket['ausgeliefert']}")
     print(f"geschrieben: {_test_datei} (historisch, Ausgang bekannt)")
-    print(f"             {_schatten_datei} (Schattenbetrieb, Ausgang offen)")
+    print(f"             {_prognose_datei} (Schattenbetrieb, Ausgang offen)")
     print("             wartungsmodell.joblib")
 print()
-print(f"Die Schattenliste steht auf dem {_schatten_stichtag.date()} - dem letzten Tag")
-print(f"der Daten. Bewertbar wird sie am {(_schatten_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()},")
+print(f"Die Prognoseliste steht auf dem {_prognose_stichtag.date()} - dem letzten Tag")
+print(f"der Daten. Bewertbar wird sie am {(_prognose_stichtag + pd.Timedelta(days=HORIZONT_TAGE)).date()},")
 print("wenn die 90 Tage vorbei sind. Bis dahin ist sie eine Vorhersage")
 print("ohne Ergebnis.")
 print()
@@ -1878,7 +1878,7 @@ beiden Ausgänge zu sehen. Was hilft, ist ein Vergleich zwischen Rädern:
 
 1. **Alles protokollieren:** Auswahlgrund, Prüfdatum, Befund, Reparatur und die späteren
    Meldungen. Ohne dieses Protokoll ist nichts auswertbar.
-2. **Erst im Schatten mitlaufen lassen:** Liste erzeugen, aber nicht danach handeln. Die
+2. **Erst im Schattenbetrieb mitlaufen lassen:** Liste erzeugen, aber nicht danach handeln. Die
    Grundrate bleibt unverändert, und man sieht, ob die Liste trifft.
 3. **Dann eine Kontrollgruppe:** Ein fachlich vertretbarer Teil der Flotte wird weiter
    nach dem Standardprozess gewartet. Nur der Unterschied zwischen beiden Gruppen misst,
@@ -1902,7 +1902,7 @@ MD("""
 | 3 Data Preparation | Zeitlicher Schnitt statt Gesamtbetrachtung. Gemessene Distanzen bevorzugt, Langfahrten ausgeschlossen, Räder mit offenem Schaden aus der Prognosepopulation genommen. Rückgesetzt wird bei der **erledigten Reparatur**, nicht bei der Meldung |
 | 4 Modeling | Drei Faustregeln als Maßstab, dann Baum und Wald — beide mit `class_weight` aus der Kostenmatrix |
 | 5 Evaluation | Auf dem Testquartal liegt die Faustregel vorn ({{treffer_regel:.0f}} gegen {{treffer_wald:.0f}} Treffer). **Entschieden hat K3:** Die Wilson-Untergrenze der Regel liegt bei {{k3_unten_regel:.1%}} über der dynamischen Schwelle von {{k3_schwelle:.1%}} ({{lift_faktor}} × Grundrate {{grundrate_test:.1%}}); der Wald erreicht nur {{k3_unten_wald:.1%}} und reißt K3. Über {{roll_quartale:.0f}} Validierungsquartale nimmt die Regel K1 in {{k1_quartale_regel:.0f}} Quartalen. Zur Einordnung: D70 erfüllen beide ({{d70_regel}} / {{d70_wald}}) — die Marke war ohnehin unerfüllbar, in einem Quartal liegt die Orakelschranke bei {{winter_orakel:.1%}} |
-| 6 Deployment | **Ausgeliefert wird die Faustregel.** Dazu eine Schattenliste zum {{schatten_stichtag}}, bewertbar nach {{horizont_tage:.0f}} Tagen — die Freigabe steht auf historischen Daten und wird prospektiv nachgeprüft |
+| 6 Deployment | **Ausgeliefert wird die Faustregel.** Dazu eine Prognoseliste zum {{prognose_stichtag}}, bewertbar nach {{horizont_tage:.0f}} Tagen — die Freigabe steht auf historischen Daten und wird prospektiv nachgeprüft |
 
 **Drei Sätze, die aus diesem Notebook bleiben sollten**
 
