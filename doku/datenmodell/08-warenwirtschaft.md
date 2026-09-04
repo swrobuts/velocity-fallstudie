@@ -377,6 +377,47 @@ darf, obwohl auf `aenderungsprotokoll` sonst `using (false)` für jedes
 gesamten Schema darf das Protokoll anfassen — und es ist die, die Art. 17
 umsetzt.
 
+## Die Prüfliste — ein Analyseergebnis, das in der Datenbank landet
+
+Die Instandhaltung hat einen dritten Unterreiter. Die beiden ersten
+zeigen, was **passiert ist**: gemeldete Schäden, laufende Aufträge. Der
+dritte zeigt, was passieren **könnte** — die 60 Räder, die seit ihrer
+letzten Reparatur am meisten gearbeitet haben.
+
+Die Idee kommt aus Notebook 2 des CRISP-DM-Blocks, das Verfahren nicht.
+`db/aufbau/0021_wartungsprognose.sql` begründet im Kopfkommentar
+ausführlich, warum sich die dortige Regel („Kilometer seit der letzten
+erledigten Reparatur") hier nicht abschreiben ließ; kurz gefasst:
+
+- `distanz_km` fehlt bei 40 % der Fahrten, und der Anteil schwankt je Rad
+  zwischen 37 % und 82 %. Eine Summe der bekannten Kilometer sortierte
+  die Räder nach der Datenqualität statt nach dem Verschleiß.
+- Rohe Fahrzeit sortiert den **Radtyp**: Lastenradfahrten dauern im
+  Mittel 39 Minuten, Cityradfahrten 19. Die Liste enthielte 96 % aller
+  Lastenräder und 4 % der Cityräder. Deshalb wird durch den Median des
+  Typs geteilt — die Rangfolge entsteht damit innerhalb des Typs.
+- Eine einzige nicht beendete Ausleihe kippt die Liste. Ein Rad stand mit
+  6.435 Minuten auf Platz 1, davon 5.422 aus **einer** Fahrt über 90
+  Stunden. Jede Fahrt zählt deshalb höchstens 300 Minuten mit.
+
+Drei Punkte, die didaktisch mehr wert sind als eine Liste, die auf Anhieb
+gestimmt hätte: Ein Verfahren, das auf einem Datensatz trägt, trägt nicht
+automatisch auf einem anderen. Was übertragbar ist, ist die **Frage** —
+wer hat seit der letzten Reparatur am meisten gearbeitet? —, nicht die
+Formel.
+
+**Die Liste wird eingefroren, nicht gerechnet.** `velocity.wartungsprognose`
+hält je Stichtag 60 Zeilen fest, `v_wawi_wartungsprognose` zeigt sie an.
+Eine Sicht, die sich bei jedem Aufruf neu berechnet, ließe sich nach 90
+Tagen an nichts messen — und genau diese Nachprüfung ist der Zweck.
+Bis dahin steht in jeder Zeile `betriebsmodus = 'probelauf'`: Die Liste
+ordnet keine Reparatur an.
+
+**Und sie ist noch nicht belastbar.** Notebook 2 hat seine Regel an
+tausenden Schadensmeldungen gemessen; in dieser Datenbank stehen sieben
+Meldungen und zwei erledigte Reparaturen. Für 276 der 278 Räder heißt
+„seit der letzten Reparatur" deshalb schlicht „seit der Anschaffung".
+
 ## Was auch das nicht leistet
 
 Ein Sicherheitskonzept, das mehr behauptet, als es hält, ist gefährlicher

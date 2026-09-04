@@ -547,7 +547,7 @@ def baue() -> Presentation:
             "Was kostet Annas Fahrt genau — und warum?",
             "Jetzt lösen wir die Frage vom Anfang auf. Jeder Cent muss begründbar sein.")
 
-    s = folie(prs, "6 · Implementierung", "Neunzehn Aufbauschritte, jeder für sich lauffähig",
+    s = folie(prs, "6 · Implementierung", "Zwanzig Aufbauschritte, jeder für sich lauffähig",
               "Jede Datei ist idempotent: sie läuft zweimal hintereinander fehlerfrei. Das "
               "ist die Voraussetzung dafür, dass man einen Aufbau gefahrlos wiederholen kann.")
     schichtenstapel(s, [
@@ -605,8 +605,8 @@ def baue() -> Presentation:
           "  and a.attname not in",
           "      ('erstellt_am','geaendert_am');",
           "",
-          "320 Spalten im Aufbau, 248 beschrieben,",
-          "72 technische Audit-Spalten ausgenommen."], GRUEN_D),
+          "338 Spalten im Aufbau, 264 beschrieben,",
+          "74 technische Audit-Spalten ausgenommen."], GRUEN_D),
         y=176, hoehe=240)
     notizen(s, "Der Trick ist der Test, nicht der Kommentar. Ohne ihn schreibt man die "
                "ersten zwanzig Kommentare und vergisst die restlichen zweihundert.")
@@ -764,10 +764,10 @@ def baue() -> Presentation:
               "Sie legt Sichten und Funktionen über genau die Tabellen, die schon da waren.")
     kachelreihe(s, [
         ("Kein zweites Schema",
-         ["37 Basistabellen legt der Aufbau an — für beide dieselben",
+         ["38 Basistabellen legt der Aufbau an — für beide dieselben",
           "Eine Kundenadresse ist eine Kundenadresse",
           "Keine Kopie, die veralten könnte"]),
-        ("17 Sichten, 14 Funktionen",
+        ("18 Sichten, 15 Funktionen",
          ["Gelesen wird über v_wawi_…",
           "Geschrieben über api_…",
           "Fünf weitere api_ dienen der Website"]),

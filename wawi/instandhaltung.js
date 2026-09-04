@@ -53,7 +53,7 @@ bereichAnmelden({
     suchePlatzhalterSchluessel: 'nav.instandhaltungSuche'
 });
 
-let unterbereich = 'schaeden';   // 'schaeden' | 'auftraege'
+let unterbereich = 'schaeden';   // 'schaeden' | 'auftraege' | 'pruefliste'
 
 // Fuer den Querverweis aus der Flotte (Gestaltungsauftrag Punkt 3: "Rad
 // in der Flotte -> seine Schadensmeldungen"). unterbereich ueberlebt
@@ -128,8 +128,11 @@ async function instandhaltungAufbauen() {
         t('button.reportDamage'), schadenMeldenMaske);
 
     zeigeUnterreiter(vorgang, [
-        { schluessel: 'schaeden',  titel: t('tab.openDamage') },
-        { schluessel: 'auftraege', titel: t('tab.workOrders') }
+        { schluessel: 'schaeden',   titel: t('tab.openDamage') },
+        { schluessel: 'auftraege',  titel: t('tab.workOrders') },
+        // Der dritte Reiter zeigt keine Vorgaenge, sondern eine
+        // VORHERSAGE - siehe pruefListeZeigen() weiter unten.
+        { schluessel: 'pruefliste', titel: t('tab.checkList') }
     ], unterbereich, async (gewaehlt) => {
         unterbereich = gewaehlt;
         // Ohne dies bliebe die Detailmaske des VORHERIGEN Unterreiters
@@ -176,8 +179,9 @@ async function instandhaltungAufbauen() {
         // schon in der Datenbank stehen.
         new Map(modelleFuerTypnamen.map((m) => [m.typ_code, m.typ]))));
 
-    if (unterbereich === 'schaeden') await schaedenZeigen(vorgang);
-    else                             await auftraegeZeigen(vorgang);
+    if      (unterbereich === 'schaeden')   await schaedenZeigen(vorgang);
+    else if (unterbereich === 'pruefliste') await pruefListeZeigen(vorgang);
+    else                                    await auftraegeZeigen(vorgang);
 }
 
 // ===== Kopftafel der Instandhaltung =====
@@ -880,4 +884,129 @@ async function auftragErledigen(auftrag, minuten, bemerkung) {
         p_arbeitszeit_minuten: minuten, p_bemerkung: bemerkung
     });
     melde(t('msg.workOrderCompleted', { auftragsnummer: auftrag.auftragsnummer }), 'gut');
+}
+
+
+// ===== Prüfliste =====
+//
+// Die beiden Reiter davor zeigen, was PASSIERT ist: gemeldete Schäden,
+// laufende Aufträge. Dieser zeigt, was passieren KÖNNTE - die
+// Wartungsprognose aus 0021_wartungsprognose.sql: die 60 Räder, die
+// seit ihrer letzten Reparatur am meisten gearbeitet haben, gemessen am
+// Median ihres Radtyps.
+//
+// SIE ORDNET NICHTS AN. Die Datenbank hält das in betriebsmodus fest,
+// und die Statuszeile sagt es bei jedem Aufruf. Erst wenn sich nach 90
+// Tagen zeigt, ob die Liste die richtigen Räder benannt hat, kann aus
+// dem Probelauf etwas Verbindliches werden.
+//
+// GEZEIGT WIRD IMMER DIE JÜNGSTE LISTE. Ältere bleiben in der Tabelle
+// stehen - ohne sie gäbe es später nichts nachzuprüfen -, aber in der
+// Werkstatt ist die aktuelle gefragt.
+const DRINGLICHKEIT_SCHLUESSEL = {
+    'zuerst':           'misc.urgencyFirst',
+    'danach':           'misc.urgencyNext',
+    'wenn Zeit bleibt': 'misc.urgencyIfTime'
+};
+
+function dringlichkeitAnzeige(wert) {
+    const schluessel = DRINGLICHKEIT_SCHLUESSEL[wert];
+    return schluessel ? t(schluessel) : (wert || '');
+}
+
+// "1,47×" statt "1.47" - der Malpunkt sagt, dass es ein Verhältnis ist
+// und keine Menge. Ohne ihn liest sich die Spalte wie Kilometer.
+function quoteAnzeige(wert) {
+    if (wert === null || wert === undefined) return '';
+    return `${zahlFormat(Number(wert), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}×`;
+}
+
+async function pruefListeZeigen(vorgang) {
+    const zeilen = await ladeListe('v_wawi_wartungsprognose',
+        'stichtag, rang, fahrrad_id, rahmennummer, typ, standort, nutzungsquote, ' +
+        'fahrminuten_seit_reparatur, typ_median_minuten, fahrten_seit_reparatur, ' +
+        'km_gemessen, anteil_mit_distanz, letzte_reparatur, meldungen_bisher, ' +
+        'gilt_bis, betriebsmodus, dringlichkeit',
+        (q) => q.order('stichtag', { ascending: false }).order('rang'));
+
+    const fehler = letzterLadeFehler('v_wawi_wartungsprognose');
+    if (fehler) {
+        meldeVorgang(vorgang, t('msg.checkListLoadFailed', { fehler }), 'schlecht');
+        return;
+    }
+
+    if (zeilen.length === 0) {
+        zeigeLeermaske(vorgang, t('empty.noCheckListTitle'), t('empty.noCheckListText'));
+        meldeVorgang(vorgang, t('empty.noCheckListTitle'));
+        return;
+    }
+
+    // Die Anfrage sortiert bereits nach stichtag absteigend - die erste
+    // Zeile trägt also den jüngsten. Gefiltert wird danach im Browser
+    // statt in einer zweiten Anfrage: 60 Zeilen je Liste sind weniger
+    // Daten als ein zusätzlicher Umlauf kostet.
+    const stichtag = zeilen[0].stichtag;
+    const aktuell = zeilen.filter((z) => z.stichtag === stichtag);
+
+    zeigeListe(vorgang, aktuell, [
+        { feld: 'rang',          titel: t('field.platz'), filterbar: false },
+        { feld: 'rahmennummer',  titel: t('field.rad') },
+        { feld: 'typ',           titel: t('field.radtyp') },
+        { feld: 'standort',      titel: t('field.standort'), formatieren: (w) => w || '—' },
+        { feld: 'dringlichkeit', titel: t('field.dringlichkeit'),
+          formatieren: dringlichkeitAnzeige,
+          // Dieselbe Auszeichnung wie bei einem offenen Schaden: was
+          // zuerst drankommt, hebt sich ab.
+          klasse: (z) => (z.dringlichkeit === 'zuerst' ? 'warnung' : '') },
+        { feld: 'nutzungsquote', titel: t('field.nutzung'), filterbar: false,
+          formatieren: quoteAnzeige }
+    ], pruefListeMaske);
+
+    meldeVorgang(vorgang, t('msg.checkListCount', {
+        raederPhrase: mengeFormat(aktuell.length, 'rad'),
+        stichtag: datumFormat(stichtag, ZEITSTEMPEL_FORMAT),
+        gueltigBis: datumFormat(aktuell[0].gilt_bis, ZEITSTEMPEL_FORMAT)
+    }));
+}
+
+// Die Liste nennt den Platz, die Maske nennt seine BEGRÜNDUNG. Beides
+// zusammen in der Tabelle wären neun Spalten, von denen sieben nur beim
+// Nachfragen interessieren.
+function pruefListeMaske(zeile) {
+    const abdeckung = zeile.anteil_mit_distanz === null
+        ? '—'
+        : `${zahlFormat(Math.round(Number(zeile.anteil_mit_distanz) * 100))} %`;
+    zeigeMaske(t('misc.checkListTitle', {
+        rahmennummer: zeile.rahmennummer, rang: zeile.rang
+    }), [
+        { name: 'rahmennummer', titel: t('field.rad'),    wert: zeile.rahmennummer, nurLesen: true },
+        { name: 'typ',          titel: t('field.radtyp'), wert: zeile.typ, nurLesen: true },
+        { name: 'standort',     titel: t('field.standort'),
+          wert: zeile.standort || '—', nurLesen: true },
+        { name: 'dringlichkeit', titel: t('field.dringlichkeit'),
+          wert: dringlichkeitAnzeige(zeile.dringlichkeit), nurLesen: true },
+        { name: 'nutzungsquote', titel: t('field.nutzung'),
+          wert: quoteAnzeige(zeile.nutzungsquote), nurLesen: true },
+        { name: 'fahrzeit', titel: t('field.fahrzeit'),
+          wert: zahlFormat(Math.round(Number(zeile.fahrminuten_seit_reparatur))), nurLesen: true },
+        { name: 'typ_median', titel: t('field.typMedian'),
+          wert: zahlFormat(Math.round(Number(zeile.typ_median_minuten))), nurLesen: true },
+        { name: 'fahrten', titel: t('field.fahrten'),
+          wert: zahlFormat(zeile.fahrten_seit_reparatur), nurLesen: true },
+        // Die gemessenen Kilometer stehen NEBEN dem Rangwert, nicht an
+        // seiner Stelle - sie fehlen bei 40 % der Fahrten, und der
+        // Anteil daneben sagt, wieviel diese Zahl wert ist.
+        { name: 'km_gemessen', titel: t('field.kilometer'),
+          wert: zeile.km_gemessen === null
+              ? '—' : zahlFormat(Math.round(Number(zeile.km_gemessen))), nurLesen: true },
+        { name: 'abdeckung', titel: t('field.messabdeckung'), wert: abdeckung, nurLesen: true },
+        { name: 'letzte_reparatur', titel: t('field.letzteWartung'),
+          wert: zeile.letzte_reparatur
+              ? datumFormat(zeile.letzte_reparatur, ZEITSTEMPEL_FORMAT)
+              : t('misc.neverRepaired'), nurLesen: true },
+        { name: 'meldungen', titel: t('field.schaeden'),
+          wert: zahlFormat(zeile.meldungen_bisher), nurLesen: true },
+        { name: 'gilt_bis', titel: t('field.gueltigBis'),
+          wert: datumFormat(zeile.gilt_bis, ZEITSTEMPEL_FORMAT), nurLesen: true }
+    ], []);
 }

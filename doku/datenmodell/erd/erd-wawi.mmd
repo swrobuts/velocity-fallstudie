@@ -14,6 +14,7 @@ erDiagram
     SCHADENSMELDUNG  |o--o{ WARTUNGSAUFTRAG    : "loest aus"
     MITARBEITER      |o--o{ WARTUNGSAUFTRAG    : "bearbeitet, sobald zugeteilt"
     FAHRRAD          ||--o{ FAHRRAD_EREIGNIS   : "durchlaeuft"
+    FAHRRAD          ||--o{ WARTUNGSPROGNOSE   : "steht auf der Prüfliste von"
     MITARBEITER      |o--o{ FAHRRAD_EREIGNIS   : "loest aus, wenn auth.uid() aufloesbar ist"
     MITARBEITER      ||--o{ MITARBEITER_ROLLE  : "haelt"
     ROLLE            ||--o{ MITARBEITER_ROLLE  : "wird zugeordnet"
@@ -137,6 +138,24 @@ erDiagram
         timestamptz erledigt_am
         integer arbeitszeit_minuten
         auftrag_status status
+    }
+    WARTUNGSPROGNOSE {
+        bigint wartungsprognose_id PK "gebaut (0021)"
+        date stichtag UK "mit fahrrad_id bzw. rang eindeutig"
+        bigint fahrrad_id FK
+        integer rang "1 = zuerst prüfen"
+        numeric nutzungsquote "Rangwert: Fahrminuten geteilt durch den Median des Radtyps"
+        numeric fahrminuten_seit_reparatur "je Fahrt bei 300 Minuten gekappt"
+        numeric typ_median_minuten "der Nenner, mitgespeichert"
+        integer fahrten_seit_reparatur
+        numeric fahrminuten_180
+        numeric km_gemessen "unvollständig, siehe anteil_mit_distanz"
+        numeric anteil_mit_distanz
+        date letzte_reparatur "NULL wenn nie repariert"
+        integer meldungen_bisher
+        text regelversion
+        date gilt_bis "Stichtag + 90 Tage"
+        text betriebsmodus "probelauf | verbindlich"
     }
     WARTUNGSPOSITION {
         bigint wartungsposition_id PK "entworfen, nicht gebaut - braucht ARTIKEL (Bereich G) und LAGERBEWEGUNG (Bereich H), die es nicht gibt"

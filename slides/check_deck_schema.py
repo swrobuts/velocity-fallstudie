@@ -57,7 +57,10 @@ def gezaehlt() -> dict[str, int]:
         "tabellen_f": len(namen(TABELLE, 7, 7)),
         "tabellen": len(namen(TABELLE)),
         "wawi_sichten": len([x for x in namen(SICHT) if x.startswith("v_wawi_")]),
-        "wawi_api": len([x for x in namen(FUNKTION, 17, 20) if x.startswith("api_")]),
+        # Kein festes oberes Ende: Die Warenwirtschaft beginnt bei 0017,
+        # und 0021 waere der festen 20 entgangen - die Pruefung haette
+        # geschwiegen, obwohl die Folie falsch wurde.
+        "wawi_api": len([x for x in namen(FUNKTION, 17, 999) if x.startswith("api_")]),
         "website_api": len([x for x in namen(FUNKTION, 1, 16) if x.startswith("api_")]),
         "spalten": spalten,
         "audit": audit,

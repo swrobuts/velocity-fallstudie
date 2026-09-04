@@ -567,6 +567,31 @@ Arbeitsauftrag der Werkstatt: eine Reparatur nach Schadensmeldung oder eine gepl
 | `erstellt_am` | `timestamp with time zone` | nein | `now()` |  |
 | `geaendert_am` | `timestamp with time zone` | nein | `now()` |  |
 
+## `wartungsprognose` (Tabelle)
+
+Eingefrorene Prüfliste der Werkstatt zu einem Stichtag: je Zeile ein Rad mit seinem Platz. Wird nicht neu berechnet, damit sie nach Ablauf von gilt_bis nachprüfbar bleibt. Siehe Kopfkommentar von 0021_wartungsprognose.sql.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `wartungsprognose_id` | `bigint` | nein |  | Surrogatschlüssel, fachlich bedeutungslos und deshalb stabil. |
+| `stichtag` | `date` | nein |  | Tag, für den die Liste gerechnet wurde. Zusammen mit rang bzw. fahrrad_id eindeutig. |
+| `fahrrad_id` | `bigint` | nein |  | Das Rad, das geprüft werden soll. |
+| `rang` | `integer` | nein |  | Platz auf der Liste, 1 = zuerst prüfen. Ergibt sich aus nutzungsquote, absteigend. |
+| `nutzungsquote` | `numeric(8,3)` | nein |  | Der Rangwert: Fahrminuten seit der letzten Reparatur, geteilt durch den Median des Radtyps. 1,4 heißt "40 % mehr gearbeitet als ein durchschnittliches Rad seiner Art". Ohne diese Normierung rangiert die Liste den Typ statt das Rad, siehe Kopfkommentar. |
+| `fahrminuten_seit_reparatur` | `numeric(12,1)` | nein |  | Summe der Fahrminuten seit der letzten ERLEDIGTEN Reparatur, je Fahrt bei 300 Minuten gekappt. Nicht seit der Meldung: zwischen Meldung und Reparatur wird weitergefahren, und diese Zeit geht auf das alte Bauteil. |
+| `typ_median_minuten` | `numeric(12,1)` | nein |  | Der Nenner der nutzungsquote: Median derselben Größe über alle Räder dieses Typs. Mitgespeichert, damit die Quote später nachrechenbar bleibt. |
+| `fahrten_seit_reparatur` | `integer` | nein |  | Zahl der Fahrten seit der letzten erledigten Reparatur - sagt, auf wievielen Fahrten die Fahrminuten beruhen. |
+| `fahrminuten_180` | `numeric(12,1)` | nein |  | Fahrminuten der letzten 180 Tage, unabhängig von der Reparatur. Zeigt, ob ein Rad gerade viel läuft oder seine Minuten aus einer älteren Phase stammen. |
+| `km_gemessen` | `numeric(12,2)` | ja |  | Gemessene Kilometer im selben Zeitraum - Zusatzangabe, nicht der Rangwert. Unvollständig, deshalb steht anteil_mit_distanz daneben. |
+| `anteil_mit_distanz` | `numeric(4,3)` | ja |  | Anteil der Fahrten seit der letzten Reparatur, die eine Strecke gemeldet haben. Sagt, wieviel km_gemessen wert ist. |
+| `letzte_reparatur` | `date` | ja |  | Tag der letzten erledigten Reparatur, NULL wenn das Rad noch nie repariert wurde. |
+| `meldungen_bisher` | `integer` | nein | `0` | Zahl der bisherigen Schadensmeldungen dieses Rades bis zum Stichtag. |
+| `regelversion` | `text` | nein |  | Welche Regel die Reihenfolge bestimmt hat. Ändert sich die Regel, ändert sich dieser Wert - alte Listen bleiben damit lesbar. |
+| `gilt_bis` | `date` | nein |  | Ende des Vorhersagefensters. Erst danach lässt sich die Liste an dem messen, was tatsächlich eingetreten ist. |
+| `betriebsmodus` | `text` | nein | `'probelauf'::text` | probelauf: die Liste läuft mit und ordnet keine Reparatur an. verbindlich: erst nach bestandener Nachprüfung. |
+| `erstellt_am` | `timestamp with time zone` | nein | `now()` | Zeitpunkt des Einfrierens. |
+| `geaendert_am` | `timestamp with time zone` | nein | `now()` | Zeitpunkt der letzten Änderung, gesetzt von fn_audit_anhaengen. |
+
 ## `zahlung` (Tabelle)
 
 Zahlungsvorgang zu einer Rechnung.
@@ -1121,3 +1146,31 @@ Monatsumsatz je Fahrradtyp, ausschliesslich für die Leitung - die Spec reservie
 | `minuten` | `bigint` | ja |  | Summe der Fahrtdauer in Minuten, die Auslastungsseite neben dem Umsatz. |
 | `umsatz` | `numeric` | ja |  | Summe der Entgeltpositionen (ep.betrag), bereits vorzeichenbehaftet aus fn_position_anlegen. Keine zweite Multiplikation mit vorzeichen - das würde Rabatte und Kappungen zu Einnahmen machen, siehe Kopfkommentar. |
 | `umsatz_je_fahrt` | `numeric` | ja |  | umsatz geteilt durch fahrten, die Kennzahl für den Vergleich zwischen Radtypen unabhängig von deren Flottengrösse. |
+
+## `v_wawi_wartungsprognose` (Sicht)
+
+Arbeitssicht der eingefrorenen Prüflisten: ein Rad je Zeile mit Platz, Dringlichkeit, Standort und den Zahlen, die den Platz begründen. Filtert selbst über velocity.hat_rolle.
+
+| Spalte | Datentyp | NULL | Vorgabe | Beschreibung |
+|---|---|---|---|---|
+| `stichtag` | `date` | ja |  | Tag, für den die Liste gerechnet wurde. |
+| `rang` | `integer` | ja |  | Platz auf der Liste, 1 = zuerst prüfen. |
+| `fahrrad_id` | `bigint` | ja |  | Das Rad, für den Sprung in die Flotte. |
+| `rahmennummer` | `text` | ja |  | Die Nummer, unter der die Werkstatt das Rad sucht. |
+| `typ_code` | `text` | ja |  | Kurzschlüssel des Radtyps (CITY, EBIKE, CARGO). |
+| `typ` | `text` | ja |  | Ausgeschriebener Name des Radtyps. |
+| `radstatus` | `velocity.fahrrad_status` | ja |  | Heutiger Status des Rades - kann sich seit dem Stichtag geändert haben. |
+| `standort` | `text` | ja |  | Station, an der das Rad zuletzt stand. NULL, wenn es frei abgestellt wurde. |
+| `nutzungsquote` | `numeric(8,3)` | ja |  | Der Rangwert: Fahrminuten seit der Reparatur, geteilt durch den Median des Radtyps. |
+| `fahrminuten_seit_reparatur` | `numeric(12,1)` | ja |  | Der Zähler der Quote, je Fahrt bei 300 Minuten gekappt. |
+| `typ_median_minuten` | `numeric(12,1)` | ja |  | Der Nenner der Quote. |
+| `fahrten_seit_reparatur` | `integer` | ja |  | Auf wievielen Fahrten die Minuten beruhen. |
+| `fahrminuten_180` | `numeric(12,1)` | ja |  | Fahrminuten der letzten 180 Tage. |
+| `km_gemessen` | `numeric(12,2)` | ja |  | Gemessene Kilometer im selben Zeitraum - Zusatzangabe, nicht der Rangwert. |
+| `anteil_mit_distanz` | `numeric(4,3)` | ja |  | Anteil der Fahrten mit gemeldeter Strecke. Sagt, wieviel km_gemessen wert ist. |
+| `letzte_reparatur` | `date` | ja |  | Tag der letzten erledigten Reparatur, NULL wenn nie repariert. |
+| `meldungen_bisher` | `integer` | ja |  | Zahl der bisherigen Schadensmeldungen bis zum Stichtag. |
+| `regelversion` | `text` | ja |  | Welche Regel die Reihenfolge bestimmt hat. |
+| `gilt_bis` | `date` | ja |  | Ende des Vorhersagefensters. |
+| `betriebsmodus` | `text` | ja |  | probelauf: die Liste ordnet keine Reparatur an. |
+| `dringlichkeit` | `text` | ja |  | Reihenfolge des Arbeitstags: zuerst (Platz 1-20), danach (21-40), wenn Zeit bleibt (ab 41). |
