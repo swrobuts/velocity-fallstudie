@@ -1068,20 +1068,22 @@ def teil_synthese(prs):
                "etwas anderem.")
 
     s = folie(prs, "Synthese", "Die Notebooks — und wie sie weiterhelfen",
-              "Zu jedem der sechs Fälle gibt es zwei Fassungen: eine vollständig "
-              "gerechnete und eine mit Lücken zum Selbstausfüllen.")
-    tabelle(s, ["", "Vorführfassung", "Übungsfassung"], [
-        ["Ablage", "analytics/notebooks/", "analytics/notebooks/uebung/"],
-        ["Ausgaben", "vollständig eingebettet, sofort lesbar", "leer — sie entstehen "
-                                                               "beim Rechnen"],
-        ["Code", "vollständig", "an den Kernstellen ausgeschnitten"],
-        ["Aufgaben", "keine", "1 bis 4 je Notebook, an der jeweils lehrreichsten Stelle"],
-        ["Struktur", "sechs Phasen als Überschriften", "identisch — auch die "
-                                                        "Übungsfassung führt durch alle sechs"],
-    ], y=unter_intro(s), spalten_b=[140, 400, 363.5], zeilen_h=42)
-    notizen(s, "Empfehlen Sie, die Vorführfassung zu lesen und die Übungsfassung zu "
-               "rechnen. Beide tragen dieselbe Phasenstruktur, sodass man beim "
-               "Steckenbleiben in der einen die Antwort in der anderen findet.")
+              "Zu jedem der sechs Fälle gibt es ein Notebook: vollständig "
+              "gerechnet, mit allen Ausgaben, lesbar ohne eine Zeile auszuführen.")
+    tabelle(s, ["", "Was Sie vorfinden"], [
+        ["Ablage", "analytics/notebooks/ — sechs Dateien, eine je Verfahren"],
+        ["Ausgaben", "vollständig eingebettet: Zahlen, Tabellen und Diagramme stehen "
+                     "im Notebook, auch ohne Rechnen"],
+        ["Öffnen", "Colab-Knopf oben in jedem Notebook. Die Daten lädt es selbst — "
+                   "kein Upload, kein Drive"],
+        ["Struktur", "sechs CRISP-DM-Phasen als Überschriften, in allen sechs "
+                     "Notebooks dieselben"],
+        ["Zahlen", "jede Zahl im Fließtext stammt aus einer Ausgabe desselben Laufs; "
+                   "eine Prüfung erzwingt das"],
+    ], y=unter_intro(s), spalten_b=[140, 763.5], zeilen_h=42)
+    notizen(s, "Die Notebooks sind zum Lesen gebaut, nicht nur zum Ausführen: Wer sie "
+               "auf GitHub öffnet, sieht jedes Ergebnis sofort. Wer selbst rechnen "
+               "will, öffnet sie über den Colab-Knopf.")
 
     s = folie(prs, "Synthese", "Acht Sätze, die diesen Block tragen")
     streifen(s, [

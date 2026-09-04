@@ -5,25 +5,33 @@ Geschäftsfrage bis zur Auslieferung und zurück.
 
 | | Notebook | Verfahren | Geschäftsfrage | Ausgang |
 |---|---|---|---|---|
-| 1 | `01_Regression_Fahrtdauer` | Regression | Was kostet mich diese Fahrt voraussichtlich? | Teilfreigabe (nur CITY) |
-| 2 | `02_Klassifikation_Wartungsrisiko` | Klassifikation | Welche 60 Räder prüfen wir nächstes Quartal? | Freigabe — **für die Regel, nicht das Modell** |
-| 3 | `03_Clustering_Stationen_und_Kunden` | Clustering + RFM | Welche Stationstypen und Kundensegmente gibt es? | Freigabe, mit zwei unbequemen Befunden |
-| 4 | `04_Zeitreihe_Nachfrageprognose` | Zeitreihe | Wie viele Räder braucht der Frühdienst morgen? | Freigabe |
-| 5 | `05_Assoziation_Wege_im_Netz` | Assoziationsanalyse | Zwischen welchen Stationen fließt es wann? | Freigabe |
+| 1 | `01_Regression_Fahrtdauer` | Regression | Was kostet mich diese Fahrt voraussichtlich? | **sichtbar** — die Anzeige ist freigeschaltet, für alle drei Radtypen |
+| 2 | `02_Klassifikation_Wartungsrisiko` | Klassifikation | Welche 60 Räder prüfen wir nächstes Quartal? | Freigabe — **für die Faustregel, nicht für das Modell** |
+| 3 | `03_Clustering_Stationen_und_Kunden` | Clustering + RFM | Welche Stationstypen und Kundensegmente gibt es? | für den Einsatz freigegeben, **analytisch nicht belegt** |
+| 4 | `04_Zeitreihe_Nachfrageprognose` | Zeitreihe | Wie viele Räder braucht der Frühdienst morgen? | **Schattenpilot** — rechnet mit, entscheidet nicht |
+| 5 | `05_Assoziation_Wege_im_Netz` | Assoziationsanalyse | Zwischen welchen Stationen fließt es wann? | Produkt A **nicht freigegeben**, Produkt B nur analytisch |
 | 6 | `06_Anomalieerkennung_Auffaellige_Vorgaenge` | Anomalieerkennung | Was soll sich der Betrieb heute früh ansehen? | Teilfreigabe — **eine Aufgabe scheitert begründet** |
 
-## Zwei Fassungen je Notebook
+> Die Spalte *Ausgang* nennt den Status, den das Notebook selbst stempelt. Sie wird
+> von `tools/readme_pruefen.py` gegen die Merkzettel in `analytics/bau/werte/`
+> gehalten — dieselbe Quelle, aus der die Notebooks ihre Zahlen beziehen. Eine
+> Aussage hier kann also nicht vom Notebook abweichen, ohne dass die Abnahme rot
+> wird.
 
-| Ordner | Fassung | wofür |
-|---|---|---|
-| `notebooks/` | **Vorführfassung** | vollständig gerechnet, mit Ausgaben und Diagrammen. Läuft in Colab von oben nach unten durch |
-| `notebooks/uebung/` | **Übungsfassung** | dieselben Texte, aber die zentralen Codestellen sind Lücken mit Aufgabenstellung |
+## Was hier liegt
 
-Beide entstehen aus **einer** Quelle (`analytics/bau/`) — die Übungsfassung ist ein
-Ableitungsprodukt, keine Kopie. Sie können nicht auseinanderlaufen.
+Sechs Notebooks, je eines pro Verfahren, **vollständig gerechnet**. Zahlen, Tabellen
+und Diagramme stehen eingebettet darin: Auf GitHub ist jedes Ergebnis lesbar, ohne
+eine einzige Zelle auszuführen.
 
-Die Vorführfassung wird beim Bauen **ausgeführt**. Fällt eine Zelle um, bricht der Bau ab.
-Was im Ordner liegt, ist damit nachweislich lauffähig.
+Sie entstehen aus **einer** Quelle unter `analytics/bau/` und werden beim Bauen
+ausgeführt. Fällt eine Zelle um, bricht der Bau ab — was hier liegt, ist damit
+nachweislich lauffähig.
+
+> **Die Notebooks sind Bauprodukte.** Wer eines in PyCharm oder Jupyter öffnet und
+> ausführt, ändert Ausführungszähler und Ausgaben; Git meldet die Datei dann als
+> geändert. Das ist normal und darf verworfen werden (`git checkout -- <Datei>`).
+> Geändert wird die Quelle in `analytics/bau/`, nie das Notebook selbst.
 
 ## In Google Colab öffnen
 
@@ -66,8 +74,8 @@ Diese hier enthalten ausdrücklich:
 - **Notebook 3:** Knapp ein Drittel der Kundschaft fällt aus der Segmentierung heraus —
   RFM sieht nur, wer kauft
 - **Notebook 4:** Ein roher Mittelwertvergleich behauptet das Gegenteil des Richtigen
-- **Notebook 5:** Keine Regel nimmt beide Hürden — und der Umverteilungsplan bewegt
-  1,8 Räder je Werktag bei Stationen für 20 bis 40
+- **Notebook 5:** Der Umverteilungsplan bewegt 4,0 Räder je Werktag bei Stationen für
+  35 bis 65 — die Regeln taugen zur Deutung, nicht zur Steuerung
 - **Notebook 6:** Der erste Modellversuch findet die Preisklasse statt der Anomalien —
   und bei beiden Aufgaben schlägt am Ende eine Zeile Fachwissen das Verfahren
 

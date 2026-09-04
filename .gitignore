@@ -15,6 +15,11 @@ doku/verifikation/*sicherung*/
 # Sperrdateien von Word/PowerPoint
 ~$*
 
+# Zwischenstaende von Jupyter. Sie entstehen, sobald jemand ein Notebook
+# in PyCharm oder Jupyter oeffnet - das soll moeglich sein, ohne dass das
+# Repository schmutzig wird.
+.ipynb_checkpoints/
+
 # Arbeitsbereich der Subagenten-Ausfuehrung (Ledger, Briefs, Reviewpakete)
 .superpowers/
 analytics/kampagnenliste.csv

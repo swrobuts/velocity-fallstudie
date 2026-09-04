@@ -1,4 +1,4 @@
-"""Baut alle CRISP-DM-Notebooks: Vorfuehrfassung (ausgefuehrt) und Uebungsfassung."""
+"""Baut alle CRISP-DM-Notebooks: vollstaendig gerechnet, mit Ausgaben."""
 import importlib
 import os
 import re

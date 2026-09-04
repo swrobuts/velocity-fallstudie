@@ -170,28 +170,31 @@ Beide sind additiv; das Datenbankdeck baut unverändert mit 0 Befunden.
 
 ## Woher die Zahlen stammen
 
-**Alle Zahlen sind den ausgeführten Notebooks entnommen, keine aus dem Gedächtnis** —
-und `folienzahlen_pruefen.py` hält das nach. Die wichtigsten:
+**Alle Zahlen im Deck sind den ausgeführten Notebooks entnommen, keine aus dem
+Gedächtnis.** Drei Werkzeuge halten das nach:
 
-- **Fall 1, Baselines:** Median aller Fahrten 8,10 · je Radtyp 8,01 · je Startstation
-  5,29 · je Verbindung 5,02 Minuten. Der große Sprung kommt von der Startstation.
-- **Fall 1, Modelle auf der Validierung:** Nullmodell 8,10 · linear 4,61 · Baum 4,23 ·
-  Random Forest 3,96 Minuten (21 % besser als Baseline D)
-- **Fall 1, Ablation:** ohne Zielmerkmale 4,35 · mit 3,96 — das Ziel trägt 0,39 Minuten
-  bei, also neun Prozent
-- **Fall 1, Preisfehler auf Test 1:** CITY 0,41 € (74 % unter der Grenze) · EBIKE 0,85 €
-  (51 %) · CARGO 2,48 € (19 %)
-- **Fall 1, Artefakt:** 136 Zeilen, 60 Verbindungen, nur CITY, Abdeckung 84,5 %,
-  Preisspanne im Median 0,70 €, Reichweite 22,5 %
-- **Fall 2:** Faustregel „km seit letzter Reparatur" und Random Forest je 71,7 % und
-  11.045 € auf dem Test. Über fünf Validierungsquartale 137 gegen 129 Treffer zugunsten
-  der Regel
-- **Fall 3:** vier Stationstypen, 100 % Übereinstimmung mit der verdeckten Wahrheit
-- **Fall 4:** MAE 12,50 mit tatsächlichem Wetter, 17,13 mit simulierter Vorhersage
-- **Fall 5:** 32 Regeln, 9 mit Lift ≥ 1,3, **keine** mit Support ≥ 1 %. Die stärkste
-  erreicht 0,99 % und verfehlt die Hürde um ein Hundertstel Prozentpunkt
-- **Fall 6:** Rentabilitätsschwelle 5 %, Erfolgskriterium 20 %. Aufgabe A geht von 2 %
-  auf 36 %, Aufgabe B erreicht höchstens 14 %
+| Werkzeug | prüft |
+|---|---|
+| `tools/folienzahlen_pruefen.py` | jede Zahl auf einer Folie gegen das Notebook, das die Folie zitiert |
+| `slides/check_deck_zahlen.py` | elf handgeprüfte Aussagen des Decks gegen die Merkzettel |
+| `tools/readme_pruefen.py` | die Statusangaben in `analytics/notebooks/README.md` |
+
+Alle drei laufen in `tools/abnahme.sh` mit.
+
+**Hier stehen bewusst keine Zahlen mehr.** Bis zum 04.09.2026 führte dieser
+Abschnitt fünfzehn Kennzahlen auf — und praktisch jede war überholt, weil die
+Notebooks seither mehrfach neu gerechnet wurden: der Preisfehler für City stand
+mit 0,41 € statt 0,24 €, die Ablation mit neun statt 12,9 Prozent, und für Fall 5
+stand hier noch, **keine** Regel nehme die Support-Hürde, während die stärkste
+sie inzwischen deutlich überspringt. Eine zweite Liste neben den geprüften
+Quellen kann nur auseinanderlaufen; die Zahlen stehen dort, wo sie gemessen
+werden:
+
+- **im Notebook selbst** — `analytics/notebooks/<Fall>.ipynb`, mit der Ausgabe
+  daneben, aus der sie stammt
+- **im Merkzettel** — `analytics/bau/werte/<Fall>.json`, maschinenlesbar
+- **im Handout** — `doku/analytics/Handout_Die_sechs_Modelle.md`, aus genau
+  diesen Merkzetteln erzeugt
 
 ## Eine Regel für spätere Änderungen
 

@@ -323,6 +323,20 @@ else
   grep '✗' /tmp/abnahme-zahlen-db.log | sed 's/^/     /'
 fi
 
+# ------------------------- Statusangaben der Anleitungen gegen die Quelle
+# Die Statusspalte der Notebook-README nannte am 04.09.2026 fuer vier von
+# sechs Notebooks etwas anderes als das Notebook selbst - unter anderem
+# "Teilfreigabe (nur CITY)", waehrend die Preisschaetzung laengst alle drei
+# Radtypen abdeckt. Keine Zahl war je falsch gerechnet; sie waren alle
+# einmal richtig und sind stehengeblieben.
+schritt "Anleitungen gegen ihre Quelle"
+if python3 tools/readme_pruefen.py >/tmp/abnahme-readme.log 2>&1; then
+  ergebnis 0 "$(tail -1 /tmp/abnahme-readme.log | sed 's/^ *//')"
+else
+  ergebnis 1 "Anleitung nennt etwas anderes als die Quelle"
+  grep -A1 'FEHLER' /tmp/abnahme-readme.log | head -12 | sed 's/^/     /'
+fi
+
 schritt "Freisteller gegen die Vorlage"
 if python3 tools/freisteller_pruefen.py >/tmp/abnahme-frei.log 2>&1; then
   ergebnis 0 "$(grep -c '✓' /tmp/abnahme-frei.log) Messungen an drei Raedern"

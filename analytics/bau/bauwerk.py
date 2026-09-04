@@ -1,21 +1,14 @@
 """
 Baukasten fuer die CRISP-DM-Notebooks.
 
-EINE QUELLE, ZWEI FASSUNGEN. Jedes Notebook wird hier einmal beschrieben.
-Daraus entstehen:
+EINE QUELLE, EINE FASSUNG. Jedes Notebook wird hier einmal beschrieben.
+Daraus entsteht:
 
-  <name>.ipynb           Vorfuehrfassung - vollstaendig, ausgefuehrt, mit
-                         Ausgaben und Diagrammen. Laeuft in Colab von oben
-                         nach unten durch.
-  uebung/<name>.ipynb    Uebungsfassung - dieselben Texte, aber die als
-                         Luecke markierten Stellen sind herausgenommen und
-                         durch eine Aufgabe ersetzt.
+  <name>.ipynb           vollstaendig, ausgefuehrt, mit Ausgaben und
+                         Diagrammen. Laeuft in Colab von oben nach unten
+                         durch.
 
-Warum aus einer Quelle: zwei getrennt gepflegte Notebooks laufen
-auseinander, sobald man eines anfasst. Hier kann das nicht passieren - die
-Uebungsfassung ist ein Ableitungsprodukt, keine Kopie.
-
-LUECKEN MARKIEREN
+MARKIERTE KERNSTELLEN
 
 In einer Codezelle:
 
@@ -23,17 +16,16 @@ In einer Codezelle:
     fahrten["dauer_min"] = (fahrten.endzeit - fahrten.startzeit).dt.total_seconds() / 60
     ##ENDE
 
-Vorfuehrfassung: die Markierungszeilen fallen weg, der Code bleibt.
-Uebungsfassung: der Code faellt weg, es bleibt
-
-    # AUFGABE: Bilden Sie die Spalte 'dauer_min' aus Start- und Endzeit.
-    ...
+Die Markierungszeilen fallen beim Bauen weg, der Code bleibt - im fertigen
+Notebook ist von ihnen nichts zu sehen. Sie halten fest, welche Stellen die
+fachlich tragenden sind; der Bau zaehlt sie mit und meldet sie als
+"Kernstellen".
 
 AUSFUEHREN
 
-Die Vorfuehrfassung wird beim Bauen ausgefuehrt. Faellt eine Zelle um, ist
-das Notebook kaputt und der Bau bricht ab - eine Vorfuehrfassung, die nicht
-durchlaeuft, waere schlimmer als keine.
+Das Notebook wird beim Bauen ausgefuehrt. Faellt eine Zelle um, ist es
+kaputt und der Bau bricht ab - ein Notebook, das nicht durchlaeuft, waere
+schlimmer als keines.
 
 Damit das ohne Netz geht, lesen die Notebooks ihre Daten ueber
 
@@ -55,7 +47,6 @@ HIER = os.path.dirname(os.path.abspath(__file__))
 ANALYTICS = os.path.dirname(HIER)
 ZIEL = os.path.join(ANALYTICS, "notebooks")
 WERTE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "werte")
-ZIEL_UEBUNG = os.path.join(ZIEL, "uebung")
 
 # Die Daten haengen an einem festen COMMIT, nicht an main und nicht an einem
 # Tag: main bewegt sich mit jedem Push, und ein Tag laesst sich verschieben -
@@ -322,21 +313,6 @@ def _vorfuehrung(quelltext):
     return "\n".join(a[1] for a in _teile(quelltext)).strip("\n")
 
 
-def _uebung(quelltext):
-    aus = []
-    for a in _teile(quelltext):
-        if a[0] == "fest":
-            aus.append(a[1])
-        else:
-            einzug = re.match(r"[ \t]*", a[1].split("\n")[0]).group(0)
-            aus.append(f"{einzug}# AUFGABE: {a[2]}\n{einzug}...")
-    return "\n".join(aus).strip("\n")
-
-
-def hat_luecken(zellen):
-    return any(art == "code" and any(t[0] == "luecke" for t in _teile(q)) for art, q in zellen)
-
-
 # ---------------------------------------------------------------- Bauen
 
 # ---------------------------------------------------------------- Darstellung
@@ -436,14 +412,13 @@ def _notebook(zellen, wandler):
 
 
 def bauen(name, zellen, ausfuehren=True):
-    """Schreibt Vorfuehr- und Uebungsfassung. Gibt die Zahl der Luecken zurueck.
+    """Schreibt das Notebook. Gibt die Zahl der markierten Kernstellen zurueck.
 
     Vor dem Ausfuehren wird der Merkzettel angelegt, danach ausgelesen: alle
     {{platzhalter}} im Fliesstext werden durch die tatsaechlich gerechneten
     Werte ersetzt. Ein Platzhalter ohne passendes merke() bricht den Bau ab.
     """
     os.makedirs(ZIEL, exist_ok=True)
-    os.makedirs(ZIEL_UEBUNG, exist_ok=True)
 
     braucht_werte = any(art == "md" and _PLATZHALTER.search(inhalt)
                         for art, inhalt in zellen)
@@ -490,16 +465,11 @@ def bauen(name, zellen, ausfuehren=True):
         if zelle.cell_type == "markdown":
             zelle.source = tabellen_als_html(zelle.source)
     nbformat.write(vor, os.path.join(ZIEL, f"{name}.ipynb"))
-    ueb = _notebook(zellen, _uebung)
-    for zelle in ueb.cells:
-        if zelle.cell_type == "markdown":
-            zelle.source = tabellen_als_html(zelle.source)
-    nbformat.write(ueb, os.path.join(ZIEL_UEBUNG, f"{name}.ipynb"))
 
     n_luecken = sum(len([t for t in _teile(quelltext) if t[0] == "luecke"])
                     for art, quelltext in zellen if art == "code")
     groesse = os.path.getsize(os.path.join(ZIEL, f"{name}.ipynb")) / 1024
-    print(f"  {name:38s} {len(vor.cells):>3d} Zellen  {n_luecken:>2d} Lücken  "
+    print(f"  {name:38s} {len(vor.cells):>3d} Zellen  {n_luecken:>2d} Kernstellen  "
           f"{len(werte):>2d} Werte  {groesse:>6.0f} kB  "
           f"{'ausgeführt' if ausfuehren else 'ohne Lauf'}")
     return n_luecken

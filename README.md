@@ -1,14 +1,22 @@
-# VeloCity — Fallstudie Datenbankentwurf
+# VeloCity — Fallstudie Datenmodell und Datenanalyse
 
-Ein fiktiver Fahrradverleih in Würzburg, als durchgehendes Lehrbeispiel:
-vom Relationenmodell über PostgreSQL mit Row Level Security bis zu zwei
-Oberflächen, die beide ausschließlich über Sichten und `api_`-Funktionen
-auf die Daten zugreifen — die Website für Kundschaft und die
-Warenwirtschaft für den Betrieb.
+Ein fiktiver Fahrradverleih in Würzburg, als durchgehendes Lehrbeispiel.
+Zwei Stränge, dieselben Daten:
 
-**Live:** [bikes.butscher.cloud](https://bikes.butscher.cloud)
-(Warenwirtschaft: `wawi.butscher.cloud`, Freigabe steht noch aus — siehe
-`tools/wawi_veroeffentlichen.sh`)
+- **Datenmodell und Anwendungen** — vom Relationenmodell über PostgreSQL
+  mit Row Level Security bis zu zwei Oberflächen, die beide ausschließlich
+  über Sichten und `api_`-Funktionen auf die Daten zugreifen: die Website
+  für die Kundschaft, die Warenwirtschaft für den Betrieb.
+- **Sechs Analysefälle nach CRISP-DM** — Regression, Klassifikation,
+  Clustering, Zeitreihe, Assoziation, Anomalieerkennung. Jeder als
+  ausgeführtes Notebook, von der Geschäftsfrage bis zur Freigabe oder ihrer
+  begründeten Verweigerung.
+
+Die beiden hängen zusammen: Die Preisschätzung, die die Website anzeigt,
+ist das ausgelieferte Ergebnis aus Notebook 1.
+
+**Live:** [bikes.butscher.cloud](https://bikes.butscher.cloud) ·
+[wawi.butscher.cloud](https://wawi.butscher.cloud)
 
 Lehrveranstaltung *Datenbasierte Fallstudien*, THWS Würzburg-Schweinfurt.
 Prof. Dr. Robert Butscher.
@@ -17,8 +25,9 @@ Prof. Dr. Robert Butscher.
 
 ## Worum es didaktisch geht
 
-Die meisten Datenbankübungen hören beim ER-Diagramm auf. Hier läuft die
-Kette einmal ganz durch, und zwar so, dass jede Entscheidung nachlesbar
+Die meisten Datenbankübungen hören beim ER-Diagramm auf, und die meisten
+Analysebeispiele beim Modell mit der besten Kennzahl. Hier laufen beide
+Ketten ganz durch, und zwar so, dass jede Entscheidung nachlesbar
 begründet ist:
 
 | Schritt | Wo |
@@ -31,6 +40,8 @@ begründet ist:
 | Tests (pgTAP) und ein Durchstich mit echten COMMITs | `db/tests/`, `db/durchstich.py` |
 | Website (Kundschaft) | `src/` |
 | Warenwirtschaft (Betrieb) | `wawi/`, siehe `doku/datenmodell/08-warenwirtschaft.md` |
+| Sechs Analysefälle nach CRISP-DM | `analytics/notebooks/` |
+| Was jedes Modell verspricht und was nicht | `doku/analytics/Handout_Die_sechs_Modelle.md` |
 
 Die SQL-Dateien sind **idempotent**: jede läuft zweimal hintereinander
 fehlerfrei. Jede beginnt mit einem Kopf, der Zweck, angelegte Objekte
@@ -39,15 +50,38 @@ und Rücknahme nennt.
 ## Aufbau
 
 ```
-db/aufbau/      Schema, Referenzdaten, Logik, Rechte — in dieser Folge
-db/betrieb/     Datenübernahme, Abgleich, einmalige Eingriffe
-db/tests/       pgTAP-Tests
-doku/           Entwurf, Spezifikationen, Verifikationsprotokolle
-src/            Die Website: HTML, CSS, JavaScript, keine Bauwerkzeuge
-wawi/           Die Warenwirtschaft: eigenes HTML/CSS/JavaScript, kein Bauwerkzeug
-slides/         Foliendeck zur Fallstudie
-tools/          Prüf- und Bauwerkzeuge (siehe unten)
-deploy/         nginx und docker-compose für den Betrieb
+db/aufbau/          Schema, Referenzdaten, Logik, Rechte — in dieser Folge
+db/betrieb/         Datenübernahme, Abgleich, einmalige Eingriffe
+db/tests/           pgTAP-Tests
+doku/datenmodell/   Entwurf, Diagramme, Data Dictionary, Sicherheitskonzept
+doku/analytics/     Handout zu den sechs Modellen
+doku/verifikation/  Prüfprotokolle — Aufzeichnungen, keine Sollwerte
+analytics/          Lehrdatensatz, Notebooks und ihre Quellen
+analytics/notebooks/  die sechs ausgeführten Notebooks
+analytics/bau/        ihre Quelle: ein Skript je Notebook
+src/                Die Website: HTML, CSS, JavaScript, keine Bauwerkzeuge
+wawi/               Die Warenwirtschaft: eigenes HTML/CSS/JavaScript
+slides/             Foliendecks: CRISP-DM, Datenbankentwurf, sechs Kurzdecks
+tools/              Prüf- und Bauwerkzeuge (siehe unten)
+deploy/             nginx und docker-compose für den Betrieb
+```
+
+## Die sechs Analysefälle
+
+Sechs Notebooks, jedes vollständig gerechnet: Zahlen, Tabellen und
+Diagramme stehen eingebettet darin, auf GitHub lesbar ohne eine Zelle
+auszuführen. Sie entstehen aus einer Quelle unter `analytics/bau/` und
+werden beim Bauen ausgeführt — fällt eine Zelle um, bricht der Bau ab.
+
+Der Ausgang ist nicht immer eine Freigabe. Ein Notebook endet mit
+*Schattenpilot*, eines verweigert einem seiner beiden Produkte die
+Freigabe, weil die Wirtschaftlichkeit nicht prüfbar ist. Das ist Absicht:
+Ein Verfahren, das nichts taugt, muss man erkennen dürfen.
+
+Einzelheiten und die Colab-Links: `analytics/notebooks/README.md`.
+
+```bash
+cd analytics/bau && python3 bauen.py     # alle sechs neu bauen
 ```
 
 ## Die Website
@@ -84,10 +118,14 @@ python3 -m http.server 8766 --directory wawi
 ## Werkzeuge
 
 ```bash
-bash tools/abnahme.sh                  # alle 31 Prüfungen
+bash tools/abnahme.sh                  # alle 35 Prüfungen
 python3 tools/versionieren.py          # Fingerabdrücke der eingebundenen Dateien
+python3 tools/ausgeliefert_pruefen.py  # ist der geprüfte Stand auch der ausgelieferte?
 python3 tools/ux_check.py              # Bedienbarkeit und Regressionen der Website
 python3 tools/wawi_check.py            # Vertrag zwischen HTML und JavaScript der Warenwirtschaft
+python3 tools/erd_vollstaendig.py      # steht jede Tabelle in einem Diagramm?
+python3 tools/breitenregel_pruefen.py  # Notebook, SQL-CHECK und Ladelauf der Preisschätzung
+python3 tools/readme_pruefen.py        # die Notebook-README gegen die Merkzettel
 python3 tools/freisteller_pruefen.py   # die Radbilder gegen ihre Vorlagen
 python3 tools/zahlen_gegen_db.py       # Anleitung und Vortrag gegen die Datenbank
 python3 tools/raeder_weissgrund.py     # Radbilder neu erzeugen
@@ -102,8 +140,9 @@ bash tools/wawi_veroeffentlichen.sh    # Warenwirtschaft auf den Server stellen
 ```
 
 `tools/abnahme.sh` fasst alles zusammen — von der Idempotenz der
-SQL-Kette über den Zugriffsschutz bis zu beiden Oberflächen. Was dort
-grün ist, ist nachgerechnet und nicht nur angesehen.
+SQL-Kette über den Zugriffsschutz bis zu beiden Oberflächen und den
+Notebooks. Was dort grün ist, ist nachgerechnet und nicht nur angesehen.
+Die vollständige Liste steht in `TESTEN.md`.
 
 ## Zum anon-Key in `src/config.js` und `wawi/config.js`
 
