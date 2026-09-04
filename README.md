@@ -130,6 +130,8 @@ python3 tools/notebooks_frisch_gebaut.py  # sind die Notebooks der gebaute Stand
 python3 tools/freisteller_pruefen.py   # die Radbilder gegen ihre Vorlagen
 python3 tools/zahlen_gegen_db.py       # Anleitung und Vortrag gegen die Datenbank
 python3 tools/raeder_weissgrund.py     # Radbilder neu erzeugen
+bash tools/velocity_sichern.sh         # Abzug des Schemas velocity nehmen
+bash tools/velocity_zuruecksetzen.sh   # auf einen Abzug zurücksetzen
 bash tools/veroeffentlichen.sh         # Website auf den Server stellen
 bash tools/wawi_veroeffentlichen.sh    # Warenwirtschaft auf den Server stellen
 
@@ -144,6 +146,32 @@ bash tools/wawi_veroeffentlichen.sh    # Warenwirtschaft auf den Server stellen
 SQL-Kette über den Zugriffsschutz bis zu beiden Oberflächen und den
 Notebooks. Was dort grün ist, ist nachgerechnet und nicht nur angesehen.
 Die vollständige Liste steht in `TESTEN.md`.
+
+## Ein Weg zurück
+
+Die Fallstudie ist als Versuchsplattform gedacht: Wer die Warenwirtschaft
+über ihre `api_`-Funktionen bedient — von Hand oder durch einen Agenten —
+darf alles, was ein Mensch mit derselben Rolle darf. Dazu gehören
+Eingriffe, die **absichtlich** nicht rücknehmbar sind:
+`api_kunde_anonymisieren` löscht Vorname, Nachname und E-Mail
+unwiederbringlich, weil Art. 17 DSGVO genau das verlangt.
+
+Damit ein Versuch trotzdem folgenlos bleiben kann, gibt es einen Abzug
+des Schemas:
+
+```bash
+bash tools/velocity_sichern.sh --ausgangsstand   # den Stand festhalten
+bash tools/velocity_zuruecksetzen.sh             # dorthin zurück
+```
+
+Zurückgespielt wird mit `pg_restore --clean --if-exists
+--single-transaction`: Entweder steht am Ende der Abzug, oder es ändert
+sich nichts. Das Schema `auth` bleibt unberührt — Anmeldungen und
+Passwörter überleben ein Zurücksetzen, niemand wird ausgesperrt.
+
+Nachgemessen in einer Wegwerfdatenbank: 200 von Hand anonymisierte
+Kunden, eine geleerte Prognoseliste und eine gelöschte Sicht waren
+danach wieder da, die 25 RLS-Regeln unverändert.
 
 ## Zum anon-Key in `src/config.js` und `wawi/config.js`
 
