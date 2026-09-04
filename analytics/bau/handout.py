@@ -74,7 +74,7 @@ sondern die Frage, wofür dessen Ergebnis verwendet werden darf.
 | Status | Bedeutung |
 |---|---|
 | **gesperrt** | Das Verfahren hat die vorab festgelegte Hürde nicht genommen und wird nicht eingesetzt. |
-| **Schattenbetrieb** | Das Verfahren rechnet mit, die Ergebnisse werden protokolliert, aber nicht angezeigt; niemand handelt nach ihnen. Auf diese Weise lässt sich prüfen, ob eine Rechnung auch im laufenden Betrieb trägt. |
+| **Probebetrieb** (auch: Schattenbetrieb) | Das Verfahren rechnet mit, die Ergebnisse werden protokolliert, aber nicht angezeigt; niemand handelt nach ihnen. Auf diese Weise lässt sich prüfen, ob eine Rechnung auch im laufenden Betrieb trägt. |
 | **betriebsgesperrt** | Die Kennzahlen halten, doch eine betriebliche Voraussetzung fehlt — etwa ein Kalender, der nicht weit genug reicht. Das ist kein Modellproblem, begründet aber auch keine Freigabe. |
 | **sichtbar** | Das Ergebnis wird Kundschaft oder Personal tatsächlich angezeigt. |
 

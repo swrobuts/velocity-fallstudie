@@ -90,7 +90,7 @@ werden im Alltag als Synonyme benutzt. Hier sind sie es nicht:
 | Wort | Was es heißt | Was es **nicht** heißt |
 |---|---|---|
 | **qualifiziert** | Die vorab festgelegten Gütekriterien halten auf den vorhandenen Daten | dass jemand das Ergebnis zu sehen bekommt — dieses Notebook nennt den Zustand `GATES_HALTEN` |
-| **Schattenbetrieb** | Das Verfahren rechnet mit, Ergebnisse werden protokolliert, **niemand sieht sie und niemand handelt danach** | eine abgeschwächte Freigabe |
+| **Probebetrieb** (auch: Schattenbetrieb) | Das Verfahren rechnet mit, Ergebnisse werden protokolliert, **niemand sieht sie und niemand handelt danach** | eine abgeschwächte Freigabe |
 | **Pilot** | Ein begrenzter, befristeter echter Einsatz mit benanntem Abbruchkriterium und Kontrollmöglichkeit | ein Test |
 | **operativer Einsatz** | Das Ergebnis wirkt ohne weitere Prüfung auf Kundschaft, Personal oder Geld | dass das Verfahren fehlerfrei ist |
 
