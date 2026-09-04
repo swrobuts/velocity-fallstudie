@@ -1626,6 +1626,13 @@ CODE('''
 # Der Nichtfreigabepfad ist kein Sonderfall, den man beschreibt - er muss
 # laufen. Vorher brach die naechste Zelle mit einem TypeError ab, weil
 # ausgelieferter_score None war: ein Absturz statt einer Entscheidung.
+#
+# Die Liste zerfaellt in Rangbereiche von je BANDBREITE Raedern - die
+# Reihenfolge, in der die Werkstatt sie abarbeitet. Ob diese Reihenfolge
+# etwas taugt, laesst sich nur an der historischen Liste messen.
+BANDBREITE = merke("bandbreite", 20)
+_bandquoten = []   # (von, bis, Treffer, Plaetze) - ohne Freigabe leer
+
 if KEINE_FREIGABE:
     print("KEINE FREIGABE - kein Kandidat hat alle Pflichtgates genommen.")
     print("Es wird nichts gerechnet, nichts geschrieben, nichts gespeichert.")
@@ -1654,6 +1661,30 @@ else:
     assert set(liste.fahrrad_id) == soll, (
         f"Die exportierte Liste passt nicht zu '{ausgeliefertes_verfahren}'")
     print(f"Selbstprüfung bestanden: Liste = Top {KAPAZITAET} von '{ausgeliefertes_verfahren}'\\n")
+
+    # ─── MACHT ES EINEN UNTERSCHIED, WO EIN RAD STEHT? ──────────────────
+    # Die Trefferquote gilt fuer die Liste als GANZES. Die Werkstatt fragt
+    # etwas anderes: Lohnt es, oben anzufangen? Das beantwortet nur die
+    # historische Liste, deren 90 Tage vorbei sind. Fuer die Prognoseliste
+    # weiter unten ist es eine Erwartung, kein Befund.
+    for _von in range(0, KAPAZITAET, BANDBREITE):
+        _b = liste.iloc[_von:_von + BANDBREITE]
+        _bandquoten.append((_von + 1, _von + len(_b),
+                            int(_b.meldet_sich.sum()), len(_b)))
+    # Die Baender zerlegen dieselbe Liste - ihre Treffer MUESSEN sich zur
+    # Trefferzahl der ganzen Liste summieren. Sonst ist irgendwo sortiert
+    # oder geschnitten worden, und die Quoten stuenden fuer nichts.
+    assert sum(q[2] for q in _bandquoten) == int(liste.meldet_sich.sum()), (
+        "Die Bandquoten summieren sich nicht zur Trefferzahl der Liste")
+    for _i, (_von, _bis, _t, _n) in enumerate(_bandquoten, start=1):
+        merke(f"band{_i}_treffer", _t)
+        merke(f"band{_i}_von", _von)
+        merke(f"band{_i}_bis", _bis)
+    print(f"Treffer nach Rangbereich (historische Liste, {KAPAZITAET} Räder):")
+    for _von, _bis, _t, _n in _bandquoten:
+        print(f"   Platz {_von:>2d}–{_bis:<2d}   {_t:>2d} von {_n:<2d}  "
+              f"{'█' * _t}{'·' * (_n - _t)}")
+    print()
 
     # Der Modellscore steht NICHT in der ausgelieferten Liste. Er stammt aus
     # einem Verfahren, das ausdruecklich nicht freigegeben ist; neben einem
@@ -1777,6 +1808,76 @@ if KEINE_FREIGABE:
 else:
     print("Das ist der Unterschied zur historischen Liste darueber, deren")
     print("Ausgang bereits bekannt ist und die deshalb nichts mehr beweist.")
+
+
+# ─── WAS DIE WERKSTATT BEKAEME ──────────────────────────────────────
+#
+# Bis hierhin ist die Prognoseliste eine Tabelle aus fahrrad_id, Typ und
+# Kilometern. Damit findet niemand ein Rad. Die Werkstatt braucht die
+# RAHMENNUMMER und den ORT, an dem das Rad zuletzt stand.
+#
+# DIE STATION IST KEIN MERKMAL. Sie wird absichtlich erst hier geladen,
+# nach der gesamten Modellierung: Wo ein Rad steht, darf die Reihenfolge
+# nicht beeinflussen - sonst wandert die Werkstatt bevorzugt dorthin, wo
+# ohnehin viele Raeder stehen, und die Liste misst Verkehr statt
+# Verschleiss. Der Ort kommt zur AUSLIEFERUNG dazu, nicht zum Training.
+_stationen = pd.read_csv(BASIS + "station.csv")
+_ortsname = dict(zip(_stationen.station_id.astype(int), _stationen["name"]))
+_zuletzt = (fahrten[fahrten.endzeit.notna()].sort_values("endzeit")
+            .groupby("fahrrad_id").tail(1)
+            .set_index("fahrrad_id")[["endzeit", "end_station_id"]])
+
+_werkstatt = _prognose[["rang", "fahrrad_id", "typ_code", "rangwert",
+                        "km_180", "meldungen_bisher"]].copy()
+_werkstatt["fahrrad_id"] = _werkstatt.fahrrad_id.astype(int)
+_werkstatt = _werkstatt.merge(raeder[["fahrrad_id", "rahmennummer"]],
+                              on="fahrrad_id", how="left")
+_werkstatt = _werkstatt.join(_zuletzt, on="fahrrad_id")
+
+# Wer sein Rad ausserhalb einer Station abstellt, hinterlaesst keine
+# end_station_id. Das ist kein fehlender Wert, sondern eine Aussage - und
+# fuer die Werkstatt der Unterschied zwischen hinfahren und suchen.
+_werkstatt["Steht zuletzt"] = [
+    _ortsname.get(int(s), "frei abgestellt") if pd.notna(s) else "frei abgestellt"
+    for s in _werkstatt.end_station_id]
+_werkstatt["gesehen"] = _werkstatt.endzeit.dt.strftime("%d.%m.%Y").fillna("—")
+_werkstatt["Typ"] = _werkstatt.typ_code.map(
+    {"CITY": "City", "EBIKE": "E-Bike", "CARGO": "Lastenrad"})
+_werkstatt = _werkstatt.rename(columns={
+    "rang": "Platz", "rahmennummer": "Rad", "rangwert": "km seit Rep.",
+    "km_180": "km 180 T.", "meldungen_bisher": "Meldungen"})
+_zahlspalten = ["km seit Rep.", "km 180 T.", "Meldungen"]
+_werkstatt[_zahlspalten] = _werkstatt[_zahlspalten].round(0).astype(int)
+_spalten = ["Platz", "Rad", "Typ", "Steht zuletzt", "gesehen"] + _zahlspalten
+
+_mit_ort = _werkstatt.loc[_werkstatt["Steht zuletzt"] != "frei abgestellt",
+                          "Steht zuletzt"]
+merke("prognose_ohne_ort", int(len(_werkstatt) - len(_mit_ort)))
+merke("prognose_orte", int(_mit_ort.nunique()))
+
+print()
+print("=" * 74)
+print(f"WERKSTATTFASSUNG - was am {_prognose_stichtag.date()} an die Werkstatt ginge")
+print("=" * 74)
+# WERKSTATTSPRACHE STATT FACHSPRACHE. Der Modus heisst im Glossar
+# "Schattenbetrieb". Auf einem Arbeitsauftrag hat dieses Wort nichts zu
+# suchen - dort zaehlt, was es fuer die Werkstatt bedeutet.
+print("Diese Liste laeuft zur Probe mit: Sie wird gefuehrt und nach 90 Tagen")
+print("nachgeprueft, ordnet aber noch keine Reparatur an. Was auffaellt, geht")
+print("wie bisher ueber die normale Schadensmeldung.")
+_TITEL = ["ZUERST", "DANACH", "WENN ZEIT BLEIBT"]
+for _i, _von in enumerate(range(0, len(_werkstatt), BANDBREITE)):
+    _teil = _werkstatt.iloc[_von:_von + BANDBREITE]
+    _name = _TITEL[_i] if _i < len(_TITEL) else f"BEREICH {_i + 1}"
+    _zusatz = (f"beim letzten Mal wurden {_bandquoten[_i][2]} von "
+               f"{_bandquoten[_i][3]} auffällig") if _i < len(_bandquoten) else (
+               "ohne Freigabe gibt es keine gemessene Quote")
+    print(f"\\n{_name}   Platz {_von + 1}–{_von + len(_teil)}   ({_zusatz})")
+    print(_teil[_spalten].to_string(index=False))
+print(f"\\n{len(_werkstatt) - len(_mit_ort)} der {len(_werkstatt)} Räder standen zuletzt "
+      f"ausserhalb einer Station;")
+print(f"fuer sie nennt die Liste keinen Ort. Die uebrigen verteilen sich auf "
+      f"{_mit_ort.nunique()} Stationen.")
 '''),
 
 MD("""### 6.1 Ausgeliefert wird die Regel

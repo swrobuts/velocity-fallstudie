@@ -83,6 +83,18 @@
  "listen_exklusiv": 21,
  "keine_freigabe": 0,
  "pflichtgates": "K1 · K2 · K3",
+ "bandbreite": 20,
+ "band1_treffer": 20,
+ "band1_von": 1,
+ "band1_bis": 20,
+ "band2_treffer": 19,
+ "band2_von": 21,
+ "band2_bis": 40,
+ "band3_treffer": 14,
+ "band3_von": 41,
+ "band3_bis": 60,
  "prognose_stichtag": "2026-08-24",
- "prognose_stichtag_lang": "24.08.2026"
+ "prognose_stichtag_lang": "24.08.2026",
+ "prognose_ohne_ort": 6,
+ "prognose_orte": 10
 }
