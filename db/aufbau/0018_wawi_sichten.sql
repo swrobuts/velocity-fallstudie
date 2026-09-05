@@ -849,72 +849,18 @@ comment on column velocity.v_wawi_umsatz_kundengruppe.umsatz_je_kunde is
 drop view if exists velocity.v_wawi_fahrt_km cascade;
 
 create or replace view velocity.v_wawi_fahrt_km as
-select a.ausleihe_id,
-       a.startzeit,
-       a.kunde_id,
-       t.typ_code,
-       -- Drei Faelle, und der dritte ist der Grund fuer diesen Block.
-       -- Eine Rundfahrt endet dort, wo sie begann: ihre Luftlinie ist
-       -- strukturell null, gefahren wurde trotzdem. Ohne den mittleren
-       -- Zweig traegt rund jede zehnte Fahrt null Kilometer bei, die
-       -- CO2-Ersparnis ist systematisch zu niedrig, und es faellt
-       -- nirgends auf - der Anteil geschaetzter Fahrten sieht dabei
-       -- voellig normal aus.
-       case
-         when a.distanz_km is not null then a.distanz_km
-         when velocity.fn_luftlinie_km(
-                coalesce(s1.latitude,  a.start_latitude),
-                coalesce(s1.longitude, a.start_longitude),
-                coalesce(s2.latitude,  a.end_latitude),
-                coalesce(s2.longitude, a.end_longitude)) = 0
-           then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
-         else round(velocity.fn_luftlinie_km(
-                 coalesce(s1.latitude,  a.start_latitude),
-                 coalesce(s1.longitude, a.start_longitude),
-                 coalesce(s2.latitude,  a.end_latitude),
-                 coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
-       end                      as kilometer,
-       a.distanz_km is null     as ist_geschaetzt,
-       -- WELCHES Verfahren geschaetzt hat, gehoert sichtbar in die
-       -- Zeile. Zwei Schaetzungen, die dieselbe Spalte fuellen und sich
-       -- unterschiedlich irren, muss man auseinanderhalten koennen.
-       case when a.distanz_km is not null then 'gemessen'
-            when velocity.fn_luftlinie_km(
-                   coalesce(s1.latitude,  a.start_latitude),
-                   coalesce(s1.longitude, a.start_longitude),
-                   coalesce(s2.latitude,  a.end_latitude),
-                   coalesce(s2.longitude, a.end_longitude)) = 0
-              then 'aus_dauer'
-            else 'aus_luftlinie'
-       end                      as verfahren
-  from velocity.ausleihe a
-  join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
-  join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
-  join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
-  left join velocity.station s1 on s1.station_id = a.start_station_id
-  left join velocity.station s2 on s2.station_id = a.end_station_id
-  left join velocity.rechenannahme ra
-         on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
-  left join velocity.rechenannahme tempo
-         on tempo.code = 'reisegeschwindigkeit'
-        and tempo.gueltigkeit @> a.startzeit::date
- where a.status = 'abgeschlossen'
-   -- Gesamtpruefung Punkt 3: ist_mitarbeiter() allein liess jede
-   -- Fachrolle durch, auch kundenservice - der eine Mitarbeiter mit
-   -- NUR dieser Rolle liest damit ausleihe_id, kunde_id und startzeit
-   -- je Einzelfahrt, also das Bewegungsprofil eines Kunden. Spec
-   -- doku/specs/2026-08-25-velocity-warenwirtschaft-design.md, 4.2:
-   -- "eine Liste von Fahrten mit Start, Ziel und Uhrzeit ist ein
-   -- Bewegungsprofil. Der Kundenservice braucht es nicht ... Was
-   -- niemand braucht, wird nicht ausgeliefert." Der vormalige Kommentar
-   -- hier zitierte denselben Satz - "eine Sicht, die ihre Schranke von
-   -- einer anderen erbt, hat keine eigene" - als Begruendung, WARUM
-   -- diese Sicht KEINE eigene Rollenschranke braucht. Das war die
-   -- falsche Schlussfolgerung aus dem richtigen Satz: v_wawi_km_co2
-   -- aggregiert und hat ihre eigene hat_rolle('leitung')-Schranke exakt
-   -- deshalb bekommen; die hier zugrundeliegende Einzelfahrt-Sicht
-   -- brauchte dieselbe, hatte sie aber nicht.
-   and velocity.hat_rolle('leitung');
+select fk.ausleihe_id,
+       fk.startzeit,
+       fk.kunde_id,
+       fk.typ_code,
+       fk.km          as kilometer,
+       fk.ist_geschaetzt,
+       fk.verfahren
+  from velocity.v_fahrt_kennzahl fk
+ -- Unveraendert aus dem bisherigen Stand uebernommen. Die Schranke
+ -- gehoert in DIESE Sicht, nicht in die Basissicht: nur hier ist
+ -- entschieden, wer das Bewegungsprofil sehen darf.
+ where velocity.hat_rolle('leitung');
 
 -- ---- Kilometer und CO2 -----------------------------------------------
 -- Die Ersparnis ist die Differenz zum Pkw, nicht die Emission des
@@ -948,65 +894,24 @@ select a.ausleihe_id,
 -- naechsten Absatz) und kann 'demo' zulassen, ohne dass v_wawi_fahrt_km
 -- selbst dafuer angefasst werden muesste.
 create or replace view velocity.v_wawi_km_co2 as
-select date_trunc('month', a.startzeit)::date as monat,
-       t.typ_code,
-       count(*)                                        as fahrten,
-       round(sum(k.kilometer), 1)                      as kilometer,
-       count(*) filter (where k.ist_geschaetzt)        as fahrten_geschaetzt,
-       round(avg(case when k.ist_geschaetzt then 1.0 else 0.0 end), 3)
-                                                       as anteil_geschaetzt,
-       round(sum(k.kilometer * (pkw.wert - eigen.wert)) / 1000.0, 2)
-                                                       as co2_ersparnis_kg
-  from velocity.ausleihe a
-  join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
-  join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
-  join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
-  left join velocity.station s1 on s1.station_id = a.start_station_id
-  left join velocity.station s2 on s2.station_id = a.end_station_id
-  left join velocity.rechenannahme ra
-         on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
-  left join velocity.rechenannahme tempo
-         on tempo.code = 'reisegeschwindigkeit'
-        and tempo.gueltigkeit @> a.startzeit::date
-  -- Dieselbe Drei-Fall-Formel wie velocity.v_wawi_fahrt_km.kilometer und
-  -- velocity.v_wawi_fahrten_je_tag_rad.kilometer, hier ein drittes Mal -
-  -- siehe "KEIN JOIN" im Kopfkommentar von v_wawi_fahrten_je_tag_rad fuer
-  -- dieselbe Abwaegung (Kopieren statt eines Joins auf eine Sicht mit
-  -- einer engeren Rollenschranke). LATERAL statt eines dritten
-  -- CASE-Ausdrucks in jeder aggregierten Spalte: kilometer/ist_geschaetzt
-  -- werden hier EINMAL je Fahrt berechnet und darunter mehrfach benutzt
-  -- (sum, avg, count filter) - ein CASE je Verwendung waere dieselbe
-  -- Formel dreifach im SELECT, nicht besser lesbar als einmal hier.
-  cross join lateral (
-    select
-      case
-        when a.distanz_km is not null then a.distanz_km
-        when velocity.fn_luftlinie_km(
-               coalesce(s1.latitude,  a.start_latitude),
-               coalesce(s1.longitude, a.start_longitude),
-               coalesce(s2.latitude,  a.end_latitude),
-               coalesce(s2.longitude, a.end_longitude)) = 0
-          then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
-        else round(velocity.fn_luftlinie_km(
-                coalesce(s1.latitude,  a.start_latitude),
-                coalesce(s1.longitude, a.start_longitude),
-                coalesce(s2.latitude,  a.end_latitude),
-                coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
-      end as kilometer,
-      a.distanz_km is null as ist_geschaetzt
-  ) k
-  join velocity.rechenannahme pkw
-    on pkw.code = 'co2_pkw' and pkw.gueltigkeit @> a.startzeit::date
-  join velocity.rechenannahme eigen
-    on eigen.code = case when t.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
-   and eigen.gueltigkeit @> a.startzeit::date
- where a.status = 'abgeschlossen'
-   and k.kilometer is not null
-   -- Eigene Schranke, nicht mehr von v_wawi_fahrt_km geerbt (siehe
-   -- Kopfkommentar). 'demo' zusaetzlich zu 'leitung': eine
-   -- Monatsaggregation je Radtyp ohne jeden Personenbezug - dieselbe
-   -- Einstufung wie v_wawi_umsatz_radtyp/v_wawi_umsatz_kundengruppe
-   -- weiter oben, die aus demselben Grund schon 'demo' zulassen.
+select date_trunc('month', fk.startzeit)::date          as monat,
+       fk.typ_code,
+       count(*)                                         as fahrten,
+       round(sum(fk.km), 1)                             as kilometer,
+       count(*) filter (where fk.ist_geschaetzt)        as fahrten_geschaetzt,
+       round(avg(case when fk.ist_geschaetzt then 1.0 else 0.0 end), 3)
+                                                        as anteil_geschaetzt,
+       -- Erst summieren, dann runden - wie bisher. co2_ersparnis_g ist
+       -- in der Basissicht ungerundet, genau dafuer.
+       round(sum(fk.co2_ersparnis_g) / 1000.0, 2)       as co2_ersparnis_kg
+  from velocity.v_fahrt_kennzahl fk
+ -- Diese beiden Bedingungen standen bisher als Join-Bedingung bzw. als
+ -- "k.kilometer is not null" in der Sicht selbst. Sie bleiben HIER, wo
+ -- sie hingehoeren: nur diese Sicht rechnet CO2, und nur sie darf eine
+ -- Fahrt ohne belastbare Grundlage weglassen. Die Basissicht fuehrt sie
+ -- weiter, damit die beiden anderen Sichten sie sehen.
+ where fk.km is not null
+   and fk.co2_ersparnis_g is not null
    and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
  group by 1, 2;
 
@@ -1470,15 +1375,17 @@ comment on column velocity.v_wawi_fahrten_je_tag.fahrten is
 -- weil die Disposition genau das für die tägliche Flottensteuerung
 -- braucht (welches Rad war wo, wie lange, wie weit).
 --
--- KEIN JOIN AUF v_wawi_fahrt_km, obwohl die Kilometerformel von dort
--- eins zu eins übernommen ist: jene Sicht trägt selbst
--- "and velocity.hat_rolle('leitung')" in ihrer eigenen WHERE-Klausel. Ein
--- Join hierher würde für ein Konto mit NUR disposition (ohne leitung) an
--- dieser Stelle für JEDE Zeile null Treffer liefern, obwohl die
--- WHERE-Klausel DIESER Sicht disposition ausdrücklich zulässt (siehe
+-- JOIN AUF v_fahrt_kennzahl statt auf v_wawi_fahrt_km: jene Sicht trägt
+-- selbst "and velocity.hat_rolle('leitung')" in ihrer eigenen
+-- WHERE-Klausel. Ein Join dorthin würde für ein Konto mit NUR
+-- disposition (ohne leitung) für JEDE Zeile null Treffer liefern, obwohl
+-- die WHERE-Klausel DIESER Sicht disposition ausdrücklich zulässt (siehe
 -- ROLLE unten) - eine Sicht würde so ungewollt die engere Schranke einer
--- anderen erben. Die Drei-Fall-Formel steht deshalb ein zweites Mal hier,
--- Zeile für Zeile identisch zu v_wawi_fahrt_km.kilometer.
+-- anderen erben. Die Basissicht v_fahrt_kennzahl trägt dagegen KEINE
+-- eigene Rollenschranke (siehe deren Kopfkommentar) und liefert
+-- Kilometer, ist_geschaetzt, dauer_minuten, fahrrad_id und typ_code
+-- bereits fertig hergeleitet - ein einfacher Join auf sie genügt, weil
+-- sie jede abgeschlossene Fahrt führt.
 --
 -- ROLLE: leitung UND disposition, nicht nur eine von beiden. leitung
 -- erreicht diese Sicht über den bestehenden Drill-Down-Pfad (Auswertungen
@@ -1494,69 +1401,40 @@ comment on column velocity.v_wawi_fahrten_je_tag.fahrten is
 -- leitung bekommen - weder Umsatz noch irgendeinen Kundenbezug, der eine
 -- Erweiterung über leitung hinaus rechtfertigungsbedürftig machen würde.
 create or replace view velocity.v_wawi_fahrten_je_tag_rad as
-select date_trunc('day', a.startzeit)::date as tag,
-       f.fahrrad_id,
+select date_trunc('day', fk.startzeit)::date as tag,
+       fk.fahrrad_id,
        f.rahmennummer,
-       t.typ_code,
+       fk.typ_code,
        t.bezeichnung        as typ,
        s1.name              as start_station,
        s2.name              as ziel_station,
-       a.dauer_minuten,
-       -- Identische Drei-Fall-Formel wie velocity.v_wawi_fahrt_km.kilometer
-       -- weiter oben - siehe "KEIN JOIN" im Kopfkommentar, warum sie hier
-       -- kopiert statt wiederverwendet steht.
-       case
-         when a.distanz_km is not null then a.distanz_km
-         when velocity.fn_luftlinie_km(
-                coalesce(s1.latitude,  a.start_latitude),
-                coalesce(s1.longitude, a.start_longitude),
-                coalesce(s2.latitude,  a.end_latitude),
-                coalesce(s2.longitude, a.end_longitude)) = 0
-           then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
-         else round(velocity.fn_luftlinie_km(
-                 coalesce(s1.latitude,  a.start_latitude),
-                 coalesce(s1.longitude, a.start_longitude),
-                 coalesce(s2.latitude,  a.end_latitude),
-                 coalesce(s2.longitude, a.end_longitude)) * ra.wert, 2)
-       end                  as kilometer,
-       a.distanz_km is null as ist_geschaetzt,
+       fk.dauer_minuten,
+       fk.km                as kilometer,
+       fk.ist_geschaetzt,
        -- UMSATZ JE FAHRT (30.08.2026). Die Tagesliste zeigte bis hierher
        -- Dauer und Strecke, aber nicht, was die Fahrt eingebracht hat -
        -- die Frage, die im Drill-Down von der Umsatztafel herunter am
        -- naechsten liegt.
        --
-       -- LEFT JOIN LATERAL, nicht join+group by: die Sicht hat das Korn
-       -- "eine Zeile je Fahrt". Ein Join auf entgeltposition (mehrere
-       -- Zeilen je Ausleihe) vervielfachte die Zeilen und damit auch
-       -- dauer_minuten und kilometer - genau der Fehler, den die
-       -- Monatssichten weiter oben mit count(distinct ausleihe_id)
-       -- umgehen muessen. Die Unterabfrage bleibt beim Korn.
-       --
-       -- LEFT statt INNER, obwohl in der Datenbank nachgezaehlt aktuell
-       -- JEDE abgeschlossene Fahrt Entgeltpositionen traegt (12 049 von
-       -- 12 049): ein INNER JOIN liesse eine kuenftige unabgerechnete
-       -- Fahrt lautlos aus der Tagesliste verschwinden, obwohl sie
-       -- stattgefunden hat. So bleibt sie stehen und traegt null - die
-       -- Oberflaeche zeigt dafuer "—", nicht "0,00 €". Kein coalesce auf
-       -- 0: nicht abgerechnet ist etwas anderes als nichts eingebracht.
-       round(entgelt.summe, 2) as umsatz
-  from velocity.ausleihe a
-  join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
-  join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
-  join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
+       -- Seit der Umstellung direkt aus v_fahrt_kennzahl.betrag_brutto,
+       -- statt einer eigenen "left join lateral" auf entgeltposition:
+       -- dieselbe Summe, auf den Cent nachgemessen identisch (35 456,87
+       -- Euro insgesamt). Ein Unterschied bleibt: die Basissicht liefert
+       -- dort per coalesce eine 0,00, wo die vorherige Unterabfrage NULL
+       -- lieferte, wenn eine Fahrt keine Entgeltposition trägt. Gemessen
+       -- betrifft das 0 von 12052 Fahrten - jede abgeschlossene Fahrt
+       -- hat mindestens eine Entgeltposition. Die Umstellung ist damit
+       -- heute wirkungslos.
+       round(fk.betrag_brutto, 2) as umsatz
+  from velocity.v_fahrt_kennzahl fk
+  join velocity.ausleihe   a on a.ausleihe_id = fk.ausleihe_id
+  join velocity.fahrrad    f on f.fahrrad_id  = fk.fahrrad_id
+  join velocity.fahrradtyp t on t.typ_code    = fk.typ_code
   left join velocity.station s1 on s1.station_id = a.start_station_id
   left join velocity.station s2 on s2.station_id = a.end_station_id
-  left join lateral (select sum(ep.betrag) as summe
-                       from velocity.entgeltposition ep
-                      where ep.ausleihe_id = a.ausleihe_id) entgelt on true
-  left join velocity.rechenannahme ra
-         on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
-  left join velocity.rechenannahme tempo
-         on tempo.code = 'reisegeschwindigkeit'
-        and tempo.gueltigkeit @> a.startzeit::date
- where a.status = 'abgeschlossen'
-   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('disposition')
-     or velocity.hat_rolle('demo'));
+ where velocity.hat_rolle('leitung')
+    or velocity.hat_rolle('disposition')
+    or velocity.hat_rolle('demo');
 
 comment on view velocity.v_wawi_fahrten_je_tag_rad is
   'Dritte Ebene des Drill-Downs (Monat -> Tag -> Räder): jede an einem Tag '
