@@ -100,6 +100,133 @@ comment on function velocity.fn_luftlinie_km(numeric, numeric, numeric, numeric)
   'sobald ein Punkt fehlt - eine geschätzte Distanz aus einem halben Koordinatenpaar '
   'wäre Erfindung, keine Schätzung.';
 
+-- =====================================================================
+--  BASISSICHT: eine Zeile je abgeschlossener Fahrt
+--
+--  WARUM ES SIE GIBT
+--
+--  Die Drei-Fall-Herleitung der Kilometer stand bis zum 05.09.2026
+--  DREIMAL in dieser Datei - in v_wawi_fahrt_km, v_wawi_km_co2 und
+--  v_wawi_fahrten_je_tag_rad. Der frueher hier stehende Grund war
+--  triftig: die drei tragen VERSCHIEDENE Rollenschranken (leitung /
+--  leitung+demo / leitung+disposition), und eine Sicht auf eine Sicht
+--  mit engerer Schranke haette die engere Schranke geerbt.
+--
+--  Diese Sicht traegt GAR KEINE Schranke und wird an niemanden
+--  vergeben. Eine Sicht laeuft mit den Rechten ihres Eigentuemers
+--  (postgres, bypassrls); die drei koennen sie deshalb lesen, ohne
+--  etwas zu erben, und behalten ihre eigene Schranke dort, wo sie
+--  hingehoert - in ihrer eigenen where-Bedingung.
+--
+--  KEIN GRANT AN authenticated. Die Zeilen fuehren ausleihe_id,
+--  kunde_id und startzeit je Einzelfahrt, also ein Bewegungsprofil -
+--  dieselbe Einstufung wie v_wawi_fahrt_km. Gelesen wird sie
+--  ausschliesslich mittelbar, ueber die Sichten darueber.
+--
+--  co2_ersparnis_g IST BEWUSST UNGERUNDET. v_wawi_km_co2 rundet die
+--  Monatssumme auf zwei Stellen. Wuerde hier schon je Fahrt gerundet,
+--  summierten sich bis zu 12 052 Rundungsfehler auf, und die
+--  Monatswerte wichen von den bisherigen ab. Die Zusicherung in
+--  t0025 wuerde das melden.
+-- =====================================================================
+create or replace view velocity.v_fahrt_kennzahl as
+select a.ausleihe_id,
+       a.kunde_id,
+       a.fahrrad_id,
+       t.typ_code,
+       a.startzeit,
+       a.endzeit,
+       a.dauer_minuten,
+       k.kilometer                          as km,
+       k.ist_geschaetzt,
+       k.verfahren,
+       k.kilometer * (pkw.wert - eigen.wert) as co2_ersparnis_g,
+       coalesce((select sum(ep.betrag) from velocity.entgeltposition ep
+                  where ep.ausleihe_id = a.ausleihe_id), 0)::numeric(10,2)
+                                            as betrag_brutto
+  from velocity.ausleihe a
+  join velocity.fahrrad       f  on f.fahrrad_id = a.fahrrad_id
+  join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
+  join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
+  left join velocity.station s1 on s1.station_id = a.start_station_id
+  left join velocity.station s2 on s2.station_id = a.end_station_id
+  left join velocity.rechenannahme ra
+         on ra.code = 'umwegfaktor' and ra.gueltigkeit @> a.startzeit::date
+  left join velocity.rechenannahme tempo
+         on tempo.code = 'reisegeschwindigkeit'
+        and tempo.gueltigkeit @> a.startzeit::date
+  -- Die Luftlinie EINMAL, statt wie bisher bis zu viermal je Zeile in
+  -- derselben Sicht. Gleiche Formel, gleiche Argumente; dass sich am
+  -- Ergebnis nichts aendert, zeigt t0025.
+  cross join lateral (
+    select velocity.fn_luftlinie_km(
+             coalesce(s1.latitude,  a.start_latitude),
+             coalesce(s1.longitude, a.start_longitude),
+             coalesce(s2.latitude,  a.end_latitude),
+             coalesce(s2.longitude, a.end_longitude)) as luftlinie_km
+  ) l
+  cross join lateral (
+    select
+      case
+        when a.distanz_km is not null then a.distanz_km
+        when l.luftlinie_km = 0 then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
+        else round(l.luftlinie_km * ra.wert, 2)
+      end                        as kilometer,
+      a.distanz_km is null       as ist_geschaetzt,
+      case when a.distanz_km is not null then 'gemessen'
+           when l.luftlinie_km = 0       then 'aus_dauer'
+           else 'aus_luftlinie'
+      end                        as verfahren
+  ) k
+  join velocity.rechenannahme pkw
+    on pkw.code = 'co2_pkw' and pkw.gueltigkeit @> a.startzeit::date
+  join velocity.rechenannahme eigen
+    on eigen.code = case when t.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
+   and eigen.gueltigkeit @> a.startzeit::date
+ where a.status = 'abgeschlossen'
+   and k.kilometer is not null;
+
+comment on view velocity.v_fahrt_kennzahl is
+  'Eine Zeile je abgeschlossener Fahrt mit Kilometern, Schätzverfahren, CO2-Ersparnis '
+  'in Gramm (ungerundet) und Entgeltsumme. Einzige Stelle im Schema, an der die '
+  'Drei-Fall-Herleitung der Strecke steht. Trägt KEINE Rollenschranke und wird an '
+  'niemanden vergeben - sie führt ein Bewegungsprofil und wird ausschließlich mittelbar '
+  'gelesen, über die Sichten darüber.';
+comment on column velocity.v_fahrt_kennzahl.ausleihe_id is
+  'Schlüssel der Fahrt, Verweis auf velocity.ausleihe.';
+comment on column velocity.v_fahrt_kennzahl.kunde_id is
+  'Fahrender Kunde.';
+comment on column velocity.v_fahrt_kennzahl.fahrrad_id is
+  'Verwendetes Rad, Verweis auf velocity.fahrrad.';
+comment on column velocity.v_fahrt_kennzahl.typ_code is
+  'Fahrradtyp der Fahrt. Bestimmt die verglichene Eigenemission (co2_rad für CITY, '
+  'sonst co2_ebike).';
+comment on column velocity.v_fahrt_kennzahl.startzeit is
+  'Beginn der Fahrt, Grundlage der Zeitscheibe für Umwegfaktor, Reisegeschwindigkeit '
+  'und CO2-Annahmen (rechenannahme.gueltigkeit).';
+comment on column velocity.v_fahrt_kennzahl.endzeit is
+  'Ende der Fahrt. Immer gesetzt, da die Sicht ausschließlich abgeschlossene Fahrten führt.';
+comment on column velocity.v_fahrt_kennzahl.dauer_minuten is
+  'Fahrtdauer in aufgerundeten Minuten (velocity.ausleihe.dauer_minuten).';
+comment on column velocity.v_fahrt_kennzahl.km is
+  'Drei Fälle, siehe verfahren: gemessene Strecke, wo vorhanden; sonst bei einer '
+  'Rundfahrt mit Luftlinie null aus der Dauer geschätzt; sonst aus der Luftlinie mal '
+  'Umwegfaktor.';
+comment on column velocity.v_fahrt_kennzahl.ist_geschaetzt is
+  'Wahr, wenn km nicht gemessen wurde (verfahren aus_dauer oder aus_luftlinie).';
+comment on column velocity.v_fahrt_kennzahl.verfahren is
+  'gemessen, aus_dauer oder aus_luftlinie - womit km ermittelt wurde.';
+comment on column velocity.v_fahrt_kennzahl.co2_ersparnis_g is
+  'CO2-Ersparnis gegenüber einem vergleichbaren Pkw, in Gramm, bewusst ungerundet - '
+  'siehe Kopfkommentar der Sicht.';
+comment on column velocity.v_fahrt_kennzahl.betrag_brutto is
+  'Summe der Entgeltpositionen dieser Fahrt, 0 ohne vorhandene Positionen.';
+
+-- Kein grant. Die Zeile steht hier als Absicht, nicht als Versehen:
+-- die Vorgabe aus 0011_sicherheit.sql entzieht PUBLIC ohnehin alles,
+-- und t0018 prueft, dass hier nie ein grant nachgetragen wird.
+revoke all on velocity.v_fahrt_kennzahl from public, anon, authenticated;
+
 -- ---- Flotte ----------------------------------------------------------
 -- drop und neu, nicht CREATE OR REPLACE: Die Spalte antrieb ENTFAELLT
 -- (es gibt keinen Riemen, siehe 0001), und Spalten entfernen kann ein
