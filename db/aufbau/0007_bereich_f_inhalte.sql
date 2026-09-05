@@ -5,7 +5,7 @@
 -- Objekte:    velocity.faq_eintrag, velocity.nutzungsschritt,
 --             velocity.kennzahl, velocity.hoehenmarke
 -- Ruecknahme: DROP TABLE velocity.kennzahl, velocity.nutzungsschritt,
---             velocity.faq_eintrag;
+--             velocity.faq_eintrag, velocity.hoehenmarke;
 --
 -- Entwurfsentscheidung: drei konkrete Tabellen statt einer generischen
 -- Schluessel-Wert-Tabelle. Ein Entity-Attribute-Value-Modell waere

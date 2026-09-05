@@ -8,7 +8,8 @@
 --             velocity.nutzungspreis, velocity.preisschaetzung
 -- Ruecknahme: DROP TABLE velocity.freiminuten_periode,
 --             velocity.mitgliedschaft, velocity.tarif_kondition,
---             velocity.nutzungspreis, velocity.tarif;
+--             velocity.nutzungspreis, velocity.tarif,
+--             velocity.preisschaetzung;
 --
 -- Hinweis:    Alle Zeitraeume sind halboffen '[)'. Damit schliesst das
 --             Ende eines Zeitraums nahtlos an den Beginn des naechsten

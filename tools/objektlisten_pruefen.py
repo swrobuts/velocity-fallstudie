@@ -41,11 +41,12 @@ Rueckgabewert 0 durch und haengt in Abnahmeschritt 2. Diese Zahlen stehen
 hier als Anlass, nicht als offener Befund - wer sie nachschlagen will,
 findet sie im Verlauf jener sieben Dateien.
 
-WAS DAS WERKZEUG NICHT PRUEFT: die Ruecknahme-Zeilen derselben Koepfe. In
-0003, 0004 und 0022 sind sie aus demselben Grund unvollstaendig
-(geschaeftsgebiet, preisschaetzung, v_wawi_radereignis fehlen dort). Das
-ist derselbe Fehlertyp eine Ebene tiefer und waere die naechste
-Ausbaustufe.
+BIS ZUR ERWEITERUNG VOM 05.09.2026 GALT HIER: das Werkzeug prueft die
+Ruecknahme-Zeilen derselben Koepfe nicht. In 0003, 0004 und 0022 waren
+sie aus demselben Grund unvollstaendig (geschaeftsgebiet, preisschaetzung,
+v_wawi_radereignis fehlten dort) - derselbe Fehlertyp eine Ebene tiefer.
+Diese Luecke ist die naechste Ausbaustufe gewesen; siehe den Abschnitt
+"ERWEITERT AM 05.09.2026" weiter unten fuer das Ergebnis.
 
 WAS GEPRUEFT WIRD
 
@@ -176,13 +177,125 @@ haette das als echte Objektanlage gezaehlt. sql_kern() entfernt deshalb
 Kommentare UND Zeichenketten, bevor nach CREATE/DROP/RENAME gesucht wird
 (siehe dort).
 
+ERWEITERT AM 05.09.2026: AUCH DIE RUECKNAHME-ZEILE
+
+Derselbe Kopfrahmen traegt neben "Objekte:" ein zweites Feld,
+"Ruecknahme:" - die Anweisung, mit der sich rueckgaengig machen laesst,
+was die Datei anlegt. Genau derselbe Fehlertyp ist dort moeglich: die
+Datei legt etwas an, die Ruecknahme kennt es nicht, und wer sie ausfuehrt,
+laesst Reste stehen. Diese Erweiterung (kopf_ruecknahme_feld(),
+zerlege_ruecknahme(), pruefe_ruecknahme()) ist die Gegenmassnahme dafuer.
+
+ZWEI MACHARTEN, UND WARUM NUR EINE DAVON PRUEFBAR IST
+
+Anders als bei "Objekte:" gibt es fuer "Ruecknahme:" zwei im Bestand
+tatsaechlich genutzte, beide legitime Formen:
+
+  Verweisend
+    "DROP SCHEMA velocity CASCADE" (0001) oder "DROP VIEW fuer dieselben
+    Namen." (0010, 0018) bzw. "DROP FUNCTION fuer dieselben Namen." (0009,
+    0019) nennt keinen einzigen Namen und KANN NICHT veralten - was immer
+    die Objekte-Zeile heute oder kuenftig auflistet, "dieselben Namen"
+    trifft es automatisch mit. Diese Form ist der Aufzaehlung ausdruecklich
+    vorzuziehen, weil eine wiederholte Liste genau das ist, was
+    stehenbleibt (siehe ANLASS oben). Sie wird deshalb IMMER als
+    vollstaendig behandelt, unabhaengig davon, was die Datei tatsaechlich
+    anlegt: eine Pruefung dagegen waere keine Pruefung der Ruecknahme,
+    sondern eine Wette darauf, dass "dieselben Namen" auch stimmt - und
+    diese Wette gehoert nicht in ein automatisiertes Werkzeug. Meldete
+    dieses Werkzeug hier trotzdem etwas, waere es bei jedem Lauf falsch
+    (0009, 0010, 0018, 0019, dazu 0001 global) und wuerde ueberlesen -
+    unbrauchbar aus demselben Grund wie ein Werkzeug, das bei 0008, 0011,
+    0020 und 0024 eine leere Objekte-Liste als "alles fehlt" meldete
+    (siehe Fallstrick oben).
+  Aufzaehlend
+    Die uebrigen Dateien nennen jedes DROP TABLE/VIEW/TYPE/FUNCTION/
+    SEQUENCE einzeln, genau wie die Objekte-Zeile - und koennen deshalb
+    denselben Fehler machen: ein Name, der beim Anlegen dazukam, ohne dass
+    die Ruecknahme ihn nachzog. Nur diese Form wird gegen die tatsaechlich
+    angelegten Objekte abgeglichen.
+
+Eine einzelne Ruecknahme-Zeile kann BEIDES mischen, je Art getrennt: 0019
+verweist fuer Funktionen ("DROP FUNCTION fuer dieselben Namen"), zaehlt
+aber die Sequenz einzeln auf ("DROP SEQUENCE velocity.seq_wartungsauftrag")
+und erwaehnt nebenbei einen DROP-TRIGGER-Schritt, der keine der fuenf
+geprueften Arten betrifft. 0018 verweist fuer Sichten, zaehlt aber Tabelle
+und Funktion einzeln auf. zerlege_ruecknahme() klassifiziert deshalb JEDE
+Teilanweisung (getrennt an jedem Punkt oder Semikolon ausserhalb von
+Klammern) fuer sich, nicht die Feldzeile als Ganzes.
+
+Erkannt wird ausschliesslich die woertliche Wendung "DROP SCHEMA <name>
+CASCADE" (deckt global alle fuenf Arten ab - nur 0001 nutzt das) und
+"DROP <ART> fuer/für dieselben Namen" je Art (_VERWEIS_SCHEMA,
+_VERWEIS_NAMEN). Eine reine Textsuche nach der Wortfolge "dieselben Namen"
+IRGENDWO im Feld waere zu grobschlaechtig: 0006_bereich_e_abrechnung.sql
+schreibt im Zweck-Abschnitt (nicht im Ruecknahme-Feld) woertlich
+"Zeitstempel duerfen nicht denselben Namen tragen" - eine Erwaehnung ganz
+ohne Bezug zu einer Ruecknahme. Weil die Suche an die Feldgrenze von
+kopf_ruecknahme_feld() UND an ein vorangehendes "DROP <ART>" gebunden
+ist, faellt dieser Satz gar nicht erst in die Betrachtung.
+
+DIE WICHTIGSTE GEGENPROBE DIESER ERWEITERUNG GEGEN SICH SELBST
+
+Fuer db/aufbau/0003_bereich_b_netz_und_flotte.sql stand zur Debatte, ob
+zwei der sechs fehlenden Namen - trg_radposition_pruefen und
+trg_stellplaetze_pruefen - ueberhaupt ergaenzt werden muessen: beide
+haengen ueber ihre Trigger an Tabellen (fahrrad_position, fahrrad,
+station), die die Ruecknahme ohnehin per DROP TABLE entfernt, und ein
+DROP TABLE nimmt seine Trigger mit. Naheliegend, aber ungeprueft, waere
+der Schluss, beide Namen seien deshalb bereits abgedeckt.
+
+Nachgemessen statt uebernommen, gegen dieselbe Art Datenbank, die auch
+die Abnahme dieses Projekts benutzt: eine Wegwerftabelle mit Trigger und
+Triggerfunktion angelegt, die Tabelle OHNE jede Erwaehnung der Funktion
+gedroppt, danach in pg_proc nachgesehen - die Funktion stand noch da.
+DROP TABLE entfernt den TRIGGER, weil er seine Tabelle nicht ueberleben
+kann; die FUNKTION, die der Trigger aufruft, ist ein eigenstaendiges
+Objekt, auf das der Trigger nur verweist (nicht umgekehrt), und bleibt
+stehen. trg_radposition_pruefen() und trg_stellplaetze_pruefen() sind
+FUNKTIONEN (siehe ihre "create or replace function"-Zeilen in 0003, ihr
+Name traegt nur zufaellig das Praefix "trg_") und waeren nach dem DROP
+TABLE Datenleichen, genau wie fn_im_geschaeftsgebiet,
+fn_fahrrad_motor_passt_zum_typ und fn_fahrrad_bremse_passt_zum_typ - der
+vermeintliche Unterschied zwischen den beiden Gruppen haelt der Messung
+nicht stand, und alle fuenf Funktionen plus die Tabelle geschaeftsgebiet
+sind deshalb einzeln in db/aufbau/0003_bereich_b_netz_und_flotte.sql
+ergaenzt worden.
+
+Ebenfalls gemessen statt vermutet: eine SQL-Sprachfunktion (language sql,
+so wie fn_im_geschaeftsgebiet), die eine Tabelle in ihrem Rumpf abfragt,
+verhindert ebenfalls kein DROP TABLE ohne CASCADE - PostgreSQL analysiert
+den Funktionsrumpf nicht auf Objektabhaengigkeiten, solange die Funktion
+weder Parameter noch Rueckgabewert vom Zeilentyp der Tabelle traegt. Die
+Reihenfolge zwischen "DROP FUNCTION fn_im_geschaeftsgebiet" und "DROP
+TABLE geschaeftsgebiet" ist damit beliebig; ergaenzt wurde trotzdem die
+Funktion vor der Tabelle, weil das der Mehrheitsstil im Bestand ist
+(0015, 0016 und 0021 droppen Funktionen bzw. Trigger vor Tabellen; nur
+0018 droppt in umgekehrter Reihenfolge, dort ohne fachlichen Bezug
+zwischen der betroffenen Tabelle und Funktion).
+
+EIN ZWEITER FUND, DER DIE MESSUNG UND NICHT DIE UEBERNAHME BESTAETIGT
+
+Fuer db/aufbau/0012_dokumentation.sql war "v_data_dictionary" zunaechst
+als fehlender Name vermerkt. Nachgesehen: die Ruecknahme-Zeile lautet
+"COMMENT ON ... IS NULL; DROP VIEW v_data_dictionary;" - der Name STEHT
+bereits da, nur ohne Schemapraefix. Dieselbe Schemapraefix-Aequivalenz wie
+bei kopf_kandidaten() (ein Kopfeintrag ohne Schema gilt als erfuellt,
+sobald irgendein Schema den Namen anlegt) gilt hier ebenso, siehe
+pruefe_ruecknahme() - "v_data_dictionary" erfuellt
+"velocity.v_data_dictionary". 0012 traegt deshalb KEINEN Befund und wurde
+NICHT angefasst.
+
 AUFRUF
 
     python3 tools/objektlisten_pruefen.py
 
-Rueckgabewert 0, wenn jede pruefbare Datei ihre Objekte-Liste vollstaendig
-und ohne Phantome fuehrt; 1, sobald mindestens eine Abweichung gefunden
-wird.
+Rueckgabewert 0, wenn jede pruefbare Datei ihre Objekte-Liste UND ihre
+enumerierenden Ruecknahme-Angaben vollstaendig und ohne Phantome fuehrt;
+1, sobald mindestens eine Abweichung gefunden wird. Eine Ruecknahme, die
+fuer eine Art verweisend formuliert ist ("dieselben Namen", "DROP SCHEMA
+... CASCADE"), zaehlt fuer diese Art niemals als Abweichung - siehe
+"ERWEITERT AM 05.09.2026" oben.
 """
 from __future__ import annotations
 
@@ -433,9 +546,15 @@ _FELDZEILE = re.compile(r"^-- ([A-ZÄÖÜ][\wäöüß]*):\s?(.*)$")
 _KOMMENTARZEILE = re.compile(r"^--\s?(.*)$")
 
 
-def kopf_objekte_feld(roh: str) -> str | None:
-    """Liefert den Text des Feldes "Objekte:" im Kopfrahmen, oder None,
-    wenn die Datei kein solches Feld traegt.
+def _kopf_feld_zeilen(roh: str, feldname: str) -> list[str] | None:
+    """Liefert die rohen, von "-- " befreiten Zeilen des Feldes <feldname>
+    im Kopfrahmen, oder None, wenn die Datei kein solches Feld traegt.
+
+    Gemeinsame Grenzlogik fuer "Objekte:" und "Ruecknahme:" (und jedes
+    weitere "Wort:"-Feld) - was aus den rohen Zeilen einen zusammen-
+    haengenden FeldTEXT macht, unterscheidet sich zwischen beiden Feldern
+    und bleibt deshalb bewusst AUSSERHALB dieser Funktion; siehe
+    kopf_objekte_feld() bzw. kopf_ruecknahme_feld().
 
     ABGRENZUNG GEGEN DEN FLIESSTEXT DAHINTER (der zentrale Fallstrick)
 
@@ -445,7 +564,7 @@ def kopf_objekte_feld(roh: str) -> str | None:
     das den kompletten Kopfkommentar durchsucht, faende diese Erwaehnungen
     zusaetzlich und hielte die echte, unvollstaendige Objekte-Zeile
     faelschlich fuer vollstaendig - eine gruene Pruefung, die genau den
-    Fall verfehlt, fuer den sie gebaut wurde. Das Feld endet deshalb hart
+    Fall verfehlt, fuer den sie gebaut wurde. Ein Feld endet deshalb hart
     an der ERSTEN der drei moeglichen Grenzen: einer neuen
     "Wort:"-Feldueberschrift (Ruecknahme, Hinweis, Loesung, ...), einer
     leeren Kommentarzeile, oder der schliessenden "===="-Zeile des
@@ -468,8 +587,8 @@ def kopf_objekte_feld(roh: str) -> str | None:
         feld = _FELDZEILE.match(z)
         if feld:
             if sammlung is not None:
-                break  # ein neues Feld beginnt, "Objekte:" ist zu Ende
-            if feld.group(1) == "Objekte":
+                break  # ein neues Feld beginnt, <feldname> ist zu Ende
+            if feld.group(1) == feldname:
                 sammlung = [feld.group(2)]
             continue
         if sammlung is None:
@@ -479,6 +598,15 @@ def kopf_objekte_feld(roh: str) -> str | None:
         weiter = _KOMMENTARZEILE.match(z)
         if weiter:
             sammlung.append(weiter.group(1))
+    return sammlung
+
+
+def kopf_objekte_feld(roh: str) -> str | None:
+    """Liefert den Text des Feldes "Objekte:" im Kopfrahmen, oder None,
+    wenn die Datei kein solches Feld traegt. Grenzen siehe
+    _kopf_feld_zeilen().
+    """
+    sammlung = _kopf_feld_zeilen(roh, "Objekte")
     if sammlung is None:
         return None
 
@@ -663,6 +791,232 @@ def pruefe_datei(pfad: Path) -> Ergebnis:
 
 
 # =====================================================================
+# Das Ruecknahme-Feld im Kopfkommentar: verweisend oder aufzaehlend
+# =====================================================================
+# Ausfuehrliche Begruendung im Modul-Docstring, Abschnitt "ERWEITERT AM
+# 05.09.2026". Kurzfassung: "Ruecknahme:" nennt entweder gar keine Namen
+# (verweisend - "DROP SCHEMA velocity CASCADE", "DROP VIEW fuer dieselben
+# Namen.") und ist dann per Konstruktion vollstaendig, oder zaehlt Namen
+# einzeln auf (aufzaehlend) und kann denselben Fehler tragen wie eine
+# unvollstaendige Objekte-Zeile. Nur Letzteres wird geprueft; eine
+# einzelne Feldzeile kann beides je Art mischen (0018, 0019).
+def kopf_ruecknahme_feld(roh: str) -> str | None:
+    """Liefert den Text des Feldes "Ruecknahme:" im Kopfrahmen, oder None,
+    wenn die Datei kein solches Feld traegt. Grenzen siehe
+    _kopf_feld_zeilen().
+
+    Anders als kopf_objekte_feld() reicht hier reines Aneinanderhaengen
+    mit einem Leerzeichen: "Ruecknahme:" traegt keine Kategoriezeilen ohne
+    eigenes Trennzeichen wie "Objekte:" (siehe dort) - jede umgebrochene
+    Zeile ist entweder die Fortsetzung eines SQL-aehnlichen DROP-Fragments
+    (das eigene Kommas und Semikola schon mitbringt, z.B. 0018/0019) oder
+    ein Satz in normaler deutscher Interpunktion (0001). Beides vertraegt
+    eine blosse Leerzeichen-Verkettung; nachgeprueft an allen 24
+    Vorkommen im Bestand.
+    """
+    sammlung = _kopf_feld_zeilen(roh, "Ruecknahme")
+    if sammlung is None:
+        return None
+    return " ".join(teil.strip() for teil in sammlung if teil.strip())
+
+
+# SQL-Schluesselwort -> Art, deckungsgleich mit _CREATE_MUSTER/_DROP_MUSTER
+# oben - dieselben fuenf Arten, dieselbe Begruendung (ANGELEGTE ARTEN).
+_RUECKNAHME_ART_JE_WORT = {
+    "view": "Sicht", "table": "Tabelle", "type": "Typ",
+    "function": "Funktion", "sequence": "Sequenz",
+}
+def _ruecknahme_klauseln(text: str) -> list[str]:
+    """Zerlegt einen Ruecknahme-Feldtext in Teilklauseln, getrennt an
+    jedem Semikolon und an jedem Punkt, der ein SATZENDE ist - nicht an
+    jedem Punkt ueberhaupt. Beides ausserhalb runder Klammern, aus
+    demselben Grund wie bei _tiefe_bewusst_teilen(): eine Funktions-
+    signatur darf ihr eigenes Satzzeichen nicht als Klauselgrenze
+    missverstehen.
+
+    WARUM NICHT EINFACH _tiefe_bewusst_teilen(text, ".;") - DER FEHLER,
+    DER DEN ERSTEN ENTWURF DURCHFALLEN LIESS
+
+    Ein schemaqualifizierter Name wie "velocity.tarif" traegt selbst
+    einen Punkt. Ein Trenner, der JEDEN Punkt als Klauselende liest,
+    zerlegt "velocity.freiminuten_periode, velocity.mitgliedschaft" in
+    Bruchstuecke wie "velocity" / "freiminuten_periode, velocity" / ... -
+    keines davon ist mehr ein gueltiger Bezeichner, und die enumerierten
+    Namen fallen komplett aus der Erkennung heraus, waehrend "velocity"
+    selbst als Phantom-Bezeichner uebrig bleibt. Genau das geschah beim
+    ersten Testlauf dieser Erweiterung (siehe Bericht) und haette JEDE
+    Datei mit einer aufzaehlenden Ruecknahme faelschlich als vollstaendig
+    falsch gemeldet.
+
+    Der Unterschied zwischen beiden Punktarten ist einfach und
+    zuverlaessig: ein Schema-Punkt steht OHNE Leerzeichen zwischen zwei
+    Bezeichnerzeichen ("y" und "f" in "velocity.freiminuten_periode"); ein
+    Satzende-Punkt hat danach ein Leerzeichen oder das Textende - nie ein
+    weiteres Bezeichnerzeichen. Ein Punkt zaehlt deshalb nur als Grenze,
+    wenn NICHTS oder ein Leerzeichen (bzw. Zeilenumbruch) folgt.
+
+    Als Nebeneffekt braucht ein Auslassungszeichen wie "ALTER TABLE ...
+    DISABLE ..." (0011, 0017) keine Sonderbehandlung mehr: die ersten
+    beiden Punkte einer Punktfolge haben nie ein Leerzeichen danach (der
+    naechste Punkt folgt direkt) und zaehlen deshalb nicht als Grenze,
+    nur der letzte Punkt vor dem naechsten Wort tut es - und selbst DER
+    erzeugt hoechstens eine harmlose Klausel, die nicht mit "drop"
+    beginnt (siehe Aufrufer).
+    """
+    klauseln: list[str] = []
+    aktuelle: list[str] = []
+    tiefe = 0
+    ende = len(text)
+    for i, zeichen in enumerate(text):
+        if zeichen == "(":
+            tiefe += 1
+        elif zeichen == ")":
+            tiefe = max(0, tiefe - 1)
+        grenze = False
+        if tiefe == 0:
+            if zeichen == ";":
+                grenze = True
+            elif zeichen == ".":
+                nachfolger = text[i + 1] if i + 1 < ende else ""
+                grenze = nachfolger == "" or nachfolger.isspace()
+        if grenze:
+            klauseln.append("".join(aktuelle))
+            aktuelle = []
+            continue
+        aktuelle.append(zeichen)
+    klauseln.append("".join(aktuelle))
+    return klauseln
+
+
+# "DROP SCHEMA <name> CASCADE" deckt GLOBAL alle fuenf Arten ab (0001) -
+# ein CASCADE auf Schemaebene nimmt Tabellen, Sichten, Typen, Funktionen
+# und Sequenzen gleichermassen mit.
+_VERWEIS_SCHEMA = re.compile(r"^drop\s+schema\s+\S+\s+cascade\b", re.I)
+# Eine Teilklausel, die eine der fuenf Arten betrifft. Andere DROP-Ziele
+# (TRIGGER, POLICY) und Nicht-DROP-Klauseln (DELETE, ALTER TABLE, COMMENT
+# ON, Fliesstext) werden absichtlich NICHT erkannt - sie betreffen keine
+# der geprueften Arten und sollen nicht als "genannt" mitzaehlen.
+_RUECKNAHME_KLAUSEL = re.compile(
+    r"^drop\s+(view|table|type|function|sequence)\s+(.*)$", re.I | re.S
+)
+# "fuer dieselben Namen" (oder "für ...") direkt nach dem Artwort macht
+# genau DIESE Art in dieser Klausel verweisend - siehe Docstring-Abschnitt
+# "WIE VERWEISEND ERKANNT WIRD". Bewusst NICHT einfach nach der Wortfolge
+# irgendwo im Feld gesucht (Fallstrick 0006, siehe Modul-Docstring).
+_VERWEIS_NAMEN = re.compile(r"^f(?:ue|ü)r\s+dieselben\s+namen\b", re.I)
+_IF_EXISTS_PREFIX = re.compile(r"^if\s+exists\s+", re.I)
+_TRAILING_MODUS = re.compile(r"\s+(cascade|restrict)\s*$", re.I)
+
+
+@dataclass
+class RuecknahmeBefund:
+    verweisend: set[str]                               # Arten, verweisend abgedeckt
+    genannt: dict[str, set[tuple[str | None, str]]]     # Art -> aufgezaehlte (Schema, Name)
+
+
+def zerlege_ruecknahme(feldtext: str) -> RuecknahmeBefund:
+    """Zerlegt den Ruecknahme-Feldtext in Teilklauseln (siehe
+    _ruecknahme_klauseln()) und klassifiziert JEDE Klausel einzeln als
+    verweisend oder aufzaehlend fuer ihre Art.
+
+    Eine Klausel, die nicht mit "drop <art>" beginnt (DELETE, ALTER TABLE,
+    COMMENT ON, DROP TRIGGER/POLICY, erklaerender Fliesstext wie in 0019s
+    "Fuer das Protokoll je DROP TRIGGER ...") wird STILLSCHWEIGEND
+    uebersprungen - dieselbe Haltung wie bei kopf_kandidaten() gegenueber
+    Fliesstext im Objekte-Feld: sie ist kein Verstoss, sie betrifft nur
+    keine der fuenf geprueften Arten.
+    """
+    verweisend: set[str] = set()
+    genannt: dict[str, set[tuple[str | None, str]]] = {
+        art: set() for art in _RUECKNAHME_ART_JE_WORT.values()
+    }
+    for klausel in _ruecknahme_klauseln(feldtext):
+        klausel = klausel.strip()
+        if not klausel:
+            continue
+        if _VERWEIS_SCHEMA.match(klausel):
+            verweisend.update(_RUECKNAHME_ART_JE_WORT.values())
+            continue
+        treffer = _RUECKNAHME_KLAUSEL.match(klausel)
+        if not treffer:
+            continue  # keine der fuenf Arten betroffen - siehe Docstring
+        art = _RUECKNAHME_ART_JE_WORT[treffer.group(1).lower()]
+        rest = treffer.group(2).strip()
+        if _VERWEIS_NAMEN.match(rest):
+            verweisend.add(art)
+            continue
+        rest = _IF_EXISTS_PREFIX.sub("", rest)
+        rest = _TRAILING_MODUS.sub("", rest)
+        for segment in _tiefe_bewusst_teilen(rest, ","):
+            segment = segment.strip()
+            # Stillschweigend uebersprungen, wenn kein klarer Bezeichner -
+            # dieselbe Regel wie kopf_kandidaten(), siehe dort.
+            if not segment or not _KLARER_BEZEICHNER.match(segment):
+                continue
+            bezeichner = re.sub(r"\s*\([^()]*\)\s*$", "", segment)
+            genannt[art].add(_schema_und_name(bezeichner))
+    return RuecknahmeBefund(verweisend, genannt)
+
+
+@dataclass
+class RuecknahmeErgebnis:
+    status: str          # 'uebersprungen' | 'kein_feld' | 'ok' | 'abweichung'
+    befunde: list[str]
+
+
+def pruefe_ruecknahme(pfad: Path) -> RuecknahmeErgebnis:
+    """Analog zu pruefe_datei(), aber fuer "Ruecknahme:" statt "Objekte:"
+    und mit der Verweisend-Ausnahme je Art (siehe Modul-Docstring).
+    """
+    roh = pfad.read_text(encoding="utf-8")
+    angelegt = angelegte_objekte(roh)
+
+    if not angelegt:
+        return RuecknahmeErgebnis("uebersprungen", [])
+
+    feld = kopf_ruecknahme_feld(roh)
+    if feld is None:
+        namen = ", ".join(
+            sorted(f"{a.schema + '.' if a.schema else ''}{a.name}" for a in angelegt)
+        )
+        return RuecknahmeErgebnis(
+            "kein_feld",
+            [f"kein Feld \"Ruecknahme:\" im Kopf, obwohl {len(angelegt)} Objekt(e) "
+             f"angelegt werden: {namen}"],
+        )
+
+    befund = zerlege_ruecknahme(feld)
+    nach_art: dict[str, list[Objekt]] = {}
+    for a in angelegt:
+        nach_art.setdefault(a.art, []).append(a)
+
+    befunde: list[str] = []
+    for art in sorted(nach_art):
+        if art in befund.verweisend:
+            continue  # verweisend abgedeckt - kann nicht veralten, nicht geprueft
+        objekte = nach_art[art]
+        genannt = befund.genannt.get(art, set())
+        namen_lose = {o.name for o in objekte}
+        namen_qualifiziert = {(o.schema, o.name) for o in objekte}
+
+        for o in sorted(objekte, key=lambda x: x.zeile):
+            if (o.schema, o.name) in genannt or (None, o.name) in genannt:
+                continue
+            qual = f"{o.schema + '.' if o.schema else ''}{o.name}"
+            befunde.append(
+                f"{o.art} {qual} (Zeile {o.zeile}) angelegt, aber in Ruecknahme nicht genannt"
+            )
+        for schema, name in sorted(genannt, key=lambda sn: (sn[0] or "", sn[1])):
+            ok = (schema, name) in namen_qualifiziert if schema else name in namen_lose
+            if not ok:
+                qual = f"{schema + '.' if schema else ''}{name}"
+                befunde.append(f"{qual} in Ruecknahme genannt, aber nicht angelegt")
+
+    status = "ok" if not befunde else "abweichung"
+    return RuecknahmeErgebnis(status, befunde)
+
+
+# =====================================================================
 # Hauptprogramm
 # =====================================================================
 def main() -> int:
@@ -671,52 +1025,65 @@ def main() -> int:
         print(f"Keine .sql-Dateien gefunden unter {AUFBAU}")
         return 2
 
-    print(f"{len(dateien)} Dateien in db/aufbau/ - Objekte-Kopf gegen "
-          f"CREATE/DROP/ALTER ... RENAME abgeglichen\n"
-          f"(geprueft: Sicht, Tabelle, Typ, Funktion, Sequenz - Begruendung "
-          f"im Kopfkommentar dieser Datei)\n")
+    print(f"{len(dateien)} Dateien in db/aufbau/ - Objekte- UND Ruecknahme-Kopf "
+          f"gegen CREATE/DROP/ALTER ... RENAME abgeglichen\n"
+          f"(geprueft: Sicht, Tabelle, Typ, Funktion, Sequenz - Begruendung im "
+          f"Kopfkommentar dieser Datei; eine Ruecknahme, die fuer eine Art "
+          f"verweisend formuliert ist - \"dieselben Namen\", \"DROP SCHEMA ... "
+          f"CASCADE\" -, gilt fuer diese Art immer als vollstaendig)\n")
 
     geprueft = 0
     uebersprungen = 0
-    mit_kopf = 0
+    mit_objekte_feld = 0
+    mit_ruecknahme_feld = 0
     gesamtbefunde = 0
     for pfad in dateien:
-        e = pruefe_datei(pfad)
-        if e.status == "uebersprungen":
+        e_obj = pruefe_datei(pfad)
+        e_rn = pruefe_ruecknahme(pfad)
+
+        if e_obj.status == "uebersprungen":
             uebersprungen += 1
-            if e.hat_kopf:
-                mit_kopf += 1
+            if e_obj.hat_kopf:
+                mit_objekte_feld += 1
             print(f"  --    {pfad.name}  keine Sicht/Tabelle/Typ/Funktion/Sequenz "
-                  f"angelegt - Objekte-Kopf nicht pruefbar")
+                  f"angelegt - Objekte- und Ruecknahme-Kopf nicht pruefbar")
             continue
 
         geprueft += 1
-        if e.status != "kein_kopf":  # 'kein_kopf' fuehrt per Definition kein Feld
-            mit_kopf += 1
-        if e.status == "ok":
-            print(f"  ok    {pfad.name}  {e.anzahl_angelegt} Objekt(e) angelegt, "
-                  f"Kopf stimmt ueberein")
+        if e_obj.status != "kein_kopf":  # 'kein_kopf' fuehrt per Definition kein Feld
+            mit_objekte_feld += 1
+        if e_rn.status != "kein_feld":
+            mit_ruecknahme_feld += 1
+
+        befunde = list(e_obj.befunde) + list(e_rn.befunde)
+        if not befunde:
+            print(f"  ok    {pfad.name}  {e_obj.anzahl_angelegt} Objekt(e) angelegt, "
+                  f"Objekte- und Ruecknahme-Kopf stimmen ueberein")
             continue
 
-        print(f"  FEHL  {pfad.name}  {e.anzahl_angelegt} Objekt(e) angelegt, "
-              f"{len(e.befunde)} Befund(e):")
-        for b in e.befunde:
+        print(f"  FEHL  {pfad.name}  {e_obj.anzahl_angelegt} Objekt(e) angelegt, "
+              f"{len(befunde)} Befund(e):")
+        for b in befunde:
             print(f"        {b}")
-        gesamtbefunde += len(e.befunde)
+        gesamtbefunde += len(befunde)
 
     print(f"\n{len(dateien)} Dateien geprüft; {geprueft} davon legen mindestens "
           f"eine Sicht/Tabelle/Typ/Funktion/Sequenz an und wurden inhaltlich "
           f"abgeglichen, {uebersprungen} uebersprungen (keine solche Anlage - "
           f"Daten, Rechte oder reine Vorbelegung).")
-    print(f"{mit_kopf} von {len(dateien)} Dateien fuehren ueberhaupt ein Feld "
-          f"\"Objekte:\", das sich als Aufzaehlung lesen laesst.")
+    print(f"{mit_objekte_feld} von {len(dateien)} Dateien fuehren ueberhaupt ein "
+          f"Feld \"Objekte:\", das sich als Aufzaehlung lesen laesst.")
+    print(f"{mit_ruecknahme_feld} von {len(dateien)} Dateien fuehren ueberhaupt "
+          f"ein Feld \"Ruecknahme:\".")
 
     if gesamtbefunde:
-        print(f"\n{gesamtbefunde} Befund(e) insgesamt. Objekte-Zeile im Kopf "
-              f"nachziehen: Namen ergaenzen, die tatsaechlich angelegt werden, "
-              f"oder Namen streichen, die es nicht mehr gibt.")
+        print(f"\n{gesamtbefunde} Befund(e) insgesamt. Objekte- bzw. "
+              f"Ruecknahme-Zeile im Kopf nachziehen: Namen ergaenzen, die "
+              f"tatsaechlich angelegt bzw. zurueckzunehmen sind, oder Namen "
+              f"streichen, die es nicht mehr gibt.")
         return 1
-    print("\nJede pruefbare Datei nennt genau das, was sie anlegt.")
+    print("\nJede pruefbare Datei nennt genau das, was sie anlegt, und ihre "
+          "enumerierende Ruecknahme kennt jeden dieser Namen.")
     return 0
 
 
