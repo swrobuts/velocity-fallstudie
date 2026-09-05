@@ -7,9 +7,9 @@
 --             PostgREST meldet Kunden und Mitarbeitende als dieselbe
 --             Datenbankrolle 'authenticated' an. Ohne Filter in der
 --             Sicht laese jeder Kunde die Stammdaten aller anderen.
--- Objekte:    velocity.fn_luftlinie_km, velocity.v_wawi_flotte,
---             v_wawi_kunde, v_wawi_station, v_wawi_schaden,
---             v_wawi_auftrag, v_wawi_umsatz_radtyp,
+-- Objekte:    velocity.fn_luftlinie_km, v_fahrt_kennzahl,
+--             velocity.v_wawi_flotte, v_wawi_kunde, v_wawi_station,
+--             v_wawi_schaden, v_wawi_auftrag, v_wawi_umsatz_radtyp,
 --             v_wawi_umsatz_kundengruppe, v_wawi_km_co2,
 --             v_wawi_stationsauslastung, v_wawi_modell,
 --             v_wawi_fahrten_je_tag, v_wawi_fahrten_je_tag_rad,
@@ -184,13 +184,22 @@ select a.ausleihe_id,
            else 'aus_luftlinie'
       end                        as verfahren
   ) k
-  join velocity.rechenannahme pkw
+  -- LEFT, nicht INNER: fehlte fuer ein Fahrtdatum eine CO2-Annahme,
+  -- liesse ein INNER JOIN die ganze Fahrt verschwinden - aus dieser
+  -- Sicht und damit aus allen dreien darueber. Die Fahrt hat aber
+  -- stattgefunden; unbekannt ist nur ihre CO2-Ersparnis. Ein NULL sagt
+  -- das, ein fehlender Datensatz behauptet etwas anderes.
+  left join velocity.rechenannahme pkw
     on pkw.code = 'co2_pkw' and pkw.gueltigkeit @> a.startzeit::date
-  join velocity.rechenannahme eigen
+  left join velocity.rechenannahme eigen
     on eigen.code = case when t.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
    and eigen.gueltigkeit @> a.startzeit::date
- where a.status = 'abgeschlossen'
-   and k.kilometer is not null;
+ -- KEIN Filter auf kilometer. Die Basissicht fuehrt JEDE abgeschlossene
+ -- Fahrt; welche davon sie braucht, entscheidet jede Sicht darueber
+ -- selbst. Ein Filter hier vereinheitlichte still, was heute
+ -- unterschiedlich ist: v_wawi_km_co2 filtert, v_wawi_fahrt_km und
+ -- v_wawi_fahrten_je_tag_rad tun es nicht.
+ where a.status = 'abgeschlossen';
 
 comment on view velocity.v_fahrt_kennzahl is
   'Eine Zeile je abgeschlossener Fahrt mit Kilometern, Schätzverfahren, CO2-Ersparnis '
