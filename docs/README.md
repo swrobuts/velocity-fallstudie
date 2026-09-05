@@ -13,10 +13,14 @@ in Datenmodellierung, SQL und Business Intelligence an der THWS Business School.
 | `datenmodell.html` | Interaktive Modelldokumentation — Einstieg und technische Referenz |
 | `cockpit.html` | Netzcockpit: Kennzahlen, Karte, Standortvorschläge |
 | `config.example.js` | Vorlage für die Datenbankverbindung des Cockpits |
-| — | Der Kurszugang steht jetzt im Repository unter `db/betrieb/`: `studizugang_lesend.sql` und `lehrzugang.sql` |
 | `material/velocity-reel.mp4` | Instagram-Reel, 9:16, 15 Sekunden |
 | `material/velocity-banner.png` | Banner, zugleich Vorschaubild des Reels |
 | `material/velocity-flyer.pdf` | Flyer A5, zweiseitig |
+
+Der lesende Kurszugang zur Datenbank liegt **nicht** in diesem Ordner, sondern im
+Repository unter `db/betrieb/`: `studizugang_lesend.sql` legt die Rolle an,
+`lehrzugang.sql` öffnet ihr die zwanzig rollengesperrten Sichten. Dort steht die
+Fassung, die tatsächlich läuft.
 
 Alle Seiten sind einzelne HTML-Dateien ohne Bauschritt. Externe Abhängigkeiten sind
 Leaflet und Mermaid, beide über CDN.
