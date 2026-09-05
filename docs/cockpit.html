@@ -77,6 +77,19 @@ tfoot td:first-child{text-align:left;padding-left:0}
 
 #map{height:520px;border:1px solid var(--linie);background:#F1EFE9}
 .leaflet-container{font-family:var(--sans);background:#F1EFE9}
+/* Ruhiger Kartenhintergrund ohne fremden Dienst.
+   OpenStreetMaps Standardkacheln sind farbig und detailreich - als
+   Untergrund fuer halbtransparente Kreise zu unruhig. Ein
+   Basiskartenstil waere ruhiger, aber alle Anbieter solcher Stile
+   verlangen inzwischen einen Schluessel (CARTO seit einer Aenderung der
+   Nutzungsbedingungen, Stamen seit dem Uebergang zu Stadia).
+   Der Filter greift NUR auf .leaflet-tile-pane, also die Kacheln.
+   Die Kreise, Beschriftungen und Bedienelemente liegen in eigenen
+   Ebenen darueber und bleiben unberuehrt - waere der Filter am
+   .leaflet-container, verblassten sie mit. */
+.leaflet-tile-pane{
+  filter:grayscale(.92) contrast(.82) brightness(1.08) sepia(.12);
+}
 .leaflet-control-attribution{font-size:10px;background:rgba(251,250,247,.82)}
 .stnlab{font-family:var(--sans);font-size:11px;color:var(--tinte-2);white-space:nowrap;
   text-shadow:0 0 3px #FBFAF7,0 0 3px #FBFAF7,0 0 3px #FBFAF7;pointer-events:none;transform:translateX(-50%)}
