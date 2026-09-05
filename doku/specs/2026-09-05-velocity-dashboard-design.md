@@ -82,19 +82,42 @@ Nur abgeschlossene Fahrten, wie bisher (`status = 'abgeschlossen'`).
 aller Kundschaft. Sie wird ausschließlich mittelbar gelesen, über die
 Sichten darüber; die gehören `postgres` und laufen mit dessen Rechten.
 
-### 3.2 `v_wawi_km_co2` liest künftig daraus
+### 3.2 Drei Sichten lesen künftig daraus
 
-In `0018_wawi_sichten.sql`. Die Rollenschranke
-(`hat_rolle('leitung') or hat_rolle('demo')`) und die Ausgabespalten
-bleiben unverändert; nur die Herleitung fällt weg und wird zur Abfrage auf
-`v_fahrt_kennzahl`. Die Sicht schrumpft von rund 25 auf etwa 10 Zeilen.
+**Nachgemessen am 05.09.2026: die Formel steht dreimal im Schema**, nicht
+einmal — in `v_wawi_km_co2`, `v_wawi_fahrt_km` und
+`v_wawi_fahrten_je_tag_rad`, alle in `0018_wawi_sichten.sql`. Der
+Kopfkommentar nennt den Grund: die drei tragen **verschiedene
+Rollenschranken** (`leitung` / `leitung or disposition` / `leitung or
+demo`), und eine Sicht auf eine Sicht mit engerer Schranke hätte die
+Schranke mitgeerbt.
+
+Dieses Hindernis fällt weg. `v_fahrt_kennzahl` trägt **gar keine**
+Schranke und wird nicht an `authenticated` vergeben; eine Sicht läuft mit
+den Rechten ihres Eigentümers, die Schranke bleibt also in jeder der drei
+konsumierenden Sichten stehen, wo sie hingehört.
+
+**Alle drei werden umgestellt.** Nur eine umzustellen hieße, die Formel
+künftig an vier statt an drei Stellen zu führen — das Gegenteil des Ziels.
+Rollenschranken und Ausgabespalten bleiben in allen dreien unverändert.
 
 **Die Zahlen müssen exakt dieselben bleiben.** Dafür die Zusicherung in 7.1.
 
 ### 3.3 Drei Kundensichten
 
-Alle in `0010_sichten.sql`, alle mit `where k.auth_uid = auth.uid()` wie die
-bestehenden, alle mit `grant select … to authenticated`.
+Alle in `0010_sichten.sql`, alle mit `grant select … to authenticated`.
+
+**Zum Filtern gibt es im Projekt zwei Muster, und hier gilt das zweite.**
+`v_meine_ausleihe` und `v_meine_rechnung` stehen auf
+`security_invoker = true` und überlassen das Filtern der RLS-Regel
+`ausleihe_eigene`. `v_mein_profil` läuft dagegen mit Eigentümerrechten und
+trägt die Bedingung `where k.auth_uid = auth.uid()` selbst.
+
+Die neuen Sichten folgen `v_mein_profil`, aus einem zwingenden Grund: der
+Rang muss über **alle 495** gewerteten Kunden rechnen. Unter
+`security_invoker` sähe die Unterabfrage nur die eigenen Fahrten, und der
+Rang wäre immer 1 von 1. Die Bedingung steht deshalb ausgeschrieben in der
+Sicht, und 7.2 prüft sie.
 
 **`v_meine_fahrt_kennzahl`** — je Fahrt. Spalten von `v_fahrt_kennzahl`
 plus `rahmennummer`, `typ_bezeichnung`, `start_station`, `end_station`. Das
@@ -198,7 +221,9 @@ Konto, dieselbe Machart wie `mitarbeiter_agentenkonto.sql`. Idempotent, mit
 Gegenprobe am Ende.
 
 **Der Knopf.** Auf der Anmeldemaske: „Demo ansehen". Er meldet mit den
-Werten aus `WEB_CONFIG.demoEmail` und `WEB_CONFIG.demoPasswort` an.
+Werten aus `APP_CONFIG.demoEmail` und `APP_CONFIG.demoPasswort` an.
+(`src/config.js` führt `SUPABASE_CONFIG` und `APP_CONFIG`; ein
+`WEB_CONFIG` gibt es dort nicht.)
 Darunter ein Hinweis, der **aus denselben Werten erzeugt** wird:
 
 > Zum Ausprobieren: Anmeldung „demo@bikes.invalid", Kennwort „demodemo".
@@ -266,8 +291,19 @@ Absicht.
 
 ## 6 Sprachen
 
-Die Website führt Deutsch, Englisch und Portugiesisch. Alle neuen Texte
-kommen in alle drei — kein Bereich, der auf Deutsch stehenbleibt.
+**Die Kundenwebsite ist einsprachig deutsch.** Nachgemessen am 05.09.2026:
+`src/index.html` trägt `lang="de"`, kein einziges `data-i18n`-Attribut und
+keine Übersetzungstabelle. Die Mehrsprachigkeit liegt allein in der
+Warenwirtschaft (`wawi/`, 33 `data-i18n`-Attribute, sechs Sprachen).
+
+Ein früherer Entwurf dieses Abschnitts forderte Deutsch, Englisch und
+Portugiesisch für alle neuen Texte. Das war eine Verwechslung mit der
+Warenwirtschaft und hätte den Umsetzungsplan gezwungen, nebenbei ein
+Übersetzungssystem für die gesamte Kundenwebsite zu bauen — ein eigenes
+Vorhaben, nicht ein Nebenschritt dieses.
+
+**Alle neuen Texte sind deutsch**, wie der Rest der Seite. Wer die Website
+mehrsprachig will, macht daraus einen eigenen Auftrag.
 
 ## 7 Absicherung
 
