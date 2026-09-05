@@ -442,6 +442,32 @@ for baustein in BAUSTEINE:
            + ('' if not falsch else f' — gefunden: {", ".join(sorted(set(falsch)))}'))
 
 # ---------------------------------------------------------------------
+# Doppelte Uebersetzungsschluessel
+#
+# UEBERSETZUNGEN in rahmen.js ist ein Objektliteral je Sprache. Steht ein
+# Schluessel zweimal darin, ist das in JavaScript ERLAUBT - der letzte
+# gewinnt, stillschweigend. Wer weiter oben einen Text pflegt, aendert
+# dann nichts, und niemand sieht warum.
+#
+# Der Fall, der zu dieser Pruefung gefuehrt hat: Beim Anlegen der
+# Ausstattungstexte am 05.09.2026 kam "field.gewicht" ein zweites Mal
+# hinein, in allen sechs Sprachen. Es gab den Schluessel schon seit dem
+# 27.08. fuer die Anzeige in der Radmaske. Die neue Beschriftung
+# "Gewicht (kg)" stand vorn und war damit wirkungslos; das Eingabefeld
+# trug weiter "Gewicht", ohne Einheit. Aufgefallen ist es nur, weil
+# jemand die Maske angesehen hat.
+SPRACHBLOCK = re.compile(r'^  (de|en|tr|es|it|pl): \{', re.M)
+rahmen_js = (WAWI / 'rahmen.js').read_text(encoding='utf-8')
+
+for m in SPRACHBLOCK.finditer(rahmen_js):
+    ende = rahmen_js.find('\n  },', m.end())
+    schluessel = re.findall(r'^    "([^"]+)":', rahmen_js[m.end():ende], re.M)
+    doppelt = sorted({k for k in schluessel if schluessel.count(k) > 1})
+    pruefe('I18N', not doppelt,
+           f'{m.group(1)}: kein Schluessel steht zweimal ({len(schluessel)} Schluessel)'
+           + ('' if not doppelt else f' — doppelt: {", ".join(doppelt)}'))
+
+# ---------------------------------------------------------------------
 # Die Ausstattungslisten der Anlagemaske gegen die Aufzaehlungstypen
 #
 # wawi/flotte.js fuehrt in AUSSTATTUNG fuenf Listen von Hand - die Werte,

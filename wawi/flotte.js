@@ -824,7 +824,7 @@ async function radAnlegenMaske() {
         // Anlage sonst mit 22023 ab. Die Auswahllisten fuehren genau die
         // Werte der Aufzaehlungstypen; uebersetzt wird nur die
         // Beschriftung, gespeichert der ASCII-Bezeichner.
-        { name: 'gewicht_kg', titel: t('field.gewicht'), wert: '' },
+        { name: 'gewicht_kg', titel: t('field.gewichtKg'), wert: '' },
         {
             name: 'rahmenform', titel: t('field.rahmenform'), wert: 'diamant',
             optionen: AUSSTATTUNG.rahmenform.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
