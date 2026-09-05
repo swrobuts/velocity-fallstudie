@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Velocity — Netzcockpit</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+<!-- Optionale Verbindungsdaten. Fehlt die Datei, läuft das Cockpit aus dem Snapshot. -->
+<script src="config.js" onerror="void 0"></script>
+<style>
+:root{
+  --papier:#FBFAF7;--tinte:#1A1D21;--tinte-2:#6B7178;--tinte-3:#9BA1A7;
+  --linie:#DEDCD5;--linie-2:#EDEBE5;--quelle:#9E2B25;--senke:#1F5C8C;
+  --neutral:#585F66;--markiert:#C58A00;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--papier);color:var(--tinte);font-family:var(--serif);font-size:16px;line-height:1.55}
+.wrap{max-width:1120px;margin:0 auto;padding:40px 28px 90px}
+h1{font-size:30px;font-weight:600;letter-spacing:-.01em;margin:0 0 4px;line-height:1.15}
+h2{font-size:19px;font-weight:600;margin:0 0 2px;letter-spacing:-.005em}
+h3{font-size:15px;font-weight:600;margin:0 0 6px}
+p{margin:0 0 10px;max-width:66ch}
+.sub{color:var(--tinte-2);font-size:14.5px;margin:0}
+.num{font-family:var(--sans);font-variant-numeric:tabular-nums}
+
+section{border-top:1px solid var(--linie);padding-top:22px;margin-top:44px}
+.head{display:flex;justify-content:space-between;align-items:baseline;gap:24px;flex-wrap:wrap;margin-bottom:14px}
+.note{font-size:13.5px;color:var(--tinte-2);max-width:62ch;margin:10px 0 0}
+
+/* Herkunftszeile */
+#quelle{font-family:var(--sans);font-size:12.5px;display:flex;align-items:center;gap:8px;
+  margin-top:14px;padding:7px 0;border-top:1px solid var(--linie-2);border-bottom:1px solid var(--linie-2);
+  color:var(--tinte-2);flex-wrap:wrap}
+#quelle .pip{width:8px;height:8px;border-radius:50%;background:var(--tinte-3);flex:none}
+#quelle.live .pip{background:#2E7D4F}
+#quelle.snapshot .pip{background:var(--markiert)}
+#quelle.fehler .pip{background:var(--quelle)}
+#quelle button{font-family:var(--sans);font-size:12px;background:transparent;color:var(--tinte-2);
+  border:1px solid var(--linie);border-radius:2px;padding:2px 9px;cursor:pointer;margin-left:auto}
+#quelle button:hover{border-color:var(--tinte-3);color:var(--tinte)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));border-top:1px solid var(--linie);margin-top:22px}
+.kpi{padding:14px 20px 14px 0;border-bottom:1px solid var(--linie-2)}
+.kpi .lab{font-size:13px;color:var(--tinte-2)}
+.kpi .val{font-family:var(--sans);font-variant-numeric:tabular-nums;font-size:25px;font-weight:600;
+  letter-spacing:-.02em;line-height:1.2;margin-top:1px}
+.kpi .val small{font-size:14px;font-weight:400;color:var(--tinte-2);letter-spacing:0}
+.kpi .foot{font-size:12.5px;color:var(--tinte-3);margin-top:2px}
+
+.ctrl{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-family:var(--sans);font-size:13px}
+.ctrl .lbl{color:var(--tinte-2);margin-right:2px}
+button.seg{font-family:var(--sans);font-size:13px;background:transparent;color:var(--tinte-2);
+  border:1px solid var(--linie);border-radius:2px;padding:4px 10px;cursor:pointer}
+button.seg:hover{border-color:var(--tinte-3);color:var(--tinte)}
+button.seg[aria-pressed="true"]{background:var(--tinte);border-color:var(--tinte);color:var(--papier)}
+button.seg:focus-visible{outline:2px solid var(--markiert);outline-offset:2px}
+
+table{border-collapse:collapse;width:100%;font-family:var(--sans);font-size:13.5px;font-variant-numeric:tabular-nums}
+thead th{font-weight:500;color:var(--tinte-2);text-align:right;font-size:12px;padding:0 8px 6px;
+  border-bottom:1px solid var(--linie);vertical-align:bottom;line-height:1.25}
+thead th:first-child{text-align:left;padding-left:0}
+tbody td{padding:5px 8px;border-bottom:1px solid var(--linie-2);text-align:right}
+tbody td:first-child{text-align:left;padding-left:0;font-family:var(--serif);font-size:15px}
+tbody tr[data-id]{cursor:pointer}
+tbody tr[data-id]:hover td{background:#F2F0EA}
+tbody tr.on td{background:#EFECE2}
+tbody tr.on td:first-child{box-shadow:inset 3px 0 0 var(--markiert)}
+tfoot td{padding:7px 8px 0;text-align:right;color:var(--tinte-2);font-size:12.5px;border-top:1px solid var(--linie)}
+tfoot td:first-child{text-align:left;padding-left:0}
+.cellbar{display:block;height:9px;background:var(--neutral);margin-left:auto}
+.bipolar{position:relative;height:11px}
+.bipolar i{position:absolute;top:1px;height:9px;display:block}
+.bipolar .axis{position:absolute;top:0;bottom:0;width:1px;background:var(--linie);left:50%}
+
+#map{height:520px;border:1px solid var(--linie);background:#F1EFE9}
+.leaflet-container{font-family:var(--sans);background:#F1EFE9}
+.leaflet-control-attribution{font-size:10px;background:rgba(251,250,247,.82)}
+.stnlab{font-family:var(--sans);font-size:11px;color:var(--tinte-2);white-space:nowrap;
+  text-shadow:0 0 3px #FBFAF7,0 0 3px #FBFAF7,0 0 3px #FBFAF7;pointer-events:none;transform:translateX(-50%)}
+.stnlab.on{color:var(--tinte);font-weight:600;font-size:12px}
+.stnlab.prop{color:#8A6000}
+.leaflet-popup-content{font-family:var(--sans);font-size:13px;margin:10px 12px;line-height:1.5}
+.leaflet-popup-content b{font-family:var(--serif);font-size:15px}
+
+.legend{display:flex;gap:20px;flex-wrap:wrap;font-family:var(--sans);font-size:12.5px;color:var(--tinte-2);margin-top:10px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+
+svg.chart{display:block;max-width:100%;height:auto}
+.spk{display:block;margin-top:5px}
+.sm{display:grid;grid-template-columns:repeat(auto-fill,minmax(184px,1fr));gap:16px 22px;margin-top:6px}
+.sm figure{margin:0;cursor:pointer;padding-bottom:4px}
+.sm figure.on{box-shadow:inset 0 -2px 0 var(--markiert)}
+.sm figcaption{font-size:13px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:2px}
+.sm figcaption span{font-family:var(--sans);font-size:11.5px;color:var(--tinte-2);font-variant-numeric:tabular-nums}
+
+.detail{border-left:2px solid var(--markiert);padding:2px 0 2px 16px;margin:16px 0 0;font-size:14.5px}
+.detail .dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:2px 20px;margin-top:8px;
+  font-family:var(--sans);font-size:13px}
+.detail .dl div span{color:var(--tinte-2);display:block;font-size:11.5px}
+.detail .dl div b{font-weight:600;font-variant-numeric:tabular-nums}
+
+.prop{border-bottom:1px solid var(--linie-2);padding:13px 0;display:grid;
+  grid-template-columns:26px 1fr 128px;gap:16px;align-items:start;cursor:pointer}
+.prop:hover{background:#F2F0EA}
+.prop.on{background:#EFECE2}
+.prop .rank{font-family:var(--sans);font-size:12px;color:var(--papier);background:var(--tinte);
+  width:21px;height:21px;border-radius:50%;display:grid;place-items:center;margin-top:3px}
+.prop.p2 .rank{background:var(--tinte-2)}
+.prop.p3 .rank{background:var(--tinte-3)}
+.prop b{font-size:15.5px;font-weight:600}
+.prop p{font-size:13.5px;color:var(--tinte-2);margin:2px 0 0;max-width:60ch;line-height:1.5}
+.prop .ev{font-family:var(--sans);font-size:12px;color:var(--tinte-2);text-align:right;
+  font-variant-numeric:tabular-nums;padding-top:3px}
+.prop .ev b{display:block;font-size:17px;color:var(--tinte);font-weight:600}
+
+.warn{border-left:2px solid var(--quelle);padding-left:16px;font-size:14px;color:var(--tinte-2);margin-top:8px}
+.warn b{color:var(--tinte)}
+footer{margin-top:52px;border-top:1px solid var(--linie);padding-top:14px;font-size:12.5px;color:var(--tinte-3);max-width:70ch}
+code{font-family:var(--sans);font-size:12px;background:#F1EFE9;padding:1px 4px;border-radius:2px}
+@media (max-width:620px){
+  .wrap{padding:26px 18px 70px}
+  h1{font-size:25px}
+  #map{height:400px}
+  .prop{grid-template-columns:22px 1fr;gap:12px}
+  .prop .ev{grid-column:2;text-align:left}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Velocity Würzburg — Netzcockpit</h1>
+  <p class="sub"><span id="kopfzeile">Daten werden geladen …</span></p>
+  <div id="quelle"><span class="pip"></span><span id="quelletext">Verbindung wird geprüft …</span>
+    <button id="reload" type="button">Neu laden</button></div>
+  <div class="kpis" id="kpis"></div>
+</header>
+
+<section style="border-top:none;margin-top:34px;padding-top:0">
+  <div class="head">
+    <div>
+      <h2>Welche Station trägt den Verkehr</h2>
+      <p class="sub">Bewegungen = Abgänge + Zugänge über den gesamten Erfassungszeitraum.</p>
+    </div>
+    <div class="ctrl">
+      <span class="lbl">sortieren</span>
+      <button class="seg" data-sort="bew" aria-pressed="true">Bewegungen</button>
+      <button class="seg" data-sort="dichte" aria-pressed="false">je Stellplatz</button>
+      <button class="seg" data-sort="saldo" aria-pressed="false">Saldo</button>
+    </div>
+  </div>
+  <table id="tbl">
+    <thead><tr>
+      <th>Station</th><th style="width:22%">Bewegungen</th><th>Ø&nbsp;je Tag</th>
+      <th>Stell-<br>plätze</th><th>je Stell-<br>platz</th>
+      <th style="width:19%">Saldo Zu&nbsp;−&nbsp;Ab</th><th>Füll-<br>stand</th>
+    </tr></thead>
+    <tbody></tbody><tfoot></tfoot>
+  </table>
+  <p class="note" id="tblnote"></p>
+</section>
+
+<section>
+  <div class="head">
+    <div>
+      <h2>Wo die Stationen stehen</h2>
+      <p class="sub">Kreisfläche proportional zur gewählten Kennzahl. Gestrichelt = Standortvorschlag.</p>
+    </div>
+    <div class="ctrl">
+      <span class="lbl">Ausschnitt</span>
+      <button class="seg" data-ext="stadt" aria-pressed="true">Stadt</button>
+      <button class="seg" data-ext="region" aria-pressed="false">Einzugsgebiet</button>
+      <span class="lbl" style="margin-left:12px">Fläche</span>
+      <button class="seg" data-mapmet="bew" aria-pressed="true">Bewegungen</button>
+      <button class="seg" data-mapmet="dichte" aria-pressed="false">je Stellplatz</button>
+      <button class="seg" data-mapmet="kap" aria-pressed="false">Stellplätze</button>
+    </div>
+  </div>
+  <div id="map"></div>
+  <div class="legend">
+    <span><i class="dot" style="background:#1F5C8C"></i> Zufluss (Saldo positiv)</span>
+    <span><i class="dot" style="background:#9E2B25"></i> Abfluss (Saldo negativ)</span>
+    <span><i class="dot" style="border:1.5px dashed #C58A00;background:none"></i> Standortvorschlag</span>
+    <span><i class="dot" style="background:#B9B5A8"></i> Kundschaft je Ort (nur im Einzugsgebiet)</span>
+  </div>
+  <div class="detail" id="detail" hidden></div>
+</section>
+
+<section>
+  <div class="head">
+    <div>
+      <h2>Wann gefahren wird</h2>
+      <p class="sub">Ausleihen je Zweistundenblock, Mittel je Tag. Gleiche Skala über alle Stationen.</p>
+    </div>
+    <div class="ctrl">
+      <button class="seg" data-day="werktag" aria-pressed="true">Werktag</button>
+      <button class="seg" data-day="wochenende" aria-pressed="false">Wochenende</button>
+    </div>
+  </div>
+  <svg id="tagesgang" class="chart" viewBox="0 0 1060 230"></svg>
+  <p class="note" id="tgnote"></p>
+  <h3 style="margin-top:28px">Dieselbe Kurve je Station</h3>
+  <div class="sm" id="sm"></div>
+</section>
+
+<section>
+  <div class="head"><div>
+    <h2>Woher die Kundschaft kommt</h2>
+    <p class="sub" id="ortesub"></p>
+  </div></div>
+  <svg id="orte" class="chart" viewBox="0 0 1060 300"></svg>
+  <p class="note" id="ortenote"></p>
+</section>
+
+<section>
+  <div class="head"><div>
+    <h2>Vorschläge für neue Standorte</h2>
+    <p class="sub">Abgeleitet aus drei Signalen: Kundschaft ohne Station, Rebalancing-Saldo, Netzlücke.
+    Zum Hervorheben auf der Karte anklicken.</p>
+  </div></div>
+  <div id="props"></div>
+
+  <h3 style="margin-top:30px">Vorher: Kapazität dorthin schieben, wo sie fehlt</h3>
+  <p>Drei der zehn Stationen sind falsch dimensioniert. Das kostet nichts außer Umbau und wirkt sofort:</p>
+  <table style="max-width:680px" id="kaptbl">
+    <thead><tr><th>Station</th><th>heute</th><th>Vorschlag</th><th>je Stellplatz</th><th>Grund</th></tr></thead>
+    <tbody></tbody>
+  </table>
+</section>
+
+<section>
+  <div class="head"><div><h2>Was diesen Zahlen nicht zu trauen ist</h2></div></div>
+  <div class="warn" id="warn"></div>
+</section>
+
+<footer>
+  Quelle: Velocity-Warenwirtschaft, Sichten <span class="num">v_wawi_station</span>,
+  <span class="num">v_wawi_stationsauslastung</span>, <span class="num">v_wawi_stationsverkehr_zeitfenster</span>,
+  <span class="num">v_wawi_flotte</span>, <span class="num">v_wawi_fahrten_je_tag</span>,
+  <span class="num">v_wawi_km_co2</span>, <span class="num">v_wawi_kundenorte</span>.
+  Kartengrundlage OpenStreetMap / CARTO.
+  Standortvorschläge sind eine Auswertung dieser Daten, keine Standortplanung — Flächenverfügbarkeit,
+  Stromanschluss und Wegerecht sind darin nicht geprüft.
+</footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script>
+"use strict";
+
+/* ═══════════════════════════════════════════════════════════════════
+   VERBINDUNG ZUR WARENWIRTSCHAFT
+
+   Diese Datei enthält bewusst keine Zugangsdaten. Sie liest ihre
+   Verbindung aus window.WAWI_CONF, gesetzt von einer config.js, die
+   im <head> vor diesem Script geladen wird und nicht ins Repository
+   gehört. Fehlt sie, läuft das Cockpit aus dem eingebetteten
+   Snapshot weiter.
+
+   config.js (Vorlage liegt als config.example.js bei):
+     window.WAWI_CONF = {
+       BASIS: "https://<projekt>.supabase.co/rest/v1",
+       KEY:   "<anon-key>"
+     };
+
+   Sauberer noch: BASIS auf einen eigenen Pfad wie "/api/wawi" legen,
+   den Traefik auf die REST-URL weiterleitet und dabei den apikey-Header
+   serverseitig setzt. Dann bleibt KEY leer und der Schlüssel verlässt
+   den Server nie.
+
+   Wird der Schlüssel doch im Browser mitgegeben, ist er für jeden
+   lesbar, der die Seite öffnet: nur ein anon-/publishable-Key, dessen
+   RLS-Policy ausschließlich lesenden Zugriff auf die v_wawi_*-Sichten
+   erlaubt — nie ein service-role-Key.
+   ═══════════════════════════════════════════════════════════════════ */
+const CONF=Object.assign({BASIS:"",KEY:"",SCHEMA:""},window.WAWI_CONF||{});
+
+/* ═══════════════ Snapshot vom 5. September 2026 (Fallback) ═══════════════ */
+const SNAP={
+  stand:"5. September 2026",
+  werktage:434, wotage:173,
+  stationen:[
+   {id:31,nr:"S-0001",name:"Hauptbahnhof",ort:"Würzburg",lat:49.8019,lon:9.9358,kap:40,belegt:20,ab:1266,zu:1224,
+    wt_ab:[0,0,0,208,2,0,56,121,351,118,130,0],we_ab:[0,0,0,35,28,35,36,40,32,35,39,0]},
+   {id:30,nr:"S-0002",name:"Marktplatz",ort:"Würzburg",lat:49.7944,lon:9.9295,kap:25,belegt:15,ab:1219,zu:1230,
+    wt_ab:[1,0,0,206,0,0,40,126,310,115,130,0],we_ab:[0,0,0,36,36,27,36,44,37,38,37,0]},
+   {id:32,nr:"S-0003",name:"Universität Sanderring",ort:"Würzburg",lat:49.7880,lon:9.9353,kap:35,belegt:16,ab:1210,zu:1220,
+    wt_ab:[0,0,0,210,1,0,35,101,317,108,125,0],we_ab:[0,0,0,28,51,35,40,33,42,45,39,0]},
+   {id:39,nr:"S-0004",name:"Residenz",ort:"Würzburg",lat:49.7930,lon:9.9390,kap:25,belegt:14,ab:1191,zu:1175,
+    wt_ab:[0,0,0,218,0,0,58,111,322,117,95,0],we_ab:[0,0,0,29,32,36,33,29,37,42,32,0]},
+   {id:38,nr:"S-0005",name:"Juliuspromenade",ort:"Würzburg",lat:49.7960,lon:9.9280,kap:30,belegt:15,ab:1202,zu:1221,
+    wt_ab:[0,0,0,194,0,1,51,97,352,122,116,0],we_ab:[0,0,0,35,28,31,46,35,36,29,29,0]},
+   {id:41,nr:"S-0006",name:"Dom",ort:"Würzburg",lat:49.7938,lon:9.9322,kap:25,belegt:14,ab:1214,zu:1218,
+    wt_ab:[0,0,0,201,0,0,61,108,362,94,116,0],we_ab:[0,0,0,27,34,40,35,43,32,37,24,0]},
+   {id:34,nr:"S-0007",name:"Sanderau",ort:"Würzburg",lat:49.7818,lon:9.9412,kap:30,belegt:17,ab:1164,zu:1285,
+    wt_ab:[0,0,0,197,0,0,42,91,328,102,119,0],we_ab:[0,0,0,26,43,48,33,38,26,34,37,0]},
+   {id:35,nr:"S-0008",name:"Hubland Campus",ort:"Würzburg",lat:49.7810,lon:9.9720,kap:40,belegt:17,ab:1149,zu:1161,
+    wt_ab:[0,0,2,181,0,0,51,99,328,108,102,0],we_ab:[0,0,0,38,42,25,34,29,36,40,34,0]},
+   {id:33,nr:"S-0009",name:"Grombühl Klinikum",ort:"Würzburg",lat:49.8046,lon:9.9424,kap:25,belegt:13,ab:1234,zu:1180,
+    wt_ab:[0,0,0,209,0,0,41,122,348,112,128,0],we_ab:[0,0,0,40,27,30,38,35,26,36,42,0]},
+   {id:37,nr:"S-0010",name:"Zellerau",ort:"Würzburg",lat:49.7965,lon:9.9142,kap:20,belegt:9,ab:1203,zu:1138,
+    wt_ab:[1,0,0,210,0,0,34,116,318,117,104,0],we_ab:[0,0,0,41,37,34,40,33,45,36,37,0]}
+  ],
+  orte:[
+   {ort:"Würzburg",lat:49.778036,lon:9.943477,k:573},
+   {ort:"Veitshöchheim",lat:49.840858,lon:9.888913,k:58},
+   {ort:"Höchberg",lat:49.781826,lon:9.878684,k:56},
+   {ort:"Gerbrunn",lat:49.780795,lon:9.994524,k:40},
+   {ort:"Randersacker",lat:49.749722,lon:9.997718,k:32},
+   {ort:"Rottendorf",lat:49.799412,lon:10.032107,k:27},
+   {ort:"Ochsenfurt",lat:49.664355,lon:10.064755,k:20},
+   {ort:"Estenfeld",lat:49.838868,lon:10.002861,k:19},
+   {ort:"Waldbüttelbrunn",lat:49.786366,lon:9.831757,k:16},
+   {ort:"Zell am Main",lat:49.811107,lon:9.870445,k:16},
+   {ort:"Kist",lat:49.743490,lon:9.838752,k:14},
+   {ort:"Kitzingen",lat:49.747392,lon:10.153831,k:12},
+   {ort:"Karlstadt",lat:49.969818,lon:9.744140,k:9},
+   {ort:"Marktheidenfeld",lat:49.858203,lon:9.566704,k:9}
+  ],
+  monate:[
+   {m:"09/25",f:1385,km:5823.8,co2:769.9},{m:"10/25",f:1071,km:4485.1,co2:592.4},
+   {m:"11/25",f:575,km:2238.7,co2:297.1},{m:"12/25",f:311,km:1365.5,co2:180.2},
+   {m:"01/26",f:208,km:1365.4,co2:178.0},{m:"02/26",f:284,km:1131.2,co2:149.5},
+   {m:"03/26",f:635,km:2792.4,co2:368.8},{m:"04/26",f:1040,km:4168.4,co2:551.1},
+   {m:"05/26",f:1466,km:5982.7,co2:791.7},{m:"06/26",f:1725,km:7061.0,co2:935.6},
+   {m:"07/26",f:1939,km:7698.1,co2:1019.6},{m:"08/26",f:1392,km:5838.8,co2:772.5}
+  ],
+  flotte:{gesamt:277,verfuegbar:148,ausgeliehen:110,wartung:17,defekt:2},
+  letzterTag:"2026-08-24",
+  anteilGeschaetzt:.40
+};
+
+/* ═══════════════ Standortvorschläge (Auswertung, nicht aus der DB) ═══════════════ */
+const VORSCHLAG=[
+ {id:"v1",name:"Veitshöchheim, Bahnhof",kurz:"Veitshöchheim",ort:"Veitshöchheim",lat:49.8409,lon:9.8889,prio:1,
+  txt:"Größter Ort im Einzugsgebiet ohne eigene Station. Bahnanschluss, Mainradweg, 4,5 km bis Zellerau — die Strecke ist mit dem Rad kürzer als mit dem Auto. Fängt zugleich Freizeitverkehr am Wochenende ab, der heute komplett fehlt."},
+ {id:"v2",name:"Höchberg, Ortsmitte",kurz:"Höchberg",ort:"Höchberg",lat:49.7818,lon:9.8787,prio:1,
+  txt:"Liegt auf der Achse Zellerau–West. Zellerau gibt deutlich mehr Räder ab als es aufnimmt und ist zugleich die engste Station im Netz. Eine Station in Höchberg verlängert diese Achse, statt den Abfluss immer wieder zurückfahren zu müssen."},
+ {id:"v3",name:"Gerbrunn",kurz:"Gerbrunn",ort:"Gerbrunn",lat:49.7808,lon:9.9945,prio:2,
+  txt:"1,7 km östlich von Hubland Campus. Der Campus hat die größte Kapazität im Netz und zugleich die geringste Dichte je Stellplatz — dort ist Substanz frei, die in Gerbrunn ihren Wohnort-Gegenpol bekäme."},
+ {id:"v4",name:"Frauenland, Keesburg",kurz:"Frauenland",ort:null,lat:49.7808,lon:9.9585,prio:2,
+  txt:"Zwischen Sanderau und Hubland Campus liegen 2,2 km ohne Station. Sanderau nimmt weit mehr Räder auf als es abgibt — der Überlauf entsteht genau hier und wird heute per Transport aufgelöst."},
+ {id:"v5",name:"Heidingsfeld",kurz:"Heidingsfeld",ort:null,lat:49.7595,lon:9.9330,prio:3,
+  txt:"Südlichster Stadtteil, rund 3,5 km hinter Sanderau. Nach Süden endet das Netz heute abrupt, obwohl Randersacker und Ochsenfurt zusammen eine dreistellige Zahl an Fahrten aus dem Süden speisen."},
+ {id:"v6",name:"Randersacker, Mainufer",kurz:"Randersacker",ort:"Randersacker",lat:49.7497,lon:9.9977,prio:3,
+  txt:"Der Wochenendverkehr ist über alle Stunden hinweg flach — reiner Freizeitgebrauch ohne Pendlerspitzen. Eine Station am Mainradweg südlich der Stadt bedient genau dieses Muster und braucht keine Kapazität für Berufsverkehr."}
+];
+
+/* ═══════════════ Hilfen ═══════════════ */
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const NS="http://www.w3.org/2000/svg";
+const el=(n,a={})=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const de=(v,d=0)=>(v==null||isNaN(v)?"—":v.toLocaleString("de-DE",{minimumFractionDigits:d,maximumFractionDigits:d}));
+const sig=v=>(v>0?"+":v<0?"−":"±")+de(Math.abs(v));
+const summe=a=>a.reduce((x,y)=>x+y,0);
+
+/* Laufender Zustand */
+let S=[],ORTE=[],MON=[],FLOTTE={},WERKTAGE=434,WOTAGE=173,TAGE=607,
+    STAND="",LETZTER_TAG=null,ANTEIL_GESCH=null,HERKUNFT="snapshot";
+let sel=null,selProp=null,sortKey="bew",mapMet="bew",extent="stadt",dayType="werktag";
+
+/* ═══════════════ Datenbeschaffung ═══════════════ */
+async function hole(sicht,query=""){
+  const url=CONF.BASIS.replace(/\/$/,"")+"/"+sicht+(query?"?"+query:"");
+  const h={"Accept":"application/json"};
+  if(CONF.KEY){h["apikey"]=CONF.KEY;h["Authorization"]="Bearer "+CONF.KEY;}
+  if(CONF.SCHEMA)h["Accept-Profile"]=CONF.SCHEMA;
+  const r=await fetch(url,{headers:h});
+  if(!r.ok) throw new Error(sicht+": HTTP "+r.status+" "+r.statusText);
+  return r.json();
+}
+
+function ausSnapshot(){
+  S=SNAP.stationen.map(d=>({...d}));
+  ORTE=SNAP.orte.map(o=>({...o}));
+  MON=SNAP.monate.map(m=>({...m}));
+  FLOTTE={...SNAP.flotte};
+  WERKTAGE=SNAP.werktage; WOTAGE=SNAP.wotage; TAGE=WERKTAGE+WOTAGE;
+  STAND=SNAP.stand; LETZTER_TAG=SNAP.letzterTag; ANTEIL_GESCH=SNAP.anteilGeschaetzt;
+  HERKUNFT="snapshot";
+  ableiten();
+}
+
+async function ausDatenbank(){
+  const [station,ausl,zeit,kunden,kmco2,flotte,tage]=await Promise.all([
+    hole("v_wawi_station","select=station_id,stationsnummer,name,ort,latitude,longitude,kapazitaet,belegt,in_betrieb"),
+    hole("v_wawi_stationsauslastung","select=station_id,abgaenge,zugaenge"),
+    hole("v_wawi_stationsverkehr_zeitfenster",
+         "select=station_id,wochentyp,zeitfenster_start_stunde,abgaenge,tage_erfasst&limit=2000"),
+    hole("v_wawi_kundenorte","select=ort,latitude,longitude,kunden"),
+    hole("v_wawi_km_co2","select=monat,fahrten,kilometer,co2_ersparnis_kg,fahrten_geschaetzt&order=monat.asc&limit=500"),
+    hole("v_wawi_flotte","select=status&limit=5000"),
+    hole("v_wawi_fahrten_je_tag","select=tag,fahrten&order=tag.desc&limit=400")
+  ]);
+
+  const byId=new Map();
+  station.filter(s=>s.in_betrieb!==false).forEach(s=>byId.set(s.station_id,{
+    id:s.station_id,nr:s.stationsnummer,name:s.name,ort:s.ort,
+    lat:+s.latitude,lon:+s.longitude,kap:+s.kapazitaet,belegt:+s.belegt,
+    ab:0,zu:0,wt_ab:new Array(12).fill(0),we_ab:new Array(12).fill(0)
+  }));
+  ausl.forEach(a=>{const d=byId.get(a.station_id); if(d){d.ab=+a.abgaenge;d.zu=+a.zugaenge;}});
+
+  let wt=0,we=0;
+  zeit.forEach(z=>{
+    const d=byId.get(z.station_id); if(!d) return;
+    const i=Math.floor(+z.zeitfenster_start_stunde/2);
+    if(i<0||i>11) return;
+    if(z.wochentyp==="werktag"){d.wt_ab[i]+=+z.abgaenge; wt=Math.max(wt,+z.tage_erfasst||0);}
+    else {d.we_ab[i]+=+z.abgaenge; we=Math.max(we,+z.tage_erfasst||0);}
+  });
+  WERKTAGE=wt||SNAP.werktage; WOTAGE=we||SNAP.wotage; TAGE=WERKTAGE+WOTAGE;
+  S=[...byId.values()];
+
+  ORTE=kunden.map(o=>({ort:o.ort,lat:+o.latitude,lon:+o.longitude,k:+o.kunden}));
+
+  const mm=new Map();
+  kmco2.forEach(r=>{
+    const k=String(r.monat).slice(0,7);
+    const e=mm.get(k)||{k,f:0,km:0,co2:0,gesch:0};
+    e.f+=+r.fahrten; e.km+=+r.kilometer; e.co2+=+r.co2_ersparnis_kg; e.gesch+=+(r.fahrten_geschaetzt||0);
+    mm.set(k,e);
+  });
+  const alle=[...mm.values()].sort((a,b)=>a.k<b.k?-1:1).filter(e=>e.f>=30);
+  const letzte=alle.slice(-12);
+  MON=letzte.map(e=>({m:e.k.slice(5)+"/"+e.k.slice(2,4),f:e.f,km:e.km,co2:e.co2}));
+  const fg=summe(letzte.map(e=>e.gesch)), fa=summe(letzte.map(e=>e.f));
+  ANTEIL_GESCH=fa?fg/fa:null;
+
+  const z={gesamt:0,verfuegbar:0,ausgeliehen:0,wartung:0,defekt:0};
+  flotte.forEach(f=>{ if(f.status==="ausgemustert") return; z.gesamt++; if(z[f.status]!=null) z[f.status]++; });
+  FLOTTE=z;
+
+  const echt=tage.filter(t=>+t.fahrten>=10);
+  LETZTER_TAG=echt.length?echt[0].tag:null;
+
+  STAND=new Date().toLocaleDateString("de-DE",{day:"numeric",month:"long",year:"numeric"});
+  HERKUNFT="live";
+  ableiten();
+}
+
+function ableiten(){
+  S.forEach(d=>{d.kurz=kurzName(d.name); d.bew=d.ab+d.zu; d.saldo=d.zu-d.ab;
+                d.dichte=d.kap?d.bew/d.kap:0; d.fuell=d.kap?d.belegt/d.kap:0;});
+}
+function kurzName(n){
+  return n.replace(/^Universität /,"Uni ").replace(/ \(.*\)$/,"");
+}
+
+async function laden(){
+  const q=$("#quelle"), t=$("#quelletext");
+  if(!CONF.BASIS){
+    ausSnapshot(); q.className="snapshot";
+    t.innerHTML="Snapshot vom "+SNAP.stand+" — keine Verbindung hinterlegt. "+
+      "<code>config.js</code> mit <code>window.WAWI_CONF</code> neben diese Datei legen.";
+  }else{
+    q.className=""; t.textContent="Lade aus der Warenwirtschaft …";
+    try{
+      await ausDatenbank(); q.className="live";
+      t.textContent="Live aus der Warenwirtschaft, abgerufen um "+
+        new Date().toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})+" Uhr.";
+    }catch(e){
+      ausSnapshot(); q.className="fehler";
+      t.textContent="Abruf fehlgeschlagen ("+e.message+"). Angezeigt wird der Snapshot vom "+SNAP.stand+".";
+    }
+  }
+  aufbauen();
+}
+
+/* ═══════════════ Kopfzeile und Kennzahlen ═══════════════ */
+function kopf(){
+  const kap=summe(S.map(d=>d.kap)), fahrten=summe(S.map(d=>d.bew))/2;
+  $("#kopfzeile").textContent=
+    `${S.length} Stationen, ${de(kap)} Stellplätze, ${de(FLOTTE.gesamt)} Räder im Bestand. `+
+    `${de(fahrten)} Fahrten über ${de(TAGE)} erfasste Tage. Stand der Warenwirtschaft: ${STAND}.`;
+}
+function sparkline(vals,w,h){
+  const svg=el("svg",{viewBox:`0 0 ${w} ${h}`,width:w,height:h,class:"spk"});
+  const mx=Math.max(...vals)||1;
+  const x=i=>i*(w-2)/Math.max(vals.length-1,1)+1, y=v=>h-2-v/mx*(h-4);
+  let d=""; vals.forEach((v,i)=>d+=(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1));
+  svg.appendChild(el("path",{d,fill:"none",stroke:"#585F66","stroke-width":1.4}));
+  svg.appendChild(el("circle",{cx:x(vals.length-1),cy:y(vals[vals.length-1]),r:2.4,fill:"#1A1D21"}));
+  return svg;
+}
+function kpis(){
+  const box=$("#kpis"); box.innerHTML="";
+  const fahrten=summe(S.map(d=>d.bew))/2;
+  const kap=summe(S.map(d=>d.kap)), bel=summe(S.map(d=>d.belegt));
+  const kmGes=summe(MON.map(m=>m.km)), co2Ges=summe(MON.map(m=>m.co2));
+  const wtF=summe(S.map(d=>summe(d.wt_ab)))/WERKTAGE, weF=summe(S.map(d=>summe(d.we_ab)))/WOTAGE;
+  const best=MON.reduce((a,m)=>m.f>a.f?m:a,MON[0]||{f:0,m:"—"});
+  const items=[
+    {lab:"Fahrten je Tag",val:de(fahrten/TAGE,1),
+     foot:`Werktag ${de(wtF,1)} · Wochenende ${de(weF,1)}`,spark:MON.map(m=>m.f)},
+    {lab:`Fahrten, letzte ${MON.length} Monate`,val:de(summe(MON.map(m=>m.f))),
+     foot:`Höchstwert ${best.m}: ${de(best.f)}`,spark:MON.map(m=>m.f)},
+    {lab:"Räder unterwegs",val:de(FLOTTE.ausgeliehen),unit:"von "+de(FLOTTE.gesamt),
+     foot:`${de(FLOTTE.wartung)} in Wartung · ${de(FLOTTE.defekt)} defekt`},
+    {lab:"Stellplätze belegt",val:de(bel/kap*100,0)+" %",
+     foot:`${de(bel)} von ${de(kap)} Plätzen`,spark:S.map(d=>d.fuell)},
+    {lab:"CO₂ vermieden",val:de(co2Ges/1000,1)+" t",
+     foot:de(kmGes)+" km"+(ANTEIL_GESCH!=null?`, davon ~${de(ANTEIL_GESCH*100,0)} % geschätzt`:""),
+     spark:MON.map(m=>m.co2)}
+  ];
+  items.forEach(it=>{
+    const d=document.createElement("div"); d.className="kpi";
+    d.innerHTML=`<div class="lab">${it.lab}</div>
+      <div class="val">${it.val}${it.unit?`<small> ${it.unit}</small>`:""}</div>`;
+    if(it.spark&&it.spark.length>1) d.appendChild(sparkline(it.spark,150,20));
+    const f=document.createElement("div"); f.className="foot"; f.textContent=it.foot; d.appendChild(f);
+    box.appendChild(d);
+  });
+}
+
+/* ═══════════════ Tabelle ═══════════════ */
+function table(){
+  const tb=$("#tbl tbody"), tf=$("#tbl tfoot");
+  const rows=[...S].sort((a,b)=>sortKey==="saldo"?a.saldo-b.saldo:b[sortKey]-a[sortKey]);
+  const maxBew=Math.max(...S.map(d=>d.bew)),maxDic=Math.max(...S.map(d=>d.dichte)),
+        maxSal=Math.max(...S.map(d=>Math.abs(d.saldo)))||1;
+  tb.innerHTML="";
+  rows.forEach(d=>{
+    const tr=document.createElement("tr");
+    tr.dataset.id=d.id; if(sel===d.id) tr.className="on";
+    const w=Math.abs(d.saldo)/maxSal*48, col=d.saldo>0?"#1F5C8C":"#9E2B25";
+    tr.innerHTML=`
+      <td>${d.name}</td>
+      <td><span style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+        <span>${de(d.bew)}</span><i class="cellbar" style="width:${d.bew/maxBew*72}px"></i></span></td>
+      <td>${de(d.bew/TAGE,1)}</td><td>${de(d.kap)}</td>
+      <td><span style="display:flex;align-items:center;gap:8px;justify-content:flex-end">
+        <span>${de(d.dichte,0)}</span>
+        <i class="cellbar" style="width:${d.dichte/maxDic*48}px;background:#8A9199"></i></span></td>
+      <td><span style="display:flex;align-items:center;gap:9px;justify-content:flex-end">
+        <span style="color:${col}">${sig(d.saldo)}</span>
+        <span class="bipolar" style="width:104px"><i class="axis"></i>
+          <i style="background:${col};${d.saldo>0?`left:50%;width:${w}px`:`right:50%;width:${w}px`}"></i>
+        </span></span></td>
+      <td>${de(d.fuell*100,0)} %</td>`;
+    tr.addEventListener("click",()=>pick(sel===d.id?null:d.id));
+    tb.appendChild(tr);
+  });
+  const T={bew:summe(S.map(d=>d.bew)),kap:summe(S.map(d=>d.kap)),bel:summe(S.map(d=>d.belegt))};
+  tf.innerHTML=`<tr><td>Netz gesamt</td><td>${de(T.bew)}</td><td>${de(T.bew/TAGE,1)}</td>
+    <td>${de(T.kap)}</td><td>${de(T.bew/T.kap,0)}</td><td>±0</td><td>${de(T.bel/T.kap*100,0)} %</td></tr>`;
+
+  const hi=[...S].sort((a,b)=>b.bew-a.bew), hd=[...S].sort((a,b)=>b.dichte-a.dichte);
+  const spread=(hi[0].bew/hi[hi.length-1].bew-1)*100;
+  $("#tblnote").textContent=
+    `Das Netz ist nahezu gleich stark ausgelastet — zwischen ${hi[0].name} und ${hi[hi.length-1].name} `+
+    `liegen nur ${de(spread,0)} % Unterschied. Die eigentliche Spreizung steckt in der Kapazität: pro `+
+    `Stellplatz trägt ${hd[0].name} ${de(hd[0].dichte/hd[hd.length-1].dichte,1)}-mal so viel Verkehr wie `+
+    `${hd[hd.length-1].name}.`;
+}
+
+/* ═══════════════ Leaflet-Karte ═══════════════ */
+let map,layStation,layProp,layOrte;
+function grenzen(){
+  const pad=.012;
+  const la=S.map(d=>d.lat), lo=S.map(d=>d.lon);
+  const stadt=[[Math.min(...la)-pad,Math.min(...lo)-pad],[Math.max(...la)+pad,Math.max(...lo)+pad]];
+  const alle=[...S.map(d=>[d.lat,d.lon]),...ORTE.map(o=>[o.lat,o.lon]),...VORSCHLAG.map(v=>[v.lat,v.lon])];
+  const region=[[Math.min(...alle.map(p=>p[0]))-.02,Math.min(...alle.map(p=>p[1]))-.02],
+                [Math.max(...alle.map(p=>p[0]))+.02,Math.max(...alle.map(p=>p[1]))+.02]];
+  return {stadt,region};
+}
+function initMap(){
+  if(!window.L){$("#map").innerHTML='<p style="padding:20px;font-family:sans-serif;font-size:13px;color:#6B7178">'+
+    'Leaflet konnte nicht geladen werden. Alle übrigen Auswertungen funktionieren.</p>'; return;}
+  map=L.map("map",{scrollWheelZoom:false,zoomSnap:.25});
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
+    maxZoom:19,subdomains:"abcd",
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  }).addTo(map);
+  layOrte=L.layerGroup().addTo(map); layProp=L.layerGroup().addTo(map); layStation=L.layerGroup().addTo(map);
+  map.fitBounds(grenzen().stadt,{padding:[18,18]});
+}
+function label(lat,lon,text,cls,dy){
+  return L.marker([lat,lon],{interactive:false,keyboard:false,
+    icon:L.divIcon({className:"",html:`<div class="stnlab ${cls}">${text}</div>`,iconSize:[0,0],iconAnchor:[0,dy]})});
+}
+function drawMarkers(){
+  if(!map) return;
+  layStation.clearLayers(); layProp.clearLayers(); layOrte.clearLayers();
+  const stadtOrte=new Set(S.map(d=>d.ort));
+
+  if(extent==="region"){
+    ORTE.filter(o=>!stadtOrte.has(o.ort)).forEach(o=>{
+      L.circleMarker([o.lat,o.lon],{radius:Math.sqrt(o.k)*1.5,color:"#B9B5A8",weight:1,
+        fillColor:"#B9B5A8",fillOpacity:.45})
+        .bindPopup(`<b>${o.ort}</b><br>${de(o.k)} Kundinnen und Kunden`).addTo(layOrte);
+    });
+  }
+
+  VORSCHLAG.forEach(v=>{
+    const on=selProp===v.id;
+    L.circleMarker([v.lat,v.lon],{radius:on?15:10,color:"#C58A00",weight:on?2.6:1.8,
+      dashArray:"3 3",fillOpacity:0})
+      .on("click",()=>pickProp(selProp===v.id?null:v.id))
+      .bindPopup(`<b>${v.name}</b><br>Standortvorschlag, Priorität ${v.prio}`).addTo(layProp);
+    L.circleMarker([v.lat,v.lon],{radius:2,color:"#C58A00",fillColor:"#C58A00",fillOpacity:1,
+      weight:0,interactive:false}).addTo(layProp);
+    label(v.lat,v.lon,v.kurz,"prop",on?26:20).addTo(layProp);
+  });
+
+  const mv=d=>mapMet==="bew"?d.bew:mapMet==="dichte"?d.dichte:d.kap;
+  const mx=Math.max(...S.map(mv))||1, rmax=extent==="stadt"?30:14;
+  S.forEach(d=>{
+    const r=Math.sqrt(mv(d)/mx)*rmax+3, on=sel===d.id, dim=sel!==null&&!on;
+    const col=d.saldo>0?"#1F5C8C":"#9E2B25";
+    L.circleMarker([d.lat,d.lon],{radius:r,color:col,weight:on?2.6:1,
+      opacity:dim?.35:1,fillColor:col,fillOpacity:dim?.10:.28})
+      .on("click",()=>pick(sel===d.id?null:d.id))
+      .bindPopup(`<b>${d.name}</b><br>${de(d.bew)} Bewegungen · ${de(d.dichte,0)} je Stellplatz<br>
+        Saldo ${sig(d.saldo)} · ${de(d.belegt)} von ${de(d.kap)} Plätzen belegt`).addTo(layStation);
+    if(extent==="stadt"||on) label(d.lat,d.lon,d.kurz,on?"on":"",r+14).addTo(layStation);
+  });
+}
+function fit(){ if(map) map.flyToBounds(grenzen()[extent],{padding:[18,18],duration:.6}); }
+
+/* ═══════════════ Tagesgang ═══════════════ */
+const serie=d=>dayType==="werktag"?d.wt_ab:d.we_ab;
+const proTag=()=>dayType==="werktag"?WERKTAGE:WOTAGE;
+
+function tagesgang(){
+  const svg=$("#tagesgang"); svg.innerHTML="";
+  const W=1060,H=230,L=52,R=16,T=14,B=30;
+  const data=sel?serie(S.find(d=>d.id===sel))
+                :S.reduce((a,d)=>serie(d).map((v,i)=>a[i]+v),new Array(12).fill(0));
+  const vals=data.map(v=>v/proTag());
+  const mx=Math.max(...vals)*1.08||1, bw=(W-L-R)/12, y=v=>H-B-v/mx*(H-T-B);
+  [0,.25,.5,.75,1].forEach(f=>{
+    const v=mx*f;
+    svg.appendChild(el("path",{d:`M${L} ${y(v)}H${W-R}`,stroke:f?"#EDEBE5":"#C6C3BB","stroke-width":1}));
+    const t=el("text",{x:L-8,y:y(v)+4,"text-anchor":"end",fill:"#6B7178","font-size":"10.5"});
+    t.textContent=de(v,1); svg.appendChild(t);
+  });
+  const yl=el("text",{x:L-8,y:T+2,"text-anchor":"end",fill:"#6B7178","font-size":"10.5"});
+  yl.textContent="Ausleihen"; svg.appendChild(yl);
+  vals.forEach((v,i)=>{
+    const x=L+i*bw+bw*.16, w=bw*.68, peak=v>=Math.max(...vals)*.6;
+    svg.appendChild(el("rect",{x,y:y(v),width:w,height:H-B-y(v),fill:peak?"#1A1D21":"#9BA1A7"}));
+    if(v>mx*.06){
+      const t=el("text",{x:x+w/2,y:y(v)-5,"text-anchor":"middle","font-size":"10.5",
+        "font-weight":peak?"600":"400",fill:peak?"#1A1D21":"#6B7178"});
+      t.textContent=de(v,1); svg.appendChild(t);
+    }
+    if(i%2===0){
+      const t=el("text",{x:x+w/2,y:H-B+16,"text-anchor":"middle","font-size":"10.5",fill:"#6B7178"});
+      t.textContent=(i*2)+" Uhr"; svg.appendChild(t);
+    }
+  });
+  svg.appendChild(el("path",{d:`M${L} ${H-B}H${W-R}`,stroke:"#1A1D21","stroke-width":1}));
+  [...svg.querySelectorAll("text")].forEach(t=>t.setAttribute("font-family",
+    "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif"));
+
+  const s=summe(vals), name=sel?S.find(d=>d.id===sel).name:"das gesamte Netz";
+  const gr=vals.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).slice(0,2).sort((a,b)=>a.i-b.i);
+  const leer=vals.map((v,i)=>({v,i})).filter(o=>o.i>=3&&o.i<=9&&o.v<s*.02);
+  $("#tgnote").innerHTML = dayType==="werktag"
+    ? `Werktags fährt ${name} in zwei scharfen Spitzen: ${de(gr[0].v,1)} Ausleihen ab ${gr[0].i*2} Uhr und
+       ${de(gr[1].v,1)} ab ${gr[1].i*2} Uhr. Das stärkste Fenster allein trägt
+       ${de(Math.max(...vals)/s*100,0)}&nbsp;% des Werktags.`+
+      (leer.length?` Zwischen ${leer[0].i*2} und ${(leer[leer.length-1].i+1)*2} Uhr steht das System praktisch still.`:"")
+    : `Am Wochenende verschwinden die Spitzen: ${name} liegt über alle besetzten Blöcke zwischen
+       ${de(Math.min(...vals.filter(v=>v>0)),1)} und ${de(Math.max(...vals),1)} Ausleihen je Zweistundenblock.
+       Das ist Freizeitverkehr ohne Pendlerstruktur — und der Hebel für Standorte am Mainradweg.`;
+}
+function smallMultiples(){
+  const box=$("#sm"); box.innerHTML="";
+  const mx=Math.max(...S.flatMap(d=>serie(d).map(v=>v/proTag())))||1;
+  [...S].sort((a,b)=>b.bew-a.bew).forEach(d=>{
+    const fig=document.createElement("figure");
+    if(sel===d.id) fig.className="on";
+    const vals=serie(d).map(v=>v/proTag()), W=184,H=58;
+    const cap=document.createElement("figcaption");
+    cap.innerHTML=`<b>${d.kurz}</b><span>${de(summe(vals),1)}/Tag</span>`;
+    fig.appendChild(cap);
+    const svg=el("svg",{viewBox:`0 0 ${W} ${H}`,class:"chart"}), bw=W/12;
+    svg.appendChild(el("path",{d:`M0 ${H-1}H${W}`,stroke:"#DEDCD5","stroke-width":1}));
+    vals.forEach((v,i)=>{
+      const h=v/mx*(H-6);
+      svg.appendChild(el("rect",{x:i*bw+bw*.18,y:H-1-h,width:bw*.64,height:h,
+        fill:sel&&sel!==d.id?"#C6C3BB":"#585F66"}));
+    });
+    fig.appendChild(svg);
+    fig.addEventListener("click",()=>pick(sel===d.id?null:d.id));
+    box.appendChild(fig);
+  });
+}
+
+/* ═══════════════ Kundenorte ═══════════════ */
+function orte(){
+  const svg=$("#orte"); svg.innerHTML="";
+  const stadtOrte=new Set(S.map(d=>d.ort));
+  const list=ORTE.filter(o=>!stadtOrte.has(o.ort)).sort((a,b)=>b.k-a.k);
+  const gesamt=summe(ORTE.map(o=>o.k)), aussen=summe(list.map(o=>o.k));
+  $("#ortesub").textContent=`${de(gesamt)} Kundinnen und Kunden. ${de(aussen)} davon wohnen außerhalb `+
+    `von ${[...stadtOrte].join(", ")} — ohne Station vor der Tür.`;
+  if(!list.length){svg.setAttribute("viewBox","0 0 1060 40");return;}
+  const W=1060,L=170,R=60,T=8,rh=20,mx=Math.max(...list.map(o=>o.k));
+  const prop=new Set(VORSCHLAG.map(v=>v.ort).filter(Boolean));
+  list.forEach((o,i)=>{
+    const y=T+i*rh, w=o.k/mx*(W-L-R), hit=prop.has(o.ort);
+    const t=el("text",{x:L-12,y:y+13,"text-anchor":"end","font-size":"11.5",
+      fill:hit?"#1A1D21":"#6B7178","font-weight":hit?"600":"400"});
+    t.textContent=o.ort; svg.appendChild(t);
+    svg.appendChild(el("rect",{x:L,y:y+4,width:w,height:11,fill:hit?"#C58A00":"#B9B5A8","fill-opacity":.85}));
+    const v=el("text",{x:L+w+8,y:y+13,"font-size":"11.5",fill:"#6B7178"});
+    v.textContent=de(o.k); svg.appendChild(v);
+  });
+  const y=T+list.length*rh+6;
+  const n=el("text",{x:L,y:y+10,"font-size":"11.5",fill:"#9BA1A7"});
+  n.textContent="Gelb hervorgehoben: Orte, für die unten ein Standort vorgeschlagen wird.";
+  svg.appendChild(n);
+  [...svg.querySelectorAll("text")].forEach(t=>t.setAttribute("font-family",
+    "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica Neue,Arial,sans-serif"));
+  svg.setAttribute("viewBox",`0 0 ${W} ${y+22}`);
+  const top2=list.slice(0,2);
+  $("#ortenote").textContent=top2.length===2
+    ? `${top2[0].ort} und ${top2[1].ort} stellen zusammen ${de(top2[0].k+top2[1].k)} Kundinnen und Kunden — `+
+      `mehr als jeder Stadtteil ohne eigene Station. Beide liegen unter 5 km vom nächsten Stationsstandort.`
+    : "";
+}
+
+/* ═══════════════ Vorschläge, Kapazität, Detail, Datenqualität ═══════════════ */
+function props(){
+  const box=$("#props"); box.innerHTML="";
+  const kMap=new Map(ORTE.map(o=>[o.ort,o.k]));
+  VORSCHLAG.forEach((v,i)=>{
+    const k=v.ort?kMap.get(v.ort):null;
+    const d=document.createElement("div");
+    d.className="prop p"+v.prio+(selProp===v.id?" on":"");
+    d.innerHTML=`<div class="rank">${i+1}</div>
+      <div><b>${v.name}</b><p>${v.txt}</p></div>
+      <div class="ev"><b>${k!=null?de(k):"—"}</b>${k!=null?"Kundschaft am Ort":"Netzlücke"}</div>`;
+    d.addEventListener("click",()=>pickProp(selProp===v.id?null:v.id));
+    box.appendChild(d);
+  });
+}
+function kapazitaet(){
+  const tb=$("#kaptbl tbody"); tb.innerHTML="";
+  const eng=[...S].sort((a,b)=>b.dichte-a.dichte)[0];
+  const senke=[...S].sort((a,b)=>b.saldo-a.saldo)[0];
+  const weit=[...S].sort((a,b)=>a.dichte-b.dichte)[0];
+  const zeilen=[
+    [eng,Math.round(eng.kap*1.5/5)*5,"stärkster Abfluss je Stellplatz, engste Station"],
+    [senke,Math.round(senke.kap*1.2/2)*2,`stärkste Senke, ${sig(senke.saldo)} Räder`],
+    [weit,Math.round(weit.kap*.75/5)*5,`geringste Dichte, ${de(weit.kap-weit.belegt)} Plätze frei`]
+  ];
+  const seen=new Set();
+  zeilen.forEach(([d,neu,grund])=>{
+    if(seen.has(d.id)) return; seen.add(d.id);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${d.name}</td><td>${de(d.kap)}</td><td>${de(neu)}</td><td>${de(d.dichte,0)}</td>
+      <td style="font-size:12.5px;color:#6B7178">${grund}</td>`;
+    tb.appendChild(tr);
+  });
+}
+function detail(){
+  const box=$("#detail");
+  if(sel===null){box.hidden=true;return;}
+  const d=S.find(s=>s.id===sel);
+  const rang=[...S].sort((a,b)=>b.bew-a.bew).findIndex(s=>s.id===sel)+1;
+  const rangD=[...S].sort((a,b)=>b.dichte-a.dichte).findIndex(s=>s.id===sel)+1;
+  box.hidden=false;
+  box.innerHTML=`<b>${d.name}</b> · ${d.nr}
+    <div class="dl">
+      <div><span>Bewegungen</span><b>${de(d.bew)}</b></div>
+      <div><span>Rang Frequenz</span><b>${rang} von ${S.length}</b></div>
+      <div><span>je Stellplatz</span><b>${de(d.dichte,0)} · Rang ${rangD}</b></div>
+      <div><span>Saldo</span><b style="color:${d.saldo>0?"#1F5C8C":"#9E2B25"}">${sig(d.saldo)}</b></div>
+      <div><span>Stellplätze</span><b>${de(d.belegt)} von ${de(d.kap)} belegt</b></div>
+      <div><span>Werktag / Wochenende</span><b>${de(summe(d.wt_ab)/WERKTAGE,1)} / ${de(summe(d.we_ab)/WOTAGE,1)}</b></div>
+    </div>`;
+}
+function warn(){
+  const box=$("#warn"); const t=[];
+  if(LETZTER_TAG){
+    const dtxt=new Date(LETZTER_TAG).toLocaleDateString("de-DE",{day:"numeric",month:"long",year:"numeric"});
+    const alt=Math.round((Date.now()-new Date(LETZTER_TAG))/864e5);
+    if(alt>3) t.push(`<p><b>Die Erfassung endet am ${dtxt}.</b> Seither verzeichnet die Warenwirtschaft `+
+      `nur noch vereinzelte Fahrten je Tag statt der üblichen Größenordnung — das sind ${de(alt)} Tage `+
+      `ohne belastbare Bewegungsdaten. Was danach kommt, ist kein Nachfrageeinbruch, sondern eine Datenlücke.</p>`);
+  }
+  if(ANTEIL_GESCH!=null&&ANTEIL_GESCH>.05)
+    t.push(`<p><b>Kilometer und CO₂ sind teilweise geschätzt.</b> Rund ${de(ANTEIL_GESCH*100,0)} % der `+
+      `Fahrten in der Kilometersicht tragen einen geschätzten statt gemessenen Wert. Die CO₂-Zahl erbt `+
+      `diese Unschärfe vollständig.</p>`);
+  const kmProFahrt=MON.map(m=>({m:m.m,x:m.f?m.km/m.f:0})).filter(o=>o.x>0);
+  if(kmProFahrt.length>2){
+    const med=[...kmProFahrt].sort((a,b)=>a.x-b.x)[Math.floor(kmProFahrt.length/2)].x;
+    const aus=kmProFahrt.filter(o=>o.x>med*2.5||o.x<med*.4);
+    if(aus.length) t.push(`<p><b>Einzelne Monate fallen aus dem Rahmen.</b> `+
+      aus.map(o=>`${o.m} mit ${de(o.x,1)} km je Fahrt`).join(", ")+
+      ` gegenüber sonst rund ${de(med,1)} km. Vor Verwendung prüfen.</p>`);
+  }
+  const vals=S.reduce((a,d)=>d.wt_ab.map((v,i)=>a[i]+v),new Array(12).fill(0));
+  const s=summe(vals);
+  const leer=vals.filter((v,i)=>i>=3&&i<=9&&v<s*.01).length;
+  if(leer>=2) t.push(`<p style="margin-bottom:0"><b>Der Tagesgang ist auffällig kantig.</b> `+
+    `${leer} Zweistundenblöcke mitten am Tag verzeichnen praktisch keine Ausleihen, während benachbarte `+
+    `Blöcke auf ein Vielfaches springen. Ein reales Mietradsystem zeigt hier weiche Flanken — die Struktur `+
+    `deutet auf blockweise erzeugte Zeitstempel hin.</p>`);
+  box.innerHTML = t.length?t.join(""):
+    `<p style="margin-bottom:0">Keine auffälligen Muster in Erfassungsdichte, Schätzanteil oder Tagesgang.</p>`;
+}
+
+function pick(id){sel=id; if(id!==null) selProp=null; render();}
+function pickProp(id){selProp=id; if(id!==null) sel=null; render();}
+
+/* ═══════════════ Aufbau und Render ═══════════════ */
+function render(){ table(); drawMarkers(); tagesgang(); smallMultiples(); detail(); props(); }
+function aufbauen(){
+  kopf(); kpis(); orte(); kapazitaet(); warn();
+  if(!map) initMap(); else map.fitBounds(grenzen()[extent],{padding:[18,18]});
+  render();
+}
+
+$$("[data-sort]").forEach(b=>b.addEventListener("click",()=>{
+  sortKey=b.dataset.sort; $$("[data-sort]").forEach(o=>o.setAttribute("aria-pressed",o===b)); table();
+}));
+$$("[data-mapmet]").forEach(b=>b.addEventListener("click",()=>{
+  mapMet=b.dataset.mapmet; $$("[data-mapmet]").forEach(o=>o.setAttribute("aria-pressed",o===b)); drawMarkers();
+}));
+$$("[data-ext]").forEach(b=>b.addEventListener("click",()=>{
+  extent=b.dataset.ext; $$("[data-ext]").forEach(o=>o.setAttribute("aria-pressed",o===b)); drawMarkers(); fit();
+}));
+$$("[data-day]").forEach(b=>b.addEventListener("click",()=>{
+  dayType=b.dataset.day; $$("[data-day]").forEach(o=>o.setAttribute("aria-pressed",o===b));
+  tagesgang(); smallMultiples();
+}));
+$("#reload").addEventListener("click",laden);
+
+laden();
+</script>
+</body>
+</html>
