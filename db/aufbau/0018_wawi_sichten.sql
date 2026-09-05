@@ -56,10 +56,9 @@
 --             auf: v_wawi_kunde auf ausdruecklichen Wunsch des
 --             Auftraggebers (die Kundendaten sind Musterdaten, siehe deren
 --             eigener Kommentar), v_wawi_km_co2 durch Entkopplung von
---             v_wawi_fahrt_km - sie liest seither wie
---             v_wawi_fahrten_je_tag_rad direkt aus velocity.ausleihe (die
---             Drei-Fall-Kilometerformel dort ein drittes Mal, statt einer
---             leihweisen Sicht auf die Bewegungsprofil-Sicht), traegt
+--             v_wawi_fahrt_km - sie liest seither aus
+--             velocity.v_fahrt_kennzahl statt einer leihweisen Sicht auf
+--             die Bewegungsprofil-Sicht, traegt
 --             seither ihre eigene, unabhaengige hat_rolle-Schranke und
 --             kann deshalb 'demo' zulassen, OHNE dass ein Bewegungsprofil
 --             mit kunde_id irgendwo sichtbar wuerde (siehe deren beider
@@ -880,12 +879,11 @@ select fk.ausleihe_id,
 -- Bewegungsprofil). Antwort: ja - GENAU nach dem Muster, das
 -- v_wawi_fahrten_je_tag_rad (Gestaltungsauftrag "Sichten verweben")
 -- fuer denselben Fund schon vorgemacht hat. Diese Sicht liest deshalb
--- nicht mehr FROM v_wawi_fahrt_km, sondern direkt FROM velocity.ausleihe
--- und traegt die Drei-Fall-Kilometerformel ein drittes Mal (identisch zu
--- v_wawi_fahrt_km.kilometer und v_wawi_fahrten_je_tag_rad.kilometer) -
--- eine LATERAL-Unterabfrage rechnet sie einmal je Fahrt, damit sum()/
--- avg()/count() filter weiter unten nicht denselben CASE-Ausdruck
--- dreifach wiederholen muessen. Die Spaltenliste dieser Sicht fuehrt
+-- nicht mehr FROM v_wawi_fahrt_km, sondern aus velocity.v_fahrt_kennzahl,
+-- wo Kilometer und co2_ersparnis_g bereits fertig hergeleitet stehen
+-- (siehe deren Kopfkommentar) - kein eigener Join auf velocity.ausleihe
+-- und keine eigene Kopie der Drei-Fall-Formel. Die Spaltenliste
+-- dieser Sicht fuehrt
 -- WEDER kunde_id NOCH ausleihe_id - nur Monat, Radtyp und aggregierte
 -- Kennzahlen (siehe Spaltenkommentare) - ein Bewegungsprofil entsteht
 -- hier folglich nicht, unabhaengig von der Rollenschranke. Damit traegt
@@ -944,9 +942,11 @@ comment on column velocity.v_wawi_fahrt_km.kunde_id is
   'Fahrender Kunde, für eine spätere Auswertung je Kunde ohne erneuten Join '
   'auf ausleihe.';
 comment on column velocity.v_wawi_fahrt_km.typ_code is
-  'Fahrradtyp der Fahrt. v_wawi_km_co2 liest diese Spalte aus '
-  'velocity.v_fahrt_kennzahl und bestimmt daraus dieselbe CO2-Annahme '
-  '(co2_rad für CITY, sonst co2_ebike).';
+  'Fahrradtyp der Fahrt. v_wawi_km_co2 liest ihren eigenen typ_code '
+  'ebenso aus velocity.v_fahrt_kennzahl; die Verknüpfung zur passenden '
+  'CO2-Annahme (co2_rad für CITY, sonst co2_ebike) geschieht dort in '
+  'der Basissicht - v_wawi_km_co2 übernimmt nur das fertige '
+  'co2_ersparnis_g, ohne sie selbst zu bestimmen.';
 comment on column velocity.v_wawi_fahrt_km.kilometer is
   'Drei Fälle, siehe verfahren: gemessene Strecke (ausleihe.distanz_km), wo '
   'vorhanden; sonst, bei einer Rundfahrt mit Luftlinie null (Start- und '
