@@ -636,6 +636,18 @@ schritt "Ein angemeldeter Kunde sieht seine eigenen Fahrten"
 # security_invoker = true und braucht die Rechte des Aufrufers.
 # Bemerkt hat es weder die Testkette noch der REST-Test mit anon-Key,
 # sondern erst ein SET ROLE authenticated in einer Pruefung.
+#
+# Seit 05.09.2026 (0025_kundenkennzahlen.sql, Kundendashboard) drei
+# weitere eigene Sichten: v_meine_fahrt_kennzahl, v_meine_monatsbilanz,
+# v_meine_bilanz - mit Eigentuemerrechten statt security_invoker, aber
+# demselben GRANT-SELECT-an-authenticated-Muster. Diese Liste ist
+# GENAU der Fehlertyp, vor dem tools/objektlisten_pruefen.py warnt
+# (siehe dessen Kopfkommentar): eine woertlich eingetragene
+# Sichtenaufzaehlung, die bei einer neuen Sicht nicht von selbst
+# mitwaechst. v_fahrt_kennzahl (die Basissicht) gehoert NICHT hierher -
+# sie ist per "revoke all ... from ... authenticated" (0018) auch fuer
+# angemeldete Kundschaft gesperrt und wird stattdessen in
+# tools/rest_security_check.py gegen anon gefuehrt.
 n=$(python3 - <<'PYEOF'
 import os, psycopg
 for z in open('.env', encoding='utf-8'):
@@ -648,7 +660,8 @@ con = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
 c = con.cursor()
 try:
     c.execute('set local role authenticated')
-    for sicht in ('v_meine_ausleihe', 'v_meine_rechnung', 'v_mein_profil'):
+    for sicht in ('v_meine_ausleihe', 'v_meine_rechnung', 'v_mein_profil',
+                  'v_meine_fahrt_kennzahl', 'v_meine_monatsbilanz', 'v_meine_bilanz'):
         c.execute(f'select count(*) from velocity.{sicht}')
     print('0')
 except Exception as e:
@@ -657,7 +670,7 @@ finally:
     con.rollback()
 PYEOF
 )
-[ "$n" = "0" ] && ergebnis 0 "v_meine_ausleihe, v_meine_rechnung und v_mein_profil sind lesbar" \
+[ "$n" = "0" ] && ergebnis 0 "alle sechs eigenen Sichten sind lesbar (Ausleihe, Rechnung, Profil, Fahrt-Kennzahl, Monatsbilanz, Bilanz)" \
                || ergebnis 1 "$n"
 
 # --------------------------------------------- Funktionsrechte

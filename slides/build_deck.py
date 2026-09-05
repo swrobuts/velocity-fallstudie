@@ -548,7 +548,7 @@ def baue() -> Presentation:
             "Was kostet Annas Fahrt genau — und warum?",
             "Jetzt lösen wir die Frage vom Anfang auf. Jeder Cent muss begründbar sein.")
 
-    s = folie(prs, "6 · Implementierung", "23 Aufbauschritte, jeder für sich lauffähig",
+    s = folie(prs, "6 · Implementierung", "24 Aufbauschritte, jeder für sich lauffähig",
               "Jede Datei ist idempotent: sie läuft zweimal hintereinander fehlerfrei. Das "
               "ist die Voraussetzung dafür, dass man einen Aufbau gefahrlos wiederholen kann.")
     schichtenstapel(s, [

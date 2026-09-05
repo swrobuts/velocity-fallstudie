@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parent.parent / "src"
-SKRIPTE = ["script.js", "auth.js", "supabase.js", "config.js"]
+SKRIPTE = ["script.js", "auth.js", "supabase.js", "config.js", "dashboard.js"]
 
 # Was das Skript selbst in den Baum haengt, kann im HTML nicht stehen.
 # Die Liste bleibt kurz und wird hier gepflegt - sonst waere jede
