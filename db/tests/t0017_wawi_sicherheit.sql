@@ -83,7 +83,22 @@ begin
     from pg_policies
    where schemaname = 'velocity' and tablename = 'zahlungsmittel'
      and not (policyname = 'zahlungsmittel_eigene' and cmd = 'SELECT'
-              and qual like '%auth.uid()%');
+              and qual like '%auth.uid()%')
+     -- Zweite erlaubte Regel, seit dem lesenden Studierendenzugang
+     -- (db/betrieb/studizugang_lesend.sql): studi_liest, nur SELECT, nur
+     -- fuer die Rolle studi. Sie beruehrt die Aussage dieses Tests
+     -- nicht - studi ist keine Fachrolle und ueber PostgREST nicht
+     -- erreichbar, dort meldet sich jeder als anon oder authenticated
+     -- an. Die Kundschaft dieser Fallstudie ist erfunden und die Tabelle
+     -- leer; ein Datenmodell mit einem Loch waere als Lehrgegenstand
+     -- schlechter als eines ohne.
+     --
+     -- Die Haerte bleibt: Eine DRITTE Regel, gleich welchen cmd-Werts,
+     -- laesst diesen Test rot werden und nennt sie beim Namen. Genau so
+     -- ist der Studierendenzugang aufgefallen - der Mechanismus hat
+     -- getan, wozu er da ist.
+     and not (policyname = 'studi_liest' and cmd = 'SELECT'
+              and roles = '{studi}'::name[]);
 
   if v_abweichung is null and not exists (
        select 1 from pg_policies
@@ -95,7 +110,22 @@ begin
 
   return next is(v_abweichung, null,
     coalesce('Regel(n) auf zahlungsmittel weichen ab: ' || v_abweichung,
-             'Auf zahlungsmittel gibt es ausschliesslich zahlungsmittel_eigene, fuer SELECT ueber auth.uid()'));
+             'Auf zahlungsmittel gibt es nur zahlungsmittel_eigene (SELECT ueber auth.uid()) '
+             'und studi_liest (SELECT, nur Rolle studi)'));
+
+  -- Und die Aussage, um die es eigentlich geht: Keine Regel oeffnet die
+  -- Tabelle einer ueber PostgREST erreichbaren Rolle UNGEFILTERT.
+  -- zahlungsmittel_eigene gilt sehr wohl fuer authenticated - das ist
+  -- ihr Zweck, ein Kunde sieht sein eigenes Zahlungsmittel -, aber sie
+  -- filtert ueber auth.uid(). Genau diese Unterscheidung war in der
+  -- ersten Fassung dieser Zusicherung nicht drin, und sie wurde
+  -- prompt rot.
+  return next is_empty(
+    $sql$select policyname from pg_policies
+          where schemaname = 'velocity' and tablename = 'zahlungsmittel'
+            and (roles && array['anon','authenticated','public']::name[])
+            and coalesce(qual, 'true') not like '%auth.uid()%'$sql$,
+    'Keine ungefilterte Regel auf zahlungsmittel fuer anon, authenticated oder public');
 
   return next is_empty(
     $q$ select c.relname from pg_class c

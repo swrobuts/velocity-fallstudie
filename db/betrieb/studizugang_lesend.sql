@@ -141,6 +141,13 @@ declare
   v_tab text;
   v_n   integer := 0;
 begin
+  -- ALLE Tabellen, ohne Ausnahme - auch zahlungsmittel. Der erste Anlauf
+  -- nahm sie heraus, weil test_s_zahlungsmittel_bleibt_gesperrt rot
+  -- wurde. Die Entscheidung dagegen ist bewusst gefallen: Die Kundschaft
+  -- dieser Fallstudie ist erfunden, die Tabelle ist leer, und ein
+  -- Datenmodell mit einem Loch ist als Lehrgegenstand schlechter als
+  -- eines ohne. Der Test nennt studi_liest jetzt ausdruecklich als
+  -- erlaubte zweite Regel und bleibt fuer jede DRITTE rot.
   for v_tab in
     select c.relname
       from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -166,6 +173,7 @@ end $$;
 -- Policies, und genau deshalb steht unten eine Gegenprobe, die das
 -- meldet.
 alter default privileges in schema velocity grant select on tables to studi;
+
 
 -- ---- Und ausdruecklich NICHT ----------------------------------------
 -- Der Entzug steht hier, obwohl studi diese Rechte nie bekommen hat:
