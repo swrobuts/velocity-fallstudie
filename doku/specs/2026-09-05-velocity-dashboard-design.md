@@ -164,16 +164,28 @@ hätte zwei verschiedene Rollen unter einem Namen geführt. Die Umbenennung
 löst diese Doppelung auf; der neue Name sagt zugleich von selbst, dass die
 Person erfunden ist.
 
-**Die Adresse des Satzes wird `demo@bikes.invalid`** — dieselbe, mit der man
-sich anmeldet. Das ist keine Setzung, sondern die vorhandene Regel:
-`K-000013` ist heute das einzige verknüpfte Konto, und dort sind Kundenmail
-und Anmeldemail identisch. `kunde.email` ist eindeutig, die Adresse ist frei.
+**Die Adresse des Satzes wird `clara.fake@mail.invalid`** und folgt damit
+derselben Regel wie alle anderen. Am 05.09.2026 wurden die Kundenadressen
+umgestellt: sie trugen echte Domänen — gmail.com 326-mal, icloud.com
+198-mal, outlook.com 190-mal —, und eine erfundene Person unter einer
+zustellbaren Adresse zu führen heißt, ein fremdes Postfach zu benennen.
+1 013 Sätze tragen jetzt `vorname.nachname@mail.invalid`
+(`db/betrieb/kundenmails_anonymisieren.sql`); ausgenommen ist allein
+`K-000013`, der Satz des Betreibers.
 
-Die naheliegende Alternative wäre schlechter gewesen. Die Kundschaft trägt
-**echte Maildomänen** — gmail.com 326-mal, icloud.com 198-mal, outlook.com
-190-mal; `max.mustermann@email.de` ist einer von sieben Ausreißern. Eine
-erfundene Person unter einer erreichbaren Adresse zu führen, heißt, ein
-fremdes Postfach zu benennen.
+**Kundensatz und Anmeldekonto tragen also verschiedene Adressen** — die
+Anmeldung bleibt `demo@bikes.invalid`. Das ist kein Bruch: verbunden sind
+die beiden über `kunde.auth_uid`, nicht über die E-Mail. Ein früherer
+Entwurf dieses Abschnitts hatte „Kundenmail gleich Anmeldemail" als Regel
+gelesen; sie stützte sich auf genau eine Zeile, und die ist inzwischen die
+benannte Ausnahme.
+
+**Eine Nebenwirkung, die hier hingehört:** `api_kunde_sicherstellen`
+verknüpft einen Neuanmelder mit einem vorhandenen Kundensatz, wenn die
+Adressen übereinstimmen. Das kann seit der Umstellung nicht mehr greifen —
+an `.invalid` kommt keine Bestätigungsmail an. Der Zweig ist damit
+praktisch tot, und das ist die bessere Lage: vorher hätte, wer die Adresse
+eines Kunden kannte, dessen Fahrtenhistorie übernehmen können.
 
 **Die Umbenennung ändert einen Bestandssatz.** `K-000001` trägt heute
 „Max Mustermann"; nach dem Lauf von `demokonto_website.sql` heißt der Satz

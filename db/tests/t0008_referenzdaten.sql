@@ -90,3 +90,47 @@ begin
                  'Je Fahrradtyp drei Merkmale fuer die Tarifkarte');
 end;
 $$;
+
+create or replace function velocity_test.test_ref_kundenmails_sind_unzustellbar()
+returns setof text language plpgsql as $$
+begin
+  -- Die Kundennamen sind erfunden, die Maildomaenen waren es bis zum
+  -- 05.09.2026 nicht: 326 Saetze auf gmail.com, 198 auf icloud.com, 190
+  -- auf outlook.com. Eine erfundene Person unter einer zustellbaren
+  -- Adresse zu fuehren heisst, ein fremdes Postfach zu benennen - und
+  -- die Rolle studi liest diese Tabelle. Umgestellt mit
+  -- db/betrieb/kundenmails_anonymisieren.sql auf
+  -- vorname.nachname@mail.invalid (RFC 2606: .invalid loest nie auf).
+  --
+  -- Ausgenommen ist K-000013, der Satz des Betreibers. Das ist eine
+  -- benannte Ausnahme, keine Luecke - deshalb steht sie hier als
+  -- Bedingung und nicht als weiche Schwelle: kommt eine zweite echte
+  -- Adresse dazu, wird dieser Test rot.
+  return next is_empty(
+    $sql$select kundennummer from velocity.kunde
+          where email not like '%.invalid'
+            and kundennummer <> 'K-000013'$sql$,
+    'Ausser dem Satz des Betreibers hat kein Kunde eine zustellbare Adresse');
+
+  -- Der Protokolltrigger haelt jedes geaenderte Feld mit wert_alt fest.
+  -- Wer die Umstellung ohne Abschaltung des Triggers wiederholt,
+  -- entfernt die Adressen nicht, sondern zieht sie nur um - nach
+  -- aenderungsprotokoll, wo studi ebenfalls liest. Genau das prueft
+  -- diese Zeile.
+  --
+  -- Beide Werte werden EINZELN geprueft. Eine Verkettung waere hier ein
+  -- stiller Ausfall: bei einer Aenderung von jemand@gmail.com auf
+  -- x@mail.invalid enthaelt der zusammengesetzte Text "invalid" - der
+  -- Test bliebe gruen und uebersaehe genau den Fall, fuer den er da ist.
+  -- Zu den Nullwerten: ein INSERT hat kein wert_alt, ein DELETE kein
+  -- wert_neu. "null not like" ergibt null, und "null or false" ist
+  -- ebenfalls null, also nicht wahr - solche Zeilen fallen richtig
+  -- heraus, ohne dass es dafuer ein coalesce braucht.
+  return next is_empty(
+    $sql$select protokoll_id from velocity.aenderungsprotokoll
+          where feld = 'email'
+            and (   wert_alt not like '%.invalid'
+                 or wert_neu not like '%.invalid')$sql$,
+    'Im Aenderungsprotokoll steht keine zustellbare Mailadresse');
+end;
+$$;

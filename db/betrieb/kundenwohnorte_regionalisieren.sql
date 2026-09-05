@@ -20,10 +20,17 @@
 --     dafuer "keine Adresse hinterlegt", und genau das soll sie
 --     weiterhin koennen. Wer diese Luecke fuellt, nimmt dem Lehrbeispiel
 --     seinen Fall.
---   - vorname, nachname, email. Die sind bereits international
+--   - vorname, nachname. Die sind bereits international
 --     (chinesische, japanische und westliche Namen gemischt) - fuer eine
 --     Universitaetsstadt erwuenscht, siehe Auftrag. Nur die WOHNORTE
 --     waren das Problem, nicht die Namen.
+--
+--     NACHTRAG 05.09.2026: Fuer die E-Mail gilt das NICHT mehr. Die
+--     Adressen trugen echte Domaenen (gmail.com, icloud.com,
+--     outlook.com) und wurden von
+--     db/betrieb/kundenmails_anonymisieren.sql auf
+--     vorname.nachname@mail.invalid umgestellt. Die Namen bleiben
+--     unangetastet, wie hier beschrieben.
 --   - Die zehn Stationsadressen (velocity.station.adresse_id). Sie
 --     teilen sich keine adresse_id mit velocity.kunde (gemessen: 901
 --     kundenseitige plus 10 stationsseitige adresse_id, keine
