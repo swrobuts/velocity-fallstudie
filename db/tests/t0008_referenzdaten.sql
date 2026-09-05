@@ -167,3 +167,44 @@ begin
     'Keine abgeschlossene Fahrt liegt ueber 50 km');
 end;
 $$;
+
+create or replace function velocity_test.test_ref_dauerschaetzung_unter_tagesdeckel()
+returns setof text language plpgsql as $$
+begin
+  -- Bewacht die Deckelung des dritten Falls in velocity.v_fahrt_kennzahl
+  -- (verfahren aus_dauer): je angefangenem Kalendertag der Ausleihe gilt
+  -- höchstens rechenannahme.wert (Code max_fahrzeit_je_tag) Stunden als
+  -- gefahren. Gerechnet wird gegen den WERT AUS DER TABELLE, nicht gegen
+  -- die Zahl 3 - eine hartkodierte 3 prüfte nur eine Kopie der Regel und
+  -- bliebe grün, wenn sich die Annahme ändert, während die Sicht selbst
+  -- schon einen anderen Wert verwendet.
+  --
+  -- Verglichen wird in km, der einzigen nach außen sichtbaren Spalte:
+  -- dieselbe Rechnung wie im dritten Fall der Sicht (angefangene Tage mal
+  -- Tagesobergrenze mal Reisegeschwindigkeit) liefert die Obergrenze in
+  -- km. round() ist monoton, ein gedeckelter Wert kann diese Grenze
+  -- deshalb nicht überschreiten.
+  --
+  -- LEFT statt INNER JOIN auf beide Annahmen, dieselbe Haltung wie in der
+  -- Sicht selbst: fehlte eine der beiden für ein Fahrtdatum, liefe diese
+  -- Prüfung an der betroffenen Zeile vorbei, statt sie fälschlich als
+  -- Verstoß zu werten. Diese Zeile trägt dann aber bereits einen NULL-
+  -- Kilometerwert und fällt unter test_wv_basissicht_nur_abgeschlossen
+  -- (db/tests/t0018_wawi_sichten.sql) auf - beide Prüfungen zusammen
+  -- decken ab, was keine allein deckt.
+  return next is_empty(
+    $sql$
+      select fk.ausleihe_id
+        from velocity.v_fahrt_kennzahl fk
+        left join velocity.rechenannahme deckel
+          on deckel.code = 'max_fahrzeit_je_tag'
+         and deckel.gueltigkeit @> fk.startzeit::date
+        left join velocity.rechenannahme tempo
+          on tempo.code = 'reisegeschwindigkeit'
+         and tempo.gueltigkeit @> fk.startzeit::date
+       where fk.verfahren = 'aus_dauer'
+         and fk.km > round(ceil(fk.dauer_minuten / 1440.0) * deckel.wert * tempo.wert, 2)
+    $sql$,
+    'Keine Dauerschätzung überschreitet die Tagesobergrenze aus velocity.rechenannahme');
+end;
+$$;

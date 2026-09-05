@@ -151,7 +151,13 @@ select v.code, v.wert, v.einheit, v.gueltigkeit, v.quelle, v.erlaeuterung
     ('reisegeschwindigkeit', 13.0000, 'km/h', daterange(date '2025-01-01', null, '[)'),
      'Annahme dieser Fallstudie, nicht gemessen',
      'Nur für Rundfahrten: wer dort startet, wo er endet, hat eine Luftlinie von '
-     'null. Dann bleibt die Dauer als einzige Grundlage.')
+     'null. Dann bleibt die Dauer als einzige Grundlage.'),
+    ('max_fahrzeit_je_tag', 3.0000, 'h/Tag', daterange(date '2025-01-01', null, '[)'),
+     'Entscheidung des Auftraggebers, nicht gemessen',
+     'Obergrenze für Rundfahrten, deren Kilometer aus der Dauer geschätzt werden '
+     '(siehe reisegeschwindigkeit): je angefangenem Kalendertag der Ausleihe zählt '
+     'höchstens diese Stundenzahl als gefahrene Zeit, auch wenn die Ausleihe '
+     'insgesamt länger dauerte.')
   ) as v(code, wert, einheit, gueltigkeit, quelle, erlaeuterung)
  where not exists (
    select 1 from velocity.rechenannahme r

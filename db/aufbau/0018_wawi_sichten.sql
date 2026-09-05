@@ -161,6 +161,9 @@ select a.ausleihe_id,
   left join velocity.rechenannahme tempo
          on tempo.code = 'reisegeschwindigkeit'
         and tempo.gueltigkeit @> a.startzeit::date
+  left join velocity.rechenannahme kappe
+         on kappe.code = 'max_fahrzeit_je_tag'
+        and kappe.gueltigkeit @> a.startzeit::date
   -- Die Luftlinie EINMAL, statt wie bisher bis zu viermal je Zeile in
   -- derselben Sicht. Gleiche Formel, gleiche Argumente; dass sich am
   -- Ergebnis nichts aendert, zeigt t0025.
@@ -175,7 +178,38 @@ select a.ausleihe_id,
     select
       case
         when a.distanz_km is not null then a.distanz_km
-        when l.luftlinie_km = 0 then round(a.dauer_minuten / 60.0 * tempo.wert, 2)
+        when l.luftlinie_km = 0 then
+          -- Gedeckelt wird die FAHRZEIT (Stunden), nicht das
+          -- Kilometerergebnis: eine Kilometer-Obergrenze haenge an der
+          -- Reisegeschwindigkeit und muesste bei jeder Aenderung dieser
+          -- Annahme neu bestimmt werden.
+          --
+          -- Die Zahl der Tage kommt aus dauer_minuten, nicht aus dem
+          -- Kalenderdatum von Start und Ende: ein angefangener Tag zaehlt
+          -- VOLL (ceil, nicht floor) - aus der reinen Dauer ist nicht
+          -- ersichtlich, an welcher Tageszeit die Ausleihe begann, und
+          -- eine Ausleihe von etwas ueber 24 Stunden beruehrt bereits
+          -- einen zweiten Kalendertag. /1440.0, nicht /1440: eine
+          -- Ganzzahldivision wuerde vor dem ceil() abrunden und die
+          -- Tageszahl fuer jede nicht glatt auf 1440 Minuten fallende
+          -- Ausleihe zu klein liefern (nachgeprueft: 2552/1440 = 1,
+          -- 2552/1440.0 = 1,77).
+          --
+          -- LEFT JOIN + least(): least() ueberspringt NULL-Argumente
+          -- (least(42, null) = 42, nachgeprueft) - eine fehlende Annahme
+          -- schaltete die Deckelung damit STILL ab, statt sie erkennbar
+          -- zu unterlassen, genau der Fehlertyp, der dieses Projekt schon
+          -- mehrfach an einem Tag getroffen hat. Der Nullcheck vor
+          -- least() erzwingt stattdessen ein NULL-Ergebnis: dieselbe
+          -- Haltung wie bei co2_ersparnis_g weiter unten - eine fehlende
+          -- Annahme macht den WERT unbekannt, nicht die Fahrt unsichtbar,
+          -- und auch nicht die ungedeckelte Rohschaetzung sichtbar.
+          case when kappe.wert is null then null
+               else round(
+                      least(a.dauer_minuten / 60.0,
+                            ceil(a.dauer_minuten / 1440.0) * kappe.wert)
+                      * tempo.wert, 2)
+          end
         else round(l.luftlinie_km * ra.wert, 2)
       end                        as kilometer,
       a.distanz_km is null       as ist_geschaetzt,
@@ -225,8 +259,9 @@ comment on column velocity.v_fahrt_kennzahl.dauer_minuten is
   'Fahrtdauer in aufgerundeten Minuten (velocity.ausleihe.dauer_minuten).';
 comment on column velocity.v_fahrt_kennzahl.km is
   'Drei Fälle, siehe verfahren: gemessene Strecke, wo vorhanden; sonst bei einer '
-  'Rundfahrt mit Luftlinie null aus der Dauer geschätzt; sonst aus der Luftlinie mal '
-  'Umwegfaktor.';
+  'Rundfahrt mit Luftlinie null aus der Dauer geschätzt und gedeckelt auf '
+  'rechenannahme max_fahrzeit_je_tag je angefangenem Kalendertag der Ausleihe; '
+  'sonst aus der Luftlinie mal Umwegfaktor.';
 comment on column velocity.v_fahrt_kennzahl.ist_geschaetzt is
   'Wahr, wenn km nicht gemessen wurde (verfahren aus_dauer oder aus_luftlinie).';
 comment on column velocity.v_fahrt_kennzahl.verfahren is

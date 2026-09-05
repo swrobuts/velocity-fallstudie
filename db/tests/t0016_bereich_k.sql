@@ -206,10 +206,14 @@ $$;
 create or replace function velocity_test.test_k_annahmen_sind_gesetzt()
 returns setof text language plpgsql as $$
 begin
+  -- max_fahrzeit_je_tag kam am 05.09.2026 dazu: Tagesdeckel fuer den
+  -- dritten Fall der Kilometer-Herleitung in velocity.v_fahrt_kennzahl
+  -- (db/aufbau/0018_wawi_sichten.sql), siehe dort fuer die Begruendung.
   return next results_eq(
     $q$ select code from velocity.rechenannahme where upper_inf(gueltigkeit) order by code $q$,
-    $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),('reisegeschwindigkeit'),('umwegfaktor') $q$,
-    'Alle fuenf Rechenannahmen haben eine laufende Periode');
+    $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),('max_fahrzeit_je_tag'),
+              ('reisegeschwindigkeit'),('umwegfaktor') $q$,
+    'Alle sechs Rechenannahmen haben eine laufende Periode');
   -- Nicht pruefen, dass keine Zeile ohne Quelle DA ist - das kann keine
   -- sein, quelle ist not null mit CHECK. Pruefen, dass eine solche Zeile
   -- gar nicht erst hineinkommt. Sonst waere die Zusicherung immer wahr.
