@@ -52,6 +52,37 @@ SKRIPTE = ['script.js']
 WAWI = WURZEL / 'wawi'
 WAWI_SEITEN = ['index.html']
 
+# ===== AUCH DIE LEHRSEITE (05.09.2026) =====
+# docs/ wird von GitHub Pages veroeffentlicht. Gemessen: die drei Seiten
+# binden HEUTE keine eigene Datei ein - Stil und Skript stehen inline,
+# Leaflet und Mermaid kommen vom CDN. Es gibt dort also nichts zu
+# stempeln, und dieser Abschnitt setzt derzeit keinen einzigen Stempel.
+#
+# Er steht trotzdem hier, und zwar als WAECHTER. Legt jemand spaeter eine
+# docs/karte.js an und bindet sie ein, bekaeme sie ohne diesen Eintrag
+# keinen Fingerabdruck - und niemand wuerde es merken, weil das Werkzeug
+# das Verzeichnis gar nicht kennt. Genau dieses Muster - eine von Hand
+# gepflegte Liste hoert auf vollstaendig zu sein, waehrend die Pruefung
+# gruen bleibt - ist diesem Projekt an einem einzigen Tag achtmal
+# passiert (siehe tools/objektlisten_pruefen.py).
+#
+# Der Cache-Druck ist dort geringer als auf den eigenen Servern:
+# GitHub Pages schickt 'cache-control: max-age=600' samt ETag, eine
+# veraltete Seite haelt also hoechstens zehn Minuten. bikes.butscher.cloud
+# schickt dagegen 'no-cache' - dort revalidiert die Seite immer, ihre
+# eingebundenen Dateien aber nicht, und genau dafuer sind die Stempel da.
+DOCS = WURZEL / 'docs'
+DOCS_SEITEN = ['index.html', 'cockpit.html', 'datenmodell.html']
+
+# cockpit.html bindet config.js ein, und diese Datei FEHLT ABSICHTLICH:
+# sie traegt die Verbindungsdaten zur Datenbank, steht in .gitignore und
+# wird nie ausgeliefert. Fehlt sie, laeuft das Cockpit aus seinem
+# eingebetteten Abzug weiter - so ist es gebaut und im Kopf der Datei
+# begruendet. Ohne diese Ausnahme meldete das Werkzeug bei jedem Lauf
+# 'config.js fehlt', und ein Pruefer, der immer dasselbe meldet, wird
+# ueberlesen.
+ABSICHTLICH_OHNE_DATEI = {'config.js'}
+
 
 def fingerabdruck(pfad: Path) -> str:
     return hashlib.sha256(pfad.read_bytes()).hexdigest()[:8]
@@ -66,7 +97,8 @@ def stempeln(seite: Path, nur_pruefen: bool) -> list[str]:
         attribut, datei, alt = treffer.group(1), treffer.group(2), treffer.group(3)
         ziel = seite.parent / datei   # gegen das Verzeichnis DER SEITE
         if not ziel.exists():
-            abweichungen.append(f'{seite.name}: {datei} fehlt')
+            if datei not in ABSICHTLICH_OHNE_DATEI:
+                abweichungen.append(f'{seite.name}: {datei} fehlt')
             return treffer.group(0)
         neu = fingerabdruck(ziel)
         if alt != neu:
@@ -155,6 +187,10 @@ def main() -> int:
             alle += stempeln(seite, nur_pruefen)
     for name in WAWI_SEITEN:
         seite = WAWI / name
+        if seite.exists():
+            alle += stempeln(seite, nur_pruefen)
+    for name in DOCS_SEITEN:
+        seite = DOCS / name
         if seite.exists():
             alle += stempeln(seite, nur_pruefen)
 
