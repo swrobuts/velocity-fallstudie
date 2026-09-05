@@ -64,12 +64,26 @@ button.betont{background:var(--stahl);border-color:var(--stahl);color:#fff}
 button.betont:hover{background:#24506c;border-color:#24506c;color:#fff}
 
 /* ── Layout ────────────────────────────────────────── */
-.flaeche{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:24px;padding:24px 0 60px;align-items:start}
-@media (max-width:1100px){.flaeche{grid-template-columns:minmax(0,1fr)}}
+/* Die Tafel liegt als Leiste über dem Inhalt statt daneben - .flaeche braucht darum nur noch
+   eine Spalte, unabhängig von der Fensterbreite. p{max-width:68ch} zähmt den Fließtext ohnehin,
+   darum darf .mitte.flaeche deutlich breiter sein als das gewöhnliche .mitte. */
+.mitte.flaeche{max-width:1900px;padding:24px 26px 60px}
 .buehne{background:var(--flaeche);border:1px solid var(--linie);border-radius:6px;padding:8px;overflow:auto}
-.tafel{background:var(--flaeche);border:1px solid var(--linie);border-radius:6px;padding:20px;
-  position:sticky;top:62px;max-height:calc(100vh - 86px);overflow:auto}
-@media (max-width:1100px){.tafel{position:static;max-height:none}}
+/* Leiste: fest am rechten Rand, fährt von rechts ein. width:min(420px,100%) und der dazu passende
+   negative right-Wert sorgen dafür, dass sie auf schmalen Schirmen die volle Breite einnimmt statt
+   als schmaler Streifen zu erscheinen - und dass sie geschlossen bei jeder Breite genau um ihre
+   eigene, gerade gültige Breite verschoben ist (kein Überstand, kein Rest sichtbar). */
+.tafel{background:var(--flaeche);border-left:1px solid var(--linie);
+  position:fixed;top:0;bottom:0;width:min(420px,100%);right:calc(0px - min(420px,100%));
+  display:flex;flex-direction:column;z-index:50;transition:right .25s ease}
+.tafel.offen{right:0}
+.tafel-schliessen{position:absolute;top:12px;right:12px;font:inherit;font-size:12px;
+  font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;
+  background:var(--flaeche);border:1px solid var(--linie);border-radius:3px;
+  padding:4px 10px;color:var(--grau);cursor:pointer}
+.tafel-schliessen:hover{border-color:var(--grau2);color:var(--tinte)}
+.tafel-schliessen:focus-visible{outline:2px solid var(--stahl);outline-offset:2px}
+.tafel-inhalt{padding:50px 22px 22px;overflow:auto;flex:1;min-height:0}
 .hinweis{font-size:12.5px;color:var(--grau2);padding:6px 10px 4px;max-width:none}
 .leer{color:var(--grau);font-size:14px}
 
@@ -229,7 +243,10 @@ footer b{color:var(--tinte)}
       zusammengehören: An <em>einem</em> Rad hängen <em>n</em> Fahrten — an einer Fahrt aber
       immer nur genau ein Rad.</p>
     </div>
-    <aside class="tafel" id="tafelA"></aside>
+    <aside class="tafel" id="tafelA" role="dialog" aria-label="Erläuterung zur ausgewählten Tabelle" tabindex="-1" inert>
+      <button type="button" class="tafel-schliessen">Schließen</button>
+      <div class="tafel-inhalt" id="tafelA-inhalt"></div>
+    </aside>
   </div>
 
   <section class="glossar">
@@ -266,7 +283,10 @@ footer b{color:var(--tinte)}
       dasselbe aus Sicht der Fremdschlüsselseite. Ein Klick auf eine Entität öffnet ihre Referenz.</p>
       <div class="quelle" id="quelle" hidden></div>
     </div>
-    <aside class="tafel" id="tafelB"></aside>
+    <aside class="tafel" id="tafelB" role="dialog" aria-label="Referenz zur ausgewählten Entität" tabindex="-1" inert>
+      <button type="button" class="tafel-schliessen">Schließen</button>
+      <div class="tafel-inhalt" id="tafelB-inhalt"></div>
+    </aside>
   </div>
 </div>
 
@@ -589,18 +609,52 @@ const TOUR=[
  ["radereignis","Was war vorher?","Die Radtabelle kennt nur den Jetzt-Zustand. Wer die Geschichte braucht, muss sie getrennt aufschreiben — in einer Tabelle, in die nur angefügt wird. Damit endet der Rundgang."]
 ];
 
-/* Unter 1100px steht die Tafel unter der Bühne statt daneben (siehe .flaeche-Regel oben) —
-   dort muss ein Klick zur Tafel scrollen, sonst bleibt die Erläuterung unsichtbar. */
-const schmal=()=>window.matchMedia("(max-width:1100px)").matches;
+/* Die Tafel lag früher als Spalte neben oder (unter 1100px) unter der Bühne; schmal() und
+   tafelZeigen() unterschieden diese beiden Fälle und scrollten nötigenfalls dorthin. Jetzt liegt
+   die Tafel bei jeder Fensterbreite als Leiste über dem Inhalt und ist von sich aus unsichtbar,
+   bis sie geöffnet wird - "hinscrollen" gibt es nicht mehr, nur noch "öffnen" und "schließen".
+   Beide Funktionen entfallen darum ersatzlos; an ihre Stelle treten tafelOeffnen()/tafelSchliessen(). */
+let tafelAusloeser=null;
 
-/* Holt die Beschreibungstafel ins Bild — aber nur, wenn sie gerade nicht zu sehen ist,
-   damit auf breiten Fenstern nichts ruckelt. */
-function tafelZeigen(box){
-  box.scrollTop=0;
-  const r=box.getBoundingClientRect();
-  const sichtbar = r.top < window.innerHeight*0.55 && r.bottom > 140;
-  if(!sichtbar) box.scrollIntoView({behavior:"smooth", block:"start"});
+/* Öffnet die Leiste: Klasse für die Einfahrbewegung setzen, inert entfernen (macht den Inhalt
+   wieder fokussierbar), Fokus auf den Schließen-Knopf legen, Beobachter für Klick-daneben scharf
+   schalten. Tut nichts, wenn die Leiste schon offen ist - sonst würde ein erneuter tafelA()-Lauf
+   (Filterwechsel, Rundgangschritt) mitten im Klicken den Fokus wegreißen. */
+function tafelOeffnen(box,opener){
+  if(box.classList.contains("offen")) return;
+  box.classList.add("offen");
+  box.inert=false;
+  box.opener=opener||null;
+  box.querySelector(".tafel-schliessen").focus();
+  setTimeout(()=>document.addEventListener("click",tafelAussenKlick),0);
 }
+/* Schließt die Leiste und gibt den Fokus an das Element zurück, das sie geöffnet hat - ohne das
+   verliert eine Tastaturnutzerin ihre Stelle im Diagramm. */
+function tafelSchliessen(box){
+  if(!box.classList.contains("offen")) return;
+  box.classList.remove("offen");
+  box.inert=true;
+  document.removeEventListener("click",tafelAussenKlick);
+  /* opener ist meist das Element selbst - aber zeichneA() ersetzt bei jeder Auswahl das gesamte
+     SVG, das ursprünglich angeklickte Element existiert beim Schließen also nicht mehr. Dafür darf
+     opener auch eine Funktion sein, die das aktuelle Gegenstück im neu gezeichneten Diagramm sucht. */
+  const ziel=typeof box.opener==="function"?box.opener():box.opener;
+  if(ziel && document.contains(ziel)) ziel.focus();
+  box.opener=null;
+}
+function tafelAussenKlick(e){
+  /* composedPath() statt e.target/contains(): ein Klick auf einen Rundgang- oder Bezug-Knopf
+     lässt tafelA()/tafelB() den Inhalt noch während desselben Klicks neu aufbauen - das
+     ursprüngliche Zielelement hängt dann nicht mehr im Dokument, obwohl der Klick eindeutig
+     innerhalb der Leiste stattfand. composedPath() bildet den Pfad zum Zeitpunkt des Klicks ab
+     und bleibt davon unberührt. */
+  const pfad=e.composedPath();
+  $$(".tafel.offen").forEach(box=>{ if(!pfad.includes(box)) tafelSchliessen(box); });
+}
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape") $$(".tafel.offen").forEach(tafelSchliessen);
+});
+$$(".tafel-schliessen").forEach(b=>b.addEventListener("click",()=>tafelSchliessen(b.closest(".tafel"))));
 
 /* ═══════════════ Reiter ═══════════════ */
 function reiter(id){
@@ -662,14 +716,17 @@ function zeichneA(){
     const s=el("text",{class:"s",x:16,y:41}); s.textContent=d.unter; g.appendChild(s);
     if(d.unsicher){const u=el("text",{x:BW-12,y:20,"text-anchor":"end",class:"kard",
       fill:"var(--grau2)"}); u.textContent="?"; g.appendChild(u);}
-    g.addEventListener("click",()=>{selA=selA===id?null:id;zeichneA();tafelA();});
+    /* g wird von zeichneA() bei jeder Auswahl neu gebaut - als opener taugt darum nicht g selbst,
+       sondern eine Funktion, die das Gegenstück im gerade neu gezeichneten Diagramm nachschlägt. */
+    const findeKnoten=()=>document.querySelector(`#er g.tb[aria-label="Tabelle ${id}"]`);
+    g.addEventListener("click",()=>{selA=selA===id?null:id;tafelAusloeser=findeKnoten;zeichneA();tafelA();});
     g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){
-      e.preventDefault();selA=selA===id?null:id;zeichneA();tafelA();}});
+      e.preventDefault();selA=selA===id?null:id;tafelAusloeser=findeKnoten;zeichneA();tafelA();}});
     svg.appendChild(g);
   });
 }
 function tafelA(){
-  const box=$("#tafelA");
+  const box=$("#tafelA-inhalt");
   let vor="";
   if(tour>=0){
     const [,titel,text]=TOUR[tour];
@@ -683,7 +740,7 @@ function tafelA(){
       welche Spalten sie hat, wie eine echte Zeile aussieht und wie man sie abfragt.</p>
       <p class="leer">Das Fragezeichen heißt: Diese Tabelle ist aus den Sichten erschlossen,
       ihr genauer Aufbau ist nicht belegt.</p>`;
-    tourDraht(); return;
+    tourDraht(); tafelSchliessen($("#tafelA")); return;
   }
   const d=T[selA], G=GRUPPEN[d.g];
   const rows=d.sp.map(s=>{
@@ -711,7 +768,7 @@ function tafelA(){
     document.querySelector("#pane-a .buehne").scrollIntoView({behavior:"smooth",block:"center"});
   }));
   tourDraht();
-  if(tour<0) tafelZeigen(box);
+  if(tour<0) tafelOeffnen($("#tafelA"),tafelAusloeser);
 }
 function tourDraht(){
   const z=$("#tzur"), v=$("#tvor");
@@ -726,11 +783,12 @@ function tourSchritt(){
   $$("[data-grp]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.grp==="alle"));
   zeichneA(); tafelA();
   if(tour>=0){
-    /* Breit: Bühne mittig zeigen, die Tafel steht schon daneben.
-       Schmal: Tafel zeigen, denn dort steht der Text zum Schritt — die Bühne stünde sonst
-       allein im Bild, ohne die dazugehörige Erklärung. */
-    if(schmal()) tafelZeigen($("#tafelA"));
-    else document.querySelector("#pane-a .buehne").scrollIntoView({behavior:"smooth",block:"center"});
+    /* Die Tafel liegt jetzt immer als Leiste über dem Inhalt, nie mehr daneben oder darunter -
+       sie muss bei jedem Rundgangschritt aktiv geöffnet werden, sonst bleibt der erzählende Text
+       unsichtbar. Die Bühne zusätzlich mittig zu zeigen bleibt unabhängig von der Fensterbreite
+       sinnvoll. */
+    tafelOeffnen($("#tafelA"),tafelAusloeser);
+    document.querySelector("#pane-a .buehne").scrollIntoView({behavior:"smooth",block:"center"});
   }
 }
 $$("[data-grp]").forEach(b=>b.addEventListener("click",()=>{
@@ -739,7 +797,7 @@ $$("[data-grp]").forEach(b=>b.addEventListener("click",()=>{
   if(selA && grp!=="alle" && T[selA].g!==grp) selA=null;
   zeichneA(); tafelA();
 }));
-$("#tourAn").addEventListener("click",()=>{tour=tour<0?0:-1; if(tour<0) selA=null; tourSchritt();});
+$("#tourAn").addEventListener("click",()=>{tour=tour<0?0:-1; if(tour<0) selA=null; else tafelAusloeser=$("#tourAn"); tourSchritt();});
 
 /* ═══════════════ Reiter B: Mermaid ═══════════════ */
 let selB=null, attrModus="schluessel", mgrp="alle", mermaidGezeichnet=false;
@@ -806,7 +864,10 @@ function verdrahteEntitaeten(){
     if(!treffer) return;
     g.classList.add("entity-hit");
     g.dataset.tab=treffer;
-    g.addEventListener("click",()=>{selB=selB===treffer?null:treffer; markiere(); tafelB();});
+    /* Nicht in der Tab-Reihenfolge, aber programmatisch fokussierbar - so kann tafelSchliessen()
+       den Fokus beim Schließen der Leiste hierher zurückgeben. */
+    g.tabIndex=-1;
+    g.addEventListener("click",()=>{selB=selB===treffer?null:treffer; tafelAusloeser=g; markiere(); tafelB();});
   });
   markiere();
 }
@@ -837,7 +898,7 @@ function ddl(k){
 }
 
 function tafelB(){
-  const box=$("#tafelB");
+  const box=$("#tafelB-inhalt");
   if(!selB){
     box.innerHTML=`<p class="leer">Klicken Sie im ER-Diagramm auf eine Entität. Sie erhalten
       Datentypen, Constraints, ein CREATE-TABLE-Gerüst und die Sichten, die auf dieser Tabelle aufsetzen.</p>
@@ -851,7 +912,7 @@ function tafelB(){
       <p class="leer" style="font-size:13px">${Object.keys(T).length} Tabellen,
         ${Object.values(T).reduce((a,d)=>a+d.sp.length,0)} Spalten,
         ${B.length} Fremdschlüsselbeziehungen, 20 Sichten darüber.</p>`;
-    return;
+    tafelSchliessen($("#tafelB")); return;
   }
   const d=T[selB], G=GRUPPEN[d.g];
   const rows=d.sp.map(s=>{
@@ -884,7 +945,7 @@ function tafelB(){
       abgeleitet; Typen und Constraints sind plausibel, aber nicht aus dem Katalog gelesen.</div>`:""}`;
   box.querySelectorAll("[data-zub]").forEach(b=>b.addEventListener("click",()=>{
     selB=b.dataset.zub; markiere(); tafelB();}));
-  tafelZeigen(box);
+  tafelOeffnen($("#tafelB"),tafelAusloeser);
 }
 
 $$("[data-attr]").forEach(b=>b.addEventListener("click",()=>{
