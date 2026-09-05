@@ -112,16 +112,22 @@ comment on function velocity.fn_luftlinie_km(numeric, numeric, numeric, numeric)
 --  leitung+demo / leitung+disposition), und eine Sicht auf eine Sicht
 --  mit engerer Schranke haette die engere Schranke geerbt.
 --
---  Diese Sicht traegt GAR KEINE Schranke und wird an niemanden
---  vergeben. Eine Sicht laeuft mit den Rechten ihres Eigentuemers
---  (postgres, bypassrls); die drei koennen sie deshalb lesen, ohne
---  etwas zu erben, und behalten ihre eigene Schranke dort, wo sie
---  hingehoert - in ihrer eigenen where-Bedingung.
+--  Diese Sicht traegt GAR KEINE Rollenschranke. Der Zugriff wird nicht
+--  als grant in diesem Block geregelt, sondern folgt der Standardprivileg-
+--  berechtigung fuer die Rolle studi (db/betrieb/studizugang_lesend.sql).
+--  studi erhaelt das Leserecht automatisch, weil:
+--    • studi liest heute schon v_wawi_fahrt_km und velocity.ausleihe direkt,
+--    • studi ist ein Postgres-Zugang auf Port 5433 fuer Studierende zur
+--      Datenbankforschung; ueber PostgREST ist die Rolle nicht erreichbar,
+--    • Datenschutz ist gelockert - alle Daten sind erfunden, und
+--    • der Betreiber hat ausdruecklich gewaehlt, den Studierenden nichts zu
+--      sperren. Der Schutz, auf den es ankommt, bleibt: s.u.
+--  Die Rollen anon und authenticated erhalten kein Recht.
 --
---  KEIN GRANT AN authenticated. Die Zeilen fuehren ausleihe_id,
---  kunde_id und startzeit je Einzelfahrt, also ein Bewegungsprofil -
---  dieselbe Einstufung wie v_wawi_fahrt_km. Gelesen wird sie
---  ausschliesslich mittelbar, ueber die Sichten darueber.
+--  Schutz der Anwendung: KEIN GRANT AN anon ODER authenticated. Die Zeilen
+--  fuehren ausleihe_id, kunde_id und startzeit je Einzelfahrt, also ein
+--  Bewegungsprofil - dieselbe Einstufung wie v_wawi_fahrt_km. Gelesen wird
+--  sie ausschliesslich mittelbar, ueber die Sichten darueber (mit eigener RLS).
 --
 --  co2_ersparnis_g IST BEWUSST UNGERUNDET. v_wawi_km_co2 rundet die
 --  Monatssumme auf zwei Stellen. Wuerde hier schon je Fahrt gerundet,
@@ -189,9 +195,9 @@ select a.ausleihe_id,
 comment on view velocity.v_fahrt_kennzahl is
   'Eine Zeile je abgeschlossener Fahrt mit Kilometern, Schätzverfahren, CO2-Ersparnis '
   'in Gramm (ungerundet) und Entgeltsumme. Einzige Stelle im Schema, an der die '
-  'Drei-Fall-Herleitung der Strecke steht. Trägt KEINE Rollenschranke und wird an '
-  'niemanden vergeben - sie führt ein Bewegungsprofil und wird ausschließlich mittelbar '
-  'gelesen, über die Sichten darüber.';
+  'Drei-Fall-Herleitung der Strecke steht. Trägt KEINE Rollenschranke. Das Leserecht für studi '
+  'kommt aus der Standardprivilegberechtigung, nicht aus grant in dieser Datei; anon und authenticated '
+  'haben kein Recht. Sie wird ausschließlich mittelbar gelesen, über die Sichten darüber.';
 comment on column velocity.v_fahrt_kennzahl.ausleihe_id is
   'Schlüssel der Fahrt, Verweis auf velocity.ausleihe.';
 comment on column velocity.v_fahrt_kennzahl.kunde_id is
@@ -222,9 +228,8 @@ comment on column velocity.v_fahrt_kennzahl.co2_ersparnis_g is
 comment on column velocity.v_fahrt_kennzahl.betrag_brutto is
   'Summe der Entgeltpositionen dieser Fahrt, 0 ohne vorhandene Positionen.';
 
--- Kein grant. Die Zeile steht hier als Absicht, nicht als Versehen:
--- die Vorgabe aus 0011_sicherheit.sql entzieht PUBLIC ohnehin alles,
--- und t0018 prueft, dass hier nie ein grant nachgetragen wird.
+-- Schutz der Anwendung: Kein grant an anon, authenticated. Diese revoke-Zeile
+-- prueft die Absicht: authenticated soll nie nachtraeglich erhalten.
 revoke all on velocity.v_fahrt_kennzahl from public, anon, authenticated;
 
 -- ---- Flotte ----------------------------------------------------------
