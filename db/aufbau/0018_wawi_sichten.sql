@@ -136,8 +136,17 @@ select f.fahrrad_id,
        -- gelten je TYP, nicht je Modellzeile, weil auch der Tarif am Typ
        -- haengt und nicht an dem Hersteller, der ihn gerade fertigt.
        mo.baujahr,
-       t.gewicht_kg, t.gangzahl, t.rahmenhoehe_cm,
-       t.akkukapazitaet_wh, t.reichweite_km
+       -- gewicht_kg kommt aus fahrrad und nicht mehr aus fahrradtyp: Es
+       -- haengt am Exemplar, siehe den Ausstattungsabschnitt am Ende von
+       -- 0003_bereich_b_netz_und_flotte.sql. Name, Stelle und Typ der
+       -- Spalte bleiben, deshalb traegt CREATE OR REPLACE den Wechsel.
+       -- Die Gangzahl folgt weiter der Bauart und bleibt am Typ.
+       f.gewicht_kg, t.gangzahl, t.rahmenhoehe_cm,
+       t.akkukapazitaet_wh, t.reichweite_km,
+       -- Die uebrige Ausstattung, hinten angehaengt - CREATE OR REPLACE
+       -- darf Spalten anfuegen, aber keine verschieben.
+       f.farbe, f.rahmenform, f.schaltung, f.bremsen, f.beleuchtung,
+       f.antrieb, f.motortyp, f.reifengroesse_zoll, f.schlossnummer
   from velocity.fahrrad f
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
@@ -152,6 +161,17 @@ select f.fahrrad_id,
     -- Kopfkommentar fuer die Begruendung. Kein Widerspruch zu GR16/GR17:
     -- diese Sicht traegt keine Personendaten, nur Flottendaten.
     or velocity.hat_rolle('demo');
+
+comment on column velocity.v_wawi_flotte.gewicht_kg is 'Gewogenes Gewicht dieses Rades.';
+comment on column velocity.v_wawi_flotte.farbe is 'Lackierung dieses Rades.';
+comment on column velocity.v_wawi_flotte.rahmenform is 'Diamant oder Tiefeinsteiger.';
+comment on column velocity.v_wawi_flotte.schaltung is 'Bauart der Schaltung.';
+comment on column velocity.v_wawi_flotte.bremsen is 'Bauart der Bremsanlage.';
+comment on column velocity.v_wawi_flotte.beleuchtung is 'Nabendynamo, Akkulicht oder keine.';
+comment on column velocity.v_wawi_flotte.antrieb is 'Kette oder Riemen.';
+comment on column velocity.v_wawi_flotte.motortyp is 'Fabrikat des Motors, NULL ohne Elektroantrieb.';
+comment on column velocity.v_wawi_flotte.reifengroesse_zoll is 'Laufradgröße in Zoll.';
+comment on column velocity.v_wawi_flotte.schlossnummer is 'Nummer des Rahmenschlosses.';
 
 comment on view velocity.v_wawi_flotte is
   'Arbeitssicht der Flotte für Disposition und Werkstatt: ein Rad je Zeile mit '
@@ -1015,7 +1035,13 @@ comment on column velocity.v_wawi_stationsauslastung.fuellstand is
 -- den Auswertungen abgeleitet, nicht aus den Eingaben. Eine Maske
 -- braucht mehr als eine Liste - sie braucht auch das, was in ihre
 -- Auswahlfelder gehoert.
-create or replace view velocity.v_wawi_modell as
+-- drop statt CREATE OR REPLACE: Hier ENTFAELLT gewicht_kg, und Spalten
+-- entfernen kann ein REPLACE nicht. Ein Modell HAT kein Gewicht mehr -
+-- ein Durchschnitt seiner Raeder saehe aus wie eine Stammdatenangabe und
+-- waere doch eine Auswertung. Das Recht kommt aus dem grant-Block am
+-- Ende von 0019_wawi_logik.sql, der nach dieser Datei laeuft.
+drop view if exists velocity.v_wawi_modell;
+create view velocity.v_wawi_modell as
 select mo.modell_id,
        h.name                as hersteller,
        mo.modellbezeichnung,
@@ -1036,7 +1062,7 @@ select mo.modell_id,
        -- inzwischen mehr als Namen. baujahr bleibt je Modellzeile
        -- (Hersteller), die fuenf technischen Werte kommen seit der
        -- Produktkorrektur aus fahrradtyp - siehe deren Spaltenkommentare.
-       mo.baujahr, t.gewicht_kg, t.gangzahl, t.rahmenhoehe_cm,
+       mo.baujahr, t.gangzahl, t.rahmenhoehe_cm,
        t.akkukapazitaet_wh, t.reichweite_km
   from velocity.fahrradmodell mo
   join velocity.hersteller    h on h.hersteller_id = mo.hersteller_id
@@ -1070,8 +1096,6 @@ comment on column velocity.v_wawi_modell.zuladung_kg is
   'keine Zuladungsgrenze führt.';
 comment on column velocity.v_wawi_modell.baujahr is
   'Baujahr laut Stammdaten - das Jahr, seit dem der Hersteller dieser Modellzeile den Typ beliefert.';
-comment on column velocity.v_wawi_modell.gewicht_kg is
-  'Leergewicht des Fahrradtyps laut Stammdaten - gilt für jedes Modell dieses Typs gleich, unabhängig vom Hersteller.';
 comment on column velocity.v_wawi_modell.gangzahl is
   'Zahl der Gänge des Fahrradtyps laut Stammdaten - gilt für jedes Modell dieses Typs gleich, unabhängig vom Hersteller.';
 comment on column velocity.v_wawi_modell.rahmenhoehe_cm is
@@ -1099,6 +1123,12 @@ alter table velocity.fahrradmodell drop column if exists gangzahl;
 alter table velocity.fahrradmodell drop column if exists rahmenhoehe_cm;
 alter table velocity.fahrradmodell drop column if exists akkukapazitaet_wh;
 alter table velocity.fahrradmodell drop column if exists reichweite_km;
+
+-- Aus demselben Grund und an derselben Stelle: gewicht_kg ist seit der
+-- Ausstattungserweiterung eine Spalte von fahrrad, nicht von fahrradtyp.
+-- Beide Sichten oben lesen sie nicht mehr von dort, also ist die
+-- Abhaengigkeit weg und die Spalte kann fallen.
+alter table velocity.fahrradtyp drop column if exists gewicht_kg;
 
 -- =====================================================================
 -- Drill-Down-Aufgabe: v_wawi_fahrten_je_tag - Tagesaggregation für die

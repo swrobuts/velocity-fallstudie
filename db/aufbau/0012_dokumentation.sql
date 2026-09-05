@@ -110,16 +110,16 @@ comment on column velocity.fahrradtyp.bezeichnung  is 'Name auf der Website, etw
 comment on column velocity.fahrradtyp.beschreibung is 'Fließtext für die Tarifkarte.';
 comment on column velocity.fahrradtyp.hat_elektro  is 'Wahr bei Pedelec und E-Lastenrad. Steuert die Akkuanzeige auf der Karte.';
 comment on column velocity.fahrradtyp.zuladung_kg  is 'Zulässige Zuladung in Kilogramm.';
-comment on column velocity.fahrradtyp.gewicht_kg is
-  'Leergewicht in Kilogramm, für jedes Rad dieses Typs gleich - Hersteller fertigen zu dieser Vorgabe, sie handeln sie nicht aus. Ursprünglich an fahrradmodell, auf Kundeneinwand hierher verschoben: unterschiedliche Werte je Modell hätten unterschiedliche Preise verlangt, aber der Tarif hängt am Typ, nicht am Modell.';
+-- Das Gewicht haengt seit der Ausstattungserweiterung am einzelnen Rad;
+-- sein Kommentar steht am Ende von 0003_bereich_b_netz_und_flotte.sql.
 comment on column velocity.fahrradtyp.gangzahl is
-  'Zahl der Gänge der Schaltung, für jedes Rad dieses Typs gleich. Siehe gewicht_kg zur Begründung, warum das hier steht und nicht an fahrradmodell.';
+  'Zahl der Gänge der Schaltung, für jedes Rad dieses Typs gleich. Steht am Typ und nicht an fahrradmodell, weil der Tarif am Typ hängt.';
 comment on column velocity.fahrradtyp.rahmenhoehe_cm is
-  'Rahmenhöhe in Zentimetern, für jedes Rad dieses Typs dieselbe eine Größe - kein L/XL-Sortiment: ein Leihrad hat eine Rahmengröße, die individuelle Anpassung an die fahrende Person läuft über den Sattel-Schnellspanner, nicht über eine Modellwahl. Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell.';
+  'Rahmenhöhe in Zentimetern, für jedes Rad dieses Typs dieselbe eine Größe - kein L/XL-Sortiment: ein Leihrad hat eine Rahmengröße, die individuelle Anpassung an die fahrende Person läuft über den Sattel-Schnellspanner, nicht über eine Modellwahl. Steht am Typ und nicht an fahrradmodell, weil der Tarif am Typ hängt.';
 comment on column velocity.fahrradtyp.akkukapazitaet_wh is
-  'Kapazität des Akkus in Wattstunden, für jedes Rad dieses Typs gleich. NULL bei einem Typ ohne Elektroantrieb (hat_elektro = falsch). Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell.';
+  'Kapazität des Akkus in Wattstunden, für jedes Rad dieses Typs gleich. NULL bei einem Typ ohne Elektroantrieb (hat_elektro = falsch). Steht am Typ und nicht an fahrradmodell, weil der Tarif am Typ hängt.';
 comment on column velocity.fahrradtyp.reichweite_km is
-  'Herstellerangabe zur Reichweite je Akkuladung in Kilometern, für jedes Rad dieses Typs gleich - beim E-Bike Sport identisch mit der auf der Tarifkarte beworbenen Reichweite bis 50 km (siehe fahrradtyp.beschreibung). NULL bei einem Typ ohne Elektroantrieb. Siehe gewicht_kg zur Begründung des Spaltenumzugs von fahrradmodell.';
+  'Herstellerangabe zur Reichweite je Akkuladung in Kilometern, für jedes Rad dieses Typs gleich - beim E-Bike Sport identisch mit der auf der Tarifkarte beworbenen Reichweite bis 50 km (siehe fahrradtyp.beschreibung). NULL bei einem Typ ohne Elektroantrieb. Steht am Typ und nicht an fahrradmodell, weil der Tarif am Typ hängt.';
 
 comment on table velocity.fahrradtyp_merkmal is
   'Werbliche Einzelmerkmale eines Fahrradtyps für die Tarifkarte der Website. Früher fest in index.html kodiert.';

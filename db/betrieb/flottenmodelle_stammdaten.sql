@@ -117,18 +117,23 @@ begin;
 -- mit beiden Rahmenhoehen der frueheren Porteur-Modelle - hier keine neue
 -- Zahl, sondern die, auf die sich Nordwind Rad und Loire Manufaktur beim
 -- Cargo-Typ ohnehin schon trafen.
+--
+-- gewicht_kg steht hier seit 0024_radausstattung.sql NICHT mehr: Das
+-- Gewicht haengt seither am einzelnen Rad, nicht am Typ. Die drei
+-- Basiswerte 19,5 / 24,0 / 40,0 kg leben als Ausgangspunkt der
+-- Vorbelegung in 0024 weiter, mit Verweis hierher.
 update velocity.fahrradtyp
-   set gewicht_kg = 19.5, gangzahl = 8, rahmenhoehe_cm = 46,
+   set gangzahl = 8, rahmenhoehe_cm = 46,
        akkukapazitaet_wh = null, reichweite_km = null
  where typ_code = 'CITY';
 
 update velocity.fahrradtyp
-   set gewicht_kg = 24.0, gangzahl = 7, rahmenhoehe_cm = 48,
+   set gangzahl = 7, rahmenhoehe_cm = 48,
        akkukapazitaet_wh = 500, reichweite_km = 50
  where typ_code = 'EBIKE';
 
 update velocity.fahrradtyp
-   set gewicht_kg = 40.0, gangzahl = 8, rahmenhoehe_cm = 50,
+   set gangzahl = 8, rahmenhoehe_cm = 50,
        akkukapazitaet_wh = 600, reichweite_km = 45
  where typ_code = 'CARGO';
 

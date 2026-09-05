@@ -30,7 +30,8 @@ begin
   -- der Funktion, nicht in der Oberflaeche: sonst genuegte ein
   -- HTTP-Aufruf an PostgREST, um sie zu umgehen.
   return next throws_ok(
-    format($q$ select velocity.api_rad_anlegen('RN-L-1', %s, %s) $q$, v_modell, v_station),
+    format($q$ select velocity.api_rad_anlegen('RN-L-1', %s, %s, 19.5, 'diamant', 'kette', 'felge', 'akku', 'kette') $q$,
+           v_modell, v_station),
     '42501', null,
     'Ohne Rolle disposition kein neues Rad');
   perform set_config('request.jwt.claims', '', true);
@@ -44,12 +45,13 @@ begin
   select modell_id into v_modell from velocity.fahrradmodell order by modell_id limit 1;
   select station_id into v_station from velocity.station order by station_id limit 1;
   perform velocity_test.fixture_rollen('rad', array['disposition']);
-  v_f := velocity.api_rad_anlegen('RN-L-2', v_modell, v_station);
+  v_f := velocity.api_rad_anlegen('RN-L-2', v_modell, v_station, 19.5, 'diamant', 'kette', 'felge', 'akku', 'kette');
 
   -- GR13: ohne Station geht es nicht. Ein Rad auf 'verfuegbar' ohne Ort
   -- laesst der Trigger trg_radposition_pruefen nicht zu.
   return next throws_ok(
-    format($q$ select velocity.api_rad_anlegen('RN-L-3', %s, null) $q$, v_modell),
+    format($q$ select velocity.api_rad_anlegen('RN-L-3', %s, null, 19.5, 'diamant', 'kette', 'felge', 'akku', 'kette') $q$,
+           v_modell),
     'P0001', 'Ein neues Rad braucht eine Station (GR13)',
     'Ein Rad ohne Station wird abgewiesen');
   return next ok(v_f is not null, 'Das Rad wird angelegt');
@@ -271,7 +273,8 @@ create or replace function velocity_test.fixture_stellplatz_ueberschreiten(
   p_rahmennummer text, p_modell_id bigint, p_station_id bigint
 ) returns void language plpgsql as $$
 begin
-  perform velocity.api_rad_anlegen(p_rahmennummer, p_modell_id, p_station_id);
+  perform velocity.api_rad_anlegen(p_rahmennummer, p_modell_id, p_station_id,
+                                   19.5, 'diamant', 'kette', 'felge', 'akku', 'kette');
   set constraints all immediate;
 end;
 $$;
@@ -300,7 +303,8 @@ begin
   -- Randvoll machen, ueber die echte Schnittstelle - nicht an ihr
   -- vorbei, sonst prueft der Test die api_-Schicht nicht mehr mit.
   for v_i in 1..v_frei loop
-    perform velocity.api_rad_anlegen('RN-STELL-' || v_i, v_modell, v_station);
+    perform velocity.api_rad_anlegen('RN-STELL-' || v_i, v_modell, v_station,
+                                     19.5, 'diamant', 'kette', 'felge', 'akku', 'kette');
   end loop;
 
   return next throws_ok(

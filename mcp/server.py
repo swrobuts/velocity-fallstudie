@@ -296,15 +296,39 @@ def _rpc(funktion: str, **argumente: Any) -> str:
 
 # ─────────────────────────────────────────────────────── Flotte
 @server.tool()
-def rad_anlegen(rahmennummer: str, modell_id: int, station_id: int) -> str:
+def rad_anlegen(rahmennummer: str, modell_id: int, station_id: int,
+                gewicht_kg: float, rahmenform: str, schaltung: str,
+                bremsen: str, beleuchtung: str, antrieb: str,
+                farbe: str = "rot", motortyp: str | None = None,
+                reifengroesse_zoll: float | None = None,
+                schlossnummer: str | None = None) -> str:
     """Legt ein neues Rad an und stellt es an eine Station.
 
-    Braucht die Rolle disposition oder leitung. Die modell_id steht in
-    v_wawi_modell, die station_id in v_wawi_station. Die Rahmennummer
-    muss frei sein.
+    Braucht die Rolle disposition. Die modell_id steht in v_wawi_modell,
+    die station_id in v_wawi_station. Die Rahmennummer muss frei sein.
+
+    Pflicht ist auch die Ausstattung — ein Rad ohne diese Angaben nimmt
+    die Datenbank nicht an:
+
+      gewicht_kg   das gewogene Gewicht DIESES Rades, nicht der Bauart
+      rahmenform   diamant | tiefeinsteiger
+      schaltung    nabe | kette | keine
+      bremsen      felge | scheibe | ruecktritt
+      beleuchtung  nabendynamo | akku | keine
+      antrieb      kette | riemen
+
+    Freiwillig: farbe (Vorgabe rot), motortyp — nur bei einem Typ mit
+    Elektroantrieb, sonst weist die Datenbank es ab —,
+    reifengroesse_zoll und schlossnummer, die je Rad eindeutig ist.
     """
     return _rpc("api_rad_anlegen", p_rahmennummer=rahmennummer,
-                p_modell_id=modell_id, p_station_id=station_id)
+                p_modell_id=modell_id, p_station_id=station_id,
+                p_gewicht_kg=gewicht_kg, p_rahmenform=rahmenform,
+                p_schaltung=schaltung, p_bremsen=bremsen,
+                p_beleuchtung=beleuchtung, p_antrieb=antrieb,
+                p_farbe=farbe, p_motortyp=motortyp,
+                p_reifengroesse_zoll=reifengroesse_zoll,
+                p_schlossnummer=schlossnummer)
 
 
 @server.tool()

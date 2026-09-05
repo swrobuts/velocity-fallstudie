@@ -124,15 +124,13 @@ select velocity.fn_audit_anhaengen('fahrradmodell');
 -- vormacht, ohne dass dafuer ein Trigger noetig war. Ueber alter table, aus
 -- demselben Grund wie bei station.hoehe_m: create table if not exists
 -- allein wuerde die Spalten in einer bestehenden Datenbank nie anlegen.
-alter table velocity.fahrradtyp add column if not exists gewicht_kg         numeric(4,1);
+-- gewicht_kg stand hier bis zur Ausstattungserweiterung. Es haengt
+-- seither am einzelnen Rad, weiter unten in dieser Datei - ein Rad
+-- wiegt, was es wiegt, und nicht was seine Bauart wiegen soll.
 alter table velocity.fahrradtyp add column if not exists gangzahl          integer;
 alter table velocity.fahrradtyp add column if not exists rahmenhoehe_cm    integer;
 alter table velocity.fahrradtyp add column if not exists akkukapazitaet_wh integer;
 alter table velocity.fahrradtyp add column if not exists reichweite_km     integer;
-
-alter table velocity.fahrradtyp drop constraint if exists fahrradtyp_gewicht_chk;
-alter table velocity.fahrradtyp add  constraint fahrradtyp_gewicht_chk
-  check (gewicht_kg is null or gewicht_kg > 0);
 
 alter table velocity.fahrradtyp drop constraint if exists fahrradtyp_gangzahl_chk;
 alter table velocity.fahrradtyp add  constraint fahrradtyp_gangzahl_chk
@@ -500,3 +498,141 @@ $$;
 comment on function velocity.fn_im_geschaeftsgebiet(numeric, numeric) is
   'Wahr, wenn der Punkt in einem aktiven Geschäftsgebiet liegt. Nutzt den '
   'eingebauten Operator @> auf polygon - ohne PostGIS.';
+
+
+-- =====================================================================
+-- Ausstattung des einzelnen Rades
+--
+-- Bis hierher hatte ein Rad sechs fachliche Spalten und sonst nichts
+-- Eigenes; alles Technische hing am TYP. Raeder unterscheiden sich aber
+-- im Gewicht, werden umgeruestet, bekommen ein anderes Schloss.
+--
+-- Warum die Spalten HIER stehen und nicht in der Datei, die sie
+-- eingefuehrt hat: 0018_wawi_sichten.sql gibt sie in v_wawi_flotte
+-- heraus, und eine Sicht kann nur lesen, was zum Zeitpunkt ihrer Anlage
+-- schon existiert. Der erste Anlauf legte sie in 0024 an - beim
+-- vollstaendigen Kettenlauf scheiterte dann 0018 mit "cannot drop
+-- columns from view", weil es die Sicht mit seiner alten, kuerzeren
+-- Spaltenliste neu setzte. Die Reihenfolge der Kette ist kein Detail.
+--
+-- Die Begruendung der einzelnen Merkmale steht in
+-- db/aufbau/0024_radausstattung.sql, das die Vorbelegung und die
+-- Erfassung traegt.
+-- =====================================================================
+-- ---- Die Spalten -----------------------------------------------------
+-- Nullable bis auf farbe. NOT NULL waere hier falsch: In fahrrad fuegen
+-- auch die Ladelaeufe unter db/betrieb/ und die pgTAP-Vorrichtungen ein
+-- (velocity_test.fixture_rad und Verwandte), und die kennen diese
+-- Merkmale nicht. Die Pflicht gehoert an den Erfassungsweg, nicht an die
+-- Tabelle - api_rad_anlegen weiter unten setzt sie durch.
+alter table velocity.fahrrad
+  add column if not exists farbe              text not null default 'rot',
+  add column if not exists gewicht_kg         numeric(4,1),
+  add column if not exists rahmenform         velocity.rahmenform,
+  add column if not exists schaltung          velocity.schaltungsart,
+  add column if not exists bremsen            velocity.bremsart,
+  add column if not exists beleuchtung        velocity.beleuchtungsart,
+  add column if not exists antrieb            velocity.antriebsart,
+  add column if not exists motortyp           text,
+  add column if not exists reifengroesse_zoll numeric(3,1),
+  add column if not exists schlossnummer      text;
+
+comment on column velocity.fahrrad.farbe is
+  'Lackierung dieses Rades. Vorgabe rot - die gesamte Flotte ist rot, die Spalte unterscheidet '
+  'heute also nichts. Sie steht hier für den Tag, an dem das nicht mehr gilt.';
+comment on column velocity.fahrrad.gewicht_kg is
+  'Gewogenes Gewicht DIESES Rades in Kilogramm. Stand bis 0024 als Typwert an fahrradtyp und '
+  'galt damit für jedes Rad der Bauart gleich; Anbauteile, Akku und Verschleiß machen den '
+  'Unterschied. Siehe Kopfkommentar.';
+comment on column velocity.fahrrad.rahmenform is
+  'Diamant oder Tiefeinsteiger. Entscheidet, wer aufsteigen kann - eine Angabe für die '
+  'Ausleihe, nicht für die Werkstatt.';
+comment on column velocity.fahrrad.schaltung is
+  'Bauart der Schaltung: Naben-, Kettenschaltung oder keine. Die Zahl der Gänge steht weiterhin '
+  'am Typ (fahrradtyp.gangzahl) - sie folgt der Bauart, nicht dem Exemplar.';
+comment on column velocity.fahrrad.bremsen is
+  'Bauart der Bremsanlage: Felge, Scheibe oder Rücktritt.';
+comment on column velocity.fahrrad.beleuchtung is
+  'Nabendynamo, Akkulicht oder keine. Bei Rädern ohne Beleuchtung ist der Nachtbetrieb eine '
+  'Frage an die Disposition, keine an die Werkstatt.';
+comment on column velocity.fahrrad.antrieb is
+  'Kette oder Riemen. Bestimmt Wartungsintervall und Ersatzteil.';
+comment on column velocity.fahrrad.motortyp is
+  'Fabrikat des Antriebsmotors, etwa „Bosch Performance CX". NULL bei einem Rad ohne '
+  'Elektroantrieb - das erzwingt der Trigger trg_fahrrad_motor_passt_zum_typ.';
+comment on column velocity.fahrrad.reifengroesse_zoll is
+  'Laufradgröße in Zoll, für die Ersatzteilhaltung.';
+comment on column velocity.fahrrad.schlossnummer is
+  'Nummer des fest verbauten Rahmenschlosses. Eindeutig, sofern vergeben - ein Schloss hängt '
+  'an genau einem Rad.';
+
+-- ---- Regeln ----------------------------------------------------------
+alter table velocity.fahrrad drop constraint if exists fahrrad_gewicht_chk;
+alter table velocity.fahrrad add  constraint fahrrad_gewicht_chk
+  check (gewicht_kg is null or gewicht_kg > 0);
+
+alter table velocity.fahrrad drop constraint if exists fahrrad_reifen_chk;
+alter table velocity.fahrrad add  constraint fahrrad_reifen_chk
+  check (reifengroesse_zoll is null or reifengroesse_zoll between 12 and 32);
+
+-- Leerstring ist kein Wert. Ohne diese Regel liesse sich die Pflicht in
+-- api_rad_anlegen mit einem Leerzeichen umgehen.
+alter table velocity.fahrrad drop constraint if exists fahrrad_farbe_chk;
+alter table velocity.fahrrad add  constraint fahrrad_farbe_chk
+  check (btrim(farbe) <> '');
+
+alter table velocity.fahrrad drop constraint if exists fahrrad_motortyp_chk;
+alter table velocity.fahrrad add  constraint fahrrad_motortyp_chk
+  check (motortyp is null or btrim(motortyp) <> '');
+
+-- Ein Schloss haengt an genau einem Rad. Partiell, weil NULL erlaubt
+-- bleibt und mehrere Raeder ohne Schloss kein Widerspruch sind.
+drop index if exists velocity.fahrrad_schlossnummer_uk;
+create unique index fahrrad_schlossnummer_uk
+    on velocity.fahrrad (schlossnummer)
+ where schlossnummer is not null;
+
+-- ---- Der Motor muss zum Typ passen -----------------------------------
+-- Das ist eine Bedingung ueber zwei Tabellen hinweg, und die kann ein
+-- CHECK nicht pruefen: Er sieht nur die eigene Zeile. Ein Rad, dessen Typ
+-- hat_elektro = falsch traegt, darf kein Motorfabrikat fuehren.
+--
+-- Grenze, die dieser Trigger NICHT abdeckt: Wird fahrradtyp.hat_elektro
+-- nachtraeglich auf falsch gesetzt, bleiben bereits eingetragene
+-- Motortypen stehen. Dafuer braeuchte es einen zweiten Trigger auf
+-- fahrradtyp. Angesichts dessen, dass sich der Elektroantrieb eines
+-- Produkttyps nicht aendert, waere das mehr Mechanik als Nutzen.
+create or replace function velocity.fn_fahrrad_motor_passt_zum_typ()
+returns trigger
+language plpgsql
+as $$
+declare v_elektro boolean;
+begin
+  if new.motortyp is null then
+    return new;
+  end if;
+  select t.hat_elektro into v_elektro
+    from velocity.fahrradmodell mo
+    join velocity.fahrradtyp    t on t.typ_id = mo.typ_id
+   where mo.modell_id = new.modell_id;
+  if not coalesce(v_elektro, false) then
+    raise exception
+      'Rad % führt den Motortyp %, sein Typ hat aber keinen Elektroantrieb',
+      coalesce(new.rahmennummer, '(neu)'), new.motortyp
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+-- Erst der Entzug: PostgreSQL gibt EXECUTE auf eine neue Funktion an
+-- PUBLIC. Ohne diese Zeile waere die Triggerfunktion fuer anon
+-- ausfuehrbar - gefunden von test_s_keine_oeffentliche_funktion, derselben
+-- Zusicherung, die den gleichen Fehler schon in 0021 aufgedeckt hat.
+revoke all on function velocity.fn_fahrrad_motor_passt_zum_typ()
+  from public, anon, authenticated;
+
+drop trigger if exists trg_fahrrad_motor_passt_zum_typ on velocity.fahrrad;
+create trigger trg_fahrrad_motor_passt_zum_typ
+  before insert or update of motortyp, modell_id on velocity.fahrrad
+  for each row execute function velocity.fn_fahrrad_motor_passt_zum_typ();

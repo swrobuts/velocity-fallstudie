@@ -548,7 +548,7 @@ def baue() -> Presentation:
             "Was kostet Annas Fahrt genau — und warum?",
             "Jetzt lösen wir die Frage vom Anfang auf. Jeder Cent muss begründbar sein.")
 
-    s = folie(prs, "6 · Implementierung", "22 Aufbauschritte, jeder für sich lauffähig",
+    s = folie(prs, "6 · Implementierung", "23 Aufbauschritte, jeder für sich lauffähig",
               "Jede Datei ist idempotent: sie läuft zweimal hintereinander fehlerfrei. Das "
               "ist die Voraussetzung dafür, dass man einen Aufbau gefahrlos wiederholen kann.")
     schichtenstapel(s, [
@@ -606,7 +606,7 @@ def baue() -> Presentation:
           "  and a.attname not in",
           "      ('erstellt_am','geaendert_am');",
           "",
-          "338 Spalten im Aufbau, 264 beschrieben,",
+          "347 Spalten im Aufbau, 273 beschrieben,",
           "74 technische Audit-Spalten ausgenommen."], GRUEN_D),
         y=176, hoehe=240)
     notizen(s, "Der Trick ist der Test, nicht der Kommentar. Ohne ihn schreibt man die "

@@ -740,6 +740,26 @@ function radMaske(rad) {
 // (zeigeWerkzeugleiste in rahmen.js) - kein eigener Leisten-Baustein
 // mehr hier, siehe Kommentar dort.
 
+// Die Werte der Aufzaehlungstypen aus 0024_radausstattung.sql, in der
+// Reihenfolge, in der sie dort stehen. Von Hand gefuehrt und nicht aus
+// der Datenbank gelesen: Eine Sicht dafuer gibt es nicht, und eine
+// eigene anzulegen waere fuer sechs feste Listen zu viel Mechanik.
+// tools/wawi_check.py haelt sie gegen die Aufbaudatei.
+const AUSSTATTUNG = {
+    rahmenform:  ['diamant', 'tiefeinsteiger'],
+    schaltung:   ['nabe', 'kette', 'keine'],
+    bremsen:     ['felge', 'scheibe', 'ruecktritt'],
+    beleuchtung: ['nabendynamo', 'akku', 'keine'],
+    antrieb:     ['kette', 'riemen']
+};
+
+// Ein Maskenfeld auslesen. <select>.value und <input>.value verhalten
+// sich gleich, der Unterschied liegt nur im getrimmten Text.
+function feldWert(name) {
+    const feld = document.getElementById(`feld-maske-${name}`);
+    return feld ? feld.value.trim() : '';
+}
+
 async function radAnlegenMaske() {
     // Kennung des Bereichs-Vorgangs, der lief, als dieser Knopf gedrueckt
     // wurde - siehe laufenderVorgang() in rahmen.js fuer die Begruendung
@@ -797,7 +817,41 @@ async function radAnlegenMaske() {
                 wert: s.station_id,
                 text: `${s.name} (${t('misc.freeShort', { n: zahlFormat(s.frei) })})${s.in_betrieb ? '' : ' — ' + t('misc.decommissionedState')}`
             }))
-        }
+        },
+        // Ausstattung. Seit 0024_radausstattung.sql verlangt
+        // api_rad_anlegen sechs davon - Gewicht, Rahmenform, Schaltung,
+        // Bremsen, Beleuchtung, Antrieb -, und die Datenbank weist die
+        // Anlage sonst mit 22023 ab. Die Auswahllisten fuehren genau die
+        // Werte der Aufzaehlungstypen; uebersetzt wird nur die
+        // Beschriftung, gespeichert der ASCII-Bezeichner.
+        { name: 'gewicht_kg', titel: t('field.gewicht'), wert: '' },
+        {
+            name: 'rahmenform', titel: t('field.rahmenform'), wert: 'diamant',
+            optionen: AUSSTATTUNG.rahmenform.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
+        },
+        {
+            name: 'schaltung', titel: t('field.schaltung'), wert: 'kette',
+            optionen: AUSSTATTUNG.schaltung.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
+        },
+        {
+            name: 'bremsen', titel: t('field.bremsen'), wert: 'felge',
+            optionen: AUSSTATTUNG.bremsen.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
+        },
+        {
+            name: 'beleuchtung', titel: t('field.beleuchtung'), wert: 'nabendynamo',
+            optionen: AUSSTATTUNG.beleuchtung.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
+        },
+        {
+            name: 'antrieb', titel: t('field.antrieb'), wert: 'kette',
+            optionen: AUSSTATTUNG.antrieb.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
+        },
+        // Freiwillig. Die Farbe ist vorbelegt, weil die ganze Flotte rot
+        // ist - das Feld steht trotzdem da, damit es nicht erst gesucht
+        // werden muss, wenn das eines Tages nicht mehr stimmt.
+        { name: 'farbe', titel: t('field.farbe'), wert: 'rot' },
+        { name: 'motortyp', titel: t('field.motortyp'), wert: '' },
+        { name: 'reifengroesse_zoll', titel: t('field.reifengroesse'), wert: '' },
+        { name: 'schlossnummer', titel: t('field.schlossnummer'), wert: '' }
     ], [
         {
             titel: t('button.create'),
@@ -818,10 +872,35 @@ async function radAnlegenMaske() {
                 const modellId = Number(document.getElementById('feld-maske-modell_id').value);
                 const stationId = Number(document.getElementById('feld-maske-station_id').value);
 
+                // Das Gewicht ist Pflicht und muss eine Zahl sein. Die
+                // Datenbank faengt beides ab (22023 bei NULL,
+                // fahrrad_gewicht_chk bei <= 0) - hier steht die Meldung
+                // nur frueher und in der Sprache der Oberflaeche.
+                const gewicht = Number(feldWert('gewicht_kg').replace(',', '.'));
+                if (!Number.isFinite(gewicht) || gewicht <= 0) {
+                    meldeFehler(t('msg.gewichtFehlt'));
+                    return;
+                }
+                const reifen = Number(feldWert('reifengroesse_zoll').replace(',', '.'));
+
                 await rufeAuf('api_rad_anlegen', {
                     p_rahmennummer: rahmennummer,
                     p_modell_id: modellId,
-                    p_station_id: stationId
+                    p_station_id: stationId,
+                    p_gewicht_kg: gewicht,
+                    p_rahmenform: feldWert('rahmenform'),
+                    p_schaltung: feldWert('schaltung'),
+                    p_bremsen: feldWert('bremsen'),
+                    p_beleuchtung: feldWert('beleuchtung'),
+                    p_antrieb: feldWert('antrieb'),
+                    p_farbe: feldWert('farbe') || 'rot',
+                    // Leere Felder als null, nicht als Leerstring: die
+                    // Funktion macht daraus zwar selbst NULL, aber ein
+                    // Leerstring im Aufruf sagt "ausdruecklich leer" und
+                    // nicht "nicht angegeben".
+                    p_motortyp: feldWert('motortyp') || null,
+                    p_reifengroesse_zoll: Number.isFinite(reifen) && reifen > 0 ? reifen : null,
+                    p_schlossnummer: feldWert('schlossnummer') || null
                 });
                 const quittungstext = t('msg.bikeCreated', { rahmennummer });
                 melde(quittungstext, 'gut');

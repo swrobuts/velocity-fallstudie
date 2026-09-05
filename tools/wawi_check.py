@@ -441,6 +441,44 @@ for baustein in BAUSTEINE:
            f'{baustein}() traegt ueberall "{KENNUNG}" als erstes Argument'
            + ('' if not falsch else f' — gefunden: {", ".join(sorted(set(falsch)))}'))
 
+# ---------------------------------------------------------------------
+# Die Ausstattungslisten der Anlagemaske gegen die Aufzaehlungstypen
+#
+# wawi/flotte.js fuehrt in AUSSTATTUNG fuenf Listen von Hand - die Werte,
+# die in den Auswahlfeldern der Radanlage stehen. Sie muessen genau die
+# Labels der Aufzaehlungstypen aus db/aufbau/0001_schema_und_konventionen.sql
+# sein: Ein Wert zu viel laeuft beim Speichern in einen Datenbankfehler,
+# einer zu wenig ist unerreichbar, ohne dass es auffaellt.
+#
+# Geprueft wird gegen die SQL-Quelle und nicht gegen den Systemkatalog -
+# dieser Pruefer kommt ohne Datenbankverbindung aus und laeuft deshalb
+# auch dort, wo keine .env liegt.
+AUFZAEHLUNG_QUELLE = WURZEL / 'db' / 'aufbau' / '0001_schema_und_konventionen.sql'
+FELD_ZU_TYP = {
+    'rahmenform':  'rahmenform',
+    'schaltung':   'schaltungsart',
+    'bremsen':     'bremsart',
+    'beleuchtung': 'beleuchtungsart',
+    'antrieb':     'antriebsart',
+}
+
+flotte_js = ohne_js_kommentare((WAWI / 'flotte.js').read_text(encoding='utf-8'))
+sql_text = AUFZAEHLUNG_QUELLE.read_text(encoding='utf-8')
+
+for feld, typname in FELD_ZU_TYP.items():
+    m_js = re.search(rf"{feld}:\s*\[([^\]]*)\]", flotte_js)
+    m_sql = re.search(rf"\('{typname}',\s*array\[([^\]]*)\]\)", sql_text)
+    if m_js is None or m_sql is None:
+        pruefe('AUSSTATTUNG', False,
+               f'{feld}: Liste in flotte.js und Aufzaehlungstyp {typname} sind beide auffindbar '
+               f'(js={m_js is not None}, sql={m_sql is not None})')
+        continue
+    aus_js = re.findall(r"'([a-z_]+)'", m_js.group(1))
+    aus_sql = re.findall(r"'([a-z_]+)'", m_sql.group(1))
+    pruefe('AUSSTATTUNG', aus_js == aus_sql,
+           f'{feld}: die Auswahlliste nennt genau die Werte von velocity.{typname}'
+           + ('' if aus_js == aus_sql else f' — Maske {aus_js}, Datenbank {aus_sql}'))
+
 print('\nHandarbeit — vom Pruefer nicht entscheidbar:')
 print('  · Tab-Reihenfolge und Pfeiltasten in der Arbeitsliste wirklich durchspielen')
 print('  · Bildschirmleser auf der Anmeldemaske und in den Dialogen')

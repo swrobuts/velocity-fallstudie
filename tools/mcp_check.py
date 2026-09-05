@@ -105,14 +105,34 @@ def main() -> int:
         "select c.relname from pg_class c join pg_namespace n on n.oid=c.relnamespace "
         "where n.nspname='velocity' and c.relkind='v' and c.relname like 'v\\_wawi\\_%'"
     ).fetchall()}
-    db_funktionen = {
-        r[0]: set(r[1] or [])
-        for r in con.execute(
-            "select p.proname, p.proargnames from pg_proc p "
-            "join pg_namespace n on n.oid=p.pronamespace "
-            "where n.nspname='velocity' and p.proname like 'api\\_%' "
-            "and has_function_privilege('authenticated', p.oid, 'execute')"
-        ).fetchall()}
+    # Zweimal dieselbe Zeile, zwei verschiedene Fragen: welche Parameter
+    # es GIBT (fuer "der Server schickt etwas Unbekanntes") und welche
+    # PFLICHT sind (fuer "dem Server fehlt etwas"). pronargdefaults zaehlt
+    # die Parameter MIT Vorgabewert, und die stehen in PostgreSQL immer am
+    # Ende der Liste - der Rest davor ist Pflicht.
+    _roh = con.execute(
+        "select p.proname, p.proargnames, p.proargmodes, p.pronargdefaults "
+        "from pg_proc p join pg_namespace n on n.oid=p.pronamespace "
+        "where n.nspname='velocity' and p.proname like 'api\\_%' "
+        "and has_function_privilege('authenticated', p.oid, 'execute')"
+    ).fetchall()
+    db_funktionen = {r[0]: set(r[1] or []) for r in _roh}
+
+    def _pflicht(namen, modi, mit_vorgabe) -> set[str]:
+        """Eingabeparameter ohne Vorgabewert.
+
+        proargnames fuehrt AUCH die OUT-Parameter, also die Feldnamen des
+        Rueckgabesatzes - api_lehrbetrieb_vorfuehrbestand_auffrischen gibt
+        fuenf zurueck, und ohne diesen Filter meldete die Pruefung, der
+        Server schicke sie nicht. Er kann sie gar nicht schicken.
+        proargmodes ist NULL, solange alle Parameter Eingaben sind.
+        """
+        namen = list(namen or [])
+        ein = namen if modi is None else [
+            n for n, m in zip(namen, modi) if m in ("i", "b", "v")]
+        return set(ein[:len(ein) - (mit_vorgabe or 0)])
+
+    db_pflicht = {r[0]: _pflicht(r[1], r[2], r[3]) for r in _roh}
     con.close()
 
     funde: list[tuple[str, str]] = []
@@ -140,6 +160,15 @@ def main() -> int:
             funde.append((name, f"übergibt {', '.join(sorted(fremd))} — "
                                 f"die Funktion kennt nur "
                                 f"{', '.join(sorted(db_funktionen[name]))}"))
+        # Die Gegenrichtung. Sie fehlte bis zum 05.09.2026 und liess genau
+        # einen Fall durch: api_rad_anlegen bekam mit 0024 sechs
+        # Pflichtparameter dazu, das Werkzeug schickte weiter drei. Jeder
+        # gesendete Parameter existierte - die Pruefung war gruen, und der
+        # erste Aufruf waere in der Vorfuehrung gescheitert.
+        fehlend = db_pflicht.get(name, set()) - parameter
+        if fehlend:
+            funde.append((name, f"schickt {', '.join(sorted(fehlend))} nicht — "
+                                f"die Funktion verlangt sie ohne Vorgabewert"))
 
     # Die Anleitung nennt beide Zahlen von Hand. Sie stand am 05.09.2026
     # falsch - "15 api_-Funktionen", waehrend es 16 waren, seit

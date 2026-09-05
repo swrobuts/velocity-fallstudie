@@ -445,8 +445,14 @@ begin
   -- nicht nur einen Namen.
   return next has_column('velocity'::name, 'v_wawi_modell'::name, 'baujahr'::name,
                          'v_wawi_modell nennt das Baujahr');
-  return next has_column('velocity'::name, 'v_wawi_modell'::name, 'gewicht_kg'::name,
-                         'v_wawi_modell nennt das Gewicht');
+  -- Seit 0024_radausstattung.sql NICHT mehr: Das Gewicht haengt am
+  -- einzelnen Rad, ein Modell hat keines. Die Auswahlliste darf keinen
+  -- Wert zeigen, den es nicht gibt - auch keinen gemittelten, der wie
+  -- eine Stammdatenangabe aussaehe.
+  return next hasnt_column('velocity'::name, 'v_wawi_modell'::name, 'gewicht_kg'::name,
+                           'v_wawi_modell nennt KEIN Gewicht mehr - das haengt am Rad');
+  return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'gewicht_kg'::name,
+                         'Die Flottensicht zeigt es dafuer je Rad');
   return next has_column('velocity'::name, 'v_wawi_modell'::name, 'akkukapazitaet_wh'::name,
                          'v_wawi_modell nennt die Akkukapazitaet');
   perform set_config('request.jwt.claims', '', true);

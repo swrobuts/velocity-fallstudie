@@ -85,32 +85,82 @@ $$;
 -- Funktion zurueckgekehrt ist. Ohne die eigene Pruefung liesse sich ein
 -- Rad zwar anlegen, aber erst am Ende der ganzen Transaktion mit einer
 -- Fehlermeldung zurueckweisen, die nichts mehr von GR13 weiss.
+-- Die alte Signatur muss weichen, nicht ueberladen werden: Zwei
+-- gleichnamige Funktionen mit verschiedener Parameterliste sind fuer
+-- PostgREST nicht aufloesbar, es antwortet dann mit PGRST203.
+drop function if exists velocity.api_rad_anlegen(text, bigint, bigint);
+
 create or replace function velocity.api_rad_anlegen(
-  p_rahmennummer text, p_modell_id bigint, p_station_id bigint
-)
+    p_rahmennummer       text,
+    p_modell_id          bigint,
+    p_station_id         bigint,
+    p_gewicht_kg         numeric,
+    p_rahmenform         text,
+    p_schaltung          text,
+    p_bremsen            text,
+    p_beleuchtung        text,
+    p_antrieb            text,
+    p_farbe              text default 'rot',
+    p_motortyp           text default null,
+    p_reifengroesse_zoll numeric default null,
+    p_schlossnummer      text default null)
 returns bigint
 language plpgsql
 security definer
 set search_path = velocity, pg_temp
 as $$
-declare v_m bigint; v_f bigint;
+declare
+  v_m bigint;
+  v_f bigint;
 begin
   v_m := velocity.fn_rolle_verlangen('disposition');
 
+  -- GR13, unveraendert aus der Vorfassung in 0019: ein neues Rad ohne
+  -- Station gibt es nicht. Beim Umschreiben auf die neue Signatur war
+  -- diese Pruefung zunaechst verlorengegangen - gefunden von
+  -- test_l_rad_anlegen_und_status.
   if p_station_id is null then
     raise exception 'Ein neues Rad braucht eine Station (GR13)'
       using errcode = 'P0001';
   end if;
 
-  insert into velocity.fahrrad (rahmennummer, modell_id, status, angeschafft_am)
-       values (p_rahmennummer, p_modell_id, 'verfuegbar', current_date)
-    returning fahrrad_id into v_f;
+  -- Die Pflicht steht hier und nicht als NOT NULL an der Tabelle: Sie
+  -- gilt fuer den Erfassungsweg, nicht fuer die Ladelaeufe unter
+  -- db/betrieb/ und nicht fuer die Testvorrichtungen. Siehe Kopfkommentar.
+  if p_gewicht_kg is null or p_rahmenform is null or p_schaltung is null
+     or p_bremsen is null or p_beleuchtung is null or p_antrieb is null then
+    raise exception
+      'Gewicht, Rahmenform, Schaltung, Bremsen, Beleuchtung und Antrieb sind '
+      'bei der Anlage anzugeben'
+      using errcode = '22023';
+  end if;
+
+  insert into velocity.fahrrad (
+      rahmennummer, modell_id, status, angeschafft_am,
+      farbe, gewicht_kg, rahmenform, schaltung, bremsen, beleuchtung,
+      antrieb, motortyp, reifengroesse_zoll, schlossnummer)
+  values (
+      p_rahmennummer, p_modell_id, 'verfuegbar', current_date,
+      coalesce(nullif(btrim(p_farbe), ''), 'rot'),
+      p_gewicht_kg,
+      p_rahmenform::velocity.rahmenform,
+      p_schaltung::velocity.schaltungsart,
+      p_bremsen::velocity.bremsart,
+      p_beleuchtung::velocity.beleuchtungsart,
+      p_antrieb::velocity.antriebsart,
+      nullif(btrim(p_motortyp), ''),
+      p_reifengroesse_zoll,
+      nullif(btrim(p_schlossnummer), ''))
+  returning fahrrad_id into v_f;
 
   -- GR12 aus Phase 1: ein Rad ohne bekannten Standort laesst sich nicht
   -- ausleihen. Ein neues Rad bekommt deshalb sofort eine Position.
   insert into velocity.fahrrad_position (fahrrad_id, station_id, akkustand_prozent)
        values (v_f, p_station_id, 100);
 
+  -- Die Lebenslaufakte beginnt mit der Anschaffung. Auch diese Zeile war
+  -- beim Umschreiben zunaechst verlorengegangen; ein Rad ohne
+  -- Anfangsereignis haette eine Akte mit Luecke am Anfang.
   insert into velocity.fahrrad_ereignis
          (fahrrad_id, ereignisart, mitarbeiter_id, bemerkung, beleg_tabelle, beleg_id)
   values (v_f, 'angeschafft', v_m, 'Neu ins System aufgenommen', 'fahrrad', v_f);
@@ -118,6 +168,20 @@ begin
   return v_f;
 end;
 $$;
+
+comment on function velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
+                                             text, text, text, text, text, numeric, text) is
+  'Legt ein Rad an und stellt es an eine Station. Verlangt neben Rahmennummer, Modell und '
+  'Station die Ausstattung: Gewicht, Rahmenform, Schaltung, Bremsen, Beleuchtung, Antrieb. '
+  'Farbe ist mit rot vorbelegt; Motortyp, Reifengröße und Schlossnummer sind freiwillig. '
+  'Braucht die Rolle disposition.';
+
+revoke all on function velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
+                                                text, text, text, text, text, numeric, text)
+  from public, anon, authenticated;
+grant execute on function velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
+                                                   text, text, text, text, text, numeric, text)
+  to authenticated;
 
 -- Werkstatt UND Disposition duerfen Status setzen: die eine schickt ein
 -- Rad in die Wartung, die andere holt es als verfuegbar zurueck. Eine
@@ -1179,7 +1243,8 @@ grant execute on function
   velocity.api_ausleihe_beenden(bigint, bigint, numeric, numeric),
   velocity.ist_mitarbeiter(),
   velocity.hat_rolle(text),
-  velocity.api_rad_anlegen(text, bigint, bigint),
+  velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
+                           text, text, text, text, text, numeric, text),
   velocity.api_rad_status_setzen(bigint, text, text),
   velocity.api_rad_ausmustern(bigint, text),
   velocity.api_station_anlegen(text, text, text, text, text, numeric, numeric, integer),

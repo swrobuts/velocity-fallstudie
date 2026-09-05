@@ -495,8 +495,14 @@ $$;
 create or replace function velocity_test.test_b_typ_technische_angaben()
 returns setof text language plpgsql as $$
 begin
-  return next has_column('velocity'::name, 'fahrradtyp'::name, 'gewicht_kg'::name,
-                         'fahrradtyp traegt das Gewicht');
+  -- gewicht_kg ist seit 0024_radausstattung.sql WEG vom Typ: Ein Rad
+  -- wiegt, was es wiegt, und nicht was seine Bauart wiegen soll. Die
+  -- Zusicherung dreht sich damit um - sie haelt jetzt den Umzug fest,
+  -- nicht den frueheren Ort.
+  return next hasnt_column('velocity'::name, 'fahrradtyp'::name, 'gewicht_kg'::name,
+                           'fahrradtyp traegt KEIN Gewicht mehr - das haengt am Rad');
+  return next has_column('velocity'::name, 'fahrrad'::name, 'gewicht_kg'::name,
+                         'fahrrad traegt sein eigenes Gewicht');
   return next has_column('velocity'::name, 'fahrradtyp'::name, 'gangzahl'::name,
                          'fahrradtyp traegt die Gangzahl');
   return next has_column('velocity'::name, 'fahrradtyp'::name, 'rahmenhoehe_cm'::name,
@@ -516,8 +522,8 @@ begin
   return next lives_ok(
     $sql$insert into velocity.fahrradtyp
           (typ_code, bezeichnung, hat_elektro,
-           gewicht_kg, gangzahl, rahmenhoehe_cm, akkukapazitaet_wh, reichweite_km)
-        values ('TEST-TA', 'Testrad technische Angaben', true, 24.5, 7, 48, 500, 60)$sql$,
+           gangzahl, rahmenhoehe_cm, akkukapazitaet_wh, reichweite_km)
+        values ('TEST-TA', 'Testrad technische Angaben', true, 7, 48, 500, 60)$sql$,
     'Ein Typ mit vollstaendigen technischen Angaben laesst sich anlegen');
 
   return next lives_ok(
@@ -525,9 +531,12 @@ begin
         values ('TEST-TB', 'Testrad ohne technische Angaben')$sql$,
     'Die technischen Angaben bleiben optional - ein City-Typ hat keinen Akku');
 
+  -- Die Regel gilt weiter, nur an der neuen Stelle: fahrrad_gewicht_chk
+  -- statt fahrradtyp_gewicht_chk. Geprueft ueber eine Vorrichtung, weil
+  -- fahrrad einen Modellbezug braucht.
   return next throws_ok(
-    $sql$insert into velocity.fahrradtyp (typ_code, bezeichnung, gewicht_kg)
-        values ('TEST-TC', 'Testrad Gewicht null', 0)$sql$,
+    $sql$update velocity.fahrrad set gewicht_kg = 0
+          where fahrrad_id = (select min(fahrrad_id) from velocity.fahrrad)$sql$,
     '23514', null, 'Ein Gewicht von null Kilogramm wird abgewiesen');
 
   return next throws_ok(

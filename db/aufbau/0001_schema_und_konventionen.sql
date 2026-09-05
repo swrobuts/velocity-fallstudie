@@ -48,7 +48,18 @@ begin
       ('schaden_schwere',    array['gering','mittel','fahruntauglich']),
       ('schaden_status',     array['offen','in_arbeit','behoben','verworfen']),
       ('auftrag_status',     array['offen','in_arbeit','erledigt','abgebrochen']),
-      ('fahrrad_ereignisart',array['angeschafft','status_geaendert','gewartet','umgesetzt','ausgemustert'])
+      ('fahrrad_ereignisart',array['angeschafft','status_geaendert','gewartet','umgesetzt','ausgemustert']),
+      -- Ausstattung eines einzelnen Rades (0024_radausstattung.sql).
+      -- Aufzaehlungstypen und nicht Freitext, weil sich diese Listen
+      -- abschliessen lassen - anders als schadensmeldung.kategorie, wo
+      -- der Spaltenkommentar die Gegenentscheidung begruendet: ein
+      -- Schadensbild laesst sich nicht vorab aufzaehlen, eine Bremsbauart
+      -- schon.
+      ('rahmenform',        array['diamant','tiefeinsteiger']),
+      ('schaltungsart',     array['nabe','kette','keine']),
+      ('bremsart',          array['felge','scheibe','ruecktritt']),
+      ('beleuchtungsart',   array['nabendynamo','akku','keine']),
+      ('antriebsart',       array['kette','riemen'])
     ) as t(name, labels)
   loop
     if not exists (
