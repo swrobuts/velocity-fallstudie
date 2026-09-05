@@ -935,9 +935,8 @@ comment on view velocity.v_wawi_fahrt_km is
   'noch offenhalten müsste.';
 comment on column velocity.v_wawi_fahrt_km.ausleihe_id is
   'Schlüssel der Fahrt, für einen Verweis auf die einzelne Ausleihe hinter '
-  'einer Aggregation. v_wawi_km_co2 liest diese Spalte seit ihrer Entkopplung '
-  '(zweite Demozugang-Runde) nicht mehr über diese Sicht, sondern direkt aus '
-  'velocity.ausleihe.';
+  'einer Aggregation. v_wawi_km_co2 liest aus velocity.v_fahrt_kennzahl, wo '
+  'diese Spalte verfügbar ist.';
 comment on column velocity.v_wawi_fahrt_km.startzeit is
   'Beginn der Fahrt, Grundlage der Monatsgruppierung und der Zeitscheibe für '
   'Umwegfaktor, Reisegeschwindigkeit und CO2-Annahmen (rechenannahme.gueltigkeit).';
@@ -945,10 +944,9 @@ comment on column velocity.v_wawi_fahrt_km.kunde_id is
   'Fahrender Kunde, für eine spätere Auswertung je Kunde ohne erneuten Join '
   'auf ausleihe.';
 comment on column velocity.v_wawi_fahrt_km.typ_code is
-  'Fahrradtyp der Fahrt. v_wawi_km_co2 bestimmt daraus dieselbe CO2-Annahme '
-  '(co2_rad für CITY, sonst co2_ebike) - seit ihrer Entkopplung (zweite '
-  'Demozugang-Runde) über einen eigenen Join auf fahrradtyp, nicht mehr über '
-  'diese Spalte.';
+  'Fahrradtyp der Fahrt. v_wawi_km_co2 liest diese Spalte aus '
+  'velocity.v_fahrt_kennzahl und bestimmt daraus dieselbe CO2-Annahme '
+  '(co2_rad für CITY, sonst co2_ebike).';
 comment on column velocity.v_wawi_fahrt_km.kilometer is
   'Drei Fälle, siehe verfahren: gemessene Strecke (ausleihe.distanz_km), wo '
   'vorhanden; sonst, bei einer Rundfahrt mit Luftlinie null (Start- und '
@@ -970,16 +968,15 @@ comment on column velocity.v_wawi_fahrt_km.verfahren is
   'getrennt auswerten lassen.';
 comment on view velocity.v_wawi_km_co2 is
   'CO2-Ersparnis gegenüber dem Pkw, für Leitung und - seit der zweiten '
-  'Demozugang-Runde - für ''demo''. Liest seither NICHT MEHR FROM '
-  'v_wawi_fahrt_km, sondern direkt aus velocity.ausleihe (dieselbe '
-  'Drei-Fall-Kilometerformel ein drittes Mal, siehe Kopfkommentar am create '
-  'view) und trägt dadurch eine eigene, unabhängige '
-  '(hat_rolle(''leitung'') or hat_rolle(''demo''))-Schranke, nicht mehr nur '
-  'geerbt aus v_wawi_fahrt_km. anteil_geschaetzt und fahrten_geschaetzt '
-  'gehören in jede Darstellung dieser Zahl. ''demo'' ist hier unbedenklich, '
-  'anders als bei v_wawi_fahrt_km selbst: diese Sicht führt weder kunde_id '
-  'noch ausleihe_id, nur eine Monatsaggregation je Radtyp ohne '
-  'Personenbezug - dieselbe Einstufung wie v_wawi_umsatz_radtyp/'
+  'Demozugang-Runde - für ''demo''. Liest aus velocity.v_fahrt_kennzahl, '
+  'wo die Drei-Fall-Kilometerformel einmal definiert ist. Trägt eine eigene, '
+  'unabhängige (hat_rolle(''leitung'') or hat_rolle(''demo''))-Schranke '
+  'und separate Filter (km und co2_ersparnis_g jeweils nicht null), um '
+  'Fahrten ohne belastbare Grundlagen auszuschließen. anteil_geschaetzt und '
+  'fahrten_geschaetzt gehören in jede Darstellung dieser Zahl. ''demo'' ist '
+  'hier unbedenklich, anders als bei v_wawi_fahrt_km selbst: diese Sicht '
+  'führt weder kunde_id noch ausleihe_id, nur eine Monatsaggregation je '
+  'Radtyp ohne Personenbezug - dieselbe Einstufung wie v_wawi_umsatz_radtyp/'
   'v_wawi_umsatz_kundengruppe.';
 comment on column velocity.v_wawi_km_co2.monat is
   'Erster Tag des Monats der Fahrt (ausleihe.startzeit).';
@@ -1442,18 +1439,19 @@ comment on view velocity.v_wawi_fahrten_je_tag_rad is
   'kein Bewegungsprofil. Bewusst OHNE ausleihe_id, kunde_id, kundennummer oder '
   'Name: dieselben Fahrten wie v_wawi_fahrten_je_tag, nach Rad statt nach Kunde '
   'geschnitten - siehe ausführlicher Kopfkommentar am create view für die '
-  'Begründung dieser Grenze. Kein Join auf v_wawi_fahrt_km (deren eigene '
-  'hat_rolle(''leitung'')-Schranke würde disposition sonst ungewollt '
-  'ausschließen) - die Kilometerformel steht deshalb ein zweites Mal hier. '
-  'Filtert selbst über velocity.hat_rolle(''leitung'') oder '
+  'Begründung dieser Grenze. Liest aus velocity.v_fahrt_kennzahl, um eine eigene '
+  'Rollenschranke tragen zu können - ein Join auf v_wawi_fahrt_km würde deren '
+  'hat_rolle(''leitung'')-Schranke erben und disposition sonst ungewollt '
+  'ausschließen. Filtert selbst über velocity.hat_rolle(''leitung'') oder '
   'velocity.hat_rolle(''disposition''). Seit dem Demozugang zusätzlich für '
   'velocity.hat_rolle(''demo'') lesbar (0020_demo_zugang.sql).';
 comment on column velocity.v_wawi_fahrten_je_tag_rad.umsatz is
   'Summe der Entgeltpositionen dieser einen Fahrt, in Euro. Netto in dem Sinn, '
   'dass Korrekturpositionen mit negativem Betrag mitzaehlen (siehe '
-  'v_wawi_umsatz_radtyp weiter oben). null, wenn die Fahrt keine '
-  'Entgeltposition traegt - dann ist sie NICHT abgerechnet, was etwas anderes '
-  'ist als 0,00 Euro; die Oberflaeche zeigt dafuer einen Gedankenstrich. '
+  'v_wawi_umsatz_radtyp weiter oben). 0,00, wenn die Fahrt keine '
+  'Entgeltposition traegt - die Basissicht v_fahrt_kennzahl liefert via '
+  'coalesce in solchen Faellen 0 statt null. Gemessen betrifft das 0 von '
+  '12052 Fahrten; jede abgeschlossene Fahrt traegt mindestens eine Position. '
   'Additiv ueber Fahrten, deshalb in der Warenwirtschaft als summierbare '
   'Spalte gefuehrt.';
 comment on column velocity.v_wawi_fahrten_je_tag_rad.tag is
@@ -1478,9 +1476,10 @@ comment on column velocity.v_wawi_fahrten_je_tag_rad.ziel_station is
 comment on column velocity.v_wawi_fahrten_je_tag_rad.dauer_minuten is
   'Dauer der Fahrt in Minuten.';
 comment on column velocity.v_wawi_fahrten_je_tag_rad.kilometer is
-  'Gefahrene Strecke - gemessen oder geschätzt, siehe ist_geschaetzt und die '
-  'Drei-Fall-Formel im Kopfkommentar (identisch zu v_wawi_fahrt_km.kilometer). '
-  'NULL, wenn weder Distanz noch beide Koordinatenpaare vorliegen.';
+  'Gefahrene Strecke - gemessen oder geschätzt, siehe ist_geschaetzt. Die '
+  'Drei-Fall-Herleitung (gemessen, aus Dauer, aus Luftlinie mal Umwegfaktor) '
+  'steht in velocity.v_fahrt_kennzahl, aus der diese Sicht liest. NULL, wenn '
+  'weder Distanz noch beide Koordinatenpaare vorliegen.';
 comment on column velocity.v_wawi_fahrten_je_tag_rad.ist_geschaetzt is
   'Wahr, wenn kilometer nicht gemessen, sondern aus Dauer oder Luftlinie '
   'geschätzt wurde - gehört zu jeder Anzeige von kilometer dazu.';
