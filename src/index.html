@@ -67,6 +67,16 @@
                     </div>
                 </div>
                 <button type="submit" class="btn-primary full-width">Jetzt Anmelden</button>
+                <!-- Hinweistext steht absichtlich nicht hier: er wird in auth.js
+                     aus APP_CONFIG.demoEmail/demoPasswort erzeugt, denselben Werten,
+                     mit denen sich der Knopf anmeldet. Sind beide Werte leer, bleibt
+                     dieser Bereich verborgen (siehe demoZugangAufbauen()). -->
+                <div id="demo-zugang" class="demo-zugang" hidden>
+                    <button type="button" id="demo-anmelden" class="btn btn-sekundaer">
+                        Demo ansehen
+                    </button>
+                    <p id="demo-hinweis" class="demo-hinweis"></p>
+                </div>
                 <p class="auth-fuss">
                     Passwort vergessen?
                     <button type="button" class="auth-link" id="passwort-vergessen">Neues Passwort anfordern</button>

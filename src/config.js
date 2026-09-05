@@ -13,5 +13,12 @@ const SUPABASE_CONFIG = {
 const APP_CONFIG = {
     defaultMapCenter: [49.7930, 9.9360],
     defaultZoom: 14,
-    schema: 'velocity'
+    schema: 'velocity',
+    // Demozugang der Kundenwebsite. BEIDE FELDER BLEIBEN HIER LEER.
+    // Die Werte traegt der Betreiber ein; Zugangsdaten gehoeren nicht
+    // ins Repository, auch absichtlich oeffentliche nicht. Sind sie
+    // leer, erscheint auf der Anmeldemaske weder Knopf noch Hinweis -
+    // kein halb funktionierender Zugang.
+    demoEmail: '',
+    demoPasswort: ''
 };

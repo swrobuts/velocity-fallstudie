@@ -195,7 +195,37 @@ async function initAuth() {
         await ensureKunde();
         authStateListeners.forEach(listener => listener(currentUser));
     }
+    demoZugangAufbauen();
 }
 
 // Auth initialisieren
 initAuth();
+
+/* Der Demozugang zeigt sich nur, wenn BEIDE Werte gesetzt sind. Ein
+   Knopf ohne Kennwort waere eine Anmeldung, die sicher fehlschlaegt,
+   und ein Hinweis ohne Knopf eine Anleitung ins Leere. */
+function demoZugangAufbauen() {
+    const email = (APP_CONFIG.demoEmail || '').trim();
+    const kennwort = (APP_CONFIG.demoPasswort || '').trim();
+    const bereich = document.getElementById('demo-zugang');
+    if (!bereich || !email || !kennwort) return;
+
+    // textContent, nicht innerHTML: der Text traegt Werte aus der
+    // Konfiguration, und die gehoeren nicht als Markup interpretiert.
+    document.getElementById('demo-hinweis').textContent =
+        `Zum Ausprobieren: Anmeldung „${email}", Kennwort „${kennwort}".`;
+    bereich.hidden = false;
+
+    document.getElementById('demo-anmelden').addEventListener('click', async () => {
+        // login() liefert bei Erfolg data.user und wirft bei Fehler einen
+        // Error - kein { success }. translateAuthError hat die Meldung
+        // bereits ins Deutsche uebersetzt; sie wird unveraendert gezeigt.
+        try {
+            await login(email, kennwort);
+        } catch (fehler) {
+            const status = document.getElementById('auth-status');
+            status.textContent = fehler.message;
+            status.hidden = false;
+        }
+    });
+}
