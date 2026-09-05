@@ -95,9 +95,11 @@ Alle Personen in den Daten sind erfunden.
 
 ## Zur Herkunft dieses Ordners
 
-Der Inhalt kam am 05.09.2026 aus  und lag kurz in
-einem eigenen Repository. Er ist hier eingegliedert; zwei Repositorien für
-eine Fallstudie waren nach drei Wochen nicht mehr auseinanderzuhalten.
+Der Inhalt kam am 05.09.2026 aus `velocity-fallbeispiel.zip` und lag kurz in
+einem eigenen Repository `swrobuts/velocity-fallbeispiel`. Er ist hier
+eingegliedert und jenes Repository gelöscht; zwei Repositorien für eine
+Fallstudie waren nach drei Wochen nicht mehr auseinanderzuhalten.
 
-Was im Ordner **fehlt** und warum, sowie die Abgrenzung zwischen 
-(öffentlich) und  (intern), steht in  daneben.
+Was in diesem Ordner **fehlt** und warum, sowie die Abgrenzung zwischen
+`docs/` (öffentlich im Netz) und `doku/` (interne Projektdokumentation),
+steht in `LIESMICH.md` daneben.
