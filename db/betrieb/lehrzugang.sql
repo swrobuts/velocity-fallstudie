@@ -421,6 +421,27 @@ end $$;
 -- Keine PUBLIC-Freigabe, keine Rollenmitgliedschaft - gezielt an studi.
 grant execute on function velocity.hat_rolle(text) to studi;
 
+-- Zweites und letztes Ausfuehrungsrecht, nachgetragen am 05.09.2026 nach
+-- dem ersten scharfen Lauf. Es war NICHT vorhergesehen, und der Grund
+-- dafuer ist lehrreich: die Pruefung vor dem Lauf hatte "set role studi"
+-- benutzt, ohne die Rolleneinstellung request.jwt.claim.sub mitzusetzen.
+-- ALTER ROLE ... SET wirkt aber beim ANMELDEN, nicht bei SET ROLE in
+-- einer fremden Sitzung. Solange die Kennung fehlte, lieferte hat_rolle
+-- false, die Sichten filterten sich selbst weg, und die Auswertung kam
+-- nie bis zu dieser Funktion. Erst unter der echten Anmeldelage
+-- (set request.jwt.claim.sub = ...; set role studi) scheiterte
+-- v_wawi_km_co2 mit "permission denied for function fn_luftlinie_km".
+--
+-- Die Funktion ist unbedenklich: immutable, KEIN security definer, eine
+-- reine Haversine-Rechnung auf vier Zahlenargumenten ohne jeden
+-- Tabellenzugriff. Sie gibt eine Entfernung zurueck, sonst nichts.
+--
+-- Damit stehen die Ausfuehrungsrechte von studi bei ZWEI Funktionen -
+-- und bei null der 21 security-definer-api_-Funktionen. Das ist die
+-- tragende Annahme dieser Datei; siehe Kopf.
+grant execute on function
+  velocity.fn_luftlinie_km(numeric, numeric, numeric, numeric) to studi;
+
 -- ---- 6: Sitzungsvorgaben und Verbindungsgrenze --------------------------
 -- studi hatte vor dieser Datei keine einzige Sitzungsvorgabe und keine
 -- Verbindungsgrenze (rolconnlimit = -1, kein pg_db_role_setting-Eintrag -
