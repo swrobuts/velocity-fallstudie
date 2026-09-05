@@ -1175,3 +1175,68 @@ begin
     'Mindestens die 14 im Auftrag genannten Orte sind hinterlegt');
 end;
 $$;
+
+create or replace function velocity_test.test_wv_basissicht_form()
+returns setof text language plpgsql as $$
+begin
+  return next has_view('velocity', 'v_fahrt_kennzahl', 'Die Basissicht existiert');
+  return next columns_are('velocity', 'v_fahrt_kennzahl',
+    array['ausleihe_id','kunde_id','fahrrad_id','typ_code','startzeit','endzeit',
+          'dauer_minuten','km','ist_geschaetzt','verfahren','co2_ersparnis_g',
+          'betrag_brutto'],
+    'Die Basissicht führt genau die zwölf vereinbarten Spalten');
+end;
+$$;
+
+create or replace function velocity_test.test_wv_basissicht_ohne_recht()
+returns setof text language plpgsql as $$
+begin
+  -- Der eigentliche Schutz dieser Sicht. Sie fuehrt kunde_id und
+  -- startzeit je Einzelfahrt; ein grant an authenticated waere das
+  -- Bewegungsprofil der gesamten Kundschaft fuer jeden Angemeldeten.
+  return next ok(not has_table_privilege('authenticated',
+                   'velocity.v_fahrt_kennzahl', 'SELECT'),
+                 'authenticated darf die Basissicht nicht lesen');
+  return next ok(not has_table_privilege('anon',
+                   'velocity.v_fahrt_kennzahl', 'SELECT'),
+                 'anon darf die Basissicht nicht lesen');
+end;
+$$;
+
+create or replace function velocity_test.test_wv_basissicht_nur_abgeschlossen()
+returns setof text language plpgsql as $$
+begin
+  -- Eine laufende Fahrt hat keine Endzeit und keine Entgeltpositionen.
+  -- Stuende sie in der Basissicht, zaehlte das Dashboard sie mit und
+  -- wiese Kilometer aus, die noch gar nicht gefahren wurden.
+  return next is_empty(
+    $sql$select f.ausleihe_id from velocity.v_fahrt_kennzahl f
+           join velocity.ausleihe a using (ausleihe_id)
+          where a.status <> 'abgeschlossen'$sql$,
+    'Die Basissicht führt ausschließlich abgeschlossene Fahrten');
+  return next is_empty(
+    $sql$select ausleihe_id from velocity.v_fahrt_kennzahl where km is null$sql$,
+    'Keine Zeile ohne Kilometerwert');
+end;
+$$;
+
+create or replace function velocity_test.test_wv_basissicht_fuehrt_jede_fahrt()
+returns setof text language plpgsql as $$
+begin
+  -- Eine Basissicht muss JEDE abgeschlossene Fahrt fuehren, unabhaengig
+  -- davon, ob zu ihrem Datum eine Rechenannahme vorliegt. Filtern ist
+  -- Sache der Sichten darueber - die drei, die kuenftig aus ihr lesen
+  -- sollen, filtern heute schon unterschiedlich (siehe Kopfkommentar
+  -- der Sicht). Ein INNER JOIN oder ein Filter auf einen abgeleiteten
+  -- Wert in DIESER Sicht wuerde das still fuer alle vereinheitlichen
+  -- und Fahrten aus allen drei Sichten zugleich verschwinden lassen,
+  -- sobald einmal eine Rechenannahme-Luecke entsteht.
+  --
+  -- Gegen velocity.ausleihe gerechnet, nicht gegen eine feste Zahl:
+  -- der Bestand waechst, eine feste Zahl waere schon morgen falsch.
+  return next is(
+    (select count(*) from velocity.v_fahrt_kennzahl),
+    (select count(*) from velocity.ausleihe where status = 'abgeschlossen'),
+    'Die Basissicht führt genau so viele Zeilen wie es abgeschlossene Ausleihen gibt');
+end;
+$$;

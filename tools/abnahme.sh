@@ -136,12 +136,24 @@ schritt "Aufbaukette, zweimal (Idempotenz)"
 # Fehler hat einmal dazu gefuehrt, dass eine externe Pruefung einen
 # richtigen Betrag fuer einen Datenfehler hielt (siehe TESTEN.md).
 dateizahl=$(ls db/aufbau/*.sql | wc -l | tr -d ' ')
-if python3 db/run.py db/aufbau/*.sql >/tmp/abnahme1.log 2>&1 &&
-   python3 db/run.py db/aufbau/*.sql >/tmp/abnahme2.log 2>&1; then
-  ergebnis 0 "$dateizahl Dateien, zweimal fehlerfrei"
+aufbau_ok=0
+python3 db/run.py db/aufbau/*.sql >/tmp/abnahme1.log 2>&1 &&
+  python3 db/run.py db/aufbau/*.sql >/tmp/abnahme2.log 2>&1 || aufbau_ok=1
+# Derselbe Schritt haelt zusaetzlich die "Objekte:"-Kopfzeile jeder Datei
+# gegen das, was sie tatsaechlich anlegt (tools/objektlisten_pruefen.py,
+# siehe dessen Kopfkommentar fuer den Anlass). Ein eigener Abnahmeschritt
+# waere fachlich naheliegend, zieht aber die Schrittzahl in TESTEN.md und
+# die Zeilenzahl der Prueftabelle mit (siehe tools/readme_pruefen.py) -
+# die Pruefung haengt deshalb an dieser bestehenden Nummer, nicht an einer
+# neuen.
+python3 tools/objektlisten_pruefen.py >/tmp/abnahme-objektlisten.log 2>&1
+objekte_ok=$?
+if [ "$aufbau_ok" -eq 0 ] && [ "$objekte_ok" -eq 0 ]; then
+  ergebnis 0 "$dateizahl Dateien, zweimal fehlerfrei, Objekte-Kopf stimmt"
 else
-  ergebnis 1 "Aufbau fehlgeschlagen — siehe /tmp/abnahme2.log"
-  tail -5 /tmp/abnahme2.log | sed 's/^/     /'
+  ergebnis 1 "Aufbau fehlgeschlagen oder Objekte-Kopf weicht ab"
+  [ "$aufbau_ok"  -ne 0 ] && tail -5 /tmp/abnahme2.log | sed 's/^/     /'
+  [ "$objekte_ok" -ne 0 ] && grep 'nicht genannt\|nicht angelegt' /tmp/abnahme-objektlisten.log | head -12 | sed 's/^/     /'
 fi
 
 # ------------------------------------------------------- pgTAP-Tests
@@ -624,6 +636,18 @@ schritt "Ein angemeldeter Kunde sieht seine eigenen Fahrten"
 # security_invoker = true und braucht die Rechte des Aufrufers.
 # Bemerkt hat es weder die Testkette noch der REST-Test mit anon-Key,
 # sondern erst ein SET ROLE authenticated in einer Pruefung.
+#
+# Seit 05.09.2026 (0025_kundenkennzahlen.sql, Kundendashboard) drei
+# weitere eigene Sichten: v_meine_fahrt_kennzahl, v_meine_monatsbilanz,
+# v_meine_bilanz - mit Eigentuemerrechten statt security_invoker, aber
+# demselben GRANT-SELECT-an-authenticated-Muster. Diese Liste ist
+# GENAU der Fehlertyp, vor dem tools/objektlisten_pruefen.py warnt
+# (siehe dessen Kopfkommentar): eine woertlich eingetragene
+# Sichtenaufzaehlung, die bei einer neuen Sicht nicht von selbst
+# mitwaechst. v_fahrt_kennzahl (die Basissicht) gehoert NICHT hierher -
+# sie ist per "revoke all ... from ... authenticated" (0018) auch fuer
+# angemeldete Kundschaft gesperrt und wird stattdessen in
+# tools/rest_security_check.py gegen anon gefuehrt.
 n=$(python3 - <<'PYEOF'
 import os, psycopg
 for z in open('.env', encoding='utf-8'):
@@ -636,7 +660,8 @@ con = psycopg.connect(host=os.environ['PGHOST'], port=os.environ['PGPORT'],
 c = con.cursor()
 try:
     c.execute('set local role authenticated')
-    for sicht in ('v_meine_ausleihe', 'v_meine_rechnung', 'v_mein_profil'):
+    for sicht in ('v_meine_ausleihe', 'v_meine_rechnung', 'v_mein_profil',
+                  'v_meine_fahrt_kennzahl', 'v_meine_monatsbilanz', 'v_meine_bilanz'):
         c.execute(f'select count(*) from velocity.{sicht}')
     print('0')
 except Exception as e:
@@ -645,7 +670,7 @@ finally:
     con.rollback()
 PYEOF
 )
-[ "$n" = "0" ] && ergebnis 0 "v_meine_ausleihe, v_meine_rechnung und v_mein_profil sind lesbar" \
+[ "$n" = "0" ] && ergebnis 0 "alle sechs eigenen Sichten sind lesbar (Ausleihe, Rechnung, Profil, Fahrt-Kennzahl, Monatsbilanz, Bilanz)" \
                || ergebnis 1 "$n"
 
 # --------------------------------------------- Funktionsrechte

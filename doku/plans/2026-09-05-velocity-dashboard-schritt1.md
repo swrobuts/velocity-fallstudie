@@ -363,13 +363,22 @@ select a.ausleihe_id,
            else 'aus_luftlinie'
       end                        as verfahren
   ) k
-  join velocity.rechenannahme pkw
+  -- LEFT, nicht INNER: fehlte fuer ein Fahrtdatum eine CO2-Annahme,
+  -- liesse ein INNER JOIN die ganze Fahrt verschwinden - aus dieser
+  -- Sicht und damit aus allen dreien darueber. Die Fahrt hat aber
+  -- stattgefunden; unbekannt ist nur ihre CO2-Ersparnis. Ein NULL sagt
+  -- das, ein fehlender Datensatz behauptet etwas anderes.
+  left join velocity.rechenannahme pkw
     on pkw.code = 'co2_pkw' and pkw.gueltigkeit @> a.startzeit::date
-  join velocity.rechenannahme eigen
+  left join velocity.rechenannahme eigen
     on eigen.code = case when t.typ_code = 'CITY' then 'co2_rad' else 'co2_ebike' end
    and eigen.gueltigkeit @> a.startzeit::date
- where a.status = 'abgeschlossen'
-   and k.kilometer is not null;
+ -- KEIN Filter auf kilometer. Die Basissicht fuehrt JEDE abgeschlossene
+ -- Fahrt; welche davon sie braucht, entscheidet jede Sicht darueber
+ -- selbst. Ein Filter hier vereinheitlichte still, was heute
+ -- unterschiedlich ist: v_wawi_km_co2 filtert, v_wawi_fahrt_km und
+ -- v_wawi_fahrten_je_tag_rad tun es nicht.
+ where a.status = 'abgeschlossen';
 
 comment on view velocity.v_fahrt_kennzahl is
   'Eine Zeile je abgeschlossener Fahrt mit Kilometern, Schätzverfahren, CO2-Ersparnis '
@@ -528,18 +537,49 @@ select date_trunc('month', fk.startzeit)::date          as monat,
        -- in der Basissicht ungerundet, genau dafuer.
        round(sum(fk.co2_ersparnis_g) / 1000.0, 2)       as co2_ersparnis_kg
   from velocity.v_fahrt_kennzahl fk
- where velocity.hat_rolle('leitung') or velocity.hat_rolle('demo')
+ -- Diese beiden Bedingungen standen bisher als Join-Bedingung bzw. als
+ -- "k.kilometer is not null" in der Sicht selbst. Sie bleiben HIER, wo
+ -- sie hingehoeren: nur diese Sicht rechnet CO2, und nur sie darf eine
+ -- Fahrt ohne belastbare Grundlage weglassen. Die Basissicht fuehrt sie
+ -- weiter, damit die beiden anderen Sichten sie sehen.
+ where fk.km is not null
+   and fk.co2_ersparnis_g is not null
+   and (velocity.hat_rolle('leitung') or velocity.hat_rolle('demo'))
  group by 1, 2;
 ```
 
 - [ ] **Schritt 3: `v_wawi_fahrten_je_tag_rad` umstellen**
 
-Diese Sicht führt zusätzlich `rahmennummer, typ, start_station, ziel_station, umsatz`. Nur
-`kilometer` und `ist_geschaetzt` kommen aus der Basissicht; **alles andere bleibt, wie es
-ist** — insbesondere der `umsatz`-Ausdruck wird nicht angefasst. Die vorhandene
+Diese Sicht führt elf Spalten. Am 05.09.2026 nachgemessen, woher jede kommt:
+
+| aus `v_fahrt_kennzahl` | die Sicht holt es selbst |
+|---|---|
+| `fahrrad_id`, `typ_code`, `dauer_minuten`, `kilometer` (aus `km`), `ist_geschaetzt` | `tag` (aus `startzeit`), `rahmennummer`, `typ`, `start_station`, `ziel_station` |
+
+**`umsatz` darf aus `fk.betrag_brutto` kommen** — nachgemessen: beide summieren sich auf
+denselben Cent (35 456,87). Ein Unterschied bleibt und ist zu kennen: die alte Sicht bindet
+die Entgeltpositionen per `left join lateral` ein und liefert **NULL**, wenn eine Fahrt keine
+hat; die Basissicht setzt dort per `coalesce` eine **0,00**. Gemessen sind davon **null von
+12 052** Fahrten betroffen — jede abgeschlossene Fahrt hat mindestens eine Entgeltposition.
+Die Umstellung ist damit heute wirkungslos, und der einfachere Weg ist der bessere. Wer sie
+später brauchte, holte sich das `lateral` zurück.
+
+Die vorhandene
 Kilometerformel wird durch einen Join auf `v_fahrt_kennzahl` über `ausleihe_id` ersetzt, die
-`cross join lateral`-Blöcke und die `left join`s auf `rechenannahme` fallen weg. Schranke
-`velocity.hat_rolle('leitung') or velocity.hat_rolle('disposition')` unverändert.
+`cross join lateral`-Blöcke und die `left join`s auf `rechenannahme` fallen weg.
+
+**Die Rollenschranke lautet, am 05.09.2026 aus `pg_get_viewdef` gemessen:**
+
+```sql
+ where velocity.hat_rolle('leitung')
+    or velocity.hat_rolle('disposition')
+    or velocity.hat_rolle('demo')
+```
+
+Ein früherer Stand dieses Plans nannte hier nur `leitung or disposition` und hätte der
+Demorolle den Zugang entzogen. **Kein Filter auf `kilometer`** — diese Sicht führt heute
+auch Fahrten ohne Streckenwert, und dabei bleibt es. Ein `inner join` auf
+`v_fahrt_kennzahl` genügt, weil die Basissicht jede abgeschlossene Fahrt führt.
 
 - [ ] **Schritt 4: Kette zweimal, dann die Zusicherung**
 

@@ -195,7 +195,37 @@ async function initAuth() {
         await ensureKunde();
         authStateListeners.forEach(listener => listener(currentUser));
     }
+    demoZugangAufbauen();
 }
 
 // Auth initialisieren
 initAuth();
+
+/* Der Demozugang zeigt sich nur, wenn BEIDE Werte gesetzt sind. Ein
+   Knopf ohne Kennwort waere eine Anmeldung, die sicher fehlschlaegt,
+   und ein Hinweis ohne Knopf eine Anleitung ins Leere. */
+function demoZugangAufbauen() {
+    const email = (APP_CONFIG.demoEmail || '').trim();
+    const kennwort = (APP_CONFIG.demoPasswort || '').trim();
+    const bereich = document.getElementById('demo-zugang');
+    if (!bereich || !email || !kennwort) return;
+
+    // textContent, nicht innerHTML: der Text traegt Werte aus der
+    // Konfiguration, und die gehoeren nicht als Markup interpretiert.
+    document.getElementById('demo-hinweis').textContent =
+        `Zum Ausprobieren: Anmeldung „${email}", Kennwort „${kennwort}".`;
+    bereich.hidden = false;
+
+    document.getElementById('demo-anmelden').addEventListener('click', () => {
+        // Der Knopf ruft login() nicht selbst auf. Anmelden, Dialog
+        // schliessen, Toast und eine vorgemerkte Reservierung stehen
+        // bereits im Absende-Handler von login-form (script.js), try/catch
+        // um login() eingeschlossen, weil login() wirft und kein
+        // { success } liefert. Diese Schritte hier zu wiederholen, hiesse,
+        // sie an zwei Stellen zu pflegen - deshalb fuellt der Knopf nur
+        // die Felder und loest das vorhandene Formular aus.
+        document.getElementById('login-email').value = email;
+        document.getElementById('login-password').value = kennwort;
+        document.getElementById('login-form').requestSubmit();
+    });
+}

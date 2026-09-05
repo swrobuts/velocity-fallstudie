@@ -4,9 +4,11 @@
 -- Zweck:      Der Vertrag zwischen Datenbank und Website. Die Anwendung
 --             greift nie auf Basistabellen zu, sondern nur auf diese
 --             Sichten und auf die api_-Funktionen.
--- Objekte:    velocity.v_station, v_verfuegbares_fahrrad, v_tarifkarte,
+-- Objekte:    velocity.v_station, v_geschaeftsgebiet, v_hoehenmarke,
+--             v_verfuegbares_fahrrad, v_tarifkarte,
 --             v_tarif, v_faq, v_nutzungsschritt, v_kennzahl,
---             v_meine_ausleihe, v_meine_rechnung, v_mein_profil
+--             v_meine_ausleihe, v_meine_rechnung, v_mein_profil,
+--             v_preisschaetzung
 -- Ruecknahme: DROP VIEW fuer dieselben Namen.
 --
 -- ACHTUNG, EINZELN AUSGEFUEHRT MACHT DIESE DATEI BEIDE WEBSITES LEER.

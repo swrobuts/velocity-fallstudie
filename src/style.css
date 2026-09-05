@@ -1530,6 +1530,208 @@ footer :focus-visible, .product-tabs :focus-visible,
 .howto-section, .faq-section { padding: var(--luft) 0; background: var(--paper); }
 .map-wrapper { padding: var(--luft) 0; background: #fff; }
 
+/* ============================================================
+   PERSOENLICHES DASHBOARD
+   Nur angemeldet sichtbar, siehe #dashboard in index.html und
+   dashboardZeichnen() in dashboard.js. Weisse Kacheln auf dem grauen
+   Grund des Abschnitts - dasselbe Material wie bei .rad-kacheln.
+
+   Ringe, Verlauf, Einordnung und letzte Fahrten (.dashboard-block)
+   bekommen ihre Kartenoptik erst UEBER :not(:empty). Jede der vier
+   Zeichenfunktionen leert ihren Block per replaceChildren() ganz ohne
+   Argument, wenn es nichts zu zeigen gibt (siehe ringeZeichnen() fuer
+   den Fall "laufender Monat ohne Fahrt") - ein leeres div trifft dann
+   :empty, bleibt ohne Innenabstand und Rahmen und nimmt keine Flaeche
+   ein. Eine JS-gesteuerte hidden-Eigenschaft braeuchte fuer denselben
+   Effekt eine zusaetzliche Fallunterscheidung je Aufrufstelle. */
+.dashboard { padding: var(--luft) 0; background: var(--paper); }
+
+.dashboard-kopf {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--a5);
+  margin-bottom: var(--af-l);
+}
+.konterfei { flex: none; width: 88px; height: 88px; }
+.konterfei-svg { display: block; width: 100%; height: 100%; }
+.dashboard-kopf h2 {
+  margin: 0;
+  font-family: var(--auszeichnung); font-size: var(--grad-kopf-m); font-weight: 800;
+  letter-spacing: var(--eng); color: var(--navy);
+}
+.dashboard-zeitraum {
+  margin: var(--a1) 0 0;
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
+}
+
+.dashboard-fehler {
+  margin: 0 0 var(--af-l);
+  padding: var(--a4);
+  border-left: 3px solid var(--red);
+  background: var(--rot-hauch);
+  color: var(--ink);
+}
+
+/* Vier Kacheln, so viele Spalten wie Platz da ist. auto-fit haelt jede
+   Kachel bei mindestens 140 Punkten und wechselt die Spaltenzahl von
+   sich aus - kein fester Umbruchpunkt, der bei genau 600 Punkten
+   nachgemessen werden muesste. */
+.bilanz-gitter {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--a5);
+}
+.bilanz-kachel {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: 0 var(--a2);
+  padding: var(--a5);
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-1);
+}
+.bilanz-wert {
+  font-family: var(--auszeichnung); font-size: var(--grad-zahl-klein); font-weight: 800;
+  letter-spacing: var(--eng); color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+.bilanz-einheit {
+  font: 700 var(--grad-klein)/1 var(--mono); color: var(--grau);
+}
+.bilanz-beschriftung {
+  /* Erzwungener Zeilenumbruch im Flex-Layout: Wert und Einheit teilen
+     sich eine Grundlinie, die Beschriftung steht auf einer eigenen
+     Zeile darunter - ohne dass kachel() dafuer ein zusaetzliches
+     Huellelement bauen muesste. */
+  flex-basis: 100%;
+  font: 700 var(--grad-etikett)/1.3 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
+}
+/* Der Schaetzanteil steht sichtbar am Kilometerblock, nicht im
+   Kleingedruckten - deshalb eine eigene Zeile ueber die volle Breite
+   des Rasters, keine fuenfte Kachel. */
+.bilanz-hinweis {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--grad-klein); color: var(--grau);
+}
+.dashboard-leer { margin: 0; color: var(--grau); }
+
+/* Kartenoptik fuer einen GEFUELLTEN Block, siehe Kopfkommentar oben.
+   Dieselbe Flaeche wie .bilanz-kachel (weiss, Haarlinie, --schatten-1),
+   damit Bilanz und die vier Bloecke darunter als ein Material lesen. */
+.dashboard-block:not(:empty) {
+  margin-top: var(--af-m);
+  padding: var(--a5);
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-1);
+}
+.dashboard-block h3 {
+  margin: 0 0 var(--a4);
+  font-family: var(--auszeichnung); font-size: var(--grad-kopf-s); font-weight: 800;
+  letter-spacing: var(--eng); color: var(--navy);
+}
+
+/* ---- Ringe ---- */
+/* Feste Groesse wie beim Konterfei (.konterfei, 88px), aber mit
+   Deckel statt fixer Breite: "min(200px, 100%)" haelt die Ringe auch
+   dann im Rahmen, wenn die Karte selbst schmaler als 200px waere. */
+.ringe-svg { display: block; width: min(200px, 100%); height: auto; aspect-ratio: 1; margin: 0 auto; }
+.ringe-legende {
+  display: flex; flex-wrap: wrap;
+  gap: var(--a2) var(--a4);
+  margin: var(--a4) 0 0; padding: 0;
+  list-style: none;
+}
+.ringe-legende li { display: flex; align-items: center; gap: var(--a2); }
+.ringe-punkt { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.ringe-legende span:last-child { font-size: var(--grad-klein); color: var(--grau); }
+
+/* ---- Verlauf ---- */
+.verlauf-schalter { display: flex; flex-wrap: wrap; gap: var(--a2); margin: 0 0 var(--a4); }
+.verlauf-schalter button {
+  padding: var(--a2) var(--a4);
+  font: 700 var(--grad-klein)/1 var(--body-schrift);
+  color: var(--grau);
+  background: transparent;
+  border: 1px solid var(--rahmen);
+  border-radius: var(--pille);
+}
+.verlauf-schalter button:hover { border-color: var(--navy); color: var(--navy); }
+.verlauf-schalter button[aria-pressed="true"] {
+  background: var(--navy); border-color: var(--navy); color: #fff;
+}
+.verlauf-balken { display: flex; flex-direction: column; gap: var(--a3); margin: 0; padding: 0; list-style: none; }
+.verlauf-balken li {
+  display: grid;
+  /* Beide Aussenspalten nach ihrem Inhalt, die Spur nimmt den Rest.
+     Ein fester Punktwert fuer den Monat (zuerst 44px) hat "Sept. 25"
+     und "März 26" zweizeilig umbrechen lassen - bei Grossbuchstaben
+     und weiter Laufweite (--weit) ist ein Fixmass hier zu knapp;
+     "auto" misst dagegen an allen Zeilen gemeinsam die breiteste. */
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--a3);
+}
+.verlauf-monat {
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
+  white-space: nowrap;
+}
+/* --mist ist fuer genau diese Rolle vorgesehen (siehe :root-Kommentar:
+   "NUR Haarlinien und Flaechen, nie eine Bedienkante"). */
+.verlauf-spur { display: block; height: 10px; background: var(--mist); border-radius: var(--pille); overflow: hidden; }
+.verlauf-wert { display: block; height: 100%; background: var(--navy); border-radius: var(--pille); }
+.verlauf-zahl {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--grad-klein); color: var(--ink);
+  white-space: nowrap;
+}
+
+/* ---- Einordnung ---- */
+.einordnung-platz {
+  margin: 0;
+  font-family: var(--auszeichnung); font-size: var(--grad-zahl-klein); font-weight: 800;
+  letter-spacing: var(--eng); color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+.perzentil-spur {
+  position: relative;
+  margin: var(--a4) 0;
+  height: 10px;
+  background: var(--mist);
+  border-radius: var(--pille);
+}
+.perzentil-wert { display: block; height: 100%; background: var(--red); border-radius: var(--pille); }
+/* Strich statt Punkt: bei Rang 1 oder ganz hinten liegt die Marke am
+   Rand der Spur, und ein Strich bleibt dort vollstaendig sichtbar,
+   waehrend ein zentrierter Punkt zur Haelfte abgeschnitten wuerde. */
+.perzentil-marke {
+  position: absolute; top: -3px; left: 0;
+  width: 2px; height: 16px;
+  background: var(--navy);
+  transform: translateX(-1px);
+}
+.einordnung-text { margin: 0; font-size: var(--grad-klein); color: var(--grau); }
+
+/* ---- Letzte Fahrten ---- */
+.fahrten-liste { display: flex; flex-direction: column; gap: var(--a4); margin: 0; padding: 0; list-style: none; }
+.fahrten-liste li {
+  display: flex; flex-direction: column; gap: var(--a1);
+  padding-bottom: var(--a4);
+  border-bottom: 1px solid var(--mist);
+}
+.fahrten-liste li:last-child { padding-bottom: 0; border-bottom: 0; }
+.fahrt-kopf { font-weight: 700; color: var(--navy); }
+.fahrt-weg { font-size: var(--grad-klein); color: var(--grau); }
+.fahrt-zahlen {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--grad-klein); color: var(--ink);
+}
+.fahrten-fussnote { margin: var(--a4) 0 0; font-size: var(--grad-etikett); color: var(--grau); }
+
 .btn-primary, .btn-outline, .btn-end-rental {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--a2);
   border-radius: var(--pille);
@@ -1565,7 +1767,8 @@ footer :focus-visible, .product-tabs :focus-visible,
 .karte-leer button:active, .product-tab:active, .auth-tab:active,
 .rechner-typen button:active, .rechner-marken button:active,
 .recht-inhalt a:active, .passwort-zeigen:active, .menue-knopf:active,
-.stationsliste button:active, .konto-menue a:active, .konto-menue button:active {
+.stationsliste button:active, .konto-menue a:active, .konto-menue button:active,
+.btn-sekundaer:active {
   transform: translateY(1px);
 }
 .btn-primary:active, .primary-cta:active, .pop-leihen:active {
@@ -2614,6 +2817,35 @@ footer a:hover { color: #fff; text-decoration: underline; }
   font: 700 var(--grad-klein)/1 var(--body-schrift);
 }
 .passwort-zeigen:hover { color: var(--navy); border-color: var(--navy); }
+
+/* Der Demozugang ist ein Nebenweg unter "Jetzt Anmelden", kein zweiter
+   gleichrangiger Knopf - die Trennlinie sagt das vor jedem Lesen des
+   Textes. .btn-sekundaer bleibt darum bei .passwort-zeigen: derselbe
+   stille Rahmen, der erst beim Hover in Navy wechselt, statt der
+   dauerhaften Fuellung von .btn-primary/.btn-outline. */
+.demo-zugang {
+  margin-top: var(--a4);
+  padding-top: var(--a4);
+  border-top: 1px solid var(--mist);
+  text-align: center;
+}
+.btn-sekundaer {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: var(--a2) var(--a4);
+  border: 1px solid var(--rahmen);
+  border-radius: var(--pille);
+  background: var(--paper);
+  color: var(--grau);
+  font: 700 var(--grad-klein)/1 var(--body-schrift);
+  transition: background var(--zeit-kurz) ease, color var(--zeit-kurz) ease,
+              border-color var(--zeit-kurz) ease;
+}
+.btn-sekundaer:hover { color: var(--navy); border-color: var(--navy); }
+.demo-hinweis {
+  margin: var(--a2) 0 0;
+  font-size: var(--grad-klein);
+  color: var(--grau);
+}
 
 .auth-fuss {
   margin: var(--a4) 0 0;

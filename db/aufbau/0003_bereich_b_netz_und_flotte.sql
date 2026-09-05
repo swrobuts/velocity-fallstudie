@@ -6,7 +6,12 @@
 -- Objekte:    velocity.station, velocity.fahrradtyp,
 --             velocity.fahrradtyp_merkmal, velocity.hersteller,
 --             velocity.fahrradmodell, velocity.fahrrad,
---             velocity.fahrrad_position
+--             velocity.fahrrad_position, velocity.geschaeftsgebiet,
+--             velocity.trg_radposition_pruefen,
+--             velocity.trg_stellplaetze_pruefen,
+--             velocity.fn_im_geschaeftsgebiet,
+--             velocity.fn_fahrrad_motor_passt_zum_typ,
+--             velocity.fn_fahrrad_bremse_passt_zum_typ
 -- Ruecknahme: DROP TABLE velocity.fahrrad_position, velocity.fahrrad,
 --             velocity.fahrradmodell, velocity.hersteller,
 --             velocity.fahrradtyp_merkmal, velocity.fahrradtyp,

@@ -10,7 +10,7 @@
 --             schreiben darf: Die Uebung besteht darin, hinterher zu
 --             zeigen, WAS er getan hat. Ohne diese Sicht endet die
 --             Vorfuehrung an der Stelle, an der sie interessant wird.
--- Objekte:    velocity.v_wawi_protokoll
+-- Objekte:    velocity.v_wawi_protokoll, velocity.v_wawi_radereignis
 -- Ruecknahme: DROP VIEW velocity.v_wawi_protokoll;
 --
 -- ---------------------------------------------------------------------

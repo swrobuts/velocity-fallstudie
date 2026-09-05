@@ -27,6 +27,12 @@ GESPERRT = [
     "kunde", "adresse", "zahlungsmittel", "rechnung", "rechnungsposition",
     "zahlung", "mitgliedschaft", "freiminuten_periode", "ausleihe",
     "entgeltposition", "v_meine_ausleihe", "v_meine_rechnung", "v_mein_profil",
+    # Seit 05.09.2026 (0018/0025, Kundendashboard): v_fahrt_kennzahl ist von
+    # public, anon UND authenticated per revoke all gesperrt (Basissicht mit
+    # kunde_id je Einzelfahrt); die drei v_meine_-Sichten sind wie
+    # v_meine_ausleihe nur an authenticated vergeben, nicht an anon.
+    "v_fahrt_kennzahl", "v_meine_fahrt_kennzahl", "v_meine_monatsbilanz",
+    "v_meine_bilanz",
 ]
 
 # Ressourcen, die anon erreichen MUSS, damit die Website funktioniert.

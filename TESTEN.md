@@ -15,8 +15,8 @@ Rückgabewert 0, wenn alles besteht.
 |---|---|---|
 | 1 | Zugangsdaten | `.env` ist vollständig |
 | 2 | Aufbaukette zweimal | die SQL-Dateien in `db/aufbau/` laufen, gezählt statt eingetragen, und sind idempotent |
-| 3 | Datenbanktests | 189 pgTAP-Testfunktionen |
-| 4 | Zugriffsschutz | 13 Ressourcen gesperrt, 10 Sichten öffentlich — über HTTP geprüft |
+| 3 | Datenbanktests | 203 pgTAP-Testfunktionen |
+| 4 | Zugriffsschutz | 17 Ressourcen gesperrt, 10 Sichten öffentlich — über HTTP geprüft |
 | 5 | Altschema | Der anon-Key kommt nicht mehr an die Altdaten |
 | 6 | Abgleichsbericht | Übernahme vollständig, Beträge stimmen auf den Cent |
 | 7 | Mermaid-Diagramme | alle Quellen validieren |
@@ -42,7 +42,7 @@ Rückgabewert 0, wenn alles besteht.
 | 27 | Warenwirtschaft: Basistabellen | sieben Tabellen antworten mit HTTP 401 |
 | 28 | Warenwirtschaft: Sichten ohne Anmeldung | alle 20 `v_wawi_`-Sichten antworten mit HTTP 401 |
 | 29 | Rechenannahmen | jede nennt ihre Quelle |
-| 30 | Kunde sieht eigene Fahrten | `v_meine_ausleihe`/`v_meine_rechnung`/`v_mein_profil` lesbar |
+| 30 | Kunde sieht eigene Fahrten | `v_meine_ausleihe`/`v_meine_rechnung`/`v_mein_profil`/`v_meine_fahrt_kennzahl`/`v_meine_monatsbilanz`/`v_meine_bilanz` lesbar |
 | 31 | Keine Funktion versehentlich ausführbar | nur `api_`-Funktionen freigegeben, keine für `anon` |
 | 32 | Radstatus | stimmt mit offenen Ausleihen überein |
 | 33 | Fahruntauglich nicht verfügbar | kein Rad mit offener schwerer Meldung auf „verfügbar" |
