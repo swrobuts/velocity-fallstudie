@@ -120,7 +120,7 @@ begin
 end;
 $$;
 
-create or replace function velocity_test.test_ra_farbe_ist_vorbelegt()
+create or replace function velocity_test.test_ra_farbe_ist_eine_ral_nummer()
 returns setof text language plpgsql as $$
 declare v_n bigint;
 begin
@@ -132,6 +132,21 @@ begin
     format($q$ update velocity.fahrrad set farbe = '   ' where fahrrad_id = %s $q$, v_n),
     '23514', null,
     'Ein Leerstring ist keine Farbe');
+
+  -- Die Farbe ist eine Normangabe. 'rot' war der Wert vor der Umstellung
+  -- und ist seither keiner mehr - sonst stuenden nach einem Jahr vier
+  -- Schreibweisen desselben Lacks nebeneinander.
+  return next throws_ok(
+    format($q$ update velocity.fahrrad set farbe = 'rot' where fahrrad_id = %s $q$, v_n),
+    '23514', null,
+    'Ein Klarname ohne RAL-Nummer wird abgewiesen');
+  return next throws_ok(
+    format($q$ update velocity.fahrrad set farbe = 'RAL3000' where fahrrad_id = %s $q$, v_n),
+    '23514', null,
+    'Auch RAL3000 ohne Leerzeichen wird abgewiesen');
+  return next lives_ok(
+    format($q$ update velocity.fahrrad set farbe = 'RAL 6018' where fahrrad_id = %s $q$, v_n),
+    'Eine andere RAL-Nummer geht - die Regel prueft die Form, nicht den Ton');
 end;
 $$;
 
@@ -176,7 +191,7 @@ begin
 
   v_f := velocity.api_rad_anlegen('RN-RA-3', v_modell, v_station, 21.4,
            'tiefeinsteiger', 'nabe', 'scheibe', 'nabendynamo', 'riemen',
-           'rot', null, 28.0, 'SCHLOSS-RA-3');
+           'RAL 3000', null, 28.0, 'SCHLOSS-RA-3');
 
   select * into v_r from velocity.fahrrad where fahrrad_id = v_f;
   return next is(v_r.gewicht_kg, 21.4, 'Das Gewicht kommt an');
@@ -185,7 +200,7 @@ begin
   return next is(v_r.bremsen::text,     'scheibe',        'Die Bremsen kommen an');
   return next is(v_r.beleuchtung::text, 'nabendynamo',    'Die Beleuchtung kommt an');
   return next is(v_r.antrieb::text,     'riemen',         'Der Antrieb kommt an');
-  return next is(v_r.farbe,             'rot',            'Die Farbe kommt an');
+  return next is(v_r.farbe,             'RAL 3000',       'Die Farbe kommt an');
   return next is(v_r.schlossnummer,     'SCHLOSS-RA-3',   'Die Schlossnummer kommt an');
 
   -- Die Vorfassung aus 0019 tat beides; beim Umschreiben auf die neue

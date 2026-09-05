@@ -848,7 +848,7 @@ async function radAnlegenMaske() {
         // Freiwillig. Die Farbe ist vorbelegt, weil die ganze Flotte rot
         // ist - das Feld steht trotzdem da, damit es nicht erst gesucht
         // werden muss, wenn das eines Tages nicht mehr stimmt.
-        { name: 'farbe', titel: t('field.farbe'), wert: 'rot' },
+        { name: 'farbe', titel: t('field.farbe'), wert: 'RAL 3000' },
         { name: 'motortyp', titel: t('field.motortyp'), wert: '' },
         { name: 'reifengroesse_zoll', titel: t('field.reifengroesse'), wert: '' },
         { name: 'schlossnummer', titel: t('field.schlossnummer'), wert: '' }
@@ -893,7 +893,7 @@ async function radAnlegenMaske() {
                     p_bremsen: feldWert('bremsen'),
                     p_beleuchtung: feldWert('beleuchtung'),
                     p_antrieb: feldWert('antrieb'),
-                    p_farbe: feldWert('farbe') || 'rot',
+                    p_farbe: feldWert('farbe') || 'RAL 3000',
                     // Leere Felder als null, nicht als Leerstring: die
                     // Funktion macht daraus zwar selbst NULL, aber ein
                     // Leerstring im Aufruf sagt "ausdruecklich leer" und

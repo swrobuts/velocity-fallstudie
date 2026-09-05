@@ -299,7 +299,7 @@ def _rpc(funktion: str, **argumente: Any) -> str:
 def rad_anlegen(rahmennummer: str, modell_id: int, station_id: int,
                 gewicht_kg: float, rahmenform: str, schaltung: str,
                 bremsen: str, beleuchtung: str, antrieb: str,
-                farbe: str = "rot", motortyp: str | None = None,
+                farbe: str = "RAL 3000", motortyp: str | None = None,
                 reifengroesse_zoll: float | None = None,
                 schlossnummer: str | None = None) -> str:
     """Legt ein neues Rad an und stellt es an eine Station.
@@ -317,7 +317,8 @@ def rad_anlegen(rahmennummer: str, modell_id: int, station_id: int,
       beleuchtung  nabendynamo | akku | keine
       antrieb      kette | riemen
 
-    Freiwillig: farbe (Vorgabe rot), motortyp — nur bei einem Typ mit
+    Freiwillig: farbe — eine RAL-Classic-Nummer wie „RAL 3000",
+    Vorgabe eben diese —, motortyp — nur bei einem Typ mit
     Elektroantrieb, sonst weist die Datenbank es ab —,
     reifengroesse_zoll und schlossnummer, die je Rad eindeutig ist.
     """

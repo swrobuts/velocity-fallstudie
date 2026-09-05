@@ -526,7 +526,7 @@ comment on function velocity.fn_im_geschaeftsgebiet(numeric, numeric) is
 -- Merkmale nicht. Die Pflicht gehoert an den Erfassungsweg, nicht an die
 -- Tabelle - api_rad_anlegen weiter unten setzt sie durch.
 alter table velocity.fahrrad
-  add column if not exists farbe              text not null default 'rot',
+  add column if not exists farbe              text not null default 'RAL 3000',
   add column if not exists gewicht_kg         numeric(4,1),
   add column if not exists rahmenform         velocity.rahmenform,
   add column if not exists schaltung          velocity.schaltungsart,
@@ -538,8 +538,10 @@ alter table velocity.fahrrad
   add column if not exists schlossnummer      text;
 
 comment on column velocity.fahrrad.farbe is
-  'Lackierung dieses Rades. Vorgabe rot - die gesamte Flotte ist rot, die Spalte unterscheidet '
-  'heute also nichts. Sie steht hier für den Tag, an dem das nicht mehr gilt.';
+  'Lackierung dieses Rades als RAL-Classic-Nummer, Vorgabe RAL 3000 (Feuerrot). Die gesamte '
+  'Flotte trägt heute denselben Wert, die Spalte unterscheidet also nichts - sie steht hier '
+  'für den Tag, an dem das nicht mehr gilt. Nur der Code, kein Klarname: Ein Name daneben '
+  'wäre dieselbe Tatsache ein zweites Mal, und er könnte vom Code abweichen.';
 comment on column velocity.fahrrad.gewicht_kg is
   'Gewogenes Gewicht DIESES Rades in Kilogramm. Stand bis 0024 als Typwert an fahrradtyp und '
   'galt damit für jedes Rad der Bauart gleich; Anbauteile, Akku und Verschleiß machen den '
@@ -577,9 +579,32 @@ alter table velocity.fahrrad add  constraint fahrrad_reifen_chk
 
 -- Leerstring ist kein Wert. Ohne diese Regel liesse sich die Pflicht in
 -- api_rad_anlegen mit einem Leerzeichen umgehen.
+-- add column if not exists laesst eine BESTEHENDE Spalte voellig
+-- unberuehrt - auch ihren Vorgabewert. Die Zeile oben legt farbe also nur
+-- in einer frischen Datenbank mit 'RAL 3000' an; wo die Spalte schon
+-- stand, blieb 'rot' die Vorgabe, und jeder Einfuegevorgang ohne
+-- ausdrueckliche Farbe lief in die Formatregel weiter unten. 54 pgTAP-
+-- Funktionen haben das gemeldet, bevor es irgendwohin ausgeliefert wurde.
+alter table velocity.fahrrad alter column farbe set default 'RAL 3000';
+
+-- Der Bestand trug bis zur Umstellung auf RAL den Wert 'rot'. Die
+-- Umsetzung steht HIER und nicht in einer Betriebsdatei, weil die
+-- Formatregel darunter sie voraussetzt: Ein Constraint laesst sich nicht
+-- anlegen, solange Zeilen dagegen verstossen. Idempotent, weil sie beim
+-- zweiten Lauf keine Zeile mehr findet.
+update velocity.fahrrad set farbe = 'RAL 3000' where farbe = 'rot';
+
+-- Die Farbe ist eine Normangabe, kein Freitext. Ohne diese Regel stuenden
+-- nach einem Jahr 'rot', 'Rot', 'feuerrot' und 'RAL3000' nebeneinander
+-- und bezeichneten denselben Lack.
+--
+-- Was die Regel ABSCHNEIDET, und zwar absichtlich: Sonderlackierungen und
+-- Folierungen, die keine RAL-Nummer haben. Wer so ein Rad aufnehmen will,
+-- muss die Regel aendern - das ist die richtige Huerde dafuer, hoch genug,
+-- dass es eine Entscheidung bleibt.
 alter table velocity.fahrrad drop constraint if exists fahrrad_farbe_chk;
 alter table velocity.fahrrad add  constraint fahrrad_farbe_chk
-  check (btrim(farbe) <> '');
+  check (farbe ~ '^RAL [0-9]{4}$');
 
 alter table velocity.fahrrad drop constraint if exists fahrrad_motortyp_chk;
 alter table velocity.fahrrad add  constraint fahrrad_motortyp_chk

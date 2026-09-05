@@ -100,7 +100,7 @@ create or replace function velocity.api_rad_anlegen(
     p_bremsen            text,
     p_beleuchtung        text,
     p_antrieb            text,
-    p_farbe              text default 'rot',
+    p_farbe              text default 'RAL 3000',
     p_motortyp           text default null,
     p_reifengroesse_zoll numeric default null,
     p_schlossnummer      text default null)
@@ -141,7 +141,7 @@ begin
       antrieb, motortyp, reifengroesse_zoll, schlossnummer)
   values (
       p_rahmennummer, p_modell_id, 'verfuegbar', current_date,
-      coalesce(nullif(btrim(p_farbe), ''), 'rot'),
+      coalesce(nullif(btrim(p_farbe), ''), 'RAL 3000'),
       p_gewicht_kg,
       p_rahmenform::velocity.rahmenform,
       p_schaltung::velocity.schaltungsart,
@@ -173,7 +173,7 @@ comment on function velocity.api_rad_anlegen(text, bigint, bigint, numeric, text
                                              text, text, text, text, text, numeric, text) is
   'Legt ein Rad an und stellt es an eine Station. Verlangt neben Rahmennummer, Modell und '
   'Station die Ausstattung: Gewicht, Rahmenform, Schaltung, Bremsen, Beleuchtung, Antrieb. '
-  'Farbe ist mit rot vorbelegt; Motortyp, Reifengröße und Schlossnummer sind freiwillig. '
+  'Farbe ist mit RAL 3000 vorbelegt und muss eine RAL-Classic-Nummer sein; Motortyp, Reifengröße und Schlossnummer sind freiwillig. '
   'Braucht die Rolle disposition.';
 
 revoke all on function velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
