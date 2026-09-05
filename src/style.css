@@ -1565,7 +1565,8 @@ footer :focus-visible, .product-tabs :focus-visible,
 .karte-leer button:active, .product-tab:active, .auth-tab:active,
 .rechner-typen button:active, .rechner-marken button:active,
 .recht-inhalt a:active, .passwort-zeigen:active, .menue-knopf:active,
-.stationsliste button:active, .konto-menue a:active, .konto-menue button:active {
+.stationsliste button:active, .konto-menue a:active, .konto-menue button:active,
+.btn-sekundaer:active {
   transform: translateY(1px);
 }
 .btn-primary:active, .primary-cta:active, .pop-leihen:active {
@@ -2614,6 +2615,35 @@ footer a:hover { color: #fff; text-decoration: underline; }
   font: 700 var(--grad-klein)/1 var(--body-schrift);
 }
 .passwort-zeigen:hover { color: var(--navy); border-color: var(--navy); }
+
+/* Der Demozugang ist ein Nebenweg unter "Jetzt Anmelden", kein zweiter
+   gleichrangiger Knopf - die Trennlinie sagt das vor jedem Lesen des
+   Textes. .btn-sekundaer bleibt darum bei .passwort-zeigen: derselbe
+   stille Rahmen, der erst beim Hover in Navy wechselt, statt der
+   dauerhaften Fuellung von .btn-primary/.btn-outline. */
+.demo-zugang {
+  margin-top: var(--a4);
+  padding-top: var(--a4);
+  border-top: 1px solid var(--mist);
+  text-align: center;
+}
+.btn-sekundaer {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: var(--a2) var(--a4);
+  border: 1px solid var(--rahmen);
+  border-radius: var(--pille);
+  background: var(--paper);
+  color: var(--grau);
+  font: 700 var(--grad-klein)/1 var(--body-schrift);
+  transition: background var(--zeit-kurz) ease, color var(--zeit-kurz) ease,
+              border-color var(--zeit-kurz) ease;
+}
+.btn-sekundaer:hover { color: var(--navy); border-color: var(--navy); }
+.demo-hinweis {
+  margin: var(--a2) 0 0;
+  font-size: var(--grad-klein);
+  color: var(--grau);
+}
 
 .auth-fuss {
   margin: var(--a4) 0 0;

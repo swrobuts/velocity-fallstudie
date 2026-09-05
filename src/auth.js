@@ -216,16 +216,16 @@ function demoZugangAufbauen() {
         `Zum Ausprobieren: Anmeldung „${email}", Kennwort „${kennwort}".`;
     bereich.hidden = false;
 
-    document.getElementById('demo-anmelden').addEventListener('click', async () => {
-        // login() liefert bei Erfolg data.user und wirft bei Fehler einen
-        // Error - kein { success }. translateAuthError hat die Meldung
-        // bereits ins Deutsche uebersetzt; sie wird unveraendert gezeigt.
-        try {
-            await login(email, kennwort);
-        } catch (fehler) {
-            const status = document.getElementById('auth-status');
-            status.textContent = fehler.message;
-            status.hidden = false;
-        }
+    document.getElementById('demo-anmelden').addEventListener('click', () => {
+        // Der Knopf ruft login() nicht selbst auf. Anmelden, Dialog
+        // schliessen, Toast und eine vorgemerkte Reservierung stehen
+        // bereits im Absende-Handler von login-form (script.js), try/catch
+        // um login() eingeschlossen, weil login() wirft und kein
+        // { success } liefert. Diese Schritte hier zu wiederholen, hiesse,
+        // sie an zwei Stellen zu pflegen - deshalb fuellt der Knopf nur
+        // die Felder und loest das vorhandene Formular aus.
+        document.getElementById('login-email').value = email;
+        document.getElementById('login-password').value = kennwort;
+        document.getElementById('login-form').requestSubmit();
     });
 }
