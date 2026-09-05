@@ -175,6 +175,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             };
             checkActiveRentals();
             preisschaetzerLaden();
+            dashboardZeichnen();
         } else {
             kontoMenueSetzen(false);
             userNavBtn.innerHTML = `<i class="fa-regular fa-user"></i> Login`;
@@ -184,6 +185,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             userNavBtn.removeAttribute('aria-controls');
             userNavBtn.onclick = (e) => { e.preventDefault(); openModal(); };
             hideRentalBanner();
+            // Sonst bliebe das Dashboard nach einer Abmeldung ohne
+            // Neuladen der Seite mit der Bilanz des vorigen Kontos
+            // sichtbar stehen - derselbe Grund wie bei hideRentalBanner().
+            const dashboardAbschnitt = document.getElementById('dashboard');
+            if (dashboardAbschnitt) dashboardAbschnitt.hidden = true;
             /* Abgemeldet ist der Schaetzer AN.
 
                Bis zum 03.09.2026 stand hier preisschaetzerAn = false, mit

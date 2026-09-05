@@ -1530,6 +1530,90 @@ footer :focus-visible, .product-tabs :focus-visible,
 .howto-section, .faq-section { padding: var(--luft) 0; background: var(--paper); }
 .map-wrapper { padding: var(--luft) 0; background: #fff; }
 
+/* ============================================================
+   PERSOENLICHES DASHBOARD
+   Nur angemeldet sichtbar, siehe #dashboard in index.html und
+   dashboardZeichnen() in dashboard.js. Weisse Kacheln auf dem grauen
+   Grund des Abschnitts - dasselbe Material wie bei .rad-kacheln.
+   Ringe, Verlauf, Einordnung und letzte Fahrten (.dashboard-block)
+   tragen bewusst noch keine eigene Gestaltung: eine spaetere Aufgabe
+   fuellt sie, und ein leeres div ohne Innenabstand und Rahmen nimmt
+   ohnehin keine Flaeche ein - es braucht keine Sonderregel, um
+   unsichtbar zu bleiben.
+   ============================================================ */
+.dashboard { padding: var(--luft) 0; background: var(--paper); }
+
+.dashboard-kopf {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--a5);
+  margin-bottom: var(--af-l);
+}
+.konterfei { flex: none; width: 88px; height: 88px; }
+.konterfei-svg { display: block; width: 100%; height: 100%; }
+.dashboard-kopf h2 {
+  margin: 0;
+  font-family: var(--auszeichnung); font-size: var(--grad-kopf-m); font-weight: 800;
+  letter-spacing: var(--eng); color: var(--navy);
+}
+.dashboard-zeitraum {
+  margin: var(--a1) 0 0;
+  font: 700 var(--grad-etikett)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
+}
+
+.dashboard-fehler {
+  margin: 0 0 var(--af-l);
+  padding: var(--a4);
+  border-left: 3px solid var(--red);
+  background: var(--rot-hauch);
+  color: var(--ink);
+}
+
+/* Vier Kacheln, so viele Spalten wie Platz da ist. auto-fit haelt jede
+   Kachel bei mindestens 140 Punkten und wechselt die Spaltenzahl von
+   sich aus - kein fester Umbruchpunkt, der bei genau 600 Punkten
+   nachgemessen werden muesste. */
+.bilanz-gitter {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--a5);
+}
+.bilanz-kachel {
+  display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: 0 var(--a2);
+  padding: var(--a5);
+  background: #fff;
+  border: 1px solid var(--mist);
+  border-radius: var(--kante);
+  box-shadow: var(--schatten-1);
+}
+.bilanz-wert {
+  font-family: var(--auszeichnung); font-size: var(--grad-zahl-klein); font-weight: 800;
+  letter-spacing: var(--eng); color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+.bilanz-einheit {
+  font: 700 var(--grad-klein)/1 var(--mono); color: var(--grau);
+}
+.bilanz-beschriftung {
+  /* Erzwungener Zeilenumbruch im Flex-Layout: Wert und Einheit teilen
+     sich eine Grundlinie, die Beschriftung steht auf einer eigenen
+     Zeile darunter - ohne dass kachel() dafuer ein zusaetzliches
+     Huellelement bauen muesste. */
+  flex-basis: 100%;
+  font: 700 var(--grad-etikett)/1.3 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
+}
+/* Der Schaetzanteil steht sichtbar am Kilometerblock, nicht im
+   Kleingedruckten - deshalb eine eigene Zeile ueber die volle Breite
+   des Rasters, keine fuenfte Kachel. */
+.bilanz-hinweis {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--grad-klein); color: var(--grau);
+}
+.dashboard-leer { margin: 0; color: var(--grau); }
+
 .btn-primary, .btn-outline, .btn-end-rental {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--a2);
   border-radius: var(--pille);

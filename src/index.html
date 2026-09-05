@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=277a62f3">
+    <link rel="stylesheet" href="style.css?v=4a986b47">
 </head>
 <body>
 
@@ -275,6 +275,37 @@
 </nav>
 
 <main id="top">
+
+<!-- ============================================================
+     PERSOENLICHES DASHBOARD
+     Nur angemeldet sichtbar (dashboardZeichnen() in dashboard.js,
+     aufgerufen aus updateUI() in script.js). Ringe, Verlauf, Einordnung
+     und letzte Fahrten sind hier bereits als leere Bloecke angelegt,
+     obwohl diese Aufgabe nur die Bilanzkacheln und das Konterfei
+     zeichnet - eine spaetere Aufgabe fuellt sie, ohne das Markup noch
+     einmal umzustellen. Steht vor der Buehne: wer angemeldet ist, sieht
+     zuerst die eigene Bilanz, nicht die Werbung fuer Neukunden.
+     ============================================================ -->
+<section id="dashboard" class="dashboard" hidden aria-labelledby="dashboard-titel">
+    <!-- .container wie in jedem anderen Abschnitt (.facts, .howto-section,
+         .faq-section): ohne ihn liefe der Inhalt bis an den Fensterrand,
+         waehrend jeder andere Abschnitt der Seite auf --spur begrenzt ist. -->
+    <div class="container">
+        <header class="dashboard-kopf">
+            <div id="dashboard-konterfei" class="konterfei" aria-hidden="true"></div>
+            <div>
+                <h2 id="dashboard-titel">Meine Bilanz</h2>
+                <p id="dashboard-zeitraum" class="dashboard-zeitraum"></p>
+            </div>
+        </header>
+        <p id="dashboard-fehler" class="dashboard-fehler" role="status" hidden></p>
+        <div id="dashboard-bilanz" class="bilanz-gitter"></div>
+        <div id="dashboard-ringe" class="dashboard-block"></div>
+        <div id="dashboard-verlauf" class="dashboard-block"></div>
+        <div id="dashboard-einordnung" class="dashboard-block"></div>
+        <div id="dashboard-fahrten" class="dashboard-block"></div>
+    </div>
+</section>
 
 <!-- ============================================================
      KOPFBEREICH
@@ -555,7 +586,8 @@
 <script src="config.js?v=1b46ce53"></script>
 <script src="supabase.js?v=114ade78"></script>
 <script src="auth.js?v=127b1291"></script>
-<script src="script.js?v=61a95acc"></script>
+<script src="script.js?v=6dba6a57"></script>
+<script src="dashboard.js?v=16dabfe6"></script>
 
 
 <!-- DER FAHRPREISRECHNER WOHNT IN EINER SCHUBLADE (28.08.2026).
