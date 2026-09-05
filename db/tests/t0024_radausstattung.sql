@@ -29,8 +29,13 @@ begin
     'Die Bremsbauart haengt am Rad');
   return next has_column('velocity'::name, 'fahrrad'::name, 'beleuchtung'::name,
     'Die Beleuchtung haengt am Rad');
-  return next has_column('velocity'::name, 'fahrrad'::name, 'antrieb'::name,
-    'Der Antrieb haengt am Rad');
+  return next has_column('velocity'::name, 'fahrrad'::name, 'erstinbetriebnahme_am'::name,
+    'Der Tag der Erstinbetriebnahme haengt am Rad');
+  -- antrieb ist mit der Praezisierung entfallen: Es gibt keinen
+  -- Riemenantrieb, und eine Spalte mit einem einzigen moeglichen Wert
+  -- unterscheidet nichts. Die Zusicherung dreht sich um.
+  return next hasnt_column('velocity'::name, 'fahrrad'::name, 'antrieb'::name,
+    'antrieb ist entfallen - die Flotte faehrt ausschliesslich Kette');
   return next has_column('velocity'::name, 'fahrrad'::name, 'motortyp'::name,
     'Der Motortyp haengt am Rad');
   return next has_column('velocity'::name, 'fahrrad'::name, 'reifengroesse_zoll'::name,
@@ -75,7 +80,7 @@ begin
    order by f.fahrrad_id limit 1;
 
   return next throws_ok(
-    format($q$ update velocity.fahrrad set motortyp = 'Bosch Performance CX'
+    format($q$ update velocity.fahrrad set motortyp = 'vantaa_m50'
                 where fahrrad_id = %s $q$, v_city),
     '23514', null,
     'Ein Rad ohne Elektroantrieb bekommt keinen Motortyp');
@@ -90,7 +95,7 @@ begin
    order by f.fahrrad_id limit 1;
 
   return next lives_ok(
-    format($q$ update velocity.fahrrad set motortyp = 'Pruefmotor'
+    format($q$ update velocity.fahrrad set motortyp = 'vantaa_c85'
                 where fahrrad_id = %s $q$, v_ebike),
     'Bei einem Elektrotyp wird der Motortyp angenommen');
 end;
@@ -165,17 +170,17 @@ begin
   -- nicht.
   return next throws_ok(
     format($q$ select velocity.api_rad_anlegen('RN-RA-1', %s, %s, null,
-                 'diamant', 'kette', 'felge', 'akku', 'kette') $q$,
+                 'diamant', 'nabe', 'scheibe', 'akku') $q$,
            v_modell, v_station),
     '22023', null,
     'Ohne Gewicht wird kein Rad angelegt');
 
   return next throws_ok(
     format($q$ select velocity.api_rad_anlegen('RN-RA-2', %s, %s, 19.5,
-                 'diamant', 'kette', 'felge', 'akku', null) $q$,
+                 'diamant', 'nabe', 'scheibe', null) $q$,
            v_modell, v_station),
     '22023', null,
-    'Ohne Antrieb wird kein Rad angelegt');
+    'Ohne Beleuchtung wird kein Rad angelegt');
 
   perform set_config('request.jwt.claims', '', true);
 end;
@@ -190,8 +195,9 @@ begin
   perform velocity_test.fixture_rollen('ausstattung-voll', array['disposition']);
 
   v_f := velocity.api_rad_anlegen('RN-RA-3', v_modell, v_station, 21.4,
-           'tiefeinsteiger', 'nabe', 'scheibe', 'nabendynamo', 'riemen',
-           'RAL 3000', null, 28.0, 'SCHLOSS-RA-3');
+           'tiefeinsteiger', 'nabe', 'scheibe', 'nabendynamo',
+           'RAL 3000', null, 28.0, 'SCHLOSS-RA-3',
+           date '2026-03-01', date '2026-03-15');
 
   select * into v_r from velocity.fahrrad where fahrrad_id = v_f;
   return next is(v_r.gewicht_kg, 21.4, 'Das Gewicht kommt an');
@@ -199,7 +205,9 @@ begin
   return next is(v_r.schaltung::text,   'nabe',           'Die Schaltung kommt an');
   return next is(v_r.bremsen::text,     'scheibe',        'Die Bremsen kommen an');
   return next is(v_r.beleuchtung::text, 'nabendynamo',    'Die Beleuchtung kommt an');
-  return next is(v_r.antrieb::text,     'riemen',         'Der Antrieb kommt an');
+  return next is(v_r.angeschafft_am,    date '2026-03-01', 'Das Kaufdatum kommt an');
+  return next is(v_r.erstinbetriebnahme_am, date '2026-03-15',
+    'Der Tag der Erstinbetriebnahme kommt an');
   return next is(v_r.farbe,             'RAL 3000',       'Die Farbe kommt an');
   return next is(v_r.schlossnummer,     'SCHLOSS-RA-3',   'Die Schlossnummer kommt an');
 
@@ -207,7 +215,12 @@ begin
   -- Signatur ging es zunaechst verloren und fiel erst hier auf. Deshalb
   -- steht es jetzt in einer eigenen Zusicherung und nicht nur nebenbei
   -- in t0019.
-  return next isnt(v_r.angeschafft_am, null, 'Das Anschaffungsdatum wird gesetzt');
+  -- Die Inbetriebnahme liegt nie vor dem Kauf - fahrrad_inbetriebnahme_chk.
+  return next throws_ok(
+    format($q$ update velocity.fahrrad set erstinbetriebnahme_am = angeschafft_am - 1
+                where fahrrad_id = %s $q$, v_f),
+    '23514', null,
+    'Eine Inbetriebnahme vor dem Kaufdatum wird abgewiesen');
   return next ok(exists (select 1 from velocity.fahrrad_ereignis
                           where fahrrad_id = v_f and ereignisart = 'angeschafft'),
     'Die Lebenslaufakte beginnt mit der Anschaffung');
@@ -234,8 +247,8 @@ begin
     'v_wawi_flotte nennt die Bremsen');
   return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'beleuchtung'::name,
     'v_wawi_flotte nennt die Beleuchtung');
-  return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'antrieb'::name,
-    'v_wawi_flotte nennt den Antrieb');
+  return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'erstinbetriebnahme_am'::name,
+    'v_wawi_flotte nennt die Erstinbetriebnahme');
   return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'motortyp'::name,
     'v_wawi_flotte nennt den Motortyp');
   return next has_column('velocity'::name, 'v_wawi_flotte'::name, 'schlossnummer'::name,

@@ -111,7 +111,7 @@ begin;
 -- (0008_referenzdaten.sql) - eine hoehere Zahl hier waere genau die Art
 -- von Widerspruch, die tools/zahlen_gegen_db.py an anderer Stelle schon
 -- einmal aufgedeckt hat (Zuladung des Lastenrads an vier Stellen mit
--- drei verschiedenen Zahlen). gangzahl des City-Bikes = 8, konsistent
+-- drei verschiedenen Zahlen). gangzahl: City 8, E-Bike und Cargo 11. Die 8 ist konsistent
 -- mit dem bereits gefuehrten Werbemerkmal "8-Gang Nabenschaltung"
 -- (fahrradtyp_merkmal); rahmenhoehe_cm des Cargo-Rads = 50, deckungsgleich
 -- mit beiden Rahmenhoehen der frueheren Porteur-Modelle - hier keine neue
@@ -128,12 +128,12 @@ update velocity.fahrradtyp
  where typ_code = 'CITY';
 
 update velocity.fahrradtyp
-   set gangzahl = 7, rahmenhoehe_cm = 48,
+   set gangzahl = 11, rahmenhoehe_cm = 48,
        akkukapazitaet_wh = 500, reichweite_km = 50
  where typ_code = 'EBIKE';
 
 update velocity.fahrradtyp
-   set gangzahl = 8, rahmenhoehe_cm = 50,
+   set gangzahl = 11, rahmenhoehe_cm = 50,
        akkukapazitaet_wh = 600, reichweite_km = 45
  where typ_code = 'CARGO';
 

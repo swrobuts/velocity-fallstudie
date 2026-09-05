@@ -84,11 +84,11 @@ select t.typ_id, m.sortierung, m.merkmal
     ('CITY',  1, '8-Gang Nabenschaltung'),
     ('CITY',  2, 'Pannensichere Reifen'),
     ('CITY',  3, 'Komfort-Sattel'),
-    ('EBIKE', 1, 'Bosch Performance CX'),
+    ('EBIKE', 1, 'Vantaa Motion M50'),
     ('EBIKE', 2, 'Bis 25 km/h Unterstützung'),
     ('EBIKE', 3, 'Ideal fürs Hubland'),
     ('CARGO', 1, 'Große Transportbox (75 kg)'),
-    ('CARGO', 2, 'Starker E-Motor'),
+    ('CARGO', 2, 'Vantaa Motion C85'),
     ('CARGO', 3, 'Sitzbank für zwei Kinder')
   ) as m(typ_code, sortierung, merkmal)
   join velocity.fahrradtyp t on t.typ_code = m.typ_code

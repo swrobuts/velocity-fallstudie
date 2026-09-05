@@ -532,7 +532,6 @@ alter table velocity.fahrrad
   add column if not exists schaltung          velocity.schaltungsart,
   add column if not exists bremsen            velocity.bremsart,
   add column if not exists beleuchtung        velocity.beleuchtungsart,
-  add column if not exists antrieb            velocity.antriebsart,
   add column if not exists motortyp           text,
   add column if not exists reifengroesse_zoll numeric(3,1),
   add column if not exists schlossnummer      text;
@@ -557,8 +556,11 @@ comment on column velocity.fahrrad.bremsen is
 comment on column velocity.fahrrad.beleuchtung is
   'Nabendynamo, Akkulicht oder keine. Bei Rädern ohne Beleuchtung ist der Nachtbetrieb eine '
   'Frage an die Disposition, keine an die Werkstatt.';
-comment on column velocity.fahrrad.antrieb is
-  'Kette oder Riemen. Bestimmt Wartungsintervall und Ersatzteil.';
+-- antrieb stand hier, solange es Kette und Riemen gab. Die Flotte
+-- faehrt ausschliesslich Kette; die Spalte und der Aufzaehlungstyp
+-- antriebsart sind mit der Praezisierung der Ausstattung entfallen,
+-- abgeraeumt am Ende von 0018_wawi_sichten.sql (die Sicht musste
+-- zuerst aufhoeren, die Spalte zu lesen).
 comment on column velocity.fahrrad.motortyp is
   'Fabrikat des Antriebsmotors, etwa „Bosch Performance CX". NULL bei einem Rad ohne '
   'Elektroantrieb - das erzwingt der Trigger trg_fahrrad_motor_passt_zum_typ.';
@@ -606,9 +608,12 @@ alter table velocity.fahrrad drop constraint if exists fahrrad_farbe_chk;
 alter table velocity.fahrrad add  constraint fahrrad_farbe_chk
   check (farbe ~ '^RAL [0-9]{4}$');
 
+-- fahrrad_motortyp_chk gab es hier, solange motortyp Freitext war: eine
+-- Regel gegen den Leerstring. Seit der Umstellung auf den
+-- Aufzaehlungstyp velocity.motorfabrikat (weiter unten in dieser Datei)
+-- ist sie gegenstandslos - ein Aufzaehlungswert kann kein Leerstring
+-- sein, und der Typ laesst ohnehin nur die beiden Fabrikate zu.
 alter table velocity.fahrrad drop constraint if exists fahrrad_motortyp_chk;
-alter table velocity.fahrrad add  constraint fahrrad_motortyp_chk
-  check (motortyp is null or btrim(motortyp) <> '');
 
 -- Ein Schloss haengt an genau einem Rad. Partiell, weil NULL erlaubt
 -- bleibt und mehrere Raeder ohne Schloss kein Widerspruch sind.
@@ -661,3 +666,149 @@ drop trigger if exists trg_fahrrad_motor_passt_zum_typ on velocity.fahrrad;
 create trigger trg_fahrrad_motor_passt_zum_typ
   before insert or update of motortyp, modell_id on velocity.fahrrad
   for each row execute function velocity.fn_fahrrad_motor_passt_zum_typ();
+
+-- ---------------------------------------------------------------------
+-- Erstinbetriebnahme, und die Praezisierung der Ausstattung
+--
+-- angeschafft_am ist das KAUFDATUM - so heisst es in der Oberflaeche
+-- seither. Zwischen Kauf und erster Fahrt liegen Aufbau, Pruefung und
+-- Auslieferung an die Station; fuer die Gewaehrleistung zaehlt das eine
+-- Datum, fuer die Nutzungsdauer das andere. Deshalb zwei Spalten.
+alter table velocity.fahrrad
+  add column if not exists erstinbetriebnahme_am date;
+
+comment on column velocity.fahrrad.angeschafft_am is
+  'Kaufdatum dieses Rades. Nicht der Tag der ersten Fahrt - dafür steht erstinbetriebnahme_am.';
+comment on column velocity.fahrrad.erstinbetriebnahme_am is
+  'Tag der Erstinbetriebnahme: ab wann das Rad im Verleih stand. Liegt nie vor dem Kaufdatum, '
+  'kann aber fehlen, solange ein gekauftes Rad noch nicht aufgebaut ist.';
+
+alter table velocity.fahrrad drop constraint if exists fahrrad_inbetriebnahme_chk;
+alter table velocity.fahrrad add  constraint fahrrad_inbetriebnahme_chk
+  check (erstinbetriebnahme_am is null or angeschafft_am is null
+      or erstinbetriebnahme_am >= angeschafft_am);
+
+-- ---- Erst die Daten, dann die Typen ---------------------------------
+-- Die Reihenfolge ist zwingend: Ein Aufzaehlungstyp laesst sich nicht
+-- verkleinern, solange eine Zeile den wegfallenden Wert traegt.
+update velocity.fahrrad set schaltung = 'nabe'
+ where schaltung is not null and schaltung::text <> 'nabe';
+
+update velocity.fahrrad f set bremsen = 'scheibe'
+  from velocity.fahrradmodell mo, velocity.fahrradtyp t
+ where mo.modell_id = f.modell_id and t.typ_id = mo.typ_id
+   and t.typ_code = 'CARGO' and f.bremsen::text <> 'scheibe';
+
+update velocity.fahrrad set bremsen = 'scheibe'
+ where bremsen is not null and bremsen::text = 'ruecktritt';
+
+-- ---- Die Aufzaehlungstypen nachziehen -------------------------------
+-- Zuerst muss die Sicht weg. "alter column ... type" scheitert, solange
+-- eine Sicht auf die Spalte zeigt ("cannot alter type of a column used
+-- by a view"), und v_wawi_flotte fuehrt bremsen, schaltung und motortyp.
+-- 0018_wawi_sichten.sql legt sie weiter hinten in der Kette ohnehin neu
+-- an, mitsamt ihren Spaltenkommentaren; das Leserecht kommt aus dem
+-- grant-Block am Ende von 0019_wawi_logik.sql. Wer NUR diese Datei
+-- ausfuehrt, hat die Sicht solange nicht - dann gehoert 0018 hinterher.
+--
+-- Kein cascade: Haengt eines Tages doch etwas an v_wawi_flotte, soll das
+-- hier laut scheitern und nicht stillschweigend mitgerissen werden.
+drop view if exists velocity.v_wawi_flotte;
+
+-- Und derselbe Grund noch einmal fuer den Motorwaechter: Ein Trigger,
+-- der "update of motortyp" nennt, haengt an der Spalte, und PostgreSQL
+-- laesst ihren Typ dann nicht aendern. Er wird weiter unten in dieser
+-- Datei wieder angelegt - unveraendert, nur nach der Umstellung.
+drop trigger if exists trg_fahrrad_motor_passt_zum_typ on velocity.fahrrad;
+
+-- PostgreSQL kann einem Aufzaehlungstyp Werte HINZUFUEGEN, aber keine
+-- entfernen. Verkleinern heisst deshalb: neuen Typ anlegen, die Spalte
+-- umhaengen, den alten wegwerfen, den neuen umbenennen. Der Block laeuft
+-- nur, solange der alte Wert noch im Typ steht - beim zweiten Lauf ist
+-- die Bedingung falsch und er tut nichts.
+do $$
+begin
+  if exists (select 1 from pg_enum e
+               join pg_type ty on ty.oid = e.enumtypid
+               join pg_namespace n on n.oid = ty.typnamespace
+              where n.nspname = 'velocity' and ty.typname = 'bremsart'
+                and e.enumlabel = 'ruecktritt') then
+    create type velocity.bremsart_neu as enum ('felge','scheibe');
+    alter table velocity.fahrrad
+      alter column bremsen type velocity.bremsart_neu
+      using bremsen::text::velocity.bremsart_neu;
+    drop type velocity.bremsart;
+    alter type velocity.bremsart_neu rename to bremsart;
+  end if;
+
+  if exists (select 1 from pg_enum e
+               join pg_type ty on ty.oid = e.enumtypid
+               join pg_namespace n on n.oid = ty.typnamespace
+              where n.nspname = 'velocity' and ty.typname = 'schaltungsart'
+                and e.enumlabel = 'kette') then
+    create type velocity.schaltungsart_neu as enum ('nabe');
+    alter table velocity.fahrrad
+      alter column schaltung type velocity.schaltungsart_neu
+      using schaltung::text::velocity.schaltungsart_neu;
+    drop type velocity.schaltungsart;
+    alter type velocity.schaltungsart_neu rename to schaltungsart;
+  end if;
+
+  -- motortyp war Freitext und wird zur Auswahl. Der bisherige Bestand
+  -- traegt "Bosch Performance CX" aus dem Werbemerkmal; er wird auf das
+  -- E-Bike-Fabrikat abgebildet. Ein unbekannter Freitext wuerde die
+  -- Umstellung scheitern lassen - das ist gewollt: Er waere ein Wert,
+  -- den niemand zugeordnet hat.
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'velocity' and table_name = 'fahrrad'
+                and column_name = 'motortyp' and data_type = 'text') then
+    update velocity.fahrrad set motortyp = 'vantaa_m50'
+     where motortyp is not null and motortyp not in ('vantaa_m50','vantaa_c85');
+    alter table velocity.fahrrad drop constraint if exists fahrrad_motortyp_chk;
+    alter table velocity.fahrrad
+      alter column motortyp type velocity.motorfabrikat
+      using motortyp::velocity.motorfabrikat;
+  end if;
+end $$;
+
+-- ---- Der Motorwaechter zurueck --------------------------------------
+-- Wortgleich zu der Fassung weiter oben; er musste fuer die
+-- Typumstellung weichen. Die Funktion selbst blieb unberuehrt.
+create trigger trg_fahrrad_motor_passt_zum_typ
+  before insert or update of motortyp, modell_id on velocity.fahrrad
+  for each row execute function velocity.fn_fahrrad_motor_passt_zum_typ();
+
+-- ---- Scheibenbremse ist beim Lastenrad Pflicht ----------------------
+-- Wieder eine Bedingung ueber zwei Tabellen hinweg, die ein CHECK nicht
+-- sehen kann - dieselbe Bauart wie beim Motortyp. Ein Lastenrad traegt
+-- bis zu 75 kg Zuladung; eine Felgenbremse ist dafuer nicht zugelassen.
+create or replace function velocity.fn_fahrrad_bremse_passt_zum_typ()
+returns trigger
+language plpgsql
+as $$
+declare v_typ text;
+begin
+  if new.bremsen is null then
+    return new;
+  end if;
+  select t.typ_code into v_typ
+    from velocity.fahrradmodell mo
+    join velocity.fahrradtyp    t on t.typ_id = mo.typ_id
+   where mo.modell_id = new.modell_id;
+  if v_typ = 'CARGO' and new.bremsen::text <> 'scheibe' then
+    raise exception
+      'Rad % ist ein Lastenrad und braucht eine Scheibenbremse, nicht %',
+      coalesce(new.rahmennummer, '(neu)'), new.bremsen
+      using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+revoke all on function velocity.fn_fahrrad_bremse_passt_zum_typ()
+  from public, anon, authenticated;
+
+drop trigger if exists trg_fahrrad_bremse_passt_zum_typ on velocity.fahrrad;
+create trigger trg_fahrrad_bremse_passt_zum_typ
+  before insert or update of bremsen, modell_id on velocity.fahrrad
+  for each row execute function velocity.fn_fahrrad_bremse_passt_zum_typ();

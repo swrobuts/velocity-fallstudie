@@ -485,7 +485,7 @@ FELD_ZU_TYP = {
     'schaltung':   'schaltungsart',
     'bremsen':     'bremsart',
     'beleuchtung': 'beleuchtungsart',
-    'antrieb':     'antriebsart',
+    'motortyp':    'motorfabrikat',
 }
 
 flotte_js = ohne_js_kommentare((WAWI / 'flotte.js').read_text(encoding='utf-8'))
@@ -504,6 +504,40 @@ for feld, typname in FELD_ZU_TYP.items():
     pruefe('AUSSTATTUNG', aus_js == aus_sql,
            f'{feld}: die Auswahlliste nennt genau die Werte von velocity.{typname}'
            + ('' if aus_js == aus_sql else f' — Maske {aus_js}, Datenbank {aus_sql}'))
+
+# ---------------------------------------------------------------------
+# Die Typvorgaben der Maske gegen die Vorbelegung der Datenbank
+#
+# TYPVORGABE in flotte.js belegt die Anlagemaske vor, sobald ein Modell
+# gewaehlt ist. db/aufbau/0024_radausstattung.sql setzt dem BESTAND
+# dieselben Werte. Zwei Stellen mit denselben Zahlen laufen auseinander,
+# sobald eine davon gepflegt wird und die andere nicht - dieselbe Sorte
+# Befund, die bei der Zuladung des Lastenrads schon einmal an vier
+# Stellen drei verschiedene Zahlen ergab.
+#
+# Geprueft wird nur das Gewicht: Es ist die einzige Zahl, die in beiden
+# Quellen als Ziffer dasteht. Die uebrigen Vorgaben sind Aufzaehlungswerte
+# und stehen in unterschiedlicher Form da; sie gegeneinander zu halten,
+# hiesse die SQL-CASE-Ausdruecke nachzubauen - mehr Mechanik als Nutzen.
+VORBELEGUNG = WURZEL / 'db' / 'aufbau' / '0024_radausstattung.sql'
+sql_0024 = VORBELEGUNG.read_text(encoding='utf-8')
+
+m_js = re.search(r'const TYPVORGABE = \{(.*?)\n\};', flotte_js, re.S)
+if m_js is None:
+    pruefe('TYPVORGABE', False, 'TYPVORGABE steht in wawi/flotte.js')
+else:
+    for typ in ('CITY', 'EBIKE', 'CARGO'):
+        js = re.search(rf"{typ}:\s*\{{\s*gewicht:\s*(\d+)", m_js.group(1))
+        sql = re.search(rf"when '{typ}'\s+then (\d+(?:\.\d+)?)", sql_0024)
+        if js is None or sql is None:
+            pruefe('TYPVORGABE', False,
+                   f'{typ}: Gewicht in Maske und Vorbelegung auffindbar '
+                   f'(js={js is not None}, sql={sql is not None})')
+            continue
+        gleich = float(js.group(1)) == float(sql.group(1))
+        pruefe('TYPVORGABE', gleich,
+               f'{typ}: die Maske belegt {js.group(1)} kg vor, 0024 setzt '
+               f'{sql.group(1)} kg' + ('' if gleich else ' — das laeuft auseinander'))
 
 print('\nHandarbeit — vom Pruefer nicht entscheidbar:')
 print('  · Tab-Reihenfolge und Pfeiltasten in der Arbeitsliste wirklich durchspielen')

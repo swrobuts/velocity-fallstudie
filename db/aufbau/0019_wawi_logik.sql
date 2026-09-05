@@ -89,6 +89,12 @@ $$;
 -- gleichnamige Funktionen mit verschiedener Parameterliste sind fuer
 -- PostgREST nicht aufloesbar, es antwortet dann mit PGRST203.
 drop function if exists velocity.api_rad_anlegen(text, bigint, bigint);
+-- Die Fassung mit p_antrieb: Der Parameter ist mit der Praezisierung
+-- der Ausstattung entfallen (kein Riemenantrieb), dafuer kamen Kauf-
+-- und Inbetriebnahmedatum dazu.
+drop function if exists velocity.api_rad_anlegen(
+  text, bigint, bigint, numeric, text, text, text, text, text, text, text,
+  numeric, text);
 
 create or replace function velocity.api_rad_anlegen(
     p_rahmennummer       text,
@@ -99,11 +105,12 @@ create or replace function velocity.api_rad_anlegen(
     p_schaltung          text,
     p_bremsen            text,
     p_beleuchtung        text,
-    p_antrieb            text,
     p_farbe              text default 'RAL 3000',
     p_motortyp           text default null,
-    p_reifengroesse_zoll numeric default null,
-    p_schlossnummer      text default null)
+    p_reifengroesse_zoll numeric default 28.0,
+    p_schlossnummer      text default null,
+    p_angeschafft_am     date default null,
+    p_erstinbetriebnahme_am date default null)
 returns bigint
 language plpgsql
 security definer
@@ -128,9 +135,9 @@ begin
   -- gilt fuer den Erfassungsweg, nicht fuer die Ladelaeufe unter
   -- db/betrieb/ und nicht fuer die Testvorrichtungen. Siehe Kopfkommentar.
   if p_gewicht_kg is null or p_rahmenform is null or p_schaltung is null
-     or p_bremsen is null or p_beleuchtung is null or p_antrieb is null then
+     or p_bremsen is null or p_beleuchtung is null then
     raise exception
-      'Gewicht, Rahmenform, Schaltung, Bremsen, Beleuchtung und Antrieb sind '
+      'Gewicht, Rahmenform, Schaltung, Bremsen und Beleuchtung sind '
       'bei der Anlage anzugeben'
       using errcode = '22023';
   end if;
@@ -138,19 +145,20 @@ begin
   insert into velocity.fahrrad (
       rahmennummer, modell_id, status, angeschafft_am,
       farbe, gewicht_kg, rahmenform, schaltung, bremsen, beleuchtung,
-      antrieb, motortyp, reifengroesse_zoll, schlossnummer)
+      motortyp, reifengroesse_zoll, schlossnummer, erstinbetriebnahme_am)
   values (
-      p_rahmennummer, p_modell_id, 'verfuegbar', current_date,
+      p_rahmennummer, p_modell_id, 'verfuegbar',
+      coalesce(p_angeschafft_am, current_date),
       coalesce(nullif(btrim(p_farbe), ''), 'RAL 3000'),
       p_gewicht_kg,
       p_rahmenform::velocity.rahmenform,
       p_schaltung::velocity.schaltungsart,
       p_bremsen::velocity.bremsart,
       p_beleuchtung::velocity.beleuchtungsart,
-      p_antrieb::velocity.antriebsart,
-      nullif(btrim(p_motortyp), ''),
-      p_reifengroesse_zoll,
-      nullif(btrim(p_schlossnummer), ''))
+      nullif(btrim(p_motortyp), '')::velocity.motorfabrikat,
+      coalesce(p_reifengroesse_zoll, 28.0),
+      nullif(btrim(p_schlossnummer), ''),
+      p_erstinbetriebnahme_am)
   returning fahrrad_id into v_f;
 
   -- GR12 aus Phase 1: ein Rad ohne bekannten Standort laesst sich nicht
@@ -170,17 +178,19 @@ end;
 $$;
 
 comment on function velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
-                                             text, text, text, text, text, numeric, text) is
+                                             text, text, text, text, numeric, text, date, date) is
   'Legt ein Rad an und stellt es an eine Station. Verlangt neben Rahmennummer, Modell und '
-  'Station die Ausstattung: Gewicht, Rahmenform, Schaltung, Bremsen, Beleuchtung, Antrieb. '
-  'Farbe ist mit RAL 3000 vorbelegt und muss eine RAL-Classic-Nummer sein; Motortyp, Reifengröße und Schlossnummer sind freiwillig. '
+  'Station die Ausstattung: Gewicht, Rahmenform, Schaltung, Bremsen, Beleuchtung. '
+  'Farbe ist mit RAL 3000 vorbelegt und muss eine RAL-Classic-Nummer sein, Reifengröße mit 28 Zoll. '
+  'Motortyp, Schlossnummer und die beiden Daten (Kauf, Erstinbetriebnahme) sind freiwillig; '
+  'ohne Kaufdatum gilt der heutige Tag. '
   'Braucht die Rolle disposition.';
 
 revoke all on function velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
-                                                text, text, text, text, text, numeric, text)
+                                                text, text, text, text, numeric, text, date, date)
   from public, anon, authenticated;
 grant execute on function velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
-                                                   text, text, text, text, text, numeric, text)
+                                                   text, text, text, text, numeric, text, date, date)
   to authenticated;
 
 -- Werkstatt UND Disposition duerfen Status setzen: die eine schickt ein
@@ -1244,7 +1254,7 @@ grant execute on function
   velocity.ist_mitarbeiter(),
   velocity.hat_rolle(text),
   velocity.api_rad_anlegen(text, bigint, bigint, numeric, text, text,
-                           text, text, text, text, text, numeric, text),
+                           text, text, text, text, numeric, text, date, date),
   velocity.api_rad_status_setzen(bigint, text, text),
   velocity.api_rad_ausmustern(bigint, text),
   velocity.api_station_anlegen(text, text, text, text, text, numeric, numeric, integer),

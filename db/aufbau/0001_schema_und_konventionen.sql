@@ -56,10 +56,23 @@ begin
       -- Schadensbild laesst sich nicht vorab aufzaehlen, eine Bremsbauart
       -- schon.
       ('rahmenform',        array['diamant','tiefeinsteiger']),
-      ('schaltungsart',     array['nabe','kette','keine']),
-      ('bremsart',          array['felge','scheibe','ruecktritt']),
+      -- Nur 'nabe': Die Flotte faehrt ausschliesslich Nabenschaltung,
+      -- eine Kettenschaltung gibt es nicht. Die Spalte bleibt trotzdem
+      -- stehen - wie farbe - damit die Stelle da ist, sobald sich das
+      -- aendert. Die ZAHL der Gaenge steht weiter am Typ
+      -- (fahrradtyp.gangzahl), weil sie der Bauart folgt: City 8,
+      -- E-Bike und Cargo 11.
+      ('schaltungsart',     array['nabe']),
+      -- Ohne 'ruecktritt': angeboten werden Felgen- und Scheibenbremse.
+      ('bremsart',          array['felge','scheibe']),
       ('beleuchtungsart',   array['nabendynamo','akku','keine']),
-      ('antriebsart',       array['kette','riemen'])
+      -- Zwei Fabrikate, beide erfunden wie die Hersteller der Fallstudie.
+      -- Sie stehen zugleich als Werbemerkmal auf der Tarifkarte
+      -- (0008_referenzdaten.sql) - eine Tatsache, eine Stelle. Die
+      -- Klartexte "Vantaa Motion M50" und "Vantaa Motion C85" liefert
+      -- die Oberflaeche ueber wert.vantaa_m50 / wert.vantaa_c85; der
+      -- Bezeichner bleibt ASCII wie bei jedem anderen Aufzaehlungswert.
+      ('motorfabrikat',     array['vantaa_m50','vantaa_c85'])
     ) as t(name, labels)
   loop
     if not exists (

@@ -747,10 +747,28 @@ function radMaske(rad) {
 // tools/wawi_check.py haelt sie gegen die Aufbaudatei.
 const AUSSTATTUNG = {
     rahmenform:  ['diamant', 'tiefeinsteiger'],
-    schaltung:   ['nabe', 'kette', 'keine'],
-    bremsen:     ['felge', 'scheibe', 'ruecktritt'],
+    schaltung:   ['nabe'],
+    bremsen:     ['felge', 'scheibe'],
     beleuchtung: ['nabendynamo', 'akku', 'keine'],
-    antrieb:     ['kette', 'riemen']
+    motortyp:    ['vantaa_m50', 'vantaa_c85']
+};
+
+// Was ein Radtyp ueblicherweise mitbringt. Die Maske belegt danach vor,
+// SOBALD ein Modell gewaehlt ist - dieselben Werte, die auch
+// 0024_radausstattung.sql dem Bestand gibt. Zwei Stellen mit denselben
+// Zahlen waeren ein Widerspruch in Wartestellung; tools/wawi_check.py
+// haelt sie deshalb gegeneinander.
+//
+// nurScheibe beim Lastenrad ist keine Vorgabe, sondern eine Regel:
+// trg_fahrrad_bremse_passt_zum_typ weist alles andere ab. Die Maske
+// bietet dort gar nichts anderes erst an.
+const TYPVORGABE = {
+    CITY:  { gewicht: 19, rahmenform: 'tiefeinsteiger', bremsen: 'felge',
+             beleuchtung: 'nabendynamo', motortyp: '',           nurScheibe: false },
+    EBIKE: { gewicht: 24, rahmenform: 'diamant',        bremsen: 'scheibe',
+             beleuchtung: 'akku',        motortyp: 'vantaa_m50', nurScheibe: false },
+    CARGO: { gewicht: 30, rahmenform: 'diamant',        bremsen: 'scheibe',
+             beleuchtung: 'akku',        motortyp: 'vantaa_c85', nurScheibe: true }
 };
 
 // Ein Maskenfeld auslesen. <select>.value und <input>.value verhalten
@@ -758,6 +776,35 @@ const AUSSTATTUNG = {
 function feldWert(name) {
     const feld = document.getElementById(`feld-maske-${name}`);
     return feld ? feld.value.trim() : '';
+}
+
+function feldSetzen(name, wert) {
+    const feld = document.getElementById(`feld-maske-${name}`);
+    if (feld) feld.value = wert;
+}
+
+// Heute als ISO-Datum, in ORTSZEIT. toISOString() waere hier falsch: Es
+// rechnet nach UTC um und liefert vor 01:00 MEZ noch den Vortag - genau
+// die Sorte Abweichung, die als Kaufdatum niemandem auffiele.
+function heuteIso() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+         + `-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Die Auswahlliste eines Maskenfeldes neu bestuecken. Gebraucht fuer die
+// Bremsen: Beim Lastenrad steht die Scheibenbremse nicht zur Wahl,
+// sondern fest (trg_fahrrad_bremse_passt_zum_typ).
+function optionenSetzen(name, werte, ausgewaehlt) {
+    const feld = document.getElementById(`feld-maske-${name}`);
+    if (!feld) return;
+    feld.replaceChildren(...werte.map((w) => {
+        const o = document.createElement('option');
+        o.value = w.wert;
+        o.textContent = w.text;
+        return o;
+    }));
+    feld.value = ausgewaehlt;
 }
 
 async function radAnlegenMaske() {
@@ -775,7 +822,7 @@ async function radAnlegenMaske() {
     // also einen technischen Fehler, keine fehlende Berechtigung.
     const [modelle, stationen] = await Promise.all([
         ladeListe('v_wawi_modell',
-            'modell_id, hersteller, modellbezeichnung, typ_code, raeder_im_bestand',
+            'modell_id, hersteller, modellbezeichnung, typ_code, raeder_im_bestand, gangzahl, hat_elektro',
             (q) => q.order('hersteller').order('modellbezeichnung')),
         ladeListe('v_wawi_station', 'station_id, name, frei, in_betrieb',
             (q) => q.order('name'))
@@ -798,6 +845,17 @@ async function radAnlegenMaske() {
         return;
     }
 
+    // Kopfbild wie in der Radmaske: dasselbe radtypBild(), derselbe
+    // Grund (Auftrag: "damit ich das Produkt/Flotte auch sehe"). Es
+    // wechselt unten mit der Modellauswahl mit - solange keines gewaehlt
+    // ist, zeigt es den Typ des ersten Eintrags. alt bleibt leer und
+    // aria-hidden: Der Radtyp steht als Text im Modellfeld darunter, ein
+    // Bildname waere fuer einen Screenreader nur Wiederholung.
+    const kopfbild = document.createElement('img');
+    kopfbild.alt = '';
+    kopfbild.setAttribute('aria-hidden', 'true');
+    kopfbild.addEventListener('error', () => { kopfbild.hidden = true; });
+
     zeigeMaske(t('button.newBike'), [
         { name: 'rahmennummer', titel: t('field.rahmennummer'), wert: '' },
         {
@@ -818,21 +876,22 @@ async function radAnlegenMaske() {
                 text: `${s.name} (${t('misc.freeShort', { n: zahlFormat(s.frei) })})${s.in_betrieb ? '' : ' — ' + t('misc.decommissionedState')}`
             }))
         },
-        // Ausstattung. Seit 0024_radausstattung.sql verlangt
-        // api_rad_anlegen sechs davon - Gewicht, Rahmenform, Schaltung,
-        // Bremsen, Beleuchtung, Antrieb -, und die Datenbank weist die
-        // Anlage sonst mit 22023 ab. Die Auswahllisten fuehren genau die
-        // Werte der Aufzaehlungstypen; uebersetzt wird nur die
-        // Beschriftung, gespeichert der ASCII-Bezeichner.
+        // Ausstattung. api_rad_anlegen verlangt fuenf davon - Gewicht,
+        // Rahmenform, Schaltung, Bremsen, Beleuchtung -, und die
+        // Datenbank weist die Anlage sonst mit 22023 ab. Die
+        // Auswahllisten fuehren genau die Werte der Aufzaehlungstypen;
+        // uebersetzt wird nur die Beschriftung, gespeichert der
+        // ASCII-Bezeichner. Vorbelegt werden sie unten aus TYPVORGABE,
+        // sobald ein Modell feststeht.
         { name: 'gewicht_kg', titel: t('field.gewichtKg'), wert: '' },
         {
             name: 'rahmenform', titel: t('field.rahmenform'), wert: 'diamant',
             optionen: AUSSTATTUNG.rahmenform.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
         },
-        {
-            name: 'schaltung', titel: t('field.schaltung'), wert: 'kette',
-            optionen: AUSSTATTUNG.schaltung.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
-        },
+        // Nur zum Lesen: Es gibt genau eine Schaltungsbauart, und die
+        // Zahl der Gaenge folgt dem Typ. Eine Auswahlliste mit einem
+        // Eintrag waere eine Frage ohne Wahl.
+        { name: 'schaltung_anzeige', titel: t('field.schaltung'), wert: '', nurLesen: true },
         {
             name: 'bremsen', titel: t('field.bremsen'), wert: 'felge',
             optionen: AUSSTATTUNG.bremsen.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
@@ -842,15 +901,24 @@ async function radAnlegenMaske() {
             optionen: AUSSTATTUNG.beleuchtung.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
         },
         {
-            name: 'antrieb', titel: t('field.antrieb'), wert: 'kette',
-            optionen: AUSSTATTUNG.antrieb.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
+            // Leerer erster Eintrag: Ein City-Bike hat keinen Motor, und
+            // die Datenbank weist einen Motortyp am nicht-elektrischen
+            // Typ ab (trg_fahrrad_motor_passt_zum_typ).
+            name: 'motortyp', titel: t('field.motortyp'), wert: '',
+            optionen: [{ wert: '', text: t('misc.ohneMotor') }].concat(
+                AUSSTATTUNG.motortyp.map((w) => ({ wert: w, text: t(`wert.${w}`) })))
         },
-        // Freiwillig. Die Farbe ist vorbelegt, weil die ganze Flotte rot
-        // ist - das Feld steht trotzdem da, damit es nicht erst gesucht
-        // werden muss, wenn das eines Tages nicht mehr stimmt.
+        // Die beiden Daten der Stammdatenpflege. Ohne Kaufdatum nimmt die
+        // Datenbank den heutigen Tag; die Inbetriebnahme darf davor nicht
+        // liegen (fahrrad_inbetriebnahme_chk).
+        { name: 'angeschafft_am', titel: t('field.kaufdatum'), wert: heuteIso() },
+        { name: 'erstinbetriebnahme_am', titel: t('field.erstinbetriebnahme'), wert: '' },
+        // Freiwillig. Farbe und Reifengroesse sind vorbelegt, weil die
+        // ganze Flotte denselben Wert traegt - die Felder stehen trotzdem
+        // da, damit sie nicht erst gesucht werden muessen, wenn das eines
+        // Tages nicht mehr stimmt.
         { name: 'farbe', titel: t('field.farbe'), wert: 'RAL 3000' },
-        { name: 'motortyp', titel: t('field.motortyp'), wert: '' },
-        { name: 'reifengroesse_zoll', titel: t('field.reifengroesse'), wert: '' },
+        { name: 'reifengroesse_zoll', titel: t('field.reifengroesse'), wert: '28' },
         { name: 'schlossnummer', titel: t('field.schlossnummer'), wert: '' }
     ], [
         {
@@ -889,10 +957,11 @@ async function radAnlegenMaske() {
                     p_station_id: stationId,
                     p_gewicht_kg: gewicht,
                     p_rahmenform: feldWert('rahmenform'),
-                    p_schaltung: feldWert('schaltung'),
                     p_bremsen: feldWert('bremsen'),
                     p_beleuchtung: feldWert('beleuchtung'),
-                    p_antrieb: feldWert('antrieb'),
+                    // Es gibt genau eine Schaltungsbauart - das Feld
+                    // darueber zeigt sie nur an, gesendet wird sie hier.
+                    p_schaltung: 'nabe',
                     p_farbe: feldWert('farbe') || 'RAL 3000',
                     // Leere Felder als null, nicht als Leerstring: die
                     // Funktion macht daraus zwar selbst NULL, aber ein
@@ -900,7 +969,9 @@ async function radAnlegenMaske() {
                     // nicht "nicht angegeben".
                     p_motortyp: feldWert('motortyp') || null,
                     p_reifengroesse_zoll: Number.isFinite(reifen) && reifen > 0 ? reifen : null,
-                    p_schlossnummer: feldWert('schlossnummer') || null
+                    p_schlossnummer: feldWert('schlossnummer') || null,
+                    p_angeschafft_am: feldWert('angeschafft_am') || null,
+                    p_erstinbetriebnahme_am: feldWert('erstinbetriebnahme_am') || null
                 });
                 const quittungstext = t('msg.bikeCreated', { rahmennummer });
                 melde(quittungstext, 'gut');
@@ -911,5 +982,51 @@ async function radAnlegenMaske() {
                 await quittung(quittungstext);
             }
         }
-    ]);
+    ], kopfbild);
+
+    // ---- Vorbelegung nach Radtyp -------------------------------------
+    // zeigeMaske() kennt keine Feldabhaengigkeiten - es baut ein
+    // Formular und ist fertig. Die Verdrahtung gehoert deshalb hierher,
+    // NACH dem Aufbau: ein Zuhoerer am Modellfeld, der die uebrigen
+    // Felder auf den Typstandard stellt. Dieselben Werte wie in
+    // 0024_radausstattung.sql, siehe TYPVORGABE oben.
+    //
+    // Wer danach von Hand etwas anderes einstellt, behaelt es - bis er
+    // das Modell wechselt. Ein Modellwechsel heisst, dass ein anderer
+    // Radtyp gemeint ist, und dann sind die alten Vorgaben nicht mehr die
+    // richtigen.
+    const nachModell = new Map(modelle.map((m) => [String(m.modell_id), m]));
+
+    function vorbelegen() {
+        const m = nachModell.get(feldWert('modell_id'));
+        if (!m) return;
+        const v = TYPVORGABE[m.typ_code];
+
+        const quelle = radtypBild(m.typ_code);
+        if (quelle) { kopfbild.src = quelle; kopfbild.hidden = false; }
+        else kopfbild.hidden = true;
+
+        // Die Schaltung ist keine Wahl, sondern eine Ansage: eine
+        // Bauart, die Gangzahl aus dem Typ.
+        feldSetzen('schaltung_anzeige',
+            t('misc.nabenschaltung', { n: zahlFormat(m.gangzahl) }));
+
+        if (!v) return;
+        feldSetzen('gewicht_kg', String(v.gewicht));
+        feldSetzen('rahmenform', v.rahmenform);
+        feldSetzen('beleuchtung', v.beleuchtung);
+        optionenSetzen('bremsen',
+            (v.nurScheibe ? ['scheibe'] : AUSSTATTUNG.bremsen)
+                .map((w) => ({ wert: w, text: t(`wert.${w}`) })),
+            v.bremsen);
+        optionenSetzen('motortyp',
+            m.hat_elektro
+                ? AUSSTATTUNG.motortyp.map((w) => ({ wert: w, text: t(`wert.${w}`) }))
+                : [{ wert: '', text: t('misc.ohneMotor') }],
+            m.hat_elektro ? v.motortyp : '');
+    }
+
+    document.getElementById('feld-maske-modell_id')
+        ?.addEventListener('change', vorbelegen);
+    vorbelegen();
 }

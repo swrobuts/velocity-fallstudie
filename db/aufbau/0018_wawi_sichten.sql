@@ -101,7 +101,14 @@ comment on function velocity.fn_luftlinie_km(numeric, numeric, numeric, numeric)
   'wäre Erfindung, keine Schätzung.';
 
 -- ---- Flotte ----------------------------------------------------------
-create or replace view velocity.v_wawi_flotte as
+-- drop und neu, nicht CREATE OR REPLACE: Die Spalte antrieb ENTFAELLT
+-- (es gibt keinen Riemen, siehe 0001), und Spalten entfernen kann ein
+-- REPLACE nicht. 0003_bereich_b_netz_und_flotte.sql hat die Sicht fuer
+-- die Typumstellung ohnehin schon abgeraeumt; hier steht der Fall
+-- trotzdem, damit die Datei auch allein lauffaehig bleibt. Das Leserecht
+-- kommt aus dem grant-Block am Ende von 0019_wawi_logik.sql.
+drop view if exists velocity.v_wawi_flotte;
+create view velocity.v_wawi_flotte as
 select f.fahrrad_id,
        f.rahmennummer,
        t.typ_code,
@@ -146,7 +153,8 @@ select f.fahrrad_id,
        -- Die uebrige Ausstattung, hinten angehaengt - CREATE OR REPLACE
        -- darf Spalten anfuegen, aber keine verschieben.
        f.farbe, f.rahmenform, f.schaltung, f.bremsen, f.beleuchtung,
-       f.antrieb, f.motortyp, f.reifengroesse_zoll, f.schlossnummer
+       f.motortyp, f.reifengroesse_zoll, f.schlossnummer,
+       f.erstinbetriebnahme_am
   from velocity.fahrrad f
   join velocity.fahrradmodell mo on mo.modell_id = f.modell_id
   join velocity.fahrradtyp    t  on t.typ_id     = mo.typ_id
@@ -168,10 +176,11 @@ comment on column velocity.v_wawi_flotte.rahmenform is 'Diamant oder Tiefeinstei
 comment on column velocity.v_wawi_flotte.schaltung is 'Bauart der Schaltung.';
 comment on column velocity.v_wawi_flotte.bremsen is 'Bauart der Bremsanlage.';
 comment on column velocity.v_wawi_flotte.beleuchtung is 'Nabendynamo, Akkulicht oder keine.';
-comment on column velocity.v_wawi_flotte.antrieb is 'Kette oder Riemen.';
 comment on column velocity.v_wawi_flotte.motortyp is 'Fabrikat des Motors, NULL ohne Elektroantrieb.';
 comment on column velocity.v_wawi_flotte.reifengroesse_zoll is 'Laufradgröße in Zoll.';
 comment on column velocity.v_wawi_flotte.schlossnummer is 'Nummer des Rahmenschlosses.';
+comment on column velocity.v_wawi_flotte.erstinbetriebnahme_am is
+  'Tag der Erstinbetriebnahme. angeschafft_am daneben ist das Kaufdatum.';
 
 comment on view velocity.v_wawi_flotte is
   'Arbeitssicht der Flotte für Disposition und Werkstatt: ein Rad je Zeile mit '
@@ -1129,6 +1138,14 @@ alter table velocity.fahrradmodell drop column if exists reichweite_km;
 -- Beide Sichten oben lesen sie nicht mehr von dort, also ist die
 -- Abhaengigkeit weg und die Spalte kann fallen.
 alter table velocity.fahrradtyp drop column if exists gewicht_kg;
+
+-- Und derselbe Fall ein drittes Mal: antrieb ist seit der Praezisierung
+-- der Ausstattung gegenstandslos - die Flotte faehrt ausschliesslich
+-- Kette, einen Riemenantrieb gibt es nicht. Die Sicht oben liest die
+-- Spalte nicht mehr, also kann sie fallen; mit ihr der Aufzaehlungstyp,
+-- den danach niemand mehr benutzt.
+alter table velocity.fahrrad drop column if exists antrieb;
+drop type if exists velocity.antriebsart;
 
 -- =====================================================================
 -- Drill-Down-Aufgabe: v_wawi_fahrten_je_tag - Tagesaggregation für die

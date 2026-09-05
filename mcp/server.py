@@ -298,10 +298,12 @@ def _rpc(funktion: str, **argumente: Any) -> str:
 @server.tool()
 def rad_anlegen(rahmennummer: str, modell_id: int, station_id: int,
                 gewicht_kg: float, rahmenform: str, schaltung: str,
-                bremsen: str, beleuchtung: str, antrieb: str,
+                bremsen: str, beleuchtung: str,
                 farbe: str = "RAL 3000", motortyp: str | None = None,
-                reifengroesse_zoll: float | None = None,
-                schlossnummer: str | None = None) -> str:
+                reifengroesse_zoll: float = 28.0,
+                schlossnummer: str | None = None,
+                angeschafft_am: str | None = None,
+                erstinbetriebnahme_am: str | None = None) -> str:
     """Legt ein neues Rad an und stellt es an eine Station.
 
     Braucht die Rolle disposition. Die modell_id steht in v_wawi_modell,
@@ -311,25 +313,29 @@ def rad_anlegen(rahmennummer: str, modell_id: int, station_id: int,
     die Datenbank nicht an:
 
       gewicht_kg   das gewogene Gewicht DIESES Rades, nicht der Bauart
+                   (Richtwerte: City 19, E-Bike 24, Cargo 30)
       rahmenform   diamant | tiefeinsteiger
-      schaltung    nabe | kette | keine
-      bremsen      felge | scheibe | ruecktritt
+      schaltung    nabe — die Flotte kennt keine Kettenschaltung
+      bremsen      felge | scheibe — beim Lastenrad NUR scheibe
       beleuchtung  nabendynamo | akku | keine
-      antrieb      kette | riemen
 
     Freiwillig: farbe — eine RAL-Classic-Nummer wie „RAL 3000",
-    Vorgabe eben diese —, motortyp — nur bei einem Typ mit
-    Elektroantrieb, sonst weist die Datenbank es ab —,
-    reifengroesse_zoll und schlossnummer, die je Rad eindeutig ist.
+    Vorgabe eben diese —, motortyp — vantaa_m50 oder vantaa_c85, nur bei
+    einem Typ mit Elektroantrieb, sonst weist die Datenbank es ab —,
+    reifengroesse_zoll (Vorgabe 28), schlossnummer, die je Rad eindeutig
+    ist, sowie angeschafft_am (das Kaufdatum, ohne Angabe der heutige
+    Tag) und erstinbetriebnahme_am, beide als ISO-Datum.
     """
     return _rpc("api_rad_anlegen", p_rahmennummer=rahmennummer,
                 p_modell_id=modell_id, p_station_id=station_id,
                 p_gewicht_kg=gewicht_kg, p_rahmenform=rahmenform,
                 p_schaltung=schaltung, p_bremsen=bremsen,
-                p_beleuchtung=beleuchtung, p_antrieb=antrieb,
+                p_beleuchtung=beleuchtung,
                 p_farbe=farbe, p_motortyp=motortyp,
                 p_reifengroesse_zoll=reifengroesse_zoll,
-                p_schlossnummer=schlossnummer)
+                p_schlossnummer=schlossnummer,
+                p_angeschafft_am=angeschafft_am,
+                p_erstinbetriebnahme_am=erstinbetriebnahme_am)
 
 
 @server.tool()

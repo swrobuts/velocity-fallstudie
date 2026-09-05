@@ -63,75 +63,84 @@
 -- ---------------------------------------------------------------------
 -- ERFUNDENE WERTE, UND WORAN SIE SICH HALTEN
 --
--- Die Vorbelegung des Bestands unten setzt Werte, die es so nie gab -
--- die ganze Fallstudie besteht aus solchen. Die Regel dabei ist nicht
+-- Die Vorbelegung unten setzt Werte, die es so nie gab - die ganze
+-- Fallstudie besteht aus solchen. Die Regel dabei ist nicht
 -- Beliebigkeit, sondern Widerspruchsfreiheit zu dem, was schon
 -- geschrieben steht:
 --
---   CITY   schaltung = nabe        Die Tarifkarte wirbt seit 0008 mit
---                                  "8-Gang Nabenschaltung"
---                                  (fahrradtyp_merkmal, Sortierung 1).
---   EBIKE  motortyp = Bosch …      Ebenfalls aus fahrradtyp_merkmal,
---                                  woertlich uebernommen.
---   CARGO  motortyp = NULL         Der Werbetext nennt nur "Starker
---                                  E-Motor" und kein Fabrikat. Hier wird
---                                  keines erfunden - die Luecke ist
---                                  sichtbar und von Hand zu fuellen.
+--   Nabenschaltung   Die Tarifkarte wirbt seit 0008 mit "8-Gang
+--                    Nabenschaltung" fuer das City-Bike. Die Gangzahl
+--                    steht am Typ, die Bauart am Rad.
+--   Motorfabrikate   "Vantaa Motion M50" und "Vantaa Motion C85", beide
+--                    erfunden wie die Hersteller der Fallstudie. Sie
+--                    stehen zugleich als Werbemerkmal auf der
+--                    Tarifkarte - eine Tatsache, eine Stelle. Vorher
+--                    warb dort "Bosch Performance CX", ein echtes
+--                    Fabrikat neben erfundenen Herstellern.
+--   Gewichte         19 / 24 / 30 kg als MITTELWERT je Typ, mit einer
+--                    Streuung von +/- 0,9 kg. Ohne sie waere die Spalte
+--                    am Rad so aussagelos wie vorher am Typ.
 --
--- Das Gewicht streut deterministisch um den bisherigen Typwert, aus der
--- fahrrad_id abgeleitet: kein random(), damit zwei Laeufe dasselbe
--- Ergebnis haben und die Aufbaukette idempotent bleibt.
+-- Alle Werte leiten sich aus typ_code und fahrrad_id ab: kein random(),
+-- damit zwei Laeufe dasselbe Ergebnis haben.
 -- =====================================================================
 
--- ---- Vorbelegung des Bestands ---------------------------------------
--- Nur dort, wo noch nichts steht: Ein zweiter Lauf der Aufbaukette darf
--- von Hand gepflegte Werte nicht ueberschreiben. Genau das macht diesen
--- Block idempotent, ohne dass er ein zweites Mal dieselben Zeilen
--- anfasst.
+-- ---- Die Ausstattung des Bestands folgt dem Typ ---------------------
+-- UNBEDINGT, nicht nur wo noch nichts steht. Die erste Fassung setzte
+-- Werte nur in leere Spalten, um von Hand Gepflegtes zu schonen. Das
+-- traegt hier nicht: Diese sieben Angaben sind KEINE Eigenschaften des
+-- einzelnen Rades, sondern seines Typs - ein City-Bike hat eine
+-- Felgenbremse, weil es ein City-Bike ist. Ein Wert, der davon abweicht,
+-- waere ein Fehler und kein pflegenswerter Sonderfall.
+--
+-- Was NICHT angefasst wird: farbe (eigener Vorgabewert, siehe 0003),
+-- schlossnummer (haengt am einzelnen Rad) und erstinbetriebnahme_am
+-- (ein Datum, das nur dieses Rad kennt - deshalb weiter unten mit
+-- coalesce).
+--
+-- Idempotent, weil jeder Lauf dasselbe Ergebnis hat: Alle Werte leiten
+-- sich aus typ_code und fahrrad_id ab, keiner aus random() oder now().
 update velocity.fahrrad f
-   set gewicht_kg = coalesce(f.gewicht_kg,
-         -- Streuung +/- 0,9 kg in Schritten von 0,3 um das bisherige
-         -- Typgewicht. Aus der fahrrad_id abgeleitet und damit bei jedem
-         -- Lauf dieselbe - random() waere hier ein Idempotenzbruch.
-         --
-         -- Die drei Basiswerte stehen hier als Zahl und nicht als
-         -- Verweis auf t.gewicht_kg, obwohl die Spalte in diesem Moment
-         -- noch existiert: Dieselbe Datei loescht sie weiter unten, und
-         -- beim ZWEITEN Lauf gaebe es sie nicht mehr. Genau daran ist
-         -- der erste Entwurf gescheitert - Abnahmeschritt 2 laesst die
-         -- Aufbaukette zweimal laufen. Die Werte stammen aus
-         -- db/betrieb/flottenmodelle_stammdaten.sql, wo sie begruendet
-         -- sind.
-         case t.typ_code when 'CITY'  then 19.5
-                         when 'EBIKE' then 24.0
-                         when 'CARGO' then 40.0
-                         else 20.0 end + ((f.fahrrad_id % 7) - 3) * 0.3),
-       rahmenform  = coalesce(f.rahmenform,
-         case t.typ_code when 'CITY' then 'tiefeinsteiger'
-                         else 'diamant' end::velocity.rahmenform),
-       schaltung   = coalesce(f.schaltung,
-         case t.typ_code when 'CITY'  then 'nabe'
-                         when 'CARGO' then 'nabe'
-                         else 'kette' end::velocity.schaltungsart),
-       bremsen     = coalesce(f.bremsen,
-         case t.typ_code when 'CITY' then 'felge'
-                         else 'scheibe' end::velocity.bremsart),
-       beleuchtung = coalesce(f.beleuchtung,
-         case when t.hat_elektro then 'akku'
-              else 'nabendynamo' end::velocity.beleuchtungsart),
-       antrieb     = coalesce(f.antrieb, 'kette'::velocity.antriebsart),
-       motortyp    = coalesce(f.motortyp,
-         case t.typ_code when 'EBIKE' then 'Bosch Performance CX'
-                         else null end),
-       reifengroesse_zoll = coalesce(f.reifengroesse_zoll,
-         case t.typ_code when 'CARGO' then 26.0 else 28.0 end)
+   set gewicht_kg = case t.typ_code when 'CITY'  then 19.0
+                                    when 'EBIKE' then 24.0
+                                    when 'CARGO' then 30.0
+                                    else 20.0 end
+                    -- Streuung +/- 0,9 kg in Schritten von 0,3, aus der
+                    -- fahrrad_id abgeleitet. Die genannten Zahlen sind
+                    -- damit der MITTELWERT je Typ, nicht der Wert jedes
+                    -- Rades: Anbauteile und Verschleiss machen den
+                    -- Unterschied, und ohne ihn waere die Spalte am Rad
+                    -- so aussagelos wie vorher am Typ.
+                    + ((f.fahrrad_id % 7) - 3) * 0.3,
+       rahmenform  = case t.typ_code when 'CITY' then 'tiefeinsteiger'
+                                     else 'diamant' end::velocity.rahmenform,
+       -- Die Flotte faehrt ausschliesslich Nabenschaltung. Die ZAHL der
+       -- Gaenge steht am Typ: City 8, E-Bike und Cargo 11 (gesetzt in
+       -- db/betrieb/flottenmodelle_stammdaten.sql).
+       schaltung   = 'nabe'::velocity.schaltungsart,
+       -- Beim Lastenrad ist die Scheibenbremse Pflicht, nicht Vorgabe -
+       -- trg_fahrrad_bremse_passt_zum_typ in 0003 setzt das durch.
+       bremsen     = case t.typ_code when 'CITY' then 'felge'
+                                     else 'scheibe' end::velocity.bremsart,
+       beleuchtung = case when t.hat_elektro then 'akku'
+                          else 'nabendynamo' end::velocity.beleuchtungsart,
+       -- Zwei Fabrikate, beide erfunden: das staerkere ins Lastenrad.
+       -- Dieselben Namen wirbt die Tarifkarte (0008_referenzdaten.sql).
+       motortyp    = case t.typ_code when 'EBIKE' then 'vantaa_m50'
+                                     when 'CARGO' then 'vantaa_c85'
+                                     else null end::velocity.motorfabrikat,
+       reifengroesse_zoll = 28.0,
+       -- Nur wo nichts steht: Zwischen Kauf und erster Fahrt liegen
+       -- Aufbau und Auslieferung. Null bis 21 Tage, aus der fahrrad_id
+       -- abgeleitet - erfunden, aber nachvollziehbar und bei jedem Lauf
+       -- gleich. Nie vor dem Kaufdatum, das erzwingt ausserdem
+       -- fahrrad_inbetriebnahme_chk.
+       erstinbetriebnahme_am = coalesce(
+         f.erstinbetriebnahme_am,
+         f.angeschafft_am + ((f.fahrrad_id % 22))::integer)
   from velocity.fahrradmodell mo, velocity.fahrradtyp t
  where mo.modell_id = f.modell_id
-   and t.typ_id     = mo.typ_id
-   and (f.gewicht_kg is null or f.rahmenform is null or f.schaltung is null
-     or f.bremsen is null or f.beleuchtung is null or f.antrieb is null
-     or f.reifengroesse_zoll is null
-     or (f.motortyp is null and t.typ_code = 'EBIKE'));
+   and t.typ_id     = mo.typ_id;
 
 -- ---- Ruecknahme ------------------------------------------------------
 --   drop trigger trg_fahrrad_motor_passt_zum_typ on velocity.fahrrad;
