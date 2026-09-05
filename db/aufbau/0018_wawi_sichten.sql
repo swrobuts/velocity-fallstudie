@@ -108,7 +108,7 @@ comment on function velocity.fn_luftlinie_km(numeric, numeric, numeric, numeric)
 --  DREIMAL in dieser Datei - in v_wawi_fahrt_km, v_wawi_km_co2 und
 --  v_wawi_fahrten_je_tag_rad. Der frueher hier stehende Grund war
 --  triftig: die drei tragen VERSCHIEDENE Rollenschranken (leitung /
---  leitung+demo / leitung+disposition), und eine Sicht auf eine Sicht
+--  leitung+demo / leitung+disposition+demo), und eine Sicht auf eine Sicht
 --  mit engerer Schranke haette die engere Schranke geerbt.
 --
 --  Diese Sicht traegt GAR KEINE Rollenschranke. Der Zugriff wird nicht
