@@ -17,6 +17,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const closeBtn = document.querySelector(".close-modal");
     const rentalBanner = document.getElementById("active-rental-banner");
     const endRentalBtn = document.getElementById("end-rental-btn");
+    // Fuer die Kontoansicht (#konto) weiter unten: das Dashboard selbst
+    // und sein Elternbereich, dessen UEBRIGE Kinder dafuer zurueckweichen.
+    const dashboardAbschnitt = document.getElementById('dashboard');
+    const hauptbereich = document.getElementById('top');
 
     /* =================================================================
        KOPFZEILE IM ANGEMELDETEN ZUSTAND
@@ -185,11 +189,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             userNavBtn.removeAttribute('aria-controls');
             userNavBtn.onclick = (e) => { e.preventDefault(); openModal(); };
             hideRentalBanner();
-            // Sonst bliebe das Dashboard nach einer Abmeldung ohne
-            // Neuladen der Seite mit der Bilanz des vorigen Kontos
-            // sichtbar stehen - derselbe Grund wie bei hideRentalBanner().
-            const dashboardAbschnitt = document.getElementById('dashboard');
-            if (dashboardAbschnitt) dashboardAbschnitt.hidden = true;
             /* Abgemeldet ist der Schaetzer AN.
 
                Bis zum 03.09.2026 stand hier preisschaetzerAn = false, mit
@@ -209,7 +208,53 @@ document.addEventListener("DOMContentLoaded", async () => {
             schaetzbareTypen = await fetchSchaetzbareTypen();
             radKachelSchaetzknoepfeSetzen();
         }
+        ansichtAktualisieren();
     }
+
+    /* =================================================================
+       KONTOANSICHT (#konto)
+
+       Die eigene Bilanz ist eine ZWEITE ANSICHT derselben Seite, keine
+       eigene Datei und kein serverseitiger Pfad - dafuer braeuchte es
+       eine fuenfte Datei, und diese Aufgabe ist auf vier begrenzt. #konto
+       ist trotzdem eine echte Adresse: "Meine Bilanz" im Kontomenue setzt
+       sie (ein ganz normaler Link, siehe index.html), und die
+       Landingpage-Abschnitte - alle Kinder von <main id="top"> ausser
+       #dashboard selbst - weichen dafuer zurueck. Der Rueckweg ist der
+       Link "Zur Startseite" im Dashboard-Kopf (href="#top") und der
+       Zurueck-Knopf des Browsers: beide aendern den Hash, und genau
+       darauf reagiert diese Funktion per 'hashchange'.
+
+       isAuthenticated() entscheidet MIT, nicht nur der Hash. Zwei Faelle
+       haengen daran:
+         - Abmeldung waehrend die Bilanz steht: ohne diese Abfrage bliebe
+           sie nach einer Abmeldung ohne Neuladen der Seite mit den Zahlen
+           des vorigen Kontos sichtbar stehen (derselbe Grund wie bei
+           hideRentalBanner()).
+         - #konto in der Adresse, aber abgemeldet (Lesezeichen, Reload,
+           weitergereichter Link): die Bilanz bleibt aus, die Landingpage
+           steht. Kein Fehler, keine leere Kachelreihe - nur die Adresse
+           zeigt weiterhin #konto, bis sich das durch eine Anmeldung oder
+           einen weiteren Klick aendert.
+       ================================================================= */
+    function ansichtAktualisieren() {
+        if (!dashboardAbschnitt || !hauptbereich) return;
+        const zeigen = location.hash === '#konto' && isAuthenticated();
+        const kommtNeuInsBild = zeigen && dashboardAbschnitt.hidden;
+        dashboardAbschnitt.hidden = !zeigen;
+        for (const kind of hauptbereich.children) {
+            if (kind !== dashboardAbschnitt) kind.hidden = zeigen;
+        }
+        // Nur BEIM WECHSEL nach oben scrollen und den Fokus setzen, nicht
+        // bei jedem Aufruf - sonst risse ein erneuter Aufruf (z. B. nach
+        // der Abmeldung) aus der eigenen Fahrtenliste weiter unten.
+        if (kommtNeuInsBild) {
+            window.scrollTo(0, 0);
+            document.getElementById('dashboard-titel')?.focus();
+        }
+    }
+
+    window.addEventListener('hashchange', ansichtAktualisieren);
 
     /* =================================================================
        ANMELDEDIALOG

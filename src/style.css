@@ -1531,10 +1531,11 @@ footer :focus-visible, .product-tabs :focus-visible,
 .map-wrapper { padding: var(--luft) 0; background: #fff; }
 
 /* ============================================================
-   PERSOENLICHES DASHBOARD
-   Nur angemeldet sichtbar, siehe #dashboard in index.html und
-   dashboardZeichnen() in dashboard.js. Weisse Kacheln auf dem grauen
-   Grund des Abschnitts - dasselbe Material wie bei .rad-kacheln.
+   PERSOENLICHES DASHBOARD ("Meine Bilanz")
+   Sichtbar nur ueber die Adresse #konto UND angemeldet - beides
+   entscheidet ansichtAktualisieren() in script.js, nicht dieses
+   Stylesheet. Weisse Kacheln auf dem grauen Grund des Abschnitts -
+   dasselbe Material wie bei .rad-kacheln.
 
    Ringe, Verlauf, Einordnung und letzte Fahrten (.dashboard-block)
    bekommen ihre Kartenoptik erst UEBER :not(:empty). Jede der vier
@@ -1543,8 +1544,30 @@ footer :focus-visible, .product-tabs :focus-visible,
    den Fall "laufender Monat ohne Fahrt") - ein leeres div trifft dann
    :empty, bleibt ohne Innenabstand und Rahmen und nimmt keine Flaeche
    ein. Eine JS-gesteuerte hidden-Eigenschaft braeuchte fuer denselben
-   Effekt eine zusaetzliche Fallunterscheidung je Aufrufstelle. */
+   Effekt eine zusaetzliche Fallunterscheidung je Aufrufstelle.
+
+   ZENTRIERT WIE JEDER ANDERE ABSCHNITT: .container begrenzt auf --spur
+   und zentriert per margin: 0 auto - hier galt bereits vor dieser
+   Aufgabe dieselbe Regel wie bei .facts oder .faq-section. Was auf
+   sehr breiten Schirmen trotzdem an den linken Rand gestaucht wirkte,
+   war kein Zentrierungsfehler, sondern ein Fehler im Bilanzraster (siehe
+   .bilanz-hinweis unten) - behoben dort, nicht durch eine zusaetzliche
+   Breitenregel hier. */
 .dashboard { padding: var(--luft) 0; background: var(--paper); }
+
+/* Rueckweg aus der Kontoansicht. Ein ganz normaler Anker auf #top
+   (<main id="top">) - kein Klick-Handler noetig, das ist genau der Fall,
+   fuer den <a href> erfunden wurde. Der Browser-Zurueck-Knopf UND der
+   Escape-Schalter der Adresse #konto (siehe ansichtAktualisieren() in
+   script.js) fuehren zusaetzlich zurueck. */
+.dashboard-zurueck {
+  display: inline-block;
+  margin-bottom: var(--a5);
+  font: 700 var(--grad-klein)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase;
+  color: var(--grau); text-decoration: none;
+}
+.dashboard-zurueck:hover { color: var(--red); }
 
 .dashboard-kopf {
   display: flex; flex-wrap: wrap; align-items: center;
@@ -1609,10 +1632,28 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 /* Der Schaetzanteil steht sichtbar am Kilometerblock, nicht im
    Kleingedruckten - deshalb eine eigene Zeile ueber die volle Breite
-   des Rasters, keine fuenfte Kachel. */
+   der Karte, keine fuenfte Kachel.
+
+   NICHT MEHR IM RASTER: bis zum 06.09.2026 stand hier grid-column: 1/-1,
+   und #dashboard-bilanz-hinweis war ein Kind von .bilanz-gitter, so wie
+   die vier Kacheln. Das schien harmlos, war es aber nicht: -1 bezeichnet
+   die LETZTE Spur des auto-fit-Rasters, und ein Element, das jede Spur
+   von der ersten bis zur letzten beruehrt, verhindert genau das
+   Zusammenfallen ungenutzter Spuren, das auto-fit sonst leistet (siehe
+   .bilanz-gitter oben). Bei 1700 Punkten Kartenbreite legt auto-fit bis
+   zu zehn 148-Punkt-Spuren an; mit dem Hinweis als fuenftem, alle zehn
+   beruehrendem Kind blieben alle zehn bestehen, und die vier Kacheln
+   fuellten nur die ersten vier - gestaucht auf Mindestbreite, gepresst
+   an den linken Rand, "170,8" und "km" zu schmal fuer eine gemeinsame
+   Zeile. Ausserhalb des Rasters (jetzt ein Geschwister von
+   #dashboard-bilanz, kein Kind) hat der Hinweis keinen Einfluss mehr auf
+   dessen Spuren, und die vier Kacheln teilen sich die volle Kartenbreite
+   zu gleichen Teilen. Gepruefte Alternative: grid-column auf eine feste
+   Spurenzahl (z. B. 1/5) statt 1/-1 - verworfen, weil sie die Spurenzahl
+   an die Kachelzahl kettet und bei einer fuenften Kachel wortlos wieder
+   zu schmalen Kacheln fuehrte. */
 .bilanz-hinweis {
-  grid-column: 1 / -1;
-  margin: 0;
+  margin: var(--a4) 0 0;
   font-size: var(--grad-klein); color: var(--grau);
 }
 .dashboard-leer { margin: 0; color: var(--grau); }
@@ -1635,19 +1676,53 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 
 /* ---- Ringe ---- */
-/* Feste Groesse wie beim Konterfei (.konterfei, 88px), aber mit
-   Deckel statt fixer Breite: "min(200px, 100%)" haelt die Ringe auch
-   dann im Rahmen, wenn die Karte selbst schmaler als 200px waere. */
-.ringe-svg { display: block; width: min(200px, 100%); height: auto; aspect-ratio: 1; margin: 0 auto; }
-.ringe-legende {
-  display: flex; flex-wrap: wrap;
-  gap: var(--a2) var(--a4);
-  margin: var(--a4) 0 0; padding: 0;
-  list-style: none;
+/* Ring und Legende NEBENEINANDER, nicht mehr gestapelt: die Karte ist so
+   breit wie die drei anderen Bloecke (Verlauf, Einordnung, Fahrten) - ein
+   200-Punkte-Ring allein in der Kartenmitte liess links und rechts nur
+   Flaeche ohne Aussage stehen, genau die Beobachtung des Auftraggebers
+   ("ein kleiner Ring in der Mitte einer grossen weissen Flaeche"). Die
+   Legende steht jetzt daneben und listet die drei Werte UNTEREINANDER
+   (siehe .ringe-legende) - das nutzt die Breite, statt sie leerzulassen.
+
+   #dashboard-ringe h3 erzwingt per flex-basis: 100% eine eigene Zeile
+   ueber Ring und Legende - derselbe Kunstgriff wie bei
+   .bilanz-beschriftung weiter oben, hier per ID nur auf die Ringkarte
+   beschraenkt, damit die uebrigen drei Bloecke ihre Ueberschrift
+   unveraendert behalten.
+
+   KEIN fester Umbruchpunkt fuer schmale Schirme: flex-wrap wirft die
+   Legende von selbst unter den Ring, sobald beide zusammen nicht mehr in
+   die Kartenbreite passen (dieselbe Haltung wie bei .bilanz-gitter
+   oben). */
+#dashboard-ringe {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--a5) var(--a6);
 }
-.ringe-legende li { display: flex; align-items: center; gap: var(--a2); }
+#dashboard-ringe h3 { flex-basis: 100%; }
+/* Feste Groesse wie beim Konterfei (.konterfei, 88px), aber mit Deckel
+   statt fixer Breite: "min(220px, 100%)" haelt den Ring auch dann im
+   Rahmen, wenn die Karte selbst schmaler als 220px waere. Etwas groesser
+   als vorher (200px): neben dem Ring ist jetzt Raum frei, den ein
+   groesserer Ring sinnvoller fuellt als Leerflaeche. */
+.ringe-svg {
+  display: block; width: min(220px, 100%); height: auto; aspect-ratio: 1;
+  margin: 0 auto; flex: none;
+}
+/* Untereinander statt in einer Zeile: drei Werte NEBENEINANDER brauchten
+   auf einer ueber tausend Punkte breiten Spalte kaum ein Drittel ihrer
+   Breite und liessen den Rest wieder leer. Untereinander liest sich jede
+   Zeile wie eine eigene kleine Kennzahl, nicht wie ein Rest unter dem
+   Ring. */
+.ringe-legende {
+  display: flex; flex-direction: column;
+  gap: var(--a3);
+  margin: 0; padding: 0;
+  list-style: none;
+  flex: 1 1 240px;
+}
+.ringe-legende li { display: flex; align-items: center; gap: var(--a3); }
 .ringe-punkt { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.ringe-legende span:last-child { font-size: var(--grad-klein); color: var(--grau); }
+.ringe-legende span:last-child { font-size: var(--control-font); color: var(--ink); }
 
 /* ---- Verlauf ---- */
 .verlauf-schalter { display: flex; flex-wrap: wrap; gap: var(--a2); margin: 0 0 var(--a4); }

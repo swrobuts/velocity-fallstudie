@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=3c4c753a">
+    <link rel="stylesheet" href="style.css?v=1bbb8182">
 </head>
 <body>
 
@@ -241,6 +241,16 @@
       <p class="konto-wer">Angemeldet als <strong id="konto-name">—</strong><br>
          <span id="konto-mail"></span></p>
       <a href="#map-section">Rad finden</a>
+      <!-- Fuehrt auf keine eigene Seite, sondern setzt #konto: script.js
+           blendet dafuer die Landingpage-Abschnitte aus und zeigt
+           stattdessen #dashboard (ansichtAktualisieren() dort). "Meine
+           Bilanz" statt "Mein Konto": das Menue selbst heisst schon
+           "Konto", und "Meine Daten" darunter ist bereits die
+           Kontoeinstellung - ein zweiter, aehnlich benannter Eintrag
+           waere von beiden kaum zu unterscheiden. Der Name ist ausserdem
+           wortgleich mit der Ueberschrift der Ansicht, auf die er zeigt
+           (siehe dashboard-titel weiter unten). -->
+      <a href="#konto">Meine Bilanz</a>
       <a href="rechtliches.html#datenschutz">Meine Daten</a>
       <!-- DER PREISSCHAETZER IST ABSCHALTBAR (01.09.2026).
            Er ist eine Analytics-Funktion, kein Kernbestandteil des
@@ -275,42 +285,6 @@
 </nav>
 
 <main id="top">
-
-<!-- ============================================================
-     PERSOENLICHES DASHBOARD
-     Nur angemeldet sichtbar (dashboardZeichnen() in dashboard.js,
-     aufgerufen aus updateUI() in script.js). Ringe, Verlauf, Einordnung
-     und letzte Fahrten sind hier bereits als leere Bloecke angelegt,
-     obwohl diese Aufgabe nur die Bilanzkacheln und das Konterfei
-     zeichnet - eine spaetere Aufgabe fuellt sie, ohne das Markup noch
-     einmal umzustellen. Steht vor der Buehne: wer angemeldet ist, sieht
-     zuerst die eigene Bilanz, nicht die Werbung fuer Neukunden.
-     ============================================================ -->
-<section id="dashboard" class="dashboard" hidden aria-labelledby="dashboard-titel">
-    <!-- .container wie in jedem anderen Abschnitt (.facts, .howto-section,
-         .faq-section): ohne ihn liefe der Inhalt bis an den Fensterrand,
-         waehrend jeder andere Abschnitt der Seite auf --spur begrenzt ist. -->
-    <div class="container">
-        <header class="dashboard-kopf">
-            <!-- KEIN aria-hidden: das erzeugte <svg> traegt selbst
-                 role="img" und aria-label mit dem vollen Namen
-                 (konterfeiZeichnen() in dashboard.js). Der Name steht
-                 sonst nirgends als Text - aria-hidden hier wuerde einer
-                 Screenreader-Nutzerin verschweigen, wer angemeldet ist. -->
-            <div id="dashboard-konterfei" class="konterfei"></div>
-            <div>
-                <h2 id="dashboard-titel">Meine Bilanz</h2>
-                <p id="dashboard-zeitraum" class="dashboard-zeitraum"></p>
-            </div>
-        </header>
-        <p id="dashboard-fehler" class="dashboard-fehler" role="status" hidden></p>
-        <div id="dashboard-bilanz" class="bilanz-gitter"></div>
-        <div id="dashboard-ringe" class="dashboard-block"></div>
-        <div id="dashboard-verlauf" class="dashboard-block"></div>
-        <div id="dashboard-einordnung" class="dashboard-block"></div>
-        <div id="dashboard-fahrten" class="dashboard-block"></div>
-    </div>
-</section>
 
 <!-- ============================================================
      KOPFBEREICH
@@ -539,6 +513,66 @@
         </div>
     </div>
 </section>
+
+<!-- ============================================================
+     PERSOENLICHES DASHBOARD ("Meine Bilanz")
+     Bis zum 06.09.2026 stand dieser Abschnitt HIER OBEN im Markup, vor
+     der Bildergeschichte, und dashboardZeichnen() blendete ihn direkt
+     nach der Anmeldung ein - ungefragt das Erste, was ein angemeldeter
+     Besuch sah. Jetzt steht er am Ende von <main> UND bleibt verborgen,
+     bis "Meine Bilanz" im Kontomenue angeklickt wird (Adresse #konto).
+     script.js blendet dabei diesen Abschnitt und die uebrigen Kinder von
+     <main id="top"> gegenseitig ein/aus (ansichtAktualisieren(), reagiert
+     auf 'hashchange' sowie auf jede An-/Abmeldung). Die Position hier
+     unten ist nur die zweite Absicherung - die erste ist das hidden
+     zusammen mit jener Funktion; selbst wenn beide versagten, stuende
+     die Werbung fuer Neukunden trotzdem vor der eigenen Bilanz.
+
+     dashboardZeichnen() (dashboard.js) laedt die Daten weiterhin bei
+     jeder Anmeldung, nicht erst beim Aufruf von #konto - wer die Ansicht
+     oeffnet, wartet dann nicht zusaetzlich auf das Netz.
+
+     Ringe, Verlauf, Einordnung und letzte Fahrten sind hier bereits als
+     leere Bloecke angelegt, obwohl diese Aufgabe nur die Bilanzkacheln
+     und das Konterfei zeichnet - eine spaetere Aufgabe fuellt sie, ohne
+     das Markup noch einmal umzustellen.
+     ============================================================ -->
+<section id="dashboard" class="dashboard" hidden aria-labelledby="dashboard-titel">
+    <!-- .container wie in jedem anderen Abschnitt (.facts, .howto-section,
+         .faq-section): ohne ihn liefe der Inhalt bis an den Fensterrand,
+         waehrend jeder andere Abschnitt der Seite auf --spur begrenzt ist. -->
+    <div class="container">
+        <a href="#top" class="dashboard-zurueck">← Zur Startseite</a>
+        <header class="dashboard-kopf">
+            <!-- KEIN aria-hidden: das erzeugte <svg> traegt selbst
+                 role="img" und aria-label mit dem vollen Namen
+                 (konterfeiZeichnen() in dashboard.js). Der Name steht
+                 sonst nirgends als Text - aria-hidden hier wuerde einer
+                 Screenreader-Nutzerin verschweigen, wer angemeldet ist. -->
+            <div id="dashboard-konterfei" class="konterfei"></div>
+            <div>
+                <!-- tabindex="-1": ansichtAktualisieren() (script.js) setzt
+                     den Fokus hierher, wenn die Ansicht neu erscheint - ohne
+                     die Ueberschrift in die normale Tab-Reihenfolge
+                     aufzunehmen. -->
+                <h2 id="dashboard-titel" tabindex="-1">Meine Bilanz</h2>
+                <p id="dashboard-zeitraum" class="dashboard-zeitraum"></p>
+            </div>
+        </header>
+        <p id="dashboard-fehler" class="dashboard-fehler" role="status" hidden></p>
+        <div id="dashboard-bilanz" class="bilanz-gitter"></div>
+        <!-- Eigenes, festes Element statt eines dynamisch angehaengten <p>:
+             siehe Kommentar bei .bilanz-hinweis in style.css - im SELBEN
+             auto-fit-Raster wie die Kacheln stehend (per grid-column:
+             1/-1), verhinderte es dort das Zusammenfallen der ungenutzten
+             Spalten und zwang alle vier Kacheln auf Minimalbreite. -->
+        <p id="dashboard-bilanz-hinweis" class="bilanz-hinweis" hidden></p>
+        <div id="dashboard-ringe" class="dashboard-block"></div>
+        <div id="dashboard-verlauf" class="dashboard-block"></div>
+        <div id="dashboard-einordnung" class="dashboard-block"></div>
+        <div id="dashboard-fahrten" class="dashboard-block"></div>
+    </div>
+</section>
 </main>
 
 <footer>
@@ -591,8 +625,8 @@
 <script src="config.js?v=1b46ce53"></script>
 <script src="supabase.js?v=114ade78"></script>
 <script src="auth.js?v=127b1291"></script>
-<script src="script.js?v=6dba6a57"></script>
-<script src="dashboard.js?v=eb088900"></script>
+<script src="script.js?v=58e9516f"></script>
+<script src="dashboard.js?v=8008f128"></script>
 
 
 <!-- DER FAHRPREISRECHNER WOHNT IN EINER SCHUBLADE (28.08.2026).

@@ -54,14 +54,28 @@ function bilanzZeichnen(b) {
     /* Der Schaetzanteil steht sichtbar, nicht im Kleingedruckten. 40
        Prozent der Fahrten im Bestand haben keine gemessene Distanz; ein
        Wert, der eine Schaetzung als Messung ausgibt, ist der Punkt, an
-       dem ein solches Dashboard unglaubwuerdig wird. */
+       dem ein solches Dashboard unglaubwuerdig wird.
+
+       EIGENES ELEMENT (#dashboard-bilanz-hinweis in index.html), NICHT
+       hier angehaengt: als Kind IM SELBEN auto-fit-Raster wie die vier
+       Kacheln stand dieses <p> frueher per grid-column: 1/-1 quer ueber
+       alle Spuren - und genau das verhinderte, dass ungenutzte auto-fit-
+       Spuren zusammenfallen (siehe Kommentar bei .bilanz-hinweis in
+       style.css). Das Raster legte sich dadurch auf so viele 148-Punkt-
+       Spuren an, wie in die Kartenbreite passen, und die vier Kacheln
+       fuellten nur die ersten vier davon - jede blieb auf ihrer
+       Mindestbreite stehen, gestaucht an den linken Rand statt die Karte
+       zu fuellen. Ausserhalb des Rasters hat dasselbe <p> keinen Einfluss
+       mehr auf dessen Spuren. */
+    const hinweis = document.getElementById('dashboard-bilanz-hinweis');
     if (b.anteil_geschaetzt > 0) {
-        const hinweis = document.createElement('p');
-        hinweis.className = 'bilanz-hinweis';
         hinweis.textContent =
             `${zahl.format(b.anteil_geschaetzt * 100)} % der Strecken sind geschätzt, `
             + 'nicht gemessen.';
-        ziel.append(hinweis);
+        hinweis.hidden = false;
+    } else {
+        hinweis.hidden = true;
+        hinweis.textContent = '';
     }
 }
 
@@ -102,10 +116,27 @@ function konterfeiZeichnen(vorname, nachname, schluessel) {
     document.getElementById('dashboard-konterfei').replaceChildren(svg);
 }
 
-/* Drei Ringe fuer den LAUFENDEN Monat, gemessen am eigenen
-   Monatsdurchschnitt - nicht an einem festen Ziel. Am 5. eines Monats
-   stuenden die Ringe sonst auf einem Bruchteil, und das Dashboard zeigte
-   an jedem Monatsanfang Versagen an. */
+/* Drei Ringe fuer den LAUFENDEN Monat, gemessen am MEDIAN der eigenen
+   Vormonate - nicht am Durchschnitt und nicht an einem festen Ziel.
+
+   GEAENDERT (06.09.2026), GEMELDET STATT STILLSCHWEIGEND KORRIGIERT:
+   Bis dahin stand hier das arithmetische Mittel. Bei einem Konto mit
+   wenigen, unterschiedlich langen Vormonaten zieht ein einzelner
+   Ausreissermonat (z. B. eine sehr lange Ausleihe) den Mittelwert weit
+   ueber das, was in den uebrigen Monaten ueblich war - beobachtet als
+   "Minuten: 4 (Durchschnitt 982,4)" bei einem laufenden Monat mit einer
+   einzigen kurzen Fahrt. Ein Vergleich einer Vier mit einer Neunhundert-
+   zweiundachtzig ist wertlos. Der Median ist gegen einzelne Ausreisser
+   unempfindlich; einordnungZeichnen() weiter unten nutzt ihn aus
+   demselben Grund bereits fuer den Flottenvergleich (siehe dortigen
+   Kommentar "'Median', nicht 'Mittelwert'"). Beides bleibt eine reine
+   Umrechnung der bereits gelieferten Monatszeilen (v_meine_monatsbilanz),
+   keine neue Sicht noetig - und keine Loesung fuer sehr kurze
+   Kontohistorien: bei nur ein oder zwei Vormonaten ist auch der Median
+   nur so aussagekraeftig wie die Stichprobe selbst.
+
+   Am 5. eines Monats stuenden die Ringe sonst auf einem Bruchteil, und
+   das Dashboard zeigte an jedem Monatsanfang Versagen an. */
 function ringeZeichnen(monate) {
     const ziel = document.getElementById('dashboard-ringe');
     if (!monate.length) { ziel.replaceChildren(); return; }
@@ -115,12 +146,19 @@ function ringeZeichnen(monate) {
     const aktuell = monate.find((m) => m.monat === lauf);
     const frueher = monate.filter((m) => m.monat !== lauf);
     // Kein laufender Monat (noch keine Fahrt seit dem Ersten) oder keine
-    // Vergangenheit zum Vergleich: dann gibt es keinen eigenen
-    // Durchschnitt, gegen den zu messen waere. Ein leerer Block ist hier
-    // ehrlicher als eine erfundene Zahl.
+    // Vergangenheit zum Vergleich: dann gibt es keinen eigenen Median,
+    // gegen den zu messen waere. Ein leerer Block ist hier ehrlicher als
+    // eine erfundene Zahl.
     if (!aktuell || !frueher.length) { ziel.replaceChildren(); return; }
 
-    const mittel = (feld) => frueher.reduce((s, m) => s + Number(m[feld]), 0) / frueher.length;
+    function median(werte) {
+        const sortiert = [...werte].sort((a, b) => a - b);
+        const mitte = Math.floor(sortiert.length / 2);
+        return sortiert.length % 2
+            ? sortiert[mitte]
+            : (sortiert[mitte - 1] + sortiert[mitte]) / 2;
+    }
+    const bezug = (feld) => median(frueher.map((m) => Number(m[feld])));
     // Farben gegen die weisse Kartenflaeche geprueft (WCAG 1.4.11, 3:1 fuer
     // grafische Objekte): Rot 4,2:1, Gruen 3,45:1, Blau 4,79:1.
     const ringe = [
@@ -139,7 +177,7 @@ function ringeZeichnen(monate) {
     ringe.forEach((r, i) => {
         const radius = 84 - i * 24;
         const umfang = 2 * Math.PI * radius;
-        const soll = mittel(r.feld);
+        const soll = bezug(r.feld);
         const anteil = soll > 0 ? Math.min(Number(aktuell[r.feld]) / soll, 1) : 0;
 
         for (const [klasse, laenge, farbe] of [
@@ -158,7 +196,7 @@ function ringeZeichnen(monate) {
             kreis.setAttribute('transform', 'rotate(-90 100 100)');
             svg.append(kreis);
         }
-        teile.push(`${r.name} ${Math.round(anteil * 100)} Prozent des eigenen Durchschnitts`);
+        teile.push(`${r.name} ${Math.round(anteil * 100)} Prozent des eigenen Medians`);
     });
 
     svg.setAttribute('aria-label', 'Laufender Monat: ' + teile.join(', '));
@@ -174,7 +212,7 @@ function ringeZeichnen(monate) {
         punkt.style.background = r.farbe;
         const text = document.createElement('span');
         text.textContent = `${r.name}: ${zahl.format(aktuell[r.feld])} `
-            + `(Durchschnitt ${zahl.format(mittel(r.feld))})`;
+            + `(Median ${zahl.format(bezug(r.feld))})`;
         li.append(punkt, text);
         legende.append(li);
     });
@@ -327,6 +365,11 @@ function fahrtenZeichnen(fahrten) {
     }
 }
 
+/* Zeichnet nur - zeigt nichts. Ob #dashboard ueberhaupt sichtbar ist,
+   entscheidet ansichtAktualisieren() in script.js (Hash #konto UND
+   angemeldet), nicht diese Funktion. Sie laeuft trotzdem bei jeder
+   Anmeldung, nicht erst beim Aufruf von #konto: wer die Ansicht oeffnet,
+   soll die Daten vorbereitet vorfinden, nicht erst auf das Netz warten. */
 async function dashboardZeichnen() {
     const abschnitt = document.getElementById('dashboard');
     const fehlerfeld = document.getElementById('dashboard-fehler');
@@ -342,13 +385,11 @@ async function dashboardZeichnen() {
     if (fehler) {
         fehlerfeld.textContent = 'Die Bilanz konnte nicht geladen werden.';
         fehlerfeld.hidden = false;
-        abschnitt.hidden = false;
         return;
     }
     fehlerfeld.hidden = true;
 
     if (!bilanz) {
-        abschnitt.hidden = false;
         document.getElementById('dashboard-bilanz').replaceChildren(
             Object.assign(document.createElement('p'), {
                 className: 'dashboard-leer',
@@ -370,6 +411,4 @@ async function dashboardZeichnen() {
     document.getElementById('dashboard-zeitraum').textContent =
         `${new Date(bilanz.erste_fahrt).toLocaleDateString('de-DE')} bis `
         + `${new Date(bilanz.letzte_fahrt).toLocaleDateString('de-DE')}`;
-
-    abschnitt.hidden = false;
 }
