@@ -1,0 +1,18 @@
+flowchart LR
+    classDef aufrufer fill:#FFFFFF,stroke:#C9C3B4,stroke-width:1px,color:#404040
+    classDef tor fill:#003E6E,stroke:#003E6E,color:#FFFFFF
+    classDef sperre fill:#F7F5EF,stroke:#C9C3B4,stroke-width:1px,color:#404040
+
+    W["Kundenwebsite"]:::aufrufer
+    M["Warenwirtschaft"]:::aufrufer
+    A["KI-Agent<br/>20 Werkzeuge"]:::aufrufer
+
+    S["20 Sichten zum Lesen<br/>21 api_-Funktionen<br/>zum Schreiben"]:::tor
+    R["Row Level Security<br/>und hat_rolle()<br/>hier fällt die<br/>Entscheidung"]:::tor
+    T["Die Tabellen darunter<br/>für keinen<br/>der drei erreichbar"]:::sperre
+
+    W --> S
+    M --> S
+    A --> S
+    S --> R
+    R --> T
