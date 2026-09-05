@@ -498,6 +498,19 @@ async function dashboardZeichnen() {
                 className: 'dashboard-leer',
                 textContent: 'Sobald die erste Fahrt abgeschlossen ist, steht hier die Bilanz.'
             }));
+        /* Abzeichen und Fortschritt erscheinen AUCH ohne Fahrt, mit null
+           Kilometern. v_meine_bilanz liefert fuer ein Konto ohne
+           abgeschlossene Fahrt keine Zeile - deshalb hier ein Ersatzwert
+           statt eines Ausstiegs.
+
+           Der Grund ist der Zweck der Sache: Wer neu ist, soll sehen,
+           dass es eine Leiter gibt und wie weit die erste Sprosse weg
+           ist. Ein leerer Bereich zeigt kein Ziel, und ein Ziel ist das
+           Einzige, was diese Anzeige zu bieten hat. Genau derselbe
+           Fehler steckte zuvor im Konterfei, das aus dem Namen entsteht
+           und ebenfalls hinter diesem Ausstieg lag. */
+        statusabzeichenZeichnen({ km_gesamt: 0 });
+        fortschrittZeichnen({ km_gesamt: 0 });
         return;
     }
 

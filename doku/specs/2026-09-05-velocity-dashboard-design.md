@@ -292,7 +292,7 @@ heißt vor allem: **eine Aussage je Block, die Zahl vor der Erklärung.**
 | **Ringe** | drei konzentrische Ringe für den laufenden Monat — Fahrten, Kilometer, Minuten, je gegen den eigenen Monatsdurchschnitt |
 | **Bilanz** | vier große Zahlen: km gesamt, CO₂ gespart, Fahrten, Ausgaben |
 | **Verlauf** | Balken je Monat über den ganzen Zeitraum, umschaltbar zwischen km, Fahrten und Ausgaben |
-| **Einordnung** | „Platz 45 von 495" mit Perzentilbalken, Median und Bestwert als Markierungen |
+| **Status** | Stufe als Abzeichen und der Fortschritt zur nächsten — feste Kilometergrenzen (90/120/150/200), damit ein Status nicht verfallen kann; der Rang bleibt als Textzeile |
 | **Letzte Fahrten** | fünf Zeilen aus `v_meine_fahrt_kennzahl` mit Rad, Strecke und Betrag |
 
 **Geschätzte Werte werden gekennzeichnet.** 41 % der Fahrten haben keine
@@ -371,10 +371,25 @@ rot.
 
 ## 8 Was nicht dazugehört
 
-**Badges sind Schritt 2.** Sie hängen vollständig an den Kennzahlen aus
-Abschnitt 3; auf falschen Zahlen wären sie zweimal Arbeit. Erst wenn das
-Dashboard läuft und die Zahlen nachweislich stimmen, wird entschieden,
-welche Auszeichnungen es gibt und wo sie stehen.
+**Badges sind Schritt 2 — inzwischen gebaut (06.09.2026).** Fünf Stufen an
+festen Kilometergrenzen: *Gelegentlich unterwegs* (ab 0), *Regelmäßig
+unterwegs* (90), *Viel unterwegs* (120), *Dauerhaft unterwegs* (150),
+*An der Spitze* (200).
+
+**Feste Grenzen statt Perzentile**, und zwar aus zwei Gründen. Erstens ist
+die Verteilung zu eng: zwischen dem schwächsten Zehntel (69 km) und dem
+stärksten Prozent (168,7 km) liegt nur der Faktor 2,4. Zweitens — und das
+wiegt schwerer — könnte ein rangbasierter Status **fallen, ohne dass der
+Kunde etwas tut**, nur weil andere gefahren sind. Was man sich erarbeitet
+hat, muss bleiben.
+
+Die Grenzen sind an der gemessenen Verteilung gewählt, nicht geraten: sie
+ergeben 189 / 190 / 99 / 16 / 1 über 495 Kunden. Die naheliegende Leiter
+50/100/150/200/250 ergab 276 / 202 / 16 / 1 und ließ eine Stufe leer.
+
+**Die Bezeichnungen sind geschlechtsneutral.** `velocity.kunde` führt kein
+Geschlecht; „Vielfahrerin" oder „Vielfahrer" wäre in jedem Einzelfall
+geraten.
 
 **Keine Bestenliste.** Entschieden am 05.09.2026: nur der eigene Rang. Eine
 Liste mit Namen anderer Kunden wäre die erste Stelle, an der die Website
