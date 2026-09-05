@@ -151,8 +151,8 @@ Unterabfrage über **alle gewerteten Kunden** und gibt danach **nur die
 eigene Zeile** heraus. Nach außen gehen ausschließlich Zahlen:
 
 ```
-rang_km = 45   kunden_gewertet = 495   perzentil = 90.9
-median_km_flotte = 70.3                bestwert_km_flotte = 168.7
+rang_km = 19   kunden_gewertet = 495   perzentil = 96.4
+median_km_flotte = 96.9                bestwert_km_flotte = 711.7
 ```
 
 Kein Name, keine Kundennummer, keine fremde Zeile. Median und Bestwert sind
@@ -162,10 +162,31 @@ Kennzahlen der Flotte, keine Personen — dieselbe Unterscheidung, mit der
 **Gewertet wird, wer mindestens eine abgeschlossene Fahrt hat**: 495, nicht
 1 014. Ein Rang unter Konten ohne jede Fahrt wäre keine Einordnung.
 
-**Bekannte Eigenschaft, kein Fehler:** Beide vorgesehenen Konten liegen im
-oberen Zehntel — `K-000013` auf Platz 45, `K-000001` auf Platz 15 von 495.
-Das Ranking schmeichelt also, statt zu relativieren. Wer im Unterricht den
-umgekehrten Fall zeigen will, meldet sich mit einem anderen Kundensatz an.
+**Nachgemessen am 05.09.2026, und schlechter als hier zuvor stand:**
+`K-000001` steht auf **Platz 19**, `K-000013` auf **Platz 1 von 495**. Eine
+frühere Fassung dieses Abschnitts nannte Platz 15 und Platz 45; diese Zahlen
+waren falsch.
+
+**Der erste Platz ist ein Artefakt einer einzigen Fahrt.** Ausleihe 269 vom
+15.01.2026 lief 2 552 Minuten — 42,5 Stunden — vom Hauptbahnhof zum
+Hauptbahnhof. Weil Start und Ziel zusammenfallen, ist die Luftlinie null und
+die Herleitung greift auf ihren dritten Fall zurück: Dauer mal 13 km/h. Das
+ergibt **552,93 km**, die längste Einzelfahrt der Flotte, und allein 78 % der
+711,7 km dieses Kontos. Der Flottendurchschnitt liegt bei 4,15 km je Fahrt.
+
+Es ist die einzige Fahrt über 100 km im ganzen Bestand. Die Schwäche liegt
+nicht in den Daten, sondern in der Annahme des dritten Falls: er setzt die
+gesamte Ausleihdauer als Fahrzeit an. Bei einem Rad, das jemand über zwei
+Nächte behält, trifft das nicht zu.
+
+**Offen, und vom Betreiber zu entscheiden** — die Umstellung berührt
+`velocity.rechenannahme` und damit veröffentlichte Zahlen (die Flottensumme
+von 49 995,4 km fiele um rund 550), weshalb sie hier nicht nebenbei
+mitgemacht wird. Drei Wege stehen offen: so lassen und im Unterricht
+besprechen, was ein Ausreißer mit einem Ranking macht; die Dauerschätzung
+deckeln; oder die eine Ausleihe berichtigen. Bis dahin zeigt das Dashboard
+den Wert mit der Kennzeichnung als Schätzung, die Abschnitt 5 ohnehin
+vorsieht.
 
 ## 4 Demozugang
 
