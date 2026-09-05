@@ -577,9 +577,20 @@ function initMap(){
   if(!window.L){$("#map").innerHTML='<p style="padding:20px;font-family:sans-serif;font-size:13px;color:#6B7178">'+
     'Leaflet konnte nicht geladen werden. Alle übrigen Auswertungen funktionieren.</p>'; return;}
   map=L.map("map",{scrollWheelZoom:false,zoomSnap:.25});
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{
-    maxZoom:19,subdomains:"abcd",
-    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>, &copy; <a href="https://carto.com/attributions">CARTO</a>'
+  /* Kacheln von OpenStreetMap, ohne Schluessel und ohne Anmeldung.
+     Vorher lag hier CARTOs "light_all"-Stil; der ist optisch ruhiger,
+     verlangt seit einer Aenderung der Nutzungsbedingungen aber einen
+     API-Key und legt sonst "API KEY REQUIRED" als Wasserzeichen ueber
+     jede Kachel - am 05.09.2026 auf der veroeffentlichten Seite
+     beobachtet. Dieselbe Quelle bedient seit Monaten die Karte der
+     Kundenwebsite (src/script.js), es kommt also keine neue
+     Abhaengigkeit dazu.
+     Der Preis: OSM-Standardkacheln sind farbiger und detailreicher als
+     ein Basiskartenstil. Die Kreise darueber bleiben trotzdem lesbar -
+     sie sind halbtransparent und werden von Beschriftungen begleitet. */
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{
+    maxZoom:19,
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
   }).addTo(map);
   layOrte=L.layerGroup().addTo(map); layProp=L.layerGroup().addTo(map); layStation=L.layerGroup().addTo(map);
   map.fitBounds(grenzen().stadt,{padding:[18,18]});
