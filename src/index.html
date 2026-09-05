@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=4a986b47">
+    <link rel="stylesheet" href="style.css?v=3c4c753a">
 </head>
 <body>
 
@@ -292,7 +292,12 @@
          waehrend jeder andere Abschnitt der Seite auf --spur begrenzt ist. -->
     <div class="container">
         <header class="dashboard-kopf">
-            <div id="dashboard-konterfei" class="konterfei" aria-hidden="true"></div>
+            <!-- KEIN aria-hidden: das erzeugte <svg> traegt selbst
+                 role="img" und aria-label mit dem vollen Namen
+                 (konterfeiZeichnen() in dashboard.js). Der Name steht
+                 sonst nirgends als Text - aria-hidden hier wuerde einer
+                 Screenreader-Nutzerin verschweigen, wer angemeldet ist. -->
+            <div id="dashboard-konterfei" class="konterfei"></div>
             <div>
                 <h2 id="dashboard-titel">Meine Bilanz</h2>
                 <p id="dashboard-zeitraum" class="dashboard-zeitraum"></p>
@@ -587,7 +592,7 @@
 <script src="supabase.js?v=114ade78"></script>
 <script src="auth.js?v=127b1291"></script>
 <script src="script.js?v=6dba6a57"></script>
-<script src="dashboard.js?v=16dabfe6"></script>
+<script src="dashboard.js?v=eb088900"></script>
 
 
 <!-- DER FAHRPREISRECHNER WOHNT IN EINER SCHUBLADE (28.08.2026).
