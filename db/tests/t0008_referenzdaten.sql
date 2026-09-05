@@ -134,3 +134,36 @@ begin
     'Im Aenderungsprotokoll steht keine zustellbare Mailadresse');
 end;
 $$;
+
+create or replace function velocity_test.test_ref_keine_fahrt_ueber_50km()
+returns setof text language plpgsql as $$
+begin
+  -- Dauerhafte Wache, kein einmaliger Fund: der reale Höchstwert unter
+  -- allen abgeschlossenen Fahrten liegt bei 21,49 km (Ausleihe 33303).
+  -- 50 km lassen dieser echten Spitze reichlich Luft und fangen
+  -- trotzdem jede Dauerschätzung ab, die aus dem Ruder läuft.
+  --
+  -- Genau das ist am 05.09.2026 einmal passiert: Ausleihe 269 hatte
+  -- dieselbe Start- wie Endstation (Hauptbahnhof), damit eine Luftlinie
+  -- von null, und der dritte Fall der Herleitung in
+  -- velocity.v_fahrt_kennzahl rechnete deshalb Dauer mal
+  -- Reisegeschwindigkeit - bei 2552 Minuten Ausleihdauer 552,93 km, mit
+  -- weitem Abstand die längste Einzelfahrt der Flotte.
+  -- db/betrieb/ausreisser_dauerschaetzung.sql hat den Wert danach durch
+  -- eine vorgegebene Distanz (12 km) ersetzt; siehe deren Kopfkommentar
+  -- für die Einzelheiten und db/tests/t0025_kennzahl_umstellung.sql für
+  -- die dadurch verschobenen Summen.
+  --
+  -- Die Gefahr ist nicht hypothetisch, sondern strukturell: die längste
+  -- Ausleihdauer im gesamten Bestand sind 5422 Minuten (Ausleihe 265).
+  -- Ihre Start- und Endstation unterscheiden sich, weshalb sie über die
+  -- Luftlinie statt über die Dauer geschätzt wird und unauffällig
+  -- bleibt - träfen beide Eigenschaften künftig auf dieselbe Fahrt zu
+  -- (gleiche Station, sehr lange Ausleihe), ergäbe derselbe dritte Fall
+  -- rund 1175 km. Dieser Test wacht über die Konstellation selbst, nicht
+  -- über eine einzelne Ausleihe-Nummer.
+  return next is_empty(
+    $sql$select ausleihe_id from velocity.v_fahrt_kennzahl where km > 50$sql$,
+    'Keine abgeschlossene Fahrt liegt ueber 50 km');
+end;
+$$;
