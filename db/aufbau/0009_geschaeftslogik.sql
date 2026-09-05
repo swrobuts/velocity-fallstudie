@@ -10,7 +10,8 @@
 --             velocity.api_kunde_sicherstellen,
 --             velocity.api_profil_aktualisieren,
 --             velocity.api_ausleihe_starten, velocity.api_ausleihe_beenden,
---             velocity.fn_rechnung_erzeugen
+--             velocity.fn_rechnung_erzeugen,
+--             velocity.api_preisschaetzer_umschalten
 -- Ruecknahme: DROP FUNCTION fuer dieselben Namen.
 --
 -- Schichtung: fn_* traegt die Fachlogik und bekommt die kunde_id als

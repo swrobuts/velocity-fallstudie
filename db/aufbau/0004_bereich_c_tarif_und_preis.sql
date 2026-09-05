@@ -5,7 +5,7 @@
 --             Mitgliedschaft des Kunden in einem Tarif.
 -- Objekte:    velocity.tarif, velocity.tarif_kondition,
 --             velocity.mitgliedschaft, velocity.freiminuten_periode,
---             velocity.nutzungspreis
+--             velocity.nutzungspreis, velocity.preisschaetzung
 -- Ruecknahme: DROP TABLE velocity.freiminuten_periode,
 --             velocity.mitgliedschaft, velocity.tarif_kondition,
 --             velocity.nutzungspreis, velocity.tarif;

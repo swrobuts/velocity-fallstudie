@@ -9,7 +9,12 @@
 --             ENUM kunde_status, fahrrad_status, ausleihe_status,
 --                  tarifart, rechnung_status, zahlung_status,
 --                  mitarbeiter_status, schaden_schwere, schaden_status,
---                  auftrag_status, fahrrad_ereignisart
+--                  auftrag_status, fahrrad_ereignisart, rahmenform,
+--                  schaltungsart, bremsart, beleuchtungsart,
+--                  motorfabrikat (16 Typen insgesamt, alle ueber eine
+--                  Wertetabelle in einer Schleife per EXECUTE FORMAT
+--                  angelegt - keiner steht als woertliches CREATE TYPE
+--                  im Text, siehe Schleife weiter unten)
 --             Funktion velocity.fn_audit_setzen()
 --             Funktion velocity.fn_audit_anhaengen(text)
 -- Ruecknahme: DROP SCHEMA velocity CASCADE;

@@ -14,7 +14,8 @@
 --             v_wawi_stationsauslastung, v_wawi_modell,
 --             v_wawi_fahrten_je_tag, v_wawi_fahrten_je_tag_rad,
 --             v_wawi_station_flotte, v_wawi_stationsverkehr_zeitfenster,
---             velocity.ort_koordinate, v_wawi_kundenorte
+--             velocity.ort_koordinate, v_wawi_kundenorte,
+--             v_wawi_fahrt_km, v_wawi_fahrten_je_tag_typ
 -- Ruecknahme: DROP VIEW fuer dieselben Namen; DROP TABLE
 --             velocity.ort_koordinate; DROP FUNCTION
 --             velocity.fn_luftlinie_km(numeric,numeric,numeric,numeric);

@@ -136,12 +136,24 @@ schritt "Aufbaukette, zweimal (Idempotenz)"
 # Fehler hat einmal dazu gefuehrt, dass eine externe Pruefung einen
 # richtigen Betrag fuer einen Datenfehler hielt (siehe TESTEN.md).
 dateizahl=$(ls db/aufbau/*.sql | wc -l | tr -d ' ')
-if python3 db/run.py db/aufbau/*.sql >/tmp/abnahme1.log 2>&1 &&
-   python3 db/run.py db/aufbau/*.sql >/tmp/abnahme2.log 2>&1; then
-  ergebnis 0 "$dateizahl Dateien, zweimal fehlerfrei"
+aufbau_ok=0
+python3 db/run.py db/aufbau/*.sql >/tmp/abnahme1.log 2>&1 &&
+  python3 db/run.py db/aufbau/*.sql >/tmp/abnahme2.log 2>&1 || aufbau_ok=1
+# Derselbe Schritt haelt zusaetzlich die "Objekte:"-Kopfzeile jeder Datei
+# gegen das, was sie tatsaechlich anlegt (tools/objektlisten_pruefen.py,
+# siehe dessen Kopfkommentar fuer den Anlass). Ein eigener Abnahmeschritt
+# waere fachlich naheliegend, zieht aber die Schrittzahl in TESTEN.md und
+# die Zeilenzahl der Prueftabelle mit (siehe tools/readme_pruefen.py) -
+# die Pruefung haengt deshalb an dieser bestehenden Nummer, nicht an einer
+# neuen.
+python3 tools/objektlisten_pruefen.py >/tmp/abnahme-objektlisten.log 2>&1
+objekte_ok=$?
+if [ "$aufbau_ok" -eq 0 ] && [ "$objekte_ok" -eq 0 ]; then
+  ergebnis 0 "$dateizahl Dateien, zweimal fehlerfrei, Objekte-Kopf stimmt"
 else
-  ergebnis 1 "Aufbau fehlgeschlagen — siehe /tmp/abnahme2.log"
-  tail -5 /tmp/abnahme2.log | sed 's/^/     /'
+  ergebnis 1 "Aufbau fehlgeschlagen oder Objekte-Kopf weicht ab"
+  [ "$aufbau_ok"  -ne 0 ] && tail -5 /tmp/abnahme2.log | sed 's/^/     /'
+  [ "$objekte_ok" -ne 0 ] && grep 'nicht genannt\|nicht angelegt' /tmp/abnahme-objektlisten.log | head -12 | sed 's/^/     /'
 fi
 
 # ------------------------------------------------------- pgTAP-Tests
