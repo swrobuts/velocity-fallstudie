@@ -37,12 +37,25 @@ a.eintrag em{font-family:var(--mono);font-size:11px;color:var(--grau2);font-styl
   background:var(--flaeche);border:1px solid var(--linie);border-radius:6px;
   padding:16px 18px;margin-bottom:10px}
 .medien video{width:100%;border-radius:4px;background:#0d1a33;display:block}
+/* Vorschaubilder liegen in derselben 200-Pixel-Spalte wie das Video und
+   werden genauso breit. Die Haarlinie braucht das Video nicht - es hat
+   einen dunklen Grund -, ein helles Blatt auf hellem Papier sonst schon,
+   sonst franst es in die Flaeche aus. */
+.medien a.vorschau{display:block;border-radius:4px;overflow:hidden;
+  border:1px solid var(--linie);background:#fff}
+.medien a.vorschau img{width:100%;height:auto;display:block}
+.medien a.vorschau:hover{border-color:var(--stahl)}
 .medien b{display:block;font-size:16px;margin-bottom:3px}
 .medien span{color:var(--grau);font-size:13.5px;display:block}
 .medien em{font-family:var(--mono);font-size:11px;color:var(--grau2);font-style:normal;
   display:block;margin-top:7px}
 @media (max-width:560px){.medien{grid-template-columns:1fr}
-  .medien video{max-width:220px}}
+  /* Unter 560px steht die Vorschau ueber dem Text statt daneben und
+     wuerde sonst die volle Spaltenbreite fuellen. Der Deckel galt
+     bisher nur fuer das Video; Bilder brauchen ihn genauso, sonst
+     stehen Reel, Banner und Flyer in drei verschiedenen Groessen
+     untereinander. */
+  .medien video,.medien a.vorschau{max-width:220px}}
 footer{color:var(--grau2);font-size:12.5px;padding:38px 0 50px;border-top:1px solid var(--linie);
   margin-top:40px}
 </style>
@@ -100,18 +113,31 @@ footer{color:var(--grau2);font-size:12.5px;padding:38px 0 50px;border-top:1px so
     </div>
   </div>
 
-  <a class="eintrag" href="material/velocity-banner.png">
-    <b>Banner</b>
-    <span>Standbild im selben CI — für Kursseiten, Moodle oder als Vorschaubild des Reels.</span>
-    <em>PNG</em>
-  </a>
+  <div class="medien">
+    <a class="vorschau" href="material/velocity-banner.png">
+      <img src="material/velocity-banner.png" alt="Banner der VeloCity-Fallstudie"
+           width="1080" height="1350" loading="lazy">
+    </a>
+    <div>
+      <b>Banner</b>
+      <span>Standbild im selben CI — für Kursseiten, Moodle oder als Vorschaubild des Reels.
+      Klick öffnet die Datei in voller Größe.</span>
+      <em>1080 × 1350 · PNG</em>
+    </div>
+  </div>
 
-  <a class="eintrag" href="material/velocity-flyer.pdf">
-    <b>Flyer</b>
-    <span>A5, zweiseitig, druckfertig: Jahreskurve, Stationsregister, Flotte und Tarifmodell,
-    mit QR-Code auf die Systemseite.</span>
-    <em>PDF · 148 × 210 mm</em>
-  </a>
+  <div class="medien">
+    <a class="vorschau" href="material/velocity-flyer.pdf">
+      <img src="material/velocity-flyer-titel.png" alt="Titelseite des VeloCity-Flyers"
+           width="583" height="827" loading="lazy">
+    </a>
+    <div>
+      <b>Flyer</b>
+      <span>A5, zweiseitig, druckfertig: Jahreskurve, Stationsregister, Flotte und Tarifmodell,
+      mit QR-Code auf die Systemseite. Gezeigt ist die Titelseite; Klick öffnet das PDF.</span>
+      <em>PDF · 148 × 210 mm</em>
+    </div>
+  </div>
 
   <div class="hinweis">
     Das Datenmodell ist aus den Sichten der Warenwirtschaft erschlossen, nicht aus dem
@@ -122,7 +148,7 @@ footer{color:var(--grau2);font-size:12.5px;padding:38px 0 50px;border-top:1px so
 </div>
 
 <footer class="mitte">
-  Lehrmaterial der THWS Business School. Kartengrundlage OpenStreetMap / CARTO.
+  Lehrmaterial der THWS Business School. Kartengrundlage OpenStreetMap.
 </footer>
 </body>
 </html>
