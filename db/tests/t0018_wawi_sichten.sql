@@ -1237,6 +1237,6 @@ begin
   return next is(
     (select count(*) from velocity.v_fahrt_kennzahl),
     (select count(*) from velocity.ausleihe where status = 'abgeschlossen'),
-    'Die Basissicht fuehrt genau so viele Zeilen wie es abgeschlossene Ausleihen gibt');
+    'Die Basissicht führt genau so viele Zeilen wie es abgeschlossene Ausleihen gibt');
 end;
 $$;
