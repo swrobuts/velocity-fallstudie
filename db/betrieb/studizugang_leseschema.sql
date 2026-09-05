@@ -53,7 +53,28 @@
 --     alter role studi with login password '…';
 --
 -- Am besten interaktiv ueber   psql -c '\password studi'   - dann geht
--- der Wert bereits gehasht ueber die Leitung.
+-- der Wert bereits gehasht ueber die Leitung. Vorsicht dabei: Eine leere
+-- Eingabe ist kein Fehler, sondern eine LOESCHUNG - psql meldet dann nur
+-- "empty string is not a valid password, clearing password".
+--
+-- ---------------------------------------------------------------------
+-- VERBINDUNG - GEMESSEN, NICHT VERMUTET (05.09.2026)
+--
+--     Host        supabase.butscher.cloud
+--     Port        5433        NICHT 5432. Von den drei ueblichen Ports
+--                             antwortet nur dieser; 5432 und 6543 sind zu.
+--     Datenbank   postgres
+--     Benutzer    studi
+--     SSL         AUS. Nicht "require" - der Server hat TLS nicht an
+--                             (pg_settings: ssl = off). Ein sslmode=require
+--                             scheitert mit "server does not support SSL".
+--
+-- WAS DAS HEISST: Kennwort und alle Abfrageergebnisse gehen
+-- unverschluesselt ueber das offene Internet. Bei erfundenen Daten und
+-- einem Wegwerf-Kennwort tragbar - aber als Entscheidung, nicht als
+-- Ueberraschung. Wer es aendern will, schaltet ssl = on im
+-- Postgres-Container ein oder legt einen TLS-Proxy davor; beides ist
+-- Serverarbeit und nicht in dieser Datei zu erledigen.
 -- =====================================================================
 
 create schema if not exists velocity_lesen;
@@ -76,7 +97,10 @@ comment on schema velocity_lesen is
 do $$
 declare
   v_tab text;
+  v_sp  text;
+  v_kom text;
   v_n   integer := 0;
+  v_k   integer := 0;
 begin
   for v_tab in
     select tablename from pg_tables where schemaname = 'velocity' order by tablename
@@ -85,8 +109,29 @@ begin
     execute format('create view velocity_lesen.%I as select * from velocity.%I',
                    v_tab, v_tab);
     v_n := v_n + 1;
+
+    -- Und der eigentliche Punkt: die Kommentare kommen MIT. Ohne sie
+    -- sieht ein Datenbankwerkzeug 39 nackte Namen, und das Data
+    -- Dictionary aus 0012_dokumentation.sql - 39 Tabellen- und 283
+    -- Spaltenkommentare - waere fuer die Erkundung verloren. Genau die
+    -- Erklaerungen sind aber der Grund, warum sich das Modell im
+    -- Werkzeug lesen laesst statt nur anschauen.
+    execute format('comment on view velocity_lesen.%I is %L',
+                   v_tab, obj_description(format('velocity.%I', v_tab)::regclass));
+    for v_sp, v_kom in
+      select a.attname, col_description(a.attrelid, a.attnum)
+        from pg_attribute a
+       where a.attrelid = format('velocity.%I', v_tab)::regclass
+         and a.attnum > 0 and not a.attisdropped
+         and col_description(a.attrelid, a.attnum) is not null
+    loop
+      execute format('comment on column velocity_lesen.%I.%I is %L',
+                     v_tab, v_sp, v_kom);
+      v_k := v_k + 1;
+    end loop;
   end loop;
-  raise notice '% Sichten in velocity_lesen angelegt', v_n;
+  raise notice '% Sichten in velocity_lesen angelegt, % Spaltenkommentare uebernommen',
+               v_n, v_k;
 end $$;
 
 -- ---- Die Rolle -------------------------------------------------------
