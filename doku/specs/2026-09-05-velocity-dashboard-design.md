@@ -152,7 +152,7 @@ eigene Zeile** heraus. Nach außen gehen ausschließlich Zahlen:
 
 ```
 rang_km = 19   kunden_gewertet = 495   perzentil = 96.4
-median_km_flotte = 96.9                bestwert_km_flotte = 711.7
+median_km_flotte = 96.9                bestwert_km_flotte = 220.6
 ```
 
 Kein Name, keine Kundennummer, keine fremde Zeile. Median und Bestwert sind
@@ -162,31 +162,45 @@ Kennzahlen der Flotte, keine Personen — dieselbe Unterscheidung, mit der
 **Gewertet wird, wer mindestens eine abgeschlossene Fahrt hat**: 495, nicht
 1 014. Ein Rang unter Konten ohne jede Fahrt wäre keine Einordnung.
 
-**Nachgemessen am 05.09.2026, und schlechter als hier zuvor stand:**
-`K-000001` steht auf **Platz 19**, `K-000013` auf **Platz 1 von 495**. Eine
-frühere Fassung dieses Abschnitts nannte Platz 15 und Platz 45; diese Zahlen
-waren falsch.
+**Nachgemessen am 05.09.2026, nach der Berichtigung des Ausreißers:**
+`K-000001` (Clara Fake) steht auf **Platz 19**, `K-000013` auf **Platz 5 von
+495**. Median der Flotte 96,9 km, Bestwert 220,6 km.
 
-**Der erste Platz ist ein Artefakt einer einzigen Fahrt.** Ausleihe 269 vom
-15.01.2026 lief 2 552 Minuten — 42,5 Stunden — vom Hauptbahnhof zum
-Hauptbahnhof. Weil Start und Ziel zusammenfallen, ist die Luftlinie null und
-die Herleitung greift auf ihren dritten Fall zurück: Dauer mal 13 km/h. Das
-ergibt **552,93 km**, die längste Einzelfahrt der Flotte, und allein 78 % der
-711,7 km dieses Kontos. Der Flottendurchschnitt liegt bei 4,15 km je Fahrt.
+**Wie es dahin kam.** Eine frühere Fassung dieses Abschnitts nannte Platz 15
+und Platz 45 — beide Zahlen waren falsch. Die richtige Messung ergab zunächst
+Platz 1 für `K-000013` bei 711,7 km, und der Grund war ein einzelner
+Datenpunkt: Ausleihe 269 vom 15.01.2026 lief 2 552 Minuten vom Hauptbahnhof
+zum Hauptbahnhof. Bei gleichem Start und Ziel ist die Luftlinie null, und die
+Herleitung greift auf ihren dritten Fall zurück — Dauer mal 13 km/h, also
+552,93 km. Der Satz stammte aus der Altdatenübernahme; seine einzige
+Entgeltposition war eine Bestandsübernahme.
 
-Es ist die einzige Fahrt über 100 km im ganzen Bestand. Die Schwäche liegt
-nicht in den Daten, sondern in der Annahme des dritten Falls: er setzt die
-gesamte Ausleihdauer als Fahrzeit an. Bei einem Rad, das jemand über zwei
-Nächte behält, trifft das nicht zu.
+**Entschieden und ausgeführt am 05.09.2026:** `distanz_km` auf 12 gesetzt
+(`db/betrieb/ausreisser_dauerschaetzung.sql`). Nicht gelöscht — die Ausleihe
+hat stattgefunden, und ein Löschen hätte die Zeilenzahlen 12 274 und 12 052
+verschoben, die in Tests und Abnahme stehen. Ein gemessener Wert lässt jede
+Zählung stehen und macht aus der Schätzung eine Messung. Die eingefrorenen
+Werte in `t0025` wurden mit Begründung nachgezogen: die Flottensumme fiel von
+49 995,4 auf 49 454,5 km, die Verfahrensverteilung von 1141/3688/7223 auf
+1140/3688/7224. Die Zeilenzahlen blieben unverändert — der Beleg, dass nichts
+verlorenging.
 
-**Offen, und vom Betreiber zu entscheiden** — die Umstellung berührt
-`velocity.rechenannahme` und damit veröffentlichte Zahlen (die Flottensumme
-von 49 995,4 km fiele um rund 550), weshalb sie hier nicht nebenbei
-mitgemacht wird. Drei Wege stehen offen: so lassen und im Unterricht
-besprechen, was ein Ausreißer mit einem Ranking macht; die Dauerschätzung
-deckeln; oder die eine Ausleihe berichtigen. Bis dahin zeigt das Dashboard
-den Wert mit der Kennzeichnung als Schätzung, die Abschnitt 5 ohnehin
-vorsieht.
+**`test_ref_keine_fahrt_ueber_50km` wacht seither darüber.** Der reale
+Höchstwert einer Einzelfahrt liegt bei 21,5 km; die Schwelle lässt reichlich
+Luft und fängt trotzdem jede Dauerschätzung ab, die aus dem Ruder läuft. Die
+längste Ausleihdauer im Bestand sind 5 422 Minuten — die Gefahr ist real,
+nicht hypothetisch.
+
+**Was bleibt, und wofür es keine Prüfung gibt:** Die Annahme des dritten
+Falls, die gesamte Ausleihdauer sei Fahrzeit, ist weiterhin falsch. Nur die
+Extremfälle fallen jetzt auf; ein Rad, das statt zwei Nächten fünf Stunden zu
+lange steht, erzeugt still zu viele Kilometer. Für eine Fallstudie ist das
+tragbar und als Beispiel sogar brauchbar — aber es ist eine Schwäche, keine
+Feinheit.
+
+**Beide Konten liegen weiterhin im oberen Zehntel** (Platz 5 und 19 von 495).
+Das Ranking schmeichelt also nach wie vor. Wer im Unterricht den umgekehrten
+Fall zeigen will, meldet sich mit einem anderen Kundensatz an.
 
 ## 4 Demozugang
 
