@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Datenmodell der VeloCity-Warenwirtschaft</title>
+<style>
+:root{
+  --papier:#F7F7F4; --flaeche:#FFFFFF; --tinte:#191C1B; --grau:#6B7270; --grau2:#9AA09E;
+  --linie:#E3E4DF; --linie2:#EFEFEB;
+  --stahl:#2D5D7C; --stahl-h:#E8EFF4;
+  --rost:#8C4A2F;  --rost-h:#F6EDE8;
+  --moos:#3F6B4A;  --moos-h:#E9F1EA;
+  --pflaume:#6A4A78; --pflaume-h:#F1EBF4;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--papier);color:var(--tinte);font-family:var(--sans);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.mitte{max-width:1280px;margin:0 auto;padding:0 26px}
+h1{font-size:26px;margin:0 0 5px;letter-spacing:-.02em;line-height:1.2}
+h2{font-size:19px;margin:0 0 8px;letter-spacing:-.01em}
+h3{font-size:14px;margin:20px 0 6px;letter-spacing:.02em;text-transform:uppercase;
+  font-family:var(--mono);font-weight:600;color:var(--grau)}
+p{margin:0 0 11px;max-width:68ch}
+code{font-family:var(--mono);font-size:.87em;background:var(--linie2);padding:1px 5px;border-radius:3px}
+
+/* ── Kopf ──────────────────────────────────────────── */
+header.kopf{background:var(--flaeche);border-bottom:1px solid var(--linie);padding:26px 0 0;
+  box-shadow:inset 0 3px 0 var(--stahl)}
+header.kopf .marke{font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--grau2);margin-bottom:9px}
+header.kopf p{color:var(--grau);max-width:74ch;font-size:14.5px;margin-bottom:22px}
+.reiter{display:flex;gap:6px;margin-bottom:-1px;position:relative;z-index:2}
+.reiter button{font:inherit;font-size:14.5px;font-weight:500;background:#EFF0EC;
+  border:1px solid var(--linie);border-radius:6px 6px 0 0;color:var(--grau);
+  padding:10px 20px 12px;cursor:pointer;display:flex;align-items:baseline;gap:8px}
+.reiter button:hover{color:var(--tinte);background:#E7E9E4}
+.reiter button[aria-selected="true"]{background:var(--flaeche);color:var(--tinte);
+  border-bottom-color:var(--flaeche);box-shadow:inset 0 3px 0 var(--stahl)}
+.reiter button span{font-family:var(--mono);font-size:11px;color:var(--grau2)}
+.reiter button[aria-selected="true"] span{color:var(--stahl)}
+.reiter button:focus-visible{outline:2px solid var(--stahl);outline-offset:2px}
+
+/* ── Werkzeugleiste ────────────────────────────────── */
+.leiste{background:var(--flaeche);border-bottom:1px solid var(--linie);padding:9px 0;
+  position:sticky;top:0;z-index:30}
+.leiste .mitte{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lab{font-family:var(--mono);font-size:11px;color:var(--grau);text-transform:uppercase;
+  letter-spacing:.1em;margin-right:2px}
+button.seg{font:inherit;font-size:13px;background:var(--flaeche);color:var(--grau);
+  border:1px solid var(--linie);border-radius:3px;padding:4px 12px;cursor:pointer}
+button.seg:hover{border-color:var(--grau2);color:var(--tinte)}
+button.seg[aria-pressed="true"]{background:var(--tinte);border-color:var(--tinte);color:#fff}
+button.seg:focus-visible{outline:2px solid var(--stahl);outline-offset:2px}
+button.rechts{margin-left:auto}
+button.betont{background:var(--stahl);border-color:var(--stahl);color:#fff}
+button.betont:hover{background:#24506c;border-color:#24506c;color:#fff}
+
+/* ── Layout ────────────────────────────────────────── */
+.flaeche{display:grid;grid-template-columns:1fr 420px;gap:24px;padding:24px 0 60px;align-items:start}
+@media (max-width:1100px){.flaeche{grid-template-columns:1fr}}
+.buehne{background:var(--flaeche);border:1px solid var(--linie);border-radius:6px;padding:8px;overflow:auto}
+.tafel{background:var(--flaeche);border:1px solid var(--linie);border-radius:6px;padding:20px;
+  position:sticky;top:62px;max-height:calc(100vh - 86px);overflow:auto}
+@media (max-width:1100px){.tafel{position:static;max-height:none}}
+.hinweis{font-size:12.5px;color:var(--grau2);padding:6px 10px 4px;max-width:none}
+.leer{color:var(--grau);font-size:14px}
+
+/* ── Reiter 1: Einstieg ────────────────────────────── */
+.einstieg{background:var(--flaeche);border-bottom:1px solid var(--linie);padding:22px 0}
+.karten{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px;margin-top:12px}
+.karte{border-left:3px solid var(--linie);padding:2px 0 2px 14px}
+.karte b{display:block;font-size:14px;margin-bottom:2px}
+.karte span{font-size:13.5px;color:var(--grau);display:block}
+#pane-a h2,#pane-a .satz{font-family:var(--serif)}
+#pane-a .satz{font-size:16px;line-height:1.55}
+
+svg#er{display:block;width:100%;height:auto}
+.tb{cursor:pointer}
+.tb rect.k{fill:var(--flaeche);stroke:var(--linie);stroke-width:1.5;rx:5}
+.tb:hover rect.k{stroke:var(--grau2)}
+.tb.aktiv rect.k{stroke-width:2.5}
+.tb.blass{opacity:.24}
+.tb text.n{font-family:var(--mono);font-size:12.5px;font-weight:600;fill:var(--tinte)}
+.tb text.s{font-size:11px;fill:var(--grau)}
+.kante{stroke:#BFC6C4;stroke-width:1.4;fill:none}
+.kante.hell{stroke:var(--rost);stroke-width:2.2}
+.kante.blass{opacity:.18}
+.kard{font-family:var(--mono);font-size:10.5px;fill:var(--grau);paint-order:stroke;
+  stroke:var(--flaeche);stroke-width:3px;stroke-linejoin:round}
+
+/* ── Reiter 2: Mermaid ─────────────────────────────── */
+#mermaidWrap svg{max-width:none;height:auto}
+#mermaidWrap .entity-hit{cursor:pointer}
+#mermaidWrap .entity-hit:hover rect{stroke:var(--stahl)!important;stroke-width:2px!important}
+#mermaidWrap .entity-aktiv rect{stroke:var(--rost)!important;stroke-width:2.5px!important}
+.quelle{background:#F1F3F0;color:#2A312F;border:1px solid var(--linie);font-family:var(--mono);
+  font-size:12px;padding:14px 16px;border-radius:6px;overflow:auto;white-space:pre;
+  line-height:1.55;max-height:420px;margin-top:12px}
+
+/* ── Tafelinhalt ───────────────────────────────────── */
+.pill{display:inline-block;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;
+  letter-spacing:.1em;padding:3px 9px;border-radius:3px;margin-bottom:10px}
+.tafel h2{font-family:var(--mono);font-size:17px;word-break:break-word}
+table.sp{border-collapse:collapse;width:100%;font-size:13px;margin:4px 0 6px}
+table.sp th{text-align:left;font-weight:500;font-size:10.5px;color:var(--grau);
+  text-transform:uppercase;letter-spacing:.08em;padding:0 6px 5px 0;border-bottom:1px solid var(--linie);
+  font-family:var(--mono)}
+table.sp td{padding:6px 6px 6px 0;border-bottom:1px solid var(--linie2);vertical-align:top}
+table.sp td.f{font-family:var(--mono);font-size:12px}
+table.sp td.t{font-family:var(--mono);font-size:11.5px;color:var(--stahl);white-space:nowrap}
+table.sp td.d{color:var(--grau);font-size:12.5px;line-height:1.45}
+.badge{display:inline-block;font-family:var(--mono);font-size:9.5px;padding:1px 5px;
+  border-radius:3px;margin-left:5px;vertical-align:1px;letter-spacing:.04em}
+.badge.pk{background:var(--rost-h);color:var(--rost)}
+.badge.fk{background:var(--stahl-h);color:var(--stahl)}
+.badge.uk{background:var(--moos-h);color:var(--moos)}
+.badge.nl{background:var(--linie2);color:var(--grau)}
+.beispiel{background:#F4F5F2;border:1px solid var(--linie);border-radius:5px;padding:11px 13px;
+  font-family:var(--mono);font-size:12px;line-height:1.65;overflow-x:auto;white-space:pre}
+.ddl{background:#F1F3F0;color:#2A312F;border:1px solid var(--linie)}
+.ddl .kw{color:var(--stahl);font-weight:600}
+.ddl .ty{color:var(--rost)}
+.ddl .cm{color:var(--grau2);font-style:italic}
+.merk{border-left:3px solid var(--rost);padding:2px 0 2px 13px;font-size:13.5px;color:var(--grau);margin:12px 0}
+.merk b{color:var(--tinte)}
+.merk.grau{border-color:var(--grau2)}
+.bezug{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+button.chip{font:inherit;font-family:var(--mono);font-size:11.5px;background:var(--flaeche);
+  border:1px solid var(--linie);border-radius:3px;padding:3px 9px;cursor:pointer;color:var(--grau)}
+button.chip:hover{border-color:var(--stahl);color:var(--stahl)}
+
+/* ── Tour ──────────────────────────────────────────── */
+.tourbox{background:var(--stahl);color:#fff;border-radius:6px;padding:16px 18px;margin-bottom:16px}
+.tourbox h3{margin:0 0 4px;color:#fff;font-size:14px;text-transform:none;font-family:var(--sans);
+  font-weight:600;letter-spacing:-.01em}
+.tourbox p{color:rgba(255,255,255,.82);font-size:13.5px;margin:0 0 12px;max-width:none}
+.tourbox .nav{display:flex;gap:8px;align-items:center}
+.tourbox button{font:inherit;font-size:13px;border-radius:3px;padding:4px 12px;cursor:pointer;
+  background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.26);color:#fff}
+.tourbox button:hover{background:rgba(255,255,255,.2)}
+.tourbox .zaehler{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:rgba(255,255,255,.5)}
+
+/* ── Glossar ───────────────────────────────────────── */
+.glossar{background:var(--flaeche);border-top:1px solid var(--linie);padding:32px 0 56px}
+details{border-bottom:1px solid var(--linie2);padding:10px 0;break-inside:avoid}
+summary{cursor:pointer;font-weight:500;font-size:14.5px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"+";font-family:var(--mono);color:var(--rost);margin-right:9px;font-weight:600}
+details[open] summary::before{content:"−"}
+details p{margin:8px 0 2px 22px;font-size:13.5px;color:var(--grau)}
+.gl2{columns:2;column-gap:34px}
+@media (max-width:760px){.gl2{columns:1}}
+
+footer{background:var(--flaeche);border-top:1px solid var(--linie);color:var(--grau);
+  font-size:12.5px;padding:22px 0 30px}
+footer b{color:var(--tinte)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="kopf">
+  <div class="mitte">
+    <div class="marke">VeloCity Würzburg · Warenwirtschaft</div>
+    <h1>Das Datenmodell</h1>
+    <p>Fünfzehn Tabellen, in denen ein Leihradsystem sich merkt, welches Rad wo steht, wer damit
+    gefahren ist und was dabei kaputtging. Links der Einstieg für alle, die zum ersten Mal auf ein
+    Datenmodell schauen — rechts dieselbe Sache technisch.</p>
+    <nav class="reiter" role="tablist">
+      <button role="tab" id="tab-a" aria-controls="pane-a" aria-selected="true">
+        Verstehen<span>für den Anfang</span></button>
+      <button role="tab" id="tab-b" aria-controls="pane-b" aria-selected="false">
+        Referenz<span>ER-Diagramm & DDL</span></button>
+    </nav>
+  </div>
+</header>
+
+<!-- ══════════════════ REITER A ══════════════════ -->
+<div id="pane-a" role="tabpanel" aria-labelledby="tab-a">
+
+  <section class="einstieg">
+    <div class="mitte">
+      <h2>Vier Begriffe, dann können Sie das Bild lesen</h2>
+      <div class="karten">
+        <div class="karte" style="border-color:var(--stahl)"><b>Tabelle</b>
+          <span>Eine Schublade für eine Sorte Ding. Alle Räder in die eine, alle Kunden in die andere.
+          Nie beides gemischt.</span></div>
+        <div class="karte" style="border-color:var(--moos)"><b>Zeile und Spalte</b>
+          <span>Jede Zeile ist ein einzelnes Ding — ein bestimmtes Rad. Jede Spalte eine Eigenschaft,
+          die jedes Ding dieser Sorte hat.</span></div>
+        <div class="karte" style="border-color:var(--rost)"><b>Primärschlüssel</b>
+          <span>Die Nummer, an der genau eine Zeile hängt. Wie eine Matrikelnummer: Namen doppeln
+          sich, die Nummer nicht.</span></div>
+        <div class="karte" style="border-color:var(--pflaume)"><b>Fremdschlüssel</b>
+          <span>Eine Spalte, die auf die Nummer in einer anderen Tabelle zeigt. So wird aus vielen
+          Schubladen ein System.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="leiste">
+    <div class="mitte">
+      <span class="lab">Bereich</span>
+      <button class="seg" data-grp="alle" aria-pressed="true">Alles</button>
+      <button class="seg" data-grp="ausleihe" aria-pressed="false">Ausleihe</button>
+      <button class="seg" data-grp="flotte" aria-pressed="false">Flotte</button>
+      <button class="seg" data-grp="wartung" aria-pressed="false">Wartung</button>
+      <button class="seg" data-grp="protokoll" aria-pressed="false">Protokoll</button>
+      <button class="seg betont rechts" id="tourAn">Geführter Rundgang</button>
+    </div>
+  </div>
+
+  <div class="mitte flaeche">
+    <div>
+      <div class="buehne">
+        <svg id="er" viewBox="0 0 1180 640" role="img"
+             aria-label="Diagramm der Tabellen und ihrer Beziehungen"></svg>
+      </div>
+      <p class="hinweis">Linien sind Beziehungen. <b>1</b> und <b>n</b> sagen, wie viele
+      zusammengehören: An <em>einem</em> Rad hängen <em>n</em> Fahrten — an einer Fahrt aber
+      immer nur genau ein Rad.</p>
+    </div>
+    <aside class="tafel" id="tafelA"></aside>
+  </div>
+
+  <section class="glossar">
+    <div class="mitte">
+      <h2 style="font-family:var(--serif)">Wörter, die immer wieder vorkommen</h2>
+      <p style="color:var(--grau);font-size:14px">Erst lesen, wenn sie Ihnen begegnen —
+      nicht vorher auswendig lernen.</p>
+      <div class="gl2" id="glossar"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ══════════════════ REITER B ══════════════════ -->
+<div id="pane-b" role="tabpanel" aria-labelledby="tab-b" hidden>
+  <div class="leiste">
+    <div class="mitte">
+      <span class="lab">Spalten</span>
+      <button class="seg" data-attr="schluessel" aria-pressed="true">Nur Schlüssel</button>
+      <button class="seg" data-attr="alle" aria-pressed="false">Alle</button>
+      <span class="lab" style="margin-left:14px">Bereich</span>
+      <button class="seg" data-mgrp="alle" aria-pressed="true">Alles</button>
+      <button class="seg" data-mgrp="ausleihe" aria-pressed="false">Ausleihe</button>
+      <button class="seg" data-mgrp="flotte" aria-pressed="false">Flotte</button>
+      <button class="seg" data-mgrp="wartung" aria-pressed="false">Wartung</button>
+      <button class="seg" data-mgrp="protokoll" aria-pressed="false">Protokoll</button>
+      <button class="seg rechts" id="quelleAn">Mermaid-Quelltext</button>
+    </div>
+  </div>
+
+  <div class="mitte flaeche">
+    <div>
+      <div class="buehne" id="mermaidWrap"></div>
+      <p class="hinweis"><code>||--o{</code> heißt eins zu null-oder-viele, <code>}o--||</code>
+      dasselbe aus Sicht der Fremdschlüsselseite. Ein Klick auf eine Entität öffnet ihre Referenz.</p>
+      <div class="quelle" id="quelle" hidden></div>
+    </div>
+    <aside class="tafel" id="tafelB"></aside>
+  </div>
+</div>
+
+<footer>
+  <div class="mitte">
+    <b>Woher dieses Modell stammt:</b> aus den zwanzig <code>v_wawi_*</code>-Sichten
+    der Warenwirtschaft, nicht aus dem Systemkatalog. Tabellennamen, Datentypen, Schlüssel und
+    Beziehungen sind daraus erschlossen; vier Tabellen sind mit <code>?</code>
+    als unbelegt markiert. Vor produktiver Verwendung gegen <code>information_schema</code>
+    prüfen. Die Datenbank ist ein Lehrfallbeispiel; Personen darin sind erfunden.
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js"></script>
+<script>
+"use strict";
+const NS="http://www.w3.org/2000/svg";
+const el=(n,a={})=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");
+
+const GRUPPEN={
+  ausleihe:{name:"Ausleihe",  farbe:"var(--stahl)",  hell:"var(--stahl-h)",  hex:"#2D5D7C", bg:"#E8EFF4"},
+  flotte:  {name:"Flotte",    farbe:"var(--moos)",   hell:"var(--moos-h)",   hex:"#3F6B4A", bg:"#E9F1EA"},
+  wartung: {name:"Wartung",   farbe:"var(--rost)",   hell:"var(--rost-h)",   hex:"#8C4A2F", bg:"#F6EDE8"},
+  protokoll:{name:"Protokoll",farbe:"var(--pflaume)",hell:"var(--pflaume-h)",hex:"#6A4A78", bg:"#F1EBF4"}
+};
+
+/* ═══════════════════════════════════════════════════════════════
+   Ein Modell, zwei Lesarten.
+   d = Erklärung für den Einstieg   ·   t = technische Anmerkung
+   ═══════════════════════════════════════════════════════════════ */
+const T={
+
+tarif:{g:"ausleihe",x:30,y:30,unsicher:true,unter:"Die Preismodelle",
+ satz:"Welche Tarife es überhaupt gibt — Einzelfahrt, Monatskarte, Studierendentarif.",
+ warum:"Der Preis steht nicht bei jedem Kunden einzeln, sondern einmal hier. Ändert sich der Studierendentarif, ändert man eine Zeile statt hundert.",
+ sichten:["v_wawi_kunde","v_wawi_umsatz_kundengruppe"],
+ sp:[{n:"tarif_id",pg:"bigint",pk:1,d:"Der Primärschlüssel.",t:"GENERATED ALWAYS AS IDENTITY"},
+     {n:"tarif_code",pg:"text",uk:1,d:"Kurzzeichen wie STUD oder MONAT — für Menschen lesbar.",t:"UNIQUE; erscheint in v_wawi_kunde.tarif_code"},
+     {n:"bezeichnung",pg:"text",d:"Der ausgeschriebene Name, wie er auf der Rechnung steht."},
+     {n:"grundpreis_cent",pg:"integer",nl:1,d:"Grundgebühr, falls der Tarif eine hat.",t:"Geldbeträge als Ganzzahl in Cent — vermeidet Rundungsfehler von float"},
+     {n:"minutenpreis_cent",pg:"integer",nl:1,d:"Preis je gefahrener Minute."}],
+ zeile:"tarif_id  17\ntarif_code  STUD\nbezeichnung  Studierendentarif",
+ merk:"Nachschlagetabellen wie diese sind klein und ändern sich selten. Sie sind der Grund, warum in der großen Tabelle nur eine Nummer steht statt eines langen Textes.",
+ tmerk:"Klassische Referenztabelle. Kandidat für einen ENUM — dagegen spricht, dass Tarife fachliche Attribute tragen und sich zur Laufzeit ändern sollen.",
+ sql:"SELECT * FROM tarif;"},
+
+mitgliedschaft:{g:"ausleihe",x:30,y:150,unsicher:true,unter:"Wer hat wann welchen Tarif",
+ satz:"Verbindet einen Kunden mit einem Tarif — für einen Zeitraum.",
+ warum:"Ein Kunde kann im Lauf der Zeit mehrere Tarife haben, und einen Tarif haben viele Kunden. Für so etwas braucht es eine Tabelle in der Mitte.",
+ sichten:["v_wawi_kunde","v_wawi_umsatz_kundengruppe"],
+ sp:[{n:"mitgliedschaft_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"kunde_id",pg:"bigint",fk:"kunde",d:"Zeigt auf kunde.",t:"ON DELETE CASCADE vermutet"},
+     {n:"tarif_id",pg:"bigint",fk:"tarif",d:"Zeigt auf tarif.",t:"ON DELETE RESTRICT vermutet"},
+     {n:"beginn",pg:"date",d:"Ab wann der Tarif gilt."},
+     {n:"ende",pg:"date",nl:1,d:"Bis wann — leer, solange er noch läuft.",t:"NULL = laufend"}],
+ zeile:"kunde_id  2334\ntarif_id  17\nbeginn  2026-01-15\nende  (leer)",
+ merk:"Das ist eine <b>n:m-Beziehung</b>: viele zu vielen. Sie lässt sich nicht mit einer Spalte abbilden, deshalb steht hier eine eigene Tabelle dazwischen.",
+ tmerk:"Assoziationstabelle mit Gültigkeitszeitraum. Sauberer wäre daterange plus EXCLUDE-Constraint mit btree_gist — das verhindert überlappende Mitgliedschaften auf Datenbankebene statt in der Anwendung.",
+ sql:"SELECT t.bezeichnung\nFROM   mitgliedschaft m\nJOIN   tarif t ON t.tarif_id = m.tarif_id\nWHERE  m.kunde_id = 2334 AND m.ende IS NULL;"},
+
+kunde:{g:"ausleihe",x:30,y:290,unter:"Die Menschen",
+ satz:"Alle, die sich angemeldet haben: Name, Kontakt, Adresse, Status.",
+ warum:"Ohne diese Tabelle wüsste niemand, wem eine Fahrt zuzuordnen ist und an wen die Rechnung geht.",
+ sichten:["v_wawi_kunde","v_wawi_kundenorte","v_wawi_umsatz_kundengruppe"],
+ sp:[{n:"kunde_id",pg:"bigint",pk:1,d:"Primärschlüssel. Nur die Datenbank kennt ihn.",t:"Surrogatschlüssel"},
+     {n:"kundennummer",pg:"text",uk:1,d:"K-000013 — die Nummer für den Schriftverkehr.",t:"Natürlicher Schlüssel, UNIQUE"},
+     {n:"anrede",pg:"text",nl:1,d:"Optional."},
+     {n:"vorname",pg:"text",d:"Personenangabe."},
+     {n:"nachname",pg:"text",d:"Personenangabe."},
+     {n:"email",pg:"citext",uk:1,d:"Auch der Anmeldename.",t:"citext macht den Vergleich case-insensitiv"},
+     {n:"telefon",pg:"text",nl:1,d:"Oft leer — nicht jeder gibt eine an."},
+     {n:"status",pg:"text",d:"aktiv oder gesperrt.",t:"CHECK-Constraint vermutet"},
+     {n:"registriert_am",pg:"timestamptz",d:"Wann das Konto entstand.",t:"DEFAULT now()"},
+     {n:"strasse",pg:"text",nl:1,d:"Anschrift, oft leer."},
+     {n:"hausnummer",pg:"text",nl:1,d:"Als Text — wegen „12a“.",t:"Nie integer: Hausnummern sind keine Zahlen"},
+     {n:"plz",pg:"text",nl:1,d:"Ebenfalls Text — führende Nullen.",t:"01067 wäre als integer 1067"},
+     {n:"ort",pg:"text",nl:1,d:"Grundlage der Kundenortauswertung."}],
+ zeile:"kunde_id  2334\nkundennummer  K-000013\nvorname  Robert\nnachname  Butscher\nstatus  aktiv\nregistriert_am  2026-01-15",
+ merk:"Zwei Nummern für dasselbe: <b>kunde_id</b> ist der technische Schlüssel, <b>kundennummer</b> der fachliche. Verbindungen im System laufen immer über den technischen — der fachliche darf sich ändern, ohne dass etwas zerbricht.",
+ tmerk:"Enthält personenbezogene Daten nach Art. 4 DSGVO. Löschbegehren nach Art. 17 kollidieren mit den Aufbewahrungsfristen aus § 147 AO und § 257 HGB — deshalb sieht die Warenwirtschaft Anonymisieren statt Löschen vor.",
+ sql:"SELECT kundennummer, nachname, status\nFROM   kunde WHERE status = 'aktiv';"},
+
+fahrt:{g:"ausleihe",x:290,y:290,unter:"Das Herzstück",
+ satz:"Jede einzelne Ausleihe: wer, welches Rad, von wo nach wo, wie lange, was es gekostet hat.",
+ warum:"Hier laufen alle Fäden zusammen. Fast jede Auswertung im Betrieb beginnt in dieser Tabelle — Umsatz, Auslastung, Kilometer, Stationsverkehr.",
+ sichten:["v_wawi_fahrt_km","v_wawi_fahrten_je_tag","v_wawi_fahrten_je_tag_typ","v_wawi_fahrten_je_tag_rad","v_wawi_km_co2","v_wawi_stationsauslastung","v_wawi_stationsverkehr_zeitfenster","v_wawi_umsatz_radtyp"],
+ sp:[{n:"fahrt_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"kunde_id",pg:"bigint",fk:"kunde",d:"Wer gefahren ist.",t:"ON DELETE RESTRICT — Belege bleiben"},
+     {n:"fahrrad_id",pg:"bigint",fk:"fahrrad",d:"Womit."},
+     {n:"start_station_id",pg:"bigint",fk:"station",d:"Wo die Fahrt begann."},
+     {n:"ziel_station_id",pg:"bigint",fk:"station",nl:1,d:"Wo sie endete — leer bei laufender Fahrt.",t:"Zweiter FK auf dieselbe Tabelle"},
+     {n:"start_zeit",pg:"timestamptz",d:"Beginn der Ausleihe.",t:"Index (kunde_id, start_zeit DESC) für die Kundenhistorie"},
+     {n:"ende_zeit",pg:"timestamptz",nl:1,d:"Ende — leer bei laufender Fahrt."},
+     {n:"kilometer",pg:"numeric(6,2)",nl:1,d:"Strecke."},
+     {n:"ist_geschaetzt",pg:"boolean",d:"Wahr, wenn die Strecke gerechnet und nicht gemessen wurde.",t:"Herkunftskennzeichen — trennt Messung von Modell"},
+     {n:"entgelt_cent",pg:"integer",nl:1,d:"Was berechnet wurde."}],
+ zeile:"tag  2026-08-18\nfahrrad  CB-00085 (City-Bike)\nstart  Dom\nziel  Residenz\ndauer  7 Minuten\nkilometer  0,62  ← geschätzt\numsatz  0,80 €",
+ merk:"Beachten Sie die <b>zwei</b> Fremdschlüssel auf dieselbe Tabelle: Start und Ziel zeigen beide auf <b>station</b>. Das ist erlaubt und häufig — eine Beziehung wird durch ihren Namen bestimmt, nicht durch das Ziel.",
+ tmerk:"Die größte Tabelle des Modells und der Ausgangspunkt fast aller Sichten. Die zwei FK auf station verlangen beim JOIN zwei Aliase. CHECK (ende_zeit IS NULL OR ende_zeit >= start_zeit) wäre eine billige Absicherung.",
+ sql:"SELECT f.fahrt_id, f.kilometer,\n       s1.name AS start, s2.name AS ziel\nFROM   fahrt f\nJOIN   station s1 ON s1.station_id = f.start_station_id\nJOIN   station s2 ON s2.station_id = f.ziel_station_id\nORDER  BY f.kilometer DESC LIMIT 10;"},
+
+station:{g:"flotte",x:290,y:70,unter:"Die Orte",
+ satz:"Die zehn Stationen mit Anschrift, Koordinate und Stellplatzzahl.",
+ warum:"Räder stehen an Stationen, Fahrten beginnen und enden dort. Ohne Koordinate keine Karte, ohne Kapazität keine Aussage über Füllstände.",
+ sichten:["v_wawi_station","v_wawi_station_flotte","v_wawi_stationsauslastung","v_wawi_stationsverkehr_zeitfenster"],
+ sp:[{n:"station_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"stationsnummer",pg:"text",uk:1,d:"S-0001 — die fachliche Nummer."},
+     {n:"name",pg:"text",d:"Hauptbahnhof, Dom, Zellerau …"},
+     {n:"strasse",pg:"text",d:"Anschrift."},
+     {n:"hausnummer",pg:"text",d:"Anschrift."},
+     {n:"plz",pg:"text",d:"Anschrift."},
+     {n:"ort",pg:"text",d:"Anschrift."},
+     {n:"latitude",pg:"numeric(9,6)",d:"Geografische Breite."},
+     {n:"longitude",pg:"numeric(9,6)",d:"Geografische Länge.",t:"Bei Umkreissuchen wäre PostGIS geography(Point) die bessere Wahl"},
+     {n:"kapazitaet",pg:"integer",d:"Wie viele Räder hier hineinpassen.",t:"CHECK (kapazitaet > 0)"},
+     {n:"betriebszeitraum",pg:"daterange",d:"Von wann bis wann in Betrieb.",t:"Bereichstyp statt Datumspaar — erlaubt @> und &&"}],
+ zeile:"station_id  31\nstationsnummer  S-0001\nname  Hauptbahnhof\nplz/ort  97070 Würzburg\nlatitude  49,8019\nlongitude  9,9358\nkapazitaet  40",
+ merk:"<b>betriebszeitraum</b> ist ein Zeitraum in einer einzigen Spalte, kein Datumspaar. PostgreSQL kann das und beantwortet damit Fragen wie „war diese Station im März schon offen?“ ohne Klimmzüge.",
+ tmerk:"daterange mit GiST-Index beantwortet Stichtagsfragen direkt: WHERE betriebszeitraum @> DATE '2026-03-01'. Die Spalten belegt und frei aus v_wawi_station sind berechnet und stehen nicht in der Tabelle.",
+ sql:"SELECT name, kapazitaet, belegt, frei\nFROM   v_wawi_station ORDER BY frei;"},
+
+radtyp:{g:"flotte",x:550,y:30,unsicher:true,unter:"Die drei Gattungen",
+ satz:"City-Bike, E-Bike Sport, E-Cargo Loader — die grobe Einteilung.",
+ warum:"Der Tarif hängt am Typ, nicht am einzelnen Rad. Auch Auswertungen fragen fast immer nach Typ, selten nach Modell.",
+ sichten:["v_wawi_modell","v_wawi_flotte","v_wawi_umsatz_radtyp"],
+ sp:[{n:"typ_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"typ_code",pg:"text",uk:1,d:"CITY, EBIKE, CARGO."},
+     {n:"bezeichnung",pg:"text",d:"Der Name in der Anzeige."},
+     {n:"hat_elektro",pg:"boolean",d:"Ob ein Motor verbaut ist."},
+     {n:"zuladung_kg",pg:"integer",nl:1,d:"Was mitgenommen werden darf."}],
+ zeile:"typ_id  41\ntyp_code  CITY\nbezeichnung  City-Bike\nhat_elektro  nein\nzuladung_kg  20",
+ merk:"Drei Zeilen, aber sie tragen 277 Räder. Solche kleinen Tabellen ganz oben in der Kette nennt man <b>Stammdaten</b> — sie ändern sich fast nie und werden überall mitgelesen.",
+ tmerk:"Drei Zeilen, die praktisch jede Auswertung mitliest. Der Planer hält sie im Cache; ein Index ist überflüssig.",
+ sql:"SELECT typ_code, bezeichnung, hat_elektro FROM radtyp;"},
+
+modell:{g:"flotte",x:550,y:155,unter:"Bauart und Ausstattung",
+ satz:"Hersteller, Modellbezeichnung und alle technischen Daten, die für ein ganzes Baulos gelten.",
+ warum:"110 Räder desselben Modells haben dieselbe Gangzahl und dasselbe Gewicht. Das steht einmal hier statt 110-mal in der Radtabelle.",
+ sichten:["v_wawi_modell","v_wawi_flotte"],
+ sp:[{n:"modell_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"typ_id",pg:"bigint",fk:"radtyp",d:"Zeigt auf radtyp."},
+     {n:"hersteller",pg:"text",d:"Nordwind Rad und andere."},
+     {n:"modellbezeichnung",pg:"text",d:"Der Name des Modells."},
+     {n:"baujahr",pg:"integer",d:"Jahrgang der Bauserie."},
+     {n:"gewicht_kg",pg:"numeric(4,1)",nl:1,d:"Gewicht."},
+     {n:"gangzahl",pg:"integer",nl:1,d:"Anzahl der Gänge."},
+     {n:"rahmenhoehe_cm",pg:"integer",nl:1,d:"Rahmenhöhe."},
+     {n:"akkukapazitaet_wh",pg:"integer",nl:1,d:"Nur bei Elektromodellen gefüllt.",t:"NULL trägt hier Bedeutung: kein Akku vorhanden"},
+     {n:"reichweite_km",pg:"integer",nl:1,d:"Nur bei Elektromodellen gefüllt."}],
+ zeile:"modell_id  23379\nhersteller  Nordwind Rad\nmodellbezeichnung  City-Bike\ntyp  CITY\nbaujahr  2021\ngangzahl  8",
+ merk:"Das ist <b>Normalisierung</b> in einem Satz: Was für viele Zeilen gleich ist, bekommt eine eigene Tabelle. Vorteil ist nicht der gesparte Platz, sondern dass es nur eine Stelle zum Ändern gibt.",
+ tmerk:"Dritte Normalform: Die technischen Daten hängen am Modell, nicht am Exemplar. Die Elektrospalten sind für Nicht-E-Modelle strukturell NULL — ein CHECK könnte das an hat_elektro koppeln.",
+ sql:"SELECT m.hersteller, m.modellbezeichnung, count(*) AS bestand\nFROM   fahrrad f JOIN modell m USING (modell_id)\nGROUP  BY 1,2 ORDER BY bestand DESC;"},
+
+fahrrad:{g:"flotte",x:550,y:290,unter:"Die einzelnen Räder",
+ satz:"Ein Rad je Zeile: Rahmennummer, Zustand, aktueller Standort, Anschaffungsdatum.",
+ warum:"Alles, was ein bestimmtes Rad von seinem Zwilling unterscheidet — seine Nummer, sein Status, wo es gerade steht.",
+ sichten:["v_wawi_flotte","v_wawi_station_flotte","v_wawi_wartungsprognose","v_wawi_radereignis"],
+ sp:[{n:"fahrrad_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"rahmennummer",pg:"text",uk:1,d:"CB-00085 — steht auch am Rahmen."},
+     {n:"modell_id",pg:"bigint",fk:"modell",d:"Zeigt auf modell."},
+     {n:"station_id",pg:"bigint",fk:"station",nl:1,d:"Wo es gerade steht — leer, während es unterwegs ist.",t:"NULL ist hier ein Zustand, kein fehlender Wert"},
+     {n:"status",pg:"text",d:"verfuegbar, ausgeliehen, wartung, defekt, ausgemustert.",t:"CHECK-Liste; Übergänge protokolliert radereignis"},
+     {n:"angeschafft_am",pg:"date",d:"Kaufdatum."},
+     {n:"erstinbetriebnahme_am",pg:"date",nl:1,d:"Wann es zum ersten Mal ausgeliehen werden konnte."},
+     {n:"akkustand_prozent",pg:"integer",nl:1,d:"Nur bei Elektrorädern.",t:"CHECK (0..100)"},
+     {n:"farbe",pg:"text",nl:1,d:"Eigenschaft dieses Exemplars."},
+     {n:"schlossnummer",pg:"text",nl:1,d:"Eigenschaft dieses Exemplars."}],
+ zeile:"fahrrad_id  460\nrahmennummer  CB-00210\nstatus  ausgeliehen\nstandort  (leer)  ← weil unterwegs\nangeschafft_am  2024-03-18",
+ merk:"Ein leeres Feld heißt <b>NULL</b> und bedeutet „unbekannt oder nicht zutreffend“ — nicht null und nicht leerer Text. Ein ausgeliehenes Rad steht an keiner Station, und genau das drückt NULL aus.",
+ tmerk:"status und station_id sind redundant zueinander und können auseinanderlaufen. Entweder ein Trigger hält sie konsistent, oder man leitet den Status aus offenen Fahrten ab. Die Warenwirtschaft schreibt jede Änderung nach radereignis fort.",
+ sql:"SELECT rahmennummer, status FROM fahrrad\nWHERE  station_id IS NULL AND status = 'ausgeliehen';"},
+
+schadensmeldung:{g:"wartung",x:810,y:180,unter:"Etwas ist kaputt",
+ satz:"Wer wann welchen Schaden an welchem Rad gemeldet hat, samt Schweregrad.",
+ warum:"Eine Meldung ist noch keine Reparatur. Sie hält fest, dass ein Problem bekannt ist — was daraus wird, steht nebenan.",
+ sichten:["v_wawi_schaden","v_wawi_flotte","v_wawi_auftrag"],
+ sp:[{n:"schadensmeldung_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"fahrrad_id",pg:"bigint",fk:"fahrrad",d:"Welches Rad betroffen ist."},
+     {n:"gemeldet_am",pg:"timestamptz",d:"Wann die Meldung einging.",t:"DEFAULT now()"},
+     {n:"melderart",pg:"text",d:"Kunde oder Mitarbeiter."},
+     {n:"kategorie",pg:"text",d:"Laufrad, Bremse, Beleuchtung …"},
+     {n:"beschreibung",pg:"text",nl:1,d:"Was genau beobachtet wurde.",t:"Freitext — für Auswertungen taugt kategorie"},
+     {n:"schwere",pg:"text",d:"kosmetisch, eingeschraenkt, fahruntauglich.",t:"Ordinale Skala als Text; ENUM wäre sortierbar"},
+     {n:"status",pg:"text",d:"offen oder behoben."}],
+ zeile:"schadensmeldung_id  1043\nrahmennummer  CB-00031\nkategorie  Laufrad\nschwere  fahruntauglich\nstatus  behoben\ngemeldet_am  2026-08-25",
+ merk:"Meldung und Reparatur getrennt zu halten ist eine <b>fachliche</b> Entscheidung, keine technische: Es gibt Meldungen ohne Auftrag und Aufträge ohne Meldung, etwa die planmäßige Inspektion.",
+ tmerk:"schwere ist ordinal, liegt aber als text vor — ORDER BY schwere sortiert alphabetisch und damit falsch. Ein ENUM oder eine Rangspalte würde das lösen.",
+ sql:"SELECT schwere, count(*) FROM schadensmeldung\nWHERE  status = 'offen' GROUP BY schwere;"},
+
+wartungsauftrag:{g:"wartung",x:810,y:310,unter:"Jemand kümmert sich",
+ satz:"Der Auftrag in der Werkstatt: eröffnet, bearbeitet, erledigt — mit Arbeitszeit.",
+ warum:"Trennt die Beobachtung von der Handlung. Erst hier steht, wer wie lange gearbeitet und was er getan hat.",
+ sichten:["v_wawi_auftrag","v_wawi_flotte"],
+ sp:[{n:"wartungsauftrag_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"auftragsnummer",pg:"text",uk:1,d:"WA-2026-00065.",t:"Jahresbezogene Sequenz"},
+     {n:"fahrrad_id",pg:"bigint",fk:"fahrrad",d:"Das Rad in der Werkstatt."},
+     {n:"schadensmeldung_id",pg:"bigint",fk:"schadensmeldung",nl:1,d:"Der Auslöser — leer bei planmäßiger Wartung.",t:"Optionaler FK"},
+     {n:"mitarbeiter_id",pg:"bigint",fk:"mitarbeiter",nl:1,d:"Wer den Auftrag bearbeitet."},
+     {n:"eroeffnet_am",pg:"timestamptz",d:"Anfang."},
+     {n:"erledigt_am",pg:"timestamptz",nl:1,d:"Ende — leer, solange offen."},
+     {n:"status",pg:"text",d:"offen oder erledigt.",t:"Ableitbar aus erledigt_am IS NULL — Redundanz"},
+     {n:"arbeitszeit_minuten",pg:"integer",nl:1,d:"Aufwand."},
+     {n:"bemerkung",pg:"text",nl:1,d:"Was gemacht wurde."}],
+ zeile:"auftragsnummer  WA-2026-00065\nrahmennummer  CB-00031\nschadensmeldung  1043\nstatus  erledigt\narbeitszeit  30 Minuten\nbearbeiter  Robert Butscher",
+ merk:"<b>schadensmeldung_id</b> darf leer sein. Ein Fremdschlüssel bedeutet also nicht immer „muss vorhanden sein“ — sondern: <em>wenn</em> etwas darin steht, muss es dort drüben auch wirklich existieren.",
+ tmerk:"Optionaler Fremdschlüssel: NULL erlaubt, aber jeder gesetzte Wert muss existieren. Der Unterschied zwischen NOT NULL und der Referenzbedingung wird hier gut sichtbar.",
+ sql:"SELECT s.kategorie, round(avg(a.arbeitszeit_minuten)) AS minuten\nFROM   wartungsauftrag a\nJOIN   schadensmeldung s USING (schadensmeldung_id)\nGROUP  BY s.kategorie;"},
+
+mitarbeiter:{g:"wartung",x:1010,y:310,unsicher:true,unter:"Das Personal",
+ satz:"Wer im Betrieb arbeitet — Personalnummer und Name.",
+ warum:"Damit an Aufträgen und Protokolleinträgen eine Person hängt statt eines frei getippten Namens.",
+ sichten:["v_wawi_auftrag","v_wawi_protokoll","v_wawi_radereignis"],
+ sp:[{n:"mitarbeiter_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"personalnummer",pg:"text",uk:1,d:"Die Nummer im Haus."},
+     {n:"name",pg:"text",d:"Vor- und Nachname."},
+     {n:"rolle",pg:"text",d:"kundenservice, werkstatt, leitung.",t:"Steuert die Rechte im MCP-Server"}],
+ zeile:"personalnummer  P-0007\nname  Robert Butscher\nrolle  leitung",
+ merk:"Diese Tabelle enthält Beschäftigtendaten. Beim Lehrzugang bleibt sie deshalb außen vor — ein Grundsatz, der auch für erfundene Daten gilt, weil sich die Gewohnheit einprägt.",
+ tmerk:"Beschäftigtendaten. Die Rollenspalte ist die Grundlage der Zugriffssteuerung; bei RLS würde sie in der Policy ausgewertet.",
+ sql:"SELECT m.name, count(*) AS auftraege\nFROM   wartungsauftrag a JOIN mitarbeiter m USING (mitarbeiter_id)\nGROUP  BY m.name;"},
+
+wartungsprognose:{g:"wartung",x:810,y:55,unter:"Die eingefrorene Prüfliste",
+ satz:"Eine Rangliste, welche Räder als Nächstes in die Werkstatt sollten — festgehalten zu einem Stichtag.",
+ warum:"Die Rechnung wird einmal gemacht und dann aufbewahrt. Später lässt sich nachvollziehen, was man am 4. September wusste — auch wenn die Formel inzwischen eine andere ist.",
+ sichten:["v_wawi_wartungsprognose"],
+ sp:[{n:"stichtag",pg:"date",pk:1,d:"Für welchen Tag die Liste gilt.",t:"Teil des zusammengesetzten PK"},
+     {n:"fahrrad_id",pg:"bigint",pk:1,fk:"fahrrad",d:"Das bewertete Rad.",t:"Teil des zusammengesetzten PK"},
+     {n:"rang",pg:"integer",d:"Platz in der Liste."},
+     {n:"nutzungsquote",pg:"numeric(6,3)",d:"Beanspruchung im Verhältnis zum Typmedian."},
+     {n:"fahrminuten_seit_reparatur",pg:"numeric",d:"Eingefrorene Kennzahl."},
+     {n:"typ_median_minuten",pg:"numeric",d:"Vergleichsmaßstab zum Stichtag."},
+     {n:"dringlichkeit",pg:"text",d:"zuerst, bald, beobachten."},
+     {n:"regelversion",pg:"text",d:"Nach welcher Formel gerechnet wurde.",t:"Ohne diese Spalte sind alte Listen nicht deutbar"},
+     {n:"gilt_bis",pg:"date",d:"Ab wann die Liste als veraltet gilt."},
+     {n:"betriebsmodus",pg:"text",d:"probelauf oder scharf."}],
+ zeile:"stichtag  2026-09-04\nrang  1\nrahmennummer  CB-00267\nnutzungsquote  1,472\ndringlichkeit  zuerst\nregelversion  nutzungsquote_typmedian",
+ merk:"Der Primärschlüssel besteht aus <b>zwei</b> Spalten zusammen: Stichtag und Rad. Dasselbe Rad darf an vielen Stichtagen vorkommen, aber je Stichtag nur einmal.",
+ tmerk:"Materialisiertes Ergebnis, kein Abbild des Zustands — eine Snapshot-Tabelle. Die mitgeführte regelversion macht sie über Modellwechsel hinweg auswertbar; ohne sie wären ältere Stichtage nicht vergleichbar.",
+ sql:"SELECT rang, rahmennummer, dringlichkeit\nFROM   v_wawi_wartungsprognose\nWHERE  stichtag = (SELECT max(stichtag) FROM v_wawi_wartungsprognose)\nORDER  BY rang;"},
+
+radereignis:{g:"protokoll",x:1010,y:435,unter:"Der Lebenslauf eines Rades",
+ satz:"Jede Statusänderung eines Rades mit Zeitpunkt, Vorher-Nachher und Verursacher.",
+ warum:"Die Radtabelle kennt nur den Jetzt-Zustand. Wenn man wissen will, wie es dazu kam, braucht es ein Buch, in dem nichts überschrieben wird.",
+ sichten:["v_wawi_radereignis"],
+ sp:[{n:"ereignis_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"fahrrad_id",pg:"bigint",fk:"fahrrad",d:"Um welches Rad es geht."},
+     {n:"zeitpunkt",pg:"timestamptz",d:"Wann es geschah.",t:"Index (fahrrad_id, zeitpunkt)"},
+     {n:"ereignisart",pg:"text",d:"status_geaendert, angelegt, ausgemustert …"},
+     {n:"mitarbeiter_id",pg:"bigint",fk:"mitarbeiter",nl:1,d:"Wer — leer bei automatischen Vorgängen."},
+     {n:"bemerkung",pg:"text",nl:1,d:"verfuegbar -> ausgeliehen."},
+     {n:"beleg_tabelle",pg:"text",nl:1,d:"Verweis auf den auslösenden Datensatz.",t:"Polymorpher Verweis — von der Datenbank nicht prüfbar"},
+     {n:"beleg_id",pg:"bigint",nl:1,d:"Die Nummer des auslösenden Datensatzes."}],
+ zeile:"zeitpunkt  2026-08-25 14:12\nrahmennummer  CB-00284\nereignisart  status_geaendert\nwer  ohne Anmeldung\nbemerkung  verfuegbar -> ausgeliehen",
+ merk:"In eine solche Tabelle wird nur <b>angefügt</b>, nie geändert. Das macht sie groß, aber vertrauenswürdig — genau der Tausch, den man bei Nachweisen eingeht.",
+ tmerk:"Append-only. beleg_tabelle/beleg_id sind ein polymorpher Verweis: bequem, aber ohne Fremdschlüsselschutz — die Datenbank kann nicht prüfen, ob der Beleg existiert. Kandidat für Partitionierung nach Zeitpunkt.",
+ sql:"SELECT zeitpunkt, ereignisart, bemerkung\nFROM   v_wawi_radereignis\nWHERE  rahmennummer = 'CB-00284' ORDER BY zeitpunkt;"},
+
+protokoll:{g:"protokoll",x:1010,y:545,unter:"Wer hat was angefasst",
+ satz:"Ein Eintrag je Änderung: Zeitpunkt, Person, Tabelle, Datensatz, Feld — aber ohne den Wert selbst.",
+ warum:"Beantwortet die Frage „wer war das?“, ohne die alten Inhalte noch einmal zu speichern. Nur die Leitung darf hineinsehen.",
+ sichten:["v_wawi_protokoll"],
+ sp:[{n:"protokoll_id",pg:"bigint",pk:1,d:"Primärschlüssel."},
+     {n:"zeitpunkt",pg:"timestamptz",d:"Wann geändert wurde."},
+     {n:"mitarbeiter_id",pg:"bigint",fk:"mitarbeiter",nl:1,d:"Wer — leer bei Arbeit ohne Anmeldung."},
+     {n:"tabelle",pg:"text",d:"In welcher Tabelle."},
+     {n:"datensatz_id",pg:"bigint",d:"Welche Zeile."},
+     {n:"aktion",pg:"text",d:"INSERT, UPDATE oder DELETE."},
+     {n:"feld",pg:"text",nl:1,d:"Welche Spalte betroffen war.",t:"Bewusst ohne alt_wert/neu_wert"}],
+ zeile:"zeitpunkt  2026-08-25 15:51\nwer  ohne Anmeldung\ntabelle  fahrrad\ndatensatz_id  352\naktion  UPDATE\nfeld  status",
+ merk:"Bewusst <b>ohne</b> die geänderten Werte. Ein Protokoll, das alles mitschreibt, wird selbst zur Datensammlung — und damit zum Risiko statt zum Schutz.",
+ tmerk:"Datensparsames Auditlog, vermutlich per Trigger befüllt. Der Verzicht auf alt_wert/neu_wert ist eine Datenschutzentscheidung: Sonst enthielte das Protokoll Kopien genau der personenbezogenen Daten, die anderswo gelöscht werden.",
+ sql:"SELECT tabelle, aktion, count(*)\nFROM   v_wawi_protokoll\nWHERE  zeitpunkt > now() - interval '7 days'\nGROUP  BY tabelle, aktion;"}
+};
+
+const B=[
+ ["mitgliedschaft","kunde","gehört zu",1],
+ ["mitgliedschaft","tarif","verweist auf",1],
+ ["fahrt","kunde","gefahren von",1],
+ ["fahrt","fahrrad","gefahren mit",1],
+ ["fahrt","station","Start und Ziel",1],
+ ["fahrrad","modell","ist ein",1],
+ ["fahrrad","station","steht an",0],
+ ["modell","radtyp","gehört zur Gattung",1],
+ ["schadensmeldung","fahrrad","betrifft",1],
+ ["wartungsauftrag","fahrrad","betrifft",1],
+ ["wartungsauftrag","schadensmeldung","ausgelöst durch",0],
+ ["wartungsauftrag","mitarbeiter","bearbeitet von",0],
+ ["wartungsprognose","fahrrad","bewertet",1],
+ ["radereignis","fahrrad","betrifft",1],
+ ["radereignis","mitarbeiter","verursacht von",0],
+ ["protokoll","mitarbeiter","verursacht von",0]
+];
+
+const GLOSSAR=[
+ ["Tabelle","Eine Sammlung gleichartiger Dinge. In dieser Datenbank etwa alle Räder oder alle Fahrten. Was nicht dieselbe Sorte ist, gehört in eine eigene Tabelle."],
+ ["Zeile (Datensatz)","Ein einzelnes Ding aus der Sammlung — dieses eine Rad mit der Rahmennummer CB-00085."],
+ ["Spalte (Attribut)","Eine Eigenschaft, die jedes Ding dieser Sorte hat. Jedes Rad hat einen Status, also gibt es eine Spalte status."],
+ ["Primärschlüssel","Die Spalte, die eine Zeile eindeutig macht. Zwei Kunden dürfen gleich heißen, aber nie dieselbe kunde_id haben. Manchmal bilden zwei Spalten gemeinsam den Schlüssel."],
+ ["Fremdschlüssel","Eine Spalte, die auf den Primärschlüssel einer anderen Tabelle zeigt. In fahrt steht fahrrad_id — die Nummer eines Rades, nicht seine Beschreibung."],
+ ["NULL","Der Zustand „hier steht nichts“. Nicht die Zahl null und nicht der leere Text, sondern: unbekannt oder nicht zutreffend. Ein ausgeliehenes Rad hat keinen Standort."],
+ ["1:n-Beziehung","Eins zu vielen. Eine Station hat viele Räder, ein Rad steht an genau einer Station. Der Fremdschlüssel steht immer auf der n-Seite."],
+ ["n:m-Beziehung","Viele zu vielen. Ein Kunde kann mehrere Tarife gehabt haben, ein Tarif gehört zu vielen Kunden. Dafür braucht es eine Tabelle dazwischen — hier mitgliedschaft."],
+ ["JOIN","Der Befehl, mit dem man zwei Tabellen über ihre Schlüssel zusammenführt. Ohne ihn bekommt man aus fahrt nur Nummern statt Namen."],
+ ["Sicht (View)","Eine gespeicherte Abfrage, die sich benutzen lässt wie eine Tabelle, aber keine eigenen Daten hält. Alle v_wawi_*-Objekte sind Sichten."],
+ ["Normalisierung","Der Grundsatz, jede Angabe nur an einer Stelle zu speichern. Deshalb steht die Gangzahl beim Modell und nicht bei jedem einzelnen Rad."],
+ ["Stammdaten und Bewegungsdaten","Stammdaten ändern sich selten und beschreiben Dinge: Kunde, Rad, Station. Bewegungsdaten entstehen laufend und beschreiben Vorgänge: Fahrt, Schadensmeldung."]
+];
+
+const TOUR=[
+ [null,"Worum es geht","Fünfzehn Tabellen wirken viel. Sie zerfallen aber in vier Bereiche, und der Rundgang zeigt sie in der Reihenfolge, in der sie im Betrieb entstehen. Sechs Schritte."],
+ ["kunde","Am Anfang ist jemand da","Jemand meldet sich an. Das ist die einfachste Sorte Tabelle: ein Ding je Zeile, keine Verweise nach außen. Achten Sie auf die zwei Nummern — die technische und die fachliche."],
+ ["fahrrad","Und ein Gegenstand","Ein Rad ist ebenfalls ein Ding. Interessant ist die Spalte station_id: Sie zeigt woanders hin. So hängen Tabellen zusammen. Und sie darf leer sein, wenn das Rad unterwegs ist."],
+ ["fahrt","Dann passiert etwas","Kunde und Rad kommen zusammen, an einem Ort, zu einer Zeit. Vier Fremdschlüssel in einer Zeile. Solche Tabellen — Vorgänge statt Dinge — sind fast immer die größten und die für Auswertungen wichtigsten."],
+ ["modell","Warum nicht alles in eine Tabelle?","Man könnte Hersteller und Gangzahl bei jedem Rad wiederholen. Bei 110 gleichen Rädern stünde dieselbe Angabe 110-mal — und bei einer Korrektur müsste man 110-mal ändern. Deshalb eine eigene Tabelle."],
+ ["mitgliedschaft","Wenn eine Spalte nicht reicht","Ein Kunde, mehrere Tarife im Lauf der Zeit; ein Tarif, viele Kunden. Für viele-zu-viele gibt es keine einzelne Spalte — es braucht eine Tabelle in der Mitte. Merken Sie sich dieses Muster."],
+ ["radereignis","Was war vorher?","Die Radtabelle kennt nur den Jetzt-Zustand. Wer die Geschichte braucht, muss sie getrennt aufschreiben — in einer Tabelle, in die nur angefügt wird. Damit endet der Rundgang."]
+];
+
+/* Holt die Beschreibungstafel ins Bild — aber nur, wenn sie gerade nicht zu sehen ist,
+   damit auf breiten Fenstern nichts ruckelt. */
+function tafelZeigen(box){
+  box.scrollTop=0;
+  const r=box.getBoundingClientRect();
+  const sichtbar = r.top < window.innerHeight*0.55 && r.bottom > 140;
+  if(!sichtbar) box.scrollIntoView({behavior:"smooth", block:"start"});
+}
+
+/* ═══════════════ Reiter ═══════════════ */
+function reiter(id){
+  const a=id==="a";
+  $("#tab-a").setAttribute("aria-selected",a);
+  $("#tab-b").setAttribute("aria-selected",!a);
+  $("#pane-a").hidden=!a; $("#pane-b").hidden=a;
+  if(!a && !mermaidGezeichnet) mermaidZeichnen();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+$("#tab-a").addEventListener("click",()=>reiter("a"));
+$("#tab-b").addEventListener("click",()=>reiter("b"));
+
+/* ═══════════════ Reiter A: SVG-Diagramm ═══════════════ */
+const BW=200, BH=58;
+let selA=null, grp="alle", tour=-1;
+function mitteP(t){return {x:T[t].x+BW/2, y:T[t].y+BH/2};}
+function kanten(a,b){
+  const A=mitteP(a), Bp=mitteP(b), dx=Bp.x-A.x, dy=Bp.y-A.y;
+  const k=(m,ux,uy)=>{
+    if(!ux&&!uy) return m;
+    const tx=ux?(BW/2)/Math.abs(ux):Infinity, ty=uy?(BH/2)/Math.abs(uy):Infinity;
+    const s=Math.min(tx,ty); return {x:m.x+ux*s, y:m.y+uy*s};
+  };
+  return [k(A,dx,dy), k(Bp,-dx,-dy)];
+}
+function zeichneA(){
+  const svg=$("#er"); svg.innerHTML="";
+  const bez=selA?new Set(B.filter(r=>r[0]===selA||r[1]===selA).flatMap(r=>[r[0],r[1]])):null;
+  B.forEach(([von,nach,label])=>{
+    const [p,q]=kanten(von,nach);
+    const inG = grp==="alle"||T[von].g===grp||T[nach].g===grp;
+    const hell= selA && (von===selA||nach===selA);
+    const bl  = (selA && !hell) || !inG;
+    const g=el("g");
+    g.appendChild(el("line",{x1:p.x,y1:p.y,x2:q.x,y2:q.y,
+      class:"kante"+(hell?" hell":"")+(bl?" blass":"")}));
+    const mk=(f,txt)=>{
+      const t=el("text",{x:p.x+(q.x-p.x)*f, y:p.y+(q.y-p.y)*f+4, class:"kard",
+        "text-anchor":"middle", opacity:bl?.22:1}); t.textContent=txt; return t;
+    };
+    g.appendChild(mk(.12,"n")); g.appendChild(mk(.88,"1"));
+    if(hell){
+      const t=el("text",{x:(p.x+q.x)/2,y:(p.y+q.y)/2-7,class:"kard",
+        "text-anchor":"middle",fill:"var(--rost)"}); t.textContent=label; g.appendChild(t);
+    }
+    svg.appendChild(g);
+  });
+  Object.entries(T).forEach(([id,d])=>{
+    const G=GRUPPEN[d.g];
+    const inG = grp==="alle"||d.g===grp;
+    const aktiv=selA===id, bl=(!inG)||(selA&&!bez.has(id));
+    const g=el("g",{class:"tb"+(aktiv?" aktiv":"")+(bl?" blass":""),
+      transform:`translate(${d.x},${d.y})`,tabindex:"0",role:"button","aria-label":"Tabelle "+id});
+    g.appendChild(el("rect",{class:"k",x:0,y:0,width:BW,height:BH,
+      stroke:aktiv?G.hex:"var(--linie)"}));
+    g.appendChild(el("rect",{x:0,y:0,width:5,height:BH,fill:G.hex,rx:2}));
+    const n=el("text",{class:"n",x:16,y:24}); n.textContent=id; g.appendChild(n);
+    const s=el("text",{class:"s",x:16,y:41}); s.textContent=d.unter; g.appendChild(s);
+    if(d.unsicher){const u=el("text",{x:BW-12,y:20,"text-anchor":"end",class:"kard",
+      fill:"var(--grau2)"}); u.textContent="?"; g.appendChild(u);}
+    g.addEventListener("click",()=>{selA=selA===id?null:id;zeichneA();tafelA();});
+    g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){
+      e.preventDefault();selA=selA===id?null:id;zeichneA();tafelA();}});
+    svg.appendChild(g);
+  });
+}
+function tafelA(){
+  const box=$("#tafelA");
+  let vor="";
+  if(tour>=0){
+    const [,titel,text]=TOUR[tour];
+    vor=`<div class="tourbox"><h3>${titel}</h3><p>${text}</p><div class="nav">
+      <button id="tzur" ${tour===0?"disabled style='opacity:.4'":""}>Zurück</button>
+      <button id="tvor">${tour===TOUR.length-1?"Beenden":"Weiter"}</button>
+      <span class="zaehler">${tour+1} / ${TOUR.length}</span></div></div>`;
+  }
+  if(!selA){
+    box.innerHTML=vor+`<p class="leer">Klicken Sie im Diagramm auf eine Tabelle. Sie sehen dann,
+      welche Spalten sie hat, wie eine echte Zeile aussieht und wie man sie abfragt.</p>
+      <p class="leer">Das Fragezeichen heißt: Diese Tabelle ist aus den Sichten erschlossen,
+      ihr genauer Aufbau ist nicht belegt.</p>`;
+    tourDraht(); return;
+  }
+  const d=T[selA], G=GRUPPEN[d.g];
+  const rows=d.sp.map(s=>{
+    const b=(s.pk?'<span class="badge pk">PK</span>':"")+(s.fk?'<span class="badge fk">FK</span>':"")+
+            (s.nl?'<span class="badge nl">leer möglich</span>':"");
+    return `<tr><td class="f">${s.n}${b}</td><td class="d">${s.d}</td></tr>`;
+  }).join("");
+  const nb=[...new Set(B.filter(r=>r[0]===selA||r[1]===selA).map(r=>r[0]===selA?r[1]:r[0]))];
+  box.innerHTML=vor+`
+    <span class="pill" style="background:${G.hell};color:${G.farbe}">${G.name}</span>
+    <h2>${selA}</h2>
+    <p class="satz">${d.satz}</p>
+    <h3>Wozu sie da ist</h3><p style="font-size:13.5px;color:var(--grau)">${d.warum}</p>
+    <h3>Die Spalten</h3>
+    <table class="sp"><thead><tr><th>Spalte</th><th>Bedeutung</th></tr></thead><tbody>${rows}</tbody></table>
+    <h3>So sieht eine echte Zeile aus</h3><div class="beispiel">${esc(d.zeile)}</div>
+    <div class="merk">${d.merk}</div>
+    <h3>Abfrage zum Ausprobieren</h3><div class="beispiel">${esc(d.sql)}</div>
+    <h3>Hängt zusammen mit</h3>
+    <div class="bezug">${nb.map(n=>`<button class="chip" data-zu="${n}">${n}</button>`).join("")}</div>
+    ${d.unsicher?`<div class="merk grau"><b>Erschlossen, nicht belegt.</b> Diese Tabelle ist aus
+      den Sichten abgeleitet — Name und Spalten können abweichen.</div>`:""}`;
+  box.querySelectorAll("[data-zu]").forEach(b=>b.addEventListener("click",()=>{
+    selA=b.dataset.zu; zeichneA(); tafelA();
+    document.querySelector("#pane-a .buehne").scrollIntoView({behavior:"smooth",block:"center"});
+  }));
+  tourDraht();
+  if(tour<0) tafelZeigen(box);
+}
+function tourDraht(){
+  const z=$("#tzur"), v=$("#tvor");
+  if(z) z.addEventListener("click",()=>{if(tour>0){tour--;tourSchritt();}});
+  if(v) v.addEventListener("click",()=>{
+    if(tour>=TOUR.length-1){tour=-1;selA=null;} else tour++;
+    tourSchritt();});
+}
+function tourSchritt(){
+  if(tour>=0) selA=TOUR[tour][0];
+  grp="alle";
+  $$("[data-grp]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.grp==="alle"));
+  zeichneA(); tafelA();
+  if(tour>=0) document.querySelector("#pane-a .buehne").scrollIntoView({behavior:"smooth",block:"center"});
+}
+$$("[data-grp]").forEach(b=>b.addEventListener("click",()=>{
+  grp=b.dataset.grp;
+  $$("[data-grp]").forEach(o=>o.setAttribute("aria-pressed",o===b));
+  if(selA && grp!=="alle" && T[selA].g!==grp) selA=null;
+  zeichneA(); tafelA();
+}));
+$("#tourAn").addEventListener("click",()=>{tour=tour<0?0:-1; if(tour<0) selA=null; tourSchritt();});
+
+/* ═══════════════ Reiter B: Mermaid ═══════════════ */
+let selB=null, attrModus="schluessel", mgrp="alle", mermaidGezeichnet=false;
+
+function mermaidQuelle(){
+  const zeigen=Object.keys(T).filter(k=>mgrp==="alle"||T[k].g===mgrp);
+  let s="erDiagram\n";
+  B.filter(([v,n])=>zeigen.includes(v)&&zeigen.includes(n)).forEach(([von,nach,label,pflicht])=>{
+    // nach = 1-Seite (Ziel des Fremdschluessels), von = n-Seite
+    const links = pflicht ? "||" : "|o";
+    s += `    ${nach} ${links}--o{ ${von} : "${label}"\n`;
+  });
+  zeigen.forEach(k=>{
+    const d=T[k];
+    const sp = attrModus==="alle" ? d.sp : d.sp.filter(x=>x.pk||x.fk||x.uk);
+    s += `    ${k} {\n`;
+    sp.forEach(x=>{
+      const typ=x.pg.replace(/[()\s,]/g,"_");
+      const flag=x.pk?" PK":x.fk?" FK":x.uk?" UK":"";
+      s += `        ${typ} ${x.n}${flag}\n`;
+    });
+    if(!sp.length) s += `        bigint id PK\n`;
+    s += "    }\n";
+  });
+  return s;
+}
+
+function mermaidZeichnen(){
+  const wrap=$("#mermaidWrap");
+  const code=mermaidQuelle();
+  $("#quelle").textContent=code;
+  if(typeof mermaid==="undefined"){
+    wrap.innerHTML=`<p class="hinweis">Mermaid konnte nicht geladen werden. Der Quelltext steht
+      unten und lässt sich in jeden Mermaid-fähigen Editor einfügen.</p>`;
+    $("#quelle").hidden=false; mermaidGezeichnet=true; return;
+  }
+  mermaid.initialize({startOnLoad:false, theme:"base", securityLevel:"loose",
+    er:{useMaxWidth:false, entityPadding:14, fontSize:13},
+    themeVariables:{fontFamily:"ui-monospace,SFMono-Regular,Menlo,monospace",
+      primaryColor:"#FFFFFF", primaryBorderColor:"#C9CFCD", primaryTextColor:"#191C1B",
+      lineColor:"#8D9694", tertiaryColor:"#F4F5F2"}});
+  mermaid.render("erSvg", code).then(({svg})=>{
+    wrap.innerHTML=svg;
+    verdrahteEntitaeten();
+    mermaidGezeichnet=true;
+  }).catch(e=>{
+    wrap.innerHTML=`<p class="hinweis">Das Diagramm ließ sich nicht erzeugen (${esc(e.message)}).
+      Der Quelltext steht unten.</p>`;
+    $("#quelle").hidden=false; mermaidGezeichnet=true;
+  });
+}
+
+function verdrahteEntitaeten(){
+  const svg=$("#mermaidWrap svg"); if(!svg) return;
+  const namen=Object.keys(T);
+  svg.querySelectorAll("g").forEach(g=>{
+    const rect=g.querySelector("rect"); if(!rect) return;
+    const txt=[...g.querySelectorAll("text")].map(t=>t.textContent.trim());
+    const treffer=txt.find(t=>namen.includes(t));
+    if(!treffer) return;
+    g.classList.add("entity-hit");
+    g.dataset.tab=treffer;
+    g.addEventListener("click",()=>{selB=selB===treffer?null:treffer; markiere(); tafelB();});
+  });
+  markiere();
+}
+function markiere(){
+  $$("#mermaidWrap .entity-hit").forEach(g=>
+    g.classList.toggle("entity-aktiv", g.dataset.tab===selB));
+}
+
+function ddl(k){
+  const d=T[k];
+  const breite=Math.max(...d.sp.map(s=>s.n.length))+2;
+  let s=`<span class="kw">CREATE TABLE</span> ${k} (\n`;
+  d.sp.forEach((x,i)=>{
+    const nn = (x.pk||!x.nl) ? " NOT NULL" : "";
+    s+=`  ${x.n.padEnd(breite)}<span class="ty">${x.pg}</span>${nn}`;
+    s+= (i<d.sp.length-1||d.sp.some(y=>y.pk)) ? ",\n" : "\n";
+  });
+  const pks=d.sp.filter(x=>x.pk).map(x=>x.n);
+  if(pks.length) s+=`  <span class="kw">PRIMARY KEY</span> (${pks.join(", ")})`;
+  const uks=d.sp.filter(x=>x.uk).map(x=>x.n);
+  uks.forEach(u=>{s+=`,\n  <span class="kw">UNIQUE</span> (${u})`;});
+  d.sp.filter(x=>x.fk).forEach(x=>{
+    const zielPk=T[x.fk].sp.find(y=>y.pk).n;
+    s+=`,\n  <span class="kw">FOREIGN KEY</span> (${x.n}) <span class="kw">REFERENCES</span> ${x.fk} (${zielPk})`;
+  });
+  s+="\n);";
+  return s;
+}
+
+function tafelB(){
+  const box=$("#tafelB");
+  if(!selB){
+    box.innerHTML=`<p class="leer">Klicken Sie im ER-Diagramm auf eine Entität. Sie erhalten
+      Datentypen, Constraints, ein CREATE-TABLE-Gerüst und die Sichten, die auf dieser Tabelle aufsetzen.</p>
+      <h3>Legende</h3>
+      <p class="leer" style="font-size:13px">
+        <span class="badge pk">PK</span> Primärschlüssel &nbsp;
+        <span class="badge fk">FK</span> Fremdschlüssel &nbsp;
+        <span class="badge uk">UK</span> eindeutig &nbsp;
+        <span class="badge nl">leer möglich</span> NULL erlaubt</p>
+      <h3>Umfang</h3>
+      <p class="leer" style="font-size:13px">${Object.keys(T).length} Tabellen,
+        ${Object.values(T).reduce((a,d)=>a+d.sp.length,0)} Spalten,
+        ${B.length} Fremdschlüsselbeziehungen, 20 Sichten darüber.</p>`;
+    return;
+  }
+  const d=T[selB], G=GRUPPEN[d.g];
+  const rows=d.sp.map(s=>{
+    const b=(s.pk?'<span class="badge pk">PK</span>':"")+(s.fk?'<span class="badge fk">FK</span>':"")+
+            (s.uk?'<span class="badge uk">UK</span>':"")+(s.nl?'<span class="badge nl">NULL</span>':"");
+    return `<tr><td class="f">${s.n}${b}</td><td class="t">${s.pg}</td>
+      <td class="d">${s.t?esc(s.t):(s.fk?"→ "+s.fk:"")}</td></tr>`;
+  }).join("");
+  box.innerHTML=`
+    <span class="pill" style="background:${G.hell};color:${G.farbe}">${G.name}</span>
+    <h2>${selB}</h2>
+    <p style="font-size:13.5px;color:var(--grau)">${d.satz}</p>
+    <h3>Spalten und Typen</h3>
+    <table class="sp"><thead><tr><th>Spalte</th><th>Typ</th><th>Anmerkung</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    <h3>Gerüst</h3>
+    <div class="beispiel ddl">${ddl(selB)}</div>
+    <div class="merk">${d.tmerk}</div>
+    <h3>Darauf setzen auf</h3>
+    <div class="bezug">${d.sichten.map(v=>`<button class="chip" disabled style="cursor:default">${v}</button>`).join("")}</div>
+    <h3>Beziehungen</h3>
+    <table class="sp"><tbody>${
+      B.filter(r=>r[0]===selB||r[1]===selB).map(([v,n,l,p])=>
+        `<tr><td class="f">${v===selB?"→ "+n:"← "+v}</td>
+          <td class="d">${l}${p?"":" (optional)"}</td></tr>`).join("")}</tbody></table>
+    <div class="bezug" style="margin-top:8px">${
+      [...new Set(B.filter(r=>r[0]===selB||r[1]===selB).map(r=>r[0]===selB?r[1]:r[0]))]
+      .map(n=>`<button class="chip" data-zub="${n}">${n}</button>`).join("")}</div>
+    ${d.unsicher?`<div class="merk grau"><b>Erschlossen, nicht belegt.</b> Aus den Sichten
+      abgeleitet; Typen und Constraints sind plausibel, aber nicht aus dem Katalog gelesen.</div>`:""}`;
+  box.querySelectorAll("[data-zub]").forEach(b=>b.addEventListener("click",()=>{
+    selB=b.dataset.zub; markiere(); tafelB();}));
+  tafelZeigen(box);
+}
+
+$$("[data-attr]").forEach(b=>b.addEventListener("click",()=>{
+  attrModus=b.dataset.attr;
+  $$("[data-attr]").forEach(o=>o.setAttribute("aria-pressed",o===b));
+  mermaidGezeichnet=false; mermaidZeichnen();
+}));
+$$("[data-mgrp]").forEach(b=>b.addEventListener("click",()=>{
+  mgrp=b.dataset.mgrp;
+  $$("[data-mgrp]").forEach(o=>o.setAttribute("aria-pressed",o===b));
+  if(selB && mgrp!=="alle" && T[selB].g!==mgrp){selB=null;tafelB();}
+  mermaidGezeichnet=false; mermaidZeichnen();
+}));
+$("#quelleAn").addEventListener("click",()=>{
+  const q=$("#quelle"); q.hidden=!q.hidden;
+  $("#quelleAn").setAttribute("aria-pressed", !q.hidden);
+});
+
+/* ═══════════════ Start ═══════════════ */
+$("#glossar").innerHTML=GLOSSAR.map(([w,t])=>
+  `<details><summary>${w}</summary><p>${t}</p></details>`).join("");
+zeichneA(); tafelA(); tafelB();
+</script>
+</body>
+</html>

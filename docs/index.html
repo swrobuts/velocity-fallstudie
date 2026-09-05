@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VeloCity Würzburg — Lehrfallbeispiel</title>
+<style>
+:root{
+  --papier:#F7F7F4;--flaeche:#fff;--tinte:#191C1B;--grau:#6B7270;--grau2:#9AA09E;
+  --linie:#E3E4DF;--stahl:#2D5D7C;--rost:#8C4A2F;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--papier);color:var(--tinte);font-family:var(--sans);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.mitte{max-width:880px;margin:0 auto;padding:0 26px}
+header{background:var(--flaeche);border-bottom:1px solid var(--linie);
+  box-shadow:inset 0 3px 0 var(--stahl);padding:44px 0 40px;margin-bottom:38px}
+.marke{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--grau2);margin-bottom:10px}
+h1{font-size:30px;margin:0 0 8px;letter-spacing:-.02em;font-family:var(--serif)}
+header p{color:var(--grau);margin:0;max-width:62ch}
+h2{font-size:13px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em;
+  color:var(--grau);margin:36px 0 12px;font-weight:600}
+a.eintrag{display:block;background:var(--flaeche);border:1px solid var(--linie);border-radius:6px;
+  padding:16px 18px;margin-bottom:10px;text-decoration:none;color:inherit}
+a.eintrag:hover{border-color:var(--stahl)}
+a.eintrag b{display:block;font-size:16px;margin-bottom:3px}
+a.eintrag span{color:var(--grau);font-size:13.5px;display:block}
+a.eintrag em{font-family:var(--mono);font-size:11px;color:var(--grau2);font-style:normal;
+  display:block;margin-top:7px}
+.hinweis{border-left:3px solid var(--rost);padding:2px 0 2px 14px;color:var(--grau);
+  font-size:13.5px;margin:26px 0}
+.medien{display:grid;grid-template-columns:200px 1fr;gap:22px;align-items:start;
+  background:var(--flaeche);border:1px solid var(--linie);border-radius:6px;
+  padding:16px 18px;margin-bottom:10px}
+.medien video{width:100%;border-radius:4px;background:#0d1a33;display:block}
+.medien b{display:block;font-size:16px;margin-bottom:3px}
+.medien span{color:var(--grau);font-size:13.5px;display:block}
+.medien em{font-family:var(--mono);font-size:11px;color:var(--grau2);font-style:normal;
+  display:block;margin-top:7px}
+@media (max-width:560px){.medien{grid-template-columns:1fr}
+  .medien video{max-width:220px}}
+footer{color:var(--grau2);font-size:12.5px;padding:38px 0 50px;border-top:1px solid var(--linie);
+  margin-top:40px}
+</style>
+</head>
+<body>
+<header>
+  <div class="mitte">
+    <div class="marke">THWS Business School · Lehrfallbeispiel</div>
+    <h1>VeloCity Würzburg</h1>
+    <p>Ein erfundenes Leihradsystem mit echter Warenwirtschaft: zehn Stationen, 277 Räder,
+    gut zwölftausend Fahrten. Grundlage für Übungen in Datenmodellierung, SQL und Business
+    Intelligence.</p>
+  </div>
+</header>
+
+<div class="mitte">
+
+  <h2>Zum Anschauen</h2>
+
+  <a class="eintrag" href="datenmodell.html">
+    <b>Das Datenmodell</b>
+    <span>Interaktive Dokumentation in zwei Stufen: ein Einstieg für alle, die zum ersten Mal
+    auf ein Datenmodell schauen, und eine technische Referenz mit ER-Diagramm, Datentypen und
+    Constraints. Tabellen sind anklickbar.</span>
+    <em>Einstieg · Referenz · Glossar</em>
+  </a>
+
+  <a class="eintrag" href="cockpit.html">
+    <b>Das Netzcockpit</b>
+    <span>Auswertung des Betriebs nach Tufte und Bissantz: Stationsfrequenz, Rebalancing-Saldo,
+    Tagesgang, Karte und Standortvorschläge. Läuft aus einem Snapshot oder live gegen die
+    Datenbank.</span>
+    <em>Kennzahlen · Leaflet-Karte · Datenqualität</em>
+  </a>
+
+  <h2>Zum Nachbauen</h2>
+
+  <a class="eintrag"
+     href="https://github.com/swrobuts/velocity-fallstudie/blob/main/db/betrieb/studizugang_lesend.sql">
+    <b>studizugang_lesend.sql</b>
+    <span>Lesender Datenbankzugang für den Kurs. Liegt im Repository unter
+    <code>db/betrieb/</code> — dort steht die Fassung, die tatsächlich läuft, zusammen mit
+    <code>lehrzugang.sql</code>, das die zwanzig rollengesperrten Sichten öffnet.</span>
+    <em>PostgreSQL · Supabase</em>
+  </a>
+
+  <a class="eintrag" href="config.example.js">
+    <b>config.example.js</b>
+    <span>Vorlage für die Verbindung des Cockpits zur Datenbank. Nach config.js kopieren,
+    ausfüllen — und die Kopie nicht einchecken.</span>
+    <em>PostgREST · Traefik</em>
+  </a>
+
+  <h2>Werbematerial</h2>
+
+  <p style="color:var(--grau);font-size:13.5px;margin:-2px 0 12px">
+  Gestaltet im CI von bikes.butscher.cloud, mit Zahlen aus der Warenwirtschaft.
+  Für Lehrzwecke frei verwendbar.</p>
+
+  <div class="medien">
+    <video controls preload="metadata" playsinline
+           poster="material/velocity-banner.png">
+      <source src="material/velocity-reel.mp4" type="video/mp4">
+      Ihr Browser kann dieses Video nicht abspielen —
+      <a href="material/velocity-reel.mp4">hier herunterladen</a>.
+    </video>
+    <div>
+      <b>Instagram-Reel</b>
+      <span>Fünfzehn Sekunden, 9:16, stumm. Die Wortmarke rollt ein, der Fahrtenzähler läuft
+      auf zwölftausend hoch, die Jahreskurve wächst mit. Ton wird beim Posten in der App
+      unterlegt.</span>
+      <em>1080 × 1920 · H.264</em>
+    </div>
+  </div>
+
+  <a class="eintrag" href="material/velocity-banner.png">
+    <b>Banner</b>
+    <span>Standbild im selben CI — für Kursseiten, Moodle oder als Vorschaubild des Reels.</span>
+    <em>PNG</em>
+  </a>
+
+  <a class="eintrag" href="material/velocity-flyer.pdf">
+    <b>Flyer</b>
+    <span>A5, zweiseitig, druckfertig: Jahreskurve, Stationsregister, Flotte und Tarifmodell,
+    mit QR-Code auf die Systemseite.</span>
+    <em>PDF · 148 × 210 mm</em>
+  </a>
+
+  <div class="hinweis">
+    Das Datenmodell ist aus den Sichten der Warenwirtschaft erschlossen, nicht aus dem
+    Systemkatalog gelesen. Vier Tabellen sind entsprechend als unbelegt gekennzeichnet.
+    Alle Personen in den Daten sind erfunden.
+  </div>
+
+</div>
+
+<footer class="mitte">
+  Lehrmaterial der THWS Business School. Kartengrundlage OpenStreetMap / CARTO.
+</footer>
+</body>
+</html>
