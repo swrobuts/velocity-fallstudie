@@ -28,12 +28,24 @@ db/aufbau/.
 
 GEMESSEN AM 05.09.2026
 
-db/aufbau/0018_wawi_sichten.sql legt 18 Sichten an, 16 davon stehen im
-Kopf. Es fehlen v_wawi_fahrt_km und v_wawi_fahrten_je_tag_typ - beide
-wurden nach Aufgabe 10 bzw. bei der Drill-Down-Erweiterung ergaenzt, ohne
-dass die Objekte-Zeile im Kopf nachgezogen wurde. Dieses Werkzeug muss
-genau diese zwei Namen finden; tut es das nicht, taugt es nichts (siehe
-Nachweis am Ende dieser Datei).
+Der erste Lauf fand 19 Abweichungen in sechs Dateien: 0001 (fuenf
+Aufzaehlungstypen, die dynamisch ueber eine Wertetabelle entstehen statt
+per woertlichem CREATE TYPE - ein Mechanismus, den ein naives Werkzeug
+uebersehen haette), 0003 (sechs), 0010 (drei), 0018 (zwei), sowie je eine
+in 0004, 0009 und 0022. In 0018 fehlten v_wawi_fahrt_km und
+v_wawi_fahrten_je_tag_typ; beide waren spaeter ergaenzt worden, ohne dass
+die Objekte-Zeile nachgezogen wurde.
+
+ALLE 19 SIND BEHOBEN (Commit d21760a), das Werkzeug laeuft seither mit
+Rueckgabewert 0 durch und haengt in Abnahmeschritt 2. Diese Zahlen stehen
+hier als Anlass, nicht als offener Befund - wer sie nachschlagen will,
+findet sie im Verlauf jener sieben Dateien.
+
+WAS DAS WERKZEUG NICHT PRUEFT: die Ruecknahme-Zeilen derselben Koepfe. In
+0003, 0004 und 0022 sind sie aus demselben Grund unvollstaendig
+(geschaeftsgebiet, preisschaetzung, v_wawi_radereignis fehlen dort). Das
+ist derselbe Fehlertyp eine Ebene tiefer und waere die naechste
+Ausbaustufe.
 
 WAS GEPRUEFT WIRD
 
