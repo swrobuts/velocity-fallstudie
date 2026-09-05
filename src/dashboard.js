@@ -375,6 +375,14 @@ async function dashboardZeichnen() {
     const fehlerfeld = document.getElementById('dashboard-fehler');
     if (!abschnitt) return;
 
+    /* Das Konterfei ZUERST, und vor jedem Ausstieg weiter unten. Es
+       leitet sich aus dem NAMEN ab, den es unabhaengig von Fahrten gibt -
+       ein Konto ohne Fahrt hat trotzdem einen Inhaber. Stand es weiter
+       unten, blieb der Kreis bei einem frischen Konto leer, und die
+       Ansicht wirkte kaputt statt nur leer. */
+    const profil = (await ladeListe('v_mein_profil'))[0] || {};
+    konterfeiZeichnen(profil.vorname, profil.nachname, profil.kundennummer);
+
     const bilanz = await ladeBilanz();
 
     /* Leer ist nicht gleich kaputt. ladeListe() liefert bei einem Fehler
@@ -398,8 +406,6 @@ async function dashboardZeichnen() {
         return;
     }
 
-    const profil = (await ladeListe('v_mein_profil'))[0] || {};
-    konterfeiZeichnen(profil.vorname, profil.nachname, profil.kundennummer);
     bilanzZeichnen(bilanz);
 
     const monate = await ladeMonate();
