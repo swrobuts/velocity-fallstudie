@@ -127,13 +127,15 @@ function konterfeiZeichnen(vorname, nachname, schluessel) {
    "Minuten: 4 (Durchschnitt 982,4)" bei einem laufenden Monat mit einer
    einzigen kurzen Fahrt. Ein Vergleich einer Vier mit einer Neunhundert-
    zweiundachtzig ist wertlos. Der Median ist gegen einzelne Ausreisser
-   unempfindlich; einordnungZeichnen() weiter unten nutzt ihn aus
-   demselben Grund bereits fuer den Flottenvergleich (siehe dortigen
-   Kommentar "'Median', nicht 'Mittelwert'"). Beides bleibt eine reine
-   Umrechnung der bereits gelieferten Monatszeilen (v_meine_monatsbilanz),
-   keine neue Sicht noetig - und keine Loesung fuer sehr kurze
-   Kontohistorien: bei nur ein oder zwei Vormonaten ist auch der Median
-   nur so aussagekraeftig wie die Stichprobe selbst.
+   unempfindlich - ein anderer Median als der der FLOTTE weiter unten
+   (STUFEN/fortschrittZeichnen()): dieser hier ist der ueber die eigenen
+   Vormonate, nicht ueber andere Kunden. (Frueher stand hier ein Verweis
+   auf einordnungZeichnen(), das den Flotten-Median fuer den inzwischen
+   ersetzten Perzentilbalken nutzte - mit dem Balken entfallen.) Das
+   bleibt eine reine Umrechnung der bereits gelieferten Monatszeilen
+   (v_meine_monatsbilanz), keine neue Sicht noetig - und keine Loesung
+   fuer sehr kurze Kontohistorien: bei nur ein oder zwei Vormonaten ist
+   auch der Median nur so aussagekraeftig wie die Stichprobe selbst.
 
    Am 5. eines Monats stuenden die Ringe sonst auf einem Bruchteil, und
    das Dashboard zeigte an jedem Monatsanfang Versagen an. */
@@ -282,45 +284,138 @@ function verlaufZeichnen(monate) {
     ziel.replaceChildren(ueber, schalter, liste);
 }
 
-/* Nach aussen gehen nur Zahlen. Median und Bestwert sind Kennzahlen der
-   Flotte, keine Personen - es gibt hier keine Bestenliste und keinen
-   fremden Namen. */
-function einordnungZeichnen(b) {
-    const ziel = document.getElementById('dashboard-einordnung');
+/* STATUS-STUFEN: feste Kilometerschwellen, kein Rang und kein Perzentil.
+   Ausgeloest durch die Beanstandung "dieses Diagramm kann man so nicht
+   verstehen" zum bisherigen Perzentilbalken (siehe fortschrittZeichnen()
+   weiter unten) und den Wunsch nach einem Status/Abzeichen fuer die
+   Gamification.
+
+   Gemessen (05.09.2026, 495 gewertete Kunden): zwischen dem schwaechsten
+   Zehntel (69 km) und dem staerksten Prozent (168,7 km) liegt nur der
+   Faktor 2,4. Ein Status nach RANG waere praktisch bedeutungslos - und er
+   koennte fallen, ohne dass die Kundschaft selbst etwas tut, nur weil
+   andere mehr gefahren sind. Was sich jemand erarbeitet hat, soll bleiben:
+   deshalb feste Kilometerschwellen auf km_gesamt, kein Rang und kein
+   Perzentil.
+
+   Die vier Grenzen (90/120/150/200) sind nachgemessen, nicht geschaetzt:
+   sie verteilen die 495 Kunden auf 189 | 190 | 99 | 16 | 1 - jede der
+   fuenf Stufen belegt, keine schluckt zwei Drittel. Die naheliegende
+   Leiter 50/100/150/200/250 ergab dagegen 276 | 202 | 16 | 1 | 0 und liess
+   die oberste Stufe leer.
+
+   Sachliche Bezeichnungen ohne Geschlecht: velocity.kunde fuehrt keins,
+   jede gebeugte Form waere geraten. */
+const STUFEN = [
+    { ab: 0,   name: 'Gelegentlich unterwegs' },
+    { ab: 90,  name: 'Regelmäßig unterwegs' },
+    { ab: 120, name: 'Viel unterwegs' },
+    { ab: 150, name: 'Dauerhaft unterwegs' },
+    { ab: 200, name: 'An der Spitze' }
+];
+
+/* AUSDRUECKLICH BENANNTE AUSNAHME zu "das Dashboard rechnet nicht" (siehe
+   Kopfkommentar dieser Datei) - sonst haelt sie spaeter jemand fuer einen
+   Regelbruch: Diese Funktion ERFINDET keine Kennzahl, sie fragt nur ab,
+   in welchen der oben festgelegten Bereiche km_gesamt aus v_meine_bilanz
+   faellt. Dieselbe Ausnahme traegt bereits die Ringlaenge in
+   ringeZeichnen() und die Balkenbreite in verlaufZeichnen(): eine
+   gelieferte Zahl rein darstellen, ohne einen neuen Wert zu bilden. */
+function stufeIndex(km) {
+    let i = 0;
+    for (let j = 1; j < STUFEN.length; j++) {
+        if (km >= STUFEN[j].ab) i = j;
+    }
+    return i;
+}
+
+/* Das Abzeichen steht NICHT hier im Block weiter unten, sondern oben im
+   Kopf, neben dem Konterfei (#dashboard-abzeichen in index.html) - siehe
+   dortigen Kommentar. EINE Abzeichenfarbe fuer alle fuenf Stufen
+   (.status-abzeichen, Navy): "kein Pokal, kein Farbrausch" war die
+   ausdrueckliche Vorgabe, nur der Text der Stufe wechselt. */
+function statusabzeichenZeichnen(b) {
+    const ziel = document.getElementById('dashboard-abzeichen');
+    const abzeichen = document.createElement('span');
+    abzeichen.className = 'status-abzeichen';
+    abzeichen.textContent = STUFEN[stufeIndex(Number(b.km_gesamt))].name;
+    ziel.replaceChildren(abzeichen);
+}
+
+/* Vormals ein Balken zum Flottenvergleich (Perzentil, Median, Bestwert) -
+   ohne Beschriftung nicht zu verstehen, wie beanstandet ("dieses Diagramm
+   kann man so nicht verstehen"). Ersetzt durch den Fortschritt zur
+   naechsten Stufe: ein erreichbares eigenes Ziel statt eines Vergleichs
+   mit anderen, mit beschrifteten Werten fuer aktuellen Stand, Ziel und
+   verbleibende Kilometer.
+
+   Der Rang bleibt als REINER TEXT (.rang-platz), nicht mehr als Balken:
+   anders als die Stufe oben ist er weiterhin ein Vergleich mit anderen
+   und koennte fallen, ohne dass die Kundschaft selbst etwas tut - deshalb
+   nicht mehr die Hauptaussage des Blocks, sondern eine kleine,
+   nachrangige Zusatzzeile. Median und Bestwert der Flotte entfallen
+   dagegen ganz: sie erklaerten nur die Marke auf dem jetzt entfernten
+   Balken und haetten ohne ihn keinen Bezugspunkt mehr. */
+function fortschrittZeichnen(b) {
+    const ziel = document.getElementById('dashboard-fortschritt');
     const ueber = document.createElement('h3');
-    ueber.textContent = 'Einordnung';
+    ueber.textContent = 'Fortschritt';
 
-    const platz = document.createElement('p');
-    platz.className = 'einordnung-platz';
-    platz.textContent = `Platz ${b.rang_km} von ${b.kunden_gewertet}`;
+    const km = Number(b.km_gesamt);
+    const i = stufeIndex(km);
+    const aktuelle = STUFEN[i];
+    const naechste = STUFEN[i + 1];
 
-    const erklaerung = document.createElement('p');
-    erklaerung.className = 'einordnung-text';
-    // "Median", nicht "Mittelwert": velocity.v_meine_bilanz.median_km_flotte
-    // entsteht per percentile_cont(0.5) - das ist der Median, kein
-    // arithmetisches Mittel. Die beiden Woerter benennen im Deutschen
-    // unterschiedliche Kennzahlen.
-    erklaerung.textContent =
-        `Gewertet wird, wer mindestens eine Fahrt abgeschlossen hat. `
-        + `Median der Flotte: ${zahl.format(b.median_km_flotte)} km, `
-        + `Bestwert: ${zahl.format(b.bestwert_km_flotte)} km.`;
+    const kopf = document.createElement('div');
+    kopf.className = 'fortschritt-kopf';
+    const stand = document.createElement('span');
+    stand.className = 'fortschritt-stand';
+    stand.textContent = `${zahl.format(km)} km`;
+    const zielfeld = document.createElement('span');
+    zielfeld.className = 'fortschritt-ziel';
 
     const spur = document.createElement('div');
-    spur.className = 'perzentil-spur';
+    spur.className = 'fortschritt-spur';
     spur.setAttribute('role', 'img');
-    spur.setAttribute('aria-label',
-        `Eigene Kilometer ${zahl.format(b.km_gesamt)}, `
-        + `besser als ${zahl.format(b.perzentil)} Prozent der gewerteten Kunden`);
-    const gefuellt = document.createElement('div');
-    gefuellt.className = 'perzentil-wert';
-    gefuellt.style.width = `${b.perzentil}%`;
-    const marke = document.createElement('span');
-    marke.className = 'perzentil-marke';
-    marke.style.left = `${(b.median_km_flotte / b.bestwert_km_flotte) * 100}%`;
-    marke.title = 'Median der Flotte';
-    spur.append(gefuellt, marke);
+    const wert = document.createElement('div');
+    wert.className = 'fortschritt-wert';
 
-    ziel.replaceChildren(ueber, platz, spur, erklaerung);
+    const text = document.createElement('p');
+    text.className = 'fortschritt-text';
+
+    if (naechste) {
+        // Fortschritt INNERHALB der aktuellen Stufe (von deren eigener
+        // Untergrenze bis zur naechsten Schwelle), nicht ab 0: so beginnt
+        // die Anzeige nach jedem Stufenaufstieg wieder klein und fuellt
+        // sich sichtbar wieder auf - ab 0 gemessen waere der Balken kurz
+        // vor dem Ziel ohnehin fast voll und der Aufstieg selbst kaum zu
+        // erkennen.
+        const anteil = ((km - aktuelle.ab) / (naechste.ab - aktuelle.ab)) * 100;
+        wert.style.width = `${Math.max(0, Math.min(anteil, 100))}%`;
+        zielfeld.textContent = `Ziel ${zahl.format(naechste.ab)} km`;
+        spur.setAttribute('aria-label',
+            `${zahl.format(km)} von ${zahl.format(naechste.ab)} Kilometern auf dem Weg zur Stufe ${naechste.name}`);
+        text.textContent = `Noch ${zahl.format(naechste.ab - km)} km bis zur Stufe ${naechste.name}.`;
+    } else {
+        // Hoechste Stufe: kein Ziel mehr uebrig. Ein leerer Balken waere
+        // hier die schlechteste Loesung - er saehe nach "nichts erreicht"
+        // aus, bei genau umgekehrter Sachlage. Deshalb ein VOLLER Balken
+        // statt eines leeren, mit eigenem Text statt einer Zielzahl, die
+        // es nicht mehr gibt.
+        wert.style.width = '100%';
+        zielfeld.textContent = 'Höchste Stufe';
+        spur.setAttribute('aria-label', `Höchste Stufe erreicht: ${aktuelle.name}, ${zahl.format(km)} km`);
+        text.textContent = `Höchste Stufe erreicht: ${aktuelle.name}.`;
+    }
+
+    kopf.append(stand, zielfeld);
+    spur.append(wert);
+
+    const platz = document.createElement('p');
+    platz.className = 'rang-platz';
+    platz.textContent = `Platz ${b.rang_km} von ${b.kunden_gewertet}`;
+
+    ziel.replaceChildren(ueber, kopf, spur, text, platz);
 }
 
 function fahrtenZeichnen(fahrten) {
@@ -411,7 +506,8 @@ async function dashboardZeichnen() {
     const monate = await ladeMonate();
     ringeZeichnen(monate);
     verlaufZeichnen(monate);
-    einordnungZeichnen(bilanz);
+    statusabzeichenZeichnen(bilanz);
+    fortschrittZeichnen(bilanz);
     fahrtenZeichnen(await ladeLetzteFahrten(5));
 
     document.getElementById('dashboard-zeitraum').textContent =

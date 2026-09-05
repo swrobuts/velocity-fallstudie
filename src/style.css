@@ -1537,7 +1537,7 @@ footer :focus-visible, .product-tabs :focus-visible,
    Stylesheet. Weisse Kacheln auf dem grauen Grund des Abschnitts -
    dasselbe Material wie bei .rad-kacheln.
 
-   Ringe, Verlauf, Einordnung und letzte Fahrten (.dashboard-block)
+   Ringe, Verlauf, Fortschritt und letzte Fahrten (.dashboard-block)
    bekommen ihre Kartenoptik erst UEBER :not(:empty). Jede der vier
    Zeichenfunktionen leert ihren Block per replaceChildren() ganz ohne
    Argument, wenn es nichts zu zeigen gibt (siehe ringeZeichnen() fuer
@@ -1585,6 +1585,24 @@ footer :focus-visible, .product-tabs :focus-visible,
   margin: var(--a1) 0 0;
   font: 700 var(--grad-etikett)/1 var(--mono);
   letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
+}
+/* Leer, solange keine Bilanz da ist (siehe Kommentar bei
+   #dashboard-abzeichen in index.html) - dann auch KEIN Abstand nach oben,
+   sonst bliebe bei einem Konto ohne Fahrten eine kleine unbenutzte Luecke
+   unter dashboard-zeitraum stehen. Dasselbe Prinzip wie bei
+   .dashboard-block:not(:empty) weiter unten, hier per ID statt Klasse,
+   weil dieses eine div kein Kartenelement ist. */
+#dashboard-abzeichen:not(:empty) { margin-top: var(--a3); }
+/* EINE Abzeichenfarbe fuer alle fuenf Stufen, nicht eine je Stufe: "kein
+   Pokal, kein Farbrausch" war die ausdrueckliche Vorgabe. Navy gefuellt,
+   wie .login.ist-angemeldet - ein Zustand, keine Aufforderung. */
+.status-abzeichen {
+  display: inline-block;
+  padding: var(--a2) var(--a4);
+  background: var(--navy);
+  color: #fff;
+  border-radius: var(--pille);
+  font: 700 var(--grad-klein)/1 var(--body-schrift);
 }
 
 .dashboard-fehler {
@@ -1677,7 +1695,7 @@ footer :focus-visible, .product-tabs :focus-visible,
 
 /* ---- Ringe ---- */
 /* Ring und Legende NEBENEINANDER, nicht mehr gestapelt: die Karte ist so
-   breit wie die drei anderen Bloecke (Verlauf, Einordnung, Fahrten) - ein
+   breit wie die drei anderen Bloecke (Verlauf, Fortschritt, Fahrten) - ein
    200-Punkte-Ring allein in der Kartenmitte liess links und rechts nur
    Flaeche ohne Aussage stehen, genau die Beobachtung des Auftraggebers
    ("ein kleiner Ring in der Mitte einer grossen weissen Flaeche"). Die
@@ -1765,31 +1783,42 @@ footer :focus-visible, .product-tabs :focus-visible,
   white-space: nowrap;
 }
 
-/* ---- Einordnung ---- */
-.einordnung-platz {
-  margin: 0;
+/* ---- Fortschritt ---- */
+/* Vormals "Einordnung": ein Balken zum Flottenvergleich (Perzentil,
+   Median, Bestwert als Marke), ohne Beschriftung nicht zu verstehen.
+   Ersetzt durch den Fortschritt zur naechsten Stufe (siehe
+   fortschrittZeichnen() in dashboard.js) - derselbe Bahn-Aufbau wie
+   .verlauf-spur/.verlauf-wert oben, hier in Markenrot statt Navy, damit
+   diese Bahn optisch nicht mit den Monatsbalken des Verlauf-Blocks
+   direkt darueber verwechselt wird. */
+.fortschritt-kopf {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: var(--a3);
+  margin: 0 0 var(--a3);
+}
+.fortschritt-stand {
   font-family: var(--auszeichnung); font-size: var(--grad-zahl-klein); font-weight: 800;
   letter-spacing: var(--eng); color: var(--navy);
   font-variant-numeric: tabular-nums;
 }
-.perzentil-spur {
-  position: relative;
-  margin: var(--a4) 0;
+.fortschritt-ziel {
+  font: 700 var(--grad-klein)/1 var(--mono);
+  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
+}
+.fortschritt-spur {
   height: 10px;
+  margin: 0 0 var(--a4);
   background: var(--mist);
   border-radius: var(--pille);
+  overflow: hidden;
 }
-.perzentil-wert { display: block; height: 100%; background: var(--red); border-radius: var(--pille); }
-/* Strich statt Punkt: bei Rang 1 oder ganz hinten liegt die Marke am
-   Rand der Spur, und ein Strich bleibt dort vollstaendig sichtbar,
-   waehrend ein zentrierter Punkt zur Haelfte abgeschnitten wuerde. */
-.perzentil-marke {
-  position: absolute; top: -3px; left: 0;
-  width: 2px; height: 16px;
-  background: var(--navy);
-  transform: translateX(-1px);
-}
-.einordnung-text { margin: 0; font-size: var(--grad-klein); color: var(--grau); }
+.fortschritt-wert { display: block; height: 100%; background: var(--red); border-radius: var(--pille); }
+.fortschritt-text { margin: 0; font-size: var(--grad-klein); color: var(--grau); }
+/* Nachrangig statt Hauptaussage (frueher .einordnung-platz, gross und in
+   Navy): der Rang bleibt nuetzlich, ist aber weiterhin ein Vergleich mit
+   anderen und koennte fallen, ohne dass die Kundschaft selbst etwas tut -
+   anders als die Stufe oben. Deshalb klein und grau, als Zusatzzeile. */
+.rang-platz { margin: var(--a4) 0 0; font-size: var(--grad-klein); color: var(--grau); }
 
 /* ---- Letzte Fahrten ---- */
 .fahrten-liste { display: flex; flex-direction: column; gap: var(--a4); margin: 0; padding: 0; list-style: none; }

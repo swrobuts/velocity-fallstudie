@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=1bbb8182">
+    <link rel="stylesheet" href="style.css?v=4b72c2ea">
 </head>
 <body>
 
@@ -532,7 +532,7 @@
      jeder Anmeldung, nicht erst beim Aufruf von #konto - wer die Ansicht
      oeffnet, wartet dann nicht zusaetzlich auf das Netz.
 
-     Ringe, Verlauf, Einordnung und letzte Fahrten sind hier bereits als
+     Ringe, Verlauf, Fortschritt und letzte Fahrten sind hier bereits als
      leere Bloecke angelegt, obwohl diese Aufgabe nur die Bilanzkacheln
      und das Konterfei zeichnet - eine spaetere Aufgabe fuellt sie, ohne
      das Markup noch einmal umzustellen.
@@ -557,6 +557,16 @@
                      aufzunehmen. -->
                 <h2 id="dashboard-titel" tabindex="-1">Meine Bilanz</h2>
                 <p id="dashboard-zeitraum" class="dashboard-zeitraum"></p>
+                <!-- Das Statusabzeichen (statusabzeichenZeichnen() in
+                     dashboard.js) steht bewusst HIER, neben dem Konterfei,
+                     nicht im Block weiter unten: das Konterfei benennt per
+                     aria-label bereits die Person, das Abzeichen daneben
+                     nennt ihren Status - beides gehoert damit optisch
+                     zusammen. NICHT :not(:empty) wie .dashboard-block:
+                     der Abstand nach oben haengt hier direkt an der eigenen
+                     Leere (siehe #dashboard-abzeichen in style.css), weil
+                     dieses div kein Kartenelement ist. -->
+                <div id="dashboard-abzeichen"></div>
             </div>
         </header>
         <p id="dashboard-fehler" class="dashboard-fehler" role="status" hidden></p>
@@ -569,7 +579,7 @@
         <p id="dashboard-bilanz-hinweis" class="bilanz-hinweis" hidden></p>
         <div id="dashboard-ringe" class="dashboard-block"></div>
         <div id="dashboard-verlauf" class="dashboard-block"></div>
-        <div id="dashboard-einordnung" class="dashboard-block"></div>
+        <div id="dashboard-fortschritt" class="dashboard-block"></div>
         <div id="dashboard-fahrten" class="dashboard-block"></div>
     </div>
 </section>
@@ -626,7 +636,7 @@
 <script src="supabase.js?v=114ade78"></script>
 <script src="auth.js?v=127b1291"></script>
 <script src="script.js?v=58e9516f"></script>
-<script src="dashboard.js?v=4aeb576f"></script>
+<script src="dashboard.js?v=693775cc"></script>
 
 
 <!-- DER FAHRPREISRECHNER WOHNT IN EINER SCHUBLADE (28.08.2026).
