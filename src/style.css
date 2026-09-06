@@ -1936,9 +1936,28 @@ footer :focus-visible, .product-tabs :focus-visible,
    die Schaltpillen links und der Gesamtwert rechts (margin-left: auto
    auf .verlauf-gesamt). Auf schmalen Schirmen rutscht er per flex-wrap
    in die naechste Zeile. */
+/* OPTISCH AUSGERICHTET, NICHT NACH KASTENKANTE (06.09.2026).
+   Alle Kaesten in diesen Karten beginnen an derselben Senkrechten - die
+   Ueberschrift, die Monatskuerzel im Verlauf, die Eintraege im
+   Fahrtenbuch und auch die erste Pille. Der TEXT der Pille faengt aber
+   erst 17 Punkte weiter rechts an, weil er hinter 1 Punkt Rahmen und
+   var(--a4) Innenabstand liegt. Auf einer Karte, in der sonst jede Zeile
+   Text an derselben Kante beginnt, faellt genau diese eine auf - im
+   Browser nachgemessen: alles bei 61, der Pillentext bei 78.
+
+   Der negative Aussenabstand zieht die Zeile um exakt diese 17 Punkte
+   nach links, damit der Pillentext auf 61 landet. Der Wert ist
+   GERECHNET, nicht eingetragen: aendert jemand oben das Polster oder die
+   Rahmenstaerke der Pillen, wandert der Ausgleich mit.
+
+   Nur der LINKE Rand. Bei width:auto bleibt die rechte Kante dort, wo
+   sie war - die Gesamtsumme mit margin-left:auto steht also weiterhin
+   buendig ueber den Zahlen der Balkenzeilen. */
 .verlauf-schalter {
   display: flex; flex-wrap: wrap; align-items: center;
-  gap: var(--a2); margin: 0 0 var(--a4);
+  gap: var(--a2);
+  margin: 0 0 var(--a4);
+  margin-left: calc(-1 * (var(--a4) + 1px));
 }
 .verlauf-gesamt {
   margin-left: auto;
