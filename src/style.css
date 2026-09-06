@@ -1583,13 +1583,14 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 /* Ein leerer Teil darf keine Spur belegen - sonst bleibt eine halbe
    Karte weiss stehen, wenn der laufende Monat noch keine Fahrt hat.
-   #dashboard-ringe ist HIER MIT AUFGEFUEHRT, und zwar notwendigerweise:
-   jene Regel setzt display:flex ueber einen ID-Selektor (1,0,0) und
-   schlaegt damit jedes Klassen-Selektor-Paar (0,2,0). Ohne den Zusatz
-   griffe diese Zeile nie - im Browser gemessen, nicht vermutet. */
-.status-teil:empty,
-#dashboard-ringe:empty,
-#dashboard-fortschritt:empty { display: none; }
+
+   Hier standen frueher zusaetzlich #dashboard-ringe:empty und
+   #dashboard-fortschritt:empty. Notwendig waren sie, solange die
+   Ringkarte ihr display ueber einen ID-Selektor (1,0,0) setzte und damit
+   dieses Klassenpaar (0,2,0) schlug. Die Ringe sind weg, kein
+   ID-Selektor setzt in diesem Block noch ein display - also greift die
+   Klassenregel wieder allein. Im Browser nachgemessen, nicht vermutet. */
+.status-teil:empty { display: none; }
 /* Und die Karte selbst verschwindet, wenn beide Teile leer sind - sonst
    staende dort ein weisser Kasten ohne Inhalt. .dashboard-block:not(:empty)
    greift hier nicht: der Behaelter hat immer zwei Kindelemente, auch wenn
@@ -1610,9 +1611,18 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 .dashboard-zurueck:hover { color: var(--red); }
 
+/* EINE FLUCHT, NICHT ZWEI. Vorher standen Konterfei und Textblock
+   nebeneinander: der Rueckweg-Link, das Konterfei und die Kacheln
+   darunter begannen bei 209 Punkt, der Titel dagegen bei 321 - um die
+   Breite des Konterfeis eingerueckt. Neben einem Bild ist das ueblich,
+   zwischen einem Link darueber und Kacheln darunter sieht es nach
+   Versehen aus. Alles beginnt jetzt an derselben Kante.
+
+   Der Preis: der Kopf wird hoeher. Das ist hier zu verschmerzen - er
+   steht am Anfang einer eigenen Ansicht, nicht im Weg. */
 .dashboard-kopf {
-  display: flex; flex-wrap: wrap; align-items: center;
-  gap: var(--a5);
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: var(--a4);
   margin-bottom: var(--af-l);
 }
 .konterfei { flex: none; width: 88px; height: 88px; }
@@ -1622,6 +1632,19 @@ footer :focus-visible, .product-tabs :focus-visible,
   font-family: var(--auszeichnung); font-size: var(--grad-kopf-m); font-weight: 800;
   letter-spacing: var(--eng); color: var(--navy);
 }
+/* ansichtAktualisieren() setzt den Fokus programmatisch auf diese
+   Ueberschrift, damit eine Screenreader-Nutzerin hoert, wo sie gelandet
+   ist. Der Browser zeichnet dafuer seinen Fokusrahmen - und der ragte in
+   die Datumszeile darunter, zwischen beiden lagen nur vier Punkt.
+   :focus-visible unterscheidet: bei programmatischem Fokus kein Rahmen,
+   bei Tastaturbedienung einer, und dann mit Abstand statt auf Kante. */
+.dashboard-kopf h2:focus { outline: none; }
+.dashboard-kopf h2:focus-visible {
+  outline: 2px solid var(--navy); outline-offset: 6px; border-radius: 2px;
+}
+/* Der Zeitraum steht auf line-height 1 - eine Grossbuchstabenzeile
+   braucht darueber Luft, sonst klebt sie am Titel. */
+.dashboard-kopf > div > * + * { margin-top: var(--a3); }
 .dashboard-zeitraum {
   margin: var(--a1) 0 0;
   font: 700 var(--grad-etikett)/1 var(--mono);
@@ -1735,53 +1758,81 @@ footer :focus-visible, .product-tabs :focus-visible,
 }
 
 /* ---- Ringe ---- */
-/* Ring und Legende NEBENEINANDER, nicht mehr gestapelt: die Karte ist so
-   breit wie die drei anderen Bloecke (Verlauf, Fortschritt, Fahrten) - ein
-   200-Punkte-Ring allein in der Kartenmitte liess links und rechts nur
-   Flaeche ohne Aussage stehen, genau die Beobachtung des Auftraggebers
-   ("ein kleiner Ring in der Mitte einer grossen weissen Flaeche"). Die
-   Legende steht jetzt daneben und listet die drei Werte UNTEREINANDER
-   (siehe .ringe-legende) - das nutzt die Breite, statt sie leerzulassen.
+/* ---- Dieser Monat: Balken mit Bezugsmarke ---- */
+/* Frueher standen hier drei konzentrische Ringe. Warum sie weg sind,
+   steht ausfuehrlich in dashboard.js ueber monatZeichnen(): ein Ring
+   zeigt Fortschritt zu einem Ziel, hier gibt es keins, und konzentrische
+   Boegen sind untereinander ohnehin nicht vergleichbar.
 
-   #dashboard-ringe h3 erzwingt per flex-basis: 100% eine eigene Zeile
-   ueber Ring und Legende - derselbe Kunstgriff wie bei
-   .bilanz-beschriftung weiter oben, hier per ID nur auf die Ringkarte
-   beschraenkt, damit die uebrigen drei Bloecke ihre Ueberschrift
-   unveraendert behalten.
-
-   KEIN fester Umbruchpunkt fuer schmale Schirme: flex-wrap wirft die
-   Legende von selbst unter den Ring, sobald beide zusammen nicht mehr in
-   die Kartenbreite passen (dieselbe Haltung wie bei .bilanz-gitter
-   oben). */
-#dashboard-ringe {
-  display: flex; flex-wrap: wrap; align-items: center;
-  gap: var(--a5) var(--a6);
+   Der Ersatz ist bewusst schlicht: drei Zeilen untereinander, jede mit
+   Kopf (Name links, Wert rechts), Spur und Fusszeile. Alle drei teilen
+   dieselbe Spurbreite, also stehen Balkenanfaenge, Werte und Fusszeilen
+   in einer Flucht - genau das, was drei verschieden grosse Ringe nicht
+   leisten konnten. */
+.monat-hinweis {
+  margin: 0 0 var(--a5);
+  font-size: var(--grad-klein); line-height: 1.5; color: var(--grau);
 }
-#dashboard-ringe h3 { flex-basis: 100%; }
-/* Feste Groesse wie beim Konterfei (.konterfei, 88px), aber mit Deckel
-   statt fixer Breite: "min(220px, 100%)" haelt den Ring auch dann im
-   Rahmen, wenn die Karte selbst schmaler als 220px waere. Etwas groesser
-   als vorher (200px): neben dem Ring ist jetzt Raum frei, den ein
-   groesserer Ring sinnvoller fuellt als Leerflaeche. */
-.ringe-svg {
-  display: block; width: min(220px, 100%); height: auto; aspect-ratio: 1;
-  margin: 0 auto; flex: none;
-}
-/* Untereinander statt in einer Zeile: drei Werte NEBENEINANDER brauchten
-   auf einer ueber tausend Punkte breiten Spalte kaum ein Drittel ihrer
-   Breite und liessen den Rest wieder leer. Untereinander liest sich jede
-   Zeile wie eine eigene kleine Kennzahl, nicht wie ein Rest unter dem
-   Ring. */
-.ringe-legende {
+.monat-liste {
   display: flex; flex-direction: column;
-  gap: var(--a3);
+  gap: var(--a5);
   margin: 0; padding: 0;
   list-style: none;
-  flex: 1 1 240px;
 }
-.ringe-legende li { display: flex; align-items: center; gap: var(--a3); }
-.ringe-punkt { width: 10px; height: 10px; border-radius: 50%; flex: none; }
-.ringe-legende span:last-child { font-size: var(--control-font); color: var(--ink); }
+/* space-between statt fester Breiten: der Name sitzt an der linken, der
+   Wert an der rechten Spurkante. Weil alle drei Spuren gleich breit
+   sind, stehen die drei Werte damit von selbst untereinander. */
+.monat-kopf {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--a3);
+  margin-bottom: var(--a2);
+}
+.monat-name { font-size: var(--control-font); color: var(--ink); }
+/* tabular-nums, damit die Ziffern in der Senkrechten stehen und nicht
+   je nach Zifferbreite wandern. */
+.monat-wert {
+  font-weight: 700; color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+/* Die Spur endet beim besten Monat. Sie ist damit KEINE Skala von null
+   bis hundert Prozent, sondern die Spannweite der eigenen Monate - und
+   der Balken sagt, wo der laufende Monat darin liegt. */
+/* KEIN overflow: hidden - die Marke soll oben und unten herausragen
+   duerfen (siehe .monat-marke). Der Balken bringt seine Rundung deshalb
+   selbst mit. */
+.monat-spur {
+  position: relative;
+  height: 10px; border-radius: 5px;
+  background: var(--linie-still);
+}
+.monat-balken {
+  position: absolute; inset: 0 auto 0 0;
+  border-radius: 5px;
+  background: var(--navy);
+  min-width: 3px;   /* ein Wert von null bliebe sonst voellig unsichtbar */
+}
+/* Die Marke ist ein Strich, kein Punkt: ein Punkt sieht aus wie ein
+   weiterer Wert, ein Strich quer zur Spur liest sich als Schwelle.
+
+   Sie RAGT OBEN UND UNTEN HERAUS, und das ist der ganze Trick. Bliebe
+   sie in der Spur, laege sie - sobald der laufende Monat den Median
+   ueberschritten hat - mitten auf dem Navy-Balken; --ink auf --navy
+   traegt 1,2:1 und waere dort unsichtbar. Die herausragenden Enden
+   stehen dagegen immer auf der weissen Karte (16,1:1), und von denen
+   liest man den Strich ab, egal was in der Spur hinter ihm liegt.
+   Ausprobiert wurde vorher mix-blend-mode: difference - der Unterschied
+   zwischen #111827 und #061841 ist zu klein, um etwas zu zeigen. */
+.monat-marke {
+  position: absolute; top: -5px; bottom: -5px;
+  width: 2px; margin-left: -1px;
+  background: var(--ink);
+  border-radius: 1px;
+}
+.monat-fuss {
+  display: block; margin-top: var(--a2);
+  font-size: var(--grad-klein); color: var(--grau);
+  font-variant-numeric: tabular-nums;
+}
 
 /* ---- Verlauf ---- */
 .verlauf-schalter { display: flex; flex-wrap: wrap; gap: var(--a2); margin: 0 0 var(--a4); }

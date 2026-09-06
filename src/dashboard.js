@@ -116,109 +116,110 @@ function konterfeiZeichnen(vorname, nachname, schluessel) {
     document.getElementById('dashboard-konterfei').replaceChildren(svg);
 }
 
-/* Drei Ringe fuer den LAUFENDEN Monat, gemessen am MEDIAN der eigenen
-   Vormonate - nicht am Durchschnitt und nicht an einem festen Ziel.
+/* DIESER MONAT GEGEN DIE EIGENEN VORMONATE - ALS BALKEN, NICHT ALS RING.
 
-   GEAENDERT (06.09.2026), GEMELDET STATT STILLSCHWEIGEND KORRIGIERT:
-   Bis dahin stand hier das arithmetische Mittel. Bei einem Konto mit
-   wenigen, unterschiedlich langen Vormonaten zieht ein einzelner
-   Ausreissermonat (z. B. eine sehr lange Ausleihe) den Mittelwert weit
-   ueber das, was in den uebrigen Monaten ueblich war - beobachtet als
-   "Minuten: 4 (Durchschnitt 982,4)" bei einem laufenden Monat mit einer
-   einzigen kurzen Fahrt. Ein Vergleich einer Vier mit einer Neunhundert-
-   zweiundachtzig ist wertlos. Der Median ist gegen einzelne Ausreisser
-   unempfindlich - ein anderer Median als der der FLOTTE weiter unten
-   (STUFEN/fortschrittZeichnen()): dieser hier ist der ueber die eigenen
-   Vormonate, nicht ueber andere Kunden. (Frueher stand hier ein Verweis
-   auf einordnungZeichnen(), das den Flotten-Median fuer den inzwischen
-   ersetzten Perzentilbalken nutzte - mit dem Balken entfallen.) Das
-   bleibt eine reine Umrechnung der bereits gelieferten Monatszeilen
-   (v_meine_monatsbilanz), keine neue Sicht noetig - und keine Loesung
-   fuer sehr kurze Kontohistorien: bei nur ein oder zwei Vormonaten ist
-   auch der Median nur so aussagekraeftig wie die Stichprobe selbst.
+   Vorher standen hier drei konzentrische Ringe. Zwei Gruende sprachen
+   dagegen, beide am 06.09.2026 nachgelesen statt vermutet:
 
-   Am 5. eines Monats stuenden die Ringe sonst auf einem Bruchteil, und
-   das Dashboard zeigte an jedem Monatsanfang Versagen an. */
-function ringeZeichnen(monate) {
-    const ziel = document.getElementById('dashboard-ringe');
+   Ein Ring zeigt Fortschritt zu einem ZIEL - sein Sinn liegt darin, dass
+   er sich schliesst. Hier gibt es kein Ziel, sondern einen Vergleich mit
+   dem eigenen Median; "geschlossen" bedeutet dabei nichts. Die
+   Gestaltungsliteratur haelt Fortschrittsringe ausdruecklich fuer
+   Abschlussgroessen bereit, nicht fuer Vergleiche.
+
+   Und konzentrische Ringe sind untereinander gar nicht vergleichbar: das
+   optische Gewicht eines Bogens haengt von seinem Radius ab, derselbe
+   Anteil sieht auf dem inneren Ring kleiner aus als auf dem aeusseren.
+   Dazu schaetzen Menschen Bogenlaengen ohnehin schlecht - lineare
+   Laengen dagegen gut.
+
+   Fuer einen Vergleich mit Bezugswert nennt die Literatur den
+   Bullet-Chart: ein Balken fuer den Wert, eine Marke fuer den Bezug.
+   Genau das steht hier - Balken bis zum Wert des laufenden Monats, Marke
+   auf dem Median der Vormonate, Spurende beim besten Monat. Drei Zeilen
+   mit gleicher Skala, untereinander lesbar und miteinander vergleichbar.
+
+   Die Bezugsgroesse ist weiter der EIGENE Median, kein festes Ziel: am
+   6. eines Monats stuende sonst jede Anzeige auf einem Bruchteil und das
+   Dashboard zeigte an jedem Monatsanfang Versagen an. */
+function monatZeichnen(monate) {
+    const ziel = document.getElementById('dashboard-monat');
     if (!monate.length) { ziel.replaceChildren(); return; }
 
     const jetzt = new Date();
     const lauf = `${jetzt.getFullYear()}-${String(jetzt.getMonth() + 1).padStart(2, '0')}-01`;
     const aktuell = monate.find((m) => m.monat === lauf);
     const frueher = monate.filter((m) => m.monat !== lauf);
-    // Kein laufender Monat (noch keine Fahrt seit dem Ersten) oder keine
-    // Vergangenheit zum Vergleich: dann gibt es keinen eigenen Median,
-    // gegen den zu messen waere. Ein leerer Block ist hier ehrlicher als
-    // eine erfundene Zahl.
+    // Kein laufender Monat oder keine Vergangenheit zum Vergleich: dann
+    // gibt es keinen Bezug, gegen den zu messen waere. Ein leerer Block
+    // ist hier ehrlicher als eine erfundene Zahl.
     if (!aktuell || !frueher.length) { ziel.replaceChildren(); return; }
 
     function median(werte) {
-        const sortiert = [...werte].sort((a, b) => a - b);
-        const mitte = Math.floor(sortiert.length / 2);
-        return sortiert.length % 2
-            ? sortiert[mitte]
-            : (sortiert[mitte - 1] + sortiert[mitte]) / 2;
+        const s = [...werte].sort((a, b) => a - b);
+        const m = Math.floor(s.length / 2);
+        return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
     }
-    const bezug = (feld) => median(frueher.map((m) => Number(m[feld])));
-    // Farben gegen die weisse Kartenflaeche geprueft (WCAG 1.4.11, 3:1 fuer
-    // grafische Objekte): Rot 4,2:1, Gruen 3,45:1, Blau 4,79:1.
-    const ringe = [
-        { feld: 'fahrten', name: 'Fahrten',   farbe: '#e2402d' },
-        { feld: 'km',      name: 'Kilometer', farbe: '#1f9d6b' },
-        { feld: 'minuten', name: 'Minuten',   farbe: '#2f74c0' }
+
+    const groessen = [
+        { feld: 'fahrten', name: 'Fahrten', einheit: '' },
+        { feld: 'km',      name: 'Kilometer', einheit: ' km' },
+        { feld: 'minuten', name: 'Minuten', einheit: ' min' }
     ];
-
-    const ns = 'http://www.w3.org/2000/svg';
-    const svg = document.createElementNS(ns, 'svg');
-    svg.setAttribute('viewBox', '0 0 200 200');
-    svg.setAttribute('class', 'ringe-svg');
-    svg.setAttribute('role', 'img');
-
-    const teile = [];
-    ringe.forEach((r, i) => {
-        const radius = 84 - i * 24;
-        const umfang = 2 * Math.PI * radius;
-        const soll = bezug(r.feld);
-        const anteil = soll > 0 ? Math.min(Number(aktuell[r.feld]) / soll, 1) : 0;
-
-        for (const [klasse, laenge, farbe] of [
-            ['ring-grund', umfang, '#e6e3dc'],
-            ['ring-wert',  umfang * anteil, r.farbe]
-        ]) {
-            const kreis = document.createElementNS(ns, 'circle');
-            kreis.setAttribute('cx', '100'); kreis.setAttribute('cy', '100');
-            kreis.setAttribute('r', String(radius));
-            kreis.setAttribute('fill', 'none');
-            kreis.setAttribute('stroke', farbe);
-            kreis.setAttribute('stroke-width', '16');
-            kreis.setAttribute('stroke-linecap', 'round');
-            kreis.setAttribute('class', klasse);
-            kreis.setAttribute('stroke-dasharray', `${laenge} ${umfang}`);
-            kreis.setAttribute('transform', 'rotate(-90 100 100)');
-            svg.append(kreis);
-        }
-        teile.push(`${r.name} ${Math.round(anteil * 100)} Prozent des eigenen Medians`);
-    });
-
-    svg.setAttribute('aria-label', 'Laufender Monat: ' + teile.join(', '));
 
     const ueber = document.createElement('h3');
     ueber.textContent = 'Dieser Monat';
-    const legende = document.createElement('ul');
-    legende.className = 'ringe-legende';
-    ringe.forEach((r) => {
+    const hinweis = document.createElement('p');
+    hinweis.className = 'monat-hinweis';
+    hinweis.textContent = 'Der laufende Monat gegen die eigenen Vormonate. '
+        + 'Die Marke steht auf dem Median, das Ende der Spur auf dem besten Monat.';
+
+    const liste = document.createElement('ul');
+    liste.className = 'monat-liste';
+
+    groessen.forEach((g) => {
+        const wert  = Number(aktuell[g.feld]);
+        const mitte = median(frueher.map((m) => Number(m[g.feld])));
+        const best  = Math.max(...frueher.map((m) => Number(m[g.feld])), wert);
+        const skala = best > 0 ? best : 1;
+
         const li = document.createElement('li');
-        const punkt = document.createElement('span');
-        punkt.className = 'ringe-punkt';
-        punkt.style.background = r.farbe;
-        const text = document.createElement('span');
-        text.textContent = `${r.name}: ${zahl.format(aktuell[r.feld])} `
-            + `(Median ${zahl.format(bezug(r.feld))})`;
-        li.append(punkt, text);
-        legende.append(li);
+
+        const kopf = document.createElement('div');
+        kopf.className = 'monat-kopf';
+        const name = document.createElement('span');
+        name.className = 'monat-name';
+        name.textContent = g.name;
+        const zahltext = document.createElement('span');
+        zahltext.className = 'monat-wert';
+        zahltext.textContent = zahl.format(wert) + g.einheit;
+        kopf.append(name, zahltext);
+
+        const spur = document.createElement('div');
+        spur.className = 'monat-spur';
+        spur.setAttribute('role', 'img');
+        spur.setAttribute('aria-label',
+            `${g.name}: ${zahl.format(wert)}${g.einheit} in diesem Monat, `
+            + `Median der Vormonate ${zahl.format(mitte)}${g.einheit}, `
+            + `bester Monat ${zahl.format(best)}${g.einheit}`);
+        const balken = document.createElement('div');
+        balken.className = 'monat-balken';
+        balken.style.width = `${(wert / skala) * 100}%`;
+        const marke = document.createElement('span');
+        marke.className = 'monat-marke';
+        marke.style.left = `${(mitte / skala) * 100}%`;
+        spur.append(balken, marke);
+
+        const fuss = document.createElement('span');
+        fuss.className = 'monat-fuss';
+        fuss.textContent = `Median ${zahl.format(mitte)}${g.einheit} · `
+            + `bester Monat ${zahl.format(best)}${g.einheit}`;
+
+        li.append(kopf, spur, fuss);
+        liste.append(li);
     });
-    ziel.replaceChildren(ueber, svg, legende);
+
+    ziel.replaceChildren(ueber, hinweis, liste);
 }
 
 /* Ein Balken je Monat, umschaltbar. Die Achse beginnt bei null: hier
@@ -319,7 +320,7 @@ const STUFEN = [
    Regelbruch: Diese Funktion ERFINDET keine Kennzahl, sie fragt nur ab,
    in welchen der oben festgelegten Bereiche km_gesamt aus v_meine_bilanz
    faellt. Dieselbe Ausnahme traegt bereits die Ringlaenge in
-   ringeZeichnen() und die Balkenbreite in verlaufZeichnen(): eine
+   monatZeichnen() und die Balkenbreite in verlaufZeichnen(): eine
    gelieferte Zahl rein darstellen, ohne einen neuen Wert zu bilden. */
 function stufeIndex(km) {
     let i = 0;
@@ -517,7 +518,7 @@ async function dashboardZeichnen() {
     bilanzZeichnen(bilanz);
 
     const monate = await ladeMonate();
-    ringeZeichnen(monate);
+    monatZeichnen(monate);
     verlaufZeichnen(monate);
     statusabzeichenZeichnen(bilanz);
     fortschrittZeichnen(bilanz);
