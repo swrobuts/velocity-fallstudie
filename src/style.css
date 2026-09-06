@@ -1777,10 +1777,6 @@ footer :focus-visible, .product-tabs :focus-visible,
    dieselbe Spurbreite, also stehen Balkenanfaenge, Werte und Fusszeilen
    in einer Flucht - genau das, was drei verschieden grosse Ringe nicht
    leisten konnten. */
-.monat-hinweis {
-  margin: 0 0 var(--a5);
-  font-size: var(--grad-klein); line-height: 1.5; color: var(--grau);
-}
 .monat-liste {
   display: flex; flex-direction: column;
   gap: var(--a5);
@@ -1849,6 +1845,12 @@ footer :focus-visible, .product-tabs :focus-visible,
   font-size: var(--grad-klein); color: var(--grau);
   font-variant-numeric: tabular-nums;
 }
+/* DIESELBE FARBE WIE DIE MARKE - das ist der ganze Zweck. Ueber dem
+   Block stand vorher ein Satz, der erklaerte, wofuer die Marke steht;
+   die geteilte Farbe erklaert es schneller und braucht keine Zeile.
+   --red traegt auf der weissen Karte 5,47:1, haelt also auch die
+   Textschwelle von 4,5:1, nicht nur die 3:1 fuer Grafik. */
+.monat-median { color: var(--red); font-weight: 700; }
 
 /* ---- Verlauf ---- */
 .verlauf-schalter { display: flex; flex-wrap: wrap; gap: var(--a2); margin: 0 0 var(--a4); }

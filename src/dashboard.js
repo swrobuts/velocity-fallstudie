@@ -169,12 +169,6 @@ function monatZeichnen(monate) {
 
     const ueber = document.createElement('h3');
     ueber.textContent = 'Dieser Monat';
-    const hinweis = document.createElement('p');
-    hinweis.className = 'monat-hinweis';
-    hinweis.textContent = 'Der laufende Monat im Vergleich zu den eigenen '
-        + 'Vormonaten. Die Marke sitzt auf dem Median, die Spur reicht bis '
-        + 'zum besten Monat.';
-
     const liste = document.createElement('ul');
     liste.className = 'monat-liste';
 
@@ -211,16 +205,26 @@ function monatZeichnen(monate) {
         marke.style.left = `${(mitte / skala) * 100}%`;
         spur.append(balken, marke);
 
+        /* Der Median steht ROT da, in genau der Farbe der Marke in der
+           Spur darueber. Frueher stand ueber dem Block ein erklaerender
+           Satz ("Die Marke sitzt auf dem Median ..."); die gemeinsame
+           Farbe sagt dasselbe, ohne dass man es lesen muss. Der beste
+           Monat bleibt grau: er braucht keine Marke, er IST das
+           Spurende. */
         const fuss = document.createElement('span');
         fuss.className = 'monat-fuss';
-        fuss.textContent = `Median ${zahl.format(mitte)}${g.einheit} · `
-            + `bester Monat ${zahl.format(best)}${g.einheit}`;
+        const median_text = document.createElement('span');
+        median_text.className = 'monat-median';
+        median_text.textContent = `Median ${zahl.format(mitte)}${g.einheit}`;
+        const rest = document.createElement('span');
+        rest.textContent = ` · bester Monat ${zahl.format(best)}${g.einheit}`;
+        fuss.append(median_text, rest);
 
         li.append(kopf, spur, fuss);
         liste.append(li);
     });
 
-    ziel.replaceChildren(ueber, hinweis, liste);
+    ziel.replaceChildren(ueber, liste);
 }
 
 /* Ein Balken je Monat, umschaltbar. Die Achse beginnt bei null: hier
