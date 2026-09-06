@@ -23,6 +23,20 @@ WAS GEPRUEFT WIRD
      uebergibt nur Parameter, die sie hat. Das faengt den Fall, der am
      teuersten waere - eine umbenannte Spalte in einer Signatur.
 
+WAS DIESE PRUEFUNG NICHT SIEHT - und was sie deshalb ausgibt
+
+Geprueft wird die Datei auf der Platte, nicht der Prozess, den Claude
+Desktop gestartet hat. Der laedt server.py EINMAL beim Start; wird sie
+danach geaendert, laeuft der alte Code weiter. Am 06.09.2026 war genau
+das der Fall: Diese Pruefung meldete gruen, und rad_anlegen scheiterte
+trotzdem, weil der laufende Prozess noch die Fassung von vor dem
+05.09.2026 hielt.
+
+Deshalb nennt die Ausgabe unten den Fingerabdruck der Datei. Das
+Werkzeug serverstand() des MCP-Servers nennt denselben Abdruck fuer die
+Fassung, die der Prozess GELADEN hat. Stimmen beide ueberein, laeuft der
+aktuelle Stand; sonst muss Claude Desktop neu starten.
+
 Gelesen wird der Server ueber den Syntaxbaum, nicht ueber Textsuche: Ein
 Aufruf, der ueber drei Zeilen umbrochen ist, soll genauso gefunden
 werden wie einer in einer Zeile.
@@ -135,6 +149,12 @@ def main() -> int:
     db_pflicht = {r[0]: _pflicht(r[1], r[2], r[3]) for r in _roh}
     con.close()
 
+    # Identisch zu _fingerabdruck() in mcp/server.py: sha256 der Bytes,
+    # acht Stellen. Wer das eine aendert, aendert das andere mit - sonst
+    # vergleichen die beiden Ausgaben nichts mehr.
+    import hashlib
+    abdruck = hashlib.sha256(SERVER.read_bytes()).hexdigest()[:8]
+
     funde: list[tuple[str, str]] = []
 
     for name in sichten:
@@ -190,8 +210,17 @@ def main() -> int:
           f"MCP-Servers gegen die Datenbank\n  ({len(db_sichten)} v_wawi_-Sichten, "
           f"{len(db_funktionen)} api_-Funktionen für authenticated, "
           f"{len(ausgelassen)} bewusst ausgelassen)")
+    # Der Abdruck steht IMMER da, auch bei Funden: Er beantwortet eine
+    # andere Frage als die Pruefung darueber - nicht "stimmt die Datei",
+    # sondern "laeuft die Datei". Beides kann getrennt schieflaufen.
+    print(f"  Fingerabdruck von mcp/server.py: {abdruck}\n"
+          f"  Das Werkzeug serverstand() des laufenden MCP-Servers muss "
+          f"denselben nennen;\n"
+          f"  nennt es einen anderen, laeuft dort eine aeltere Fassung "
+          f"und Claude Desktop\n  braucht einen Neustart.")
     if not funde:
-        print("  Jedes Werkzeug zeigt auf ein Objekt, das es gibt.")
+        print("  Jedes Werkzeug zeigt auf ein Objekt, das es gibt, und "
+              "ruft es richtig auf.")
         return 0
     print(f"  {len(funde)} Befund(e):\n")
     for name, warum in funde:

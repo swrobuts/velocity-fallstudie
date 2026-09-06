@@ -216,6 +216,37 @@ NICHT_ANGEBOTEN = {
     "api_preisschaetzer_umschalten": "schaltet die Anzeige im eigenen Konto",
 }
 
+# ─────────────────────────────────────────── Stand dieses Prozesses
+#
+# WOZU. Claude Desktop startet diese Datei als eigenen Prozess und laedt
+# ihren Inhalt EINMAL, beim Start. Wird die Datei danach geaendert, laeuft
+# der alte Code weiter, bis der Prozess neu startet - und von aussen ist
+# dem Server nicht anzusehen, welche Fassung das ist.
+#
+# Genau das ist am 06.09.2026 passiert: rad_anlegen bekam am Vortag fuenf
+# Pflichtparameter dazu, der laufende Prozess schickte weiter drei, und
+# der Aufruf scheiterte mit "Could not find the function". Die Meldung
+# zeigte auf den Schemacache von PostgREST - falsche Faehrte, der war in
+# Ordnung. Gekostet hat die Verwechslung zwei Fehlversuche und einen
+# unnoetigen Cache-Neustart.
+#
+# _STAND_BEIM_START haelt fest, wie die Datei aussah, ALS dieser Prozess
+# sie las. serverstand() liest sie erneut und vergleicht. Weichen die
+# beiden ab, ist der Prozess veraltet - und das steht dann dort, statt
+# aus einer Folgemeldung erraten zu werden.
+
+
+def _fingerabdruck(pfad: pathlib.Path) -> str:
+    """Kurzer Abdruck des Dateiinhalts. Acht Stellen reichen: es geht um
+    gleich oder ungleich, nicht um Faelschungssicherheit."""
+    import hashlib
+    return hashlib.sha256(pfad.read_bytes()).hexdigest()[:8]
+
+
+_DATEI = pathlib.Path(__file__).resolve()
+_STAND_BEIM_START = _fingerabdruck(_DATEI)
+
+
 server = MCPServer(
     "velocity-wawi",
     instructions=(
@@ -236,6 +267,61 @@ def sichten_auflisten() -> str:
     gehören in sicht_lesen.
     """
     return "\n".join(f"{name:36} {zweck}" for name, zweck in SICHTEN.items())
+
+
+@server.tool()
+def serverstand() -> str:
+    """Sagt, welche Fassung dieses Servers gerade laeuft.
+
+    Zuerst aufrufen, wenn ein Werkzeug mit "Could not find the function"
+    oder mit fehlenden Parametern scheitert. Die Meldung kommt dann von
+    PostgREST und zeigt scheinbar auf die Datenbank — die haeufigere
+    Ursache ist aber ein Prozess, der eine aeltere Fassung dieser Datei
+    geladen hat.
+
+    Der Abgleich gegen das Repo: tools/mcp_check.py nennt denselben
+    Abdruck fuer die Datei auf der Platte.
+    """
+    jetzt = _fingerabdruck(_DATEI)
+    veraltet = jetzt != _STAND_BEIM_START
+    zeit = time.strftime("%Y-%m-%d %H:%M", time.localtime(_DATEI.stat().st_mtime))
+
+    zeilen = [
+        f"Datei            {_DATEI}",
+        f"geladen als      {_STAND_BEIM_START}",
+        f"auf der Platte   {jetzt}   (zuletzt geaendert {zeit})",
+        "",
+    ]
+    if veraltet:
+        zeilen += [
+            "VERALTET. Dieser Prozess laeuft mit einer aelteren Fassung, als",
+            "auf der Platte liegt. Claude Desktop neu starten (oder den",
+            "Verbinder aus- und wieder einschalten) - dann liest er die Datei",
+            "erneut. Bis dahin koennen Werkzeuge Parameter schicken, die die",
+            "Datenbankfunktion nicht mehr hat, oder welche vermissen lassen.",
+            "",
+        ]
+    else:
+        zeilen += ["Aktuell. Der Prozess laeuft mit der Fassung, die auf der "
+                   "Platte liegt.", ""]
+
+    # Was dieser Prozess TATSAECHLICH senden wuerde - unabhaengig davon,
+    # was im Repo steht. Bei einem veralteten Prozess ist genau das die
+    # Liste, die gegen die Datenbanksignatur zu halten ist.
+    import inspect
+    zeilen.append("Parameter, die dieser Prozess je Schreibwerkzeug sendet:")
+    for name, obj in sorted(globals().items()):
+        if not callable(obj) or name.startswith("_"):
+            continue
+        try:
+            quelle = inspect.getsource(obj)
+        except (OSError, TypeError):
+            continue
+        if "_rpc(" not in quelle:
+            continue
+        args = ", ".join(p for p in inspect.signature(obj).parameters)
+        zeilen.append(f"  {name:38} {args}")
+    return "\n".join(zeilen)
 
 
 @server.tool()

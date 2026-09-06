@@ -28,6 +28,49 @@ from thws import (  # noqa: E402
 )
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
+
+
+def _serverkennzahlen() -> dict[str, int]:
+    """Zaehlt mcp/server.py aus, statt die Zahlen hier zu fuehren.
+
+    Am 06.09.2026 standen auf dieser Folie "20 Werkzeuge: 4 lesend, 16
+    aendernd" und "486 Zeilen Python". Beim Nachmessen war die Zeilenzahl
+    laengst 603 und stieg im selben Lauf auf 690, und die Werkzeugzahl
+    wurde durch ein neues Werkzeug falsch. Eine Zahl ueber fremden Code,
+    die von Hand hier steht, veraltet - dieses Projekt hat das an einem
+    Tag elfmal erlebt.
+
+    Getrennt wird ueber den Syntaxbaum, nicht ueber Textsuche: ein
+    Werkzeug gilt als aendernd, wenn es _rpc() tatsaechlich AUFRUFT. Beim
+    ersten Versuch habe ich auf die Zeichenkette "_rpc(" geprueft und
+    serverstand() faelschlich als aendernd gezaehlt, weil dessen Quelltext
+    diese Zeichenkette in einem Vergleich fuehrt.
+    """
+    import ast
+    quelle = (WURZEL / "mcp" / "server.py").read_text(encoding="utf-8")
+    baum = ast.parse(quelle)
+    lesend = aendernd = 0
+    for knoten in baum.body:
+        if not isinstance(knoten, ast.FunctionDef):
+            continue
+        if not any(isinstance(d, ast.Call) and getattr(d.func, "attr", "") == "tool"
+                   for d in knoten.decorator_list):
+            continue
+        ruft_rpc = any(isinstance(n, ast.Call) and getattr(n.func, "id", "") == "_rpc"
+                       for n in ast.walk(knoten))
+        if ruft_rpc:
+            aendernd += 1
+        else:
+            lesend += 1
+    zeilen = quelle.count("\n") + 1
+    begruendung = sum(1 for z in quelle.splitlines() if z.strip().startswith("#"))
+    begruendung += sum(
+        len(ast.get_docstring(n).splitlines())
+        for n in ast.walk(baum)
+        if isinstance(n, (ast.Module, ast.ClassDef, ast.FunctionDef))
+        and ast.get_docstring(n))
+    return {"lesend": lesend, "aendernd": aendernd, "werkzeuge": lesend + aendernd,
+            "zeilen": zeilen, "anteil_begruendung": round(100 * begruendung / zeilen)}
 ASSETS = WURZEL / "slides" / "assets"
 # Dieselbe Vorlage wie das grosse Deck, aus build_deck.py bezogen statt
 # ein zweites Mal eingetragen: Ein Pfad an zwei Stellen ist ein Pfad,
@@ -95,6 +138,7 @@ def baue() -> Presentation:
               "Die Anbindung kostete kein neues Schema, keine neue Tabelle und kein neues "
               "Recht. Der Aufwand lag daneben: ein Konto, ein Programm, ein Rückweg und "
               "eine Prüfung, die das Ganze grün hält.")
+    _k = _serverkennzahlen()
     kachelreihe(s, [
         ("Am Modell: nichts", [
             "kein neues Schema",
@@ -110,8 +154,10 @@ def baue() -> Presentation:
             "eine Prüfung gegen den Systemkatalog",
         ]),
         ("Was messbar entstand", [
-            "20 Werkzeuge: 4 lesend, 16 ändernd",
-            "486 Zeilen Python, davon ein Fünftel Begründung",
+            f"{_k['werkzeuge']} Werkzeuge: {_k['lesend']} lesend, "
+            f"{_k['aendernd']} ändernd",
+            f"{_k['zeilen']} Zeilen Python, davon "
+            f"{_k['anteil_begruendung']} % Begründung",
             "5 api_-Funktionen bewusst ausgelassen",
             "0 Zeilen Rechteprüfung im Programm",
         ]),
