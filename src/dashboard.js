@@ -506,11 +506,26 @@ function fortschrittZeichnen(b) {
     kopf.append(stand, zielfeld);
     spur.append(wert);
 
-    const platz = document.createElement('p');
-    platz.className = 'rang-platz';
-    platz.textContent = `Platz ${b.rang_km} von ${b.kunden_gewertet}`;
+    /* DEN RANG NUR, WENN ES EINEN GIBT. v_meine_bilanz wertet aus, wer
+       mindestens eine abgeschlossene Fahrt hat - fuer ein frisches Konto
+       liefert sie gar keine Zeile, und dashboardZeichnen() ruft diese
+       Funktion dann mit { km_gesamt: 0 } auf, ohne rang_km und ohne
+       kunden_gewertet. Ohne diese Abfrage stand dort "Platz undefined
+       von undefined", und zwar bei jedem neu registrierten Konto.
 
-    ziel.replaceChildren(ueber, kopf, spur, text, platz);
+       Dieselbe Sorte Fehler hat diese Ansicht heute schon dreimal
+       getroffen: Konterfei, Abzeichen und Zeitraum lagen alle auf dem
+       Weg ohne Fahrten falsch. Gefunden wurde er hier nicht durch
+       Nachdenken, sondern durch Aufrufen des Zweiges im Browser. */
+    const teile = [ueber, kopf, spur, text];
+    if (b.rang_km && b.kunden_gewertet) {
+        const platz = document.createElement('p');
+        platz.className = 'rang-platz';
+        platz.textContent = `Platz ${b.rang_km} von ${b.kunden_gewertet}`;
+        teile.push(platz);
+    }
+
+    ziel.replaceChildren(...teile);
 }
 
 /* Die Zeitauswahl der Fahrtenliste, wie beim Verlauf darueber: eine
