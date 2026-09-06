@@ -172,13 +172,24 @@
 --  SOFORTBEDARF: WAS DER EINMALIGE AUFFUELLSCHRITT TUT UND WAS ER KOSTET
 --
 --  Der aelteste Monat (Januar 2025) traegt nur eine einzige Fahrt - zu
---  wenig fuer "10-15 Fahrten, kein Alibi". Diese Datei verschiebt daher
---  EINMALIG diese eine Fahrt (ueber die normale Rollfunktion, siehe
---  unten) UND legt zusaetzlich 12 neue, echte Fahrten fuer K-000001 im
---  laufenden Monat an (Ziel 13 Fahrten insgesamt - deutlich innerhalb
---  10-15, absichtlich nicht am Rand und absichtlich nicht auf 12
---  gesetzt, um keine zufaellige Verwechslung mit "12 Monate mit Fahrten"
---  nahezulegen). Diese 12 Fahrten sind ECHTE neue Zeilen (Start-/
+--  wenig. Diese Datei verschiebt daher EINMALIG diese eine Fahrt (ueber
+--  die normale Rollfunktion, siehe unten) UND fuellt den laufenden Monat
+--  mit echten neuen Fahrten auf.
+--
+--  DAS ZIEL IST DER EIGENE MEDIAN PLUS EINS, NICHT MEHR 13 (berichtigt
+--  06.09.2026). Zuerst stand hier die feste Zahl 13, aus der Vorgabe
+--  "ein voller Monat, 10-15". Das Ergebnis war im Dashboard sofort zu
+--  sehen und falsch: Clara faehrt im Median 3 Fahrten im Monat, ihr
+--  bester Monat hat 6. Mit 13 stand der Block "Dieser Monat" an jedem
+--  Anschlag - Balken voll, Medianmarke ganz links -, und zwar Monat fuer
+--  Monat, weil der Auffuellschritt das Ziel jedes Mal neu herstellt. Ein
+--  Vergleich, dessen Ergebnis von vornherein feststeht, zeigt nichts.
+--
+--  Median plus eins ergibt hier 4: sichtbar ueber der Marke, also ein
+--  guter Monat, aber deutlich unter dem Bestwert, also mit Luft nach
+--  oben. Die Zahl wird BERECHNET, nicht eingetragen - waechst Claras
+--  Bestand, waechst das Ziel mit, ohne dass jemand daran denken muss.
+--  Diese Fahrten sind ECHTE neue Zeilen (Start-/
 --  Zielstation aus Claras eigenem, bereits benutztem Stationsumfeld,
 --  Fahrraeder aus dem allgemeinen, aktuell verfuegbaren Bestand, Preise
 --  ueber velocity.fn_ausleihe_abrechnen - dieselbe Preislogik wie eine
@@ -203,7 +214,7 @@
 --
 --  Jene Datei friert flottenweite Summen ein (Zeilenzahlen, Kilometer-
 --  und CO2-Summen, Verfahrensverteilung ueber ALLE Kunden). Der einmalige
---  Auffuellschritt legt 12 neue, echte Fahrten an - die flottenweiten
+--  Auffuellschritt legt einige neue, echte Fahrten an - die flottenweiten
 --  Summen wachsen dadurch zwangslaeufig, waehrend das reine Verschieben
 --  (Rollfunktion) sie nachweislich (s.o.) nicht veraendert. t0025 wird
 --  deshalb NACH diesem Lauf neu gemessen und mit einem dritten Nachtrag
@@ -221,8 +232,9 @@
 --  und Befehl der bestehenden Zeile, legt keine zweite an) sind fuer sich
 --  wiederholbar. Der Ausfuehrungsblock ist es ueber zwei Wächter: die
 --  Rollfunktion tut nichts, wenn der laufende Monat fuer K-000001 schon
---  eine Fahrt traegt; der Auffuellschritt tut nichts, wenn danach schon
---  zehn oder mehr Fahrten im laufenden Monat stehen. Ein zweiter Lauf
+--  eine Fahrt traegt; der Auffuellschritt fuellt auf das berechnete Ziel
+--  auf, raeumt einen Ueberhang darueber ab und tut nichts, wenn der
+--  Monat genau auf dem Ziel steht. Ein zweiter Lauf
 --  dieser Datei im selben Kalendermonat aendert deshalb nichts mehr.
 --
 --  Aufruf (braucht supabase_admin, siehe oben):
@@ -399,6 +411,23 @@ $$;
 revoke all on function velocity.fn_demofahrten_rollieren()
   from public, anon, authenticated;
 
+-- UND SOFORT WIEDER AN postgres (ergaenzt 06.09.2026).
+--
+-- Der Cron-Eintrag unten laeuft unter der Rolle postgres
+-- (cron.schedule_in_database(..., 'postgres', 'postgres')). Diese Rolle
+-- hat in dieser Datenbank rolsuper = false und bezog ihr
+-- Ausfuehrungsrecht ausschliesslich ueber PUBLIC - der revoke daueber
+-- nimmt es ihr also mit. Ergebnis ohne diese Zeile: der Job liefe jeden
+-- Monatsersten an und bräche jedes Mal mit "permission denied for
+-- function fn_demofahrten_rollieren" ab, ohne dass irgendwo etwas
+-- auffiele. Nachgemessen, nicht vermutet: der Aufruf als postgres schlug
+-- am 06.09.2026 genau so fehl.
+--
+-- Der Eigentuemer ist supabase_admin (unter dieser Rolle laeuft die
+-- Datei), deshalb kann nur sie diesen grant vergeben - postgres selbst
+-- kann sich das Recht nicht geben.
+grant execute on function velocity.fn_demofahrten_rollieren() to postgres;
+
 -- Monatlich, 1. Kalendertag, 22:30 UTC - Begruendung der Uhrzeit siehe
 -- Kopfkommentar Punkt 3. username => 'postgres' statt der anlegenden
 -- Rolle supabase_admin - Begruendung siehe Kopfkommentar. Upsert-Semantik
@@ -412,20 +441,21 @@ select cron.schedule_in_database(
 );
 
 -- =======================================================================
--- Sofort-Auffuellschritt (einmalig): heutigen Rolllauf ausloesen und auf
--- 13 Fahrten im laufenden Monat auffuellen. Siehe Kopfkommentar,
+-- Sofort-Auffuellschritt: heutigen Rolllauf ausloesen und den laufenden
+-- Monat auf den eigenen Median plus eins auffuellen. Siehe Kopfkommentar,
 -- Abschnitt "SOFORTBEDARF".
 -- =======================================================================
 do $$
 declare
   c_kundennummer constant text    := 'K-000001';
-  c_ziel         constant integer := 13;  -- innerhalb 10-15, siehe Kopf
+  v_ziel         integer;         -- berechnet, siehe unten
   v_kunde_id     bigint;
   v_monat_neu    timestamptz := date_trunc('month', now());
   v_fenster_bis  timestamptz;
   v_mitgl_id     bigint;
   v_vorhandene   integer;
   v_fehlt        integer;
+  v_zuviel       integer;
   v_vor_max_id   bigint;
   v_neu_min_id   bigint;
   v_neu_max_id   bigint;
@@ -480,8 +510,22 @@ begin
    where kunde_id = v_kunde_id and status = 'abgeschlossen'
      and date_trunc('month', startzeit) = v_monat_neu;
 
-  if v_vorhandene < 10 then
-    v_fehlt := c_ziel - v_vorhandene;
+  -- Ziel aus den EIGENEN Vormonaten, nicht aus einer eingetragenen Zahl.
+  -- percentile_cont liefert double precision, deshalb der Cast vor ::int
+  -- (round(double precision, integer) kennt PostgreSQL nicht - derselbe
+  -- Fallstrick wie in 0025_kundenkennzahlen.sql). Ohne Vormonate bleibt
+  -- coalesce bei 0, das Ziel also bei 1: eine Fahrt ist immer noch
+  -- besser als ein leerer Block.
+  select coalesce(percentile_cont(0.5) within group (order by s.n), 0)::numeric::int + 1
+    into v_ziel
+    from (select count(*) as n
+            from velocity.ausleihe
+           where kunde_id = v_kunde_id and status = 'abgeschlossen'
+             and date_trunc('month', startzeit) <> v_monat_neu
+           group by date_trunc('month', startzeit)) s;
+
+  if v_vorhandene < v_ziel then
+    v_fehlt := v_ziel - v_vorhandene;
 
     v_fenster_bis := greatest(v_monat_neu,
                        least(now() - interval '2 hours',
@@ -556,8 +600,64 @@ begin
 
     raise notice 'Sofort-Auffuellschritt: % neue Fahrt(en) fuer % im laufenden Monat (%) angelegt',
       v_fehlt, c_kundennummer, to_char(v_monat_neu, 'YYYY-MM');
+  elsif v_vorhandene > v_ziel then
+    /* ---- Schritt 3: UEBERHANG ABRAEUMEN --------------------------------
+
+       Der Auffuellschritt kann auch zu viel vorfinden. Genau das war am
+       06.09.2026 der Fall: der erste Lauf dieser Datei arbeitete noch mit
+       dem festen Ziel 13 und legte zwoelf Fahrten an, obwohl Claras
+       Median bei drei liegt. Ohne diesen Zweig bliebe der Ueberhang fuer
+       immer stehen - der Auffuellschritt haette nichts zu tun und
+       schwiege, waehrend "Dieser Monat" weiter am Anschlag stuende.
+
+       VIER SCHRANKEN, und jede einzelne ist noetig:
+         - nur K-000001, der erfundene Demokunde dieser Datei,
+         - nur der laufende Monat,
+         - nur UNABGERECHNETE Fahrten. Eine Fahrt auf einer Rechnung zu
+           loeschen hiesse, eine Rechnungssumme zu faelschen.
+         - und nur die JUENGSTEN. offset v_ziel ueber "order by
+           ausleihe_id" laesst die aeltesten stehen - darunter die aus
+           einem Altmonat herbeigerollte Fahrt, die echte Geschichte
+           traegt. Weg kommen nur die zuletzt erzeugten.
+
+       Die Entgeltpositionen muessen zuerst weg (Fremdschluessel auf
+       ausleihe). Rechnung und Rechnungsposition bleiben unberuehrt -
+       genau das sichert die dritte Schranke. */
+    with ueberhang as (
+      select a.ausleihe_id
+        from velocity.ausleihe a
+       where a.kunde_id = v_kunde_id
+         and a.status = 'abgeschlossen'
+         and date_trunc('month', a.startzeit) = v_monat_neu
+         and not exists (select 1 from velocity.rechnungsposition rp
+                          where rp.ausleihe_id = a.ausleihe_id)
+       order by a.ausleihe_id
+      offset v_ziel
+    ), weg_ep as (
+      delete from velocity.entgeltposition
+       where ausleihe_id in (select ausleihe_id from ueberhang)
+      returning 1
+    )
+    delete from velocity.ausleihe
+     where ausleihe_id in (select ausleihe_id from ueberhang);
+    get diagnostics v_zuviel = row_count;
+
+    -- Gegenprobe: steht der Monat danach wirklich auf dem Ziel? Wenn
+    -- nicht, war eine der Schranken im Weg (etwa lauter abgerechnete
+    -- Fahrten) - dann bricht der Block ab, statt still danebenzuliegen.
+    select count(*) into v_vorhandene
+      from velocity.ausleihe
+     where kunde_id = v_kunde_id and status = 'abgeschlossen'
+       and date_trunc('month', startzeit) = v_monat_neu;
+    if v_vorhandene <> v_ziel then
+      raise exception 'Ueberhang abgeraeumt, laufender Monat steht aber auf % statt %',
+        v_vorhandene, v_ziel;
+    end if;
+
+    raise notice 'Ueberhang abgeraeumt: % Fahrt(en) entfernt, laufender Monat (%) steht auf % (Ziel %)',
+      v_zuviel, to_char(v_monat_neu, 'YYYY-MM'), v_vorhandene, v_ziel;
   else
-    raise notice 'Sofort-Auffuellschritt uebersprungen: laufender Monat hat bereits % Fahrten',
+    raise notice 'Auffuellschritt uebersprungen: laufender Monat hat % Fahrten, genau das Ziel',
       v_vorhandene;
   end if;
 
