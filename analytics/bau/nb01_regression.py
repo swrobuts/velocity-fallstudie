@@ -427,6 +427,14 @@ Die Startstation allein verbessert wenig. Der große Sprung entsteht erst mit de
 App-Logik: erst fragen, wohin es geht, dann schätzen. Ob das auch für ein richtiges
 Modell gilt, prüfen wir in Phase 4 mit einer Ablation — der Vergleich zweier
 Nachschlagetabellen ist dafür kein Beweis.
+
+> **Ablation** heißt: ein Merkmal wegnehmen und messen, was fehlt. Dasselbe Modell wird
+> zweimal gerechnet — einmal vollständig, einmal ohne die eine Sache, deren Wert man
+> wissen will —, und die Differenz der Güte ist ihr Beitrag. Alles andere bleibt gleich:
+> dieselben Daten, dieselbe Aufteilung, dasselbe Verfahren. Nur so ist der Unterschied
+> dieser einen Sache zuzuschreiben und nicht dem Verfahren. Der Begriff stammt aus der
+> Medizin, wo Ablation das Entfernen von Gewebe bezeichnet — man lernt, wozu ein Teil
+> gut war, indem man es herausnimmt.
 """),
 
 CODE("""

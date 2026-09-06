@@ -911,6 +911,12 @@ Rädern, die gerade auffällig geworden sind.
 **Wie groß dieser Effekt ist, wird gemessen und nicht begründet.** Die
 nächste Zelle rechnet dieselbe Faustregel zweimal — einmal mit jedem Rücksetzzeitpunkt,
 auf demselben Datenstand:
+
+> **Ablation** heißt: eine Sache wegnehmen oder austauschen und messen, was sich ändert.
+> Alles andere bleibt gleich, damit der Unterschied dieser einen Sache zuzuschreiben ist.
+> In Notebook 1 wird so ein Merkmal geprüft; hier ist es eine **Entscheidung** — wann der
+> Kilometerzähler zurückfällt. Das Vorgehen ist dasselbe, und der Nutzen auch: Eine
+> Begründung, die niemand nachgerechnet hat, ist eine Vermutung.
 """),
 
 CODE('''
