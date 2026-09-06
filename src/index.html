@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=4b72c2ea">
+    <link rel="stylesheet" href="style.css?v=0ec4b9dd">
 </head>
 <body>
 
@@ -577,9 +577,17 @@
              1/-1), verhinderte es dort das Zusammenfallen der ungenutzten
              Spalten und zwang alle vier Kacheln auf Minimalbreite. -->
         <p id="dashboard-bilanz-hinweis" class="bilanz-hinweis" hidden></p>
-        <div id="dashboard-ringe" class="dashboard-block"></div>
+        <!-- EINE Karte fuer zwei Blicke auf dasselbe: "Dieser Monat"
+             zeigt den laufenden Monat gegen den eigenen Median, der
+             Fortschritt den Gesamtstand gegen die naechste Stufe. Beide
+             beantworten "wie stehe ich gerade da" - getrennt in zwei
+             Karten standen sie mit viel Leerraum untereinander und
+             wirkten wie zwei Themen. -->
+        <div class="dashboard-block status-karte">
+          <div id="dashboard-ringe" class="status-teil"></div>
+          <div id="dashboard-fortschritt" class="status-teil"></div>
+        </div>
         <div id="dashboard-verlauf" class="dashboard-block"></div>
-        <div id="dashboard-fortschritt" class="dashboard-block"></div>
         <div id="dashboard-fahrten" class="dashboard-block"></div>
     </div>
 </section>

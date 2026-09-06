@@ -1555,6 +1555,47 @@ footer :focus-visible, .product-tabs :focus-visible,
    Breitenregel hier. */
 .dashboard { padding: var(--luft) 0; background: var(--paper); }
 
+/* EIGENE, DEUTLICH SCHMALERE SPUR ALS DER REST DER SEITE.
+   --spur ist 1840px - richtig fuer eine Startseite mit grossen Bildern,
+   falsch fuer eine Uebersicht aus Zahlen. Auf einem breiten Schirm zog
+   sie die Kacheln und Balken ueber fast zwei Meter Bildschirm
+   auseinander; der Auftraggeber nannte das Cockpit "viel zu breit".
+   Eine Zahl gewinnt nichts dadurch, dass mehr Weiss neben ihr steht.
+   1080px sind breit genug fuer die Monatsbalken samt Beschriftung und
+   schmal genug, dass der Blick nicht wandern muss. */
+.dashboard .container { max-width: 1080px; }
+
+/* ZWEI BLICKE, EINE KARTE: "Dieser Monat" (laufender Monat gegen den
+   eigenen Median) und "Fortschritt" (Gesamtstand gegen die naechste
+   Stufe) beantworten beide die Frage "wie stehe ich gerade da". Als
+   getrennte Karten standen sie mit viel Leerraum untereinander und
+   sahen nach zwei Themen aus.
+
+   auto-fit statt zweier fester Spalten: faellt einer der beiden Teile
+   weg - die Ringe erscheinen nicht, solange der laufende Monat keine
+   Fahrt hat -, nimmt der verbleibende die ganze Breite ein, statt eine
+   leere Haelfte stehen zu lassen. */
+.status-karte {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--a5) var(--a6);
+  align-items: start;
+}
+/* Ein leerer Teil darf keine Spur belegen - sonst bleibt eine halbe
+   Karte weiss stehen, wenn der laufende Monat noch keine Fahrt hat.
+   #dashboard-ringe ist HIER MIT AUFGEFUEHRT, und zwar notwendigerweise:
+   jene Regel setzt display:flex ueber einen ID-Selektor (1,0,0) und
+   schlaegt damit jedes Klassen-Selektor-Paar (0,2,0). Ohne den Zusatz
+   griffe diese Zeile nie - im Browser gemessen, nicht vermutet. */
+.status-teil:empty,
+#dashboard-ringe:empty,
+#dashboard-fortschritt:empty { display: none; }
+/* Und die Karte selbst verschwindet, wenn beide Teile leer sind - sonst
+   staende dort ein weisser Kasten ohne Inhalt. .dashboard-block:not(:empty)
+   greift hier nicht: der Behaelter hat immer zwei Kindelemente, auch wenn
+   die nichts enthalten. */
+.status-karte:not(:has(> .status-teil:not(:empty))) { display: none; }
+
 /* Rueckweg aus der Kontoansicht. Ein ganz normaler Anker auf #top
    (<main id="top">) - kein Klick-Handler noetig, das ist genau der Fall,
    fuer den <a href> erfunden wurde. Der Browser-Zurueck-Knopf UND der
