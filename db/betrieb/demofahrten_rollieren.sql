@@ -109,6 +109,14 @@
 --     neuen Zeitstempel auf "now() minus 2 Stunden" (Puffer fuer die
 --     eigene Fahrtdauer) - unabhaengig von der Tageszeit des Laufs kann
 --     also nie eine zukuenftige Endzeit entstehen.
+--  3b. KEIN Testjob nebenher. In cron.job stand bis zum 06.09.2026 ein
+--  zweiter Eintrag "velo_test_job" mit dem Befehl "select 2;", taeglich
+--  um 4:07 - ein Ueberbleibsel vom Ausprobieren der Erweiterung, das in
+--  keiner Datei dieses Repos vorkam. Harmlos, aber nach drei Wochen
+--  weiss niemand mehr, woher er kommt. Entfernt mit
+--  select cron.unschedule('velo_test_job'); seither ist
+--  demofahrten_rollieren der einzige Eintrag.
+--
 --  4. KEIN hartkodiertes kunde_id. Die Funktion schlaegt kundennummer
 --     'K-000001' bei jedem Lauf neu nach - der Ersatzschluessel kunde_id
 --     (bigint generated always as identity) ist eine Umgebungseigenschaft,
@@ -283,6 +291,8 @@ declare
   v_neu_start    timestamptz;
   v_neu_ende     timestamptz;
   v_gezaehlt     integer := 0;
+  v_uebersprungen integer := 0;
+  v_dauer        interval;
   v_r            record;
 begin
   select kunde_id into v_kunde_id from velocity.kunde where kundennummer = c_kundennummer;
@@ -369,12 +379,47 @@ begin
     -- ausserhalb des sicheren Fensters erzeugen koennte.
     v_anteil := extract(epoch from (v_r.startzeit - v_alt_monat))
               / extract(epoch from ((v_alt_monat + interval '1 month') - v_alt_monat));
-    v_neu_start := v_monat_neu + v_anteil * (v_fenster_bis - v_monat_neu);
+    v_dauer := v_r.endzeit - v_r.startzeit;
+
+    /* ---- DER DECKEL AUF DIE ENDZEIT (ergaenzt 06.09.2026) -----------
+
+       Hier stand nur die Zeile mit v_anteil, und die Endzeit ergab sich
+       ungeprueft daraus. Getragen hat das allein der feste Puffer von
+       zwei Stunden in v_fenster_bis - eine Konstante gegen eine
+       Fahrtdauer, die keine Obergrenze hat. Eine Fahrt von mehr als zwei
+       Stunden am Fensterende haette eine Endzeit in der ZUKUNFT bekommen,
+       und genau die nennt der Kopf dieser Datei einen "sofort sichtbaren
+       Widerspruch".
+
+       Heute greift der Fall nicht: Claras laengste unabgerechnete Fahrt
+       dauert 57 Minuten (nachgemessen am 06.09.2026). Der Job laeuft aber
+       unbeaufsichtigt weiter, und der Auffuellschritt derselben Datei
+       deckelt laengst - er rechnet "v_fenster_bis - dauer". Diese
+       Ungleichbehandlung war der eigentliche Befund.
+
+       Der Deckel zieht den START so weit vor, dass das ENDE spaetestens
+       auf v_fenster_bis faellt. greatest() haelt ihn zugleich hinter dem
+       Monatsanfang - eine Fahrt darf nicht in den Vormonat rutschen. */
+    v_neu_start := least(v_monat_neu + v_anteil * (v_fenster_bis - v_monat_neu),
+                         v_fenster_bis - v_dauer);
+    v_neu_start := greatest(v_neu_start, v_monat_neu);
+
+    /* Passt eine Fahrt selbst dann nicht, ist sie laenger als das ganze
+       Fenster. Dann bleibt sie, wo sie ist. Sie zu verschieben hiesse,
+       die Zukunft zu erzeugen; sie stillschweigend zu kappen hiesse, die
+       Dauer zu faelschen und damit auch die daraus geschaetzten
+       Kilometer. Beides waere schlimmer als eine Fahrt, die im Altmonat
+       stehen bleibt - und die Notiz unten sagt es. */
+    if v_neu_start + v_dauer > v_fenster_bis then
+      v_uebersprungen := v_uebersprungen + 1;
+      continue;
+    end if;
+
     -- endzeit um GENAU dasselbe Intervall verschieben wie startzeit -
     -- nicht neu berechnen. Das haelt dauer_minuten (generated column)
     -- und damit jede dauerbasierte Kilometerschaetzung unveraendert,
     -- siehe Kopfkommentar.
-    v_neu_ende := v_neu_start + (v_r.endzeit - v_r.startzeit);
+    v_neu_ende := v_neu_start + v_dauer;
 
     update velocity.ausleihe
        set startzeit = v_neu_start, endzeit = v_neu_ende
@@ -384,6 +429,11 @@ begin
 
   raise notice 'fn_demofahrten_rollieren: % - % Fahrt(en) aus % in den laufenden Monat (%) verschoben',
     c_kundennummer, v_gezaehlt, to_char(v_alt_monat, 'YYYY-MM'), to_char(v_monat_neu, 'YYYY-MM');
+  if v_uebersprungen > 0 then
+    raise notice 'fn_demofahrten_rollieren: % Fahrt(en) blieben stehen - laenger als das '
+                 'Zeitfenster bis %. Sie zu verschieben haette eine Endzeit in der Zukunft '
+                 'erzeugt.', v_uebersprungen, to_char(v_fenster_bis, 'YYYY-MM-DD HH24:MI');
+  end if;
 end;
 $$;
 
