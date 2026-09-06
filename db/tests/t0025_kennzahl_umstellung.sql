@@ -140,6 +140,48 @@ set search_path = velocity_test, velocity, extensions, public;
 -- nur einer dieser Fahrten dadurch ganz aus der Gruppierung faellt.
 -- 49488.23 - 49460.85 = 27,38 km - genau die Summe der neun Fahrten.
 -- ---------------------------------------------------------------------
+-- ---------------------------------------------------------------------
+-- NACHTRAG 06.09.2026, DRITTER AM SELBEN TAG: ZWEI ECHTE TESTFAHRTEN
+--
+-- Diesmal kein Umbau und kein Job, sondern der Klickdurchlauf der
+-- Abnahme: Der offene Punkt "angemeldeter Ablauf" (Registrierung,
+-- Anmeldung, Ausleihe starten und beenden) wurde an der
+-- veroeffentlichten Seite nachgeholt. Dabei sind zwei ECHTE Fahrten von
+-- K-000001 entstanden und regulaer abgerechnet worden:
+--
+--   #128519  CB-00311  Hauptbahnhof -> Dom,  8 Min, 0,90 EUR
+--   #128520  CB-00010  Grombuehl Klinikum, 16 Sek, 0,20 EUR
+--
+-- Beide ohne gemeldete Distanz - das Schloss meldete nichts, die Sicht
+-- schaetzte aus der Luftlinie. Genau deshalb verschiebt sich auch die
+-- Verfahrensverteilung: aus_dauer und aus_luftlinie bekommen je eine
+-- Fahrt dazu, gemessen bleibt unveraendert.
+--
+-- Die Fahrten BLEIBEN STEHEN. Sie sind nicht falsch, sondern der Beleg,
+-- dass der Ablauf funktioniert; sie zu loeschen hiesse, den Nachweis
+-- wegzuraeumen. Die eingefrorenen Werte werden deshalb nachgezogen -
+-- wie es der Kopf dieser Datei verlangt: verstanden, nicht nur
+-- beobachtet.
+--
+--   ALT (nach dem Abraeumen des Ueberhangs, selben Tags):
+--     v_wawi_km_co2              48 Zeilen, 49461.0 km, 6543.86 kg CO2, 12055 Fahrten
+--     v_wawi_fahrt_km             12055 Zeilen, 49460.85 km
+--     v_wawi_fahrten_je_tag_rad   12055 Zeilen, 49460.85 km
+--     Verfahren                   aus_dauer 1140, aus_luftlinie 3689, gemessen 7226
+--
+--   NEU (aus dem Testlauf abgelesen, nicht gerechnet):
+--     v_wawi_km_co2              48 Zeilen, 49462.4 km, 6544.05 kg CO2, 12057 Fahrten
+--     v_wawi_fahrt_km             12057 Zeilen, 49462.24 km
+--     v_wawi_fahrten_je_tag_rad   12057 Zeilen, 49462.24 km
+--     Verfahren                   aus_dauer 1141, aus_luftlinie 3690, gemessen 7226
+--
+-- Die Differenz geht auf: 12057 - 12055 = 2 Fahrten, eine je Verfahren,
+-- gemessen unveraendert. 49462.24 - 49460.85 = 1,39 km - die geschaetzte
+-- Strecke der beiden Fahrten (1,17 km aus der Luftlinie Hauptbahnhof-Dom
+-- und 0,22 km aus der Dauer der 16-Sekunden-Fahrt). Die Zeilenzahl von
+-- v_wawi_km_co2 bleibt bei 48: beide Fahrten fallen in einen Monat, den
+-- es dort schon gibt.
+-- ---------------------------------------------------------------------
 create or replace function velocity_test.test_um_kennzahlen_unveraendert()
 returns setof text language plpgsql as $$
 declare
@@ -159,26 +201,26 @@ begin
 
   return next is(v_zeilen, 48::bigint,
                  'v_wawi_km_co2 hat 48 Zeilen nach demofahrten_rollieren.sql vom 06.09.2026');
-  return next is(v_km, 49461.0::numeric,
-                 'v_wawi_km_co2 summiert 49461.0 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
-  return next is(v_co2, 6543.86::numeric,
-                 'v_wawi_km_co2 summiert 6543.86 kg CO2 nach demofahrten_rollieren.sql vom 06.09.2026');
-  return next is(v_fahrten, 12055::bigint,
-                 'v_wawi_km_co2 zaehlt 12055 Fahrten nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_km, 49462.4::numeric,
+                 'v_wawi_km_co2 summiert 49462.4 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_co2, 6544.05::numeric,
+                 'v_wawi_km_co2 summiert 6544.05 kg CO2 nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_fahrten, 12057::bigint,
+                 'v_wawi_km_co2 zaehlt 12057 Fahrten nach demofahrten_rollieren.sql vom 06.09.2026');
 
   select count(*), round(sum(kilometer), 2) into v_zeilen, v_km
     from velocity.v_wawi_fahrt_km;
-  return next is(v_zeilen, 12055::bigint,
-                 'v_wawi_fahrt_km hat 12055 Zeilen nach demofahrten_rollieren.sql vom 06.09.2026');
-  return next is(v_km, 49460.85::numeric,
-                 'v_wawi_fahrt_km summiert 49460.85 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_zeilen, 12057::bigint,
+                 'v_wawi_fahrt_km hat 12057 Zeilen nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_km, 49462.24::numeric,
+                 'v_wawi_fahrt_km summiert 49462.24 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
 
   select count(*), round(sum(kilometer), 2) into v_zeilen, v_km
     from velocity.v_wawi_fahrten_je_tag_rad;
-  return next is(v_zeilen, 12055::bigint,
-                 'v_wawi_fahrten_je_tag_rad hat 12055 Zeilen nach demofahrten_rollieren.sql vom 06.09.2026');
-  return next is(v_km, 49460.85::numeric,
-                 'v_wawi_fahrten_je_tag_rad summiert 49460.85 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_zeilen, 12057::bigint,
+                 'v_wawi_fahrten_je_tag_rad hat 12057 Zeilen nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_km, 49462.24::numeric,
+                 'v_wawi_fahrten_je_tag_rad summiert 49462.24 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
 end;
 $$;
 
@@ -205,8 +247,8 @@ begin
   return next results_eq(
     $sql$select verfahren, count(*)::bigint
            from velocity.v_wawi_fahrt_km group by verfahren order by verfahren$sql$,
-    $sql$values ('aus_dauer'::text, 1140::bigint),
-                ('aus_luftlinie'::text, 3689::bigint),
+    $sql$values ('aus_dauer'::text, 1141::bigint),
+                ('aus_luftlinie'::text, 3690::bigint),
                 ('gemessen'::text, 7226::bigint)$sql$,
     'Die Verteilung auf die drei Schaetzverfahren nach demofahrten_rollieren.sql vom 06.09.2026');
 end;
