@@ -398,7 +398,10 @@ erledigten Reparatur") hier nicht abschreiben ließ; kurz gefasst:
   Typs geteilt — die Rangfolge entsteht damit innerhalb des Typs.
 - Eine einzige nicht beendete Ausleihe kippt die Liste. Ein Rad stand mit
   6.435 Minuten auf Platz 1, davon 5.422 aus **einer** Fahrt über 90
-  Stunden. Jede Fahrt zählt deshalb höchstens 300 Minuten mit.
+  Stunden. Jede Fahrt zählt deshalb höchstens 300 Minuten mit — der Wert
+  steht seit dem 05.09.2026 nicht mehr als Zahl in der Funktion, sondern
+  als Rechenannahme `fahrt_deckel_minuten_wartung` in
+  `velocity.rechenannahme`, mit Einheit, Quelle und Gültigkeit.
 
 Drei Punkte, die didaktisch mehr wert sind als eine Liste, die auf Anhieb
 gestimmt hätte: Ein Verfahren, das auf einem Datensatz trägt, trägt nicht

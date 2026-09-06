@@ -55,8 +55,11 @@
 -- EB-00447 stand mit 6.435 Minuten auf Platz 1 - davon 5.422 aus EINER
 -- Fahrt ueber 90 Stunden, bei sonst 50 bis 59 Minuten. In der ganzen
 -- Flotte gibt es nur zwei Fahrten ueber 300 Minuten. Jede Fahrt wird
--- deshalb bei FAHRT_DECKEL_MINUTEN gekappt: Was laenger dauert, ist ein
--- Buchungsproblem und kein Verschleiss. EB-00447 steht danach auf 52.
+-- deshalb gekappt: Was laenger dauert, ist ein Buchungsproblem und kein
+-- Verschleiss. EB-00447 steht danach auf 52. Der Deckel selbst steht
+-- nicht in dieser Datei, sondern als Rechenannahme
+-- fahrt_deckel_minuten_wartung in velocity.rechenannahme (0016) - dort
+-- mit Einheit, Quelle und Gueltigkeit statt als blosse Zahl im Rumpf.
 --
 -- ---------------------------------------------------------------------
 -- WAS DIESE LISTE NICHT IST
@@ -124,7 +127,7 @@ comment on table velocity.wartungsprognose is
 comment on column velocity.wartungsprognose.stichtag is 'Tag, für den die Liste gerechnet wurde. Zusammen mit rang bzw. fahrrad_id eindeutig.';
 comment on column velocity.wartungsprognose.rang is 'Platz auf der Liste, 1 = zuerst prüfen. Ergibt sich aus nutzungsquote, absteigend.';
 comment on column velocity.wartungsprognose.nutzungsquote is 'Der Rangwert: Fahrminuten seit der letzten Reparatur, geteilt durch den Median des Radtyps. 1,4 heißt "40 % mehr gearbeitet als ein durchschnittliches Rad seiner Art". Ohne diese Normierung rangiert die Liste den Typ statt das Rad, siehe Kopfkommentar.';
-comment on column velocity.wartungsprognose.fahrminuten_seit_reparatur is 'Summe der Fahrminuten seit der letzten ERLEDIGTEN Reparatur, je Fahrt bei 300 Minuten gekappt. Nicht seit der Meldung: zwischen Meldung und Reparatur wird weitergefahren, und diese Zeit geht auf das alte Bauteil.';
+comment on column velocity.wartungsprognose.fahrminuten_seit_reparatur is 'Summe der Fahrminuten seit der letzten ERLEDIGTEN Reparatur, je Fahrt gekappt auf die Rechenannahme fahrt_deckel_minuten_wartung. Nicht seit der Meldung: zwischen Meldung und Reparatur wird weitergefahren, und diese Zeit geht auf das alte Bauteil.';
 comment on column velocity.wartungsprognose.typ_median_minuten is 'Der Nenner der nutzungsquote: Median derselben Größe über alle Räder dieses Typs. Mitgespeichert, damit die Quote später nachrechenbar bleibt.';
 comment on column velocity.wartungsprognose.km_gemessen is 'Gemessene Kilometer im selben Zeitraum - Zusatzangabe, nicht der Rangwert. Unvollständig, deshalb steht anteil_mit_distanz daneben.';
 comment on column velocity.wartungsprognose.anteil_mit_distanz is 'Anteil der Fahrten seit der letzten Reparatur, die eine Strecke gemeldet haben. Sagt, wieviel km_gemessen wert ist.';
@@ -161,7 +164,28 @@ returns table (
 language sql
 stable
 as $$
-with kappe as (select 300::numeric as fahrt_deckel_minuten),
+-- Der Deckel steht NICHT hier, sondern als Zeile in
+-- velocity.rechenannahme (0016) - mit Einheit, Quelle und Gueltigkeit.
+-- Gelesen wird er ZUM STICHTAG, und das ist kein Zierrat: Wer eine
+-- eingefrorene Liste spaeter nachrechnet, muss dieselbe Zahl bekommen,
+-- die an ihrem Stichtag galt. Stuende der Deckel im Rumpf, lieferte die
+-- Funktion nach einer Aenderung fuer JEDEN Stichtag den neuen Wert -
+-- auch fuer laengst vergangene. Ueber gueltigkeit behaelt ein alter
+-- Stichtag den Deckel, der an ihm galt.
+--
+-- Kein left join, anders als bei den CO2-Annahmen in 0018. Fehlte die
+-- Zeile, waere fahrt_deckel_minuten null - und least(dauer, null)
+-- liefert die DAUER, weil least NULL-Werte ueberspringt. Aus einer
+-- fehlenden Annahme wuerde damit still eine UNGEDECKELTE Rangfolge,
+-- also genau die kaputte Liste, gegen die der Deckel eingefuehrt
+-- wurde. So kommt stattdessen gar keine Liste heraus; eine leere Liste
+-- faellt auf, eine falsch sortierte nicht. Siehe
+-- test_wp_ohne_deckelannahme_keine_liste in t0021.
+with kappe as (
+    select r.wert as fahrt_deckel_minuten
+      from velocity.rechenannahme r
+     where r.code = 'fahrt_deckel_minuten_wartung'
+       and r.gueltigkeit @> p_stichtag),
 letzte_rep as (
     -- Nur ERLEDIGTE Auftraege, und nur solche, die am Stichtag schon
     -- erledigt WAREN. Ein Auftrag, der spaeter fertig wird, darf die
@@ -387,7 +411,7 @@ comment on column velocity.v_wawi_wartungsprognose.typ is 'Ausgeschriebener Name
 comment on column velocity.v_wawi_wartungsprognose.radstatus is 'Heutiger Status des Rades - kann sich seit dem Stichtag geändert haben.';
 comment on column velocity.v_wawi_wartungsprognose.standort is 'Station, an der das Rad zuletzt stand. NULL, wenn es frei abgestellt wurde.';
 comment on column velocity.v_wawi_wartungsprognose.nutzungsquote is 'Der Rangwert: Fahrminuten seit der Reparatur, geteilt durch den Median des Radtyps.';
-comment on column velocity.v_wawi_wartungsprognose.fahrminuten_seit_reparatur is 'Der Zähler der Quote, je Fahrt bei 300 Minuten gekappt.';
+comment on column velocity.v_wawi_wartungsprognose.fahrminuten_seit_reparatur is 'Der Zähler der Quote, je Fahrt gekappt auf die Rechenannahme fahrt_deckel_minuten_wartung.';
 comment on column velocity.v_wawi_wartungsprognose.typ_median_minuten is 'Der Nenner der Quote.';
 comment on column velocity.v_wawi_wartungsprognose.fahrten_seit_reparatur is 'Auf wievielen Fahrten die Minuten beruhen.';
 comment on column velocity.v_wawi_wartungsprognose.fahrminuten_180 is 'Fahrminuten der letzten 180 Tage.';

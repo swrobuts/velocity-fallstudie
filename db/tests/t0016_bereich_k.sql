@@ -209,11 +209,27 @@ begin
   -- max_fahrzeit_je_tag kam am 05.09.2026 dazu: Tagesdeckel fuer den
   -- dritten Fall der Kilometer-Herleitung in velocity.v_fahrt_kennzahl
   -- (db/aufbau/0018_wawi_sichten.sql), siehe dort fuer die Begruendung.
+  -- fahrt_deckel_minuten_wartung kam am 05.09.2026 dazu: Obergrenze der
+  -- Fahrzeit EINER Fahrt in velocity.fn_wartungsprognose
+  -- (db/aufbau/0021_wartungsprognose.sql). Bis dahin stand die Zahl als
+  -- blosse 300 im Rumpf der Funktion - ohne Einheit, ohne Quelle, ohne
+  -- Gueltigkeit und nur durch Aendern von SQL zu bewegen.
   return next results_eq(
     $q$ select code from velocity.rechenannahme where upper_inf(gueltigkeit) order by code $q$,
-    $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),('max_fahrzeit_je_tag'),
+    $q$ values ('co2_ebike'),('co2_pkw'),('co2_rad'),
+              ('fahrt_deckel_minuten_wartung'),('max_fahrzeit_je_tag'),
               ('reisegeschwindigkeit'),('umwegfaktor') $q$,
-    'Alle sechs Rechenannahmen haben eine laufende Periode');
+    'Alle sieben Rechenannahmen haben eine laufende Periode');
+
+  -- Die Einheit ist hier keine Zierde. Zwei Annahmen deckeln Fahrzeit:
+  -- max_fahrzeit_je_tag in STUNDEN je Kalendertag, fahrt_deckel_minuten_wartung
+  -- in MINUTEN je Fahrt. Wer den einen Wert in die andere Rechnung
+  -- schriebe, bekaeme eine Liste, die plausibel aussieht und um den
+  -- Faktor 60 danebenliegt.
+  return next is(
+    (select einheit from velocity.rechenannahme
+      where code = 'fahrt_deckel_minuten_wartung' and upper_inf(gueltigkeit)),
+    'min'::text, 'Der Fahrtdeckel der Wartungsprognose steht in Minuten');
   -- Nicht pruefen, dass keine Zeile ohne Quelle DA ist - das kann keine
   -- sein, quelle ist not null mit CHECK. Pruefen, dass eine solche Zeile
   -- gar nicht erst hineinkommt. Sonst waere die Zusicherung immer wahr.

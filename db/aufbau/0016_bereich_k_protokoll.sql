@@ -157,7 +157,16 @@ select v.code, v.wert, v.einheit, v.gueltigkeit, v.quelle, v.erlaeuterung
      'Obergrenze für Rundfahrten, deren Kilometer aus der Dauer geschätzt werden '
      '(siehe reisegeschwindigkeit): je angefangenem Kalendertag der Ausleihe zählt '
      'höchstens diese Stundenzahl als gefahrene Zeit, auch wenn die Ausleihe '
-     'insgesamt länger dauerte.')
+     'insgesamt länger dauerte.'),
+    ('fahrt_deckel_minuten_wartung', 300.0000, 'min', daterange(date '2025-01-01', null, '[)'),
+     'Entscheidung dieser Fallstudie, gestützt auf eine Messung am Bestand vom 04.09.2026',
+     'Obergrenze der Fahrzeit EINER Fahrt in der Wartungsprognose '
+     '(velocity.fn_wartungsprognose, 0021): Was länger dauert, zählt nur mit diesem '
+     'Wert. Gemessen am 04.09.2026 lagen von 12.052 abgeschlossenen Fahrten genau '
+     'zwei darüber (5.422 und 2.552 Minuten), die längste übrige bei 90 Minuten - '
+     'der Deckel liegt also im leeren Raum dazwischen und nicht auf einer '
+     'Datengrenze. Wer ihn reißt, hat ein Buchungsproblem und keinen Verschleiß. '
+     'Nicht zu verwechseln mit max_fahrzeit_je_tag: andere Einheit, andere Rechnung.')
   ) as v(code, wert, einheit, gueltigkeit, quelle, erlaeuterung)
  where not exists (
    select 1 from velocity.rechenannahme r

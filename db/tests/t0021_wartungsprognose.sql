@@ -86,7 +86,7 @@ $$;
 
 create or replace function velocity_test.test_wp_deckel_greift()
 returns setof text language plpgsql as $$
-declare v_f record; v_minuten numeric;
+declare v_f record; v_minuten numeric; v_deckel numeric;
 begin
   select * into v_f from velocity_test.fixture_prognoserad('deckel');
   -- Eine Fahrt ueber 5.000 Minuten - der Fall EB-00447 aus dem
@@ -94,12 +94,68 @@ begin
   -- Ausleihe, die die ganze Liste kippte.
   perform velocity_test.fixture_prognosefahrt(v_f.o_kunde_id, v_f.o_fahrrad_id, 5000);
 
+  -- Erwartet wird der Wert aus velocity.rechenannahme und nicht die
+  -- Zahl 300. Stuende sie hier, waere dieser Test eine zweite Stelle,
+  -- an der der Deckel steht - genau das, was die Annahme abschaffen
+  -- soll. Ob der Deckel ueberhaupt aus der Tabelle kommt, prueft
+  -- test_wp_deckel_kommt_aus_der_rechenannahme.
+  select r.wert into v_deckel
+    from velocity.rechenannahme r
+   where r.code = 'fahrt_deckel_minuten_wartung'
+     and r.gueltigkeit @> current_date;
+
   select p.fahrminuten_seit_reparatur into v_minuten
     from velocity.fn_wartungsprognose(current_date, 500) p
    where p.fahrrad_id = v_f.o_fahrrad_id;
 
-  return next is(v_minuten, 300.0::numeric,
-                 'Eine Fahrt ueber 5.000 Minuten zaehlt mit 300, nicht mit 5.000');
+  return next is(v_minuten, v_deckel,
+                 'Eine Fahrt ueber 5.000 Minuten zaehlt mit dem Deckel, nicht mit 5.000');
+end;
+$$;
+
+create or replace function velocity_test.test_wp_deckel_kommt_aus_der_rechenannahme()
+returns setof text language plpgsql as $$
+declare v_f record; v_minuten numeric;
+begin
+  select * into v_f from velocity_test.fixture_prognoserad('annahme');
+  perform velocity_test.fixture_prognosefahrt(v_f.o_kunde_id, v_f.o_fahrrad_id, 5000);
+
+  -- Der Nachweis, dass der Deckel WIRKLICH aus velocity.rechenannahme
+  -- kommt: Die Annahme wird hier veraendert. Folgt die Rechnung dem
+  -- neuen Wert, kann sie ihn nicht aus dem Funktionsrumpf haben. Ein
+  -- Test, der nur "300 kommt heraus" prueft, bestuende auch dann noch,
+  -- wenn jemand die Zahl wieder ins SQL zurueckschriebe.
+  update velocity.rechenannahme set wert = 120
+   where code = 'fahrt_deckel_minuten_wartung'
+     and gueltigkeit @> current_date;
+
+  select p.fahrminuten_seit_reparatur into v_minuten
+    from velocity.fn_wartungsprognose(current_date, 500) p
+   where p.fahrrad_id = v_f.o_fahrrad_id;
+
+  return next is(v_minuten, 120.0::numeric,
+                 'Die Rechnung folgt dem Wert in velocity.rechenannahme');
+end;
+$$;
+
+create or replace function velocity_test.test_wp_ohne_deckelannahme_keine_liste()
+returns setof text language plpgsql as $$
+declare v_anzahl bigint;
+begin
+  -- Fehlt die Annahme, kommt KEINE Liste heraus - und das ist Absicht.
+  --
+  -- Der Reflex waere ein left join, wie ihn 0018 fuer die CO2-Annahmen
+  -- benutzt. Hier waere er falsch: least(dauer, null) liefert in
+  -- Postgres die DAUER, weil least NULL-Werte ueberspringt. Aus einer
+  -- fehlenden Annahme wuerde damit stillschweigend eine UNGEDECKELTE
+  -- Rangfolge - dieselbe kaputte Liste, gegen die der Deckel ueberhaupt
+  -- erst eingefuehrt wurde, nur ohne jeden Hinweis darauf. Eine leere
+  -- Liste faellt auf, eine falsch sortierte nicht.
+  delete from velocity.rechenannahme where code = 'fahrt_deckel_minuten_wartung';
+
+  select count(*) into v_anzahl from velocity.fn_wartungsprognose(current_date, 500);
+  return next is(v_anzahl, 0::bigint,
+                 'Ohne Deckelannahme bleibt die Liste leer statt ungedeckelt');
 end;
 $$;
 
