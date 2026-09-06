@@ -25,6 +25,13 @@ async function ladeLetzteFahrten(anzahl = 5) {
    stuenden 1234.5 und 1.234,5 nebeneinander auf derselben Seite. */
 const zahl = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
 const euro = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+/* Fuer die vier Kacheln OHNE Nachkommastelle. Begruendung: 40 Prozent
+   der Fahrten im Bestand haben keine gemessene Distanz, die Kilometer
+   und damit auch die CO2-Zahl sind also teils geschaetzt. Eine
+   Nachkommastelle hinter einer Schaetzung behauptet eine Genauigkeit,
+   die es nicht gibt. Die genauen Werte stehen weiterhin im Verlauf und
+   bei den einzelnen Fahrten. */
+const ganz = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
 
 function kachel(wert, einheit, beschriftung) {
     const d = document.createElement('div');
@@ -38,17 +45,32 @@ function kachel(wert, einheit, beschriftung) {
     const b = document.createElement('span');
     b.className = 'bilanz-beschriftung';
     b.textContent = beschriftung;
-    d.append(w, e, b);
+    // Beschriftung ZUERST: sie steht ueber der Zahl, nicht darunter.
+    // Den Zeilenumbruch macht weiterhin flex-basis: 100% in style.css,
+    // die Reihenfolge hier bestimmt nur, welche Zeile oben liegt.
+    d.append(b, w, e);
     return d;
 }
 
 function bilanzZeichnen(b) {
     const ziel = document.getElementById('dashboard-bilanz');
     ziel.replaceChildren(
-        kachel(zahl.format(b.km_gesamt), 'km', 'gefahren'),
-        kachel(zahl.format(b.co2_ersparnis_kg_gesamt), 'kg', 'CO₂ gespart'),
-        kachel(String(b.fahrten_gesamt), '', 'Fahrten'),
-        kachel(euro.format(b.ausgaben_gesamt), '', 'ausgegeben')
+        kachel(ganz.format(b.km_gesamt), 'km', 'gefahren'),
+        kachel(ganz.format(b.co2_ersparnis_kg_gesamt), 'kg', 'CO₂ gespart'),
+        kachel(String(b.fahrten_gesamt), '', 'Fahrten')
+        /* DREI KACHELN, NICHT VIER (06.09.2026, auf Wunsch des
+           Auftraggebers). Die vierte zeigte die Ausgaben. Sie ist raus,
+           und zwar aus zwei Gruenden.
+
+           Der erste ist psychologisch: die Ansicht soll zeigen, was
+           jemand gefahren und eingespart hat. Ein Betrag gleich daneben,
+           in derselben Groesse und demselben Gewicht, macht aus der
+           Bilanz eine Rechnung. Was bezahlt wurde, ist damit nicht
+           versteckt - es steht im Verlauf unter "Ausgaben", mitsamt
+           Gesamtsumme, nur eben nicht als Erstes.
+
+           Der zweite ist Platz: drei Kacheln auf derselben Spur sind
+           breiter als vier, und die Zahlen wachsen. */
     );
 
     /* Der Schaetzanteil steht sichtbar, nicht im Kleingedruckten. 40
@@ -69,9 +91,13 @@ function bilanzZeichnen(b) {
        mehr auf dessen Spuren. */
     const hinweis = document.getElementById('dashboard-bilanz-hinweis');
     if (b.anteil_geschaetzt > 0) {
+        /* "der Kilometer", und die Sicht rechnet seit dem 06.09.2026
+           auch so: anteil_geschaetzt ist nach Strecke gewichtet, nicht
+           nach Fahrten. Der Satz steht unter einer Kilometerkachel und
+           muss deshalb ueber Kilometer sprechen. */
         hinweis.textContent =
-            `${zahl.format(b.anteil_geschaetzt * 100)} % der Strecken sind geschätzt, `
-            + 'nicht gemessen.';
+            `${zahl.format(b.anteil_geschaetzt * 100)} % der Kilometer sind `
+            + 'geschätzt, nicht gemessen. Kilometer und CO₂ sind gerundet.';
         hinweis.hidden = false;
     } else {
         hinweis.hidden = true;
@@ -84,7 +110,11 @@ function bilanzZeichnen(b) {
    angelegtes. Ein Foto kommt nicht in Frage - ein Gesicht unter einer
    erfundenen Identitaet ist keine Illustration, sondern eine Behauptung
    ueber einen Menschen. */
-function konterfeiZeichnen(vorname, nachname, schluessel) {
+/* Zeichnet den Personenblock im Kopf: Konterfei UND Name. Der Name
+   stand bis zum 06.09.2026 nur im aria-label des SVG - sichtbar war
+   also nur "CF", und wer das Dashboard zeigt, musste dazusagen, wem es
+   gehoert. */
+function personZeichnen(vorname, nachname, schluessel) {
     const initialen = ((vorname || '?')[0] + (nachname || '?')[0]).toUpperCase();
     let summe = 0;
     for (const z of String(schluessel || initialen)) summe = (summe * 31 + z.charCodeAt(0)) % 360;
@@ -114,6 +144,11 @@ function konterfeiZeichnen(vorname, nachname, schluessel) {
 
     svg.append(scheibe, text);
     document.getElementById('dashboard-konterfei').replaceChildren(svg);
+
+    // Leer statt "undefined undefined", wenn v_mein_profil nichts
+    // liefert - der Kopf zeigt dann nur Ueberschrift und Konterfei.
+    document.getElementById('dashboard-name').textContent =
+        (vorname && nachname) ? `${vorname} ${nachname}` : '';
 }
 
 /* DIESER MONAT GEGEN DIE EIGENEN VORMONATE - ALS BALKEN, NICHT ALS RING.
@@ -261,6 +296,20 @@ function verlaufZeichnen(monate) {
         schalter.append(knopf);
     }
 
+    /* Der Gesamtwert steht auf HOEHE DER SCHALTER, rechts, nicht unter
+       den Balken: dort gehoert er zur getroffenen Auswahl und braucht
+       keine eigene Zeile. Er summiert genau die Balken darunter.
+
+       Nicht dieselbe Zahl wie in der Kachel oben, obwohl beide alles
+       umfassen: die Kachel rundet auf ganze Zahlen (siehe ganz), hier
+       steht der genaue Wert. Wer es auf den Kilometer wissen will,
+       findet ihn also hier. */
+    const summe = monate.reduce((s, m) => s + Number(m[verlaufGroesse]), 0);
+    const gesamt = document.createElement('span');
+    gesamt.className = 'verlauf-gesamt';
+    gesamt.textContent = `Gesamt ${g.form(summe)}`;
+    schalter.append(gesamt);
+
     const liste = document.createElement('ol');
     liste.className = 'verlauf-balken';
     monate.forEach((m) => {
@@ -344,7 +393,33 @@ function statusabzeichenZeichnen(b) {
     const ziel = document.getElementById('dashboard-abzeichen');
     const abzeichen = document.createElement('span');
     abzeichen.className = 'status-abzeichen';
-    abzeichen.textContent = STUFEN[stufeIndex(Number(b.km_gesamt))].name;
+
+    /* Ein Stern, gezeichnet statt als Schriftzeichen gesetzt. Ein
+       Emoji-Stern haette auf jedem System anders ausgesehen und in der
+       Vorlesung am Beamer womoeglich als leeres Kaestchen; ein SVG-Pfad
+       sieht ueberall gleich aus und nimmt per fill="currentColor" die
+       Schriftfarbe des Abzeichens an.
+
+       aria-hidden: das Zeichen sagt nichts, was der Text daneben nicht
+       schon sagt. Eine Vorlesekraft soll "Viel unterwegs" hoeren, nicht
+       "Stern, Viel unterwegs". */
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('class', 'status-zeichen');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    const stern = document.createElementNS(ns, 'path');
+    stern.setAttribute('fill', 'currentColor');
+    stern.setAttribute('d',
+        'M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24'
+        + 'l5.46 4.73L5.82 21z');
+    svg.append(stern);
+
+    const text = document.createElement('span');
+    text.textContent = STUFEN[stufeIndex(Number(b.km_gesamt))].name;
+
+    abzeichen.append(svg, text);
     ziel.replaceChildren(abzeichen);
 }
 
@@ -482,7 +557,7 @@ async function dashboardZeichnen() {
        unten, blieb der Kreis bei einem frischen Konto leer, und die
        Ansicht wirkte kaputt statt nur leer. */
     const profil = (await ladeListe('v_mein_profil'))[0] || {};
-    konterfeiZeichnen(profil.vorname, profil.nachname, profil.kundennummer);
+    personZeichnen(profil.vorname, profil.nachname, profil.kundennummer);
 
     const bilanz = await ladeBilanz();
 

@@ -139,3 +139,44 @@ begin
     'v_meine_fahrt_kennzahl führt keine fremde Fahrt');
 end;
 $$;
+
+-- ---------------------------------------------------------------------
+-- DER SCHAETZANTEIL ZAEHLT KILOMETER, NICHT FAHRTEN (ab 06.09.2026)
+--
+-- Bis dahin war anteil_geschaetzt der Anteil der FAHRTEN mit
+-- geschaetzter Strecke. Richtig gerechnet, aber die falsche Frage: der
+-- Wert steht auf der Website unter einer Kilometerkachel. Eine Fahrt
+-- wird ohnehin nie geschaetzt - sie ist erfasst; geschaetzt wird allein
+-- ihre Strecke.
+--
+-- Der zweite Satz ist die GEGENPROBE zum ersten. Ohne ihn bliebe der
+-- Test auch unter der alten Definition gruen, sobald beide Anteile
+-- zufaellig zusammenfielen - und dann bewachte er nichts. Schlaegt er
+-- eines Tages an, ist nicht die Sicht kaputt, sondern der Datensatz
+-- unterscheidet die beiden Rechenwege nicht mehr; dann braucht dieser
+-- Test einen anderen Kunden.
+-- ---------------------------------------------------------------------
+create or replace function velocity_test.test_kk_schaetzanteil_zaehlt_kilometer()
+returns setof text language plpgsql as $$
+declare
+  v_gemeldet     numeric;
+  v_nach_km      numeric;
+  v_nach_fahrten numeric;
+begin
+  perform velocity_test.fixture_kunde_anmelden('K-000001');
+
+  select anteil_geschaetzt into v_gemeldet from velocity.v_meine_bilanz;
+  select round(coalesce(sum(km) filter (where ist_geschaetzt)
+                        / nullif(sum(km), 0), 0), 3),
+         round(avg(case when ist_geschaetzt then 1.0 else 0.0 end), 3)
+    into v_nach_km, v_nach_fahrten
+    from velocity.v_meine_fahrt_kennzahl;
+
+  return next is(v_gemeldet, v_nach_km,
+    'v_meine_bilanz.anteil_geschaetzt ist der nach Kilometern gewichtete Anteil');
+
+  return next isnt(v_nach_km, v_nach_fahrten,
+    'Kilometeranteil und Fahrtenanteil gehen bei K-000001 auseinander - '
+    'der Satz darueber unterscheidet also wirklich zwischen beiden Rechenwegen');
+end;
+$$;

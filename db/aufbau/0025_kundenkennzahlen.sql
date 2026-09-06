@@ -116,8 +116,27 @@ select date_trunc('month', fk.startzeit)::date          as monat,
        round(sum(fk.km), 1)                             as km,
        round(sum(fk.co2_ersparnis_g) / 1000.0, 2)       as co2_ersparnis_kg,
        sum(fk.betrag_brutto)                            as ausgaben_brutto,
-       round(avg(case when fk.ist_geschaetzt then 1.0 else 0.0 end), 3)
-                                                        as anteil_geschaetzt
+       -- NACH KILOMETERN GEWICHTET, NICHT NACH FAHRTEN (06.09.2026).
+       -- Hier stand avg(case when ist_geschaetzt then 1 else 0 end),
+       -- also der Anteil der FAHRTEN mit geschätzter Strecke. Der Wert
+       -- war richtig gerechnet, beantwortete aber die falsche Frage:
+       -- er steht auf der Website unter einer Kilometerkachel, und wer
+       -- dort „30 %" liest, denkt an Kilometer, nicht an Fahrten. Eine
+       -- Fahrt wird ohnehin nie geschätzt — sie ist erfasst; geschätzt
+       -- wird allein ihre Strecke (v_fahrt_kennzahl.ist_geschaetzt ist
+       -- „a.distanz_km is null").
+       --
+       -- Die beiden Zahlen gehen deutlich auseinander, weil die
+       -- Schätzung überwiegend kurze Fahrten trifft: bei K-000001 waren
+       -- es am 06.09.2026 28,6 % der Fahrten, aber nur 17,0 % der
+       -- Kilometer (zehn Luftlinienfahrten mit zusammen 14,4 km gegen
+       -- 152,2 gemessene km). Nach Fahrten gezählt wirkt die Bilanz
+       -- also unsicherer, als sie ist.
+       --
+       -- nullif gegen Division durch null: ohne km gibt es auch keine
+       -- geschätzten km, coalesce macht daraus die ehrliche 0.
+       round(coalesce(sum(fk.km) filter (where fk.ist_geschaetzt)
+                      / nullif(sum(fk.km), 0), 0), 3)   as anteil_geschaetzt
   from velocity.v_fahrt_kennzahl fk
   join velocity.kunde k on k.kunde_id = fk.kunde_id
  where k.auth_uid = auth.uid()
@@ -141,8 +160,9 @@ comment on column velocity.v_meine_monatsbilanz.co2_ersparnis_kg is
 comment on column velocity.v_meine_monatsbilanz.ausgaben_brutto is
   'Summe der Entgelte dieses Monats.';
 comment on column velocity.v_meine_monatsbilanz.anteil_geschaetzt is
-  'Anteil der Fahrten dieses Monats mit geschätzter statt gemessener Strecke, zwischen '
-  '0 und 1.';
+  'Anteil der Kilometer dieses Monats, die geschätzt statt gemessen sind, zwischen '
+  '0 und 1. Nach Kilometern gewichtet, nicht nach Fahrten - eine Fahrt wird nie '
+  'geschätzt, nur ihre Strecke.';
 
 -- ---- Eine einzige Zeile, mit der Einordnung ---------------------------
 create or replace view velocity.v_meine_bilanz as
@@ -157,7 +177,10 @@ with je_kunde as (
          sum(fk.betrag_brutto)                    as ausgaben,
          min(fk.startzeit)                        as erste,
          max(fk.startzeit)                        as letzte,
-         avg(case when fk.ist_geschaetzt then 1.0 else 0.0 end) as geschaetzt
+         -- Nach Kilometern gewichtet - Begründung ausführlich bei
+         -- v_meine_monatsbilanz weiter oben.
+         coalesce(sum(fk.km) filter (where fk.ist_geschaetzt)
+                  / nullif(sum(fk.km), 0), 0)      as geschaetzt
     from velocity.v_fahrt_kennzahl fk
    group by fk.kunde_id
 ),
@@ -234,7 +257,9 @@ comment on column velocity.v_meine_bilanz.bestwert_km_flotte is
   'Höchster Kilometerwert unter allen gewerteten Kunden - eine Zahl, keine Kundennummer, '
   'kein Name.';
 comment on column velocity.v_meine_bilanz.anteil_geschaetzt is
-  'Anteil der eigenen Fahrten mit geschätzter statt gemessener Strecke, zwischen 0 und 1.';
+  'Anteil der eigenen Kilometer, die geschätzt statt gemessen sind, zwischen 0 und 1. '
+  'Nach Kilometern gewichtet, nicht nach Fahrten - eine Fahrt wird nie geschätzt, '
+  'nur ihre Strecke.';
 
 grant select on velocity.v_meine_fahrt_kennzahl to authenticated;
 grant select on velocity.v_meine_monatsbilanz   to authenticated;

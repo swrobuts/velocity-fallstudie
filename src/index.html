@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=1b3ebbed">
+    <link rel="stylesheet" href="style.css?v=e593ee88">
 </head>
 <body>
 
@@ -543,30 +543,34 @@
          waehrend jeder andere Abschnitt der Seite auf --spur begrenzt ist. -->
     <div class="container">
         <a href="#top" class="dashboard-zurueck">← Zur Startseite</a>
+        <!-- EINE ZEILE: Konterfei, daneben Ueberschrift und Name, ganz
+             rechts das Abzeichen. Die rechte Kante dieser Zeile ist die
+             rechte Kante von .container - also dieselbe, an der auch die
+             vierte Bilanzkachel endet. -->
         <header class="dashboard-kopf">
             <!-- KEIN aria-hidden: das erzeugte <svg> traegt selbst
                  role="img" und aria-label mit dem vollen Namen
-                 (konterfeiZeichnen() in dashboard.js). Der Name steht
-                 sonst nirgends als Text - aria-hidden hier wuerde einer
-                 Screenreader-Nutzerin verschweigen, wer angemeldet ist. -->
+                 (personZeichnen() in dashboard.js). Der Name steht
+                 seit dem 06.09.2026 zwar auch sichtbar daneben, das
+                 aria-label bleibt aber: es benennt genau dieses Bild. -->
             <div id="dashboard-konterfei" class="konterfei"></div>
-            <div>
+            <div class="dashboard-kopf-text">
                 <!-- tabindex="-1": ansichtAktualisieren() (script.js) setzt
                      den Fokus hierher, wenn die Ansicht neu erscheint - ohne
                      die Ueberschrift in die normale Tab-Reihenfolge
                      aufzunehmen. -->
                 <h2 id="dashboard-titel" tabindex="-1">Meine Bilanz</h2>
-                <!-- Das Statusabzeichen (statusabzeichenZeichnen() in
-                     dashboard.js) steht bewusst HIER, neben dem Konterfei,
-                     nicht im Block weiter unten: das Konterfei benennt per
-                     aria-label bereits die Person, das Abzeichen daneben
-                     nennt ihren Status - beides gehoert damit optisch
-                     zusammen. NICHT :not(:empty) wie .dashboard-block:
-                     der Abstand nach oben haengt hier direkt an der eigenen
-                     Leere (siehe #dashboard-abzeichen in style.css), weil
-                     dieses div kein Kartenelement ist. -->
-                <div id="dashboard-abzeichen"></div>
+                <!-- Gefuellt von personZeichnen(); leer, solange kein
+                     Profil geladen ist. :empty raeumt dann auch den
+                     Abstand mit weg (style.css). -->
+                <p id="dashboard-name" class="dashboard-name"></p>
             </div>
+            <!-- Das Statusabzeichen (statusabzeichenZeichnen() in
+                 dashboard.js) steht am rechten Ende derselben Zeile: die
+                 Zeile nennt damit von links nach rechts Person, Ansicht
+                 und Status. Frueher stand es unter der Ueberschrift und
+                 sah aus wie ein Knopf zu ihr. -->
+            <div id="dashboard-abzeichen"></div>
         </header>
         <p id="dashboard-fehler" class="dashboard-fehler" role="status" hidden></p>
         <!-- Der Zeitraum steht HIER, nicht mehr oben neben dem Konterfei:
@@ -650,7 +654,7 @@
 <script src="supabase.js?v=114ade78"></script>
 <script src="auth.js?v=127b1291"></script>
 <script src="script.js?v=58e9516f"></script>
-<script src="dashboard.js?v=a65c0b63"></script>
+<script src="dashboard.js?v=82c5642a"></script>
 
 
 <!-- DER FAHRPREISRECHNER WOHNT IN EINER SCHUBLADE (28.08.2026).
