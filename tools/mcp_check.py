@@ -53,7 +53,12 @@ import sys
 
 WURZEL = pathlib.Path(__file__).resolve().parent.parent
 SERVER = WURZEL / "mcp" / "server.py"
-ANLEITUNG = WURZEL / "mcp" / "README.md"
+# BEIDE Anleitungen. Bis zum 06.09.2026 stand hier nur mcp/README.md -
+# und genau deshalb blieb im Haupt-README "20 Sichten und 15
+# api_-Funktionen" stehen, waehrend es 16 waren. Die Zahl war in der
+# geprueften Datei richtig und in der ungeprueften falsch: die Grenze der
+# Pruefung verlief mitten durch dieselbe Aussage.
+ANLEITUNGEN = (WURZEL / "mcp" / "README.md", WURZEL / "README.md")
 
 
 def env_laden() -> None:
@@ -194,17 +199,30 @@ def main() -> int:
     # falsch - "15 api_-Funktionen", waehrend es 16 waren, seit
     # api_kunde_loeschen dazukam. Dieselbe Sorte Fehler wie die
     # Pruefungszahl in TESTEN.md, und derselbe Weg dagegen: zaehlen.
-    anleitung = ANLEITUNG.read_text(encoding="utf-8") if ANLEITUNG.exists() else ""
-    for zahl, muster, was in (
-            (len(sichten),  r"(\d+) Sichten zum Lesen",       "Sichten"),
-            (len(aufrufe),  r"(\d+) `api_`-Funktionen zum",   "api_-Funktionen")):
-        m = re.search(muster, anleitung)
-        if m is None:
-            funde.append(("mcp/README.md",
-                          f"die Angabe zur Zahl der {was} steht nicht mehr da"))
-        elif int(m.group(1)) != zahl:
-            funde.append(("mcp/README.md",
-                          f"nennt {m.group(1)} {was}, der Server bietet {zahl}"))
+    # Je Datei ein eigenes Muster: die beiden Anleitungen formulieren
+    # dieselbe Aussage verschieden ("20 Sichten zum Lesen" gegen
+    # "Dieselben 20 Sichten und 16 api_-Funktionen"). Ein Muster fuer
+    # beide faende in einer davon nichts und meldete "steht nicht mehr
+    # da" - eine Fehlmeldung, die schlimmer waere als keine Pruefung.
+    muster_je_datei = {
+        "mcp/README.md": ((len(sichten), r"(\d+) Sichten zum Lesen", "Sichten"),
+                          (len(aufrufe), r"(\d+) `api_`-Funktionen zum",
+                           "api_-Funktionen")),
+        "README.md":     ((len(sichten), r"Dieselben (\d+) Sichten", "Sichten"),
+                          (len(aufrufe), r"und (\d+) `api_`-Funktionen",
+                           "api_-Funktionen")),
+    }
+    for pfad in ANLEITUNGEN:
+        name = pfad.relative_to(WURZEL).as_posix()
+        text = pfad.read_text(encoding="utf-8") if pfad.exists() else ""
+        for zahl, muster, was in muster_je_datei.get(name, ()):
+            m = re.search(muster, text)
+            if m is None:
+                funde.append((name,
+                              f"die Angabe zur Zahl der {was} steht nicht mehr da"))
+            elif int(m.group(1)) != zahl:
+                funde.append((name,
+                              f"nennt {m.group(1)} {was}, der Server bietet {zahl}"))
 
     print(f"{len(sichten)} Sichten und {len(aufrufe)} api_-Aufrufe des "
           f"MCP-Servers gegen die Datenbank\n  ({len(db_sichten)} v_wawi_-Sichten, "
