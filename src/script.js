@@ -2539,6 +2539,34 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             await loadData();
             karteZeichnen();
+
+            /* UND DAS DASHBOARD MIT (ergaenzt 06.09.2026).
+
+               Hier standen nur loadData() und karteZeichnen(): die
+               oeffentliche Ansicht und die Karte wurden frisch, die
+               eigene Bilanz nicht. dashboardZeichnen() lief bis dahin
+               ausschliesslich beim Anmelden. Wer also eine Fahrt beendete
+               und danach auf "Konto" ging, sah seine Zahlen von vor der
+               Fahrt - Kilometer, Fahrten, "Dieser Monat" und das
+               Fahrtenbuch allesamt einen Stand zu alt, bis er die Seite
+               neu lud.
+
+               Aufgefallen im Klickdurchlauf vom 06.09.2026: eine Fahrt
+               Hauptbahnhof - Dom war abgerechnet und in der Datenbank
+               sichtbar, das Dashboard zeigte weiter 33 Fahrten statt 34.
+
+               OHNE await, und das ist Absicht. Der Beleg steht schon auf
+               dem Schirm; das Dashboard liegt darunter und darf in Ruhe
+               nachladen. Ein await hier hielte den Knopf laenger
+               gesperrt, ohne dass jemand darauf wartet.
+
+               catch statt Durchreichen: ein Fehler beim Nachladen des
+               Dashboards darf die Rueckgabe nicht nachtraeglich als
+               gescheitert erscheinen lassen - die Fahrt IST beendet und
+               abgerechnet. Er gehoert in die Konsole, nicht in den
+               Rueckgabedialog. */
+            dashboardZeichnen().catch((fehler) =>
+                console.error('Dashboard nach der Rückgabe nicht aktualisiert:', fehler));
         } catch (fehler) {
             console.error('Fehler beim Beenden:', fehler);
             rueckgabeMelden('fehler', fehler.message);
