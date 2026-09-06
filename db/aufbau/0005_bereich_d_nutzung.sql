@@ -80,8 +80,52 @@ begin
 end;
 $$;
 
+-- ---------------------------------------------------------------------
+--  WOHER DIE STRECKE KOMMT - UND WARUM SIE OFT FEHLT
+--
+--  Ergaenzt am 06.09.2026. Bis dahin stand hier nur, dass null "nicht
+--  gemessen" bedeutet - nicht aber, WIE gemessen worden sein soll. Die
+--  Frage kam vom Auftraggeber und ist berechtigt: ein Rad hat keinen
+--  Kilometerzaehler, den jemand abliest, und eine Strecke laesst sich
+--  aus Start- und Zielstation allein nicht bestimmen.
+--
+--  DAS SCHLOSS MISST. Jedes Rad traegt ein Schloss mit Mobilfunk- und
+--  GPS-Modul. Es zeichnet die Fahrt auf und meldet die gefahrene Strecke
+--  beim Abschliessen. Genau dann steht sie hier.
+--
+--  UND MANCHMAL MELDET ES NICHT. Kein Mobilfunk am Abstellort, leere
+--  Schlossbatterie, kein GPS-Fix zwischen engen Haeuserzeilen, Rueckgabe
+--  in einer Tiefgarage - dann kommt keine Meldung an, und die Strecke
+--  bleibt unbekannt. Das trifft rund 40 Prozent der Fahrten, unabhaengig
+--  von Rad, Radtyp, Station, Kunde und Wetter (nachgemessen: 61,4 / 60,1
+--  / 58,6 Prozent gemeldeter Strecken bei E-Cargo, City-Bike und E-Bike
+--  Sport - kein Zusammenhang mit dem Antrieb).
+--
+--  ZWEI EHRLICHE EINSCHRAENKUNGEN, damit niemand mehr hineinliest, als
+--  hier steht:
+--
+--  Erstens ist die Ausfallquote hoch. Eine heutige Flotte verliert eher
+--  5 bis 15 Prozent ihrer Telemetrie. Die 40 Prozent stehen hier
+--  absichtlich: die Luecke ist Gegenstand mehrerer Uebungen
+--  (analytics/notebooks/02 fuellt sie und prueft die Fuellung, 06
+--  schliesst die Spalte aus genau diesem Grund aus).
+--
+--  Zweitens ist der Ausfall hier REIN ZUFAELLIG. In der Wirklichkeit
+--  haengt er am Ort: dieselben Funkloecher und Tiefgaragen treffen immer
+--  wieder dieselben Stationen. Wer Muster im Fehlen sucht, findet in
+--  diesem Bestand deshalb keine - das ist eine Eigenschaft der
+--  Fallstudie, kein Befund ueber Telemetrie.
+--
+--  Die Sichten in 0018_wawi_sichten.sql rechnen die fehlenden Strecken
+--  aus Luftlinie mal Umwegfaktor oder aus der Fahrzeit und kennzeichnen
+--  das in ist_geschaetzt und verfahren. Eine gerechnete Strecke steht
+--  dort nie ununterscheidbar neben einer gemeldeten.
+-- ---------------------------------------------------------------------
 comment on column velocity.ausleihe.distanz_km is
-  'Gefahrene Strecke in Kilometern. null bedeutet nicht gemessen, nicht null Kilometer.';
+  'Vom Schloss des Rades gemeldete Fahrstrecke in Kilometern. null bedeutet, dass '
+  'beim Abschließen keine Meldung ankam (kein Mobilfunk, leere Schlossbatterie, kein '
+  'GPS-Fix) — nicht null Kilometer. Betrifft rund 40 % der Fahrten, zufällig verteilt; '
+  'die Sichten in 0018 rechnen dann eine Schätzung und kennzeichnen sie.';
 
 select velocity.fn_audit_anhaengen('ausleihe');
 

@@ -263,7 +263,10 @@ comment on column velocity.v_fahrt_kennzahl.km is
   'rechenannahme max_fahrzeit_je_tag je angefangenem Kalendertag der Ausleihe; '
   'sonst aus der Luftlinie mal Umwegfaktor.';
 comment on column velocity.v_fahrt_kennzahl.ist_geschaetzt is
-  'Wahr, wenn km nicht gemessen wurde (verfahren aus_dauer oder aus_luftlinie).';
+  'Wahr, wenn das Schloss des Rades beim Abschließen keine Strecke gemeldet hat und '
+  'km deshalb gerechnet ist (verfahren aus_dauer oder aus_luftlinie). Woher die '
+  'gemeldete Strecke kommt und warum sie bei rund 40 % der Fahrten fehlt, steht bei '
+  'velocity.ausleihe.distanz_km.';
 comment on column velocity.v_fahrt_kennzahl.verfahren is
   'gemessen, aus_dauer oder aus_luftlinie - womit km ermittelt wurde.';
 comment on column velocity.v_fahrt_kennzahl.co2_ersparnis_g is

@@ -1229,7 +1229,27 @@ while d <= BIS:
         heapq.heappush(unterwegs, (endzeit, rueckgabe_lfd, rad["id"], rueckgabe_ort))
         rad_ort.pop(rad["id"], None)
 
-        # ---- Distanz: der Sensor meldet nur einen Teil der Fahrten
+        # ---- Distanz: das Schloss meldet nur einen Teil der Fahrten
+        #
+        # Die WAHRE Strecke steht oben in strecke_km und geht in Dauer,
+        # Hoehenmeter und Verschleiss ein. Hier entscheidet sich nur, ob
+        # sie auch AUFGEZEICHNET wird.
+        #
+        # Die Fiktion dahinter, ausgeschrieben in der Modellbeschreibung
+        # (Spaltenkommentar velocity.ausleihe.distanz_km in
+        # db/aufbau/0005_bereich_d_nutzung.sql): Das Schloss des Rades
+        # zeichnet die Fahrt auf und meldet sie beim Abschliessen. Kommt
+        # die Meldung nicht an - kein Mobilfunk am Abstellort, leere
+        # Schlossbatterie, kein GPS-Fix, Rueckgabe in einer Tiefgarage -,
+        # bleibt die Strecke unbekannt.
+        #
+        # 0.60 ist bewusst niedrig. Eine heutige Flotte verloere eher 5
+        # bis 15 Prozent; 40 Prozent Luecke machen aus der Spalte einen
+        # Uebungsgegenstand (Notebook 02 fuellt sie und prueft die
+        # Fuellung, 06 schliesst sie deswegen aus). Der Ausfall ist hier
+        # REIN ZUFAELLIG und haengt an nichts - in der Wirklichkeit haengt
+        # er am Ort. Wer das aendern will, wuerfelt nicht mehr, sondern
+        # bindet die Wahrscheinlichkeit an die Zielstation.
         distanz = ""
         if status == "abgeschlossen":
             if random.random() < 0.60:
@@ -1584,6 +1604,6 @@ print(f"Stationsstoerungen: {len(stoerungen)} an {len(STOERTAGE)} Tagen")
 abg = sum(1 for row in ausleihe_rows if row[7] != "abgeschlossen")
 print(f"Nicht abgeschlossene Fahrten: {abg} ({abg/len(ausleihe_rows):.1%})")
 ohne_distanz = sum(1 for row in ausleihe_rows if row[8] == "")
-print(f"Fahrten ohne gemessene Distanz: {ohne_distanz} ({ohne_distanz/len(ausleihe_rows):.1%})"
+print(f"Fahrten ohne gemeldete Distanz: {ohne_distanz} ({ohne_distanz/len(ausleihe_rows):.1%})"
       f"   (Thema der Data-Preparation-Phase)")
 print("=" * 66)
