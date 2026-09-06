@@ -53,6 +53,54 @@
 -- Verfahren von aus_dauer zu gemessen und liefert seither 12 km statt
 -- 552,93 km. 49995.23 - 49454.30 = 540,93 km, exakt 552,93 - 12.
 -- ---------------------------------------------------------------------
+-- NACHTRAG 06.09.2026: DIE WERTE UNTEN WURDEN ERNEUT NACHGEZOGEN
+--
+-- Auslöser war db/betrieb/demofahrten_rollieren.sql, wieder kein
+-- weiterer Umbau der Sichten. Jene Datei richtet einen pg_cron-Job ein,
+-- der monatlich den ältesten unabgerechneten Fahrtmonat von K-000001
+-- (Clara Fake, Demokonto der Website) in den laufenden Kalendermonat
+-- verschiebt, damit das persönliche Dashboard nicht dauerhaft einen
+-- leeren "Dieser Monat"-Block zeigt. Das reine VERSCHIEBEN (Update von
+-- startzeit/endzeit) ändert an den Summen unten nachweislich nichts -
+-- siehe Kopfkommentar jener Datei für die Begründung (jede
+-- rechenannahme-Zeile gilt unbegrenzt seit 2025-01-01, ein Zeitstempel-
+-- Schwenk innerhalb des Datensatzes trifft also immer dieselbe Annahme).
+--
+-- Verändert haben die Summen unten ausschließlich die zwölf ECHTEN neuen
+-- Fahrten des einmaligen Sofort-Auffüllschritts derselben Datei (Ziel:
+-- laufender Monat auf 13 Fahrten für Clara Fake, da ihr ältester Monat
+-- nur eine einzige Fahrt hergab). Das ist genau der Fall, den der Kopf
+-- oben verlangt: verstanden, nicht nur beobachtet - deshalb NACHGEZOGEN
+-- statt stumm überschrieben, mit den alten Werten daneben:
+--
+--   ALT (galt seit der Ausreißer-Korrektur vom 05.09.2026 bis zum Lauf
+--   von demofahrten_rollieren.sql):
+--     v_wawi_km_co2              47 Zeilen, 49454.5 km, 6543.00 kg CO2, 12052 Fahrten
+--     v_wawi_fahrt_km             12052 Zeilen, 49454.30 km
+--     v_wawi_fahrten_je_tag_rad   12052 Zeilen, 49454.30 km
+--     Verfahren                   aus_dauer 1140, aus_luftlinie 3688, gemessen 7224
+--
+--   NEU (nachgemessen nach dem Lauf, selbst erhoben, nicht aus dem
+--   Auftrag übernommen):
+--     v_wawi_km_co2              49 Zeilen, 49488.5 km, 6547.54 kg CO2, 12064 Fahrten
+--     v_wawi_fahrt_km             12064 Zeilen, 49488.23 km
+--     v_wawi_fahrten_je_tag_rad   12064 Zeilen, 49488.23 km
+--     Verfahren                   aus_dauer 1140, aus_luftlinie 3691, gemessen 7233
+--
+-- Nachvollzogen: 12064 - 12052 = 12, genau die zwölf neuen Fahrten -
+-- das eine VERSCHOBENE Fahrt (Januar 2025 nach September 2026) war
+-- bereits in den 12052 gezählt und trägt zur Differenz nichts bei.
+-- 49488.23 - 49454.30 = 33,93 km, deckungsgleich mit Claras eigenem
+-- Zuwachs (149,4 auf 183,3 km, siehe .superpowers/auftraege/
+-- demofahrten-job-bericht.md). Zwei zusätzliche Zeilen in v_wawi_km_co2
+-- (47 auf 49): zwei der zwölf neuen Fahrten liefen auf einer Rad-Typ/
+-- Monat-Kombination, die im September 2026 zuvor noch keine Zeile hatte.
+-- Die Verfahrensverteilung verschiebt sich um genau die zwölf neuen
+-- Fahrten (9 gemessen, 3 aus_luftlinie) - aus_dauer bleibt unverändert,
+-- weil keine der zwölf eine Rundfahrt (gleiche Start-/Zielstation) ist
+-- und die eine verschobene Fahrt ihr Verfahren (aus_luftlinie) durch die
+-- reine Zeitverschiebung nicht wechselt.
+-- ---------------------------------------------------------------------
 -- =====================================================================
 create schema if not exists velocity_test;
 set search_path = velocity_test, velocity, extensions, public;
@@ -74,28 +122,28 @@ begin
     into v_zeilen, v_km, v_co2, v_fahrten
     from velocity.v_wawi_km_co2;
 
-  return next is(v_zeilen, 47::bigint,
-                 'v_wawi_km_co2 hat unveraendert 47 Zeilen');
-  return next is(v_km, 49454.5::numeric,
-                 'v_wawi_km_co2 summiert 49454.5 Kilometer nach der Ausreisser-Korrektur vom 05.09.2026');
-  return next is(v_co2, 6543.00::numeric,
-                 'v_wawi_km_co2 summiert 6543.00 kg CO2 nach der Ausreisser-Korrektur vom 05.09.2026');
-  return next is(v_fahrten, 12052::bigint,
-                 'v_wawi_km_co2 zaehlt unveraendert 12052 Fahrten');
+  return next is(v_zeilen, 49::bigint,
+                 'v_wawi_km_co2 hat 49 Zeilen nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_km, 49488.5::numeric,
+                 'v_wawi_km_co2 summiert 49488.5 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_co2, 6547.54::numeric,
+                 'v_wawi_km_co2 summiert 6547.54 kg CO2 nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_fahrten, 12064::bigint,
+                 'v_wawi_km_co2 zaehlt 12064 Fahrten nach demofahrten_rollieren.sql vom 06.09.2026');
 
   select count(*), round(sum(kilometer), 2) into v_zeilen, v_km
     from velocity.v_wawi_fahrt_km;
-  return next is(v_zeilen, 12052::bigint,
-                 'v_wawi_fahrt_km hat unveraendert 12052 Zeilen');
-  return next is(v_km, 49454.30::numeric,
-                 'v_wawi_fahrt_km summiert 49454.30 Kilometer nach der Ausreisser-Korrektur vom 05.09.2026');
+  return next is(v_zeilen, 12064::bigint,
+                 'v_wawi_fahrt_km hat 12064 Zeilen nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_km, 49488.23::numeric,
+                 'v_wawi_fahrt_km summiert 49488.23 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
 
   select count(*), round(sum(kilometer), 2) into v_zeilen, v_km
     from velocity.v_wawi_fahrten_je_tag_rad;
-  return next is(v_zeilen, 12052::bigint,
-                 'v_wawi_fahrten_je_tag_rad hat unveraendert 12052 Zeilen');
-  return next is(v_km, 49454.30::numeric,
-                 'v_wawi_fahrten_je_tag_rad summiert 49454.30 Kilometer nach der Ausreisser-Korrektur vom 05.09.2026');
+  return next is(v_zeilen, 12064::bigint,
+                 'v_wawi_fahrten_je_tag_rad hat 12064 Zeilen nach demofahrten_rollieren.sql vom 06.09.2026');
+  return next is(v_km, 49488.23::numeric,
+                 'v_wawi_fahrten_je_tag_rad summiert 49488.23 Kilometer nach demofahrten_rollieren.sql vom 06.09.2026');
 end;
 $$;
 
@@ -123,8 +171,8 @@ begin
     $sql$select verfahren, count(*)::bigint
            from velocity.v_wawi_fahrt_km group by verfahren order by verfahren$sql$,
     $sql$values ('aus_dauer'::text, 1140::bigint),
-                ('aus_luftlinie'::text, 3688::bigint),
-                ('gemessen'::text, 7224::bigint)$sql$,
-    'Die Verteilung auf die drei Schaetzverfahren nach der Ausreisser-Korrektur vom 05.09.2026');
+                ('aus_luftlinie'::text, 3691::bigint),
+                ('gemessen'::text, 7233::bigint)$sql$,
+    'Die Verteilung auf die drei Schaetzverfahren nach demofahrten_rollieren.sql vom 06.09.2026');
 end;
 $$;
