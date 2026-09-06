@@ -38,6 +38,53 @@ from thws import (  # noqa: E402
 
 WURZEL  = pathlib.Path(__file__).resolve().parent.parent
 
+
+def _zahlwort(n: int) -> str:
+    """Zahl als Wort - das Deck haelt es durchgehend so."""
+    worte = ("null eins zwei drei vier fuenf sechs sieben acht neun zehn elf zwoelf "
+             "dreizehn vierzehn fuenfzehn sechzehn siebzehn achtzehn neunzehn zwanzig "
+             "einundzwanzig zweiundzwanzig dreiundzwanzig vierundzwanzig "
+             "fuenfundzwanzig sechsundzwanzig siebenundzwanzig achtundzwanzig "
+             "neunundzwanzig dreissig").split()
+    if n >= len(worte):
+        return str(n)      # bricht mit der Form, nicht mit der Wahrheit
+    return (worte[n].replace("ue", "ü").replace("oe", "ö").replace("ss", "ß")
+            .capitalize())
+
+
+def _werkzeugzahlen() -> dict[str, str]:
+    """Zaehlt die Werkzeuge in mcp/server.py, ausgeschrieben.
+
+    Die Folie "Der Agent" fuehrte diese Zahlen als Woerter: "Zwanzig
+    Werkzeuge", "Vier zum Lesen", "Sechzehn zum Aendern". Am 06.09.2026
+    kam serverstand() dazu, und alle drei wurden falsch. Gefunden hat es
+    tools/deck_audit.py, das die Folienzahl gegen das Repository haelt -
+    die Pruefung hat also getan, was sie soll. Gezaehlt statt korrigiert
+    kann es kein zweites Mal passieren.
+
+    Aendernd heisst: ruft _rpc() wirklich AUF. Auf die Zeichenkette
+    "_rpc(" zu pruefen zaehlte serverstand() falsch mit, weil dessen
+    Quelltext sie in einem Vergleich fuehrt - beim ersten Versuch genau
+    so passiert.
+    """
+    import ast
+    quelle = (WURZEL / "mcp" / "server.py").read_text(encoding="utf-8")
+    lesend = aendernd = 0
+    for knoten in ast.parse(quelle).body:
+        if not isinstance(knoten, ast.FunctionDef):
+            continue
+        if not any(isinstance(d, ast.Call) and getattr(d.func, "attr", "") == "tool"
+                   for d in knoten.decorator_list):
+            continue
+        if any(isinstance(n, ast.Call) and getattr(n.func, "id", "") == "_rpc"
+               for n in ast.walk(knoten)):
+            aendernd += 1
+        else:
+            lesend += 1
+    return {"gesamt": _zahlwort(lesend + aendernd),
+            "lesend": _zahlwort(lesend),
+            "aendernd": _zahlwort(aendernd)}
+
 # Frueher diente ein konkretes BINT-Vorlesungsdeck aus dem Werkzeug
 # thws-deck-batch als Vorlage (nur fuer Layouts und Fussmasken, keine
 # Inhalte). Dieses Werkzeug ist abgeloest, der Ordner existiert nicht
@@ -1031,16 +1078,19 @@ def baue() -> Presentation:
                "läge, wäre er hier weg. Er liegt aber in der Datenbank, und deshalb "
                "ändert sich durch den neuen Aufrufer an den Rechten nichts.")
 
-    s = folie(prs, "12 · Der Agent", "Zwanzig Werkzeuge — und fünf, die mit Absicht fehlen",
+    _w = _werkzeugzahlen()
+    s = folie(prs, "12 · Der Agent",
+              f"{_w['gesamt']} Werkzeuge — und fünf, die mit Absicht fehlen",
               "Das Programm bietet genau die Funktionen an, die auch die Warenwirtschaft "
               "benutzt. Was fehlt, fehlt aus einem Grund, den man am Modell ablesen kann.")
     kachelreihe(s, [
-        ("Vier zum Lesen", [
+        (f"{_w['lesend']} zum Lesen", [
             "Sichten auflisten und abfragen",
             "Änderungsprotokoll — nur mit der Rolle leitung",
             "Radereignisse mit Vorher und Nachher",
+            "Serverstand — welche Fassung gerade läuft",
         ]),
-        ("Sechzehn zum Ändern", [
+        (f"{_w['aendernd']} zum Ändern", [
             "Räder, Kunden und Stationen anlegen",
             "Status setzen, Schäden melden, Aufträge schließen",
             "Drei davon sind nicht rücknehmbar",
