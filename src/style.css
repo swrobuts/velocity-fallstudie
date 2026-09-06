@@ -1710,14 +1710,30 @@ footer :focus-visible, .product-tabs :focus-visible,
   color: var(--ink);
 }
 
-/* Vier Kacheln, so viele Spalten wie Platz da ist. auto-fit haelt jede
+/* Drei Kacheln, so viele Spalten wie Platz da ist. auto-fit haelt jede
    Kachel bei mindestens 140 Punkten und wechselt die Spaltenzahl von
-   sich aus - kein fester Umbruchpunkt, der bei genau 600 Punkten
-   nachgemessen werden muesste. */
+   sich aus. */
 .bilanz-gitter {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: var(--a5);
+}
+/* EIN FESTER UMBRUCHPUNKT, UND ZWAR NOTGEDRUNGEN (06.09.2026).
+   Sonst gilt in diesem Projekt: keine festen Umbruchpunkte, auto-fit
+   erledigt das. Bei GENAU DREI Kacheln kann es das nicht - es gibt immer
+   einen Bereich, in dem zwei Spalten passen und die dritte Kachel allein
+   auf halber Breite steht, mit einem Loch daneben.
+
+   Im Browser ausgemessen, nicht geschaetzt: drei Spalten ab 516 Punkten
+   Fensterbreite, zwei Spalten von rund 340 bis 515. In genau dieser
+   Spanne liegen 375, 390, 414 und 430 - also praktisch jedes Telefon.
+   Der Umbruch bei 515 macht daraus eine Spalte: jede Kachel ueber die
+   volle Breite, kein Loch.
+
+   Der Wert haengt an minmax(140px) und var(--a5) oben. Wer eines von
+   beiden aendert, misst hier nach. */
+@media (max-width: 515px) {
+  .bilanz-gitter { grid-template-columns: 1fr; }
 }
 /* min-width: 0 und container-type: inline-size gehoeren zusammen und
    beide zum selben Zweck - DIE ZAHLEN WACHSEN. Ohne min-width: 0 kann
@@ -1941,17 +1957,44 @@ footer :focus-visible, .product-tabs :focus-visible,
 .verlauf-schalter button[aria-pressed="true"] {
   background: var(--navy); border-color: var(--navy); color: #fff;
 }
-.verlauf-balken { display: flex; flex-direction: column; gap: var(--a3); margin: 0; padding: 0; list-style: none; }
-.verlauf-balken li {
+/* EIN RASTER FUER ALLE ZEILEN, nicht eines je Zeile (berichtigt
+   06.09.2026).
+
+   Hier stand ".verlauf-balken { display: flex }" mit einem eigenen
+   "display: grid" auf jedem li - und daneben die Behauptung, "auto"
+   messe "an allen Zeilen gemeinsam die breiteste". Das ist falsch, und
+   zwar aus einem einfachen Grund: jedes li war ein EIGENES Raster. Eine
+   Spur richtet sich immer nur nach den Zeilen IHRES Rasters, und bei je
+   einer Zeile pro Raster heisst das: nach ihrer eigenen. "APR. 25" ist
+   schmaler als "SEPT. 25", also begann jeder Balken woanders. Der
+   Auftraggeber hat es gesehen, bevor ich es nachgemessen hatte.
+
+   Jetzt traegt die Liste selbst die drei Spuren, und jedes li reicht
+   per subgrid genau diese Spuren an seine Kinder durch. Damit misst
+   die erste Spur wirklich ueber alle Zeilen, und alle Balken beginnen
+   auf derselben Senkrechten.
+
+   ZWEI grid-template-columns-Zeilen, Reihenfolge mit Absicht: kennt ein
+   Browser subgrid nicht, ist die zweite Deklaration ungueltig und wird
+   verworfen - dann gilt die erste, und die Zeile sieht aus wie bisher
+   (nicht in Flucht, aber vollstaendig lesbar). Ein fester Punktwert
+   waere keine Loesung: mit 44px brachen "Sept. 25" und "März 26"
+   zweizeilig um, weil Versalien mit weiter Laufweite (--weit) mehr
+   Platz brauchen, als ein Fixmass vorwegnehmen kann. */
+.verlauf-balken {
   display: grid;
-  /* Beide Aussenspalten nach ihrem Inhalt, die Spur nimmt den Rest.
-     Ein fester Punktwert fuer den Monat (zuerst 44px) hat "Sept. 25"
-     und "März 26" zweizeilig umbrechen lassen - bei Grossbuchstaben
-     und weiter Laufweite (--weit) ist ein Fixmass hier zu knapp;
-     "auto" misst dagegen an allen Zeilen gemeinsam die breiteste. */
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: var(--a3);
+  margin: 0; padding: 0; list-style: none;
+}
+.verlauf-balken li {
+  display: grid;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: var(--a3);
+  grid-template-columns: auto 1fr auto;
+  grid-template-columns: subgrid;
 }
 .verlauf-monat {
   font: 700 var(--grad-etikett)/1 var(--mono);

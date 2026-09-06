@@ -16,9 +16,23 @@ async function ladeMonate() {
     return ladeListe('v_meine_monatsbilanz', '*', (q) => q.order('monat'));
 }
 
-async function ladeLetzteFahrten(anzahl = 5) {
-    return ladeListe('v_meine_fahrt_kennzahl', '*',
-        (q) => q.order('startzeit', { ascending: false }).limit(anzahl));
+/* ALLE eigenen Fahrten, AUFSTEIGEND. Beides hat sich am 06.09.2026
+   geaendert: vorher waren es die fuenf juengsten, absteigend.
+
+   Aufsteigend, weil die Liste jetzt ein Fahrtenbuch ist und nicht mehr
+   ein Auszug - und weil der Verlauf darueber ebenfalls vom aeltesten
+   zum juengsten Monat laeuft. Zwei Zeitachsen auf einer Seite sollten
+   in dieselbe Richtung zeigen.
+
+   Alle statt fuenf, weil die Zeitauswahl darunter "Alle" anbietet.
+   Das Limit von 500 ist eine Reissleine gegen ein Konto, das irgendwann
+   Tausende Fahrten traegt - der Demokunde liegt bei 33. Wird es je
+   erreicht, fehlen die AELTESTEN, nicht die juengsten; deshalb wird
+   absteigend geholt und erst danach gedreht. */
+async function ladeFahrten(hoechstens = 500) {
+    const zeilen = await ladeListe('v_meine_fahrt_kennzahl', '*',
+        (q) => q.order('startzeit', { ascending: false }).limit(hoechstens));
+    return zeilen.reverse();
 }
 
 /* Zahlen im Dashboard werden EINHEITLICH deutsch formatiert. Ohne das
@@ -499,17 +513,78 @@ function fortschrittZeichnen(b) {
     ziel.replaceChildren(ueber, kopf, spur, text, platz);
 }
 
+/* Die Zeitauswahl der Fahrtenliste, wie beim Verlauf darueber: eine
+   Modulvariable, keine Eigenschaft am DOM. Sie ueberlebt das Neuzeichnen
+   der Liste, nicht aber ein Neuladen der Seite - genau richtig fuer eine
+   Ansichtseinstellung, die niemand gespeichert haben will. */
+let fahrtenZeitraum = 'monat';
+
+const FAHRTEN_ZEITRAUM = {
+    monat: {
+        name: 'Dieser Monat',
+        titel: 'dieser Monat',
+        passt: (f) => {
+            const d = new Date(f.startzeit);
+            const jetzt = new Date();
+            return d.getFullYear() === jetzt.getFullYear()
+                && d.getMonth() === jetzt.getMonth();
+        }
+    },
+    alle: { name: 'Alle', titel: 'alle', passt: () => true }
+};
+
 function fahrtenZeichnen(fahrten) {
     const ziel = document.getElementById('dashboard-fahrten');
+    const z = FAHRTEN_ZEITRAUM[fahrtenZeitraum];
+
     const ueber = document.createElement('h3');
-    ueber.textContent = 'Letzte Fahrten';
-    if (!fahrten.length) {
-        ziel.replaceChildren(ueber);
+    ueber.textContent = `Fahrten: ${z.titel}`;
+
+    /* KEIN "Letzte Fahrten" mehr. Die Liste zeigt seit dem 06.09.2026
+       einen waehlbaren Zeitraum in aufsteigender Reihenfolge - "letzte"
+       beschriebe weder das eine noch das andere. Die Ueberschrift nennt
+       stattdessen die getroffene Wahl, genau wie "Verlauf: Kilometer"
+       darueber. */
+    const schalter = document.createElement('div');
+    schalter.className = 'verlauf-schalter';
+    schalter.setAttribute('role', 'group');
+    schalter.setAttribute('aria-label', 'Zeitraum wählen');
+    for (const [schluessel, wert] of Object.entries(FAHRTEN_ZEITRAUM)) {
+        const knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.textContent = wert.name;
+        knopf.setAttribute('aria-pressed', String(schluessel === fahrtenZeitraum));
+        knopf.addEventListener('click', () => {
+            fahrtenZeitraum = schluessel;
+            fahrtenZeichnen(fahrten);
+        });
+        schalter.append(knopf);
+    }
+
+    const gewaehlt = fahrten.filter(z.passt);
+
+    // Dieselbe Stelle wie die Verlaufssumme: rechts auf Hoehe der Pillen.
+    const anzahl = document.createElement('span');
+    anzahl.className = 'verlauf-gesamt';
+    anzahl.textContent = gewaehlt.length === 1
+        ? '1 Fahrt' : `${gewaehlt.length} Fahrten`;
+    schalter.append(anzahl);
+
+    if (!gewaehlt.length) {
+        /* Ein leerer Zeitraum ist kein Fehler - im laufenden Monat kann
+           es schlicht noch keine Fahrt geben. Der Satz sagt das und
+           laesst die Pillen stehen, damit der Weg zurueck zu "Alle"
+           sichtbar bleibt. */
+        const leer = document.createElement('p');
+        leer.className = 'dashboard-leer';
+        leer.textContent = 'In diesem Zeitraum steht keine Fahrt.';
+        ziel.replaceChildren(ueber, schalter, leer);
         return;
     }
+
     const liste = document.createElement('ul');
     liste.className = 'fahrten-liste';
-    fahrten.forEach((f) => {
+    gewaehlt.forEach((f) => {
         const li = document.createElement('li');
         const kopf = document.createElement('span');
         kopf.className = 'fahrt-kopf';
@@ -527,13 +602,14 @@ function fahrtenZeichnen(fahrten) {
         li.append(kopf, weg, zahlen);
         liste.append(li);
     });
-    ziel.replaceChildren(ueber, liste);
+    ziel.replaceChildren(ueber, schalter, liste);
 
-    // Die Fussnote nur zeigen, wenn mindestens eine der fuenf Fahrten
-    // tatsaechlich geschaetzt ist - dasselbe Prinzip wie beim
-    // Schaetzhinweis in bilanzZeichnen(): eine Fussnote zu einem Zeichen,
-    // das gar nicht auftaucht, waere eine Behauptung ins Leere.
-    if (fahrten.some((f) => f.ist_geschaetzt)) {
+    /* Die Fussnote nur zeigen, wenn mindestens eine der ANGEZEIGTEN
+       Fahrten geschaetzt ist - nicht eine der geladenen. Eine Fussnote
+       zu einem Zeichen, das im gewaehlten Zeitraum gar nicht auftaucht,
+       waere eine Behauptung ins Leere. Dasselbe Prinzip wie beim
+       Schaetzhinweis in bilanzZeichnen(). */
+    if (gewaehlt.some((f) => f.ist_geschaetzt)) {
         const fussnote = document.createElement('p');
         fussnote.className = 'fahrten-fussnote';
         fussnote.textContent = '* Strecke geschätzt, nicht gemessen.';
@@ -603,7 +679,7 @@ async function dashboardZeichnen() {
     verlaufZeichnen(monate);
     statusabzeichenZeichnen(bilanz);
     fortschrittZeichnen(bilanz);
-    fahrtenZeichnen(await ladeLetzteFahrten(5));
+    fahrtenZeichnen(await ladeFahrten());
 
     zeitraumZeichnen(bilanz);
 }

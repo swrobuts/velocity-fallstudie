@@ -113,7 +113,18 @@ create or replace view velocity.v_meine_monatsbilanz as
 select date_trunc('month', fk.startzeit)::date          as monat,
        count(*)::integer                                as fahrten,
        sum(fk.dauer_minuten)::integer                   as minuten,
-       round(sum(fk.km), 1)                             as km,
+       -- UNGERUNDET (06.09.2026). Hier stand round(sum(fk.km), 1).
+       -- Auf dem Dashboard summiert der Verlauf diese Monatswerte zu
+       -- einem Gesamtwert; elf einzeln gerundete Monate ergaben 155,9,
+       -- waehrend die Kachel darueber die einmal gerundete Gesamtsumme
+       -- mit 156 auswies. Zwei Zahlen fuer dieselbe Groesse auf einem
+       -- Bildschirm, und keine Moeglichkeit zu erkennen, welche stimmt.
+       --
+       -- Die Anzeige aendert sich dadurch NICHT: das Frontend formatiert
+       -- ohnehin auf eine Nachkommastelle (Intl.NumberFormat mit
+       -- maximumFractionDigits 1 in dashboard.js). Gewonnen ist nur, dass
+       -- die Summe der Monate jetzt der Gesamtsumme entspricht.
+       sum(fk.km)                                       as km,
        round(sum(fk.co2_ersparnis_g) / 1000.0, 2)       as co2_ersparnis_kg,
        sum(fk.betrag_brutto)                            as ausgaben_brutto,
        -- NACH KILOMETERN GEWICHTET, NICHT NACH FAHRTEN (06.09.2026).
@@ -153,7 +164,9 @@ comment on column velocity.v_meine_monatsbilanz.fahrten is
 comment on column velocity.v_meine_monatsbilanz.minuten is
   'Summe der Fahrtdauer dieses Monats, in Minuten.';
 comment on column velocity.v_meine_monatsbilanz.km is
-  'Summe der gefahrenen Kilometer dieses Monats, auf eine Nachkommastelle gerundet.';
+  'Summe der gefahrenen Kilometer dieses Monats, ungerundet - damit die Summe über '
+  'alle Monate der Gesamtsumme in v_meine_bilanz entspricht. Gerundet wird erst bei '
+  'der Anzeige.';
 comment on column velocity.v_meine_monatsbilanz.co2_ersparnis_kg is
   'Summe der CO2-Ersparnis dieses Monats in Kilogramm; erst summiert, dann gerundet - '
   'velocity.v_fahrt_kennzahl.co2_ersparnis_g ist bewusst ungerundet.';
