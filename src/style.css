@@ -1645,11 +1645,19 @@ footer :focus-visible, .product-tabs :focus-visible,
 /* Der Zeitraum steht auf line-height 1 - eine Grossbuchstabenzeile
    braucht darueber Luft, sonst klebt sie am Titel. */
 .dashboard-kopf > div > * + * { margin-top: var(--a3); }
+/* Frueher ein Versalien-Etikett im Kopf (Mono, gesperrt, 700). Jetzt ein
+   gewoehnlicher Satz ueber den Kacheln: die Zeile SAGT etwas ("Summen
+   ueber den gesamten Zeitraum, ..."), und Versalien in Mono lesen sich
+   als Rubrik, nicht als Aussage. Dieselbe Groesse und Farbe wie
+   .bilanz-hinweis darunter - beide erklaeren dieselben vier Kacheln, die
+   eine von oben, die andere von unten. */
 .dashboard-zeitraum {
-  margin: var(--a1) 0 0;
-  font: 700 var(--grad-etikett)/1 var(--mono);
-  letter-spacing: var(--weit); text-transform: uppercase; color: var(--grau);
+  margin: 0 0 var(--a4);
+  font-size: var(--grad-klein); line-height: 1.5; color: var(--grau);
 }
+/* Ohne Zeitraum (Konto ohne Fahrt) darf auch der Abstand nicht stehen
+   bleiben - sonst klafft ueber den Kacheln eine Luecke ohne Anlass. */
+.dashboard-zeitraum:empty { display: none; }
 /* Leer, solange keine Bilanz da ist (siehe Kommentar bei
    #dashboard-abzeichen in index.html) - dann auch KEIN Abstand nach oben,
    sonst bliebe bei einem Konto ohne Fahrten eine kleine unbenutzte Luecke
@@ -1816,17 +1824,25 @@ footer :focus-visible, .product-tabs :focus-visible,
 
    Sie RAGT OBEN UND UNTEN HERAUS, und das ist der ganze Trick. Bliebe
    sie in der Spur, laege sie - sobald der laufende Monat den Median
-   ueberschritten hat - mitten auf dem Navy-Balken; --ink auf --navy
-   traegt 1,2:1 und waere dort unsichtbar. Die herausragenden Enden
-   stehen dagegen immer auf der weissen Karte (16,1:1), und von denen
-   liest man den Strich ab, egal was in der Spur hinter ihm liegt.
-   Ausprobiert wurde vorher mix-blend-mode: difference - der Unterschied
-   zwischen #111827 und #061841 ist zu klein, um etwas zu zeigen. */
+   ueberschritten hat - mitten auf dem Navy-Balken und waere dort
+   unsichtbar. Die herausragenden Enden stehen dagegen immer auf der
+   weissen Karte, und von denen liest man den Strich ab, egal was in der
+   Spur hinter ihm liegt. Ausprobiert und verworfen: mix-blend-mode:
+   difference - der Unterschied zwischen --ink und --navy ist zu klein,
+   um etwas zu zeigen.
+
+   ROT, NICHT SCHWARZ (06.09.2026). --ink trug auf dem Navy-Balken
+   1,03:1, war also genau dort unsichtbar, wo es darauf ankommt. --red
+   haelt 5,47:1 gegen die weisse Karte und 3,16:1 gegen Navy - beide
+   Schwellen fuer grafische Objekte (3:1) also auf beiden Gruenden. Rot
+   kommt auf dieser Karte sonst NICHT mehr vor, seit der
+   Fortschrittsbalken navy ist; es markiert hier genau eine Sache. Der
+   Strich ist zudem breiter (3 statt 2 Punkte) und ragt weiter heraus. */
 .monat-marke {
-  position: absolute; top: -5px; bottom: -5px;
-  width: 2px; margin-left: -1px;
-  background: var(--ink);
-  border-radius: 1px;
+  position: absolute; top: -6px; bottom: -6px;
+  width: 3px; margin-left: -1.5px;
+  background: var(--red);
+  border-radius: 1.5px;
 }
 .monat-fuss {
   display: block; margin-top: var(--a2);
@@ -1904,7 +1920,15 @@ footer :focus-visible, .product-tabs :focus-visible,
   border-radius: var(--pille);
   overflow: hidden;
 }
-.fortschritt-wert { display: block; height: 100%; background: var(--red); border-radius: var(--pille); }
+/* NAVY, NICHT ROT (06.09.2026, auf Wunsch des Auftraggebers). Rot ist
+   auf dieser Seite die Farbe der Handlungsaufforderung - Login, Leihen,
+   Karte oeffnen. Ein roter Fortschrittsbalken sah aus wie ein Knopf und
+   trug obendrein einen Beiklang von Warnung, wo nur ein Stand gemeint
+   ist. Navy ist dieselbe Farbe wie die Balken in "Dieser Monat"
+   darueber: ueberall auf dieser Karte heisst Navy "dein Wert". Auf
+   --mist traegt es 13,26:1. Rot bleibt damit auf der ganzen Karte fuer
+   genau eine Sache reserviert, die Medianmarke. */
+.fortschritt-wert { display: block; height: 100%; background: var(--navy); border-radius: var(--pille); }
 .fortschritt-text { margin: 0; font-size: var(--grad-klein); color: var(--grau); }
 /* Nachrangig statt Hauptaussage (frueher .einordnung-platz, gross und in
    Navy): der Rang bleibt nuetzlich, ist aber weiterhin ein Vergleich mit

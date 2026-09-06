@@ -171,8 +171,9 @@ function monatZeichnen(monate) {
     ueber.textContent = 'Dieser Monat';
     const hinweis = document.createElement('p');
     hinweis.className = 'monat-hinweis';
-    hinweis.textContent = 'Der laufende Monat gegen die eigenen Vormonate. '
-        + 'Die Marke steht auf dem Median, das Ende der Spur auf dem besten Monat.';
+    hinweis.textContent = 'Der laufende Monat im Vergleich zu den eigenen '
+        + 'Vormonaten. Die Marke sitzt auf dem Median, die Spur reicht bis '
+        + 'zum besten Monat.';
 
     const liste = document.createElement('ul');
     liste.className = 'monat-liste';
@@ -512,6 +513,7 @@ async function dashboardZeichnen() {
            und ebenfalls hinter diesem Ausstieg lag. */
         statusabzeichenZeichnen({ km_gesamt: 0 });
         fortschrittZeichnen({ km_gesamt: 0 });
+        zeitraumZeichnen(null);
         return;
     }
 
@@ -524,7 +526,23 @@ async function dashboardZeichnen() {
     fortschrittZeichnen(bilanz);
     fahrtenZeichnen(await ladeLetzteFahrten(5));
 
-    document.getElementById('dashboard-zeitraum').textContent =
-        `${new Date(bilanz.erste_fahrt).toLocaleDateString('de-DE')} bis `
-        + `${new Date(bilanz.letzte_fahrt).toLocaleDateString('de-DE')}`;
+    zeitraumZeichnen(bilanz);
+}
+
+/* Der Zeitraum steht DIREKT UEBER den vier Kacheln und sagt zweierlei:
+   dass dort Summen stehen, und ueber welche Zeit summiert wurde. Vorher
+   stand nur die nackte Datumsspanne im Kopf neben dem Konterfei - dort
+   las sie sich als Angabe zur Person, nicht als Geltungsbereich der
+   Zahlen darunter.
+
+   Ausgeschriebener Monatsname statt 5.1.2025: die Zeile ist ein Satz,
+   kein Datumsfeld, und in einem Satz liest sich "5. Januar 2025"
+   fluessiger als eine Ziffernfolge. */
+function zeitraumZeichnen(bilanz) {
+    const feld = document.getElementById('dashboard-zeitraum');
+    if (!bilanz || !bilanz.erste_fahrt) { feld.textContent = ''; return; }
+    const tag = (wert) => new Date(wert).toLocaleDateString('de-DE',
+        { day: 'numeric', month: 'long', year: 'numeric' });
+    feld.textContent = `Summen über den gesamten Zeitraum, `
+        + `${tag(bilanz.erste_fahrt)} bis ${tag(bilanz.letzte_fahrt)}.`;
 }

@@ -13,7 +13,7 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="style.css?v=11d657f8">
+    <link rel="stylesheet" href="style.css?v=6242d50c">
 </head>
 <body>
 
@@ -556,7 +556,6 @@
                      die Ueberschrift in die normale Tab-Reihenfolge
                      aufzunehmen. -->
                 <h2 id="dashboard-titel" tabindex="-1">Meine Bilanz</h2>
-                <p id="dashboard-zeitraum" class="dashboard-zeitraum"></p>
                 <!-- Das Statusabzeichen (statusabzeichenZeichnen() in
                      dashboard.js) steht bewusst HIER, neben dem Konterfei,
                      nicht im Block weiter unten: das Konterfei benennt per
@@ -570,6 +569,13 @@
             </div>
         </header>
         <p id="dashboard-fehler" class="dashboard-fehler" role="status" hidden></p>
+        <!-- Der Zeitraum steht HIER, nicht mehr oben neben dem Konterfei:
+             er ist der Geltungsbereich der vier Kacheln darunter, und
+             genau so muss er auch stehen. Im Kopf las er sich als Angabe
+             zur Person. Gefuellt von zeitraumZeichnen() in dashboard.js;
+             leer, solange keine Bilanz da ist - :empty raeumt dann den
+             Abstand mit weg (siehe style.css). -->
+        <p id="dashboard-zeitraum" class="dashboard-zeitraum"></p>
         <div id="dashboard-bilanz" class="bilanz-gitter"></div>
         <!-- Eigenes, festes Element statt eines dynamisch angehaengten <p>:
              siehe Kommentar bei .bilanz-hinweis in style.css - im SELBEN
@@ -644,7 +650,7 @@
 <script src="supabase.js?v=114ade78"></script>
 <script src="auth.js?v=127b1291"></script>
 <script src="script.js?v=58e9516f"></script>
-<script src="dashboard.js?v=efbd0858"></script>
+<script src="dashboard.js?v=9df41039"></script>
 
 
 <!-- DER FAHRPREISRECHNER WOHNT IN EINER SCHUBLADE (28.08.2026).
