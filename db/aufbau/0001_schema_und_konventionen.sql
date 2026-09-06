@@ -29,6 +29,56 @@ create schema if not exists velocity;
 create extension if not exists btree_gist with schema extensions;
 
 -- ---------------------------------------------------------------------
+-- Zeitpunkte: IMMER timestamptz, nie timestamp
+--
+-- Jede Zeitspalte dieses Modells ist timestamptz. Das ist keine
+-- Gewohnheit, sondern die eine Entscheidung, die eine ganze Fehlerklasse
+-- ausschliesst - und sie wird hier festgehalten, weil man sie einer
+-- Spalte nicht ansieht.
+--
+-- WAS DER UNTERSCHIED IST. timestamp speichert eine ABLESUNG: "9:44",
+-- ohne zu sagen, auf welcher Uhr. timestamptz speichert einen
+-- ZEITPUNKT: den Augenblick selbst, unabhaengig davon, wer wo auf die
+-- Uhr sieht. Beide belegen acht Byte, beide sehen in einer Abfrage
+-- gleich aus - der Unterschied zeigt sich erst, wenn zwei Zeitzonen ins
+-- Spiel kommen.
+--
+-- WAS DAS IM BETRIEB HEISST. Ein Wert wird als der Augenblick abgelegt
+-- und beim Lesen in die Zeitzone der SITZUNG umgerechnet. Dieselbe Zeile
+-- erscheint deshalb verschieden, je nachdem wer sie liest:
+--
+--   psql mit timezone=UTC              2026-09-06 09:44:35+00
+--   die Website (toLocaleString de-DE) 6.9.2026, 11:44:35
+--
+-- Das sind nicht zwei Werte, das ist einer. Im September gilt
+-- Sommerzeit, also zwei Stunden Unterschied; im Januar waere es eine.
+--
+-- DIE FALLE, und sie ist am 06.09.2026 im Betrieb aufgetreten: Wer die
+-- Ausgabe einer UTC-Sitzung abschreibt und als Ortszeit weiterverwendet,
+-- verschiebt jeden Wert um zwei Stunden. Auswertungen nach Tageszeit
+-- wandern dann ueber die Mittagsspitze, Tagesabgrenzungen ueber
+-- Mitternacht. Der gespeicherte Wert war dabei nie falsch.
+--
+-- WIE MAN ES RICHTIG LIEST. Entweder einmal die Sitzung stellen:
+--
+--   set timezone = 'Europe/Berlin';
+--
+-- oder je Ausgabespalte umrechnen:
+--
+--   select a.startzeit at time zone 'Europe/Berlin' as start_ortszeit ...
+--
+-- "at time zone" liefert ein timestamp OHNE Zone. Fuer die Anzeige ist
+-- das genau richtig, zum Rechnen nicht: wer damit vergleicht, sortiert
+-- oder gruppiert, hat die Information weggeworfen, auf die es ankam.
+-- Deshalb gehoert es in die Ausgabespalte, nie in where oder order by.
+--
+-- WAS ABSICHTLICH NICHT timestamptz IST: reine Kalenderangaben wie
+-- angeschafft_am oder gueltigkeit. Ein Kaufdatum ist ein Tag, kein
+-- Augenblick; date ist dort der richtige Typ, und eine Umrechnung waere
+-- dort sogar schaedlich.
+-- ---------------------------------------------------------------------
+
+-- ---------------------------------------------------------------------
 -- Aufzaehlungstypen
 --
 -- Geschlossene technische Wertemengen werden als ENUM modelliert,

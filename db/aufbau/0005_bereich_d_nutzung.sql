@@ -121,6 +121,13 @@ $$;
 --  das in ist_geschaetzt und verfahren. Eine gerechnete Strecke steht
 --  dort nie ununterscheidbar neben einer gemeldeten.
 -- ---------------------------------------------------------------------
+comment on column velocity.ausleihe.startzeit is
+  'Augenblick, in dem das Schloss aufging. timestamptz — der Wert ist ein Zeitpunkt, '
+  'keine Ablesung, und erscheint je nach Zeitzone der Sitzung verschieden. Für die '
+  'Anzeige in Ortszeit: at time zone ''Europe/Berlin''. Siehe 0001, Abschnitt '
+  '"Zeitpunkte".';
+comment on column velocity.ausleihe.endzeit is
+  'Augenblick der Rückgabe, null solange die Fahrt läuft. Zeitzone wie bei startzeit.';
 comment on column velocity.ausleihe.distanz_km is
   'Vom Schloss des Rades gemeldete Fahrstrecke in Kilometern. null bedeutet, dass '
   'beim Abschließen keine Meldung ankam (kein Mobilfunk, leere Schlossbatterie, kein '
