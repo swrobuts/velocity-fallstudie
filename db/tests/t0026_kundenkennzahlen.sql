@@ -114,16 +114,33 @@ $$;
 
 create or replace function velocity_test.test_kk_summen_stimmen_ueberein()
 returns setof text language plpgsql as $$
-declare v_monat numeric; v_gesamt numeric;
+declare v_monat numeric; v_gesamt numeric; v_monate int; v_toleranz numeric;
 begin
   perform velocity_test.fixture_kunde_anmelden('K-000001');
-  select round(sum(km), 1) into v_monat from velocity.v_meine_monatsbilanz;
+  select round(sum(km), 1), count(*) into v_monat, v_monate
+    from velocity.v_meine_monatsbilanz;
   select km_gesamt        into v_gesamt from velocity.v_meine_bilanz;
-  -- Zwei Sichten, dieselbe Groesse. Laufen sie auseinander, zeigt das
-  -- Dashboard im Verlauf etwas anderes als in der Bilanz darueber -
-  -- und niemand weiss, welche der beiden Zahlen stimmt.
-  return next is(v_monat, v_gesamt,
-                 'Die Monatssummen ergeben die Gesamtbilanz');
+
+  /* Zwei Sichten, dieselbe Groesse. Laufen sie auseinander, zeigt das
+     Dashboard im Verlauf etwas anderes als in der Bilanz darueber - und
+     niemand weiss, welche der beiden Zahlen stimmt.
+
+     TOLERANZ STATT GLEICHHEIT (06.09.2026). Hier stand is(v_monat,
+     v_gesamt) - ein exakter Vergleich, der jahrelang gruen war, weil er
+     Glueck hatte. v_meine_monatsbilanz rundet JEDEN MONAT einzeln auf
+     eine Stelle, v_meine_bilanz rundet die Gesamtsumme einmal. Bei n
+     Monaten koennen sich diese Rundungen auf bis zu n * 0,05 addieren,
+     dazu 0,05 fuer die Gesamtsumme selbst. Aufgefallen ist es, als nach
+     dem Entfernen von neun Demofahrten 155,9 gegen 156,0 stand.
+
+     Die Schranke bleibt scharf: die kleinste Abweichung, die ein ECHTER
+     Fehler erzeugen kann, ist eine ganze Fahrt - mehrere Kilometer, also
+     eine Groessenordnung ueber dieser Toleranz. */
+  v_toleranz := v_monate * 0.05 + 0.05;
+  return next ok(abs(v_monat - v_gesamt) <= v_toleranz,
+                 format('Die Monatssummen ergeben die Gesamtbilanz '
+                        '(%s gegen %s, erlaubte Rundungsabweichung %s)',
+                        v_monat, v_gesamt, v_toleranz));
 end;
 $$;
 

@@ -19,7 +19,9 @@
 --  Auftrag des Betreibers, woertlich: "es muss einen job auf der DB
 --  geben, der regelmaessig Demodaten schreibt, damit das nicht gleich
 --  veraltet." Zusaetzlich fuer den Sofortbedarf: der laufende Monat soll
---  einmalig auf 10-15 Fahrten kommen, kein Alibi mit einer einzigen Fahrt.
+--  einmalig auf den eigenen Median plus eins kommen, kein Alibi mit
+--  einer einzigen Fahrt. (Bis zum 06.09.2026 stand hier die feste
+--  Vorgabe "10-15" - warum sie weg ist, steht unten bei SOFORTBEDARF.)
 --
 --  ---------------------------------------------------------------------
 --  DAS ENTWURFSPROBLEM: WACHSTUM STATT ROLLIEREN
@@ -456,6 +458,7 @@ declare
   v_vorhandene   integer;
   v_fehlt        integer;
   v_zuviel       integer;
+  v_km_entfernt  numeric := 0;
   v_vor_max_id   bigint;
   v_neu_min_id   bigint;
   v_neu_max_id   bigint;
@@ -623,6 +626,22 @@ begin
        Die Entgeltpositionen muessen zuerst weg (Fremdschluessel auf
        ausleihe). Rechnung und Rechnungsposition bleiben unberuehrt -
        genau das sichert die dritte Schranke. */
+    -- Kilometer der zu entfernenden Fahrten VORHER merken - nach dem
+    -- delete sind sie aus v_fahrt_kennzahl verschwunden, und die
+    -- Schlussgegenprobe unten braucht sie, um die Differenz zu erklaeren.
+    select coalesce(round(sum(fk.km), 1), 0) into v_km_entfernt
+      from velocity.v_fahrt_kennzahl fk
+     where fk.ausleihe_id in (
+       select a.ausleihe_id
+         from velocity.ausleihe a
+        where a.kunde_id = v_kunde_id
+          and a.status = 'abgeschlossen'
+          and date_trunc('month', a.startzeit) = v_monat_neu
+          and not exists (select 1 from velocity.rechnungsposition rp
+                           where rp.ausleihe_id = a.ausleihe_id)
+        order by a.ausleihe_id
+       offset v_ziel);
+
     with ueberhang as (
       select a.ausleihe_id
         from velocity.ausleihe a
@@ -692,29 +711,58 @@ begin
       v_vorher_rg_zeilen, v_nachher_rg_zeilen, v_vorher_rgp_zeilen, v_nachher_rgp_zeilen;
   end if;
 
+  -- GEGEN DAS BERECHNETE ZIEL, NICHT MEHR GEGEN 10-15 (berichtigt
+  -- 06.09.2026). Hier stand "< 10 or > 15" aus der alten festen Vorgabe.
+  -- Beim Umstellen auf den Median habe ich die Auffuell-Logik und die
+  -- Kopfkommentare nachgezogen, DIESE Zeile aber uebersehen - mit der
+  -- Folge, dass der Block sauber durchlief, den Ueberhang korrekt auf 4
+  -- abraeumte und dann an der eigenen Schlusspruefung scheiterte:
+  -- "laufender Monat hat 4 Fahrten, ausserhalb 10-15". Die Ausnahme
+  -- rollte alles zurueck, und ein Lauf der Datei sah nach aussen aus,
+  -- als haette er nichts getan. Genau die Sorte Fehler, gegen die dieses
+  -- Projekt tools/objektlisten_pruefen.py und tools/grants_pruefen.py
+  -- hat: eine von Hand gefuehrte Zahl, die neben ihrer Quelle
+  -- weiterlebt.
   select count(*) into v_vorhandene
     from velocity.ausleihe
    where kunde_id = v_kunde_id and status = 'abgeschlossen'
      and date_trunc('month', startzeit) = v_monat_neu;
-  if v_vorhandene < 10 or v_vorhandene > 15 then
-    raise exception 'Gegenprobe fehlgeschlagen: laufender Monat hat % Fahrten, ausserhalb 10-15',
-      v_vorhandene;
+  if v_vorhandene <> v_ziel then
+    raise exception 'Gegenprobe fehlgeschlagen: laufender Monat hat % Fahrten, Ziel war %',
+      v_vorhandene, v_ziel;
   end if;
 
   select round(sum(fk.km), 1), count(*) into v_km_nachher, v_fahrten_nachher
     from velocity.v_fahrt_kennzahl fk where fk.kunde_id = v_kunde_id;
 
-  -- Die neu ANGELEGTEN Fahrten muessen die gesamte Differenz erklaeren -
-  -- das reine Verschieben darf keinen einzigen Kilometer beitragen.
+  -- Angelegte MINUS entfernte Fahrten muessen die gesamte Differenz
+  -- erklaeren - das reine Verschieben darf keinen einzigen Kilometer
+  -- beitragen.
+  --
+  -- Der Abzug ist seit dem 06.09.2026 dabei. Vorher stand hier nur der
+  -- Zuwachs, weil dieser Block nur Fahrten anlegen konnte. Seit er auch
+  -- einen Ueberhang abraeumt, ist die Differenz negativ, und die
+  -- Gegenprobe schlug mit "km-Zuwachs (-27.3) entspricht nicht der
+  -- Summe der neu angelegten Fahrten (0)" an - richtig gemeldet,
+  -- gemessen an ihrer eigenen, inzwischen unvollstaendigen Annahme.
   select coalesce(round(sum(fk.km), 1), 0) into v_km_neu
     from velocity.v_fahrt_kennzahl fk
    where fk.kunde_id = v_kunde_id
      and v_neu_min_id is not null and fk.ausleihe_id between v_neu_min_id and v_neu_max_id;
 
-  if round(v_km_nachher - v_km_vorher, 1) <> v_km_neu then
-    raise exception 'Gegenprobe fehlgeschlagen: km-Zuwachs (%) entspricht nicht der Summe der '
-                     'neu angelegten Fahrten (%) - das reine Verschieben duerfte keine '
-                     'Kilometer beitragen', round(v_km_nachher - v_km_vorher, 1), v_km_neu;
+  -- TOLERANZ 0,2, KEIN EXAKTER VERGLEICH. In dieser Zeile stehen VIER
+  -- unabhaengig auf eine Stelle gerundete Summen (vorher, nachher,
+  -- angelegt, entfernt). Jede kann um bis zu 0,05 danebenliegen, in
+  -- Summe also 0,2 - genau das ist hier aufgetreten: -27,3 gegen -27,4.
+  -- Ein ECHTER Fehler waere um Groessenordnungen groesser, denn die
+  -- kleinste Einheit, die hier verschwinden oder entstehen kann, ist
+  -- eine ganze Fahrt mit mehreren Kilometern. Die Schranke unterscheidet
+  -- also weiterhin, was sie unterscheiden soll.
+  if abs((v_km_nachher - v_km_vorher) - (v_km_neu - v_km_entfernt)) > 0.2 then
+    raise exception 'Gegenprobe fehlgeschlagen: km-Differenz (%) entspricht nicht '
+                     'angelegt minus entfernt (% - %) - das reine Verschieben duerfte '
+                     'keine Kilometer beitragen',
+      round(v_km_nachher - v_km_vorher, 1), v_km_neu, v_km_entfernt;
   end if;
 
   raise notice 'Clara Fake (K-000001) vorher: % Fahrten, % km. Nachher: % Fahrten, % km.',
