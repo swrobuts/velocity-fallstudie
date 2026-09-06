@@ -407,9 +407,13 @@ MD("""
 einzigen Ausreißer. In echten Daten wäre sie die erste Adresse für Anomalien: Tempo 45 auf
 einem CITY-Rad bedeutet, dass das Rad im Transporter lag, 2 km/h bedeutet Schieben.
 
-Der Grund ist die Herkunft dieses Datensatzes: **Die Distanz wurde aus der Dauer
-gerechnet**, mit einer typtypischen Geschwindigkeit und wenig Streuung. Wo eine Größe aus
-einer anderen abgeleitet ist, kann sie nichts Neues zeigen.
+Der Grund ist die Herkunft dieses Datensatzes: **Dauer und Distanz stammen
+voneinander.** Zuerst steht die Strecke — kürzeste Route zwischen den Stationen mal
+Umwegbereitschaft —, aus ihr folgt über eine typtypische Geschwindigkeit die Fahrzeit,
+und diese ist nach unten zusätzlich so begrenzt, dass kein Rad schneller fährt, als es
+fahren kann. Der Quotient aus beiden ist deshalb im Wesentlichen wieder jene
+Geschwindigkeit. Wo eine Größe aus einer anderen abgeleitet ist, kann ihr Quotient nichts
+Neues zeigen.
 
 > **Der Punkt gilt über diesen Datensatz hinaus:**
 > Wie eine Spalte entstanden ist, gehört zur Datenprüfung. Eine abgeleitete Größe als
