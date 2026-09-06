@@ -1936,28 +1936,29 @@ footer :focus-visible, .product-tabs :focus-visible,
    die Schaltpillen links und der Gesamtwert rechts (margin-left: auto
    auf .verlauf-gesamt). Auf schmalen Schirmen rutscht er per flex-wrap
    in die naechste Zeile. */
-/* OPTISCH AUSGERICHTET, NICHT NACH KASTENKANTE (06.09.2026).
-   Alle Kaesten in diesen Karten beginnen an derselben Senkrechten - die
-   Ueberschrift, die Monatskuerzel im Verlauf, die Eintraege im
-   Fahrtenbuch und auch die erste Pille. Der TEXT der Pille faengt aber
-   erst 17 Punkte weiter rechts an, weil er hinter 1 Punkt Rahmen und
-   var(--a4) Innenabstand liegt. Auf einer Karte, in der sonst jede Zeile
-   Text an derselben Kante beginnt, faellt genau diese eine auf - im
-   Browser nachgemessen: alles bei 61, der Pillentext bei 78.
+/* ZWEI FLUCHTEN, UND ZWAR MIT ABSICHT (06.09.2026).
+   Eine Pille hat Rahmen und Innenabstand, ihr Text beginnt also
+   --pillen-einzug weiter rechts als ihr Kasten. Beides zugleich kann
+   nicht in einer Flucht stehen; es ist eine Wahl, und sie ist so
+   getroffen:
 
-   Der negative Aussenabstand zieht die Zeile um exakt diese 17 Punkte
-   nach links, damit der Pillentext auf 61 landet. Der Wert ist
-   GERECHNET, nicht eingetragen: aendert jemand oben das Polster oder die
-   Rahmenstaerke der Pillen, wandert der Ausgleich mit.
+     Ueberschrift und Pillenkasten  -> linke Kante der Karte
+     alles, was unter den Pillen folgt -> Kante des Pillentextes
 
-   Nur der LINKE Rand. Bei width:auto bleibt die rechte Kante dort, wo
-   sie war - die Gesamtsumme mit margin-left:auto steht also weiterhin
-   buendig ueber den Zahlen der Balkenzeilen. */
+   Damit steht oben die Bedienung und darunter, leicht eingerueckt, was
+   sie steuert - Monatszeilen im Verlauf, Fahrteintraege im Fahrtenbuch.
+   Kurz stand hier stattdessen ein negativer Aussenabstand, der die
+   Pille nach links zog; sie ragte dann sichtbar aus der Spalte, und ein
+   Kasten, der als Einziger uebersteht, faellt staerker auf als ein
+   Text, der als Einziger eingerueckt ist.
+
+   Der Einzug ist GERECHNET: aendert jemand unten Polster oder
+   Rahmenstaerke der Pillen, wandert er mit. Er sitzt auf
+   .dashboard-block, weil ihn beide Karten brauchen. */
+.dashboard-block { --pillen-einzug: calc(var(--a4) + 1px); }
 .verlauf-schalter {
   display: flex; flex-wrap: wrap; align-items: center;
-  gap: var(--a2);
-  margin: 0 0 var(--a4);
-  margin-left: calc(-1 * (var(--a4) + 1px));
+  gap: var(--a2); margin: 0 0 var(--a4);
 }
 .verlauf-gesamt {
   margin-left: auto;
@@ -2090,6 +2091,21 @@ footer :focus-visible, .product-tabs :focus-visible,
   font-size: var(--grad-klein); color: var(--ink);
 }
 .fahrten-fussnote { margin: var(--a4) 0 0; font-size: var(--grad-etikett); color: var(--grau); }
+/* DIESE REGEL MUSS HIER UNTEN STEHEN, nicht oben bei .verlauf-schalter,
+   wo sie hingehoerte. .verlauf-balken, .fahrten-liste und
+   .fahrten-fussnote setzen margin als KURZFORM ("margin: 0",
+   "margin: var(--a4) 0 0"); eine Kurzform setzt auch margin-left, und
+   bei gleicher Spezifitaet gewinnt die spaetere Regel. Oben stehend
+   blieb der Einzug wirkungslos - im Browser gemessen: Monatskuerzel
+   weiterhin auf der Kastenkante statt auf der Textkante der Pille.
+
+   Nur der LINKE Rand wandert: bei width:auto bleibt die rechte Kante
+   stehen, die Zahlen der Balkenzeilen stehen also weiterhin buendig
+   unter der Gesamtsumme in der Pillenzeile. */
+.verlauf-balken,
+.fahrten-liste,
+.fahrten-fussnote,
+#dashboard-fahrten .dashboard-leer { margin-left: var(--pillen-einzug); }
 
 .btn-primary, .btn-outline, .btn-end-rental {
   display: inline-flex; align-items: center; justify-content: center; gap: var(--a2);
