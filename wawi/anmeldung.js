@@ -9,15 +9,28 @@
 // ============================================
 
 let rollenZwischenspeicher = null;
+let rollenVersion = 0;
+let rollenBenutzerId = null;
 const wechselRueckrufe = [];
 
-supabaseClient.auth.onAuthStateChange((ereignis) => {
+supabaseClient.auth.onAuthStateChange((ereignis, session) => {
+    const benutzerId = session?.user?.id ?? null;
+    const gewechselt = benutzerId !== rollenBenutzerId;
+    if (ereignis === 'INITIAL_SESSION') {
+        rollenBenutzerId = benutzerId;
+        return;
+    }
     // Nur bei einem ECHTEN Benutzerwechsel verfaellt der Rollenspeicher.
     // TOKEN_REFRESHED kommt stuendlich waehrend einer laufenden Sitzung -
     // dabei die Rollen neu zu laden hiesse fuenf RPC-Aufrufe und einen
     // Neuaufbau der Navigation, waehrend jemand mitten in einer Buchung
     // steckt.
-    if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(ereignis)) {
+    // SIGNED_IN kommt auch beim erneuten Fokussieren des Browser-Tabs.
+    // Dasselbe Konto darf dadurch keine offenen Formulare verlieren.
+    if (['SIGNED_IN', 'SIGNED_OUT', 'USER_UPDATED'].includes(ereignis)
+        && (gewechselt || ereignis === 'USER_UPDATED')) {
+        rollenBenutzerId = benutzerId;
+        rollenVersion++;
         rollenZwischenspeicher = null;
         // setTimeout mit 0: Supabase haelt waehrend onAuthStateChange
         // eine Sperre. Ein Rueckruf, der von hier aus synchron wieder in
@@ -96,7 +109,10 @@ async function meineRollen() {
     // eine Sitzung besteht.
     if (rollenZwischenspeicher !== null) return rollenZwischenspeicher;
 
-    const { data: { user } } = await supabaseClient.auth.getUser();
+    const version = rollenVersion;
+    const { data: { user }, error } = await supabaseClient.auth.getUser();
+    if (version !== rollenVersion) return null;
+    if (error) throw new Error(`Die Anmeldung liess sich nicht pruefen: ${error.message}`);
     if (!user) return null;
 
     // error MUSS ausgewertet werden. Ein technischer Fehlschlag liefert
@@ -106,6 +122,7 @@ async function meineRollen() {
     // Fehlers. Spurlos, nicht einmal ein Eintrag in der Konsole.
     const { data: istMitarbeiter, error: fehlerMitarbeiter } =
         await supabaseClient.rpc('ist_mitarbeiter');
+    if (version !== rollenVersion) return null;
     if (fehlerMitarbeiter) {
         throw new Error(`Die Rollen liessen sich nicht ermitteln: ${fehlerMitarbeiter.message}`);
     }
@@ -126,6 +143,7 @@ async function meineRollen() {
             return data ? code : null;
         })
     );
+    if (version !== rollenVersion) return null;
     rollenZwischenspeicher = new Set(treffer.filter(Boolean));
     return rollenZwischenspeicher;
 }

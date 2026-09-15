@@ -3859,7 +3859,10 @@ function bereichAnmelden(bereich) {
     bereiche.set(bereich.schluessel, bereich);
 }
 
+let seitenAufbau = 0;
+
 async function seiteAufbauen() {
+    const aufbau = ++seitenAufbau;
     // ALLERERSTE Anweisung, unbedingt - nicht erst im Erfolgsfall (siehe
     // sitzungsUhrStoppen() weiter unten): seiteAufbauen() laeuft bei jedem
     // Benutzerwechsel neu (SIGNED_IN/SIGNED_OUT/USER_UPDATED, siehe
@@ -3874,6 +3877,7 @@ async function seiteAufbauen() {
     try {
         rollen = await meineRollen();
     } catch (fehler) {
+        if (aufbau !== seitenAufbau) return;
         // meineRollen() wirft seit der Prüfung von Aufgabe 1 bei einem
         // technischen Fehlschlag, statt still ein leeres Rollen-Set zu
         // liefern - genau damit ein Netzwerk- oder Rechtefehler nicht wie
@@ -3896,6 +3900,7 @@ async function seiteAufbauen() {
         return;
     }
 
+    if (aufbau !== seitenAufbau) return;
     geladeneRollen = rollen;
 
     // instanceof Set statt Wahrheitswert: ein LEERES Set (Mitarbeiter

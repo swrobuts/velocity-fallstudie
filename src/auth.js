@@ -5,10 +5,13 @@
 // Auth-State
 let currentUser = null;
 let authStateListeners = [];
+let passwortWiederherstellung = false;
 
 // Auth State Change Handler registrieren
 supabaseClient.auth.onAuthStateChange((event, session) => {
     currentUser = session?.user ?? null;
+    if (event === 'PASSWORD_RECOVERY') passwortWiederherstellung = true;
+    if (!currentUser) passwortWiederherstellung = false;
     console.log('Auth State Changed:', event, currentUser?.email);
 
     // Die Oberflaeche zuerst: sie darf nicht auf einen Netzaufruf warten.
@@ -106,6 +109,22 @@ async function passwortZuruecksetzen(email) {
         console.error('Passwort-Reset-Fehler:', error);
         throw new Error(translateAuthError(error.message));
     }
+}
+
+// Der Link stellt nur eine Sitzung her; updateUser setzt das Passwort.
+// Der Zustand bleibt erhalten, auch wenn das Formular erst spaeter laedt.
+function istPasswortWiederherstellung() {
+    return passwortWiederherstellung;
+}
+
+async function passwortSpeichern(password) {
+    if (!currentUser || !passwortWiederherstellung) {
+        throw new Error('Bitte fordere zuerst einen neuen Link zum Zurücksetzen an.');
+    }
+    const { error } = await supabaseClient.auth.updateUser({ password });
+    if (error) throw new Error(translateAuthError(error.message));
+    passwortWiederherstellung = false;
+    benachrichtigen();
 }
 
 // ===== LOGOUT =====

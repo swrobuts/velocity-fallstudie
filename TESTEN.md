@@ -1,5 +1,21 @@
 # Wie du alles testest
 
+## Lokale Regressionstests ohne Datenbankzugang
+
+```bash
+npm ci
+npm test
+python3 -m unittest discover -s tests -p 'test_*.py'
+```
+
+Die JavaScript-Tests verwenden die vorhandene jsdom-Abhängigkeit. Sie prüfen
+Passwort-Wiederherstellung einschließlich Formular, Dashboard-Ladefehler,
+Kontowechsel mit verspäteten Antworten sowie den Rollenspeicher der
+Warenwirtschaft. Supabase und die Kartenbibliothek werden dabei ersetzt;
+es werden keine Konten angelegt, E-Mails versendet oder Fahrten gebucht.
+Der Python-Test prüft stabile Cache-Fingerabdrücke und LF-Zeilenenden.
+Die Datenbank- und Live-Abnahme unten bleibt zusätzlich erforderlich.
+
 ## In einem Befehl
 
 ```bash

@@ -111,7 +111,7 @@ def stempeln(seite: Path, nur_pruefen: bool) -> list[str]:
     text = re.sub(muster, ersetzen, text)
 
     if not nur_pruefen and text != original:
-        seite.write_text(text, encoding='utf-8')
+        seite.write_text(text, encoding='utf-8', newline='\n')
     return abweichungen
 
 
@@ -138,7 +138,7 @@ def bilder_stempeln(datei: Path, nur_pruefen: bool) -> list[str]:
     text = re.sub(muster, ersetzen, text)
 
     if not nur_pruefen and text != original:
-        datei.write_text(text, encoding='utf-8')
+        datei.write_text(text, encoding='utf-8', newline='\n')
     return abweichungen
 
 
@@ -164,7 +164,7 @@ def bilder_in_skript_stempeln(datei: Path, nur_pruefen: bool) -> list[str]:
     text = re.sub(muster, ersetzen, text)
 
     if not nur_pruefen and text != original:
-        datei.write_text(text, encoding='utf-8')
+        datei.write_text(text, encoding='utf-8', newline='\n')
     return abweichungen
 
 

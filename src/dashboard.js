@@ -637,32 +637,62 @@ function fahrtenZeichnen(fahrten) {
    angemeldet), nicht diese Funktion. Sie laeuft trotzdem bei jeder
    Anmeldung, nicht erst beim Aufruf von #konto: wer die Ansicht oeffnet,
    soll die Daten vorbereitet vorfinden, nicht erst auf das Netz warten. */
+let dashboardLauf = 0;
+
+function dashboardZuruecksetzen() {
+    dashboardLauf++;
+    for (const id of ['dashboard-name', 'dashboard-konterfei', 'dashboard-bilanz',
+        'dashboard-bilanz-hinweis', 'dashboard-monat', 'dashboard-verlauf',
+        'dashboard-abzeichen', 'dashboard-fortschritt', 'dashboard-fahrten',
+        'dashboard-zeitraum', 'dashboard-fehler']) {
+        document.getElementById(id)?.replaceChildren();
+    }
+    document.getElementById('dashboard-bilanz-hinweis').hidden = true;
+    document.getElementById('dashboard-fehler').hidden = true;
+}
+
 async function dashboardZeichnen() {
     const abschnitt = document.getElementById('dashboard');
     const fehlerfeld = document.getElementById('dashboard-fehler');
     if (!abschnitt) return;
+
+    // Jede Darstellung gehoert zu genau einem Konto und Ladelauf.
+    // Auch bei leerem Ergebnis oder Fehler duerfen keine alten Daten bleiben.
+    dashboardZuruecksetzen();
+    const lauf = dashboardLauf;
+    const benutzerId = getCurrentUser()?.id;
+    if (!benutzerId) return;
+    const aktuell = () => lauf === dashboardLauf && getCurrentUser()?.id === benutzerId;
+
+    let profile, bilanz, monate, fahrten;
+    try {
+        [profile, bilanz, monate, fahrten] = await Promise.all([
+            ladeListe('v_mein_profil'), ladeBilanz(), ladeMonate(), ladeFahrten()
+        ]);
+    } catch (error) {
+        if (!aktuell()) return;
+        console.error('Dashboard konnte nicht geladen werden:', error);
+        fehlerfeld.textContent = 'Die Bilanz konnte nicht vollständig geladen werden.';
+        fehlerfeld.hidden = false;
+        return;
+    }
+    if (!aktuell()) return;
+
+    const fehler = ['v_mein_profil', 'v_meine_bilanz', 'v_meine_monatsbilanz',
+        'v_meine_fahrt_kennzahl'].some(quelle => letzterLadeFehler(quelle));
+    if (fehler) {
+        fehlerfeld.textContent = 'Die Bilanz konnte nicht vollständig geladen werden.';
+        fehlerfeld.hidden = false;
+        return;
+    }
 
     /* Das Konterfei ZUERST, und vor jedem Ausstieg weiter unten. Es
        leitet sich aus dem NAMEN ab, den es unabhaengig von Fahrten gibt -
        ein Konto ohne Fahrt hat trotzdem einen Inhaber. Stand es weiter
        unten, blieb der Kreis bei einem frischen Konto leer, und die
        Ansicht wirkte kaputt statt nur leer. */
-    const profil = (await ladeListe('v_mein_profil'))[0] || {};
+    const profil = profile[0] || {};
     personZeichnen(profil.vorname, profil.nachname, profil.kundennummer);
-
-    const bilanz = await ladeBilanz();
-
-    /* Leer ist nicht gleich kaputt. ladeListe() liefert bei einem Fehler
-       ebenfalls [], und ein Ladefehler als "noch keine Fahrten"
-       auszugeben hat bei den Belegen schon einmal eine halbe Stunde
-       Fehlersuche gekostet. */
-    const fehler = letzterLadeFehler('v_meine_bilanz');
-    if (fehler) {
-        fehlerfeld.textContent = 'Die Bilanz konnte nicht geladen werden.';
-        fehlerfeld.hidden = false;
-        return;
-    }
-    fehlerfeld.hidden = true;
 
     if (!bilanz) {
         document.getElementById('dashboard-bilanz').replaceChildren(
@@ -689,12 +719,11 @@ async function dashboardZeichnen() {
 
     bilanzZeichnen(bilanz);
 
-    const monate = await ladeMonate();
     monatZeichnen(monate);
     verlaufZeichnen(monate);
     statusabzeichenZeichnen(bilanz);
     fortschrittZeichnen(bilanz);
-    fahrtenZeichnen(await ladeFahrten());
+    fahrtenZeichnen(fahrten);
 
     zeitraumZeichnen(bilanz);
 }

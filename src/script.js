@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     let rentalTimerInterval = null;
     let db_Stations = [];
     let db_Bikes = [];
+    let anmeldeLauf = 0;
 
     // ===== DOM ELEMENTE =====
     const modal = document.getElementById("auth-modal");
@@ -106,10 +107,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    async function preisschaetzerLaden() {
+    async function preisschaetzerLaden(lauf = anmeldeLauf) {
         const [profil, typen] = await Promise.all([
             fetchProfil(), fetchSchaetzbareTypen()
         ]);
+        if (lauf !== anmeldeLauf) return;
         /* Kein Profil heisst KEIN WUNSCH, nicht "aus". Sonst faellt ein
            Konto, dessen Profil gerade nicht geladen werden konnte, still
            auf einen ausgeschalteten Schaetzer zurueck. */
@@ -154,6 +156,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // ===== UI UPDATE FUNKTION =====
     async function updateUI(user) {
+        const lauf = ++anmeldeLauf;
+        ansichtAktualisieren();
         if (user) {
             const name = getUserDisplayName();
             userNavBtn.innerHTML = `<i class="fa-solid fa-circle-user"></i> ${escapeHtml(name)}`;
@@ -175,12 +179,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             userNavBtn.onclick = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
+                if (istPasswortWiederherstellung()) {
+                    openModal('recovery-form');
+                    return;
+                }
                 kontoMenueSetzen(kontoMenue.hidden);
             };
             checkActiveRentals();
             preisschaetzerLaden();
             dashboardZeichnen();
+            if (istPasswortWiederherstellung() &&
+                (!dialogOffen() || document.getElementById('recovery-form').hidden)) {
+                openModal('recovery-form');
+            }
         } else {
+            dashboardZuruecksetzen();
             kontoMenueSetzen(false);
             userNavBtn.innerHTML = `<i class="fa-regular fa-user"></i> Login`;
             userNavBtn.classList.remove('ist-angemeldet');
@@ -205,7 +218,9 @@ document.addEventListener("DOMContentLoaded", async () => {
                findet und umlegt. */
             preisschaetzerAn = true;
             if (schalter) schalter.checked = true;
-            schaetzbareTypen = await fetchSchaetzbareTypen();
+            const typen = await fetchSchaetzbareTypen();
+            if (lauf !== anmeldeLauf) return;
+            schaetzbareTypen = typen;
             radKachelSchaetzknoepfeSetzen();
         }
         ansichtAktualisieren();
@@ -298,6 +313,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     function reiterWaehlen(ziel) {
+        const recovery = ziel === 'recovery-form';
+        document.querySelector('.auth-tabs').hidden = recovery;
+        document.getElementById('auth-titel').textContent = recovery
+            ? 'Neues Passwort setzen' : 'Anmelden oder Konto anlegen';
         reiter.forEach(t => {
             const aktiv = t.dataset.target === ziel;
             t.classList.toggle('active', aktiv);
@@ -316,7 +335,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ruecksprung = document.activeElement;
         modal.style.display = 'flex';
         document.body.classList.add('dialog-offen');
-        reiterWaehlen(ziel || 'login-form');
+        reiterWaehlen(ziel || (istPasswortWiederherstellung() ? 'recovery-form' : 'login-form'));
         // Der Fokus gehoert in den Dialog, nicht dahinter.
         const erstes = modal.querySelector('.auth-form.active input');
         (erstes || reiter[0]).focus();
@@ -479,6 +498,33 @@ document.addEventListener("DOMContentLoaded", async () => {
             }
         } finally {
             formSperren(regForm, false);
+        }
+    });
+
+    const recoveryForm = document.getElementById('recovery-form');
+    recoveryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (recoveryForm.querySelector('button[type="submit"]').disabled) return;
+        const password = document.getElementById('recovery-password');
+        const confirmation = document.getElementById('recovery-confirm');
+        statusLeeren();
+        if (!recoveryForm.reportValidity()) return;
+        if (password.value !== confirmation.value) {
+            statusZeigen('fehler', 'Die beiden Passwörter stimmen nicht überein.');
+            confirmation.focus();
+            return;
+        }
+        formSperren(recoveryForm, true, 'Wird gespeichert …');
+        try {
+            await passwortSpeichern(password.value);
+            recoveryForm.reset();
+            reiterWaehlen('login-form');
+            statusZeigen('erfolg', 'Dein neues Passwort ist gespeichert. Du bist angemeldet.',
+                { text: 'Weiter', tun: closeModal });
+        } catch (error) {
+            statusZeigen('fehler', error.message);
+        } finally {
+            formSperren(recoveryForm, false);
         }
     });
 
@@ -2197,9 +2243,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     // ===== AKTIVE AUSLEIHEN PRUEFEN =====
     async function checkActiveRentals() {
         if (!isAuthenticated()) return;
+        const lauf = anmeldeLauf;
 
         try {
             const rentals = await fetchActiveRentals();
+            if (lauf !== anmeldeLauf || !isAuthenticated()) return;
             if (rentals && rentals.length > 0) {
                 const rental = rentals[0];
                 const satz = rechnerTarife.find(t => t.typ_code === rental.typ_code);

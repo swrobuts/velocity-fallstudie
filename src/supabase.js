@@ -20,15 +20,18 @@ const supabaseClient = window.supabase.createClient(
    lassen - der Beleg blieb wortlos leer. Der Fehler wird jetzt gemerkt,
    damit der Aufrufer ihn unterscheiden kann. */
 const ladeFehler = new Map();
+const ladeZaehler = new Map();
 
 async function ladeListe(quelle, spalten = '*', aufbau = (q) => q) {
+    const lauf = (ladeZaehler.get(quelle) || 0) + 1;
+    ladeZaehler.set(quelle, lauf);
     const { data, error } = await aufbau(supabaseClient.from(quelle).select(spalten));
     if (error) {
         console.error(`Fehler beim Laden von ${quelle}:`, error.message);
-        ladeFehler.set(quelle, error.message);
+        if (ladeZaehler.get(quelle) === lauf) ladeFehler.set(quelle, error.message);
         return [];
     }
-    ladeFehler.delete(quelle);
+    if (ladeZaehler.get(quelle) === lauf) ladeFehler.delete(quelle);
     return data || [];
 }
 
