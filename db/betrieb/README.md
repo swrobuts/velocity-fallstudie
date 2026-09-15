@@ -11,6 +11,52 @@ was hier liegt, betrifft nur die konkrete Instanz.
 | `altsystem_abloesen.sql` | Setzt `"cityBikesRental".handle_new_user()` auf Leerlauf, verhindert Fremdanmeldungen im Kundenbestand (verschoben aus `db/aufbau/0013_`, lief gegen eine leere Datenbank nicht durch) |
 | `referenzdaten_grundlage.sql` | Referenzjahr, Teil 1: Preisperioden, Tarifkonditionen, Mitgliedschaften, erster Mitarbeiter |
 | `flottenmodelle_stammdaten.sql` | Löst den Hersteller-Platzhalter `unbekannt` ab: fünf Hersteller, neun Modelle mit Baujahr/Gewicht/Gangzahl/Akku/Reichweite, alle 275 Räder umgehängt |
+| `studi_net_absichern.sql` | Schließt den über PUBLIC offenen pg_net-Zugriff für `studi`, erhält die bisherigen Rechte der anderen vorhandenen Anwendungs- und Betriebsrollen |
+
+## Lehrzugang und pg_net
+
+`studi_net_absichern.sql` ergänzt den Fachschutz aus `studizugang_lesend.sql`
+und `lehrzugang.sql`. Die Standardeinstellung `default_transaction_read_only`
+ist keine Rechtebeschränkung: Die eigene Sitzung kann sie abschalten.
+
+Die Korrektur ersetzt ausschließlich im Schema `net` vorhandene
+`PUBLIC`-Freigaben durch gleichwertige direkte Grants an die übrigen
+vorhandenen Rollen (ohne die PostgreSQL-Systemrollen `pg_*`). Damit bleiben
+insbesondere die Supabase-Betriebsrollen und andere Anwendungen auf der
+gemeinsam genutzten Instanz beim bisherigen Stand. Andere Lehrkonten werden
+mit dieser auf `studi` begrenzten Korrektur nicht neu bewertet.
+
+Für `studi` werden Schema-, Tabellen-, Sequenz- und Funktionsrechte entzogen.
+Auch bereits aufgelöste Objektnamen dürfen keinen Schreibweg offenlassen.
+Anmeldedaten, Rollenmitgliedschaften und die Fachrechte in `velocity` bleiben
+unverändert. Neue Rollen erhalten anschließend keinen automatischen
+`net`-Zugang; dieser muss bei Bedarf gezielt eingerichtet werden.
+
+Vor dem produktiven Lauf die aktuellen `net`-ACLs sichern und die bisherigen
+effektiven Rechte der Betriebsrollen erfassen. Als Eigentümer der
+`net`-Objekte in einer Transaktion ausführen:
+
+```bash
+python3 db/run.py db/betrieb/studi_net_absichern.sql
+python3 tools/studi_net_check.py
+python3 tools/rest_security_check.py
+```
+
+`studi_net_check.py` verwendet Host, Port und Datenbank aus `.env`, meldet
+sich jedoch ausdrücklich als `studi` an. Das Kennwort wird verdeckt abgefragt
+oder aus `STUDI_PASSWORD` gelesen. Der Test prüft Fachlesezugriff, alle
+installierten `net`-Funktionssignaturen und verweigerte Schreibpläne.
+Es werden keine Fahrten gebucht oder HTTP-Aufträge abgeschickt.
+Danach Website- und WaWi-Demoanmeldung sowie einen erlaubten pg_net-Aufruf
+mit einer Betriebsrolle prüfen.
+
+**Nach pg_net-Installation oder -Update erneut prüfen:** Die Erweiterung
+kann selbst wieder `PUBLIC`-Grants setzen. Bei erneut geöffnetem Zugang die
+Korrektur wiederholen. Ein Lauf ohne neue `PUBLIC`-Grants ist idempotent und
+erteilt auch später angelegten Rollen keine zusätzlichen Rechte.
+
+Hintergrund: [PostgreSQL-Rechtevergabe](https://www.postgresql.org/docs/17/sql-grant.html)
+und [pg_net-Installationsskript](https://github.com/supabase/pg_net/blob/master/sql/pg_net.sql).
 
 ## Referenzdaten für das Lehrjahr
 

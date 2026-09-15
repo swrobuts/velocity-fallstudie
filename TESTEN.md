@@ -16,6 +16,20 @@ es werden keine Konten angelegt, E-Mails versendet oder Fahrten gebucht.
 Der Python-Test prüft stabile Cache-Fingerabdrücke und LF-Zeilenenden.
 Die Datenbank- und Live-Abnahme unten bleibt zusätzlich erforderlich.
 
+## Direkten Lehrzugang nach einer pg_net-Änderung prüfen
+
+```bash
+python3 tools/studi_net_check.py
+```
+
+Mit `psycopg2` und den Verbindungsparametern aus `.env`. Der Test fragt das
+Kennwort verdeckt ab (alternativ `STUDI_PASSWORD`) und verwendet eine echte
+`studi`-Verbindung. Er liest alle Fachtabellen und WaWi-Sichten, prüft die
+effektiven `net`-Rechte und erwartet SQLSTATE 42501 für Schreibpläne und
+HTTP-Funktionsaufrufe. Die HTTP-Proben sind zusätzlich durch READ ONLY
+abgesichert; jede Transaktion wird zurückgerollt.
+Der betriebliche Ablauf steht in `db/betrieb/README.md`.
+
 ## In einem Befehl
 
 ```bash
