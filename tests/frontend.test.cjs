@@ -278,3 +278,24 @@ test('WaWi uebernimmt verspaetete Rollen des vorigen Kontos nicht in den Cache',
     await first;
     assert.equal(await ctx.meineRollen(), false);
 });
+
+// Ohne Sitzung liefert supabase-js bei getUser() einen Fehler
+// "Auth session missing!" statt eines leeren Benutzers. Vor der Anmeldung
+// ist das der Normalfall und muss zur Anmeldemaske führen (null), nicht
+// zur Fehleranzeige. Ein echter technischer Fehlschlag bleibt ein Fehler.
+test('WaWi zeigt ohne Sitzung die Anmeldung statt eines Fehlers', async () => {
+    let antwort;
+    const ctx = vm.createContext({ console, setTimeout, WAWI_CONFIG: { rollen: ['leitung'] },
+        supabaseClient: {
+            auth: { onAuthStateChange() {}, getUser: async () => antwort },
+            rpc: async () => ({ data: true })
+        }
+    });
+    vm.runInContext(source('wawi/anmeldung.js'), ctx);
+    antwort = { data: { user: null },
+                error: { name: 'AuthSessionMissingError', message: 'Auth session missing!' } };
+    assert.equal(await ctx.meineRollen(), null);
+    antwort = { data: { user: null },
+                error: { name: 'AuthRetryableFetchError', message: 'Failed to fetch' } };
+    await assert.rejects(ctx.meineRollen(), /Die Anmeldung liess sich nicht pruefen: Failed to fetch/);
+});

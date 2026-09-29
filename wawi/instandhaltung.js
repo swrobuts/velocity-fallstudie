@@ -53,7 +53,7 @@ bereichAnmelden({
     suchePlatzhalterSchluessel: 'nav.instandhaltungSuche'
 });
 
-let unterbereich = 'schaeden';   // 'schaeden' | 'auftraege' | 'pruefliste'
+let unterbereich = 'schaeden';   // 'meldungseingang' | 'schaeden' | 'auftraege' | 'pruefliste'
 
 // Fuer den Querverweis aus der Flotte (Gestaltungsauftrag Punkt 3: "Rad
 // in der Flotte -> seine Schadensmeldungen"). unterbereich ueberlebt
@@ -128,6 +128,10 @@ async function instandhaltungAufbauen() {
         t('button.reportDamage'), schadenMeldenMaske);
 
     zeigeUnterreiter(vorgang, [
+        // Der Eingang steht vorn, weil dort der Arbeitsfluss beginnt: aus
+        // einer Kundenmeldung wird eine Schadensmeldung, aus ihr ein
+        // Auftrag. Geöffnet wird der Bereich weiter auf den Schäden.
+        { schluessel: 'meldungseingang', titel: t('tab.jevInbox') },
         { schluessel: 'schaeden',   titel: t('tab.openDamage') },
         { schluessel: 'auftraege',  titel: t('tab.workOrders') },
         // Der dritte Reiter zeigt keine Vorgaenge, sondern eine
@@ -171,7 +175,9 @@ async function instandhaltungAufbauen() {
     //
     // Damit entfallen dort auch diese drei Ladeanfragen. Sie holten
     // Zeilen fuer eine Tafel, die niemand mehr sieht.
-    if (unterbereich === 'pruefliste') {
+    // Der Meldungseingang zeigt wie die Prüfliste keine Schadensfälle,
+    // dieselbe Begründung wie dort.
+    if (unterbereich === 'pruefliste' || unterbereich === 'meldungseingang') {
         zeigeKopftafel(vorgang, null);
     } else {
         const [alleSchaeden, alleAuftraege, modelleFuerTypnamen] = await Promise.all([
@@ -193,8 +199,9 @@ async function instandhaltungAufbauen() {
             new Map(modelleFuerTypnamen.map((m) => [m.typ_code, m.typ]))));
     }
 
-    if      (unterbereich === 'schaeden')   await schaedenZeigen(vorgang);
-    else if (unterbereich === 'pruefliste') await pruefListeZeigen(vorgang);
+    if      (unterbereich === 'schaeden')        await schaedenZeigen(vorgang);
+    else if (unterbereich === 'pruefliste')      await pruefListeZeigen(vorgang);
+    else if (unterbereich === 'meldungseingang') await meldungseingangZeigen(vorgang);
     else                                    await auftraegeZeigen(vorgang);
 }
 
@@ -1029,4 +1036,248 @@ function pruefListeMaske(zeile) {
         { name: 'gilt_bis', titel: t('field.gueltigBis'),
           wert: datumFormat(zeile.gilt_bis, ZEITSTEMPEL_FORMAT), nurLesen: true }
     ], []);
+}
+
+// ===== Meldungseingang: Vorschläge von Jev =====
+//
+// Der vierte Reiter zeigt wie die Prüfliste keine Vorgänge, sondern
+// VORSCHLÄGE. Jede Zeile ist eine eingegangene Kundenmeldung, beurteilt
+// von Jev (System One von TypeSafe) im Notebook des Lehrprojekts jev/
+// und dort über Schwellen entschieden: sperren, prüfen, Wartungsauftrag
+// oder kein Schaden. Die Datenbank liefert nur den zuletzt freigegebenen
+// Lauf (siehe 0026_jev_meldungseingang.sql).
+//
+// DER VORSCHLAG BUCHT NICHTS. Eine Schadensmeldung entsteht erst über den
+// Knopf "Als Schaden melden", und dann über dieselbe Prüfung wie jede
+// andere Meldung (api_schaden_melden, Rolle werkstatt). Kategorie und
+// Schwere stehen als Vorbelegung in der Maske und dürfen geändert werden:
+// Entscheidet die Werkstatt anders als Jev, ist genau das die
+// Information, an der sich die Vorschläge später messen lassen.
+
+// Reihenfolge nach dem, was bei einem Fehler auf dem Spiel steht: Ein
+// übersehener Sperrvorschlag wiegt schwerer als ein übersehener
+// Wartungsauftrag. Für die Sortierung der Spalte und die Vorsortierung.
+const VORSCHLAG_RANG = { sperren: 3, pruefen: 2, auftrag: 1, kein_schaden_weiterleiten: 0 };
+
+// "96 %" statt "0.96": Die Spalte liest sich dann als Wahrscheinlichkeit
+// und nicht als Messwert.
+function prozentAnzeige(wert) {
+    if (wert === null || wert === undefined) return '';
+    return `${zahlFormat(Math.round(Number(wert) * 100))} %`;
+}
+
+function vorschlagAnzeige(wert) {
+    return wert ? t('jevVorschlag.' + wert) : '';
+}
+
+function bearbeitungAnzeige(wert) {
+    return wert ? t('jevStand.' + wert) : '';
+}
+
+// keine_zuordnung ist ein Ergebnis der Beurteilung, kein Bauteil - in der
+// Oberfläche steht deshalb ein Satz statt des technischen Werts.
+function kategorieAnzeige(wert) {
+    return wert === 'keine_zuordnung' ? t('misc.jevNoCategory') : (wert || '');
+}
+
+// Die Verteilung über die drei Stufen, etwa "gering 9 % · mittel 85 % ·
+// fahruntauglich 6 %". Sie steht neben der gerundeten Stufe, weil eine
+// knappe Entscheidung (45 % zu 54 %) sonst wie eine sichere aussieht.
+function schwereVerteilung(wkt) {
+    const werte = typeof wkt === 'string' ? JSON.parse(wkt) : (wkt || {});
+    return Object.keys(SCHWERE_RANG)
+        .map((stufe) => `${t('schwere.' + stufe)} ${prozentAnzeige(werte[stufe] ?? 0)}`)
+        .join(' · ');
+}
+
+async function meldungseingangZeigen(vorgang) {
+    const zeilen = await ladeListe('v_wawi_meldungseingang',
+        'meldung_id, lauf_id, kanal, meldungstext, fahrrad_id, rahmennummer, typ_code, radstatus, ' +
+        'standort, vorschlag, begruendung, eskalation, kategorie, kategorie_konfidenz, schwere, ' +
+        'schwere_konfidenz, schwere_wkt, ist_schadensmeldung, sicherheitsrelevant, personenschaden, ' +
+        'modell, fragen_stand, freigegeben_am, bearbeitung, entschieden_am, schadensmeldung_id, bemerkung',
+        (q) => q.order('meldung_id'));
+
+    const fehler = letzterLadeFehler('v_wawi_meldungseingang');
+    if (fehler) {
+        meldeVorgang(vorgang, t('msg.jevLoadFailed', { fehler }), 'schlecht');
+        return;
+    }
+
+    if (zeilen.length === 0) {
+        zeigeLeermaske(vorgang, t('empty.noJevTitle'), t('empty.noJevText'));
+        meldeVorgang(vorgang, t('empty.noJevTitle'));
+        return;
+    }
+
+    // Offene Meldungen zuerst, darin die riskantesten Vorschläge oben. Die
+    // Spaltenköpfe sortieren danach beliebig um; diese Reihenfolge ist nur
+    // der Zustand, mit dem der Reiter aufgeht.
+    zeilen.sort((a, b) =>
+        (a.bearbeitung === 'offen' ? 0 : 1) - (b.bearbeitung === 'offen' ? 0 : 1)
+        || (VORSCHLAG_RANG[b.vorschlag] ?? -1) - (VORSCHLAG_RANG[a.vorschlag] ?? -1)
+        || Number(b.sicherheitsrelevant) - Number(a.sicherheitsrelevant));
+
+    zeigeListe(vorgang, zeilen, [
+        { feld: 'meldung_id',   titel: t('field.meldung'), filterbar: false, gruppierbar: false },
+        { feld: 'rahmennummer', titel: t('field.rad') },
+        {
+            feld: 'vorschlag', titel: t('field.vorschlag'),
+            formatieren: vorschlagAnzeige,
+            sortierwert: (z) => VORSCHLAG_RANG[z.vorschlag] ?? -1,
+            klasse: (z) => (z.vorschlag === 'sperren' ? 'schlecht' : z.vorschlag === 'pruefen' ? 'warnung' : '')
+        },
+        { feld: 'kategorie', titel: t('field.kategorie'), formatieren: kategorieAnzeige },
+        {
+            feld: 'schwere', titel: t('field.schwere'),
+            sortierwert: (z) => SCHWERE_RANG[z.schwere] ?? -1,
+            formatieren: (wert) => t('schwere.' + wert),
+            klasse: (z) => (z.schwere === 'fahruntauglich' ? 'schlecht' : z.schwere === 'mittel' ? 'warnung' : '')
+        },
+        {
+            feld: 'sicherheitsrelevant', titel: t('field.gefahr'),
+            formatieren: prozentAnzeige, sortierwert: (z) => Number(z.sicherheitsrelevant),
+            filterbar: false, gruppierbar: false
+        },
+        {
+            feld: 'bearbeitung', titel: t('field.bearbeitung'),
+            formatieren: bearbeitungAnzeige,
+            klasse: (z) => (z.bearbeitung === 'uebernommen' ? 'gut' : '')
+        }
+    ], meldungseingangMaske);
+
+    const offen = zeilen.filter((z) => z.bearbeitung === 'offen');
+    meldeVorgang(vorgang, t('msg.jevCount', {
+        n: zahlFormat(zeilen.length),
+        offen: zahlFormat(offen.length),
+        sperren: zahlFormat(offen.filter((z) => z.vorschlag === 'sperren').length),
+        datum: datumFormat(zeilen[0].freigegeben_am, ZEITSTEMPEL_FORMAT)
+    }));
+}
+
+// Die Liste nennt den Vorschlag, die Maske seine Begründung und - für die
+// Werkstatt, solange die Meldung offen ist - die vorbelegte
+// Schadensmeldung zum Übernehmen.
+function meldungseingangMaske(zeile) {
+    const entscheidbar = darfRolle('werkstatt') && zeile.bearbeitung === 'offen';
+    const felder = [
+        { name: 'meldungstext', titel: t('field.meldungstext'), wert: zeile.meldungstext,
+          typ: 'mehrzeilig', nurLesen: true },
+        { name: 'kanal', titel: t('field.kanal'), wert: zeile.kanal, nurLesen: true },
+        { name: 'rad', titel: t('field.rad'), nurLesen: true,
+          wert: `${zeile.rahmennummer} (${zeile.typ_code}) · ${statusAnzeige(zeile.radstatus)}` },
+        { name: 'standort', titel: t('field.standort'),
+          wert: zeile.standort || t('misc.underway'), nurLesen: true },
+        { name: 'vorschlag', titel: t('field.vorschlag'), wert: vorschlagAnzeige(zeile.vorschlag), nurLesen: true },
+        { name: 'begruendung', titel: t('field.begruendung'), wert: zeile.begruendung, nurLesen: true },
+        { name: 'jev_kategorie', titel: t('field.jevKategorie'), nurLesen: true,
+          wert: t('misc.jevWithConfidence', {
+              wert: kategorieAnzeige(zeile.kategorie),
+              konfidenz: zahlFormat(Number(zeile.kategorie_konfidenz),
+                  { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          }) },
+        { name: 'jev_schwere', titel: t('field.jevSchwere'), typ: 'mehrzeilig', nurLesen: true,
+          wert: schwereVerteilung(zeile.schwere_wkt) },
+        { name: 'wahrscheinlichkeiten', titel: t('field.wahrscheinlichkeiten'), typ: 'mehrzeilig', nurLesen: true,
+          wert: t('misc.jevProbabilities', {
+              schaden: prozentAnzeige(zeile.ist_schadensmeldung),
+              gefahr: prozentAnzeige(zeile.sicherheitsrelevant),
+              person: prozentAnzeige(zeile.personenschaden)
+          }) },
+        { name: 'beurteilung', titel: t('field.beurteilung'), nurLesen: true,
+          wert: t('misc.jevRun', {
+              modell: zeile.modell, stand: zeile.fragen_stand,
+              datum: datumFormat(zeile.freigegeben_am, ZEITSTEMPEL_FORMAT)
+          }) },
+        { name: 'hinweis', titel: t('field.hinweis'), typ: 'mehrzeilig', nurLesen: true,
+          wert: zeile.eskalation ? t('misc.jevEscalation') : t('misc.jevHumanDecides') },
+        { name: 'bearbeitung', titel: t('field.bearbeitung'),
+          wert: bearbeitungAnzeige(zeile.bearbeitung), nurLesen: true }
+    ];
+
+    if (entscheidbar) {
+        // Vorbelegt mit dem Vorschlag, aber änderbar. Bei keine_zuordnung
+        // bleibt die Kategorie leer: Das Bauteil benennt, wer übernimmt.
+        felder.push(
+            { name: 'kategorie', titel: t('field.kategorie'),
+              wert: zeile.kategorie === 'keine_zuordnung' ? '' : zeile.kategorie },
+            { name: 'schwere', titel: t('field.schwere'), wert: zeile.schwere,
+              optionen: Object.keys(SCHWERE_RANG).map((stufe) => ({ wert: stufe, text: t('schwere.' + stufe) })) },
+            { name: 'beschreibung', titel: t('field.beschreibung'), typ: 'mehrzeilig',
+              wert: `${zeile.meldungstext} (${zeile.meldung_id}, ${zeile.kanal})` },
+            { name: 'bemerkung', titel: t('field.bemerkung'), wert: '' }
+        );
+    } else if (zeile.bemerkung) {
+        felder.push({ name: 'bemerkung', titel: t('field.bemerkung'), wert: zeile.bemerkung, nurLesen: true });
+    }
+
+    zeigeMaske(t('misc.jevInboxTitle', { meldung: zeile.meldung_id, rahmennummer: zeile.rahmennummer }),
+        felder, meldungseingangKnoepfe(zeile, entscheidbar));
+}
+
+// Übernehmen ist EIN Aufruf: api_jev_vorschlag_uebernehmen legt die
+// Schadensmeldung an und hält die Entscheidung fest, beides in einer
+// Transaktion (siehe Kopfkommentar dort). Zwei Aufrufe aus dem Browser
+// ließen bei einem Fehler dazwischen eine Meldung ohne Entscheidung
+// zurück.
+function meldungseingangKnoepfe(zeile, entscheidbar) {
+    const knoepfe = [];
+    if (entscheidbar) {
+        knoepfe.push({
+            titel: t('button.jevAccept'),
+            art: 'schaffend',
+            ausfuehren: async () => {
+                const kategorie = document.getElementById('feld-maske-kategorie').value.trim();
+                const beschreibung = document.getElementById('feld-maske-beschreibung').value.trim();
+                const schwere = document.getElementById('feld-maske-schwere').value;
+                if (!kategorie || !beschreibung) {
+                    meldeFehler(t('msg.categoryDescriptionRequired'));
+                    return;
+                }
+                const id = await rufeAuf('api_jev_vorschlag_uebernehmen', {
+                    p_lauf_id: zeile.lauf_id, p_meldung_id: zeile.meldung_id,
+                    p_kategorie: kategorie, p_beschreibung: beschreibung, p_schwere: schwere
+                });
+                melde(schwere === 'fahruntauglich'
+                    ? t('msg.damageReportedBlocked', { id })
+                    : t('msg.damageReported', { id }), 'gut');
+                await instandhaltungAufbauen();
+            }
+        }, {
+            titel: t('button.jevDismiss'),
+            art: 'neben',
+            ausfuehren: async () => {
+                await rufeAuf('api_jev_vorschlag_verwerfen', {
+                    p_lauf_id: zeile.lauf_id, p_meldung_id: zeile.meldung_id,
+                    p_bemerkung: document.getElementById('feld-maske-bemerkung').value.trim()
+                });
+                melde(t('msg.jevDismissed', { meldung: zeile.meldung_id }), 'gut');
+                await instandhaltungAufbauen();
+            }
+        });
+    }
+    // Nach der Übernahme führt der Weg zur entstandenen Schadensmeldung -
+    // derselbe Arbeitsfluss wie von der Meldung zum Auftrag.
+    if (zeile.schadensmeldung_id) {
+        knoepfe.push({
+            titel: t('button.jevToDamage'),
+            art: 'neben',
+            ausfuehren: async () => {
+                unterbereich = 'schaeden';
+                maskeVerwerfen();
+                await instandhaltungAufbauen();
+                waehleZeileMit('schadensmeldung_id', zeile.schadensmeldung_id);
+            }
+        });
+    }
+    if (darfBereich('flotte') && zeile.fahrrad_id) {
+        knoepfe.push({
+            titel: t('button.bikeInFleet'),
+            art: 'neben',
+            ausfuehren: () => bereichSprung('flotte',
+                t('nav.originDamageReport', { rahmennummer: zeile.rahmennummer }),
+                () => waehleZeileMit('fahrrad_id', zeile.fahrrad_id))
+        });
+    }
+    return knoepfe;
 }
