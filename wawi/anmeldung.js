@@ -112,7 +112,14 @@ async function meineRollen() {
     const version = rollenVersion;
     const { data: { user }, error } = await supabaseClient.auth.getUser();
     if (version !== rollenVersion) return null;
-    if (error) throw new Error(`Die Anmeldung liess sich nicht pruefen: ${error.message}`);
+    // Ohne Sitzung meldet getUser() den Fehler "Auth session missing!"
+    // statt eines leeren Benutzers. Vor der Anmeldung ist das der
+    // Normalfall und führt zur Anmeldemaske, nicht zur Fehleranzeige - so
+    // stand es bis c95e994, das die Fehlerprüfung ergänzte und dabei
+    // diesen Fall mitgefangen hat. Jeder andere Fehler bleibt ein Fehler.
+    if (error && error.name !== 'AuthSessionMissingError') {
+        throw new Error(`Die Anmeldung liess sich nicht pruefen: ${error.message}`);
+    }
     if (!user) return null;
 
     // error MUSS ausgewertet werden. Ein technischer Fehlschlag liefert
