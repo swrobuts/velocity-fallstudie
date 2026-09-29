@@ -187,6 +187,9 @@ SICHTEN = {
     "v_wawi_auftrag": "Jeder Wartungsauftrag mit Rad, Bearbeiter und Stand.",
     "v_wawi_wartungsprognose": "Die eingefrorenen Prüflisten: Platz, "
                      "Dringlichkeit, Nutzungsquote je Rad.",
+    "v_wawi_meldungseingang": "Vorschläge von Jev zu eingegangenen "
+                     "Schadenmeldungen: Vorschlag, Wahrscheinlichkeiten, "
+                     "Stand der Bearbeitung.",
     "v_wawi_kunde": "Stammdaten, laufender Tarif und Kontostand je Kunde.",
     "v_wawi_kundenorte": "Kundschaft je Ort, aggregiert mit Koordinate.",
     "v_wawi_fahrt_km": "Strecke je Fahrt — die einzige Stelle, an der "
@@ -213,6 +216,12 @@ NICHT_ANGEBOTEN = {
     "api_ausleihe_beenden": "handelt auf dem eigenen Kundensatz",
     "api_profil_aktualisieren": "handelt auf dem eigenen Kundensatz",
     "api_kunde_sicherstellen": "legt den eigenen Kundensatz an",
+    # Über einen Vorschlag von Jev entscheidet ein Mensch in der Werkstatt
+    # (0026_jev_meldungseingang.sql). Ein Agent, der Vorschläge übernimmt,
+    # hätte die Beurteilung und die Buchung in einer Hand - genau das soll
+    # der Meldungseingang trennen.
+    "api_jev_vorschlag_uebernehmen": "Entscheidung über einen Jev-Vorschlag trifft die Werkstatt",
+    "api_jev_vorschlag_verwerfen": "Entscheidung über einen Jev-Vorschlag trifft die Werkstatt",
     "api_preisschaetzer_umschalten": "schaltet die Anzeige im eigenen Konto",
 }
 
@@ -261,7 +270,7 @@ server = MCPServer(
 # ─────────────────────────────────────────────────────── Lesen
 @server.tool()
 def sichten_auflisten() -> str:
-    """Nennt die 20 Sichten der Warenwirtschaft mit ihrem Inhalt.
+    """Nennt die 21 Sichten der Warenwirtschaft mit ihrem Inhalt.
 
     Erster Aufruf, wenn unklar ist, wo etwas steht. Die Namen daraus
     gehören in sicht_lesen.
