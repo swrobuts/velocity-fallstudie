@@ -19,6 +19,8 @@ erDiagram
     MITARBEITER      ||--o{ MITARBEITER_ROLLE  : "haelt"
     ROLLE            ||--o{ MITARBEITER_ROLLE  : "wird zugeordnet"
     MITARBEITER      |o--o{ AENDERUNGSPROTOKOLL : "loest aus, wenn anmeldbar"
+    MITARBEITER      ||--o{ JEV_VORSCHLAG_ENTSCHEIDUNG : "entscheidet über einen Vorschlag von Jev"
+    SCHADENSMELDUNG  |o--o{ JEV_VORSCHLAG_ENTSCHEIDUNG : "entsteht bei der Übernahme"
 
     %% =================================================================
     %% ENTWORFEN, NICHT GEBAUT (Bereiche G Beschaffung und H Lager, dazu
@@ -156,6 +158,16 @@ erDiagram
         text regelversion
         date gilt_bis "Stichtag + 90 Tage"
         text betriebsmodus "probelauf | verbindlich"
+    }
+    JEV_VORSCHLAG_ENTSCHEIDUNG {
+        bigint jev_vorschlag_entscheidung_id PK "gebaut (0026)"
+        text meldung_id UK "eine Entscheidung je eingegangener Meldung"
+        bigint lauf_id "mit meldung_id Verweis auf jev_labor.urteil, außerhalb von velocity"
+        text entscheidung "uebernommen oder verworfen"
+        bigint schadensmeldung_id FK "genau dann gesetzt, wenn uebernommen"
+        text kategorie
+        schaden_schwere schwere
+        bigint mitarbeiter_id FK
     }
     WARTUNGSPOSITION {
         bigint wartungsposition_id PK "entworfen, nicht gebaut - braucht ARTIKEL (Bereich G) und LAGERBEWEGUNG (Bereich H), die es nicht gibt"

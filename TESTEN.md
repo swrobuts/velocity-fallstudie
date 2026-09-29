@@ -45,7 +45,7 @@ Rückgabewert 0, wenn alles besteht.
 |---|---|---|
 | 1 | Zugangsdaten | `.env` ist vollständig |
 | 2 | Aufbaukette zweimal | die SQL-Dateien in `db/aufbau/` laufen, gezählt statt eingetragen, und sind idempotent |
-| 3 | Datenbanktests | 207 pgTAP-Testfunktionen |
+| 3 | Datenbanktests | 212 pgTAP-Testfunktionen |
 | 4 | Zugriffsschutz | 17 Ressourcen gesperrt, 10 Sichten öffentlich — über HTTP geprüft |
 | 5 | Altschema | Der anon-Key kommt nicht mehr an die Altdaten |
 | 6 | Abgleichsbericht | Übernahme vollständig, Beträge stimmen auf den Cent |
@@ -70,7 +70,7 @@ Rückgabewert 0, wenn alles besteht.
 | 25 | Passwörter unerreichbar | `auth.users` antwortet mit HTTP 406 |
 | 26 | Zahlungsmittel gesperrt | HTTP 401 ohne Anmeldung |
 | 27 | Warenwirtschaft: Basistabellen | sieben Tabellen antworten mit HTTP 401 |
-| 28 | Warenwirtschaft: Sichten ohne Anmeldung | alle 20 `v_wawi_`-Sichten antworten mit HTTP 401 |
+| 28 | Warenwirtschaft: Sichten ohne Anmeldung | alle 21 `v_wawi_`-Sichten antworten mit HTTP 401 |
 | 29 | Rechenannahmen | jede nennt ihre Quelle |
 | 30 | Kunde sieht eigene Fahrten | `v_meine_ausleihe`/`v_meine_rechnung`/`v_mein_profil`/`v_meine_fahrt_kennzahl`/`v_meine_monatsbilanz`/`v_meine_bilanz` lesbar |
 | 31 | Keine Funktion versehentlich ausführbar | nur `api_`-Funktionen freigegeben, keine für `anon` |

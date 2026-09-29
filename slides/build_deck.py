@@ -595,7 +595,7 @@ def baue() -> Presentation:
             "Was kostet Annas Fahrt genau — und warum?",
             "Jetzt lösen wir die Frage vom Anfang auf. Jeder Cent muss begründbar sein.")
 
-    s = folie(prs, "6 · Implementierung", "24 Aufbauschritte, jeder für sich lauffähig",
+    s = folie(prs, "6 · Implementierung", "25 Aufbauschritte, jeder für sich lauffähig",
               "Jede Datei ist idempotent: sie läuft zweimal hintereinander fehlerfrei. Das "
               "ist die Voraussetzung dafür, dass man einen Aufbau gefahrlos wiederholen kann.")
     schichtenstapel(s, [
@@ -653,8 +653,8 @@ def baue() -> Presentation:
           "  and a.attname not in",
           "      ('erstellt_am','geaendert_am');",
           "",
-          "347 Spalten im Aufbau, 273 beschrieben,",
-          "74 technische Audit-Spalten ausgenommen."], GRUEN_D),
+          "358 Spalten im Aufbau, 282 beschrieben,",
+          "76 technische Audit-Spalten ausgenommen."], GRUEN_D),
         y=176, hoehe=240)
     notizen(s, "Der Trick ist der Test, nicht der Kommentar. Ohne ihn schreibt man die "
                "ersten zwanzig Kommentare und vergisst die restlichen zweihundert.")
@@ -812,10 +812,10 @@ def baue() -> Presentation:
               "Sie legt Sichten und Funktionen über genau die Tabellen, die schon da waren.")
     kachelreihe(s, [
         ("Kein zweites Schema",
-         ["38 Basistabellen legt der Aufbau an — für beide dieselben",
+         ["39 Basistabellen legt der Aufbau an — für beide dieselben",
           "Eine Kundenadresse ist eine Kundenadresse",
           "Keine Kopie, die veralten könnte"]),
-        ("20 Sichten, 16 Funktionen",
+        ("21 Sichten, 18 Funktionen",
          ["Gelesen wird über v_wawi_…",
           "Geschrieben über api_…",
           "Fünf weitere api_ dienen der Website"]),
@@ -1041,7 +1041,7 @@ def baue() -> Presentation:
     schichtenstapel(s, [
         ("Kundenwebsite · Warenwirtschaft · Programm eines Agenten", False),
         ("Eine Adresse für alle drei", False),
-        ("20 Sichten zum Lesen, 21 api_-Funktionen zum Schreiben", True),
+        ("21 Sichten zum Lesen, 23 api_-Funktionen zum Schreiben", True),
         ("Row Level Security und hat_rolle() — hier fällt die Entscheidung", True),
         ("Die Tabellen darunter: für keinen der drei erreichbar", False),
     ], y=unter_intro(s), hoehe=50, luecke=10)
@@ -1080,7 +1080,7 @@ def baue() -> Presentation:
 
     _w = _werkzeugzahlen()
     s = folie(prs, "12 · Der Agent",
-              f"{_w['gesamt']} Werkzeuge — und fünf, die mit Absicht fehlen",
+              f"{_w['gesamt']} Werkzeuge — und sieben, die mit Absicht fehlen",
               "Das Programm bietet genau die Funktionen an, die auch die Warenwirtschaft "
               "benutzt. Was fehlt, fehlt aus einem Grund, den man am Modell ablesen kann.")
     kachelreihe(s, [
@@ -1095,20 +1095,23 @@ def baue() -> Presentation:
             "Status setzen, Schäden melden, Aufträge schließen",
             "Drei davon sind nicht rücknehmbar",
         ]),
-        ("Fünf ausgelassen", [
-            "Ausleihe starten und beenden, Profil, Kundensatz, Preisschätzer",
-            "Alle handeln auf dem eigenen Kundensatz des Aufrufers",
+        ("Sieben ausgelassen", [
+            "Fünf auf dem eigenen Kundensatz: Ausleihe starten und beenden, Profil, Kundensatz, Preisschätzer",
             "Ein Mitarbeiterkonto hat keinen — sie liefen in einen Fehler",
+            "Zwei zum Meldungseingang: Über Vorschläge von Jev entscheidet die Werkstatt",
         ]),
     ], y=unter_intro(s), hoehe=186)
     sandband(s, "Auslassen ist eine Entscheidung, kein Vergessen: eine Prüfung verlangt zu "
                 "jeder api_-Funktion entweder ein Werkzeug oder einen Eintrag in der "
                 "Ausnahmeliste.", y=400)
-    notizen(s, "Die fünf ausgelassenen Funktionen sind kein Sicherheitsargument. Sie "
+    notizen(s, "Die fünf Funktionen auf dem Kundensatz fehlen nicht aus Sicherheitsgründen. Sie "
                "handeln auf dem eigenen Kundensatz des angemeldeten Kontos, und ein "
                "Mitarbeiterkonto hat keinen. Sie wären also nicht gefährlich, sondern "
                "wirkungslos. Der Unterschied ist wichtig: Wer alles Unbequeme als "
-               "Sicherheitsfrage verkauft, kann die echten nicht mehr begründen.")
+               "Sicherheitsfrage verkauft, kann die echten nicht mehr begründen. Die zwei "
+               "Funktionen zum Meldungseingang fehlen aus einem anderen Grund: Ein Agent, der "
+               "Vorschläge von Jev übernimmt, hätte Beurteilung und Buchung in einer Hand, und "
+               "genau das trennt der Meldungseingang.")
 
     s = folie(prs, "12 · Der Agent", "Löschen: zwei Rechtsgrundlagen, ein Kunde",
               "Ein Kunde verlangt Löschung, seine Rechnungen sind aufbewahrungspflichtig. "

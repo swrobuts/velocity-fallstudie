@@ -27,18 +27,19 @@
 --             aus dem Notebook, geschrieben von der Rolle jev_schreiber, die
 --             nichts anderes darf als in jev_labor einfügen.
 --
--- Objekte:    Schema jev_labor mit jev_labor.meldung, jev_labor.lauf,
---             jev_labor.urteil,
---             Rolle jev_schreiber (hier ohne Anmeldung angelegt, siehe unten),
+-- Objekte:    Tabelle jev_labor.meldung, jev_labor.lauf, jev_labor.urteil,
 --             velocity.jev_vorschlag_entscheidung,
---             velocity.v_wawi_meldungseingang,
---             velocity.api_jev_vorschlag_uebernehmen(bigint, text, text, text, text),
---             velocity.api_jev_vorschlag_verwerfen(bigint, text, text)
--- Rücknahme:  DROP FUNCTION velocity.api_jev_vorschlag_verwerfen(bigint, text, text);
---             DROP FUNCTION velocity.api_jev_vorschlag_uebernehmen(bigint, text, text, text, text);
+--             Sicht velocity.v_wawi_meldungseingang,
+--             Funktion velocity.api_jev_vorschlag_uebernehmen(bigint,text,text,text,text),
+--             velocity.api_jev_vorschlag_verwerfen(bigint,text,text),
+--             Schema jev_labor, Rolle jev_schreiber (hier ohne Anmeldung
+--             angelegt, siehe unten)
+-- Ruecknahme: DROP FUNCTION velocity.api_jev_vorschlag_verwerfen(bigint,text,text);
+--             DROP FUNCTION velocity.api_jev_vorschlag_uebernehmen(bigint,text,text,text,text);
 --             DROP VIEW velocity.v_wawi_meldungseingang;
 --             DROP TABLE velocity.jev_vorschlag_entscheidung;
---             DROP SCHEMA jev_labor CASCADE;   -- löscht alle Läufe
+--             DROP TABLE jev_labor.urteil, jev_labor.lauf, jev_labor.meldung;
+--             DROP SCHEMA jev_labor;   -- die Tabellen enthalten alle Läufe
 --             DROP ROLE jev_schreiber;
 -- =====================================================================
 
